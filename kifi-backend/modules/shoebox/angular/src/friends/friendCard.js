@@ -2,26 +2,18 @@
 
 angular.module('kifi')
 
-
 .directive('kfFriendCard', [
-  '$log', 'friendService', 'modalService', 'routeService',
-  function ($log, friendService, modalService, routeService) {
+  'friendService', 'modalService',
+  function (friendService, modalService) {
     return {
       scope: {
-        'friend': '&'
+        'getFriend': '&friend'
       },
       replace: true,
       restrict: 'A',
       templateUrl: 'friends/friendCard.tpl.html',
-      link: function (scope/*, element, attrs*/) {
-        var friend = scope.friend();
-        scope.name = friend.firstName + ' ' + friend.lastName;
-        scope.firstName = friend.firstName;
-        scope.mainImage = friendService.getPictureUrlForUser(friend);
-        scope.friendCount = friend.friendCount;
-        scope.unfriended = friend.unfriended;
-        scope.searchFriend = friend.searchFriend;
-        scope.friendProfileUrl = routeService.getProfileUrl(friend.username);
+      link: function (scope) {
+        scope.friend = scope.getFriend();
 
         scope.unfriend = function () {
           modalService.open({
@@ -31,15 +23,15 @@ angular.module('kifi')
         };
 
         scope.reallyUnfriend = function () {
-          friendService.unfriend(friend.id);
+          friendService.unfriend(scope.friend.id);
         };
 
         scope.unsearchfriend = function () {
-          friendService.unSearchFriend(friend.id);
+          friendService.unSearchFriend(scope.friend.id);
         };
 
         scope.researchfriend = function () {
-          friendService.reSearchFriend(friend.id);
+          friendService.reSearchFriend(scope.friend.id);
         };
 
       }

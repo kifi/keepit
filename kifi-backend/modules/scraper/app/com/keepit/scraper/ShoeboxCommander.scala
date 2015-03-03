@@ -21,7 +21,8 @@ class ShoeboxCommander @Inject() (
   implicit val serviceCallTimeout = config.serviceCallTimeout
   implicit val fjCtx = ExecutionContext.fj
 
-  val uriUpdateLock = new ReactiveLock(1)
+  val uriUpdateLock = new ReactiveLock(1, Some(10))
+  val saveScrapeLock = new ReactiveLock(1, Some(10))
 
   def assignTasks(zkId: Long, max: Int): Future[Seq[ScrapeRequest]] = shoeboxScraperClient.assignScrapeTasks(zkId, max)
 
@@ -33,7 +34,7 @@ class ShoeboxCommander @Inject() (
   }
   def saveNormalizedUri(uri: NormalizedURI): Future[NormalizedURI] = uriUpdateLock.withLockFuture(shoeboxScraperClient.saveNormalizedURI(uri))
   def updateNormalizedURIState(uriId: Id[NormalizedURI], state: State[NormalizedURI]): Future[Unit] = uriUpdateLock.withLockFuture(shoeboxScraperClient.updateNormalizedURIState(uriId, state))
-  def saveScrapeInfo(info: ScrapeInfo): Future[Unit] = shoeboxScraperClient.saveScrapeInfo(if (info.state == ScrapeInfoStates.INACTIVE) info else info.withState(ScrapeInfoStates.ACTIVE))
+  def saveScrapeInfo(info: ScrapeInfo): Future[Unit] = saveScrapeLock.withLockFuture(shoeboxScraperClient.saveScrapeInfo(if (info.state == ScrapeInfoStates.INACTIVE) info else info.withState(ScrapeInfoStates.ACTIVE)))
   def getLatestKeep(url: String): Future[Option[Keep]] = shoeboxScraperClient.getLatestKeep(url)
   def recordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect): Future[NormalizedURI] = uriUpdateLock.withLockFuture(shoeboxScraperClient.recordPermanentRedirect(uri, redirect))
   def recordScrapedNormalization(uriId: Id[NormalizedURI], uriSignature: Signature, candidateUrl: String, candidateNormalization: Normalization, alternateUrls: Set[String]): Future[Unit] = {

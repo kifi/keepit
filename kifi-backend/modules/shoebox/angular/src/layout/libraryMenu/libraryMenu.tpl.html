@@ -121,8 +121,8 @@
                 </div>
               </div>
             </a>
-            <a href="{{getLibraryOwnerProfileUrl(library)}}" kf-track-origin="libraryList/followed">
-              <img class="library-icon-owner-img" ng-if="!library.isMine" ng-src="{{library.owner.image || 'https://www.kifi.com/assets/img/ghost.200.png'}}" title="{{library.owner.firstName + ' ' + library.owner.lastName}}"></img>
+            <a href="{{library.owner|profileUrl}}" kf-track-origin="libraryList/followed">
+              <img class="library-icon-owner-img" ng-if="!library.isMine" ng-src="{{library.owner | pic:100}}" title="{{library.owner.firstName}} {{library.owner.lastName}}"></img>
             </a>
           </li>
           <li class="kf-nav-lib-separator" ng-if="invitedLibsToShow.length > 0">
@@ -138,8 +138,8 @@
                 <div class="kf-nav-lib-text">invitation pending</div>
               </div>
             </a>
-            <a href="{{getLibraryOwnerProfileUrl(library)}}" kf-track-origin="libraryList/invited">
-              <img class="library-icon-owner-img" ng-if="!library.isMine" ng-src="{{library.owner.image || 'https://www.kifi.com/assets/img/ghost.200.png'}}" title="{{library.owner.firstName + ' ' + library.owner.lastName}}"></img>
+            <a href="{{library.owner|profileUrl}}" kf-track-origin="libraryList/invited">
+              <img class="library-icon-owner-img" ng-if="!library.isMine" ng-src="{{library.owner | pic:100}}" title="{{library.owner.firstName}} {{library.owner.lastName}}"></img>
             </a>
           </li>
         </ul>

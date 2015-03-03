@@ -4,9 +4,9 @@ angular.module('kifi')
 
 .directive('kfLibraryMenu', [
   '$document', '$interval', '$location', '$rootScope', '$window', '$timeout',
-  'friendService', 'libraryService', 'modalService', 'profileService', 'routeService', 'tagService', 'util',
+  'friendService', 'libraryService', 'modalService', 'profileService', 'tagService', 'util',
   function ($document, $interval, $location, $rootScope, $window, $timeout,
-  friendService, libraryService, modalService, profileService, routeService, tagService, util) {
+  friendService, libraryService, modalService, profileService, tagService, util) {
     return {
       restrict: 'A',
       replace: true,
@@ -174,10 +174,6 @@ angular.module('kifi')
 
         scope.toggleMyLibsFirst = function () {
           scope.sortingMenu.myLibsFirst = !scope.sortingMenu.myLibsFirst;
-        };
-
-        scope.getLibraryOwnerProfileUrl = function (library) {
-          return routeService.getProfileUrl(library.owner.username);
         };
 
         //

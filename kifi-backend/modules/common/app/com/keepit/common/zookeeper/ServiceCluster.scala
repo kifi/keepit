@@ -35,8 +35,8 @@ class ServiceCluster(val serviceType: ServiceType, airbrake: Provider[AirbrakeNo
   /**
    * using round robin, also use sick etc. instances if less than half of the instances ar UP.
    */
-  def nextService(): Option[ServiceInstance] = {
-    val upList = routingList.filter(_.isUp)
+  def nextService(serviceStatus: Option[ServiceStatus] = None): Option[ServiceInstance] = {
+    val upList = serviceStatus.map(stat => routingList.filter(_.remoteService.status == stat)).getOrElse(routingList.filter(_.isUp))
     val availableList = routingList.filter(_.isAvailable)
     val list = if (upList.length < availableList.length / 2.0) {
       availableList

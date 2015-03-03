@@ -75,24 +75,25 @@ angular.module('kifi')
       })
       .state('userProfile.libraries.own', {
         url: '',
-        templateUrl: 'userProfile/userProfileLibrariesList.tpl.html',
-        data: {
-          libraryType: 'own'
-        }
+        templateUrl: 'userProfile/userProfileLibrariesList.tpl.html'
       })
       .state('userProfile.libraries.following', {
         url: '/libraries/following',
-        templateUrl: 'userProfile/userProfileLibrariesList.tpl.html',
-        data: {
-          libraryType: 'following'
-        }
+        templateUrl: 'userProfile/userProfileLibrariesList.tpl.html'
       })
       .state('userProfile.libraries.invited', {
         url: '/libraries/invited',
-        templateUrl: 'userProfile/userProfileLibrariesList.tpl.html',
-        data: {
-          libraryType: 'invited'
-        }
+        templateUrl: 'userProfile/userProfileLibrariesList.tpl.html'
+      })
+      .state('userProfile.connections', {
+        url: '/connections',
+        templateUrl: 'userProfile/userProfileConnections.tpl.html',
+        controller: 'UserProfileConnectionsCtrl'
+      })
+      .state('userProfile.followers', {
+        url: '/followers',
+        templateUrl: 'userProfile/userProfileFollowers.tpl.html',
+        controller: 'UserProfileFollowersCtrl'
       })
 
       // ↓↓↓↓↓ Important: This needs to be last! ↓↓↓↓↓

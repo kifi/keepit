@@ -18,9 +18,9 @@
       </div>
     </a>
     <div>
-      <a class="kf-upl-card-owner" href="{{lib.ownerProfileUrl}}" kf-track-origin="{{currentPageOrigin}}/curator"
+      <a class="kf-upl-card-owner" href="{{lib.owner|profileUrl}}" kf-track-origin="{{currentPageOrigin}}/curator"
         ng-click="trackUplCardClick(lib, 'clickedLibraryCurator')">
-        <img class="kf-upl-card-owner-pic" ng-src="{{lib.ownerPicUrl}}" alt="{{lib.owner.firstName}} {{lib.owner.lastName}}" ng-if="libraryType !== 'own'">
+        <img class="kf-upl-card-owner-pic" ng-src="{{lib.owner | pic:100}}" alt="{{lib.owner.firstName}} {{lib.owner.lastName}}" ng-if="libraryType !== 'own'">
         <span class="kf-upl-card-by">by</span>
         <span class="kf-upl-card-by-name">{{lib.owner.firstName}} {{lib.owner.lastName}}</span>
       </a>
@@ -37,8 +37,8 @@
     <button ng-class="{'kf-upl-card-follow': true, 'kf-following': lib.following}" ng-if="lib.owner.id !== me.id" ng-click="onFollowButtonClick(lib, $event); trackUplCardClick(lib, 'clickedLibraryFollowButton')"></button>
     <div class="kf-upl-card-foot" ng-switch="profile.id === me.id && lib.visibility === 'published' && lib.owner.id === me.id && !lib.listed ? 'unlisted' : lib.followers.length ? 'followers' : lib.lastKept ? 'updated' : ''">
       <div class="kf-upl-followers" ng-switch-when="followers">
-        <a href="{{user.profileUrl}}" class="kf-upl-follower" ng-repeat="user in lib.followers" kf-track-origin="{{currentPageOrigin}}/follower" ng-click="trackUplCardClick(lib, 'clickedLibraryFollowersFace')"
-           ng-attr-style="background-image:url({{user.picUrl}})"></a>
+        <a href="{{user|profileUrl}}" class="kf-upl-follower" ng-repeat="user in lib.followers" kf-track-origin="{{currentPageOrigin}}/follower" ng-click="trackUplCardClick(lib, 'clickedLibraryFollowersFace')"
+           ng-attr-style="background-image:url({{user | pic:100}})"></a>
         <span ng-if="lib.numFollowers === lib.followers.length">
           <a href="javascript:" ng-click="openFollowersList(lib)" class="kf-upl-followers-number">
             <ng-pluralize class="kf-upl-all-followers" count="lib.numFollowers" when="{'1':'follows this library','other':'are following'}"></ng-pluralize>

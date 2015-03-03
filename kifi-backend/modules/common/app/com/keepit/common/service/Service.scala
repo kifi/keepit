@@ -31,7 +31,12 @@ sealed abstract class ServiceType(val name: String, val shortName: String, val l
 }
 
 object ServiceType {
-  case object SHOEBOX extends ServiceType("SHOEBOX", "SB")
+  case object SHOEBOX extends ServiceType("SHOEBOX", "SB") {
+    override def healthyStatus(instance: AmazonInstanceInfo): ServiceStatus = {
+      val capabilities = instance.capabilities
+      if (capabilities.contains(ServiceStatus.OFFLINE.name)) ServiceStatus.OFFLINE else ServiceStatus.UP
+    }
+  }
   case object ELIZA extends ServiceType("ELIZA", "EZ")
   case object HEIMDAL extends ServiceType("HEIMDAL", "HD", loadFactor = 2)
   case object ABOOK extends ServiceType("ABOOK", "AB", loadFactor = 2)

@@ -1,16 +1,5 @@
 @(title: String, scripts: List[String] = Nil, stylesheets: List[String] = Nil)(content: Html)(implicit request: com.keepit.common.controller.UserRequest[_])
 
-@quote(daQuote: com.keepit.common.admin.DouglasAdamsQuote) = {
-  <br>
-  <br>
-  <blockquote>
-    @daQuote.quote.map{ line =>
-      <p>@line</p>
-    }
-    <small>Douglas Adams <cite title="Source Title">"@daQuote.cite"</cite></small>
-  </blockquote>
-}
-
 <!DOCTYPE html>
 <html>
   <head>
@@ -160,7 +149,6 @@
     </header>
     <div class="container">
       @content
-      @quote(com.keepit.common.admin.DouglasAdamsQuotes.random)
     </div>
     <div class="integrity-reminder" style="background-image:url(//djty7jcqog9qu.cloudfront.net/users/@{request.user.externalId}/pics/100/@{request.user.pictureName}.jpg)">
       <img class="integrity-halo" src="/assets/images/halo.png">

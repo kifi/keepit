@@ -88,6 +88,25 @@ object LibraryAccess {
   def getAll() = Seq(OWNER, READ_WRITE, READ_INSERT, READ_ONLY)
 }
 
+case class CountWithLibraryIdByAccess(readOnly: Int, readInsert: Int, readWrite: Int, owner: Int)
+
+object CountWithLibraryIdByAccess {
+  val empty: CountWithLibraryIdByAccess = CountWithLibraryIdByAccess(0, 0, 0, 0)
+  implicit val format = Json.format[CountWithLibraryIdByAccess]
+  def fromMap(counts: Map[LibraryAccess, Int]): CountWithLibraryIdByAccess = {
+    CountWithLibraryIdByAccess(counts.getOrElse(LibraryAccess.READ_ONLY, 0), counts.getOrElse(LibraryAccess.READ_INSERT, 0), counts.getOrElse(LibraryAccess.READ_WRITE, 0), counts.getOrElse(LibraryAccess.OWNER, 0))
+  }
+}
+
+case class CountWithLibraryIdByAccessKey(id: Id[Library]) extends Key[CountWithLibraryIdByAccess] {
+  override val version = 1
+  val namespace = "count_lib_access"
+  def toKey(): String = id.id.toString
+}
+
+class CountWithLibraryIdByAccessCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[CountWithLibraryIdByAccessKey, CountWithLibraryIdByAccess](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+
 case class LibraryMembershipIdKey(id: Id[LibraryMembership]) extends Key[LibraryMembership] {
   override val version = 2
   val namespace = "library_membership_by_id"
@@ -107,13 +126,19 @@ class LibraryMembershipCountCache(stats: CacheStatistics, accessLog: AccessLog, 
   extends PrimitiveCacheImpl[LibraryMembershipCountKey, Int](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class FollowersCountKey(userId: Id[User]) extends Key[Int] {
-  override val version = 1
+  override val version = 2
   val namespace = "followers_count"
   def toKey(): String = s"$userId"
 }
 
 class FollowersCountCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends PrimitiveCacheImpl[FollowersCountKey, Int](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+
+case class MutualFollowersCountKey(ownerId: Id[User], friendId: Id[User]) extends Key[Int] {
+  override val version = 1
+  val namespace = "mutual_followers_count"
+  def toKey(): String = s"$ownerId:$friendId"
+}
 
 case class LibrariesWithWriteAccessUserKey(userId: Id[User]) extends Key[Set[Id[Library]]] {
   override val version = 1
@@ -123,3 +148,13 @@ case class LibrariesWithWriteAccessUserKey(userId: Id[User]) extends Key[Set[Id[
 
 class LibrariesWithWriteAccessCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends JsonCacheImpl[LibrariesWithWriteAccessUserKey, Set[Id[Library]]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+
+case class LibraryMembershipCountByLibIdAndAccessKey(libraryId: Id[Library], access: LibraryAccess) extends Key[Int] {
+  override val version = 1
+  val namespace = "library_membership_count_by_lib_id_and_access"
+  def toKey(): String = s"$libraryId:$access"
+}
+
+class LibraryMembershipCountByLibIdAndAccessCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends PrimitiveCacheImpl[LibraryMembershipCountByLibIdAndAccessKey, Int](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+

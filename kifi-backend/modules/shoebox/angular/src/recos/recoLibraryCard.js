@@ -3,10 +3,10 @@
 angular.module('kifi')
 
 .directive('kfRecoLibraryCard', [
-  '$FB', '$q', '$rootScope', '$timeout', '$twitter', 'env', 'friendService', 'libraryService',
-  'modalService','profileService', 'routeService', 'util',
-  function ($FB, $q, $rootScope, $timeout, $twitter, env, friendService, libraryService,
-    modalService, profileService, routeService, util) {
+  '$FB', '$q', '$rootScope', '$timeout', '$twitter', 'env', 'libraryService',
+  'modalService','profileService', 'util',
+  function ($FB, $q, $rootScope, $timeout, $twitter, env, libraryService,
+    modalService, profileService, util) {
     return {
       restrict: 'A',
       replace: true,
@@ -38,14 +38,6 @@ angular.module('kifi')
             scope.library.description = '';
           }
 
-          if (scope.library.owner) {
-            scope.library.owner.picUrl = friendService.getPictureUrlForUser(scope.library.owner);
-            scope.library.owner.profileUrl = routeService.getProfileUrl(scope.library.owner.username);
-          }
-
-          scope.library.followers = scope.library.followers || [];
-          scope.library.followers.forEach(augmentFollower);
-
           var maxLength = 150;
           if (scope.library.description.length > maxLength) {
             // Try to chop off at a word boundary, using a simple space as the word boundary delimiter.
@@ -76,21 +68,6 @@ angular.module('kifi')
           }
         }
 
-        function augmentFollower(follower) {
-          follower.picUrl = friendService.getPictureUrlForUser(follower);
-          follower.profileUrl = routeService.getProfileUrl(follower.username);
-          return follower;
-        }
-
-        function preloadSocial() {
-          if (!$FB.failedToLoad && !$FB.loaded) {
-            $FB.init();
-          }
-          if (!$twitter.failedToLoad && !$twitter.loaded) {
-            $twitter.load();
-          }
-        }
-
 
         //
         // Scope methods.
@@ -100,12 +77,20 @@ angular.module('kifi')
           scope.clippedDescription = false;
         };
 
+        scope.preloadFB = function () {
+          $FB.init();
+        };
+
         scope.shareFB = function () {
           trackShareEvent('clickedShareFacebook');
           $FB.ui({
             method: 'share',
             href: scope.library.shareFbUrl
           });
+        };
+
+        scope.preloadTwitter = function () {
+          $twitter.load();
         };
 
         scope.shareTwitter = function () {
@@ -158,7 +143,7 @@ angular.module('kifi')
               lib.numFollowers++;
               var me = profileService.me;
               if (!_.contains(lib.followers, {id: me.id})) {
-                lib.followers.push(augmentFollower(_.pick(me, 'id', 'firstName', 'lastName', 'pictureName', 'username')));
+                lib.followers.push(_.pick(me, 'id', 'firstName', 'lastName', 'pictureName', 'username'));
               }
             }
           }),
@@ -182,8 +167,6 @@ angular.module('kifi')
         scope.clippedDescription = false;
 
         augmentData();
-
-        $timeout(preloadSocial);
       }
     };
   }

@@ -5,8 +5,8 @@
   <h2 class="kf-add-friend-banner-title">{{friendRequestBannerHeader}}</h2>
 
   <div class="kf-add-friend-banner">
-    <a href="{{userProfileUrl}}">
-      <img class="kf-add-friend-banner-image" onerror="this.src='/assets/img/ghost.200.png'" ng-src="{{mainImage}}" />
+    <a href="{{user|profileUrl}}">
+      <img class="kf-add-friend-banner-image" onerror="this.src='/assets/img/ghost.200.png'" ng-src="{{user | pic:200}}" />
     </a>
     <span class="kf-add-friend-banner-who">
       <span class="kf-add-friend-banner-main-label" title="{{mainLabel}}">{{mainLabel}}</span>

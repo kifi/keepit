@@ -48,7 +48,7 @@ class MobileMessagingController @Inject() (
         notificationCommander.getLatestSendableNotifications(request.userId, howMany.toInt, includeUriSummary = true, filterByReplyable = Some(false))
     }
     noticesFuture.map { notices: Seq[com.keepit.eliza.commanders.NotificationJson] =>
-      val numUnreadUnmuted = messagingCommander.getUnreadUnmutedThreadCount(request.userId)
+      val numUnreadUnmuted = messagingCommander.getUnreadUnmutedThreadCount(request.userId, filterByReplyable = Some(false))
       Ok(Json.arr("notifications", notices.map(_.obj), numUnreadUnmuted))
     }
   }
@@ -61,7 +61,7 @@ class MobileMessagingController @Inject() (
         notificationCommander.getLatestSendableNotifications(request.userId, howMany.toInt, includeUriSummary = true, filterByReplyable = Some(true))
     }
     noticesFuture.map { notices: Seq[com.keepit.eliza.commanders.NotificationJson] =>
-      val numUnreadUnmuted = messagingCommander.getUnreadUnmutedThreadCount(request.userId)
+      val numUnreadUnmuted = messagingCommander.getUnreadUnmutedThreadCount(request.userId, filterByReplyable = Some(true))
       Ok(Json.arr("notifications", notices.map(_.obj), numUnreadUnmuted))
     }
   }
@@ -285,5 +285,17 @@ class MobileMessagingController @Inject() (
   def getUnreadNotificationsCount = UserAction { request =>
     val numUnreadUnmuted = messagingCommander.getUnreadUnmutedThreadCount(request.userId)
     Ok(numUnreadUnmuted.toString)
+  }
+
+  def markUnreadNotifications(kind: Option[String] = None) = UserAction { request =>
+    kind match {
+      case Some("system") =>
+        notificationCommander.setSystemNotificationsRead(request.userId) // mark system notifs as read
+      case Some("message") =>
+        notificationCommander.setMessageNotificationsRead(request.userId) // mark message notifs as read
+      case _ =>
+        notificationCommander.setAllNotificationsRead(request.userId) // mark all as read
+    }
+    NoContent
   }
 }

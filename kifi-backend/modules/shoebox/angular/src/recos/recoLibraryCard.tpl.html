@@ -11,8 +11,8 @@
           style="background-image:url({{coverImageUrl}});background-position:{{library.image.x}}% {{library.image.y}}%"></a>
         <div class="kf-rcl-info">
           <div class="kf-rcl-owner">
-            <a href="{{library.owner.profileUrl}}" kf-track-origin="recommendationsPage/curator">
-              <img src="{{library.owner.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}"
+            <a href="{{library.owner|profileUrl}}" kf-track-origin="recommendationsPage/curator">
+              <img ng-src="{{library.owner | pic:100}}"
                 class="kf-rcl-owner-image" alt="{{library.owner.firstName}} {{library.owner.lastName}}">
             </a>
             <div class="kf-rcl-owner-text">
@@ -49,10 +49,10 @@
           <button class="kf-button kf-rcl-unfollow-btn" ng-if="alreadyFollowingLibrary()" ng-click="unfollowLibrary()"></button>
           <button class="kf-button kf-rcl-follow-btn" ng-if="!alreadyFollowingLibrary()" ng-click="followLibrary()">Follow Library</button>
         </div>
-        <a class="kf-button kf-button-text-optional" ng-click="shareTwitter()" ng-href="https://twitter.com/intent/tweet?original_referer={{library.shareUrl}}&text={{library.shareText}}&tw_p=tweetbutton&url={{library.shareTwitterUrl}}">
+        <a class="kf-button kf-button-text-optional" ng-focus="preloadTwitter()" ng-mouseenter="preloadTwitter()" ng-click="shareTwitter()" ng-href="https://twitter.com/intent/tweet?original_referer={{library.shareUrl}}&text={{library.shareText}}&tw_p=tweetbutton&url={{library.shareTwitterUrl}}">
           <span class="kf-button-icon svg-twitter"></span> Tweet
         </a>
-        <button class="kf-button kf-button-text-optional" ng-click="shareFB()">
+        <button class="kf-button kf-button-text-optional" ng-focus="preloadFB()" ng-mouseenter="preloadFB()" ng-click="shareFB()">
           <span class="kf-button-icon svg-facebook"></span> Post
         </button>
       </div>

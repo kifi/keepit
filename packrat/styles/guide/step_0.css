@@ -25,18 +25,16 @@
   left: 0;
   width: 100%;
   text-align: center;
+  -webkit-transform: translate3d(0,-50%,0);
+  transform: translate3d(0,-50%,0);
   transition: -webkit-transform .5s ease-out;
   transition: transform .5s ease-out;
 }
 [kifi-p='1']>.kifi-guide-page {
-  -webkit-transform: translate3d(-100%,0,0);
-  transform: translate3d(-100%,0,0);
-}
-.kifi-guide-page-0 {
-  margin-top: -170px;
+  -webkit-transform: translate3d(-100%,-50%,0);
+  transform: translate3d(-100%,-50%,0);
 }
 .kifi-guide-page-1 {
-  margin-top: -200px;
   left: 100%;
 }
 .kifi-guide-pic {

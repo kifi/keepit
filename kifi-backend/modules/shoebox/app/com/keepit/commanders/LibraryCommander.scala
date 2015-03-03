@@ -10,7 +10,7 @@ import com.keepit.common.core._
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick.Database
-import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.db.{ SequenceNumber, State, ExternalId, Id }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.{ BasicContact, ElectronicMail, EmailAddress }
@@ -27,6 +27,7 @@ import com.kifi.macros.json
 import org.joda.time.DateTime
 import play.api.http.Status._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import views.html.admin.{ libraries, library }
 
@@ -73,7 +74,6 @@ class LibraryCommander @Inject() (
     libraryImageCommander: LibraryImageCommander,
     uriSummaryCommander: URISummaryCommander,
     experimentCommander: LocalUserExperimentCommander,
-    friendStatusCommander: FriendStatusCommander,
     userValueRepo: UserValueRepo,
     systemValueRepo: SystemValueRepo,
     implicit val publicIdConfig: PublicIdConfiguration,
@@ -120,7 +120,7 @@ class LibraryCommander @Inject() (
         val library = librariesById(libId)
         val owner = ownersById(library.ownerId)
         val keepCount = keepCountsByLibraryId(libId)
-        LibraryInfo.fromLibraryAndOwner(library, owner, keepCount, None)
+        LibraryInfo.fromLibraryAndOwner(library, None, owner, keepCount) // library images are not used, so no need to include
       }
     }
   }
@@ -152,7 +152,7 @@ class LibraryCommander @Inject() (
       if (library.visibility == LibraryVisibility.PUBLISHED || mine || following.get) {
         val owner = basicUserRepo.load(library.ownerId)
         val keepCount = keepRepo.getCountByLibrary(library.id.get)
-        val followerCount = libraryMembershipRepo.countWithLibraryIdByAccess(library.id.get).apply(LibraryAccess.READ_ONLY)
+        val followerCount = libraryMembershipRepo.countWithLibraryIdByAccess(library.id.get).readOnly
         Right(library, owner, keepCount, followerCount, following)
       } else {
         Left(LibraryFail(FORBIDDEN, "library_access_denied"))
@@ -160,8 +160,8 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def countFollowerInfosByLibraryId(libraries: Seq[Library], maxMembersShown: Int, viewerUserIdOpt: Option[Id[User]]): Map[Id[Library], (Seq[Id[User]], Map[LibraryAccess, Int])] = libraries.map { library =>
-    val info: (Seq[Id[User]], Map[LibraryAccess, Int]) = library.kind match {
+  def countFollowerInfosByLibraryId(libraries: Seq[Library], maxMembersShown: Int, viewerUserIdOpt: Option[Id[User]]): Map[Id[Library], (Seq[Id[User]], CountWithLibraryIdByAccess)] = libraries.map { library =>
+    val info: (Seq[Id[User]], CountWithLibraryIdByAccess) = library.kind match {
       case LibraryKind.USER_CREATED | LibraryKind.SYSTEM_PERSONA =>
         val (collaborators, followers, _, counts) = getLibraryMembers(library.id.get, 0, maxMembersShown, fillInWithInvites = false)
         val inviters: Seq[LibraryMembership] = viewerUserIdOpt.map { userId =>
@@ -176,7 +176,7 @@ class LibraryCommander @Inject() (
         val all = (inviters ++ collaborators.filter(!inviters.contains(_)) ++ followers.filter(!inviters.contains(_))).map(_.userId)
         (all, counts)
       case _ =>
-        (Seq.empty, Map.empty)
+        (Seq.empty, CountWithLibraryIdByAccess.empty)
     }
     library.id.get -> info
   }.toMap
@@ -246,8 +246,8 @@ class LibraryCommander @Inject() (
       libraries.map { library =>
         library.id.get -> SafeFuture {
           val counts = followerInfosByLibraryId(library.id.get)._2
-          val collaboratorCount = counts.getOrElse(LibraryAccess.READ_WRITE, 0)
-          val followerCount = counts.getOrElse(LibraryAccess.READ_INSERT, 0) + counts.getOrElse(LibraryAccess.READ_ONLY, 0)
+          val collaboratorCount = counts.readWrite
+          val followerCount = counts.readInsert + counts.readOnly
           val keepCount = keepCountsByLibraries.getOrElse(library.id.get, 0)
           (collaboratorCount, followerCount, keepCount)
         }
@@ -305,20 +305,22 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def getLibraryMembers(libraryId: Id[Library], offset: Int, limit: Int, fillInWithInvites: Boolean): (Seq[LibraryMembership], Seq[LibraryMembership], Seq[(Either[Id[User], EmailAddress], Set[LibraryInvite])], Map[LibraryAccess, Int]) = {
+  def getLibraryMembers(libraryId: Id[Library], offset: Int, limit: Int, fillInWithInvites: Boolean): (Seq[LibraryMembership], Seq[LibraryMembership], Seq[(Either[Id[User], EmailAddress], Set[LibraryInvite])], CountWithLibraryIdByAccess) = {
     val collaboratorsAccess: Set[LibraryAccess] = Set(LibraryAccess.READ_INSERT, LibraryAccess.READ_WRITE)
     val followersAccess: Set[LibraryAccess] = Set(LibraryAccess.READ_ONLY)
     val relevantInviteStates = Set(LibraryInviteStates.ACTIVE)
 
-    val memberCount = db.readOnlyMaster { implicit s => libraryMembershipRepo.countWithLibraryIdByAccess(libraryId) } //todo(eishay): not cached
+    val memberCount = db.readOnlyMaster { implicit s =>
+      libraryMembershipRepo.countWithLibraryIdByAccess(libraryId)
+    }
 
     if (limit > 0) db.readOnlyMaster { implicit session =>
       // Get Collaborators
       val collaborators = libraryMembershipRepo.pageWithLibraryIdAndAccess(libraryId, offset, limit, collaboratorsAccess) //not cached
       val collaboratorsShown = collaborators.length
 
-      val numCollaborators = memberCount(LibraryAccess.READ_INSERT) + memberCount(LibraryAccess.READ_WRITE)
-      val numMembers = numCollaborators + memberCount(LibraryAccess.READ_ONLY)
+      val numCollaborators = memberCount.readInsert + memberCount.readWrite
+      val numMembers = numCollaborators + memberCount.readOnly
 
       // Get Followers
       val followersLimit = limit - collaboratorsShown
@@ -342,7 +344,7 @@ class LibraryCommander @Inject() (
       }
       (collaborators, followers, inviteesWithInvites, memberCount)
     }
-    else (Seq.empty, Seq.empty, Seq.empty, memberCount)
+    else (Seq.empty, Seq.empty, Seq.empty, CountWithLibraryIdByAccess.empty)
   }
 
   def buildMaybeLibraryMembers(collaborators: Seq[LibraryMembership], followers: Seq[LibraryMembership], inviteesWithInvites: Seq[(Either[Id[User], EmailAddress], Set[LibraryInvite])]): Seq[MaybeLibraryMember] = {
@@ -713,6 +715,7 @@ class LibraryCommander @Inject() (
           val imgUrl = s3ImageStore.avatarUrlByExternalId(Some(200), inviter.externalId, inviter.pictureName, Some("https"))
           val inviterImage = if (imgUrl.endsWith(".jpg.jpg")) imgUrl.dropRight(4) else imgUrl // basicUser appends ".jpg" which causes an extra .jpg in this case
           val libLink = s"""https://www.kifi.com${Library.formatLibraryPath(libOwner.username, lib.slug)}"""
+          val libImageOpt = libraryImageCommander.getBestImageForLibrary(libId, ProcessedImageSize.Medium.idealSize)
 
           // send notifications to kifi users only
           val inviteeIdSet = invitesToPersist.map(_.userId).flatten.toSet
@@ -727,7 +730,7 @@ class LibraryCommander @Inject() (
             category = NotificationCategory.User.LIBRARY_INVITATION,
             extra = Some(Json.obj(
               "inviter" -> inviter,
-              "library" -> Json.toJson(LibraryNotificationInfo.fromLibraryAndOwner(lib, libOwner))
+              "library" -> Json.toJson(LibraryNotificationInfo.fromLibraryAndOwner(lib, libImageOpt, libOwner))
             ))
           )
 
@@ -880,6 +883,7 @@ class LibraryCommander @Inject() (
     val (follower, owner) = db.readOnlyReplica { implicit session =>
       userRepo.get(newFollowerId) -> basicUserRepo.load(lib.ownerId)
     }
+    val libImageOpt = libraryImageCommander.getBestImageForLibrary(lib.id.get, ProcessedImageSize.Medium.idealSize)
     elizaClient.sendGlobalNotification(
       userIds = Set(lib.ownerId),
       title = "New Library Follower",
@@ -891,7 +895,7 @@ class LibraryCommander @Inject() (
       category = NotificationCategory.User.LIBRARY_FOLLOWED,
       extra = Some(Json.obj(
         "follower" -> BasicUser.fromUser(follower),
-        "library" -> Json.toJson(LibraryNotificationInfo.fromLibraryAndOwner(lib, owner))
+        "library" -> Json.toJson(LibraryNotificationInfo.fromLibraryAndOwner(lib, libImageOpt, owner))
       ))
     )
   }
@@ -905,6 +909,7 @@ class LibraryCommander @Inject() (
       val usersById = userRepo.getUsers(newKeeps.map(_.userId) :+ library.ownerId)
       (relevantFollowers, usersById)
     }
+    val libImageOpt = libraryImageCommander.getBestImageForLibrary(library.id.get, ProcessedImageSize.Medium.idealSize)
     val owner = usersById(library.ownerId)
     newKeeps.foreach { newKeep =>
       val toBeNotified = relevantFollowers - newKeep.userId
@@ -922,7 +927,7 @@ class LibraryCommander @Inject() (
           category = NotificationCategory.User.NEW_KEEP,
           extra = Some(Json.obj(
             "keeper" -> basicKeeper,
-            "library" -> Json.toJson(LibraryNotificationInfo.fromLibraryAndOwner(library, basicKeeper)),
+            "library" -> Json.toJson(LibraryNotificationInfo.fromLibraryAndOwner(library, libImageOpt, basicKeeper)),
             "keep" -> Json.obj(
               "id" -> newKeep.externalId,
               "url" -> newKeep.url
@@ -934,7 +939,7 @@ class LibraryCommander @Inject() (
   }
 
   def joinLibrary(userId: Id[User], libraryId: Id[Library])(implicit eventContext: HeimdalContext): Either[LibraryFail, Library] = {
-    db.readWrite { implicit s =>
+    db.readWrite(attempts = 3) { implicit s =>
       val lib = libraryRepo.get(libraryId)
       val listInvites = libraryInviteRepo.getWithLibraryIdAndUserId(libraryId, userId)
 
@@ -1360,6 +1365,17 @@ class LibraryCommander @Inject() (
     }
   }
 
+  def countFollowers(userId: Id[User], viewer: Option[Id[User]]): Int = db.readOnlyReplica { implicit s =>
+    viewer match {
+      case None =>
+        libraryMembershipRepo.countFollowersFromAnonymous(userId)
+      case Some(id) if id == userId =>
+        libraryMembershipRepo.countFollowersForOwner(userId)
+      case Some(viewerId) =>
+        libraryMembershipRepo.countFollowersForOtherUser(userId, viewerId)
+    }
+  }
+
   private def getUserValueSetting(userId: Id[User], userVal: UserValueName)(implicit rs: RSession): Boolean = {
     val settingsJs = userValueRepo.getValue(userId, UserValues.userProfileSettings)
     UserValueSettings.retrieveSetting(userVal, settingsJs)
@@ -1439,13 +1455,18 @@ class LibraryCommander @Inject() (
     }
   }
 
-  private def createLibraryCardInfos(libs: Seq[Library], owners: Map[Id[User], BasicUser], viewer: Option[User], withFollowing: Boolean, idealSize: ImageSize)(implicit session: RSession): ParSeq[LibraryCardInfo] = {
-    val ownersWFS = if (viewer.isDefined && owners.keySet.exists(_ != viewer.get.id.get)) {
-      friendStatusCommander.augmentWithFriendStatus(viewer.get.id.get, owners)
-    } else {
-      owners mapValues BasicUserWithFriendStatus.fromWithoutFriendStatus
+  def getFollowersByViewer(userId: Id[User], viewer: Option[Id[User]]): Seq[Id[User]] = db.readOnlyMaster { implicit s =>
+    viewer match {
+      case None =>
+        libraryMembershipRepo.getFollowersFromAnonymous(userId)
+      case Some(id) if id == userId =>
+        libraryMembershipRepo.getFollowersForOwner(userId)
+      case Some(viewerId) =>
+        libraryMembershipRepo.getFollowersForOtherUser(userId, viewerId)
     }
+  }
 
+  private def createLibraryCardInfos(libs: Seq[Library], owners: Map[Id[User], BasicUser], viewer: Option[User], withFollowing: Boolean, idealSize: ImageSize)(implicit session: RSession): ParSeq[LibraryCardInfo] = {
     libs.par map { lib => // may want to optimize queries below into bulk queries
       val image = ProcessedImageSize.pickBestImage(idealSize, libraryImageRepo.getActiveForLibraryId(lib.id.get), false)
       val numKeeps = keepRepo.getCountByLibrary(lib.id.get)
@@ -1458,17 +1479,17 @@ class LibraryCommander @Inject() (
         (0, Seq.empty)
       }
 
-      val ownerWFS = ownersWFS(lib.ownerId)
-      val isFollowing = if (withFollowing && viewer.isDefined && viewer.get.externalId != ownerWFS.externalId) {
+      val owner = owners(lib.ownerId)
+      val isFollowing = if (withFollowing && viewer.isDefined && viewer.get.externalId != owner.externalId) {
         Some(libraryMembershipRepo.getWithLibraryIdAndUserId(lib.id.get, viewer.get.id.get).isDefined)
       } else {
         None
       }
-      createLibraryCardInfo(lib, image, ownerWFS, numKeeps, numFollowers, followersSample, isFollowing)
+      createLibraryCardInfo(lib, image, owner, numKeeps, numFollowers, followersSample, isFollowing)
     }
   }
 
-  private def createLibraryCardInfo(lib: Library, image: Option[LibraryImage], owner: BasicUserWithFriendStatus, numKeeps: Int, numFollowers: Int,
+  private def createLibraryCardInfo(lib: Library, image: Option[LibraryImage], owner: BasicUser, numKeeps: Int, numFollowers: Int,
     followers: Seq[BasicUser], isFollowing: Option[Boolean]): LibraryCardInfo = {
     LibraryCardInfo(
       id = Library.publicId(lib.id.get),

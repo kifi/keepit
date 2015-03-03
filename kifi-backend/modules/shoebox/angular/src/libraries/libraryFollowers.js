@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfLibraryFollowers', [
-  '$location', '$window', '$rootScope', 'friendService', 'libraryService', 'routeService',
-  function ($location, $window, $rootScope, friendService, libraryService, routeService) {
+  'libraryService',
+  function (libraryService) {
     return {
       restrict: 'A',
       require: '^kfModal',
@@ -42,22 +42,10 @@ angular.module('kifi')
                 scope.moreFollowers = true;
                 scope.offset += 1;
                 members = _.reject(members, function(m) { return m.lastInvitedAt; });
-                members.forEach(function (member) {
-                  member.picUrl = friendService.getPictureUrlForUser(member);
-                  member.profileUrl = routeService.getProfileUrl(member.username);
-                });
                 scope.followerList.push.apply(scope.followerList, members);
               }
             });
           }
-        }
-
-        function augmentLibrary() {
-          // The passed-in library may have owner information on different properties;
-          // normalize the properties (scope.library properties override scope.library.owner properties).
-          scope.library.owner = scope.library.owner || {};
-          scope.library.owner.picUrl = scope.library.ownerPicUrl || scope.library.owner.picUrl;
-          scope.library.owner.profileUrl = scope.library.ownerProfileUrl || scope.library.owner.profileUrl;
         }
 
         scope.close = function () {
@@ -68,9 +56,7 @@ angular.module('kifi')
         // On link.
         //
         if (scope.modalData) {
-          scope.library = _.cloneDeep(scope.modalData.library);
-          augmentLibrary();
-
+          scope.library = scope.modalData.library;
           scope.modalTitle = scope.library.name;
           scope.currentPageOrigin = scope.modalData.currentPageOrigin;
         }

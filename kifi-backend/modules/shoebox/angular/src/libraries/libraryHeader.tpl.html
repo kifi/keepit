@@ -38,9 +38,9 @@
           </div>
 
           <div class="kf-lh-owner" itemprop="creator" itemscope itemtype="http://schema.org/Person">
-            <a href="{{library.owner.profileUrl}}" itemprop="url"
+            <a href="{{library.owner|profileUrl}}" itemprop="url"
                kf-track-origin="libraryPage/curator">
-              <img class="kf-lh-owner-image" ng-src="{{library.owner.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}" itemprop="image" alt="{{library.owner.firstName}} {{library.owner.lastName}}">
+              <img class="kf-lh-owner-image" ng-src="{{library.owner | pic:100}}" itemprop="image" alt="{{library.owner.firstName}} {{library.owner.lastName}}">
             </a>
             <div class="kf-lh-owner-text">
               <div class="kf-lh-owner-label">Curator:</div>
@@ -85,12 +85,12 @@
             <span class="kf-button-icon svg-pen"></span> Manage Library
           </button>
         </div>
-        <a ng-if="isPublic()" class="kf-button kf-button-text-optional kf-lh-share-external" ng-click="shareTwitter()" ng-href="https://twitter.com/intent/tweet?original_referer={{library.shareUrl}}&text={{library.shareText}}&tw_p=tweetbutton&url={{library.shareTwitterUrl}}">
+        <a ng-if="isPublic()" class="kf-button kf-button-text-optional kf-lh-share-external" ng-focus="preloadTwitter()" ng-mouseenter="preloadTwitter()" ng-click="shareTwitter()" ng-href="https://twitter.com/intent/tweet?original_referer={{library.shareUrl}}&text={{library.shareText}}&tw_p=tweetbutton&url={{library.shareTwitterUrl}}">
           <span class="kf-button-icon svg-twitter"></span>
           <span class="kf-button-icon svg-twitter-white"></span><!-- for non-logged-in users -->
           Tweet
         </a>
-        <button ng-if="isPublic()" class="kf-button kf-button-text-optional kf-lh-share-external" ng-click="shareFB()">
+        <button ng-if="isPublic()" class="kf-button kf-button-text-optional kf-lh-share-external" ng-focus="preloadFB()" ng-mouseenter="preloadFB()" ng-click="shareFB()">
           <span class="kf-button-icon svg-facebook"></span>
           <span class="kf-button-icon svg-facebook-white"></span><!-- for non-logged-in users -->
           Post

@@ -1,5 +1,7 @@
 package com.keepit.model
 
+import com.keepit.commanders.{ UserConnectionRelationshipKey, UserConnectionRelationshipCache }
+
 import scala.concurrent.duration.Duration
 import com.google.inject.{ Inject, Singleton, ImplementedBy }
 import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, Key, CacheStatistics }
@@ -23,6 +25,7 @@ trait UserConnectionRepo extends Repo[UserConnection] with SeqNumberFunction[Use
   def addConnections(userId: Id[User], users: Set[Id[User]], requested: Boolean = false)(implicit session: RWSession)
   def unfriendConnections(userId: Id[User], users: Set[Id[User]])(implicit session: RWSession): Int
   def getConnectionCount(userId: Id[User])(implicit session: RSession): Int
+  def getMutualConnectionCount(user1: Id[User], user2: Id[User])(implicit session: RSession): Int
   def getConnectionCounts(userIds: Set[Id[User]])(implicit session: RSession): Map[Id[User], Int]
   def deactivateAllConnections(userId: Id[User])(implicit session: RWSession): Unit
   def getUserConnectionChanged(seq: SequenceNumber[UserConnection], fetchSize: Int)(implicit session: RSession): Seq[UserConnection]
@@ -44,6 +47,7 @@ class UserConnectionRepoImpl @Inject() (
   userConnectionRelationshipCache: UserConnectionRelationshipCache,
   val friendRequestRepo: FriendRequestRepo,
   val connCountCache: UserConnectionCountCache,
+  mutualConnCountCache: UserMutualConnectionCountCache,
   val userConnCache: UserConnectionIdCache,
   val basicUserConnCache: BasicUserConnectionIdCache,
   val unfriendedCache: UnfriendedConnectionsCache,
@@ -68,6 +72,7 @@ class UserConnectionRepoImpl @Inject() (
   }
 
   override def deleteCache(conn: UserConnection)(implicit session: RSession): Unit = {
+    mutualConnCountCache.remove(UserMutualConnectionCountKey(conn.user1, conn.user2))
     userConnectionRelationshipCache.remove(UserConnectionRelationshipKey(conn.user1, conn.user2))
     userConnectionRelationshipCache.remove(UserConnectionRelationshipKey(conn.user2, conn.user1))
     List(conn.user1, conn.user2) foreach invalidateCache
@@ -82,6 +87,15 @@ class UserConnectionRepoImpl @Inject() (
       } yield c).length).first
     }
   }
+
+  def getMutualConnectionCount(user1: Id[User], user2: Id[User])(implicit session: RSession): Int = {
+    mutualConnCountCache.getOrElse(UserMutualConnectionCountKey(user1, user2)) {
+      Query((for {
+        c <- rows if (c.user1 === user1 || c.user2 === user1) && (c.user1 === user2 || c.user2 === user1) && c.state === UserConnectionStates.ACTIVE
+      } yield c).length).first
+    }
+  }
+
   def getConnectionCounts(userIds: Set[Id[User]])(implicit session: RSession): Map[Id[User], Int] = {
     import StaticQuery.interpolation
     import scala.collection.JavaConversions._

@@ -47,7 +47,7 @@ object Persona {
     PersonaName.STUDENT -> "Student Resources",
     PersonaName.INVESTOR -> "Investing Ideas",
     PersonaName.TRAVELER -> "Travel Tips",
-    PersonaName.GAMER -> "Gaming News",
+    PersonaName.GAMER -> "Gaming Guides",
     PersonaName.PARENT -> "Parenting Gems",
     PersonaName.ANIMAL_LOVER -> "Animal Antics",
     PersonaName.DEEP_THINKER -> "Deep Thoughts")
@@ -56,139 +56,139 @@ object Persona {
 
   val keeps: Map[PersonaName, PersonaKeep] = Map(
     PersonaName.DEVELOPER -> PersonaKeep(
-      title = "Top 10 Professional Sample Code Websites For Programmers",
-      url = "http://www.makeuseof.com/tag/top-10-professional-sample-code-websites-for-programmers/",
-      image = PersonaKeepImageInfo("//d1dwdv9wd966qu.cloudfront.net/img/guide/sample_websites.b87fdb6.jpg", 480, 394),
+      title = "Good Tech Lead, Bad Tech Lead",
+      url = "https://medium.com/@jliszka/good-tech-lead-bad-tech-lead-948b2b806d86",
+      image = PersonaKeepImageInfo("//d1dwdv9wd966qu.cloudfront.net/img/guide/sampleCode_480x496.c4766ec.png", 480, 496),
       noun = "blog post",
-      query = "sample+codes",
-      matches = createMatchJson(Seq((20, 6), (27, 4)), Seq((49, 6), (56, 4))),
-      track = "sampleCodeDeveloperPersona"
+      query = "tech+lead",
+      matches = createMatchJson(Seq((5,4),(10,4),(20,4), (25,4)), Seq((33,4),(38,4),(48,4),(53,4))),
+      track = "techLeadDeveloperPersona"
     ),
     PersonaName.TECHIE -> PersonaKeep(
-      title = "The Rise Of Nostalgia Tech",
-      url = "http://www.fastcoexist.com/3020622/the-rise-of-nostalgia-tech",
-      image = PersonaKeepImageInfo("//d1dwdv9wd966qu.cloudfront.net/img/guide/nostalgia_tech.0232540.jpg", 480, 358),
-      noun = "article",
-      query = "tech+trends",
-      matches = createMatchJson(Seq((22, 4)), Seq((57, 4))),
-      track = "nostalgiaTechiePersona"
+      title = "The Mind Behind Tesla, SpaceX, and SolarCity",
+      url = "http://www.ted.com/talks/elon_musk_the_mind_behind_tesla_spacex_solarcity",
+      image = PersonaKeepImageInfo("//d1dwdv9wd966qu.cloudfront.net/img/guide/superintelMachines_480x486.8a5cca9.png", 480, 486),
+      noun = "video",
+      query = "elon+musk",
+      matches = createMatchJson(Seq(), Seq((25,4),(30,4))),
+      track = "elonMuskTechiePersona"
     ),
     PersonaName.ENTREPRENEUR -> PersonaKeep(
       title = "11 Famous Entrepreneurs Share How They Overcame Their Biggest Failure",
       url = "http://www.fastcompany.com/3029883/bottom-line/11-famous-entrepreneurs-share-how-they-overcame-their-biggest-failure",
-      image = PersonaKeepImageInfo("//d1dwdv9wd966qu.cloudfront.net/img/guide/moving_cultures.542973a.jpg", 480, 372),
+      image = PersonaKeepImageInfo("//d1dwdv9wd966qu.cloudfront.net/img/guide/entrepreneurFail_480x496.69e55bb.png", 480, 496),
       noun = "blog post",
       query = "entrepreneurship",
       matches = createMatchJson(Seq((10, 13)), Seq((57, 13))),
       track = "biggestFailureEntrepreneurPersona"
     ),
     PersonaName.ARTIST -> PersonaKeep(
-      title = "Six Things You May Not Know About the Louvre",
-      url = "http://www.history.com/news/six-things-you-may-not-know-about-the-louvre",
-      image = PersonaKeepImageInfo("//d1dwdv9wd966qu.cloudfront.net/img/guide/louvre.e60b47d.jpg", 480, 414),
-      noun = "article",
-      query = "the+louvre",
-      matches = createMatchJson(Seq((38, 6)), Seq((66, 6))),
-      track = "louvreArtistPersona"
+      title = "My wish: Use art to turn the world inside out",
+      url = "https://www.ted.com/talks/jr_s_ted_prize_wish_use_art_to_turn_the_world_inside_out",
+      image = PersonaKeepImageInfo("//d1dwdv9wd966qu.cloudfront.net/img/guide/louvre_480x510.06af404.png", 480 ,510),
+      noun = "video",
+      query = "art",
+      matches = createMatchJson(Seq((13,3)), Seq((50,3))),
+      track = "tedArtArtistPersona"
     ),
     PersonaName.FOODIE -> PersonaKeep(
       title = "The Beginner’s Guide to Dim Sum",
       url = "http://luckypeach.com/the-beginners-field-guide-to-dim-sum/",
-      image = PersonaKeepImageInfo("//d1dwdv9wd966qu.cloudfront.net/img/guide/dim_sum.2facf8d.jpg", 480, 418),
+      image = PersonaKeepImageInfo("//d1dwdv9wd966qu.cloudfront.net/img/guide/dimsum_480x486.1cf8744.png", 480, 486),
       noun = "page",
       query = "dim+sum",
       matches = createMatchJson(Seq((24, 3), (28, 3)), Seq((51, 3), (55, 3))),
       track = "dimSumFoodiePersona"
     ),
     PersonaName.SCIENCE_BUFF -> PersonaKeep(
-      title = "The Physics of Popcorn",
-      url = "http://www.nytimes.com/video/science/100000003510016/the-physics-of-popcorn.html",
-      image = PersonaKeepImageInfo("//d1dwdv9wd966qu.cloudfront.net/img/guide/physics_popcorn.95caf57.jpg", 480, 368),
-      noun = "video",
-      query = "popcorn",
-      matches = createMatchJson(Seq((15, 7)), Seq((68, 7))),
-      track = "popcornSciencePersona"
+      title = "How the Universe Made the Stuff That Made Us",
+      url = "http://nautil.us/blog/how-the-universe-made-the-stuff-that-made-us",
+      image = PersonaKeepImageInfo("//d1dwdv9wd966qu.cloudfront.net/img/guide/universeMade_480x510.fe3bb0a.png", 480, 510),
+      noun = "article",
+      query = "universe",
+      matches = createMatchJson(Seq((8, 8)), Seq((30, 8))),
+      track = "universeSciencePersona"
     ),
     PersonaName.FASHIONISTA -> PersonaKeep(
-      title = "7 Habits of Highly Stylish People",
-      url = "http://stylecaster.com/the-7-habits-of-highly-stylish-people/",
-      image = PersonaKeepImageInfo("//d1dwdv9wd966qu.cloudfront.net/img/guide/style_habits.59313d9.jpg", 480, 366),
-      noun = "page",
-      query = "habits+of+stylish+people",
-      matches = createMatchJson(Seq((2, 6), (19, 7), (27, 6)), Seq((29, 6), (46, 7), (54, 6))),
-      track = "styleHabitsFashionPersona"
+      title = "Isaac Mizrahi on Fashion & Creativity",
+      url = "http://www.ted.com/talks/isaac_mizrahi_on_fashion_and_creativity?language=en",
+      image = PersonaKeepImageInfo("//d1dwdv9wd966qu.cloudfront.net/img/guide/isaacMizrah_480x450.a2aa7b4.png", 480, 450),
+      noun = "video",
+      query = "isaac+mizrahi",
+      matches = createMatchJson(Seq((0, 5), (6, 7)), Seq((25, 5), (31, 7))),
+      track = "isaacMizrahiFashionPersona"
     ),
     PersonaName.HEALTH_NUT -> PersonaKeep(
-      title = "We make exercise way too complicated. Here's how to get it right.",
-      url = "http://www.vox.com/2014/12/17/7405451/best-workout-perfect-body",
-      image = PersonaKeepImageInfo("//d1dwdv9wd966qu.cloudfront.net/img/guide/complicated_fitness.6fbb321.jpg", 480, 366),
+      title = "Where does the fat go when you lose it?",
+      url = "http://www.washingtonpost.com/news/to-your-health/wp/2014/12/16/where-does-the-fat-go-when-you-lose-it-hint-the-fat-fairy-is-not-involved/",
+      image = PersonaKeepImageInfo("//d1dwdv9wd966qu.cloudfront.net/img/guide/fatFairy_480x500.c54da4d.png", 480, 500),
       noun = "article",
-      query = "exercise+and+working+out",
-      matches = createMatchJson(Seq((8, 8)), Seq((43, 7))),
-      track = "complicatedFitnessHealthPersona"
+      query = "losing+fat",
+      matches = createMatchJson(Seq((15, 3), (31, 4)), Seq((79, 3), (95, 4), (112, 3))),
+      track = "fatFairyHealthPersona"
     ),
     PersonaName.STUDENT -> PersonaKeep(
       title = "This Diagram Shows Cornell's Revolutionary Method For Taking Notes",
       url = "http://www.businessinsider.com/cornell-perfect-way-to-take-notes-2014-12",
-      image = PersonaKeepImageInfo("//d1dwdv9wd966qu.cloudfront.net/img/guide/cornell_note_taking.649e168.jpg", 480, 490),
+      image = PersonaKeepImageInfo("//d1dwdv9wd966qu.cloudfront.net/img/guide/cornellNotes_480x528.ea34a6e.png", 480, 528),
       noun = "article",
       query = "cornell+note+taking",
       matches = createMatchJson(Seq((19, 7), (54, 6), (61, 5)), Seq((31, 7), (54, 4), (59, 5))),
       track = "cornellNotesStudentPersona"
     ),
     PersonaName.INVESTOR -> PersonaKeep(
-      title = "What To Do With An Old Mutual Funds Investment",
-      url = "http://www.forbes.com/sites/mitchelltuchman/2013/09/12/what-to-do-with-an-old-mutual-funds-investment/",
-      image = PersonaKeepImageInfo("//d1dwdv9wd966qu.cloudfront.net/img/guide/old_mutual_fund.fad0ee0.jpg", 480, 382),
+      title = "The Power of a Zero-Sum Budget",
+      url = "http://lifehacker.com/the-power-of-a-zero-sum-budget-1443100021",
+      image = PersonaKeepImageInfo("//d1dwdv9wd966qu.cloudfront.net/img/guide/zeroSumBudget_480x450.559f05a.png", 480, 450),
       noun = "article",
-      query = "old+mutual+funds",
-      matches = createMatchJson(Seq((19, 3), (23, 6), (30, 5)), Seq((74, 3), (78, 6), (85, 5))),
-      track = "oldMutualFundsInvestorPersona"
+      query = "zero+sum+budget",
+      matches = createMatchJson(Seq((15, 4), (20, 3), (24, 6)), Seq((37, 4), (42, 3), (46, 6))),
+      track = "zeroSumInvestorPersona"
     ),
     PersonaName.TRAVELER -> PersonaKeep(
       title = "Lessons Learned From Visiting Every Country in the World",
       url = "http://www.fluentin3months.com/8-lessons-learned-from-visiting-every-country-in-the-world/",
-      image = PersonaKeepImageInfo("//d1dwdv9wd966qu.cloudfront.net/img/guide/fluent_in_3_months.0451c12.jpg", 480, 356),
+      image = PersonaKeepImageInfo("//d1dwdv9wd966qu.cloudfront.net/img/guide/travelCountries_480x500.4c50408.png", 480, 500),
       noun = "blog post",
       query = "visit+every+country",
       matches = createMatchJson(Seq((21, 5), (30, 5), (36, 7)), Seq((54, 5), (63, 5), (69, 7))),
       track = "visitEveryCountryTravelerPersona"
     ),
     PersonaName.GAMER -> PersonaKeep(
-      title = "30 Best Text-Adventures/Interactive-Fiction Games Over 5 Decades",
-      url = "http://www.gamingenthusiast.net/best-text-adventures-best-interactive-fiction-games/",
-      image = PersonaKeepImageInfo("//d1dwdv9wd966qu.cloudfront.net/img/guide/best_adventure_games.9038bc2.jpg", 480, 506),
+      title = "The Board Game of the Alpha Nerds",
+      url = "http://fivethirtyeight.com/features/designing-the-best-board-game-on-the-planet/",
+      image = PersonaKeepImageInfo("//d1dwdv9wd966qu.cloudfront.net/img/guide/boardGame_480x492.48e7e65.png", 480, 492),
       noun = "blog post",
-      query = "best+adventure+games",
-      matches = createMatchJson(Seq((3, 4), (13, 10), (44, 5)), Seq((32, 4), (42, 10), (78, 5))),
-      track = "bestAdventureGamesGamerPersona"
+      query = "board+games",
+      matches = createMatchJson(Seq((5, 5), (11, 4)), Seq((55, 5), (61, 4))),
+      track = "alphaNerdGamerPersona"
     ),
     PersonaName.PARENT -> PersonaKeep(
-      title = "What Happens to a Woman's Brain When She Becomes a Mother",
-      url = "http://www.theatlantic.com/health/archive/2015/01/what-happens-to-a-womans-brain-when-she-becomes-a-mother/384179/",
-      image = PersonaKeepImageInfo("//d1dwdv9wd966qu.cloudfront.net/img/guide/mothers_brain.bff7abe.jpg", 480, 384),
-      noun = "article",
-      query = "mothers+brain",
-      matches = createMatchJson(Seq((26, 5), (51, 6)), Seq((75, 5), (100, 6))),
-      track = "motherBrainParentPersona"
+      title = "Should You Teach Your Kids to Share",
+      url = "http://www.popsugar.com/moms/Should-You-Teach-Kids-Share-27333250",
+      image = PersonaKeepImageInfo("//d1dwdv9wd966qu.cloudfront.net/img/guide/shareKids_480x446.c976f3c.png", 480, 446),
+      noun = "blog post",
+      query = "kids+and+sharing",
+      matches = createMatchJson(Seq((22, 4), (30, 5)), Seq((46, 4), (51, 5))),
+      track = "shareKidsParentPersona"
     ),
     PersonaName.ANIMAL_LOVER -> PersonaKeep(
-      title = "How a Kitty Walked 200 Miles Home: The Science of Your Cat’s Inner Compass",
-      url = "http://science.time.com/2013/02/11/the-mystery-of-the-geolocating-cat/",
-      image = PersonaKeepImageInfo("//d1dwdv9wd966qu.cloudfront.net/img/guide/geolocating_cat.27ac02f.jpg", 480, 402),
+      title = "What Can We Learn From How Animals Cope?",
+      url = "http://ideas.ted.com/animal_madness/",
+      image = PersonaKeepImageInfo("//d1dwdv9wd966qu.cloudfront.net/img/guide/geolocatingCat_480x480.631b510.png", 480, 480),
       noun = "article",
-      query = "geolocating+cat",
-      matches = createMatchJson(Seq((55, 3)), Seq((54, 11), (66, 3))),
-      track = "geolocatingCatAnimalLoverPersona"
+      query = "how+animals+cope",
+      matches = createMatchJson(Seq((23,3),(27,7),(35,4)), Seq((21,6))),
+      track = "copingAnimalLoverPersona"
     ),
     PersonaName.DEEP_THINKER -> PersonaKeep(
-      title = "How Cultures Move Across Continents = Goats and Soda",
-      url = "http://www.npr.org/blogs/goatsandsoda/2014/08/01/336646562/how-cultures-move-across-continents",
-      image = PersonaKeepImageInfo("//d1dwdv9wd966qu.cloudfront.net/img/guide/moving_cultures.542973a.jpg", 480, 412),
+      title = "What happened to Downtime?",
+      url = "http://99u.com/articles/6947/what-happened-to-downtime-the-extinction-of-deep-thinking-sacred-space",
+      image = PersonaKeepImageInfo("//d1dwdv9wd966qu.cloudfront.net/img/guide/downtime_480x488.a4b4da2.png", 480, 488),
       noun = "blog post",
-      query = "cultures+across+continents",
-      matches = createMatchJson(Seq((4, 8), (8, 6), (25, 10)), Seq((63, 8), (77, 6), (84, 10))),
-      track = "culturesDeepThinkerPersona"
+      query = "downtime",
+      matches = createMatchJson(Seq((17, 8)), Seq((46, 8))),
+      track = "downtimeDeepThinkerPersona"
     )
   )
 

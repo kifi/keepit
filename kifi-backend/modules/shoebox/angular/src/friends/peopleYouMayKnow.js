@@ -25,8 +25,10 @@ angular.module('kifi')
             return {
               id: person.id,
               fullName: person.firstName + ' ' + person.lastName,
+              // TODO: remove pictureUrl when wtiService is removed
               pictureUrl: routeService.formatPicUrl(person.id, person.pictureName, 100),
-              profileUrl: routeService.getProfileUrl(person.username),
+              pictureName: person.pictureName,
+              username: person.username,
               actionText: 'Connect',
               clickable: true,
               isKifiUser: true,
@@ -106,7 +108,7 @@ angular.module('kifi')
         scope.showMutualFriends = function (person) {
           modalService.open({
             template: 'friends/seeMutualFriendsModal.tpl.html',
-            modalData: { savedPymk: person }
+            modalData: person
           });
         };
 

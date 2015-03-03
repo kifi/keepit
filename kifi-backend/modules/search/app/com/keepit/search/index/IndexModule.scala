@@ -1,6 +1,7 @@
 package com.keepit.search.index
 
 import com.keepit.common.zookeeper.ServiceDiscovery
+import com.keepit.search.index.graph.library.membership.{ LibraryMembershipIndexerPluginImpl, LibraryMembershipIndexerPlugin, LibraryMembershipIndexer }
 import net.codingwell.scalaguice.ScalaModule
 import com.keepit.common.amazon.MyInstanceInfo
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -69,6 +70,7 @@ trait IndexModule extends ScalaModule with Logging {
     bind[UserGraphPlugin].to[UserGraphPluginImpl].in[AppScoped]
     bind[SearchFriendGraphPlugin].to[SearchFriendGraphPluginImpl].in[AppScoped]
     bind[LibraryIndexerPlugin].to[LibraryIndexerPluginImpl].in[AppScoped]
+    bind[LibraryMembershipIndexerPlugin].to[LibraryMembershipIndexerPluginImpl].in[AppScoped]
     bind[KeepIndexerPlugin].to[KeepIndexerPluginImpl].in[AppScoped]
   }
 
@@ -184,6 +186,14 @@ trait IndexModule extends ScalaModule with Logging {
     val libraryDir = getIndexDirectory("index.library.directory", noShard, version, backup, conf, IndexerVersionProviders.Library.getVersionsForCleanup())
     log.info(s"storing library index ${indexNameSuffix(noShard, version)} in $libraryDir")
     new LibraryIndexer(libraryDir, shoebox, airbrake)
+  }
+
+  @Provides @Singleton
+  def libraryMembershipIndexer(backup: IndexStore, shoebox: ShoeboxServiceClient, airbrake: AirbrakeNotifier, conf: Configuration, serviceDisovery: ServiceDiscovery): LibraryMembershipIndexer = {
+    val version = IndexerVersionProviders.LibraryMembership.getVersionByStatus(serviceDisovery)
+    val libraryDir = getIndexDirectory("index.libraryMembership.directory", noShard, version, backup, conf, IndexerVersionProviders.LibraryMembership.getVersionsForCleanup())
+    log.info(s"storing library membership index ${indexNameSuffix(noShard, version)} in $libraryDir")
+    new LibraryMembershipIndexer(libraryDir, shoebox, airbrake)
   }
 
   @Provides @Singleton

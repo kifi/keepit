@@ -1,5 +1,5 @@
-@()
-
+@(name: String, picture: String, purposeDrivenInstall: Boolean = false)
+@import com.keepit.controllers.core.routes.{AuthController => authRoutes}
 @headHtml = {
   <link rel="stylesheet" type="text/css" href="/assets/ml/css/authentication.css">
 }
@@ -10,15 +10,19 @@
         <div class="image_container target">
           <div class="image-inner"></div>
           <div class="image-upload-wrapper">
-            <a href="#" class="image-upload placeholder" style="background-image:url('https://djty7jcqog9qu.cloudfront.net/users/2d8b2fd1-1346-4b9e-9d56-573ce9f9b2f7/pics/200/aCiYX.jpg');"></a>
+            <span class="image-upload placeholder" style="background-image:url('@picture');"></span>
           </div>
         </div>
-        <h3 class="light small">Almost done, <span class="weight400">Sterling</span></h3>
-        <h3 class="small">Where should we send instructions?</h3>
-        <form class="signup-form" method="#" post="#">
+        <h3 class="light small">Almost done, <span class="weight400">@name</span></h3>
+        @if(purposeDrivenInstall) {
+          <h3 class="small">Where should we send instructions?</h3>
+        } else {
+          <h3 class="small">What’s your email address?</h3>
+        }
+        <form class="signup-form signup-email" method="POST" action="@authRoutes.socialFinalizeAccountAction()">
           <div class="input-wrapper">
-            <input type="text" name="email" class="form-input email" placeholder="Enter email address">
-            <div id="signup-email" class="error"></div>
+            <input type="email" name="email" class="form-input email" placeholder="Enter email address">
+            <div id="error-signup-email" class="error"></div>
           </div>
 
           <button id="signup-complete-btn" class="btn-authentication btn-done" type="submit">Done</button>

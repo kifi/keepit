@@ -8,20 +8,20 @@ import com.keepit.commanders.emails.EmailSenderProvider
 import com.keepit.commanders.{ ConnectionInfo, _ }
 import com.keepit.common.controller._
 import com.keepit.common.db.slick._
+import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.http._
 import com.keepit.common.mail.{ EmailAddress, _ }
-import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.{ ImageCropAttributes, S3ImageStore }
 import com.keepit.common.time._
 import com.keepit.controllers.core.NetworkInfoLoader
-import com.keepit.eliza.ElizaServiceClient
 import com.keepit.heimdal.{ BasicDelightedAnswer, DelightedAnswerSources }
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
 import com.keepit.social.BasicUser
+
 import play.api.data.Form
 import play.api.data.Forms._
 import play.api.libs.Comet
@@ -45,7 +45,6 @@ class UserController @Inject() (
     userConnectionRepo: UserConnectionRepo,
     emailRepo: UserEmailAddressRepo,
     userValueRepo: UserValueRepo,
-    socialConnectionRepo: SocialConnectionRepo,
     socialUserRepo: SocialUserInfoRepo,
     invitationRepo: InvitationRepo,
     networkInfoLoader: NetworkInfoLoader,
@@ -54,18 +53,12 @@ class UserController @Inject() (
     postOffice: LocalPostOffice,
     userConnectionsCommander: UserConnectionsCommander,
     userCommander: UserCommander,
-    elizaServiceClient: ElizaServiceClient,
     clock: Clock,
     s3ImageStore: S3ImageStore,
     abookServiceClient: ABookServiceClient,
     airbrakeNotifier: AirbrakeNotifier,
-    authCommander: AuthCommander,
-    searchClient: SearchServiceClient,
     abookUploadConf: ABookUploadConf,
     emailSender: EmailSenderProvider,
-    libraryCommander: LibraryCommander,
-    libraryInviteRepo: LibraryInviteRepo,
-    basicUserRepo: BasicUserRepo,
     fortytwoConfig: FortyTwoConfig) extends UserActions with ShoeboxServiceController {
 
   def friends(page: Int, pageSize: Int) = UserAction { request =>
@@ -85,15 +78,6 @@ class UserController @Inject() (
       "friends" -> friendsJsons,
       "total" -> total
     ))
-  }
-
-  def friendCount() = UserAction { request =>
-    db.readOnlyMaster { implicit s =>
-      Ok(Json.obj(
-        "friends" -> userConnectionRepo.getConnectionCount(request.userId),
-        "requests" -> friendRequestRepo.getCountByRecipient(request.userId)
-      ))
-    }
   }
 
   def socialNetworkInfo() = UserAction { request =>
@@ -590,75 +574,6 @@ class UserController @Inject() (
       }
     }
     Status(200).chunked(returnEnumerator.andThen(Enumerator.eof))
-  }
-
-  def profile(username: Username) = MaybeUserAction { request =>
-    val viewer = request.userOpt
-    userCommander.profile(username, viewer) match {
-      case None =>
-        log.warn(s"can't find username ${username.value}")
-        NotFound(s"username ${username.value}")
-      case Some(profile) =>
-        val (numLibraries, numInvitedLibs) = libraryCommander.countLibraries(profile.userId, viewer.map(_.id.get))
-
-        val json = Json.toJson(profile.basicUserWithFriendStatus).as[JsObject] ++ Json.obj(
-          "numLibraries" -> numLibraries,
-          "numKeeps" -> profile.numKeeps
-        )
-        numInvitedLibs match {
-          case Some(numInvited) =>
-            Ok(json ++ Json.obj("numInvitedLibraries" -> numInvited))
-          case _ =>
-            Ok(json)
-        }
-    }
-  }
-
-  def profileConnections(username: Username, limit: Int, userExtIds: String) = MaybeUserAction.async { request =>
-    userCommander.userFromUsername(username) match {
-      case None =>
-        log.warn(s"can't find username ${username.value}")
-        Future.successful(NotFound(s"username ${username.value}"))
-      case Some(user) =>
-        val viewerId = request.userIdOpt.getOrElse(user.id.get)
-        if (userExtIds.isEmpty) {
-          userConnectionsCommander.getConnectionsSortedByRelationship(viewerId, user.id.get) map { connections =>
-            val head = connections.take(limit)
-            val userMap = db.readOnlyMaster { implicit s =>
-              basicUserRepo.loadAll(head.toSet)
-            }
-            val users = head.map(u => userMap(u))
-            Ok(Json.obj("users" -> users, "count" -> connections.size))
-          }
-        } else {
-          Try(userExtIds.split(',').map(ExternalId[User])) match {
-            case Success(userIds) =>
-              val users = db.readOnlyMaster { implicit s =>
-                userIds.map(userRepo.getOpt).flatten
-              }
-              Future.successful(Ok(Json.obj("users" -> users.map(BasicUser.fromUser))))
-            case _ =>
-              Future.successful(BadRequest("ids invalid"))
-          }
-        }
-    }
-  }
-
-  def profileConnectionIds(username: Username, limit: Int) = MaybeUserAction.async { request =>
-    userCommander.userFromUsername(username) match {
-      case None =>
-        log.warn(s"can't find username ${username.value}")
-        Future.successful(NotFound(s"username ${username.value}"))
-      case Some(user) =>
-        val viewerId = request.userIdOpt.getOrElse(user.id.get)
-        userConnectionsCommander.getConnectionsSortedByRelationship(viewerId, user.id.get) map { connections =>
-          val userMap = db.readOnlyMaster { implicit s =>
-            basicUserRepo.loadAll(connections.take(limit).toSet)
-          }
-          val ids = connections.flatMap(u => userMap.get(u)).map(_.externalId)
-          Ok(Json.obj("ids" -> ids))
-        }
-    }
   }
 
   def getSettings() = UserAction { request =>

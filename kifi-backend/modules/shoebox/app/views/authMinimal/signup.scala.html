@@ -1,0 +1,38 @@
+@()
+@import com.keepit.controllers.core.routes.{AuthController => authRoutes}
+@headHtml = {
+  <link rel="stylesheet" type="text/css" href="/assets/ml/css/authentication.css">
+}
+@content = {
+  <div class="page">
+    <h1 class="login-h1">Create your Kifi account</h1>
+    <div id="center_container">
+      <div class="left">
+        <h3>Use your social network</h3>
+        <a href="/signup/twitter" class="auth_button twitter" data-track-action="clickAuthTwitter"><span class="twitter"><i class="i-tbtn"></i></span><span class="twittertext">Twitter</span></a>
+        <a href="/signup/facebook" class="auth_button facebook" data-track-action="clickAuthFacebook"><span class="fb"><i class="i-fbtn"></i></span><span class="fbtext">Facebook</span></a>
+      </div>
+      <div class="right border-left">
+        <h3>Use your email address</h3>
+        <form class="signup-form signup-email-pass" method="POST" action="@authRoutes.userPasswordSignup">
+          <div class="input-wrapper">
+            <input type="email" name="email" class="form-input signup-email" placeholder="Your email address">
+            <div id="login-email" class="error"></div>
+          </div>
+          <div class="input-wrapper">
+            <input type="password" name="password" class="form-input signup-password" placeholder="Your password">
+            <div id="login-password" class="error"></div>
+          </div>
+          <button id="login-btn" class="btn-authentication btn-login" type="submit">Signup</button>
+        </form>
+      </div>
+    </div>
+  </div>
+}
+@scripts = {
+  <script src="/assets/ml/js/authentication.js"></script>
+}
+
+@minimal.layout(content = content, htmlClass = "signup-page", headHtml = headHtml, scripts = scripts, footerClass = "join")
+
+

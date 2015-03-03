@@ -26,10 +26,9 @@ class RecommendationsController @Inject() (
     commander.adHocRecos(request.userId, n, scores).map(fkis => Ok(Json.toJson(fkis)))
   }
 
-  def topRecosV2(recencyWeight: Float, uriContext: Option[String], libContext: Option[String]) = UserAction.async { request =>
-    log.info(s"uriContex: ${uriContext.getOrElse("null")}, libContext: ${libContext.getOrElse("null")}")
-    val libRecosF = commander.topPublicLibraryRecos(request.userId, 10, RecommendationSource.Site, RecommendationSubSource.RecommendationsFeed, context = uriContext)
-    val uriRecosF = commander.topRecos(request.userId, RecommendationSource.Site, RecommendationSubSource.RecommendationsFeed, libContext.isDefined, recencyWeight, context = libContext)
+  def topRecosV2(recencyWeight: Float, uriContext: Option[String], libContext: Option[String], trackLibDelivery: Boolean) = UserAction.async { request =>
+    val libRecosF = commander.topPublicLibraryRecos(request.userId, 10, RecommendationSource.Site, RecommendationSubSource.RecommendationsFeed, trackDelivery = trackLibDelivery, context = libContext)
+    val uriRecosF = commander.topRecos(request.userId, RecommendationSource.Site, RecommendationSubSource.RecommendationsFeed, libContext.isDefined, recencyWeight, context = uriContext)
 
     for (libs <- libRecosF; uris <- uriRecosF) yield Ok {
       val FullUriRecoResults(urisReco, newUriContext) = uris
@@ -62,7 +61,6 @@ trait RecoMixingHelper extends Logging {
 
   def mix(uris: Seq[FullUriRecoInfo], libs: Seq[(Id[Library], FullLibRecoInfo)]): Seq[FullRecoInfo] = {
     val (lucky, rest) = libs.partition { case (id, _) => specialBoostSet.contains(id) }
-    log.info(s"[reco mixing] lucky library ids: ${lucky.map(_._1).mkString(", ")}. total libs size: ${libs.size}")
     util.Random.shuffle(lucky.map { _._2 }) ++ util.Random.shuffle(uris ++ rest.map(_._2))
   }
 }

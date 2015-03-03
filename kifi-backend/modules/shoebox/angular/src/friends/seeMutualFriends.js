@@ -2,8 +2,9 @@
 
 angular.module('kifi')
 
-.directive('kfSeeMutualFriends', ['$rootScope', '$timeout', 'friendService', 'inviteService', 'routeService',
-  function ($rootScope, $timeout, friendService, inviteService, routeService) {
+.directive('kfSeeMutualFriends', [
+  'inviteService',
+  function (inviteService) {
     return {
       replace: true,
       restrict: 'A',
@@ -13,43 +14,28 @@ angular.module('kifi')
         scope.actionText = 'Connect';
         scope.clickable = true;
 
-        function init() {
-          updateScopeValues(scope.modalData.savedPymk);
-        }
+        var user = scope.modalData;
+        _.assign(scope, _.pick(user, 'id', 'fullName', 'numMutualFriends', 'pictureName', 'username'));
 
-        // Helper function to update scope values based on passed-in person.
-        function updateScopeValues (person) {
-          scope.actionText = 'Connect';
-          scope.clickable = true;
+        // Divide up list of mutual friends into list of pairs of mutual
+        // friends for two-column display in modal.
+        var mutualFriendsPairs = [];
+        var mutualFriendPair = [];
+        user.mutualFriends.forEach(function (mutualFriend, index) {
+          mutualFriendPair.push(mutualFriend);
 
-          scope.id = person.id;
-          scope.name = person.fullName;
-          scope.numMutualFriends = person.numMutualFriends;
-          scope.pictureUrl = person.pictureUrl;
-          scope.userProfileUrl = person.profileUrl;
+          if (index % 2 !== 0) {
+            mutualFriendsPairs.push(mutualFriendPair);
+            mutualFriendPair = [];
+          }
 
-          // Divide up list of mutual friends into list of pairs of mutual
-          // friends for two-column display in modal.
-          var mutualFriendsPairs = [];
-          var mutualFriendPair = [];
-          person.mutualFriends.forEach(function (mutualFriend, index) {
-            mutualFriend.pictureUrl = friendService.getPictureUrlForUser(mutualFriend);
-            mutualFriend.profileUrl = routeService.getProfileUrl(mutualFriend.username);
-            mutualFriendPair.push(mutualFriend);
+          // Flush last pair even if it has only one mutual friend.
+          if ((index === user.mutualFriends.length - 1) && (mutualFriendPair.length > 0)) {
+            mutualFriendsPairs.push(mutualFriendPair);
+          }
+        });
 
-            if (index % 2 !== 0) {
-              mutualFriendsPairs.push(mutualFriendPair);
-              mutualFriendPair = [];
-            }
-
-            // Flush last pair even if it has only one mutual friend.
-            if ((index === person.mutualFriends.length - 1) && (mutualFriendPair.length > 0)) {
-              mutualFriendsPairs.push(mutualFriendPair);
-            }
-          });
-
-          scope.mutualFriendsPairs = mutualFriendsPairs;
-        }
+        scope.mutualFriendsPairs = mutualFriendsPairs;
 
         scope.addFriend = function (id) {
           if (!scope.clickable) {
@@ -70,9 +56,6 @@ angular.module('kifi')
         scope.close = function () {
           kfModalCtrl.close();
         };
-
-
-        init();
       }
     };
   }

@@ -1130,10 +1130,10 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         db.readWrite { implicit s =>
           libraryInviteRepo.save(LibraryInvite(libraryId = libMurica.id.get, inviterId = userCaptain.id.get, emailAddress = Some(EmailAddress("thor@asgard.com")), access = LibraryAccess.READ_ONLY))
           val memberCounts = libraryMembershipRepo.countWithLibraryIdByAccess(libMurica.id.get)
-          memberCounts(LibraryAccess.OWNER) === 1
-          memberCounts(LibraryAccess.READ_ONLY) === 2
-          memberCounts(LibraryAccess.READ_INSERT) === 0
-          memberCounts(LibraryAccess.READ_WRITE) === 0
+          memberCounts.owner === 1
+          memberCounts.readOnly === 2
+          memberCounts.readInsert === 0
+          memberCounts.readWrite === 0
         }
         val libraryCommander = inject[LibraryCommander]
         val members = libraryCommander.getLibraryMembers(libMurica.id.get, 0, 10, true)

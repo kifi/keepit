@@ -60,7 +60,7 @@ class FakeSearchServiceClient() extends SearchServiceClientImpl(null, null, null
 
   override def dumpLuceneDocument(id: Id[NormalizedURI]): Future[Html] = ???
 
-  override def getLibraryDocument(libraryAndMemberships: LibraryAndMemberships): Future[Html] = ???
+  override def getLibraryDocument(library: DetailedLibraryView): Future[Html] = ???
 
   override def benchmarks(): Future[BenchmarkResults] = ???
 

@@ -1,7 +1,7 @@
 <div class="kf-lfp">
   <span class="kf-lfp-pics">
-    <a ng-repeat="follower in followersToShow" href="{{follower.profileUrl}}" kf-track-origin="{{currentPageOrigin}}/follower">
-      <img ng-src="{{follower.picUrl || 'https://www.kifi.com/assets/img/ghost.200.png'}}"
+    <a ng-repeat="follower in followersToShow" href="{{follower|profileUrl}}" kf-track-origin="{{currentPageOrigin}}/follower">
+      <img ng-src="{{follower | pic:100}}"
         class="kf-lfp-pic"
         kf-who-tooltip
         keeper="follower"

@@ -8,6 +8,7 @@ import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.CuratorServiceController
 import com.keepit.common.db.Id
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.curator.commanders.email.{ RecentInterestRankStrategy, EngagementEmailActor, FeedDigestEmailSender }
 import com.keepit.curator.commanders._
@@ -37,7 +38,7 @@ class CuratorController @Inject() (
     feedEmailSender: FeedDigestEmailSender,
     userExperimentCommander: RemoteUserExperimentCommander,
     personaRecoIngestor: PersonaRecommendationIngestor,
-    protected val airbrake: AirbrakeNotifier) extends CuratorServiceController {
+    protected val airbrake: AirbrakeNotifier) extends CuratorServiceController with Logging {
 
   val topScoreRecoStrategy = new TopScoreRecoSelectionStrategy()
   val diverseRecoStrategy = new DiverseRecoSelectionStrategy()
@@ -204,10 +205,16 @@ class CuratorController @Inject() (
     Ok
   }
 
-  def ingestPersonaRecos(userId: Id[User]) = Action(parse.tolerantJson) { request =>
+  def ingestPersonaRecos(userId: Id[User]) = Action.async(parse.tolerantJson) { request =>
     val js = request.body
     val pids = (js \ "personaIds").as[Seq[Id[Persona]]]
-    pids.foreach { pid => personaRecoIngestor.ingestUserRecosByPersona(userId, pid) }
-    Ok
+    val t1 = System.currentTimeMillis()
+    personaRecoIngestor.ingestUserRecosByPersonas(userId, pids).collect {
+      case _ =>
+        val t2 = System.currentTimeMillis()
+        log.info(s"persona reco ingestion: ${(t2 - t1) / 1000f} seconds")
+        statsd.timing("curatorController.ingestPersonaRecos", (t2 - t1), 1.0)
+        Ok
+    }
   }
 }

@@ -411,7 +411,17 @@ class NotificationCommander @Inject() (
 
   def setAllNotificationsRead(userId: Id[User]): Unit = {
     log.info(s"Setting all Notifications as read for user $userId.")
-    db.readWrite(attempts = 2) { implicit session => userThreadRepo.markAllRead(userId) }
+    db.readWrite(attempts = 2) { implicit session => userThreadRepo.markAllRead(userId, None) }
+  }
+
+  def setSystemNotificationsRead(userId: Id[User]): Unit = {
+    log.info(s"Setting System Notifications as read for user $userId")
+    db.readWrite(attempts = 2) { implicit session => userThreadRepo.markAllRead(userId, Some(true)) }
+  }
+
+  def setMessageNotificationsRead(userId: Id[User]): Unit = {
+    log.info(s"Setting Messaging Notifications as read for user $userId")
+    db.readWrite(attempts = 2) { implicit session => userThreadRepo.markAllRead(userId, Some(false)) }
   }
 
   def setAllNotificationsReadBefore(user: Id[User], messageId: ExternalId[Message], unreadCount: Int): DateTime = {

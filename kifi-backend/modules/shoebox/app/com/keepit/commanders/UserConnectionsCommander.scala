@@ -4,9 +4,10 @@ import com.google.inject.Inject
 import com.keepit.abook.ABookServiceClient
 import com.keepit.commanders.emails.EmailSenderProvider
 import com.keepit.common.akka.SafeFuture
+import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ ExternalId, Id }
-import com.keepit.common.logging.Logging
+import com.keepit.common.logging.{ AccessLog, Logging }
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.S3ImageStore
 import com.keepit.eliza.ElizaServiceClient
@@ -19,8 +20,22 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
 
 import scala.concurrent.Future
+import scala.concurrent.duration.Duration
 
 case class ConnectionInfo(user: BasicUser, userId: Id[User], unfriended: Boolean, unsearched: Boolean)
+case class ConnectedUserId(userId: Id[User], connected: Boolean)
+object ConnectedUserId {
+  implicit val formatter = Json.format[ConnectedUserId]
+}
+
+case class UserConnectionRelationshipKey(viewerId: Id[User], ownerId: Id[User]) extends Key[Seq[ConnectedUserId]] {
+  val namespace = "user_con_rel"
+  override val version = 2
+  def toKey(): String = ownerId.id.toString + ":" + viewerId.id.toString
+}
+
+class UserConnectionRelationshipCache(stats: CacheStatistics, accessLog: AccessLog, inner: (FortyTwoCachePlugin, Duration), outer: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[UserConnectionRelationshipKey, Seq[ConnectedUserId]](stats, accessLog, inner, outer: _*)
 
 class UserConnectionsCommander @Inject() (
     abookServiceClient: ABookServiceClient,
@@ -44,7 +59,7 @@ class UserConnectionsCommander @Inject() (
     userConnectionRelationshipCache: UserConnectionRelationshipCache,
     db: Database) extends Logging {
 
-  def getConnectionsSortedByRelationship(viewer: Id[User], owner: Id[User]): Future[Seq[Id[User]]] = {
+  def getConnectionsSortedByRelationship(viewer: Id[User], owner: Id[User]): Future[Seq[ConnectedUserId]] = {
     import com.keepit.common.cache.TransactionalCaching.Implicits._
     userConnectionRelationshipCache.getOrElseFuture(UserConnectionRelationshipKey(viewer, owner)) {
       val sociallyRelatedEntitiesF = graphServiceClient.getSociallyRelatedEntities(viewer)
@@ -67,8 +82,11 @@ class UserConnectionsCommander @Inject() (
             val newScore = ownerConnectionsMap(con) + score
             ownerConnectionsMap(con) = newScore
         }
+        if (ownerConnectionsMap.contains(viewer)) {
+          ownerConnectionsMap(viewer) = Double.MaxValue
+        }
         val scoring = ownerConnectionsMap.toSeq.sortBy(_._2 * -1)
-        scoring.map(_._1)
+        scoring.map(t => ConnectedUserId(t._1, viewerConnections.contains(t._1)))
       }
     }
   }

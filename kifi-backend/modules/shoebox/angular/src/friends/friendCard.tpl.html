@@ -1,15 +1,15 @@
 <div class="kf-friend-card">
-  <a href="{{friendProfileUrl}}" kf-track-origin="friendsPage">
-    <img class="kf-friend-card-image" onerror="this.src='https://www.kifi.com/assets/img/ghost.100.png'" ng-src="{{mainImage}}">
+  <a href="{{friend|profileUrl}}" kf-track-origin="friendsPage">
+    <img class="kf-friend-card-image" onerror="this.src='https://www.kifi.com/assets/img/ghost.100.png'" ng-src="{{friend | pic:200}}">
   </a>
   <span class="kf-friend-card-who">
-    <div class="kf-friend-card-name" title="{{name}}">{{name}}</div>
-    <div class="kf-friend-card-count" title="{{friendCount}}"><ng-pluralize count="friendCount" when="{'one': '1 connection ', 'other': '{} connections '}"></ng-pluralize>on Kifi</div>
+    <div class="kf-friend-card-name">{{friend.firstName}} {{friend.lastName}}</div>
+    <div class="kf-friend-card-count"><ng-pluralize count="friend.friendCount" when="{'one': '1 connection ', 'other': '{} connections '}"></ng-pluralize>on Kifi</div>
   </span>
   <span class="kf-friend-card-button">Connection</span>
   <ul class="kf-dropdown-menu kf-friend-card-menu">
-    <li ng-show="searchFriend"><a href="javascript:" ng-click="unsearchfriend()">Hide {{firstName}}’s keeps in my search results</a></li>
-    <li ng-show="!searchFriend"><a href="javascript:" ng-click="researchfriend()">Show {{firstName}}’s keeps in my search results</a></li>
+    <li ng-show="friend.searchFriend"><a href="javascript:" ng-click="unsearchfriend()">Hide {{friend.firstName}}’s keeps in my search results</a></li>
+    <li ng-show="!friend.searchFriend"><a href="javascript:" ng-click="researchfriend()">Show {{friend.firstName}}’s keeps in my search results</a></li>
     <li><a href="javascript:" ng-click="unfriend()">Remove connection</a></li>
   </ul>
 </div>

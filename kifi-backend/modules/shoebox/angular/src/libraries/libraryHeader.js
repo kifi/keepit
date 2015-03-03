@@ -4,10 +4,10 @@ angular.module('kifi')
 
 .directive('kfLibraryHeader', [
   '$FB', '$http', '$location', '$q', '$rootScope', '$state', '$stateParams', '$timeout', '$twitter', '$window',
-  'env', 'friendService', 'libraryService', 'modalService','profileService', 'platformService', 'signupService',
+  'env', 'libraryService', 'modalService','profileService', 'platformService', 'signupService',
   'routeService', 'util',
   function ($FB, $http, $location, $q, $rootScope, $state, $stateParams, $timeout, $twitter, $window,
-            env, friendService, libraryService, modalService, profileService, platformService, signupService,
+            env, libraryService, modalService, profileService, platformService, signupService,
             routeService, util) {
     return {
       restrict: 'A',
@@ -63,14 +63,6 @@ angular.module('kifi')
             scope.library.owner = profileService.me;
           }
 
-          if (scope.library.owner) {
-            scope.library.owner.picUrl = friendService.getPictureUrlForUser(scope.library.owner);
-            scope.library.owner.profileUrl = routeService.getProfileUrl(scope.library.owner.username);
-          }
-
-          scope.library.followers = scope.library.followers || [];
-          scope.library.followers.forEach(augmentFollower);
-
           var maxLength = 150;
           if (scope.library.description.length > maxLength && $rootScope.userLoggedIn) {
             // Try to chop off at a word boundary, using a simple space as the word boundary delimiter.
@@ -102,27 +94,12 @@ angular.module('kifi')
           }
         }
 
-        function augmentFollower(follower) {
-          follower.picUrl = friendService.getPictureUrlForUser(follower);
-          follower.profileUrl = routeService.getProfileUrl(follower.username);
-          return follower;
-        }
-
         function updateInvite() {
           var info = _.find(libraryService.getInvitedInfos(), {id: scope.library.id});
           scope.library.invite = info && {
             inviterName: info.inviter.firstName + ' ' + info.inviter.lastName,
             actedOn: false
           };
-        }
-
-        function preloadSocial() {
-          if (!$FB.failedToLoad && !$FB.loaded) {
-            $FB.init();
-          }
-          if (!$twitter.failedToLoad && !$twitter.loaded) {
-            $twitter.load();
-          }
         }
 
 
@@ -576,12 +553,20 @@ angular.module('kifi')
           return scope.library.visibility === 'published';
         };
 
+        scope.preloadFB = function () {
+          $FB.init();
+        };
+
         scope.shareFB = function () {
           trackShareEvent('clickedShareFacebook');
           $FB.ui({
             method: 'share',
             href: scope.library.shareFbUrl
           });
+        };
+
+        scope.preloadTwitter = function () {
+          $twitter.load();
         };
 
         scope.shareTwitter = function () {
@@ -718,7 +703,7 @@ angular.module('kifi')
               lib.numFollowers++;
               var me = profileService.me;
               if (!_.contains(lib.followers, {id: me.id})) {
-                lib.followers.push(augmentFollower(_.pick(me, 'id', 'firstName', 'lastName', 'pictureName', 'username')));
+                lib.followers.push(_.pick(me, 'id', 'firstName', 'lastName', 'pictureName', 'username'));
               }
             }
           }),
@@ -746,8 +731,6 @@ angular.module('kifi')
         augmentData();
 
         updateInvite();
-
-        scope.$evalAsync(preloadSocial);
 
         $timeout(function () {
           element.addClass('kf-loaded');  // enables transitions/animations

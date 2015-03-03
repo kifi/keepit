@@ -1,6 +1,6 @@
 package com.keepit.controllers.internal
 
-import com.google.inject.{ Provider, Inject }
+import com.google.inject.{ Singleton, Provider, Inject }
 import com.keepit.common.controller.ShoeboxServiceController
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
@@ -201,19 +201,22 @@ class ShoeboxScraperController @Inject() (
   }
 
   def saveScrapeInfo() = SafeAsyncAction(parse.tolerantJson) { request =>
+    statsd.gauge("saveScrapeInfo", 1)
     val ts = System.currentTimeMillis
     val json = request.body
     val info = json.as[ScrapeInfo]
-    val saved = db.readWrite(attempts = 3) { implicit s =>
-      val nuri = normUriRepo.get(info.uriId)
-      if (URI.parse(nuri.url).isFailure) {
-        scrapeInfoRepo.save(info.withStateAndNextScrape(ScrapeInfoStates.INACTIVE))
-        airbrake.notify(s"can't parse $nuri, not passing it to the scraper, marking as unscrapable")
-      } else {
-        scrapeInfoRepo.save(info)
+    val saved = scraperHelper.assignLock.withLock {
+      db.readWrite(attempts = 3) { implicit s =>
+        val nuri = normUriRepo.get(info.uriId)
+        if (URI.parse(nuri.url).isFailure) {
+          scrapeInfoRepo.save(info.withStateAndNextScrape(ScrapeInfoStates.INACTIVE))
+          airbrake.notify(s"can't parse $nuri, not passing it to the scraper, marking as unscrapable")
+        } else {
+          scrapeInfoRepo.save(info)
+        }
       }
     }
-    log.debug(s"[saveScrapeInfo] time-lapsed:${System.currentTimeMillis - ts} result=$saved")
+    log.info(s"[saveScrapeInfo] time-lapsed:${System.currentTimeMillis - ts} result=$saved")
     Ok
   }
 

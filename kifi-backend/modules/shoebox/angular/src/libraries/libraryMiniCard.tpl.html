@@ -2,8 +2,8 @@
 
   <div class="kf-library-mini-card-header" ng-style="{'border-bottom-color': library.color}">
     <div class="kf-library-mini-card-curator">
-      <a href="{{library.owner.profileUrl}}">
-        <img class="kf-library-mini-card-curator-img" ng-src="{{library.owner.image || 'https://www.kifi.com/assets/img/ghost.200.png'}}">
+      <a href="{{library.owner|profileUrl}}">
+        <img class="kf-library-mini-card-curator-img" ng-src="{{library.owner | pic:100}}">
       </a>
       <span class="kf-library-mini-card-curator-info">
         <div class="kf-library-mini-card-curator-heading">Library Curator:</div>

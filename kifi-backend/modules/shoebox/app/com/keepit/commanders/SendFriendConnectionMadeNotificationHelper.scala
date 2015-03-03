@@ -8,10 +8,11 @@ import com.keepit.common.store.S3ImageStore
 import com.keepit.common.time._
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model.{ NotificationCategory, User, UserRepo }
-import com.keepit.social.SocialNetworkType
+import com.keepit.social.{ BasicUser, SocialNetworkType }
 import com.keepit.social.SocialNetworks.{ LINKEDIN, FACEBOOK }
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.api.libs.json.Json
 
 @Singleton
 class SendFriendConnectionMadeNotificationHelper @Inject() (
@@ -47,7 +48,8 @@ class SendFriendConnectionMadeNotificationHelper @Inject() (
       linkUrl = "https://www.kifi.com/friends/invite",
       imageUrl = respondingUserImage,
       sticky = false,
-      category = category
+      category = category,
+      extra = Some(Json.obj("friend" -> BasicUser.fromUser(respondingUser)))
     )
 
     emailF flatMap (_ => notificationF)

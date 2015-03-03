@@ -1,7 +1,6 @@
 package com.keepit.search.index.graph.library
 
 import com.keepit.common.db.Id
-import com.keepit.model.view.LibraryMembershipView
 import com.keepit.model._
 import com.keepit.search.index._
 import com.keepit.search.LangDetector
@@ -19,9 +18,6 @@ object LibraryFields {
   val kindField = "k"
   val ownerField = "o"
   val ownerIdField = "oid"
-  val usersField = "u"
-  val allUsersField = "a"
-  val allUsersCountField = "ac"
   val recordField = "rec"
 
   val strictTextSearchFields = Set(nameField, nameStemmedField, descriptionField, descriptionStemmedField)
@@ -95,46 +91,17 @@ object LibraryIndexable {
     librarySearcher.getStringDocValue(LibraryFields.nameValueField, libId)
   }
 
-  def getMemberCount(librarySearcher: Searcher, libId: Long): Option[Long] = {
-    librarySearcher.getLongDocValue(LibraryFields.allUsersCountField, libId)
-  }
-
   def getRecord(librarySearcher: Searcher, libraryId: Id[Library]): Option[LibraryRecord] = {
     librarySearcher.getDecodedDocValue(LibraryFields.recordField, libraryId.id)
   }
 
-  def getLibrariesByOwner(librarySearcher: Searcher, ownerId: Id[User]): Set[Long] = {
-    LongArraySet.from(librarySearcher.findPrimaryIds(new Term(LibraryFields.ownerField, ownerId.id.toString)).toArray)
-  }
-
-  def getLibrariesByMember(librarySearcher: Searcher, memberId: Id[User]): Set[Long] = {
-    LongArraySet.from(librarySearcher.findPrimaryIds(new Term(LibraryFields.usersField, memberId.id.toString)).toArray)
-  }
-
-  def countPublishedLibrariesByMember(librarySearcher: Searcher, memberId: Id[User]): Int = {
-    librarySearcher.findPrimaryIds(new Term(LibraryFields.usersField, memberId.id.toString)).toArray().count(isPublished(librarySearcher, _))
-  }
-
-  def countPublishedLibrariesByOwner(librarySearcher: Searcher, ownerId: Id[User]): Int = {
-    librarySearcher.findPrimaryIds(new Term(LibraryFields.ownerField, ownerId.id.toString)).toArray().count(isPublished(librarySearcher, _))
-  }
 }
 
-class LibraryIndexable(library: Library, memberships: Seq[LibraryMembershipView]) extends Indexable[Library, Library] {
+class LibraryIndexable(library: DetailedLibraryView) extends Indexable[Library, Library] {
 
   val id = library.id.get
   val sequenceNumber = library.seq
-  val isDeleted: Boolean = memberships.isEmpty
-
-  private val (users, allUsers) = {
-    var users = Set.empty[Id[User]]
-    val allUsers = memberships.map { membership =>
-      require(membership.libraryId == id, s"This membership is unrelated to library $id: $membership")
-      if (membership.showInSearch) { users += membership.userId }
-      membership.userId
-    }.toSet
-    (users, allUsers)
-  }
+  val isDeleted: Boolean = (library.state == LibraryStates.INACTIVE)
 
   override def buildDocument = {
     import LibraryFields._
@@ -157,11 +124,8 @@ class LibraryIndexable(library: Library, memberships: Seq[LibraryMembershipView]
     }
 
     doc.add(buildKeywordField(ownerField, library.ownerId.id.toString))
-    doc.add(buildIteratorField(usersField, users.iterator) { id => id.id.toString })
-    doc.add(buildIteratorField(allUsersField, allUsers.iterator) { id => id.id.toString })
 
     doc.add(buildIdValueField(ownerIdField, library.ownerId))
-    doc.add(buildLongValueField(allUsersCountField, allUsers.size))
     doc.add(buildLongValueField(visibilityField, Visibility.toNumericCode(library.visibility)))
     doc.add(buildLongValueField(kindField, Kind.toNumericCode(library.kind)))
 
