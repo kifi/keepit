@@ -11,7 +11,6 @@ sealed trait Article { self =>
 
   def url: String
   def createdAt: DateTime
-  def context: ArticleContext
   def content: ArticleContent
 }
 
@@ -57,7 +56,6 @@ case class EmbedlyArticle(url: String, createdAt: DateTime, json: JsValue) exten
   type A = EmbedlyArticle
   def kind = EmbedlyArticle
   lazy val content = new EmbedlyContent(json)
-  lazy val context = new EmbedlyContext(json)
 }
 
 case object EmbedlyArticle extends ArticleKind[EmbedlyArticle] {
@@ -72,8 +70,7 @@ case object EmbedlyArticle extends ArticleKind[EmbedlyArticle] {
 case class DefaultArticle(
     createdAt: DateTime,
     url: String,
-    content: DefaultContent,
-    context: DefaultContext) extends Article {
+    content: DefaultContent) extends Article {
   type A = DefaultArticle
   def kind = DefaultArticle
 }
@@ -90,8 +87,7 @@ case object DefaultArticle extends ArticleKind[DefaultArticle] {
 case class YoutubeArticle(
     createdAt: DateTime,
     url: String,
-    content: YoutubeContent,
-    context: DefaultContext) extends Article {
+    content: YoutubeContent) extends Article {
   type A = YoutubeArticle
   def kind = YoutubeArticle
 }

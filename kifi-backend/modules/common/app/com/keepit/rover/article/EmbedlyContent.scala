@@ -6,6 +6,7 @@ import org.joda.time.DateTime
 import play.api.libs.json.JsValue
 
 class EmbedlyContent(json: JsValue) extends ArticleContent {
+  def destinationUrl = (json \ "url").as[String]
   def title = (json \ "title").asOpt[String]
   def description = (json \ "description").asOpt[String]
   def content = rawContent // todo(Léo): needs post-processing to eliminate html tags
@@ -20,8 +21,4 @@ class EmbedlyContent(json: JsValue) extends ArticleContent {
   def embedlyKeywords = (json \ "keywords").as[Seq[EmbedlyKeyword]]
   def entities = (json \ "entities").as[Seq[EmbedlyEntity]]
   def faviconUrl = (json \ "favicon_url").asOpt[String]
-}
-
-class EmbedlyContext(json: JsValue) extends ArticleContext {
-  def destinationUrl = (json \ "url").as[String]
 }

@@ -31,12 +31,15 @@ case class YoutubeVideo(
 
 @json
 case class YoutubeContent(
+    destinationUrl: String,
     title: Option[String],
     description: Option[String],
     keywords: Seq[String],
     authors: Seq[PageAuthor],
     publishedAt: Option[DateTime],
-    video: YoutubeVideo) extends ArticleContent {
+    http: HTTPContext,
+    normalization: NormalizationContext,
+    video: YoutubeVideo) extends ArticleContent with HTTPContextHolder with NormalizationContextHolder {
 
   def content = Some(Seq(
     video.title.getOrElse(""),

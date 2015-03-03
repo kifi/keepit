@@ -6,15 +6,12 @@ import org.joda.time.DateTime
 
 @json
 case class DefaultContent(
+  destinationUrl: String,
   title: Option[String],
   description: Option[String],
   content: Option[String],
   keywords: Seq[String],
   authors: Seq[PageAuthor],
-  publishedAt: Option[DateTime]) extends ArticleContent
-
-@json
-case class DefaultContext(
-  destinationUrl: String,
+  publishedAt: Option[DateTime],
   http: HTTPContext,
-  normalization: NormalizationContext) extends ArticleContext with HTTPContextProvider with NormalizationContextProvider
+  normalization: NormalizationContext) extends ArticleContent with HTTPContextHolder with NormalizationContextHolder
