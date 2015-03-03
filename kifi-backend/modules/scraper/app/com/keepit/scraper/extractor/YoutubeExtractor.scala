@@ -82,7 +82,7 @@ class YoutubeExtractor(url: URI, maxContentChars: Int, httpFetcher: HttpFetcher,
     }
     httpFetcher.fetch(URI.parse(trackUrl).get, proxy = getProxy(url))(trackExtractor.process)
     log.info(s"[getTrack] fetched ${(if (trackInfo.isDefault) "default " else "") + (if (trackInfo.isAutomatic) "automatic " else "") + trackInfo.langTranslated} closed captions for ${url}")
-    YoutubeTrack(trackExtractor.getContent(), trackInfo)
+    YoutubeTrack(trackInfo, trackExtractor.getContent())
   }
 
   private def getProxy(url: URI) = syncGetProxyP(url)
