@@ -151,16 +151,21 @@ class LibraryController @Inject() (
     val libsWithInvites = for ((lib, invites) <- libsWithAllInvites.groupBy(_._2).mapValues(_.map(_._1))) yield {
       (invites.sorted.last, lib) // only show one invite per library - the one with highest access
     }
-    val (libInfosWithMembershipsF, libInfosWithInvitesF) = db.readOnlyMaster { implicit s =>
-      val basicUsers = basicUserRepo.loadAll((libsWithMemberships.map(_._2.ownerId) ++ libsWithInvites.map(_._2.ownerId) ++ libsWithInvites.map(_._1.inviterId)).toSet)
-      val libInfosWithMemberships = SafeFuture {
+
+    val basicUsers = db.readOnlyReplica { implicit session =>
+      basicUserRepo.loadAll((libsWithMemberships.map(_._2.ownerId) ++ libsWithInvites.map(_._2.ownerId) ++ libsWithInvites.map(_._1.inviterId)).toSet)
+    }
+    val libInfosWithMembershipsF = SafeFuture {
+      db.readOnlyReplica { implicit session =>
         for ((mem, library) <- libsWithMemberships) yield {
           val owner = basicUsers(library.ownerId)
           val numKeeps = keepRepo.getCountByLibrary(library.id.get)
           (LibraryInfo.fromLibraryAndOwner(library, None, owner, numKeeps), mem) // should have library image, but this endpoint doesn't use it and is already slow & heavy.
         }
       }
-      val libInfosWithInvites = SafeFuture {
+    }
+    val libInfosWithInvitesF = SafeFuture {
+      db.readOnlyReplica { implicit session =>
         for ((invite, lib) <- libsWithInvites) yield {
           val owner = basicUsers(lib.ownerId)
           val inviter = basicUsers(invite.inviterId)
@@ -168,7 +173,6 @@ class LibraryController @Inject() (
           (LibraryInfo.fromLibraryAndOwner(lib, None, owner, numKeeps, Some(inviter)), invite) // should have library image, but this endpoint doesn't use it and is already slow & heavy.
         }
       }
-      (libInfosWithMemberships, libInfosWithInvites)
     }
 
     for {
@@ -584,7 +588,7 @@ class LibraryController @Inject() (
               image = info.image,
               slug = info.slug,
               visibility = info.visibility,
-              owner = BasicUserWithFriendStatus.fromWithoutFriendStatus(info.owner),
+              owner = info.owner,
               numKeeps = info.numKeeps,
               numFollowers = info.numFollowers,
               followers = LibraryCardInfo.showable(info.followers),

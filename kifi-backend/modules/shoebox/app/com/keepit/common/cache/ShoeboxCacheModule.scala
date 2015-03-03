@@ -191,8 +191,8 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
 
   @Singleton
   @Provides
-  def userValueCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
-    new UserValueCache(stats, accessLog, (outerRepo, 30 days))
+  def userValueCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new UserValueCache(stats, accessLog, (outerRepo, 3 minutes), (outerRepo, 30 days))
 
   @Provides @Singleton
   def systemValueCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
@@ -328,6 +328,11 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
 
   @Singleton
   @Provides
+  def countWithLibraryIdByAccessCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new CountWithLibraryIdByAccessCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 30 days))
+
+  @Singleton
+  @Provides
   def libraryMembershipCountCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new LibraryMembershipCountCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 30 days))
 
@@ -335,11 +340,6 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   @Provides
   def followersCountCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new FollowersCountCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 30 days))
-
-  @Singleton
-  @Provides
-  def mutualFollowersCountCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new MutualFollowersCountCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 30 days))
 
   @Singleton
   @Provides
@@ -397,5 +397,9 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   @Provides @Singleton
   def RelatedLibrariesCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new RelatedLibrariesCache(stats, accessLog, (innerRepo, 30 minutes), (outerRepo, 2 hours))
+
+  @Provides @Singleton
+  def userToDomainCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new UserToDomainCache(stats, accessLog, (innerRepo, 30 minutes), (outerRepo, 30 days))
 
 }

@@ -11,16 +11,13 @@ import play.api.libs.json.JsValue
 
 @ImplementedBy(classOf[UserToDomainRepoImpl])
 trait UserToDomainRepo extends Repo[UserToDomain] {
-  def get(userId: Id[User], domainId: Id[Domain], kind: UserToDomainKind,
-    excludeState: Option[State[UserToDomain]] = Some(UserToDomainStates.INACTIVE))(implicit session: RSession): Option[UserToDomain]
-
-  def exists(userId: Id[User], domainId: Id[Domain], kind: UserToDomainKind,
-    excludeState: Option[State[UserToDomain]] = Some(UserToDomainStates.INACTIVE))(implicit session: RSession): Boolean
+  def get(userId: Id[User], domainId: Id[Domain], kind: UserToDomainKind)(implicit session: RSession): Option[UserToDomain]
 }
 
 @Singleton
 class UserToDomainRepoImpl @Inject() (
     val db: DataBaseComponent,
+    userToDomainCache: UserToDomainCache,
     val clock: Clock) extends DbRepo[UserToDomain] with UserToDomainRepo {
 
   import db.Driver.simple._
@@ -37,14 +34,18 @@ class UserToDomainRepoImpl @Inject() (
   def table(tag: Tag) = new UserToDomainTable(tag)
   initTable()
 
-  override def deleteCache(model: UserToDomain)(implicit session: RSession): Unit = {}
-  override def invalidateCache(model: UserToDomain)(implicit session: RSession): Unit = {}
+  override def deleteCache(model: UserToDomain)(implicit session: RSession): Unit = {
+    userToDomainCache.remove(UserToDomainKey(model.userId, model.domainId, model.kind))
+  }
 
-  def get(userId: Id[User], domainId: Id[Domain], kind: UserToDomainKind,
-    excludeState: Option[State[UserToDomain]] = Some(UserToDomainStates.INACTIVE))(implicit session: RSession): Option[UserToDomain] =
-    (for (t <- rows if t.userId === userId && t.domainId === domainId && t.kind === kind && t.state =!= excludeState.orNull) yield t).firstOption
+  override def invalidateCache(model: UserToDomain)(implicit session: RSession): Unit = {
+    userToDomainCache.set(UserToDomainKey(model.userId, model.domainId, model.kind), Some(model))
+  }
 
-  def exists(userId: Id[User], domainId: Id[Domain], kind: UserToDomainKind,
-    excludeState: Option[State[UserToDomain]] = Some(UserToDomainStates.INACTIVE))(implicit session: RSession): Boolean =
-    (for (t <- rows if t.userId === userId && t.domainId === domainId && t.kind === kind && t.state =!= excludeState.orNull) yield t.id).firstOption.isDefined
+  def get(userId: Id[User], domainId: Id[Domain], kind: UserToDomainKind)(implicit session: RSession): Option[UserToDomain] = {
+    userToDomainCache.getOrElse(UserToDomainKey(userId, domainId, kind)) {
+      (for (t <- rows if t.userId === userId && t.domainId === domainId && t.kind === kind) yield t).firstOption
+    }
+  }
+
 }

@@ -354,8 +354,8 @@ GET     /site/user/:name/profile    @com.keepit.controllers.website.UserControll
 GET     /site/user/:name/libraries  @com.keepit.controllers.website.LibraryController.getProfileLibraries(name: Username, page: Int ?= 0, size: Int ?= 12, filter: String ?= "own")
 GET     /site/user/:name/connections @com.keepit.controllers.website.UserController.profileConnections(name: Username, n: Int ?= 12, ids: String ?= "")
 GET     /site/user/:name/connections/ids @com.keepit.controllers.website.UserController.profileConnectionIds(name: Username, n: Int ?= 480)
-GET     /site/user/connection       @com.keepit.controllers.website.UserController.fullConnectionByViewer(owner: ExternalId[User])
-
+GET     /site/user/:name/followers      @com.keepit.controllers.website.UserController.profileFollowers(name: Username, n: Int ?= 12, ids: String ?= "")
+GET     /site/user/:name/followers/ids  @com.keepit.controllers.website.UserController.profileFollowerIds(name: Username, n: Int ?= 480)
 
 GET     /site/libraries             @com.keepit.controllers.website.LibraryController.getLibrarySummariesByUser()
 POST    /site/libraries/add         @com.keepit.controllers.website.LibraryController.addLibrary()
@@ -438,7 +438,6 @@ GET     /site/user/outgoingFriendRequests @com.keepit.controllers.website.UserCo
 GET     /site/user/incomingFriendRequests @com.keepit.controllers.website.UserController.incomingFriendRequests
 
 GET     /site/user/friends          @com.keepit.controllers.website.UserController.friends(page: Int ?= 0, pageSize: Int ?= 1000)
-GET     /site/user/friends/count    @com.keepit.controllers.website.UserController.friendCount()
 GET     /site/user/friends/recommended   @com.keepit.controllers.website.PeopleRecommendationController.getFriendRecommendations(offset: Int ?= 0, limit: Int ?= 5)
 GET     /site/user/invite/recommended    @com.keepit.controllers.website.PeopleRecommendationController.getInviteRecommendations(offset: Int ?= 0, limit: Int ?= 5)
 POST    /site/user/invite/hide           @com.keepit.controllers.website.PeopleRecommendationController.hideInviteRecommendation()

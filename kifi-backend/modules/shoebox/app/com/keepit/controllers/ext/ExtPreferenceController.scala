@@ -116,7 +116,7 @@ class ExtPreferenceController @Inject() (
         case Some(d) => d
         case None => domainRepo.save(Domain(hostname = host))
       }
-      userToDomainRepo.get(request.user.id.get, domain.id.get, UserToDomainKinds.KEEPER_POSITION, excludeState = None) match {
+      userToDomainRepo.get(request.user.id.get, domain.id.get, UserToDomainKinds.KEEPER_POSITION) match {
         case Some(p) if p.state != UserToDomainStates.ACTIVE || p.value.get != pos =>
           userToDomainRepo.save(p.withState(UserToDomainStates.ACTIVE).withValue(Some(pos)))
         case Some(p) => p
@@ -137,7 +137,7 @@ class ExtPreferenceController @Inject() (
         case Some(d) => domainRepo.save(d.withState(DomainStates.ACTIVE))
         case None => domainRepo.save(Domain(hostname = host))
       }
-      userToDomainRepo.get(request.userId, domain.id.get, UserToDomainKinds.NEVER_SHOW, excludeState = None) match {
+      userToDomainRepo.get(request.userId, domain.id.get, UserToDomainKinds.NEVER_SHOW) match {
         case Some(utd) if (utd.isActive != suppress) =>
           userToDomainRepo.save(utd.withState(if (suppress) UserToDomainStates.ACTIVE else UserToDomainStates.INACTIVE))
         case Some(utd) => utd
