@@ -396,7 +396,7 @@ GET     /site/libraries/recos/top           @com.keepit.controllers.website.Libr
 POST    /site/libraries/recos/feedback      @com.keepit.controllers.website.LibraryRecommendationsController.updateLibraryRecommendationFeedback(id: PublicId[Library])
 
 POST    /site/recos/adHoc           @com.keepit.controllers.website.RecommendationsController.adHocRecos(n: Int)
-GET     /site/recos/topV2           @com.keepit.controllers.website.RecommendationsController.topRecosV2(recency: Float, uriContext: Option[String] ?= None, libContext: Option[String] ?= None)
+GET     /site/recos/topV2           @com.keepit.controllers.website.RecommendationsController.topRecosV2(recency: Float, uriContext: Option[String] ?= None, libContext: Option[String] ?= None, trackLibDelivery: Boolean ?= true)
 GET     /site/recos/public          @com.keepit.controllers.website.RecommendationsController.topPublicRecos()
 POST    /site/recos/feedback        @com.keepit.controllers.website.RecommendationsController.updateUriRecommendationFeedback(id: ExternalId[NormalizedURI])
 
