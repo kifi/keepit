@@ -350,11 +350,12 @@ GET     /site/users/:userStr/libraries/:slug    @com.keepit.controllers.website.
 POST    /site/users/:userStr/libraries/:slug/auth    @com.keepit.controllers.website.LibraryController.authToLibrary(userStr: String, slug: String, authToken: Option[String])
 
 # Profile pages
-GET     /site/user/:name/profile    @com.keepit.controllers.website.UserProfileController.profile(name: Username)
+GET     /site/user/:name/profile    @com.keepit.controllers.website.UserProfileController.getProfile(name: Username)
 GET     /site/user/:name/libraries  @com.keepit.controllers.website.LibraryController.getProfileLibraries(name: Username, page: Int ?= 0, size: Int ?= 12, filter: String ?= "own")
 GET     /site/users/:name/connections @com.keepit.controllers.website.UserProfileController.getProfileConnections(name: Username, n: Int ?= 12)
 GET     /site/users/:name/followers  @com.keepit.controllers.website.UserProfileController.getProfileFollowers(name: Username, n: Int ?= 12)
 GET     /site/users/:ids            @com.keepit.controllers.website.UserProfileController.getProfileUsers(ids)
+GET     /site/users/:id/connections/mutual @com.keepit.controllers.website.UserProfileController.getMutualConnections(id: ExternalId[User])
 
 GET     /site/libraries             @com.keepit.controllers.website.LibraryController.getLibrarySummariesByUser()
 POST    /site/libraries/add         @com.keepit.controllers.website.LibraryController.addLibrary()
@@ -396,7 +397,7 @@ GET     /site/libraries/recos/top           @com.keepit.controllers.website.Libr
 POST    /site/libraries/recos/feedback      @com.keepit.controllers.website.LibraryRecommendationsController.updateLibraryRecommendationFeedback(id: PublicId[Library])
 
 POST    /site/recos/adHoc           @com.keepit.controllers.website.RecommendationsController.adHocRecos(n: Int)
-GET     /site/recos/topV2           @com.keepit.controllers.website.RecommendationsController.topRecosV2(recency: Float, uriContext: Option[String] ?= None, libContext: Option[String] ?= None)
+GET     /site/recos/topV2           @com.keepit.controllers.website.RecommendationsController.topRecosV2(recency: Float, uriContext: Option[String] ?= None, libContext: Option[String] ?= None, trackLibDelivery: Boolean ?= true)
 GET     /site/recos/public          @com.keepit.controllers.website.RecommendationsController.topPublicRecos()
 POST    /site/recos/feedback        @com.keepit.controllers.website.RecommendationsController.updateUriRecommendationFeedback(id: ExternalId[NormalizedURI])
 

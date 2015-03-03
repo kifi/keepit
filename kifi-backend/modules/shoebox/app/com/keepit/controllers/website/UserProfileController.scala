@@ -51,7 +51,7 @@ class UserProfileController @Inject() (
     libraryRepo: LibraryRepo,
     basicUserRepo: BasicUserRepo) extends UserActions with ShoeboxServiceController {
 
-  def profile(username: Username) = MaybeUserAction { request =>
+  def getProfile(username: Username) = MaybeUserAction { request =>
     val viewer = request.userOpt
     userCommander.profile(username, viewer) match {
       case None =>
@@ -130,7 +130,7 @@ class UserProfileController @Inject() (
     }
   }
 
-  def getProfileUsers(userExtIds: String) = MaybeUserAction.async { request =>
+  def getProfileUsers(userExtIds: String) = MaybeUserAction { request =>
     Try(userExtIds.split('.').map(ExternalId[User])) match {
       case Success(userIds) =>
         val viewerIdOpt = request.userIdOpt
@@ -146,9 +146,9 @@ class UserProfileController @Inject() (
               loadProfileUser(userId, userWFS, viewerIdOpt)
           }
         }
-        Future.successful(Ok(Json.obj("users" -> userJsonObjs)))
+        Ok(Json.obj("users" -> userJsonObjs))
       case _ =>
-        Future.successful(BadRequest("ids invalid"))
+        BadRequest("ids invalid")
     }
   }
 
@@ -175,4 +175,20 @@ class UserProfileController @Inject() (
     } getOrElse jsonWithGlobalCounts
   }
 
+  def getMutualConnections(extUserId: ExternalId[User]) = UserAction { request =>
+    db.readOnlyMaster { implicit s =>
+      userRepo.getOpt(extUserId)
+    } match {
+      case Some(user) if user.id.get != request.userId =>
+        val userIds = userConnectionsCommander.getMutualFriends(request.userId, user.id.get)
+        val userMap = db.readOnlyMaster { implicit s =>
+          basicUserRepo.loadAll(userIds)
+        }
+        Ok(Json.obj("users" -> userIds.flatMap(userMap.get), "count" -> userIds.size))
+      case Some(_) =>
+        BadRequest("self")
+      case None =>
+        NotFound(s"user id $extUserId")
+    }
+  }
 }
