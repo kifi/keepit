@@ -487,7 +487,7 @@ gulp.task('server-dev', ['build-dev'], startDevServer);
 gulp.task('local-prod', ['build-prod'], startLocalProdServer);
 
 // This task is the one that should be run by the build script
-gulp.task('release', ['build-prod', 'karma', 'assets:release', /*'protractor:release'*/]);
+gulp.task('release', ['build-prod', 'karma', 'assets:release'/*, 'protractor:release'*/]);
 
 // Use this task for normal development
 gulp.task('default', ['watch', 'server-dev']);
