@@ -47,7 +47,7 @@ object Persona {
     PersonaName.STUDENT -> "Student Resources",
     PersonaName.INVESTOR -> "Investing Ideas",
     PersonaName.TRAVELER -> "Travel Tips",
-    PersonaName.GAMER -> "Gaming News",
+    PersonaName.GAMER -> "Gaming Guides",
     PersonaName.PARENT -> "Parenting Gems",
     PersonaName.ANIMAL_LOVER -> "Animal Antics",
     PersonaName.DEEP_THINKER -> "Deep Thoughts")
@@ -56,21 +56,21 @@ object Persona {
 
   val keeps: Map[PersonaName, PersonaKeep] = Map(
     PersonaName.DEVELOPER -> PersonaKeep(
-      title = "Programming Sucks",
-      url = "http://stilldrinking.org/programming-sucks",
+      title = "Good Tech Lead, Bad Tech Lead",
+      url = "https://medium.com/@jliszka/good-tech-lead-bad-tech-lead-948b2b806d86",
       image = PersonaKeepImageInfo("//d1dwdv9wd966qu.cloudfront.net/img/guide/sampleCode_480x496.c4766ec.png", 480, 496),
       noun = "blog post",
-      query = "programming",
-      matches = createMatchJson(Seq(), Seq()),
-      track = "sampleCodeDeveloperPersona"
+      query = "tech+lead",
+      matches = createMatchJson(Seq((5,4),(10,4),(20,4), (25,4)), Seq((33,4),(38,4),(48,4),(53,4))),
+      track = "techLeadDeveloperPersona"
     ),
     PersonaName.TECHIE -> PersonaKeep(
-      title = "Elon Musk on Mars",
-      url = "http://aeon.co/magazine/technology/the-elon-musk-interview-on-mars/",
+      title = "The Mind Behind Tesla, SpaceX, and SolarCity",
+      url = "http://www.ted.com/talks/elon_musk_the_mind_behind_tesla_spacex_solarcity",
       image = PersonaKeepImageInfo("//d1dwdv9wd966qu.cloudfront.net/img/guide/superintelMachines_480x486.8a5cca9.png", 480, 486),
-      noun = "article",
+      noun = "video",
       query = "elon+musk",
-      matches = createMatchJson(Seq(), Seq()),
+      matches = createMatchJson(Seq(), Seq((25,4),(30,4))),
       track = "elonMuskTechiePersona"
     ),
     PersonaName.ENTREPRENEUR -> PersonaKeep(
@@ -83,13 +83,13 @@ object Persona {
       track = "biggestFailureEntrepreneurPersona"
     ),
     PersonaName.ARTIST -> PersonaKeep(
-      title = "Psychedelic Science",
-      url = "https://www.ted.com/talks/fabian_oefner_psychedelic_science",
-      image = PersonaKeepImageInfo("//d1dwdv9wd966qu.cloudfront.net/img/guide/louvre_480x510.06af404.png", 480, 510),
-      noun = "article",
-      query = "psychedelic+art",
-      matches = createMatchJson(Seq(), Seq()),
-      track = "louvreArtistPersona"
+      title = "My wish: Use art to turn the world inside out",
+      url = "https://www.ted.com/talks/jr_s_ted_prize_wish_use_art_to_turn_the_world_inside_out",
+      image = PersonaKeepImageInfo("//d1dwdv9wd966qu.cloudfront.net/img/guide/louvre_480x510.06af404.png", 480 ,510),
+      noun = "video",
+      query = "art",
+      matches = createMatchJson(Seq((13,3)), Seq((50,3))),
+      track = "tedArtArtistPersona"
     ),
     PersonaName.FOODIE -> PersonaKeep(
       title = "The Beginner’s Guide to Dim Sum",
@@ -178,8 +178,8 @@ object Persona {
       image = PersonaKeepImageInfo("//d1dwdv9wd966qu.cloudfront.net/img/guide/geolocatingCat_480x480.631b510.png", 480, 480),
       noun = "article",
       query = "how+animals+cope",
-      matches = createMatchJson(Seq(), Seq()),
-      track = "geolocatingCatAnimalLoverPersona"
+      matches = createMatchJson(Seq((23,3),(27,7),(35,4)), Seq((21,6))),
+      track = "copingAnimalLoverPersona"
     ),
     PersonaName.DEEP_THINKER -> PersonaKeep(
       title = "What happened to Downtime?",
