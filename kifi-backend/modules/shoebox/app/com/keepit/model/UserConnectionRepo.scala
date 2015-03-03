@@ -1,6 +1,6 @@
 package com.keepit.model
 
-import com.keepit.commanders.{ UserConnectionRelationshipKey, UserConnectionRelationshipCache }
+import com.keepit.commanders.{ UserFollowerRelationshipKey, UserFollowerRelationshipCache, UserConnectionRelationshipKey, UserConnectionRelationshipCache }
 
 import scala.concurrent.duration.Duration
 import com.google.inject.{ Inject, Singleton, ImplementedBy }
@@ -45,6 +45,7 @@ class UserConnectionRepoImpl @Inject() (
   val db: DataBaseComponent,
   val clock: Clock,
   userConnectionRelationshipCache: UserConnectionRelationshipCache,
+  userFollowerRelationshipCache: UserFollowerRelationshipCache,
   val friendRequestRepo: FriendRequestRepo,
   val connCountCache: UserConnectionCountCache,
   mutualConnCountCache: UserMutualConnectionCountCache,
@@ -75,6 +76,10 @@ class UserConnectionRepoImpl @Inject() (
     mutualConnCountCache.remove(UserMutualConnectionCountKey(conn.user1, conn.user2))
     userConnectionRelationshipCache.remove(UserConnectionRelationshipKey(conn.user1, conn.user2))
     userConnectionRelationshipCache.remove(UserConnectionRelationshipKey(conn.user2, conn.user1))
+    userFollowerRelationshipCache.remove(UserFollowerRelationshipKey(Some(conn.user1), conn.user2))
+    userFollowerRelationshipCache.remove(UserFollowerRelationshipKey(Some(conn.user2), conn.user1))
+    userFollowerRelationshipCache.remove(UserFollowerRelationshipKey(None, conn.user2))
+    userFollowerRelationshipCache.remove(UserFollowerRelationshipKey(None, conn.user1))
     List(conn.user1, conn.user2) foreach invalidateCache
   }
 

@@ -1,11 +1,14 @@
 package com.keepit.controllers.website
 
 import com.keepit.abook.FakeABookServiceClientModule
+import com.keepit.abook.model.EmailAccountInfo
 import com.keepit.commanders.FriendStatusCommander
 import com.keepit.common.controller.{ FakeUserActionsHelper }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.social.FakeSocialGraphModule
+import com.keepit.graph.FakeGraphServiceClientImpl
+import com.keepit.graph.model.RelatedEntities
 import com.keepit.model.KeepFactoryHelper._
 import com.keepit.model.KeepFactory._
 import com.keepit.model.LibraryInviteFactory._
@@ -38,6 +41,8 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
     FakeABookServiceClientModule(),
     FakeSocialGraphModule()
   )
+
+  def SociallyRelatedEntities(value: Any, value1: Any, value2: Any, value3: Any) = ???
 
   "UserProfileController" should {
 
@@ -276,14 +281,23 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
         }
         val controller = inject[UserProfileController]
 
+        val relationship = SociallyRelatedEntities(
+          RelatedEntities[User, User](user1.id.get, Seq(user4.id.get -> .1, user5.id.get -> .4, user2.id.get -> .2, user3.id.get -> .3)),
+          RelatedEntities[User, SocialUserInfo](user1.id.get, Seq.empty),
+          RelatedEntities[User, SocialUserInfo](user1.id.get, Seq.empty),
+          RelatedEntities[User, EmailAccountInfo](user1.id.get, Seq.empty)
+        )
+        inject[FakeGraphServiceClientImpl].setSociallyRelatedEntities(user1.id.get, relationship)
+
         // view as owner
         inject[FakeUserActionsHelper].setUser(user1)
-        val result1 = controller.getProfileFollowers(Username("GDubs"), 2)(FakeRequest("GET", routes.UserProfileController.getProfileFollowers(Username("GDubs"), 2).url))
+        val result1 = controller.getProfileFollowers(Username("GDubs"), 10)(FakeRequest("GET", routes.UserProfileController.getProfileFollowers(Username("GDubs"), 10).url))
         status(result1) must equalTo(OK)
         contentType(result1) must beSome("application/json")
         val resultJson1 = contentAsJson(result1)
+        println(Set(user1, user2, user3, user4, user5).map(_.externalId))
         (resultJson1 \ "count") === JsNumber(4)
-        (resultJson1 \\ "id") === Seq(user2, user3).map(u => JsString(u.externalId.id))
+        (resultJson1 \\ "id") === Seq(user5, user3, user4, user2).map(u => JsString(u.externalId.id))
         (resultJson1 \ "ids") === Json.toJson(Seq(user4, user5).map(_.externalId))
 
         // view as anybody
