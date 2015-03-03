@@ -2,7 +2,7 @@
 
 angular.module('kifi')
 
-.controller('UserProfileConnectionsCtrl', [
+.controller('UserProfileFollowersCtrl', [
   '$scope', '$stateParams', 'userProfileActionService',
   function ($scope, $stateParams, userProfileActionService) {
     var users;
@@ -10,7 +10,7 @@ angular.module('kifi')
     var fetchPageSize = 9;
     var loading = true;
 
-    $scope.fetchConnections = function () {
+    $scope.fetchFollowers = function () {
       if (loading) {
         return;
       }
@@ -24,11 +24,11 @@ angular.module('kifi')
       });
     };
 
-    $scope.hasMoreConnections = function () {
+    $scope.hasMoreFollowers = function () {
       return !users || !remainingUserIds || remainingUserIds.length;
     };
 
-    userProfileActionService.getConnections($stateParams.username, fetchPageSize).then(function (data) {
+    userProfileActionService.getFollowers($stateParams.username, fetchPageSize).then(function (data) {
       $scope.users = users = data.users;
       remainingUserIds = data.ids;
       loading = false;
