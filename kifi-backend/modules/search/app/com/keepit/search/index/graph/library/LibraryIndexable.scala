@@ -18,7 +18,6 @@ object LibraryFields {
   val kindField = "k"
   val ownerField = "o"
   val ownerIdField = "oid"
-  val allUsersCountField = "ac"
   val recordField = "rec"
 
   val strictTextSearchFields = Set(nameField, nameStemmedField, descriptionField, descriptionStemmedField)
@@ -92,11 +91,6 @@ object LibraryIndexable {
     librarySearcher.getStringDocValue(LibraryFields.nameValueField, libId)
   }
 
-  // todo(Léo): we could use LibraryMembership Index to get this count instead
-  def getMemberCount(librarySearcher: Searcher, libId: Long): Option[Long] = {
-    librarySearcher.getLongDocValue(LibraryFields.allUsersCountField, libId)
-  }
-
   def getRecord(librarySearcher: Searcher, libraryId: Id[Library]): Option[LibraryRecord] = {
     librarySearcher.getDecodedDocValue(LibraryFields.recordField, libraryId.id)
   }
@@ -132,7 +126,6 @@ class LibraryIndexable(library: DetailedLibraryView) extends Indexable[Library, 
     doc.add(buildKeywordField(ownerField, library.ownerId.id.toString))
 
     doc.add(buildIdValueField(ownerIdField, library.ownerId))
-    doc.add(buildLongValueField(allUsersCountField, library.memberCount))
     doc.add(buildLongValueField(visibilityField, Visibility.toNumericCode(library.visibility)))
     doc.add(buildLongValueField(kindField, Kind.toNumericCode(library.kind)))
 

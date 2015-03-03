@@ -300,6 +300,7 @@ class SearchFactory @Inject() (
         filter.userFilter.foreach(addUserFilterToUriSearch(engBuilder, _))
 
         val librarySearcher = libraryIndexer.getSearcher
+        val libraryMembershipSearcher = libraryMembershipIndexer.getSearcher
         val userSearcher = userIndexer.getSearcher
         shards.toSeq.map { shard =>
           val keepSearcher = shardedKeepIndexer.getIndexer(shard).getSearcher
@@ -314,6 +315,7 @@ class SearchFactory @Inject() (
             config,
             engBuilder,
             librarySearcher,
+            libraryMembershipSearcher,
             keepSearcher,
             userSearcher,
             libraryQualityEvaluator,

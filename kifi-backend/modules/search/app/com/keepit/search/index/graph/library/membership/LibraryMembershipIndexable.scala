@@ -36,6 +36,15 @@ object LibraryMembershipIndexable {
   def getLibrariesByOwner(libraryMembershipSearcher: Searcher, ownerId: Id[User]): Set[Long] = {
     LongArraySet.from(libraryMembershipSearcher.findSecondaryIds(new Term(ownerField, ownerId.id.toString), libraryIdField).toArray)
   }
+
+  def countPublishedLibrariesByOwner(librarySearcher: Searcher, libraryMembershipSearcher: Searcher, ownerId: Id[User]): Int = {
+    val libraryIds = libraryMembershipSearcher.findSecondaryIds(new Term(ownerField, ownerId.id.toString), libraryIdField).toArray
+    libraryIds.count(LibraryIndexable.isPublished(librarySearcher, _))
+  }
+
+  def getMemberCount(libraryMembershipSearcher: Searcher, libId: Long): Int = {
+    libraryMembershipSearcher.freq(new Term(libraryField, libId.toString))
+  }
 }
 
 class LibraryMembershipIndexable(membership: LibraryMembershipView) extends Indexable[LibraryMembership, LibraryMembership] {

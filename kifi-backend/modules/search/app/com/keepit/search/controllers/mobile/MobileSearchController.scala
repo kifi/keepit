@@ -216,7 +216,7 @@ class MobileSearchController @Inject() (
         val librarySearcher = libraryIndexer.getSearcher
         val libraryMembershipSearcher = libraryMembershipIndexer.getSearcher
         val publishedLibrariesCountByMember = userSearchResult.hits.map { hit => hit.id -> LibraryMembershipIndexable.countPublishedLibrariesByMember(librarySearcher, libraryMembershipSearcher, hit.id) }.toMap
-        val publishedLibrariesCountByOwner = userSearchResult.hits.map { hit => hit.id -> LibraryIndexable.countPublishedLibrariesByOwner(librarySearcher, hit.id) }.toMap
+        val publishedLibrariesCountByOwner = userSearchResult.hits.map { hit => hit.id -> LibraryMembershipIndexable.countPublishedLibrariesByOwner(librarySearcher, libraryMembershipSearcher, hit.id) }.toMap
         val relevantLibraryRecordsAndVisibity = getLibraryRecordsAndVisibility(librarySearcher, userSearchResult.hits.flatMap(_.library).toSet)
         for {
           keepCountsByUser <- futureKeepCountsByUser
