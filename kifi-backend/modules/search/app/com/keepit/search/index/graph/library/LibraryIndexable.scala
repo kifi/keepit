@@ -101,13 +101,6 @@ object LibraryIndexable {
     librarySearcher.getDecodedDocValue(LibraryFields.recordField, libraryId.id)
   }
 
-  def getLibrariesByOwner(librarySearcher: Searcher, ownerId: Id[User]): Set[Long] = {
-    LongArraySet.from(librarySearcher.findPrimaryIds(new Term(LibraryFields.ownerField, ownerId.id.toString)).toArray)
-  }
-
-  def countPublishedLibrariesByOwner(librarySearcher: Searcher, ownerId: Id[User]): Int = {
-    librarySearcher.findPrimaryIds(new Term(LibraryFields.ownerField, ownerId.id.toString)).toArray().count(isPublished(librarySearcher, _))
-  }
 }
 
 class LibraryIndexable(library: DetailedLibraryView) extends Indexable[Library, Library] {
