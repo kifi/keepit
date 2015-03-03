@@ -45,8 +45,10 @@ class MobileRecommendationsController @Inject() (
   }
 
   def topPublicRecos() = UserAction.async { request =>
+    val useDict = request.headers.get("X-Kifi-Client").exists(_.toLowerCase.trim.startsWith("ios 2.1"))
     commander.topPublicRecos(request.userId).map { recos =>
-      Ok(Json.toJson(recos))
+      if (useDict) Ok(Json.obj("recos" -> recos))
+      else Ok(Json.toJson(recos))
     }
   }
 
