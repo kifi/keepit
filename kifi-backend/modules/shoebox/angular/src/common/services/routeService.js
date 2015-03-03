@@ -242,14 +242,11 @@ angular.module('kifi')
           size: _.isUndefined(opt_size) ? [] : opt_size
         });
       },
-      getUserConnections: function (username, limit) {
-        return route('/user/' + username + '/connections', {n: limit || []});
+      getProfileConnections: function (username, limit) {
+        return route('/users/' + username + '/connections', {n: limit || []});
       },
-      getUserConnectionsById: function (username, ids) {
-        return route('/user/' + username + '/connections', {ids: ids.join(',')});
-      },
-      getUserConnectionIds: function (username, limit) {
-        return route('/user/' + username + '/connections/ids', {n: limit || []});
+      getProfileUsers: function (username, ids) {
+        return route('/users/' + ids.join('.'));
       }
     };
   }
