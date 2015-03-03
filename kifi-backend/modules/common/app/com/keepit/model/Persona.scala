@@ -85,7 +85,7 @@ object Persona {
     PersonaName.ARTIST -> PersonaKeep(
       title = "Psychedelic Science",
       url = "https://www.ted.com/talks/fabian_oefner_psychedelic_science",
-      image = PersonaKeepImageInfo("//d1dwdv9wd966qu.cloudfront.net/img/guide/louvre_480x510.06af404.png", 480 ,510),
+      image = PersonaKeepImageInfo("//d1dwdv9wd966qu.cloudfront.net/img/guide/louvre_480x510.06af404.png", 480, 510),
       noun = "article",
       query = "psychedelic+art",
       matches = createMatchJson(Seq(), Seq()),
