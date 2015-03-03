@@ -300,16 +300,17 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
 
     "get mutual connections" in {
       withDb(controllerTestModules: _*) { implicit injector =>
-        val (user1, user2, user3, user4, user5) = db.readWrite { implicit session =>
+        val (user1, user2, user3, user4, user5, user6) = db.readWrite { implicit session =>
           val user1 = user().withName("George", "Washington").withUsername("GDubs").withPictureName("pic1").saved
           val user2 = user().withName("Abe", "Lincoln").withUsername("abe").saved
           val user3 = user().withName("Thomas", "Jefferson").withUsername("TJ").saved
           val user4 = user().withName("John", "Adams").withUsername("jayjayadams").saved
           val user5 = user().withName("Ben", "Franklin").withUsername("Benji").saved
+          val user6 = user().withName("Nikola", "Tesla").withUsername("wizard").saved
 
-          connect(user1 -> user2, user1 -> user3, user4 -> user1, user2 -> user3, user2 -> user4, user2 -> user5).saved
+          connect(user1 -> user2, user1 -> user3, user4 -> user1, user2 -> user3, user2 -> user4, user2 -> user5, user3 -> user5, user2 -> user6).saved
 
-          (user1, user2, user3, user4, user5)
+          (user1, user2, user3, user4, user5, user6)
         }
 
         { // unauthenticated vistor
@@ -328,6 +329,7 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
           contentType(result) === Some("application/json")
           val content = contentAsJson(result)
           (content \\ "id") === Seq(user3, user4).map(u => JsString(u.externalId.id))
+          (content \\ "connections") === Seq(JsNumber(3), JsNumber(2))
           (content \ "count") === JsNumber(2)
         }
 
@@ -336,16 +338,18 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
           status(result) === OK
           contentType(result) === Some("application/json")
           val content = contentAsJson(result)
-          (content \\ "id") === Seq(user3, user4).map(u => JsString(u.externalId.id))
+          (content \\ "id") === Seq(user4, user3).map(u => JsString(u.externalId.id))
+          (content \\ "connections") === Seq(JsNumber(2), JsNumber(3))
           (content \ "count") === JsNumber(2)
         }
 
         { // connected, no mutual connections
-          val result = getMutualConnections(Some(user2), user5.externalId)
+          val result = getMutualConnections(Some(user2), user6.externalId)
           status(result) === OK
           contentType(result) === Some("application/json")
           val content = contentAsJson(result)
           (content \\ "id") === Seq.empty
+          (content \\ "connections") === Seq.empty
           (content \ "count") === JsNumber(0)
         }
       }

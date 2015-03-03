@@ -181,10 +181,13 @@ class UserProfileController @Inject() (
     } match {
       case Some(user) if user.id.get != request.userId =>
         val userIds = userConnectionsCommander.getMutualFriends(request.userId, user.id.get)
-        val userMap = db.readOnlyMaster { implicit s =>
-          basicUserRepo.loadAll(userIds)
+        val (userMap, countMap) = userCommander.loadBasicUsersAndConnectionCounts(userIds, userIds)
+        val userJsonObjs = userIds.flatMap { id =>
+          userMap.get(id).map { basicUser =>
+            Json.toJson(basicUser).as[JsObject] + ("connections" -> JsNumber(countMap(id)))
+          }
         }
-        Ok(Json.obj("users" -> userIds.flatMap(userMap.get), "count" -> userIds.size))
+        Ok(Json.obj("users" -> userJsonObjs, "count" -> userIds.size))
       case Some(_) =>
         BadRequest("self")
       case None =>
