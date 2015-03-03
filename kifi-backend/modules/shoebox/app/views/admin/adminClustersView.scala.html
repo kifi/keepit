@@ -11,11 +11,11 @@
         <small style="float:right;"> Auto Refresh: <input type="checkbox" checked id="autoRefresh"> </small>
         <table class="table table-condensed table-striped">
             <thead>
-              <th>Type</th> <th>Name</th> <th>ZK Id</th> <th>IPs</th> <th>State</th> <th>Compiled At</th><th>Commit</th> <th>Type</th> <th>AWS Details</th>
+              <th>Type</th> <th>Name</th> <th>ZK Id</th> <th>IPs</th> <th>State</th> <th>Compiled At</th><th>Commit</th> <th>Type</th> <th># DB Conn. (M/S) </th> <th>AWS Details</th>
             </thead>
             <tbody>
             @for(cmi <- data) {
-                <tr class="@(if (!(cmi.state.name=="up" || cmi.state.name=="backing_up")) "error" else "")" style="font-weight: @(if (cmi.isLeader) "bold" else "normal");">
+                <tr class="@(if (!(cmi.state.name=="up" || cmi.state.name=="backing_up" || cmi.state.name=="offline")) "error" else "")" style="font-weight: @(if (cmi.isLeader) "bold" else "normal");">
                     <td>@cmi.serviceType.name</td>
                     <td>@cmi.instanceInfo.name.getOrElse("")</td>
                     <td>@cmi.zkid</td>
@@ -24,6 +24,7 @@
                     <td>@{cmi.version.date}-@{cmi.version.time}</td>
                     <td><a href="https://github.com/kifi/keepit/commit/@{cmi.version.hash}">@{randomColor(cmi.version.hash)}</a></td>
                     <td><a href="http://www.ec2instances.info/">@{cmi.instanceInfo.instanceType}</a></td>
+                    <td>@{cmi.numDbConnections.getOrElse("N/A")}</td>
                     <td>
                       @adminHelper.instanceInfoModal(cmi.instanceInfo.instanceId.toString, cmi.instanceInfo)
                       <button type="button" data-toggle="modal" data-target="#@cmi.instanceInfo.instanceId" style="width: 100%;">Show</button>
@@ -38,7 +39,7 @@
               if (document.getElementById("autoRefresh").checked) {
                 location.reload();
               }
-            }, 5000);
+            }, 15000);
         </script>
     }
 

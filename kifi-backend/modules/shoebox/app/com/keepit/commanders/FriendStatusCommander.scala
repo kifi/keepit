@@ -12,67 +12,84 @@ class FriendStatusCommander @Inject() (
     friendRequestRepo: FriendRequestRepo) extends Logging {
 
   // Augments a BasicUser with its friend status with respect to userId.
-  def augmentWithFriendStatus(userId: Id[User], basicUserId: Id[User], basicUser: BasicUser)(implicit session: RSession): BasicUserWithFriendStatus = {
+  def augmentUser(userId: Id[User], basicUserId: Id[User], basicUser: BasicUser)(implicit session: RSession): BasicUserWithFriendStatus = {
     if (userId == basicUserId) {
       BasicUserWithFriendStatus.fromWithoutFriendStatus(basicUser)
     } else if (userConnectionRepo.areConnected(userId, basicUserId)) {
-      BasicUserWithFriendStatus.from(basicUser, true)
+      augmentFriend(userId, basicUserId, basicUser)
     } else {
-      augmentNonFriendWithFriendStatus(userId, basicUserId, basicUser)
+      augmentNonFriend(userId, basicUserId, basicUser)
     }
   }
 
   // Augments a map of BasicUsers with their friend status with respect to userId.
-  def augmentWithFriendStatus(userId: Id[User], basicUsers: Map[Id[User], BasicUser])(implicit session: RSession): Map[Id[User], BasicUserWithFriendStatus] = {
-    val otherUserIds = basicUsers.keySet - userId
-    if (otherUserIds.isEmpty) {
-      basicUsers mapValues BasicUserWithFriendStatus.fromWithoutFriendStatus
-    } else if (otherUserIds.size == 1) {
+  def augmentUsers(userId: Id[User], basicUsers: Map[Id[User], BasicUser])(implicit session: RSession): Map[Id[User], BasicUserWithFriendStatus] = {
+    val size = basicUsers.size
+    if (size == 1 || (size == 2 && basicUsers.contains(userId))) {
       basicUsers.map {
         case (id, user) =>
-          (id, augmentWithFriendStatus(userId, id, user))
+          (id, augmentUser(userId, id, user))
       }
     } else {
-      val friendIds = userConnectionRepo.getConnectedUsers(userId)
-      val nonFriendUserIds = otherUserIds -- friendIds
-      if (nonFriendUserIds.size <= 1) {
-        basicUsers.map {
-          case (id, user) =>
-            if (nonFriendUserIds.contains(id)) {
-              (id, augmentNonFriendWithFriendStatus(userId, id, user))
-            } else {
-              (id, BasicUserWithFriendStatus.from(user, true))
-            }
-        }
-      } else {
-        val reqsSent = friendRequestRepo.getBySender(userId, Set(FriendRequestStates.ACTIVE, FriendRequestStates.IGNORED))
-        val reqsReceived = friendRequestRepo.getByRecipient(userId, Set(FriendRequestStates.ACTIVE))
-        basicUsers.map {
-          case (id, user) =>
-            val reqSent = reqsSent.find(_.recipientId == id)
-            val reqReceived = reqsReceived.find(_.senderId == id)
-            if (friendIds.contains(id)) {
-              (id, BasicUserWithFriendStatus.from(user, true))
-            } else if (reqSent.isDefined) {
-              (id, BasicUserWithFriendStatus.fromWithRequestSentAt(user, reqSent.get.createdAt))
-            } else if (reqReceived.isDefined) {
-              (id, BasicUserWithFriendStatus.fromWithRequestReceivedAt(user, reqReceived.get.createdAt))
-            } else {
-              (id, BasicUserWithFriendStatus.from(user, false))
-            }
-        }
+      augmentUsers(userId, basicUsers, userConnectionRepo.getConnectedUsers(userId))
+    }
+  }
+
+  // Augments a map of BasicUsers with their friend status with respect to `userId`, given a `Set[Id[User]]` that can be used to check for a friendship with `userId`.
+  def augmentUsers(userId: Id[User], basicUsers: Map[Id[User], BasicUser], friendIds: Set[Id[User]])(implicit session: RSession): Map[Id[User], BasicUserWithFriendStatus] = {
+    val groups = basicUsers.groupBy {
+      case (id, _) =>
+        if (friendIds.contains(id)) "friend" else if (id == userId) "self" else "other"
+    }
+    augmentFriends(userId, groups.getOrElse("friend", Map.empty)) ++
+      augmentNonFriends(userId, groups.getOrElse("other", Map.empty)) ++
+      groups.getOrElse("self", Map.empty).mapValues(BasicUserWithFriendStatus.fromWithoutFriendStatus)
+  }
+
+  // Augments a BasicUser already known *not* to be friends with userId.
+  private def augmentFriend(userId: Id[User], friendId: Id[User], friend: BasicUser)(implicit session: RSession): BasicUserWithFriendStatus = {
+    // TODO: add "isSearchFriend" to BasicUserWithFriendStatus and set it here
+    BasicUserWithFriendStatus.from(friend, true)
+  }
+
+  // Augments a map of BasicUsers already known to be friends with userId.
+  private def augmentFriends(userId: Id[User], friends: Map[Id[User], BasicUser])(implicit session: RSession): Map[Id[User], BasicUserWithFriendStatus] = {
+    // TODO: add "isSearchFriend" to BasicUserWithFriendStatus and set it here
+    friends.mapValues(basicUser => BasicUserWithFriendStatus.from(basicUser, true))
+  }
+
+  // Augments a BasicUser already known *not* to be friends with userId.
+  private def augmentNonFriend(userId: Id[User], nonFriendId: Id[User], nonFriend: BasicUser)(implicit session: RSession): BasicUserWithFriendStatus = {
+    friendRequestRepo.getBySenderAndRecipient(nonFriendId, userId, Set(FriendRequestStates.ACTIVE)) map { req =>
+      BasicUserWithFriendStatus.fromWithRequestReceivedAt(nonFriend, req.createdAt)
+    } getOrElse {
+      friendRequestRepo.getBySenderAndRecipient(userId, nonFriendId, Set(FriendRequestStates.ACTIVE, FriendRequestStates.IGNORED)) map { req =>
+        BasicUserWithFriendStatus.fromWithRequestSentAt(nonFriend, req.createdAt)
+      } getOrElse {
+        BasicUserWithFriendStatus.from(nonFriend, false)
       }
     }
   }
 
-  private def augmentNonFriendWithFriendStatus(userId: Id[User], basicUserId: Id[User], basicUser: BasicUser)(implicit session: RSession): BasicUserWithFriendStatus = {
-    friendRequestRepo.getBySenderAndRecipient(basicUserId, userId, Set(FriendRequestStates.ACTIVE)) map { req =>
-      BasicUserWithFriendStatus.fromWithRequestReceivedAt(basicUser, req.createdAt)
-    } getOrElse {
-      friendRequestRepo.getBySenderAndRecipient(userId, basicUserId, Set(FriendRequestStates.ACTIVE, FriendRequestStates.IGNORED)) map { req =>
-        BasicUserWithFriendStatus.fromWithRequestSentAt(basicUser, req.createdAt)
-      } getOrElse {
-        BasicUserWithFriendStatus.from(basicUser, false)
+  // Augments a map of BasicUsers already known *not* to be friends with userId.
+  private def augmentNonFriends(userId: Id[User], nonFriends: Map[Id[User], BasicUser])(implicit session: RSession): Map[Id[User], BasicUserWithFriendStatus] = {
+    if (nonFriends.size <= 1) {
+      nonFriends.map {
+        case (id, user) =>
+          (id, augmentNonFriend(userId, id, user))
+      }
+    } else {
+      val reqsSent = friendRequestRepo.getBySender(userId, Set(FriendRequestStates.ACTIVE, FriendRequestStates.IGNORED))
+      val reqsReceived = friendRequestRepo.getByRecipient(userId, Set(FriendRequestStates.ACTIVE))
+      nonFriends.map {
+        case (id, user) =>
+          reqsSent.find(_.recipientId == id).map { reqSent =>
+            id -> BasicUserWithFriendStatus.fromWithRequestSentAt(user, reqSent.createdAt)
+          } orElse reqsReceived.find(_.senderId == id).map { reqReceived =>
+            id -> BasicUserWithFriendStatus.fromWithRequestReceivedAt(user, reqReceived.createdAt)
+          } getOrElse {
+            id -> BasicUserWithFriendStatus.from(user, false)
+          }
       }
     }
   }

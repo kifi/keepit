@@ -154,7 +154,7 @@ class KeepDecorator @Inject() (
   }
 
   def getBasicKeeps(userId: Id[User], uriIds: Set[Id[NormalizedURI]]): Map[Id[NormalizedURI], Set[BasicKeep]] = {
-    val (allKeeps, libraryMemberships) = db.readOnlyMaster { implicit session =>
+    val (allKeeps, libraryMemberships) = db.readOnlyReplica { implicit session =>
       val allKeeps = keepRepo.getByUserAndUriIds(userId, uriIds)
       val libraryMemberships = libraryMembershipRepo.getWithLibraryIdsAndUserId(allKeeps.map(_.libraryId.get).toSet, userId)
       (allKeeps, libraryMemberships)

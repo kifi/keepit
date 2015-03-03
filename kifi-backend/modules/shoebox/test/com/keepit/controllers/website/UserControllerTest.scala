@@ -1,6 +1,6 @@
 package com.keepit.controllers.website
 
-import com.keepit.commanders.UserConnectionsCommander
+import com.keepit.commanders.{ FriendStatusCommander, UserConnectionsCommander }
 import com.keepit.common.time._
 import com.keepit.model.KeepFactoryHelper._
 import com.keepit.model.KeepFactory._
@@ -16,7 +16,7 @@ import com.keepit.model.LibraryMembershipFactory._
 import com.keepit.model.LibraryMembershipFactoryHelper._
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.controller._
-import com.keepit.common.db.ExternalId
+import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.slick.Database
 
 import com.keepit.common.mail.{ EmailAddress, FakeMailModule }
@@ -30,6 +30,7 @@ import com.keepit.model._
 import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
+import com.keepit.social.BasicUser
 import com.keepit.test.ShoeboxTestInjector
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
@@ -302,7 +303,7 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
       }
     }
 
-    "get profile for self" in {
+    "get profile connections" in {
       withDb(controllerTestModules: _*) { implicit injector =>
         val (user1, user2, user3, user4, user5, lib1) = db.readWrite { implicit session =>
           val user1 = user().withName("George", "Washington").withUsername("GDubs").withPictureName("pic1").saved
@@ -336,42 +337,55 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
           (user1, user2, user3, user4, user5, user1lib)
         }
         val controller = inject[UserController]
-        controller.loadFullConnectionUser(user1.id.get, db.readOnlyMaster { implicit s => basicUserRepo.load(user1.id.get) }, None, Some(user2.id.get)) === Json.obj(
+        def basicUserWFS(user: User, viewerIdOpt: Option[Id[User]]): BasicUserWithFriendStatus = {
+          val basicUser = BasicUser.fromUser(user)
+          viewerIdOpt map { viewerId =>
+            db.readOnlyMaster { implicit s =>
+              inject[FriendStatusCommander].augmentUser(viewerId, user.id.get, basicUser)
+            }
+          } getOrElse BasicUserWithFriendStatus.fromWithoutFriendStatus(basicUser)
+        }
+        controller.loadFullConnectionUser(user1.id.get, basicUserWFS(user1, user2.id), user2.id) === Json.obj(
           "id" -> user1.externalId,
           "firstName" -> user1.firstName,
           "lastName" -> user1.lastName,
           "pictureName" -> "pic1.jpg",
           "username" -> user1.username.value,
-          "libs" -> 2, "followers" -> 3, "connections" -> 3, "connected" -> true, "mlibs" -> 0, "mConnections" -> 1
+          "isFriend" -> true,
+          "libraries" -> 2, "connections" -> 3, "followers" -> 3,
+          "mLibraries" -> 0, "mConnections" -> 1
         )
-        controller.loadFullConnectionUser(user1.id.get, db.readOnlyMaster { implicit s => basicUserRepo.load(user1.id.get) }, None, None) === Json.obj(
+        controller.loadFullConnectionUser(user1.id.get, basicUserWFS(user1, None), None) === Json.obj(
           "id" -> user1.externalId,
           "firstName" -> user1.firstName,
           "lastName" -> user1.lastName,
           "pictureName" -> "pic1.jpg",
           "username" -> user1.username.value,
-          "libs" -> 1, "followers" -> 3, "connections" -> 3
+          "libraries" -> 1,
+          "connections" -> 3, "followers" -> 2
         )
-        controller.loadFullConnectionUser(user2.id.get, db.readOnlyMaster { implicit s => basicUserRepo.load(user2.id.get) }, None, Some(user3.id.get)) === Json.obj(
+        controller.loadFullConnectionUser(user2.id.get, basicUserWFS(user2, user3.id), user3.id) === Json.obj(
           "id" -> user2.externalId,
           "firstName" -> user2.firstName,
           "lastName" -> user2.lastName,
           "pictureName" -> "0.jpg",
           "username" -> user2.username.value,
-          "libs" -> 0, "followers" -> 0, "connections" -> 2, "connected" -> true, "mlibs" -> 1, "mConnections" -> 1
+          "isFriend" -> true,
+          "libraries" -> 0, "connections" -> 2, "followers" -> 0,
+          "mLibraries" -> 1, "mConnections" -> 1
         )
-        controller.loadFullConnectionUser(user2.id.get, db.readOnlyMaster { implicit s => basicUserRepo.load(user2.id.get) }, None, None) === Json.obj(
+        controller.loadFullConnectionUser(user2.id.get, basicUserWFS(user2, None), None) === Json.obj(
           "id" -> user2.externalId,
           "firstName" -> user2.firstName,
           "lastName" -> user2.lastName,
           "pictureName" -> "0.jpg",
           "username" -> user2.username.value,
-          "libs" -> 0, "followers" -> 0, "connections" -> 2
+          "libraries" -> 0, "connections" -> 2, "followers" -> 0
         )
       }
     }
 
-    "get profile for self" in {
+    "get profile libraries" in {
       withDb(controllerTestModules: _*) { implicit injector =>
         val (user1, user2, user3, user4, user5, lib1) = db.readWrite { implicit session =>
           val user1 = user().withName("George", "Washington").withUsername("GDubs").withPictureName("pic1").saved
@@ -505,6 +519,64 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
               "numFollowers": 3
             }
           """)
+      }
+    }
+
+    "get profile followers" in {
+      withDb(controllerTestModules: _*) { implicit injector =>
+        val (user1, user2, user3, user4, user5) = db.readWrite { implicit session =>
+          val user1 = user().withName("George", "Washington").withUsername("GDubs").withPictureName("pic1").saved
+          val user2 = user().withName("Abe", "Lincoln").withUsername("abe").saved
+          val user3 = user().withName("Thomas", "Jefferson").withUsername("TJ").saved
+          val user4 = user().withName("John", "Adams").withUsername("jayjayadams").saved
+          val user5 = user().withName("Ben", "Franklin").withUsername("Benji").saved
+
+          libraries(3).map(_.withUser(user1).secret()).saved.head.savedFollowerMembership(user2, user3) // create 3 secret libraries, one is follower by user2 and user3
+          library().withUser(user1).published().saved.savedFollowerMembership(user5, user4) // create 1 published library, followed by user4 and user 5
+
+          (user1, user2, user3, user4, user5)
+        }
+        val controller = inject[UserController]
+
+        // get all follower ids for owner
+        inject[FakeUserActionsHelper].setUser(user1)
+        val resultIds = controller.profileFollowerIds(Username("GDubs"), 100)(FakeRequest("GET", routes.UserController.profileFollowerIds(Username("GDubs"), 100).url))
+        status(resultIds) must equalTo(OK)
+        contentType(resultIds) must beSome("application/json")
+        Json.parse(contentAsString(resultIds)) === Json.parse(s"""
+           {
+            "ids" : ["${user2.externalId}", "${user3.externalId}", "${user4.externalId}", "${user5.externalId}"]
+           }
+         """
+        )
+
+        // view as owner
+        inject[FakeUserActionsHelper].setUser(user1)
+        val result1 = controller.profileFollowers(Username("GDubs"), 10, "")(FakeRequest("GET", routes.UserController.profileFollowers(Username("GDubs"), 10).url))
+        status(result1) must equalTo(OK)
+        contentType(result1) must beSome("application/json")
+        val resultJson1 = contentAsJson(result1)
+        (resultJson1 \\ "count").map(_.as[Int] === 4)
+        (resultJson1 \\ "id").map(_.as[ExternalId[User]]) === Seq(user2.externalId, user3.externalId, user4.externalId, user5.externalId)
+
+        // view as anybody
+        inject[FakeUserActionsHelper].setUser(user4)
+        val result2 = controller.profileFollowers(Username("GDubs"), 10, "")(FakeRequest("GET", routes.UserController.profileFollowers(Username("GDubs"), 10).url))
+        status(result2) must equalTo(OK)
+        contentType(result2) must beSome("application/json")
+        val resultJson2 = contentAsJson(result2)
+        (resultJson2 \\ "count").map(_.as[Int] === 2)
+        (resultJson2 \\ "id").map(_.as[ExternalId[User]]) === Seq(user5.externalId, user4.externalId)
+
+        // view as follower (to a secret library)
+        inject[FakeUserActionsHelper].setUser(user2)
+        val result3 = controller.profileFollowers(Username("GDubs"), 10, "")(FakeRequest("GET", routes.UserController.profileFollowers(Username("GDubs"), 10).url))
+        status(result3) must equalTo(OK)
+        contentType(result3) must beSome("application/json")
+        val resultJson3 = contentAsJson(result3)
+        (resultJson3 \\ "count").map(_.as[Int] === 3)
+        (resultJson3 \\ "id").map(_.as[ExternalId[User]]) === Seq(user4.externalId, user5.externalId, user2.externalId)
+
       }
     }
 

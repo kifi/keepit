@@ -28,11 +28,14 @@ class AdminSocialUserController @Inject() (
 
   def migrateHashColumn(page: Int, iters: Int) = AdminUserPage { implicit request =>
     val pages = (0 until iters).map { i => page + i }
-    pages.foreach { page =>
-      db.readWrite { implicit s =>
-        val socialUsers = socialUserInfoRepo.page(page, 100)
-        socialUsers.foreach(socialUserInfoRepo.doNotUseSave(_))
-      }
+    db.readWriteBatch(pages) {
+      case (session, p) =>
+        implicit val s = session
+        val socialUsers = socialUserInfoRepo.page(p, 1000)
+        socialUsers.foreach(socialUserInfoRepo.doNotUseSave)
+        if (p % 10 == 0) {
+          log.info(s"[migrateHashColumn] Page $p done")
+        }
     }
     Ok(JsNumber(pages.last))
   }
