@@ -101,3 +101,20 @@ case object YoutubeArticle extends ArticleKind[YoutubeArticle] {
   }
 }
 
+case class GithubArticle(
+    createdAt: DateTime,
+    url: String,
+    content: GithubContent) extends Article {
+  type A = GithubArticle
+  def kind = GithubArticle
+}
+
+case object GithubArticle extends ArticleKind[GithubArticle] {
+  val typeCode = "github"
+  val version = 1
+  def formatByVersion(thatVersion: Int) = thatVersion match {
+    case `version` => Json.format[GithubArticle]
+    case _ => throw new UnknownArticleVersionException(this, version, thatVersion)
+  }
+}
+
