@@ -14,6 +14,7 @@ object LibraryMembershipFields {
   val libraryField = "lib"
   val libraryIdField = "libId"
   val searcherField = "searcher"
+  val ownerField = "owner"
 
   val decoders: Map[String, FieldDecoder] = Map.empty
 }
@@ -47,6 +48,9 @@ class LibraryMembershipIndexable(membership: LibraryMembershipView) extends Inde
     doc.add(buildIdValueField(userIdField, membership.userId))
     if (membership.showInSearch) {
       doc.add(buildKeywordField(searcherField, membership.userId.id.toString))
+    }
+    if (membership.access == LibraryAccess.OWNER) {
+      doc.add(buildKeywordField(ownerField, membership.userId.id.toString))
     }
 
     doc.add(buildKeywordField(libraryField, membership.libraryId.id.toString))
