@@ -314,7 +314,7 @@ class KeepImageCommanderImpl @Inject() (
             }
           } else {
             // have existing KeepImages, use those
-            log.info(s"[kic] Existing stored images found: $existingSameHash")
+            log.info(s"[kic] Existing stored images (${existingSameHash.size}}) found: $existingSameHash")
             Future.successful(copyExistingImagesAndReplace(keepId, source, existingSameHash))
           }
         case Left(failure) => Future.successful(failure)

@@ -23,7 +23,7 @@ trait UserLDAInterestsRepo extends DbRepo[UserLDAInterests] {
 class UserLDAInterestsRepoImpl @Inject() (
     val db: DataBaseComponent,
     val clock: Clock,
-    airbrake: AirbrakeNotifier) extends DbRepo[UserLDAInterests] with UserLDAInterestsRepo with CortexTypeMappers with FortyTwoGenericTypeMappers {
+    airbrake: AirbrakeNotifier) extends DbRepo[UserLDAInterests] with UserLDAInterestsRepo with CortexTypeMappers {
 
   import db.Driver.simple._
 
