@@ -18,7 +18,7 @@ import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.controller._
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.slick.Database
-
+import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.mail.{ EmailAddress, FakeMailModule }
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.oauth.FakeOAuth2ConfigurationModule
@@ -34,7 +34,7 @@ import com.keepit.social.BasicUser
 import com.keepit.test.ShoeboxTestInjector
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
-import play.api.libs.json.{ JsNull, Json }
+import play.api.libs.json.{ JsArray, JsNull, JsNumber, JsString, Json }
 import play.api.mvc.Result
 import play.api.test.Helpers._
 import play.api.test._
@@ -337,51 +337,51 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
           (user1, user2, user3, user4, user5, user1lib)
         }
         val controller = inject[UserController]
-        def basicUserWFS(user: User, viewerIdOpt: Option[Id[User]]): BasicUserWithFriendStatus = {
+        def basicUserWFS(user: User, viewerIdOpt: Option[Id[User]])(implicit session: RSession): BasicUserWithFriendStatus = {
           val basicUser = BasicUser.fromUser(user)
           viewerIdOpt map { viewerId =>
-            db.readOnlyMaster { implicit s =>
-              inject[FriendStatusCommander].augmentUser(viewerId, user.id.get, basicUser)
-            }
+            inject[FriendStatusCommander].augmentUser(viewerId, user.id.get, basicUser)
           } getOrElse BasicUserWithFriendStatus.fromWithoutFriendStatus(basicUser)
         }
-        controller.loadFullConnectionUser(user1.id.get, basicUserWFS(user1, user2.id), user2.id) === Json.obj(
-          "id" -> user1.externalId,
-          "firstName" -> user1.firstName,
-          "lastName" -> user1.lastName,
-          "pictureName" -> "pic1.jpg",
-          "username" -> user1.username.value,
-          "isFriend" -> true,
-          "libraries" -> 2, "connections" -> 3, "followers" -> 3,
-          "mLibraries" -> 0, "mConnections" -> 1
-        )
-        controller.loadFullConnectionUser(user1.id.get, basicUserWFS(user1, None), None) === Json.obj(
-          "id" -> user1.externalId,
-          "firstName" -> user1.firstName,
-          "lastName" -> user1.lastName,
-          "pictureName" -> "pic1.jpg",
-          "username" -> user1.username.value,
-          "libraries" -> 1,
-          "connections" -> 3, "followers" -> 2
-        )
-        controller.loadFullConnectionUser(user2.id.get, basicUserWFS(user2, user3.id), user3.id) === Json.obj(
-          "id" -> user2.externalId,
-          "firstName" -> user2.firstName,
-          "lastName" -> user2.lastName,
-          "pictureName" -> "0.jpg",
-          "username" -> user2.username.value,
-          "isFriend" -> true,
-          "libraries" -> 0, "connections" -> 2, "followers" -> 0,
-          "mLibraries" -> 1, "mConnections" -> 1
-        )
-        controller.loadFullConnectionUser(user2.id.get, basicUserWFS(user2, None), None) === Json.obj(
-          "id" -> user2.externalId,
-          "firstName" -> user2.firstName,
-          "lastName" -> user2.lastName,
-          "pictureName" -> "0.jpg",
-          "username" -> user2.username.value,
-          "libraries" -> 0, "connections" -> 2, "followers" -> 0
-        )
+        db.readOnlyMaster { implicit s =>
+          controller.loadProfileUser(user1.id.get, basicUserWFS(user1, user2.id), user2.id) === Json.obj(
+            "id" -> user1.externalId,
+            "firstName" -> user1.firstName,
+            "lastName" -> user1.lastName,
+            "pictureName" -> "pic1.jpg",
+            "username" -> user1.username.value,
+            "isFriend" -> true,
+            "libraries" -> 2, "connections" -> 3, "followers" -> 3,
+            "mLibraries" -> 0, "mConnections" -> 1
+          )
+          controller.loadProfileUser(user1.id.get, basicUserWFS(user1, None), None) === Json.obj(
+            "id" -> user1.externalId,
+            "firstName" -> user1.firstName,
+            "lastName" -> user1.lastName,
+            "pictureName" -> "pic1.jpg",
+            "username" -> user1.username.value,
+            "libraries" -> 1,
+            "connections" -> 3, "followers" -> 2
+          )
+          controller.loadProfileUser(user2.id.get, basicUserWFS(user2, user3.id), user3.id) === Json.obj(
+            "id" -> user2.externalId,
+            "firstName" -> user2.firstName,
+            "lastName" -> user2.lastName,
+            "pictureName" -> "0.jpg",
+            "username" -> user2.username.value,
+            "isFriend" -> true,
+            "libraries" -> 0, "connections" -> 2, "followers" -> 0,
+            "mLibraries" -> 1, "mConnections" -> 1
+          )
+          controller.loadProfileUser(user2.id.get, basicUserWFS(user2, None), None) === Json.obj(
+            "id" -> user2.externalId,
+            "firstName" -> user2.firstName,
+            "lastName" -> user2.lastName,
+            "pictureName" -> "0.jpg",
+            "username" -> user2.username.value,
+            "libraries" -> 0, "connections" -> 2, "followers" -> 0
+          )
+        }
       }
     }
 
@@ -538,45 +538,35 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
         }
         val controller = inject[UserController]
 
-        // get all follower ids for owner
-        inject[FakeUserActionsHelper].setUser(user1)
-        val resultIds = controller.profileFollowerIds(Username("GDubs"), 100)(FakeRequest("GET", routes.UserController.profileFollowerIds(Username("GDubs"), 100).url))
-        status(resultIds) must equalTo(OK)
-        contentType(resultIds) must beSome("application/json")
-        Json.parse(contentAsString(resultIds)) === Json.parse(s"""
-           {
-            "ids" : ["${user2.externalId}", "${user3.externalId}", "${user4.externalId}", "${user5.externalId}"]
-           }
-         """
-        )
-
         // view as owner
         inject[FakeUserActionsHelper].setUser(user1)
-        val result1 = controller.profileFollowers(Username("GDubs"), 10, "")(FakeRequest("GET", routes.UserController.profileFollowers(Username("GDubs"), 10).url))
+        val result1 = controller.getProfileFollowers(Username("GDubs"), 2)(FakeRequest("GET", routes.UserController.getProfileFollowers(Username("GDubs"), 2).url))
         status(result1) must equalTo(OK)
         contentType(result1) must beSome("application/json")
         val resultJson1 = contentAsJson(result1)
-        (resultJson1 \\ "count").map(_.as[Int] === 4)
-        (resultJson1 \\ "id").map(_.as[ExternalId[User]]) === Seq(user2.externalId, user3.externalId, user4.externalId, user5.externalId)
+        (resultJson1 \ "count") === JsNumber(4)
+        (resultJson1 \\ "id") === Seq(user2, user3).map(u => JsString(u.externalId.id))
+        (resultJson1 \ "ids") === Json.toJson(Seq(user4, user5).map(_.externalId))
 
         // view as anybody
         inject[FakeUserActionsHelper].setUser(user4)
-        val result2 = controller.profileFollowers(Username("GDubs"), 10, "")(FakeRequest("GET", routes.UserController.profileFollowers(Username("GDubs"), 10).url))
+        val result2 = controller.getProfileFollowers(Username("GDubs"), 10)(FakeRequest("GET", routes.UserController.getProfileFollowers(Username("GDubs"), 10).url))
         status(result2) must equalTo(OK)
         contentType(result2) must beSome("application/json")
         val resultJson2 = contentAsJson(result2)
-        (resultJson2 \\ "count").map(_.as[Int] === 2)
-        (resultJson2 \\ "id").map(_.as[ExternalId[User]]) === Seq(user5.externalId, user4.externalId)
+        (resultJson2 \ "count") === JsNumber(2)
+        (resultJson2 \\ "id") === Seq(user4, user5).map(u => JsString(u.externalId.id))
+        (resultJson2 \ "ids") === JsArray()
 
         // view as follower (to a secret library)
         inject[FakeUserActionsHelper].setUser(user2)
-        val result3 = controller.profileFollowers(Username("GDubs"), 10, "")(FakeRequest("GET", routes.UserController.profileFollowers(Username("GDubs"), 10).url))
+        val result3 = controller.getProfileFollowers(Username("GDubs"), 10)(FakeRequest("GET", routes.UserController.getProfileFollowers(Username("GDubs"), 10).url))
         status(result3) must equalTo(OK)
         contentType(result3) must beSome("application/json")
         val resultJson3 = contentAsJson(result3)
-        (resultJson3 \\ "count").map(_.as[Int] === 3)
-        (resultJson3 \\ "id").map(_.as[ExternalId[User]]) === Seq(user4.externalId, user5.externalId, user2.externalId)
-
+        (resultJson3 \ "count") === JsNumber(3)
+        (resultJson3 \\ "id") === Seq(user4, user5, user2).map(u => JsString(u.externalId.id))
+        (resultJson3 \ "ids") === JsArray()
       }
     }
 

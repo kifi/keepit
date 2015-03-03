@@ -22,23 +22,16 @@ angular.module('kifi')
     }, clutchParams);
 
     var connectionsClutch = new Clutch(function (username, limit) {
-      return $http.get(routeService.getUserConnections(username, limit)).then(getData);
+      return $http.get(routeService.getProfileConnections(username, limit)).then(getData);
     }, clutchParams);
 
-    var connectionIdsClutch = new Clutch(function (username, limit) {
-      return $http.get(routeService.getUserConnectionIds(username, limit)).then(getData);
-    }, clutchParams);
-
-    var api = {
+    return {
       getProfile: angular.bind(profileClutch, profileClutch.get),
       getLibraries: angular.bind(librariesClutch, librariesClutch.get),
       getConnections: angular.bind(connectionsClutch, connectionsClutch.get),
-      getConnectionsById: function (username, ids) {
-        return $http.get(routeService.getUserConnectionsById(username, ids)).then(getData);
-      },
-      getConnectionIds: angular.bind(connectionIdsClutch, connectionIdsClutch.get)
+      getUsers: function (ids) {
+        return $http.get(routeService.getProfileUsers(ids)).then(getData);
+      }
     };
-
-    return api;
   }
 ]);

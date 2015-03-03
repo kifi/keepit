@@ -7,7 +7,7 @@ angular.module('kifi')
   function ($scope, $stateParams, $q, userProfileActionService, modalService) {
     var users;
     var remainingUserIds;
-    var fetchPageSize = 6;
+    var fetchPageSize = 9;
     var loading = true;
 
     function getId(o) {
@@ -21,7 +21,7 @@ angular.module('kifi')
       loading = true;
 
       var requestedIds = remainingUserIds.slice(0, fetchPageSize);
-      userProfileActionService.getConnectionsById($stateParams.username, requestedIds).then(function (data) {
+      userProfileActionService.getUsers(requestedIds).then(function (data) {
         users.push.apply(users, data.users);
         remainingUserIds = _.difference(remainingUserIds, requestedIds);
         loading = false;
@@ -44,14 +44,8 @@ angular.module('kifi')
 
     userProfileActionService.getConnections($stateParams.username, fetchPageSize).then(function (data) {
       $scope.users = users = data.users;
-      if (remainingUserIds) {
-        remainingUserIds = _.difference(remainingUserIds, users.map(getId));
-      }
+      remainingUserIds = data.ids;
       loading = false;
-    });
-
-    userProfileActionService.getConnectionIds($stateParams.username).then(function (data) {
-      remainingUserIds = users ? _.difference(data, users.map(getId)) : data.ids;
     });
   }
 ]);

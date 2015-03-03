@@ -8,6 +8,7 @@ import com.keepit.commanders.emails.EmailSenderProvider
 import com.keepit.commanders.{ ConnectionInfo, _ }
 import com.keepit.common.controller._
 import com.keepit.common.db.slick._
+import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.http._
@@ -71,132 +72,99 @@ class UserController @Inject() (
     libraryMembershipRepo: LibraryMembershipRepo,
     fortytwoConfig: FortyTwoConfig) extends UserActions with ShoeboxServiceController {
 
-  private def loadConnectionUsers(userIds: Set[Id[User]], viewerIdOpt: Option[Id[User]], friendIds: Set[Id[User]] = Set.empty) = {
-    val usersWFS = db.readOnlyMaster { implicit s =>
-      val userMap = basicUserRepo.loadAll(userIds)
-      viewerIdOpt.map { viewerId =>
-        friendStatusCommander.augmentUsers(viewerId, userMap, friendIds)
-      } getOrElse userMap.mapValues(BasicUserWithFriendStatus.fromWithoutFriendStatus)
-    }
-    usersWFS.map {
-      case (userId, userWFS) =>
-        loadFullConnectionUser(userId, userWFS, viewerIdOpt)
-    }
-  }
-
   //todo(eishay): caching work!
-  def loadFullConnectionUser(userId: Id[User], user: BasicUserWithFriendStatus, viewerIdOpt: Option[Id[User]]): JsValue = {
-    db.readOnlyMaster { implicit t =>
-      val json = Json.toJson(user).as[JsObject]
-      //global or personalized
-      val libCount = viewerIdOpt.map(viewerId => libraryRepo.countLibrariesForOtherUser(userId, viewerId)).getOrElse(libraryRepo.countLibrariesOfUserFromAnonymous(userId)) //not cached
-      //global
-      val followersCount = libraryCommander.countFollowers(userId, viewerIdOpt)
-      val connectionCount = userConnectionRepo.getConnectionCount(userId) //cached
-      val jsonWithGlobalCounts = json +
-        ("libraries" -> JsNumber(libCount)) +
-        ("followers" -> JsNumber(followersCount)) +
-        ("connections" -> JsNumber(connectionCount))
-      //mutual
-      viewerIdOpt.map { viewerId =>
-        val followingLibCount = libraryRepo.countLibrariesOfOwnerUserFollow(userId, viewerId) //not cached
-        val mutualConnectionCount = userConnectionRepo.getMutualConnectionCount(userId, viewerId) //cached
-        jsonWithGlobalCounts +
-          ("mConnections" -> JsNumber(mutualConnectionCount)) +
-          ("mLibraries" -> JsNumber(followingLibCount))
-      } getOrElse jsonWithGlobalCounts
-    }
+  def loadProfileUser(userId: Id[User], user: BasicUserWithFriendStatus, viewerIdOpt: Option[Id[User]])(implicit session: RSession): JsValue = {
+    val json = Json.toJson(user).as[JsObject]
+    //global or personalized
+    val libCount = viewerIdOpt.map(viewerId => libraryRepo.countLibrariesForOtherUser(userId, viewerId)).getOrElse(libraryRepo.countLibrariesOfUserFromAnonymous(userId)) //not cached
+    //global
+    val followersCount = libraryCommander.countFollowers(userId, viewerIdOpt)
+    val connectionCount = userConnectionRepo.getConnectionCount(userId) //cached
+    val jsonWithGlobalCounts = json +
+      ("libraries" -> JsNumber(libCount)) +
+      ("followers" -> JsNumber(followersCount)) +
+      ("connections" -> JsNumber(connectionCount))
+    //mutual
+    viewerIdOpt.map { viewerId =>
+      val followingLibCount = libraryRepo.countLibrariesOfOwnerUserFollow(userId, viewerId) //not cached
+      val mutualConnectionCount = userConnectionRepo.getMutualConnectionCount(userId, viewerId) //cached
+      jsonWithGlobalCounts +
+        ("mConnections" -> JsNumber(mutualConnectionCount)) +
+        ("mLibraries" -> JsNumber(followingLibCount))
+    } getOrElse jsonWithGlobalCounts
   }
 
-  def profileConnections(username: Username, limit: Int, userExtIds: String) = MaybeUserAction.async { request =>
-    userCommander.userFromUsername(username) match {
-      case None =>
-        log.warn(s"can't find username ${username.value}")
-        Future.successful(NotFound(s"username ${username.value}"))
-      case Some(owner) =>
-        val ownerId = owner.id.get
-        val viewerIdOpt = request.userIdOpt
-        if (userExtIds.isEmpty) {
-          userConnectionsCommander.getConnectionsSortedByRelationship(viewerIdOpt.getOrElse(ownerId), ownerId) map { connections =>
-            val head = connections.take(limit)
-            val headFriendIdSet = head.filter(_.connected).map(_.userId).toSet
-            val usersJson = loadConnectionUsers(head.map(_.userId).toSet, viewerIdOpt, headFriendIdSet)
-            Ok(Json.obj("users" -> usersJson, "count" -> connections.size))
-          }
-        } else {
-          Try(userExtIds.split(',').map(ExternalId[User])) match {
-            case Success(userExternalIds) =>
-              val userMapping = db.readOnlyMaster { implicit s =>
-                userRepo.getAllUsersByExternalId(userExternalIds)
-              }
-              val usersJson = loadConnectionUsers(userMapping.values.map(_.id.get).toSet, viewerIdOpt)
-              Future.successful(Ok(Json.obj("users" -> usersJson)))
-            case _ =>
-              Future.successful(BadRequest("ids invalid"))
-          }
-        }
-    }
-  }
-
-  def profileConnectionIds(username: Username, limit: Int) = MaybeUserAction.async { request =>
+  def getProfileConnections(username: Username, limit: Int) = MaybeUserAction.async { request =>
     userCommander.userFromUsername(username) match {
       case None =>
         log.warn(s"can't find username ${username.value}")
         Future.successful(NotFound(s"username ${username.value}"))
       case Some(user) =>
-        val viewerIdOpt = request.userIdOpt.getOrElse(user.id.get)
-        userConnectionsCommander.getConnectionsSortedByRelationship(viewerIdOpt, user.id.get) map { connections =>
-          val userMap = db.readOnlyMaster { implicit s =>
-            basicUserRepo.loadAll(connections.take(limit).map(_.userId).toSet)
+        val viewerIdOpt = request.userIdOpt
+        userConnectionsCommander.getConnectionsSortedByRelationship(viewerIdOpt.orElse(user.id).get, user.id.get) map { connections =>
+          val head = connections.take(limit)
+          val (headUserJsonObjs, userMap) = db.readOnlyMaster { implicit s =>
+            val userMap = basicUserRepo.loadAll(connections.take(200).map(_.userId).toSet)
+            val headUserMap = Map(head.map(c => c.userId -> userMap(c.userId)): _*)
+            val headUserJsonObjs = viewerIdOpt.map { viewerId =>
+              val headFriendIdSet = head.filter(_.connected).map(_.userId).toSet
+              friendStatusCommander.augmentUsers(viewerId, headUserMap, headFriendIdSet)
+            } getOrElse headUserMap.mapValues(BasicUserWithFriendStatus.fromWithoutFriendStatus) map {
+              case (userId, userWFS) =>
+                loadProfileUser(userId, userWFS, viewerIdOpt)
+            }
+            (headUserJsonObjs, userMap)
           }
-          val ids = connections.flatMap(u => userMap.get(u.userId)).map(_.externalId)
-          Ok(Json.obj("ids" -> ids))
+          val extIds = connections.drop(limit).flatMap(u => userMap.get(u.userId)).map(_.externalId)
+          Ok(Json.obj("users" -> headUserJsonObjs, "ids" -> extIds, "count" -> connections.size))
         }
     }
   }
 
-  def profileFollowers(username: Username, limit: Int, userExtIds: String) = MaybeUserAction { request =>
+  def getProfileFollowers(username: Username, limit: Int) = MaybeUserAction { request =>
     userCommander.userFromUsername(username) match {
       case None =>
         log.warn(s"can't find username ${username.value}")
         NotFound(s"username ${username.value}")
-      case Some(owner) =>
-        val ownerId = owner.id.get
+      case Some(user) =>
         val viewerIdOpt = request.userIdOpt
-        if (userExtIds.isEmpty) {
-          val followerIds = libraryCommander.getFollowersByViewer(ownerId, viewerIdOpt) // todo (aaron): If there is some order by social graph, this will be a future!
-          val head = followerIds.take(limit)
-          val usersJson = loadConnectionUsers(head.toSet, viewerIdOpt)
-          Ok(Json.obj("users" -> usersJson, "count" -> followerIds.size))
-        } else {
-          Try(userExtIds.split(',').map(ExternalId[User])) match {
-            case Success(userIds) =>
-              val users = db.readOnlyMaster { implicit s =>
-                userIds.map(userRepo.getOpt).flatten
-              }
-              val jsons = loadConnectionUsers(users.map(_.id.get).toSet, viewerIdOpt)
-              Ok(Json.obj("users" -> jsons))
-            case _ =>
-              BadRequest("ids invalid")
+        val followerIds = libraryCommander.getFollowersByViewer(user.id.get, viewerIdOpt) // todo (aaron): If there is some order by social graph, this will be a future!
+        val head = followerIds.take(limit)
+        val (headUserJsonObjs, userMap) = db.readOnlyMaster { implicit s =>
+          val userMap = basicUserRepo.loadAll(followerIds.toSet)
+          val headUserMap = Map(head.map(userId => userId -> userMap(userId)): _*)
+          val headUserJsonObjs = viewerIdOpt.map { viewerId =>
+            friendStatusCommander.augmentUsers(viewerId, headUserMap)
+          } getOrElse headUserMap.mapValues(BasicUserWithFriendStatus.fromWithoutFriendStatus) map {
+            case (userId, userWFS) =>
+              loadProfileUser(userId, userWFS, viewerIdOpt)
           }
+          (headUserJsonObjs, userMap)
         }
+        val ids = followerIds.drop(limit).flatMap(userId => userMap.get(userId)).map(_.externalId)
+        Ok(Json.obj("users" -> headUserJsonObjs, "ids" -> ids, "count" -> followerIds.size))
     }
   }
 
-  def profileFollowerIds(username: Username, limit: Int) = MaybeUserAction.async { request =>
-    userCommander.userFromUsername(username) match {
-      case None =>
-        log.warn(s"can't find username ${username.value}")
-        Future.successful(NotFound(s"username ${username.value}"))
-      case Some(owner) =>
-        val ownerId = owner.id.get
+  def getProfileUsers(userExtIds: String) = MaybeUserAction.async { request =>
+    Try(userExtIds.split('.').map(ExternalId[User])) match {
+      case Success(userIds) =>
         val viewerIdOpt = request.userIdOpt
-        val followerIds = libraryCommander.getFollowersByViewer(ownerId, viewerIdOpt)
-        val userMap = db.readOnlyMaster { implicit s =>
-          basicUserRepo.loadAll(followerIds.toSet)
+        val userJsonObjs = db.readOnlyMaster { implicit s =>
+          val userMap = userRepo.getAllUsersByExternalId(userIds).map {
+            case (extId, user) =>
+              user.id.get -> BasicUser.fromUser(user)
+          }
+          viewerIdOpt.map { viewerId =>
+            friendStatusCommander.augmentUsers(viewerId, userMap)
+          } getOrElse userMap.mapValues(BasicUserWithFriendStatus.fromWithoutFriendStatus) map {
+            case (userId, userWFS) =>
+              loadProfileUser(userId, userWFS, viewerIdOpt)
+          }
         }
-        val ids = followerIds.flatMap(uId => userMap.get(uId)).map(_.externalId)
-        Future.successful(Ok(Json.obj("ids" -> ids)))
+        Future.successful(Ok(Json.obj("users" -> userJsonObjs)))
+      case _ =>
+        Future.successful(BadRequest("ids invalid"))
     }
   }
 
