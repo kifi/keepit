@@ -10,10 +10,6 @@ angular.module('kifi')
     var fetchPageSize = 9;
     var loading = true;
 
-    function getId(o) {
-      return o.id;
-    }
-
     $scope.fetchConnections = function () {
       if (loading) {
         return;
