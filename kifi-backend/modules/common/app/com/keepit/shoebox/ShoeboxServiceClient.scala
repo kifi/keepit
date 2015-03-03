@@ -306,7 +306,7 @@ class ShoeboxServiceClientImpl @Inject() (
     redundantDBConnectionCheck(userIds)
     implicit val idFormat = Id.format[User]
     val payload = JsArray(userIds.map { x => Json.toJson(x) })
-    call(Shoebox.internal.getEmailAddressesForUsers(), payload).map { res =>
+    call(Shoebox.internal.getEmailAddressesForUsers(), payload, callTimeouts = extraLongTimeout, routingStrategy = offlinePriority).map { res =>
       log.debug(s"[res.request.trackingId] getEmailAddressesForUsers for users $userIds returns json ${res.json}")
       res.json.as[Map[String, Seq[EmailAddress]]].map { case (id, emails) => Id[User](id.toLong) -> emails }.toMap
     }
@@ -649,7 +649,7 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getCandidateURIs(uris: Seq[Id[NormalizedURI]]): Future[Seq[Boolean]] = {
-    call(Shoebox.internal.getCandidateURIs(), body = Json.toJson(uris), callTimeouts = longTimeout).map { r =>
+    call(Shoebox.internal.getCandidateURIs(), body = Json.toJson(uris), callTimeouts = extraLongTimeout, routingStrategy = offlinePriority).map { r =>
       r.json.as[Seq[Boolean]]
     }
   }
@@ -748,7 +748,7 @@ class ShoeboxServiceClientImpl @Inject() (
 
   def getBasicKeeps(userId: Id[User], uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[BasicKeep]]] = {
     if (uriIds.isEmpty) Future.successful(Map.empty[Id[NormalizedURI], Set[BasicKeep]]) else {
-      call(Shoebox.internal.getBasicKeeps(userId), Json.toJson(uriIds)).map { r =>
+      call(Shoebox.internal.getBasicKeeps(userId), Json.toJson(uriIds), callTimeouts = extraLongTimeout, routingStrategy = offlinePriority).map { r =>
         implicit val readsFormat = TupleFormat.tuple2Reads[Id[NormalizedURI], Set[BasicKeep]]
         r.json.as[Seq[(Id[NormalizedURI], Set[BasicKeep])]].toMap
       }
