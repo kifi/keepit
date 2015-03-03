@@ -139,11 +139,11 @@ angular.module('kifi')
       });
     };
 
-    function reloadRecos(invalidate) {
+    function reloadRecos(invalidate, setRecosDelivered) {
       $scope.loading = true;
 
       recoStateService.empty();
-      recoActionService.get(invalidate).then(function (rawRecos) {
+      recoActionService.get(invalidate, setRecosDelivered).then(function (rawRecos) {
         var recos = [];
         if (rawRecos.length > 0) {
           rawRecos.forEach(function (rawReco) {
@@ -182,7 +182,8 @@ angular.module('kifi')
       if ($scope.recos.length > 0) {
         $scope.recosState = 'hasRecos';
       } else {
-        reloadRecos();
+        reloadRecos(false, $scope.setRecosDelivered);
+        $scope.setRecosDelivered = undefined;
       }
     }
 
@@ -203,21 +204,22 @@ angular.module('kifi')
       $scope.$on('$destroy', deregister);
     });
 
-
+    $scope.setRecosDelivered = undefined;
     var unregisterAutoShowPersona = $scope.$watch(function () {
       return profileService.prefs.auto_show_persona;
     }, function (newValue, oldValue) {
       $scope.autoShowPersona = newValue;
 
-      // load recommendations only when autoShowPersona is set to non-true
-      if (newValue === null) {
-        initRecos();
-      }
-
       // stop listening when autoShowPersona from true -> null (means we're closing the auto-show-persona)
       if (!newValue && oldValue) {
         $scope.showHints = true;
+        $scope.setRecosDelivered = false;
         unregisterAutoShowPersona();
+      }
+
+      // load recommendations only when autoShowPersona is set to non-true
+      if (newValue === null) {
+        initRecos();
       }
     });
   }

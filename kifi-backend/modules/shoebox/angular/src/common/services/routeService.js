@@ -117,7 +117,8 @@ angular.module('kifi')
         return route('/recos/topV2', {
           recency: opts.recency,
           uriContext: opts.uriContext || [],
-          libContext: opts.libContext || []
+          libContext: opts.libContext || [],
+          trackLibDelivery: _.isBoolean(opts.trackLibDelivery) ? opts.trackLibDelivery : []
         });
       },
       recosPublic: function () {
