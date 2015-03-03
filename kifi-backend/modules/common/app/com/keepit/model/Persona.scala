@@ -56,22 +56,22 @@ object Persona {
 
   val keeps: Map[PersonaName, PersonaKeep] = Map(
     PersonaName.DEVELOPER -> PersonaKeep(
-      title = "Top 10 Professional Sample Code Websites For Programmers",
-      url = "http://www.makeuseof.com/tag/top-10-professional-sample-code-websites-for-programmers/",
+      title = "Programming Sucks",
+      url = "http://stilldrinking.org/programming-sucks",
       image = PersonaKeepImageInfo("//d1dwdv9wd966qu.cloudfront.net/img/guide/sampleCode_480x496.c4766ec.png", 480, 496),
       noun = "blog post",
-      query = "sample+codes",
-      matches = createMatchJson(Seq((20, 6), (27, 4)), Seq((49, 6), (56, 4))),
+      query = "programming",
+      matches = createMatchJson(Seq(), Seq()),
       track = "sampleCodeDeveloperPersona"
     ),
     PersonaName.TECHIE -> PersonaKeep(
-      title = "You Should Be Terrified of Superintelligent Machines",
-      url = "http://www.slate.com/articles/technology/future_tense/2014/09/will_artificial_intelligence_turn_on_us_robots_are_nothing_like_humans_and.single.html",
+      title = "Elon Musk on Mars",
+      url = "http://aeon.co/magazine/technology/the-elon-musk-interview-on-mars/",
       image = PersonaKeepImageInfo("//d1dwdv9wd966qu.cloudfront.net/img/guide/superintelMachines_480x486.8a5cca9.png", 480, 486),
       noun = "article",
-      query = "artificial+intelligence",
-      matches = createMatchJson(Seq((32, 11), (44, 8)), Seq((78, 8))),
-      track = "attackingRobotsTechiePersona"
+      query = "elon+musk",
+      matches = createMatchJson(Seq(), Seq()),
+      track = "elonMuskTechiePersona"
     ),
     PersonaName.ENTREPRENEUR -> PersonaKeep(
       title = "11 Famous Entrepreneurs Share How They Overcame Their Biggest Failure",
@@ -83,12 +83,12 @@ object Persona {
       track = "biggestFailureEntrepreneurPersona"
     ),
     PersonaName.ARTIST -> PersonaKeep(
-      title = "Six Things You May Not Know About the Louvre",
-      url = "http://www.history.com/news/six-things-you-may-not-know-about-the-louvre",
+      title = "Psychedelic Science",
+      url = "https://www.ted.com/talks/fabian_oefner_psychedelic_science",
       image = PersonaKeepImageInfo("//d1dwdv9wd966qu.cloudfront.net/img/guide/louvre_480x510.06af404.png", 480 ,510),
       noun = "article",
-      query = "the+louvre",
-      matches = createMatchJson(Seq((38, 6)), Seq((66, 6))),
+      query = "psychedelic+art",
+      matches = createMatchJson(Seq(), Seq()),
       track = "louvreArtistPersona"
     ),
     PersonaName.FOODIE -> PersonaKeep(
@@ -173,12 +173,12 @@ object Persona {
       track = "shareKidsParentPersona"
     ),
     PersonaName.ANIMAL_LOVER -> PersonaKeep(
-      title = "How a Kitty Walked 200 Miles Home: The Science of Your Cat’s Inner Compass",
-      url = "http://science.time.com/2013/02/11/the-mystery-of-the-geolocating-cat/",
+      title = "What Can We Learn From How Animals Cope?",
+      url = "http://ideas.ted.com/animal_madness/",
       image = PersonaKeepImageInfo("//d1dwdv9wd966qu.cloudfront.net/img/guide/geolocatingCat_480x480.631b510.png", 480, 480),
       noun = "article",
-      query = "geolocating+cat",
-      matches = createMatchJson(Seq((55, 3)), Seq((54, 11), (66, 3))),
+      query = "how+animals+cope",
+      matches = createMatchJson(Seq(), Seq()),
       track = "geolocatingCatAnimalLoverPersona"
     ),
     PersonaName.DEEP_THINKER -> PersonaKeep(

@@ -78,7 +78,7 @@ class ExtUserControllerTest extends Specification with ShoeboxTestInjector with 
         contentType(result2) must beSome("application/json")
         val resultJson = contentAsJson(result2)
         // keep info
-        (resultJson \\ "track").map(_.as[String] === "attackingRobotsTechiePersona")
+        (resultJson \\ "track").map(_.as[String] === "elonMuskTechiePersona")
         // library info
         (resultJson \\ "id").map(_.as[String] === Library.publicId(personaLibOpt.get.id.get).id)
         (resultJson \\ "name").map(_.as[String] === "Techie Picks")
