@@ -90,6 +90,11 @@ angular.module('kifi')
         templateUrl: 'userProfile/userProfileConnections.tpl.html',
         controller: 'UserProfileConnectionsCtrl'
       })
+      .state('userProfile.followers', {
+        url: '/followers',
+        templateUrl: 'userProfile/userProfileFollowers.tpl.html',
+        controller: 'UserProfileFollowersCtrl'
+      })
 
       // ↓↓↓↓↓ Important: This needs to be last! ↓↓↓↓↓
       .state('library', {

@@ -25,10 +25,15 @@ angular.module('kifi')
       return $http.get(routeService.getProfileConnections(username, limit)).then(getData);
     }, clutchParams);
 
+    var followersClutch = new Clutch(function (username, limit) {
+      return $http.get(routeService.getProfileFollowers(username, limit)).then(getData);
+    }, clutchParams);
+
     return {
       getProfile: angular.bind(profileClutch, profileClutch.get),
       getLibraries: angular.bind(librariesClutch, librariesClutch.get),
       getConnections: angular.bind(connectionsClutch, connectionsClutch.get),
+      getFollowers: angular.bind(followersClutch, followersClutch.get),
       getUsers: function (ids) {
         return $http.get(routeService.getProfileUsers(ids)).then(getData);
       }
