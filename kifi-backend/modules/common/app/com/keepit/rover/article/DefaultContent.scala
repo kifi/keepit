@@ -12,6 +12,7 @@ case class DefaultContent(
   content: Option[String],
   keywords: Seq[String],
   authors: Seq[PageAuthor],
+  mediaType: Option[String],
   publishedAt: Option[DateTime],
-  http: HTTPContext,
-  normalization: NormalizationContext) extends ArticleContent with HTTPContextHolder with NormalizationContextHolder
+  http: HttpInfo,
+  normalization: NormalizationInfo) extends ArticleContent with HttpInfoHolder with NormalizationInfoHolder

@@ -12,6 +12,7 @@ class EmbedlyContent(json: JsValue) extends ArticleContent {
   def content = rawContent // todo(Léo): needs post-processing to eliminate html tags
   def keywords = embedlyKeywords.map(_.name)
   def authors = (json \ "authors").asOpt[Seq[PageAuthor]] getOrElse Seq.empty[PageAuthor]
+  def mediaType = (json \ "type").asOpt[String]
   def publishedAt = (json \ "published").asOpt[DateTime]
 
   def rawContent = (json \ "content").asOpt[String]

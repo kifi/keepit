@@ -36,10 +36,11 @@ case class YoutubeContent(
     description: Option[String],
     keywords: Seq[String],
     authors: Seq[PageAuthor],
+    mediaType: Option[String],
     publishedAt: Option[DateTime],
-    http: HTTPContext,
-    normalization: NormalizationContext,
-    video: YoutubeVideo) extends ArticleContent with HTTPContextHolder with NormalizationContextHolder {
+    http: HttpInfo,
+    normalization: NormalizationInfo,
+    video: YoutubeVideo) extends ArticleContent with HttpInfoHolder with NormalizationInfoHolder {
 
   def content = Some(Seq(
     video.title.getOrElse(""),

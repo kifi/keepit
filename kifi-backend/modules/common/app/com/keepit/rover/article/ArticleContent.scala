@@ -12,25 +12,29 @@ trait ArticleContent {
   def content: Option[String]
   def keywords: Seq[String]
   def authors: Seq[PageAuthor]
+  def mediaType: Option[String]
   def publishedAt(): Option[DateTime]
 }
 
-trait HTTPContextHolder { self: ArticleContent =>
-  def http: HTTPContext
+trait HttpInfoHolder { self: ArticleContent =>
+  def http: HttpInfo
 }
 
 @json
-case class HTTPContext(
+case class HttpInfo(
   status: Int,
   redirects: Seq[HttpRedirect],
-  message: Option[String])
+  message: Option[String],
+  httpContentType: Option[String], // from http header
+  httpOriginalContentCharset: Option[String] // from EntityUtils.getContentCharSet
+  )
 
-trait NormalizationContextHolder { self: ArticleContent =>
-  def normalization: NormalizationContext
+trait NormalizationInfoHolder { self: ArticleContent =>
+  def normalization: NormalizationInfo
 }
 
 @json
-case class NormalizationContext(
+case class NormalizationInfo(
   canonicalUrl: Option[String],
   openGraphUrl: Option[String],
   alternateUrls: Set[String],
