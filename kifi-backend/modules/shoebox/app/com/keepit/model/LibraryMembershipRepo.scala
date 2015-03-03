@@ -86,9 +86,7 @@ class LibraryMembershipRepoImpl @Inject() (
 
   override def save(libraryMembership: LibraryMembership)(implicit session: RWSession): LibraryMembership = {
     val toSave = libraryMembership.copy(seq = deferredSeqNum())
-    val res = super.save(toSave)
-    libraryRepo.save(libraryRepo.get(libraryMembership.libraryId)) // update Library sequence number
-    res
+    super.save(toSave)
   }
 
   override def get(id: Id[LibraryMembership])(implicit session: RSession): LibraryMembership = {
