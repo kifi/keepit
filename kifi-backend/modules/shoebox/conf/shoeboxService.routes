@@ -350,11 +350,11 @@ GET     /site/users/:userStr/libraries/:slug    @com.keepit.controllers.website.
 POST    /site/users/:userStr/libraries/:slug/auth    @com.keepit.controllers.website.LibraryController.authToLibrary(userStr: String, slug: String, authToken: Option[String])
 
 # Profile pages
-GET     /site/user/:name/profile    @com.keepit.controllers.website.UserController.profile(name: Username)
+GET     /site/user/:name/profile    @com.keepit.controllers.website.UserProfileController.profile(name: Username)
 GET     /site/user/:name/libraries  @com.keepit.controllers.website.LibraryController.getProfileLibraries(name: Username, page: Int ?= 0, size: Int ?= 12, filter: String ?= "own")
-GET     /site/users/:name/connections @com.keepit.controllers.website.UserController.getProfileConnections(name: Username, n: Int ?= 12)
-GET     /site/users/:name/followers  @com.keepit.controllers.website.UserController.getProfileFollowers(name: Username, n: Int ?= 12)
-GET     /site/users/:ids            @com.keepit.controllers.website.UserController.getProfileUsers(ids)
+GET     /site/users/:name/connections @com.keepit.controllers.website.UserProfileController.getProfileConnections(name: Username, n: Int ?= 12)
+GET     /site/users/:name/followers  @com.keepit.controllers.website.UserProfileController.getProfileFollowers(name: Username, n: Int ?= 12)
+GET     /site/users/:ids            @com.keepit.controllers.website.UserProfileController.getProfileUsers(ids)
 
 GET     /site/libraries             @com.keepit.controllers.website.LibraryController.getLibrarySummariesByUser()
 POST    /site/libraries/add         @com.keepit.controllers.website.LibraryController.addLibrary()
