@@ -28,6 +28,6 @@ object IndexerVersionProviders {
   case object Message extends IndexerVersionProvider(0, 0)
   case object Phrase extends IndexerVersionProvider(0, 0)
   case object Library extends IndexerVersionProvider(8, 8)
-  case object LibraryMembership extends IndexerVersionProvider(0, 1)
+  case object LibraryMembership extends IndexerVersionProvider(1, 1)
   case object Keep extends IndexerVersionProvider(2, 2)
 }

@@ -161,12 +161,13 @@ class SearchFactory @Inject() (
   }
 
   def getLibraryIdsFuture(userId: Id[User], library: LibraryContext): Future[(Set[Long], Set[Long], Set[Long], Set[Long])] = {
-    val librarySearcher = libraryIndexer.getSearcher
-    val libraryMembershipSearcher = libraryMembershipIndexer.getSearcher
 
-    val trustedPublishedLibIds = library match {
-      case LibraryContext.NotAuthorized(libId) if LibraryIndexable.isPublished(librarySearcher, libId) => LongArraySet.from(Array(libId))
-      case _ => LongArraySet.empty // we may want to get a set of published libraries that are trusted (or featured) somehow
+    val trustedPublishedLibIds = {
+      val librarySearcher = libraryIndexer.getSearcher
+      library match {
+        case LibraryContext.NotAuthorized(libId) if LibraryIndexable.isPublished(librarySearcher, libId) => LongArraySet.from(Array(libId))
+        case _ => LongArraySet.empty // we may want to get a set of published libraries that are trusted (or featured) somehow
+      }
     }
 
     val authorizedLibIds = library match {
@@ -176,7 +177,8 @@ class SearchFactory @Inject() (
 
     val future = libraryIdsReqConsolidator(userId) { userId =>
       SafeFuture {
-        val myOwnLibIds = LibraryIndexable.getLibrariesByOwner(librarySearcher, userId)
+        val libraryMembershipSearcher = libraryMembershipIndexer.getSearcher
+        val myOwnLibIds = LibraryMembershipIndexable.getLibrariesByOwner(libraryMembershipSearcher, userId)
         val memberLibIds = LibraryMembershipIndexable.getLibrariesByMember(libraryMembershipSearcher, userId)
 
         (myOwnLibIds, memberLibIds) // myOwnLibIds is a subset of memberLibIds
@@ -298,6 +300,7 @@ class SearchFactory @Inject() (
         filter.userFilter.foreach(addUserFilterToUriSearch(engBuilder, _))
 
         val librarySearcher = libraryIndexer.getSearcher
+        val libraryMembershipSearcher = libraryMembershipIndexer.getSearcher
         val userSearcher = userIndexer.getSearcher
         shards.toSeq.map { shard =>
           val keepSearcher = shardedKeepIndexer.getIndexer(shard).getSearcher
@@ -312,6 +315,7 @@ class SearchFactory @Inject() (
             config,
             engBuilder,
             librarySearcher,
+            libraryMembershipSearcher,
             keepSearcher,
             userSearcher,
             libraryQualityEvaluator,
