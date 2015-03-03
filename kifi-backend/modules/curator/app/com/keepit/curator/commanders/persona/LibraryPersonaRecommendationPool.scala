@@ -58,6 +58,6 @@ object FixedSetLibraryReco {
     Map(
       "dev" -> dev, "stu" -> stu, "techie" -> techie, "entre" -> entre, "art" -> art,
       "foodie" -> foodie, "science" -> science, "fashion" -> fashion, "health" -> health, "investor" -> investor,
-      "travel" -> travel, "gamer" -> gamer, "animal" -> animal, "thinker" -> thinker
+      "travel" -> travel, "gamer" -> gamer, "parent" -> parent, "animal" -> animal, "thinker" -> thinker
     ).map { case (a, b) => (name2Id(a), toLibraryList(b)) }
 }
