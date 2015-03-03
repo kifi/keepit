@@ -118,19 +118,19 @@ case object GithubArticle extends ArticleKind[GithubArticle] {
   }
 }
 
-case class LinkedInArticle(
+case class LinkedInProfileArticle(
     createdAt: DateTime,
     url: String,
-    content: LinkedInContent) extends Article {
-  type A = LinkedInArticle
-  def kind = LinkedInArticle
+    content: LinkedInProfileContent) extends Article {
+  type A = LinkedInProfileArticle
+  def kind = LinkedInProfileArticle
 }
 
-case object LinkedInArticle extends ArticleKind[LinkedInArticle] {
-  val typeCode = "linkedin"
+case object LinkedInProfileArticle extends ArticleKind[LinkedInProfileArticle] {
+  val typeCode = "linked_in_profile"
   val version = 1
   def formatByVersion(thatVersion: Int) = thatVersion match {
-    case `version` => Json.format[LinkedInArticle]
+    case `version` => Json.format[LinkedInProfileArticle]
     case _ => throw new UnknownArticleVersionException(this, version, thatVersion)
   }
 }
