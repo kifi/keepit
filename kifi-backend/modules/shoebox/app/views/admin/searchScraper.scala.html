@@ -39,4 +39,64 @@
         </div>
     </form>
 
+    <script>
+        var refreshEnabled = function() { return $("#autorefresh").is(":checked"); };
+        var runnableFilterEnabled = function() { return $("#runnable-filter").is(":checked"); };
+        var isModalOpen = false;
+        var timeout = undefined;
+        var registerModalEvents = function() {
+            $(".modal").on("show.bs.modal", function() {
+                isModalOpen = true;
+            });
+            $(".modal").on("hidden.bs.modal", function() {
+                isModalOpen = false;
+            });
+        };
+        var loadrequests = function(){
+            if (runnableFilterEnabled()) {
+                var url = "@com.keepit.controllers.admin.routes.ScraperAdminController.scraperRequests(Some("RUNNABLE"))"
+            } else {
+                var url = "@com.keepit.controllers.admin.routes.ScraperAdminController.scraperRequests(None)"
+            }
+            $.ajax({
+                url : url,
+                dataType: "html",
+                success: function(data){
+                    $("span.assigned-title-hint").replaceWith($(data).find("span.assigned-title-hint"));
+                    $("div.assigned-request-table").replaceWith($(data).find("div.assigned-request-table"));
+                    $("span.overdue-title-hint").replaceWith($(data).find("span.overdue-title-hint"));
+                    $("div.overdue-request-table").replaceWith($(data).find("div.overdue-request-table"));
+                    $("span.thread-details-hint").replaceWith($(data).find("span.thread-details-hint"));
+                    $("div.thread-details").replaceWith($(data).find("div.thread-details"));
+                    registerModalEvents();
+                },
+                error: function(){
+                    $("span.assigned-title-hint").html("(loading failed)");
+                    $("div.assigned-request-table").html("");
+                    $("span.overdue-title-hint").html("(loading failed)");
+                    $("div.overdue-request-table").html("");
+                    $("span.thread-details-hint").html("(loading failed)");
+                    $("div.thread-details").html("");
+                },
+            });
+            timeout = setTimeout(refresh, 5000);
+        };
+        var shouldRefresh = function() { return refreshEnabled() && !isModalOpen; };
+        var refresh = function(){
+            if (shouldRefresh()) {
+                loadrequests();
+            } else if (refreshEnabled()) {
+                timeout = setTimeout(refresh, 5000);
+            }
+        };
+        $("#autorefresh").change(function() {
+            if (shouldRefresh()) { loadrequests(); }
+            else { clearTimeout(timeout); }
+        });
+        $("#runnable-filter").change(function() {
+            clearTimeout(timeout);
+            loadrequests();
+        });
+        loadrequests();
+    </script>
 }
