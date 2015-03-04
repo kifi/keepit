@@ -9,7 +9,8 @@
   footerClass: String = "",
   content: Html = Html(""), // Main page content
   scripts: Html = Html(""), // End of page scripts
-  isLoggedIn: Boolean = false
+  isLoggedIn: Boolean = false,
+  headerLink: String = "" // Links on upper right corner
 )
 @()
 <!DOCTYPE html>
@@ -36,7 +37,21 @@
   <body class="@bodyClass">
 
     <header id="header_bar">
-      <a href="/" id="kifi_logo"></a>
+      <div id="header-wrapper">
+        <a href="/" id="kifi_logo"></a>
+        @if(headerLink == "login") {
+          <div class="header-link login">
+            Already a member?
+            <a href="/login">Log In</a>
+          </div>
+        }
+        @if(headerLink == "signup") {
+          <div class="header-link signup">
+            Not a member yet?
+            <a href="/signup">Signup</a>
+          </div>
+        }
+      </div>
     </header>
 
 @content

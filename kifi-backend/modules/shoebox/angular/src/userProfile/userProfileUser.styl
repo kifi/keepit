@@ -12,6 +12,9 @@
   text-align: center
   color: #505459
 
+  .kf-logged-out &
+    height: 290px
+
 .kf-upu-pic-a
   display: block
   height: 100px
@@ -42,7 +45,7 @@
 .kf-upu-stats
   display: table
   width: 100%
-  margin: 16px 0 20px
+  margin: 16px 0 22px
 
 accentGreen = #5ab166
 
@@ -67,6 +70,10 @@ accentGreen = #5ab166
   font-weight: bold
   color: accentGreen
 
+.kf-upu-counts
+  font-size: 0
+  line-height: 10px
+
 .kf-upu-count
   font-size: 13px
   font-smoothing: antialiased
@@ -76,6 +83,7 @@ accentGreen = #5ab166
     border: none
     padding: 0
     background: transparent
+    color: inherit
     cursor: pointer
 
     &:hover
@@ -91,7 +99,7 @@ accentGreen = #5ab166
 .kf-upu-connect
   borderWidth = 1px
   lineHeight = 36px
-  margin-top: 26px
+  margin-top: 22px
   border-radius: (lineHeight / 2) + borderWidth
   border: borderWidth solid accentGreen
   background: #fff
@@ -99,3 +107,6 @@ accentGreen = #5ab166
   line-height: lineHeight
   font-size: 13px
   color: accentGreen
+
+  .kf-logged-out &
+    margin-top: 0

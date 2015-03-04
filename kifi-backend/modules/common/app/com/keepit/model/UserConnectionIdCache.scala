@@ -25,6 +25,7 @@ class UserConnectionCountCache(stats: CacheStatistics, accessLog: AccessLog, inn
   extends PrimitiveCacheImpl[UserConnectionCountKey, Int](stats, accessLog, inner, outer: _*)
 
 case class UserMutualConnectionCountKey(user1: Id[User], user2: Id[User]) extends Key[Int] {
+  override val version = 2
   val namespace = "user_mutual_conn_count"
   def toKey(): String = {
     val id1 = user1.id
@@ -35,4 +36,3 @@ case class UserMutualConnectionCountKey(user1: Id[User], user2: Id[User]) extend
 
 class UserMutualConnectionCountCache(stats: CacheStatistics, accessLog: AccessLog, inner: (FortyTwoCachePlugin, Duration), outer: (FortyTwoCachePlugin, Duration)*)
   extends PrimitiveCacheImpl[UserMutualConnectionCountKey, Int](stats, accessLog, inner, outer: _*)
-

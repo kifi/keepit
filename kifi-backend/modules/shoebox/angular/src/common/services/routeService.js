@@ -253,6 +253,9 @@ angular.module('kifi')
       getProfileUsers: function (ids) {
         return route('/users/' + ids.join('.'));
       },
+      getMutualConnections: function (userId) {
+        return route('/users/' + userId + '/connections/mutual');
+      },
 
       /////////////////////////////
       // User Personas           //
