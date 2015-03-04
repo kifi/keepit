@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfUserProfileUser', [
-  'modalService', 'userProfileActionService',
-  function (modalService, userProfileActionService) {
+  'modalService', 'profileService', 'userProfileActionService',
+  function (modalService, profileService, userProfileActionService) {
     return {
       restrict: 'A',
       replace: true,
@@ -13,6 +13,8 @@ angular.module('kifi')
       },
       templateUrl: 'userProfile/userProfileUser.tpl.html',
       link: function (scope) {
+        scope.me = profileService.me;
+
         scope.showMutualConnections = function () {
           userProfileActionService.getMutualConnections(scope.user.id).then(function (data) {
             var person = _.assign(scope.user, 'id', 'username', 'pictureName');
