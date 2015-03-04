@@ -30,6 +30,7 @@ trait UriRecommendationRepo extends DbRepo[UriRecommendation] {
   def getGeneralRecommendationScore(uriId: Id[NormalizedURI], minClickedUsers: Int = 3)(implicit session: RSession): Option[Float]
   def getGeneralRecommendationCandidates(limit: Int, minClickedUsers: Int = 3)(implicit session: RSession): Seq[Id[NormalizedURI]]
   def deleteByUriId(uriId: Id[NormalizedURI])(implicit session: RWSession): Unit
+  def insertAll(recos: Seq[UriRecommendation])(implicit session: RWSession): Int
 }
 
 @Singleton
@@ -186,5 +187,9 @@ class UriRecommendationRepoImpl @Inject() (
   def deleteCache(model: UriRecommendation)(implicit session: RSession): Unit = {}
 
   def invalidateCache(model: UriRecommendation)(implicit session: RSession): Unit = {}
+
+  def insertAll(recos: Seq[UriRecommendation])(implicit session: RWSession): Int = {
+    rows.insertAll(recos: _*).get
+  }
 }
 
