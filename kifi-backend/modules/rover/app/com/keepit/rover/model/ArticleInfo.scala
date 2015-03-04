@@ -6,6 +6,8 @@ import com.keepit.model.NormalizedURI
 import com.keepit.rover.article.{ Article, ArticleKind }
 import org.joda.time.DateTime
 
+object ArticleInfoStates extends States[ArticleInfo]
+
 case class ArticleInfo(
     id: Option[Id[ArticleInfo]] = None,
     createdAt: DateTime = currentDateTime,
@@ -13,9 +15,10 @@ case class ArticleInfo(
     state: State[ArticleInfo] = ArticleInfoStates.ACTIVE,
     seq: SequenceNumber[ArticleInfo] = SequenceNumber.ZERO,
     uriId: Id[NormalizedURI],
-    kind: String, // todo(Léo): make this kind: ArticleKind[_ <: Article] with Scala 2.11, (with proper mapper, serialization is unchanged)
     url: String,
-    fetchSeq: Option[SequenceNumber[ArticleInfo]] = None,
+    kind: String, // todo(Léo): make this kind: ArticleKind[_ <: Article] with Scala 2.11, (with proper mapper, serialization is unchanged)
+    major: Option[VersionNumber[Article]] = None,
+    minor: Option[VersionNumber[Article]] = None,
     lastQueuedAt: Option[DateTime] = None,
     lastFetchedAt: Option[DateTime] = None,
     nextFetchAt: Option[DateTime] = None,
@@ -25,7 +28,23 @@ case class ArticleInfo(
   val articleKind = ArticleKind.byTypeCode(kind)
 }
 
-object ArticleInfoStates extends States[ArticleInfo]
+object ArticleInfo {
+  implicit def fromArticleInfoSeq(seq: SequenceNumber[ArticleInfo]): SequenceNumber[BasicArticleInfo] = seq.copy()
+  implicit def toArticleInfoSeq(seq: SequenceNumber[BasicArticleInfo]): SequenceNumber[ArticleInfo] = seq.copy()
+  implicit def fromArticleInfoState(state: State[ArticleInfo]): State[BasicArticleInfo] = state.copy()
+  implicit def toArticleInfoState(state: State[BasicArticleInfo]): State[ArticleInfo] = state.copy()
+  implicit def toBasicArticleInfo(info: ArticleInfo): BasicArticleInfo = {
+    BasicArticleInfo(
+      info.state == ArticleInfoStates.INACTIVE,
+      info.seq,
+      info.uriId,
+      info.kind,
+      info.major,
+      info.minor,
+      info.lastFetchedAt
+    )
+  }
+}
 
 import com.google.inject.{ Singleton, ImplementedBy }
 import com.google.inject.Inject
@@ -52,14 +71,15 @@ class ArticleInfoRepoImpl @Inject() (
   type RepoImpl = ArticleInfoTable
   class ArticleInfoTable(tag: Tag) extends RepoTable[ArticleInfo](db, tag, "article_info") with SeqNumberColumn[ArticleInfo] {
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)
-    def kind = column[String]("kind", O.NotNull)
     def url = column[String]("url", O.NotNull)
-    def fetchSeq = column[SequenceNumber[ArticleInfo]]("fetch_seq", O.Nullable)
+    def kind = column[String]("kind", O.NotNull)
+    def major = column[VersionNumber[Article]]("major", O.Nullable)
+    def minor = column[VersionNumber[Article]]("minor", O.Nullable)
     def lastQueuedAt = column[DateTime]("last_queued_at", O.Nullable)
     def lastFetchedAt = column[DateTime]("last_fetched_at", O.Nullable)
     def nextFetchAt = column[DateTime]("next_fetch_at", O.Nullable)
     def fetchInterval = column[Double]("fetch_interval", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, state, seq, uriId, kind, url, fetchSeq.?, lastQueuedAt.?, lastFetchedAt.?, nextFetchAt.?, fetchInterval) <> ((ArticleInfo.apply _).tupled, ArticleInfo.unapply _)
+    def * = (id.?, createdAt, updatedAt, state, seq, uriId, url, kind, major.?, minor.?, lastQueuedAt.?, lastFetchedAt.?, nextFetchAt.?, fetchInterval) <> ((ArticleInfo.apply _).tupled, ArticleInfo.unapply _)
   }
 
   def table(tag: Tag) = new ArticleInfoTable(tag)
