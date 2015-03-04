@@ -243,7 +243,6 @@ angular.module('kifi')
           size: _.isUndefined(opt_size) ? [] : opt_size
         });
       },
-
       getProfileConnections: function (username, limit) {
         return route('/users/' + username + '/connections', {n: limit || []});
       },
