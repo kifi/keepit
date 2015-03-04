@@ -13,6 +13,7 @@ angular.module('kifi')
       },
       templateUrl: 'userProfile/userProfileUser.tpl.html',
       link: function (scope) {
+        scope.profile = scope.$parent.$parent.$parent.profile; // TODO: pass all the way down?
         scope.me = profileService.me;
 
         scope.showMutualConnections = function () {
