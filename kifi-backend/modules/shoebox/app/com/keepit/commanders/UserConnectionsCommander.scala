@@ -23,19 +23,6 @@ import scala.concurrent.Future
 import scala.concurrent.duration.Duration
 
 case class ConnectionInfo(user: BasicUser, userId: Id[User], unfriended: Boolean, unsearched: Boolean)
-case class ConnectedUserId(userId: Id[User], connected: Boolean)
-object ConnectedUserId {
-  implicit val formatter = Json.format[ConnectedUserId]
-}
-
-case class UserConnectionRelationshipKey(viewerId: Id[User], ownerId: Id[User]) extends Key[Seq[ConnectedUserId]] {
-  val namespace = "user_con_rel"
-  override val version = 2
-  def toKey(): String = ownerId.id.toString + ":" + viewerId.id.toString
-}
-
-class UserConnectionRelationshipCache(stats: CacheStatistics, accessLog: AccessLog, inner: (FortyTwoCachePlugin, Duration), outer: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[UserConnectionRelationshipKey, Seq[ConnectedUserId]](stats, accessLog, inner, outer: _*)
 
 class UserConnectionsCommander @Inject() (
     abookServiceClient: ABookServiceClient,
@@ -51,45 +38,11 @@ class UserConnectionsCommander @Inject() (
     userCache: SocialUserInfoUserCache,
     socialConnectionRepo: SocialConnectionRepo,
     socialGraphPlugin: SocialGraphPlugin,
-    graphServiceClient: GraphServiceClient,
     kifiUserTypeahead: KifiUserTypeahead,
     socialUserTypeahead: SocialUserTypeahead,
     emailSender: EmailSenderProvider,
     s3ImageStore: S3ImageStore,
-    userConnectionRelationshipCache: UserConnectionRelationshipCache,
     db: Database) extends Logging {
-
-  def getConnectionsSortedByRelationship(viewer: Id[User], owner: Id[User]): Future[Seq[ConnectedUserId]] = {
-    import com.keepit.common.cache.TransactionalCaching.Implicits._
-    userConnectionRelationshipCache.getOrElseFuture(UserConnectionRelationshipKey(viewer, owner)) {
-      val sociallyRelatedEntitiesF = graphServiceClient.getSociallyRelatedEntities(viewer)
-      val connectionsF = db.readOnlyReplicaAsync { implicit s =>
-        val all = userConnectionRepo.getConnectedUsersForUsers(Set(viewer, owner))
-        all(viewer) -> all(owner)
-      }
-      for {
-        sociallyRelatedEntities <- sociallyRelatedEntitiesF
-        (viewerConnections, ownerConnections) <- connectionsF
-      } yield {
-        val relatedUsersMap = sociallyRelatedEntities.map(_.users.related).getOrElse(Seq.empty).toMap
-        val ownerConnectionsMap = collection.mutable.Map(ownerConnections.toSeq.zip(List.fill(ownerConnections.size)(0d)): _*)
-        //if its a mutual connection, set the relationship score to 100
-        viewerConnections.filter(ownerConnectionsMap.contains).foreach { con =>
-          ownerConnectionsMap(con) = 100d
-        }
-        relatedUsersMap.filter(t => ownerConnectionsMap.contains(t._1)).foreach {
-          case (con, score) =>
-            val newScore = ownerConnectionsMap(con) + score
-            ownerConnectionsMap(con) = newScore
-        }
-        if (ownerConnectionsMap.contains(viewer)) {
-          ownerConnectionsMap(viewer) = Double.MaxValue
-        }
-        val scoring = ownerConnectionsMap.toSeq.sortBy(_._2 * -1)
-        scoring.map(t => ConnectedUserId(t._1, viewerConnections.contains(t._1)))
-      }
-    }
-  }
 
   def ignoreFriendRequest(userId: Id[User], id: ExternalId[User]): (Boolean, String) = {
     db.readWrite { implicit s =>
