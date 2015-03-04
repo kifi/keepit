@@ -6,7 +6,7 @@
       <span class="kf-user-profile-friend-request-msg">{{profile.firstName}} wants to connect with you on Kifi</span>
     </div>
     <div class="kf-up-basic-info-main-content" itemscope itemtype="http://schema.org/Person">
-      <a href="{{userProfileRootUrl}}" itemprop="url">
+      <a class="kf-user-profile-picture-a" href="{{profile|profileUrl}}" itemprop="url">
         <img class="kf-user-profile-picture" ng-src="{{profile | pic:200}}" alt="{{profile.firstName}} {{profile.lastName}}" itemprop="image">
       </a>
 
@@ -43,7 +43,7 @@
         <div class="kf-user-profile-progress-check"></div>
       </div>
 
-      <div class="kf-user-profile-name" itemprop="name">{{profile.firstName}} {{profile.lastName}}</div>
+      <h1 class="kf-user-profile-name" itemprop="name">{{profile.firstName}} {{profile.lastName}}</h1>
     </div>
     <nav class="kf-user-profile-user-nav">
       <!-- For testing AngularUI routing, using <a> tags. However, will make into divs for V1 release. -->

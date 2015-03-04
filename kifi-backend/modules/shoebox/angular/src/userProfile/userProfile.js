@@ -3,12 +3,10 @@
 angular.module('kifi')
 
 .controller('UserProfileCtrl', [
-  '$scope', '$analytics', '$location', '$rootScope', '$state', '$stateParams', '$window', 'profile',
-  'env', 'inviteService', 'originTrackingService', 'profileService',
-  'installService', 'modalService', 'initParams',
-  function ($scope, $analytics, $location, $rootScope, $state, $stateParams, $window, profile,
-            env, inviteService, originTrackingService, profileService,
-            installService, modalService, initParams) {
+  '$scope', '$analytics', '$location', '$rootScope', '$state', '$window', 'profile',
+  'inviteService', 'originTrackingService', 'profileService', 'installService', 'modalService', 'initParams',
+  function ($scope, $analytics, $location, $rootScope, $state, $window, profile,
+            inviteService, originTrackingService, profileService, installService, modalService, initParams) {
     //
     // Internal functions.
     //
@@ -97,7 +95,6 @@ angular.module('kifi')
     //
 
     $window.document.title = profile.firstName + ' ' + profile.lastName + ' • Kifi';
-    $scope.userProfileRootUrl = env.origin + '/' + $stateParams.username;
     $scope.profile = _.cloneDeep(profile);
     $scope.viewingOwnProfile = profile.id === profileService.me.id;
 
