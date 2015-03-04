@@ -95,7 +95,7 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
             "username" -> user1.username.value,
             "isFriend" -> true,
             "libraries" -> 2, "connections" -> 3, "followers" -> 3,
-            "mLibraries" -> 0, "mConnections" -> 1
+            "mLibraries" -> 1, "mConnections" -> 1
           )
           controller.loadProfileUser(user1.id.get, basicUserWFS(user1, None), None) === Json.obj(
             "id" -> user1.externalId,
@@ -114,7 +114,7 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
             "username" -> user2.username.value,
             "isFriend" -> true,
             "libraries" -> 0, "connections" -> 2, "followers" -> 0,
-            "mLibraries" -> 1, "mConnections" -> 1
+            "mLibraries" -> 0, "mConnections" -> 1
           )
           controller.loadProfileUser(user2.id.get, basicUserWFS(user2, None), None) === Json.obj(
             "id" -> user2.externalId,
