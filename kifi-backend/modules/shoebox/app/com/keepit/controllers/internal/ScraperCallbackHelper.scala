@@ -28,7 +28,7 @@ class ScraperCallbackHelper @Inject() (
     implicit val scraperConfig: ScraperSchedulerConfig,
     integrityHelpers: UriIntegrityHelpers) extends Logging {
 
-  val assignLock = new ReactiveLock(1, Some(5)) // should not be more then number of scrapers x 2!
+  val assignLock = new ReactiveLock(1, Some(9)) // should not be more then number of scrapers x 2 + 1!
 
   private[this] var averageNumberOfTasks = 0.0 // an exponential moving average of the number of tasks assigned to a scraper instance
   private[this] val alpha = 0.3
