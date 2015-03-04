@@ -88,7 +88,7 @@ class UserConnectionRepoImpl @Inject() (
     }
   }
 
-  val getMutualConnectionCountQ = StaticQuery.query[(Long, Long, Long, Long), Int]("""select count(*) from
+  private val getMutualConnectionCountQ = StaticQuery.query[(Long, Long, Long, Long), Int]("""select count(*) from
       (select conn from
         (select user_2 conn from user_connection where user_1 in (?,?) and state = 'active' union all
          select user_1 conn from user_connection where user_2 in (?,?) and state = 'active') conn_ids
