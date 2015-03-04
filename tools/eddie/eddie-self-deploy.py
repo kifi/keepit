@@ -17,6 +17,7 @@ import time
 import portalocker
 import traceback
 import datetime
+import json
 from collections import defaultdict
 from boto.s3.connection import S3Connection
 from boto.s3.key import Key
@@ -31,23 +32,22 @@ class DeployAbortException(Exception):
   def __init__(self, reason):
     self.reason = reason
 
-def message_irc(msg):
-  data = {
-    'service': 'deployment',
-    'url': 'https://grove.io/app',
-    'icon_url': 'https://grove.io/static/img/avatar.png',
-    'message': msg
+def message_slack(msg):
+  payload = {
+    "type": "message",
+    "text": msg,
+    "channel": "#deploy",
+    "username": "eddie",
+    "icon_emoji": ":star2:"
   }
-  requests.post("https://grove.io/api/notice/rQX6TOyYYv2cqt4hnDqqwb8v5taSlUdD/", data=data)
-
-
-def message_hipchat(msg):
-  data = {
-    "room_id": "Deploy",
-    "from": "Deploy",
-    "message": msg
-  }
-  requests.post("https://api.hipchat.com/v1/rooms/message?format=json&auth_token=47ea1c354d1df8e90f64ba4dc25c1b", data=data)
+  # webhook url for #deploy channel
+  url = 'https://hooks.slack.com/services/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'
+  try:
+    r = requests.post(url, data=json.dumps(payload))
+    if r.status_code != requests.codes.ok:
+      print r, r.text
+  except Exception as e:
+    print 'Unexpected error in message_slack: ', str(e)
 
 def whoAmI():
   ec2 = boto.ec2.connect_to_region("us-west-1", aws_access_key_id="AKIAINZ2TABEYCFH7SMQ", aws_secret_access_key="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")
@@ -65,8 +65,7 @@ def whoAmI():
 def logger(head):
   def log(msg):
     print head + msg
-    message_irc(head + msg)
-    message_hipchat(head + msg)
+    message_slack(head + msg)
   return log
 
 def checkUp():

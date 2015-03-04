@@ -4,7 +4,7 @@
 # description: Java deamon script
 #
 # Set this to your Java installation
-JAVA_HOME=/usr/local/java/jdk1.7.0_25/
+[ -d /usr/lib/jvm/java-7-oracle ] && JAVA_HOME=/usr/lib/jvm/java-7-oracle || JAVA_HOME=/usr/local/java/jdk1.7.0_25
 
 USER=fortytwo
 [[ $(whoami) == $USER ]] || { echo "You must run this script as $USER"; exit 1; }

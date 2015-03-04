@@ -4,7 +4,7 @@
 # description: Java deamon script
 #
 # Set this to your Java installation
-JAVA_HOME=/usr/local/java/jdk1.7.0_25
+[ -d /usr/lib/jvm/java-7-oracle ] && JAVA_HOME=/usr/lib/jvm/java-7-oracle || JAVA_HOME=/usr/local/java/jdk1.7.0_25
 
 USER=fortytwo
 [[ $(whoami) == $USER ]] || { echo "You must run this script as $USER"; exit 1; }
@@ -18,14 +18,14 @@ serviceUserHome="/home/$serviceUser"                       # home directory of t
 serviceLogFile="$applDir/log/$serviceNameLo.out"               # log file for StdOut/StdErr
 maxShutdownTime=30                                         # maximum number of seconds to wait for the daemon to terminate normally
 pidFile="$applDir/$serviceNameLo.pid"                      # name of PID file (PID = process ID number)
-#yourkit="-agentpath:/opt/yjp/bin/linux-x86-64/libyjpagent.so=port=4242,dir=~/profiles,logdir=/home/fortytwo/run/eliza/log" #Yourkit profiler agent
+yourkit="-agentpath:/opt/yjp/bin/linux-x86-64/libyjpagent.so=port=4242,dir=~/profiles,logdir=/home/fortytwo/run/eliza/log" #Yourkit profiler agent
 #newrelic="-javaagent:/opt/newrelic/newrelic.jar -Dnewrelic.bootstrap_classpath=true"
 jmxArgs="-Dcom.sun.management.jmxremote.port=9999 -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false" # remote JMX
 javaCommand="java"                                         # name of the Java launcher without the path
 javaExe="$JAVA_HOME/bin/$javaCommand"                      # file name of the Java application launcher executable
 javaGc="-Xloggc:gc_stats.log -XX:+PrintGCDetails -XX:PermSize=64m -XX:MaxPermSize=256m -XX:+UseConcMarkSweepGC -XX:+CMSClassUnloadingEnabled -XX:+HeapDumpOnOutOfMemoryError"
 #echo applDir=$applDir
-classpathLine=`grep "classpath=" $applDir/start | sed 's/.*"\(.*\)".*/\1/'`
+classpathLine=`grep "classpath=" $applDir/bin/$serviceNameLo | sed 's/.*"\(.*\)".*/\1/' | sed "s:\\\$lib_dir:$applDir/lib:g"`
 #echo classpathLine=$classpathLine
 classpath=`echo "$classpathLine" | sed 's%$scriptdir%'$applDir'%g'`
 #echo classpath=$classpath
@@ -65,6 +65,7 @@ function getServicePID {
    return 0; }
 
 function startServiceProcess {
+   ulimit -Sn 4096
    cd $applDir || return 1
    rm -f $pidFile
    makeFileWritable $pidFile || return 1
@@ -162,4 +163,3 @@ function main {
 }
 
 main $1
-
