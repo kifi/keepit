@@ -46,8 +46,6 @@ class ShoeboxScraperClientImpl @Inject() (
   val MaxUrlLength = 3000
   val longTimeout = CallTimeouts(responseTimeout = Some(60000), maxWaitTime = Some(60000), maxJsonParseTime = Some(30000))
 
-  val maxParallelism = 4
-
   def getUriImage(nUriId: Id[NormalizedURI]): Future[Option[String]] = {
     statsd.gauge("getUriImage", 1)
     call(Shoebox.internal.getUriImage(nUriId), routingStrategy = offlinePriority).map { r =>
