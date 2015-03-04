@@ -17,19 +17,18 @@ def report(stats, topK = 20):
     for k in stats.keys():
         lst = stats[k]
         if len(lst) > 4:
-            ## total duration, size, min, max, 25%, 50%, 75%, 90% percentile
+            ## total duration, size, min, max, 50%, 90%, 99% percentile
             lst.sort()
             n = len(lst)
-            (id1, id2, id3, id4) = (int(.25 * n), int(.5 * n), int(.75 * n), int(.9 * n))
-            report[k] = (sum(lst), len(lst), lst[0], lst[n-1], lst[id1], lst[id2], lst[id3], lst[id4])
+            (id1, id2, id3) = (int(.5 * n), int(.9 * n), int(.99 * n))
+            report[k] = (sum(lst), len(lst), lst[0], lst[n-1], lst[id1], lst[id2], lst[id3])
     rep_items = report.items()
     rep_items.sort(key = lambda x: -x[1][0])
     lines = []
     for i in range(min(topK, len(rep_items))):
         (k, v) = rep_items[i]
         ln = "{:<60} sum: {:<9d} size: {:<6d} ".format(k, v[0], v[1]) + \
-        "min: {:<5d} max: {:<5d} 25%: {:<5d} 50%: {:<5d} ".format(v[2], v[3], v[4], v[5]) + \
-        "75%: {:<5d} 90% {:<5d}".format(v[6], v[7])
+        "{:<5d} | {:<5d} | {:<5d} | {:<5d}".format(v[2], v[4], v[5], v[6], v[3])
         lines.append(ln)
     return lines
 
@@ -90,7 +89,7 @@ def main():
     payload = {"channel": "#pulse", "username": "db", "text": "dummy performance stats", "icon_emoji": ":bomb:"}
 
     lines = db_log_stats(dblog)
-    msg = "=====BEGIN DB LOG REPORT=====\n\n" + host_name + '\n' + '\n'.join(lines[0:20]) + "\n\n=====END REPORT====="
+    msg = "=====BEGIN DB LOG REPORT=====\n\n```" + host_name + '\n' + '\n'.join(lines[0:20]) + "```\n\n=====END REPORT====="
     payload['text'] = msg
 
     #f = open(base + 'db.log.stats', 'wb')
@@ -100,7 +99,7 @@ def main():
     requests.post(url, data=json.dumps(payload), headers=headers)
 
     lines = access_log_stats(access_log)
-    msg = "=====BEGIN Acess LOG REPORT=====\n\n" + host_name + '\n' + '\n'.join(lines[0:20]) + "\n\n=====END REPORT====="
+    msg = "=====BEGIN Acess LOG REPORT=====\n\n```" + host_name + '\n' + '\n'.join(lines[0:20]) + "```\n\n=====END REPORT====="
     payload['text'] = msg
     #f = open(base + 'access.log.stats', 'wb')
     #f.write(msg)
