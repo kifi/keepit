@@ -142,6 +142,21 @@ p {
   border-bottom: 1px solid #E3E1E1;
 }
 
+#header_bar #header-wrapper {
+  position: relative;
+  width: 960px;
+  height: 100%;
+  margin: 0 auto;
+}
+
+.header-link {
+  position: absolute;
+  right: 0px;
+  top: 50%;
+  transform: translateY(-50%);
+  visibility: hidden;
+}
+
 .text-center {
   text-align: center;
 }

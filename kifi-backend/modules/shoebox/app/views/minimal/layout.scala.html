@@ -36,7 +36,17 @@
   <body class="@bodyClass">
 
     <header id="header_bar">
-      <a href="/" id="kifi_logo"></a>
+      <div id="header-wrapper">
+        <a href="/" id="kifi_logo"></a>
+        <div class="header-link login">
+          Already a member?
+          <a href="/login">Log In</a>
+        </div>
+        <div class="header-link signup">
+          Not a member yet?
+          <a href="/signup">Signup</a>
+        </div>
+      </div>
     </header>
 
 @content
