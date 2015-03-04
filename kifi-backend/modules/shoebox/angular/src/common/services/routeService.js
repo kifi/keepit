@@ -117,7 +117,8 @@ angular.module('kifi')
         return route('/recos/topV2', {
           recency: opts.recency,
           uriContext: opts.uriContext || [],
-          libContext: opts.libContext || []
+          libContext: opts.libContext || [],
+          trackLibDelivery: _.isBoolean(opts.trackLibDelivery) ? opts.trackLibDelivery : []
         });
       },
       recosPublic: function () {
@@ -253,6 +254,19 @@ angular.module('kifi')
       },
       getMutualConnections: function (userId) {
         return route('/users/' + userId + '/connections/mutual');
+      },
+
+      /////////////////////////////
+      // User Personas           //
+      /////////////////////////////
+      getPersonas: function () {
+        return route('/user/personas');
+      },
+      addPersona: function (personaName) {
+        return route('/user/personas/' + personaName);
+      },
+      removePersona: function (personaName) {
+        return route('/user/personas/' + personaName);
       }
     };
   }

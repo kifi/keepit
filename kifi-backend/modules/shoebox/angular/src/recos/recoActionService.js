@@ -15,7 +15,8 @@ angular.module('kifi')
 
     var kifiRecommendationService = new Clutch(function (opts) {
       var recoOpts = {
-        recency: opts && angular.isNumber(opts.recency) ? opts.recency : 0.75
+        recency: opts && angular.isNumber(opts.recency) ? opts.recency : 0.75,
+        trackLibDelivery: opts && _.isBoolean(opts.trackLibDelivery) ? opts.trackLibDelivery : undefined
       };
 
       if (opts && opts.more) {
@@ -59,10 +60,15 @@ angular.module('kifi')
     }
 
     var api = {
-      get: function () {
-        return rawRecos.length > 0 ?
-          $q.when(rawRecos) :
-          kifiRecommendationService.get();
+      get: function (invalidate, trackLibDelivery) {
+        if (invalidate || rawRecos.length === 0) {
+          uriContext = '';
+          libContext = '';
+          var opts = {trackLibDelivery: trackLibDelivery};
+          return kifiRecommendationService.get(opts);
+        } else {
+          return $q.when(rawRecos);
+        }
       },
 
       getMore: function (opt_recency) {
