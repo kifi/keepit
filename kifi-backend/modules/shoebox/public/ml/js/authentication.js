@@ -1,7 +1,6 @@
 $(function() {
 
   //Simple demonstration of error messages/animations
-
   $('.form-input').on('click keypress', hideError);
 
 

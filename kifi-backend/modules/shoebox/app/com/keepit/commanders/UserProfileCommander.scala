@@ -13,8 +13,6 @@ import play.api.libs.json.Json
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.concurrent.duration.Duration
 
-case class ConnectionInfo(user: BasicUser, userId: Id[User], unfriended: Boolean, unsearched: Boolean)
-
 case class ConnectedUserId(userId: Id[User], connected: Boolean)
 object ConnectedUserId {
   implicit val formatter = Json.format[ConnectedUserId]
@@ -27,7 +25,7 @@ object FollowerUserId {
 
 case class UserConnectionRelationshipKey(viewerId: Id[User], ownerId: Id[User]) extends Key[Seq[ConnectedUserId]] {
   val namespace = "user_con_rel"
-  override val version = 2
+  override val version = 3
   def toKey(): String = ownerId.id.toString + ":" + viewerId.id.toString
 }
 
@@ -36,7 +34,7 @@ class UserConnectionRelationshipCache(stats: CacheStatistics, accessLog: AccessL
 
 case class UserFollowerRelationshipKey(viewerIdOpt: Option[Id[User]], ownerId: Id[User]) extends Key[Seq[FollowerUserId]] {
   val namespace = "user_fol_rel"
-  override val version = 1
+  override val version = 2
   def toKey(): String = ownerId.id.toString + ":" + viewerIdOpt.map(_.id.toString).getOrElse("ANON")
 }
 

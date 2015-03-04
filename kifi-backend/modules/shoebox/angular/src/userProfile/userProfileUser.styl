@@ -1,8 +1,11 @@
+textColor = #505459
+accentGreen = #5ab166
+
 .kf-upu-card
   display: inline-block
   vertical-align: top
   width: 210px
-  height: 350px
+  height: 360px
   margin: 0 9px 15px
   box-sizing: border-box
   border: defaultBorder
@@ -10,7 +13,7 @@
   padding: 22px 16px
   background: #fff
   text-align: center
-  color: #505459
+  color: textColor
 
   .kf-logged-out &
     height: 290px
@@ -19,7 +22,7 @@
   display: block
   height: 100px
   width: 100px
-  margin: 0 auto 10px
+  margin: 0 auto
   border-radius: 50%
 
 .kf-upu-pic
@@ -27,37 +30,60 @@
   width: inherit
   border-radius: '%s' % inherit
 
-.kf-upu-name
-  display: inline-block
+.kf-upu-name-wrap-1
+  display: table
+  table-layout: fixed
   max-width: 176px
+  margin: 2px auto 6px
+
+nameLineHeight = 21px
+.kf-upu-name-wrap-2
+  display: table-cell
+  vertical-align: middle
+  line-height: nameLineHeight
+  height: 2 * nameLineHeight
+
+.kf-upu-name-wrap-3
+  max-height: 2 * nameLineHeight
+  overflow: hidden
+
+.kf-upu-name
   color: inherit
-  line-height: 19px
   font-size: 18px
   font-weight: bold
   letter-spacing: -.2px
-  white-space: nowrap
-  overflow: hidden
-  text-overflow: ellipsis
+  user-select: none
 
   &:hover
     color: linkColor
 
+statLine1Height = 12px
+statLine2Height = 24px
+
 .kf-upu-stats
   display: table
-  width: 100%
-  margin: 16px 0 22px
+  margin: 0 auto 10px
 
-accentGreen = #5ab166
+  &:empty
+    height: statLine1Height + statLine2Height
 
 .kf-upu-stat
   display: table-cell
   text-align: center
   font-size: 11px
   font-smoothing: antialiased
+  padding: 0 4px
+
+  &:first-child
+    padding-left: 0
+
+  &:last-child
+    padding-right: 0
 
 .kf-upu-stat-a
   display: block
-  color: inherit
+  line-height: statLine1Height
+  color: accentGreen
 
   &:hover
     color: linkColor
@@ -65,16 +91,26 @@ accentGreen = #5ab166
 .kf-upu-stat-n
   content: attr(data-n)
   display: block
-  margin-top: 2px
+  line-height: statLine2Height
   font-size: 16px
   font-weight: bold
-  color: accentGreen
+  color: textColor
 
 .kf-upu-counts
   font-size: 0
   line-height: 10px
 
+.kf-upu-counts-title
+  line-height: 17px
+  font-size: 13px
+  font-smoothing: antialiased
+  color: tint(textColor, 50%)
+  white-space: nowrap
+  overflow: hidden
+  text-overflow: ellipsis
+
 .kf-upu-count
+  line-height: 17px
   font-size: 13px
   font-smoothing: antialiased
   cursor: default
@@ -99,7 +135,7 @@ accentGreen = #5ab166
 .kf-upu-connect
   borderWidth = 1px
   lineHeight = 36px
-  margin-top: 22px
+  margin-top: 20px
   border-radius: (lineHeight / 2) + borderWidth
   border: borderWidth solid accentGreen
   background: #fff
@@ -109,4 +145,4 @@ accentGreen = #5ab166
   color: accentGreen
 
   .kf-logged-out &
-    margin-top: 0
+    margin-top: 4px

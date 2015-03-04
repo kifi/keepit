@@ -1,0 +1,26 @@
+<div class="kf-mp dialog-content" ng-if="allPersonas.length > 0">
+  <a class="dialog-x kf-mp-close-x" ng-if="isModal" ng-click="close()" ng-class="{visible: selectedPersonaIds.length > 0}"></a>
+  <div class="dialog-body-wrap">
+    <div class="dialog-body">
+      <h1 class="dialog-header"> Who are you? </h1>
+
+      <div class="kf-mp-table">
+        <div ng-repeat="persona in allPersonas" class="kf-mp-icon" ng-class="{active: persona.selected}" ng-click="toggleSelect(persona)">
+          <div class="kf-mp-icon-image-wrapper">
+            <img class="kf-mp-icon-image" src="{{persona.iconSrc}}" ng-if="!persona.selected">
+            <img class="kf-mp-icon-image" src="{{persona.activeIconSrc}}" ng-if="persona.selected">
+          </div>
+          <div class="kf-mp-icon-display-name">{{persona.displayName}}</div>
+        </div>
+      </div>
+
+      <div class="dialog-button">
+        <button class="kf-mp-exit-button" ng-class="{active: selectedPersonaIds.length > 0}" ng-click="close()" ng-if="!loading">{{closeText}}</button>
+        <div class="kf-mp-logo-overlay" ng-if="loading">
+          <div class="kf-mp-loading-logo svg-small-new-logo"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>

@@ -188,7 +188,7 @@ angular.module('kifi')
         registrationService.socialFinalize(fields).then(function () {
           // todo: do we need to handle the return resp?
           modalService.close();
-          thanksForRegisteringModal();
+          $location.url('/install');
         })['catch'](function () {
           // Would love to get logs of this.
           $scope.onError({'code': 'social_finalize_fail', redirect: 'https://www.kifi.com/signup'});
@@ -205,8 +205,8 @@ angular.module('kifi')
         registrationService.emailFinalize(fields).then(function () {
           // todo: do we need to handle the return resp?
           modalService.close();
-          thanksForRegisteringModal();
           trackEvent('visitor_clicked_page', 'signup2', 'signup');
+          $location.url('/install');
         })['catch'](function (resp) {
           if (resp.data && resp.data.error === 'user_exists_failed_auth') {
             $scope.requestActive = false;
@@ -217,44 +217,6 @@ angular.module('kifi')
           }
         });
       }
-    };
-
-    // 3rd confirm modal
-    var thanksForRegisteringModal = function () {
-      $scope.requestActive = false;
-      $scope.installTriggered = false;
-      if (!installService.installedVersion) {
-        if (installService.canInstall) {
-          if (installService.isValidChrome) {
-            $scope.platformName = 'Chrome';
-          } else if (installService.isValidFirefox) {
-            $scope.platformName = 'Firefox';
-          }
-          $scope.installExtension = function() {
-            trackEvent('visitor_clicked_page', 'install', 'install');
-            $scope.installTriggered = true;
-            installService.triggerInstall();
-          };
-          $scope.thanksVersion = 'installExt';
-        } else {
-          $scope.thanksVersion = 'notSupported';
-        }
-
-        emitTracking('view', 'install');
-
-        setModalScope(modalService.open({
-          template: 'signup/thanksForRegisteringModal.tpl.html',
-          scope: $scope
-        }), function onClose() {
-          if (!$scope.installTriggered) {
-            trackEvent('visitor_clicked_page', 'install', 'close');
-          }
-          $scope.onSuccess();
-        });
-      } else {
-        $scope.onSuccess();
-      }
-      $rootScope.$emit('appStart');
     };
 
     registerModal();
