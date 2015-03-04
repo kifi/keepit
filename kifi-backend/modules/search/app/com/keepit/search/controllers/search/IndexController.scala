@@ -2,8 +2,9 @@ package com.keepit.search.controllers.search
 
 import com.google.inject.Inject
 import com.keepit.common.controller.SearchServiceController
-import com.keepit.model.LibraryAndMemberships
+import com.keepit.model.{ DetailedLibraryView, Library, LibraryAndMemberships }
 import com.keepit.search.index.graph.keep.KeepIndexerPlugin
+import com.keepit.search.index.graph.library.membership.{ LibraryMembershipIndexer, LibraryMembershipIndexerPlugin }
 import com.keepit.search.index.graph.library.{ LibraryIndexer, LibraryIndexable, LibraryIndexerPlugin }
 import play.api.libs.json.Json
 import play.api.mvc.Action
@@ -25,6 +26,8 @@ class IndexController @Inject() (
     keepIndexerPlugin: KeepIndexerPlugin,
     libraryIndexerPlugin: LibraryIndexerPlugin,
     libraryIndexer: LibraryIndexer,
+    libraryMembershipIndexerPlugin: LibraryMembershipIndexerPlugin,
+    libraryMembershipIndexer: LibraryMembershipIndexer,
     phraseIndexerPlugin: PhraseIndexerPlugin) extends SearchServiceController {
 
   def updateKeepIndex() = Action { implicit request =>
@@ -35,6 +38,7 @@ class IndexController @Inject() (
 
   def updateLibraryIndex() = Action { implicit request =>
     libraryIndexerPlugin.update()
+    libraryMembershipIndexerPlugin.update()
     Ok
   }
 
@@ -48,14 +52,15 @@ class IndexController @Inject() (
       messageIndexerPlugin.indexInfos ++
       keepIndexerPlugin.indexInfos ++
       libraryIndexerPlugin.indexInfos ++
+      libraryMembershipIndexerPlugin.indexInfos ++
       phraseIndexerPlugin.indexInfos
     )
     Ok(Json.toJson(infos))
   }
 
   def getLibraryDocument = Action(parse.json) { implicit request =>
-    val LibraryAndMemberships(library, memberships) = request.body.as[LibraryAndMemberships]
-    val indexable = new LibraryIndexable(library, memberships)
+    val library = request.body.as[DetailedLibraryView]
+    val indexable = new LibraryIndexable(library)
     val doc = indexable.buildDocument
     Ok(html.admin.luceneDocDump("Library", doc, libraryIndexer))
   }

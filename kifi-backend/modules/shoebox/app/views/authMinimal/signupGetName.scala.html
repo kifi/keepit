@@ -1,5 +1,5 @@
 @()
-
+@import com.keepit.controllers.core.routes.{AuthController => authRoutes}
 @headHtml = {
   <link rel="stylesheet" type="text/css" href="/assets/ml/css/authentication.css">
 }
@@ -15,13 +15,13 @@
           </div>
         </div>
         <h3>Your name</h3>
-        <form class="signup-form" method="#" post="#">
+        <form class="signup-form signup-name" method="POST" action="@authRoutes.userPassFinalizeAccountAction()">
           <div class="input-wrapper inline-wrap">
-            <input type="text" name="firstname" class="form-input inline right2" placeholder="First">
+            <input type="text" name="first-name" class="form-input inline right2 first-name" placeholder="First">
             <div id="signup-firstname" class="error"></div>
           </div>
           <div class="input-wrapper inline-wrap">
-            <input type="text" name="lastname" class="form-input inline" placeholder="Last">
+            <input type="text" name="last-name" class="form-input inline last-name" placeholder="Last">
             <div id="signup-lastname" class="error"></div>
           </div>
 

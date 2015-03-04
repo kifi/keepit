@@ -265,12 +265,10 @@ class AdminLibraryController @Inject() (
   }
 
   def getLuceneDocument(libraryId: Id[Library]) = AdminUserPage.async { implicit request =>
-    val libraryAndMemberships = db.readOnlyMaster { implicit session =>
-      val library = libraryRepo.get(libraryId)
-      val memberships = libraryMembershipRepo.getWithLibraryId(libraryId).map(_.toLibraryMembershipView)
-      LibraryAndMemberships(library, memberships)
+    val library = db.readOnlyMaster { implicit session =>
+      libraryRepo.get(libraryId)
     }
-    searchClient.getLibraryDocument(libraryAndMemberships).map(Ok(_))
+    searchClient.getLibraryDocument(Library.toDetailedLibraryView(library)).map(Ok(_))
   }
 
   def saveSuggestedSearches() = AdminUserPage { implicit request =>

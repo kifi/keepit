@@ -10,7 +10,7 @@ import com.keepit.model._
 import com.keepit.social.{ SocialGraphPlugin, SocialUserRawInfoStore }
 import org.joda.time.DateTimeZone
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json.JsString
+import play.api.libs.json._
 import views.html
 
 import scala.util.Random
@@ -25,6 +25,20 @@ class AdminSocialUserController @Inject() (
   abook: ABookServiceClient,
   clock: Clock)
     extends AdminUserActions {
+
+  def migrateHashColumn(page: Int, iters: Int) = AdminUserPage { implicit request =>
+    val pages = (0 until iters).map { i => page + i }
+    db.readWriteBatch(pages) {
+      case (session, p) =>
+        implicit val s = session
+        val socialUsers = socialUserInfoRepo.page(p, 1000)
+        socialUsers.foreach(socialUserInfoRepo.doNotUseSave)
+        if (p % 10 == 0) {
+          log.info(s"[migrateHashColumn] Page $p done")
+        }
+    }
+    Ok(JsNumber(pages.last))
+  }
 
   def resetSocialUser(socialUserId: Id[SocialUserInfo]) = AdminUserPage { implicit request =>
     val socialUserInfo = db.readWrite { implicit s =>

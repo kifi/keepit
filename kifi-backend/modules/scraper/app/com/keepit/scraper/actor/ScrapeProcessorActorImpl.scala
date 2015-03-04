@@ -61,7 +61,7 @@ class ScrapeProcessorActorImpl @Inject() (
 
   private[this] def getQueueSize(): Future[Int] = actor.ask(QueueSize).mapTo[Int]
 
-  private[this] val lock = new ReactiveLock(1)
+  private[this] val lock = new ReactiveLock(1, Some(100))
 
   override def pull(): Unit = lock.withLockFuture {
     val futureTask = getQueueSize() map { qSize =>

@@ -4,12 +4,14 @@ import com.google.inject.{ Singleton, Inject, ImplementedBy }
 import com.keepit.common.db.{ State, Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
-import com.keepit.common.time.Clock
+import com.keepit.common.time._
 import com.keepit.model.{ TwitterWaitlistEntryStates, TwitterWaitlistRepo, User, TwitterWaitlistEntry }
 
 @ImplementedBy(classOf[TwitterWaitlistCommanderImpl])
 trait TwitterWaitlistCommander {
   def addEntry(userId: Id[User], handle: String): Either[String, TwitterWaitlistEntry]
+  def getFakeWaitlistPosition(userId: Id[User], handle: String): Option[Long]
+  def getFakeWaitlistLength(): Long
 }
 
 @Singleton
@@ -17,6 +19,9 @@ class TwitterWaitlistCommanderImpl @Inject() (
     db: Database,
     twitterWaitlistRepo: TwitterWaitlistRepo,
     clock: Clock) extends TwitterWaitlistCommander with Logging {
+
+  private val WAITLIST_LENGTH_SHIFT = 1152
+  private val WAITLIST_MULTIPLIER = 3
 
   def addEntry(userId: Id[User], handle: String): Either[String, TwitterWaitlistEntry] = {
     val waitlistEntry = db.readOnlyMaster { implicit s =>
@@ -38,6 +43,20 @@ class TwitterWaitlistCommanderImpl @Inject() (
         twitterWaitlistRepo.save(entry)
       }
     }
+  }
+
+  def getFakeWaitlistPosition(userId: Id[User], handle: String): Option[Long] = {
+    db.readOnlyMaster { implicit session =>
+      twitterWaitlistRepo.getByUserAndHandle(userId, handle).map { waitlistEntry =>
+        twitterWaitlistRepo.countActiveEntriesBeforeDateTime(waitlistEntry.createdAt)
+      }
+    }.map(_ * WAITLIST_MULTIPLIER + WAITLIST_LENGTH_SHIFT)
+  }
+
+  def getFakeWaitlistLength(): Long = {
+    db.readOnlyReplica { implicit session =>
+      twitterWaitlistRepo.countActiveEntriesBeforeDateTime(currentDateTime)
+    } * WAITLIST_MULTIPLIER + WAITLIST_LENGTH_SHIFT
   }
 }
 

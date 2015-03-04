@@ -15,7 +15,7 @@
         <span class="kf-lih-search-left">
           <span class="kf-lih-search-icon svg-search-icon-gray"></span>
           <span class="kf-lih-search-icon-lit svg-search-icon-blue"></span>
-          <a class="kf-lih-search-lib-owner-img" ng-if="search.libraryChip" style="background-image:url({{libOwnerPicUrl || 'https://www.kifi.com/assets/img/ghost.100.png'}})" href="{{libOwnerProfileUrl}}" title="{{library.owner.firstName}} {{library.owner.lastName}}"></a>
+          <a class="kf-lih-search-lib-owner-img" ng-if="search.libraryChip" style="background-image:url({{library.owner | pic:100}})" href="{{library.owner|profileUrl}}" title="{{library.owner.firstName}} {{library.owner.lastName}}"></a>
           <span class="kf-lih-search-lib-name" ng-if="search.libraryChip" style="background-color:{{library.color}}">{{library.name}}</span>
           <a class="kf-lih-search-lib-x" ng-if="search.libraryChip" style="background-color:{{library.color}}" ng-click="onClickLibX()" href="javascript:">&times;</a>
         </span>
@@ -38,11 +38,11 @@
         </menu>
       </span>
       <span class="kf-lih-dropdown-parent" ng-mouseenter="showMenu($event)" ng-mouseleave="hideMenu($event)" ng-click="hideMenu($event)">
-        <a href="{{userProfileUrl}}" class="kf-lih-profile" style="background-image:url({{me.picUrl}})"></a>
+        <a href="{{me|profileUrl}}" class="kf-lih-profile" style="background-image:url({{me | pic:100}})"></a>
         <menu class="kf-dropdown-menu">
-          <a href="{{userProfileUrl}}">Your Profile</a>
+          <a href="{{me|profileUrl}}">Your Profile</a>
           <a href="/profile">Settings</a>
-          <a href="{{logoutUrl}}" target="_top">Log out</a>
+          <a href="/logout" target="_top">Log out</a>
         </menu>
       </span>
     </div>

@@ -1,0 +1,112 @@
+.kf-upu-card
+  display: inline-block
+  vertical-align: top
+  width: 210px
+  height: 350px
+  margin: 0 9px 15px
+  box-sizing: border-box
+  border: defaultBorder
+  border-radius: 16px
+  padding: 22px 16px
+  background: #fff
+  text-align: center
+  color: #505459
+
+  .kf-logged-out &
+    height: 290px
+
+.kf-upu-pic-a
+  display: block
+  height: 100px
+  width: 100px
+  margin: 0 auto 10px
+  border-radius: 50%
+
+.kf-upu-pic
+  height: inherit
+  width: inherit
+  border-radius: '%s' % inherit
+
+.kf-upu-name
+  display: inline-block
+  max-width: 176px
+  color: inherit
+  line-height: 19px
+  font-size: 18px
+  font-weight: bold
+  letter-spacing: -.2px
+  white-space: nowrap
+  overflow: hidden
+  text-overflow: ellipsis
+
+  &:hover
+    color: linkColor
+
+.kf-upu-stats
+  display: table
+  width: 100%
+  margin: 16px 0 22px
+
+accentGreen = #5ab166
+
+.kf-upu-stat
+  display: table-cell
+  text-align: center
+  font-size: 11px
+  font-smoothing: antialiased
+
+.kf-upu-stat-a
+  display: block
+  color: inherit
+
+  &:hover
+    color: linkColor
+
+.kf-upu-stat-n
+  content: attr(data-n)
+  display: block
+  margin-top: 2px
+  font-size: 16px
+  font-weight: bold
+  color: accentGreen
+
+.kf-upu-counts
+  font-size: 0
+  line-height: 10px
+
+.kf-upu-count
+  font-size: 13px
+  font-smoothing: antialiased
+  cursor: default
+
+  button&
+    border: none
+    padding: 0
+    background: transparent
+    color: inherit
+    cursor: pointer
+
+    &:hover
+      color: linkColor
+
+  &::before
+    content: attr(data-n)
+    margin-right: 4px
+    font-weight: bold
+    font-size: 14px
+    color: accentGreen
+
+.kf-upu-connect
+  borderWidth = 1px
+  lineHeight = 36px
+  margin-top: 22px
+  border-radius: (lineHeight / 2) + borderWidth
+  border: borderWidth solid accentGreen
+  background: #fff
+  padding: 0 22px
+  line-height: lineHeight
+  font-size: 13px
+  color: accentGreen
+
+  .kf-logged-out &
+    margin-top: 0

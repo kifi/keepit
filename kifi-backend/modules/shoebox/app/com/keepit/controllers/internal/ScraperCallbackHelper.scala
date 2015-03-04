@@ -28,7 +28,7 @@ class ScraperCallbackHelper @Inject() (
     implicit val scraperConfig: ScraperSchedulerConfig,
     integrityHelpers: UriIntegrityHelpers) extends Logging {
 
-  private[this] val assignLock = new ReactiveLock(1)
+  val assignLock = new ReactiveLock(1, Some(5)) // should not be more then number of scrapers x 2!
 
   private[this] var averageNumberOfTasks = 0.0 // an exponential moving average of the number of tasks assigned to a scraper instance
   private[this] val alpha = 0.3
@@ -82,6 +82,7 @@ class ScraperCallbackHelper @Inject() (
 
   def saveNormalizedURI(normalizedUri: NormalizedURI): NormalizedURI = {
     log.info(s"scraper callback: save uri: ${normalizedUri.id.get}")
+    statsd.gauge("scraper.saveNormalizedURI", 1)
     db.readWrite(attempts = 1) { implicit s =>
       normUriRepo.save(normalizedUri) tap integrityHelpers.improveKeepsSafely
     }

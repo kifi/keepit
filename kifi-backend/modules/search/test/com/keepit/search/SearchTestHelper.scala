@@ -17,6 +17,7 @@ import com.keepit.search.index.graph.collection._
 import com.keepit.search.index.graph.keep.{ ShardedKeepIndexer, KeepIndexer }
 import com.keepit.search.index.graph.library.LibraryIndexer
 import com.keepit.search.index.VolatileIndexDirectory
+import com.keepit.search.index.graph.library.membership.LibraryMembershipIndexer
 import com.keepit.search.index.phrase._
 import com.keepit.search.index.user.UserIndexer
 import com.keepit.search.test.SearchTestInjector
@@ -75,6 +76,7 @@ trait SearchTestHelper { self: SearchTestInjector =>
     val userGraphsSearcherFactory = new UserGraphsSearcherFactory(userGraphIndexer, searchFriendIndexer)
 
     val libraryIndexer = new LibraryIndexer(new VolatileIndexDirectory, inject[ShoeboxServiceClient], inject[AirbrakeNotifier])
+    val libraryMembershipIndexer = new LibraryMembershipIndexer(new VolatileIndexDirectory, inject[ShoeboxServiceClient], inject[AirbrakeNotifier])
     val phraseDetector = new PhraseDetector(new FakePhraseIndexer(inject[AirbrakeNotifier]))
     val libraryQualityEvaluator = new LibraryQualityEvaluator(activeShards)
 
@@ -85,6 +87,7 @@ trait SearchTestHelper { self: SearchTestInjector =>
       shardedArticleIndexer,
       shardedKeepIndexer,
       libraryIndexer,
+      libraryMembershipIndexer,
       userIndexer,
       userGraphsSearcherFactory,
       inject[ShoeboxServiceClient],
@@ -96,7 +99,7 @@ trait SearchTestHelper { self: SearchTestInjector =>
       libraryQualityEvaluator,
       fortyTwoServices)
 
-    (shardedCollectionIndexer, shardedArticleIndexer, userGraphIndexer, userGraphsSearcherFactory, searchFactory, shardedKeepIndexer, libraryIndexer)
+    (shardedCollectionIndexer, shardedArticleIndexer, userGraphIndexer, userGraphsSearcherFactory, searchFactory, shardedKeepIndexer, libraryIndexer, libraryMembershipIndexer)
   }
 
   def mkStore(uris: Seq[NormalizedURI]) = {

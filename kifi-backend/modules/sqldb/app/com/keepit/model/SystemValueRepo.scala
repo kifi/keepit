@@ -6,6 +6,7 @@ import com.keepit.common.db.slick.{ DataBaseComponent, DbRepo, Repo }
 import com.keepit.common.db.{ Id, LargeString, SequenceNumber, State }
 import com.keepit.common.time.{ Clock, DEFAULT_DATE_TIME_ZONE }
 import org.joda.time.DateTime
+import scala.slick.jdbc.StaticQuery
 
 @ImplementedBy(classOf[SystemValueRepoImpl])
 trait SystemValueRepo extends Repo[SystemValue] {
@@ -15,6 +16,9 @@ trait SystemValueRepo extends Repo[SystemValue] {
   def clearValue(name: Name[SystemValue])(implicit session: RWSession): Boolean
   def getSequenceNumber[T](name: Name[SequenceNumber[T]])(implicit session: RSession): Option[SequenceNumber[T]]
   def setSequenceNumber[T](name: Name[SequenceNumber[T]], seq: SequenceNumber[T])(implicit session: RWSession): Unit
+
+  //Need to find a better home for this.
+  def getDbConnectionStats()(implicit session: RSession): Map[String, Int]
 }
 
 @Singleton
@@ -80,6 +84,11 @@ class SystemValueRepoImpl @Inject() (
       valueCache.remove(SystemValueKey(name))
     }
     changed
+  }
+
+  def getDbConnectionStats()(implicit session: RSession): Map[String, Int] = {
+    import StaticQuery.interpolation
+    sql"SELECT LEFT(host, (LOCATE(':', host) -1)) hostname, count(host) AS connections FROM information_schema.processlist GROUP BY hostname order by connections;".as[(String, Int)].list.toMap
   }
 
   private def toSystemValueName[T](name: Name[SequenceNumber[T]]): Name[SystemValue] = Name(name.name + "_sequence")

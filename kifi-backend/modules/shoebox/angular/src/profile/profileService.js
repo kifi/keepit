@@ -8,7 +8,6 @@ angular.module('kifi')
     var initialized = false;
 
     var me = {
-      picUrl: 'https://www.kifi.com/assets/img/ghost.200.png',
       seqNum: 0
     };
     var prefs = {};
@@ -39,7 +38,6 @@ angular.module('kifi')
       })['catch'](function (err) {
         if (err.status === 403) {
           util.replaceObjectInPlace(me, {
-            picUrl: 'https://www.kifi.com/assets/img/ghost.200.png',
             seqNum: (me.seqNum || 0) + 1
           });
           updateLoginState(null, me.id !== oldMeId);
@@ -53,7 +51,6 @@ angular.module('kifi')
       angular.forEach(data, function (val, key) {
         me[key] = val;
       });
-      me.picUrl = routeService.formatPicUrl(me.id, me.pictureName);
       me.primaryEmail = getPrimaryEmail(me.emails);
       me.seqNum++;
       socialService.setExpiredTokens(me.notAuthed);

@@ -59,7 +59,7 @@ class ImageDataIntegrityPluginTest extends TestKitSupport with SpecificationLike
         errors.exists {
           _.message.get contains
             "http://cloudfront/users/59eba923-54cb-4257-9bb6-7c81d602bd76/pics/100/0.jpg"
-        } === true
+        } === false
         errors.exists {
           _.message.get contains
             "http://cloudfront/users/59eba923-54cb-4257-9bb6-7c81d602bd76/pics/200/0.jpg"

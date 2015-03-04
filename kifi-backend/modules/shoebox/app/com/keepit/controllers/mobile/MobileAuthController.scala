@@ -112,7 +112,7 @@ class MobileAuthController @Inject() (
     builder += ("device", platform.name)
     if (isNewInstall) {
       builder += ("action", "installedExtension")
-      val numInstallations = db.readOnlyMaster { implicit session => installationRepo.all(userId, Some(KifiInstallationStates.INACTIVE)).length } // all platforms
+      val numInstallations = db.readOnlyReplica { implicit session => installationRepo.all(userId, Some(KifiInstallationStates.INACTIVE)).length } // all platforms
       builder += ("installation", numInstallations)
       heimdal.setUserProperties(userId, "installedExtensions" -> ContextDoubleData(numInstallations))
       heimdal.trackEvent(UserEvent(userId, builder.build, UserEventTypes.JOINED))

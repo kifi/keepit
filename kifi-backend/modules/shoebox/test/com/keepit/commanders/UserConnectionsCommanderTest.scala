@@ -100,7 +100,8 @@ class UserConnectionsCommanderTest extends Specification with ShoeboxTestInjecto
       val commander = inject[UserConnectionsCommander]
       val connections = Await.result(commander.getConnectionsSortedByRelationship(viewer.id.get, owner.id.get), Duration.Inf)
 
-      connections === Seq(user4, user1, user6, user3, user2, user7).map(_.id.get)
+      connections.map(_.userId) === Seq(user4, user1, user6, user3, user2, user7).map(_.id.get)
+      connections.map(_.connected) === Seq(true, true, true, false, false, false)
     }
   }
 

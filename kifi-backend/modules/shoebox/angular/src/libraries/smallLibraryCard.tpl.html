@@ -8,9 +8,9 @@
         <div class="kf-slc-card-name-clip">{{library.name}}</div>
       </div>
     </div>
-    <a class="kf-slc-card-owner" href="{{library.ownerProfileUrl}}"
+    <a class="kf-slc-card-owner" href="{{library.owner|profileUrl}}"
       kf-track-origin="libraryPage.RelatedLibraries/curator">
-      <img class="kf-slc-card-owner-pic" ng-src="{{library.ownerPicUrl}}" alt="{{library.owner.firstName}} {{library.owner.lastName}}">
+      <img class="kf-slc-card-owner-pic" ng-src="{{library.owner | pic:100}}" alt="{{library.owner.firstName}} {{library.owner.lastName}}">
       <span class="kf-slc-card-by">by</span>
       <span class="kf-slc-card-by-name">{{library.owner.firstName}} {{library.owner.lastName}}</span>
     </a>

@@ -5,6 +5,7 @@ import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.mail.{ EmailAddress, SystemEmailAddress, ElectronicMail, LocalPostOffice }
 import com.keepit.common.store.S3ImageStore
 import com.keepit.heimdal.{ DelightedAnswerSources, BasicDelightedAnswer }
 import com.keepit.model._
@@ -16,7 +17,7 @@ import play.api.libs.json.Json.toJson
 
 import com.google.inject.Inject
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.mvc.{ MaxSizeExceeded, Request }
+import play.api.mvc.{ Action, MaxSizeExceeded, Request }
 import scala.concurrent.Future
 import securesocial.core.{ SecureSocial, Authenticator }
 import play.api.libs.json.JsSuccess
@@ -41,6 +42,7 @@ class MobileUserController @Inject() (
   libraryCommander: LibraryCommander,
   db: Database,
   airbrakeNotifier: AirbrakeNotifier,
+  postOffice: LocalPostOffice,
   s3ImageStore: S3ImageStore)
     extends UserActions with ShoeboxServiceController {
 
@@ -318,6 +320,20 @@ class MobileUserController @Inject() (
       case Left(err) =>
         BadRequest(Json.obj("error" -> "file_too_large", "size" -> err.length))
     }
+  }
+
+  def reportData() = Action(parse.tolerantJson) { implicit request =>
+    val body = "<pre>" + Json.prettyPrint(request.body) + "</pre>"
+    val email = ElectronicMail(
+      from = SystemEmailAddress.ANDREW,
+      to = Seq(EmailAddress("jeremy@kifi.com"), EmailAddress("thass@kifi.com"), EmailAddress("andrew@kifi.com")),
+      subject = "iOS Report",
+      htmlBody = body,
+      fromName = Some("iOS Nagger"),
+      category = NotificationCategory.System.PLAY
+    )
+    db.readWrite { implicit rw => postOffice.sendMail(email) }
+    Ok
   }
 
 }

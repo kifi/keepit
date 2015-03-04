@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .controller('InviteCtrl', [
-  '$scope', '$http', '$window', 'modalService', 'profileService', 'routeService', 'socialService', 'wtiService',
-  function ($scope, $http, $window, modalService, profileService, routeService, socialService, wtiService) {
+  '$scope', '$http', '$window', 'modalService', 'profileService', 'socialService', 'wtiService',
+  function ($scope, $http, $window, modalService, profileService, socialService, wtiService) {
     $window.document.title = 'Kifi • Invite your connections';
 
     $scope.$watch(socialService.checkIfRefreshingSocialGraph, function (v) {
@@ -273,10 +273,10 @@ angular.module('kifi')
 ])
 
 .directive('kfFriendRequestBanner', [
-  '$analytics', '$timeout', 'initParams', 'keepWhoService',
-  'profileService', 'routeService', 'userService',
-  function ($analytics, $timeout, initParams, keepWhoService,
-    profileService, routeService, userService) {
+  '$analytics', '$timeout', 'initParams',
+  'profileService', 'userService',
+  function ($analytics, $timeout, initParams,
+    profileService, userService) {
 
     function setupShowFriendRequestBanner(scope, externalId, eventSubtype) {
       function closeBanner() {
@@ -286,12 +286,9 @@ angular.module('kifi')
       }
 
       userService.getBasicUserInfo(externalId, true).then(function (res) {
-        var user = res.data,
-            picUrl = keepWhoService.getPicUrl(user, 200);
+        var user = res.data;
         scope.user = user;
-        scope.mainImage = picUrl;
         scope.mainLabel = user.firstName + ' ' + user.lastName;
-        scope.userProfileUrl = routeService.getProfileUrl(user.username);
         scope.hidden = false;
         scope.actionText = 'Add';
         scope.result = {

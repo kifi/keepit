@@ -2,10 +2,9 @@
 
 angular.module('kifi')
 
-
 .directive('kfFriendRequestCard', [
-  '$log', 'friendService', 'routeService',
-  function ($log, friendService, routeService) {
+  'friendService',
+  function (friendService) {
     return {
       scope: {
         'request': '&'
@@ -13,18 +12,15 @@ angular.module('kifi')
       replace: true,
       restrict: 'A',
       templateUrl: 'friends/friendRequestCard.tpl.html',
-      link: function (scope/*, element, attrs*/) {
-        var friend = scope.request();
-        scope.name = friend.firstName + ' ' + friend.lastName;
-        scope.mainImage = routeService.formatPicUrl(friend.id, friend.pictureName, 200);
-        scope.friendProfileUrl = routeService.getProfileUrl(friend.username);
+      link: function (scope) {
+        scope.friend = scope.request();
 
         scope.accept = function () {
-          friendService.acceptRequest(friend.id);
+          friendService.acceptRequest(scope.friend.id);
         };
 
         scope.ignore = function () {
-          friendService.ignoreRequest(friend.id);
+          friendService.ignoreRequest(scope.friend.id);
         };
       }
     };

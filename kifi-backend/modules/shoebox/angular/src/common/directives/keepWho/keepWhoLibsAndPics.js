@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfKeepWhoLibsAndPics', [
-  '$rootScope', 'friendService', 'keepWhoService', 'profileService', 'libraryService', 'env',
-  function ($rootScope, friendService, keepWhoService, profileService, libraryService, env) {
+  '$rootScope', 'profileService', 'libraryService', 'env',
+  function ($rootScope, profileService, libraryService, env) {
     return {
       restrict: 'A',
       replace: true,
@@ -15,8 +15,6 @@ angular.module('kifi')
       },
       link: function (scope) {
         scope.me = profileService.me;
-        scope.getPicUrl = keepWhoService.getPicUrl;
-        scope.getName = keepWhoService.getName;
         scope.isMyBookmark = scope.keep && scope.keep.isMyBookmark;
         scope.visibleKeepLibraries = scope.keep.libraries;
         scope.visibleKeepLibraries.forEach(function (lib) {
@@ -32,16 +30,14 @@ angular.module('kifi')
           }
         }});
 
-        // For keep cards that search results on the search page, add and remove user library attribution
-        // on the client side when the user keeps or unkeeps.
+        // Add/remove library attribution on reco or search result when the user keeps/unkeeps.
         var deregisterKeepAddedListener = $rootScope.$on('keepAdded', function (e, keeps, library) {
           var visibleLibraryIds = _.pluck(scope.visibleKeepLibraries, 'id');
           _.each(keeps, function (keep) {
-            if (!scope.keep.id &&                      // No scope.keep.id if the keep is not on a library page.
+            if (!scope.keep.id &&                      // No scope.keep.id if the keep is not on a library page
                 scope.keep.url === keep.url &&
-                !libraryService.isLibraryMainOrSecret(library) &&     // Do not show system libraries as attributions.
+                !libraryService.isLibraryMainOrSecret(library) &&     // Do not show system libraries
                 !_.contains(visibleLibraryIds, library.id)) {
-              library.keeperPic = friendService.getPictureUrlForUser(profileService.me);
               scope.visibleKeepLibraries.push(library);
             }
           });
@@ -81,20 +77,14 @@ angular.module('kifi')
   }
 ])
 
-.directive('kfKeepWhoPic', ['routeService',
-  function (routeService) {
-    return {
-      restrict: 'A',
-      replace: true,
-      templateUrl: 'common/directives/keepWho/keepWhoPic.tpl.html',
-      scope: {
-        keeper: '=',
-        currentPageOrigin: '@'
-      },
-      link: function (scope) {
-        scope.keeper.profileUrl = routeService.getProfileUrl(scope.keeper.username);
-      }
-    };
-  }
-]);
-
+.directive('kfKeepWhoPic', function () {
+  return {
+    restrict: 'A',
+    replace: true,
+    templateUrl: 'common/directives/keepWho/keepWhoPic.tpl.html',
+    scope: {
+      keeper: '=',
+      currentPageOrigin: '@'
+    }
+  };
+});

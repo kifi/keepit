@@ -71,7 +71,6 @@ angular.module('kifi')
 
     function augment(library) {  // used on both library infos and full libraries
       if (library.owner) {
-        library.owner.image = friendService.getPictureUrlForUser(library.owner);
         library.isMine = library.owner.id === profileService.me.id;
       }
       if (api.isLibraryMainOrSecret(library)) {
@@ -87,8 +86,6 @@ angular.module('kifi')
       this.owner = library.owner;
       this.numFollowers = library.numFollowers;
       this.numKeeps = library.numKeeps;
-      this.ownerPicUrl = routeService.formatPicUrl(library.owner.id, library.owner.pictureName, 200);
-      this.ownerProfileUrl = routeService.getProfileUrl(library.owner.username);
       this.name = library.name;
       this.description = library.description;
       this.color = library.color;
@@ -96,12 +93,7 @@ angular.module('kifi')
       this.imageUrl = library.image ? routeService.libraryImageUrl(library.image.path) : null;
       this.path = '/' + library.owner.username + '/' + library.slug;
       this.reason = reason;
-      this.followers = library.followers.map(function (user) {
-        return _.merge(user, {
-          picUrl: routeService.formatPicUrl(user.id, user.pictureName, 200),
-          profileUrl: routeService.getProfileUrl(user.username)
-        });
-      });
+      this.followers = library.followers;
     }
 
 

@@ -34,7 +34,7 @@ class PublicUriScoringHelper @Inject() (
   }
 
   private def getRawRecencyScores(items: Seq[PublicSeedItemWithMultiplier]): Seq[Float] = items.map { item =>
-    val daysOld = Days.daysBetween(item.lastSeen, currentDateTime).getDays
+    val daysOld = Math.max(Days.daysBetween(item.lastSeen, currentDateTime).getDays, 0)
     (1.0 / (Math.log(daysOld + 1.0) + 1)).toFloat
   }
 

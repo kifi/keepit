@@ -25,9 +25,9 @@ class UriSearchCommanderTest extends Specification with SearchTestInjector with 
         val allKeeps = saveBookmarksByURI(expectedUriToUserEdges)
 
         val store = mkStore(uris)
-        val (shardedCollectionIndexer, indexer, userGraphIndexer, _, searchFactory, shardedKeepIndexer, libraryIndexer) = initIndexes(store)
+        val (shardedCollectionIndexer, indexer, userGraphIndexer, _, searchFactory, shardedKeepIndexer, libraryIndexer, libraryMembershipIndexer) = initIndexes(store)
         indexer.update() === uris.size
-        Await.result((shardedKeepIndexer.asyncUpdate() zip libraryIndexer.asyncUpdate()), Duration(60, SECONDS))
+        Await.result((shardedKeepIndexer.asyncUpdate() zip libraryIndexer.asyncUpdate() zip libraryMembershipIndexer.asyncUpdate()), Duration(60, SECONDS))
 
         setConnections(Map(users(0).id.get -> Set(users(1).id.get)))
         userGraphIndexer.update()

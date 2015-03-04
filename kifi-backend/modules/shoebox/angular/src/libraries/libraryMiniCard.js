@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfLibraryMiniCard', [
-  '$rootScope', '$state', 'libraryService', 'profileService', 'friendService', 'modalService', 'routeService', 'signupService', '$location',
-  function ($rootScope, $state, libraryService, profileService, friendService, modalService, routeService, signupService, $location) {
+  '$rootScope', '$state', 'libraryService', 'modalService', 'signupService', '$location',
+  function ($rootScope, $state, libraryService, modalService, signupService, $location) {
     return {
       restrict: 'A',
       replace: true,
@@ -77,8 +77,6 @@ angular.module('kifi')
 
         libraryService.getLibraryInfoById(scope.library.id).then(function (data) {
           _.assign(scope.library, data.library);
-          scope.library.owner.image = friendService.getPictureUrlForUser(scope.library.owner);
-          scope.library.owner.profileUrl = routeService.getProfileUrl(scope.library.owner.username);
           scope.isFollowing = data.membership === 'read_only';
         })['catch'](function () {
           scope.showMiniCard = false;

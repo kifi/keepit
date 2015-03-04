@@ -51,45 +51,6 @@ case class LibraryModifyRequest(
   color: Option[LibraryColor] = None,
   listed: Option[Boolean] = None)
 
-case class BasicUserWithFriendStatus(
-  externalId: ExternalId[User],
-  firstName: String,
-  lastName: String,
-  pictureName: String,
-  username: Username,
-  isFriend: Option[Boolean],
-  friendRequestSentAt: Option[DateTime],
-  friendRequestReceivedAt: Option[DateTime]) extends BasicUserFields
-
-object BasicUserWithFriendStatus {
-  implicit val format = (
-    BasicUserFields.format and
-    (__ \ 'isFriend).formatNullable[Boolean] and
-    (__ \ 'friendRequestSentAt).formatNullable[DateTime] and
-    (__ \ 'friendRequestReceivedAt).formatNullable[DateTime]
-  )(BasicUserWithFriendStatus.apply, unlift(BasicUserWithFriendStatus.unapply))
-
-  def fromWithoutFriendStatus(u: User): BasicUserWithFriendStatus = fromWithoutFriendStatus(BasicUser.fromUser(u))
-  def fromWithoutFriendStatus(u: BasicUser): BasicUserWithFriendStatus = from(u, None, None, None)
-  def from(u: User, isFriend: Boolean): BasicUserWithFriendStatus = from(BasicUser.fromUser(u), isFriend)
-  def from(u: BasicUser, isFriend: Boolean): BasicUserWithFriendStatus = from(u, Some(isFriend))
-  def fromWithRequestSentAt(u: User, at: DateTime): BasicUserWithFriendStatus = fromWithRequestSentAt(BasicUser.fromUser(u), at)
-  def fromWithRequestSentAt(u: BasicUser, at: DateTime): BasicUserWithFriendStatus = from(u, Some(false), friendRequestSentAt = Some(at))
-  def fromWithRequestReceivedAt(u: User, at: DateTime): BasicUserWithFriendStatus = fromWithRequestReceivedAt(BasicUser.fromUser(u), at)
-  def fromWithRequestReceivedAt(u: BasicUser, at: DateTime): BasicUserWithFriendStatus = from(u, Some(false), friendRequestReceivedAt = Some(at))
-  private def from(u: BasicUser, isFriend: Option[Boolean], friendRequestSentAt: Option[DateTime] = None, friendRequestReceivedAt: Option[DateTime] = None): BasicUserWithFriendStatus = {
-    BasicUserWithFriendStatus(
-      externalId = u.externalId,
-      firstName = u.firstName,
-      lastName = u.lastName,
-      pictureName = u.pictureName,
-      username = u.username,
-      isFriend = isFriend,
-      friendRequestSentAt = friendRequestSentAt,
-      friendRequestReceivedAt = friendRequestReceivedAt)
-  }
-}
-
 case class LibraryInfo(
   id: PublicId[Library],
   name: String,
@@ -97,6 +58,7 @@ case class LibraryInfo(
   shortDescription: Option[String],
   url: String,
   color: Option[LibraryColor], // system libraries have no color
+  image: Option[LibraryImageInfo],
   owner: BasicUser,
   numKeeps: Int,
   numFollowers: Int,
@@ -112,6 +74,7 @@ object LibraryInfo {
     (__ \ 'shortDescription).formatNullable[String] and
     (__ \ 'url).format[String] and
     (__ \ 'color).formatNullable[LibraryColor] and
+    (__ \ 'image).formatNullable[LibraryImageInfo] and
     (__ \ 'owner).format[BasicUser] and
     (__ \ 'numKeeps).format[Int] and
     (__ \ 'numFollowers).format[Int] and
@@ -120,7 +83,7 @@ object LibraryInfo {
     (__ \ 'inviter).formatNullable[BasicUser]
   )(LibraryInfo.apply, unlift(LibraryInfo.unapply))
 
-  def fromLibraryAndOwner(lib: Library, owner: BasicUser, keepCount: Int, inviter: Option[BasicUser])(implicit config: PublicIdConfiguration): LibraryInfo = {
+  def fromLibraryAndOwner(lib: Library, image: Option[LibraryImage], owner: BasicUser, keepCount: Int, inviter: Option[BasicUser] = None)(implicit config: PublicIdConfiguration): LibraryInfo = {
     LibraryInfo(
       id = Library.publicId(lib.id.get),
       name = lib.name,
@@ -128,6 +91,7 @@ object LibraryInfo {
       shortDescription = lib.description,
       url = Library.formatLibraryPath(owner.username, lib.slug),
       color = lib.color,
+      image = image.map(LibraryImageInfo.createInfo(_)),
       owner = owner,
       numKeeps = keepCount,
       numFollowers = lib.memberCount - 1, // remove owner from count
@@ -178,7 +142,7 @@ case class LibraryCardInfo(
   image: Option[LibraryImageInfo],
   slug: LibrarySlug,
   visibility: LibraryVisibility,
-  owner: BasicUserWithFriendStatus,
+  owner: BasicUser,
   numKeeps: Int,
   numFollowers: Int,
   followers: Seq[BasicUser],
@@ -201,12 +165,14 @@ object LibraryCardInfo {
 case class LibraryNotificationInfo(
   id: PublicId[Library],
   name: String,
-  owner: Username,
-  slug: LibrarySlug)
+  slug: LibrarySlug,
+  color: Option[LibraryColor],
+  image: Option[LibraryImageInfo],
+  owner: BasicUser)
 
 object LibraryNotificationInfo {
-  def fromLibraryAndOwner(lib: Library, owner: BasicUser)(implicit config: PublicIdConfiguration): LibraryNotificationInfo = {
-    LibraryNotificationInfo(Library.publicId(lib.id.get), lib.name, owner.username, lib.slug)
+  def fromLibraryAndOwner(lib: Library, image: Option[LibraryImage], owner: BasicUser)(implicit config: PublicIdConfiguration): LibraryNotificationInfo = {
+    LibraryNotificationInfo(Library.publicId(lib.id.get), lib.name, lib.slug, lib.color, image.map(LibraryImageInfo.createInfo(_)), owner)
   }
 }
 

@@ -1,6 +1,7 @@
 package com.keepit.common.social
 
 import com.keepit.commanders.UserCommander
+import com.keepit.common.net.NonOKResponseException
 import com.keepit.model._
 import com.google.inject.Inject
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -81,7 +82,7 @@ private[social] class SocialGraphActor @Inject() (
     case m => throw new UnsupportedActorMessage(m)
   }
 
-  private def fetchUserInfo(socialUserInfo: SocialUserInfo): Seq[Id[SocialConnection]] = timing(s"fetchUserInfo($socialUserInfo)") {
+  private def fetchUserInfo(socialUserInfo: SocialUserInfo): Unit = timing(s"fetchUserInfo($socialUserInfo)") {
     try {
       require(socialUserInfo.credentials.isDefined, s"SocialUserInfo's credentials are not defined: $socialUserInfo")
       require(socialUserInfo.state != SocialUserInfoStates.APP_NOT_AUTHORIZED, s"SocialUserInfo's state is not authorized, need to wait until user re-auth: $socialUserInfo")
@@ -123,6 +124,8 @@ private[social] class SocialGraphActor @Inject() (
       }
       connectionsOpt getOrElse Seq.empty
     } catch {
+      case ex: NonOKResponseException if ex.response.status == 500 =>
+        Seq()
       case ex: Exception =>
         db.readWrite { implicit s => socialRepo.save(socialUserInfo.withState(SocialUserInfoStates.FETCH_FAIL).withLastGraphRefresh()) }
         throw new Exception(s"Error updating SocialUserInfo: $socialUserInfo", ex)

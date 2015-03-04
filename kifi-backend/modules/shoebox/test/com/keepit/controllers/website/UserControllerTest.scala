@@ -1,61 +1,35 @@
 package com.keepit.controllers.website
 
+import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.commanders.UserConnectionsCommander
 import com.keepit.common.time._
-import com.keepit.model.KeepFactoryHelper._
-import com.keepit.model.KeepFactory._
-import com.keepit.model.LibraryInviteFactory._
-import com.keepit.model.LibraryInviteFactoryHelper._
-import com.keepit.model.UserFactoryHelper._
-import com.keepit.model.UserFactory._
-import com.keepit.model.UserConnectionFactoryHelper._
-import com.keepit.model.UserConnectionFactory._
-import com.keepit.model.LibraryFactoryHelper._
-import com.keepit.model.LibraryFactory._
-import com.keepit.model.LibraryMembershipFactory._
-import com.keepit.model.LibraryMembershipFactoryHelper._
-import com.keepit.abook.FakeABookServiceClientModule
-import com.keepit.common.controller._
+import com.keepit.common.controller.FakeUserActionsHelper
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
-
-import com.keepit.common.mail.{ EmailAddress, FakeMailModule }
-import com.keepit.common.net.FakeHttpClientModule
-import com.keepit.common.oauth.FakeOAuth2ConfigurationModule
+import com.keepit.common.mail.{ EmailAddress /*, FakeMailModule*/ }
 import com.keepit.common.social.FakeSocialGraphModule
-import com.keepit.common.store.FakeShoeboxStoreModule
-import com.keepit.cortex.FakeCortexServiceClientModule
-import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.model._
+import com.keepit.model.UserFactoryHelper._
+import com.keepit.model.UserFactory._
 import com.keepit.scraper.FakeScrapeSchedulerModule
-import com.keepit.search.FakeSearchServiceClientModule
-import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.test.ShoeboxTestInjector
+
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
+
 import play.api.libs.json.{ JsNull, Json }
 import play.api.mvc.Result
 import play.api.test.Helpers._
 import play.api.test._
 
 import scala.concurrent.Future
-import scala.slick.jdbc.StaticQuery
 
 class UserControllerTest extends Specification with ShoeboxTestInjector {
 
   val controllerTestModules = Seq(
-    FakeClockModule(),
-    FakeShoeboxServiceModule(),
-    FakeSearchServiceClientModule(),
     FakeScrapeSchedulerModule(),
-    FakeShoeboxStoreModule(),
     FakeABookServiceClientModule(),
-    FakeMailModule(),
-    FakeHttpClientModule(),
-    FakeSocialGraphModule(),
-    FakeCortexServiceClientModule(),
-    FakeCuratorServiceClientModule(),
-    FakeOAuth2ConfigurationModule()
+    FakeSocialGraphModule()
   )
 
   "UserController" should {
@@ -299,137 +273,6 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
         val resultJson = contentAsJson(result1)
         val resultIds = (resultJson \\ "id").map(_.as[ExternalId[User]])
         resultIds === List(userJA.externalId, userTJ.externalId, userAL.externalId)
-      }
-    }
-
-    "get profile for self" in {
-      withDb(controllerTestModules: _*) { implicit injector =>
-        val (user1, user2, user3, user4, user5, lib1) = db.readWrite { implicit session =>
-          val user1 = user().withName("George", "Washington").withUsername("GDubs").withPictureName("pic1").saved
-          val user2 = user().withName("Abe", "Lincoln").withUsername("abe").saved
-          val user3 = user().withName("Thomas", "Jefferson").withUsername("TJ").saved
-          val user4 = user().withName("John", "Adams").withUsername("jayjayadams").saved
-          val user5 = user().withName("Ben", "Franklin").withUsername("Benji").saved
-
-          connect(user1 -> user2,
-            user1 -> user3,
-            user4 -> user1,
-            user2 -> user3).saved
-
-          val user1secretLib = libraries(3).map(_.withUser(user1).secret()).saved.head.savedFollowerMembership(user2)
-
-          val user1lib = library().withUser(user1).published().saved.savedFollowerMembership(user5, user4)
-          user1lib.visibility === LibraryVisibility.PUBLISHED
-
-          val user3lib = library().withUser(user3).published().saved
-          val user5lib = library().withUser(user5).published().saved.savedFollowerMembership(user1)
-          membership().withLibraryFollower(library().withUser(user5).published().saved, user1).unlisted().saved
-
-          invite().fromLibraryOwner(user3lib).toUser(user1.id.get).withState(LibraryInviteStates.ACTIVE).saved
-          invite().fromLibraryOwner(user3lib).toUser(user1.id.get).withState(LibraryInviteStates.ACTIVE).saved // duplicate library invite
-          invite().fromLibraryOwner(user5lib).toUser(user1.id.get).withState(LibraryInviteStates.ACCEPTED).saved
-
-          keeps(2).map(_.withLibrary(user1secretLib)).saved
-          keeps(3).map(_.withLibrary(user1lib)).saved
-          keep().withLibrary(user3lib).saved
-
-          (user1, user2, user3, user4, user5, user1lib)
-        }
-        db.readOnlyMaster { implicit s =>
-          val libMem = libraryMembershipRepo.getWithLibraryIdAndUserId(lib1.id.get, user4.id.get).get
-          libMem.access === LibraryAccess.READ_ONLY
-          libMem.state.value === "active"
-
-          import StaticQuery.interpolation
-          val ret1 = sql"select count(*) from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = 4".as[Int].firstOption.getOrElse(0)
-          ret1 === 1
-          val ret2 = sql"select count(*) from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = 4 and lib.state = 'active' and lm.state = 'active' and lm.listed and lib.visibility = 'published'".as[Int].firstOption.getOrElse(0)
-          ret2 === 1
-
-          libraryMembershipRepo.countWithUserIdAndAccess(user1.id.get, LibraryAccess.OWNER) === 4
-          libraryMembershipRepo.countWithUserIdAndAccess(user2.id.get, LibraryAccess.OWNER) === 0
-          libraryMembershipRepo.countWithUserIdAndAccess(user3.id.get, LibraryAccess.OWNER) === 1
-          libraryMembershipRepo.countWithUserIdAndAccess(user4.id.get, LibraryAccess.OWNER) === 0
-          libraryMembershipRepo.countWithUserIdAndAccess(user5.id.get, LibraryAccess.OWNER) === 2
-
-          libraryRepo.countLibrariesOfUserFromAnonymous(user1.id.get) === 1
-          libraryRepo.countLibrariesOfUserFromAnonymous(user2.id.get) === 0
-          libraryRepo.countLibrariesOfUserFromAnonymous(user3.id.get) === 1
-          libraryRepo.countLibrariesOfUserFromAnonymous(user4.id.get) === 0
-          libraryRepo.countLibrariesOfUserFromAnonymous(user5.id.get) === 2
-          libraryRepo.countLibrariesForOtherUser(user1.id.get, user5.id.get) === 1
-          libraryRepo.countLibrariesForOtherUser(user1.id.get, user2.id.get) === 2
-          libraryRepo.countLibrariesForOtherUser(user2.id.get, user5.id.get) === 0
-          libraryRepo.countLibrariesForOtherUser(user3.id.get, user5.id.get) === 1
-          libraryRepo.countLibrariesForOtherUser(user4.id.get, user5.id.get) === 0
-          libraryRepo.countLibrariesForOtherUser(user5.id.get, user1.id.get) === 2
-        }
-        val userController = inject[UserController]
-        def call(viewer: Option[User], viewing: Username) = {
-          viewer match {
-            case None => inject[FakeUserActionsHelper].unsetUser()
-            case Some(user) => inject[FakeUserActionsHelper].setUser(user)
-          }
-          val request = FakeRequest("GET", routes.UserController.profile(viewing.value).url)
-          userController.profile(viewing.value)(request)
-        }
-        //non existing username
-        status(call(Some(user1), Username("foo"))) must equalTo(NOT_FOUND)
-
-        //seeing a profile from an anonymos user
-        val anonViewer = call(None, user1.username)
-        status(anonViewer) must equalTo(OK)
-        contentType(anonViewer) must beSome("application/json")
-        contentAsJson(anonViewer) === Json.parse(
-          s"""
-            {
-              "id":"${user1.externalId.id}",
-              "firstName":"George",
-              "lastName":"Washington",
-              "pictureName":"pic1.jpg",
-              "username": "GDubs",
-              "numLibraries": 1,
-              "numKeeps": 5
-            }
-          """)
-
-        //seeing a profile of my own
-        val selfViewer = call(Some(user1), user1.username)
-        status(selfViewer) must equalTo(OK)
-        contentType(selfViewer) must beSome("application/json")
-        val res2 = contentAsJson(selfViewer)
-        res2 === Json.parse(
-          s"""
-            {
-              "id":"${user1.externalId.id}",
-              "firstName":"George",
-              "lastName":"Washington",
-              "pictureName":"pic1.jpg",
-              "username": "GDubs",
-              "numLibraries": 4,
-              "numKeeps": 5,
-              "numInvitedLibraries": 1
-            }
-          """)
-
-        //seeing a profile from another user (friend)
-        val friendViewer = call(Some(user2), user1.username)
-        status(friendViewer) must equalTo(OK)
-        contentType(friendViewer) must beSome("application/json")
-        val res3 = contentAsJson(friendViewer)
-        res3 === Json.parse(
-          s"""
-            {
-              "id":"${user1.externalId.id}",
-              "firstName":"George",
-              "lastName":"Washington",
-              "pictureName":"pic1.jpg",
-              "username": "GDubs",
-              "numLibraries": 2,
-              "numKeeps": 5,
-              "isFriend": true
-            }
-          """)
       }
     }
 

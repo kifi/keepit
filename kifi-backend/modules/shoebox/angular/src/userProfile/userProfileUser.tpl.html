@@ -1,0 +1,20 @@
+<li class="kf-upu-card" ng-class="{'kf-self': user.id === me.id}">
+  <a class="kf-upu-pic-a" href="{{user|profileUrl}}"><img class="kf-upu-pic" ng-src="{{user|pic:200}}"></a>
+  <a class="kf-upu-name" href="{{user|profileUrl}}">{{user.firstName}} {{user.lastName}}</a>
+  <ul class="kf-upu-stats">
+    <li class="kf-upu-stat"><a class="kf-upu-stat-a" href="{{user|profileUrl:'libraries'}}">Libraries<div class="kf-upu-stat-n">{{user.libraries|num}}</div></a></li>
+    <li class="kf-upu-stat"><a class="kf-upu-stat-a" href="{{user|profileUrl:'connections'}}">Connections<div class="kf-upu-stat-n">{{user.connections|num}}</div></a></li>
+    <li class="kf-upu-stat"><a class="kf-upu-stat-a" href="{{user|profileUrl:'followers'}}">Followers<div class="kf-upu-stat-n">{{user.followers|num}}</div></a></li>
+  </ul>
+  <div class="kf-upu-counts" ng-if="$root.userLoggedIn && user.id !== me.id">
+    <button class="kf-upu-count" data-n="{{user.mConnections|num}}" ng-click="showMutualConnections()" ng-if="user.mConnections">
+      <ng-pluralize count="user.mConnections" when="{'one': 'mutual connection', 'other': 'mutual connections'}"></ng-pluralize>
+    </button>
+    <span class="kf-upu-count" data-n="{{user.mConnections|num}}" ng-if="!user.mConnections">mutual connections</span>
+    <button class="kf-upu-count" data-n="{{user.mLibraries|num}}" ng-if="user.mLibraries">
+      <ng-pluralize count="user.mLibraries" when="{'one': 'library in common', 'other': 'libraries in common'}"></ng-pluralize>
+    </button>
+    <span class="kf-upu-count" data-n="{{user.mLibraries|num}}" ng-if="!user.mLibraries">libraries in common</span>
+  </div>
+  <button class="kf-upu-connect" ng-if="!$root.userLoggedIn || user.id !== me.id">Connect</button>
+</li>

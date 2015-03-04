@@ -4,9 +4,9 @@ angular.module('kifi')
 
 .controller('LoggedOutHeaderCtrl', [
   '$scope', '$rootScope', '$state', '$timeout', '$location', '$window',
-  'signupService', 'platformService', 'libraryService', 'routeService', 'util',
+  'signupService', 'platformService', 'libraryService', 'util',
   function ($scope, $rootScope, $state, $timeout, $location, $window,
-            signupService, platformService, libraryService, routeService, util) {
+            signupService, platformService, libraryService, util) {
     $scope.library = null;
     $scope.search = {text: '', focused: false};
     $scope.isMobile = platformService.isSupportedMobilePlatform();
@@ -31,8 +31,6 @@ angular.module('kifi')
     [
       $rootScope.$on('libraryOnPage', function (e, library) {
         $scope.library = library;
-        $scope.libOwnerPicUrl = library && routeService.formatPicUrl(library.owner.id, library.owner.pictureName, 100);
-        $scope.libOwnerProfileUrl = library && routeService.getProfileUrl(library.owner.username);
 
         if ($state.params && $state.params.q && util.startsWith($state.params.q, 'tag:')) {
           $scope.search.text = $state.params.q;

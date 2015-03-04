@@ -24,10 +24,15 @@ case class UserConnectionCountKey(userId: Id[User]) extends Key[Int] {
 class UserConnectionCountCache(stats: CacheStatistics, accessLog: AccessLog, inner: (FortyTwoCachePlugin, Duration), outer: (FortyTwoCachePlugin, Duration)*)
   extends PrimitiveCacheImpl[UserConnectionCountKey, Int](stats, accessLog, inner, outer: _*)
 
-case class UserConnectionRelationshipKey(viewerId: Id[User], ownerId: Id[User]) extends Key[Seq[Id[User]]] {
-  val namespace = "user_con_rel"
-  def toKey(): String = ownerId.id.toString + ":" + viewerId.id.toString
+case class UserMutualConnectionCountKey(user1: Id[User], user2: Id[User]) extends Key[Int] {
+  override val version = 2
+  val namespace = "user_mutual_conn_count"
+  def toKey(): String = {
+    val id1 = user1.id
+    val id2 = user2.id
+    (id1.min(id2)).toString + ":" + (id1.max(id2)).toString
+  }
 }
 
-class UserConnectionRelationshipCache(stats: CacheStatistics, accessLog: AccessLog, inner: (FortyTwoCachePlugin, Duration), outer: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[UserConnectionRelationshipKey, Seq[Id[User]]](stats, accessLog, inner, outer: _*)
+class UserMutualConnectionCountCache(stats: CacheStatistics, accessLog: AccessLog, inner: (FortyTwoCachePlugin, Duration), outer: (FortyTwoCachePlugin, Duration)*)
+  extends PrimitiveCacheImpl[UserMutualConnectionCountKey, Int](stats, accessLog, inner, outer: _*)

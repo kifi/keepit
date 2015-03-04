@@ -18,7 +18,7 @@ import com.keepit.scraper.ScrapeScheduler
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.json._
-import play.api.mvc.AnyContent
+import play.api.mvc.{ Action, AnyContent }
 import views.html
 
 import scala.collection.mutable.{ SynchronizedMap, HashMap => MutableMap }
@@ -62,6 +62,18 @@ class AdminBookmarksController @Inject() (
         Ok(html.admin.bookmark(user, bookmark, uri, scrapeInfo, imageUrlOpt.getOrElse(""), "", keywords, libraryOpt))
       }
     }
+  }
+
+  def disableUrl(id: Id[NormalizedURI]) = Action { implicit request =>
+    val url = db.readWrite { implicit s =>
+      val uri = uriRepo.get(id)
+      uriRepo.save(uri.copy(state = NormalizedURIStates.INACTIVE))
+      scrapeRepo.getByUriId(id) foreach { scrapeInfo =>
+        scrapeRepo.save(scrapeInfo.copy(state = ScrapeInfoStates.INACTIVE))
+      }
+      uri.url
+    }
+    Ok(s"disabling $url")
   }
 
   def whoKeptMyKeeps = AdminUserPage { implicit request =>
@@ -301,7 +313,7 @@ class AdminBookmarksController @Inject() (
     }
   }
 
-  def deleteTag(userId: Id[User], tagName: String) = UserAction { request =>
+  def deleteTag(userId: Id[User], tagName: String) = AdminUserAction { request =>
     db.readOnlyMaster { implicit s =>
       collectionRepo.getByUserAndName(userId, Hashtag(tagName))
     } map { coll =>
@@ -311,6 +323,13 @@ class AdminBookmarksController @Inject() (
     } getOrElse {
       NotFound(Json.obj("error" -> "not_found"))
     }
+  }
+
+  def www$youtube$com$watch$v$otCpCn0l4Wo(keepId: Id[Keep]) = UserAction {
+    db.readWrite { implicit session =>
+      keepRepo.save(keepRepo.get(keepId).copy(keptAt = clock.now().plusDays(1000)))
+    }
+    Ok
   }
 
 }

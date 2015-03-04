@@ -671,6 +671,7 @@ a, .avatars li, img, .tabs_nav li {
 }
 
 .error {
+  font-size: 14px;
   width: auto;
   position: absolute;
   background: #E9595D;
@@ -681,6 +682,11 @@ a, .avatars li, img, .tabs_nav li {
   z-index: 1000;
   margin-top: -10px;
   display: none;
+}
+
+.error a {
+  text-decoration: underline;
+  color: #3B5998;
 }
 
 .error:after {

@@ -45,7 +45,7 @@ class URILDATopicRepoImpl @Inject() (
     val db: DataBaseComponent,
     val keepRepoProvider: Provider[CortexKeepRepo],
     val clock: Clock,
-    airbrake: AirbrakeNotifier) extends DbRepo[URILDATopic] with URILDATopicRepo with CortexTypeMappers with FortyTwoGenericTypeMappers {
+    airbrake: AirbrakeNotifier) extends DbRepo[URILDATopic] with URILDATopicRepo with CortexTypeMappers {
 
   import db.Driver.simple._
 

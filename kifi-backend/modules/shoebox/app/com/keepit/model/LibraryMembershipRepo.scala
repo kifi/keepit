@@ -12,7 +12,6 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.performance.timing
 import com.keepit.common.plugin.{ SequencingActor, SchedulingProperties, SequencingPlugin }
 import com.keepit.common.time._
-import com.keepit.common.util.Paginator
 import org.joda.time.DateTime
 import scala.concurrent.duration._
 import scala.slick.jdbc.StaticQuery
@@ -21,7 +20,9 @@ import scala.concurrent.duration.FiniteDuration
 
 @ImplementedBy(classOf[LibraryMembershipRepoImpl])
 trait LibraryMembershipRepo extends Repo[LibraryMembership] with RepoWithDelete[LibraryMembership] with SeqNumberFunction[LibraryMembership] {
+  def getIdsWithLibraryId(libraryId: Id[Library])(implicit session: RSession): Seq[Id[LibraryMembership]]
   def getWithLibraryId(libraryId: Id[Library], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Seq[LibraryMembership]
+  def getWithLibraryIdAndLimit(libraryId: Id[Library], limit: Int)(implicit session: RSession): Seq[LibraryMembership]
   def getWithUserId(userId: Id[User], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Seq[LibraryMembership]
   def getLibrariesWithWriteAccess(userId: Id[User])(implicit session: RSession): Set[Id[Library]]
   def getWithLibraryIdAndUserId(libraryId: Id[Library], userId: Id[User], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Option[LibraryMembership]
@@ -30,7 +31,7 @@ trait LibraryMembershipRepo extends Repo[LibraryMembership] with RepoWithDelete[
   def pageWithLibraryIdAndAccess(libraryId: Id[Library], offset: Int, limit: Int, accessSet: Set[LibraryAccess],
     excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Seq[LibraryMembership]
   def countWithLibraryIdAndAccess(libraryId: Id[Library], access: LibraryAccess)(implicit session: RSession): Int
-  def countWithLibraryIdByAccess(libraryId: Id[Library])(implicit session: RSession): Map[LibraryAccess, Int]
+  def countWithLibraryIdByAccess(libraryId: Id[Library])(implicit session: RSession): CountWithLibraryIdByAccess
   def countWithLibraryId(libraryId: Id[Library], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Int
   def countWithAccessByLibraryId(libraryIds: Set[Id[Library]], access: LibraryAccess)(implicit session: RSession): Map[Id[Library], Int]
   def updateLastViewed(membershipId: Id[LibraryMembership])(implicit session: RWSession): Unit
@@ -41,7 +42,12 @@ trait LibraryMembershipRepo extends Repo[LibraryMembership] with RepoWithDelete[
   def mostMembersSinceForUser(count: Int, since: DateTime, ownerId: Id[User])(implicit session: RSession): Seq[(Id[Library], Int)]
   def countWithUserIdAndAccess(userId: Id[User], access: LibraryAccess)(implicit session: RSession): Int
   def countsWithUserIdAndAccesses(userId: Id[User], accesses: Set[LibraryAccess])(implicit session: RSession): Map[LibraryAccess, Int]
-  def countFollowersWithOwnerId(ownerId: Id[User])(implicit session: RSession): Int
+  def getFollowersFromAnonymous(ownerId: Id[User])(implicit session: RSession): Seq[Id[User]]
+  def getFollowersForOwner(ownerId: Id[User])(implicit session: RSession): Seq[Id[User]]
+  def getFollowersForOtherUser(ownerId: Id[User], viewerId: Id[User])(implicit session: RSession): Seq[Id[User]]
+  def countFollowersFromAnonymous(userId: Id[User])(implicit session: RSession): Int
+  def countFollowersForOwner(ownerId: Id[User])(implicit session: RSession): Int
+  def countFollowersForOtherUser(ownerId: Id[User], viewerId: Id[User])(implicit session: RSession): Int
 }
 
 @Singleton
@@ -52,7 +58,9 @@ class LibraryMembershipRepoImpl @Inject() (
   libraryMembershipCountCache: LibraryMembershipCountCache,
   followersCountCache: FollowersCountCache,
   memberIdCache: LibraryMembershipIdCache,
-  librariesWithWriteAccessCache: LibrariesWithWriteAccessCache)
+  countWithLibraryIdByAccessCache: CountWithLibraryIdByAccessCache,
+  librariesWithWriteAccessCache: LibrariesWithWriteAccessCache,
+  countByLibIdAndAccessCache: LibraryMembershipCountByLibIdAndAccessCache)
     extends DbRepo[LibraryMembership] with DbRepoWithDelete[LibraryMembership] with LibraryMembershipRepo with SeqNumberDbFunction[LibraryMembership] with Logging {
 
   import DBSession._
@@ -78,9 +86,7 @@ class LibraryMembershipRepoImpl @Inject() (
 
   override def save(libraryMembership: LibraryMembership)(implicit session: RWSession): LibraryMembership = {
     val toSave = libraryMembership.copy(seq = deferredSeqNum())
-    val res = super.save(toSave)
-    libraryRepo.save(libraryRepo.get(libraryMembership.libraryId)) // update Library sequence number
-    res
+    super.save(toSave)
   }
 
   override def get(id: Id[LibraryMembership])(implicit session: RSession): LibraryMembership = {
@@ -104,6 +110,14 @@ class LibraryMembershipRepoImpl @Inject() (
       case None => getWithLibraryIdCompiled(libraryId).list
       case Some(exclude) => getWithLibraryIdWithExcludeCompiled(libraryId, exclude).list
     }
+  }
+
+  def getWithLibraryIdAndLimit(libraryId: Id[Library], limit: Int)(implicit session: RSession): Seq[LibraryMembership] = {
+    (for (row <- rows if row.libraryId === libraryId) yield row).sortBy(_.createdAt).take(limit).list
+  }
+
+  def getIdsWithLibraryId(libraryId: Id[Library])(implicit session: RSession): Seq[Id[LibraryMembership]] = {
+    (for (row <- rows if row.libraryId === libraryId) yield row.id).list
   }
 
   private val getWithUserIdCompiled = Compiled { (userId: Column[Id[User]]) =>
@@ -208,18 +222,23 @@ class LibraryMembershipRepoImpl @Inject() (
   }
 
   private val countWithLibraryIdAndAccessCompiled = Compiled { (libraryId: Column[Id[Library]], access: Column[LibraryAccess]) =>
-    (for (row <- rows if row.libraryId === libraryId && row.access === access && row.state =!= LibraryMembershipStates.INACTIVE) yield row).length
+    (for (row <- rows if row.libraryId === libraryId && row.access === access && row.state =!= LibraryMembershipStates.INACTIVE) yield row.id).length
   }
   def countWithLibraryIdAndAccess(libraryId: Id[Library], access: LibraryAccess)(implicit session: RSession): Int = {
-    countWithLibraryIdAndAccessCompiled(libraryId, access).run
+    countByLibIdAndAccessCache.getOrElse(LibraryMembershipCountByLibIdAndAccessKey(libraryId, access)) {
+      countWithLibraryIdAndAccessCompiled(libraryId, access).run
+    }
   }
 
-  def countWithLibraryIdByAccess(libraryId: Id[Library])(implicit session: RSession): Map[LibraryAccess, Int] = {
-    import StaticQuery.interpolation
-    val existingAccessMap = sql"""select access, count(*) from library_membership where library_id=$libraryId and state='active' group by access""".as[(String, Int)].list
-      .map(t => (LibraryAccess(t._1), t._2))
-      .toMap
-    LibraryAccess.getAll.map(access => (access -> existingAccessMap.getOrElse(access, 0))).toMap
+  def countWithLibraryIdByAccess(libraryId: Id[Library])(implicit session: RSession): CountWithLibraryIdByAccess = {
+    countWithLibraryIdByAccessCache.getOrElse(CountWithLibraryIdByAccessKey(libraryId)) {
+      import StaticQuery.interpolation
+      val existingAccessMap = sql"""select access, count(*) from library_membership where library_id=$libraryId and state='active' group by access""".as[(String, Int)].list
+        .map(t => (LibraryAccess(t._1), t._2))
+        .toMap
+      val counts: Map[LibraryAccess, Int] = LibraryAccess.getAll.map(access => access -> existingAccessMap.getOrElse(access, 0)).toMap
+      CountWithLibraryIdByAccess.fromMap(counts)
+    }
   }
 
   def countWithAccessByLibraryId(libraryIds: Set[Id[Library]], access: LibraryAccess)(implicit session: RSession): Map[Id[Library], Int] = {
@@ -265,11 +284,14 @@ class LibraryMembershipRepoImpl @Inject() (
 
   override def deleteCache(libMem: LibraryMembership)(implicit session: RSession): Unit = {
     libMem.id.map { id =>
+      countWithLibraryIdByAccessCache.remove(CountWithLibraryIdByAccessKey(libMem.libraryId))
       memberIdCache.remove(LibraryMembershipIdKey(id))
+      countByLibIdAndAccessCache.remove(LibraryMembershipCountByLibIdAndAccessKey(libMem.libraryId, libMem.access))
       libraryMembershipCountCache.remove(LibraryMembershipCountKey(libMem.userId, libMem.access))
       if (libMem.canWrite) { librariesWithWriteAccessCache.remove(LibrariesWithWriteAccessUserKey(libMem.userId)) }
       // ugly! but the library is in an in memory cache so the cost is low
-      followersCountCache.remove(FollowersCountKey(libraryRepo.get(libMem.libraryId).ownerId))
+      val ownerId = libraryRepo.get(libMem.libraryId).ownerId
+      followersCountCache.remove(FollowersCountKey(ownerId))
     }
   }
 
@@ -278,11 +300,13 @@ class LibraryMembershipRepoImpl @Inject() (
       if (libMem.state == LibraryMembershipStates.INACTIVE) {
         deleteCache(libMem)
       } else {
+        countByLibIdAndAccessCache.remove(LibraryMembershipCountByLibIdAndAccessKey(libMem.libraryId, libMem.access))
         memberIdCache.set(LibraryMembershipIdKey(id), libMem)
         libraryMembershipCountCache.remove(LibraryMembershipCountKey(libMem.userId, libMem.access))
         if (libMem.canWrite) { librariesWithWriteAccessCache.remove(LibrariesWithWriteAccessUserKey(libMem.userId)) }
         // ugly! but the library is in an in memory cache so the cost is low
         followersCountCache.remove(FollowersCountKey(libraryRepo.get(libMem.libraryId).ownerId))
+        countWithLibraryIdByAccessCache.remove(CountWithLibraryIdByAccessKey(libMem.libraryId))
       }
     }
   }
@@ -302,13 +326,40 @@ class LibraryMembershipRepoImpl @Inject() (
     }.map { case (k, v) => k.access -> v }
   }
 
-  def countFollowersWithOwnerId(ownerId: Id[User])(implicit session: RSession): Int = {
+  def getFollowersForOwner(ownerId: Id[User])(implicit session: RSession): Seq[Id[User]] = {
+    import StaticQuery.interpolation
+    val q = sql"select distinct lm.user_id from library_membership lm, library lib where lm.library_id = lib.id and lib.owner_id = $ownerId and lib.state = 'active' and lm.access != 'owner' and lm.state = 'active'"
+    q.as[Id[User]].list
+  }
+  def getFollowersFromAnonymous(ownerId: Id[User])(implicit session: RSession): Seq[Id[User]] = {
+    import StaticQuery.interpolation
+    val q = sql"select distinct lm.user_id from library_membership lm, library lib where lm.library_id = lib.id and lib.owner_id = $ownerId and lib.state = 'active' and lm.access != 'owner' and lm.state = 'active' and lib.visibility = 'published'"
+    q.as[Id[User]].list
+  }
+  def getFollowersForOtherUser(ownerId: Id[User], viewerId: Id[User])(implicit session: RSession): Seq[Id[User]] = {
+    import StaticQuery.interpolation
+    val q = sql"select distinct lm.user_id from library_membership lm, library lib where lm.library_id = lib.id and lib.owner_id = $ownerId and lib.state = 'active' and lm.access != 'owner' and lm.state = 'active' and (lib.visibility = 'published' or (lib.visibility='secret' and lm.user_id = $viewerId))"
+    q.as[Id[User]].list
+  }
+
+  def countFollowersForOwner(ownerId: Id[User])(implicit session: RSession): Int = {
     followersCountCache.getOrElse(FollowersCountKey(ownerId)) {
       import StaticQuery.interpolation
-      sql"select count(*) from library_membership lm, library lib where lm.library_id = lib.id and lib.owner_id = $ownerId and lib.state = 'active' and lm.state = 'active'".as[Int].firstOption.getOrElse(0)
+      sql"select count(distinct lm.user_id) from library_membership lm, library lib where lm.library_id = lib.id and lib.owner_id = $ownerId and lib.state = 'active' and lm.access != 'owner' and lm.state = 'active'".as[Int].firstOption.getOrElse(0)
     }
   }
 
+  def countFollowersFromAnonymous(ownerId: Id[User])(implicit session: RSession): Int = {
+    import StaticQuery.interpolation
+    val q = sql"select count(distinct lm.user_id) from library_membership lm, library lib where lm.library_id = lib.id and lib.owner_id = $ownerId and lib.state = 'active' and lm.access != 'owner' and lm.state = 'active' and lib.visibility = 'published'"
+    q.as[Int].firstOption.getOrElse(0)
+  }
+
+  def countFollowersForOtherUser(ownerId: Id[User], viewerId: Id[User])(implicit session: RSession): Int = {
+    import StaticQuery.interpolation
+    val q = sql"select count(distinct lm.user_id) from library_membership lm, library lib where lm.library_id = lib.id and lib.owner_id = $ownerId and lib.state = 'active' and lm.access != 'owner' and lm.state = 'active' and (lib.visibility = 'published' or (lib.visibility='secret' and lm.user_id = $viewerId))"
+    q.as[Int].firstOption.getOrElse(0)
+  }
 }
 
 trait LibraryMembershipSequencingPlugin extends SequencingPlugin

@@ -4,9 +4,9 @@ angular.module('kifi')
 
 .controller('LoggedInHeaderCtrl', [
   '$scope', '$window', '$rootElement', '$rootScope', '$document', 'profileService',
-  '$location', 'util', 'keyIndices', 'modalService', '$timeout', '$state', 'routeService',
+  '$location', 'util', 'keyIndices', 'modalService', '$timeout', '$state',
   function ($scope, $window, $rootElement, $rootScope, $document, profileService,
-    $location, util, keyIndices, modalService, $timeout, $state, routeService) {
+    $location, util, keyIndices, modalService, $timeout, $state) {
 
     $scope.toggleMenu = function () {
       if ($scope.calloutVisible) {
@@ -38,8 +38,6 @@ angular.module('kifi')
     [
       $rootScope.$on('libraryOnPage', function (e, library) {
         $scope.library = library;
-        $scope.libOwnerPicUrl = library && routeService.formatPicUrl(library.owner.id, library.owner.pictureName, 100);
-        $scope.libOwnerProfileUrl = library && routeService.getProfileUrl(library.owner.username);
         $scope.search.libraryChip = !!library;
       }),
 
@@ -143,7 +141,6 @@ angular.module('kifi')
     };
 
     $scope.me = profileService.me;
-    $scope.me.picUrl = $scope.me.picUrl || '//www.kifi.com/assets/img/ghost.200.png';
 
     $scope.addKeeps = function (library) {
       modalService.open({
@@ -163,8 +160,5 @@ angular.module('kifi')
     $scope.$on('$destroy', function () {
       $document.off('keydown', addKeepsShortcut);
     });
-
-    $scope.userProfileUrl = routeService.getProfileUrl($scope.me.username);
-    $scope.logoutUrl = routeService.logoutUrl;
   }
 ]);

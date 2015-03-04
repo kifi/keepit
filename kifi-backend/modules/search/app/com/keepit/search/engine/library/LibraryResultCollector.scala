@@ -5,11 +5,13 @@ import com.keepit.model.LibraryKind
 import com.keepit.search.engine.uri.UriResultCollector
 import com.keepit.search.engine.{ LibraryQualityEvaluator, Visibility, ScoreContext }
 import com.keepit.search.engine.result.{ HitQueue, ResultCollector }
+import com.keepit.search.index.IndexerVersionProviders.LibraryMembership
 import com.keepit.search.index.Searcher
 import com.keepit.search.index.graph.keep.KeepFields
 import com.keepit.search.index.graph.library.LibraryIndexable
+import com.keepit.search.index.graph.library.membership.LibraryMembershipIndexable
 
-class LibraryResultCollector(librarySearcher: Searcher, keepSearcher: Searcher, maxHitsPerCategory: Int, myLibraryBoost: Float, matchingThreshold: Float, libraryQualityEvaluator: LibraryQualityEvaluator, explanation: Option[LibrarySearchExplanationBuilder]) extends ResultCollector[ScoreContext] with Logging {
+class LibraryResultCollector(librarySearcher: Searcher, libraryMembershipSearcher: Searcher, keepSearcher: Searcher, maxHitsPerCategory: Int, myLibraryBoost: Float, matchingThreshold: Float, libraryQualityEvaluator: LibraryQualityEvaluator, explanation: Option[LibrarySearchExplanationBuilder]) extends ResultCollector[ScoreContext] with Logging {
 
   import UriResultCollector._
 
@@ -47,7 +49,7 @@ class LibraryResultCollector(librarySearcher: Searcher, keepSearcher: Searcher, 
           othersHits
         }
         val popularityBoost = {
-          val memberCount = LibraryIndexable.getMemberCount(librarySearcher, id) getOrElse 1L
+          val memberCount = LibraryMembershipIndexable.getMemberCount(libraryMembershipSearcher, id)
           libraryQualityEvaluator.getPopularityBoost(memberCount)
         }
         score = score * popularityBoost

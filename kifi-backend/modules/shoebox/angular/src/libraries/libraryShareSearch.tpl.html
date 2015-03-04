@@ -15,8 +15,8 @@
         <li class="library-share-contact" ng-repeat="result in results" ng-mouseenter="onResultHover(result)" ng-mouseleave="onResultUnhover(result)" ng-class="{'library-share-selected': result.selected, 'library-share-actionable': result.actionable}">
           <!-- Kifi friend -->
           <div ng-if="result.id" class="library-share-contact-container library-share-kifi">
-            <a href="{{result.userProfileUrl}}" ng-click="close()" kf-track-origin="{{currentPageOrigin}}/invitationDropdown">
-              <img ng-src="{{result.image || 'https://www.kifi.com/assets/img/ghost.200.png'}}" class="library-share-contact-image">
+            <a href="{{result|profileUrl}}" ng-click="close()" kf-track-origin="{{currentPageOrigin}}/invitationDropdown">
+              <img ng-src="{{result | pic:100}}" class="library-share-contact-image">
             </a>
             <div class="library-share-contact-summary">
               <div class="library-share-contact-name" ng-bind-html="result.name"></div>
