@@ -1,6 +1,6 @@
 package com.keepit.model
 
-import com.keepit.commanders.{ UserConnectionRelationshipKey, UserConnectionRelationshipCache }
+import com.keepit.commanders.{ UserFollowerRelationshipKey, UserFollowerRelationshipCache, UserConnectionRelationshipKey, UserConnectionRelationshipCache }
 
 import scala.concurrent.duration.Duration
 import com.google.inject.{ Inject, Singleton, ImplementedBy }
@@ -45,6 +45,7 @@ class UserConnectionRepoImpl @Inject() (
   val db: DataBaseComponent,
   val clock: Clock,
   userConnectionRelationshipCache: UserConnectionRelationshipCache,
+  userFollowerRelationshipCache: UserFollowerRelationshipCache,
   val friendRequestRepo: FriendRequestRepo,
   val connCountCache: UserConnectionCountCache,
   mutualConnCountCache: UserMutualConnectionCountCache,
@@ -75,6 +76,10 @@ class UserConnectionRepoImpl @Inject() (
     mutualConnCountCache.remove(UserMutualConnectionCountKey(conn.user1, conn.user2))
     userConnectionRelationshipCache.remove(UserConnectionRelationshipKey(conn.user1, conn.user2))
     userConnectionRelationshipCache.remove(UserConnectionRelationshipKey(conn.user2, conn.user1))
+    userFollowerRelationshipCache.remove(UserFollowerRelationshipKey(Some(conn.user1), conn.user2))
+    userFollowerRelationshipCache.remove(UserFollowerRelationshipKey(Some(conn.user2), conn.user1))
+    userFollowerRelationshipCache.remove(UserFollowerRelationshipKey(None, conn.user2))
+    userFollowerRelationshipCache.remove(UserFollowerRelationshipKey(None, conn.user1))
     List(conn.user1, conn.user2) foreach invalidateCache
   }
 
@@ -88,11 +93,15 @@ class UserConnectionRepoImpl @Inject() (
     }
   }
 
+  private val getMutualConnectionCountQ = StaticQuery.query[(Long, Long, Long, Long), Int]("""select count(*) from
+      (select conn from
+        (select user_2 conn from user_connection where user_1 in (?,?) and state = 'active' union all
+         select user_1 conn from user_connection where user_2 in (?,?) and state = 'active') conn_ids
+      group by conn having count(*) > 1) mutual_connections""")
+
   def getMutualConnectionCount(user1: Id[User], user2: Id[User])(implicit session: RSession): Int = {
     mutualConnCountCache.getOrElse(UserMutualConnectionCountKey(user1, user2)) {
-      Query((for {
-        c <- rows if (c.user1 === user1 || c.user2 === user1) && (c.user1 === user2 || c.user2 === user1) && c.state === UserConnectionStates.ACTIVE
-      } yield c).length).first
+      getMutualConnectionCountQ.first(user1.id, user2.id, user1.id, user2.id)
     }
   }
 

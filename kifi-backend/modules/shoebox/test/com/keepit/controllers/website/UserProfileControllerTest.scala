@@ -2,11 +2,14 @@ package com.keepit.controllers.website
 
 import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
+import com.keepit.abook.model.EmailAccountInfo
 import com.keepit.commanders.FriendStatusCommander
 import com.keepit.common.controller.{ FakeUserActionsHelper }
 import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.social.FakeSocialGraphModule
+import com.keepit.graph.FakeGraphServiceClientImpl
+import com.keepit.graph.model.{ SociallyRelatedEntities, RelatedEntities }
 import com.keepit.model.KeepFactoryHelper._
 import com.keepit.model.KeepFactory._
 import com.keepit.model.LibraryInviteFactory._
@@ -265,9 +268,17 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
 
           libraries(3).map(_.withUser(user1).secret()).saved.head.savedFollowerMembership(user2, user3) // create 3 secret libraries, one is follower by user2 and user3
           library().withUser(user1).published().saved.savedFollowerMembership(user5, user4) // create 1 published library, followed by user4 and user 5
-
+          connect(user1 -> user3).saved
           (user1, user2, user3, user4, user5)
         }
+
+        val relationship = SociallyRelatedEntities(
+          RelatedEntities[User, User](user1.id.get, Seq(user4.id.get -> .1, user5.id.get -> .4, user2.id.get -> .2, user3.id.get -> .3)),
+          RelatedEntities[User, SocialUserInfo](user1.id.get, Seq.empty),
+          RelatedEntities[User, SocialUserInfo](user1.id.get, Seq.empty),
+          RelatedEntities[User, EmailAccountInfo](user1.id.get, Seq.empty)
+        )
+        inject[FakeGraphServiceClientImpl].setSociallyRelatedEntities(user1.id.get, relationship)
 
         // view as owner
         val result1 = getProfileFollowers(Some(user1), Username("GDubs"), 2)
@@ -275,8 +286,8 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
         contentType(result1) must beSome("application/json")
         val resultJson1 = contentAsJson(result1)
         (resultJson1 \ "count") === JsNumber(4)
-        (resultJson1 \\ "id") === Seq(user2, user3).map(u => JsString(u.externalId.id))
-        (resultJson1 \ "ids") === Json.toJson(Seq(user4, user5).map(_.externalId))
+        (resultJson1 \\ "id") === Seq(user3, user5).map(u => JsString(u.externalId.id))
+        (resultJson1 \ "ids") === Json.toJson(Seq(user2, user4).map(_.externalId))
 
         // view as anybody
         val result2 = getProfileFollowers(Some(user4), Username("GDubs"), 10)
@@ -293,7 +304,7 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
         contentType(result3) must beSome("application/json")
         val resultJson3 = contentAsJson(result3)
         (resultJson3 \ "count") === JsNumber(3)
-        (resultJson3 \\ "id") === Seq(user4, user5, user2).map(u => JsString(u.externalId.id))
+        (resultJson3 \\ "id") === Seq(user2, user4, user5).map(u => JsString(u.externalId.id))
         (resultJson3 \ "ids") === JsArray()
       }
     }

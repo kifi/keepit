@@ -61,7 +61,7 @@ object Persona {
       image = PersonaKeepImageInfo("//d1dwdv9wd966qu.cloudfront.net/img/guide/techlead_960x892.57da042.jpg", 480, 446),
       noun = "blog post",
       query = "tech+lead",
-      matches = createMatchJson(Seq((5,4),(10,4),(20,4), (25,4)), Seq((33,4),(38,4),(48,4),(53,4))),
+      matches = createMatchJson(Seq((5, 4), (10, 4), (20, 4), (25, 4)), Seq((33, 4), (38, 4), (48, 4), (53, 4))),
       track = "techLeadDeveloperPersona"
     ),
     PersonaName.TECHIE -> PersonaKeep(
@@ -70,7 +70,7 @@ object Persona {
       image = PersonaKeepImageInfo("//d1dwdv9wd966qu.cloudfront.net/img/guide/elonMusk_960x892.d146d1b.jpg", 480, 446),
       noun = "video",
       query = "elon+musk",
-      matches = createMatchJson(Seq(), Seq((25,4),(30,4))),
+      matches = createMatchJson(Seq(), Seq((25, 4), (30, 4))),
       track = "elonMuskTechiePersona"
     ),
     PersonaName.ENTREPRENEUR -> PersonaKeep(
@@ -88,7 +88,7 @@ object Persona {
       image = PersonaKeepImageInfo("//d1dwdv9wd966qu.cloudfront.net/img/guide/artInsideOut_960x892.aadb85e.jpg", 480 ,446),
       noun = "video",
       query = "art",
-      matches = createMatchJson(Seq((13,3)), Seq((50,3))),
+      matches = createMatchJson(Seq((13, 3)), Seq((50, 3))),
       track = "tedArtArtistPersona"
     ),
     PersonaName.FOODIE -> PersonaKeep(
@@ -178,7 +178,7 @@ object Persona {
       image = PersonaKeepImageInfo("//d1dwdv9wd966qu.cloudfront.net/img/guide/copingAnimals_960x892.32e940d.jpg", 480, 446),
       noun = "article",
       query = "how+animals+cope",
-      matches = createMatchJson(Seq((23,3),(27,7),(35,4)), Seq((21,6))),
+      matches = createMatchJson(Seq((23, 3), (27, 7), (35, 4)), Seq((21, 6))),
       track = "copingAnimalLoverPersona"
     ),
     PersonaName.DEEP_THINKER -> PersonaKeep(
