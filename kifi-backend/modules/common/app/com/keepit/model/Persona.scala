@@ -202,7 +202,7 @@ object Persona {
   // if for whatever reason, a default persona keep is not found, use this one
   val defaultKeep = PersonaKeep(
     url = "http://www.ted.com/talks/steve_jobs_how_to_live_before_you_die",
-    image = PersonaKeepImageInfo("//d1dwdv9wd966qu.cloudfront.net/img/guide/ted_jobs.7878954.jpg", 480, 425),
+    image = PersonaKeepImageInfo("//d1dwdv9wd966qu.cloudfront.net/img/guide/steve_960x892.d25b7d8.jpg", 480, 446),
     noun = "video",
     query = "steve+jobs",
     title = "Steve Jobs: How to live before you die | Talk Video | TED.com",
