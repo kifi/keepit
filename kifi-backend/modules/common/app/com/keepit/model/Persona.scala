@@ -61,7 +61,7 @@ object Persona {
       image = PersonaKeepImageInfo("//d1dwdv9wd966qu.cloudfront.net/img/guide/sampleCode_480x496.c4766ec.png", 480, 496),
       noun = "blog post",
       query = "tech+lead",
-      matches = createMatchJson(Seq((5,4),(10,4),(20,4), (25,4)), Seq((33,4),(38,4),(48,4),(53,4))),
+      matches = createMatchJson(Seq((5, 4), (10, 4), (20, 4), (25, 4)), Seq((33, 4), (38, 4), (48, 4), (53, 4))),
       track = "techLeadDeveloperPersona"
     ),
     PersonaName.TECHIE -> PersonaKeep(
@@ -70,7 +70,7 @@ object Persona {
       image = PersonaKeepImageInfo("//d1dwdv9wd966qu.cloudfront.net/img/guide/superintelMachines_480x486.8a5cca9.png", 480, 486),
       noun = "video",
       query = "elon+musk",
-      matches = createMatchJson(Seq(), Seq((25,4),(30,4))),
+      matches = createMatchJson(Seq(), Seq((25, 4), (30, 4))),
       track = "elonMuskTechiePersona"
     ),
     PersonaName.ENTREPRENEUR -> PersonaKeep(
@@ -85,10 +85,10 @@ object Persona {
     PersonaName.ARTIST -> PersonaKeep(
       title = "My wish: Use art to turn the world inside out",
       url = "https://www.ted.com/talks/jr_s_ted_prize_wish_use_art_to_turn_the_world_inside_out",
-      image = PersonaKeepImageInfo("//d1dwdv9wd966qu.cloudfront.net/img/guide/louvre_480x510.06af404.png", 480 ,510),
+      image = PersonaKeepImageInfo("//d1dwdv9wd966qu.cloudfront.net/img/guide/louvre_480x510.06af404.png", 480, 510),
       noun = "video",
       query = "art",
-      matches = createMatchJson(Seq((13,3)), Seq((50,3))),
+      matches = createMatchJson(Seq((13, 3)), Seq((50, 3))),
       track = "tedArtArtistPersona"
     ),
     PersonaName.FOODIE -> PersonaKeep(
@@ -178,7 +178,7 @@ object Persona {
       image = PersonaKeepImageInfo("//d1dwdv9wd966qu.cloudfront.net/img/guide/geolocatingCat_480x480.631b510.png", 480, 480),
       noun = "article",
       query = "how+animals+cope",
-      matches = createMatchJson(Seq((23,3),(27,7),(35,4)), Seq((21,6))),
+      matches = createMatchJson(Seq((23, 3), (27, 7), (35, 4)), Seq((21, 6))),
       track = "copingAnimalLoverPersona"
     ),
     PersonaName.DEEP_THINKER -> PersonaKeep(

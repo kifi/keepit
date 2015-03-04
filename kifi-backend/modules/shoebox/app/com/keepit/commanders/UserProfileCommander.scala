@@ -64,8 +64,6 @@ class UserProfileCommander @Inject() (
         sociallyRelatedEntities <- sociallyRelatedEntitiesF
         (viewerConnections, ownerConnections) <- connectionsF
       } yield {
-        println(s"viewerConnections->$viewerConnections")
-        println(s"ownerConnections->$ownerConnections")
         val relatedUsersMap = sociallyRelatedEntities.map(_.users.related).getOrElse(Seq.empty).toMap
         val ownerConnectionsMap = collection.mutable.Map(ownerConnections.toSeq.zip(List.fill(ownerConnections.size)(0d)): _*)
         //if its a mutual connection, set the relationship score to 100
@@ -81,7 +79,8 @@ class UserProfileCommander @Inject() (
           ownerConnectionsMap(viewer) = 10000d
         }
         val scoring = ownerConnectionsMap.toSeq.sortBy(_._2 * -1)
-        scoring.map(t => ConnectedUserId(t._1, viewerConnections.contains(t._1)))
+        val res = scoring.map(t => ConnectedUserId(t._1, t._1 == viewer || viewerConnections.contains(t._1)))
+        res
       }
     }
   }
@@ -116,11 +115,11 @@ class UserProfileCommander @Inject() (
         }
         viewerOpt.foreach { viewer =>
           if (followersMap.contains(viewer)) {
-            followersMap(viewer) = Double.MaxValue
+            followersMap(viewer) = 10000d
           }
         }
         val scoring = followersMap.toSeq.sortBy(_._2 * -1)
-        scoring.map(t => FollowerUserId(t._1, viewerConnections.contains(t._1)))
+        scoring.map(t => FollowerUserId(t._1, viewerOpt.exists(_ == t._1) || viewerConnections.contains(t._1)))
       }
     }
   }

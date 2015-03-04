@@ -93,10 +93,14 @@ class UserProfileController @Inject() (
           val (headUserJsonObjs, userMap) = db.readOnlyMaster { implicit s =>
             val userMap = basicUserRepo.loadAll(connections.take(200).map(_.userId).toSet)
             val headUserMap = Map(head.map(c => c.userId -> userMap(c.userId)): _*)
-            val headUserJsonObjs = viewerIdOpt.map { viewerId =>
+            val headUserWithStatus = viewerIdOpt.map { viewerId =>
               val headFriendIdSet = head.filter(_.connected).map(_.userId).toSet
               friendStatusCommander.augmentUsers(viewerId, headUserMap, headFriendIdSet)
-            } getOrElse headUserMap.mapValues(BasicUserWithFriendStatus.fromWithoutFriendStatus) map {
+            } getOrElse headUserMap.mapValues(BasicUserWithFriendStatus.fromWithoutFriendStatus)
+            val sortedHeadUserWithStatus = {
+              head.map(id => id.userId -> headUserWithStatus(id.userId))
+            }
+            val headUserJsonObjs = sortedHeadUserWithStatus map {
               case (userId, userWFS) =>
                 loadProfileUser(userId, userWFS, viewerIdOpt)
             }
@@ -120,10 +124,14 @@ class UserProfileController @Inject() (
           val (headUserJsonObjs, userMap) = db.readOnlyMaster { implicit s =>
             val userMap = basicUserRepo.loadAll(followers.take(200).map(_.userId).toSet)
             val headUserMap = Map(head.map(c => c.userId -> userMap(c.userId)): _*)
-            val headUserJsonObjs = viewerIdOpt.map { viewerId =>
+            val headUserWithStatus = viewerIdOpt.map { viewerId =>
               val headFriendIdSet = head.filter(_.connected).map(_.userId).toSet
               friendStatusCommander.augmentUsers(viewerId, headUserMap, headFriendIdSet)
-            } getOrElse headUserMap.mapValues(BasicUserWithFriendStatus.fromWithoutFriendStatus) map {
+            } getOrElse headUserMap.mapValues(BasicUserWithFriendStatus.fromWithoutFriendStatus)
+            val sortedHeadUserWithStatus = {
+              head.map(id => id.userId -> headUserWithStatus(id.userId))
+            }
+            val headUserJsonObjs = sortedHeadUserWithStatus map {
               case (userId, userWFS) =>
                 loadProfileUser(userId, userWFS, viewerIdOpt)
             }
