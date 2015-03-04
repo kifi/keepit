@@ -56,7 +56,7 @@ class ExtUserControllerTest extends Specification with ShoeboxTestInjector with 
             {
               "keep":{
                 "url":"http://www.ted.com/talks/steve_jobs_how_to_live_before_you_die",
-                "image":{"url":"//d1dwdv9wd966qu.cloudfront.net/img/guide/ted_jobs.7878954.jpg","width":480,"height":425},
+                "image":{"url":"//d1dwdv9wd966qu.cloudfront.net/img/guide/steve_960x892.d25b7d8.jpg","width":480,"height":446},
                 "noun":"video",
                 "query":"steve+jobs",
                 "title":"Steve Jobs: How to live before you die | Talk Video | TED.com",
