@@ -1,12 +1,12 @@
 package com.keepit.shoebox
 
-import com.google.inject.Inject
+import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.db.{ SequenceNumber, ExternalId, State, Id }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.{ CallTimeouts, HttpClient }
 import com.keepit.common.routes.Shoebox
-import com.keepit.common.service.ServiceClient
+import com.keepit.common.service.ThrottledServiceClient
 import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.model._
 import com.keepit.scraper.{ Signature, HttpRedirect, ScrapeRequest }
@@ -19,7 +19,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.Future
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 
-trait ShoeboxScraperClient extends ServiceClient {
+trait ShoeboxScraperClient extends ThrottledServiceClient {
   private val ? = null
   def getAllURLPatterns(): Future[UrlPatternRules]
   def assignScrapeTasks(zkId: Long, max: Int): Future[Seq[ScrapeRequest]]
@@ -35,6 +35,7 @@ trait ShoeboxScraperClient extends ServiceClient {
   def getUriImage(nUriId: Id[NormalizedURI]): Future[Option[String]]
 }
 
+@Singleton
 class ShoeboxScraperClientImpl @Inject() (
   override val serviceCluster: ServiceCluster,
   override val httpClient: HttpClient,
@@ -62,14 +63,14 @@ class ShoeboxScraperClientImpl @Inject() (
 
   def assignScrapeTasks(zkId: Long, max: Int): Future[Seq[ScrapeRequest]] = {
     statsd.gauge("assignScrapeTasks", 1)
-    call(Shoebox.internal.assignScrapeTasks(zkId, max), callTimeouts = longTimeout, routingStrategy = leaderPriority).map { r =>
+    call(Shoebox.internal.assignScrapeTasks(zkId, max), callTimeouts = longTimeout, routingStrategy = offlinePriority).map { r =>
       r.json.as[Seq[ScrapeRequest]]
     }
   }
 
   def saveScrapeInfo(info: ScrapeInfo): Future[Unit] = {
     statsd.gauge(s"saveScrapeInfo.${info.state}", 1)
-    call(Shoebox.internal.saveScrapeInfo(), Json.toJson(info), callTimeouts = longTimeout, routingStrategy = leaderPriority).map { r => Unit }
+    call(Shoebox.internal.saveScrapeInfo(), Json.toJson(info), callTimeouts = longTimeout, routingStrategy = offlinePriority).map { r => Unit }
   }
 
   @deprecated("Dangerous call. Use updateNormalizedURI instead.", "2014-01-30")

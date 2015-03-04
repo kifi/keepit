@@ -106,6 +106,9 @@ angular.module('kifi')
         };
 
         scope.showMutualFriends = function (person) {
+          person.mutualFriends.forEach(function (mf) {
+            mf.connections = mf.numFriends;  // until server switches to connections
+          });
           modalService.open({
             template: 'friends/seeMutualFriendsModal.tpl.html',
             modalData: person
