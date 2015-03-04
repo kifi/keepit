@@ -306,7 +306,7 @@ class UriIntegrityActor @Inject() (
     log.debug(s"start deduping keeps: fetching tasks from seqNum $seq")
     try {
       var dedupedSuccessCount = 0
-      val keeps = db.readOnlyReplica { implicit s => keepRepo.getBookmarksChanged(seq, 100) }
+      val keeps = db.readOnlyReplica { implicit s => keepRepo.getBookmarksChanged(seq, 30) }
       if (keeps.nonEmpty) {
         db.readWriteBatch(keeps, 3) { (session, keep) =>
           val newUriOpt = normalizedURIInterner.getByUri(keep.url)(session)
