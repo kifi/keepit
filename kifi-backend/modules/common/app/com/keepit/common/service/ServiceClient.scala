@@ -14,6 +14,7 @@ import com.keepit.common.routes._
 import com.keepit.common.zookeeper.{ ServiceCluster, ServiceInstance }
 import com.keepit.common.core._
 import com.keepit.common.strings._
+import com.keepit.common.concurrent.ReactiveLock
 
 import java.net.ConnectException
 
@@ -191,4 +192,13 @@ trait ServiceClient extends CommonServiceUtilities with Logging {
 
 trait CommonServiceUtilities { self: ServiceClient =>
   def removeAllFromLocalCaches(prefix: Option[String]): Future[Seq[ClientResponse]] = Future.sequence(broadcast(Common.internal.removeAllFromLocalCache(prefix)).values.toSeq)
+}
+
+trait ThrottledServiceClient extends ServiceClient {
+  val maxParallelism: Int
+  val maxQueue: Option[Int] = Some(maxParallelism * 42)
+  val limiter = new ReactiveLock(maxParallelism, maxQueue)
+  override protected def callUrl(call: ServiceRoute, httpUri: HttpUri, body: JsValue, ignoreFailure: Boolean = false, callTimeouts: CallTimeouts = CallTimeouts.NoTimeouts): Future[ClientResponse] = limiter.withLockFuture {
+    super.callUrl(call, httpUri, body, ignoreFailure, callTimeouts)
+  }
 }
