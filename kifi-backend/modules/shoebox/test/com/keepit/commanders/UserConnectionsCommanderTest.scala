@@ -72,6 +72,8 @@ class UserConnectionsCommanderTest extends Specification with ShoeboxTestInjecto
         val owner = user().saved
         val viewer = user().saved
 
+        connect(viewer -> owner).saved //mc
+
         connect(viewer -> user1).saved //mc
         connect(viewer -> user4).saved //mc - 0.1
         connect(viewer -> user5).saved
@@ -97,11 +99,11 @@ class UserConnectionsCommanderTest extends Specification with ShoeboxTestInjecto
       inject[FakeGraphServiceClientImpl].setSociallyRelatedEntities(viewer.id.get, relationship)
       Await.result(inject[FakeGraphServiceClientImpl].getSociallyRelatedEntities(viewer.id.get), Duration.Inf).get === relationship
       Await.result(inject[GraphServiceClient].getSociallyRelatedEntities(viewer.id.get), Duration.Inf).get === relationship
-      val commander = inject[UserConnectionsCommander]
+      val commander = inject[UserProfileCommander]
       val connections = Await.result(commander.getConnectionsSortedByRelationship(viewer.id.get, owner.id.get), Duration.Inf)
 
-      connections.map(_.userId) === Seq(user4, user1, user6, user3, user2, user7).map(_.id.get)
-      connections.map(_.connected) === Seq(true, true, true, false, false, false)
+      connections.map(_.userId) === Seq(viewer, user4, user1, user6, user3, user2, user7).map(_.id.get)
+      connections.map(_.connected) === Seq(true, true, true, true, false, false, false)
     }
   }
 

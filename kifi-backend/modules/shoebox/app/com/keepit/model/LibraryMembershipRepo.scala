@@ -3,6 +3,7 @@ package com.keepit.model
 import java.sql.SQLException
 
 import com.google.inject.{ Inject, Singleton, ImplementedBy }
+import com.keepit.commanders.{ UserFollowerRelationshipKey, UserFollowerRelationshipCache }
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.{ DbSequenceAssigner, State, Id }
@@ -57,6 +58,7 @@ class LibraryMembershipRepoImpl @Inject() (
   libraryRepo: LibraryRepo,
   libraryMembershipCountCache: LibraryMembershipCountCache,
   followersCountCache: FollowersCountCache,
+  userFollowerRelationshipCache: UserFollowerRelationshipCache,
   memberIdCache: LibraryMembershipIdCache,
   countWithLibraryIdByAccessCache: CountWithLibraryIdByAccessCache,
   librariesWithWriteAccessCache: LibrariesWithWriteAccessCache,
@@ -300,15 +302,19 @@ class LibraryMembershipRepoImpl @Inject() (
       if (libMem.state == LibraryMembershipStates.INACTIVE) {
         deleteCache(libMem)
       } else {
-        countByLibIdAndAccessCache.remove(LibraryMembershipCountByLibIdAndAccessKey(libMem.libraryId, libMem.access))
         memberIdCache.set(LibraryMembershipIdKey(id), libMem)
-        libraryMembershipCountCache.remove(LibraryMembershipCountKey(libMem.userId, libMem.access))
-        if (libMem.canWrite) { librariesWithWriteAccessCache.remove(LibrariesWithWriteAccessUserKey(libMem.userId)) }
-        // ugly! but the library is in an in memory cache so the cost is low
-        followersCountCache.remove(FollowersCountKey(libraryRepo.get(libMem.libraryId).ownerId))
-        countWithLibraryIdByAccessCache.remove(CountWithLibraryIdByAccessKey(libMem.libraryId))
       }
     }
+    countByLibIdAndAccessCache.remove(LibraryMembershipCountByLibIdAndAccessKey(libMem.libraryId, libMem.access))
+    libraryMembershipCountCache.remove(LibraryMembershipCountKey(libMem.userId, libMem.access))
+    if (libMem.canWrite) { librariesWithWriteAccessCache.remove(LibrariesWithWriteAccessUserKey(libMem.userId)) }
+    // ugly! but the library is in an in memory cache so the cost is low
+    val ownerId = libraryRepo.get(libMem.libraryId).ownerId
+    followersCountCache.remove(FollowersCountKey(ownerId))
+    countWithLibraryIdByAccessCache.remove(CountWithLibraryIdByAccessKey(libMem.libraryId))
+    userFollowerRelationshipCache.remove(UserFollowerRelationshipKey(None, libMem.userId))
+    userFollowerRelationshipCache.remove(UserFollowerRelationshipKey(Some(ownerId), libMem.userId))
+    userFollowerRelationshipCache.remove(UserFollowerRelationshipKey(Some(libMem.userId), ownerId))
   }
 
   def countWithUserIdAndAccess(userId: Id[User], access: LibraryAccess)(implicit session: RSession): Int = {

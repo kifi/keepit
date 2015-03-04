@@ -6,12 +6,14 @@ import com.google.inject.Inject
 import com.keepit.abook.{ ABookServiceClient, ABookUploadConf }
 import com.keepit.commanders.emails.EmailSenderProvider
 import com.keepit.commanders.{ ConnectionInfo, _ }
+import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
 import com.keepit.common.controller._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.http._
+import com.keepit.common.logging.AccessLog
 import com.keepit.common.mail.{ EmailAddress, _ }
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.{ ImageCropAttributes, S3ImageStore }
@@ -45,6 +47,7 @@ class UserProfileController @Inject() (
     userCommander: UserCommander,
     userConnectionRepo: UserConnectionRepo,
     userConnectionsCommander: UserConnectionsCommander,
+    userProfileCommander: UserProfileCommander,
     val userActionsHelper: UserActionsHelper,
     friendStatusCommander: FriendStatusCommander,
     libraryCommander: LibraryCommander,
@@ -85,15 +88,19 @@ class UserProfileController @Inject() (
         Future.successful(NotFound(s"username ${username.value}"))
       case Some(user) =>
         val viewerIdOpt = request.userIdOpt
-        userConnectionsCommander.getConnectionsSortedByRelationship(viewerIdOpt.orElse(user.id).get, user.id.get) map { connections =>
+        userProfileCommander.getConnectionsSortedByRelationship(viewerIdOpt.orElse(user.id).get, user.id.get) map { connections =>
           val head = connections.take(limit)
           val (headUserJsonObjs, userMap) = db.readOnlyMaster { implicit s =>
             val userMap = basicUserRepo.loadAll(connections.take(200).map(_.userId).toSet)
             val headUserMap = Map(head.map(c => c.userId -> userMap(c.userId)): _*)
-            val headUserJsonObjs = viewerIdOpt.map { viewerId =>
+            val headUserWithStatus = viewerIdOpt.map { viewerId =>
               val headFriendIdSet = head.filter(_.connected).map(_.userId).toSet
               friendStatusCommander.augmentUsers(viewerId, headUserMap, headFriendIdSet)
-            } getOrElse headUserMap.mapValues(BasicUserWithFriendStatus.fromWithoutFriendStatus) map {
+            } getOrElse headUserMap.mapValues(BasicUserWithFriendStatus.fromWithoutFriendStatus)
+            val sortedHeadUserWithStatus = {
+              head.map(id => id.userId -> headUserWithStatus(id.userId))
+            }
+            val headUserJsonObjs = sortedHeadUserWithStatus map {
               case (userId, userWFS) =>
                 loadProfileUser(userId, userWFS, viewerIdOpt)
             }
@@ -105,28 +112,34 @@ class UserProfileController @Inject() (
     }
   }
 
-  def getProfileFollowers(username: Username, limit: Int) = MaybeUserAction { request =>
+  def getProfileFollowers(username: Username, limit: Int) = MaybeUserAction.async { request =>
     userCommander.userFromUsername(username) match {
       case None =>
         log.warn(s"can't find username ${username.value}")
-        NotFound(s"username ${username.value}")
+        Future.successful(NotFound(s"username ${username.value}"))
       case Some(user) =>
         val viewerIdOpt = request.userIdOpt
-        val followerIds = libraryCommander.getFollowersByViewer(user.id.get, viewerIdOpt) // todo (aaron): If there is some order by social graph, this will be a future!
-        val head = followerIds.take(limit)
-        val (headUserJsonObjs, userMap) = db.readOnlyMaster { implicit s =>
-          val userMap = basicUserRepo.loadAll(followerIds.toSet)
-          val headUserMap = Map(head.map(userId => userId -> userMap(userId)): _*)
-          val headUserJsonObjs = viewerIdOpt.map { viewerId =>
-            friendStatusCommander.augmentUsers(viewerId, headUserMap)
-          } getOrElse headUserMap.mapValues(BasicUserWithFriendStatus.fromWithoutFriendStatus) map {
-            case (userId, userWFS) =>
-              loadProfileUser(userId, userWFS, viewerIdOpt)
+        userProfileCommander.getFollowersSortedByRelationship(viewerIdOpt, user.id.get) map { followers =>
+          val head = followers.take(limit)
+          val (headUserJsonObjs, userMap) = db.readOnlyMaster { implicit s =>
+            val userMap = basicUserRepo.loadAll(followers.take(200).map(_.userId).toSet)
+            val headUserMap = Map(head.map(c => c.userId -> userMap(c.userId)): _*)
+            val headUserWithStatus = viewerIdOpt.map { viewerId =>
+              val headFriendIdSet = head.filter(_.connected).map(_.userId).toSet
+              friendStatusCommander.augmentUsers(viewerId, headUserMap, headFriendIdSet)
+            } getOrElse headUserMap.mapValues(BasicUserWithFriendStatus.fromWithoutFriendStatus)
+            val sortedHeadUserWithStatus = {
+              head.map(id => id.userId -> headUserWithStatus(id.userId))
+            }
+            val headUserJsonObjs = sortedHeadUserWithStatus map {
+              case (userId, userWFS) =>
+                loadProfileUser(userId, userWFS, viewerIdOpt)
+            }
+            (headUserJsonObjs, userMap)
           }
-          (headUserJsonObjs, userMap)
+          val extIds = followers.drop(limit).flatMap(u => userMap.get(u.userId)).map(_.externalId)
+          Ok(Json.obj("users" -> headUserJsonObjs, "ids" -> extIds, "count" -> followers.size))
         }
-        val ids = followerIds.drop(limit).flatMap(userId => userMap.get(userId)).map(_.externalId)
-        Ok(Json.obj("users" -> headUserJsonObjs, "ids" -> ids, "count" -> followerIds.size))
     }
   }
 
