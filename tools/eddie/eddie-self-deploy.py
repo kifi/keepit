@@ -338,7 +338,7 @@ if __name__ == "__main__":
       while (waitSoFar < maxWaitTime and not serviceUp):
         serviceUp = checkUp()
         if not serviceUp:
-          if (waitSoFar>0 and int(waitSoFar)%20==0): log("Not up yet. Waited: %ss. Max remaining wait: %ss" %(int(waitSoFar), int(maxWaitTime-waitSoFar)))
+          if (waitSoFar>0 and int(waitSoFar)%60==0): log("Not up yet. Waited: %ss. Max remaining wait: %ss" %(int(waitSoFar), int(maxWaitTime-waitSoFar)))
           time.sleep(1)
           waitSoFar = time.time() - waitStart
         else:
