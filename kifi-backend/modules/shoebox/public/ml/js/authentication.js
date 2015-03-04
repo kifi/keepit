@@ -1,12 +1,5 @@
 $(function() {
 
-  // show links on /signup and /login
-  if (window.location.pathname === "/new/login") {
-    $('.header-link.signup')[0].style.visibility = 'visible';
-  } else if (window.location.pathname === '/new/signup') {
-    $('.header-link.login')[0].style.visibility = 'visible';
-  }
-
   //Simple demonstration of error messages/animations
   $('.form-input').on('click keypress', hideError);
 

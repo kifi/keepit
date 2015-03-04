@@ -144,17 +144,17 @@ p {
 
 #header_bar #header-wrapper {
   position: relative;
-  width: 960px;
   height: 100%;
+  width: 90%;
+  max-width: 960px;
   margin: 0 auto;
 }
 
 .header-link {
   position: absolute;
   right: 0px;
-  top: 50%;
-  transform: translateY(-50%);
-  visibility: hidden;
+  top: 19px;
+  font-size: 18px;
 }
 
 .text-center {
