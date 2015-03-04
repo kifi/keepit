@@ -166,7 +166,7 @@ object Persona {
     PersonaName.PARENT -> PersonaKeep(
       title = "Should You Teach Your Kids to Share",
       url = "http://www.popsugar.com/moms/Should-You-Teach-Kids-Share-27333250",
-      image = PersonaKeepImageInfo("//d1dwdv9wd966qu.cloudfront.net/img/guide/kidsSharing_480x446.757fa43.png", 480, 446),
+      image = PersonaKeepImageInfo("//d1dwdv9wd966qu.cloudfront.net/img/guide/sharingKids_960×892.6820466.jpg", 480, 446),
       noun = "blog post",
       query = "kids+and+sharing",
       matches = createMatchJson(Seq((22, 4), (30, 5)), Seq((46, 4), (51, 5))),
@@ -184,7 +184,7 @@ object Persona {
     PersonaName.DEEP_THINKER -> PersonaKeep(
       title = "What happened to Downtime?",
       url = "http://99u.com/articles/6947/what-happened-to-downtime-the-extinction-of-deep-thinking-sacred-space",
-      image = PersonaKeepImageInfo("//d1dwdv9wd966qu.cloudfront.net/img/guide/downtime_480x446.64f42e0.png", 480, 446),
+      image = PersonaKeepImageInfo("//d1dwdv9wd966qu.cloudfront.net/img/guide/downtime_960×892.171e5fc.jpg", 480, 446),
       noun = "blog post",
       query = "downtime",
       matches = createMatchJson(Seq((17, 8)), Seq((46, 8))),
