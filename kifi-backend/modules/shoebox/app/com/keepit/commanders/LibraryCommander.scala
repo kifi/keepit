@@ -426,9 +426,15 @@ class LibraryCommander @Inject() (
 
   def addLibrary(libAddReq: LibraryAddRequest, ownerId: Id[User])(implicit context: HeimdalContext): Either[LibraryFail, Library] = {
     val badMessage: Option[String] = {
-      if (libAddReq.name.isEmpty || !Library.isValidName(libAddReq.name)) { Some("invalid_name") }
-      else if (libAddReq.slug.isEmpty || !LibrarySlug.isValidSlug(libAddReq.slug)) { Some("invalid_slug") }
-      else { None }
+      if (libAddReq.name.isEmpty || !Library.isValidName(libAddReq.name)) {
+        log.info(s"[addLibrary] Invalid name ${libAddReq.name} for $ownerId")
+        Some("invalid_name")
+      } else if (libAddReq.slug.isEmpty || !LibrarySlug.isValidSlug(libAddReq.slug)) {
+        log.info(s"[addLibrary] Invalid slub ${libAddReq.slug} for $ownerId")
+        Some("invalid_slug")
+      } else {
+        None
+      }
     }
     badMessage match {
       case Some(x) => Left(LibraryFail(BAD_REQUEST, x))
