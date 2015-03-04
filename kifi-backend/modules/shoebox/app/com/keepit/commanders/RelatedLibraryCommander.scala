@@ -139,7 +139,7 @@ class RelatedLibraryCommanderImpl @Inject() (
     }
   }
 
-  def topFollowedLibraries(minFollow: Int = DEFAULT_MIN_FOLLOW, topK: Int = 100): Future[Seq[RelatedLibrary]] = {
+  def topFollowedLibraries(minFollow: Int = DEFAULT_MIN_FOLLOW, topK: Int = 50): Future[Seq[RelatedLibrary]] = {
     db.readOnlyReplicaAsync { implicit s =>
       libRepo.filterPublishedByMemberCount(minFollow + 1, limit = topK).map { lib => RelatedLibrary(lib, RelatedLibraryKind.POPULAR) }
     }
