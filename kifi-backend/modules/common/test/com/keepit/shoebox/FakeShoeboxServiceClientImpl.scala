@@ -31,8 +31,6 @@ import com.keepit.common.crypto.PublicIdConfiguration
 class FakeShoeboxScraperClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends ShoeboxScraperClient {
   val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(airbrakeNotifier), new FakeScheduler(), () => {})
 
-  val maxParallelism = 4
-
   protected def httpClient: com.keepit.common.net.HttpClient = ???
 
   def assignScrapeTasks(zkId: Long, max: Int): Future[Seq[ScrapeRequest]] = {

@@ -195,7 +195,7 @@ trait CommonServiceUtilities { self: ServiceClient =>
 }
 
 trait ThrottledServiceClient extends ServiceClient {
-  val maxParallelism: Int
+  val maxParallelism: Int = 4
   val maxQueue: Option[Int] = Some(maxParallelism * 42)
   val limiter = new ReactiveLock(maxParallelism, maxQueue)
   override protected def callUrl(call: ServiceRoute, httpUri: HttpUri, body: JsValue, ignoreFailure: Boolean = false, callTimeouts: CallTimeouts = CallTimeouts.NoTimeouts): Future[ClientResponse] = limiter.withLockFuture {
