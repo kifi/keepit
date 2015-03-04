@@ -3,6 +3,7 @@ package com.keepit.model
 import java.util.concurrent.atomic.AtomicLong
 
 import com.keepit.common.db.{ ExternalId, Id, State }
+import com.keepit.common.time._
 import com.keepit.model.LibraryVisibility.{ PUBLISHED, SECRET, DISCOVERABLE }
 import org.apache.commons.lang3.RandomStringUtils.random
 
@@ -34,6 +35,7 @@ object LibraryFactory {
     def secret() = new PartialLibrary(library.copy(visibility = SECRET))
     def published() = new PartialLibrary(library.copy(visibility = PUBLISHED))
     def discoverable() = new PartialLibrary(library.copy(visibility = DISCOVERABLE))
+    def withLastKept() = new PartialLibrary(library.copy(lastKept = Some(currentDateTime)))
     def get: Library = library
   }
 
