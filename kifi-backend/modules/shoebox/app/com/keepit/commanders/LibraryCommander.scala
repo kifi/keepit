@@ -604,15 +604,11 @@ class LibraryCommander @Inject() (
         }
         keepRepo.getByLibrary(oldLibrary.id.get, 0, Int.MaxValue)
       }
-
-      val savedKeeps = keepsInLibrary.grouped(50).toArray.flatMap { keepGroup =>
-        db.readWriteBatch(keepGroup) { (s, keep) =>
-          keepRepo.save(keep.sanitizeForDelete())(s)
-        }.keySet
-      }.toSet
-
+      val savedKeeps = db.readWriteBatch(keepsInLibrary) { (s, keep) =>
+        keepRepo.save(keep.sanitizeForDelete())(s)
+      }
       libraryAnalytics.deleteLibrary(userId, oldLibrary, context)
-      libraryAnalytics.unkeptPages(userId, savedKeeps.toSeq, oldLibrary, context)
+      libraryAnalytics.unkeptPages(userId, savedKeeps.keySet.toSeq, oldLibrary, context)
       searchClient.updateKeepIndex()
       //Note that this is at the end, if there was an error while cleaning other library assets
       //we would want to be able to get back to the library and clean it again
