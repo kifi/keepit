@@ -190,7 +190,7 @@ object ApplicationBuild extends Build {
   ).settings(
       libraryDependencies ++= roverDependencies,
       javaOptions in Test += "-Dconfig.resource=application-rover.conf"
-    ).dependsOn(common % "test->test;compile->compile")
+    ).dependsOn(common % "test->test;compile->compile", sqldb % "test->test;compile->compile")
 
   lazy val kifiBackend = Project(appName, file(".")).enablePlugins(play.PlayScala).settings(commonSettings: _*).settings(
     version := "0.42",
