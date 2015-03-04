@@ -4,16 +4,6 @@ import org.joda.time.DateTime
 import play.api.libs.json._
 import com.keepit.common.reflection.CompanionTypeSystem
 
-sealed trait Article { self =>
-  type A >: self.type <: Article
-  protected def kind: ArticleKind[A]
-  protected def instance: A = self
-
-  def url: String
-  def createdAt: DateTime
-  def content: ArticleContent
-}
-
 sealed trait ArticleKind[A <: Article] {
   implicit def kind: ArticleKind[A] = this
 
@@ -24,11 +14,34 @@ sealed trait ArticleKind[A <: Article] {
   def formatByVersion(thatVersion: Int): Format[A]
 }
 
+object ArticleKind {
+  val all: Set[ArticleKind[_ <: Article]] = CompanionTypeSystem[Article, ArticleKind[_ <: Article]]("A")
+  val byTypeCode: Map[String, ArticleKind[_ <: Article]] = {
+    require(all.size == all.map(_.typeCode).size, "Duplicate Article type codes.")
+    all.map { articleKind => articleKind.typeCode -> articleKind }.toMap
+  }
+
+  implicit val format = new Format[ArticleKind[_ <: Article]] {
+    def reads(json: JsValue) = json.validate[String].map(ArticleKind.byTypeCode)
+    def writes(kind: ArticleKind[_ <: Article]) = JsString(kind.typeCode)
+  }
+}
+
+sealed trait Article { self =>
+  type A >: self.type <: Article
+  protected def kind: ArticleKind[A]
+  protected def instance: A = self
+
+  def url: String
+  def createdAt: DateTime
+  def content: ArticleContent
+}
+
 object Article {
   implicit val format = new Format[Article] {
     def writes(article: Article) = {
       Json.obj(
-        "kind" -> article.kind.typeCode,
+        "kind" -> article.kind,
         "version" -> article.kind.version,
         "article" -> article.kind.format.writes(article.instance)
       )
@@ -38,14 +51,6 @@ object Article {
       version <- (json \ "version").validate[Int]
       article <- ArticleKind.byTypeCode(typeCode).formatByVersion(version).reads(json \ "article")
     } yield article
-  }
-}
-
-object ArticleKind {
-  val all: Set[ArticleKind[_ <: Article]] = CompanionTypeSystem[Article, ArticleKind[_ <: Article]]("A")
-  val byTypeCode: Map[String, ArticleKind[_ <: Article]] = {
-    require(all.size == all.map(_.typeCode).size, "Duplicate Article type codes.")
-    all.map { articleKind => articleKind.typeCode -> articleKind }.toMap
   }
 }
 
