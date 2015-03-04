@@ -13,8 +13,6 @@ import play.api.libs.json.Json
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.concurrent.duration.Duration
 
-case class ConnectionInfo(user: BasicUser, userId: Id[User], unfriended: Boolean, unsearched: Boolean)
-
 case class ConnectedUserId(userId: Id[User], connected: Boolean)
 object ConnectedUserId {
   implicit val formatter = Json.format[ConnectedUserId]

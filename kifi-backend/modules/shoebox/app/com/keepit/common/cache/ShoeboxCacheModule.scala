@@ -215,7 +215,7 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
 
   @Singleton
   @Provides
-  def userFollwerRelationshipCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+  def userFollowerRelationshipCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new UserFollowerRelationshipCache(stats, accessLog, (innerRepo, 10 seconds), (outerRepo, 30 days))
 
   @Singleton
