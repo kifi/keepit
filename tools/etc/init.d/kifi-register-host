@@ -23,6 +23,8 @@ def set_hostname(name):
   with open("/etc/hostname", "w") as f:
     print "setting hostname:", name
     f.write(name + "\n")
+  update_code = call(['hostname', '-F', '/etc/hostname'])
+  if update_code != 0: print 'Error updating hostname'
 
 # make sure EC2 Name is in the hosts file
 def update_hosts(name):
@@ -37,8 +39,10 @@ def register_logentries(name, service):
   if not os.path.isfile('/etc/le/config'):
     register_code = call(["le", "register", "--name", name,
       "--account-key", le_account_key, "--hostname", name])
-    if register_code != 0:
-      print 'Failed to register logentries host', name
+    if register_code != 0: print 'Failed to register logentries host', name
+
+  daemon_code = call(["apt-get", "install", "-q", "-y", "logentries-daemon"])
+  if daemon_code != 0: print 'Failed to install logentries-daemon', name
 
   appDir = '/home/fortytwo/run/%s/log/' % service
   le_follow(appDir + 'db.log')
@@ -51,16 +55,14 @@ def register_logentries(name, service):
   le_follow('/var/log/nginx/error.log', 'nginx_error')
   le_follow('/var/log/lastlog')
   restart_code = call(['service', 'logentries', 'restart'])
-  if restart_code != 0:
-    print 'Error restarting logentries'
+  if restart_code != 0: print 'Error restarting logentries'
 
 def le_follow(path, name=None):
   name = os.path.basename(path) if not name else name
   print 'le follow: %s => %s' % (name, path)
   exit_status = call(["le", "--account-key", le_account_key,
     "follow", path, "--name", name])
-  if exit_status != 0:
-    print 'Failed logentires follow'
+  if exit_status != 0: print 'Failed logentires follow'
 
 if __name__ == "__main__":
   try:
