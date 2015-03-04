@@ -14,6 +14,7 @@ object LibraryMembershipFields {
   val libraryField = "lib"
   val libraryIdField = "libId"
   val searcherField = "searcher"
+  val ownerField = "owner"
 
   val decoders: Map[String, FieldDecoder] = Map.empty
 }
@@ -31,6 +32,19 @@ object LibraryMembershipIndexable {
     val libraryIds = libraryMembershipSearcher.findSecondaryIds(new Term(userField, memberId.id.toString), libraryIdField).toArray
     libraryIds.count(LibraryIndexable.isPublished(librarySearcher, _))
   }
+
+  def getLibrariesByOwner(libraryMembershipSearcher: Searcher, ownerId: Id[User]): Set[Long] = {
+    LongArraySet.from(libraryMembershipSearcher.findSecondaryIds(new Term(ownerField, ownerId.id.toString), libraryIdField).toArray)
+  }
+
+  def countPublishedLibrariesByOwner(librarySearcher: Searcher, libraryMembershipSearcher: Searcher, ownerId: Id[User]): Int = {
+    val libraryIds = libraryMembershipSearcher.findSecondaryIds(new Term(ownerField, ownerId.id.toString), libraryIdField).toArray
+    libraryIds.count(LibraryIndexable.isPublished(librarySearcher, _))
+  }
+
+  def getMemberCount(libraryMembershipSearcher: Searcher, libId: Long): Int = {
+    libraryMembershipSearcher.freq(new Term(libraryField, libId.toString))
+  }
 }
 
 class LibraryMembershipIndexable(membership: LibraryMembershipView) extends Indexable[LibraryMembership, LibraryMembership] {
@@ -47,6 +61,9 @@ class LibraryMembershipIndexable(membership: LibraryMembershipView) extends Inde
     doc.add(buildIdValueField(userIdField, membership.userId))
     if (membership.showInSearch) {
       doc.add(buildKeywordField(searcherField, membership.userId.id.toString))
+    }
+    if (membership.access == LibraryAccess.OWNER) {
+      doc.add(buildKeywordField(ownerField, membership.userId.id.toString))
     }
 
     doc.add(buildKeywordField(libraryField, membership.libraryId.id.toString))

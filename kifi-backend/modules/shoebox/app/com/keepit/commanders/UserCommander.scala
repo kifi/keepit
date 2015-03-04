@@ -701,18 +701,22 @@ class UserCommander @Inject() (
         }
 
         val mutualFriends = recommendedUsers.map { recommendedUserId =>
-          recommendedUserId -> (friends.get(userId).getOrElse(Set.empty) intersect friends.get(recommendedUserId).getOrElse(Set.empty))
+          recommendedUserId -> (friends.getOrElse(userId, Set.empty) intersect friends.getOrElse(recommendedUserId, Set.empty))
         }.toMap
 
-        val (basicUsers, mutualFriendConnectionCounts) = db.readOnlyReplica { implicit session =>
-          val uniqueMutualFriends = mutualFriends.values.flatten.toSet
-          val basicUsers = basicUserRepo.loadAll(uniqueMutualFriends ++ recommendedUsers)
-          val mutualFriendConnectionCounts = uniqueMutualFriends.map { mutualFriendId => mutualFriendId -> userConnectionRepo.getConnectionCount(mutualFriendId) }.toMap
-          (basicUsers, mutualFriendConnectionCounts)
-        }
+        val uniqueMutualFriends = mutualFriends.values.flatten.toSet
+        val (basicUsers, mutualFriendConnectionCounts) = loadBasicUsersAndConnectionCounts(uniqueMutualFriends ++ recommendedUsers, uniqueMutualFriends)
 
         FriendRecommendations(basicUsers, mutualFriendConnectionCounts, recommendedUsers, mutualFriends)
       }
+    }
+  }
+
+  def loadBasicUsersAndConnectionCounts(idsForUsers: Set[Id[User]], idsForCounts: Set[Id[User]]): (Map[Id[User], BasicUser], Map[Id[User], Int]) = {
+    db.readOnlyReplica { implicit session =>
+      val basicUsers = basicUserRepo.loadAll(idsForUsers)
+      val connectionCounts = userConnectionRepo.getConnectionCounts(idsForCounts)
+      (basicUsers, connectionCounts)
     }
   }
 

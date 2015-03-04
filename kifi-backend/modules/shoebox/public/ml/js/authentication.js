@@ -38,11 +38,15 @@ $(function() {
     var $email = $form.find('.login-email');
     var $password = $form.find('.login-password');
 
-    // todo: Validate input
+    var validEmail = validateEmailAddress($email);
+    var validPassword = validatePassword($password);
+    if (!validEmail || !validPassword) {
+      return;
+    }
 
     $.postJson(this.action, {
-      'username': $email.val(),
-      'password': $password.val()
+      'username': validEmail,
+      'password': validPassword
     }).done(function (data) {
       if (data.uri) {
         window.location = data.uri;
@@ -77,11 +81,15 @@ $(function() {
     var $email = $form.find('.signup-email');
     var $password = $form.find('.signup-password');
 
-    // todo: Validate input
+    var validEmail = validateEmailAddress($email);
+    var validPassword = validatePassword($password);
+    if (!validEmail || !validPassword) {
+      return;
+    }
 
     $.postJson(this.action, {
-      'email': $email.val(),
-      'password': $password.val()
+      'email': validEmail,
+      'password': validPassword
     }).done(function (data) {
       if (data.success) { // successes return: {success: true}
         window.location = '/new/signupName'; // todo: change to /signup
@@ -106,11 +114,15 @@ $(function() {
     var $firstName = $form.find('.first-name');
     var $lastName = $form.find('.last-name');
 
-    // todo: Validate input
+    var validFirstName = validateName($firstName);
+    var validLastName = validateName($lastName);
+    if (!validFirstName || !validLastName) {
+      return;
+    }
 
     $.postJson(this.action, {
-      firstName: $firstName.val() || '',
-      lastName: $lastName.val() || '',
+      firstName: validFirstName,
+      lastName: validLastName,
       picToken: undefined, // upload && upload.token
       picWidth: undefined, // pic.width
       picHeight: undefined, // pic.height
@@ -138,11 +150,13 @@ $(function() {
     var $form = $(this);
     var $email = $form.find('.email');
 
-    // todo: Validate input
-    console.log($email.val() || 'sd');
+    var validEmail = validateEmailAddress($email);
+    if (!validEmail) {
+      return;
+    }
 
     $.postJson(this.action, {
-      email: $email.val() || ''
+      email: validEmail
     }).done(function (data) {
       console.log(data);
       return;
@@ -169,6 +183,42 @@ $(function() {
 
   function hideError() {
     $('.error').fadeOut();
+  }
+
+  var emailAddrRe = /^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
+  function validateEmailAddress($email) { // pass email object
+    var s = $email.val();
+    if (!s) {
+      // (todo) TRACK
+      error($email, 'Please enter your email address');
+    } else if (!emailAddrRe.test(s)) {
+      // (todo) TRACK
+      error($email, 'Invalid email address')
+    }
+    return s;
+  }
+
+  function validatePassword($password) {
+    var s = $password.val();
+    if (!s) {
+      // (todo) TRACK
+      error($password, 'Please enter your password');
+    } else if (s.length < 7) {
+      // (todo) TRACK
+      error($password, 'Password too short');
+    } else {
+      return s;
+    }
+  }
+
+  function validateName($name) {
+    var s = $.trim($name.val());
+    if (!s) {
+      // (todo) TRACK
+      error($name, 'Name is required');
+    } else {
+      return s;
+    }
   }
 
   $.postJson = function (uri, data) {

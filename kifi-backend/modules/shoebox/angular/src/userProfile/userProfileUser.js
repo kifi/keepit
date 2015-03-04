@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfUserProfileUser', [
-  'modalService',
-  function (modalService) {
+  'modalService', 'profileService', 'userProfileActionService',
+  function (modalService, profileService, userProfileActionService) {
     return {
       restrict: 'A',
       replace: true,
@@ -13,14 +13,18 @@ angular.module('kifi')
       },
       templateUrl: 'userProfile/userProfileUser.tpl.html',
       link: function (scope) {
+        scope.me = profileService.me;
+
         scope.showMutualConnections = function () {
-          var person = _.assign(scope.user, 'id', 'username', 'pictureName');
-          person.fullName = scope.user.firstName + ' ' + scope.user.lastName;
-          person.numMutualFriends = scope.user.mConnections;
-          person.mutualFriends = [];  // TODO
-          modalService.open({
-            template: 'friends/seeMutualFriendsModal.tpl.html',
-            modalData: person
+          userProfileActionService.getMutualConnections(scope.user.id).then(function (data) {
+            var person = _.assign(scope.user, 'id', 'username', 'pictureName');
+            person.fullName = scope.user.firstName + ' ' + scope.user.lastName;
+            person.numMutualFriends = scope.user.mConnections;
+            person.mutualFriends = data.users;
+            modalService.open({
+              template: 'friends/seeMutualFriendsModal.tpl.html',
+              modalData: person
+            });
           });
         };
       }
