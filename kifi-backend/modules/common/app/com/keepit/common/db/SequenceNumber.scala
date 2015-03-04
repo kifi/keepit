@@ -21,8 +21,8 @@ object SequenceNumber {
   ScalaMessagePack.messagePack.register(classOf[SequenceNumber[Any]], new MsgPackSequenceNumberTemplate[Any]())
   def ZERO[T] = SequenceNumber[T](0)
   def MinValue[T] = SequenceNumber[T](-1L)
-  implicit def format[T] = new Format[SequenceNumber[T]] {
-    def reads(json: JsValue): JsResult[SequenceNumber[T]] = __.read[Long].reads(json).map(SequenceNumber[T](_))
+  implicit def format[T]: Format[SequenceNumber[T]] = new Format[SequenceNumber[T]] {
+    def reads(json: JsValue): JsResult[SequenceNumber[T]] = json.validate[Long].map(SequenceNumber[T](_))
     def writes(o: SequenceNumber[T]): JsValue = JsNumber(o.value)
   }
 
