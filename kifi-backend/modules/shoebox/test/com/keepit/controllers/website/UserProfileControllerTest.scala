@@ -1,10 +1,11 @@
 package com.keepit.controllers.website
 
+import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.abook.model.EmailAccountInfo
 import com.keepit.commanders.FriendStatusCommander
 import com.keepit.common.controller.{ FakeUserActionsHelper }
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.graph.FakeGraphServiceClientImpl
@@ -29,9 +30,11 @@ import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.Specification
 
 import play.api.libs.json.{ JsArray, JsNumber, JsString, Json }
+import play.api.mvc.{ Call, Result }
 import play.api.test.Helpers._
 import play.api.test._
 
+import scala.concurrent.Future
 import scala.slick.jdbc.StaticQuery
 
 class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
@@ -39,14 +42,13 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
   val controllerTestModules = Seq(
     FakeScrapeSchedulerModule(),
     FakeABookServiceClientModule(),
-    FakeSocialGraphModule()
-  )
+    FakeSocialGraphModule())
 
   def SociallyRelatedEntities(value: Any, value1: Any, value2: Any, value3: Any) = ???
 
   "UserProfileController" should {
 
-    "get profile connections" in {
+    "load profile users" in {
       withDb(controllerTestModules: _*) { implicit injector =>
         val (user1, user2, user3, user4, user5, lib1) = db.readWrite { implicit session =>
           val user1 = user().withName("George", "Washington").withUsername("GDubs").withPictureName("pic1").saved
@@ -79,7 +81,7 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
 
           (user1, user2, user3, user4, user5, user1lib)
         }
-        val controller = inject[UserProfileController]
+
         def basicUserWFS(user: User, viewerIdOpt: Option[Id[User]])(implicit session: RSession): BasicUserWithFriendStatus = {
           val basicUser = BasicUser.fromUser(user)
           viewerIdOpt map { viewerId =>
@@ -128,7 +130,7 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
       }
     }
 
-    "get profile libraries" in {
+    "get profile" in {
       withDb(controllerTestModules: _*) { implicit injector =>
         val (user1, user2, user3, user4, user5, lib1) = db.readWrite { implicit session =>
           val user1 = user().withName("George", "Washington").withUsername("GDubs").withPictureName("pic1").saved
@@ -190,20 +192,12 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
           libraryRepo.countLibrariesForOtherUser(user4.id.get, user5.id.get) === 0
           libraryRepo.countLibrariesForOtherUser(user5.id.get, user1.id.get) === 2
         }
-        val controller = inject[UserProfileController]
-        def call(viewer: Option[User], viewing: Username) = {
-          viewer match {
-            case None => inject[FakeUserActionsHelper].unsetUser()
-            case Some(user) => inject[FakeUserActionsHelper].setUser(user)
-          }
-          val request = FakeRequest("GET", routes.UserProfileController.profile(viewing).url)
-          controller.profile(viewing)(request)
-        }
+
         //non existing username
-        status(call(Some(user1), Username("foo"))) must equalTo(NOT_FOUND)
+        status(getProfile(Some(user1), Username("foo"))) must equalTo(NOT_FOUND)
 
         //seeing a profile from an anonymos user
-        val anonViewer = call(None, user1.username)
+        val anonViewer = getProfile(None, user1.username)
         status(anonViewer) must equalTo(OK)
         contentType(anonViewer) must beSome("application/json")
         contentAsJson(anonViewer) === Json.parse(
@@ -222,7 +216,7 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
           """)
 
         //seeing a profile of my own
-        val selfViewer = call(Some(user1), user1.username)
+        val selfViewer = getProfile(Some(user1), user1.username)
         status(selfViewer) must equalTo(OK)
         contentType(selfViewer) must beSome("application/json")
         val res2 = contentAsJson(selfViewer)
@@ -243,7 +237,7 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
           """)
 
         //seeing a profile from another user (friend)
-        val friendViewer = call(Some(user2), user1.username)
+        val friendViewer = getProfile(Some(user2), user1.username)
         status(friendViewer) must equalTo(OK)
         contentType(friendViewer) must beSome("application/json")
         val res3 = contentAsJson(friendViewer)
@@ -279,7 +273,6 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
 
           (user1, user2, user3, user4, user5)
         }
-        val controller = inject[UserProfileController]
 
         val relationship = SociallyRelatedEntities(
           RelatedEntities[User, User](user1.id.get, Seq(user4.id.get -> .1, user5.id.get -> .4, user2.id.get -> .2, user3.id.get -> .3)),
@@ -290,8 +283,7 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
         inject[FakeGraphServiceClientImpl].setSociallyRelatedEntities(user1.id.get, relationship)
 
         // view as owner
-        inject[FakeUserActionsHelper].setUser(user1)
-        val result1 = controller.getProfileFollowers(Username("GDubs"), 10)(FakeRequest("GET", routes.UserProfileController.getProfileFollowers(Username("GDubs"), 10).url))
+        val result1 = getProfileFollowers(Some(user1), Username("GDubs"), 10)
         status(result1) must equalTo(OK)
         contentType(result1) must beSome("application/json")
         val resultJson1 = contentAsJson(result1)
@@ -301,8 +293,7 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
         (resultJson1 \ "ids") === Json.toJson(Seq(user4, user5).map(_.externalId))
 
         // view as anybody
-        inject[FakeUserActionsHelper].setUser(user4)
-        val result2 = controller.getProfileFollowers(Username("GDubs"), 10)(FakeRequest("GET", routes.UserProfileController.getProfileFollowers(Username("GDubs"), 10).url))
+        val result2 = getProfileFollowers(Some(user4), Username("GDubs"), 10)
         status(result2) must equalTo(OK)
         contentType(result2) must beSome("application/json")
         val resultJson2 = contentAsJson(result2)
@@ -311,8 +302,7 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
         (resultJson2 \ "ids") === JsArray()
 
         // view as follower (to a secret library)
-        inject[FakeUserActionsHelper].setUser(user2)
-        val result3 = controller.getProfileFollowers(Username("GDubs"), 10)(FakeRequest("GET", routes.UserProfileController.getProfileFollowers(Username("GDubs"), 10).url))
+        val result3 = getProfileFollowers(Some(user2), Username("GDubs"), 10)
         status(result3) must equalTo(OK)
         contentType(result3) must beSome("application/json")
         val resultJson3 = contentAsJson(result3)
@@ -322,6 +312,85 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
       }
     }
 
+    "get mutual connections" in {
+      withDb(controllerTestModules: _*) { implicit injector =>
+        val (user1, user2, user3, user4, user5, user6) = db.readWrite { implicit session =>
+          val user1 = user().withName("George", "Washington").withUsername("GDubs").withPictureName("pic1").saved
+          val user2 = user().withName("Abe", "Lincoln").withUsername("abe").saved
+          val user3 = user().withName("Thomas", "Jefferson").withUsername("TJ").saved
+          val user4 = user().withName("John", "Adams").withUsername("jayjayadams").saved
+          val user5 = user().withName("Ben", "Franklin").withUsername("Benji").saved
+          val user6 = user().withName("Nikola", "Tesla").withUsername("wizard").saved
+
+          connect(user1 -> user2, user1 -> user3, user4 -> user1, user2 -> user3, user2 -> user4, user2 -> user5, user3 -> user5, user2 -> user6).saved
+
+          (user1, user2, user3, user4, user5, user6)
+        }
+
+        { // unauthenticated vistor
+          val result = getMutualConnections(None, user1.externalId)
+          status(result) === FORBIDDEN
+        }
+
+        { // self
+          val result = getMutualConnections(Some(user1), user1.externalId)
+          status(result) === BAD_REQUEST
+        }
+
+        { // connected
+          val result = getMutualConnections(Some(user1), user2.externalId)
+          status(result) === OK
+          contentType(result) === Some("application/json")
+          val content = contentAsJson(result)
+          (content \\ "id") === Seq(user3, user4).map(u => JsString(u.externalId.id))
+          (content \\ "connections") === Seq(JsNumber(3), JsNumber(2))
+          (content \ "count") === JsNumber(2)
+        }
+
+        { // connected, symmetrical
+          val result = getMutualConnections(Some(user2), user1.externalId)
+          status(result) === OK
+          contentType(result) === Some("application/json")
+          val content = contentAsJson(result)
+          (content \\ "id") === Seq(user4, user3).map(u => JsString(u.externalId.id))
+          (content \\ "connections") === Seq(JsNumber(2), JsNumber(3))
+          (content \ "count") === JsNumber(2)
+        }
+
+        { // connected, no mutual connections
+          val result = getMutualConnections(Some(user2), user6.externalId)
+          status(result) === OK
+          contentType(result) === Some("application/json")
+          val content = contentAsJson(result)
+          (content \\ "id") === Seq.empty
+          (content \\ "connections") === Seq.empty
+          (content \ "count") === JsNumber(0)
+        }
+      }
+    }
   }
 
+  private def getProfile(viewerOpt: Option[User], username: Username)(implicit injector: Injector): Future[Result] = {
+    setViewer(viewerOpt)
+    controller.getProfile(username)(request(routes.UserProfileController.getProfile(username)))
+  }
+
+  private def getProfileFollowers(viewerOpt: Option[User], username: Username, limit: Int)(implicit injector: Injector): Future[Result] = {
+    setViewer(viewerOpt)
+    controller.getProfileFollowers(username, limit)(request(routes.UserProfileController.getProfileFollowers(username, limit)))
+  }
+
+  private def getMutualConnections(viewerOpt: Option[User], id: ExternalId[User])(implicit injector: Injector): Future[Result] = {
+    setViewer(viewerOpt)
+    controller.getMutualConnections(id)(request(routes.UserProfileController.getMutualConnections(id)))
+  }
+
+  private def controller(implicit injector: Injector) = inject[UserProfileController]
+  private def request(route: Call) = FakeRequest(route.method, route.url)
+  private def setViewer(viewerOpt: Option[User])(implicit injector: Injector): Unit = {
+    viewerOpt match {
+      case Some(user) => inject[FakeUserActionsHelper].setUser(user)
+      case None => inject[FakeUserActionsHelper].unsetUser()
+    }
+  }
 }

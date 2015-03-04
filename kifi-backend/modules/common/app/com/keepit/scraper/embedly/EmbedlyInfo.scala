@@ -1,5 +1,6 @@
 package com.keepit.scraper.embedly
 
+import com.kifi.macros.json
 import play.api.libs.functional.syntax._
 import com.keepit.model._
 import com.keepit.common.db.Id
@@ -33,10 +34,8 @@ object EmbedlyImage {
 
 // field names must match embedly json field so that js.validate[EmbedlyInfo] works
 
-case class EmbedlyEntity(count: Int, name: String)
-case class EmbedlyKeyword(score: Int, name: String) {
-  override def toString(): String = s"($name, $score)"
-}
+@json case class EmbedlyEntity(name: String, count: Int)
+@json case class EmbedlyKeyword(name: String, score: Int)
 
 case class EmbedlyInfo(
     originalUrl: String,
@@ -77,8 +76,6 @@ object EmbedlyInfo {
   val EMPTY = EmbedlyInfo("", None, None, None, Seq.empty, None, None, None, None, None, Seq(), Seq(), Seq())
 
   implicit val idFormat = Id.format[NormalizedURI]
-  implicit val entityFormat = Json.format[EmbedlyEntity]
-  implicit val keywordFormat = Json.format[EmbedlyKeyword]
 
   implicit val format = (
     (__ \ 'original_url).format[String] and
