@@ -22,6 +22,8 @@ import play.api.libs.json.Json
 import scala.concurrent.Future
 import scala.concurrent.duration.Duration
 
+case class ConnectionInfo(user: BasicUser, userId: Id[User], unfriended: Boolean, unsearched: Boolean)
+
 class UserConnectionsCommander @Inject() (
     abookServiceClient: ABookServiceClient,
     userConnectionRepo: UserConnectionRepo,
