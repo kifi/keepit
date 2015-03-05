@@ -6,7 +6,7 @@ import org.joda.time.DateTime
 import org.specs2.mutable.Specification
 import play.api.libs.json.Json
 
-class LibraryViewTest extends Specification {
+class BasicUserWithFriendStatusTest extends Specification {
   "BasicUserWithFriendStatus" should {
     "serialize to JSON" in {
       Json.toJson(BasicUserWithFriendStatus(
@@ -17,7 +17,8 @@ class LibraryViewTest extends Specification {
         username = Username("cc"),
         isFriend = Some(false),
         friendRequestSentAt = Some(new DateTime(23948192381L)),
-        friendRequestReceivedAt = None)) ===
+        friendRequestReceivedAt = None,
+        unsearched = None)) ===
         Json.parse("""{
           "id": "58328718-0222-47bf-9b12-d2d781cb8b0c",
           "firstName": "Chris",
@@ -36,13 +37,33 @@ class LibraryViewTest extends Specification {
         username = Username("jj"),
         isFriend = None,
         friendRequestSentAt = None,
-        friendRequestReceivedAt = None)) ===
+        friendRequestReceivedAt = None,
+        unsearched = None)) ===
         Json.parse("""{
           "id": "9813c3a2-f283-4056-ac9f-04d2e39d15a2",
           "firstName": "Janet",
           "lastName": "Jackson",
           "pictureName": "2.jpg",
           "username": "jj"
+        }""")
+
+      Json.toJson(BasicUserWithFriendStatus(
+        externalId = ExternalId[User]("9813c3a2-f283-4056-ac9f-04d2e39d15a2"),
+        firstName = "Janet",
+        lastName = "Jackson",
+        pictureName = "2.jpg",
+        username = Username("jj"),
+        isFriend = Some(true),
+        friendRequestSentAt = None,
+        friendRequestReceivedAt = None,
+        unsearched = None)) === // we use None instead of Some(false) to omit the field when it has its default value, since true is rare
+        Json.parse("""{
+          "id": "9813c3a2-f283-4056-ac9f-04d2e39d15a2",
+          "firstName": "Janet",
+          "lastName": "Jackson",
+          "pictureName": "2.jpg",
+          "username": "jj",
+          "isFriend": true
         }""")
     }
   }
