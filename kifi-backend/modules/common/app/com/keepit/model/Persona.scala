@@ -85,7 +85,7 @@ object Persona {
     PersonaName.ARTIST -> PersonaKeep(
       title = "My wish: Use art to turn the world inside out",
       url = "https://www.ted.com/talks/jr_s_ted_prize_wish_use_art_to_turn_the_world_inside_out",
-      image = PersonaKeepImageInfo("//d1dwdv9wd966qu.cloudfront.net/img/guide/artInsideOut_960x892.aadb85e.jpg", 480 ,446),
+      image = PersonaKeepImageInfo("//d1dwdv9wd966qu.cloudfront.net/img/guide/artInsideOut_960x892.aadb85e.jpg", 480, 446),
       noun = "video",
       query = "art",
       matches = createMatchJson(Seq((13, 3)), Seq((50, 3))),

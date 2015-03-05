@@ -234,10 +234,13 @@ class UserConnectionRepoImpl @Inject() (
           (for (c <- rows if c.user2 === userId) yield c.user1)
       }.list.toSet
 
-      (friendRequestRepo.getBySender(userId).filter(users contains _.recipientId) ++
-        friendRequestRepo.getByRecipient(userId).filter(users contains _.senderId)) map { friendRequest =>
-          friendRequestRepo.save(friendRequest.copy(state = FriendRequestStates.ACCEPTED))
-        }
+      val activeOrIgnored = Set(FriendRequestStates.ACTIVE, FriendRequestStates.IGNORED)
+      val friendRequests =
+        friendRequestRepo.getBySenderAndRecipients(userId, users, activeOrIgnored) ++
+          friendRequestRepo.getBySendersAndRecipient(users, userId, activeOrIgnored)
+      friendRequests map { fr =>
+        friendRequestRepo.save(fr.copy(state = FriendRequestStates.ACCEPTED))
+      }
 
       (users + userId) foreach invalidateCache
 
