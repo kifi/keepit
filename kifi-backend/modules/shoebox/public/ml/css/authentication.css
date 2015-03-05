@@ -748,6 +748,44 @@ a, .avatars li, img, .tabs_nav li {
 }
 
 
+.page.claim-account {
+  margin-top: 155px;
+  margin-bottom: 155px;
+  text-align: center;
+}
+
+.ca-h2 {
+  color: #aaa;
+  font-size: 1.7em;
+}
+
+.claim-account-wrapper input {
+  width: 350px;
+}
+
+.claim-account-wrapper .ca-text {
+  font-size: 17px;
+  line-height: 30px;
+  margin-bottom: 25px;
+}
+
+.claim-account-wrapper .input-wrapper {
+  width: 350px;
+  margin: 0 auto;
+}
+
+.ca-action {
+  width: 350px;
+  margin: 0 auto;
+}
+.ca-action .forgot-password-link {
+  float: right;
+  width: initial;
+}
+.ca-action #login-btn {
+  float: left;
+}
+
 /* Modal Stylings */
 .modal-overlay {
   position: fixed;
@@ -986,7 +1024,7 @@ a, .avatars li, img, .tabs_nav li {
     margin-bottom: 150px;
   }
 
-    #photo-upload-step2, #photo-upload-step1 {
+  #photo-upload-step2, #photo-upload-step1 {
     position: absolute;
     left: 50%;
     margin-left: -200px;
@@ -1057,6 +1095,13 @@ a, .avatars li, img, .tabs_nav li {
     padding: 0px 15px;
     text-align: center;
     display: block;
+  }
+
+  .page.claim-account {
+    margin-top: 30px;
+  }
+  .claim-account-wrapper .forgot-password-link {
+    width: 100%;
   }
 
   .page.signup {
@@ -1141,6 +1186,9 @@ a, .avatars li, img, .tabs_nav li {
 
 @media screen and (max-height: 750px) {
   .page.signup {
+    margin-top: 30px;
+  }
+  .page.claim-account {
     margin-top: 30px;
   }
 }
