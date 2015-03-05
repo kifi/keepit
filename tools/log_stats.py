@@ -25,12 +25,12 @@ def report(stats, topK = 20):
     rep_items = report.items()
     rep_items.sort(key = lambda x: -x[1][0])
     lines = []
-    lines.append(' ' * 89 + '{:<5s} | {:<5s} | {:<5s} | {:5s}'.format('min', '50%', '90%', '99%', 'max'))
+    lines.append(' ' * 89 + '{:<5s} | {:<5s} | {:<5s} | {:<5s} | {:<5s}'.format('min', '50%', '90%', '99%', 'max'))
     for i in range(min(topK, len(rep_items))):
         (k, v) = rep_items[i]
         # duration sum size min | 50% | 90% | 99% | max
         ln = "{:<60} sum: {:<9d} size: {:<6d} ".format(k, v[0], v[1]) + \
-        "{:<5d} | {:<5d} | {:<5d} | {:<5d}".format(v[2], v[4], v[5], v[6], v[3])
+        "{:<5d} | {:<5d} | {:<5d} | {:<5d} | {:<5d}".format(v[2], v[4], v[5], v[6], v[3])
         lines.append(ln)
     return lines
 
