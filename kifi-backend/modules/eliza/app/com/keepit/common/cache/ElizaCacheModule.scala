@@ -9,7 +9,7 @@ import com.keepit.model._
 import com.keepit.social.BasicUserUserIdCache
 import com.keepit.eliza.model._
 import com.keepit.eliza.commanders.InboxUriSummaryCache
-import com.keepit.search.ActiveExperimentsCache
+import com.keepit.search.{ ArticleSearchResultCache, InitialSearchIdCache, ActiveExperimentsCache }
 import com.keepit.common.usersegment.UserSegmentCache
 
 case class ElizaCacheModule(cachePluginModules: CachePluginModule*) extends CacheModule(cachePluginModules: _*) {
@@ -68,6 +68,16 @@ case class ElizaCacheModule(cachePluginModules: CachePluginModule*) extends Cach
   @Provides
   def uriSummaryCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new URISummaryCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 30 days))
+
+  @Singleton
+  @Provides
+  def searchIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new InitialSearchIdCache(stats, accessLog, (outerRepo, 1 hour))
+
+  @Singleton
+  @Provides
+  def searchArticleCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new ArticleSearchResultCache(stats, accessLog, (outerRepo, 1 hour))
 
   @Singleton
   @Provides
