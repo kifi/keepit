@@ -27,9 +27,13 @@ abstract class JsoupBasedExtractor(url: URI, maxContentChars: Int) extends Extra
   }
 
   def getContent() = {
-    val content = parse(doc)
-    if (content.length > maxContentChars) log.warn(s"max number of characters reached: ${url}")
-    content.take(maxContentChars)
+    if (doc != null) {
+      val content = parse(doc)
+      if (content.length > maxContentChars) log.warn(s"max number of characters reached: ${url}")
+      content.take(maxContentChars)
+    } else {
+      ""
+    }
   }
 
   def getMetadata(name: String): Option[String] = {
