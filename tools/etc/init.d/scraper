@@ -20,16 +20,16 @@ maxShutdownTime=30                                         # maximum number of s
 pidFile="$applDir/$serviceNameLo.pid"                      # name of PID file (PID = process ID number)
 #yourkit="-agentpath:/opt/yjp/bin/linux-x86-64/libyjpagent.so=port=4242,dir=~/profiles,logdir=/home/fortytwo/run/scraper/log" #Yourkit profiler agent
 #newrelic="-javaagent:/opt/newrelic/newrelic.jar -Dnewrelic.bootstrap_classpath=true"
-jmxArgs="-Dscraper.plugin.async=false -Dcom.sun.management.jmxremote.port=9999 -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false" # remote JMX
+jmxArgs="-Djava.net.preferIPv4Stack=true -Dcom.sun.management.jmxremote.port=9999 -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false" # remote JMX
 javaCommand="java"                                         # name of the Java launcher without the path
 javaExe="$JAVA_HOME/bin/$javaCommand"                      # file name of the Java application launcher executable
 javaGc="-Xloggc:log/gc.log -XX:+PrintGCDetails -XX:+PrintGCTimeStamps -XX:+PrintGCDateStamps -XX:+PrintTenuringDistribution -XX:PermSize=64m -XX:MaxPermSize=256m -XX:+UseConcMarkSweepGC -XX:+CMSClassUnloadingEnabled -XX:+HeapDumpOnOutOfMemoryError"
 #echo applDir=$applDir
-classpathLine=`grep "classpath=" $applDir/start | sed 's/.*"\(.*\)".*/\1/'`
+classpathLine=`grep "classpath=" $applDir/bin/$serviceNameLo | sed 's/.*"\(.*\)".*/\1/' | sed "s:\\\$lib_dir:$applDir/lib:g"`
 #echo classpathLine=$classpathLine
 classpath=`echo "$classpathLine" | sed 's%$scriptdir%'$applDir'%g'`
 #echo classpath=$classpath
-javaArgs="$yourkit $newrelic $jmxArgs $javaGc -Dhttp.port=9000 -Xms3072M -Xmx3072m -server -Dconfig.resource=prod/$serviceNameLo.conf -Duser.dir=$applDir/ -Dlogger.resource=prod/logger.prod.xml -cp $classpath play.core.server.NettyServer $applDir"
+javaArgs="$yourkit $newrelic $jmxArgs $javaGc -Dhttp.port=9000 -Xms3g -Xmx3g -server -Dconfig.resource=prod/$serviceNameLo.conf -Duser.dir=$applDir/ -Dlogger.resource=prod/logger.prod.xml -cp $classpath play.core.server.NettyServer $applDir"
 javaCommandLine="$javaExe $javaArgs"                       # command line to start the Java service application
 javaCommandLineKeyword="prod/$serviceNameLo.conf"                     # a keyword that occurs on the commandline, used to detect an already running service process and to distinguish it from others
 
