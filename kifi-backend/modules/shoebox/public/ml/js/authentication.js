@@ -1,9 +1,28 @@
 $(function() {
 
+  //
+  // Listeners
+  //
+
   //Simple demonstration of error messages/animations
   $('.form-input').on('click keypress', hideError);
 
+  /* General Modal Functionalities */
+  $('.modal-overlay').on('click', function() {
+    if (event.target.className === 'modal-overlay' || event.target.className === 'modal-cell') {
+      hideModal();
+    }
+  });
+  $('.modal-x').click(hideModal);
+  $('.modal-button-cancel').click(hideModal);
 
+  /* Forgot password */
+  $('.forgot-password-link').click(showForgotPasswordModal);
+  $('.forgot-password-modal .modal-x').click(resetForgotPasswordModal);
+  $('.forgot-password-modal .modal-button-cancel').click(resetForgotPasswordModal);
+  $('.forgot-password-modal .modal-button-action').click(submitForgotPassword);
+
+  /* Signup With Email */
   $('#upload-image-btn').click(function() {
     $("#photo-upload-step2").fadeIn();
     $("#photo-upload-step1").fadeOut();
@@ -173,7 +192,65 @@ $(function() {
   };
   $('.signup-email').submit(kifi.signupGetEmail);
 
+
+  //
+  // Modal Functions
+  //
+  function hideModal() {
+    event.preventDefault();
+    $('.modal-overlay').removeClass('show');
+  }
+
+  function showForgotPasswordModal() {
+    $('.modal-overlay.forgot-password').addClass('show');
+    var modal = $('.forgot-password-modal');
+    modal.find('.fp-form').show();
+    modal.find('.fp-success').hide();
+  }
+
+  function submitForgotPassword() {
+    event.preventDefault();
+
+    // validate email
+    var $email = $('.fp-input');
+    var validEmail = validateEmailAddress($email);
+    var emailError = $('#error-fp');
+
+    if (!validEmail) {
+      error(emailError, 'Sorry invalid email');
+      $('.fp-input').focus().select();
+      return;
+    }
+    // make request
+    var actionUri = $('.fp-form')[0].action;
+    $.postJson(actionUri, {email: validEmail})
+    .done(function () {
+      // TRACK
+      // show success pane, hide original pane
+      var modal = $('.forgot-password-modal');
+      modal.find('.fp-address').html(validEmail);
+      modal.find('.fp-form').hide();
+      modal.find('.fp-success').show();
+    })
+    .fail(function () {
+      // TRACK
+      var emailError = $('#error-fp');
+      error(emailError, 'Sorry, we don’t recognize this email address.');
+      $('.fp-input').focus().select();
+    });
+  }
+
+  function resetForgotPasswordModal() {
+    hideModal();
+    var modal = $('.forgot-password-modal');
+    modal.find('.fp-form').show();
+    modal.find('.fp-success').hide();
+  }
+
+
+  //
   // Utilities
+  //
   function error(errorField, errorHtml) {
     $('#center_container').addClass('shake');
     errorField.html(errorHtml).fadeIn();
