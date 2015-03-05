@@ -23,5 +23,16 @@
     </button>
     <span class="kf-upu-count" data-n="{{user.mLibraries|num}}" ng-if="!user.mLibraries">libraries in common</span>
   </div>
-  <button class="kf-upu-connect">Connect</button>
+  <button class="kf-upu-connect kf-upu-button" ng-class="{'kf-connected': user.isFriend, 'kf-sent': user.friendRequestSentAt, 'kf-busy': friendStatusChanging}" ng-click="onClickPrimaryButton()">
+    <span class="kf-upu-connect-text" ng-class="{'svg-checkmark': user.isFriend}"></span>
+  </button>
+  <div class="kf-upu-request" ng-if="user.friendRequestReceivedAt">
+    <div class="kf-upu-request-text-1">
+      <div class="kf-upu-request-text-2">
+        {{user.firstName}} wants&nbsp;to&nbsp;connect
+      </div>
+    </div>
+    <button class="kf-upu-decline kf-upu-button" ng-click="decline()">Decline</button>
+    <button class="kf-upu-accept kf-upu-button" ng-click="accept()">Accept</button>
+  </div>
 </li>

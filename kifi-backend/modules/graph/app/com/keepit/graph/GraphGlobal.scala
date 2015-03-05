@@ -19,7 +19,7 @@ object GraphGlobal extends FortyTwoGlobal(Prod) with GraphServices {
 
 trait GraphServices { self: FortyTwoGlobal =>
   def startGraphServices() {
-    require(injector.instance[GraphManagerPlugin] != null) //make sure its not lazy loaded
     require(injector.instance[HealthcheckPlugin] != null) //make sure its not lazy loaded
+    require(injector.instance[GraphManagerPlugin] != null) //make sure its not lazy loaded
   }
 }

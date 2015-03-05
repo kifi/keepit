@@ -77,8 +77,8 @@ angular.module('kifi')
 
       requests: requests,
 
-      unSearchFriend: function (userExtId) {
-        return $http.post(env.xhrBase + '/user/' + userExtId + '/exclude', {}).then(function () {
+      unSearchFriend: function (userId) {
+        return $http.post(env.xhrBase + '/user/' + userId + '/exclude', {}).then(function () {
           kifiFriendsService.expireAll();
           api.getKifiFriends();
           $analytics.eventTrack('user_clicked_page', {
@@ -88,8 +88,8 @@ angular.module('kifi')
         });
       },
 
-      reSearchFriend: function (userExtId) {
-        return $http.post(env.xhrBase + '/user/' + userExtId + '/include', {}).then(function () {
+      reSearchFriend: function (userId) {
+        return $http.post(env.xhrBase + '/user/' + userId + '/include', {}).then(function () {
           kifiFriendsService.expireAll();
           api.getKifiFriends();
           $analytics.eventTrack('user_clicked_page', {
@@ -99,8 +99,8 @@ angular.module('kifi')
         });
       },
 
-      acceptRequest: function (extId) {
-        return $http.post(env.xhrBase + '/user/' + extId + '/friend', {}).then(function () {
+      acceptRequest: function (userId) {
+        return $http.post(env.xhrBase + '/user/' + userId + '/friend', {}).then(function () {
           kifiFriendsService.expireAll();
           kifiFriendRequestsService.expireAll();
           api.getRequests();
@@ -112,8 +112,8 @@ angular.module('kifi')
         });
       },
 
-      ignoreRequest: function (extId) {
-        return $http.post(env.xhrBase + '/user/' + extId + '/ignoreRequest', {}).then(function () {
+      ignoreRequest: function (userId) {
+        return $http.post(env.xhrBase + '/user/' + userId + '/ignoreRequest', {}).then(function () {
           kifiFriendsService.expireAll();
           kifiFriendRequestsService.expireAll();
           api.getRequests();
@@ -124,10 +124,10 @@ angular.module('kifi')
         });
       },
 
-      unfriend: function (userExtId) {
-        return $http.post(env.xhrBase + '/user/' + userExtId + '/unfriend', {}).then(function () {
+      unfriend: function (userId) {
+        return $http.post(env.xhrBase + '/user/' + userId + '/unfriend', {}).then(function () {
           kifiFriendsService.expireAll();
-          api.getKifiFriends();
+          api.getKifiFriends(); // TODO: kill these assumptions about needing a cached friend list
           $analytics.eventTrack('user_clicked_page', {
             'action': 'unFriend',
             'path': $location.path()
