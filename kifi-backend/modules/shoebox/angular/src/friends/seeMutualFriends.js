@@ -11,11 +11,10 @@ angular.module('kifi')
       templateUrl: 'friends/seeMutualFriends.tpl.html',
       require: '^kfModal',
       link: function (scope, element, attrs, kfModalCtrl) {
-        scope.actionText = 'Connect';
-        scope.clickable = true;
-
         var user = scope.modalData;
         _.assign(scope, _.pick(user, 'id', 'fullName', 'numMutualFriends', 'pictureName', 'username'));
+        scope.actionText = user.isFriend ? '' : 'Connect';
+        scope.clickable = true;
 
         // Divide up list of mutual friends into list of pairs of mutual
         // friends for two-column display in modal.
