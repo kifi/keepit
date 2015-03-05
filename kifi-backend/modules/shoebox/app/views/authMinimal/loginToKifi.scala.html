@@ -24,12 +24,45 @@
             <input type="password" name="password" class="form-input login-password" placeholder="Your password">
             <div id="error-login-password" class="error"></div>
           </div>
-          <a href="#" class="forgot-password">Forgot your password?</a>
+          <a href="#" class="forgot-password-link">Forgot your password?</a>
           <button id="login-btn" class="btn-authentication btn-login" type="submit">Log In</button>
         </form>
       </div>
     </div>
   </div>
+
+  <div class="modal-overlay forgot-password">
+    <div class="modal-cell">
+      <div class="modal forgot-password-modal">
+        <div class="modal-x">&times;</div>
+        <div class="modal-title">I forgot my password</div>
+
+        <form class="fp-form" action="@com.keepit.controllers.core.routes.AuthController.forgotPassword()" novalidate>
+          <p class="modal-text">
+            To reset your password, please enter<br>
+            the email address you use to log in.
+          </p>
+          <input class="fp-input form-input" type="email" name="forgot-password-email" placeholder="Your email address">
+          <div id="error-fp" class="error"></div>
+          <div class="modal-buttons">
+            <span><button class="modal-button-cancel">Cancel</button></span>
+            <span><button class="modal-button-action">Submit</button></span>
+          </div>
+        </form>
+
+        <div class="fp-success">
+          <p class="modal-text">We just sent instructions for resetting your password to:</p>
+          <div class="fp-address"></div>
+          <div class="modal-buttons">
+            <button class="modal-button-cancel">Close</button>
+          </div>
+        </div>
+
+
+      </div>
+    </div>
+  </div>
+
 }
 @scripts = {
   <script src="/assets/ml/js/authentication.js"></script>
