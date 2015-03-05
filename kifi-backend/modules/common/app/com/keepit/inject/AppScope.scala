@@ -132,7 +132,7 @@ class AppScope extends Scope with Logging {
               promise.complete(Try(createInstance(key, unscoped)))
               promise.future
           }
-          Try(Await.result(instFuture, Duration(10, scala.concurrent.duration.SECONDS)).asInstanceOf[T]) match {
+          Try(Await.result(instFuture, Duration(45, scala.concurrent.duration.SECONDS)).asInstanceOf[T]) match {
             case Success(res) => res
             case Failure(ex) =>
               throw new Exception(s"Guice problem getting: $key", ex)
