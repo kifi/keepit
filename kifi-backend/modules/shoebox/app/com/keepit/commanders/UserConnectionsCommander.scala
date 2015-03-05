@@ -276,17 +276,17 @@ class UserConnectionsCommander @Inject() (
             }
             userConnectionRepo.addConnections(friendReq.senderId, Set(friendReq.recipientId), requested = true)
 
-            elizaServiceClient.sendToUser(friendReq.senderId, Json.arr("new_friends", Set(basicUserRepo.load(friendReq.recipientId))))
-            elizaServiceClient.sendToUser(friendReq.recipientId, Json.arr("new_friends", Set(basicUserRepo.load(friendReq.senderId))))
             s.onTransactionSuccess {
+              log.info("just made a friend! updating typeahead, user graph index now.")
+              searchClient.updateUserGraph()
               Seq(friendReq.senderId, friendReq.recipientId) foreach { id =>
                 socialUserTypeahead.refresh(id)
                 kifiUserTypeahead.refresh(id)
               }
+              elizaServiceClient.sendToUser(friendReq.senderId, Json.arr("new_friends", Set(basicUserRepo.load(friendReq.recipientId))))
+              elizaServiceClient.sendToUser(friendReq.recipientId, Json.arr("new_friends", Set(basicUserRepo.load(friendReq.senderId))))
+              sendFriendRequestAcceptedEmailAndNotification(senderId, recipient)
             }
-            log.info("just made a friend! updating user graph index now.")
-            searchClient.updateUserGraph()
-            sendFriendRequestAcceptedEmailAndNotification(senderId, recipient)
             (true, "acceptedRequest")
           } getOrElse {
             val request = friendRequestRepo.save(FriendRequest(senderId = senderId, recipientId = recipient.id.get, messageHandle = None))

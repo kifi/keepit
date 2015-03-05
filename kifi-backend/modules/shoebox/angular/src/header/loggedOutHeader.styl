@@ -17,11 +17,18 @@ search-dur = .36s
   [kifi-with-pane] &
     width: calc(100% - 322px)
 
+  .kf-mobile &
+    height: 120px
+    width: 800px
+
 .kf-loh-inner
   height: 100%
   width: 'calc(100% - %s)' % (2 * appSidePad)
   display: table
   table-layout: fixed
+
+  .kf-mobile &
+    width: 85%
 
 .kf-loh-left
   display: table-cell
@@ -35,6 +42,9 @@ search-dur = .36s
   .kf-lit>&
     width: 100px
 
+  .kf-mobile &
+    width: 410px
+
 .kf-loh-logo
   display: inline-block
   vertical-align: middle
@@ -44,6 +54,11 @@ search-dur = .36s
   background-repeat: no-repeat
   background-size: 70px auto
   outline-color: #fff
+
+  .kf-mobile &
+    width: 180px
+    height: 68px
+    background-size: 170px auto
 
 .kf-loh-tagline
   display: inline-block
@@ -57,6 +72,12 @@ search-dur = .36s
 
   .kf-lit &
     opacity: 0
+
+  .kf-mobile &
+    width: 200px
+    line-height: 24px
+    font-size: 20px
+    font-smoothing: antialiased
 
 .kf-loh-center
   display: table-cell
@@ -199,6 +220,12 @@ input.kf-loh-search-input
   font-size: 14px
   position: relative  // for follow button
 
+  .kf-mobile &
+    vertical-align: middle
+    width: 215px
+    font-size: 28px
+    line-height: 120px
+
 .kf-loh-links
   position: relative  // for follow button
 
@@ -211,6 +238,15 @@ input.kf-loh-search-input
   &:hover
     color: #686d79
 
+  .kf-mobile &
+    color: #1990ea
+
 .kf-loh-dot
   margin: 0 10px
   cursor: default
+
+  .kf-mobile &
+    display: inline-block
+    position: relative
+    top: -2px
+    font-size: 20px

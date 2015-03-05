@@ -7,9 +7,9 @@
     <div class="kf-friend-card-count"><ng-pluralize count="friend.friendCount" when="{'one': '1 connection ', 'other': '{} connections '}"></ng-pluralize>on Kifi</div>
   </span>
   <span class="kf-friend-card-button">Connection</span>
-  <ul class="kf-dropdown-menu kf-friend-card-menu">
-    <li ng-show="friend.searchFriend"><a href="javascript:" ng-click="unsearchfriend()">Hide {{friend.firstName}}’s keeps in my search results</a></li>
-    <li ng-show="!friend.searchFriend"><a href="javascript:" ng-click="researchfriend()">Show {{friend.firstName}}’s keeps in my search results</a></li>
-    <li><a href="javascript:" ng-click="unfriend()">Remove connection</a></li>
-  </ul>
+  <menu class="kf-friend-card-menu kf-dropdown-menu">
+    <button class="kf-dropdown-menu-item" ng-click="unsearchfriend()" ng-if="friend.searchFriend">Hide {{friend.firstName}}’s keeps in my search results</button>
+    <button class="kf-dropdown-menu-item" ng-click="researchfriend()" ng-if="!friend.searchFriend">Show {{friend.firstName}}’s keeps in my search results</button>
+    <button class="kf-dropdown-menu-item" ng-click="unfriend()">Remove connection</button>
+  </menu>
 </div>

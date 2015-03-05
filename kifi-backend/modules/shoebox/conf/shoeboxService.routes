@@ -24,6 +24,7 @@ GET     /new/signupEmail            @com.keepit.controllers.core.AuthController.
 GET     /new/signupName             @com.keepit.controllers.core.AuthController.signupPageGetName()
 GET     /new/login                  @com.keepit.controllers.core.AuthController.loginPageMinimal()
 GET     /new/loginNoTwitter         @com.keepit.controllers.core.AuthController.loginPageNoTwitterMinimal()
+GET     /new/claimAccount           @com.keepit.controllers.core.AuthController.claimAccountMinimal()
 
 # End new signup pages
 

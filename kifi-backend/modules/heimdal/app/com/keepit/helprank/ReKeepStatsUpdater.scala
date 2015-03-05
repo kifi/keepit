@@ -34,7 +34,7 @@ class ReKeepStatsUpdater @Inject() (
     airbrake: AirbrakeNotifier,
     attributionCmdr: AttributionCommander) extends FortyTwoActor(airbrake) with Logging {
   def receive() = {
-    case UpdateStats => attributionCmdr.updateAllReKeepStats()
+    case UpdateStats => attributionCmdr.updateAllReKeepStats(1)
     case m => throw new UnsupportedActorMessage(m)
   }
 }

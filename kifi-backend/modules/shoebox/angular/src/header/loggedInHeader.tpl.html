@@ -30,19 +30,19 @@
     <div class="kf-lih-right kifi-guide-target-3">
       <button class="kf-lih-add-link sprite sprite-add-link" ng-click="addKeeps(library)">Add a link</button>
       <a href="/tags/manage" class="kf-lih-tags"><span class="svg-tag-white"></span>Manage tags</a>
-      <span class="kf-lih-dropdown-parent" ng-mouseenter="showMenu($event)" ng-mouseleave="hideMenu($event)"  ng-click="hideMenu($event)">
+      <span class="kf-lih-dropdown-parent" kf-hover-menu>
         <a href="/connections" class="kf-lih-friends"><span class="svg-friends-white"></span>Connections</a>
         <menu class="kf-dropdown-menu">
-          <a href="/connections">Your Kifi connections</a>
-          <a href="/invite">Invite someone to Kifi</a>
+          <a class="kf-dropdown-menu-item" href="/connections">Your Kifi connections</a>
+          <a class="kf-dropdown-menu-item" href="/invite">Invite someone to Kifi</a>
         </menu>
       </span>
-      <span class="kf-lih-dropdown-parent" ng-mouseenter="showMenu($event)" ng-mouseleave="hideMenu($event)" ng-click="hideMenu($event)">
+      <span class="kf-lih-dropdown-parent" kf-hover-menu>
         <a href="{{me|profileUrl}}" class="kf-lih-profile" style="background-image:url({{me | pic:100}})"></a>
         <menu class="kf-dropdown-menu">
-          <a href="{{me|profileUrl}}">Your Profile</a>
-          <a href="/profile">Settings</a>
-          <a href="/logout" target="_top">Log out</a>
+          <a class="kf-dropdown-menu-item" href="{{me|profileUrl}}">Your Profile</a>
+          <a class="kf-dropdown-menu-item" href="/profile">Settings</a>
+          <a class="kf-dropdown-menu-item" href="/logout" target="_top">Log out</a>
         </menu>
       </span>
     </div>

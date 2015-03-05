@@ -1,4 +1,11 @@
 <li class="kf-upu-card" ng-class="{'kf-self': user.id === me.id}">
+  <div class="kf-upu-settings" kf-hover-menu ng-if="mutual.isFriend && user.id !== me.id">
+    <button class="kf-upu-settings-btn svg-settings-gear-gray"></button>
+    <menu class="kf-upu-settings-menu kf-dropdown-menu">
+      <button class="kifi-upu-settings-unsearch kf-dropdown-menu-item" ng-click="toggleSearch()">{{mutual.unsearched ? 'Show' : 'Hide'}} {{mutual.firstName}}’s keeps in my search results</button>
+      <button class="kifi-upu-settings-unfriend kf-dropdown-menu-item" ng-click="unfriend()">Remove connection</button>
+    </menu>
+  </div>
   <a class="kf-upu-pic-a" href="{{user|profileUrl}}"><img class="kf-upu-pic" ng-src="{{user|pic:200}}"></a>
   <div class="kf-upu-name-wrap-1">
     <div class="kf-upu-name-wrap-2">
@@ -13,15 +20,23 @@
     <li class="kf-upu-stat" ng-if="user.followers"><a class="kf-upu-stat-a" href="{{user|profileUrl:'followers'}}">Followers<div class="kf-upu-stat-n">{{user.followers|num}}</div></a></li>
   </ul>
   <div class="kf-upu-counts" ng-if="$root.userLoggedIn">
-    <div class="kf-upu-counts-title">You and {{(user.id === me.id ? profile : user).firstName}} have:</div>
-    <button class="kf-upu-count" data-n="{{user.mConnections|num}}" ng-click="showMutualConnections()" ng-if="user.mConnections">
-      <ng-pluralize count="user.mConnections" when="{'one': 'mutual connection', 'other': 'mutual connections'}"></ng-pluralize>
+    <div class="kf-upu-counts-title">You and {{mutual.firstName}} have:</div>
+    <button class="kf-upu-count" data-n="{{mutual.connections|num}}" ng-click="showMutualConnections()" ng-if="mutual.connections">
+      <ng-pluralize count="mutual.connections" when="{'one': 'mutual connection', 'other': 'mutual connections'}"></ng-pluralize>
     </button>
-    <span class="kf-upu-count" data-n="{{user.mConnections|num}}" ng-if="!user.mConnections">mutual connections</span>
-    <button class="kf-upu-count" data-n="{{user.mLibraries|num}}" ng-if="user.mLibraries">
-      <ng-pluralize count="user.mLibraries" when="{'one': 'library in common', 'other': 'libraries in common'}"></ng-pluralize>
-    </button>
-    <span class="kf-upu-count" data-n="{{user.mLibraries|num}}" ng-if="!user.mLibraries">libraries in common</span>
+    <span class="kf-upu-count" data-n="0" ng-if="!mutual.connections">mutual connections</span>
+    <span class="kf-upu-count" data-n="{{mutual.libraries|num}}">libraries in common</span>
   </div>
-  <button class="kf-upu-connect">Connect</button>
+  <button class="kf-upu-connect kf-upu-button" ng-class="{'kf-connected': mutual.isFriend, 'kf-sent': mutual.friendRequestSentAt, 'kf-busy': friendStatusChanging}" ng-click="onClickPrimaryButton()">
+    <span class="kf-upu-connect-text" ng-class="{'svg-checkmark': mutual.isFriend}"></span>
+  </button>
+  <div class="kf-upu-request" ng-if="mutual.friendRequestReceivedAt">
+    <div class="kf-upu-request-text-1">
+      <div class="kf-upu-request-text-2">
+        {{mutual.firstName}} wants&nbsp;to&nbsp;connect
+      </div>
+    </div>
+    <button class="kf-upu-decline kf-upu-button" ng-click="decline()">Decline</button>
+    <button class="kf-upu-accept kf-upu-button" ng-click="accept()">Accept</button>
+  </div>
 </li>
