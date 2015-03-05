@@ -24,9 +24,10 @@ trait ArticleKeyHolder {
   def kind: String
   def bestVersion: Option[ArticleVersion]
   def latestVersion: Option[ArticleVersion]
-  val articleKind = ArticleKind.byTypeCode(kind)
-  def getLatestKey: Option[ArticleKey] = bestVersion.map(ArticleKey(uriId, articleKind, _))
-  def getBestKey: Option[ArticleKey] = latestVersion.map(ArticleKey(uriId, articleKind, _))
+  def articleKind = ArticleKind.byTypeCode(kind)
+  def getLatestKey: Option[ArticleKey] = bestVersion.map(toKey)
+  def getBestKey: Option[ArticleKey] = latestVersion.map(toKey)
+  private def toKey(version: ArticleVersion) = ArticleKey(uriId, articleKind, version)
 }
 
 case class BasicArticleInfo(
