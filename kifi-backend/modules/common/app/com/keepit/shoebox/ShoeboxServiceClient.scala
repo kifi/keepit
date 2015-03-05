@@ -394,7 +394,7 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getUriIdsInCollection(collectionId: Id[Collection]): Future[Seq[KeepUriAndTime]] = {
-    call(Shoebox.internal.getUriIdsInCollection(collectionId), callTimeouts = longTimeout) map { r =>
+    call(Shoebox.internal.getUriIdsInCollection(collectionId), callTimeouts = extraLongTimeout, routingStrategy = offlinePriority) map { r =>
       Json.fromJson[Seq[KeepUriAndTime]](r.json).get
     }
   }
@@ -696,7 +696,7 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getLapsedUsersForDelighted(maxCount: Int, skipCount: Int, after: DateTime, before: Option[DateTime]): Future[Seq[DelightedUserRegistrationInfo]] = {
-    call(Shoebox.internal.getLapsedUsersForDelighted(maxCount, skipCount, after, before), callTimeouts = longTimeout).map { r =>
+    call(Shoebox.internal.getLapsedUsersForDelighted(maxCount, skipCount, after, before), callTimeouts = extraLongTimeout, routingStrategy = offlinePriority).map { r =>
       r.json.as[Seq[DelightedUserRegistrationInfo]]
     }
   }
