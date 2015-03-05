@@ -595,11 +595,11 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def triggerRawKeepImport(): Unit = {
-    callLeader(Shoebox.internal.triggerRawKeepImport())
+    call(Shoebox.internal.triggerRawKeepImport(), callTimeouts = extraLongTimeout, routingStrategy = offlinePriority)
   }
 
   def triggerSocialGraphFetch(socialUserInfoId: Id[SocialUserInfo]): Future[Unit] = {
-    callLeader(call = Shoebox.internal.triggerSocialGraphFetch(socialUserInfoId), callTimeouts = CallTimeouts(responseTimeout = Some(300000))).map(_ => ())(ExecutionContext.immediate)
+    call(call = Shoebox.internal.triggerSocialGraphFetch(socialUserInfoId), callTimeouts = extraLongTimeout, routingStrategy = offlinePriority).map(_ => ())(ExecutionContext.immediate)
   }
 
   def getUserConnectionsChanged(seqNum: SequenceNumber[UserConnection], fetchSize: Int): Future[Seq[UserConnection]] = {
