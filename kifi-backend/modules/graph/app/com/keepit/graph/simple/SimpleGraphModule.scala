@@ -20,7 +20,7 @@ trait SimpleGraphModule extends GraphManagerModule {
         log.info(s"Successfully loaded SimpleGraph from disk. State:\n$state")
         (graph, state)
       case Failure(ex) =>
-        airbrake.notify("Failed to load SimpleGraph from disk", ex)
+        //airbrake.notify("Failed to load SimpleGraph from disk", ex)
         log.error(s"Failed to load SimpleGraph from disk - ${ex}")
         log.info(s"Rebuilding SimpleGraph from scratch")
         (SimpleGraph(), GraphUpdaterState.empty)
