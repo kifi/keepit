@@ -15,6 +15,10 @@ import play.api.libs.json._
 import scala.concurrent.Future
 import scala.util.{ Failure, Success, Try }
 
+case class ProfileStats(libs: Int, followers: Int, connections: Int)
+
+case class ProfileMutualStats(libs: Int, connections: Int)
+
 class UserProfileController @Inject() (
     db: Database,
     userRepo: UserRepo,
@@ -76,7 +80,7 @@ class UserProfileController @Inject() (
             }
             val headUserJsonObjs = sortedHeadUserWithStatus map {
               case (userId, userWFS) =>
-                loadProfileUser(userId, userWFS, viewerIdOpt)
+                loadProfileUser(userId, userWFS, viewerIdOpt, user.id)
             }
             (headUserJsonObjs, userMap)
           }
@@ -106,8 +110,8 @@ class UserProfileController @Inject() (
               head.map(id => id.userId -> headUserWithStatus(id.userId))
             }
             val headUserJsonObjs = sortedHeadUserWithStatus map {
-              case (userId, userWFS) =>
-                loadProfileUser(userId, userWFS, viewerIdOpt)
+              case (cardUserId, cardUserWFS) =>
+                loadProfileUser(cardUserId, cardUserWFS, viewerIdOpt, user.id)
             }
             (headUserJsonObjs, userMap)
           }
@@ -129,8 +133,8 @@ class UserProfileController @Inject() (
           viewerIdOpt.map { viewerId =>
             friendStatusCommander.augmentUsers(viewerId, userMap)
           } getOrElse userMap.mapValues(BasicUserWithFriendStatus.fromWithoutFriendStatus) map {
-            case (userId, userWFS) =>
-              loadProfileUser(userId, userWFS, viewerIdOpt)
+            case (cardUserId, cardUserWFS) =>
+              loadProfileUser(cardUserId, cardUserWFS, viewerIdOpt, None)
           }
         }
         Ok(Json.obj("users" -> userJsonObjs))
@@ -139,27 +143,44 @@ class UserProfileController @Inject() (
     }
   }
 
-  // visible for testing
-  //todo(eishay): caching work!
-  def loadProfileUser(userId: Id[User], user: BasicUserWithFriendStatus, viewerIdOpt: Option[Id[User]])(implicit session: RSession): JsValue = {
-    val json = Json.toJson(user).as[JsObject]
-    //global or personalized
+  private def loadProfileStats(userId: Id[User], viewerIdOpt: Option[Id[User]])(implicit session: RSession): ProfileStats = {
     val libCount = viewerIdOpt.map(viewerId => libraryRepo.countLibrariesForOtherUser(userId, viewerId)).getOrElse(libraryRepo.countLibrariesOfUserFromAnonymous(userId)) //not cached
     //global
     val followersCount = libraryCommander.countFollowers(userId, viewerIdOpt)
     val connectionCount = userConnectionRepo.getConnectionCount(userId) //cached
+    ProfileStats(libs = libCount, followers = followersCount, connections = connectionCount)
+  }
+
+  private def loadProfileMutualStats(userId: Id[User], viewerId: Id[User])(implicit session: RSession): ProfileMutualStats = {
+    val followingLibCount = libraryRepo.countLibrariesOfOwnerUserFollow(userId, viewerId) //not cached
+    val mutualConnectionCount = userConnectionRepo.getMutualConnectionCount(userId, viewerId) //cached
+    ProfileMutualStats(libs = followingLibCount, connections = mutualConnectionCount)
+  }
+
+  private def profileUserJson(user: BasicUserWithFriendStatus, profileStats: ProfileStats, profileMutualStatsOpt: Option[ProfileMutualStats])(implicit session: RSession): JsValue = {
+    val json = Json.toJson(user).as[JsObject]
+    //global or personalized
     val jsonWithGlobalCounts = json +
-      ("libraries" -> JsNumber(libCount)) +
-      ("followers" -> JsNumber(followersCount)) +
-      ("connections" -> JsNumber(connectionCount))
+      ("libraries" -> JsNumber(profileStats.libs)) +
+      ("followers" -> JsNumber(profileStats.followers)) +
+      ("connections" -> JsNumber(profileStats.connections))
     //mutual
-    viewerIdOpt.map { viewerId =>
-      val followingLibCount = libraryRepo.countLibrariesOfOwnerUserFollow(userId, viewerId) //not cached
-      val mutualConnectionCount = userConnectionRepo.getMutualConnectionCount(userId, viewerId) //cached
+    profileMutualStatsOpt.map { profileMutualStats =>
       jsonWithGlobalCounts +
-        ("mConnections" -> JsNumber(mutualConnectionCount)) +
-        ("mLibraries" -> JsNumber(followingLibCount))
+        ("mConnections" -> JsNumber(profileMutualStats.connections)) +
+        ("mLibraries" -> JsNumber(profileMutualStats.libs))
     } getOrElse jsonWithGlobalCounts
+  }
+
+  def loadProfileUser(userId: Id[User], user: BasicUserWithFriendStatus, viewerIdOpt: Option[Id[User]], profilePageOwnerId: Option[Id[User]])(implicit session: RSession): JsValue = {
+    val mutualStatus = viewerIdOpt.map { viewerId =>
+      if (viewerId == userId && profilePageOwnerId.nonEmpty) {
+        loadProfileMutualStats(profilePageOwnerId.get, viewerId)
+      } else {
+        loadProfileMutualStats(userId, viewerId)
+      }
+    }
+    profileUserJson(user, loadProfileStats(userId, viewerIdOpt), mutualStatus)
   }
 
   def getMutualConnections(extUserId: ExternalId[User]) = UserAction { request =>
