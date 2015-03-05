@@ -13,14 +13,26 @@ angular.module('kifi')
       },
       templateUrl: 'userProfile/userProfileUser.tpl.html',
       link: function (scope) {
-        scope.profile = scope.$parent.$parent.$parent.profile; // TODO: pass all the way down?
-        scope.me = profileService.me;
+        if (scope.$root.userLoggedIn) {
+          scope.me = profileService.me;
+
+          // unpacking information about relationship, since it's (confusingly) not always about the user on this card
+          scope.mutual = _.pick(  // TODO: pass profile all the way down?
+            scope.me && scope.me.id === scope.user.id ? scope.$parent.$parent.$parent.profile : scope.user,
+            'id', 'firstName', 'lastName', 'pictureName', 'username');
+          scope.mutual.connections = scope.user.mConnections;
+          scope.mutual.libraries = scope.user.mLibraries;
+          _.assign(scope.mutual, _.pick(scope.user, 'isFriend', 'friendRequestSentAt', 'friendRequestReceivedAt'));
+          ['mConnections','mLibraries','isFriend','friendRequestSentAt','friendRequestReceivedAt'].forEach(function (key) {
+            delete scope.user[key];
+          });
+        }
 
         scope.showMutualConnections = function () {
-          userProfileActionService.getMutualConnections(scope.user.id).then(function (data) {
-            var person = _.assign(scope.user, 'id', 'username', 'pictureName');
-            person.fullName = scope.user.firstName + ' ' + scope.user.lastName;
-            person.numMutualFriends = scope.user.mConnections;
+          userProfileActionService.getMutualConnections(scope.mutual.id).then(function (data) {
+            var person = _.pick(scope.mutual, 'id', 'username', 'pictureName', 'isFriend');
+            person.fullName = scope.mutual.firstName + ' ' + scope.mutual.lastName;
+            person.numMutualFriends = scope.mutual.connections;
             person.mutualFriends = data.users;
             modalService.open({
               template: 'friends/seeMutualFriendsModal.tpl.html',
@@ -34,22 +46,22 @@ angular.module('kifi')
             return;
           } else if (!scope.$root.userLoggedIn) {
             signupService.register({toConnectWith: scope.user});
-          } else if (scope.user.isFriend) {
+          } else if (scope.mutual.isFriend) {
             modalService.open({
               template: 'friends/unfriendConfirmModal.tpl.html',
-              scope: scope
+              scope: _.assign(scope.$root.$new(), {friend: scope.mutual, reallyUnfriend: reallyUnfriend})
             });
-          } else if (!scope.user.friendRequestSentAt) {
+          } else if (!scope.mutual.friendRequestSentAt) {
             var btnDuration = 600;  // easier to duplicate from stylesheet than to read from element
             var minimumDuration = $timeout(angular.noop, btnDuration / 2 + 160);  // added delay to avoid bouncing feeling
             scope.friendStatusChanging = true;
-            inviteService.friendRequest(scope.user.id).then(function (data) {
+            inviteService.friendRequest(scope.mutual.id).then(function (data) {
               minimumDuration.then(function () {
-                delete scope.user.friendRequestReceivedAt; // just to be sure, old server bug made it possible
+                delete scope.mutual.friendRequestReceivedAt; // just to be sure, old server bug made it possible
                 if (data.sentRequest) {
-                  scope.user.friendRequestSentAt = Date.now();
+                  scope.mutual.friendRequestSentAt = Date.now();
                 } else if (data.acceptedRequest || data.alreadyConnected) {
-                  scope.user.isFriend = true;
+                  scope.mutual.isFriend = true;
                 }
                 scope.friendStatusChanging = false;
               });
@@ -60,30 +72,30 @@ angular.module('kifi')
         };
 
         scope.accept = function () {
-          friendService.acceptRequest(scope.user.id).then(function () {
-            scope.user.isFriend = true;
-            scope.user.friendRequestReceivedAt = null;
+          friendService.acceptRequest(scope.mutual.id).then(function () {
+            scope.mutual.isFriend = true;
+            scope.mutual.friendRequestReceivedAt = null;
           });
         };
 
         scope.decline = function () {
-          scope.user.friendRequestReceivedAt = null;
-          friendService.ignoreRequest(scope.user.id);
+          scope.mutual.friendRequestReceivedAt = null;
+          friendService.ignoreRequest(scope.mutual.id);
         };
 
-        scope.reallyUnfriend = function () {
-          scope.user.isFriend = false;
-          friendService.unfriend(scope.user.id).then(angular.noop, function error() {
-            scope.user.isFriend = true;
+        function reallyUnfriend() {
+          scope.mutual.isFriend = false;
+          friendService.unfriend(scope.mutual.id).then(angular.noop, function error() {
+            scope.mutual.isFriend = true;
           });
-        };
+        }
 
         // scope.unSearchFriend = function () {
-        //   friendService.unSearchFriend(scope.user.id);
+        //   friendService.unSearchFriend(scope.mutual.id);
         // };
 
         // scope.reSearchFriend = function () {
-        //   friendService.reSearchFriend(scope.user.id);
+        //   friendService.reSearchFriend(scope.mutual.id);
         // };
       }
     };
