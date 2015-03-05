@@ -85,6 +85,8 @@ angular.module('kifi')
     transclude: true,
     require: '^kfModal',
     link: function (scope, element, attrs, kfModalCtrl) {
+      element.removeAttr('title');  // TODO: use a different attribute name for modal title
+
       scope.title = attrs.title || '';
       scope.actionText = attrs.actionText;
       scope.withCancel = (attrs.withCancel !== void 0) || false;
