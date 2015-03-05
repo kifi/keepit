@@ -62,10 +62,10 @@ class PersonaRecommendationIngestor @Inject() (
 
   // optimized for new user
   private def ingestLibraryRecos(userId: Id[User], libRecos: Seq[LibraryRecommendation]): Unit = {
-    val uniqueLibRecos = libRecos.groupBy(_.libraryId).map { case (id, recos) => recos.head }
+    val uniqueLibRecos = libRecos.groupBy(_.libraryId).map { case (id, recos) => recos.head }.toSeq
     val existing = db.readOnlyMaster { implicit s => libRecRepo.getLibraryIdsForUser(userId) }
     if (existing.isEmpty) {
-      db.readWrite { implicit s => uniqueLibRecos.foreach { libRecRepo.save(_) } }
+      db.readWrite { implicit s => libRecRepo.insertAll(uniqueLibRecos) }
     } else {
       db.readWrite { implicit s => uniqueLibRecos.foreach { ingestLibraryReco(_) } }
     }
@@ -73,10 +73,10 @@ class PersonaRecommendationIngestor @Inject() (
 
   // optimized for new user
   private def ingestURIRecos(userId: Id[User], uriRecos: Seq[UriRecommendation]): Unit = {
-    val uniqueUriRecos = uriRecos.groupBy(_.uriId).map { case (id, recos) => recos.head }
+    val uniqueUriRecos = uriRecos.groupBy(_.uriId).map { case (id, recos) => recos.head }.toSeq
     val existing = db.readOnlyMaster { implicit s => uriRecRepo.getUriIdsForUser(userId) }
     if (existing.isEmpty) {
-      db.readWrite { implicit s => uniqueUriRecos.foreach { uriRecRepo.save(_) } }
+      db.readWrite { implicit s => uriRecRepo.insertAll(uniqueUriRecos) }
     } else {
       db.readWrite { implicit s => uniqueUriRecos.foreach(ingestURIReco(_)) }
     }
