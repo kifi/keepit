@@ -6,10 +6,16 @@
   margin: 0 auto
   text-align: center
 
+  .kf-mobile &
+    font-size: 1.5em
+
 .kf-user-profile-header
   padding-bottom: 25px
   background: pageHeaderColor
   color: #fff
+
+  .kf-mobile &
+    padding: 10px 0 40px
 
 .kf-up-basic-info-main-content
   position: relative
@@ -165,6 +171,10 @@
   width: 100px
   border-radius: 100%
 
+  .kf-mobile &
+    width: 150px
+    height: 150px
+
 .kf-user-profile-name
   font-weight: bold
   font-size: 1.3em
@@ -181,17 +191,3 @@
     &::after
       margin-left: 5px
       content: '·'
-
-
-// Mobile styles
-
-.kf-mobile
-  .kf-user-profile
-    font-size: 1.5em
-
-  .kf-user-profile-header
-    padding: 10px 0 40px
-
-  .kf-user-profile-picture
-    width: 150px
-    height: 150px
