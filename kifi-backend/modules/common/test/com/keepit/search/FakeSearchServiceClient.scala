@@ -12,16 +12,20 @@ import com.keepit.common.healthcheck.BenchmarkResults
 
 class FakeSearchServiceClient() extends SearchServiceClientImpl(null, null, null) {
 
-  override def updateKeepIndex(): Unit = {}
+  override def warmUpUser(userId: Id[User]): Unit = {}
 
+  override def updateKeepIndex(): Unit = {}
   override def updateLibraryIndex(): Unit = {}
 
-  override def index(): Unit = {}
+  override def updateUserGraph(): Unit = {}
+  override def updateSearchFriendGraph(): Unit = {}
+  override def reindexUserGraphs(): Unit = {}
 
+  override def index(): Unit = {}
   override def reindex(): Unit = {}
+  override def articleIndexerSequenceNumber(): Future[Int] = ???
 
   override def reindexUsers(): Unit = {}
-
   override def updateUserIndex(): Unit = {}
 
   override def sharingUserInfo(userId: Id[User], uriId: Id[NormalizedURI]): Future[SharingUserInfo] =
@@ -39,8 +43,6 @@ class FakeSearchServiceClient() extends SearchServiceClientImpl(null, null, null
       Future.successful(sharingUserInfoDataFix)
     }
   }
-
-  override def articleIndexerSequenceNumber(): Future[Int] = ???
 
   override def refreshSearcher(): Unit = {}
 
@@ -73,8 +75,6 @@ class FakeSearchServiceClient() extends SearchServiceClientImpl(null, null, null
   override def resetUserConfig(id: Id[User]): Unit = {}
 
   override def getSearchDefaultConfig: Future[SearchConfig] = ???
-
-  override def warmUpUser(userId: Id[User]): Unit = {}
 
   override def augmentation(request: ItemAugmentationRequest): Future[ItemAugmentationResponse] = Future.successful {
     itemAugmentations.getOrElse(request,

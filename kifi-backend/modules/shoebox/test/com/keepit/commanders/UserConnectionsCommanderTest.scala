@@ -8,9 +8,9 @@ import com.keepit.graph.model.{ RelatedEntities, SociallyRelatedEntities }
 import com.keepit.graph.{ GraphServiceClient, FakeGraphServiceModule, FakeGraphServiceClientImpl }
 import com.keepit.model._
 import com.keepit.scraper.FakeScrapeSchedulerModule
+import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.Specification
-
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.model.UserFactory._
 import com.keepit.model.UserConnectionFactoryHelper._
@@ -27,10 +27,12 @@ class UserConnectionsCommanderTest extends Specification with ShoeboxTestInjecto
     FakeABookServiceClientModule(),
     FakeScrapeSchedulerModule(),
     FakeGraphServiceModule(),
-    FakeSocialGraphModule()
-  )
+    FakeSocialGraphModule(),
+    FakeSearchServiceClientModule())
 
-  "PeopleRecommendationCommander" should {
+  "UserConnectionsCommander" should {
+
+    // TODO: move this test case to UserCommanderTest
     "getFriendRecommendations" should {
       "return users and mutual users friend counts" in {
         withDb(modules: _*) { implicit injector =>
@@ -90,6 +92,26 @@ class UserConnectionsCommanderTest extends Specification with ShoeboxTestInjecto
 
         val actual = inject[UserConnectionsCommander].getMutualFriends(user1, user2)
         actual === commonUserIds.toSet
+      }
+    }
+  }
+
+  "friend" should {
+    "connect two users if one ignores the other's request and then tries to connect with that same other user" in {
+      withDb(modules: _*) { implicit injector =>
+        val (user1, user2, frReqId) = db.readWrite { implicit s =>
+          val user1 = user().saved
+          val user2 = user().saved
+          val frReq = inject[FriendRequestRepo].save(FriendRequest(senderId = user1.id.get, recipientId = user2.id.get, state = FriendRequestStates.IGNORED, messageHandle = None))
+          (user1, user2, frReq.id.get)
+        }
+
+        inject[UserConnectionsCommander].friend(user2.id.get, user1.externalId) === (true, "acceptedRequest")
+
+        db.readOnlyMaster { implicit s =>
+          inject[FriendRequestRepo].get(frReqId).state === FriendRequestStates.ACCEPTED
+          inject[UserConnectionRepo].areConnected(user1.id.get, user2.id.get) === true
+        }
       }
     }
   }

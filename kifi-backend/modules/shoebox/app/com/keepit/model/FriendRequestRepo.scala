@@ -19,9 +19,11 @@ import com.keepit.eliza.ElizaServiceClient
 trait FriendRequestRepo extends Repo[FriendRequest] {
   def getBySender(userId: Id[User], states: Set[State[FriendRequest]] = Set(FriendRequestStates.ACTIVE))(implicit s: RSession): Seq[FriendRequest]
   def getByRecipient(userId: Id[User], states: Set[State[FriendRequest]] = Set(FriendRequestStates.ACTIVE))(implicit s: RSession): Seq[FriendRequest]
+  def getCountBySender(userId: Id[User])(implicit s: RSession): Int
   def getCountByRecipient(userId: Id[User])(implicit s: RSession): Int
-  def getBySenderAndRecipient(senderId: Id[User], recipientId: Id[User],
-    states: Set[State[FriendRequest]] = Set(FriendRequestStates.ACTIVE))(implicit s: RSession): Option[FriendRequest]
+  def getBySenderAndRecipient(senderId: Id[User], recipientId: Id[User], states: Set[State[FriendRequest]] = Set(FriendRequestStates.ACTIVE))(implicit s: RSession): Option[FriendRequest]
+  def getBySenderAndRecipients(senderId: Id[User], recipientIds: Set[Id[User]], states: Set[State[FriendRequest]] = Set(FriendRequestStates.ACTIVE))(implicit s: RSession): Seq[FriendRequest]
+  def getBySendersAndRecipient(senderIds: Set[Id[User]], recipientId: Id[User], states: Set[State[FriendRequest]] = Set(FriendRequestStates.ACTIVE))(implicit s: RSession): Seq[FriendRequest]
 }
 
 case class FriendRequestCountKey(userId: Id[User]) extends Key[Int] {
@@ -71,14 +73,6 @@ class FriendRequestRepoImpl @Inject() (
     super.save(model)
   }
 
-  def getCountByRecipient(userId: Id[User])(implicit s: RSession): Int = {
-    friendRequestCountCache.getOrElse(FriendRequestCountKey(userId)) {
-      Query(
-        (for (fr <- rows if fr.recipientId === userId && fr.state === FriendRequestStates.ACTIVE) yield fr).length
-      ).first
-    }
-  }
-
   def getBySender(userId: Id[User], states: Set[State[FriendRequest]] = Set(FriendRequestStates.ACTIVE))(implicit s: RSession): Seq[FriendRequest] = {
     (for (fr <- rows if fr.senderId === userId && fr.state.inSet(states)) yield fr).list
   }
@@ -87,12 +81,25 @@ class FriendRequestRepoImpl @Inject() (
     (for (fr <- rows if fr.recipientId === userId && fr.state.inSet(states)) yield fr).list
   }
 
-  def getBySenderAndRecipient(senderId: Id[User], recipientId: Id[User],
-    states: Set[State[FriendRequest]] = Set(FriendRequestStates.ACTIVE))(implicit s: RSession): Option[FriendRequest] = {
-    (for (
-      fr <- rows if fr.senderId === senderId && fr.recipientId === recipientId &&
-        fr.state.inSet(states)
-    ) yield fr).sortBy(_.createdAt desc).firstOption
+  def getCountBySender(userId: Id[User])(implicit s: RSession): Int = {
+    Query((for (fr <- rows if fr.senderId === userId && fr.state === FriendRequestStates.ACTIVE) yield fr).length).first
+  }
+
+  def getCountByRecipient(userId: Id[User])(implicit s: RSession): Int = {
+    friendRequestCountCache.getOrElse(FriendRequestCountKey(userId)) {
+      Query((for (fr <- rows if fr.recipientId === userId && fr.state === FriendRequestStates.ACTIVE) yield fr).length).first
+    }
+  }
+
+  def getBySenderAndRecipient(senderId: Id[User], recipientId: Id[User], states: Set[State[FriendRequest]] = Set(FriendRequestStates.ACTIVE))(implicit s: RSession): Option[FriendRequest] = {
+    (for (fr <- rows if fr.senderId === senderId && fr.recipientId === recipientId && fr.state.inSet(states)) yield fr).sortBy(_.createdAt desc).firstOption
+  }
+
+  def getBySenderAndRecipients(senderId: Id[User], recipientIds: Set[Id[User]], states: Set[State[FriendRequest]] = Set(FriendRequestStates.ACTIVE))(implicit s: RSession): Seq[FriendRequest] = {
+    (for (fr <- rows if fr.senderId === senderId && fr.recipientId.inSet(recipientIds) && fr.state.inSet(states)) yield fr).list
+  }
+
+  def getBySendersAndRecipient(senderIds: Set[Id[User]], recipientId: Id[User], states: Set[State[FriendRequest]] = Set(FriendRequestStates.ACTIVE))(implicit s: RSession): Seq[FriendRequest] = {
+    (for (fr <- rows if fr.senderId.inSet(senderIds) && fr.recipientId === recipientId && fr.state.inSet(states)) yield fr).list
   }
 }
-
