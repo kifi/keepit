@@ -2,7 +2,7 @@ package com.keepit.rover.model
 
 import com.keepit.common.db._
 import com.keepit.common.time._
-import com.keepit.model.NormalizedURI
+import com.keepit.model._
 import com.keepit.rover.article.{ Article, ArticleKind }
 import org.joda.time.DateTime
 
@@ -17,15 +17,14 @@ case class ArticleInfo(
     uriId: Id[NormalizedURI],
     url: String,
     kind: String, // todo(Léo): make this kind: ArticleKind[_ <: Article] with Scala 2.11, (with proper mapper, serialization is unchanged)
-    major: Option[VersionNumber[Article]] = None,
-    minor: Option[VersionNumber[Article]] = None,
+    bestVersion: Option[ArticleVersion] = None,
+    latestVersion: Option[ArticleVersion] = None,
     lastQueuedAt: Option[DateTime] = None,
     lastFetchedAt: Option[DateTime] = None,
     nextFetchAt: Option[DateTime] = None,
-    fetchInterval: Float = 24.0f) extends ModelWithState[ArticleInfo] with ModelWithSeqNumber[ArticleInfo] {
+    fetchInterval: Float = 24.0f) extends ModelWithState[ArticleInfo] with ModelWithSeqNumber[ArticleInfo] with ArticleKeyHolder {
   def withId(id: Id[ArticleInfo]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
-  val articleKind = ArticleKind.byTypeCode(kind)
 }
 
 object ArticleInfo {
@@ -39,11 +38,65 @@ object ArticleInfo {
       info.seq,
       info.uriId,
       info.kind,
-      info.major,
-      info.minor,
+      info.bestVersion,
+      info.latestVersion,
       info.lastFetchedAt
     )
   }
+
+  def applyFromDbRow(
+    id: Option[Id[ArticleInfo]] = None,
+    createdAt: DateTime = currentDateTime,
+    updatedAt: DateTime = currentDateTime,
+    state: State[ArticleInfo] = ArticleInfoStates.ACTIVE,
+    seq: SequenceNumber[ArticleInfo] = SequenceNumber.ZERO,
+    uriId: Id[NormalizedURI],
+    url: String,
+    kind: String,
+    bestVersionMajor: Option[VersionNumber[Article]],
+    bestVersionMinor: Option[VersionNumber[Article]],
+    latestVersionMajor: Option[VersionNumber[Article]],
+    latestVersionMinor: Option[VersionNumber[Article]],
+    lastQueuedAt: Option[DateTime],
+    lastFetchedAt: Option[DateTime],
+    nextFetchAt: Option[DateTime],
+    fetchInterval: Float): ArticleInfo = {
+    val bestVersion = articleVersionFromDb(bestVersionMajor, bestVersionMinor)
+    val latestVersion = articleVersionFromDb(latestVersionMajor, latestVersionMinor)
+    ArticleInfo(id, createdAt, updatedAt, state, seq, uriId, url, kind, bestVersion, latestVersion, lastQueuedAt, lastFetchedAt, nextFetchAt, fetchInterval)
+  }
+
+  def unapplyToDbRow(info: ArticleInfo) = {
+    val (bestVersionMajor, bestVersionMinor) = articleVersionToDb(info.bestVersion)
+    val (latestVersionMajor, latestVersionMinor) = articleVersionToDb(info.latestVersion)
+    Some(
+      info.id,
+      info.createdAt,
+      info.updatedAt,
+      info.state,
+      info.seq,
+      info.uriId,
+      info.url,
+      info.kind,
+      bestVersionMajor,
+      bestVersionMinor,
+      latestVersionMajor,
+      latestVersionMinor,
+      info.lastQueuedAt,
+      info.lastFetchedAt,
+      info.nextFetchAt,
+      info.fetchInterval
+    )
+  }
+
+  private def articleVersionFromDb(versionMajor: Option[VersionNumber[Article]], versionMinor: Option[VersionNumber[Article]]) = {
+    for {
+      major <- versionMajor
+      minor <- versionMinor
+    } yield ArticleVersion(major, minor)
+  }
+
+  private def articleVersionToDb(version: Option[ArticleVersion]) = (version.map(_.major), version.map(_.minor))
 }
 
 import com.google.inject.{ Singleton, ImplementedBy }
@@ -73,13 +126,15 @@ class ArticleInfoRepoImpl @Inject() (
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)
     def url = column[String]("url", O.NotNull)
     def kind = column[String]("kind", O.NotNull)
-    def major = column[VersionNumber[Article]]("major", O.Nullable)
-    def minor = column[VersionNumber[Article]]("minor", O.Nullable)
+    def bestVersionMajor = column[VersionNumber[Article]]("best_version_major", O.Nullable)
+    def bestVersionMinor = column[VersionNumber[Article]]("best_version_minor", O.Nullable)
+    def latestVersionMajor = column[VersionNumber[Article]]("latest_version_major", O.Nullable)
+    def latestVersionMinor = column[VersionNumber[Article]]("latest_version_minor", O.Nullable)
     def lastQueuedAt = column[DateTime]("last_queued_at", O.Nullable)
     def lastFetchedAt = column[DateTime]("last_fetched_at", O.Nullable)
     def nextFetchAt = column[DateTime]("next_fetch_at", O.Nullable)
     def fetchInterval = column[Float]("fetch_interval", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, state, seq, uriId, url, kind, major.?, minor.?, lastQueuedAt.?, lastFetchedAt.?, nextFetchAt.?, fetchInterval) <> ((ArticleInfo.apply _).tupled, ArticleInfo.unapply _)
+    def * = (id.?, createdAt, updatedAt, state, seq, uriId, url, kind, bestVersionMajor.?, bestVersionMinor.?, latestVersionMajor.?, latestVersionMinor.?, lastQueuedAt.?, lastFetchedAt.?, nextFetchAt.?, fetchInterval) <> ((ArticleInfo.applyFromDbRow _).tupled, ArticleInfo.unapplyToDbRow _)
   }
 
   def table(tag: Tag) = new ArticleInfoTable(tag)
