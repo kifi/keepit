@@ -22,7 +22,7 @@ case class ArticleInfo(
     lastQueuedAt: Option[DateTime] = None,
     lastFetchedAt: Option[DateTime] = None,
     nextFetchAt: Option[DateTime] = None,
-    fetchInterval: Double = 24.0d) extends ModelWithState[ArticleInfo] with ModelWithSeqNumber[ArticleInfo] {
+    fetchInterval: Float = 24.0f) extends ModelWithState[ArticleInfo] with ModelWithSeqNumber[ArticleInfo] {
   def withId(id: Id[ArticleInfo]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   val articleKind = ArticleKind.byTypeCode(kind)
@@ -78,7 +78,7 @@ class ArticleInfoRepoImpl @Inject() (
     def lastQueuedAt = column[DateTime]("last_queued_at", O.Nullable)
     def lastFetchedAt = column[DateTime]("last_fetched_at", O.Nullable)
     def nextFetchAt = column[DateTime]("next_fetch_at", O.Nullable)
-    def fetchInterval = column[Double]("fetch_interval", O.NotNull)
+    def fetchInterval = column[Float]("fetch_interval", O.NotNull)
     def * = (id.?, createdAt, updatedAt, state, seq, uriId, url, kind, major.?, minor.?, lastQueuedAt.?, lastFetchedAt.?, nextFetchAt.?, fetchInterval) <> ((ArticleInfo.apply _).tupled, ArticleInfo.unapply _)
   }
 
