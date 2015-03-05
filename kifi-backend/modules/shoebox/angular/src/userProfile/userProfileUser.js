@@ -12,7 +12,7 @@ angular.module('kifi')
         user: '=kfUserProfileUser'
       },
       templateUrl: 'userProfile/userProfileUser.tpl.html',
-      link: function (scope) {
+      link: function (scope, element) {
         if (scope.$root.userLoggedIn) {
           scope.me = profileService.me;
 
@@ -22,10 +22,7 @@ angular.module('kifi')
             'id', 'firstName', 'lastName', 'pictureName', 'username');
           scope.mutual.connections = scope.user.mConnections;
           scope.mutual.libraries = scope.user.mLibraries;
-          _.assign(scope.mutual, _.pick(scope.user, 'isFriend', 'friendRequestSentAt', 'friendRequestReceivedAt'));
-          ['mConnections','mLibraries','isFriend','friendRequestSentAt','friendRequestReceivedAt'].forEach(function (key) {
-            delete scope.user[key];
-          });
+          _.assign(scope.mutual, _.pick(scope.user, 'isFriend', 'friendRequestSentAt', 'friendRequestReceivedAt', 'unsearched'));
         }
 
         scope.showMutualConnections = function () {
@@ -47,10 +44,7 @@ angular.module('kifi')
           } else if (!scope.$root.userLoggedIn) {
             signupService.register({toConnectWith: scope.user});
           } else if (scope.mutual.isFriend) {
-            modalService.open({
-              template: 'friends/unfriendConfirmModal.tpl.html',
-              scope: _.assign(scope.$root.$new(), {friend: scope.mutual, reallyUnfriend: reallyUnfriend})
-            });
+            scope.unfriend();
           } else if (!scope.mutual.friendRequestSentAt) {
             var btnDuration = 600;  // easier to duplicate from stylesheet than to read from element
             var minimumDuration = $timeout(angular.noop, btnDuration / 2 + 160);  // added delay to avoid bouncing feeling
@@ -75,28 +69,44 @@ angular.module('kifi')
           friendService.acceptRequest(scope.mutual.id).then(function () {
             scope.mutual.isFriend = true;
             scope.mutual.friendRequestReceivedAt = null;
+            hideOverflowTemporarily();
           });
         };
 
         scope.decline = function () {
           scope.mutual.friendRequestReceivedAt = null;
           friendService.ignoreRequest(scope.mutual.id);
+          hideOverflowTemporarily();
         };
 
-        function reallyUnfriend() {
-          scope.mutual.isFriend = false;
-          friendService.unfriend(scope.mutual.id).then(angular.noop, function error() {
-            scope.mutual.isFriend = true;
+        scope.unfriend = function () {
+          modalService.open({
+            template: 'friends/unfriendConfirmModal.tpl.html',
+            scope: _.assign(scope.$root.$new(), {
+              friend: scope.mutual,
+              reallyUnfriend: function () {
+                scope.mutual.isFriend = false;
+                friendService.unfriend(scope.mutual.id).then(angular.noop, function error() {
+                  scope.mutual.isFriend = true;
+                });
+              }
+            })
           });
+        };
+
+        scope.toggleSearch = function () {
+          var unsearched = scope.mutual.unsearched;
+          friendService[unsearched ? 'reSearchFriend' : 'unSearchFriend'](scope.mutual.id).then(function () {
+            scope.mutual.unsearched = !unsearched;
+          });
+        };
+
+        function hideOverflowTemporarily() {
+          element.addClass('kf-clipped');
+          $timeout(function () {
+            element.removeClass('kf-clipped');
+          }, 500);
         }
-
-        // scope.unSearchFriend = function () {
-        //   friendService.unSearchFriend(scope.mutual.id);
-        // };
-
-        // scope.reSearchFriend = function () {
-        //   friendService.reSearchFriend(scope.mutual.id);
-        // };
       }
     };
   }
