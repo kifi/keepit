@@ -314,13 +314,13 @@ class LibraryRepoImpl @Inject() (
 
   def getLibrariesBothFollow(user1: Id[User], user2: Id[User])(implicit session: RSession): Seq[Id[Library]] = {
     import StaticQuery.interpolation
-    val query = sql"""select lm1.library_id from library_membership lm1 inner join library_membership lm2 on lm1.library_id = lm2.library_id where lm1.user_id = $user1 and lm1.access != 'owner' and lm1.state = 'active' and lm2.user_id = $user2 and lm2.access != 'owner' and lm2.state = 'active';"""
+    val query = sql"""select lm1.library_id from library_membership lm1 inner join library_membership lm2 on lm1.library_id = lm2.library_id where lm1.user_id = $user1 and lm1.access != 'owner' and lm1.state = 'active' and lm2.user_id = $user2 and lm2.access != 'owner' and lm2.state = 'active' order by lm1.library_id desc """
     query.as[Id[Library]].list
   }
 
   def getOwnerLibrariesOtherFollow(owner: Id[User], other: Id[User])(implicit session: RSession): Seq[Id[Library]] = {
     import StaticQuery.interpolation
-    val query = sql"""select lm1.library_id from library_membership lm1 inner join library_membership lm2 on lm1.library_id = lm2.library_id where lm1.user_id = $owner and lm1.access = 'owner' and lm1.state = 'active' and lm2.user_id = $other and lm2.access != 'owner' and lm2.state = 'active';"""
+    val query = sql"""select lm1.library_id from library_membership lm1 inner join library_membership lm2 on lm1.library_id = lm2.library_id where lm1.user_id = $owner and lm1.access = 'owner' and lm1.state = 'active' and lm2.user_id = $other and lm2.access != 'owner' and lm2.state = 'active' order by lm1.library_id desc """
     query.as[Id[Library]].list
   }
 }
