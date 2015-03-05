@@ -11,20 +11,26 @@
   transform-origin: top
   transition: opacity .12s linear, transform .12s ease-in
 
-  a
-    display: block
-    padding: 0 25px 0 16px
-    color: #556179
-    transition: background .2s ease
-    font-size: 13px
-    line-height: 30px
-    white-space: nowrap
+.kf-dropdown-menu-item
+  display: block
+  padding: 0 25px 0 16px
+  color: #556179
+  font-size: 13px
+  line-height: 30px
+  white-space: nowrap
+  text-align: right
 
-    &:hover
-      background: #eee
+  button&
+    border: none
+    background: transparent
+    box-sizing: border-box
+    width: 100%
 
-    &:active
-      background: #ccc
+  &:hover
+    background-color: #eee
+
+  &:active
+    background-color: #d8d8d8
 
 .fill-parent
   width: 100%

@@ -1,4 +1,11 @@
 <li class="kf-upu-card" ng-class="{'kf-self': user.id === me.id}">
+  <div class="kf-upu-settings" kf-hover-menu ng-if="mutual.isFriend && user.id !== me.id">
+    <button class="kf-upu-settings-btn svg-settings-gear-gray"></button>
+    <menu class="kf-upu-settings-menu kf-dropdown-menu">
+      <button class="kifi-upu-settings-unsearch kf-dropdown-menu-item" ng-click="toggleSearch()">{{mutual.unsearched ? 'Show' : 'Hide'}} {{mutual.firstName}}’s keeps in my search results</button>
+      <button class="kifi-upu-settings-unfriend kf-dropdown-menu-item" ng-click="unfriend()">Remove connection</button>
+    </menu>
+  </div>
   <a class="kf-upu-pic-a" href="{{user|profileUrl}}"><img class="kf-upu-pic" ng-src="{{user|pic:200}}"></a>
   <div class="kf-upu-name-wrap-1">
     <div class="kf-upu-name-wrap-2">
