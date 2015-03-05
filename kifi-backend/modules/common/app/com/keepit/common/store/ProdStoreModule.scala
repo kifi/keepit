@@ -1,6 +1,7 @@
 package com.keepit.common.store
 
 import com.amazonaws.services.s3.transfer.TransferManager
+import com.keepit.rover.store.{ InMemoryRoverArticleStoreImpl, S3RoverArticleStoreImpl, RoverArticleStore }
 import com.keepit.search.tracking.{ InMemoryProbablisticLRUStoreImpl, S3ProbablisticLRUStoreImpl, ProbablisticLRUStore }
 import play.api.Play.current
 import net.codingwell.scalaguice.ScalaModule
@@ -10,9 +11,7 @@ import com.keepit.search._
 import com.amazonaws.auth.BasicAWSCredentials
 import com.keepit.common.logging.AccessLog
 
-trait StoreModule extends ScalaModule {
-
-}
+trait StoreModule extends ScalaModule
 
 abstract class ProdOrElseDevStoreModule[T <: StoreModule](val prodStoreModule: T) extends StoreModule {
   protected def whenConfigured[T](parameter: String)(expression: => T): Option[T] =
@@ -47,11 +46,16 @@ trait ProdStoreModule extends StoreModule {
     new S3ArticleSearchResultStoreImpl(bucketName, amazonS3Client, accessLog, initialSearchIdCache, articleCache)
   }
 
-  @Singleton
-  @Provides
+  @Provides @Singleton
   def articleStore(amazonS3Client: AmazonS3, accessLog: AccessLog): ArticleStore = {
     val bucketName = S3Bucket(current.configuration.getString("amazon.s3.article.bucket").get)
     new S3ArticleStoreImpl(bucketName, amazonS3Client, accessLog)
+  }
+
+  @Provides @Singleton
+  def roverArticleStore(amazonS3Client: AmazonS3, accessLog: AccessLog): RoverArticleStore = {
+    val bucketName = S3Bucket(current.configuration.getString("amazon.s3.rover.bucket").get)
+    new S3RoverArticleStoreImpl(bucketName, amazonS3Client, accessLog)
   }
 
   @Singleton
@@ -90,12 +94,17 @@ abstract class DevStoreModule[T <: ProdStoreModule](override val prodStoreModule
       prodStoreModule.articleSearchResultStore(amazonS3ClientProvider.get, accessLog, initialSearchIdCache, articleCache)
     ).getOrElse(new InMemoryArticleSearchResultStoreImpl())
 
-  @Singleton
-  @Provides
+  @Provides @Singleton
   def articleStore(amazonS3ClientProvider: Provider[AmazonS3], accessLog: AccessLog): ArticleStore =
     whenConfigured("amazon.s3.article.bucket")(
       prodStoreModule.articleStore(amazonS3ClientProvider.get, accessLog)
     ).getOrElse(new InMemoryArticleStoreImpl())
+
+  @Provides @Singleton
+  def roverArticleStore(amazonS3ClientProvider: Provider[AmazonS3], accessLog: AccessLog): RoverArticleStore =
+    whenConfigured("amazon.s3.rover.bucket")(
+      prodStoreModule.roverArticleStore(amazonS3ClientProvider.get, accessLog)
+    ).getOrElse(new InMemoryRoverArticleStoreImpl())
 
   @Singleton
   @Provides
