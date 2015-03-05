@@ -3,8 +3,11 @@
 angular.module('kifi')
 
 .directive('kfUserProfileUser', [
-  '$timeout', 'modalService', 'profileService', 'userProfileActionService', 'friendService', 'inviteService', 'signupService',
-  function ($timeout, modalService, profileService, userProfileActionService, friendService, inviteService, signupService) {
+  '$timeout', 'env', '$filter', 'modalService', 'profileService', 'userProfileActionService',
+  'friendService', 'inviteService', 'signupService', 'platformService',
+  function (
+      $timeout, env, $filter, modalService, profileService, userProfileActionService,
+      friendService, inviteService, signupService, platformService) {
     return {
       restrict: 'A',
       replace: true,
@@ -39,8 +42,10 @@ angular.module('kifi')
         };
 
         scope.onClickPrimaryButton = function () {
-          if (scope.friendStatusChanging) {
-            return;
+          if (platformService.isSupportedMobilePlatform()) {
+            platformService.goToAppOrStore(env.navBase + $filter('profileUrl')(scope.user));
+          } else if (scope.friendStatusChanging) {
+            return; // ignore
           } else if (!scope.$root.userLoggedIn) {
             signupService.register({toConnectWith: scope.user});
           } else if (scope.mutual.isFriend) {
