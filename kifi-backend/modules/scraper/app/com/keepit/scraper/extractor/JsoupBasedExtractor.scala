@@ -14,7 +14,7 @@ import java.util.regex.Pattern
 import scala.util.Try
 
 abstract class JsoupBasedExtractor(url: URI, maxContentChars: Int) extends Extractor with Logging {
-  protected var doc: Document = null
+  protected var doc: Document = null // why!?
 
   def parse(doc: Document): String
 
