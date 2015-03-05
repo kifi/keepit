@@ -25,26 +25,26 @@ import com.keepit.queue.DevNormalizationUpdateJobQueueModule
 import com.keepit.common.concurrent.ProdForkJoinContextMonitorModule
 import com.keepit.curator.ProdCuratorServiceClientModule
 
-case class ShoeboxDevModule() extends ShoeboxModule(
-  secureSocialModule = ProdShoeboxSecureSocialModule(),
-  userActionsModule = ProdShoeboxUserActionsModule(),
-  mailModule = DevMailModule(),
-  reaperModule = DevReaperModule(),
-  siteMapModule = DevSiteMapGeneratorModule(),
-  storeModule = ShoeboxDevStoreModule(),
-  sqsModule = DevSimpleQueueModule(),
-  normalizationQueueModule = DevNormalizationUpdateJobQueueModule(),
+case class ShoeboxDevModule() extends ShoeboxModule with CommonDevModule {
+  val secureSocialModule = ProdShoeboxSecureSocialModule()
+  val userActionsModule = ProdShoeboxUserActionsModule()
+  val mailModule = DevMailModule()
+  val reaperModule = DevReaperModule()
+  val siteMapModule = DevSiteMapGeneratorModule()
+  val storeModule = ShoeboxDevStoreModule()
+  val sqsModule = DevSimpleQueueModule()
+  val normalizationQueueModule = DevNormalizationUpdateJobQueueModule()
 
   // Shoebox Functional Modules
-  analyticsModule = DevAnalyticsModule(),
-  //  topicModelModule = DevTopicModelModule(),
-  scrapeSchedulerModule = DevScrapeSchedulerModule(),
-  scraperHealthMonitorModule = DevScraperHealthMonitorModule(),
-  fjMonitorModule = ProdForkJoinContextMonitorModule(),
-  twilioCredentialsModule = DevTwilioCredentialsModule(),
-  dataPipelineExecutorModule = DevDataPipelineExecutorModule(),
-  cacheModule = ShoeboxCacheModule(HashMapMemoryCacheModule())
-) with CommonDevModule {
+  val analyticsModule = DevAnalyticsModule()
+  //  topicModelModule = DevTopicModelModule()
+  val scrapeSchedulerModule = DevScrapeSchedulerModule()
+  val scraperHealthMonitorModule = DevScraperHealthMonitorModule()
+  val fjMonitorModule = ProdForkJoinContextMonitorModule()
+  val twilioCredentialsModule = DevTwilioCredentialsModule()
+  val dataPipelineExecutorModule = DevDataPipelineExecutorModule()
+  val cacheModule = ShoeboxCacheModule(HashMapMemoryCacheModule())
+
   // Service clients
   val searchServiceClientModule = ProdSearchServiceClientModule()
   val shoeboxServiceClientModule = ProdShoeboxServiceClientModule()

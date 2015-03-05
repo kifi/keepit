@@ -34,26 +34,26 @@ case class ShoeboxServiceTypeModule() extends ServiceTypeModule {
   val servicesToListenOn = ServiceType.SEARCH :: ServiceType.ELIZA :: ServiceType.HEIMDAL :: ServiceType.ABOOK :: ServiceType.SCRAPER :: ServiceType.CORTEX :: ServiceType.GRAPH :: ServiceType.CURATOR :: ServiceType.ROVER :: Nil
 }
 
-abstract class ShoeboxModule(
-    //these are modules that inheriting modules need to provide
-    val secureSocialModule: SecureSocialModule,
-    val userActionsModule: UserActionsModule,
-    val mailModule: MailModule,
-    val reaperModule: ReaperModule,
-    val siteMapModule: SiteMapGeneratorModule,
-    val storeModule: ShoeboxDevStoreModule,
-    val sqsModule: SimpleQueueModule,
-    val normalizationQueueModule: NormalizationUpdateJobQueueModule,
+trait ShoeboxModule extends ConfigurationModule with CommonServiceModule {
+  //these are modules that inheriting modules need to provide
+  val secureSocialModule: SecureSocialModule
+  val userActionsModule: UserActionsModule
+  val mailModule: MailModule
+  val reaperModule: ReaperModule
+  val siteMapModule: SiteMapGeneratorModule
+  val storeModule: ShoeboxDevStoreModule
+  val sqsModule: SimpleQueueModule
+  val normalizationQueueModule: NormalizationUpdateJobQueueModule
 
-    // Shoebox Functional Modules
-    val analyticsModule: AnalyticsModule,
-    val cacheModule: ShoeboxCacheModule,
-    val scrapeSchedulerModule: ScrapeSchedulerModule,
-    val scraperHealthMonitorModule: ScraperHealthMonitorModule,
-    val fjMonitorModule: ForkJoinContextMonitorModule,
-    val twilioCredentialsModule: TwilioCredentialsModule,
-    val dataPipelineExecutorModule: DataPipelineExecutorModule,
-    val shoeboxTasksModule: ShoeboxTasksPluginModule = ShoeboxTasksPluginModule()) extends ConfigurationModule with CommonServiceModule {
+  // Shoebox Functional Modules
+  val analyticsModule: AnalyticsModule
+  val cacheModule: ShoeboxCacheModule
+  val scrapeSchedulerModule: ScrapeSchedulerModule
+  val scraperHealthMonitorModule: ScraperHealthMonitorModule
+  val fjMonitorModule: ForkJoinContextMonitorModule
+  val twilioCredentialsModule: TwilioCredentialsModule
+  val dataPipelineExecutorModule: DataPipelineExecutorModule
+
   //these are modules that are provided here (but can be overriden by inheriting modules)
   // Service clients
   val serviceTypeModule = ShoeboxServiceTypeModule()
@@ -82,4 +82,6 @@ abstract class ShoeboxModule(
   val mailerModule = PlayMailerModule()
 
   val activityEmailCronModule = ActivityEmailCronModule()
+
+  val shoeboxTasksModule: ShoeboxTasksPluginModule = ShoeboxTasksPluginModule()
 }
