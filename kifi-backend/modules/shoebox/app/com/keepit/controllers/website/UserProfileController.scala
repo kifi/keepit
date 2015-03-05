@@ -66,19 +66,15 @@ class UserProfileController @Inject() (
           val head = connections.take(limit)
           val (headUserJsonObjs, userMap) = db.readOnlyMaster { implicit s =>
             val userMap = basicUserRepo.loadAll(connections.take(200).map(_.userId).toSet)
-            val headUserMap = Map(head.map(c => c.userId -> userMap(c.userId)): _*)
-            val headUserWithStatus = viewerIdOpt.map { viewerId =>
+            val headUserMap = head.map(c => c.userId -> userMap(c.userId)).toMap
+            val headUsersWFSMap = viewerIdOpt.map { viewerId =>
               val headFriendIdSet = head.filter(_.connected).map(_.userId).toSet
               friendStatusCommander.augmentUsers(viewerId, headUserMap, headFriendIdSet)
             } getOrElse headUserMap.mapValues(BasicUserWithFriendStatus.fromWithoutFriendStatus)
-            val sortedHeadUserWithStatus = {
-              head.map(id => id.userId -> headUserWithStatus(id.userId))
+            val headUserJsonObjsSorted = head.map { c =>
+              loadProfileUser(c.userId, headUsersWFSMap(c.userId), viewerIdOpt)
             }
-            val headUserJsonObjs = sortedHeadUserWithStatus map {
-              case (userId, userWFS) =>
-                loadProfileUser(userId, userWFS, viewerIdOpt)
-            }
-            (headUserJsonObjs, userMap)
+            (headUserJsonObjsSorted, userMap)
           }
           val extIds = connections.drop(limit).flatMap(u => userMap.get(u.userId)).map(_.externalId)
           Ok(Json.obj("users" -> headUserJsonObjs, "ids" -> extIds, "count" -> connections.size))
@@ -97,19 +93,15 @@ class UserProfileController @Inject() (
           val head = followers.take(limit)
           val (headUserJsonObjs, userMap) = db.readOnlyMaster { implicit s =>
             val userMap = basicUserRepo.loadAll(followers.take(200).map(_.userId).toSet)
-            val headUserMap = Map(head.map(c => c.userId -> userMap(c.userId)): _*)
-            val headUserWithStatus = viewerIdOpt.map { viewerId =>
+            val headUserMap = head.map(c => c.userId -> userMap(c.userId)).toMap
+            val headUsersWFSMap = viewerIdOpt.map { viewerId =>
               val headFriendIdSet = head.filter(_.connected).map(_.userId).toSet
               friendStatusCommander.augmentUsers(viewerId, headUserMap, headFriendIdSet)
             } getOrElse headUserMap.mapValues(BasicUserWithFriendStatus.fromWithoutFriendStatus)
-            val sortedHeadUserWithStatus = {
-              head.map(id => id.userId -> headUserWithStatus(id.userId))
+            val headUserJsonObjsSorted = head.map { c =>
+              loadProfileUser(c.userId, headUsersWFSMap(c.userId), viewerIdOpt)
             }
-            val headUserJsonObjs = sortedHeadUserWithStatus map {
-              case (userId, userWFS) =>
-                loadProfileUser(userId, userWFS, viewerIdOpt)
-            }
-            (headUserJsonObjs, userMap)
+            (headUserJsonObjsSorted, userMap)
           }
           val extIds = followers.drop(limit).flatMap(u => userMap.get(u.userId)).map(_.externalId)
           Ok(Json.obj("users" -> headUserJsonObjs, "ids" -> extIds, "count" -> followers.size))
