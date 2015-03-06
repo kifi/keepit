@@ -1,7 +1,7 @@
 package com.keepit.model
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton, Provider }
-import com.keepit.commanders.{ LibraryMetadataKey, LibraryMetadataCache }
+import com.keepit.commanders.{ TopFollowedLibrariesKey, TopFollowedLibrariesCache, LibraryMetadataKey, LibraryMetadataCache }
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick._
@@ -51,6 +51,7 @@ class LibraryRepoImpl @Inject() (
   val clock: Clock,
   val libraryMembershipRepo: Provider[LibraryMembershipRepoImpl],
   val libraryMetadataCache: LibraryMetadataCache,
+  val topLibsCache: TopFollowedLibrariesCache,
   val idCache: LibraryIdCache)
     extends DbRepo[Library] with LibraryRepo with SeqNumberDbFunction[Library] with Logging {
 
@@ -111,6 +112,9 @@ class LibraryRepoImpl @Inject() (
     library.id.map { id =>
       libraryMetadataCache.remove(LibraryMetadataKey(id))
       idCache.remove(LibraryIdKey(id))
+    }
+    if (library.memberCount >= 5 + 1) {
+      topLibsCache.remove(new TopFollowedLibrariesKey()) // lib with fewer than 5 followers will never enter that cache. This threshold need to by synced with RelatedLibraryCommanderImpl
     }
   }
 
