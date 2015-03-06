@@ -2,7 +2,7 @@
 
 # --- !Ups
 
-CREATE TABLE keep_image (
+CREATE TABLE IF NOT EXISTS keep_image (
   id bigint(20) NOT NULL AUTO_INCREMENT,
   created_at datetime NOT NULL,
   updated_at datetime NOT NULL,

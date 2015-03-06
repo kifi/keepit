@@ -2,7 +2,7 @@
 
 # --- !Ups
 
-CREATE TABLE library_image (
+CREATE TABLE IF NOT EXISTS library_image (
   id bigint(20) NOT NULL AUTO_INCREMENT,
   created_at datetime NOT NULL,
   updated_at datetime NOT NULL,
@@ -22,7 +22,7 @@ CREATE TABLE library_image (
   KEY library_image_f_library_id (library_id)
 );
 
-CREATE TABLE library_image_request (
+CREATE TABLE IF NOT EXISTS library_image_request (
   id bigint(20) NOT NULL AUTO_INCREMENT,
   created_at datetime NOT NULL,
   updated_at datetime NOT NULL,
