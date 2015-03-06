@@ -13,7 +13,7 @@ import com.keepit.scraper._
 import com.keepit.scraper.actor.InternalMessages.FetchJob
 import com.keepit.scraper.actor.ScraperMessages.Fetch
 import com.keepit.scraper.embedly.FakeEmbedlyModule
-import com.keepit.scraper.fetcher.FakeHttpFetcherModule
+import com.keepit.scraper.fetcher.{ FetcherHttpContext, HttpFetchStatus, FakeHttpFetcherModule }
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.test.ScraperTestInjector
 import org.specs2.mutable.SpecificationLike

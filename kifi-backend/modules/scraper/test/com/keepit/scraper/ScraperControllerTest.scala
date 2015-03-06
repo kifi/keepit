@@ -6,7 +6,7 @@ import com.keepit.common.controller.{ FakeSecureSocialClientIdModule, FakeUserAc
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.store.ScraperTestStoreModule
 import com.keepit.scraper.embedly.FakeEmbedlyModule
-import com.keepit.scraper.fetcher.FakeHttpFetcherModule
+import com.keepit.scraper.fetcher.{ FetcherHttpContext, HttpFetchStatus, FakeHttpFetcherModule }
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.test.ScraperTestInjector
 import play.api.http.Status

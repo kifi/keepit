@@ -2,10 +2,20 @@ package com.keepit.scraper.fetcher
 
 import com.keepit.common.net.URI
 import com.keepit.model.HttpProxy
-import com.keepit.scraper.{ HttpFetchStatus, HttpInputStream }
+import com.keepit.scraper.{ HttpRedirect, HttpInputStream }
 import org.joda.time.DateTime
 
 import scala.concurrent.Future
+
+trait FetcherHttpContext {
+  def destinationUrl: Option[String]
+  def redirects: Seq[HttpRedirect]
+}
+
+case class HttpFetchStatus(statusCode: Int, message: Option[String], context: FetcherHttpContext) {
+  def destinationUrl = context.destinationUrl
+  def redirects = context.redirects
+}
 
 trait HttpFetcher {
   val NO_OP = { is: HttpInputStream => }

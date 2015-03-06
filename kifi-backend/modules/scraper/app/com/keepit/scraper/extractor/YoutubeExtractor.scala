@@ -16,6 +16,7 @@ import org.jsoup.nodes.{ Document, Element }
 import scala.collection.JavaConversions._
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
+import com.keepit.common.strings._
 
 @Singleton
 class YoutubeExtractorProvider @Inject() (httpFetcher: HttpFetcher, shoeboxScraperClient: ShoeboxScraperClient) extends ExtractorProvider {
@@ -52,7 +53,7 @@ class YoutubeExtractor(url: URI, maxContentChars: Int, httpFetcher: HttpFetcher,
   private def findTTSUrl(doc: Document): Option[String] = {
     val ttsUrlPattern = """(?:'TTS_URL'|"ttsurl): "(http.*)",""".r
     val script = doc.getElementsByTag("script").toString
-    ttsUrlPattern.findFirstIn(script).map { case ttsUrlPattern(url) => replace(url, "\\/" -> "/", "\\u0026" -> "&") }
+    ttsUrlPattern.findFirstIn(script).map { case ttsUrlPattern(url) => url.replaceAllLiterally("\\/" -> "/", "\\u0026" -> "&") }
   }
 
   private def findTrack(ttsParameters: String): Option[YoutubeTrackInfo] = {

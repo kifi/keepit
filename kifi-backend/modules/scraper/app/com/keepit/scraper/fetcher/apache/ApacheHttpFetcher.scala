@@ -23,12 +23,11 @@ import com.keepit.common.performance._
 import com.keepit.common.plugin.SchedulingProperties
 import com.keepit.model.HttpProxy
 import com.keepit.scraper._
-import com.keepit.scraper.fetcher.HttpFetcher
+import com.keepit.scraper.fetcher.{ HttpFetchStatus, FetcherHttpContext, HttpFetcher }
 import org.apache.http.HttpHeaders._
 import org.apache.http.HttpStatus._
 import org.apache.http._
 import org.apache.http.auth.{ AuthScope, UsernamePasswordCredentials }
-import org.apache.http.client.ClientProtocolException
 import org.apache.http.client.config.RequestConfig
 import org.apache.http.client.entity.{ DeflateDecompressingEntity, GzipDecompressingEntity }
 import org.apache.http.client.methods.{ CloseableHttpResponse, HttpGet }

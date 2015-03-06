@@ -3,7 +3,7 @@ package com.keepit.scraper.fetcher
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.net.URI
 import com.keepit.model.HttpProxy
-import com.keepit.scraper.{ HttpRedirect, FetcherHttpContext, HttpFetchStatus, HttpInputStream }
+import com.keepit.scraper.{ HttpRedirect, HttpInputStream }
 import org.joda.time.DateTime
 import play.api.http.Status
 

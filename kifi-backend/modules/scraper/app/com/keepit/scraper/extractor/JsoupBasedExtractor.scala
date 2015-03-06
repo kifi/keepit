@@ -9,7 +9,6 @@ import com.keepit.scraper.HttpInputStream
 
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
-import java.util.regex.Pattern
 
 import scala.util.Try
 
@@ -48,18 +47,8 @@ abstract class JsoupBasedExtractor(url: URI, maxContentChars: Int) extends Extra
   }
 
   private def toOption(unsafe: => String): Option[String] = {
-    Try(Option(unsafe)).toOption.flatten.map {
-      case o if o.isEmpty => None
-      case o => Some(o)
-    }.flatten
+    Try(Option(unsafe)).toOption.flatten.filter(_.nonEmpty)
   }
 
   def getKeywords(): Option[String] = getMetadata("keywords")
-
-  private[extractor] def replace(text: String, replacements: (String, String)*) = {
-    val replacement = replacements.toMap.withDefault(identity)
-    val regex = replacement.keysIterator.map(Pattern.quote).mkString("|").r
-    regex.replaceAllIn(text, m => replacement(m.matched))
-  }
 }
-
