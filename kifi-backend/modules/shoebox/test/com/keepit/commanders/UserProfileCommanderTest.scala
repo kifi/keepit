@@ -74,6 +74,11 @@ class UserProfileCommanderTest extends Specification with ShoeboxTestInjector {
       connections.map(_.userId) === Seq(viewer, user4, user1, user6, user3, user2, user7).map(_.id.get)
       connections.map(_.connected) === Seq(true, true, true, true, false, false, false)
 
+      val selfConnections = Await.result(commander.getConnectionsSortedByRelationship(owner.id.get, owner.id.get), Duration.Inf)
+
+      selfConnections.map(_.userId) === Seq(user4, viewer, user3, user1, user7, user6, user2).map(_.id.get)
+      selfConnections.map(_.connected) === Seq(true, true, true, true, true, true, true)
+
       val repo = inject[UserConnectionRepo]
 
       db.readWrite { implicit s =>
@@ -93,10 +98,8 @@ class UserProfileCommanderTest extends Specification with ShoeboxTestInjector {
       }
 
       db.readWrite { implicit s =>
-        val connection1 = repo.getConnectionOpt(viewer.id.get, owner.id.get).get
-        repo.save(connection1.withState(UserConnectionStates.UNFRIENDED))
-        val connection2 = repo.getConnectionOpt(viewer.id.get, user1.id.get).get
-        repo.save(connection2.withState(UserConnectionStates.UNFRIENDED))
+        repo.unfriendConnections(owner.id.get, Set(viewer.id.get)) === 1
+        repo.unfriendConnections(viewer.id.get, Set(user1.id.get)) === 1
       }
 
       db.readWrite { implicit s =>
@@ -119,6 +122,12 @@ class UserProfileCommanderTest extends Specification with ShoeboxTestInjector {
 
       connections2.map(_.userId) === Seq(user4, user6, user3, user2, user1, user7).map(_.id.get)
       connections2.map(_.connected) === Seq(true, true, false, false, false, false)
+
+      val selfConnections2 = Await.result(commander.getConnectionsSortedByRelationship(owner.id.get, owner.id.get), Duration.Inf)
+
+      selfConnections2.map(_.userId) === Seq(user4, user3, user1, user7, user6, user2).map(_.id.get)
+      selfConnections2.map(_.connected) === Seq(true, true, true, true, true, true)
+
     }
 
   }
