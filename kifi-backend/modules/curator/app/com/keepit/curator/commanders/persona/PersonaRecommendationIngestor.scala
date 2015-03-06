@@ -5,7 +5,7 @@ import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.Database
-import com.keepit.curator.model.{ UriRecommendation, LibraryRecommendation, LibraryRecommendationRepo, UriRecommendationRepo }
+import com.keepit.curator.model._
 import com.keepit.model.{ Persona, User }
 import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.Future
@@ -16,7 +16,8 @@ class PersonaRecommendationIngestor @Inject() (
     uriPersonaRecoPool: URIPersonaRecommendationPool,
     libPersonaRecoPool: LibraryPersonaRecommendationPool,
     uriRecRepo: UriRecommendationRepo,
-    libRecRepo: LibraryRecommendationRepo) {
+    libRecRepo: LibraryRecommendationRepo,
+    libMembershipRepo: CuratorLibraryMembershipInfoRepo) {
 
   def ingestUserRecosByPersona(userId: Id[User], pid: Id[Persona]): Unit = {
     val uriRecos = uriPersonaRecoPool.getUserRecosByPersona(userId, pid)
@@ -62,12 +63,16 @@ class PersonaRecommendationIngestor @Inject() (
 
   // optimized for new user
   private def ingestLibraryRecos(userId: Id[User], libRecos: Seq[LibraryRecommendation]): Unit = {
-    val uniqueLibRecos = libRecos.groupBy(_.libraryId).map { case (id, recos) => recos.head }.toSeq
-    val existing = db.readOnlyMaster { implicit s => libRecRepo.getLibraryIdsForUser(userId) }
+    val (existing, uniqueLibRecosToIngest) = db.readOnlyMaster { implicit s =>
+      val userLibs = libMembershipRepo.getLibrariesByUserId(userId).toSet
+      val existing = db.readOnlyMaster { implicit s => libRecRepo.getLibraryIdsForUser(userId) }
+      val uniqueLibRecosToIngest = libRecos.groupBy(_.libraryId).map { case (id, recos) => recos.head }.toSeq.filter(x => !userLibs.contains(x.libraryId))
+      (existing, uniqueLibRecosToIngest)
+    }
     if (existing.isEmpty) {
-      db.readWrite { implicit s => libRecRepo.insertAll(uniqueLibRecos) }
+      db.readWrite { implicit s => libRecRepo.insertAll(uniqueLibRecosToIngest) }
     } else {
-      db.readWrite { implicit s => uniqueLibRecos.foreach { ingestLibraryReco(_) } }
+      db.readWrite { implicit s => uniqueLibRecosToIngest.foreach { ingestLibraryReco(_) } }
     }
   }
 
