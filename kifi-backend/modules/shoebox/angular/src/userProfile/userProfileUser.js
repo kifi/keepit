@@ -44,7 +44,7 @@ angular.module('kifi')
         scope.onClickPrimaryButton = function () {
           if (platformService.isSupportedMobilePlatform()) {
             platformService.goToAppOrStore(env.navBase + $filter('profileUrl')(scope.user));
-          } else if (scope.friendStatusChanging) {
+          } else if (scope.connectBtnChanging) {
             return; // ignore
           } else if (!scope.$root.userLoggedIn) {
             signupService.register({toConnectWith: scope.user});
@@ -52,8 +52,15 @@ angular.module('kifi')
             scope.unfriend();
           } else if (!scope.mutual.friendRequestSentAt) {
             var btnDuration = 600;  // easier to duplicate from stylesheet than to read from element
-            var minimumDuration = $timeout(angular.noop, btnDuration / 2 + 160);  // added delay to avoid bouncing feeling
-            scope.friendStatusChanging = true;
+            var minimumDuration = $timeout(angular.noop, btnDuration + 160);  // added delay to avoid bouncing feeling
+            scope.connectBtnChanging = true;
+            var onConnectBtnChangeEnd = function () {
+              scope.connectBtnChanging = false;
+              scope.connectBtnChanged = true;
+              $timeout(function () {
+                scope.connectBtnChanged = false;
+              }, btnDuration);
+            };
             inviteService.friendRequest(scope.mutual.id).then(function (data) {
               minimumDuration.then(function () {
                 delete scope.mutual.friendRequestReceivedAt; // just to be sure, old server bug made it possible
@@ -62,12 +69,11 @@ angular.module('kifi')
                 } else if (data.acceptedRequest || data.alreadyConnected) {
                   scope.mutual.isFriend = true;
                 }
-                scope.friendStatusChanging = false;
+                onConnectBtnChangeEnd();
               });
-            }, function () {
-              scope.friendStatusChanging = false;
-            });
+            }, onConnectBtnChangeEnd);
           }
+
         };
 
         scope.accept = function () {
