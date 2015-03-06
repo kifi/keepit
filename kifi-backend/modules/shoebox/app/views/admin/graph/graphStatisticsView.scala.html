@@ -9,7 +9,7 @@
     <p><i>Showing by instance: (vertex count, average outgoing degree, average incoming degree)</i></p>
     <table class = "table table-bordered">
       <tr> <th>Vertex</th> @allInstances.map { instance => <th>@instance.getName</th> } </tr>
-      @statistics.values.flatMap(_.vertexStatistics.keySet).toSeq.sorted.map { vertexType: String =>
+      @statistics.values.flatMap(_.vertexStatistics.keySet).toSeq.distinct.sorted.map { vertexType: String =>
         <tr> <td>@vertexType</td> @allInstances.map { instance => <td>@statistics.get(instance).flatMap(_.vertexStatistics.get(vertexType))</td> } </tr>
       }
     </table>
@@ -18,7 +18,7 @@
     <p><i>Showing by instance: (edge count, source average outgoing degree, destination average incoming degree)</i></p>
     <table class = "table table-bordered">
       <tr> <th>Edge</th> @allInstances.map { instance => <th>@instance.getName</th> } </tr>
-      @statistics.values.flatMap(_.edgeStatistics.keySet).toSeq.sorted.map { edgeType: (String, String, String) => @edgeType match { case (sourceKind, destinationKind, edgeKind) =>
+      @statistics.values.flatMap(_.edgeStatistics.keySet).toSeq.distinct.sorted.map { edgeType: (String, String, String) => @edgeType match { case (sourceKind, destinationKind, edgeKind) =>
         <tr> <td>@sourceKind -> @destinationKind | @edgeKind</td> @allInstances.map { instance => <td>@statistics.get(instance).flatMap(_.edgeStatistics.get((sourceKind, destinationKind, edgeKind)))</td> } </tr>
       }}
     </table>
@@ -26,7 +26,7 @@
   <h3>Graph Updater State</h3>
     <table class = "table table-bordered">
       <tr> <th>GraphUpdate</th> @allInstances.map { instance => <th>@instance.getName</th> } </tr>
-        @states.values.flatMap(_.state.keySet).toSeq.sorted.map { updateKind: String =>
+        @states.values.flatMap(_.state.keySet).toSeq.distinct.sorted.map { updateKind: String =>
         <tr> <td>@updateKind</td> @allInstances.map { instance => <td>@states.get(instance).map(_.state.get(updateKind))</td> } </tr>
       }
     </table>
