@@ -56,9 +56,12 @@ $(function() {
     var $email = $form.find('.login-email');
     var $password = $form.find('.login-password');
 
-    var validEmail = validateEmailAddress($email);
-    var validPassword = validatePassword($password);
-    if (!validEmail || !validPassword) {
+    var validEmail = validateEmailAddress($email, $form.find('#error-login-email'));
+    if (!validEmail) {
+      return;
+    }
+    var validPassword = validatePassword($password, $form.find('#error-login-password'));
+    if (!validPassword) {
       return;
     }
 
@@ -72,21 +75,17 @@ $(function() {
         console.log(data);
       }
     }).fail(function (xhr) {
-      // errors I know about:
-      // no_such_user
-      // wrong_password
+      // possible errors: no_such_user, wrong_password, bad_form (bad email, bad password, etc.)
       var body = xhr.responseJSON || {};
-      console.error(body)
+      var $email = $('.form-input.signup-email');
+      var $password = $('.form-input.signup-password');
       if (body.error === 'no_such_user') {
-        $('.login-email').focus().select();
-        error($('#error-login-email'), 'Whoops, we can’t find you.<br>Try a different email or social account?');
+        errorUserNotFound($('#error-login-email'), $email);
       } else if (body.error === 'wrong_password') {
-        $('.login-password').focus().select();
-        error($('#error-login-password'), 'Wrong password. Forgot it?<br><a href="#">Reset it here</a>.');
+        errorWrongPassword($('#error-login-password'), $password);
       } else {
-        // ...
+        errorUnknown($('#login-email'), $email);
       }
-      console.log(xhr);
     });
     return false;
   };
@@ -99,10 +98,12 @@ $(function() {
     var $email = $form.find('.signup-email');
     var $password = $form.find('.signup-password');
 
-    var validEmail = validateEmailAddress($email);
-    var validPassword = validatePassword($password);
-    if (!validEmail || !validPassword) {
-      //error()
+    var validEmail = validateEmailAddress($email, $form.find('#login-email'));
+    if (!validEmail) {
+      return;
+    }
+    var validPassword = validatePassword($password, $form.find('#login-password'));
+    if (!validPassword) {
       return;
     }
 
@@ -116,10 +117,19 @@ $(function() {
         console.log(data);
       }
     }).fail(function (xhr) {
-      // errors I know about:
-      // password_too_short
-      error();
-      console.log(xhr);
+      // possible errors: error.email, password_too_short, user_exists_failed_auth
+      var body = xhr.responseJSON || {};
+      var $email = $('.form-input.signup-email');
+      var $password = $('.form-input.signup-password');
+      if (body.error === "error.email") {
+        errorInvalidEmail($('#login-email'), $email);
+      } else if (body.error === "password_too_short") {
+        errorShortPassword($('#login-password'), $password);
+      } else if (body.error === "user_exists_failed_auth") { // account already exists but incorrect password
+        errorUserExists($('#login-email'), $email);
+      } else {
+        errorUnknown($('#login-email'), $email);
+      }
     });
     return false;
   };
@@ -132,9 +142,12 @@ $(function() {
     var $firstName = $form.find('.first-name');
     var $lastName = $form.find('.last-name');
 
-    var validFirstName = validateName($firstName);
-    var validLastName = validateName($lastName);
-    if (!validFirstName || !validLastName) {
+    var validFirstName = validateName($firstName, $form.find('#signup-firstname'), 'first');
+    if (!validFirstName) {
+      return;
+    }
+    var validLastName = validateName($lastName, $form.find('#signup-lastname'), 'last');
+    if (!validLastName) {
       return;
     }
 
@@ -154,9 +167,8 @@ $(function() {
         console.log(data);
       }
     }).fail(function (xhr) {
-      // not sure about errors for this
-      error();
-      console.log(xhr);
+      var $form = $('.form-input.first-name');
+      errorUnknown('#signup-firstname', $form);
     });
     return false;
   };
@@ -168,7 +180,7 @@ $(function() {
     var $form = $(this);
     var $email = $form.find('.email');
 
-    var validEmail = validateEmailAddress($email);
+    var validEmail = validateEmailAddress($email, $form.find('#error-signup-email'));
     if (!validEmail) {
       return;
     }
@@ -180,13 +192,17 @@ $(function() {
       return;
       if (data.uri) { // successes return: {success: true}
         window.location = data.uri;
-      } else {
-        console.log(data);
       }
     }).fail(function (xhr) {
-      // not sure about errors for this
-      error($('.error-signup-email'), 'Whoops!');
-      console.log(xhr);
+      var body = xhr.responseJSON || {};
+      var $form = $('.form-input.email');
+      if (body.error === 'error.email') {
+        errorInvalidEmail($('#error-signup-email'), $form);
+      } else if (body.error === 'error.required') {
+        errorUnrecognizedEmail($('#error-signup-email'), $form);
+      } else {
+        errorUnknown($('#error-signup-email'), $form);
+      }
     });
     return false;
   };
@@ -213,12 +229,9 @@ $(function() {
 
     // validate email
     var $email = $('.fp-input');
-    var validEmail = validateEmailAddress($email);
-    var emailError = $('#error-fp');
+    var validEmail = validateEmailAddress($email, $('#error-fp'));
 
     if (!validEmail) {
-      error(emailError, 'Sorry invalid email');
-      $('.fp-input').focus().select();
       return;
     }
     // make request
@@ -232,11 +245,13 @@ $(function() {
       modal.find('.fp-form').hide();
       modal.find('.fp-success').show();
     })
-    .fail(function () {
-      // TRACK
-      var emailError = $('#error-fp');
-      error(emailError, 'Sorry, we don’t recognize this email address.');
-      $('.fp-input').focus().select();
+    .fail(function (xhr) { // errors: no_account
+      var body = xhr.responseJSON || {};
+      if (body.error === 'no_account') {
+        errorUnrecognizedEmail($('#error-fp'), $('.fp-input'));
+      } else {
+        errorUnknown($('#error-fp'), $('.fp-input'));
+      }
     });
   }
 
@@ -251,47 +266,92 @@ $(function() {
   //
   // Utilities
   //
-  function error(errorField, errorHtml) {
+  function error(errorField, errorHtml, $inputField) {
     $('#center_container').addClass('shake');
     errorField.html(errorHtml).fadeIn();
     setTimeout(function(){ $('#center_container').removeClass('shake'); }, 2000);
+    if ($inputField) {
+      $inputField.focus().select();
+    }
   }
 
   function hideError() {
     $('.error').fadeOut();
   }
 
-  var emailAddrRe = /^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
-  function validateEmailAddress($email) { // pass email object
-    var s = $email.val();
-    if (!s) {
-      // (todo) TRACK
-      error($email, 'Please enter your email address');
-    } else if (!emailAddrRe.test(s)) {
-      // (todo) TRACK
-      error($email, 'Invalid email address')
-    }
-    return s;
+  // All Errors
+  function errorEmptyPassword($errorField, $inputField) {
+    // TRACK
+    error($errorField, 'Please enter your password', $inputField);
+  }
+  function errorShortPassword($errorField, $inputField) {
+    // TRACK
+    error($errorField, 'Password is too short', $inputField);
+  }
+  function errorEmptyName($errorField, whichName, $inputField) {
+    // TRACK
+    error($errorField, 'Your '+ whichName +' name is required', $inputField);
+  }
+  function errorEmptyEmail($errorField, $inputField) {
+    // TRACK
+    error($errorField, 'Please enter your email address', $inputField);
+  }
+  function errorInvalidEmail($errorField, $inputField) {
+    // TRACK
+    error($errorField, 'Invalid email address', $inputField);
+  }
+  function errorUserNotFound($errorField, $inputField) {
+    // TRACK
+    error($errorField, 'Whoops, we can’t find you.<br>Try a different email or social account?', $inputField);
+  }
+  function errorUnrecognizedEmail($errorField, $inputField) {
+    // TRACK
+    error($errorField, 'Sorry, we don’t recognize this email address.', $inputField);
+  }
+  function errorWrongPassword($errorField, $inputField) {
+    // TRACK
+    error($errorField, 'Wrong password. Forgot it?<br><a href="#">Reset it here</a>.', $inputField);
+  }
+  function errorUserExists($errorField, $inputField) {
+    // TRACK
+    error($errorField, 'An account already exists for this email!<br>Try <a href="/login">Logging In</a>', $inputField);
+  }
+  function errorUnknown($errorField, $inputField) {
+    // TRACK
+    error($errorField, 'Unknown Error:<br>Please contact us on <a href="http://support.kifi.com/hc/en-us/requests/new">Support</a>', $inputField);
   }
 
-  function validatePassword($password) {
-    var s = $password.val();
+
+  //
+  // Validation functions
+  //
+  var emailAddrRe = /^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
+  function validateEmailAddress($email, $errorObj) { // pass email object & where error object should appear
+    var s = $email.val();
     if (!s) {
-      // (todo) TRACK
-      error($password, 'Please enter your password');
-    } else if (s.length < 7) {
-      // (todo) TRACK
-      error($password, 'Password too short');
+      errorEmptyEmail($errorObj, $email);
+    } else if (!emailAddrRe.test(s)) {
+      errorInvalidEmail($errorObj, $email);
     } else {
       return s;
     }
   }
 
-  function validateName($name) {
+  function validatePassword($password, $errorObj) {
+    var s = $password.val();
+    if (!s) {
+      errorEmptyPassword($errorObj, $password);
+    } else if (s.length < 7) {
+      errorShortPassword($errorObj, $password);
+    } else {
+      return s;
+    }
+  }
+
+  function validateName($name, $errorObj, whichName) {
     var s = $.trim($name.val());
     if (!s) {
-      // (todo) TRACK
-      error($name, 'Name is required');
+      errorEmptyName($errorObj, whichName, $name);
     } else {
       return s;
     }

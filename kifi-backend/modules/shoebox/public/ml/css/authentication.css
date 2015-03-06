@@ -490,6 +490,16 @@ margin-bottom: 20px;
   color: #8A8E8E;
 }
 
+#signup-firstname {
+  position: absolute;
+  left: 0px;
+}
+
+#signup-lastname {
+  position: absolute;
+  right: 0px;
+}
+
 .form-input[type='password'] {
   margin-bottom: 10px;
 }
