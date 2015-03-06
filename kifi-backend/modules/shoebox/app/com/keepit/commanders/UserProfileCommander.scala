@@ -25,7 +25,7 @@ object FollowerUserId {
 
 case class UserConnectionRelationshipKey(viewerId: Id[User], ownerId: Id[User]) extends Key[Seq[ConnectedUserId]] {
   val namespace = "user_con_rel"
-  override val version = 3
+  override val version = 4
   def toKey(): String = ownerId.id.toString + ":" + viewerId.id.toString
 }
 
@@ -34,7 +34,7 @@ class UserConnectionRelationshipCache(stats: CacheStatistics, accessLog: AccessL
 
 case class UserFollowerRelationshipKey(viewerIdOpt: Option[Id[User]], ownerId: Id[User]) extends Key[Seq[FollowerUserId]] {
   val namespace = "user_fol_rel"
-  override val version = 2
+  override val version = 3
   def toKey(): String = ownerId.id.toString + ":" + viewerIdOpt.map(_.id.toString).getOrElse("ANON")
 }
 
@@ -54,8 +54,8 @@ class UserProfileCommander @Inject() (
     import com.keepit.common.cache.TransactionalCaching.Implicits._
     userConnectionRelationshipCache.getOrElseFuture(UserConnectionRelationshipKey(viewer, owner)) {
       val sociallyRelatedEntitiesF = graphServiceClient.getSociallyRelatedEntities(viewer)
-      val connectionsF = db.readOnlyReplicaAsync { implicit s =>
-        val all = userConnectionRepo.getConnectedUsersForUsers(Set(viewer, owner))
+      val connectionsF = db.readOnlyMasterAsync { implicit s =>
+        val all = userConnectionRepo.getConnectedUsersForUsers(Set(viewer, owner)) //cached
         all(viewer) -> all(owner)
       }
       for {

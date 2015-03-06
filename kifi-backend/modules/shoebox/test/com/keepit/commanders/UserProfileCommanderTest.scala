@@ -73,7 +73,54 @@ class UserProfileCommanderTest extends Specification with ShoeboxTestInjector {
 
       connections.map(_.userId) === Seq(viewer, user4, user1, user6, user3, user2, user7).map(_.id.get)
       connections.map(_.connected) === Seq(true, true, true, true, false, false, false)
+
+      val repo = inject[UserConnectionRepo]
+
+      db.readWrite { implicit s =>
+        repo.getConnectedUsers(viewer.id.get).contains(owner.id.get) === true
+        repo.getConnectedUsers(owner.id.get).contains(viewer.id.get) === true
+        val connections = repo.getConnectedUsersForUsers(Set(viewer.id.get, owner.id.get))
+        connections(viewer.id.get).contains(owner.id.get) === true
+        connections(owner.id.get).contains(viewer.id.get) === true
+      }
+
+      db.readWrite { implicit s =>
+        repo.getConnectedUsers(viewer.id.get).contains(user1.id.get) === true
+        repo.getConnectedUsers(user1.id.get).contains(viewer.id.get) === true
+        val connections = repo.getConnectedUsersForUsers(Set(viewer.id.get, user1.id.get))
+        connections(viewer.id.get).contains(user1.id.get) === true
+        connections(user1.id.get).contains(viewer.id.get) === true
+      }
+
+      db.readWrite { implicit s =>
+        val connection1 = repo.getConnectionOpt(viewer.id.get, owner.id.get).get
+        repo.save(connection1.withState(UserConnectionStates.UNFRIENDED))
+        val connection2 = repo.getConnectionOpt(viewer.id.get, user1.id.get).get
+        repo.save(connection2.withState(UserConnectionStates.UNFRIENDED))
+      }
+
+      db.readWrite { implicit s =>
+        repo.getConnectedUsers(viewer.id.get).contains(owner.id.get) === false
+        repo.getConnectedUsers(owner.id.get).contains(viewer.id.get) === false
+        val connections = repo.getConnectedUsersForUsers(Set(viewer.id.get, owner.id.get))
+        connections(viewer.id.get).contains(owner.id.get) === false
+        connections(owner.id.get).contains(viewer.id.get) === false
+      }
+
+      db.readWrite { implicit s =>
+        repo.getConnectedUsers(viewer.id.get).contains(user1.id.get) === false
+        repo.getConnectedUsers(user1.id.get).contains(viewer.id.get) === false
+        val connections = repo.getConnectedUsersForUsers(Set(viewer.id.get, user1.id.get))
+        connections(viewer.id.get).contains(user1.id.get) === false
+        connections(user1.id.get).contains(viewer.id.get) === false
+      }
+
+      val connections2 = Await.result(commander.getConnectionsSortedByRelationship(viewer.id.get, owner.id.get), Duration.Inf)
+
+      connections2.map(_.userId) === Seq(user4, user6, user3, user2, user1, user7).map(_.id.get)
+      connections2.map(_.connected) === Seq(true, true, false, false, false, false)
     }
+
   }
 
 }
