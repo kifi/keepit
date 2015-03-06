@@ -24,8 +24,8 @@
             <input type="password" name="password" class="form-input login-password" placeholder="Your password">
             <div id="error-login-password" class="error"></div>
           </div>
-          <a href="#" class="forgot-password-link">Forgot your password?</a>
-          <button id="login-btn" class="btn-authentication btn-login" type="submit">Log In</button>
+          <a href="#" class="forgot-password-link" data-track-action="clickForgotPassword">Forgot your password?</a>
+          <button id="login-btn" class="btn-authentication btn-login" type="submit" data-track-action="clickLoginButton">Log In</button>
         </form>
       </div>
     </div>
@@ -45,8 +45,8 @@
           <input class="fp-input form-input" type="email" name="forgot-password-email" placeholder="Your email address">
           <div id="error-fp" class="error"></div>
           <div class="modal-buttons">
-            <span><button class="modal-button-cancel">Cancel</button></span>
-            <span><button class="modal-button-action">Submit</button></span>
+            <span><button class="modal-button-cancel" data-track-action="clickCancelPassword">Cancel</button></span>
+            <span><button class="modal-button-action" data-track-action="clickSubmitPassword">Submit</button></span>
           </div>
         </form>
 
@@ -54,7 +54,7 @@
           <p class="modal-text">We just sent instructions for resetting your password to:</p>
           <div class="fp-address"></div>
           <div class="modal-buttons">
-            <button class="modal-button-cancel">Close</button>
+            <button class="modal-button-cancel" data-track-action="clickClosePassword">Close</button>
           </div>
         </div>
 
