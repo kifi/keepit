@@ -51,8 +51,9 @@ class QueryEngineTest extends Specification {
       override val lang = english
       override val altAnalyzer = None
       override val altStemmingAnalyzer = None
-      override val siteBoost: Float = 1.0f
-      override val concatBoost: Float = 0.5f
+      val titleBoost = 2.0f
+      val siteBoost: Float = 1.0f
+      val concatBoost: Float = 0.5f
       val prefixBoost: Float = 0.0f
     }
   }

@@ -20,6 +20,7 @@ object SearchConfig {
   private[search] val defaultParams =
     Map[String, String](
       // Common Query Parser
+      "titleBoost" -> "2.0",
       "prefixBoost" -> "1.0",
       "phraseBoost" -> "0.33",
       "siteBoost" -> "1.0",
@@ -43,6 +44,7 @@ object SearchConfig {
       "tailCutting" -> "0.3",
 
       // LibrarySearch
+
       // UserSearch
 
       "proximityBoost" -> "0.95",
@@ -63,6 +65,7 @@ object SearchConfig {
   private[this] val descriptions =
     Map[String, String](
       // Common Query Parser
+      "titleBoost" -> "boost value for title field vs main content",
       "prefixBoost" -> "importance of prefix query vs regular text query",
       "phraseBoost" -> "boost value for the detected phrase [0f,1f]",
       "siteBoost" -> "boost value for matching website names and domains",

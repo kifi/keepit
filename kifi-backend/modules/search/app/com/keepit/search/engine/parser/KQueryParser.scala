@@ -23,12 +23,13 @@ class KQueryParser(
     phraseDetectionConsolidator: RequestConsolidator[(CharSequence, Lang), Set[(Int, Int)]]) { qp =>
 
   private[this] val parser = new QueryParser(analyzer, stemmingAnalyzer) with DefaultSyntax with KQueryExpansion {
-    override val altAnalyzer = qp.altAnalyzer
-    override val altStemmingAnalyzer = qp.altStemmingAnalyzer
-    override val siteBoost = config.asFloat("siteBoost")
-    override val concatBoost = config.asFloat("concatBoost")
-    override val prefixBoost = if (disablePrefixSearch) 0.0f else config.asFloat("prefixBoost")
-    override val lang: Lang = qp.analyzer.lang
+    val altAnalyzer = qp.altAnalyzer
+    val altStemmingAnalyzer = qp.altStemmingAnalyzer
+    val titleBoost = config.asFloat("titleBoost")
+    val siteBoost = config.asFloat("siteBoost")
+    val concatBoost = config.asFloat("concatBoost")
+    val prefixBoost = if (disablePrefixSearch) 0.0f else config.asFloat("prefixBoost")
+    val lang: Lang = qp.analyzer.lang
   }
 
   private[this] val phraseBoost = config.asFloat("phraseBoost")

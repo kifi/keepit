@@ -3,8 +3,6 @@ package com.keepit.search.engine.parser
 import com.keepit.search.Lang
 import com.keepit.search.engine.query.core.{ KTextQuery, KBooleanQuery }
 import com.keepit.search.index.DefaultAnalyzer
-import com.keepit.search.engine.parser.DefaultSyntax
-import com.keepit.search.engine.parser.QueryParser
 import org.specs2.specification.Scope
 import org.specs2.mutable._
 
@@ -14,18 +12,19 @@ class KQueryExpansionTest extends Specification {
     val english = Lang("en")
     val analyzer = DefaultAnalyzer.getAnalyzer(english)
     val stemmingAnalyzer = DefaultAnalyzer.getAnalyzerWithStemmer(english)
-    val parser = new QueryParser(analyzer, stemmingAnalyzer) with DefaultSyntax with KQueryExpansion {
+    implicit val parser = new QueryParser(analyzer, stemmingAnalyzer) with DefaultSyntax with KQueryExpansion {
       override val lang = english
       override val altAnalyzer = None
       override val altStemmingAnalyzer = None
-      override val siteBoost: Float = 1.0f
-      override val concatBoost: Float = concatBoostValue
+      val titleBoost: Float = 2.0f
+      val siteBoost: Float = 1.0f
+      val concatBoost: Float = concatBoostValue
       val prefixBoost: Float = 0.0f
     }
   }
 
   private[this] val tb = KTextQuery.tieBreakerMultiplier
-  private[this] val b = if (KQueryExpansion.titleBoost == 1.0f) "" else s"^${KQueryExpansion.titleBoost}"
+  private[this] def b(implicit queryExpansion: KQueryExpansion) = if (queryExpansion.titleBoost == 1.0f) "" else s"^${queryExpansion.titleBoost}"
 
   "KQueryExpansion" should {
     "expand queries (with no concat)" in new QueryParserScope(concatBoostValue = 0.0f) {
