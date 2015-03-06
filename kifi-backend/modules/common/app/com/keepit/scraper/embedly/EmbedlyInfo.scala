@@ -1,41 +1,12 @@
 package com.keepit.scraper.embedly
 
-import com.kifi.macros.json
+import com.keepit.rover.article.{ EmbedlyEntity, EmbedlyKeyword, EmbedlyImage }
 import play.api.libs.functional.syntax._
 import com.keepit.model._
 import com.keepit.common.db.Id
 import play.api.libs.json._
 import com.keepit.common.time.DateTimeJsonFormat
 import org.joda.time.DateTime
-
-case class EmbedlyImage(
-    url: String,
-    caption: Option[String] = None,
-    width: Option[Int] = None,
-    height: Option[Int] = None,
-    size: Option[Int] = None) extends ImageGenericInfo {
-  def toImageInfoWithPriority(nuriId: Id[NormalizedURI], priority: Option[Int], path: String, name: String): ImageInfo = {
-    ImageInfo(uriId = nuriId, url = Some(this.url), caption = this.caption, width = this.width, height = this.height,
-      size = this.size, provider = Some(ImageProvider.EMBEDLY), priority = priority, path = path, name = name)
-  }
-
-  def toImageInfo(nuriId: Id[NormalizedURI], path: String, name: String): ImageInfo = toImageInfoWithPriority(nuriId, None, path = path, name = name)
-}
-
-object EmbedlyImage {
-  implicit val format = (
-    (__ \ 'url).format[String] and
-    (__ \ 'caption).formatNullable[String] and
-    (__ \ 'width).formatNullable[Int] and
-    (__ \ 'height).formatNullable[Int] and
-    (__ \ 'size).formatNullable[Int]
-  )(EmbedlyImage.apply _, unlift(EmbedlyImage.unapply))
-}
-
-// field names must match embedly json field so that js.validate[EmbedlyInfo] works
-
-@json case class EmbedlyEntity(name: String, count: Int)
-@json case class EmbedlyKeyword(name: String, score: Int)
 
 case class EmbedlyInfo(
     originalUrl: String,

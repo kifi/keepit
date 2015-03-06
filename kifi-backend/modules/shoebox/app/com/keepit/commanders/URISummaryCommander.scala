@@ -21,7 +21,7 @@ import com.keepit.scraper.embedly.EmbedlyStore
 import com.keepit.common.db.Id
 import com.keepit.cortex.CortexServiceClient
 import com.keepit.search.ArticleStore
-import com.keepit.scraper.embedly.EmbedlyKeyword
+import com.keepit.rover.article.EmbedlyKeyword
 import com.keepit.normalizer.NormalizedURIInterner
 import com.keepit.common.service.RequestConsolidator
 import scala.concurrent.duration._

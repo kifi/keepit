@@ -2,9 +2,8 @@ package com.keepit.scraper.embedly
 
 import java.net.URLEncoder
 import java.util.concurrent.atomic.AtomicInteger
+import com.keepit.common.net.WebServiceUtils
 import com.keepit.common.performance._
-import com.keepit.common.store.S3URIImageStore
-import org.apache.commons.lang3.RandomStringUtils
 
 import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
@@ -13,12 +12,10 @@ import com.keepit.common.concurrent.RetryFuture
 import com.keepit.common.logging.Logging
 import com.keepit.common.service.RequestConsolidator
 import com.keepit.common.strings.UTF8
-import com.keepit.model.{ ImageFormat, ImageInfo, NormalizedURI }
 import play.api.http.Status
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
 import play.api.libs.ws.{ WSResponse, WS }
-import com.keepit.common.db.Id
 import play.api.Play.current
 import com.keepit.common.healthcheck.AirbrakeNotifier
 
@@ -52,7 +49,8 @@ class EmbedlyClientImpl @Inject() (airbrake: AirbrakeNotifier) extends EmbedlyCl
     val watch = Stopwatch(s"embedly infor for $url")
     val apiUrl = embedlyUrl(url)
     fetchExtendedInfoConsolidater(apiUrl) { urlString =>
-      fetchWithRetry(apiUrl, 120000) map { resp =>
+      val request = WS.url(url).withRequestTimeout(120000)
+      WebServiceUtils.getWithRetry(request, 2) map { resp =>
         val info = parseEmbedlyInfo(resp)
         watch.stop()
         info
@@ -67,20 +65,6 @@ class EmbedlyClientImpl @Inject() (airbrake: AirbrakeNotifier) extends EmbedlyCl
   }
 
   private val fetchExtendedInfoConsolidater = new RequestConsolidator[String, Option[EmbedlyInfo]](2 minutes)
-
-  private def fetchWithRetry(url: String, timeout: Int): Future[WSResponse] = {
-    val count = new AtomicInteger()
-    val resolver: PartialFunction[Throwable, Boolean] = {
-      case t: Throwable =>
-        count.getAndIncrement
-        // random delay or backoff
-        log.info(s"[fetchWithRetry($url)] attempt#(${count.get}) failed with $t") // intermittent embedly/site failures
-        true
-    }
-    RetryFuture(attempts = 2, resolver) {
-      WS.url(url).withRequestTimeout(timeout).get()
-    }
-  }
 }
 
 class DevEmbedlyClient extends EmbedlyClient {
