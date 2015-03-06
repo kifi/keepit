@@ -45,13 +45,19 @@
 
       <h1 class="kf-user-profile-name" itemprop="name">{{profile.firstName}} {{profile.lastName}}</h1>
     </div>
-    <nav class="kf-user-profile-user-nav">
-      <!-- For testing AngularUI routing, using <a> tags. However, will make into divs for V1 release. -->
-      <!-- Switch back to <a> tags in V2. (use: ui-sref="{{userNavLink.routeState}}") -->
-      <div class="kf-user-profile-user-nav-link" ng-repeat="userNavLink in userNavLinks">
-        <span class="kf-user-profile-user-nav-item-count">{{userNavLink.count|number}}</span>
-        <span class="kf-user-profile-user-nav-item-name">{{userNavLink.name}}</span>
-      </div>
+    <nav class="kf-uph-nav">
+      <a class="kf-uph-nav-a" href="{{profile|profileUrl:'libraries'}}" data-path="libraries">
+        <div class="kf-uph-nav-name">Libraries</div>
+        <div class="kf-uph-nav-count">{{profile.numLibraries|num}}</div>
+      </a>
+      <a class="kf-uph-nav-a" href="{{profile|profileUrl:'connections'}}" data-path="connections">
+        <div class="kf-uph-nav-name">Connections</div>
+        <div class="kf-uph-nav-count">{{profile.numConnections|num}}</div>
+      </a>
+      <a class="kf-uph-nav-a" href="{{profile|profileUrl:'followers'}}" data-path="followers" ng-if="profile.numFollowers">
+        <div class="kf-uph-nav-name">Followers</div>
+        <div class="kf-uph-nav-count">{{profile.numFollowers|num}}</div>
+      </a>
     </nav>
   </div>
 </div>

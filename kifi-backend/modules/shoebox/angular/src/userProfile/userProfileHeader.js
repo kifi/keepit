@@ -2,73 +2,21 @@
 
 angular.module('kifi')
 
-.directive('kfUserProfileHeader', ['$rootScope', 'profileService', 'inviteService', 'friendService', '$document',
-  function ($rootScope, profileService, inviteService, friendService, $document) {
+.directive('kfUserProfileHeader', [
+  '$rootScope', '$state', '$timeout', 'profileService', 'inviteService', 'friendService', '$document',
+  function ($rootScope, $state, $timeout, profileService, inviteService, friendService, $document) {
     return {
       restrict: 'A',
       scope: {
         profile: '='
       },
       templateUrl: 'userProfile/userProfileHeader.tpl.html',
-      link: function (scope /*, element, attrs*/) {
-
-        //
-        // Configs.
-        //
-        var userNavLinksConfig = [
-          { name: 'Libraries', /*routeState: 'userProfile.libraries.own',*/ countFieldName: 'numLibraries' },  // routeState is V2
-          { name: 'Keeps', countFieldName: 'numKeeps' }  // V1 only
-
-          /*
-           * V2
-           */
-          // { name: 'Friends', routeState: 'userProfile.friends', countFieldName: 'numFriends' },
-          // { name: 'Followers', routeState: 'userProfile.followers', countFieldName: 'numFollowers' },
-          // { name: 'Helped', routeState: 'userProfile.helped', countFieldName: 'numRekeeps' }
-        ];
-
-        var kifiCuratorUsernames = [
-          'kifi',
-          'kifi-editorial',
-          'kifi-eng'
-        ];
+      link: function (scope, element) {
+        var navLinks = element.find('.kf-uph-nav-a');
 
         //
         // Internal Functions
         //
-        function isKifiCurator(username) {
-          return kifiCuratorUsernames.indexOf(username) !== -1;
-        }
-
-        function initViewingUserStatus() {
-          scope.viewingOwnProfile = scope.profile.id === profileService.me.id;
-
-          if ($rootScope.userLoggedIn) {
-            if (scope.viewingOwnProfile) {
-              scope.connectionWithUser = 'self';
-            } else {
-              if (scope.profile.isFriend) {
-                scope.connectionWithUser = 'friends';
-              } else if (scope.profile.friendRequestSentAt) {
-                scope.connectionWithUser = 'request_sent';
-              } else if (scope.profile.friendRequestReceivedAt) {
-                scope.connectionWithUser = 'request_received';
-              } else {
-                scope.connectionWithUser = 'not_friends';
-              }
-            }
-          }
-        }
-
-        function initUserNavLinks() {
-          scope.userNavLinks = _.map(userNavLinksConfig, function (config) {
-            return {
-              name: config.name,
-              count: scope.profile[config.countFieldName],
-              routeState: config.routeState
-            };
-          });
-        }
 
         function toggleFriendMenuOn() {
           scope.showFriendMenu = true;
@@ -94,29 +42,36 @@ angular.module('kifi')
           header.animate({height: '0px'}, 150, nextAnimation);
         }
 
+        function removeNavLinkHref(state) {
+          navLinks.filter('[data-path=' + stateNamePart(state) + ']').removeAttr('href');
+        }
+
+        function restoreNavLinkHref(state) {
+          navLinks.filter('[data-path=' + stateNamePart(state) + ']').prop('href', $state.href(state));
+        }
+
+        function stateNamePart(state) {
+          return state && state.name.split('.')[1] || '';
+        }
 
         //
         // Scope Variables
         //
-        scope.viewingOwnProfile = false;
-        scope.isKifiCurator = false;
-        scope.userNavLinks = [];
-
+        scope.viewingOwnProfile = scope.profile.id === profileService.me.id;
+        scope.isKifiCurator = ['kifi','kifi-editorial','kifi-eng'].indexOf(scope.profile.username) >= 0;
         scope.showFriendMenu = false;
-
-        // for user connection, potential (states -> actions):
-        //   'self' -> setting
-        //   'not_friends' -> send request
-        //   'request_sent' -> (nothing)
-        //   'request_received' -> accept request
-        //   'friends' -> defriend
-        scope.connectionWithUser = '';
+        scope.connectionWithUser =
+          scope.viewingOwnProfile ? 'self' :
+          scope.profile.isFriend ? 'friends' :
+          scope.profile.friendRequestSentAt ? 'request_sent' :
+          scope.profile.friendRequestReceivedAt ? 'request_received' :
+          $rootScope.userLoggedIn ? 'not_friends' : '';
 
         //
         // Scope Functions
         //
         scope.trackClickedSettings = function () {
-          $rootScope.$emit('trackUserProfileEvent', 'click', { 'action': 'clickedSettings' });
+          $rootScope.$emit('trackUserProfileEvent', 'click', {action: 'clickedSettings'});
         };
 
         scope.toggleFriendMenu = function () {
@@ -128,7 +83,7 @@ angular.module('kifi')
         };
 
         scope.sendFriendRequest = function () {
-          $rootScope.$emit('trackUserProfileEvent', 'click', { 'action': 'clickedAddFriend' });
+          $rootScope.$emit('trackUserProfileEvent', 'click', {action: 'clickedAddFriend'});
 
           var progressBar = angular.element('.kf-user-profile-progress-bar');
           var progressCheckmark = angular.element('.kf-user-profile-progress-check');
@@ -151,17 +106,15 @@ angular.module('kifi')
                         scope.connectionWithUser = 'request_sent';
                       });
                     });
-
                   });
                 });
-
               });
             }
           });
         };
 
         scope.acceptFriendRequest = function () {
-          $rootScope.$emit('trackUserProfileEvent', 'click', { 'action': 'clickedAcceptFriend' });
+          $rootScope.$emit('trackUserProfileEvent', 'click', {action: 'clickedAcceptFriend'});
 
           friendService.acceptRequest(scope.profile.id).then(function() {
             var friendsIcon = angular.element('.kf-user-profile-connect-image');
@@ -177,7 +130,7 @@ angular.module('kifi')
         };
 
         scope.ignoreFriendRequest = function () {
-          $rootScope.$emit('trackUserProfileEvent', 'click', { 'action': 'clickedDeclineFriend' });
+          $rootScope.$emit('trackUserProfileEvent', 'click', {action: 'clickedDeclineFriend'});
 
           friendService.ignoreRequest(scope.profile.id).then(function() {
             closeFriendRequestHeader();
@@ -191,16 +144,17 @@ angular.module('kifi')
           });
         };
 
+        //
+        // Watches and listeners
+        //
 
-        //
-        // Watchers & Listeners
-        //
-        scope.$watch('profile', function (newProfile) {
-          if (newProfile) {
-            scope.isKifiCurator = isKifiCurator(scope.profile.username);
-            initViewingUserStatus();
-            initUserNavLinks();
-          }
+        scope.$on('$destroy', $rootScope.$on('$stateChangeSuccess', function (event, toState, toParams, fromState) {
+          restoreNavLinkHref(fromState);
+          removeNavLinkHref(toState);
+        }));
+
+        $timeout(function () {
+          removeNavLinkHref($state.current);
         });
       }
     };
