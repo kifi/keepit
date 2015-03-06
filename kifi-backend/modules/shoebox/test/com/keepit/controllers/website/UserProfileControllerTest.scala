@@ -168,6 +168,7 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
 
           val user3lib = library().withUser(user3).published().saved
           val user5lib = library().withUser(user5).published().saved.savedFollowerMembership(user1)
+          keep().withLibrary(user5lib).saved
           membership().withLibraryFollower(library().withUser(user5).published().saved, user1).unlisted().saved
 
           invite().fromLibraryOwner(user3lib).toUser(user1.id.get).withState(LibraryInviteStates.ACTIVE).saved
@@ -201,13 +202,13 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
           libraryRepo.countLibrariesOfUserFromAnonymous(user2.id.get) === 0
           libraryRepo.countLibrariesOfUserFromAnonymous(user3.id.get) === 1
           libraryRepo.countLibrariesOfUserFromAnonymous(user4.id.get) === 0
-          libraryRepo.countLibrariesOfUserFromAnonymous(user5.id.get) === 2
+          libraryRepo.countLibrariesOfUserFromAnonymous(user5.id.get) === 1
           libraryRepo.countLibrariesForOtherUser(user1.id.get, user5.id.get) === 1
           libraryRepo.countLibrariesForOtherUser(user1.id.get, user2.id.get) === 2
           libraryRepo.countLibrariesForOtherUser(user2.id.get, user5.id.get) === 0
           libraryRepo.countLibrariesForOtherUser(user3.id.get, user5.id.get) === 1
           libraryRepo.countLibrariesForOtherUser(user4.id.get, user5.id.get) === 0
-          libraryRepo.countLibrariesForOtherUser(user5.id.get, user1.id.get) === 2
+          libraryRepo.countLibrariesForOtherUser(user5.id.get, user1.id.get) === 1
         }
 
         //non existing username

@@ -54,8 +54,8 @@ class UserProfileCommander @Inject() (
     import com.keepit.common.cache.TransactionalCaching.Implicits._
     userConnectionRelationshipCache.getOrElseFuture(UserConnectionRelationshipKey(viewer, owner)) {
       val sociallyRelatedEntitiesF = graphServiceClient.getSociallyRelatedEntities(viewer)
-      val connectionsF = db.readOnlyReplicaAsync { implicit s =>
-        val all = userConnectionRepo.getConnectedUsersForUsers(Set(viewer, owner))
+      val connectionsF = db.readOnlyMasterAsync { implicit s =>
+        val all = userConnectionRepo.getConnectedUsersForUsers(Set(viewer, owner)) //cached
         all(viewer) -> all(owner)
       }
       for {
