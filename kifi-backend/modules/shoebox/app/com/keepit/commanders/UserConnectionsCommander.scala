@@ -127,24 +127,24 @@ class UserConnectionsCommander @Inject() (
     user1FriendIds intersect user2FriendIds
   }
 
-  def unfriend(userId: Id[User], id: ExternalId[User]): Boolean = {
-    db.readOnlyMaster(attempts = 2) { implicit ro => userRepo.getOpt(id) } exists { user =>
-      val success = db.readWrite(attempts = 2) { implicit s =>
-        userConnectionRepo.unfriendConnections(userId, user.id.toSet) > 0
-      }
-      if (success) {
-        db.readOnlyReplica { implicit session =>
-          elizaServiceClient.sendToUser(userId, Json.arr("lost_friends", Set(basicUserRepo.load(user.id.get))))
-          elizaServiceClient.sendToUser(user.id.get, Json.arr("lost_friends", Set(basicUserRepo.load(userId))))
-        }
-        Seq(userId, user.id.get) foreach { id =>
-          socialUserTypeahead.refresh(id)
-          kifiUserTypeahead.refresh(id)
-        }
-        searchClient.updateUserGraph()
-      }
-      success
+  def unfriend(userId: Id[User], friendExternalId: ExternalId[User]): Boolean = {
+    val friendId = db.readOnlyMaster(attempts = 2) { implicit ro => userRepo.get(friendExternalId).id.get }
+    val success = db.readWrite(attempts = 2) { implicit s =>
+      userConnectionRepo.unfriendConnections(userId, Set(friendId)) > 0
     }
+    if (success) {
+      val (friend, user) = db.readOnlyMaster { implicit session =>
+        (basicUserRepo.load(friendId), basicUserRepo.load(userId))
+      }
+      elizaServiceClient.sendToUser(userId, Json.arr("lost_friends", Set(friend)))
+      elizaServiceClient.sendToUser(userId, Json.arr("lost_friends", Set(user)))
+      Seq(userId, friendId) foreach { id =>
+        socialUserTypeahead.refresh(id)
+        kifiUserTypeahead.refresh(id)
+      }
+      searchClient.updateUserGraph()
+    }
+    success
   }
 
   def getConnectionsPage(userId: Id[User], page: Int, pageSize: Int): (Seq[ConnectionInfo], Int) = {
