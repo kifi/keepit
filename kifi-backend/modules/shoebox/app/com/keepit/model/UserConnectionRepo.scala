@@ -66,22 +66,21 @@ class UserConnectionRepoImpl @Inject() (
   }
 
   def deleteCacheForUsers(user1: Id[User], user2: Id[User])(implicit session: RSession): Unit = {
-    def invalidateCache(userId: Id[User])(implicit session: RSession): Unit = {
+    def invalidateCache(userId: Id[User]): Unit = {
       userConnCache.remove(UserConnectionIdKey(userId))
       basicUserConnCache.remove(BasicUserConnectionIdKey(userId))
       connCountCache.remove(UserConnectionCountKey(userId))
       searchFriendsCache.remove(SearchFriendsKey(userId))
       unfriendedCache.remove(UnfriendedConnectionsKey(userId))
+      userFollowerRelationshipCache.remove(UserFollowerRelationshipKey(None, userId))
     }
-
     mutualConnCountCache.remove(UserMutualConnectionCountKey(user1, user2))
     userConnectionRelationshipCache.remove(UserConnectionRelationshipKey(user1, user2))
     userConnectionRelationshipCache.remove(UserConnectionRelationshipKey(user2, user1))
     userFollowerRelationshipCache.remove(UserFollowerRelationshipKey(Some(user1), user2))
     userFollowerRelationshipCache.remove(UserFollowerRelationshipKey(Some(user2), user1))
-    userFollowerRelationshipCache.remove(UserFollowerRelationshipKey(None, user2))
-    userFollowerRelationshipCache.remove(UserFollowerRelationshipKey(None, user1))
-    List(user1, user2) foreach invalidateCache
+    invalidateCache(user1)
+    invalidateCache(user2)
   }
 
   override def deleteCache(conn: UserConnection)(implicit session: RSession): Unit = {
