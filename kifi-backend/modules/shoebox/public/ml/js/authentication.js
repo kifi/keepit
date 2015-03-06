@@ -55,12 +55,13 @@ $(function() {
     var $form = $(this);
     var $email = $form.find('.login-email');
     var $password = $form.find('.login-password');
+    var trackingType = window.location.pathname.search('linkSocial') >= 0 ? 'linkSocialAccount' : 'login';
 
-    var validEmail = validateEmailAddress($email, $form.find('#error-login-email'), 'login');
+    var validEmail = validateEmailAddress($email, $form.find('#error-login-email'), trackingType);
     if (!validEmail) {
       return;
     }
-    var validPassword = validatePassword($password, $form.find('#error-login-password'), 'login');
+    var validPassword = validatePassword($password, $form.find('#error-login-password'), trackingType);
     if (!validPassword) {
       return;
     }
@@ -80,11 +81,11 @@ $(function() {
       var $email = $('.form-input.signup-email');
       var $password = $('.form-input.signup-password');
       if (body.error === 'no_such_user') {
-        errorUserNotFound($('#error-login-email'), $email, 'login');
+        errorUserNotFound($('#error-login-email'), $email, trackingType);
       } else if (body.error === 'wrong_password') {
-        errorWrongPassword($('#error-login-password'), $password, 'login');
+        errorWrongPassword($('#error-login-password'), $password, trackingType);
       } else {
-        errorUnknown($('#login-email'), $email, 'login');
+        errorUnknown($('#login-email'), $email, trackingType);
       }
     });
     return false;
@@ -197,11 +198,11 @@ $(function() {
       var body = xhr.responseJSON || {};
       var $form = $('.form-input.email');
       if (body.error === 'error.email') {
-        errorInvalidEmail($('#error-signup-email'), $form'signup2Social');
+        errorInvalidEmail($('#error-signup-email'), $form, 'signup2Social');
       } else if (body.error === 'error.required') {
-        errorUnrecognizedEmail($('#error-signup-email'), $form'signup2Social');
+        errorUnrecognizedEmail($('#error-signup-email'), $form, 'signup2Social');
       } else {
-        errorUnknown($('#error-signup-email'), $form'signup2Social');
+        errorUnknown($('#error-signup-email'), $form, 'signup2Social');
       }
     });
     return false;
@@ -226,10 +227,11 @@ $(function() {
 
   function submitForgotPassword() {
     event.preventDefault();
+    var trackingType = window.location.pathname.search('linkSocial') >= 0 ? 'linkSocialAccount' : 'login';
 
     // validate email
     var $email = $('.fp-input');
-    var validEmail = validateEmailAddress($email, $('#error-fp'), 'login');
+    var validEmail = validateEmailAddress($email, $('#error-fp'), trackingType);
 
     if (!validEmail) {
       return;
@@ -248,9 +250,9 @@ $(function() {
     .fail(function (xhr) { // errors: no_account
       var body = xhr.responseJSON || {};
       if (body.error === 'no_account') {
-        errorUnrecognizedEmail($('#error-fp'), $('.fp-input'), 'login');
+        errorUnrecognizedEmail($('#error-fp'), $('.fp-input'), trackingType);
       } else {
-        errorUnknown($('#error-fp'), $('.fp-input'), 'login');
+        errorUnknown($('#error-fp'), $('.fp-input'), trackingType);
       }
     });
   }
@@ -302,9 +304,9 @@ $(function() {
   }
   function errorEmptyName($errorField, whichName, $inputField) {
     if (whichName === 'first') {
-      Tracker.track('visitor_viewed_page', { type: type, error: 'noFirstName' });
+      Tracker.track('visitor_viewed_page', { type: 'signup2Email', error: 'noFirstName' });
     } else if (whichName === 'last') {
-      Tracker.track('visitor_viewed_page', { type: type, error: 'noLastName' });
+      Tracker.track('visitor_viewed_page', { type: 'signup2Email', error: 'noLastName' });
     }
     error($errorField, 'Your '+ whichName +' name is required', $inputField);
   }
@@ -329,7 +331,7 @@ $(function() {
     error($errorField, 'An account already exists for this email!<br>Try <a href="/login">Logging In</a>', $inputField);
   }
   function errorUnknown($errorField, $inputField, type) {
-    if (type === 'login') {
+    if (type === 'login' || type === 'linkSocialAccount') {
       Tracker.track('visitor_viewed_page', { type: 'login', error: 'unknownLoginError' });
     } else if (type === 'signup' || type === 'signup2Email' || type === 'signup2Social') {
       Tracker.track('visitor_viewed_page', { type: 'signup', error: 'unknownSignupError'})

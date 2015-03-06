@@ -626,8 +626,8 @@ class AuthController @Inject() (
     Ok(views.html.authMinimal.loginToKifiNoTwitter())
   }
 
-  def claimAccountMinimal() = Action { implicit request =>
-    Ok(views.html.authMinimal.claimAccount("facebook", "someemail1230@gmail.com"))
+  def linkSocialAccountMinimal() = Action { implicit request =>
+    Ok(views.html.authMinimal.linkSocial("facebook", "someemail1230@gmail.com"))
   }
 
 }
