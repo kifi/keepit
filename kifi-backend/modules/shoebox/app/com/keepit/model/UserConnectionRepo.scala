@@ -1,7 +1,5 @@
 package com.keepit.model
 
-import com.keepit.commanders.{ UserFollowerRelationshipKey, UserFollowerRelationshipCache, UserConnectionRelationshipKey, UserConnectionRelationshipCache }
-
 import scala.concurrent.duration.Duration
 import com.google.inject.{ Inject, Singleton, ImplementedBy }
 import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, Key, CacheStatistics }
@@ -45,8 +43,6 @@ class UnfriendedConnectionsCache(stats: CacheStatistics, accessLog: AccessLog, i
 class UserConnectionRepoImpl @Inject() (
   val db: DataBaseComponent,
   val clock: Clock,
-  userConnectionRelationshipCache: UserConnectionRelationshipCache,
-  userFollowerRelationshipCache: UserFollowerRelationshipCache,
   val friendRequestRepo: FriendRequestRepo,
   val connCountCache: UserConnectionCountCache,
   mutualConnCountCache: UserMutualConnectionCountCache,
@@ -72,13 +68,8 @@ class UserConnectionRepoImpl @Inject() (
       connCountCache.remove(UserConnectionCountKey(userId))
       searchFriendsCache.remove(SearchFriendsKey(userId))
       unfriendedCache.remove(UnfriendedConnectionsKey(userId))
-      userFollowerRelationshipCache.remove(UserFollowerRelationshipKey(None, userId))
     }
     mutualConnCountCache.remove(UserMutualConnectionCountKey(user1, user2))
-    userConnectionRelationshipCache.remove(UserConnectionRelationshipKey(user1, user2))
-    userConnectionRelationshipCache.remove(UserConnectionRelationshipKey(user2, user1))
-    userFollowerRelationshipCache.remove(UserFollowerRelationshipKey(Some(user1), user2))
-    userFollowerRelationshipCache.remove(UserFollowerRelationshipKey(Some(user2), user1))
     invalidateCache(user1)
     invalidateCache(user2)
   }
