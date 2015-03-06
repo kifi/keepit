@@ -1,49 +1,49 @@
-<div class="kf-user-profile-header kf-min-width-bounded">
+<div class="kf-uph kf-min-width-bounded">
   <div class="kf-width-bounded">
-    <div class="kf-user-profile-friend-request-header" ng-if="connectionWithUser==='request_received'">
-      <button class="kf-user-profile-friend-respond kf-accept" ng-click="acceptFriendRequest()">Accept</button>
-      <button class="kf-user-profile-friend-respond kf-decline" ng-click="ignoreFriendRequest()">Decline</button>
-      <span class="kf-user-profile-friend-request-msg">{{profile.firstName}} wants to connect with you on Kifi</span>
+    <div class="kf-uph-connect-banner" ng-if="connectionWithUser==='request_received'">
+      <button class="kf-uph-connect-banner-btn kf-accept" ng-click="acceptFriendRequest()">Accept</button>
+      <button class="kf-uph-connect-banner-btn kf-decline" ng-click="ignoreFriendRequest()">Decline</button>
+      <span class="kf-uph-connect-banner-text">{{profile.firstName}} wants to connect with you on Kifi</span>
     </div>
-    <div class="kf-up-basic-info-main-content" itemscope itemtype="http://schema.org/Person">
-      <a class="kf-user-profile-picture-a" href="{{profile|profileUrl}}" itemprop="url">
-        <img class="kf-user-profile-picture" ng-src="{{profile | pic:200}}" alt="{{profile.firstName}} {{profile.lastName}}" itemprop="image">
+    <div class="kf-uph-top" itemscope itemtype="http://schema.org/Person">
+      <a class="kf-uph-pic-a" href="{{profile|profileUrl}}" itemprop="url">
+        <img class="kf-uph-pic" ng-src="{{profile|pic:200}}" alt="{{profile.firstName}} {{profile.lastName}}" itemprop="image">
       </a>
 
-      <div ng-if="!isKifiCurator" ng-switch="connectionWithUser" class="kf-user-profile-available-action">
-        <div ng-switch-when="not_friends" class="kf-user-profile-connect connect" ng-click="sendFriendRequest()">
-          <div class="kf-user-profile-action connect">Connect</div>
-          <span class="kf-user-profile-connect-image add-friend"></span>
-          <div class="kf-user-profile-action hidden">Invited to connect</div>
+      <div class="kf-uph-action" ng-if="!isKifiCurator" ng-switch="connectionWithUser">
+        <button class="kf-uph-connect connect" ng-switch-when="not_friends" ng-click="sendFriendRequest()">
+          <div class="kf-uph-action-text connect">Connect</div>
+          <span class="kf-uph-connect-image add-friend"></span>
+          <div class="kf-uph-action-text hidden">Invited to connect</div>
+        </button>
+
+        <div class="kf-uph-connect request-sent" ng-switch-when="request_sent">
+          <span class="kf-uph-connect-image add-friend"></span>
+          <span class="kf-uph-action-text">Invited to connect</span>
         </div>
 
-        <div ng-switch-when="request_sent" class="kf-user-profile-connect request-sent">
-          <span class="kf-user-profile-connect-image add-friend"></span>
-          <span class="kf-user-profile-action">Invited to connect</span>
+        <div class="kf-uph-connect request-received" ng-switch-when="request_received">
+          <span class="kf-uph-connect-image already-friends hidden"></span>
         </div>
 
-        <div ng-switch-when="request_received" class="kf-user-profile-connect request-received">
-          <span class="kf-user-profile-connect-image already-friends hidden"></span>
-        </div>
-
-        <div ng-switch-when="friends" class="kf-user-profile-connect friends" ng-click="toggleFriendMenu()">
-          <span class="kf-user-profile-connect-image already-friends"></span>
-          <div class="kf-user-profile-action-menu" ng-class="{on: showFriendMenu}">
-            <div class="kf-user-profile-action-selection">Remove connection</div>
+        <button class="kf-uph-connect friends" ng-switch-when="friends" ng-click="toggleFriendMenu()">
+          <span class="kf-uph-connect-image already-friends"></span>
+          <div class="kf-uph-action-menu" ng-class="{on: showFriendMenu}">
+            <div class="kf-uph-action-menu-item">Remove connection</div>
           </div>
-        </div>
+        </button>
 
-        <a ng-switch-when="self" class="kf-user-profile-settings-link" ui-sref="settings" ng-click="trackClickedSettings()">
-          <span class="kf-user-profile-settings-gear svg-settings-gear"></span>
-          <span class="kf-user-profile-action">Settings</span>
+        <a class="kf-uph-settings-a" ng-switch-when="self" ui-sref="settings" ng-click="trackClickedSettings()">
+          <span class="kf-uph-settings-icon svg-settings-gear"></span>
+          <span class="kf-uph-action-text">Settings</span>
         </a>
       </div>
-      <div class="kf-user-profile-progress" ng-if="connectionWithUser==='not_friends'">
-        <div class="kf-user-profile-progress-bar"></div>
-        <div class="kf-user-profile-progress-check"></div>
+      <div class="kf-uph-progress" ng-if="connectionWithUser==='not_friends'">
+        <div class="kf-uph-progress-bar"></div>
+        <div class="kf-uph-progress-check"></div>
       </div>
 
-      <h1 class="kf-user-profile-name" itemprop="name">{{profile.firstName}} {{profile.lastName}}</h1>
+      <h1 class="kf-uph-name" itemprop="name">{{profile.firstName}} {{profile.lastName}}</h1>
     </div>
     <nav class="kf-uph-nav">
       <a class="kf-uph-nav-a" href="{{profile|profileUrl:'libraries'}}" data-path="libraries">

@@ -29,16 +29,16 @@ angular.module('kifi')
 
         function onClickFriendMenu(event) {
           var clickTarget = angular.element(event.target);
-          if (scope.showFriendMenu && clickTarget.is('.kf-user-profile-action-menu .kf-user-profile-action-selection')) {
+          if (scope.showFriendMenu && clickTarget.hasClass('kf-uph-action-menu-item')) {
             scope.unfriend();
             scope.$evalAsync(toggleFriendMenuOff);
-          } else if (!clickTarget.is('.kf-user-profile-connect-image')) {
+          } else if (!clickTarget.hasClass('kf-uph-connect-image')) {
             scope.$evalAsync(toggleFriendMenuOff);
           }
         }
 
         function closeFriendRequestHeader(nextAnimation) {
-          var header = angular.element('.kf-user-profile-friend-request-header');
+          var header = angular.element('.kf-uph-connect-banner');
           header.animate({height: '0px'}, 150, nextAnimation);
         }
 
@@ -85,8 +85,8 @@ angular.module('kifi')
         scope.sendFriendRequest = function () {
           $rootScope.$emit('trackUserProfileEvent', 'click', {action: 'clickedAddFriend'});
 
-          var progressBar = angular.element('.kf-user-profile-progress-bar');
-          var progressCheckmark = angular.element('.kf-user-profile-progress-check');
+          var progressBar = angular.element('.kf-uph-progress-bar');
+          var progressCheckmark = angular.element('.kf-uph-progress-check');
 
           var promise = inviteService.friendRequest(scope.profile.id);
           progressBar.animate({width: '15%'}, 80);
@@ -95,9 +95,9 @@ angular.module('kifi')
             if (res.sentRequest || res.acceptedRequest) {
               progressBar.animate({width: '100%'}, 200, function() {
                 progressCheckmark.animate({opacity: 1}, 100, function() {
-                  var connectBlock = angular.element('.kf-user-profile-connect');
-                  var connectMsg = connectBlock.find('.kf-user-profile-action.connect');
-                  var requestSentMsg = connectBlock.find('.kf-user-profile-action.hidden');
+                  var connectBlock = angular.element('.kf-uph-connect');
+                  var connectMsg = connectBlock.find('.kf-uph-action-text.connect');
+                  var requestSentMsg = connectBlock.find('.kf-uph-action-text.hidden');
 
                   connectMsg.css('display', 'none');
                   requestSentMsg.animate({width: '113px'}, 350, function() { // size of Friend Request Sent message
@@ -117,7 +117,7 @@ angular.module('kifi')
           $rootScope.$emit('trackUserProfileEvent', 'click', {action: 'clickedAcceptFriend'});
 
           friendService.acceptRequest(scope.profile.id).then(function() {
-            var friendsIcon = angular.element('.kf-user-profile-connect-image');
+            var friendsIcon = angular.element('.kf-uph-connect-image');
             var nextAnimation = function() {
               friendsIcon.animate({opacity: 1}, 300, function() {
                 scope.$evalAsync(function() {
