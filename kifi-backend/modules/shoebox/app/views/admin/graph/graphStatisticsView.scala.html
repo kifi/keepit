@@ -77,7 +77,6 @@
       if (chart == "graphSize") {
         options.title = "Graph Size"
         options.target = ["substr(stats.gauges.graph.graph.*.*)"]
-        options.logBase = 2
       }
 
       $("#" + chart).graphite(options);
