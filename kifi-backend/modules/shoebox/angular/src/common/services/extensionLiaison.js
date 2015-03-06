@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .factory('extensionLiaison', [
-  '$window', '$timeout', '$rootScope', 'installService', 'profileService',
-  function ($window, $timeout, $rootScope, installService, profileService) {
+  '$window', '$rootScope',
+  function ($window, $rootScope) {
 
     $window.addEventListener('message', function (event) {
       $rootScope.$apply(function () {
