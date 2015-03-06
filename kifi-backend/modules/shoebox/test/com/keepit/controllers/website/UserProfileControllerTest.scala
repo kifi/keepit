@@ -144,6 +144,22 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
             "mLibraries" -> 1, "mConnections" -> 1
           )
         }
+        db.readWrite { implicit s =>
+          val repo = inject[UserConnectionRepo]
+          repo.deactivateAllConnections(user2.id.get)
+        }
+        db.readOnlyMaster { implicit s =>
+          controller.loadProfileUser(user1.id.get, basicUserWFS(user1, user2.id), user2.id, None) === Json.obj(
+            "id" -> user1.externalId,
+            "firstName" -> user1.firstName,
+            "lastName" -> user1.lastName,
+            "pictureName" -> "pic1.jpg",
+            "username" -> user1.username.value,
+            "isFriend" -> false,
+            "libraries" -> 2, "connections" -> 2, "followers" -> 3,
+            "mLibraries" -> 1, "mConnections" -> 0
+          )
+        }
       }
     }
 
@@ -323,6 +339,7 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
         status(result3) must equalTo(OK)
         contentType(result3) must beSome("application/json")
         val resultJson3 = contentAsJson(result3)
+        println(s"resultJson3=$resultJson3")
         (resultJson3 \ "count") === JsNumber(3)
         (resultJson3 \\ "id") === Seq(user2, user4, user5).map(u => JsString(u.externalId.id))
         (resultJson3 \ "ids") === JsArray()

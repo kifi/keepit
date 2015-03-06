@@ -9,7 +9,7 @@ import com.keepit.serializer.ArrayBinaryFormat
 
 case class SearchFriendsKey(userId: Id[User]) extends Key[Array[Long]] {
   val namespace = "search_friends"
-  override val version: Int = 2
+  override val version: Int = 3
   def toKey(): String = userId.id.toString
 }
 
