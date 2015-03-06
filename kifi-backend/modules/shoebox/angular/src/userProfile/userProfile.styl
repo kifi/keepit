@@ -19,7 +19,7 @@
 
 .kf-up-basic-info-main-content
   position: relative
-  padding-top: 40px
+  padding-top: 20px
 
 .kf-user-profile-available-action
   position: absolute
@@ -176,18 +176,43 @@
     height: 150px
 
 .kf-user-profile-name
-  font-weight: bold
+  font-weight: normal
   font-size: 1.3em
   line-height: 2em
   color: inherit
 
-.kf-user-profile-user-nav-link
+.kf-uph-nav
+  margin: 10px auto 0
   display: inline-block
+  border-top: 1px solid #fff
+
+.kf-uph-nav-a
+  display: inline-block
+  padding: 6px 10px
   color: #9fa3aa
 
-  &:first-child
-    margin-right: 5px
+  // &:first-child
+  //   padding-left: 0
 
-    &::after
-      margin-left: 5px
-      content: '·'
+  // &:last-child
+  //   padding-right: 0
+
+  &[href]:hover
+    background-color: alpha(#fff, 5%)
+
+  &:not([href])
+    color: accentGreen
+    cursor: default
+
+.kf-uph-nav-name
+  line-height: 20px
+  font-size: 12px
+  text-transform: uppercase
+
+.kf-uph-nav-count
+  color: #fff
+  line-height: 24px
+  font-size: 18px
+
+  :not([href])>&
+    color: inherit

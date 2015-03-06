@@ -105,29 +105,32 @@ class AngularRouter @Inject() (
   import AngularRouter.Path
 
   def route(request: MaybeUserRequest[_]): Routeable = {
-    ngRedirects.get(request.path) map { toPath =>
-      MovedPermanentlyRoute(toPath)
+    val path = AngularRouter.Path(request.path)
+    ngLoginRedirects.get(path.path) map { toPath =>
+      request match {
+        case _: UserRequest[_] => MovedPermanentlyRoute(toPath)
+        case _ => RedirectToLogin(toPath)
+      }
     } orElse {
-      val path = AngularRouter.Path(request.path)
-      ngStaticPage(path, request.userOpt.isDefined) orElse userOrLibrary(path, request)
+      if (path.primary == "friends" || path.path == "/connections") {
+        request match {
+          case r: UserRequest[_] => Some(SeeOtherRoute(s"/${URLEncoder.encode(r.user.username.value, UTF8)}/connections"))
+          case _ => Some(RedirectToLogin("/connections"))
+        }
+      } else {
+        ngStaticPage(path, request.userOpt.isDefined) orElse userOrLibrary(path, request)
+      }
     } getOrElse {
       Error404
     }
   }
 
-  private val ngRedirects = Map(
+  private val ngLoginRedirects = Map(
     "/recommendations" -> "/",
-    "/friends" -> "/connections",
-    "/friends/invite" -> "/invite",
-    "/friends/requests" -> "/connections",
-    "/friends/requests/email" -> "/connections",
-    "/friends/requests/linkedin" -> "/connections",
-    "/friends/requests/facebook" -> "/connections",
-    "/friends/requests/refresh" -> "/connections"
+    "/friends/invite" -> "/invite"
   )
   private val ngFixedRoutes: Map[String, Seq[MaybeUserRequest[_] => Future[String]]] = Map(
     "/" -> Seq(), // Note: "/" currently handled directly by HomeController.home
-    "/connections" -> Seq(),
     "/invite" -> Seq(),
     "/profile" -> Seq(),
     "/find" -> Seq(),
@@ -135,7 +138,6 @@ class AngularRouter @Inject() (
     "/keeps" -> Seq()
   )
   private val ngPrefixRoutes: Map[String, Seq[MaybeUserRequest[_] => Future[String]]] = Map(
-    "friends" -> Seq(),
     "keep" -> Seq(),
     "tag" -> Seq()
   )

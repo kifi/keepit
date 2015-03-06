@@ -4,9 +4,10 @@ angular.module('kifi')
 
 .directive('kfLibraryMenu', [
   '$document', '$interval', '$location', '$rootScope', '$window', '$timeout',
-  'friendService', 'libraryService', 'modalService', 'profileService', 'tagService', 'util',
-  function ($document, $interval, $location, $rootScope, $window, $timeout,
-  friendService, libraryService, modalService, profileService, tagService, util) {
+  'libraryService', 'modalService', 'profileService', 'tagService', 'util',
+  function (
+      $document, $interval, $location, $rootScope, $window, $timeout,
+      libraryService, modalService, profileService, tagService, util) {
     return {
       restrict: 'A',
       replace: true,
@@ -30,11 +31,6 @@ angular.module('kifi')
         scope.userLibsToShow = [];
         scope.invitedLibsToShow = [];
         scope.sortingMenu = { show : false, option : '', myLibsFirst : true };
-
-        scope.counts = {
-          friendsCount: friendService.totalFriends(),
-          friendsNotifCount: friendService.requests.length
-        };
 
         //
         // Internal methods.
@@ -200,16 +196,6 @@ angular.module('kifi')
           }
         });
         scope.$on('$destroy', deregisterLibraryVisited);
-
-        scope.$watch(function () {
-          return friendService.requests.length;
-        }, function (value) {
-          scope.counts.friendsNotifCount = value;
-        });
-
-        scope.$watch(friendService.totalFriends, function (value) {
-          scope.counts.friendsCount = value;
-        });
 
         scope.$watch(tagService.getTotalKeepCount, function (val) {
           scope.counts.keepCount = val;
