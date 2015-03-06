@@ -3,13 +3,22 @@
   states: Map[com.keepit.common.amazon.AmazonInstanceInfo, com.keepit.graph.manager.PrettyGraphState]
 )(implicit request: com.keepit.common.controller.UserRequest[_])
 
-@views.html.admin.admin("Graph Statistics") {
+@views.html.admin.admin("Graph Statistics", scripts = List("graphite")) {
+
+  <div align="right" class="form-horizontal">
+   <select class="input-medium params" id="timerange"></select>
+   <button class="btn btn-primary" type="button" id="update">Update Now</button>
+  </div>
+
+  <div align="center">
+    <p><img id="graphSize" class="img-polaroid"></p>
+  </div>
 
   <h3>Vertex Statistics</h3>
     <p><i>Showing by instance: (vertex count, average outgoing degree, average incoming degree)</i></p>
     <table class = "table table-bordered">
       <tr> <th>Vertex</th> @allInstances.map { instance => <th>@instance.getName</th> } </tr>
-      @statistics.values.flatMap(_.vertexStatistics.keySet).toSeq.sorted.map { vertexType: String =>
+      @statistics.values.flatMap(_.vertexStatistics.keySet).toSeq.distinct.sorted.map { vertexType: String =>
         <tr> <td>@vertexType</td> @allInstances.map { instance => <td>@statistics.get(instance).flatMap(_.vertexStatistics.get(vertexType))</td> } </tr>
       }
     </table>
@@ -18,7 +27,7 @@
     <p><i>Showing by instance: (edge count, source average outgoing degree, destination average incoming degree)</i></p>
     <table class = "table table-bordered">
       <tr> <th>Edge</th> @allInstances.map { instance => <th>@instance.getName</th> } </tr>
-      @statistics.values.flatMap(_.edgeStatistics.keySet).toSeq.sorted.map { edgeType: (String, String, String) => @edgeType match { case (sourceKind, destinationKind, edgeKind) =>
+      @statistics.values.flatMap(_.edgeStatistics.keySet).toSeq.distinct.sorted.map { edgeType: (String, String, String) => @edgeType match { case (sourceKind, destinationKind, edgeKind) =>
         <tr> <td>@sourceKind -> @destinationKind | @edgeKind</td> @allInstances.map { instance => <td>@statistics.get(instance).flatMap(_.edgeStatistics.get((sourceKind, destinationKind, edgeKind)))</td> } </tr>
       }}
     </table>
@@ -26,8 +35,61 @@
   <h3>Graph Updater State</h3>
     <table class = "table table-bordered">
       <tr> <th>GraphUpdate</th> @allInstances.map { instance => <th>@instance.getName</th> } </tr>
-        @states.values.flatMap(_.state.keySet).toSeq.sorted.map { updateKind: String =>
+        @states.values.flatMap(_.state.keySet).toSeq.distinct.sorted.map { updateKind: String =>
         <tr> <td>@updateKind</td> @allInstances.map { instance => <td>@states.get(instance).map(_.state.get(updateKind))</td> } </tr>
       }
     </table>
+
+  <script>
+
+    var timeranges = {
+      "10 Minutes": "-0h10min",
+      "30 Minutes": "-0h30min",
+      "1 Hour": "-1h",
+      "3 Hours": "-3h",
+      "6 Hours": "-6h",
+      "12 Hours": "-12h",
+      "24 Hours": "-24h",
+      "48 Hours": "-48h",
+      "1 Week": "-1w",
+      "2 Weeks": "-2w",
+      "1 Month": "-1mon",
+      "1 Month": "-1mon",
+      "3 Months": "-3mon"
+    };
+
+    $.each(timeranges, function (name, timerange) {
+      $("#timerange").append($("<option>").val(timerange).text(name));
+    });
+    $("#timerange").find('option[value="-12h"]').prop('selected',true)
+
+    var options = $.fn.graphite.defaults = {
+      url: "https://www.hostedgraphite.com/a3d638f9/b4e709e5-45b0-4b89-904b-a6cc7e517e04/graphite/render/",
+      lineMode: "connected",
+      width: 1200,
+      height: 600
+    };
+
+    function renderChart(chart) {
+
+      options.from = $("#timerange").val();
+
+      if (chart == "graphSize") {
+        options.title = "Graph Size"
+        options.target = ["substr(stats.gauges.graph.graph.*.*)"]
+        options.logBase = 2
+      }
+
+      $("#" + chart).graphite(options);
+    }
+
+    function renderAll() {
+      renderChart("graphSize")
+    }
+
+    $(".params").change(renderAll);
+    $("#update").click(renderAll);
+    setInterval(renderAll, 300000);
+    renderAll()
+  </script>
 }
