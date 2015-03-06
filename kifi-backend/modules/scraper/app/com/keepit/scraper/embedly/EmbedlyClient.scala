@@ -49,7 +49,7 @@ class EmbedlyClientImpl @Inject() (airbrake: AirbrakeNotifier) extends EmbedlyCl
     val watch = Stopwatch(s"embedly infor for $url")
     val apiUrl = embedlyUrl(url)
     fetchExtendedInfoConsolidater(apiUrl) { urlString =>
-      val request = WS.url(url).withRequestTimeout(120000)
+      val request = WS.url(urlString).withRequestTimeout(120000)
       WebServiceUtils.getWithRetry(request, 2) map { resp =>
         val info = parseEmbedlyInfo(resp)
         watch.stop()
