@@ -339,7 +339,6 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
         status(result3) must equalTo(OK)
         contentType(result3) must beSome("application/json")
         val resultJson3 = contentAsJson(result3)
-        println(s"resultJson3=$resultJson3")
         (resultJson3 \ "count") === JsNumber(3)
         (resultJson3 \\ "id") === Seq(user2, user4, user5).map(u => JsString(u.externalId.id))
         (resultJson3 \ "ids") === JsArray()
