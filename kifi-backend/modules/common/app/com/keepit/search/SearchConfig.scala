@@ -49,7 +49,6 @@ object SearchConfig {
       "myLibraryBoost" -> "1.5",
       "minMyLibraries" -> "1",
 
-
       // UserSearch
       "userSourceBoost" -> "3.0",
       "myFriendBoost" -> "1.5",
