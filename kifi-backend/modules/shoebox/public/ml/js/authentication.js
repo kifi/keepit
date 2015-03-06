@@ -102,6 +102,7 @@ $(function() {
     var validEmail = validateEmailAddress($email);
     var validPassword = validatePassword($password);
     if (!validEmail || !validPassword) {
+      //error()
       return;
     }
 
@@ -117,7 +118,6 @@ $(function() {
     }).fail(function (xhr) {
       // errors I know about:
       // password_too_short
-
       error();
       console.log(xhr);
     });
