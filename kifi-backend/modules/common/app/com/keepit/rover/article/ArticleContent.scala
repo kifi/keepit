@@ -13,7 +13,7 @@ trait ArticleContent {
   def keywords: Seq[String]
   def authors: Seq[PageAuthor]
   def mediaType: Option[String]
-  def publishedAt(): Option[DateTime]
+  def publishedAt: Option[DateTime]
 }
 
 trait HttpInfoHolder { self: ArticleContent =>
