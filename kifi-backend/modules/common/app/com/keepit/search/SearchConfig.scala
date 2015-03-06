@@ -44,8 +44,15 @@ object SearchConfig {
       "tailCutting" -> "0.3",
 
       // LibrarySearch
+      "librarySourceBoost" -> "3.0",
+      "libraryOwnerBoost" -> "0.5",
+      "myLibraryBoost" -> "1.5",
+      "minMyLibraries" -> "1",
+
 
       // UserSearch
+      "userSourceBoost" -> "3.0",
+      "myFriendBoost" -> "1.5",
 
       "proximityBoost" -> "0.95",
       "dampingHalfDecayMine" -> "6.0",
@@ -54,13 +61,7 @@ object SearchConfig {
       "forbidEmptyFriendlyHits" -> "true",
       "proximityGapPenalty" -> "0.05",
       "proximityPowerFactor" -> "1.0",
-      "messageHalfLifeHours" -> "24",
-      "minMyLibraries" -> "1",
-      "myLibraryBoost" -> "1.5",
-      "librarySourceBoost" -> "1.5",
-      "myFriendBoost" -> "1.5",
-      "userSourceBoost" -> "1.5",
-      "libraryOwnerBoost" -> "0.5"
+      "messageHalfLifeHours" -> "24"
     )
   private[this] val descriptions =
     Map[String, String](
@@ -89,7 +90,14 @@ object SearchConfig {
       "tailCutting" -> "after damping, a hit with a score below the high score multiplied by this will be removed",
 
       // LibrarySearch
+      "librarySourceBoost" -> "boost value for library source in library search",
+      "libraryOwnerBoost" -> "boost value for library owner in user search and a user's libraries in library search",
+      "myLibraryBoost" -> "boost value for my own libraries in library search",
+      "minMyLibraries" -> "the minimum number of my libraries in a library search result",
+
       // UserSearch
+      "userSourceBoost" -> "boost value for user source in user search",
+      "myFriendBoost" -> "boost value for my friends in user search",
 
       "proximityBoost" -> "boosting by proximity",
       "dampingHalfDecayMine" -> "how many top hits in my bookmarks are important",
@@ -98,13 +106,7 @@ object SearchConfig {
       "forbidEmptyFriendlyHits" -> "when hits do not contain bookmarks from me or my friends, collapse results in the initial search",
       "proximityGapPenalty" -> "unit gap penalty, used in proximity query",
       "proximityPowerFactor" -> "raise proximity score to a power. Usually used in content field to penalize more on loose matches",
-      "messageHalfLifeHours" -> "exponential time decay constant used in message search",
-      "minMyLibraries" -> "the minimum number of my libraries in a library search result",
-      "myLibraryBoost" -> "boost value for my own libraries in library search",
-      "librarySourceBoost" -> "boost value for library source in library search",
-      "myFriendBoost" -> "boost value for my friends in user search",
-      "libraryOwnerBoost" -> "boost value for library owner in user search and a user's libraries in library search",
-      "userSourceBoost" -> "boost value for user source in user search"
+      "messageHalfLifeHours" -> "exponential time decay constant used in message search"
     )
 
   val empty = new SearchConfig(Map.empty)
