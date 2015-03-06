@@ -197,10 +197,6 @@ angular.module('kifi')
         });
         scope.$on('$destroy', deregisterLibraryVisited);
 
-        scope.$watch(tagService.getTotalKeepCount, function (val) {
-          scope.counts.keepCount = val;
-        });
-
         scope.$watch(function () {
             return scope.sortingMenu.option;
           }, function () {

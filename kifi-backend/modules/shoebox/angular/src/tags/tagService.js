@@ -10,8 +10,7 @@ angular.module('kifi')
       tagsById = {},
       prevFilter = '',
       fetchAllPromise = null,
-      removedKeepsByTagId = {},
-      totalKeepCount; // this should get out of this service
+      removedKeepsByTagId = {};
 
     function indexById(array, id) {
       for (var i = 0, l = array.length; i < l; i++) {
@@ -149,8 +148,6 @@ angular.module('kifi')
           });
           api.refreshList();
 
-          totalKeepCount = res.data.keeps;
-
           return allTags;
         });
 
@@ -231,17 +228,6 @@ angular.module('kifi')
 
       setRemovedKeepsForTag: function (tagId, keeps) {
         removedKeepsByTagId[tagId] = keeps;
-      },
-
-      getTotalKeepCount: function () {
-        return totalKeepCount;
-      },
-
-      addToKeepCount: function (num) {
-        totalKeepCount += num;
-        if (totalKeepCount < 0) {
-          totalKeepCount = 0;
-        }
       },
 
       removeKeepsFromTag: function (tagId, keeps) {
