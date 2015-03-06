@@ -8,23 +8,46 @@ import play.api.libs.json._
 import play.api.libs.functional.syntax._
 
 class EmbedlyContent(json: JsValue) extends ArticleContent {
-  def destinationUrl = (json \ "url").as[String]
-  def title = (json \ "title").asOpt[String]
-  def description = (json \ "description").asOpt[String]
-  def content = rawContent // todo(Léo): needs post-processing to eliminate html tags
-  def keywords = embedlyKeywords.map(_.name)
-  def authors = (json \ "authors").asOpt[Seq[PageAuthor]] getOrElse Seq.empty[PageAuthor]
-  def mediaType = (json \ "type").asOpt[String]
-  def publishedAt = (json \ "published").asOpt[DateTime]
+  private val parsed = json.as[EmbedlyContent.ParsedFields]
+  def destinationUrl = parsed.url
+  def title = parsed.title
+  def description = parsed.description
+  def content = parsed.content // todo(Léo): needs post-processing to eliminate html tags
+  def keywords = parsed.keywords.map(_.name)
+  def authors = parsed.authors getOrElse Seq.empty[PageAuthor]
+  def mediaType = parsed.`type`
+  def publishedAt = parsed.published
 
-  def rawContent = (json \ "content").asOpt[String]
-  def isSafe = (json \ "safe").asOpt[Boolean]
-  def language = (json \ "language").asOpt[String]
-  def images = (json \ "images").as[Seq[EmbedlyImage]]
-  def embedlyKeywords = (json \ "keywords").as[Seq[EmbedlyKeyword]]
-  def entities = (json \ "entities").as[Seq[EmbedlyEntity]]
-  def faviconUrl = (json \ "favicon_url").asOpt[String]
-  def media = (json \ "media").asOpt[EmbedlyMedia]
+  def isSafe = parsed.safe
+  def language = parsed.language
+  def images = parsed.images
+  def embedlyKeywords = parsed.keywords
+  def entities = parsed.entities
+  def faviconUrl = parsed.favicon_url
+  def media = parsed.media
+}
+
+object EmbedlyContent {
+  case class ParsedFields(
+    original_url: String,
+    url: String,
+    title: Option[String],
+    description: Option[String],
+    content: Option[String],
+    authors: Option[Seq[PageAuthor]],
+    `type`: Option[String],
+    published: Option[DateTime],
+    safe: Option[Boolean],
+    language: Option[String],
+    images: Seq[EmbedlyImage],
+    keywords: Seq[EmbedlyKeyword],
+    entities: Seq[EmbedlyEntity],
+    favicon_url: Option[String],
+    media: Option[EmbedlyMedia])
+
+  object ParsedFields {
+    implicit val reads: Reads[ParsedFields] = Json.reads[ParsedFields] // todo(Léo): we may need a more permissive Reads
+  }
 }
 
 case class EmbedlyMedia(mediaType: String, html: String, width: Int, height: Int, url: Option[String])

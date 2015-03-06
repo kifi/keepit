@@ -23,16 +23,15 @@ import play.api.Play.current
 import com.keepit.common.healthcheck.AirbrakeNotifier
 
 trait EmbedlyClient {
-  def embedlyUrl(url: String): String
   def getEmbedlyInfo(url: String): Future[Option[EmbedlyInfo]]
 }
 
 @Singleton
-class EmbedlyClientImpl @Inject() (airbrake: AirbrakeNotifier, s3URIImageStore: S3URIImageStore) extends EmbedlyClient with Logging {
+class EmbedlyClientImpl @Inject() (airbrake: AirbrakeNotifier) extends EmbedlyClient with Logging {
 
   private val embedlyKey = "e46ecae2611d4cb29342fddb0e666a29"
 
-  override def embedlyUrl(url: String): String = s"http://api.embed.ly/1/extract?key=$embedlyKey&url=${URLEncoder.encode(url, UTF8)}"
+  private def embedlyUrl(url: String): String = s"http://api.embed.ly/1/extract?key=$embedlyKey&url=${URLEncoder.encode(url, UTF8)}"
 
   private def parseEmbedlyInfo(resp: WSResponse): Option[EmbedlyInfo] = {
     resp.status match {
@@ -85,6 +84,5 @@ class EmbedlyClientImpl @Inject() (airbrake: AirbrakeNotifier, s3URIImageStore: 
 }
 
 class DevEmbedlyClient extends EmbedlyClient {
-  override def embedlyUrl(url: String): String = "http://dev.ezkeep.com"
-  override def getEmbedlyInfo(url: String): Future[Option[EmbedlyInfo]] = Future.successful(None)
+  def getEmbedlyInfo(url: String): Future[Option[EmbedlyInfo]] = Future.successful(None)
 }
