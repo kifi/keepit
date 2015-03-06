@@ -2,8 +2,9 @@
 
 angular.module('kifi')
 
-.factory('keepDecoratorService', ['tagService', 'util', 'profileService',
-  function (tagService, util, profileService) {
+.factory('keepDecoratorService', [
+  'util', 'profileService',
+  function (util, profileService) {
     function processLibraries(item) {
       if (item.libraries && item.libraries.length > 0 && Array.isArray(item.libraries[0])) {
         var cleanedLibraries = [];
@@ -144,29 +145,11 @@ angular.module('kifi')
     Keep.prototype.makeUnkept = function () {
       this.unkept = true;
       this.isMyBookmark = false;
-
-      if (this.tagList){
-        this.tagList.forEach(function (tag) {
-          var existingTag = tagService.getById(tag.id);
-
-          if (existingTag) {
-            existingTag.keeps--;
-          }
-        });
-      }
     };
 
     Keep.prototype.makeKept = function () {
       this.unkept = false;
       this.isMyBookmark = true;
-      if (this.tagList) {
-        this.tagList.forEach(function (tag) {
-          var existingTag = tagService.getById(tag.id);
-          if (existingTag) {
-            existingTag.keeps++;
-          }
-        });
-      }
     };
 
     // angular.toJSON does not copy over the Keep prototype methods.
