@@ -31,6 +31,7 @@ class ArticleIndexerTest extends Specification with SearchTestInjector {
     val lang: Lang = en
     val altAnalyzer: Option[Analyzer] = None
     val altStemmingAnalyzer: Option[Analyzer] = None
+    val titleBoost: Float = 2.0f
     val siteBoost: Float = 1.0f
     val concatBoost: Float = 0.0f
     val prefixBoost: Float = 0.0f
