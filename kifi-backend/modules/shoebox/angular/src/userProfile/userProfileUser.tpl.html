@@ -27,7 +27,7 @@
     <span class="kf-upu-count" data-n="0" ng-if="!mutual.connections">mutual connections</span>
     <span class="kf-upu-count" data-n="{{mutual.libraries|num}}">libraries in common</span>
   </div>
-  <button class="kf-upu-connect kf-upu-button" ng-class="{'kf-connected': mutual.isFriend, 'kf-sent': mutual.friendRequestSentAt, 'kf-busy': friendStatusChanging}" ng-click="onClickPrimaryButton()">
+  <button class="kf-upu-connect kf-upu-button" ng-class="{'kf-connected': mutual.isFriend, 'kf-sent': mutual.friendRequestSentAt, 'kf-busy': connectBtnChanging, 'kf-transit': connectBtnChanging || connectBtnChanged}" ng-click="onClickPrimaryButton()">
     <span class="kf-upu-connect-text" ng-class="{'svg-checkmark': mutual.isFriend}"></span>
   </button>
   <div class="kf-upu-request" ng-if="mutual.friendRequestReceivedAt">

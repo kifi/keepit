@@ -1,5 +1,4 @@
 textColor = #505459
-accentGreen = #5ab166
 cardBorderRadius = 16px
 
 .kf-upu-card
@@ -218,10 +217,12 @@ btnDuration = .6s  // update value in script too if you change this
   white-space: nowrap
   position: relative  // for .kf-upu-connect-text
   overflow: hidden
-  transition: width btnDuration
 
   .kf-logged-out &
     margin-top: 4px
+
+  &.kf-transit
+    transition: width btnDuration
 
   &.kf-sent
     width: 142px
@@ -250,13 +251,15 @@ btnDuration = .6s  // update value in script too if you change this
   top: 0
   transform: translate(-50%) // so text will be centered even when button is too small for it
   line-height: btnHeight
-  transition: opacity (btnDuration / 2) (btnDuration / 2)
 
   &.svg-checkmark
     padding-left: 21px
     background-position: left center
     background-size: auto 12px
     background-repeat: no-repeat
+
+  .kf-transit>&
+    transition: opacity (btnDuration / 2) (btnDuration / 2)
 
   .kf-busy>&
     opacity: 0
