@@ -61,9 +61,9 @@ class UserConnectionRepoImpl @Inject() (
     super.save(model.copy(seq = seqNum))
   }
 
-  def deleteCacheForUsers(user1: Id[User], friends: Seq[Id[User]])(implicit session: RSession): Unit = {
+  def deleteCacheForConnections(user: Id[User], friends: Set[Id[User]])(implicit session: RSession): Unit = {
     friends foreach { friend =>
-      deleteCacheForUsers(userId, friend)
+      deleteCacheForUsers(user, friend)
     }
   }
 
@@ -194,7 +194,7 @@ class UserConnectionRepoImpl @Inject() (
       }
     } yield changedUser
 
-    deleteCacheForUsers(userId, changedUsers)
+    deleteCacheForConnections(userId, changedUsers)
   }
 
   def unfriendConnections(userId: Id[User], users: Set[Id[User]])(implicit session: RWSession): Int = {
@@ -212,7 +212,7 @@ class UserConnectionRepoImpl @Inject() (
           friendRequestRepo.save(friendRequest.copy(state = FriendRequestStates.IGNORED))
         }
 
-      deleteCacheForUsers(userId, users)
+      deleteCacheForConnections(userId, users)
 
       ids.size
     } else {
@@ -244,7 +244,7 @@ class UserConnectionRepoImpl @Inject() (
         friendRequestRepo.save(fr.copy(state = FriendRequestStates.ACCEPTED))
       }
 
-      deleteCacheForUsers(userId, users)
+      deleteCacheForConnections(userId, users)
 
       rows.insertAll(toInsert.map { connId => UserConnection(createdAt = clock.now, user1 = userId, user2 = connId, seq = deferredSeqNum()) }.toSeq: _*)
     }
