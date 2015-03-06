@@ -2,48 +2,9 @@
 
 angular.module('kifi')
 
-.controller('KeepsCtrl', [
-  '$scope', 'profileService', 'tagService', 'util',
-  function ($scope, profileService, tagService, util) {
-    $scope.me = profileService.me;
-
-    // Whenever new keeps are loaded or when tags have been added or removed,
-    // sync up the keep tags with the current list of tags.
-    function joinTags() {
-      var keeps = $scope.keeps;
-      var tags = tagService.allTags;
-      if (keeps && keeps.length && tags.length) {
-        var tagsById = _.indexBy(tags, 'id');
-        var toTag = function (id) {
-          return tagsById[id];
-        };
-
-        _.forEach(keeps, function (keep) {
-          var newTagList = _(keep.collections).union(keep.tags).map(toTag).compact().value();
-          if (keep.tagList) {
-            util.replaceArrayInPlace(keep.tagList, newTagList);
-          } else {
-            keep.tagList = newTagList;
-          }
-        });
-      }
-    }
-    $scope.$watch(function () {
-      return $scope.keepsLoading;
-    }, function (newVal, oldVal) {
-      if (!newVal && oldVal) {
-        joinTags();
-      }
-    });
-    $scope.$watch(function () {
-      return tagService.allTags.length;
-    }, joinTags);
-  }
-])
-
 .directive('kfKeeps', [
-  '$rootScope', '$window', '$timeout', 'keepActionService', 'libraryService', 'modalService', 'selectionService', 'tagService', 'undoService',
-  function ($rootScope, $window, $timeout, keepActionService, libraryService, modalService, selectionService, tagService, undoService) {
+  '$window', '$timeout', 'keepActionService', 'libraryService', 'modalService', 'selectionService', 'undoService', 'profileService',
+  function ($window, $timeout, keepActionService, libraryService, modalService, selectionService, undoService, profileService) {
 
     return {
       restrict: 'A',
@@ -62,7 +23,6 @@ angular.module('kifi')
         selectedKeepsFilter: '&',
         currentPageOrigin: '@'
       },
-      controller: 'KeepsCtrl',
       templateUrl: 'keeps/keeps.tpl.html',
       link: function (scope) {
         //
@@ -73,7 +33,7 @@ angular.module('kifi')
         scope.$watchCollection(function () {
           return scope.keeps;
         }, function (keeps) {
-          scope.availableKeeps = _.reject(keeps, { 'unkept': true });
+          scope.availableKeeps = _.reject(keeps, {unkept: true});
         });
 
 
@@ -114,9 +74,10 @@ angular.module('kifi')
         //
         // Scope data.
         //
+        scope.me = profileService.me;
         scope.scrollDistance = '100%';
         scope.editingTags = false;
-        scope.addingTag = { enabled: false };
+        scope.addingTag = {enabled: false};
 
         // 'selection' keeps track of which keeps have been selected.
         scope.selection = new selectionService.Selection();

@@ -4,10 +4,10 @@ angular.module('kifi')
 
 .directive('kfLibraryMenu', [
   '$document', '$interval', '$location', '$rootScope', '$window', '$timeout',
-  'libraryService', 'modalService', 'profileService', 'tagService', 'util',
+  'libraryService', 'modalService', 'profileService', 'util',
   function (
       $document, $interval, $location, $rootScope, $window, $timeout,
-      libraryService, modalService, profileService, tagService, util) {
+      libraryService, modalService, profileService, util) {
     return {
       restrict: 'A',
       replace: true,

@@ -2,10 +2,12 @@
 
 angular.module('kifi')
 
-.controller('ManageTagCtrl', ['tagService', '$scope', '$window', 'manageTagService', 'libraryService',
-            'routeService', '$http', '$location', 'modalService', '$timeout', '$rootScope',
-  function (tagService, $scope, $window, manageTagService, libraryService,
-              routeService, $http, $location, modalService, $timeout, $rootScope) {
+.controller('ManageTagCtrl', [
+  '$scope', '$window', 'manageTagService', 'libraryService',
+  'routeService', '$http', '$location', 'modalService', '$timeout', '$rootScope',
+  function (
+      $scope, $window, manageTagService, libraryService,
+      routeService, $http, $location, modalService, $timeout, $rootScope) {
     $window.document.title = 'Kifi • Manage Your Tags';
 
     $scope.selected = {};
@@ -187,7 +189,6 @@ angular.module('kifi')
     var removedIndex = -1;
     var removedTag = {};
     $scope.deleteTag = function () {
-      tagService.remove($scope.selectedTag);
       removedIndex = _.findIndex($scope.tagsToShow, function(t) { return t === $scope.selectedTag; });
       removedTag = $scope.tagsToShow[removedIndex];
       $scope.tagsToShow.splice(removedIndex, 1);
