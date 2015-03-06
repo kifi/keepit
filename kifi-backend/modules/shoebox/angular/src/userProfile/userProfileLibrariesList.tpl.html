@@ -56,7 +56,7 @@
       </div>
     </div>
   </div>
-  <div class="kf-upl-empty" ng-if="libraries && libraries.length === 0">
+  <div class="kf-upl-empty" ng-if="libraries.length === 0">
     <span ng-if="libraryType === 'own'">{{viewingOwnProfile ? 'You have' : profile.firstName + ' has'}} not created any publicly viewable libraries.</span>
     <span ng-if="libraryType === 'following'">{{viewingOwnProfile ? 'You are' : profile.firstName + ' is'}} not following any libraries.</span>
     <span ng-if="libraryType === 'invited'">{{viewingOwnProfile ? 'You have' : profile.firstName + ' has'}} no pending invitations to follow a library.</span>
