@@ -12,7 +12,7 @@ angular.module('kifi')
       },
       templateUrl: 'userProfile/userProfileHeader.tpl.html',
       link: function (scope, element) {
-        var navLinks = element.find('.kf-uph-nav-a');
+        var navLinks;
 
         //
         // Internal Functions
@@ -154,6 +154,7 @@ angular.module('kifi')
         }));
 
         $timeout(function () {
+          navLinks = element.find('.kf-uph-nav-a');
           removeNavLinkHref($state.current);
         });
       }
