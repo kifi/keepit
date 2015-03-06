@@ -34,10 +34,8 @@ angular.module('kifi')
 ])
 
 .directive('kfKeepCard', [
-  '$document', '$rootScope', '$rootElement', 'installService', 'keepDecoratorService',
-  'libraryService', 'modalService', 'recoActionService', 'tagService', 'undoService', 'util',
-  function ($document, $rootScope, $rootElement, installService, keepDecoratorService,
-            libraryService, modalService, recoActionService, tagService, undoService, util) {
+  '$rootScope', 'installService', 'libraryService', 'modalService', 'util',
+  function ($rootScope, installService, libraryService, modalService, util) {
     return {
       restrict: 'A',
       scope: {
@@ -342,8 +340,8 @@ angular.module('kifi')
   }
 ])
 
-.directive('kfKeepMasterButton', ['keepActionService', 'keepDecoratorService', 'libraryService', 'tagService', 'modalService',
-  function (keepActionService, keepDecoratorService, libraryService, tagService, modalService) {
+.directive('kfKeepMasterButton', ['keepActionService', 'keepDecoratorService', 'libraryService', 'modalService',
+  function (keepActionService, keepDecoratorService, libraryService, modalService) {
     return {
       restrict: 'A',
       scope: {
@@ -398,7 +396,6 @@ angular.module('kifi')
             var fetchKeepInfoCallback = function (fullKeep) {
               libraryService.fetchLibraryInfos(true);
               libraryService.addToLibraryCount(clickedLibrary.id, 1);
-              tagService.addToKeepCount(1);
 
               scope.keep.keeps = fullKeep.keeps;
 
