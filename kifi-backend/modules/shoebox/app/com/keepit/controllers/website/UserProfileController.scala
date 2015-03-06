@@ -23,6 +23,7 @@ class UserProfileController @Inject() (
     db: Database,
     userRepo: UserRepo,
     userCommander: UserCommander,
+    friendRequestRepo: FriendRequestRepo,
     userConnectionRepo: UserConnectionRepo,
     userConnectionsCommander: UserConnectionsCommander,
     userProfileCommander: UserProfileCommander,
@@ -66,6 +67,23 @@ class UserProfileController @Inject() (
         Future.successful(NotFound(s"username ${username.value}"))
       case Some(user) =>
         val viewerIdOpt = request.userIdOpt
+        val invitations: Seq[JsValue] = if (viewerIdOpt.exists(_ == user.id.get)) {
+          val viewerId = viewerIdOpt.get
+          db.readOnlyMaster { implicit s =>
+            val friendRequests = friendRequestRepo.getByRecipient(user.id.get).map(_.senderId) //not cached
+            val userMap = basicUserRepo.loadAll(friendRequests.toSet)
+            val augmentedFriends = {
+              friendStatusCommander.augmentUsers(viewerId, userMap, Set.empty)
+            }
+            val friendsWithStatus = {
+              friendRequests.map(fr => fr -> augmentedFriends(fr))
+            }
+            friendsWithStatus map {
+              case (userId, userWFS) =>
+                loadProfileUser(userId, userWFS, viewerIdOpt, user.id)
+            }
+          }
+        } else Seq.empty
         userProfileCommander.getConnectionsSortedByRelationship(viewerIdOpt.orElse(user.id).get, user.id.get) map { connections =>
           val head = connections.take(limit)
           val (headUserJsonObjs, userMap) = db.readOnlyMaster { implicit s =>
@@ -85,7 +103,10 @@ class UserProfileController @Inject() (
             (headUserJsonObjs, userMap)
           }
           val extIds = connections.drop(limit).flatMap(u => userMap.get(u.userId)).map(_.externalId)
-          Ok(Json.obj("users" -> headUserJsonObjs, "ids" -> extIds, "count" -> connections.size))
+          val res = Json.obj("users" -> headUserJsonObjs, "ids" -> extIds, "count" -> connections.size)
+          if (invitations.nonEmpty) {
+            Ok(res.as[JsObject] ++ Json.obj("invitations" -> invitations))
+          } else Ok(res)
         }
     }
   }
