@@ -26,6 +26,8 @@ import scala.concurrent.Future
 
 class LibraryImageControllerTest extends Specification with ShoeboxTestInjector with DbInjectionHelper {
 
+  args(skipAll = true)
+
   val controllerTestModules = Seq(
     FakeCryptoModule(),
     FakeShoeboxServiceModule(),
