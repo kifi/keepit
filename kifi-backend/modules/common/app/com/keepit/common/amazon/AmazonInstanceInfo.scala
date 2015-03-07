@@ -70,6 +70,7 @@ case class AmazonInstanceInfo(
     case AmazonInstanceType.M3Large.name => AmazonInstanceType.M3Large
     case AmazonInstanceType.M3XLarge.name => AmazonInstanceType.M3XLarge
     case AmazonInstanceType.M3XXLarge.name => AmazonInstanceType.M3XXLarge
+    case AmazonInstanceType.R3XLarge.name => AmazonInstanceType.R3XLarge
     case AmazonInstanceType.M1Large.name => AmazonInstanceType.M1Large
     case AmazonInstanceType.M1Medium.name => AmazonInstanceType.M1Medium
     case AmazonInstanceType.M1Small.name => AmazonInstanceType.M1Small
