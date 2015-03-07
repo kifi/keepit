@@ -1,21 +1,20 @@
-package com.keepit.rover.fetcher
+package com.keepit.rover.article
 
 import java.net.URLEncoder
-import com.keepit.common.net.{ WebServiceUtils, WebService }
-import com.keepit.common.time.Clock
-import com.keepit.rover.article.EmbedlyArticle
+
+import com.google.inject.{Inject, Singleton}
+import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.logging.Logging
+import com.keepit.common.net.{WebService, WebServiceUtils}
+import com.keepit.common.performance._
+import com.keepit.common.service.RequestConsolidator
+import com.keepit.common.strings.UTF8
+import com.keepit.common.time.{Clock, _}
 import play.api.libs.json.Json
 import play.api.libs.ws.WSResponse
 
-import scala.concurrent.{ ExecutionContext, Future }
 import scala.concurrent.duration.DurationInt
-import com.google.inject.{ Inject, Singleton }
-import com.keepit.common.logging.Logging
-import com.keepit.common.service.RequestConsolidator
-import com.keepit.common.strings.UTF8
-import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.time._
-import com.keepit.common.performance._
+import scala.concurrent.{ExecutionContext, Future}
 
 trait EmbedlyArticleFetcher extends ArticleFetcher[EmbedlyArticle]
 
@@ -32,7 +31,7 @@ class EmbedlyArticleFetcherImpl @Inject() (
     clock: Clock,
     implicit val executionContext: ExecutionContext) extends EmbedlyArticleFetcher with Logging {
 
-  import EmbedlyArticleFetcher._
+  import com.keepit.rover.article.EmbedlyArticleFetcher._
 
   private val fetchConsolidate = new RequestConsolidator[String, EmbedlyArticle](2 minutes)
 
