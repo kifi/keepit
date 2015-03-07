@@ -19,27 +19,20 @@ import views.html.admin.library
 import scala.concurrent.Future
 
 trait UserProfileTab {
-  def path: String
-  def titleSuffix: String
+  def paths: Seq[String]
+  def title(name: String): String
 }
 
 object UserProfileTab {
-  object UserProfileHomeTab extends UserProfileTab { val path = ""; val titleSuffix = "" }
-  object UserProfileLibrariesTab extends UserProfileTab { val path = "/libraries"; val titleSuffix = "'s Libraries" }
-  object UserProfileConnectionsTab extends UserProfileTab { val path = "/connections"; val titleSuffix = "'s Connections" }
-  object UserProfileFollowersTab extends UserProfileTab { val path = "/followers"; val titleSuffix = "'s Followers" }
-  object UserProfileTagsTab extends UserProfileTab { val path = "/tags"; val titleSuffix = "'s Tags" }
-  object UserProfileFollowLibrariesTab extends UserProfileTab { val path = "/libraries/following"; val titleSuffix = " Follows" }
-  object UserProfileInvitedLibrariesTab extends UserProfileTab { val path = "/libraries/invited"; val titleSuffix = "'s Connection Invitations" }
-  val tabs = Seq(UserProfileHomeTab, UserProfileLibrariesTab, UserProfileConnectionsTab, UserProfileFollowersTab, UserProfileTagsTab, UserProfileFollowLibrariesTab, UserProfileInvitedLibrariesTab).map(t => t.path -> t).toMap
+  object Libraries extends UserProfileTab { val paths = Seq("", "/libraries"); def title(name: String) = s"$name’s Libraries" }
+  object FollowingLibraries extends UserProfileTab { val paths = Seq("/libraries/following"); def title(name: String) = s"Libraries $name Follows" }
+  object InvitedLibraries extends UserProfileTab { val paths = Seq("/libraries/invited"); def title(name: String) = s"$name’s Library Invitations" }
+  object Connections extends UserProfileTab { val paths = Seq("/connections"); def title(name: String) = s"$name’s Connections" }
+  object Followers extends UserProfileTab { val paths = Seq("/followers"); def title(name: String) = s"$name’s Followers" }
+  val tabsByPath = Seq(Libraries, FollowingLibraries, InvitedLibraries, Connections, Followers).map(t => t.paths.map(p => Seq(p -> t, p + '/' -> t)).flatten).flatten.toMap
   def apply(path: String): UserProfileTab = {
-    val segment = path.indexOf("/", 1)
-    if (segment <= 0) UserProfileHomeTab
-    else {
-      val key = path.substring(segment)
-      if (key.isEmpty || key == "/") UserProfileHomeTab
-      else tabs(key)
-    }
+    val i = path.indexOf("/", 1)
+    tabsByPath(if (i < 0) "" else path.substring(i))
   }
 }
 
@@ -188,11 +181,12 @@ class PageMetaTagsCommander @Inject() (
       (imageUrl, facebookId) <- metaInfoF
       countLibraries <- countLibrariesF
     } yield {
+      val title = tab.title(s"${user.firstName} ${user.lastName}")
       PublicPageMetaFullTags(
-        unsafeTitle = s"${user.firstName} ${user.lastName}${tab.titleSuffix}",
-        url = url + tab.path,
-        urlPathOnly = urlPath + tab.path,
-        unsafeDescription = s"${user.firstName} ${user.lastName}${tab.titleSuffix} on Kifi. Join Kifi to connect with ${user.firstName} ${user.lastName} and others you may know. Kifi connects people with knowledge.",
+        unsafeTitle = title,
+        url = url + tab.paths.head,
+        urlPathOnly = urlPath + tab.paths.head,
+        unsafeDescription = s"$title on Kifi. Join Kifi to connect with ${user.firstName} and others you may know. Kifi connects people with knowledge.",
         images = Seq(imageUrl),
         facebookId = facebookId,
         createdAt = user.createdAt,

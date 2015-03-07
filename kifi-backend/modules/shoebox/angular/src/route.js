@@ -28,10 +28,6 @@ angular.module('kifi')
         url: '/',
         templateUrl: 'recos/recosView.tpl.html'
       })
-      .state('connections', {
-        url: '/connections',
-        templateUrl: 'friends/friends.tpl.html'
-      })
       .state('invite', {
         url: '/invite',
         templateUrl: 'invite/invite.tpl.html'

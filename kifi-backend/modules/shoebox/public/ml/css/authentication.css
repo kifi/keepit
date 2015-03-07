@@ -314,13 +314,14 @@ h3.small {
   opacity: 0.6;
 }
 
-.image-upload .plus {
+.image-upload .add {
   display: block;
   text-align: center;
-  font-size: 70px;
+  padding-top: 20px;
+  font-size: 22px;
+  line-height: 28px;
   font-weight: 700;
   color: #D4D4D4;
-  line-height: 95px;
 }
 
 .image-upload.placeholder {
@@ -484,10 +485,19 @@ margin-bottom: 20px;
 
 .forgot-password-link {
   display: block;
-  padding: 5px 0px;
   width: 100%;
   font-size: 13px;
   color: #8A8E8E;
+}
+
+#signup-firstname {
+  position: absolute;
+  left: 0px;
+}
+
+#signup-lastname {
+  position: absolute;
+  right: 0px;
 }
 
 .form-input[type='password'] {

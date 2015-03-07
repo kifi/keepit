@@ -31,7 +31,7 @@ describe('kifi angular sanity suite', function () {
       settingsIcon.click();
 
       // Check that the user profile is displayed.
-      var profileGearIcon = element(by.css('.kf-user-profile-action'));
+      var profileGearIcon = element(by.css('.kf-uph-action-text'));
       expect(profileGearIcon.getText()).toEqual('Settings');
     });
   });

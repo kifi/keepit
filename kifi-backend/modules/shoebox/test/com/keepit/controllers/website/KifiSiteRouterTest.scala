@@ -56,7 +56,6 @@ class KifiSiteRouterTest extends Specification with ShoeboxTestInjector {
         val (user1, user2) = db.readWrite { implicit session =>
           val u1 = userRepo.save(User(firstName = "Abe", lastName = "Lincoln", username = Username("abez"), normalizedUsername = "abez"))
           val u2 = userRepo.save(User(firstName = "Léo", lastName = "HasAnAccentInHisName", username = Username("léo1221"), normalizedUsername = "leo"))
-
           (u1, u2)
         }
 
@@ -86,6 +85,7 @@ class KifiSiteRouterTest extends Specification with ShoeboxTestInjector {
         router.route(NonUserRequest(FakeRequest.apply("GET", "/abe.z1234/libraries/following"))) must beAnInstanceOf[Angular]
         router.route(NonUserRequest(FakeRequest.apply("GET", "/abe.z1234/libraries/invited"))) must beAnInstanceOf[Angular]
 
+        // Library routing
         val libraryCommander = inject[LibraryCommander]
         val Right(library) = {
           val libraryRequest = LibraryAddRequest(name = "Awesome Lib", visibility = LibraryVisibility.PUBLISHED, slug = "awesome-lib")
@@ -98,16 +98,37 @@ class KifiSiteRouterTest extends Specification with ShoeboxTestInjector {
         router.route(NonUserRequest(FakeRequest.apply("GET", "/abe.z1234/awesome-lib"))) === MovedPermanentlyRoute("/abe.z1234/most-awesome-lib")
         router.route(NonUserRequest(FakeRequest.apply("GET", "/abe.z1234/most-awesome-lib"))) must beAnInstanceOf[Angular]
 
+        // Fixed Angular routes
         router.route(NonUserRequest(FakeRequest.apply("GET", "/invite"))) === RedirectToLogin("/invite")
-        router.route(UserRequest(FakeRequest.apply("GET", "/invite"), Id[User](1), None, actionsHelper)) must beAnInstanceOf[Angular]
+        router.route(UserRequest(FakeRequest.apply("GET", "/invite"), user1.id.get, None, actionsHelper)) must beAnInstanceOf[Angular]
 
         // /me
         router.route(NonUserRequest(FakeRequest.apply("GET", "/me"))) === RedirectToLogin("/me")
         router.route(NonUserRequest(FakeRequest.apply("GET", "/me/libraries/following"))) === RedirectToLogin("/me/libraries/following")
-        router.route(UserRequest(FakeRequest.apply("GET", "/me"), Id[User](1), None, actionsHelper)) === SeeOtherRoute("/abez")
-        router.route(UserRequest(FakeRequest.apply("GET", "/me/libraries/invited"), Id[User](1), None, actionsHelper)) === SeeOtherRoute("/abez/libraries/invited")
+        router.route(UserRequest(FakeRequest.apply("GET", "/me"), user1.id.get, None, actionsHelper)) === SeeOtherRoute("/abez")
+        router.route(UserRequest(FakeRequest.apply("GET", "/me/libraries/invited"), user1.id.get, None, actionsHelper)) === SeeOtherRoute("/abez/libraries/invited")
 
-        1 === 1
+        // Redirects (logged out)
+        router.route(NonUserRequest(FakeRequest.apply("GET", "/recommendations"))) === RedirectToLogin("/")
+        router.route(NonUserRequest(FakeRequest.apply("GET", "/connections"))) === RedirectToLogin("/connections")
+        router.route(NonUserRequest(FakeRequest.apply("GET", "/friends"))) === RedirectToLogin("/connections")
+        router.route(NonUserRequest(FakeRequest.apply("GET", "/friends/invite"))) === RedirectToLogin("/invite")
+        router.route(NonUserRequest(FakeRequest.apply("GET", "/friends/requests"))) === RedirectToLogin("/connections")
+        router.route(NonUserRequest(FakeRequest.apply("GET", "/friends/requests/email"))) === RedirectToLogin("/connections")
+        router.route(NonUserRequest(FakeRequest.apply("GET", "/friends/requests/linkedin"))) === RedirectToLogin("/connections")
+        router.route(NonUserRequest(FakeRequest.apply("GET", "/friends/requests/facebook"))) === RedirectToLogin("/connections")
+        router.route(NonUserRequest(FakeRequest.apply("GET", "/friends/requests/refresh"))) === RedirectToLogin("/connections")
+
+        // Redirects (logged in)
+        router.route(UserRequest(FakeRequest.apply("GET", "/recommendations"), user1.id.get, None, actionsHelper)) === MovedPermanentlyRoute("/")
+        router.route(UserRequest(FakeRequest.apply("GET", "/connections"), user1.id.get, None, actionsHelper)) === SeeOtherRoute("/abez/connections")
+        router.route(UserRequest(FakeRequest.apply("GET", "/friends"), user1.id.get, None, actionsHelper)) === SeeOtherRoute("/abez/connections")
+        router.route(UserRequest(FakeRequest.apply("GET", "/friends/invite"), user1.id.get, None, actionsHelper)) === MovedPermanentlyRoute("/invite")
+        router.route(UserRequest(FakeRequest.apply("GET", "/friends/requests"), user1.id.get, None, actionsHelper)) === SeeOtherRoute("/abez/connections")
+        router.route(UserRequest(FakeRequest.apply("GET", "/friends/requests/email"), user1.id.get, None, actionsHelper)) === SeeOtherRoute("/abez/connections")
+        router.route(UserRequest(FakeRequest.apply("GET", "/friends/requests/linkedin"), user1.id.get, None, actionsHelper)) === SeeOtherRoute("/abez/connections")
+        router.route(UserRequest(FakeRequest.apply("GET", "/friends/requests/facebook"), user1.id.get, None, actionsHelper)) === SeeOtherRoute("/abez/connections")
+        router.route(UserRequest(FakeRequest.apply("GET", "/friends/requests/refresh"), user1.id.get, None, actionsHelper)) === SeeOtherRoute("/abez/connections")
       }
     }
 

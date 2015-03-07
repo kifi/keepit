@@ -78,16 +78,12 @@ angular.module('kifi')
 
       whoToInvite: route('/user/invite/recommended'),
       blockWtiConnection: route('/user/invite/hide'),
-      friends: function (page, pageSize) {
-        return route('/user/friends', {page: page, pageSize: pageSize});
-      },
       friendRequest: function (id) {
         return env.xhrBase + '/user/' + id + '/friend';
       },
       libraryShareSuggest: function (libId, opt_query) {
         return route('/libraries/' + libId + '/members/suggest', {n: 30, q: opt_query || []});
       },
-      incomingFriendRequests: route('/user/incomingFriendRequests'),
       invite: route('/user/invite'),
       peopleYouMayKnow: function (offset, limit) {
         return route('/user/friends/recommended', {offset: offset, limit: limit});

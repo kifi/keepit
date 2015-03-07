@@ -9,7 +9,7 @@
 @content = {
   <div class="page claim-account">
     <div class="claim-account-wrapper">
-      <h1 class="ca-h1">Claim Your Account</h1>
+      <h1 class="ca-h1">Link Your Social Account</h1>
       <h2 class="ca-h2">Connect @providerName</h2>
       <p class="ca-text">
         We already have an account for <b>@email</b>.<br>
@@ -27,7 +27,7 @@
         </div>
         <div class="ca-action">
           <a href="#" class="forgot-password-link">Forgot your password?</a>
-          <button id="login-btn" class="btn-authentication btn-login" type="submit">Log In</button>
+          <button id="login-btn" class="btn-authentication btn-login" type="submit" data-track-action="clickedLoginButton">Log In</button>
         </div>
       </form>
 
@@ -47,8 +47,8 @@
           <input class="fp-input form-input" type="email" name="forgot-password-email" placeholder="@email">
           <div id="error-fp" class="error"></div>
           <div class="modal-buttons">
-            <span><button class="modal-button-cancel">Cancel</button></span>
-            <span><button class="modal-button-action">Submit</button></span>
+            <span><button class="modal-button-cancel" data-track-action="clickedCancelPassword">Cancel</button></span>
+            <span><button class="modal-button-action" data-track-action="clickedSubmitPassword">Submit</button></span>
           </div>
         </form>
 
@@ -56,7 +56,7 @@
           <p class="modal-text">We just sent instructions for resetting your password to:</p>
           <div class="fp-address"></div>
           <div class="modal-buttons">
-            <button class="modal-button-cancel">Close</button>
+            <button class="modal-button-cancel" data-track-action="clickedClosePassword">Close</button>
           </div>
         </div>
 
@@ -68,6 +68,6 @@
   <script src="/assets/ml/js/authentication.js"></script>
 }
 
-@minimal.layout(content = content, htmlClass = "signup-page", headHtml = headHtml, scripts = scripts, footerClass = "join")
+@minimal.layout(title = "Kifi | Claim Account", content = content, htmlClass = "signup-page", headHtml = headHtml, scripts = scripts, footerClass = "join")
 
 

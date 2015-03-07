@@ -25,7 +25,7 @@
             <div id="error-signup-email" class="error"></div>
           </div>
 
-          <button id="signup-complete-btn" class="btn-authentication btn-done" type="submit">Done</button>
+          <button id="signup-complete-btn" class="btn-authentication btn-done" type="submit" data-track-action="clickedsignUpButton">Done</button>
         </form>
       </div>
     </div>
@@ -35,6 +35,6 @@
   <script src="/assets/ml/js/authentication.js"></script>
 }
 
-@minimal.layout(content = content, htmlClass = "signup-page", headHtml = headHtml, scripts = scripts, footerClass = "join")
+@minimal.layout(title = "Kifi | Sign Up", content = content, htmlClass = "signup-page", headHtml = headHtml, scripts = scripts, footerClass = "join")
 
 
