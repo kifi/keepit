@@ -1,6 +1,6 @@
 package com.keepit.rover.article
 
-import com.google.inject.{Inject, Singleton}
+import com.google.inject.{ Inject, Singleton }
 
 import scala.concurrent.Future
 

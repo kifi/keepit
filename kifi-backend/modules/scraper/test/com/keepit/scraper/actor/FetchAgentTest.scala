@@ -9,6 +9,7 @@ import com.keepit.common.controller.FakeUserActionsModule
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.store.ScraperTestStoreModule
 import com.keepit.common.time._
+import com.keepit.rover.fetcher.HttpRedirect
 import com.keepit.scraper._
 import com.keepit.scraper.actor.InternalMessages.FetchJob
 import com.keepit.scraper.actor.ScraperMessages.Fetch

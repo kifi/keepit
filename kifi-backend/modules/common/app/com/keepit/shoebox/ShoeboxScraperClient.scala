@@ -9,7 +9,8 @@ import com.keepit.common.routes.Shoebox
 import com.keepit.common.service.ThrottledServiceClient
 import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.model._
-import com.keepit.scraper.{ Signature, HttpRedirect, ScrapeRequest }
+import com.keepit.rover.fetcher.HttpRedirect
+import com.keepit.scraper.{ Signature, ScrapeRequest }
 import org.joda.time.DateTime
 import play.api.libs.json.{ JsString, JsArray, Json }
 import play.api.libs.json.Json.JsValueWrapper

@@ -4,7 +4,8 @@ import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.model._
 import com.keepit.common.time._
-import com.keepit.scraper.{ ScrapeScheduler, HttpRedirect }
+import com.keepit.rover.fetcher.HttpRedirect
+import com.keepit.scraper.ScrapeScheduler
 import scala.concurrent.duration._
 import views.html
 import com.keepit.common.controller.{ UserActionsHelper, AdminUserActions }

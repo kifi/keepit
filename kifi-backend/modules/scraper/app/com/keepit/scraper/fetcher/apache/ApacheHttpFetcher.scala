@@ -13,6 +13,7 @@ import com.keepit.common.akka.SafeFuture
 import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.common.service.RequestConsolidator
 import com.keepit.common.strings._
+import com.keepit.rover.fetcher.HttpRedirect
 import play.api.Play.current
 
 import com.keepit.common.time._

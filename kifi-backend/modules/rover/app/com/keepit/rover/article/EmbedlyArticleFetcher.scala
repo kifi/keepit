@@ -2,19 +2,19 @@ package com.keepit.rover.article
 
 import java.net.URLEncoder
 
-import com.google.inject.{Inject, Singleton}
+import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.net.{WebService, WebServiceUtils}
+import com.keepit.common.net.{ WebService, WebServiceUtils }
 import com.keepit.common.performance._
 import com.keepit.common.service.RequestConsolidator
 import com.keepit.common.strings.UTF8
-import com.keepit.common.time.{Clock, _}
+import com.keepit.common.time.{ Clock, _ }
 import play.api.libs.json.Json
 import play.api.libs.ws.WSResponse
 
 import scala.concurrent.duration.DurationInt
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ ExecutionContext, Future }
 
 trait EmbedlyArticleFetcher extends ArticleFetcher[EmbedlyArticle]
 

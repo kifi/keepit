@@ -1,8 +1,8 @@
-package com.keepit.scraper
+package com.keepit.rover.fetcher
 
+import com.keepit.rover.fetcher.HttpRedirect._
 import org.specs2.mutable.Specification
-import play.api.http.Status.{ MOVED_PERMANENTLY => MOVED, FOUND => TEMP_MOVED }
-import HttpRedirect._
+import play.api.http.Status.{ FOUND => TEMP_MOVED, MOVED_PERMANENTLY => MOVED }
 
 class HttpRedirectTest extends Specification {
   "HttpRedirect" should {

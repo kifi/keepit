@@ -5,6 +5,7 @@ import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.controller.{ FakeSecureSocialClientIdModule, FakeUserActionsModule }
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.store.ScraperTestStoreModule
+import com.keepit.rover.fetcher.HttpRedirect
 import com.keepit.scraper.embedly.FakeEmbedlyModule
 import com.keepit.scraper.fetcher.{ FetcherHttpContext, HttpFetchStatus, FakeHttpFetcherModule }
 import com.keepit.shoebox.FakeShoeboxServiceModule
