@@ -21,7 +21,7 @@ class LibraryMetadataCache(stats: CacheStatistics, accessLog: AccessLog, innermo
 case class UserMetadataKey(id: Id[User], tab: UserProfileTab) extends Key[String] {
   override val version = 1
   val namespace = "user_metadata_by_id"
-  def toKey(): String = s"${id.id.toString}:${tab.path}"
+  def toKey(): String = s"${id.id.toString}:${tab.paths.mkString("")}"
 }
 
 class UserMetadataCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
