@@ -160,12 +160,14 @@ class PageMetaTagsCommander @Inject() (
     s"$cdnBaseUrl/users/${user.externalId}/pics/200/${user.pictureName.getOrElse(S3UserPictureConfig.defaultName)}.jpg"
 
   private def getUserProfileUrl(username: Username): String = {
-    val urlPathOnly = s"/${username.value}"
-    val fullUrl = s"${applicationConfig.applicationBaseUrl}$urlPathOnly"
+    val fullUrl = s"${applicationConfig.applicationBaseUrl}${userPathOnly(username)}"
     if (fullUrl.startsWith("http") || fullUrl.startsWith("https:")) fullUrl else s"http:$fullUrl"
   }
 
+  private def userPathOnly(username: Username): String = s"/${username.value}"
+
   def userMetaTags(user: User, tab: UserProfileTab): Future[PublicPageMetaTags] = {
+    val urlPath = userPathOnly(user.username)
     val url = getUserProfileUrl(user.username)
     val metaInfoF = db.readOnlyMasterAsync { implicit s =>
       val facebookId: Option[String] = socialUserInfoRepo.getByUser(user.id.get).filter(i => i.networkType == SocialNetworks.FACEBOOK).map(_.socialId.id).headOption
@@ -183,7 +185,7 @@ class PageMetaTagsCommander @Inject() (
       PublicPageMetaFullTags(
         unsafeTitle = title,
         url = url + tab.paths.head,
-        urlPathOnly = url + tab.paths.head,
+        urlPathOnly = urlPath + tab.paths.head,
         unsafeDescription = s"$title on Kifi. Join Kifi to connect with ${user.firstName} and others you may know. Kifi connects people with knowledge.",
         images = Seq(imageUrl),
         facebookId = facebookId,
