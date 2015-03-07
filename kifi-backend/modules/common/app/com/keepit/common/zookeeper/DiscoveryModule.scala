@@ -124,7 +124,13 @@ case class ProdDiscoveryModule() extends DiscoveryModule with Logging {
 
   @Singleton
   @Provides
-  def myAmazonInstanceInfo(info: AmazonInstanceInfo, serviceType: ServiceType): MyInstanceInfo = MyInstanceInfo(info, serviceType)
+  def myAmazonInstanceInfo(info: AmazonInstanceInfo, serviceType: ServiceType, airbrake: AirbrakeNotifier): MyInstanceInfo = {
+    val myInstanceInfo = MyInstanceInfo(info, serviceType)
+    if (myInstanceInfo.info.instantTypeInfo == AmazonInstanceType.UNKNOWN) {
+        airbrake.notify(s"Unknown machine type for current instance: $myInstanceInfo")
+      }
+    myInstanceInfo
+  }
 
   @Singleton
   @Provides
