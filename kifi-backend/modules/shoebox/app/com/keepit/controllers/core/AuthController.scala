@@ -630,4 +630,8 @@ class AuthController @Inject() (
     Ok(views.html.authMinimal.linkSocial("facebook", "someemail1230@gmail.com"))
   }
 
+  def install() = Action { implicit request =>
+    Ok(views.html.authMinimal.install())
+  }
+
 }

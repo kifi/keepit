@@ -1,0 +1,52 @@
+@()
+@import com.keepit.controllers.core.routes.{AuthController => authRoutes}
+@headHtml = {
+  <link rel="stylesheet" type="text/css" href="/assets/ml/css/authentication.css">
+  <link rel="stylesheet" type="text/css" href="/assets/ml/css/install.css">
+}
+@content = {
+  <div class="page install">
+    <div class="install-wrapper">
+      <h1 class="install-title">Get the browser extension<br>to start using Kifi</h1>
+
+      <!-- Only shown if Chrome / Firefox version is supported -->
+      <a class="install-button" href=":javascript" data-track-action="install">
+        <div class="install-button-wrapper">
+          Get the <span class="browser-name"></span> Extension
+        </div>
+      </a>
+
+      <!-- Chrome store badge - only shown in Chrome -->
+      <a class="chrome-webstore-badge" target="_blank" href="https://chrome.google.com/webstore/detail/Kifi/fpjooibalklfinmkiodaamcckfbcjhin" data-track-action="webstore">
+        <img src="/assets/images/chrome-webstore.png"/>
+      </a>
+
+
+      <!-- Initiall hidden, update chrome or firefox to a supported version -->
+      <div class="install-old" data-track-source="old">
+        <p class="install-title">You’re running an old version of <span class="browser-name"></span></p>
+        <p class="browser-newer">Please update your browser and then come back to install<br>the Kifi browser extension</p>
+        <a class="browser-button chrome" href="https://www.google.com/chrome" data-track-action="getChrome">Get Chrome</a>
+        <a class="browser-button firefox" href="https://www.mozilla.org/firefox" data-track-action="getFirefox">Get Firefox</a>
+      </div>
+
+      <!-- Initially hidden, install other browser (if not Chrome or Firefox) -->
+      <div class="install-other" data-track-source="other">
+        <p class="install-title">This browser does not support Kifi</p>
+        <p class="browser-newer">Please come back with one of the browsers below to install<br>the Kifi browser extension</p>
+        <a class="browser-button chrome" href="https://www.google.com/chrome" data-track-action="getChrome">Get Chrome</a>
+        <a class="browser-button firefox" href="https://www.mozilla.org/firefox" data-track-action="getFirefox">Get Firefox</a>
+      </div>
+
+
+    </div>
+  </div>
+}
+@scripts = {
+  <script src="/assets/ml/js/authentication.js"></script>
+  <script src="/assets/ml/js/install.js"></script>
+}
+
+@minimal.layout(title = "Kifi | Install", content = content, htmlClass = "signup-page", headHtml = headHtml, scripts = scripts, footerClass = "join")
+
+
