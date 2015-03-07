@@ -149,7 +149,7 @@ class UserRepoImpl @Inject() (
     user.id map { id =>
       idCache.remove(UserIdKey(id))
       basicUserCache.remove(BasicUserUserIdKey(id))
-      UserProfileTab.tabsByPath.values.foreach(v => userMetadataCache.remove(UserMetadataKey(id, v)))
+      UserProfileTab.all.foreach(v => userMetadataCache.remove(UserMetadataKey(id, v)))
       usernameCache.remove(UsernameKey(user.username))
       externalIdCache.remove(UserExternalIdKey(user.externalId))
     }
@@ -162,7 +162,7 @@ class UserRepoImpl @Inject() (
       idCache.set(UserIdKey(id), user)
       basicUserCache.set(BasicUserUserIdKey(id), basicUser)
       usernameCache.set(UsernameKey(user.username), user)
-      UserProfileTab.tabsByPath.values.foreach(v => userMetadataCache.remove(UserMetadataKey(id, v)))
+      UserProfileTab.all.foreach(v => userMetadataCache.remove(UserMetadataKey(id, v)))
     }
     externalIdCache.set(UserExternalIdKey(user.externalId), user)
     session.onTransactionSuccess {
