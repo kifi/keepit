@@ -18,6 +18,31 @@ import views.html.admin.library
 
 import scala.concurrent.Future
 
+trait UserProfileTab {
+  def path: String
+  def titleSuffix: String
+}
+
+object UserProfileTab {
+  object UserProfileHomeTab extends UserProfileTab { val path = ""; val titleSuffix = "" }
+  object UserProfileLibrariesTab extends UserProfileTab { val path = "/libraries"; val titleSuffix = "'s Libraries" }
+  object UserProfileConnectionsTab extends UserProfileTab { val path = "/connections"; val titleSuffix = "'s Connections" }
+  object UserProfileFollowersTab extends UserProfileTab { val path = "/followers"; val titleSuffix = "'s Followers" }
+  object UserProfileTagsTab extends UserProfileTab { val path = "/tags"; val titleSuffix = "'s Tags" }
+  object UserProfileFollowLibrariesTab extends UserProfileTab { val path = "/libraries/following"; val titleSuffix = " Follows" }
+  object UserProfileInvitedLibrariesTab extends UserProfileTab { val path = "/libraries/invited"; val titleSuffix = "'s Connection Invitations" }
+  val tabs = Seq(UserProfileHomeTab, UserProfileLibrariesTab, UserProfileConnectionsTab, UserProfileFollowersTab, UserProfileTagsTab, UserProfileFollowLibrariesTab, UserProfileInvitedLibrariesTab).map(t => t.path -> t).toMap
+  def apply(path: String): UserProfileTab = {
+    val segment = path.indexOf("/", 1)
+    if (segment <= 0) UserProfileHomeTab
+    else {
+      val key = path.substring(segment)
+      if (key.isEmpty || key == "/") UserProfileHomeTab
+      else tabs(key)
+    }
+  }
+}
+
 class PageMetaTagsCommander @Inject() (
     db: Database,
     libraryImageCommander: LibraryImageCommander,
@@ -147,7 +172,7 @@ class PageMetaTagsCommander @Inject() (
     if (fullUrl.startsWith("http") || fullUrl.startsWith("https:")) fullUrl else s"http:$fullUrl"
   }
 
-  def userMetaTags(user: User): Future[PublicPageMetaTags] = {
+  def userMetaTags(user: User, tab: UserProfileTab): Future[PublicPageMetaTags] = {
     val url = getUserProfileUrl(user.username)
     val metaInfoF = db.readOnlyMasterAsync { implicit s =>
       val facebookId: Option[String] = socialUserInfoRepo.getByUser(user.id.get).filter(i => i.networkType == SocialNetworks.FACEBOOK).map(_.socialId.id).headOption
@@ -162,10 +187,10 @@ class PageMetaTagsCommander @Inject() (
       countLibraries <- countLibrariesF
     } yield {
       PublicPageMetaFullTags(
-        unsafeTitle = s"${user.firstName} ${user.lastName}",
-        url = url,
-        urlPathOnly = url,
-        unsafeDescription = s"${user.firstName} ${user.lastName} is on Kifi. Join Kifi to connect with ${user.firstName} ${user.lastName} and others you may know. Kifi connects people with knowledge.",
+        unsafeTitle = s"${user.firstName} ${user.lastName}${tab.titleSuffix}",
+        url = url + tab.path,
+        urlPathOnly = url + tab.path,
+        unsafeDescription = s"${user.firstName} ${user.lastName}${tab.titleSuffix} on Kifi. Join Kifi to connect with ${user.firstName} ${user.lastName} and others you may know. Kifi connects people with knowledge.",
         images = Seq(imageUrl),
         facebookId = facebookId,
         createdAt = user.createdAt,
