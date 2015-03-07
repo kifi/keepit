@@ -29,10 +29,10 @@ object UserProfileTab {
   object InvitedLibraries extends UserProfileTab { val paths = Seq("/libraries/invited"); def title(name: String) = s"$name’s Library Invitations" }
   object Connections extends UserProfileTab { val paths = Seq("/connections"); def title(name: String) = s"$name’s Connections" }
   object Followers extends UserProfileTab { val paths = Seq("/followers"); def title(name: String) = s"$name’s Followers" }
-  val tabs: Map[String, UserProfileTab] = Seq(Libraries, FollowingLibraries, InvitedLibraries, Connections, Followers).map(t => t.paths.map(p => Seq(p -> t, p + '/' -> t)).flatten).flatten.toMap
+  val tabsByPath = Seq(Libraries, FollowingLibraries, InvitedLibraries, Connections, Followers).map(t => t.paths.map(p => Seq(p -> t, p + '/' -> t)).flatten).flatten.toMap
   def apply(path: String): UserProfileTab = {
     val i = path.indexOf("/", 1)
-    tabs(if (i < 0) "" else path.substring(i))
+    tabsByPath(if (i < 0) "" else path.substring(i))
   }
 }
 
