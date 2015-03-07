@@ -24,7 +24,7 @@ trait UserProfileTab {
 }
 
 object UserProfileTab {
-  object UserProfileHomeTab extends UserProfileTab { val path = "/"; val titleSuffix = "" }
+  object UserProfileHomeTab extends UserProfileTab { val path = ""; val titleSuffix = "" }
   object UserProfileLibrariesTab extends UserProfileTab { val path = "/libraries"; val titleSuffix = "'s Libraries" }
   object UserProfileConnectionsTab extends UserProfileTab { val path = "/connections"; val titleSuffix = "'s Connections" }
   object UserProfileFollowersTab extends UserProfileTab { val path = "/followers"; val titleSuffix = "'s Followers" }
@@ -32,7 +32,15 @@ object UserProfileTab {
   object UserProfileFollowLibrariesTab extends UserProfileTab { val path = "/libraries/following"; val titleSuffix = " Follows" }
   object UserProfileInvitedLibrariesTab extends UserProfileTab { val path = "/libraries/invited"; val titleSuffix = "'s Connection Invitations" }
   val tabs = Seq(UserProfileHomeTab, UserProfileLibrariesTab, UserProfileConnectionsTab, UserProfileFollowersTab, UserProfileTagsTab, UserProfileFollowLibrariesTab, UserProfileInvitedLibrariesTab).map(t => t.path -> t).toMap
-  def apply(path: String): UserProfileTab = tabs(path.substring(path.indexOf("/", 1)))
+  def apply(path: String): UserProfileTab = {
+    val segment = path.indexOf("/", 1)
+    if (segment <= 0) UserProfileHomeTab
+    else {
+      val key = path.substring(segment)
+      if (key.isEmpty || key == "/") UserProfileHomeTab
+      else tabs(key)
+    }
+  }
 }
 
 class PageMetaTagsCommander @Inject() (

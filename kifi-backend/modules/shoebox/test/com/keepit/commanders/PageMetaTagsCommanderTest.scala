@@ -1,7 +1,7 @@
 package com.keepit.commanders
 
 import com.keepit.abook.FakeABookServiceClientModule
-import com.keepit.commanders.UserProfileTab.UserProfileLibrariesTab
+import com.keepit.commanders.UserProfileTab.{ UserProfileFollowLibrariesTab, UserProfileHomeTab, UserProfileLibrariesTab }
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.controller.FakeUserActionsModule
 import com.keepit.common.social.FakeSocialGraphModule
@@ -40,7 +40,10 @@ class PageMetaTagsCommanderTest extends Specification with ShoeboxTestInjector {
   "UserProfileTab" should {
     "get by path" in {
       UserProfileTab.tabs.size === 7
-      UserProfileTab("/libraries") === UserProfileLibrariesTab
+      UserProfileTab("/joe/libraries") === UserProfileLibrariesTab
+      UserProfileTab("/joe/libraries/following") === UserProfileFollowLibrariesTab
+      UserProfileTab("/joe/") === UserProfileHomeTab
+      UserProfileTab("/joe") === UserProfileHomeTab
     }
   }
 
