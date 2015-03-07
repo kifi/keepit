@@ -174,7 +174,7 @@ class AngularRouter @Inject() (
             val redir = "/" + (user.username.value +: path.segments.drop(1)).map(r => URLEncoder.encode(r, UTF8)).mkString("/")
             if (isUserAlias) Some(MovedPermanentlyRoute(redir)) else Some(SeeOtherRoute(redir))
           } else if (path.segments.length == 1) { // user profile page
-            Some(Angular(Some(userMetadata(user, UserProfileTab.UserProfileHomeTab))))
+            Some(Angular(Some(userMetadata(user, UserProfileTab(path.path)))))
           } else if (path.segments.length == 2 && (path.segments(1) == "libraries" || path.segments(1) == "connections" || path.segments(1) == "followers")) { // user profile page (Angular will rectify /libraries)
             Some(Angular(Some(userMetadata(user, UserProfileTab(path.path)))))
           } else if (path.segments.length == 3 && path.segments(1) == "libraries" && (path.segments(2) == "following" || path.segments(2) == "invited")) { // user profile page (nested routes)
