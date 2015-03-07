@@ -203,7 +203,7 @@ class AngularRouter @Inject() (
   }
 
   private def userMetadata(user: User, tab: UserProfileTab): Future[String] = try {
-    userMetadataCache.getOrElseFuture(UserMetadataKey(user.id.get)) {
+    userMetadataCache.getOrElseFuture(UserMetadataKey(user.id.get, tab)) {
       pageMetaTagsCommander.userMetaTags(user, tab).imap(_.formatOpenGraphForUser)
     }
   } catch {

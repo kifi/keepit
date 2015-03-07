@@ -1,7 +1,7 @@
 package com.keepit.model
 
 import com.google.inject.{ Provider, Inject, Singleton, ImplementedBy }
-import com.keepit.commanders.{ UserMetadataKey, UserMetadataCache, UsernameOps }
+import com.keepit.commanders.{ UserProfileTab, UserMetadataKey, UserMetadataCache, UsernameOps }
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick._
@@ -149,7 +149,7 @@ class UserRepoImpl @Inject() (
     user.id map { id =>
       idCache.remove(UserIdKey(id))
       basicUserCache.remove(BasicUserUserIdKey(id))
-      userMetadataCache.remove(UserMetadataKey(id))
+      UserProfileTab.tabs.values.foreach(v => userMetadataCache.remove(UserMetadataKey(id, v)))
       usernameCache.remove(UsernameKey(user.username))
       externalIdCache.remove(UserExternalIdKey(user.externalId))
     }
@@ -162,7 +162,7 @@ class UserRepoImpl @Inject() (
       idCache.set(UserIdKey(id), user)
       basicUserCache.set(BasicUserUserIdKey(id), basicUser)
       usernameCache.set(UsernameKey(user.username), user)
-      userMetadataCache.remove(UserMetadataKey(id))
+      UserProfileTab.tabs.values.foreach(v => userMetadataCache.remove(UserMetadataKey(id, v)))
     }
     externalIdCache.set(UserExternalIdKey(user.externalId), user)
     session.onTransactionSuccess {

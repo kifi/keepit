@@ -18,10 +18,10 @@ case class LibraryMetadataKey(id: Id[Library]) extends Key[String] {
 class LibraryMetadataCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends JsonCacheImpl[LibraryMetadataKey, String](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
-case class UserMetadataKey(id: Id[User]) extends Key[String] {
-  override val version = 7
+case class UserMetadataKey(id: Id[User], tab: UserProfileTab) extends Key[String] {
+  override val version = 1
   val namespace = "user_metadata_by_id"
-  def toKey(): String = id.id.toString
+  def toKey(): String = s"${id.id.toString}:${tab.path}"
 }
 
 class UserMetadataCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
