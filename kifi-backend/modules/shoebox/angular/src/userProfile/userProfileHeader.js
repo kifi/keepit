@@ -51,7 +51,7 @@ angular.module('kifi')
         }
 
         function stateNamePart(state) {
-          return state && state.name.split('.')[1] || '';
+          return state && state.name.split('.')[1] || '""';
         }
 
         //
