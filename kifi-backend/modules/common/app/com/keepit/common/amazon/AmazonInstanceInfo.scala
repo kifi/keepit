@@ -97,6 +97,9 @@ object AmazonInstanceType {
   case object M3XLarge extends AmazonInstanceType("m3.xlarge", 4, 13)
   case object M3XXLarge extends AmazonInstanceType("m3.2xlarge", 8, 26)
 
+  // R3 class
+  case object R3XLarge extends AmazonInstanceType("r3.xlarge", 4, 13)
+
   // M1 class
   case object M1Small extends AmazonInstanceType("m1.small", 1, 1)
   case object M1Medium extends AmazonInstanceType("m1.medium", 1, 2)
