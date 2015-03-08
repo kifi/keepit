@@ -1,6 +1,7 @@
 package com.keepit.controllers.website
 
 import com.google.inject.Inject
+import com.keepit.abook.ABookServiceClient
 import com.keepit.commanders._
 import com.keepit.common.controller._
 import com.keepit.common.db.slick._
@@ -25,6 +26,7 @@ class UserProfileController @Inject() (
     userCommander: UserCommander,
     friendRequestRepo: FriendRequestRepo,
     userConnectionRepo: UserConnectionRepo,
+    abookServiceClient: ABookServiceClient,
     userConnectionsCommander: UserConnectionsCommander,
     userProfileCommander: UserProfileCommander,
     val userActionsHelper: UserActionsHelper,
@@ -57,6 +59,32 @@ class UserProfileController @Inject() (
           case _ =>
             Ok(json)
         }
+    }
+  }
+
+  /**
+   * @param fullInfoLimit trying to get at least this number of full card info
+   * @param maxExtraIds if available, returning external id of additional maxExtraIds ids that the frontend can iterate on as it does with getProfileConnections
+   */
+  def getFriendRecommendations(fullInfoLimit: Int, maxExtraIds: Int) = UserAction.async { request =>
+    abookServiceClient.getFriendRecommendations(request.userId, 0, fullInfoLimit + maxExtraIds, true) map {
+      case None => Ok(Json.obj("users" -> JsArray()))
+      case Some(recommendedUserIds) => {
+        val head = recommendedUserIds.take(fullInfoLimit)
+        val (headUserJsonObjs, userMap) = db.readOnlyMaster { implicit s =>
+          val userMap = basicUserRepo.loadAll(recommendedUserIds.toSet)
+          val headUserMap = Map(head.map(id => id -> userMap(id)): _*)
+          val headUserWithStatus = headUserMap.mapValues(BasicUserWithFriendStatus.fromWithoutFriendStatus)
+          val sortedHeadUserWithStatus = head.map(id => id -> headUserWithStatus(id))
+          val headUserJsonObjs = sortedHeadUserWithStatus map {
+            case (userId, userWFS) =>
+              loadProfileUser(userId, userWFS, request.userIdOpt, request.userIdOpt)
+          }
+          (headUserJsonObjs, userMap)
+        }
+        val extIds = recommendedUserIds.drop(fullInfoLimit).flatMap(u => userMap.get(u)).map(_.externalId)
+        Ok(Json.obj("users" -> headUserJsonObjs, "ids" -> extIds, "count" -> recommendedUserIds.size))
+      }
     }
   }
 
