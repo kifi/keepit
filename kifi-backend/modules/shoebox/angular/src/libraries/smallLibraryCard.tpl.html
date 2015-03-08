@@ -22,11 +22,11 @@
   </a>
   <div class="kf-slc-counts">
     <a class="kf-slc-count" href="{{library.path}}" ng-click="clickCard()" kf-track-origin="{{origin}}">
-      <ng-pluralize count="library.numKeeps" when="{'1':'{} Keep','other':'{{library.numKeeps|number}} Keeps'}"></ng-pluralize>
+      <ng-pluralize count="library.numKeeps" when="{'1':'{} Keep','other':'{{library.numKeeps|num}} Keeps'}"></ng-pluralize>
     </a>
     <span class="kf-slc-count-dot" ng-if="library.numFollowers > 0">·</span>
     <a class="kf-slc-count kf-slc-count-followers" href="javascript:" ng-click="openFollowersList(library)" ng-if="library.numFollowers > 0">
-      <ng-pluralize count="library.numFollowers" when="{'1':'{} Follower','other':'{{library.numFollowers|number}} Followers'}"></ng-pluralize>
+      <ng-pluralize count="library.numFollowers" when="{'1':'{} Follower','other':'{{library.numFollowers|num}} Followers'}"></ng-pluralize>
     </a>
   </div>
 </div>
