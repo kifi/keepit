@@ -128,7 +128,7 @@ class PageMetaTagsCommander @Inject() (
         }
 
         val lowQualityLibrary: Boolean = {
-          keeps.size <= 3 || ((library.description.isEmpty || library.description.get.length <= 10) && keeps.size <= 6)
+          keeps.size <= 2 || ((library.description.isEmpty || library.description.get.length <= 10) && keeps.size <= 4)
         }
 
         (owner, url, imageUrls, facebookId, lowQualityLibrary)
