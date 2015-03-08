@@ -10,6 +10,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.inject._
 import com.keepit.macros.Location
 
+import scala.collection.mutable.ListBuffer
 import scala.slick.driver.JdbcDriver.simple.{ Database => SlickDatabase }
 import scala.slick.jdbc.ResultSetConcurrency
 
@@ -23,8 +24,12 @@ trait DbInjectionHelper extends Logging { self: InjectorProvider =>
   def withDb[T](overridingModules: Module*)(f: Injector => T) = {
     withInjector(overridingModules: _*) { implicit injector =>
       val h2 = inject[DataBaseComponent].asInstanceOf[H2]
+      val initiatedTables = ListBuffer[String]()
       h2.initListener = Some(new TableInitListener {
-        def init(tableName: String, ddl: { def createStatements: Iterator[String] }) = executeTableDDL(h2, tableName, ddl)
+        def init(tableName: String, ddl: { def createStatements: Iterator[String] }) = {
+          initiatedTables += tableName.toUpperCase
+          executeTableDDL(h2, tableName, ddl)
+        }
         def initSequence(sequence: String) = executeSequenceinit(h2, sequence)
       })
       try {
@@ -40,6 +45,14 @@ trait DbInjectionHelper extends Logging { self: InjectorProvider =>
           // h2.sequencesToInit.values foreach { sequence =>
           //   conn.createStatement().execute(s"DROP SEQUENCE IF EXISTS $sequence")
           // }
+          val rows = conn.createStatement().executeQuery("show tables")
+          val tables = ListBuffer[String]()
+          while (rows.next()) {
+            val table = rows.getString(1)
+            tables += table.toUpperCase
+          }
+          if (initiatedTables.size != tables.size) println(s"[${getClass.getCanonicalName}] initiated ${initiatedTables.size} tables but dropping ${tables.size} tables! Init: [${initiatedTables.mkString(", ")}], Dropping: [${tables.mkString(", ")}]")
+          println(s"[${getClass.getCanonicalName}] Dropping ${tables.size} tables [${tables.mkString(", ")}]")
           conn.createStatement().execute("DROP ALL OBJECTS")
         }
       }
@@ -56,7 +69,7 @@ trait DbInjectionHelper extends Logging { self: InjectorProvider =>
   }
 
   def executeSequenceinit(db: H2, sequence: String): Unit = {
-    log.debug(s"initiating sequence [$sequence]")
+    println(s"[${getClass.getCanonicalName}] initiating sequence [$sequence]")
     readWrite(db) { implicit session =>
       try {
         val statment = s"CREATE SEQUENCE IF NOT EXISTS $sequence;"
@@ -72,7 +85,7 @@ trait DbInjectionHelper extends Logging { self: InjectorProvider =>
   }
 
   def executeTableDDL(db: H2, tableName: String, ddl: { def createStatements: Iterator[String] }): Unit = {
-    log.debug(s"initiating table [$tableName]")
+    println(s"[${getClass.getCanonicalName}] initiating table [$tableName]")
     readWrite(db) { implicit session =>
       try {
         for (s <- ddl.createStatements) {
@@ -80,11 +93,11 @@ trait DbInjectionHelper extends Logging { self: InjectorProvider =>
           try {
             session.withPreparedStatement(statement)(_.execute)
           } catch {
-            case t: Throwable => throw new Exception(s"fail initiating table $tableName, statement: [$statement]", t)
+            case t: Throwable => throw new Exception(s"[${getClass.getCanonicalName}] fail initiating table $tableName, statement: [$statement]", t)
           }
         }
       } catch {
-        case t: Throwable => throw new Exception(s"fail initiating table $tableName}", t)
+        case t: Throwable => throw new Exception(s"[${getClass.getCanonicalName}] fail initiating table $tableName}", t)
       }
     }
   }
