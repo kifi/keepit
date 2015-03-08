@@ -1,6 +1,7 @@
 package com.keepit.commanders
 
 import com.keepit.abook.FakeABookServiceClientModule
+import com.keepit.commanders.UserProfileTab
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.controller.FakeUserActionsModule
 import com.keepit.common.social.FakeSocialGraphModule
@@ -35,6 +36,31 @@ class PageMetaTagsCommanderTest extends Specification with ShoeboxTestInjector {
     FakeSocialGraphModule() ::
     FakeSliderHistoryTrackerModule() ::
     Nil
+
+  "UserProfileTab" should {
+    "get by path" in {
+      UserProfileTab("/joe") === UserProfileTab.Libraries
+      UserProfileTab("/joe/") === UserProfileTab.Libraries
+      UserProfileTab("/joe/libraries") === UserProfileTab.Libraries
+      UserProfileTab("/joe/libraries/") === UserProfileTab.Libraries
+      UserProfileTab("/joe/libraries/following") === UserProfileTab.FollowingLibraries
+      UserProfileTab("/joe/libraries/following/") === UserProfileTab.FollowingLibraries
+      UserProfileTab("/joe/libraries/invited") === UserProfileTab.InvitedLibraries
+      UserProfileTab("/joe/libraries/invited/") === UserProfileTab.InvitedLibraries
+      UserProfileTab("/joe/connections") === UserProfileTab.Connections
+      UserProfileTab("/joe/connections/") === UserProfileTab.Connections
+      UserProfileTab("/joe/followers") === UserProfileTab.Followers
+      UserProfileTab("/joe/followers/") === UserProfileTab.Followers
+    }
+
+    "format titles" in {
+      UserProfileTab.Libraries.title("G.I. Joe") === "G.I. Joe’s Libraries"
+      UserProfileTab.FollowingLibraries.title("G.I. Joe") === "Libraries G.I. Joe Follows"
+      UserProfileTab.InvitedLibraries.title("G.I. Joe") === "G.I. Joe’s Library Invitations"
+      UserProfileTab.Connections.title("G.I. Joe") === "G.I. Joe’s Connections"
+      UserProfileTab.Followers.title("G.I. Joe") === "G.I. Joe’s Followers"
+    }
+  }
 
   "PageMetaTagsCommander" should {
 

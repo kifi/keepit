@@ -394,7 +394,7 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getUriIdsInCollection(collectionId: Id[Collection]): Future[Seq[KeepUriAndTime]] = {
-    call(Shoebox.internal.getUriIdsInCollection(collectionId), callTimeouts = longTimeout) map { r =>
+    call(Shoebox.internal.getUriIdsInCollection(collectionId), callTimeouts = extraLongTimeout, routingStrategy = offlinePriority) map { r =>
       Json.fromJson[Seq[KeepUriAndTime]](r.json).get
     }
   }
@@ -595,11 +595,11 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def triggerRawKeepImport(): Unit = {
-    callLeader(Shoebox.internal.triggerRawKeepImport())
+    call(Shoebox.internal.triggerRawKeepImport(), callTimeouts = extraLongTimeout, routingStrategy = offlinePriority)
   }
 
   def triggerSocialGraphFetch(socialUserInfoId: Id[SocialUserInfo]): Future[Unit] = {
-    callLeader(call = Shoebox.internal.triggerSocialGraphFetch(socialUserInfoId), callTimeouts = CallTimeouts(responseTimeout = Some(300000))).map(_ => ())(ExecutionContext.immediate)
+    call(call = Shoebox.internal.triggerSocialGraphFetch(socialUserInfoId), callTimeouts = extraLongTimeout, routingStrategy = offlinePriority).map(_ => ())(ExecutionContext.immediate)
   }
 
   def getUserConnectionsChanged(seqNum: SequenceNumber[UserConnection], fetchSize: Int): Future[Seq[UserConnection]] = {
@@ -696,7 +696,7 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getLapsedUsersForDelighted(maxCount: Int, skipCount: Int, after: DateTime, before: Option[DateTime]): Future[Seq[DelightedUserRegistrationInfo]] = {
-    call(Shoebox.internal.getLapsedUsersForDelighted(maxCount, skipCount, after, before), callTimeouts = longTimeout).map { r =>
+    call(Shoebox.internal.getLapsedUsersForDelighted(maxCount, skipCount, after, before), callTimeouts = extraLongTimeout, routingStrategy = offlinePriority).map { r =>
       r.json.as[Seq[DelightedUserRegistrationInfo]]
     }
   }

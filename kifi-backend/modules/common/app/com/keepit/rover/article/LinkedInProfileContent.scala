@@ -14,7 +14,7 @@ case class LinkedInProfile(
 }
 
 @json
-case class LinkedInContent(
+case class LinkedInProfileContent(
     destinationUrl: String,
     title: Option[String],
     description: Option[String],

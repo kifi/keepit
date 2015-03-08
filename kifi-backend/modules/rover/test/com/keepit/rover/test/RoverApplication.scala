@@ -1,24 +1,16 @@
 package com.keepit.rover.test
 
+import com.keepit.common.concurrent.ExecutionContextModule
+import com.keepit.common.db.{ TestDbInfo, FakeSlickModule }
 import com.google.inject.Module
 import java.io.File
-
-import com.google.inject.util.Modules
-import com.keepit.common.cache.HashMapMemoryCacheModule
-import com.keepit.inject.ApplicationInjector
-
-import com.google.inject.Module
-import java.io.File
-import com.keepit.test.{ TestInjector, TestApplication }
+import com.keepit.test.{ DbInjectionHelper, TestInjector, TestApplication }
 import com.keepit.common.net.FakeHttpClientModule
-import com.keepit.abook.FakeABookServiceClientModule
-import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.common.healthcheck.{ FakeHealthcheckModule, FakeMemoryUsageModule, FakeAirbrakeModule }
 import com.keepit.common.time.FakeClockModule
-import com.keepit.inject.{ EmptyInjector, ApplicationInjector, FakeFortyTwoModule }
+import com.keepit.inject.{ ApplicationInjector, FakeFortyTwoModule }
 import com.keepit.common.zookeeper.FakeDiscoveryModule
 import com.keepit.common.cache.{ HashMapMemoryCacheModule }
-import play.api.Mode
 import com.google.inject.util.Modules
 import com.keepit.shoebox.FakeShoeboxServiceClientModule
 import com.keepit.rover.common.cache.RoverCacheModule
@@ -26,6 +18,8 @@ import com.keepit.rover.RoverServiceTypeModule
 
 class RoverApplication(overridingModules: Module*)(implicit path: File = new File("./modules/rover/"))
   extends TestApplication(path, overridingModules, Seq(
+    ExecutionContextModule(),
+    FakeSlickModule(TestDbInfo.dbInfo),
     RoverServiceTypeModule(),
     FakeHttpClientModule(),
     FakeShoeboxServiceClientModule(),
@@ -38,10 +32,11 @@ class RoverApplication(overridingModules: Module*)(implicit path: File = new Fil
     RoverCacheModule(HashMapMemoryCacheModule())
   ))
 
-trait RoverApplicationInjector extends ApplicationInjector
+trait RoverApplicationInjector extends ApplicationInjector with DbInjectionHelper
 
-trait RoverTestInjector extends TestInjector {
+trait RoverTestInjector extends TestInjector with DbInjectionHelper {
   val module = Modules.combine(
+    FakeSlickModule(TestDbInfo.dbInfo),
     FakeHttpClientModule(),
     RoverServiceTypeModule(),
     FakeHttpClientModule(),

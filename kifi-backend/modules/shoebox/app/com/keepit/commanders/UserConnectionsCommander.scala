@@ -127,24 +127,24 @@ class UserConnectionsCommander @Inject() (
     user1FriendIds intersect user2FriendIds
   }
 
-  def unfriend(userId: Id[User], id: ExternalId[User]): Boolean = {
-    db.readOnlyMaster(attempts = 2) { implicit ro => userRepo.getOpt(id) } exists { user =>
-      val success = db.readWrite(attempts = 2) { implicit s =>
-        userConnectionRepo.unfriendConnections(userId, user.id.toSet) > 0
-      }
-      if (success) {
-        db.readOnlyReplica { implicit session =>
-          elizaServiceClient.sendToUser(userId, Json.arr("lost_friends", Set(basicUserRepo.load(user.id.get))))
-          elizaServiceClient.sendToUser(user.id.get, Json.arr("lost_friends", Set(basicUserRepo.load(userId))))
-        }
-        Seq(userId, user.id.get) foreach { id =>
-          socialUserTypeahead.refresh(id)
-          kifiUserTypeahead.refresh(id)
-        }
-        searchClient.updateUserGraph()
-      }
-      success
+  def unfriend(userId: Id[User], friendExternalId: ExternalId[User]): Boolean = {
+    val friendId = db.readOnlyMaster(attempts = 2) { implicit ro => userRepo.get(friendExternalId).id.get }
+    val success = db.readWrite(attempts = 2) { implicit s =>
+      userConnectionRepo.unfriendConnections(userId, Set(friendId)) > 0
     }
+    if (success) {
+      val (friend, user) = db.readOnlyMaster { implicit session =>
+        (basicUserRepo.load(friendId), basicUserRepo.load(userId))
+      }
+      elizaServiceClient.sendToUser(userId, Json.arr("lost_friends", Set(friend)))
+      elizaServiceClient.sendToUser(userId, Json.arr("lost_friends", Set(user)))
+      Seq(userId, friendId) foreach { id =>
+        socialUserTypeahead.refresh(id)
+        kifiUserTypeahead.refresh(id)
+      }
+      searchClient.updateUserGraph()
+    }
+    success
   }
 
   def getConnectionsPage(userId: Id[User], page: Int, pageSize: Int): (Seq[ConnectionInfo], Int) = {
@@ -251,54 +251,51 @@ class UserConnectionsCommander @Inject() (
     emailF flatMap (_ => friendReqF)
   }
 
-  def friend(myUserId: Id[User], friendUserId: ExternalId[User]): (Boolean, String) = {
+  def friend(senderId: Id[User], recipientExtId: ExternalId[User]): (Boolean, String) = {
     db.readWrite { implicit s =>
-      userRepo.getOpt(friendUserId) map { recipient =>
-        if (userConnectionRepo.areConnected(myUserId, recipient.id.get)) {
+      userRepo.getOpt(recipientExtId) map { recipient =>
+        val activeOrIgnored = Set(FriendRequestStates.ACTIVE, FriendRequestStates.IGNORED)
+        if (userConnectionRepo.areConnected(senderId, recipient.id.get)) {
           (true, "alreadyConnected")
+        } else if (friendRequestRepo.getBySenderAndRecipient(senderId, recipient.id.get, activeOrIgnored).isDefined) {
+          (true, "alreadySent")
+        } else if (friendRequestRepo.getCountBySender(senderId) > 500) {
+          (false, "tooManySent")
         } else {
-          val openFriendRequests = friendRequestRepo.getBySender(myUserId, Set(FriendRequestStates.ACTIVE))
-
-          if (openFriendRequests.size > 500) {
-            (false, "tooManySent")
-          } else if (friendRequestRepo.getBySenderAndRecipient(myUserId, recipient.id.get).isDefined) {
-            (true, "alreadySent")
-          } else {
-            friendRequestRepo.getBySenderAndRecipient(recipient.id.get, myUserId) map { friendReq =>
-              for {
-                su1 <- socialUserInfoRepo.getByUser(friendReq.senderId).find(_.networkType == SocialNetworks.FORTYTWO)
-                su2 <- socialUserInfoRepo.getByUser(friendReq.recipientId).find(_.networkType == SocialNetworks.FORTYTWO)
-              } yield {
-                socialConnectionRepo.getConnectionOpt(su1.id.get, su2.id.get) match {
-                  case Some(sc) =>
-                    socialConnectionRepo.save(sc.withState(SocialConnectionStates.ACTIVE))
-                  case None =>
-                    socialConnectionRepo.save(SocialConnection(socialUser1 = su1.id.get, socialUser2 = su2.id.get, state = SocialConnectionStates.ACTIVE))
-                }
+          friendRequestRepo.getBySenderAndRecipient(recipient.id.get, senderId, activeOrIgnored) map { friendReq =>
+            for {
+              su1 <- socialUserInfoRepo.getByUser(friendReq.senderId).find(_.networkType == SocialNetworks.FORTYTWO)
+              su2 <- socialUserInfoRepo.getByUser(friendReq.recipientId).find(_.networkType == SocialNetworks.FORTYTWO)
+            } yield {
+              socialConnectionRepo.getConnectionOpt(su1.id.get, su2.id.get) match {
+                case Some(sc) =>
+                  socialConnectionRepo.save(sc.withState(SocialConnectionStates.ACTIVE))
+                case None =>
+                  socialConnectionRepo.save(SocialConnection(socialUser1 = su1.id.get, socialUser2 = su2.id.get, state = SocialConnectionStates.ACTIVE))
               }
-              userConnectionRepo.addConnections(friendReq.senderId, Set(friendReq.recipientId), requested = true)
+            }
+            userConnectionRepo.addConnections(friendReq.senderId, Set(friendReq.recipientId), requested = true)
 
+            s.onTransactionSuccess {
+              log.info("just made a friend! updating typeahead, user graph index now.")
+              searchClient.updateUserGraph()
+              Seq(friendReq.senderId, friendReq.recipientId) foreach { id =>
+                socialUserTypeahead.refresh(id)
+                kifiUserTypeahead.refresh(id)
+              }
               elizaServiceClient.sendToUser(friendReq.senderId, Json.arr("new_friends", Set(basicUserRepo.load(friendReq.recipientId))))
               elizaServiceClient.sendToUser(friendReq.recipientId, Json.arr("new_friends", Set(basicUserRepo.load(friendReq.senderId))))
-              s.onTransactionSuccess {
-                Seq(friendReq.senderId, friendReq.recipientId) foreach { id =>
-                  socialUserTypeahead.refresh(id)
-                  kifiUserTypeahead.refresh(id)
-                }
-              }
-              log.info("just made a friend! updating user graph index now.")
-              searchClient.updateUserGraph()
-              sendFriendRequestAcceptedEmailAndNotification(myUserId, recipient)
-              (true, "acceptedRequest")
-            } getOrElse {
-              val request = friendRequestRepo.save(FriendRequest(senderId = myUserId, recipientId = recipient.id.get, messageHandle = None))
-              sendingFriendRequestEmailAndNotification(request, myUserId, recipient)
-              (true, "sentRequest")
+              sendFriendRequestAcceptedEmailAndNotification(senderId, recipient)
             }
+            (true, "acceptedRequest")
+          } getOrElse {
+            val request = friendRequestRepo.save(FriendRequest(senderId = senderId, recipientId = recipient.id.get, messageHandle = None))
+            sendingFriendRequestEmailAndNotification(request, senderId, recipient)
+            (true, "sentRequest")
           }
         }
       } getOrElse {
-        (false, s"User with id $myUserId not found.")
+        (false, "noSuchUser")
       }
     }
   }

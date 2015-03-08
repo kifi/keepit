@@ -9,9 +9,9 @@
     <div id="center_container">
       <div class="left">
         <h3>Use your social network</h3>
-        <a href="/login/twitter" class="auth_button twitter" data-track-action="clickAuthTwitter"><span class="twitter"><i class="i-tbtn"></i></span><span class="twittertext">Twitter</span></a>
-        <a href="/login/facebook" class="auth_button facebook" data-track-action="clickAuthFacebook"><span class="fb"><i class="i-fbtn"></i></span><span class="fbtext">Facebook</span></a>
-        <a href="/login/linkedin" class="auth_button linkedin" data-track-action="clickAuthLinkedin"><span class="linked"><i class="i-lbtn"></i></span><span class="linkedintext">LinkedIn</span></a>
+        <a href="/login/twitter" class="auth_button twitter" data-track-action="clickedAuthTwitter"><span class="twitter"><i class="i-tbtn"></i></span><span class="twittertext">Twitter</span></a>
+        <a href="/login/facebook" class="auth_button facebook" data-track-action="clickedAuthFacebook"><span class="fb"><i class="i-fbtn"></i></span><span class="fbtext">Facebook</span></a>
+        <a href="/login/linkedin" class="auth_button linkedin" data-track-action="clickedAuthLinkedin"><span class="linked"><i class="i-lbtn"></i></span><span class="linkedintext">LinkedIn</span></a>
       </div>
       <div class="right border-left">
         <h3>Use your email address</h3>
@@ -24,17 +24,49 @@
             <input type="password" name="password" class="form-input login-password" placeholder="Your password">
             <div id="error-login-password" class="error"></div>
           </div>
-          <a href="#" class="forgot-password">Forgot your password?</a>
-          <button id="login-btn" class="btn-authentication btn-login" type="submit">Log In</button>
+          <a href="#" class="forgot-password-link" data-track-action="clickedForgotPassword">Forgot your password?</a>
+          <button id="login-btn" class="btn-authentication btn-login" type="submit" data-track-action="clickedLoginButton">Log In</button>
         </form>
       </div>
     </div>
   </div>
+
+  <div class="modal-overlay forgot-password">
+    <div class="modal-cell">
+      <div class="modal forgot-password-modal">
+        <div class="modal-x">&times;</div>
+        <div class="modal-title">I forgot my password</div>
+
+        <form class="fp-form" action="@com.keepit.controllers.core.routes.AuthController.forgotPassword()" novalidate>
+          <p class="modal-text">
+            To reset your password, please enter<br>
+            the email address you use to log in.
+          </p>
+          <input class="fp-input form-input" type="email" name="forgot-password-email" placeholder="Your email address">
+          <div id="error-fp" class="error"></div>
+          <div class="modal-buttons">
+            <span><button class="modal-button-cancel" data-track-action="clickedCancelPassword">Cancel</button></span>
+            <span><button class="modal-button-action" data-track-action="clickedSubmitPassword">Submit</button></span>
+          </div>
+        </form>
+
+        <div class="fp-success">
+          <p class="modal-text">We just sent instructions for resetting your password to:</p>
+          <div class="fp-address"></div>
+          <div class="modal-buttons">
+            <button class="modal-button-cancel" data-track-action="clickedClosePassword">Close</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
 }
 @scripts = {
   <script src="/assets/ml/js/authentication.js"></script>
 }
 
-@minimal.layout(content = content, htmlClass = "signup-page", headHtml = headHtml, scripts = scripts, footerClass = "join", headerLink = "signup")
+@minimal.layout(title = "Kifi | Log In", content = content, htmlClass = "signup-page", headHtml = headHtml, scripts = scripts, footerClass = "join", headerLink = "signup")
 
 

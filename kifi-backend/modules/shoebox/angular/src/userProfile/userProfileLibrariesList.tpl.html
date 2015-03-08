@@ -27,11 +27,11 @@
     </div>
     <div ng-class="{'kf-upl-counts': true, 'kf-mine': lib.owner.id === me.id}">
       <a href="{{lib.path}}" class="kf-upl-count" ng-click="trackUplCardClick(lib, 'clickedLibraryKeepsTotal')">
-        <ng-pluralize count="lib.numKeeps" when="{'1':'{} Keep','other':'{{lib.numKeeps|number}} Keeps'}"></ng-pluralize>
+        <ng-pluralize count="lib.numKeeps" when="{'1':'{} Keep','other':'{{lib.numKeeps|num}} Keeps'}"></ng-pluralize>
       </a>
       <span class="kf-upl-count-dot" ng-if="lib.numFollowers > 0">·</span>
       <a href="javascript:" class="kf-upl-count kf-upl-count-followers" ng-click="openFollowersList(lib); trackUplCardClick(lib, 'clickedLibraryFollowersTotal')" ng-if="lib.numFollowers > 0">
-        <ng-pluralize count="lib.numFollowers" when="{'1':'{} Follower','other':'{{lib.numFollowers|number}} Followers'}"></ng-pluralize>
+        <ng-pluralize count="lib.numFollowers" when="{'1':'{} Follower','other':'{{lib.numFollowers|num}} Followers'}"></ng-pluralize>
       </a>
     </div>
     <button ng-class="{'kf-upl-card-follow': true, 'kf-following': lib.following}" ng-if="lib.owner.id !== me.id" ng-click="onFollowButtonClick(lib, $event); trackUplCardClick(lib, 'clickedLibraryFollowButton')"></button>
@@ -45,7 +45,7 @@
           </a>
         </span>
         <span ng-if="lib.numFollowers > lib.followers.length">
-          <a href="javascript:" ng-click="openFollowersList(lib); trackUplCardClick(lib, 'clickedLibraryFollowersMoreFollowing')" class="kf-upl-followers-number">+ {{lib.numFollowers - lib.followers.length}} are following</a>
+          <a href="javascript:" ng-click="openFollowersList(lib); trackUplCardClick(lib, 'clickedLibraryFollowersMoreFollowing')" class="kf-upl-followers-number">+ {{lib.numFollowers - lib.followers.length | num}} are following</a>
         </span>
       </div>
       <div class="kf-upl-updated" ng-switch-when="updated">
@@ -56,7 +56,7 @@
       </div>
     </div>
   </div>
-  <div class="kf-upl-empty" ng-if="libraries && libraries.length === 0">
+  <div class="kf-upl-empty" ng-if="libraries.length === 0">
     <span ng-if="libraryType === 'own'">{{viewingOwnProfile ? 'You have' : profile.firstName + ' has'}} not created any publicly viewable libraries.</span>
     <span ng-if="libraryType === 'following'">{{viewingOwnProfile ? 'You are' : profile.firstName + ' is'}} not following any libraries.</span>
     <span ng-if="libraryType === 'invited'">{{viewingOwnProfile ? 'You have' : profile.firstName + ' has'}} no pending invitations to follow a library.</span>

@@ -26,7 +26,7 @@ import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 object UserSiteMapGenerator {
-  val BaselineDate = new LocalDate(2015, 2, 10)
+  val BaselineDate = new LocalDate(2015, 3, 7)
 }
 
 @Singleton
@@ -83,7 +83,7 @@ class UserSiteMapGenerator @Inject() (airbrake: AirbrakeNotifier,
           userRepo.getAllUsers(realUsers.toSeq).values.toSeq
         } filter { user =>
           user.state == UserStates.ACTIVE
-        } filterNot { user =>
+        } filter { user =>
           val countLibraries = db.readOnlyMaster { implicit s =>
             libraryMembershipRepo.countWithUserIdAndAccess(user.id.get, LibraryAccess.OWNER) + libraryMembershipRepo.countWithUserIdAndAccess(user.id.get, LibraryAccess.READ_ONLY)
           }

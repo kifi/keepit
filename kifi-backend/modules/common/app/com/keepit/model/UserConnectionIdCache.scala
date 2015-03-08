@@ -8,7 +8,7 @@ import com.keepit.common.db.Id
 import com.keepit.serializer.ArrayBinaryFormat
 
 case class UserConnectionIdKey(userId: Id[User]) extends Key[Array[Long]] {
-  override val version = 4
+  override val version = 5
   val namespace = "user_connections"
   def toKey(): String = userId.id.toString
 }
@@ -17,6 +17,7 @@ class UserConnectionIdCache(stats: CacheStatistics, accessLog: AccessLog, inner:
   extends BinaryCacheImpl[UserConnectionIdKey, Array[Long]](stats, accessLog, inner, outer: _*)(ArrayBinaryFormat.longArrayFormat)
 
 case class UserConnectionCountKey(userId: Id[User]) extends Key[Int] {
+  override val version = 2
   val namespace = "user_connection_count"
   def toKey(): String = userId.id.toString
 }
@@ -25,7 +26,7 @@ class UserConnectionCountCache(stats: CacheStatistics, accessLog: AccessLog, inn
   extends PrimitiveCacheImpl[UserConnectionCountKey, Int](stats, accessLog, inner, outer: _*)
 
 case class UserMutualConnectionCountKey(user1: Id[User], user2: Id[User]) extends Key[Int] {
-  override val version = 2
+  override val version = 3
   val namespace = "user_mutual_conn_count"
   def toKey(): String = {
     val id1 = user1.id

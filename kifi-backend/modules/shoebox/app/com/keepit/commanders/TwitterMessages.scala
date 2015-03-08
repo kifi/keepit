@@ -16,7 +16,7 @@ class TwitterMessages @Inject() (
   /**
    * 140 is twitter max msg length
    */
-  private val Overhead = message("", "", "", "").length
+  private val Overhead = message("", "", "", "").length + 5 //the +5 is extra padding since for an unknown reason twitter is still failing us on content size
   val ContentSpace = 140 - Overhead
 
   def keepMessage(title: String, keepUrl: String, libName: String, libUrl: String): Future[String] = {

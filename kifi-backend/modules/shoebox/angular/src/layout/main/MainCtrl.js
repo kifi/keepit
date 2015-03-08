@@ -256,12 +256,14 @@ angular.module('kifi')
       $rootElement.find('body').addClass('mac');
     }
 
-    $rootScope.$watch(function () {
-      return Boolean(installService.installedVersion && profileService.prefs.auto_show_guide);
+
+    var unregisterAutoShowGuide = $rootScope.$watch(function () {
+      return Boolean(installService.installedVersion && profileService.prefs.auto_show_guide && !profileService.prefs.auto_show_persona);
     }, function (show) {
       if (show) {
         extensionLiaison.triggerGuide();
         profileService.savePrefs({auto_show_guide: null});
+        unregisterAutoShowGuide();
       }
     });
   }

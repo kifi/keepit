@@ -9,17 +9,15 @@ import com.keepit.realtime.ElizaUrbanAirshipModule
 import com.keepit.common.cache.HashMapMemoryCacheModule
 import com.keepit.common.cache.ElizaCacheModule
 import com.keepit.common.store.ElizaDevStoreModule
-import com.keepit.common.queue.DevSimpleQueueModule
 import com.keepit.scraper.ProdScraperServiceClientModule
 import com.keepit.search.ProdSearchServiceClientModule
 import com.keepit.shoebox.ProdShoeboxServiceClientModule
 
-case class ElizaDevModule() extends ElizaModule(
-  userActionsModule = DevRemoteUserActionsHelperModule(),
-  cacheModule = ElizaCacheModule(HashMapMemoryCacheModule()),
-  urbanAirshipModule = ElizaUrbanAirshipModule(),
-  storeModule = ElizaDevStoreModule()
-) with CommonDevModule {
+case class ElizaDevModule() extends ElizaModule with CommonDevModule {
+  val userActionsModule = DevRemoteUserActionsHelperModule()
+  val cacheModule = ElizaCacheModule(HashMapMemoryCacheModule())
+  val urbanAirshipModule = ElizaUrbanAirshipModule()
+  val storeModule = ElizaDevStoreModule()
   // Service clients
   val searchServiceClientModule = ProdSearchServiceClientModule()
   val shoeboxServiceClientModule = ProdShoeboxServiceClientModule()

@@ -23,7 +23,7 @@ trait RelatedLibraryCommander {
   def suggestedLibrariesInfo(libId: Id[Library], userIdOpt: Option[Id[User]]): Future[(Seq[FullLibraryInfo], Seq[RelatedLibraryKind])]
   def suggestedLibraries(libId: Id[Library]): Future[(Seq[RelatedLibrary])]
   def topicRelatedLibraries(libId: Id[Library]): Future[Seq[RelatedLibrary]]
-  def topFollowedLibraries(minFollow: Int, topK: Int): Future[Seq[RelatedLibrary]]
+  def topFollowedLibraries(minFollow: Int): Future[Seq[RelatedLibrary]]
 }
 
 @Singleton
@@ -36,6 +36,7 @@ class RelatedLibraryCommanderImpl @Inject() (
     userCommander: UserCommander,
     libQualityHelper: LibraryQualityHelper,
     relatedLibsCache: RelatedLibrariesCache,
+    topLibsCache: TopFollowedLibrariesCache,
     airbrake: AirbrakeNotifier) extends RelatedLibraryCommander with Logging {
 
   protected val DEFAULT_MIN_FOLLOW = 5
@@ -44,8 +45,6 @@ class RelatedLibraryCommanderImpl @Inject() (
   private val SPECIAL_OWNER_RETURN_SIZE = 1
 
   private val SPECIAL_OWNERS = Set(Id[User](10015)) // e.g. Kifi Editorial
-
-  private val consolidater = new RequestConsolidator[Id[Library], Seq[RelatedLibrary]](FiniteDuration(10, MINUTES))
 
   // main method
   def suggestedLibrariesInfo(libId: Id[Library], userIdOpt: Option[Id[User]]): Future[(Seq[FullLibraryInfo], Seq[RelatedLibraryKind])] = {
@@ -139,10 +138,14 @@ class RelatedLibraryCommanderImpl @Inject() (
     }
   }
 
-  def topFollowedLibraries(minFollow: Int = DEFAULT_MIN_FOLLOW, topK: Int = 50): Future[Seq[RelatedLibrary]] = {
-    db.readOnlyReplicaAsync { implicit s =>
-      libRepo.filterPublishedByMemberCount(minFollow + 1, limit = topK).map { lib => RelatedLibrary(lib, RelatedLibraryKind.POPULAR) }
-    }
+  def topFollowedLibraries(minFollow: Int = DEFAULT_MIN_FOLLOW): Future[Seq[RelatedLibrary]] = {
+    val topK = 100
+    topLibsCache.getOrElseFuture(new TopFollowedLibrariesKey()) {
+      db.readOnlyReplicaAsync { implicit s =>
+        val libs = libRepo.filterPublishedByMemberCount(minFollow + 1, limit = topK).map { lib => RelatedLibrary(lib, RelatedLibraryKind.POPULAR) }
+        TopFollowedLibraries(libs)
+      }
+    }.map { _.libs }
   }
 
 }
@@ -167,3 +170,14 @@ case class RelatedLibariesKey(id: Id[Library]) extends Key[RelatedLibraries] {
 
 class RelatedLibrariesCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends JsonCacheImpl[RelatedLibariesKey, RelatedLibraries](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+
+@json case class TopFollowedLibraries(libs: Seq[RelatedLibrary])
+
+case class TopFollowedLibrariesKey() extends Key[TopFollowedLibraries] {
+  override val version = 1
+  val namespace = "top_followed_libraries_key"
+  def toKey(): String = version.toString
+}
+
+class TopFollowedLibrariesCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[TopFollowedLibrariesKey, TopFollowedLibraries](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)

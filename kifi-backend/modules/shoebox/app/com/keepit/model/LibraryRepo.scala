@@ -1,7 +1,7 @@
 package com.keepit.model
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton, Provider }
-import com.keepit.commanders.{ LibraryMetadataKey, LibraryMetadataCache }
+import com.keepit.commanders.{ TopFollowedLibrariesKey, TopFollowedLibrariesCache, LibraryMetadataKey, LibraryMetadataCache }
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick._
@@ -41,6 +41,8 @@ trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
   def pagePublished(page: Paginator)(implicit session: RSession): Seq[Library]
   def countPublished(implicit session: RSession): Int
   def filterPublishedByMemberCount(minCount: Int, limit: Int = 100)(implicit session: RSession): Seq[Library]
+  def getLibrariesBothFollow(user1: Id[User], user2: Id[User])(implicit session: RSession): Seq[Id[Library]]
+  def getOwnerLibrariesOtherFollow(onwer: Id[User], other: Id[User])(implicit session: RSession): Seq[Id[Library]]
 }
 
 @Singleton
@@ -49,6 +51,7 @@ class LibraryRepoImpl @Inject() (
   val clock: Clock,
   val libraryMembershipRepo: Provider[LibraryMembershipRepoImpl],
   val libraryMetadataCache: LibraryMetadataCache,
+  val topLibsCache: TopFollowedLibrariesCache,
   val idCache: LibraryIdCache)
     extends DbRepo[Library] with LibraryRepo with SeqNumberDbFunction[Library] with Logging {
 
@@ -109,6 +112,9 @@ class LibraryRepoImpl @Inject() (
     library.id.map { id =>
       libraryMetadataCache.remove(LibraryMetadataKey(id))
       idCache.remove(LibraryIdKey(id))
+    }
+    if (library.memberCount >= 5 + 1) {
+      topLibsCache.remove(new TopFollowedLibrariesKey()) // lib with fewer than 5 followers will never enter that cache. This threshold need to by synced with RelatedLibraryCommanderImpl
     }
   }
 
@@ -194,7 +200,7 @@ class LibraryRepoImpl @Inject() (
   // non user: number of libraries I own that are published and "displayable on profile"
   def countLibrariesOfUserFromAnonymous(userId: Id[User])(implicit session: RSession): Int = {
     import StaticQuery.interpolation
-    val query = sql"select count(*) from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $userId and lib.state = 'active' and lm.state = 'active' and lm.listed and lib.visibility = 'published' and lm.access='owner'"
+    val query = sql"select count(*) from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $userId and lib.state = 'active' and lm.state = 'active' and lm.listed and lib.visibility = 'published' and lm.access='owner' and lib.last_kept is not null"
     query.as[Int].firstOption.getOrElse(0)
   }
 
@@ -207,13 +213,13 @@ class LibraryRepoImpl @Inject() (
       case 1 => s"or (lib.id = ${libsFriendFollow.head})"
       case _ => s"or (lib.id in (${libsFriendFollow mkString ","}))"
     }
-    val query = sql"select count(*) from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $userId and lib.state = 'active' and lm.state = 'active' and ((lm.listed and lib.visibility = 'published' and lm.access='owner') #$libVisibility)"
+    val query = sql"select count(*) from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $userId and lib.state = 'active' and lm.state = 'active' and lib.last_kept is not null and ((lm.listed and lib.visibility = 'published' and lm.access='owner') #$libVisibility)"
     query.as[Int].firstOption.getOrElse(0)
   }
 
   def countLibrariesOfOwnerUserFollow(ownerId: Id[User], userId: Id[User])(implicit session: RSession): Int = {
     import StaticQuery.interpolation
-    sql"select count(*) from library_membership lm, library lib where lm.library_id = lib.id and lib.owner_id = $userId and lm.user_id = $userId and lib.state = 'active' and lm.state = 'active'".as[Int].firstOption.getOrElse(0)
+    sql"select count(*) from library_membership lm, library lib where lm.library_id = lib.id and lib.owner_id = $ownerId and lm.user_id = $userId and lib.state = 'active' and lm.state = 'active'".as[Int].firstOption.getOrElse(0)
   }
 
   def getLibraries(libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Library] = {
@@ -243,7 +249,7 @@ class LibraryRepoImpl @Inject() (
       case 1 => s"or (lib.id = ${libsFriendFollow.head})"
       case _ => s"or (lib.id in (${libsFriendFollow mkString ","}))"
     }
-    val query = sql"select lib.* from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $userId and lib.state = 'active' and lm.state = 'active' and lm.access = 'owner' and ((lm.listed and lib.visibility = 'published') #$libVisibility) order by lib.member_count desc, lib.last_kept desc, lib.id desc limit ${page.itemsToDrop}, ${page.size}"
+    val query = sql"select lib.* from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $userId and lib.state = 'active' and lm.state = 'active' and lm.access = 'owner' and lib.last_kept is not null and ((lm.listed and lib.visibility = 'published') #$libVisibility) order by lib.member_count desc, lib.last_kept desc, lib.id desc limit ${page.itemsToDrop}, ${page.size}"
     query.as[Library].list
   }
 
@@ -308,6 +314,18 @@ class LibraryRepoImpl @Inject() (
     (for {
       t <- rows if t.visibility === (LibraryVisibility.PUBLISHED: LibraryVisibility) && t.state === LibraryStates.ACTIVE && t.memberCount >= minCount
     } yield t).sortBy(_.updatedAt.desc).take(limit).list
+  }
+
+  def getLibrariesBothFollow(user1: Id[User], user2: Id[User])(implicit session: RSession): Seq[Id[Library]] = {
+    import StaticQuery.interpolation
+    val query = sql"""select lm1.library_id from library_membership lm1 inner join library_membership lm2 on lm1.library_id = lm2.library_id where lm1.user_id = $user1 and lm1.access != 'owner' and lm1.state = 'active' and lm2.user_id = $user2 and lm2.access != 'owner' and lm2.state = 'active' order by lm1.library_id desc """
+    query.as[Id[Library]].list
+  }
+
+  def getOwnerLibrariesOtherFollow(owner: Id[User], other: Id[User])(implicit session: RSession): Seq[Id[Library]] = {
+    import StaticQuery.interpolation
+    val query = sql"""select lm1.library_id from library_membership lm1 inner join library_membership lm2 on lm1.library_id = lm2.library_id where lm1.user_id = $owner and lm1.access = 'owner' and lm1.state = 'active' and lm2.user_id = $other and lm2.access != 'owner' and lm2.state = 'active' order by lm1.library_id desc """
+    query.as[Id[Library]].list
   }
 }
 

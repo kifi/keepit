@@ -17,7 +17,6 @@ object KQueryExpansion {
 
   def useBooleanForPhrase(lang: Lang) = langsToUseBoolean.contains(lang)
 
-  val titleBoost: Float = 2.0f
 }
 
 trait KQueryExpansion extends QueryParser {
@@ -30,6 +29,7 @@ trait KQueryExpansion extends QueryParser {
   val siteBoost: Float
   val concatBoost: Float
   val prefixBoost: Float
+  val titleBoost: Float
 
   val textQueries: ArrayBuffer[KTextQuery] = ArrayBuffer()
 
@@ -104,7 +104,7 @@ trait KQueryExpansion extends QueryParser {
     super.getFieldQuery("t", queryText, quoted).foreach { q =>
       textQuery.terms = extractTerms(q)
       val query = if (quoted) q else mayConvertQuery(q, lang)
-      textQuery.addQuery(query, 2.0f)
+      textQuery.addQuery(query, titleBoost)
       textQuery.addQuery(copyFieldQuery(query, "c"))
       textQuery.addQuery(copyFieldQuery(query, "h"))
       addSiteQuery(textQuery, queryText)
@@ -128,7 +128,7 @@ trait KQueryExpansion extends QueryParser {
       getStemmedFieldQuery("ts", queryText).foreach { q =>
         textQuery.stems = extractTerms(q)
         val query = mayConvertQuery(q, lang)
-        textQuery.addQuery(query, 2.0f)
+        textQuery.addQuery(query, titleBoost)
         textQuery.addQuery(copyFieldQuery(query, "cs"))
         textQuery.addQuery(copyFieldQuery(query, "hs"))
       }
@@ -138,7 +138,7 @@ trait KQueryExpansion extends QueryParser {
           if (!equivalent(textQuery.stems, extractTerms(q))) {
             val query = mayConvertQuery(q, alt.lang)
             val boost = if (textQuery.isEmpty) 0.1f else 1.0f
-            textQuery.addQuery(query, 2.0f)
+            textQuery.addQuery(query, titleBoost)
             textQuery.addQuery(copyFieldQuery(query, "cs"))
             textQuery.addQuery(copyFieldQuery(query, "hs"))
             textQuery.setBoost(textQuery.getBoost * boost)

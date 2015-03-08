@@ -63,19 +63,27 @@ class ServiceInstance(object):
   def __repr__(self):
     return "%s (%s) %s on %s [%s]" % (self.service, self.mode, self.name, self.type, self.ip)
 
-def message_hipchat(msg):
-  data = {
-    "room_id": "Deploy",
-    "from": "Deploy",
-    "message": msg,
-    "notify": 1
+def message_slack(msg):
+  payload = {
+    "type": "message",
+    "text": msg,
+    "channel": "#deploy",
+    "username": "eddie",
+    "icon_emoji": ":star2:"
   }
-  requests.post("https://api.hipchat.com/v1/rooms/message?format=json&auth_token=47ea1c354d1df8e90f64ba4dc25c1b", data=data)
+  # webhook url for #deploy channel
+  url = 'https://hooks.slack.com/services/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'
+  try:
+    r = requests.post(url, data=json.dumps(payload))
+    if r.status_code != requests.codes.ok:
+      print r, r.text
+  except Exception as e:
+    print 'Unexpected error in message_slack: ', str(e)
 
 def log(msg):
   amsg = "[" + userName + "] " + msg
   print amsg
-  message_hipchat(amsg)
+  message_slack(amsg)
 
 def getAllInstances():
   ec2 = boto.ec2.connect_to_region("us-west-1")
@@ -112,7 +120,7 @@ if __name__=="__main__":
   parser.add_argument(
     '--iam',
     action = 'store',
-    help = "Your name, so people can see who is deploying in the hipchat logs. Please use this! (default: local user name)",
+    help = "Your name, so people can see who is deploying in the slack logs. Please use this! (default: local user name)",
     metavar = "Name"
   )
 

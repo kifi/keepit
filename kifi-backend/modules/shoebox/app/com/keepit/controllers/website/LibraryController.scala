@@ -652,6 +652,27 @@ class LibraryController @Inject() (
     }
   }
 
+  def getMutualLibraries(username: Username) = UserAction { request =>
+    userCommander.userFromUsername(username) match {
+      case None =>
+        log.warn(s"unknown username ${username.value} requested")
+        NotFound(username.value)
+      case Some(user) =>
+        val viewer = request.userId
+        val userId = user.id.get
+        db.readOnlyReplica { implicit s =>
+          val ofUser = libraryRepo.getOwnerLibrariesOtherFollow(userId, viewer)
+          val ofViewer = libraryRepo.getOwnerLibrariesOtherFollow(viewer, userId)
+          val mutualFollow = libraryRepo.getLibrariesBothFollow(viewer, userId)
+          Ok(Json.obj(
+            "ofUser" -> ofUser,
+            "ofOwner" -> ofViewer,
+            "mutualFollow" -> mutualFollow
+          ))
+        }
+    }
+  }
+
   def marketingSiteSuggestedLibraries() = Action.async {
     libraryCommander.getMarketingSiteSuggestedLibraries() map { infos => Ok(Json.toJson(infos)) }
   }

@@ -210,16 +210,6 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
 
   @Singleton
   @Provides
-  def userConnectionRelationshipCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new UserConnectionRelationshipCache(stats, accessLog, (innerRepo, 10 seconds), (outerRepo, 30 days))
-
-  @Singleton
-  @Provides
-  def userFollowerRelationshipCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new UserFollowerRelationshipCache(stats, accessLog, (innerRepo, 10 seconds), (outerRepo, 30 days))
-
-  @Singleton
-  @Provides
   def basicUserConnectionIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new BasicUserConnectionIdCache(stats, accessLog, (innerRepo, 10 seconds), (outerRepo, 7 days))
 
@@ -406,5 +396,9 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   @Provides @Singleton
   def userToDomainCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new UserToDomainCache(stats, accessLog, (innerRepo, 30 minutes), (outerRepo, 30 days))
+
+  @Provides @Singleton
+  def topFollowedLibrariesCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new TopFollowedLibrariesCache(stats, accessLog, (innerRepo, 5 minutes), (outerRepo, 12 hours))
 
 }

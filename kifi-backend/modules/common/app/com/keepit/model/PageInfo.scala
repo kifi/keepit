@@ -9,7 +9,7 @@ import com.keepit.common.db._
 import org.joda.time.DateTime
 import com.keepit.common.time._
 import com.keepit.common.store.ImageSize
-import com.keepit.scraper.embedly.EmbedlyKeyword
+import com.keepit.rover.article.EmbedlyKeyword
 import scala.concurrent.duration.Duration
 
 trait PageSafetyInfo {

@@ -34,6 +34,10 @@ angular.module('kifi')
       getLibraries: angular.bind(librariesClutch, librariesClutch.get),
       getConnections: angular.bind(connectionsClutch, connectionsClutch.get),
       getFollowers: angular.bind(followersClutch, followersClutch.get),
+      expireAllPeople: function () {
+        connectionsClutch.expireAll();
+        followersClutch.expireAll();
+      },
       getUsers: function (ids) {
         return $http.get(routeService.getProfileUsers(ids)).then(getData);
       },

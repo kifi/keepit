@@ -21,7 +21,7 @@ object BasicUserConnection {
 }
 
 case class BasicUserConnectionIdKey(userId: Id[User]) extends Key[Seq[BasicUserConnection]] {
-  override val version = 1
+  override val version = 2
   val namespace = "basic_user_connections"
   def toKey(): String = userId.id.toString
 }

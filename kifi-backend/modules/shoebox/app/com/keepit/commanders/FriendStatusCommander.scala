@@ -9,7 +9,8 @@ import com.keepit.social.BasicUser
 
 class FriendStatusCommander @Inject() (
     userConnectionRepo: UserConnectionRepo,
-    friendRequestRepo: FriendRequestRepo) extends Logging {
+    friendRequestRepo: FriendRequestRepo,
+    searchFriendRepo: SearchFriendRepo) extends Logging {
 
   // Augments a BasicUser with its friend status with respect to userId.
   def augmentUser(userId: Id[User], basicUserId: Id[User], basicUser: BasicUser)(implicit session: RSession): BasicUserWithFriendStatus = {
@@ -48,14 +49,13 @@ class FriendStatusCommander @Inject() (
 
   // Augments a BasicUser already known *not* to be friends with userId.
   private def augmentFriend(userId: Id[User], friendId: Id[User], friend: BasicUser)(implicit session: RSession): BasicUserWithFriendStatus = {
-    // TODO: add "isSearchFriend" to BasicUserWithFriendStatus and set it here
-    BasicUserWithFriendStatus.from(friend, true)
+    BasicUserWithFriendStatus.from(friend, true, searchFriendRepo.getSearchFriends(userId).contains(friendId))
   }
 
   // Augments a map of BasicUsers already known to be friends with userId.
   private def augmentFriends(userId: Id[User], friends: Map[Id[User], BasicUser])(implicit session: RSession): Map[Id[User], BasicUserWithFriendStatus] = {
-    // TODO: add "isSearchFriend" to BasicUserWithFriendStatus and set it here
-    friends.mapValues(basicUser => BasicUserWithFriendStatus.from(basicUser, true))
+    val searchFriends = searchFriendRepo.getSearchFriends(userId)
+    friends.map { case (friendId, friend) => friendId -> BasicUserWithFriendStatus.from(friend, true, searchFriends.contains(friendId)) }
   }
 
   // Augments a BasicUser already known *not* to be friends with userId.
@@ -66,7 +66,7 @@ class FriendStatusCommander @Inject() (
       friendRequestRepo.getBySenderAndRecipient(userId, nonFriendId, Set(FriendRequestStates.ACTIVE, FriendRequestStates.IGNORED)) map { req =>
         BasicUserWithFriendStatus.fromWithRequestSentAt(nonFriend, req.createdAt)
       } getOrElse {
-        BasicUserWithFriendStatus.from(nonFriend, false)
+        BasicUserWithFriendStatus.from(nonFriend, false, false)
       }
     }
   }
@@ -88,7 +88,7 @@ class FriendStatusCommander @Inject() (
           } orElse reqsReceived.find(_.senderId == id).map { reqReceived =>
             id -> BasicUserWithFriendStatus.fromWithRequestReceivedAt(user, reqReceived.createdAt)
           } getOrElse {
-            id -> BasicUserWithFriendStatus.from(user, false)
+            id -> BasicUserWithFriendStatus.from(user, false, false)
           }
       }
     }

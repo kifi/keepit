@@ -1347,11 +1347,10 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         libraryCommander.getOwnProfileLibraries(owner, None, Paginator(0, 1000), ImageSize("100x100")).size === 2
 
         val libsForOther = libraryCommander.getOwnProfileLibraries(owner, Some(other), Paginator(0, 1000), ImageSize("100x100"))
-        libsForOther.size === 12
+        libsForOther.size === 2
 
         val libsForFriend = libraryCommander.getOwnProfileLibraries(owner, Some(owner), Paginator(0, 1000), ImageSize("100x100"))
-        libsForFriend.size === 13
-        libsForFriend.map(_.id).toSet === allLibs.reverse.map(_.id.get).map(Library.publicId).toSet
+        libsForFriend.size === 3
       }
     }
 

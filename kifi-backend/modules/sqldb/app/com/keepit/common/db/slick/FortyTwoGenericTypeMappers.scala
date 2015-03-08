@@ -44,6 +44,7 @@ trait FortyTwoGenericTypeMappers { self: { val db: DataBaseComponent } =>
     { ids => Json.stringify(Json.toJson(ids)) }, { jstr => Json.parse(jstr).as[Seq[Id[M]]] })
 
   implicit def sequenceNumberTypeMapper[T] = MappedColumnType.base[SequenceNumber[T], Long](_.value, SequenceNumber[T](_))
+  implicit def versionNumberTypeMapper[T] = MappedColumnType.base[VersionNumber[T], Int](_.value, VersionNumber[T](_))
   implicit val abookOriginMapper = MappedColumnType.base[ABookOriginType, String](_.name, ABookOriginType.apply)
   implicit val normalizationMapper = MappedColumnType.base[Normalization, String](_.scheme, Normalization.apply)
   implicit val userToDomainKindMapper = MappedColumnType.base[UserToDomainKind, String](_.value, UserToDomainKind.apply)

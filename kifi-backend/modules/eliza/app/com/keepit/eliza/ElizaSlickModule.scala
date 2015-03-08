@@ -1,10 +1,6 @@
 package com.keepit.eliza
 
-import com.keepit.common.db.slick._
-import scala.util._
 import scala.slick.jdbc.JdbcBackend.{ Database => SlickDatabase }
-
-import net.codingwell.scalaguice.ScalaModule
 
 import com.google.inject.{ Provides, Singleton }
 import com.keepit.common.db.slick._

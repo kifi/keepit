@@ -142,6 +142,17 @@ angular.module('util', [])
         // Extremely simple for now, can be developed in the future
         return keepUrl.indexOf('.') !== -1;
       },
+      toCamelCase: function (strings) { // given a list of strings, return a single camel cased string
+        var str = '';
+        for (var i=0; i < strings.length; i++) {
+          if (i === 0) {
+            str += strings[i].toLowerCase();
+          } else {
+            str += strings[i].charAt(0).toUpperCase() + strings[i].substr(1).toLowerCase();
+          }
+        }
+        return str;
+      },
       htmlEscape: htmlEscape,
       /**
        * Behaves like $location.search({...}). Keys whose values are an empty array will be omitted entirely.

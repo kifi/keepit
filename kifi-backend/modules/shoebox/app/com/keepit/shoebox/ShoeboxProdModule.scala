@@ -22,26 +22,27 @@ import com.keepit.queue.ProdNormalizationUpdateJobQueueModule
 import com.keepit.common.concurrent.ProdForkJoinContextMonitorModule
 import com.keepit.curator.ProdCuratorServiceClientModule
 
-case class ShoeboxProdModule() extends ShoeboxModule(
-  secureSocialModule = ProdShoeboxSecureSocialModule(),
-  userActionsModule = ProdShoeboxUserActionsModule(),
-  mailModule = ProdMailModule(),
-  reaperModule = ProdReaperModule(),
-  siteMapModule = ProdSiteMapGeneratorModule(),
-  storeModule = ShoeboxDevStoreModule(),
-  sqsModule = ProdSimpleQueueModule(),
-  normalizationQueueModule = ProdNormalizationUpdateJobQueueModule(),
+case class ShoeboxProdModule() extends ShoeboxModule with CommonProdModule {
+
+  val secureSocialModule = ProdShoeboxSecureSocialModule()
+  val userActionsModule = ProdShoeboxUserActionsModule()
+  val mailModule = ProdMailModule()
+  val reaperModule = ProdReaperModule()
+  val siteMapModule = ProdSiteMapGeneratorModule()
+  val storeModule = ShoeboxDevStoreModule()
+  val sqsModule = ProdSimpleQueueModule()
+  val normalizationQueueModule = ProdNormalizationUpdateJobQueueModule()
 
   // Shoebox Functional Modules
-  analyticsModule = ProdAnalyticsModule(),
-  //topicModelModule = LdaTopicModelModule(), //disable for now
-  scrapeSchedulerModule = ProdScrapeSchedulerModule(),
-  scraperHealthMonitorModule = ProdScraperHealthMonitorModule(),
-  fjMonitorModule = ProdForkJoinContextMonitorModule(),
-  twilioCredentialsModule = ProdTwilioCredentialsModule(),
-  dataPipelineExecutorModule = ProdDataPipelineExecutorModule(),
-  cacheModule = ShoeboxCacheModule(MemcachedCacheModule(), EhCacheCacheModule())
-) with CommonProdModule {
+  val analyticsModule = ProdAnalyticsModule()
+  //topicModelModule = LdaTopicModelModule() //disable for now
+  val scrapeSchedulerModule = ProdScrapeSchedulerModule()
+  val scraperHealthMonitorModule = ProdScraperHealthMonitorModule()
+  val fjMonitorModule = ProdForkJoinContextMonitorModule()
+  val twilioCredentialsModule = ProdTwilioCredentialsModule()
+  val dataPipelineExecutorModule = ProdDataPipelineExecutorModule()
+  val cacheModule = ShoeboxCacheModule(MemcachedCacheModule(), EhCacheCacheModule())
+
   // Service clients
   val searchServiceClientModule = ProdSearchServiceClientModule()
   val shoeboxServiceClientModule = ProdShoeboxServiceClientModule()

@@ -13,6 +13,8 @@ angular.module('kifi')
     $scope.recosState = 'loading';
     $scope.initialCardClosed = false;
     $scope.noMoreRecos = false;
+    $scope.showHints = false;
+    $scope.autoShowPersona = undefined;
 
     $scope.getMore = function (opt_recency) {
       $scope.loading = true;
@@ -111,6 +113,18 @@ angular.module('kifi')
       $scope.initialCardClosed = true;
     };
 
+    // click on 'update your interests'
+    $scope.showPersonaModal = function() {
+      $analytics.eventTrack('user_clicked_page', {type: 'yourKeeps', action: 'clickedUpdateInterests'});
+      modalService.open({
+        template: 'persona/managePersonaModal.tpl.html'
+      });
+    };
+
+    $scope.closeAutoShowPersonas = function() {
+      profileService.savePrefs({'auto_show_persona' : null});
+    };
+
 
     /*
     This is intended be called from the console only, for debugging.
@@ -125,18 +139,11 @@ angular.module('kifi')
       });
     };
 
-    // Load a new set of recommendations only on page refresh.
-    // Otherwise, load the recommendations we have previously shown.
-    if ($scope.recos.length > 0) {
-      _.remove($scope.recos, function (reco) {
-        return reco && reco.recoKeep && reco.recoKeep.isMyBookmark;
-      });
-      $scope.recosState = 'hasRecos';
-    } else {
+    function reloadRecos(invalidate, setRecosDelivered) {
       $scope.loading = true;
 
       recoStateService.empty();
-      recoActionService.get().then(function (rawRecos) {
+      recoActionService.get(invalidate, setRecosDelivered).then(function (rawRecos) {
         var recos = [];
         if (rawRecos.length > 0) {
           rawRecos.forEach(function (rawReco) {
@@ -145,6 +152,7 @@ angular.module('kifi')
           recoStateService.populate(recos);
           $scope.recosState = 'hasRecos';
           $scope.loading = false;
+          $scope.noMoreRecos = false;
         } else {
           // If the user has no recommendations, show some popular
           // keeps/libraries as recommendations.
@@ -155,9 +163,28 @@ angular.module('kifi')
             recoStateService.populate(recos);
             $scope.recosState = 'noRecos';
             $scope.loading = false;
+            $scope.noMoreRecos = false;
           });
         }
       });
+    }
+
+    function removeAlreadyKeptKeeps() {
+      _.remove($scope.recos, function (reco) {
+        return reco && reco.recoKeep && reco.recoKeep.isMyBookmark;
+      });
+    }
+
+    function initRecos() {
+      // Load a new set of recommendations only on page refresh.
+      // Otherwise, load the recommendations we have previously shown.
+      removeAlreadyKeptKeeps();
+      if ($scope.recos.length > 0) {
+        $scope.recosState = 'hasRecos';
+      } else {
+        reloadRecos(false, $scope.setRecosDelivered);
+        $scope.setRecosDelivered = undefined;
+      }
     }
 
     $scope.showDelightedSurvey = profileService.prefs.show_delighted_question;
@@ -168,6 +195,33 @@ angular.module('kifi')
     $scope.hideDelightedSurvey = function () {
       $scope.showDelightedSurvey = false;
     };
+
+    [
+      $rootScope.$on('refreshRecos', function () {
+        reloadRecos(true);
+      })
+    ].forEach(function (deregister) {
+      $scope.$on('$destroy', deregister);
+    });
+
+    $scope.setRecosDelivered = undefined;
+    var unregisterAutoShowPersona = $scope.$watch(function () {
+      return profileService.prefs.auto_show_persona;
+    }, function (newValue, oldValue) {
+      $scope.autoShowPersona = newValue;
+
+      // stop listening when autoShowPersona from true -> null (means we're closing the auto-show-persona)
+      if (!newValue && oldValue) {
+        $scope.showHints = true;
+        $scope.setRecosDelivered = false;
+        unregisterAutoShowPersona();
+      }
+
+      // load recommendations only when autoShowPersona is set to non-true
+      if (newValue === null) {
+        initRecos();
+      }
+    });
   }
 ])
 

@@ -38,17 +38,17 @@
 
     <header id="header_bar">
       <div id="header-wrapper">
-        <a href="/" id="kifi_logo"></a>
+        <a href="/" id="kifi_logo" data-track-action="clickedLogo"></a>
         @if(headerLink == "login") {
           <div class="header-link login">
             Already a member?
-            <a href="/login">Log In</a>
+            <a href="/login" data-track-action="clickedLoginHeader">Log In</a>
           </div>
         }
         @if(headerLink == "signup") {
           <div class="header-link signup">
             Not a member yet?
-            <a href="/signup">Signup</a>
+            <a href="/signup" data-track-action="clickedSignupHeader">Sign Up</a>
           </div>
         }
       </div>
@@ -61,19 +61,19 @@
         <div class="border">
           <div class="copy">FortyTwo Inc 2014
             <span id="footer_links">
-              <a href="mailto:support@@kifi.com">Contact Us</a>
-              <a href="http://support.kifi.com/">Support</a>
-              <a href="https://www.kifi.com/terms" >Terms</a>
-              <a href="https://www.kifi.com/privacy" >Privacy</a>
-              <a href="https://www.kifi.com/about/join_us" data-track-action="clickJobsFooter">Careers</a>
-              <a href="http://blog.kifi.com/" target="_blank">Blog</a>
-              <a href="http://eng.kifi.com/" target="_blank">EngBlog</a>
+              <a href="mailto:support@@kifi.com" data-track-action="clickedContactUsFooter">Contact Us</a>
+              <a href="http://support.kifi.com/" data-track-action="clickedSupportFooter">Support</a>
+              <a href="https://www.kifi.com/terms" data-track-action="clickedToSFooter">Terms</a>
+              <a href="https://www.kifi.com/privacy" data-track-action="clickedPrivacyFooter">Privacy</a>
+              <a href="https://www.kifi.com/about/join_us" data-track-action="clickedJobsFooter">Careers</a>
+              <a href="http://blog.kifi.com/" target="_blank" data-track-action="clickedConsumerBlogFooter">Blog</a>
+              <a href="http://eng.kifi.com/" target="_blank" data-track-action="clickedEngBlogFooter">Eng Blog</a>
             </span>
           </div>
           <div class="social">
-            <a href="https://www.facebook.com/pages/Kifi/534872986523643?ref=br_tf" target="_blank"><i class="i-f"></i></a>
-            <a href="http://www.linkedin.com/company/2759913" target="_blank"><i class="i-l"></i></a>
-            <a href="https://twitter.com/kifi" target="_blank"><i class="i-t"></i></a>
+            <a href="https://www.facebook.com/pages/Kifi/534872986523643?ref=br_tf" target="_blank" data-track-action="clickedFacebookPage"><i class="i-f"></i></a>
+            <a href="http://www.linkedin.com/company/2759913" target="_blank" data-track-action="clickedLinkedinPage"><i class="i-l"></i></a>
+            <a href="https://twitter.com/kifi" target="_blank" data-track-action="clickedTwitterPage"><i class="i-t"></i></a>
           </div>
         </div>
       </div>

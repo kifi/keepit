@@ -26,6 +26,7 @@ trait LibraryRecommendationRepo extends DbRepo[LibraryRecommendation] {
   def updateLibraryRecommendationFeedback(userId: Id[User], libraryId: Id[Library], feedback: LibraryRecommendationFeedback)(implicit session: RWSession): Boolean
   def incrementDeliveredCount(recoId: Id[LibraryRecommendation])(implicit session: RWSession): Unit
   def updateLibraryRecommendationState(ids: Seq[Id[LibraryRecommendation]], state: State[LibraryRecommendation])(implicit session: RWSession): Int
+  def insertAll(recos: Seq[LibraryRecommendation])(implicit session: RWSession): Int
 }
 
 @Singleton
@@ -156,5 +157,9 @@ class LibraryRecommendationRepoImpl @Inject() (
   def deleteCache(model: LibraryRecommendation)(implicit session: RSession): Unit = {}
 
   def invalidateCache(model: LibraryRecommendation)(implicit session: RSession): Unit = {}
+
+  def insertAll(recos: Seq[LibraryRecommendation])(implicit session: RWSession): Int = {
+    rows.insertAll(recos: _*).get
+  }
 }
 

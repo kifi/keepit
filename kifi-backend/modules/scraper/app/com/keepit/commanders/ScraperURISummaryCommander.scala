@@ -3,13 +3,8 @@ package com.keepit.commanders
 import java.awt.image.BufferedImage
 
 import com.keepit.common.logging.Logging
+import com.keepit.rover.article.EmbedlyImage
 import com.keepit.shoebox.ShoeboxScraperClient
-import com.kifi.macros.json
-import org.apache.commons.lang3.RandomStringUtils
-import org.joda.time.DateTime
-
-import scala.concurrent.Future
-import scala.util.{ Failure, Success }
 
 import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -19,7 +14,7 @@ import com.keepit.scraper.{ URIPreviewFetchResult, NormalizedURIRef }
 import com.keepit.common.net.URI
 import com.keepit.common.store.{ S3ImageConfig, S3URIImageStore }
 import com.keepit.model.{ ImageStoreFailureWithException, ImageInfo }
-import com.keepit.scraper.embedly.{ EmbedlyClient, EmbedlyImage }
+import com.keepit.scraper.embedly.EmbedlyClient
 import com.keepit.scraper._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 

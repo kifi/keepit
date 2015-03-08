@@ -1,5 +1,9 @@
+<h2 class="kf-upf-title">Followers</h2>
 <div class="kf-upf kf-width-bounded" smart-scroll scroll-distance="'100%'" scroll-disabled="!hasMoreFollowers()" scroll-next="fetchFollowers()">
   <ul class="kf-upf-cards">
     <li kf-user-profile-user="user" ng-repeat="user in users"></li>
+    <li class="kf-upf-empty" ng-if="users.length === 0">
+      {{viewingOwnProfile ? 'You do' : profile.firstName + ' does'}} not yet have any library followers.
+    </li>
   </ul>
 </div>

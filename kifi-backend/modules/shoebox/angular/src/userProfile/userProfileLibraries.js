@@ -9,17 +9,21 @@ angular.module('kifi')
     routeService, profileService, userProfileActionService, libraryService, modalService, platformService, signupService) {
     var username = $stateParams.username;
     var fetchPageSize = 12;
-    var fetchPageNumber = 0;
-    var hasMoreLibraries = true;
-    var loading = false;
-    var newLibraryIds = [];
+    var fetchPageNumber;
+    var hasMoreLibraries;
+    var loading;
+    var newLibraryIds;
 
-    $scope.libraryType = $state.current.name.split('.').pop();
     $scope.libraries = null;
+    $scope.libraryType = $state.current.name.split('.').pop();
     $scope.me = profileService.me;
 
-    function refetchLibraries() {
-      resetFetchState();
+    function resetAndFetchLibraries() {
+      fetchPageNumber = 0;
+      hasMoreLibraries = true;
+      loading = false;
+      newLibraryIds = [];
+      $scope.libraries = null;
       $scope.fetchLibraries();
     }
 
@@ -34,19 +38,11 @@ angular.module('kifi')
       return lib;
     }
 
-    function resetFetchState() {
-      $scope.libraries = null;
-      fetchPageNumber = 0;
-      hasMoreLibraries = true;
-      newLibraryIds.length = 0;
-      loading = false;
-    }
-
     [
       $rootScope.$on('$stateChangeSuccess', function (event, toState) {
         if (/^userProfile\.libraries\./.test(toState.name)) {
           $scope.libraryType = toState.name.split('.').pop();
-          refetchLibraries();
+          resetAndFetchLibraries();
         }
       }),
       $rootScope.$on('libraryDeleted', function (event, libraryId) {
@@ -222,5 +218,7 @@ angular.module('kifi')
         profileTab: $scope.stateSuffixToTrackingName[$scope.libraryType]
       });
     };
+
+    resetAndFetchLibraries();
   }
 ]);

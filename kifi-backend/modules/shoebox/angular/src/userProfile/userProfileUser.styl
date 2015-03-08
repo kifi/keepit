@@ -1,25 +1,92 @@
+textColor = #505459
+cardBorderRadius = 16px
+
 .kf-upu-card
   display: inline-block
   vertical-align: top
   width: 210px
-  height: 350px
+  height: 360px
   margin: 0 9px 15px
   box-sizing: border-box
   border: defaultBorder
-  border-radius: 16px
+  border-radius: cardBorderRadius
   padding: 22px 16px
   background: #fff
   text-align: center
-  color: #505459
+  color: textColor
+  position: relative
+
+  &.kf-clipped
+    overflow: hidden
 
   .kf-logged-out &
-    height: 290px
+    height: 284px
+
+  .kf-mobile &
+    display: block
+    margin: 20px auto 470px
+    transform: scale(2.5)
+    transform-origin: center top
+
+settingsMenuGap = 4px
+
+.kf-upu-settings
+  position: absolute
+  top: 10px
+  right: 10px
+  width: 20px
+  height: 20px
+
+  :not(:hover)>&
+    display: none
+
+  &.kf-open::before
+    content: ''
+    position: absolute
+    top: 'calc(100% - %s)' % settingsMenuGap
+    left: -30px
+    right: -10px
+    height: 20px
+
+.kf-upu-settings-btn
+  width: 100%
+  height: 100%
+  border: none
+  padding: 0
+  background-color: transparent
+  background-position: center
+  background-size: 15px 15px
+  background-repeat: no-repeat
+  position: relative
+  z-index: 1
+
+  &:not(:hover):not(:focus)
+  &:active
+    opacity: .7
+
+.kf-upu-settings-menu
+  dur = .1s
+  top: 'calc(100% + %s)' % settingsMenuGap
+  right: -24px
+  transform-origin: 80% top
+  transition: visibility 0s, opacity linear dur, transform dur
+
+  :not(.kf-open)>&
+    dur = .16s
+    visibility: hidden
+    opacity: 0
+    transform: scale(.9)
+    transition-duration: 0s, dur, dur
+    transition-delay: dur, 0s, 0s
+
+  &>.kf-dropdown-menu-item
+    font-smoothing: antialiased
 
 .kf-upu-pic-a
   display: block
   height: 100px
   width: 100px
-  margin: 0 auto 10px
+  margin: 0 auto
   border-radius: 50%
 
 .kf-upu-pic
@@ -27,37 +94,60 @@
   width: inherit
   border-radius: '%s' % inherit
 
-.kf-upu-name
-  display: inline-block
+.kf-upu-name-wrap-1
+  display: table
+  table-layout: fixed
   max-width: 176px
+  margin: 2px auto 6px
+
+nameLineHeight = 21px
+.kf-upu-name-wrap-2
+  display: table-cell
+  vertical-align: middle
+  line-height: nameLineHeight
+  height: 2 * nameLineHeight
+
+.kf-upu-name-wrap-3
+  max-height: 2 * nameLineHeight
+  overflow: hidden
+
+.kf-upu-name
   color: inherit
-  line-height: 19px
   font-size: 18px
   font-weight: bold
   letter-spacing: -.2px
-  white-space: nowrap
-  overflow: hidden
-  text-overflow: ellipsis
+  user-select: none
 
   &:hover
     color: linkColor
 
+statLine1Height = 12px
+statLine2Height = 24px
+
 .kf-upu-stats
   display: table
-  width: 100%
-  margin: 16px 0 22px
+  margin: 0 auto 10px
 
-accentGreen = #5ab166
+  &:empty
+    height: statLine1Height + statLine2Height
 
 .kf-upu-stat
   display: table-cell
   text-align: center
   font-size: 11px
   font-smoothing: antialiased
+  padding: 0 4px
+
+  &:first-child
+    padding-left: 0
+
+  &:last-child
+    padding-right: 0
 
 .kf-upu-stat-a
   display: block
-  color: inherit
+  line-height: statLine1Height
+  color: accentGreen
 
   &:hover
     color: linkColor
@@ -65,16 +155,26 @@ accentGreen = #5ab166
 .kf-upu-stat-n
   content: attr(data-n)
   display: block
-  margin-top: 2px
+  line-height: statLine2Height
   font-size: 16px
   font-weight: bold
-  color: accentGreen
+  color: textColor
 
 .kf-upu-counts
   font-size: 0
   line-height: 10px
 
+.kf-upu-counts-title
+  line-height: 17px
+  font-size: 13px
+  font-smoothing: antialiased
+  color: tint(textColor, 50%)
+  white-space: nowrap
+  overflow: hidden
+  text-overflow: ellipsis
+
 .kf-upu-count
+  line-height: 17px
   font-size: 13px
   font-smoothing: antialiased
   cursor: default
@@ -96,17 +196,140 @@ accentGreen = #5ab166
     font-size: 14px
     color: accentGreen
 
+btnBorderWidth = 1px
+btnHeight = 36px
+btnFontSize = 13px
+btnDuration = .6s  // update value in script too if you change this
+
+.kf-upu-button:not(.kf-sent):not(.kf-busy):hover:not(:active)
+  transform: scale(1.02)
+
 .kf-upu-connect
-  borderWidth = 1px
-  lineHeight = 36px
-  margin-top: 22px
-  border-radius: (lineHeight / 2) + borderWidth
-  border: borderWidth solid accentGreen
-  background: #fff
-  padding: 0 22px
-  line-height: lineHeight
-  font-size: 13px
+  margin-top: 20px
+  width: 96px
+  border-radius: (btnHeight / 2) + btnBorderWidth
+  border: btnBorderWidth solid accentGreen
+  padding: 0
+  background-color: #fff
+  height: btnHeight
+  font-size: btnFontSize
   color: accentGreen
+  white-space: nowrap
+  position: relative  // for .kf-upu-connect-text
+  overflow: hidden
 
   .kf-logged-out &
-    margin-top: 0
+    margin-top: 4px
+
+  &.kf-transit
+    transition: width btnDuration
+
+  &.kf-sent
+    width: 142px
+    border-color: #bbb
+    color: inherit
+    cursor: default
+
+  &:not(.kf-sent):hover:active
+    background-color: tint(accentGreen, 96%)
+
+  &.kf-connected
+    width: 110px
+    background-color: accentGreen
+    color: #fff
+
+    &:hover:active
+      background-color: shade(accentGreen, 4%)
+
+  &.kf-busy
+    width: btnHeight
+    cursor: default
+
+.kf-upu-connect-text
+  position: absolute
+  left: 50%
+  top: 0
+  transform: translate(-50%) // so text will be centered even when button is too small for it
+  line-height: btnHeight
+
+  &.svg-checkmark
+    padding-left: 21px
+    background-position: left center
+    background-size: auto 12px
+    background-repeat: no-repeat
+
+  .kf-transit>&
+    transition: opacity (btnDuration / 2) (btnDuration / 2)
+
+  .kf-busy>&
+    opacity: 0
+    transition-delay: 0s
+
+  &::after
+    content: 'Connect'
+
+  .kf-sent>&::after
+    content: 'Invited to connect'
+
+  .kf-connected>&::after
+    content: 'Connected'
+
+.kf-upu-request
+  position: absolute
+  left: 0
+  right: 0
+  bottom: 0
+  height: 128px
+  border-top: 20px solid #fff
+  border-bottom-left-radius: cardBorderRadius - 1px
+  border-bottom-right-radius: cardBorderRadius - 1px
+  background-color: accentGreen
+  color: #fff
+
+  &.ng-leave
+    transition: opacity, transform ease-in
+    transition-duration: .3s
+
+    &.ng-leave-active
+      opacity: 0
+      transform: translate(0, 100%)
+
+.kf-upu-request-text-1
+  display: table
+  table-layout: fixed
+  width: 100%
+
+.kf-upu-request-text-2
+  display: table-cell
+  vertical-align: middle
+  padding: 18px 10px 13px
+  height: 32px
+  line-height: 16px
+  font-size: 13px
+
+.kf-upu-decline
+.kf-upu-accept
+  margin: 0 2px
+  width: 78px
+  border-radius: (btnHeight / 2) + btnBorderWidth
+  border: btnBorderWidth solid
+  padding: 0
+  line-height: btnHeight
+  font-size: btnFontSize
+  text-align: center
+
+.kf-upu-decline
+  border-color: #fff
+  background-color: transparent
+  color: #fff
+
+  &:hover:active
+    background-color: tint(accentGreen, 8%)
+
+.kf-upu-accept
+  border-color: transparent
+  background-color: #fff
+  color: accentGreen
+
+  &:hover:active
+    background-color: tint(accentGreen, 94%)

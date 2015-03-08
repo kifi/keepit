@@ -4,11 +4,11 @@
 # description: Java deamon script
 #
 # Set this to your Java installation
-JAVA_HOME=/usr/local/java/jdk1.7.0_25
+[ -d /usr/lib/jvm/java-7-oracle ] && JAVA_HOME=/usr/lib/jvm/java-7-oracle || JAVA_HOME=/usr/local/java/jdk1.7.0_25
 
 USER=fortytwo
 [[ $(whoami) == $USER ]] || { echo "You must run this script as $USER"; exit 1; }
- 
+
 serviceNameLo="scraper"                                  # service name with the first letter in lowercase
 serviceName="Scraper"                                    # service name
 serviceUser="fortytwo"                                      # OS user name for the service
@@ -32,7 +32,7 @@ classpath=`echo "$classpathLine" | sed 's%$scriptdir%'$applDir'%g'`
 javaArgs="$yourkit $newrelic $jmxArgs $javaGc -Dhttp.port=9000 -Xms3g -Xmx3g -server -Dconfig.resource=prod/$serviceNameLo.conf -Duser.dir=$applDir/ -Dlogger.resource=prod/logger.prod.xml -cp $classpath play.core.server.NettyServer $applDir"
 javaCommandLine="$javaExe $javaArgs"                       # command line to start the Java service application
 javaCommandLineKeyword="prod/$serviceNameLo.conf"                     # a keyword that occurs on the commandline, used to detect an already running service process and to distinguish it from others
- 
+
 # Makes the file $1 writable by the group $serviceGroup.
 function makeFileWritable {
    local filename="$1"
@@ -40,14 +40,14 @@ function makeFileWritable {
    chown $serviceUser:$serviceGroup $filename || return 1
    chmod g+w $filename || return 1
    return 0; }
- 
+
 # Returns 0 if the process with PID $1 is running.
 function checkProcessIsRunning {
    local pid="$1"
    if [ -z "$pid" -o "$pid" == " " ]; then return 1; fi
    if [ ! -e /proc/$pid ]; then return 1; fi
    return 0; }
- 
+
 # Returns 0 if the process with PID $1 is our Java service process.
 function checkProcessIsOurService {
    local pid="$1"
@@ -55,7 +55,7 @@ function checkProcessIsOurService {
    grep -q --binary -F "$javaCommandLineKeyword" /proc/$pid/cmdline
    if [ $? -ne 0 ]; then return 1; fi
    return 0; }
- 
+
 # Returns 0 when the service is running and sets the variable $pid to the PID.
 function getServicePID {
    if [ ! -f $pidFile ]; then return 1; fi
@@ -63,7 +63,7 @@ function getServicePID {
    checkProcessIsRunning $pid || return 1
    checkProcessIsOurService $pid || return 1
    return 0; }
- 
+
 function startServiceProcess {
    cd $applDir || return 1
    rm -f $pidFile
@@ -82,7 +82,7 @@ function startServiceProcess {
       return 1
    fi
    return 0; }
- 
+
 function stopServiceProcess {
    kill $pid || return 1
    for ((i=0; i<maxShutdownTime*10; i++)); do
@@ -106,7 +106,7 @@ function stopServiceProcess {
       done
    echo "Error: $serviceName could not be stopped within $maxShutdownTime+$killWaitTime seconds!"
    return 1; }
- 
+
 function startService {
    getServicePID
    if [ $? -eq 0 ]; then echo -n "$serviceName is already running"; RETVAL=0; return 0; fi
@@ -116,7 +116,7 @@ function startService {
    echo "started PID=$pid"
    RETVAL=0
    return 0; }
- 
+
 function stopService {
    getServicePID
    if [ $? -ne 0 ]; then echo -n "$serviceName is not running"; RETVAL=0; echo ""; return 0; fi
@@ -126,7 +126,7 @@ function stopService {
    echo "stopped PID=$pid"
    RETVAL=0
    return 0; }
- 
+
 function checkServiceStatus {
    echo -n "Checking for $serviceName:   "
    if getServicePID; then
@@ -137,7 +137,7 @@ function checkServiceStatus {
     RETVAL=3
    fi
    return 0; }
- 
+
 function main {
    RETVAL=0
    case "$1" in
@@ -160,6 +160,5 @@ function main {
       esac
    exit $RETVAL
 }
- 
-main $1
 
+main $1

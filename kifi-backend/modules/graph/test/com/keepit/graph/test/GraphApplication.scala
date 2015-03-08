@@ -2,6 +2,7 @@ package com.keepit.graph.test
 
 import com.google.inject.Module
 import java.io.File
+import com.keepit.common.concurrent.ExecutionContextModule
 import com.keepit.test.{ TestInjector, TestApplication }
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.abook.FakeABookServiceClientModule
@@ -19,6 +20,7 @@ import com.keepit.graph.GraphServiceTypeModule
 
 class GraphApplication(overridingModules: Module*)(implicit path: File = new File("./modules/graph/"))
   extends TestApplication(path, overridingModules, Seq(
+    ExecutionContextModule(),
     GraphServiceTypeModule(),
     FakeHttpClientModule(),
     FakeABookServiceClientModule(),

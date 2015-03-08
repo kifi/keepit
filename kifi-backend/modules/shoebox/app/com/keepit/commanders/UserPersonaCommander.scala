@@ -1,6 +1,7 @@
 package com.keepit.commanders
 
 import com.google.inject.{ Singleton, ImplementedBy, Inject }
+import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
@@ -46,6 +47,20 @@ class UserPersonaCommanderImpl @Inject() (
       val personaNamesToAdd = personas diff currentPersonas.map(_.name)
       personaRepo.getByNames(personaNamesToAdd)
     }
+
+    def generatePersonaLibraries(personas: Map[PersonaName, Persona]): Map[Persona, Option[Library]] = {
+      personas.map {
+        case (personaName, persona) =>
+          val defaultLibraryName = Persona.libraryNames.getOrElse(personaName, personaName.value)
+          val defaultLibrarySlug = LibrarySlug.generateFromName(defaultLibraryName)
+          val libraryAddReq = LibraryAddRequest(name = defaultLibraryName, visibility = LibraryVisibility.PUBLISHED, slug = defaultLibrarySlug, kind = Some(LibraryKind.SYSTEM_PERSONA))
+          (persona, libraryCommander.addLibrary(libraryAddReq, userId))
+      }.collect {
+        case (persona, Right(lib)) => (persona, Some(lib)) // library successfully created
+        case (persona, Left(_)) => (persona, None) // library with name or slug already created
+      }.toMap
+    }
+
     db.readWrite { implicit s =>
       personasToPersist.map {
         case (_, persona) =>
@@ -58,19 +73,12 @@ class UserPersonaCommanderImpl @Inject() (
       }
     }
 
-    curator.ingestPersonaRecos(userId, personasToPersist.values.map { _.id.get }.toSeq.distinct).collect {
+    curator.ingestPersonaRecos(userId, personasToPersist.values.map { _.id.get }.toSeq.distinct).map { _ =>
+      generatePersonaLibraries(personasToPersist)
+    }.recover {
       case _ =>
-        // create libraries based on added personas
-        personasToPersist.map {
-          case (personaName, persona) =>
-            val defaultLibraryName = Persona.libraryNames.getOrElse(personaName, personaName.value)
-            val defaultLibrarySlug = LibrarySlug.generateFromName(defaultLibraryName)
-            val libraryAddReq = LibraryAddRequest(name = defaultLibraryName, visibility = LibraryVisibility.PUBLISHED, slug = defaultLibrarySlug, kind = Some(LibraryKind.SYSTEM_PERSONA))
-            (persona, libraryCommander.addLibrary(libraryAddReq, userId))
-        }.collect {
-          case (persona, Right(lib)) => (persona, Some(lib)) // library successfully created
-          case (persona, Left(_)) => (persona, None) // library with name or slug already created
-        }.toMap
+        curator.ingestPersonaRecos(userId, personasToPersist.values.map { _.id.get }.toSeq.distinct) // fire and forget this time
+        generatePersonaLibraries(personasToPersist)
     }
 
   }

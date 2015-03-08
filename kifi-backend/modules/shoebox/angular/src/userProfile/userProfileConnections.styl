@@ -1,2 +1,23 @@
+.kf-upc-title
+  background: #e8e8e8
+  line-height: 66px  // matches subtabs height on libraries tab
+  font-size: 20px
+
+  .kf-mobile &
+    line-height: 110px
+    font-size: 32px
+
+topPadding = 23px
+
 .kf-upc-cards
-  padding-top: 23px
+  &:empty
+    // maintains page height and thus window scroll position while the list
+    // is temporarily empty during sub-tab navigations
+    min-height: 100vh
+
+  &:not(:empty)
+    padding-top: topPadding
+
+.kf-upc-empty
+  padding: (30px - topPadding) 30px 30px
+  color: #777

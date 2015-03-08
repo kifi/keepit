@@ -21,6 +21,7 @@ trait RoverModule extends ConfigurationModule with CommonServiceModule {
   val storeModule: RoverStoreModule
 
   // Rover Functional Modules
+  val slickModule = RoverSlickModule()
 
   // Service clients
   val serviceTypeModule = RoverServiceTypeModule()
