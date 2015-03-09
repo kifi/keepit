@@ -172,6 +172,10 @@ angular.module('kifi')
           scope.sortingMenu.myLibsFirst = !scope.sortingMenu.myLibsFirst;
         };
 
+        scope.isMyLibrary = function (library) {
+          return libraryService.isMyLibrary(library);
+        };
+
         //
         // Watches and listeners.
         //
@@ -338,7 +342,7 @@ angular.module('kifi')
           }
           var newMyLibs = [];
           if (scope.sortingMenu.myLibsFirst && newLibs.length > 0) {
-            var split = _.groupBy(newLibs, function(lib) { return lib.isMine ? 'mine' : 'notMine'; });
+            var split = _.groupBy(newLibs, function (lib) { return libraryService.isMyLibrary(lib) ? 'mine' : 'notMine'; });
             newLibs = split.notMine || [];
             newMyLibs = split.mine || [];
           }

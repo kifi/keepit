@@ -3,9 +3,9 @@
 angular.module('kifi')
 
 .controller('LoggedInHeaderCtrl', [
-  '$scope', '$window', '$rootElement', '$rootScope', '$document', 'profileService',
+  '$scope', '$window', '$rootElement', '$rootScope', '$document', 'profileService', 'libraryService',
   '$location', 'util', 'keyIndices', 'modalService', '$timeout', '$state',
-  function ($scope, $window, $rootElement, $rootScope, $document, profileService,
+  function ($scope, $window, $rootElement, $rootScope, $document, profileService, libraryService,
     $location, util, keyIndices, modalService, $timeout, $state) {
 
     $scope.toggleMenu = function () {
@@ -131,7 +131,7 @@ angular.module('kifi')
     $scope.addKeeps = function (library) {
       modalService.open({
         template: 'keeps/addKeepsModal.tpl.html',
-        modalData: {selectedLibId: library && library.isMine && library.id}
+        modalData: {selectedLibId: library && libraryService.isMyLibrary(library) && library.id}
       });
     };
 

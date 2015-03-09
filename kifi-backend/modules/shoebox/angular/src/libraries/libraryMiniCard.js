@@ -48,18 +48,16 @@ angular.module('kifi')
         //
         // Scope methods.
         //
+        scope.isMyLibrary = function () {
+          return libraryService.isMyLibrary(scope.library);
+        };
+
         scope.following = function () {
-          return !scope.invite && !scope.library.isMine && scope.isFollowing;
+          return !scope.invite && !scope.isMyLibrary() && scope.isFollowing;
         };
 
         scope.toggleFollow = function () {
-          if (scope.library.isMine) {
-            modalService.openGenericErrorModal({
-              modalData: {
-                genericErrorMessage: 'You cannot follow your own libraries!'
-              }
-            });
-          } else if (scope.isFollowing) {
+          if (scope.isFollowing) {
             unfollowLibrary();
           } else  {
             followLibrary();

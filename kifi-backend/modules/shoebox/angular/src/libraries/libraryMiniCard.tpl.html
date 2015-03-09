@@ -33,13 +33,13 @@
   <div class="kf-library-mini-card-hdivider"></div>
 
   <div>
-    <button ng-if="!library.isMine"
+    <button ng-if="!isMyLibrary()"
       ng-class="{'kf-library-mini-card-button-follow': !following(), 'kf-library-mini-card-button-unfollow': following()}"
       class="kf-library-mini-card-button"
       ng-click="toggleFollow($event)"
     ></button>
 
-    <button ng-if="library.isMine"
+    <button ng-if="isMyLibrary()"
       class="kf-library-mini-card-button kf-library-mini-card-button-view"
       ng-click="view()"
     >View my library</button>
