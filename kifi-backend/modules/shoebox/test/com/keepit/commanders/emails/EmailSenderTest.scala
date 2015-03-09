@@ -250,7 +250,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         val (toUser, fromUser) = db.readWrite { implicit rw =>
           (
             inject[UserRepo].save(User(firstName = "Billy", lastName = "Madison", primaryEmail = Some(EmailAddress("billy@gmail.com")), username = Username("billy"), normalizedUsername = "billy")),
-            inject[UserRepo].save(User(firstName = "Johnny", lastName = "Manziel", primaryEmail = Some(EmailAddress("johnny@gmail.com")), username = Username("test"), normalizedUsername = "test"))
+            inject[UserRepo].save(User(firstName = "Johnny", lastName = "Manziel", primaryEmail = Some(EmailAddress("johnny@gmail.com")), username = Username("johnny"), normalizedUsername = "johnny"))
           )
         }
         val email = Await.result(sender.sendToUser(toUser.id.get, fromUser.id.get), Duration(5, "seconds"))
@@ -265,13 +265,13 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         html must contain("Hi Billy,")
         html must contain("Johnny Manziel just joined Kifi.")
         html must contain("utm_campaign=contactJoined")
-        html must contain("friend=" + fromUser.externalId)
+        html must contain(s"/${fromUser.username.value}?intent=connect")
 
         val text = email.textBody.get.value
         text must contain("Hi Billy,")
         text must contain("Johnny Manziel just joined Kifi.")
         text must contain("to invite Johnny to connect on Kifi")
-        text must contain("friend=" + fromUser.externalId)
+        text must contain(s"/${fromUser.username.value}?intent=connect")
       }
     }
   }
