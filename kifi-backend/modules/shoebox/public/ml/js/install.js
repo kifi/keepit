@@ -24,21 +24,21 @@
     $('.browser-name').html(browserName);
     if (isChrome) {
       if (supported) {
-        $('.install-button').css('display', 'initial');
+        $('.install-button').css('display', 'block');
         $('.chrome-webstore-badge').css('display', 'block');
       } else { // old version
-        $('.install-old').css('display', 'initial');
+        $('.install-old').css('display', 'block');
       }
 
     } else if (isFirefox) {
       if (supported) {
-        $('.install-button').css('display', 'initial');
+        $('.install-button').css('display', 'block');
       } else { // old version
-        $('.install-old').css('display', 'initial');
+        $('.install-old').css('display', 'block');
       }
 
     } else { // not chrome or firefox
-      $('.install-other').css('display', 'initial');
+      $('.install-other').css('display', 'block');
     }
 
   }
