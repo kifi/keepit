@@ -32,6 +32,7 @@ trait ServiceDiscovery {
   def myStatus: Option[ServiceStatus]
   def myVersion: ServiceVersion
   def thisInstance: Option[ServiceInstance]
+  def instancesInCluster: Vector[ServiceInstance]
   def thisService: ServiceType
   def timeSinceLastStatusChange: Long
   def myHealthyStatus: Option[ServiceStatus] = thisInstance.map(_.remoteService.healthyStatus)
@@ -95,6 +96,8 @@ class ServiceDiscoveryImpl(
    */
   private[this] var lastLeaderLogTime = 0L
 
+  def instancesInCluster: Seq[ServiceInstance] = myCluster.allMembers.toSeq
+
   def isLeader(): Boolean = if (isCanary) false else zkClient.session { zk =>
     if (!stillRegistered()) {
       log.warn(s"service did not register itself yet!")
@@ -124,18 +127,6 @@ class ServiceDiscoveryImpl(
         if (logMe) logLeader(s"I'm not the leader since my instance is ${myInstance.get} and I have no idea who the leader is")
         require(myCluster.size == 0)
         return false
-    }
-  }
-
-  def isRunnerFor(taskName: String): Boolean = if (isCanary) false else zkClient.session { zk =>
-    if (!stillRegistered()) {
-      log.warn(s"service did not register itself yet!")
-      return false
-    }
-
-    myInstance.exists { thisInst =>
-      val index = (taskName.hashCode() & 0x7FFFFFFF) % myCluster.allMembers.size
-      myCluster.allMembers(index) == thisInst
     }
   }
 
