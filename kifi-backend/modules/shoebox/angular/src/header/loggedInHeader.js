@@ -51,8 +51,8 @@ angular.module('kifi')
         $scope.search.text = toState.name === 'library.search' || toState.name === 'search' ? toParams.q : '';
       }),
 
-      $rootScope.$on('triggerAddKeep', function (e, library) {
-        $scope.addKeeps(library);
+      $rootScope.$on('triggerAddKeep', function () {
+        $scope.addKeeps();
       })
     ].forEach(function (deregister) {
       $scope.$on('$destroy', deregister);
@@ -128,7 +128,8 @@ angular.module('kifi')
 
     $scope.me = profileService.me;
 
-    $scope.addKeeps = function (library) {
+    $scope.addKeeps = function () {
+      var library = $scope.library;
       modalService.open({
         template: 'keeps/addKeepsModal.tpl.html',
         modalData: {selectedLibId: library && libraryService.isMyLibrary(library) && library.id}
