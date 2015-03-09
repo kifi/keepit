@@ -3,7 +3,7 @@
 
 describe('kifi.invite', function () {
   var $injector, $rootScope, $httpBackend, routeService, $location, $compile,
-    initParams, profileService, inviteService, elem, scope;
+    profileService, inviteService, elem, scope;
 
   var fakeSocialId = '29a10380-166a-11e4-8c21-0800200c9a66';
 
