@@ -177,6 +177,13 @@ $(function() {
     if (this.files && URL) {
       photoUpload = uploadPhotoXhr2(this.files);
       if (photoUpload) {
+
+        photoUpload.promise.fail(function() {
+          var $errorField = $('#error-invalid-image');
+          var $inputField = $('.upload-image-btn');
+          errorImageFile($errorField, $inputField);
+        });
+
         // wait for file dialog to go away before starting dialog transition
         setTimeout(function () {
           if (localPhotoUrl) {
@@ -199,6 +206,7 @@ $(function() {
   });
   var photoXhr2;
   function uploadPhotoXhr2(files) {
+    hideError();
     var file = Array.prototype.filter.call(files, isImage)[0];
     if (file) {
       if (photoXhr2) {
@@ -406,6 +414,10 @@ $(function() {
       Tracker.track('visitor_viewed_page', { type: 'signup', error: 'unknownSignupError'})
     }
     error($errorField, 'Unknown Error:<br>Please contact us on <a href="http://support.kifi.com/hc/en-us/requests/new">Support</a>', $inputField);
+  }
+  function errorImageFile($errorField, $inputField) {
+    Tracker.track('visitor_viewed_page', { type: 'signup2Email', error: 'invalidImageFile' });
+    error($errorField, 'Image upload failed.<br>Please use a different image', $inputField);
   }
 
 
