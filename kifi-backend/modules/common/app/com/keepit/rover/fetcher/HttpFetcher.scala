@@ -3,7 +3,6 @@ package com.keepit.rover.fetcher
 import java.io.{ FilterInputStream, InputStream }
 
 import com.keepit.model.HttpProxy
-import com.keepit.rover.fetcher.HttpRedirect
 import org.joda.time.DateTime
 
 import scala.concurrent.Future

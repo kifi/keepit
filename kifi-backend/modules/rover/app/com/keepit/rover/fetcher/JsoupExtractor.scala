@@ -1,7 +1,6 @@
 package com.keepit.rover.fetcher
 
 import com.keepit.common.logging.Logging
-import com.keepit.rover.HttpInputStream
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import scala.collection.JavaConversions._
