@@ -1,7 +1,7 @@
 package com.keepit.rover.article
 
 import com.keepit.model.PageAuthor
-import com.keepit.scraper.HttpRedirect
+import com.keepit.rover.fetcher.HttpRedirect
 import com.kifi.macros.json
 import org.joda.time.DateTime
 

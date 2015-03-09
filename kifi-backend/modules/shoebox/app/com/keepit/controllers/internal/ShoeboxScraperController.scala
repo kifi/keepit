@@ -12,7 +12,8 @@ import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.normalizer._
-import com.keepit.scraper.{ HttpRedirect, Signature }
+import com.keepit.rover.fetcher.HttpRedirect
+import com.keepit.scraper.Signature
 import play.api.mvc.Action
 import play.api.libs.json.{ JsObject, JsArray, JsBoolean, Json }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext

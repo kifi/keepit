@@ -5,11 +5,10 @@ import com.keepit.common.net.URI
 import scala.collection.JavaConversions._
 
 import com.keepit.common.logging.Logging
-import com.keepit.scraper.HttpInputStream
+import com.keepit.scraper.DeprecatedHttpInputStream
 
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
-import java.util.regex.Pattern
 
 import scala.util.Try
 
@@ -18,7 +17,7 @@ abstract class JsoupBasedExtractor(url: URI, maxContentChars: Int) extends Extra
 
   def parse(doc: Document): String
 
-  def process(input: HttpInputStream) {
+  def process(input: DeprecatedHttpInputStream) {
     try {
       doc = Jsoup.parse(input, null, url.toString()) // null charset autodetects based on `http-equiv` meta tag and default to UTF-8, Parser defaults to HTML
     } catch {
@@ -52,18 +51,8 @@ abstract class JsoupBasedExtractor(url: URI, maxContentChars: Int) extends Extra
   }
 
   private def toOption(unsafe: => String): Option[String] = {
-    Try(Option(unsafe)).toOption.flatten.map {
-      case o if o.isEmpty => None
-      case o => Some(o)
-    }.flatten
+    Try(Option(unsafe)).toOption.flatten.filter(_.nonEmpty)
   }
 
   def getKeywords(): Option[String] = getMetadata("keywords")
-
-  private[extractor] def replace(text: String, replacements: (String, String)*) = {
-    val replacement = replacements.toMap.withDefault(identity)
-    val regex = replacement.keysIterator.map(Pattern.quote).mkString("|").r
-    regex.replaceAllIn(text, m => replacement(m.matched))
-  }
 }
-

@@ -1,5 +1,7 @@
 package com.keepit.common
 
+import java.util.regex.{ Matcher, Pattern }
+
 import org.apache.commons.lang3.StringUtils
 import play.api.libs.json.Json.JsValueWrapper
 import play.api.libs.json.{ Json, JsObject, JsNull, JsString, JsUndefined }
@@ -49,4 +51,11 @@ package object strings {
     }
   }
 
+  implicit class StringWithReplacements(str: String) {
+    def replaceAllLiterally(replacements: (String, String)*) = {
+      val replacement = replacements.toMap.withDefault(identity)
+      val regex = replacement.keysIterator.map(Pattern.quote).mkString("|").r
+      regex.replaceAllIn(str, m => Matcher.quoteReplacement(replacement(m.matched)))
+    }
+  }
 }
