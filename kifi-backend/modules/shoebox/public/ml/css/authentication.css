@@ -742,6 +742,15 @@ a, .avatars li, img, .tabs_nav li {
 	80% { -webkit-transform: translate(3px, 0px) rotate(0deg); }
 }
 
+#error-fp {
+  left: 30px;
+}
+
+#error-invalid-image {
+  width: 150px;
+  left: -30px;
+}
+
 .shake {
 	display:inline-block;
 	-webkit-animation-name: shake-animation;
