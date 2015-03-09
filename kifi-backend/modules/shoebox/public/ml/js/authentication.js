@@ -285,7 +285,7 @@ $(function() {
     modal.find('.fp-success').hide();
   }
 
-  function submitForgotPassword() {
+  function submitForgotPassword(event) {
     event.preventDefault();
     var trackingType = window.location.pathname.search('linkSocial') >= 0 ? 'linkSocialAccount' : 'login';
 
