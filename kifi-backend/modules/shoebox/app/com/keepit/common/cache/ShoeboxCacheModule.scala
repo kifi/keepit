@@ -4,6 +4,7 @@ import com.keepit.commanders._
 import com.keepit.common.seo.SiteMapCache
 import com.keepit.controllers.core.StateTokenCache
 import com.keepit.model.cache.UserSessionViewExternalIdCache
+import com.keepit.scraper.UrlSignatureCache
 
 import scala.concurrent.duration._
 import com.google.inject.{ Provides, Singleton }
@@ -400,5 +401,9 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   @Provides @Singleton
   def topFollowedLibrariesCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new TopFollowedLibrariesCache(stats, accessLog, (innerRepo, 5 minutes), (outerRepo, 12 hours))
+
+  @Provides @Singleton
+  def urlSignatureCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new UrlSignatureCache(stats, accessLog, (innerRepo, 5 minutes), (outerRepo, 24 hours))
 
 }
