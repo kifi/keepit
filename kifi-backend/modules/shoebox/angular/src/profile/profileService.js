@@ -7,9 +7,7 @@ angular.module('kifi')
   function ($http, env, $q, util, routeService, socialService, $analytics, $location, $window, $rootScope, Clutch, $rootElement) {
     var initialized = false;
 
-    var me = {
-      seqNum: 0
-    };
+    var me = {};
     var prefs = {};
     var userLoggedIn; // undefined means we don't know the status yet
 
@@ -17,13 +15,13 @@ angular.module('kifi')
       fetchMe();
     });
 
-    function updateLoginState(meObj, broadcast) {
-      $rootElement.find('html').removeClass('kf-logged-in kf-logged-out').addClass(!!meObj ? 'kf-logged-in' : 'kf-logged-out');
-      $rootScope.userLoggedIn = userLoggedIn = !!meObj;
+    function updateLoginState(loggedIn, broadcast) {
+      $rootElement.find('html').removeClass('kf-logged-in kf-logged-out').addClass(loggedIn ? 'kf-logged-in' : 'kf-logged-out');
+      $rootScope.userLoggedIn = userLoggedIn = loggedIn;
 
       // Do not broadcast 'userLoggedInStateChange' on the first call.
       if (initialized && broadcast) {
-        $rootScope.$broadcast('userLoggedInStateChange', meObj);
+        $rootScope.$broadcast('userLoggedInStateChange', loggedIn);
       }
 
       initialized = true;
@@ -33,14 +31,12 @@ angular.module('kifi')
       var oldMeId = me.id;
       return $http.get(routeService.profileUrl).then(function (res) {
         updateMe(res.data);
-        updateLoginState(me, me.id !== oldMeId);
+        updateLoginState(true, me.id !== oldMeId);
         return me;
       })['catch'](function (err) {
         if (err.status === 403) {
-          util.replaceObjectInPlace(me, {
-            seqNum: (me.seqNum || 0) + 1
-          });
-          updateLoginState(null, me.id !== oldMeId);
+          util.replaceObjectInPlace(me, {});
+          updateLoginState(false, me.id !== oldMeId);
         }
       });
     }, {
@@ -52,7 +48,6 @@ angular.module('kifi')
         me[key] = val;
       });
       me.primaryEmail = getPrimaryEmail(me.emails);
-      me.seqNum++;
       socialService.setExpiredTokens(me.notAuthed);
       return me;
     }
@@ -288,7 +283,7 @@ angular.module('kifi')
 
     return {
       userLoggedIn: getUserLoggedIn,
-      me: me, // when mutated, you MUST increment me.seqNum
+      me: me,
       getSettings: getSettings,
       setSettings: setSettings,
       fetchMe: fetchMe,
