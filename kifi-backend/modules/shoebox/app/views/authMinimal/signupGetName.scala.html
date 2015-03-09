@@ -12,6 +12,7 @@
           <div class="image-inner"></div>
           <div class="image-upload-wrapper">
             <a id="upload-image-btn" href="#" class="image-upload" data-track-action="clickedAddPhotoPlus"><span class="add">Add Photo</span></a>
+            <input class="form-photo-file" type="file" name="photo" data-uri="@authRoutes.uploadBinaryPicture()" accept="image/*">
           </div>
         </div>
         <h3>Your name</h3>
@@ -27,21 +28,6 @@
 
           <button id="signup-btn" class="btn-authentication btn-done" type="submit" data-track-action="clickedsignUpButton">Done</button>
         </form>
-      </div>
-    </div>
-  </div>
-
-  <div id="photo-upload-step2" style="display:none;">
-    <div id="center_container" class="small upload-container">
-      <div class="inner photo">
-        <h3>Grab photo from</h3>
-        <div class="social-btn-wrap">
-          <a href="#" class="photo-facebook" data-track-action="clickedAuthFacebookPhoto"><i class="i-fbtn"></i></a>
-          <a href="#" class="photo-linkedin" data-track-action="clickedAuthLinkedInPhoto"><i class="i-lbtn"></i></a>
-          <a href="#" class="file-upload" data-track-action="clickedUploadPhoto">Upload from your computer</a>
-          <input class="form-photo-file" type="file" name="photo" data-uri="@authRoutes.uploadBinaryPicture()" accept="image/*">
-          <a id="back-btn" href="#" class="btn-authentication btn-back" data-track-action="clickedGoBack">Go back</a>
-        </div>
       </div>
     </div>
   </div>
