@@ -123,7 +123,7 @@ class ScrapeAgentSupervisor @Inject() (
       scrapeQ.enqueue(ScrapeJob(clock.now(), s))
       scraperBroadcaster ! JobAvail
     case QueueSize =>
-      if (scrapeQ.size > config.pullMax / 2) { // tweak
+      if (scrapeQ.size > 2) { // tweak
         diagnostic()
       }
       sender ! scrapeQ.size
