@@ -149,10 +149,10 @@ angular.module('kifi')
       $rootScope.$emit('triggerAddKeep', library);
     };
     $scope.callImportBookmarks = function () {
-      $rootScope.$emit('showGlobalModal', 'importBookmarks');
+      $rootScope.$emit('showGlobalModal', 'importBookmarks', {library: library});
     };
     $scope.callImportBookmarkFile = function () {
-      $rootScope.$emit('showGlobalModal', 'importBookmarkFile');
+      $rootScope.$emit('showGlobalModal', 'importBookmarkFile', {library: library});
     };
     $scope.triggerInstall = function () {
       installService.triggerInstall(function () {
