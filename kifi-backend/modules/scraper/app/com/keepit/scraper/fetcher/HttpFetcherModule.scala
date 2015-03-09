@@ -3,8 +3,9 @@ package com.keepit.scraper.fetcher
 import com.google.inject.{ Provides, Singleton }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.plugin.SchedulingProperties
+import com.keepit.rover.fetcher.DeprecatedHttpFetcher
 import com.keepit.scraper.{ ScraperSchedulerConfig, ScraperConfig }
-import com.keepit.scraper.fetcher.apache.ApacheHttpFetcher
+import com.keepit.rover.fetcher.apache.ApacheHttpFetcher
 import net.codingwell.scalaguice.ScalaModule
 
 trait HttpFetcherModule extends ScalaModule

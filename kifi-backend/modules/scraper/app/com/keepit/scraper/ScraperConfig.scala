@@ -1,16 +1,12 @@
 package com.keepit.scraper
 
-import scala.util.Random
+import com.keepit.rover.fetcher.ScraperHttpConfig
 
 case class ScraperQueueConfig(
   terminateThreshold: Int,
   queueSizeThreshold: Int,
   pullThreshold: Option[Int],
   terminatorFreq: Int)
-
-case class ScraperHttpConfig(
-  httpFetcherEnforcerFreq: Int,
-  httpFetcherQSizeThreshold: Int)
 
 case class ScraperConfig(
     changeThreshold: Double,

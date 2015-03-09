@@ -7,8 +7,8 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.URI
 import com.keepit.model.HttpProxy
+import com.keepit.rover.fetcher.DeprecatedHttpFetcher
 import com.keepit.scraper.extractor.{ ExtractorFactory, ExtractorProviderType, ExtractorProviderTypes, LinkedInIdExtractor }
-import com.keepit.scraper.fetcher.DeprecatedHttpFetcher
 import com.keepit.scraper._
 import play.api.http.Status
 

@@ -3,7 +3,7 @@ package com.keepit.scraper
 import java.io.FilterInputStream
 import java.io.InputStream
 
-class HttpInputStream(input: InputStream) extends FilterInputStream(input) {
+class DeprecatedHttpInputStream(input: InputStream) extends FilterInputStream(input) {
 
   var httpContentType: Option[String] = None
 

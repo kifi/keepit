@@ -5,7 +5,7 @@ import com.keepit.common.net.URI
 import scala.collection.JavaConversions._
 
 import com.keepit.common.logging.Logging
-import com.keepit.scraper.HttpInputStream
+import com.keepit.scraper.DeprecatedHttpInputStream
 
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
@@ -17,7 +17,7 @@ abstract class JsoupBasedExtractor(url: URI, maxContentChars: Int) extends Extra
 
   def parse(doc: Document): String
 
-  def process(input: HttpInputStream) {
+  def process(input: DeprecatedHttpInputStream) {
     try {
       doc = Jsoup.parse(input, null, url.toString()) // null charset autodetects based on `http-equiv` meta tag and default to UTF-8, Parser defaults to HTML
     } catch {

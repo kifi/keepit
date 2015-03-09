@@ -1,4 +1,4 @@
-package com.keepit.scraper.fetcher.apache
+package com.keepit.rover.fetcher.apache
 
 import java.security.cert.X509Certificate
 import org.apache.http.conn.ssl.{ SSLConnectionSocketFactory, SSLContexts, TrustStrategy }

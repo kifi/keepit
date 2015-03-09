@@ -1,6 +1,6 @@
 package com.keepit.scraper
 
-import com.keepit.scraper.fetcher.apache.ContentAwareHttpRequestExecutor
+import com.keepit.rover.fetcher.apache.ContentAwareHttpRequestExecutor
 import org.specs2.mutable.Specification
 
 class ContentAwareHttpRequestExecutorTest extends Specification {
