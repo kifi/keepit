@@ -17,13 +17,13 @@ angular.module('kifi')
       fetchMe();
     });
 
-    function updateLoginState(meObj, broadcast) {
-      $rootElement.find('html').removeClass('kf-logged-in kf-logged-out').addClass(!!meObj ? 'kf-logged-in' : 'kf-logged-out');
-      $rootScope.userLoggedIn = userLoggedIn = !!meObj;
+    function updateLoginState(loggedIn, broadcast) {
+      $rootElement.find('html').removeClass('kf-logged-in kf-logged-out').addClass(loggedIn ? 'kf-logged-in' : 'kf-logged-out');
+      $rootScope.userLoggedIn = userLoggedIn = loggedIn;
 
       // Do not broadcast 'userLoggedInStateChange' on the first call.
       if (initialized && broadcast) {
-        $rootScope.$broadcast('userLoggedInStateChange', meObj);
+        $rootScope.$broadcast('userLoggedInStateChange', loggedIn);
       }
 
       initialized = true;
@@ -33,14 +33,14 @@ angular.module('kifi')
       var oldMeId = me.id;
       return $http.get(routeService.profileUrl).then(function (res) {
         updateMe(res.data);
-        updateLoginState(me, me.id !== oldMeId);
+        updateLoginState(true, me.id !== oldMeId);
         return me;
       })['catch'](function (err) {
         if (err.status === 403) {
           util.replaceObjectInPlace(me, {
             seqNum: (me.seqNum || 0) + 1
           });
-          updateLoginState(null, me.id !== oldMeId);
+          updateLoginState(false, me.id !== oldMeId);
         }
       });
     }, {
