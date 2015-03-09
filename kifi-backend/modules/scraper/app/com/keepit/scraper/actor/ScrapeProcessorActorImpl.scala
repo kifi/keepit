@@ -69,7 +69,7 @@ class ScrapeProcessorActorImpl @Inject() (
         log.info(s"[ScrapeProcessorActorImpl.pull] qSize=$qSize. Let's get some work.")
         serviceDiscovery.thisInstance.map { inst =>
           if (inst.isHealthy) {
-            val taskFuture = shoeboxCommander.assignTasks(inst.id.id, config.pullMax)
+            val taskFuture = shoeboxCommander.assignTasks(inst.id.id, 4)
             val queuedFuture = taskFuture map { requests =>
               log.info(s"[ScrapeProcessorActorImpl.pull(${inst.id.id})] assigned (${requests.length}) scraping tasks: ${requests.map(r => s"[uriId=${r.uri.id},infoId=${r.scrapeInfo.id},url=${r.uri.url}]").mkString(",")} ")
               for (sr <- requests) {
