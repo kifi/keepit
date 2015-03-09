@@ -146,7 +146,7 @@ angular.module('kifi')
     };
 
     $scope.callAddKeep = function () {
-      $rootScope.$emit('triggerAddKeep', library);
+      $rootScope.$emit('triggerAddKeep');
     };
     $scope.callImportBookmarks = function () {
       $rootScope.$emit('showGlobalModal', 'importBookmarks', {library: library});
