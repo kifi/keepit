@@ -185,9 +185,7 @@ angular.module('kifi')
           if (existingKeep && !_.find($scope.keeps, { id: keep.id })) {
             existingKeep.keeps.push({
               id: keep.id,
-              isMine: true,
               libraryId: library.id,
-              mine: true,
               visibility: library.visibility
             });
           }
