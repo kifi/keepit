@@ -22,18 +22,6 @@ $(function() {
   $('.forgot-password-modal .modal-button-cancel').click(resetForgotPasswordModal);
   $('.forgot-password-modal .modal-button-action').click(submitForgotPassword);
 
-  /* Signup With Email */
-  $('#upload-image-btn').click(function() {
-    $("#photo-upload-step2").fadeIn();
-    $("#photo-upload-step1").fadeOut();
-    return false;
-  });
-
-  $('#back-btn').click(function() {
-    $("#photo-upload-step2").fadeOut();
-    $("#photo-upload-step1").fadeIn();
-    return false;
-  });
 
 
   //$('#signup-complete-btn').click(function() {
@@ -175,7 +163,9 @@ $(function() {
   };
   $('.signup-name').submit(kifi.signupGetName);
   // Image utilities
-  $('.file-upload').click(function (e) {
+
+  var $userPhoto = $('.image-upload');
+  $userPhoto.click(function (e) {
     if (e.which === 1) {
       $('.form-photo-file').click();
     }
@@ -189,8 +179,6 @@ $(function() {
       if (photoUpload) {
         // wait for file dialog to go away before starting dialog transition
         setTimeout(function () {
-          $("#photo-upload-step2").fadeOut();
-          $("#photo-upload-step1").fadeIn();
           if (localPhotoUrl) {
             URL.revokeObjectURL(localPhotoUrl);
           }
@@ -200,7 +188,7 @@ $(function() {
             console.log('onload', e); // todo, needed?
           };
           img.src = localPhotoUrl;
-          $('.image-upload').css({
+          $userPhoto.css({
             'background-image': 'url(' + localPhotoUrl + ')'
           }).find('.add').hide();
         }, 200);
