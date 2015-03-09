@@ -24,8 +24,8 @@ case class ScraperConfig(
     httpConfig: ScraperHttpConfig,
     queueConfig: ScraperQueueConfig) {
   val numCores = Runtime.getRuntime.availableProcessors
-  val pullThreshold = 2 // tweak
-  val numWorkers = 2
+  val pullThreshold = 4 // tweak
+  val numWorkers = 16
 }
 
 object ScraperConfig {
