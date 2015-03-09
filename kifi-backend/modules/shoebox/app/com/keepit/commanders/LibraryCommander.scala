@@ -894,7 +894,7 @@ class LibraryCommander @Inject() (
       userIds = Set(lib.ownerId),
       title = "New Library Follower",
       body = s"${follower.firstName} ${follower.lastName} is now following your Library ${lib.name}",
-      linkText = s"See ${follower.firstName}'s profile",
+      linkText = s"See ${follower.firstName}’s profile",
       linkUrl = s"https://www.kifi.com/${follower.username.value}",
       imageUrl = s3ImageStore.avatarUrlByUser(follower),
       sticky = false,
