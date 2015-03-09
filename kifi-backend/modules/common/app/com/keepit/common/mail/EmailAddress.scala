@@ -39,10 +39,10 @@ object EmailAddress {
   // Regex from http://www.whatwg.org/specs/web-apps/current-work/multipage/states-of-the-type-attribute.html
   private val emailRegex = """^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$""".r
 
-  private def isValid(address: String): Boolean = emailRegex.findFirstIn(address).isDefined
+  private def isValid(address: String): Boolean = emailRegex.findFirstIn(address.trim).isDefined
 
   private def canonicalize(address: String): String = {
-    val (localAt, host) = address.splitAt(address.lastIndexOf('@') + 1)
+    val (localAt, host) = address.trim.splitAt(address.lastIndexOf('@') + 1)
     localAt + host.toLowerCase
   }
 
@@ -60,7 +60,7 @@ object EmailAddress {
   // discuss help careers jobs reports? bounces? updates?
   private val botEmailAddressRe = """(?:\+[^@]|\d{10}|\b(?i)(?:(?:no)?reply|(?:un)?subscribe)\b)""".r
   def isLikelyHuman(email: EmailAddress): Boolean = {
-    botEmailAddressRe.findFirstIn(email.address).isEmpty
+    botEmailAddressRe.findFirstIn(email.address.trim).isEmpty
   }
 }
 

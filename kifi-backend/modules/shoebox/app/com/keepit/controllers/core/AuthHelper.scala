@@ -174,7 +174,7 @@ class AuthHelper @Inject() (
       Forbidden(Json.obj("error" -> formWithErrors.errors.head.message))
     },
     success = {
-      case EmailPassword(emailAddress, password) => handleEmailPasswordSuccessForm(emailAddress, password)
+      case EmailPassword(emailAddress, password) => handleEmailPasswordSuccessForm(emailAddress.copy(address = emailAddress.address.trim), password)
     }
   )
 
@@ -234,7 +234,7 @@ class AuthHelper @Inject() (
   private val socialFinalizeAccountForm = Form[SocialFinalizeInfo](
     mapping(
       "email" -> EmailAddress.formMapping.verifying("known_email_address", email => db.readOnlyMaster { implicit s =>
-        val existing = userCredRepo.findByEmailOpt(email.address)
+        val existing = userCredRepo.findByEmailOpt(email.address.trim)
         if (existing.nonEmpty) {
           log.warn("[social-finalize] Can't finalize because email is known: " + existing)
         }
@@ -256,7 +256,7 @@ class AuthHelper @Inject() (
           log.warn(s"[social-finalize] Rejected social password, generating one instead. Supplied password was ${pwd.map(_.length).getOrElse(0)} chars.")
           RandomStringUtils.random(20)
         }
-        SocialFinalizeInfo(email = email, firstName = fName, lastName = lName.getOrElse(""), password = allowedPassword.toCharArray, picToken = picToken, picHeight = picH, picWidth = picW, cropX = cX, cropY = cY, cropSize = cS)
+        SocialFinalizeInfo(email = email.copy(address = email.address.trim), firstName = fName, lastName = lName.getOrElse(""), password = allowedPassword.toCharArray, picToken = picToken, picHeight = picH, picWidth = picW, cropX = cX, cropY = cY, cropSize = cS)
       })((sfi: SocialFinalizeInfo) =>
         Some((sfi.email, sfi.firstName, Option(sfi.lastName), Option(new String(sfi.password)), sfi.picToken, sfi.picHeight, sfi.picWidth, sfi.cropX, sfi.cropY, sfi.cropSize)))
   )
@@ -285,7 +285,7 @@ class AuthHelper @Inject() (
     val inviteExtIdOpt: Option[ExternalId[Invitation]] = request.cookies.get("inv").flatMap(v => ExternalId.asOpt[Invitation](v.value))
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build
     val (user, emailPassIdentity) = authCommander.finalizeSocialAccount(sfi, identity, inviteExtIdOpt)
-    val emailConfirmedBySocialNetwork = identity.email.map(EmailAddress.validate).collect { case Success(validEmail) => validEmail }.exists(_.equalsIgnoreCase(sfi.email))
+    val emailConfirmedBySocialNetwork = identity.email.map(EmailAddress.validate).collect { case Success(validEmail) => validEmail.copy(address = validEmail.address.trim) }.exists(_.equalsIgnoreCase(sfi.email))
     finishSignup(user, sfi.email, emailPassIdentity, emailConfirmedAlready = emailConfirmedBySocialNetwork, libraryPublicId = libraryPublicId, isFinalizedImmediately = isFinalizedImmediately)
   }
 
