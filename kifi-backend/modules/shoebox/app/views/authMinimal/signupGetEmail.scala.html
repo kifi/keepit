@@ -1,4 +1,4 @@
-@(name: String, picture: String, purposeDrivenInstall: Boolean = false)
+@(firstName: String, lastName: String, picture: String, purposeDrivenInstall: Boolean = false)
 @import com.keepit.controllers.core.routes.{AuthController => authRoutes}
 @headHtml = {
   <link rel="stylesheet" type="text/css" href="/assets/ml/css/authentication.css">
@@ -13,7 +13,7 @@
             <span class="image-upload placeholder" style="background-image:url('@picture');"></span>
           </div>
         </div>
-        <h3 class="light small">Almost done, <span class="weight400">@name</span></h3>
+        <h3 class="light small">Almost done, <span class="weight400">@firstName</span></h3>
         @if(purposeDrivenInstall) {
           <h3 class="small">Where should we send instructions?</h3>
         } else {
@@ -22,6 +22,8 @@
         <form class="signup-form signup-email" method="POST" action="@authRoutes.socialFinalizeAccountAction()">
           <div class="input-wrapper">
             <input type="email" name="email" class="form-input email" placeholder="Enter email address">
+            <input type="hidden" class="form-first-name" name="firstName" value="@firstName">
+            <input type="hidden" class="form-last-name" name="lastName" value="@lastName">
             <div id="error-signup-email" class="error"></div>
           </div>
 

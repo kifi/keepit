@@ -241,9 +241,13 @@ $(function() {
     if (!validEmail) {
       return;
     }
+    var $first = $form.find('.form-first-name');
+    var $last = $form.find('.form-last-name');
 
     $.postJson(this.action, {
-      email: validEmail
+      email: validEmail,
+      firstName: $first.val() || '',
+      lastName: $last.val() || ''
     }).done(function (data) {
       if (data.uri) { // successes return: {success: true}
         window.location = data.uri;
