@@ -1,10 +1,10 @@
 package com.keepit.scraper.extractor
 
 import com.google.inject.{ Inject, Singleton }
-import com.keepit.common.net.{ URIParser, URI }
+import com.keepit.common.net.URI
 import com.keepit.model.HttpProxy
 import com.keepit.scraper.ScraperConfig
-import com.keepit.scraper.fetcher.HttpFetcher
+import com.keepit.scraper.fetcher.DeprecatedHttpFetcher
 import com.keepit.shoebox.ShoeboxScraperClient
 import org.apache.tika.parser.html.HtmlMapper
 import org.apache.tika.sax.{ Link, LinkContentHandler, TeeContentHandler }
@@ -19,7 +19,7 @@ class LinkProcessingExtractor(
   maxContentChars: Int,
   htmlMapper: Option[HtmlMapper],
   processLink: Link => Option[String],
-  httpFetcher: HttpFetcher,
+  httpFetcher: DeprecatedHttpFetcher,
   shoeboxScraperClient: ShoeboxScraperClient)
     extends DefaultExtractor(url, maxContentChars, htmlMapper) {
 
@@ -59,7 +59,7 @@ class LinkProcessingExtractor(
 }
 
 @Singleton
-class LinkProcessingExtractorProvider @Inject() (httpFetcher: HttpFetcher, shoeboxScraperClient: ShoeboxScraperClient) extends ExtractorProvider {
+class LinkProcessingExtractorProvider @Inject() (httpFetcher: DeprecatedHttpFetcher, shoeboxScraperClient: ShoeboxScraperClient) extends ExtractorProvider {
   def isDefinedAt(uri: URI) = true
   def apply(uri: URI) = new LinkProcessingExtractor(uri, ScraperConfig.maxContentChars, DefaultExtractorProvider.htmlMapper, processLink(uri), httpFetcher, shoeboxScraperClient) // TODO
 

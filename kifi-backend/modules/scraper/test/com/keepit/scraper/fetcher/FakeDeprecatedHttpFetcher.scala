@@ -10,7 +10,7 @@ import play.api.http.Status
 
 import scala.concurrent.Future
 
-class FakeHttpFetcher(urlToResponse: Option[PartialFunction[String, HttpFetchStatus]] = None) extends HttpFetcher {
+class FakeDeprecatedHttpFetcher(urlToResponse: Option[PartialFunction[String, HttpFetchStatus]] = None) extends DeprecatedHttpFetcher {
   def fetch(uri: URI, ifModifiedSince: Option[DateTime], proxy: Option[HttpProxy])(f: (HttpInputStream) => Unit): HttpFetchStatus = {
     val url = uri.toString()
     if (urlToResponse.exists(_.isDefinedAt(url))) {

@@ -18,7 +18,7 @@ case class HttpFetchStatus(statusCode: Int, message: Option[String], context: Fe
   def redirects = context.redirects
 }
 
-trait HttpFetcher {
+trait DeprecatedHttpFetcher {
   val NO_OP = { is: HttpInputStream => }
   // deprecated
   def fetch(url: URI, ifModifiedSince: Option[DateTime] = None, proxy: Option[HttpProxy] = None)(f: HttpInputStream => Unit): HttpFetchStatus

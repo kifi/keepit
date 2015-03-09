@@ -7,7 +7,7 @@ import com.keepit.scraper.extractor.{ ExtractorFactoryImpl, ExtractorFactory }
 import akka.actor.ActorSystem
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.plugin.SchedulingProperties
-import com.keepit.scraper.fetcher.{ DevHttpFetcherModule, HttpFetcher }
+import com.keepit.scraper.fetcher.{ DevHttpFetcherModule, DeprecatedHttpFetcher }
 import com.keepit.scraper.fetcher.apache.ApacheHttpFetcher
 
 case class DevScraperProcessorModule() extends ScrapeProcessorModule {

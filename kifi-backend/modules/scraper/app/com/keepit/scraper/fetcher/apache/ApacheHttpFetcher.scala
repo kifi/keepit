@@ -24,7 +24,7 @@ import com.keepit.common.performance._
 import com.keepit.common.plugin.SchedulingProperties
 import com.keepit.model.HttpProxy
 import com.keepit.scraper._
-import com.keepit.scraper.fetcher.{ HttpFetchStatus, FetcherHttpContext, HttpFetcher }
+import com.keepit.scraper.fetcher.{ HttpFetchStatus, FetcherHttpContext, DeprecatedHttpFetcher }
 import org.apache.http.HttpHeaders._
 import org.apache.http.HttpStatus._
 import org.apache.http._
@@ -53,7 +53,7 @@ import scala.concurrent.duration._
 import org.apache.commons.io.{ IOUtils, FileUtils }
 
 // based on Apache HTTP Client (this one is blocking but feature-rich & flexible; see http://hc.apache.org/httpcomponents-client-ga/index.html)
-class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, connectionTimeout: Int, soTimeOut: Int, schedulingProperties: SchedulingProperties, scraperHttpConfig: ScraperHttpConfig) extends HttpFetcher with Logging with ScraperUtils {
+class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, connectionTimeout: Int, soTimeOut: Int, schedulingProperties: SchedulingProperties, scraperHttpConfig: ScraperHttpConfig) extends DeprecatedHttpFetcher with Logging with ScraperUtils {
 
   implicit def toFetcherContext(apacheCtx: HttpContext): FetcherHttpContext = new FetcherHttpContextAdaptor(apacheCtx)
 

@@ -8,7 +8,7 @@ case class FakeHttpFetcherModule(urlToResponse: Option[PartialFunction[String, H
 
   @Singleton
   @Provides
-  def httpFetcher(): HttpFetcher = {
-    new FakeHttpFetcher(urlToResponse)
+  def httpFetcher(): DeprecatedHttpFetcher = {
+    new FakeDeprecatedHttpFetcher(urlToResponse)
   }
 }

@@ -8,7 +8,7 @@ import com.keepit.common.net.URI._
 import com.keepit.model._
 import com.keepit.rover.fetcher.HttpRedirect
 import com.keepit.scraper.extractor._
-import com.keepit.scraper.fetcher.HttpFetcher
+import com.keepit.scraper.fetcher.DeprecatedHttpFetcher
 import com.keepit.search.{ LangDetector, Article, ArticleStore }
 import scala.concurrent.duration._
 import org.joda.time.Days
@@ -34,7 +34,7 @@ class ScrapeWorkerImpl @Inject() (
     airbrake: AirbrakeNotifier,
     config: ScraperConfig,
     schedulerConfig: ScraperSchedulerConfig,
-    httpFetcher: HttpFetcher,
+    httpFetcher: DeprecatedHttpFetcher,
     extractorFactory: ExtractorFactory,
     articleStore: ArticleStore,
     pornDetectorFactory: PornDetectorFactory,
@@ -275,7 +275,7 @@ class ScrapeWorkerImpl @Inject() (
     }
   }
 
-  private def fetch(normalizedUri: NormalizedURI, httpFetcher: HttpFetcher, info: ScrapeInfo, proxyOpt: Option[HttpProxy]): Future[ScraperResult] = {
+  private def fetch(normalizedUri: NormalizedURI, httpFetcher: DeprecatedHttpFetcher, info: ScrapeInfo, proxyOpt: Option[HttpProxy]): Future[ScraperResult] = {
     val url = URI.parse(normalizedUri.url).getOrElse(throw new Exception(s"url can not be parsed for $normalizedUri"))
     val extractor = extractorFactory(url)
     log.debug(s"[fetchArticle] url=${normalizedUri.url} ${extractor.getClass}")
