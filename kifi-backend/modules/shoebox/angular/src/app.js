@@ -64,7 +64,7 @@ angular.module('kifi', [
 .factory('initParams', [
   '$location',
   function ($location) {
-    var names = ['m', 'o', 'friend', 'subtype', 'install', 'intent'];
+    var names = ['m', 'o', 'install', 'intent'];
     var search = $location.search();
     var params = _.pick(search, names);
     if (!_.isEmpty(params)) {
