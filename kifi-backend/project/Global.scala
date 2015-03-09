@@ -78,7 +78,9 @@ object Global {
     "org.bouncycastle" % "bcprov-jdk15on" % "1.50",
     "org.msgpack" %% "msgpack-scala" % "0.6.8",
     "com.kifi" %% "json-annotation" % "0.1",
-    "com.mchange" % "c3p0" % "0.9.5-pre8" // todo(andrew): remove from common when C3P0 plugin is in sqldb
+    "com.mchange" % "c3p0" % "0.9.5-pre8", // todo(andrew): remove from common when C3P0 plugin is in sqldb
+    "org.im4java" % "im4java" % "1.4.0", //todo(eishay): means that all services get that. not sure that's this is best
+    "org.apache.httpcomponents" % "httpclient" % "4.3.1" //todo(Léo): remove when Scraper is gone when ApacheHttpFetcher is in Rover
   ) map (_.excludeAll(
     ExclusionRule(organization = "javax.jms"),
     ExclusionRule(organization = "com.sun.jdmk"),
