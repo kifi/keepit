@@ -25,6 +25,7 @@ GET     /new/signupName             @com.keepit.controllers.core.AuthController.
 GET     /new/login                  @com.keepit.controllers.core.AuthController.loginPageMinimal()
 GET     /new/loginNoTwitter         @com.keepit.controllers.core.AuthController.loginPageNoTwitterMinimal()
 GET     /new/linkSocial             @com.keepit.controllers.core.AuthController.linkSocialAccountMinimal()
+GET     /new/install                @com.keepit.controllers.core.AuthController.install()
 
 # End new signup pages
 

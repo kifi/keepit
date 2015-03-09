@@ -1,0 +1,53 @@
+.page.install {
+
+}
+
+@media screen and (min-width: 600px) and (min-height: 750px) {
+  .page.install {
+    margin-top: 175px;
+  }
+}
+
+.install-wrapper {
+  text-align: center;
+}
+
+.install-title {
+  margin-top: 40px;
+  font-size: 1.7em;
+}
+
+.install-button-content {
+  margin: 0 auto;
+  width: 300px;
+  line-height: 50px;
+  background-color: white;
+  color: #3E4954;
+  border: 1px solid #aaa;
+  border-radius: 10px;
+  font-size: 20px;
+  font-weight: 300;
+}
+
+.install-button-content:hover {
+  background-color: #f7f7f7;
+}
+
+.chrome-webstore-badge {
+  width: 206px;
+  height: 58px;
+  margin: 20px auto;
+}
+
+.chrome-webstore-badge img {
+  width: 100%;
+  height: 100%;
+}
+
+.browser-newer {
+  line-height: 28px;
+}
+
+.browser-button {
+  margin: 0px 10px;
+}

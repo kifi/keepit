@@ -47,7 +47,7 @@ class ShoeboxScraperClientImpl @Inject() (
   val MaxUrlLength = 3000
   val longTimeout = CallTimeouts(responseTimeout = Some(60000), maxWaitTime = Some(60000), maxJsonParseTime = Some(30000))
   override val limiter = new ReactiveLock(8, Some(32))
-  val assignScrapeTasksLimiter = new ReactiveLock(1, Some(3)) //in fact we should have at most one in the queue
+  val assignScrapeTasksLimiter = new ReactiveLock(1, Some(5)) //in fact we should have at most one in the queue
 
   def getUriImage(nUriId: Id[NormalizedURI]): Future[Option[String]] = limiter.withLockFuture {
     statsd.gauge("getUriImage", 1)

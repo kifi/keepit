@@ -118,6 +118,8 @@ class KifiSiteRouterTest extends Specification with ShoeboxTestInjector {
         router.route(NonUserRequest(FakeRequest.apply("GET", "/friends/requests/linkedin"))) === RedirectToLogin("/connections")
         router.route(NonUserRequest(FakeRequest.apply("GET", "/friends/requests/facebook"))) === RedirectToLogin("/connections")
         router.route(NonUserRequest(FakeRequest.apply("GET", "/friends/requests/refresh"))) === RedirectToLogin("/connections")
+        router.route(NonUserRequest(FakeRequest.apply("GET", "/friends?friend=" + user2.externalId))) === RedirectToLogin("/l%C3%A9o1221?intent=connect")
+        router.route(NonUserRequest(FakeRequest.apply("GET", "/invite?friend=" + user2.externalId))) === RedirectToLogin("/l%C3%A9o1221?intent=connect")
 
         // Redirects (logged in)
         router.route(UserRequest(FakeRequest.apply("GET", "/recommendations"), user1.id.get, None, actionsHelper)) === MovedPermanentlyRoute("/")
@@ -129,6 +131,8 @@ class KifiSiteRouterTest extends Specification with ShoeboxTestInjector {
         router.route(UserRequest(FakeRequest.apply("GET", "/friends/requests/linkedin"), user1.id.get, None, actionsHelper)) === SeeOtherRoute("/abez/connections")
         router.route(UserRequest(FakeRequest.apply("GET", "/friends/requests/facebook"), user1.id.get, None, actionsHelper)) === SeeOtherRoute("/abez/connections")
         router.route(UserRequest(FakeRequest.apply("GET", "/friends/requests/refresh"), user1.id.get, None, actionsHelper)) === SeeOtherRoute("/abez/connections")
+        router.route(UserRequest(FakeRequest.apply("GET", "/friends?friend=" + user2.externalId), user1.id.get, None, actionsHelper)) === SeeOtherRoute("/l%C3%A9o1221?intent=connect")
+        router.route(UserRequest(FakeRequest.apply("GET", "/invite?friend=" + user2.externalId), user1.id.get, None, actionsHelper)) === SeeOtherRoute("/l%C3%A9o1221?intent=connect")
       }
     }
 

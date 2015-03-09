@@ -97,11 +97,12 @@ angular.module('kifi')
     $window.document.title = profile.firstName + ' ' + profile.lastName + ' • Kifi';
     $scope.profile = _.cloneDeep(profile);
     $scope.viewingOwnProfile = profile.id === profileService.me.id;
+    $scope.intent = initParams.getAndClear('intent');
 
     trackPageView();
     setCurrentPageOrigin();
 
-    if (initParams.install === '1' && !installService.installedVersion) {
+    if (initParams.getAndClear('install') === '1' && !installService.installedVersion) {
       showInstallModal();
     }
   }
