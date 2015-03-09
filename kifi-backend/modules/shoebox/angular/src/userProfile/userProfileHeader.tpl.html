@@ -16,6 +16,9 @@
           <span class="kf-uph-connect-image add-friend"></span>
           <div class="kf-uph-action-text hidden">Invited to connect</div>
         </button>
+        <div class="kf-uph-connect-callout kf-callout-bubble kf-callout-bubble-bottom" ng-if="showConnectCallout">
+          Click to invite {{profile.firstName}} to connect.
+        </div>
 
         <div class="kf-uph-connect request-sent" ng-switch-when="request_sent">
           <span class="kf-uph-connect-image add-friend"></span>

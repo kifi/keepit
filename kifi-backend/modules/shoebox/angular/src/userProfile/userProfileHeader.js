@@ -8,7 +8,8 @@ angular.module('kifi')
     return {
       restrict: 'A',
       scope: {
-        profile: '='
+        profile: '=',
+        intent: '='
       },
       templateUrl: 'userProfile/userProfileHeader.tpl.html',
       link: function (scope, element) {
@@ -66,6 +67,7 @@ angular.module('kifi')
           scope.profile.friendRequestSentAt ? 'request_sent' :
           scope.profile.friendRequestReceivedAt ? 'request_received' :
           $rootScope.userLoggedIn ? 'not_friends' : '';
+        scope.showConnectCallout = scope.intent === 'connect' && scope.connectionWithUser === 'not_friends';
 
         //
         // Scope Functions
@@ -83,6 +85,7 @@ angular.module('kifi')
         };
 
         scope.sendFriendRequest = function () {
+          scope.showConnectCallout = false;
           $rootScope.$emit('trackUserProfileEvent', 'click', {action: 'clickedAddFriend'});
 
           var progressBar = angular.element('.kf-uph-progress-bar');
