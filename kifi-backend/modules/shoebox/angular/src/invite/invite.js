@@ -280,8 +280,6 @@ angular.module('kifi')
 
     function setupShowFriendRequestBanner(scope, externalId, eventSubtype) {
       function closeBanner() {
-        delete initParams.friend;
-        delete initParams.subtype;
         scope.hidden = true;
       }
 
@@ -327,11 +325,11 @@ angular.module('kifi')
     function link(scope) {
       scope.hidden = true;
 
-      var externalId = initParams.friend;
+      var externalId = initParams.getAndClear('friend');
       if (externalId && /^[a-f0-9-]{36}$/.test(externalId)) {
         scope.friendRequestBannerHeader = 'Send a friend request';
         scope.showFriendRequestBanner = true;
-        setupShowFriendRequestBanner(scope, externalId, initParams.subtype || 'contactJoined');
+        setupShowFriendRequestBanner(scope, externalId, initParams.getAndClear('subtype') || 'contactJoined');
       }
     }
 

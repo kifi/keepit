@@ -23,14 +23,16 @@ angular.module('kifi')
 
     $scope.undo = undoService;
 
-    if (initParams.m === '1') {
-      $scope.showEmailVerifiedModal = true;
-    } else if (initParams.m in tooltipMessages) { // show small tooltip
-      $scope.tooltipMessage = tooltipMessages[initParams.m];
-      $timeout(function () {
-        delete $scope.tooltipMessage;
-      }, 5000);
-    }
+    (function (m) {
+      if (m === '1') {
+        $scope.showEmailVerifiedModal = true;
+      } else if (m in tooltipMessages) { // show small tooltip
+        $scope.tooltipMessage = tooltipMessages[m];
+        $timeout(function () {
+          $scope.tooltipMessage = null;
+        }, 5000);
+      }
+    }(initParams.getAndClear('m')));
 
     //
     // For importing bookmarks
