@@ -7,9 +7,7 @@ angular.module('kifi')
   function ($http, env, $q, util, routeService, socialService, $analytics, $location, $window, $rootScope, Clutch, $rootElement) {
     var initialized = false;
 
-    var me = {
-      seqNum: 0
-    };
+    var me = {};
     var prefs = {};
     var userLoggedIn; // undefined means we don't know the status yet
 
@@ -37,9 +35,7 @@ angular.module('kifi')
         return me;
       })['catch'](function (err) {
         if (err.status === 403) {
-          util.replaceObjectInPlace(me, {
-            seqNum: (me.seqNum || 0) + 1
-          });
+          util.replaceObjectInPlace(me, {});
           updateLoginState(false, me.id !== oldMeId);
         }
       });
@@ -52,7 +48,6 @@ angular.module('kifi')
         me[key] = val;
       });
       me.primaryEmail = getPrimaryEmail(me.emails);
-      me.seqNum++;
       socialService.setExpiredTokens(me.notAuthed);
       return me;
     }
@@ -288,7 +283,7 @@ angular.module('kifi')
 
     return {
       userLoggedIn: getUserLoggedIn,
-      me: me, // when mutated, you MUST increment me.seqNum
+      me: me,
       getSettings: getSettings,
       setSettings: setSettings,
       fetchMe: fetchMe,
