@@ -55,7 +55,7 @@ class ShoeboxScraperClientImpl @Inject() (
     }
   }
 
-  def getAllURLPatterns(): Future[UrlPatternRules] = limiter.withLockFuture {
+  def getAllURLPatterns(): Future[UrlPatternRules] = {
     urlPatternRuleAllCache.getOrElseFuture(UrlPatternRulesAllKey()) {
       call(Shoebox.internal.allURLPatternRules(), routingStrategy = offlinePriority).map { r =>
         Json.fromJson[UrlPatternRules](r.json).get
