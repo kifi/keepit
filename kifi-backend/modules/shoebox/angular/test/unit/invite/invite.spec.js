@@ -108,7 +108,7 @@ describe('kifi.invite', function () {
     var friendRequestUrl, basicUserInfoUrl, profileUrl;
 
     beforeEach(function () {
-      initParams.friend = fakeSocialId;
+      spyOn(initParams, 'getAndClear').and.returnValue(fakeSocialId);
       elem = angular.element('<div kf-friend-request-banner></div>');
       friendRequestUrl = routeService.friendRequest(fakeSocialId);
       basicUserInfoUrl = routeService.basicUserInfo(fakeSocialId, true);

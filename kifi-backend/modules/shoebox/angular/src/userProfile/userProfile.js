@@ -101,7 +101,7 @@ angular.module('kifi')
     trackPageView();
     setCurrentPageOrigin();
 
-    if (initParams.install === '1' && !installService.installedVersion) {
+    if (initParams.getAndClear('install') === '1' && !installService.installedVersion) {
       showInstallModal();
     }
   }
