@@ -1,6 +1,7 @@
 package com.keepit.test
 
 import java.sql.{ Driver, DriverManager }
+import java.util.concurrent.atomic.AtomicBoolean
 
 import com.google.inject.{ Injector, Module }
 import com.keepit.common.db.TestDbInfo
@@ -22,11 +23,13 @@ trait DbInjectionHelper extends Logging { self: InjectorProvider =>
   DriverManager.registerDriver(new play.utils.ProxyDriver(Class.forName("org.h2.Driver").newInstance.asInstanceOf[Driver]))
 
   def withDb[T](overridingModules: Module*)(f: Injector => T) = {
+    val inScope = new AtomicBoolean(true)
     withInjector(overridingModules: _*) { implicit injector =>
       val h2 = inject[DataBaseComponent].asInstanceOf[H2]
       val initiatedTables = ListBuffer[String]()
       h2.initListener = Some(new TableInitListener {
         def init(tableName: String, ddl: { def createStatements: Iterator[String] }) = {
+          if (!inScope.get()) throw new Exception(s"[${getClass.getCanonicalName}] Initiating table [$tableName] when test scope is closed!")
           initiatedTables += tableName.toUpperCase
           executeTableDDL(h2, tableName, ddl)
         }
@@ -35,6 +38,7 @@ trait DbInjectionHelper extends Logging { self: InjectorProvider =>
       try {
         f(injector)
       } finally {
+        inScope.set(false)
         readWrite(h2) { implicit session =>
           val conn = session.conn
           // conn.createStatement().execute("SET REFERENTIAL_INTEGRITY FALSE")
@@ -68,7 +72,7 @@ trait DbInjectionHelper extends Logging { self: InjectorProvider =>
     } finally s.close()
   }
 
-  def executeSequenceinit(db: H2, sequence: String): Unit = {
+  private[test] def executeSequenceinit(db: H2, sequence: String): Unit = {
     println(s"[${getClass.getCanonicalName}] initiating sequence [$sequence]")
     readWrite(db) { implicit session =>
       try {
@@ -79,12 +83,12 @@ trait DbInjectionHelper extends Logging { self: InjectorProvider =>
           case t: Throwable => throw new Exception(s"fail initiating sequence $sequence, statement: [$statment]", t)
         }
       } catch {
-        case t: Throwable => throw new Exception(s"fail initiating table $sequence", t)
+        case t: Throwable => throw new Exception(s"fail initiating sequence $sequence", t)
       }
     }
   }
 
-  def executeTableDDL(db: H2, tableName: String, ddl: { def createStatements: Iterator[String] }): Unit = {
+  private[test] def executeTableDDL(db: H2, tableName: String, ddl: { def createStatements: Iterator[String] }): Unit = {
     println(s"[${getClass.getCanonicalName}] initiating table [$tableName]")
     readWrite(db) { implicit session =>
       try {
@@ -100,5 +104,6 @@ trait DbInjectionHelper extends Logging { self: InjectorProvider =>
         case t: Throwable => throw new Exception(s"[${getClass.getCanonicalName}] fail initiating table $tableName}", t)
       }
     }
+    println(s"[${getClass.getCanonicalName}] initiated table [$tableName]")
   }
 }

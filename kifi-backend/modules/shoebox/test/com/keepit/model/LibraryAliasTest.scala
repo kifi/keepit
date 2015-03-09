@@ -18,9 +18,8 @@ class LibraryAliasTest extends Specification with ShoeboxTestInjector {
 
   "libraryAliasRepo" should {
 
-    withDb() { implicit injector =>
-
-      "alias an owner id and a library slug to a single library" in {
+    "alias an owner id and a library slug to a single library" in {
+      withDb() { implicit injector =>
 
         // first user
 
