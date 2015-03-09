@@ -137,6 +137,7 @@ $(function() {
   $('.signup-email-pass').submit(kifi.signupWithEmailPassword);
 
   // Sign up with email/password (sign up 2), needs name
+  var photoUpload; // gets set if there's an image upload in progress
   kifi.signupGetName = function (e) {
     e.preventDefault();
     var $form = $(this);
@@ -151,29 +152,96 @@ $(function() {
     if (!validLastName) {
       return;
     }
+    var form = this;
 
-    $.postJson(this.action, {
-      firstName: validFirstName,
-      lastName: validLastName,
-      picToken: undefined, // upload && upload.token
-      picWidth: undefined, // pic.width
-      picHeight: undefined, // pic.height
-      cropX: undefined, // pic.x
-      cropY: undefined, // pic.y
-      cropSize: undefined // pic.size
-    }).done(function (data) {
-      if (data.uri) { // successes return: {success: true}
-        window.location = data.uri;
-      } else {
-        console.log(data);
-      }
-    }).fail(function (xhr) {
-      var $form = $('.form-input.first-name');
-      errorUnknown('#signup-firstname', $form, 'signup2Email');
+    $.when(photoUpload && photoUpload.promise).always(function (upload) {
+      $.postJson(form.action, {
+        firstName: validFirstName,
+        lastName: validLastName,
+        picToken: upload && upload.token // upload && upload.token
+      }).done(function (data) {
+        if (data.uri) { // successes return: {success: true}
+          window.location = data.uri;
+        } else {
+          console.log(data);
+        }
+      }).fail(function (xhr) {
+        var $form = $('.form-input.first-name');
+        errorUnknown('#signup-firstname', $form, 'signup2Email');
+      });
     });
+
     return false;
   };
   $('.signup-name').submit(kifi.signupGetName);
+  // Image utilities
+  $('.file-upload').click(function (e) {
+    if (e.which === 1) {
+      $('.form-photo-file').click();
+    }
+  });
+  var $photoFile = $('.form-photo-file');
+  var URL = window.URL || window.webkitURL;
+  var localPhotoUrl;
+  $('.form-photo-file').change(function () {
+    if (this.files && URL) {
+      photoUpload = uploadPhotoXhr2(this.files);
+      if (photoUpload) {
+        // wait for file dialog to go away before starting dialog transition
+        setTimeout(function () {
+          $("#photo-upload-step2").fadeOut();
+          $("#photo-upload-step1").fadeIn();
+          if (localPhotoUrl) {
+            URL.revokeObjectURL(localPhotoUrl);
+          }
+          localPhotoUrl = URL.createObjectURL(photoUpload.file);
+          var img = new Image();
+          img.onload = function (e) {
+            console.log('onload', e); // todo, needed?
+          };
+          img.src = localPhotoUrl;
+          $('.image-upload').css({
+            'background-image': 'url(' + localPhotoUrl + ')'
+          }).find('.add').hide();
+        }, 200);
+      }
+    } else {
+      // uploadPhotoIframe(this.form); // todo???
+    }
+  });
+  var photoXhr2;
+  function uploadPhotoXhr2(files) {
+    var file = Array.prototype.filter.call(files, isImage)[0];
+    if (file) {
+      if (photoXhr2) {
+        photoXhr2.abort();
+      }
+      var xhr = photoXhr2 = new XMLHttpRequest();
+      var deferred = $.Deferred();
+      xhr.upload.addEventListener('progress', function (e) {
+        if (e.lengthComputable) {
+          deferred.notify(e.loaded / e.total);
+        }
+      });
+      xhr.addEventListener('load', function () {
+        deferred.resolve(JSON.parse(xhr.responseText));
+      });
+      xhr.addEventListener('loadend', function () {
+        if (photoXhr2 === xhr) {
+          photoXhr2 = null;
+        }
+        if (deferred.state() === 'pending') {
+          deferred.reject();
+        }
+      });
+      xhr.open('POST', $photoFile.data('uri'), true);
+      xhr.send(file);
+      return {file: file, promise: deferred.promise()};
+    }
+  }
+  function isImage(file) {
+    return file.type.search(/^image\/(?:jpeg|png|gif)$/) === 0;
+  }
 
   // Sign up social account (signup 2), needs email
   kifi.signupGetEmail = function (e) {
@@ -189,10 +257,10 @@ $(function() {
     $.postJson(this.action, {
       email: validEmail
     }).done(function (data) {
-      console.log(data);
-      return;
       if (data.uri) { // successes return: {success: true}
         window.location = data.uri;
+      } else {
+        window.location = '/'; // todo: best location for success?
       }
     }).fail(function (xhr) {
       var body = xhr.responseJSON || {};
