@@ -97,6 +97,7 @@ angular.module('kifi')
     $window.document.title = profile.firstName + ' ' + profile.lastName + ' • Kifi';
     $scope.profile = _.cloneDeep(profile);
     $scope.viewingOwnProfile = profile.id === profileService.me.id;
+    $scope.intent = initParams.getAndClear('intent');
 
     trackPageView();
     setCurrentPageOrigin();
