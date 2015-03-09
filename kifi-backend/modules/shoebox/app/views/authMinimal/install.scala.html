@@ -1,8 +1,18 @@
 @()
 @import com.keepit.controllers.core.routes.{AuthController => authRoutes}
 @headHtml = {
+  <link rel="chrome-webstore-item" href="https://chrome.google.com/webstore/detail/fpjooibalklfinmkiodaamcckfbcjhin">
   <link rel="stylesheet" type="text/css" href="/assets/ml/css/authentication.css">
   <link rel="stylesheet" type="text/css" href="/assets/ml/css/install.css">
+  <script>
+    !function (el) {
+      var isChrome = window.chrome && chrome.webstore && chrome.webstore.install;
+      var isFirefox = !isChrome && ('MozBoxSizing' in el.style) || ~navigator.userAgent.indexOf('Firefox');
+      var majorVersion = +(navigator.userAgent.match(/(?:Chrome|Firefox)\/(\d+)/) || [,999])[1];
+      var supported = isChrome && majorVersion >= 32 || isFirefox && majorVersion >= 20;
+      el.className += (supported ? ' supported ' : ' unsupported ') + (isChrome ? 'chrome' : isFirefox ? 'firefox' : 'other');
+    }(document.documentElement);
+  </script>
 }
 @content = {
   <div class="page install">
@@ -10,20 +20,35 @@
       <h1 class="install-title">Get the browser extension<br>to start using Kifi</h1>
 
       <!-- Only shown if Chrome / Firefox version is supported -->
-      <a class="install-button" href=":javascript" data-track-action="install">
-        <div class="install-button-wrapper">
+      <a class="install-button" href="javascript:" style="display:none" data-track-action="install">
+        <div class="install-button-content">
           Get the <span class="browser-name"></span> Extension
         </div>
       </a>
+      <p class="install-error" style="display:none">
+        There seems to be a problem.<br>We’ll look into it.<br>Feel free to try again later.
+      </p>
 
-      <!-- Chrome store badge - only shown in Chrome -->
-      <a class="chrome-webstore-badge" target="_blank" href="https://chrome.google.com/webstore/detail/Kifi/fpjooibalklfinmkiodaamcckfbcjhin" data-track-action="webstore">
+      <!-- Only shown in Chrome - Chrome store badge -->
+      <a class="chrome-webstore-badge" style="display:none" target="_blank" href="https://chrome.google.com/webstore/detail/Kifi/fpjooibalklfinmkiodaamcckfbcjhin" data-track-action="webstore">
         <img src="/assets/images/chrome-webstore.png"/>
       </a>
 
+      <!-- Initially hidden, Firefox Helper Tip -->
+      <div class="install-ff-help" style="display:none">
+        <p>
+          If you’re having trouble, please check your Add-ons<br>
+          (<b>Tools > Add-ons</b>) to make sure Kifi isn’t disabled.
+        </p>
+        <p>
+          Firefox’s website has
+          <a href="https://support.mozilla.org/en-US/kb/unable-install-add-ons-or-extensions" target="_blank">more
+          troubleshooting tips</a>.
+        </p>
+      </div>
 
-      <!-- Initiall hidden, update chrome or firefox to a supported version -->
-      <div class="install-old" data-track-source="old">
+      <!-- Initially hidden, update chrome or firefox to a supported version -->
+      <div class="install-old" style="display:none" data-track-source="old">
         <p class="install-title">You’re running an old version of <span class="browser-name"></span></p>
         <p class="browser-newer">Please update your browser and then come back to install<br>the Kifi browser extension</p>
         <a class="browser-button chrome" href="https://www.google.com/chrome" data-track-action="getChrome">Get Chrome</a>
@@ -31,20 +56,68 @@
       </div>
 
       <!-- Initially hidden, install other browser (if not Chrome or Firefox) -->
-      <div class="install-other" data-track-source="other">
+      <div class="install-other" style="display:none" data-track-source="other">
         <p class="install-title">This browser does not support Kifi</p>
         <p class="browser-newer">Please come back with one of the browsers below to install<br>the Kifi browser extension</p>
         <a class="browser-button chrome" href="https://www.google.com/chrome" data-track-action="getChrome">Get Chrome</a>
         <a class="browser-button firefox" href="https://www.mozilla.org/firefox" data-track-action="getFirefox">Get Firefox</a>
       </div>
 
-
     </div>
   </div>
 }
 @scripts = {
-  <script src="/assets/ml/js/authentication.js"></script>
+  <script type="text/javascript" src="//www.googleadservices.com/pagead/conversion.js"></script>
   <script src="/assets/ml/js/install.js"></script>
+  <script src="/assets/js/auth-footer.js"></script>
+
+  <script>
+    (function() {
+      var _fbq = window._fbq || (window._fbq = []);
+      if (!_fbq.loaded) {
+      var fbds = document.createElement('script');
+      fbds.async = true;
+      fbds.src = '//connect.facebook.net/en_US/fbds.js';
+      var s = document.getElementsByTagName('script')[0];
+      s.parentNode.insertBefore(fbds, s);
+      _fbq.loaded = true;
+      }
+    })();
+    window._fbq = window._fbq || [];
+    window._fbq.push(['track', '6012675478096', {'value':'0.00','currency':'USD'}]);
+  </script>
+
+  <noscript>
+    <img height="1" width="1" alt="" style="display:none" src="https://www.facebook.com/tr?ev=6012675478096&amp;cd[value]=0.00&amp;cd[currency]=USD&amp;noscript=1" />
+  </noscript>
+
+  <script src="//platform.twitter.com/oct.js" type="text/javascript"></script>
+  <script type="text/javascript">twttr.conversion.trackPid('l49yk');</script>
+
+  <noscript>
+    <img height="1" width="1" style="display:none;" alt="" src="https://analytics.twitter.com/i/adsct?txn_id=l49yk&p_id=Twitter" />
+  </noscript>
+
+  <script type="text/javascript">
+    /* <![CDATA[ */
+    var google_conversion_id = 974063265;
+    var google_conversion_language = "en";
+    var google_conversion_format = "3";
+    var google_conversion_color = "cccccc";
+    var google_conversion_label = "m4JaCO_qtwgQoY280AM";
+    var google_conversion_value = 0;
+    var google_remarketing_only = false;
+    /* ]]> */
+  </script>
+
+  <script type="text/javascript" src="//www.googleadservices.com/pagead/conversion.js">
+  </script>
+
+  <noscript>
+    <div style="display:inline;">
+      <img height="1" width="1" style="border-style:none;" alt="" src="//www.googleadservices.com/pagead/conversion/974063265/?value=0&amp;label=m4JaCO_qtwgQoY280AM&amp;guid=ON&amp;script=0"/>
+    </div>
+  </noscript>
 }
 
 @minimal.layout(title = "Kifi | Install", content = content, htmlClass = "signup-page", headHtml = headHtml, scripts = scripts, footerClass = "join")

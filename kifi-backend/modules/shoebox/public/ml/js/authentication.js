@@ -300,7 +300,16 @@ $(function() {
   }
   function errorWrongPassword($errorField, $inputField, type) {
     Tracker.track('visitor_viewed_page', { type: type, error: 'wrongPassword' });
-    error($errorField, 'Wrong password. Forgot it?<br><a href="#">Reset it here</a>.', $inputField);
+    error($errorField, 'Wrong password. Forgot it?<br><a href="#" class="errorTipResetPassword">Reset it here</a>.', $inputField);
+
+    function showResetPasswordModal() {
+      $('.error').fadeOut(); // hide error
+      $('.modal-overlay.forgot-password').addClass('show'); // show forgot password modal
+      var modal = $('.forgot-password-modal');
+      modal.find('.fp-form').show();
+      modal.find('.fp-success').hide();
+    }
+    $('.errorTipResetPassword').click(showResetPasswordModal);
   }
   function errorEmptyName($errorField, whichName, $inputField) {
     if (whichName === 'first') {
