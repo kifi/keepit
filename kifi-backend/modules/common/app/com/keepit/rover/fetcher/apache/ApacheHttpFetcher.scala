@@ -61,10 +61,9 @@ class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, conne
     httpClientBuilder.build()
   }
 
-  private def logAndSet[T](fetchInfo: FetchExecutionInfo, ret: T)(t: Throwable, tag: String, ctx: String, notify: Boolean = false): T = {
+  private def logAndSet(fetchInfo: FetchExecutionInfo)(t: Throwable, tag: String, ctx: String, notify: Boolean = false): Unit = {
     logErr(t, tag, ctx, notify)
     fetchInfo.exRef.set(t)
-    ret
   }
 
   val q = new ConcurrentLinkedQueue[WeakReference[FetchExecutionInfo]]()
@@ -106,14 +105,17 @@ class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, conne
       fetchInfo.respStatusRef.set(response.getStatusLine)
       Some(response)
     } catch {
-      case e: ZipException => if (disableGzip) logAndSet(fetchInfo, None)(e, "fetch", url, true)
-
-      else fetchHandler(request, true) // Retry with gzip compression disabled
-      case e @ (_: IOException | _: GeneralSecurityException) => logAndSet(fetchInfo, None)(e, "fetch", url)
-      case e: NullPointerException => logAndSet(fetchInfo, None)(e, "fetch", url) //can happen on BrowserCompatSpec.formatCookies
-      case t: Throwable => logAndSet(fetchInfo, None)(t, "fetch", url, true)
+      case e: ZipException if (!disableGzip) => fetchHandler(request, disableGzip = true) // Retry with gzip compression disabled
+      case e @ (_: IOException | _: GeneralSecurityException | _: NullPointerException) => { // NullPointerException can happen on BrowserCompatSpec.formatCookies
+        logAndSet(fetchInfo)(e, "fetch", url, notify = false)
+        None
+      }
+      case t: Throwable => {
+        logAndSet(fetchInfo)(t, "fetch", url, notify = true)
+        None
+      }
     } finally {
-      println(s"[scrape-end] $url")
+      println(s"[fetch-end] $url")
     }
   }
 
