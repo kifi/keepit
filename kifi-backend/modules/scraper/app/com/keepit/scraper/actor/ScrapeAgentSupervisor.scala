@@ -62,8 +62,6 @@ class ScrapeAgentSupervisor @Inject() (
   val scrapers = (0 until config.numWorkers).map { i =>
     context.actorOf(Props(scrapeAgentProvider.get), s"scrape-agent$i")
   }
-  val scraperBroadcaster = context.actorOf(Props.empty.withRouter(BroadcastGroup(paths = scrapers.map(_.path.toString))), "scraper-router")
-  log.info(s"[Supervisor.<ctr>] scraperBroadcaster=$scraperBroadcaster scrapers(sz=${scrapers.size}):${scrapers.mkString(",")}")
 
   val fetchers = (0 until config.numWorkers / 2).map { i =>
     context.actorOf(Props(fetcherAgentProvider.get), s"fetch-agent$i")
@@ -83,6 +81,12 @@ class ScrapeAgentSupervisor @Inject() (
     scrapeQ.toSeq.zipWithIndex.foreach {
       case (job, i) => log.info(s"[Supervisor.diagnostic] scrapeQ[$i]=$job")
     }
+  }
+
+  private def notifyJobAvailToIdleWorkers(): Unit = {
+    val idleWorkers = scrapers.filter(!workerJobs.contains(_))
+    log.info(s"[Supervisor] broadcasting JobAvail to ${idleWorkers.size} idle workers")
+    idleWorkers.foreach { worker => worker ! JobAvail }
   }
 
   def receive = {
@@ -114,14 +118,14 @@ class ScrapeAgentSupervisor @Inject() (
     case job: ScrapeJob =>
       log.info(s"[Supervisor] <ScrapeJob> enqueue $job")
       scrapeQ.enqueue(job)
-      scraperBroadcaster ! JobAvail
+      notifyJobAvailToIdleWorkers()
 
     // external
     case f: Fetch =>
       fetcherRouter.forward(FetchJob(clock.now(), f))
     case s: Scrape =>
       scrapeQ.enqueue(ScrapeJob(clock.now(), s))
-      scraperBroadcaster ! JobAvail
+      notifyJobAvailToIdleWorkers()
     case QueueSize =>
       if (scrapeQ.size > 2) { // tweak
         diagnostic()
