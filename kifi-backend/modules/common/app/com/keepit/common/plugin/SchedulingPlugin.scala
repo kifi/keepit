@@ -11,52 +11,8 @@ import akka.actor.{ ActorSystem, Cancellable, ActorRef }
 import play.api.Plugin
 
 import us.theatr.akka.quartz._
-import com.keepit.common.zookeeper.{ServiceInstance, ServiceDiscovery}
+import com.keepit.common.zookeeper.{ ServiceInstance, ServiceDiscovery }
 import scala.collection.mutable.ListBuffer
-
-trait SchedulingProperties {
-  def enabled: Boolean
-  //bad name, can you think of anything else?
-  //method returns true if schedualing is enabled and the instance is the leader
-  def enabledOnlyForLeader: Boolean
-  def enabledOnlyForOneMachine(taskName: String): Boolean
-}
-
-class SchedulingPropertiesImpl(serviceDiscovery: ServiceDiscovery, val enabled: Boolean = true) extends SchedulingProperties {
-  def enabledOnlyForLeader: Boolean = enabled && serviceDiscovery.isLeader()
-  def enabledOnlyForOneMachine(taskName: String): Boolean = enabled && isRunnerFor(taskName)
-
-  private def isRunningFor(taskName: String, me: ServiceInstance, members: Vector[ServiceInstance]): Boolean = {
-    val index = (taskName.hashCode() & 0x7FFFFFFF) % members.size
-    members(index) == me
-  }
-
-  private def isRunningFor(members: Vector[ServiceInstance], me: ServiceInstance, taskName: String): Boolean = {
-    val offline = members.filter(_.remoteService.status == ServiceStatus.OFFLINE)
-    if (offline.isEmpty) {
-      //if there's no offline service, consider all cluster
-      isRunningFor(taskName, members)
-    } else {
-      if (thisInstance.exists(me => offline.contains(me))) {
-        //if there's at least one offline service and I'm offline as well, use only offline services for the check
-        isRunningFor(taskName, offline)
-      } else {
-        //if i'm not an offline services and at least one like this exist in my cluster, don't even consider me
-        false
-      }
-    }
-  }
-
-  def isRunnerFor(taskName: String): Boolean = if (isCanary) false else zkClient.session { zk =>
-    if (!stillRegistered()) {
-      log.warn(s"service did not register itself yet!")
-      return false
-    }
-    serviceDiscovery.thisInstance exists { me =>
-      isRunningFor(serviceDiscovery.instancesInCluster, me, taskName)
-    }
-  }
-}
 
 case class NamedCancellable(underlying: Cancellable, taskName: String) extends Cancellable {
   def name() = taskName

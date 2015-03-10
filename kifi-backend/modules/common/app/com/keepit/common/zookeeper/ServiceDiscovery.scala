@@ -24,7 +24,6 @@ trait ServiceDiscovery {
   def register(): ServiceInstance
   def unRegister(): Unit = {}
   def isLeader(): Boolean
-  def isRunnerFor(taskName: String): Boolean
   def myClusterSize: Int = 0
   def startSelfCheck(): Future[Boolean]
   def changeStatus(newStatus: ServiceStatus): Unit
@@ -32,7 +31,7 @@ trait ServiceDiscovery {
   def myStatus: Option[ServiceStatus]
   def myVersion: ServiceVersion
   def thisInstance: Option[ServiceInstance]
-  def instancesInCluster: Vector[ServiceInstance]
+  def instancesInCluster: Seq[ServiceInstance]
   def thisService: ServiceType
   def timeSinceLastStatusChange: Long
   def myHealthyStatus: Option[ServiceStatus] = thisInstance.map(_.remoteService.healthyStatus)
