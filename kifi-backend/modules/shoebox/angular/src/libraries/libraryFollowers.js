@@ -17,6 +17,7 @@ angular.module('kifi')
         scope.moreFollowers = true;
         scope.followerList = [];
         scope.followerScrollDistance = '100%';
+        scope.Math = window.Math;
 
         scope.isFollowerScrollDisabled = function () {
           return !(scope.moreFollowers);
