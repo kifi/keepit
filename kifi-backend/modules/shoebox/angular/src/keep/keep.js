@@ -56,10 +56,7 @@ angular.module('kifi')
           return;
         }
 
-        scope.isMyLibrary = false;
-        scope.$emit('getCurrentLibrary', { callback: function (lib) {
-          scope.isMyLibrary = lib.isMine;
-        }});
+        scope.isMyLibrary = scope.library && libraryService.isMyLibrary(scope.library);
 
         //
         // Internal data.

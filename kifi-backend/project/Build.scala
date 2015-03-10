@@ -97,7 +97,6 @@ object ApplicationBuild extends Build {
   lazy val common = Project("common", file("modules/common")).enablePlugins(play.PlayScala).settings(
     commonSettings: _*
   ).settings(
-    libraryDependencies += "org.im4java" % "im4java" % "1.4.0", //means that all services get that. not sure that's this is best
     javaOptions in Test += "-Dconfig.resource=application-dev.conf",
     // Only necessary for admin:
     includeFilter in (Assets, LessKeys.less) := "*.less"

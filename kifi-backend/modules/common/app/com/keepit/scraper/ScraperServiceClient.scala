@@ -6,9 +6,10 @@ import java.io.IOException
 
 import com.google.inject.Inject
 import com.keepit.common.amazon.AmazonInstanceInfo
+import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.logging.Logging
+import com.keepit.common.logging.{ AccessLog, Logging }
 import com.keepit.common.net.{ CallTimeouts, HttpClient }
 import com.keepit.common.routes.Scraper
 import com.keepit.common.service.{ RequestConsolidator, ServiceClient, ServiceType }
@@ -21,6 +22,7 @@ import com.kifi.macros.json
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
+import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -133,6 +135,15 @@ case class ScraperThreadInstanceInfo(info: AmazonInstanceInfo, jobInfo: Either[S
   faviconUrl: Option[String],
   images: Option[PersistedImageRef])
 
+case class UrlSignatureKey(urlHash: UrlHash, extractor: Option[ExtractorProviderType]) extends Key[Option[Signature]] {
+  override val version = 1
+  val namespace = "url_signature_key"
+  def toKey(): String = urlHash.hash + "#" + extractor.map(_.name).getOrElse("")
+}
+
+class UrlSignatureCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[UrlSignatureKey, Option[Signature]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+
 trait ScraperServiceClient extends ServiceClient {
   implicit val fj = com.keepit.common.concurrent.ExecutionContext.fj
   final val serviceType = ServiceType.SCRAPER
@@ -155,7 +166,8 @@ trait ScraperServiceClient extends ServiceClient {
 }
 
 case class ScraperCacheProvider @Inject() (
-  wordCountCache: NormalizedURIWordCountCache)
+  wordCountCache: NormalizedURIWordCountCache,
+  signatureCache: UrlSignatureCache)
 
 class ScraperServiceClientImpl @Inject() (
     val airbrakeNotifier: AirbrakeNotifier,
@@ -176,8 +188,11 @@ class ScraperServiceClientImpl @Inject() (
   private[this] val consolidateGetSignatureReq = new RequestConsolidator[String, Option[Signature]](5 minutes)
 
   def getSignature(url: String, proxy: Option[HttpProxy], extractorProviderType: Option[ExtractorProviderType]): Future[Option[Signature]] = consolidateGetSignatureReq(url) { url =>
-    call(Scraper.internal.getSignature, Json.obj("url" -> url, "proxy" -> Json.toJson(proxy), "extractorProviderType" -> extractorProviderType.map(_.name)), callTimeouts = longTimeout).map { r =>
-      r.json.asOpt[String].map(Signature(_))
+    val key = UrlSignatureKey(NormalizedURI.hashUrl(url), extractorProviderType)
+    cacheProvider.signatureCache.getOrElseFuture(key) {
+      call(Scraper.internal.getSignature, Json.obj("url" -> url, "proxy" -> Json.toJson(proxy), "extractorProviderType" -> extractorProviderType.map(_.name)), callTimeouts = longTimeout).map { r =>
+        r.json.asOpt[String].map(Signature(_))
+      }
     }
   }
 

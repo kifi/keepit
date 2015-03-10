@@ -63,8 +63,8 @@ class ScrapeProcessorActorImpl @Inject() (
 
   private[this] val lock = new ReactiveLock(1, Some(100))
 
-  override def pull(): Unit = if (lock.waiting < 10) lock.withLockFuture {
-    val futureTask: Future[Unit] = getQueueSize() map { qSize =>
+  override def pull(): Unit = if (lock.waiting < 3) lock.withLockFuture {
+    val futureTask: Future[Unit] = getQueueSize() flatMap { qSize =>
       if (qSize <= config.pullThreshold) {
         log.info(s"[ScrapeProcessorActorImpl.pull] qSize=$qSize. Let's get some work.")
         val queuedF = serviceDiscovery.thisInstance.map { inst =>

@@ -5,6 +5,7 @@ import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.controller.{ FakeSecureSocialClientIdModule, FakeUserActionsModule }
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.store.ScraperTestStoreModule
+import com.keepit.rover.fetcher.{ DeprecatedHttpFetchStatus, DeprecatedFetcherHttpContext, HttpRedirect }
 import com.keepit.scraper.embedly.FakeEmbedlyModule
 import com.keepit.scraper.fetcher.FakeHttpFetcherModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
@@ -19,8 +20,8 @@ import scala.concurrent.Future
 
 class ScraperControllerTest extends TestKitSupport with ScraperTestInjector {
 
-  val testFetcher: PartialFunction[String, HttpFetchStatus] = {
-    case "https://www.google.com/" => HttpFetchStatus(Status.OK, None, new FetcherHttpContext {
+  val testFetcher: PartialFunction[String, DeprecatedHttpFetchStatus] = {
+    case "https://www.google.com/" => DeprecatedHttpFetchStatus(Status.OK, None, new DeprecatedFetcherHttpContext {
       def destinationUrl: Option[String] = None
       def redirects: Seq[HttpRedirect] = Seq.empty
     })

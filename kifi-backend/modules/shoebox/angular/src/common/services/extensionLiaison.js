@@ -15,7 +15,7 @@ angular.module('kifi')
             break;
           case 'import_bookmarks':
             if (data.count > 0) {
-              $rootScope.$emit('showGlobalModal', 'importBookmarks', data.count, event);
+              $rootScope.$emit('showGlobalModal', 'importBookmarks', {msgEvent: event});
             }
             break;
           case 'update_keeps':

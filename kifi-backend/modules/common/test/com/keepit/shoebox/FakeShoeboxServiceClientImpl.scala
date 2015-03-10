@@ -16,7 +16,8 @@ import com.keepit.common.usersegment.UserSegment
 import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.model._
 import com.keepit.model.view.{ LibraryMembershipView, UserSessionView }
-import com.keepit.scraper.{ HttpRedirect, ScrapeRequest, Signature }
+import com.keepit.rover.fetcher.HttpRedirect
+import com.keepit.scraper.{ ScrapeRequest, Signature }
 import com.keepit.search._
 import com.keepit.shoebox.model.ids.UserSessionExternalId
 import com.keepit.social.{ BasicUser, SocialId, SocialNetworkType }

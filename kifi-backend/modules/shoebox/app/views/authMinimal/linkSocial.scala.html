@@ -44,14 +44,17 @@
             To reset your password, please enter<br>
             the email address you use to log in.
           </p>
-          <input class="fp-input form-input" type="email" name="forgot-password-email" placeholder="@email" value="@email">
+
+          <input class="fp-input form-input" type="email" name="forgot-password-email" value="@email">
           <div id="error-fp" class="error"></div>
           <div class="modal-buttons">
-            <span><button class="modal-button-cancel" data-track-action="clickedCancelPassword">Cancel</button></span>
-            <span><button class="modal-button-action" data-track-action="clickedSubmitPassword">
-              <span class="progress"></span>
-              <span class="text">Submit</span>
-            </button></span>
+            <span><button class="modal-button-cancel" type="button" data-track-action="clickedCancelPassword">Cancel</button></span>
+            <span>
+              <button class="modal-button-action" type="submit" data-track-action="clickedSubmitPassword">
+                <span class="progress"></span>
+                <span class="text">Submit</span>
+              </button>
+            </span>
           </div>
         </form>
 
@@ -59,7 +62,7 @@
           <p class="modal-text">We just sent instructions for resetting your password to:</p>
           <div class="fp-address"></div>
           <div class="modal-buttons">
-            <button class="modal-button-cancel" data-track-action="clickedClosePassword">Close</button>
+            <button class="modal-button-cancel" type="button" data-track-action="clickedClosePassword">Close</button>
           </div>
         </div>
 
@@ -71,6 +74,6 @@
   <script src="/assets/ml/js/authentication.js"></script>
 }
 
-@minimal.layout(title = "Kifi | Link Social Account", content = content, htmlClass = "signup-page", headHtml = headHtml, scripts = scripts, footerClass = "join")
+@minimal.layout(title = "Kifi | Link Social Account", content = content, htmlClass = "signup-page", headHtml = headHtml, scripts = scripts, footerClass = "join", dataTrack = "linkSocial")
 
 

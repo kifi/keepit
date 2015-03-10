@@ -1,5 +1,6 @@
 package com.keepit.scraper
 
+import com.keepit.rover.fetcher.HttpRedirect
 import com.keepit.search.Article
 import com.keepit.model.NormalizedURI
 

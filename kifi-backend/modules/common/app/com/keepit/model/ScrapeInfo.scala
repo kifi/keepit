@@ -50,7 +50,7 @@ case class ScrapeInfo(
 
   def withFailure()(implicit config: ScraperSchedulerConfig) = {
     val backoff = min(config.intervalConfig.maxBackoff, config.intervalConfig.initialBackoff * (1 << failures).toDouble)
-    val newInterval = min(config.intervalConfig.maxInterval, interval + config.intervalConfig.intervalIncrement)
+    val newInterval = min(config.intervalConfig.maxInterval, interval + config.intervalConfig.intervalIncrement) max config.intervalConfig.minInterval
     val now = currentDateTime
     copy(nextScrape = now.plusSeconds(hoursToSeconds(backoff) + config.randomDelay),
       interval = newInterval,
@@ -58,7 +58,7 @@ case class ScrapeInfo(
   }
 
   def withDocumentUnchanged()(implicit config: ScraperSchedulerConfig) = {
-    val newInterval = min(config.intervalConfig.maxInterval, interval + config.intervalConfig.intervalIncrement)
+    val newInterval = min(config.intervalConfig.maxInterval, interval + config.intervalConfig.intervalIncrement) max config.intervalConfig.minInterval
     val now = currentDateTime
     copy(nextScrape = now.plusSeconds(hoursToSeconds(newInterval) + config.randomDelay),
       interval = newInterval,

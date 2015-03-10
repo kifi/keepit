@@ -1,17 +1,8 @@
-package com.keepit.scraper
+package com.keepit.rover.fetcher
 
 import com.keepit.common.net.URI
+import com.keepit.scraper.ShortenedUrls
 import play.api.http.Status._
-
-trait FetcherHttpContext {
-  def destinationUrl: Option[String]
-  def redirects: Seq[HttpRedirect]
-}
-
-case class HttpFetchStatus(statusCode: Int, message: Option[String], context: FetcherHttpContext) {
-  def destinationUrl = context.destinationUrl
-  def redirects = context.redirects
-}
 
 case class HttpRedirect(statusCode: Int, currentLocation: String, newDestination: String) {
   def isPermanent: Boolean = (statusCode == MOVED_PERMANENTLY)

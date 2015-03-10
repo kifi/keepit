@@ -40,7 +40,7 @@
         <div class="modal-x">&times;</div>
         <div class="modal-title">I forgot my password</div>
 
-        <form class="fp-form" action="@com.keepit.controllers.core.routes.AuthController.forgotPassword()" novalidate>
+        <form class="fp-form" action="@com.keepit.controllers.core.routes.AuthController.forgotPassword()" method="POST" novalidate>
           <p class="modal-text">
             To reset your password, please enter<br>
             the email address you use to log in.
@@ -48,8 +48,8 @@
           <input class="fp-input form-input" type="email" name="forgot-password-email" placeholder="Your email address">
           <div id="error-fp" class="error"></div>
           <div class="modal-buttons">
-            <span><button class="modal-button-cancel" data-track-action="clickedCancelPassword">Cancel</button></span>
-            <span><button class="modal-button-action" data-track-action="clickedSubmitPassword">
+            <span><button class="modal-button-cancel" type="button" data-track-action="clickedCancelPassword">Cancel</button></span>
+            <span><button class="modal-button-action" type="submit" data-track-action="clickedSubmitPassword">
               <span class="progress"></span>
               <span class="text">Submit</span>
             </button></span>
@@ -60,7 +60,7 @@
           <p class="modal-text">We just sent instructions for resetting your password to:</p>
           <div class="fp-address"></div>
           <div class="modal-buttons">
-            <button class="modal-button-cancel" data-track-action="clickedClosePassword">Close</button>
+            <button class="modal-button-cancel" type="button" data-track-action="clickedClosePassword">Close</button>
           </div>
         </div>
 
@@ -73,6 +73,6 @@
   <script src="/assets/ml/js/authentication.js"></script>
 }
 
-@minimal.layout(title = "Kifi | Log In", content = content, htmlClass = "signup-page", headHtml = headHtml, scripts = scripts, footerClass = "join", headerLink = "signup")
+@minimal.layout(title = "Kifi | Log In", content = content, htmlClass = "signup-page", headHtml = headHtml, scripts = scripts, footerClass = "join", headerLink = "signup", dataTrack = "login")
 
 
