@@ -1,7 +1,7 @@
 <div class="kf-slc-card" ng-style="{'background-color': library.color}">
   <a class="kf-slc-card-link" href="{{library.path}}" ng-click="clickCard()" ng-attr-title="{{library.description}}" kf-track-origin="{{origin}}">
     <div class="kf-slc-card-cover">
-      <div class="kf-slc-card-cover-image" ng-attr-style="background-image:url({{library.imageUrl}});background-position:{{library.image.x}}% {{library.image.y}}%" ng-if="library.image"></div>
+      <div class="kf-slc-card-cover-image" style="{{library.image|bgImageAndPos}}" ng-if="library.image"></div>
     </div>
     <div class="kf-slc-card-name-align">
       <div class="kf-slc-card-name">

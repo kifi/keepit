@@ -27,6 +27,15 @@ angular.module('kifi')
   };
 })
 
+.filter('bgImageAndPos', [
+  'env',
+  function (env) {
+    return function (image) {
+      return image ? ['background-image:url(', env.picBase, '/', image.path, ');background-position:', image.x, '% ', image.y, '%'].join('') : '';
+    };
+  }
+])
+
 .filter('num', function () {
   return function (n) {
     if (n < 1000) {

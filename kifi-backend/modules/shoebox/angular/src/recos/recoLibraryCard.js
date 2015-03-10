@@ -61,11 +61,6 @@ angular.module('kifi')
             '?utm_medium=vf_twitter&utm_source=library_share&utm_content=lid_' + scope.library.id +
             '&kcid=na-vf_twitter-library_share-lid_' + scope.library.id);
           scope.library.shareText = 'Discover this amazing @Kifi library about ' + scope.library.name + '!';
-
-          var image = scope.library.image;
-          if (image) {
-            scope.coverImageUrl = env.picBase + '/' + image.path;
-          }
         }
 
 
