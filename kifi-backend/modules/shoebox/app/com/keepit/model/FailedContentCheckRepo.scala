@@ -6,11 +6,14 @@ import org.joda.time.DateTime
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
 
+import scala.slick.jdbc.StaticQuery
+
 @ImplementedBy(classOf[FailedContentCheckRepoImpl])
 trait FailedContentCheckRepo extends Repo[FailedContentCheck] {
   def getByUrls(url1: String, url2: String)(implicit session: RSession): Option[FailedContentCheck]
   def createOrIncrease(url1: String, url2: String)(implicit session: RWSession): Unit
   def contains(url1: String, url2: String)(implicit session: RSession): Boolean
+  def getRecentCountByURL(url: String, since: DateTime)(implicit session: RSession): Int
 }
 
 @Singleton
@@ -55,4 +58,11 @@ class FailedContentCheckRepoImpl @Inject() (
   }
 
   def contains(url1: String, url2: String)(implicit session: RSession): Boolean = getByUrls(url1, url2).isDefined
+
+  def getRecentCountByURL(url: String, since: DateTime)(implicit session: RSession): Int = {
+    import StaticQuery.interpolation
+    val hash = NormalizedURI.hashUrl(url).hash
+    val q = sql"""select count(*) from failed_content_check where url1_hash = ${hash} or url2_hash = ${hash} and updated_at > ${since}"""
+    q.as[Int].list.head
+  }
 }
