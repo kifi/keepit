@@ -10,7 +10,6 @@ case class ScraperQueueConfig(
 
 case class ScraperConfig(
     changeThreshold: Double,
-    pullMultiplier: Int,
     pullFrequency: Int, // seconds
     queued: Boolean,
     async: Boolean,
@@ -21,9 +20,8 @@ case class ScraperConfig(
     httpConfig: ScraperHttpConfig,
     queueConfig: ScraperQueueConfig) {
   val numCores = Runtime.getRuntime.availableProcessors
-  val pullMax = numCores * pullMultiplier
-  val pullThreshold = numCores // tweak
-  val numWorkers = numCores * math.max(pullMultiplier / 2, 2) // tweak
+  val pullThreshold = 4 // tweak
+  val numWorkers = 16
 }
 
 object ScraperConfig {

@@ -1,7 +1,5 @@
 package com.keepit.model
 
-import com.keepit.commanders.{ UserFollowerRelationshipKey, UserFollowerRelationshipCache, UserConnectionRelationshipKey, UserConnectionRelationshipCache }
-
 import scala.concurrent.duration.Duration
 import com.google.inject.{ Inject, Singleton, ImplementedBy }
 import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, Key, CacheStatistics }
@@ -45,8 +43,6 @@ class UnfriendedConnectionsCache(stats: CacheStatistics, accessLog: AccessLog, i
 class UserConnectionRepoImpl @Inject() (
   val db: DataBaseComponent,
   val clock: Clock,
-  userConnectionRelationshipCache: UserConnectionRelationshipCache,
-  userFollowerRelationshipCache: UserFollowerRelationshipCache,
   val friendRequestRepo: FriendRequestRepo,
   val connCountCache: UserConnectionCountCache,
   mutualConnCountCache: UserMutualConnectionCountCache,
@@ -65,23 +61,23 @@ class UserConnectionRepoImpl @Inject() (
     super.save(model.copy(seq = seqNum))
   }
 
+  def deleteCacheForConnections(user: Id[User], friends: Set[Id[User]])(implicit session: RSession): Unit = {
+    friends foreach { friend =>
+      deleteCacheForUsers(user, friend)
+    }
+  }
+
   def deleteCacheForUsers(user1: Id[User], user2: Id[User])(implicit session: RSession): Unit = {
-    def invalidateCache(userId: Id[User])(implicit session: RSession): Unit = {
+    def invalidateCache(userId: Id[User]): Unit = {
       userConnCache.remove(UserConnectionIdKey(userId))
       basicUserConnCache.remove(BasicUserConnectionIdKey(userId))
       connCountCache.remove(UserConnectionCountKey(userId))
       searchFriendsCache.remove(SearchFriendsKey(userId))
       unfriendedCache.remove(UnfriendedConnectionsKey(userId))
     }
-
     mutualConnCountCache.remove(UserMutualConnectionCountKey(user1, user2))
-    userConnectionRelationshipCache.remove(UserConnectionRelationshipKey(user1, user2))
-    userConnectionRelationshipCache.remove(UserConnectionRelationshipKey(user2, user1))
-    userFollowerRelationshipCache.remove(UserFollowerRelationshipKey(Some(user1), user2))
-    userFollowerRelationshipCache.remove(UserFollowerRelationshipKey(Some(user2), user1))
-    userFollowerRelationshipCache.remove(UserFollowerRelationshipKey(None, user2))
-    userFollowerRelationshipCache.remove(UserFollowerRelationshipKey(None, user1))
-    List(user1, user2) foreach invalidateCache
+    invalidateCache(user1)
+    invalidateCache(user2)
   }
 
   override def deleteCache(conn: UserConnection)(implicit session: RSession): Unit = {
@@ -198,9 +194,7 @@ class UserConnectionRepoImpl @Inject() (
       }
     } yield changedUser
 
-    changedUsers foreach { friend =>
-      deleteCacheForUsers(userId, friend)
-    }
+    deleteCacheForConnections(userId, changedUsers)
   }
 
   def unfriendConnections(userId: Id[User], users: Set[Id[User]])(implicit session: RWSession): Int = {
@@ -218,9 +212,7 @@ class UserConnectionRepoImpl @Inject() (
           friendRequestRepo.save(friendRequest.copy(state = FriendRequestStates.IGNORED))
         }
 
-      users foreach { friend =>
-        deleteCacheForUsers(userId, friend)
-      }
+      deleteCacheForConnections(userId, users)
 
       ids.size
     } else {
@@ -252,9 +244,7 @@ class UserConnectionRepoImpl @Inject() (
         friendRequestRepo.save(fr.copy(state = FriendRequestStates.ACCEPTED))
       }
 
-      users foreach { friend =>
-        deleteCacheForUsers(userId, friend)
-      }
+      deleteCacheForConnections(userId, users)
 
       rows.insertAll(toInsert.map { connId => UserConnection(createdAt = clock.now, user1 = userId, user2 = connId, seq = deferredSeqNum()) }.toSeq: _*)
     }

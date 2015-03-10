@@ -11,7 +11,9 @@
         <div class="image_container target">
           <div class="image-inner"></div>
           <div class="image-upload-wrapper">
-            <a id="upload-image-btn" href="#" class="image-upload"><span class="plus">+</span></a>
+            <a id="upload-image-btn" href="#" class="image-upload" data-track-action="clickedAddPhotoPlus"><span class="add">Add Photo</span></a>
+            <input class="form-photo-file" type="file" name="photo" data-uri="@authRoutes.uploadBinaryPicture()" accept="image/*">
+            <div id="error-invalid-image" class="error"></div>
           </div>
         </div>
         <h3>Your name</h3>
@@ -25,22 +27,11 @@
             <div id="signup-lastname" class="error"></div>
           </div>
 
-          <button id="signup-btn" class="btn-authentication btn-done" type="submit">Done</button>
+          <button id="signup-btn" class="btn-authentication btn-done" type="submit" data-track-action="clickedsignUpButton">
+            <span class="progress"></span>
+            <span class="text">Done</span>
+          </button>
         </form>
-      </div>
-    </div>
-  </div>
-
-  <div id="photo-upload-step2" style="display:none;">
-    <div id="center_container" class="small upload-container">
-      <div class="inner photo">
-        <h3>Grab photo from</h3>
-        <div class="social-btn-wrap">
-          <a href="#" class="photo-facebook"><i class="i-fbtn"></i></a>
-          <a href="#" class="photo-linkedin"><i class="i-lbtn"></i></a>
-          <a href="#" class="file-upload">Upload your computer</a>
-          <a id="back-btn" href="#" class="btn-authentication btn-back">Go back</a>
-        </div>
       </div>
     </div>
   </div>
@@ -50,5 +41,5 @@
   <script src="/assets/ml/js/authentication.js"></script>
 }
 
-@minimal.layout(content = content, htmlClass = "signup-page", headHtml = headHtml, scripts = scripts, footerClass="join signup1")
+@minimal.layout(title = "Kifi | Sign Up", content = content, htmlClass = "signup-page", headHtml = headHtml, scripts = scripts, footerClass="join signup1", dataTrack = "signup2Email")
 

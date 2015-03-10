@@ -24,7 +24,6 @@ trait ServiceDiscovery {
   def register(): ServiceInstance
   def unRegister(): Unit = {}
   def isLeader(): Boolean
-  def isRunnerFor(taskName: String): Boolean
   def myClusterSize: Int = 0
   def startSelfCheck(): Future[Boolean]
   def changeStatus(newStatus: ServiceStatus): Unit
@@ -32,6 +31,7 @@ trait ServiceDiscovery {
   def myStatus: Option[ServiceStatus]
   def myVersion: ServiceVersion
   def thisInstance: Option[ServiceInstance]
+  def instancesInCluster: Seq[ServiceInstance]
   def thisService: ServiceType
   def timeSinceLastStatusChange: Long
   def myHealthyStatus: Option[ServiceStatus] = thisInstance.map(_.remoteService.healthyStatus)
@@ -95,6 +95,8 @@ class ServiceDiscoveryImpl(
    */
   private[this] var lastLeaderLogTime = 0L
 
+  def instancesInCluster: Seq[ServiceInstance] = myCluster.allMembers.toSeq
+
   def isLeader(): Boolean = if (isCanary) false else zkClient.session { zk =>
     if (!stillRegistered()) {
       log.warn(s"service did not register itself yet!")
@@ -124,35 +126,6 @@ class ServiceDiscoveryImpl(
         if (logMe) logLeader(s"I'm not the leader since my instance is ${myInstance.get} and I have no idea who the leader is")
         require(myCluster.size == 0)
         return false
-    }
-  }
-
-  private def isRunningFor(taskName: String, members: Vector[ServiceInstance]): Boolean = {
-    myInstance.exists { thisInst =>
-      val index = (taskName.hashCode() & 0x7FFFFFFF) % members.size
-      myCluster.allMembers(index) == thisInst
-    }
-  }
-
-  def isRunnerFor(taskName: String): Boolean = if (isCanary) false else zkClient.session { zk =>
-    if (!stillRegistered()) {
-      log.warn(s"service did not register itself yet!")
-      return false
-    }
-
-    val all = myCluster.allMembers
-    val offline = all.filter(_.remoteService.status == ServiceStatus.OFFLINE)
-    if (offline.isEmpty) {
-      //if there's no offline service, consider all cluster
-      isRunningFor(taskName, all)
-    } else {
-      if (thisInstance.exists(me => offline.contains(me))) {
-        //if there's at least one offline service and I'm offline as well, use only offline services for the check
-        isRunningFor(taskName, offline)
-      } else {
-        //if i'm not an offline services and at least one like this exist in my cluster, don't even consider me
-        false
-      }
     }
   }
 

@@ -63,13 +63,13 @@ class ScrapeProcessorActorImpl @Inject() (
 
   private[this] val lock = new ReactiveLock(1, Some(100))
 
-  override def pull(): Unit = lock.withLockFuture {
-    val futureTask = getQueueSize() map { qSize =>
+  override def pull(): Unit = if (lock.waiting < 3) lock.withLockFuture {
+    val futureTask: Future[Unit] = getQueueSize() flatMap { qSize =>
       if (qSize <= config.pullThreshold) {
         log.info(s"[ScrapeProcessorActorImpl.pull] qSize=$qSize. Let's get some work.")
-        serviceDiscovery.thisInstance.map { inst =>
+        val queuedF = serviceDiscovery.thisInstance.map { inst =>
           if (inst.isHealthy) {
-            val taskFuture = shoeboxCommander.assignTasks(inst.id.id, config.pullMax)
+            val taskFuture = shoeboxCommander.assignTasks(inst.id.id, 8)
             val queuedFuture = taskFuture map { requests =>
               log.info(s"[ScrapeProcessorActorImpl.pull(${inst.id.id})] assigned (${requests.length}) scraping tasks: ${requests.map(r => s"[uriId=${r.uri.id},infoId=${r.scrapeInfo.id},url=${r.uri.url}]").mkString(",")} ")
               for (sr <- requests) {
@@ -84,12 +84,16 @@ class ScrapeProcessorActorImpl @Inject() (
               case e =>
                 airbrake.notify(s"failed si to parse and queue task", e)
             }
-          }
+            queuedFuture
+          } else Future.successful()
         }
+        queuedF.getOrElse(Future.successful())
       } else if (qSize > WARNING_THRESHOLD) {
         airbrake.notify(s"qSize=${qSize} has exceeded threshold=$WARNING_THRESHOLD")
+        Future.successful()
       } else {
         log.info(s"[ScrapeProcessorActorImpl.pull] qSize=${qSize}; Skip a round")
+        Future.successful()
       }
     }
     futureTask.onFailure {

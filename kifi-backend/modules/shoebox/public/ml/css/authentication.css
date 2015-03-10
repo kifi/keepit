@@ -277,6 +277,14 @@ h3.small {
   color: #4ab4ed;
 }
 
+.form-photo-file {
+  position: absolute;
+  height: 0;
+  width: 0;
+  overflow: hidden;
+  visibility: hidden;
+}
+
 .image_container {
   width: 120px;
   height: 120px;
@@ -308,19 +316,23 @@ h3.small {
   -moz-transition: all .2s ease;
   -o-transition: all .2s ease;
   transition: all .2s ease;
+  background-position: center center;
+  background-repeat: no-repeat;
+  background-size: cover;
 }
 
 .image-upload:hover {
   opacity: 0.6;
 }
 
-.image-upload .plus {
+.image-upload .add {
   display: block;
   text-align: center;
-  font-size: 70px;
+  padding-top: 20px;
+  font-size: 22px;
+  line-height: 28px;
   font-weight: 700;
   color: #D4D4D4;
-  line-height: 95px;
 }
 
 .image-upload.placeholder {
@@ -484,10 +496,19 @@ margin-bottom: 20px;
 
 .forgot-password-link {
   display: block;
-  padding: 5px 0px;
   width: 100%;
   font-size: 13px;
   color: #8A8E8E;
+}
+
+#signup-firstname {
+  position: absolute;
+  left: 0px;
+}
+
+#signup-lastname {
+  position: absolute;
+  right: 0px;
 }
 
 .form-input[type='password'] {
@@ -495,6 +516,7 @@ margin-bottom: 20px;
 }
 
 .btn-authentication {
+  position: relative;
   outline: none;
   border:none;
   display: inline-block;
@@ -507,7 +529,7 @@ margin-bottom: 20px;
 }
 
 .btn-authentication:hover {
-  background: #2D77B9;
+  background: #3ebaeb;
 }
 
 .btn-done {
@@ -721,6 +743,15 @@ a, .avatars li, img, .tabs_nav li {
 	80% { -webkit-transform: translate(3px, 0px) rotate(0deg); }
 }
 
+#error-fp {
+  left: 30px;
+}
+
+#error-invalid-image {
+  width: 170px;
+  left: -30px;
+}
+
 .shake {
 	display:inline-block;
 	-webkit-animation-name: shake-animation;
@@ -850,14 +881,14 @@ a, .avatars li, img, .tabs_nav li {
   font-weight: 300;
 }
 
-.modal-button-cancel {
+.modal-button-cancel,.modal-button-close {
   color: #888;
   background-color: #e8e8e8;
 }
-.modal-button-cancel:hover {
+.modal-button-cancel:hover,.modal-button-close:hover {
   background-color: #eeeeee;
 }
-.modal-button-cancel:active {
+.modal-button-cancel:active,.modal-button-close:active {
   background-color: #e0e0e0;
 }
 
@@ -896,6 +927,31 @@ a, .avatars li, img, .tabs_nav li {
   outline-color: #ccc;
 }
 
+.progress {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  height: 100%;
+  border-top-left-radius: 5px;
+  border-bottom-left-radius: 5px;
+  background: #2D77B9;
+}
+
+.progress.success {
+  width: 100% !important;
+  transition: width .5s ease-in-out;
+}
+
+.progress.fail {
+  background: #b00;
+  width: 0% !important;;
+  transition: width .24s ease-in-out;
+}
+.progress + .text {
+  position: relative;
+}
 
 /* Specific Modal Stylings */
 .forgot-password-modal {

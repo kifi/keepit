@@ -122,7 +122,7 @@
               </div>
             </a>
             <a href="{{library.owner|profileUrl}}" kf-track-origin="libraryList/followed">
-              <img class="library-icon-owner-img" ng-if="!library.isMine" ng-src="{{library.owner | pic:100}}" title="{{library.owner.firstName}} {{library.owner.lastName}}"></img>
+              <img class="library-icon-owner-img" ng-if="!isMyLibrary(library)" ng-src="{{library.owner|pic:100}}" title="{{library.owner.firstName}} {{library.owner.lastName}}"></img>
             </a>
           </li>
           <li class="kf-nav-lib-separator" ng-if="invitedLibsToShow.length > 0">
@@ -139,7 +139,7 @@
               </div>
             </a>
             <a href="{{library.owner|profileUrl}}" kf-track-origin="libraryList/invited">
-              <img class="library-icon-owner-img" ng-if="!library.isMine" ng-src="{{library.owner | pic:100}}" title="{{library.owner.firstName}} {{library.owner.lastName}}"></img>
+              <img class="library-icon-owner-img" ng-src="{{library.owner|pic:100}}" title="{{library.owner.firstName}} {{library.owner.lastName}}"></img>
             </a>
           </li>
         </ul>

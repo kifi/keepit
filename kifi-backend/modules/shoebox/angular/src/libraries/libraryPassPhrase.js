@@ -36,8 +36,8 @@ angular.module('kifi')
         //
         // Watches and listeners.
         //
-        var deregister = $rootScope.$on('userLoggedInStateChange', function (e, me) {
-          if (!me) {
+        var deregister = $rootScope.$on('userLoggedInStateChange', function (e, loggedIn) {
+          if (!loggedIn) {
             reloadThisLibrary();
           }
         });

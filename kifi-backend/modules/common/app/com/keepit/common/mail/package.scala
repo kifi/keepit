@@ -112,7 +112,7 @@ package object template {
 
     def kifiFriendsUrl(content: String) = htmlUrl(s"$baseUrl/friends?", content, openInAppIfMobile = true)
 
-    def acceptFriendUrl(id: Id[User], content: String) = htmlUrl(s"$baseUrl/friends?friend=${userExternalId(id)}&", content, openInAppIfMobile = true)
+    def acceptFriendUrl(id: Id[User], content: String) = htmlUrl(Tag1(tags.profileUrl, id) + "?intent=connect&", content, openInAppIfMobile = true)
 
     private def connectNetworkUrl(network: String, content: String): Html = Html {
       s"$baseUrl/link/$network?${EmailTrackingParam.paramName}=${trackingParam(content)}"
@@ -122,10 +122,10 @@ package object template {
     def connectLinkedInUrl(content: String) = connectNetworkUrl("linkedin", content)
 
     def inviteContactUrl(id: Id[User], content: String) =
-      htmlUrl(s"$baseUrl/invite?friend=${userExternalId(id)}&subtype=contactJoined&", content, openInAppIfMobile = true)
+      htmlUrl(Tag1(tags.profileUrl, id) + "?intent=connect&", content, openInAppIfMobile = true)
 
     def inviteFriendUrl(id: Id[User], index: Int, subtype: String) =
-      htmlUrl(s"$baseUrl/invite?friend=${userExternalId(id)}&subtype=$subtype&", "pymk" + index, openInAppIfMobile = true)
+      htmlUrl(Tag1(tags.profileUrl, id) + "?intent=connect&", "pymk" + index, openInAppIfMobile = true)
 
     def invitedLibrariesUrl(id: Id[User], content: String) = htmlUrl(Tag1(tags.profileUrl, id) + s"/libraries/invited?", content, openInAppIfMobile = true)
 

@@ -70,9 +70,6 @@ angular.module('kifi')
     //
 
     function augment(library) {  // used on both library infos and full libraries
-      if (library.owner) {
-        library.isMine = library.owner.id === profileService.me.id;
-      }
       if (api.isLibraryMainOrSecret(library)) {
         library.color = '#808080';
       }

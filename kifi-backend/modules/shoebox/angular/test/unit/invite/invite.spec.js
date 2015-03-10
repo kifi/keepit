@@ -3,7 +3,7 @@
 
 describe('kifi.invite', function () {
   var $injector, $rootScope, $httpBackend, routeService, $location, $compile,
-    initParams, profileService, inviteService, elem, scope;
+    profileService, inviteService, elem, scope;
 
   var fakeSocialId = '29a10380-166a-11e4-8c21-0800200c9a66';
 
@@ -30,7 +30,6 @@ describe('kifi.invite', function () {
     $location = $injector.get('$location');
     $compile = $injector.get('$compile');
     routeService = $injector.get('routeService');
-    initParams = $injector.get('initParams');
     profileService = $injector.get('profileService');
     inviteService = $injector.get('inviteService');
 
@@ -101,41 +100,6 @@ describe('kifi.invite', function () {
         iscope().invite();
         expect(inviteService.friendRequest).toHaveBeenCalledWith(fakeSocialId);
       });
-    });
-  });
-
-  describe('friend request banner', function () {
-    var friendRequestUrl, basicUserInfoUrl, profileUrl;
-
-    beforeEach(function () {
-      initParams.friend = fakeSocialId;
-      elem = angular.element('<div kf-friend-request-banner></div>');
-      friendRequestUrl = routeService.friendRequest(fakeSocialId);
-      basicUserInfoUrl = routeService.basicUserInfo(fakeSocialId, true);
-      profileUrl = routeService.profileUrl;
-    });
-
-    it('shows a success message after server response ok', function () {
-      $httpBackend.expectGET(basicUserInfoUrl).respond(200,
-        '{"id":"' + fakeSocialId + '","firstName":"John","lastName":"Doe","pictureName":"123.jpg","username":"johndoe"}');
-
-      compile();
-      $httpBackend.flush();
-
-      $httpBackend.expectPOST(friendRequestUrl).respond(200, '{}');
-      var target = elem.find('div.clickable-target');
-      target.click();
-
-      expect(target.text()).toEqual('Sending');
-      $httpBackend.flush();
-      expect(target.text()).toEqual('Sent!');
-    });
-
-    it('does not show banner if get user info fails', function () {
-      $httpBackend.expectGET(basicUserInfoUrl).respond(404, '{}');
-
-      compile();
-      expect(elem.hasClass('hidden')).toBe(true);
     });
   });
 });

@@ -93,22 +93,6 @@ angular.module('kifi')
       });
     };
 
-    $scope.importBookmarks = function () {
-      var kifiVersion = $window.document.documentElement.getAttribute('data-kifi-ext');
-
-      if (!kifiVersion) {
-        modalService.open({
-          template: 'common/modal/installExtensionModal.tpl.html',
-          scope: $scope
-        });
-      }
-
-      $rootScope.$emit('showGlobalModal', 'importBookmarks');
-      $analytics.eventTrack('user_viewed_page', {
-        'type': 'browserImport'
-      });
-    };
-
     $scope.closeInitialCard = function () {
       $scope.initialCardClosed = true;
     };

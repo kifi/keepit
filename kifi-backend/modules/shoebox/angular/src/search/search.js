@@ -329,9 +329,7 @@ angular.module('kifi')
         if (searchKeep && !_.find(searchKeep.keeps, { id: keep.id })) {
           searchKeep.keeps.push({
             id: keep.id,
-            isMine: true,
             libraryId: library.id,
-            mine: true,
             visibility: library.visibility
           });
         }

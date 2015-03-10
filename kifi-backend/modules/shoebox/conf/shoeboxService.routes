@@ -24,7 +24,8 @@ GET     /new/signupEmail            @com.keepit.controllers.core.AuthController.
 GET     /new/signupName             @com.keepit.controllers.core.AuthController.signupPageGetName()
 GET     /new/login                  @com.keepit.controllers.core.AuthController.loginPageMinimal()
 GET     /new/loginNoTwitter         @com.keepit.controllers.core.AuthController.loginPageNoTwitterMinimal()
-GET     /new/claimAccount           @com.keepit.controllers.core.AuthController.claimAccountMinimal()
+GET     /new/linkSocial             @com.keepit.controllers.core.AuthController.linkSocialAccountMinimal()
+GET     /new/install                @com.keepit.controllers.core.AuthController.install()
 
 # End new signup pages
 
@@ -441,6 +442,7 @@ GET     /site/user/incomingFriendRequests @com.keepit.controllers.website.UserCo
 
 GET     /site/user/friends          @com.keepit.controllers.website.UserController.friends(page: Int ?= 0, pageSize: Int ?= 1000)
 GET     /site/user/friends/recommended   @com.keepit.controllers.website.PeopleRecommendationController.getFriendRecommendations(offset: Int ?= 0, limit: Int ?= 5)
+GET     /site/user/friends/recommendedCards @com.keepit.controllers.website.UserProfileController.getFriendRecommendations(fullInfoLimit: Int ?= 12, maxExtraIds: Int ?= 12)
 GET     /site/user/invite/recommended    @com.keepit.controllers.website.PeopleRecommendationController.getInviteRecommendations(offset: Int ?= 0, limit: Int ?= 5)
 POST    /site/user/invite/hide           @com.keepit.controllers.website.PeopleRecommendationController.hideInviteRecommendation()
 POST    /site/user/:id/hide              @com.keepit.controllers.website.PeopleRecommendationController.hideFriendRecommendation(id: ExternalId[User])

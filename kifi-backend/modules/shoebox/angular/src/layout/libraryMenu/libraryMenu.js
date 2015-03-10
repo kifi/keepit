@@ -4,9 +4,10 @@ angular.module('kifi')
 
 .directive('kfLibraryMenu', [
   '$document', '$interval', '$location', '$rootScope', '$window', '$timeout',
-  'friendService', 'libraryService', 'modalService', 'profileService', 'tagService', 'util',
-  function ($document, $interval, $location, $rootScope, $window, $timeout,
-  friendService, libraryService, modalService, profileService, tagService, util) {
+  'libraryService', 'modalService', 'profileService', 'util',
+  function (
+      $document, $interval, $location, $rootScope, $window, $timeout,
+      libraryService, modalService, profileService, util) {
     return {
       restrict: 'A',
       replace: true,
@@ -30,11 +31,6 @@ angular.module('kifi')
         scope.userLibsToShow = [];
         scope.invitedLibsToShow = [];
         scope.sortingMenu = { show : false, option : '', myLibsFirst : true };
-
-        scope.counts = {
-          friendsCount: friendService.totalFriends(),
-          friendsNotifCount: friendService.requests.length
-        };
 
         //
         // Internal methods.
@@ -176,6 +172,10 @@ angular.module('kifi')
           scope.sortingMenu.myLibsFirst = !scope.sortingMenu.myLibsFirst;
         };
 
+        scope.isMyLibrary = function (library) {
+          return libraryService.isMyLibrary(library);
+        };
+
         //
         // Watches and listeners.
         //
@@ -200,20 +200,6 @@ angular.module('kifi')
           }
         });
         scope.$on('$destroy', deregisterLibraryVisited);
-
-        scope.$watch(function () {
-          return friendService.requests.length;
-        }, function (value) {
-          scope.counts.friendsNotifCount = value;
-        });
-
-        scope.$watch(friendService.totalFriends, function (value) {
-          scope.counts.friendsCount = value;
-        });
-
-        scope.$watch(tagService.getTotalKeepCount, function (val) {
-          scope.counts.keepCount = val;
-        });
 
         scope.$watch(function () {
             return scope.sortingMenu.option;
@@ -356,7 +342,7 @@ angular.module('kifi')
           }
           var newMyLibs = [];
           if (scope.sortingMenu.myLibsFirst && newLibs.length > 0) {
-            var split = _.groupBy(newLibs, function(lib) { return lib.isMine ? 'mine' : 'notMine'; });
+            var split = _.groupBy(newLibs, function (lib) { return libraryService.isMyLibrary(lib) ? 'mine' : 'notMine'; });
             newLibs = split.notMine || [];
             newMyLibs = split.mine || [];
           }

@@ -8,6 +8,7 @@ import com.google.inject.{ Provider, Inject, Singleton }
 import com.keepit.commanders._
 import com.keepit.common.core._
 import com.keepit.common.controller._
+import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.http._
@@ -95,6 +96,8 @@ class KifiSiteRouter @Inject() (
 
 @Singleton
 class AngularRouter @Inject() (
+    db: Database,
+    userRepo: UserRepo,
     userCommander: UserCommander,
     pageMetaTagsCommander: PageMetaTagsCommander,
     libraryCommander: LibraryCommander,
@@ -105,29 +108,46 @@ class AngularRouter @Inject() (
   import AngularRouter.Path
 
   def route(request: MaybeUserRequest[_]): Routeable = {
-    ngRedirects.get(request.path) map { toPath =>
-      MovedPermanentlyRoute(toPath)
+    val path = AngularRouter.Path(request.path)
+    ngLoginRedirects.get(path.path) map { toPath =>
+      request match {
+        case _: UserRequest[_] => MovedPermanentlyRoute(toPath)
+        case _ => RedirectToLogin(toPath)
+      }
     } orElse {
-      val path = AngularRouter.Path(request.path)
-      ngStaticPage(path, request.userOpt.isDefined) orElse userOrLibrary(path, request)
+      if (path.primary == "friends" || path.primary == "invite") {
+        request.queryString.get("friend").flatMap(_.headOption).flatMap(ExternalId.asOpt[User]).flatMap { userExtId =>
+          db.readOnlyMaster { implicit session =>
+            userRepo.getOpt(userExtId)
+          }
+        } map { user =>
+          val url = s"/${URLEncoder.encode(user.username.value, UTF8)}?intent=connect"
+          request match {
+            case r: UserRequest[_] => SeeOtherRoute(url)
+            case _ => RedirectToLogin(url)
+          }
+        }
+      } else None
+    } orElse {
+      if (path.primary == "friends" || path.path == "/connections") {
+        request match {
+          case r: UserRequest[_] => Some(SeeOtherRoute(s"/${URLEncoder.encode(r.user.username.value, UTF8)}/connections"))
+          case _ => Some(RedirectToLogin("/connections"))
+        }
+      } else {
+        ngStaticPage(path, request.userOpt.isDefined) orElse userOrLibrary(path, request)
+      }
     } getOrElse {
       Error404
     }
   }
 
-  private val ngRedirects = Map(
+  private val ngLoginRedirects = Map(
     "/recommendations" -> "/",
-    "/friends" -> "/connections",
-    "/friends/invite" -> "/invite",
-    "/friends/requests" -> "/connections",
-    "/friends/requests/email" -> "/connections",
-    "/friends/requests/linkedin" -> "/connections",
-    "/friends/requests/facebook" -> "/connections",
-    "/friends/requests/refresh" -> "/connections"
+    "/friends/invite" -> "/invite"
   )
   private val ngFixedRoutes: Map[String, Seq[MaybeUserRequest[_] => Future[String]]] = Map(
     "/" -> Seq(), // Note: "/" currently handled directly by HomeController.home
-    "/connections" -> Seq(),
     "/invite" -> Seq(),
     "/profile" -> Seq(),
     "/find" -> Seq(),
@@ -135,7 +155,6 @@ class AngularRouter @Inject() (
     "/keeps" -> Seq()
   )
   private val ngPrefixRoutes: Map[String, Seq[MaybeUserRequest[_] => Future[String]]] = Map(
-    "friends" -> Seq(),
     "keep" -> Seq(),
     "tag" -> Seq()
   )
@@ -172,11 +191,11 @@ class AngularRouter @Inject() (
             val redir = "/" + (user.username.value +: path.segments.drop(1)).map(r => URLEncoder.encode(r, UTF8)).mkString("/")
             if (isUserAlias) Some(MovedPermanentlyRoute(redir)) else Some(SeeOtherRoute(redir))
           } else if (path.segments.length == 1) { // user profile page
-            Some(Angular(Some(userMetadata(user))))
+            Some(Angular(Some(userMetadata(user, UserProfileTab(path.path)))))
           } else if (path.segments.length == 2 && (path.segments(1) == "libraries" || path.segments(1) == "connections" || path.segments(1) == "followers")) { // user profile page (Angular will rectify /libraries)
-            Some(Angular(Some(userMetadata(user))))
+            Some(Angular(Some(userMetadata(user, UserProfileTab(path.path)))))
           } else if (path.segments.length == 3 && path.segments(1) == "libraries" && (path.segments(2) == "following" || path.segments(2) == "invited")) { // user profile page (nested routes)
-            Some(Angular(Some(userMetadata(user))))
+            Some(Angular(Some(userMetadata(user, UserProfileTab(path.path)))))
           } else {
             path.segments.tail.headOption.flatMap { secondary =>
               libraryCommander.getLibraryBySlugOrAlias(user.id.get, LibrarySlug(secondary)).map {
@@ -202,9 +221,9 @@ class AngularRouter @Inject() (
     }
   }
 
-  private def userMetadata(user: User): Future[String] = try {
-    userMetadataCache.getOrElseFuture(UserMetadataKey(user.id.get)) {
-      pageMetaTagsCommander.userMetaTags(user).imap(_.formatOpenGraphForUser)
+  private def userMetadata(user: User, tab: UserProfileTab): Future[String] = try {
+    userMetadataCache.getOrElseFuture(UserMetadataKey(user.id.get, tab)) {
+      pageMetaTagsCommander.userMetaTags(user, tab).imap(_.formatOpenGraphForUser)
     }
   } catch {
     case e: Throwable =>

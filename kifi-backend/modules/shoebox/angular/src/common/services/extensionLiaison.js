@@ -3,10 +3,9 @@
 angular.module('kifi')
 
 .factory('extensionLiaison', [
-  '$window', '$timeout', '$rootScope', 'installService', 'profileService', 'tagService',
-  function ($window, $timeout, $rootScope, installService, profileService, tagService) {
+  '$window', '$rootScope',
+  function ($window, $rootScope) {
 
-    var refreshTimeout;
     $window.addEventListener('message', function (event) {
       $rootScope.$apply(function () {
         var data = event.data || '';
@@ -16,15 +15,12 @@ angular.module('kifi')
             break;
           case 'import_bookmarks':
             if (data.count > 0) {
-              $rootScope.$emit('showGlobalModal', 'importBookmarks', data.count, event);
+              $rootScope.$emit('showGlobalModal', 'importBookmarks', {msgEvent: event});
             }
             break;
           case 'update_keeps':
           case 'update_tags':
-            $timeout.cancel(refreshTimeout);
-            refreshTimeout = $timeout(function () {
-              tagService.fetchAll(true);
-            }, 1000); // Giving enough time for the services to be updated
+            // TODO
             break;
         }
       });

@@ -63,7 +63,7 @@ trait Extractor {
       title = getTitle,
       content = getContent,
       canonicalUrl = getCanonicalUrl(destinationUrl),
-      alternateUrls = getAlternateUrls(),
+      alternateUrls = getAlternateUrls().take(3),
       description = getDescription,
       media = getMediaTypeString,
       httpContentType = getMetadata("Content-Type"),

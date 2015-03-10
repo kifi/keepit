@@ -28,12 +28,12 @@
       </label>
     </div>
     <div class="kf-lih-right kifi-guide-target-3">
-      <button class="kf-lih-add-link sprite sprite-add-link" ng-click="addKeeps(library)">Add a link</button>
+      <button class="kf-lih-add-link sprite sprite-add-link" ng-click="addKeeps()">Add a link</button>
       <a href="/tags/manage" class="kf-lih-tags"><span class="svg-tag-white"></span>Manage tags</a>
       <span class="kf-lih-dropdown-parent" kf-hover-menu>
-        <a href="/connections" class="kf-lih-friends"><span class="svg-friends-white"></span>Connections</a>
+        <a href="{{me|profileUrl:'connections'}}" class="kf-lih-friends"><span class="svg-friends-white"></span>Connections</a>
         <menu class="kf-dropdown-menu">
-          <a class="kf-dropdown-menu-item" href="/connections">Your Kifi connections</a>
+          <a class="kf-dropdown-menu-item" href="{{me|profileUrl:'connections'}}">Your Kifi connections</a>
           <a class="kf-dropdown-menu-item" href="/invite">Invite someone to Kifi</a>
         </menu>
       </span>

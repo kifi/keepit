@@ -1,0 +1,229 @@
+.kf-uph
+  padding-bottom: 25px
+  background: pageHeaderColor
+  color: #fff
+
+  .kf-mobile &
+    padding: 10px 0 40px
+
+.kf-uph-top
+  position: relative
+  padding-top: 20px
+
+.kf-uph-connect-banner
+  position: relative
+  border-radius: 8px
+  height: 40px
+  padding: 0 30px
+  overflow: hidden
+  background-color: libraryGreen
+  font-size: 13px
+  color: white
+  transition: 0.2s linear height
+
+.kf-uph-connect-banner-text
+  float: left
+  margin-top: 12px
+
+.kf-uph-connect-banner-btn
+  float: right
+  padding: 5px 15px
+  margin-left: 10px
+  margin-top: 8px
+  border: 1px solid white
+  border-radius: 4px
+  font-size: 11px
+  cursor: pointer
+
+  &.kf-accept
+    background-color: white
+    color: libraryGreen
+
+  &.kf-decline
+    background-color: transparent
+    color: #fff
+
+.kf-uph-action
+  position: absolute
+  top: 10px
+  right: 12px
+
+.kf-uph-connect
+  display: inline-block
+  cursor: pointer
+
+  button&
+    border: none
+    background-color: transparent
+    padding: 0
+    color: inherit
+
+  &.friends
+    padding: 0
+    text-align: right
+
+  &.request-sent
+    cursor: initial
+
+.kf-uph-connect-image
+  display: inline-block
+
+  &.add-friend
+    sprite2x($add-friend)
+    width: 36px
+
+  &.already-friends
+    sprite2x($add-friend-active)
+    width: 36px
+
+    &.hidden
+      opacity: 0
+
+.kf-uph-action-text
+  position: relative
+  top: 3px
+  margin-left: 0px
+  vertical-align: top
+  font-size: 0.8em
+  overflow: hidden
+
+  &.connect
+    display: inline-block
+    width: 0px
+    margin-left: 5px
+    transition: 0.1s linear width
+
+    :hover>&
+      width: 60px
+
+  &.hidden
+    display: inline-block
+    width: 0px
+    height: 15px
+    margin-left: 3px
+    opacity: 0
+
+.kf-uph-progress
+  position: absolute
+  top: 40px
+  right: 5px
+  width: 100px
+
+.kf-uph-progress-bar
+  position: absolute
+  height: 2px
+  width: 0%
+  max-width: 70px
+  background-color: white
+
+.kf-uph-progress-check
+  position: absolute
+  top: -5px
+  left: 75px
+  sprite2x($white-checkmark)
+  width: 14px
+  height: 10px
+  opacity: 0
+
+.kf-uph-action-menu
+  height: 0px
+  overflow: hidden
+  transition: 0.1s linear height
+
+  &.on
+    height: 50px
+
+  .kf-uph-action-menu-item
+    padding: 2px 10px 2px 10px
+    margin-left: 30px
+    margin-right: -8px
+    font-size: 0.7em
+    font-weight: 100
+    line-height: 20px
+
+    &:hover
+      background-color: #37414b
+
+.kf-uph-connect-callout
+  right: 0
+  top: 100%
+  width: auto
+  margin-top: 14px
+  padding: 14px 24px
+  white-space: nowrap
+
+  &::before
+    left: auto
+    right: 25px
+    top: -11px
+    border-width: 0 5px 11px 16px
+
+.kf-uph-settings-a
+  position: relative
+  font-size: 1.2em
+  color: white
+
+  .kf-uph-settings-icon
+    display: inline-block
+    width: 20px
+    height: 20px
+
+  .kf-uph-action-text
+    position: relative
+    top: 1px
+
+.kf-uph-pic-a
+  display: inline-block
+
+.kf-uph-pic
+  height: 100px
+  width: 100px
+  border-radius: 100%
+
+  .kf-mobile &
+    width: 150px
+    height: 150px
+
+.kf-uph-name
+  font-weight: normal
+  font-size: 1.3em
+  line-height: 2em
+  color: inherit
+
+  .kf-mobile &
+    font-size: 1.4em
+
+.kf-uph-nav
+  margin: 10px auto 0
+  display: inline-block
+  border-top: 1px solid #fff
+
+  .kf-mobile &
+    transform: scale(1.5)
+    transform-origin: center top
+    margin-bottom: 40px
+
+.kf-uph-nav-a
+  display: inline-block
+  padding: 6px 10px
+  color: #9fa3aa
+
+  &[href]:hover
+    background-color: alpha(#fff, 5%)
+
+  &:not([href])
+    color: accentGreen
+    cursor: default
+
+.kf-uph-nav-name
+  line-height: 20px
+  font-size: 12px
+  text-transform: uppercase
+
+.kf-uph-nav-count
+  color: #fff
+  line-height: 24px
+  font-size: 18px
+
+  :not([href])>&
+    color: inherit

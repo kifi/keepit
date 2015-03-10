@@ -35,7 +35,6 @@ trait ScraperConfigModule extends ScalaModule {
   def scraperConfig(queueConfig: ScraperQueueConfig, httpConfig: ScraperHttpConfig, intervalConfig: ScraperIntervalConfig): ScraperConfig = {
     ScraperConfig(
       changeThreshold = conf.getInt("scraper.changeThreshold").get,
-      pullMultiplier = conf.getInt("scraper.pullMultiplier").get,
       pullFrequency = conf.getInt("scraper.pullFrequency").get, // seconds
       queued = conf.getBoolean("scraper.queued").get,
       async = conf.getBoolean("scraper.async").get,

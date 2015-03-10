@@ -64,13 +64,22 @@ angular.module('kifi', [
 .factory('initParams', [
   '$location',
   function ($location) {
-    var params = ['m', 'o', 'friend', 'subtype', 'install', 'intent'];
+    var names = ['m', 'o', 'install', 'intent'];
     var search = $location.search();
-    var state = _.pick(search, params);
-    if (!_.isEmpty(state)) {
-      $location.search(_.omit(search, params)).replace();
+    var params = _.pick(search, names);
+    if (!_.isEmpty(params)) {
+      $location.search(_.omit(search, names)).replace();
     }
-    return state;
+    return {
+      getAndClear: function (name) {
+        var value;
+        if (name in params) {
+          value = params[name];
+          delete params[name];
+        }
+        return value;
+      }
+    };
   }
 ])
 

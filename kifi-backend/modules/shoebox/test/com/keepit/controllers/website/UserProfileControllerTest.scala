@@ -29,7 +29,7 @@ import com.keepit.test.ShoeboxTestInjector
 
 import org.specs2.mutable.Specification
 
-import play.api.libs.json.{ JsArray, JsNumber, JsString, Json }
+import play.api.libs.json._
 import play.api.mvc.{ Call, Result }
 import play.api.test.Helpers._
 import play.api.test._
@@ -293,6 +293,73 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
       }
     }
 
+    "get profile connections" in {
+      withDb(controllerTestModules: _*) { implicit injector =>
+        val (user1, user2, user3, user4, user5) = db.readWrite { implicit session =>
+          val user1 = user().withName("George", "Washington").withUsername("GDubs").withPictureName("pic1").saved
+          val user2 = user().withName("Abe", "Lincoln").withUsername("abe").saved
+          val user3 = user().withName("Thomas", "Jefferson").withUsername("TJ").saved
+          val user4 = user().withName("John", "Adams").withUsername("jayjayadams").saved
+          val user5 = user().withName("Ben", "Franklin").withUsername("Benji").saved
+
+          connect(user1 -> user3).saved
+          connect(user1 -> user4).saved
+          connect(user2 -> user4).saved
+          (user1, user2, user3, user4, user5)
+        }
+
+        val relationship = SociallyRelatedEntities(
+          RelatedEntities[User, User](user1.id.get, Seq(user4.id.get -> .1, user5.id.get -> .4, user2.id.get -> .2, user3.id.get -> .3)),
+          RelatedEntities[User, SocialUserInfo](user1.id.get, Seq.empty),
+          RelatedEntities[User, SocialUserInfo](user1.id.get, Seq.empty),
+          RelatedEntities[User, EmailAccountInfo](user1.id.get, Seq.empty)
+        )
+        inject[FakeGraphServiceClientImpl].setSociallyRelatedEntities(user1.id.get, relationship)
+        // view as owner
+        val result1 = getProfileConnections(Some(user1), Username("GDubs"), 10)
+        status(result1) must equalTo(OK)
+        contentType(result1) must beSome("application/json")
+        val resultJson1 = contentAsJson(result1)
+        (resultJson1 \ "count") === JsNumber(2)
+        (resultJson1 \\ "id") === Seq(user3, user4).map(u => JsString(u.externalId.id))
+        (resultJson1 \ "ids") === JsArray()
+
+        // view as anybody
+        val result2 = getProfileConnections(Some(user4), Username("GDubs"), 10)
+        status(result2) must equalTo(OK)
+        contentType(result2) must beSome("application/json")
+        val resultJson2 = contentAsJson(result2)
+        (resultJson2 \ "count") === JsNumber(2)
+        (resultJson2 \\ "id") === Seq(user4, user3).map(u => JsString(u.externalId.id))
+        (resultJson2 \ "ids") === JsArray()
+
+        (resultJson2 \ "invitations").isInstanceOf[JsUndefined] === true
+
+        db.readWrite { implicit s =>
+          friendRequestRepo.save(FriendRequest(senderId = user5.id.get, recipientId = user1.id.get, messageHandle = None))
+        }
+
+        val result3 = getProfileConnections(Some(user4), Username("GDubs"), 10)
+        status(result3) must equalTo(OK)
+        contentType(result3) must beSome("application/json")
+        val resultJson3 = contentAsJson(result3)
+        (resultJson3 \ "count") === JsNumber(2)
+        (resultJson3 \\ "id") === Seq(user4, user3).map(u => JsString(u.externalId.id))
+        (resultJson3 \ "ids") === JsArray()
+
+        (resultJson3 \ "invitations").isInstanceOf[JsUndefined] === true
+
+        val result4 = getProfileConnections(Some(user1), Username("GDubs"), 10)
+        status(result4) must equalTo(OK)
+        contentType(result4) must beSome("application/json")
+        val resultJson4 = contentAsJson(result4)
+        (resultJson4 \ "count") === JsNumber(2)
+        (resultJson4 \ "users" \\ "id") === Seq(user3, user4).map(u => JsString(u.externalId.id))
+        (resultJson4 \ "ids") === JsArray()
+
+        (resultJson4 \ "invitations" \\ "id") === Seq(user5).map(u => JsString(u.externalId.id))
+      }
+    }
     "get profile followers" in {
       withDb(controllerTestModules: _*) { implicit injector =>
         val (user1, user2, user3, user4, user5) = db.readWrite { implicit session =>
@@ -334,15 +401,16 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
         (resultJson2 \\ "id") === Seq(user4, user5).map(u => JsString(u.externalId.id))
         (resultJson2 \ "ids") === JsArray()
 
-        // view as follower (to a secret library)
         val result3 = getProfileFollowers(Some(user2), Username("GDubs"), 10)
         status(result3) must equalTo(OK)
         contentType(result3) must beSome("application/json")
         val resultJson3 = contentAsJson(result3)
-        println(s"resultJson3=$resultJson3")
         (resultJson3 \ "count") === JsNumber(3)
         (resultJson3 \\ "id") === Seq(user2, user4, user5).map(u => JsString(u.externalId.id))
         (resultJson3 \ "ids") === JsArray()
+
+        (resultJson3 \ "invitations").isInstanceOf[JsUndefined] === true
+
       }
     }
 
@@ -399,6 +467,8 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
           (content \\ "id") === Seq.empty
           (content \\ "connections") === Seq.empty
           (content \ "count") === JsNumber(0)
+
+          (content \ "invitations").isInstanceOf[JsUndefined] === true
         }
       }
     }
@@ -412,6 +482,11 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
   private def getProfileFollowers(viewerOpt: Option[User], username: Username, limit: Int)(implicit injector: Injector): Future[Result] = {
     setViewer(viewerOpt)
     controller.getProfileFollowers(username, limit)(request(routes.UserProfileController.getProfileFollowers(username, limit)))
+  }
+
+  private def getProfileConnections(viewerOpt: Option[User], username: Username, limit: Int)(implicit injector: Injector): Future[Result] = {
+    setViewer(viewerOpt)
+    controller.getProfileConnections(username, limit)(request(routes.UserProfileController.getProfileFollowers(username, limit)))
   }
 
   private def getMutualConnections(viewerOpt: Option[User], id: ExternalId[User])(implicit injector: Injector): Future[Result] = {

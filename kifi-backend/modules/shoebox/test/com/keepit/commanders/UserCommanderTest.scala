@@ -32,15 +32,15 @@ class UserCommanderTest extends Specification with ShoeboxTestInjector {
     db.readWrite { implicit session =>
       var user1 = userRepo.save(User(
         firstName = "Homer",
-        lastName = "Simpson", username = Username("test"), normalizedUsername = "test"
+        lastName = "Simpson", username = Username("homer"), normalizedUsername = "homer"
       ))
       var user2 = userRepo.save(User(
         firstName = "Peter",
-        lastName = "Griffin", username = Username("test2"), normalizedUsername = "test2"
+        lastName = "Griffin", username = Username("peter"), normalizedUsername = "peter"
       ))
       var user3 = userRepo.save(User(
         firstName = "Clark",
-        lastName = "Kent", username = Username("test3"), normalizedUsername = "test3"
+        lastName = "Kent", username = Username("clark"), normalizedUsername = "clark"
       ))
 
       val email1 = emailRepo.save(UserEmailAddress(userId = user1.id.get, address = EmailAddress("username@42go.com")))
@@ -110,27 +110,12 @@ class UserCommanderTest extends Specification with ShoeboxTestInjector {
         val userRepo = inject[UserRepo]
         val connectionRepo = inject[UserConnectionRepo]
 
-        val (user1, user2, user3, user4) = db.readWrite {
-          implicit session =>
-            var user1 = userRepo.save(User(
-              firstName = "Homer",
-              lastName = "Simpson", username = Username("test"), normalizedUsername = "test"
-            ))
-            var user2 = userRepo.save(User(
-              firstName = "Peter",
-              lastName = "Griffin", username = Username("test2"), normalizedUsername = "test2"
-            ))
-            var user3 = userRepo.save(User(
-              firstName = "Clark",
-              lastName = "Kent", username = Username("test3"), normalizedUsername = "test3"
-            ))
-            var user4 = userRepo.save(User(
-              firstName = "Clark",
-              lastName = "Simpson", username = Username("test4"), normalizedUsername = "test4"
-            ))
-            connectionRepo.addConnections(user1.id.get, Set(user3.id.get, user2.id.get, user4.id.get))
-            connectionRepo.addConnections(user2.id.get, Set(user4.id.get))
-            (user1, user2, user3, user4)
+        val (user1, user2, user3) = setup()
+        val user4 = db.readWrite { implicit session =>
+          var user4 = userRepo.save(User(firstName = "Jess", lastName = "Jones", username = Username("jess"), normalizedUsername = "jess"))
+          connectionRepo.addConnections(user1.id.get, Set(user3.id.get, user2.id.get, user4.id.get))
+          connectionRepo.addConnections(user2.id.get, Set(user4.id.get))
+          user4
         }
 
         val (connections2, total2) = inject[UserConnectionsCommander].getConnectionsPage(user2.id.get, 0, 1000)
@@ -185,7 +170,7 @@ class UserCommanderTest extends Specification with ShoeboxTestInjector {
         userCommander.setUsername(user1.id.get, Username("bob.z"), false) === Right(Username("bob.z"))
 
         // changes user model
-        db.readOnlyMaster(s => userRepo.get(user2.id.get)(s).username.value === "test2")
+        db.readOnlyMaster(s => userRepo.get(user2.id.get)(s).username.value === "peter")
         userCommander.setUsername(user2.id.get, Username("obama"), false) === Right(Username("obama"))
         db.readOnlyMaster(s => userRepo.get(user2.id.get)(s).username === Username("obama"))
 
@@ -259,7 +244,7 @@ class UserCommanderTest extends Specification with ShoeboxTestInjector {
         val (user1, user2, user3) = setup()
         val outbox = inject[FakeOutbox]
         val user4 = db.readWrite { implicit rw =>
-          inject[UserRepo].save(User(firstName = "Jane", lastName = "Doe", primaryEmail = Some(EmailAddress("jane@doe.com")), username = Username("test"), normalizedUsername = "test"))
+          inject[UserRepo].save(User(firstName = "Jane", lastName = "Doe", primaryEmail = Some(EmailAddress("jane@doe.com")), username = Username("jane"), normalizedUsername = "jane"))
         }
 
         // set service client response
@@ -277,12 +262,12 @@ class UserCommanderTest extends Specification with ShoeboxTestInjector {
         val htmlBody = mail.htmlBody.value
         htmlBody must contain("Hi Jane")
         htmlBody must contain("Homer Simpson just joined")
-        htmlBody must contain("/invite?friend=" + user1.externalId)
+        htmlBody must contain("/homer?intent=connect")
 
         val textBody = mail.textBody.get.value
         textBody must contain("Hi Jane")
         textBody must contain("Homer Simpson just joined")
-        textBody must contain("/invite?friend=" + user1.externalId)
+        textBody must contain("/homer?intent=connect")
 
         NotificationCategory.fromElectronicMailCategory(mail.category) === NotificationCategory.User.CONTACT_JOINED
       }

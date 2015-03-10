@@ -122,7 +122,7 @@ class AuthController @Inject() (
     implicit val secureSocialClientIds: SecureSocialClientIds) extends UserActions with ShoeboxServiceController with Logging with SecureSocialHelper {
 
   // path is an Angular route
-  val LinkRedirects = Map("recommendations" -> s"${config.applicationBaseUrl}/recommendations")
+  val LinkRedirects = Map("recommendations" -> s"${config.applicationBaseUrl}/recommendations") // todo: Is this needed?
 
   private val PopupKey = "popup"
 
@@ -610,8 +610,13 @@ class AuthController @Inject() (
     Ok(views.html.authMinimal.signup())
   }
 
-  def signupPageGetEmailMinimal() = Action { implicit request =>
-    Ok(views.html.authMinimal.signupGetEmail("Andrew", "https://djty7jcqog9qu.cloudfront.net/users/2d8b2fd1-1346-4b9e-9d56-573ce9f9b2f7/pics/200/aCiYX.jpg"))
+  def signupPageGetEmailMinimal() = MaybeUserAction { implicit request =>
+    val identity = request.identityOpt.get
+    Ok(views.html.authMinimal.signupGetEmail(
+      firstName = User.sanitizeName(identity.firstName.trim),
+      lastName = User.sanitizeName(identity.lastName.trim),
+      picture = identityPicture(identity))
+    )
   }
 
   def signupPageGetName() = Action { implicit request =>
@@ -626,8 +631,12 @@ class AuthController @Inject() (
     Ok(views.html.authMinimal.loginToKifiNoTwitter())
   }
 
-  def claimAccountMinimal() = Action { implicit request =>
-    Ok(views.html.authMinimal.claimAccount("facebook", "someemail1230@gmail.com"))
+  def linkSocialAccountMinimal() = Action { implicit request =>
+    Ok(views.html.authMinimal.linkSocial("facebook", "someemail1230@gmail.com"))
+  }
+
+  def install() = Action { implicit request =>
+    Ok(views.html.authMinimal.install())
   }
 
 }

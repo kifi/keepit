@@ -26,6 +26,8 @@ import scala.concurrent.Future
 
 class LibraryImageControllerTest extends Specification with ShoeboxTestInjector with DbInjectionHelper {
 
+  args(skipAll = true)
+
   val controllerTestModules = Seq(
     FakeCryptoModule(),
     FakeShoeboxServiceModule(),
@@ -62,6 +64,12 @@ class LibraryImageControllerTest extends Specification with ShoeboxTestInjector 
         val libPubId1 = Library.publicId(lib1.id.get)
         val libPubId2 = Library.publicId(lib2.id.get)
 
+        db.readOnlyMaster { implicit s =>
+          keepImageRepo.count === 0
+          keepImageRequestRepo.count === 0
+          libraryImageRepo.count === 0
+          libraryImageRequestRepo.count === 0
+        } //making sure db repo is initiated
         // Invalid Access to Library (wrong user)
         status(uploadFile(user2, libPubId1, fakeFile, None, None, None)) === FORBIDDEN
 

@@ -23,14 +23,16 @@ angular.module('kifi')
 
     $scope.undo = undoService;
 
-    if (initParams.m === '1') {
-      $scope.showEmailVerifiedModal = true;
-    } else if (initParams.m in tooltipMessages) { // show small tooltip
-      $scope.tooltipMessage = tooltipMessages[initParams.m];
-      $timeout(function () {
-        delete $scope.tooltipMessage;
-      }, 5000);
-    }
+    (function (m) {
+      if (m === '1') {
+        $scope.showEmailVerifiedModal = true;
+      } else if (m in tooltipMessages) { // show small tooltip
+        $scope.tooltipMessage = tooltipMessages[m];
+        $timeout(function () {
+          $scope.tooltipMessage = null;
+        }, 5000);
+      }
+    }(initParams.getAndClear('m')));
 
     //
     // For importing bookmarks
@@ -40,25 +42,23 @@ angular.module('kifi')
       $scope.importLibrary = selectedLibrary;
     };
 
-    function initBookmarkImport(count, msgEvent) {
-      // Display the Main Library as the default option.
-      $scope.importLibrary = libraryService.getSysMainInfo();
+    function initBookmarkImport(opts) {
+      $scope.importLibrary = opts && opts.library || libraryService.getSysMainInfo();
 
       modalService.open({
         template: 'common/modal/importBookmarksModal.tpl.html',
         scope: $scope
       });
 
-      importBookmarksMessageEvent = msgEvent;
+      importBookmarksMessageEvent = opts && opts.msgEvent;
     }
 
-    function initBookmarkFileUpload() {
+    function initBookmarkFileUpload(opts) {
       // Make sure file input is empty.
       var fileInput = $rootElement.find('.bookmark-file-upload');
       fileInput.replaceWith(fileInput = fileInput.clone(true));
 
-      // Display the Main Library as the default option.
-      $scope.importLibrary = libraryService.getSysMainInfo();
+      $scope.importLibrary = opts && opts.library || libraryService.getSysMainInfo();
 
       modalService.open({
         template: 'common/modal/importBookmarkFileModal.tpl.html',
@@ -66,13 +66,13 @@ angular.module('kifi')
       });
     }
 
-    var deregisterGlobalModal = $rootScope.$on('showGlobalModal', function (e, modal) {
+    var deregisterGlobalModal = $rootScope.$on('showGlobalModal', function (e, modal, opts) {
       switch (modal) {
         case 'importBookmarks':
-          initBookmarkImport.apply(null, Array.prototype.slice(arguments, 2));
+          initBookmarkImport(opts);
           break;
         case 'importBookmarkFile':
-          initBookmarkFileUpload();
+          initBookmarkFileUpload(opts);
           break;
       }
     });

@@ -124,7 +124,13 @@ case class ProdDiscoveryModule() extends DiscoveryModule with Logging {
 
   @Singleton
   @Provides
-  def myAmazonInstanceInfo(info: AmazonInstanceInfo, serviceType: ServiceType): MyInstanceInfo = MyInstanceInfo(info, serviceType)
+  def myAmazonInstanceInfo(info: AmazonInstanceInfo, serviceType: ServiceType, airbrake: AirbrakeNotifier): MyInstanceInfo = {
+    val myInstanceInfo = MyInstanceInfo(info, serviceType)
+    if (myInstanceInfo.info.instantTypeInfo == AmazonInstanceType.UNKNOWN) {
+      airbrake.notify(s"Unknown machine type for current instance: $myInstanceInfo")
+    }
+    myInstanceInfo
+  }
 
   @Singleton
   @Provides
@@ -183,6 +189,7 @@ abstract class LocalDiscoveryModule(serviceType: ServiceType) extends DiscoveryM
       def serviceCluster(serviceType: ServiceType): ServiceCluster = if (availableServices.contains(serviceType)) cluster else throw new UnknownServiceException(s"DiscoveryService is not listening to service $serviceType.")
       def register() = thisInstance.get
       def isLeader() = true
+      def instancesInCluster: Seq[ServiceInstance] = Seq(thisInstance.get)
       def isRunnerFor(taskName: String) = true
       def changeStatus(newStatus: ServiceStatus): Unit = { state = Some(newStatus) }
       def startSelfCheck(): Future[Boolean] = Promise[Boolean].success(true).future

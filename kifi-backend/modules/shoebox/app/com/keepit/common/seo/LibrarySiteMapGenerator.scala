@@ -86,7 +86,8 @@ class LibrarySiteMapGenerator @Inject() (
       } // cached
       val libs = db.readOnlyReplica { implicit ro =>
         libraries.filter { lib =>
-          owners.get(lib.ownerId).isDefined && keepsInRepo(lib) > 3 // proxy for quality; need bulk version
+          // proxy for quality; need bulk version. Library itself has a no-index with stricter rules
+          owners.get(lib.ownerId).isDefined && keepsInRepo(lib) > 1
         }
       }
 

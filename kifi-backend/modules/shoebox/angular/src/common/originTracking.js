@@ -19,10 +19,7 @@ angular.module('kifi')
 
       applyAndClear: function (obj) {
         if (!pageOrigin) {
-          pageOrigin = pageOrigins[initParams.o];
-          if (pageOrigin) {
-            delete initParams.o;
-          }
+          pageOrigin = pageOrigins[initParams.getAndClear('o')];
         }
         if (pageOrigin) {
           var parts = pageOrigin.split('/');
