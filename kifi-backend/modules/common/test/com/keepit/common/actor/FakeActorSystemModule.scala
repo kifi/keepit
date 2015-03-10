@@ -26,6 +26,7 @@ case class FakeSchedulerModule() extends ScalaModule {
   @Provides
   def globalSchedulingEnabled: SchedulingProperties =
     new SchedulingProperties {
+      def isRunnerFor(taskName: String) = true
       def enabled = false
       def enabledOnlyForLeader = false
       def enabledOnlyForOneMachine(taskName: String) = false
