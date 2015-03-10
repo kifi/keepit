@@ -779,13 +779,13 @@ a, .avatars li, img, .tabs_nav li {
 }
 
 
-.page.claim-account {
+.page.claim-account, .page.account-not-found {
   margin-top: 155px;
   margin-bottom: 155px;
   text-align: center;
 }
 
-.ca-h2 {
+.ca-h2, .anf-h2 {
   color: #aaa;
   font-size: 1.7em;
 }
@@ -815,6 +815,11 @@ a, .avatars li, img, .tabs_nav li {
 }
 .ca-action #login-btn {
   float: left;
+}
+
+.anf-btn {
+  margin-left: 15px;
+  margin-right: 15px;
 }
 
 /* Modal Stylings */
@@ -1244,7 +1249,7 @@ a, .avatars li, img, .tabs_nav li {
   .page.signup {
     margin-top: 30px;
   }
-  .page.claim-account {
+  .page.claim-account, .page.account-not-found {
     margin-top: 30px;
   }
 }
