@@ -87,7 +87,6 @@ angular.module('kifi')
       this.description = library.description;
       this.color = library.color;
       this.image = library.image;
-      this.imageUrl = library.image ? routeService.libraryImageUrl(library.image.path) : null;
       this.path = '/' + library.owner.username + '/' + library.slug;
       this.reason = reason;
       this.followers = library.followers;

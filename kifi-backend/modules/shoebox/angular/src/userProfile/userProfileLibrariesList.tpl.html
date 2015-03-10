@@ -9,7 +9,7 @@
     <a class="kf-upl-card-link" href="{{lib.path}}" ng-click="trackUplCardClick(lib, 'clickedLibraryTitle')">
       <div class="kf-upl-card-icon" ng-class="{system_main: 'kf-sys svg-card-star', system_secret: 'kf-sys svg-card-lock'}[lib.kind] || 'kf-user svg-card-lock'" ng-if="(lib.visibility === 'secret' && lib.owner.id === me.id) || lib.kind === 'system_main'"></div>
       <div class="kf-upl-card-cover">
-        <div class="kf-upl-card-cover-image" ng-attr-style="background-image:url({{lib.imageUrl}});background-position:{{lib.image.x}}% {{lib.image.y}}%" ng-if="lib.image"></div>
+        <div class="kf-upl-card-cover-image" style="{{lib.image|bgImageAndPos}}" ng-if="lib.image"></div>
       </div>
       <div class="kf-upl-card-name-align">
         <div class="kf-upl-card-name">

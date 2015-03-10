@@ -31,7 +31,6 @@ angular.module('kifi')
       owner = lib.owner || owner;
       lib.path = '/' + owner.username + '/' + lib.slug;
       lib.owner = owner;
-      lib.imageUrl = lib.image ? routeService.libraryImageUrl(lib.image.path) : null;
       if (lib.following == null && following != null) {
         lib.following = following;
       }
