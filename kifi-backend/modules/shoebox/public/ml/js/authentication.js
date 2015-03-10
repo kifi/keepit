@@ -325,7 +325,7 @@ $(function() {
     });
     return false;
   };
-  $('.reset-password-button').click(kifi.resetPassword);
+  $('.form-reset-password').submit(kifi.resetPassword);
 
   //
   // Modal Functions
