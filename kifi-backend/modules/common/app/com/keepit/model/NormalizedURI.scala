@@ -55,6 +55,7 @@ object NormalizedURI {
   )
 
   val TitleMaxLen = 2040
+  val UrlMaxLen = 3000
 
   val handleDeprecatedScrapeWantedState: State[NormalizedURI] => State[NormalizedURI] = {
     case State("scrape_wanted") => NormalizedURIStates.ACTIVE

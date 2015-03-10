@@ -11,6 +11,7 @@ trait SchedulingProperties {
   //method returns true if schedualing is enabled and the instance is the leader
   def enabledOnlyForLeader: Boolean
   def enabledOnlyForOneMachine(taskName: String): Boolean
+  def isRunnerFor(taskName: String): Boolean
 }
 
 class SchedulingPropertiesImpl(serviceDiscovery: ServiceDiscovery, val enabled: Boolean = true) extends SchedulingProperties with Logging {

@@ -8,6 +8,7 @@ import com.keepit.common.db.{ State, Id, SequenceNumber }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
+import com.keepit.common.plugin.SchedulingProperties
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.curator.model._
 import com.keepit.curator.{ LibraryQualityHelper, LibraryScoringHelper, ScoredLibraryInfo }
@@ -30,7 +31,7 @@ class LibraryRecommendationGenerationCommander @Inject() (
     analytics: CuratorAnalytics,
     libraryQualityHelper: LibraryQualityHelper,
     seedCommander: SeedIngestionCommander,
-    serviceDiscovery: ServiceDiscovery) extends Logging {
+    schedulingProperties: SchedulingProperties) extends Logging {
 
   val recommendationGenerationLock = new ReactiveLock(4)
   val defaultLibraryScoreParams = LibraryRecoSelectionParams.default
@@ -131,7 +132,7 @@ class LibraryRecommendationGenerationCommander @Inject() (
     }
 
     private def precomputeRecommendationsForUser(alwaysInclude: Set[Id[Library]], recoGenState: LibraryRecommendationGenerationState): Future[Unit] = {
-      if (serviceDiscovery.isRunnerFor(CuratorTasks.libraryRecommendationPrecomputation)) {
+      if (schedulingProperties.isRunnerFor(CuratorTasks.libraryRecommendationPrecomputation)) {
         log.info(s"precomputeRecommendationsForUser called userId=$userId seq=${recoGenState.seq}")
         val (candidateLibraries, excludedLibraries, newSeqNum) = getCandidateLibrariesForUser(recoGenState)
 
