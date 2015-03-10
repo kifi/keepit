@@ -282,6 +282,49 @@ $(function() {
   };
   $('.signup-email').submit(kifi.signupGetEmail);
 
+  kifi.resetPassword = function (e) {
+    e.preventDefault();
+    var $form = $('.form-reset-password');
+    var $passwordInputs = $form.find('.form-input');
+    var $password1 = $passwordInputs.eq(0);
+    var $password2 = $passwordInputs.eq(1);
+
+    var validPw1 = validatePassword($password1, $form.find('#error-reset-password1'), 'resetPassword');
+    if (!validPw1) {
+      return;
+    }
+    var validPw2 = validatePassword($password2, $form.find('#error-reset-password2'), 'resetPassword');
+    if (!validPw2) {
+      return;
+    }
+
+    if (validPw1 !== validPw2) {
+      var errorField = $form.find('#error-reset-password2');
+      var inputField = $form.find('.form-input').eq(0);
+      errorPasswordsDoNotMatch(errorField, inputField);
+      return;
+    }
+
+    var action = $form[0].action;
+    var code = $form[0].getAttribute('data-code');
+
+    $.postJson(action, {
+      code: code,
+      password: validPw1
+    }).done(function (data) {
+      if (data.uri) { // successes return: {success: true}
+        window.location = data.uri;
+      } else {
+        window.location = '/'; // todo: best location for success?
+      }
+    }).fail(function (xhr) {
+      var body = xhr.responseJSON || {};
+      var $firstPw = $('.form-input').eq(0);
+      errorUnknown($('#error-reset-password1'), $firstPw, 'resetPassword');
+    });
+    return false;
+  };
+  $('.reset-password-button').click(kifi.resetPassword);
 
   //
   // Modal Functions
@@ -436,6 +479,10 @@ $(function() {
   function errorImageFile($errorField, $inputField) {
     Tracker.track('visitor_viewed_page', { type: 'signup2Email', error: 'invalidImageFile' });
     error($errorField, 'Image upload failed.<br>Please use a different image', $inputField);
+  }
+  function errorPasswordsDoNotMatch($errorField, $inputField) {
+    // TRACK
+    error($errorField, 'Passwords do not match. Please try again', $inputField);
   }
 
 

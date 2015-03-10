@@ -779,7 +779,9 @@ a, .avatars li, img, .tabs_nav li {
 }
 
 
-.page.claim-account, .page.account-not-found {
+.page.claim-account,
+.page.account-not-found,
+.page.reset-password {
   margin-top: 155px;
   margin-bottom: 155px;
   text-align: center;
@@ -820,6 +822,25 @@ a, .avatars li, img, .tabs_nav li {
 .anf-btn {
   margin-left: 15px;
   margin-right: 15px;
+}
+
+
+.form-reset-password {
+  margin: 10px auto;
+  width: 300px;
+}
+
+.reset-password-button {
+  margin-top: 10px;
+  padding: 10px 30px;
+  outline: none;
+  border: none;
+  background-color: #2CB4E9;
+  color: white;
+  border-radius: 5px;
+}
+.reset-password-button:hover {
+  background-color: #3ebaeb;
 }
 
 /* Modal Stylings */
@@ -1251,7 +1272,9 @@ a, .avatars li, img, .tabs_nav li {
   .page.signup {
     margin-top: 30px;
   }
-  .page.claim-account, .page.account-not-found {
+  .page.claim-account,
+  .page.account-not-found,
+  .page.reset-password {
     margin-top: 30px;
   }
 }
