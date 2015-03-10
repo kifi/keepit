@@ -817,6 +817,11 @@ a, .avatars li, img, .tabs_nav li {
   float: left;
 }
 
+.anf-btn {
+  margin-left: 15px;
+  margin-right: 15px;
+}
+
 /* Modal Stylings */
 .modal-overlay {
   position: fixed;
