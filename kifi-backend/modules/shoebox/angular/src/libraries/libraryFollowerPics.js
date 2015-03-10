@@ -19,7 +19,7 @@ angular.module('kifi')
         var isMobile = platformService.isSupportedMobilePlatform();
 
         function adjustFollowerPicsSize() {
-          var n = scope.numFollowers;
+          var n = Math.max(scope.numFollowers, scope.followers.length);  // tolerating incorrect numFollowers
           var maxWidth = element[0].offsetWidth;
           var picWidth = isMobile ? 110 : 50;
 
