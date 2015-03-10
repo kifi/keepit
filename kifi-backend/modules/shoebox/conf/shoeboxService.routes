@@ -84,6 +84,14 @@ POST    /extmsg/email/mute          @com.keepit.controllers.website.EmailNonUser
 
 GET     /get                        @com.keepit.controllers.website.HomeController.get()
 
+
+##########################################
+# Special projects
+##########################################
+
+GET     /site/twitterQueuePosition  @com.keepit.controllers.website.TwitterWaitlistController.getFakeWaitlistPosition()
+
+
 POST    /sms                        @com.keepit.controllers.website.HomeController.sendSmsToGetKifi()
 
 ##########################################
