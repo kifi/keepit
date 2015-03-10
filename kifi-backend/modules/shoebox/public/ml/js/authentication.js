@@ -17,6 +17,7 @@ $(function() {
   $('.forgot-password-link').click(showForgotPasswordModal);
   $('.forgot-password-modal .modal-x').click(resetForgotPasswordModal);
   $('.forgot-password-modal .fp-form .modal-button-cancel').click(resetForgotPasswordModal);
+  $('.forgot-password-modal .modal-button-close').click(resetForgotPasswordModal);
   $('.forgot-password-modal .fp-form').submit(submitForgotPassword);
 
 
@@ -134,8 +135,8 @@ $(function() {
       return;
     }
     var form = this;
+    var animation = animateButton($('.btn-authentication'));
     $.when(photoUpload && photoUpload.promise).always(function (upload) {
-      var animation = animateButton($('.btn-authentication'));
       $.postJson(form.action, {
         firstName: validFirstName,
         lastName: validLastName,
@@ -330,12 +331,14 @@ $(function() {
     return false;
   }
 
-  function resetForgotPasswordModal(ev) {
-    hideModal();
+  function resetForgotPasswordModal() {
     hideError();
+    hideModal();
     var modal = $('.forgot-password-modal');
-    modal.find('.fp-form').show();
-    modal.find('.fp-success').hide();
+    setTimeout(function () {
+      modal.find('.fp-success').hide();
+      modal.find('.fp-form').show();
+    }, 400);
   }
 
 

@@ -2,6 +2,7 @@ package com.keepit.common.plugin
 
 import com.keepit.common.performance._
 import com.keepit.common.logging.Logging
+import com.keepit.common.service.ServiceStatus
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.actor.ActorInstance
@@ -10,21 +11,8 @@ import akka.actor.{ ActorSystem, Cancellable, ActorRef }
 import play.api.Plugin
 
 import us.theatr.akka.quartz._
-import com.keepit.common.zookeeper.ServiceDiscovery
+import com.keepit.common.zookeeper.{ ServiceInstance, ServiceDiscovery }
 import scala.collection.mutable.ListBuffer
-
-trait SchedulingProperties {
-  def enabled: Boolean
-  //bad name, can you think of anything else?
-  //method returns true if schedualing is enabled and the instance is the leader
-  def enabledOnlyForLeader: Boolean
-  def enabledOnlyForOneMachine(taskName: String): Boolean
-}
-
-class SchedulingPropertiesImpl(serviceDiscovery: ServiceDiscovery, val enabled: Boolean = true) extends SchedulingProperties {
-  def enabledOnlyForLeader: Boolean = enabled && serviceDiscovery.isLeader()
-  def enabledOnlyForOneMachine(taskName: String): Boolean = enabled && serviceDiscovery.isRunnerFor(taskName)
-}
 
 case class NamedCancellable(underlying: Cancellable, taskName: String) extends Cancellable {
   def name() = taskName
