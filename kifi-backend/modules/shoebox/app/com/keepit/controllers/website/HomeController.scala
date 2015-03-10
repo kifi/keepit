@@ -157,7 +157,7 @@ class HomeController @Inject() (
       if (!agent.canRunExtensionIfUpToDate) {
         Some(AngularDistAssets.angularApp())
       } else None
-    }.flatten.getOrElse(Ok(views.html.website.install(request.user)))
+    }.flatten.getOrElse(Ok(views.html.authMinimal.install()))
   }
 
   // todo: move this to UserController
