@@ -134,7 +134,6 @@ $(function() {
       return;
     }
     var form = this;
-
     $.when(photoUpload && photoUpload.promise).always(function (upload) {
       var animation = animateButton($('.btn-authentication'));
       $.postJson(form.action, {
@@ -152,7 +151,7 @@ $(function() {
       }).fail(function (xhr) {
         animation.fail();
         var $form = $('.form-input.first-name');
-        errorUnknown('#signup-firstname', $form, 'signup2Email');
+        errorUnknown($('#signup-firstname'), $form, 'signup2Email');
       });
     });
 
@@ -478,9 +477,9 @@ $(function() {
       if (this) {
         this.style.width = Math.min(frac * 100, 100) + '%';
         if (frac < 1) {
-          var delta = Math.min(.01 * (.9 - frac), 0.005);
+          var delta = Math.min(.01 * (.9 - frac), 0.05);
           if (delta > 0.0001) {
-            progressTimeout = setTimeout(updateProgress.bind(this, frac + delta), 10);
+            progressTimeout = setTimeout(updateProgress.bind(this, frac + delta), 20);
           }
         }
       }
