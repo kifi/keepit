@@ -112,10 +112,10 @@ class LibraryCommander @Inject() (
   }
 
   def getLibrarySummaries(libraryIds: Seq[Id[Library]]): Seq[LibraryInfo] = {
-    db.readOnlyReplica { implicit session =>
-      val librariesById = libraryRepo.getLibraries(libraryIds.toSet)
-      val ownersById = basicUserRepo.loadAll(librariesById.values.map(_.ownerId).toSet)
-      val keepCountsByLibraryId = keepRepo.getCountsByLibrary(libraryIds.toSet).withDefaultValue(0)
+    db.readOnlyMaster { implicit session =>
+      val librariesById = libraryRepo.getLibraries(libraryIds.toSet) // cached
+      val ownersById = basicUserRepo.loadAll(librariesById.values.map(_.ownerId).toSet) // cached
+      val keepCountsByLibraryId = keepRepo.getCountsByLibrary(libraryIds.toSet).withDefaultValue(0) // cached
       libraryIds.map { libId =>
         val library = librariesById(libId)
         val owner = ownersById(library.ownerId)
@@ -140,8 +140,9 @@ class LibraryCommander @Inject() (
 
   def getLibrarySummaryAndMembership(userIdOpt: Option[Id[User]], libraryId: Id[Library]): (LibraryInfo, Option[LibraryMembership]) = {
     val Seq(libInfo) = getLibrarySummaries(Seq(libraryId))
+    val imageOpt = libraryImageCommander.getBestImageForLibrary(libraryId, ProcessedImageSize.Medium.idealSize).map(LibraryImageInfo.createInfo)
     val memOpt = getMaybeMembership(userIdOpt, libraryId)
-    (libInfo, memOpt)
+    (libInfo.copy(image = imageOpt), memOpt)
   }
 
   def getLibraryWithOwnerAndCounts(libraryId: Id[Library], viewerUserId: Id[User]): Either[LibraryFail, (Library, BasicUser, Int, Int, Option[Boolean])] = {
