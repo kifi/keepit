@@ -247,6 +247,7 @@ $(function() {
     }
     var $first = $form.find('.form-first-name');
     var $last = $form.find('.form-last-name');
+    var animation = animateButton($('.btn-authentication'));
 
     $.postJson(this.action, {
       email: validEmail,
@@ -255,10 +256,13 @@ $(function() {
     }).done(function (data) {
       if (data.uri) { // successes return: {success: true}
         window.location = data.uri;
+        animation.update(1);
+        animation.success();
       } else {
         window.location = '/'; // todo: best location for success?
       }
     }).fail(function (xhr) {
+      animation.fail();
       var body = xhr.responseJSON || {};
       var $form = $('.form-input.email');
       if (body.error === 'error.email') {
@@ -306,12 +310,9 @@ $(function() {
       return;
     }
     // make request
-    var animation = animateButton($('.btn-authentication'));
     var actionUri = $('.fp-form')[0].action;
     $.postJson(actionUri, {email: validEmail})
     .done(function () {
-      animation.update(1);
-      animation.success();
       // show success pane, hide original pane
       var modal = $('.forgot-password-modal');
       modal.find('.fp-address').html(validEmail);
@@ -319,7 +320,6 @@ $(function() {
       modal.find('.fp-success').show();
     })
     .fail(function (xhr) { // errors: no_account
-      animation.fail();
       var body = xhr.responseJSON || {};
       if (body.error === 'no_account') {
         errorUnrecognizedEmail($('#error-fp'), $('.fp-input'), trackingType);

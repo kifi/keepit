@@ -18,7 +18,7 @@
 
       <form class="login-form login-email-pass" method="POST" action="@authRoutes.logInWithUserPass()">
         <div class="input-wrapper">
-          <input type="email" name="email" class="form-input login-email" placeholder="@email">
+          <input type="email" name="email" class="form-input login-email" placeholder="@email" value="@email">
           <div id="error-login-email" class="error"></div>
         </div>
         <div class="input-wrapper">
@@ -68,6 +68,6 @@
   <script src="/assets/ml/js/authentication.js"></script>
 }
 
-@minimal.layout(title = "Kifi | Claim Account", content = content, htmlClass = "signup-page", headHtml = headHtml, scripts = scripts, footerClass = "join", dataTrack = "claimAccount")
+@minimal.layout(title = "Kifi | Link Social Account", content = content, htmlClass = "signup-page", headHtml = headHtml, scripts = scripts, footerClass = "join", dataTrack = "linkSocial")
 
 

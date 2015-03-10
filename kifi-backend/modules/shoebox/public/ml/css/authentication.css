@@ -934,7 +934,8 @@ a, .avatars li, img, .tabs_nav li {
   bottom: 0;
   width: 0;
   height: 100%;
-  border-radius: 5px;
+  border-top-left-radius: 5px;
+  border-bottom-left-radius: 5px;
   background: #2D77B9;
 }
 
