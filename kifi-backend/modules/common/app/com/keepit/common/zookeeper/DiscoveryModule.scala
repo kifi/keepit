@@ -189,6 +189,7 @@ abstract class LocalDiscoveryModule(serviceType: ServiceType) extends DiscoveryM
       def serviceCluster(serviceType: ServiceType): ServiceCluster = if (availableServices.contains(serviceType)) cluster else throw new UnknownServiceException(s"DiscoveryService is not listening to service $serviceType.")
       def register() = thisInstance.get
       def isLeader() = true
+      def instancesInCluster: Seq[ServiceInstance] = Seq(thisInstance.get)
       def isRunnerFor(taskName: String) = true
       def changeStatus(newStatus: ServiceStatus): Unit = { state = Some(newStatus) }
       def startSelfCheck(): Future[Boolean] = Promise[Boolean].success(true).future
