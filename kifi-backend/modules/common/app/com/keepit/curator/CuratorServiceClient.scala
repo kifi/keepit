@@ -98,7 +98,7 @@ class CuratorServiceClientImpl(
 
   def topLibraryRecos(userId: Id[User], limit: Option[Int] = None, context: Option[String]): Future[LibraryRecoResults] = {
     val payload = Json.obj("context" -> JsString(context.getOrElse("")))
-    call(Curator.internal.topLibraryRecos(userId, limit, context), payload).map { response =>
+    call(Curator.internal.topLibraryRecos(userId, limit), payload).map { response =>
       val js = response.json
       js.validate[LibraryRecoResults] match {
         case res: JsSuccess[LibraryRecoResults] => res.get
