@@ -263,6 +263,7 @@ GET     /m/1/keeps/:id                      @com.keepit.controllers.mobile.Mobil
 
 GET     /                           @com.keepit.controllers.website.HomeController.home
 GET     /robots.txt                 @com.keepit.controllers.website.HomeController.robots
+GET     /google6de4ad16957106ef.html @com.keepit.controllers.website.HomeController.googleWebmasterToolsSiteVerification
 GET     /blog                       @com.keepit.controllers.website.HomeController.moved(uri = "http://blog.kifi.com")
 GET     /blog/                      @com.keepit.controllers.website.HomeController.moved(uri = "http://blog.kifi.com")
 GET     /about                      @com.keepit.controllers.website.HomeController.route(path = "about")
