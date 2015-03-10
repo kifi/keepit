@@ -560,13 +560,13 @@ class AuthController @Inject() (
     db.readWrite { implicit s =>
       passwordResetRepo.getByToken(code) match {
         case Some(pr) if passwordResetRepo.tokenIsNotExpired(pr) =>
-          Ok(views.html.auth.setPassword(code = code))
+          Ok(views.html.authMinimal.resetPassword(code = code))
         case Some(pr) if pr.state == PasswordResetStates.ACTIVE || pr.state == PasswordResetStates.INACTIVE =>
-          Ok(views.html.auth.setPassword(error = "expired"))
+          Ok(views.html.authMinimal.resetPassword(error = "expired"))
         case Some(pr) if pr.state == PasswordResetStates.USED =>
-          Ok(views.html.auth.setPassword(error = "already_used"))
+          Ok(views.html.authMinimal.resetPassword(error = "already_used"))
         case _ =>
-          Ok(views.html.auth.setPassword(error = "invalid_code"))
+          Ok(views.html.authMinimal.resetPassword(error = "invalid_code"))
       }
     }
   }
