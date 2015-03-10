@@ -95,6 +95,10 @@ class HomeController @Inject() (
       """.stripMargin)
   }
 
+  def googleWebmasterToolsSiteVerification = Action {
+    Ok(Html("google-site-verification: google6de4ad16957106ef.html"))
+  }
+
   def getKeepsCount = Action.async {
     keepsCommander.getKeepsCountFuture() imap { count =>
       Ok(count.toString)
