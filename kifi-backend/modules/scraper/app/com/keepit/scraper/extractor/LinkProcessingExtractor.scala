@@ -3,7 +3,7 @@ package com.keepit.scraper.extractor
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.net.URI
 import com.keepit.model.HttpProxy
-import com.keepit.rover.fetcher.DeprecatedHttpFetcher
+import com.keepit.rover.fetcher.{ FetchRequest, DeprecatedHttpFetcher }
 import com.keepit.scraper.ScraperConfig
 import com.keepit.shoebox.ShoeboxScraperClient
 import org.apache.tika.parser.html.HtmlMapper
@@ -39,7 +39,7 @@ class LinkProcessingExtractor(
         log.info(s"Scraping additional content from link ${linkUrl} for url ${url}")
         val extractor = new DefaultExtractor(URI.parse(linkUrl).get, maxContentChars, htmlMapper)
         val proxy = syncGetProxyP(url)
-        httpFetcher.fetch(URI.parse(linkUrl).get, proxy = proxy)(extractor.process)
+        httpFetcher.fetch(FetchRequest(linkUrl, proxy = proxy))(extractor.process)
         val content = extractor.getContent
         val keywords = extractor.getKeywords
         log.info(s"Scraped additional content from link ${linkUrl} for url ${url}: time-lapsed:${System.currentTimeMillis - ts} content.len=${content.length} keywords=$keywords")

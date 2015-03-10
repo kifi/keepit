@@ -6,7 +6,7 @@ import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.net.{ Host, URI }
 import com.keepit.model.HttpProxy
 import com.keepit.rover.article.{ YoutubeTrackInfo, YoutubeTrack }
-import com.keepit.rover.fetcher.DeprecatedHttpFetcher
+import com.keepit.rover.fetcher.{ FetchRequest, DeprecatedHttpFetcher }
 import com.keepit.scraper.ScraperConfig
 import com.keepit.search.Lang
 import com.keepit.shoebox.ShoeboxScraperClient
@@ -57,9 +57,9 @@ class YoutubeExtractor(url: URI, maxContentChars: Int, httpFetcher: DeprecatedHt
   }
 
   private def findTrack(ttsParameters: String): Option[YoutubeTrackInfo] = {
-    val trackListUrl = URI.parse("https://www.youtube.com/api/timedtext?asrs=1&type=list&tlangs=1&" + ttsParameters).get
+    val trackListUrl = "https://www.youtube.com/api/timedtext?asrs=1&type=list&tlangs=1&" + ttsParameters
     val trackListExtractor = new YoutubeTrackListExtractor(trackListUrl)
-    httpFetcher.fetch(trackListUrl, proxy = getProxy(url))(trackListExtractor.process)
+    httpFetcher.fetch(FetchRequest(trackListUrl, proxy = getProxy(url)))(trackListExtractor.process)
     val trackList = trackListExtractor.getTrackList()
     trackList.find(_.isDefault) orElse {
       trackList.find(_.isAutomatic).map(asr =>
@@ -81,7 +81,7 @@ class YoutubeExtractor(url: URI, maxContentChars: Int, httpFetcher: DeprecatedHt
     val trackExtractor = new JsoupBasedExtractor(trackUri, maxContentChars) {
       def parse(doc: Document): String = StringEscapeUtils.unescapeXml(doc.getElementsByTag("text").map(_.text).mkString(" "))
     }
-    httpFetcher.fetch(URI.parse(trackUrl).get, proxy = getProxy(url))(trackExtractor.process)
+    httpFetcher.fetch(FetchRequest(trackUrl, proxy = getProxy(url)))(trackExtractor.process)
     log.info(s"[getTrack] fetched ${(if (trackInfo.isDefault) "default " else "") + (if (trackInfo.isAutomatic) "automatic " else "") + trackInfo.langTranslated} closed captions for ${url}")
     YoutubeTrack(trackInfo, trackExtractor.getContent())
   }
@@ -92,7 +92,7 @@ class YoutubeExtractor(url: URI, maxContentChars: Int, httpFetcher: DeprecatedHt
   private[extractor] def syncGetProxyP(url: URI): Option[HttpProxy] = Await.result(getProxyP(url), 10 seconds)
 }
 
-class YoutubeTrackListExtractor(trackListUrl: URI) extends JsoupBasedExtractor(trackListUrl, Int.MaxValue) {
+class YoutubeTrackListExtractor(trackListUrl: String) extends JsoupBasedExtractor(URI.parse(trackListUrl).get, Int.MaxValue) {
   def parse(doc: Document): String = doc.getElementsByTag("track").toString
   def getTrackList(): Seq[YoutubeTrackInfo] = doc.getElementsByTag("track").map(parseTrackElement)
 

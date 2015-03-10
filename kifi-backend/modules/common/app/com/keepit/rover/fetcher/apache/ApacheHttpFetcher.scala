@@ -12,27 +12,21 @@ import com.keepit.common.service.RequestConsolidator
 import com.keepit.common.strings._
 import com.keepit.rover.fetcher._
 
-import com.keepit.common.time._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.net.{ URISanitizer, URI }
 import com.keepit.common.performance._
 import com.keepit.common.plugin.SchedulingProperties
-import com.keepit.model.HttpProxy
 import com.keepit.scraper._
 import org.apache.http.HttpHeaders._
 import org.apache.http._
-import org.apache.http.auth.{ AuthScope, UsernamePasswordCredentials }
 import org.apache.http.client.config.RequestConfig
 import org.apache.http.client.methods.{ CloseableHttpResponse, HttpGet }
-import org.apache.http.client.protocol.HttpClientContext
 import org.apache.http.config.RegistryBuilder
 import org.apache.http.conn.socket.{ ConnectionSocketFactory, PlainConnectionSocketFactory }
-import org.apache.http.impl.client.{ BasicCredentialsProvider, HttpClientBuilder }
+import org.apache.http.impl.client.HttpClientBuilder
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager
-import org.apache.http.protocol.{ HttpContext, BasicHttpContext }
+import org.apache.http.protocol.HttpContext
 import org.apache.http.util.EntityUtils
-import org.joda.time.DateTime
 import RedirectInterceptor._
 
 import scala.concurrent.Future
@@ -43,14 +37,6 @@ import scala.concurrent.duration._
 import org.apache.commons.io.IOUtils
 
 import com.keepit.rover.fetcher.{ DeprecatedFetcherHttpContext, HttpRedirect }
-import org.apache.http.protocol.{ HttpContext => ApacheHttpContext }
-
-object ApacheHttpFetcher {
-  private[apache] implicit class DeprecatedFetcherHttpContextAdaptor(context: ApacheHttpContext) extends DeprecatedFetcherHttpContext {
-    def destinationUrl: Option[String] = Option(context.getAttribute(scraperDestinationUrlAttribute).asInstanceOf[String])
-    def redirects: Seq[HttpRedirect] = Option(context.getAttribute(redirectsAttribute).asInstanceOf[Seq[HttpRedirect]]).getOrElse(Seq.empty[HttpRedirect])
-  }
-}
 
 // based on Apache HTTP Client (this one is blocking but feature-rich & flexible; see http://hc.apache.org/httpcomponents-client-ga/index.html)
 class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, connectionTimeout: Int, soTimeOut: Int, schedulingProperties: SchedulingProperties, scraperHttpConfig: ScraperHttpConfig) extends DeprecatedHttpFetcher with Logging with ScraperUtils {
@@ -76,13 +62,13 @@ class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, conne
     httpClientBuilder.build()
   }
 
-  private def logAndSet[T](fetchInfo: FetchInfo, ret: T)(t: Throwable, tag: String, ctx: String, notify: Boolean = false): T = {
+  private def logAndSet[T](fetchInfo: FetchExecutionInfo, ret: T)(t: Throwable, tag: String, ctx: String, notify: Boolean = false): T = {
     logErr(t, tag, ctx, notify)
     fetchInfo.exRef.set(t)
     ret
   }
 
-  val q = new ConcurrentLinkedQueue[WeakReference[FetchInfo]]()
+  val q = new ConcurrentLinkedQueue[WeakReference[FetchExecutionInfo]]()
   if (schedulingProperties.enabled) {
     val enforcer = {
       val Q_SIZE_THRESHOLD = scraperHttpConfig.httpFetcherQSizeThreshold
@@ -101,44 +87,16 @@ class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, conne
     scheduler.scheduleWithFixedDelay(enforcer, ENFORCER_FREQ, ENFORCER_FREQ, TimeUnit.SECONDS)
   }
 
-  private case class HttpFetchHandlerResult(responseOpt: Option[CloseableHttpResponse], fetchInfo: FetchInfo, httpGet: HttpGet, httpContext: HttpContext)
+  private case class HttpFetchHandlerResult(responseOpt: Option[CloseableHttpResponse], fetchInfo: FetchExecutionInfo, httpGet: HttpGet, httpContext: HttpContext)
   private object HttpFetchHandlerResult {
-    implicit def reponseOpt2HttpFetchHandlerResult(responseOpt: Option[CloseableHttpResponse])(implicit fetchInfo: FetchInfo, httpGet: HttpGet, httpContext: HttpContext): HttpFetchHandlerResult =
+    implicit def reponseOpt2HttpFetchHandlerResult(responseOpt: Option[CloseableHttpResponse])(implicit fetchInfo: FetchExecutionInfo, httpGet: HttpGet, httpContext: HttpContext): HttpFetchHandlerResult =
       HttpFetchHandlerResult(responseOpt, fetchInfo, httpGet, httpContext)
   }
 
-  private def fetchHandler(uri: URI, ifModifiedSince: Option[DateTime] = None, proxy: Option[HttpProxy] = None, disableGzip: Boolean = false): HttpFetchHandlerResult = {
-    if (uri.host.isEmpty) throw new IllegalArgumentException(s"url $uri has no host!")
-    val url = uri.toString()
-    implicit val httpGet = {
-      try { new HttpGet(url) } catch {
-        case _: Exception => new HttpGet(URISanitizer.sanitize(url)) // try sanitized version of URL as a fallback
-      }
-    }
-    implicit val httpContext = new BasicHttpContext()
-
-    proxy.map { httpProxy =>
-      val requestConfigWithProxy = RequestConfig.copy(defaultRequestConfig).setProxy(new HttpHost(httpProxy.hostname, httpProxy.port, httpProxy.scheme)).build()
-      httpGet.setConfig(requestConfigWithProxy)
-      for {
-        user <- httpProxy.username
-        password <- httpProxy.password
-      } yield {
-        val credentials = new BasicCredentialsProvider()
-        credentials.setCredentials(new AuthScope(httpProxy.hostname, httpProxy.port), new UsernamePasswordCredentials(user, password))
-        httpContext.setAttribute(HttpClientContext.CREDS_PROVIDER, credentials)
-      }
-    }
-
-    ifModifiedSince.foreach { ifModifiedSince =>
-      httpGet.addHeader(IF_MODIFIED_SINCE, ifModifiedSince.toHttpHeaderString)
-    }
-
-    httpContext.setAttribute("scraper_destination_url", url)
-    httpContext.setAttribute("redirects", Seq.empty[HttpRedirect])
-
-    if (disableGzip) httpGet.addHeader(ACCEPT_ENCODING, "")
-    implicit val fetchInfo = FetchInfo(url, System.currentTimeMillis, httpGet, Thread.currentThread()) // pass this up
+  private def fetchHandler(request: FetchRequest, disableGzip: Boolean = false): HttpFetchHandlerResult = {
+    implicit val ApacheFetchRequest(httpGet, httpContext) = ApacheFetchRequest(request, defaultRequestConfig, disableGzip)
+    val url = httpGet.getURI.toString
+    implicit val fetchInfo = FetchExecutionInfo(url, System.currentTimeMillis, httpGet, Thread.currentThread()) // pass this up
     try {
       q.offer(WeakReference(fetchInfo))
       val response = timingWithResult[CloseableHttpResponse](s"fetch($url).execute", { r: CloseableHttpResponse => r.getStatusLine.toString }) {
@@ -151,7 +109,7 @@ class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, conne
     } catch {
       case e: ZipException => if (disableGzip) logAndSet(fetchInfo, None)(e, "fetch", url, true)
 
-      else fetchHandler(uri, ifModifiedSince, proxy, true) // Retry with gzip compression disabled
+      else fetchHandler(request, true) // Retry with gzip compression disabled
       case e @ (_: IOException | _: GeneralSecurityException) => logAndSet(fetchInfo, None)(e, "fetch", url)
       case e: NullPointerException => logAndSet(fetchInfo, None)(e, "fetch", url) //can happen on BrowserCompatSpec.formatCookies
       case t: Throwable => logAndSet(fetchInfo, None)(t, "fetch", url, true)
@@ -160,13 +118,13 @@ class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, conne
     }
   }
 
-  def fetch(url: URI, ifModifiedSince: Option[DateTime] = None, proxy: Option[HttpProxy] = None)(f: HttpInputStream => Unit): DeprecatedHttpFetchStatus = timing(s"HttpFetcher.fetch($url) ${proxy.map { p => s" via ${p.alias}" }.getOrElse("")}") {
-    val HttpFetchHandlerResult(responseOpt, fetchInfo, httpGet, httpContext) = fetchHandler(url, ifModifiedSince, proxy)
+  def fetch(request: FetchRequest)(f: HttpInputStream => Unit): DeprecatedHttpFetchStatus = timing(s"HttpFetcher.fetch(${request.url} ${request.proxy.map { p => s" via ${p.alias}" }.getOrElse("")}") {
+    val HttpFetchHandlerResult(responseOpt, fetchInfo, httpGet, httpContext) = fetchHandler(request)
     responseOpt match {
       case None =>
-        DeprecatedHttpFetchStatus(HttpStatus.SC_BAD_REQUEST, Some(s"fetch request ($url) FAILED to execute ($fetchInfo)"), httpContext)
+        DeprecatedHttpFetchStatus(HttpStatus.SC_BAD_REQUEST, Some(s"fetch request ($request) FAILED to execute ($fetchInfo)"), httpContext)
       case Some(response) if httpGet.isAborted =>
-        DeprecatedHttpFetchStatus(HttpStatus.SC_BAD_REQUEST, Some(s"fetch request ($url) has been ABORTED ($fetchInfo)"), httpContext)
+        DeprecatedHttpFetchStatus(HttpStatus.SC_BAD_REQUEST, Some(s"fetch request ($request) has been ABORTED ($fetchInfo)"), httpContext)
       case Some(response) => {
         val statusCode = response.getStatusLine.getStatusCode
         val entity = response.getEntity
@@ -181,12 +139,12 @@ class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, conne
             httpInputStream match {
               case Success(input) =>
                 try {
-                  consumeInput(statusCode, input, httpContext, url, response, httpGet, entity, f)
+                  consumeInput(statusCode, input, httpContext, request.url, response, httpGet, entity, f)
                 } finally {
                   Try(input.close())
                 }
               case Failure(error) =>
-                log.error(s"error getting content for $url", error)
+                log.error(s"error getting content for $request", error)
                 DeprecatedHttpFetchStatus(-1, Some(error.toString), httpContext)
             }
           } finally {
@@ -196,7 +154,7 @@ class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, conne
           httpGet.abort()
           statusCode match {
             case HttpStatus.SC_OK =>
-              log.info(s"request failed, no entity found: [${response.getStatusLine().toString()}][$url]")
+              log.info(s"request failed, no entity found: [${response.getStatusLine().toString()}][$request]")
               DeprecatedHttpFetchStatus(-1, Some("no entity found"), httpContext)
             case HttpStatus.SC_NOT_MODIFIED =>
               DeprecatedHttpFetchStatus(statusCode, None, httpContext)
@@ -205,7 +163,7 @@ class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, conne
                 case Some(e) => IOUtils.toString(new HttpInputStream(e.getContent, None), UTF8).abbreviate(1000)
                 case None => "null content entity"
               }
-              log.info(s"request failed while parsing response, bad error code: [${response.getStatusLine().toString()}][$url] with content: $content")
+              log.info(s"request failed while parsing response, bad error code: [${response.getStatusLine().toString()}][$request] with content: $content")
               DeprecatedHttpFetchStatus(statusCode, Some(s"${response.getStatusLine.toString} : $content"), httpContext)
           }
         }
@@ -213,7 +171,7 @@ class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, conne
     }
   }
 
-  private def consumeInput(statusCode: Int, input: HttpInputStream, httpContext: HttpContext, url: URI,
+  private def consumeInput(statusCode: Int, input: HttpInputStream, httpContext: HttpContext, url: String,
     response: CloseableHttpResponse, httpGet: HttpGet, entity: HttpEntity, f: HttpInputStream => Unit): DeprecatedHttpFetchStatus = {
     try {
       statusCode match {
@@ -238,36 +196,44 @@ class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, conne
     }
   }
 
-  private lazy val consolidateFetch = new RequestConsolidator[URI, DeprecatedHttpFetchStatus](5 minutes)
+  private lazy val consolidateFetch = new RequestConsolidator[FetchRequest, DeprecatedHttpFetchStatus](5 minutes)
 
-  def get(url: URI, ifModifiedSince: Option[DateTime], proxy: Option[HttpProxy])(f: (HttpInputStream) => Unit): Future[DeprecatedHttpFetchStatus] = consolidateFetch(url) { url =>
-    SafeFuture {
-      try {
-        fetch(url, ifModifiedSince, proxy)(f)
-      } catch {
-        case eof: EOFException =>
-          val msg = s"EOF on fetching url [$url] if modified since [$ifModifiedSince] using proxy [$proxy]"
-          log.warn(msg, eof)
-          DeprecatedHttpFetchStatus(statusCode = 500, message = Some(msg), context = new DeprecatedFetcherHttpContext() { def redirects = Seq[HttpRedirect](); def destinationUrl = None })
-        case ste: SocketException =>
-          val msg = s"SocketException on fetching url [$url] if modified since [$ifModifiedSince] using proxy [$proxy]"
-          log.warn(msg, ste)
-          DeprecatedHttpFetchStatus(statusCode = 500, message = Some(msg), context = new DeprecatedFetcherHttpContext() { def redirects = Seq[HttpRedirect](); def destinationUrl = None })
-        case ste: SocketTimeoutException =>
-          val msg = s"SocketTimeoutException on fetching url [$url] if modified since [$ifModifiedSince] using proxy [$proxy]"
-          log.warn(msg, ste)
-          DeprecatedHttpFetchStatus(statusCode = 500, message = Some(msg), context = new DeprecatedFetcherHttpContext() { def redirects = Seq[HttpRedirect](); def destinationUrl = None })
-        case cce: ConnectionClosedException =>
-          val msg = s"ConnectionClosedException on fetching url [$url] if modified since [$ifModifiedSince] using proxy [$proxy]"
-          log.warn(msg, cce)
-          DeprecatedHttpFetchStatus(statusCode = 500, message = Some(msg), context = new DeprecatedFetcherHttpContext() { def redirects = Seq[HttpRedirect](); def destinationUrl = None })
-        case ze: ZipException =>
-          val msg = s"ZipException on fetching url [$url] if modified since [$ifModifiedSince] using proxy [$proxy]"
-          log.warn(msg, ze)
-          DeprecatedHttpFetchStatus(statusCode = 500, message = Some(msg), context = new DeprecatedFetcherHttpContext() { def redirects = Seq[HttpRedirect](); def destinationUrl = None })
-        case e: Exception =>
-          throw new Exception(s"on fetching url [$url] if modified since [$ifModifiedSince] using proxy [$proxy]", e)
-      }
-    }(ExecutionContext.fj)
+  def get(request: FetchRequest)(f: (HttpInputStream) => Unit): Future[DeprecatedHttpFetchStatus] = consolidateFetch(request) {
+    case FetchRequest(url, ifModifiedSince, proxy) =>
+      SafeFuture {
+        try {
+          fetch(request)(f)
+        } catch {
+          case eof: EOFException =>
+            val msg = s"EOF on fetching url [$url] if modified since [$ifModifiedSince] using proxy [$proxy]"
+            log.warn(msg, eof)
+            DeprecatedHttpFetchStatus(statusCode = 500, message = Some(msg), context = new DeprecatedFetcherHttpContext() { def redirects = Seq[HttpRedirect](); def destinationUrl = None })
+          case ste: SocketException =>
+            val msg = s"SocketException on fetching url [$url] if modified since [$ifModifiedSince] using proxy [$proxy]"
+            log.warn(msg, ste)
+            DeprecatedHttpFetchStatus(statusCode = 500, message = Some(msg), context = new DeprecatedFetcherHttpContext() { def redirects = Seq[HttpRedirect](); def destinationUrl = None })
+          case ste: SocketTimeoutException =>
+            val msg = s"SocketTimeoutException on fetching url [$url] if modified since [$ifModifiedSince] using proxy [$proxy]"
+            log.warn(msg, ste)
+            DeprecatedHttpFetchStatus(statusCode = 500, message = Some(msg), context = new DeprecatedFetcherHttpContext() { def redirects = Seq[HttpRedirect](); def destinationUrl = None })
+          case cce: ConnectionClosedException =>
+            val msg = s"ConnectionClosedException on fetching url [$url] if modified since [$ifModifiedSince] using proxy [$proxy]"
+            log.warn(msg, cce)
+            DeprecatedHttpFetchStatus(statusCode = 500, message = Some(msg), context = new DeprecatedFetcherHttpContext() { def redirects = Seq[HttpRedirect](); def destinationUrl = None })
+          case ze: ZipException =>
+            val msg = s"ZipException on fetching url [$url] if modified since [$ifModifiedSince] using proxy [$proxy]"
+            log.warn(msg, ze)
+            DeprecatedHttpFetchStatus(statusCode = 500, message = Some(msg), context = new DeprecatedFetcherHttpContext() { def redirects = Seq[HttpRedirect](); def destinationUrl = None })
+          case e: Exception =>
+            throw new Exception(s"on fetching url [$url] if modified since [$ifModifiedSince] using proxy [$proxy]", e)
+        }
+      }(ExecutionContext.fj)
+  }
+}
+
+object ApacheHttpFetcher {
+  implicit class DeprecatedFetcherHttpContextAdaptor(context: HttpContext) extends DeprecatedFetcherHttpContext {
+    def destinationUrl: Option[String] = Option(context.getAttribute(scraperDestinationUrlAttribute).asInstanceOf[String])
+    def redirects: Seq[HttpRedirect] = Option(context.getAttribute(redirectsAttribute).asInstanceOf[Seq[HttpRedirect]]).getOrElse(Seq.empty[HttpRedirect])
   }
 }

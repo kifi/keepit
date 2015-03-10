@@ -6,7 +6,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.net.URI._
 import com.keepit.model._
-import com.keepit.rover.fetcher.{ DeprecatedHttpFetcher, HttpRedirect }
+import com.keepit.rover.fetcher.{ FetchRequest, DeprecatedHttpFetcher, HttpRedirect }
 import com.keepit.scraper.extractor._
 import com.keepit.search.{ LangDetector, Article, ArticleStore }
 import scala.concurrent.duration._
@@ -275,14 +275,19 @@ class ScrapeWorkerImpl @Inject() (
   }
 
   private def fetch(normalizedUri: NormalizedURI, httpFetcher: DeprecatedHttpFetcher, info: ScrapeInfo, proxyOpt: Option[HttpProxy]): Future[ScraperResult] = {
-    val url = URI.parse(normalizedUri.url).getOrElse(throw new Exception(s"url can not be parsed for $normalizedUri"))
-    val extractor = extractorFactory(url)
+    val extractor = {
+      val parsedUrl = URI.parse(normalizedUri.url).getOrElse(throw new Exception(s"url can not be parsed for $normalizedUri"))
+      extractorFactory(parsedUrl)
+    }
     log.debug(s"[fetchArticle] url=${normalizedUri.url} ${extractor.getClass}")
-    val ifModifiedSince = getIfModifiedSince(normalizedUri, info)
-    httpFetcher.get(url, ifModifiedSince, proxy = proxyOpt) { input => extractor.process(input) } flatMap { fetchStatus =>
+    val fetchRequest = {
+      val ifModifiedSince = getIfModifiedSince(normalizedUri, info)
+      FetchRequest(normalizedUri.url, proxyOpt, ifModifiedSince)
+    }
+    httpFetcher.get(fetchRequest) { input => extractor.process(input) } flatMap { fetchStatus =>
       fetchStatus.statusCode match {
         case HttpStatus.SC_OK =>
-          uriCommander.isUnscrapable(url, fetchStatus.destinationUrl) flatMap { unscrapable =>
+          uriCommander.isUnscrapable(normalizedUri.url, fetchStatus.destinationUrl) flatMap { unscrapable =>
             if (unscrapable) {
               Future.successful(NotScrapable(fetchStatus.destinationUrl, fetchStatus.redirects))
             } else {
@@ -384,10 +389,10 @@ class ScrapeWorkerImpl @Inject() (
           case Some(recentKeep) if !KeepSource.bulk.contains(recentKeep.source) =>
             true
           case Some(importedBookmark) =>
-            val parsedBookmarkUrl = URI.parse(importedBookmark.url).get
-            val isFishy = (parsedBookmarkUrl.toString != movedUri.url) &&
-              !httpFetcher.fetch(parsedBookmarkUrl)(httpFetcher.NO_OP).redirects.headOption.exists(_.isPermanent)
-            log.info(s"[hasFishy301] ${importedBookmark.uriId} result: $isFishy, ${parsedBookmarkUrl.toString} vs ${movedUri.url}")
+            val parsedBookmarkUrl = URI.parse(importedBookmark.url).get.toString
+            val isFishy = (parsedBookmarkUrl != movedUri.url) &&
+              !httpFetcher.fetch(FetchRequest(parsedBookmarkUrl))(httpFetcher.NO_OP).redirects.headOption.exists(_.isPermanent)
+            log.info(s"[hasFishy301] ${importedBookmark.uriId} result: $isFishy, ${parsedBookmarkUrl} vs ${movedUri.url}")
             isFishy
           case None =>
             false

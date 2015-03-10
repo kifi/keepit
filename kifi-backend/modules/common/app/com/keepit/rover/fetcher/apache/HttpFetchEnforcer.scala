@@ -12,14 +12,14 @@ import scala.ref.WeakReference
 import java.util.concurrent.atomic.{ AtomicInteger, AtomicReference }
 import java.util.concurrent.ConcurrentLinkedQueue
 
-case class FetchInfo(url: String, ts: Long, htpGet: HttpGet, thread: Thread) {
+case class FetchExecutionInfo(url: String, ts: Long, httpGet: HttpGet, thread: Thread) {
   val killCount = new AtomicInteger()
   val respStatusRef = new AtomicReference[StatusLine]()
   val exRef = new AtomicReference[Throwable]()
-  override def toString = s"[Fetch($url,${ts},${thread.getName})] isAborted=${htpGet.isAborted} killCount=${killCount} respRef=${respStatusRef} exRef=${exRef}"
+  override def toString = s"[Fetch($url,${ts},${thread.getName})] isAborted=${httpGet.isAborted} killCount=${killCount} respRef=${respStatusRef} exRef=${exRef}"
 }
 
-class HttpFetchEnforcer(q: ConcurrentLinkedQueue[WeakReference[FetchInfo]], Q_SIZE_THRESHOLD: Int, airbrake: AirbrakeNotifier) extends Runnable with Logging {
+class HttpFetchEnforcer(q: ConcurrentLinkedQueue[WeakReference[FetchExecutionInfo]], Q_SIZE_THRESHOLD: Int, airbrake: AirbrakeNotifier) extends Runnable with Logging {
 
   val LONG_RUNNING_THRESHOLD = if (Play.maybeApplication.isDefined && Play.isDev) 1000 else sys.props.get("fetcher.abort.threshold") map (_.toInt) getOrElse (2 * 1000 * 60) // Play reference can be removed
 
@@ -32,21 +32,21 @@ class HttpFetchEnforcer(q: ConcurrentLinkedQueue[WeakReference[FetchInfo]], Q_SI
           val curr = System.currentTimeMillis
           val ref = iter.next
           ref.get map {
-            case ft: FetchInfo =>
+            case ft: FetchExecutionInfo =>
               if (ft.respStatusRef.get != null) {
                 val sc = ft.respStatusRef.get.getStatusCode
                 removeRef(iter, if (sc != SC_OK && sc != SC_NOT_MODIFIED) Some(s"[enforcer] ${ft.url} finished with abnormal status:${ft.respStatusRef.get}") else None)
               } else if (ft.exRef.get != null) removeRef(iter, Some(s"[enforcer] ${ft.url} caught error ${ft.exRef.get}; remove from q"))
-              else if (ft.htpGet.isAborted) removeRef(iter, Some(s"[enforcer] ${ft.url} is aborted; remove from q"))
+              else if (ft.httpGet.isAborted) removeRef(iter, Some(s"[enforcer] ${ft.url} is aborted; remove from q"))
               else {
                 val runMillis = curr - ft.ts
                 if (runMillis > LONG_RUNNING_THRESHOLD * 2) {
-                  val msg = s"[enforcer] attempt# ${ft.killCount.get} to abort long ($runMillis ms) fetch task: ${ft.htpGet.getURI}"
+                  val msg = s"[enforcer] attempt# ${ft.killCount.get} to abort long ($runMillis ms) fetch task: ${ft.httpGet.getURI}"
                   log.warn(msg)
-                  ft.htpGet.abort() // inform scraper
+                  ft.httpGet.abort() // inform scraper
                   ft.killCount.incrementAndGet()
-                  log.debug(s"[enforcer] ${ft.htpGet.getURI} isAborted=${ft.htpGet.isAborted}")
-                  if (!ft.htpGet.isAborted) {
+                  log.debug(s"[enforcer] ${ft.httpGet.getURI} isAborted=${ft.httpGet.isAborted}")
+                  if (!ft.httpGet.isAborted) {
                     log.warn(s"[enforcer] failed to abort long ($runMillis ms) fetch task $ft; calling interrupt ...")
                     ft.thread.interrupt
                     if (ft.thread.isInterrupted) {
