@@ -270,6 +270,8 @@ $(function() {
         errorInvalidEmail($('#error-signup-email'), $form, 'signup2Social');
       } else if (body.error === 'error.required') {
         errorUnrecognizedEmail($('#error-signup-email'), $form, 'signup2Social');
+      } else if (body.error === 'known_email_address') {
+        errorExistingEmail($('#error-signup-email'), $form, 'signup2Social');
       } else {
         errorUnknown($('#error-signup-email'), $form, 'signup2Social');
       }
@@ -412,9 +414,13 @@ $(function() {
     Tracker.track('visitor_viewed_page', { type: type, error: 'unrecognizedEmail' });
     error($errorField, 'Sorry, we don’t recognize this email address.', $inputField);
   }
+  function errorExistingEmail($errorField, $inputField, type) {
+    Tracker.track('visitor_viewed_page', { type: type, error: 'existingEmail' });
+    error($errorField, 'This is a user already.<br><a href="/signup?link=' + ($inputField.val() || '') + '">Claim your account</a>.', $inputField);
+  }
   function errorUserExists($errorField, $inputField, type) {
     Tracker.track('visitor_viewed_page', { type: type, error: 'wrongPassword' });
-    error($errorField, 'An account already exists for this email!<br>Try <a href="/login">logging In</a>', $inputField);
+    error($errorField, 'An account already exists for this email!<br>Try <a href="/login">logging in</a>', $inputField);
   }
   function errorUnknown($errorField, $inputField, type) {
     if (type === 'login' || type === 'linkSocialAccount') {
