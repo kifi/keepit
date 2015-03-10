@@ -368,8 +368,8 @@ $(function() {
 
   function submitForgotPassword(event) {
     event.preventDefault();
-    var fromLinkSocial = $('.page.claim-account').length >= 0;
-    var fromResetPassword = $('.page.reset-password').length >= 0;
+    var fromLinkSocial = $('.page.claim-account').length > 0;
+    var fromResetPassword = $('.page.reset-password').length > 0;
     var trackingType = fromLinkSocial ? 'linkSocialAccount' : (fromResetPassword ? 'resetPassword' : 'forgotPassword');
 
     // validate email
