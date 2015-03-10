@@ -310,22 +310,16 @@ $(function() {
       return;
     }
     // make request
-    var animation = animateButton($('.modal-button-action'));
     var actionUri = $('.fp-form')[0].action;
     $.postJson(actionUri, {email: validEmail})
     .done(function () {
-      animation.update(1);
-      animation.success();
       // show success pane, hide original pane
       var modal = $('.forgot-password-modal');
       modal.find('.fp-address').html(validEmail);
       modal.find('.fp-form').hide();
       modal.find('.fp-success').show();
-      animation.update(0);
-      debugger;
     })
     .fail(function (xhr) { // errors: no_account
-      animation.fail();
       var body = xhr.responseJSON || {};
       if (body.error === 'no_account') {
         errorUnrecognizedEmail($('#error-fp'), $('.fp-input'), trackingType);
