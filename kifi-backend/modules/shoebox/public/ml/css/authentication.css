@@ -939,13 +939,13 @@ a, .avatars li, img, .tabs_nav li {
 }
 
 .progress.success {
-  width: 100%;
-  transition: width .16s ease-in-out;
+  width: 100% !important;
+  transition: width .5s ease-in-out;
 }
 
 .progress.fail {
   background: #b00;
-  width: 0%;
+  width: 0% !important;;
   transition: width .24s ease-in-out;
 }
 .progress + .text {

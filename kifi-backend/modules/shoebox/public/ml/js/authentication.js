@@ -134,8 +134,8 @@ $(function() {
       return;
     }
     var form = this;
+    var animation = animateButton($('.btn-authentication'));
     $.when(photoUpload && photoUpload.promise).always(function (upload) {
-      var animation = animateButton($('.btn-authentication'));
       $.postJson(form.action, {
         firstName: validFirstName,
         lastName: validLastName,
