@@ -159,7 +159,7 @@ angular.module('kifi')
         // Initialize.
         //
 
-        scope.Math = window.Math;
+        scope.Math = Math;
         scope.clippedDescription = false;
 
         augmentData();

@@ -35,7 +35,7 @@ angular.module('kifi')
         //
         // Scope data.
         //
-        scope.Math = window.Math;
+        scope.Math = Math;
         scope.clippedDescription = false;
         scope.editKeepsText = 'Edit Keeps';
         scope.search = { 'text': $stateParams.q || '' };
