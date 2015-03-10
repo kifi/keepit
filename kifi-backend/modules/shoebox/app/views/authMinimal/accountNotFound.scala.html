@@ -1,0 +1,32 @@
+@(provider: String)
+@import com.keepit.controllers.core.routes.{AuthController => authRoutes}
+@headHtml = {
+  <link rel="stylesheet" type="text/css" href="/assets/ml/css/authentication.css">
+}
+@providerName = {
+  @{provider.substring(0,1).toUpperCase + provider.substring(1)}
+}
+@content = {
+  <div class="page account-not-found">
+    <div class="account-not-found-wrapper">
+
+      <h1 class="anf-h1">Account Not Found</h1>
+      <p class="anf-text">
+        Hmmm... We’ve never seen this @providerName account before.
+      </p>
+      <p class="anf-text">Have you signed up with us before?</p>
+
+      <a class="btn-authentication btn-login anf-btn" href="@com.keepit.controllers.core.routes.AuthController.signupPage">
+        I’m new here,<br>sign me up!
+      </a>
+      <a class="btn-authentication btn-login anf-btn" href="@com.keepit.controllers.core.routes.AuthController.loginPage">
+        I already have<br>a Kifi account
+      </a>
+    </div>
+  </div>
+}
+@scripts = {
+  <script src="/assets/ml/js/authentication.js"></script>
+}
+
+@minimal.layout(title = "Kifi | Account Not Found", content = content, htmlClass = "signup-page", headHtml = headHtml, scripts = scripts, footerClass = "join", dataTrack = "accountNotFound")

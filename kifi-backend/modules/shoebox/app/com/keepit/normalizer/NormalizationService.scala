@@ -14,6 +14,7 @@ import com.keepit.common.core._
 import com.keepit.common.db.Id
 import scala.util.{ Failure, Success, Try }
 import com.keepit.common.performance._
+import com.keepit.common.time._
 
 @ImplementedBy(classOf[NormalizationServiceImpl])
 trait NormalizationService {
@@ -53,22 +54,29 @@ class NormalizationServiceImpl @Inject() (
   }
 
   private def processUpdate(currentReference: NormalizationReference, candidates: NormalizationCandidate*): Future[Option[NormalizationReference]] = timing(s"NormalizationService.processUpdate.${currentReference.url}") {
-    log.debug(s"[processUpdate($currentReference,${candidates.mkString(",")})")
-    val contentChecks = {
-      URI.parse(currentReference.url) match { // for debugging bad reference urls -- this is the only place that invokes getContentChecks
-        case Success(uri) => log.debug(s"[processUpdate-check] currRef=$currentReference parsed-uri=$uri")
-        case Failure(t) => throw new IllegalArgumentException(s"[processUpdate-check] -- failed to parse currRef=$currentReference; Exception=$t; Cause=${t.getCause}", t)
+    val now = currentDateTime
+    val recentFailedChecks = db.readOnlyReplica { implicit s => failedContentCheckRepo.getRecentCountByURL(currentReference.url, now.minusMinutes(5)) }
+    if (recentFailedChecks > 10) {
+      Future.successful(None)
+    } else {
+      log.debug(s"[processUpdate($currentReference,${candidates.mkString(",")})")
+      val contentChecks = {
+        URI.parse(currentReference.url) match {
+          // for debugging bad reference urls -- this is the only place that invokes getContentChecks
+          case Success(uri) => log.debug(s"[processUpdate-check] currRef=$currentReference parsed-uri=$uri")
+          case Failure(t) => throw new IllegalArgumentException(s"[processUpdate-check] -- failed to parse currRef=$currentReference; Exception=$t; Cause=${t.getCause}", t)
+        }
+        priorKnowledge.getContentChecks(currentReference.url, currentReference.signature)
       }
-      priorKnowledge.getContentChecks(currentReference.url, currentReference.signature)
-    }
-    val findStrongerCandidate = FindStrongerCandidate(currentReference, Action(currentReference, contentChecks))
+      val findStrongerCandidate = FindStrongerCandidate(currentReference, Action(currentReference, contentChecks))
 
-    for { (successfulCandidateOption, weakerCandidates) <- findStrongerCandidate(candidates) } yield {
-      contentChecks foreach persistFailedAttempts
-      for {
-        successfulCandidate <- successfulCandidateOption
-        betterReference <- migrate(currentReference, successfulCandidate, weakerCandidates)
-      } yield betterReference
+      for { (successfulCandidateOption, weakerCandidates) <- findStrongerCandidate(candidates) } yield {
+        contentChecks foreach persistFailedAttempts
+        for {
+          successfulCandidate <- successfulCandidateOption
+          betterReference <- migrate(currentReference, successfulCandidate, weakerCandidates)
+        } yield betterReference
+      }
     }
   }
 

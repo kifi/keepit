@@ -639,4 +639,8 @@ class AuthController @Inject() (
     Ok(views.html.authMinimal.install())
   }
 
+  def accountNotFound() = Action { implicit request =>
+    Ok(views.html.authMinimal.accountNotFound("facebook"))
+  }
+
 }

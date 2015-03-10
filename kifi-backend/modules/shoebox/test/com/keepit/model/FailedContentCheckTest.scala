@@ -1,5 +1,7 @@
 package com.keepit.model
 
+import com.keepit.common.time._
+import org.joda.time.DateTime
 import org.specs2.mutable.Specification
 import com.keepit.test._
 
@@ -18,7 +20,7 @@ class FailedContentCheckTest extends Specification with ShoeboxTestInjector {
         }
 
         db.readOnlyMaster { implicit s =>
-          var r = failedContentCheckRepo.getByUrls(u1, u2)
+          val r = failedContentCheckRepo.getByUrls(u1, u2)
           r.get.counts === 5
           r.get.state === FailedContentCheckStates.ACTIVE
 
@@ -26,6 +28,8 @@ class FailedContentCheckTest extends Specification with ShoeboxTestInjector {
           failedContentCheckRepo.getByUrls(u2, u1)
           r.get.counts === 5
           r.get.state === FailedContentCheckStates.ACTIVE
+          val ancient = new DateTime(2000, 1, 1, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
+          failedContentCheckRepo.getRecentCountByURL(u1, ancient) === 1
         }
       }
     }
