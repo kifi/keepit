@@ -946,6 +946,8 @@ a, .avatars li, img, .tabs_nav li {
 
 .progress.success {
   width: 100% !important;
+  border-top-right-radius: 5px;
+  border-bottom-right-radius: 5px;
   transition: width .5s ease-in-out;
 }
 
