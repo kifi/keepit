@@ -92,11 +92,13 @@ $(function() {
       'password': validPassword
     }).done(function (data) {
       if (data.success) { // successes return: {success: true}
-        window.location = '/new/signupName'; // todo: change to /signup
+        window.location = '/signup';
         animation.update(1);
         animation.success();
+      } else if (data.uri) {
+        window.location = data.uri;
       } else {
-        console.log(data);
+        errorUnknown($('#login-email'), $email, 'signup');
       }
     }).fail(function (xhr) {
       // possible errors: error.email, password_too_short, user_exists_failed_auth
