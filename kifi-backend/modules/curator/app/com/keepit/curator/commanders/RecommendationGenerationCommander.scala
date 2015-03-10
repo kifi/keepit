@@ -10,6 +10,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ Id, SequenceNumber }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
+import com.keepit.common.plugin.SchedulingProperties
 import com.keepit.common.service.ServiceStatus
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.curator.model.{ Keepers, RecoInfo, ScoredSeedItemWithAttribution, SeedItem, UriRecommendation, UriRecommendationRepo, UriRecommendationStates, UriScores, UserRecommendationGenerationState, UserRecommendationGenerationStateRepo }
@@ -38,7 +39,7 @@ class RecommendationGenerationCommander @Inject() (
     genStateRepo: UserRecommendationGenerationStateRepo,
     systemValueRepo: SystemValueRepo,
     experimentCommander: RemoteUserExperimentCommander,
-    serviceDiscovery: ServiceDiscovery) extends Logging {
+    schedulingProperties: SchedulingProperties) extends Logging {
 
   val defaultScore = 0.0f
   val recommendationGenerationLock = new ReactiveLock(4)
@@ -205,7 +206,7 @@ class RecommendationGenerationCommander @Inject() (
 
   private def precomputeRecommendationsForUser(userId: Id[User], boostedKeepers: Set[Id[User]], alwaysIncludeOpt: Option[Set[Id[NormalizedURI]]] = None): Future[Unit] = recommendationGenerationLock.withLockFuture {
     getPerUserGenerationLock(userId).withLockFuture {
-      if (serviceDiscovery.isRunnerFor(CuratorTasks.uriRecommendationPrecomputation)) {
+      if (schedulingProperties.isRunnerFor(CuratorTasks.uriRecommendationPrecomputation)) {
         val alwaysInclude: Set[Id[NormalizedURI]] = alwaysIncludeOpt.getOrElse(db.readOnlyReplica { implicit session => uriRecRepo.getUriIdsForUser(userId) })
         val state: UserRecommendationGenerationState = getStateOfUser(userId)
         val seedsAndSeqFuture: Future[(Seq[SeedItem], SequenceNumber[SeedItem])] = getCandidateSeedsForUser(userId, state)
