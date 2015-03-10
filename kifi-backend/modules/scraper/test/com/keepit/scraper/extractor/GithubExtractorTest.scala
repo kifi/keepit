@@ -3,7 +3,7 @@ package com.keepit.scraper.extractor
 import org.specs2.mutable._
 import org.jsoup.Jsoup
 import java.io.FileInputStream
-import com.keepit.scraper.HttpInputStream
+import com.keepit.scraper.DeprecatedHttpInputStream
 import com.keepit.common.net.URI
 
 class GithubExtractorTest extends Specification {
@@ -12,7 +12,7 @@ class GithubExtractorTest extends Specification {
     val uri = URI.parse(url).get
     val stream = new FileInputStream("test/com/keepit/scraper/extractor/" + file)
     val extractor = GithubExtractorProvider(uri)
-    extractor.process(new HttpInputStream(stream))
+    extractor.process(new DeprecatedHttpInputStream(stream))
     extractor.getCanonicalUrl("") ==== None
     extractor.getContent()
   }

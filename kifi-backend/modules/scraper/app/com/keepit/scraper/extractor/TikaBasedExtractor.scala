@@ -2,7 +2,7 @@ package com.keepit.scraper.extractor
 
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.URI
-import com.keepit.scraper.HttpInputStream
+import com.keepit.scraper.DeprecatedHttpInputStream
 import org.apache.tika.detect.DefaultDetector
 import org.apache.tika.metadata.Metadata
 import org.apache.tika.metadata.HttpHeaders
@@ -37,7 +37,7 @@ abstract class TikaBasedExtractor(url: URI, maxContentChars: Int, htmlMapper: Op
 
   protected def getHtmlMapper: Option[HtmlMapper] = htmlMapper
 
-  def process(input: HttpInputStream) {
+  def process(input: DeprecatedHttpInputStream) {
     val context = new ParseContext()
     var parser = getParser(input.getContentType())
     val contentHandler = getContentHandler

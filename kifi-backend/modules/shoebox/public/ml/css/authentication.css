@@ -516,6 +516,7 @@ margin-bottom: 20px;
 }
 
 .btn-authentication {
+  position: relative;
   outline: none;
   border:none;
   display: inline-block;
@@ -528,7 +529,7 @@ margin-bottom: 20px;
 }
 
 .btn-authentication:hover {
-  background: #2D77B9;
+  background: #3ebaeb;
 }
 
 .btn-done {
@@ -742,6 +743,15 @@ a, .avatars li, img, .tabs_nav li {
 	80% { -webkit-transform: translate(3px, 0px) rotate(0deg); }
 }
 
+#error-fp {
+  left: 30px;
+}
+
+#error-invalid-image {
+  width: 170px;
+  left: -30px;
+}
+
 .shake {
 	display:inline-block;
 	-webkit-animation-name: shake-animation;
@@ -917,6 +927,30 @@ a, .avatars li, img, .tabs_nav li {
   outline-color: #ccc;
 }
 
+.progress {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  height: 100%;
+  border-radius: 5px;
+  background: #2D77B9;
+}
+
+.progress.success {
+  width: 100%;
+  transition: width .16s ease-in-out;
+}
+
+.progress.fail {
+  background: #b00;
+  width: 0%;
+  transition: width .24s ease-in-out;
+}
+.progress + .text {
+  position: relative;
+}
 
 /* Specific Modal Stylings */
 .forgot-password-modal {

@@ -6,8 +6,8 @@ import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.net.{ Host, URI }
 import com.keepit.model.HttpProxy
 import com.keepit.rover.article.{ YoutubeTrackInfo, YoutubeTrack }
+import com.keepit.rover.fetcher.DeprecatedHttpFetcher
 import com.keepit.scraper.ScraperConfig
-import com.keepit.scraper.fetcher.HttpFetcher
 import com.keepit.search.Lang
 import com.keepit.shoebox.ShoeboxScraperClient
 import org.apache.commons.lang3.StringEscapeUtils
@@ -16,9 +16,10 @@ import org.jsoup.nodes.{ Document, Element }
 import scala.collection.JavaConversions._
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
+import com.keepit.common.strings._
 
 @Singleton
-class YoutubeExtractorProvider @Inject() (httpFetcher: HttpFetcher, shoeboxScraperClient: ShoeboxScraperClient) extends ExtractorProvider {
+class YoutubeExtractorProvider @Inject() (httpFetcher: DeprecatedHttpFetcher, shoeboxScraperClient: ShoeboxScraperClient) extends ExtractorProvider {
   def isDefinedAt(uri: URI) = {
     uri match {
       case URI(_, _, Some(Host("com", "youtube", _*)), _, Some(path), Some(query), _) =>
@@ -29,7 +30,7 @@ class YoutubeExtractorProvider @Inject() (httpFetcher: HttpFetcher, shoeboxScrap
   def apply(uri: URI) = new YoutubeExtractor(uri, ScraperConfig.maxContentChars, httpFetcher, shoeboxScraperClient)
 }
 
-class YoutubeExtractor(url: URI, maxContentChars: Int, httpFetcher: HttpFetcher, shoeboxScraperClient: ShoeboxScraperClient) extends JsoupBasedExtractor(url, maxContentChars) {
+class YoutubeExtractor(url: URI, maxContentChars: Int, httpFetcher: DeprecatedHttpFetcher, shoeboxScraperClient: ShoeboxScraperClient) extends JsoupBasedExtractor(url, maxContentChars) {
 
   def parse(doc: Document): String = {
     val headline = Option(doc.getElementById("watch-headline-title")).map(_.text).getOrElse("")
@@ -52,7 +53,7 @@ class YoutubeExtractor(url: URI, maxContentChars: Int, httpFetcher: HttpFetcher,
   private def findTTSUrl(doc: Document): Option[String] = {
     val ttsUrlPattern = """(?:'TTS_URL'|"ttsurl): "(http.*)",""".r
     val script = doc.getElementsByTag("script").toString
-    ttsUrlPattern.findFirstIn(script).map { case ttsUrlPattern(url) => replace(url, "\\/" -> "/", "\\u0026" -> "&") }
+    ttsUrlPattern.findFirstIn(script).map { case ttsUrlPattern(url) => url.replaceAllLiterally("\\/" -> "/", "\\u0026" -> "&") }
   }
 
   private def findTrack(ttsParameters: String): Option[YoutubeTrackInfo] = {

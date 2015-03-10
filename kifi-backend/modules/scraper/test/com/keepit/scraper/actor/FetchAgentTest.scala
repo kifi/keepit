@@ -9,6 +9,7 @@ import com.keepit.common.controller.FakeUserActionsModule
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.store.ScraperTestStoreModule
 import com.keepit.common.time._
+import com.keepit.rover.fetcher.{ DeprecatedHttpFetchStatus, DeprecatedFetcherHttpContext, HttpRedirect }
 import com.keepit.scraper._
 import com.keepit.scraper.actor.InternalMessages.FetchJob
 import com.keepit.scraper.actor.ScraperMessages.Fetch
@@ -26,8 +27,8 @@ class FetchAgentTest extends TestKitSupport with SpecificationLike with ScraperT
 
   implicit val fj = ExecutionContext.fj
 
-  val testFetcher: PartialFunction[String, HttpFetchStatus] = {
-    case "https://www.google.com/" => HttpFetchStatus(Status.OK, None, new FetcherHttpContext {
+  val testFetcher: PartialFunction[String, DeprecatedHttpFetchStatus] = {
+    case "https://www.google.com/" => DeprecatedHttpFetchStatus(Status.OK, None, new DeprecatedFetcherHttpContext {
       def destinationUrl: Option[String] = None
       def redirects: Seq[HttpRedirect] = Seq.empty
     })

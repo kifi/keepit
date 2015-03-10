@@ -1,6 +1,5 @@
 package com.keepit.shoebox
 
-import scala.concurrent.duration._
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.db.{ SequenceNumber, ExternalId, State, Id }
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -10,7 +9,8 @@ import com.keepit.common.routes.Shoebox
 import com.keepit.common.service.ThrottledServiceClient
 import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.model._
-import com.keepit.scraper.{ Signature, HttpRedirect, ScrapeRequest }
+import com.keepit.rover.fetcher.HttpRedirect
+import com.keepit.scraper.{ Signature, ScrapeRequest }
 import org.joda.time.DateTime
 import play.api.libs.json.{ JsString, JsArray, Json }
 import play.api.libs.json.Json.JsValueWrapper
@@ -18,7 +18,7 @@ import com.keepit.common.core._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.concurrent.ReactiveLock
 
-import scala.concurrent.{ Await, Future }
+import scala.concurrent.Future
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 
 trait ShoeboxScraperClient extends ThrottledServiceClient {
@@ -65,11 +65,11 @@ class ShoeboxScraperClientImpl @Inject() (
     }
   }
 
-  def assignScrapeTasks(zkId: Long, max: Int): Future[Seq[ScrapeRequest]] = assignScrapeTasksLimiter.withLock {
+  def assignScrapeTasks(zkId: Long, max: Int): Future[Seq[ScrapeRequest]] = assignScrapeTasksLimiter.withLockFuture {
     statsd.gauge("assignScrapeTasks", 1)
-    Await.result(call(Shoebox.internal.assignScrapeTasks(zkId, max), callTimeouts = longTimeout, routingStrategy = offlinePriority).map { r =>
+    call(Shoebox.internal.assignScrapeTasks(zkId, max), callTimeouts = longTimeout, routingStrategy = offlinePriority).map { r =>
       r.json.as[Seq[ScrapeRequest]]
-    }, 1 minutes)
+    }
   }
 
   def saveScrapeInfo(info: ScrapeInfo): Future[Unit] = limiter.withLockFuture {

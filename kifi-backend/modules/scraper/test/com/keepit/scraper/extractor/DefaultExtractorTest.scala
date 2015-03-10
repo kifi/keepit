@@ -2,7 +2,7 @@ package com.keepit.scraper.extractor
 
 import org.specs2.mutable._
 import java.io.FileInputStream
-import com.keepit.scraper.HttpInputStream
+import com.keepit.scraper.DeprecatedHttpInputStream
 import com.keepit.common.net.URI
 
 class DefaultExtractorTest extends Specification {
@@ -14,7 +14,7 @@ class DefaultExtractorTest extends Specification {
       case Some(max) => DefaultExtractorProvider(uri, max)
       case None => DefaultExtractorProvider(uri)
     }
-    extractor.process(new HttpInputStream(stream))
+    extractor.process(new DeprecatedHttpInputStream(stream))
     extractor
   }
 

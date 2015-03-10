@@ -146,7 +146,7 @@ angular.module('kifi')
     };
 
     $scope.callAddKeep = function () {
-      $rootScope.$emit('triggerAddKeep', library);
+      $rootScope.$emit('triggerAddKeep');
     };
     $scope.callImportBookmarks = function () {
       $rootScope.$emit('showGlobalModal', 'importBookmarks', {library: library});
@@ -185,9 +185,7 @@ angular.module('kifi')
           if (existingKeep && !_.find($scope.keeps, { id: keep.id })) {
             existingKeep.keeps.push({
               id: keep.id,
-              isMine: true,
               libraryId: library.id,
-              mine: true,
               visibility: library.visibility
             });
           }
