@@ -400,7 +400,7 @@ class ScrapeWorkerImpl @Inject() (
     sanitize(uri.url, canonicalUrl) match {
       case None => Future.successful(())
       case Some(properCanonicalUrl) =>
-        val properAlternateUrls = alternateUrls.flatMap(sanitize(uri.url, _)) - uri.url - properCanonicalUrl
+        val properAlternateUrls = (alternateUrls.flatMap(sanitize(uri.url, _)) - uri.url - properCanonicalUrl).filterNot(_.length > NormalizedURI.UrlMaxLen).take(3)
         shoeboxCommander.recordScrapedNormalization(uri.id.get, signature, properCanonicalUrl, Normalization.CANONICAL, properAlternateUrls)
     }
   }
