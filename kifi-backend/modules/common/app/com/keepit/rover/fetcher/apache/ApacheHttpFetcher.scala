@@ -27,7 +27,6 @@ import org.apache.http.impl.client.HttpClientBuilder
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager
 import org.apache.http.protocol.HttpContext
 import org.apache.http.util.EntityUtils
-import RedirectInterceptor._
 
 import scala.concurrent.Future
 import scala.ref.WeakReference
@@ -232,6 +231,7 @@ class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, conne
 }
 
 object ApacheHttpFetcher {
+  import RedirectInterceptor._
   implicit class DeprecatedFetcherHttpContextAdaptor(context: HttpContext) extends DeprecatedFetcherHttpContext {
     def destinationUrl: Option[String] = Option(context.getAttribute(scraperDestinationUrlAttribute).asInstanceOf[String])
     def redirects: Seq[HttpRedirect] = Option(context.getAttribute(redirectsAttribute).asInstanceOf[Seq[HttpRedirect]]).getOrElse(Seq.empty[HttpRedirect])
