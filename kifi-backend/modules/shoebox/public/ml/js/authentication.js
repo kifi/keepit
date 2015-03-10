@@ -4,7 +4,6 @@ $(function() {
   // Listeners
   //
 
-  //Simple demonstration of error messages/animations
   $('.form-input').on('click keypress', hideError);
 
   /* General Modal Functionalities */
@@ -13,26 +12,12 @@ $(function() {
       hideModal();
     }
   });
-  $('.modal-x').click(hideModal);
-  $('.modal-button-cancel').click(hideModal);
 
   /* Forgot password */
   $('.forgot-password-link').click(showForgotPasswordModal);
   $('.forgot-password-modal .modal-x').click(resetForgotPasswordModal);
-  $('.forgot-password-modal .modal-button-cancel').click(resetForgotPasswordModal);
-  $('.forgot-password-modal .modal-button-action').click(submitForgotPassword);
-
-
-
-  //$('#signup-complete-btn').click(function() {
-  //
-  //  $('#center_container').addClass('shake');
-  //  $('#signup-email').html('You did something wrong.<br><a href="https://kifi.com" class="white-link">Kifi Homepage</a>');
-  //  $('#signup-email').fadeIn();
-  //  setTimeout(function(){ $('#center_container').removeClass('shake'); }, 2000);
-  //
-  //  return false;
-  //});
+  $('.forgot-password-modal .fp-form .modal-button-cancel').click(resetForgotPasswordModal);
+  $('.forgot-password-modal .fp-form').submit(submitForgotPassword);
 
 
   var kifi = {};
@@ -279,15 +264,20 @@ $(function() {
   }
 
   function showForgotPasswordModal() {
+    hideError();
     $('.modal-overlay.forgot-password').addClass('show');
     var modal = $('.forgot-password-modal');
     modal.find('.fp-form').show();
     modal.find('.fp-success').hide();
+    setTimeout(function () {
+      modal.find('.fp-input').focus();
+    }, 100);
+    modal.find('.fp-input').val($('.login-email').val());
   }
 
   function submitForgotPassword(event) {
     event.preventDefault();
-    var trackingType = window.location.pathname.search('linkSocial') >= 0 ? 'linkSocialAccount' : 'login';
+    var trackingType = window.location.pathname.search('linkSocial') >= 0 ? 'linkSocialAccount' : 'forgotPassword';
 
     // validate email
     var $email = $('.fp-input');
@@ -315,10 +305,12 @@ $(function() {
         errorUnknown($('#error-fp'), $('.fp-input'), trackingType);
       }
     });
+    return false;
   }
 
-  function resetForgotPasswordModal() {
+  function resetForgotPasswordModal(ev) {
     hideModal();
+    hideError();
     var modal = $('.forgot-password-modal');
     modal.find('.fp-form').show();
     modal.find('.fp-success').hide();
@@ -445,7 +437,6 @@ $(function() {
   }
 
   $.postJson = function (uri, data) {
-    console.log(uri, data);
     return $.ajax({
       url: uri,
       type: 'POST',

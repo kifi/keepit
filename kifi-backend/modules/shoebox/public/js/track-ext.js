@@ -74,6 +74,7 @@
 	}
 
 	function track(name, data) {
+		console.log('tracking', name, data);
 		data = addDefaultValues(data);
 		return mixpanel.track(name, data);
 	}
