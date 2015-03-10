@@ -175,7 +175,7 @@ $(function() {
   var URL = window.URL || window.webkitURL;
   var localPhotoUrl;
   $('.form-photo-file').change(function () {
-    if (this.files && URL) {
+    if (this.files && this.files.length && URL) {
       photoUpload = uploadPhotoXhr2(this.files);
       if (photoUpload) {
         photoUpload.promise.fail(function() {
