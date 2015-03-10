@@ -286,8 +286,8 @@ $(function() {
   //
   // Modal Functions
   //
-  function hideModal() {
-    event.preventDefault();
+  function hideModal(event) {
+    event && event.preventDefault();
     $('.modal-overlay').removeClass('show');
   }
 
@@ -343,6 +343,7 @@ $(function() {
       modal.find('.fp-success').hide();
       modal.find('.fp-form').show();
     }, 400);
+    return false;
   }
 
 
