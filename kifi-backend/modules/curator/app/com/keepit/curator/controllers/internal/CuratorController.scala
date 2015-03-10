@@ -126,7 +126,7 @@ class CuratorController @Inject() (
     userExperimentCommander.getExperimentsByUser(userId) map { experiments =>
       val sortStrategy = topScoreLibraryRecoStrategy
       val scoringStrategy = nonlinearLibraryRecoScoringStrategy
-
+      val context = (request.body \ "context").asOpt[String]
       val recoResults = libraryRecoGenCommander.getTopRecommendations(userId, limit, sortStrategy, scoringStrategy, context)
       val libRecoInfos = recoResults.recos
       log.info(s"topLibraryRecos returning userId=$userId resultCount=${libRecoInfos.size}")
