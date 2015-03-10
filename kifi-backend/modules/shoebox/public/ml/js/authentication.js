@@ -53,6 +53,7 @@ $(function() {
     if (!validPassword) {
       return;
     }
+    var animation = animateButton($('.btn-authentication'));
 
     $.postJson(this.action, {
       'username': validEmail,
@@ -60,10 +61,13 @@ $(function() {
     }).done(function (data) {
       if (data.uri) {
         window.location = data.uri;
+        animation.update(1);
+        animation.success();
       } else {
         console.log(data);
       }
     }).fail(function (xhr) {
+      animation.fail();
       // possible errors: no_such_user, wrong_password, bad_form (bad email, bad password, etc.)
       var body = xhr.responseJSON || {};
       var $email = $('.form-input.signup-email');
@@ -96,17 +100,21 @@ $(function() {
       return;
     }
 
+    var animation = animateButton($('.btn-authentication'));
     $.postJson(this.action, {
       'email': validEmail,
       'password': validPassword
     }).done(function (data) {
       if (data.success) { // successes return: {success: true}
         window.location = '/new/signupName'; // todo: change to /signup
+        animation.update(1);
+        animation.success();
       } else {
         console.log(data);
       }
     }).fail(function (xhr) {
       // possible errors: error.email, password_too_short, user_exists_failed_auth
+      animation.fail();
       var body = xhr.responseJSON || {};
       var $email = $('.form-input.signup-email');
       var $password = $('.form-input.signup-password');
@@ -143,6 +151,7 @@ $(function() {
     var form = this;
 
     $.when(photoUpload && photoUpload.promise).always(function (upload) {
+      var animation = animateButton($('.btn-authentication'));
       $.postJson(form.action, {
         firstName: validFirstName,
         lastName: validLastName,
@@ -150,10 +159,13 @@ $(function() {
       }).done(function (data) {
         if (data.uri) { // successes return: {success: true}
           window.location = data.uri;
+          animation.update(1);
+          animation.success();
         } else {
           console.log(data);
         }
       }).fail(function (xhr) {
+        animation.fail();
         var $form = $('.form-input.first-name');
         errorUnknown('#signup-firstname', $form, 'signup2Email');
       });
@@ -305,10 +317,12 @@ $(function() {
       return;
     }
     // make request
+    var animation = animateButton($('.btn-authentication'));
     var actionUri = $('.fp-form')[0].action;
     $.postJson(actionUri, {email: validEmail})
     .done(function () {
-      // TRACK
+      animation.update(1);
+      animation.success();
       // show success pane, hide original pane
       var modal = $('.forgot-password-modal');
       modal.find('.fp-address').html(validEmail);
@@ -316,6 +330,7 @@ $(function() {
       modal.find('.fp-success').show();
     })
     .fail(function (xhr) { // errors: no_account
+      animation.fail();
       var body = xhr.responseJSON || {};
       if (body.error === 'no_account') {
         errorUnrecognizedEmail($('#error-fp'), $('.fp-input'), trackingType);
@@ -454,6 +469,45 @@ $(function() {
     } else {
       return s;
     }
+  }
+
+  // Other
+
+  var animateButton = function (button) {
+    var $button = $(button);
+    var $progress = $button.find('.progress');
+    var $text = $button.find('.text');
+
+    $button.prop('disabled', true);
+    updateProgress.call($progress[0], 0);
+
+    var progressTimeout;
+    function updateProgress(frac) {
+      if (this) {
+        this.style.width = Math.min(frac * 100, 100) + '%';
+        if (frac < 1) {
+          var delta = Math.min(.01 * (.9 - frac), 0.005);
+          if (delta > 0.0001) {
+            progressTimeout = setTimeout(updateProgress.bind(this, frac + delta), 10);
+          }
+        }
+      }
+    }
+
+    return {
+      update: function(newProgress) {
+        updateProgress.call($progress[0], newProgress);
+      },
+      fail: function() {
+        clearTimeout(progressTimeout), progressTimeout = null;
+        $progress.css('width', 0);
+        $button.prop('disabled', false);
+      },
+      success: function() {
+        clearTimeout(progressTimeout), progressTimeout = null;
+        $button.addClass('submit-done');
+      }
+    };
   }
 
   $.postJson = function (uri, data) {
