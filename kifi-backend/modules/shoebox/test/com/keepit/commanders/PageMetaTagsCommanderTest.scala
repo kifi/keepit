@@ -1,7 +1,6 @@
 package com.keepit.commanders
 
 import com.keepit.abook.FakeABookServiceClientModule
-import com.keepit.commanders.UserProfileTab
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.controller.FakeUserActionsModule
 import com.keepit.common.social.FakeSocialGraphModule
