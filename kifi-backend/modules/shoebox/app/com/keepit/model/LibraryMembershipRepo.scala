@@ -42,10 +42,10 @@ trait LibraryMembershipRepo extends Repo[LibraryMembership] with RepoWithDelete[
   def mostMembersSinceForUser(count: Int, since: DateTime, ownerId: Id[User])(implicit session: RSession): Seq[(Id[Library], Int)]
   def countWithUserIdAndAccess(userId: Id[User], access: LibraryAccess)(implicit session: RSession): Int
   def countsWithUserIdAndAccesses(userId: Id[User], accesses: Set[LibraryAccess])(implicit session: RSession): Map[LibraryAccess, Int]
-  def getFollowersFromAnonymous(ownerId: Id[User])(implicit session: RSession): Seq[Id[User]]
+  def getFollowersForAnonymous(ownerId: Id[User])(implicit session: RSession): Seq[Id[User]]
   def getFollowersForOwner(ownerId: Id[User])(implicit session: RSession): Seq[Id[User]]
   def getFollowersForOtherUser(ownerId: Id[User], viewerId: Id[User])(implicit session: RSession): Seq[Id[User]]
-  def countFollowersFromAnonymous(userId: Id[User])(implicit session: RSession): Int
+  def countFollowersForAnonymous(userId: Id[User])(implicit session: RSession): Int
   def countFollowersForOwner(ownerId: Id[User])(implicit session: RSession): Int
   def countFollowersForOtherUser(ownerId: Id[User], viewerId: Id[User])(implicit session: RSession): Int
 }
@@ -332,7 +332,7 @@ class LibraryMembershipRepoImpl @Inject() (
     val q = sql"select distinct lm.user_id from library_membership lm, library lib where lm.library_id = lib.id and lib.owner_id = $ownerId and lib.state = 'active' and lm.access != 'owner' and lm.state = 'active'"
     q.as[Id[User]].list
   }
-  def getFollowersFromAnonymous(ownerId: Id[User])(implicit session: RSession): Seq[Id[User]] = {
+  def getFollowersForAnonymous(ownerId: Id[User])(implicit session: RSession): Seq[Id[User]] = {
     import StaticQuery.interpolation
     val q = sql"select distinct lm.user_id from library_membership lm, library lib where lm.library_id = lib.id and lib.owner_id = $ownerId and lib.state = 'active' and lm.access != 'owner' and lm.state = 'active' and lib.visibility = 'published'"
     q.as[Id[User]].list
@@ -350,7 +350,7 @@ class LibraryMembershipRepoImpl @Inject() (
     }
   }
 
-  def countFollowersFromAnonymous(ownerId: Id[User])(implicit session: RSession): Int = {
+  def countFollowersForAnonymous(ownerId: Id[User])(implicit session: RSession): Int = {
     import StaticQuery.interpolation
     val q = sql"select count(distinct lm.user_id) from library_membership lm, library lib where lm.library_id = lib.id and lib.owner_id = $ownerId and lib.state = 'active' and lm.access != 'owner' and lm.state = 'active' and lib.visibility = 'published'"
     q.as[Int].firstOption.getOrElse(0)
