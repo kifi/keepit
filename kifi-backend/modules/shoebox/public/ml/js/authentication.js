@@ -5,6 +5,7 @@ $(function() {
   //
 
   $('.form-input').on('click keypress', hideError);
+  $('.login-email, .signup-email, .form-input.email').focus();
 
   /* General Modal Functionalities */
   $('.modal-overlay').on('click', function() {
@@ -168,6 +169,7 @@ $(function() {
     if (e.which === 1) {
       $('.form-photo-file').click();
     }
+    return false;
   });
   var $photoFile = $('.form-photo-file');
   var URL = window.URL || window.webkitURL;
@@ -176,7 +178,6 @@ $(function() {
     if (this.files && URL) {
       photoUpload = uploadPhotoXhr2(this.files);
       if (photoUpload) {
-
         photoUpload.promise.fail(function() {
           var $errorField = $('#error-invalid-image');
           var $inputField = $('.upload-image-btn');
@@ -344,6 +345,7 @@ $(function() {
       modal.find('.fp-input').focus();
     }, 100);
     modal.find('.fp-input').val($('.login-email').val());
+    return false;
   }
 
   function submitForgotPassword(event) {

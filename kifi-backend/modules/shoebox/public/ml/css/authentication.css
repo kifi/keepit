@@ -82,7 +82,6 @@ ul, li {
 
 a {
   text-decoration: none;
-  outline: none;
   cursor: pointer;
 }
 
@@ -322,7 +321,11 @@ h3.small {
 }
 
 .image-upload:hover {
-  opacity: 0.6;
+  background: #ECF7F7;
+}
+
+.image-upload:hover .add {
+  color: #777;
 }
 
 .image-upload .add {
@@ -517,7 +520,6 @@ margin-bottom: 20px;
 
 .btn-authentication {
   position: relative;
-  outline: none;
   border:none;
   display: inline-block;
   margin-top: 10px;
@@ -902,7 +904,6 @@ a, .avatars li, img, .tabs_nav li {
   margin: 0 4px;
   font-size: 16px;
   border: none;
-  outline: none;
   border-radius: 3px;
   font-weight: 300;
 }
