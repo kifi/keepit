@@ -638,4 +638,8 @@ class AuthController @Inject() (
     Ok(views.html.authMinimal.accountNotFound("facebook"))
   }
 
+  def resetPassword(error: Option[String] = None) = Action { implicit request =>
+    Ok(views.html.authMinimal.resetPassword("", error.getOrElse("")))
+  }
+
 }
