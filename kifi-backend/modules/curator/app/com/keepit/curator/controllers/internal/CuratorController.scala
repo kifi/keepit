@@ -120,7 +120,7 @@ class CuratorController @Inject() (
     Ok
   }
 
-  def topLibraryRecos(userId: Id[User], limit: Int, context: Option[String]) = Action.async(parse.tolerantJson) { request =>
+  def topLibraryRecos(userId: Id[User], limit: Int) = Action.async(parse.tolerantJson) { request =>
     log.info(s"topLibraryRecos called userId=$userId limit=$limit")
 
     userExperimentCommander.getExperimentsByUser(userId) map { experiments =>
