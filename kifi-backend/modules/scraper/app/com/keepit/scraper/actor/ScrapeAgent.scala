@@ -35,6 +35,7 @@ class ScrapeAgent @Inject() (
     case job: ScrapeJob =>
       log.info(s"[ScrapeAgent($name).idle] <ScrapeJob> got assigned $job")
       context.become(busy(job))
+      context.setReceiveTimeout(60 seconds)
       worker.safeProcess(job.s.uri, job.s.info, job.s.pageInfo, job.s.proxyOpt) map { res =>
         val done = JobDone(self, job, res)
         parent ! done
@@ -52,6 +53,11 @@ class ScrapeAgent @Inject() (
     case job: ScrapeJob =>
       log.warn(s"[ScrapeAgent($name).busy] reject <ScrapeJob> assignment: $job")
       parent ! WorkerBusy(self, job)
+    case ReceiveTimeout =>
+      log.error(s"[ScrapeAgent($name).busy] ReceiveTimeout exception when busy")
+      context.become(idle)
+      parent ! WorkerAvail(self)
+
     case m => throw new UnsupportedActorMessage(m)
   }
 
