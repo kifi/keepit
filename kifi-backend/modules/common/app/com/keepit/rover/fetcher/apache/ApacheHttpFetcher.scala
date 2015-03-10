@@ -11,7 +11,6 @@ import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.common.service.RequestConsolidator
 import com.keepit.common.strings._
 import com.keepit.rover.fetcher._
-import com.keepit.scraper.DeprecatedHttpInputStream
 
 import com.keepit.common.time._
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -161,7 +160,7 @@ class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, conne
     }
   }
 
-  def fetch(url: URI, ifModifiedSince: Option[DateTime] = None, proxy: Option[HttpProxy] = None)(f: DeprecatedHttpInputStream => Unit): DeprecatedHttpFetchStatus = timing(s"HttpFetcher.fetch($url) ${proxy.map { p => s" via ${p.alias}" }.getOrElse("")}") {
+  def fetch(url: URI, ifModifiedSince: Option[DateTime] = None, proxy: Option[HttpProxy] = None)(f: HttpInputStream => Unit): DeprecatedHttpFetchStatus = timing(s"HttpFetcher.fetch($url) ${proxy.map { p => s" via ${p.alias}" }.getOrElse("")}") {
     val HttpFetchHandlerResult(responseOpt, fetchInfo, httpGet, httpContext) = fetchHandler(url, ifModifiedSince, proxy)
     responseOpt match {
       case None =>
@@ -175,12 +174,13 @@ class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, conne
         // If the response does not enclose an entity, there is no need to bother about connection release
         if (entity != null) {
           try {
-            Try(new DeprecatedHttpInputStream(entity.getContent)) match {
+            val httpInputStream = Try {
+              val contentType = Option(response.getHeaders(CONTENT_TYPE)).flatMap(_.lastOption.map(_.getValue))
+              new HttpInputStream(entity.getContent, contentType)
+            }
+            httpInputStream match {
               case Success(input) =>
                 try {
-                  Option(response.getHeaders(CONTENT_TYPE)).foreach { headers =>
-                    if (headers.length > 0) input.setContentType(headers(headers.length - 1).getValue())
-                  }
                   consumeInput(statusCode, input, httpContext, url, response, httpGet, entity, f)
                 } finally {
                   Try(input.close())
@@ -202,7 +202,7 @@ class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, conne
               DeprecatedHttpFetchStatus(statusCode, None, httpContext)
             case _ =>
               val content = Option(entity) match {
-                case Some(e) => IOUtils.toString(new DeprecatedHttpInputStream(e.getContent), UTF8).abbreviate(1000)
+                case Some(e) => IOUtils.toString(new HttpInputStream(e.getContent, None), UTF8).abbreviate(1000)
                 case None => "null content entity"
               }
               log.info(s"request failed while parsing response, bad error code: [${response.getStatusLine().toString()}][$url] with content: $content")
@@ -213,8 +213,8 @@ class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, conne
     }
   }
 
-  private def consumeInput(statusCode: Int, input: DeprecatedHttpInputStream, httpContext: HttpContext, url: URI,
-    response: CloseableHttpResponse, httpGet: HttpGet, entity: HttpEntity, f: DeprecatedHttpInputStream => Unit): DeprecatedHttpFetchStatus = {
+  private def consumeInput(statusCode: Int, input: HttpInputStream, httpContext: HttpContext, url: URI,
+    response: CloseableHttpResponse, httpGet: HttpGet, entity: HttpEntity, f: HttpInputStream => Unit): DeprecatedHttpFetchStatus = {
     try {
       statusCode match {
         case HttpStatus.SC_OK =>
@@ -240,7 +240,7 @@ class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, conne
 
   private lazy val consolidateFetch = new RequestConsolidator[URI, DeprecatedHttpFetchStatus](5 minutes)
 
-  def get(url: URI, ifModifiedSince: Option[DateTime], proxy: Option[HttpProxy])(f: (DeprecatedHttpInputStream) => Unit): Future[DeprecatedHttpFetchStatus] = consolidateFetch(url) { url =>
+  def get(url: URI, ifModifiedSince: Option[DateTime], proxy: Option[HttpProxy])(f: (HttpInputStream) => Unit): Future[DeprecatedHttpFetchStatus] = consolidateFetch(url) { url =>
     SafeFuture {
       try {
         fetch(url, ifModifiedSince, proxy)(f)

@@ -2,7 +2,6 @@ package com.keepit.rover.fetcher
 
 import com.keepit.common.net.URI
 import com.keepit.model.HttpProxy
-import com.keepit.scraper.DeprecatedHttpInputStream
 import org.joda.time.DateTime
 
 import scala.concurrent.Future
@@ -18,10 +17,10 @@ case class DeprecatedHttpFetchStatus(statusCode: Int, message: Option[String], c
 }
 
 trait DeprecatedHttpFetcher {
-  val NO_OP = { is: DeprecatedHttpInputStream => }
+  val NO_OP = { is: HttpInputStream => }
   // deprecated
-  def fetch(url: URI, ifModifiedSince: Option[DateTime] = None, proxy: Option[HttpProxy] = None)(f: DeprecatedHttpInputStream => Unit): DeprecatedHttpFetchStatus
-  def get(url: URI, ifModifiedSince: Option[DateTime] = None, proxy: Option[HttpProxy] = None)(f: DeprecatedHttpInputStream => Unit): Future[DeprecatedHttpFetchStatus]
+  def fetch(url: URI, ifModifiedSince: Option[DateTime] = None, proxy: Option[HttpProxy] = None)(f: HttpInputStream => Unit): DeprecatedHttpFetchStatus
+  def get(url: URI, ifModifiedSince: Option[DateTime] = None, proxy: Option[HttpProxy] = None)(f: HttpInputStream => Unit): Future[DeprecatedHttpFetchStatus]
 }
 
 case class ScraperHttpConfig(
