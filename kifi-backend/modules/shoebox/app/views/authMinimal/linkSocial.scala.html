@@ -18,7 +18,7 @@
 
       <form class="login-form login-email-pass" method="POST" action="@authRoutes.logInWithUserPass()">
         <div class="input-wrapper">
-          <input type="email" name="email" class="form-input login-email" placeholder="@email">
+          <input type="email" name="email" class="form-input login-email" placeholder="@email" value="@email">
           <div id="error-login-email" class="error"></div>
         </div>
         <div class="input-wrapper">
@@ -44,11 +44,14 @@
             To reset your password, please enter<br>
             the email address you use to log in.
           </p>
-          <input class="fp-input form-input" type="email" name="forgot-password-email" placeholder="@email">
+          <input class="fp-input form-input" type="email" name="forgot-password-email" placeholder="@email" value="@email">
           <div id="error-fp" class="error"></div>
           <div class="modal-buttons">
             <span><button class="modal-button-cancel" data-track-action="clickedCancelPassword">Cancel</button></span>
-            <span><button class="modal-button-action" data-track-action="clickedSubmitPassword">Submit</button></span>
+            <span><button class="modal-button-action" data-track-action="clickedSubmitPassword">
+              <span class="progress"></span>
+              <span class="text">Submit</span>
+            </button></span>
           </div>
         </form>
 
@@ -68,6 +71,6 @@
   <script src="/assets/ml/js/authentication.js"></script>
 }
 
-@minimal.layout(title = "Kifi | Claim Account", content = content, htmlClass = "signup-page", headHtml = headHtml, scripts = scripts, footerClass = "join")
+@minimal.layout(title = "Kifi | Link Social Account", content = content, htmlClass = "signup-page", headHtml = headHtml, scripts = scripts, footerClass = "join")
 
 

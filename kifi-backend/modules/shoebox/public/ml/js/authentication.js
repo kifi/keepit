@@ -263,6 +263,7 @@ $(function() {
     }
     var $first = $form.find('.form-first-name');
     var $last = $form.find('.form-last-name');
+    var animation = animateButton($('.btn-authentication'));
 
     $.postJson(this.action, {
       email: validEmail,
@@ -271,10 +272,13 @@ $(function() {
     }).done(function (data) {
       if (data.uri) { // successes return: {success: true}
         window.location = data.uri;
+        animation.update(1);
+        animation.success();
       } else {
         window.location = '/'; // todo: best location for success?
       }
     }).fail(function (xhr) {
+      animation.fail();
       var body = xhr.responseJSON || {};
       var $form = $('.form-input.email');
       if (body.error === 'error.email') {
@@ -317,7 +321,7 @@ $(function() {
       return;
     }
     // make request
-    var animation = animateButton($('.btn-authentication'));
+    var animation = animateButton($('.modal-button-action'));
     var actionUri = $('.fp-form')[0].action;
     $.postJson(actionUri, {email: validEmail})
     .done(function () {
@@ -328,6 +332,8 @@ $(function() {
       modal.find('.fp-address').html(validEmail);
       modal.find('.fp-form').hide();
       modal.find('.fp-success').show();
+      animation.update(0);
+      debugger;
     })
     .fail(function (xhr) { // errors: no_account
       animation.fail();
