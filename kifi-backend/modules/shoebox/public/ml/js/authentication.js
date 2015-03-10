@@ -298,7 +298,6 @@ $(function() {
     if (!validPw2) {
       return;
     }
-
     if (validPw1 !== validPw2) {
       var errorField = $form.find('#error-reset-password2');
       var inputField = $form.find('.form-input').eq(0);
@@ -319,13 +318,32 @@ $(function() {
         window.location = '/'; // todo: best location for success?
       }
     }).fail(function (xhr) {
-      var body = xhr.responseJSON || {};
-      var $firstPw = $('.form-input').eq(0);
-      errorUnknown($('#error-reset-password1'), $firstPw, 'resetPassword');
+      // make error message + email form appear!
+      $('#rp-reset').hide();
+      $('.rp-try-again-message').show();
+      $('.rp-try-again-message .fp-form').submit(submitForgotPassword);
     });
     return false;
   };
   $('.form-reset-password').submit(kifi.resetPassword);
+
+  function trackResetPasswordErrorView() {
+    var $page = $('.reset-password-wrapper');
+    if ($page.length === 0) {
+      return;
+    }
+    if ($page.find('#rp-already-used').length) {
+      Tracker.track('visitor_viewed_page', { type: 'resetPassword', error: 'linkAlreadyUsed' });
+
+    } else if ($page.find('#rp-expired').length) {
+      Tracker.track('visitor_viewed_page', { type: 'resetPassword', error: 'linkExpired' });
+
+    } else if ($page.find('#rp-invalid').length) {
+      Tracker.track('visitor_viewed_page', { type: 'resetPassword', error: 'unknownError' });
+    }
+  }
+  trackResetPasswordErrorView();
+  $('.rp-try-again .fp-form').submit(submitForgotPassword);
 
   //
   // Modal Functions
@@ -350,24 +368,31 @@ $(function() {
 
   function submitForgotPassword(event) {
     event.preventDefault();
-    var trackingType = window.location.pathname.search('linkSocial') >= 0 ? 'linkSocialAccount' : 'forgotPassword';
+    var fromLinkSocial = $('.page.claim-account').length >= 0;
+    var fromResetPassword = $('.page.reset-password').length >= 0;
+    var trackingType = fromLinkSocial ? 'linkSocialAccount' : (fromResetPassword ? 'resetPassword' : 'forgotPassword');
 
     // validate email
     var $email = $('.fp-input');
     var validEmail = validateEmailAddress($email, $('#error-fp'), trackingType);
-
     if (!validEmail) {
       return;
     }
+
     // make request
     var actionUri = $('.fp-form')[0].action;
     $.postJson(actionUri, {email: validEmail})
     .done(function () {
-      // show success pane, hide original pane
-      var modal = $('.forgot-password-modal');
-      modal.find('.fp-address').html(validEmail);
-      modal.find('.fp-form').hide();
-      modal.find('.fp-success').show();
+      if (fromResetPassword) {
+        $('.reset-password-submitted').addClass('show');
+      } else {
+        // show success pane, hide original pane
+        var modal = $('.forgot-password-modal');
+        modal.find('.fp-address').html(validEmail);
+        modal.find('.fp-form').hide();
+        modal.find('.fp-success').show();
+      }
+
     })
     .fail(function (xhr) { // errors: no_account
       var body = xhr.responseJSON || {};
@@ -483,7 +508,7 @@ $(function() {
     error($errorField, 'Image upload failed.<br>Please use a different image', $inputField);
   }
   function errorPasswordsDoNotMatch($errorField, $inputField) {
-    // TRACK
+    Tracker.track('visitor_viewed_page', { error: 'notMatchedPasswords' });
     error($errorField, 'Passwords do not match. Please try again', $inputField);
   }
 

@@ -845,6 +845,45 @@ a, .avatars li, img, .tabs_nav li {
   background-color: #3ebaeb;
 }
 
+.rp-try-again {
+  display: inline-block;
+  position: relative;
+}
+.rp-try-again-message {
+  margin-top: 25px;
+}
+.rp-try-again-message p {
+  line-height: 1.8;
+}
+
+#rp-already-used, #rp-expired, #rp-invalid {
+  line-height: 30px;
+}
+
+#rp-already-used + a {
+  display: inline-block;
+  margin-top: 10px;
+  color: white;
+  background-color: #2CB4E9;
+  border-radius: 5px;
+  padding: 10px 30px;
+}
+#rp-already-used + a:hover {
+  background-color: #3ebaeb;
+}
+.reset-password-submitted {
+  margin-top: 20px;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity linear 0.1s, visibility linear 0.1s;
+}
+
+.reset-password-submitted.show {
+  opacity: 1.0;
+  visibility: visible;
+}
+
+
 /* Modal Stylings */
 .modal-overlay {
   position: fixed;
