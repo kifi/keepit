@@ -96,7 +96,7 @@ class HomeController @Inject() (
   }
 
   def googleWebmasterToolsSiteVerification = Action {
-    Ok(Html("google-site-verification: google25ae05cb8bf5b064.html"))  // verification for eishay@kifi.com
+    Ok(Html("google-site-verification: google25ae05cb8bf5b064.html\n"))  // verification for eishay@kifi.com
   }
 
   def getKeepsCount = Action.async {
