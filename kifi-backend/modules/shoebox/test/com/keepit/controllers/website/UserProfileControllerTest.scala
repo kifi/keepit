@@ -243,6 +243,7 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
               "pictureName":"pic1.jpg",
               "username": "GDubs",
               "numLibraries": 1,
+              "numFollowedLibraries": 1,
               "numKeeps": 5,
               "numConnections": 3,
               "numFollowers": 2
@@ -263,6 +264,7 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
               "pictureName":"pic1.jpg",
               "username": "GDubs",
               "numLibraries": 4,
+              "numFollowedLibraries": 2,
               "numKeeps": 5,
               "numConnections": 3,
               "numFollowers": 3,
@@ -285,6 +287,7 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
               "username": "GDubs",
               "isFriend": true,
               "numLibraries": 2,
+              "numFollowedLibraries": 1,
               "numKeeps": 5,
               "numConnections": 3,
               "numFollowers": 3

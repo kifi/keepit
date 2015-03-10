@@ -1356,19 +1356,33 @@ class LibraryCommander @Inject() (
     }
   }
 
-  /* always number of libraries (that I own) that are viewable on my profile
-   * and show invited libraries only if I am viewing my own profile
-   */
-  def countLibraries(userId: Id[User], viewer: Option[Id[User]]): (Int, Option[Int]) = db.readOnlyReplica { implicit s =>
+  // number of libraries user owns that the viewer can see
+  // number of libraries user follows that the viewer can see
+  // number of libraries user is invited to (only if user is viewing his/her own profile)
+  def countLibraries(userId: Id[User], viewer: Option[Id[User]]): (Int, Int, Option[Int]) = {
     viewer match {
       case None =>
-        (libraryRepo.countLibrariesOfUserForAnonymous(userId), None)
+        db.readOnlyReplica { implicit s =>
+          val numLibsOwned = libraryRepo.countLibrariesOfUserForAnonymous(userId)
+          val numLibsFollowing = libraryRepo.countFollowingLibrariesForAnonymous(userId)
+          (numLibsOwned, numLibsFollowing, None)
+        }
       case Some(id) if id == userId =>
-        val numLibsCreated = libraryMembershipRepo.countWithUserIdAndAccess(userId, LibraryAccess.OWNER)
-        val numLibsInvited = libraryInviteRepo.countDistinctWithUserId(userId)
-        (numLibsCreated, Some(numLibsInvited))
-      case Some(friendId) =>
-        (libraryRepo.countLibrariesForOtherUser(userId, friendId), None)
+        val (numLibsOwned, numLibsFollowing) = db.readOnlyMaster { implicit s =>
+          val numLibsOwned = libraryMembershipRepo.countWithUserIdAndAccess(userId, LibraryAccess.OWNER) // cached
+          val numLibsFollowing = libraryMembershipRepo.countWithUserIdAndAccess(userId, LibraryAccess.READ_ONLY) // cached
+          (numLibsOwned, numLibsFollowing)
+        }
+        val numLibsInvited = db.readOnlyReplica { implicit s =>
+          libraryInviteRepo.countDistinctWithUserId(userId)
+        }
+        (numLibsOwned, numLibsFollowing, Some(numLibsInvited))
+      case Some(viewerId) =>
+        db.readOnlyReplica { implicit s =>
+          val numLibsOwned = libraryRepo.countLibrariesForOtherUser(userId, viewerId)
+          val numLibsFollowing = libraryRepo.countFollowingLibrariesForOtherUser(userId, viewerId)
+          (numLibsOwned, numLibsFollowing, None)
+        }
     }
   }
 
