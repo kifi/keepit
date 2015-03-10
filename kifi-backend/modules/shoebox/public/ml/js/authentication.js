@@ -414,7 +414,7 @@ $(function() {
   }
   function errorUserExists($errorField, $inputField, type) {
     Tracker.track('visitor_viewed_page', { type: type, error: 'wrongPassword' });
-    error($errorField, 'An account already exists for this email!<br>Try <a href="/login">Logging In</a>', $inputField);
+    error($errorField, 'An account already exists for this email!<br>Try <a href="/login">logging In</a>', $inputField);
   }
   function errorUnknown($errorField, $inputField, type) {
     if (type === 'login' || type === 'linkSocialAccount') {

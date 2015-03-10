@@ -27,7 +27,10 @@
         </div>
         <div class="ca-action">
           <a href="#" class="forgot-password-link">Forgot your password?</a>
-          <button id="login-btn" class="btn-authentication btn-login" type="submit" data-track-action="clickedLoginButton">Log In</button>
+          <button id="login-btn" class="btn-authentication btn-login" type="submit" data-track-action="clickedLoginButton">
+            <span class="progress"></span>
+            <span class="text">Log In</span>
+          </button>
         </div>
       </form>
 
@@ -39,7 +42,7 @@
         <div class="modal-x">&times;</div>
         <div class="modal-title">I forgot my password</div>
 
-        <form class="fp-form" action="@com.keepit.controllers.core.routes.AuthController.forgotPassword()" novalidate>
+        <form class="fp-form" action="@com.keepit.controllers.core.routes.AuthController.forgotPassword()" method="POST" novalidate>
           <p class="modal-text">
             To reset your password, please enter<br>
             the email address you use to log in.
