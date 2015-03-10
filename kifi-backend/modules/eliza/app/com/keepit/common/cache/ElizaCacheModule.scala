@@ -1,6 +1,7 @@
 package com.keepit.common.cache
 
 import com.keepit.model.cache.UserSessionViewExternalIdCache
+import com.keepit.scraper.UrlSignatureCache
 
 import scala.concurrent.duration._
 import com.keepit.common.logging.AccessLog
@@ -187,5 +188,9 @@ case class ElizaCacheModule(cachePluginModules: CachePluginModule*) extends Cach
   @Provides
   def libraryMemberIdCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
     new LibraryMembershipIdCache(stats, accessLog, (outerRepo, 10 days))
+
+  @Provides @Singleton
+  def urlSignatureCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new UrlSignatureCache(stats, accessLog, (innerRepo, 5 minutes), (outerRepo, 24 hours))
 
 }
