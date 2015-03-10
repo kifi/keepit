@@ -881,14 +881,14 @@ a, .avatars li, img, .tabs_nav li {
   font-weight: 300;
 }
 
-.modal-button-cancel {
+.modal-button-cancel,.modal-button-close {
   color: #888;
   background-color: #e8e8e8;
 }
-.modal-button-cancel:hover {
+.modal-button-cancel:hover,.modal-button-close:hover {
   background-color: #eeeeee;
 }
-.modal-button-cancel:active {
+.modal-button-cancel:active,.modal-button-close:active {
   background-color: #e0e0e0;
 }
 

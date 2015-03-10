@@ -17,6 +17,7 @@ $(function() {
   $('.forgot-password-link').click(showForgotPasswordModal);
   $('.forgot-password-modal .modal-x').click(resetForgotPasswordModal);
   $('.forgot-password-modal .fp-form .modal-button-cancel').click(resetForgotPasswordModal);
+  $('.forgot-password-modal .modal-button-close').click(resetForgotPasswordModal);
   $('.forgot-password-modal .fp-form').submit(submitForgotPassword);
 
 
@@ -306,12 +307,9 @@ $(function() {
       return;
     }
     // make request
-    var animation = animateButton($('.btn-authentication'));
     var actionUri = $('.fp-form')[0].action;
     $.postJson(actionUri, {email: validEmail})
     .done(function () {
-      animation.update(1);
-      animation.success();
       // show success pane, hide original pane
       var modal = $('.forgot-password-modal');
       modal.find('.fp-address').html(validEmail);
@@ -319,7 +317,6 @@ $(function() {
       modal.find('.fp-success').show();
     })
     .fail(function (xhr) { // errors: no_account
-      animation.fail();
       var body = xhr.responseJSON || {};
       if (body.error === 'no_account') {
         errorUnrecognizedEmail($('#error-fp'), $('.fp-input'), trackingType);
@@ -330,12 +327,14 @@ $(function() {
     return false;
   }
 
-  function resetForgotPasswordModal(ev) {
-    hideModal();
+  function resetForgotPasswordModal() {
     hideError();
+    hideModal();
     var modal = $('.forgot-password-modal');
-    modal.find('.fp-form').show();
-    modal.find('.fp-success').hide();
+    setTimeout(function () {
+      modal.find('.fp-success').hide();
+      modal.find('.fp-form').show();
+    }, 400);
   }
 
 
