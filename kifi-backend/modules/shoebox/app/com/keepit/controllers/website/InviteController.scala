@@ -2,7 +2,7 @@ package com.keepit.controllers.website
 
 import com.google.inject.Inject
 import com.keepit.abook.ABookServiceClient
-import com.keepit.commanders.{ FailedInvitationException, FullSocialId, InviteCommander, InviteStatus }
+import com.keepit.commanders.{ FailedInvitationException, FullSocialId, InviteCommander, InviteStatus, LibraryCommander }
 import com.keepit.common.akka.TimeoutFuture
 import com.keepit.common.controller.{ UserActions, UserActionsHelper, ShoeboxServiceController }
 import com.keepit.common.db.ExternalId
@@ -15,6 +15,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
 import play.api.mvc.{ Cookie, _ }
 import play.twirl.api.Html
+import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -26,13 +27,16 @@ class InviteController @Inject() (db: Database,
     emailRepo: UserEmailAddressRepo,
     userConnectionRepo: UserConnectionRepo,
     invitationRepo: InvitationRepo,
+    libraryRepo: LibraryRepo,
+    libraryCommander: LibraryCommander,
     socialUserInfoRepo: SocialUserInfoRepo,
     socialGraphPlugin: SocialGraphPlugin,
     val userActionsHelper: UserActionsHelper,
     abookServiceClient: ABookServiceClient,
     inviteCommander: InviteCommander,
     fortytwoConfig: FortyTwoConfig,
-    airbrake: AirbrakeNotifier) extends UserActions with ShoeboxServiceController {
+    airbrake: AirbrakeNotifier,
+    implicit val config: PublicIdConfiguration) extends UserActions with ShoeboxServiceController {
 
   def invite = UserAction { implicit request =>
     Redirect("/friends/invite") // Can't use reverse routes because we need to send to this URL exactly
@@ -165,6 +169,44 @@ class InviteController @Inject() (db: Database,
             resolve(Redirect(com.keepit.controllers.website.routes.HomeController.home))
         }
     }
+  }
+
+  def userInvite(id: ExternalId[User]) = Action {
+    Redirect(s"https://www.kifi.com?utm_channel=vf_personal_invite_url&utm_source=kifi_invite&utm_content=uid_${id}&kcid=na-vf_personal_invite_url-kifi_invite-uid_${id}-na")
+  }
+
+  def getGeneralInviteInfo() = UserAction { request =>
+    val link = s"https://kifi.com/i/${request.user.externalId}"
+    Ok(Json.obj(
+      "link" -> link,
+      "sms" -> s"Come join me on Kifi to discover the things you should know: $link",
+      "email" -> Json.obj(
+        "subject" -> "Come join me on Kifi",
+        "body" -> s"Connect with me on Kifi to discover the things you should know: $link"
+      ),
+      "facebook" -> s"Come join me on Kifi to discover the things you should know: $link",
+      "twitter" -> s"Come join me on Kifi to discover the things you should know: $link"
+    ))
+  }
+
+  def getLibraryInviteInfo(id: PublicId[Library]) = UserAction { request =>
+    Library.decodePublicId(id).toOption.map { libId =>
+      val library = db.readOnlyReplica { implicit session =>
+        libraryRepo.get(libId)
+      }
+      val link = s"https://kifi.com${libraryCommander.getLibraryPath(library)}"
+      val title = library.name
+      Ok(Json.obj(
+        "link" -> link,
+        "sms" -> s"Check out this interesting Kifi library: $link",
+        "email" -> Json.obj(
+          "subject" -> s"Check out this Kifi library: $title",
+          "body" -> s"I think you will find this Kifi library interesting: $link"
+        ),
+        "facebook" -> s"Check out this interesting Kifi library: $link",
+        "twitter" -> s"Check out this interesting Kifi library: $link"
+      ))
+    } getOrElse BadRequest("Invalid Library Id")
   }
 
 }
