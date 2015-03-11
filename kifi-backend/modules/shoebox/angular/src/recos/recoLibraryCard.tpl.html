@@ -34,7 +34,7 @@
               </div>
               <a class="kf-rcl-stat" ng-click="showFollowers()" href="javascript:">
                 <span class="kf-rcl-stat-name">Followers</span>
-                <span class="kf-rcl-stat-val">{{library.numFollowers | number}}</span>
+                <span class="kf-rcl-stat-val">{{Math.max(library.numFollowers, library.followers.length) | number}}</span>
               </a>
             </div>
             <div kf-library-follower-pics num-followers="library.numFollowers" followers="library.followers"

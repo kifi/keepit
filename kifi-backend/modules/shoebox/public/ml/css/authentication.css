@@ -318,6 +318,8 @@ h3.small {
   background-position: center center;
   background-repeat: no-repeat;
   background-size: cover;
+  outline: none;
+  border: none;
 }
 
 .image-upload:hover {
@@ -331,7 +333,6 @@ h3.small {
 .image-upload .add {
   display: block;
   text-align: center;
-  padding-top: 20px;
   font-size: 22px;
   line-height: 28px;
   font-weight: 700;
@@ -497,11 +498,14 @@ margin-bottom: 20px;
   transition: all .5s ease;
 }
 
-.forgot-password-link {
+.forgot-password-btn {
   display: block;
-  width: 100%;
+  padding: 0 0;
   font-size: 13px;
   color: #8A8E8E;
+  border: none;
+  outline: none;
+  background: none;
 }
 
 #signup-firstname {
@@ -528,6 +532,7 @@ margin-bottom: 20px;
   background: #2CB4E9;
   padding: 10px 40px;
   font-weight: 400;
+  overflow: hidden;
 }
 
 .btn-authentication:hover {
@@ -541,7 +546,7 @@ margin-bottom: 20px;
   display: block;
   font-weight: 300;
   padding: 8px 60px;
-  font-size: 24px;
+  font-size: 20px;
 }
 
 .photo-facebook, .photo-linkedin {
@@ -813,9 +818,10 @@ a, .avatars li, img, .tabs_nav li {
   width: 350px;
   margin: 0 auto;
 }
-.ca-action .forgot-password-link {
+.ca-action .forgot-password-btn {
   float: right;
   width: initial;
+  padding-top: 5px;
 }
 .ca-action #login-btn {
   float: left;
@@ -843,6 +849,44 @@ a, .avatars li, img, .tabs_nav li {
 }
 .reset-password-button:hover {
   background-color: #3ebaeb;
+}
+
+.rp-try-again {
+  display: inline-block;
+  position: relative;
+}
+.rp-try-again-message {
+  margin-top: 25px;
+}
+.rp-try-again-message p {
+  line-height: 1.8;
+}
+
+#rp-already-used, #rp-expired, #rp-invalid {
+  line-height: 30px;
+}
+
+#rp-already-used + a {
+  display: inline-block;
+  margin-top: 10px;
+  color: white;
+  background-color: #2CB4E9;
+  border-radius: 5px;
+  padding: 10px 30px;
+}
+#rp-already-used + a:hover {
+  background-color: #3ebaeb;
+}
+.reset-password-submitted {
+  margin-top: 20px;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity linear 0.1s, visibility linear 0.1s;
+}
+
+.reset-password-submitted.show {
+  opacity: 1.0;
+  visibility: visible;
 }
 
 /* Modal Stylings */
@@ -936,11 +980,14 @@ a, .avatars li, img, .tabs_nav li {
   top: 7px;
   height: 24px;
   width: 24px;
+  padding: 0 0;
   line-height: 24px;
   font-size: 22px;
   color: #aaa;
-  background: white;
   border-radius: 50%;
+  outline: none;
+  border: none;
+  background: none;
   cursor: pointer;
 }
 
@@ -966,11 +1013,11 @@ a, .avatars li, img, .tabs_nav li {
   background: #2D77B9;
 }
 
-.progress.success {
+.progress.submit-done {
   width: 100% !important;
   border-top-right-radius: 5px;
   border-bottom-right-radius: 5px;
-  transition: width .5s ease-in-out;
+  transition: width .1s ease-in-out;
 }
 
 .progress.fail {
@@ -1185,7 +1232,7 @@ a, .avatars li, img, .tabs_nav li {
   .page.claim-account {
     margin-top: 30px;
   }
-  .claim-account-wrapper .forgot-password-link {
+  .claim-account-wrapper .forgot-password-btn {
     width: 100%;
   }
 

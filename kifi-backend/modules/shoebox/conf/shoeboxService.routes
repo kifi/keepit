@@ -94,6 +94,8 @@ GET     /site/twitterQueuePosition  @com.keepit.controllers.website.TwitterWaitl
 
 POST    /sms                        @com.keepit.controllers.website.HomeController.sendSmsToGetKifi()
 
+GET     /i/:id                      @com.keepit.controllers.website.InviteController.userInvite(id: ExternalId[User])
+
 ##########################################
 # Extension API
 ##########################################
@@ -262,8 +264,12 @@ DELETE  /m/1/libraries/:id/keeps/:kId           @com.keepit.controllers.mobile.M
 POST    /m/1/libraries/:id/invite               @com.keepit.controllers.mobile.MobileLibraryController.inviteUsersToLibrary(id: PublicId[Library])
 GET     /m/1/libraries/:id/members              @com.keepit.controllers.mobile.MobileLibraryController.getLibraryMembers(id: PublicId[Library], offset: Int ?= 0, limit: Int ?= 20)
 GET     /m/1/libraries/:id/members/suggest      @com.keepit.controllers.mobile.MobileLibraryController.suggestMembers(id: PublicId[Library], q: Option[String] ?= None, n: Int ?= 5)
+GET     /m/1/libraries/:id/inviteInfo           @com.keepit.controllers.website.InviteController.getLibraryInviteInfo(id: PublicId[Library])
+
 
 GET     /m/1/keeps/:id                      @com.keepit.controllers.mobile.MobileKeepsController.getKeepInfo(id: ExternalId[Keep], withFullInfo: Boolean ?= false, imageWidth: Option[Int] ?= None, imageHeight: Option[Int] ?= None)
+
+GET     /m/1/inviteInfo                     @com.keepit.controllers.website.InviteController.getGeneralInviteInfo()
 
 
 
@@ -273,6 +279,7 @@ GET     /m/1/keeps/:id                      @com.keepit.controllers.mobile.Mobil
 
 GET     /                           @com.keepit.controllers.website.HomeController.home
 GET     /robots.txt                 @com.keepit.controllers.website.HomeController.robots
+GET     /google25ae05cb8bf5b064.html @com.keepit.controllers.website.HomeController.googleWebmasterToolsSiteVerification
 GET     /blog                       @com.keepit.controllers.website.HomeController.moved(uri = "http://blog.kifi.com")
 GET     /blog/                      @com.keepit.controllers.website.HomeController.moved(uri = "http://blog.kifi.com")
 GET     /about                      @com.keepit.controllers.website.HomeController.route(path = "about")

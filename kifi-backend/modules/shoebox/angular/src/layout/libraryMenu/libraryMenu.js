@@ -43,12 +43,6 @@ angular.module('kifi')
           return elementCache[selector];
         }
 
-        function positionMenu() {
-          if (scope.libraryMenu.visible) {
-            element.css({'left': Math.max(getElement('.kf-lih-toggle-menu').offset().left - 13, 0) + 'px'});
-          }
-        }
-
         function setMenuHeight() {
           var menuHeight = getElement('.kf-nav-lib-users')[0].scrollHeight + 230;
           var maxMenuHeight = Math.floor(($window.innerHeight - getElement('.kf-lih').outerHeight()) * 0.9);
@@ -57,7 +51,6 @@ angular.module('kifi')
 
         function openMenu() {
           resetSeparators();
-          positionMenu();
           scope.changeList();
           if (!scrollableLibList.data('antiscroll')) {
             element.on('transitionend', function f(e) {
@@ -77,7 +70,7 @@ angular.module('kifi')
           librarySummarySearch = new Fuse(allUserLibs, fuseOptions);
           invitedSummarySearch = new Fuse(libraryService.getInvitedInfos(), fuseOptions);
 
-          if (scope.libraryMenu.visible) {
+          if (scope.libraryMenuVisible) {
             scope.changeList();
           }
         }
@@ -156,7 +149,7 @@ angular.module('kifi')
         //
 
         scope.closeMenu = function () {
-          scope.libraryMenu.visible = false;
+          scope.libraryMenuVisible = false;
         };
 
         scope.isActive = function (path) {
@@ -219,36 +212,16 @@ angular.module('kifi')
           scope.changeList();
         });
 
-        scope.$watch('libraryMenu.visible', function (visible) {
+        scope.$watch('libraryMenuVisible', function (visible) {
           if (visible) {
             openMenu();
           }
         });
 
-        // On window resize, if the library menu is open, close it during the
-        // resize and reopen after resizing has completed.
-        var closedOnResize = false;
-        var reopenOnResizeComplete = _.debounce(function () {
-          if (closedOnResize) {
-            $timeout(function () {
-              scope.libraryMenu.visible = true;
-              closedOnResize = false;
-            });
-          }
-        }, 500);
-        var hideAndReopenOnResize = function () {
-          $timeout(function () {
-            if (scope.libraryMenu.visible) {
-              scope.libraryMenu.visible = false;
-              closedOnResize = true;
-            }
-
-            $timeout(reopenOnResizeComplete);
-          });
-        };
-        $window.addEventListener('resize', hideAndReopenOnResize);
+        var onWinResize = util.$debounce(scope, setMenuHeight, 300);
+        $window.addEventListener('resize', onWinResize);
         scope.$on('$destroy', function () {
-          $window.removeEventListener(hideAndReopenOnResize);
+          $window.removeEventListener(onWinResize);
         });
 
         //
@@ -392,9 +365,9 @@ angular.module('kifi')
 
         function onClick(event) {
           // On a click outside the menu, close the menu.
-          if (scope.libraryMenu.visible && !element[0].contains(event.target) &&
+          if (scope.libraryMenuVisible && !element[0].contains(event.target) &&
               !getElement('.kf-lih-toggle-menu')[0].contains(event.target)) {
-            scope.libraryMenu.visible = false;
+            scope.libraryMenuVisible = false;
           }
 
           if (angular.element(event.target).closest('.kf-sort-libs-button').length) {

@@ -7,7 +7,8 @@
           <button class="kf-callout-bubble-button" ng-click="closeCallout()">Got it</button>
         </div>
       </div>
-      <button class="kf-lih-toggle-menu kifi-guide-target-1" ng-class="{'kf-menu-visible': libraryMenu.visible}" ng-mousedown="toggleMenu()"><span class="kf-lih-burger"></span></button>
+      <button class="kf-lih-toggle-menu kifi-guide-target-1" ng-class="{'kf-menu-visible': libraryMenuVisible}" ng-mousedown="toggleMenu()"><span class="kf-lih-burger"></span></button>
+      <div kf-library-menu ng-show="libraryMenuVisible"></div>
       <a class="kf-lih-logo svg-kifi-clover-white-text" ui-sref="home"></a>
     </div>
     <div class="kf-lih-center">

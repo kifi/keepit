@@ -132,10 +132,6 @@ angular.module('kifi', [
           $scope.errorParams = toParams;
         }
       });
-
-      $scope.libraryMenu = {
-        visible: false
-      };
     }
 
     function paramsDiffer(stateName, p1, p2) {
