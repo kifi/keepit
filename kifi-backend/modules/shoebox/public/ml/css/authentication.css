@@ -782,7 +782,7 @@ a, .avatars li, img, .tabs_nav li {
 }
 
 
-.page.claim-account,
+.page.link-social,
 .page.account-not-found,
 .page.reset-password {
   margin-top: 155px;
@@ -790,35 +790,35 @@ a, .avatars li, img, .tabs_nav li {
   text-align: center;
 }
 
-.ca-h2, .anf-h2 {
+.ls-h2, .anf-h2 {
   color: #aaa;
   font-size: 1.7em;
 }
 
-.claim-account-wrapper input {
+.link-social-wrapper input {
   width: 350px;
 }
 
-.claim-account-wrapper .ca-text {
+.link-social-wrapper .ls-text {
   font-size: 17px;
   line-height: 30px;
   margin-bottom: 25px;
 }
 
-.claim-account-wrapper .input-wrapper {
+.link-social-wrapper .input-wrapper {
   width: 350px;
   margin: 0 auto;
 }
 
-.ca-action {
+.ls-action {
   width: 350px;
   margin: 0 auto;
 }
-.ca-action .forgot-password-link {
+.ls-action .forgot-password-link {
   float: right;
   width: initial;
 }
-.ca-action #login-btn {
+.ls-action #login-btn {
   float: left;
 }
 
@@ -1221,10 +1221,10 @@ a, .avatars li, img, .tabs_nav li {
     display: block;
   }
 
-  .page.claim-account {
+  .page.link-social {
     margin-top: 30px;
   }
-  .claim-account-wrapper .forgot-password-link {
+  .link-social-wrapper .forgot-password-link {
     width: 100%;
   }
 
@@ -1312,7 +1312,7 @@ a, .avatars li, img, .tabs_nav li {
   .page.signup {
     margin-top: 30px;
   }
-  .page.claim-account,
+  .page.link-social,
   .page.account-not-found,
   .page.reset-password {
     margin-top: 30px;
