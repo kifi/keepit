@@ -430,21 +430,29 @@ class AuthController @Inject() (
       val cookiePublicLibraryId = request.cookies.get("publicLibraryId")
       val cookieIntent = request.cookies.get("intent")
       val pubLibIdOpt = cookiePublicLibraryId.map(cookie => PublicId[Library](cookie.value))
+      val discardedCookies = Seq(cookiePublicLibraryId, cookieIntent).flatten.map(c => DiscardingCookie(c.name))
 
       request match {
         case ur: UserRequest[_] =>
           if (ur.user.state != UserStates.INCOMPLETE_SIGNUP) {
             // Complete user, they don't need to be here!
             log.info(s"[doSignupPage] ${ur.userId} already completed signup!")
-            if (pubLibIdOpt.isDefined && cookieIntent.isDefined) {
+
+            val homeUrl = s"${com.keepit.controllers.website.routes.HomeController.home.url}?m=0"
+
+            if (cookieIntent.isDefined) {
               cookieIntent.get.value match {
-                case "follow" =>
+                case "waitlist" =>
+                  Redirect(s"${com.keepit.controllers.website.routes.TwitterWaitlistController.getFakeWaitlistPosition().url}").discardingCookies(discardedCookies: _*)
+                case "follow" if pubLibIdOpt.isDefined =>
                   authCommander.autoJoinLib(ur.userId, pubLibIdOpt.get)
+                  Redirect(homeUrl).discardingCookies(discardedCookies: _*)
                 case _ =>
+                  Redirect(homeUrl).discardingCookies(discardedCookies: _*)
               }
+            } else {
+              Redirect(homeUrl).discardingCookies(discardedCookies: _*)
             }
-            val discardedCookies = Seq(cookiePublicLibraryId, cookieIntent).flatten.map(c => DiscardingCookie(c.name))
-            Redirect(s"${com.keepit.controllers.website.routes.HomeController.home.url}?m=0").discardingCookies(discardedCookies: _*)
 
           } else if (ur.identityOpt.isDefined) {
             log.info(s"[doSignupPage] ${ur.identityOpt.get} has incomplete signup state")
@@ -483,10 +491,12 @@ class AuthController @Inject() (
               // todo: This shouldn't be special cased to twitter, this should be for social regs that don't provide an email
               if (requestNonUser.identityOpt.get.identityId.providerId == "twitter") {
                 log.info(s"[doSignupPage] ${identity} finalizing twitter account")
+                val purposeDrivenInstall = cookieIntent.isDefined && cookieIntent.get.value == "waitlist"
                 Ok(views.html.authMinimal.signupGetEmail(
                   firstName = User.sanitizeName(identity.firstName.trim),
                   lastName = User.sanitizeName(identity.lastName.trim),
-                  picture = identityPicture(identity)
+                  picture = identityPicture(identity),
+                  purposeDrivenInstall = purposeDrivenInstall
                 ))
               } else {
                 log.info(s"[doSignupPage] ${identity} finalizing social id")
