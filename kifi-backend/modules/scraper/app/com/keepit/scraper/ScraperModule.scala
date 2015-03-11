@@ -2,7 +2,8 @@ package com.keepit.scraper
 
 import com.keepit.common.cache.CacheModule
 import com.keepit.common.controller.UserActionsModule
-import com.keepit.scraper.fetcher.HttpFetcherModule
+import com.keepit.rover.fetcher.HttpFetcherModule
+import com.keepit.scraper.fetcher.DeprecatedHttpFetcherModule
 import com.keepit.social.RemoteSecureSocialModule
 import com.keepit.inject.{ CommonServiceModule, ConfigurationModule }
 import com.keepit.shoebox.{ ProdShoeboxScraperClientModule, ProdShoeboxServiceClientModule }
@@ -31,4 +32,5 @@ abstract class ScraperModule(
   val secureSocialModule = RemoteSecureSocialModule()
 
   val fetcherModule: HttpFetcherModule
+  val deprecatedFetcherModule: DeprecatedHttpFetcherModule
 }
