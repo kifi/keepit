@@ -26,7 +26,7 @@
           <div id="error-login-password" class="error"></div>
         </div>
         <div class="ls-action">
-          <a href="#" class="forgot-password-link" tabindex="2" data-track-action="clickedForgotPassword">Forget your password?</a>
+          <button class="forgot-password-btn" tabindex="2" data-track-action="clickedForgotPassword">Forget your password?</button>
           <button id="login-btn" class="btn-authentication btn-login" type="submit" data-track-action="clickedLoginButton">
             <span class="progress"></span>
             <span class="text">Log In</span>
@@ -39,7 +39,7 @@
   <div class="modal-overlay forgot-password">
     <div class="modal-cell">
       <div class="modal forgot-password-modal">
-        <div class="modal-x">&times;</div>
+        <button class="modal-x">&times;</button>
         <div class="modal-title">I forgot my password</div>
 
         <form class="fp-form" action="@com.keepit.controllers.core.routes.AuthController.forgotPassword()" method="POST" novalidate>

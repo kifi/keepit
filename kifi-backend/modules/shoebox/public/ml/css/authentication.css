@@ -318,6 +318,8 @@ h3.small {
   background-position: center center;
   background-repeat: no-repeat;
   background-size: cover;
+  outline: none;
+  border: none;
 }
 
 .image-upload:hover {
@@ -331,7 +333,6 @@ h3.small {
 .image-upload .add {
   display: block;
   text-align: center;
-  padding-top: 20px;
   font-size: 22px;
   line-height: 28px;
   font-weight: 700;
@@ -497,11 +498,14 @@ margin-bottom: 20px;
   transition: all .5s ease;
 }
 
-.forgot-password-link {
+.forgot-password-btn {
   display: block;
-  width: 100%;
+  padding: 0 0;
   font-size: 13px;
   color: #8A8E8E;
+  border: none;
+  outline: none;
+  background: none;
 }
 
 #signup-firstname {
@@ -781,7 +785,6 @@ a, .avatars li, img, .tabs_nav li {
   font-weight: 400;
 }
 
-
 .page.link-social,
 .page.account-not-found,
 .page.reset-password {
@@ -814,9 +817,11 @@ a, .avatars li, img, .tabs_nav li {
   width: 350px;
   margin: 0 auto;
 }
-.ls-action .forgot-password-link {
+
+.ls-action .forgot-password-btn {
   float: right;
   width: initial;
+  padding-top: 5px;
 }
 .ls-action #login-btn {
   float: left;
@@ -975,11 +980,14 @@ a, .avatars li, img, .tabs_nav li {
   top: 7px;
   height: 24px;
   width: 24px;
+  padding: 0 0;
   line-height: 24px;
   font-size: 22px;
   color: #aaa;
-  background: white;
   border-radius: 50%;
+  outline: none;
+  border: none;
+  background: none;
   cursor: pointer;
 }
 
@@ -1224,7 +1232,8 @@ a, .avatars li, img, .tabs_nav li {
   .page.link-social {
     margin-top: 30px;
   }
-  .link-social-wrapper .forgot-password-link {
+
+  .link-social-wrapper .forgot-password-btn {
     width: 100%;
   }
 
