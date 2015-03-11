@@ -71,6 +71,8 @@ POST  /internal/eliza/checkUrisDiscussed         @com.keepit.eliza.controllers.i
 
 GET  /internal/eliza/getUnreadNotifications     @com.keepit.eliza.controllers.internal.MessagingController.getUnreadNotifications(userId: Id[User], howMany: Int)
 
+POST /internal/eliza/disableDevice              @com.keepit.eliza.controllers.internal.ElizaController.disableDevice(id: Id[com.keepit.realtime.Device])
+
 ##########################################
 # IMPORTS
 ##########################################
