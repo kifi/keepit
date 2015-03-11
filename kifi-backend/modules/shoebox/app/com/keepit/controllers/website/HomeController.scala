@@ -155,7 +155,7 @@ class HomeController @Inject() (
       log.info(s"trying to log in via $agent. orig string: $agentString")
 
       if (!agent.canRunExtensionIfUpToDate) {
-        Some(AngularDistAssets.angularApp())
+        Some(AngularDistAssets.angularApp()) // FIX THIS!!!
       } else None
     }.flatten.getOrElse(Ok(views.html.authMinimal.install()))
   }

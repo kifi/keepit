@@ -5,6 +5,7 @@ import com.google.inject.Inject
 import com.keepit.common.mail.{ OptoutSecret, EmailAddress }
 import scala.util.Try
 
+@Singleton
 class EmailOptOutCommander @Inject() (optoutSecret: OptoutSecret) {
 
   private val crypt = new RatherInsecureDESCrypt
