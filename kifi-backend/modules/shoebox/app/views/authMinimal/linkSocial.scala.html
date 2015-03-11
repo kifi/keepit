@@ -16,7 +16,7 @@
         Please enter your Kifi password to connect @providerName.
       </p>
 
-      <form class="login-form login-email-pass" method="POST" action="@authRoutes.logInWithUserPass()">
+      <form class="login-form login-email-pass" method="POST" action="@authRoutes.logInWithUserPass(provider)">
         <div class="input-wrapper">
           <input type="email" name="email" class="form-input login-email" placeholder="Your Email" value="@email">
           <div id="error-login-email" class="error"></div>

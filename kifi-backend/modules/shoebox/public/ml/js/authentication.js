@@ -490,7 +490,7 @@ $(function() {
   }
   function errorExistingEmail($errorField, $inputField, type) {
     Tracker.track('visitor_viewed_page', { type: type, error: 'existingEmail' });
-    error($errorField, 'This is a user already.<br><a href="/signup?link=' + ($inputField.val() || '') + '">Claim your account</a>.', $inputField);
+    error($errorField, 'This is a user already.<br><a href="/signup?link=' + ($inputField.val() || '') + '">Link this social account</a>', $inputField);
   }
   function errorUserExists($errorField, $inputField, type) {
     Tracker.track('visitor_viewed_page', { type: type, error: 'wrongPassword' });
