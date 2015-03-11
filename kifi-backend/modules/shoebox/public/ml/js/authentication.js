@@ -15,7 +15,7 @@ $(function() {
   });
 
   /* Forgot password */
-  $('.forgot-password-link').click(showForgotPasswordModal);
+  $('.forgot-password-btn').click(showForgotPasswordModal);
   $('.forgot-password-modal .modal-x').click(resetForgotPasswordModal);
   $('.forgot-password-modal .fp-form .modal-button-cancel').click(resetForgotPasswordModal);
   $('.forgot-password-modal .modal-button-close').click(resetForgotPasswordModal);
@@ -181,7 +181,7 @@ $(function() {
       if (photoUpload) {
         photoUpload.promise.fail(function() {
           var $errorField = $('#error-invalid-image');
-          var $inputField = $('.upload-image-btn');
+          var $inputField = $('#upload-image-btn');
           errorImageFile($errorField, $inputField);
         });
 

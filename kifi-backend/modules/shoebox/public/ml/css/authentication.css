@@ -318,10 +318,12 @@ h3.small {
   background-position: center center;
   background-repeat: no-repeat;
   background-size: cover;
+  outline: none;
+  border: none;
 }
 
 .image-upload:hover {
-  background: #ECF7F7;
+  background-color: #ECF7F7;
 }
 
 .image-upload:hover .add {
@@ -331,7 +333,6 @@ h3.small {
 .image-upload .add {
   display: block;
   text-align: center;
-  padding-top: 20px;
   font-size: 22px;
   line-height: 28px;
   font-weight: 700;
@@ -497,11 +498,14 @@ margin-bottom: 20px;
   transition: all .5s ease;
 }
 
-.forgot-password-link {
+.forgot-password-btn {
   display: block;
-  width: 100%;
+  padding: 0 0;
   font-size: 13px;
   color: #8A8E8E;
+  border: none;
+  outline: none;
+  background: none;
 }
 
 #signup-firstname {
@@ -814,9 +818,10 @@ a, .avatars li, img, .tabs_nav li {
   width: 350px;
   margin: 0 auto;
 }
-.ca-action .forgot-password-link {
+.ca-action .forgot-password-btn {
   float: right;
   width: initial;
+  padding-top: 5px;
 }
 .ca-action #login-btn {
   float: left;
@@ -975,11 +980,14 @@ a, .avatars li, img, .tabs_nav li {
   top: 7px;
   height: 24px;
   width: 24px;
+  padding: 0 0;
   line-height: 24px;
   font-size: 22px;
   color: #aaa;
-  background: white;
   border-radius: 50%;
+  outline: none;
+  border: none;
+  background: none;
   cursor: pointer;
 }
 
@@ -1224,7 +1232,7 @@ a, .avatars li, img, .tabs_nav li {
   .page.claim-account {
     margin-top: 30px;
   }
-  .claim-account-wrapper .forgot-password-link {
+  .claim-account-wrapper .forgot-password-btn {
     width: 100%;
   }
 
