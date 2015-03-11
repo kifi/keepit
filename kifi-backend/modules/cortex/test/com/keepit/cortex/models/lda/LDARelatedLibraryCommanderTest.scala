@@ -88,11 +88,11 @@ class LDARelatedLibraryCommanderTest extends Specification with CortexTestInject
         db.readOnlyReplica { implicit s =>
 
           checkConnection(Id[Library](1)) === List()
-          checkConnection(Id[Library](2)) === List()              // 2 is deactivated
-          checkConnection(Id[Library](3)) === List()              // 2 is gone
+          checkConnection(Id[Library](2)) === List() // 2 is deactivated
+          checkConnection(Id[Library](3)) === List() // 2 is gone
           checkConnection(Id[Library](4)) === List((5, true))
           checkConnection(Id[Library](5)) === List((4, true))
-          checkConnection(Id[Library](6)).map { x => x._1 }.toSet === Set(4, 5)     // 6 is new
+          checkConnection(Id[Library](6)).map { x => x._1 }.toSet === Set(4, 5) // 6 is new
         }
 
       }
