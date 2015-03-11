@@ -39,7 +39,7 @@ class LibraryResultCollector(librarySearcher: Searcher, libraryMembershipSearche
         score = ctx.score() * matching
       }
 
-      if (score > 0.0f && isUserCreated(id)) {
+      if (score > 0.0f) {
         val visibility = ctx.visibility
         val relevantQueue = if ((visibility & Visibility.OWNER) != 0) {
           myHits
@@ -55,6 +55,7 @@ class LibraryResultCollector(librarySearcher: Searcher, libraryMembershipSearche
         score = score * popularityBoost
         if ((visibility & (Visibility.OWNER | Visibility.MEMBER)) != 0) { score = score * myLibraryBoost }
         else {
+          //todo(Léo): boost libraries if isUserCreated
           val keepCount = libraryQualityEvaluator.estimateKeepCount(keepSearcher, id)
           val publishedLibraryBoost = libraryQualityEvaluator.getPublishedLibraryBoost(keepCount)
           score = score * publishedLibraryBoost

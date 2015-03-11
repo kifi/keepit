@@ -107,15 +107,11 @@ class LibraryIndexable(library: DetailedLibraryView) extends Indexable[Library, 
     import LibraryFields._
     val doc = super.buildDocument
 
-    library.kind match {
-      case LibraryKind.SYSTEM_MAIN | LibraryKind.SYSTEM_SECRET | LibraryKind.SYSTEM_PERSONA => // do not index the name of main/private libraries
-      case LibraryKind.USER_CREATED =>
-        val nameLang = LangDetector.detect(library.name)
-        doc.add(buildTextField(nameField, library.name, DefaultAnalyzer.getAnalyzer(nameLang)))
-        doc.add(buildTextField(nameStemmedField, library.name, DefaultAnalyzer.getAnalyzerWithStemmer(nameLang)))
-        doc.add(buildPrefixField(namePrefixField, library.name, maxPrefixLength))
-        doc.add(buildStringDocValuesField(nameValueField, library.name))
-    }
+    val nameLang = LangDetector.detect(library.name)
+    doc.add(buildTextField(nameField, library.name, DefaultAnalyzer.getAnalyzer(nameLang)))
+    doc.add(buildTextField(nameStemmedField, library.name, DefaultAnalyzer.getAnalyzerWithStemmer(nameLang)))
+    doc.add(buildPrefixField(namePrefixField, library.name, maxPrefixLength))
+    doc.add(buildStringDocValuesField(nameValueField, library.name))
 
     library.description.foreach { description =>
       val descriptionLang = LangDetector.detect(description)
