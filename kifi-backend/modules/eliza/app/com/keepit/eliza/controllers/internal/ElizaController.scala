@@ -5,6 +5,7 @@ import com.keepit.common.controller.ElizaServiceController
 import com.keepit.common.logging.Logging
 import com.keepit.model.{ User }
 import com.keepit.common.db.{ Id }
+import com.keepit.realtime.{ DeviceStates, DeviceRepo, Device }
 
 import scala.concurrent.future
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -15,10 +16,21 @@ import play.api.libs.json.{ Json, JsObject, JsArray }
 import com.google.inject.Inject
 import com.keepit.eliza.commanders.{ MessagingCommander, NotificationJson, NotificationCommander, ElizaStatsCommander }
 import com.keepit.eliza.model.UserThreadStats
+import com.keepit.common.db.slick._
 
 class ElizaController @Inject() (
     notificationRouter: WebSocketRouter,
+    deviceRepo: DeviceRepo,
+    db: Database,
     elizaStatsCommander: ElizaStatsCommander) extends ElizaServiceController with Logging {
+
+  def disableDevice(id: Id[Device]) = Action { request =>
+    val device = db.readWrite { implicit s =>
+      val device = deviceRepo.get(id)
+      deviceRepo.save(device.copy(state = DeviceStates.INACTIVE))
+    }
+    Ok(device.toString)
+  }
 
   def getUserThreadStats(userId: Id[User]) = Action { request =>
     Ok(UserThreadStats.format.writes(elizaStatsCommander.getUserThreadStats(userId)))
