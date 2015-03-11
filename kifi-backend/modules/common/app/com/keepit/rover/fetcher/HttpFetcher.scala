@@ -13,14 +13,22 @@ case class FetchRequest(
   proxy: Option[HttpProxy] = None,
   ifModifiedSince: Option[DateTime] = None)
 
-case class FetchResponse[A](
-  statusCode: Int,
-  message: Option[String],
-  destinationUrl: String,
-  redirects: Seq[HttpRedirect],
-  content: Try[A])
+sealed trait FetchResponse[A] {
+  def status: Int
+  def statusText: Option[String]
+}
 
-class HttpInputStream(input: InputStream, val contentType: String) extends FilterInputStream(input)
+case class FetchHttpContext(destinationUrl: String, redirects: Seq[HttpRedirect])
+
+case class SuccessfulFetch[A](
+  status: Int,
+  statusText: Option[String],
+  context: Try[FetchHttpContext],
+  content: Try[A]) extends FetchResponse[A]
+
+case class FailedFetch[A](status: Int, statusText: Option[String], exception: Option[Throwable]) extends FetchResponse[A]
+
+class HttpInputStream(input: InputStream, val contentType: Option[String] = None) extends FilterInputStream(input)
 
 trait HttpFetcher {
   def fetch[A](request: FetchRequest)(f: HttpInputStream => A): Future[FetchResponse[A]]

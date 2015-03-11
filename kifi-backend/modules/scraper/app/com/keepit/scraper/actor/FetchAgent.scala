@@ -7,7 +7,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.URI
 import com.keepit.model.HttpProxy
-import com.keepit.rover.fetcher.DeprecatedHttpFetcher
+import com.keepit.rover.fetcher.{ FetchRequest, DeprecatedHttpFetcher }
 import com.keepit.scraper.extractor.{ ExtractorFactory, ExtractorProviderType, ExtractorProviderTypes, LinkedInIdExtractor }
 import com.keepit.scraper._
 import play.api.http.Status
@@ -37,16 +37,17 @@ class FetchAgent @Inject() (
   }
 
   private def fetchBasicArticle(url: String, proxyOpt: Option[HttpProxy], extractorProviderTypeOpt: Option[ExtractorProviderType]): Future[Option[BasicArticle]] = {
-    val uri = URI.parse(url).get
-    val extractor = extractorProviderTypeOpt match {
-      case Some(t) if t == ExtractorProviderTypes.LINKEDIN_ID => new LinkedInIdExtractor(uri, ScraperConfig.maxContentChars)
-      case _ => extractorFactory(uri)
+    val extractor = {
+      val uri = URI.parse(url).get
+      extractorProviderTypeOpt match {
+        case Some(t) if t == ExtractorProviderTypes.LINKEDIN_ID => new LinkedInIdExtractor(uri, ScraperConfig.maxContentChars)
+        case _ => extractorFactory(uri)
+      }
     }
-    if (uri.host.isEmpty) throw new IllegalArgumentException(s"url $url has no host!")
-    val resF = httpFetcher.get(uri, proxy = proxyOpt)(input => extractor.process(input)) flatMap { fetchStatus =>
+    val resF = httpFetcher.get(FetchRequest(url, proxy = proxyOpt))(input => extractor.process(input)) flatMap { fetchStatus =>
       fetchStatus.statusCode match {
         case OK =>
-          uriCommander.isUnscrapable(uri, fetchStatus.destinationUrl) map { isUnscrapable =>
+          uriCommander.isUnscrapable(url, fetchStatus.destinationUrl) map { isUnscrapable =>
             if (isUnscrapable) None
             else Some(extractor.basicArticle(fetchStatus.destinationUrl getOrElse url))
           }
