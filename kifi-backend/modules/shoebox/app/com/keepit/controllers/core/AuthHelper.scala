@@ -563,8 +563,4 @@ class AuthHelper @Inject() (
     }
   }
 
-  def handleCookies(cookies: Seq[Cookie]): Unit = {
-
-  }
-
 }
