@@ -1,6 +1,6 @@
 package com.keepit.scraper
 
-import com.keepit.rover.fetcher.ScraperHttpConfig
+import com.keepit.rover.fetcher.apache.HttpFetchEnforcerConfig
 
 case class ScraperQueueConfig(
   terminateThreshold: Int,
@@ -17,7 +17,7 @@ case class ScraperConfig(
     serviceCallTimeout: Int,
     batchSize: Int,
     batchMax: Int,
-    httpConfig: ScraperHttpConfig,
+    httpConfig: HttpFetchEnforcerConfig,
     queueConfig: ScraperQueueConfig) {
   val numCores = Runtime.getRuntime.availableProcessors
   val pullThreshold = 4 // tweak

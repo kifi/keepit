@@ -1,6 +1,6 @@
 package com.keepit.scraper
 
-import com.keepit.rover.fetcher.ScraperHttpConfig
+import com.keepit.rover.fetcher.apache.HttpFetchEnforcerConfig
 import net.codingwell.scalaguice.ScalaModule
 import com.google.inject.{ Provides, Singleton }
 import play.api.{ Play, Configuration }
@@ -22,17 +22,16 @@ trait ScraperConfigModule extends ScalaModule {
 
   @Singleton
   @Provides
-  def scraperHttpConfig: ScraperHttpConfig = {
-    ScraperHttpConfig(
+  def scraperHttpConfig: HttpFetchEnforcerConfig = {
+    HttpFetchEnforcerConfig(
       httpFetcherEnforcerFreq = conf.getInt("scraper.http.fetcherEnforcerFreq").get,
       httpFetcherQSizeThreshold = conf.getInt("scraper.http.fetcherQSizeThreshold").get
     )
-
   }
 
   @Singleton
   @Provides
-  def scraperConfig(queueConfig: ScraperQueueConfig, httpConfig: ScraperHttpConfig, intervalConfig: ScraperIntervalConfig): ScraperConfig = {
+  def scraperConfig(queueConfig: ScraperQueueConfig, httpConfig: HttpFetchEnforcerConfig, intervalConfig: ScraperIntervalConfig): ScraperConfig = {
     ScraperConfig(
       changeThreshold = conf.getInt("scraper.changeThreshold").get,
       pullFrequency = conf.getInt("scraper.pullFrequency").get, // seconds

@@ -2,24 +2,17 @@ package com.keepit.rover.fetcher.apache
 
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import org.apache.http.StatusLine
-import org.apache.http.client.methods.HttpGet
+import com.keepit.common.plugin.SchedulingProperties
 import play.api.Play
 import play.api.Play.current
 import org.apache.http.HttpStatus._
 
 import scala.ref.WeakReference
-import java.util.concurrent.atomic.{ AtomicInteger, AtomicReference }
-import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.{ TimeUnit, ThreadFactory, Executors, ConcurrentLinkedQueue }
 
-case class FetchExecutionInfo(url: String, ts: Long, httpGet: HttpGet, thread: Thread) {
-  val killCount = new AtomicInteger()
-  val respStatusRef = new AtomicReference[StatusLine]()
-  val exRef = new AtomicReference[Throwable]()
-  override def toString = s"[Fetch($url,${ts},${thread.getName})] isAborted=${httpGet.isAborted} killCount=${killCount} respRef=${respStatusRef} exRef=${exRef}"
-}
+case class HttpFetchEnforcerConfig(httpFetcherEnforcerFreq: Int, httpFetcherQSizeThreshold: Int)
 
-class HttpFetchEnforcer(q: ConcurrentLinkedQueue[WeakReference[FetchExecutionInfo]], Q_SIZE_THRESHOLD: Int, airbrake: AirbrakeNotifier) extends Runnable with Logging {
+class HttpFetchEnforcer(q: ConcurrentLinkedQueue[WeakReference[ApacheFetchRequest]], Q_SIZE_THRESHOLD: Int, airbrake: AirbrakeNotifier) extends Runnable with Logging {
 
   val LONG_RUNNING_THRESHOLD = if (Play.maybeApplication.isDefined && Play.isDev) 1000 else sys.props.get("fetcher.abort.threshold") map (_.toInt) getOrElse (2 * 1000 * 60) // Play reference can be removed
 
@@ -32,24 +25,24 @@ class HttpFetchEnforcer(q: ConcurrentLinkedQueue[WeakReference[FetchExecutionInf
           val curr = System.currentTimeMillis
           val ref = iter.next
           ref.get map {
-            case ft: FetchExecutionInfo =>
+            case ft: ApacheFetchRequest =>
               if (ft.respStatusRef.get != null) {
                 val sc = ft.respStatusRef.get.getStatusCode
                 removeRef(iter, if (sc != SC_OK && sc != SC_NOT_MODIFIED) Some(s"[enforcer] ${ft.url} finished with abnormal status:${ft.respStatusRef.get}") else None)
               } else if (ft.exRef.get != null) removeRef(iter, Some(s"[enforcer] ${ft.url} caught error ${ft.exRef.get}; remove from q"))
-              else if (ft.httpGet.isAborted) removeRef(iter, Some(s"[enforcer] ${ft.url} is aborted; remove from q"))
-              else {
-                val runMillis = curr - ft.ts
+              else if (ft.isAborted) removeRef(iter, Some(s"[enforcer] ${ft.url} is aborted; remove from q"))
+              else Option(ft.thread.get).foreach { thread =>
+                val runMillis = curr - ft.executedAt.get
                 if (runMillis > LONG_RUNNING_THRESHOLD * 2) {
-                  val msg = s"[enforcer] attempt# ${ft.killCount.get} to abort long ($runMillis ms) fetch task: ${ft.httpGet.getURI}"
+                  val msg = s"[enforcer] attempt# ${ft.killCount.get} to abort long ($runMillis ms) fetch task: ${ft.url}"
                   log.warn(msg)
-                  ft.httpGet.abort() // inform scraper
+                  ft.abort() // inform scraper
                   ft.killCount.incrementAndGet()
-                  log.debug(s"[enforcer] ${ft.httpGet.getURI} isAborted=${ft.httpGet.isAborted}")
-                  if (!ft.httpGet.isAborted) {
+                  log.debug(s"[enforcer] ${ft.url} isAborted=${ft.isAborted}")
+                  if (!ft.isAborted) {
                     log.warn(s"[enforcer] failed to abort long ($runMillis ms) fetch task $ft; calling interrupt ...")
-                    ft.thread.interrupt
-                    if (ft.thread.isInterrupted) {
+                    thread.interrupt
+                    if (thread.isInterrupted) {
                       log.warn(s"[enforcer] thread ${ft.thread} has been interrupted for fetch task $ft")
                       // removeRef -- maybe later
                     } else {
@@ -60,7 +53,7 @@ class HttpFetchEnforcer(q: ConcurrentLinkedQueue[WeakReference[FetchExecutionInf
                     }
                   }
                 } else if (runMillis > LONG_RUNNING_THRESHOLD) {
-                  log.warn(s"[enforcer] potential long ($runMillis ms) running task: $ft; stackTrace=${ft.thread.getStackTrace.mkString("|")}")
+                  log.warn(s"[enforcer] potential long ($runMillis ms) running task: $ft; stackTrace=${thread.getStackTrace.mkString("|")}")
                 } else {
                   log.debug(s"[enforcer] $ft has been running for $runMillis ms")
                 }
@@ -91,5 +84,29 @@ class HttpFetchEnforcer(q: ConcurrentLinkedQueue[WeakReference[FetchExecutionInf
       case t: Throwable =>
         log.error(s"[terminator] Caught exception $t; (cause=${t.getCause}) while attempting to remove entry from queue")
     }
+  }
+}
+
+object HttpFetchEnforcer extends Logging {
+  def makeQueue(schedulingProperties: SchedulingProperties, httpConfig: HttpFetchEnforcerConfig, airbrake: AirbrakeNotifier) = {
+    val queue = new ConcurrentLinkedQueue[WeakReference[ApacheFetchRequest]]()
+    if (schedulingProperties.enabled) {
+      val enforcer = {
+        val Q_SIZE_THRESHOLD = httpConfig.httpFetcherQSizeThreshold
+        new HttpFetchEnforcer(queue, Q_SIZE_THRESHOLD, airbrake)
+      }
+
+      val scheduler = Executors.newSingleThreadScheduledExecutor(new ThreadFactory {
+        def newThread(r: Runnable): Thread = {
+          val thread = new Thread(r, "HttpFetcher-Enforcer")
+          log.debug(s"[HttpFetcher] $thread created")
+          thread
+        }
+      })
+
+      val ENFORCER_FREQ: Int = httpConfig.httpFetcherEnforcerFreq
+      scheduler.scheduleWithFixedDelay(enforcer, ENFORCER_FREQ, ENFORCER_FREQ, TimeUnit.SECONDS)
+    }
+    queue
   }
 }

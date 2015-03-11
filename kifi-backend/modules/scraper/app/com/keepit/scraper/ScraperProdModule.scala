@@ -9,8 +9,9 @@ import com.keepit.common.cache.ScraperCacheModule
 import com.keepit.common.cache.MemcachedCacheModule
 import com.keepit.common.store.ScraperProdStoreModule
 import com.keepit.common.concurrent.ProdForkJoinContextMonitorModule
+import com.keepit.rover.fetcher.ProdHttpFetcherModule
 import com.keepit.scraper.embedly.ProdEmbedlyModule
-import com.keepit.scraper.fetcher.ProdHttpFetcherModule
+import com.keepit.scraper.fetcher.DeprecatedHttpFetcherImplModule
 
 case class ScraperProdModule() extends ScraperModule(
   userActionsModule = ProdRemoteUserActionsHelperModule(),
@@ -21,4 +22,5 @@ case class ScraperProdModule() extends ScraperModule(
   embedlyModule = ProdEmbedlyModule()
 ) with CommonProdModule {
   val fetcherModule = ProdHttpFetcherModule()
+  val deprecatedFetcherModule = DeprecatedHttpFetcherImplModule()
 }

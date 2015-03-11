@@ -4,17 +4,17 @@ import akka.pattern.ask
 import akka.testkit.TestActorRef
 import akka.util.Timeout
 import com.keepit.common.actor.{ FakeActorSystemModule, TestKitSupport }
-import com.keepit.common.concurrent.{ FJExecutionContextModule, WatchableExecutionContext, FakeExecutionContextModule, ExecutionContext }
+import com.keepit.common.concurrent.{ FakeExecutionContextModule, ExecutionContext }
 import com.keepit.common.controller.FakeUserActionsModule
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.store.ScraperTestStoreModule
 import com.keepit.common.time._
-import com.keepit.rover.fetcher.{ DeprecatedHttpFetchStatus, DeprecatedFetcherHttpContext, HttpRedirect }
+import com.keepit.rover.fetcher.FetchContext
 import com.keepit.scraper._
 import com.keepit.scraper.actor.InternalMessages.FetchJob
 import com.keepit.scraper.actor.ScraperMessages.Fetch
 import com.keepit.scraper.embedly.FakeEmbedlyModule
-import com.keepit.scraper.fetcher.FakeHttpFetcherModule
+import com.keepit.scraper.fetcher.{ DeprecatedHttpFetchStatus, FakeDeprecatedHttpFetcherModule }
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.test.ScraperTestInjector
 import org.specs2.mutable.SpecificationLike
@@ -28,12 +28,9 @@ class FetchAgentTest extends TestKitSupport with SpecificationLike with ScraperT
   implicit val fj = ExecutionContext.fj
 
   val testFetcher: PartialFunction[String, DeprecatedHttpFetchStatus] = {
-    case "https://www.google.com/" => DeprecatedHttpFetchStatus(Status.OK, None, new DeprecatedFetcherHttpContext {
-      def destinationUrl: Option[String] = None
-      def redirects: Seq[HttpRedirect] = Seq.empty
-    })
+    case "https://www.google.com/" => DeprecatedHttpFetchStatus(Status.OK, None, Some(FetchContext("https://www.google.com/", Seq.empty)))
   }
-  val testFetcherModule = FakeHttpFetcherModule(Some(testFetcher))
+  val testFetcherModule = FakeDeprecatedHttpFetcherModule(Some(testFetcher))
 
   def modules = {
     Seq(

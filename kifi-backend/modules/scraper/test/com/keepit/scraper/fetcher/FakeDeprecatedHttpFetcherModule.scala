@@ -1,9 +1,8 @@
 package com.keepit.scraper.fetcher
 
 import com.google.inject.{ Provides, Singleton }
-import com.keepit.rover.fetcher.{ DeprecatedHttpFetchStatus, DeprecatedHttpFetcher }
 
-case class FakeHttpFetcherModule(urlToResponse: Option[PartialFunction[String, DeprecatedHttpFetchStatus]] = None) extends HttpFetcherModule {
+case class FakeDeprecatedHttpFetcherModule(urlToResponse: Option[PartialFunction[String, DeprecatedHttpFetchStatus]] = None) extends DeprecatedHttpFetcherModule {
 
   def configure(): Unit = {}
 
