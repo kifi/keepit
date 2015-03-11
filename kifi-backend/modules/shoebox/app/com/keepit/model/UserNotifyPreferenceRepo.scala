@@ -12,8 +12,10 @@ trait UserNotifyPreferenceRepo extends Repo[UserNotifyPreference] {
   def getByUser(userId: Id[User], excludeState: Option[State[UserNotifyPreference]] = Some(UserNotifyPreferenceStates.INACTIVE))(implicit session: RSession): Seq[UserNotifyPreference]
   def canNotify(userId: Id[User], name: String)(implicit session: RSession): Boolean
   def canNotify(userId: Id[User], name: ElectronicMailCategory)(implicit session: RSession): Boolean
+  def canNotify(userId: Id[User], name: NotifyPreference)(implicit session: RSession): Boolean
   def setNotifyPreference(userId: Id[User], name: String, canSend: Boolean)(implicit session: RWSession): Unit
   def setNotifyPreference(userId: Id[User], name: ElectronicMailCategory, canSend: Boolean)(implicit session: RWSession): Unit
+  def setNotifyPreference(userId: Id[User], pref: NotifyPreference, canSend: Boolean)(implicit session: RWSession): Unit
 }
 
 @Singleton
@@ -42,12 +44,18 @@ class UserNotifyPreferenceRepoImpl @Inject() (val db: DataBaseComponent, val clo
   def canNotify(userId: Id[User], name: ElectronicMailCategory)(implicit session: RSession): Boolean =
     canNotify(userId, "email_" + name.category)
 
+  def canNotify(userId: Id[User], pref: NotifyPreference)(implicit session: RSession): Boolean =
+    canNotify(userId, pref.name)
+
   def canNotify(userId: Id[User], name: String)(implicit session: RSession): Boolean = {
     (for (f <- rows if f.userId === userId && f.name === name && f.state === UserNotifyPreferenceStates.ACTIVE) yield f.canSend).firstOption.getOrElse(true)
   }
 
   def setNotifyPreference(userId: Id[User], name: ElectronicMailCategory, canSend: Boolean)(implicit session: RWSession): Unit =
     setNotifyPreference(userId, "email_" + name.category, canSend)
+
+  def setNotifyPreference(userId: Id[User], pref: NotifyPreference, canSend: Boolean)(implicit session: RWSession): Unit =
+    setNotifyPreference(userId, pref.name, canSend)
 
   def setNotifyPreference(userId: Id[User], name: String, canSend: Boolean)(implicit session: RWSession): Unit = {
     val updated = (for (f <- rows if f.userId === userId && f.name === name) yield (f.state, f.updatedAt, f.canSend))

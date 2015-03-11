@@ -189,6 +189,7 @@ GET     /m/1/collections/all                @com.keepit.controllers.mobile.Mobil
 GET     /m/1/user/me                        @com.keepit.controllers.mobile.MobileUserController.currentUser()
 POST    /m/1/user/me                        @com.keepit.controllers.mobile.MobileUserController.updateCurrentUser()
 GET     /m/1/user/prefs                     @com.keepit.controllers.mobile.MobileUserController.getPrefs()
+POST    /m/1/user/notifyPrefs               @com.keepit.controllers.mobile.MobilePreferenceController.setNotifyPreferences()
 POST    /m/1/user/pic/upload                @com.keepit.controllers.mobile.MobileUserController.uploadBinaryUserPicture()
 GET     /m/1/keeps/all                      @com.keepit.controllers.mobile.MobileKeepsController.allKeeps(before: Option[String], after: Option[String], collection: Option[String], helprank: Option[String], count: Int ?= Integer.MAX_VALUE, withPageInfo: Boolean ?= false)
 POST    /m/1/tags/:id/addToKeep             @com.keepit.controllers.mobile.MobileKeepsController.addTag(id: ExternalId[Collection])

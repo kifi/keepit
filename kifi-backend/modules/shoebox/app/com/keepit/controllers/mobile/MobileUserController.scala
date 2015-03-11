@@ -39,6 +39,7 @@ class MobileUserController @Inject() (
   userRepo: UserRepo,
   userConnectionRepo: UserConnectionRepo,
   userValueRepo: UserValueRepo,
+  notifyPreferenceRepo: UserNotifyPreferenceRepo,
   libraryCommander: LibraryCommander,
   db: Database,
   airbrakeNotifier: AirbrakeNotifier,
@@ -248,7 +249,13 @@ class MobileUserController @Inject() (
   def getPrefs() = UserAction.async { request =>
     // Make sure the user's last active date has been updated before returning the result
     userCommander.setLastUserActive(request.userId)
-    userCommander.getPrefs(MobilePrefNames, request.userId, request.experiments) map (Ok(_))
+    val notifyPrefs = db.readOnlyMaster { implicit s =>
+      val canShowRecosReminders = notifyPreferenceRepo.canNotify(request.userId, NotifyPreference.RECOS_REMINDER)
+      Json.obj("recos_reminder" -> canShowRecosReminders)
+    }
+    userCommander.getPrefs(MobilePrefNames, request.userId, request.experiments) map { prefObj =>
+      Ok(prefObj ++ notifyPrefs)
+    }
   }
 
   def getSettings() = UserAction { request =>
