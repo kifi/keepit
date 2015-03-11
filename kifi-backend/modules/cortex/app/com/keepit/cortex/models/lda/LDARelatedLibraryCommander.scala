@@ -79,7 +79,7 @@ class LDARelatedLibraryCommanderImpl @Inject() (
     log.info(s"begin partial update LDA related library graph for version ${version.version}")
     val now = currentDateTime
     val updates = db.readOnlyReplica { implicit s => libTopicRepo.getRecentUpdated(version, since = now.minusHours(3)) }
-    val (active, other) = updates.partition(_.state == LibraryLDATopicStates.ACTIVE)
+    val (active, others) = updates.partition(_.state == LibraryLDATopicStates.ACTIVE)
     val (newSources, _) = active.partition { x => db.readOnlyReplica { implicit s => relatedLibRepo.getNeighborIdsAndWeights(x.libraryId, version).isEmpty } } // query could be optimized
 
     if (newSources.size > 0) {
@@ -87,7 +87,7 @@ class LDARelatedLibraryCommanderImpl @Inject() (
       newSources.foreach { source => computeAndPersistEdges(source, libTopics)(version) }
     }
 
-    other.foreach { x => deactivateEdges(x.libraryId, version) }
+    others.foreach { x => deactivateEdges(x.libraryId, version) }
     log.info(s"done with partial update LDA related library graph for version ${version.version}")
   }
 
@@ -160,7 +160,6 @@ class LDARelatedLibraryCommanderImpl @Inject() (
 
 trait LDARelatedLibraryMessage
 case object UpdateLDARelatedLibrary extends LDARelatedLibraryMessage
-case object PartialUpdateLDARelatedLibrary extends LDARelatedLibraryMessage
 
 class LDARelatedLibraryActor @Inject() (
     relatedLibCommander: LDARelatedLibraryCommander,
