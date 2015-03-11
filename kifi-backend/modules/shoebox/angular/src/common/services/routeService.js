@@ -45,9 +45,6 @@ angular.module('kifi')
       formatPicUrl: function (userId, pictureName, size) {
         return env.picBase + '/users/' + userId + '/pics/' + (size || 200) + '/' + pictureName;
       },
-      libraryImageUrl: function (path) {
-        return env.picBase + '/' + path;
-      },
       getKeep: function (keepId) {
         return route('/keeps/' + keepId);
       },

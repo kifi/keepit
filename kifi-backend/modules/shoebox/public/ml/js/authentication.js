@@ -5,6 +5,7 @@ $(function() {
   //
 
   $('.form-input').on('click keypress', hideError);
+  $('.login-email, .signup-email, .form-input.email').focus();
 
   /* General Modal Functionalities */
   $('.modal-overlay').on('click', function() {
@@ -14,7 +15,7 @@ $(function() {
   });
 
   /* Forgot password */
-  $('.forgot-password-link').click(showForgotPasswordModal);
+  $('.forgot-password-btn').click(showForgotPasswordModal);
   $('.forgot-password-modal .modal-x').click(resetForgotPasswordModal);
   $('.forgot-password-modal .fp-form .modal-button-cancel').click(resetForgotPasswordModal);
   $('.forgot-password-modal .modal-button-close').click(resetForgotPasswordModal);
@@ -45,10 +46,10 @@ $(function() {
       'username': validEmail,
       'password': validPassword
     }).done(function (data) {
+      animation.update(1);
+      animation.success();
       if (data.uri) {
         window.location = data.uri;
-        animation.update(1);
-        animation.success();
       } else {
         console.log(data);
       }
@@ -91,12 +92,15 @@ $(function() {
       'email': validEmail,
       'password': validPassword
     }).done(function (data) {
+      animation.update(1);
+      animation.success();
       if (data.success) { // successes return: {success: true}
-        window.location = '/new/signupName'; // todo: change to /signup
-        animation.update(1);
-        animation.success();
+        window.location = '/signup';
+      } else if (data.uri) {
+        window.location = data.uri;
       } else {
-        console.log(data);
+        animation.fail();
+        errorUnknown($('#login-email'), $email, 'signup');
       }
     }).fail(function (xhr) {
       // possible errors: error.email, password_too_short, user_exists_failed_auth
@@ -142,10 +146,10 @@ $(function() {
         lastName: validLastName,
         picToken: upload && upload.token // upload && upload.token
       }).done(function (data) {
+        animation.update(1);
+        animation.success();
         if (data.uri) { // successes return: {success: true}
           window.location = data.uri;
-          animation.update(1);
-          animation.success();
         } else {
           console.log(data);
         }
@@ -166,18 +170,18 @@ $(function() {
     if (e.which === 1) {
       $('.form-photo-file').click();
     }
+    return false;
   });
   var $photoFile = $('.form-photo-file');
   var URL = window.URL || window.webkitURL;
   var localPhotoUrl;
   $('.form-photo-file').change(function () {
-    if (this.files && URL) {
+    if (this.files && this.files.length && URL) {
       photoUpload = uploadPhotoXhr2(this.files);
       if (photoUpload) {
-
         photoUpload.promise.fail(function() {
           var $errorField = $('#error-invalid-image');
-          var $inputField = $('.upload-image-btn');
+          var $inputField = $('#upload-image-btn');
           errorImageFile($errorField, $inputField);
         });
 
@@ -255,10 +259,10 @@ $(function() {
       firstName: $first.val() || '',
       lastName: $last.val() || ''
     }).done(function (data) {
+      animation.update(1);
+      animation.success();
       if (data.uri) { // successes return: {success: true}
         window.location = data.uri;
-        animation.update(1);
-        animation.success();
       } else {
         window.location = '/'; // todo: best location for success?
       }
@@ -270,6 +274,8 @@ $(function() {
         errorInvalidEmail($('#error-signup-email'), $form, 'signup2Social');
       } else if (body.error === 'error.required') {
         errorUnrecognizedEmail($('#error-signup-email'), $form, 'signup2Social');
+      } else if (body.error === 'known_email_address') {
+        errorExistingEmail($('#error-signup-email'), $form, 'signup2Social');
       } else {
         errorUnknown($('#error-signup-email'), $form, 'signup2Social');
       }
@@ -278,12 +284,73 @@ $(function() {
   };
   $('.signup-email').submit(kifi.signupGetEmail);
 
+  kifi.resetPassword = function (e) {
+    e.preventDefault();
+    var $form = $('.form-reset-password');
+    var $passwordInputs = $form.find('.form-input');
+    var $password1 = $passwordInputs.eq(0);
+    var $password2 = $passwordInputs.eq(1);
+
+    var validPw1 = validatePassword($password1, $form.find('#error-reset-password1'), 'resetPassword');
+    if (!validPw1) {
+      return;
+    }
+    var validPw2 = validatePassword($password2, $form.find('#error-reset-password2'), 'resetPassword');
+    if (!validPw2) {
+      return;
+    }
+    if (validPw1 !== validPw2) {
+      var errorField = $form.find('#error-reset-password2');
+      var inputField = $form.find('.form-input').eq(0);
+      errorPasswordsDoNotMatch(errorField, inputField);
+      return;
+    }
+
+    var action = $form[0].action;
+    var code = $form[0].getAttribute('data-code');
+
+    $.postJson(action, {
+      code: code,
+      password: validPw1
+    }).done(function (data) {
+      if (data.uri) { // successes return: {success: true}
+        window.location = data.uri;
+      } else {
+        window.location = '/'; // todo: best location for success?
+      }
+    }).fail(function (xhr) {
+      // make error message + email form appear!
+      $('#rp-reset').hide();
+      $('.rp-try-again-message').show();
+      $('.rp-try-again-message .fp-form').submit(submitForgotPassword);
+    });
+    return false;
+  };
+  $('.form-reset-password').submit(kifi.resetPassword);
+
+  function trackResetPasswordErrorView() {
+    var $page = $('.reset-password-wrapper');
+    if ($page.length === 0) {
+      return;
+    }
+    if ($page.find('#rp-already-used').length) {
+      Tracker.track('visitor_viewed_page', { type: 'resetPassword', error: 'linkAlreadyUsed' });
+
+    } else if ($page.find('#rp-expired').length) {
+      Tracker.track('visitor_viewed_page', { type: 'resetPassword', error: 'linkExpired' });
+
+    } else if ($page.find('#rp-invalid').length) {
+      Tracker.track('visitor_viewed_page', { type: 'resetPassword', error: 'unknownError' });
+    }
+  }
+  trackResetPasswordErrorView();
+  $('.rp-try-again .fp-form').submit(submitForgotPassword);
 
   //
   // Modal Functions
   //
-  function hideModal() {
-    event.preventDefault();
+  function hideModal(event) {
+    event && event.preventDefault();
     $('.modal-overlay').removeClass('show');
   }
 
@@ -297,28 +364,36 @@ $(function() {
       modal.find('.fp-input').focus();
     }, 100);
     modal.find('.fp-input').val($('.login-email').val());
+    return false;
   }
 
   function submitForgotPassword(event) {
     event.preventDefault();
-    var trackingType = window.location.pathname.search('linkSocial') >= 0 ? 'linkSocialAccount' : 'forgotPassword';
+    var fromLinkSocial = $('.page.link-social').length > 0;
+    var fromResetPassword = $('.page.reset-password').length > 0;
+    var trackingType = fromLinkSocial ? 'linkSocialAccount' : (fromResetPassword ? 'resetPassword' : 'forgotPassword');
 
     // validate email
     var $email = $('.fp-input');
     var validEmail = validateEmailAddress($email, $('#error-fp'), trackingType);
-
     if (!validEmail) {
       return;
     }
+
     // make request
     var actionUri = $('.fp-form')[0].action;
     $.postJson(actionUri, {email: validEmail})
     .done(function () {
-      // show success pane, hide original pane
-      var modal = $('.forgot-password-modal');
-      modal.find('.fp-address').html(validEmail);
-      modal.find('.fp-form').hide();
-      modal.find('.fp-success').show();
+      if (fromResetPassword) {
+        $('.reset-password-submitted').addClass('show');
+      } else {
+        // show success pane, hide original pane
+        var modal = $('.forgot-password-modal');
+        modal.find('.fp-address').html(validEmail);
+        modal.find('.fp-form').hide();
+        modal.find('.fp-success').show();
+      }
+
     })
     .fail(function (xhr) { // errors: no_account
       var body = xhr.responseJSON || {};
@@ -339,6 +414,7 @@ $(function() {
       modal.find('.fp-success').hide();
       modal.find('.fp-form').show();
     }, 400);
+    return false;
   }
 
 
@@ -412,9 +488,13 @@ $(function() {
     Tracker.track('visitor_viewed_page', { type: type, error: 'unrecognizedEmail' });
     error($errorField, 'Sorry, we don’t recognize this email address.', $inputField);
   }
+  function errorExistingEmail($errorField, $inputField, type) {
+    Tracker.track('visitor_viewed_page', { type: type, error: 'existingEmail' });
+    error($errorField, 'This is a user already.<br><a href="/signup?link=' + ($inputField.val() || '') + '">Claim your account</a>.', $inputField);
+  }
   function errorUserExists($errorField, $inputField, type) {
     Tracker.track('visitor_viewed_page', { type: type, error: 'wrongPassword' });
-    error($errorField, 'An account already exists for this email!<br>Try <a href="/login">Logging In</a>', $inputField);
+    error($errorField, 'An account already exists for this email!<br>Try <a href="/login">logging in</a>', $inputField);
   }
   function errorUnknown($errorField, $inputField, type) {
     if (type === 'login' || type === 'linkSocialAccount') {
@@ -427,6 +507,10 @@ $(function() {
   function errorImageFile($errorField, $inputField) {
     Tracker.track('visitor_viewed_page', { type: 'signup2Email', error: 'invalidImageFile' });
     error($errorField, 'Image upload failed.<br>Please use a different image', $inputField);
+  }
+  function errorPasswordsDoNotMatch($errorField, $inputField) {
+    Tracker.track('visitor_viewed_page', { error: 'notMatchedPasswords' });
+    error($errorField, 'Passwords do not match. Please try again', $inputField);
   }
 
 

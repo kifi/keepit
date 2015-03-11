@@ -60,6 +60,7 @@ class NormalizationServiceTest extends TestKitSupport with SpecificationLike wit
 
     "normalize a new http:// url to HTTP" in {
       withDb(modules: _*) { implicit injector =>
+        db.readWrite { implicit s => failedContentCheckRepo.createOrIncrease("abc", "xyz") }
         val httpUri = db.readWrite { implicit session => uriRepo.save(NormalizedURI.withHash("http://vimeo.com/48578814")) }
         httpUri.normalization === None
         updateNormalizationNow(httpUri)
@@ -79,6 +80,7 @@ class NormalizationServiceTest extends TestKitSupport with SpecificationLike wit
     //    }
     "redirect an existing http url to a new https:// url" in {
       withDb(modules: _*) { implicit injector =>
+        db.readWrite { implicit s => failedContentCheckRepo.createOrIncrease("abc", "xyz") }
         db.readWrite { implicit session => uriRepo.save(NormalizedURI.withHash("http://vimeo.com/48578814")) }
         val httpUri = db.readOnlyMaster { implicit session => uriRepo.getByNormalizedUrl("http://vimeo.com/48578814") }.get
 
@@ -95,6 +97,7 @@ class NormalizationServiceTest extends TestKitSupport with SpecificationLike wit
     }
     "redirect a new http://www url to an existing https:// url" in {
       withDb(modules: _*) { implicit injector =>
+        db.readWrite { implicit s => failedContentCheckRepo.createOrIncrease("abc", "xyz") }
         db.readWrite { implicit session => uriRepo.save(NormalizedURI.withHash("https://vimeo.com/48578814")) }
         val httpsUri = db.readOnlyMaster { implicit session => uriRepo.getByNormalizedUrl("https://vimeo.com/48578814") }.get
 
@@ -144,6 +147,7 @@ class NormalizationServiceTest extends TestKitSupport with SpecificationLike wit
     //    }
     "not normalize a LinkedIn private profile to its public url if ids do not match" in {
       withDb(modules: _*) { implicit injector =>
+        db.readWrite { implicit s => failedContentCheckRepo.createOrIncrease("abc", "xyz") }
         val privateUri = db.readWrite { implicit session => uriRepo.save(NormalizedURI.withHash("https://www.linkedin.com/profile/view?id=17558679", normalization = Some(Normalization.HTTPSWWW))) }
         updateNormalizationNow(privateUri, UntrustedCandidate("http://www.linkedin.com/pub/leonard\u002dgrimaldi/12/42/2b3", Normalization.CANONICAL)) === None
       }

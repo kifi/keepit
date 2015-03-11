@@ -6,9 +6,8 @@
             <a class="kf-rcl-name" href="{{library.url}}" ng-click="clickLibraryCallback()">{{library.name}}</a>
           </div>
         </div>
-        <div class="kf-rcl-color" ng-class="{'kf-above-image': coverImageUrl}" style="background-color:{{library.color}}"></div>
-        <a class="kf-rcl-cover-image" href="{{library.url}}" ng-if="coverImageUrl"
-          style="background-image:url({{coverImageUrl}});background-position:{{library.image.x}}% {{library.image.y}}%"></a>
+        <div class="kf-rcl-color" ng-class="{'kf-above-image': library.image}" style="background-color:{{library.color}}"></div>
+        <a class="kf-rcl-cover-image" href="{{library.url}}" ng-if="library.image" style="{{library.image|bgImageAndPos}}"></a>
         <div class="kf-rcl-info">
           <div class="kf-rcl-owner">
             <a href="{{library.owner|profileUrl}}" kf-track-origin="recommendationsPage/curator">
@@ -35,7 +34,7 @@
               </div>
               <a class="kf-rcl-stat" ng-click="showFollowers()" href="javascript:">
                 <span class="kf-rcl-stat-name">Followers</span>
-                <span class="kf-rcl-stat-val">{{library.numFollowers | number}}</span>
+                <span class="kf-rcl-stat-val">{{Math.max(library.numFollowers, library.followers.length) | number}}</span>
               </a>
             </div>
             <div kf-library-follower-pics num-followers="library.numFollowers" followers="library.followers"

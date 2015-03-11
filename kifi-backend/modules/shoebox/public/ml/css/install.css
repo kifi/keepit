@@ -14,6 +14,7 @@
 
 .install-title {
   margin-top: 40px;
+  margin-bottom: 40px;
   font-size: 1.7em;
 }
 
@@ -21,22 +22,22 @@
   margin: 0 auto;
   width: 300px;
   line-height: 50px;
-  background-color: white;
-  color: #3E4954;
-  border: 1px solid #aaa;
+  background-color: #2CB4E9;
+  color: white;
+  border: none;
   border-radius: 10px;
   font-size: 20px;
   font-weight: 300;
 }
 
 .install-button-content:hover {
-  background-color: #f7f7f7;
+  background-color: #3ebaeb;
 }
 
 .chrome-webstore-badge {
   width: 206px;
   height: 58px;
-  margin: 20px auto;
+  margin: 40px auto;
 }
 
 .chrome-webstore-badge img {
@@ -49,5 +50,15 @@
 }
 
 .browser-button {
-  margin: 0px 10px;
+  display: inline-block;
+  margin: 15px 15px 0 15px;
+  padding: 10px 20px;
+  background-color: #2CB4E9;
+  color: white;
+  border-radius: 5px;
+}
+
+.browser-button:hover {
+  color: white;
+  background-color: #3ebaeb;
 }

@@ -13,16 +13,15 @@ angular.module('kifi')
         $scope.closeCallout();
       }
 
-      // libraryMenu is inherited from AppCtrl scope.
-      $scope.libraryMenu.visible = !$scope.libraryMenu.visible;
+      $scope.libraryMenuVisible = !$scope.libraryMenuVisible;
     };
 
+    $scope.libraryMenuVisible = false;
     $scope.search = {text: '', focused: false, libraryChip: false};
-
 
     // TODO: Remove callout when most users know about library menu (Feb 9 2014)
     $timeout(function () {
-      $scope.calloutVisible = profileService.prefs.site_introduce_library_menu && !$scope.libraryMenu.visible;
+      $scope.calloutVisible = profileService.prefs.site_introduce_library_menu && !$scope.libraryMenuVisible;
     }, 2400);
 
     $scope.closeCallout = function () {

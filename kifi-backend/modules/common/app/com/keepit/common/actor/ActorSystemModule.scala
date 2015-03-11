@@ -49,6 +49,7 @@ case class DevActorSystemModule() extends ActorSystemModule {
   def globalSchedulingEnabled(config: Configuration): SchedulingProperties = {
     val enabledProp = config.getBoolean("scheduler.enabled").getOrElse(false)
     new SchedulingProperties {
+      def isRunnerFor(taskName: String): Boolean = enabledProp
       def enabled = enabledProp
       def enabledOnlyForLeader = enabledProp
       def enabledOnlyForOneMachine(taskName: String) = enabledProp

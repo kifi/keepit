@@ -112,10 +112,10 @@ class LibraryCommander @Inject() (
   }
 
   def getLibrarySummaries(libraryIds: Seq[Id[Library]]): Seq[LibraryInfo] = {
-    db.readOnlyReplica { implicit session =>
-      val librariesById = libraryRepo.getLibraries(libraryIds.toSet)
-      val ownersById = basicUserRepo.loadAll(librariesById.values.map(_.ownerId).toSet)
-      val keepCountsByLibraryId = keepRepo.getCountsByLibrary(libraryIds.toSet).withDefaultValue(0)
+    db.readOnlyMaster { implicit session =>
+      val librariesById = libraryRepo.getLibraries(libraryIds.toSet) // cached
+      val ownersById = basicUserRepo.loadAll(librariesById.values.map(_.ownerId).toSet) // cached
+      val keepCountsByLibraryId = keepRepo.getCountsByLibrary(libraryIds.toSet).withDefaultValue(0) // cached
       libraryIds.map { libId =>
         val library = librariesById(libId)
         val owner = ownersById(library.ownerId)
@@ -140,8 +140,9 @@ class LibraryCommander @Inject() (
 
   def getLibrarySummaryAndMembership(userIdOpt: Option[Id[User]], libraryId: Id[Library]): (LibraryInfo, Option[LibraryMembership]) = {
     val Seq(libInfo) = getLibrarySummaries(Seq(libraryId))
+    val imageOpt = libraryImageCommander.getBestImageForLibrary(libraryId, ProcessedImageSize.Medium.idealSize).map(LibraryImageInfo.createInfo)
     val memOpt = getMaybeMembership(userIdOpt, libraryId)
-    (libInfo, memOpt)
+    (libInfo.copy(image = imageOpt), memOpt)
   }
 
   def getLibraryWithOwnerAndCounts(libraryId: Id[Library], viewerUserId: Id[User]): Either[LibraryFail, (Library, BasicUser, Int, Int, Option[Boolean])] = {
@@ -1361,7 +1362,7 @@ class LibraryCommander @Inject() (
   def countLibraries(userId: Id[User], viewer: Option[Id[User]]): (Int, Option[Int]) = db.readOnlyReplica { implicit s =>
     viewer match {
       case None =>
-        (libraryRepo.countLibrariesOfUserFromAnonymous(userId), None)
+        (libraryRepo.countLibrariesOfUserForAnonymous(userId), None)
       case Some(id) if id == userId =>
         val numLibsCreated = libraryMembershipRepo.countWithUserIdAndAccess(userId, LibraryAccess.OWNER)
         val numLibsInvited = libraryInviteRepo.countDistinctWithUserId(userId)
@@ -1374,7 +1375,7 @@ class LibraryCommander @Inject() (
   def countFollowers(userId: Id[User], viewer: Option[Id[User]]): Int = db.readOnlyReplica { implicit s =>
     viewer match {
       case None =>
-        libraryMembershipRepo.countFollowersFromAnonymous(userId)
+        libraryMembershipRepo.countFollowersForAnonymous(userId)
       case Some(id) if id == userId =>
         libraryMembershipRepo.countFollowersForOwner(userId)
       case Some(viewerId) =>
@@ -1389,7 +1390,7 @@ class LibraryCommander @Inject() (
 
   def getOwnProfileLibrariesForSelf(user: User, page: Paginator, idealSize: ImageSize): ParSeq[OwnLibraryCardInfo] = {
     val (libraryInfos, memberships) = db.readOnlyMaster { implicit session =>
-      val libs = libraryRepo.getLibrariesOfSelf(user.id.get, page)
+      val libs = libraryRepo.getLibrariesForSelf(user.id.get, page)
       val libraryIds = libs.map(_.id.get).toSet
       val owners = Map(user.id.get -> BasicUser.fromUser(user))
       val memberships = libraryMembershipRepo.getWithLibraryIdsAndUserId(libraryIds, user.id.get)
@@ -1419,7 +1420,7 @@ class LibraryCommander @Inject() (
     db.readOnlyMaster { implicit session =>
       val libs = viewer match {
         case None =>
-          libraryRepo.getLibrariesOfUserFromAnonymous(user.id.get, page)
+          libraryRepo.getLibrariesOfUserForAnonymous(user.id.get, page)
         case Some(other) =>
           libraryRepo.getOwnedLibrariesForOtherUser(user.id.get, other.id.get, page)
       }
@@ -1434,10 +1435,10 @@ class LibraryCommander @Inject() (
         case None =>
           val showFollowLibraries = getUserValueSetting(user.id.get, UserValueName.SHOW_FOLLOWED_LIBRARIES)
           if (showFollowLibraries) {
-            libraryRepo.getFollowingLibrariesFromAnonymous(user.id.get, page)
+            libraryRepo.getFollowingLibrariesForAnonymous(user.id.get, page)
           } else Seq.empty
         case Some(other) if other.id == user.id =>
-          libraryRepo.getFollowingLibrariesOfSelf(user.id.get, page)
+          libraryRepo.getFollowingLibrariesForSelf(user.id.get, page)
         case Some(other) =>
           val showFollowLibraries = getUserValueSetting(user.id.get, UserValueName.SHOW_FOLLOWED_LIBRARIES)
           if (showFollowLibraries) {
@@ -1452,7 +1453,7 @@ class LibraryCommander @Inject() (
   def getInvitedLibraries(user: User, viewer: Option[User], page: Paginator, idealSize: ImageSize): ParSeq[LibraryCardInfo] = {
     if (viewer.exists(_.id == user.id)) {
       db.readOnlyMaster { implicit session =>
-        val libs = libraryRepo.getInvitedLibrariesOfSelf(user.id.get, page)
+        val libs = libraryRepo.getInvitedLibrariesForSelf(user.id.get, page)
         val owners = basicUserRepo.loadAll(libs.map(_.ownerId).toSet)
         createLibraryCardInfos(libs, owners, viewer, false, idealSize)
       }
@@ -1464,7 +1465,7 @@ class LibraryCommander @Inject() (
   def getFollowersByViewer(userId: Id[User], viewer: Option[Id[User]]): Seq[Id[User]] = db.readOnlyMaster { implicit s =>
     viewer match {
       case None =>
-        libraryMembershipRepo.getFollowersFromAnonymous(userId)
+        libraryMembershipRepo.getFollowersForAnonymous(userId)
       case Some(id) if id == userId =>
         libraryMembershipRepo.getFollowersForOwner(userId)
       case Some(viewerId) =>

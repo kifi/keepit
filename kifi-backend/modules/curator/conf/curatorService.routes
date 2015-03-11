@@ -18,7 +18,7 @@ POST   /internal/curator/updateLibraryRecommendationFeedback        @com.keepit.
 POST   /internal/curator/triggerEmailToUser 	                    @com.keepit.curator.controllers.internal.CuratorController.triggerEmailToUser(code: String, userId: Id[User])
 POST   /internal/curator/refreshUserRecos                           @com.keepit.curator.controllers.internal.CuratorController.refreshUserRecos(userId: Id[User])
 
-POST   /internal/curator/topLibraryRecos                            @com.keepit.curator.controllers.internal.CuratorController.topLibraryRecos(userId: Id[User], limit: Int ?= 100, context: Option[String] ?= None)
+POST   /internal/curator/topLibraryRecos                            @com.keepit.curator.controllers.internal.CuratorController.topLibraryRecos(userId: Id[User], limit: Int ?= 100)
 POST   /internal/curator/refreshLibraryRecos                        @com.keepit.curator.controllers.internal.CuratorController.refreshLibraryRecos(userId: Id[User], await: Boolean ?= false)
 POST   /internal/curator/ingestPersonaRecos                         @com.keepit.curator.controllers.internal.CuratorController.ingestPersonaRecos(userId: Id[User])
 

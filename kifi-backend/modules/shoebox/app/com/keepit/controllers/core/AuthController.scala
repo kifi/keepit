@@ -317,11 +317,7 @@ class AuthController @Inject() (
           nonUserRequest.identityOpt.get.email.flatMap(e => db.readOnlyMaster(emailAddressRepo.getByAddressOpt(EmailAddress(e))(_))) match {
             case Some(addr) =>
               // A user with this email address exists in the system, but it is not yet linked to this social identity.
-              Ok(views.html.auth.connectToAuthenticate(
-                emailAddress = nonUserRequest.identityOpt.get.email.get,
-                network = SocialNetworkType(nonUserRequest.identityOpt.get.identityId.providerId),
-                logInAttempted = true
-              ))
+              Ok(views.html.authMinimal.linkSocial(nonUserRequest.identityOpt.get.identityId.providerId, nonUserRequest.identityOpt.get.email.get))
             case None =>
               // No email for this user exists in the system.
               Redirect("/signup").flashing("signin_error" -> "no_account")
@@ -404,7 +400,7 @@ class AuthController @Inject() (
           if (agent.isOldIE) {
             Some(Redirect(com.keepit.controllers.website.routes.HomeController.unsupported()))
           } else None
-        }.flatten.getOrElse(Ok(views.html.auth.authGrey("login")))
+        }.flatten.getOrElse(Ok(views.html.authMinimal.loginToKifi()))
     }
   }
 
@@ -456,13 +452,7 @@ class AuthController @Inject() (
             // User exists, is incomplete
             val (firstName, lastName) = if (identity.firstName.contains("@")) ("", "") else (User.sanitizeName(identity.firstName), User.sanitizeName(identity.lastName))
             val picture = identityPicture(identity)
-            Ok(views.html.auth.authGrey(
-              view = "signup2Email",
-              emailAddress = identity.email.getOrElse(""),
-              picturePath = picture,
-              firstName = firstName,
-              lastName = lastName
-            ))
+            Ok(views.html.authMinimal.signupGetName())
           } else {
             log.info(s"[doSignupPage] ${ur.userId} has no identity ${ur.user.state}")
             // User but no identity. Huh?
@@ -472,32 +462,31 @@ class AuthController @Inject() (
         case requestNonUser: NonUserRequest[_] =>
           if (requestNonUser.identityOpt.isDefined) {
             val identity = requestNonUser.identityOpt.get
-            if (identity.email.exists(e => authCommander.emailAddressMatchesSomeKifiUser(EmailAddress(e)))) {
+            val loginAndLinkEmail = request.queryString.get("link").map(_.headOption).flatten
+            if (loginAndLinkEmail.isDefined || identity.email.exists(e => authCommander.emailAddressMatchesSomeKifiUser(EmailAddress(e)))) {
               // No user exists, but social network identity’s email address matches a Kifi user
               log.info(s"[doSignupPage] ${identity} social network email ${identity.email}")
-              Ok(views.html.auth.connectToAuthenticate(
-                emailAddress = identity.email.get,
-                network = SocialNetworkType(identity.identityId.providerId),
-                logInAttempted = false
+              Ok(views.html.authMinimal.linkSocial(
+                identity.identityId.providerId,
+                identity.email.getOrElse(loginAndLinkEmail.getOrElse(""))
               ))
             } else if (requestNonUser.flash.get("signin_error").exists(_ == "no_account")) {
               // No user exists, social login was attempted. Let user choose what to do next.
               log.info(s"[doSignupPage] ${identity} logged in with wrong network")
-              Ok(views.html.auth.loggedInWithWrongNetwork(
-                network = SocialNetworkType(identity.identityId.providerId)
+              // todo: Needs visual refresh
+              Ok(views.html.authMinimal.accountNotFound(
+                provider = identity.identityId.providerId
               ))
             } else {
               // No user exists, has social network identity, must finalize
 
+              // todo: This shouldn't be special cased to twitter, this should be for social regs that don't provide an email
               if (requestNonUser.identityOpt.get.identityId.providerId == "twitter") {
                 log.info(s"[doSignupPage] ${identity} finalizing twitter account")
-                Ok(views.html.auth.authGrey(
-                  view = "signup2Social",
-                  firstName = User.sanitizeName(identity.firstName),
-                  lastName = User.sanitizeName(identity.lastName),
-                  emailAddress = identity.email.getOrElse(""),
-                  picturePath = identityPicture(identity),
-                  network = Some(SocialNetworkType(identity.identityId.providerId))
+                Ok(views.html.authMinimal.signupGetEmail(
+                  firstName = User.sanitizeName(identity.firstName.trim),
+                  lastName = User.sanitizeName(identity.lastName.trim),
+                  picture = identityPicture(identity)
                 ))
               } else {
                 log.info(s"[doSignupPage] ${identity} finalizing social id")
@@ -519,7 +508,7 @@ class AuthController @Inject() (
             }
           } else {
             temporaryReportSignupLoad()(requestNonUser)
-            Ok(views.html.auth.authGrey("signup"))
+            Ok(views.html.authMinimal.signup())
           }
 
       }
@@ -571,13 +560,13 @@ class AuthController @Inject() (
     db.readWrite { implicit s =>
       passwordResetRepo.getByToken(code) match {
         case Some(pr) if passwordResetRepo.tokenIsNotExpired(pr) =>
-          Ok(views.html.auth.setPassword(code = code))
+          Ok(views.html.authMinimal.resetPassword(code = code))
         case Some(pr) if pr.state == PasswordResetStates.ACTIVE || pr.state == PasswordResetStates.INACTIVE =>
-          Ok(views.html.auth.setPassword(error = "expired"))
+          Ok(views.html.authMinimal.resetPassword(error = "expired"))
         case Some(pr) if pr.state == PasswordResetStates.USED =>
-          Ok(views.html.auth.setPassword(error = "already_used"))
+          Ok(views.html.authMinimal.resetPassword(error = "already_used"))
         case _ =>
-          Ok(views.html.auth.setPassword(error = "invalid_code"))
+          Ok(views.html.authMinimal.resetPassword(error = "invalid_code"))
       }
     }
   }
@@ -606,10 +595,12 @@ class AuthController @Inject() (
 
   // New signup pages
 
+  // todo, this is signup
   def signupPageMinimal() = Action { implicit request =>
     Ok(views.html.authMinimal.signup())
   }
 
+  // todo, this is signup2Social
   def signupPageGetEmailMinimal() = MaybeUserAction { implicit request =>
     val identity = request.identityOpt.get
     Ok(views.html.authMinimal.signupGetEmail(
@@ -619,14 +610,17 @@ class AuthController @Inject() (
     )
   }
 
+  // todo, this is signup2Email
   def signupPageGetName() = Action { implicit request =>
     Ok(views.html.authMinimal.signupGetName())
   }
 
+  // todo
   def loginPageMinimal() = Action { implicit request =>
     Ok(views.html.authMinimal.loginToKifi())
   }
 
+  // Skipping until Twitter waitlist
   def loginPageNoTwitterMinimal() = Action { implicit request =>
     Ok(views.html.authMinimal.loginToKifiNoTwitter())
   }
@@ -635,8 +629,17 @@ class AuthController @Inject() (
     Ok(views.html.authMinimal.linkSocial("facebook", "someemail1230@gmail.com"))
   }
 
+  // Done
   def install() = Action { implicit request =>
     Ok(views.html.authMinimal.install())
+  }
+
+  def accountNotFound() = Action { implicit request =>
+    Ok(views.html.authMinimal.accountNotFound("facebook"))
+  }
+
+  def resetPassword(code: String, error: Option[String] = None) = Action { implicit request =>
+    Ok(views.html.authMinimal.resetPassword(code, error.getOrElse("")))
   }
 
 }
