@@ -7,11 +7,11 @@
   @{provider.substring(0,1).toUpperCase + provider.substring(1)}
 }
 @content = {
-  <div class="page claim-account">
-    <div class="claim-account-wrapper">
-      <h1 class="ca-h1">Link Your Social Account</h1>
-      <h2 class="ca-h2">Connect @providerName</h2>
-      <p class="ca-text">
+  <div class="page link-social">
+    <div class="link-social-wrapper">
+      <h1 class="ls-h1">Link Your Social Account</h1>
+      <h2 class="ls-h2">Connect @providerName</h2>
+      <p class="ls-text">
         @if(email != "") { We already have an account for <b>@email</b>.<br> }
         Please enter your Kifi password to connect @providerName.
       </p>
@@ -25,7 +25,7 @@
           <input type="password" name="password" class="form-input login-password" placeholder="Your password">
           <div id="error-login-password" class="error"></div>
         </div>
-        <div class="ca-action">
+        <div class="ls-action">
           <button class="forgot-password-btn" tabindex="2" data-track-action="clickedForgotPassword">Forget your password?</button>
           <button id="login-btn" class="btn-authentication btn-login" type="submit" data-track-action="clickedLoginButton">
             <span class="progress"></span>
