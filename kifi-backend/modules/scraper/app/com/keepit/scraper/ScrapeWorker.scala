@@ -6,8 +6,9 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.net.URI._
 import com.keepit.model._
-import com.keepit.rover.fetcher.{ FetchRequest, DeprecatedHttpFetcher, HttpRedirect }
+import com.keepit.rover.fetcher.{ FetchRequest, HttpRedirect }
 import com.keepit.scraper.extractor._
+import com.keepit.scraper.fetcher.DeprecatedHttpFetcher
 import com.keepit.search.{ LangDetector, Article, ArticleStore }
 import scala.concurrent.duration._
 import org.joda.time.Days
@@ -391,7 +392,7 @@ class ScrapeWorkerImpl @Inject() (
           case Some(importedBookmark) =>
             val parsedBookmarkUrl = URI.parse(importedBookmark.url).get.toString
             val isFishy = (parsedBookmarkUrl != movedUri.url) &&
-              !httpFetcher.fetch(FetchRequest(parsedBookmarkUrl))(httpFetcher.NO_OP).redirects.headOption.exists(_.isPermanent)
+              !httpFetcher.fetch(FetchRequest(parsedBookmarkUrl))(DeprecatedHttpFetcher.NO_OP).redirects.headOption.exists(_.isPermanent)
             log.info(s"[hasFishy301] ${importedBookmark.uriId} result: $isFishy, ${parsedBookmarkUrl} vs ${movedUri.url}")
             isFishy
           case None =>
