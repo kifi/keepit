@@ -528,6 +528,7 @@ margin-bottom: 20px;
   background: #2CB4E9;
   padding: 10px 40px;
   font-weight: 400;
+  overflow: hidden;
 }
 
 .btn-authentication:hover {
@@ -1004,11 +1005,11 @@ a, .avatars li, img, .tabs_nav li {
   background: #2D77B9;
 }
 
-.progress.success {
+.progress.submit-done {
   width: 100% !important;
   border-top-right-radius: 5px;
   border-bottom-right-radius: 5px;
-  transition: width .5s ease-in-out;
+  transition: width .1s ease-in-out;
 }
 
 .progress.fail {

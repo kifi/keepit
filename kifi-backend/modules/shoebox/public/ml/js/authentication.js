@@ -46,10 +46,10 @@ $(function() {
       'username': validEmail,
       'password': validPassword
     }).done(function (data) {
+      animation.update(1);
+      animation.success();
       if (data.uri) {
         window.location = data.uri;
-        animation.update(1);
-        animation.success();
       } else {
         console.log(data);
       }
@@ -92,13 +92,14 @@ $(function() {
       'email': validEmail,
       'password': validPassword
     }).done(function (data) {
+      animation.update(1);
+      animation.success();
       if (data.success) { // successes return: {success: true}
         window.location = '/signup';
-        animation.update(1);
-        animation.success();
       } else if (data.uri) {
         window.location = data.uri;
       } else {
+        animation.fail();
         errorUnknown($('#login-email'), $email, 'signup');
       }
     }).fail(function (xhr) {
@@ -145,10 +146,10 @@ $(function() {
         lastName: validLastName,
         picToken: upload && upload.token // upload && upload.token
       }).done(function (data) {
+        animation.update(1);
+        animation.success();
         if (data.uri) { // successes return: {success: true}
           window.location = data.uri;
-          animation.update(1);
-          animation.success();
         } else {
           console.log(data);
         }
@@ -258,10 +259,10 @@ $(function() {
       firstName: $first.val() || '',
       lastName: $last.val() || ''
     }).done(function (data) {
+      animation.update(1);
+      animation.success();
       if (data.uri) { // successes return: {success: true}
         window.location = data.uri;
-        animation.update(1);
-        animation.success();
       } else {
         window.location = '/'; // todo: best location for success?
       }
