@@ -46,7 +46,7 @@ class S3URIImageStoreImpl(override val s3Client: AmazonS3, config: S3ImageConfig
 
   //setting the path for the image info
   def getImageURL(imageInfo: ImageInfo, extNormUriId: ExternalId[NormalizedURI]): Option[String] = {
-    if ((config.isLocal || imageInfo.provider == ImageProvider.PAGEPEEKER)) return None
+    if (config.isLocal || imageInfo.provider == Some(ImageProvider.PAGEPEEKER)) return None
     urlFromKey(getImageKey(imageInfo, extNormUriId))
   }
 
