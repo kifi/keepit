@@ -2,7 +2,6 @@ package com.keepit.rover.fetcher.apache
 
 import java.util.zip.ZipException
 
-import com.keepit.common.akka.SafeFuture
 import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.rover.fetcher._
 
@@ -52,9 +51,9 @@ class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, conne
 
   private val q = HttpFetchEnforcer.makeQueue(schedulingProperties, scraperHttpConfig, airbrake)
 
-  def fetch[A](request: FetchRequest)(f: HttpInputStream => A): Future[FetchResult[A]] = SafeFuture {
-    doFetch(request)(f).get
-  }(ExecutionContext.fj)
+  def fetch[A](request: FetchRequest)(f: HttpInputStream => A): Future[FetchResult[A]] = {
+    Future { doFetch(request)(f).get }(ExecutionContext.fj) // not using SafeFuture here, alerting logic in Try
+  }
 
   def doFetch[A](request: FetchRequest)(f: HttpInputStream => A): Try[FetchResult[A]] = {
     timing(s"ApacheHttpFetcher.doFetch(${request.url} ${request.proxy.map { p => s" via ${p.alias}" }.getOrElse("")}") {
