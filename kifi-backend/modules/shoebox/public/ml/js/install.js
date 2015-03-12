@@ -60,14 +60,16 @@
       chrome.webstore.install($('link[rel="chrome-webstore-item"]').attr('href'), function () {
         console.log('[chrome.webstore.install] done');
         $aContent.text('Installed. Initializing...');
+        setTimeout(troubleshootChrome.bind(null, $a), 8000);
       }, function (e) {
         console.log('[chrome.webstore.install] error:', e);
         if (++errorCount < 4) {
           $aContent.text('Had an error. Try again?');
-          setTimeout(restoreInstallLink.bind(null, $a), 1500);
+          setTimeout(troubleshootChrome.bind(null, $a), 1500);
         } else {
           $aContent.hide();
           $('.install-error').show();
+          $('.continue-link').show();
         }
       })
     } else if ($doc.hasClass('firefox')) {
@@ -88,6 +90,11 @@
   function troubleshootFirefox($a) {
     restoreInstallLink($a);
     $('.install-ff-help:hidden').slideDown();
+  }
+
+  function troubleshootChrome($a) {
+    restoreInstallLink($a);
+    $('.install-chrome-help:hidden').slideDown();
   }
 
   function reportToThirdPartyCampaigns() {
