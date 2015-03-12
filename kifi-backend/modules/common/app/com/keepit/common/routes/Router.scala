@@ -222,6 +222,7 @@ object Search extends Service {
 
 object Eliza extends Service {
   object internal {
+    def sendPushNotification() = ServiceRoute(POST, "/internal/eliza/sendPushNotification")
     def sendToUserNoBroadcast() = ServiceRoute(POST, "/internal/eliza/sendToUserNoBroadcast")
     def sendToUser() = ServiceRoute(POST, "/internal/eliza/sendToUser")
     def sendToAllUsers() = ServiceRoute(POST, "/internal/eliza/sendToAllUsers")

@@ -10,7 +10,7 @@ import com.keepit.model.{ NotificationCategory, User }
 import com.keepit.common.db.{ ExternalId, Id }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.realtime.PushNotification
+import com.keepit.realtime.{ MessageThreadPushNotification, SimplePushNotification, PushNotification }
 import com.keepit.common.db.slick.Database
 import com.keepit.eliza.model._
 
@@ -47,7 +47,12 @@ class MessagingAnalytics @Inject() (
     }
   }
 
-  def sentPushNotificationForThread(userId: Id[User], notification: PushNotification): Unit = {
+  def sentPushNotification(userId: Id[User], notification: PushNotification): Unit = notification match {
+    case messageNotification: MessageThreadPushNotification => sentPushNotificationForThread(userId, messageNotification)
+    case simplePushNotification: SimplePushNotification => sentSimplePushNotification(userId, simplePushNotification)
+  }
+
+  private def sentPushNotificationForThread(userId: Id[User], notification: MessageThreadPushNotification): Unit = {
     val sentAt = currentDateTime
     SafeFuture {
       val contextBuilder = heimdalContextBuilder()
@@ -55,7 +60,22 @@ class MessagingAnalytics @Inject() (
       contextBuilder += ("channel", push)
       contextBuilder.addNotificationCategory(NotificationCategory.User.MESSAGE)
       contextBuilder += ("global", false)
+      contextBuilder += ("type", "messageThread")
       contextBuilder += ("threadId", notification.id.id)
+      contextBuilder += ("pendingNotificationCount", notification.unvisitedCount)
+      heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.WAS_NOTIFIED, sentAt))
+    }
+  }
+
+  private def sentSimplePushNotification(userId: Id[User], notification: SimplePushNotification): Unit = {
+    val sentAt = currentDateTime
+    SafeFuture {
+      val contextBuilder = heimdalContextBuilder()
+      contextBuilder += ("action", "sent")
+      contextBuilder += ("channel", push)
+      contextBuilder.addNotificationCategory(NotificationCategory.User.MESSAGE)
+      contextBuilder += ("global", false)
+      contextBuilder += ("type", "simple")
       contextBuilder += ("pendingNotificationCount", notification.unvisitedCount)
       heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.WAS_NOTIFIED, sentAt))
     }
