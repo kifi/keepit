@@ -42,21 +42,25 @@ class UserPersonaCommanderTest extends TestKitSupport with ShoeboxTestInjector {
         val userPersonaCommander = inject[UserPersonaCommander]
         db.readOnlyMaster { implicit s =>
           userPersonaRepo.getPersonasForUser(user1.id.get).map(_.name) === Seq(PersonaName.INVESTOR, PersonaName.TECHIE)
+          libraryRepo.getAllByOwner(user1.id.get).length === 0
         }
         // add an existing persona
         val mapping1 = Await.result(userPersonaCommander.addPersonasForUser(user1.id.get, Set(PersonaName.INVESTOR)), 5 seconds)
         mapping1.size === 0
 
-        // add a new persona
+        // add a new persona (should auto generate library)
         val mapping2 = Await.result(userPersonaCommander.addPersonasForUser(user1.id.get, Set(PersonaName.FOODIE)), 5 seconds)
         mapping2.size === 1
+        mapping2.values.toSeq.flatten.length === 1
 
-        // add a mixed set
+        // add a mixed set (should not auto generate library - non-default library already created)
         val mapping3 = Await.result(userPersonaCommander.addPersonasForUser(user1.id.get, Set(PersonaName.INVESTOR, PersonaName.DEVELOPER, PersonaName.FOODIE)), 5 seconds)
         mapping3.size === 1
+        mapping3.values.toSeq.flatten.length === 0
 
         db.readOnlyMaster { implicit s =>
           userPersonaRepo.getPersonasForUser(user1.id.get).map(_.name) === Seq(PersonaName.INVESTOR, PersonaName.TECHIE, PersonaName.FOODIE, PersonaName.DEVELOPER)
+          libraryRepo.getAllByOwner(user1.id.get).length === 1
         }
       }
     }
