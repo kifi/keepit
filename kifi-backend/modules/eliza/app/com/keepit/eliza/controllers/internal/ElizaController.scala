@@ -5,7 +5,7 @@ import com.keepit.common.controller.ElizaServiceController
 import com.keepit.common.logging.Logging
 import com.keepit.model.{ User }
 import com.keepit.common.db.{ Id }
-import com.keepit.realtime.{ DeviceStates, DeviceRepo, Device }
+import com.keepit.realtime._
 
 import scala.concurrent.future
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -20,6 +20,7 @@ import com.keepit.common.db.slick._
 
 class ElizaController @Inject() (
     notificationRouter: WebSocketRouter,
+    messagingCommander: MessagingCommander,
     deviceRepo: DeviceRepo,
     db: Database,
     elizaStatsCommander: ElizaStatsCommander) extends ElizaServiceController with Logging {
@@ -34,6 +35,16 @@ class ElizaController @Inject() (
 
   def getUserThreadStats(userId: Id[User]) = Action { request =>
     Ok(UserThreadStats.format.writes(elizaStatsCommander.getUserThreadStats(userId)))
+  }
+
+  def sendPushNotification() = Action.async { request =>
+    future {
+      val req = request.body.asJson.get.asInstanceOf[JsObject]
+      val userId = Id[User]((req \ "userId").as[Long])
+      val message = (req \ "message").asInstanceOf[String]
+      messagingCommander.sendMessagePushNotification(userId, message)
+      Ok("")
+    }
   }
 
   def sendToUserNoBroadcast() = Action.async { request =>

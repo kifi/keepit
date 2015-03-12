@@ -14,6 +14,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.time._
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
+import com.keepit.realtime.SimplePushNotification
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.{ BasicUser, NonUserKinds }
 import com.keepit.common.concurrent.PimpMyFuture._
@@ -60,6 +61,11 @@ class MessagingCommander @Inject() (
     notificationCommander: NotificationCommander,
     messageSearchHistoryRepo: MessageSearchHistoryRepo,
     implicit val executionContext: ExecutionContext) extends Logging {
+
+  def sendMessagePushNotification(userId: Id[User], message: String) = {
+    val notification = SimplePushNotification(message = Some(message), unvisitedCount = getUnreadUnmutedThreadCount(userId))
+    notificationCommander.sendPushNotification(userId, notification)
+  }
 
   private def buildThreadInfos(userId: Id[User], threads: Seq[MessageThread], requestUrl: Option[String]): Seq[ElizaThreadInfo] = {
     //get all involved users
