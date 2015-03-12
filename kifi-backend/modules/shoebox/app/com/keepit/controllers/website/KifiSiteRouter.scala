@@ -1,7 +1,6 @@
 package com.keepit.controllers.website
 
 import java.net.{ URLDecoder, URLEncoder }
-import java.util.regex.Pattern
 
 import com.keepit.common.cache.TransactionalCaching.Implicits._
 import com.google.inject.{ Provider, Inject, Singleton }
@@ -23,7 +22,6 @@ import play.api.mvc.Result
 import securesocial.core.SecureSocial
 
 import scala.concurrent.Future
-import scala.util.matching.Regex
 
 sealed trait Routeable
 private case class MovedPermanentlyRoute(url: String) extends Routeable
@@ -31,20 +29,6 @@ private case class Angular(headerload: Option[Future[String]], postload: Seq[May
 private case class SeeOtherRoute(url: String) extends Routeable
 private case class RedirectToLogin(originalUrl: String) extends Routeable
 private case object Error404 extends Routeable
-
-object KifiSiteRouter {
-  def substituteMetaProperty(property: String, newContent: String): (Regex, String) = {
-    val pattern = ("""<meta\s+property="""" + Pattern.quote(property) + """"\s+content=".*"\s*/?>""").r
-    val newValue = s"""<meta property="$property" content="$newContent"/>"""
-    pattern -> newValue
-  }
-
-  def substituteLink(rel: String, newRef: String): (Regex, String) = {
-    val pattern = ("""<link\s+rel="""" + Pattern.quote(rel) + """"\s+href=".*"\s*/?>""").r
-    val newValue = s"""<link rel="$rel" href="$newRef"/>"""
-    pattern -> newValue
-  }
-}
 
 @Singleton // holds state for performance reasons
 class KifiSiteRouter @Inject() (
