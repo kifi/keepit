@@ -55,6 +55,7 @@ class ScrapeAgent @Inject() (
     case d: JobDone =>
       log.info(s"[ScrapeAgent($name).busy] <JobDone> $d")
       context.become(idle) // unbecome shouldn't be necessary
+      parent ! WorkerAvail(self)
     case ReceiveTimeout =>
       log.error(s"[ScrapeAgent($name).busy] ReceiveTimeout exception when busy")
       context.become(idle)
