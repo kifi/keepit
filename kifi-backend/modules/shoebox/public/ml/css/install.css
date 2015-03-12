@@ -29,7 +29,6 @@
   font-size: 20px;
   font-weight: 300;
 }
-
 .install-button-content:hover {
   background-color: #3ebaeb;
 }
@@ -37,7 +36,7 @@
 .chrome-webstore-badge {
   width: 206px;
   height: 58px;
-  margin: 40px auto;
+  margin: 25px auto;
 }
 
 .chrome-webstore-badge img {
