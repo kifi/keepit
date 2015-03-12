@@ -28,12 +28,20 @@ object FetchedResult {
 case class FetchRequestInfo(destinationUrl: String, redirects: Seq[HttpRedirect])
 case class FetchResponseInfo(statusCode: Int, status: String, contentType: Option[String])
 case class FetchContext(request: FetchRequestInfo, response: FetchResponseInfo)
+object FetchContext {
+  def ok(destinationUrl: String): FetchContext = {
+    FetchContext(
+      FetchRequestInfo(destinationUrl, Seq()),
+      FetchResponseInfo(200, "OK", None)
+    )
+  }
+}
 
 trait FetchContextHolder { self: FetchResult[_] =>
   def context: FetchContext
 }
 
-class HttpInputStream(input: InputStream, val info: FetchResponseInfo) extends FilterInputStream(input)
+class HttpInputStream(input: InputStream, val context: FetchContext) extends FilterInputStream(input)
 
 trait HttpFetcher {
   def fetch[A](request: FetchRequest)(f: HttpInputStream => A): Future[FetchResult[A]]

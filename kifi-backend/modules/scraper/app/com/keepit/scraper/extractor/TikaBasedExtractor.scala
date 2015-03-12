@@ -37,12 +37,13 @@ abstract class TikaBasedExtractor(url: URI, maxContentChars: Int, htmlMapper: Op
 
   def process(input: HttpInputStream) {
     val context = new ParseContext()
-    val parser = getParser(input.info.contentType)
+    val contentType = input.context.response.contentType
+    val parser = getParser(contentType)
     val contentHandler = getContentHandler
     context.set(classOf[Parser], parser)
     getHtmlMapper.foreach(mapper => context.set(classOf[HtmlMapper], mapper))
 
-    input.info.contentType.foreach { metadata.set(HttpHeaders.CONTENT_TYPE, _) }
+    contentType.foreach { metadata.set(HttpHeaders.CONTENT_TYPE, _) }
 
     val tmp = new TemporaryResources()
     // see http://tika.apache.org/1.3/api/org/apache/tika/io/TikaInputStream.html#get(java.io.InputStream, org.apache.tika.io.TemporaryResources)
@@ -61,7 +62,7 @@ abstract class TikaBasedExtractor(url: URI, maxContentChars: Int, htmlMapper: Op
       try {
         stream.close()
       } catch {
-        case e: Exception => log.error(s"error closing Tika stream of content type: ${input.info.contentType}", e)
+        case e: Exception => log.error(s"error closing Tika stream of content type: ${contentType}", e)
       }
     }
   }

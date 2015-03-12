@@ -1,5 +1,6 @@
 package com.keepit.rover.fetcher.apache
 
+import java.io.InputStream
 import java.util.zip.ZipException
 
 import com.keepit.common.concurrent.ExecutionContext
@@ -98,7 +99,7 @@ class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, conne
   private def getFetchResult[A](requestInfo: FetchRequestInfo, response: ApacheFetchResponse, f: HttpInputStream => A): FetchResult[A] = {
     val context = FetchContext(requestInfo, response.info)
     response.info.statusCode match {
-      case HttpStatus.SC_OK => extractContent(response, f) match {
+      case HttpStatus.SC_OK => extractContent(context, response.content, f) match {
         case Success(content) => Fetched(context, content)
         case Failure(error) => FetchContentExtractionError(context, error)
       }
@@ -107,8 +108,8 @@ class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, conne
     }
   }
 
-  private def extractContent[A](response: ApacheFetchResponse, f: HttpInputStream => A): Try[A] = Try {
-    val input = new HttpInputStream(response.content.get, response.info)
+  private def extractContent[A](context: FetchContext, content: Option[InputStream], f: HttpInputStream => A): Try[A] = Try {
+    val input = new HttpInputStream(content.get, context)
     try {
       f(input)
     } finally {
