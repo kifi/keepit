@@ -50,18 +50,16 @@ class ScrapeAgent @Inject() (
   }
 
   def busy(s: ScrapeJob): Receive = {
-    case JobAvail => // ignore
     case d: JobDone =>
       log.info(s"[ScrapeAgent($name).busy] <JobDone> $d")
       context.become(idle) // unbecome shouldn't be necessary
       parent ! WorkerAvail(self)
-    case job: ScrapeJob =>
-      log.warn(s"[ScrapeAgent($name).busy] reject <ScrapeJob> assignment: $job")
-      parent ! WorkerBusy(self, job)
     case ReceiveTimeout =>
       log.error(s"[ScrapeAgent($name).busy] ReceiveTimeout exception when busy")
       context.become(idle)
       parent ! WorkerAvail(self)
+    case JobAvail | ScrapeJob =>
+      log.warn(s"[ScrapeAgent($name).busy], not supposed to receive JobAvail or ScrapeJob message")
 
     case m => throw new UnsupportedActorMessage(m)
   }
