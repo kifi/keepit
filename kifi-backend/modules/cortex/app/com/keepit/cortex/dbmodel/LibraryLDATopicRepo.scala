@@ -10,6 +10,7 @@ import com.keepit.cortex.models.lda.{ LDATopic, DenseLDA }
 import com.keepit.cortex.sql.CortexTypeMappers
 import com.keepit.model.{ User, Library }
 import com.keepit.common.db.slick.{ DataBaseComponent, DbRepo }
+import org.joda.time.DateTime
 
 import scala.slick.jdbc.{ GetResult, StaticQuery }
 
@@ -21,6 +22,7 @@ trait LibraryLDATopicRepo extends DbRepo[LibraryLDATopic] {
   def getUserFollowedLibraryFeatures(userId: Id[User], version: ModelVersion[DenseLDA], minEvidence: Int = 5)(implicit session: RSession): Seq[LibraryTopicMean]
   def getLibraryByTopics(firstTopic: LDATopic, secondTopic: Option[LDATopic] = None, thirdTopic: Option[LDATopic] = None, version: ModelVersion[DenseLDA], minKeeps: Int = 5, limit: Int)(implicit session: RSession): Seq[LibraryLDATopic]
   def getAllActiveByVersion(version: ModelVersion[DenseLDA], minEvidence: Int = 5)(implicit session: RSession): Seq[LibraryLDATopic]
+  def getRecentUpdated(version: ModelVersion[DenseLDA], since: DateTime)(implicit session: RSession): Seq[LibraryLDATopic]
 }
 
 @Singleton
@@ -90,5 +92,9 @@ class LibraryLDATopicRepoImpl @Inject() (
 
   def getAllActiveByVersion(version: ModelVersion[DenseLDA], minEvidence: Int = 5)(implicit session: RSession): Seq[LibraryLDATopic] = {
     (for { r <- rows if r.version === version && r.state === LibraryLDATopicStates.ACTIVE && r.numOfEvidence >= minEvidence } yield r).list
+  }
+
+  def getRecentUpdated(version: ModelVersion[DenseLDA], since: DateTime)(implicit session: RSession): Seq[LibraryLDATopic] = {
+    (for { r <- rows if r.version === version && r.updatedAt > since } yield r).list
   }
 }

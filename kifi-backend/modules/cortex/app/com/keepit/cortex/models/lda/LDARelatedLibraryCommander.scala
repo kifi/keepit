@@ -14,6 +14,7 @@ import com.keepit.cortex.utils.MatrixUtils._
 import com.keepit.cortex.ModelVersions._
 import com.keepit.model.Library
 import scala.concurrent.duration._
+import com.keepit.common.time._
 
 @ImplementedBy(classOf[LDARelatedLibraryCommanderImpl])
 trait LDARelatedLibraryCommander {
@@ -36,22 +37,58 @@ class LDARelatedLibraryCommanderImpl @Inject() (
   private val TOP_K = 50
   private val MIN_WEIGHT = 0.7f
   private val MIN_EVIDENCE = 2
+  private var hasFullyUpdated = false
+
+  def fullyUpdateMode: Boolean = !hasFullyUpdated
+
+  def update(version: ModelVersion[DenseLDA]): Unit = {
+    if (!hasFullyUpdated) {
+      fullUpdate(version)
+      hasFullyUpdated = true
+    } else {
+      partialUpdate(version)
+    }
+  }
 
   // completely reconstruct an asymetric graph
-  def update(version: ModelVersion[DenseLDA]): Unit = {
+  def fullUpdate(version: ModelVersion[DenseLDA]): Unit = {
     log.info(s"update LDA related library graph for version ${version.version}")
-    var edgeCnt = 0
-
     val libTopics = db.readOnlyReplica { implicit s => libTopicRepo.getAllActiveByVersion(version, MIN_EVIDENCE) }
-    libTopics.foreach { source =>
-      val sourceId = source.libraryId
-      val full = computeFullAdjacencyList(source, libTopics)
-      val sparse = sparsify(full, TOP_K, MIN_WEIGHT)
-      edgeCnt += sparse.size
-      saveAdjacencyList(sourceId, sparse, version)
+    libTopics.foreach { source => computeAndPersistEdges(source, libTopics)(version) }
+    log.info(s"finished updating LDA related library graph for version ${version.version}")
+  }
+
+  private def computeAndPersistEdges(source: LibraryLDATopic, libTopics: Seq[LibraryLDATopic])(implicit version: ModelVersion[DenseLDA]): Unit = {
+    val sourceId = source.libraryId
+    val full = computeFullAdjacencyList(source, libTopics)
+    val sparse = sparsify(full, TOP_K, MIN_WEIGHT)
+    saveAdjacencyList(sourceId, sparse, version)
+  }
+
+  private def deactivateEdges(vertex: Id[Library], version: ModelVersion[DenseLDA]): Unit = {
+    db.readWrite { implicit s =>
+      val outgoing = relatedLibRepo.getRelatedLibraries(vertex, version, excludeState = Some(LDARelatedLibraryStates.INACTIVE))
+      val incoming = relatedLibRepo.getIncomingEdges(vertex, version, excludeState = Some(LDARelatedLibraryStates.INACTIVE))
+      outgoing.foreach { x => relatedLibRepo.save(x.copy(state = LDARelatedLibraryStates.INACTIVE)) }
+      incoming.foreach { x => relatedLibRepo.save(x.copy(state = LDARelatedLibraryStates.INACTIVE)) }
+    }
+  }
+
+  // creates new vertexes, delete inactive ones.
+  def partialUpdate(version: ModelVersion[DenseLDA]): Unit = {
+    log.info(s"begin partial update LDA related library graph for version ${version.version}")
+    val now = currentDateTime
+    val updates = db.readOnlyReplica { implicit s => libTopicRepo.getRecentUpdated(version, since = now.minusHours(3)) }
+    val (active, others) = updates.partition(_.state == LibraryLDATopicStates.ACTIVE)
+    val (newSources, _) = active.partition { x => db.readOnlyReplica { implicit s => relatedLibRepo.getNeighborIdsAndWeights(x.libraryId, version).isEmpty } } // query could be optimized
+
+    if (newSources.size > 0) {
+      val libTopics = db.readOnlyReplica { implicit s => libTopicRepo.getAllActiveByVersion(version, MIN_EVIDENCE) }
+      newSources.foreach { source => computeAndPersistEdges(source, libTopics)(version) }
     }
 
-    log.info(s"finished updating LDA related library graph for version ${version.version}. total edges number = ${edgeCnt}")
+    others.foreach { x => deactivateEdges(x.libraryId, version) }
+    log.info(s"done with partial update LDA related library graph for version ${version.version}")
   }
 
   def cleanFewKeepsLibraries(version: ModelVersion[DenseLDA], readOnly: Boolean): Unit = {
