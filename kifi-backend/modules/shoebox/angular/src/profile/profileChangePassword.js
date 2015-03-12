@@ -68,7 +68,7 @@ angular.module('kifi')
           return scope.prefs.has_no_password;
         }, function(hasNoPassword) {
           scope.hasNoPassword = Boolean(hasNoPassword);
-          scope.passwordAction = scope.hasNoPassword ? 'Set a password' : 'Change you password';
+          scope.passwordAction = scope.hasNoPassword ? 'Set a password' : 'Change your password';
         });
 
       }

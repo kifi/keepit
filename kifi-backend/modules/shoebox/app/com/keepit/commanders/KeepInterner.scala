@@ -160,7 +160,6 @@ class KeepInterner @Inject() (
     (persisted.values.map(_.get).toSeq, failedRaws)
   }
 
-  val MAX_RANDOM_SCHEDULE_DELAY: Int = 600000
   private val httpPrefix = "https?://".r
 
   private def internUriAndBookmark(rawBookmark: RawBookmarkRepresentation, userId: Id[User], library: Library, source: KeepSource, installationId: Option[ExternalId[KifiInstallation]])(implicit session: RWSession): Try[InternedUriAndKeep] = try {
@@ -173,9 +172,8 @@ class KeepInterner @Inject() (
       }
       if (uri.state == ACTIVE || uri.state == INACTIVE) {
         val date = source match {
-          case s if KeepSource.imports.contains(s) => currentDateTime.plus(Random.nextInt(MAX_RANDOM_SCHEDULE_DELAY))
-          case KeepSource.keeper => START_OF_TIME
-          case _ => currentDateTime
+          case s if KeepSource.discrete.contains(s) => START_OF_TIME
+          case _ => currentDateTime // todo: useful to de-prioritize bulk imports.
         }
         scraper.scheduleScrape(uri, date)
       }

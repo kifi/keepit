@@ -33,9 +33,13 @@ class TwitterWaitlistController @Inject() (
             "email" -> email,
             "pos" -> pos
           ))
-        } getOrElse NotFound
+        } getOrElse Ok(Json.obj(
+          "pos" -> -1
+        ))
       case _ =>
-        Ok
+        Ok(Json.obj(
+          "pos" -> -1
+        ))
     }
   }
 
