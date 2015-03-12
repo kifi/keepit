@@ -207,6 +207,7 @@ class FasterMobileUserControllerTest extends Specification with ShoeboxTestInjec
               "pictureName":"pic1.jpg",
               "username": "GDubs",
               "numLibraries":1,
+              "numFollowedLibraries": 1,
               "numKeeps": 5
             }
           """)
@@ -224,6 +225,7 @@ class FasterMobileUserControllerTest extends Specification with ShoeboxTestInjec
               "pictureName":"pic1.jpg",
               "username": "GDubs",
               "numLibraries":2,
+              "numFollowedLibraries": 1,
               "numKeeps": 5,
               "isFriend": true
             }
@@ -242,6 +244,7 @@ class FasterMobileUserControllerTest extends Specification with ShoeboxTestInjec
               "pictureName":"pic1.jpg",
               "username": "GDubs",
               "numLibraries":4,
+              "numFollowedLibraries": 2,
               "numKeeps": 5,
               "numInvitedLibraries": 0
             }
