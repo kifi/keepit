@@ -10,7 +10,7 @@ import com.keepit.common.mail._
 import com.keepit.common.time._
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
-import com.keepit.social.{ UserIdentity, SocialId, SecureSocialClientIds, SocialNetworkType }
+import com.keepit.social._
 import com.kifi.macros.json
 import com.keepit.common.controller.KifiSession._
 
@@ -24,7 +24,7 @@ import play.api.libs.iteratee.Enumerator
 import play.api.Play
 import com.keepit.common.store.{ S3UserPictureConfig, S3ImageStore }
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.commanders.{ SocialFinalizeInfo, AuthCommander, EmailPassFinalizeInfo, InviteCommander }
+import com.keepit.commanders._
 import com.keepit.common.net.UserAgent
 import com.keepit.common.performance._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -119,6 +119,7 @@ class AuthController @Inject() (
     passwordResetRepo: PasswordResetRepo,
     heimdalServiceClient: HeimdalServiceClient,
     config: FortyTwoConfig,
+    twitterWaitlistCommander: TwitterWaitlistCommander,
     implicit val secureSocialClientIds: SecureSocialClientIds) extends UserActions with ShoeboxServiceController with Logging with SecureSocialHelper {
 
   // path is an Angular route
@@ -430,21 +431,37 @@ class AuthController @Inject() (
       val cookiePublicLibraryId = request.cookies.get("publicLibraryId")
       val cookieIntent = request.cookies.get("intent")
       val pubLibIdOpt = cookiePublicLibraryId.map(cookie => PublicId[Library](cookie.value))
+      val discardedCookies = Seq(cookiePublicLibraryId, cookieIntent).flatten.map(c => DiscardingCookie(c.name))
 
       request match {
         case ur: UserRequest[_] =>
           if (ur.user.state != UserStates.INCOMPLETE_SIGNUP) {
             // Complete user, they don't need to be here!
             log.info(s"[doSignupPage] ${ur.userId} already completed signup!")
-            if (pubLibIdOpt.isDefined && cookieIntent.isDefined) {
+
+            val homeUrl = s"${com.keepit.controllers.website.routes.HomeController.home.url}?m=0"
+
+            if (cookieIntent.isDefined) {
               cookieIntent.get.value match {
-                case "follow" =>
+                case "waitlist" =>
+                  db.readOnlyReplica { implicit session =>
+                    socialRepo.getByUser(ur.user.id.get).find(_.networkType == SocialNetworks.TWITTER).flatMap {
+                      _.getProfileUrl.map(url => url.substring(url.lastIndexOf('/') + 1))
+                    }
+                  }.map { handle =>
+                    twitterWaitlistCommander.addEntry(ur.user.id.get, handle)
+                  }
+                  // todo: change to real URL:
+                  Redirect(s"${com.keepit.controllers.website.routes.TwitterWaitlistController.getFakeWaitlistPosition().url}").discardingCookies(discardedCookies: _*)
+                case "follow" if pubLibIdOpt.isDefined =>
                   authCommander.autoJoinLib(ur.userId, pubLibIdOpt.get)
+                  Redirect(homeUrl).discardingCookies(discardedCookies: _*)
                 case _ =>
+                  Redirect(homeUrl).discardingCookies(discardedCookies: _*)
               }
+            } else {
+              Redirect(homeUrl).discardingCookies(discardedCookies: _*)
             }
-            val discardedCookies = Seq(cookiePublicLibraryId, cookieIntent).flatten.map(c => DiscardingCookie(c.name))
-            Redirect(s"${com.keepit.controllers.website.routes.HomeController.home.url}?m=0").discardingCookies(discardedCookies: _*)
 
           } else if (ur.identityOpt.isDefined) {
             log.info(s"[doSignupPage] ${ur.identityOpt.get} has incomplete signup state")
@@ -483,10 +500,12 @@ class AuthController @Inject() (
               // todo: This shouldn't be special cased to twitter, this should be for social regs that don't provide an email
               if (requestNonUser.identityOpt.get.identityId.providerId == "twitter") {
                 log.info(s"[doSignupPage] ${identity} finalizing twitter account")
+                val purposeDrivenInstall = cookieIntent.isDefined && cookieIntent.get.value == "waitlist"
                 Ok(views.html.authMinimal.signupGetEmail(
                   firstName = User.sanitizeName(identity.firstName.trim),
                   lastName = User.sanitizeName(identity.lastName.trim),
-                  picture = identityPicture(identity)
+                  picture = identityPicture(identity),
+                  purposeDrivenInstall = purposeDrivenInstall
                 ))
               } else {
                 log.info(s"[doSignupPage] ${identity} finalizing social id")

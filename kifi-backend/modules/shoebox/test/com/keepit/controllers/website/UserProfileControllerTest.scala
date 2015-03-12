@@ -214,11 +214,11 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
           libraryMembershipRepo.countWithUserIdAndAccess(user4.id.get, LibraryAccess.OWNER) === 0
           libraryMembershipRepo.countWithUserIdAndAccess(user5.id.get, LibraryAccess.OWNER) === 2
 
-          libraryRepo.countLibrariesOfUserFromAnonymous(user1.id.get) === 1
-          libraryRepo.countLibrariesOfUserFromAnonymous(user2.id.get) === 0
-          libraryRepo.countLibrariesOfUserFromAnonymous(user3.id.get) === 1
-          libraryRepo.countLibrariesOfUserFromAnonymous(user4.id.get) === 0
-          libraryRepo.countLibrariesOfUserFromAnonymous(user5.id.get) === 1
+          libraryRepo.countLibrariesOfUserForAnonymous(user1.id.get) === 1
+          libraryRepo.countLibrariesOfUserForAnonymous(user2.id.get) === 0
+          libraryRepo.countLibrariesOfUserForAnonymous(user3.id.get) === 1
+          libraryRepo.countLibrariesOfUserForAnonymous(user4.id.get) === 0
+          libraryRepo.countLibrariesOfUserForAnonymous(user5.id.get) === 1
           libraryRepo.countLibrariesForOtherUser(user1.id.get, user5.id.get) === 1
           libraryRepo.countLibrariesForOtherUser(user1.id.get, user2.id.get) === 2
           libraryRepo.countLibrariesForOtherUser(user2.id.get, user5.id.get) === 0
@@ -243,6 +243,7 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
               "pictureName":"pic1.jpg",
               "username": "GDubs",
               "numLibraries": 1,
+              "numFollowedLibraries": 1,
               "numKeeps": 5,
               "numConnections": 3,
               "numFollowers": 2
@@ -263,6 +264,7 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
               "pictureName":"pic1.jpg",
               "username": "GDubs",
               "numLibraries": 4,
+              "numFollowedLibraries": 2,
               "numKeeps": 5,
               "numConnections": 3,
               "numFollowers": 3,
@@ -285,6 +287,7 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
               "username": "GDubs",
               "isFriend": true,
               "numLibraries": 2,
+              "numFollowedLibraries": 1,
               "numKeeps": 5,
               "numConnections": 3,
               "numFollowers": 3

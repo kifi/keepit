@@ -33,6 +33,7 @@ object InternalMessages {
   case class WorkerAvail(worker: ActorRef)
   case class WorkerBusy(worker: ActorRef, job: ScrapeJob)
   case class JobAborted(worker: ActorRef, job: ScrapeJob)
+  case class ScrapeAgentTimeout(worker: ActorRef)
 
   // worker => worker, master
   case class JobDone(worker: ActorRef, job: ScrapeJob, res: Option[Article]) {
@@ -62,8 +63,6 @@ class ScrapeAgentSupervisor @Inject() (
   val scrapers = (0 until config.numWorkers).map { i =>
     context.actorOf(Props(scrapeAgentProvider.get), s"scrape-agent$i")
   }
-  val scraperBroadcaster = context.actorOf(Props.empty.withRouter(BroadcastGroup(paths = scrapers.map(_.path.toString))), "scraper-router")
-  log.info(s"[Supervisor.<ctr>] scraperBroadcaster=$scraperBroadcaster scrapers(sz=${scrapers.size}):${scrapers.mkString(",")}")
 
   val fetchers = (0 until config.numWorkers / 2).map { i =>
     context.actorOf(Props(fetcherAgentProvider.get), s"fetch-agent$i")
@@ -85,17 +84,23 @@ class ScrapeAgentSupervisor @Inject() (
     }
   }
 
+  private def workerIsIdle(worker: ActorRef): Boolean = !workerJobs.contains(worker)
+
+  private def notifyJobAvailToIdleWorkers(): Unit = {
+    val idleWorkers = scrapers.filter(workerIsIdle(_))
+    val broadcastSize = scrapeQ.size min idleWorkers.size
+    log.info(s"[Supervisor] broadcasting JobAvail to  ${broadcastSize} out of ${idleWorkers.size} idle workers")
+    util.Random.shuffle(idleWorkers).take(broadcastSize).foreach { worker => worker ! JobAvail }
+  }
+
   def receive = {
     // internal
     case WorkerCreated(worker) =>
       log.info(s"[Supervisor] <WorkerCreated> $worker")
     case WorkerAvail(worker) =>
+      // receiving this msg does not guarantee worker is still available. Double check.
       log.info(s"[Supervisor] <WorkerAvail> $worker; scrapeQ(sz=${scrapeQ.size}):${scrapeQ.mkString(",")}")
-      if (!scrapeQ.isEmpty) {
-        workerJobs.get(worker) foreach { assignedJob =>
-          log.warn(s"[Supervisor] <WorkerAvail> worker $worker is currently assigned $assignedJob")
-          workerJobs.remove(worker)
-        }
+      if (!scrapeQ.isEmpty && workerIsIdle(worker)) {
         val job = scrapeQ.dequeue
         log.info(s"[Supervisor] <WorkerAvail> assign job ${job.s} (submit: ${job.submitTS.toLocalTime}, waited: ${clock.now().getMillis - job.submitTS.getMillis}) to worker $worker")
         workerJobs += (worker -> job)
@@ -103,7 +108,6 @@ class ScrapeAgentSupervisor @Inject() (
       }
     case WorkerBusy(worker, job) =>
       log.info(s"[Supervisor] <WorkerBusy> worker=$worker is busy; $job rejected")
-      workerJobs.remove(worker)
       self ! job
     case JobDone(worker, job, res) =>
       log.info(s"[Supervisor] <JobDone> worker=$worker job=$job res=${res.map(_.title)}")
@@ -111,17 +115,20 @@ class ScrapeAgentSupervisor @Inject() (
     case JobAborted(worker, job) =>
       log.warn(s"[Supervisor] <JobAborted> worker=$worker job=$job")
       workerJobs.remove(worker) // move on
+    case ScrapeAgentTimeout(worker) =>
+      log.warn(s"[Supervisor] worker ${worker} timeout. remove stuck job from worker.")
+      workerJobs.remove(worker)
     case job: ScrapeJob =>
       log.info(s"[Supervisor] <ScrapeJob> enqueue $job")
       scrapeQ.enqueue(job)
-      scraperBroadcaster ! JobAvail
+      notifyJobAvailToIdleWorkers()
 
     // external
     case f: Fetch =>
       fetcherRouter.forward(FetchJob(clock.now(), f))
     case s: Scrape =>
       scrapeQ.enqueue(ScrapeJob(clock.now(), s))
-      scraperBroadcaster ! JobAvail
+      notifyJobAvailToIdleWorkers()
     case QueueSize =>
       if (scrapeQ.size > 2) { // tweak
         diagnostic()

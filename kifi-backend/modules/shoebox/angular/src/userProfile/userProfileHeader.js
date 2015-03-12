@@ -13,7 +13,7 @@ angular.module('kifi')
       },
       templateUrl: 'userProfile/userProfileHeader.tpl.html',
       link: function (scope, element) {
-        var navLinks;
+        var navLinks = angular.element();
 
         //
         // Internal Functions

@@ -1,6 +1,6 @@
 package com.keepit.search.controllers.website
 
-import com.keepit.common.crypto.{ PublicIdConfiguration }
+import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.search.controllers.util.{ SearchControllerUtil }
 import com.keepit.search.engine.SearchFactory
 import com.keepit.search.engine.uri.UriSearchResult
@@ -46,18 +46,18 @@ class WebsiteSearchController @Inject() (
 
   def search2(
     query: String,
-    filter: Option[String],
-    library: Option[String],
+    userFilter: Option[String],
+    libraryFilter: Option[String],
     maxHits: Int,
     lastUUIDStr: Option[String],
     context: Option[String],
     auth: Option[String],
     debug: Option[String] = None) = MaybeUserAction.async { request =>
 
-    val libraryContextFuture = getLibraryContextFuture(library, auth, request)
+    val libraryContextFuture = getLibraryFilterFuture(libraryFilter.map(PublicId[Library](_)), auth, request)
     val acceptLangs = getAcceptLangs(request)
     val (userId, experiments) = getUserAndExperiments(request)
-    val filterFuture = getUserFilterFuture(filter)
+    val filterFuture = getUserFilterFuture(userFilter)
 
     val debugOpt = if (debug.isDefined && experiments.contains(ADMIN)) debug else None // debug is only for admin
 
@@ -211,7 +211,8 @@ class WebsiteSearchController @Inject() (
 
   def search(
     query: String,
-    filter: Option[String],
+    userFilter: Option[String],
+    libraryFilter: Option[String],
     maxUris: Int,
     uriContext: Option[String],
     lastUUIDStr: Option[String],
@@ -225,7 +226,7 @@ class WebsiteSearchController @Inject() (
     val acceptLangs = getAcceptLangs(request)
     val (userId, experiments) = getUserAndExperiments(request)
     val debugOpt = if (debug.isDefined && experiments.contains(ADMIN)) debug else None // debug is only for admin
-    val filterFuture = getUserFilterFuture(filter)
+    val filterFuture = getUserFilterFuture(userFilter)
 
     // Uri Search
 
@@ -295,7 +296,7 @@ class WebsiteSearchController @Inject() (
     // User Search
 
     val futureUserSearchResultJson = if (maxUsers <= 0) Future.successful(JsNull) else {
-      userSearchCommander.searchUsers(userId, acceptLangs, experiments, query, filter, userContext, maxUsers, disablePrefixSearch, None, debugOpt, None).flatMap { userSearchResult =>
+      userSearchCommander.searchUsers(userId, acceptLangs, experiments, query, userFilter, userContext, maxUsers, disablePrefixSearch, None, debugOpt, None).flatMap { userSearchResult =>
         val userIds = userSearchResult.hits.map(_.id).toSet
         val futureUsers = shoeboxClient.getBasicUsers(userIds.toSeq)
         val futureFriends = searchFactory.getFriends(userId)

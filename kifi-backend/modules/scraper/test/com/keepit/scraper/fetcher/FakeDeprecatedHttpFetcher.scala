@@ -1,28 +1,20 @@
 package com.keepit.scraper.fetcher
 
-import com.keepit.common.akka.SafeFuture
-import com.keepit.common.net.URI
-import com.keepit.model.HttpProxy
-import com.keepit.rover.fetcher.{ DeprecatedHttpFetchStatus, DeprecatedFetcherHttpContext, DeprecatedHttpFetcher, HttpRedirect }
-import com.keepit.scraper.DeprecatedHttpInputStream
-import org.joda.time.DateTime
+import com.keepit.rover.fetcher._
 import play.api.http.Status
 
 import scala.concurrent.Future
 
 class FakeDeprecatedHttpFetcher(urlToResponse: Option[PartialFunction[String, DeprecatedHttpFetchStatus]] = None) extends DeprecatedHttpFetcher {
-  def fetch(uri: URI, ifModifiedSince: Option[DateTime], proxy: Option[HttpProxy])(f: (DeprecatedHttpInputStream) => Unit): DeprecatedHttpFetchStatus = {
-    val url = uri.toString()
+  def fetch(request: FetchRequest)(f: (HttpInputStream) => Unit): DeprecatedHttpFetchStatus = {
+    val url = request.url
     if (urlToResponse.exists(_.isDefinedAt(url))) {
       urlToResponse.get(url)
-    } else DeprecatedHttpFetchStatus(Status.OK, None, new DeprecatedFetcherHttpContext {
-      def destinationUrl: Option[String] = Some(url)
-      def redirects: Seq[HttpRedirect] = Seq.empty
-    })
+    } else DeprecatedHttpFetchStatus(Status.OK, None, Some(FetchContext(url, Seq.empty)))
   }
 
   implicit val fj = com.keepit.common.concurrent.ExecutionContext.fj
-  def get(url: URI, ifModifiedSince: Option[DateTime], proxy: Option[HttpProxy])(f: (DeprecatedHttpInputStream) => Unit): Future[DeprecatedHttpFetchStatus] = SafeFuture {
-    fetch(url, ifModifiedSince, proxy)(f)
+  def get(request: FetchRequest)(f: (HttpInputStream) => Unit): Future[DeprecatedHttpFetchStatus] = Future.successful {
+    fetch(request)(f)
   }
 }

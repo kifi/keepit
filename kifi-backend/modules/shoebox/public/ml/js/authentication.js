@@ -176,7 +176,7 @@ $(function() {
   var URL = window.URL || window.webkitURL;
   var localPhotoUrl;
   $('.form-photo-file').change(function () {
-    if (this.files && URL) {
+    if (this.files && this.files.length && URL) {
       photoUpload = uploadPhotoXhr2(this.files);
       if (photoUpload) {
         photoUpload.promise.fail(function() {
@@ -369,7 +369,7 @@ $(function() {
 
   function submitForgotPassword(event) {
     event.preventDefault();
-    var fromLinkSocial = $('.page.claim-account').length > 0;
+    var fromLinkSocial = $('.page.link-social').length > 0;
     var fromResetPassword = $('.page.reset-password').length > 0;
     var trackingType = fromLinkSocial ? 'linkSocialAccount' : (fromResetPassword ? 'resetPassword' : 'forgotPassword');
 
@@ -490,7 +490,7 @@ $(function() {
   }
   function errorExistingEmail($errorField, $inputField, type) {
     Tracker.track('visitor_viewed_page', { type: type, error: 'existingEmail' });
-    error($errorField, 'This is a user already.<br><a href="/signup?link=' + ($inputField.val() || '') + '">Claim your account</a>.', $inputField);
+    error($errorField, 'This is a user already.<br><a href="/signup?link=' + ($inputField.val() || '') + '">Link this social account</a>', $inputField);
   }
   function errorUserExists($errorField, $inputField, type) {
     Tracker.track('visitor_viewed_page', { type: type, error: 'wrongPassword' });

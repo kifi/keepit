@@ -222,6 +222,7 @@ object Search extends Service {
 
 object Eliza extends Service {
   object internal {
+    def sendPushNotification() = ServiceRoute(POST, "/internal/eliza/sendPushNotification")
     def sendToUserNoBroadcast() = ServiceRoute(POST, "/internal/eliza/sendToUserNoBroadcast")
     def sendToUser() = ServiceRoute(POST, "/internal/eliza/sendToUser")
     def sendToAllUsers() = ServiceRoute(POST, "/internal/eliza/sendToAllUsers")
@@ -410,7 +411,7 @@ object Curator extends Service {
     def updateLibraryRecommendationFeedback(userId: Id[User], libraryId: Id[Library]) = ServiceRoute(POST, "/internal/curator/updateLibraryRecommendationFeedback", Param("userId", userId), Param("libraryId", libraryId))
     def triggerEmailToUser(code: String, userId: Id[User]) = ServiceRoute(POST, "/internal/curator/triggerEmailToUser", Param("code", code), Param("userId", userId))
     def refreshUserRecos(userId: Id[User]) = ServiceRoute(POST, "/internal/curator/refreshUserRecos", Param("userId", userId))
-    def topLibraryRecos(userId: Id[User], limit: Option[Int], context: Option[String]) = ServiceRoute(POST, "/internal/curator/topLibraryRecos", Param("userId", userId), Param("limit", limit), Param("context", context))
+    def topLibraryRecos(userId: Id[User], limit: Option[Int]) = ServiceRoute(POST, "/internal/curator/topLibraryRecos", Param("userId", userId), Param("limit", limit))
     def refreshLibraryRecos(userId: Id[User], await: Boolean) = ServiceRoute(POST, "/internal/curator/refreshLibraryRecos", Param("userId", userId), Param("await", await))
     def notifyLibraryRecosDelivered(userId: Id[User]) = ServiceRoute(POST, "/internal/curator/notifyLibraryRecosDelivered", Param("userId", userId))
     def ingestPersonaRecos(userId: Id[User]) = ServiceRoute(POST, "/internal/curator/ingestPersonaRecos", Param("userId", userId))

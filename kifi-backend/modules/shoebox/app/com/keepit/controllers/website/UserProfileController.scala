@@ -42,13 +42,14 @@ class UserProfileController @Inject() (
         log.warn(s"can't find username ${username.value}")
         NotFound(s"username ${username.value}")
       case Some(profile) =>
-        val (numLibraries, numInvitedLibs) = libraryCommander.countLibraries(profile.userId, viewer.map(_.id.get))
+        val (numLibraries, numFollowedLibraries, numInvitedLibs) = libraryCommander.countLibraries(profile.userId, viewer.map(_.id.get))
         val numConnections = db.readOnlyMaster { implicit s =>
           userConnectionRepo.getConnectionCount(profile.userId)
         }
 
         val json = Json.toJson(profile.basicUserWithFriendStatus).as[JsObject] ++ Json.obj(
           "numLibraries" -> numLibraries,
+          "numFollowedLibraries" -> numFollowedLibraries,
           "numKeeps" -> profile.numKeeps,
           "numConnections" -> numConnections,
           "numFollowers" -> libraryCommander.countFollowers(profile.userId, viewer.map(_.id.get))
@@ -193,7 +194,7 @@ class UserProfileController @Inject() (
   }
 
   private def loadProfileStats(userId: Id[User], viewerIdOpt: Option[Id[User]])(implicit session: RSession): ProfileStats = {
-    val libCount = viewerIdOpt.map(viewerId => libraryRepo.countLibrariesForOtherUser(userId, viewerId)).getOrElse(libraryRepo.countLibrariesOfUserFromAnonymous(userId)) //not cached
+    val libCount = viewerIdOpt.map(viewerId => libraryRepo.countLibrariesForOtherUser(userId, viewerId)).getOrElse(libraryRepo.countLibrariesOfUserForAnonymous(userId)) //not cached
     //global
     val followersCount = libraryCommander.countFollowers(userId, viewerIdOpt)
     val connectionCount = userConnectionRepo.getConnectionCount(userId) //cached

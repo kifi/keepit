@@ -6,7 +6,7 @@
     <div class="dialog-body">
       <div class="lib-followers-info">
         <p class="lib-followers-stats">
-          <span ng-pluralize count="library.numFollowers"
+          <span ng-pluralize count="Math.max(library.numFollowers, followerList.length)"
                 when="{'0': '0 people are ', 'one': '1 person is ', 'other': '{} people are '}"></span>
           <span>following this library</span>
         </p>

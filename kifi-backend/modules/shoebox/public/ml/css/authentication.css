@@ -311,10 +311,10 @@ h3.small {
   background: #EFEEEE;
   display: block;
   border-radius: 50%;
-  -webkit-transition: all .2s ease;
-  -moz-transition: all .2s ease;
-  -o-transition: all .2s ease;
-  transition: all .2s ease;
+  -webkit-transition: background-color .2s ease;
+  -moz-transition: background-color .2s ease;
+  -o-transition: background-color .2s ease;
+  transition: background-color .2s ease;
   background-position: center center;
   background-repeat: no-repeat;
   background-size: cover;
@@ -785,8 +785,7 @@ a, .avatars li, img, .tabs_nav li {
   font-weight: 400;
 }
 
-
-.page.claim-account,
+.page.link-social,
 .page.account-not-found,
 .page.reset-password {
   margin-top: 155px;
@@ -794,36 +793,37 @@ a, .avatars li, img, .tabs_nav li {
   text-align: center;
 }
 
-.ca-h2, .anf-h2 {
+.ls-h2, .anf-h2 {
   color: #aaa;
   font-size: 1.7em;
 }
 
-.claim-account-wrapper input {
+.link-social-wrapper input {
   width: 350px;
 }
 
-.claim-account-wrapper .ca-text {
+.link-social-wrapper .ls-text {
   font-size: 17px;
   line-height: 30px;
   margin-bottom: 25px;
 }
 
-.claim-account-wrapper .input-wrapper {
+.link-social-wrapper .input-wrapper {
   width: 350px;
   margin: 0 auto;
 }
 
-.ca-action {
+.ls-action {
   width: 350px;
   margin: 0 auto;
 }
-.ca-action .forgot-password-btn {
+
+.ls-action .forgot-password-btn {
   float: right;
   width: initial;
   padding-top: 5px;
 }
-.ca-action #login-btn {
+.ls-action #login-btn {
   float: left;
 }
 
@@ -1229,10 +1229,11 @@ a, .avatars li, img, .tabs_nav li {
     display: block;
   }
 
-  .page.claim-account {
+  .page.link-social {
     margin-top: 30px;
   }
-  .claim-account-wrapper .forgot-password-btn {
+
+  .link-social-wrapper .forgot-password-btn {
     width: 100%;
   }
 
@@ -1320,7 +1321,7 @@ a, .avatars li, img, .tabs_nav li {
   .page.signup {
     margin-top: 30px;
   }
-  .page.claim-account,
+  .page.link-social,
   .page.account-not-found,
   .page.reset-password {
     margin-top: 30px;

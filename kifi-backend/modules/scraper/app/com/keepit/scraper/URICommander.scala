@@ -24,9 +24,9 @@ class URICommander @Inject() (
       Future.successful(true)
   }
 
-  def isUnscrapable(url: URI, destinationUrl: Option[String]): Future[Boolean] = try {
+  def isUnscrapable(url: String, destinationUrl: Option[String]): Future[Boolean] = try {
     shoeboxScraperClient.getAllURLPatterns() map { rules =>
-      rules.isUnscrapable(url.toString) || destinationUrl.exists(rules.isUnscrapable)
+      rules.isUnscrapable(url) || destinationUrl.exists(rules.isUnscrapable)
     }
   } catch {
     case e: Exception =>

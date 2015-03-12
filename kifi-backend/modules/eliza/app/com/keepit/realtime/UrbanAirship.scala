@@ -16,7 +16,7 @@ import com.keepit.eliza.model._
 import com.keepit.model.User
 import org.joda.time.Days
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json.Json
+import play.api.libs.json.{ JsString, JsNumber, JsObject, Json }
 
 import scala.collection
 import scala.concurrent.future
@@ -24,7 +24,14 @@ import scala.concurrent.future
 case class UrbanAirshipConfig(key: String, secret: String, devKey: String, devSecret: String, baseUrl: String = "https://go.urbanairship.com")
 
 // Add fields to this object and handle them properly for each platform
-case class PushNotification(id: ExternalId[MessageThread], unvisitedCount: Int, message: Option[String], sound: Option[NotificationSound])
+sealed trait PushNotification {
+  val unvisitedCount: Int
+  val message: Option[String]
+  val sound: Option[NotificationSound]
+}
+
+case class MessageThreadPushNotification(id: ExternalId[MessageThread], unvisitedCount: Int, message: Option[String], sound: Option[NotificationSound]) extends PushNotification
+case class SimplePushNotification(unvisitedCount: Int, message: Option[String], sound: Option[NotificationSound] = None) extends PushNotification
 
 case class NotificationSound(name: String) extends AnyVal
 
@@ -100,6 +107,14 @@ class UrbanAirshipImpl @Inject() (
     }
   }
 
+  private def jsonMessageExtra(notification: PushNotification) = {
+    val json = Json.obj("unreadCount" -> notification.unvisitedCount)
+    notification match {
+      case spn: SimplePushNotification => json
+      case mtpn: MessageThreadPushNotification => json.as[JsObject] + ("id" -> JsString(mtpn.id.id))
+    }
+  }
+
   //see http://docs.urbanairship.com/reference/api/v3/push.html
   private[realtime] def createAndroidJson(notification: PushNotification, device: Device) = {
     val audienceKey = if (device.isChannel) "android_channel" else "apid"
@@ -110,10 +125,7 @@ class UrbanAirshipImpl @Inject() (
         "notification" -> Json.obj(
           "android" -> Json.obj(
             "alert" -> message,
-            "extra" -> Json.obj(
-              "unreadCount" -> notification.unvisitedCount.toString,
-              "id" -> notification.id.id
-            )
+            "extra" -> jsonMessageExtra(notification)
           )
         )
       )
@@ -123,10 +135,7 @@ class UrbanAirshipImpl @Inject() (
         "device_types" -> Json.arr("android"),
         "notification" -> Json.obj(
           "android" -> Json.obj(
-            "extra" -> Json.obj(
-              "unreadCount" -> notification.unvisitedCount.toString,
-              "id" -> notification.id.id
-            )
+            "extra" -> jsonMessageExtra(notification)
           )
         )
       )
@@ -146,10 +155,7 @@ class UrbanAirshipImpl @Inject() (
             "badge" -> notification.unvisitedCount,
             "sound" -> notification.sound.get.name,
             "content-available" -> true,
-            "extra" -> Json.obj(
-              "unreadCount" -> notification.unvisitedCount,
-              "id" -> notification.id.id
-            )
+            "extra" -> jsonMessageExtra(notification)
           )
         )
       )
@@ -161,10 +167,7 @@ class UrbanAirshipImpl @Inject() (
           "ios" -> Json.obj(
             "badge" -> notification.unvisitedCount,
             "content-available" -> false,
-            "extra" -> Json.obj(
-              "unreadCount" -> notification.unvisitedCount,
-              "id" -> notification.id.id
-            )
+            "extra" -> jsonMessageExtra(notification)
           )
         )
       )

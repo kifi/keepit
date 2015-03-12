@@ -14,7 +14,7 @@ import com.keepit.eliza.controllers.WebSocketRouter
 import com.keepit.eliza.model.{ Notification, UserThread, UserThreadActivity, _ }
 import com.keepit.eliza.util.MessageFormatter
 import com.keepit.model.{ NotificationCategory, User }
-import com.keepit.realtime.{ PushNotification, UrbanAirship }
+import com.keepit.realtime.{ MessageThreadPushNotification, PushNotification, UrbanAirship }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.{ BasicNonUser, BasicUser, BasicUserLikeEntity }
 import org.joda.time.DateTime
@@ -112,8 +112,8 @@ class NotificationCommander @Inject() (
           ))
         }
 
-        newNonUserParticipants.map { nup =>
-          val nut = nonUserThreadRepo.save(NonUserThread(
+        newNonUserParticipants.foreach { nup =>
+          nonUserThreadRepo.save(NonUserThread(
             createdBy = adderUserId,
             participant = nup,
             threadId = thread.id.get,
@@ -160,7 +160,7 @@ class NotificationCommander @Inject() (
 
   private def notifyUnreadCount(userId: Id[User], threadExtId: ExternalId[MessageThread], unreadCount: Int): Unit = {
     sendToUser(userId, Json.arr("unread_notifications_count", unreadCount))
-    val notification = PushNotification(threadExtId, unreadCount, None, None)
+    val notification = MessageThreadPushNotification(threadExtId, unreadCount, None, None)
     sendPushNotification(userId, notification)
   }
 
@@ -280,7 +280,7 @@ class NotificationCommander @Inject() (
 
   def sendPushNotification(userId: Id[User], notification: PushNotification) = {
     urbanAirship.notifyUser(userId, notification)
-    messagingAnalytics.sentPushNotificationForThread(userId, notification)
+    messagingAnalytics.sentPushNotification(userId, notification)
   }
 
   def sendNotificationForMessage(userId: Id[User], message: Message, thread: MessageThread, messageWithBasicUser: MessageWithBasicUser, orderedActivityInfo: Seq[UserThreadActivity]): Unit = {
@@ -332,7 +332,7 @@ class NotificationCommander @Inject() (
         }
         val notifText = sender + MessageFormatter.toText(message.messageText)
         val sound = if (numMessages > 1) UrbanAirship.MoreMessageNotificationSound else UrbanAirship.DefaultNotificationSound
-        val notification = PushNotification(thread.externalId, unreadCount, Some(trimAtBytes(notifText, 128, UTF_8)), Some(sound))
+        val notification = MessageThreadPushNotification(thread.externalId, unreadCount, Some(trimAtBytes(notifText, 128, UTF_8)), Some(sound))
         sendPushNotification(userId, notification)
       }
     }
@@ -431,7 +431,7 @@ class NotificationCommander @Inject() (
       message
     }
     notificationRouter.sendToUser(user, Json.arr("unread_notifications_count", unreadCount))
-    val notification = PushNotification(message.threadExtId, unreadCount, None, None)
+    val notification = MessageThreadPushNotification(message.threadExtId, unreadCount, None, None)
     sendPushNotification(user, notification)
     message.createdAt
   }

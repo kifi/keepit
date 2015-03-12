@@ -14,6 +14,7 @@ import com.keepit.model.Library
 @ImplementedBy(classOf[LDARelatedLibraryRepoImpl])
 trait LDARelatedLibraryRepo extends DbRepo[LDARelatedLibrary] {
   def getRelatedLibraries(sourceId: Id[Library], version: ModelVersion[DenseLDA], excludeState: Option[State[LDARelatedLibrary]])(implicit session: RSession): Seq[LDARelatedLibrary]
+  def getIncomingEdges(destId: Id[Library], version: ModelVersion[DenseLDA], excludeState: Option[State[LDARelatedLibrary]])(implicit session: RSession): Seq[LDARelatedLibrary]
   def getNeighborIdsAndWeights(sourceId: Id[Library], version: ModelVersion[DenseLDA])(implicit session: RSession): Seq[(Id[Library], Float)]
   def getTopNeighborIdsAndWeights(sourceId: Id[Library], version: ModelVersion[DenseLDA], limit: Int)(implicit session: RSession): Seq[(Id[Library], Float)]
 }
@@ -44,6 +45,10 @@ class LDARelatedLibraryRepoImpl @Inject() (
 
   def getRelatedLibraries(sourceId: Id[Library], version: ModelVersion[DenseLDA], excludeState: Option[State[LDARelatedLibrary]])(implicit session: RSession): Seq[LDARelatedLibrary] = {
     (for (r <- rows if r.version === version && r.sourceId === sourceId && r.state =!= excludeState.orNull) yield r).list
+  }
+
+  def getIncomingEdges(destId: Id[Library], version: ModelVersion[DenseLDA], excludeState: Option[State[LDARelatedLibrary]])(implicit session: RSession): Seq[LDARelatedLibrary] = {
+    (for (r <- rows if r.version === version && r.destId === destId && r.state =!= excludeState.orNull) yield r).list
   }
 
   def getNeighborIdsAndWeights(sourceId: Id[Library], version: ModelVersion[DenseLDA])(implicit session: RSession): Seq[(Id[Library], Float)] = {

@@ -70,6 +70,7 @@ class AuthHelper @Inject() (
     inviteCommander: InviteCommander,
     libraryCommander: LibraryCommander,
     userCommander: UserCommander,
+    twitterWaitlistCommander: TwitterWaitlistCommander,
     heimdalContextBuilder: HeimdalContextBuilderFactory,
     implicit val secureSocialClientIds: SecureSocialClientIds,
     resetPasswordEmailSender: ResetPasswordEmailSender,
@@ -217,14 +218,25 @@ class AuthHelper @Inject() (
     Authenticator.create(newIdentity).fold(
       error => Status(INTERNAL_SERVER_ERROR)("0"),
       authenticator => {
-        val result = if (isFinalizedImmediately) {
-          Redirect(uri)
-        } else {
-          Ok(Json.obj("uri" -> uri))
-        }
         val cookieTargetLibId = request.cookies.get("publicLibraryId")
         val cookieIntent = request.cookies.get("intent")
         val discardedCookies = Seq(cookieTargetLibId, cookieIntent).flatten.map(c => DiscardingCookie(c.name)) :+ DiscardingCookie("inv")
+
+        val result = if (isFinalizedImmediately) {
+          Redirect(uri)
+        } else if (cookieIntent.isDefined && cookieIntent.get.value == "waitlist") {
+          db.readOnlyMaster { implicit session =>
+            socialRepo.getByUser(user.id.get).find(_.networkType == SocialNetworks.TWITTER).flatMap {
+              _.getProfileUrl.map(url => url.substring(url.lastIndexOf('/') + 1))
+            }
+          }.map { handle =>
+            twitterWaitlistCommander.addEntry(user.id.get, handle)
+          }
+          // todo: use real url:
+          Redirect(s"${com.keepit.controllers.website.routes.TwitterWaitlistController.getFakeWaitlistPosition().url}").discardingCookies(discardedCookies: _*)
+        } else {
+          Ok(Json.obj("uri" -> uri))
+        }
         result.withCookies(authenticator.toCookie).discardingCookies(discardedCookies: _*)
           .withSession(request.session.setUserId(user.id.get))
       }

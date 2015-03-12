@@ -95,6 +95,10 @@ class HomeController @Inject() (
       """.stripMargin)
   }
 
+  def googleWebmasterToolsSiteVerification = Action {
+    Ok(Html("google-site-verification: google25ae05cb8bf5b064.html\n")) // verification for eishay@kifi.com
+  }
+
   def getKeepsCount = Action.async {
     keepsCommander.getKeepsCountFuture() imap { count =>
       Ok(count.toString)
@@ -155,7 +159,7 @@ class HomeController @Inject() (
       log.info(s"trying to log in via $agent. orig string: $agentString")
 
       if (!agent.canRunExtensionIfUpToDate) {
-        Some(AngularDistAssets.angularApp())
+        Some(Redirect("/"))
       } else None
     }.flatten.getOrElse(Ok(views.html.authMinimal.install()))
   }

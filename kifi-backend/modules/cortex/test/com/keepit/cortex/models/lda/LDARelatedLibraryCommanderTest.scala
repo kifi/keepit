@@ -40,6 +40,7 @@ class LDARelatedLibraryCommanderTest extends Specification with CortexTestInject
         }
 
         val commander = new LDARelatedLibraryCommanderImpl(db, libTopicRepo, relatedLibRepo)
+        commander.fullyUpdateMode === true
         commander.update(ModelVersion[DenseLDA](1))
 
         db.readOnlyReplica { implicit s =>
@@ -61,7 +62,8 @@ class LDARelatedLibraryCommanderTest extends Specification with CortexTestInject
           libTopicRepo.save(model.copy(topic = Some(LibraryTopicMean(Array(0f, 0f, 0.1f, 0.9f)))))
         }
 
-        commander.update(ModelVersion[DenseLDA](1))
+        commander.fullyUpdateMode === false
+        commander.fullUpdate(ModelVersion[DenseLDA](1)) // need full update here
 
         db.readOnlyReplica { implicit s =>
 
@@ -71,6 +73,26 @@ class LDARelatedLibraryCommanderTest extends Specification with CortexTestInject
           checkConnection(Id[Library](4)) === List((5, true))
           checkConnection(Id[Library](5)) === List((4, true))
 
+        }
+
+        // make library 2 has inactive feature
+        db.readWrite { implicit s =>
+          val model = libTopicRepo.getActiveByLibraryId(Id[Library](2), ModelVersion[DenseLDA](1)).get
+          libTopicRepo.save(model.copy(state = LibraryLDATopicStates.INACTIVE))
+          val lib6 = lib1.copy(libraryId = Id[Library](6), topic = Some(LibraryTopicMean(Array(0f, 0.9f, 0f, 0.1f))))
+          libTopicRepo.save(lib6)
+        }
+        commander.fullyUpdateMode === false
+        commander.update(ModelVersion[DenseLDA](1)) // partial update
+
+        db.readOnlyReplica { implicit s =>
+
+          checkConnection(Id[Library](1)) === List()
+          checkConnection(Id[Library](2)) === List() // 2 is deactivated
+          checkConnection(Id[Library](3)) === List() // 2 is gone
+          checkConnection(Id[Library](4)) === List((5, true))
+          checkConnection(Id[Library](5)) === List((4, true))
+          checkConnection(Id[Library](6)).map { x => x._1 }.toSet === Set(4, 5) // 6 is new
         }
 
       }

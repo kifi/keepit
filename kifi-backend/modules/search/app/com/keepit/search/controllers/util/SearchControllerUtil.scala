@@ -114,10 +114,10 @@ trait SearchControllerUtil {
 
   def getAcceptLangs(requestHeader: RequestHeader): Seq[String] = requestHeader.acceptLanguages.map(_.code)
 
-  def getLibraryContextFuture(library: Option[String], auth: Option[String], requestHeader: RequestHeader)(implicit publicIdConfig: PublicIdConfiguration): Future[LibraryContext] = {
+  def getLibraryFilterFuture(library: Option[PublicId[Library]], auth: Option[String], requestHeader: RequestHeader)(implicit publicIdConfig: PublicIdConfiguration): Future[LibraryContext] = {
     library match {
       case Some(libPublicId) =>
-        Library.decodePublicId(PublicId[Library](libPublicId)) match {
+        Library.decodePublicId(libPublicId) match {
           case Success(libId) =>
             val libraryAccess = requestHeader.session.get("library_access").map { _.split("/") }
             (auth, libraryAccess) match {

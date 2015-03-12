@@ -19,3 +19,13 @@ case class UserNotifyPreference(
 
 object UserNotifyPreferenceStates extends States[UserNotifyPreference]
 
+abstract class NotifyPreference(val name: String)
+object NotifyPreference {
+  case object RECOS_REMINDER extends NotifyPreference("recos_reminder")
+
+  def apply(name: String): NotifyPreference = {
+    name match {
+      case RECOS_REMINDER.name => NotifyPreference.RECOS_REMINDER
+    }
+  }
+}

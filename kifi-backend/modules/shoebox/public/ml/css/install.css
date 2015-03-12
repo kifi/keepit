@@ -29,7 +29,6 @@
   font-size: 20px;
   font-weight: 300;
 }
-
 .install-button-content:hover {
   background-color: #3ebaeb;
 }
@@ -37,7 +36,7 @@
 .chrome-webstore-badge {
   width: 206px;
   height: 58px;
-  margin: 40px auto;
+  margin: 25px auto;
 }
 
 .chrome-webstore-badge img {
@@ -48,7 +47,7 @@
 .chrome-hamburger-icon {
   display: inline-block;
   width: 20px;
-  height: 18px;
+  height: 17px;
   margin-left: 2px;
   vertical-align: text-bottom;
   border-radius: 4px;

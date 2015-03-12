@@ -72,7 +72,7 @@ class ExtSearchController @Inject() (
     extVersion: Option[KifiExtVersion],
     debug: Option[String] = None) = UserAction { request =>
 
-    val libraryContextFuture = getLibraryContextFuture(None, None, request)
+    val libraryContextFuture = getLibraryFilterFuture(None, None, request)
     val acceptLangs = getAcceptLangs(request)
     val (userId, experiments) = getUserAndExperiments(request)
     val filterFuture = getUserFilterFuture(filter)
