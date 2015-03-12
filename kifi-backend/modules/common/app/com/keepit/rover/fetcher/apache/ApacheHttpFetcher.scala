@@ -25,6 +25,8 @@ import scala.concurrent.Future
 import scala.ref.WeakReference
 import scala.util.{ Failure, Success, Try }
 
+case class InvalidFetchRequestException(request: FetchRequest, cause: Throwable) extends Throwable(s"$request failed", cause)
+
 // based on Apache HTTP Client (this one is blocking but feature-rich & flexible; see http://hc.apache.org/httpcomponents-client-ga/index.html)
 class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, connectionTimeout: Int, soTimeOut: Int, schedulingProperties: SchedulingProperties, scraperHttpConfig: HttpFetchEnforcerConfig) extends HttpFetcher with Logging {
 
@@ -74,6 +76,7 @@ class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, conne
       apacheRequest.execute().map((apacheRequest, _))
     } recoverWith {
       case e: ZipException if (!disableGzip) => execute(request, disableGzip = true) // Retry with gzip compression disabled
+      case t: Throwable => Failure(InvalidFetchRequestException(request, t))
     }
   }
 

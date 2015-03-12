@@ -42,9 +42,9 @@ class ApacheFetchRequest(httpClient: CloseableHttpClient, airbrake: AirbrakeNoti
   def context: FetchContext = RedirectInterceptor.getFetchContext(httpContext).get
 
   def execute(): Try[CloseableHttpResponse] = {
-    executedAt.set(System.currentTimeMillis)
-    thread.set(Thread.currentThread())
     Try {
+      executedAt.set(System.currentTimeMillis)
+      thread.set(Thread.currentThread())
       timingWithResult[CloseableHttpResponse](s"fetch(${url}).execute", { r: CloseableHttpResponse => r.getStatusLine.toString }) {
         println(s"[fetch-start] ${url}")
         System.out.flush()
