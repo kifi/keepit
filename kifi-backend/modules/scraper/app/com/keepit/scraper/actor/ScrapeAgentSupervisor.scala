@@ -87,9 +87,8 @@ class ScrapeAgentSupervisor @Inject() (
 
   private def notifyJobAvailToIdleWorkers(): Unit = {
     val idleWorkers = scrapers.filter(workerIsIdle(_))
-    val qsize = scrapeQ.size
-    val broadcastSize = qsize min idleWorkers.size
-    log.info(s"[Supervisor] broadcasting JobAvail to  ${qsize} out of ${idleWorkers.size} idle workers")
+    val broadcastSize = scrapeQ.size min idleWorkers.size
+    log.info(s"[Supervisor] broadcasting JobAvail to  ${broadcastSize} out of ${idleWorkers.size} idle workers")
     util.Random.shuffle(idleWorkers).take(broadcastSize).foreach { worker => worker ! JobAvail }
   }
 
