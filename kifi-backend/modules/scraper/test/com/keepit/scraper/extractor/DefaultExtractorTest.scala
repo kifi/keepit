@@ -2,7 +2,7 @@ package com.keepit.scraper.extractor
 
 import org.specs2.mutable._
 import java.io.FileInputStream
-import com.keepit.rover.fetcher.HttpInputStream
+import com.keepit.rover.fetcher.{ FetchResponseInfo, HttpInputStream }
 import com.keepit.common.net.URI
 
 class DefaultExtractorTest extends Specification {
@@ -14,7 +14,7 @@ class DefaultExtractorTest extends Specification {
       case Some(max) => DefaultExtractorProvider(uri, max)
       case None => DefaultExtractorProvider(uri)
     }
-    extractor.process(new HttpInputStream(stream))
+    extractor.process(new HttpInputStream(stream, FetchResponseInfo(200, "", None)))
     extractor
   }
 

@@ -12,26 +12,28 @@ case class FetchRequest(
   proxy: Option[HttpProxy] = None,
   ifModifiedSince: Option[DateTime] = None)
 
-case class FetchResult[A](context: FetchContext, response: FetchResponse[A])
-
-case class FetchContext(destinationUrl: String, redirects: Seq[HttpRedirect])
-
-sealed trait FetchResponse[A]
-case class Fetched[A](fetched: A) extends FetchResponse[A]
-case class NotModified[A]() extends FetchResponse[A]
-case class FetchHttpError[A](errorCode: Int, errorStatus: String) extends FetchResponse[A]
-case class FetchContentExtractionError[A](cause: Throwable) extends FetchResponse[A]
+sealed trait FetchResult[A]
+case class Fetched[A](context: FetchContext, content: A) extends FetchResult[A] with FetchContextHolder
+case class NotModified[A](context: FetchContext) extends FetchResult[A] with FetchContextHolder
+case class FetchHttpError[A](context: FetchContext) extends FetchResult[A] with FetchContextHolder
+case class FetchContentExtractionError[A](context: FetchContext, cause: Throwable) extends FetchResult[A] with FetchContextHolder
 
 object FetchedResult {
-  implicit def toOption[A](content: FetchResponse[A]): Option[A] = content match {
-    case Fetched(fetched) => Some(fetched)
-    case NotModified() => None
-    case FetchHttpError(_, _) => None
-    case FetchContentExtractionError(_) => None
+  implicit def toOption[A](result: FetchResult[A]): Option[A] = result match {
+    case Fetched(_, content) => Some(content)
+    case _ => None
   }
 }
 
-class HttpInputStream(input: InputStream, val contentType: Option[String] = None) extends FilterInputStream(input)
+case class FetchRequestInfo(destinationUrl: String, redirects: Seq[HttpRedirect])
+case class FetchResponseInfo(statusCode: Int, status: String, contentType: Option[String])
+case class FetchContext(request: FetchRequestInfo, response: FetchResponseInfo)
+
+trait FetchContextHolder { self: FetchResult[_] =>
+  def context: FetchContext
+}
+
+class HttpInputStream(input: InputStream, val info: FetchResponseInfo) extends FilterInputStream(input)
 
 trait HttpFetcher {
   def fetch[A](request: FetchRequest)(f: HttpInputStream => A): Future[FetchResult[A]]

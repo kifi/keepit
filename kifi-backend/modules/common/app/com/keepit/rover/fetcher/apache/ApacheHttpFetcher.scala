@@ -9,15 +9,12 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.performance._
 import com.keepit.common.plugin.SchedulingProperties
-import org.apache.http.HttpHeaders._
 import org.apache.http._
 import org.apache.http.client.config.RequestConfig
-import org.apache.http.client.methods.CloseableHttpResponse
 import org.apache.http.config.RegistryBuilder
 import org.apache.http.conn.socket.{ ConnectionSocketFactory, PlainConnectionSocketFactory }
 import org.apache.http.impl.client.HttpClientBuilder
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager
-import org.apache.http.util.EntityUtils
 import com.keepit.common.core._
 
 import scala.concurrent.Future
@@ -58,9 +55,8 @@ class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, conne
   def doFetch[A](request: FetchRequest)(f: HttpInputStream => A): Try[FetchResult[A]] = {
     timing(s"ApacheHttpFetcher.doFetch(${request.url} ${request.proxy.map { p => s" via ${p.alias}" }.getOrElse("")}") {
       execute(request).map {
-        case (apacheRequest, closeableResponse) =>
-          val fetchResponse = processResponse(apacheRequest, closeableResponse, f)
-          FetchResult(apacheRequest.context, fetchResponse)
+        case (apacheRequest, apacheResponse) =>
+          processResponse(apacheRequest, apacheResponse, f)
       }
     } recoverWith {
       case ex: Throwable =>
@@ -70,7 +66,7 @@ class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, conne
     }
   }
 
-  private def execute(request: FetchRequest, disableGzip: Boolean = false): Try[(ApacheFetchRequest, CloseableHttpResponse)] = {
+  private def execute(request: FetchRequest, disableGzip: Boolean = false): Try[(ApacheFetchRequest, ApacheFetchResponse)] = {
     buildApacheFetchRequest(request, disableGzip).flatMap { apacheRequest =>
       apacheRequest.execute().map((apacheRequest, _))
     } recoverWith {
@@ -87,37 +83,32 @@ class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, conne
     }
   }
 
-  private def processResponse[A](apacheRequest: ApacheFetchRequest, response: CloseableHttpResponse, f: HttpInputStream => A): FetchResponse[A] = {
+  private def processResponse[A](apacheRequest: ApacheFetchRequest, response: ApacheFetchResponse, f: HttpInputStream => A): FetchResult[A] = {
     try {
-      getFetchResponse(response, f)
+      getFetchResult(apacheRequest.info, response, f)
     } catch {
       case ex: Throwable =>
         apacheRequest.abort()
         throw ex
     } finally {
-      EntityUtils.consumeQuietly(response.getEntity)
       response.close()
     }
   }
 
-  private def getFetchResponse[A](response: CloseableHttpResponse, f: HttpInputStream => A): FetchResponse[A] = {
-    response.getStatusLine.getStatusCode match {
+  private def getFetchResult[A](requestInfo: FetchRequestInfo, response: ApacheFetchResponse, f: HttpInputStream => A): FetchResult[A] = {
+    val context = FetchContext(requestInfo, response.info)
+    response.info.statusCode match {
       case HttpStatus.SC_OK => extractContent(response, f) match {
-        case Success(content) => Fetched(content)
-        case Failure(error) => FetchContentExtractionError(error)
+        case Success(content) => Fetched(context, content)
+        case Failure(error) => FetchContentExtractionError(context, error)
       }
-      case HttpStatus.SC_NOT_MODIFIED => NotModified()
-      case errorCode => FetchHttpError(errorCode, response.getStatusLine.toString)
+      case HttpStatus.SC_NOT_MODIFIED => NotModified(context)
+      case errorCode => FetchHttpError(context)
     }
   }
 
-  private def extractContent[A](response: CloseableHttpResponse, f: HttpInputStream => A): Try[A] = Try {
-    val entity = response.getEntity
-    val input = {
-      val contentType = Option(response.getLastHeader(CONTENT_TYPE)).map(_.getValue)
-      val content = entity.getContent
-      new HttpInputStream(content, contentType)
-    }
+  private def extractContent[A](response: ApacheFetchResponse, f: HttpInputStream => A): Try[A] = Try {
+    val input = new HttpInputStream(response.content.get, response.info)
     try {
       f(input)
     } finally {

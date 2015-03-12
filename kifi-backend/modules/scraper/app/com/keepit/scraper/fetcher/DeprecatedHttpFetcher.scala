@@ -14,19 +14,20 @@ import org.apache.http.{ ConnectionClosedException, HttpStatus }
 import scala.concurrent.Future
 
 case class DeprecatedHttpFetchStatus(statusCode: Int, message: Option[String], context: Option[FetchContext]) {
-  def destinationUrl: Option[String] = context.map(_.destinationUrl)
-  def redirects: Seq[HttpRedirect] = context.map(_.redirects) getOrElse Seq.empty
+  def destinationUrl: Option[String] = context.map(_.request.destinationUrl)
+  def redirects: Seq[HttpRedirect] = context.map(_.request.redirects) getOrElse Seq.empty
 }
 
 object DeprecatedHttpFetchStatus {
   implicit def fromFetchResult(result: FetchResult[Unit]): DeprecatedHttpFetchStatus = {
-    val (statusCode, message) = result.response match {
-      case Fetched(_) => (HttpStatus.SC_OK, None)
-      case NotModified() => (HttpStatus.SC_NOT_MODIFIED, None)
-      case FetchHttpError(code, status) => (code, Some(status))
-      case FetchContentExtractionError(cause) => (HttpStatus.SC_OK, Some(cause.getMessage))
+    val (statusCode, message) = result match {
+      case Fetched(_, _) => (HttpStatus.SC_OK, None)
+      case NotModified(_) => (HttpStatus.SC_NOT_MODIFIED, None)
+      case FetchHttpError(FetchContext(_, responseInfo)) => (responseInfo.statusCode, Some(responseInfo.status))
+      case FetchContentExtractionError(context, cause) => (context.response.statusCode, Some(cause.getMessage))
     }
-    DeprecatedHttpFetchStatus(statusCode, message, Some(result.context))
+    val context = Some(result).collect { case resultWithContext: FetchContextHolder => resultWithContext.context }
+    DeprecatedHttpFetchStatus(statusCode, message, context)
   }
 
 }

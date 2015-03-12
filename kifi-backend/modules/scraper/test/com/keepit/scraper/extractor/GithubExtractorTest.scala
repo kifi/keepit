@@ -1,6 +1,6 @@
 package com.keepit.scraper.extractor
 
-import com.keepit.rover.fetcher.HttpInputStream
+import com.keepit.rover.fetcher.{ FetchResponseInfo, HttpInputStream }
 import org.specs2.mutable._
 import org.jsoup.Jsoup
 import java.io.FileInputStream
@@ -12,7 +12,7 @@ class GithubExtractorTest extends Specification {
     val uri = URI.parse(url).get
     val stream = new FileInputStream("test/com/keepit/scraper/extractor/" + file)
     val extractor = GithubExtractorProvider(uri)
-    extractor.process(new HttpInputStream(stream))
+    extractor.process(new HttpInputStream(stream, FetchResponseInfo(200, "", None)))
     extractor.getCanonicalUrl("") ==== None
     extractor.getContent()
   }

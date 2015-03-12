@@ -7,12 +7,12 @@ import java.util.concurrent.atomic.{ AtomicLong, AtomicReference, AtomicInteger 
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.{ URISanitizer, URI }
-import com.keepit.rover.fetcher.{ FetchContext, HttpRedirect, FetchRequest }
+import com.keepit.rover.fetcher.{ FetchRequestInfo, HttpRedirect, FetchRequest }
 import org.apache.http.HttpHeaders._
 import org.apache.http.{ StatusLine, HttpHost }
 import org.apache.http.auth.{ UsernamePasswordCredentials, AuthScope }
 import org.apache.http.client.config.RequestConfig
-import org.apache.http.client.methods.{ CloseableHttpResponse, HttpGet }
+import org.apache.http.client.methods.HttpGet
 import org.apache.http.client.protocol.HttpClientContext
 import org.apache.http.impl.client.{ CloseableHttpClient, BasicCredentialsProvider }
 import org.apache.http.protocol.{ BasicHttpContext, HttpContext }
@@ -39,16 +39,16 @@ class ApacheFetchRequest(httpClient: CloseableHttpClient, airbrake: AirbrakeNoti
 
   def url: String = httpGet.getURI.toString
   def isAborted: Boolean = httpGet.isAborted
-  def context: FetchContext = RedirectInterceptor.getFetchContext(httpContext).get
+  def info: FetchRequestInfo = RedirectInterceptor.getFetchRequestContext(httpContext).get
 
-  def execute(): Try[CloseableHttpResponse] = {
+  def execute(): Try[ApacheFetchResponse] = {
     Try {
       executedAt.set(System.currentTimeMillis)
       thread.set(Thread.currentThread())
-      timingWithResult[CloseableHttpResponse](s"fetch(${url}).execute", { r: CloseableHttpResponse => r.getStatusLine.toString }) {
+      timingWithResult[ApacheFetchResponse](s"fetch(${url}).execute", { r: ApacheFetchResponse => r.getStatusLine.toString }) {
         println(s"[fetch-start] ${url}")
         System.out.flush()
-        httpClient.execute(httpGet, httpContext)
+        new ApacheFetchResponse(httpClient.execute(httpGet, httpContext))
       }
     } tap { _ => println(s"[fetch-end] ${url}") } tap {
       case Success(httpResponse) => respStatusRef.set(httpResponse.getStatusLine)

@@ -10,7 +10,7 @@ class FakeDeprecatedHttpFetcher(urlToResponse: Option[PartialFunction[String, De
     val url = request.url
     if (urlToResponse.exists(_.isDefinedAt(url))) {
       urlToResponse.get(url)
-    } else DeprecatedHttpFetchStatus(Status.OK, None, Some(FetchContext(url, Seq.empty)))
+    } else DeprecatedHttpFetchStatus(Status.OK, None, None)
   }
 
   implicit val fj = com.keepit.common.concurrent.ExecutionContext.fj
