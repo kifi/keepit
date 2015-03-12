@@ -25,10 +25,6 @@ import scala.concurrent.Future
 import scala.ref.WeakReference
 import scala.util.{ Failure, Success, Try }
 
-case class ApacheHttpFetcherException(message: String, cause: Option[Throwable] = None) extends Throwable(message) {
-  cause.foreach(initCause)
-}
-
 // based on Apache HTTP Client (this one is blocking but feature-rich & flexible; see http://hc.apache.org/httpcomponents-client-ga/index.html)
 class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, connectionTimeout: Int, soTimeOut: Int, schedulingProperties: SchedulingProperties, scraperHttpConfig: HttpFetchEnforcerConfig) extends HttpFetcher with Logging {
 
@@ -74,21 +70,10 @@ class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, conne
   }
 
   private def execute(request: FetchRequest, disableGzip: Boolean = false): Try[(ApacheFetchRequest, CloseableHttpResponse)] = {
-    buildApacheFetchRequest(request, disableGzip) match {
-      case Failure(ex) => {
-        val message = s"Failed to build Apache request from $request"
-        Failure(ApacheHttpFetcherException(message, Some(ex)))
-      }
-      case Success(apacheRequest) => {
-        apacheRequest.execute().map((apacheRequest, _)) recoverWith {
-          case e: ZipException if (!disableGzip) => execute(request, disableGzip = true) // Retry with gzip compression disabled
-          case ex: Throwable => {
-            val failed = if (apacheRequest.isAborted) "has been ABORTED" else "has FAILED"
-            val message = s"fetch request ($request) $failed ($apacheRequest)"
-            Failure(ApacheHttpFetcherException(message, Some(ex)))
-          }
-        }
-      }
+    buildApacheFetchRequest(request, disableGzip).flatMap { apacheRequest =>
+      apacheRequest.execute().map((apacheRequest, _))
+    } recoverWith {
+      case e: ZipException if (!disableGzip) => execute(request, disableGzip = true) // Retry with gzip compression disabled
     }
   }
 
