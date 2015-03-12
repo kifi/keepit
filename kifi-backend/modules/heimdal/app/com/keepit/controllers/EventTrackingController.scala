@@ -9,9 +9,9 @@ import com.keepit.curator.RecommendationUserAction
 import com.keepit.heimdal._
 import com.keepit.model._
 import com.kifi.franz.SQSQueue
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.{ JsArray, JsValue }
 
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 import scala.util.{ Failure, Success }
 
@@ -23,7 +23,8 @@ class EventTrackingController @Inject() (
     nonUserEventLoggingRepo: NonUserEventLoggingRepo,
     heimdalEventQueue: SQSQueue[Seq[HeimdalEvent]],
     eventTrackingCommander: HelpRankEventTrackingCommander,
-    airbrake: AirbrakeNotifier) extends HeimdalServiceController {
+    airbrake: AirbrakeNotifier,
+    implicit val defaultContext: ExecutionContext) extends HeimdalServiceController {
 
   private[controllers] def trackInternalEvent(eventJs: JsValue): Unit = trackInternalEvent(eventJs.as[HeimdalEvent])
 
