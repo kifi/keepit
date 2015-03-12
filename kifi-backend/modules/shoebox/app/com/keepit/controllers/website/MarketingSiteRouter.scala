@@ -1,6 +1,7 @@
 package com.keepit.controllers.website
 
 import java.io.StringWriter
+import java.util.regex.Pattern
 
 import com.keepit.common.logging.Logging
 import com.keepit.common.http._
@@ -14,6 +15,18 @@ import scala.util.Try
 import scala.util.matching.Regex
 
 object MarketingSiteRouter extends AssetsBuilder with Controller with Logging {
+
+  def substituteMetaProperty(property: String, newContent: String): (Regex, String) = {
+    val pattern = ("""<meta\s+property="""" + Pattern.quote(property) + """"\s+content=".*"\s*/?>""").r
+    val newValue = s"""<meta property="$property" content="$newContent"/>"""
+    pattern -> newValue
+  }
+
+  def substituteLink(rel: String, newRef: String): (Regex, String) = {
+    val pattern = ("""<link\s+rel="""" + Pattern.quote(rel) + """"\s+href=".*"\s*/?>""").r
+    val newValue = s"""<link rel="$rel" href="$newRef"/>"""
+    pattern -> newValue
+  }
 
   private def fileLoad(path: String): Option[String] = {
     Play.resourceAsStream(s"/marketing/$path.html").map { stream =>
