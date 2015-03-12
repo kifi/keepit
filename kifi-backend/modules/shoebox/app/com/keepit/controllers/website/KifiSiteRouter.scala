@@ -30,11 +30,10 @@ private case class SeeOtherRoute(url: String) extends Routeable
 private case class RedirectToLogin(originalUrl: String) extends Routeable
 private case object Error404 extends Routeable
 
-@Singleton // holds state for performance reasons
+@Singleton // for performance
 class KifiSiteRouter @Inject() (
   angularRouter: AngularRouter,
   applicationConfig: FortyTwoConfig,
-  db: Database,
   val userActionsHelper: UserActionsHelper)
     extends UserActions with ShoeboxServiceController {
 
@@ -78,7 +77,7 @@ class KifiSiteRouter @Inject() (
 
 }
 
-@Singleton
+@Singleton // for performance
 class AngularRouter @Inject() (
     db: Database,
     userRepo: UserRepo,
