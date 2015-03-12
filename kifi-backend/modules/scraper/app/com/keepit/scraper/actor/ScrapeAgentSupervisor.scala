@@ -33,6 +33,7 @@ object InternalMessages {
   case class WorkerAvail(worker: ActorRef)
   case class WorkerBusy(worker: ActorRef, job: ScrapeJob)
   case class JobAborted(worker: ActorRef, job: ScrapeJob)
+  case class ScrapeAgentTimeout(worker: ActorRef)
 
   // worker => worker, master
   case class JobDone(worker: ActorRef, job: ScrapeJob, res: Option[Article]) {
@@ -114,6 +115,9 @@ class ScrapeAgentSupervisor @Inject() (
     case JobAborted(worker, job) =>
       log.warn(s"[Supervisor] <JobAborted> worker=$worker job=$job")
       workerJobs.remove(worker) // move on
+    case ScrapeAgentTimeout(worker) =>
+      log.warn(s"[Supervisor] worker ${worker} timeout. remove stuck job from worker.")
+      workerJobs.remove(worker)
     case job: ScrapeJob =>
       log.info(s"[Supervisor] <ScrapeJob> enqueue $job")
       scrapeQ.enqueue(job)
