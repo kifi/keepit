@@ -45,6 +45,15 @@
   height: 100%;
 }
 
+.chrome-hamburger-icon {
+  display: inline-block;
+  width: 20px;
+  height: 18px;
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  border-radius: 4px;
+}
+
 .browser-newer {
   line-height: 28px;
 }
