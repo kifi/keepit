@@ -46,6 +46,8 @@ class ScrapeAgent @Inject() (
           parent ! done
           self ! done
       }
+    case ReceiveTimeout =>
+      log.info(s"[ScrapeAgent($name).idle] has been idle for a while")
     case m => throw new UnsupportedActorMessage(m)
   }
 
