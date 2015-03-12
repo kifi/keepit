@@ -83,10 +83,14 @@ class ScrapeAgentSupervisor @Inject() (
     }
   }
 
+  private def workerIsIdle(worker: ActorRef): Boolean = !workerJobs.contains(worker)
+
   private def notifyJobAvailToIdleWorkers(): Unit = {
-    val idleWorkers = scrapers.filter(!workerJobs.contains(_))
-    log.info(s"[Supervisor] broadcasting JobAvail to ${idleWorkers.size} idle workers")
-    idleWorkers.foreach { worker => worker ! JobAvail }
+    val idleWorkers = scrapers.filter(workerIsIdle(_))
+    val qsize = scrapeQ.size
+    val broadcastSize = qsize min idleWorkers.size
+    log.info(s"[Supervisor] broadcasting JobAvail to  ${qsize} out of ${idleWorkers.size} idle workers")
+    util.Random.shuffle(idleWorkers).take(broadcastSize).foreach { worker => worker ! JobAvail }
   }
 
   def receive = {
@@ -94,12 +98,9 @@ class ScrapeAgentSupervisor @Inject() (
     case WorkerCreated(worker) =>
       log.info(s"[Supervisor] <WorkerCreated> $worker")
     case WorkerAvail(worker) =>
+      // receiving this msg does not guarantee worker is still available. Double check.
       log.info(s"[Supervisor] <WorkerAvail> $worker; scrapeQ(sz=${scrapeQ.size}):${scrapeQ.mkString(",")}")
-      if (!scrapeQ.isEmpty) {
-        workerJobs.get(worker) foreach { assignedJob =>
-          log.warn(s"[Supervisor] <WorkerAvail> worker $worker is currently assigned $assignedJob")
-          workerJobs.remove(worker)
-        }
+      if (!scrapeQ.isEmpty && workerIsIdle(worker)) {
         val job = scrapeQ.dequeue
         log.info(s"[Supervisor] <WorkerAvail> assign job ${job.s} (submit: ${job.submitTS.toLocalTime}, waited: ${clock.now().getMillis - job.submitTS.getMillis}) to worker $worker")
         workerJobs += (worker -> job)
@@ -107,7 +108,6 @@ class ScrapeAgentSupervisor @Inject() (
       }
     case WorkerBusy(worker, job) =>
       log.info(s"[Supervisor] <WorkerBusy> worker=$worker is busy; $job rejected")
-      workerJobs.remove(worker)
       self ! job
     case JobDone(worker, job, res) =>
       log.info(s"[Supervisor] <JobDone> worker=$worker job=$job res=${res.map(_.title)}")
