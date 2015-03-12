@@ -157,7 +157,11 @@ object LibrarySlug {
   val invalidSlugSet = Set("libraries", "connections", "followers", "keeps", "tags", "main", "secret")
 
   def isValidSlug(slug: String): Boolean = {
-    slug != "" && !slug.contains(' ') && slug.length <= MaxLength && !invalidSlugSet.contains(slug)
+    slug != "" && !slug.contains(' ') && slug.length <= MaxLength
+  }
+
+  def isReservedSlug(slug: String): Boolean = {
+    invalidSlugSet.contains(slug)
   }
 
   def generateFromName(name: String): String = {
