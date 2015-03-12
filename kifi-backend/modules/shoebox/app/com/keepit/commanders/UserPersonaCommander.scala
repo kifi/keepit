@@ -42,19 +42,25 @@ class UserPersonaCommanderImpl @Inject() (
   }
 
   def addPersonasForUser(userId: Id[User], personas: Set[PersonaName])(implicit context: HeimdalContext): Future[Map[Persona, Option[Library]]] = {
-    val personasToPersist = db.readOnlyMaster { implicit s =>
+    val (personasToPersist, hasNonDefaultLibrary) = db.readOnlyMaster { implicit s =>
       val currentPersonas = userPersonaRepo.getPersonasForUser(userId).toSet
       val personaNamesToAdd = personas diff currentPersonas.map(_.name)
-      personaRepo.getByNames(personaNamesToAdd)
+      val personasToPersist = personaRepo.getByNames(personaNamesToAdd)
+      val hasNonDefaultLibrary = libraryRepo.getAllByOwner(userId).exists(lib => lib.kind == LibraryKind.SYSTEM_PERSONA || lib.kind == LibraryKind.USER_CREATED)
+      (personasToPersist, hasNonDefaultLibrary)
     }
 
-    def generatePersonaLibraries(personas: Map[PersonaName, Persona]): Map[Persona, Option[Library]] = {
+    def generatePersonaLibraries(personas: Map[PersonaName, Persona], hasNonDefaultLibrary: Boolean): Map[Persona, Option[Library]] = {
       personas.map {
         case (personaName, persona) =>
           val defaultLibraryName = Persona.libraryNames.getOrElse(personaName, personaName.value)
           val defaultLibrarySlug = LibrarySlug.generateFromName(defaultLibraryName)
           val libraryAddReq = LibraryAddRequest(name = defaultLibraryName, visibility = LibraryVisibility.PUBLISHED, slug = defaultLibrarySlug, kind = Some(LibraryKind.SYSTEM_PERSONA))
-          (persona, libraryCommander.addLibrary(libraryAddReq, userId))
+          if (hasNonDefaultLibrary)
+            (persona, Left("already_has_nondefault_libraries"))
+          else
+            (persona, libraryCommander.addLibrary(libraryAddReq, userId))
+
       }.collect {
         case (persona, Right(lib)) => (persona, Some(lib)) // library successfully created
         case (persona, Left(_)) => (persona, None) // library with name or slug already created
@@ -74,13 +80,12 @@ class UserPersonaCommanderImpl @Inject() (
     }
 
     curator.ingestPersonaRecos(userId, personasToPersist.values.map { _.id.get }.toSeq.distinct).map { _ =>
-      generatePersonaLibraries(personasToPersist)
+      generatePersonaLibraries(personasToPersist, hasNonDefaultLibrary)
     }.recover {
       case _ =>
         curator.ingestPersonaRecos(userId, personasToPersist.values.map { _.id.get }.toSeq.distinct) // fire and forget this time
-        generatePersonaLibraries(personasToPersist)
+        generatePersonaLibraries(personasToPersist, hasNonDefaultLibrary)
     }
-
   }
 
   def removePersonaForUser(userId: Id[User], persona: PersonaName): Option[Persona] = {
