@@ -56,7 +56,7 @@ trait DbInjectionHelper extends Logging { self: InjectorProvider =>
             tables += table.toUpperCase
           }
           if (initiatedTables.size != tables.size) println(s"[${getClass.getCanonicalName}] initiated ${initiatedTables.size} tables but dropping ${tables.size} tables! Init: [${initiatedTables.mkString(", ")}], Dropping: [${tables.mkString(", ")}]")
-          println(s"[${getClass.getCanonicalName}] Dropping ${tables.size} tables [${tables.mkString(", ")}]")
+          //          println(s"[${getClass.getCanonicalName}] Dropping ${tables.size} tables [${tables.mkString(", ")}]")
           conn.createStatement().execute("DROP ALL OBJECTS")
         }
       }
@@ -73,7 +73,7 @@ trait DbInjectionHelper extends Logging { self: InjectorProvider =>
   }
 
   private[test] def executeSequenceinit(db: H2, sequence: String): Unit = {
-    println(s"[${getClass.getCanonicalName}] initiating sequence [$sequence]")
+    //    println(s"[${getClass.getCanonicalName}] initiating sequence [$sequence]")
     readWrite(db) { implicit session =>
       try {
         val statment = s"CREATE SEQUENCE IF NOT EXISTS $sequence;"
@@ -89,7 +89,7 @@ trait DbInjectionHelper extends Logging { self: InjectorProvider =>
   }
 
   private[test] def executeTableDDL(db: H2, tableName: String, ddl: { def createStatements: Iterator[String] }): Unit = {
-    println(s"[${getClass.getCanonicalName}] initiating table [$tableName]")
+    //    println(s"[${getClass.getCanonicalName}] initiating table [$tableName]")
     readWrite(db) { implicit session =>
       try {
         for (s <- ddl.createStatements) {
@@ -104,6 +104,6 @@ trait DbInjectionHelper extends Logging { self: InjectorProvider =>
         case t: Throwable => throw new Exception(s"[${getClass.getCanonicalName}] fail initiating table $tableName}", t)
       }
     }
-    println(s"[${getClass.getCanonicalName}] initiated table [$tableName]")
+    //    println(s"[${getClass.getCanonicalName}] initiated table [$tableName]")
   }
 }
