@@ -69,7 +69,6 @@
         } else {
           $aContent.hide();
           $('.install-error').show();
-          $('.continue-link').show();
         }
       })
     } else if ($doc.hasClass('firefox')) {

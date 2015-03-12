@@ -33,24 +33,10 @@
   background-color: #3ebaeb;
 }
 
-.continue-link a {
-  display: block;
-  width: 200px;
-  line-height: 40px;
-  margin: 0 auto;
-  background-color: #2CB4E9;
-  border-radius: 5px;
-  font-size: 20px;
-  color: white;
-}
-.continue-link a:hover {
-  background-color: #3ebaeb;
-}
-
 .chrome-webstore-badge {
   width: 206px;
   height: 58px;
-  margin: 40px auto;
+  margin: 25px auto;
 }
 
 .chrome-webstore-badge img {
