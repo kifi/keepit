@@ -7,7 +7,7 @@ import java.util.zip.ZipException
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.common.logging.Logging
-import com.keepit.rover.fetcher.apache.ApacheHttpFetcher
+import com.keepit.rover.fetcher.apache.{ InvalidFetchRequestException, ApacheHttpFetcher }
 import com.keepit.rover.fetcher._
 import org.apache.http.{ ConnectionClosedException, HttpStatus }
 
@@ -55,23 +55,27 @@ class DeprecatedHttpFetcherImpl @Inject() (apacheHttpFetcher: ApacheHttpFetcher)
       case eof: EOFException =>
         val msg = getErrorMessage(request, eof)
         log.warn(msg, eof)
-        DeprecatedHttpFetchStatus(statusCode = 500, message = Some(msg), context = None)
+        DeprecatedHttpFetchStatus(statusCode = HttpStatus.SC_INTERNAL_SERVER_ERROR, message = Some(msg), context = None)
       case ste: SocketException =>
         val msg = getErrorMessage(request, ste)
         log.warn(msg, ste)
-        DeprecatedHttpFetchStatus(statusCode = 500, message = Some(msg), context = None)
+        DeprecatedHttpFetchStatus(statusCode = HttpStatus.SC_INTERNAL_SERVER_ERROR, message = Some(msg), context = None)
       case ste: SocketTimeoutException =>
         val msg = getErrorMessage(request, ste)
         log.warn(msg, ste)
-        DeprecatedHttpFetchStatus(statusCode = 500, message = Some(msg), context = None)
+        DeprecatedHttpFetchStatus(statusCode = HttpStatus.SC_INTERNAL_SERVER_ERROR, message = Some(msg), context = None)
       case cce: ConnectionClosedException =>
         val msg = getErrorMessage(request, cce)
         log.warn(msg, cce)
-        DeprecatedHttpFetchStatus(statusCode = 500, message = Some(msg), context = None)
+        DeprecatedHttpFetchStatus(statusCode = HttpStatus.SC_INTERNAL_SERVER_ERROR, message = Some(msg), context = None)
       case ze: ZipException =>
         val msg = getErrorMessage(request, ze)
         log.warn(msg, ze)
-        DeprecatedHttpFetchStatus(statusCode = 500, message = Some(msg), context = None)
+        DeprecatedHttpFetchStatus(statusCode = HttpStatus.SC_INTERNAL_SERVER_ERROR, message = Some(msg), context = None)
+      case InvalidFetchRequestException(_, cause) =>
+        val msg = getErrorMessage(request, cause)
+        log.warn(msg, cause)
+        DeprecatedHttpFetchStatus(statusCode = HttpStatus.SC_BAD_REQUEST, message = Some(msg), context = None)
     }
   }
 
