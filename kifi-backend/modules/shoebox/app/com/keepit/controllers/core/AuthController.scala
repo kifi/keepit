@@ -444,11 +444,14 @@ class AuthController @Inject() (
             if (cookieIntent.isDefined) {
               cookieIntent.get.value match {
                 case "waitlist" =>
-                  socialRepo.getByUser(ur.user.id.get).find(_.networkType == SocialNetworks.TWITTER).flatMap {
-                    _.getProfileUrl.map(url => url.substring(url.lastIndexOf('/') + 1))
+                  db.readOnlyReplica { implicit session =>
+                    socialRepo.getByUser(ur.user.id.get).find(_.networkType == SocialNetworks.TWITTER).flatMap {
+                      _.getProfileUrl.map(url => url.substring(url.lastIndexOf('/') + 1))
+                    }
                   }.map { handle =>
                     twitterWaitlistCommander.addEntry(ur.user.id.get, handle)
                   }
+                  // todo: change to real URL:
                   Redirect(s"${com.keepit.controllers.website.routes.TwitterWaitlistController.getFakeWaitlistPosition().url}").discardingCookies(discardedCookies: _*)
                 case "follow" if pubLibIdOpt.isDefined =>
                   authCommander.autoJoinLib(ur.userId, pubLibIdOpt.get)

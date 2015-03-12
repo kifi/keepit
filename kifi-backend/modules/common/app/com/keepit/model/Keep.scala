@@ -251,6 +251,8 @@ object KeepSource {
   // These may be old links
   val bulk = Set(site, bookmarkImport, kippt, pocket, instapaper, bookmarkFileImport, twitterFileImport, userCopied, unknown)
 
+  val discrete = Set(keeper, site, mobile, email, twitterSync)
+
   def get(value: String): KeepSource = KeepSource(value) match {
     case KeepSource("HOVER_KEEP") => keeper
     case KeepSource("INIT_LOAD") => bookmarkImport
