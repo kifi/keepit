@@ -10,7 +10,7 @@ import com.keepit.common.mail._
 import com.keepit.common.time._
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
-import com.keepit.social.{ UserIdentity, SocialId, SecureSocialClientIds, SocialNetworkType }
+import com.keepit.social._
 import com.kifi.macros.json
 import com.keepit.common.controller.KifiSession._
 
@@ -24,7 +24,7 @@ import play.api.libs.iteratee.Enumerator
 import play.api.Play
 import com.keepit.common.store.{ S3UserPictureConfig, S3ImageStore }
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.commanders.{ SocialFinalizeInfo, AuthCommander, EmailPassFinalizeInfo, InviteCommander }
+import com.keepit.commanders._
 import com.keepit.common.net.UserAgent
 import com.keepit.common.performance._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -119,6 +119,7 @@ class AuthController @Inject() (
     passwordResetRepo: PasswordResetRepo,
     heimdalServiceClient: HeimdalServiceClient,
     config: FortyTwoConfig,
+    twitterWaitlistCommander: TwitterWaitlistCommander,
     implicit val secureSocialClientIds: SecureSocialClientIds) extends UserActions with ShoeboxServiceController with Logging with SecureSocialHelper {
 
   // path is an Angular route
@@ -443,6 +444,11 @@ class AuthController @Inject() (
             if (cookieIntent.isDefined) {
               cookieIntent.get.value match {
                 case "waitlist" =>
+                  socialRepo.getByUser(ur.user.id.get).find(_.networkType == SocialNetworks.TWITTER).flatMap {
+                    _.getProfileUrl.map(url => url.substring(url.lastIndexOf('/') + 1))
+                  }.map { handle =>
+                    twitterWaitlistCommander.addEntry(ur.user.id.get, handle)
+                  }
                   Redirect(s"${com.keepit.controllers.website.routes.TwitterWaitlistController.getFakeWaitlistPosition().url}").discardingCookies(discardedCookies: _*)
                 case "follow" if pubLibIdOpt.isDefined =>
                   authCommander.autoJoinLib(ur.userId, pubLibIdOpt.get)
