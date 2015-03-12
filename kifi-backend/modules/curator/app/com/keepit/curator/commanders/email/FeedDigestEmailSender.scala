@@ -23,6 +23,7 @@ import com.keepit.search.augmentation.{ AugmentableItem }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.SocialNetworks
 import com.kifi.franz.SQSQueue
+import com.keepit.common.time._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.twirl.api.Html
 
@@ -248,10 +249,12 @@ class FeedDigestEmailSender @Inject() (
     val isFacebookConnected = socialInfos.find(_.networkType == SocialNetworks.FACEBOOK).exists(_.getProfileUrl.isDefined)
     val emailData = AllDigestItems(toUser = userId, recommendations = digestRecos, newLibraryItems = newLibraryItems, isFacebookConnected = isFacebookConnected)
 
+    val subject = if (currentDateTime.getDayOfWeek() > 5) "Things you should read this weekend" else s"Kifi Digest: ${digestRecos.headOption.getOrElse(newLibraryItems.head).title}"
+
     val htmlBody = views.html.email.feedDigest(emailData)
     val emailToSend = EmailToSend(
       category = NotificationCategory.User.DIGEST,
-      subject = s"Kifi Digest: ${digestRecos.headOption.getOrElse(newLibraryItems.head).title}",
+      subject = subject,
       to = Left(userId),
       from = SystemEmailAddress.NOTIFICATIONS,
       htmlTemplate = htmlBody,
