@@ -46,7 +46,7 @@ class UserPersonaCommanderImpl @Inject() (
       val currentPersonas = userPersonaRepo.getPersonasForUser(userId).toSet
       val personaNamesToAdd = personas diff currentPersonas.map(_.name)
       val personasToPersist = personaRepo.getByNames(personaNamesToAdd)
-      val hasNonDefaultLibrary = libraryRepo.getAllByOwner(userId).exists(lib => lib.kind == LibraryKind.SYSTEM_PERSONA || lib.kind == LibraryKind.USER_CREATED)
+      val hasNonDefaultLibrary = libraryRepo.hasKindsByOwner(userId, Set(LibraryKind.USER_CREATED, LibraryKind.SYSTEM_PERSONA))
       (personasToPersist, hasNonDefaultLibrary)
     }
 

@@ -26,6 +26,8 @@ trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
   def getOpt(ownerId: Id[User], slug: LibrarySlug)(implicit session: RSession): Option[Library]
   def updateLastKept(libraryId: Id[Library])(implicit session: RWSession): Unit
   def getLibraries(libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Library]
+  def hasKindsByOwner(ownerId: Id[User], kinds: Set[LibraryKind], excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Boolean
+
   def countLibrariesOfUserForAnonymous(userId: Id[User])(implicit session: RSession): Int
   def countLibrariesForOtherUser(userId: Id[User], friendId: Id[User])(implicit session: RSession): Int
   def countLibrariesOfOwnerUserFollow(ownerId: Id[User], userId: Id[User])(implicit session: RSession): Int
@@ -191,6 +193,10 @@ class LibraryRepoImpl @Inject() (
     val updateTime = Some(clock.now)
     (for { t <- rows if t.id === libraryId } yield (t.lastKept)).update(updateTime)
     invalidateCache(get(libraryId).copy(lastKept = updateTime))
+  }
+
+  def hasKindsByOwner(ownerId: Id[User], kinds: Set[LibraryKind], excludeState: Option[State[Library]])(implicit session: RSession): Boolean = {
+    (for { t <- rows if t.ownerId === ownerId && t.kind.inSet(kinds) && t.state =!= excludeState.orNull } yield t).firstOption.isDefined
   }
 
   private val getOptCompiled = Compiled { (ownerId: Column[Id[User]], slug: Column[LibrarySlug]) =>
