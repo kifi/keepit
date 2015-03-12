@@ -1,21 +1,19 @@
 @(url: String)
 <!DOCTYPE html>
-<html>
-<head>
 <meta charset="utf-8"/>
 <meta name="apple-itunes-app" content="app-id=740232575, app-argument=kifi:@url"/>
 <meta name="apple-mobile-web-app-capable" content="no"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
 <title>Kifi</title>
-</head>
-<body>
+
 <header style="padding:3em 10%;text-align:center;font:22px/1.5 'Open Sans',Arial,Helvetica,sans-serif;">
   <div style="margin:0 auto;font-weight:300;color:#788a95;">
     <img src="https://djty7jcqog9qu.cloudfront.net/assets/site/kifi_logo_clover_gray.svg" alt="kifi logo with four-leaf clover" onload="document.getElementById('txt').style.display='';">
     <div id="txt" style="display:none;">Our social library</div>
   </div>
 </header>
-<script type="text/javascript">
+
+<script>
 var IS_IPAD = navigator.userAgent.match(/iPad/i) != null,
     IS_IPHONE = !IS_IPAD && ((navigator.userAgent.match(/iPhone/i) != null) || (navigator.userAgent.match(/iPod/i) != null)),
     IS_IOS = IS_IPAD || IS_IPHONE,
@@ -23,26 +21,19 @@ var IS_IPAD = navigator.userAgent.match(/iPad/i) != null,
     IS_MOBILE = IS_IOS || IS_ANDROID;
 
 if (IS_IOS) {
-    window.location = 'kifi:/@url';
-    setTimeout(function() {
-        // If the user is still here, open the App Store
-        if (!document.webkitHidden) {
-            window.location = 'https://itunes.apple.com/app/id740232575';
-        }
-    }, 25);
+  window.location = 'kifi:/@url';
+  setTimeout(function() {
+    @* If user is still here, open the App Store *@
+    if (!document.hidden && !document.webkitHidden) {
+      window.location = 'https://itunes.apple.com/app/id740232575';
+    }
+  }, 25);
 
 } else if (IS_ANDROID) {
-    //drop slash if exist
-    var cleanUrl = '@url';
-    while (cleanUrl.charAt(0) == "/") {
-      cleanUrl = cleanUrl.substring(1);
-    }
-    if (cleanUrl) {
-      window.location = 'intent://' + cleanUrl + '#Intent;package=com.kifi;scheme=kifi;action=com.kifi.intent.action.APP_EVENT;end;';
-    } else {
-      window.location = 'https://play.google.com/store/apps/details?id=com.kifi';
-    }
+  @if(!url.matches("^/*$")) {
+    window.location = 'intent://@(url.dropWhile(_=='/'))#Intent;package=com.kifi;scheme=kifi;action=com.kifi.intent.action.APP_EVENT;end;';
+  } else {
+    window.location = 'https://play.google.com/store/apps/details?id=com.kifi';
+  }
 }
 </script>
-</body>
-</html>

@@ -198,7 +198,7 @@ class KifiSiteRouterTest extends Specification with ShoeboxApplicationInjector {
           contentType(result) must beSome("text/html")
           val resString = contentAsString(result)
           resString.contains("window.location = 'kifi://some/path?kma=1';") === true
-          resString.contains("var cleanUrl = '/some/path?kma=1") === true
+          resString.contains("window.location = 'intent://some/path?kma=1#Intent;package=com.kifi;scheme=kifi;action=com.kifi.intent.action.APP_EVENT;end;';") === true
         }
 
         { // ignoring flag with no mobile

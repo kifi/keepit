@@ -442,7 +442,7 @@ class AuthHelper @Inject() (
               error => throw error,
               authenticator => {
                 val resp = if (request.userAgentOpt.exists(_.isMobile)) {
-                  Ok(views.html.mobile.MobileRedirect("/email/verified"))
+                  Ok(views.html.mobile.mobileAppRedirect("/email/verified"))
                 } else if (kifiInstallationRepo.all(address.userId, Some(KifiInstallationStates.INACTIVE)).isEmpty) { // todo: factor out
                   // user has no installations
                   Redirect("/install")
