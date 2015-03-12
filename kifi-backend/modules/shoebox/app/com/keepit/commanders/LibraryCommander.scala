@@ -431,8 +431,11 @@ class LibraryCommander @Inject() (
         log.info(s"[addLibrary] Invalid name ${libAddReq.name} for $ownerId")
         Some("invalid_name")
       } else if (libAddReq.slug.isEmpty || !LibrarySlug.isValidSlug(libAddReq.slug)) {
-        log.info(s"[addLibrary] Invalid slub ${libAddReq.slug} for $ownerId")
+        log.info(s"[addLibrary] Invalid slug ${libAddReq.slug} for $ownerId")
         Some("invalid_slug")
+      } else if (LibrarySlug.isReservedSlug(libAddReq.slug)) {
+        log.info(s"[addLibrary] Attempted reserved slug ${libAddReq.slug} for $ownerId")
+        Some("reserved_slug")
       } else {
         None
       }
@@ -521,6 +524,8 @@ class LibraryCommander @Inject() (
           case Some(slugStr) =>
             if (!LibrarySlug.isValidSlug(slugStr)) {
               Left(LibraryFail(BAD_REQUEST, "invalid_slug"))
+            } else if (LibrarySlug.isReservedSlug(slugStr)) {
+              Left(LibraryFail(BAD_REQUEST, "reserved_slug"))
             } else {
               val slug = LibrarySlug(slugStr)
               db.readOnlyMaster { implicit s =>

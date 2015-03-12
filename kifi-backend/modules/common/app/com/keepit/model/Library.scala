@@ -154,8 +154,14 @@ object LibrarySlug {
     Format(__.read[String].map(LibrarySlug(_)), new Writes[LibrarySlug] { def writes(o: LibrarySlug) = JsString(o.value) })
 
   val MaxLength = 50
+  val invalidSlugSet = Set("libraries", "connections", "followers", "keeps", "tags", "main", "secret")
+
   def isValidSlug(slug: String): Boolean = {
     slug != "" && !slug.contains(' ') && slug.length <= MaxLength
+  }
+
+  def isReservedSlug(slug: String): Boolean = {
+    invalidSlugSet.contains(slug)
   }
 
   def generateFromName(name: String): String = {
