@@ -91,27 +91,41 @@ angular.module('kifi')
         return;
       }
       $scope.loading = true;
-      return libraryService.getKeepsInLibrary(library.id, offset, $stateParams.authToken).then(function (res) {
+      libraryService.getKeepsInLibrary(library.id, offset, $stateParams.authToken).then(function (res) {
         var rawKeeps = res.keeps;
-        rawKeeps.forEach(function (rawKeep) {
-          var keep = new keepDecoratorService.Keep(rawKeep);
-          keep.buildKeep(keep);
-          keep.makeKept();
-
-          $scope.keeps.push(keep);
-        });
-
-        $scope.hasMore = $scope.keeps.length < library.numKeeps;
-        $scope.loading = false;
-
-        // Preload for non-mobile public pages
-        if (!$rootScope.userLoggedIn && $scope.hasMore && $scope.keeps.length < 30 && !platformService.isSupportedMobilePlatform()) {
-          $scope.$evalAsync($scope.getNextKeeps.bind(null, $scope.keeps.length));
+        if (rawKeeps.length) {
+          $timeout(angular.bind(null, renderNextRawKeep, res.keeps.slice()));
+        } else {
+          $scope.hasMore = false;
+          onDoneWithBatchOfRawKeeps();
         }
-
-        return $scope.keeps;
       });
     };
+
+    function renderNextRawKeep(rawKeeps) {
+      if (rawKeeps.length) {
+        var keep = new keepDecoratorService.Keep(rawKeeps.shift());
+        keep.buildKeep(keep);
+        keep.makeKept();
+        $scope.keeps.push(keep);
+        $timeout(angular.bind(null, renderNextRawKeep, rawKeeps));
+      } else {
+        onDoneWithBatchOfRawKeeps();
+      }
+    }
+
+    function onDoneWithBatchOfRawKeeps() {
+      $scope.loading = false;
+      $scope.hasMore = $scope.hasMore && $scope.keeps.length < library.numKeeps;
+
+      // auto-load more irrespective of scrolling in some cases
+      if ($scope.hasMore && !platformService.isSupportedMobilePlatform()) {
+        var numLoaded = $scope.keeps.length;
+        if (numLoaded < 20 || numLoaded < 30 && !$rootScope.userLoggedIn) {
+          $timeout($scope.getNextKeeps.bind(null, numLoaded));
+        }
+      }
+    }
 
     $scope.getSubtitle = function () {
       if ($scope.loading) {
@@ -243,21 +257,8 @@ angular.module('kifi')
       $rootScope.$emit('lastViewedLib', library);
     }
 
-    // dealing with keeps asynchronously to allow header to be drawn
-    $timeout(function () {
-      library.keeps.forEach(function (rawKeep) {
-        var keep = new keepDecoratorService.Keep(rawKeep);
-        keep.buildKeep(keep);
-        keep.makeKept();
-        $scope.keeps.push(keep);
-      });
-
-      $scope.loading = false;
-      $scope.hasMore = library.keeps.length < library.numKeeps;
-      if ($scope.hasMore) {
-        $scope.$evalAsync($scope.getNextKeeps.bind(null, library.keeps.length)); // fetch the next page
-      }
-    });
+    // dealing with keeps asynchronously, one by one, to allow header to be drawn
+    $timeout(angular.bind(null, renderNextRawKeep, library.keeps.slice()));
 
     libraryService.getRelatedLibraries(library.id).then(function (libraries) {
       trackPageView({libraryRecCount: libraries.length});
