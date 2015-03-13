@@ -924,4 +924,12 @@ GET     /img/*file                 com.keepit.controllers.website.AngularImgAsse
 
 ->  / commonService.Routes
 
+##########################################
+# Web App
+##########################################
+
+GET     /recommendations           @com.keepit.controllers.website.KifiSiteRouter.redirectUserTo(path = "/")
+GET     /friends/invite            @com.keepit.controllers.website.KifiSiteRouter.redirectUserTo(path = "/invite")
+GET     /me                        @com.keepit.controllers.website.KifiSiteRouter.redirectUserToOwnProfile(subpath = "")
+GET     /me/*subpath               @com.keepit.controllers.website.KifiSiteRouter.redirectUserToOwnProfile(subpath)
 GET     /*wildcard                 @com.keepit.controllers.website.KifiSiteRouter.app(wildcard)
