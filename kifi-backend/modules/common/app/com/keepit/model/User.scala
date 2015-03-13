@@ -1,6 +1,7 @@
 package com.keepit.model
 
 import java.util.UUID
+import java.net.URLEncoder
 
 import play.api.mvc.{ PathBindable, QueryStringBindable }
 
@@ -12,6 +13,7 @@ import com.kifi.macros.json
 import com.keepit.common.cache._
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.db._
+import com.keepit.common.strings.UTF8
 import com.keepit.common.time._
 
 import play.api.libs.functional.syntax._
@@ -67,7 +69,9 @@ object User {
 }
 
 @json
-case class Username(value: String)
+case class Username(value: String) {
+  def urlEncoded: String = URLEncoder.encode(value, UTF8)
+}
 
 object Username {
 
