@@ -33,6 +33,7 @@ object InternalMessages {
   case class WorkerAvail(worker: ActorRef)
   case class WorkerBusy(worker: ActorRef, job: ScrapeJob)
   case class JobAborted(worker: ActorRef, job: ScrapeJob)
+  case class ScrapeAgentTimeout(worker: ActorRef)
 
   // worker => worker, master
   case class JobDone(worker: ActorRef, job: ScrapeJob, res: Option[Article]) {
@@ -88,8 +89,10 @@ class ScrapeAgentSupervisor @Inject() (
   private def notifyJobAvailToIdleWorkers(): Unit = {
     val idleWorkers = scrapers.filter(workerIsIdle(_))
     val broadcastSize = scrapeQ.size min idleWorkers.size
-    log.info(s"[Supervisor] broadcasting JobAvail to  ${broadcastSize} out of ${idleWorkers.size} idle workers")
-    util.Random.shuffle(idleWorkers).take(broadcastSize).foreach { worker => worker ! JobAvail }
+    if (scrapeQ.size > 0) {
+      log.info(s"[Supervisor] broadcasting JobAvail to  ${broadcastSize} out of ${idleWorkers.size} idle workers")
+      util.Random.shuffle(idleWorkers).take(broadcastSize).foreach { worker => worker ! JobAvail }
+    }
   }
 
   def receive = {
@@ -111,9 +114,14 @@ class ScrapeAgentSupervisor @Inject() (
     case JobDone(worker, job, res) =>
       log.info(s"[Supervisor] <JobDone> worker=$worker job=$job res=${res.map(_.title)}")
       workerJobs.remove(worker)
+      notifyJobAvailToIdleWorkers()
     case JobAborted(worker, job) =>
       log.warn(s"[Supervisor] <JobAborted> worker=$worker job=$job")
       workerJobs.remove(worker) // move on
+    case ScrapeAgentTimeout(worker) =>
+      log.warn(s"[Supervisor] worker ${worker} timeout. remove stuck job from worker.")
+      workerJobs.remove(worker)
+      notifyJobAvailToIdleWorkers()
     case job: ScrapeJob =>
       log.info(s"[Supervisor] <ScrapeJob> enqueue $job")
       scrapeQ.enqueue(job)

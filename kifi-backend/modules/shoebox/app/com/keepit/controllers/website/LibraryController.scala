@@ -231,16 +231,24 @@ class LibraryController @Inject() (
     }
   }
 
-  def joinLibrary(pubId: PublicId[Library]) = UserAction { request =>
+  def joinLibrary(pubId: PublicId[Library], authToken: Option[String] = None) = UserAction { request =>
     val idTry = Library.decodePublicId(pubId)
     idTry match {
       case Failure(ex) =>
         BadRequest(Json.obj("error" -> "invalid_id"))
       case Success(libId) =>
+        val hashedPassPhrase = if (authToken.isDefined) {
+          val existingCookieFields = request.session.get("library_access").flatMap(libraryCommander.getLibraryIdAndPassPhraseFromCookie)
+          existingCookieFields.map(_._2)
+        } else {
+          None
+        }
         implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
-        db.readOnlyMaster { implicit s => libraryMembershipRepo.getWithLibraryIdAndUserId(libId, request.userId) } match {
+        db.readOnlyMaster { implicit s =>
+          libraryMembershipRepo.getWithLibraryIdAndUserId(libId, request.userId)
+        } match {
           case None =>
-            libraryCommander.joinLibrary(request.userId, libId) match {
+            libraryCommander.joinLibrary(request.userId, libId, authToken, hashedPassPhrase) match {
               case Left(fail) =>
                 Status(fail.status)(Json.obj("error" -> fail.message))
               case Right(lib) =>

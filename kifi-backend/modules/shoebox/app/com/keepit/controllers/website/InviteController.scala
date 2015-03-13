@@ -158,10 +158,10 @@ class InviteController @Inject() (db: Database,
               }
               val inviteUrl = inviteCommander.acceptUrl(id, false)
               val openGraphTags = Map(
-                KifiSiteRouter.substituteMetaProperty("og:title", inviteCommander.fbTitle(inviterUserOpt.map(_.firstName))),
-                KifiSiteRouter.substituteMetaProperty("og:description", inviteCommander.fbDescription),
-                KifiSiteRouter.substituteMetaProperty("og:url", inviteUrl),
-                KifiSiteRouter.substituteLink("canonical", inviteUrl)
+                MarketingSiteRouter.substituteMetaProperty("og:title", inviteCommander.fbTitle(inviterUserOpt.map(_.firstName))),
+                MarketingSiteRouter.substituteMetaProperty("og:description", inviteCommander.fbDescription),
+                MarketingSiteRouter.substituteMetaProperty("og:url", inviteUrl),
+                MarketingSiteRouter.substituteLink("canonical", inviteUrl)
               )
               resolve(MarketingSiteRouter.marketingSite(substitutions = openGraphTags).withCookies(Cookie("inv", invite.externalId.id)))
             }
