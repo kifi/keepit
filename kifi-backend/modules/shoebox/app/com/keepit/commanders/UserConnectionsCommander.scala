@@ -212,7 +212,7 @@ class UserConnectionsCommander @Inject() (
       userIds = Set(friend.id.get),
       title = s"${respondingUser.firstName} ${respondingUser.lastName} accepted your invitation to connect!",
       body = s"Now you will enjoy ${respondingUser.firstName}’s keeps in your search results and you can message ${respondingUser.firstName} directly.",
-      linkText = "Visit ${respondingUser.firstName}’s profile",
+      linkText = s"Visit ${respondingUser.firstName}’s profile",
       linkUrl = s"https://www.kifi.com/${respondingUser.username.value}",
       imageUrl = respondingUserImage,
       sticky = false,
