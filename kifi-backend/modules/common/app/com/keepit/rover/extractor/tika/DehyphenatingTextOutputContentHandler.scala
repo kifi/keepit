@@ -1,34 +1,6 @@
-package com.keepit.scraper.extractor
+package com.keepit.rover.extractor.tika
 
-import org.apache.tika.sax.ContentHandlerDecorator
 import org.xml.sax.ContentHandler
-
-class TextOutputContentHandler(handler: ContentHandler) extends ContentHandlerDecorator(handler) {
-
-  private[this] val newLine = Array('\n')
-
-  // title tag
-  private def endTitle(uri: String, localName: String, qName: String) = {
-    characters(newLine, 0, 1)
-  }
-
-  // p tag
-  private def endP(uri: String, localName: String, qName: String) = {
-    characters(newLine, 0, 1)
-  }
-
-  private[this] val endElemProcs: Map[String, (String, String, String) => Unit] = Map(
-    "title" -> endTitle,
-    "p" -> endP
-  )
-
-  override def endElement(uri: String, localName: String, qName: String) {
-    endElemProcs.get(localName.toLowerCase()) match {
-      case Some(proc) => proc(uri, localName, qName)
-      case None => super.endElement(uri, localName, qName)
-    }
-  }
-}
 
 class DehyphenatingTextOutputContentHandler(handler: ContentHandler) extends TextOutputContentHandler(handler) {
 
@@ -59,7 +31,7 @@ class DehyphenatingTextOutputContentHandler(handler: ContentHandler) extends Tex
 
   override def characters(ch: Array[Char], start: Int, length: Int) {
     var ptr = start
-    var end = start + length
+    val end = start + length
     while (ptr < end) {
       val c = ch(ptr)
       if (hyphenFound) {
@@ -98,4 +70,3 @@ class DehyphenatingTextOutputContentHandler(handler: ContentHandler) extends Tex
     characters(ch, start, length);
   }
 }
-

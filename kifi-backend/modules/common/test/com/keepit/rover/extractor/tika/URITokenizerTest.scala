@@ -1,4 +1,4 @@
-package com.keepit.scraper.extractor
+package com.keepit.rover.extractor.tika
 
 import com.keepit.common.net.URI
 import org.specs2.mutable._

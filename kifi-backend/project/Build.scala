@@ -73,11 +73,7 @@ object ApplicationBuild extends Build {
 
   lazy val curatorDependencies = Seq()
 
-  lazy val roverDependencies = Seq(
-    "org.apache.lucene" % "lucene-analyzers-common" % "4.10.2",
-    "org.apache.httpcomponents" % "httpclient" % "4.3.1",
-    "org.apache.tika" % "tika-parsers" % "1.5"
-  )
+  lazy val roverDependencies = Seq()
 
   lazy val commonSettings =
     Global.settings ++
