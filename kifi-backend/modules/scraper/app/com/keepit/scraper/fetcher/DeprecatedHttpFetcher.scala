@@ -19,25 +19,25 @@ case class DeprecatedHttpFetchStatus(statusCode: Int, message: Option[String], c
 }
 
 object DeprecatedHttpFetcher {
-  val NO_OP = { is: FetchResult => }
+  val NO_OP = { is: FetchResult[HttpInputStream] => }
 }
 
 trait DeprecatedHttpFetcher {
-  def fetch(request: FetchRequest)(f: FetchResult => Unit): DeprecatedHttpFetchStatus
-  def get(request: FetchRequest)(f: FetchResult => Unit): Future[DeprecatedHttpFetchStatus]
+  def fetch(request: FetchRequest)(f: FetchResult[HttpInputStream] => Unit): DeprecatedHttpFetchStatus
+  def get(request: FetchRequest)(f: FetchResult[HttpInputStream] => Unit): Future[DeprecatedHttpFetchStatus]
 }
 
 @Singleton
 class DeprecatedHttpFetcherImpl @Inject() (apacheHttpFetcher: ApacheHttpFetcher) extends DeprecatedHttpFetcher with Logging {
-  def fetch(request: FetchRequest)(f: FetchResult => Unit): DeprecatedHttpFetchStatus = {
+  def fetch(request: FetchRequest)(f: FetchResult[HttpInputStream] => Unit): DeprecatedHttpFetchStatus = {
     apacheHttpFetcher.doFetch(request)(processResultWith(f)).recover(toInternalServerError(request)).get
   }
-  def get(request: FetchRequest)(f: FetchResult => Unit): Future[DeprecatedHttpFetchStatus] = {
+  def get(request: FetchRequest)(f: FetchResult[HttpInputStream] => Unit): Future[DeprecatedHttpFetchStatus] = {
     implicit val ec = ExecutionContext.immediate
     apacheHttpFetcher.fetch(request)(processResultWith(f)).recover(toInternalServerError(request))
   }
 
-  private def processResultWith(f: FetchResult => Unit)(result: FetchResult): DeprecatedHttpFetchStatus = {
+  private def processResultWith(f: FetchResult[HttpInputStream] => Unit)(result: FetchResult[HttpInputStream]): DeprecatedHttpFetchStatus = {
     result.context.response.statusCode match {
       case HttpStatus.SC_OK => {
         f(result)

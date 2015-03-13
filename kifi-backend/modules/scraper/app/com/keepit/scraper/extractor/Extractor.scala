@@ -14,7 +14,7 @@ import org.joda.time.DateTime
 import org.joda.time.format.{ DateTimeParser, DateTimeFormat, DateTimeFormatterBuilder, ISODateTimeFormat }
 
 trait Extractor {
-  def process(input: FetchResult): Unit
+  def process(input: FetchResult[HttpInputStream]): Unit
   def getContent(): String
   def getMetadata(name: String): Option[String]
   def getKeywords(): Option[String]

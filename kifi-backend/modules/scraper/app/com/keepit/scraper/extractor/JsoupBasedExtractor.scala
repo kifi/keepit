@@ -17,7 +17,7 @@ abstract class JsoupBasedExtractor(url: URI, maxContentChars: Int) extends Extra
 
   def parse(doc: Document): String
 
-  def process(result: FetchResult) {
+  def process(result: FetchResult[HttpInputStream]) {
     try {
       doc = Jsoup.parse(result.content.get, null, url.toString()) // null charset autodetects based on `http-equiv` meta tag and default to UTF-8, Parser defaults to HTML
     } catch {
