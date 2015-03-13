@@ -221,19 +221,29 @@ class KifiSiteRouterTest extends Specification with ShoeboxApplicationInjector {
         route(FakeRequest("GET", "/friends?friend=" + user2.externalId)) must beRedirect(303, "/l%C3%A9o1221?intent=connect")
         route(FakeRequest("GET", "/invite?friend=" + user2.externalId)) must beRedirect(303, "/l%C3%A9o1221?intent=connect")
 
-        { // catching mobile
-          val Some(resF) = route(FakeRequest("GET", "/some/path?kma=1").withHeaders("user-agent" -> "Mozilla/5.0 (iPhone)"))
-          status(resF) must equalTo(OK)
-          contentType(resF) must beSome("text/html")
+        // catching mobile
+        {
+          val Some(resF) = route(FakeRequest("GET", "/some/path?kma=1").withHeaders("user-agent" -> "iPhone"))
+          status(resF) === OK
+          contentType(resF) === Some("text/html")
           val content = contentAsString(resF)
           content must contain("window.location = 'kifi://some/path?kma=1';")
           content must contain("window.location = 'intent://some/path?kma=1#Intent;package=com.kifi;scheme=kifi;action=com.kifi.intent.action.APP_EVENT;end;';")
         }
 
-        // ignoring flag with no mobile
+        contentAsString(route(FakeRequest("GET", s"/${user2.username.value}?intent=connect&id=${user2.externalId.id}&invited=1&kma=1").withHeaders("user-agent" -> "iPhone")).get) must contain(
+          s"window.location = 'kifi://friends?friend=${user2.externalId.id}';")
+
+        contentAsString(route(FakeRequest("GET", s"/${user2.username.value}?intent=connect&id=${user2.externalId.id}&kma=1").withHeaders("user-agent" -> "iPhone")).get) must contain(
+          s"window.location = 'kifi://invite?friend=${user2.externalId.id}';")
+
+        contentAsString(route(FakeRequest("GET", s"/${user2.username.value}?intent=connect&kma=1").withHeaders("user-agent" -> "iPhone")).get) must contain(
+          s"window.location = 'kifi://invite?friend=${user2.externalId.id}';")
+
+        // ignoring query param with non-mobile device
         route(FakeRequest("GET", "/some/path?kma=1").withHeaders("user-agent" -> "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.8; rv:20.0) Gecko/20100101 Firefox/20.0")) must be404
 
-        // ignoring mobile with no flag
+        // ignoring mobile device without query param
         route(FakeRequest("GET", "/some/path").withHeaders("user-agent" -> "Mozilla/5.0 (iPhone)")) must be404
       }
     }
