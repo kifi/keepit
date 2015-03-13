@@ -35,7 +35,7 @@ abstract class TikaBasedExtractor(url: URI, maxContentChars: Int, htmlMapper: Op
 
   protected def getHtmlMapper: Option[HtmlMapper] = htmlMapper
 
-  def process(result: FetchResult) {
+  def process(result: FetchResult[HttpInputStream]) {
     val context = new ParseContext()
     val contentType = result.context.response.contentType
     val parser = getParser(contentType)

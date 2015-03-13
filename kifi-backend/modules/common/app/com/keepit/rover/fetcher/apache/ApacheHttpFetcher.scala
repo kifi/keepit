@@ -47,11 +47,11 @@ class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, conne
 
   private val q = HttpFetchEnforcer.makeQueue(schedulingProperties, scraperHttpConfig, airbrake)
 
-  def fetch[A](request: FetchRequest)(f: FetchResult => A): Future[A] = {
+  def fetch[A](request: FetchRequest)(f: FetchResult[HttpInputStream] => A): Future[A] = {
     Future { doFetch(request)(f).get }(ExecutionContext.fj) // not using SafeFuture here, alerting logic in Try
   }
 
-  def doFetch[A](request: FetchRequest)(f: FetchResult => A): Try[A] = {
+  def doFetch[A](request: FetchRequest)(f: FetchResult[HttpInputStream] => A): Try[A] = {
     timing(s"ApacheHttpFetcher.doFetch(${request.url} ${request.proxy.map { p => s" via ${p.alias}" }.getOrElse("")}") {
       execute(request).map {
         case (apacheRequest, apacheResponse) =>
@@ -82,7 +82,7 @@ class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, conne
     }
   }
 
-  private def processResponse[A](apacheRequest: ApacheFetchRequest, response: ApacheFetchResponse, f: FetchResult => A): A = {
+  private def processResponse[A](apacheRequest: ApacheFetchRequest, response: ApacheFetchResponse, f: FetchResult[HttpInputStream] => A): A = {
     try {
       doProcessResponse(apacheRequest.info, response, f)
     } catch {
@@ -94,7 +94,7 @@ class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, conne
     }
   }
 
-  private def doProcessResponse[A](requestInfo: FetchRequestInfo, response: ApacheFetchResponse, f: FetchResult => A): A = {
+  private def doProcessResponse[A](requestInfo: FetchRequestInfo, response: ApacheFetchResponse, f: FetchResult[HttpInputStream] => A): A = {
     val context = FetchContext(requestInfo, response.info)
     val input = response.content.map(new HttpInputStream(_))
     val result = FetchResult(context, input)
