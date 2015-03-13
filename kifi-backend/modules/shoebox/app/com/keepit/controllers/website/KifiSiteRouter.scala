@@ -47,13 +47,13 @@ class KifiSiteRouter @Inject() (
     case r: NonUserRequest[_] => redirectToLogin(s"/me$subpath", r)
   }
 
-  def redirectFromFriends(friend: Option[String]) = WebAppPage { implicit request =>
+  def redirectFromFriends(friend: Option[String]) = WebAppPage { implicit request => // for old emails
     redirectUserToProfileToConnect(friend, request) getOrElse redirUserToOwnProfile("/connections", request)
   }
   def handleInvitePage(friend: Option[String]) = WebAppPage { implicit request =>
     redirectUserToProfileToConnect(friend, request) getOrElse serveWebAppToUser2(request)
   }
-  private def redirectUserToProfileToConnect(friend: Option[String], request: MaybeUserRequest[_]): Option[Result] = {
+  private def redirectUserToProfileToConnect(friend: Option[String], request: MaybeUserRequest[_]): Option[Result] = { // for old emails
     friend.flatMap(ExternalId.asOpt[User]) flatMap { userExtId =>
       db.readOnlyMaster { implicit session =>
         userRepo.getOpt(userExtId)
@@ -112,7 +112,7 @@ class KifiSiteRouter @Inject() (
     } getOrElse notFound(request)
   }
 
-  private def lookupUsername(username: Username)(implicit request: MaybeUserRequest[_]): Option[(User, Option[Int])] = {
+  private def lookupUsername(username: Username): Option[(User, Option[Int])] = {
     userCommander.getUserByUsernameOrAlias(username) map {
       case (user, isAlias) =>
         if (user.username != username) { // user moved or username normalization
@@ -141,7 +141,17 @@ class KifiSiteRouter @Inject() (
     protected def filter[A](request: MaybeUserRequest[A]): Future[Option[Result]] = Future.successful {
       if (request.userAgentOpt.exists(_.isMobile) &&
         request.queryString.get(KifiMobileAppLinkFlag.key).exists(_.contains(KifiMobileAppLinkFlag.value))) {
-        Some(Ok(views.html.mobile.mobileAppRedirect(request.uri)))
+        val uri = Some(request).filter(r => r.path.length > 1 && r.path.indexOf('/', 1) == -1 && r.queryString.get("intent").exists(_.contains("connect"))) flatMap { req =>
+          req.queryString.get("id").flatMap(_.headOption).flatMap(ExternalId.asOpt[User]) orElse {
+            lookupUsername(Username(request.path.drop(1))) map { case (u, _) => u.externalId }
+          } map { userExtId: ExternalId[User] =>
+            req.queryString.get("invited") match {
+              case Some(_) => s"/friends?friend=${userExtId.id}"
+              case None => s"/invite?friend=${userExtId.id}"
+            }
+          }
+        } getOrElse request.uri
+        Some(Ok(views.html.mobile.mobileAppRedirect(uri)))
       } else None
     }
   }
