@@ -112,12 +112,14 @@ class ScrapeAgentSupervisor @Inject() (
     case JobDone(worker, job, res) =>
       log.info(s"[Supervisor] <JobDone> worker=$worker job=$job res=${res.map(_.title)}")
       workerJobs.remove(worker)
+      notifyJobAvailToIdleWorkers()
     case JobAborted(worker, job) =>
       log.warn(s"[Supervisor] <JobAborted> worker=$worker job=$job")
       workerJobs.remove(worker) // move on
     case ScrapeAgentTimeout(worker) =>
       log.warn(s"[Supervisor] worker ${worker} timeout. remove stuck job from worker.")
       workerJobs.remove(worker)
+      notifyJobAvailToIdleWorkers()
     case job: ScrapeJob =>
       log.info(s"[Supervisor] <ScrapeJob> enqueue $job")
       scrapeQ.enqueue(job)
