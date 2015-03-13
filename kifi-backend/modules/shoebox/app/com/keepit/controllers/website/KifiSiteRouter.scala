@@ -105,7 +105,7 @@ class KifiSiteRouter @Inject() (
     protected def filter[A](request: MaybeUserRequest[A]): Future[Option[Result]] = Future.successful {
       if (request.userAgentOpt.exists(_.isMobile) &&
         request.queryString.get(KifiMobileAppLinkFlag.key).exists(_.contains(KifiMobileAppLinkFlag.value))) {
-        Some(Ok(views.html.mobile.MobileRedirect(request.uri)))
+        Some(Ok(views.html.mobile.mobileAppRedirect(request.uri)))
       } else None
     }
   }

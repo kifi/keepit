@@ -11,10 +11,10 @@ protected[email] trait HandleDeepLinkRequests { this: ShoeboxServiceController =
   def handleAuthenticatedDeepLink(request: UserRequest[_], uri: NormalizedURI, locator: DeepLocator, recipientUserId: Option[Id[User]]) = {
     val (isMobileWeb, isMobileApp) = mobileCheck(request.request)
     if (isMobileApp) {
-      log.info(s"redirecting user ${request.userId} on iphone app")
+      log.info(s"redirecting user ${request.userId} on mobile app")
       Redirect(uri.url)
     } else if (isMobileWeb) {
-      log.info(s"user ${request.userId} on iphone")
+      log.info(s"user ${request.userId} on mobile")
       doHandleMobile(request, uri, locator)
     } else {
       recipientUserId match {
@@ -31,7 +31,7 @@ protected[email] trait HandleDeepLinkRequests { this: ShoeboxServiceController =
   def handleUnauthenticatedDeepLink(request: Request[_], uri: NormalizedURI, locator: DeepLocator) = {
     val (isMobileWeb, isMobileApp) = mobileCheck(request)
     if (isMobileApp) {
-      log.info(s"handling unknown user on iphone app")
+      log.info(s"handling unknown user on mobile app")
       Redirect(uri.url)
     } else if (isMobileWeb) {
       doHandleMobile(request, uri, locator)
@@ -44,14 +44,14 @@ protected[email] trait HandleDeepLinkRequests { this: ShoeboxServiceController =
   protected def doHandleMobile(request: Request[_], uri: NormalizedURI, locator: DeepLocator): Result = {
     val (isMobileWeb, isMobileApp) = mobileCheck(request)
     if (locator.value.endsWith("#compose")) {
-      log.info(s"iphone app cannot yet handle #compose")
+      log.info(s"mobile app cannot yet handle #compose")
       Redirect(uri.url)
     } else if (isMobileApp) {
-      log.info(s"handling request from iphone app")
+      log.info(s"handling request from mobile app")
       Redirect(uri.url)
     } else if (isMobileWeb) {
-      log.info(s"sending via iphone app page to $uri")
-      Ok(views.html.mobile.MobileRedirect(s"open${locator.value}"))
+      log.info(s"sending via mobile app page to $uri")
+      Ok(views.html.mobile.mobileAppRedirect(s"open${locator.value}"))
     } else throw new IllegalStateException("not mobile!")
   }
 
