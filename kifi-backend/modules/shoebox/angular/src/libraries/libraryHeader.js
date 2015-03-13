@@ -594,8 +594,7 @@ angular.module('kifi')
           } else if (!$rootScope.userLoggedIn) {
             return signupService.register({libraryId: scope.library.id, intent: 'follow'});
           }
-
-          libraryService.joinLibrary(scope.library.id)['catch'](modalService.openGenericErrorModal);
+          libraryService.joinLibrary(scope.library.id, authToken)['catch'](modalService.openGenericErrorModal);
         };
 
         scope.unfollowLibrary = function () {

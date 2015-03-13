@@ -230,8 +230,8 @@ angular.module('kifi')
         return $http.post(routeService.shareLibrary(libraryId), opts);
       },
 
-      joinLibrary: function (libraryId) {
-        return $http.post(routeService.joinLibrary(libraryId)).then(function (response) {
+      joinLibrary: function (libraryId, authToken) {
+        return $http.post(routeService.joinLibrary(libraryId, authToken)).then(function (response) {
           var wasInvited = _.remove(infos.invited, {id: libraryId}).length > 0;
           var justJoined = !_.some(infos.following, {id: libraryId});
           if (justJoined) {
