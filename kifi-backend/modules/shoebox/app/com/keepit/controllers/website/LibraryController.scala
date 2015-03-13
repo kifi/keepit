@@ -237,15 +237,13 @@ class LibraryController @Inject() (
       case Failure(ex) =>
         BadRequest(Json.obj("error" -> "invalid_id"))
       case Success(libId) =>
-        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
-
         val hashedPassPhrase = if (authToken.isDefined) {
           val existingCookieFields = request.session.get("library_access").flatMap(libraryCommander.getLibraryIdAndPassPhraseFromCookie)
           existingCookieFields.map(_._2)
         } else {
           None
         }
-
+        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
         db.readOnlyMaster { implicit s =>
           libraryMembershipRepo.getWithLibraryIdAndUserId(libId, request.userId)
         } match {

@@ -642,11 +642,24 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         // Proving that accepting a lesser invite doesn't destroy current access
         db.readWrite { implicit s =>
           libraryInviteRepo.save(LibraryInvite(libraryId = libShield.id.get, inviterId = userIron.id.get, userId = Some(userAgent.id.get), access = LibraryAccess.READ_ONLY, createdAt = t1))
-
-          libraryCommander.joinLibrary(userAgent.id.get, libShield.id.get)
-          libraryCommander.userAccess(userAgent.id.get, libShield.id.get, None) === Some(LibraryAccess.OWNER)
         }
-        1 === 1
+        libraryCommander.joinLibrary(userAgent.id.get, libShield.id.get)
+        libraryCommander.userAccess(userAgent.id.get, libShield.id.get, None) === Some(LibraryAccess.OWNER)
+
+        // Joining a private library from an email invite (library invite has a null userId field)!
+        db.readWrite { implicit s =>
+          libraryInviteRepo.save(LibraryInvite(libraryId = libShield.id.get, inviterId = userAgent.id.get, emailAddress = Some(EmailAddress("incrediblehulk@gmail.com")), access = LibraryAccess.READ_ONLY, authToken = "asdf", passPhrase = "unlock"))
+          libraryInviteRepo.getByLibraryIdAndAuthToken(libShield.id.get, "asdf").exists(i => i.state == LibraryInviteStates.ACCEPTED) === false
+        }
+        val hashedPassPhrase1 = HashedPassPhrase.generateHashedPhrase("attempt") // wrong passphrase)
+        libraryCommander.joinLibrary(userHulk.id.get, libShield.id.get, Some("asdf"), Some(hashedPassPhrase1)).isLeft === true
+
+        val hashedPassPhrase2 = HashedPassPhrase.generateHashedPhrase("unlock")
+        val successJoin = libraryCommander.joinLibrary(userHulk.id.get, libShield.id.get, Some("asdf"), Some(hashedPassPhrase2))
+        successJoin.isRight === true
+        db.readOnlyMaster { implicit s =>
+          libraryInviteRepo.getByLibraryIdAndAuthToken(libShield.id.get, "asdf").exists(i => i.state == LibraryInviteStates.ACCEPTED) === true
+        }
       }
     }
 
