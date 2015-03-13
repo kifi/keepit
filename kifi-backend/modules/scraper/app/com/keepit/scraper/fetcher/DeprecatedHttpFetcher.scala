@@ -18,37 +18,35 @@ case class DeprecatedHttpFetchStatus(statusCode: Int, message: Option[String], c
   def redirects: Seq[HttpRedirect] = context.map(_.request.redirects) getOrElse Seq.empty
 }
 
-object DeprecatedHttpFetchStatus {
-  implicit def fromFetchResult(result: FetchResult[Unit]): DeprecatedHttpFetchStatus = {
-    val (statusCode, message) = result match {
-      case Fetched(_, _) => (HttpStatus.SC_OK, None)
-      case NotModified(_) => (HttpStatus.SC_NOT_MODIFIED, None)
-      case FetchHttpError(FetchContext(_, responseInfo)) => (responseInfo.statusCode, Some(responseInfo.status))
-      case FetchContentExtractionError(context, cause) => (context.response.statusCode, Some(cause.getMessage))
-    }
-    val context = Some(result).collect { case resultWithContext: FetchContextHolder => resultWithContext.context }
-    DeprecatedHttpFetchStatus(statusCode, message, context)
-  }
-
-}
-
 object DeprecatedHttpFetcher {
-  val NO_OP = { is: HttpInputStream => }
+  val NO_OP = { is: FetchResult => }
 }
 
 trait DeprecatedHttpFetcher {
-  def fetch(request: FetchRequest)(f: HttpInputStream => Unit): DeprecatedHttpFetchStatus
-  def get(request: FetchRequest)(f: HttpInputStream => Unit): Future[DeprecatedHttpFetchStatus]
+  def fetch(request: FetchRequest)(f: FetchResult => Unit): DeprecatedHttpFetchStatus
+  def get(request: FetchRequest)(f: FetchResult => Unit): Future[DeprecatedHttpFetchStatus]
 }
 
 @Singleton
 class DeprecatedHttpFetcherImpl @Inject() (apacheHttpFetcher: ApacheHttpFetcher) extends DeprecatedHttpFetcher with Logging {
-  def fetch(request: FetchRequest)(f: HttpInputStream => Unit): DeprecatedHttpFetchStatus = {
-    apacheHttpFetcher.doFetch(request)(f).map(DeprecatedHttpFetchStatus.fromFetchResult).recover(toInternalServerError(request))get
+  def fetch(request: FetchRequest)(f: FetchResult => Unit): DeprecatedHttpFetchStatus = {
+    apacheHttpFetcher.doFetch(request)(processResultWith(f)).recover(toInternalServerError(request)).get
   }
-  def get(request: FetchRequest)(f: HttpInputStream => Unit): Future[DeprecatedHttpFetchStatus] = {
+  def get(request: FetchRequest)(f: FetchResult => Unit): Future[DeprecatedHttpFetchStatus] = {
     implicit val ec = ExecutionContext.immediate
-    apacheHttpFetcher.fetch(request)(f).map(DeprecatedHttpFetchStatus.fromFetchResult).recover(toInternalServerError(request))
+    apacheHttpFetcher.fetch(request)(processResultWith(f)).recover(toInternalServerError(request))
+  }
+
+  private def processResultWith(f: FetchResult => Unit)(result: FetchResult): DeprecatedHttpFetchStatus = {
+    result.context.response.statusCode match {
+      case HttpStatus.SC_OK => {
+        f(result)
+        DeprecatedHttpFetchStatus(HttpStatus.SC_OK, None, Some(result.context))
+      }
+      case HttpStatus.SC_NOT_MODIFIED => DeprecatedHttpFetchStatus(HttpStatus.SC_NOT_MODIFIED, None, Some(result.context))
+      case errorCode => DeprecatedHttpFetchStatus(errorCode, Some(result.context.response.status), Some(result.context))
+
+    }
   }
 
   private def toInternalServerError(request: FetchRequest): PartialFunction[Throwable, DeprecatedHttpFetchStatus] = {

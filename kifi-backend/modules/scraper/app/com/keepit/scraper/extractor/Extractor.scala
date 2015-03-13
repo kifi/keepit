@@ -3,7 +3,7 @@ package com.keepit.scraper.extractor
 import com.keepit.common.logging.Logging
 import com.keepit.common.time.DEFAULT_DATE_TIME_ZONE
 import com.keepit.common.net.URI
-import com.keepit.rover.fetcher.HttpInputStream
+import com.keepit.rover.fetcher.{ FetchResult, HttpInputStream }
 import com.keepit.scraper.mediatypes.MediaTypes
 import com.keepit.scraper.{ BasicArticle, SignatureBuilder, Signature }
 
@@ -14,7 +14,7 @@ import org.joda.time.DateTime
 import org.joda.time.format.{ DateTimeParser, DateTimeFormat, DateTimeFormatterBuilder, ISODateTimeFormat }
 
 trait Extractor {
-  def process(input: HttpInputStream): Unit
+  def process(input: FetchResult): Unit
   def getContent(): String
   def getMetadata(name: String): Option[String]
   def getKeywords(): Option[String]

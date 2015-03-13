@@ -1,6 +1,5 @@
 package com.keepit.rover.fetcher.apache
 
-import java.io.InputStream
 import java.util.zip.ZipException
 
 import com.keepit.common.concurrent.ExecutionContext
@@ -10,7 +9,6 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.performance._
 import com.keepit.common.plugin.SchedulingProperties
-import org.apache.http._
 import org.apache.http.client.config.RequestConfig
 import org.apache.http.config.RegistryBuilder
 import org.apache.http.conn.socket.{ ConnectionSocketFactory, PlainConnectionSocketFactory }
@@ -20,7 +18,7 @@ import com.keepit.common.core._
 
 import scala.concurrent.Future
 import scala.ref.WeakReference
-import scala.util.{ Failure, Success, Try }
+import scala.util.{ Failure, Try }
 
 case class InvalidFetchRequestException(request: FetchRequest, cause: Throwable) extends Throwable(s"$request failed", cause)
 
@@ -49,11 +47,11 @@ class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, conne
 
   private val q = HttpFetchEnforcer.makeQueue(schedulingProperties, scraperHttpConfig, airbrake)
 
-  def fetch[A](request: FetchRequest)(f: HttpInputStream => A): Future[FetchResult[A]] = {
+  def fetch[A](request: FetchRequest)(f: FetchResult => A): Future[A] = {
     Future { doFetch(request)(f).get }(ExecutionContext.fj) // not using SafeFuture here, alerting logic in Try
   }
 
-  def doFetch[A](request: FetchRequest)(f: HttpInputStream => A): Try[FetchResult[A]] = {
+  def doFetch[A](request: FetchRequest)(f: FetchResult => A): Try[A] = {
     timing(s"ApacheHttpFetcher.doFetch(${request.url} ${request.proxy.map { p => s" via ${p.alias}" }.getOrElse("")}") {
       execute(request).map {
         case (apacheRequest, apacheResponse) =>
@@ -84,9 +82,9 @@ class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, conne
     }
   }
 
-  private def processResponse[A](apacheRequest: ApacheFetchRequest, response: ApacheFetchResponse, f: HttpInputStream => A): FetchResult[A] = {
+  private def processResponse[A](apacheRequest: ApacheFetchRequest, response: ApacheFetchResponse, f: FetchResult => A): A = {
     try {
-      getFetchResult(apacheRequest.info, response, f)
+      doProcessResponse(apacheRequest.info, response, f)
     } catch {
       case ex: Throwable =>
         apacheRequest.abort()
@@ -96,24 +94,14 @@ class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, conne
     }
   }
 
-  private def getFetchResult[A](requestInfo: FetchRequestInfo, response: ApacheFetchResponse, f: HttpInputStream => A): FetchResult[A] = {
+  private def doProcessResponse[A](requestInfo: FetchRequestInfo, response: ApacheFetchResponse, f: FetchResult => A): A = {
     val context = FetchContext(requestInfo, response.info)
-    response.info.statusCode match {
-      case HttpStatus.SC_OK => extractContent(context, response.content, f) match {
-        case Success(content) => Fetched(context, content)
-        case Failure(error) => FetchContentExtractionError(context, error)
-      }
-      case HttpStatus.SC_NOT_MODIFIED => NotModified(context)
-      case errorCode => FetchHttpError(context)
-    }
-  }
-
-  private def extractContent[A](context: FetchContext, content: Option[InputStream], f: HttpInputStream => A): Try[A] = Try {
-    val input = new HttpInputStream(content.get, context)
+    val input = response.content.map(new HttpInputStream(_))
+    val result = FetchResult(context, input)
     try {
-      f(input)
+      f(result)
     } finally {
-      input.close()
+      input.map(_.close())
     }
   }
 }

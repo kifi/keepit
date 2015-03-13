@@ -6,7 +6,7 @@ import play.api.http.Status
 import scala.concurrent.Future
 
 class FakeDeprecatedHttpFetcher(urlToResponse: Option[PartialFunction[String, DeprecatedHttpFetchStatus]] = None) extends DeprecatedHttpFetcher {
-  def fetch(request: FetchRequest)(f: (HttpInputStream) => Unit): DeprecatedHttpFetchStatus = {
+  def fetch(request: FetchRequest)(f: (FetchResult) => Unit): DeprecatedHttpFetchStatus = {
     val url = request.url
     if (urlToResponse.exists(_.isDefinedAt(url))) {
       urlToResponse.get(url)
@@ -14,7 +14,7 @@ class FakeDeprecatedHttpFetcher(urlToResponse: Option[PartialFunction[String, De
   }
 
   implicit val fj = com.keepit.common.concurrent.ExecutionContext.fj
-  def get(request: FetchRequest)(f: (HttpInputStream) => Unit): Future[DeprecatedHttpFetchStatus] = Future.successful {
+  def get(request: FetchRequest)(f: (FetchResult) => Unit): Future[DeprecatedHttpFetchStatus] = Future.successful {
     fetch(request)(f)
   }
 }

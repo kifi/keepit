@@ -12,22 +12,12 @@ case class FetchRequest(
   proxy: Option[HttpProxy] = None,
   ifModifiedSince: Option[DateTime] = None)
 
-sealed trait FetchResult[A]
-case class Fetched[A](context: FetchContext, content: A) extends FetchResult[A] with FetchContextHolder
-case class NotModified[A](context: FetchContext) extends FetchResult[A] with FetchContextHolder
-case class FetchHttpError[A](context: FetchContext) extends FetchResult[A] with FetchContextHolder
-case class FetchContentExtractionError[A](context: FetchContext, cause: Throwable) extends FetchResult[A] with FetchContextHolder
-
-object FetchedResult {
-  implicit def toOption[A](result: FetchResult[A]): Option[A] = result match {
-    case Fetched(_, content) => Some(content)
-    case _ => None
-  }
-}
+case class FetchResult(context: FetchContext, content: Option[HttpInputStream])
 
 case class FetchRequestInfo(destinationUrl: String, redirects: Seq[HttpRedirect])
 case class FetchResponseInfo(statusCode: Int, status: String, contentType: Option[String])
 case class FetchContext(request: FetchRequestInfo, response: FetchResponseInfo)
+
 object FetchContext {
   def ok(destinationUrl: String): FetchContext = {
     FetchContext(
@@ -37,12 +27,8 @@ object FetchContext {
   }
 }
 
-trait FetchContextHolder { self: FetchResult[_] =>
-  def context: FetchContext
-}
-
-class HttpInputStream(input: InputStream, val context: FetchContext) extends FilterInputStream(input)
+class HttpInputStream(input: InputStream) extends FilterInputStream(input)
 
 trait HttpFetcher {
-  def fetch[A](request: FetchRequest)(f: HttpInputStream => A): Future[FetchResult[A]]
+  def fetch[A](request: FetchRequest)(f: FetchResult => A): Future[A]
 }
