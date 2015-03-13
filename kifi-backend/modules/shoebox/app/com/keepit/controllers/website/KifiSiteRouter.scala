@@ -1,7 +1,5 @@
 package com.keepit.controllers.website
 
-import java.net.{ URLDecoder, URLEncoder }
-
 import com.keepit.common.cache.TransactionalCaching.Implicits._
 import com.google.inject.{ Provider, Inject, Singleton }
 import com.keepit.commanders._
@@ -13,7 +11,6 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.http._
 import com.keepit.common.mail.KifiMobileAppLinkFlag
 import com.keepit.common.net.UserAgent
-import com.keepit.common.strings.UTF8
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
 import play.api.Play
@@ -23,19 +20,17 @@ import securesocial.core.SecureSocial
 
 import scala.concurrent.Future
 
-sealed trait Routeable
-private case class MovedPermanentlyRoute(url: String) extends Routeable
-private case class Angular(headerload: Option[Future[String]], postload: Seq[MaybeUserRequest[_] => Future[String]] = Seq.empty) extends Routeable
-private case class SeeOtherRoute(url: String) extends Routeable
-private case class RedirectToLogin(url: String) extends Routeable
-private case object Error404 extends Routeable
-
 @Singleton // for performance
 class KifiSiteRouter @Inject() (
   db: Database,
   userRepo: UserRepo,
-  angularRouter: AngularRouter,
+  userCommander: UserCommander,
+  pageMetaTagsCommander: PageMetaTagsCommander,
+  libraryCommander: LibraryCommander,
+  libraryMetadataCache: LibraryMetadataCache,
+  userMetadataCache: UserMetadataCache,
   applicationConfig: FortyTwoConfig,
+  airbrake: AirbrakeNotifier,
   val userActionsHelper: UserActionsHelper)
     extends UserActions with ShoeboxServiceController {
 
@@ -48,7 +43,7 @@ class KifiSiteRouter @Inject() (
 
   def redirectUserToOwnProfile(subpath: String) = WebAppPage(implicit request => redirUserToOwnProfile(subpath, request))
   private def redirUserToOwnProfile(subpath: String, request: MaybeUserRequest[_]): Result = request match {
-    case r: UserRequest[_] => Redirect(s"/${URLEncoder.encode(r.user.username.value, UTF8)}$subpath")
+    case r: UserRequest[_] => Redirect(s"/${r.user.username.urlEncoded}$subpath")
     case r: NonUserRequest[_] => redirectToLogin(s"/me$subpath", r)
   }
 
@@ -64,7 +59,7 @@ class KifiSiteRouter @Inject() (
         userRepo.getOpt(userExtId)
       }
     } map { user =>
-      val url = s"/${URLEncoder.encode(user.username.value, UTF8)}?intent=connect"
+      val url = s"/${user.username.urlEncoded}?intent=connect"
       request match {
         case _: UserRequest[_] => Redirect(url)
         case r: NonUserRequest[_] => redirectToLogin(url, r)
@@ -74,31 +69,72 @@ class KifiSiteRouter @Inject() (
 
   def serveWebAppToUser = WebAppPage(implicit request => serveWebAppToUser2(request))
   private def serveWebAppToUser2(request: MaybeUserRequest[_]): Result = request match {
-    case r: UserRequest[_] => serveWebApp(Angular(None), r)
+    case _: UserRequest[_] => serveWebApp(None)
     case r: NonUserRequest[_] => redirectToLogin(r.uri, r)
   }
 
-  // Useful to route anything that a) serves the Angular app, b) requires context about if a user is logged in or not
-  def app(path: String) = WebAppPage(implicit r => routeToResult)
+  def serveWebAppIfUserFound(username: Username) = WebAppPage { implicit request =>
+    lookupUsername(username) map {
+      case (user, redirectStatusOpt) =>
+        redirectStatusOpt map { status =>
+          Redirect(s"/${user.username.urlEncoded}${dropPathSegment(request.uri)}", status)
+        } getOrElse serveWebApp(Some(userMetadata(user, UserProfileTab(request.path))))
+    } getOrElse notFound(request)
+  }
 
-  def routeToResult[T](implicit request: MaybeUserRequest[T]): Result = {
-    route match {
-      case Error404 => NotFound(views.html.error.notFound(request.path))
-      case SeeOtherRoute(url) => Redirect(url)
-      case MovedPermanentlyRoute(url) => MovedPermanently(url)
-      case RedirectToLogin(url) => redirectToLogin(url, request.asInstanceOf[NonUserRequest[_]])
-      case ng: Angular => serveWebApp(ng, request)
+  def serveWebAppIfUserIsSelf(username: Username) = WebAppPage { implicit request =>
+    request match {
+      case r: UserRequest[_] =>
+        lookupUsername(username).filter { case (user, _) => user.id == r.user.id } map {
+          case (user, redirectStatusOpt) =>
+            redirectStatusOpt map { status =>
+              Redirect(s"/${user.username.urlEncoded}${dropPathSegment(request.uri)}", status)
+            } getOrElse serveWebApp(Some(userMetadata(user, UserProfileTab(request.path))))
+        } getOrElse notFound(request)
+      case r: NonUserRequest[_] =>
+        redirectToLogin(s"/me${dropPathSegment(request.uri)}", r)
     }
   }
 
-  def route[T](implicit request: MaybeUserRequest[T]): Routeable = angularRouter.route(request)
+  def serveWebAppIfLibraryFound(username: Username, slug: String) = WebAppPage { implicit request =>
+    lookupUsername(username) flatMap {
+      case (user, userRedirectStatusOpt) =>
+        libraryCommander.getLibraryBySlugOrAlias(user.id.get, LibrarySlug(slug)) map {
+          case (library, isLibraryAlias) =>
+            if (library.slug.value != slug || userRedirectStatusOpt.isDefined) { // library moved
+              val uri = Library.formatLibraryPathUrlEncoded(user.username, library.slug) + dropPathSegment(dropPathSegment(request.uri))
+              val status = if (!isLibraryAlias || userRedirectStatusOpt.exists(_ == 303)) 303 else 301
+              Redirect(uri, status)
+            } else {
+              serveWebApp(request.userAgentOpt.orElse(Some(UserAgent.UnknownUserAgent)).filter(_.possiblyBot).map(_ => libMetadata(library)))
+            }
+        }
+    } getOrElse notFound(request)
+  }
+
+  private def lookupUsername(username: Username)(implicit request: MaybeUserRequest[_]): Option[(User, Option[Int])] = {
+    userCommander.getUserByUsernameOrAlias(username) map {
+      case (user, isAlias) =>
+        if (user.username != username) { // user moved or username normalization
+          (user, Some(if (isAlias) 301 else 303))
+        } else {
+          (user, None)
+        }
+    }
+  }
+
+  private def dropPathSegment(uri: String): String = uri.drop(1).dropWhile(!"/?".contains(_))
 
   private def redirectToLogin(url: String, request: NonUserRequest[_]): Result = {
     Redirect("/login").withSession(request.session + (SecureSocial.OriginalUrlKey -> url))
   }
 
-  private def serveWebApp(ng: Angular, request: MaybeUserRequest[_]): Result = {
-    AngularDistAssets.angularApp(ng.headerload, ng.postload.map(_(request)))
+  private def serveWebApp(header: Option[Future[String]]): Result = {
+    AngularDistAssets.angularApp(header)
+  }
+
+  private def notFound(request: MaybeUserRequest[_]): Result = {
+    NotFound(views.html.error.notFound(request.path))
   }
 
   private object MobileAppFilter extends ActionFilter[MaybeUserRequest] {
@@ -120,64 +156,6 @@ class KifiSiteRouter @Inject() (
 
   private val WebAppPage = MaybeUserPage andThen MobileAppFilter andThen IncompleteSignupFilter
 
-}
-
-@Singleton // for performance
-class AngularRouter @Inject() (
-    db: Database,
-    userRepo: UserRepo,
-    userCommander: UserCommander,
-    pageMetaTagsCommander: PageMetaTagsCommander,
-    libraryCommander: LibraryCommander,
-    airbrake: AirbrakeNotifier,
-    libraryMetadataCache: LibraryMetadataCache,
-    userMetadataCache: UserMetadataCache) {
-
-  import AngularRouter.Path
-
-  def route(request: MaybeUserRequest[_]): Routeable = {
-    userOrLibrary(Path(request.path), request) getOrElse Error404
-  }
-
-  // combined to re-use User lookup
-  private def userOrLibrary(path: Path, request: MaybeUserRequest[_]): Option[Routeable] = {
-    if (path.primary.nonEmpty) {
-      userCommander.getUserByUsernameOrAlias(Username(path.primary)).flatMap {
-        case (user, isUserAlias) =>
-          if (user.username.value != path.primary) { // user moved or username normalization
-            val redir = "/" + (user.username.value +: path.segments.drop(1)).map(r => URLEncoder.encode(r, UTF8)).mkString("/")
-            if (isUserAlias) Some(MovedPermanentlyRoute(redir)) else Some(SeeOtherRoute(redir))
-          } else if (path.segments.length == 1) { // user profile page
-            Some(Angular(Some(userMetadata(user, UserProfileTab(path.path)))))
-          } else if (path.segments.length == 2 && (path.segments(1) == "libraries" || path.segments(1) == "connections" || path.segments(1) == "followers")) { // user profile page (Angular will rectify /libraries)
-            Some(Angular(Some(userMetadata(user, UserProfileTab(path.path)))))
-          } else if (path.segments.length == 3 && path.segments(1) == "libraries" && (path.segments(2) == "following" || path.segments(2) == "invited")) { // user profile page (nested routes)
-            Some(Angular(Some(userMetadata(user, UserProfileTab(path.path)))))
-          } else {
-            path.segments.tail.headOption.flatMap { secondary =>
-              libraryCommander.getLibraryBySlugOrAlias(user.id.get, LibrarySlug(secondary)).map {
-                case (library, isLibraryAlias) =>
-                  if (isLibraryAlias) { // library moved
-                    val redir = libraryCommander.getLibraryPath(library).split("/").map(r => URLEncoder.encode(r, UTF8)).mkString("/")
-                    Some(MovedPermanentlyRoute(redir))
-                  } else if (library.slug.value != secondary) { // slug normalization
-                    val redir = "/" + (path.segments.dropRight(1) :+ library.slug.value).map(r => URLEncoder.encode(r, UTF8)).mkString("/")
-                    Some(SeeOtherRoute(redir))
-                  } else {
-                    val metadata = if (request.userAgentOpt.getOrElse(UserAgent.UnknownUserAgent).possiblyBot) {
-                      Some(libMetadata(library))
-                    } else None
-                    Some(Angular(metadata)) // great place to postload request data since we have `lib` available
-                  }
-              } getOrElse None
-            }
-          }
-      }
-    } else {
-      None
-    }
-  }
-
   private def userMetadata(user: User, tab: UserProfileTab): Future[String] = try {
     userMetadataCache.getOrElseFuture(UserMetadataKey(user.id.get, tab)) {
       pageMetaTagsCommander.userMetaTags(user, tab).imap(_.formatOpenGraphForUser)
@@ -198,11 +176,4 @@ class AngularRouter @Inject() (
       Future.successful("")
   }
 
-}
-
-object AngularRouter {
-  case class Path(path: String) {
-    val segments = path.drop(1).split('/').map(URLDecoder.decode(_, UTF8))
-    val primary = segments.head
-  }
 }

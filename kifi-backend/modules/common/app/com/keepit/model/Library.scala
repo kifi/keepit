@@ -1,22 +1,26 @@
 package com.keepit.model
 
+import java.net.URLEncoder
 import javax.crypto.spec.IvParameterSpec
 
 import com.keepit.common.cache.{ CacheStatistics, FortyTwoCachePlugin, JsonCacheImpl, Key }
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration, ModelWithPublicId, ModelWithPublicIdCompanion }
 import com.keepit.common.db._
 import com.keepit.common.logging.AccessLog
+import com.keepit.common.json
+import com.keepit.common.strings.UTF8
 import com.keepit.common.time._
 import com.keepit.model.view.LibraryMembershipView
+import com.keepit.social.BasicUser
 import com.kifi.macros.json
+
 import org.apache.commons.lang3.RandomStringUtils
 import org.joda.time.DateTime
+
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
 import scala.concurrent.duration.Duration
-import com.keepit.social.BasicUser
-import com.keepit.common.json
 
 import scala.util.Random
 
@@ -130,6 +134,10 @@ object Library extends ModelWithPublicIdCompanion[Library] {
     s"/${ownerUsername.value}/${slug.value}"
   }
 
+  def formatLibraryPathUrlEncoded(ownerUsername: Username, slug: LibrarySlug): String = {
+    s"/${ownerUsername.urlEncoded}/${slug.urlEncoded}"
+  }
+
   def toLibraryView(lib: Library): LibraryView = LibraryView(id = lib.id, ownerId = lib.ownerId, state = lib.state, seq = lib.seq, kind = lib.kind)
 
   def toDetailedLibraryView(lib: Library, keepCount: Int = 0): DetailedLibraryView = DetailedLibraryView(id = lib.id, ownerId = lib.ownerId, state = lib.state,
@@ -148,7 +156,9 @@ class LibraryIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPlug
 
 object LibraryStates extends States[Library]
 
-case class LibrarySlug(value: String)
+case class LibrarySlug(value: String) {
+  def urlEncoded: String = URLEncoder.encode(value, UTF8)
+}
 object LibrarySlug {
   implicit def format: Format[LibrarySlug] =
     Format(__.read[String].map(LibrarySlug(_)), new Writes[LibrarySlug] { def writes(o: LibrarySlug) = JsString(o.value) })
