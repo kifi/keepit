@@ -32,6 +32,8 @@ private case object Error404 extends Routeable
 
 @Singleton // for performance
 class KifiSiteRouter @Inject() (
+  db: Database,
+  userRepo: UserRepo,
   angularRouter: AngularRouter,
   applicationConfig: FortyTwoConfig,
   val userActionsHelper: UserActionsHelper)
@@ -44,14 +46,36 @@ class KifiSiteRouter @Inject() (
     }
   }
 
-  def redirectUserToOwnProfile(subpath: String) = WebAppPage { implicit request =>
-    request match {
-      case r: UserRequest[_] =>
-        val suffix = if (subpath.isEmpty) "" else "/" + subpath
-        Redirect(s"/${URLEncoder.encode(r.user.username.value, UTF8)}$suffix")
-      case r: NonUserRequest[_] =>
-        redirectToLogin(request.path, r)
+  def redirectUserToOwnProfile(subpath: String) = WebAppPage(implicit request => redirUserToOwnProfile(subpath, request))
+  private def redirUserToOwnProfile(subpath: String, request: MaybeUserRequest[_]): Result = request match {
+    case r: UserRequest[_] => Redirect(s"/${URLEncoder.encode(r.user.username.value, UTF8)}$subpath")
+    case r: NonUserRequest[_] => redirectToLogin(s"/me$subpath", r)
+  }
+
+  def redirectFromFriends(friend: Option[String]) = WebAppPage { implicit request =>
+    redirectUserToProfileToConnect(friend, request) getOrElse redirUserToOwnProfile("/connections", request)
+  }
+  def handleInvitePage(friend: Option[String]) = WebAppPage { implicit request =>
+    redirectUserToProfileToConnect(friend, request) getOrElse serveWebAppToUser2(request)
+  }
+  private def redirectUserToProfileToConnect(friend: Option[String], request: MaybeUserRequest[_]): Option[Result] = {
+    friend.flatMap(ExternalId.asOpt[User]) flatMap { userExtId =>
+      db.readOnlyMaster { implicit session =>
+        userRepo.getOpt(userExtId)
+      }
+    } map { user =>
+      val url = s"/${URLEncoder.encode(user.username.value, UTF8)}?intent=connect"
+      request match {
+        case _: UserRequest[_] => Redirect(url)
+        case r: NonUserRequest[_] => redirectToLogin(url, r)
+      }
     }
+  }
+
+  def serveWebAppToUser = WebAppPage(implicit request => serveWebAppToUser2(request))
+  private def serveWebAppToUser2(request: MaybeUserRequest[_]): Result = request match {
+    case r: UserRequest[_] => serveWebApp(Angular(None), r)
+    case r: NonUserRequest[_] => redirectToLogin(r.uri, r)
   }
 
   // Useful to route anything that a) serves the Angular app, b) requires context about if a user is logged in or not
@@ -63,9 +87,7 @@ class KifiSiteRouter @Inject() (
       case SeeOtherRoute(url) => Redirect(url)
       case MovedPermanentlyRoute(url) => MovedPermanently(url)
       case RedirectToLogin(url) => redirectToLogin(url, request.asInstanceOf[NonUserRequest[_]])
-      case ng: Angular =>
-        // routing to ng page - could be public pages like public library, user profile and other shared routes with private views
-        AngularDistAssets.angularApp(ng.headerload, ng.postload.map(_(request)))
+      case ng: Angular => serveWebApp(ng, request)
     }
   }
 
@@ -73,6 +95,10 @@ class KifiSiteRouter @Inject() (
 
   private def redirectToLogin(url: String, request: NonUserRequest[_]): Result = {
     Redirect("/login").withSession(request.session + (SecureSocial.OriginalUrlKey -> url))
+  }
+
+  private def serveWebApp(ng: Angular, request: MaybeUserRequest[_]): Result = {
+    AngularDistAssets.angularApp(ng.headerload, ng.postload.map(_(request)))
   }
 
   private object MobileAppFilter extends ActionFilter[MaybeUserRequest] {
@@ -110,60 +136,7 @@ class AngularRouter @Inject() (
   import AngularRouter.Path
 
   def route(request: MaybeUserRequest[_]): Routeable = {
-    val path = Path(request.path)
-    Some(path).filter(p => p.primary == "friends" || p.primary == "invite") flatMap { path =>
-      request.queryString.get("friend").flatMap(_.headOption).flatMap(ExternalId.asOpt[User]).flatMap { userExtId =>
-        db.readOnlyMaster { implicit session =>
-          userRepo.getOpt(userExtId)
-        }
-      } map { user =>
-        val url = s"/${URLEncoder.encode(user.username.value, UTF8)}?intent=connect"
-        request match {
-          case _: UserRequest[_] => SeeOtherRoute(url)
-          case _: NonUserRequest[_] => RedirectToLogin(url)
-        }
-      }
-    } orElse {
-      if (path.primary == "friends" || path.path == "/connections") {
-        request match {
-          case r: UserRequest[_] => Some(SeeOtherRoute(s"/${URLEncoder.encode(r.user.username.value, UTF8)}/connections"))
-          case _: NonUserRequest[_] => Some(RedirectToLogin("/connections"))
-        }
-      } else {
-        ngStaticPage(path, request) orElse userOrLibrary(path, request)
-      }
-    } getOrElse {
-      Error404
-    }
-  }
-
-  private val ngFixedRoutes: Map[String, Seq[MaybeUserRequest[_] => Future[String]]] = Map(
-    "/" -> Seq(), // Note: "/" currently handled directly by HomeController.home
-    "/invite" -> Seq(),
-    "/profile" -> Seq(),
-    "/find" -> Seq(),
-    "/tags/manage" -> Seq(),
-    "/keeps" -> Seq()
-  )
-  private val ngPrefixRoutes: Map[String, Seq[MaybeUserRequest[_] => Future[String]]] = Map(
-    "keep" -> Seq(),
-    "tag" -> Seq()
-  )
-
-  //private val dataOnEveryAngularPage = Seq(injectUser _) // todo: Have fun with this!
-
-  // def injectUser(request: MaybeUserRequest[_]) = Future {
-  //   "" // inject user data!
-  // }
-
-  private def ngStaticPage(path: Path, request: MaybeUserRequest[_]): Option[Routeable] = {
-    // Right now, all static routes are for users only. If this changes, update this!
-    ngFixedRoutes.get(path.path) orElse ngPrefixRoutes.get(path.primary) map { dataLoaders =>
-      request match {
-        case _: UserRequest[_] => Angular(None, dataLoaders)
-        case _: NonUserRequest[_] => RedirectToLogin(path.path)
-      }
-    }
+    userOrLibrary(Path(request.path), request) getOrElse Error404
   }
 
   // combined to re-use User lookup

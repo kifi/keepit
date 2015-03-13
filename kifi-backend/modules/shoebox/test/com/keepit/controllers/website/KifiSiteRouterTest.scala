@@ -101,6 +101,20 @@ class KifiSiteRouterTest extends Specification with ShoeboxApplicationInjector {
             } getOrElse result(false, "", "request did not match any routes", x)
           }
         }
+        object beWebApp extends Matcher[Option[Future[Result]]] {
+          def apply[T <: Option[Future[Result]]](x: Expectable[T]) = {
+            x.value map { resultF =>
+              val expectedStatus = 200
+              val resStatus = status(resultF)
+              if (resStatus != expectedStatus) {
+                result(false, "", s"expected status $expectedStatus but was $resStatus", x)
+              }
+              val expectedContent = "angular.bootstrap(document, ['kifi'])"
+              val resContent = contentAsString(resultF)
+              result(resContent.contains(expectedContent), "", s"""expected content to contain "$expectedContent" but was:\n$resContent""", x)
+            } getOrElse result(false, "", "request did not match any routes", x)
+          }
+        }
 
         // Username routing
         router.route(NonUserRequest(FakeRequest.apply("GET", "/asdf"))) === Error404
@@ -136,9 +150,9 @@ class KifiSiteRouterTest extends Specification with ShoeboxApplicationInjector {
         router.route(NonUserRequest(FakeRequest.apply("GET", "/abe.z1234/most-awesome-lib"))) must beAnInstanceOf[Angular]
 
         // Fixed Angular routes
-        router.route(NonUserRequest(FakeRequest.apply("GET", "/invite"))) === RedirectToLogin("/invite")
+        route(FakeRequest("GET", "/invite")) must beLoginRedirect("/invite")
         actionsHelper.setUser(user1)
-        router.route(UserRequest(FakeRequest.apply("GET", "/invite"), user1.id.get, None, actionsHelper)) must beAnInstanceOf[Angular]
+        route(FakeRequest("GET", "/invite")) must beWebApp
 
         // /me
         actionsHelper.unsetUser
@@ -152,30 +166,30 @@ class KifiSiteRouterTest extends Specification with ShoeboxApplicationInjector {
         // Redirects (logged out)
         actionsHelper.unsetUser
         route(FakeRequest("GET", "/recommendations")) must beLoginRedirect("/")
-        router.route(NonUserRequest(FakeRequest.apply("GET", "/connections"))) === RedirectToLogin("/connections")
-        router.route(NonUserRequest(FakeRequest.apply("GET", "/friends"))) === RedirectToLogin("/connections")
+        route(FakeRequest("GET", "/connections")) must beLoginRedirect("/me/connections")
+        route(FakeRequest("GET", "/friends")) must beLoginRedirect("/me/connections")
         route(FakeRequest("GET", "/friends/invite")) must beLoginRedirect("/invite")
-        router.route(NonUserRequest(FakeRequest.apply("GET", "/friends/requests"))) === RedirectToLogin("/connections")
-        router.route(NonUserRequest(FakeRequest.apply("GET", "/friends/requests/email"))) === RedirectToLogin("/connections")
-        router.route(NonUserRequest(FakeRequest.apply("GET", "/friends/requests/linkedin"))) === RedirectToLogin("/connections")
-        router.route(NonUserRequest(FakeRequest.apply("GET", "/friends/requests/facebook"))) === RedirectToLogin("/connections")
-        router.route(NonUserRequest(FakeRequest.apply("GET", "/friends/requests/refresh"))) === RedirectToLogin("/connections")
-        router.route(NonUserRequest(FakeRequest.apply("GET", "/friends?friend=" + user2.externalId))) === RedirectToLogin("/l%C3%A9o1221?intent=connect")
-        router.route(NonUserRequest(FakeRequest.apply("GET", "/invite?friend=" + user2.externalId))) === RedirectToLogin("/l%C3%A9o1221?intent=connect")
+        route(FakeRequest("GET", "/friends/requests")) must beLoginRedirect("/me/connections")
+        route(FakeRequest("GET", "/friends/requests/email")) must beLoginRedirect("/me/connections")
+        route(FakeRequest("GET", "/friends/requests/linkedin")) must beLoginRedirect("/me/connections")
+        route(FakeRequest("GET", "/friends/requests/facebook")) must beLoginRedirect("/me/connections")
+        route(FakeRequest("GET", "/friends/requests/refresh")) must beLoginRedirect("/me/connections")
+        route(FakeRequest("GET", "/friends?friend=" + user2.externalId)) must beLoginRedirect("/l%C3%A9o1221?intent=connect")
+        route(FakeRequest("GET", "/invite?friend=" + user2.externalId)) must beLoginRedirect("/l%C3%A9o1221?intent=connect")
 
         // Redirects (logged in)
         actionsHelper.setUser(user1)
         route(FakeRequest("GET", "/recommendations")) must beRedirect(301, "/")
-        router.route(UserRequest(FakeRequest.apply("GET", "/connections"), user1.id.get, None, actionsHelper)) === SeeOtherRoute("/abez/connections")
-        router.route(UserRequest(FakeRequest.apply("GET", "/friends"), user1.id.get, None, actionsHelper)) === SeeOtherRoute("/abez/connections")
+        route(FakeRequest("GET", "/connections")) must beRedirect(303, "/abez/connections")
+        route(FakeRequest("GET", "/friends")) must beRedirect(303, "/abez/connections")
         route(FakeRequest("GET", "/friends/invite")) must beRedirect(301, "/invite")
-        router.route(UserRequest(FakeRequest.apply("GET", "/friends/requests"), user1.id.get, None, actionsHelper)) === SeeOtherRoute("/abez/connections")
-        router.route(UserRequest(FakeRequest.apply("GET", "/friends/requests/email"), user1.id.get, None, actionsHelper)) === SeeOtherRoute("/abez/connections")
-        router.route(UserRequest(FakeRequest.apply("GET", "/friends/requests/linkedin"), user1.id.get, None, actionsHelper)) === SeeOtherRoute("/abez/connections")
-        router.route(UserRequest(FakeRequest.apply("GET", "/friends/requests/facebook"), user1.id.get, None, actionsHelper)) === SeeOtherRoute("/abez/connections")
-        router.route(UserRequest(FakeRequest.apply("GET", "/friends/requests/refresh"), user1.id.get, None, actionsHelper)) === SeeOtherRoute("/abez/connections")
-        router.route(UserRequest(FakeRequest.apply("GET", "/friends?friend=" + user2.externalId), user1.id.get, None, actionsHelper)) === SeeOtherRoute("/l%C3%A9o1221?intent=connect")
-        router.route(UserRequest(FakeRequest.apply("GET", "/invite?friend=" + user2.externalId), user1.id.get, None, actionsHelper)) === SeeOtherRoute("/l%C3%A9o1221?intent=connect")
+        route(FakeRequest("GET", "/friends/requests")) must beRedirect(303, "/abez/connections")
+        route(FakeRequest("GET", "/friends/requests/email")) must beRedirect(303, "/abez/connections")
+        route(FakeRequest("GET", "/friends/requests/linkedin")) must beRedirect(303, "/abez/connections")
+        route(FakeRequest("GET", "/friends/requests/facebook")) must beRedirect(303, "/abez/connections")
+        route(FakeRequest("GET", "/friends/requests/refresh")) must beRedirect(303, "/abez/connections")
+        route(FakeRequest("GET", "/friends?friend=" + user2.externalId)) must beRedirect(303, "/l%C3%A9o1221?intent=connect")
+        route(FakeRequest("GET", "/invite?friend=" + user2.externalId)) must beRedirect(303, "/l%C3%A9o1221?intent=connect")
 
         { // catching mobile
           val request = FakeRequest("GET", "/some/path?kma=1").withHeaders("user-agent" -> "Mozilla/5.0 (iPhone; U; CPU iPhone OS 5_1_1 like Mac OS X; en) AppleWebKit/534.46.0 (KHTML, like Gecko) CriOS/19.0.1084.60 Mobile/9B206 Safari/7534.48.3")

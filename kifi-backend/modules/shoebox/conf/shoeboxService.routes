@@ -928,8 +928,25 @@ GET     /img/*file                 com.keepit.controllers.website.AngularImgAsse
 # Web App
 ##########################################
 
-GET     /recommendations           @com.keepit.controllers.website.KifiSiteRouter.redirectUserTo(path = "/")
+# Let's keep these routes alphabetized.
+
+GET     /connections               @com.keepit.controllers.website.KifiSiteRouter.redirectUserToOwnProfile(subpath = "/connections")
+GET     /find                      @com.keepit.controllers.website.KifiSiteRouter.serveWebAppToUser
+GET     /friends                   @com.keepit.controllers.website.KifiSiteRouter.redirectFromFriends(friend: Option[String])
 GET     /friends/invite            @com.keepit.controllers.website.KifiSiteRouter.redirectUserTo(path = "/invite")
+GET     /friends/requests          @com.keepit.controllers.website.KifiSiteRouter.redirectUserToOwnProfile(subpath = "/connections")
+GET     /friends/requests/email    @com.keepit.controllers.website.KifiSiteRouter.redirectUserToOwnProfile(subpath = "/connections")
+GET     /friends/requests/linkedin @com.keepit.controllers.website.KifiSiteRouter.redirectUserToOwnProfile(subpath = "/connections")
+GET     /friends/requests/facebook @com.keepit.controllers.website.KifiSiteRouter.redirectUserToOwnProfile(subpath = "/connections")
+GET     /friends/requests/refresh  @com.keepit.controllers.website.KifiSiteRouter.redirectUserToOwnProfile(subpath = "/connections")
+GET     /invite                    @com.keepit.controllers.website.KifiSiteRouter.handleInvitePage(friend: Option[String])
 GET     /me                        @com.keepit.controllers.website.KifiSiteRouter.redirectUserToOwnProfile(subpath = "")
-GET     /me/*subpath               @com.keepit.controllers.website.KifiSiteRouter.redirectUserToOwnProfile(subpath)
+GET     /me/libraries              @com.keepit.controllers.website.KifiSiteRouter.redirectUserToOwnProfile(subpath = "/libraries")
+GET     /me/libraries/following    @com.keepit.controllers.website.KifiSiteRouter.redirectUserToOwnProfile(subpath = "/libraries/following")
+GET     /me/libraries/invited      @com.keepit.controllers.website.KifiSiteRouter.redirectUserToOwnProfile(subpath = "/libraries/invited")
+GET     /me/connections            @com.keepit.controllers.website.KifiSiteRouter.redirectUserToOwnProfile(subpath = "/connections")
+GET     /me/followers              @com.keepit.controllers.website.KifiSiteRouter.redirectUserToOwnProfile(subpath = "/followers")
+GET     /profile                   @com.keepit.controllers.website.KifiSiteRouter.serveWebAppToUser
+GET     /recommendations           @com.keepit.controllers.website.KifiSiteRouter.redirectUserTo(path = "/")
+GET     /tags/manage               @com.keepit.controllers.website.KifiSiteRouter.serveWebAppToUser
 GET     /*wildcard                 @com.keepit.controllers.website.KifiSiteRouter.app(wildcard)
