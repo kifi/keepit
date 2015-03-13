@@ -48,7 +48,7 @@ class ScrapeAgent @Inject() (
       }
     case ReceiveTimeout =>
       log.info(s"[ScrapeAgent($name).idle] has been idle for a while")
-    case JobDone =>
+    case x: JobDone =>
       log.warn(s"[ScrapeAgent($name).idle] received JobDone msg while idle. Likely from a slow future.")
     case m => throw new UnsupportedActorMessage(m)
   }
