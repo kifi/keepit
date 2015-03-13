@@ -950,17 +950,21 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def joinLibrary(userId: Id[User], libraryId: Id[Library])(implicit eventContext: HeimdalContext): Either[LibraryFail, Library] = {
-    db.readWrite(attempts = 3) { implicit s =>
+  def joinLibrary(userId: Id[User], libraryId: Id[Library], authToken: Option[String] = None, hashedPassPhrase: Option[HashedPassPhrase] = None)(implicit eventContext: HeimdalContext): Either[LibraryFail, Library] = {
+    val (lib, listInvites, validAuth) = db.readOnlyMaster { implicit s =>
       val lib = libraryRepo.get(libraryId)
       val listInvites = libraryInviteRepo.getWithLibraryIdAndUserId(libraryId, userId)
+      val validAuthFromTokenAndPassPhrase = checkAuthTokenAndPassPhrase(libraryId, authToken, hashedPassPhrase)
+      (lib, listInvites, validAuthFromTokenAndPassPhrase)
+    }
 
-      if (lib.kind == LibraryKind.SYSTEM_MAIN || lib.kind == LibraryKind.SYSTEM_SECRET)
-        Left(LibraryFail(FORBIDDEN, "cant_join_system_generated_library"))
-      else if (lib.visibility != LibraryVisibility.PUBLISHED && listInvites.isEmpty)
-        Left(LibraryFail(FORBIDDEN, "cant_join_nonpublished_library"))
-      else {
-        val maxAccess = if (listInvites.isEmpty) LibraryAccess.READ_ONLY else listInvites.sorted.last.access
+    if (lib.kind == LibraryKind.SYSTEM_MAIN || lib.kind == LibraryKind.SYSTEM_SECRET)
+      Left(LibraryFail(FORBIDDEN, "cant_join_system_generated_library"))
+    else if (lib.visibility != LibraryVisibility.PUBLISHED && listInvites.isEmpty && !validAuth)
+      Left(LibraryFail(FORBIDDEN, "cant_join_nonpublished_library"))
+    else {
+      val maxAccess = if (listInvites.isEmpty) LibraryAccess.READ_ONLY else listInvites.sorted.last.access
+      val updatedLib = db.readWrite(attempts = 3) { implicit s =>
         libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId, None) match {
           case None =>
             libraryMembershipRepo.save(LibraryMembership(libraryId = libraryId, userId = userId, access = maxAccess, lastJoinedAt = Some(currentDateTime)))
@@ -973,9 +977,10 @@ class LibraryCommander @Inject() (
         }
         val updatedLib = libraryRepo.save(lib.copy(memberCount = libraryMembershipRepo.countWithLibraryId(libraryId)))
         listInvites.map(inv => libraryInviteRepo.save(inv.copy(state = LibraryInviteStates.ACCEPTED)))
-        updateLibraryJoin(userId, lib, eventContext)
-        Right(updatedLib)
+        updatedLib
       }
+      updateLibraryJoin(userId, lib, eventContext)
+      Right(updatedLib)
     }
   }
 
