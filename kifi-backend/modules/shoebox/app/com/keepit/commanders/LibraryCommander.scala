@@ -626,13 +626,15 @@ class LibraryCommander @Inject() (
     }
   }
 
-  private def checkAuthTokenAndPassPhrase(libraryId: Id[Library], authToken: Option[String], passPhrase: Option[HashedPassPhrase])(implicit s: RSession) = {
-    authToken.nonEmpty && passPhrase.nonEmpty && {
+  private def getValidLibInvitesFromAuthTokenAndPassPhrase(libraryId: Id[Library], authToken: Option[String], passPhrase: Option[HashedPassPhrase])(implicit s: RSession): Seq[LibraryInvite] = {
+    if (authToken.nonEmpty && passPhrase.nonEmpty) {
       val excludeSet = Set(LibraryInviteStates.INACTIVE, LibraryInviteStates.ACCEPTED, LibraryInviteStates.DECLINED)
       libraryInviteRepo.getByLibraryIdAndAuthToken(libraryId, authToken.get, excludeSet)
-        .exists { i =>
+        .filter { i =>
           HashedPassPhrase.generateHashedPhrase(i.passPhrase) == passPhrase.get
         }
+    } else {
+      Seq.empty[LibraryInvite]
     }
   }
 
@@ -646,9 +648,9 @@ class LibraryCommander @Inject() (
           case Some(id) =>
             libraryMembershipRepo.getWithLibraryIdAndUserId(library.id.get, id).nonEmpty ||
               libraryInviteRepo.getWithLibraryIdAndUserId(userId = id, libraryId = library.id.get, excludeState = Some(LibraryInviteStates.INACTIVE)).nonEmpty ||
-              checkAuthTokenAndPassPhrase(library.id.get, authToken, passPhrase)
+              getValidLibInvitesFromAuthTokenAndPassPhrase(library.id.get, authToken, passPhrase).nonEmpty
           case None =>
-            checkAuthTokenAndPassPhrase(library.id.get, authToken, passPhrase)
+            getValidLibInvitesFromAuthTokenAndPassPhrase(library.id.get, authToken, passPhrase).nonEmpty
         }
       }
   }
@@ -950,17 +952,24 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def joinLibrary(userId: Id[User], libraryId: Id[Library])(implicit eventContext: HeimdalContext): Either[LibraryFail, Library] = {
-    db.readWrite(attempts = 3) { implicit s =>
+  def joinLibrary(userId: Id[User], libraryId: Id[Library], authToken: Option[String] = None, hashedPassPhrase: Option[HashedPassPhrase] = None)(implicit eventContext: HeimdalContext): Either[LibraryFail, Library] = {
+    val (lib, listInvites) = db.readOnlyMaster { implicit s =>
       val lib = libraryRepo.get(libraryId)
-      val listInvites = libraryInviteRepo.getWithLibraryIdAndUserId(libraryId, userId)
+      val listInvites = if (authToken.isDefined) {
+        getValidLibInvitesFromAuthTokenAndPassPhrase(libraryId, authToken, hashedPassPhrase)
+      } else {
+        libraryInviteRepo.getWithLibraryIdAndUserId(libraryId, userId)
+      }
+      (lib, listInvites)
+    }
 
-      if (lib.kind == LibraryKind.SYSTEM_MAIN || lib.kind == LibraryKind.SYSTEM_SECRET)
-        Left(LibraryFail(FORBIDDEN, "cant_join_system_generated_library"))
-      else if (lib.visibility != LibraryVisibility.PUBLISHED && listInvites.isEmpty)
-        Left(LibraryFail(FORBIDDEN, "cant_join_nonpublished_library"))
-      else {
-        val maxAccess = if (listInvites.isEmpty) LibraryAccess.READ_ONLY else listInvites.sorted.last.access
+    if (lib.kind == LibraryKind.SYSTEM_MAIN || lib.kind == LibraryKind.SYSTEM_SECRET)
+      Left(LibraryFail(FORBIDDEN, "cant_join_system_generated_library"))
+    else if (lib.visibility != LibraryVisibility.PUBLISHED && listInvites.isEmpty)
+      Left(LibraryFail(FORBIDDEN, "cant_join_nonpublished_library"))
+    else {
+      val maxAccess = if (listInvites.isEmpty) LibraryAccess.READ_ONLY else listInvites.sorted.last.access
+      val updatedLib = db.readWrite(attempts = 3) { implicit s =>
         libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId, None) match {
           case None =>
             libraryMembershipRepo.save(LibraryMembership(libraryId = libraryId, userId = userId, access = maxAccess, lastJoinedAt = Some(currentDateTime)))
@@ -973,9 +982,10 @@ class LibraryCommander @Inject() (
         }
         val updatedLib = libraryRepo.save(lib.copy(memberCount = libraryMembershipRepo.countWithLibraryId(libraryId)))
         listInvites.map(inv => libraryInviteRepo.save(inv.copy(state = LibraryInviteStates.ACCEPTED)))
-        updateLibraryJoin(userId, lib, eventContext)
-        Right(updatedLib)
+        updatedLib
       }
+      updateLibraryJoin(userId, lib, eventContext)
+      Right(updatedLib)
     }
   }
 
