@@ -955,9 +955,11 @@ class LibraryCommander @Inject() (
   def joinLibrary(userId: Id[User], libraryId: Id[Library], authToken: Option[String] = None, hashedPassPhrase: Option[HashedPassPhrase] = None)(implicit eventContext: HeimdalContext): Either[LibraryFail, Library] = {
     val (lib, listInvites) = db.readOnlyMaster { implicit s =>
       val lib = libraryRepo.get(libraryId)
-      val listInvites = if (authToken.isDefined) {
+      val listInvites = if (lib.visibility != LibraryVisibility.PUBLISHED && authToken.isDefined) { // private library & auth token (opened by email) requires checking of pass phrase
         getValidLibInvitesFromAuthTokenAndPassPhrase(libraryId, authToken, hashedPassPhrase)
-      } else {
+      } else if (authToken.isDefined) { // public library & auth token (opened by email)
+        libraryInviteRepo.getByLibraryIdAndAuthToken(libraryId, authToken.get)
+      } else { // public or private library (called from kifi.com)
         libraryInviteRepo.getWithLibraryIdAndUserId(libraryId, userId)
       }
       (lib, listInvites)

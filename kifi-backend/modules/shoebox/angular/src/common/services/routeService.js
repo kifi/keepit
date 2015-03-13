@@ -186,8 +186,8 @@ angular.module('kifi')
       shareLibrary: function (libraryId) {
         return route('/libraries/' + libraryId + '/invite');
       },
-      joinLibrary: function (libraryId) {
-        return route('/libraries/' + libraryId + '/join');
+      joinLibrary: function (libraryId, authToken) {
+        return route('/libraries/' + libraryId + '/join', {authToken: authToken || []});
       },
       leaveLibrary: function (libraryId) {
         return route('/libraries/' + libraryId + '/leave');
