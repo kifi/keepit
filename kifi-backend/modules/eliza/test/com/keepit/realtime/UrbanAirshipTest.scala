@@ -86,7 +86,7 @@ class UrbanAirshipTest extends Specification with TestInjector with ElizaTestInj
       val urbanAirshipClient = inject[FakeUrbanAirshipClient]
       urbanAirshipClient.jsons.size === 0
       val device = Device(userId = Id[User](1), token = "32e0a1c0cd0860ea392d06d26bbd1d4f289bbc488c29d634aee8ccb10e812f63", deviceType = DeviceType.IOS)
-      val notification = SimplePushNotification(unvisitedCount = 3, message = Some("bar"), sound = Some(UrbanAirship.DefaultNotificationSound))
+      val notification = SimplePushNotification(unvisitedCount = 3, message = Some("bar"), sound = Some(UrbanAirship.DefaultNotificationSound), category = null, experiment = null)
       urbanAirship.sendNotification(device, notification)
       urbanAirshipClient.jsons.size === 1
       urbanAirshipClient.jsons(0) === Json.parse(

@@ -1,5 +1,7 @@
 package com.keepit.realtime
 
+import com.keepit.eliza.{ PushNotificationExperiment, PushNotificationCategory }
+
 import scala.concurrent.duration._
 import java.util.concurrent.TimeUnit
 
@@ -31,7 +33,7 @@ sealed trait PushNotification {
 }
 
 case class MessageThreadPushNotification(id: ExternalId[MessageThread], unvisitedCount: Int, message: Option[String], sound: Option[NotificationSound]) extends PushNotification
-case class SimplePushNotification(unvisitedCount: Int, message: Option[String], sound: Option[NotificationSound] = None) extends PushNotification
+case class SimplePushNotification(unvisitedCount: Int, message: Option[String], sound: Option[NotificationSound] = None, category: PushNotificationCategory, experiment: PushNotificationExperiment) extends PushNotification
 
 case class NotificationSound(name: String) extends AnyVal
 
