@@ -79,10 +79,7 @@ class LibraryRepoImpl @Inject() (
     def * = (id.?, createdAt, updatedAt, state, name, ownerId, description, visibility, slug, color.?, seq, kind, memberCount, universalLink, lastKept) <> ((Library.applyFromDbRow _).tupled, Library.unapplyToDbRow _)
   }
 
-  def table(tag: Tag) = new LibraryTable(tag)
-  initTable()
-
-  private implicit val getLibraryResult: GetResult[com.keepit.model.Library] = GetResult { r: PositionedResult =>
+  implicit val getLibraryResult: GetResult[com.keepit.model.Library] = GetResult { r: PositionedResult =>
     Library.applyFromDbRow(
       id = r.<<[Option[Id[Library]]],
       createdAt = r.<<[DateTime],
@@ -101,6 +98,9 @@ class LibraryRepoImpl @Inject() (
       lastKept = r.<<[Option[DateTime]]
     )
   }
+
+  def table(tag: Tag) = new LibraryTable(tag)
+  initTable()
 
   override def save(library: Library)(implicit session: RWSession): Library = {
     val toSave = library.copy(seq = deferredSeqNum())

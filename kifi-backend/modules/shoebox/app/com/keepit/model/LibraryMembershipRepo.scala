@@ -25,6 +25,7 @@ trait LibraryMembershipRepo extends Repo[LibraryMembership] with RepoWithDelete[
   def getWithLibraryIdAndLimit(libraryId: Id[Library], limit: Int)(implicit session: RSession): Seq[LibraryMembership]
   def getWithUserId(userId: Id[User], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Seq[LibraryMembership]
   def getLibrariesWithWriteAccess(userId: Id[User])(implicit session: RSession): Set[Id[Library]]
+  def getLatestUpdatedLibraryUserFollow(userId: Id[User])(implicit session: RSession): Option[Library]
   def getWithLibraryIdAndUserId(libraryId: Id[Library], userId: Id[User], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Option[LibraryMembership]
   def getWithLibraryIdsAndUserId(libraryIds: Set[Id[Library]], userId: Id[User], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Map[Id[Library], LibraryMembership]
   def getWithLibraryIdAndUserIds(libraryId: Id[Library], userIds: Set[Id[User]], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Map[Id[User], LibraryMembership]
@@ -54,7 +55,7 @@ trait LibraryMembershipRepo extends Repo[LibraryMembership] with RepoWithDelete[
 class LibraryMembershipRepoImpl @Inject() (
   val db: DataBaseComponent,
   val clock: Clock,
-  libraryRepo: LibraryRepo,
+  libraryRepo: LibraryRepoImpl,
   libraryMembershipCountCache: LibraryMembershipCountCache,
   followersCountCache: FollowersCountCache,
   memberIdCache: LibraryMembershipIdCache,
@@ -79,6 +80,8 @@ class LibraryMembershipRepoImpl @Inject() (
     def lastJoinedAt = column[Option[DateTime]]("last_joined_at", O.Nullable)
     def * = (id.?, libraryId, userId, access, createdAt, updatedAt, state, seq, showInSearch, listed, lastViewed, lastEmailSent, lastJoinedAt) <> ((LibraryMembership.apply _).tupled, LibraryMembership.unapply)
   }
+
+  implicit val getLibraryResult = libraryRepo.getLibraryResult
 
   def table(tag: Tag) = new LibraryMemberTable(tag)
 
@@ -137,6 +140,11 @@ class LibraryMembershipRepoImpl @Inject() (
     librariesWithWriteAccessCache.getOrElse(LibrariesWithWriteAccessUserKey(userId)) {
       getWithUserId(userId, Some(LibraryMembershipStates.INACTIVE)).collect { case membership if membership.canWrite => membership.libraryId }.toSet
     }
+  }
+
+  def getLatestUpdatedLibraryUserFollow(userId: Id[User])(implicit session: RSession): Option[Library] = {
+    import StaticQuery.interpolation
+    sql"""select lm.* from library_membership lm, library l where l.id = lm.library_id and lm.state='active' and l.state='active' and lm.access != 'owner' order by l.last_kept desc limit 1""".as[Library].firstOption
   }
 
   private val getWithLibraryIdAndUserIdCompiled = Compiled { (libraryId: Column[Id[Library]], userId: Column[Id[User]]) =>

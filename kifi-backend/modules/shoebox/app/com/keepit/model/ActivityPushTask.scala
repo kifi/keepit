@@ -9,7 +9,6 @@ import com.keepit.common.strings.StringWithNoLineBreaks
 import com.keepit.common.time._
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
-import com.keepit.common.crypto.PublicId
 
 case class ActivityPushTask(
     id: Option[Id[ActivityPushTask]] = None,
@@ -18,9 +17,14 @@ case class ActivityPushTask(
     userId: Id[User],
     state: State[ActivityPushTask] = ActivityPushTaskStates.ACTIVE,
     lastPush: Option[DateTime] = None,
-    lastActive: DateTime) extends Model[ActivityPushTask] {
+    lastActiveTime: LocalTime,
+    lastActiveDate: DateTime) extends Model[ActivityPushTask] {
+
   def withId(id: Id[ActivityPushTask]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
+
+  def withLastActivity(when: DateTime): ActivityPushTask = copy(lastActiveDate = when, lastActiveTime = when.toLocalTimeInZone(DEFAULT_DATE_TIME_ZONE))
+
 }
 
 object ActivityPushTaskStates extends States[ActivityPushTask]

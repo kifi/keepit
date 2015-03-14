@@ -39,7 +39,7 @@ trait FortyTwoGenericTypeMappers { self: { val db: DataBaseComponent } =>
   implicit def externalIdTypeMapper[M <: Model[M]] = MappedColumnType.base[ExternalId[M], String](_.id, ExternalId[M])
   implicit def nameMapper[M <: Model[M]] = MappedColumnType.base[Name[M], String](_.name, Name[M])
   implicit val dateTimeMapper = MappedColumnType.base[DateTime, Timestamp](d => new Timestamp(d.getMillis), t => new DateTime(t.getTime, zones.UTC))
-  implicit val localTimeMapper = MappedColumnType.base[LocalTime, Time](d => new Time(d.getMillisOfDay), t => new LocalTime(t.getTime, zones.UTC))
+  implicit val localTimeMapper = MappedColumnType.base[LocalTime, Int](t => t.getMillisOfDay, t => new LocalTime(t, zones.UTC))
 
   implicit def seqIdsMapper[M <: Model[M]]: TypedType[Seq[Id[M]]] = MappedColumnType.base[Seq[Id[M]], String](
     { ids => Json.stringify(Json.toJson(ids)) }, { jstr => Json.parse(jstr).as[Seq[Id[M]]] })

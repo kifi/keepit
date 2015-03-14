@@ -30,7 +30,7 @@ class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
   var inbox = List.empty[(Id[User], NotificationCategory, String, String)]
 
   def sendToUserNoBroadcast(userId: Id[User], data: JsArray): Unit = {}
-  def sendPushNotification(userId: Id[User], message: String): Unit = {}
+  def sendPushNotification(userId: Id[User], message: String, pushNotificationCategory: PushNotificationCategory, pushNotificationExperiment: PushNotificationExperiment): Unit = {}
 
   def sendToUser(userId: Id[User], data: JsArray): Unit = {}
 
