@@ -1,25 +1,15 @@
 package com.keepit.scraper.extractor
 
-import com.keepit.rover.extractor.tika.{ KeywordValidator, DefaultContentHandler }
+import com.keepit.rover.extractor.tika.{ HtmlMappers, KeywordValidator, MainContentHandler }
 import com.keepit.scraper.ScraperConfig
-import org.apache.tika.parser.html.DefaultHtmlMapper
 import org.apache.tika.parser.html.HtmlMapper
 import org.xml.sax.ContentHandler
 import com.keepit.common.net.URI
 
 object DefaultExtractorProvider extends ExtractorProvider {
   def isDefinedAt(uri: URI) = true
-  def apply(uri: URI) = new DefaultExtractor(uri, ScraperConfig.maxContentChars, htmlMapper)
-  def apply(uri: URI, maxContentChars: Int) = new DefaultExtractor(uri, maxContentChars, htmlMapper)
-
-  val htmlMapper = Some(new DefaultHtmlMapper {
-    override def mapSafeElement(name: String) = {
-      name.toLowerCase match {
-        case "option" => "option"
-        case _ => super.mapSafeElement(name)
-      }
-    }
-  })
+  def apply(uri: URI) = new DefaultExtractor(uri, ScraperConfig.maxContentChars, HtmlMappers.default)
+  def apply(uri: URI, maxContentChars: Int) = new DefaultExtractor(uri, maxContentChars, HtmlMappers.default)
 }
 
 object DefaultExtractor {
@@ -28,7 +18,7 @@ object DefaultExtractor {
 }
 
 class DefaultExtractor(url: URI, maxContentChars: Int, htmlMapper: Option[HtmlMapper]) extends TikaBasedExtractor(url, maxContentChars, htmlMapper) {
-  private[this] val handler: DefaultContentHandler = new DefaultContentHandler(maxContentChars, output, metadata, url.toString())
+  private[this] val handler: MainContentHandler = new MainContentHandler(maxContentChars, output, metadata, url.toString())
 
   protected def getContentHandler: ContentHandler = handler
 

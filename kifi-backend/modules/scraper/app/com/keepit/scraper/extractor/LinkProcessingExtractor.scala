@@ -3,6 +3,8 @@ package com.keepit.scraper.extractor
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.net.URI
 import com.keepit.model.HttpProxy
+import com.keepit.rover.extractor.tika.HtmlMappers
+import com.keepit.rover.extractor.utils.LinkClassifier
 import com.keepit.rover.fetcher.FetchRequest
 import com.keepit.scraper.ScraperConfig
 import com.keepit.scraper.fetcher.DeprecatedHttpFetcher
@@ -62,18 +64,10 @@ class LinkProcessingExtractor(
 @Singleton
 class LinkProcessingExtractorProvider @Inject() (httpFetcher: DeprecatedHttpFetcher, shoeboxScraperClient: ShoeboxScraperClient) extends ExtractorProvider {
   def isDefinedAt(uri: URI) = true
-  def apply(uri: URI) = new LinkProcessingExtractor(uri, ScraperConfig.maxContentChars, DefaultExtractorProvider.htmlMapper, processLink(uri), httpFetcher, shoeboxScraperClient) // TODO
+  def apply(uri: URI) = new LinkProcessingExtractor(uri, ScraperConfig.maxContentChars, HtmlMappers.default, processLink(uri), httpFetcher, shoeboxScraperClient) // TODO
 
   private def processLink(uri: URI)(link: Link): Option[String] = {
     val url = uri.toString()
-    URI.absoluteUrl(uri, link.getUri).collect { case absoluteLinkUrl if isAbout(url, link.getText, absoluteLinkUrl) => absoluteLinkUrl }
-  }
-
-  private def isAbout(baseUrl: String, linkText: String, linkUrl: String): Boolean = {
-    val aboutText = Set("about", "about us", "a propos")
-    val concatenators = Set("", "-", "_")
-    val aboutUrls = for { text <- aboutText; c <- concatenators } yield text.mkString(c)
-    val aboutUrlRegex = ("/(" + aboutUrls.mkString("|") + """)(\.[a-z]{2,4})?/?$""").r
-    linkUrl.startsWith(baseUrl) && (aboutText.contains(linkText.toLowerCase) || aboutUrlRegex.pattern.matcher(linkUrl).find)
+    URI.absoluteUrl(uri, link.getUri).collect { case absoluteLinkUrl if LinkClassifier.isAbout(url, link.getText, absoluteLinkUrl) => absoluteLinkUrl }
   }
 }

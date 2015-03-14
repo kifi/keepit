@@ -1,19 +1,29 @@
 package com.keepit.rover.extractor.tika
 
 import com.keepit.common.logging.Logging
-import org.apache.tika.metadata.Metadata
+import com.keepit.rover.extractor.utils.URITokenizer
+import org.apache.tika.metadata.{ HttpHeaders, Metadata }
 import org.apache.tika.parser.html.BoilerpipeContentHandler
-import org.apache.tika.sax.ContentHandlerDecorator
+import org.apache.tika.sax.{ WriteOutContentHandler, ContentHandlerDecorator }
 import org.xml.sax.Attributes
-import org.xml.sax.ContentHandler
 import play.api.http.MimeTypes
 
 import scala.collection.mutable
 
-class DefaultContentHandler(maxContentChars: Int, handler: ContentHandler, metadata: Metadata, url: String) extends ContentHandlerDecorator(handler) with Logging {
+object MainContentHandler {
+  val maxContentChars = 100000 // 100K chars
+  def apply(metadata: Metadata, url: String): MainContentHandler = {
+    val output = new WriteOutContentHandler(maxContentChars)
+    new MainContentHandler(maxContentChars, output, metadata, url)
+  }
+}
 
-  var charsCount = 0
-  var maxContentCharsLimitReached = false
+class MainContentHandler(maxContentChars: Int, output: WriteOutContentHandler, val metadata: Metadata, val url: String) extends ContentHandlerDecorator(output) with Logging {
+
+  def getContent(): String = output.toString
+
+  private[this] var charsCount = 0
+  private[this] var maxContentCharsLimitReached = false
 
   private[this] var keywordValidatorContentHandler: Option[KeywordValidatorContentHandler] = None
 
@@ -21,17 +31,19 @@ class DefaultContentHandler(maxContentChars: Int, handler: ContentHandler, metad
 
   val links = new mutable.HashMap[String, mutable.Set[String]] with mutable.MultiMap[String, String] // todo(Léo): use Tika's LinkHandler instead
 
+  def isWriteLimitReached(t: Throwable): Boolean = output.isWriteLimitReached(t)
+
   override def startDocument() {
     // enable boilerpipe only for HTML
-    Option(metadata.get("Content-Type")).foreach { contentType =>
+    Option(metadata.get(HttpHeaders.CONTENT_TYPE)).foreach { contentType =>
       if (contentType startsWith MimeTypes.HTML) {
         val keywordValidator = new KeywordValidator(URITokenizer.getTokens(url))
         keywordValidatorContentHandler = Some(
-          new KeywordValidatorContentHandler(keywordValidator, new BoilerpipeContentHandler(new TextOutputContentHandler(handler)))
+          new KeywordValidatorContentHandler(keywordValidator, new BoilerpipeContentHandler(new TextOutputContentHandler(output)))
         )
         setContentHandler(keywordValidatorContentHandler.get)
       } else {
-        setContentHandler(new DehyphenatingTextOutputContentHandler(handler))
+        setContentHandler(new DehyphenatingTextOutputContentHandler(output))
       }
     }
     super.startDocument()

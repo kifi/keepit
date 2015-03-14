@@ -1,4 +1,4 @@
-package com.keepit.rover.extractor.tika
+package com.keepit.rover.extractor.utils
 
 import com.keepit.common.net.URI
 
