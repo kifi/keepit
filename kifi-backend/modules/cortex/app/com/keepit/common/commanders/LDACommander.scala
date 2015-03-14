@@ -198,7 +198,7 @@ class LDACommanderImpl @Inject() (
             val score = scores.max
             val idx = scores.indexOf(score)
             val days = Days.daysBetween(updatedTimes(idx), currentDateTime).getDays
-            val weight = exp(-days / 14.0)
+            val weight = exp(-days / 1.0)
             val conf = computeURIConfidence(feat.numOfWords, feat.timesFirstTopicChanged)
             (LDAUserURIInterestScore(score, conf), weight.toFloat)
           }
