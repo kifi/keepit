@@ -1,22 +1,16 @@
 package com.keepit.controllers.website
 
-import java.net.URLConnection
 import java.util.concurrent.TimeoutException
 
-import com.keepit.classify.{ Domain, DomainRepo, DomainStates }
-import com.keepit.commanders.{ KeepsCommander, KeepInterner, UserCommander }
+import com.keepit.commanders.{ TweetImportCommander, KeepsCommander, KeepInterner }
 import com.keepit.common.akka.{ TimeoutFuture, SafeFuture }
 import com.keepit.common.controller.{ UserRequest, UserActions, UserActionsHelper, ShoeboxServiceController }
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.db.slick._
-import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.net.URI
-import com.keepit.common.social.twitter.RawTweet
 import com.keepit.common.util.UrlClassifier
 import com.keepit.model._
 
 import play.api.libs.json._
-import play.api.libs.functional.syntax._
 
 import com.google.inject.Inject
 import play.api.mvc.{ MaxSizeExceeded, Request }
@@ -26,16 +20,13 @@ import org.jsoup.Jsoup
 import java.io._
 import com.keepit.common.db.Id
 import java.util.UUID
-import com.keepit.heimdal.{ HeimdalContextBuilderFactory, HeimdalContextBuilder }
+import com.keepit.heimdal.HeimdalContextBuilderFactory
 import com.keepit.common.logging.Logging
 import com.keepit.common.time.Clock
 import com.keepit.common.strings.humanFriendlyToken
-import org.apache.commons.io.{ Charsets, IOUtils, FileUtils }
 import com.keepit.common.performance._
 
 import org.joda.time.DateTime
-import java.util.zip.{ ZipInputStream, ZipFile, ZipEntry }
-import scala.collection.JavaConversions._
 import scala.concurrent.duration.Duration
 
 class BookmarkImporter @Inject() (
@@ -46,6 +37,7 @@ class BookmarkImporter @Inject() (
     keepInterner: KeepInterner,
     heimdalContextBuilderFactoryBean: HeimdalContextBuilderFactory,
     keepsCommander: KeepsCommander,
+    tweetCommander: TweetImportCommander,
     clock: Clock,
     implicit val executionContext: ExecutionContext,
     implicit val config: PublicIdConfiguration) extends UserActions with ShoeboxServiceController with Logging {
@@ -59,10 +51,10 @@ class BookmarkImporter @Inject() (
       case Right(bookmarks) =>
 
         val uploadAttempt = Try(bookmarks.file).flatMap({ file =>
-          val isTwitterZip = isLikelyTwitterImport(file)
+          val isTwitterZip = tweetCommander.isLikelyTwitterImport(file)
           if (isTwitterZip) {
             log.info(s"[bmFileImport:$id] Twitter import, ${file.getAbsoluteFile}")
-            parseTwitterArchive(file)
+            tweetCommander.parseTwitterArchive(file)
           } else {
             log.info(s"[bmFileImport:$id] Netscape import, ${file.getAbsoluteFile}")
             parseNetscapeBookmarks(file)
@@ -103,14 +95,9 @@ class BookmarkImporter @Inject() (
 
   def processDirectTwitterData(userId: Id[User], libraryId: Id[Library], tweets: Seq[JsObject]): Unit = {
     implicit val context = heimdalContextBuilderFactoryBean().build
-    val (sourceOpt, parsed) = parseTwitterJson(tweets)
+    val (sourceOpt, parsed) = tweetCommander.parseTwitterJson(tweets)
     log.info(s"[TweetSync] Got ${parsed.length} Bookmarks out of ${tweets.length} tweets")
-    val tagSet = scala.collection.mutable.Set.empty[String]
-    parsed.foreach { bm =>
-      bm.tags.map { tagName =>
-        tagSet.add(tagName)
-      }
-    }
+    val tagSet = parsed.map { bm => bm.tags }.flatten.toSet
 
     val tags = tagSet.map { tagStr =>
       tagStr.trim -> keepsCommander.getOrCreateTag(userId, tagStr.trim)(context)
@@ -124,19 +111,6 @@ class BookmarkImporter @Inject() (
     val (importId, rawKeeps) = createRawKeeps(userId, sourceOpt, taggedKeeps, libraryId)
 
     keepInterner.persistRawKeeps(rawKeeps, Some(importId))
-  }
-
-  // Internal
-
-  private def isLikelyTwitterImport(file: File) = {
-    Try {
-      val zip = new ZipFile(file)
-      val isZipped = zip.entries().toStream.exists { ze =>
-        ze.getName.startsWith("data/js/tweets")
-      }
-      zip.close()
-      isZipped
-    }.getOrElse(false)
   }
 
   case class LoggingFields(startMillis: Long, id: String, request: UserRequest[Either[MaxSizeExceeded, play.api.libs.Files.TemporaryFile]])
@@ -234,55 +208,6 @@ class BookmarkImporter @Inject() (
       }
     }.toList.flatten
     (source, extracted)
-  }
-
-  private def rawTweetToBookmarks(tweet: RawTweet): Seq[Bookmark] = {
-    val tags = tweet.entities.hashtags.map(_.text).toList
-    tweet.entities.urls.filterNot(url => urlClassifier.socialActivityUrl(url.expandedUrl)).map { url =>
-      Bookmark(title = None, href = url.expandedUrl, tags = tags, createdDate = Some(tweet.createdAt), originalJson = Some(tweet.originalJson))
-    }
-  }
-
-  private def parseTwitterJson(jsons: Seq[JsObject]): (Option[KeepSource], List[Bookmark]) = {
-    val links = twitterJsonToRawTweets(jsons).collect {
-      case tweet if tweet.entities.urls.nonEmpty => rawTweetToBookmarks(tweet)
-    }.flatten
-    (Option(KeepSource.twitterSync), links.toList)
-  }
-
-  // Parses Twitter archives, from https://twitter.com/settings/account (click “Request your archive”)
-  private def parseTwitterArchive(archive: File): Try[(Option[KeepSource], List[Bookmark])] = Try {
-    val zip = new ZipFile(archive)
-    val filesInArchive = zip.entries().toList
-
-    val links = filesInArchive.filter(_.getName.startsWith("data/js/tweets/")).map { ze =>
-      twitterEntryToJson(zip, ze).collect {
-        case tweet if tweet.entities.urls.nonEmpty => rawTweetToBookmarks(tweet)
-      }.flatten
-    }.flatten
-
-    (Option(KeepSource.twitterFileImport), links)
-  }
-
-  private def twitterJsonToRawTweets(jsons: Seq[JsValue]): Seq[RawTweet] = {
-    jsons.map { rawTweetJson =>
-      Json.fromJson[RawTweet](rawTweetJson) match {
-        case JsError(fail) =>
-          log.warn(s"Couldn't parse a raw tweet: $fail\n$rawTweetJson")
-          None
-        case JsSuccess(rt, _) => Some(rt)
-      }
-    }.flatten
-  }
-
-  private def twitterEntryToJson(zip: ZipFile, entry: ZipEntry): Seq[RawTweet] = {
-    val is = zip.getInputStream(entry)
-    val str = IOUtils.toString(is, Charsets.UTF_8)
-    is.close()
-    Try(Json.parse(str.substring(str.indexOf("=") + 1)).as[JsArray]) match {
-      case Success(rawTweetsJson) => twitterJsonToRawTweets(rawTweetsJson.value)
-      case Failure(ex) => Seq()
-    }
   }
 
   private def createRawKeeps(userId: Id[User], source: Option[KeepSource], bookmarks: Seq[BookmarkWithTagIds], libraryId: Id[Library]) = {
