@@ -1,0 +1,34 @@
+@(toUserId: Id[User])
+@import com.keepit.common.mail.template.helpers._
+<table width="100%" border="0" cellspacing="0" cellpadding="0" align="center" style="border-collapse: collapse; mso-table-lspace: 0px; mso-table-rspace: 0px;">
+    <tr><td height="18" style="line-height: 1px; font-size: 1px; border-collapse: collapse; mso-line-height-rule: exactly;">&nbsp;</td></tr>
+    <tr>
+        <td class="title" style="font-family: 'Helvetica Neue', Helvetica, Arial , sans-serif; font-size: 24px; color: #000000; font-weight: bold; text-align: center; border-collapse: collapse; mso-line-height-rule: exactly;" align="center">
+            Hey @firstName(toUserId), <br>
+            You are on the list
+        </td>
+    </tr>
+    <tr><td height="18" style="line-height: 1px; font-size: 1px; text-align: center; border-collapse: collapse; mso-line-height-rule: exactly;">&nbsp;</td></tr>
+    <tr>
+        <td class="content" style="font-family: 'Helvetica Neue', Helvetica, Arial , sans-serif; font-size: 19px; color: #505E65; text-align: center; border-collapse: collapse; mso-line-height-rule: exactly;" align="center">
+            We will let you know as soon as your<br>
+            Kifi Twitter library is ready
+        </td>
+    </tr>
+    <tr>
+        <td height="18" style="line-height: 1px; font-size: 1px; border-collapse: collapse; text-align: center; mso-line-height-rule: exactly;">
+            In the meantime, be sure to tweet about Kifi <br>
+            Twitter Deep Search in order to move up on the list.
+        </td>
+    </tr>
+    <tr>
+        <td style="border-collapse: collapse; mso-line-height-rule: exactly;" align="center">
+            @email.tags.roundedContainer(260, 60, 10, "#41c381") {
+            <a href='@kifiFriendsUrl("findMoreFriendsBtn")' target="_blank" style="font-family:Arial,sans-serif;font-size:20px;line-height:26px;color:#ffffff;font-weight:normal;text-decoration:none;display:block;">
+                Find connections
+            </a>
+            }
+        </td>
+    </tr>
+    @email.layouts.closingLines(Seq(), "center")
+</table>

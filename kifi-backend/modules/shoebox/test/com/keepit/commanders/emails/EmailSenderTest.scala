@@ -425,4 +425,31 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
     }
   }
 
+  "TwitterWaitlistEmailSender" should {
+
+    "sends confirmation email to user (userId)" in {
+      withDb(modules: _*) { implicit injector =>
+        val outbox = inject[FakeOutbox]
+        val sender = inject[TwitterWaitlistEmailSender]
+        val toEmail = EmailAddress("foo@bar.com")
+        val user = db.readWrite { implicit s =>
+          userRepo.save(User(firstName = "Rocky", lastName = "Balboa", username = Username("tester"), normalizedUsername = "tester", primaryEmail = Some(toEmail)))
+        }
+        val email = Await.result(sender.sendToUser(toEmail, user.id.get), Duration(5, "seconds"))
+        outbox.size === 1
+        outbox(0) === email
+
+        email.to === Seq(toEmail)
+        email.category === NotificationCategory.toElectronicMailCategory(NotificationCategory.User.TWITTER_WAITLIST)
+        email.subject === "You are on the list"
+        val html = email.htmlBody.value
+        html must contain("Hey Rocky")
+        html must contain("Kifi Twitter library is ready")
+
+        val text = email.textBody.get.value
+        text must contain("Kifi Twitter library is ready")
+      }
+    }
+  }
+
 }

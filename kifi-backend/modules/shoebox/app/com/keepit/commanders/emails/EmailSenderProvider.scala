@@ -14,6 +14,7 @@ trait EmailSenderProvider {
   def libraryInvite: LibraryInviteEmailSender
   def kifiInvite: InviteToKifiSender
   def activityFeed: ActivityFeedEmailSender
+  def twitterWaitlist: TwitterWaitlistEmailSender
 }
 
 @Singleton
@@ -27,7 +28,8 @@ class EmailSenderProviderImpl @Inject() (
     private val waitListSender: Provider[FeatureWaitlistEmailSender],
     private val libraryInviteEmailSender: Provider[LibraryInviteEmailSender],
     private val inviteToKifiSender: Provider[InviteToKifiSender],
-    private val activityFeedSender: Provider[ActivityFeedEmailSender]) extends EmailSenderProvider {
+    private val activityFeedSender: Provider[ActivityFeedEmailSender],
+    private val twitterWaitlistSender: Provider[TwitterWaitlistEmailSender]) extends EmailSenderProvider {
   lazy val connectionMade = connectionMadeEmailSender.get()
   lazy val friendRequest = friendRequestEmailSender.get()
   lazy val contactJoined = contactJoinedEmailSender.get()
@@ -38,4 +40,5 @@ class EmailSenderProviderImpl @Inject() (
   lazy val libraryInvite = libraryInviteEmailSender.get()
   lazy val kifiInvite = inviteToKifiSender.get()
   lazy val activityFeed = activityFeedSender.get()
+  lazy val twitterWaitlist = twitterWaitlistSender.get()
 }
