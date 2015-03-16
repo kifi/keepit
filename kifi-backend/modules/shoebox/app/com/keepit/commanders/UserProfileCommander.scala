@@ -34,7 +34,7 @@ class UserProfileCommander @Inject() (
     val sociallyRelatedEntitiesF = graphServiceClient.getSociallyRelatedEntities(viewer)
     val connectionsF = db.readOnlyMasterAsync { implicit s =>
       val all = userConnectionRepo.getConnectedUsersForUsers(Set(viewer, owner)) //cached
-      all(viewer) -> all(owner)
+      (all.getOrElse(viewer, Set.empty), all.getOrElse(owner, Set.empty))
     }
     for {
       sociallyRelatedEntities <- sociallyRelatedEntitiesF
