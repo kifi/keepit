@@ -104,12 +104,16 @@ class LibraryTest extends Specification with ShoeboxTestInjector {
     }
 
     "generate valid library slugs" in {
-      val slug1 = LibrarySlug.generateFromName("-- Foo, Bar & Baz! --")
-      slug1 === "foo-bar-baz"
-      LibrarySlug.isValidSlug(slug1) === true
-      val slug2 = LibrarySlug.generateFromName("A Super Long Library Name That Surely Never Would Be Actually Chosen")
-      slug2 === "a-super-long-library-name-that-surely-never-would"
-      LibrarySlug.isValidSlug(slug2) === true
+      Seq(
+        "-- Foo, Bar & Baz! --" -> "foo-bar-baz",
+        "Far-away Places I’d like to go" -> "far-away-places-id-like-to-go",
+        "Gift Ideas -- For That Special Someone" -> "gift-ideas-for-that-special-someone",
+        "A Super Long Library Name That Surely Never Would Be Actually Chosen" -> "a-super-long-library-name-that-surely-never-would",
+        "Connections" -> "connections-") map {
+          case (name, slug) =>
+            LibrarySlug.generateFromName(name) === slug
+            slug -> LibrarySlug.isValidSlug(slug) === slug -> true
+        } head
     }
 
     "reflect latest display naming scheme" in {

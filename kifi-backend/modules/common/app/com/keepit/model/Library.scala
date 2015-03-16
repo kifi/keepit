@@ -1,6 +1,7 @@
 package com.keepit.model
 
 import java.net.URLEncoder
+import java.util.regex.Pattern
 import javax.crypto.spec.IvParameterSpec
 
 import com.keepit.common.cache.{ CacheStatistics, FortyTwoCachePlugin, JsonCacheImpl, Key }
@@ -163,20 +164,28 @@ object LibrarySlug {
   implicit def format: Format[LibrarySlug] =
     Format(__.read[String].map(LibrarySlug(_)), new Writes[LibrarySlug] { def writes(o: LibrarySlug) = JsString(o.value) })
 
-  val MaxLength = 50
-  val invalidSlugSet = Set("libraries", "connections", "followers", "keeps", "tags", "main", "secret")
+  private val MaxLength = 50
+  private val ReservedSlugs = Set("libraries", "connections", "followers", "keeps", "tags")
+  private val BeforeTruncate = Seq("[^\\w\\s-]|_" -> "", "(\\s|--)+" -> "-", "^-" -> "") map compile
+  private val AfterTruncate = Seq("-$" -> "") map compile
 
   def isValidSlug(slug: String): Boolean = {
-    slug != "" && !slug.contains(' ') && slug.length <= MaxLength
+    slug.nonEmpty && !slug.contains(' ') && slug.length <= MaxLength
   }
 
   def isReservedSlug(slug: String): Boolean = {
-    invalidSlugSet.contains(slug)
+    ReservedSlugs.contains(slug)
   }
 
   def generateFromName(name: String): String = {
-    name.toLowerCase().replaceAll("[^\\w\\s]|_", "").replaceAll("\\s+", "-").replaceAll("^-", "").take(MaxLength).replaceAll("-$", "") // taken from generateSlug() in  manageLibrary.js
+    // taken from generateSlug() in angular/src/common/util.js
+    val s1 = BeforeTruncate.foldLeft(name.toLowerCase())(replaceAll)
+    val s2 = AfterTruncate.foldLeft(s1.take(MaxLength))(replaceAll)
+    if (isReservedSlug(s2)) s2 + '-' else s2
   }
+
+  private def compile(pair: (String, String)): (Pattern, String) = Pattern.compile(pair._1) -> pair._2
+  private def replaceAll(s: String, op: (Pattern, String)): String = op._1.matcher(s).replaceAll(op._2)
 }
 
 sealed abstract class LibraryVisibility(val value: String)

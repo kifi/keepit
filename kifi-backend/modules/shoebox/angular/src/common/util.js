@@ -19,6 +19,8 @@ angular.module('util', [])
     var emailAddrDetectRe = /(?:\b|^)([a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+)(?:\b|$)/;  // jshint ignore:line
     var emailAddrValidateRe = /^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/; // jshint ignore:line
 
+    var RESERVED_SLUGS = ['libraries', 'connections', 'followers', 'keeps', 'tags'];
+
     var queryStringHelper = {$$path: '', $$compose: $location.$$compose};
 
     function htmlEscape(text) {
@@ -164,7 +166,8 @@ angular.module('util', [])
         return queryStringHelper.$$url;
       },
       generateSlug: function (name) {
-        return name.toLowerCase().replace(/[^\w\s-]|_/g, '').replace(/\s+/g, '-').replace(/^-/, '').substr(0, 50).replace(/-$/, '');
+        var slug = name.toLowerCase().replace(/[^\w\s-]|_/g, '').replace(/(\s|--)+/g, '-').replace(/^-/, '').substr(0, 50).replace(/-$/, '');
+        return RESERVED_SLUGS.indexOf(slug) >= 0 ? slug + '-' : slug;
       },
       linkify: angular.bind(null, processUrlsThen, processEmailAddresses),
       chooseTreatment: function (salt, treatments) {
