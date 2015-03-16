@@ -84,6 +84,8 @@ class EmailTestController @Inject() (
             emailRepo.get(emailId)
           }
         }
+      case "twitterWaitlist" =>
+        emailSenderProvider.twitterWaitlist.sendToUser(sendTo, userId)
     }
 
     emailOptF.map(_.map(email => Ok(email.htmlBody.value))).
