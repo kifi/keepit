@@ -1,7 +1,6 @@
 package com.keepit.scraper.extractor
 
 import com.keepit.common.net.URI
-import scala.util.{ Failure, Success }
 import com.keepit.common.logging.Logging
 import com.google.inject.{ Singleton, Inject }
 

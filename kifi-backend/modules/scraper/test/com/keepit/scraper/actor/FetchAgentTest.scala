@@ -28,7 +28,7 @@ class FetchAgentTest extends TestKitSupport with SpecificationLike with ScraperT
   implicit val fj = ExecutionContext.fj
 
   val testFetcher: PartialFunction[String, DeprecatedHttpFetchStatus] = {
-    case "https://www.google.com/" => DeprecatedHttpFetchStatus(Status.OK, None, Some(FetchContext("https://www.google.com/", Seq.empty)))
+    case "https://www.google.com/" => DeprecatedHttpFetchStatus(Status.OK, None, None)
   }
   val testFetcherModule = FakeDeprecatedHttpFetcherModule(Some(testFetcher))
 

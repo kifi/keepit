@@ -1,7 +1,7 @@
 package com.keepit.scraper.extractor
 
 import com.keepit.common.net.URI
-import com.keepit.rover.fetcher.HttpInputStream
+import com.keepit.rover.fetcher.{ FetchResult, HttpInputStream }
 
 import scala.collection.JavaConversions._
 
@@ -17,9 +17,9 @@ abstract class JsoupBasedExtractor(url: URI, maxContentChars: Int) extends Extra
 
   def parse(doc: Document): String
 
-  def process(input: HttpInputStream) {
+  def process(result: FetchResult[HttpInputStream]) {
     try {
-      doc = Jsoup.parse(input, null, url.toString()) // null charset autodetects based on `http-equiv` meta tag and default to UTF-8, Parser defaults to HTML
+      doc = Jsoup.parse(result.content.get, null, url.toString()) // null charset autodetects based on `http-equiv` meta tag and default to UTF-8, Parser defaults to HTML
     } catch {
       case e: Throwable => log.error("Jsoup extraction failed: ", e)
     }

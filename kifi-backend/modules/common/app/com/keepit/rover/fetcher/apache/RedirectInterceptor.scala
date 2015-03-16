@@ -1,6 +1,6 @@
 package com.keepit.rover.fetcher.apache
 
-import com.keepit.rover.fetcher.{ FetchContext, HttpRedirect }
+import com.keepit.rover.fetcher.{ FetchRequestInfo, HttpRedirect }
 import org.apache.http.HttpHeaders._
 import org.apache.http.protocol.HttpContext
 import org.apache.http.{ HttpResponseInterceptor, HttpResponse }
@@ -22,11 +22,11 @@ object RedirectInterceptor {
     Option(httpContext.getAttribute(scraperDestinationUrlAttribute).asInstanceOf[String])
   }
 
-  def getFetchContext(httpContext: HttpContext): Option[FetchContext] = {
+  def getFetchRequestContext(httpContext: HttpContext): Option[FetchRequestInfo] = {
     for {
       destinationUrl <- getDestinationUrl(httpContext)
       redirects <- getRedirects(httpContext)
-    } yield FetchContext(destinationUrl, redirects)
+    } yield FetchRequestInfo(destinationUrl, redirects)
   }
 }
 
