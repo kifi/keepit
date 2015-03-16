@@ -28,8 +28,8 @@ class KeepSourceAttributionRepoImpl @Inject() (
 
   class KeepSourceAttributionTable(tag: Tag) extends RepoTable[KeepSourceAttribution](db, tag, "keep_source_attribution") {
     def attributionType = column[KeepAttributionType]("attr_type", O.NotNull)
-    def attributionJson = column[JsValue]("attr_json", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, attributionType, attributionJson.?, state) <> ((KeepSourceAttribution.apply _).tupled, KeepSourceAttribution.unapply _)
+    def attributionJson = column[JsValue]("attr_json", O.NotNull)
+    def * = (id.?, createdAt, updatedAt, attributionType, attributionJson, state) <> ((KeepSourceAttribution.applyFromDbRow _).tupled, KeepSourceAttribution.unapplyToDbRow _)
   }
 
   def table(tag: Tag) = new KeepSourceAttributionTable(tag)

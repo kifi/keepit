@@ -9,22 +9,42 @@ case class KeepSourceAttribution(
     id: Option[Id[KeepSourceAttribution]] = None,
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,
-    attributionType: KeepAttributionType,
-    attributionJson: Option[JsValue],
+    attribution: SourceAttribution,
     state: State[KeepSourceAttribution] = KeepSourceAttributionStates.ACTIVE) extends ModelWithState[KeepSourceAttribution] {
-
-  import KeepAttributionType._
 
   def withId(id: Id[KeepSourceAttribution]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
+}
 
-  def parseAttribution(): Option[SourceAttribution] = {
-    this.attributionType match {
-      case Twitter => attributionJson.map { js => TwitterAttribution.format.reads(js).get }
-      case _ => throw new Exception("unsupported keep attribution type")
+object KeepSourceAttribution {
+  import KeepAttributionType._
+
+  private def toJsValue(attr: SourceAttribution): (KeepAttributionType, JsValue) = {
+    attr match {
+      case x: TwitterAttribution => (Twitter, TwitterAttribution.format.writes(x))
     }
   }
+
+  private def fromJsValue(attrType: KeepAttributionType, attrJson: JsValue): SourceAttribution = {
+    attrType match {
+      case Twitter => TwitterAttribution.format.reads(attrJson).get
+      case x => throw new UnknownAttributionTypeException(x.name)
+    }
+  }
+
+  def unapplyToDbRow(attr: KeepSourceAttribution) = {
+    val (attrType, js) = toJsValue(attr.attribution)
+    Some((attr.id, attr.createdAt, attr.updatedAt, attrType, js, attr.state))
+  }
+
+  def applyFromDbRow(id: Option[Id[KeepSourceAttribution]], createdAt: DateTime, updatedAt: DateTime, attrType: KeepAttributionType, attrJson: JsValue, state: State[KeepSourceAttribution]) = {
+    val attr = fromJsValue(attrType, attrJson)
+    KeepSourceAttribution(id, createdAt, updatedAt, attr, state)
+  }
+
 }
+
+case class UnknownAttributionTypeException(msg: String) extends Exception(msg)
 
 object KeepSourceAttributionStates extends States[KeepSourceAttribution]
 
@@ -34,7 +54,7 @@ object KeepAttributionType {
   val Twitter = KeepAttributionType("twitter")
 }
 
-trait SourceAttribution
+sealed trait SourceAttribution
 
 case class TwitterAttribution(idString: String, screenName: String) extends SourceAttribution {
   def getOriginalURL: String = s"https://twitter.com/$screenName/status/$idString"
