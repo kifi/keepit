@@ -637,8 +637,8 @@ class AuthController @Inject() (
         addEntry match {
           case None => // maybe unknown error like twitter user/handle wasn't found
             Redirect("/link/twitter").withSession(session + (SecureSocial.OriginalUrlKey -> "/twitter/thanks"))
-          case Some(Left(error)) => // user was already added to twitter waitlist
-            Redirect("/twitter/thanks")
+          case Some(Left(error)) => // user has already been added to waitlist
+            Ok(Json.obj("res" -> "already_added"))
           case Some(Right(_)) =>
             Ok(Json.obj("res" -> "thanks"))
         }
