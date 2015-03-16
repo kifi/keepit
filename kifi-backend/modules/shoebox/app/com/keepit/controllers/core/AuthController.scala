@@ -627,7 +627,7 @@ class AuthController @Inject() (
       case requestNonUser: NonUserRequest[_] =>
         Redirect("/twitter/request")
       case ur: UserRequest[_] =>
-        val addEntry = db.readOnlyReplica { implicit session =>
+        val addEntry = db.readOnlyMaster { implicit session =>
           socialRepo.getByUser(ur.userId).find(_.networkType == SocialNetworks.TWITTER).flatMap {
             _.getProfileUrl.map(url => url.substring(url.lastIndexOf('/') + 1))
           }
@@ -636,9 +636,9 @@ class AuthController @Inject() (
         }
         addEntry match {
           case None => // maybe unknown error like twitter user/handle wasn't found
-            Ok(Json.obj("res" -> "error"))
-          case Some(Left(error)) => // user was already added to kifi library
             Redirect("/link/twitter").withSession(session + (SecureSocial.OriginalUrlKey -> "/twitter/thanks"))
+          case Some(Left(error)) => // user was already added to twitter waitlist
+            Redirect("/twitter/thanks")
           case Some(Right(_)) =>
             Ok(Json.obj("res" -> "thanks"))
         }
