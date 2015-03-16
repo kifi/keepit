@@ -21,7 +21,7 @@ import scala.concurrent.Future
 class ScraperControllerTest extends TestKitSupport with ScraperTestInjector {
 
   val testFetcher: PartialFunction[String, DeprecatedHttpFetchStatus] = {
-    case "https://www.google.com/" => DeprecatedHttpFetchStatus(Status.OK, None, Some(FetchContext("https://www.google.com/", Seq.empty)))
+    case "https://www.google.com/" => DeprecatedHttpFetchStatus(Status.OK, None, None)
   }
   val testFetcherModule = FakeDeprecatedHttpFetcherModule(Some(testFetcher))
 

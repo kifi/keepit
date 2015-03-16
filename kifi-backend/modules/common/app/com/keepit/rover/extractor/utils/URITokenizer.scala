@@ -1,7 +1,6 @@
-package com.keepit.scraper.extractor
+package com.keepit.rover.extractor.utils
 
 import com.keepit.common.net.URI
-import scala.util.Success
 
 object URITokenizer {
 
@@ -12,6 +11,10 @@ object URITokenizer {
       case Some(path) => specialCharRegex.split(path).filter { _.length > 0 }
       case _ => Seq()
     }
+  }
+
+  def getTokens(url: String): Seq[String] = {
+    URI.safelyParse(url).map(getTokens) getOrElse Seq.empty
   }
 }
 

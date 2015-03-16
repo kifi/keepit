@@ -443,16 +443,6 @@ class AuthController @Inject() (
 
             if (cookieIntent.isDefined) {
               cookieIntent.get.value match {
-                case "waitlist" =>
-                  db.readOnlyReplica { implicit session =>
-                    socialRepo.getByUser(ur.user.id.get).find(_.networkType == SocialNetworks.TWITTER).flatMap {
-                      _.getProfileUrl.map(url => url.substring(url.lastIndexOf('/') + 1))
-                    }
-                  }.map { handle =>
-                    twitterWaitlistCommander.addEntry(ur.user.id.get, handle)
-                  }
-                  // todo: change to real URL:
-                  Redirect(s"${com.keepit.controllers.website.routes.TwitterWaitlistController.getFakeWaitlistPosition().url}").discardingCookies(discardedCookies: _*)
                 case "follow" if pubLibIdOpt.isDefined =>
                   authCommander.autoJoinLib(ur.userId, pubLibIdOpt.get)
                   Redirect(homeUrl).discardingCookies(discardedCookies: _*)
@@ -610,6 +600,49 @@ class AuthController @Inject() (
     // todo(Andrew): Remove from database: user, credentials, securesocial session
     Ok("1").withNewSession.discardingCookies(
       DiscardingCookie(Authenticator.cookieName, Authenticator.cookiePath, Authenticator.cookieDomain, Authenticator.cookieSecure))
+  }
+
+  def requestToTwitterWaitlist = MaybeUserAction { implicit request =>
+    val session = request.session
+    request match {
+      case requestNonUser: NonUserRequest[_] =>
+        Redirect("/signup/twitter").withSession(session + (SecureSocial.OriginalUrlKey -> "/twitter/thanks"))
+      case ur: UserRequest[_] =>
+        val twitterSocialForUser = db.readOnlyMaster { implicit s =>
+          socialRepo.getByUser(ur.user.id.get).find(_.networkType == SocialNetworks.TWITTER)
+        }
+        if (twitterSocialForUser.isDefined) {
+          // if user already has twitter account, go to thanks
+          Redirect("/twitter/thanks")
+        } else {
+          // if user does not have twitter account, link it!
+          Redirect("/link/twitter").withSession(session + (SecureSocial.OriginalUrlKey -> "/twitter/thanks"))
+        }
+    }
+  }
+
+  def thanksForTwitterWaitlist = MaybeUserAction { implicit request =>
+    val session = request.session
+    request match {
+      case requestNonUser: NonUserRequest[_] =>
+        Redirect("/twitter/request")
+      case ur: UserRequest[_] =>
+        val addEntry = db.readOnlyMaster { implicit session =>
+          socialRepo.getByUser(ur.userId).find(_.networkType == SocialNetworks.TWITTER).flatMap {
+            _.getProfileUrl.map(url => url.substring(url.lastIndexOf('/') + 1))
+          }
+        }.map { handle =>
+          twitterWaitlistCommander.addEntry(ur.userId, handle)
+        }
+        addEntry match {
+          case None => // maybe unknown error like twitter user/handle wasn't found
+            Redirect("/link/twitter").withSession(session + (SecureSocial.OriginalUrlKey -> "/twitter/thanks"))
+          case Some(Left(error)) => // user has already been added to waitlist
+            Ok(Json.obj("res" -> "already_added"))
+          case Some(Right(_)) =>
+            Ok(Json.obj("res" -> "thanks"))
+        }
+    }
   }
 
   // New signup pages

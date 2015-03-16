@@ -2,7 +2,7 @@ package com.keepit.scraper.extractor
 
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.URI
-import com.keepit.rover.fetcher.HttpInputStream
+import com.keepit.rover.fetcher.{ FetchResult, HttpInputStream }
 import org.apache.tika.detect.DefaultDetector
 import org.apache.tika.metadata.Metadata
 import org.apache.tika.metadata.HttpHeaders
@@ -35,19 +35,20 @@ abstract class TikaBasedExtractor(url: URI, maxContentChars: Int, htmlMapper: Op
 
   protected def getHtmlMapper: Option[HtmlMapper] = htmlMapper
 
-  def process(input: HttpInputStream) {
+  def process(result: FetchResult[HttpInputStream]) {
     val context = new ParseContext()
-    val parser = getParser(input.contentType)
+    val contentType = result.context.response.contentType
+    val parser = getParser(contentType)
     val contentHandler = getContentHandler
     context.set(classOf[Parser], parser)
     getHtmlMapper.foreach(mapper => context.set(classOf[HtmlMapper], mapper))
 
-    input.contentType.foreach { metadata.set(HttpHeaders.CONTENT_TYPE, _) }
+    contentType.foreach { metadata.set(HttpHeaders.CONTENT_TYPE, _) }
 
     val tmp = new TemporaryResources()
     // see http://tika.apache.org/1.3/api/org/apache/tika/io/TikaInputStream.html#get(java.io.InputStream, org.apache.tika.io.TemporaryResources)
     // and http://stackoverflow.com/questions/14280128/tika-could-not-delete-temporary-files
-    val stream = TikaInputStream.get(input, tmp)
+    val stream = TikaInputStream.get(result.content.get, tmp)
     try {
       parser.parse(stream, contentHandler, metadata, context)
     } catch {
@@ -61,7 +62,7 @@ abstract class TikaBasedExtractor(url: URI, maxContentChars: Int, htmlMapper: Op
       try {
         stream.close()
       } catch {
-        case e: Exception => log.error(s"error closing Tika stream of content type: ${input.contentType}", e)
+        case e: Exception => log.error(s"error closing Tika stream of content type: ${contentType}", e)
       }
     }
   }

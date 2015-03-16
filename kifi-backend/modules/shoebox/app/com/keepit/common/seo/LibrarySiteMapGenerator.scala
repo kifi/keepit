@@ -25,7 +25,7 @@ import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 object LibrarySiteMapGenerator {
-  val BaselineDate = new LocalDate(2015, 1, 28)
+  val BaselineDate = new LocalDate(2015, 3, 15)
 }
 
 @Singleton
@@ -46,24 +46,8 @@ class LibrarySiteMapGenerator @Inject() (
     }
   }
 
-  private def keepsInRepo(library: Library)(implicit session: RSession): Int = {
-    keepRepo.getCountByLibrary(library.id.get)
-  }
-
   private def path(lib: Library, owner: BasicUser): String = {
     s"${fortyTwoConfig.applicationBaseUrl}${Library.formatLibraryPath(owner.username, lib.slug)}"
-  }
-
-  private def lastMod(lib: Library): LocalDate = {
-    val date = db.readOnlyReplica { implicit s =>
-      keepRepo.latestKeepInLibrary(lib.id.get) match {
-        case Some(date) if date.isAfter(lib.updatedAt) => date.toLocalDate
-        case _ => lib.updatedAt.toLocalDate
-      }
-    }
-    if (date.isBefore(LibrarySiteMapGenerator.BaselineDate)) {
-      LibrarySiteMapGenerator.BaselineDate
-    } else date
   }
 
   def generateAndCache(): Future[String] = generate() map { sitemap =>
@@ -73,38 +57,31 @@ class LibrarySiteMapGenerator @Inject() (
 
   def generate(): Future[String] = {
     db.readOnlyReplicaAsync { implicit ro =>
-      val libs = libraryRepo.getAllPublishedLibraries().take(50000)
-      if (libs.size > 40000) airbrake.notify(s"there are ${libs.size} libraries for sitemap, need to paginate the list!")
-      libs
-    } map { libraries =>
-
-      // batch, optimize
-      val ownerIds = libraries.map(_.ownerId).toSet
-      val owners = db.readOnlyMaster { implicit ro =>
-        val realUsers = ownerIds.filterNot(fakeUsers.contains)
-        userRepo.loadAll(realUsers.toSet)
-      } // cached
-      val libs = db.readOnlyReplica { implicit ro =>
-        libraries.filter { lib =>
-          // proxy for quality; need bulk version. Library itself has a no-index with stricter rules
-          owners.get(lib.ownerId).isDefined && keepsInRepo(lib) > 1
-        }
-      }
-
+      val libIds = libraryRepo.getAllPublishedNonEmptyLibraries().take(50000)
+      if (libIds.size > 40000) airbrake.notify(s"there are ${libIds.size} libraries for sitemap, need to paginate the list!")
+      libIds
+    } map { ids =>
       val urlset =
         <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
           {
-            libs.map { lib =>
-              <url>
-                <loc>
-                  { path(lib, owners(lib.ownerId)) }
-                </loc>
-                <lastmod>{ ISO_8601_DAY_FORMAT.print(lastMod(lib)) }</lastmod>
-              </url>
+            ids.map { id =>
+              db.readOnlyMaster { implicit s =>
+                val lib = libraryRepo.get(id)
+                val owner = userRepo.load(lib.ownerId)
+                lib -> owner
+              }
+            }.map {
+              case (lib, owner) =>
+                <url>
+                  <loc>
+                    { path(lib, owner) }
+                  </loc>
+                  <lastmod>{ ISO_8601_DAY_FORMAT.print(lib.lastKept.get) }</lastmod>
+                </url>
             }
           }
         </urlset>
-      log.info(s"[generate] done with sitemap generation. #libraries=${libs.size}")
+      log.info(s"[generate] done with sitemap generation. #libraries=${ids.size}")
       s"""
          |<?xml-stylesheet type='text/xsl' href='sitemap.xsl'?>
          |${urlset.toString}

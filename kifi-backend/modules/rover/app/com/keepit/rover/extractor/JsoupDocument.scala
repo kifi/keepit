@@ -1,13 +1,14 @@
-package com.keepit.rover.fetcher
+package com.keepit.rover.extractor
 
 import com.keepit.common.logging.Logging
+import com.keepit.rover.fetcher.HttpInputStream
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
-import scala.collection.JavaConversions._
 
+import scala.collection.JavaConversions._
 import scala.util.Try
 
-class JsoupExtractor(doc: Document) extends Logging {
+class JsoupDocument(doc: Document) extends Logging {
 
   def getMetadata(name: String): Option[String] = {
     if (name.toLowerCase == "title") {
@@ -31,9 +32,9 @@ class JsoupExtractor(doc: Document) extends Logging {
   def getKeywords(): Option[String] = getMetadata("keywords")
 }
 
-object JsoupExtractor {
-  def parse(input: HttpInputStream, destinationUrl: String, charset: String = null): Try[JsoupExtractor] = {
+object JsoupDocument {
+  def parse(input: HttpInputStream, destinationUrl: String, charset: String = null): Try[JsoupDocument] = {
     // null charset autodetects based on `http-equiv` meta tag and default to UTF-8, Parser defaults to HTML
-    Try(Jsoup.parse(input, charset, destinationUrl)).map(new JsoupExtractor(_))
+    Try(Jsoup.parse(input, charset, destinationUrl)).map(new JsoupDocument(_))
   }
 }

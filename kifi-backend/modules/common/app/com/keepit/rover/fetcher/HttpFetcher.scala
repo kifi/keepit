@@ -12,27 +12,30 @@ case class FetchRequest(
   proxy: Option[HttpProxy] = None,
   ifModifiedSince: Option[DateTime] = None)
 
-case class FetchResult[A](context: FetchContext, response: FetchResponse[A])
-
-case class FetchContext(destinationUrl: String, redirects: Seq[HttpRedirect])
-
-sealed trait FetchResponse[A]
-case class Fetched[A](fetched: A) extends FetchResponse[A]
-case class NotModified[A]() extends FetchResponse[A]
-case class FetchHttpError[A](errorCode: Int, errorStatus: String) extends FetchResponse[A]
-case class FetchContentExtractionError[A](cause: Throwable) extends FetchResponse[A]
-
-object FetchedResult {
-  implicit def toOption[A](content: FetchResponse[A]): Option[A] = content match {
-    case Fetched(fetched) => Some(fetched)
-    case NotModified() => None
-    case FetchHttpError(_, _) => None
-    case FetchContentExtractionError(_) => None
+case class FetchResult[T](context: FetchContext, content: Option[T]) {
+  def collectContent[U](validStatusCodes: Int*)(f: T => U): FetchResult[U] = {
+    val collectedContent = content.collect {
+      case input if validStatusCodes.contains(context.response.statusCode) => f(input)
+    }
+    copy(content = collectedContent)
   }
 }
 
-class HttpInputStream(input: InputStream, val contentType: Option[String] = None) extends FilterInputStream(input)
+case class FetchRequestInfo(destinationUrl: String, redirects: Seq[HttpRedirect])
+case class FetchResponseInfo(statusCode: Int, status: String, contentType: Option[String])
+case class FetchContext(request: FetchRequestInfo, response: FetchResponseInfo)
+
+object FetchContext {
+  def ok(destinationUrl: String): FetchContext = {
+    FetchContext(
+      FetchRequestInfo(destinationUrl, Seq()),
+      FetchResponseInfo(200, "OK", None)
+    )
+  }
+}
+
+class HttpInputStream(input: InputStream) extends FilterInputStream(input)
 
 trait HttpFetcher {
-  def fetch[A](request: FetchRequest)(f: HttpInputStream => A): Future[FetchResult[A]]
+  def fetch[A](request: FetchRequest)(f: FetchResult[HttpInputStream] => A): Future[A]
 }
