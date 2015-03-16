@@ -22,7 +22,6 @@ object NotificationCategory {
   object User {
     val ANNOUNCEMENT = NotificationCategory("announcement")
     val WAITLIST = NotificationCategory("waitlist")
-    val TWITTER_WAITLIST = NotificationCategory("twitter_waitlist")
     val APPROVED = NotificationCategory("approved")
     val WELCOME = NotificationCategory("welcome")
     val EMAIL_CONFIRMATION = NotificationCategory("email_confirmation")

@@ -440,7 +440,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         outbox(0) === email
 
         email.to === Seq(toEmail)
-        email.category === NotificationCategory.toElectronicMailCategory(NotificationCategory.User.TWITTER_WAITLIST)
+        email.category === NotificationCategory.toElectronicMailCategory(NotificationCategory.User.WAITLIST)
         email.subject === "You are on the list"
         val html = email.htmlBody.value
         html must contain("Hey Rocky")
