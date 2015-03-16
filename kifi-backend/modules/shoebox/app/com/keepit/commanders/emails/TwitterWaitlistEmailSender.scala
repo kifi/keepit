@@ -21,10 +21,10 @@ class TwitterWaitlistEmailSender @Inject() (
       fromName = Some(Right("Kifi")),
       from = SystemEmailAddress.NOTIFICATIONS,
       to = Right(email),
-      subject = "You're on the list",
+      subject = "You are on the list",
       category = NotificationCategory.User.WAITLIST,
-      htmlTemplate = views.html.email.black.welcome(userId),
-      textTemplate = Some(views.html.email.black.welcomeText(userId)),
+      htmlTemplate = views.html.email.black.twitterWaitlist(userId),
+      textTemplate = Some(views.html.email.black.twitterWaitlistText(userId)),
       campaign = Some(s"twitter_waitlist"))
     emailTemplateSender.send(emailToSend)
   }
