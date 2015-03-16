@@ -49,22 +49,22 @@ class LibrarySitemapTest extends Specification with ShoeboxTestInjector {
       val user2 = userRepo.save(u2)
 
       val lib1 = libraryRepo.save(Library(name = "lib1A", ownerId = user1.id.get, visibility = LibraryVisibility.PUBLISHED,
-        createdAt = t1.plusMinutes(1), slug = LibrarySlug("A"), memberCount = 1))
+        createdAt = t1.plusMinutes(1), slug = LibrarySlug("A"), memberCount = 1, lastKept = Some(new DateTime(2015, 3, 16, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE))))
       libraryMembershipRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = user1.id.get, access = LibraryAccess.OWNER))
 
       val lib2 = libraryRepo.save(Library(name = "lib1B", ownerId = user1.id.get, visibility = LibraryVisibility.PUBLISHED,
-        createdAt = t1.plusMinutes(2), slug = LibrarySlug("B"), memberCount = 1))
+        createdAt = t1.plusMinutes(2), slug = LibrarySlug("B"), memberCount = 1, lastKept = None))
       libraryMembershipRepo.save(LibraryMembership(libraryId = lib2.id.get, userId = user1.id.get, access = LibraryAccess.OWNER))
       libraryMembershipRepo.save(LibraryMembership(libraryId = lib2.id.get, userId = user2.id.get, access = LibraryAccess.READ_ONLY))
 
       val lib3 = libraryRepo.save(Library(name = "lib2", ownerId = user2.id.get, visibility = LibraryVisibility.PUBLISHED,
-        createdAt = t1.plusMinutes(1), slug = LibrarySlug("C"), memberCount = 1))
+        createdAt = t1.plusMinutes(1), slug = LibrarySlug("C"), memberCount = 1, lastKept = None))
       libraryMembershipRepo.save(LibraryMembership(libraryId = lib3.id.get, userId = user2.id.get, access = LibraryAccess.OWNER))
 
-      val s1 = libraryRepo.save(Library(name = "Main Library", ownerId = user1.id.get, visibility = LibraryVisibility.DISCOVERABLE, createdAt = t1.plusMinutes(1), kind = LibraryKind.SYSTEM_MAIN, slug = LibrarySlug("main"), memberCount = 1))
+      val s1 = libraryRepo.save(Library(name = "Main Library", ownerId = user1.id.get, visibility = LibraryVisibility.DISCOVERABLE, createdAt = t1.plusMinutes(1), kind = LibraryKind.SYSTEM_MAIN, slug = LibrarySlug("main"), memberCount = 1, lastKept = Some(t1)))
       libraryMembershipRepo.save(LibraryMembership(libraryId = s1.id.get, userId = user1.id.get, access = LibraryAccess.OWNER))
 
-      val s2 = libraryRepo.save(Library(name = "Secret Library", ownerId = user1.id.get, visibility = LibraryVisibility.SECRET, createdAt = t1.plusMinutes(1), kind = LibraryKind.SYSTEM_SECRET, slug = LibrarySlug("secret"), memberCount = 1))
+      val s2 = libraryRepo.save(Library(name = "Secret Library", ownerId = user1.id.get, visibility = LibraryVisibility.SECRET, createdAt = t1.plusMinutes(1), kind = LibraryKind.SYSTEM_SECRET, slug = LibrarySlug("secret"), memberCount = 1, lastKept = Some(t1)))
       libraryMembershipRepo.save(LibraryMembership(libraryId = s2.id.get, userId = user1.id.get, access = LibraryAccess.OWNER))
 
       val uri1 = uriRepo.save(NormalizedURI.withHash("http://www.google.com/", Some("Google")))
@@ -100,7 +100,7 @@ class LibrarySitemapTest extends Specification with ShoeboxTestInjector {
         val sitemap = Await.result(inject[LibrarySiteMapGenerator].generate(), Duration.Inf)
         val updateAt = ISO_8601_DAY_FORMAT.print(lib.updatedAt)
 
-        sitemap ===
+        sitemap.replaceAll(" ", "").trim ===
           s"""
             |<?xml-stylesheet type='text/xsl' href='sitemap.xsl'?>
             |<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
@@ -111,7 +111,7 @@ class LibrarySitemapTest extends Specification with ShoeboxTestInjector {
             |                <lastmod>$updateAt</lastmod>
             |              </url>
             |        </urlset>
-          """.stripMargin.trim
+          """.stripMargin.replaceAll(" ", "").trim
       }
     }
   }
