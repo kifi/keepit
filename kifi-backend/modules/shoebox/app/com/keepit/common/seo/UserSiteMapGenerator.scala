@@ -73,13 +73,13 @@ class UserSiteMapGenerator @Inject() (airbrake: AirbrakeNotifier,
          |<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
        """.stripMargin.trim)
     db.readOnlyReplicaAsync { implicit ro =>
-      val users = userRepo.getAllIds()
+      val users = userRepo.getAllActiveIds()
       if (users.size > 40000) airbrake.notify(s"there are ${users.size} libraries for sitemap, need to paginate the list!")
       users
     } map { userIds =>
-      userIds.grouped(500) foreach { group =>
+      userIds.grouped(100) foreach { group =>
         val realUsers = group.filterNot(fakeUsers.contains)
-        db.readOnlyReplica { implicit ro =>
+        db.readOnlyMaster { implicit ro =>
           userRepo.getAllUsers(realUsers.toSeq).values.toSeq
         } filter { user =>
           user.state == UserStates.ACTIVE
