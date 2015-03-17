@@ -22,6 +22,17 @@ body {
     margin: 0px;
     padding: 0px;
 }
+.white-space {
+    font-size:1px;
+    line-height:1px;
+    background-color: #ffffff;
+}
+
+.gray-space {
+    font-size:1px;
+    line-height:1px;
+    background-color: #ededed;
+}
 </style>
 </head>
 
@@ -43,7 +54,7 @@ body {
                                 <td align="center" valign="top" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:20px;line-height:24px;color:#ffffff;text-align:center;">Hey @firstName(toUserId),</td>
                             </tr>
                             <tr>
-                                <td align="center" valign="top" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:24px;line-height:28px;color:#ffffff;text-align:center;">You are on the list</td>
+                                <td align="center" valign="top" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:30px;line-height:40px;color:#ffffff;text-align:center;">You are on the list</td>
                             </tr>
                             @trSpacer(25)
                         </table>
@@ -53,38 +64,38 @@ body {
         </td>
     </tr>
 
-    <tr><td height="35" style="font-size:1px; line-height:1px;">&nbsp;</td></tr>
+    <tr><td height="35" class="gray-space">&nbsp;</td></tr>
     <tr>
         <td bgcolor="#ededed" align="center">
-            <img src="@assetV3Url("twitterDeepSearch.png")" width="100" style="display:block;" border="0"/>
+            <img src="@assetV3Url("twitterDeepSearch.png")" width="250" style="display:block;" border="0"/>
         </td>
     </tr>
-    <tr><td height="35" style="font-size:1px; line-height:1px;">&nbsp;</td></tr>
+    <tr><td height="35" class="gray-space">&nbsp;</td></tr>
 
-    <tr bgcolor="#ffffff" color="#000000">
-        <td>
+    <tr bgcolor="#ffffff">
+        <td style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:18px;line-height:22px;color:#000000;text-align:center;">
             We will let you know as soon as your<br>
             Kifi Twitter library is ready
         </td>
     </tr>
-    <tr><td height="20" style="font-size:1px; line-height:1px;">&nbsp;</td></tr>
+    <tr><td height="20" class="white-space">&nbsp;</td></tr>
 
-    <tr bgcolor="#ffffff" color="#bbbbbb">
-        <td>
+    <tr bgcolor="#ffffff">
+        <td style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:16px;line-height:20px;color:#bbbbbb;text-align:center;">
             In the meantime, be sure to tweet about Kifi<br>
             Twitter Deep Search in order to move up on the list.
         </td>
     </tr>
-    <tr><td height="35" style="font-size:1px; line-height:1px;">&nbsp;</td></tr>
+    <tr><td height="35" class="white-space">&nbsp;</td></tr>
 
     <tr bgcolor="#ffffff">
-        <td>
-            <a href="@kifiUrl("header")" target="_blank" style="text-align:center; color:"blue"; border:1px solid blue; padding:10px;">Tweet now!</a>
+        <td style="border:1px solid black;padding:10;">
+            <a href="@kifiUrl("header")" target="_blank" style="text-align:center; color:#0000ff; border:1px solid #0000ff; padding:10px;">Tweet now!</a>
         </td>
     </tr>
-    <tr><td height="55" style="font-size:1px; line-height:1px;">&nbsp;</td></tr>
+    <tr><td height="55" class="white-space">&nbsp;</td></tr>
 
-    <tr>
+    <tr bgcolor="#ffffff">
         <td align="center" class="txt11" valign="top" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:13px;line-height:22px;color:#a7adb3;">
             <a href="@kifiFooterUrl" target="_blank" style="text-decoration:none;color:#a7adb3;">Your Kifi</a> |
             <a href="@privacyUrl" target="_blank" style="text-decoration:none;color:#a7adb3;">Privacy policy</a> |
@@ -97,6 +108,6 @@ body {
             <br/>&copy; 2015 FortyTwo
         </td>
     </tr>
-    <tr><td height="35" style="font-size:1px; line-height:1px;">&nbsp;</td></tr>
+    <tr><td height="35" class="white-space">&nbsp;</td></tr>
 </table>
 
