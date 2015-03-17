@@ -169,7 +169,8 @@ angular.module('kifi')
             }
             break;
           case 191: // '/'
-            if (!e.metaKey && !e.shiftKey && !e.altKey && !e.ctrlKey && !angular.element(document.activeElement).hasClass('kf-lih-search-input')) {
+            if (!e.metaKey && !e.shiftKey && !e.altKey && !e.ctrlKey &&
+                !angular.element(document.activeElement).is('input,textarea,[contenteditable],[contenteditable] *')) {
               e.preventDefault();
               angular.element('.kf-lih-search-input').focus();
             }
