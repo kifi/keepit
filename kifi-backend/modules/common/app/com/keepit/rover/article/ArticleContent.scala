@@ -23,11 +23,10 @@ trait HttpInfoHolder { self: ArticleContent =>
 @json
 case class HttpInfo(
   status: Int,
-  redirects: Seq[HttpRedirect],
   message: Option[String],
-  httpContentType: Option[String], // from http header
-  httpOriginalContentCharset: Option[String] // from EntityUtils.getContentCharSet
-  )
+  redirects: Seq[HttpRedirect],
+  httpContentType: Option[String],
+  httpOriginalContentCharset: Option[String])
 
 trait NormalizationInfoHolder { self: ArticleContent =>
   def normalization: NormalizationInfo

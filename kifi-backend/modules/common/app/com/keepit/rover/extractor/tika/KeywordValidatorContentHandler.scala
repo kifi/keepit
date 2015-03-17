@@ -25,5 +25,3 @@ class KeywordValidatorContentHandler(keywordValidator: KeywordValidator, handler
   def keywords: Seq[String] = keywordValidator.keywords
 }
 
-
-
