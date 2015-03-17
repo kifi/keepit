@@ -9,7 +9,7 @@ import org.apache.james.mime4j.dom.datetime.DateTime
 import scala.concurrent.Future
 
 @Singleton
-class RoverDocumentFetcher @Inject()() {
+class RoverDocumentFetcher @Inject() () {
 
   def fetch[A](url: String, ifModifiedSince: Option[DateTime] = None)(f: FetchResult[HttpInputStream] => A): Future[A] = {
     ???
