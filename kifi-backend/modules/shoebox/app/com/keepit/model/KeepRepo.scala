@@ -55,6 +55,7 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def getKeepsFromLibrarySince(since: DateTime, library: Id[Library], max: Int)(implicit session: RSession): Seq[Keep]
   def librariesWithMostKeepsSince(count: Int, since: DateTime)(implicit session: RSession): Seq[(Id[Library], Int)]
   def latestKeepInLibrary(libraryId: Id[Library])(implicit session: RSession): Option[DateTime]
+  def latestKeep(userId: Id[User])(implicit session: RSession): Option[DateTime]
 }
 
 @Singleton
@@ -480,5 +481,10 @@ class KeepRepoImpl @Inject() (
   def latestKeepInLibrary(libraryId: Id[Library])(implicit session: RSession): Option[DateTime] = {
     import StaticQuery.interpolation
     sql"""select max(kept_at) as cnt from bookmark where library_id = $libraryId and state='active'""".as[DateTime].firstOption
+  }
+
+  def latestKeep(userId: Id[User])(implicit session: RSession): Option[DateTime] = {
+    import StaticQuery.interpolation
+    sql"""select max(kept_at) as cnt from bookmark where user_id = $userId and state='active'""".as[DateTime].firstOption
   }
 }
