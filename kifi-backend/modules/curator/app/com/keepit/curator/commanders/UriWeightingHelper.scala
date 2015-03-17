@@ -47,6 +47,10 @@ object UrlPatterns {
     UrlPattern("""^https?://(images?.|videos?.|screen.|maps?.|search.|answers.|www.)?yahoo\.com[.\/?\#]?""".r, 0.5f, "yahoo search, images, videos, answer and maps"),
     UrlPattern("""^https?://[A-Za-z0-9]+\.[A-Za-z0-9]+\.[A-Za-z0-9]+[./?\#]?\.*(homepage|index|home)""".r, 0.8f, "Any home page"),
 
+    // tmp penalty required by product
+    UrlPattern("""^https?://blog\.bufferapp\.com/.*""".r, 0.5f, "buffer blog"),
+    UrlPattern("""^https?://www\.maclife\.com/.*""".r, 0.5f, "maclife"),
+
     //----------------------------------Boost------------------------------------------------------------------------------
     UrlPattern("""^https?://(www.)?tripadvisor\.com[./?\#][-A-Za-z0-9.]?""".r, 1.1f, "Destination page on tripadvisor"),
     UrlPattern("""^https?://(www.)?medium\.com[./?\#][-A-Za-z0-9.]?""".r, 1.1f, "Article on medium.com"),
