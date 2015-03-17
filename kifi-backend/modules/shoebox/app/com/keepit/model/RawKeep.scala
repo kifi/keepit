@@ -29,9 +29,6 @@ case class RawKeep(
 
 class RawKeepFactory @Inject() (airbrake: AirbrakeNotifier) {
 
-  def toRawKeep(userId: Id[User], source: KeepSource, keepInfos: Seq[KeepInfo], importId: Option[String], installationId: Option[ExternalId[KifiInstallation]], libraryId: Option[Id[Library]]): Seq[RawKeep] =
-    keepInfos map { k => RawKeep(userId = userId, title = k.title, url = k.url, isPrivate = k.isPrivate, importId = importId, source = source, installationId = installationId, libraryId = libraryId) }
-
   private def getBookmarkJsonObjects(value: JsValue): Seq[JsObject] = value match {
     case JsArray(elements) => elements.map(getBookmarkJsonObjects).flatten
     case json: JsObject if json.keys.contains("children") => getBookmarkJsonObjects(json \ "children")
