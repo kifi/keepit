@@ -44,4 +44,12 @@ angular.module('kifi')
     var hundreds = String(n).slice(0, -2);
     return hundreds.slice(-1) === '0' ? hundreds.slice(0, -1) + 'K' : hundreds.replace(/(\d)$/, '.$1') + 'K';
   };
+})
+
+.filter('domain', function () {
+  var re = /^\w+:\/\/([^\/]+)/;
+  return function (url) {
+    var match = re.exec(url);
+    return match && match[1];
+  };
 });

@@ -85,16 +85,20 @@ left-logo-width = 76px
   vertical-align: middle
 
 search-height = 28px
-search-on-dur = .3s
-search-off-dur = .7s
+search-on-dur = .12s
+search-off-dur = .3s
 
 .kf-lih-search
   display: table
   width: 100%
   height: search-height
   border-radius: 3px
-  background-color: alpha(#fff, .1)
-  transition: background-color search-off-dur
+  background-color: tint(pageHeaderColor, 10%)
+  position: relative  // to cover suggestions
+  z-index: 1
+
+  &:not(.kf-instant)
+    transition: background-color search-off-dur
 
   &.kf-lit
     background-color: #fff
@@ -130,11 +134,13 @@ search-icon-left-pad = 7px
   background-position: center
   background-repeat: no-repeat
   position: relative  // to cover kf-lih-search-icon
-  transition: opacity search-on-dur
 
-.kf-lih-search:not(.kf-lit) .kf-lih-search-icon-lit
-  opacity: 0
-  transition-duration: search-off-dur
+  .kf-lih-search:not(.kf-instant) &
+    transition: opacity search-on-dur
+
+  .kf-lih-search:not(.kf-lit) &
+    opacity: 0
+    transition-duration: search-off-dur
 
 lib-owner-img-radius = 12px
 
@@ -210,6 +216,23 @@ input.kf-lih-search-input
   font-size: 16px
   color: blueColor
   cursor: pointer
+
+.kf-lih-search-suggestions
+  position: relative
+  transform-origin: 30% top
+
+  &.ng-enter
+    transition: opacity .12s linear, transform .12s 0s
+
+    &:not(.ng-enter-active)
+      opacity: 0
+      transform: scale(.96) translate(0, -20px)
+
+  &.ng-leave
+    transition: opacity .2s
+
+    &.ng-leave-active
+      opacity: 0
 
 .kf-lih-right
   display: table-cell
