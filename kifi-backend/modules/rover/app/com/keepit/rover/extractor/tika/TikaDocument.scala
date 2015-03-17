@@ -16,7 +16,7 @@ import scala.collection.JavaConversions._
 
 class TikaDocument(
     metadata: Metadata,
-    val content: String,
+    content: String,
     val keywords: Seq[String],
     val links: Seq[Link]) extends FetchedDocument {
 
@@ -36,9 +36,11 @@ class TikaDocument(
       .orElse(metadata.getValues(initCap(name)).sortBy(_.size).lastOption)
   }
 
+  def getContent: Option[String] = Some(content).filter(_.nonEmpty)
+
   def getLinks(rel: String): Set[String] = links.collect { case link if link.getRel == rel => link.getUri }.toSet
 
-  def getTitle: Option[String] = getMetadata("title")
+  def getTitle: Option[String] = getMetadata("title").filter(_.nonEmpty)
 }
 
 object TikaDocument extends Logging {

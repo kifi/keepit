@@ -36,7 +36,7 @@ case class YoutubeContent(
     description: Option[String],
     keywords: Seq[String],
     authors: Seq[PageAuthor],
-    mediaType: Option[String],
+    openGraphType: Option[String],
     publishedAt: Option[DateTime],
     http: HttpInfo,
     normalization: NormalizationInfo,
@@ -48,6 +48,8 @@ case class YoutubeContent(
     video.channel,
     preferredTrack.map(_.content).getOrElse("")
   ).filter(_.nonEmpty).mkString("\n")).filter(_.nonEmpty)
+
+  def mediaType: Option[String] = openGraphType
 
   private def preferredTrack: Option[YoutubeTrack] = {
     video.tracks.find(_.info.isDefault) orElse {

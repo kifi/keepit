@@ -43,18 +43,18 @@ class YoutubeArticleFetcher @Inject() (
   def fetch(url: String, ifModifiedSince: Option[DateTime]): Future[FetchResult[YoutubeArticle]] = {
     documentFetcher.fetchJsoupDocument(url, ifModifiedSince).flatMap { result =>
       result.flatMap { doc =>
-        getVideo(doc).imap { video =>
+        getVideoContent(doc).imap { videoContent =>
           val content = YoutubeContent(
-            result.context.request.destinationUrl,
-            doc.getTitle,
-            doc.getDescription,
-            doc.getMetaKeywords,
-            doc.getAuthor.toSeq,
-            doc.getOpenGraphType,
-            doc.getPublishedAt,
-            result.context,
-            doc.getNormalizationInfo,
-            video
+            destinationUrl = result.context.request.destinationUrl,
+            title = doc.getTitle,
+            description = doc.getDescription,
+            keywords = doc.getMetaKeywords,
+            authors = doc.getAuthor.toSeq,
+            openGraphType = doc.getOpenGraphType,
+            publishedAt = doc.getPublishedAt,
+            http = result.context,
+            normalization = doc.getNormalizationInfo,
+            video = videoContent
           )
           YoutubeArticle(clock.now(), url, content)
         }
@@ -62,7 +62,7 @@ class YoutubeArticleFetcher @Inject() (
     }
   }
 
-  private def getVideo(doc: JsoupDocument): Future[YoutubeVideo] = {
+  private def getVideoContent(doc: JsoupDocument): Future[YoutubeVideo] = {
     val futureTracks = getTracks(doc)
     val headline = Option(doc.doc.getElementById("watch-headline-title")).map(_.text).filter(_.nonEmpty)
     val description = doc.doc.select("#watch-description-text .content").text
