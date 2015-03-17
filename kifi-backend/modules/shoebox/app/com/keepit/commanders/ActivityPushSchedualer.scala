@@ -128,14 +128,14 @@ class ActivityPusher @Inject() (
   }
 
   def createPushActivityEntities(): Seq[Id[ActivityPushTask]] = {
-    
+    Seq.empty
   }
 
   def createPushActivityEntitiesBatch(batchSize: Int): Seq[Id[ActivityPushTask]] = {
     db.readOnlyReplica { implicit s =>
       val userIds = activityPushTaskRepo.getUsersWithoutActivityPushTask(batchSize)
     }
-
+    Seq.empty
   }
 
   def getNextPushBatch(): Seq[Id[ActivityPushTask]] = {

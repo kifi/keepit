@@ -98,7 +98,7 @@ class LibrarySitemapTest extends Specification with ShoeboxTestInjector {
       withDb(modules: _*) { implicit injector =>
         val lib = setup()
         val sitemap = Await.result(inject[LibrarySiteMapGenerator].generate(), Duration.Inf)
-        val updateAt = ISO_8601_DAY_FORMAT.print(lib.updatedAt)
+        val updateAt = ISO_8601_DAY_FORMAT.print(lib.lastKept.get)
 
         sitemap.replaceAll(" ", "").trim ===
           s"""
