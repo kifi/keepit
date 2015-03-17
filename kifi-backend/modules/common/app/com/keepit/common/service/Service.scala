@@ -36,6 +36,8 @@ object ServiceType {
       val capabilities = instance.capabilities
       if (capabilities.contains(ServiceStatus.OFFLINE.name)) ServiceStatus.OFFLINE else ServiceStatus.UP
     }
+    override val minInstances = 2
+    override val warnInstances = 3
   }
   case object ELIZA extends ServiceType("ELIZA", "EZ")
   case object HEIMDAL extends ServiceType("HEIMDAL", "HD", loadFactor = 2)

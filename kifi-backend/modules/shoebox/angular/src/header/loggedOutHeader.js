@@ -48,7 +48,7 @@ angular.module('kifi')
       $scope.search.focused = true;
     };
     $scope.onInputBlur = function ($event) {
-      $scope.search.focused = $window.document.activeElement === $event.target;
+      $scope.search.focused = document.activeElement === $event.target;
     };
 
     function reactToQueryChange() {

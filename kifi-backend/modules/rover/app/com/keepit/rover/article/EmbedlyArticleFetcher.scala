@@ -16,8 +16,6 @@ import play.api.libs.ws.WSResponse
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ ExecutionContext, Future }
 
-trait EmbedlyArticleFetcher extends ArticleFetcher[EmbedlyArticle]
-
 object EmbedlyArticleFetcher {
   val key = "e46ecae2611d4cb29342fddb0e666a29"
   val timeout = 120000 // ms
@@ -25,11 +23,11 @@ object EmbedlyArticleFetcher {
 }
 
 @Singleton
-class EmbedlyArticleFetcherImpl @Inject() (
+class EmbedlyArticleFetcher @Inject() (
     ws: WebService,
     airbrake: AirbrakeNotifier,
     clock: Clock,
-    implicit val executionContext: ExecutionContext) extends EmbedlyArticleFetcher with Logging {
+    implicit val executionContext: ExecutionContext) extends Logging {
 
   import com.keepit.rover.article.EmbedlyArticleFetcher._
 

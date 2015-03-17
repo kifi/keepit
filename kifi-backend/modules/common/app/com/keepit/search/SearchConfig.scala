@@ -50,7 +50,7 @@ object SearchConfig {
       "minMyLibraries" -> "1",
 
       // UserSearch
-      "userSourceBoost" -> "3.0",
+      "userSourceBoost" -> "10.0",
       "myFriendBoost" -> "1.5",
 
       "proximityBoost" -> "0.95",

@@ -67,6 +67,7 @@ object ExperimentType {
   val CORTEX_NEW_MODEL = ExperimentType("cortex_new_model")
   val CURATOR_DIVERSE_TOPIC_RECOS = ExperimentType("curator_diverse_topic_recos")
   val NEW_PUBLIC_FEED = ExperimentType("new_public_feed")
+  val SEARCH_SUGGESTIONS = ExperimentType("search_suggestions")
 
   val PROFILES_BETA = ExperimentType("profiles_beta")
   val TWITTER_BETA = ExperimentType("twitter_beta")
@@ -78,7 +79,7 @@ object ExperimentType {
     CAN_MESSAGE_ALL_USERS :: DEMO :: EXTENSION_LOGGING :: SHOW_HIT_SCORES :: SHOW_DISCUSSIONS ::
     MOBILE_REDIRECT :: DELIGHTED_SURVEY_PERMANENT :: SPECIAL_CURATOR :: LIBRARIES :: SEND_DIGEST_EMAIL_ON_REFRESH ::
     GRAPH_BASED_PEOPLE_TO_INVITE :: NEW_KEEP_NOTIFICATIONS :: CORTEX_NEW_MODEL :: CURATOR_DIVERSE_TOPIC_RECOS ::
-    NEW_PUBLIC_FEED :: PROFILES_BETA :: TWITTER_BETA :: ACTIVITY_EMAIL :: ALL_KEEPS_VIEW :: EXPLICIT_SOCIAL_POSTING :: Nil
+    NEW_PUBLIC_FEED :: SEARCH_SUGGESTIONS :: PROFILES_BETA :: TWITTER_BETA :: ACTIVITY_EMAIL :: ALL_KEEPS_VIEW :: EXPLICIT_SOCIAL_POSTING :: Nil
 
   private val _ALL_MAP: Map[String, ExperimentType] = _ALL.map(e => e.value -> e).toMap
 

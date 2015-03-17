@@ -12,21 +12,22 @@
       <a class="kf-lih-logo svg-kifi-clover-white-text" ui-sref="home"></a>
     </div>
     <div class="kf-lih-center">
-      <label class="kf-lih-search kifi-guide-target-2" ng-class="{'kf-lit': search.focused || search.text}">
+      <label class="kf-lih-search kifi-guide-target-2" ng-class="{'kf-lit': search.focused || search.text, 'kf-instant': search.transitionOff}">
         <span class="kf-lih-search-left">
           <span class="kf-lih-search-icon svg-search-icon-gray"></span>
           <span class="kf-lih-search-icon-lit svg-search-icon-blue"></span>
           <a class="kf-lih-search-lib-owner-img" ng-if="search.libraryChip" style="background-image:url({{library.owner | pic:100}})" href="{{library.owner|profileUrl}}" title="{{library.owner.firstName}} {{library.owner.lastName}}"></a>
           <span class="kf-lih-search-lib-name" ng-if="search.libraryChip" style="background-color:{{library.color}}">{{library.name}}</span>
-          <a class="kf-lih-search-lib-x" ng-if="search.libraryChip" style="background-color:{{library.color}}" ng-click="onClickLibX()" href="javascript:">&times;</a>
+          <a class="kf-lih-search-lib-x" ng-if="search.libraryChip" style="background-color:{{library.color}}" ng-mousedown="onMouseDownLibX($event)" ng-click="onClickLibX()" href="javascript:">&times;</a>
         </span>
         <span class="kf-lih-search-center">
           <input class="kf-lih-search-input" type="text" placeholder="Search Kifi…" ng-model="search.text" ng-focus="onInputFocus()" ng-blur="onInputBlur($event)" ng-change="onQueryChange()" ng-keydown="onKeydown($event)" ng-click="onSearchBarClicked()">
         </span>
         <span class="kf-lih-search-right" ng-if="search.text">
-          <button class="kf-lih-search-clear" ng-click="clearInput()">Clear</button>
+          <button class="kf-lih-search-clear" ng-click="clearInput($event)">Clear</button>
         </span>
       </label>
+      <div class="kf-lih-search-suggestions" kf-search-suggest="search" library-id="library.id" ng-if="search.suggesting"></div>
     </div>
     <div class="kf-lih-right kifi-guide-target-3">
       <button class="kf-lih-add-link sprite sprite-add-link" ng-click="addKeeps()">Add a link</button>

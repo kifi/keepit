@@ -15,10 +15,12 @@ import com.keepit.common.db.slick._
 import com.keepit.eliza.{ PushNotificationExperiment, PushNotificationCategory, ElizaServiceClient }
 import com.keepit.model._
 import org.joda.time.DateTime
+import scala.collection.mutable
 import scala.concurrent.duration._
 import scala.util.Random
 
 object PushActivities
+object CreatePushActivityEntities
 case class PushActivity(activityPushTaskId: Id[ActivityPushTask])
 
 class ActivityPushActor @Inject() (
@@ -27,6 +29,8 @@ class ActivityPushActor @Inject() (
 
   private val counter = new AtomicInteger(0)
   def receive = {
+    case CreatePushActivityEntities =>
+      activityPusher.createPushActivityEntities()
     case PushActivities =>
       if (counter.get <= 0) {
         activityPusher.getNextPushBatch() foreach { activityId =>
@@ -54,6 +58,7 @@ class ActivityPushSchedualer @Inject() (
     actor: ActorInstance[ActivityPushActor]) extends SchedulerPlugin {
   override def onStart() {
     scheduleTaskOnOneMachine(actor.system, 21 seconds, 29 seconds, actor.ref, PushActivity, PushActivity.getClass.getSimpleName)
+    scheduleTaskOnOneMachine(actor.system, 1 hour, 1 hours, actor.ref, CreatePushActivityEntities, CreatePushActivityEntities.getClass.getSimpleName)
   }
 
 }
@@ -63,23 +68,28 @@ class ActivityPusher @Inject() (
     db: Database,
     elizaServiceClient: ElizaServiceClient,
     libraryRepo: LibraryRepo,
+    keepRepo: KeepRepo,
+    userRepo: UserRepo,
+    notifyPreferenceRepo: UserNotifyPreferenceRepo,
     userPersonaRepo: UserPersonaRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
     actor: ActorInstance[ActivityPushActor],
     clock: Clock) {
 
   def pushItBaby(activityPushTaskId: Id[ActivityPushTask]): Unit = {
-    val activity = db.readOnlyMaster { implicit s =>
-      activityPushTaskRepo.get(activityPushTaskId)
-    }
-    getMessage(activity.userId) match {
-      case Some((message, pushMessageType, experimant)) =>
-        elizaServiceClient.sendPushNotification(activity.userId, message, pushMessageType, experimant)
-        val lastActivity = getLastActivity(activity.userId)
-        db.readWrite { implicit s =>
-          activityPushTaskRepo.save(activity.copy(lastPush = Some(clock.now())).withLastActivity(lastActivity))
-        }
-      case None =>
+    db.readOnlyMaster { implicit s =>
+      val activity = activityPushTaskRepo.get(activityPushTaskId)
+      if (notifyPreferenceRepo.canNotify(activity.userId, NotifyPreference.RECOS_REMINDER)) Some(activity) else None
+    } map { activity =>
+      getMessage(activity.userId) match {
+        case Some((message, pushMessageType, experimant)) =>
+          elizaServiceClient.sendPushNotification(activity.userId, message, pushMessageType, experimant)
+          val lastActivity = getLastActivity(activity.userId)
+          db.readWrite { implicit s =>
+            activityPushTaskRepo.save(activity.copy(lastPush = Some(clock.now())).withLastActivity(lastActivity))
+          }
+        case None =>
+      }
     }
   }
 
@@ -121,6 +131,36 @@ class ActivityPusher @Inject() (
       libraryRepo.getAllByOwner(userId)
     }
     libs.map(lib => lib.lastKept.getOrElse(lib.updatedAt)).sorted.reverse.head
+  }
+
+  def createPushActivityEntities(): Seq[Id[ActivityPushTask]] = {
+    val batchSize = 1000
+    val allTasks = mutable.ArrayBuffer[Id[ActivityPushTask]]()
+    var lastBatchSize = batchSize
+    while (lastBatchSize >= batchSize) {
+      val batch = createPushActivityEntitiesBatch(batchSize)
+      allTasks ++= batch
+      lastBatchSize = batch.size
+    }
+    allTasks.toSeq
+  }
+
+  def createPushActivityEntitiesBatch(batchSize: Int): Seq[Id[ActivityPushTask]] = {
+    val users = db.readOnlyReplica { implicit s =>
+      val userIds = activityPushTaskRepo.getUsersWithoutActivityPushTask(batchSize)
+      val usersWithLastKeep = userRepo.getAllUsers(userIds).values map { user =>
+        user -> keepRepo.latestKeep(user.id.get)
+      }
+      usersWithLastKeep.toSeq
+    }
+    db.readWrite { implicit s =>
+      users map {
+        case (user, lastKeep) =>
+          val lastActiveDate = lastKeep.getOrElse(user.createdAt)
+          val task = ActivityPushTask(userId = user.id.get, lastActiveDate = lastActiveDate, lastActiveTime = lastActiveDate.toLocalTime, state = ActivityPushTaskStates.INACTIVE)
+          activityPushTaskRepo.save(task).id.get
+      }
+    }
   }
 
   def getNextPushBatch(): Seq[Id[ActivityPushTask]] = {
