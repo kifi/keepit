@@ -86,9 +86,10 @@ class KeepRepoImpl @Inject() (
     def libraryId = column[Option[Id[Library]]]("library_id", O.Nullable)
     def visibility = column[LibraryVisibility]("visibility", O.NotNull)
     def keptAt = column[DateTime]("kept_at", O.NotNull)
+    def sourceAttributionId = column[Id[KeepSourceAttribution]]("source_attribution_id", O.Nullable)
 
     def * = (id.?, createdAt, updatedAt, externalId, title.?, uriId, isPrimary.?, inDisjointLib.?, urlId, url, bookmarkPath.?, isPrivate,
-      userId, state, source, kifiInstallation.?, seq, libraryId, visibility, keptAt) <> ((Keep.applyFromDbRow _).tupled, Keep.unapplyToDbRow _)
+      userId, state, source, kifiInstallation.?, seq, libraryId, visibility, keptAt, sourceAttributionId.?) <> ((Keep.applyFromDbRow _).tupled, Keep.unapplyToDbRow _)
   }
 
   def table(tag: Tag) = new KeepTable(tag)
@@ -120,7 +121,8 @@ class KeepRepoImpl @Inject() (
       seq = r.<<[SequenceNumber[Keep]],
       libraryId = r.<<[Option[Id[Library]]],
       visibility = r.<<[LibraryVisibility],
-      keptAt = r.<<[DateTime]
+      keptAt = r.<<[DateTime],
+      sourceAttributionId = r.<<[Option[Id[KeepSourceAttribution]]]
     )
   }
   private val bookmarkColumnOrder: String = _taggedTable.columnStrings("bm")

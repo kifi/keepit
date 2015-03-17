@@ -1,6 +1,6 @@
 package com.keepit.model
 
-import com.keepit.common.db.{ States, ModelWithState, State, Id }
+import com.keepit.common.db.{ Id, ModelWithState, State, States }
 import com.keepit.common.time._
 import org.joda.time.DateTime
 import play.api.libs.json._
@@ -17,7 +17,7 @@ case class KeepSourceAttribution(
 }
 
 object KeepSourceAttribution {
-  import KeepAttributionType._
+  import com.keepit.model.KeepAttributionType._
 
   private def toJsValue(attr: SourceAttribution): (KeepAttributionType, JsValue) = {
     attr match {
