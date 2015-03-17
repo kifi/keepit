@@ -1,6 +1,7 @@
 package com.keepit.rover.extractor.tika
 
 import com.keepit.common.logging.Logging
+import com.keepit.rover.extractor.FetchedDocument
 import com.keepit.rover.fetcher.HttpInputStream
 import org.apache.tika.detect.DefaultDetector
 import org.apache.tika.io.{ TemporaryResources, TikaInputStream }
@@ -17,7 +18,7 @@ class TikaDocument(
     metadata: Metadata,
     val content: String,
     val keywords: Seq[String],
-    val links: Seq[Link]) {
+    val links: Seq[Link]) extends FetchedDocument {
 
   def getMetadata(name: String): Option[String] = {
     def initCap(str: String) = {
@@ -34,6 +35,10 @@ class TikaDocument(
       .orElse(metadata.getValues(name.toUpperCase).sortBy(_.size).lastOption)
       .orElse(metadata.getValues(initCap(name)).sortBy(_.size).lastOption)
   }
+
+  def getLinks(rel: String): Set[String] = links.collect { case link if link.getRel == rel => link.getUri }.toSet
+
+  def getTitle: Option[String] = getMetadata("title")
 }
 
 object TikaDocument extends Logging {
