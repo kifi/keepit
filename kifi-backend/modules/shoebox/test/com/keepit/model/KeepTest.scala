@@ -80,14 +80,6 @@ class KeepTest extends Specification with ShoeboxTestInjector {
         all.map(_.title) === Seq(Some("G1"), Some("A1"), Some("A2"), None)
       }
     }
-    "latestKeepInLibrary" in {
-      withDb() { implicit injector =>
-        val (user1, user2, uri1, uri2, _, _, _, lib) = setup()
-        db.readOnlyMaster { implicit s =>
-          keepRepo.latestKeepInLibrary(lib.id.get).get === new DateTime(2013, 3, 23, 14, 30, 0, 0, DEFAULT_DATE_TIME_ZONE)
-        }
-      }
-    }
     "load by user" in {
       withDb() { implicit injector =>
         val (user1, user2, uri1, uri2, _, _, _, _) = setup()

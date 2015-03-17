@@ -55,7 +55,7 @@ class ActivityPushTaskRepoImpl @Inject() (
 
   def getUsersWithoutActivityPushTask(limit: Int)(implicit session: RSession): Seq[Id[User]] = {
     import StaticQuery.interpolation
-    sql"select user.id from user left join activity_email on user.id = activity_email.user_id where activity_email.user_id is null limit $limit".as[Id[User]].list
+    sql"select user.id from user left join activity_push_task on user.id = activity_push_task.user_id where activity_push_task.user_id is null limit $limit".as[Id[User]].list
   }
 }
 

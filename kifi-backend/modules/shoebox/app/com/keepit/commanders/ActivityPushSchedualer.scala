@@ -136,8 +136,8 @@ class ActivityPusher @Inject() (
   def createPushActivityEntities(): Seq[Id[ActivityPushTask]] = {
     val batchSize = 1000
     val allTasks = mutable.ArrayBuffer[Id[ActivityPushTask]]()
-    var lastBatchSize = 0
-    while (lastBatchSize < batchSize) {
+    var lastBatchSize = batchSize
+    while (lastBatchSize >= batchSize) {
       val batch = createPushActivityEntitiesBatch(batchSize)
       allTasks ++= batch
       lastBatchSize = batch.size
@@ -148,10 +148,10 @@ class ActivityPusher @Inject() (
   def createPushActivityEntitiesBatch(batchSize: Int): Seq[Id[ActivityPushTask]] = {
     val users = db.readOnlyReplica { implicit s =>
       val userIds = activityPushTaskRepo.getUsersWithoutActivityPushTask(batchSize)
-      val users = userRepo.getAllUsers(userIds).values.toSeq
-      users map { user =>
+      val usersWithLastKeep = userRepo.getAllUsers(userIds).values map { user =>
         user -> keepRepo.latestKeep(user.id.get)
       }
+      usersWithLastKeep.toSeq
     }
     db.readWrite { implicit s =>
       users map {
