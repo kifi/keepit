@@ -1,18 +1,19 @@
 <menu class="kf-ssg">
-  <div class="kf-ssg-group-title" ng-if="search.text">Keeps <span ng-if="urisInLibrary">in this library</span></div>
+  <img class="kf-ssg-spinner" src="/img/spinner_32.gif" ng-show="working">
+  <div class="kf-ssg-group-title" ng-if="query">Keeps <span ng-if="inLibrary">in this library</span></div>
   <a class="kf-ssg-a kf-ssg-uri" href="{{uri.url}}" target="_blank" ng-repeat="uri in uris">
     <div class="kf-ssg-uri-thumb" ng-style="{'background-image': uri.summary.imageUrl ? 'url(' + uri.summary.imageUrl + ')' : ''}"></div>
     <div class="kf-ssg-uri-title">{{uri.title}}</div>
     <div class="kf-ssg-uri-domain">{{uri.url|domain}}</div>
   </a>
-  <a class="kf-ssg-a kf-ssg-query kf-selected" ui-sref="{{search.libraryChip ? 'library.search' : 'search'}}({q: search.text})" ng-if="search.text && (!uris || uris.length)">
+  <a class="kf-ssg-a kf-ssg-query kf-selected" ui-sref="{{inLibrary ? 'library.search' : 'search'}}({q: query})" ng-if="query && (!uris || uris.length)">
     <div class="kf-ssg-query-icon svg-search-icon-gray"></div>
-    See all matching keeps <span ng-if="urisInLibrary">in this library</span>
+    See all matching keeps <span ng-if="inLibrary">in this library</span>
   </a>
-  <div class="kf-ssg-no-results" ng-if="search.text && uris.length === 0">
-    No matching keeps <span ng-if="urisInLibrary">in this library</span>
+  <div class="kf-ssg-no-results" ng-if="query && uris.length === 0">
+    No matching keeps <span ng-if="inLibrary">in this library</span>
   </div>
-  <div class="kf-ssg-group-title" ng-if="libraries.length">Libraries</div>
+  <div class="kf-ssg-group-title" ng-if="libraries.length"><span ng-if="!query">Your</span> Libraries</div>
   <a class="kf-ssg-a kf-ssg-lib" ng-class="{'kf-with-counts': library.keepCount || library.followerCount}" href="{{library.path}}" ng-repeat="library in libraries">
     <div class="kf-ssg-lib-card" ng-attr-style="background-color:{{library.color}}"></div>
     <div class="kf-ssg-lib-icon" ng-class="{'svg-card-lock': library.visibility === 'secret', 'svg-card-star': library.visibility === 'discoverable'}" ng-if="library.visibility !== 'published'"></div>
@@ -23,6 +24,9 @@
       <span ng-pluralize count="library.keepCount" when="{'one': '1 keep', 'other': '{{library.keepCount|number}} keeps'}" ng-if="library.keepCount"></span>
       <span ng-pluralize count="library.followerCount" when="{'one': '1 follower', 'other': '{{library.followerCount|number}} followers'}" ng-if="library.followerCount"></span>
     </div>
+  </a>
+  <a class="kf-ssg-a kf-ssg-my-libs kf-selected" href="{{me|profileUrl:'libraries'}}" ng-if="!query">
+    See all of your libraries
   </a>
   <div class="kf-ssg-group-title" ng-if="users.length">People</div>
   <a class="kf-ssg-a kf-ssg-user" ng-class="{'kf-with-counts': user.libraryCount || user.keepCount}" href="{{user|profileUrl}}" ng-repeat="user in users">
