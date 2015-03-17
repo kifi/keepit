@@ -4,8 +4,8 @@ import com.google.inject.Inject
 import com.keepit.common.logging.Logging
 import com.keepit.common.time.Clock
 import com.keepit.rover.fetcher.{ FetchResult, RoverDocumentFetcher }
-import org.apache.james.mime4j.dom.datetime.DateTime
 import com.keepit.common.time._
+import org.joda.time.DateTime
 
 import scala.concurrent.{ Future, ExecutionContext }
 

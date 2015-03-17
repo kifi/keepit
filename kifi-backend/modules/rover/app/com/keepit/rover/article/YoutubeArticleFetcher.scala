@@ -10,7 +10,7 @@ import com.keepit.rover.extractor.JsoupDocument
 import com.keepit.rover.fetcher.{ FetchResult, RoverDocumentFetcher }
 import com.keepit.search.Lang
 import org.apache.commons.lang3.StringEscapeUtils
-import org.apache.james.mime4j.dom.datetime.DateTime
+import org.joda.time.DateTime
 import org.jsoup.nodes.Element
 
 import scala.collection.JavaConversions._

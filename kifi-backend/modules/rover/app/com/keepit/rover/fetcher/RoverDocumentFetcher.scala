@@ -4,7 +4,7 @@ import com.google.inject.{ Inject, Singleton }
 import com.keepit.rover.extractor.tika.TikaDocument
 import com.keepit.rover.extractor.JsoupDocument
 import org.apache.http.HttpStatus
-import org.apache.james.mime4j.dom.datetime.DateTime
+import org.joda.time.DateTime
 
 import scala.concurrent.Future
 
