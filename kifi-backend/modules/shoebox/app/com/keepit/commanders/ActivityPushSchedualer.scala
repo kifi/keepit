@@ -19,6 +19,7 @@ import scala.concurrent.duration._
 import scala.util.Random
 
 object PushActivities
+object CreatePushActivityEntities
 case class PushActivity(activityPushTaskId: Id[ActivityPushTask])
 
 class ActivityPushActor @Inject() (
@@ -27,6 +28,8 @@ class ActivityPushActor @Inject() (
 
   private val counter = new AtomicInteger(0)
   def receive = {
+    case CreatePushActivityEntities =>
+      activityPusher.createPushActivityEntities()
     case PushActivities =>
       if (counter.get <= 0) {
         activityPusher.getNextPushBatch() foreach { activityId =>
@@ -54,6 +57,7 @@ class ActivityPushSchedualer @Inject() (
     actor: ActorInstance[ActivityPushActor]) extends SchedulerPlugin {
   override def onStart() {
     scheduleTaskOnOneMachine(actor.system, 21 seconds, 29 seconds, actor.ref, PushActivity, PushActivity.getClass.getSimpleName)
+    scheduleTaskOnOneMachine(actor.system, 1 hour, 1 hours, actor.ref, CreatePushActivityEntities, CreatePushActivityEntities.getClass.getSimpleName)
   }
 
 }
@@ -121,6 +125,17 @@ class ActivityPusher @Inject() (
       libraryRepo.getAllByOwner(userId)
     }
     libs.map(lib => lib.lastKept.getOrElse(lib.updatedAt)).sorted.reverse.head
+  }
+
+  def createPushActivityEntities(): Seq[Id[ActivityPushTask]] = {
+    
+  }
+
+  def createPushActivityEntitiesBatch(batchSize: Int): Seq[Id[ActivityPushTask]] = {
+    db.readOnlyReplica { implicit s =>
+      val userIds = activityPushTaskRepo.getUsersWithoutActivityPushTask(batchSize)
+    }
+
   }
 
   def getNextPushBatch(): Seq[Id[ActivityPushTask]] = {

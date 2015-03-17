@@ -15,11 +15,11 @@ CREATE TABLE activity_push_task (
     last_active_date datetime NOT NULL,
 
     PRIMARY KEY (id),
-    INDEX activity_push_task_i_push_active (last_push, last_active_time),
-    CONSTRAINT activity_push_task_f_user FOREIGN KEY (user_id)
-      REFERENCES user(id)
-      ON UPDATE CASCADE ON DELETE RESTRICT
+    INDEX activity_push_task_i_push_active (last_push, last_active_time)
 );
+
+create unique index activity_push_task_uf_user on activity_push_task(user_id);
+alter table activity_push_task add constraint activity_push_task_uf_user foreign key (user_id) references user(id) ON UPDATE CASCADE ON DELETE RESTRICT;
 
 
 insert into evolutions (name, description) values('302.sql', 'create new table for push task activity');
