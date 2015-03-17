@@ -11,8 +11,6 @@ import play.api.test.Helpers._
 
 class ActivityPushTaskRepoTest extends Specification with ShoeboxApplicationInjector {
 
-  args(skipAll = true)
-
   "ActivityPushTaskRepo" should {
     "save and load model" in {
       running(new ShoeboxApplication()) {
@@ -22,12 +20,15 @@ class ActivityPushTaskRepoTest extends Specification with ShoeboxApplicationInje
           val user1 = user().saved
           val user2 = user().saved
           val user3 = user().saved
+          val user4 = user().saved
+          val user5 = user().saved
+          val user6 = user().saved
           val a1 = repo.save(ActivityPushTask(userId = user1.id.get, lastActiveDate = now, lastActiveTime = now.toLocalTime))
           val a2 = repo.save(ActivityPushTask(userId = user2.id.get, lastActiveDate = now.plusHours(2), lastActiveTime = now.plusHours(2).toLocalTime))
           val a3 = repo.save(ActivityPushTask(userId = user3.id.get, lastActiveDate = now.plusHours(4), lastActiveTime = now.plusHours(4).toLocalTime))
-          val a4 = repo.save(ActivityPushTask(userId = user1.id.get, lastPush = Some(now.plusDays(2)), lastActiveDate = now, lastActiveTime = now.toLocalTime))
-          val a5 = repo.save(ActivityPushTask(userId = user2.id.get, lastPush = Some(now.plusDays(2)), lastActiveDate = now.plusHours(2), lastActiveTime = now.plusHours(2).toLocalTime))
-          val a6 = repo.save(ActivityPushTask(userId = user3.id.get, lastPush = Some(now.plusDays(2)), lastActiveDate = now.plusHours(4), lastActiveTime = now.plusHours(4).toLocalTime))
+          val a4 = repo.save(ActivityPushTask(userId = user4.id.get, lastPush = Some(now.plusDays(2)), lastActiveDate = now, lastActiveTime = now.toLocalTime))
+          val a5 = repo.save(ActivityPushTask(userId = user5.id.get, lastPush = Some(now.plusDays(2)), lastActiveDate = now.plusHours(2), lastActiveTime = now.plusHours(2).toLocalTime))
+          val a6 = repo.save(ActivityPushTask(userId = user6.id.get, lastPush = Some(now.plusDays(2)), lastActiveDate = now.plusHours(4), lastActiveTime = now.plusHours(4).toLocalTime))
           (user1, user2, user3, a1, a2, a3, a4, a5, a6)
         }
         db.readOnlyMaster { implicit s =>
