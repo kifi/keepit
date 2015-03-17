@@ -8,7 +8,7 @@ import org.joda.time.DateTime
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 
-class EmbedlyContent(val json: JsValue) extends ArticleContent[EmbedlyContent] {
+class EmbedlyContent(val json: JsValue) extends ArticleContent {
   private val parsed = json.as[EmbedlyContent.ParsedFields]
   def destinationUrl = parsed.url
   def title = parsed.title
