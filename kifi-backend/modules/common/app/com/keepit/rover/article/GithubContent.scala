@@ -12,8 +12,9 @@ case class GithubContent(
     content: Option[String],
     keywords: Seq[String],
     authors: Seq[PageAuthor],
-    mediaType: Option[String],
+    openGraphType: Option[String],
     publishedAt: Option[DateTime],
     http: HttpInfo,
     normalization: NormalizationInfo) extends ArticleContent with HttpInfoHolder with NormalizationInfoHolder {
+  def mediaType: Option[String] = openGraphType
 }
