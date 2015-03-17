@@ -1,17 +1,14 @@
 package com.keepit.scraper.extractor
 
-import com.keepit.common.logging.Logging
-import com.keepit.common.time.DEFAULT_DATE_TIME_ZONE
 import com.keepit.common.net.URI
+import com.keepit.rover.extractor.utils.DateTimeMetadataParser
 import com.keepit.rover.fetcher.{ FetchResult, HttpInputStream }
 import com.keepit.scraper.mediatypes.MediaTypes
 import com.keepit.scraper.{ BasicArticle, SignatureBuilder, Signature }
 
-import java.util.Locale
 import scala.util.{ Failure, Success }
 import org.apache.commons.lang3.StringEscapeUtils.unescapeHtml4
 import org.joda.time.DateTime
-import org.joda.time.format.{ DateTimeParser, DateTimeFormat, DateTimeFormatterBuilder, ISODateTimeFormat }
 
 trait Extractor {
   def process(input: FetchResult[HttpInputStream]): Unit
@@ -47,7 +44,7 @@ trait Extractor {
   def getDescription(): Option[String] = getMetadata("description")
   def getAuthor(): Option[String] = getMetadata("author")
   def getPublishedAt(): Option[DateTime] = {
-    Stream("article:published_time", "article:published", "ptime", "pdate").map(getMetadata).flatten.headOption.flatMap(ExtractorDateTimeParser.parse)
+    Stream("article:published_time", "article:published", "ptime", "pdate").map(getMetadata).flatten.headOption.flatMap(DateTimeMetadataParser.parse)
   }
   def getSignature(): Signature = {
     new SignatureBuilder().add(Seq(
@@ -76,34 +73,3 @@ trait Extractor {
 trait ExtractorFactory extends Function[URI, Extractor]
 
 abstract class ExtractorProvider extends PartialFunction[URI, Extractor]
-
-object ExtractorDateTimeParser extends Logging {
-
-  private[this] val MULTI_FORMAT = {
-    val simpleFormat = // yyyy-MM-dd HH:mm:ss.SSS Z
-      new DateTimeFormatterBuilder()
-        .append(ISODateTimeFormat.dateElementParser)
-        .appendLiteral(' ')
-        .append(ISODateTimeFormat.timeElementParser.getParser)
-        .appendOptional(new DateTimeFormatterBuilder().appendTimeZoneOffset("Z", true, 2, 4).toFormatter.getParser).toFormatter
-
-    new DateTimeFormatterBuilder().append(
-      ISODateTimeFormat.dateTime.getPrinter,
-      Array[DateTimeParser](
-        ISODateTimeFormat.dateTimeParser.getParser,
-        simpleFormat.getParser,
-        DateTimeFormat.forPattern("yyyyMMddHHmmss").getParser,
-        ISODateTimeFormat.basicDate.getParser)
-    ).toFormatter.withLocale(Locale.ENGLISH).withZone(DEFAULT_DATE_TIME_ZONE).withOffsetParsed()
-  }
-
-  def parse(dateTimeString: String): Option[DateTime] = {
-    try {
-      Some(DateTime.parse(dateTimeString, MULTI_FORMAT))
-    } catch {
-      case e: Throwable =>
-        log.error(s"unable to parse datetime string: [$dateTimeString]")
-        None
-    }
-  }
-}

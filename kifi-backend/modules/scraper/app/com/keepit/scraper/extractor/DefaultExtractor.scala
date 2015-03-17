@@ -1,6 +1,6 @@
 package com.keepit.scraper.extractor
 
-import com.keepit.rover.extractor.tika.{ HtmlMappers, KeywordValidator, MainContentHandler }
+import com.keepit.rover.extractor.tika.{ KeywordValidator, HtmlMappers, MainContentHandler }
 import com.keepit.scraper.ScraperConfig
 import org.apache.tika.parser.html.HtmlMapper
 import org.xml.sax.ContentHandler
@@ -10,11 +10,6 @@ object DefaultExtractorProvider extends ExtractorProvider {
   def isDefinedAt(uri: URI) = true
   def apply(uri: URI) = new DefaultExtractor(uri, ScraperConfig.maxContentChars, HtmlMappers.default)
   def apply(uri: URI, maxContentChars: Int) = new DefaultExtractor(uri, maxContentChars, HtmlMappers.default)
-}
-
-object DefaultExtractor {
-  val specialRegex = """[,;:/]\s*""".r
-  val spaceRegex = """\s+""".r
 }
 
 class DefaultExtractor(url: URI, maxContentChars: Int, htmlMapper: Option[HtmlMapper]) extends TikaBasedExtractor(url, maxContentChars, htmlMapper) {
@@ -31,9 +26,8 @@ class DefaultExtractor(url: URI, maxContentChars: Int, htmlMapper: Option[HtmlMa
 
   private def getValidatedMetaTagKeywords: Option[String] = {
     getMetadata("keywords").flatMap { meta =>
-      import DefaultExtractor._
-      val phrases = specialRegex.split(meta).filter { _.length > 0 }.toSeq
-      val allPhrases = phrases.foldLeft(phrases) { (phrases, onePhrase) => phrases ++ spaceRegex.split(onePhrase).filter { _.length > 0 }.toSeq }
+      val phrases = KeywordValidator.specialRegex.split(meta).filter { _.length > 0 }.toSeq
+      val allPhrases = phrases.foldLeft(phrases) { (phrases, onePhrase) => phrases ++ KeywordValidator.spaceRegex.split(onePhrase).filter { _.length > 0 }.toSeq }
       val validator = new KeywordValidator(allPhrases)
 
       validator.startDocument()
