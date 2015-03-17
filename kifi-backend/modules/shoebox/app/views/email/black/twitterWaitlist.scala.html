@@ -1,28 +1,102 @@
 @(toUserId: Id[User])
+@import views.html.email.tags._
 @import com.keepit.common.mail.template.helpers._
-<table width="100%" border="0" cellspacing="0" cellpadding="0" align="center" style="border-collapse: collapse; mso-table-lspace: 0px; mso-table-rspace: 0px;">
-    <tr><td height="18" style="line-height: 1px; font-size: 1px; border-collapse: collapse; mso-line-height-rule: exactly;">&nbsp;</td></tr>
+<head>
+<style type="text/css">
+table {
+    padding: 0px !important;
+    border: none !important;
+    border-bottom-width: 0px !important;
+    mso-table-lspace: 0pt;
+    mso-table-rspace: 0pt;
+    mso-line-height-rule: exactly !important;
+    font-family: Arial, sans-serif;
+    -webkit-text-size-adjust: none;
+    -ms-text-size-adjust: none;
+}
+table td {
+    border-collapse: collapse;
+    mso-line-height-rule: exactly !important;
+}
+body {
+    margin: 0px;
+    padding: 0px;
+}
+</style>
+</head>
+
+<table width="100%" border="0" cellspacing="0" cellpadding="0" align="center" bgcolor="#ededed">
     <tr>
-        <td class="title" style="font-family: 'Helvetica Neue', Helvetica, Arial , sans-serif; font-size: 24px; color: #000000; font-weight: bold; text-align: center; border-collapse: collapse; mso-line-height-rule: exactly;" align="center">
-            Hey @firstName(toUserId), <br>
-            You are on the list
+        <td align="center" valign="top" bgcolor="#3e4854">
+            <table width="100%" border="0" cellspacing="0" cellpadding="0" align="left">
+                <tr>
+                    <td align="center" valign="top">
+                        <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                            @trSpacer(20)
+                            <tr>
+                                <td align="center" valign="top">
+                                    <a href="@kifiUrl("header")" target="_blank"><img src="@assetV3Url("logo@2x.png")" width="81" height="35" alt="Kifi" style="display:block;" border="0"/></a>
+                                </td>
+                            </tr>
+                            @trSpacer(12)
+                            <tr>
+                                <td align="center" valign="top" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:20px;line-height:24px;color:#ffffff;text-align:center;">Hey @firstName(toUserId),</td>
+                            </tr>
+                            <tr>
+                                <td align="center" valign="top" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:24px;line-height:28px;color:#ffffff;text-align:center;">You are on the list</td>
+                            </tr>
+                            @trSpacer(25)
+                        </table>
+                    </td>
+                </tr>
+            </table>
         </td>
     </tr>
-    <tr><td height="18" style="line-height: 1px; font-size: 1px; text-align: center; border-collapse: collapse; mso-line-height-rule: exactly;">&nbsp;</td></tr>
+
+    <tr><td height="35" style="font-size:1px; line-height:1px;">&nbsp;</td></tr>
     <tr>
-        <td class="content" style="font-family: 'Helvetica Neue', Helvetica, Arial , sans-serif; font-size: 19px; color: #505E65; text-align: center; border-collapse: collapse; mso-line-height-rule: exactly;" align="center">
+        <td bgcolor="#ededed" align="center">
+            <img src="@assetV3Url("twitterDeepSearch.png")" width="100" style="display:block;" border="0"/>
+        </td>
+    </tr>
+    <tr><td height="35" style="font-size:1px; line-height:1px;">&nbsp;</td></tr>
+
+    <tr bgcolor="#ffffff" color="#000000">
+        <td>
             We will let you know as soon as your<br>
             Kifi Twitter library is ready
         </td>
     </tr>
-    <tr>
-        <td height="18" style="line-height: 1px; font-size: 1px; border-collapse: collapse; text-align: center; mso-line-height-rule: exactly;">
-            In the meantime, be sure to tweet about Kifi <br>
+    <tr><td height="20" style="font-size:1px; line-height:1px;">&nbsp;</td></tr>
+
+    <tr bgcolor="#ffffff" color="#bbbbbb">
+        <td>
+            In the meantime, be sure to tweet about Kifi<br>
             Twitter Deep Search in order to move up on the list.
         </td>
     </tr>
-    <tr>
-        <td>Tweet now</td>
+    <tr><td height="35" style="font-size:1px; line-height:1px;">&nbsp;</td></tr>
+
+    <tr bgcolor="#ffffff">
+        <td>
+            <a href="@kifiUrl("header")" target="_blank" style="text-align:center; color:"blue"; border:1px solid blue; padding:10px;">Tweet now!</a>
+        </td>
     </tr>
-    @email.layouts.closingLines(Seq(), "center")
+    <tr><td height="55" style="font-size:1px; line-height:1px;">&nbsp;</td></tr>
+
+    <tr>
+        <td align="center" class="txt11" valign="top" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:13px;line-height:22px;color:#a7adb3;">
+            <a href="@kifiFooterUrl" target="_blank" style="text-decoration:none;color:#a7adb3;">Your Kifi</a> |
+            <a href="@privacyUrl" target="_blank" style="text-decoration:none;color:#a7adb3;">Privacy policy</a> |
+            <a href="@kifiSupportUrl" target="_blank" style="text-decoration:none;color:#a7adb3;">Help Center</a>
+            <span class="hide">|</span>
+            <span class="br1"></span><a href="@kifiFacebookUrl" target="_blank" style="text-decoration:none;color:#a7adb3;">Facebook</a> |
+            <a href="@kifiTwitterUrl" target="_blank" style="text-decoration:none;color:#a7adb3;">Twitter</a><br/>
+            <a href="@unsubscribeUrl" target="_blank" style="text-decoration:none;color:#a7adb3;">Unsubscribe from updates like this</a><br/>
+            Kifi 709 N Shoreline Blvd,<span class="br1"></span> Mountain View, CA 94043, USA.
+            <br/>&copy; 2015 FortyTwo
+        </td>
+    </tr>
+    <tr><td height="35" style="font-size:1px; line-height:1px;">&nbsp;</td></tr>
 </table>
+
