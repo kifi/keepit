@@ -14,7 +14,6 @@ angular.module('kifi')
     var filter;
     var lastResult = null;
     var selectedCount = 0;
-    var numResults = 0;
     var smoothScrollStep;  // used to ensure that only one smooth scroll animation happens at a time
 
 
@@ -175,12 +174,10 @@ angular.module('kifi')
           $scope.resultTotals.myTotal = 0;
           $scope.resultTotals.friendsTotal = 0;
           $scope.resultTotals.othersTotal = 0;
-          numResults = 0;
         }
         $scope.resultTotals.myTotal = $scope.resultTotals.myTotal || result.myTotal;
         $scope.resultTotals.friendsTotal = $scope.resultTotals.friendsTotal || result.friendsTotal;
         $scope.resultTotals.othersTotal = $scope.resultTotals.othersTotal || result.othersTotal;
-        numResults = result.hits.length;
 
         var hits = result.hits;
         var hitIndex = 0;
@@ -239,13 +236,13 @@ angular.module('kifi')
 
       // If there are no selected keep, the display the number of
       // search results in the subtitle.
-      switch (numResults) {
+      switch ($scope.resultKeeps.length) {
         case 0:
           return 'Sorry, no results found for “' + query + '”';
         case 1:
           return '1 result found';
         default:
-          return 'Top ' + numResults + ' results';
+          return 'Top ' + $scope.resultKeeps.length + ' results';
       }
     };
 
