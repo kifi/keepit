@@ -42,15 +42,6 @@ object KeepSourceAttribution {
     KeepSourceAttribution(id, createdAt, updatedAt, attr, state)
   }
 
-  def fromRawKeep(keep: RawKeep): Option[KeepSourceAttribution] = {
-    keep.source match {
-      case KeepSource.twitterFileImport | KeepSource.twitterSync =>
-        val attrOpt = keep.originalJson.flatMap(js => TwitterAttribution.fromRawTweetJson(js))
-        attrOpt.map { attr => KeepSourceAttribution(attribution = attr) }
-      case _ => None
-    }
-  }
-
 }
 
 case class UnknownAttributionTypeException(msg: String) extends Exception(msg)

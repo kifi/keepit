@@ -27,6 +27,17 @@ case class RawKeep(
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
 }
 
+object RawKeep {
+  def extractKeepSourceAttribtuion(keep: RawKeep): Option[KeepSourceAttribution] = {
+    keep.source match {
+      case KeepSource.twitterFileImport | KeepSource.twitterSync =>
+        val attrOpt = keep.originalJson.flatMap(js => TwitterAttribution.fromRawTweetJson(js))
+        attrOpt.map { attr => KeepSourceAttribution(attribution = attr) }
+      case _ => None
+    }
+  }
+}
+
 class RawKeepFactory @Inject() (airbrake: AirbrakeNotifier) {
 
   def toRawKeep(userId: Id[User], source: KeepSource, keepInfos: Seq[KeepInfo], importId: Option[String], installationId: Option[ExternalId[KifiInstallation]], libraryId: Option[Id[Library]]): Seq[RawKeep] =

@@ -24,14 +24,14 @@ class KeepSourceAttributionTest extends Specification with ShoeboxTestInjector {
         originalJson = Some(tweetJs),
         libraryId = None)
 
-      val attr = KeepSourceAttribution.fromRawKeep(rawKeep)
+      val attr = RawKeep.extractKeepSourceAttribtuion(rawKeep)
       attr.get.attribution === TwitterAttribution("505809542656303104", "connerdelights")
 
       val rawKeep2 = rawKeep.copy(originalJson = Some(JsString("{}")))
-      KeepSourceAttribution.fromRawKeep(rawKeep2) === None
+      RawKeep.extractKeepSourceAttribtuion(rawKeep2) === None
 
       val rawKeep3 = rawKeep.copy(source = KeepSource.bookmarkFileImport)
-      KeepSourceAttribution.fromRawKeep(rawKeep3) === None
+      RawKeep.extractKeepSourceAttribtuion(rawKeep3) === None
 
     }
 
