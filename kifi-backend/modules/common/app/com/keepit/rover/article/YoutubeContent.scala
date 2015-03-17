@@ -24,7 +24,7 @@ case class YoutubeTrack(info: YoutubeTrackInfo, content: String)
 case class YoutubeVideo(
   title: Option[String],
   description: String,
-  keywords: Seq[String],
+  tags: Seq[String],
   channel: String,
   tracks: Seq[YoutubeTrack],
   viewCount: Int)
