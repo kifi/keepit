@@ -11,6 +11,8 @@ import play.api.test.Helpers._
 
 class ActivityPushTaskRepoTest extends Specification with ShoeboxApplicationInjector {
 
+  args(skipAll = true)
+
   "ActivityPushTaskRepo" should {
     "save and load model" in {
       running(new ShoeboxApplication()) {

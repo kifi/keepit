@@ -14,6 +14,7 @@ import scala.slick.jdbc.StaticQuery
 trait ActivityPushTaskRepo extends Repo[ActivityPushTask] {
   def getByUser(userId: Id[User])(implicit session: RSession): Option[ActivityPushTask]
   def getByPushAndActivity(pushTimeBefore: DateTime, lastActivityAfter: LocalTime, limit: Int)(implicit session: RSession): Seq[Id[ActivityPushTask]]
+  def getUsersWithoutActivityPushTask(limit: Int)(implicit session: RSession): Seq[Id[User]]
 }
 
 @Singleton
@@ -50,6 +51,11 @@ class ActivityPushTaskRepoImpl @Inject() (
   def getByPushAndActivity(pushTimeBefore: DateTime, activeTimeAfter: LocalTime, limit: Int)(implicit session: RSession): Seq[Id[ActivityPushTask]] = {
     import StaticQuery.interpolation
     sql"select id from activity_push_task where state = 'active' and ((last_push is null) or (last_push < $pushTimeBefore)) and last_active_time < $activeTimeAfter limit $limit".as[Id[ActivityPushTask]].list
+  }
+
+  def getUsersWithoutActivityPushTask(limit: Int)(implicit session: RSession): Seq[Id[User]] = {
+    import StaticQuery.interpolation
+    sql"select user.id from user left join activity_email on user.id = activity_email.user_id where activity_email.user_id is null limit $limit".as[Id[User]].list
   }
 }
 
