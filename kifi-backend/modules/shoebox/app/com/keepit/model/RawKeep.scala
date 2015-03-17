@@ -1,6 +1,7 @@
 package com.keepit.model
 
 import com.keepit.common.db._
+import com.keepit.common.logging.Logging
 import org.joda.time.DateTime
 import play.api.libs.json.{ JsArray, JsObject, JsValue }
 import com.keepit.common.time.{ currentDateTime, DEFAULT_DATE_TIME_ZONE }
@@ -27,11 +28,12 @@ case class RawKeep(
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
 }
 
-object RawKeep {
+object RawKeep extends Logging {
   def extractKeepSourceAttribtuion(keep: RawKeep): Option[KeepSourceAttribution] = {
     keep.source match {
       case KeepSource.twitterFileImport | KeepSource.twitterSync =>
         val attrOpt = keep.originalJson.flatMap(js => TwitterAttribution.fromRawTweetJson(js))
+        if (attrOpt.isEmpty) log.warn(s"empty KeepSourceAttribtuion extracted. rawKeep id: ${keep.id.get}")
         attrOpt.map { attr => KeepSourceAttribution(attribution = attr) }
       case _ => None
     }
