@@ -1,6 +1,6 @@
 package com.keepit.model
 
-import com.keepit.common.db.{ States, ModelWithState, State, Id }
+import com.keepit.common.db.{ Id, ModelWithState, State, States }
 import com.keepit.common.time._
 import org.joda.time.DateTime
 import play.api.libs.json._
@@ -17,7 +17,7 @@ case class KeepSourceAttribution(
 }
 
 object KeepSourceAttribution {
-  import KeepAttributionType._
+  import com.keepit.model.KeepAttributionType._
 
   private def toJsValue(attr: SourceAttribution): (KeepAttributionType, JsValue) = {
     attr match {
@@ -40,6 +40,15 @@ object KeepSourceAttribution {
   def applyFromDbRow(id: Option[Id[KeepSourceAttribution]], createdAt: DateTime, updatedAt: DateTime, attrType: KeepAttributionType, attrJson: JsValue, state: State[KeepSourceAttribution]) = {
     val attr = fromJsValue(attrType, attrJson)
     KeepSourceAttribution(id, createdAt, updatedAt, attr, state)
+  }
+
+  def fromRawKeep(keep: RawKeep): Option[KeepSourceAttribution] = {
+    keep.source match {
+      case KeepSource.twitterFileImport | KeepSource.twitterSync =>
+        val attrOpt = keep.originalJson.flatMap(js => TwitterAttribution.fromRawTweetJson(js))
+        attrOpt.map { attr => KeepSourceAttribution(attribution = attr) }
+      case _ => None
+    }
   }
 
 }
