@@ -20,7 +20,6 @@ angular.module('kifi')
         editOptions: '&',
         toggleEdit: '=',
         updateSelectedCount: '&',
-        selectedKeepsFilter: '&',
         currentPageOrigin: '@'
       },
       templateUrl: 'keeps/keeps.tpl.html',
@@ -62,12 +61,6 @@ angular.module('kifi')
             lastSizedAt = $window.innerWidth;
             sizeKeeps();
           }
-        }
-
-        function getSelectedKeeps() {
-          var selectedKeeps = scope.selection.getSelected(scope.availableKeeps);
-          var filter = scope.selectedKeepsFilter();
-          return _.isFunction(filter) ? filter(selectedKeeps) : selectedKeeps;
         }
 
 
@@ -199,7 +192,7 @@ angular.module('kifi')
 
         scope.onWidgetCopyLibraryClicked = function (clickedLibrary) {
           // Copies the keeps that are selected into the library that is selected.
-          var selectedKeeps = getSelectedKeeps();
+          var selectedKeeps = scope.selection.getSelected(scope.availableKeeps);
 
           keepActionService.copyToLibrary(_.pluck(selectedKeeps, 'id'), clickedLibrary.id).then(function (data) {
             var addedKeeps = data.successes;
