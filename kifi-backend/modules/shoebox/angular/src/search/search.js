@@ -45,18 +45,6 @@ angular.module('kifi')
       }
     }
 
-    function setTitle() {
-      function getNormalizedQuery() {
-        if (util.startsWith(query, 'tag:')) {
-          return query.slice(4);
-        }
-        return query;
-      }
-
-      var libraryPart = library && library.name ? library.name + ' • ' : '';
-      $window.document.title = libraryPart + getNormalizedQuery() + ' • Kifi';
-    }
-
     function init() {
       queryCount++;
       query = $stateParams.q || '';
@@ -76,7 +64,7 @@ angular.module('kifi')
       $scope.scrollDistance = '100%';
       $scope.loading = false;
 
-      setTitle();
+      document.title = (library && library.name ? library.name + ' • ' : '') + query.replace(/^tag:/, '') + ' • Kifi';
 
       searchActionService.reset();
       $scope.getNextKeeps(true);
