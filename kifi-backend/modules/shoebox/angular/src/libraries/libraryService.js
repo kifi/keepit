@@ -181,6 +181,11 @@ angular.module('kifi')
         return keepsInLibraryClutch.get(libraryId, 10, offset, authToken);
       },
 
+      expireKeepsInLibraries: function () {
+        keepsInLibraryClutch.expireAll();
+        libraryByUserSlugClutch.expireAll();  // contains keeps too
+      },
+
       addToLibraryCount: function (libraryId, val) {
         var lib = _.find(infos.own, {id: libraryId});
         lib.numKeeps += val;
