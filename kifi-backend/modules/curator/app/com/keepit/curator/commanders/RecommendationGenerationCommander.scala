@@ -42,7 +42,7 @@ class RecommendationGenerationCommander @Inject() (
     schedulingProperties: SchedulingProperties) extends Logging {
 
   val defaultScore = 0.0f
-  val recommendationGenerationLock = new ReactiveLock(4)
+  val recommendationGenerationLock = new ReactiveLock(8)
   val perUserRecommendationGenerationLocks = TrieMap[Id[User], ReactiveLock]()
   val candidateURILock = new ReactiveLock(4)
 
