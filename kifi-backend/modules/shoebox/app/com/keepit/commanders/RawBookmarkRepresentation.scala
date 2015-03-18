@@ -39,14 +39,6 @@ object RawBookmarkRepresentation {
       JsSuccess(RawBookmarkRepresentation(x.title, x.url, x.isPrivate, x.canonical, x.openGraph, x.keptAt, None))
     }
   }
-
-  // NOTE: No attemp to write the trait SourceAttribution
-  implicit val writes = new Writes[RawBookmarkRepresentation] {
-    def writes(keep: RawBookmarkRepresentation): JsValue = {
-      val tmp = RawBookmarkRepresentationWithoutAttribution(keep.title, keep.url, keep.isPrivate, keep.canonical, keep.openGraph, keep.keptAt)
-      Json.toJson(tmp)
-    }
-  }
 }
 
 @Singleton
