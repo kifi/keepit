@@ -55,7 +55,7 @@ class MobileDevicesControllerTest extends Specification with ElizaTestInjector {
         }
 
         // start with an empty user, register devices with signatures (new device!)
-        val result1ForEmpty = registerDevice(user1, DeviceType.Android, Json.obj("token" -> "token1a", "deviceId" -> "nexus5"))
+        val result1ForEmpty = registerDevice(user1, DeviceType.Android, Json.obj("token" -> "token1a", "signature" -> "nexus5"))
         status(result1ForEmpty) must equalTo(OK)
         db.readOnlyMaster { implicit s =>
           val d = deviceRepo.getByUserIdAndDeviceTypeAndSignature(user1.id.get, DeviceType.Android, "nexus5")
@@ -63,7 +63,7 @@ class MobileDevicesControllerTest extends Specification with ElizaTestInjector {
         }
 
         // change token with same signature (update device!)
-        val result2ForEmpty = registerDevice(user1, DeviceType.Android, Json.obj("token" -> "token1b", "deviceId" -> "nexus5"))
+        val result2ForEmpty = registerDevice(user1, DeviceType.Android, Json.obj("token" -> "token1b", "signature" -> "nexus5"))
         status(result2ForEmpty) must equalTo(OK)
         db.readOnlyMaster { implicit s =>
           val d = deviceRepo.getByUserIdAndDeviceTypeAndSignature(user1.id.get, DeviceType.Android, "nexus5")
@@ -71,7 +71,7 @@ class MobileDevicesControllerTest extends Specification with ElizaTestInjector {
         }
 
         // different signature (new device!)
-        val result3ForEmpty = registerDevice(user1, DeviceType.Android, Json.obj("token" -> "token1zzzz", "deviceId" -> "htc-one"))
+        val result3ForEmpty = registerDevice(user1, DeviceType.Android, Json.obj("token" -> "token1zzzz", "signature" -> "htc-one"))
         status(result3ForEmpty) must equalTo(OK)
 
         // different device type (new device!)

@@ -14,7 +14,7 @@ class MobileDevicesController @Inject() (urbanAirship: UrbanAirship, val userAct
 
     tokenOpt map { token =>
       val isDev: Boolean = (jsonBody \ "dev").asOpt[Boolean].exists(x => x)
-      val signatureOpt = (jsonBody \ "deviceId").asOpt[String] // send a "signature" (coming in as deviceId)
+      val signatureOpt = (jsonBody \ "signature").asOpt[String].orElse((jsonBody \ "deviceId").asOpt[String]) // todo (aaron & mobile): right now iOS sends "deviceId", would be better & clear to make it "signature"
       val device = urbanAirship.registerDevice(request.userId, token, DeviceType(deviceType), isDev, signatureOpt)
       Ok(Json.obj(
         "token" -> device.token
