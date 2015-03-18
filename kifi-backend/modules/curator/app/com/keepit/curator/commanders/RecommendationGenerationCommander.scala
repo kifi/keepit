@@ -207,7 +207,7 @@ class RecommendationGenerationCommander @Inject() (
   private def precomputeRecommendationsForUser(userId: Id[User], boostedKeepers: Set[Id[User]], alwaysIncludeOpt: Option[Set[Id[NormalizedURI]]] = None): Future[Unit] = recommendationGenerationLock.withLockFuture {
     getPerUserGenerationLock(userId).withLockFuture {
       if (schedulingProperties.isRunnerFor(CuratorTasks.uriRecommendationPrecomputation)) {
-        val alwaysInclude: Set[Id[NormalizedURI]] = alwaysIncludeOpt.getOrElse(db.readOnlyReplica { implicit session => uriRecRepo.getUriIdsForUser(userId) })
+        val alwaysInclude: Set[Id[NormalizedURI]] = alwaysIncludeOpt.getOrElse(db.readOnlyReplica { implicit session => uriRecRepo.getTopUriIdsForUser(userId) })
         val state: UserRecommendationGenerationState = getStateOfUser(userId)
         val seedsAndSeqFuture: Future[(Seq[SeedItem], SequenceNumber[SeedItem])] = getCandidateSeedsForUser(userId, state)
         val res: Future[Boolean] = seedsAndSeqFuture.flatMap {
