@@ -157,16 +157,20 @@ class UserRepoImpl @Inject() (
   }
 
   override def invalidateCache(user: User)(implicit session: RSession) = {
-    val basicUser = BasicUser.fromUser(user)
-    for (id <- user.id) {
-      idCache.set(UserIdKey(id), user)
-      basicUserCache.set(BasicUserUserIdKey(id), basicUser)
-      usernameCache.set(UsernameKey(user.username), user)
-      UserProfileTab.all.foreach(v => userMetadataCache.remove(UserMetadataKey(id, v)))
-    }
-    externalIdCache.set(UserExternalIdKey(user.externalId), user)
-    session.onTransactionSuccess {
-      invalidateMixpanel(user)
+    if (user.state == UserStates.ACTIVE) {
+      val basicUser = BasicUser.fromUser(user)
+      for (id <- user.id) {
+        idCache.set(UserIdKey(id), user)
+        basicUserCache.set(BasicUserUserIdKey(id), basicUser)
+        usernameCache.set(UsernameKey(user.username), user)
+        UserProfileTab.all.foreach(v => userMetadataCache.remove(UserMetadataKey(id, v)))
+      }
+      externalIdCache.set(UserExternalIdKey(user.externalId), user)
+      session.onTransactionSuccess {
+        invalidateMixpanel(user)
+      }
+    } else {
+      deleteCache(user)
     }
   }
 
