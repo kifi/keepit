@@ -15,11 +15,13 @@ angular.module('kifi')
       link: function (scope, element) {
         var libInfoComparePropsDesc = ['lastViewed', 'lastKept', 'numKeeps', 'numFollowers'];
 
+        scope.me = profileService.me;
         scope.working = false;
-        scope.users = null;
-        scope.libraries = null;
+        scope.query = '';
+        scope.inLibrary = false;
         scope.uris = null;
-        scope.urisInLibrary = false;
+        scope.libraries = null;
+        scope.users = null;
 
         suggest();
 
@@ -62,15 +64,6 @@ angular.module('kifi')
           var itemEl = angular.element(e.target).closest('.kf-ssg-a');
           if (itemEl.length) {
             onSuggestionTaken(itemEl);
-            // scope.$evalAsync(function () {
-            //   scope.search.focused = false; // start search box fade immediately
-            //   itemEl.click();
-            // });
-            // manually performing action b/c search input blur will prevent click
-            // if (itemEl.prop('target') === '_blank') {
-            // } else {
-            //   $location.
-            // }
           }
         });
 
@@ -87,8 +80,6 @@ angular.module('kifi')
                 if (itemEl.length) {
                   e.preventDefault();
                   onSuggestionTaken(itemEl);
-                // } else if (scope.search.text) {
-                  // TODO: search for it?
                 }
                 break;
               case keyIndices.KEY_UP:
@@ -121,12 +112,15 @@ angular.module('kifi')
             scope.working = true;
             searchSuggestService.suggest(q, libraryId).then(function (data) {
               if (scope.search.text.trimLeft() === q && (scope.search.libraryChip ? scope.libraryId : null) === libraryId) {
+                scope.query = q;
+                scope.inLibrary = !!libraryId;
                 scope.users = data.users && data.users.hits;
                 scope.libraries = data.libraries && data.libraries.hits;
                 scope.uris = data.uris && data.uris.hits;
-                scope.urisInLibrary = !!libraryId;
                 scope.$evalAsync(function () {
-                  element.find('.kf-ssg-query').addClass('kf-selected');
+                  if (!element.find('.kf-selected').length) {
+                    element.find('.kf-ssg-query').addClass('kf-selected');
+                  }
                 });
               }
             })['finally'](function () {
@@ -135,18 +129,12 @@ angular.module('kifi')
               }
             });
           } else {
-            var me = profileService.me;
             scope.working = false;
-            scope.users = [];
-            scope.users = [
-              _.assign({
-                name: me.firstName + ' ' + me.lastName,
-                libraryCount: libraryService.getOwnInfos().length
-              }, me)
-            ];
-            scope.libraries = libraryService.getOwnInfos().filter(notAtLibInfo.bind(null, $location.url())).sort(compareLibInfos).slice(0, 7).map(adaptLibInfo);
+            scope.query = '';
+            scope.inLibrary = false;
             scope.uris = null;
-            scope.urisInLibrary = false;
+            scope.libraries = libraryService.getOwnInfos().filter(notAtLibInfo.bind(null, $location.url())).sort(compareLibInfos).slice(0, 7).map(adaptLibInfo);
+            scope.users = null;
           }
         }
 

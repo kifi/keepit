@@ -103,11 +103,11 @@ angular.module('kifi')
     };
 
     function renderNextRawKeep(rawKeeps) {
+      var keep = new keepDecoratorService.Keep(rawKeeps.shift());
+      keep.buildKeep(keep);
+      keep.makeKept();
+      $scope.keeps.push(keep);
       if (rawKeeps.length) {
-        var keep = new keepDecoratorService.Keep(rawKeeps.shift());
-        keep.buildKeep(keep);
-        keep.makeKept();
-        $scope.keeps.push(keep);
         $timeout(angular.bind(null, renderNextRawKeep, rawKeeps));
       } else {
         onDoneWithBatchOfRawKeeps();
@@ -257,8 +257,12 @@ angular.module('kifi')
       $rootScope.$emit('lastViewedLib', library);
     }
 
-    // dealing with keeps asynchronously, one by one, to allow header to be drawn
-    $timeout(angular.bind(null, renderNextRawKeep, library.keeps.slice()));
+    if (library.keeps.length) {
+      // dealing with keeps asynchronously, one by one, to allow header to be drawn
+      $timeout(angular.bind(null, renderNextRawKeep, library.keeps.slice()));
+    } else {
+      onDoneWithBatchOfRawKeeps();
+    }
 
     libraryService.getRelatedLibraries(library.id).then(function (libraries) {
       trackPageView({libraryRecCount: libraries.length});

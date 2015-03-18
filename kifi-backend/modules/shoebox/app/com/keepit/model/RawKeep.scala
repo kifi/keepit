@@ -56,9 +56,10 @@ class RawKeepFactory @Inject() (airbrake: AirbrakeNotifier) {
     val title = (json \ "title").asOpt[String]
     val url = (json \ "url").asOpt[String].getOrElse(throw new Exception(s"json $json did not have a url"))
     val isPrivate = (json \ "isPrivate").asOpt[Boolean].getOrElse(true)
+    val addedAt = (json \ "addedAt").asOpt[DateTime]
     val canonical = (json \ Normalization.CANONICAL.scheme).asOpt[String]
     val openGraph = (json \ Normalization.OPENGRAPH.scheme).asOpt[String]
-    RawKeep(userId = userId, title = title, url = url, isPrivate = isPrivate, importId = importId, source = source, originalJson = Some(json), installationId = installationId, libraryId = libraryId)
+    RawKeep(userId = userId, title = title, url = url, isPrivate = isPrivate, importId = importId, source = source, originalJson = Some(json), installationId = installationId, libraryId = libraryId, createdDate = addedAt)
   }
 }
 

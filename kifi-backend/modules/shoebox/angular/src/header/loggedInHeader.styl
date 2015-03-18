@@ -25,50 +25,14 @@ btn-color = alpha(#fff, .1)
 btn-color-hover = #6fa5ee
 btn-opacity-active = .9
 
-left-logo-space = 16px
 left-logo-width = 76px
 
 .kf-lih-left
   display: table-cell
   vertical-align: middle
-  width: btn-diam + left-logo-space + left-logo-width + 14px
+  width: left-logo-width + 14px
   font-size: 0
   position: relative // for library menu
-
-.kf-lih-toggle-menu
-  display: inline-block
-  vertical-align: middle
-  height: btn-diam
-  width: btn-diam
-  margin-right: left-logo-space
-  border-radius: 50%
-  border: none
-  padding: 0
-  background-color: btn-color
-  position: relative
-  cursor: pointer
-
-  &:focus
-    outline-color: alpha(#fff, .2)
-
-  &:hover
-  &.kf-menu-visible
-    background-color: btn-color-hover
-
-  &:hover:active
-  &.kf-menu-visible
-    opacity: btn-opacity-active
-
-.kf-lih-burger
-  color = #fff
-  position: absolute
-  top: 15px
-  left: 8px
-  height: 3px
-  width: 16px
-  border-radius: 1px
-  background-color: color
-  box-shadow: 0 -5px color, 0 5px color
 
 .kf-lih-logo
   display: inline-block
@@ -79,6 +43,13 @@ left-logo-width = 76px
   background-repeat: no-repeat
   background-size: 70px auto
   outline-color: #fff
+
+.kifi-guide-target-1
+  position: fixed
+  top: -9999px
+  left: -9999px
+  width: 0
+  height: 0
 
 .kf-lih-center
   display: table-cell
@@ -226,7 +197,7 @@ input.kf-lih-search-input
 
     &:not(.ng-enter-active)
       opacity: 0
-      transform: scale(.96) translate(0, -20px)
+      transform: scale(.96) translate(0, -10px)
 
   &.ng-leave
     transition: opacity .2s

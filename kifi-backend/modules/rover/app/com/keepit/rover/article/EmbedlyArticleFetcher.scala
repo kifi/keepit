@@ -20,6 +20,8 @@ object EmbedlyArticleFetcher {
   val key = "e46ecae2611d4cb29342fddb0e666a29"
   val timeout = 120000 // ms
   val attempts = 2
+
+  def embedlyExtractAPI(originalUrl: String): String = s"http://api.embed.ly/1/extract?key=$key&url=${URLEncoder.encode(originalUrl, UTF8)}"
 }
 
 @Singleton
@@ -43,15 +45,14 @@ class EmbedlyArticleFetcher @Inject() (
       watch.logTimeWith(s"Response: $response")
       try {
         val json = Json.parse(response.body) // issues with resp.json ?
-        new EmbedlyArticle(originalUrl, clock.now(), json)
+        val content = new EmbedlyContent(json)
+        new EmbedlyArticle(originalUrl, clock.now(), content)
       } catch {
         case error: Throwable =>
           throw new InvalidEmbedlyResponseException(originalUrl, response, error)
       }
     }
   }
-
-  private def embedlyExtractAPI(originalUrl: String): String = s"http://api.embed.ly/1/extract?key=$key&url=${URLEncoder.encode(originalUrl, UTF8)}"
 }
 
 case class InvalidEmbedlyResponseException(url: String, response: WSResponse, error: Throwable)

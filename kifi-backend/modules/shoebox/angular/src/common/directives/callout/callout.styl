@@ -96,10 +96,10 @@ bg-color = #4dAf7c
 
 // Specific callout styles
 
-.kf-callout-lib-menu
+.kf-callout-search
   width: auto
-  margin-left: -28px
-  padding: 24px 30px
+  margin-left: 0px
+  padding: 24px 26px 16px 28px
   transform-origin: 20% top
 
   &.ng-enter
@@ -114,10 +114,26 @@ bg-color = #4dAf7c
     transform: translate(0,-20px) scale(.6)
 
   &::before
-    left: 33px
+    height=13px
+    top: (-(height))
+    left: 36px
+    border-width: 0 15px height
+
+  &>p
+    margin: 0 0 10px
 
   .kf-callout-bubble-button
-    width: 100px
+    width: 80px
 
-  .kf-callout-bubble-action
+  &>.kf-callout-bubble-action
     margin-top: 20px
+
+.kf-callout-key
+  margin: 0 3px
+  border: 1px solid alpha(#fff, .5)
+  border-radius: 4px
+  padding: 0 5px 1px
+  line-height: 10px
+  font-size: 10px
+  font-weight: bold
+  vertical-align: 1px

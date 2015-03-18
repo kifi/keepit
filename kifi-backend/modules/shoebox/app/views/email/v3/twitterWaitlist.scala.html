@@ -34,16 +34,6 @@
         font-size: 1px;
         line-height: 1px;
     }
-    .tweet-button {
-        padding: 15px 20px;
-        text-align: center;
-        color: #55acee;
-        border: 1px solid #55acee;
-        border-radius: 8px
-        text-decoration: none;
-        font-size: 15px;
-        font-weight: 100;
-    }
     </style>
 </head>
 
@@ -63,10 +53,10 @@
                             </tr>
                             @trSpacer(12)
                             <tr>
-                                <td align="center" valign="top" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:20px;line-height:24px;color:#ffffff;text-align:center;">Hey @firstName(toUserId),</td>
+                                <td align="center" valign="top" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:24px;line-height:34px;font-weight:100;color:#ffffff;text-align:center;">Hey @firstName(toUserId),</td>
                             </tr>
                             <tr>
-                                <td align="center" valign="top" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:30px;line-height:40px;color:#ffffff;text-align:center;">You are on the list</td>
+                                <td align="center" valign="top" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:34px;line-height:44px;font-weight:400;letter-spacing:1.2px;color:#ffffff;text-align:center;">You are on the list</td>
                             </tr>
                             @trSpacer(25)
                         </table>
@@ -79,14 +69,14 @@
     <tr><td height="35" class="line-space">&nbsp;</td></tr>
     <tr>
         <td bgcolor="#ededed" align="center">
-            <img src="@assetV3Url("twitterDeepSearch.png")" width="250" alt="Welcome to Kifi's Twitter Deep Search" style="display:block;" border="0"/>
+            <img src="@assetV3Url("twitterDeepSearch.png")" width="200" alt="Welcome to Kifi's Twitter Deep Search" style="display:block;" border="0"/>
         </td>
     </tr>
     <tr><td height="35" class="line-space">&nbsp;</td></tr>
 
     <tr bgcolor="#ffffff"><td height="20" class="line-space">&nbsp;</td></tr>
     <tr bgcolor="#ffffff">
-        <td style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:18px;line-height:22px;color:#000000;text-align:center;">
+        <td style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:20px;line-height:26px;color:#3E4954;font-weight:200;text-align:center;">
             We will let you know as soon as your<br>
             Kifi Twitter library is ready
         </td>
@@ -94,7 +84,7 @@
     <tr bgcolor="#ffffff"><td height="20" class="line-space">&nbsp;</td></tr>
 
     <tr bgcolor="#ffffff">
-        <td style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:16px;line-height:20px;color:#bbbbbb;text-align:center;">
+        <td style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:16px;line-height:22px;color:#a8a8a8;font-weight:200;text-align:center;">
             In the meantime, be sure to tweet about Kifi<br>
             Twitter Deep Search in order to move up on the list.
         </td>
@@ -103,13 +93,15 @@
 
     <tr bgcolor="#ffffff">
         <td align="center">
-            <a href="@kifiUrl("header")" target="_blank" class="tweet-button">Tweet now!</a>
+            <a href="http://ctt.ec/Z2hH9" target="_blank" style="padding: 15px 20px;text-align:center;color:#55acee;border:1px solid #55acee;border-radius:8px;text-decoration:none;font-size:15px;font-weight:100;">
+                Tweet now!
+            </a>
         </td>
     </tr>
-    <tr bgcolor="#ffffff"><td height="55" class="line-space">&nbsp;</td></tr>
-
+    <tr bgcolor="#ffffff"><td height="45" class="line-space">&nbsp;</td></tr>
+    <tr bgcolor="#ffffff"><td height="25" class="line-space" style="border-top:1px solid #ededed;">&nbsp;</td></tr>
     <tr bgcolor="#ffffff">
-        <td align="center" class="txt11" valign="top" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:13px;line-height:22px;color:#a7adb3;">
+        <td align="center" valign="top" style="font-family:'Lato', Helvetica, Arial, sans-serif;font-size:13px;line-height:22px;color:#a7adb3;">
             <a href="@kifiFooterUrl" target="_blank" style="text-decoration:none;color:#a7adb3;">Your Kifi</a> |
             <a href="@privacyUrl" target="_blank" style="text-decoration:none;color:#a7adb3;">Privacy policy</a> |
             <a href="@kifiSupportUrl" target="_blank" style="text-decoration:none;color:#a7adb3;">Help Center</a>
@@ -121,7 +113,7 @@
             <br/>&copy; 2015 FortyTwo
         </td>
     </tr>
-    <tr bgcolor="#ffffff"><td height="35" class="line-space">&nbsp;</td></tr>
+    <tr bgcolor="#ffffff"><td height="15" class="line-space">&nbsp;</td></tr>
 </table>
 </body>
 </html>

@@ -10,6 +10,21 @@ sidePad = 10px
   background: #fff
   box-shadow: 0 3px 8px rgba(0,0,0,.15)
 
+.kf-ssg-spinner
+  position: absolute
+  right: 10px
+  top: 10px
+  height: 16px
+  width: 16px
+
+  &.ng-hide-remove
+    display: block !important
+    opacity: 0
+    transition: opacity .2s linear .1s
+
+  &.ng-hide-remove-active
+    opacity: 1
+
 .kf-ssg-group-title
   padding-left: sidePad
   line-height: 22px
@@ -29,7 +44,7 @@ iconAreaWidth = sidePad + 54px
   position: relative
 
   &.kf-selected
-    background-color: #f3faf2
+    background-color: tint(libraryGreen, 84%)
 
 uriHeight = 48px
 
@@ -66,12 +81,13 @@ uriHeight = 48px
   overflow: hidden
   text-overflow: ellipsis
 
-queryHeight = 32px
+simpleItemHeight = 32px
 
 .kf-ssg-query
 .kf-ssg-no-results
-  height: queryHeight
-  line-height: queryHeight
+.kf-ssg-my-libs
+  height: simpleItemHeight
+  line-height: simpleItemHeight
   font-size: 14px
   color: #777
 
@@ -79,7 +95,7 @@ queryHeight = 32px
   position: absolute
   top: 0
   left: 0
-  height: queryHeight
+  height: simpleItemHeight
   width: iconAreaWidth
   background-position: center
   background-size: 16px auto
@@ -159,6 +175,20 @@ countsHeight = 14px
 
   &>:not(:last-child)::after
     content: ' \00b7 '
+
+.kf-ssg-my-libs
+  padding: 0 sidePad 0 iconAreaWidth
+
+  &::before
+    content: ''
+    position: absolute
+    height: 6px
+    width: 6px
+    background: #bbb
+    border-radius: 50%
+    box-shadow: -9px 0 #bbb, 9px 0 #bbb
+    left: 27px
+    bottom: 12px
 
 userHeight = 46px
 userPicRadius = 32px

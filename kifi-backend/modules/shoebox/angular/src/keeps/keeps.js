@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfKeeps', [
-  '$window', '$timeout', 'keepActionService', 'libraryService', 'modalService', 'selectionService', 'undoService', 'profileService',
-  function ($window, $timeout, keepActionService, libraryService, modalService, selectionService, undoService, profileService) {
+  '$window', '$timeout', 'keepActionService', 'libraryService', 'modalService', 'KeepSelection', 'undoService', 'profileService',
+  function ($window, $timeout, keepActionService, libraryService, modalService, KeepSelection, undoService, profileService) {
 
     return {
       restrict: 'A',
@@ -20,7 +20,6 @@ angular.module('kifi')
         editOptions: '&',
         toggleEdit: '=',
         updateSelectedCount: '&',
-        selectedKeepsFilter: '&',
         currentPageOrigin: '@'
       },
       templateUrl: 'keeps/keeps.tpl.html',
@@ -64,12 +63,6 @@ angular.module('kifi')
           }
         }
 
-        function getSelectedKeeps() {
-          var selectedKeeps = scope.selection.getSelected(scope.availableKeeps);
-          var filter = scope.selectedKeepsFilter();
-          return _.isFunction(filter) ? filter(selectedKeeps) : selectedKeeps;
-        }
-
 
         //
         // Scope data.
@@ -80,7 +73,7 @@ angular.module('kifi')
         scope.addingTag = {enabled: false};
 
         // 'selection' keeps track of which keeps have been selected.
-        scope.selection = new selectionService.Selection();
+        scope.selection = new KeepSelection();
 
         // set default edit-mode options if it's not set by parent
         scope.editOptions = _.isObject(scope.editOptions()) ? scope.editOptions : function() {
@@ -199,7 +192,7 @@ angular.module('kifi')
 
         scope.onWidgetCopyLibraryClicked = function (clickedLibrary) {
           // Copies the keeps that are selected into the library that is selected.
-          var selectedKeeps = getSelectedKeeps();
+          var selectedKeeps = scope.selection.getSelected(scope.availableKeeps);
 
           keepActionService.copyToLibrary(_.pluck(selectedKeeps, 'id'), clickedLibrary.id).then(function (data) {
             var addedKeeps = data.successes;
