@@ -4,7 +4,7 @@
       <a href="{{library.keeper||library.owner|profileUrl}}" kf-track-origin="{{currentPageOrigin}}/alsoKeptInLibraryBy">
         <span class="kf-keep-who-pic" ng-attr-style="background-image:url({{library.keeper || library.owner | pic:100}})"></span>
       </a>
-      <a href="{{library.absPath}}" ng-click="onLibraryAttributionClicked()" kf-track-origin="libraryAttributionChip">
+      <a href="{{library.absPath || library.url}}" ng-click="onLibraryAttributionClicked()" kf-track-origin="libraryAttributionChip">
         <span class="kf-keep-who-lib">{{library.name}}</span>
       </a>
       <span kf-tooltip position="top" padding="10">
