@@ -111,8 +111,6 @@ class KeepDecorator @Inject() (
               hashtags = Some(collsForKeep.toSet.map { c: BasicCollection => Hashtag(c.name) }),
               summary = Some(pageInfoForKeep),
               siteName = DomainToNameMapper.getNameFromUrl(keep.url),
-              clickCount = None,
-              rekeepCount = None,
               libraryId = keep.libraryId.map(l => Library.publicId(l))
             )
         }

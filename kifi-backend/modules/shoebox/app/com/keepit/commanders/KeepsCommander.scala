@@ -224,13 +224,7 @@ class KeepsCommander @Inject() (
     keepsF.flatMap {
       case keepsWithHelpRankCounts =>
         val (keeps, clickCounts, rkCounts) = keepsWithHelpRankCounts.unzip3
-
-        keepDecorator.decorateKeepsIntoKeepInfos(Some(userId), false, keeps, ProcessedImageSize.Large.idealSize, withKeepTime = true).map { keepInfos =>
-          (keepInfos, clickCounts, rkCounts).zipped.map {
-            case (keepInfo, clickCount, rkCount) =>
-              keepInfo.copy(clickCount = clickCount, rekeepCount = rkCount)
-          }
-        }
+        keepDecorator.decorateKeepsIntoKeepInfos(Some(userId), false, keeps, ProcessedImageSize.Large.idealSize, withKeepTime = true)
     }
   }
 

@@ -403,14 +403,11 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
                       "libraries":[],
                       "librariesOmitted": 0,
                       "librariesTotal": 0,
-                      "clickCount":1,
                       "collections":[],
                       "tags":[],
                       "hashtags":[],
                       "summary":{},
                       "siteName":"kifi.com",
-                      "clickCount":1,
-                      "rekeepCount":1,
                       "libraryId":"l7jlKlnA36Su"
                     },
                     {
@@ -431,7 +428,6 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
                       "hashtags":[],
                       "summary":{},
                       "siteName":"FortyTwo",
-                      "clickCount":1,
                       "libraryId":"l7jlKlnA36Su"
                     }
                   ],
@@ -490,7 +486,6 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
                       "hashtags":[],
                       "summary":{},
                       "siteName":"FortyTwo",
-                      "clickCount":1,
                       "libraryId":"l7jlKlnA36Su"
                     }
                   ],
