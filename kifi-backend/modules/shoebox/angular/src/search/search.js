@@ -125,29 +125,6 @@ angular.module('kifi')
     // Scope methods.
     //
 
-    /*
-     * returns an array of the user's `keep` objects fetched from the keep
-     * cards that are selected. Each keep card (hit) is basically a URL. Each
-     * hit has a `keeps` array that contains information about all keeps the
-     * user has related to the URL.
-     *
-     * example input:
-     *   [ {url: 'foo.com', keeps: [{id: 1}, {id: 2}]},
-     *     {url: 'bar.com', keeps: [{id: 3}]} ]
-     * example output:
-     *   [ {url: 'foo.com', id: 1},
-     *     {url: 'foo.com', id: 2},
-     *     {url: 'bar.com', id: 3} ]
-     */
-    $scope.selectedKeepsFilter = function (hits) {
-      return _.flatten(_.map(hits, function (hit) {
-        return _.map(hit.keeps, function (keep) {
-          var ret = { 'url': hit.url };
-          return _.merge(ret, keep);
-        });
-      }));
-    };
-
     $scope.getNextKeeps = function (resetExistingResults) {
       if ($scope.loading || query === '') {
         return;
