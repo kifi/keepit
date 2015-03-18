@@ -142,21 +142,6 @@ class SeedIngestionCommander @Inject() (
     }
   }
 
-  def getPreviousSeeds(userId: Id[User], uris: Seq[Id[NormalizedURI]]): Future[Seq[SeedItem]] = {
-    db.readOnlyReplicaAsync { implicit session =>
-      val rawSeeds = rawSeedsRepo.getByUserIdAndUriIds(userId, uris)
-      rawSeeds.map { rawSeed =>
-        val keepers =
-          if (rawSeed.timesKept > MAX_INDIVIDUAL_KEEPERS_TO_CONSIDER) {
-            Keepers.TooMany
-          } else {
-            Keepers.ReasonableNumber(keepInfoRepo.getKeepersByUriId(rawSeed.uriId))
-          }
-        cookSeedItem(userId, rawSeed, keepers)
-      }
-    }
-  }
-
   def getBySeqNum(start: SequenceNumber[PublicSeedItem], maxBatchSize: Int): Future[Seq[PublicSeedItem]] = {
     db.readOnlyReplicaAsync { implicit session =>
       rawSeedsRepo.getDiscoverableBySeqNum(SequenceNumber[RawSeedItem](start.value), maxBatchSize).map { rawItem =>
