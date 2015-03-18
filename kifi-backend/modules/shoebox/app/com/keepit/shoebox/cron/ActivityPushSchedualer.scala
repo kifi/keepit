@@ -61,7 +61,7 @@ class ActivityPushSchedualer @Inject() (
     scheduleTaskOnOneMachine(actor.system, 21 seconds, 29 seconds, actor.ref, PushActivity, PushActivity.getClass.getSimpleName)
     scheduleTaskOnOneMachine(actor.system, 1 hour, 1 hours, actor.ref, CreatePushActivityEntities, CreatePushActivityEntities.getClass.getSimpleName)
   }
-
+  def createPushActivityEntities() = actor.ref ! CreatePushActivityEntities
 }
 
 class ActivityPusher @Inject() (
