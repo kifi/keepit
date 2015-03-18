@@ -4,6 +4,7 @@ import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.time._
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.model.ActivityPushTaskRepo
+import com.keepit.shoebox.cron.ActivityPusher
 import com.keepit.test.ShoeboxTestInjector
 
 import com.keepit.model.LibraryFactory._

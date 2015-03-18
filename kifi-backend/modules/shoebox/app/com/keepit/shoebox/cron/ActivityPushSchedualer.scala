@@ -1,20 +1,21 @@
-package com.keepit.commanders
+package com.keepit.shoebox.cron
 
 import java.util.concurrent.atomic.AtomicInteger
 
 import com.google.inject.Inject
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.akka.FortyTwoActor
-import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.logging.Logging
-import com.keepit.common.strings._
-import com.keepit.common.plugin.{ SchedulingProperties, SchedulerPlugin }
-import com.keepit.common.time._
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
-import com.keepit.eliza.{ PushNotificationExperiment, PushNotificationCategory, ElizaServiceClient }
+import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.logging.Logging
+import com.keepit.common.plugin.{ SchedulerPlugin, SchedulingProperties }
+import com.keepit.common.strings._
+import com.keepit.common.time._
+import com.keepit.eliza.{ ElizaServiceClient, PushNotificationCategory, PushNotificationExperiment }
 import com.keepit.model._
 import org.joda.time.DateTime
+
 import scala.collection.mutable
 import scala.concurrent.duration._
 import scala.util.Random
@@ -74,21 +75,23 @@ class ActivityPusher @Inject() (
     userPersonaRepo: UserPersonaRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
     actor: ActorInstance[ActivityPushActor],
-    clock: Clock) {
+    clock: Clock) extends Logging {
 
   def pushItBaby(activityPushTaskId: Id[ActivityPushTask]): Unit = {
     db.readOnlyMaster { implicit s =>
       val activity = activityPushTaskRepo.get(activityPushTaskId)
       if (notifyPreferenceRepo.canNotify(activity.userId, NotifyPreference.RECOS_REMINDER)) Some(activity) else None
-    } map { activity =>
+    } foreach { activity =>
       getMessage(activity.userId) match {
         case Some((message, pushMessageType, experimant)) =>
+          log.info(s"pushing activity update to ${activity.userId} of type $pushMessageType [$experimant]: $message")
           elizaServiceClient.sendPushNotification(activity.userId, message, pushMessageType, experimant)
           val lastActivity = getLastActivity(activity.userId)
           db.readWrite { implicit s =>
             activityPushTaskRepo.save(activity.copy(lastPush = Some(clock.now())).withLastActivity(lastActivity))
           }
         case None =>
+          log.info(s"skipping push activity for user ${activity.userId}")
       }
     }
   }
@@ -154,6 +157,7 @@ class ActivityPusher @Inject() (
       usersWithLastKeep.toSeq
     }
     db.readWrite { implicit s =>
+      log.info(s"creating ${users.size} tasks for users")
       users map {
         case (user, lastKeep) =>
           val lastActiveDate = lastKeep.getOrElse(user.createdAt)
