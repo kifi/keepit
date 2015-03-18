@@ -108,11 +108,13 @@ angular.module('kifi')
     }
 
     function unkeepFromLibrary(libraryId, keepId) {
+      libraryService.expireKeepsInLibraries();
       var url = routeService.removeKeepFromLibrary(libraryId, keepId);
       return $http.delete(url);  // jshint ignore:line
     }
 
     function unkeepManyFromLibrary(libraryId, keeps) {
+      libraryService.expireKeepsInLibraries();
       var url = routeService.removeManyKeepsFromLibrary(libraryId);
       var data = {
         'ids': _.pluck(keeps, 'id')
