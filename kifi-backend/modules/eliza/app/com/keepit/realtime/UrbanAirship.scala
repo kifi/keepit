@@ -45,7 +45,7 @@ object UrbanAirship {
 
 @ImplementedBy(classOf[UrbanAirshipImpl])
 trait UrbanAirship {
-  def registerDevice(userId: Id[User], token: String, deviceType: DeviceType, isDev: Boolean): Device
+  def registerDevice(userId: Id[User], token: String, deviceType: DeviceType, isDev: Boolean, signature: Option[String]): Device
   def notifyUser(userId: Id[User], notification: PushNotification): Unit
   def sendNotification(device: Device, notification: PushNotification): Unit
 }
@@ -59,16 +59,45 @@ class UrbanAirshipImpl @Inject() (
     clock: Clock,
     scheduler: Scheduler) extends UrbanAirship with Logging {
 
-  def registerDevice(userId: Id[User], token: String, deviceType: DeviceType, isDev: Boolean): Device = synchronized {
-    log.info(s"Registering device: $token (user $userId)")
-    val device = db.readWrite { implicit s =>
-      deviceRepo.get(token, deviceType).map { d =>
-        if (d.userId != userId) deviceRepo.save(d.copy(state = DeviceStates.INACTIVE))
+  def registerDevice(userId: Id[User], token: String, deviceType: DeviceType, isDev: Boolean, signatureOpt: Option[String]): Device = synchronized {
+    log.info(s"Registering device: $deviceType:$token for (user $userId, signature $signatureOpt)")
+
+    val device = if (signatureOpt.isDefined) {
+      val signature = signatureOpt.get
+
+      // find all devices for user with deviceType, but no signature and deactivate them!
+      db.readWrite { implicit s =>
+        val noSignatureDevices = deviceRepo.getByUserIdAndDeviceType(userId, deviceType).filter(_.signature.isEmpty)
+        noSignatureDevices.map { d =>
+          deviceRepo.save(d.copy(state = DeviceStates.INACTIVE))
+        }
       }
-      deviceRepo.get(userId, token, deviceType) match {
-        case Some(d) if d.state == DeviceStates.ACTIVE && d.isDev == isDev => d
-        case Some(d) => deviceRepo.save(d.copy(state = DeviceStates.ACTIVE, isDev = isDev))
-        case None => deviceRepo.save(Device(userId = userId, token = token, deviceType = deviceType, isDev = isDev))
+
+      db.readOnlyMaster { implicit s =>
+        deviceRepo.getByUserIdAndDeviceTypeAndSignature(userId, deviceType, signature, None)
+      } match {
+        case Some(d) => // update or reactivate an existing device
+          db.readWrite { implicit s =>
+            deviceRepo.save(d.copy(token = token, isDev = isDev, state = DeviceStates.ACTIVE))
+          }
+        case None => // new device for user! save new device!
+          db.readWrite { implicit s =>
+            deviceRepo.save(Device(userId = userId, token = token, deviceType = deviceType, isDev = isDev, signature = signatureOpt))
+          }
+      }
+
+    } else { // no signature provided... can only deal with tokens (old logic)
+      db.readWrite { implicit s =>
+        // deactivate all devices with token & deviceType but don't match current userId and don't have signature
+        deviceRepo.get(token, deviceType).filter(d => d.userId != userId && d.signature.isEmpty).map { d =>
+          deviceRepo.save(d.copy(state = DeviceStates.INACTIVE))
+        }
+        // find device with token & device type
+        deviceRepo.get(userId, token, deviceType) match {
+          case Some(d) if d.state == DeviceStates.ACTIVE && d.isDev == isDev => d
+          case Some(d) => deviceRepo.save(d.copy(state = DeviceStates.ACTIVE, isDev = isDev))
+          case None => deviceRepo.save(Device(userId = userId, token = token, deviceType = deviceType, isDev = isDev))
+        }
       }
     }
     future {
