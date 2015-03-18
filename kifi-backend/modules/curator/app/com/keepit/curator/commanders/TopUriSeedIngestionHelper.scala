@@ -27,7 +27,7 @@ class TopUriSeedIngestionHelper @Inject() (
     db: Database,
     graph: GraphServiceClient) extends PersonalSeedIngestionHelper with Logging {
 
-  val uriIngestionFreq = 120 //hours
+  val uriIngestionFreq = 180 //hours
 
   val graphCallLimiterLock = new ReactiveLock(2)
 
