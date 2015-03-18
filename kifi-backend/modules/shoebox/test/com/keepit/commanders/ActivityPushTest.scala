@@ -4,6 +4,7 @@ import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.time._
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.model.ActivityPushTaskRepo
+import com.keepit.shoebox.cron.ActivityPusher
 import com.keepit.test.ShoeboxTestInjector
 
 import com.keepit.model.LibraryFactory._
@@ -33,7 +34,7 @@ class ActivityPushTest extends Specification with ShoeboxTestInjector {
           keep().withLibrary(lib1).saved
           (user1, user2, user3)
         }
-        inject[ActivityPusher].createPushActivityEntities()
+        inject[ActivityPusher].createPushActivityEntities(2)
         db.readOnlyMaster { implicit s =>
           val repo = inject[ActivityPushTaskRepo]
           repo.getByUser(user1.id.get).get.userId === user1.id.get

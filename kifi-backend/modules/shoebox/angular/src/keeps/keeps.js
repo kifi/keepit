@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfKeeps', [
-  '$window', '$timeout', 'keepActionService', 'libraryService', 'modalService', 'selectionService', 'undoService', 'profileService',
-  function ($window, $timeout, keepActionService, libraryService, modalService, selectionService, undoService, profileService) {
+  '$window', '$timeout', 'keepActionService', 'libraryService', 'modalService', 'KeepSelection', 'undoService', 'profileService',
+  function ($window, $timeout, keepActionService, libraryService, modalService, KeepSelection, undoService, profileService) {
 
     return {
       restrict: 'A',
@@ -73,7 +73,7 @@ angular.module('kifi')
         scope.addingTag = {enabled: false};
 
         // 'selection' keeps track of which keeps have been selected.
-        scope.selection = new selectionService.Selection();
+        scope.selection = new KeepSelection();
 
         // set default edit-mode options if it's not set by parent
         scope.editOptions = _.isObject(scope.editOptions()) ? scope.editOptions : function() {
@@ -132,29 +132,26 @@ angular.module('kifi')
               selectedKeep.makeUnkept();
             });
 
-            var keepsDeletedText = selectedKeeps.length > 1 ? ' keeps deleted' : ' keep deleted';
-            undoService.add(selectedKeeps.length + keepsDeletedText, function () {
-              keepActionService.keepToLibrary(_.map(selectedKeeps, function(keep) {
-                var keepData = { url: keep.url };
-                if (keep.title) { keepData.title = keep.title; }
-                return keepData;
-              }), libraryId).then(function () {
-                _.forEach(selectedKeeps, function (selectedKeep) {
-                  selectedKeep.makeKept();
-                });
-
-                scope.selection.selectAll(selectedKeeps);
-                libraryService.addToLibraryCount(libraryId, selectedKeeps.length);
-              })['catch'](modalService.openGenericErrorModal);
-            });
-
-            libraryService.addToLibraryCount(libraryId, -1 * selectedKeeps.length);
+            libraryService.addToLibraryCount(libraryId, -selectedKeeps.length);
             scope.selection.unselectAll();
 
             scope.availableKeeps = _.difference(scope.availableKeeps, selectedKeeps);
             if (scope.availableKeeps.length < 10) {
               scope.scrollNext()(scope.availableKeeps.length);
             }
+
+            undoService.add(selectedKeeps.length > 1 ? selectedKeeps.length + ' keeps deleted' : 'keep deleted', function () {
+              keepActionService.keepToLibrary(_.map(selectedKeeps, function (keep) { return _.pick(keep, 'url', 'title'); }), libraryId).then(function () {
+                _.forEach(selectedKeeps, function (keep) {
+                  keep.makeKept();
+                });
+
+                libraryService.addToLibraryCount(libraryId, selectedKeeps.length);
+                scope.selection.selectAll(selectedKeeps);
+
+                scope.availableKeeps = _.reject(scope.keeps, {unkept: true});
+              })['catch'](modalService.openGenericErrorModal);
+            });
           })['catch'](modalService.openGenericErrorModal);
         };
 
