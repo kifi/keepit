@@ -37,7 +37,7 @@ class CuratorTasksPlugin @Inject() (
 
   override def onStart() {
     log.info("CuratorTasksPlugin onStart")
-    scheduleTaskOnOneMachine(system, 5 minutes, 3 minutes, completeDataIngestion) {
+    scheduleTaskOnLeader(system, 5 minutes, 3 minutes, completeDataIngestion) {
       ingestionCommander.ingestAll()
     }
     scheduleTaskOnOneMachine(system, 3 minutes, 2 minutes, uriRecommendationPrecomputation) {
