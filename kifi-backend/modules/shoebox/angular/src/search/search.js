@@ -12,8 +12,9 @@ angular.module('kifi')
     //
     var query;
     var filter;
-    var lastResult = null;
-    var selectedCount = 0;
+    var context;
+    var selectedCount;
+    var renderTimeout;
     var smoothScrollStep;  // used to ensure that only one smooth scroll animation happens at a time
 
 
@@ -64,8 +65,10 @@ angular.module('kifi')
         return;
       }
 
-      lastResult = null;
+      context = null;
       selectedCount = 0;
+      $timeout.cancel(renderTimeout);
+      renderTimeout = null;
 
       $scope.hasMore = true;
       $scope.scrollDistance = '100%';
@@ -161,13 +164,12 @@ angular.module('kifi')
       }
 
       $scope.loading = true;
-      searchActionService.find(query, filter, library, lastResult && lastResult.context, $rootScope.userLoggedIn).then(function (q, result) {
-        if (q !== query) {  // query was updated
+      searchActionService.find(query, filter, library, context, $rootScope.userLoggedIn).then(function (q, f, l, result) {
+        if (query !== q || filter !== f || library !== l) {  // query changed
           return;
         }
 
-        $scope.hasMore = !!result.mayHaveMore;
-        lastResult = result;
+        context = result.context;
 
         if (resetExistingResults) {
           $scope.resultKeeps.length = 0;
@@ -180,35 +182,34 @@ angular.module('kifi')
         $scope.resultTotals.othersTotal = $scope.resultTotals.othersTotal || result.othersTotal;
 
         var hits = result.hits;
-        var hitIndex = 0;
-
-        function processHit() {
-          // If query has changed or if we've finished processing all the hits, exit.
-          if ((q !== query) ||  (hitIndex >= hits.length)) {
-            return;
-          }
-
-          var hit = hits[hitIndex];
-          var searchKeep = new keepDecoratorService.Keep(hit);
-          if (!!searchKeep.id) {
-            searchKeep.buildKeep(searchKeep);
-          }
-
-          // TODO remove after we get rid of the deprecated code and update new code to use 'tags' instead of 'hashtags'
-          searchKeep.hashtags = searchKeep.tags;
-          $scope.resultKeeps.push(searchKeep);
-
-          hitIndex++;
-          $timeout(processHit);
+        if (hits.length) {
+          $scope.hasMore = !!result.mayHaveMore;
+          renderTimeout = $timeout(angular.bind(null, renderNextKeep, hits.slice()));
+        } else {
+          $scope.hasMore = false;
+          onDoneWithBatchOfKeeps();
         }
-
-        // Process one hit per event loop turn to allow other events to come through.
-        $timeout(function () {
-          processHit();
-          $scope.loading = false;
-        });
-      }.bind(null, query));
+      }.bind(null, query, filter, library));
     };
+
+    function renderNextKeep(keeps) {
+      var keep = new keepDecoratorService.Keep(keeps.shift());
+      if (keep.id) {
+        keep.buildKeep(keep);
+      }
+      // TODO remove after we get rid of the deprecated code and update new code to use 'tags' instead of 'hashtags'
+      keep.hashtags = keep.tags;
+      $scope.resultKeeps.push(keep);
+      if (keeps.length) {
+        renderTimeout = $timeout(angular.bind(null, renderNextKeep, keeps));
+      } else {
+        onDoneWithBatchOfKeeps();
+      }
+    }
+
+    function onDoneWithBatchOfKeeps() {
+      $scope.loading = false;
+    }
 
     $scope.isFilterSelected = function (type) {
       return filter === type;
