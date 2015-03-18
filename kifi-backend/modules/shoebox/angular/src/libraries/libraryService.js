@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .factory('libraryService', [
-  '$http', '$rootScope', 'util', 'profileService', 'routeService', 'Clutch', '$q', 'friendService', '$analytics',
-  function ($http, $rootScope, util, profileService, routeService, Clutch, $q, friendService, $analytics) {
+  '$http', '$rootScope', 'profileService', 'routeService', 'Clutch', '$q', '$analytics',
+  function ($http, $rootScope, profileService, routeService, Clutch, $q, $analytics) {
     var infos = {  // Note: the 3 kinds are mutually exclusive
       own: [],
       following: [],

@@ -100,7 +100,7 @@ angular.module('kifi')
     $scope.intent = initParams.getAndClear('intent');
 
     if ($state.current.name.split('.').pop() === 'own' && profile.numLibraries === 0 && profile.numFollowedLibraries > 0) {
-      $state.go('^.following');
+      $state.go('^.following', null, {location: 'replace'});
     } else {
       trackPageView();
       setCurrentPageOrigin();

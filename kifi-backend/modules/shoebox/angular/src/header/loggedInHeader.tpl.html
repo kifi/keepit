@@ -1,34 +1,34 @@
 <div class="kf-lih" ng-controller="LoggedInHeaderCtrl">
   <div class="kf-lih-inner kf-width-bounded">
     <div class="kf-lih-left">
-      <div class="kf-callout-lib-menu kf-callout-bubble kf-callout-bubble-bottom" ng-if="calloutVisible">
-        We’ve tidied up a bit.<br>Your libraries are now<br>listed here.
-        <div class="kf-callout-bubble-action">
-          <button class="kf-callout-bubble-button" ng-click="closeCallout()">Got it</button>
-        </div>
-      </div>
-      <button class="kf-lih-toggle-menu kifi-guide-target-1" ng-class="{'kf-menu-visible': libraryMenuVisible}" ng-mousedown="toggleMenu()"><span class="kf-lih-burger"></span></button>
-      <div kf-library-menu ng-show="libraryMenuVisible"></div>
       <a class="kf-lih-logo svg-kifi-clover-white-text" ui-sref="home"></a>
+      <div class="kifi-guide-target-1"></div><!-- TODO: remove all kifi-guide-target-# after all extension users at 3.3.50 -->
     </div>
     <div class="kf-lih-center">
-      <label class="kf-lih-search kifi-guide-target-2" ng-class="{'kf-lit': search.focused || search.text}">
+      <label class="kf-lih-search kifi-guide-target-2 kifi-guide-1" ng-class="{'kf-lit': search.focused || search.text, 'kf-instant': search.transitionOff}">
         <span class="kf-lih-search-left">
           <span class="kf-lih-search-icon svg-search-icon-gray"></span>
           <span class="kf-lih-search-icon-lit svg-search-icon-blue"></span>
           <a class="kf-lih-search-lib-owner-img" ng-if="search.libraryChip" style="background-image:url({{library.owner | pic:100}})" href="{{library.owner|profileUrl}}" title="{{library.owner.firstName}} {{library.owner.lastName}}"></a>
           <span class="kf-lih-search-lib-name" ng-if="search.libraryChip" style="background-color:{{library.color}}">{{library.name}}</span>
-          <a class="kf-lih-search-lib-x" ng-if="search.libraryChip" style="background-color:{{library.color}}" ng-click="onClickLibX()" href="javascript:">&times;</a>
+          <a class="kf-lih-search-lib-x" ng-if="search.libraryChip" style="background-color:{{library.color}}" ng-mousedown="onMouseDownLibX($event)" ng-click="onClickLibX()" href="javascript:">&times;</a>
         </span>
         <span class="kf-lih-search-center">
-          <input class="kf-lih-search-input" type="text" placeholder="Search Kifi…" ng-model="search.text" ng-focus="onInputFocus()" ng-blur="onInputBlur($event)" ng-change="onQueryChange()" ng-keydown="onKeydown($event)" ng-click="onSearchBarClicked()">
+          <input class="kf-lih-search-input" type="text" placeholder="Search" ng-model="search.text" ng-focus="onInputFocus()" ng-blur="onInputBlur($event)" ng-change="onQueryChange()" ng-keydown="onKeydown($event)" ng-click="onSearchBarClicked()">
         </span>
         <span class="kf-lih-search-right" ng-if="search.text">
-          <button class="kf-lih-search-clear" ng-click="clearInput()">Clear</button>
+          <button class="kf-lih-search-clear" ng-click="clearInput($event)">Clear</button>
         </span>
       </label>
+      <div class="kf-lih-search-suggestions" kf-search-suggest="search" library-id="library.id" ng-if="search.suggesting"></div>
+      <div class="kf-callout-search kf-callout-bubble kf-callout-bubble-bottom" ng-if="calloutVisible">
+        <p>We’ve tidied up a bit.<p>You can now click the search bar or<br>press <span class="kf-callout-key">/</span> to access your libraries.
+        <div class="kf-callout-bubble-action">
+          <button class="kf-callout-bubble-button" ng-click="closeCallout()">Got it</button>
+        </div>
+      </div>
     </div>
-    <div class="kf-lih-right kifi-guide-target-3">
+    <div class="kf-lih-right kifi-guide-target-3 kifi-guide-2">
       <button class="kf-lih-add-link sprite sprite-add-link" ng-click="addKeeps()">Add a link</button>
       <a href="/tags/manage" class="kf-lih-tags"><span class="svg-tag-white"></span>Manage tags</a>
       <span class="kf-lih-dropdown-parent" kf-hover-menu>

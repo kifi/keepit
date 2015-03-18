@@ -63,6 +63,9 @@ GET     /link/:provider             @com.keepit.controllers.core.AuthController.
 
 GET     /signup/:provider           @com.keepit.controllers.core.AuthController.signup(provider: String, publicLibraryId: Option[String] ?= None, intent: Option[String] ?= None)
 
+GET     /twitter/request            @com.keepit.controllers.core.AuthController.requestToTwitterWaitlist()
+GET     /twitter/thanks             @com.keepit.controllers.core.AuthController.thanksForTwitterWaitlist()
+
 # do we still use this endpoint?
 POST    /mobileauth/:provider       @com.keepit.controllers.mobile.MobileAuthController.accessTokenLogin(provider)
 
@@ -924,4 +927,36 @@ GET     /img/*file                 com.keepit.controllers.website.AngularImgAsse
 
 ->  / commonService.Routes
 
-GET     /*wildcard                 @com.keepit.controllers.website.KifiSiteRouter.app(wildcard)
+##########################################
+# Web App
+##########################################
+
+# Let's keep these routes alphabetized.
+
+GET     /connections               @com.keepit.controllers.website.KifiSiteRouter.redirectUserToOwnProfile(subpath = "/connections")
+GET     /find                      @com.keepit.controllers.website.KifiSiteRouter.serveWebAppToUser
+GET     /friends                   @com.keepit.controllers.website.KifiSiteRouter.redirectFromFriends(friend: Option[String])
+GET     /friends/invite            @com.keepit.controllers.website.KifiSiteRouter.redirectUserTo(path = "/invite")
+GET     /friends/requests          @com.keepit.controllers.website.KifiSiteRouter.redirectUserToOwnProfile(subpath = "/connections")
+GET     /friends/requests/email    @com.keepit.controllers.website.KifiSiteRouter.redirectUserToOwnProfile(subpath = "/connections")
+GET     /friends/requests/linkedin @com.keepit.controllers.website.KifiSiteRouter.redirectUserToOwnProfile(subpath = "/connections")
+GET     /friends/requests/facebook @com.keepit.controllers.website.KifiSiteRouter.redirectUserToOwnProfile(subpath = "/connections")
+GET     /friends/requests/refresh  @com.keepit.controllers.website.KifiSiteRouter.redirectUserToOwnProfile(subpath = "/connections")
+GET     /invite                    @com.keepit.controllers.website.KifiSiteRouter.handleInvitePage(friend: Option[String])
+GET     /me                        @com.keepit.controllers.website.KifiSiteRouter.redirectUserToOwnProfile(subpath = "")
+GET     /me/connections            @com.keepit.controllers.website.KifiSiteRouter.redirectUserToOwnProfile(subpath = "/connections")
+GET     /me/followers              @com.keepit.controllers.website.KifiSiteRouter.redirectUserToOwnProfile(subpath = "/followers")
+GET     /me/libraries              @com.keepit.controllers.website.KifiSiteRouter.redirectUserToOwnProfile(subpath = "/libraries")
+GET     /me/libraries/following    @com.keepit.controllers.website.KifiSiteRouter.redirectUserToOwnProfile(subpath = "/libraries/following")
+GET     /me/libraries/invited      @com.keepit.controllers.website.KifiSiteRouter.redirectUserToOwnProfile(subpath = "/libraries/invited")
+GET     /profile                   @com.keepit.controllers.website.KifiSiteRouter.serveWebAppToUser
+GET     /recommendations           @com.keepit.controllers.website.KifiSiteRouter.redirectUserTo(path = "/")
+GET     /tags/manage               @com.keepit.controllers.website.KifiSiteRouter.serveWebAppToUser
+GET     /:name                     @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfUserFound(name: Username)
+GET     /:name/connections         @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfUserFound(name: Username)
+GET     /:name/followers           @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfUserFound(name: Username)
+GET     /:name/libraries           @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfUserFound(name: Username)
+GET     /:name/libraries/following @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfUserFound(name: Username)
+GET     /:name/libraries/invited   @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfUserIsSelf(name: Username)
+GET     /:name/:slug               @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfLibraryFound(name: Username, slug)
+GET     /:name/:slug/find          @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfLibraryFound(name: Username, slug)

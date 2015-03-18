@@ -13,6 +13,7 @@ import javax.mail.event._
 import javax.mail.{ Authenticator, PasswordAuthentication }
 
 import com.google.inject.{ Inject, Singleton }
+import org.joda.time.{ Minutes, DateTime }
 
 import play.api.Play
 import play.api.Play.current
@@ -106,6 +107,8 @@ class SendgridMailProvider @Inject() (
       transportOpt.get
   }
 
+  private var lastAirbrakeTime: Option[DateTime] = None
+
   /**
    * Please see http://sendgrid.com/docs/API%20Reference/SMTP%20API/index.html for docs
    */
@@ -114,7 +117,15 @@ class SendgridMailProvider @Inject() (
       val checkAgain = db.readOnlyMaster(mailRepo.getOpt(mail.id.get)(_)).exists(_.isReadyToSend)
       if (checkAgain) {
         val now = clock.now
-        airbrake.verify(mail.createdAt.isAfter(now.minusMinutes(10)),
+        val ontime = mail.createdAt.isAfter(now.minusMinutes(10))
+        val shouldAlert = if (ontime || lastAirbrakeTime.exists(time => Minutes.minutesBetween(time, currentDateTime).getMinutes < 10)) {
+          false
+        } else {
+          lastAirbrakeTime = Some(currentDateTime)
+          true
+        }
+
+        airbrake.verify(!shouldAlert,
           s"sending mail ${mail.id.get} / ${mail.externalId} which was created more then 10 minutes ago at " +
             s"${mail.createdAt}, now is $now")
         val message = try {

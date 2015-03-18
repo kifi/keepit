@@ -1,5 +1,6 @@
 package com.keepit.eliza.controllers.internal
 
+import com.keepit.eliza.{ PushNotificationCategory, PushNotificationExperiment }
 import com.keepit.eliza.controllers.WebSocketRouter
 import com.keepit.common.controller.ElizaServiceController
 import com.keepit.common.logging.Logging
@@ -42,7 +43,9 @@ class ElizaController @Inject() (
       val req = request.body.asJson.get.asInstanceOf[JsObject]
       val userId = Id[User]((req \ "userId").as[Long])
       val message = (req \ "message").asInstanceOf[String]
-      messagingCommander.sendMessagePushNotification(userId, message)
+      val pushNotificationExperiment = (req \ "pushNotificationExperiment").asInstanceOf[PushNotificationExperiment]
+      val pushNotificationCategory = (req \ "pushNotificationCategory").asInstanceOf[PushNotificationCategory]
+      messagingCommander.sendPushNotification(userId, message, pushNotificationCategory, pushNotificationExperiment)
       Ok("")
     }
   }

@@ -1,6 +1,7 @@
 package com.keepit.model
 
 import com.keepit.common.db._
+import com.keepit.common.logging.Logging
 import org.joda.time.DateTime
 import play.api.libs.json.{ JsArray, JsObject, JsValue }
 import com.keepit.common.time.{ currentDateTime, DEFAULT_DATE_TIME_ZONE }
@@ -27,10 +28,19 @@ case class RawKeep(
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
 }
 
-class RawKeepFactory @Inject() (airbrake: AirbrakeNotifier) {
+object RawKeep extends Logging {
+  def extractKeepSourceAttribtuion(keep: RawKeep): Option[KeepSourceAttribution] = {
+    keep.source match {
+      case KeepSource.twitterFileImport | KeepSource.twitterSync =>
+        val attrOpt = keep.originalJson.flatMap(js => TwitterAttribution.fromRawTweetJson(js))
+        if (attrOpt.isEmpty) log.warn(s"empty KeepSourceAttribtuion extracted. rawKeep id: ${keep.id.get}")
+        attrOpt.map { attr => KeepSourceAttribution(attribution = attr) }
+      case _ => None
+    }
+  }
+}
 
-  def toRawKeep(userId: Id[User], source: KeepSource, keepInfos: Seq[KeepInfo], importId: Option[String], installationId: Option[ExternalId[KifiInstallation]], libraryId: Option[Id[Library]]): Seq[RawKeep] =
-    keepInfos map { k => RawKeep(userId = userId, title = k.title, url = k.url, isPrivate = k.isPrivate, importId = importId, source = source, installationId = installationId, libraryId = libraryId) }
+class RawKeepFactory @Inject() (airbrake: AirbrakeNotifier) {
 
   private def getBookmarkJsonObjects(value: JsValue): Seq[JsObject] = value match {
     case JsArray(elements) => elements.map(getBookmarkJsonObjects).flatten

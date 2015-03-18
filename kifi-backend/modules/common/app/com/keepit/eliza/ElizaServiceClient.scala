@@ -24,13 +24,26 @@ import com.keepit.eliza.model.{ UserThreadView, MessageHandle, UserThreadStatsFo
 import akka.actor.Scheduler
 import com.keepit.common.json.TupleFormat._
 
+sealed case class PushNotificationCategory(name: String)
+object PushNotificationCategory {
+  val LibraryChanged = PushNotificationCategory("LibraryChanged")
+  val PersonaUpdate = PushNotificationCategory("PersonaUpdate")
+  implicit val format = Json.format[PushNotificationCategory]
+}
+case class PushNotificationExperiment(name: String)
+object PushNotificationExperiment {
+  val Experiment1 = PushNotificationExperiment("Experiment1")
+  val Experiment2 = PushNotificationExperiment("Experiment2")
+  implicit val format = Json.format[PushNotificationExperiment]
+}
+
 trait ElizaServiceClient extends ServiceClient {
   final val serviceType = ServiceType.ELIZA
   def sendToUserNoBroadcast(userId: Id[User], data: JsArray): Unit
   def sendToUser(userId: Id[User], data: JsArray): Unit
   def sendToAllUsers(data: JsArray): Unit
 
-  def sendPushNotification(userId: Id[User], message: String)
+  def sendPushNotification(userId: Id[User], message: String, pushNotificationCategory: PushNotificationCategory, pushNotificationExperiment: PushNotificationExperiment): Unit
 
   def connectedClientCount: Future[Seq[Int]]
 
@@ -65,9 +78,9 @@ class ElizaServiceClientImpl @Inject() (
   userThreadStatsForUserIdCache: UserThreadStatsForUserIdCache)
     extends ElizaServiceClient with Logging {
 
-  def sendPushNotification(userId: Id[User], message: String): Unit = {
+  def sendPushNotification(userId: Id[User], message: String, pushNotificationCategory: PushNotificationCategory, pushNotificationExperiment: PushNotificationExperiment): Unit = {
     implicit val userFormatter = Id.format[User]
-    val payload = Json.obj("userId" -> userId, "message" -> message)
+    val payload = Json.obj("userId" -> userId, "message" -> message, "pushNotificationCategory" -> pushNotificationCategory, "pushNotificationExperiment" -> pushNotificationExperiment)
     call(Eliza.internal.sendPushNotification, payload)
   }
 

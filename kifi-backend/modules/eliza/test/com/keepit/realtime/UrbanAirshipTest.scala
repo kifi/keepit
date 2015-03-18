@@ -1,18 +1,53 @@
 package com.keepit.realtime
 
 import com.google.inject.Provides
+import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.net.ProdHttpClientModule
 import com.keepit.eliza.model.MessageThread
 import com.keepit.model.User
 import com.keepit.test.{ ElizaTestInjector, TestInjector }
 import net.codingwell.scalaguice.ScalaModule
+import org.joda.time.DateTime
 import org.specs2.mutable.Specification
 import play.api.libs.json.Json
 
 class UrbanAirshipTest extends Specification with TestInjector with ElizaTestInjector {
 
   "Urban Airship" should {
+
+    "getDevices" in {
+      withDb() { implicit injector =>
+
+        val urbanAirship = inject[UrbanAirshipImpl]
+        val repo = inject[DeviceRepo]
+        inject[Database].readWrite { implicit s =>
+          repo.save(Device(userId = Id[User](1), token = "32e0a1c0cd0860ea392d06d26bbd1d4f289bbc488c29d634aee8ccb10e812f63", deviceType = DeviceType.IOS, updatedAt = new DateTime(2013, 2, 2, 1, 1, 1)))
+          repo.save(Device(userId = Id[User](1), token = "32e0a1c0cd0860ea392d06d26bbd1d4f289bbc488c29d634aee8ccb10e812f64", deviceType = DeviceType.IOS, updatedAt = new DateTime(2014, 2, 2, 1, 1, 1)))
+          repo.save(Device(userId = Id[User](1), token = "32e0a1c0cd0860ea392d06d26bbd1d4f289bbc488c29d634aee8ccb10e812f65", deviceType = DeviceType.IOS, updatedAt = new DateTime(2014, 2, 2, 1, 1, 1)))
+          repo.save(Device(userId = Id[User](1), token = "32e0a1c0cd0860ea392d06d26bbd1d4f289bbc488c29d634aee8ccb10e812f67", deviceType = DeviceType.Android, updatedAt = new DateTime(2014, 2, 2, 1, 1, 1)))
+        }
+        inject[Database].readOnlyMaster { implicit s =>
+          urbanAirship.getDevices(Id[User](1)).map(_.token).toSet === Set("32e0a1c0cd0860ea392d06d26bbd1d4f289bbc488c29d634aee8ccb10e812f65", "32e0a1c0cd0860ea392d06d26bbd1d4f289bbc488c29d634aee8ccb10e812f67")
+        }
+      }
+    }
+
+    "getDevice" in {
+      withDb() { implicit injector =>
+
+        val urbanAirship = inject[UrbanAirshipImpl]
+        val repo = inject[DeviceRepo]
+        inject[Database].readWrite { implicit s =>
+          repo.save(Device(userId = Id[User](1), token = "32e0a1c0cd0860ea392d06d26bbd1d4f289bbc488c29d634aee8ccb10e812f63", deviceType = DeviceType.IOS, updatedAt = new DateTime(2013, 2, 2, 1, 1, 1)))
+          repo.save(Device(userId = Id[User](1), token = "32e0a1c0cd0860ea392d06d26bbd1d4f289bbc488c29d634aee8ccb10e812f64", deviceType = DeviceType.IOS, updatedAt = new DateTime(2014, 2, 2, 1, 1, 1)))
+          repo.save(Device(userId = Id[User](1), token = "32e0a1c0cd0860ea392d06d26bbd1d4f289bbc488c29d634aee8ccb10e812f65", deviceType = DeviceType.IOS, updatedAt = new DateTime(2014, 2, 2, 1, 1, 1)))
+        }
+        inject[Database].readOnlyMaster { implicit s =>
+          urbanAirship.getDevices(Id[User](1)).map(_.token).toSet === Set("32e0a1c0cd0860ea392d06d26bbd1d4f289bbc488c29d634aee8ccb10e812f65")
+        }
+      }
+    }
 
     "create ios json for MessageThreadPushNotification" in {
       withInjector() { implicit injector =>
@@ -51,7 +86,7 @@ class UrbanAirshipTest extends Specification with TestInjector with ElizaTestInj
       val urbanAirshipClient = inject[FakeUrbanAirshipClient]
       urbanAirshipClient.jsons.size === 0
       val device = Device(userId = Id[User](1), token = "32e0a1c0cd0860ea392d06d26bbd1d4f289bbc488c29d634aee8ccb10e812f63", deviceType = DeviceType.IOS)
-      val notification = SimplePushNotification(unvisitedCount = 3, message = Some("bar"), sound = Some(UrbanAirship.DefaultNotificationSound))
+      val notification = SimplePushNotification(unvisitedCount = 3, message = Some("bar"), sound = Some(UrbanAirship.DefaultNotificationSound), category = null, experiment = null)
       urbanAirship.sendNotification(device, notification)
       urbanAirshipClient.jsons.size === 1
       urbanAirshipClient.jsons(0) === Json.parse(

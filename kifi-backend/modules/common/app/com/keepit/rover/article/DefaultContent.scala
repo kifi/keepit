@@ -6,13 +6,15 @@ import org.joda.time.DateTime
 
 @json
 case class DefaultContent(
-  destinationUrl: String,
-  title: Option[String],
-  description: Option[String],
-  content: Option[String],
-  keywords: Seq[String],
-  authors: Seq[PageAuthor],
-  mediaType: Option[String],
-  publishedAt: Option[DateTime],
-  http: HttpInfo,
-  normalization: NormalizationInfo) extends ArticleContent with HttpInfoHolder with NormalizationInfoHolder
+    destinationUrl: String,
+    title: Option[String],
+    description: Option[String],
+    content: Option[String],
+    keywords: Seq[String],
+    authors: Seq[PageAuthor],
+    openGraphType: Option[String],
+    publishedAt: Option[DateTime],
+    http: HttpInfo,
+    normalization: NormalizationInfo) extends ArticleContent with HttpInfoHolder with NormalizationInfoHolder {
+  def mediaType = openGraphType
+}

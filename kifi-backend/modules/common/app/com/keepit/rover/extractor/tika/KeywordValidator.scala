@@ -1,8 +1,11 @@
-package com.keepit.scraper.extractor
+package com.keepit.rover.extractor.tika
 
 import com.keepit.search.util.AhoCorasick
-import org.apache.tika.sax.ContentHandlerDecorator
-import org.xml.sax.ContentHandler
+
+object KeywordValidator {
+  val specialRegex = """[,;:/]\s*""".r
+  val spaceRegex = """\s+""".r
+}
 
 class KeywordValidator(keywordCandidates: Seq[String]) {
 
@@ -44,4 +47,3 @@ class KeywordValidator(keywordCandidates: Seq[String]) {
 
   def coverage: Double = validatedKeywords.size.toDouble / matcher.size.toDouble
 }
-

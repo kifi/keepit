@@ -5,8 +5,8 @@ import com.keepit.common.time._
 import com.keepit.cortex.models.lda.LDATopic
 import com.keepit.heimdal.DelightedAnswerSource
 import com.keepit.model._
-import java.sql.{ Clob, Date, Timestamp }
-import org.joda.time.{ DateTime, LocalDate }
+import java.sql.{ Time, Clob, Timestamp }
+import org.joda.time.{ LocalTime, DateTime, LocalDate }
 import scala.slick.ast.TypedType
 import scala.slick.jdbc.{ PositionedResult, GetResult, PositionedParameters, SetParameter }
 import play.api.libs.json._
@@ -39,6 +39,7 @@ trait FortyTwoGenericTypeMappers { self: { val db: DataBaseComponent } =>
   implicit def externalIdTypeMapper[M <: Model[M]] = MappedColumnType.base[ExternalId[M], String](_.id, ExternalId[M])
   implicit def nameMapper[M <: Model[M]] = MappedColumnType.base[Name[M], String](_.name, Name[M])
   implicit val dateTimeMapper = MappedColumnType.base[DateTime, Timestamp](d => new Timestamp(d.getMillis), t => new DateTime(t.getTime, zones.UTC))
+  implicit val localTimeMapper = MappedColumnType.base[LocalTime, Int](t => t.getMillisOfDay, t => new LocalTime(t, zones.UTC))
 
   implicit def seqIdsMapper[M <: Model[M]]: TypedType[Seq[Id[M]]] = MappedColumnType.base[Seq[Id[M]], String](
     { ids => Json.stringify(Json.toJson(ids)) }, { jstr => Json.parse(jstr).as[Seq[Id[M]]] })
@@ -156,6 +157,8 @@ trait FortyTwoGenericTypeMappers { self: { val db: DataBaseComponent } =>
   implicit val setSeqLongParameter = setSeqParameter[Long]
   implicit val setDateTimeParameter = setParameterFromMapper[DateTime]
   implicit val setSeqDateTimeParameter = setSeqParameter[DateTime]
+  implicit val setLocalTimeParameter = setParameterFromMapper[LocalTime]
+  implicit val setSeqLocalTimeParameter = setSeqParameter[LocalTime]
   implicit def setIdParameter[M <: Model[M]] = setParameterFromMapper[Id[M]]
   implicit def setStateParameter[M <: Model[M]] = setParameterFromMapper[State[M]]
   implicit val setSocialNetworkTypeParameter = setParameterFromMapper[SocialNetworkType]
@@ -169,6 +172,8 @@ trait FortyTwoGenericTypeMappers { self: { val db: DataBaseComponent } =>
 
   implicit val getDateTimeResult = getResultFromMapper[DateTime]
   implicit val getOptDateTimeResult = getResultOptionFromMapper[DateTime]
+  implicit val getLocalTimeResult = getResultFromMapper[LocalTime]
+  implicit val getOptLocalTimeResult = getResultOptionFromMapper[LocalTime]
   implicit val getSocialNetworkTypeResult = getResultFromMapper[SocialNetworkType]
   implicit def getSequenceNumberResult[T] = getResultFromMapper[SequenceNumber[T]]
   implicit def getIdResult[M <: Model[M]] = getResultFromMapper[Id[M]]

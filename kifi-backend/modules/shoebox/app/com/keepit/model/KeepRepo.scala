@@ -54,7 +54,7 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def getByExtIdandLibraryId(extId: ExternalId[Keep], libraryId: Id[Library], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Option[Keep]
   def getKeepsFromLibrarySince(since: DateTime, library: Id[Library], max: Int)(implicit session: RSession): Seq[Keep]
   def librariesWithMostKeepsSince(count: Int, since: DateTime)(implicit session: RSession): Seq[(Id[Library], Int)]
-  def latestKeepInLibrary(libraryId: Id[Library])(implicit session: RSession): Option[DateTime]
+  def latestKeep(userId: Id[User])(implicit session: RSession): Option[DateTime]
 }
 
 @Singleton
@@ -86,9 +86,10 @@ class KeepRepoImpl @Inject() (
     def libraryId = column[Option[Id[Library]]]("library_id", O.Nullable)
     def visibility = column[LibraryVisibility]("visibility", O.NotNull)
     def keptAt = column[DateTime]("kept_at", O.NotNull)
+    def sourceAttributionId = column[Id[KeepSourceAttribution]]("source_attribution_id", O.Nullable)
 
     def * = (id.?, createdAt, updatedAt, externalId, title.?, uriId, isPrimary.?, inDisjointLib.?, urlId, url, bookmarkPath.?, isPrivate,
-      userId, state, source, kifiInstallation.?, seq, libraryId, visibility, keptAt) <> ((Keep.applyFromDbRow _).tupled, Keep.unapplyToDbRow _)
+      userId, state, source, kifiInstallation.?, seq, libraryId, visibility, keptAt, sourceAttributionId.?) <> ((Keep.applyFromDbRow _).tupled, Keep.unapplyToDbRow _)
   }
 
   def table(tag: Tag) = new KeepTable(tag)
@@ -120,7 +121,8 @@ class KeepRepoImpl @Inject() (
       seq = r.<<[SequenceNumber[Keep]],
       libraryId = r.<<[Option[Id[Library]]],
       visibility = r.<<[LibraryVisibility],
-      keptAt = r.<<[DateTime]
+      keptAt = r.<<[DateTime],
+      sourceAttributionId = r.<<[Option[Id[KeepSourceAttribution]]]
     )
   }
   private val bookmarkColumnOrder: String = _taggedTable.columnStrings("bm")
@@ -477,8 +479,8 @@ class KeepRepoImpl @Inject() (
     sql"""select b.library_id, count(*) as cnt from bookmark b, library l where l.id = b.library_id and l.state='active' and l.visibility='published' and b.kept_at > $since group by b.library_id order by count(*) desc limit $count""".as[(Id[Library], Int)].list
   }
 
-  def latestKeepInLibrary(libraryId: Id[Library])(implicit session: RSession): Option[DateTime] = {
+  def latestKeep(userId: Id[User])(implicit session: RSession): Option[DateTime] = {
     import StaticQuery.interpolation
-    sql"""select max(kept_at) as cnt from bookmark where library_id = $libraryId and state='active'""".as[DateTime].firstOption
+    sql"""select kept_at from bookmark where user_id = $userId and state='active'""".as[DateTime].firstOption
   }
 }

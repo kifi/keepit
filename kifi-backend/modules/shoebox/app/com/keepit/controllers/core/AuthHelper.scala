@@ -224,16 +224,6 @@ class AuthHelper @Inject() (
 
         val result = if (isFinalizedImmediately) {
           Redirect(uri)
-        } else if (cookieIntent.isDefined && cookieIntent.get.value == "waitlist") {
-          db.readOnlyMaster { implicit session =>
-            socialRepo.getByUser(user.id.get).find(_.networkType == SocialNetworks.TWITTER).flatMap {
-              _.getProfileUrl.map(url => url.substring(url.lastIndexOf('/') + 1))
-            }
-          }.map { handle =>
-            twitterWaitlistCommander.addEntry(user.id.get, handle)
-          }
-          // todo: use real url:
-          Redirect(s"${com.keepit.controllers.website.routes.TwitterWaitlistController.getFakeWaitlistPosition().url}").discardingCookies(discardedCookies: _*)
         } else {
           Ok(Json.obj("uri" -> uri))
         }
@@ -442,7 +432,7 @@ class AuthHelper @Inject() (
               error => throw error,
               authenticator => {
                 val resp = if (request.userAgentOpt.exists(_.isMobile)) {
-                  Ok(views.html.mobile.MobileRedirect("/email/verified"))
+                  Ok(views.html.mobile.mobileAppRedirect("/email/verified"))
                 } else if (kifiInstallationRepo.all(address.userId, Some(KifiInstallationStates.INACTIVE)).isEmpty) { // todo: factor out
                   // user has no installations
                   Redirect("/install")

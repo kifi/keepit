@@ -1,13 +1,13 @@
 <div class="kf-main-search" ng-class="{'kf-width-bounded': !isLibrarySearch}">
-  <div class="kf-main-head" ng-if="!isLibrarySearch">
-    <div ng-if="$root.userLoggedIn" class="kf-search-filters">
+  <div class="kf-main-head">
+    <div class="kf-search-filters" ng-if="$root.userLoggedIn && !isLibrarySearch">
       <a class="kf-search-filter" ng-class="{ selected: isFilterSelected('a'), enabled: isEnabled('a') }" ui-sref=".({f:'a'})" ng-click="onClickSearchFilter('a')">All keeps</a>
       <a class="kf-search-filter" ng-class="{ selected: isFilterSelected('m'), enabled: isEnabled('m') }" ui-sref=".({f:'m'})" ng-click="onClickSearchFilter('m')">Your keeps ({{resultTotals.myTotal | number}})</a>
       <a class="kf-search-filter" ng-class="{ selected: isFilterSelected('f'), enabled: isEnabled('f') }" ui-sref=".({f:'f'})" ng-click="onClickSearchFilter('f')">Connections’ keeps ({{resultTotals.friendsTotal | number}})</a>
     </div>
     <div class="kf-subtitle">
       <span class="kf-subtitle-text">{{getSubtitle()}}</span>
-      <div ng-if="$root.userLoggedIn" class="kf-edit-keeps" ng-click="toggleEdit()">
+      <div class="kf-edit-keeps" ng-click="toggleEdit()" ng-if="$root.userLoggedIn && resultKeeps.length > 1">
         <span class="sprite sprite-edit-pencil-icon"></span>
         <span class="kf-edit-keeps-label">{{editKeepsLabel()}}</span>
       </div>

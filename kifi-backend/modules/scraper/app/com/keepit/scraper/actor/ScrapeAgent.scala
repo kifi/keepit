@@ -48,6 +48,8 @@ class ScrapeAgent @Inject() (
       }
     case ReceiveTimeout =>
       log.info(s"[ScrapeAgent($name).idle] has been idle for a while")
+    case x: JobDone =>
+      log.warn(s"[ScrapeAgent($name).idle] received JobDone msg while idle. Likely from a slow future.")
     case m => throw new UnsupportedActorMessage(m)
   }
 
@@ -60,6 +62,7 @@ class ScrapeAgent @Inject() (
       log.error(s"[ScrapeAgent($name).busy] ReceiveTimeout exception when busy")
       context.become(idle)
       parent ! ScrapeAgentTimeout(self)
+      parent ! WorkerAvail(self)
     case JobAvail | ScrapeJob =>
       log.warn(s"[ScrapeAgent($name).busy], not supposed to receive JobAvail or ScrapeJob message")
 

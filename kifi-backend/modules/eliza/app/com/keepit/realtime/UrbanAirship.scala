@@ -1,5 +1,7 @@
 package com.keepit.realtime
 
+import com.keepit.eliza.{ PushNotificationExperiment, PushNotificationCategory }
+
 import scala.concurrent.duration._
 import java.util.concurrent.TimeUnit
 
@@ -31,7 +33,7 @@ sealed trait PushNotification {
 }
 
 case class MessageThreadPushNotification(id: ExternalId[MessageThread], unvisitedCount: Int, message: Option[String], sound: Option[NotificationSound]) extends PushNotification
-case class SimplePushNotification(unvisitedCount: Int, message: Option[String], sound: Option[NotificationSound] = None) extends PushNotification
+case class SimplePushNotification(unvisitedCount: Int, message: Option[String], sound: Option[NotificationSound] = None, category: PushNotificationCategory, experiment: PushNotificationExperiment) extends PushNotification
 
 case class NotificationSound(name: String) extends AnyVal
 
@@ -76,22 +78,19 @@ class UrbanAirshipImpl @Inject() (
     device
   }
 
-  val devicesCache: LoadingCache[Id[User], Seq[Device]] = CacheBuilder.newBuilder()
-    .maximumSize(10000)
-    .expireAfterWrite(30, TimeUnit.MINUTES)
-    .build(
-      new CacheLoader[Id[User], Seq[Device]]() {
-        def load(userId: Id[User]): collection.Seq[Device] = {
-          db.readOnlyReplica { implicit s =>
-            //todo(eishay): should be cached in memcache!
-            deviceRepo.getByUserId(userId)
-          }
-        }
-      })
+  def getDevices(userId: Id[User]): Seq[Device] = {
+    val devices = db.readOnlyMaster { implicit s =>
+      deviceRepo.getByUserId(userId).groupBy(_.deviceType)
+    }
+    val onePerType = devices map {
+      case (deviceType, devicesOfType) => deviceType -> devicesOfType.sortBy(_.updatedAt).reverse.head
+    }
+    onePerType.values.toSeq
+  }
 
   def notifyUser(userId: Id[User], notification: PushNotification): Unit = {
-    log.info(s"Notifying user: $userId")
-    val devices: Seq[Device] = devicesCache.get(userId)
+    val devices: Seq[Device] = getDevices(userId)
+    log.info(s"Notifying user: $userId with $devices")
     //get only active devices
     val activeDevices = devices filter { d =>
       d.state == DeviceStates.ACTIVE

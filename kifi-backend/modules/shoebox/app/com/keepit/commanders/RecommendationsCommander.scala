@@ -240,7 +240,7 @@ class RecommendationsCommander @Inject() (
       val libIds = libInfos.map(_.libraryId)
       val libraries = db.readOnlyReplica { implicit s =>
         val mapping = libRepo.getLibraries(libIds.toSet)
-        libIds.flatMap { id => mapping.get(id).map { x => (id, x) } }.filter(_._2.visibility == LibraryVisibility.PUBLISHED)
+        libIds.flatMap { id => mapping.get(id).map { x => (id, x) } }.filter(x => x._2.visibility == LibraryVisibility.PUBLISHED && x._2.state == LibraryStates.ACTIVE)
       }.take(limit)
 
       val idToLibraryMap = libraries.toMap

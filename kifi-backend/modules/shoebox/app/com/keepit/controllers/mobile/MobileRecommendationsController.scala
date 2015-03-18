@@ -34,7 +34,7 @@ class MobileRecommendationsController @Inject() (
 
   def topRecosV3(recencyWeight: Float, uriContext: Option[String], libContext: Option[String]) = UserAction.async { request =>
     val uriRecosF = commander.topRecos(request.userId, getRecommendationSource(request), RecommendationSubSource.RecommendationsFeed, uriContext.isDefined, recencyWeight, context = uriContext)
-    val libRecosF = commander.topPublicLibraryRecos(request.userId, 10, RecommendationSource.Site, RecommendationSubSource.RecommendationsFeed, context = libContext)
+    val libRecosF = commander.topPublicLibraryRecos(request.userId, 10, getRecommendationSource(request), RecommendationSubSource.RecommendationsFeed, context = libContext)
 
     for (libs <- libRecosF; uris <- uriRecosF) yield Ok {
       val FullUriRecoResults(urisReco, newUrisContext) = uris

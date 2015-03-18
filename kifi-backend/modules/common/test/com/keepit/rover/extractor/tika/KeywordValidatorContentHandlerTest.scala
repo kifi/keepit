@@ -1,7 +1,7 @@
-package com.keepit.scraper.extractor
+package com.keepit.rover.extractor.tika
 
-import org.specs2.mutable._
 import org.apache.tika.sax.WriteOutContentHandler
+import org.specs2.mutable._
 
 class KeywordValidatorContentHandlerTest extends Specification {
   "KeywordValidatorContentHandler" should {

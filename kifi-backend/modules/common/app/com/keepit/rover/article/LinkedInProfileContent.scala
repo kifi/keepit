@@ -6,11 +6,11 @@ import org.joda.time.DateTime
 
 @json
 case class LinkedInProfile(
-    id: String,
+    id: Option[String],
     title: String,
     overview: String,
     sections: String) {
-  def content = Seq(title, overview, sections, id).filter(_.nonEmpty).mkString("\n")
+  def content = Seq(title, overview, sections, id.getOrElse("")).filter(_.nonEmpty).mkString("\n")
 }
 
 @json
@@ -20,10 +20,11 @@ case class LinkedInProfileContent(
     description: Option[String],
     keywords: Seq[String],
     authors: Seq[PageAuthor],
-    mediaType: Option[String],
+    openGraphType: Option[String],
     publishedAt: Option[DateTime],
     profile: LinkedInProfile,
     http: HttpInfo,
     normalization: NormalizationInfo) extends ArticleContent with HttpInfoHolder with NormalizationInfoHolder {
-  def content = Some(profile.content)
+  def content = Some(profile.content).filter(_.nonEmpty)
+  def mediaType = openGraphType
 }

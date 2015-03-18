@@ -149,9 +149,7 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
         val userController = inject[UserController]
         val path = routes.UserController.savePrefs().url
 
-        val inputJson1 = Json.obj(
-          "library_sorting_pref" -> "name",
-          "show_delighted_question" -> false)
+        val inputJson1 = Json.obj("show_delighted_question" -> false)
         val request1 = FakeRequest("POST", path).withBody(inputJson1)
         val result1: Future[Result] = userController.savePrefs()(request1)
         status(result1) must equalTo(OK)
@@ -159,7 +157,7 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
         Json.parse(contentAsString(result1)) === inputJson1
 
         db.readOnlyMaster { implicit s =>
-          inject[UserValueRepo].getValueStringOpt(user.id.get, UserValueName.LIBRARY_SORTING_PREF) === Some("name")
+          inject[UserValueRepo].getValue(user.id.get, UserValues.showDelightedQuestion) === false
         }
 
         val request2 = FakeRequest("GET", path)
@@ -169,9 +167,8 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
         Json.parse(contentAsString(result2)) === Json.obj(
           "auto_show_guide" -> JsNull,
           "auto_show_persona" -> JsNull,
-          "library_sorting_pref" -> "name",
           "show_delighted_question" -> false,
-          "site_introduce_library_menu" -> JsNull,
+          "site_notify_libraries_in_search" -> JsNull,
           "has_no_password" -> JsNull)
       }
     }
