@@ -4,10 +4,12 @@ import com.google.inject.{ Singleton, Inject }
 import com.keepit.common.time._
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.model.{ KeepInfo, Library, Normalization, URLFactory }
+import com.keepit.model._
 import com.kifi.macros.json
-import play.api.libs.json.{ JsArray, JsObject, JsValue }
+import play.api.libs.json._
 import org.joda.time.DateTime
+
+import scala.io.Source
 
 /* RawBookmarkRepresentation is an input (not output) class for parsing JSON requests dealing with keeps.
  * The standard use case is parsing the request JSON, then keeping it.
@@ -16,13 +18,28 @@ import org.joda.time.DateTime
  * Do not trust isPrivate here. It's provided for legacy reasons only. Privacy is the responsibility of the libraryId.
  * LibraryId is purposely not in this, it should be provided separately.
  */
-@json case class RawBookmarkRepresentation(
+case class RawBookmarkRepresentation(
   title: Option[String] = None,
   url: String,
   isPrivate: Option[Boolean],
   canonical: Option[String] = None,
   openGraph: Option[String] = None,
-  keptAt: Option[DateTime] = None)
+  keptAt: Option[DateTime] = None,
+  sourceAttribution: Option[SourceAttribution] = None)
+
+object RawBookmarkRepresentation {
+  case class RawBookmarkRepresentationWithoutAttribution(title: Option[String], url: String, isPrivate: Option[Boolean], canonical: Option[String], openGraph: Option[String], keptAt: Option[DateTime])
+
+  implicit val helperFormat = Json.format[RawBookmarkRepresentationWithoutAttribution]
+
+  // NOTE: No attemp to parse the trait SourceAttribution
+  implicit val reads = new Reads[RawBookmarkRepresentation] {
+    def reads(js: JsValue): JsResult[RawBookmarkRepresentation] = {
+      val x = js.as[RawBookmarkRepresentationWithoutAttribution]
+      JsSuccess(RawBookmarkRepresentation(x.title, x.url, x.isPrivate, x.canonical, x.openGraph, x.keptAt, None))
+    }
+  }
+}
 
 @Singleton
 class RawBookmarkFactory @Inject() (
@@ -51,6 +68,6 @@ class RawBookmarkFactory @Inject() (
     val isPrivate = (json \ "isPrivate").asOpt[Boolean]
     val canonical = (json \ Normalization.CANONICAL.scheme).asOpt[String]
     val openGraph = (json \ Normalization.OPENGRAPH.scheme).asOpt[String]
-    RawBookmarkRepresentation(title = title, url = url, isPrivate = isPrivate, canonical = canonical, openGraph = openGraph, Some(clock.now))
+    RawBookmarkRepresentation(title = title, url = url, isPrivate = isPrivate, canonical = canonical, openGraph = openGraph, Some(clock.now), None)
   }
 }

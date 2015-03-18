@@ -16,7 +16,7 @@ angular.module('kifi')
 
         scope.navigateToLibrary = function () {
           libraryService.getLibraryById(scope.modalData.library.id, true).then(function() { // invalidates cache
-            $location.path(scope.modalData.library.url);
+            $location.url(scope.modalData.library.url);
           });
           kfModalCtrl.close();
         };
