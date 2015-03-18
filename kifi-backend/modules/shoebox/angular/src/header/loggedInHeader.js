@@ -135,16 +135,16 @@ angular.module('kifi')
           }
           break;
         case 27:  // esc
-          if ($state.name === 'search' || $state.name === 'library.search') {
+          if ($scope.search.suggesting && ($state.current.name === 'search' || $state.current.name === 'library.search')) {
             $scope.search.suggesting = false;
-            $scope.search.text = $state.params.q || '';
+            $scope.search.text = $state.params.q;
             restoreLibraryChip();
           } else {
             $scope.clearInput();
+            $timeout(function () {  // Angular throws an exception if an event is triggered during $digest/$apply
+              angular.element(document.activeElement).filter('.kf-lih-search-input').blur();
+            });
           }
-          $timeout(function () {  // Angular throws an exception if an event is triggered during $digest/$apply
-            angular.element(document.activeElement).filter('.kf-lih-search-input').blur();
-          });
           break;
       }
     };
