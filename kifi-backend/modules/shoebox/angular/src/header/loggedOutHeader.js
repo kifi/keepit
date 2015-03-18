@@ -3,9 +3,9 @@
 angular.module('kifi')
 
 .controller('LoggedOutHeaderCtrl', [
-  '$scope', '$rootScope', '$state', '$timeout', '$location', '$window',
+  '$scope', '$rootScope', '$state', '$timeout', '$location', '$document',
   'signupService', 'platformService', 'libraryService', 'util',
-  function ($scope, $rootScope, $state, $timeout, $location, $window,
+  function ($scope, $rootScope, $state, $timeout, $location, $document,
             signupService, platformService, libraryService, util) {
     $scope.library = null;
     $scope.search = {text: '', focused: false};
@@ -86,6 +86,9 @@ angular.module('kifi')
       switch (e.keyCode) {
         case 27:  // esc
           $scope.clearInput();
+          $timeout(function () {  // Angular throws an exception if an event is triggered during $digest/$apply
+            angular.element(document.activeElement).filter('.kf-loh-search-input').blur();
+          });
           break;
       }
     };
@@ -157,5 +160,19 @@ angular.module('kifi')
         }
       }
     };
+
+    function onDocKeyDown(e) {
+      if (e.which === 191) { // '/'
+        if (!e.metaKey && !e.shiftKey && !e.altKey && !e.ctrlKey && !e.isDefaultPrevented() &&
+            !angular.element(document.activeElement).is('input,textarea,[contenteditable],[contenteditable] *')) {
+          e.preventDefault();
+          angular.element('.kf-loh-search-input').focus();
+        }
+      }
+    }
+    $document.on('keydown', onDocKeyDown);
+    $scope.$on('$destroy', function () {
+      $document.off('keydown', onDocKeyDown);
+    });
   }
 ]);
