@@ -32,7 +32,7 @@ angular.module('kifi')
             if ($location.path() === scope.library.url) {
               $state.reload();
             } else {
-              $location.path(scope.library.url);
+              $location.url(scope.library.url);
             }
           })['catch'](modalService.openGenericErrorModal);
         }
@@ -40,7 +40,7 @@ angular.module('kifi')
         function unfollowLibrary() {
           libraryService.leaveLibrary(scope.library.id).then(function () {
             // TODO: would be better user experience not to navigate away
-            $location.path(scope.library.url);
+            $location.url(scope.library.url);
           })['catch'](modalService.openGenericErrorModal);
         }
 
@@ -65,7 +65,7 @@ angular.module('kifi')
         };
 
         scope.view = function () {
-          $location.path(scope.library.url);
+          $location.url(scope.library.url);
         };
 
 
