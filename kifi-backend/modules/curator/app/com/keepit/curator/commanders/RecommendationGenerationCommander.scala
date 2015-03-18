@@ -218,7 +218,7 @@ class RecommendationGenerationCommander @Inject() (
                 genStateRepo.save(newState)
               }
               if (state.seq < newSeqNum) {
-                if (recommendationGenerationLock.waiting < 300) {
+                if (recommendationGenerationLock.waiting < 200) {
                   precomputeRecommendationsForUser(userId, boostedKeepers, Some(alwaysInclude))
                 } else {
                   precomputeRecommendationsForUser(userId, boostedKeepers) //No point in keeping all that data in memory when it's not needed soon
