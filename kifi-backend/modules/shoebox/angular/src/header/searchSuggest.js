@@ -14,10 +14,10 @@ angular.module('kifi')
       templateUrl: 'header/searchSuggest.tpl.html',
       link: function (scope, element) {
         var libInfoComparePropsDesc = ['lastViewed', 'lastKept', 'numKeeps', 'numFollowers'];
+        var inEmptyQueryState;
 
         scope.me = profileService.me;
         scope.working = false;
-        scope.query = '';
         scope.inLibrary = false;
         scope.uris = null;
         scope.libraries = null;
@@ -109,10 +109,13 @@ angular.module('kifi')
           var q = scope.search.text.trimLeft();
           if (q) {
             var libraryId = scope.search.libraryChip ? scope.libraryId : null;
+            if (inEmptyQueryState) {
+              inEmptyQueryState = false;
+              scope.libraries = null;
+            }
             scope.working = true;
             searchSuggestService.suggest(q, libraryId).then(function (data) {
               if (scope.search.text.trimLeft() === q && (scope.search.libraryChip ? scope.libraryId : null) === libraryId) {
-                scope.query = q;
                 scope.inLibrary = !!libraryId;
                 scope.users = data.users && data.users.hits;
                 scope.libraries = data.libraries && data.libraries.hits;
@@ -129,8 +132,8 @@ angular.module('kifi')
               }
             });
           } else {
+            inEmptyQueryState = true;
             scope.working = false;
-            scope.query = '';
             scope.inLibrary = false;
             scope.uris = null;
             scope.libraries = libraryService.getOwnInfos().filter(notAtLibInfo.bind(null, $location.url())).sort(compareLibInfos).slice(0, 7).map(adaptLibInfo);
