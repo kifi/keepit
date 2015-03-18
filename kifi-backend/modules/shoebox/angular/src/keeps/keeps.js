@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfKeeps', [
-  '$window', '$timeout', 'keepActionService', 'libraryService', 'modalService', 'selectionService', 'undoService', 'profileService',
-  function ($window, $timeout, keepActionService, libraryService, modalService, selectionService, undoService, profileService) {
+  '$window', '$timeout', 'keepActionService', 'libraryService', 'modalService', 'KeepSelection', 'undoService', 'profileService',
+  function ($window, $timeout, keepActionService, libraryService, modalService, KeepSelection, undoService, profileService) {
 
     return {
       restrict: 'A',
@@ -73,7 +73,7 @@ angular.module('kifi')
         scope.addingTag = {enabled: false};
 
         // 'selection' keeps track of which keeps have been selected.
-        scope.selection = new selectionService.Selection();
+        scope.selection = new KeepSelection();
 
         // set default edit-mode options if it's not set by parent
         scope.editOptions = _.isObject(scope.editOptions()) ? scope.editOptions : function() {
