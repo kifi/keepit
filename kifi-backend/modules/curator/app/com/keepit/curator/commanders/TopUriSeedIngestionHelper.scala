@@ -85,13 +85,21 @@ class TopUriSeedIngestionHelper @Inject() (
     val betweenHours = Hours.hoursBetween(lastIngestionTime.plusSeconds(randomShift), currentDateTime).getHours
 
     if (betweenHours > uriIngestionFreq || firstTimeIngesting || force) {
-      graph.uriWander(userId, 50000).flatMap { uriScores =>
+      graph.uriWander(userId, 50000).map { uriScores =>
         val rescaledUriScores = uriScores.mapValues(score => Math.log(score.toDouble + 1).toFloat).toSeq.sortBy {
           case (uriId, score) => -1 * score
         }.take(2000).toMap //Last part (sort + take) is a stop gap
         val normalizationFactor = if (rescaledUriScores.isEmpty) 0.0f else rescaledUriScores.values.max
 
-        db.readWriteAsync(attempts = 2) { implicit session =>
+        db.readWriteBatch(rescaledUriScores.toSeq, attempts = 2) { (session, singleScore) =>
+          val (uriId, score) = singleScore
+          log.debug(s"ingesting uri score is: ${score}, related user id is: ${uriId}")
+          processUriScores(uriId, score / normalizationFactor, userId)(session)
+        }.values.foreach { maybeException =>
+          maybeException.get //will throw the exception in the Try if there is one
+        }
+
+        db.readWrite(attempts = 2) { implicit session =>
           if (firstTimeIngesting) {
             lastTopUriIngestionRepo.save(LastTopUriIngestion(userId = userId, lastIngestionTime = currentDateTime))
           } else {
@@ -103,15 +111,8 @@ class TopUriSeedIngestionHelper @Inject() (
               }
             }
           }
-
-          rescaledUriScores.foreach {
-            case (uriId, score) =>
-              log.debug(s"ingesting uri score is: ${score}, related user id is: ${uriId}")
-              processUriScores(uriId, score / normalizationFactor, userId)
-          }
-
-          false
         }
+        false
       }.recover {
         case ex: Exception =>
           airbrake.notify(s"Could not get uris from graph, skipping user $userId", ex)
