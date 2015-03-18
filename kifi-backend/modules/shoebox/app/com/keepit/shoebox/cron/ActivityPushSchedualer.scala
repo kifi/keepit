@@ -31,7 +31,7 @@ class ActivityPushActor @Inject() (
   private val counter = new AtomicInteger(0)
   def receive = {
     case CreatePushActivityEntities =>
-      activityPusher.createPushActivityEntities()
+      activityPusher.createPushActivityEntities(100)
     case PushActivities =>
       if (counter.get <= 0) {
         activityPusher.getNextPushBatch() foreach { activityId =>
@@ -136,19 +136,19 @@ class ActivityPusher @Inject() (
     libs.map(lib => lib.lastKept.getOrElse(lib.updatedAt)).sorted.reverse.head
   }
 
-  def createPushActivityEntities(): Seq[Id[ActivityPushTask]] = {
-    val batchSize = 1000
+  def createPushActivityEntities(batchSize: Int): Seq[Id[ActivityPushTask]] = {
     val allTasks = mutable.ArrayBuffer[Id[ActivityPushTask]]()
     var lastBatchSize = batchSize
     while (lastBatchSize >= batchSize) {
       val batch = createPushActivityEntitiesBatch(batchSize)
       allTasks ++= batch
       lastBatchSize = batch.size
+      log.info(s"created ${lastBatchSize} new activity rows")
     }
     allTasks.toSeq
   }
 
-  def createPushActivityEntitiesBatch(batchSize: Int): Seq[Id[ActivityPushTask]] = {
+  private def createPushActivityEntitiesBatch(batchSize: Int): Seq[Id[ActivityPushTask]] = {
     val users = db.readOnlyReplica { implicit s =>
       val userIds = activityPushTaskRepo.getUsersWithoutActivityPushTask(batchSize)
       val usersWithLastKeep = userRepo.getAllUsers(userIds).values map { user =>
@@ -168,10 +168,12 @@ class ActivityPusher @Inject() (
   }
 
   def getNextPushBatch(): Seq[Id[ActivityPushTask]] = {
-    db.readOnlyReplica { implicit s =>
+    val ids = db.readOnlyReplica { implicit s =>
       val now = clock.now()
       activityPushTaskRepo.getByPushAndActivity(now.minusDays(2), now.toLocalTimeInZone(DEFAULT_DATE_TIME_ZONE), 100)
     }
+    log.info(s"next push batch size is ${ids.size}")
+    ids
   }
 
 }
