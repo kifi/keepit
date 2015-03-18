@@ -33,7 +33,7 @@ import org.apache.commons.io.FileUtils
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
 import play.api.libs.Files.TemporaryFile
-import play.api.libs.json.{ JsArray, JsObject, JsValue, Json }
+import play.api.libs.json._
 import play.api.test.Helpers._
 import play.api.test._
 
@@ -60,6 +60,18 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
     tf.file.deleteOnExit()
     FileUtils.copyFile(new File("test/data/image1.png"), tf.file)
     tf
+  }
+
+  import com.keepit.commanders.RawBookmarkRepresentation._
+
+  implicit val helperFormat = RawBookmarkRepresentation.helperFormat
+
+  // NOTE: No attemp to write the trait SourceAttribution
+  implicit val rawBookmarkRepwrites = new Writes[RawBookmarkRepresentation] {
+    def writes(keep: RawBookmarkRepresentation): JsValue = {
+      val tmp = RawBookmarkRepresentationWithoutAttribution(keep.title, keep.url, keep.isPrivate, keep.canonical, keep.openGraph, keep.keptAt)
+      Json.toJson(tmp)
+    }
   }
 
   "LibraryController" should {
