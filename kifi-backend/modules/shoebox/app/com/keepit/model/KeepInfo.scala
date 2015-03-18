@@ -7,7 +7,7 @@ import com.keepit.common.db.ExternalId
 import com.keepit.common.json.TupleFormat
 import com.keepit.social.BasicUser
 import org.joda.time.DateTime
-import play.api.libs.json.{ Json, Writes }
+import play.api.libs.json.{ JsNull, Json, Writes }
 
 case class KeepInfo(
   id: Option[ExternalId[Keep]] = None,
@@ -28,8 +28,6 @@ case class KeepInfo(
   hashtags: Option[Set[Hashtag]] = None,
   summary: Option[URISummary] = None,
   siteName: Option[String] = None,
-  clickCount: Option[Int] = None, // deprecated
-  rekeepCount: Option[Int] = None, // deprecated
   libraryId: Option[PublicId[Library]] = None)
 
 object KeepInfo {

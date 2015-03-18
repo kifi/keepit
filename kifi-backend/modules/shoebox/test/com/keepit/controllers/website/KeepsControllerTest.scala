@@ -319,14 +319,11 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
                       "libraries":[],
                       "librariesOmitted": 0,
                       "librariesTotal": 0,
-                      "clickCount":1,
                       "collections":[],
                       "tags":[],
                       "hashtags":[],
                       "summary":{},
                       "siteName":"kifi.com",
-                      "clickCount":1,
-                      "rekeepCount":1,
                       "libraryId":"l7jlKlnA36Su"
                     },
                     {
@@ -347,7 +344,6 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
                       "hashtags":[],
                       "summary":{},
                       "siteName":"FortyTwo",
-                      "clickCount":1,
                       "libraryId":"l7jlKlnA36Su"
                     }
                   ],
@@ -409,7 +405,6 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
                       "hashtags":[],
                       "summary":{},
                       "siteName":"FortyTwo",
-                      "clickCount":1,
                       "libraryId":"l7jlKlnA36Su"
                     }
                   ],
@@ -469,7 +464,6 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
                                       "hashtags":[],
                                       "summary":{},
                                       "siteName":"Facebook",
-                                      "clickCount":1,
                                       "libraryId":"lzmfsKLJyou6"
                                     },
                                     {
@@ -490,8 +484,6 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
                                       "hashtags":[],
                                       "summary":{},
                                       "siteName":"kifi.com",
-                                      "clickCount":1,
-                                      "rekeepCount":1,
                                       "libraryId":"lzmfsKLJyou6"
                                     }
                                   ],
