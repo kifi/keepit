@@ -10,6 +10,7 @@ angular.module('kifi')
     //
     // Internal data.
     //
+    var queryCount = 0;
     var query;
     var filter;
     var context;
@@ -57,6 +58,7 @@ angular.module('kifi')
     }
 
     function init() {
+      queryCount++;
       query = $stateParams.q || '';
       filter = $stateParams.f || 'a';
 
@@ -164,8 +166,8 @@ angular.module('kifi')
       }
 
       $scope.loading = true;
-      searchActionService.find(query, filter, library, context, $rootScope.userLoggedIn).then(function (q, f, l, result) {
-        if (query !== q || filter !== f || library !== l) {  // query changed
+      searchActionService.find(query, filter, library, context, $rootScope.userLoggedIn).then(function (queryNumber, result) {
+        if (queryNumber !== queryCount) {  // results are for an old query
           return;
         }
 
@@ -189,7 +191,7 @@ angular.module('kifi')
           $scope.hasMore = false;
           onDoneWithBatchOfKeeps();
         }
-      }.bind(null, query, filter, library));
+      }.bind(null, queryCount));
     };
 
     function renderNextKeep(keeps) {
@@ -334,7 +336,6 @@ angular.module('kifi')
       });
     });
     $scope.$on('$destroy', deregisterKeepAddedListener);
-
 
     init();
   }
