@@ -510,41 +510,26 @@ var api = (function createApi() {
   var hostRe = /^https?:\/\/[^\/]*/;
   return {
     bookmarks: {
-      create: function (parentId, name, url, callback) {
-        chrome.bookmarks.create({parentId: parentId, title: name, url: url}, errors.wrap(callback));
-      },
-      createFolder: function (parentId, name, callback) {
-        chrome.bookmarks.create({parentId: parentId, title: name}, errors.wrap(callback));
-      },
-      get: function (id, callback) {
-        chrome.bookmarks.get(id, errors.wrap(function (bm) {
-          callback(bm && bm[0]);
-        }));
-      },
       getAll: function (callback) {
         chrome.bookmarks.getTree(errors.wrap(function (bm) {
-          var arr = [];
-          !function traverse(b) {
-            if (b.children) {
-              b.children.forEach(traverse);
-            } else if (httpRe.test(b.url)) {
-              arr.push({id: b.id, url: b.url, title: b.title, addedAt: b.dateAdded});
+          var arr = [], path;
+          !function traverse(node) {
+            if (node.children) {
+              var name = node.id > 2 && node.title.trim(); // '0','1','2' are '','Bookmarks Bar','Other Bookmarks'
+              if (name) {
+                path = path ? path.concat([name]) : [name];
+              }
+              node.children.forEach(traverse);
+              if (name) {
+                path = path.length > 1 ? path.slice(0, -1) : undefined;
+              }
+            } else if (httpRe.test(node.url)) {
+              arr.push({url: node.url, title: node.title, addedAt: node.dateAdded, path: path});
             }
           }(bm && bm[0]);
           callback(arr);
         }));
-      },
-      getBarFolder: function (callback) {
-        chrome.bookmarks.getChildren("0", function(bm) {
-          callback(bm.filter(function(bm) { return bm.title == "Bookmarks Bar" })[0] || bm[0]);
-        });
-      },
-      getChildren: chrome.bookmarks.getChildren.bind(chrome.bookmarks),
-      move: function (id, newParentId) {
-        chrome.bookmarks.move(id, {parentId: newParentId});
-      },
-      remove: chrome.bookmarks.remove.bind(chrome.bookmarks),
-      search: chrome.bookmarks.search.bind(chrome.bookmarks)
+      }
     },
     errors: {
       init: function (handler) {
