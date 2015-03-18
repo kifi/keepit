@@ -112,6 +112,13 @@ class TopUriSeedIngestionHelper @Inject() (
             }
           }
         }
+
+        for (i <- 0 to 2) {
+          db.readWrite(attempts = 2) { implicit session =>
+            rawSeedsRepo.cleanupBatch(userId)
+          }
+        }
+
         false
       }.recover {
         case ex: Exception =>
