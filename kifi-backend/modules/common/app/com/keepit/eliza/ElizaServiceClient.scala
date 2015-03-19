@@ -43,7 +43,7 @@ trait ElizaServiceClient extends ServiceClient {
   def sendToUser(userId: Id[User], data: JsArray): Unit
   def sendToAllUsers(data: JsArray): Unit
 
-  def sendPushNotification(userId: Id[User], message: String, pushNotificationCategory: PushNotificationCategory, pushNotificationExperiment: PushNotificationExperiment): Unit
+  def sendPushNotification(userId: Id[User], message: String, pushNotificationCategory: PushNotificationCategory, pushNotificationExperiment: PushNotificationExperiment): Future[Int]
 
   def connectedClientCount: Future[Seq[Int]]
 
@@ -78,10 +78,12 @@ class ElizaServiceClientImpl @Inject() (
   userThreadStatsForUserIdCache: UserThreadStatsForUserIdCache)
     extends ElizaServiceClient with Logging {
 
-  def sendPushNotification(userId: Id[User], message: String, pushNotificationCategory: PushNotificationCategory, pushNotificationExperiment: PushNotificationExperiment): Unit = {
+  def sendPushNotification(userId: Id[User], message: String, pushNotificationCategory: PushNotificationCategory, pushNotificationExperiment: PushNotificationExperiment): Future[Int] = {
     implicit val userFormatter = Id.format[User]
     val payload = Json.obj("userId" -> userId, "message" -> message, "pushNotificationCategory" -> pushNotificationCategory, "pushNotificationExperiment" -> pushNotificationExperiment)
-    call(Eliza.internal.sendPushNotification, payload)
+    call(Eliza.internal.sendPushNotification, payload).map { response =>
+      response.body.toInt
+    }
   }
 
   def sendToUserNoBroadcast(userId: Id[User], data: JsArray): Unit = {

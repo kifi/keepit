@@ -12,7 +12,7 @@ import scala.concurrent.future
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import play.api.mvc.Action
-import play.api.libs.json.{ Json, JsObject, JsArray }
+import play.api.libs.json.{ JsNumber, Json, JsObject, JsArray }
 
 import com.google.inject.Inject
 import com.keepit.eliza.commanders.{ MessagingCommander, NotificationJson, NotificationCommander, ElizaStatsCommander }
@@ -45,8 +45,8 @@ class ElizaController @Inject() (
       val message = (req \ "message").asInstanceOf[String]
       val pushNotificationExperiment = (req \ "pushNotificationExperiment").asInstanceOf[PushNotificationExperiment]
       val pushNotificationCategory = (req \ "pushNotificationCategory").asInstanceOf[PushNotificationCategory]
-      messagingCommander.sendPushNotification(userId, message, pushNotificationCategory, pushNotificationExperiment)
-      Ok("")
+      val deviceCount = messagingCommander.sendPushNotification(userId, message, pushNotificationCategory, pushNotificationExperiment)
+      Ok(JsNumber(deviceCount))
     }
   }
 
