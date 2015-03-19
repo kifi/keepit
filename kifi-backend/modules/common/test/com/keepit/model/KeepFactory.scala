@@ -27,6 +27,7 @@ object KeepFactory {
   class PartialKeep private[KeepFactory] (keep: Keep) {
     def withUser(id: Id[User]) = new PartialKeep(keep.copy(userId = id))
     def withUser(user: User) = new PartialKeep(keep.copy(userId = user.id.get))
+    def withKeptAt(keptAt: DateTime) = new PartialKeep(keep.copy(keptAt = keptAt))
     def withId(id: Id[Keep]) = new PartialKeep(keep.copy(id = Some(id)))
     def withId(id: Int) = new PartialKeep(keep.copy(id = Some(Id[Keep](id))))
     def withId(id: ExternalId[Keep]) = new PartialKeep(keep.copy(externalId = id))
