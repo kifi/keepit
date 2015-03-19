@@ -62,7 +62,7 @@ class RawKeepFactory @Inject() (
       val url = (json \ "url").asOpt[String].getOrElse(throw new Exception(s"json $json did not have a url"))
       val isPrivate = (json \ "isPrivate").asOpt[Boolean].getOrElse(true)
       val addedAt = (json \ "addedAt").asOpt[DateTime]
-      val pathOpt = (json \ "path").asOpt[String]
+      val pathOpt = (json \ "path").asOpt[Seq[String]]
       val tagsOpt = (json \ "tags").asOpt[Seq[String]]
 
       // add tags to bookmark if it has a path or pre-tagged
@@ -72,8 +72,8 @@ class RawKeepFactory @Inject() (
           tagSet.add(t)
         }
       }
-      pathOpt.map { path =>
-        path.split("/").filter(_.length > 0).map(tagSet.add(_))
+      pathOpt.map { pathSegments =>
+        pathSegments.filter(_.nonEmpty).map(tagSet.add(_))
       }
       val tagIds = {
         // create tags for user, and then create a string of all tag ids separated by ","
