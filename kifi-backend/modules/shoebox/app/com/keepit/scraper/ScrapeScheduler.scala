@@ -1,5 +1,7 @@
 package com.keepit.scraper
 
+import com.keepit.rover.article.Signature
+
 import scala.concurrent.Future
 import com.keepit.model.NormalizedURI
 import com.keepit.scraper.extractor.ExtractorProviderType

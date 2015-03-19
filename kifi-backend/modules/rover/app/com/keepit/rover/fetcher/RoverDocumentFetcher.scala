@@ -9,10 +9,11 @@ import org.joda.time.DateTime
 import scala.concurrent.Future
 
 @Singleton
-class RoverDocumentFetcher @Inject() () {
+class RoverDocumentFetcher @Inject() (httpFetcher: HttpFetcher) {
 
   def fetch[A](url: String, ifModifiedSince: Option[DateTime] = None)(f: FetchResult[HttpInputStream] => A): Future[A] = {
-    ???
+    val proxy = None // todo(Léo): Implement proxy repo, proxy rules
+    httpFetcher.fetch(FetchRequest(url, proxy, ifModifiedSince))(f)
   }
 
   def fetchJsoupDocument(url: String, ifModifiedSince: Option[DateTime] = None): Future[FetchResult[JsoupDocument]] = {

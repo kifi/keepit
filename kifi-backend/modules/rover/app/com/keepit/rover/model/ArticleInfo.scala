@@ -3,7 +3,7 @@ package com.keepit.rover.model
 import com.keepit.common.db._
 import com.keepit.common.time._
 import com.keepit.model._
-import com.keepit.rover.article.{ Article, ArticleKind }
+import com.keepit.rover.article.{ ArticleFetchRequest, Article, ArticleKind }
 import org.joda.time.DateTime
 
 object ArticleInfoStates extends States[ArticleInfo]
@@ -25,6 +25,7 @@ case class ArticleInfo(
     fetchInterval: Float = 24.0f) extends ModelWithState[ArticleInfo] with ModelWithSeqNumber[ArticleInfo] with ArticleKeyHolder {
   def withId(id: Id[ArticleInfo]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
+  def getFetchRequest[A <: Article](implicit kind: ArticleKind[A]) = ArticleFetchRequest(kind, url, lastFetchedAt, getLatestKey)
 }
 
 object ArticleInfo {

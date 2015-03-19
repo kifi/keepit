@@ -24,7 +24,7 @@ case class LinkedInProfileContent(
     publishedAt: Option[DateTime],
     profile: LinkedInProfile,
     http: HttpInfo,
-    normalization: NormalizationInfo) extends ArticleContent with HttpInfoHolder with NormalizationInfoHolder {
+    normalization: NormalizationInfo) extends ArticleContent[LinkedInProfileArticle] with HttpInfoHolder with NormalizationInfoHolder {
   def content = Some(profile.content).filter(_.nonEmpty)
   def mediaType = openGraphType
 }

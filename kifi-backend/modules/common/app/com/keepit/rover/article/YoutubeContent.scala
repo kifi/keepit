@@ -40,7 +40,7 @@ case class YoutubeContent(
     publishedAt: Option[DateTime],
     http: HttpInfo,
     normalization: NormalizationInfo,
-    video: YoutubeVideo) extends ArticleContent with HttpInfoHolder with NormalizationInfoHolder {
+    video: YoutubeVideo) extends ArticleContent[YoutubeArticle] with HttpInfoHolder with NormalizationInfoHolder {
 
   def content = Some(Seq(
     video.title.getOrElse(""),

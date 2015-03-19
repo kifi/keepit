@@ -16,6 +16,7 @@ import com.keepit.common.service.{ RequestConsolidator, ServiceClient, ServiceTy
 import com.keepit.common.store.ImageSize
 import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.model._
+import com.keepit.rover.article.Signature
 import com.keepit.scraper.extractor.ExtractorProviderType
 import com.keepit.search.Article
 import com.kifi.macros.json

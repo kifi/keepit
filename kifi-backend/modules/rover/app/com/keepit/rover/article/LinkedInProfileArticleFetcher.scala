@@ -5,16 +5,23 @@ import com.keepit.common.logging.Logging
 import com.keepit.rover.extractor.JsoupDocument
 import com.keepit.rover.fetcher.{ FetchResult, RoverDocumentFetcher }
 import com.keepit.common.time._
+import com.keepit.rover.store.RoverArticleStore
 import org.joda.time.DateTime
 
 import scala.concurrent.{ Future, ExecutionContext }
 
 class LinkedInProfileArticleFetcher @Inject() (
+    articleStore: RoverArticleStore,
     documentFetcher: RoverDocumentFetcher,
     clock: Clock,
-    implicit val executionContext: ExecutionContext) extends Logging {
+    implicit val executionContext: ExecutionContext) extends ArticleFetcher[LinkedInProfileArticle] with Logging {
 
-  def fetch(url: String, ifModifiedSince: Option[DateTime]): Future[FetchResult[LinkedInProfileArticle]] = {
+  def fetch(request: ArticleFetchRequest[LinkedInProfileArticle]): Future[Option[LinkedInProfileArticle]] = {
+    val futureFetchedArticle = doFetch(request.url, request.lastFetchedAt)
+    ArticleFetcher.resolveAndCompare(articleStore)(futureFetchedArticle, request.latestArticleKey, ArticleFetcher.defaultSimilarityCheck)
+  }
+
+  def doFetch(url: String, ifModifiedSince: Option[DateTime]): Future[FetchResult[LinkedInProfileArticle]] = {
     documentFetcher.fetchJsoupDocument(url, ifModifiedSince).map { result =>
       result.map { doc =>
         val content = LinkedInProfileContent(
