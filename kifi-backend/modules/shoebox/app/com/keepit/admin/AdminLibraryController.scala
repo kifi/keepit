@@ -77,7 +77,7 @@ class AdminLibraryController @Inject() (
       val keeps = ArrayBuffer[Keep]()
       while (hasMore) {
         val from = page * pageSize
-        val chunk: Seq[Keep] = keepRepo.getByLibrary(libraryId, from, from + pageSize, None) map { keep =>
+        val chunk: Seq[Keep] = keepRepo.getByLibrary(libraryId, from, from + pageSize, Set.empty) map { keep =>
           val tags = keepToCollectionRepo.getByKeep(keep.id.get)
           tags foreach { keepToTag =>
             val origTag = collectionRepo.get(keepToTag.collectionId)

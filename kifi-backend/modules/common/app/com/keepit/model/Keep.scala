@@ -167,7 +167,7 @@ object KeepUriAndTime {
 }
 
 case class KeepCountKey(userId: Id[User]) extends Key[Int] {
-  override val version = 3
+  override val version = 4
   val namespace = "bookmark_count"
   def toKey(): String = userId.toString
 }
@@ -194,7 +194,7 @@ class KeepUriUserCache(stats: CacheStatistics, accessLog: AccessLog, innermostPl
   extends JsonCacheImpl[KeepUriUserKey, Keep](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class CountByLibraryKey(id: Id[Library]) extends Key[Int] {
-  override val version = 0
+  override val version = 1
   val namespace = "count_by_lib"
   def toKey(): String = id.toString
 }
