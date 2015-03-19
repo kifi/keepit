@@ -1,5 +1,7 @@
 package com.keepit.scraper
 
+import com.keepit.rover.article.Signature
+
 case class BasicArticle(
   title: String,
   content: String,

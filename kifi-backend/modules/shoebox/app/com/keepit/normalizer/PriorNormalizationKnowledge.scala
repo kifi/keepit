@@ -2,7 +2,8 @@ package com.keepit.normalizer
 
 import com.keepit.common.net.URI
 import com.keepit.model.{ UrlPatternRulesCommander, UrlPatternRuleRepo }
-import com.keepit.scraper.{ Signature, ScrapeScheduler }
+import com.keepit.rover.article.Signature
+import com.keepit.scraper.ScrapeScheduler
 import com.google.inject.{ Inject, Singleton }
 import scala.util.{ Failure, Try }
 

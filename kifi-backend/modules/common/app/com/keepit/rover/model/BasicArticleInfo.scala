@@ -25,8 +25,8 @@ trait ArticleKeyHolder {
   def bestVersion: Option[ArticleVersion]
   def latestVersion: Option[ArticleVersion]
   def articleKind = ArticleKind.byTypeCode(kind)
-  def getLatestKey: Option[ArticleKey] = bestVersion.map(toKey)
-  def getBestKey: Option[ArticleKey] = latestVersion.map(toKey)
+  def getLatestKey: Option[ArticleKey] = latestVersion.map(toKey)
+  def getBestKey: Option[ArticleKey] = bestVersion.map(toKey)
   private def toKey(version: ArticleVersion) = ArticleKey(uriId, articleKind, version)
 }
 
