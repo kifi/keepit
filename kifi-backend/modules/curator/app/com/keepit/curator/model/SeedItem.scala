@@ -80,7 +80,7 @@ case class UriScores(
   }
 
   private def reducePrecision(xOpt: Option[Float]): Option[Float] = {
-    xOpt.map { x => (x * 10000).toInt.toFloat * 10000 }
+    xOpt.map { x => (x * 10000).toInt.toFloat / 10000 }
   }
 
   //this is used to save space in the json
