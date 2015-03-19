@@ -1,5 +1,6 @@
 package com.keepit.model
 
+import com.keepit.commanders.KeepsCommander
 import com.keepit.common.db._
 import com.keepit.common.logging.Logging
 import org.joda.time.DateTime
@@ -40,7 +41,9 @@ object RawKeep extends Logging {
   }
 }
 
-class RawKeepFactory @Inject() (airbrake: AirbrakeNotifier) {
+class RawKeepFactory @Inject() (
+  keepCommander: KeepsCommander,
+  airbrake: AirbrakeNotifier) {
 
   private def getBookmarkJsonObjects(value: JsValue): Seq[JsObject] = value match {
     case JsArray(elements) => elements.map(getBookmarkJsonObjects).flatten
@@ -57,9 +60,31 @@ class RawKeepFactory @Inject() (airbrake: AirbrakeNotifier) {
     val url = (json \ "url").asOpt[String].getOrElse(throw new Exception(s"json $json did not have a url"))
     val isPrivate = (json \ "isPrivate").asOpt[Boolean].getOrElse(true)
     val addedAt = (json \ "addedAt").asOpt[DateTime]
+    val pathOpt = (json \ "path").asOpt[String]
+    val tags = (json \ "tags").as[Seq[String]]
+
+    val tagSet = scala.collection.mutable.Set.empty[String]
+    tags.foreach { t =>
+      tagSet.add(t)
+    }
+    pathOpt.map { path =>
+      path.split("/").filter(_.length > 0).map(tagSet.add(_))
+    }
+    val tagIds = {
+      // create tags for user, and then create a string of all tag ids separated by ","
+      val tagIdString = tagSet.map { tagStr =>
+        keepCommander.getOrCreateTag(userId, tagStr.trim)
+      }.toSeq.map(_.id.get.toString).mkString(",")
+      if (tagIdString.nonEmpty) {
+        None
+      } else {
+        Some(tagIdString)
+      }
+    }
+
     val canonical = (json \ Normalization.CANONICAL.scheme).asOpt[String]
     val openGraph = (json \ Normalization.OPENGRAPH.scheme).asOpt[String]
-    RawKeep(userId = userId, title = title, url = url, isPrivate = isPrivate, importId = importId, source = source, originalJson = Some(json), installationId = installationId, libraryId = libraryId, createdDate = addedAt)
+    RawKeep(userId = userId, title = title, url = url, isPrivate = isPrivate, importId = importId, source = source, originalJson = Some(json), installationId = installationId, libraryId = libraryId, tagIds = tagIds, createdDate = addedAt)
   }
 }
 
