@@ -272,7 +272,7 @@ class AdminUserController @Inject() (
 
     val (user, bookmarks) = db.readOnlyReplica { implicit s =>
       val user = userRepo.get(userId)
-      val bookmarks = keepRepo.getByUser(userId, Some(KeepStates.INACTIVE)).filter(b => showPrivates || !b.isPrivate)
+      val bookmarks = keepRepo.getByUser(userId, Set(KeepStates.INACTIVE)).filter(b => showPrivates || !b.isPrivate)
       val uris = bookmarks map (_.uriId) map normalizedURIRepo.get
       (user, (bookmarks, uris).zipped.toList.seq)
     }
