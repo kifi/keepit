@@ -114,7 +114,7 @@ class TopUriSeedIngestionHelper @Inject() (
           }
         }
 
-        for (i <- 0 to 2) {
+        for (i <- 0 to 10) {
           db.readWrite(attempts = 2) { implicit session =>
             rawSeedsRepo.cleanupBatch(userId)
           }
