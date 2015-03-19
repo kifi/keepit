@@ -45,6 +45,16 @@ class LibraryMembershipTest extends Specification with ShoeboxTestInjector {
       }
     }
 
+    "getLatestUpdatedLibraryUserFollow" in {
+      withDb() { implicit injector =>
+        val (library1, library2, user1, user2, lm1, lm2, lm3, lm4, t1) = setup()
+        db.readOnlyMaster { implicit session =>
+          libraryMembershipRepo.getLatestUpdatedLibraryUserFollow(user1.id.get).get === library2
+          libraryMembershipRepo.getLatestUpdatedLibraryUserFollow(user2.id.get).get === library1
+        }
+      }
+    }
+
     "invalidate cache when delete" in {
       withDb() { implicit injector =>
         val (lib1, lib2, user1, user2, lm1, lm2, lm3, lm4, t1) = setup()
