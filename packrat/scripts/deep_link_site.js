@@ -1,6 +1,8 @@
 // @match /^https?:\/\/(dev\.ezkeep\.com:\d{4}|www\.kifi\.com)\/(?!r\/).*/
 // @require scripts/api.js
 
+api.identify('deepLinkSite');
+
 // DEPRECATED: The site is transitioning to posting an 'open_deep_link' message.
 document.addEventListener('click', function (e) {
   'use strict';

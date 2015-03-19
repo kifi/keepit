@@ -1,19 +1,19 @@
 // API for content scripts
 
-const api = function() {
+const api = (function () {
   // TODO: 'use strict'; after working around global definitions in eval’d scripts below
-  var msgHandlers = [], nextCallbackId = 1, callbacks = {};
+  var msgHandlers = [], nextCallbackId = 1, callbacks = {}, identity = {};
 
-  self.port.on('api:respond', function (callbackId, response) {
+  function onApiRespond(callbackId, response) {
     var cb = callbacks[callbackId];
     log('[api:respond]', cb && cb[0] || '', response != null && (response.length || 0) < 200 ? response : '');
     if (cb) {
       delete callbacks[callbackId];
       cb[1](response);
     }
-  });
+  }
 
-  self.port.on('api:inject', function(styles, scripts, callbackId) {
+  function onApiInject(styles, scripts, callbackId) {
     styles.forEach(function (path) {
       var el = document.createElement('link');
       el.rel = 'stylesheet';
@@ -40,20 +40,56 @@ const api = function() {
         cb();
       }
     }
-  });
+  }
 
-  self.port.on('detach', function () {
-    log('[detach]');
+  const onDetach = function () {
+    log = api.noop;  // logging in onDetach sometimes causes Error: Permission denied to access property 'console'
+    end();
+  };
+
+  self.port.on('api:respond', onApiRespond);
+  self.port.on('api:inject', onApiInject);
+  self.port.on('detach', onDetach);
+
+  function end() {
+    self.port.removeListener('api:respond', onApiRespond);
+    self.port.removeListener('api:inject', onApiInject);
+    self.port.removeListener('detach', onDetach);
     api.port.on = api.port.emit = api.noop;
-    for (var i in api.onEnd) {
-      api.onEnd[i]();
+    for (let i = msgHandlers.length; i--;) {
+      let handlers = msgHandlers[i];
+      for (let type in handlers) {
+        self.port.removeListener(type, handlers[type]);
+      }
     }
-    api.onEnd.length = msgHandlers.length = 0;
-  });
+    msgHandlers.length = 0;
+    for (let i in api.onEnd) {
+      try {
+        api.onEnd[i]();
+      } catch (e) {
+        log('[end] onEnd error', e);
+      }
+    }
+    api.onEnd.length = 0;
+    callbacks = {};
+  }
+
+  function onWinMessage(e) {
+    if (e.data && e.data.kifi === 'identity' && e.data.name === identity.name && e.data.bornAt > identity.bornAt && e.origin === location.origin) {
+      log('[identity] ending', identity, e.data.bornAt);
+      end();
+    }
+  }
 
   return {
     dev: self.options.dev,
     mutationsFirePromptly: false,
+    identify: function (name) {
+      var now = Date.now();
+      identity = {name: name, bornAt: now};
+      window.postMessage({kifi: 'identity', name: name, bornAt: now}, location.origin);
+      window.addEventListener('message', onWinMessage);
+    },
     noop: function() {},
     onEnd: [],
     port: {
@@ -94,9 +130,9 @@ const api = function() {
     url: function(path) {
       return self.options.dataUriPrefix + path;
     }};
-}();
+}());
 
-function log() {
+var log = function log() {
   'use strict';
   var d = new Date, ds = d.toString();
   for (var args = Array.slice(arguments), i = 0; i < args.length; i++) {
@@ -111,4 +147,4 @@ function log() {
   }
   args.unshift("'" + ds.substr(0,2) + ds.substr(15,9) + "." + String(+d).substr(10) + "'");
   console.log.apply(console, args);
-}
+};
