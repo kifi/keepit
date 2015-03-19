@@ -344,7 +344,7 @@ class KeepsCommander @Inject() (
         val (keeps, invalidKeepIds) = db.readWrite { implicit s =>
           val (keeps, invalidKeepIds) = keepIds.map { kId =>
             keepRepo.getByExtIdandLibraryId(kId, libId, excludeState = None) match {
-              case Some(k) if (k.isActive) =>
+              case Some(k) if k.state != KeepStates.INACTIVE =>
                 keepsToFinalize = k +: keepsToFinalize
                 Left(setKeepStateWithSession(k, KeepStates.INACTIVE, userId))
               case Some(k) =>
