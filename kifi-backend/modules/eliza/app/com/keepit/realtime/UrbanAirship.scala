@@ -18,7 +18,7 @@ import com.keepit.eliza.model._
 import com.keepit.model.User
 import org.joda.time.Days
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json.{ JsString, JsNumber, JsObject, Json }
+import play.api.libs.json._
 
 import scala.collection
 import scala.concurrent.future
@@ -174,6 +174,10 @@ class UrbanAirshipImpl @Inject() (
   //see http://docs.urbanairship.com/reference/api/v3/push.html
   private[realtime] def createIosJson(notification: PushNotification, device: Device) = {
     val audienceKey = if (device.isChannel) "ios_channel" else "device_token"
+    val sound = notification.sound match {
+      case Some(fileName) => JsString(fileName.name)
+      case None => JsNull
+    }
     notification.message.map { message =>
       Json.obj(
         "audience" -> Json.obj(audienceKey -> device.token),
@@ -182,7 +186,7 @@ class UrbanAirshipImpl @Inject() (
           "ios" -> Json.obj(
             "alert" -> message.abbreviate(1000), //can be replaced with a json https://developer.apple.com/library/mac/documentation/NetworkingInternet/Conceptual/RemoteNotificationsPG/Chapters/ApplePushService.html#//apple_ref/doc/uid/TP40008194-CH100-SW9
             "badge" -> notification.unvisitedCount,
-            "sound" -> notification.sound.get.name,
+            "sound" -> sound,
             "content-available" -> true,
             "extra" -> jsonMessageExtra(notification)
           )
