@@ -138,7 +138,7 @@ class RawSeedItemRepoImpl @Inject() (
   def cleanupBatch(userId: Id[User])(implicit session: RWSession): Unit = {
     import StaticQuery.interpolation
     val cutoff = currentDateTime.minus(org.joda.time.Duration.standardDays(10))
-    sqlu"DELETE FROM raw_seed_item WHERE user_id=$userId AND updated_at<=$cutoff LIMIT 1000".first()
+    sqlu"DELETE FROM raw_seed_item WHERE user_id=$userId AND updated_at<=$cutoff LIMIT 250".first()
   }
 }
 

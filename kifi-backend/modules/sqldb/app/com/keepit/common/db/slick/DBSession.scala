@@ -110,6 +110,11 @@ object DBSession {
       }
     }
 
+    def withAutocommit[T](f: => T): T = {
+      if (open) conn.setAutoCommit(true)
+      f
+    }
+
     private val statementCache = new mutable.HashMap[String, PreparedStatement]
     def getPreparedStatement(statement: String): PreparedStatement = {
       val preparedStatement = statementCache.getOrElseUpdate(statement, {

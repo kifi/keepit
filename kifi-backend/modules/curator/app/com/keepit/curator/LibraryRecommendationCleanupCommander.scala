@@ -13,8 +13,8 @@ class LibraryRecommendationCleanupCommander @Inject() (
     db: Database,
     libraryRecoRepo: LibraryRecommendationRepo) {
 
-  val defaultMinimumRecommendationsToKeep = 500
-  val defaultAgeBeforeCleanup = Duration.standardDays(7)
+  val defaultMinimumRecommendationsToKeep = 200
+  val defaultAgeBeforeCleanup = Duration.standardDays(5)
 
   def cleanupLowMasterScoreRecos(overrideMinimumRecosToKeep: Option[Int] = None, overrideBeforeUpdatedAt: Option[DateTime] = None) = {
     val usersToClean = Random.shuffle(db.readOnlyReplica { implicit session =>

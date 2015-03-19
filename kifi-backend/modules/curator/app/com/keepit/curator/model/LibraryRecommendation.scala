@@ -4,8 +4,10 @@ import com.keepit.common.crypto.ModelWithPublicId
 import com.keepit.common.db.{ Id, Model, ModelWithState, State, States }
 import com.keepit.common.time._
 import com.keepit.model.{ Library, User }
-import com.kifi.macros.json
 import org.joda.time.DateTime
+
+import play.api.libs.json._
+import play.api.libs.functional.syntax._
 
 object LibraryRecommendation {
   implicit def toLibraryRecoInfo(libReco: LibraryRecommendation): LibraryRecoInfo = {
@@ -39,7 +41,7 @@ case class LibraryRecommendation(
 
 object LibraryRecommendationStates extends States[LibraryRecommendation]
 
-@json case class LibraryScores(
+case class LibraryScores(
     socialScore: Float,
     interestScore: Float,
     recencyScore: Float,
@@ -58,4 +60,45 @@ object LibraryRecommendationStates extends States[LibraryRecommendation]
        |si:$sizeScore%1.2f-
        |c:$contentScoreOrDefault%1.2f
      """.stripMargin.replace("\n", "").trim()
+
+  private def reducePrecision(x: Float): Float = {
+    (x * 10000).toInt.toFloat * 10000
+  }
+
+  private def reducePrecision(xOpt: Option[Float]): Option[Float] = {
+    xOpt.map { x => (x * 10000).toInt.toFloat * 10000 }
+  }
+
+  //this is used to save space in the json
+  def withReducedPrecision(): LibraryScores = LibraryScores(
+    reducePrecision(socialScore),
+    reducePrecision(interestScore),
+    reducePrecision(recencyScore),
+    reducePrecision(popularityScore),
+    reducePrecision(sizeScore),
+    reducePrecision(contentScore)
+  )
+}
+
+object LibraryScores {
+  val oldFormat = Json.format[LibraryScores]
+
+  def newFormat = (
+    (__ \ 's).format[Float] and
+    (__ \ 'i).format[Float] and
+    (__ \ 'r).format[Float] and
+    (__ \ 'p).format[Float] and
+    (__ \ 'si).format[Float] and
+    (__ \ 'c).formatNullable[Float]
+  )(LibraryScores.apply, unlift(LibraryScores.unapply))
+
+  implicit val format: Format[LibraryScores] = new Format[LibraryScores] {
+    def reads(json: JsValue) = {
+      oldFormat.reads(json) orElse newFormat.reads(json)
+    }
+
+    def writes(obj: LibraryScores): JsValue = {
+      newFormat.writes(obj.withReducedPrecision)
+    }
+  }
 }
