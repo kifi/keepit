@@ -1,6 +1,7 @@
 package com.keepit.model
 
 import com.keepit.common.db._
+import com.keepit.common.time._
 import com.keepit.model.LibraryFactory._
 import com.keepit.model.LibraryFactoryHelper._
 import com.keepit.model.KeepFactory._
@@ -8,6 +9,7 @@ import com.keepit.model.KeepFactoryHelper._
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.model.UserFactory._
 import com.keepit.test._
+import org.joda.time.DateTime
 import org.specs2.mutable._
 
 class KeepRepoTest extends Specification with ShoeboxTestInjector {
@@ -33,6 +35,24 @@ class KeepRepoTest extends Specification with ShoeboxTestInjector {
           inject[KeepRepo].getPrivate(user2.id.get, 0, 8).size === 8
           inject[KeepRepo].getPrivate(user2.id.get, 10, 100).size === 10
           inject[KeepRepo].getNonPrivate(user2.id.get, 0, 8).size === 8
+        }
+      }
+    }
+    "last active keep time" in {
+      withDb() { implicit injector =>
+        val (user1, user2, user3) = db.readWrite { implicit s =>
+          val user1 = user().saved
+          val user2 = user().saved
+          val user3 = user().saved
+          keep().withUser(user1).withKeptAt(new DateTime(2013, 1, 1, 1, 1, 1, DEFAULT_DATE_TIME_ZONE)).discoverable().saved
+          keep().withUser(user1).withKeptAt(new DateTime(2014, 1, 1, 1, 1, 1, DEFAULT_DATE_TIME_ZONE)).discoverable().saved
+          keep().withUser(user1).withKeptAt(new DateTime(2015, 1, 1, 1, 1, 1, DEFAULT_DATE_TIME_ZONE)).discoverable().saved
+          keep().withUser(user2).discoverable().saved
+          (user1, user2, user3)
+        }
+        db.readOnlyMaster { implicit s =>
+          inject[KeepRepo].latestKeep(user1.id.get).get.year().get() === 2015
+          inject[KeepRepo].latestKeep(user3.id.get) === None
         }
       }
     }

@@ -481,6 +481,7 @@ class KeepRepoImpl @Inject() (
 
   def latestKeep(userId: Id[User])(implicit session: RSession): Option[DateTime] = {
     import StaticQuery.interpolation
-    sql"""select kept_at from bookmark where user_id = $userId and state='active'""".as[DateTime].firstOption
+    val res = sql"""select max(kept_at) from bookmark where user_id = $userId and state='active'""".as[DateTime].first
+    Option(res)
   }
 }
