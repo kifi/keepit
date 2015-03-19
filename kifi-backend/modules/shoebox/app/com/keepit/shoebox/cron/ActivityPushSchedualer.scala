@@ -149,7 +149,7 @@ class ActivityPusher @Inject() (
   }
 
   private def createPushActivityEntitiesBatch(batchSize: Int): Seq[Id[ActivityPushTask]] = {
-    val users = db.readOnlyReplica { implicit s =>
+    val users = db.readOnlyMaster { implicit s => //need to use master since we'll quickly gate to race condition because of replica lag
       val userIds = activityPushTaskRepo.getUsersWithoutActivityPushTask(batchSize)
       val usersWithLastKeep = userRepo.getAllUsers(userIds).values map { user =>
         user -> keepRepo.latestKeep(user.id.get)
@@ -168,7 +168,7 @@ class ActivityPusher @Inject() (
   }
 
   def getNextPushBatch(): Seq[Id[ActivityPushTask]] = {
-    val ids = db.readOnlyReplica { implicit s =>
+    val ids = db.readOnlyMaster { implicit s =>
       val now = clock.now()
       activityPushTaskRepo.getByPushAndActivity(now.minusDays(2), now.toLocalTimeInZone(DEFAULT_DATE_TIME_ZONE), 100)
     }
