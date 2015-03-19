@@ -76,7 +76,7 @@ case class UriScores(
   """.stripMargin('|').replace("\n", "").trim()
 
   private def reducePrecision(x: Float): Float = {
-    (x * 10000).toInt.toFloat * 10000
+    (x * 10000).toInt.toFloat / 10000
   }
 
   private def reducePrecision(xOpt: Option[Float]): Option[Float] = {
