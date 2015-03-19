@@ -4,11 +4,13 @@ import java.io.{ FilterInputStream, InputStream }
 import java.nio.charset.Charset
 
 import com.keepit.model.HttpProxy
-import com.keepit.rover.article.HttpInfo
+import com.keepit.rover.article.{ Article, HttpInfo }
+import org.apache.http.HttpStatus
 import org.joda.time.DateTime
 import com.keepit.common.core._
 
-import scala.concurrent.Future
+import scala.concurrent.{ ExecutionContext, Future }
+import scala.util.{ Failure, Success, Try }
 
 case class FetchRequest(
   url: String,
@@ -33,6 +35,12 @@ case class FetchResult[T](context: FetchContext, content: Option[T]) {
     }
     futureMappedContent.imap(mappedContent => copy(content = mappedContent))
   }
+  def resolve: Try[Option[T]] = context.response.statusCode match {
+    case HttpStatus.SC_OK if content.isDefined => Success(content)
+    case HttpStatus.SC_NOT_MODIFIED => Success(None)
+    case code => Failure(InvalidFetchResponseException(context.response, content))
+  }
+
 }
 
 case class FetchRequestInfo(destinationUrl: String, redirects: Seq[HttpRedirect])
@@ -63,3 +71,6 @@ class HttpInputStream(input: InputStream) extends FilterInputStream(input)
 trait HttpFetcher {
   def fetch[A](request: FetchRequest)(f: FetchResult[HttpInputStream] => A): Future[A]
 }
+
+case class InvalidFetchRequestException(request: FetchRequest, cause: Throwable) extends Throwable(s"$request failed", cause)
+case class InvalidFetchResponseException[T](responseInfo: FetchResponseInfo, content: Option[T]) extends Throwable(s"Invalid fetch response: $responseInfo, content: $content")

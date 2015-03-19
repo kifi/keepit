@@ -20,8 +20,6 @@ import scala.concurrent.Future
 import scala.ref.WeakReference
 import scala.util.{ Failure, Try }
 
-case class InvalidFetchRequestException(request: FetchRequest, cause: Throwable) extends Throwable(s"$request failed", cause)
-
 // based on Apache HTTP Client (this one is blocking but feature-rich & flexible; see http://hc.apache.org/httpcomponents-client-ga/index.html)
 class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, connectionTimeout: Int, soTimeOut: Int, schedulingProperties: SchedulingProperties, scraperHttpConfig: HttpFetchEnforcerConfig) extends HttpFetcher with Logging {
 

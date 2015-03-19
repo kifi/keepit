@@ -5,16 +5,23 @@ import com.keepit.common.logging.Logging
 import com.keepit.rover.extractor.JsoupDocument
 import com.keepit.rover.fetcher.{ FetchResult, RoverDocumentFetcher }
 import com.keepit.common.time._
+import com.keepit.rover.store.{ RoverArticleStore, RoverUnderlyingArticleStore }
 import org.joda.time.DateTime
 
 import scala.concurrent.{ Future, ExecutionContext }
 
 class GithubArticleFetcher @Inject() (
+    articleStore: RoverArticleStore,
     documentFetcher: RoverDocumentFetcher,
     clock: Clock,
-    implicit val executionContext: ExecutionContext) extends Logging {
+    implicit val executionContext: ExecutionContext) extends ArticleFetcher[GithubArticle] with Logging {
 
-  def fetch(url: String, ifModifiedSince: Option[DateTime]): Future[FetchResult[GithubArticle]] = {
+  def fetch(request: ArticleFetchRequest[GithubArticle]): Future[Option[GithubArticle]] = {
+    val futureFetchedArticle = doFetch(request.url, request.lastFetchedAt)
+    ArticleFetcher.resolveAndCompare(articleStore)(futureFetchedArticle, request.latestArticleKey, ArticleFetcher.defaultSimilarityCheck)
+  }
+
+  private def doFetch(url: String, ifModifiedSince: Option[DateTime]): Future[FetchResult[GithubArticle]] = {
     documentFetcher.fetchJsoupDocument(url, ifModifiedSince).map { result =>
       result.map { doc =>
         val content = GithubContent(

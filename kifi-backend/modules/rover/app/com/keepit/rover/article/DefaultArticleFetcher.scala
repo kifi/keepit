@@ -5,16 +5,23 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.time.Clock
 import com.keepit.rover.fetcher.{ FetchResult, RoverDocumentFetcher }
 import com.keepit.common.time._
+import com.keepit.rover.store.RoverArticleStore
 import org.joda.time.DateTime
 
 import scala.concurrent.{ Future, ExecutionContext }
 
 class DefaultArticleFetcher @Inject() (
+    articleStore: RoverArticleStore,
     documentFetcher: RoverDocumentFetcher,
     clock: Clock,
-    implicit val executionContext: ExecutionContext) extends Logging {
+    implicit val executionContext: ExecutionContext) extends ArticleFetcher[DefaultArticle] with Logging {
 
-  def fetch(url: String, ifModifiedSince: Option[DateTime]): Future[FetchResult[DefaultArticle]] = {
+  def fetch(request: ArticleFetchRequest[DefaultArticle]): Future[Option[DefaultArticle]] = {
+    val futureFetchedArticle = doFetch(request.url, request.lastFetchedAt)
+    ArticleFetcher.resolveAndCompare(articleStore)(futureFetchedArticle, request.latestArticleKey, ArticleFetcher.defaultSimilarityCheck)
+  }
+
+  private def doFetch(url: String, ifModifiedSince: Option[DateTime]): Future[FetchResult[DefaultArticle]] = {
     documentFetcher.fetchTikaDocument(url, ifModifiedSince).map { result =>
       result.map { doc =>
         val content = DefaultContent(
