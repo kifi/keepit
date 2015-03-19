@@ -278,9 +278,10 @@ class NotificationCommander @Inject() (
     )
   }
 
-  def sendPushNotification(userId: Id[User], notification: PushNotification) = {
-    urbanAirship.notifyUser(userId, notification)
+  def sendPushNotification(userId: Id[User], notification: PushNotification): Int = {
+    val deviceCount = urbanAirship.notifyUser(userId, notification)
     messagingAnalytics.sentPushNotification(userId, notification)
+    deviceCount
   }
 
   def sendNotificationForMessage(userId: Id[User], message: Message, thread: MessageThread, messageWithBasicUser: MessageWithBasicUser, orderedActivityInfo: Seq[UserThreadActivity]): Unit = {

@@ -46,7 +46,7 @@ object UrbanAirship {
 @ImplementedBy(classOf[UrbanAirshipImpl])
 trait UrbanAirship {
   def registerDevice(userId: Id[User], token: String, deviceType: DeviceType, isDev: Boolean, signature: Option[String]): Device
-  def notifyUser(userId: Id[User], notification: PushNotification): Unit
+  def notifyUser(userId: Id[User], notification: PushNotification): Int
   def sendNotification(device: Device, notification: PushNotification): Unit
 }
 
@@ -117,7 +117,7 @@ class UrbanAirshipImpl @Inject() (
     onePerType.values.toSeq
   }
 
-  def notifyUser(userId: Id[User], notification: PushNotification): Unit = {
+  def notifyUser(userId: Id[User], notification: PushNotification): Int = {
     val devices: Seq[Device] = getDevices(userId)
     log.info(s"Notifying user: $userId with $devices")
     //get only active devices
@@ -133,6 +133,7 @@ class UrbanAirshipImpl @Inject() (
     devices foreach { device =>
       client.updateDeviceState(device)
     }
+    activeDevices.size
   }
 
   private def jsonMessageExtra(notification: PushNotification) = {

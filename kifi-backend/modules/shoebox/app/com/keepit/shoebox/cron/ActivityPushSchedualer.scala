@@ -1,5 +1,6 @@
 package com.keepit.shoebox.cron
 
+import scala.concurrent.ExecutionContext
 import java.util.concurrent.atomic.AtomicInteger
 
 import com.google.inject.Inject
@@ -75,6 +76,7 @@ class ActivityPusher @Inject() (
     userPersonaRepo: UserPersonaRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
     actor: ActorInstance[ActivityPushActor],
+    implicit val executionContext: ExecutionContext,
     clock: Clock) extends Logging {
 
   def pushItBaby(activityPushTaskId: Id[ActivityPushTask]): Unit = {
@@ -85,7 +87,16 @@ class ActivityPusher @Inject() (
       getMessage(activity.userId) match {
         case Some((message, pushMessageType, experimant)) =>
           log.info(s"pushing activity update to ${activity.userId} of type $pushMessageType [$experimant]: $message")
-          elizaServiceClient.sendPushNotification(activity.userId, message, pushMessageType, experimant)
+          elizaServiceClient.sendPushNotification(activity.userId, message, pushMessageType, experimant) map { deviceCount =>
+            log.info(s"push successful to $deviceCount devices")
+            if (deviceCount <= 0) {
+              db.readWrite { implicit s =>
+                //there may be some race conditions with the four lines ahead, we can live with that.
+                log.info(s"disable activity push task $activity until user register with at least one device")
+                activityPushTaskRepo.save(activityPushTaskRepo.get(activity.id.get).copy(state = ActivityPushTaskStates.NO_DEVICES))
+              }
+            }
+          }
           val lastActivity = getLastActivity(activity.userId)
           db.readWrite { implicit s =>
             activityPushTaskRepo.save(activity.copy(lastPush = Some(clock.now())).withLastActivity(lastActivity))
