@@ -28,7 +28,8 @@ case class KeepInfo(
   hashtags: Option[Set[Hashtag]] = None,
   summary: Option[URISummary] = None,
   siteName: Option[String] = None,
-  libraryId: Option[PublicId[Library]] = None)
+  libraryId: Option[PublicId[Library]] = None,
+  sourceAttribution: Option[KeepSourceAttribution] = None)
 
 object KeepInfo {
 

@@ -19,6 +19,13 @@ case class KeepSourceAttribution(
 object KeepSourceAttribution {
   import com.keepit.model.KeepAttributionType._
 
+  implicit val writes = new Writes[KeepSourceAttribution] {
+    def writes(x: KeepSourceAttribution): JsValue = {
+      val (attrType, attrJs) = toJsValue(x.attribution)
+      Json.obj(attrType.name -> attrJs)
+    }
+  }
+
   private def toJsValue(attr: SourceAttribution): (KeepAttributionType, JsValue) = {
     attr match {
       case x: TwitterAttribution => (Twitter, TwitterAttribution.format.writes(x))
