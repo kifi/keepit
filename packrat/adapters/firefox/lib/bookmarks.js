@@ -6,71 +6,58 @@ var { Cc, Ci } = require('chrome')
 var bookmarks = Cc["@mozilla.org/browser/nav-bookmarks-service;1"].getService(Ci.nsINavBookmarksService);
 var history = Cc["@mozilla.org/browser/nav-history-service;1"].getService(Ci.nsINavHistoryService);
 
-function newURI(url) {
-  return Cc["@mozilla.org/network/io-service;1"].getService(Ci.nsIIOService).newURI(url, null, null);
+function identity(x) {
+  return x;
 }
-
-function runQuery(query) {
-  var options = history.getNewQueryOptions();
-  options.queryType = options.QUERY_TYPE_BOOKMARKS;
-
-  var result = history.executeQuery(query, options).root, resultArray = [];
-  result.containerOpen = true;
-  for (let i = 0, n = result.childCount; i < n; ++i) {
-    let node = result.getChild(i);
-    resultArray.push({id: node.itemId, title: node.title, url: node.uri, addedAt: Math.round(node.dateAdded / 1000)});
-  }
-  return resultArray;
-}
-
-exports.create = function(parentId, name, url, callback) {  // TODO: not working?
-  var id = bookmarks.insertBookmark(parentId, newURI(url), bookmarks.DEFAULT_INDEX, name);
-  callback({id: id, url: url, title: name});
-};
-
-exports.createFolder = function(parentId, name, callback) {
-  var id = bookmarks.createFolder(parentId, name, bookmarks.DEFAULT_INDEX);
-  callback({id: id, title: name});
-};
-
-exports.get = function(id, callback) {
-  switch (bookmarks.getItemType(id)) {
-  case bookmarks.TYPE_BOOKMARK:
-    callback({id: id, title: bookmarks.getItemTitle(id), url: bookmarks.getBookmarkURI(id)});
-    break;
-  case bookmarks.TYPE_FOLDER:
-    callback({id: id, title: bookmarks.getItemTitle(id)});
-    break;
-  default:
-    callback(null);
-  }
-};
 
 exports.getAll = function(callback) {
-  callback(runQuery(history.getNewQuery()).filter(function(b) {return /^https?:/.test(b.url)}));
-};
+  var systemFolderIds = [
+    bookmarks.placesRoot,
+    bookmarks.bookmarksMenuFolder,
+    bookmarks.toolbarFolder,
+    bookmarks.unfiledBookmarksFolder,
+  ];
 
-exports.getBarFolder = function(callback) {
-  callback({id: bookmarks.toolbarFolder});
-};
-
-exports.getChildren = function(id, callback) {
   var query = history.getNewQuery();
-  query.setFolders([id], 1);
-  callback(runQuery(query));
-};
+  query.setFolders([bookmarks.placesRoot], 1);
+  var root = history.executeQuery(query, history.getNewQueryOptions()).root;
 
-exports.move = function(id, newParentId) {
-  bookmarks.moveItem(id, newParentId, bookmarks.DEFAULT_INDEX);
-};
+  var arr = [], path, httpRe = /^https?:/, commaRe = /\s*(?:,\s*)+/;
 
-exports.remove = function(id) {
-  bookmarks.removeItem(id);
-};
+  !function traverse(node) {
+    switch (node.type) {
+      case node.RESULT_TYPE_FOLDER:
+        if (node.itemId !== bookmarks.tagsFolder && !(node.title === 'Mozilla Firefox' && node.parent.itemId === bookmarks.bookmarksMenuFolder)) {
+          node.QueryInterface(Ci.nsINavHistoryContainerResultNode);
+          node.containerOpen = true;
 
-exports.search = function(url, callback) {
-  var ids = bookmarks.getBookmarkIdsForURI(newURI(url));
-  callback(ids.map(function(id) {
-    return {id: id, title: bookmarks.getItemTitle(id), url: bookmarks.getBookmarkURI(id)};
-  }));
+          var name = systemFolderIds.indexOf(node.itemId) < 0 && node.title.trim();
+          if (name) {
+            path = path ? path.concat([name]) : [name];
+          }
+          for (let i = 0, n = node.childCount; i < n; ++i) {
+            traverse(node.getChild(i));
+          }
+          if (name) {
+            path = path.length > 1 ? path.slice(0, -1) : undefined;
+          }
+        }
+        break;
+      case node.RESULT_TYPE_URI:
+        if (httpRe.test(node.uri) && !(node.uri === 'https://www.mozilla.org/en-US/firefox/central/' && node.parent.itemId === bookmarks.toolbarFolder)) {
+          var tags = (node.tags || '').trim();
+          tags = tags && tags.split(commaRe).filter(identity);
+          arr.push({
+            title: node.title,
+            url: node.uri,
+            addedAt: Math.round(node.dateAdded / 1000),
+            path: path,
+            tags: tags.length ? tags : undefined
+          });
+        }
+        break;
+    }
+  }(root);
+
+  callback(arr);
 };
