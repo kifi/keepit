@@ -2,6 +2,8 @@
 // @require scripts/api.js
 // loaded on every page, so no more dependencies
 
+api.identify('keeperScout');
+
 var k = k && k.kifi ? k : {kifi: true};
 
 k.tile = k.tile || function () {  // idempotent for Chrome

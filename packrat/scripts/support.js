@@ -2,6 +2,8 @@
 // @require scripts/api.js
 // @asap
 
+api.identify('support');
+
 (function (doc) {
   'use strict';
   var ds = doc.documentElement.dataset;
