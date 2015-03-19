@@ -210,12 +210,17 @@ class UrbanAirshipImpl @Inject() (
   }
 
   def sendNotification(device: Device, notification: PushNotification): Unit = {
-    log.info(s"Sending notification to device: ${device.token}")
-
     val json = device.deviceType match {
       case DeviceType.IOS => createIosJson(notification, device)
       case DeviceType.Android => createAndroidJson(notification, device)
     }
+    notification match {
+      case spn: SimplePushNotification =>
+        log.info(s"Sending SimplePushNotification to user ${device.userId} device [${device.token}] with: $json")
+      case mtpn: MessageThreadPushNotification =>
+        log.info(s"Sending MessageThreadPushNotification to user ${device.userId} device: [${device.token}] message ${mtpn.id}")
+    }
+
     client.send(json, device, notification).onFailure {
       case e1 =>
         log.error(s"fail to send a push notification $notification for device $device, retry in five seconds", e1)
