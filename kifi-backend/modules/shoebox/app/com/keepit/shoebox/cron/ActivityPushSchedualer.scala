@@ -45,12 +45,12 @@ class ActivityPushActor @Inject() (
         activityPusher.pushItBaby(activityPushTaskId)
       } catch {
         case e: Exception =>
-          if (counter.decrementAndGet() <= 0) {
-            self ! PushActivities
-          }
           airbrake.notify(s"on pushing activity $activityPushTaskId", e)
+      } finally {
+        if (counter.decrementAndGet() <= 0) {
+          self ! PushActivities
+        }
       }
-
   }
 }
 
