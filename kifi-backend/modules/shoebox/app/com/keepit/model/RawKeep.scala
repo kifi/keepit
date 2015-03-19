@@ -70,11 +70,11 @@ class RawKeepFactory @Inject() (
       val tagSet = scala.collection.mutable.Set.empty[String]
       tagsOpt.map { tags =>
         tags.foreach { t =>
-          tagSet.add(t)
+          tagSet.add(t.toLowerCase)
         }
       }
       pathOpt.map { pathSegments =>
-        pathSegments.filter(_.nonEmpty).map(tagSet.add(_))
+        pathSegments.filter(_.nonEmpty).map(seg => tagSet.add(seg.toLowerCase))
       }
       val hashTags = if (tagSet.nonEmpty) {
         Some(tagSet.mkString("::"))
