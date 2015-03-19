@@ -59,7 +59,7 @@ class ActivityPushSchedualer @Inject() (
     val scheduling: SchedulingProperties,
     actor: ActorInstance[ActivityPushActor]) extends SchedulerPlugin {
   override def onStart() {
-    scheduleTaskOnOneMachine(actor.system, 21 seconds, 29 seconds, actor.ref, PushActivity, PushActivity.getClass.getSimpleName)
+    scheduleTaskOnOneMachine(actor.system, 21 seconds, 29 seconds, actor.ref, PushActivities, PushActivities.getClass.getSimpleName)
     scheduleTaskOnOneMachine(actor.system, 1 hour, 1 hours, actor.ref, CreatePushActivityEntities, CreatePushActivityEntities.getClass.getSimpleName)
   }
   def createPushActivityEntities() = actor.ref ! CreatePushActivityEntities
