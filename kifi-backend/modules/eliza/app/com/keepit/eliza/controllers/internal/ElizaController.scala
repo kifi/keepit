@@ -1,5 +1,6 @@
 package com.keepit.eliza.controllers.internal
 
+import com.keepit.common.akka.SafeFuture
 import com.keepit.eliza.{ PushNotificationCategory, PushNotificationExperiment }
 import com.keepit.eliza.controllers.WebSocketRouter
 import com.keepit.common.controller.ElizaServiceController
@@ -39,7 +40,7 @@ class ElizaController @Inject() (
   }
 
   def sendPushNotification() = Action.async { request =>
-    future {
+    SafeFuture {
       val req = request.body.asJson.get.asInstanceOf[JsObject]
       val userId = Id[User]((req \ "userId").as[Long])
       val message = (req \ "message").asInstanceOf[String]
@@ -51,7 +52,7 @@ class ElizaController @Inject() (
   }
 
   def sendToUserNoBroadcast() = Action.async { request =>
-    future {
+    SafeFuture {
       val req = request.body.asJson.get.asInstanceOf[JsObject]
       val userId = Id[User]((req \ "userId").as[Long])
       val data = (req \ "data").asInstanceOf[JsArray]
@@ -61,7 +62,7 @@ class ElizaController @Inject() (
   }
 
   def sendToUser() = Action.async { request =>
-    future {
+    SafeFuture {
       val req = request.body.asJson.get.asInstanceOf[JsObject]
       val userId = Id[User]((req \ "userId").as[Long])
       val data = (req \ "data").asInstanceOf[JsArray]
@@ -71,7 +72,7 @@ class ElizaController @Inject() (
   }
 
   def sendToAllUsers() = Action.async { request =>
-    future {
+    SafeFuture {
       val req = request.body.asJson.get.asInstanceOf[JsArray]
       notificationRouter.sendToAllUsers(req)
       Ok("")
