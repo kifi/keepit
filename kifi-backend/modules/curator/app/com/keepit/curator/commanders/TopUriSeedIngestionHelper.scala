@@ -3,7 +3,7 @@ package com.keepit.curator.commanders
 import com.google.inject.{ Singleton, Inject }
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.{ Id }
-import com.keepit.common.db.slick.Database
+import com.keepit.common.db.slick.{ Database, ExecutionSkipped }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
@@ -96,7 +96,11 @@ class TopUriSeedIngestionHelper @Inject() (
           log.debug(s"ingesting uri score is: ${score}, related user id is: ${uriId}")
           processUriScores(uriId, score / normalizationFactor, userId)(session)
         }.values.foreach { maybeException =>
-          maybeException.get //will throw the exception in the Try if there is one
+          try {
+            maybeException.get
+          } catch {
+            case _: ExecutionSkipped => //re-raise any real exceptions
+          }
         }
 
         db.readWrite(attempts = 2) { implicit session =>
