@@ -40,40 +40,40 @@ class ElizaController @Inject() (
   }
 
   def sendPushNotification() = Action.async { request =>
+    val req = request.body.asJson.get.asInstanceOf[JsObject]
+    val userId = Id[User]((req \ "userId").as[Long])
+    val message = (req \ "message").as[String]
+    val pushNotificationExperiment = (req \ "pushNotificationExperiment").as[PushNotificationExperiment]
+    val pushNotificationCategory = (req \ "pushNotificationCategory").as[PushNotificationCategory]
     SafeFuture {
-      val req = request.body.asJson.get.asInstanceOf[JsObject]
-      val userId = Id[User]((req \ "userId").as[Long])
-      val message = (req \ "message").asInstanceOf[String]
-      val pushNotificationExperiment = (req \ "pushNotificationExperiment").asInstanceOf[PushNotificationExperiment]
-      val pushNotificationCategory = (req \ "pushNotificationCategory").asInstanceOf[PushNotificationCategory]
       val deviceCount = messagingCommander.sendPushNotification(userId, message, pushNotificationCategory, pushNotificationExperiment)
       Ok(JsNumber(deviceCount))
     }
   }
 
   def sendToUserNoBroadcast() = Action.async { request =>
+    val req = request.body.asJson.get.asInstanceOf[JsObject]
+    val userId = Id[User]((req \ "userId").as[Long])
+    val data = (req \ "data").asInstanceOf[JsArray]
     SafeFuture {
-      val req = request.body.asJson.get.asInstanceOf[JsObject]
-      val userId = Id[User]((req \ "userId").as[Long])
-      val data = (req \ "data").asInstanceOf[JsArray]
       notificationRouter.sendToUserNoBroadcast(userId, data)
       Ok("")
     }
   }
 
   def sendToUser() = Action.async { request =>
+    val req = request.body.asJson.get.asInstanceOf[JsObject]
+    val userId = Id[User]((req \ "userId").as[Long])
+    val data = (req \ "data").asInstanceOf[JsArray]
     SafeFuture {
-      val req = request.body.asJson.get.asInstanceOf[JsObject]
-      val userId = Id[User]((req \ "userId").as[Long])
-      val data = (req \ "data").asInstanceOf[JsArray]
       notificationRouter.sendToUser(userId, data)
       Ok("")
     }
   }
 
   def sendToAllUsers() = Action.async { request =>
+    val req = request.body.asJson.get.asInstanceOf[JsArray]
     SafeFuture {
-      val req = request.body.asJson.get.asInstanceOf[JsArray]
       notificationRouter.sendToAllUsers(req)
       Ok("")
     }
