@@ -91,15 +91,12 @@ class TopUriSeedIngestionHelper @Inject() (
         }.take(2000).toMap //Last part (sort + take) is a stop gap
         val normalizationFactor = if (rescaledUriScores.isEmpty) 0.0f else rescaledUriScores.values.max
 
-        db.readWriteBatch(rescaledUriScores.toSeq, attempts = 2) { (session, singleScore) =>
-          val (uriId, score) = singleScore
-          log.debug(s"ingesting uri score is: ${score}, related user id is: ${uriId}")
-          processUriScores(uriId, score / normalizationFactor, userId)(session)
-        }.values.foreach { maybeException =>
-          try {
-            maybeException.get
-          } catch {
-            case _: ExecutionSkipped => //re-raise any real exceptions
+        db.readWriteWithAutocommit { implicit session =>
+          rescaledUriScores.foreach {
+            case (uriId, score) => {
+              log.debug(s"ingesting uri score is: ${score}, related user id is: ${uriId}")
+              processUriScores(uriId, score / normalizationFactor, userId)(session)
+            }
           }
         }
 
