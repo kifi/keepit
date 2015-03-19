@@ -134,9 +134,23 @@ private class RawKeepImporterActor @Inject() (
 
           successes.foreach { keep =>
             val allTagIdsForThisKeep = rawKeepByUrl.get(keep.url).flatMap { rk =>
-              rk.tagIds.map { tags =>
+
+              val keepTagIds = rk.tagIds.map { tags =>
                 tags.split(",").toSeq.filter(_.length > 0).map { c => Try(c.toLong).map(Id[Collection]).toOption }.flatten
               }
+
+              val keepHashtagIds = rk.hashtags.map { hashtags =>
+                hashtags.split("::").toSeq.filter(_.nonEmpty).map { hashtag =>
+                  val tag = bookmarksCommanderProvider.get.getOrCreateTag(userId, hashtag)(context)
+                  tag.id.get
+                }
+              }
+
+              (keepTagIds, keepHashtagIds) match {
+                case (Some(tagIds), Some(hashtagIds)) => Some(tagIds ++ hashtagIds)
+                case _ => keepTagIds.orElse(keepHashtagIds)
+              }
+
             }.getOrElse(Seq.empty)
 
             allTagIdsForThisKeep.map { tagId =>

@@ -36,7 +36,8 @@ class RawKeepRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) ex
     def tagIds = column[String]("tag_ids", O.Nullable) // Comma separated list of references to `collection.id`
     def libraryId = column[Id[Library]]("library_id", O.Nullable)
     def createdDate = column[DateTime]("created_date", O.Nullable)
-    def * = (id.?, userId, createdAt, updatedAt, url, title.?, isPrivate, importId.?, source, kifiInstallationId.?, originalJson, state, tagIds.?, libraryId.?, createdDate.?) <> ((RawKeep.apply _).tupled, RawKeep.unapply _)
+    def hashtags = column[String]("hashtags", O.Nullable)
+    def * = (id.?, userId, createdAt, updatedAt, url, title.?, isPrivate, importId.?, source, kifiInstallationId.?, originalJson, state, tagIds.?, libraryId.?, createdDate.?, hashtags.?) <> ((RawKeep.apply _).tupled, RawKeep.unapply _)
   }
 
   def table(tag: Tag) = new RawKeepTable(tag)

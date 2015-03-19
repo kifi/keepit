@@ -23,9 +23,11 @@ case class RawKeep(
     installationId: Option[ExternalId[KifiInstallation]] = None,
     originalJson: Option[JsValue] = None,
     state: State[RawKeep] = RawKeepStates.ACTIVE,
-    tagIds: Option[String] = None,
+    tagIds: Option[String] = None, // deprecated - use hashtags instead!
     libraryId: Option[Id[Library]],
-    createdDate: Option[DateTime] = None) extends Model[RawKeep] {
+    createdDate: Option[DateTime] = None,
+    hashtags: Option[String] = None // i.e. "[tagA,tagB]"
+    ) extends Model[RawKeep] {
   def withId(id: Id[RawKeep]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
 }
@@ -43,7 +45,6 @@ object RawKeep extends Logging {
 }
 
 class RawKeepFactory @Inject() (
-    keepCommander: KeepsCommander,
     airbrake: AirbrakeNotifier) {
 
   private def getBookmarkJsonObjects(value: JsValue): Seq[JsObject] = value match {
@@ -75,21 +76,15 @@ class RawKeepFactory @Inject() (
       pathOpt.map { pathSegments =>
         pathSegments.filter(_.nonEmpty).map(tagSet.add(_))
       }
-      val tagIds = {
-        // create tags for user, and then create a string of all tag ids separated by ","
-        val tagIdString = tagSet.map { tagStr =>
-          keepCommander.getOrCreateTag(userId, tagStr.trim)
-        }.toSeq.map(_.id.get.toString).mkString(",")
-        if (tagIdString.isEmpty) {
-          None
-        } else {
-          Some(tagIdString)
-        }
+      val hashTags = if (tagSet.nonEmpty) {
+        Some(tagSet.mkString("::"))
+      } else {
+        None
       }
 
       val canonical = (json \ Normalization.CANONICAL.scheme).asOpt[String]
       val openGraph = (json \ Normalization.OPENGRAPH.scheme).asOpt[String]
-      RawKeep(userId = userId, title = title, url = url, isPrivate = isPrivate, importId = importId, source = source, originalJson = Some(json), installationId = installationId, libraryId = libraryId, tagIds = tagIds, createdDate = addedAt)
+      RawKeep(userId = userId, title = title, url = url, isPrivate = isPrivate, importId = importId, source = source, originalJson = Some(json), installationId = installationId, libraryId = libraryId, hashtags = hashTags, createdDate = addedAt)
     }
   }
 }
