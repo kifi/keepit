@@ -7,7 +7,7 @@ import com.keepit.common.healthcheck._
 import com.keepit.common.mail.{ MailToKeepPlugin, MailSenderPlugin }
 import com.keepit.common.store.ImageDataIntegrityPlugin
 import com.keepit.scraper._
-import com.keepit.shoebox.cron.{ActivityPushSchedualer, ActivityEmailCronPlugin}
+import com.keepit.shoebox.cron.{ ActivityPushSchedualer, ActivityEmailCronPlugin }
 import play.api.Mode._
 import play.api._
 import com.keepit.social.SocialGraphPlugin
