@@ -58,7 +58,7 @@ object FutureHelpers {
         }
         p.future
     }
-    Future.sequence(seq).map(_.toMap)
+    Future.sequence(seq).imap(_.toMap)
   }
 
   def sequentialExec[I, T](items: Iterable[I])(f: I => Future[T])(implicit ec: ScalaExecutionContext): Future[Unit] = {
