@@ -167,12 +167,12 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
       withDb(controllerTestModules: _*) { implicit injector =>
         val (user1, user2, user3, user4, user5, lib1) = db.readWrite { implicit session =>
           val user1 = user().withName("George", "Washington").withUsername("GDubs").withPictureName("pic1").saved
-          inject[UserValueRepo].save(UserValue(userId = user1.id.get, name = UserValueName.USER_DESCRIPTION, value = "First Prez yo!"))
           val user2 = user().withName("Abe", "Lincoln").withUsername("abe").saved
           val user3 = user().withName("Thomas", "Jefferson").withUsername("TJ").saved
           val user4 = user().withName("John", "Adams").withUsername("jayjayadams").saved
           val user5 = user().withName("Ben", "Franklin").withUsername("Benji").saved
 
+          inject[UserValueRepo].save(UserValue(userId = user1.id.get, name = UserValueName.USER_DESCRIPTION, value = "First Prez yo!"))
           connect(user1 -> user2,
             user1 -> user3,
             user4 -> user1,

@@ -296,22 +296,25 @@ class MobileUserController @Inject() (
     userCommander.profile(Username(username), viewer) match {
       case None => NotFound(s"can't find username $username")
       case Some(profile) =>
-        val userBiography = db.readOnlyMaster { implicit s =>
-          userValueRepo.getValueStringOpt(profile.userId, UserValueName.USER_DESCRIPTION)
-        }
         val (numLibraries, numFollowedLibs, numInvitedLibs) = libraryCommander.countLibraries(profile.userId, viewer.map(_.id.get))
-        val json = Json.toJson(profile.basicUserWithFriendStatus).asInstanceOf[JsObject] ++ Json.obj(
-          "biography" -> userBiography,
-          "numLibraries" -> numLibraries,
-          "numFollowedLibraries" -> numFollowedLibs,
-          "numKeeps" -> profile.numKeeps)
-
-        numInvitedLibs match {
-          case Some(numInvited) =>
-            Ok(json ++ Json.obj("numInvitedLibraries" -> numInvited))
-          case _ =>
-            Ok(json)
+        val (numConnections, userBiography) = db.readOnlyMaster { implicit s =>
+          val numConnections = userConnectionRepo.getConnectionCount(profile.userId)
+          val userBio = userValueRepo.getValueStringOpt(profile.userId, UserValueName.USER_DESCRIPTION)
+          (numConnections, userBio)
         }
+
+        val jsonFriendInfo = Json.toJson(profile.basicUserWithFriendStatus).as[JsObject]
+        val jsonProfileInfo = Json.toJson(UserProfileStats(
+          numLibraries = numLibraries,
+          numFollowedLibraries = numFollowedLibs,
+          numKeeps = profile.numKeeps,
+          numConnections = numConnections,
+          numFollowers = libraryCommander.countFollowers(profile.userId, viewer.map(_.id.get)),
+          numInvitedLibraries = numInvitedLibs,
+          biography = userBiography
+        )).as[JsObject]
+
+        Ok(jsonFriendInfo ++ jsonProfileInfo)
     }
   }
 

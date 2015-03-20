@@ -50,8 +50,8 @@ class UserProfileController @Inject() (
           (numConnections, userBio)
         }
 
-        val json = Json.toJson(profile.basicUserWithFriendStatus).as[JsObject]
-        val finalJson = Json.toJson(UserProfileStats(
+        val jsonFriendInfo = Json.toJson(profile.basicUserWithFriendStatus).as[JsObject]
+        val jsonProfileInfo = Json.toJson(UserProfileStats(
           numLibraries = numLibraries,
           numFollowedLibraries = numFollowedLibraries,
           numKeeps = profile.numKeeps,
@@ -60,7 +60,7 @@ class UserProfileController @Inject() (
           numInvitedLibraries = numInvitedLibs,
           biography = userBiography
         )).as[JsObject]
-        Ok(json ++ finalJson)
+        Ok(jsonFriendInfo ++ jsonProfileInfo)
     }
   }
 
