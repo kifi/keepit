@@ -131,11 +131,6 @@ case class GraphCacheModule(cachePluginModules: CachePluginModule*) extends Cach
 
   @Singleton
   @Provides
-  def systemValueCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
-    new SystemValueCache(stats, accessLog, (outerRepo, 7 days))
-
-  @Singleton
-  @Provides
   def userSegmentCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new UserSegmentCache(stats, accessLog, (innerRepo, 12 hours), (outerRepo, 1 day))
 
