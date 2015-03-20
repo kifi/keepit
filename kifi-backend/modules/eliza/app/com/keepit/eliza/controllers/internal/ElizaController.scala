@@ -40,7 +40,7 @@ class ElizaController @Inject() (
   }
 
   def sendPushNotification() = Action.async { request =>
-    val req = request.body.asJson.get.asInstanceOf[JsObject]
+    val req = request.body.asJson.get.as[JsObject]
     val userId = Id[User]((req \ "userId").as[Long])
     val message = (req \ "message").as[String]
     val pushNotificationExperiment = (req \ "pushNotificationExperiment").as[PushNotificationExperiment]
@@ -52,9 +52,9 @@ class ElizaController @Inject() (
   }
 
   def sendToUserNoBroadcast() = Action.async { request =>
-    val req = request.body.asJson.get.asInstanceOf[JsObject]
+    val req = request.body.asJson.get.as[JsObject]
     val userId = Id[User]((req \ "userId").as[Long])
-    val data = (req \ "data").asInstanceOf[JsArray]
+    val data = (req \ "data").as[JsArray]
     SafeFuture {
       notificationRouter.sendToUserNoBroadcast(userId, data)
       Ok("")
@@ -62,9 +62,9 @@ class ElizaController @Inject() (
   }
 
   def sendToUser() = Action.async { request =>
-    val req = request.body.asJson.get.asInstanceOf[JsObject]
+    val req = request.body.asJson.get.as[JsObject]
     val userId = Id[User]((req \ "userId").as[Long])
-    val data = (req \ "data").asInstanceOf[JsArray]
+    val data = (req \ "data").as[JsArray]
     SafeFuture {
       notificationRouter.sendToUser(userId, data)
       Ok("")
@@ -72,7 +72,7 @@ class ElizaController @Inject() (
   }
 
   def sendToAllUsers() = Action.async { request =>
-    val req = request.body.asJson.get.asInstanceOf[JsArray]
+    val req = request.body.asJson.get.as[JsArray]
     SafeFuture {
       notificationRouter.sendToAllUsers(req)
       Ok("")
