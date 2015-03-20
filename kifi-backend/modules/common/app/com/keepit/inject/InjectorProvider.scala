@@ -8,7 +8,7 @@ import net.codingwell.scalaguice.InjectorExtensions.ScalaInjector
 import java.util.concurrent.atomic.AtomicBoolean
 import com.google.inject.util.Modules
 import com.keepit.FortyTwoGlobal
-import net.codingwell.scalaguice.ScalaModule
+import net.codingwell.scalaguice._
 
 sealed trait InjectorProvider {
 
@@ -40,6 +40,7 @@ sealed trait InjectorProvider {
   }
 
   def inject[A](implicit m: Manifest[A], injector: Injector): A = injector.instance[A]
+  def injectOpt[A](implicit m: Manifest[A], injector: Injector): Option[A] = if (null == injector.getExistingBinding(Key.get(typeLiteral[A]))) None else Some(inject[A])
   def provide[T](func: => T): Provider[T] = new Provider[T] { def get = func }
 
 }

@@ -41,13 +41,16 @@ trait DbInjectionHelper extends Logging { self: InjectorProvider =>
         f(injector)
       } finally {
         inScope.set(false)
-        inject[ExecutionContext] match {
-          case watchable: WatchableExecutionContext =>
-            val killed = watchable.kill()
-            if (killed > 0) {
-              println(s"Killed $killed threads at the end of a test, should have those been running?")
-            }
-          case simple: ExecutionContext => println(s"can't close execution context of type ${simple.getClass.getName}")
+        injectOpt[ExecutionContext] match {
+          case Some(ec) => ec match {
+            case watchable: WatchableExecutionContext =>
+              val killed = watchable.kill()
+              if (killed > 0) {
+                println(s"Killed $killed threads at the end of a test, should have those been running?")
+              }
+            case simple: ExecutionContext => println(s"can't close execution context of type ${simple.getClass.getName}")
+          }
+          case None =>
         }
         readWrite(h2) { implicit session =>
           val conn = session.conn
