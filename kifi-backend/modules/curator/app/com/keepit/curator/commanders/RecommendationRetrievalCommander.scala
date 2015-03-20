@@ -111,8 +111,19 @@ class RecommendationRetrievalCommander @Inject() (
     def scoreReco(reco: UriRecommendation) =
       UriRecoScore(scoringStrategy.scoreItem(reco.masterScore, reco.allScores, reco.delivered, reco.clicked, reco.vote, more, recencyWeight), reco)
 
+    def badData(reco: UriRecommendation) = { //temporary because I corrupted a small fraction of the data. Can be removed after April 19th 2015. Data will have been reaped by then. -Stephen
+      reco.allScores.socialScore < 1000 &&
+        reco.allScores.popularityScore < 1000 &&
+        reco.allScores.overallInterestScore < 1000 &&
+        reco.allScores.recentInterestScore < 1000 &&
+        reco.allScores.recencyScore < 1000 &&
+        reco.allScores.priorScore < 1000 &&
+        reco.allScores.rekeepScore < 1000 &&
+        reco.allScores.discoveryScore < 1000
+    }
+
     val (recos, newContext) = db.readOnlyReplica { implicit session =>
-      val recosByTopScore = uriRecoRepo.getRecommendableByTopMasterScore(userId, 1000) map scoreReco
+      val recosByTopScore = uriRecoRepo.getRecommendableByTopMasterScore(userId, 1000) filter badData map scoreReco //ZZZ
       val finalSorted = recoSortStrategy.sort(recosByTopScore)
       idFilter.take(finalSorted, context, limit = 10)((x: UriRecoScore) => x.reco.uriId.id)
     }
