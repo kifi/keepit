@@ -224,6 +224,8 @@ class AuthHelper @Inject() (
 
         val result = if (isFinalizedImmediately) {
           Redirect(uri)
+        } else if (cookieIntent.exists(_.value == "waitlist")) {
+          Ok(Json.obj("uri" -> "/twitter/thanks"))
         } else {
           Ok(Json.obj("uri" -> uri))
         }

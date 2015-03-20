@@ -261,6 +261,7 @@ $(function() {
     }).done(function (data) {
       animation.update(1);
       animation.success();
+      console.log('xx', data);
       if (data.uri) { // successes return: {success: true}
         window.location = data.uri;
       } else {
