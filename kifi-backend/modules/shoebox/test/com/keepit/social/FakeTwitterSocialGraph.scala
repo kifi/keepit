@@ -8,7 +8,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.net.FakeWSResponse
-import com.keepit.common.oauth.{ UserProfileInfo, TwitterOAuthProviderImpl, OAuth1Configuration }
+import com.keepit.common.oauth.{ TwitterUserInfo, UserProfileInfo, TwitterOAuthProviderImpl, OAuth1Configuration }
 import com.keepit.common.social._
 import com.keepit.common.time.Clock
 import com.keepit.model._
@@ -29,7 +29,7 @@ class FakeTwitterSocialGraph @Inject() (
 
   val twtrOAuthProvider = new TwitterOAuthProviderImpl(airbrake, oauth1Config) {
     override def getUserProfileInfo(accessToken: OAuth1TokenInfo): Future[UserProfileInfo] = Future.successful {
-      tweetfortytwoInfo.copy(screenName = "tweet42")
+      TwitterUserInfo.toUserProfileInfo(tweetfortytwoInfo.copy(screenName = "tweet42"))
     }
   }
 
