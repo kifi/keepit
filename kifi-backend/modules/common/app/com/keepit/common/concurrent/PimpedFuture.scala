@@ -99,7 +99,7 @@ object FutureHelpers {
           if (pred.forall(p => p(acc, updatedAcc, item)))
             foldLeftWhile(items.tail, promised)(updatedAcc)(fMap, pred)
           else
-            promised.success(acc)
+            promised.success(updatedAcc)
         case Failure(ex) =>
           promised.failure(ex)
       }
