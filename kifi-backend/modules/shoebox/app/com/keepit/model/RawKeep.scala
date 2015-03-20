@@ -24,7 +24,7 @@ case class RawKeep(
     tagIds: Option[String] = None, // deprecated - use hashtags instead!
     libraryId: Option[Id[Library]],
     createdDate: Option[DateTime] = None,
-    hashtags: Option[JsArray] = None) extends Model[RawKeep] {
+    keepTags: Option[JsArray] = None) extends Model[RawKeep] {
   def withId(id: Id[RawKeep]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
 }
@@ -73,7 +73,7 @@ class RawKeepFactory @Inject() (airbrake: AirbrakeNotifier) {
         tagMap += (tag.toLowerCase -> tag.trim)
       }
     }
-    val hashtags = if (tagMap.nonEmpty) {
+    val keepTags = if (tagMap.nonEmpty) {
       Some(JsArray(tagMap.values.toSeq.map(JsString(_))))
     } else {
       None
@@ -81,7 +81,7 @@ class RawKeepFactory @Inject() (airbrake: AirbrakeNotifier) {
 
     val canonical = (json \ Normalization.CANONICAL.scheme).asOpt[String]
     val openGraph = (json \ Normalization.OPENGRAPH.scheme).asOpt[String]
-    RawKeep(userId = userId, title = title, url = url, isPrivate = isPrivate, importId = importId, source = source, originalJson = Some(json), installationId = installationId, libraryId = libraryId, hashtags = hashtags, createdDate = addedAt)
+    RawKeep(userId = userId, title = title, url = url, isPrivate = isPrivate, importId = importId, source = source, originalJson = Some(json), installationId = installationId, libraryId = libraryId, keepTags = keepTags, createdDate = addedAt)
   }
 }
 

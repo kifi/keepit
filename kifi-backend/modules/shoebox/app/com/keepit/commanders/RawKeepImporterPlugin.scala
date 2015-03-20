@@ -87,16 +87,13 @@ private class RawKeepImporterActor @Inject() (
   private def processBatch(rawKeeps: Seq[RawKeep], reason: String): Unit = {
     log.info(s"[RawKeepImporterActor] Processing ($reason) ${rawKeeps.length} keeps")
 
-    rawKeeps.groupBy(rk => (rk.userId, rk.importId, rk.source, rk.installationId, rk.isPrivate, rk.libraryId, rk.hashtags)).map {
-      case ((userId, importIdOpt, source, installationId, isPrivate, libraryId, hashtags), rawKeepGroup) =>
+    rawKeeps.groupBy(rk => (rk.userId, rk.importId, rk.source, rk.installationId, rk.isPrivate, rk.libraryId)).map {
+      case ((userId, importIdOpt, source, installationId, isPrivate, libraryId), rawKeepGroup) =>
         val context = importIdOpt.map(importId => getHeimdalContext(userId, importId)).flatten.getOrElse(HeimdalContext.empty)
 
-        val hashtagSet = rawKeepGroup.map { rk =>
-          rk.hashtags.map { tagArray =>
-            val tagNames = tagArray.value.map { j =>
-              Json.stringify(j).replace("\"", "")
-            }
-            tagNames.map { tag =>
+        val keepTagSet = rawKeepGroup.map { rk =>
+          rk.keepTags.map { tagNames =>
+            tagNames.as[Seq[String]].map { tag =>
               val collection = bookmarksCommanderProvider.get.getOrCreateTag(userId, tag)(context)
               (tag, collection)
             }
@@ -150,15 +147,15 @@ private class RawKeepImporterActor @Inject() (
                 tags.split(",").toSeq.filter(_.length > 0).map { c => Try(c.toLong).map(Id[Collection]).toOption }.flatten
               }
 
-              val tagIdsFromHashtags = rk.hashtags.map { tagArray =>
-                tagArray.value.map(Json.stringify(_).replace("\"", "")).map { tagName =>
-                  hashtagSet.get(tagName).map(_.id.get)
+              val tagIdsFromKeepTags = rk.keepTags.map { tagArray =>
+                tagArray.as[Seq[String]].map { tagName =>
+                  keepTagSet.get(tagName).map(_.id.get)
                 }.flatten
               }
 
-              (tagIdsFromTags, tagIdsFromHashtags) match {
-                case (Some(tagIds), Some(hashtags)) => Some(tagIds ++ hashtags)
-                case _ => tagIdsFromTags.orElse(tagIdsFromHashtags)
+              (tagIdsFromTags, tagIdsFromKeepTags) match {
+                case (Some(tagIds), Some(keepTagIds)) => Some(tagIds ++ keepTagIds)
+                case _ => tagIdsFromTags.orElse(tagIdsFromKeepTags)
               }
 
             }.getOrElse(Seq.empty)
