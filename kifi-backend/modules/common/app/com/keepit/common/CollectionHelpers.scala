@@ -25,4 +25,12 @@ object CollectionHelpers {
       !alreadySeen(key) tap { notSeen => if (notSeen) alreadySeen += key }
     }
   }
+
+  implicit class Cycle[A](seq: Iterable[A]) {
+    def cycle(offset: Int): Iterable[A] = {
+      val firstChunk = seq.take(offset)
+      val secondChunk = seq.drop(offset)
+      secondChunk ++ firstChunk
+    }
+  }
 }
