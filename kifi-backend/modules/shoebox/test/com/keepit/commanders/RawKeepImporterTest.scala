@@ -107,6 +107,9 @@ class RawKeepImporterTest extends TestKitSupport with SpecificationLike with Sho
           val bm = oneUrl.head
           bm.userId === user.id.get
           bookmarks.size === 5
+
+          collectionRepo.getAllTagsByUserSortedByNumKeeps(user.id.get).map(_._1.tag) === Seq("college", "hack", "stuff")
+          keepToCollectionRepo.getCollectionsForKeep(bookmarks.filter(b => b.title.get.contains("Infographic")).head).length === 3
         }
       }
     }
