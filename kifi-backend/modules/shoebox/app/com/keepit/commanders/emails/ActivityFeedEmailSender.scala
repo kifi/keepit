@@ -22,10 +22,9 @@ import com.keepit.curator.{ CuratorServiceClient, LibraryQualityHelper }
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
 import com.keepit.social.BasicUser
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.twirl.api.Html
 
-import scala.concurrent.Future
+import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success }
 
 trait LibraryInfoView {
@@ -118,6 +117,7 @@ class ActivityFeedEmailSenderImpl @Inject() (
     keepImageCommander: KeepImageCommander,
     postOffice: LocalPostOffice,
     s3Config: S3ImageConfig,
+    implicit val defaultContext: ExecutionContext,
     protected val airbrake: AirbrakeNotifier,
     private implicit val publicIdConfig: PublicIdConfiguration) extends ActivityFeedEmailSender with ActivityEmailHelpers with Logging {
 

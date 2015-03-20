@@ -4,6 +4,7 @@ import java.sql.{ Driver, DriverManager }
 import java.util.concurrent.atomic.AtomicBoolean
 
 import com.google.inject.{ Injector, Module }
+import com.keepit.common.concurrent.WatchableExecutionContext
 import com.keepit.common.db.TestDbInfo
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick._
@@ -12,6 +13,7 @@ import com.keepit.inject._
 import com.keepit.macros.Location
 
 import scala.collection.mutable.ListBuffer
+import scala.concurrent.ExecutionContext
 import scala.slick.driver.JdbcDriver.simple.{ Database => SlickDatabase }
 import scala.slick.jdbc.ResultSetConcurrency
 
@@ -39,6 +41,14 @@ trait DbInjectionHelper extends Logging { self: InjectorProvider =>
         f(injector)
       } finally {
         inScope.set(false)
+        inject[ExecutionContext] match {
+          case watchable: WatchableExecutionContext =>
+            val killed = watchable.kill()
+            if (killed > 0) {
+              println(s"Killed $killed threads at the end of a test, should have those been running?")
+            }
+          case simple: ExecutionContext => println(s"can't close execution context of type ${simple.getClass.getName}")
+        }
         readWrite(h2) { implicit session =>
           val conn = session.conn
           // conn.createStatement().execute("SET REFERENTIAL_INTEGRITY FALSE")
