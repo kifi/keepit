@@ -35,7 +35,7 @@ sealed trait Article { self =>
 
   def url: String
   def createdAt: DateTime
-  def content: ArticleContent
+  def content: ArticleContent[A]
 }
 
 object Article {
@@ -58,10 +58,9 @@ object Article {
 case class UnknownArticleVersionException[A <: Article](kind: ArticleKind[A], currentVersion: VersionNumber[Article], unknownVersion: VersionNumber[Article])
   extends Throwable(s"[$kind] Unknown version: $unknownVersion (Latest version: $currentVersion)")
 
-case class EmbedlyArticle(url: String, createdAt: DateTime, json: JsValue) extends Article {
+case class EmbedlyArticle(url: String, createdAt: DateTime, content: EmbedlyContent) extends Article {
   type A = EmbedlyArticle
   def kind = EmbedlyArticle
-  lazy val content = new EmbedlyContent(json)
 }
 
 case object EmbedlyArticle extends ArticleKind[EmbedlyArticle] {

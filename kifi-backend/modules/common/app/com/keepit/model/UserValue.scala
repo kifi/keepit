@@ -25,7 +25,7 @@ case class UserValue(
 }
 
 case class UserValueKey(userId: Id[User], key: UserValueName) extends Key[String] {
-  override val version = 4
+  override val version = 5
   val namespace = "uservalue"
   def toKey(): String = userId.id + "_" + key.name
 }
@@ -62,7 +62,6 @@ object UserValueName {
   val LAST_DIGEST_EMAIL_SCHEDULED_AT = UserValueName("last_digest_email_scheduled_at")
   val SENT_EMAIL_CONFIRMATION = UserValueName("sent_email_confirmation")
   val LATEST_EMAIL_TIPS_SENT = UserValueName("latest_email_tips")
-  val LIBRARY_SORTING_PREF = UserValueName("library_sorting_pref")
 
   val TWITTER_FOLLOWERS_CURSOR = UserValueName("twitter_followers_cursor")
   val TWITTER_FRIENDS_CURSOR = UserValueName("twitter_friends_cursor")
@@ -74,8 +73,8 @@ object UserValueName {
   val USER_PROFILE_SETTINGS = UserValueName("user_profile_settings")
   val SHOW_FOLLOWED_LIBRARIES = UserValueName("show_followed_libraries") // show libraries I follow
 
-  // temp for library menu callout for existing user. remove after a while (Feb 9 2014)
-  val SITE_INTRODUCE_LIBRARY_MENU = UserValueName("site_introduce_library_menu")
+  // temp for libraries-in-search callout for existing users. remove after a while (Mar 17 2015)
+  val SITE_NOTIFY_LIBRARIES_IN_SEARCH = UserValueName("site_notify_libraries_in_search")
 
   val AUTO_SHOW_GUIDE = UserValueName("auto_show_guide")
   val AUTO_SHOW_PERSONA = UserValueName("auto_show_persona") // for new users, show who-are-you modal on page land

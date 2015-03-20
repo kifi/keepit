@@ -10,7 +10,9 @@ import com.keepit.model.User
 
 @ImplementedBy(classOf[DeviceRepoImpl])
 trait DeviceRepo extends Repo[Device] {
+  def getByUserIdAndDeviceTypeAndSignature(userId: Id[User], deviceType: DeviceType, signature: String, excludeState: Option[State[Device]] = Some(DeviceStates.INACTIVE))(implicit s: RSession): Option[Device]
   def getByUserId(userId: Id[User], excludeState: Option[State[Device]] = Some(DeviceStates.INACTIVE))(implicit s: RSession): Seq[Device]
+  def getByUserIdAndDeviceType(userId: Id[User], deviceType: DeviceType, excludeState: Option[State[Device]] = Some(DeviceStates.INACTIVE))(implicit s: RSession): Seq[Device]
   def get(userId: Id[User], token: String, deviceType: DeviceType)(implicit s: RSession): Option[Device]
   def get(token: String, deviceType: DeviceType)(implicit s: RSession): Seq[Device]
 }
@@ -26,8 +28,10 @@ class DeviceRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) ext
     def token = column[String]("token", O.NotNull)
     def deviceType = column[DeviceType]("device_type", O.NotNull)
     def isDev = column[Boolean]("is_dev", O.NotNull)
-    def * = (id.?, userId, token, deviceType, state, createdAt, updatedAt, isDev) <> ((Device.apply _).tupled, Device.unapply _)
+    def signature = column[Option[String]]("signature", O.Nullable)
+    def * = (id.?, userId, token, deviceType, state, createdAt, updatedAt, isDev, signature) <> ((Device.apply _).tupled, Device.unapply _)
   }
+
   def table(tag: Tag) = new DeviceTable(tag)
 
   override def deleteCache(model: Device)(implicit session: RSession): Unit = {}
@@ -35,6 +39,14 @@ class DeviceRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) ext
 
   def getByUserId(userId: Id[User], excludeState: Option[State[Device]])(implicit s: RSession): Seq[Device] = {
     (for (t <- rows if t.userId === userId && t.state =!= excludeState.orNull) yield t).list
+  }
+
+  def getByUserIdAndDeviceTypeAndSignature(userId: Id[User], deviceType: DeviceType, signature: String, excludeState: Option[State[Device]] = Some(DeviceStates.INACTIVE))(implicit s: RSession): Option[Device] = {
+    (for (t <- rows if t.userId === userId && t.deviceType === deviceType && t.signature === signature && t.state =!= excludeState.orNull) yield t).firstOption
+  }
+
+  def getByUserIdAndDeviceType(userId: Id[User], deviceType: DeviceType, excludeState: Option[State[Device]] = Some(DeviceStates.INACTIVE))(implicit s: RSession): Seq[Device] = {
+    (for (t <- rows if t.userId === userId && t.deviceType === deviceType && t.state =!= excludeState.orNull) yield t).list
   }
 
   def get(userId: Id[User], token: String, deviceType: DeviceType)(implicit s: RSession): Option[Device] = {

@@ -5,7 +5,7 @@ import com.keepit.rover.fetcher.HttpRedirect
 import com.kifi.macros.json
 import org.joda.time.DateTime
 
-trait ArticleContent {
+trait ArticleContent[A <: Article] {
   def destinationUrl: String
   def title: Option[String]
   def description: Option[String]
@@ -16,20 +16,33 @@ trait ArticleContent {
   def publishedAt: Option[DateTime]
 }
 
-trait HttpInfoHolder { self: ArticleContent =>
+object ArticleContent {
+  def defaultSignature[A <: Article](articleContent: ArticleContent[A]): Signature = {
+    new SignatureBuilder().add(
+      Seq(
+        articleContent.title.toSeq,
+        articleContent.description.toSeq,
+        articleContent.content.toSeq,
+        articleContent.keywords,
+        articleContent.authors.map(_.name)
+      ).flatten
+    ).build
+  }
+}
+
+trait HttpInfoHolder {
   def http: HttpInfo
 }
 
 @json
 case class HttpInfo(
   status: Int,
-  redirects: Seq[HttpRedirect],
   message: Option[String],
-  httpContentType: Option[String], // from http header
-  httpOriginalContentCharset: Option[String] // from EntityUtils.getContentCharSet
-  )
+  redirects: Seq[HttpRedirect],
+  httpContentType: Option[String],
+  httpOriginalContentCharset: Option[String])
 
-trait NormalizationInfoHolder { self: ArticleContent =>
+trait NormalizationInfoHolder {
   def normalization: NormalizationInfo
 }
 

@@ -5,6 +5,7 @@ import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.store.LibraryImageStore
 import com.keepit.common.time._
 import com.keepit.common.core._
+import com.keepit.common.strings._
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
@@ -229,7 +230,7 @@ class TwitterSocialGraphImpl @Inject() (
         .sign(OAuthCalculator(providerConfig.key, accessToken))
         .post(params.map(kv => (kv._1, Seq(kv._2))))
         .map { resp =>
-          log.info(s"[lookupUsers] prevAcc.len=${a.value.length} cursor=${c.head} response.json=${resp.json}")
+          log.info(s"[lookupUsers] prevAcc.len=${a.value.length} cursor=${c.head} response.json=${resp.json.toString.abbreviate(400)}")
           resp.status match {
             case OK => resp.json
             case _ =>

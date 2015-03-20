@@ -25,50 +25,14 @@ btn-color = alpha(#fff, .1)
 btn-color-hover = #6fa5ee
 btn-opacity-active = .9
 
-left-logo-space = 16px
 left-logo-width = 76px
 
 .kf-lih-left
   display: table-cell
   vertical-align: middle
-  width: btn-diam + left-logo-space + left-logo-width + 14px
+  width: left-logo-width + 14px
   font-size: 0
   position: relative // for library menu
-
-.kf-lih-toggle-menu
-  display: inline-block
-  vertical-align: middle
-  height: btn-diam
-  width: btn-diam
-  margin-right: left-logo-space
-  border-radius: 50%
-  border: none
-  padding: 0
-  background-color: btn-color
-  position: relative
-  cursor: pointer
-
-  &:focus
-    outline-color: alpha(#fff, .2)
-
-  &:hover
-  &.kf-menu-visible
-    background-color: btn-color-hover
-
-  &:hover:active
-  &.kf-menu-visible
-    opacity: btn-opacity-active
-
-.kf-lih-burger
-  color = #fff
-  position: absolute
-  top: 15px
-  left: 8px
-  height: 3px
-  width: 16px
-  border-radius: 1px
-  background-color: color
-  box-shadow: 0 -5px color, 0 5px color
 
 .kf-lih-logo
   display: inline-block
@@ -80,21 +44,32 @@ left-logo-width = 76px
   background-size: 70px auto
   outline-color: #fff
 
+.kifi-guide-target-1
+  position: fixed
+  top: -9999px
+  left: -9999px
+  width: 0
+  height: 0
+
 .kf-lih-center
   display: table-cell
   vertical-align: middle
 
 search-height = 28px
-search-on-dur = .3s
-search-off-dur = .7s
+search-on-dur = .12s
+search-off-dur = .3s
 
 .kf-lih-search
   display: table
   width: 100%
   height: search-height
   border-radius: 3px
-  background-color: alpha(#fff, .1)
-  transition: background-color search-off-dur
+  background-color: tint(pageHeaderColor, 10%)
+  position: relative  // to cover suggestions
+  z-index: 1
+
+  &:not(.kf-instant)
+    transition: background-color search-off-dur
 
   &.kf-lit
     background-color: #fff
@@ -130,11 +105,13 @@ search-icon-left-pad = 7px
   background-position: center
   background-repeat: no-repeat
   position: relative  // to cover kf-lih-search-icon
-  transition: opacity search-on-dur
 
-.kf-lih-search:not(.kf-lit) .kf-lih-search-icon-lit
-  opacity: 0
-  transition-duration: search-off-dur
+  .kf-lih-search:not(.kf-instant) &
+    transition: opacity search-on-dur
+
+  .kf-lih-search:not(.kf-lit) &
+    opacity: 0
+    transition-duration: search-off-dur
 
 lib-owner-img-radius = 12px
 
@@ -204,12 +181,34 @@ input.kf-lih-search-input
 .kf-lih-search-clear
   border: none
   background-color: transparent
-  padding: 0 8px 0 0
+  padding: 0 8px
   line-height: search-height
   font-weight: 200
   font-size: 16px
   color: blueColor
   cursor: pointer
+
+  &:hover
+  &:focus
+    font-weight: normal
+    box-shadow: inset 0 0 3px currentColor
+
+.kf-lih-search-suggestions
+  position: relative
+  transform-origin: 30% top
+
+  &.ng-enter
+    transition: opacity .12s linear, transform .12s 0s
+
+    &:not(.ng-enter-active)
+      opacity: 0
+      transform: scale(.96) translate(0, -10px)
+
+  &.ng-leave
+    transition: opacity .2s
+
+    &.ng-leave-active
+      opacity: 0
 
 .kf-lih-right
   display: table-cell

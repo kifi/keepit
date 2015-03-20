@@ -87,7 +87,7 @@ angular.module('kifi')
             scope.close();
 
             if (!returnAction) {
-              $location.path(newLibrary.url);
+              $location.url(newLibrary.url);
             } else {
               returnAction(newLibrary);
             }
@@ -132,7 +132,7 @@ angular.module('kifi')
             // If we were on the deleted library's page, return to the homepage.
             if ($state.is('library.keeps') &&
                 ($state.href('library.keeps') === scope.library.url)) {
-              $location.path('/');
+              $location.url('/');
             }
           })['catch'](modalService.openGenericErrorModal)['finally'](function () {
             submitting = false;

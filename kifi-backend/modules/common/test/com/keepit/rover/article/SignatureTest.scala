@@ -1,6 +1,7 @@
-package com.keepit.scraper
+package com.keepit.rover.article
 
 import org.specs2.mutable._
+
 import scala.util.Random
 
 class SignatureTest extends Specification {

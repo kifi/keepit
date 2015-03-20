@@ -3,18 +3,8 @@
 angular.module('kifi')
 
 .factory('keepActionService', [
-  '$analytics', '$http', '$location', '$log', '$q', 'env', 'libraryService', 'routeService', 'Clutch',
-  function ($analytics, $http, $location, $log, $q, env, libraryService, routeService, Clutch) {
-    var limit = 10;
-    var smallLimit = 4;
-
-    var keepList = new Clutch(function (url, config) {
-      $log.log('keepActionService.getList()', config && config.params);
-
-      return $http.get(url, config).then(function (res) {
-        return res && res.data;
-      });
-    });
+  '$analytics', '$http', '$location', 'libraryService', 'routeService',
+  function ($analytics, $http, $location, libraryService, routeService) {
 
     function sanitizeUrl(url) {
       var regex = /^[a-zA-Z]+:\/\//;
@@ -23,39 +13,6 @@ angular.module('kifi')
       } else {
         return url;
       }
-    }
-
-    function getKeeps(lastKeepId, params) {
-      var url = env.xhrBase + '/keeps/all';
-
-      params = params || {};
-      params.withPageInfo = true;
-
-      // Pass the id of the last keep received to the server so the server
-      // knows which keeps to send next.
-      params.before = lastKeepId;
-
-      // Request a smaller number of keeps in the first request.
-      params.count = lastKeepId ? params.count || limit : smallLimit;
-
-      var config = {
-        params: params
-      };
-
-      return keepList.get(url, config).then(function (data) {
-        var result = {};
-
-        result.keeps = data.keeps;
-        result.mayHaveMore = data.keeps.length === params.count;
-
-        return result;
-      });
-    }
-
-    function getKeepsByTagId(tagId, lastKeepId, params) {
-      params = params || {};
-      params.collection = tagId;
-      return getKeeps(lastKeepId, params);
     }
 
     function keepToLibrary(keepInfos, libraryId) {
@@ -73,8 +30,6 @@ angular.module('kifi')
           return keepData;
         })
       };
-
-      $log.log('keepActionService.keepToLibrary()', data);
 
       var url = routeService.addKeepsToLibrary(libraryId);
       return $http.post(url, data, {}).then(function (res) {
@@ -101,8 +56,6 @@ angular.module('kifi')
         keeps: keepIds
       };
 
-      $log.log('keepActionService.copyToLibrary()', data);
-
       var url = routeService.copyKeepsToLibrary();
       return $http.post(url, data, {}).then(function (res) {
         libraryService.rememberRecentId(libraryId);
@@ -127,8 +80,6 @@ angular.module('kifi')
         to: libraryId,
         keeps: keepIds
       };
-
-      $log.log('keepActionService.moveToLibrary()', data);
 
       var url = routeService.moveKeepsToLibrary();
       return $http.post(url, data, {}).then(function (res) {
@@ -157,11 +108,13 @@ angular.module('kifi')
     }
 
     function unkeepFromLibrary(libraryId, keepId) {
+      libraryService.expireKeepsInLibraries();
       var url = routeService.removeKeepFromLibrary(libraryId, keepId);
       return $http.delete(url);  // jshint ignore:line
     }
 
     function unkeepManyFromLibrary(libraryId, keeps) {
+      libraryService.expireKeepsInLibraries();
       var url = routeService.removeManyKeepsFromLibrary(libraryId);
       var data = {
         'ids': _.pluck(keeps, 'id')
@@ -170,8 +123,6 @@ angular.module('kifi')
     }
 
     var api = {
-      getKeeps: getKeeps,
-      getKeepsByTagId: getKeepsByTagId,
       keepToLibrary: keepToLibrary,
       copyToLibrary: copyToLibrary,
       moveToLibrary: moveToLibrary,

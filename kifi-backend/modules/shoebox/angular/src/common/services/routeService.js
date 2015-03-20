@@ -9,8 +9,8 @@ angular.module('kifi')
       return env.xhrBase + path + (params ? queryStr(params) : '');
     }
 
-    function searchRoute(path) {
-      return env.xhrBaseSearch + path;
+    function searchRoute(path, params) {
+      return env.xhrBaseSearch + path + (params ? queryStr(params) : '');
     }
 
     function navRoute(path, params) {
@@ -87,6 +87,9 @@ angular.module('kifi')
       },
       hideUserRecommendation: function (id) {
         return route('/user/' + id + '/hide');
+      },
+      searchSuggest: function (params) {
+        return searchRoute('/site/search', params);
       },
       search: searchRoute('/site/search2'),
       searchResultClicked: searchRoute('/site/search/events/resultClicked'),

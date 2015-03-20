@@ -11,12 +11,10 @@ k.guide.step4 = k.guide.step4 || function () {
   'use strict';
   var $stage, cutScreen, $feats, arrows, $steps, timeout;
   var holes = [
-    {sel: '.kifi-guide-target-1', pad: [7]},
-    {sel: '.kifi-guide-target-2', pad: [8]},
-    {sel: '.kifi-guide-target-3', pad: [-9, 10, -9, -14]}
+    {sel: '.kifi-guide-1', pad: [8]},
+    {sel: '.kifi-guide-2', pad: [-9, 10, -9, -14]}
   ];
   var arcs = [
-    {dx: 0, dy: -48, from: {angle: 90, gap: 12, along: [.2, 0], spacing: 7}, to: {angle: 90, gap: 12, along: [.5, 1]}},
     {dx: 0, dy: -48, from: {angle: 90, gap: 12, along: [.4, 0], spacing: 7}, to: {angle: 90, gap: 12, along: [.4, 1]}},
     {dx: 0, dy: -48, from: {angle: 90, gap: 12, along: [.4, 0], spacing: 7}, to: {angle: 90, gap: 12, along: [.37, 1]}}
   ];
@@ -24,19 +22,7 @@ k.guide.step4 = k.guide.step4 || function () {
 
   function show($guide) {
     if (!$stage) {
-      var show2Bound = show2.bind(null, $guide);
-      var $html = $('html');
-      if ($html.hasClass('kf-sidebar-active')) {
-        show2Bound();
-      } else {
-        window.postMessage('show_left_column', location.origin);
-        $html.on('transitionend.guideStep4', '.kf-sidebar', function (e) {
-          if (e.target === this) {
-            show2Bound();
-          }
-        });
-        timeout = setTimeout(show2Bound, 900);
-      }
+      show2($guide);
     }
   }
 

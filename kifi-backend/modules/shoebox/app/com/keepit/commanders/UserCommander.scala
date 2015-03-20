@@ -753,7 +753,7 @@ class UserCommander @Inject() (
 
   def getUserByUsernameOrAlias(username: Username): Option[(User, Boolean)] = {
     db.readOnlyMaster { implicit session =>
-      userRepo.getByUsername(username).map((_, false)) orElse
+      userRepo.getByUsername(username).filter(_.state == UserStates.ACTIVE).map((_, false)) orElse
         usernameRepo.getByUsername(username).map(alias => (userRepo.get(alias.userId), true))
     }
   }

@@ -1,6 +1,5 @@
 package com.keepit.common.store
 
-import com.keepit.common.db.Id
 import org.joda.time.DateTime
 
 trait ObjectStore[A, B] {

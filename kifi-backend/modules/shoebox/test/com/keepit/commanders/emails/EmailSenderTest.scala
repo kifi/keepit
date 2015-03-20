@@ -445,6 +445,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         val html = email.htmlBody.value
         html must contain("Hey Rocky")
         html must contain("Kifi Twitter library is ready")
+        html must not contain ("Your recommendations network") // custom email layout
 
         val text = email.textBody.get.value
         text must contain("Kifi Twitter library is ready")

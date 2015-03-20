@@ -9,9 +9,8 @@ import com.keepit.common.db.Id
 import com.keepit.model._
 import com.keepit.curator.model._
 
-import scala.concurrent.Future
+import scala.concurrent.{ ExecutionContext, Future }
 import play.api.libs.json._
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 trait CuratorServiceClient extends ServiceClient {
   final val serviceType = ServiceType.CURATOR
@@ -33,6 +32,7 @@ trait CuratorServiceClient extends ServiceClient {
 class CuratorServiceClientImpl(
     override val serviceCluster: ServiceCluster,
     override val httpClient: HttpClient,
+    implicit val defaultContext: ExecutionContext,
     val airbrakeNotifier: AirbrakeNotifier) extends CuratorServiceClient {
 
   val longTimeout = CallTimeouts(responseTimeout = Some(30000), maxWaitTime = Some(3000), maxJsonParseTime = Some(10000))

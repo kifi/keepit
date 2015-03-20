@@ -14,9 +14,9 @@ class LibraryMembershipTest extends Specification with ShoeboxTestInjector {
     db.readWrite { implicit s =>
       val user1 = userRepo.save(User(firstName = "Aaron", lastName = "H", createdAt = t1, username = Username("test"), normalizedUsername = "test"))
       val user2 = userRepo.save(User(firstName = "Jackie", lastName = "Chan", createdAt = t1.plusHours(2), username = Username("test2"), normalizedUsername = "test2"))
-      val library1 = libraryRepo.save(Library(name = "Lib1", ownerId = user1.id.get, createdAt = t1.plusMinutes(2),
+      val library1 = libraryRepo.save(Library(name = "Lib1", ownerId = user1.id.get, createdAt = t1.plusMinutes(2), lastKept = Some(t1.plusMinutes(2)),
         visibility = LibraryVisibility.PUBLISHED, slug = LibrarySlug("A"), memberCount = 1))
-      val library2 = libraryRepo.save(Library(name = "Lib2", ownerId = user2.id.get, createdAt = t1.plusMinutes(5),
+      val library2 = libraryRepo.save(Library(name = "Lib2", ownerId = user2.id.get, createdAt = t1.plusMinutes(5), lastKept = Some(t1.plusMinutes(2)),
         visibility = LibraryVisibility.PUBLISHED, slug = LibrarySlug("B"), memberCount = 1))
       val lm1 = libraryMembershipRepo.save(LibraryMembership(libraryId = library1.id.get, userId = user1.id.get,
         access = LibraryAccess.OWNER, createdAt = t1.plusHours(1)))
@@ -41,6 +41,16 @@ class LibraryMembershipTest extends Specification with ShoeboxTestInjector {
           libraryMembershipRepo.countWithUserIdAndAccess(user1.id.get, LibraryAccess.READ_ONLY) === 0
           libraryMembershipRepo.countWithUserIdAndAccess(user2.id.get, LibraryAccess.OWNER) === 1
           libraryMembershipRepo.countWithUserIdAndAccess(user2.id.get, LibraryAccess.READ_ONLY) === 1
+        }
+      }
+    }
+
+    "getLatestUpdatedLibraryUserFollow" in {
+      withDb() { implicit injector =>
+        val (library1, library2, user1, user2, lm1, lm2, lm3, lm4, t1) = setup()
+        db.readOnlyMaster { implicit session =>
+          libraryMembershipRepo.getLatestUpdatedLibraryUserFollow(user1.id.get) === None
+          libraryMembershipRepo.getLatestUpdatedLibraryUserFollow(user2.id.get).get === library1
         }
       }
     }

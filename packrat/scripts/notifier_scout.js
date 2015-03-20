@@ -1,6 +1,8 @@
 // @match /^https?:\/\/[^\/]*\/.*$/
 // @require scripts/api.js
 
+api.identify('notifierScout');
+
 var k = k && k.kifi ? k : {kifi: true};
 
 k.notifierScout = k.notifierScout || function (doc) {  // idempotent for Chrome

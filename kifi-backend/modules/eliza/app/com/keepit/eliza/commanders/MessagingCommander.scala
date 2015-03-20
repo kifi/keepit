@@ -63,7 +63,7 @@ class MessagingCommander @Inject() (
     messageSearchHistoryRepo: MessageSearchHistoryRepo,
     implicit val executionContext: ExecutionContext) extends Logging {
 
-  def sendPushNotification(userId: Id[User], message: String, pushNotificationCategory: PushNotificationCategory, pushNotificationExperiment: PushNotificationExperiment) = {
+  def sendPushNotification(userId: Id[User], message: String, pushNotificationCategory: PushNotificationCategory, pushNotificationExperiment: PushNotificationExperiment): Int = {
     val notification = SimplePushNotification(message = Some(message), unvisitedCount = getUnreadUnmutedThreadCount(userId), category = pushNotificationCategory, experiment = pushNotificationExperiment)
     notificationCommander.sendPushNotification(userId, notification)
   }

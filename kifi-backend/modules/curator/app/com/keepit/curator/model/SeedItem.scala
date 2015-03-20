@@ -5,6 +5,9 @@ import com.keepit.cortex.models.lda.LDATopic
 import com.keepit.model.{ NormalizedURI, User }
 import com.kifi.macros.json
 
+import play.api.libs.json._
+import play.api.libs.functional.syntax._
+
 import org.joda.time.DateTime
 
 sealed trait Keepers
@@ -41,7 +44,7 @@ case class PublicSeedItem(
   curationScore: Option[Float],
   multiplier: Option[Float])
 
-@json case class UriScores(
+case class UriScores(
     socialScore: Float,
     popularityScore: Float,
     overallInterestScore: Float,
@@ -71,6 +74,61 @@ case class PublicSeedItem(
     |t1m:${topic1Multiplier.getOrElse(0.0f)}%1.2f-
     |t1:${topic1.getOrElse("")}
   """.stripMargin('|').replace("\n", "").trim()
+
+  private def reducePrecision(x: Float): Float = {
+    (x * 10000).toInt.toFloat / 10000
+  }
+
+  private def reducePrecision(xOpt: Option[Float]): Option[Float] = {
+    xOpt.map { x => (x * 10000).toInt.toFloat / 10000 }
+  }
+
+  //this is used to save space in the json
+  def withReducedPrecision(): UriScores = UriScores(
+    reducePrecision(socialScore),
+    reducePrecision(popularityScore),
+    reducePrecision(overallInterestScore),
+    reducePrecision(recentInterestScore),
+    reducePrecision(recencyScore),
+    reducePrecision(priorScore),
+    reducePrecision(rekeepScore),
+    reducePrecision(discoveryScore),
+    reducePrecision(curationScore),
+    reducePrecision(multiplier),
+    reducePrecision(libraryInducedScore),
+    reducePrecision(topic1Multiplier),
+    topic1
+  )
+}
+
+object UriScores {
+  val oldFormat = Json.format[UriScores]
+
+  def newFormat = ( //ZZZ
+    (__ \ 's).format[Float] and
+    (__ \ 'p).format[Float] and
+    (__ \ 'oI).format[Float] and
+    (__ \ 'rI).format[Float] and
+    (__ \ 'r).format[Float] and
+    (__ \ 'g).format[Float] and
+    (__ \ 'rk).format[Float] and
+    (__ \ 'd).format[Float] and
+    (__ \ 'c).formatNullable[Float] and
+    (__ \ 'm).formatNullable[Float] and
+    (__ \ 'lb).formatNullable[Float] and
+    (__ \ 't1m).formatNullable[Float] and
+    (__ \ 't1).formatNullable[Int]
+  )(UriScores.apply, unlift(UriScores.unapply))
+
+  implicit val format: Format[UriScores] = new Format[UriScores] {
+    def reads(json: JsValue) = {
+      oldFormat.reads(json) orElse newFormat.reads(json)
+    }
+
+    def writes(obj: UriScores): JsValue = {
+      newFormat.writes(obj.withReducedPrecision)
+    }
+  }
 }
 
 case class SeedItemWithMultiplier(

@@ -2,6 +2,7 @@ package com.keepit.controllers.admin
 
 import com.keepit.commanders.emails.ActivityFeedEmailSender
 import com.keepit.curator.CuratorServiceClient
+import com.keepit.shoebox.cron.ActivityPushSchedualer
 import scala.concurrent.{ Await, Future, Promise }
 import scala.concurrent.duration.{ Duration, DurationInt }
 import scala.util.{ Try }
@@ -113,7 +114,13 @@ class AdminUserController @Inject() (
     heimdal: HeimdalServiceClient,
     curator: CuratorServiceClient,
     activityEmailSender: ActivityFeedEmailSender,
+    activityPushSchedualer: ActivityPushSchedualer,
     authCommander: AuthCommander) extends AdminUserActions {
+
+  def createPushActivityEntities = AdminUserPage { implicit request =>
+    activityPushSchedualer.createPushActivityEntities()
+    Ok("started!")
+  }
 
   def merge = AdminUserPage { implicit request =>
     // This doesn't do a complete merge. It's designed for cases where someone accidentally creates a new user when
@@ -265,7 +272,7 @@ class AdminUserController @Inject() (
 
     val (user, bookmarks) = db.readOnlyReplica { implicit s =>
       val user = userRepo.get(userId)
-      val bookmarks = keepRepo.getByUser(userId, Some(KeepStates.INACTIVE)).filter(b => showPrivates || !b.isPrivate)
+      val bookmarks = keepRepo.getByUser(userId, Set(KeepStates.INACTIVE)).filter(b => showPrivates || !b.isPrivate)
       val uris = bookmarks map (_.uriId) map normalizedURIRepo.get
       (user, (bookmarks, uris).zipped.toList.seq)
     }

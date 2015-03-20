@@ -9,6 +9,7 @@ import com.keepit.common.service.ServiceType
 import com.keepit.common.store.ImageSize
 import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.model._
+import com.keepit.rover.article.Signature
 import com.keepit.scraper.embedly.EmbedlyInfo
 import com.keepit.scraper.extractor.ExtractorProviderType
 

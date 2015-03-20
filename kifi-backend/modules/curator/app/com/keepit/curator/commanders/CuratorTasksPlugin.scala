@@ -37,7 +37,7 @@ class CuratorTasksPlugin @Inject() (
 
   override def onStart() {
     log.info("CuratorTasksPlugin onStart")
-    scheduleTaskOnOneMachine(system, 5 minutes, 3 minutes, completeDataIngestion) {
+    scheduleTaskOnLeader(system, 5 minutes, 3 minutes, completeDataIngestion) {
       ingestionCommander.ingestAll()
     }
     scheduleTaskOnOneMachine(system, 3 minutes, 2 minutes, uriRecommendationPrecomputation) {
@@ -73,6 +73,6 @@ class CuratorTasksPlugin @Inject() (
     val cronTime = s"0 0 $utcHourFor9amEasternTime ? * 3" // 1pm UTC - send every Tuesday at 9am EDT / 6am PDT
     val cronTimeWeekend = s"0 0 $utcHourFor9amEasternTime ? * 7" // 1pm UTC - send every Tuesday at 9am EDT / 6am PDT
     cronTaskOnLeader(quartz, emailActor.ref, cronTime, FeedDigestMessage.Queue)
-    cronTaskOnLeader(quartz, emailActor.ref, cronTimeWeekend, FeedDigestMessage.Queue)
+    //cronTaskOnLeader(quartz, emailActor.ref, cronTimeWeekend, FeedDigestMessage.Queue)
   }
 }

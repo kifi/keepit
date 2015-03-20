@@ -7,7 +7,7 @@
     </div>
     <div class="kf-subtitle">
       <span class="kf-subtitle-text">{{getSubtitle()}}</span>
-      <div ng-if="$root.userLoggedIn" class="kf-edit-keeps" ng-click="toggleEdit()">
+      <div class="kf-edit-keeps" ng-click="toggleEdit()" ng-if="$root.userLoggedIn && resultKeeps.length > 1">
         <span class="sprite sprite-edit-pencil-icon"></span>
         <span class="kf-edit-keeps-label">{{editKeepsLabel()}}</span>
       </div>
@@ -24,7 +24,6 @@
     keep-click="analyticsTrack"
     edit-mode="editMode"
     edit-options="editOptions"
-    selected-keeps-filter="selectedKeepsFilter"
     toggle-edit="toggleEdit"
     update-selected-count="updateSelectedCount(numSelected)"
     current-page-origin="searchResultsPage"

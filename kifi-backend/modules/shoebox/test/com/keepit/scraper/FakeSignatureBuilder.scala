@@ -1,5 +1,7 @@
 package com.keepit.scraper
 
+import com.keepit.rover.article.Signature
+
 class FakeSignatureBuilder(windowSize: Int = 20) extends Signature.Builder(windowSize) {
 
   override protected def tokenize(text: String)(addTerm: (Array[Char], Int) => Unit): Unit = {

@@ -21,7 +21,7 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def getPrimaryInDisjointByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[Keep]
   def getByUri(uriId: Id[NormalizedURI], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Seq[Keep]
   def countPublicActiveByUri(uriId: Id[NormalizedURI])(implicit session: RSession): Int
-  def getByUser(userId: Id[User], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Seq[Keep]
+  def getByUser(userId: Id[User], excludeSet: Set[State[Keep]] = Set(KeepStates.INACTIVE, KeepStates.DUPLICATE))(implicit session: RSession): Seq[Keep]
   def getByUser(userId: Id[User], beforeId: Option[ExternalId[Keep]], afterId: Option[ExternalId[Keep]], count: Int)(implicit session: RSession): Seq[Keep]
   def getNonPrivate(ownerId: Id[User], offset: Int, limit: Int)(implicit session: RSession): Seq[Keep]
   def getPrivate(ownerId: Id[User], offset: Int, limit: Int)(implicit session: RSession): Seq[Keep]
@@ -44,17 +44,16 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def getByTitle(title: String)(implicit session: RSession): Seq[Keep]
   def exists(uriId: Id[NormalizedURI])(implicit session: RSession): Boolean
   def getSourcesByUser()(implicit session: RSession): Map[Id[User], Seq[KeepSource]]
-  def oldestKeep(userId: Id[User], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Option[Keep]
   def whoKeptMyKeeps(userId: Id[User], since: DateTime, maxKeepers: Int)(implicit session: RSession): Seq[WhoKeptMyKeeps]
   def getLatestKeepsURIByUser(userId: Id[User], limit: Int, includePrivate: Boolean = false)(implicit session: RSession): Seq[Id[NormalizedURI]]
   def getKeepExports(userId: Id[User])(implicit session: RSession): Seq[KeepExport]
-  def getByLibrary(libraryId: Id[Library], offset: Int, limit: Int, excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Seq[Keep]
+  def getByLibrary(libraryId: Id[Library], offset: Int, limit: Int, excludeSet: Set[State[Keep]] = Set(KeepStates.INACTIVE, KeepStates.DUPLICATE))(implicit session: RSession): Seq[Keep]
   def getCountByLibrary(libraryId: Id[Library])(implicit session: RSession): Int
   def getCountsByLibrary(libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Int]
-  def getByExtIdandLibraryId(extId: ExternalId[Keep], libraryId: Id[Library], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Option[Keep]
+  def getByExtIdandLibraryId(extId: ExternalId[Keep], libraryId: Id[Library], excludeSet: Set[State[Keep]] = Set(KeepStates.INACTIVE, KeepStates.DUPLICATE))(implicit session: RSession): Option[Keep]
   def getKeepsFromLibrarySince(since: DateTime, library: Id[Library], max: Int)(implicit session: RSession): Seq[Keep]
   def librariesWithMostKeepsSince(count: Int, since: DateTime)(implicit session: RSession): Seq[(Id[Library], Int)]
-  def latestKeepInLibrary(libraryId: Id[Library])(implicit session: RSession): Option[DateTime]
+  def latestKeep(userId: Id[User])(implicit session: RSession): Option[DateTime]
 }
 
 @Singleton
@@ -86,9 +85,10 @@ class KeepRepoImpl @Inject() (
     def libraryId = column[Option[Id[Library]]]("library_id", O.Nullable)
     def visibility = column[LibraryVisibility]("visibility", O.NotNull)
     def keptAt = column[DateTime]("kept_at", O.NotNull)
+    def sourceAttributionId = column[Id[KeepSourceAttribution]]("source_attribution_id", O.Nullable)
 
     def * = (id.?, createdAt, updatedAt, externalId, title.?, uriId, isPrimary.?, inDisjointLib.?, urlId, url, bookmarkPath.?, isPrivate,
-      userId, state, source, kifiInstallation.?, seq, libraryId, visibility, keptAt) <> ((Keep.applyFromDbRow _).tupled, Keep.unapplyToDbRow _)
+      userId, state, source, kifiInstallation.?, seq, libraryId, visibility, keptAt, sourceAttributionId.?) <> ((Keep.applyFromDbRow _).tupled, Keep.unapplyToDbRow _)
   }
 
   def table(tag: Tag) = new KeepTable(tag)
@@ -120,7 +120,8 @@ class KeepRepoImpl @Inject() (
       seq = r.<<[SequenceNumber[Keep]],
       libraryId = r.<<[Option[Id[Library]]],
       visibility = r.<<[LibraryVisibility],
-      keptAt = r.<<[DateTime]
+      keptAt = r.<<[DateTime],
+      sourceAttributionId = r.<<[Option[Id[KeepSourceAttribution]]]
     )
   }
   private val bookmarkColumnOrder: String = _taggedTable.columnStrings("bm")
@@ -209,8 +210,8 @@ class KeepRepoImpl @Inject() (
     sql"select count(*) from bookmark where uri_id = $uriId and is_private = false and state = 'active'".as[Int].first
   }
 
-  def getByUser(userId: Id[User], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Seq[Keep] =
-    (for (b <- rows if b.userId === userId && b.state =!= excludeState.orNull) yield b).sortBy(_.keptAt).list
+  def getByUser(userId: Id[User], excludeSet: Set[State[Keep]])(implicit session: RSession): Seq[Keep] =
+    (for (b <- rows if b.userId === userId && !b.state.inSet(excludeSet)) yield b).sortBy(_.keptAt).list
 
   def getNonPrivate(ownerId: Id[User], offset: Int, limit: Int)(implicit session: RSession): Seq[Keep] = {
     import StaticQuery.interpolation
@@ -411,13 +412,6 @@ class KeepRepoImpl @Inject() (
       case (id, source) => (Id[User](id), KeepSource.get(source))
     }.groupBy(_._1).mapValues(_.map(_._2))
 
-  def oldestKeep(userId: Id[User], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Option[Keep] = {
-    val bookmarks = for { bookmark <- rows if bookmark.userId === userId && bookmark.state =!= excludeState.orNull } yield bookmark
-    val min = bookmarks.map(_.keptAt).min
-    val oldest = for { bookmark <- bookmarks if bookmark.keptAt <= min } yield bookmark
-    oldest.sortBy(_.keptAt asc).firstOption
-  }
-
   def getLatestKeepsURIByUser(userId: Id[User], limit: Int, includePrivate: Boolean = false)(implicit session: RSession): Seq[Id[NormalizedURI]] = {
     import StaticQuery.interpolation
 
@@ -438,8 +432,8 @@ class KeepRepoImpl @Inject() (
 
   // Make compiled in Slick 2.1
 
-  def getByLibrary(libraryId: Id[Library], offset: Int, limit: Int, excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Seq[Keep] = {
-    (for (b <- rows if b.libraryId === libraryId && b.state =!= excludeState.orNull) yield b).sortBy(_.keptAt desc).drop(offset).take(limit).list
+  def getByLibrary(libraryId: Id[Library], offset: Int, limit: Int, excludeSet: Set[State[Keep]])(implicit session: RSession): Seq[Keep] = {
+    (for (b <- rows if b.libraryId === libraryId && !b.state.inSet(excludeSet)) yield b).sortBy(_.keptAt desc).drop(offset).take(limit).list
   }
 
   def getCountByLibrary(libraryId: Id[Library])(implicit session: RSession): Int = {
@@ -449,7 +443,7 @@ class KeepRepoImpl @Inject() (
   def getCountsByLibrary(libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Int] = {
     countByLibraryCache.bulkGetOrElse(libraryIds.map(CountByLibraryKey(_))) { missingKeys =>
       val missingLibraryIds = missingKeys.map(_.id)
-      val keepsQuery = (for (b <- rows if b.libraryId.inSet(missingLibraryIds) && b.state =!= KeepStates.INACTIVE) yield b)
+      val keepsQuery = (for (b <- rows if b.libraryId.inSet(missingLibraryIds) && b.state === KeepStates.ACTIVE) yield b)
       val countQuery = keepsQuery.groupBy(_.libraryId).map { case (libraryId, keeps) => (libraryId, keeps.length) }
       countQuery.run.map { case (libraryIdOpt, keepCount) => (CountByLibraryKey(libraryIdOpt.get), keepCount) }.toMap
     }.map { case (CountByLibraryKey(libraryId), keepCount) => (libraryId, keepCount) }
@@ -458,13 +452,11 @@ class KeepRepoImpl @Inject() (
   private val getByExtIdandLibraryIdCompiled = Compiled { (extId: Column[ExternalId[Keep]], libraryId: Column[Id[Library]]) =>
     (for (b <- rows if b.externalId === extId && b.libraryId === libraryId) yield b)
   }
-  private val getByExtIdandLibraryIdWithExcludeCompiled = Compiled { (extId: Column[ExternalId[Keep]], libraryId: Column[Id[Library]], excludeState: Column[State[Keep]]) =>
-    (for (b <- rows if b.externalId === extId && b.libraryId === libraryId && b.state =!= excludeState) yield b)
-  }
-  def getByExtIdandLibraryId(extId: ExternalId[Keep], libraryId: Id[Library], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Option[Keep] = {
-    excludeState match {
-      case None => getByExtIdandLibraryIdCompiled(extId, libraryId).firstOption
-      case Some(exclude) => getByExtIdandLibraryIdWithExcludeCompiled(extId, libraryId, exclude).firstOption
+  def getByExtIdandLibraryId(extId: ExternalId[Keep], libraryId: Id[Library], excludeSet: Set[State[Keep]])(implicit session: RSession): Option[Keep] = {
+    if (excludeSet.isEmpty) {
+      getByExtIdandLibraryIdCompiled(extId, libraryId).firstOption
+    } else {
+      (for (b <- rows if b.externalId === extId && b.libraryId === libraryId && !b.state.inSet(excludeSet)) yield b).firstOption
     }
   }
 
@@ -477,8 +469,9 @@ class KeepRepoImpl @Inject() (
     sql"""select b.library_id, count(*) as cnt from bookmark b, library l where l.id = b.library_id and l.state='active' and l.visibility='published' and b.kept_at > $since group by b.library_id order by count(*) desc limit $count""".as[(Id[Library], Int)].list
   }
 
-  def latestKeepInLibrary(libraryId: Id[Library])(implicit session: RSession): Option[DateTime] = {
+  def latestKeep(userId: Id[User])(implicit session: RSession): Option[DateTime] = {
     import StaticQuery.interpolation
-    sql"""select max(kept_at) as cnt from bookmark where library_id = $libraryId and state='active'""".as[DateTime].firstOption
+    val res = sql"""select max(kept_at) from bookmark where user_id = $userId and state='active'""".as[DateTime].first
+    Option(res)
   }
 }

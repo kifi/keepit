@@ -4,7 +4,7 @@ import com.keepit.common.db.slick.{ DbRepo, SeqNumberFunction, SeqNumberDbFuncti
 import com.keepit.common.db.slick.{ RepoWithDelete, DbRepoWithDelete }
 import com.keepit.common.db.{ Id, DbSequenceAssigner, SequenceNumber, H2DatabaseDialect }
 import com.keepit.model.{ User, NormalizedURI }
-import com.keepit.common.time.{ currentDateTime, Clock }
+import com.keepit.common.time._
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.plugin.{ SequencingActor, SchedulingProperties, SequencingPlugin }
 import com.keepit.common.actor.ActorInstance
@@ -28,6 +28,7 @@ trait RawSeedItemRepo extends DbRepo[RawSeedItem] with SeqNumberFunction[RawSeed
   def getRecentGeneric(maxBatchSize: Int)(implicit session: RSession): Seq[RawSeedItem]
   def getFirstByUriId(uriId: Id[NormalizedURI])(implicit session: RSession): Option[RawSeedItem]
   def getByTopPriorScore(userId: Id[User], maxBatchSize: Int)(implicit session: RSession): Seq[RawSeedItem]
+  def cleanupBatch(userId: Id[User])(implicit session: RWSession): Unit
 }
 
 @Singleton
@@ -132,6 +133,12 @@ class RawSeedItemRepoImpl @Inject() (
 
   def getByTopPriorScore(userId: Id[User], maxBatchSize: Int)(implicit session: RSession): Seq[RawSeedItem] = {
     (for (row <- rows if row.userId === userId) yield row).sortBy(_.priorScore.desc).take(maxBatchSize).list
+  }
+
+  def cleanupBatch(userId: Id[User])(implicit session: RWSession): Unit = {
+    import StaticQuery.interpolation
+    val cutoff = currentDateTime.minus(org.joda.time.Duration.standardDays(10))
+    sqlu"DELETE FROM raw_seed_item WHERE user_id=$userId AND updated_at<=$cutoff LIMIT 250".first()
   }
 }
 

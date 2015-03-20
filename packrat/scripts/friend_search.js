@@ -117,14 +117,14 @@ var initFriendSearch = (function () {
       var heightInitial = $dropdown[0].clientHeight;
       var width = $dropdown[0].clientWidth;
       $dropdown.css('height', heightInitial);
-      var $clone = $($dropdown[0].cloneNode(false)).addClass('kifi-ti-dropdown-clone').css('width', width)
+      var $clone = $($dropdown[0].cloneNode(false)).addClass('kifi-ti-dropdown-clone kifi-instant').css('width', width)
           .append(els)
         .css({visibility: 'hidden', opacity: 0, height: ''})
         .insertBefore($dropdown);
       var heightFinal = $clone[0].clientHeight;
       $dropdown.layout();
       $clone
-        .css({height: heightInitial, visibility: 'visible', transition: 'none'})
+        .css({height: heightInitial, visibility: 'visible'})
         .layout()
         .on('transitionend', function (e) {
           if (e.target === this && e.originalEvent.propertyName === 'opacity') {
@@ -133,7 +133,8 @@ var initFriendSearch = (function () {
             done();
           }
         })
-        .css({height: heightFinal, opacity: 1, transition: ''});
+        .removeClass('kifi-instant')
+        .css({height: heightFinal, opacity: 1});
       $dropdown
         .css({height: heightFinal, opacity: 0});
     }

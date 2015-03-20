@@ -224,13 +224,7 @@ class KeepsCommander @Inject() (
     keepsF.flatMap {
       case keepsWithHelpRankCounts =>
         val (keeps, clickCounts, rkCounts) = keepsWithHelpRankCounts.unzip3
-
-        keepDecorator.decorateKeepsIntoKeepInfos(Some(userId), false, keeps, ProcessedImageSize.Large.idealSize, withKeepTime = true).map { keepInfos =>
-          (keepInfos, clickCounts, rkCounts).zipped.map {
-            case (keepInfo, clickCount, rkCount) =>
-              keepInfo.copy(clickCount = clickCount, rekeepCount = rkCount)
-          }
-        }
+        keepDecorator.decorateKeepsIntoKeepInfos(Some(userId), false, keeps, ProcessedImageSize.Large.idealSize, withKeepTime = true)
     }
   }
 
@@ -349,8 +343,8 @@ class KeepsCommander @Inject() (
         var keepsToFinalize = Seq.empty[Keep]
         val (keeps, invalidKeepIds) = db.readWrite { implicit s =>
           val (keeps, invalidKeepIds) = keepIds.map { kId =>
-            keepRepo.getByExtIdandLibraryId(kId, libId, excludeState = None) match {
-              case Some(k) if (k.isActive) =>
+            keepRepo.getByExtIdandLibraryId(kId, libId, excludeSet = Set.empty) match {
+              case Some(k) if k.state != KeepStates.INACTIVE =>
                 keepsToFinalize = k +: keepsToFinalize
                 Left(setKeepStateWithSession(k, KeepStates.INACTIVE, userId))
               case Some(k) =>

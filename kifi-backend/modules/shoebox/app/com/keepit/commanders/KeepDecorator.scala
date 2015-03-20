@@ -28,6 +28,7 @@ class KeepDecorator @Inject() (
     uriSummaryCommander: URISummaryCommander,
     userCommander: Provider[UserCommander],
     searchClient: SearchServiceClient,
+    keepSourceAttributionRepo: KeepSourceAttributionRepo,
     implicit val publicIdConfig: PublicIdConfiguration) {
 
   def decorateKeepsIntoKeepInfos(perspectiveUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, keeps: Seq[Keep], idealImageSize: ImageSize, withKeepTime: Boolean): Future[Seq[KeepInfo]] = {
@@ -60,6 +61,10 @@ class KeepDecorator @Inject() (
         keepToCollectionRepo.getCollectionsForKeeps(keeps) //cached
       }.map(collectionCommander.getBasicCollections)
 
+      val sourceAttrs = db.readOnlyMaster { implicit s =>
+        keeps.map { keep => keep.sourceAttributionId.map { id => keepSourceAttributionRepo.get(id) } }
+      }
+
       val allMyKeeps = perspectiveUserIdOpt.map { userId => getBasicKeeps(userId, keeps.map(_.uriId).toSet) } getOrElse Map.empty[Id[NormalizedURI], Set[BasicKeep]]
 
       val librariesWithWriteAccess = perspectiveUserIdOpt.map { userId =>
@@ -72,8 +77,8 @@ class KeepDecorator @Inject() (
         (idToBasicUser, idToBasicLibrary) <- basicInfosFuture
       } yield {
 
-        val keepsInfo = (keeps zip colls, augmentationInfos, pageInfos).zipped.map {
-          case ((keep, collsForKeep), augmentationInfoForKeep, pageInfoForKeep) =>
+        val keepsInfo = (keeps zip colls, augmentationInfos, pageInfos zip sourceAttrs).zipped.map {
+          case ((keep, collsForKeep), augmentationInfoForKeep, (pageInfoForKeep, sourceAttrOpt)) =>
             val others = augmentationInfoForKeep.keepersTotal - augmentationInfoForKeep.keepers.size - augmentationInfoForKeep.keepersOmitted
             val keepers = perspectiveUserIdOpt.map { userId => augmentationInfoForKeep.keepers.filterNot(_ == userId) } getOrElse augmentationInfoForKeep.keepers
             val keeps = allMyKeeps.get(keep.uriId) getOrElse Set.empty
@@ -111,9 +116,8 @@ class KeepDecorator @Inject() (
               hashtags = Some(collsForKeep.toSet.map { c: BasicCollection => Hashtag(c.name) }),
               summary = Some(pageInfoForKeep),
               siteName = DomainToNameMapper.getNameFromUrl(keep.url),
-              clickCount = None,
-              rekeepCount = None,
-              libraryId = keep.libraryId.map(l => Library.publicId(l))
+              libraryId = keep.libraryId.map(l => Library.publicId(l)),
+              sourceAttribution = sourceAttrOpt
             )
         }
         keepsInfo

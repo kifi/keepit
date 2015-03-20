@@ -42,7 +42,7 @@ class RecommendationGenerationCommander @Inject() (
     schedulingProperties: SchedulingProperties) extends Logging {
 
   val defaultScore = 0.0f
-  val recommendationGenerationLock = new ReactiveLock(4)
+  val recommendationGenerationLock = new ReactiveLock(8)
   val perUserRecommendationGenerationLocks = TrieMap[Id[User], ReactiveLock]()
   val candidateURILock = new ReactiveLock(4)
 
@@ -207,7 +207,7 @@ class RecommendationGenerationCommander @Inject() (
   private def precomputeRecommendationsForUser(userId: Id[User], boostedKeepers: Set[Id[User]], alwaysIncludeOpt: Option[Set[Id[NormalizedURI]]] = None): Future[Unit] = recommendationGenerationLock.withLockFuture {
     getPerUserGenerationLock(userId).withLockFuture {
       if (schedulingProperties.isRunnerFor(CuratorTasks.uriRecommendationPrecomputation)) {
-        val alwaysInclude: Set[Id[NormalizedURI]] = alwaysIncludeOpt.getOrElse(db.readOnlyReplica { implicit session => uriRecRepo.getUriIdsForUser(userId) })
+        val alwaysInclude: Set[Id[NormalizedURI]] = alwaysIncludeOpt.getOrElse(db.readOnlyReplica { implicit session => uriRecRepo.getTopUriIdsForUser(userId) })
         val state: UserRecommendationGenerationState = getStateOfUser(userId)
         val seedsAndSeqFuture: Future[(Seq[SeedItem], SequenceNumber[SeedItem])] = getCandidateSeedsForUser(userId, state)
         val res: Future[Boolean] = seedsAndSeqFuture.flatMap {
@@ -218,7 +218,7 @@ class RecommendationGenerationCommander @Inject() (
                 genStateRepo.save(newState)
               }
               if (state.seq < newSeqNum) {
-                if (recommendationGenerationLock.waiting < 300) {
+                if (recommendationGenerationLock.waiting < 200) {
                   precomputeRecommendationsForUser(userId, boostedKeepers, Some(alwaysInclude))
                 } else {
                   precomputeRecommendationsForUser(userId, boostedKeepers) //No point in keeping all that data in memory when it's not needed soon

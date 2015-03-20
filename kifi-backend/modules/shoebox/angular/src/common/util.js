@@ -69,12 +69,12 @@ angular.module('util', [])
       return parts.join('');
     }
 
-    return {
+    var util = {
       startsWith: function (str, prefix) {
         return str === prefix || str.lastIndexOf(prefix, 0) === 0;
       },
       startsWithCaseInsensitive: function (str, prefix) {
-        return this.startsWith(str.toLowerCase(), prefix.toLowerCase());
+        return util.startsWith(str.toLowerCase(), prefix.toLowerCase());
       },
       endsWith: function (str, suffix) {
         return str === suffix || str.indexOf(suffix, str.length - suffix.length) !== -1;
@@ -186,6 +186,8 @@ angular.module('util', [])
         }
       }
     };
+
+    return util;
   }
 ])
 

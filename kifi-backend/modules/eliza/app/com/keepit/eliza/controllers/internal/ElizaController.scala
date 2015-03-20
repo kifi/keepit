@@ -1,5 +1,6 @@
 package com.keepit.eliza.controllers.internal
 
+import com.keepit.common.akka.SafeFuture
 import com.keepit.eliza.{ PushNotificationCategory, PushNotificationExperiment }
 import com.keepit.eliza.controllers.WebSocketRouter
 import com.keepit.common.controller.ElizaServiceController
@@ -12,7 +13,7 @@ import scala.concurrent.future
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import play.api.mvc.Action
-import play.api.libs.json.{ Json, JsObject, JsArray }
+import play.api.libs.json.{ JsNumber, Json, JsObject, JsArray }
 
 import com.google.inject.Inject
 import com.keepit.eliza.commanders.{ MessagingCommander, NotificationJson, NotificationCommander, ElizaStatsCommander }
@@ -39,40 +40,40 @@ class ElizaController @Inject() (
   }
 
   def sendPushNotification() = Action.async { request =>
-    future {
-      val req = request.body.asJson.get.asInstanceOf[JsObject]
-      val userId = Id[User]((req \ "userId").as[Long])
-      val message = (req \ "message").asInstanceOf[String]
-      val pushNotificationExperiment = (req \ "pushNotificationExperiment").asInstanceOf[PushNotificationExperiment]
-      val pushNotificationCategory = (req \ "pushNotificationCategory").asInstanceOf[PushNotificationCategory]
-      messagingCommander.sendPushNotification(userId, message, pushNotificationCategory, pushNotificationExperiment)
-      Ok("")
+    val req = request.body.asJson.get.as[JsObject]
+    val userId = Id[User]((req \ "userId").as[Long])
+    val message = (req \ "message").as[String]
+    val pushNotificationExperiment = (req \ "pushNotificationExperiment").as[PushNotificationExperiment]
+    val pushNotificationCategory = (req \ "pushNotificationCategory").as[PushNotificationCategory]
+    SafeFuture {
+      val deviceCount = messagingCommander.sendPushNotification(userId, message, pushNotificationCategory, pushNotificationExperiment)
+      Ok(JsNumber(deviceCount))
     }
   }
 
   def sendToUserNoBroadcast() = Action.async { request =>
-    future {
-      val req = request.body.asJson.get.asInstanceOf[JsObject]
-      val userId = Id[User]((req \ "userId").as[Long])
-      val data = (req \ "data").asInstanceOf[JsArray]
+    val req = request.body.asJson.get.as[JsObject]
+    val userId = Id[User]((req \ "userId").as[Long])
+    val data = (req \ "data").as[JsArray]
+    SafeFuture {
       notificationRouter.sendToUserNoBroadcast(userId, data)
       Ok("")
     }
   }
 
   def sendToUser() = Action.async { request =>
-    future {
-      val req = request.body.asJson.get.asInstanceOf[JsObject]
-      val userId = Id[User]((req \ "userId").as[Long])
-      val data = (req \ "data").asInstanceOf[JsArray]
+    val req = request.body.asJson.get.as[JsObject]
+    val userId = Id[User]((req \ "userId").as[Long])
+    val data = (req \ "data").as[JsArray]
+    SafeFuture {
       notificationRouter.sendToUser(userId, data)
       Ok("")
     }
   }
 
   def sendToAllUsers() = Action.async { request =>
-    future {
-      val req = request.body.asJson.get.asInstanceOf[JsArray]
+    val req = request.body.asJson.get.as[JsArray]
+    SafeFuture {
       notificationRouter.sendToAllUsers(req)
       Ok("")
     }

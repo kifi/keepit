@@ -23,7 +23,7 @@ import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.test.ShoeboxTestInjector
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
-import play.api.libs.json.{ JsArray, JsObject, JsString, Json }
+import play.api.libs.json._
 import play.api.test.Helpers._
 import play.api.test._
 
@@ -43,6 +43,18 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
     FakeSocialGraphModule(),
     FakeCuratorServiceClientModule()
   )
+
+  import com.keepit.commanders.RawBookmarkRepresentation._
+
+  implicit val helperFormat = RawBookmarkRepresentation.helperFormat
+
+  // NOTE: No attemp to write the trait SourceAttribution
+  implicit val rawBookmarkRepwrites = new Writes[RawBookmarkRepresentation] {
+    def writes(keep: RawBookmarkRepresentation): JsValue = {
+      val tmp = RawBookmarkRepresentationWithoutAttribution(keep.title, keep.url, keep.isPrivate, keep.canonical, keep.openGraph, keep.keptAt)
+      Json.toJson(tmp)
+    }
+  }
 
   def prenormalize(url: String)(implicit injector: Injector): String = normalizationService.prenormalize(url).get
 
@@ -391,14 +403,11 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
                       "libraries":[],
                       "librariesOmitted": 0,
                       "librariesTotal": 0,
-                      "clickCount":1,
                       "collections":[],
                       "tags":[],
                       "hashtags":[],
                       "summary":{},
                       "siteName":"kifi.com",
-                      "clickCount":1,
-                      "rekeepCount":1,
                       "libraryId":"l7jlKlnA36Su"
                     },
                     {
@@ -419,7 +428,6 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
                       "hashtags":[],
                       "summary":{},
                       "siteName":"FortyTwo",
-                      "clickCount":1,
                       "libraryId":"l7jlKlnA36Su"
                     }
                   ],
@@ -478,7 +486,6 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
                       "hashtags":[],
                       "summary":{},
                       "siteName":"FortyTwo",
-                      "clickCount":1,
                       "libraryId":"l7jlKlnA36Su"
                     }
                   ],

@@ -640,7 +640,7 @@ angular.module('kifi')
                     augmentData();
 
                     if (data.library.slug !== scope.librarySlug) {
-                      $location.path('/' + scope.username + '/' + data.library.slug);
+                      $location.url('/' + scope.username + '/' + data.library.slug);
                     }
                   });
                 })['catch'](modalService.openGenericErrorModal);

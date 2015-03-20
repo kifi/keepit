@@ -1,6 +1,7 @@
 package com.keepit.model
 
 import com.keepit.common.db._
+import com.keepit.common.logging.Logging
 import org.joda.time.DateTime
 import play.api.libs.json.{ JsArray, JsObject, JsValue }
 import com.keepit.common.time.{ currentDateTime, DEFAULT_DATE_TIME_ZONE }
@@ -27,6 +28,18 @@ case class RawKeep(
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
 }
 
+object RawKeep extends Logging {
+  def extractKeepSourceAttribtuion(keep: RawKeep): Option[SourceAttribution] = {
+    keep.source match {
+      case KeepSource.twitterFileImport | KeepSource.twitterSync =>
+        val attrOpt = keep.originalJson.flatMap(js => TwitterAttribution.fromRawTweetJson(js))
+        if (attrOpt.isEmpty) log.warn(s"empty KeepSourceAttribtuion extracted. rawKeep id: ${keep.id.get}")
+        attrOpt
+      case _ => None
+    }
+  }
+}
+
 class RawKeepFactory @Inject() (airbrake: AirbrakeNotifier) {
 
   private def getBookmarkJsonObjects(value: JsValue): Seq[JsObject] = value match {
@@ -43,9 +56,10 @@ class RawKeepFactory @Inject() (airbrake: AirbrakeNotifier) {
     val title = (json \ "title").asOpt[String]
     val url = (json \ "url").asOpt[String].getOrElse(throw new Exception(s"json $json did not have a url"))
     val isPrivate = (json \ "isPrivate").asOpt[Boolean].getOrElse(true)
+    val addedAt = (json \ "addedAt").asOpt[DateTime]
     val canonical = (json \ Normalization.CANONICAL.scheme).asOpt[String]
     val openGraph = (json \ Normalization.OPENGRAPH.scheme).asOpt[String]
-    RawKeep(userId = userId, title = title, url = url, isPrivate = isPrivate, importId = importId, source = source, originalJson = Some(json), installationId = installationId, libraryId = libraryId)
+    RawKeep(userId = userId, title = title, url = url, isPrivate = isPrivate, importId = importId, source = source, originalJson = Some(json), installationId = installationId, libraryId = libraryId, createdDate = addedAt)
   }
 }
 

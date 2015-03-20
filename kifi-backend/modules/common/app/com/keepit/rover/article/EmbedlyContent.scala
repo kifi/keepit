@@ -8,7 +8,7 @@ import org.joda.time.DateTime
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 
-class EmbedlyContent(json: JsValue) extends ArticleContent {
+class EmbedlyContent(val json: JsValue) extends ArticleContent[EmbedlyArticle] {
   private val parsed = json.as[EmbedlyContent.ParsedFields]
   def destinationUrl = parsed.url
   def title = parsed.title
@@ -86,5 +86,12 @@ object EmbedlyContent {
 
   object ParsedFields {
     implicit val reads: Reads[ParsedFields] = Json.reads[ParsedFields] // todo(Léo): we may need a more permissive Reads
+  }
+
+  implicit val format: Format[EmbedlyContent] = {
+    Format(
+      Reads(json => JsSuccess(json).map(new EmbedlyContent(_))),
+      Writes(_.json)
+    )
   }
 }

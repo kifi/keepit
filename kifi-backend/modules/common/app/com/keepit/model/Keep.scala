@@ -30,7 +30,8 @@ case class Keep(
     kifiInstallation: Option[ExternalId[KifiInstallation]] = None,
     seq: SequenceNumber[Keep] = SequenceNumber.ZERO,
     libraryId: Option[Id[Library]],
-    keptAt: DateTime = currentDateTime) extends ModelWithExternalId[Keep] with ModelWithState[Keep] with ModelWithSeqNumber[Keep] {
+    keptAt: DateTime = currentDateTime,
+    sourceAttributionId: Option[Id[KeepSourceAttribution]] = None) extends ModelWithExternalId[Keep] with ModelWithState[Keep] with ModelWithSeqNumber[Keep] {
 
   def sanitizeForDelete(): Keep = copy(title = None, bookmarkPath = None, state = KeepStates.INACTIVE, kifiInstallation = None)
 
@@ -88,14 +89,14 @@ object Keep {
     title: Option[String], uriId: Id[NormalizedURI], isPrimary: Option[Boolean], inDisjointLib: Option[Boolean],
     urlId: Id[URL], url: String, bookmarkPath: Option[String], isPrivate: Boolean, userId: Id[User],
     state: State[Keep], source: KeepSource, kifiInstallation: Option[ExternalId[KifiInstallation]],
-    seq: SequenceNumber[Keep], libraryId: Option[Id[Library]], visibility: LibraryVisibility, keptAt: DateTime) = {
+    seq: SequenceNumber[Keep], libraryId: Option[Id[Library]], visibility: LibraryVisibility, keptAt: DateTime, sourceAttributionId: Option[Id[KeepSourceAttribution]]) = {
     Keep(id, createdAt, updatedAt, externalId, title, uriId, isPrimary.exists(b => b), inDisjointLib.exists(b => b), urlId, url,
-      bookmarkPath, visibility, userId, state, source, kifiInstallation, seq, libraryId, keptAt)
+      bookmarkPath, visibility, userId, state, source, kifiInstallation, seq, libraryId, keptAt, sourceAttributionId)
   }
   def unapplyToDbRow(k: Keep) = {
     Some(k.id, k.createdAt, k.updatedAt, k.externalId, k.title, k.uriId, if (k.isPrimary) Some(true) else None,
       if (k.inDisjointLib) Some(true) else None, k.urlId, k.url, k.bookmarkPath, Keep.visibilityToIsPrivate(k.visibility),
-      k.userId, k.state, k.source, k.kifiInstallation, k.seq, k.libraryId, k.visibility, k.keptAt)
+      k.userId, k.state, k.source, k.kifiInstallation, k.seq, k.libraryId, k.visibility, k.keptAt, k.sourceAttributionId)
   }
 
   def _bookmarkFormat = (
@@ -117,7 +118,8 @@ object Keep {
     (__ \ 'kifiInstallation).formatNullable(ExternalId.format[KifiInstallation]) and
     (__ \ 'seq).format(SequenceNumber.format[Keep]) and
     (__ \ 'libraryId).formatNullable(Id.format[Library]) and
-    (__ \ 'keptAt).format(DateTimeJsonFormat)
+    (__ \ 'keptAt).format(DateTimeJsonFormat) and
+    (__ \ 'sourceAttributionId).formatNullable(Id.format[KeepSourceAttribution])
   )(Keep.apply, unlift(Keep.unapply))
 
   // Remove when all services use the new Keep object
@@ -146,7 +148,8 @@ object Keep {
         "kifiInstallation" -> k.kifiInstallation,
         "seq" -> k.seq,
         "libraryId" -> k.libraryId,
-        "keptAt" -> k.keptAt
+        "keptAt" -> k.keptAt,
+        "sourceAttributionId" -> k.sourceAttributionId
       )
     }
   }
@@ -164,7 +167,7 @@ object KeepUriAndTime {
 }
 
 case class KeepCountKey(userId: Id[User]) extends Key[Int] {
-  override val version = 3
+  override val version = 4
   val namespace = "bookmark_count"
   def toKey(): String = userId.toString
 }
@@ -191,7 +194,7 @@ class KeepUriUserCache(stats: CacheStatistics, accessLog: AccessLog, innermostPl
   extends JsonCacheImpl[KeepUriUserKey, Keep](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class CountByLibraryKey(id: Id[Library]) extends Key[Int] {
-  override val version = 0
+  override val version = 1
   val namespace = "count_by_lib"
   def toKey(): String = id.toString
 }

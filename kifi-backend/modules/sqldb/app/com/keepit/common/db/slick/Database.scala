@@ -132,6 +132,11 @@ class Database @Inject() (
     try rw.withTransaction { f(rw) } finally rw.close()
   }
 
+  def readWriteWithAutocommit[T](f: RWSession => T)(implicit location: Location): T = enteringSession {
+    val rw = createReadWriteSession(location)
+    try rw.withAutocommit { f(rw) } finally rw.close()
+  }
+
   def readWrite[T](attempts: Int)(f: RWSession => T)(implicit location: Location): T = {
     1 to attempts - 1 foreach { attempt =>
       try {

@@ -18,7 +18,7 @@ import com.keepit.eliza.model._
 import com.keepit.model.User
 import org.joda.time.Days
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json.{ JsString, JsNumber, JsObject, Json }
+import play.api.libs.json._
 
 import scala.collection
 import scala.concurrent.future
@@ -45,8 +45,8 @@ object UrbanAirship {
 
 @ImplementedBy(classOf[UrbanAirshipImpl])
 trait UrbanAirship {
-  def registerDevice(userId: Id[User], token: String, deviceType: DeviceType, isDev: Boolean): Device
-  def notifyUser(userId: Id[User], notification: PushNotification): Unit
+  def registerDevice(userId: Id[User], token: String, deviceType: DeviceType, isDev: Boolean, signature: Option[String]): Device
+  def notifyUser(userId: Id[User], notification: PushNotification): Int
   def sendNotification(device: Device, notification: PushNotification): Unit
 }
 
@@ -59,16 +59,45 @@ class UrbanAirshipImpl @Inject() (
     clock: Clock,
     scheduler: Scheduler) extends UrbanAirship with Logging {
 
-  def registerDevice(userId: Id[User], token: String, deviceType: DeviceType, isDev: Boolean): Device = synchronized {
-    log.info(s"Registering device: $token (user $userId)")
-    val device = db.readWrite { implicit s =>
-      deviceRepo.get(token, deviceType).map { d =>
-        if (d.userId != userId) deviceRepo.save(d.copy(state = DeviceStates.INACTIVE))
+  def registerDevice(userId: Id[User], token: String, deviceType: DeviceType, isDev: Boolean, signatureOpt: Option[String]): Device = synchronized {
+    log.info(s"Registering device: $deviceType:$token for (user $userId, signature $signatureOpt)")
+
+    val device = if (signatureOpt.isDefined) {
+      val signature = signatureOpt.get
+
+      // find all devices for user with deviceType, but no signature and deactivate them!
+      db.readWrite { implicit s =>
+        val noSignatureDevices = deviceRepo.getByUserIdAndDeviceType(userId, deviceType).filter(_.signature.isEmpty)
+        noSignatureDevices.map { d =>
+          deviceRepo.save(d.copy(state = DeviceStates.INACTIVE))
+        }
       }
-      deviceRepo.get(userId, token, deviceType) match {
-        case Some(d) if d.state == DeviceStates.ACTIVE && d.isDev == isDev => d
-        case Some(d) => deviceRepo.save(d.copy(state = DeviceStates.ACTIVE, isDev = isDev))
-        case None => deviceRepo.save(Device(userId = userId, token = token, deviceType = deviceType, isDev = isDev))
+
+      db.readOnlyMaster { implicit s =>
+        deviceRepo.getByUserIdAndDeviceTypeAndSignature(userId, deviceType, signature, None)
+      } match {
+        case Some(d) => // update or reactivate an existing device
+          db.readWrite { implicit s =>
+            deviceRepo.save(d.copy(token = token, isDev = isDev, state = DeviceStates.ACTIVE))
+          }
+        case None => // new device for user! save new device!
+          db.readWrite { implicit s =>
+            deviceRepo.save(Device(userId = userId, token = token, deviceType = deviceType, isDev = isDev, signature = signatureOpt))
+          }
+      }
+
+    } else { // no signature provided... can only deal with tokens (old logic)
+      db.readWrite { implicit s =>
+        // deactivate all devices with token & deviceType but don't match current userId and don't have signature
+        deviceRepo.get(token, deviceType).filter(d => d.userId != userId && d.signature.isEmpty).map { d =>
+          deviceRepo.save(d.copy(state = DeviceStates.INACTIVE))
+        }
+        // find device with token & device type
+        deviceRepo.get(userId, token, deviceType) match {
+          case Some(d) if d.state == DeviceStates.ACTIVE && d.isDev == isDev => d
+          case Some(d) => deviceRepo.save(d.copy(state = DeviceStates.ACTIVE, isDev = isDev))
+          case None => deviceRepo.save(Device(userId = userId, token = token, deviceType = deviceType, isDev = isDev))
+        }
       }
     }
     future {
@@ -88,7 +117,7 @@ class UrbanAirshipImpl @Inject() (
     onePerType.values.toSeq
   }
 
-  def notifyUser(userId: Id[User], notification: PushNotification): Unit = {
+  def notifyUser(userId: Id[User], notification: PushNotification): Int = {
     val devices: Seq[Device] = getDevices(userId)
     log.info(s"Notifying user: $userId with $devices")
     //get only active devices
@@ -104,6 +133,7 @@ class UrbanAirshipImpl @Inject() (
     devices foreach { device =>
       client.updateDeviceState(device)
     }
+    activeDevices.size
   }
 
   private def jsonMessageExtra(notification: PushNotification) = {
@@ -145,17 +175,23 @@ class UrbanAirshipImpl @Inject() (
   private[realtime] def createIosJson(notification: PushNotification, device: Device) = {
     val audienceKey = if (device.isChannel) "ios_channel" else "device_token"
     notification.message.map { message =>
+      val ios = {
+        val json = Json.obj(
+          "alert" -> message.abbreviate(1000), //can be replaced with a json https://developer.apple.com/library/mac/documentation/NetworkingInternet/Conceptual/RemoteNotificationsPG/Chapters/ApplePushService.html#//apple_ref/doc/uid/TP40008194-CH100-SW9
+          "badge" -> notification.unvisitedCount,
+          "content-available" -> true,
+          "extra" -> jsonMessageExtra(notification)
+        )
+        notification.sound match {
+          case Some(fileName) => json + ("sound" -> JsString(fileName.name))
+          case None => json
+        }
+      }
       Json.obj(
         "audience" -> Json.obj(audienceKey -> device.token),
         "device_types" -> Json.arr("ios"),
         "notification" -> Json.obj(
-          "ios" -> Json.obj(
-            "alert" -> message.abbreviate(1000), //can be replaced with a json https://developer.apple.com/library/mac/documentation/NetworkingInternet/Conceptual/RemoteNotificationsPG/Chapters/ApplePushService.html#//apple_ref/doc/uid/TP40008194-CH100-SW9
-            "badge" -> notification.unvisitedCount,
-            "sound" -> notification.sound.get.name,
-            "content-available" -> true,
-            "extra" -> jsonMessageExtra(notification)
-          )
+          "ios" -> ios
         )
       )
     } getOrElse {
@@ -174,12 +210,17 @@ class UrbanAirshipImpl @Inject() (
   }
 
   def sendNotification(device: Device, notification: PushNotification): Unit = {
-    log.info(s"Sending notification to device: ${device.token}")
-
     val json = device.deviceType match {
       case DeviceType.IOS => createIosJson(notification, device)
       case DeviceType.Android => createAndroidJson(notification, device)
     }
+    notification match {
+      case spn: SimplePushNotification =>
+        log.info(s"Sending SimplePushNotification to user ${device.userId} device [${device.token}] with: $json")
+      case mtpn: MessageThreadPushNotification =>
+        log.info(s"Sending MessageThreadPushNotification to user ${device.userId} device: [${device.token}] message ${mtpn.id}")
+    }
+
     client.send(json, device, notification).onFailure {
       case e1 =>
         log.error(s"fail to send a push notification $notification for device $device, retry in five seconds", e1)

@@ -10,11 +10,12 @@ angular.module('kifi')
     //
     // Internal data.
     //
+    var queryCount = 0;
     var query;
     var filter;
-    var lastResult = null;
-    var selectedCount = 0;
-    var numResults = 0;
+    var context;
+    var selectedCount;
+    var renderTimeout;
     var smoothScrollStep;  // used to ensure that only one smooth scroll animation happens at a time
 
 
@@ -44,19 +45,8 @@ angular.module('kifi')
       }
     }
 
-    function setTitle() {
-      function getNormalizedQuery() {
-        if (util.startsWith(query, 'tag:')) {
-          return query.slice(4);
-        }
-        return query;
-      }
-
-      var libraryPart = library && library.name ? library.name + ' • ' : '';
-      $window.document.title = libraryPart + getNormalizedQuery() + ' • Kifi';
-    }
-
     function init() {
+      queryCount++;
       query = $stateParams.q || '';
       filter = $stateParams.f || 'a';
 
@@ -65,14 +55,16 @@ angular.module('kifi')
         return;
       }
 
-      lastResult = null;
+      context = null;
       selectedCount = 0;
+      $timeout.cancel(renderTimeout);
+      renderTimeout = null;
 
       $scope.hasMore = true;
       $scope.scrollDistance = '100%';
       $scope.loading = false;
 
-      setTitle();
+      document.title = (library && library.name ? library.name + ' • ' : '') + query.replace(/^tag:/, '') + ' • Kifi';
 
       searchActionService.reset();
       $scope.getNextKeeps(true);
@@ -133,85 +125,58 @@ angular.module('kifi')
     // Scope methods.
     //
 
-    /*
-     * returns an array of the user's `keep` objects fetched from the keep
-     * cards that are selected. Each keep card (hit) is basically a URL. Each
-     * hit has a `keeps` array that contains information about all keeps the
-     * user has related to the URL.
-     *
-     * example input:
-     *   [ {url: 'foo.com', keeps: [{id: 1}, {id: 2}]},
-     *     {url: 'bar.com', keeps: [{id: 3}]} ]
-     * example output:
-     *   [ {url: 'foo.com', id: 1},
-     *     {url: 'foo.com', id: 2},
-     *     {url: 'bar.com', id: 3} ]
-     */
-    $scope.selectedKeepsFilter = function (hits) {
-      return _.flatten(_.map(hits, function (hit) {
-        return _.map(hit.keeps, function (keep) {
-          var ret = { 'url': hit.url };
-          return _.merge(ret, keep);
-        });
-      }));
-    };
-
     $scope.getNextKeeps = function (resetExistingResults) {
       if ($scope.loading || query === '') {
         return;
       }
 
       $scope.loading = true;
-      searchActionService.find(query, filter, library, lastResult && lastResult.context, $rootScope.userLoggedIn).then(function (q, result) {
-        if (q !== query) {  // query was updated
+      searchActionService.find(query, filter, library, context, $rootScope.userLoggedIn).then(function (queryNumber, result) {
+        if (queryNumber !== queryCount) {  // results are for an old query
           return;
         }
 
-        $scope.hasMore = !!result.mayHaveMore;
-        lastResult = result;
+        context = result.context;
 
         if (resetExistingResults) {
           $scope.resultKeeps.length = 0;
           $scope.resultTotals.myTotal = 0;
           $scope.resultTotals.friendsTotal = 0;
           $scope.resultTotals.othersTotal = 0;
-          numResults = 0;
         }
         $scope.resultTotals.myTotal = $scope.resultTotals.myTotal || result.myTotal;
         $scope.resultTotals.friendsTotal = $scope.resultTotals.friendsTotal || result.friendsTotal;
         $scope.resultTotals.othersTotal = $scope.resultTotals.othersTotal || result.othersTotal;
-        numResults = result.hits.length;
 
         var hits = result.hits;
-        var hitIndex = 0;
-
-        function processHit() {
-          // If query has changed or if we've finished processing all the hits, exit.
-          if ((q !== query) ||  (hitIndex >= hits.length)) {
-            return;
-          }
-
-          var hit = hits[hitIndex];
-          var searchKeep = new keepDecoratorService.Keep(hit);
-          if (!!searchKeep.id) {
-            searchKeep.buildKeep(searchKeep);
-          }
-
-          // TODO remove after we get rid of the deprecated code and update new code to use 'tags' instead of 'hashtags'
-          searchKeep.hashtags = searchKeep.tags;
-          $scope.resultKeeps.push(searchKeep);
-
-          hitIndex++;
-          $timeout(processHit);
+        if (hits.length) {
+          $scope.hasMore = !!result.mayHaveMore;
+          renderTimeout = $timeout(angular.bind(null, renderNextKeep, hits.slice()));
+        } else {
+          $scope.hasMore = false;
+          onDoneWithBatchOfKeeps();
         }
-
-        // Process one hit per event loop turn to allow other events to come through.
-        $timeout(function () {
-          processHit();
-          $scope.loading = false;
-        });
-      }.bind(null, query));
+      }.bind(null, queryCount));
     };
+
+    function renderNextKeep(keeps) {
+      var keep = new keepDecoratorService.Keep(keeps.shift());
+      if (keep.id) {
+        keep.buildKeep(keep);
+      }
+      // TODO remove after we get rid of the deprecated code and update new code to use 'tags' instead of 'hashtags'
+      keep.hashtags = keep.tags;
+      $scope.resultKeeps.push(keep);
+      if (keeps.length) {
+        renderTimeout = $timeout(angular.bind(null, renderNextKeep, keeps));
+      } else {
+        onDoneWithBatchOfKeeps();
+      }
+    }
+
+    function onDoneWithBatchOfKeeps() {
+      $scope.loading = false;
+    }
 
     $scope.isFilterSelected = function (type) {
       return filter === type;
@@ -239,13 +204,13 @@ angular.module('kifi')
 
       // If there are no selected keep, the display the number of
       // search results in the subtitle.
-      switch (numResults) {
+      switch ($scope.resultKeeps.length) {
         case 0:
           return 'Sorry, no results found for “' + query + '”';
         case 1:
           return '1 result found';
         default:
-          return 'Top ' + numResults + ' results';
+          return 'Top ' + $scope.resultKeeps.length + ' results';
       }
     };
 
@@ -336,7 +301,6 @@ angular.module('kifi')
       });
     });
     $scope.$on('$destroy', deregisterKeepAddedListener);
-
 
     init();
   }
