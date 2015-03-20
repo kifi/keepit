@@ -125,10 +125,6 @@ case class ABookCacheModule(cachePluginModules: CachePluginModule*) extends Cach
   def userValueCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
     new UserValueCache(stats, accessLog, (outerRepo, 7 days))
 
-  @Provides @Singleton
-  def systemValueCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
-    new SystemValueCache(stats, accessLog, (outerRepo, 7 days))
-
   @Singleton
   @Provides
   def userSegmentCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
