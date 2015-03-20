@@ -28,8 +28,8 @@ class DeviceRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) ext
     def token = column[String]("token", O.NotNull)
     def deviceType = column[DeviceType]("device_type", O.NotNull)
     def isDev = column[Boolean]("is_dev", O.NotNull)
-    def signature = column[Option[String]]("signature", O.Nullable)
-    def * = (id.?, userId, token, deviceType, state, createdAt, updatedAt, isDev, signature) <> ((Device.apply _).tupled, Device.unapply _)
+    def signature = column[String]("signature", O.Nullable)
+    def * = (id.?, userId, token, deviceType, state, createdAt, updatedAt, isDev, signature.?) <> ((Device.apply _).tupled, Device.unapply _)
   }
 
   def table(tag: Tag) = new DeviceTable(tag)

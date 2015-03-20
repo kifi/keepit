@@ -1,7 +1,9 @@
 package com.keepit.model
 
+import com.keepit.commanders.KeepsCommander
 import com.keepit.common.db._
 import com.keepit.common.logging.Logging
+import com.keepit.heimdal.HeimdalContext
 import org.joda.time.DateTime
 import play.api.libs.json.{ JsArray, JsObject, JsValue }
 import com.keepit.common.time.{ currentDateTime, DEFAULT_DATE_TIME_ZONE }
@@ -21,9 +23,11 @@ case class RawKeep(
     installationId: Option[ExternalId[KifiInstallation]] = None,
     originalJson: Option[JsValue] = None,
     state: State[RawKeep] = RawKeepStates.ACTIVE,
-    tagIds: Option[String] = None,
+    tagIds: Option[String] = None, // deprecated - use hashtags instead!
     libraryId: Option[Id[Library]],
-    createdDate: Option[DateTime] = None) extends Model[RawKeep] {
+    createdDate: Option[DateTime] = None,
+    hashtags: Option[String] = None // i.e. "[tagA,tagB]"
+    ) extends Model[RawKeep] {
   def withId(id: Id[RawKeep]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
 }
@@ -40,7 +44,8 @@ object RawKeep extends Logging {
   }
 }
 
-class RawKeepFactory @Inject() (airbrake: AirbrakeNotifier) {
+class RawKeepFactory @Inject() (
+    airbrake: AirbrakeNotifier) {
 
   private def getBookmarkJsonObjects(value: JsValue): Seq[JsObject] = value match {
     case JsArray(elements) => elements.map(getBookmarkJsonObjects).flatten
@@ -52,14 +57,35 @@ class RawKeepFactory @Inject() (airbrake: AirbrakeNotifier) {
       Seq()
   }
 
-  def toRawKeep(userId: Id[User], source: KeepSource, value: JsValue, importId: Option[String] = None, installationId: Option[ExternalId[KifiInstallation]] = None, libraryId: Option[Id[Library]]): Seq[RawKeep] = getBookmarkJsonObjects(value) map { json =>
-    val title = (json \ "title").asOpt[String]
-    val url = (json \ "url").asOpt[String].getOrElse(throw new Exception(s"json $json did not have a url"))
-    val isPrivate = (json \ "isPrivate").asOpt[Boolean].getOrElse(true)
-    val addedAt = (json \ "addedAt").asOpt[DateTime]
-    val canonical = (json \ Normalization.CANONICAL.scheme).asOpt[String]
-    val openGraph = (json \ Normalization.OPENGRAPH.scheme).asOpt[String]
-    RawKeep(userId = userId, title = title, url = url, isPrivate = isPrivate, importId = importId, source = source, originalJson = Some(json), installationId = installationId, libraryId = libraryId, createdDate = addedAt)
+  def toRawKeep(userId: Id[User], source: KeepSource, value: JsValue, importId: Option[String] = None, installationId: Option[ExternalId[KifiInstallation]] = None, libraryId: Option[Id[Library]])(implicit context: HeimdalContext): Seq[RawKeep] = {
+    getBookmarkJsonObjects(value) map { json =>
+      val title = (json \ "title").asOpt[String]
+      val url = (json \ "url").asOpt[String].getOrElse(throw new Exception(s"json $json did not have a url"))
+      val isPrivate = (json \ "isPrivate").asOpt[Boolean].getOrElse(true)
+      val addedAt = (json \ "addedAt").asOpt[DateTime]
+      val pathOpt = (json \ "path").asOpt[Seq[String]]
+      val tagsOpt = (json \ "tags").asOpt[Seq[String]]
+
+      // add tags to bookmark if it has a path or pre-tagged
+      val tagSet = scala.collection.mutable.Set.empty[String]
+      tagsOpt.map { tags =>
+        tags.foreach { t =>
+          tagSet.add(t.toLowerCase)
+        }
+      }
+      pathOpt.map { pathSegments =>
+        pathSegments.filter(_.nonEmpty).map(seg => tagSet.add(seg.toLowerCase))
+      }
+      val hashTags = if (tagSet.nonEmpty) {
+        Some(tagSet.mkString("::"))
+      } else {
+        None
+      }
+
+      val canonical = (json \ Normalization.CANONICAL.scheme).asOpt[String]
+      val openGraph = (json \ Normalization.OPENGRAPH.scheme).asOpt[String]
+      RawKeep(userId = userId, title = title, url = url, isPrivate = isPrivate, importId = importId, source = source, originalJson = Some(json), installationId = installationId, libraryId = libraryId, hashtags = hashTags, createdDate = addedAt)
+    }
   }
 }
 
