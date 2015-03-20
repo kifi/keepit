@@ -631,7 +631,7 @@ class AuthController @Inject() (
      * account is brought in, the SocialUserInfo record is not complete. Namely, it's missing
      * the profileUrl field. Only after our system syncs with the social network do we get this.
      * Unfortunately, in this code path, it's nearly always too fast, so it's empty. However,
-     * we need the handle here. So we poll the db every 200 ms (up to 15 times) looking for it.
+     * we need the handle here. So we poll the db every 300 ms (up to `iterations` times) looking for it.
      * We aggressively log if we can't get it fast enough.
      *
      * What we should do:
