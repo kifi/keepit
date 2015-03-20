@@ -74,7 +74,7 @@ class RawKeepFactory @Inject() (airbrake: AirbrakeNotifier) {
       }
     }
     val hashtags = if (tagMap.nonEmpty) {
-      Some(JsArray(tagMap.values.toSeq.map(Json.toJson(_))))
+      Some(JsArray(tagMap.values.toSeq.map(JsString(_))))
     } else {
       None
     }

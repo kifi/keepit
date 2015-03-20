@@ -109,7 +109,7 @@ class RawKeepImporterTest extends TestKitSupport with SpecificationLike with Sho
           bookmarks.size === 5
 
           collectionRepo.getAllTagsByUserSortedByNumKeeps(user.id.get).map(_._1.tag) === Seq("college", "google", "hack", "stuff")
-          keepToCollectionRepo.count === 4
+          keepToCollectionRepo.getCollectionsForKeep(bookmarks.filter(b => b.title.get.contains("Infographic")).head).length === 4
         }
       }
     }
