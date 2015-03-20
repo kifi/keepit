@@ -344,15 +344,27 @@ div.kifi-res-menu-item {
   color: #bda874;
 }
 .kifi-res-type-icon {
-  height: 15px;
-  width: 15px;
   display: inline-block;
-  top: 2px;
+  height: 14px;
   position: relative;
+  top: 1px;
   margin-right: 5px;
+  background-repeat: no-repeat;
+  background-position: left bottom;
+  background-size: 100% auto;
 }
+.kifi-res-type-icon.kifi-docs     { width: 13px; background-image: url(/images/results/docs.svg); }
+.kifi-res-type-icon.kifi-drive    { width: 14px; background-image: url(/images/results/drive.svg); }
+.kifi-res-type-icon.kifi-dropbox  { width: 13px; background-image: url(/images/results/dropbox.svg); top: 2px; }
+.kifi-res-type-icon.kifi-gmail    { width: 14px; background-image: url(/images/results/gmail.svg); margin-right: 6px; }
+.kifi-res-type-icon.kifi-facebook { width: 12px; background-image: url(/images/results/facebook.svg); }
+.kifi-res-type-icon.kifi-pdf      { width: 13px; background-image: url(/images/results/pdf.svg); }
+.kifi-res-type-icon.kifi-sheets   { width: 13px; background-image: url(/images/results/sheets.svg); }
+.kifi-res-type-icon.kifi-sites    { width: 12px; background-image: url(/images/results/sites.svg); }
+.kifi-res-type-icon.kifi-slides   { width: 13px; background-image: url(/images/results/slides.svg); }
 .kifi-res-desc {
   display: block;
+  line-height: 19px;
   white-space: nowrap;
   overflow-x: hidden;
   text-overflow: ellipsis;
