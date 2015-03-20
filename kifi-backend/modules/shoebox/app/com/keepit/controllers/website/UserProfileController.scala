@@ -23,6 +23,7 @@ case class ProfileMutualStats(libs: Int, connections: Int)
 class UserProfileController @Inject() (
     db: Database,
     userRepo: UserRepo,
+    userValueRepo: UserValueRepo,
     userCommander: UserCommander,
     friendRequestRepo: FriendRequestRepo,
     userConnectionRepo: UserConnectionRepo,
@@ -43,23 +44,23 @@ class UserProfileController @Inject() (
         NotFound(s"username ${username.value}")
       case Some(profile) =>
         val (numLibraries, numFollowedLibraries, numInvitedLibs) = libraryCommander.countLibraries(profile.userId, viewer.map(_.id.get))
-        val numConnections = db.readOnlyMaster { implicit s =>
-          userConnectionRepo.getConnectionCount(profile.userId)
+        val (numConnections, userBiography) = db.readOnlyMaster { implicit s =>
+          val numConnections = userConnectionRepo.getConnectionCount(profile.userId)
+          val userBio = userValueRepo.getValueStringOpt(profile.userId, UserValueName.USER_DESCRIPTION)
+          (numConnections, userBio)
         }
 
-        val json = Json.toJson(profile.basicUserWithFriendStatus).as[JsObject] ++ Json.obj(
-          "numLibraries" -> numLibraries,
-          "numFollowedLibraries" -> numFollowedLibraries,
-          "numKeeps" -> profile.numKeeps,
-          "numConnections" -> numConnections,
-          "numFollowers" -> libraryCommander.countFollowers(profile.userId, viewer.map(_.id.get))
-        )
-        numInvitedLibs match {
-          case Some(numInvited) =>
-            Ok(json ++ Json.obj("numInvitedLibraries" -> numInvited))
-          case _ =>
-            Ok(json)
-        }
+        val json = Json.toJson(profile.basicUserWithFriendStatus).as[JsObject]
+        val finalJson = Json.toJson(UserProfileStats(
+          numLibraries = numLibraries,
+          numFollowedLibraries = numFollowedLibraries,
+          numKeeps = profile.numKeeps,
+          numConnections = numConnections,
+          numFollowers = libraryCommander.countFollowers(profile.userId, viewer.map(_.id.get)),
+          numInvitedLibraries = numInvitedLibs,
+          biography = userBiography
+        )).as[JsObject]
+        Ok(json ++ finalJson)
     }
   }
 

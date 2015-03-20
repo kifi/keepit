@@ -82,7 +82,6 @@ class MobileUserController @Inject() (
 
   def currentUser = UserAction.async { implicit request =>
     getUserInfo(request, true)
-
   }
 
   def updateCurrentUser() = UserAction.async(parse.tolerantJson) { implicit request =>
@@ -297,8 +296,12 @@ class MobileUserController @Inject() (
     userCommander.profile(Username(username), viewer) match {
       case None => NotFound(s"can't find username $username")
       case Some(profile) =>
+        val userBiography = db.readOnlyMaster { implicit s =>
+          userValueRepo.getValueStringOpt(profile.userId, UserValueName.USER_DESCRIPTION)
+        }
         val (numLibraries, numFollowedLibs, numInvitedLibs) = libraryCommander.countLibraries(profile.userId, viewer.map(_.id.get))
         val json = Json.toJson(profile.basicUserWithFriendStatus).asInstanceOf[JsObject] ++ Json.obj(
+          "biography" -> userBiography,
           "numLibraries" -> numLibraries,
           "numFollowedLibraries" -> numFollowedLibs,
           "numKeeps" -> profile.numKeeps)

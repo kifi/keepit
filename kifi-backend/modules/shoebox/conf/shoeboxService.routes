@@ -429,7 +429,7 @@ GET     /site/user/me               @com.keepit.controllers.website.UserControll
 POST    /site/user/me               @com.keepit.controllers.website.UserController.updateCurrentUser()
 POST    /site/user/me/username      @com.keepit.controllers.website.UserController.updateUsername()
 POST    /site/user/me/name          @com.keepit.controllers.website.UserController.updateName()
-POST    /site/user/me/description   @com.keepit.controllers.website.UserController.updateDescription()
+POST    /site/user/me/biography     @com.keepit.controllers.website.UserController.updateBiography()
 POST    /site/user/me/email        @com.keepit.controllers.website.UserController.addEmail()
 PUT     /site/user/me/email        @com.keepit.controllers.website.UserController.changePrimaryEmail()
 DELETE  /site/user/me/email        @com.keepit.controllers.website.UserController.removeEmail()

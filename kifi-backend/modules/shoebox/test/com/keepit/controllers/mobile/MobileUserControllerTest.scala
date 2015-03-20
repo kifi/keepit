@@ -147,13 +147,15 @@ class FasterMobileUserControllerTest extends Specification with ShoeboxTestInjec
     }
   }
 
-  "MobileUserControllerTest" should {
+  "FasterMobileUserControllerTest" should {
 
     "get profile for self" in {
       withDb(modules: _*) { implicit injector =>
         val userConnectionRepo = inject[UserConnectionRepo]
+        val userValueRepo = inject[UserValueRepo]
         val (user1, user2, user3, user4, user5, lib1) = db.readWrite { implicit session =>
           val user1 = user().withName("George", "Washington").withUsername("GDubs").withPictureName("pic1").saved
+          userValueRepo.save(UserValue(userId = user1.id.get, name = UserValueName.USER_DESCRIPTION, value = "First Prez yo!"))
           val user2 = user().withName("Abe", "Lincoln").withUsername("abe").saved
           val user3 = user().withName("Thomas", "Jefferson").withUsername("TJ").saved
           val user4 = user().withName("John", "Adams").withUsername("jayjayadams").saved
@@ -206,6 +208,7 @@ class FasterMobileUserControllerTest extends Specification with ShoeboxTestInjec
               "lastName":"Washington",
               "pictureName":"pic1.jpg",
               "username": "GDubs",
+              "biography":"First Prez yo!",
               "numLibraries":1,
               "numFollowedLibraries": 1,
               "numKeeps": 5
@@ -224,6 +227,7 @@ class FasterMobileUserControllerTest extends Specification with ShoeboxTestInjec
               "lastName":"Washington",
               "pictureName":"pic1.jpg",
               "username": "GDubs",
+              "biography":"First Prez yo!",
               "numLibraries":2,
               "numFollowedLibraries": 1,
               "numKeeps": 5,
@@ -243,6 +247,7 @@ class FasterMobileUserControllerTest extends Specification with ShoeboxTestInjec
               "lastName":"Washington",
               "pictureName":"pic1.jpg",
               "username": "GDubs",
+              "biography":"First Prez yo!",
               "numLibraries":4,
               "numFollowedLibraries": 2,
               "numKeeps": 5,
@@ -333,7 +338,8 @@ class FasterMobileUserControllerTest extends Specification with ShoeboxTestInjec
         val bodyInput = Json.parse("""
           {
             "firstName": "Donald",
-            "lastName": "Trump"
+            "lastName": "Trump",
+            "biography": "I am rich and famous"
           }""")
 
         val call = controller.updateCurrentUser()
@@ -347,7 +353,9 @@ class FasterMobileUserControllerTest extends Specification with ShoeboxTestInjec
               "id":"${user.externalId}",
               "firstName":"Donald",
               "lastName":"Trump",
-              "pictureName":"0.jpg","username":"test",
+              "pictureName":"0.jpg",
+              "username":"test",
+              "biography":"I am rich and famous",
               "emails":[],
               "notAuthed":[],
               "experiments":[],
