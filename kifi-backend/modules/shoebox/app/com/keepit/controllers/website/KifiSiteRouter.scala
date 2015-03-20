@@ -130,7 +130,7 @@ class KifiSiteRouter @Inject() (
   }
 
   private def serveWebApp(header: Option[Future[String]]): Result = {
-    AngularDistAssets.angularApp(header)
+    AngularApp.app(header)
   }
 
   private def notFound(request: MaybeUserRequest[_]): Result = {
