@@ -38,6 +38,7 @@ class MobileDevicesControllerTest extends Specification with ElizaTestInjector {
       withDb(modules: _*) { implicit injector =>
         val deviceRepo = inject[DeviceRepo]
         val (user1, user2) = db.readWrite { implicit s =>
+          deviceRepo.count
           val userPika = User(firstName = "Pika", lastName = "Chu", username = Username("pikachu"), normalizedUsername = "pikachu")
           val userJiggly = User(firstName = "Jiggly", lastName = "Puff", username = Username("jigglypuff"), normalizedUsername = "jigglypuff")
           val users = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveUsers(userPika, userJiggly)

@@ -87,10 +87,22 @@ private class RawKeepImporterActor @Inject() (
   private def processBatch(rawKeeps: Seq[RawKeep], reason: String): Unit = {
     log.info(s"[RawKeepImporterActor] Processing ($reason) ${rawKeeps.length} keeps")
 
-    rawKeeps.groupBy(rk => (rk.userId, rk.importId, rk.source, rk.installationId, rk.isPrivate, rk.libraryId)).map {
-      case ((userId, importIdOpt, source, installationId, isPrivate, libraryId), rawKeepGroup) =>
-
+    rawKeeps.groupBy(rk => (rk.userId, rk.importId, rk.source, rk.installationId, rk.isPrivate, rk.libraryId, rk.hashtags)).map {
+      case ((userId, importIdOpt, source, installationId, isPrivate, libraryId, hashtags), rawKeepGroup) =>
         val context = importIdOpt.map(importId => getHeimdalContext(userId, importId)).flatten.getOrElse(HeimdalContext.empty)
+
+        val hashtagSet = rawKeepGroup.map { rk =>
+          rk.hashtags.map { tagArray =>
+            val tagNames = tagArray.value.map { j =>
+              Json.stringify(j).replace("\"", "")
+            }
+            tagNames.map { tag =>
+              val collection = bookmarksCommanderProvider.get.getOrCreateTag(userId, tag)(context)
+              (tag, collection)
+            }
+          }.getOrElse(Seq.empty)
+        }.flatten.toMap
+
         val rawBookmarks = rawKeepGroup.map { rk =>
           val canonical = rk.originalJson.flatMap(json => (json \ Normalization.CANONICAL.scheme).asOpt[String])
           val openGraph = rk.originalJson.flatMap(json => (json \ Normalization.OPENGRAPH.scheme).asOpt[String])
@@ -134,9 +146,21 @@ private class RawKeepImporterActor @Inject() (
 
           successes.foreach { keep =>
             val allTagIdsForThisKeep = rawKeepByUrl.get(keep.url).flatMap { rk =>
-              rk.tagIds.map { tags =>
+              val tagIdsFromTags = rk.tagIds.map { tags =>
                 tags.split(",").toSeq.filter(_.length > 0).map { c => Try(c.toLong).map(Id[Collection]).toOption }.flatten
               }
+
+              val tagIdsFromHashtags = rk.hashtags.map { tagArray =>
+                tagArray.value.map(Json.stringify(_).replace("\"", "")).map { tagName =>
+                  hashtagSet.get(tagName).map(_.id.get)
+                }.flatten
+              }
+
+              (tagIdsFromTags, tagIdsFromHashtags) match {
+                case (Some(tagIds), Some(hashtags)) => Some(tagIds ++ hashtags)
+                case _ => tagIdsFromTags.orElse(tagIdsFromHashtags)
+              }
+
             }.getOrElse(Seq.empty)
 
             allTagIdsForThisKeep.map { tagId =>
