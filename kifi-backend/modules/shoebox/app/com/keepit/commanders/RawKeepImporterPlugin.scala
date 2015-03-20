@@ -91,14 +91,19 @@ private class RawKeepImporterActor @Inject() (
       case ((userId, importIdOpt, source, installationId, isPrivate, libraryId), rawKeepGroup) =>
         val context = importIdOpt.map(importId => getHeimdalContext(userId, importId)).flatten.getOrElse(HeimdalContext.empty)
 
-        val keepTagMap = rawKeepGroup.map { rk =>
+        // create a set of all tags
+        val keepTagNamesMap = scala.collection.mutable.Map.empty[String, String]
+        rawKeepGroup.foreach { rk =>
           rk.keepTags.map { tagNames =>
-            tagNames.as[Seq[String]].map { tagName =>
-              val collection = bookmarksCommanderProvider.get.getOrCreateTag(userId, tagName)(context)
-              (tagName, collection)
+            tagNames.as[Seq[String]].foreach { tagName =>
+              keepTagNamesMap += (tagName.toLowerCase -> tagName)
             }
-          }.getOrElse(Seq.empty)
-        }.flatten.toMap
+          }
+        }
+        val keepTagMap = keepTagNamesMap.values.toSet.map { tagName: String =>
+          val collection = bookmarksCommanderProvider.get.getOrCreateTag(userId, tagName)(context)
+          (tagName.toLowerCase, collection)
+        }.toMap
 
         val rawBookmarks = rawKeepGroup.map { rk =>
           val canonical = rk.originalJson.flatMap(json => (json \ Normalization.CANONICAL.scheme).asOpt[String])
@@ -149,7 +154,7 @@ private class RawKeepImporterActor @Inject() (
 
               val tagIdsFromKeepTags = rk.keepTags.map { tagArray =>
                 tagArray.as[Seq[String]].map { tagName =>
-                  keepTagMap.get(tagName).map(_.id.get)
+                  keepTagMap.get(tagName.toLowerCase).map(_.id.get)
                 }.flatten
               }
 

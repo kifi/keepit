@@ -61,20 +61,9 @@ class RawKeepFactory @Inject() (airbrake: AirbrakeNotifier) {
     val pathOpt = (json \ "path").asOpt[Seq[String]]
     val tagsOpt = (json \ "tags").asOpt[Seq[String]]
 
-    // map (tag name (lower cased) -> real tag)
-    val tagMap = scala.collection.mutable.Map[String, String]()
-    pathOpt.map { pathSegment =>
-      pathSegment.map(seg =>
-        tagMap += (seg.toLowerCase -> seg.trim)
-      )
-    }
-    tagsOpt.map { tags =>
-      tags.map { tag =>
-        tagMap += (tag.toLowerCase -> tag.trim)
-      }
-    }
-    val keepTags = if (tagMap.nonEmpty) {
-      Some(JsArray(tagMap.values.toSeq.map(JsString(_))))
+    val allTagNames = (pathOpt.getOrElse(Seq.empty) ++ tagsOpt.getOrElse(Seq.empty)).groupBy(_.toLowerCase.trim).map(_._2.head).toSeq
+    val keepTags = if (allTagNames.nonEmpty) {
+      Some(JsArray(allTagNames.map(JsString(_))))
     } else {
       None
     }
