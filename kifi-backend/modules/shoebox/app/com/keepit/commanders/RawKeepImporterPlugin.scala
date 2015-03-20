@@ -91,11 +91,11 @@ private class RawKeepImporterActor @Inject() (
       case ((userId, importIdOpt, source, installationId, isPrivate, libraryId), rawKeepGroup) =>
         val context = importIdOpt.map(importId => getHeimdalContext(userId, importId)).flatten.getOrElse(HeimdalContext.empty)
 
-        val keepTagSet = rawKeepGroup.map { rk =>
+        val keepTagMap = rawKeepGroup.map { rk =>
           rk.keepTags.map { tagNames =>
-            tagNames.as[Seq[String]].map { tag =>
-              val collection = bookmarksCommanderProvider.get.getOrCreateTag(userId, tag)(context)
-              (tag, collection)
+            tagNames.as[Seq[String]].map { tagName =>
+              val collection = bookmarksCommanderProvider.get.getOrCreateTag(userId, tagName)(context)
+              (tagName, collection)
             }
           }.getOrElse(Seq.empty)
         }.flatten.toMap
@@ -149,7 +149,7 @@ private class RawKeepImporterActor @Inject() (
 
               val tagIdsFromKeepTags = rk.keepTags.map { tagArray =>
                 tagArray.as[Seq[String]].map { tagName =>
-                  keepTagSet.get(tagName).map(_.id.get)
+                  keepTagMap.get(tagName).map(_.id.get)
                 }.flatten
               }
 
