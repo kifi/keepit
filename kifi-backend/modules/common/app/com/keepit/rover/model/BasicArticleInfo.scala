@@ -36,8 +36,8 @@ trait ArticleKeyHolder {
   def uriId: Id[NormalizedURI]
   def bestVersion: Option[ArticleVersion]
   def latestVersion: Option[ArticleVersion]
-  def getLatestKey[A <: Article](implicit kind: ArticleKind[A]): Option[ArticleKey[A]] = bestVersion.map(toKey(_))
-  def getBestKey[A <: Article](implicit kind: ArticleKind[A]): Option[ArticleKey[A]] = latestVersion.map(toKey(_))
+  def getLatestKey[A <: Article](implicit kind: ArticleKind[A]): Option[ArticleKey[A]] = latestVersion.map(toKey(_))
+  def getBestKey[A <: Article](implicit kind: ArticleKind[A]): Option[ArticleKey[A]] = bestVersion.map(toKey(_))
   private def toKey[A <: Article](version: ArticleVersion)(implicit kind: ArticleKind[A]) = ArticleKey(uriId, kind, version)
 }
 
