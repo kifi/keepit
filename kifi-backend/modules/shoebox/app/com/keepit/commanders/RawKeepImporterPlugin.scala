@@ -100,9 +100,10 @@ private class RawKeepImporterActor @Inject() (
             }
           }
         }
+        // map tagNames to keepTags
         val keepTagMap = keepTagNamesMap.values.toSet.map { tagName: String =>
-          val collection = bookmarksCommanderProvider.get.getOrCreateTag(userId, tagName)(context)
-          (tagName.toLowerCase, collection)
+          val keepTag = bookmarksCommanderProvider.get.getOrCreateTag(userId, tagName)(context)
+          (tagName.toLowerCase, keepTag)
         }.toMap
 
         val rawBookmarks = rawKeepGroup.map { rk =>
