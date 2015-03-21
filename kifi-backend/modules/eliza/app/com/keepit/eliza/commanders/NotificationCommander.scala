@@ -170,7 +170,7 @@ class NotificationCommander @Inject() (
   def sendToUser(userId: Id[User], data: JsArray): Unit =
     notificationRouter.sendToUser(userId, data)
 
-  def createGlobalNotification(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean, category: NotificationCategory, extra: Option[JsObject]) = {
+  def createGlobalNotification(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean, category: NotificationCategory, unread: Boolean = true, extra: Option[JsObject]) = {
     val (message, thread) = db.readWrite { implicit session =>
       val mtps = MessageThreadParticipants(userIds)
       val thread = threadRepo.save(MessageThread(
@@ -225,7 +225,7 @@ class NotificationCommander @Inject() (
               threadId = thread.id.get,
               uriId = None,
               lastSeen = None,
-              unread = true,
+              unread = unread,
               lastMsgFromOther = Some(message.id.get),
               lastNotification = notifJson,
               notificationUpdatedAt = message.createdAt,
@@ -483,6 +483,10 @@ class NotificationCommander @Inject() (
       userThreadRepo.getUnreadRawNotificationsBefore(userId, time, howMany)
     }, includeUriSummary)
   }
+
+  // given a set of notifications (unread)
+  // group notifications by category (we want "somebody followed your library" & to same library)
+  //
 
   def getLatestSentSendableNotifications(userId: Id[User], howMany: Int, includeUriSummary: Boolean): Future[Seq[NotificationJson]] = {
     notificationJsonMaker.make(db.readOnlyReplica { implicit session =>
