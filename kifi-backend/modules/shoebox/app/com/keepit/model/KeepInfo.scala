@@ -29,7 +29,8 @@ case class KeepInfo(
   summary: Option[URISummary] = None,
   siteName: Option[String] = None,
   libraryId: Option[PublicId[Library]] = None,
-  sourceAttribution: Option[KeepSourceAttribution] = None)
+  sourceAttribution: Option[KeepSourceAttribution] = None,
+  note: Option[String] = None)
 
 object KeepInfo {
 

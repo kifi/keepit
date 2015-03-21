@@ -25,10 +25,11 @@ case class RawBookmarkRepresentation(
   canonical: Option[String] = None,
   openGraph: Option[String] = None,
   keptAt: Option[DateTime] = None,
-  sourceAttribution: Option[SourceAttribution] = None)
+  sourceAttribution: Option[SourceAttribution] = None, // clients can't provide this. probably a bad idea to have here
+  note: Option[String] = None)
 
 object RawBookmarkRepresentation {
-  case class RawBookmarkRepresentationWithoutAttribution(title: Option[String], url: String, isPrivate: Option[Boolean], canonical: Option[String], openGraph: Option[String], keptAt: Option[DateTime])
+  case class RawBookmarkRepresentationWithoutAttribution(title: Option[String], url: String, isPrivate: Option[Boolean], canonical: Option[String], openGraph: Option[String], keptAt: Option[DateTime], note: Option[String])
 
   implicit val helperFormat = Json.format[RawBookmarkRepresentationWithoutAttribution]
 
@@ -68,6 +69,6 @@ class RawBookmarkFactory @Inject() (
     val isPrivate = (json \ "isPrivate").asOpt[Boolean]
     val canonical = (json \ Normalization.CANONICAL.scheme).asOpt[String]
     val openGraph = (json \ Normalization.OPENGRAPH.scheme).asOpt[String]
-    RawBookmarkRepresentation(title = title, url = url, isPrivate = isPrivate, canonical = canonical, openGraph = openGraph, Some(clock.now), None)
+    RawBookmarkRepresentation(title = title, url = url, isPrivate = isPrivate, canonical = canonical, openGraph = openGraph, keptAt = Some(clock.now), sourceAttribution = None, note = None)
   }
 }
