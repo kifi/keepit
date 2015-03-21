@@ -484,10 +484,6 @@ class NotificationCommander @Inject() (
     }, includeUriSummary)
   }
 
-  // given a set of notifications (unread)
-  // group notifications by category (we want "somebody followed your library" & to same library)
-  //
-
   def getLatestSentSendableNotifications(userId: Id[User], howMany: Int, includeUriSummary: Boolean): Future[Seq[NotificationJson]] = {
     notificationJsonMaker.make(db.readOnlyReplica { implicit session =>
       userThreadRepo.getLatestRawNotificationsForStartedThreads(userId, howMany)
