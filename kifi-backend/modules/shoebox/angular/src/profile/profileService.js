@@ -278,6 +278,9 @@ angular.module('kifi')
     }
 
     return {
+      initLoggedOut: function () {
+        updateLoginState(false);
+      },
       userLoggedIn: getUserLoggedIn,
       me: me,
       getSettings: getSettings,

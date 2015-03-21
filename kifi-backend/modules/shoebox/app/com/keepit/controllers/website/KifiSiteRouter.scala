@@ -51,7 +51,7 @@ class KifiSiteRouter @Inject() (
     redirectUserToProfileToConnect(friend, request) getOrElse redirUserToOwnProfile("/connections", request)
   }
   def handleInvitePage(friend: Option[String]) = WebAppPage { implicit request =>
-    redirectUserToProfileToConnect(friend, request) getOrElse serveWebAppToUser2(request)
+    redirectUserToProfileToConnect(friend, request) getOrElse serveWebAppToUser2
   }
   private def redirectUserToProfileToConnect(friend: Option[String], request: MaybeUserRequest[_]): Option[Result] = { // for old emails
     friend.flatMap(ExternalId.asOpt[User]) flatMap { userExtId =>
@@ -67,9 +67,9 @@ class KifiSiteRouter @Inject() (
     }
   }
 
-  def serveWebAppToUser = WebAppPage(implicit request => serveWebAppToUser2(request))
-  private def serveWebAppToUser2(request: MaybeUserRequest[_]): Result = request match {
-    case _: UserRequest[_] => serveWebApp(None)
+  def serveWebAppToUser = WebAppPage(implicit request => serveWebAppToUser2)
+  private def serveWebAppToUser2(implicit request: MaybeUserRequest[_]): Result = request match {
+    case _: UserRequest[_] => AngularApp.app()
     case r: NonUserRequest[_] => redirectToLogin(r.uri, r)
   }
 
@@ -78,7 +78,9 @@ class KifiSiteRouter @Inject() (
       case (user, redirectStatusOpt) =>
         redirectStatusOpt map { status =>
           Redirect(s"/${user.username.urlEncoded}${dropPathSegment(request.uri)}", status)
-        } getOrElse serveWebApp(Some(userMetadata(user, UserProfileTab(request.path))))
+        } getOrElse {
+          AngularApp.app(() => userMetadata(user, UserProfileTab(request.path)))
+        }
     } getOrElse notFound(request)
   }
 
@@ -89,7 +91,7 @@ class KifiSiteRouter @Inject() (
           case (user, redirectStatusOpt) =>
             redirectStatusOpt map { status =>
               Redirect(s"/${user.username.urlEncoded}${dropPathSegment(request.uri)}", status)
-            } getOrElse serveWebApp(Some(userMetadata(user, UserProfileTab(request.path))))
+            } getOrElse AngularApp.app()
         } getOrElse notFound(request)
       case r: NonUserRequest[_] =>
         redirectToLogin(s"/me${dropPathSegment(request.uri)}", r)
@@ -106,7 +108,7 @@ class KifiSiteRouter @Inject() (
               val status = if (!isLibraryAlias || userRedirectStatusOpt.exists(_ == 303)) 303 else 301
               Redirect(uri, status)
             } else {
-              serveWebApp(request.userAgentOpt.orElse(Some(UserAgent.UnknownUserAgent)).filter(_.possiblyBot).map(_ => libMetadata(library)))
+              AngularApp.app(() => libMetadata(library))
             }
         }
     } getOrElse notFound(request)
@@ -127,10 +129,6 @@ class KifiSiteRouter @Inject() (
 
   private def redirectToLogin(url: String, request: NonUserRequest[_]): Result = {
     Redirect("/login").withSession(request.session + (SecureSocial.OriginalUrlKey -> url))
-  }
-
-  private def serveWebApp(header: Option[Future[String]]): Result = {
-    AngularApp.app(header)
   }
 
   private def notFound(request: MaybeUserRequest[_]): Result = {

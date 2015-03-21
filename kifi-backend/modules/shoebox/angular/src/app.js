@@ -94,14 +94,18 @@ angular.module('kifi', [
       if (platformService.isSupportedMobilePlatform()) {
         $rootElement.find('html').addClass('kf-mobile');
       }
-      $timeout(function () {
-        profileService.fetchMe().then(function () {
-          if ($rootScope.userLoggedIn) {
-            profileService.fetchPrefs();
-            libraryService.fetchLibraryInfos(true);
-          }
+      if ($rootElement.find('#kf-authenticated').removeAttr('id').length) {
+        $timeout(function () {
+          profileService.fetchMe().then(function () {
+            if ($rootScope.userLoggedIn) {
+              profileService.fetchPrefs();
+              libraryService.fetchLibraryInfos(true);
+            }
+          });
         });
-      });
+      } else {
+        profileService.initLoggedOut();
+      }
 
       $rootScope.$on('$stateChangeSuccess', function (event, toState, toParams, fromState, fromParams) {
         $scope.errorStatus = $scope.errorParams = null;

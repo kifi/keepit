@@ -130,6 +130,23 @@ class KifiSiteRouterTest extends Specification with ShoeboxApplicationInjector {
           }
         }
 
+        // Site root
+        actionsHelper.unsetUser
+
+        {
+          val Some(resF) = route(FakeRequest("GET", "/"))
+          status(resF) === 200
+          Some(resF) must not(beWebApp)
+        }
+
+        actionsHelper.setUser(user1)
+
+        {
+          val Some(resF) = route(FakeRequest("GET", "/"))
+          Some(resF) must beWebApp
+          contentAsString(resF) must contain("""<title id="kf-authenticated">Kifi</title>""")
+        }
+
         // User profiles
         actionsHelper.unsetUser
         route(FakeRequest("GET", "/asdf")) must be404
