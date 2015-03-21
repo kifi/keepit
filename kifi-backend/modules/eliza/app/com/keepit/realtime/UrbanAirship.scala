@@ -1,5 +1,6 @@
 package com.keepit.realtime
 
+import com.keepit.eliza.commanders.MessagingAnalytics
 import com.keepit.eliza.{ PushNotificationExperiment, PushNotificationCategory }
 
 import scala.concurrent.duration._
@@ -21,7 +22,8 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
 
 import scala.collection
-import scala.concurrent.future
+import scala.concurrent.{ Future, future }
+import scala.util.{ Try, Success, Failure }
 
 case class UrbanAirshipConfig(key: String, secret: String, devKey: String, devSecret: String, baseUrl: String = "https://go.urbanairship.com")
 
@@ -47,7 +49,7 @@ object UrbanAirship {
 trait UrbanAirship {
   def registerDevice(userId: Id[User], token: String, deviceType: DeviceType, isDev: Boolean, signature: Option[String]): Device
   def notifyUser(userId: Id[User], notification: PushNotification): Int
-  def sendNotification(device: Device, notification: PushNotification): Unit
+  def sendNotification(device: Device, notification: PushNotification, trial: Int = 3): Unit
 }
 
 @Singleton
@@ -55,6 +57,7 @@ class UrbanAirshipImpl @Inject() (
     client: UrbanAirshipClient,
     deviceRepo: DeviceRepo,
     airbrake: AirbrakeNotifier,
+    messagingAnalytics: MessagingAnalytics,
     db: Database,
     clock: Clock,
     scheduler: Scheduler) extends UrbanAirship with Logging {
@@ -209,11 +212,29 @@ class UrbanAirshipImpl @Inject() (
     }
   }
 
-  def sendNotification(device: Device, notification: PushNotification): Unit = {
+  private def dealWithFailNotification(device: Device, notification: PushNotification, trial: Int, throwable: Throwable): Unit = {
+    val (retry, retryText) = trial match {
+      case 1 =>
+        (Some(5 seconds), "retry in five seconds")
+      case 2 =>
+        (Some(1 minute), "retry in five seconds")
+      case 3 =>
+        (None, s"stop retries")
+    }
+    airbrake.notify(s"fail to send a push notification $notification for device $device, $retryText: $throwable")
+    retry foreach { timeout =>
+      scheduler.scheduleOnce(timeout) {
+        sendNotification(device, notification, trial + 1)
+      }
+    }
+  }
+
+  def sendNotification(device: Device, notification: PushNotification, trial: Int = 3): Unit = {
     val json = device.deviceType match {
       case DeviceType.IOS => createIosJson(notification, device)
       case DeviceType.Android => createAndroidJson(notification, device)
     }
+
     notification match {
       case spn: SimplePushNotification =>
         log.info(s"Sending SimplePushNotification to user ${device.userId} device [${device.token}] with: $json")
@@ -221,21 +242,16 @@ class UrbanAirshipImpl @Inject() (
         log.info(s"Sending MessageThreadPushNotification to user ${device.userId} device: [${device.token}] message ${mtpn.id}")
     }
 
-    client.send(json, device, notification).onFailure {
-      case e1 =>
-        log.error(s"fail to send a push notification $notification for device $device, retry in five seconds", e1)
-        scheduler.scheduleOnce(5 seconds) {
-          client.send(json, device, notification).onFailure {
-            case e2 =>
-              log.error(s"fail to send a push notification $notification for device $device, second retry in one minute", e2)
-              scheduler.scheduleOnce(1 minute) {
-                client.send(json, device, notification).onFailure {
-                  case e3 =>
-                    airbrake.notify(s"fail to send a push notification $notification for device $device, after two retries: $e3")
-                }
-              }
-          }
+    client.send(json, device, notification) andThen {
+      case Success(res) =>
+        if (res.status / 100 != 2) {
+          dealWithFailNotification(device, notification, trial, new Exception(s"bad status ${res.status} on push notification $notification for device $device response: ${res.body}"))
+        } else {
+          log.info(s"successful send of push notification on trial $trial for device $deviceRepo: ${res.body}")
+          messagingAnalytics.sentPushNotification(device, notification)
         }
+      case Failure(e) =>
+        dealWithFailNotification(device, notification, trial, new Exception(s"fail on push notification $notification for device $device", e))
     }
   }
 

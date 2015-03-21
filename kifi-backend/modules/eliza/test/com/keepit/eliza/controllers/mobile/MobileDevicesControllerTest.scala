@@ -7,7 +7,7 @@ import com.keepit.common.controller.{ FakeUserActionsHelper }
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.store.FakeElizaStoreModule
 import com.keepit.eliza.FakeElizaServiceClientModule
-import com.keepit.heimdal.{ HeimdalContext }
+import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext }
 import com.keepit.model.{ Username, User }
 import com.keepit.realtime._
 import com.keepit.shoebox.{ FakeShoeboxServiceClientImpl, ShoeboxServiceClient, FakeShoeboxServiceModule }
@@ -26,6 +26,7 @@ class MobileDevicesControllerTest extends Specification with ElizaTestInjector {
     ElizaCacheModule(),
     FakeShoeboxServiceModule(),
     FakeElizaServiceClientModule(),
+    FakeHeimdalServiceClientModule(),
     FakeActorSystemModule(),
     FakeUrbanAirshipModule(),
     FakeHttpClientModule(),
