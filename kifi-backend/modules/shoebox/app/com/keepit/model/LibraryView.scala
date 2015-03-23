@@ -202,9 +202,11 @@ case class FullLibraryInfo(
   keeps: Seq[KeepInfo],
   numKeeps: Int,
   numCollaborators: Int,
-  numFollowers: Int)
+  numFollowers: Int,
+  attr: Option[LibrarySourceAttribution] = None)
 
 object FullLibraryInfo {
+  implicit val sourceWrites = LibrarySourceAttribution.writes
   implicit val writes = Json.writes[FullLibraryInfo]
 }
 
@@ -216,3 +218,21 @@ case class LibraryInfoIdKey(libraryId: Id[Library]) extends Key[LibraryInfo] {
 
 class LibraryInfoIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends ImmutableJsonCacheImpl[LibraryInfoIdKey, LibraryInfo](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+
+sealed trait LibrarySourceAttribution
+
+object LibrarySourceAttribution {
+  implicit val writes = new Writes[LibrarySourceAttribution] {
+    def writes(x: LibrarySourceAttribution): JsValue = {
+      x match {
+        case twitter: TwitterLibrarySourceAttribution => Json.obj("twitter" -> TwitterLibrarySourceAttribution.writes.writes(twitter))
+      }
+    }
+  }
+}
+
+case class TwitterLibrarySourceAttribution(handle: String) extends LibrarySourceAttribution
+
+object TwitterLibrarySourceAttribution {
+  implicit val writes = Json.writes[TwitterLibrarySourceAttribution]
+}
