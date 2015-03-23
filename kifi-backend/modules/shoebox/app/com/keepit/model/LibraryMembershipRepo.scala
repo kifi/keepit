@@ -37,7 +37,7 @@ trait LibraryMembershipRepo extends Repo[LibraryMembership] with RepoWithDelete[
   def countWithAccessByLibraryId(libraryIds: Set[Id[Library]], access: LibraryAccess)(implicit session: RSession): Map[Id[Library], Int]
   def updateLastViewed(membershipId: Id[LibraryMembership])(implicit session: RWSession): Unit
   def updateLastEmailSent(membershipId: Id[LibraryMembership])(implicit session: RWSession): Unit
-  def getMemberCountSinceForLibrary(libraryId: Id[Library], since: DateTime)(implicit session: RSession): Int
+  def countMembersForLibrarySince(libraryId: Id[Library], since: DateTime)(implicit session: RSession): Int
   def mostMembersSince(count: Int, since: DateTime)(implicit session: RSession): Seq[(Id[Library], Int)]
   def percentGainSince(since: DateTime, totalMoreThan: Int, recentMoreThan: Int, count: Int)(implicit session: RSession): Seq[(Id[Library], Int, Int, Double)]
   def mostMembersSinceForUser(count: Int, since: DateTime, ownerId: Id[User])(implicit session: RSession): Seq[(Id[Library], Int)]
@@ -175,8 +175,8 @@ class LibraryMembershipRepoImpl @Inject() (
     (for (b <- rows if b.libraryId === libraryId && b.userId.inSet(userIds) && b.state =!= excludeState.orNull) yield (b.userId, b)).list.toMap
   }
 
-  def getMemberCountSinceForLibrary(libraryId: Id[Library], since: DateTime)(implicit session: RSession): Int = {
-    Query((for (r <- rows if r.createdAt > since) yield r).length).first
+  def countMembersForLibrarySince(libraryId: Id[Library], since: DateTime)(implicit session: RSession): Int = {
+    Query((for (r <- rows if r.createdAt > since && r.libraryId === libraryId) yield r).length).first
   }
 
   def mostMembersSince(count: Int, since: DateTime)(implicit session: RSession): Seq[(Id[Library], Int)] = {

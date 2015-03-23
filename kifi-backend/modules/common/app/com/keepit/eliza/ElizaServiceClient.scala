@@ -47,7 +47,7 @@ trait ElizaServiceClient extends ServiceClient {
 
   def connectedClientCount: Future[Seq[Int]]
 
-  def sendGlobalNotification(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean, category: NotificationCategory, extra: Option[JsObject] = None): Future[Id[MessageHandle]]
+  def sendGlobalNotification(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean, category: NotificationCategory, unread: Boolean = true, extra: Option[JsObject] = None): Future[Id[MessageHandle]]
 
   def unsendNotification(messageHandle: Id[MessageHandle]): Unit
 
@@ -108,7 +108,7 @@ class ElizaServiceClientImpl @Inject() (
     }
   }
 
-  def sendGlobalNotification(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean, category: NotificationCategory, extra: Option[JsObject]): Future[Id[MessageHandle]] = {
+  def sendGlobalNotification(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean, category: NotificationCategory, unread: Boolean = true, extra: Option[JsObject]): Future[Id[MessageHandle]] = {
     implicit val userFormatter = Id.format[User]
     val payload = Json.obj(
       "userIds" -> userIds.toSeq,
@@ -119,6 +119,7 @@ class ElizaServiceClientImpl @Inject() (
       "imageUrl" -> imageUrl,
       "sticky" -> sticky,
       "category" -> category,
+      "unread" -> unread,
       "extra" -> extra
     )
     call(Eliza.internal.sendGlobalNotification, payload).map { response =>

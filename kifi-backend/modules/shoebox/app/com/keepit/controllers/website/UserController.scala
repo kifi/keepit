@@ -235,9 +235,9 @@ class UserController @Inject() (
     Ok(JsString("success"))
   }
 
-  def updateDescription() = UserAction(parse.tolerantJson) { implicit request =>
-    val newDescription = (request.body \ "description").as[String]
-    userCommander.updateUserDescription(request.userId, newDescription)
+  def updateBiography() = UserAction(parse.tolerantJson) { implicit request =>
+    val newBio = (request.body \ "biography").as[String]
+    userCommander.updateUserBiography(request.userId, newBio)
     Ok(JsString("success"))
   }
 

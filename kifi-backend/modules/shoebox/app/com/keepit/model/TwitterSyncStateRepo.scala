@@ -4,12 +4,16 @@ import com.keepit.common.db.Id
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.db.slick.{ DbRepo, DataBaseComponent }
 import com.keepit.common.time._
-import com.keepit.common.db.slick.DBSession.RSession
+import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
+import com.keepit.model.TwitterSyncStateStates
 
 import org.joda.time.DateTime
 
 @Singleton
-class TwitterSyncStateRepo @Inject() (val db: DataBaseComponent, val clock: Clock) extends DbRepo[TwitterSyncState] {
+class TwitterSyncStateRepo @Inject() (
+    val db: DataBaseComponent,
+    val clock: Clock,
+    val twitterHandleCache: TwitterHandleCache) extends DbRepo[TwitterSyncState] {
   import db.Driver.simple._
 
   type RepoImpl = TwitterSyncStateTable
@@ -26,11 +30,31 @@ class TwitterSyncStateRepo @Inject() (val db: DataBaseComponent, val clock: Cloc
   def table(tag: Tag) = new TwitterSyncStateTable(tag)
   initTable()
 
-  override def deleteCache(model: TwitterSyncState)(implicit session: RSession): Unit = {}
-  override def invalidateCache(model: TwitterSyncState)(implicit session: RSession): Unit = {}
+  implicit def toHandleLibraryIdKey(libId: Id[Library]) = TwitterHandleLibraryIdKey(libId)
+
+  override def deleteCache(model: TwitterSyncState)(implicit session: RSession): Unit = {
+    twitterHandleCache.remove(model.libraryId)
+  }
+  override def invalidateCache(model: TwitterSyncState)(implicit session: RSession): Unit = {
+    twitterHandleCache.set(model.libraryId, model.twitterHandle)
+  }
+
+  override def save(model: TwitterSyncState)(implicit session: RWSession): TwitterSyncState = {
+    invalidateCache(model)
+    super.save(model)
+  }
 
   def getSyncsToUpdate(refreshWindow: DateTime)(implicit session: RSession): Seq[TwitterSyncState] = {
     (for (row <- rows if (row.lastFetchedAt.isEmpty || row.lastFetchedAt <= refreshWindow) && row.state === TwitterSyncStateStates.ACTIVE) yield row).list
+  }
+
+  def getHandleByLibraryId(libId: Id[Library])(implicit session: RSession): Option[String] = {
+    twitterHandleCache.getOrElseOpt(libId) {
+      val q = for {
+        row <- rows if (row.libraryId === libId && row.state === TwitterSyncStateStates.ACTIVE)
+      } yield row.twitterHandle
+      q.list.headOption
+    }
   }
 
 }

@@ -3,14 +3,17 @@ package com.keepit.controllers.website
 import java.io.StringWriter
 
 import com.keepit.common.concurrent.ExecutionContext.immediate
+import com.keepit.common.controller.{ MaybeUserRequest, UserRequest, NonUserRequest }
 import com.keepit.common.core._
+import com.keepit.common.http._
 import com.keepit.common.logging.Logging
+import com.keepit.common.net.UserAgent
 import com.keepit.common.strings.UTF8
 import controllers.AssetsBuilder
 import org.apache.commons.io.IOUtils
 import play.api.Play.current
 import play.api.libs.iteratee.Enumerator
-import play.api.mvc.Controller
+import play.api.mvc.{ Controller, Result }
 import play.api.{ Mode, Play }
 
 import scala.concurrent.Future
@@ -51,15 +54,25 @@ object AngularApp extends Controller with Logging {
   }
 
   @inline
-  private def augmentPage(head: Future[String], feet: => Seq[Future[String]]): Enumerator[String] = {
+  private def augmentPage(head: Future[String], feet: => Seq[Future[String]] = Seq.empty): Enumerator[String] = {
     val (idx1, idx2) = maybeCachedIndex
     idx1 andThen enumerateFuture(head) andThen idx2 andThen enumerateFutures(feet) andThen Enumerator.eof
   }
 
-  def app(headOpt: Option[Future[String]] = None, feet: => Seq[Future[String]] = Seq.empty) = {
-    val head = headOpt getOrElse Future.successful("<title>Kifi</title>")
-    Ok.chunked(augmentPage(head, feet)).as(HTML)
+  def app(makeBotMetadata: Option[() => Future[String]] = None)(implicit request: MaybeUserRequest[_]): Result = {
+    val head = request match {
+      case r: UserRequest[_] =>
+        Future.successful(s"""<title id="kf-authenticated">Kifi</title>""") // a temporary silly way to indicate to the app that a user is authenticated
+      case r: NonUserRequest[_] if makeBotMetadata.isDefined && r.userAgentOpt.orElse(Some(UserAgent.UnknownUserAgent)).exists(_.possiblyBot) =>
+        makeBotMetadata.get()
+      case _ =>
+        Future.successful("<title>Kifi</title>")
+    }
+    Ok.chunked(augmentPage(head)).as(HTML)
   }
+
+  def app(makeBotMetadata: () => Future[String])(implicit request: MaybeUserRequest[_]): Result = app(Some(makeBotMetadata))
+
 }
 
 object AngularDistAssets extends AssetsBuilder with Logging
