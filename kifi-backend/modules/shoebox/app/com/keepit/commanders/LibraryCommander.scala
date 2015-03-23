@@ -1555,4 +1555,10 @@ class LibraryCommander @Inject() (
       caption = None)
   }
 
+  def getOwnerLibraryCounts(users: Set[Id[User]]): Map[Id[User], Int] = {
+    db.readOnlyReplica { implicit s =>
+      libraryRepo.getOwnerLibraryCounts(users)
+    }
+  }
+
 }
