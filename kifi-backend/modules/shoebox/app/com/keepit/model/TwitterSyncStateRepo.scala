@@ -17,10 +17,10 @@ class TwitterSyncStateRepo @Inject() (val db: DataBaseComponent, val clock: Cloc
   class TwitterSyncStateTable(tag: Tag) extends RepoTable[TwitterSyncState](db, tag, "twitter_sync_state") {
     def userId = column[Id[User]]("user_id", O.Nullable)
     def twitterHandle = column[String]("twitter_handle", O.NotNull)
-    def lastFetchedAt = column[DateTime]("last_fetched_at", O.Nullable)
+    def lastFetchedAt = column[Option[DateTime]]("last_fetched_at", O.Nullable)
     def libraryId = column[Id[Library]]("library_id", O.NotNull)
-    def maxTweetIdSeen = column[Long]("max_tweet_id_seen", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, state, userId.?, twitterHandle, lastFetchedAt.?, libraryId, maxTweetIdSeen.?) <> ((TwitterSyncState.apply _).tupled, TwitterSyncState.unapply)
+    def maxTweetIdSeen = column[Option[Long]]("max_tweet_id_seen", O.Nullable)
+    def * = (id.?, createdAt, updatedAt, state, userId.?, twitterHandle, lastFetchedAt, libraryId, maxTweetIdSeen) <> ((TwitterSyncState.apply _).tupled, TwitterSyncState.unapply)
   }
 
   def table(tag: Tag) = new TwitterSyncStateTable(tag)

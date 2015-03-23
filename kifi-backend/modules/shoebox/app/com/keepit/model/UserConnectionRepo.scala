@@ -102,7 +102,7 @@ class UserConnectionRepoImpl @Inject() (
 
   def getMutualConnectionCount(user1: Id[User], user2: Id[User])(implicit session: RSession): Int = {
     mutualConnCountCache.getOrElse(UserMutualConnectionCountKey(user1, user2)) {
-      getMutualConnectionCountQ.first(user1.id, user2.id, user1.id, user2.id)
+      getMutualConnectionCountQ.apply(user1.id, user2.id, user1.id, user2.id).first
     }
   }
 

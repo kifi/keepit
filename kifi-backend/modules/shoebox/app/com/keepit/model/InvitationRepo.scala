@@ -53,13 +53,13 @@ class InvitationRepoImpl @Inject() (
 
   type RepoImpl = InvitationTable
   case class InvitationTable(tag: Tag) extends RepoTable[Invitation](db, tag, "invitation") with ExternalIdColumn[Invitation] with SeqNumberColumn[Invitation] {
-    def senderUserId = column[Id[User]]("sender_user_id", O.Nullable)
-    def recipientSocialUserId = column[Id[SocialUserInfo]]("recipient_social_user_id", O.Nullable)
-    def recipientEmailAddress = column[EmailAddress]("recipient_email_address", O.Nullable)
-    def lastSentAt = column[DateTime]("last_sent_at", O.Nullable)
+    def senderUserId = column[Option[Id[User]]]("sender_user_id", O.Nullable)
+    def recipientSocialUserId = column[Option[Id[SocialUserInfo]]]("recipient_social_user_id", O.Nullable)
+    def recipientEmailAddress = column[Option[EmailAddress]]("recipient_email_address", O.Nullable)
+    def lastSentAt = column[Option[DateTime]]("last_sent_at", O.Nullable)
     def timesSent = column[Int]("times_sent", O.NotNull)
 
-    def * = (id.?, createdAt, updatedAt, timesSent, lastSentAt.?, externalId, senderUserId.?, recipientSocialUserId.?, recipientEmailAddress.?, state, seq) <> ((Invitation.apply _).tupled, Invitation.unapply _)
+    def * = (id.?, createdAt, updatedAt, timesSent, lastSentAt, externalId, senderUserId, recipientSocialUserId, recipientEmailAddress, state, seq) <> ((Invitation.apply _).tupled, Invitation.unapply _)
   }
 
   def table(tag: Tag) = new InvitationTable(tag)
@@ -142,7 +142,10 @@ class InvitationRepoImpl @Inject() (
     } else {
       val query = for (i <- rows if i.senderUserId === senderId && i.recipientSocialUserId.inSet(socialUserInfoIds) && i.state =!= InvitationStates.INACTIVE && i.lastSentAt.isDefined)
         yield (i.recipientSocialUserId, i.lastSentAt) // using createdAt for now (user cannot currently re-invite same social connection)
-      Map(query.list: _*)
+      query.list.collect {
+        case (Some(k), Some(v)) =>
+          k -> v
+      }.toMap
     }
   }
 
@@ -152,7 +155,10 @@ class InvitationRepoImpl @Inject() (
     } else {
       var query = for (i <- rows if i.senderUserId === senderId && i.recipientEmailAddress.inSet(emailAddresses) && i.state =!= InvitationStates.INACTIVE && i.lastSentAt.isDefined)
         yield (i.recipientEmailAddress, i.lastSentAt) // using createdAt for now (user cannot currently re-invite same e-contact)
-      Map(query.list: _*)
+      query.list.collect {
+        case (Some(k), Some(v)) =>
+          k -> v
+      }.toMap
     }
   }
 

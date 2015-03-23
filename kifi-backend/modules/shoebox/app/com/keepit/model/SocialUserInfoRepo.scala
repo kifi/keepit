@@ -49,17 +49,17 @@ class SocialUserInfoRepoImpl @Inject() (
 
   type RepoImpl = SocialUserInfoTable
   class SocialUserInfoTable(tag: Tag) extends RepoTable[SocialUserInfo](db, tag, "social_user_info") with SeqNumberColumn[SocialUserInfo] {
-    def userId = column[Id[User]]("user_id", O.Nullable)
+    def userId = column[Option[Id[User]]]("user_id", O.Nullable)
     def fullName = column[String]("full_name", O.NotNull)
     def socialId = column[SocialId]("social_id", O.NotNull)
-    def socialHash = column[Long]("social_hash", O.Nullable)
+    def socialHash = column[Option[Long]]("social_hash", O.Nullable)
     def networkType = column[SocialNetworkType]("network_type", O.NotNull)
-    def credentials = column[SocialUser]("credentials", O.Nullable)
-    def lastGraphRefresh = column[DateTime]("last_graph_refresh", O.Nullable)
-    def pictureUrl = column[String]("picture_url", O.Nullable)
-    def profileUrl = column[String]("profile_url", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, userId.?, fullName, pictureUrl.?, profileUrl.?, state, socialId,
-      networkType, credentials.?, lastGraphRefresh.?, seq, socialHash.?) <> ((applyFromDbRow _).tupled, unapplyToDbRow _)
+    def credentials = column[Option[SocialUser]]("credentials", O.Nullable)
+    def lastGraphRefresh = column[Option[DateTime]]("last_graph_refresh", O.Nullable)
+    def pictureUrl = column[Option[String]]("picture_url", O.Nullable)
+    def profileUrl = column[Option[String]]("profile_url", O.Nullable)
+    def * = (id.?, createdAt, updatedAt, userId, fullName, pictureUrl, profileUrl, state, socialId,
+      networkType, credentials, lastGraphRefresh, seq, socialHash) <> ((applyFromDbRow _).tupled, unapplyToDbRow _)
   }
 
   private def applyFromDbRow(id: Option[Id[SocialUserInfo]], createdAt: DateTime, updatedAt: DateTime,

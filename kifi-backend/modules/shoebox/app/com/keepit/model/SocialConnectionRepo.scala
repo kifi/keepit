@@ -105,7 +105,7 @@ class SocialConnectionRepoImpl @Inject() (
               """.format(connectionsSQL)
     //can use GetResult and SetParameter to be type safe, not sure its worth it at this point
     val q = StaticQuery.query[(Long, Long), Long](sql)
-    val res: Seq[Long] = q.list(id.id, id.id)
+    val res: Seq[Long] = q.apply(id.id, id.id).list
     res map { id => Id[User](id) } toSet
   }
 

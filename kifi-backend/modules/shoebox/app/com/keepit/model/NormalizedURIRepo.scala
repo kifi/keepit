@@ -53,15 +53,15 @@ class NormalizedURIRepoImpl @Inject() (
 
   type RepoImpl = NormalizedURITable
   class NormalizedURITable(tag: Tag) extends RepoTable[NormalizedURI](db, tag, "normalized_uri") with ExternalIdColumn[NormalizedURI] with SeqNumberColumn[NormalizedURI] {
-    def title = column[String]("title")
+    def title = column[Option[String]]("title", O.Nullable)
     def url = column[String]("url", O.NotNull)
     def urlHash = column[UrlHash]("url_hash", O.NotNull)
-    def screenshotUpdatedAt = column[DateTime]("screenshot_updated_at")
-    def restriction = column[Option[Restriction]]("restriction")
-    def normalization = column[Normalization]("normalization", O.Nullable)
-    def redirect = column[Id[NormalizedURI]]("redirect", O.Nullable)
-    def redirectTime = column[DateTime]("redirect_time", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, externalId, title.?, url, urlHash, state, seq, screenshotUpdatedAt.?, restriction, normalization.?, redirect.?, redirectTime.?) <> ((NormalizedURI.apply _).tupled, NormalizedURI.unapply _)
+    def screenshotUpdatedAt = column[Option[DateTime]]("screenshot_updated_at", O.Nullable)
+    def restriction = column[Option[Restriction]]("restriction", O.Nullable)
+    def normalization = column[Option[Normalization]]("normalization", O.Nullable)
+    def redirect = column[Option[Id[NormalizedURI]]]("redirect", O.Nullable)
+    def redirectTime = column[Option[DateTime]]("redirect_time", O.Nullable)
+    def * = (id.?, createdAt, updatedAt, externalId, title, url, urlHash, state, seq, screenshotUpdatedAt, restriction, normalization, redirect, redirectTime) <> ((NormalizedURI.apply _).tupled, NormalizedURI.unapply _)
   }
 
   def table(tag: Tag) = new NormalizedURITable(tag)
@@ -186,7 +186,7 @@ class NormalizedURIRepoImpl @Inject() (
 
   def updateScreenshotUpdatedAt(id: Id[NormalizedURI], time: DateTime)(implicit session: RWSession) = {
     val updateTime = clock.now
-    (for { t <- rows if t.id === id } yield (t.updatedAt, t.screenshotUpdatedAt)).update((updateTime, time))
+    (for { t <- rows if t.id === id } yield (t.updatedAt, t.screenshotUpdatedAt)).update((updateTime, Some(time)))
     invalidateCache(get(id).copy(updatedAt = updateTime, screenshotUpdatedAt = Some(time)))
   }
 

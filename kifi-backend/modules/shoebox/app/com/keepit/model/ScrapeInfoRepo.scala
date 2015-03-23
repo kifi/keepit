@@ -90,7 +90,7 @@ class ScrapeInfoRepoImpl @Inject() (
     var updateCount = 0
     (for {
       u <- normUriRepo.get.rows if u.url like urlRegex
-      s <- rows if (u.id === s.uriId) && (s.state is ScrapeInfoStates.ACTIVE)
+      s <- rows if (u.id === s.uriId) && (s.state === ScrapeInfoStates.ACTIVE)
     } yield s
     ).mutate { r =>
       r.row = r.row.copy(nextScrape = now.plusSeconds((scala.math.random * withinSeconds).toInt), signature = "")
