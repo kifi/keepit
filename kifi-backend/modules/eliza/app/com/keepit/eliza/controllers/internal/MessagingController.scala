@@ -61,9 +61,10 @@ class MessagingController @Inject() (
     val imageUrl: String = (data \ "imageUrl").as[String]
     val sticky: Boolean = (data \ "sticky").as[Boolean]
     val category: NotificationCategory = (data \ "category").as[NotificationCategory]
+    val unread: Boolean = (data \ "unread").as[Boolean]
     val extra = (data \ "extra").asOpt[JsObject]
 
-    Ok(notificationCommander.createGlobalNotification(userIds, title, body, linkText, linkUrl, imageUrl, sticky, category, extra).id.toString)
+    Ok(notificationCommander.createGlobalNotification(userIds, title, body, linkText, linkUrl, imageUrl, sticky, category, unread, extra).id.toString)
 
   }
 
