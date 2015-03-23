@@ -109,7 +109,7 @@ object Global {
     ScalariformKeys.preferences := ScalariformKeys.preferences.value
       .setPreference(DoubleIndentClassDeclaration, true),
     javaOptions in Test += "-Dlogger.resource=test-logger.xml",
-    updateOptions := updateOptions.value.withConsolidatedResolution(true),
+    updateOptions := updateOptions.value.withCachedResolution(true),
     updateOptions := updateOptions.value.withLatestSnapshots(false) // sbt 0.13.6 can do a better job with SNAPSHOTS, but it's slower.
   )
 
