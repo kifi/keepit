@@ -185,6 +185,7 @@
     height: 150px
 
 .kf-uph-name
+  position: relative
   font-weight: normal
   font-size: 1.3em
   line-height: 2em
@@ -195,8 +196,9 @@
 
 .kf-uph-bio-edit
   position: absolute
-  right: 290px
-  top: 131px
+  top: 13px
+  margin-left: 10px
+  font-size: 0.7em
   background: none
   outline: none
   border: none
@@ -205,6 +207,13 @@
 
   &:hover
     text-decoration: underline
+
+  &.empty
+    position: relative
+    top: 0px
+    margin-left: 0px
+    margin-bottom: 5px
+    font-size: 0.9em
 
 .kf-uph-bio
   width: 400px
@@ -253,8 +262,11 @@
     background-color: #6ab875
 
   &.over
-    background-color: #d50000
+    opacity: 0.4
     cursor: initial
+
+    &:hover
+      background-color: accentGreen
 
 .kf-uph-nav
   margin: 10px auto 0
