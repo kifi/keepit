@@ -32,7 +32,7 @@ class SeedIngestionCommander @Inject() (
 
   val INGESTION_BATCH_SIZE = 50
 
-  val MAX_INDIVIDUAL_KEEPERS_TO_CONSIDER = 100
+  val MAX_INDIVIDUAL_KEEPERS_TO_CONSIDER = 20
 
   val MIN_KEEPS_FOR_RECOS = 20
   val MIN_LIBS_FOR_RECOS = 1
@@ -138,21 +138,6 @@ class SeedIngestionCommander @Inject() (
           Keepers.ReasonableNumber(keepInfoRepo.getKeepersByUriId(rawItem.uriId))
         }
         cookSeedItem(userId, rawItem, keepers)
-      }
-    }
-  }
-
-  def getPreviousSeeds(userId: Id[User], uris: Seq[Id[NormalizedURI]]): Future[Seq[SeedItem]] = {
-    db.readOnlyReplicaAsync { implicit session =>
-      val rawSeeds = rawSeedsRepo.getByUserIdAndUriIds(userId, uris)
-      rawSeeds.map { rawSeed =>
-        val keepers =
-          if (rawSeed.timesKept > MAX_INDIVIDUAL_KEEPERS_TO_CONSIDER) {
-            Keepers.TooMany
-          } else {
-            Keepers.ReasonableNumber(keepInfoRepo.getKeepersByUriId(rawSeed.uriId))
-          }
-        cookSeedItem(userId, rawSeed, keepers)
       }
     }
   }

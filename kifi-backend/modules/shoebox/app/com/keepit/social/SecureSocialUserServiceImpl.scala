@@ -258,12 +258,12 @@ class SecureSocialUserPluginImpl @Inject() (
 
       case None =>
         val userOpt = getOrCreateUser(existingUserOpt, allowSignup, socialUser)
-        log.info("creating new SocialUserInfo for %s".format(userOpt))
+        log.info(s"creating new SocialUserInfo for $userOpt, $socialUser")
 
         val userInfo = SocialUserInfo(userId = userOpt.flatMap(_.id), //verify saved
           socialId = socialId, networkType = socialNetworkType, pictureUrl = socialUser.avatarUrl,
           fullName = socialUser.fullName, credentials = Some(socialUser))
-        log.info("SocialUserInfo created is %s".format(userInfo))
+        log.info(s"SocialUserInfo created is $userInfo")
         val sui = db.readWrite(attempts = 3) { implicit session =>
           socialUserInfoRepo.save(userInfo)
         }

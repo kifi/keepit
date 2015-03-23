@@ -181,12 +181,17 @@ input.kf-lih-search-input
 .kf-lih-search-clear
   border: none
   background-color: transparent
-  padding: 0 8px 0 0
+  padding: 0 8px
   line-height: search-height
   font-weight: 200
   font-size: 16px
   color: blueColor
   cursor: pointer
+
+  &:hover
+  &:focus
+    font-weight: normal
+    box-shadow: inset 0 0 3px currentColor
 
 .kf-lih-search-suggestions
   position: relative

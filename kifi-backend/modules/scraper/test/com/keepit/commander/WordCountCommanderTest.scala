@@ -6,7 +6,8 @@ import com.keepit.common.db.Id
 import com.keepit.common.time.{ DEFAULT_DATE_TIME_ZONE, currentDateTime }
 import com.keepit.model.NormalizedURIStates._
 import com.keepit.model._
-import com.keepit.scraper.{ BasicArticle, ScrapeProcessor, Signature }
+import com.keepit.rover.article.Signature
+import com.keepit.scraper.{ BasicArticle, ScrapeProcessor }
 import com.keepit.scraper.extractor._
 import com.keepit.search.{ InMemoryArticleStoreImpl, Article, Lang }
 import com.keepit.test.CommonTestInjector

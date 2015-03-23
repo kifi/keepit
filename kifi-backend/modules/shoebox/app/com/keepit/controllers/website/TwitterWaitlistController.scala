@@ -2,7 +2,7 @@ package com.keepit.controllers.website
 
 import com.google.inject.Inject
 import com.keepit.commanders.TwitterWaitlistCommander
-import com.keepit.common.controller.{ UserActionsHelper, UserActions, ShoeboxServiceController }
+import com.keepit.common.controller._
 import com.keepit.common.db.slick.Database
 import com.keepit.common.time.Clock
 import com.keepit.model._
@@ -16,6 +16,10 @@ class TwitterWaitlistController @Inject() (
     userEmailAddressRepo: UserEmailAddressRepo,
     db: Database,
     val userActionsHelper: UserActionsHelper) extends UserActions with ShoeboxServiceController {
+
+  def twitterWaitlistLanding() = MaybeUserAction { implicit request =>
+    MarketingSiteRouter.marketingSite("twitter-home")
+  }
 
   //DO NOT USE THE WORD *FAKE* IN THE ROUTE FOR THIS!!!
   def getFakeWaitlistPosition() = UserAction { request =>
@@ -33,9 +37,13 @@ class TwitterWaitlistController @Inject() (
             "email" -> email,
             "pos" -> pos
           ))
-        } getOrElse Ok(Json.obj(
-          "pos" -> -1
-        ))
+        } getOrElse {
+          val pos = commander.getFakeWaitlistLength() + 1
+          Ok(Json.obj(
+            "email" -> email,
+            "pos" -> pos
+          ))
+        }
       case _ =>
         Ok(Json.obj(
           "pos" -> -1

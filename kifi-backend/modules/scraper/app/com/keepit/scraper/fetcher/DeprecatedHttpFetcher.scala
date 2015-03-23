@@ -7,7 +7,7 @@ import java.util.zip.ZipException
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.common.logging.Logging
-import com.keepit.rover.fetcher.apache.{ InvalidFetchRequestException, ApacheHttpFetcher }
+import com.keepit.rover.fetcher.apache.ApacheHttpFetcher
 import com.keepit.rover.fetcher._
 import org.apache.http.{ ConnectionClosedException, HttpStatus }
 

@@ -8,6 +8,7 @@ import com.keepit.common.net._
 import com.keepit.common.time.Clock
 import com.keepit.rover.extractor.JsoupDocument
 import com.keepit.rover.fetcher.{ FetchResult, RoverDocumentFetcher }
+import com.keepit.rover.store.RoverArticleStore
 import com.keepit.search.Lang
 import org.apache.commons.lang3.StringEscapeUtils
 import org.joda.time.DateTime
@@ -35,12 +36,18 @@ object YoutubeArticleFetcher {
   private def parameter(name: String, value: String) = s"$name=${URLEncoder.encode(value, "UTF-8")}"
 }
 class YoutubeArticleFetcher @Inject() (
+    articleStore: RoverArticleStore,
     documentFetcher: RoverDocumentFetcher,
     clock: Clock,
-    implicit val executionContext: ExecutionContext) extends Logging {
+    implicit val executionContext: ExecutionContext) extends ArticleFetcher[YoutubeArticle] with Logging {
   import YoutubeArticleFetcher._
 
-  def fetch(url: String, ifModifiedSince: Option[DateTime]): Future[FetchResult[YoutubeArticle]] = {
+  def fetch(request: ArticleFetchRequest[YoutubeArticle]): Future[Option[YoutubeArticle]] = {
+    val futureFetchedArticle = doFetch(request.url, request.lastFetchedAt)
+    ArticleFetcher.resolveAndCompare(articleStore)(futureFetchedArticle, request.latestArticleKey, ArticleFetcher.defaultSimilarityCheck)
+  }
+
+  private def doFetch(url: String, ifModifiedSince: Option[DateTime]): Future[FetchResult[YoutubeArticle]] = {
     documentFetcher.fetchJsoupDocument(url, ifModifiedSince).flatMap { result =>
       result.flatMap { doc =>
         getVideoContent(doc).imap { videoContent =>

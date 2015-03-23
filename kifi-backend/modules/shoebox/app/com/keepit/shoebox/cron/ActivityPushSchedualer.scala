@@ -1,5 +1,6 @@
 package com.keepit.shoebox.cron
 
+import scala.concurrent.ExecutionContext
 import java.util.concurrent.atomic.AtomicInteger
 
 import com.google.inject.Inject
@@ -44,12 +45,12 @@ class ActivityPushActor @Inject() (
         activityPusher.pushItBaby(activityPushTaskId)
       } catch {
         case e: Exception =>
-          if (counter.decrementAndGet() <= 0) {
-            self ! PushActivities
-          }
           airbrake.notify(s"on pushing activity $activityPushTaskId", e)
+      } finally {
+        if (counter.decrementAndGet() <= 0) {
+          self ! PushActivities
+        }
       }
-
   }
 }
 
@@ -58,7 +59,7 @@ class ActivityPushSchedualer @Inject() (
     val scheduling: SchedulingProperties,
     actor: ActorInstance[ActivityPushActor]) extends SchedulerPlugin {
   override def onStart() {
-    scheduleTaskOnOneMachine(actor.system, 21 seconds, 29 seconds, actor.ref, PushActivity, PushActivity.getClass.getSimpleName)
+    scheduleTaskOnOneMachine(actor.system, 21 seconds, 29 seconds, actor.ref, PushActivities, PushActivities.getClass.getSimpleName)
     scheduleTaskOnOneMachine(actor.system, 1 hour, 1 hours, actor.ref, CreatePushActivityEntities, CreatePushActivityEntities.getClass.getSimpleName)
   }
   def createPushActivityEntities() = actor.ref ! CreatePushActivityEntities
@@ -75,23 +76,41 @@ class ActivityPusher @Inject() (
     userPersonaRepo: UserPersonaRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
     actor: ActorInstance[ActivityPushActor],
+    implicit val executionContext: ExecutionContext,
     clock: Clock) extends Logging {
 
   def pushItBaby(activityPushTaskId: Id[ActivityPushTask]): Unit = {
-    db.readOnlyMaster { implicit s =>
+    val (activity, canNotify) = db.readOnlyMaster { implicit s =>
       val activity = activityPushTaskRepo.get(activityPushTaskId)
-      if (notifyPreferenceRepo.canNotify(activity.userId, NotifyPreference.RECOS_REMINDER)) Some(activity) else None
-    } foreach { activity =>
+      val canNotify = notifyPreferenceRepo.canNotify(activity.userId, NotifyPreference.RECOS_REMINDER)
+      (activity, canNotify)
+    }
+    if (canNotify) {
       getMessage(activity.userId) match {
         case Some((message, pushMessageType, experimant)) =>
           log.info(s"pushing activity update to ${activity.userId} of type $pushMessageType [$experimant]: $message")
-          elizaServiceClient.sendPushNotification(activity.userId, message, pushMessageType, experimant)
+          elizaServiceClient.sendPushNotification(activity.userId, message, pushMessageType, experimant) map { deviceCount =>
+            log.info(s"push successful to $deviceCount devices")
+            if (deviceCount <= 0) {
+              db.readWrite { implicit s =>
+                //there may be some race conditions with the four lines ahead, we can live with that.
+                log.info(s"disable activity push task $activity until user register with at least one device")
+                activityPushTaskRepo.save(activityPushTaskRepo.get(activity.id.get).copy(state = ActivityPushTaskStates.NO_DEVICES))
+              }
+            }
+          }
           val lastActivity = getLastActivity(activity.userId)
           db.readWrite { implicit s =>
-            activityPushTaskRepo.save(activity.copy(lastPush = Some(clock.now())).withLastActivity(lastActivity))
+            activityPushTaskRepo.save(activityPushTaskRepo.get(activity.id.get).copy(lastPush = Some(clock.now())).withLastActivity(lastActivity))
           }
         case None =>
           log.info(s"skipping push activity for user ${activity.userId}")
+      }
+    } else {
+      //todo(eishay) re-enable when user resets prefs
+      db.readWrite { implicit s =>
+        log.info(s"user asked not to be notified on RECOS_REMINDER, disabling his task")
+        activityPushTaskRepo.save(activity.copy(state = ActivityPushTaskStates.INACTIVE))
       }
     }
   }
@@ -149,7 +168,7 @@ class ActivityPusher @Inject() (
   }
 
   private def createPushActivityEntitiesBatch(batchSize: Int): Seq[Id[ActivityPushTask]] = {
-    val users = db.readOnlyReplica { implicit s =>
+    val users = db.readOnlyMaster { implicit s => //need to use master since we'll quickly gate to race condition because of replica lag
       val userIds = activityPushTaskRepo.getUsersWithoutActivityPushTask(batchSize)
       val usersWithLastKeep = userRepo.getAllUsers(userIds).values map { user =>
         user -> keepRepo.latestKeep(user.id.get)
@@ -168,7 +187,7 @@ class ActivityPusher @Inject() (
   }
 
   def getNextPushBatch(): Seq[Id[ActivityPushTask]] = {
-    val ids = db.readOnlyReplica { implicit s =>
+    val ids = db.readOnlyMaster { implicit s =>
       val now = clock.now()
       activityPushTaskRepo.getByPushAndActivity(now.minusDays(2), now.toLocalTimeInZone(DEFAULT_DATE_TIME_ZONE), 100)
     }

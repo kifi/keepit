@@ -26,6 +26,7 @@ trait UriRecommendationRepo extends DbRepo[UriRecommendation] {
   def cleanupLowMasterScoreRecos(userId: Id[User], limitNumRecosForUser: Int, before: DateTime)(implicit session: RWSession): Unit
   def cleanupOldRecos(userId: Id[User], expiration: DateTime)(implicit session: RWSession): Unit
   def getUriIdsForUser(userId: Id[User])(implicit session: RSession): Set[Id[NormalizedURI]]
+  def getTopUriIdsForUser(userId: Id[User])(implicit session: RSession): Set[Id[NormalizedURI]]
   def getUsersWithRecommendations()(implicit session: RSession): Set[Id[User]]
   def getGeneralRecommendationScore(uriId: Id[NormalizedURI], minClickedUsers: Int = 3)(implicit session: RSession): Option[Float]
   def getGeneralRecommendationCandidates(limit: Int, minClickedUsers: Int = 3)(implicit session: RSession): Seq[Id[NormalizedURI]]
@@ -146,6 +147,11 @@ class UriRecommendationRepoImpl @Inject() (
   def cleanupOldRecos(userId: Id[User], expiration: DateTime)(implicit session: RWSession): Unit = {
     import StaticQuery.interpolation
     sqlu"""DELETE FROM uri_recommendation WHERE user_id=$userId AND updated_at < $expiration""".first()
+  }
+
+  def getTopUriIdsForUser(userId: Id[User])(implicit session: RSession): Set[Id[NormalizedURI]] = {
+    import StaticQuery.interpolation
+    sql"""SELECT uri_id FROM uri_recommendation WHERE user_id=$userId ORDER BY master_score DESC LIMIT 200""".as[Id[NormalizedURI]].list.toSet
   }
 
   def getUriIdsForUser(userId: Id[User])(implicit session: RSession): Set[Id[NormalizedURI]] = {

@@ -9,9 +9,13 @@ import play.api.libs.json._
 class MobileDevicesController @Inject() (urbanAirship: UrbanAirship, val userActionsHelper: UserActionsHelper) extends UserActions with ElizaServiceController with Logging {
 
   def registerDevice(deviceType: String) = UserAction(parse.tolerantJson) { implicit request =>
-    (request.body \ "token").asOpt[String] map { token =>
-      val isDev: Boolean = (request.body \ "dev").asOpt[Boolean].exists(x => x)
-      val device = urbanAirship.registerDevice(request.userId, token, DeviceType(deviceType), isDev)
+    val jsonBody = request.body
+    val tokenOpt = (jsonBody \ "token").asOpt[String]
+
+    tokenOpt map { token =>
+      val isDev: Boolean = (jsonBody \ "dev").asOpt[Boolean].exists(x => x)
+      val signatureOpt = (jsonBody \ "signature").asOpt[String].orElse((jsonBody \ "deviceId").asOpt[String]) // todo (aaron & mobile): right now iOS sends "deviceId", would be better & clear to make it "signature"
+      val device = urbanAirship.registerDevice(request.userId, token, DeviceType(deviceType), isDev, signatureOpt)
       Ok(Json.obj(
         "token" -> device.token
       ))

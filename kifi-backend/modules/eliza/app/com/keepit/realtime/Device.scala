@@ -13,10 +13,10 @@ case class Device(
     state: State[Device] = DeviceStates.ACTIVE,
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,
-    isDev: Boolean = false) extends ModelWithState[Device] {
+    isDev: Boolean = false,
+    signature: Option[String] = None) extends ModelWithState[Device] {
 
   def isChannel: Boolean = ExternalId.UUIDPattern.pattern.matcher(token).matches()
-
   def withId(id: Id[Device]): Device = copy(id = Some(id))
   def withUpdateTime(updateTime: DateTime): Device = copy(updatedAt = updateTime)
 

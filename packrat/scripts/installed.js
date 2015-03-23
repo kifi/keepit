@@ -2,6 +2,8 @@
 // @require scripts/api.js
 // @asap
 
+api.identify('installed');
+
 (function (v) {
   var origin = window.location.origin;
 

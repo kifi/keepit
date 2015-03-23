@@ -35,7 +35,7 @@ sealed trait Article { self =>
 
   def url: String
   def createdAt: DateTime
-  def content: ArticleContent
+  def content: ArticleContent[A]
 }
 
 object Article {

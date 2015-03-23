@@ -40,7 +40,7 @@ class TwitterOAuthProviderImpl @Inject() (
             throw new AuthException(s"[fillProfile] Failed to parse response.body=${resp.body}")
           case Some(tui) =>
             log.info(s"[fillProfile] tui=$tui; response.body=${resp.body}")
-            tui
+            TwitterUserInfo.toUserProfileInfo(tui)
         }
       }
     }

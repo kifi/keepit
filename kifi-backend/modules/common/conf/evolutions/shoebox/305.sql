@@ -1,10 +1,11 @@
-# SHOEBOX
+# ELIZA
 
 # --- !Ups
 
-alter table twitter_sync_state
-    add index twitter_sync_state_i_library (library_id);
+alter table device add column signature varchar(40) NULL;
 
-insert into evolutions (name, description) values('305.sql', 'add library index to twitter_sync_table');
+create unique index device_u_user_id_device_type_signature on device (user_id, device_type, signature);
+
+insert into evolutions (name, description) values('305.sql', 'add column signature to device table');
 
 # --- !Downs

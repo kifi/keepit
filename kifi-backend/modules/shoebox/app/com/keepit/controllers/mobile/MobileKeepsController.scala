@@ -180,29 +180,6 @@ class MobileKeepsController @Inject() (
     }
   }
 
-  private def toJsObject(
-    url: String,
-    uri: NormalizedURI,
-    screenshotUrlOpt: Option[String],
-    imageUrlOpt: Option[String],
-    imageWidthOpt: Option[Int],
-    imageHeightOpt: Option[Int]): JsObject = {
-    log.info(s"[getImageUrl] returning screenshot $screenshotUrlOpt and image $imageUrlOpt")
-    val main = (screenshotUrlOpt, imageUrlOpt) match {
-      case (None, None) =>
-        Json.obj("url" -> url, "uriId" -> uri.id.get)
-      case (None, Some(imgUrl)) =>
-        Json.obj("url" -> url, "imgUrl" -> imgUrl)
-      case (Some(ssUrl), None) =>
-        Json.obj("url" -> url, "screenshotUrl" -> ssUrl)
-      case (Some(ssUrl), Some(imgUrl)) =>
-        Json.obj("url" -> url, "imgUrl" -> imgUrl, "screenshotUrl" -> ssUrl)
-    }
-    val width = imageWidthOpt map { width => Json.obj("imgWidth" -> width) } getOrElse Json.obj()
-    val height = imageHeightOpt map { height => Json.obj("imgHeight" -> height) } getOrElse Json.obj()
-    main ++ width ++ height
-  }
-
   def numKeeps() = UserAction { request =>
     Ok(Json.obj(
       "numKeeps" -> keepsCommander.numKeeps(request.userId)

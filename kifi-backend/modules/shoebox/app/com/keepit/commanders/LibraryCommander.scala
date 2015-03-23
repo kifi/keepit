@@ -557,7 +557,7 @@ class LibraryCommander @Inject() (
         val newListed = modifyReq.listed.getOrElse(targetMembership.listed)
         future {
           val keeps = db.readOnlyMaster { implicit s =>
-            keepRepo.getByLibrary(libraryId, 0, Int.MaxValue, None)
+            keepRepo.getByLibrary(libraryId, 0, Int.MaxValue, Set.empty)
           }
           if (keeps.nonEmpty) {
             db.readWriteBatch(keeps) { (s, k) =>

@@ -3,31 +3,33 @@ package com.keepit.controllers.website
 import java.io.StringWriter
 
 import com.keepit.common.concurrent.ExecutionContext.immediate
-import play.api.libs.concurrent.Execution.Implicits._
-import com.keepit.common.logging.Logging
+import com.keepit.common.controller.{ MaybeUserRequest, UserRequest, NonUserRequest }
 import com.keepit.common.core._
+import com.keepit.common.http._
+import com.keepit.common.logging.Logging
+import com.keepit.common.net.UserAgent
+import com.keepit.common.strings.UTF8
 import controllers.AssetsBuilder
 import org.apache.commons.io.IOUtils
 import play.api.Play.current
 import play.api.libs.iteratee.Enumerator
-import play.api.mvc.Controller
+import play.api.mvc.{ Controller, Result }
 import play.api.{ Mode, Play }
 
 import scala.concurrent.Future
 
-object AngularDistAssets extends AssetsBuilder with Controller with Logging {
+object AngularApp extends Controller with Logging {
 
   val COMMENT_STRING = "<!-- HEADER_PLACEHOLDER -->"
 
   private def index(): (Enumerator[String], Enumerator[String]) = {
     val fileStream = Play.resourceAsStream("public/ng/index_cdn.html").orElse(Play.resourceAsStream("public/ng/index.html")).get
     val writer = new StringWriter()
-    IOUtils.copy(fileStream, writer, "UTF-8")
+    IOUtils.copy(fileStream, writer, UTF8)
     val fileStr = writer.toString
     val parts = fileStr.split(COMMENT_STRING)
     if (parts.size != 2) throw new Exception(s"no two parts for index file $fileStr")
     (Enumerator(parts(0)), Enumerator(parts(1)))
-
   }
 
   private lazy val cachedIndex: (Enumerator[String], Enumerator[String]) = index()
@@ -41,28 +43,38 @@ object AngularDistAssets extends AssetsBuilder with Controller with Logging {
   }
 
   @inline
-  private def reactiveEnumerator(futureSeq: Seq[Future[String]]) = {
-    // Returns successful results of Futures in the order they are completed, reactively
-    Enumerator.interleave(futureSeq.map { future =>
-      Enumerator.flatten(future.map(r => Enumerator(r))(immediate))
-    })
+  private def enumerateFuture[T](f: Future[T]): Enumerator[T] = {
+    Enumerator.flatten(f.map(t => Enumerator(t))(immediate))
   }
 
   @inline
-  private def augmentPage(headerLoad: Future[String], postload: => Seq[Future[String]]) = {
-    val (idx1, idx2) = maybeCachedIndex
-    val headers = headerLoad.map { f => Enumerator(f) }
-    val compositPage = idx1 andThen Enumerator.flatten(headers) andThen idx2
-    compositPage.andThen(reactiveEnumerator(postload)).andThen(Enumerator.eof)
+  private def enumerateFutures[T](futures: Seq[Future[T]]): Enumerator[T] = {
+    // Returns successful results of Futures in the order they are completed, reactively
+    Enumerator.interleave(futures map enumerateFuture)
   }
 
-  def angularApp(headerLoad: Option[Future[String]] = None, postload: => Seq[Future[String]] = Seq()) = {
-    val header = headerLoad match {
-      case None => Future.successful("<title>Kifi</title>")
-      case Some(h) => h
-    }
-    Ok.chunked(augmentPage(header, postload)).as(HTML)
+  @inline
+  private def augmentPage(head: Future[String], feet: => Seq[Future[String]] = Seq.empty): Enumerator[String] = {
+    val (idx1, idx2) = maybeCachedIndex
+    idx1 andThen enumerateFuture(head) andThen idx2 andThen enumerateFutures(feet) andThen Enumerator.eof
   }
+
+  def app(makeBotMetadata: Option[() => Future[String]] = None)(implicit request: MaybeUserRequest[_]): Result = {
+    val head = request match {
+      case r: UserRequest[_] =>
+        Future.successful(s"""<title id="kf-authenticated">Kifi</title>""") // a temporary silly way to indicate to the app that a user is authenticated
+      case r: NonUserRequest[_] if makeBotMetadata.isDefined && r.userAgentOpt.orElse(Some(UserAgent.UnknownUserAgent)).exists(_.possiblyBot) =>
+        makeBotMetadata.get()
+      case _ =>
+        Future.successful("<title>Kifi</title>")
+    }
+    Ok.chunked(augmentPage(head)).as(HTML)
+  }
+
+  def app(makeBotMetadata: () => Future[String])(implicit request: MaybeUserRequest[_]): Result = app(Some(makeBotMetadata))
+
 }
+
+object AngularDistAssets extends AssetsBuilder with Logging
 
 object AngularImgAssets extends AssetsBuilder with Logging

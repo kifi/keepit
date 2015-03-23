@@ -163,7 +163,7 @@ class LibraryRecommendationGenerationCommander @Inject() (
     }
 
     private def isRecommendable(scoredLibrary: ScoredLibraryInfo): Boolean = {
-      scoredLibrary.masterScore > 1 // TODO(josh) improve this cutoff
+      scoredLibrary.masterScore > 2.5
     }
 
     private def getStateOfUser(): LibraryRecommendationGenerationState = {

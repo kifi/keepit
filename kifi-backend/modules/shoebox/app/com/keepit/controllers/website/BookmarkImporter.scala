@@ -32,7 +32,6 @@ import scala.concurrent.duration.Duration
 class BookmarkImporter @Inject() (
     val userActionsHelper: UserActionsHelper,
     db: Database,
-    rawKeepFactory: RawKeepFactory,
     urlClassifier: UrlClassifier,
     keepInterner: KeepInterner,
     heimdalContextBuilderFactoryBean: HeimdalContextBuilderFactory,
@@ -119,16 +118,16 @@ class BookmarkImporter @Inject() (
     implicit val context = heimdalContextBuilderFactoryBean.withRequestInfoAndSource(lf.request, sourceOpt.getOrElse(KeepSource.bookmarkFileImport)).build
     SafeFuture("processBookmarkExtraction") {
       log.info(s"[bmFileImport:${lf.id}] Parsed in ${clock.getMillis() - lf.startMillis}ms")
-      val tagSet = scala.collection.mutable.Set.empty[String]
+      val tagMap = scala.collection.mutable.Map.empty[String, String]
       parsed.foreach { bm =>
         bm.tags.map { tagName =>
-          tagSet.add(tagName)
+          tagMap += (tagName.toLowerCase -> tagName)
         }
       }
 
       val importTag = keepsCommander.getOrCreateTag(lf.request.userId, "Imported links")(context)
 
-      val tags = tagSet.map { tagStr =>
+      val tags = tagMap.values.toSeq.map { tagStr =>
         tagStr.trim -> timing(s"uploadBookmarkFile(${lf.request.userId}) -- getOrCreateTag(${tagStr.trim})", 50) { keepsCommander.getOrCreateTag(lf.request.userId, tagStr.trim)(context) }
       }.toMap
       val taggedKeeps = parsed.map {

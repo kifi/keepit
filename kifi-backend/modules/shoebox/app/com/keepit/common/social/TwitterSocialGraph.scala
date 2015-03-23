@@ -5,6 +5,7 @@ import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.store.LibraryImageStore
 import com.keepit.common.time._
 import com.keepit.common.core._
+import com.keepit.common.strings._
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
@@ -218,18 +219,13 @@ class TwitterSocialGraphImpl @Inject() (
     log.info(s"[lookupUsers] mutualFollows(len=${mutualFollows.size}): ${mutualFollows.take(20).mkString(",")}... sui=$sui")
     val endpoint = "https://api.twitter.com/1.1/users/lookup.json"
     val sorted = mutualFollows.toSeq.sorted // expensive
-    def pred(prevAcc: JsArray, currAcc: JsArray, c: Seq[Long]) = {
-      prevAcc.value.length != currAcc.value.length tap { res =>
-        if (!res) log.warn(s"[lookupUsers.pred] prevAcc(len=${prevAcc.value.length}) currAcc.value.length=${currAcc.value.length} c.head=${c.headOption} res=$res")
-      }
-    }
-    val accF = FutureHelpers.foldLeftWhile[Seq[Long], JsArray](sorted.grouped(100).toIterable)(JsArray())({ (a, c) =>
+    val accF = FutureHelpers.foldLeftUntil[Seq[Long], JsArray](sorted.grouped(100).toIterable)(JsArray()) { (a, c) =>
       val params = Map("user_id" -> c.mkString(","), "include_entities" -> false.toString)
       val chunkF = WS.url(endpoint)
         .sign(OAuthCalculator(providerConfig.key, accessToken))
         .post(params.map(kv => (kv._1, Seq(kv._2))))
         .map { resp =>
-          log.info(s"[lookupUsers] prevAcc.len=${a.value.length} cursor=${c.head} response.json=${resp.json}")
+          log.info(s"[lookupUsers] prevAcc.len=${a.value.length} cursor=${c.head} response.json=${resp.json.toString.abbreviate(400)}")
           resp.status match {
             case OK => resp.json
             case _ =>
@@ -237,8 +233,12 @@ class TwitterSocialGraphImpl @Inject() (
               JsArray(Seq.empty[JsValue])
           }
         }
-      chunkF map { chunk => a ++ chunk.as[JsArray] }
-    }, Some(pred))
+      chunkF map { chunk =>
+        val updatedAcc = a ++ chunk.as[JsArray]
+        val done = a.value.length == updatedAcc.value.length
+        (updatedAcc, done)
+      }
+    }
     accF map { acc =>
       log.info(s"[lookupUsers.prevAcc] prevAcc(len=${acc.value.length}):${acc.value}")
       acc

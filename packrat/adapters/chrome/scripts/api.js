@@ -88,11 +88,14 @@ var api = api || function () {
   function notInjected(path) {
     return !api.injected[path];
   }
+  function noop() {
+  }
 
   return {
+    identify: noop,
     injected: {'scripts/api.js': 1},
     mutationsFirePromptly: true,
-    noop: function() {},
+    noop: noop,
     onEnd: [],
     port: {
       emit: function(type, data, callback) {

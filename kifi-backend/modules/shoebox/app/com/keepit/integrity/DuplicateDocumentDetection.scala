@@ -7,9 +7,9 @@ import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.mail.{ SystemEmailAddress, ElectronicMail }
+import com.keepit.rover.article.Signature
 import play.api.Play.current
 import com.google.inject.Inject
-import com.keepit.scraper.Signature
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.healthcheck.SystemAdminMailSender

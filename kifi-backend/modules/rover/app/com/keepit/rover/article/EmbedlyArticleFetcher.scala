@@ -12,6 +12,7 @@ import com.keepit.common.strings.UTF8
 import com.keepit.common.time.{ Clock, _ }
 import play.api.libs.json.Json
 import play.api.libs.ws.WSResponse
+import com.keepit.common.core._
 
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ ExecutionContext, Future }
@@ -29,16 +30,20 @@ class EmbedlyArticleFetcher @Inject() (
     ws: WebService,
     airbrake: AirbrakeNotifier,
     clock: Clock,
-    implicit val executionContext: ExecutionContext) extends Logging {
+    implicit val executionContext: ExecutionContext) extends ArticleFetcher[EmbedlyArticle] with Logging {
 
   import com.keepit.rover.article.EmbedlyArticleFetcher._
 
-  private val fetchConsolidate = new RequestConsolidator[String, EmbedlyArticle](2 minutes)
+  private val consolidate = new RequestConsolidator[String, EmbedlyArticle](2 minutes)
 
-  def fetch(url: String): Future[EmbedlyArticle] = fetchConsolidate(url) { originalUrl =>
-    val watch = Stopwatch(s"Fetching Embedly content for $originalUrl")
+  def fetch(request: ArticleFetchRequest[EmbedlyArticle]): Future[Option[EmbedlyArticle]] = {
+    consolidate(request.url)(doFetch).imap(Some(_))
+  }
+
+  private def doFetch(url: String): Future[EmbedlyArticle] = {
+    val watch = Stopwatch(s"Fetching Embedly content for $url")
     val request = {
-      val embedlyUrl = embedlyExtractAPI(originalUrl)
+      val embedlyUrl = embedlyExtractAPI(url)
       ws.url(embedlyUrl).withRequestTimeout(timeout)
     }
     WebServiceUtils.getWithRetry(request, attempts).map { response =>
@@ -46,10 +51,10 @@ class EmbedlyArticleFetcher @Inject() (
       try {
         val json = Json.parse(response.body) // issues with resp.json ?
         val content = new EmbedlyContent(json)
-        new EmbedlyArticle(originalUrl, clock.now(), content)
+        new EmbedlyArticle(url, clock.now(), content)
       } catch {
         case error: Throwable =>
-          throw new InvalidEmbedlyResponseException(originalUrl, response, error)
+          throw new InvalidEmbedlyResponseException(url, response, error)
       }
     }
   }

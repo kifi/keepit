@@ -2,6 +2,8 @@
 // @require scripts/api.js
 // @asap
 
+api.identify('deepLinkRedirect');
+
 !function run(json, e) {
   'use strict';
   var msg = document.getElementsByClassName('kifi-deep-link-no-extension')[0];

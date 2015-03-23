@@ -15,6 +15,6 @@ case class GithubContent(
     openGraphType: Option[String],
     publishedAt: Option[DateTime],
     http: HttpInfo,
-    normalization: NormalizationInfo) extends ArticleContent with HttpInfoHolder with NormalizationInfoHolder {
+    normalization: NormalizationInfo) extends ArticleContent[GithubArticle] with HttpInfoHolder with NormalizationInfoHolder {
   def mediaType: Option[String] = openGraphType
 }

@@ -307,7 +307,8 @@ class MobileLibraryController @Inject() (
     val url = (jsonBody \ "url").as[String]
     val tagNames = (jsonBody \ "hashtags").as[Seq[String]]
     val imageUrlOpt = (jsonBody \ "imageUrl").asOpt[String]
-    val rawKeep = RawBookmarkRepresentation(title, url, None, keptAt = Some(clock.now))
+    val note = (jsonBody \ "note").asOpt[String]
+    val rawKeep = RawBookmarkRepresentation(title, url, None, keptAt = Some(clock.now), note = note)
     val source = KeepSource.mobile
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, source).build
     keepsCommander.keepWithSelectedTags(request.userId, rawKeep, libraryId, source, tagNames, SocialShare(jsonBody)) match {
