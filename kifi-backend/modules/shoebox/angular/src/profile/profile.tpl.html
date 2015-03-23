@@ -30,9 +30,13 @@
         <div kf-profile-manage-settings></div>
         <div kf-profile-change-password></div>
         <div kf-profile-email-addresses input-state="addEmailInput" email-list="me.emails" validate-email-action="validateEmail(value)" add-email-action="addEmail(value)" resend-verification-email-action="resendVerificationEmail(value)"></div>
-        <button class="kf-profile-update-personas" ng-click="showPersonaModal()">
+        <button class="kf-profile-update-popup" ng-click="showPersonaModal()">
           <div class="profile-setting-arrow"></div>
           <div class="profile-manage-settings-title">Update your interests</div>
+        </button>
+        <button class="kf-profile-update-popup" ng-click="showBiographyModal()">
+          <div class="profile-setting-arrow"></div>
+          <div class="profile-manage-settings-title">Update your biography</div>
         </button>
       </div>
       <div class="profile-section">

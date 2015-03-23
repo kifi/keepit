@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfUserProfileHeader', [
-  '$rootScope', '$state', '$timeout', 'profileService', 'inviteService', 'friendService', '$document',
-  function ($rootScope, $state, $timeout, profileService, inviteService, friendService, $document) {
+  '$rootScope', '$state', '$timeout', 'profileService', 'inviteService', 'friendService', '$document', 'modalService',
+  function ($rootScope, $state, $timeout, profileService, inviteService, friendService, $document, modalService) {
     return {
       restrict: 'A',
       scope: {
@@ -144,6 +144,18 @@ angular.module('kifi')
         scope.unfriend = function () {
           friendService.unfriend(scope.profile.id).then(function() {
             scope.connectionWithUser = 'not_friends';
+          });
+        };
+
+        scope.showBiographyModal = function () {
+          modalService.open({
+            template: 'profile/editUserBiographyModal.tpl.html',
+            modalData: {
+              biography: scope.profile.biography,
+              onClose: function (newBiography) {
+                scope.profile.biography = newBiography;
+              }
+            }
           });
         };
 
