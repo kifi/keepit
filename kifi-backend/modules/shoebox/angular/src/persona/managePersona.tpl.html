@@ -7,8 +7,8 @@
       <div class="kf-mp-table">
         <div ng-repeat="persona in allPersonas" class="kf-mp-icon" ng-class="{active: persona.selected}" ng-click="toggleSelect(persona)">
           <div class="kf-mp-icon-image-wrapper">
-            <img class="kf-mp-icon-image" src="{{persona.iconSrc}}" ng-if="!persona.selected">
-            <img class="kf-mp-icon-image" src="{{persona.activeIconSrc}}" ng-if="persona.selected">
+            <img class="kf-mp-icon-image" ng-src="{{persona.iconSrc}}" ng-if="!persona.selected">
+            <img class="kf-mp-icon-image" ng-src="{{persona.activeIconSrc}}" ng-if="persona.selected">
           </div>
           <div class="kf-mp-icon-display-name">{{persona.displayName}}</div>
         </div>
