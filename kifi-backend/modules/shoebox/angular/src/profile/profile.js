@@ -14,11 +14,6 @@ angular.module('kifi')
     $scope.me = profileService.me;
     profileService.getMe();
 
-    $scope.descInput = {};
-    $scope.$watch('me.description', function (val) {
-      $scope.descInput.value = val || '';
-    });
-
     $scope.emailInput = {};
     $scope.$watch('me.primaryEmail.address', function (val) {
       $scope.emailInput.value = val || '';
@@ -33,12 +28,6 @@ angular.module('kifi')
     });
 
     $scope.addEmailInput = {};
-
-    $scope.saveDescription = function (value) {
-      profileService.postMe({
-        description: value
-      });
-    };
 
     $scope.validateName = function (name) {
       return profileService.validateNameFormat(name);
@@ -99,6 +88,13 @@ angular.module('kifi')
       $analytics.eventTrack('user_clicked_page', {type: 'settings', action: 'clickedUpdateInterests'});
       modalService.open({
         template: 'persona/managePersonaModal.tpl.html'
+      });
+    };
+
+    $scope.showBiographyModal = function() {
+      modalService.open({
+        template: 'profile/editUserBiographyModal.tpl.html',
+        modalData: { biography: profileService.me.biography }
       });
     };
 

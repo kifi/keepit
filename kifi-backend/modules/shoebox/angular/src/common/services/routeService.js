@@ -42,6 +42,7 @@ angular.module('kifi')
       abooksUrl: route('/user/abooks'),
       resendVerificationUrl: route('/user/resend-verification'),
       userPasswordUrl: route('/user/password'),
+      userBiography: route('/user/me/biography'),
       formatPicUrl: function (userId, pictureName, size) {
         return env.picBase + '/users/' + userId + '/pics/' + (size || 200) + '/' + pictureName;
       },

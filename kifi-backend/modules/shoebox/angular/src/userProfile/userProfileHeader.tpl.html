@@ -47,6 +47,8 @@
       </div>
 
       <h1 class="kf-uph-name" itemprop="name">{{profile.firstName}} {{profile.lastName}}</h1>
+      <button ng-click="showBiographyModal()" ng-if="viewingOwnProfile" class="kf-uph-bio-edit">Edit Bio</button>
+      <div class="kf-uph-bio" ng-if="profile.biography">{{profile.biography}}</div>
     </div>
     <nav class="kf-uph-nav">
       <a class="kf-uph-nav-a" href="{{profile|profileUrl:'libraries'}}" data-path="libraries">
