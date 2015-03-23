@@ -172,6 +172,7 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
           val user4 = user().withName("John", "Adams").withUsername("jayjayadams").saved
           val user5 = user().withName("Ben", "Franklin").withUsername("Benji").saved
 
+          inject[UserValueRepo].save(UserValue(userId = user1.id.get, name = UserValueName.USER_DESCRIPTION, value = "First Prez yo!"))
           connect(user1 -> user2,
             user1 -> user3,
             user4 -> user1,
@@ -246,7 +247,8 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
               "numFollowedLibraries": 1,
               "numKeeps": 5,
               "numConnections": 3,
-              "numFollowers": 2
+              "numFollowers": 2,
+              "biography": "First Prez yo!"
             }
           """)
 
@@ -268,7 +270,8 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
               "numKeeps": 5,
               "numConnections": 3,
               "numFollowers": 3,
-              "numInvitedLibraries": 1
+              "numInvitedLibraries": 1,
+              "biography": "First Prez yo!"
             }
           """)
 
@@ -290,7 +293,8 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
               "numFollowedLibraries": 1,
               "numKeeps": 5,
               "numConnections": 3,
-              "numFollowers": 3
+              "numFollowers": 3,
+              "biography": "First Prez yo!"
             }
           """)
       }
