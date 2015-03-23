@@ -31,7 +31,8 @@ case class Keep(
     seq: SequenceNumber[Keep] = SequenceNumber.ZERO,
     libraryId: Option[Id[Library]],
     keptAt: DateTime = currentDateTime,
-    sourceAttributionId: Option[Id[KeepSourceAttribution]] = None) extends ModelWithExternalId[Keep] with ModelWithState[Keep] with ModelWithSeqNumber[Keep] {
+    sourceAttributionId: Option[Id[KeepSourceAttribution]] = None,
+    note: Option[String] = None) extends ModelWithExternalId[Keep] with ModelWithState[Keep] with ModelWithSeqNumber[Keep] {
 
   def sanitizeForDelete(): Keep = copy(title = None, bookmarkPath = None, state = KeepStates.INACTIVE, kifiInstallation = None)
 
@@ -89,14 +90,15 @@ object Keep {
     title: Option[String], uriId: Id[NormalizedURI], isPrimary: Option[Boolean], inDisjointLib: Option[Boolean],
     urlId: Id[URL], url: String, bookmarkPath: Option[String], isPrivate: Boolean, userId: Id[User],
     state: State[Keep], source: KeepSource, kifiInstallation: Option[ExternalId[KifiInstallation]],
-    seq: SequenceNumber[Keep], libraryId: Option[Id[Library]], visibility: LibraryVisibility, keptAt: DateTime, sourceAttributionId: Option[Id[KeepSourceAttribution]]) = {
+    seq: SequenceNumber[Keep], libraryId: Option[Id[Library]], visibility: LibraryVisibility, keptAt: DateTime,
+    sourceAttributionId: Option[Id[KeepSourceAttribution]], note: Option[String]) = {
     Keep(id, createdAt, updatedAt, externalId, title, uriId, isPrimary.exists(b => b), inDisjointLib.exists(b => b), urlId, url,
-      bookmarkPath, visibility, userId, state, source, kifiInstallation, seq, libraryId, keptAt, sourceAttributionId)
+      bookmarkPath, visibility, userId, state, source, kifiInstallation, seq, libraryId, keptAt, sourceAttributionId, note)
   }
   def unapplyToDbRow(k: Keep) = {
     Some(k.id, k.createdAt, k.updatedAt, k.externalId, k.title, k.uriId, if (k.isPrimary) Some(true) else None,
       if (k.inDisjointLib) Some(true) else None, k.urlId, k.url, k.bookmarkPath, Keep.visibilityToIsPrivate(k.visibility),
-      k.userId, k.state, k.source, k.kifiInstallation, k.seq, k.libraryId, k.visibility, k.keptAt, k.sourceAttributionId)
+      k.userId, k.state, k.source, k.kifiInstallation, k.seq, k.libraryId, k.visibility, k.keptAt, k.sourceAttributionId, k.note)
   }
 
   def _bookmarkFormat = (
@@ -119,7 +121,8 @@ object Keep {
     (__ \ 'seq).format(SequenceNumber.format[Keep]) and
     (__ \ 'libraryId).formatNullable(Id.format[Library]) and
     (__ \ 'keptAt).format(DateTimeJsonFormat) and
-    (__ \ 'sourceAttributionId).formatNullable(Id.format[KeepSourceAttribution])
+    (__ \ 'sourceAttributionId).formatNullable(Id.format[KeepSourceAttribution]) and
+    (__ \ 'note).formatNullable[String]
   )(Keep.apply, unlift(Keep.unapply))
 
   // Remove when all services use the new Keep object
@@ -149,7 +152,8 @@ object Keep {
         "seq" -> k.seq,
         "libraryId" -> k.libraryId,
         "keptAt" -> k.keptAt,
-        "sourceAttributionId" -> k.sourceAttributionId
+        "sourceAttributionId" -> k.sourceAttributionId,
+        "note" -> k.note
       )
     }
   }

@@ -117,7 +117,8 @@ class KeepDecorator @Inject() (
               summary = Some(pageInfoForKeep),
               siteName = DomainToNameMapper.getNameFromUrl(keep.url),
               libraryId = keep.libraryId.map(l => Library.publicId(l)),
-              sourceAttribution = sourceAttrOpt
+              sourceAttribution = sourceAttrOpt,
+              note = keep.note
             )
         }
         keepsInfo

@@ -80,10 +80,12 @@ class ActivityPusher @Inject() (
     clock: Clock) extends Logging {
 
   def pushItBaby(activityPushTaskId: Id[ActivityPushTask]): Unit = {
-    db.readOnlyMaster { implicit s =>
+    val (activity, canNotify) = db.readOnlyMaster { implicit s =>
       val activity = activityPushTaskRepo.get(activityPushTaskId)
-      if (notifyPreferenceRepo.canNotify(activity.userId, NotifyPreference.RECOS_REMINDER)) Some(activity) else None
-    } foreach { activity =>
+      val canNotify = notifyPreferenceRepo.canNotify(activity.userId, NotifyPreference.RECOS_REMINDER)
+      (activity, canNotify)
+    }
+    if (canNotify) {
       getMessage(activity.userId) match {
         case Some((message, pushMessageType, experimant)) =>
           log.info(s"pushing activity update to ${activity.userId} of type $pushMessageType [$experimant]: $message")
@@ -99,10 +101,16 @@ class ActivityPusher @Inject() (
           }
           val lastActivity = getLastActivity(activity.userId)
           db.readWrite { implicit s =>
-            activityPushTaskRepo.save(activity.copy(lastPush = Some(clock.now())).withLastActivity(lastActivity))
+            activityPushTaskRepo.save(activityPushTaskRepo.get(activity.id.get).copy(lastPush = Some(clock.now())).withLastActivity(lastActivity))
           }
         case None =>
           log.info(s"skipping push activity for user ${activity.userId}")
+      }
+    } else {
+      //todo(eishay) re-enable when user resets prefs
+      db.readWrite { implicit s =>
+        log.info(s"user asked not to be notified on RECOS_REMINDER, disabling his task")
+        activityPushTaskRepo.save(activity.copy(state = ActivityPushTaskStates.INACTIVE))
       }
     }
   }

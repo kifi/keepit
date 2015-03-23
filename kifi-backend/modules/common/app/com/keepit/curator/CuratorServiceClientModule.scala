@@ -1,5 +1,7 @@
 package com.keepit.curator
 
+import scala.concurrent.ExecutionContext
+
 import net.codingwell.scalaguice.ScalaModule
 
 import com.google.inject.{ Provides, Singleton }
@@ -20,10 +22,12 @@ case class ProdCuratorServiceClientModule() extends CuratorServiceClientModule {
   def curatorServiceClient(
     client: HttpClient,
     serviceDiscovery: ServiceDiscovery,
+    defaultContext: ExecutionContext,
     airbrakeNotifier: AirbrakeNotifier): CuratorServiceClient = {
     new CuratorServiceClientImpl(
       serviceDiscovery.serviceCluster(ServiceType.CURATOR),
       client,
+      defaultContext,
       airbrakeNotifier
     )
   }

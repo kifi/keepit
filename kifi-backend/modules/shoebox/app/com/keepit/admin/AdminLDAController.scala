@@ -30,8 +30,7 @@ class AdminLDAController @Inject() (
   implicit def int2VersionOpt(n: Int) = Some(ModelVersion[DenseLDA](n))
   implicit def int2Version(n: Int) = ModelVersion[DenseLDA](n)
 
-  val defaultVersionF = cortex.defaultLDAVersion()
-  lazy val defaultVersion = Await.result(defaultVersionF, 1 second)
+  lazy val defaultVersion = Await.result(cortex.defaultLDAVersion(), 1 second)
 
   def index() = versionPage(defaultVersion)
 

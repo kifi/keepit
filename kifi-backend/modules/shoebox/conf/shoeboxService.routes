@@ -63,9 +63,6 @@ GET     /link/:provider             @com.keepit.controllers.core.AuthController.
 
 GET     /signup/:provider           @com.keepit.controllers.core.AuthController.signup(provider: String, publicLibraryId: Option[String] ?= None, intent: Option[String] ?= None)
 
-GET     /twitter/request            @com.keepit.controllers.core.AuthController.requestToTwitterWaitlist()
-GET     /twitter/thanks             @com.keepit.controllers.core.AuthController.thanksForTwitterWaitlist()
-
 # do we still use this endpoint?
 POST    /mobileauth/:provider       @com.keepit.controllers.mobile.MobileAuthController.accessTokenLogin(provider)
 
@@ -92,7 +89,10 @@ GET     /get                        @com.keepit.controllers.website.HomeControll
 # Special projects
 ##########################################
 
+GET     /twitter                    @com.keepit.controllers.website.TwitterWaitlistController.twitterWaitlistLanding()
 GET     /site/twitterQueuePosition  @com.keepit.controllers.website.TwitterWaitlistController.getFakeWaitlistPosition()
+GET     /twitter/request            @com.keepit.controllers.core.AuthController.requestToTwitterWaitlist()
+GET     /twitter/thanks             @com.keepit.controllers.core.AuthController.thanksForTwitterWaitlist()
 
 
 POST    /sms                        @com.keepit.controllers.website.HomeController.sendSmsToGetKifi()
