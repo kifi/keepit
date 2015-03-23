@@ -30,7 +30,7 @@ class TwitterSyncStateRepo @Inject() (val db: DataBaseComponent, val clock: Cloc
   override def invalidateCache(model: TwitterSyncState)(implicit session: RSession): Unit = {}
 
   def getSyncsToUpdate(refreshWindow: DateTime)(implicit session: RSession): Seq[TwitterSyncState] = {
-    (for (row <- rows if (row.lastFetchedAt.isNull || row.lastFetchedAt <= refreshWindow) && row.state === TwitterSyncStateStates.ACTIVE) yield row).list
+    (for (row <- rows if (row.lastFetchedAt.isEmpty || row.lastFetchedAt <= refreshWindow) && row.state === TwitterSyncStateStates.ACTIVE) yield row).list
   }
 
 }

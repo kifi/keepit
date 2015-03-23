@@ -276,7 +276,7 @@ class KeepRepoImpl @Inject() (
   def bulkGetByUserAndUriIds(userId: Id[User], uriIds: Set[Id[NormalizedURI]])(implicit session: RSession): Map[Id[NormalizedURI], Keep] = {
     val res = keepUriUserCache.bulkGetOrElse(uriIds.map(KeepUriUserKey(_, userId))) { keys =>
       val missing = keys.map(_.uriId)
-      val keeps = (for (r <- rows if r.userId === userId && r.uriId.inSet(missing) && r.state === KeepStates.ACTIVE) yield r).list()
+      val keeps = (for (r <- rows if r.userId === userId && r.uriId.inSet(missing) && r.state === KeepStates.ACTIVE) yield r).list
       keeps.map { k => KeepUriUserKey(k.uriId, userId) -> k }.toMap
     }
     res.map { case (key, keep) => key.uriId -> keep }
@@ -344,7 +344,7 @@ class KeepRepoImpl @Inject() (
   def getPrivatePublicCountByUser(userId: Id[User])(implicit session: RSession): (Int, Int) = {
     import StaticQuery.interpolation
     val sql = sql"select sum(is_private), sum(1 - is_private) from bookmark where user_id=${userId} and state = '#${KeepStates.ACTIVE}'"
-    sql.as[(Int, Int)].first()
+    sql.as[(Int, Int)].first
   }
 
   def getCountByTime(from: DateTime, to: DateTime)(implicit session: RSession): Int = {

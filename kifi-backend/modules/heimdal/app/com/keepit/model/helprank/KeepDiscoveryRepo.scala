@@ -57,15 +57,15 @@ class KeepDiscoveryRepoImpl @Inject() (
   override def invalidateCache(model: KeepDiscovery)(implicit session: RSession): Unit = deleteCache(model)
 
   def getDiscoveriesByUUID(uuid: ExternalId[ArticleSearchResult])(implicit r: RSession): Seq[KeepDiscovery] = {
-    (for (r <- rows if (r.hitUUID === uuid && r.state === KeepDiscoveryStates.ACTIVE)) yield r).list()
+    (for (r <- rows if (r.hitUUID === uuid && r.state === KeepDiscoveryStates.ACTIVE)) yield r).list
   }
 
   def getByKeepId(keepId: Id[Keep])(implicit r: RSession): Seq[KeepDiscovery] = {
-    (for (r <- rows if (r.keepId === keepId && r.state === KeepDiscoveryStates.ACTIVE)) yield r).list()
+    (for (r <- rows if (r.keepId === keepId && r.state === KeepDiscoveryStates.ACTIVE)) yield r).list
   }
 
   def getDiscoveriesByKeeper(userId: Id[User], since: DateTime)(implicit r: RSession): Seq[KeepDiscovery] = {
-    (for (r <- rows if (r.keeperId === userId && r.state === KeepDiscoveryStates.ACTIVE && r.createdAt >= since)) yield r).sortBy(_.createdAt.desc).list()
+    (for (r <- rows if (r.keeperId === userId && r.state === KeepDiscoveryStates.ACTIVE && r.createdAt >= since)) yield r).sortBy(_.createdAt.desc).list
   }
 
   def getDiscoveryCountByKeeper(userId: Id[User], since: DateTime)(implicit r: RSession): Int = {
@@ -111,18 +111,18 @@ class KeepDiscoveryRepoImpl @Inject() (
     val q = (for (r <- rows if (r.keeperId === userId && r.state === KeepDiscoveryStates.ACTIVE && r.createdAt >= since)) yield r)
       .groupBy(_.keepId)
       .map { case (kId, kc) => (kId, kc.length) }
-    q.toMap()
+    q.toMap
   }
 
   def getUriDiscoveriesWithCountsByKeeper(userId: Id[User], since: DateTime)(implicit r: RSession): Seq[(Id[NormalizedURI], Id[Keep], Id[User], Int)] = {
-    sql"select uri_id, keep_id, keeper_id, count(*) c from keep_click where created_at >= $since and keeper_id=$userId group by uri_id order by keep_id desc".as[(Id[NormalizedURI], Id[Keep], Id[User], Int)].list()
+    sql"select uri_id, keep_id, keeper_id, count(*) c from keep_click where created_at >= $since and keeper_id=$userId group by uri_id order by keep_id desc".as[(Id[NormalizedURI], Id[Keep], Id[User], Int)].list
   }
 
   def getUriDiscoveryCountsByKeeper(userId: Id[User], since: DateTime)(implicit r: RSession): Map[Id[NormalizedURI], Int] = {
     val q = (for (r <- rows if (r.keeperId === userId && r.state === KeepDiscoveryStates.ACTIVE && r.createdAt >= since)) yield r)
       .groupBy(_.uriId)
       .map { case (uriId, kc) => (uriId, kc.length) }
-    q.toMap()
+    q.toMap
   }
 
   def getDiscoveryCountsByKeepIds(userId: Id[User], keepIds: Set[Id[Keep]], since: DateTime)(implicit r: RSession): Map[Id[Keep], Int] = {
@@ -131,7 +131,7 @@ class KeepDiscoveryRepoImpl @Inject() (
       val q = (for (r <- rows if (r.keeperId === userId && r.state === KeepDiscoveryStates.ACTIVE && r.keepId.inSet(keepIds) && r.createdAt >= since)) yield r)
         .groupBy(_.keepId)
         .map { case (kId, kc) => (kId, kc.length) }
-      q.toMap()
+      q.toMap
     }
   }
 }

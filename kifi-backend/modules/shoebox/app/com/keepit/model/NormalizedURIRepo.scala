@@ -171,7 +171,7 @@ class NormalizedURIRepoImpl @Inject() (
   }
 
   def toBeRemigrated()(implicit session: RSession): Seq[NormalizedURI] =
-    (for (t <- rows if t.state =!= NormalizedURIStates.REDIRECTED && t.redirect.isNotNull) yield t).list
+    (for (t <- rows if t.state =!= NormalizedURIStates.REDIRECTED && t.redirect.isDefined) yield t).list
 
   def getByRedirection(redirect: Id[NormalizedURI])(implicit session: RSession): Seq[NormalizedURI] = {
     (for (t <- rows if t.state === NormalizedURIStates.REDIRECTED && t.redirect === redirect) yield t).list
@@ -195,7 +195,7 @@ class NormalizedURIRepoImpl @Inject() (
   }
 
   def checkRecommendable(uriIds: Seq[Id[NormalizedURI]])(implicit session: RSession): Seq[Boolean] = {
-    val info = { for (r <- rows if r.id.inSet(uriIds)) yield (r.id, r.restriction.isNull, r.state) }.list
+    val info = { for (r <- rows if r.id.inSet(uriIds)) yield (r.id, r.restriction.isEmpty, r.state) }.list
     assert(info.size == uriIds.distinct.size, s"looks like some uriIds are missing in normalized_uri_repo")
     val m = info.map { case (id, noRestriction, state) => (id, noRestriction && (state == NormalizedURIStates.SCRAPED)) }.toMap
     uriIds.map { id => m(id) }

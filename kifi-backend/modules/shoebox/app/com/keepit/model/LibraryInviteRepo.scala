@@ -127,7 +127,7 @@ class LibraryInviteRepoImpl @Inject() (
     val invitees = {
       val invitesGroupedByInvitee = (for (r <- rows if r.libraryId === libraryId && r.state.inSet(includeStates)) yield r).groupBy(r => (r.userId, r.emailAddress))
       val inviteesWithLastInvitedAt = invitesGroupedByInvitee.map { case ((userId, emailAddress), invites) => (userId, emailAddress, invites.map(_.createdAt).min) }
-      val sortedInvitees = inviteesWithLastInvitedAt.sortBy { case (userId, emailAddress, firstInvitedAt) => (userId.isNotNull, firstInvitedAt) }
+      val sortedInvitees = inviteesWithLastInvitedAt.sortBy { case (userId, emailAddress, firstInvitedAt) => (userId.isDefined, firstInvitedAt) }
       sortedInvitees.drop(offset).take(limit).map { case (userId, emailAddress, firstInvitedAt) => (userId.?, emailAddress.?) }.list
     }
 

@@ -149,9 +149,34 @@ trait FortyTwoGenericTypeMappers { self: { val db: DataBaseComponent } =>
 
   // SetParameter conversions to be used for interpolated query parameters
 
-  def setParameterFromMapper[T](implicit mapper: BaseColumnType[T]): SetParameter[T] = SetParameter { case (value, parameters) => mapper.setValue(value, parameters) }
-  def setOptionParameterFromMapper[T](implicit mapper: BaseColumnType[T]): SetParameter[Option[T]] = SetParameter { case (option, parameters) => mapper.setOption(option, parameters) }
-  def setSeqParameter[T](implicit pconv: SetParameter[T]): SetParameter[Seq[T]] = SetParameter { case (seq, parameters) => seq.foreach(pconv(_, parameters)) }
+  def setParameterFromMapper[T](implicit mapper: BaseColumnType[T]): SetParameter[T] = {
+    SetParameter {
+      case (value, pp) =>
+        val npos = pp.pos + 1
+        mapper.setValue(value, pp.ps, npos)
+        pp.pos = npos
+    }
+  }
+
+  def setOptionParameterFromMapper[T](implicit mapper: BaseColumnType[T]): SetParameter[Option[T]] = {
+    SetParameter {
+      case (value, pp) =>
+        val npos = pp.pos + 1
+        mapper.setOption(value, pp.ps, npos)
+        pp.pos = npos
+    }
+  }
+
+  def setSeqParameter[T](implicit pconv: SetParameter[T]): SetParameter[Seq[T]] = {
+    SetParameter {
+      case (seq, pp) =>
+        seq.foreach(pconv(_, pp))
+    }
+  }
+
+  //  def setParameterFromMapper[T](implicit mapper: BaseColumnType[T]): SetParameter[T] = SetParameter { case (value, parameters) => mapper.setValue(value, parameters) }
+  //  def setOptionParameterFromMapper[T](implicit mapper: BaseColumnType[T]): SetParameter[Option[T]] = SetParameter { case (option, parameters) => mapper.setOption(option, parameters) }
+  //  def setSeqParameter[T](implicit pconv: SetParameter[T]): SetParameter[Seq[T]] = SetParameter { case (seq, parameters) => seq.foreach(pconv(_, parameters)) }
 
   implicit val setSeqStringParameter = setSeqParameter[String]
   implicit val setSeqLongParameter = setSeqParameter[Long]
@@ -167,8 +192,26 @@ trait FortyTwoGenericTypeMappers { self: { val db: DataBaseComponent } =>
 
   // GetResult mappers to be used for interpolated query results
 
-  def getResultFromMapper[T](implicit mapper: BaseColumnType[T]): GetResult[T] = GetResult[T](mapper.nextValue)
-  def getResultOptionFromMapper[T](implicit mapper: BaseColumnType[T]): GetResult[Option[T]] = GetResult[Option[T]](mapper.nextOption)
+  def getResultFromMapper[T](implicit mapper: BaseColumnType[T]): GetResult[T] = {
+    GetResult[T] { pr =>
+      val npos = pr.currentPos + 1
+      val r = mapper.getValue(pr.rs, npos)
+      pr.skip
+      r
+    }
+  }
+
+  def getResultOptionFromMapper[T](implicit mapper: BaseColumnType[T]): GetResult[Option[T]] = {
+    GetResult[Option[T]] { pr =>
+      val npos = pr.currentPos + 1
+      val r = Option(mapper.getValue(pr.rs, npos))
+      pr.skip
+      r
+    }
+  }
+
+  //  def getResultFromMapper[T](implicit mapper: BaseColumnType[T]): GetResult[T] = GetResult[T](mapper.nextValue)
+  //  def getResultOptionFromMapper[T](implicit mapper: BaseColumnType[T]): GetResult[Option[T]] = GetResult[Option[T]](mapper.nextOption)
 
   implicit val getDateTimeResult = getResultFromMapper[DateTime]
   implicit val getOptDateTimeResult = getResultOptionFromMapper[DateTime]

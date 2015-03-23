@@ -329,7 +329,7 @@ class LibraryMembershipRepoImpl @Inject() (
   def countsWithUserIdAndAccesses(userId: Id[User], accesses: Set[LibraryAccess])(implicit session: RSession): Map[LibraryAccess, Int] = {
     libraryMembershipCountCache.bulkGetOrElse(accesses.map(LibraryMembershipCountKey(userId, _))) { keys =>
       import StaticQuery.interpolation
-      val counts = sql"select access, count(*) from library_membership where user_id = $userId and state = 'active' group by access".as[(String, Int)].list().toMap
+      val counts = sql"select access, count(*) from library_membership where user_id = $userId and state = 'active' group by access".as[(String, Int)].list.toMap
 
       keys.toSeq.map(k => k -> counts.getOrElse(k.access.value, 0)).toMap
     }.map { case (k, v) => k.access -> v }

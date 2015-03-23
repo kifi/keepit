@@ -43,14 +43,14 @@ class RawSeedItemRepoImpl @Inject() (
   class RawSeedItemTable(tag: Tag) extends RepoTable[RawSeedItem](db, tag, "raw_seed_item") with SeqNumberColumn[RawSeedItem] {
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)
     def url = column[String]("url", O.NotNull) // set default url to empty string in db to avoid exceptions.
-    def userId = column[Id[User]]("user_id", O.Nullable)
+    def userId = column[Option[Id[User]]]("user_id", O.Nullable)
     def firstKept = column[DateTime]("first_kept", O.NotNull)
     def lastKept = column[DateTime]("last_kept", O.NotNull)
     def lastSeen = column[DateTime]("last_seen", O.NotNull)
-    def priorScore = column[Float]("prior_score", O.Nullable)
+    def priorScore = column[Option[Float]]("prior_score", O.Nullable)
     def timesKept = column[Int]("times_kept", O.NotNull)
     def discoverable = column[Boolean]("discoverable", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, seq, uriId, userId.?, firstKept, lastKept, lastSeen, priorScore.?, timesKept, discoverable, url) <> ((RawSeedItem.apply _).tupled, RawSeedItem.unapply _)
+    def * = (id.?, createdAt, updatedAt, seq, uriId, userId, firstKept, lastKept, lastSeen, priorScore, timesKept, discoverable, url) <> ((RawSeedItem.apply _).tupled, RawSeedItem.unapply _)
   }
 
   def table(tag: Tag) = new RawSeedItemTable(tag)
@@ -92,14 +92,14 @@ class RawSeedItemRepoImpl @Inject() (
   }
 
   def getFirstByUriId(uriId: Id[NormalizedURI])(implicit session: RSession): Option[RawSeedItem] = {
-    (for (row <- rows if row.uriId === uriId && row.userId.isNull) yield row).firstOption
+    (for (row <- rows if row.uriId === uriId && row.userId.isEmpty) yield row).firstOption
   }
 
   def getByUriIdAndUserId(uriId: Id[NormalizedURI], userIdOpt: Option[Id[User]])(implicit session: RSession): Option[RawSeedItem] = {
     userIdOpt.map { userId =>
       (for (row <- rows if row.uriId === uriId && row.userId === userId) yield row).firstOption
     } getOrElse {
-      (for (row <- rows if row.uriId === uriId && row.userId.isNull) yield row).firstOption
+      (for (row <- rows if row.uriId === uriId && row.userId.isEmpty) yield row).firstOption
     }
   }
 
@@ -124,11 +124,11 @@ class RawSeedItemRepoImpl @Inject() (
   }
 
   def getRecent(userId: Id[User], maxBatchSize: Int)(implicit session: RSession): Seq[RawSeedItem] = {
-    (for (row <- rows if row.userId === userId || row.userId.isNull) yield row).sortBy(_.seq.desc).take(maxBatchSize).list
+    (for (row <- rows if row.userId === userId || row.userId.isEmpty) yield row).sortBy(_.seq.desc).take(maxBatchSize).list
   }
 
   def getRecentGeneric(maxBatchSize: Int)(implicit session: RSession): Seq[RawSeedItem] = {
-    (for (row <- rows if row.userId.isNull) yield row).sortBy(_.seq.desc).take(maxBatchSize).list
+    (for (row <- rows if row.userId.isEmpty) yield row).sortBy(_.seq.desc).take(maxBatchSize).list
   }
 
   def getByTopPriorScore(userId: Id[User], maxBatchSize: Int)(implicit session: RSession): Seq[RawSeedItem] = {
@@ -138,7 +138,7 @@ class RawSeedItemRepoImpl @Inject() (
   def cleanupBatch(userId: Id[User])(implicit session: RWSession): Unit = {
     import StaticQuery.interpolation
     val cutoff = currentDateTime.minus(org.joda.time.Duration.standardDays(10))
-    sqlu"DELETE FROM raw_seed_item WHERE user_id=$userId AND updated_at<=$cutoff LIMIT 250".first()
+    sqlu"DELETE FROM raw_seed_item WHERE user_id=$userId AND updated_at<=$cutoff LIMIT 250".first
   }
 }
 

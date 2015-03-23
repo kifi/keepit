@@ -140,7 +140,7 @@ class InvitationRepoImpl @Inject() (
     if (socialUserInfoIds.isEmpty) {
       Map.empty
     } else {
-      val query = for (i <- rows if i.senderUserId === senderId && i.recipientSocialUserId.inSet(socialUserInfoIds) && i.state =!= InvitationStates.INACTIVE && i.lastSentAt.isNotNull)
+      val query = for (i <- rows if i.senderUserId === senderId && i.recipientSocialUserId.inSet(socialUserInfoIds) && i.state =!= InvitationStates.INACTIVE && i.lastSentAt.isDefined)
         yield (i.recipientSocialUserId, i.lastSentAt) // using createdAt for now (user cannot currently re-invite same social connection)
       Map(query.list: _*)
     }
@@ -150,7 +150,7 @@ class InvitationRepoImpl @Inject() (
     if (emailAddresses.isEmpty) {
       Map.empty
     } else {
-      var query = for (i <- rows if i.senderUserId === senderId && i.recipientEmailAddress.inSet(emailAddresses) && i.state =!= InvitationStates.INACTIVE && i.lastSentAt.isNotNull)
+      var query = for (i <- rows if i.senderUserId === senderId && i.recipientEmailAddress.inSet(emailAddresses) && i.state =!= InvitationStates.INACTIVE && i.lastSentAt.isDefined)
         yield (i.recipientEmailAddress, i.lastSentAt) // using createdAt for now (user cannot currently re-invite same e-contact)
       Map(query.list: _*)
     }
@@ -165,15 +165,15 @@ class InvitationRepoImpl @Inject() (
   }
 
   def getSocialInvitesBySenderId(senderId: Id[User])(implicit session: RSession): Seq[Invitation] = {
-    (for (b <- rows if b.senderUserId === senderId && b.recipientSocialUserId.isNotNull) yield b).list
+    (for (b <- rows if b.senderUserId === senderId && b.recipientSocialUserId.isDefined) yield b).list
   }
 
   def getEmailInvitesBySenderId(senderId: Id[User])(implicit session: RSession): Seq[Invitation] = {
-    (for (b <- rows if b.senderUserId === senderId && b.recipientEmailAddress.isNotNull) yield b).list
+    (for (b <- rows if b.senderUserId === senderId && b.recipientEmailAddress.isDefined) yield b).list
   }
 
   def getRecentInvites(since: DateTime)(implicit session: RSession): List[Invitation] = {
-    (for (b <- rows if b.state.inSet(Set(InvitationStates.ACTIVE, InvitationStates.ACCEPTED)) && b.updatedAt > since && b.lastSentAt.isNotNull) yield b).list
+    (for (b <- rows if b.state.inSet(Set(InvitationStates.ACTIVE, InvitationStates.ACCEPTED)) && b.updatedAt > since && b.lastSentAt.isDefined) yield b).list
   }
 }
 

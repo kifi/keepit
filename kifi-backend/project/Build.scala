@@ -27,7 +27,7 @@ object ApplicationBuild extends Build {
     ws
   )
 
-  val slickVersion = "2.0.3"
+  val slickVersion = "2.1.0"
 
   lazy val sqldbDependencies = Seq(
     "mysql" % "mysql-connector-java" % "5.1.25",

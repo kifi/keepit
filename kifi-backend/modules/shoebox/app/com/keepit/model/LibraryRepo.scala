@@ -182,11 +182,11 @@ class LibraryRepoImpl @Inject() (
   }
 
   def getAllByOwner(ownerId: Id[User], excludeState: Option[State[Library]])(implicit session: RSession): List[Library] = {
-    (for { t <- rows if t.ownerId === ownerId && t.state =!= excludeState.orNull } yield t).list()
+    (for { t <- rows if t.ownerId === ownerId && t.state =!= excludeState.orNull } yield t).list
   }
 
   def getAllByOwners(ownerIds: Set[Id[User]], excludeState: Option[State[Library]])(implicit session: RSession): List[Library] = {
-    (for { t <- rows if t.ownerId.inSet(ownerIds) && t.state =!= excludeState.orNull } yield t).list()
+    (for { t <- rows if t.ownerId.inSet(ownerIds) && t.state =!= excludeState.orNull } yield t).list
   }
 
   def updateLastKept(libraryId: Id[Library])(implicit session: RWSession) = {
@@ -243,7 +243,7 @@ class LibraryRepoImpl @Inject() (
 
   def getLibrariesOfUserForAnonymous(ownerId: Id[User], page: Paginator)(implicit session: RSession): Seq[Library] = {
     val q = (for {
-      lib <- rows if lib.ownerId === ownerId && lib.visibility === (LibraryVisibility.PUBLISHED: LibraryVisibility) && lib.state === LibraryStates.ACTIVE && lib.lastKept.isNotNull
+      lib <- rows if lib.ownerId === ownerId && lib.visibility === (LibraryVisibility.PUBLISHED: LibraryVisibility) && lib.state === LibraryStates.ACTIVE && lib.lastKept.isDefined
       lm <- libraryMembershipRepo.get.rows if lm.libraryId === lib.id && lm.userId === ownerId && lm.listed && lm.state === LibraryMembershipStates.ACTIVE
     } yield lib).sortBy(x => (x.memberCount.desc, x.lastKept.desc, x.id.desc)).drop(page.itemsToDrop).take(page.size)
     q.list
@@ -319,7 +319,7 @@ class LibraryRepoImpl @Inject() (
   }
 
   def getAllPublishedNonEmptyLibraries()(implicit session: RSession): Seq[Id[Library]] = {
-    (for (r <- rows if r.visibility === (LibraryVisibility.PUBLISHED: LibraryVisibility) && r.state === LibraryStates.ACTIVE && r.lastKept.isNotNull) yield r.id).list
+    (for (r <- rows if r.visibility === (LibraryVisibility.PUBLISHED: LibraryVisibility) && r.state === LibraryStates.ACTIVE && r.lastKept.isDefined) yield r.id).list
   }
 
   def getNewPublishedLibraries(size: Int = 20)(implicit session: RSession): Seq[Library] = {

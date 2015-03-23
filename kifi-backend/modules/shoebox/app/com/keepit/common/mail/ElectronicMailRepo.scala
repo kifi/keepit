@@ -55,8 +55,8 @@ class ElectronicMailRepoImpl @Inject() (
   def getOpt(id: Id[ElectronicMail])(implicit session: RSession): Option[ElectronicMail] = (for (f <- rows if f.id is id) yield f).firstOption
 
   def outbox()(implicit session: RSession): Seq[Id[ElectronicMail]] =
-    (for (t <- rows if t.state === ElectronicMailStates.READY_TO_SEND) yield t.id).list()
+    (for (t <- rows if t.state === ElectronicMailStates.READY_TO_SEND) yield t.id).list
 
   def forSender(senderId: Id[User])(implicit session: RSession): Seq[ElectronicMail] =
-    (for (t <- rows if t.senderUserId === senderId) yield t).list()
+    (for (t <- rows if t.senderUserId === senderId) yield t).list
 }

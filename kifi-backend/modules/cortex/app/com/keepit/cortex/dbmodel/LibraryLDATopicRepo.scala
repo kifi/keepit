@@ -68,7 +68,8 @@ class LibraryLDATopicRepoImpl @Inject() (
 
   def getUserFollowedLibraryFeatures(userId: Id[User], version: ModelVersion[DenseLDA], minEvidence: Int = 5)(implicit session: RSession): Seq[LibraryTopicMean] = {
     import StaticQuery.interpolation
-    implicit val getLibraryFeature = GetResult(r => libraryTopicMeanMapper.nextValue(r))
+    implicit val getLibraryFeature = getResultFromMapper[LibraryTopicMean]
+
     val q =
       sql"""select topic from
            library_lda_topic as tp inner join cortex_library_membership as mem

@@ -123,7 +123,7 @@ class SocialConnectionRepoImpl @Inject() (
             t <- rows if ((t.socialUser1 inSet ids) || (t.socialUser2 inSet ids)) && t.state === SocialConnectionStates.ACTIVE
           } yield t).length
         )
-        q.first()
+        q.first
       }
       case _ => 0
     }
@@ -177,7 +177,7 @@ class SocialConnectionRepoImpl @Inject() (
             where sc.seq > ${lowerBound.value}"""
     }
 
-    query.as[(Id[SocialUserInfo], Id[SocialUserInfo], State[SocialConnection], SequenceNumber[SocialConnection], SocialNetworkType)].list()
+    query.as[(Id[SocialUserInfo], Id[SocialUserInfo], State[SocialConnection], SequenceNumber[SocialConnection], SocialNetworkType)].list
   }
 }
 
