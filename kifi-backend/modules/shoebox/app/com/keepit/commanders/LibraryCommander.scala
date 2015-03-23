@@ -903,8 +903,11 @@ class LibraryCommander @Inject() (
   }
 
   private def notifyOwnerOfNewFollower(newFollowerId: Id[User], lib: Library): Unit = SafeFuture {
-    val (follower, owner) = db.readOnlyReplica { implicit session =>
-      userRepo.get(newFollowerId) -> basicUserRepo.load(lib.ownerId)
+    val (follower, owner, lotsOfFollowers) = db.readOnlyReplica { implicit session =>
+      val follower = userRepo.get(newFollowerId)
+      val owner = basicUserRepo.load(lib.ownerId)
+      val lotsOfFollowers = libraryMembershipRepo.countMembersForLibrarySince(lib.id.get, DateTime.now().minusDays(1)) > 1
+      (follower, owner, lotsOfFollowers)
     }
     val libImageOpt = libraryImageCommander.getBestImageForLibrary(lib.id.get, ProcessedImageSize.Medium.idealSize)
     elizaClient.sendGlobalNotification(
@@ -916,6 +919,7 @@ class LibraryCommander @Inject() (
       imageUrl = s3ImageStore.avatarUrlByUser(follower),
       sticky = false,
       category = NotificationCategory.User.LIBRARY_FOLLOWED,
+      unread = !lotsOfFollowers, // if not a lot of recent followers, notification is marked unread
       extra = Some(Json.obj(
         "follower" -> BasicUser.fromUser(follower),
         "library" -> Json.toJson(LibraryNotificationInfo.fromLibraryAndOwner(lib, libImageOpt, owner))
@@ -1040,7 +1044,7 @@ class LibraryCommander @Inject() (
   //
   def sortAndSelectLibrariesWithTopGrowthSince(libraryIds: Set[Id[Library]], since: DateTime, totalMemberCount: Id[Library] => Int): Seq[(Id[Library], Seq[LibraryMembership])] = {
     val libraryMemberCountsSince = db.readOnlyReplica { implicit session =>
-      libraryIds.map { id => id -> libraryMembershipRepo.getMemberCountSinceForLibrary(id, since) }.toMap
+      libraryIds.map { id => id -> libraryMembershipRepo.countMembersForLibrarySince(id, since) }.toMap
     }
 
     sortAndSelectLibrariesWithTopGrowthSince(libraryMemberCountsSince, since, totalMemberCount)

@@ -41,7 +41,7 @@ class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
     p.future
   }
 
-  def sendGlobalNotification(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean, category: NotificationCategory, extra: Option[JsObject]): Future[Id[MessageHandle]] = {
+  def sendGlobalNotification(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean, category: NotificationCategory, unread: Boolean = true, extra: Option[JsObject]): Future[Id[MessageHandle]] = {
     userIds.map { id =>
       inbox = (id, category, linkUrl, imageUrl) +: inbox
     }
