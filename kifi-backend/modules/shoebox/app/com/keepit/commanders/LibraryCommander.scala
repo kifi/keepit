@@ -76,6 +76,7 @@ class LibraryCommander @Inject() (
     experimentCommander: LocalUserExperimentCommander,
     userValueRepo: UserValueRepo,
     systemValueRepo: SystemValueRepo,
+    twitterSyncRepo: TwitterSyncStateRepo,
     implicit val publicIdConfig: PublicIdConfiguration,
     clock: Clock) extends Logging {
 
@@ -270,6 +271,7 @@ class LibraryCommander @Inject() (
         val (collaboratorCount, followerCount, keepCount) = counts
         val owner = usersById(lib.ownerId)
         val followers = followerInfosByLibraryId(lib.id.get)._1.map(usersById(_))
+        val attr = getSourceAttribution(libId)
         lib.id.get -> FullLibraryInfo(
           id = Library.publicId(lib.id.get),
           name = lib.name,
@@ -286,11 +288,18 @@ class LibraryCommander @Inject() (
           numKeeps = keepCount,
           numCollaborators = collaboratorCount,
           numFollowers = followerCount,
-          lastKept = lib.lastKept
+          lastKept = lib.lastKept,
+          attr = attr
         )
       }
     }
     Future.sequence(futureFullLibraryInfos)
+  }
+
+  private def getSourceAttribution(libId: Id[Library]): Option[LibrarySourceAttribution] = {
+    db.readOnlyReplica { implicit s =>
+      twitterSyncRepo.getHandleByLibraryId(libId).map { TwitterLibrarySourceAttribution(_) }
+    }
   }
 
   def sortUsersByImage(users: Seq[BasicUser]): Seq[BasicUser] =
