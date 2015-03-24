@@ -1,14 +1,19 @@
+desktopMinHeight = 740px // for @media min-height
+
 .kf-uph
-  padding-bottom: 25px
   background: pageHeaderColor
   color: #fff
+  padding-bottom: 12px
 
-  .kf-mobile &
-    padding: 10px 0 40px
+  @media (min-height: desktopMinHeight)
+    padding-bottom: 25px
 
 .kf-uph-top
   position: relative
-  padding-top: 20px
+  padding-top: 12px
+
+  @media (min-height: desktopMinHeight)
+    padding-top: 20px
 
 .kf-uph-connect-banner
   position: relative
@@ -176,53 +181,49 @@
   display: inline-block
 
 .kf-uph-pic
-  height: 100px
-  width: 100px
-  border-radius: 100%
+  width: 60px
+  height: 60px
+  border-radius: 50%
 
-  .kf-mobile &
-    width: 150px
-    height: 150px
+  @media (min-height: desktopMinHeight)
+    width: 100px
+    height: 100px
 
 .kf-uph-name
-  position: relative
+  margin-top: 6px
+  line-height: 20px
+  font-size: 14px
   font-weight: normal
-  font-size: 1.3em
-  line-height: 2em
   color: inherit
 
-  .kf-mobile &
-    font-size: 1.4em
+  @media (min-height: desktopMinHeight)
+    line-height: 31px
+    font-size: 21px
 
-.kf-uph-bio-edit
-  position: absolute
-  top: 13px
-  margin-left: 10px
-  font-size: 0.7em
+.kf-uph-bio-add
   background: none
   outline: none
   border: none
+  padding: 0
   color: accentGreen
   font-weight: 100
 
   &:hover
     text-decoration: underline
 
-  &.empty
-    position: relative
-    top: 0px
-    margin-left: 0px
-    margin-bottom: 5px
-    font-size: 0.9em
-
 .kf-uph-bio
-  width: 400px
-  margin: 0 auto 10px auto
-  color: white
-  font-size: 0.9em
-  line-height: 1.6em
+  max-width: 400px
+  margin: 0 auto 4px
+  color: #d8d8d8
+  line-height: 16px
+  font-size: 10px
   font-weight: 100
+  font-smoothing: antialiased
   word-break: break-word
+
+  @media (min-height: desktopMinHeight)
+    line-height: 1.6em
+    font-size: 0.9em
 
 .kf-bio-input
   width: 100%
@@ -270,18 +271,26 @@
       background-color: accentGreen
 
 .kf-uph-nav
-  margin: 10px auto 0
+  margin: 2px auto 0
   display: inline-block
-  border-top: 1px solid #fff
 
-  .kf-mobile &
-    transform: scale(1.5)
-    transform-origin: center top
-    margin-bottom: 40px
+  @media (min-height: desktopMinHeight)
+    margin-top: 10px
+
+  &::before
+    content: ''
+    display: block
+    height: 1px
+    background-color: #fff
+    transform: scale(1,.5)  // half-pixel border workaround crbug.com/236371
+
+  @media (min-height: desktopMinHeight)
+    &::before
+      transform: none
 
 .kf-uph-nav-a
   display: inline-block
-  padding: 6px 10px
+  padding: 3px 5px
   color: #9fa3aa
 
   &[href]:hover
@@ -291,15 +300,26 @@
     color: accentGreen
     cursor: default
 
+  @media (min-height: desktopMinHeight)
+    padding: 6px 10px
+
 .kf-uph-nav-name
-  line-height: 20px
-  font-size: 12px
+  line-height: 12px
+  font-size: 7px
   text-transform: uppercase
+
+  @media (min-height: desktopMinHeight)
+    line-height: 20px
+    font-size: 12px
 
 .kf-uph-nav-count
   color: #fff
-  line-height: 24px
-  font-size: 18px
+  line-height: 15px
+  font-size: 11px
+
+  @media (min-height: desktopMinHeight)
+    line-height: 24px
+    font-size: 18px
 
   :not([href])>&
     color: inherit

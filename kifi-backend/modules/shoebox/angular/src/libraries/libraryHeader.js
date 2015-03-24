@@ -734,6 +734,11 @@ angular.module('kifi')
 
         $timeout(function () {
           element.addClass('kf-loaded');  // enables transitions/animations
+
+          if (elemLohRight.length) {
+            // delaying DOM measurements for smoother initial rendering
+            scope.followButtonStickyTop = (elemLohRight[0].offsetHeight - element.find('.kf-lh-follow-btn-wrap')[0].offsetHeight) / 2;
+          }
         });
       }
     };

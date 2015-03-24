@@ -1,9 +1,3 @@
-<h2 class="kf-upc-title">Connections</h2>
-<div class="kf-upc kf-width-bounded" smart-scroll scroll-distance="'100%'" scroll-disabled="!hasMoreConnections()" scroll-next="fetchConnections()">
-  <ul class="kf-upc-cards">
-    <li kf-user-profile-user="user" ng-repeat="user in users"></li>
-    <li class="kf-upf-empty" ng-if="users.length === 0">
-      {{viewingOwnProfile ? 'You do' : profile.firstName + ' does'}} not yet have any connections.
-    </li>
-  </ul>
+<div kf-user-profile-user-list="users" list-title="Connections" has-more="hasMoreConnections()" fetch-more="fetchConnections()"
+  empty-text="{{viewingOwnProfile ? 'You do' : profile.firstName + ' does'}} not yet have any connections.">
 </div>
