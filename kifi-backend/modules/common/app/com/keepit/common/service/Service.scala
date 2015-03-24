@@ -54,15 +54,7 @@ object ServiceType {
     override val minInstances = 2
     override val warnInstances = 4
   }
-  case object GRAPH extends ServiceType("GRAPH", "GR", loadFactor = 2) {
-    override def healthyStatus(instance: AmazonInstanceInfo): ServiceStatus = {
-      val capabilities = instance.capabilities
-      if (capabilities.contains("backup") && !capabilities.contains("discovery")) ServiceStatus.BACKING_UP else ServiceStatus.UP
-    }
-
-    override val minInstances = 0
-    override val warnInstances = 0
-  }
+  case object GRAPH extends ServiceType("GRAPH", "GR", loadFactor = 2)
   case object C_SHOEBOX extends ServiceType("C_SHOEBOX", "C_SB", loadFactor = 1, true) {
     override val minInstances = 0
     override val warnInstances = 0
