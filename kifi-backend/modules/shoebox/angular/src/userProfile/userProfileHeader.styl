@@ -1,19 +1,19 @@
-desktopMinHeight = 740px // for @media min-height
+uphSmallMaxDim = 736px // for @media max-height and max-width
 
 .kf-uph
   background: pageHeaderColor
   color: #fff
-  padding-bottom: 12px
+  padding-bottom: 25px
 
-  @media (min-height: desktopMinHeight)
-    padding-bottom: 25px
+  @media (max-height: uphSmallMaxDim) and (max-width: uphSmallMaxDim)
+    padding-bottom: 12px
 
 .kf-uph-top
   position: relative
-  padding-top: 12px
+  padding-top: 20px
 
-  @media (min-height: desktopMinHeight)
-    padding-top: 20px
+  @media (max-height: uphSmallMaxDim) and (max-width: uphSmallMaxDim)
+    padding-top: 12px
 
 .kf-uph-connect-banner
   position: relative
@@ -181,24 +181,24 @@ desktopMinHeight = 740px // for @media min-height
   display: inline-block
 
 .kf-uph-pic
-  width: 60px
-  height: 60px
+  width: 100px
+  height: 100px
   border-radius: 50%
 
-  @media (min-height: desktopMinHeight)
-    width: 100px
-    height: 100px
+  @media (max-height: uphSmallMaxDim) and (max-width: uphSmallMaxDim)
+    width: 60px
+    height: 60px
 
 .kf-uph-name
   margin-top: 6px
-  line-height: 20px
-  font-size: 14px
+  line-height: 31px
+  font-size: 21px
   font-weight: normal
   color: inherit
 
-  @media (min-height: desktopMinHeight)
-    line-height: 31px
-    font-size: 21px
+  @media (max-height: uphSmallMaxDim) and (max-width: uphSmallMaxDim)
+    line-height: 20px
+    font-size: 14px
 
 .kf-uph-bio-add
   background: none
@@ -215,15 +215,16 @@ desktopMinHeight = 740px // for @media min-height
   max-width: 400px
   margin: 0 auto 4px
   color: #d8d8d8
-  line-height: 16px
-  font-size: 10px
+  line-height: 1.6em
+  font-size: 0.9em
   font-weight: 100
   font-smoothing: antialiased
   word-break: break-word
 
-  @media (min-height: desktopMinHeight)
-    line-height: 1.6em
-    font-size: 0.9em
+  @media (max-height: uphSmallMaxDim) and (max-width: uphSmallMaxDim)
+    max-width: 88%
+    line-height: 16px
+    font-size: 10px
 
 .kf-bio-input
   width: 100%
@@ -271,26 +272,25 @@ desktopMinHeight = 740px // for @media min-height
       background-color: accentGreen
 
 .kf-uph-nav
-  margin: 2px auto 0
+  margin: 10px auto 0
   display: inline-block
 
-  @media (min-height: desktopMinHeight)
-    margin-top: 10px
+  @media (max-height: uphSmallMaxDim) and (max-width: uphSmallMaxDim)
+    margin-top: 2px
 
   &::before
     content: ''
     display: block
     height: 1px
     background-color: #fff
-    transform: scale(1,.5)  // half-pixel border workaround crbug.com/236371
 
-  @media (min-height: desktopMinHeight)
+  @media (max-height: uphSmallMaxDim) and (max-width: uphSmallMaxDim)
     &::before
-      transform: none
+      transform: scale(1,.5)  // half-pixel border workaround crbug.com/236371
 
 .kf-uph-nav-a
   display: inline-block
-  padding: 3px 5px
+  padding: 6px 10px
   color: #9fa3aa
 
   &[href]:hover
@@ -300,26 +300,26 @@ desktopMinHeight = 740px // for @media min-height
     color: accentGreen
     cursor: default
 
-  @media (min-height: desktopMinHeight)
-    padding: 6px 10px
+  @media (max-height: uphSmallMaxDim) and (max-width: uphSmallMaxDim)
+    padding: 3px 5px
 
 .kf-uph-nav-name
-  line-height: 12px
-  font-size: 7px
+  line-height: 20px
+  font-size: 12px
   text-transform: uppercase
 
-  @media (min-height: desktopMinHeight)
-    line-height: 20px
-    font-size: 12px
+  @media (max-height: uphSmallMaxDim) and (max-width: uphSmallMaxDim)
+    line-height: 12px
+    font-size: 7px
 
 .kf-uph-nav-count
   color: #fff
-  line-height: 15px
-  font-size: 11px
+  line-height: 24px
+  font-size: 18px
 
-  @media (min-height: desktopMinHeight)
-    line-height: 24px
-    font-size: 18px
+  @media (max-height: uphSmallMaxDim) and (max-width: uphSmallMaxDim)
+    line-height: 15px
+    font-size: 11px
 
   :not([href])>&
     color: inherit

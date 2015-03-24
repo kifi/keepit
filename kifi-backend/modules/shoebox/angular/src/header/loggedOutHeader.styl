@@ -8,15 +8,15 @@ search-dur = .36s
   top: 0
   left: 0
   right: 0
-  height: appHeaderHeight1
+  height: appHeaderHeight2
   background-color: #f9fafb
-  box-shadow: 0 .5px rgba(0,0,0,.14)
+  box-shadow: 0 1px rgba(0,0,0,.14)
   z-index: 500
   user-select: none
 
-  @media screen and (min-height: appHeaderHeight2MinHeight)
-    height: appHeaderHeight2
-    box-shadow: 0 1px rgba(0,0,0,.14)
+  @media (max-height: appHeaderHeight1MaxDim) and (max-width: appHeaderHeight1MaxDim)
+    height: appHeaderHeight1
+    box-shadow: 0 .5px rgba(0,0,0,.14)
 
   [kifi-pane-parent] &
     transition: width .25s ease-in
@@ -54,33 +54,33 @@ search-dur = .36s
 .kf-loh-logo
   display: inline-block
   vertical-align: middle
-  width: 78px
+  width: 80px
   height: 36px
   background-position: left center
   background-repeat: no-repeat
   background-size: 70px auto
   outline-color: #fff
 
-  @media (min-height: appHeaderHeight2MinHeight)
-    width: 80px
+  @media (max-height: appHeaderHeight1MaxDim) and (max-width: appHeaderHeight1MaxDim)
+    width: 78px
 
 .kf-loh-tagline
   display: inline-block
   vertical-align: middle
   padding-top: 2px
-  line-height: 9px
-  font-size: 8px
+  line-height: 13px
+  font-size: 11px
   font-smoothing: antialiased
   color: #7d7d7d
   cursor: default
+  transition: opacity linear search-dur
 
   .kf-lit &
     opacity: 0
 
-  @media (min-height: appHeaderHeight2MinHeight)
-    line-height: 13px
-    font-size: 11px
-    transition: opacity linear search-dur
+  @media (max-height: appHeaderHeight1MaxDim) and (max-width: appHeaderHeight1MaxDim)
+    line-height: 9px
+    font-size: 8px
 
 .kf-loh-center
   display: none
