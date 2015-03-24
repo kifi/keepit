@@ -43,11 +43,14 @@ class ArticleInfoRepoImpl @Inject() (
     def latestVersionMinor = column[VersionNumber[Article]]("latest_version_minor", O.Nullable)
     def oldestVersionMajor = column[VersionNumber[Article]]("oldest_version_major", O.Nullable)
     def oldestVersionMinor = column[VersionNumber[Article]]("oldest_version_minor", O.Nullable)
-    def lastQueuedAt = column[DateTime]("last_queued_at", O.Nullable)
     def lastFetchedAt = column[DateTime]("last_fetched_at", O.Nullable)
     def nextFetchAt = column[DateTime]("next_fetch_at", O.Nullable)
     def fetchInterval = column[Duration]("fetch_interval", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, state, seq, uriId, url, kind, bestVersionMajor.?, bestVersionMinor.?, latestVersionMajor.?, latestVersionMinor.?, oldestVersionMajor.?, oldestVersionMinor.?, lastQueuedAt.?, lastFetchedAt.?, nextFetchAt.?, fetchInterval.?) <> ((ArticleInfo.applyFromDbRow _).tupled, ArticleInfo.unapplyToDbRow _)
+    def failureCount = column[Int]("failure_count", O.NotNull)
+    def failureInfo = column[String]("failure_info", O.Nullable)
+    def lastQueuedAt = column[DateTime]("last_queued_at", O.Nullable)
+
+    def * = (id.?, createdAt, updatedAt, state, seq, uriId, url, kind, bestVersionMajor.?, bestVersionMinor.?, latestVersionMajor.?, latestVersionMinor.?, oldestVersionMajor.?, oldestVersionMinor.?, lastFetchedAt.?, nextFetchAt.?, fetchInterval.?, failureCount, failureInfo.?, lastQueuedAt.?) <> ((ArticleInfo.applyFromDbRow _).tupled, ArticleInfo.unapplyToDbRow _)
   }
 
   def table(tag: Tag) = new ArticleInfoTable(tag)

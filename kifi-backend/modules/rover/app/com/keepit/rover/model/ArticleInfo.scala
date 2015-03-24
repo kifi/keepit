@@ -22,10 +22,12 @@ case class ArticleInfo(
     bestVersion: Option[ArticleVersion] = None,
     latestVersion: Option[ArticleVersion] = None,
     oldestVersion: Option[ArticleVersion] = None,
-    lastQueuedAt: Option[DateTime] = None,
     lastFetchedAt: Option[DateTime] = None,
     nextFetchAt: Option[DateTime] = None,
-    fetchInterval: Option[Duration] = None) extends ModelWithState[ArticleInfo] with ModelWithSeqNumber[ArticleInfo] with ArticleKeyHolder {
+    fetchInterval: Option[Duration] = None,
+    failureCount: Int = 0,
+    failureInfo: Option[String] = None,
+    lastQueuedAt: Option[DateTime] = None) extends ModelWithState[ArticleInfo] with ModelWithSeqNumber[ArticleInfo] with ArticleKeyHolder {
   def withId(id: Id[ArticleInfo]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def isActive = (state == ArticleInfoStates.ACTIVE)
@@ -34,10 +36,12 @@ case class ArticleInfo(
     bestVersion = None,
     latestVersion = None,
     oldestVersion = None,
-    lastQueuedAt = None,
     lastFetchedAt = None,
     nextFetchAt = None,
-    fetchInterval = None
+    fetchInterval = None,
+    failureCount = 0,
+    failureInfo = None,
+    lastQueuedAt = None
   )
   def initializeSchedulingPolicy: ArticleInfo = copy(
     nextFetchAt = Some(currentDateTime),
@@ -77,14 +81,16 @@ object ArticleInfo {
     latestVersionMinor: Option[VersionNumber[Article]],
     oldestVersionMajor: Option[VersionNumber[Article]],
     oldestVersionMinor: Option[VersionNumber[Article]],
-    lastQueuedAt: Option[DateTime],
     lastFetchedAt: Option[DateTime],
     nextFetchAt: Option[DateTime],
-    fetchInterval: Option[Duration]): ArticleInfo = {
+    fetchInterval: Option[Duration],
+    failureCount: Int,
+    failureInfo: Option[String],
+    lastQueuedAt: Option[DateTime]): ArticleInfo = {
     val bestVersion = articleVersionFromDb(bestVersionMajor, bestVersionMinor)
     val latestVersion = articleVersionFromDb(latestVersionMajor, latestVersionMinor)
     val oldestVersion = articleVersionFromDb(oldestVersionMajor, oldestVersionMinor)
-    ArticleInfo(id, createdAt, updatedAt, state, seq, uriId, url, kind, bestVersion, latestVersion, oldestVersion, lastQueuedAt, lastFetchedAt, nextFetchAt, fetchInterval)
+    ArticleInfo(id, createdAt, updatedAt, state, seq, uriId, url, kind, bestVersion, latestVersion, oldestVersion, lastFetchedAt, nextFetchAt, fetchInterval, failureCount, failureInfo, lastQueuedAt)
   }
 
   def unapplyToDbRow(info: ArticleInfo) = {
@@ -106,10 +112,12 @@ object ArticleInfo {
       latestVersionMinor,
       oldestVersionMajor,
       oldestVersionMinor,
-      info.lastQueuedAt,
       info.lastFetchedAt,
       info.nextFetchAt,
-      info.fetchInterval
+      info.fetchInterval,
+      info.failureCount,
+      info.failureInfo,
+      info.lastQueuedAt
     )
   }
 
