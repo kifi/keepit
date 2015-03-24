@@ -143,7 +143,7 @@ class LibraryMembershipRepoImpl @Inject() (
   }
 
   def getLatestUpdatedLibraryUserFollow(userId: Id[User])(implicit session: RSession): Option[Library] = {
-    import StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     sql"""select l.* from library_membership lm, library l where l.id = lm.library_id and lm.state='active' and l.state='active' and lm.access != 'owner' and lm.user_id = $userId and l.last_kept is not null order by l.last_kept desc limit 1""".as[Library].firstOption
   }
 
@@ -180,12 +180,12 @@ class LibraryMembershipRepoImpl @Inject() (
   }
 
   def mostMembersSince(count: Int, since: DateTime)(implicit session: RSession): Seq[(Id[Library], Int)] = {
-    import StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     sql"""select lm.library_id, count(*) as cnt from library_membership lm, library l where l.id = lm.library_id and l.state='active' and l.visibility='published' and lm.created_at > $since group by lm.library_id order by count(*) desc limit $count""".as[(Id[Library], Int)].list
   }
 
   def percentGainSince(since: DateTime, totalMoreThan: Int, recentMoreThan: Int, count: Int)(implicit session: RSession): Seq[(Id[Library], Int, Int, Double)] = {
-    import StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     sql"""
          SELECT tp.library_id,
                 tp.new_followers,
@@ -212,7 +212,7 @@ class LibraryMembershipRepoImpl @Inject() (
   }
 
   def mostMembersSinceForUser(count: Int, since: DateTime, ownerId: Id[User])(implicit session: RSession): Seq[(Id[Library], Int)] = {
-    import StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     sql"""select lm.library_id, count(*) as cnt from library_membership lm, library l where l.owner_id=$ownerId and l.id = lm.library_id and l.state='active' and l.visibility='published' and lm.created_at > $since group by lm.library_id order by count(*) desc limit $count""".as[(Id[Library], Int)].list
   }
 
@@ -240,7 +240,7 @@ class LibraryMembershipRepoImpl @Inject() (
 
   def countWithLibraryIdByAccess(libraryId: Id[Library])(implicit session: RSession): CountWithLibraryIdByAccess = {
     countWithLibraryIdByAccessCache.getOrElse(CountWithLibraryIdByAccessKey(libraryId)) {
-      import StaticQuery.interpolation
+      import com.keepit.common.db.slick.StaticQueryFixed.interpolation
       val existingAccessMap = sql"""select access, count(*) from library_membership where library_id=$libraryId and state='active' group by access""".as[(String, Int)].list
         .map(t => (LibraryAccess(t._1), t._2))
         .toMap
@@ -250,7 +250,7 @@ class LibraryMembershipRepoImpl @Inject() (
   }
 
   def countWithAccessByLibraryId(libraryIds: Set[Id[Library]], access: LibraryAccess)(implicit session: RSession): Map[Id[Library], Int] = {
-    import StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     libraryIds.size match {
       case 0 =>
         Map.empty
@@ -328,7 +328,7 @@ class LibraryMembershipRepoImpl @Inject() (
 
   def countsWithUserIdAndAccesses(userId: Id[User], accesses: Set[LibraryAccess])(implicit session: RSession): Map[LibraryAccess, Int] = {
     libraryMembershipCountCache.bulkGetOrElse(accesses.map(LibraryMembershipCountKey(userId, _))) { keys =>
-      import StaticQuery.interpolation
+      import com.keepit.common.db.slick.StaticQueryFixed.interpolation
       val counts = sql"select access, count(*) from library_membership where user_id = $userId and state = 'active' group by access".as[(String, Int)].list.toMap
 
       keys.toSeq.map(k => k -> counts.getOrElse(k.access.value, 0)).toMap
@@ -336,36 +336,36 @@ class LibraryMembershipRepoImpl @Inject() (
   }
 
   def getFollowersForOwner(ownerId: Id[User])(implicit session: RSession): Seq[Id[User]] = {
-    import StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     val q = sql"select distinct lm.user_id from library_membership lm, library lib where lm.library_id = lib.id and lib.owner_id = $ownerId and lib.state = 'active' and lm.access != 'owner' and lm.state = 'active'"
     q.as[Id[User]].list
   }
   def getFollowersForAnonymous(ownerId: Id[User])(implicit session: RSession): Seq[Id[User]] = {
-    import StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     val q = sql"select distinct lm.user_id from library_membership lm, library lib where lm.library_id = lib.id and lib.owner_id = $ownerId and lib.state = 'active' and lm.access != 'owner' and lm.state = 'active' and lib.visibility = 'published'"
     q.as[Id[User]].list
   }
   def getFollowersForOtherUser(ownerId: Id[User], viewerId: Id[User])(implicit session: RSession): Seq[Id[User]] = {
-    import StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     val q = sql"select distinct lm.user_id from library_membership lm, library lib where lm.library_id = lib.id and lib.owner_id = $ownerId and lib.state = 'active' and lm.access != 'owner' and lm.state = 'active' and (lib.visibility = 'published' or (lib.visibility='secret' and lm.user_id = $viewerId))"
     q.as[Id[User]].list
   }
 
   def countFollowersForOwner(ownerId: Id[User])(implicit session: RSession): Int = {
     followersCountCache.getOrElse(FollowersCountKey(ownerId)) {
-      import StaticQuery.interpolation
+      import com.keepit.common.db.slick.StaticQueryFixed.interpolation
       sql"select count(distinct lm.user_id) from library_membership lm, library lib where lm.library_id = lib.id and lib.owner_id = $ownerId and lib.state = 'active' and lm.access != 'owner' and lm.state = 'active'".as[Int].firstOption.getOrElse(0)
     }
   }
 
   def countFollowersForAnonymous(ownerId: Id[User])(implicit session: RSession): Int = {
-    import StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     val q = sql"select count(distinct lm.user_id) from library_membership lm, library lib where lm.library_id = lib.id and lib.owner_id = $ownerId and lib.state = 'active' and lm.access != 'owner' and lm.state = 'active' and lib.visibility = 'published'"
     q.as[Int].firstOption.getOrElse(0)
   }
 
   def countFollowersForOtherUser(ownerId: Id[User], viewerId: Id[User])(implicit session: RSession): Int = {
-    import StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     val q = sql"select count(distinct lm.user_id) from library_membership lm, library lib where lm.library_id = lib.id and lib.owner_id = $ownerId and lib.state = 'active' and lm.access != 'owner' and lm.state = 'active' and (lib.visibility = 'published' or (lib.visibility='secret' and lm.user_id = $viewerId))"
     q.as[Int].firstOption.getOrElse(0)
   }

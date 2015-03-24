@@ -11,7 +11,7 @@ import com.keepit.common.performance._
 import com.keepit.model._
 import org.joda.time.DateTime
 
-import scala.slick.jdbc.StaticQuery.interpolation
+import com.keepit.common.db.slick.StaticQueryFixed.interpolation
 
 @ImplementedBy(classOf[ReKeepRepoImpl])
 trait ReKeepRepo extends Repo[ReKeep] {

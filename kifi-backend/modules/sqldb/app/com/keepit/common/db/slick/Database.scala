@@ -75,19 +75,19 @@ class Database @Inject() (
     DatabaseSessionLock.inSession.withValue(true) { f }
   }
 
-  def readOnlyMasterAsync[T](f: ROSession => T)(implicit location: Location): Future[T] = future { readOnly(Master)(f)(location) }
-  def readOnlyReplicaAsync[T](f: ROSession => T)(implicit location: Location): Future[T] = future { readOnly(Replica)(f)(location) }
+  def readOnlyMasterAsync[T](f: ROSession => T)(implicit location: Location): Future[T] = Future { readOnlyOneAttempt(Master)(f)(location) }
+  def readOnlyReplicaAsync[T](f: ROSession => T)(implicit location: Location): Future[T] = Future { readOnlyOneAttempt(Replica)(f)(location) }
 
-  def readWriteAsync[T](f: RWSession => T)(implicit location: Location): Future[T] = future { readWrite(f)(location) }
-  def readWriteAsync[T](attempts: Int)(f: RWSession => T)(implicit location: Location): Future[T] = future { readWrite(attempts)(f)(location) }
+  def readWriteAsync[T](f: RWSession => T)(implicit location: Location): Future[T] = Future { readWrite(f)(location) }
+  def readWriteAsync[T](attempts: Int)(f: RWSession => T)(implicit location: Location): Future[T] = Future { readWrite(attempts)(f)(location) }
 
-  def readOnlyMaster[T](f: ROSession => T)(implicit location: Location): T = readOnly(Master)(f)(location)
-  def readOnlyMaster[T](attempts: Int)(f: ROSession => T)(implicit location: Location): T = readOnly(attempts, Master)(f)(location)
+  def readOnlyMaster[T](f: ROSession => T)(implicit location: Location): T = readOnlyOneAttempt(Master)(f)(location)
+  def readOnlyMaster[T](attempts: Int)(f: ROSession => T)(implicit location: Location): T = readOnlyWithAttempts(attempts, Master)(f)(location)
 
-  def readOnlyReplica[T](f: ROSession => T)(implicit location: Location): T = readOnly(Replica)(f)(location)
-  def readOnlyReplica[T](attempts: Int)(f: ROSession => T)(implicit location: Location): T = readOnly(attempts, Replica)(f)(location)
+  def readOnlyReplica[T](f: ROSession => T)(implicit location: Location): T = readOnlyOneAttempt(Replica)(f)(location)
+  def readOnlyReplica[T](attempts: Int)(f: ROSession => T)(implicit location: Location): T = readOnlyWithAttempts(attempts, Replica)(f)(location)
 
-  private def readOnly[T](f: ROSession => T, dbMasterReplica: DBMasterReplica, location: Location): T = readOnly(dbMasterReplica)(f)(location)
+  private def readOnly0[T](f: ROSession => T, dbMasterReplica: DBMasterReplica, location: Location): T = readOnlyOneAttempt(dbMasterReplica)(f)(location)
 
   private def resolveDb(dbMasterReplica: DBMasterReplica) = dbMasterReplica match {
     case Master =>
@@ -101,7 +101,7 @@ class Database @Inject() (
       }
   }
 
-  private def readOnly[T](dbMasterReplica: DBMasterReplica = Master)(f: ROSession => T)(implicit location: Location): T = enteringSession {
+  private def readOnlyOneAttempt[T](dbMasterReplica: DBMasterReplica = Master)(f: ROSession => T)(implicit location: Location): T = enteringSession {
     val ro = new ROSession(dbMasterReplica, {
       val handle = resolveDb(dbMasterReplica)
       sessionProvider.createReadOnlySession(handle.slickDatabase)
@@ -109,10 +109,10 @@ class Database @Inject() (
     try f(ro) finally ro.close()
   }
 
-  private def readOnly[T](attempts: Int, dbMasterReplica: DBMasterReplica = Master)(f: ROSession => T)(implicit location: Location): T = enteringSession { // retry by default with implicit override?
+  private def readOnlyWithAttempts[T](attempts: Int, dbMasterReplica: DBMasterReplica = Master)(f: ROSession => T)(implicit location: Location): T = enteringSession { // retry by default with implicit override?
     1 to attempts - 1 foreach { attempt =>
       try {
-        return readOnly(f, dbMasterReplica, location)
+        return readOnly0(f, dbMasterReplica, location)
       } catch {
         case t: SQLException =>
           val throwableName = t.getClass.getSimpleName
@@ -120,7 +120,7 @@ class Database @Inject() (
           statsd.incrementOne(s"db.fail.attempt.$attempt.$throwableName", ALWAYS)
       }
     }
-    readOnly(f, dbMasterReplica, location)
+    readOnly0(f, dbMasterReplica, location)
   }
 
   private def createReadWriteSession(location: Location) = new RWSession({ //always master

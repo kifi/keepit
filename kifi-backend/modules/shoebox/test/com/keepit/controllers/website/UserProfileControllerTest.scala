@@ -203,7 +203,7 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
           libMem.access === LibraryAccess.READ_ONLY
           libMem.state.value === "active"
 
-          import StaticQuery.interpolation
+          import com.keepit.common.db.slick.StaticQueryFixed.interpolation
           val ret1 = sql"select count(*) from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = 4".as[Int].firstOption.getOrElse(0)
           ret1 === 1
           val ret2 = sql"select count(*) from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = 4 and lib.state = 'active' and lm.state = 'active' and lm.listed and lib.visibility = 'published'".as[Int].firstOption.getOrElse(0)

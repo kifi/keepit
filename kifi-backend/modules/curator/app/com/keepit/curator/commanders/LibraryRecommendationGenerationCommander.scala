@@ -143,12 +143,12 @@ class LibraryRecommendationGenerationCommander @Inject() (
         if (candidateLibraries.isEmpty) {
           val savedNewState = db.readWrite { implicit session => genStateRepo.save(newState) }
           if (recoGenState.seq < newSeqNum) precomputeRecommendationsForUser(alwaysInclude, savedNewState)
-          else Future.successful()
+          else Future.successful(())
         } else processLibraries(candidateLibraries, newState, alwaysInclude)
       } else {
         log.warn("precomputeRecommendationsForUser doing nothing on non-designated machine. Aborting.")
         recommendationGenerationLock.clear()
-        Future.successful()
+        Future.successful(())
       }
     }
 

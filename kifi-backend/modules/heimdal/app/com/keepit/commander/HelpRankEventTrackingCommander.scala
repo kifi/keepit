@@ -51,7 +51,7 @@ class HelpRankEventTrackingCommander @Inject() (
         implicit val logPrefix = LogPrefix(s"userClickedFeedItem($userId,$uriId)")
         if (keeperIds.isEmpty) {
           log.infoP("no keepers; skipped")
-          Future.successful[Unit]()
+          Future.successful(())
         } else {
           log.infoP(s"keepers=${keeperIds.mkString(",")}")
           val hitUUID = ExternalId[ArticleSearchResult]()
@@ -61,7 +61,7 @@ class HelpRankEventTrackingCommander @Inject() (
           kifiHitCache.get(SearchHitReportKey(userId, uriId)) match {
             case Some(hit) =>
               log.warnP(s"already recorded hit ($hit) for user within threshold -- skipped")
-              Future.successful[Unit]()
+              Future.successful(())
             case None =>
               val res = shoebox.getBasicUsers(keeperIds) flatMap { userMap =>
                 val extKeeperIds = keeperIds.collect { case id if userMap.get(id).isDefined => userMap(id).externalId }

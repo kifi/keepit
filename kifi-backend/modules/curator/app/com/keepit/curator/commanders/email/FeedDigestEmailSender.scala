@@ -183,7 +183,7 @@ class FeedDigestEmailSender @Inject() (
         queueLock.withLockFuture { queue.send(SendFeedDigestToUserMessage(userId)) }
       }
 
-      Future.sequence(seqF) map (_ -> ())
+      Future.sequence(seqF) map (_ -> (()))
     } else {
       airbrake.notify("FeedDigestEmailSender.send() should not be called by non-leader!")
       Future.successful(())
@@ -213,7 +213,7 @@ class FeedDigestEmailSender @Inject() (
       }
     }
 
-    val doneF = FutureHelpers.whilef(fetchFromQueue())()
+    val doneF = FutureHelpers.whilef(fetchFromQueue())(())
     doneF.onFailure {
       case e => airbrake.notify(s"SQS queue(${queue.queue.name}) nextWithLock failed", e)
     }

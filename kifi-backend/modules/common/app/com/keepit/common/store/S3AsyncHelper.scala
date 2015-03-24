@@ -1,7 +1,7 @@
 package com.keepit.common.store
 
 import java.io.InputStream
-import com.amazonaws.event.{ ProgressEvent, ProgressListener }
+import com.amazonaws.event.{ ProgressEvent, ProgressListener, ProgressEventType }
 import com.amazonaws.services.s3.transfer.TransferManager
 import com.amazonaws.services.s3.transfer.model.UploadResult
 import play.api.libs.Files.TemporaryFile
@@ -21,15 +21,15 @@ trait S3AsyncHelper {
     upload.addProgressListener(new ProgressListener {
       override def progressChanged(p1: ProgressEvent): Unit = {
         if (!p.isCompleted) {
-          p1.getEventCode match {
-            case ProgressEvent.COMPLETED_EVENT_CODE =>
+          p1.getEventType match {
+            case ProgressEventType.TRANSFER_COMPLETED_EVENT =>
               Try(upload.waitForUploadResult()) match {
                 case Success(succ) => p.complete(Success(succ))
                 case Failure(ex) => p.failure(ex)
               }
-            case ProgressEvent.CANCELED_EVENT_CODE =>
+            case ProgressEventType.TRANSFER_CANCELED_EVENT =>
               p.failure(new RuntimeException(s"Transfer cancelled: $bucketName / $key"))
-            case ProgressEvent.FAILED_EVENT_CODE =>
+            case ProgressEventType.TRANSFER_PART_FAILED_EVENT =>
               p.failure(new RuntimeException(s"Transfer failed: $bucketName / $key"))
             case _ =>
           }
@@ -49,12 +49,12 @@ trait S3AsyncHelper {
       download.addProgressListener(new ProgressListener {
         override def progressChanged(p1: ProgressEvent): Unit = {
           if (!p.isCompleted) {
-            p1.getEventCode match {
-              case ProgressEvent.COMPLETED_EVENT_CODE =>
+            p1.getEventType match {
+              case ProgressEventType.TRANSFER_COMPLETED_EVENT =>
                 p.complete(Success(tf))
-              case ProgressEvent.CANCELED_EVENT_CODE =>
+              case ProgressEventType.TRANSFER_CANCELED_EVENT =>
                 p.failure(new RuntimeException(s"Transfer cancelled: $bucketName / $key"))
-              case ProgressEvent.FAILED_EVENT_CODE =>
+              case ProgressEventType.TRANSFER_PART_FAILED_EVENT =>
                 p.failure(new RuntimeException(s"Transfer failed: $bucketName / $key"))
               case _ =>
             }

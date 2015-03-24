@@ -125,7 +125,7 @@ class KeepToCollectionRepoImpl @Inject() (
     (for (c <- rows if c.collectionId === collId && c.state =!= excludeState.orNull) yield c).list
 
   private[model] def count(collId: Id[Collection])(implicit session: RSession): Int = {
-    import StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     val q = sql"""select count(*) from keep_to_collection kc, collection c, bookmark k
       where kc.collection_id = ${collId} and kc.state = '#${KeepToCollectionStates.ACTIVE}' and kc.collection_id = c.id and c.state = '#${CollectionStates.ACTIVE}' and kc.bookmark_id = k.id and k.state = '#${KeepStates.ACTIVE}'"""
     q.as[Int].firstOption.getOrElse(0)

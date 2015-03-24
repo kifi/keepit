@@ -16,6 +16,7 @@ import com.keepit.common.integration.AutogenReaperPlugin
 import com.keepit.normalizer.NormalizationUpdaterPlugin
 import com.keepit.common.concurrent.ForkJoinExecContextPlugin
 import com.keepit.model._
+import net.codingwell.scalaguice.InjectorExtensions._
 
 object ShoeboxGlobal extends FortyTwoGlobal(Prod) with ShoeboxServices {
 

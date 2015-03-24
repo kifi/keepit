@@ -48,7 +48,7 @@ class TwitterWaitlistRepoImpl @Inject() (
   }
 
   def countActiveEntriesBeforeDateTime(time: DateTime)(implicit session: RSession): Int = {
-    import StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     val query = sql"select count(*) from twitter_waitlist tw where tw.state = 'active' and tw.created_at < ${time}"
     query.as[Int].first
   }

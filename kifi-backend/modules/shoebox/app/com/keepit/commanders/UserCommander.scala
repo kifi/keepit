@@ -214,12 +214,12 @@ class UserCommander @Inject() (
         case None => Left("email not found")
         case Some(emailRecord) if emailRecord.userId == userId =>
           val user = userRepo.get(userId)
-          if (emailRecord.verified && (user.primaryEmail.isEmpty || user.primaryEmail.get != emailRecord)) {
+          if (emailRecord.verified && (user.primaryEmail.isEmpty || user.primaryEmail.get.address != emailRecord)) {
             updateUserPrimaryEmail(emailRecord)
           } else {
             userValueRepo.setValue(userId, UserValueName.PENDING_PRIMARY_EMAIL, address)
           }
-          Right()
+          Right((): Unit)
       }
     }
   }
@@ -239,7 +239,7 @@ class UserCommander @Inject() (
               userValueRepo.clearValue(userId, UserValueName.PENDING_PRIMARY_EMAIL)
             }
             emailRepo.save(email.withState(UserEmailAddressStates.INACTIVE))
-            Right()
+            Right((): Unit)
           } else if (isLast) {
             Left("last email")
           } else if (isLastVerified) {
@@ -484,7 +484,7 @@ class UserCommander @Inject() (
       userValueRepo.getValueStringOpt(userId, UserValueName.PENDING_PRIMARY_EMAIL).map { pp =>
         emailRepo.getByAddressOpt(EmailAddress(pp)) match {
           case Some(em) =>
-            if (em.verified && em.address == pp) {
+            if (em.verified && em.address.address == pp) {
               updateUserPrimaryEmail(em)
             }
           case None => userValueRepo.clearValue(userId, UserValueName.PENDING_PRIMARY_EMAIL)

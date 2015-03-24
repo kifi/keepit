@@ -5,6 +5,7 @@ import com.keepit.common.healthcheck.HealthcheckPlugin
 import play.api.Mode._
 import play.api._
 import com.keepit.graph.manager.GraphManagerPlugin
+import net.codingwell.scalaguice.InjectorExtensions._
 
 object GraphGlobal extends FortyTwoGlobal(Prod) with GraphServices {
   val module = GraphProdModule()

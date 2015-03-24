@@ -86,7 +86,7 @@ class LibraryInviteRepoImpl @Inject() (
 
   def countDistinctWithUserId(userId: Id[User])(implicit session: RSession): Int = {
     //(for (b <- rows if b.userId === userId && !b.state.inSet(excludeSet)) yield b).groupBy(x => x).map(_._1).length.run
-    import StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     val query = sql"select count(distinct library_id) from library_invite where user_id=$userId and state='active'"
     query.as[Int].firstOption.getOrElse(0)
   }

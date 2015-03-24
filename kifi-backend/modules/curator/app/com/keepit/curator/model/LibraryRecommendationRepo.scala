@@ -108,7 +108,7 @@ class LibraryRecommendationRepoImpl @Inject() (
   }
 
   def cleanupLowMasterScoreRecos(userId: Id[User], minNumRecosToKeep: Int, before: DateTime)(implicit session: RWSession): Unit = {
-    import scala.slick.jdbc.StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     sqlu"""
       DELETE FROM library_recommendation WHERE user_id=$userId AND master_score < (SELECT MIN(master_score) FROM (
         SELECT master_score FROM library_recommendation WHERE user_id=$userId ORDER BY master_score DESC LIMIT $minNumRecosToKeep
@@ -120,12 +120,12 @@ class LibraryRecommendationRepoImpl @Inject() (
   }
 
   def getUsersWithRecommendations()(implicit session: RSession): Set[Id[User]] = {
-    import scala.slick.jdbc.StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     sql"SELECT DISTINCT user_id FROM library_recommendation".as[Id[User]].list.toSet
   }
 
   def updateLibraryRecommendationFeedback(userId: Id[User], libraryId: Id[Library], feedback: LibraryRecommendationFeedback)(implicit session: RWSession): Boolean = {
-    import StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
 
     lazy val rowz = for (row <- byUser(userId)(rows) |> byLibrary(libraryId)) yield row
     val clickedResult =
@@ -146,7 +146,7 @@ class LibraryRecommendationRepoImpl @Inject() (
   }
 
   def incrementDeliveredCount(recoId: Id[LibraryRecommendation])(implicit session: RWSession): Unit = {
-    import StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     sqlu"UPDATE library_recommendation SET delivered=delivered+1, updated_at=$currentDateTime WHERE id=$recoId".first
   }
 

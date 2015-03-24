@@ -5,7 +5,6 @@ import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.db.slick.{ DbRepo, DataBaseComponent }
 import com.keepit.common.time._
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
-import com.keepit.model.TwitterSyncStateStates
 
 import org.joda.time.DateTime
 

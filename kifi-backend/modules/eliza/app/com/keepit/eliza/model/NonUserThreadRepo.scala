@@ -11,7 +11,7 @@ import com.keepit.model.{ User, NormalizedURI }
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.crypto.RatherInsecureDESCrypt
 import com.keepit.social.{ NonUserKind, NonUserKinds }
-import scala.slick.jdbc.StaticQuery.interpolation
+import com.keepit.common.db.slick.StaticQueryFixed.interpolation
 
 @ImplementedBy(classOf[NonUserThreadRepoImpl])
 trait NonUserThreadRepo extends Repo[NonUserThread] {

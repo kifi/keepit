@@ -82,7 +82,7 @@ class ABookController @Inject() (
             Ok(Json.toJson(info))
           } recover {
             case t: Throwable =>
-              BadRequest(Json.obj("code" -> s"Failed to import gmail contacts; exception:$t ;cause=${t.getCause}; stackTrace=${t.getStackTraceString}"))
+              BadRequest(Json.obj("code" -> s"Failed to import gmail contacts; exception:$t ;cause=${t.getCause}; stackTrace=${t.getStackTrace.mkString("", "\n", "\n")}"))
           }
         }
         case _ => resolve(BadRequest(Json.obj("code" -> s"Unsupported issuer ${tk.issuer}")))

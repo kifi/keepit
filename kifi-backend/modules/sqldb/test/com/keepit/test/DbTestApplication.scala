@@ -5,6 +5,7 @@ import com.keepit.common.db.slick._
 import play.api.{ Application }
 import play.utils.Threads
 import java.io.File
+import net.codingwell.scalaguice.InjectorExtensions._
 
 private class TestGlobalWithDB(defaultModules: Seq[Module], overridingModules: Seq[Module])
     extends TestGlobal(defaultModules, overridingModules) {

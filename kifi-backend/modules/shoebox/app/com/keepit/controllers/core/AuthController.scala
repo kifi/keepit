@@ -649,7 +649,7 @@ class AuthController @Inject() (
             Some(Right(tsui.getProfileUrl.map(url => url.substring(url.lastIndexOf('/') + 1)).get))
           } else { // other
             log.info(s"[checkStatusOfTwitterUser] Couldn't get handle of ${tsui.networkType}/${tsui.socialId}")
-            Some(Left())
+            Some(Left(()))
           }
         }
       }

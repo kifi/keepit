@@ -18,7 +18,6 @@ import scala.slick.jdbc.{ PositionedResult, GetResult, StaticQuery }
 import org.joda.time.DateTime
 import scala.slick.lifted.{ TableQuery, Tag }
 import scala.slick.jdbc.{ StaticQuery => Q }
-import Q.interpolation
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.time._
 
@@ -142,6 +141,7 @@ class UserRepoImpl @Inject() (
   }
 
   def countNewUsers(implicit session: RSession): Int = {
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     sql"select count(distinct u.id) from kifi_installation ki, user u where ki.user_id = u.id".as[Int].first
   }
 
@@ -275,6 +275,7 @@ class UserRepoImpl @Inject() (
   }
 
   def getRecentActiveUsers(since: DateTime)(implicit session: RSession): Seq[Id[User]] = {
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     sql"select id from user u where state = 'active' and created_at > $since and not exists (select id from user_experiment x where u.id = x.user_id and x.experiment_type='fake')".as[Id[User]].list
   }
 }

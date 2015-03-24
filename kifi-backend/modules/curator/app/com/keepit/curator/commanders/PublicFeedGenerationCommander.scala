@@ -76,7 +76,7 @@ class PublicFeedGenerationCommander @Inject() (
           }
         case None =>
           log.info(s"public feed: not scored, uriId=$uriId")
-          Future.successful()
+          Future.successful(())
       }
     } catch {
       case ex: Throwable =>

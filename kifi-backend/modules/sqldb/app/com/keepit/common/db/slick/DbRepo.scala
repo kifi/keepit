@@ -250,7 +250,7 @@ trait SeqNumberDbFunction[M <: ModelWithSeqNumber[M]] extends SeqNumberFunction[
   }
 
   def minDeferredSequenceNumber()(implicit session: RSession): Option[Long] = {
-    import StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     sql"""select min(seq) from #${_taggedTable.tableName} where seq < 0""".as[Option[Long]].first
   }
 }
@@ -274,5 +274,30 @@ trait ExternalIdColumnDbFunction[M <: ModelWithExternalId[M]] extends ExternalId
   }
 
   def getOpt(id: ExternalId[M])(implicit session: RSession): Option[M] = getByExtIdCompiled(id).firstOption
+}
+
+/**
+ * * A fix for warnings when using Slick's SQL interpolation with no $vals in the string. This can be removed for Slick 2.2
+ * * to use,
+ * *   import myutils.SQI.interpolation
+ * * rather then
+ * *   import scala.slick.jdbc.StaticQueryFixed.interpolation
+ */
+
+class SQLInterpolation_WarningsFixed(val s: StringContext) extends AnyVal {
+  import scala.slick.jdbc._
+  def sql[P](param: P)(implicit pconv: SetParameter[P]) =
+    new SQLInterpolationResult[P](s.parts, param, pconv)
+  def sqlu[P](param: P)(implicit pconv: SetParameter[P]) = sql(param).asUpdate
+  // The warning occurs because when there are no $vars in the string interpolation, param is Unit
+  // and Scala now warns if we're not explicit about it. The methods below satisfy that need:
+  def sql[P]()(implicit pconv: SetParameter[Unit]) =
+    new SQLInterpolationResult[Unit](s.parts, (), pconv)
+  def sqlu[P]()(implicit pconv: SetParameter[Unit]) = sql(()).asUpdate
+}
+
+object StaticQueryFixed {
+  import scala.language.implicitConversions
+  @inline implicit def interpolation(s: StringContext): SQLInterpolation_WarningsFixed = new SQLInterpolation_WarningsFixed(s)
 }
 

@@ -97,16 +97,16 @@ class ABookImporter @Inject() (
               } catch {
                 case ex: MySQLIntegrityConstraintViolationException => {
                   log.errorP(s"Caught exception while processing batch(len=${basicContacts.length}): ${basicContacts.mkString(",")}")
-                  log.errorP(s"ex: $ex; cause: ${ex.getCause}; stack trace: ${ex.getStackTraceString}")
+                  log.errorP(s"ex: $ex; cause: ${ex.getCause}; stack trace: ${ex.getStackTrace.mkString("", "\n", "\n")}")
                   // moving along
                 }
                 case ex: java.sql.BatchUpdateException => {
                   log.errorP(s"Caught exception while processing batch(len=${basicContacts.length}): ${basicContacts.mkString(",")}")
-                  log.errorP(s"ex: $ex; cause: ${ex.getCause}; stack trace: ${ex.getStackTraceString}")
+                  log.errorP(s"ex: $ex; cause: ${ex.getCause}; stack trace: ${ex.getStackTrace.mkString("", "\n", "\n")}")
                   // moving along
                 }
                 case t: Throwable => {
-                  log.errorP(s"Unhandled ex: $t; cause: ${t.getCause}; stack trace: ${t.getStackTraceString}")
+                  log.errorP(s"Unhandled ex: $t; cause: ${t.getCause}; stack trace: ${t.getStackTrace.mkString("", "\n", "\n")}")
                   throw t // this will fail
                 }
               }
@@ -122,10 +122,10 @@ class ABookImporter @Inject() (
       }
     } catch {
       case ex: SQLException => {
-        log.warnP(s"Caught SQLException $ex; code=${ex.getErrorCode}; cause: ${ex.getCause}; stack trace: ${ex.getStackTraceString}")
+        log.warnP(s"Caught SQLException $ex; code=${ex.getErrorCode}; cause: ${ex.getCause}; stack trace: ${ex.getStackTrace.mkString("", "\n", "\n")}")
       }
       case t: Throwable => {
-        log.warnP(s"Caught unhandled exception $t; cause: ${t.getCause}; stack trace: ${t.getStackTraceString}")
+        log.warnP(s"Caught unhandled exception $t; cause: ${t.getCause}; stack trace: ${t.getStackTrace.mkString("", "\n", "\n")}")
       }
     } finally {
       if (abookEntry.state != ABookInfoStates.ACTIVE) {

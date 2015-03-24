@@ -29,8 +29,10 @@ object Global {
   )
 
   val macroParadiseSettings = Seq(
+    scalaVersion := "2.11.6",
+    scalacOptions ++= _scalacOptions,
     resolvers += Resolver.sonatypeRepo("releases"),
-    addCompilerPlugin("org.scalamacros" % "paradise" % "2.0.1" cross CrossVersion.full)
+    addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0-M5" cross CrossVersion.full)
   )
 
   val _commonResolvers = Seq(
@@ -57,8 +59,8 @@ object Global {
     "com.typesafe.akka" %% "akka-testkit" % "2.3.4" exclude("play", "*"),
     "com.typesafe.play.plugins" %% "play-statsd" % "2.3.0" exclude("play", "*"),
     "com.typesafe.play.plugins" %% "play-plugins-mailer" % "2.3.0" exclude("play", "*"),
-    "kifi-securesocial" %% "kifi-securesocial" % "master-20140903" exclude("play", "*"),
-    "org.clapper" %% "grizzled-slf4j" % "1.0.1",
+    "kifi-securesocial" %% "kifi-securesocial" % "master-20150323" exclude("play", "*"),
+    "org.clapper" %% "grizzled-slf4j" % "1.0.2",
     "org.apache.commons" % "commons-compress" % "1.4.1",
     "org.apache.commons" % "commons-math3" % "3.1.1",
     "commons-io" % "commons-io" % "2.4",
@@ -67,17 +69,17 @@ object Global {
     "com.cybozu.labs" % "langdetect" % "1.1-20120112", // todo(andrew): remove from common. make shared module between search and scraper.
     "org.mindrot" % "jbcrypt" % "0.3m",
     "com.amazonaws" % "aws-java-sdk" % "1.6.12",
-    "com.kifi" % "franz_2.10" % "0.3.5",
+    "com.kifi" %% "franz" % "0.3.8",
     "net.sf.uadetector" % "uadetector-resources" % "2013.11",
-    "com.google.inject" % "guice" % "3.0",
-    "com.google.inject.extensions" % "guice-multibindings" % "3.0",
-    "net.codingwell" %% "scala-guice" % "3.0.2",
+    "com.google.inject" % "guice" % "4.0-beta5",
+    "com.google.inject.extensions" % "guice-multibindings" % "4.0-beta5",
+    "net.codingwell" %% "scala-guice" % "4.0.0-beta5",
     "org.imgscalr" % "imgscalr-lib" % "4.2",
     "us.theatr" %% "akka-quartz" % "0.3.0" exclude("c3p0", "c3p0"),
     "org.jsoup" % "jsoup" % "1.8.1",
     "org.bouncycastle" % "bcprov-jdk15on" % "1.50",
-    "org.msgpack" %% "msgpack-scala" % "0.6.8",
-    "com.kifi" %% "json-annotation" % "0.1",
+    "org.msgpack" %% "msgpack-scala" % "0.6.11",
+    "com.kifi" %% "json-annotation" % "0.2",
     "com.mchange" % "c3p0" % "0.9.5-pre8", // todo(andrew): remove from common when C3P0 plugin is in sqldb
     "org.im4java" % "im4java" % "1.4.0", //todo(eishay): means that all services get that. not sure that's this is best
     "org.apache.httpcomponents" % "httpclient" % "4.3.1", // todo(Léo): remove when Scraper is gone and ApacheHttpFetcher is in Rover
@@ -94,7 +96,7 @@ object Global {
 
   val settings = scalariformSettings ++ macroParadiseSettings ++ Seq(
     offline := false, // set to true to do work offline
-    scalaVersion := "2.10.4",
+    scalaVersion := "2.11.6",
     version := Version.appVersion,
     libraryDependencies ++= commonDependencies,
     scalacOptions ++= _scalacOptions,

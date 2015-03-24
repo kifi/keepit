@@ -42,7 +42,7 @@ class FakeCuratorServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def triggerEmailToUser(code: String, userId: Id[User]): Future[String] = Future.successful("done")
 
-  def refreshUserRecos(userId: Id[User]): Future[Unit] = { Future.successful() }
+  def refreshUserRecos(userId: Id[User]): Future[Unit] = { Future.successful(()) }
 
   def topLibraryRecos(userId: Id[User], limit: Option[Int] = None, context: Option[String]): Future[LibraryRecoResults] =
     Future.successful {
@@ -51,11 +51,11 @@ class FakeCuratorServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
     }
 
   def refreshLibraryRecos(userId: Id[User], await: Boolean = false, selectionParams: Option[LibraryRecoSelectionParams] = None): Future[Unit] = {
-    Future.successful()
+    Future.successful(())
   }
 
   def notifyLibraryRecosDelivered(userId: Id[User], libraryIds: Set[Id[Library]], source: RecommendationSource, subSource: RecommendationSubSource): Future[Unit] = {
-    Future.successful()
+    Future.successful(())
   }
 
   def ingestPersonaRecos(userId: Id[User], personaIds: Seq[Id[Persona]]): Future[Unit] = Future.successful(())

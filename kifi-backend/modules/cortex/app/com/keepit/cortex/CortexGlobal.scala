@@ -10,6 +10,7 @@ import com.keepit.cortex.nlp.POSTagger
 import play.api.Application
 import play.api.Mode.Prod
 import com.keepit.cortex.dbmodel.CortexDataIngestionPlugin
+import net.codingwell.scalaguice.InjectorExtensions._
 
 object CortexGlobal extends FortyTwoGlobal(Prod) with CortexServices {
   val module = CortexProdModule()

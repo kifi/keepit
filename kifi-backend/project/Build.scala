@@ -41,7 +41,7 @@ object ApplicationBuild extends Build {
     "com.typesafe.slick" %% "slick-testkit" % slickVersion exclude("play", "*"),
     "org.apache.poi" % "poi" % "3.8",
     "com.googlecode.mp4parser" % "isoparser" % "1.0-RC-1",
-    "org.feijoas" %% "mango" % "0.10"
+    "org.feijoas" % "mango_2.10" % "0.10"
   )
 
   lazy val heimdalDependencies = Seq(
@@ -84,7 +84,7 @@ object ApplicationBuild extends Build {
   lazy val macros = Project(id = s"macros", base = file("modules/macros")).settings(
     Global.macroParadiseSettings: _*
   ).settings(
-    libraryDependencies += "org.scala-lang" % "scala-reflect" % "2.10.0",
+    libraryDependencies += "org.scala-lang" % "scala-reflect" % "2.11.6",
     libraryDependencies ++= (
       if (scalaVersion.value.startsWith("2.10")) Seq("org.scalamacros" %% "quasiquotes" % "2.0.1")
       else Nil

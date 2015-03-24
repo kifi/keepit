@@ -306,7 +306,7 @@ class OAuth2Controller @Inject() (
 
     val jsF = tokenRespOptF flatMap { tokenRespOpt =>
       tokenRespOpt match {
-        case None => future { JsNull }
+        case None => Future { JsNull }
         case Some(tokenResp) =>
           log.infoP(s"invoking importContacts(${request.userId}, ${tokenResp})")
           abookServiceClient.importContacts(request.userId, tokenResp.toOAuth2Token(request.userId)) map { trRes =>
