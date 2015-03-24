@@ -19,6 +19,7 @@ case class ArticleInfo(
     kind: String, // todo(Léo): make this kind: ArticleKind[_ <: Article] with Scala 2.11, (with proper mapper, serialization is unchanged)
     bestVersion: Option[ArticleVersion] = None,
     latestVersion: Option[ArticleVersion] = None,
+    oldestVersion: Option[ArticleVersion] = None,
     lastQueuedAt: Option[DateTime] = None,
     lastFetchedAt: Option[DateTime] = None,
     nextFetchAt: Option[DateTime] = None,
@@ -30,6 +31,7 @@ case class ArticleInfo(
   def clean: ArticleInfo = copy(
     bestVersion = None,
     latestVersion = None,
+    oldestVersion = None,
     lastQueuedAt = None,
     lastFetchedAt = None,
     nextFetchAt = None,
@@ -67,18 +69,22 @@ object ArticleInfo {
     bestVersionMinor: Option[VersionNumber[Article]],
     latestVersionMajor: Option[VersionNumber[Article]],
     latestVersionMinor: Option[VersionNumber[Article]],
+    oldestVersionMajor: Option[VersionNumber[Article]],
+    oldestVersionMinor: Option[VersionNumber[Article]],
     lastQueuedAt: Option[DateTime],
     lastFetchedAt: Option[DateTime],
     nextFetchAt: Option[DateTime],
     fetchInterval: Float): ArticleInfo = {
     val bestVersion = articleVersionFromDb(bestVersionMajor, bestVersionMinor)
     val latestVersion = articleVersionFromDb(latestVersionMajor, latestVersionMinor)
-    ArticleInfo(id, createdAt, updatedAt, state, seq, uriId, url, kind, bestVersion, latestVersion, lastQueuedAt, lastFetchedAt, nextFetchAt, fetchInterval)
+    val oldestVersion = articleVersionFromDb(oldestVersionMajor, oldestVersionMinor)
+    ArticleInfo(id, createdAt, updatedAt, state, seq, uriId, url, kind, bestVersion, latestVersion, oldestVersion, lastQueuedAt, lastFetchedAt, nextFetchAt, fetchInterval)
   }
 
   def unapplyToDbRow(info: ArticleInfo) = {
     val (bestVersionMajor, bestVersionMinor) = articleVersionToDb(info.bestVersion)
     val (latestVersionMajor, latestVersionMinor) = articleVersionToDb(info.latestVersion)
+    val (oldestVersionMajor, oldestVersionMinor) = articleVersionToDb(info.oldestVersion)
     Some(
       info.id,
       info.createdAt,
@@ -92,6 +98,8 @@ object ArticleInfo {
       bestVersionMinor,
       latestVersionMajor,
       latestVersionMinor,
+      oldestVersionMajor,
+      oldestVersionMinor,
       info.lastQueuedAt,
       info.lastFetchedAt,
       info.nextFetchAt,
