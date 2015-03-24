@@ -13,6 +13,10 @@ case class LinkedInProfile(
   def content = Seq(title, overview, sections, id.getOrElse("")).filter(_.nonEmpty).mkString("\n")
 }
 
+object LinkedInProfile {
+  val url = """^https?://([a-z]{2,3})\.linkedin\.com/(?:in/\w+(?:/[a-z]{2,3})?|pub/[\P{M}\p{M}\w]+(?:/\w+){3})(/)?$""".r
+}
+
 @json
 case class LinkedInProfileContent(
     destinationUrl: String,

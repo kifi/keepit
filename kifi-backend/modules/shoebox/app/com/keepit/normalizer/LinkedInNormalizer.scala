@@ -2,11 +2,12 @@ package com.keepit.normalizer
 
 import com.keepit.common.net.{ Query, Host, URI }
 import com.keepit.common.net.Param
+import com.keepit.rover.article.LinkedInProfile
 
 object LinkedInNormalizer extends StaticNormalizer {
 
   val linkedInPrivateProfile = """^https?://([a-z]{2,3})\.linkedin\.com/profile/view\?(?:.*&)?id=([0-9]{1,20}).*""".r
-  val linkedInCanonicalPublicProfile = """^https?://([a-z]{2,3})\.linkedin\.com/(?:in/\w+(?:/[a-z]{2,3})?|pub/[\P{M}\p{M}\w]+(?:/\w+){3})(/)?$""".r
+  val linkedInCanonicalPublicProfile = LinkedInProfile.url
   val touchPublicProfile = """^https?://touch\.www\.linkedin\.com/.*#public-profile/https?://(www\.linkedin\.com)(/in/.*)""".r
   val touchRedirect = """^https?://touch\.www\.linkedin\.com/.*redirect_url=https?://(www\.linkedin\.com)(/.*)([?].*)""".r
   val touchPub = """^https://touch\.www\.linkedin\.com.*(www\.linkedin\.com)(%252Fpub%252F.*?)(&.*)""".r
