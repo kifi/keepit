@@ -12,6 +12,7 @@ class LibraryChecker @Inject() (
     db: Database,
     userRepo: UserRepo,
     libraryRepo: LibraryRepo,
+    keepRepo: KeepRepo,
     libraryCommander: LibraryCommander,
     airbrake: AirbrakeNotifier) extends Logging {
 
@@ -19,6 +20,7 @@ class LibraryChecker @Inject() (
 
   def check(): Unit = lock.synchronized {
     checkSystemLibraries()
+    checkLibraryLastKept()
   }
 
   private[integrity] def checkSystemLibraries(): Unit = {
@@ -38,6 +40,39 @@ class LibraryChecker @Inject() (
       // inactivates MAIN/SECRET Libraries created later (airbrakes if multiple MAIN/SECRET libraries for a user)
       // if MAIN/SECRET library not created - airbrake & create!
       libraryCommander.internSystemGeneratedLibraries(u.id.get, false)
+    }
+  }
+
+  private[integrity] def checkLibraryLastKept(): Unit = {
+    log.info("start processing library's last kept date. A library's last_kept field should match the last kept keep")
+    val currentTime = DateTime.now()
+    val hourInd = currentTime.hourOfDay().get
+    val minuteInd = currentTime.minuteOfHour().get / 10
+    val index = hourInd * 6 + minuteInd // hour * 6 + minute / 10 (int div)
+
+    db.readOnlyMaster { implicit s =>
+      val pageSize = libraryRepo.countWithState(LibraryStates.ACTIVE) / 144 // 144 = 24 (hours per day) * 6 (10 minute intervals per hour)
+      libraryRepo.page(index, pageSize, Set(LibraryStates.INACTIVE))
+    }.map { lib =>
+      lib.lastKept match {
+        case None => // no last kept means there should be no keeps for library
+          val numKeeps = keepRepo.getCountByLibrary(lib.id.get)
+          if (numKeeps != 0) {
+            airbrake.notify(s"Library ${lib.id.get} has no last_kept but has $numKeeps active keeps... making them inactive!")
+            keepRepo.getByLibrary(lib.id.get, 0, numKeeps, Set.empty).map { k =>
+              keepRepo.save(k.withState(KeepStates.INACTIVE))
+            }
+          }
+
+        case Some(lastKept) => // make sure most recent keep in library matches library's last_kept field
+          val numKeeps = keepRepo.getCountByLibrary(lib.id.get)
+          val sortedKeeps = keepRepo.getByLibrary(lib.id.get, 0, numKeeps, Set.empty).sortBy(_.keptAt)
+          val lastKeep = sortedKeeps.lastOption
+          if (lastKeep.isDefined && lastKeep.get.keptAt != lastKept) {
+            airbrake.notify(s"Library ${lib.id.get} has inconsistent last_kept state. Library is last kept at $lastKept but keep is ${lastKeep.get.keptAt}... making them consistent")
+            libraryRepo.save(lib.copy(lastKept = Some(lastKeep.get.keptAt)))
+          }
+      }
     }
   }
 

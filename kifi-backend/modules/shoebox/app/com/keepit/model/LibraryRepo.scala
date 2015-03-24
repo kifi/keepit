@@ -27,6 +27,7 @@ trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
   def updateLastKept(libraryId: Id[Library])(implicit session: RWSession): Unit
   def getLibraries(libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Library]
   def hasKindsByOwner(ownerId: Id[User], kinds: Set[LibraryKind], excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Boolean
+  def countWithState(state: State[Library])(implicit session: RSession): Int
 
   def countLibrariesOfUserForAnonymous(userId: Id[User])(implicit session: RSession): Int
   def countLibrariesForOtherUser(userId: Id[User], friendId: Id[User])(implicit session: RSession): Int
@@ -204,6 +205,11 @@ class LibraryRepoImpl @Inject() (
   }
   def getOpt(ownerId: Id[User], slug: LibrarySlug)(implicit session: RSession): Option[Library] = {
     getOptCompiled(ownerId, slug).firstOption
+  }
+
+  def countWithState(state: State[Library])(implicit session: RSession): Int = {
+    val query = sql"select count(*) from library where state = 'active'"
+    query.as[Int].firstOption.getOrElse(0)
   }
 
   // non user: number of libraries I own that are published and "displayable on profile"
