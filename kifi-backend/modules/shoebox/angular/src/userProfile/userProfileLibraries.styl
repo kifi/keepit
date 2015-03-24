@@ -1,21 +1,21 @@
-desktopMinHeight = 740px // for @media min-height
+uphSmallMaxDim = 736px // for @media max-height and max-width
 cardWidth = 210px
 cardSideSpace = 18px
 
 .kf-upl-nav-container
-  padding: 10px 0
+  padding: 14px 0
   background: #e8e8e8
   text-align: center
 
-  @media (min-height: desktopMinHeight)
-    padding: 14px 0
+  @media (max-height: uphSmallMaxDim) and (max-width: uphSmallMaxDim)
+    padding: 10px 0
 
 .kf-upl-card-list
   max-width: 3 * (cardWidth + cardSideSpace)
-  margin: -8px auto 40px
+  margin: 0 auto 50px
 
-  @media (min-height: desktopMinHeight)
-    margin: 0 auto 50px
+  @media (max-height: uphSmallMaxDim) and (max-width: uphSmallMaxDim)
+    margin: -8px auto 40px
 
   &:empty
     // maintains page height and thus window scroll position while the list
@@ -27,27 +27,27 @@ cardSideSpace = 18px
   width: 75%
   max-width: 600px
   margin: 0 auto
-  border-radius: 4px
+  border-radius: 6px
   background: #cbcbcb
 
-  @media (min-height: desktopMinHeight)
-    border-radius: 6px
+  @media (max-height: uphSmallMaxDim) and (max-width: uphSmallMaxDim)
+    border-radius: 4px
 
 .kf-upl-nav-link
   display: table-cell
   border-radius: '%s' % inherit  // github.com/tj/nib/issues/271
   width: 33%
-  height: 24px
-  line-height: 24px
-  font-size: 10px
+  height: 38px
+  line-height: 38px
+  font-size: 13px
   color: #333539
   font-weight: bold
   text-transform: uppercase
 
-  @media (min-height: desktopMinHeight)
-    height: 38px
-    line-height: 38px
-    font-size: 13px
+  @media (max-height: uphSmallMaxDim) and (max-width: uphSmallMaxDim)
+    height: 24px
+    line-height: 24px
+    font-size: 10px
 
   &.kf-selected
     background: #fff
@@ -62,11 +62,11 @@ cardSideSpace = 18px
 
 .kf-upl-empty
   padding: 30px
-  font-size: 12px
+  font-size: 16px
   color: #777
 
-  @media (min-height: desktopMinHeight)
-    font-size: 16px
+  @media (max-height: uphSmallMaxDim) and (max-width: uphSmallMaxDim)
+    font-size: 12px
 
 .kf-upl-card
   display: inline-block

@@ -1,27 +1,27 @@
-desktopMinHeight = 740px // for @media min-height
+uphSmallMaxDim = 736px // for @media max-height and max-width
 cardWidth = 210px
 cardSideSpace = 18px
 
 .kf-upul-title
   background: #e8e8e8
-  line-height: 44px  // matches subtabs height on libraries tab
-  font-size: 11px
+  line-height: 66px  // matches subtabs height on libraries tab
+  font-size: 15px
   font-weight: bold
   text-transform: uppercase
 
-  @media (min-height: desktopMinHeight)
-    line-height: 66px  // matches subtabs height on libraries tab
-    font-size: 15px
+  @media (max-height: uphSmallMaxDim) and (max-width: uphSmallMaxDim)
+    line-height: 44px  // matches subtabs height on libraries tab
+    font-size: 11px
 
 topPadding1 = 16px
 topPadding2 = 23px
 
 .kf-upul-cards
   max-width: 3 * (cardWidth + cardSideSpace)
-  margin: 0 auto 30px
+  margin: 0 auto 40px
 
-  @media (min-height: desktopMinHeight)
-    margin: 0 auto 40px
+  @media (max-height: uphSmallMaxDim) and (max-width: uphSmallMaxDim)
+    margin-bottom: 30px
 
   &:empty
     // maintains page height and thus window scroll position while the list
@@ -29,17 +29,17 @@ topPadding2 = 23px
     min-height: 100vh
 
   &:not(:empty)
-    padding-top: topPadding1
+    padding-top: topPadding2
 
-  @media (min-height: desktopMinHeight)
+  @media (max-height: uphSmallMaxDim) and (max-width: uphSmallMaxDim)
     &:not(:empty)
-      padding-top: topPadding2
+      padding-top: topPadding1
 
 .kf-upul-empty
-  padding: (30px - topPadding1) 30px 30px
-  font-size: 12px
+  padding: (30px - topPadding2) 30px 30px
+  font-size: 16px
   color: #777
 
-  @media (min-height: desktopMinHeight)
-    padding: (30px - topPadding2) 30px 30px
-    font-size: 16px
+  @media (max-height: uphSmallMaxDim) and (max-width: uphSmallMaxDim)
+    padding-top: 30px - topPadding1
+    font-size: 12px
