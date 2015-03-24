@@ -46,7 +46,11 @@
         <div class="kf-uph-progress-check"></div>
       </div>
 
-      <h1 class="kf-uph-name" itemprop="name">{{profile.firstName}} {{profile.lastName}}</h1>
+      <h1 class="kf-uph-name" itemprop="name">{{profile.firstName}} {{profile.lastName}}
+        <button ng-click="showBiographyModal()" ng-if="viewingOwnProfile && profile.biography" class="kf-uph-bio-edit">Edit Bio</button>
+      </h1>
+      <button ng-click="showBiographyModal()" ng-if="viewingOwnProfile && !profile.biography" class="kf-uph-bio-edit empty">Edit Bio</button>
+      <div class="kf-uph-bio" ng-if="profile.biography">{{profile.biography}}</div>
     </div>
     <nav class="kf-uph-nav">
       <a class="kf-uph-nav-a" href="{{profile|profileUrl:'libraries'}}" data-path="libraries">
