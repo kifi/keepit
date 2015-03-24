@@ -14,6 +14,8 @@ CREATE TABLE if not exists article_info (
     best_version_minor int NULL,
     latest_version_major int NULL,
     latest_version_minor int NULL,
+    oldest_version_major int NULL,
+    oldest_version_minor int NULL,
     last_queued_at datetime NULL,
     last_fetched_at datetime NULL,
     next_fetch_at datetime NULL,

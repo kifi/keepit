@@ -1,6 +1,8 @@
 package com.keepit.rover
 
 import com.keepit.FortyTwoGlobal
+import com.keepit.rover.manager.RoverManagerPlugin
+import com.keepit.rover.model.ArticleInfoSequencingPlugin
 import play.api.Mode._
 import play.api._
 
@@ -16,5 +18,8 @@ object RoverGlobal extends FortyTwoGlobal(Prod) with RoverServices {
 }
 
 trait RoverServices { self: FortyTwoGlobal =>
-  def startRoverServices() {}
+  def startRoverServices(): Unit = {
+    require(injector.instance[RoverManagerPlugin] != null)
+    require(injector.instance[ArticleInfoSequencingPlugin] != null)
+  }
 }

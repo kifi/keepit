@@ -3,7 +3,6 @@ package com.keepit.model
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.db.slick.DataBaseComponent
 import com.keepit.common.db.slick.DbRepo
-import com.keepit.common.db.slick.DBSession
 import com.keepit.common.db.slick.Repo
 import com.keepit.common.time._
 import com.keepit.common.db.slick.DBSession.RSession
