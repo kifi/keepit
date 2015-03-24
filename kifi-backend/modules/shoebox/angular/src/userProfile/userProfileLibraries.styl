@@ -1,13 +1,21 @@
+desktopMinHeight = 740px // for @media min-height
+cardWidth = 210px
+cardSideSpace = 18px
+
 .kf-upl-nav-container
-  padding: 14px 0
+  padding: 10px 0
   background: #e8e8e8
   text-align: center
 
-  .kf-mobile &
-    padding: 25px 0
+  @media (min-height: desktopMinHeight)
+    padding: 14px 0
 
 .kf-upl-card-list
-  margin-bottom: 40px
+  max-width: 3 * (cardWidth + cardSideSpace)
+  margin: -8px auto 40px
+
+  @media (min-height: desktopMinHeight)
+    margin: 0 auto 50px
 
   &:empty
     // maintains page height and thus window scroll position while the list
@@ -19,25 +27,27 @@
   width: 75%
   max-width: 600px
   margin: 0 auto
-  border-radius: 6px
+  border-radius: 4px
   background: #cbcbcb
+
+  @media (min-height: desktopMinHeight)
+    border-radius: 6px
 
 .kf-upl-nav-link
   display: table-cell
-  width: 33%
-  height: 38px
-  line-height: 38px
   border-radius: '%s' % inherit  // github.com/tj/nib/issues/271
-  font-size: 0.8em
+  width: 33%
+  height: 24px
+  line-height: 24px
+  font-size: 10px
   color: #333539
   font-weight: bold
   text-transform: uppercase
 
-  .kf-mobile &
-    line-height: 60px
-    width: 30%
-    max-width: 220px
-    font-size: 1.1em
+  @media (min-height: desktopMinHeight)
+    height: 38px
+    line-height: 38px
+    font-size: 13px
 
   &.kf-selected
     background: #fff
@@ -52,13 +62,17 @@
 
 .kf-upl-empty
   padding: 30px
+  font-size: 12px
   color: #777
+
+  @media (min-height: desktopMinHeight)
+    font-size: 16px
 
 .kf-upl-card
   display: inline-block
-  width: 210px
+  width: cardWidth
   height: 280px
-  margin: 23px 9px 0
+  margin: 23px (cardSideSpace / 2) 0
   background: gray
   background-size: cover
   border-radius: 16px
@@ -66,12 +80,6 @@
   position: relative
   overflow: hidden
   text-align: center
-
-  .kf-mobile &
-    display: block
-    margin: 35px auto 480px
-    transform: scale(2.5)
-    transform-origin: center top
 
 .kf-upl-create-card
   box-sizing: border-box
@@ -233,11 +241,8 @@ owner-pic-diam = 32px
   overflow: hidden
   text-overflow: ellipsis
 
-  :hover>&
+  [href]:hover>&
     text-decoration: underline
-
-  .kf-mobile &
-    text-decoration: none
 
 .kf-upl-counts
   position: absolute
@@ -256,13 +261,9 @@ owner-pic-diam = 32px
   font-size: 13px
   font-weight: bold
   color: inherit
-  &:hover
-    color: #fff
-    text-decoration: underline
 
-.kf-upl-count-followers
-  .kf-mobile &:hover
-    text-decoration: none
+  &[href]:hover
+    text-decoration: underline
 
 .kf-upl-count-dot
   padding: 0 5px
@@ -362,11 +363,8 @@ follower-pic-diameter = 23px
 .kf-upl-followers-number
   color: inherit
 
-  &:hover
+  &[href]:hover
     text-decoration: underline
-
-    .kf-mobile &
-      text-decoration: none
 
 .kf-upl-follower
   display: inline-block

@@ -44,7 +44,7 @@ case class TwitterUserInfo(
 }
 
 object TwitterUserInfo {
-  implicit def toSocialUserInfo(tui: TwitterUserInfo, state: State[SocialUserInfo] = SocialUserInfoStates.FETCHED_USING_FRIEND): SocialUserInfo = {
+  def toSocialUserInfo(tui: TwitterUserInfo, state: State[SocialUserInfo] = SocialUserInfoStates.FETCHED_USING_FRIEND): SocialUserInfo = {
     SocialUserInfo(
       fullName = tui.name,
       socialId = SocialId(tui.id.toString),
@@ -55,7 +55,7 @@ object TwitterUserInfo {
     )
   }
 
-  implicit def toUserProfileInfo(tui: TwitterUserInfo): UserProfileInfo = {
+  def toUserProfileInfo(tui: TwitterUserInfo): UserProfileInfo = {
     UserProfileInfo(
       providerId = ProviderIds.Twitter,
       userId = ProviderUserId(tui.id.toString),

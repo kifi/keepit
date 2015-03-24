@@ -1,5 +1,5 @@
 <div class="kf-lh-wrapper">
-  <div class="kf-lh kf-width-bounded" itemscope itemtype="http://schema.org/CollectionPage">
+  <div class="kf-lh" itemscope itemtype="http://schema.org/CollectionPage">
     <meta itemtype="url" content="{{library.shareUrl}}" />
     <div class="kf-lh-card">
       <div class="kf-lh-invite-banner" ng-if="library.invite && !library.invite.actedOn">
@@ -38,8 +38,7 @@
           </div>
 
           <div class="kf-lh-owner" itemprop="creator" itemscope itemtype="http://schema.org/Person">
-            <a href="{{library.owner|profileUrl}}" itemprop="url"
-               kf-track-origin="libraryPage/curator">
+            <a class="kf-lh-owner-image-a" href="{{library.owner|profileUrl}}" itemprop="url" kf-track-origin="libraryPage/curator">
               <img class="kf-lh-owner-image" ng-src="{{library.owner | pic:100}}" itemprop="image" alt="{{library.owner.firstName}} {{library.owner.lastName}}">
             </a>
             <div class="kf-lh-owner-text">
@@ -75,7 +74,7 @@
       <div class="kf-lh-buttons clearfix">
         <div style="float:right">
           <div kf-library-share-search ng-if="canBeShared()" library="library" current-page-origin="libraryPage"></div>
-          <div class="kf-lh-follow-btn-wrap" kf-sticky sticky-if="!$root.userLoggedIn" sticky-top="isMobile ? 25 : 14" sticky-toggle="followButtonToggleStuck" sticky-near="followButtonNearlyStuck" sticky-near-px="isMobile ? 90 : 40" ng-if="canFollowLibrary()">
+          <div class="kf-lh-follow-btn-wrap" kf-sticky sticky-if="!$root.userLoggedIn" sticky-top="followButtonStickyTop" sticky-toggle="followButtonToggleStuck" sticky-near="followButtonNearlyStuck" sticky-near-px="40" ng-if="canFollowLibrary()">
             <div kf-library-header-follow-button-cta library="library" ng-if="!isMobile && library.abTest.name === 'exp_follow_popup' && library.abTestTreatment.data"></div>
             <button class="kf-button kf-lh-follow-btn" ng-click="followLibrary()">{{library.abTestTreatment.data.buttonText || 'Follow Library'}}</button>
           </div>

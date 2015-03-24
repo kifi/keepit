@@ -32,7 +32,7 @@ class SimpleGraphManager(
     val end = System.currentTimeMillis
     val persistingHeapSize = currentHeapSize()
     log.info(s"Simple Graph has been persisted in ${(end - start) / 1000} seconds - Current Heap Size: ${FileUtils.byteCountToDisplaySize(persistingHeapSize)}")
-    if (serviceDiscovery.myStatus.exists(_ == ServiceStatus.BACKING_UP)) {
+    if (serviceDiscovery.thisInstance.exists(_.instanceInfo.capabilities.contains("backup"))) {
       val start = System.currentTimeMillis
       graphDirectory.synchronized {
         graphDirectory.doBackup()

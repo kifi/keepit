@@ -110,7 +110,7 @@ class EContactRepoImpl @Inject() (
     (for (f <- rows if f.email === email && f.state === EContactStates.ACTIVE) yield f.userId).list
 
   def countEmailContacts(userId: Id[User], distinctEmailAccounts: Boolean)(implicit session: RSession): Int = {
-    import scala.slick.jdbc.StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     if (distinctEmailAccounts) sql"""select count(distinct email_account_id) from econtact where user_id=$userId and state='#${EContactStates.ACTIVE}'""".as[Int].first
     else sql"""select count(*) from econtact where user_id=$userId and state='#${EContactStates.ACTIVE}'""".as[Int].first
   }

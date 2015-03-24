@@ -86,9 +86,10 @@ class KeepRepoImpl @Inject() (
     def visibility = column[LibraryVisibility]("visibility", O.NotNull)
     def keptAt = column[DateTime]("kept_at", O.NotNull)
     def sourceAttributionId = column[Id[KeepSourceAttribution]]("source_attribution_id", O.Nullable)
+    def note = column[String]("note", O.Nullable)
 
     def * = (id.?, createdAt, updatedAt, externalId, title.?, uriId, isPrimary.?, inDisjointLib.?, urlId, url, bookmarkPath.?, isPrivate,
-      userId, state, source, kifiInstallation.?, seq, libraryId, visibility, keptAt, sourceAttributionId.?) <> ((Keep.applyFromDbRow _).tupled, Keep.unapplyToDbRow _)
+      userId, state, source, kifiInstallation.?, seq, libraryId, visibility, keptAt, sourceAttributionId.?, note.?) <> ((Keep.applyFromDbRow _).tupled, Keep.unapplyToDbRow _)
   }
 
   def table(tag: Tag) = new KeepTable(tag)
@@ -121,7 +122,8 @@ class KeepRepoImpl @Inject() (
       libraryId = r.<<[Option[Id[Library]]],
       visibility = r.<<[LibraryVisibility],
       keptAt = r.<<[DateTime],
-      sourceAttributionId = r.<<[Option[Id[KeepSourceAttribution]]]
+      sourceAttributionId = r.<<[Option[Id[KeepSourceAttribution]]],
+      note = r.<<[Option[String]]
     )
   }
   private val bookmarkColumnOrder: String = _taggedTable.columnStrings("bm")
@@ -205,7 +207,7 @@ class KeepRepoImpl @Inject() (
     (for (b <- rows if b.uriId === uriId && b.state =!= excludeState.orNull) yield b).list
 
   def countPublicActiveByUri(uriId: Id[NormalizedURI])(implicit session: RSession): Int = {
-    import StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     import scala.collection.JavaConversions._
     sql"select count(*) from bookmark where uri_id = $uriId and is_private = false and state = 'active'".as[Int].first
   }
@@ -214,21 +216,21 @@ class KeepRepoImpl @Inject() (
     (for (b <- rows if b.userId === userId && !b.state.inSet(excludeSet)) yield b).sortBy(_.keptAt).list
 
   def getNonPrivate(ownerId: Id[User], offset: Int, limit: Int)(implicit session: RSession): Seq[Keep] = {
-    import StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     import scala.collection.JavaConversions._
     val interpolated = sql"""select #$bookmarkColumnOrder from bookmark bm where bm.user_id = ${ownerId} and bm.state = '#${KeepStates.ACTIVE}' and bm.visibility != '#${LibraryVisibility.SECRET.value}' order by bm.kept_at desc, bm.id desc limit $offset, $limit;"""
     interpolated.as[Keep].list
   }
 
   def getPrivate(ownerId: Id[User], offset: Int, limit: Int)(implicit session: RSession): Seq[Keep] = {
-    import StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     import scala.collection.JavaConversions._
     val interpolated = sql"""select #$bookmarkColumnOrder from bookmark bm where bm.user_id = ${ownerId} and bm.state = '#${KeepStates.ACTIVE}' and bm.visibility = '#${LibraryVisibility.SECRET.value}' order by bm.kept_at desc, bm.id desc limit $offset, $limit;"""
     interpolated.as[Keep].list
   }
 
   def getByUser(userId: Id[User], beforeId: Option[ExternalId[Keep]], afterId: Option[ExternalId[Keep]], count: Int)(implicit session: RSession): Seq[Keep] = {
-    import StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     import scala.collection.JavaConversions._
 
     // Performance sensitive call.
@@ -254,7 +256,7 @@ class KeepRepoImpl @Inject() (
   }
 
   def whoKeptMyKeeps(userId: Id[User], since: DateTime, maxKeepers: Int)(implicit session: RSession): Seq[WhoKeptMyKeeps] = {
-    import StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     val interpolated = sql"""
           SELECT b.c user_count, b.t last_keep_time, b.uri_id, b.users FROM (
             SELECT count(ab.id) c, max(ab.kept_at) t, ab.uri_id, group_concat(ab.user_id ORDER BY ab.kept_at DESC) users FROM (
@@ -274,14 +276,14 @@ class KeepRepoImpl @Inject() (
   def bulkGetByUserAndUriIds(userId: Id[User], uriIds: Set[Id[NormalizedURI]])(implicit session: RSession): Map[Id[NormalizedURI], Keep] = {
     val res = keepUriUserCache.bulkGetOrElse(uriIds.map(KeepUriUserKey(_, userId))) { keys =>
       val missing = keys.map(_.uriId)
-      val keeps = (for (r <- rows if r.userId === userId && r.uriId.inSet(missing) && r.state === KeepStates.ACTIVE) yield r).list()
+      val keeps = (for (r <- rows if r.userId === userId && r.uriId.inSet(missing) && r.state === KeepStates.ACTIVE) yield r).list
       keeps.map { k => KeepUriUserKey(k.uriId, userId) -> k }.toMap
     }
     res.map { case (key, keep) => key.uriId -> keep }
   }
 
   def getByUserAndCollection(userId: Id[User], collectionId: Id[Collection], beforeId: Option[ExternalId[Keep]], afterId: Option[ExternalId[Keep]], count: Int)(implicit session: RSession): Seq[Keep] = {
-    import StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
 
     // Performance sensitive call.
     // Separate queries for each case because the db will cache the query plans when we only use parametrized queries.
@@ -311,14 +313,14 @@ class KeepRepoImpl @Inject() (
   }
 
   def getCountByUser(userId: Id[User])(implicit session: RSession): Int = {
-    import StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     val sql = sql"select count(*) from bookmark where user_id=${userId} and state = '#${KeepStates.ACTIVE}'"
     sql.as[Int].first
   }
 
   // TODO (this hardcodes keeper and mobile sources - update to use the Set[KeepSource]
   def getCountByUserAndSource(userId: Id[User], sources: Set[KeepSource])(implicit session: RSession): Int = {
-    import StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     val sql = sql"select count(*) from bookmark where user_id=$userId and state = '#${KeepStates.ACTIVE}' and source IN ('keeper','mobile')"
     sql.as[Int].first
   }
@@ -340,27 +342,27 @@ class KeepRepoImpl @Inject() (
   }.map { case (userId, count) => userId -> count }.toMap
 
   def getPrivatePublicCountByUser(userId: Id[User])(implicit session: RSession): (Int, Int) = {
-    import StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     val sql = sql"select sum(is_private), sum(1 - is_private) from bookmark where user_id=${userId} and state = '#${KeepStates.ACTIVE}'"
-    sql.as[(Int, Int)].first()
+    sql.as[(Int, Int)].first
   }
 
   def getCountByTime(from: DateTime, to: DateTime)(implicit session: RSession): Int = {
-    import StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
 
     val sql = sql"select count(*) as c from bookmark where updated_at between ${from} and ${to} and state='#${KeepStates.ACTIVE}';"
     sql.as[Int].first
   }
 
   def getCountByTimeAndSource(from: DateTime, to: DateTime, source: KeepSource)(implicit session: RSession): Int = {
-    import StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
 
     val sql = sql"select count(*) as c from bookmark b where b.state = '#${KeepStates.ACTIVE}' and b.source=${source} and updated_at between ${from} and ${to};"
     sql.as[Int].first
   }
 
   def getAllCountsByTimeAndSource(from: DateTime, to: DateTime)(implicit session: RSession): Seq[(KeepSource, Int)] = {
-    import StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
 
     val sql = sql"""select source, count(*) from bookmark b
       where b.state = '#${KeepStates.ACTIVE}' and created_at between ${from} and ${to}
@@ -369,7 +371,7 @@ class KeepRepoImpl @Inject() (
   }
 
   def getPrivateCountByTimeAndSource(from: DateTime, to: DateTime, source: KeepSource)(implicit session: RSession): Int = {
-    import StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
 
     val sql = sql"select count(*) as c from bookmark b where b.state = '#${KeepStates.ACTIVE}' and b.is_private = 1 and b.source=${source} and created_at between ${from} and ${to};"
     sql.as[Int].first
@@ -413,7 +415,7 @@ class KeepRepoImpl @Inject() (
     }.groupBy(_._1).mapValues(_.map(_._2))
 
   def getLatestKeepsURIByUser(userId: Id[User], limit: Int, includePrivate: Boolean = false)(implicit session: RSession): Seq[Id[NormalizedURI]] = {
-    import StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
 
     val sql = if (includePrivate) sql"select uri_Id from bookmark where state = '#${KeepStates.ACTIVE}' and user_id=${userId} order by kept_at DESC limit ${limit}"
     else sql"select uri_Id from bookmark where state = '#${KeepStates.ACTIVE}' and user_id=${userId} and is_private = false order by kept_at DESC limit ${limit}"
@@ -422,7 +424,7 @@ class KeepRepoImpl @Inject() (
   }
 
   def getKeepExports(userId: Id[User])(implicit session: RSession): Seq[KeepExport] = {
-    import StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     val sqlQuery = sql"""select k.kept_at, k.title, k.url, group_concat(c.name)
       from bookmark k left join keep_to_collection kc
       on kc.bookmark_id = k.id left join collection c on c.id = kc.collection_id where k.user_id = ${userId} and k.state = '#${KeepStates.ACTIVE}'
@@ -465,12 +467,12 @@ class KeepRepoImpl @Inject() (
   }
 
   def librariesWithMostKeepsSince(count: Int, since: DateTime)(implicit session: RSession): Seq[(Id[Library], Int)] = {
-    import StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     sql"""select b.library_id, count(*) as cnt from bookmark b, library l where l.id = b.library_id and l.state='active' and l.visibility='published' and b.kept_at > $since group by b.library_id order by count(*) desc limit $count""".as[(Id[Library], Int)].list
   }
 
   def latestKeep(userId: Id[User])(implicit session: RSession): Option[DateTime] = {
-    import StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     val res = sql"""select max(kept_at) from bookmark where user_id = $userId and state='active'""".as[DateTime].first
     Option(res)
   }

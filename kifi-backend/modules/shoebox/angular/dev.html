@@ -1,14 +1,14 @@
 <!doctype html>
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
-<meta name="viewport" content="width=device-width">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 
 <link rel="shortcut icon" type="image/png" href="/img/favicon64x64.png">
 <link rel="stylesheet" type="text/css" href="/dist/lib.css">
 <link rel="stylesheet" type="text/css" href="/dist/kifi.css">
 <link rel="stylesheet" type="text/css" href="/dist/svg.css">
 
-<!-- HEADER_PLACEHOLDER -->
+<title id="kf-authenticated">Kifi</title><!-- remove the id attribute for logged-out experience -->
 
 <div class="kf-app ng-cloak" ng-controller="AppCtrl">
   <div ng-if="$root.userLoggedIn != null" ng-include="'layout/body.tpl.html'"></div>

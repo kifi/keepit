@@ -10,7 +10,7 @@
   <form class="form-horizontal" action="@com.keepit.controllers.admin.routes.AdminCacheController.clearLocalCaches()" method="GET">
     <select class="input-medium params" name="service">
     <option value="all" selected>All Services
-    @for(service <- ServiceClient.register.map(_.serviceCluster.serviceType)) {
+    @for(service <- ServiceClient.register.toSeq.map(_.serviceCluster.serviceType)) {
       <option value="@service.name">@service.name.toLowerCase.capitalize
     }
     </select>

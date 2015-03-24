@@ -1,10 +1,11 @@
 package com.keepit.scraper.extractor
 
 import com.keepit.common.net.URI
+import com.keepit.rover.article.{ SignatureBuilder, Signature }
 import com.keepit.rover.extractor.utils.DateTimeMetadataParser
 import com.keepit.rover.fetcher.{ FetchResult, HttpInputStream }
 import com.keepit.scraper.mediatypes.MediaTypes
-import com.keepit.scraper.{ BasicArticle, SignatureBuilder, Signature }
+import com.keepit.scraper.BasicArticle
 
 import scala.util.{ Failure, Success }
 import org.apache.commons.lang3.StringEscapeUtils.unescapeHtml4

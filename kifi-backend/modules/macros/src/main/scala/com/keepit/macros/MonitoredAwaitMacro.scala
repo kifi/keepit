@@ -48,8 +48,14 @@ object MonitoredAwaitMacro {
   type MonitoredAwaitContext = Context { type PrefixType =  MonitoredAwait }
 
   private[this] def getPosition(x: MonitoredAwaitContext) = {
-    val className = Option(x.enclosingClass).map(_.symbol.toString).getOrElse("")
-    val methodName = Option(x.enclosingMethod).map(_.symbol.toString).getOrElse("")
+    val className = Option(x.enclosingClass)
+      .flatMap(c => Option(c.symbol))
+      .map(_.toString)
+      .getOrElse("")
+    val methodName = Option(x.enclosingMethod)
+      .flatMap(m => Option(m.symbol))
+      .map(_.toString)
+      .getOrElse("")
     val line = x.enclosingPosition.line
 
     s"Await[${className}][${methodName}]:${line}"

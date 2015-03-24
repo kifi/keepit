@@ -8,7 +8,7 @@ import java.util.Locale
 import play.api.Mode
 import play.api.Mode._
 import play.api.libs.json._
-import scala.concurrent.{ Future, promise }
+import scala.concurrent.{ Future, Promise }
 import com.keepit.common.amazon.AmazonInstanceInfo
 import com.keepit.inject.FortyTwoConfig
 
@@ -22,7 +22,7 @@ case class ServiceVersion(value: String) {
 }
 
 sealed abstract class ServiceType(val name: String, val shortName: String, val loadFactor: Int = 1, val isCanary: Boolean = false) {
-  def selfCheck(): Future[Boolean] = promise[Boolean].success(true).future
+  def selfCheck(): Future[Boolean] = Promise[Boolean]().success(true).future
   def healthyStatus(instance: AmazonInstanceInfo): ServiceStatus = ServiceStatus.UP
   override def toString: String = name
 
@@ -54,15 +54,7 @@ object ServiceType {
     override val minInstances = 2
     override val warnInstances = 4
   }
-  case object GRAPH extends ServiceType("GRAPH", "GR", loadFactor = 2) {
-    override def healthyStatus(instance: AmazonInstanceInfo): ServiceStatus = {
-      val capabilities = instance.capabilities
-      if (capabilities.contains("backup") && !capabilities.contains("discovery")) ServiceStatus.BACKING_UP else ServiceStatus.UP
-    }
-
-    override val minInstances = 0
-    override val warnInstances = 0
-  }
+  case object GRAPH extends ServiceType("GRAPH", "GR", loadFactor = 2)
   case object C_SHOEBOX extends ServiceType("C_SHOEBOX", "C_SB", loadFactor = 1, true) {
     override val minInstances = 0
     override val warnInstances = 0

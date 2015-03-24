@@ -1,5 +1,4 @@
-<div class="kf-uph kf-min-width-bounded">
-  <div class="kf-width-bounded">
+<div class="kf-uph">
     <div class="kf-uph-connect-banner" ng-if="connectionWithUser==='request_received'">
       <button class="kf-uph-connect-banner-btn kf-accept" ng-click="acceptFriendRequest()">Accept</button>
       <button class="kf-uph-connect-banner-btn kf-decline" ng-click="ignoreFriendRequest()">Decline</button>
@@ -47,6 +46,10 @@
       </div>
 
       <h1 class="kf-uph-name" itemprop="name">{{profile.firstName}} {{profile.lastName}}</h1>
+      <div class="kf-uph-bio">
+        {{profile.biography}}
+        <button class="kf-uph-bio-add" ng-click="showBiographyModal()" ng-if="viewingOwnProfile && !profile.biography">Add a Bio</button>
+      </div>
     </div>
     <nav class="kf-uph-nav">
       <a class="kf-uph-nav-a" href="{{profile|profileUrl:'libraries'}}" data-path="libraries">
@@ -62,5 +65,4 @@
         <div class="kf-uph-nav-count">{{profile.numFollowers|num}}</div>
       </a>
     </nav>
-  </div>
 </div>

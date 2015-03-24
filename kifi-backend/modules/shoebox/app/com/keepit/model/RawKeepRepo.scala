@@ -5,7 +5,7 @@ import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.{ ExternalId, State, Id }
 import com.keepit.common.time.{ Clock, DEFAULT_DATE_TIME_ZONE }
-import play.api.libs.json.JsValue
+import play.api.libs.json.{ JsArray, JsValue }
 import scala.util.Try
 import scala.slick.jdbc.StaticQuery
 import org.joda.time.DateTime
@@ -36,7 +36,8 @@ class RawKeepRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) ex
     def tagIds = column[String]("tag_ids", O.Nullable) // Comma separated list of references to `collection.id`
     def libraryId = column[Id[Library]]("library_id", O.Nullable)
     def createdDate = column[DateTime]("created_date", O.Nullable)
-    def * = (id.?, userId, createdAt, updatedAt, url, title.?, isPrivate, importId.?, source, kifiInstallationId.?, originalJson, state, tagIds.?, libraryId.?, createdDate.?) <> ((RawKeep.apply _).tupled, RawKeep.unapply _)
+    def keepTags = column[JsArray]("keep_tags", O.Nullable)
+    def * = (id.?, userId, createdAt, updatedAt, url, title.?, isPrivate, importId.?, source, kifiInstallationId.?, originalJson, state, tagIds.?, libraryId.?, createdDate.?, keepTags.?) <> ((RawKeep.apply _).tupled, RawKeep.unapply _)
   }
 
   def table(tag: Tag) = new RawKeepTable(tag)

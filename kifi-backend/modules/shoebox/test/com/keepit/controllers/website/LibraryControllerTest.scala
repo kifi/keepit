@@ -12,7 +12,6 @@ import com.keepit.common.mail.{ EmailAddress, FakeMailModule }
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.{ FakeShoeboxStoreModule, ImageSize }
 import com.keepit.common.time._
-import com.keepit.common.time.internalTime.DateTimeJsonLongFormat
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.model.KeepFactory._
 import com.keepit.model.KeepFactoryHelper._
@@ -69,7 +68,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
   // NOTE: No attemp to write the trait SourceAttribution
   implicit val rawBookmarkRepwrites = new Writes[RawBookmarkRepresentation] {
     def writes(keep: RawBookmarkRepresentation): JsValue = {
-      val tmp = RawBookmarkRepresentationWithoutAttribution(keep.title, keep.url, keep.isPrivate, keep.canonical, keep.openGraph, keep.keptAt)
+      val tmp = RawBookmarkRepresentationWithoutAttribution(keep.title, keep.url, keep.isPrivate, keep.canonical, keep.openGraph, keep.keptAt, keep.note)
       Json.toJson(tmp)
     }
   }
@@ -630,7 +629,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                   |"numKeeps":0,
                   |"numFollowers":0,
                   |"kind":"user_created",
-                  |"lastViewed":${Json.toJson(t2)(DateTimeJsonLongFormat)}
+                  |"lastViewed":${Json.toJson(t2)(internalTime.DateTimeJsonLongFormat)}
                 |}
               |],
             |"following":
@@ -1137,10 +1136,10 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                |  "lastName":"Princess",
                |  "pictureName":"0.jpg","username":"test",
                |  "membership":"read_only",
-               |  "lastInvitedAt":${Json.toJson(t1.plusHours(3))}},
+               |  "lastInvitedAt":${Json.toJson(t1.plusHours(3))(internalTime.DateTimeJsonLongFormat)}},
                |  {"email":"sonic@sega.co.jp",
                |  "membership":"read_only",
-               |  "lastInvitedAt":${Json.toJson(t1.plusHours(3))}}
+               |  "lastInvitedAt":${Json.toJson(t1.plusHours(3))(internalTime.DateTimeJsonLongFormat)}}
                |]
              |}""".stripMargin))
 

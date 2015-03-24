@@ -19,15 +19,26 @@ case class ArticleVersion(major: VersionNumber[Article], minor: VersionNumber[Ar
   override def toString = s"$major.$minor"
 }
 
+object ArticleVersion {
+  def zero[A <: Article](implicit kind: ArticleKind[A]): ArticleVersion = ArticleVersion(kind.version, VersionNumber.ZERO)
+  def next[A <: Article](previous: Option[ArticleVersion])(implicit kind: ArticleKind[A]): ArticleVersion = {
+    previous match {
+      case Some(version) if version.major > kind.version => throw new IllegalStateException(s"Version number of $kind must be increasing (current is ${kind.version}, got $previous)")
+      case Some(version) if version.major == kind.version => version.copy(minor = version.minor + 1)
+      case _ => zero[A]
+    }
+  }
+}
+
 trait ArticleKeyHolder {
-  def uriId: Id[NormalizedURI]
   def kind: String
+  def articleKind = ArticleKind.byTypeCode(kind)
+  def uriId: Id[NormalizedURI]
   def bestVersion: Option[ArticleVersion]
   def latestVersion: Option[ArticleVersion]
-  def articleKind = ArticleKind.byTypeCode(kind)
-  def getLatestKey: Option[ArticleKey] = bestVersion.map(toKey)
-  def getBestKey: Option[ArticleKey] = latestVersion.map(toKey)
-  private def toKey(version: ArticleVersion) = ArticleKey(uriId, articleKind, version)
+  def getLatestKey[A <: Article](implicit kind: ArticleKind[A]): Option[ArticleKey[A]] = latestVersion.map(toKey(_))
+  def getBestKey[A <: Article](implicit kind: ArticleKind[A]): Option[ArticleKey[A]] = bestVersion.map(toKey(_))
+  private def toKey[A <: Article](version: ArticleVersion)(implicit kind: ArticleKind[A]) = ArticleKey(uriId, kind, version)
 }
 
 case class BasicArticleInfo(

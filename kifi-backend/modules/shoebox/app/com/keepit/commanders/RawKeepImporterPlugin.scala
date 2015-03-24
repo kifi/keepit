@@ -89,8 +89,23 @@ private class RawKeepImporterActor @Inject() (
 
     rawKeeps.groupBy(rk => (rk.userId, rk.importId, rk.source, rk.installationId, rk.isPrivate, rk.libraryId)).map {
       case ((userId, importIdOpt, source, installationId, isPrivate, libraryId), rawKeepGroup) =>
-
         val context = importIdOpt.map(importId => getHeimdalContext(userId, importId)).flatten.getOrElse(HeimdalContext.empty)
+
+        // create a set of all tags
+        val keepTagNamesMap = scala.collection.mutable.Map.empty[String, String]
+        rawKeepGroup.foreach { rk =>
+          rk.keepTags.map { tagNames =>
+            tagNames.as[Seq[String]].foreach { tagName =>
+              keepTagNamesMap += (tagName.toLowerCase -> tagName)
+            }
+          }
+        }
+        // map tagNames to keepTags
+        val keepTagMap = keepTagNamesMap.values.toSet.map { tagName: String =>
+          val keepTag = bookmarksCommanderProvider.get.getOrCreateTag(userId, tagName)(context)
+          (tagName.toLowerCase, keepTag)
+        }.toMap
+
         val rawBookmarks = rawKeepGroup.map { rk =>
           val canonical = rk.originalJson.flatMap(json => (json \ Normalization.CANONICAL.scheme).asOpt[String])
           val openGraph = rk.originalJson.flatMap(json => (json \ Normalization.OPENGRAPH.scheme).asOpt[String])
@@ -134,9 +149,21 @@ private class RawKeepImporterActor @Inject() (
 
           successes.foreach { keep =>
             val allTagIdsForThisKeep = rawKeepByUrl.get(keep.url).flatMap { rk =>
-              rk.tagIds.map { tags =>
+              val tagIdsFromTags = rk.tagIds.map { tags =>
                 tags.split(",").toSeq.filter(_.length > 0).map { c => Try(c.toLong).map(Id[Collection]).toOption }.flatten
               }
+
+              val tagIdsFromKeepTags = rk.keepTags.map { tagArray =>
+                tagArray.as[Seq[String]].map { tagName =>
+                  keepTagMap.get(tagName.toLowerCase).map(_.id.get)
+                }.flatten
+              }
+
+              (tagIdsFromTags, tagIdsFromKeepTags) match {
+                case (Some(tagIds), Some(keepTagIds)) => Some(tagIds ++ keepTagIds)
+                case _ => tagIdsFromTags.orElse(tagIdsFromKeepTags)
+              }
+
             }.getOrElse(Seq.empty)
 
             allTagIdsForThisKeep.map { tagId =>

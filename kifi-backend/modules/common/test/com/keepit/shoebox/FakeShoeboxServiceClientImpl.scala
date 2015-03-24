@@ -16,8 +16,9 @@ import com.keepit.common.usersegment.UserSegment
 import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.model._
 import com.keepit.model.view.{ LibraryMembershipView, UserSessionView }
+import com.keepit.rover.article.Signature
 import com.keepit.rover.fetcher.HttpRedirect
-import com.keepit.scraper.{ ScrapeRequest, Signature }
+import com.keepit.scraper.ScrapeRequest
 import com.keepit.search._
 import com.keepit.shoebox.model.ids.UserSessionExternalId
 import com.keepit.social.{ BasicUser, SocialId, SocialNetworkType }
@@ -629,7 +630,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
   def triggerRawKeepImport(): Unit = ()
 
   def triggerSocialGraphFetch(socialUserInfoId: Id[SocialUserInfo]): Future[Unit] = {
-    Future.successful()
+    Future.successful(())
   }
 
   def getUserConnectionsChanged(seq: SequenceNumber[UserConnection], fetchSize: Int): Future[Seq[UserConnection]] = {

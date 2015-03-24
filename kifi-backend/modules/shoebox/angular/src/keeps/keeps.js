@@ -28,6 +28,7 @@ angular.module('kifi')
         // Internal data.
         //
         var lastSizedAt = $window.innerWidth;
+        var twoColMinWidth = 720;  // also in stylesheet
 
         scope.$watchCollection(function () {
           return scope.keeps;
@@ -120,7 +121,7 @@ angular.module('kifi')
         };
 
         scope.isScrollDisabled = function () {
-          return scope.scrollDisabled;
+          return scope.scrollDisabled || lastSizedAt < twoColMinWidth;
         };
 
         scope.unkeep = function (keeps) {

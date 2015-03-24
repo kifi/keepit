@@ -229,6 +229,16 @@ angular.module('kifi')
       });
     }
 
+    function changeBiography(newBiography) {
+      return $http.post(routeService.userBiography, {
+        biography: newBiography
+      }).then(function (resp) {
+        if (resp.data === 'success') {
+          return newBiography;
+        }
+      });
+    }
+
     function fetchPrefs() {
       return $http.get(routeService.prefs).then(function (p) {
         util.replaceObjectInPlace(prefs, p.data);
@@ -278,6 +288,9 @@ angular.module('kifi')
     }
 
     return {
+      initLoggedOut: function () {
+        updateLoginState(false);
+      },
       userLoggedIn: getUserLoggedIn,
       me: me,
       getSettings: getSettings,
@@ -293,6 +306,7 @@ angular.module('kifi')
       makePrimary: makePrimary,
       resendVerificationEmail: resendVerificationEmail,
       cancelPendingPrimary: cancelPendingPrimary,
+      changeBiography: changeBiography,
       addEmailAccount: addEmailAccount,
       deleteEmailAccount: deleteEmailAccount,
       validateEmailFormat: validateEmailFormat,

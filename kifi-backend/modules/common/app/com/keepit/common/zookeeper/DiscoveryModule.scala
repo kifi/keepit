@@ -35,7 +35,7 @@ abstract class ServiceTypeModule extends ScalaModule {
 
     servicesToListenOn.foreach { nextServiceToListenOn =>
       if (nextServiceToListenOn == serviceType) throw new IllegalArgumentException(s"Current service is included in servicesToListenOn: $servicesToListenOn")
-      servicesToListenOnBinder.addBinding().toInstance(nextServiceToListenOn)
+      servicesToListenOnBinder.addBinding.toInstance(nextServiceToListenOn)
     }
   }
 }

@@ -49,12 +49,12 @@ class CuratorLibraryMembershipInfoRepoImpl @Inject() (
   }
 
   def getUsersFollowingALibrary()(implicit session: RSession): Set[Id[User]] = {
-    import StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     sql"SELECT DISTINCT(user_id) FROM curator_library_membership_info WHERE state='active' AND library_access='read_only'".as[Id[User]].list.toSet
   }
 
   def getFollowedLibrariesWithUri(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Set[Id[Library]] = {
-    import StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     sql"""
       SELECT libs.library_id
       FROM curator_keep_info keeps, curator_library_membership_info libs

@@ -3,7 +3,7 @@ package com.keepit.common.zookeeper
 import com.keepit.common.strings._
 import org.specs2.mutable.Specification
 import org.apache.zookeeper.CreateMode._
-import org.apache.zookeeper.KeeperException
+import org.apache.zookeeper.{ CreateMode, KeeperException }
 import scala.util.{ Random, Try }
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.CountDownLatch
@@ -63,7 +63,7 @@ class ZooKeeperClientTest extends Specification {
         zk.getData[String](testNode) must throwA[KeeperException.NoNodeException]
       }
       withZKSession { zk =>
-        val testNode = zk.createChild(node, "testNode")
+        val testNode = zk.createChild(node, "testNode", CreateMode.PERSISTENT)
         zk.getData[String](testNode) === None
       }
     }
@@ -78,7 +78,7 @@ class ZooKeeperClientTest extends Specification {
         val updateCount = new AtomicInteger(0)
 
         @volatile var childMap = Map.empty[Node, String]
-        val parent = zk.createChild(node, "parent")
+        val parent = zk.createChild(node, "parent", CreateMode.PERSISTENT)
         mkLatch
         zk.watchChildrenWithData[String](parent, { (children: Seq[(Node, String)]) =>
           childMap = children.toMap
@@ -91,13 +91,13 @@ class ZooKeeperClientTest extends Specification {
         updateCount.get === 1
 
         mkLatch
-        val child1 = zk.createChild(parent, "child1")
+        val child1 = zk.createChild(parent, "child1", CreateMode.PERSISTENT)
         awaitLatch
         childMap === Map(Node(parent, "child1") -> "")
         updateCount.get === 2
 
         mkLatch
-        val child2 = zk.createChild(parent, "child2")
+        val child2 = zk.createChild(parent, "child2", CreateMode.PERSISTENT)
         awaitLatch
         childMap === Map(Node(parent, "child1") -> "", Node(parent, "child2") -> "")
         updateCount.get === 3
@@ -121,7 +121,7 @@ class ZooKeeperClientTest extends Specification {
         updateCount.get === 6
 
         mkLatch
-        val child3 = zk.createChild(parent, "child3", "new node")
+        val child3 = zk.createChild(parent, "child3", "new node", CreateMode.PERSISTENT)
         awaitLatch
         childMap === Map(Node(parent, "child2") -> "", Node(parent, "child3") -> "new node")
         updateCount.get === 7
@@ -144,7 +144,7 @@ class ZooKeeperClientTest extends Specification {
         val updateCount = new AtomicInteger(0)
 
         @volatile var childSet = Set.empty[Node]
-        val parent = zk.createChild(node, "parent")
+        val parent = zk.createChild(node, "parent", CreateMode.PERSISTENT)
         mkLatch
         zk.watchChildren(parent, { (children: Seq[Node]) =>
           childSet = children.toSet
@@ -157,13 +157,13 @@ class ZooKeeperClientTest extends Specification {
         updateCount.get === 1
 
         mkLatch
-        val child1 = zk.createChild(parent, "child1")
+        val child1 = zk.createChild(parent, "child1", CreateMode.PERSISTENT)
         awaitLatch
         childSet === Set(Node(parent, "child1"))
         updateCount.get === 2
 
         mkLatch
-        val child2 = zk.createChild(parent, "child2")
+        val child2 = zk.createChild(parent, "child2", CreateMode.PERSISTENT)
         awaitLatch
         childSet === Set(Node(parent, "child1"), Node(parent, "child2"))
         updateCount.get === 3
@@ -177,7 +177,7 @@ class ZooKeeperClientTest extends Specification {
 
         zk.deleteData(child2)
         mkLatch
-        val child3 = zk.createChild(parent, "child3")
+        val child3 = zk.createChild(parent, "child3", CreateMode.PERSISTENT)
         awaitLatch
         childSet === Set(Node(parent, "child2"), Node(parent, "child3"))
         updateCount.get === 5
@@ -193,7 +193,7 @@ class ZooKeeperClientTest extends Specification {
     "SEQUENCE EPHEMERAL (Service Instances) nodes" in {
       implicit val node = Node("/test" + Random.nextLong.abs)
       withZKSession { zk =>
-        val parent = zk.createChild(node, "parent")
+        val parent = zk.createChild(node, "parent", CreateMode.PERSISTENT)
         zk.watchChildrenWithData[String](parent, { (children: Seq[(Node, String)]) =>
           // println("Service Instances: %s".format(children.mkString(", "))) // can be removed?
         })
@@ -203,7 +203,7 @@ class ZooKeeperClientTest extends Specification {
 
         zk.getChildren(parent).size === 3
 
-        val other = zk.createChild(node, "other")
+        val other = zk.createChild(node, "other", CreateMode.PERSISTENT)
         // println(zk.createChild(other, "child")) // can be removed?
       }(node, false)
       withZKSession { zk =>

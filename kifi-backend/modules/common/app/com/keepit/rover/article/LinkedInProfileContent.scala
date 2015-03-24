@@ -13,6 +13,10 @@ case class LinkedInProfile(
   def content = Seq(title, overview, sections, id.getOrElse("")).filter(_.nonEmpty).mkString("\n")
 }
 
+object LinkedInProfile {
+  val url = """^https?://([a-z]{2,3})\.linkedin\.com/(?:in/\w+(?:/[a-z]{2,3})?|pub/[\P{M}\p{M}\w]+(?:/\w+){3})(/)?$""".r
+}
+
 @json
 case class LinkedInProfileContent(
     destinationUrl: String,
@@ -24,7 +28,7 @@ case class LinkedInProfileContent(
     publishedAt: Option[DateTime],
     profile: LinkedInProfile,
     http: HttpInfo,
-    normalization: NormalizationInfo) extends ArticleContent with HttpInfoHolder with NormalizationInfoHolder {
+    normalization: NormalizationInfo) extends ArticleContent[LinkedInProfileArticle] with HttpInfoHolder with NormalizationInfoHolder {
   def content = Some(profile.content).filter(_.nonEmpty)
   def mediaType = openGraphType
 }

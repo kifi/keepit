@@ -23,6 +23,7 @@ import com.keepit.model.{ UserEmailAddress, _ }
 import com.keepit.search.SearchServiceClient
 import com.keepit.social.{ BasicUser, SocialNetworks, UserIdentity }
 import com.keepit.typeahead.{ KifiUserTypeahead, SocialUserTypeahead, TypeaheadHit }
+import com.kifi.macros.json
 import org.apache.commons.lang3.RandomStringUtils
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.{ JsObject, JsString, JsSuccess, _ }
@@ -61,7 +62,7 @@ object EmailInfo {
 }
 
 case class UpdatableUserInfo(
-  description: Option[String], emails: Option[Seq[EmailInfo]],
+  biography: Option[String], emails: Option[Seq[EmailInfo]],
   firstName: Option[String] = None, lastName: Option[String] = None)
 
 object UpdatableUserInfo {
@@ -71,6 +72,16 @@ object UpdatableUserInfo {
 case class BasicUserInfo(basicUser: BasicUser, info: UpdatableUserInfo, notAuthed: Seq[String])
 
 case class UserProfile(userId: Id[User], basicUserWithFriendStatus: BasicUserWithFriendStatus, numKeeps: Int)
+
+@json
+case class UserProfileStats(
+  numLibraries: Int,
+  numFollowedLibraries: Int,
+  numKeeps: Int,
+  numConnections: Int,
+  numFollowers: Int,
+  numInvitedLibraries: Option[Int] = None,
+  biography: Option[String] = None)
 
 case class UserNotFoundException(username: Username) extends Exception(username.toString)
 
@@ -138,9 +149,9 @@ class UserCommander @Inject() (
     }
   }
 
-  def updateUserDescription(userId: Id[User], description: String): Unit = {
+  def updateUserBiography(userId: Id[User], biography: String): Unit = {
     db.readWrite { implicit session =>
-      val trimmed = description.trim
+      val trimmed = biography.trim
       if (trimmed != "") {
         userValueRepo.setValue(userId, UserValueName.USER_DESCRIPTION, trimmed)
       } else {
@@ -155,7 +166,7 @@ class UserCommander @Inject() (
       val user = userRepo.getNoCache(userId)
 
       userData.emails.foreach(updateEmailAddresses(userId, user.firstName, user.primaryEmail, _))
-      userData.description.foreach(updateUserDescription(userId, _))
+      userData.biography.foreach(updateUserBiography(userId, _))
 
       if (userData.firstName.exists(_.nonEmpty) && userData.lastName.exists(_.nonEmpty)) {
         updateUserNames(user, userData.firstName.get, userData.lastName.get)
@@ -203,12 +214,12 @@ class UserCommander @Inject() (
         case None => Left("email not found")
         case Some(emailRecord) if emailRecord.userId == userId =>
           val user = userRepo.get(userId)
-          if (emailRecord.verified && (user.primaryEmail.isEmpty || user.primaryEmail.get != emailRecord)) {
+          if (emailRecord.verified && (user.primaryEmail.isEmpty || user.primaryEmail.get.address != emailRecord)) {
             updateUserPrimaryEmail(emailRecord)
           } else {
             userValueRepo.setValue(userId, UserValueName.PENDING_PRIMARY_EMAIL, address)
           }
-          Right()
+          Right((): Unit)
       }
     }
   }
@@ -228,7 +239,7 @@ class UserCommander @Inject() (
               userValueRepo.clearValue(userId, UserValueName.PENDING_PRIMARY_EMAIL)
             }
             emailRepo.save(email.withState(UserEmailAddressStates.INACTIVE))
-            Right()
+            Right((): Unit)
           } else if (isLast) {
             Left("last email")
           } else if (isLastVerified) {
@@ -251,13 +262,13 @@ class UserCommander @Inject() (
   }
 
   def getUserInfo(user: User): BasicUserInfo = {
-    val (basicUser, description, emails, pendingPrimary, notAuthed) = db.readOnlyMaster { implicit session =>
+    val (basicUser, biography, emails, pendingPrimary, notAuthed) = db.readOnlyMaster { implicit session =>
       val basicUser = basicUserRepo.load(user.id.get)
-      val description = userValueRepo.getValueStringOpt(user.id.get, UserValueName.USER_DESCRIPTION)
+      val biography = userValueRepo.getValueStringOpt(user.id.get, UserValueName.USER_DESCRIPTION)
       val emails = emailRepo.getAllByUser(user.id.get)
       val pendingPrimary = userValueRepo.getValueStringOpt(user.id.get, UserValueName.PENDING_PRIMARY_EMAIL).map(EmailAddress(_))
       val notAuthed = socialUserInfoRepo.getNotAuthorizedByUser(user.id.get).map(_.networkType.name)
-      (basicUser, description, emails, pendingPrimary, notAuthed)
+      (basicUser, biography, emails, pendingPrimary, notAuthed)
     }
 
     def isPrimary(address: EmailAddress) = user.primaryEmail.isDefined && address.equalsIgnoreCase(user.primaryEmail.get)
@@ -269,7 +280,7 @@ class UserCommander @Inject() (
         isPendingPrimary = pendingPrimary.isDefined && pendingPrimary.get.equalsIgnoreCase(email.address)
       )
     }
-    BasicUserInfo(basicUser, UpdatableUserInfo(description, Some(emailInfos)), notAuthed)
+    BasicUserInfo(basicUser, UpdatableUserInfo(biography, Some(emailInfos)), notAuthed)
   }
 
   def getKeepAttributionInfo(userId: Id[User]): Future[UserKeepAttributionInfo] = {
@@ -473,7 +484,7 @@ class UserCommander @Inject() (
       userValueRepo.getValueStringOpt(userId, UserValueName.PENDING_PRIMARY_EMAIL).map { pp =>
         emailRepo.getByAddressOpt(EmailAddress(pp)) match {
           case Some(em) =>
-            if (em.verified && em.address == pp) {
+            if (em.verified && em.address.address == pp) {
               updateUserPrimaryEmail(em)
             }
           case None => userValueRepo.clearValue(userId, UserValueName.PENDING_PRIMARY_EMAIL)

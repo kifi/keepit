@@ -32,7 +32,7 @@ class ElizaNonUserEmailNotifierActor @Inject() (
         }
         case unsupportedNonUserThread => {
           airbrake.notify(new UnsupportedOperationException(s"Cannot email non user ${unsupportedNonUserThread.participant}"))
-          Future.successful()
+          Future.successful(())
         }
       }
       Future.sequence(notificationFutures).map(_ => ())

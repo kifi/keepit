@@ -7,6 +7,7 @@ import play.api.Mode._
 import play.api._
 import com.keepit.abook.model.{ EContactSequencingPlugin, EmailAccountSequencingPlugin }
 import com.keepit.abook.commanders.{ LocalRichConnectionCommander, EmailAccountUpdaterPlugin }
+import net.codingwell.scalaguice.InjectorExtensions._
 
 object ABookGlobal extends FortyTwoGlobal(Prod) with ABookServices {
   val module = ABookProdModule()

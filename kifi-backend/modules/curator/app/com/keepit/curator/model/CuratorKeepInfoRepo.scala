@@ -70,7 +70,7 @@ class CuratorKeepInfoRepoImpl @Inject() (
   }
 
   def getUsersWithKeepsCounts()(implicit session: RSession): Seq[(Id[User], Int)] = {
-    import StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     sql"SELECT user_id, COUNT(*) FROM curator_keep_info WHERE state='active' GROUP BY user_id".as[(Id[User], Int)].list
   }
 

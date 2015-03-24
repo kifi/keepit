@@ -1,9 +1,10 @@
 package com.keepit.normalizer
 
 import com.keepit.common.core._
+import com.keepit.rover.article.Signature
 
 import scala.concurrent.Future
-import com.keepit.scraper.{ ScrapeScheduler, Signature }
+import com.keepit.scraper.ScrapeScheduler
 import com.keepit.model.Normalization
 import com.keepit.scraper.extractor.{ ExtractorProviderTypes }
 import com.keepit.common.logging.Logging

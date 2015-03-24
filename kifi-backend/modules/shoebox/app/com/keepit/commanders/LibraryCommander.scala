@@ -76,6 +76,7 @@ class LibraryCommander @Inject() (
     experimentCommander: LocalUserExperimentCommander,
     userValueRepo: UserValueRepo,
     systemValueRepo: SystemValueRepo,
+    twitterSyncRepo: TwitterSyncStateRepo,
     implicit val publicIdConfig: PublicIdConfiguration,
     clock: Clock) extends Logging {
 
@@ -97,7 +98,7 @@ class LibraryCommander @Inject() (
   }
 
   def updateLastView(userId: Id[User], libraryId: Id[Library]): Unit = {
-    future {
+    Future {
       db.readWrite { implicit s =>
         libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId).map { mem =>
           libraryMembershipRepo.updateLastViewed(mem.id.get) // do not update seq num
@@ -270,6 +271,7 @@ class LibraryCommander @Inject() (
         val (collaboratorCount, followerCount, keepCount) = counts
         val owner = usersById(lib.ownerId)
         val followers = followerInfosByLibraryId(lib.id.get)._1.map(usersById(_))
+        val attr = getSourceAttribution(libId)
         lib.id.get -> FullLibraryInfo(
           id = Library.publicId(lib.id.get),
           name = lib.name,
@@ -286,11 +288,18 @@ class LibraryCommander @Inject() (
           numKeeps = keepCount,
           numCollaborators = collaboratorCount,
           numFollowers = followerCount,
-          lastKept = lib.lastKept
+          lastKept = lib.lastKept,
+          attr = attr
         )
       }
     }
     Future.sequence(futureFullLibraryInfos)
+  }
+
+  private def getSourceAttribution(libId: Id[Library]): Option[LibrarySourceAttribution] = {
+    db.readOnlyReplica { implicit s =>
+      twitterSyncRepo.getHandleByLibraryId(libId).map { TwitterLibrarySourceAttribution(_) }
+    }
   }
 
   def sortUsersByImage(users: Seq[BasicUser]): Seq[BasicUser] =
@@ -546,7 +555,7 @@ class LibraryCommander @Inject() (
         val newVisibility = modifyReq.visibility.getOrElse(targetLib.visibility)
         val newColor = modifyReq.color.orElse(targetLib.color)
         val newListed = modifyReq.listed.getOrElse(targetMembership.listed)
-        future {
+        Future {
           val keeps = db.readOnlyMaster { implicit s =>
             keepRepo.getByLibrary(libraryId, 0, Int.MaxValue, Set.empty)
           }
@@ -579,7 +588,7 @@ class LibraryCommander @Inject() (
         )
         (lib, edits)
       }
-      future {
+      Future {
         if (result.isRight) {
           val editedLibrary = result.right.get._1
           val edits = result.right.get._2
@@ -884,7 +893,7 @@ class LibraryCommander @Inject() (
         }
         val (invites, inviteesWithAccess) = invitesAndInvitees.flatten.unzip
         processInvites(invites)
-        future {
+        Future {
           libraryAnalytics.sendLibraryInvite(inviterId, targetLib, inviteList.map { _._1 }, eventContext)
         }
 
@@ -894,8 +903,11 @@ class LibraryCommander @Inject() (
   }
 
   private def notifyOwnerOfNewFollower(newFollowerId: Id[User], lib: Library): Unit = SafeFuture {
-    val (follower, owner) = db.readOnlyReplica { implicit session =>
-      userRepo.get(newFollowerId) -> basicUserRepo.load(lib.ownerId)
+    val (follower, owner, lotsOfFollowers) = db.readOnlyReplica { implicit session =>
+      val follower = userRepo.get(newFollowerId)
+      val owner = basicUserRepo.load(lib.ownerId)
+      val lotsOfFollowers = libraryMembershipRepo.countMembersForLibrarySince(lib.id.get, DateTime.now().minusDays(1)) > 1
+      (follower, owner, lotsOfFollowers)
     }
     val libImageOpt = libraryImageCommander.getBestImageForLibrary(lib.id.get, ProcessedImageSize.Medium.idealSize)
     elizaClient.sendGlobalNotification(
@@ -907,6 +919,7 @@ class LibraryCommander @Inject() (
       imageUrl = s3ImageStore.avatarUrlByUser(follower),
       sticky = false,
       category = NotificationCategory.User.LIBRARY_FOLLOWED,
+      unread = !lotsOfFollowers, // if not a lot of recent followers, notification is marked unread
       extra = Some(Json.obj(
         "follower" -> BasicUser.fromUser(follower),
         "library" -> Json.toJson(LibraryNotificationInfo.fromLibraryAndOwner(lib, libImageOpt, owner))
@@ -1010,7 +1023,7 @@ class LibraryCommander @Inject() (
     db.readOnlyMaster { implicit s =>
       libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId, None)
     } match {
-      case None => Right()
+      case None => Right((): Unit)
       case Some(mem) if mem.access == LibraryAccess.OWNER => Left(LibraryFail(BAD_REQUEST, "cannot_leave_own_library"))
       case Some(mem) =>
         val (keepCount, lib) = db.readWrite { implicit s =>
@@ -1023,7 +1036,7 @@ class LibraryCommander @Inject() (
           libraryAnalytics.unfollowLibrary(userId, lib, keepCount, eventContext)
           searchClient.updateLibraryIndex()
         }
-        Right()
+        Right((): Unit)
     }
   }
 
@@ -1031,7 +1044,7 @@ class LibraryCommander @Inject() (
   //
   def sortAndSelectLibrariesWithTopGrowthSince(libraryIds: Set[Id[Library]], since: DateTime, totalMemberCount: Id[Library] => Int): Seq[(Id[Library], Seq[LibraryMembership])] = {
     val libraryMemberCountsSince = db.readOnlyReplica { implicit session =>
-      libraryIds.map { id => id -> libraryMembershipRepo.getMemberCountSinceForLibrary(id, since) }.toMap
+      libraryIds.map { id => id -> libraryMembershipRepo.countMembersForLibrarySince(id, since) }.toMap
     }
 
     sortAndSelectLibrariesWithTopGrowthSince(libraryMemberCountsSince, since, totalMemberCount)
@@ -1177,7 +1190,7 @@ class LibraryCommander @Inject() (
           }
         }
         val keepResults = applyToKeeps(userId, toLibraryId, keeps, Set(), saveKeep)
-        future {
+        Future {
           libraryAnalytics.editLibrary(userId, toLibrary, context, Some("copy_keeps"))
         }
         keepResults
@@ -1228,7 +1241,7 @@ class LibraryCommander @Inject() (
           }
         }
         val keepResults = applyToKeeps(userId, toLibraryId, keeps, Set(LibraryAccess.READ_ONLY, LibraryAccess.READ_INSERT), saveKeep)
-        future {
+        Future {
           libraryAnalytics.editLibrary(userId, toLibrary, context, Some("move_keeps"))
         }
         keepResults

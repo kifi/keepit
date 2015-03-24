@@ -17,7 +17,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.{ Json, JsArray, JsBoolean, JsObject }
 import play.api.mvc.Action
 
-import scala.concurrent.{ future, promise }
+import scala.concurrent.{ Future, future, promise }
 
 import views.html
 
@@ -92,7 +92,7 @@ class SliderAdminController @Inject() (
       db.readWrite { implicit s =>
         domainTagRepo.save(tag)
       }
-      future {
+      Future {
         val domainIds = db.readOnlyMaster { implicit s =>
           domainToTagRepo.getByTag(tag.id.get).map(_.domainId)
         }

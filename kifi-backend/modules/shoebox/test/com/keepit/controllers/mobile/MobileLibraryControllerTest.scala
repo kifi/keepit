@@ -29,7 +29,6 @@ import com.keepit.social.BasicUser
 import com.keepit.test.ShoeboxTestInjector
 import org.apache.commons.io.FileUtils
 import org.joda.time.DateTime
-import com.keepit.common.time.internalTime.DateTimeJsonLongFormat
 import org.specs2.mutable.Specification
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.json.{ JsObject, Json }
@@ -349,12 +348,12 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
                  |"lastName":"H",
                  |"pictureName":"0.jpg","username":"test",
                  |"membership":"read_only",
-                 |"lastInvitedAt":${Json.toJson(t1.plusMinutes(4))}
+                 |"lastInvitedAt":${Json.toJson(t1.plusMinutes(4))(internalTime.DateTimeJsonLongFormat)}
                 |},
                 |{
                   |"email":"earon@gmail.com",
                   |"membership":"read_only",
-                  |"lastInvitedAt":${Json.toJson(t1.plusMinutes(6))}
+                  |"lastInvitedAt":${Json.toJson(t1.plusMinutes(6))(internalTime.DateTimeJsonLongFormat)}
                 |}
              |]
            |}""".stripMargin

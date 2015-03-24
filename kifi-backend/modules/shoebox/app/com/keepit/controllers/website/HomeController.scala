@@ -67,7 +67,7 @@ class HomeController @Inject() (
   def home = MaybeUserAction { implicit request =>
     request match {
       case _: NonUserRequest[_] => MarketingSiteRouter.marketingSite()
-      case _: UserRequest[_] => AngularDistAssets.angularApp()
+      case _: UserRequest[_] => AngularApp.app()
     }
   }
 

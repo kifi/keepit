@@ -1,6 +1,5 @@
 package com.keepit.rover.extractor.tika
 
-import com.keepit.rover.extractor.tika.KeywordValidator
 import com.keepit.search.util.AhoCorasick
 import org.apache.tika.sax.ContentHandlerDecorator
 import org.xml.sax.ContentHandler

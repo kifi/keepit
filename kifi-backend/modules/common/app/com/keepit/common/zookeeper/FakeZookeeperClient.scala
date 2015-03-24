@@ -30,7 +30,7 @@ class FakeZooKeeperSession(db: mutable.HashMap[Node, Option[Array[Byte]]]) exten
     node
   }
 
-  def createChild(parent: Node, name: String, createMode: CreateMode = CreateMode.PERSISTENT): Node = db.synchronized {
+  def createChild(parent: Node, name: String, createMode: CreateMode): Node = db.synchronized {
     val child = Node(parent, name)
     db(child) = None
     child

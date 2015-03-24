@@ -115,14 +115,14 @@ class URILDATopicRepoImpl @Inject() (
   }
 
   def getHighestSeqNumber(version: ModelVersion[DenseLDA])(implicit session: RSession): SequenceNumber[NormalizedURI] = {
-    import StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
 
     val sql = sql"select max(uri_seq) from uri_lda_topic where version = ${version.version}"
     SequenceNumber[NormalizedURI](sql.as[Long].first max 0L)
   }
 
   def getUserTopicHistograms(userId: Id[User], version: ModelVersion[DenseLDA], after: Option[DateTime])(implicit session: RSession): Seq[(LDATopic, Int)] = {
-    import StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
 
     // could be expensive. may revisit this later.
 
@@ -147,9 +147,9 @@ class URILDATopicRepoImpl @Inject() (
   }
 
   def getSmartRecentUserTopicHistograms(userId: Id[User], version: ModelVersion[DenseLDA], noOlderThan: DateTime, preferablyNewerThan: DateTime, minNum: Int, maxNum: Int)(implicit session: RSession): Seq[(LDATopic, Int)] = {
-    import StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     import scala.slick.jdbc.GetResult
-    implicit val getTuple = GetResult(r => (r.nextShort(), dateTimeMapper.nextValue(r)))
+
     val q =
       sql"""select tp.first_topic, ck.kept_at from cortex_keep as ck inner join uri_lda_topic as tp
            on ck.uri_id = tp.uri_id
@@ -165,7 +165,7 @@ class URILDATopicRepoImpl @Inject() (
 
   // admin usage. (uriId, first_topic_score)
   def getLatestURIsInTopic(topicId: LDATopic, version: ModelVersion[DenseLDA], limit: Int)(implicit session: RSession): Seq[(Id[NormalizedURI], Float)] = {
-    import StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
 
     val q = sql"select uri_id, first_topic_score from uri_lda_topic where first_topic = ${topicId.index} and version = ${version.version} and state = 'active' order by updated_at desc limit ${limit}"
     q.as[(Long, Float)].list.map { case (id, score) => (Id[NormalizedURI](id), score) }
@@ -177,23 +177,23 @@ class URILDATopicRepoImpl @Inject() (
   }
 
   def countUserURIFeatures(userId: Id[User], version: ModelVersion[DenseLDA], min_num_words: Int)(implicit session: RSession): Int = {
-    import StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     val q = sql"""select count(ck.uri_id) from cortex_keep as ck inner join uri_lda_topic as tp on ck.uri_id = tp.uri_id where ck.user_id = ${userId.id} and tp.version = ${version.version} and ck.state = 'active' and ck.source != 'default' and tp.state = 'active' and tp.num_words > ${min_num_words}"""
     q.as[Int].list.head
   }
 
   def getUserURIFeatures(userId: Id[User], version: ModelVersion[DenseLDA], min_num_words: Int)(implicit session: RSession): Seq[LDATopicFeature] = {
-    import StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     import scala.slick.jdbc.GetResult
-    implicit val getFeature = GetResult(r => ldaTopicFeatureMapper.nextValue(r))
+    implicit val getLDATopicFeature = getResultFromMapper[LDATopicFeature]
+
     val q = sql"""select tp.feature from cortex_keep as ck inner join uri_lda_topic as tp on ck.uri_id = tp.uri_id where ck.user_id = ${userId.id} and ck.state = 'active' and tp.version = ${version.version} and ck.source != 'default' and tp.state = 'active' and tp.num_words > ${min_num_words}"""
     q.as[LDATopicFeature].list
   }
 
   def getUserRecentURIFeatures(userId: Id[User], version: ModelVersion[DenseLDA], min_num_words: Int, limit: Int)(implicit session: RSession): Seq[(Id[Keep], Seq[LDATopic], LDATopicFeature)] = {
-    import StaticQuery.interpolation
-    import scala.slick.jdbc.GetResult
-    implicit val getFeature = GetResult(r => (r.nextLong(), r.nextLong(), r.nextShort(), r.nextShort(), r.nextShort(), ldaTopicFeatureMapper.nextValue(r)))
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
+    implicit val getLibraryFeature = getResultFromMapper[LDATopicFeature]
     val q =
       sql"""select ck.keep_id, ck.uri_id, tp.first_topic, tp.second_topic, tp.third_topic, tp.feature from cortex_keep as ck inner join uri_lda_topic as tp
            on ck.uri_id = tp.uri_id
@@ -215,7 +215,7 @@ class URILDATopicRepoImpl @Inject() (
   }
 
   def getTopicCounts(version: ModelVersion[DenseLDA])(implicit session: RSession): Seq[(Int, Int)] = {
-    import StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     val q = sql"""select tp.first_topic, count(tp.uri_id) from uri_lda_topic as tp where tp.version = ${version.version} and tp.state = 'active' group by tp.first_topic"""
     q.as[(Int, Int)].list
   }
@@ -225,9 +225,10 @@ class URILDATopicRepoImpl @Inject() (
   }
 
   def getLibraryURIFeatures(libId: Id[Library], version: ModelVersion[DenseLDA], min_num_words: Int)(implicit session: RSession): Seq[LDATopicFeature] = {
-    import StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     import scala.slick.jdbc.GetResult
-    implicit val getFeature = GetResult(r => ldaTopicFeatureMapper.nextValue(r))
+    implicit val getLDATopicFeature = getResultFromMapper[LDATopicFeature]
+
     val q =
       sql"""select tp.feature from cortex_keep as ck inner join uri_lda_topic as tp
            on ck.uri_id = tp.uri_id

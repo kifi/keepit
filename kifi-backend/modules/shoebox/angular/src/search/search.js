@@ -71,10 +71,10 @@ angular.module('kifi')
 
       $timeout(function () {
         if (library) {
-          var cols = angular.element('.kf-lib-cols');
+          var content = angular.element('.kf-lib-content');
           var header = angular.element('.kf-lih,.kf-loh');
-          if (cols.length && header.length) {
-            smoothScroll(cols[0].getBoundingClientRect().top - header[0].offsetHeight);
+          if (content.length && header.length) {
+            smoothScroll(content[0].getBoundingClientRect().top - header[0].offsetHeight);
           }
         } else {
           $window.document.body.scrollTop = 0;

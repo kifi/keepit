@@ -2,10 +2,11 @@ package com.keepit.common.cache
 
 import scala.concurrent.duration.Duration
 import com.keepit.common.logging.AccessLog
+import net.codingwell.scalaguice.InjectorExtensions._
 
 import java.io.{ ByteArrayOutputStream, ObjectOutputStream, ObjectInputStream, ByteArrayInputStream }
 
-import net.codingwell.scalaguice.InjectorExtensions.enrichInjector
+import net.codingwell.scalaguice.InjectorExtensions.ScalaInjector
 
 import com.keepit.FortyTwoGlobal
 import com.keepit.common.logging.Logging

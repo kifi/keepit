@@ -3,16 +3,18 @@ package com.keepit.controllers.core
 import com.google.inject.Inject
 import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper, UserRequest, MaybeUserRequest, NonUserRequest, SecureSocialHelper }
 import com.keepit.common.crypto.PublicId
-import com.keepit.common.db.ExternalId
+import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail._
 import com.keepit.common.time._
+import com.keepit.controllers.website.MarketingSiteRouter
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
 import com.keepit.social._
 import com.kifi.macros.json
 import com.keepit.common.controller.KifiSession._
+import com.keepit.common.core._
 
 import play.api.Play._
 import play.api.i18n.Messages
@@ -33,7 +35,7 @@ import com.keepit.heimdal.{ EventType, AnonymousEvent, HeimdalContextBuilder, He
 import com.keepit.social.providers.ProviderController
 import securesocial.core.providers.utils.RoutesHelper
 
-import scala.concurrent.Future
+import scala.concurrent.{ Promise, Future }
 import scala.util.{ Try, Random }
 
 object AuthController {
@@ -446,6 +448,8 @@ class AuthController @Inject() (
                 case "follow" if pubLibIdOpt.isDefined =>
                   authCommander.autoJoinLib(ur.userId, pubLibIdOpt.get)
                   Redirect(homeUrl).discardingCookies(discardedCookies: _*)
+                case "waitlist" =>
+                  Redirect("/twitter/thanks").discardingCookies(discardedCookies: _*)
                 case _ =>
                   Redirect(homeUrl).discardingCookies(discardedCookies: _*)
               }
@@ -606,7 +610,7 @@ class AuthController @Inject() (
     val session = request.session
     request match {
       case requestNonUser: NonUserRequest[_] =>
-        Redirect("/signup/twitter").withSession(session + (SecureSocial.OriginalUrlKey -> "/twitter/thanks"))
+        Redirect("/signup/twitter?intent=waitlist").withSession(session + (SecureSocial.OriginalUrlKey -> "/twitter/thanks"))
       case ur: UserRequest[_] =>
         val twitterSocialForUser = db.readOnlyMaster { implicit s =>
           socialRepo.getByUser(ur.user.id.get).find(_.networkType == SocialNetworks.TWITTER)
@@ -621,26 +625,79 @@ class AuthController @Inject() (
     }
   }
 
+  private def pollDbForTwitterHandle(userId: Id[User], iterations: Int): Future[Option[String]] = {
+    /*
+     * This is not good code, but appears to be necessary because initially, when a social
+     * account is brought in, the SocialUserInfo record is not complete. Namely, it's missing
+     * the profileUrl field. Only after our system syncs with the social network do we get this.
+     * Unfortunately, in this code path, it's nearly always too fast, so it's empty. However,
+     * we need the handle here. So we poll the db every 300 ms (up to `iterations` times) looking for it.
+     * We aggressively log if we can't get it fast enough.
+     *
+     * What we should do:
+     *   1) Handle creation of SocialUserInfo records ourselves, filling them to our heart's desire.
+     *   2) Minimize dependency on SecureSocial's static approach. It won't work much longer.
+     */
+    def checkStatusOfTwitterUser() = {
+      db.readOnlyMaster { implicit session =>
+        socialRepo.getByUser(userId).find(_.networkType == SocialNetworks.TWITTER).flatMap { tsui =>
+          if (tsui.state == SocialUserInfoStates.CREATED) {
+            log.info(s"[checkStatusOfTwitterUser] Still waiting on ${tsui.networkType}/${tsui.socialId}")
+            None // pending sync, keep polling
+          } else if (tsui.state == SocialUserInfoStates.FETCHED_USING_SELF && tsui.getProfileUrl.isDefined) { // done
+            log.info(s"[checkStatusOfTwitterUser] Got it for ${tsui.networkType}/${tsui.socialId}")
+            Some(Right(tsui.getProfileUrl.map(url => url.substring(url.lastIndexOf('/') + 1)).get))
+          } else { // other
+            log.info(s"[checkStatusOfTwitterUser] Couldn't get handle of ${tsui.networkType}/${tsui.socialId}")
+            Some(Left(()))
+          }
+        }
+      }
+    }
+
+    var times = 0
+    def timeoutF = play.api.libs.concurrent.Promise.timeout(None, 300)
+    def pollCheck(): Future[Option[String]] = {
+      timeoutF.flatMap { _ =>
+        checkStatusOfTwitterUser() match {
+          case None if times < iterations =>
+            times += 1
+            pollCheck()
+          case None | Some(Left(_)) => // Timed out or weird error
+            Future.successful(None)
+          case Some(Right(res)) => // Got handle!
+            Future.successful(Some(res))
+        }
+      }
+    }
+    pollCheck()
+  }
+
   def thanksForTwitterWaitlist = MaybeUserAction { implicit request =>
     val session = request.session
     request match {
       case requestNonUser: NonUserRequest[_] =>
         Redirect("/twitter/request")
       case ur: UserRequest[_] =>
-        val addEntry = db.readOnlyMaster { implicit session =>
-          socialRepo.getByUser(ur.userId).find(_.networkType == SocialNetworks.TWITTER).flatMap {
-            _.getProfileUrl.map(url => url.substring(url.lastIndexOf('/') + 1))
-          }
-        }.map { handle =>
-          twitterWaitlistCommander.addEntry(ur.userId, handle)
+        val noTwitter = db.readOnlyMaster { implicit session =>
+          socialRepo.getByUser(ur.userId).find { s =>
+            s.networkType == SocialNetworks.TWITTER &&
+              (s.state == SocialUserInfoStates.FETCHED_USING_SELF ||
+                s.state == SocialUserInfoStates.CREATED)
+          }.isEmpty
         }
-        addEntry match {
-          case None => // maybe unknown error like twitter user/handle wasn't found
-            Redirect("/link/twitter").withSession(session + (SecureSocial.OriginalUrlKey -> "/twitter/thanks"))
-          case Some(Left(error)) => // user has already been added to waitlist
-            Ok(Json.obj("res" -> "already_added"))
-          case Some(Right(_)) =>
-            Ok(Json.obj("res" -> "thanks"))
+        if (noTwitter) {
+          Redirect("/link/twitter?intent=waitlist").withSession(session + (SecureSocial.OriginalUrlKey -> "/twitter/thanks"))
+        } else {
+          pollDbForTwitterHandle(ur.userId, 40).map { twRes =>
+            twRes match {
+              case Some(handle) =>
+                twitterWaitlistCommander.addEntry(ur.userId, handle)
+              case None => // we failed :(
+                airbrakeNotifier.notify(s"Couldn't get twitter handle in time. userId: ${ur.userId.id}. They want to be waitlisted.")
+            }
+          }
+          MarketingSiteRouter.marketingSite("twitter-confirmation")
         }
     }
   }

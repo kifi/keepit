@@ -52,7 +52,7 @@ class CortexKeepRepoImpl @Inject() (
   def getSince(seq: SequenceNumber[CortexKeep], limit: Int)(implicit session: RSession): Seq[CortexKeep] = super.getBySequenceNumber(seq, limit)
 
   def getMaxSeq()(implicit session: RSession): SequenceNumber[CortexKeep] = {
-    import StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
 
     val sql = sql"select max(seq) from cortex_keep"
     SequenceNumber[CortexKeep](sql.as[Long].first max 0L)
@@ -67,7 +67,7 @@ class CortexKeepRepoImpl @Inject() (
   }
 
   def countRecentUserKeeps(userId: Id[User], since: DateTime)(implicit session: RSession): Int = {
-    import StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     val q = sql"""select count(*) from cortex_keep where user_id = ${userId.id} and kept_at > ${since}"""
     q.as[Int].first
   }

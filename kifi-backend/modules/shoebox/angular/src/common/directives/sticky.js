@@ -19,7 +19,6 @@ angular.module('kifi')
           return;
         }
 
-        var stickyTop = scope.stickyTop;
         var stickyToggle = scope.stickyToggle();
         var stickyNear = scope.stickyNear && scope.stickyNear();
         var stickyNearPx = scope.stickyNearPx || 10;
@@ -38,7 +37,7 @@ angular.module('kifi')
         }
 
         function handleNewScrollTop(scrollTop) {
-          var pxFromThreshold = pxFromDocTop - scrollTop - stickyTop;
+          var pxFromThreshold = pxFromDocTop - scrollTop - scope.stickyTop;
           if (pxFromThreshold <= 0) {
             if (!stuck) {
               if (stickyNear) {

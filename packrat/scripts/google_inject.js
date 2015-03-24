@@ -12,6 +12,8 @@
 // @require scripts/html/search/google_hits.js
 // @require scripts/html/search/google_hit.js
 
+api.identify('googleInject');
+
 // (same as match pattern above)
 var searchUrlRe = /^https?:\/\/www\.google\.(?:com|com\.(?:a[fgiru]|b[dhnorz]|c[ouy]|do|e[cgt]|fj|g[hit]|hk|jm|k[hw]|l[by]|m[txy]|n[afgip]|om|p[aehkry]|qa|s[abglv]|t[jrw]|u[ay]|v[cn])|co\.(?:ao|bw|c[kr]|i[dln]|jp|k[er]|ls|m[az]|nz|t[hz]|u[gkz]|v[ei]|z[amw])|a[demstz]|b[aefgijsy]|cat|c[adfghilmnvz]|d[ejkmz]|e[es]|f[imr]|g[aeglmpry]|h[nrtu]|i[emqst]|j[eo]|k[giz]|l[aiktuv]|m[degklnsuvw]|n[eloru]|p[lnstosuw]|s[cehikmnot]|t[dgklmnot]|v[gu]|ws)\/(?:|search|webhp)(?:[?#].*)?$/;
 var pageSession = Math.random().toString(16).slice(2);
@@ -372,51 +374,69 @@ if (searchUrlRe.test(document.URL)) !function () {
   /*******************************************************/
 
   var urlAutoFormatters = [{
-      match: /^https?:\/\/docs\.google\.com\//,
-      desc: 'A file in Google Docs',
-      icon: "gdocs.gif"
+      match: /^https?:\/\/docs\.google\.com\/(?:[^?#]+\/)document\//,
+      desc: 'A document on Google',
+      icon: 'docs'
     }, {
       match: /^https?:\/\/drive\.google\.com\//,
-      desc: 'A folder in your Google Drive',
-      icon: "gdrive.png"
+      desc: 'A folder on Google Drive',
+      icon: 'drive'
     }, {
-      match: /^https?:\/\/www.dropbox\.com\/home/,
-      desc: 'A folder in your Dropbox',
-      icon: "dropbox.png"
+      match: /^https?:\/\/www.dropbox\.com\/(?:home|work|lightbox\/)/,
+      icon: 'dropbox'
     }, {
       match: /^https?:\/\/dl-web\.dropbox\.com\//,
-      desc: 'A file from Dropbox',
-      icon: "dropbox.png"
+      desc: 'A file on Dropbox',
+      icon: 'dropbox'
     }, {
       match: /^https?:\/\/www.dropbox\.com\/s\//,
       desc: 'A shared file on Dropbox',
-      icon: "dropbox.png"
+      icon: 'dropbox'
     }, {  // TODO: add support for Gmail labels like inbox/starred?
       match: /^https?:\/\/mail\.google\.com\/mail\/.*#.*\/[0-9a-f]{10,}$/,
       desc: "An email on Gmail",
-      icon: "gmail.png"
+      icon: 'gmail'
     }, {
       match: /^https?:\/\/www.facebook\.com\/messages\/\w[\w.-]{2,}$/,
       desc: 'A conversation on Facebook',
-      icon: "facebook.png"
+      icon: 'facebook'
+    }, {
+      match: /\.pdf(\?|#|$)/i,
+      icon: 'pdf'
+    }, {
+      match: /^https?:\/\/docs\.google\.com\/(?:[^?#]+\/)spreadsheets\//,
+      desc: 'A spreadsheet on Google',
+      icon: 'sheets'
+    }, {
+      match: /^https?:\/\/sites.google.com\/site\//,
+      icon: 'sites'
+    }, {
+      match: /^https?:\/\/docs\.google\.com\/(?:[^?#]+\/)presentation\//,
+      desc: 'A slide deck on Google',
+      icon: 'slides'
     }];
 
   var strippedSchemeRe = /^https?:\/\//;
   var domainTrailingSlashRe = /^([^\/]*)\/$/;
   function formatDesc(url, matches) {
+    var icon, desc;
     for (var i = 0; i < urlAutoFormatters.length; i++) {
-      if (urlAutoFormatters[i].match.test(url)) {
-        var iconUrl = api.url('images/results/' + urlAutoFormatters[i].icon);
-        return "<span class=kifi-res-type-icon style='background:url(" + iconUrl + ") no-repeat;background-size:15px'></span>" +
-          urlAutoFormatters[i].desc;
+      var uaf = urlAutoFormatters[i];
+      if (uaf.match.test(url)) {
+        icon = '<span class="kifi-res-type-icon kifi-' + uaf.icon + '"></span>';
+        desc = uaf.desc;
+        break;
       }
     }
-    var strippedSchemeLen = (url.match(strippedSchemeRe) || [''])[0].length;
-    url = url.substr(strippedSchemeLen).replace(domainTrailingSlashRe, '$1');
-    for (var i = matches.length; i--;) {
-      matches[i][0] -= strippedSchemeLen;
+    if (!desc) {
+      var strippedSchemeLen = (url.match(strippedSchemeRe) || [''])[0].length;
+      url = url.substr(strippedSchemeLen).replace(domainTrailingSlashRe, '$1');
+      for (var i = matches.length; i--;) {
+        matches[i][0] -= strippedSchemeLen;
+      }
+      desc = boldSearchTerms(url, matches);
     }
-    return boldSearchTerms(url, matches);
+    return (icon || '') + desc;
   }
 
   var boundResHandlers;

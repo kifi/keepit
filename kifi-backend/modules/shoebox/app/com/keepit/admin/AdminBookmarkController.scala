@@ -21,6 +21,7 @@ import play.api.libs.json._
 import play.api.mvc.{ Action, AnyContent }
 import views.html
 
+import scala.collection.mutable
 import scala.collection.mutable.{ SynchronizedMap, HashMap => MutableMap }
 import scala.concurrent._
 import com.keepit.common.akka.SafeFuture
@@ -195,11 +196,11 @@ class AdminBookmarksController @Inject() (
   def bookmarksView(page: Int = 0) = AdminUserPage.async { implicit request =>
     val PAGE_SIZE = 25
 
-    val userMap = new MutableMap[Id[User], User] with SynchronizedMap[Id[User], User]
+    val userMap = mutable.Map[Id[User], User]()
 
     def bookmarksInfos() = {
-      future { db.readOnlyReplica { implicit s => keepRepo.page(page, PAGE_SIZE, false, Set(KeepStates.INACTIVE)) } } flatMap { bookmarks =>
-        val usersFuture = future {
+      Future { db.readOnlyReplica { implicit s => keepRepo.page(page, PAGE_SIZE, false, Set(KeepStates.INACTIVE)) } } flatMap { bookmarks =>
+        val usersFuture = Future {
           timing("load user") {
             db.readOnlyMaster { implicit s =>
               bookmarks map (_.userId) map { id =>
@@ -208,7 +209,7 @@ class AdminBookmarksController @Inject() (
             }
           }
         }
-        val urisFuture = future {
+        val urisFuture = Future {
           timing("load uris") {
             db.readOnlyReplica { implicit s =>
               bookmarks map (_.uriId) map uriRepo.get
@@ -216,7 +217,7 @@ class AdminBookmarksController @Inject() (
           }
         }
 
-        val scrapesFuture = future {
+        val scrapesFuture = Future {
           timing("load scrape info") {
             db.readOnlyReplica { implicit s =>
               bookmarks map (_.uriId) map scrapeRepo.getByUriId
@@ -234,7 +235,7 @@ class AdminBookmarksController @Inject() (
 
     val bookmarkTotalCountFuture = keepCommander.getKeepsCountFuture()
 
-    val bookmarkTodayAllCountsFuture = future {
+    val bookmarkTodayAllCountsFuture = Future {
       timing("load bookmarks counts from today") {
         db.readOnlyReplica { implicit s =>
           keepRepo.getAllCountsByTimeAndSource(clock.now().minusDays(1), clock.now())
@@ -242,7 +243,7 @@ class AdminBookmarksController @Inject() (
       }
     }
 
-    val privateKeeperKeepCountFuture = future {
+    val privateKeeperKeepCountFuture = Future {
       timing("load private keeper counts from today") {
         db.readOnlyReplica { implicit s =>
           keepRepo.getPrivateCountByTimeAndSource(clock.now().minusDays(1), clock.now(), KeepSource.keeper)
@@ -296,7 +297,7 @@ class AdminBookmarksController @Inject() (
   def bookmarksKeywordsPageView(page: Int = 0) = AdminUserPage.async { implicit request =>
     val PAGE_SIZE = 25
 
-    val bmsFut = future { db.readOnlyReplica { implicit s => keepRepo.page(page, PAGE_SIZE, false, Set(KeepStates.INACTIVE)) } }
+    val bmsFut = Future { db.readOnlyReplica { implicit s => keepRepo.page(page, PAGE_SIZE, false, Set(KeepStates.INACTIVE)) } }
     val bookmarkTotalCountFuture = keepCommander.getKeepsCountFuture()
 
     bmsFut.flatMap { bms =>

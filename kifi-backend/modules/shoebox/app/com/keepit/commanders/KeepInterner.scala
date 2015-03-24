@@ -179,7 +179,7 @@ class KeepInterner @Inject() (
         scraper.scheduleScrape(uri, date)
       }
 
-      val (isNewKeep, wasInactiveKeep, bookmark) = internKeep(uri, userId, library, installationId, source, rawBookmark.title, rawBookmark.url, rawBookmark.keptAt.getOrElse(clock.now), rawBookmark.sourceAttribution)
+      val (isNewKeep, wasInactiveKeep, bookmark) = internKeep(uri, userId, library, installationId, source, rawBookmark.title, rawBookmark.url, rawBookmark.keptAt.getOrElse(clock.now), rawBookmark.sourceAttribution, rawBookmark.note)
       Success(InternedUriAndKeep(bookmark, uri, isNewKeep, wasInactiveKeep))
     } else {
       Failure(new Exception(s"bookmark url is not an http protocol: ${rawBookmark.url}"))
@@ -195,7 +195,9 @@ class KeepInterner @Inject() (
   }
 
   private def internKeep(uri: NormalizedURI, userId: Id[User], library: Library,
-    installationId: Option[ExternalId[KifiInstallation]], source: KeepSource, title: Option[String], url: String, keptAt: DateTime, sourceAttribution: Option[SourceAttribution])(implicit session: RWSession) = {
+    installationId: Option[ExternalId[KifiInstallation]], source: KeepSource,
+    title: Option[String], url: String, keptAt: DateTime,
+    sourceAttribution: Option[SourceAttribution], note: Option[String])(implicit session: RWSession) = {
 
     val currentBookmarkOpt = if (library.isDisjoint)
       keepRepo.getPrimaryInDisjointByUriAndUser(uri.id.get, userId)
@@ -217,7 +219,9 @@ class KeepInterner @Inject() (
           title = trimmedTitle orElse bookmark.title orElse uri.title,
           state = KeepStates.ACTIVE,
           visibility = library.visibility,
-          libraryId = Some(library.id.get)
+          libraryId = Some(library.id.get),
+          keptAt = clock.now,
+          note = note orElse bookmark.note
         ) |> { keep =>
             if (wasInactiveKeep) {
               keep.copy(url = url, createdAt = clock.now)
@@ -240,7 +244,9 @@ class KeepInterner @Inject() (
           libraryId = Some(library.id.get),
           inDisjointLib = library.isDisjoint,
           keptAt = keptAt,
-          sourceAttributionId = savedAttr.flatMap { _.id })
+          sourceAttributionId = savedAttr.flatMap { _.id },
+          note = note
+        )
         val improvedKeep = integrityHelpers.improveKeepSafely(uri, keep)
         (true, false, keepRepo.save(improvedKeep))
     }

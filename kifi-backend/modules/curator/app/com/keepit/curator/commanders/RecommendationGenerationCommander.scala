@@ -42,7 +42,7 @@ class RecommendationGenerationCommander @Inject() (
     schedulingProperties: SchedulingProperties) extends Logging {
 
   val defaultScore = 0.0f
-  val recommendationGenerationLock = new ReactiveLock(6)
+  val recommendationGenerationLock = new ReactiveLock(8)
   val perUserRecommendationGenerationLocks = TrieMap[Id[User], ReactiveLock]()
   val candidateURILock = new ReactiveLock(4)
 
@@ -237,7 +237,7 @@ class RecommendationGenerationCommander @Inject() (
       } else {
         log.warn("Trying to run reco precomputation on non-designated machine. Aborting.")
         recommendationGenerationLock.clear()
-        Future.successful()
+        Future.successful(())
       }
     }
   }
@@ -249,7 +249,7 @@ class RecommendationGenerationCommander @Inject() (
         val boostedKeepers = boostedKeepersSeq.toSet
         Future.sequence(userIds.map(userId => precomputeRecommendationsForUser(userId, boostedKeepers))).map(_ => ())
       } else {
-        Future.successful()
+        Future.successful(())
       }
     }
   }

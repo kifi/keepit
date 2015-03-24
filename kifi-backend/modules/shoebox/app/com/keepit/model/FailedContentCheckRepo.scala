@@ -60,7 +60,7 @@ class FailedContentCheckRepoImpl @Inject() (
   def contains(url1: String, url2: String)(implicit session: RSession): Boolean = getByUrls(url1, url2).isDefined
 
   def getRecentCountByURL(url: String, since: DateTime)(implicit session: RSession): Int = {
-    import StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     val hash = NormalizedURI.hashUrl(url).hash
     val q = sql"""select count(*) from failed_content_check where url1_hash = ${hash} or url2_hash = ${hash} and updated_at > ${since}"""
     q.as[Int].list.head

@@ -44,13 +44,13 @@ class LibraryInviteRepoImpl @Inject() (
   class LibraryInviteTable(tag: Tag) extends RepoTable[LibraryInvite](db, tag, "library_invite") {
     def libraryId = column[Id[Library]]("library_id", O.NotNull)
     def inviterId = column[Id[User]]("inviter_id", O.NotNull)
-    def userId = column[Id[User]]("user_id", O.Nullable)
+    def userId = column[Option[Id[User]]]("user_id", O.Nullable)
     def access = column[LibraryAccess]("access", O.NotNull)
-    def emailAddress = column[EmailAddress]("email_address", O.Nullable)
+    def emailAddress = column[Option[EmailAddress]]("email_address", O.Nullable)
     def authToken = column[String]("auth_token", O.NotNull)
     def passPhrase = column[String]("pass_phrase", O.NotNull)
-    def message = column[String]("message", O.Nullable)
-    def * = (id.?, libraryId, inviterId, userId.?, emailAddress.?, access, createdAt, updatedAt, state, authToken, passPhrase, message.?) <> ((LibraryInvite.apply _).tupled, LibraryInvite.unapply)
+    def message = column[Option[String]]("message", O.Nullable)
+    def * = (id.?, libraryId, inviterId, userId, emailAddress, access, createdAt, updatedAt, state, authToken, passPhrase, message) <> ((LibraryInvite.apply _).tupled, LibraryInvite.unapply)
   }
 
   def table(tag: Tag) = new LibraryInviteTable(tag)
@@ -86,7 +86,7 @@ class LibraryInviteRepoImpl @Inject() (
 
   def countDistinctWithUserId(userId: Id[User])(implicit session: RSession): Int = {
     //(for (b <- rows if b.userId === userId && !b.state.inSet(excludeSet)) yield b).groupBy(x => x).map(_._1).length.run
-    import StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     val query = sql"select count(distinct library_id) from library_invite where user_id=$userId and state='active'"
     query.as[Int].firstOption.getOrElse(0)
   }
@@ -127,8 +127,8 @@ class LibraryInviteRepoImpl @Inject() (
     val invitees = {
       val invitesGroupedByInvitee = (for (r <- rows if r.libraryId === libraryId && r.state.inSet(includeStates)) yield r).groupBy(r => (r.userId, r.emailAddress))
       val inviteesWithLastInvitedAt = invitesGroupedByInvitee.map { case ((userId, emailAddress), invites) => (userId, emailAddress, invites.map(_.createdAt).min) }
-      val sortedInvitees = inviteesWithLastInvitedAt.sortBy { case (userId, emailAddress, firstInvitedAt) => (userId.isNotNull, firstInvitedAt) }
-      sortedInvitees.drop(offset).take(limit).map { case (userId, emailAddress, firstInvitedAt) => (userId.?, emailAddress.?) }.list
+      val sortedInvitees = inviteesWithLastInvitedAt.sortBy { case (userId, emailAddress, firstInvitedAt) => (userId.isDefined, firstInvitedAt) }
+      sortedInvitees.drop(offset).take(limit).map { case (userId, emailAddress, firstInvitedAt) => (userId, emailAddress) }.list
     }
 
     val (userIds, emailAddresses) = {

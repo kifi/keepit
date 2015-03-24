@@ -224,6 +224,8 @@ class AuthHelper @Inject() (
 
         val result = if (isFinalizedImmediately) {
           Redirect(uri)
+        } else if (cookieIntent.exists(_.value == "waitlist")) {
+          Ok(Json.obj("uri" -> "/twitter/thanks"))
         } else {
           Ok(Json.obj("uri" -> uri))
         }
@@ -498,7 +500,7 @@ class AuthHelper @Inject() (
           val filledUser = SecureSocialAdaptor.toSocialUser(profileInfo, AuthenticationMethod.OAuth2)
           val longTermTokenInfoF = provider.exchangeLongTermToken(oauth2InfoOrig) recover {
             case t: Throwable =>
-              airbrakeNotifier.notify(s"[accessTokenSignup($providerName)] Caught Exception($t) during token exchange; token=${oauth2InfoOrig}; Cause:${t.getCause}; StackTrace: ${t.getStackTraceString}")
+              airbrakeNotifier.notify(s"[accessTokenSignup($providerName)] Caught Exception($t) during token exchange; token=${oauth2InfoOrig}; Cause:${t.getCause}; StackTrace: ${t.getStackTrace.mkString("", "\n", "\n")}")
               OAuth2TokenInfo.fromOAuth2Info(oauth2InfoOrig)
           }
           longTermTokenInfoF map { oauth2InfoNew =>
@@ -506,7 +508,7 @@ class AuthHelper @Inject() (
           }
         } recover {
           case t: Throwable =>
-            airbrakeNotifier.notify(s"[accessTokenSignup($providerName)] Caught Exception($t) during getUserProfileInfo; token=${oauth2InfoOrig}; Cause:${t.getCause}; StackTrace: ${t.getStackTraceString}")
+            airbrakeNotifier.notify(s"[accessTokenSignup($providerName)] Caught Exception($t) during getUserProfileInfo; token=${oauth2InfoOrig}; Cause:${t.getCause}; StackTrace: ${t.getStackTrace.mkString("", "\n", "\n")}")
             BadRequest(Json.obj("error" -> "invalid_token"))
         }
     }
@@ -523,7 +525,7 @@ class AuthHelper @Inject() (
           authCommander.signupWithTrustedSocialUser(providerName, filledUser.copy(oAuth1Info = Some(oauth1Info)), signUpUrl)
         } recover {
           case t: Throwable =>
-            airbrakeNotifier.notify(s"[accessTokenSignup($providerName)] Caught Exception($t) during getUserProfileInfo; token=${oauth1Info}; Cause:${t.getCause}; StackTrace: ${t.getStackTraceString}")
+            airbrakeNotifier.notify(s"[accessTokenSignup($providerName)] Caught Exception($t) during getUserProfileInfo; token=${oauth1Info}; Cause:${t.getCause}; StackTrace: ${t.getStackTrace.mkString("", "\n", "\n")}")
             BadRequest(Json.obj("error" -> "invalid_token"))
         }
     }
@@ -539,7 +541,7 @@ class AuthHelper @Inject() (
           authCommander.loginWithTrustedSocialIdentity(socialUser.identityId)
         } recover {
           case t: Throwable =>
-            log.error(s"[accessTokenLogin($providerName)] Caught Exception($t) during getUserProfileInfo; token=${oAuth2Info}; Cause:${t.getCause}; StackTrace: ${t.getStackTraceString}")
+            log.error(s"[accessTokenLogin($providerName)] Caught Exception($t) during getUserProfileInfo; token=${oAuth2Info}; Cause:${t.getCause}; StackTrace: ${t.getStackTrace.mkString("", "\n", "\n")}")
             BadRequest(Json.obj("error" -> "invalid_token"))
         }
     }
@@ -555,7 +557,7 @@ class AuthHelper @Inject() (
           authCommander.loginWithTrustedSocialIdentity(socialUser.identityId)
         } recover {
           case t: Throwable =>
-            log.error(s"[doOAuth1TokenLogin($providerName)] Caught Exception($t) during getUserProfileInfo; token=${oauth1Info}; Cause:${t.getCause}; StackTrace: ${t.getStackTraceString}")
+            log.error(s"[doOAuth1TokenLogin($providerName)] Caught Exception($t) during getUserProfileInfo; token=${oauth1Info}; Cause:${t.getCause}; StackTrace: ${t.getStackTrace.mkString("", "\n", "\n")}")
             BadRequest(Json.obj("error" -> "invalid_token"))
         }
 

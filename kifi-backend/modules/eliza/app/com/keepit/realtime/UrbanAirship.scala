@@ -22,7 +22,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
 
 import scala.collection
-import scala.concurrent.{ Future, future }
+import scala.concurrent.{ Future }
 import scala.util.{ Try, Success, Failure }
 
 case class UrbanAirshipConfig(key: String, secret: String, devKey: String, devSecret: String, baseUrl: String = "https://go.urbanairship.com")
@@ -103,7 +103,7 @@ class UrbanAirshipImpl @Inject() (
         }
       }
     }
-    future {
+    Future {
       val devices = db.readOnlyReplica { implicit s => deviceRepo.getByUserId(userId) }
       devices foreach client.updateDeviceState
     }

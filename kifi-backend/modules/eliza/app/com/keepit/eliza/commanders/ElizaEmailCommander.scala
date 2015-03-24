@@ -219,13 +219,13 @@ class ElizaEmailCommander @Inject() (
         val nut = nuts(nup.identifier)
         if (!nut.muted) {
           safeProcessEmail(threadEmailData, nut, _.addedHtml.body, NotificationCategory.NonUser.ADDED_TO_DISCUSSION)
-        } else Future.successful()
+        } else Future.successful(())
       }
     }
   }
 
   def notifyEmailParticipant(emailParticipantThread: NonUserThread, threadEmailData: ThreadEmailData): Future[Unit] = {
-    val result = if (emailParticipantThread.muted) Future.successful() else {
+    val result = if (emailParticipantThread.muted) Future.successful(()) else {
       require(emailParticipantThread.participant.kind == NonUserKinds.email, s"NonUserThread ${emailParticipantThread.id.get} does not represent an email participant.")
       require(emailParticipantThread.threadId == threadEmailData.thread.id.get, "MessageThread and NonUserThread do not match.")
       val category = if (emailParticipantThread.notifiedCount > 0) NotificationCategory.NonUser.DISCUSSION_UPDATES else NotificationCategory.NonUser.DISCUSSION_STARTED

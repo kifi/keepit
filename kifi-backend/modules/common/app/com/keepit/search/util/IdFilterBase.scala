@@ -1,10 +1,12 @@
 package com.keepit.search.util
 
-import javax.xml.bind.DatatypeConverter._
+import org.apache.commons.codec.binary.Base64
 
 import com.keepit.serializer.ArrayBinaryFormat
 
 trait IdFilterBase[T <: Set[Long]] {
+
+  private val coder = new Base64(0, null, true) // url safe, no line breaks. thread safe
 
   protected val emptySet: T
 
@@ -12,13 +14,13 @@ trait IdFilterBase[T <: Set[Long]] {
 
   protected def toSet(bytes: Array[Byte]): T
 
-  def fromSetToBase64(ids: Set[Long]): String = printBase64Binary(toByteArray(ids))
+  def fromSetToBase64(ids: Set[Long]): String = coder.encodeAsString(toByteArray(ids))
 
   def fromBase64ToSet(base64: String): T = {
     if (base64.length == 0) emptySet
     else {
       val bytes = try {
-        parseBase64Binary(base64)
+        coder.decode(base64)
       } catch {
         case e: Exception => throw new IdFilterCompressorException("failed to decode base64", e)
       }

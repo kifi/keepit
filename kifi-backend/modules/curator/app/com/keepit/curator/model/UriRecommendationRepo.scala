@@ -70,7 +70,7 @@ class UriRecommendationRepoImpl @Inject() (
       for (row <- rows if row.masterScore >= masterScoreThreshold) yield row
 
     def notPushed(rows: RepoQuery) =
-      for (row <- rows if row.lastPushedAt.isNull) yield row
+      for (row <- rows if row.lastPushedAt.isEmpty) yield row
   }
   import QueryBuilder._
 
@@ -84,12 +84,12 @@ class UriRecommendationRepoImpl @Inject() (
     def clicked = column[Int]("clicked", O.NotNull)
     def kept = column[Boolean]("kept", O.NotNull)
     def trashed = column[Boolean]("trashed", O.NotNull)
-    def lastPushedAt = column[DateTime]("last_pushed_at", O.Nullable)
+    def lastPushedAt = column[Option[DateTime]]("last_pushed_at", O.Nullable)
     def attribution = column[SeedAttribution]("attribution", O.NotNull)
     def topic1 = column[LDATopic]("topic1", O.Nullable)
     def topic2 = column[LDATopic]("topic2", O.Nullable)
     def * = (id.?, createdAt, updatedAt, state, vote.?, uriId, userId, masterScore, allScores, delivered, clicked,
-      kept, trashed, lastPushedAt.?, attribution, topic1.?, topic2.?) <> ((UriRecommendation.apply _).tupled, UriRecommendation.unapply _)
+      kept, trashed, lastPushedAt, attribution, topic1.?, topic2.?) <> ((UriRecommendation.apply _).tupled, UriRecommendation.unapply _)
   }
 
   def table(tag: Tag) = new UriRecommendationTable(tag)
@@ -116,7 +116,7 @@ class UriRecommendationRepoImpl @Inject() (
   }
 
   def updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI], feedback: UriRecommendationFeedback)(implicit session: RWSession): Boolean = {
-    import StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
 
     val clickedResult = if (feedback.clicked.isDefined && feedback.clicked.get)
       sql"UPDATE uri_recommendation SET clicked=clicked+1, updated_at=$currentDateTime WHERE user_id=$userId AND uri_id=$uriId".asUpdate.first > 0
@@ -130,27 +130,27 @@ class UriRecommendationRepoImpl @Inject() (
   }
 
   def incrementDeliveredCount(recoId: Id[UriRecommendation], withlastPushedAt: Boolean = false)(implicit session: RWSession): Unit = {
-    import StaticQuery.interpolation
-    if (withlastPushedAt) sqlu"UPDATE uri_recommendation SET delivered=delivered+1, last_pushed_at=$currentDateTime, updated_at=$currentDateTime WHERE id=$recoId".first()
-    else sqlu"UPDATE uri_recommendation SET delivered=delivered+1, updated_at=$currentDateTime WHERE id=$recoId".first()
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
+    if (withlastPushedAt) sqlu"UPDATE uri_recommendation SET delivered=delivered+1, last_pushed_at=$currentDateTime, updated_at=$currentDateTime WHERE id=$recoId".first
+    else sqlu"UPDATE uri_recommendation SET delivered=delivered+1, updated_at=$currentDateTime WHERE id=$recoId".first
   }
 
   def cleanupLowMasterScoreRecos(userId: Id[User], limitNumRecosForUser: Int, before: DateTime)(implicit session: RWSession): Unit = {
-    import StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     sqlu"""
       DELETE FROM uri_recommendation WHERE user_id=$userId AND master_score < (SELECT MIN(master_score) FROM (
         SELECT master_score FROM uri_recommendation WHERE user_id=$userId ORDER BY master_score DESC LIMIT $limitNumRecosForUser
-      ) AS mScoreTable) AND (updated_at < $before OR delivered>0)""".first()
+      ) AS mScoreTable) AND (updated_at < $before OR delivered>0)""".first
 
   }
 
   def cleanupOldRecos(userId: Id[User], expiration: DateTime)(implicit session: RWSession): Unit = {
-    import StaticQuery.interpolation
-    sqlu"""DELETE FROM uri_recommendation WHERE user_id=$userId AND updated_at < $expiration""".first()
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
+    sqlu"""DELETE FROM uri_recommendation WHERE user_id=$userId AND updated_at < $expiration""".first
   }
 
   def getTopUriIdsForUser(userId: Id[User])(implicit session: RSession): Set[Id[NormalizedURI]] = {
-    import StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     sql"""SELECT uri_id FROM uri_recommendation WHERE user_id=$userId ORDER BY master_score DESC LIMIT 200""".as[Id[NormalizedURI]].list.toSet
   }
 
@@ -159,12 +159,12 @@ class UriRecommendationRepoImpl @Inject() (
   }
 
   def getUsersWithRecommendations()(implicit session: RSession): Set[Id[User]] = {
-    import StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     sql"SELECT DISTINCT user_id FROM uri_recommendation".as[Id[User]].list.toSet
   }
 
   def getGeneralRecommendationScore(uriId: Id[NormalizedURI], minClickedUsers: Int = 3)(implicit session: RSession): Option[Float] = {
-    import StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
 
     // take recos clicked by many users (minClickUsers)
     // compute scores (the root-mean-square of the inverse of master_scores) for each URI
@@ -176,7 +176,7 @@ class UriRecommendationRepoImpl @Inject() (
   }
 
   def getGeneralRecommendationCandidates(limit: Int, minClickedUsers: Int = 3)(implicit session: RSession): Seq[Id[NormalizedURI]] = {
-    import StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
 
     // take recos clicked by many users (minClickUsers)
     sql"""
@@ -186,8 +186,8 @@ class UriRecommendationRepoImpl @Inject() (
   }
 
   def deleteByUriId(uriId: Id[NormalizedURI])(implicit session: RWSession): Unit = {
-    import StaticQuery.interpolation
-    sqlu"""DELETE FROM uri_recommendation WHERE uri_id=$uriId""".first()
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
+    sqlu"""DELETE FROM uri_recommendation WHERE uri_id=$uriId""".first
   }
 
   def deleteCache(model: UriRecommendation)(implicit session: RSession): Unit = {}

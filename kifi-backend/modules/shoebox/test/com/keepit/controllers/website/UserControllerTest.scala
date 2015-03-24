@@ -105,9 +105,9 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
         }
         val userController = inject[UserController]
         val pathName = routes.UserController.updateName().url
-        val pathDescription = routes.UserController.updateDescription().url
+        val pathBio = routes.UserController.updateBiography().url
         pathName === "/site/user/me/name"
-        pathDescription === "/site/user/me/description"
+        pathBio === "/site/user/me/biography"
 
         inject[FakeUserActionsHelper].setUser(user, Set(ExperimentType.ADMIN))
 
@@ -126,10 +126,10 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
         }
 
         val inputJson2 = Json.obj(
-          "description" -> "USA #1"
+          "biography" -> "USA #1"
         )
-        val request2 = FakeRequest("POST", pathDescription).withBody(inputJson2)
-        val result2: Future[Result] = userController.updateDescription()(request2)
+        val request2 = FakeRequest("POST", pathBio).withBody(inputJson2)
+        val result2: Future[Result] = userController.updateBiography()(request2)
         status(result2) must equalTo(OK)
         contentType(result2) must beSome("application/json")
         db.readOnlyMaster { implicit s =>

@@ -53,10 +53,10 @@ class KifiInstallationRepoImpl @Inject() (val db: DataBaseComponent, val clock: 
   initTable()
 
   def getLatestActiveExtensionVersions(count: Int)(implicit session: RSession): Seq[(KifiExtVersion, DateTime, Int)] = {
-    import scala.slick.jdbc.StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     // select version,min(updated_at) as min, count(*) as count from kifi_installation group by version having count > 3 order by min desc limit 20;
     val interpolated = sql"""select version, min(updated_at) as min, count(*) as c from kifi_installation where platform = '#${KifiInstallationPlatform.Extension.name}' group by version order by min desc limit $count"""
-    interpolated.as[(String, DateTime, Int)].list().map {
+    interpolated.as[(String, DateTime, Int)].list.map {
       case (versionStr, max, count) =>
         (KifiExtVersion(versionStr), max, count)
     }.sortWith((a, b) => a._1 > b._1)

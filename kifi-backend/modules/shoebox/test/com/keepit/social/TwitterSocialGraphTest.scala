@@ -24,7 +24,7 @@ class TwitterSocialGraphTest extends Specification with ShoeboxTestInjector with
     val userValueRepo = inject[UserValueRepo]
     val twtrOAuthProvider = new TwitterOAuthProviderImpl(airbrake, oauth1Config) {
       override def getUserProfileInfo(accessToken: OAuth1TokenInfo): Future[UserProfileInfo] = Future.successful {
-        tweetfortytwoInfo.copy(screenName = "tweet42")
+        TwitterUserInfo.toUserProfileInfo(tweetfortytwoInfo.copy(screenName = "tweet42"))
       }
     }
     val twtrGraph: TwitterSocialGraphImpl = new TwitterSocialGraphImpl(airbrake, db, clock, oauth1Config, twtrOAuthProvider, userValueRepo, socialUserInfoRepo) {
@@ -90,7 +90,7 @@ class TwitterSocialGraphTest extends Specification with ShoeboxTestInjector with
       kifirayInfo.pictureUrl.map(_.toString).get === "https://pbs.twimg.com/profile_images/535882931399450624/p7jzsrJH.jpeg"
     }
     "convert to UserProfileInfo" in {
-      val upi: UserProfileInfo = kifirayInfo
+      val upi: UserProfileInfo = TwitterUserInfo.toUserProfileInfo(kifirayInfo)
       upi.userId.id === kifirayInfo.id.toString
       upi.name === kifirayInfo.name
       upi.handle.map(_.underlying).get === kifirayInfo.screenName

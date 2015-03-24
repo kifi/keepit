@@ -100,11 +100,11 @@ class EventTrackingTest extends Specification with HeimdalTestInjector {
         inject[WatchableExecutionContext].drain()
 
         //this test is failing sporadicly
-        //        userEventRepo.eventCount() === 4
-        //        userEventRepo.events(0).userId === Id(1)
-        //        userEventRepo.events(1).userId === Id(2)
-        //        userEventRepo.events(2).userId === Id(3)
-        //        userEventRepo.events(3).userId === Id(4)
+        //userEventRepo.eventCount() === 4
+        //userEventRepo.events(0).userId === Id(1)
+        //userEventRepo.events(1).userId === Id(2)
+        //userEventRepo.events(2).userId === Id(3)
+        //userEventRepo.events(3).userId === Id(4)
 
         systemEventRepo.eventCount() === 1
         systemEventRepo.events(0).eventType === EventType("system_test_event")

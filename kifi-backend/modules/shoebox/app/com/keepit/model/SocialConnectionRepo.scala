@@ -105,7 +105,7 @@ class SocialConnectionRepoImpl @Inject() (
               """.format(connectionsSQL)
     //can use GetResult and SetParameter to be type safe, not sure its worth it at this point
     val q = StaticQuery.query[(Long, Long), Long](sql)
-    val res: Seq[Long] = q.list(id.id, id.id)
+    val res: Seq[Long] = q.apply(id.id, id.id).list
     res map { id => Id[User](id) } toSet
   }
 
@@ -123,7 +123,7 @@ class SocialConnectionRepoImpl @Inject() (
             t <- rows if ((t.socialUser1 inSet ids) || (t.socialUser2 inSet ids)) && t.state === SocialConnectionStates.ACTIVE
           } yield t).length
         )
-        q.first()
+        q.first
       }
       case _ => 0
     }
@@ -166,7 +166,7 @@ class SocialConnectionRepoImpl @Inject() (
   }
 
   def getConnAndNetworkBySeqNumber(lowerBound: SequenceNumber[SocialConnection], fetchSize: Int = -1)(implicit session: RSession): Seq[(Id[SocialUserInfo], Id[SocialUserInfo], State[SocialConnection], SequenceNumber[SocialConnection], SocialNetworkType)] = {
-    import StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     val query = if (fetchSize > 0) { // unfortunately no easy way to make dynamic parts of interpolated sql queries
       sql"""select sc.social_user_1, sc.social_user_2, sc.state, sc.seq, sui.network_type
             from social_connection sc join social_user_info sui on sc.social_user_1 = sui.id
@@ -177,7 +177,7 @@ class SocialConnectionRepoImpl @Inject() (
             where sc.seq > ${lowerBound.value}"""
     }
 
-    query.as[(Id[SocialUserInfo], Id[SocialUserInfo], State[SocialConnection], SequenceNumber[SocialConnection], SocialNetworkType)].list()
+    query.as[(Id[SocialUserInfo], Id[SocialUserInfo], State[SocialConnection], SequenceNumber[SocialConnection], SocialNetworkType)].list
   }
 }
 
