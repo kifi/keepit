@@ -28,6 +28,7 @@ import com.keepit.model.DeepLocator
 import com.keepit.abook.model.RichSocialConnection
 import com.keepit.search.ArticleSearchResult
 import com.keepit.common.math.ProbabilityDensity
+import scala.concurrent.duration._
 
 case class InvalidDatabaseEncodingException(msg: String) extends java.lang.Throwable
 
@@ -40,6 +41,7 @@ trait FortyTwoGenericTypeMappers { self: { val db: DataBaseComponent } =>
   implicit def nameMapper[M <: Model[M]] = MappedColumnType.base[Name[M], String](_.name, Name[M])
   implicit val dateTimeMapper = MappedColumnType.base[DateTime, Timestamp](d => new Timestamp(d.getMillis), t => if (t == null) null else new DateTime(t.getTime, zones.UTC))
   implicit val localTimeMapper = MappedColumnType.base[LocalTime, Int](t => t.getMillisOfDay, t => new LocalTime(t, zones.UTC))
+  implicit val durationMapper = MappedColumnType.base[Duration, Long](_.toMillis, _ millis)
 
   implicit def seqIdsMapper[M <: Model[M]]: TypedType[Seq[Id[M]]] = MappedColumnType.base[Seq[Id[M]], String](
     { ids => Json.stringify(Json.toJson(ids)) }, { jstr => Json.parse(jstr).as[Seq[Id[M]]] })
