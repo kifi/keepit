@@ -43,7 +43,7 @@ class SlickStandaloneTest extends Specification with SqlDbTestInjector {
         def table(tag: Tag) = new BarTable(tag)
 
         def getByName(name: String)(implicit session: RSession): Seq[Bar] = {
-          val q = for (f <- rows if columnExtensionMethods(f.name).is(valueToConstColumn(name))) yield (f)
+          val q = for (f <- rows if columnExtensionMethods(f.name) === valueToConstColumn(name)) yield (f)
           q.list
         }
       }
