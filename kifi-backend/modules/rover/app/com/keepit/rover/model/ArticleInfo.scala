@@ -19,13 +19,24 @@ case class ArticleInfo(
     kind: String, // todo(Léo): make this kind: ArticleKind[_ <: Article] with Scala 2.11, (with proper mapper, serialization is unchanged)
     bestVersion: Option[ArticleVersion] = None,
     latestVersion: Option[ArticleVersion] = None,
+    oldestVersion: Option[ArticleVersion] = None,
     lastQueuedAt: Option[DateTime] = None,
     lastFetchedAt: Option[DateTime] = None,
     nextFetchAt: Option[DateTime] = None,
     fetchInterval: Float = 24.0f) extends ModelWithState[ArticleInfo] with ModelWithSeqNumber[ArticleInfo] with ArticleKeyHolder {
   def withId(id: Id[ArticleInfo]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
+  def isActive = (state == ArticleInfoStates.ACTIVE)
   def getFetchRequest[A <: Article](implicit kind: ArticleKind[A]) = ArticleFetchRequest(kind, url, lastFetchedAt, getLatestKey)
+  def clean: ArticleInfo = copy(
+    bestVersion = None,
+    latestVersion = None,
+    oldestVersion = None,
+    lastQueuedAt = None,
+    lastFetchedAt = None,
+    nextFetchAt = None,
+    fetchInterval = 24.0f
+  )
 }
 
 object ArticleInfo {
@@ -58,18 +69,22 @@ object ArticleInfo {
     bestVersionMinor: Option[VersionNumber[Article]],
     latestVersionMajor: Option[VersionNumber[Article]],
     latestVersionMinor: Option[VersionNumber[Article]],
+    oldestVersionMajor: Option[VersionNumber[Article]],
+    oldestVersionMinor: Option[VersionNumber[Article]],
     lastQueuedAt: Option[DateTime],
     lastFetchedAt: Option[DateTime],
     nextFetchAt: Option[DateTime],
     fetchInterval: Float): ArticleInfo = {
     val bestVersion = articleVersionFromDb(bestVersionMajor, bestVersionMinor)
     val latestVersion = articleVersionFromDb(latestVersionMajor, latestVersionMinor)
-    ArticleInfo(id, createdAt, updatedAt, state, seq, uriId, url, kind, bestVersion, latestVersion, lastQueuedAt, lastFetchedAt, nextFetchAt, fetchInterval)
+    val oldestVersion = articleVersionFromDb(oldestVersionMajor, oldestVersionMinor)
+    ArticleInfo(id, createdAt, updatedAt, state, seq, uriId, url, kind, bestVersion, latestVersion, oldestVersion, lastQueuedAt, lastFetchedAt, nextFetchAt, fetchInterval)
   }
 
   def unapplyToDbRow(info: ArticleInfo) = {
     val (bestVersionMajor, bestVersionMinor) = articleVersionToDb(info.bestVersion)
     val (latestVersionMajor, latestVersionMinor) = articleVersionToDb(info.latestVersion)
+    val (oldestVersionMajor, oldestVersionMinor) = articleVersionToDb(info.oldestVersion)
     Some(
       info.id,
       info.createdAt,
@@ -83,6 +98,8 @@ object ArticleInfo {
       bestVersionMinor,
       latestVersionMajor,
       latestVersionMinor,
+      oldestVersionMajor,
+      oldestVersionMinor,
       info.lastQueuedAt,
       info.lastFetchedAt,
       info.nextFetchAt,
@@ -100,52 +117,3 @@ object ArticleInfo {
   private def articleVersionToDb(version: Option[ArticleVersion]) = (version.map(_.major), version.map(_.minor))
 }
 
-import com.google.inject.{ Singleton, ImplementedBy }
-import com.google.inject.Inject
-import com.keepit.common.time.Clock
-import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.logging.Logging
-import com.keepit.common.db.Id
-import com.keepit.common.db.slick._
-import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
-import org.joda.time.DateTime
-
-@ImplementedBy(classOf[ArticleInfoRepoImpl])
-trait ArticleInfoRepo extends Repo[ArticleInfo] with SeqNumberFunction[ArticleInfo]
-
-@Singleton
-class ArticleInfoRepoImpl @Inject() (
-  val db: DataBaseComponent,
-  val clock: Clock,
-  airbrake: AirbrakeNotifier)
-    extends DbRepo[ArticleInfo] with ArticleInfoRepo with SeqNumberDbFunction[ArticleInfo] with Logging {
-
-  import db.Driver.simple._
-
-  type RepoImpl = ArticleInfoTable
-  class ArticleInfoTable(tag: Tag) extends RepoTable[ArticleInfo](db, tag, "article_info") with SeqNumberColumn[ArticleInfo] {
-    def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)
-    def url = column[String]("url", O.NotNull)
-    def kind = column[String]("kind", O.NotNull)
-    def bestVersionMajor = column[VersionNumber[Article]]("best_version_major", O.Nullable)
-    def bestVersionMinor = column[VersionNumber[Article]]("best_version_minor", O.Nullable)
-    def latestVersionMajor = column[VersionNumber[Article]]("latest_version_major", O.Nullable)
-    def latestVersionMinor = column[VersionNumber[Article]]("latest_version_minor", O.Nullable)
-    def lastQueuedAt = column[DateTime]("last_queued_at", O.Nullable)
-    def lastFetchedAt = column[DateTime]("last_fetched_at", O.Nullable)
-    def nextFetchAt = column[DateTime]("next_fetch_at", O.Nullable)
-    def fetchInterval = column[Float]("fetch_interval", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, state, seq, uriId, url, kind, bestVersionMajor.?, bestVersionMinor.?, latestVersionMajor.?, latestVersionMinor.?, lastQueuedAt.?, lastFetchedAt.?, nextFetchAt.?, fetchInterval) <> ((ArticleInfo.applyFromDbRow _).tupled, ArticleInfo.unapplyToDbRow _)
-  }
-
-  def table(tag: Tag) = new ArticleInfoTable(tag)
-  initTable()
-
-  override def deleteCache(model: ArticleInfo)(implicit session: RSession): Unit = {}
-
-  override def invalidateCache(model: ArticleInfo)(implicit session: RSession): Unit = {}
-
-  override def save(model: ArticleInfo)(implicit session: RWSession): ArticleInfo = {
-    super.save(model.copy(seq = deferredSeqNum()))
-  }
-}
