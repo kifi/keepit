@@ -33,6 +33,9 @@ class MobileRecommendationsController @Inject() (
   }
 
   def topRecosV3(recencyWeight: Float, uriContext: Option[String], libContext: Option[String]) = UserAction.async { request =>
+    log.info(s"mobile reco for user: ${request.userId}")
+    log.info(s"uriContext: ${uriContext.getOrElse("n/a")}")
+    log.info(s"libContext: ${libContext.getOrElse("n/a")}")
     val uriRecosF = commander.topRecos(request.userId, getRecommendationSource(request), RecommendationSubSource.RecommendationsFeed, uriContext.isDefined, recencyWeight, context = uriContext)
     val libRecosF = commander.topPublicLibraryRecos(request.userId, 10, getRecommendationSource(request), RecommendationSubSource.RecommendationsFeed, context = libContext)
 
@@ -40,6 +43,10 @@ class MobileRecommendationsController @Inject() (
       val FullUriRecoResults(urisReco, newUrisContext) = uris
       val FullLibRecoResults(libsReco, newLibsContext) = libs
       val recos = mix(urisReco, libsReco)
+
+      log.info(s"newUrisContext: ${newUrisContext}")
+      log.info(s"newLibsContext: ${newLibsContext}")
+
       Json.obj("recos" -> recos, "uctx" -> newUrisContext, "lctx" -> newLibsContext)
     }
   }
