@@ -1,3 +1,5 @@
+searchMinWidth = 660px
+
 .kf-lih
   position: fixed
   top: 0
@@ -6,6 +8,9 @@
   background-color: pageHeaderColor
   z-index: 500
   user-select: none
+
+  @media (max-height: appHeaderHeight1MaxDim) and (max-width: appHeaderHeight1MaxDim)
+    height: appHeaderHeight1
 
   [kifi-pane-parent] &
     transition: width .25s ease-in
@@ -21,7 +26,10 @@
   max-width: appMaxWidth
   box-sizing: border-box
   margin: 0 auto
-  padding: 0 appSidePad2
+  padding: 0 appSidePad1
+
+  @media (min-width: appSidePad2MinWidth)
+    padding: 0 appSidePad2
 
 btn-diam = 32px
 btn-space = 10px
@@ -56,8 +64,11 @@ left-logo-width = 76px
   height: 0
 
 .kf-lih-center
-  display: table-cell
+  display: none
   vertical-align: middle
+
+  @media (min-width: searchMinWidth)
+    display: table-cell
 
 search-height = 28px
 search-on-dur = .12s
