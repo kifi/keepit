@@ -46,7 +46,7 @@ class LibraryRecommendationRepoImpl @Inject() (
 
   private object QueryBuilder {
     def recommendable(rows: RepoQuery) =
-      for (row <- active(rows) if row.followed === false && row.delivered < 10 && row.trashed === false && row.vote.isNull) yield row
+      for (row <- active(rows) if row.followed === false && row.delivered < 10 && row.trashed === false && row.vote.isEmpty) yield row
 
     def byLibrary(libraryId: Id[Library])(rows: RepoQuery): RepoQuery =
       for (row <- rows if row.libraryId === libraryId) yield row
@@ -112,7 +112,7 @@ class LibraryRecommendationRepoImpl @Inject() (
     sqlu"""
       DELETE FROM library_recommendation WHERE user_id=$userId AND master_score < (SELECT MIN(master_score) FROM (
         SELECT master_score FROM library_recommendation WHERE user_id=$userId ORDER BY master_score DESC LIMIT $minNumRecosToKeep
-      ) AS mScoreTable) AND updated_at < $before""".first()
+      ) AS mScoreTable) AND updated_at < $before""".first
   }
 
   def getLibraryIdsForUser(userId: Id[User])(implicit session: RSession): Set[Id[Library]] = {
@@ -147,7 +147,7 @@ class LibraryRecommendationRepoImpl @Inject() (
 
   def incrementDeliveredCount(recoId: Id[LibraryRecommendation])(implicit session: RWSession): Unit = {
     import StaticQuery.interpolation
-    sqlu"UPDATE library_recommendation SET delivered=delivered+1, updated_at=$currentDateTime WHERE id=$recoId".first()
+    sqlu"UPDATE library_recommendation SET delivered=delivered+1, updated_at=$currentDateTime WHERE id=$recoId".first
   }
 
   def updateLibraryRecommendationState(ids: Seq[Id[LibraryRecommendation]], state: State[LibraryRecommendation])(implicit session: RWSession): Int = {

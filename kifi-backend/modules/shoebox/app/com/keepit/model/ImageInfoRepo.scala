@@ -113,11 +113,11 @@ class ImageInfoRepoImpl @Inject() (
         airbrake.notify(s"no provider specified for image: $info")
     }
     // pick the latest inactive row for update
-    (for (f <- rows if f.uriId === info.uriId && f.state === INACTIVE) yield f).sortBy(_.updatedAt desc).map(_.id).firstOption()
+    (for (f <- rows if f.uriId === info.uriId && f.state === INACTIVE) yield f).sortBy(_.updatedAt desc).map(_.id).firstOption
   }
 
   def getByUri(id: Id[NormalizedURI])(implicit ro: RSession): Seq[ImageInfo] = {
-    (for (f <- rows if f.uriId === id && f.state === ImageInfoStates.ACTIVE) yield f).list()
+    (for (f <- rows if f.uriId === id && f.state === ImageInfoStates.ACTIVE) yield f).list
   }
 
   def getByUriWithPriority(id: Id[NormalizedURI], minSize: ImageSize, providerOpt: Option[ImageProvider])(implicit ro: RSession): Option[ImageInfo] = {
@@ -126,12 +126,12 @@ class ImageInfoRepoImpl @Inject() (
         (for (
           f <- rows if f.uriId === id && f.state === ImageInfoStates.ACTIVE &&
             f.width > minSize.width && f.height > minSize.height && f.provider === provider
-        ) yield f).list()
+        ) yield f).list
       case None =>
         (for (
           f <- rows if f.uriId === id && f.state === ImageInfoStates.ACTIVE &&
             f.width > minSize.width && f.height > minSize.height
-        ) yield f).list()
+        ) yield f).list
     }
     if (candidates.nonEmpty) {
       Some(candidates.minBy { i =>
@@ -150,7 +150,7 @@ class ImageInfoRepoImpl @Inject() (
     val candidates = (for (
       f <- rows if f.uriId === id && f.state === ImageInfoStates.ACTIVE &&
         f.width > minSize.width && f.height > minSize.height
-    ) yield f).list()
+    ) yield f).list
     if (candidates.nonEmpty) {
       val lowestPrio = candidates.groupBy(_.priority.getOrElse(Int.MaxValue)).minBy(_._1)._2
       val best = lowestPrio.maxBy(c => c.width.getOrElse(0) * c.height.getOrElse(0))

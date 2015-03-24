@@ -271,7 +271,7 @@ class UserRepoImpl @Inject() (
   }
 
   private val getByNormalizedUsernameCompiled = Compiled { normalizedUsername: Column[String] =>
-    for (f <- rows if f.normalizedUsername is normalizedUsername) yield f
+    for (f <- rows if f.normalizedUsername === normalizedUsername) yield f
   }
 
   def getRecentActiveUsers(since: DateTime)(implicit session: RSession): Seq[Id[User]] = {

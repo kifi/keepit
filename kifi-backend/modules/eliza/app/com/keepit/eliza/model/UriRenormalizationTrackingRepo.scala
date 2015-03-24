@@ -50,7 +50,7 @@ class UriRenormalizationTrackingRepoImpl @Inject() (
   def getCurrentSequenceNumber()(implicit session: RSession): SequenceNumber[ChangedURI] = {
     import scala.slick.jdbc.StaticQuery.interpolation
     val sql = sql"select max(sequence_number) as max from uri_renormalization_event"
-    sql.as[SequenceNumber[ChangedURI]].firstOption().getOrElse(SequenceNumber.ZERO)
+    sql.as[SequenceNumber[ChangedURI]].firstOption.getOrElse(SequenceNumber.ZERO)
   }
 
   def addNew(sequenceNumber: SequenceNumber[ChangedURI], numIdsChanged: Long, idsRetired: Seq[Id[NormalizedURI]])(implicit session: RWSession): Unit = {

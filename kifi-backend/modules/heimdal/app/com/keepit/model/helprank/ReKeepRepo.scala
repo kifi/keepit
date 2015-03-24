@@ -62,23 +62,23 @@ class ReKeepRepoImpl @Inject() (
   def invalidateCache(model: ReKeep)(implicit session: RSession): Unit = deleteCache(model)
 
   def getReKeep(keeperId: Id[User], uriId: Id[NormalizedURI], rekeeperId: Id[User])(implicit r: RSession): Option[ReKeep] = {
-    (for (r <- rows if (r.keeperId === keeperId && r.uriId === uriId && r.srcUserId === rekeeperId)) yield r).firstOption()
+    (for (r <- rows if (r.keeperId === keeperId && r.uriId === uriId && r.srcUserId === rekeeperId)) yield r).firstOption(r)
   }
 
   def getReKeepsByKeeper(userId: Id[User], since: DateTime)(implicit r: RSession): Seq[ReKeep] = {
-    (for (r <- rows if (r.keeperId === userId && r.state === ReKeepStates.ACTIVE && r.createdAt >= since)) yield r).list()
+    (for (r <- rows if (r.keeperId === userId && r.state === ReKeepStates.ACTIVE && r.createdAt >= since)) yield r).list
   }
 
   def getAllReKeepsByKeeper(userId: Id[User])(implicit r: RSession): Seq[ReKeep] = {
-    (for (r <- rows if (r.keeperId === userId && r.state === ReKeepStates.ACTIVE)) yield r).sortBy(_.createdAt.desc).list()
+    (for (r <- rows if (r.keeperId === userId && r.state === ReKeepStates.ACTIVE)) yield r).sortBy(_.createdAt.desc).list
   }
 
   def getReKeepsByReKeeper(userId: Id[User], since: DateTime)(implicit r: RSession): Seq[ReKeep] = {
-    (for (r <- rows if (r.srcUserId === userId && r.state === ReKeepStates.ACTIVE && r.createdAt >= since)) yield r).sortBy(_.createdAt.desc).list()
+    (for (r <- rows if (r.srcUserId === userId && r.state === ReKeepStates.ACTIVE && r.createdAt >= since)) yield r).sortBy(_.createdAt.desc).list
   }
 
   def getAllReKeepsByReKeeper(userId: Id[User])(implicit r: RSession): Seq[ReKeep] = {
-    (for (r <- rows if (r.srcUserId === userId && r.state === ReKeepStates.ACTIVE)) yield r).list()
+    (for (r <- rows if (r.srcUserId === userId && r.state === ReKeepStates.ACTIVE)) yield r).list
   }
 
   def getReKeepCountByKeeper(userId: Id[User])(implicit r: RSession): Int = {
@@ -89,30 +89,30 @@ class ReKeepRepoImpl @Inject() (
     val q = (for (r <- rows if (r.keeperId === userId && r.state === ReKeepStates.ACTIVE)) yield r)
       .groupBy(_.keepId)
       .map { case (kId, rk) => (kId, rk.length) }
-    q.toMap()
+    q.toMap
   }
 
   def getReKeepCountsByKeepIds(userId: Id[User], keepIds: Set[Id[Keep]])(implicit r: RSession): Map[Id[Keep], Int] = {
     val q = (for (r <- rows if (r.keeperId === userId && r.keepId.inSet(keepIds) && r.state === ReKeepStates.ACTIVE)) yield r)
       .groupBy(_.keepId)
       .map { case (kId, rk) => (kId, rk.length) }
-    q.toMap()
+    q.toMap
   }
 
   def getUriReKeepsWithCountsByKeeper(userId: Id[User])(implicit r: RSession): Seq[(Id[NormalizedURI], Id[Keep], Id[User], Int)] = {
-    sql"select uri_id, keep_id, keeper_id, count(*) c from rekeep where keeper_id=$userId group by uri_id order by keep_id desc".as[(Id[NormalizedURI], Id[Keep], Id[User], Int)].list()
+    sql"select uri_id, keep_id, keeper_id, count(*) c from rekeep where keeper_id=$userId group by uri_id order by keep_id desc".as[(Id[NormalizedURI], Id[Keep], Id[User], Int)].list
   }
 
   def getUriReKeepCountsByKeeper(userId: Id[User])(implicit r: RSession): Map[Id[NormalizedURI], Int] = {
     val q = (for (r <- rows if (r.keeperId === userId && r.state === ReKeepStates.ACTIVE)) yield r)
       .groupBy(_.uriId)
       .map { case (uriId, rk) => (uriId, rk.length) }
-    q.toMap()
+    q.toMap
   }
 
   def getReKeeps(keepIds: Set[Id[Keep]])(implicit r: RSession): Map[Id[Keep], Seq[ReKeep]] = {
     val q = (for (r <- rows if (r.state === ReKeepStates.ACTIVE && r.keepId.inSet(keepIds))) yield r)
-    q.list().foldLeft(Map.empty[Id[Keep], Seq[ReKeep]]) { (a, c) =>
+    q.list.foldLeft(Map.empty[Id[Keep], Seq[ReKeep]]) { (a, c) =>
       a + (c.keepId -> (a.getOrElse(c.keepId, Seq.empty[ReKeep]) ++ Seq(c)))
     }
   }
@@ -174,7 +174,7 @@ class ReKeepRepoImpl @Inject() (
   }
 
   def getAllKeepers()(implicit r: RSession): Seq[Id[User]] = {
-    sql"select distinct keeper_id from rekeep".as[Id[User]].list()
+    sql"select distinct keeper_id from rekeep".as[Id[User]].list
   }
 
 }

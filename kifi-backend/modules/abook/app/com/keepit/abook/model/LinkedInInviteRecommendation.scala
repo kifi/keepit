@@ -68,6 +68,6 @@ class LinkedInInviteRecommendationRepoImpl @Inject() (
   }
 
   def getIrrelevantRecommendations(userId: Id[User])(implicit session: RSession): Set[Id[SocialUserInfo]] = {
-    compiledIrrelevantRecommendations(userId).list().toSet
+    compiledIrrelevantRecommendations(userId).list.toSet
   }
 }

@@ -102,7 +102,7 @@ class UserConnectionRepoImpl @Inject() (
 
   def getMutualConnectionCount(user1: Id[User], user2: Id[User])(implicit session: RSession): Int = {
     mutualConnCountCache.getOrElse(UserMutualConnectionCountKey(user1, user2)) {
-      getMutualConnectionCountQ.first(user1.id, user2.id, user1.id, user2.id)
+      getMutualConnectionCountQ.apply(user1.id, user2.id, user1.id, user2.id).first
     }
   }
 
@@ -170,7 +170,7 @@ class UserConnectionRepoImpl @Inject() (
         ((for (c <- rows if c.user1.inSet(missing) && c.state === UserConnectionStates.ACTIVE) yield (c.user1, c.user2)) union
           (for (c <- rows if c.user2.inSet(missing) && c.state === UserConnectionStates.ACTIVE) yield (c.user2, c.user1)))
 
-      query.list().groupBy(_._1).map {
+      query.list.groupBy(_._1).map {
         case (id, connections) => UserConnectionIdKey(id) -> connections.map(_._2.id).toArray
       }.toMap
     }

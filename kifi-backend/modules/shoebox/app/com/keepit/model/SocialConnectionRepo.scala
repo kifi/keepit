@@ -105,7 +105,7 @@ class SocialConnectionRepoImpl @Inject() (
               """.format(connectionsSQL)
     //can use GetResult and SetParameter to be type safe, not sure its worth it at this point
     val q = StaticQuery.query[(Long, Long), Long](sql)
-    val res: Seq[Long] = q.list(id.id, id.id)
+    val res: Seq[Long] = q.apply(id.id, id.id).list
     res map { id => Id[User](id) } toSet
   }
 
@@ -123,7 +123,7 @@ class SocialConnectionRepoImpl @Inject() (
             t <- rows if ((t.socialUser1 inSet ids) || (t.socialUser2 inSet ids)) && t.state === SocialConnectionStates.ACTIVE
           } yield t).length
         )
-        q.first()
+        q.first
       }
       case _ => 0
     }
@@ -177,7 +177,7 @@ class SocialConnectionRepoImpl @Inject() (
             where sc.seq > ${lowerBound.value}"""
     }
 
-    query.as[(Id[SocialUserInfo], Id[SocialUserInfo], State[SocialConnection], SequenceNumber[SocialConnection], SocialNetworkType)].list()
+    query.as[(Id[SocialUserInfo], Id[SocialUserInfo], State[SocialConnection], SequenceNumber[SocialConnection], SocialNetworkType)].list
   }
 }
 

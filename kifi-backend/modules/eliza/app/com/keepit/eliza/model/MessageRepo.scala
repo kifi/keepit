@@ -46,17 +46,17 @@ class MessageRepoImpl @Inject() (
 
   type RepoImpl = MessageTable
   class MessageTable(tag: Tag) extends RepoTable[Message](db, tag, "message") with ExternalIdColumn[Message] {
-    def from = column[Id[User]]("sender_id", O.Nullable)
+    def from = column[Option[Id[User]]]("sender_id", O.Nullable)
     def thread = column[Id[MessageThread]]("thread_id", O.NotNull)
     def threadExtId = column[ExternalId[MessageThread]]("thread_ext_id", O.NotNull)
     def messageText = column[String]("message_text", O.NotNull)
-    def source = column[MessageSource]("source", O.Nullable)
-    def auxData = column[JsArray]("aux_data", O.Nullable)
-    def sentOnUrl = column[String]("sent_on_url", O.Nullable)
-    def sentOnUriId = column[Id[NormalizedURI]]("sent_on_uri_id", O.Nullable)
-    def nonUserSender = column[JsValue]("non_user_sender", O.Nullable)
+    def source = column[Option[MessageSource]]("source", O.Nullable)
+    def auxData = column[Option[JsArray]]("aux_data", O.Nullable)
+    def sentOnUrl = column[Option[String]]("sent_on_url", O.Nullable)
+    def sentOnUriId = column[Option[Id[NormalizedURI]]]("sent_on_uri_id", O.Nullable)
+    def nonUserSender = column[Option[JsValue]]("non_user_sender", O.Nullable)
 
-    def * = (id.?, createdAt, updatedAt, externalId, from.?, thread, threadExtId, messageText, source.?, auxData.?, sentOnUrl.?, sentOnUriId.?, nonUserSender.?) <> ((Message.fromDbTuple _).tupled, Message.toDbTuple)
+    def * = (id.?, createdAt, updatedAt, externalId, from, thread, threadExtId, messageText, source, auxData, sentOnUrl, sentOnUriId, nonUserSender) <> ((Message.fromDbTuple _).tupled, Message.toDbTuple)
   }
   def table(tag: Tag) = new MessageTable(tag)
 
@@ -71,7 +71,7 @@ class MessageRepoImpl @Inject() (
   }
 
   def updateUriId(message: Message, uriId: Id[NormalizedURI])(implicit session: RWSession): Unit = {
-    (for (row <- rows if row.id === message.id) yield row.sentOnUriId).update(uriId)
+    (for (row <- rows if row.id === message.id) yield row.sentOnUriId).update(Some(uriId))
     invalidateCache(message)
   }
 
@@ -112,8 +112,8 @@ class MessageRepoImpl @Inject() (
   def updateUriIds(updates: Seq[(Id[NormalizedURI], Id[NormalizedURI])])(implicit session: RWSession): Unit = { //Note: There is potentially a race condition here with updateUriId. Need to investigate.
     updates.foreach {
       case (oldId, newId) =>
-        (for (row <- rows if row.sentOnUriId === oldId) yield row.sentOnUriId).update(newId)
-      //todo(stephen): do you invalidate cache here?
+        (for (row <- rows if row.sentOnUriId === oldId) yield row.sentOnUriId).update(Some(newId))
+      //todo(stephen): do you invalidate cache here? do you?
     }
   }
 
@@ -124,7 +124,7 @@ class MessageRepoImpl @Inject() (
   def getMaxId()(implicit session: RSession): Id[Message] = {
     import StaticQuery.interpolation
     val sql = sql"select max(id) as max from message"
-    sql.as[Long].firstOption().map(Id[Message]).getOrElse(Id[Message](0))
+    sql.as[Long].firstOption.map(Id[Message]).getOrElse(Id[Message](0))
   }
 
   def getMessageCounts(threadId: Id[MessageThread], afterOpt: Option[DateTime])(implicit session: RSession): (Int, Int) = {
@@ -137,7 +137,7 @@ class MessageRepoImpl @Inject() (
   }
 
   def getLatest(threadId: Id[MessageThread])(implicit session: RSession): Message = {
-    (for (row <- rows if row.thread === threadId && row.from.isNotNull) yield row).sortBy(row => row.id desc).first
+    (for (row <- rows if row.thread === threadId && row.from.isDefined) yield row).sortBy(row => row.id desc).first
   }
 
 }

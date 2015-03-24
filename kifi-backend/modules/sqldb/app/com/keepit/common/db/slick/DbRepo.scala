@@ -48,7 +48,7 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with FortyTwoGenericTypeMappers with
   protected val changeListener: Option[RepoModification.Listener[M]] = None
 
   type RepoImpl <: RepoTable[M]
-  type RepoQuery = scala.slick.lifted.Query[RepoImpl, M]
+  type RepoQuery = scala.slick.lifted.Query[RepoImpl, M, Seq]
 
   def table(tag: Tag): RepoImpl
   lazy val _taggedTable = table(new BaseTag { base =>
@@ -88,7 +88,7 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with FortyTwoGenericTypeMappers with
   def count(implicit session: RSession): Int = Query(rows.length).first
 
   protected val getCompiled = Compiled { id: Column[Id[M]] =>
-    for (f <- rows if f.id is id) yield f
+    for (f <- rows if f.id === id) yield f
   }
   def get(id: Id[M])(implicit session: RSession): M = {
     val startTime = System.currentTimeMillis()
@@ -96,7 +96,7 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with FortyTwoGenericTypeMappers with
     model
   }
 
-  def all()(implicit session: RSession): Seq[M] = rows.list()
+  def all()(implicit session: RSession): Seq[M] = rows.list
 
   def page(page: Int = 0, size: Int = 20, excludeStates: Set[State[M]] = Set.empty[State[M]])(implicit session: RSession): Seq[M] = {
     // todo(Andrew): When Slick 2.1 is released, convert to Compiled query (upgrade necessary for .take & .drop)
@@ -131,7 +131,7 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with FortyTwoGenericTypeMappers with
     //state may not exist in all entities, if it does then its column name is standardized as well.
     def state = column[State[M]]("state", O.NotNull)
 
-    def autoInc = this returning Query(id)
+    //def autoInc = this returning Query(id)
 
     //H2 likes its column names in upper case where mysql does not mind.
     //the db component should figure it out
@@ -270,7 +270,7 @@ trait ExternalIdColumnDbFunction[M <: ModelWithExternalId[M]] extends ExternalId
   def get(id: ExternalId[M])(implicit session: RSession): M = getOpt(id).get
 
   protected val getByExtIdCompiled = Compiled { id: Column[ExternalId[M]] =>
-    for (f <- rowsWithExternalIdColumn if f.externalId is id) yield f
+    for (f <- rowsWithExternalIdColumn if f.externalId === id) yield f
   }
 
   def getOpt(id: ExternalId[M])(implicit session: RSession): Option[M] = getByExtIdCompiled(id).firstOption
