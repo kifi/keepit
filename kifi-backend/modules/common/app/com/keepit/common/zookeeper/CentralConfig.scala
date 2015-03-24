@@ -2,12 +2,12 @@ package com.keepit.common.zookeeper
 
 import com.google.inject.{ Inject, Singleton }
 import org.apache.zookeeper.{ CreateMode, KeeperException }
-import scala.concurrent.future
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.collection.mutable.{ ArrayBuffer, SynchronizedBuffer }
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.SequenceNumber
 import com.keepit.common.logging.Logging
+import scala.collection.JavaConversions._
 
 // //Sample Usage****************************************
 //
@@ -65,8 +65,7 @@ trait ConfigStore {
 
 class ZkConfigStore(zkClient: ZooKeeperClient) extends ConfigStore with Logging {
   import com.keepit.common.strings.{ fromByteArray, toByteArray }
-
-  private[this] val watches = new ArrayBuffer[(CentralConfigKey, Option[String] => Unit)] with SynchronizedBuffer[(CentralConfigKey, Option[String] => Unit)]
+  private[this] val watches = new java.util.concurrent.ConcurrentLinkedQueue[(CentralConfigKey, Option[String] => Unit)]()
 
   zkClient.onConnected { zk =>
     log.info(s"ZKX registering watches")
@@ -102,7 +101,7 @@ class ZkConfigStore(zkClient: ZooKeeperClient) extends ConfigStore with Logging 
     zkClient.session { zkM =>
       val zk = sessionOverride.getOrElse(zkM)
       log.info(s"ZKX registering watch $key")
-      watches += ((key, handler))
+      watches.add((key, handler))
       zk.watchNode[String](key.toNode, data => SafeFuture { handler(data) })(fromByteArray)
     }
   }
@@ -110,14 +109,15 @@ class ZkConfigStore(zkClient: ZooKeeperClient) extends ConfigStore with Logging 
 
 class InMemoryConfigStore extends ConfigStore {
   import scala.collection.mutable.{ HashMap, ArrayBuffer, SynchronizedMap }
-  val db: SynchronizedMap[String, String] = new HashMap[String, String]() with SynchronizedMap[String, String]
-  val watches: HashMap[String, ArrayBuffer[Option[String] => Unit]] = new HashMap[String, ArrayBuffer[Option[String] => Unit]]() with SynchronizedMap[String, ArrayBuffer[Option[String] => Unit]]
+  private val db = new java.util.concurrent.ConcurrentHashMap[String, String]()
+  private val watches = new java.util.concurrent.ConcurrentHashMap[String, ArrayBuffer[Option[String] => Unit]]()
+  //private val watches: HashMap[String, ArrayBuffer[Option[String] => Unit]] = new HashMap[String, ArrayBuffer[Option[String] => Unit]]() with SynchronizedMap[String, ArrayBuffer[Option[String] => Unit]]
 
-  def get(key: CentralConfigKey): Option[String] = db.get(key.toNode.name)
+  def get(key: CentralConfigKey): Option[String] = Option(db.get(key.toNode.name))
 
   def set(key: CentralConfigKey, value: String): Unit = {
     db(key.toNode.name) = value
-    watches.get(key.toNode.name).foreach { funs =>
+    Option(watches.get(key.toNode.name)).foreach { funs =>
       funs.foreach(_(Some(value)))
     }
   }

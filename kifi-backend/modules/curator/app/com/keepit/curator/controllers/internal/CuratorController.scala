@@ -138,7 +138,7 @@ class CuratorController @Inject() (
     val selectionParams = request.body.as[Option[LibraryRecoSelectionParams]]
     log.info(s"refreshLibraryRecos called userId=$userId await=$await selectionParams=$selectionParams")
     val precomputeF = libraryRecoGenCommander.precomputeRecommendationsForUser(userId, selectionParams)
-    (if (await) precomputeF else Future.successful()) map { _ => Ok }
+    (if (await) precomputeF else Future.successful(())) map { _ => Ok }
   }
 
   def notifyLibraryRecosDelivered(userId: Id[User]) = Action(parse.tolerantJson) { request =>

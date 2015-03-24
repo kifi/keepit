@@ -119,15 +119,15 @@ class FakeHeimdalServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def getReKeepsByDegree(keeperId: Id[User], keepId: Id[Keep]): Future[Seq[ReKeepsPerDeg]] = Future.successful(Seq.empty)
 
-  def updateUserReKeepStats(userId: Id[User]): Future[Unit] = Future.successful[Unit]()
+  def updateUserReKeepStats(userId: Id[User]): Future[Unit] = Future.successful(())
 
-  def updateUsersReKeepStats(userIds: Seq[Id[User]]): Future[Unit] = Future.successful[Unit]()
+  def updateUsersReKeepStats(userIds: Seq[Id[User]]): Future[Unit] = Future.successful(())
 
-  def updateAllReKeepStats(): Future[Unit] = Future.successful[Unit]()
+  def updateAllReKeepStats(): Future[Unit] = Future.successful(())
 
-  def processSearchHitAttribution(hit: SearchHitReport): Future[Unit] = Future.successful[Unit]()
+  def processSearchHitAttribution(hit: SearchHitReport): Future[Unit] = Future.successful(())
 
-  def processKeepAttribution(userId: Id[User], newKeeps: Seq[Keep]): Future[Unit] = Future.successful[Unit]()
+  def processKeepAttribution(userId: Id[User], newKeeps: Seq[Keep]): Future[Unit] = Future.successful(())
 
   def getPagedKeepDiscoveries(page: Int, size: Int): Future[Seq[KeepDiscovery]] = keepDiscoveryRepoAccess.getPagedKeepDiscoveries(page, size)
   def getDiscoveryCount(): Future[Int] = keepDiscoveryRepoAccess.getDiscoveryCount

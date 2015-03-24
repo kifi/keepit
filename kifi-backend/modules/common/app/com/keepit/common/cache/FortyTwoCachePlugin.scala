@@ -227,7 +227,7 @@ class EhCacheCache @Inject() (
   def get(key: String): Option[Any] = Option(cache.get(key)).map(_.getObjectValue)
   def remove(key: String) { cache.remove(key) }
 
-  def set(key: String, value: Any, expiration: Int = 0): Unit = future {
+  def set(key: String, value: Any, expiration: Int = 0): Unit = Future {
     val element = new Element(key, value)
     if (expiration == 0) element.setEternal(true)
     element.setTimeToLive(expiration)

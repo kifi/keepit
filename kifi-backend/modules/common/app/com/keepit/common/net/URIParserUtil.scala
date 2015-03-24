@@ -4,8 +4,11 @@ import com.keepit.common.strings.UTF8
 import java.net.{ URLEncoder, URLDecoder }
 
 object URIParserUtil {
-  private[this] val controls = "\001\002\003\005\006\007\010\011\012\013\015\016\017\020\021\022\023\025\026\027\030\031\032\033\035\036\037\177" +
-    "\200\201\202\203\204\205\206\207\210\211\212\213\214\215\216\217\220\221\222\223\224\225\226\227\230\231\232\233\234\235\236\237\240"
+
+  private[this] val controls = "\u0001\u0002\u0003\u0005\u0006\u0007\u0008\u0009\u000a\u000b\u000d\u000e\u000f\u0010" +
+    "\u0011\u0012\u0013\u0015\u0016\u0017\u0018\u0019\u001a\u001b\u001d\u001e\u001f\u007f\u0080\u0081\u0082\u0083" +
+    "\u0084\u0085\u0086\u0087\u0088\u0089\u008a\u008b\u008c\u008d\u008e\u008f\u0090\u0091\u0092\u0093\u0094\u0095" +
+    "\u0096\u0097\u0098\u0099\u009a\u009b\u009c\u009d\u009e\u009f\u00a0"
   private[this] val space = " "
   private[this] val genDelims = ":/?#[]@"
   private[this] val subDelims = "!$&'()*+,;="

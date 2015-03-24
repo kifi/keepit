@@ -194,7 +194,7 @@ class SocialGraphPluginImpl @Inject() (
       log.info(s"[SocialGraphPluginImpl] Need to refresh SocialUserInfoId(${socialUserInfo.id.get}). Sending to leader.")
       shoeboxServiceClient.triggerSocialGraphFetch(socialUserInfo.id.get)
     } else {
-      Future.successful()
+      Future.successful(())
     }
   }
 }

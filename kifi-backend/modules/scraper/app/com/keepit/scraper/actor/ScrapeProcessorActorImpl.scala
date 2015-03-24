@@ -85,15 +85,15 @@ class ScrapeProcessorActorImpl @Inject() (
                 airbrake.notify(s"failed si to parse and queue task", e)
             }
             queuedFuture
-          } else Future.successful()
+          } else Future.successful(())
         }
-        queuedF.getOrElse(Future.successful())
+        queuedF.getOrElse(Future.successful(()))
       } else if (qSize > WARNING_THRESHOLD) {
         airbrake.notify(s"qSize=${qSize} has exceeded threshold=$WARNING_THRESHOLD")
-        Future.successful()
+        Future.successful(())
       } else {
         log.info(s"[ScrapeProcessorActorImpl.pull] qSize=${qSize}; Skip a round")
-        Future.successful()
+        Future.successful(())
       }
     }
     futureTask.onFailure {

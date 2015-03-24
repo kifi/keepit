@@ -1,7 +1,7 @@
 package com.keepit.common.concurrent
 
-import scala.concurrent.{ Future, Promise, ExecutionContext => EC, Lock }
-
+import scala.concurrent.{ Future, Promise, ExecutionContext => EC }
+import java.util.concurrent.locks.{ ReentrantLock, Lock }
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -16,7 +16,7 @@ class ReactiveLock(numConcurrent: Int = 1, maxQueueSize: Option[Int] = None) {
 
   private var runningCount: Int = 0
 
-  private val lock = new Lock()
+  private val lock: Lock = new ReentrantLock()
 
   //note that all this does inside of the synchronized block is start a future (in the worst case),
   //so actual synchonization is only held for a *very* short amount of time for each task

@@ -131,7 +131,7 @@ class DispatcherTest extends Specification {
       var results = Set.empty[Int]
 
       (0 until 10).foreach { i =>
-        disp.dispatch(Dispatcher.defaultRandomizer) { (inst, shards) => results ++= shards.map(_.numShards) }
+        disp.dispatch(Dispatcher.defaultRandomizer, Int.MaxValue) { (inst, shards) => results ++= shards.map(_.numShards) }
       }
 
       results === Set(12)

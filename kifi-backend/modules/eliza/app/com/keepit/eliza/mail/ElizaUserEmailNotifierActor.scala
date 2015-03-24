@@ -97,7 +97,7 @@ class ElizaUserEmailNotifierActor @Inject() (
 
     val extendedThreadItems: Seq[ExtendedThreadItem] = elizaEmailCommander.getExtendedThreadItems(thread, allUsers, allUserImageUrls, userThread.lastSeen, None)
 
-    val result = if (extendedThreadItems.isEmpty) Future.successful() else {
+    val result = if (extendedThreadItems.isEmpty) Future.successful(()) else {
       log.info(s"preparing to send email for thread ${thread.id}, user thread ${thread.id} of user ${userThread.user} " +
         s"with notificationUpdatedAt=${userThread.notificationUpdatedAt} and notificationLastSeen=${userThread.notificationLastSeen} " +
         s"with ${extendedThreadItems.size} items and unread=${userThread.unread} and notificationEmailed=${userThread.notificationEmailed}")
@@ -112,7 +112,7 @@ class ElizaUserEmailNotifierActor @Inject() (
 
         if (!shouldBeEmailed) {
           log.warn(s"user $recipient is not active, not sending emails")
-          Future.successful()
+          Future.successful(())
         } else {
           val destinationEmail = recipient.primaryEmail.get
           val futureEmail = shoebox.getUnsubscribeUrlForEmail(destinationEmail).map {

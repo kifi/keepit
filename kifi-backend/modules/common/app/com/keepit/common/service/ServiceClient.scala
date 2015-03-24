@@ -28,8 +28,13 @@ class ServiceNotAvailableException(serviceType: ServiceType)
 
 object ServiceClient {
   val MaxUrlLength = 1000
-  sealed trait Register[V] extends MutableSet[V]
-  final class HashSetRegister[V] extends HashSet[V] with SynchronizedSet[V] with Register[V]
+  final class HashSetRegister[V] extends java.util.concurrent.ConcurrentHashMap[V, Unit] {
+    def add(elem: V): Unit = super.put(elem, Unit)
+    def toSeq = {
+      import scala.collection.JavaConversions._
+      mapAsScalaConcurrentMap(this).toSeq.map(_._1)
+    }
+  }
   val register = new HashSetRegister[ServiceClient]
 }
 

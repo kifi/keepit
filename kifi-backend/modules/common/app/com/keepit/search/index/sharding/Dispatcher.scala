@@ -128,7 +128,7 @@ class Dispatcher[T](instances: Vector[ShardedServiceInstance[T]], forceReloadFro
   }
 
   // find service instances to cover all shards
-  def dispatch[R](randomizer: Randomizer, maxShardsPerInstance: Int = Int.MaxValue)(body: (ServiceInstance, Set[Shard[T]]) => R): Seq[R] = {
+  def dispatch[R](randomizer: Randomizer, maxShardsPerInstance: Int)(body: (ServiceInstance, Set[Shard[T]]) => R): Seq[R] = {
 
     val sharding = safeSharding // for safety
 
