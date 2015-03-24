@@ -31,16 +31,19 @@ angular.module('util', [])
       return HTML_ESCAPES[ch];
     }
 
-    function processEmailAddresses(text) {
+    function processEmailAddressesThen(process, text) {
       if (text.indexOf('@', 1)) {
         var parts = text.split(emailAddrDetectRe);
         for (var i = 1; i < parts.length; i += 2) {
           var escapedAddr = htmlEscape(parts[i]);
           parts[i] = '<a href="mailto:' + escapedAddr + '">' + escapedAddr + '</a>';
         }
+        for (var j = 0; j < parts.length; j += 2) {
+          parts[j] = process(parts[j]);
+        }
         return parts.join('');
       } else {
-        return text;
+        return process(text);
       }
     }
 
@@ -169,7 +172,7 @@ angular.module('util', [])
         var slug = name.toLowerCase().replace(/[^\w\s-]|_/g, '').replace(/(\s|--)+/g, '-').replace(/^-/, '').substr(0, 50).replace(/-$/, '');
         return RESERVED_SLUGS.indexOf(slug) >= 0 ? slug + '-' : slug;
       },
-      linkify: angular.bind(null, processUrlsThen, processEmailAddresses),
+      linkify: angular.bind(null, processUrlsThen, angular.bind(null, processEmailAddressesThen, htmlEscape)),
       chooseTreatment: function (salt, treatments) {
         // To generate the salt for an experiment:
         // [0,0,0,0,0,0].map(function () { return Math.floor(Math.random() * 32).toString(32) }).join('')
