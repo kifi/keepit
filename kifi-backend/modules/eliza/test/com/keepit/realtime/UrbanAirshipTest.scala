@@ -1,11 +1,17 @@
 package com.keepit.realtime
 
 import com.google.inject.Provides
+import com.keepit.common.actor.FakeActorSystemModule
+import com.keepit.common.cache.ElizaCacheModule
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ ExternalId, Id }
-import com.keepit.common.net.ProdHttpClientModule
+import com.keepit.common.net.{ FakeHttpClientModule, ProdHttpClientModule }
+import com.keepit.common.store.FakeElizaStoreModule
+import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.eliza.model.MessageThread
+import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.model.User
+import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.test.{ ElizaTestInjector, TestInjector }
 import net.codingwell.scalaguice.ScalaModule
 import org.joda.time.DateTime
@@ -14,10 +20,21 @@ import play.api.libs.json.Json
 
 class UrbanAirshipTest extends Specification with TestInjector with ElizaTestInjector {
 
+  def modules = Seq(
+    ElizaCacheModule(),
+    FakeShoeboxServiceModule(),
+    FakeElizaServiceClientModule(),
+    FakeHeimdalServiceClientModule(),
+    FakeActorSystemModule(),
+    FakeUrbanAirshipModule(),
+    FakeHttpClientModule(),
+    FakeElizaStoreModule()
+  )
+
   "Urban Airship" should {
 
     "getDevices" in {
-      withDb() { implicit injector =>
+      withDb(modules: _*) { implicit injector =>
 
         val urbanAirship = inject[UrbanAirshipImpl]
         val repo = inject[DeviceRepo]
@@ -34,7 +51,7 @@ class UrbanAirshipTest extends Specification with TestInjector with ElizaTestInj
     }
 
     "getDevice" in {
-      withDb() { implicit injector =>
+      withDb(modules: _*) { implicit injector =>
 
         val urbanAirship = inject[UrbanAirshipImpl]
         val repo = inject[DeviceRepo]
@@ -50,7 +67,7 @@ class UrbanAirshipTest extends Specification with TestInjector with ElizaTestInj
     }
 
     "create ios json for MessageThreadPushNotification" in {
-      withInjector() { implicit injector =>
+      withInjector(modules: _*) { implicit injector =>
 
         val urbanAirship = inject[UrbanAirship]
         val urbanAirshipClient = inject[FakeUrbanAirshipClient]
@@ -59,7 +76,7 @@ class UrbanAirshipTest extends Specification with TestInjector with ElizaTestInj
         val notification = MessageThreadPushNotification(id = ExternalId[MessageThread]("5fe6e19f-6092-49f1-b446-5d992fda0034"), unvisitedCount = 3, message = Some("bar"), sound = Some(UrbanAirship.DefaultNotificationSound))
         urbanAirship.sendNotification(device, notification)
         urbanAirshipClient.jsons.size === 1
-        urbanAirshipClient.jsons(0) === Json.parse(
+        urbanAirshipClient.jsons.head === Json.parse(
           """
             {
             "audience":
@@ -80,7 +97,7 @@ class UrbanAirshipTest extends Specification with TestInjector with ElizaTestInj
   }
 
   "create ios json for SimplePushNotification" in {
-    withInjector() { implicit injector =>
+    withInjector(modules: _*) { implicit injector =>
 
       val urbanAirship = inject[UrbanAirship]
       val urbanAirshipClient = inject[FakeUrbanAirshipClient]
@@ -89,7 +106,7 @@ class UrbanAirshipTest extends Specification with TestInjector with ElizaTestInj
       val notification = SimplePushNotification(unvisitedCount = 3, message = Some("bar"), sound = Some(UrbanAirship.DefaultNotificationSound), category = null, experiment = null)
       urbanAirship.sendNotification(device, notification)
       urbanAirshipClient.jsons.size === 1
-      urbanAirshipClient.jsons(0) === Json.parse(
+      urbanAirshipClient.jsons.head === Json.parse(
         """
             {
             "audience":
@@ -110,7 +127,7 @@ class UrbanAirshipTest extends Specification with TestInjector with ElizaTestInj
   }
 
   "create ios channel json" in {
-    withInjector() { implicit injector =>
+    withInjector(modules: _*) { implicit injector =>
 
       val urbanAirship = inject[UrbanAirship]
       val urbanAirshipClient = inject[FakeUrbanAirshipClient]
@@ -119,7 +136,7 @@ class UrbanAirshipTest extends Specification with TestInjector with ElizaTestInj
       val notification = MessageThreadPushNotification(id = ExternalId[MessageThread]("5fe6e19f-6092-49f1-b446-5d992fda0034"), unvisitedCount = 3, message = Some("bar"), sound = Some(UrbanAirship.DefaultNotificationSound))
       urbanAirship.sendNotification(device, notification)
       urbanAirshipClient.jsons.size === 1
-      urbanAirshipClient.jsons(0) === Json.parse(
+      urbanAirshipClient.jsons.head === Json.parse(
         """
             {
             "audience":
@@ -139,7 +156,7 @@ class UrbanAirshipTest extends Specification with TestInjector with ElizaTestInj
   }
 
   "create android json" in {
-    withInjector() { implicit injector =>
+    withInjector(modules: _*) { implicit injector =>
 
       val urbanAirship = inject[UrbanAirship]
       val urbanAirshipClient = inject[FakeUrbanAirshipClient]
@@ -148,7 +165,7 @@ class UrbanAirshipTest extends Specification with TestInjector with ElizaTestInj
       val notification = MessageThreadPushNotification(id = ExternalId[MessageThread]("5fe6e19f-6092-49f1-b446-5d992fda0034"), unvisitedCount = 3, message = Some("bar"), sound = Some(NotificationSound("sound.mp3")))
       urbanAirship.sendNotification(device, notification)
       urbanAirshipClient.jsons.size === 1
-      urbanAirshipClient.jsons(0) === Json.parse(
+      urbanAirshipClient.jsons.head === Json.parse(
         """
           {
             "audience":{"android_channel":"8c265c51-16a8-4559-8b2e-d8b46f62bf06"},
