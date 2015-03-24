@@ -16,8 +16,9 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 @ImplementedBy(classOf[ArticleInfoRepoImpl])
 trait ArticleInfoRepo extends Repo[ArticleInfo] with SeqNumberFunction[ArticleInfo] {
   def getByUris(uriIds: Set[Id[NormalizedURI]], excludeState: Option[State[ArticleInfo]] = Some(ArticleInfoStates.INACTIVE))(implicit session: RSession): Map[Id[NormalizedURI], Set[ArticleInfo]]
-  def getByUri(uriId: Id[NormalizedURI], kind: ArticleKind[_ <: Article], excludeState: Option[State[ArticleInfo]] = Some(ArticleInfoStates.INACTIVE))(implicit session: RSession): Option[ArticleInfo]
-  def intern(uriId: Id[NormalizedURI], url: String, kind: ArticleKind[_ <: Article])(implicit session: RWSession): ArticleInfo
+  def getByUri(uriId: Id[NormalizedURI], excludeState: Option[State[ArticleInfo]] = Some(ArticleInfoStates.INACTIVE))(implicit session: RSession): Set[ArticleInfo]
+  def internByUri(uriId: Id[NormalizedURI], url: String, kinds: Set[ArticleKind[_ <: Article]])(implicit session: RWSession): Map[ArticleKind[_ <: Article], ArticleInfo]
+  def deactivateByUri(uriId: Id[NormalizedURI])(implicit session: RWSession): Unit
 }
 
 @Singleton
@@ -62,23 +63,37 @@ class ArticleInfoRepoImpl @Inject() (
     (for (r <- rows if r.uriId.inSet(uriIds) && r.state =!= excludeState.orNull) yield r).list.toSet.groupBy(_.uriId)
   }
 
-  def getByUri(uriId: Id[NormalizedURI], kind: ArticleKind[_ <: Article], excludeState: Option[State[ArticleInfo]] = Some(ArticleInfoStates.INACTIVE))(implicit session: RSession): Option[ArticleInfo] = {
-    (for (r <- rows if r.uriId === uriId && r.kind === kind.typeCode && r.state =!= excludeState.orNull) yield r).firstOption
+  def getByUri(uriId: Id[NormalizedURI], excludeState: Option[State[ArticleInfo]] = Some(ArticleInfoStates.INACTIVE))(implicit session: RSession): Set[ArticleInfo] = {
+    (for (r <- rows if r.uriId === uriId && r.state =!= excludeState.orNull) yield r).list.toSet
   }
 
-  def intern(uriId: Id[NormalizedURI], url: String, kind: ArticleKind[_ <: Article])(implicit session: RWSession): ArticleInfo = {
-    getByUri(uriId, kind, excludeState = None) match {
-      case Some(articleInfo) if articleInfo.isActive => articleInfo
-      case Some(inactiveArticleInfo) => {
-        val reactivatedInfo = inactiveArticleInfo.clean.copy(url = url, state = ArticleInfoStates.ACTIVE, nextFetchAt = Some(clock.now()))
-        save(reactivatedInfo)
-      }
-      case None => {
-        val newInfo = ArticleInfo(uriId = uriId, url = url, kind = kind.typeCode, nextFetchAt = Some(clock.now()))
-        save(newInfo)
-      }
+  def internByUri(uriId: Id[NormalizedURI], url: String, kinds: Set[ArticleKind[_ <: Article]])(implicit session: RWSession): Map[ArticleKind[_ <: Article], ArticleInfo] = {
+    if (kinds.isEmpty) Map.empty[ArticleKind[_ <: Article], ArticleInfo]
+    else {
+      val existingByKind: Map[ArticleKind[_ <: Article], ArticleInfo] = getByUri(uriId, excludeState = None).map { info => (info.articleKind -> info) }.toMap
+      kinds.map { kind =>
+        val savedInfo = existingByKind.get(kind) match {
+          case Some(articleInfo) if articleInfo.isActive => articleInfo
+          case Some(inactiveArticleInfo) => {
+            val reactivatedInfo = inactiveArticleInfo.clean.copy(url = url, state = ArticleInfoStates.ACTIVE, nextFetchAt = Some(clock.now()))
+            save(reactivatedInfo)
+          }
+          case None => {
+            val newInfo = ArticleInfo(uriId = uriId, url = url, kind = kind.typeCode, nextFetchAt = Some(clock.now()))
+            save(newInfo)
+          }
+        }
+        kind -> savedInfo
+      }.toMap
     }
   }
+
+  def deactivateByUri(uriId: Id[NormalizedURI])(implicit session: RWSession): Unit = {
+    getByUri(uriId).foreach { info =>
+      save(info.copy(state = ArticleInfoStates.INACTIVE))
+    }
+  }
+
 }
 
 trait ArticleInfoSequencingPlugin extends SequencingPlugin
