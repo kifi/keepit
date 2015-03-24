@@ -7,11 +7,11 @@
   library-search="librarySearch"
 ></div>
 
-<div class="kf-lib-cols kf-width-bounded">
-  <div class="kf-lib-col" ui-view></div>
-  <section class="kf-lib-right-col">
+<div class="kf-lib-content">
+  <div class="kf-lib-content-1" ui-view></div>
+  <section class="kf-lib-content-2">
     <div kf-suggested-searches library="library" ng-if="library.suggestedSearches.length && !isMobile"></div>
-    <div kf-related-libraries related-libraries="relatedLibraries" parent-library="library" ng-if="relatedLibraries"></div>
+    <div kf-related-libraries related-libraries="relatedLibraries" parent-library="library" is-mobile="isMobile" ng-if="relatedLibraries"></div>
   </section>
 </div>
 

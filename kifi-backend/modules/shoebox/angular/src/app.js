@@ -91,9 +91,6 @@ angular.module('kifi', [
     $log.log('\n   █   ● ▟▛ ●        made with ❤\n   █▟▛ █ █■ █    kifi.com/about/team\n   █▜▙ █ █  █         join us!\n');
 
     function start() {
-      if (platformService.isSupportedMobilePlatform()) {
-        $rootElement.find('html').addClass('kf-mobile');
-      }
       if ($rootElement.find('#kf-authenticated').removeAttr('id').length) {
         $timeout(function () {
           profileService.fetchMe().then(function () {

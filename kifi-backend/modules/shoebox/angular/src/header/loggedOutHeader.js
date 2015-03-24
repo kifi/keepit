@@ -9,7 +9,6 @@ angular.module('kifi')
             signupService, platformService, libraryService, util) {
     $scope.library = null;
     $scope.search = {text: '', focused: false};
-    $scope.isMobile = platformService.isSupportedMobilePlatform();
 
     $scope.clickLogo = function () {
       if (util.startsWith($state.current.name, 'library')) {
@@ -95,6 +94,7 @@ angular.module('kifi')
 
     $scope.join = function ($event) {
       $event.preventDefault();
+      var isMobile = platformService.isSupportedMobilePlatform();
 
       if (util.startsWith($state.current.name, 'library')) {
         $scope.$emit('getCurrentLibrary', {
@@ -110,7 +110,7 @@ angular.module('kifi')
               });
             }
 
-            if (platformService.isSupportedMobilePlatform()) {
+            if (isMobile) {
               platformService.goToAppOrStore();
             } else {
               signupService.register(userData);
@@ -122,7 +122,7 @@ angular.module('kifi')
           action: 'clickedSignupHeader'
         });
 
-        if (platformService.isSupportedMobilePlatform()) {
+        if (isMobile) {
           platformService.goToAppOrStore();
         } else {
           signupService.register();
@@ -131,7 +131,8 @@ angular.module('kifi')
     };
 
     $scope.login = function ($event) {
-      if (platformService.isSupportedMobilePlatform()) {
+      var isMobile = platformService.isSupportedMobilePlatform();
+      if (isMobile) {
         $event.preventDefault();
       }
 
@@ -145,7 +146,7 @@ angular.module('kifi')
               });
             }
 
-            if (platformService.isSupportedMobilePlatform()) {
+            if (isMobile) {
               platformService.goToAppOrStore();
             }
           }
@@ -155,7 +156,7 @@ angular.module('kifi')
           action: 'clickedLoginHeader'
         });
 
-        if (platformService.isSupportedMobilePlatform()) {
+        if (isMobile) {
           platformService.goToAppOrStore();
         }
       }

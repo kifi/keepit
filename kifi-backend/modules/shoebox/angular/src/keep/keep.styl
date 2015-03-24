@@ -8,9 +8,12 @@ kifiGreen = #73c583
 .kf-keep-selection-tools
   box-sizing: border-box
   margin-bottom: 10px
-  border: defaultBorder
   background-color: white
   border-radius: keepBorderRadius
+  box-shadow: 0 0 0 .5px defaultBorderColor  // half-pixel border workaround crbug.com/236371
+
+  @media (min-width: 480px)
+    box-shadow: 0 0 0 1px defaultBorderColor
 
 .kf-keep-selection-tools-body
   padding: 0 0 7px 27px
@@ -125,7 +128,16 @@ kifiGreen = #73c583
       display: block
 
 .kf-keep-body
-  padding: 0 30px 5px
+  padding: 0 16px 3px
+
+  @media (min-width: 480px)
+    padding: 0 20px 4px
+
+  @media (min-width: 560px)
+    padding: 0 24px 5px
+
+  @media (min-width: 720px)
+    padding: 0 30px 5px
 
 .kf-keep-contents
   padding: 20px 0 0
@@ -136,9 +148,6 @@ kifiGreen = #73c583
   background-size: 9px 10px
   background-repeat: no-repeat
   background-position: 0 0
-
-.kf-keep-tag-new
-  margin-top: 3px
 
 .kf-keep-footer
   background-color: #f9f9f9
@@ -200,9 +209,6 @@ kifiGreen = #73c583
     content: "·"
     color: textGreyColor
     padding: 0 6px 0 5px
-
-.kf-keep-subtitle-element
-  display: inline-block
 
 .kf-keep-edit-tools
   display: none
@@ -266,16 +272,24 @@ kifiGreen = #73c583
   position: relative
   display: block
   overflow: hidden
-  margin-right: 30px
 
 .kf-keep-title
   margin-bottom: 12px
-  font: keepTitleFont
+  font: 900 18px/1.12 Lato,sans-serif
   font-smoothing: antialiased
   word-break: break-word
 
-  a[href]
-    color: textBlackColor
+  @media (min-width: 480px)
+    font-size: 21px
+
+  @media (min-width: 560px)
+    font-size: 24px
+
+  @media (min-width: 720px)
+    font-size: 27px
+
+.kf-keep-title-link[href]
+  color: textBlackColor
 
 .kf-keep-youtube-content
   width: 100%
@@ -315,21 +329,60 @@ kifiGreen = #73c583
   color: #909aa8
   vertical-align: middle
   font-smoothing: antialiased
-  font-size: 13px
+  font-size: 12px
 
-.kf-keep-dot
-  font-size: 16px
-  top: 2px;
-  position: relative
-  padding: 0 3px
+  @media (min-width: 480px)
+    font-size: 13px
+
+.kf-keep-url
+  display: inline-block
+  vertical-align: text-bottom
+  height: 13px
+  font-weight: 500
+  long-text()
+  max-width: calc(100% - 60px)
+  color: #74C485
+
+  @media (min-width: 480px)
+    max-width: calc(100% - 100px)
+
+.kf-keep-time
+  @media (max-width: 479px)
+    display: none
+
+.kf-keep-length
+  @media (max-width: 479px)
+    font-size: 11px
+
+    .sprite-small-clock
+      display: none
+
+.kf-keep-time::before
+.kf-keep-length::before
+  content: '\2022'
+  display: inline-block
+  vertical-align: 2px
+  padding: 0 4px 0 3px
+  font-size: 7px
+
+  @media (max-width: 479px)
+    padding: 0 3px 0 2px
+    font-size: 6px
 
 .kf-keep-description
-  font-size: 16px
-  line-height: 23px
-  font-family: Lato, "Helvetica", Arial, sans-serif
+  font: 12px/1.4 Lato,Helvetica,Arial,sans-serif
   font-smoothing: antialiased
   color: textBlackColor
   word-break: break-word
+
+  @media (min-width: 480px)
+    font-size: 13px
+
+  @media (min-width: 560px)
+    font-size: 14px
+
+  @media (min-width: 720px)
+    font-size: 16px
 
 .kf-keep-description-sizer
   position: absolute
@@ -338,48 +391,65 @@ kifiGreen = #73c583
   top: -999px
   left: -999px
 
-.kf-keep-url
-  font-size: 13px
-  height: 13px
-  font-weight: 500
-  long-text()
-  max-width: calc(100% - 100px)
-  vertical-align: middle
-  color: #74C485
-
-  .kf-keep.example &
-    color: #c6cbd3
-
 // tag
 
-.kf-keep-tags-new
-  padding: 7px 0
+tagMaxWidth1 = 120px
+tagMaxWidth2 = 150px
+tagSidePad1 = 6px
+tagSidePad2 = 9px
 
-  &:empty
-    border-bottom-width: 0
+.kf-keep-tags
+  margin-top: 12px
+  box-shadow: 0 -1px #e7e7e7
+  padding: 16px 0
 
-@-moz-document url-prefix()
-  .kf-keep-tags-new
-    background-position: 0 1px
+  @media (max-width: 479px)
+    margin-top: 4px
+    padding: 12px 0
+    box-shadow: 0 -.5px #e7e7e7
 
-.kf-tag-list-new > li
+.kf-keep-tag
   display: inline-block
+  vertical-align: top
+  margin-top: 3px
+  position: relative  // for kf-keep-tag-x
+  white-space: nowrap
 
-.kf-tag-list-new
-  margin-right: 10px
+  &.removed
+    width: 0 !important
+    transition: width .12s ease-in-out
 
-.kf-keep-tags-new
-  border-top: 1px solid #e7e7e7
-  box-sizing: border-box
-  padding: 20px 0
-  margin-top: 16px
-
-
-.kf-keep-tag-link-new > a
-  line-height: 21px
-  padding: 0 7px
+.kf-keep-tag-a
+  display: block
+  long-text()
+  max-width: tagMaxWidth1 - 2 * tagSidePad1
+  font-smoothing: antialiased
   color: #777
-  font-size: 12px
+
+  @media (min-width: 480px)
+    max-width: tagMaxWidth2 - 2 * tagSidePad2
+
+  &:active
+    color: clearBlueColor
+
+.kf-keep-tag-a
+input.kf-keep-tag-input-new
+  line-height: 17px
+  font-size: 11px
+
+  @media (min-width: 480px)
+    line-height: 20px
+    font-size: 12px
+
+.kf-keep-tag-x
+  position: absolute
+  right: 2px
+  top: -2px
+  cursor: pointer
+  color: kifiGreen
+
+  :not(:hover)>&
+    display: none
 
 .kf-keep-add-tag-link
   background-size: 20px 20px
@@ -390,91 +460,69 @@ kifiGreen = #73c583
   display: block
   cursor: pointer
 
-.kf-keep-tag-new
-input.kf-keep-tag-input-new
-  border: 1px solid tagOutlineColor
+.kf-keep-tag
+.kf-keep-tag-add-tag-wrapper
+  vertical-align: top
   border-radius: 3px
-  margin-right: 4px
-  vertical-align: middle
+  padding: 1px tagSidePad2
+  margin-right: 6px
+  margin-bottom: 3px
+  box-shadow: 0 0 0 1px tagOutlineColor
 
-.kf-keep-tag-new
+  @media (max-width: 479px)
+    padding: 1px tagSidePad1
+    box-shadow: 0 0 0 .5px tagOutlineColor
+
+.kf-keep-tag
 input.kf-keep-tag-input-new
 .kf-keep-tag-opt
 .kf-keep-tag-hidden
-  max-width: 150px
-  box-sizing: border-box
+  max-width: tagMaxWidth1
   font-size: 12px
   font-smoothing: antialiased
   color: linkBlueColor
 
-.kf-keep-tag-add-tag-wrapper
-.kf-keep-tag-new
-input.kf-keep-tag-input-new
-  padding: 2px 6px 1px
-  margin-bottom: 3px
-
-.kf-keep-tag-opt
-  padding: 3px 6px 3px
+  @media (min-width: 480px)
+    max-width: tagMaxWidth1
 
 input.kf-keep-tag-input-new
 .kf-keep-tag-opt
-  long-text()
+  width: tagMaxWidth1
+
+  @media (min-width: 480px)
+    width: tagMaxWidth2
 
 input.kf-keep-tag-input-new
-  width: 100%
-  min-width: 141px
+  vertical-align: top
 
-.kf-keep-tag-new
-  display: inline-block
-  position: relative
-  overflow: hidden
-  white-space: nowrap
-  float: left
-
-  &.removed
-    width: 0 !important
-    transition: width .12s ease-in-out
-
-.kf-keep-tag-link-new
-  padding: 0
-  font-smoothing: antialiased
+.kf-keep-tag-opt
+  padding: 3px tagSidePad2
   long-text()
 
-  &:active
-    color: clearBlueColor
-
-.kf-keep-tag-x-new
-  display: none
-  position: absolute
-  right: 2px
-  top: -2px
-  cursor: pointer
-  color: kifiGreen
-
-.kf-keep-tag-new:hover .kf-keep-tag-x-new
-  display: block
+  @media (max-width: 479px)
+    padding: 3px tagSidePad1
 
 .kf-keep-tag-opts-container
   position: absolute
 
 .kf-keep-tag-opts-new
   position: relative
-  top: -4px
+  left: -(tagSidePad2) - 1px
+  top: 1px
   border: 1px solid tagOutlineColor
   border-radius: 3px
   background-color: #fff
   z-index: 1
-  min-width: 150px
   box-sizing: border-box
+
+  @media (max-width: 479px)
+    left: -(tagSidePad1) - 1px
 
 .kf-keep-tag-opt
   cursor: pointer
 
 .kf-keep-tag-opt.current
   background-color: #eee
-
-.kf-keep-tag-opt-new
-  padding: 2px 3px 1px 6px
 
 .kf-keep-tag-opt-new-text
   long-text()
@@ -491,19 +539,6 @@ input.kf-keep-tag-input-new
   position: absolute
   white-space: nowrap
   visibility: hidden
-
-.kf-keep-private
-  float: right
-  margin: 0 2px
-
-  .kf-keep-private-label
-    padding-right: 6px
-    color: textDarkGrey
-    font-size: 13px
-    font-weight: 200
-    font-smoothing: antialiased
-    font-style: italic
-    vertical-align: middle
 
 // preview button
 .kf-keep-hover-button-wrapper
@@ -550,20 +585,20 @@ input.kf-keep-tag-input-new
 .kf-keep.detailed .kf-keep-button-preview
   display: none
 
-.kf-tag-list>li
-  display: inline-block
-
 .kf-keep-tag-add-tag-wrapper
-  float: left
-  padding-top: 2px
+  display: inline-block
   margin-top: 3px
 
+  &:not(.kf-adding)
+    padding-left: 2px
+    box-shadow: none
+
 .kf-keep-add-tag-button-new
-.kf-keep-add-tag-button-new
+  display: inline-block
+  vertical-align: top
   cursor: pointer
   width: 20px
   height: 20px
-  display: inline-block
 
 .kf-keep-loader
   position: relative

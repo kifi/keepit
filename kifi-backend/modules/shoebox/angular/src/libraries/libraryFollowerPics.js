@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfLibraryFollowerPics', [
-  '$window', '$filter', 'platformService', 'util',
-  function ($window, $filter, platformService, util) {
+  '$window', '$filter', 'util',
+  function ($window, $filter, util) {
     return {
       restrict: 'A',
       replace: true,
@@ -16,12 +16,10 @@ angular.module('kifi')
         currentPageOrigin: '@'
       },
       link: function (scope, element) {
-        var isMobile = platformService.isSupportedMobilePlatform();
-
         function adjustFollowerPicsSize() {
           var n = Math.max(scope.numFollowers, scope.followers.length);  // tolerating incorrect numFollowers
           var maxWidth = element[0].offsetWidth;
-          var picWidth = isMobile ? 110 : 50;
+          var picWidth = window.innerWidth < 480 ? 38 : 50;
 
           var numCanFit = Math.floor(maxWidth / picWidth);
           if (numCanFit < n) {
