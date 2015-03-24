@@ -205,11 +205,11 @@ class CuratorController @Inject() (
     Ok
   }
 
-  def ingestPersonaRecos(userId: Id[User]) = Action.async(parse.tolerantJson) { request =>
+  def ingestPersonaRecos(userId: Id[User], reverseIngestion: Boolean) = Action.async(parse.tolerantJson) { request =>
     val js = request.body
     val pids = (js \ "personaIds").as[Seq[Id[Persona]]]
     val t1 = System.currentTimeMillis()
-    personaRecoIngestor.ingestUserRecosByPersonas(userId, pids).collect {
+    personaRecoIngestor.ingestUserRecosByPersonas(userId, pids, reverseIngestion).collect {
       case _ =>
         val t2 = System.currentTimeMillis()
         log.info(s"persona reco ingestion: ${(t2 - t1) / 1000f} seconds")

@@ -109,6 +109,7 @@ class UserPersonaCommanderImpl @Inject() (
           }
       }
     }
+    curator.ingestPersonaRecos(userId, personasToRemove.values.map { _.id.get }.toSeq.distinct, reverseIngestion = true)
     personasToRemove.values.toSet
   }
 
