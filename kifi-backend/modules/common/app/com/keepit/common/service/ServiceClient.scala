@@ -29,9 +29,9 @@ class ServiceNotAvailableException(serviceType: ServiceType)
 object ServiceClient {
   val MaxUrlLength = 1000
   final class HashSetRegister[V] extends java.util.concurrent.ConcurrentHashMap[V, Unit] {
+    import scala.collection.JavaConversions._
     def add(elem: V): Unit = super.put(elem, Unit)
     def toSeq = {
-      import scala.collection.JavaConversions._
       mapAsScalaConcurrentMap(this).toSeq.map(_._1)
     }
   }

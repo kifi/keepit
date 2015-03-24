@@ -178,7 +178,7 @@ class SocialGraphPluginImpl @Inject() (
 
   def asyncRevokePermissions(socialUserInfo: SocialUserInfo): Future[Unit] = {
     graphs.find(_.networkType == socialUserInfo.networkType)
-      .map(_.revokePermissions(socialUserInfo)).getOrElse(Promise.successful().future)
+      .map(_.revokePermissions(socialUserInfo)).getOrElse(Promise.successful(()).future)
   }
 
   def asyncFetch(socialUserInfo: SocialUserInfo, broadcastToOthers: Boolean = true): Future[Unit] = {

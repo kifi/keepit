@@ -99,7 +99,7 @@ object DBSession {
           } else if (open) {
             conn.commit()
             commitCacheTransaction()
-            transaction.get.success()
+            transaction.get.success(())
           }
         }
       } finally {

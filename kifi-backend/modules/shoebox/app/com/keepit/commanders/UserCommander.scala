@@ -219,7 +219,7 @@ class UserCommander @Inject() (
           } else {
             userValueRepo.setValue(userId, UserValueName.PENDING_PRIMARY_EMAIL, address)
           }
-          Right()
+          Right((): Unit)
       }
     }
   }
@@ -239,7 +239,7 @@ class UserCommander @Inject() (
               userValueRepo.clearValue(userId, UserValueName.PENDING_PRIMARY_EMAIL)
             }
             emailRepo.save(email.withState(UserEmailAddressStates.INACTIVE))
-            Right()
+            Right((): Unit)
           } else if (isLast) {
             Left("last email")
           } else if (isLastVerified) {

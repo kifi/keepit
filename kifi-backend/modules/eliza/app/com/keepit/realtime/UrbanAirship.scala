@@ -100,7 +100,7 @@ class UrbanAirshipImpl @Inject() (
         }
       }
     }
-    future {
+    Future {
       val devices = db.readOnlyReplica { implicit s => deviceRepo.getByUserId(userId) }
       devices foreach client.updateDeviceState
     }

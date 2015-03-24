@@ -68,7 +68,7 @@ object Global {
     "com.cybozu.labs" % "langdetect" % "1.1-20120112", // todo(andrew): remove from common. make shared module between search and scraper.
     "org.mindrot" % "jbcrypt" % "0.3m",
     "com.amazonaws" % "aws-java-sdk" % "1.6.12",
-    "com.kifi" % "franz_2.10" % "0.3.8" exclude("com.typesafe.play", "*"),
+    "com.kifi" %% "franz" % "0.3.8",
     "net.sf.uadetector" % "uadetector-resources" % "2013.11",
     "com.google.inject" % "guice" % "4.0-beta5",
     "com.google.inject.extensions" % "guice-multibindings" % "4.0-beta5",
