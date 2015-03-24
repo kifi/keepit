@@ -19,7 +19,7 @@ CREATE TABLE if not exists article_info (
     last_queued_at datetime NULL,
     last_fetched_at datetime NULL,
     next_fetch_at datetime NULL,
-    fetch_interval float NOT NULL,
+    fetch_interval bigint(20) NULL,
 
     PRIMARY KEY (id),
     UNIQUE INDEX article_info_u_uri_id_kind (uri_id, kind),

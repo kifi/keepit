@@ -4,7 +4,9 @@ import com.keepit.common.db._
 import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.rover.article.{ ArticleFetchRequest, Article, ArticleKind }
+import com.keepit.rover.manager.FetchSchedulingPolicy
 import org.joda.time.DateTime
+import scala.concurrent.duration.Duration
 
 object ArticleInfoStates extends States[ArticleInfo]
 
@@ -23,7 +25,7 @@ case class ArticleInfo(
     lastQueuedAt: Option[DateTime] = None,
     lastFetchedAt: Option[DateTime] = None,
     nextFetchAt: Option[DateTime] = None,
-    fetchInterval: Float = 24.0f) extends ModelWithState[ArticleInfo] with ModelWithSeqNumber[ArticleInfo] with ArticleKeyHolder {
+    fetchInterval: Option[Duration] = None) extends ModelWithState[ArticleInfo] with ModelWithSeqNumber[ArticleInfo] with ArticleKeyHolder {
   def withId(id: Id[ArticleInfo]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def isActive = (state == ArticleInfoStates.ACTIVE)
@@ -35,7 +37,11 @@ case class ArticleInfo(
     lastQueuedAt = None,
     lastFetchedAt = None,
     nextFetchAt = None,
-    fetchInterval = 24.0f
+    fetchInterval = None
+  )
+  def initializeSchedulingPolicy: ArticleInfo = copy(
+    nextFetchAt = Some(currentDateTime),
+    fetchInterval = Some(FetchSchedulingPolicy(articleKind).initialInterval)
   )
 }
 
@@ -74,7 +80,7 @@ object ArticleInfo {
     lastQueuedAt: Option[DateTime],
     lastFetchedAt: Option[DateTime],
     nextFetchAt: Option[DateTime],
-    fetchInterval: Float): ArticleInfo = {
+    fetchInterval: Option[Duration]): ArticleInfo = {
     val bestVersion = articleVersionFromDb(bestVersionMajor, bestVersionMinor)
     val latestVersion = articleVersionFromDb(latestVersionMajor, latestVersionMinor)
     val oldestVersion = articleVersionFromDb(oldestVersionMajor, oldestVersionMinor)

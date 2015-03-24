@@ -67,6 +67,7 @@ object EmbedlyImage {
 }
 
 object EmbedlyContent {
+
   case class ParsedFields(
     original_url: String,
     url: String,
@@ -88,10 +89,5 @@ object EmbedlyContent {
     implicit val reads: Reads[ParsedFields] = Json.reads[ParsedFields] // todo(Léo): we may need a more permissive Reads
   }
 
-  implicit val format: Format[EmbedlyContent] = {
-    Format(
-      Reads(json => JsSuccess(json).map(new EmbedlyContent(_))),
-      Writes(_.json)
-    )
-  }
+  implicit val format: Format[EmbedlyContent] = __.format[JsValue].inmap(new EmbedlyContent(_), _.json)
 }

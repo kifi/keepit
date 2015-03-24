@@ -13,6 +13,8 @@ import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.{ DbSequenceAssigner, VersionNumber, State, Id }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 
+import scala.concurrent.duration.Duration
+
 @ImplementedBy(classOf[ArticleInfoRepoImpl])
 trait ArticleInfoRepo extends Repo[ArticleInfo] with SeqNumberFunction[ArticleInfo] {
   def getByUris(uriIds: Set[Id[NormalizedURI]], excludeState: Option[State[ArticleInfo]] = Some(ArticleInfoStates.INACTIVE))(implicit session: RSession): Map[Id[NormalizedURI], Set[ArticleInfo]]
@@ -44,8 +46,8 @@ class ArticleInfoRepoImpl @Inject() (
     def lastQueuedAt = column[DateTime]("last_queued_at", O.Nullable)
     def lastFetchedAt = column[DateTime]("last_fetched_at", O.Nullable)
     def nextFetchAt = column[DateTime]("next_fetch_at", O.Nullable)
-    def fetchInterval = column[Float]("fetch_interval", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, state, seq, uriId, url, kind, bestVersionMajor.?, bestVersionMinor.?, latestVersionMajor.?, latestVersionMinor.?, oldestVersionMajor.?, oldestVersionMinor.?, lastQueuedAt.?, lastFetchedAt.?, nextFetchAt.?, fetchInterval) <> ((ArticleInfo.applyFromDbRow _).tupled, ArticleInfo.unapplyToDbRow _)
+    def fetchInterval = column[Duration]("fetch_interval", O.Nullable)
+    def * = (id.?, createdAt, updatedAt, state, seq, uriId, url, kind, bestVersionMajor.?, bestVersionMinor.?, latestVersionMajor.?, latestVersionMinor.?, oldestVersionMajor.?, oldestVersionMinor.?, lastQueuedAt.?, lastFetchedAt.?, nextFetchAt.?, fetchInterval.?) <> ((ArticleInfo.applyFromDbRow _).tupled, ArticleInfo.unapplyToDbRow _)
   }
 
   def table(tag: Tag) = new ArticleInfoTable(tag)
@@ -75,11 +77,11 @@ class ArticleInfoRepoImpl @Inject() (
         val savedInfo = existingByKind.get(kind) match {
           case Some(articleInfo) if articleInfo.isActive => articleInfo
           case Some(inactiveArticleInfo) => {
-            val reactivatedInfo = inactiveArticleInfo.clean.copy(url = url, state = ArticleInfoStates.ACTIVE, nextFetchAt = Some(clock.now()))
+            val reactivatedInfo = inactiveArticleInfo.clean.copy(url = url, state = ArticleInfoStates.ACTIVE).initializeSchedulingPolicy
             save(reactivatedInfo)
           }
           case None => {
-            val newInfo = ArticleInfo(uriId = uriId, url = url, kind = kind.typeCode, nextFetchAt = Some(clock.now()))
+            val newInfo = ArticleInfo(uriId = uriId, url = url, kind = kind.typeCode).initializeSchedulingPolicy
             save(newInfo)
           }
         }

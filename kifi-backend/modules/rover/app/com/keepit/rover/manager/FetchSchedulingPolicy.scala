@@ -7,6 +7,7 @@ import scala.concurrent.duration._
 
 case class FetchSchedulingPolicy(
   maxRandomDelay: Duration,
+  initialInterval: Duration,
   minInterval: Duration,
   maxInterval: Duration,
   intervalIncrement: Duration,
@@ -23,6 +24,7 @@ object FetchSchedulingPolicy {
 
   private val defaultSchedulingPolicy = FetchSchedulingPolicy(
     maxRandomDelay = 6 hours,
+    initialInterval = 14 days,
     minInterval = 7 days,
     maxInterval = 120 days,
     intervalIncrement = 2 days,
