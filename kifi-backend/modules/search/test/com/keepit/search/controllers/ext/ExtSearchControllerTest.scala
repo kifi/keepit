@@ -112,7 +112,7 @@ class ExtSearchControllerTest extends Specification with SearchTestInjector {
         contentType(result) === Some("application/json")
         contentAsString(result) === "1\r\n" + // chunk byte count
           "[\r\n" +
-          "123\r\n" + // chunk byte count
+          "122\r\n" + // chunk byte count
           """
           {
             "uuid":"98765432-1234-5678-9abc-fedcba987654",
@@ -149,7 +149,7 @@ class ExtSearchControllerTest extends Specification with SearchTestInjector {
         val result = inject[ExtSearchController].search2("test", 2, None, None, None, None, None)(request)
         status(result) === OK
         contentType(result) === Some("text/plain")
-        contentAsString(result) === "123\r\n" + // chunk byte count
+        contentAsString(result) === "122\r\n" + // chunk byte count
           """
           {
             "uuid":"98765432-1234-5678-9abc-fedcba987654",
