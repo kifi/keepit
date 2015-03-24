@@ -11,7 +11,7 @@ import com.keepit.common.db.slick._
 import com.keepit.common.time._
 import com.keepit.common.json.TraversableFormat
 import scala.slick.jdbc.StaticQuery
-import scala.slick.jdbc.StaticQuery.interpolation
+import com.keepit.common.db.slick.StaticQueryFixed.interpolation
 
 @ImplementedBy(classOf[UserConnectionRepoImpl])
 trait UserConnectionRepo extends Repo[UserConnection] with SeqNumberFunction[UserConnection] {
@@ -107,7 +107,7 @@ class UserConnectionRepoImpl @Inject() (
   }
 
   def getConnectionCounts(userIds: Set[Id[User]])(implicit session: RSession): Map[Id[User], Int] = {
-    import StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     import scala.collection.JavaConversions._
 
     val ret = connCountCache.bulkGetOrElse(userIds map UserConnectionCountKey) { keys =>

@@ -77,7 +77,7 @@ class NormalizedURIRepoImpl @Inject() (
   }
 
   def getIdAndSeqChanged(sequenceNumber: SequenceNumber[NormalizedURI], limit: Int = -1)(implicit session: RSession): Seq[UriIdAndSeq] = {
-    import StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     sql"""
       select id, seq from normalized_uri
       where seq > ${sequenceNumber.value}

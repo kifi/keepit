@@ -60,7 +60,7 @@ class PublicFeedRepoImpl @Inject() (
   }
 
   def cleanupOldFeeds(limitNumFeeds: Int)(implicit session: RWSession): Unit = {
-    import StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
 
     val cutoff = sql"""SELECT MIN(updated_at) FROM (SELECT updated_at FROM public_feed ORDER BY updated_at DESC LIMIT $limitNumFeeds) x""".as[DateTime].firstOption
     cutoff.map { cutoff =>

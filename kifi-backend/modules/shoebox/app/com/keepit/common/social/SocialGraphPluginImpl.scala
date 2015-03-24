@@ -74,7 +74,7 @@ private[social] class SocialGraphActor @Inject() (
         socialRepo.get(socialUserInfoId)
       }
       fetchUserInfo(socialUserInfo)
-      sender ! ()
+      sender ! (())
 
     case FetchUserInfoQuietly(socialUserInfo) =>
       fetchUserInfo(socialUserInfo)

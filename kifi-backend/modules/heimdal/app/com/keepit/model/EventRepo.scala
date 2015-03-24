@@ -6,7 +6,7 @@ import CustomBSONHandlers.{ BSONDateTimeHandler, BSONEventContextHandler, BSONEv
 import com.keepit.heimdal._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.{ JsArray, Json }
-import play.modules.reactivemongo.json.ImplicitBSONHandlers.JsValueReader
+import play.modules.reactivemongo.json.ImplicitBSONHandlers
 import reactivemongo.bson._
 import reactivemongo.core.commands.PipelineOperator
 
@@ -62,7 +62,7 @@ abstract class MongoEventRepo[E <: HeimdalEvent: HeimdalEventCompanion] extends 
     val eventSelector = eventsToConsider.toBSONMatchDocument ++ ("time" -> BSONDocument("$gt" -> BSONDateTime(currentDateTime.minusHours(window).getMillis)))
     val sortOrder = BSONDocument("time" -> BSONDouble(-1.0))
     collection.find(eventSelector).sort(sortOrder).cursor.collect[Seq](number).map { events =>
-      JsArray(events.map(JsValueReader.read))
+      JsArray(events.map(ImplicitBSONHandlers.JsValueReader.read))
     }
   }
 }

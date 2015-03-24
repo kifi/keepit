@@ -7,6 +7,7 @@ import play.api.Mode._
 import play.api._
 import com.keepit.learning.porndetector.PornDetectorFactory
 import com.keepit.common.concurrent.ForkJoinExecContextPlugin
+import net.codingwell.scalaguice.InjectorExtensions._
 
 object ScraperGlobal extends FortyTwoGlobal(Prod) with ScraperServices {
   val module = ScraperProdModule()

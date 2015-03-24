@@ -80,7 +80,7 @@ class ImageInfoRepoImpl @Inject() (
   }
 
   private def purgeOldImages(info: ImageInfo)(implicit session: RWSession): Option[Id[ImageInfo]] = {
-    import StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     import ImageInfoStates._
     import ImageProvider._
 

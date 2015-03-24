@@ -42,7 +42,7 @@ class CortexURIRepoImpl @Inject() (
   def getSince(seq: SequenceNumber[CortexURI], limit: Int)(implicit session: RSession): Seq[CortexURI] = super.getBySequenceNumber(seq, limit)
 
   def getMaxSeq()(implicit session: RSession): SequenceNumber[CortexURI] = {
-    import StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
 
     val sql = sql"select max(seq) from cortex_uri"
     SequenceNumber[CortexURI](sql.as[Long].first max 0L)

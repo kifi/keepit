@@ -13,7 +13,7 @@ import org.joda.time.DateTime
 import com.keepit.common.performance._
 
 import scala.slick.jdbc.SetParameter
-import scala.slick.jdbc.StaticQuery.interpolation
+import com.keepit.common.db.slick.StaticQueryFixed.interpolation
 
 @ImplementedBy(classOf[KeepDiscoveryRepoImpl])
 trait KeepDiscoveryRepo extends Repo[KeepDiscovery] {

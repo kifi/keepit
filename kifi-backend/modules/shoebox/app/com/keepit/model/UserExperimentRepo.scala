@@ -90,7 +90,7 @@ class UserExperimentRepoImpl @Inject() (
   }
 
   def getDistinctExperimentsWithCounts()(implicit session: RSession): Seq[(ExperimentType, Int)] = {
-    import scala.slick.jdbc.StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     val query = sql"SELECT experiment_type, COUNT(*) FROM user_experiment WHERE state='active' GROUP BY experiment_type;"
     query.as[(String, Int)].list.map {
       case (name, count) =>

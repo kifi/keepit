@@ -7,7 +7,7 @@ import com.keepit.common.db.slick._
 import com.keepit.common.time._
 import com.keepit.model.{ NormalizedURI, User, UserBookmarkClicks }
 
-import scala.slick.jdbc.StaticQuery.interpolation
+import com.keepit.common.db.slick.StaticQueryFixed.interpolation
 
 @ImplementedBy(classOf[UserBookmarkClicksRepoImpl])
 trait UserBookmarkClicksRepo extends Repo[UserBookmarkClicks] {

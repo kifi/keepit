@@ -67,7 +67,7 @@ class LibraryLDATopicRepoImpl @Inject() (
   }
 
   def getUserFollowedLibraryFeatures(userId: Id[User], version: ModelVersion[DenseLDA], minEvidence: Int = 5)(implicit session: RSession): Seq[LibraryTopicMean] = {
-    import StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     implicit val getLibraryFeature = getResultFromMapper[LibraryTopicMean]
 
     val q =

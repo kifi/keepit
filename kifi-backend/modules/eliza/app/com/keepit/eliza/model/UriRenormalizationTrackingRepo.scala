@@ -48,7 +48,7 @@ class UriRenormalizationTrackingRepoImpl @Inject() (
   override def invalidateCache(model: UriRenormalizationEvent)(implicit session: RSession): Unit = {}
 
   def getCurrentSequenceNumber()(implicit session: RSession): SequenceNumber[ChangedURI] = {
-    import scala.slick.jdbc.StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     val sql = sql"select max(sequence_number) as max from uri_renormalization_event"
     sql.as[SequenceNumber[ChangedURI]].firstOption.getOrElse(SequenceNumber.ZERO)
   }

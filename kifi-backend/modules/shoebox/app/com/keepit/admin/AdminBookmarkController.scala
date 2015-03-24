@@ -21,6 +21,7 @@ import play.api.libs.json._
 import play.api.mvc.{ Action, AnyContent }
 import views.html
 
+import scala.collection.mutable
 import scala.collection.mutable.{ SynchronizedMap, HashMap => MutableMap }
 import scala.concurrent._
 import com.keepit.common.akka.SafeFuture
@@ -195,7 +196,7 @@ class AdminBookmarksController @Inject() (
   def bookmarksView(page: Int = 0) = AdminUserPage.async { implicit request =>
     val PAGE_SIZE = 25
 
-    val userMap = new MutableMap[Id[User], User] with SynchronizedMap[Id[User], User]
+    val userMap = mutable.Map[Id[User], User]()
 
     def bookmarksInfos() = {
       Future { db.readOnlyReplica { implicit s => keepRepo.page(page, PAGE_SIZE, false, Set(KeepStates.INACTIVE)) } } flatMap { bookmarks =>

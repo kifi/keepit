@@ -7,6 +7,7 @@ import com.keepit.helprank.ReKeepStatsUpdaterPlugin
 import play.api.Mode._
 import play.api._
 import com.keepit.controllers.EventTrackingController
+import net.codingwell.scalaguice.InjectorExtensions._
 
 object HeimdalGlobal extends FortyTwoGlobal(Prod) with HeimdalServices {
   val module = HeimdalProdModule()

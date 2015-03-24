@@ -166,7 +166,7 @@ class SocialConnectionRepoImpl @Inject() (
   }
 
   def getConnAndNetworkBySeqNumber(lowerBound: SequenceNumber[SocialConnection], fetchSize: Int = -1)(implicit session: RSession): Seq[(Id[SocialUserInfo], Id[SocialUserInfo], State[SocialConnection], SequenceNumber[SocialConnection], SocialNetworkType)] = {
-    import StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     val query = if (fetchSize > 0) { // unfortunately no easy way to make dynamic parts of interpolated sql queries
       sql"""select sc.social_user_1, sc.social_user_2, sc.state, sc.seq, sui.network_type
             from social_connection sc join social_user_info sui on sc.social_user_1 = sui.id

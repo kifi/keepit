@@ -104,7 +104,7 @@ class RawSeedItemRepoImpl @Inject() (
   }
 
   def getDiscoverableBySeqNumAndUser(start: SequenceNumber[RawSeedItem], userId: Id[User], maxBatchSize: Int)(implicit session: RSession): Seq[RawSeedItem] = {
-    import StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     val q = if (db.dialect == H2DatabaseDialect) {
       sql"SELECT * FROM raw_seed_item WHERE seq > ${start.value} AND (user_id=$userId OR user_id IS NULL) AND discoverable=1 ORDER BY seq LIMIT $maxBatchSize;"
     } else {
@@ -114,7 +114,7 @@ class RawSeedItemRepoImpl @Inject() (
   }
 
   def getDiscoverableBySeqNum(start: SequenceNumber[RawSeedItem], maxBatchSize: Int)(implicit session: RSession): Seq[RawSeedItem] = {
-    import StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     val q = if (db.dialect == H2DatabaseDialect) {
       sql"SELECT * FROM raw_seed_item WHERE seq > ${start.value} AND (user_id IS NULL) AND discoverable=1 ORDER BY seq LIMIT $maxBatchSize;"
     } else {
@@ -136,7 +136,7 @@ class RawSeedItemRepoImpl @Inject() (
   }
 
   def cleanupBatch(userId: Id[User])(implicit session: RWSession): Unit = {
-    import StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     val cutoff = currentDateTime.minus(org.joda.time.Duration.standardDays(10))
     sqlu"DELETE FROM raw_seed_item WHERE user_id=$userId AND updated_at<=$cutoff LIMIT 250".first
   }

@@ -91,7 +91,7 @@ class CollectionRepoImpl @Inject() (
 
   def getUnfortunatelyIncompleteTagSummariesByUser(userId: Id[User])(implicit session: RSession): Seq[CollectionSummary] =
     userCollectionSummariesCache.getOrElse(UserCollectionSummariesKey(userId)) {
-      import StaticQuery.interpolation
+      import com.keepit.common.db.slick.StaticQueryFixed.interpolation
       import scala.collection.JavaConversions._
       sql"select id, external_id, name from collection where user_id = $userId and state = '#${CollectionStates.ACTIVE}' order by last_kept_to desc, id limit 500".
         as[(Id[Collection], ExternalId[Collection], Hashtag)].list.map { row =>
@@ -117,7 +117,7 @@ class CollectionRepoImpl @Inject() (
   }
 
   def count(userId: Id[User])(implicit session: RSession): Int = {
-    import StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     import scala.collection.JavaConversions._
     sql"select count(*) from collection where user_id = $userId".as[Int].first
   }
@@ -161,14 +161,14 @@ class CollectionRepoImpl @Inject() (
   def getCollectionsChanged(num: SequenceNumber[Collection], limit: Int)(implicit session: RSession): Seq[Collection] = super.getBySequenceNumber(num, limit)
 
   def getTagsByKeepId(keepId: Id[Keep])(implicit session: RSession): Set[Hashtag] = {
-    import StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     val query = sql"select DISTINCT c.name from keep_to_collection kc, collection c where kc.bookmark_id = ${keepId} and c.id = kc.collection_id and c.state='#${CollectionStates.ACTIVE}' and kc.state='#${KeepToCollectionStates.ACTIVE}'"
 
     query.as[String].list.map(tag => Hashtag(tag)).toSet
   }
 
   private def pageTagsByUserQuery[S](userId: Id[User], page: Int, size: Int, sortBy: String) = {
-    import StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     val query = sql"select c.id, c.external_id, c.name, count(kc.id) as keep_count, c.last_kept_to from collection c, keep_to_collection kc, bookmark b where kc.collection_id=c.id and kc.bookmark_id=b.id and c.user_id=${userId} and b.state='#${KeepStates.ACTIVE}' and kc.state='#${KeepToCollectionStates.ACTIVE}' and c.state=${CollectionStates.ACTIVE} group by c.id order by #${sortBy} limit ${size} offset ${page * size}"
     query.as[(Id[Collection], ExternalId[Collection], Hashtag, Int, Option[DateTime])]
   }
