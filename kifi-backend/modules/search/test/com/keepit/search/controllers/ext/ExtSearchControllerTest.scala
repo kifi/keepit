@@ -89,7 +89,7 @@ class ExtSearchControllerTest extends Specification with SearchTestInjector {
             "mayHaveMore":false,
             "show":true,
             "experimentId":10,
-            "context":"AgFJAN8CZHg=",
+            "context":"AgFJAN8CZHg",
             "experts":[]
           }
         """)
@@ -124,7 +124,7 @@ class ExtSearchControllerTest extends Specification with SearchTestInjector {
             "show":true,
             "cutPoint":1,
             "experimentId":null,
-            "context":"AgFJAN8CZHg="
+            "context":"AgFJAN8CZHg"
           }""".replaceAll("\n *", "") + "\r\n" +
           "1\r\n" + // chunk byte count
           ",\r\n" +
@@ -161,7 +161,7 @@ class ExtSearchControllerTest extends Specification with SearchTestInjector {
             "show":true,
             "cutPoint":1,
             "experimentId":null,
-            "context":"AgFJAN8CZHg="
+            "context":"AgFJAN8CZHg"
           }""".replaceAll("\n *", "") + "\r\n" +
           "27\r\n" + // chunk byte count
           """{"hits":[{}],"users":[],"libraries":[]}""" + "\r\n" +
