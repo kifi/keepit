@@ -205,7 +205,7 @@ class NotificationCommander @Inject() (
             "id" -> message.externalId.id,
             "time" -> message.createdAt,
             "thread" -> message.threadExtId.id,
-            "unread" -> true,
+            "unread" -> unread,
             "category" -> categoryString,
             "fullCategory" -> category.category,
             "title" -> title,
