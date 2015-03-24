@@ -18,7 +18,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.social.NonUserKinds
 
 trait MailSenderPlugin {
-  def processMail(mail: ElectronicMail)
+  def processMail(mailId: Id[ElectronicMail])
   def processOutbox()
 }
 
@@ -30,15 +30,15 @@ class MailSenderPluginImpl @Inject() (
   // plugin lifecycle methods
   override def enabled: Boolean = true
   override def onStart() {
-    scheduleTaskOnOneMachine(actor.system, 30 seconds, 7 seconds, actor.ref, ProcessOutbox, ProcessOutbox.getClass.getSimpleName)
+    scheduleTaskOnLeader(actor.system, 30 seconds, 7 seconds, actor.ref, ProcessOutbox)
   }
 
   override def processOutbox() { actor.ref ! ProcessOutbox }
-  override def processMail(mail: ElectronicMail) { actor.ref ! ProcessMail(mail) }
+  override def processMail(mailId: Id[ElectronicMail]) { actor.ref ! ProcessMail(mailId) }
 }
 
 private[mail] case class ProcessOutbox()
-private[mail] case class ProcessMail(mailId: ElectronicMail)
+private[mail] case class ProcessMail(mailId: Id[ElectronicMail])
 
 private[mail] class MailSenderActor @Inject() (
   db: Database,
@@ -54,30 +54,29 @@ private[mail] class MailSenderActor @Inject() (
 
   def receive() = {
     case ProcessOutbox =>
-      val emailsToSend = db.readOnlyReplica { implicit s =>
-        mailRepo.outbox() flatMap { email =>
-          try {
-            Some(mailRepo.get(email))
-          } catch {
-            case ex: Throwable =>
-              airbrake.notify(ex)
-              None
-          }
-        }
+      val emailsToSend = db.readOnlyMaster { implicit s =>
+        mailRepo.outbox()
       }
 
       emailsToSend.foreach { mail =>
         self ! ProcessMail(mail)
       }
-    case ProcessMail(mail) =>
-      log.info(s"Processing email to send: ${mail.id.getOrElse(mail.externalId)}")
-      val newMail = takeOutOptOuts(mail).clean()
-      if (newMail.state != ElectronicMailStates.OPT_OUT) {
-        log.info(s"Sending email: ${newMail.id.getOrElse(newMail.externalId)}")
-        mailProvider.sendMail(newMail)
-        reportEmailNotificationSent(newMail)
+    case ProcessMail(mailId) =>
+      val mail = db.readOnlyMaster { implicit s =>
+        mailRepo.get(mailId)
+      }
+      if (mail.state != ElectronicMailStates.READY_TO_SEND) {
+        log.info(s"mail $mailId is in state ${mail.state}, skip it")
       } else {
-        log.info(s"Not sending email due to opt-out: ${newMail.id.getOrElse(newMail.externalId)}")
+        log.info(s"Processing email to send: ${mail.id.get}")
+        val newMail = takeOutOptOuts(mail).clean()
+        if (newMail.state != ElectronicMailStates.OPT_OUT) {
+          log.info(s"Sending email: ${newMail.id.getOrElse(newMail.externalId)}")
+          mailProvider.sendMail(newMail)
+          reportEmailNotificationSent(newMail)
+        } else {
+          log.info(s"Not sending email due to opt-out: ${newMail.id.getOrElse(newMail.externalId)}")
+        }
       }
     case m => throw new UnsupportedActorMessage(m)
   }
