@@ -50,29 +50,38 @@ class LibraryChecker @Inject() (
     val minuteInd = currentTime.minuteOfHour().get / 10
     val index = hourInd * 6 + minuteInd // hour * 6 + minute / 10 (int div)
 
-    db.readOnlyMaster { implicit s =>
+    val (libraryMap, keepCountMap, latestKeepMap) = db.readOnlyMaster { implicit s =>
       val pageSize = libraryRepo.countWithState(LibraryStates.ACTIVE) / 144 // 144 = 24 (hours per day) * 6 (10 minute intervals per hour)
-      libraryRepo.page(index, pageSize, Set(LibraryStates.INACTIVE))
-    }.map { lib =>
-      lib.lastKept match {
-        case None => // no last kept means there should be no keeps for library
-          val numKeeps = keepRepo.getCountByLibrary(lib.id.get)
-          if (numKeeps != 0) {
-            airbrake.notify(s"Library ${lib.id.get} has no last_kept but has $numKeeps active keeps... making them inactive!")
-            keepRepo.getByLibrary(lib.id.get, 0, numKeeps, Set.empty).map { k =>
-              keepRepo.save(k.withState(KeepStates.INACTIVE))
-            }
-          }
+      val libraries = libraryRepo.page(index, pageSize, Set(LibraryStates.INACTIVE))
+      val libraryMap = libraries.map(lib => lib.id.get -> lib).toMap
+      val keepCountMap = keepRepo.getCountsByLibrary(libraryMap.keySet)
+      val latestKeepMap = keepRepo.latestKeepByLibraryIds(libraryMap.keySet)
+      (libraryMap, keepCountMap, latestKeepMap)
+    }
 
-        case Some(lastKept) => // make sure most recent keep in library matches library's last_kept field
-          val numKeeps = keepRepo.getCountByLibrary(lib.id.get)
-          val sortedKeeps = keepRepo.getByLibrary(lib.id.get, 0, numKeeps, Set.empty).sortBy(_.keptAt)
-          val lastKeep = sortedKeeps.lastOption
-          if (lastKeep.isDefined && lastKeep.get.keptAt != lastKept) {
-            airbrake.notify(s"Library ${lib.id.get} has inconsistent last_kept state. Library is last kept at $lastKept but keep is ${lastKeep.get.keptAt}... making them consistent")
-            libraryRepo.save(lib.copy(lastKept = Some(lastKeep.get.keptAt)))
-          }
-      }
+    libraryMap.map {
+      case (libId, lib) =>
+        lib.lastKept match {
+          case None =>
+            val numKeeps = keepCountMap(libId)
+            if (numKeeps != 0) {
+              airbrake.notify(s"Library ${libId} has no last_kept but has $numKeeps active keeps... making them inactive!")
+              db.readWrite { implicit s =>
+                keepRepo.getByLibrary(libId, 0, numKeeps, Set.empty).map { k =>
+                  keepRepo.save(k.withState(KeepStates.INACTIVE))
+                }
+              }
+            }
+          case Some(lastKeptDate) =>
+            latestKeepMap(libId) match {
+              case Some(lastKeep) if lastKeep.keptAt != lastKeptDate =>
+                airbrake.notify(s"Library ${libId} has inconsistent last_kept state. Library is last kept at $lastKeptDate but keep is ${lastKeep.keptAt}... making them consistent")
+                db.readWrite { implicit s =>
+                  libraryRepo.save(lib.copy(lastKept = Some(lastKeep.keptAt)))
+                }
+              case _ =>
+            }
+        }
     }
   }
 
