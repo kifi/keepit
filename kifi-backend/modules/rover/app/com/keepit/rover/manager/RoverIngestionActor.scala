@@ -57,6 +57,7 @@ class RoverIngestionActor @Inject() (
 
   private def startIngestion(): Unit = {
     ingesting = true
+    log.info(s"Starting ingestion...")
     val seqNum = db.readOnlyMaster { implicit session =>
       systemValueRepo.getSequenceNumber(roverNormalizedUriSeq) getOrElse SequenceNumber.ZERO
     }
@@ -74,6 +75,7 @@ class RoverIngestionActor @Inject() (
 
   private def endIngestion(): Unit = {
     ingesting = false
+    log.info(s"Ingestion ended.")
   }
 
   private def ingest(uris: Seq[IndexableUri]): Unit = if (uris.nonEmpty) {
