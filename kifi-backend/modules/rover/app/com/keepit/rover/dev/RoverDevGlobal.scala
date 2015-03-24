@@ -6,7 +6,7 @@ import play.api.Application
 import com.keepit.rover.RoverServices
 
 object RoverDevGlobal extends FortyTwoGlobal(Dev) with RoverServices {
-  override val module = RoverDevModule()
+  val module = RoverDevModule()
 
   override def onStart(app: Application) {
     startRoverServices()
