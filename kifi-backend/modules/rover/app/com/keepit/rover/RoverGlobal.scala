@@ -5,6 +5,7 @@ import com.keepit.rover.manager.RoverManagerPlugin
 import com.keepit.rover.model.ArticleInfoSequencingPlugin
 import play.api.Mode._
 import play.api._
+import net.codingwell.scalaguice.InjectorExtensions._
 
 object RoverGlobal extends FortyTwoGlobal(Prod) with RoverServices {
   val module = RoverProdModule()
