@@ -270,7 +270,7 @@ angular.module('kifi')
     });
 
     // Report search analytics on unload.
-    var onUnload = function () {
+    function onUnload() {
       var resultsWithLibs = 0;
       $scope.resultKeeps.forEach( function (keep) {
         // does there exist a library that's not system_created?
@@ -280,6 +280,7 @@ angular.module('kifi')
       });
       searchActionService.reportSearchAnalyticsOnUnload($scope.resultKeeps.length, resultsWithLibs);
     };
+
     $window.addEventListener('beforeunload', onUnload);
 
     $scope.$on('$destroy', function () {
