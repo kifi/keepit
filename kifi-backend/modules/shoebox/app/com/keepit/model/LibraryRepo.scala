@@ -48,6 +48,7 @@ trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
   def filterPublishedByMemberCount(minCount: Int, limit: Int = 100)(implicit session: RSession): Seq[Library]
   def getLibrariesBothFollow(user1: Id[User], user2: Id[User])(implicit session: RSession): Seq[Id[Library]]
   def getOwnerLibrariesOtherFollow(onwer: Id[User], other: Id[User])(implicit session: RSession): Seq[Id[Library]]
+  def getOwnerLibraryCounts(owners: Set[Id[User]])(implicit session: RSession): Map[Id[User], Int]
 }
 
 @Singleton
@@ -355,6 +356,14 @@ class LibraryRepoImpl @Inject() (
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     val query = sql"""select lm1.library_id from library_membership lm1 inner join library_membership lm2 on lm1.library_id = lm2.library_id where lm1.user_id = $owner and lm1.access = 'owner' and lm1.state = 'active' and lm2.user_id = $other and lm2.access != 'owner' and lm2.state = 'active' order by lm1.library_id desc """
     query.as[Id[Library]].list
+  }
+
+  def getOwnerLibraryCounts(owners: Set[Id[User]])(implicit session: RSession): Map[Id[User], Int] = {
+    import StaticQuery.interpolation
+    val inIds = owners.mkString("(", ",", ")")
+    val q = sql"""select owner_id, count(*) from library  where owner_id in #${inIds} group by owner_id"""
+    val cnts = q.as[(Int, Int)].list.map { case (userId, count) => Id[User](userId) -> count }.toMap
+    owners.map { user => user -> cnts.getOrElse(user, 0) }.toMap
   }
 }
 
