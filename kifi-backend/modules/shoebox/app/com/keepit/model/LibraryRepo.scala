@@ -364,7 +364,7 @@ class LibraryRepoImpl @Inject() (
       Map()
     } else {
       val inIds = owners.map { _.id }.mkString("(", ",", ")")
-      val q = sql"""select owner_id, count(*) from library  where owner_id in #${inIds} group by owner_id"""
+      val q = sql"""select owner_id, count(*) from library  where owner_id in #${inIds} and kind = 'user_created' and state = 'active' and visibility = 'published' group by owner_id"""
 
       val cnts = q.as[(Int, Int)].list.map { case (userId, count) => Id[User](userId) -> count }.toMap
       owners.map { user => user -> cnts.getOrElse(user, 0) }.toMap
