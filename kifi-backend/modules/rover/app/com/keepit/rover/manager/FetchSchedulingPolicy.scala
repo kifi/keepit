@@ -27,6 +27,11 @@ case class FetchSchedulingPolicy(
     currentDateTime plusSeconds secondsToNextFetch
   }
 
+  def nextFetchAfterSuccess(interval: Duration): DateTime = {
+    val secondsToNextFetch = (interval + randomDelay).toSeconds.toInt
+    currentDateTime plusMinutes secondsToNextFetch
+  }
+
   def increaseInterval(currentInterval: Duration): Duration = (currentInterval - intervalDecrement) max minInterval
   def decreaseInterval(currentInterval: Duration): Duration = (currentInterval + intervalIncrement) min maxInterval
 }

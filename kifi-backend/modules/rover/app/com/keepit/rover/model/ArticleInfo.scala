@@ -5,7 +5,6 @@ import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.rover.article.{ ArticleFetchRequest, Article, ArticleKind }
 import com.keepit.rover.manager.FetchSchedulingPolicy
-import com.keepit.rover.store.ArticleKey
 import org.joda.time.DateTime
 import scala.concurrent.duration.Duration
 import scala.util.{ Success, Failure, Try }
@@ -76,7 +75,7 @@ case class ArticleInfo(
   private def withLatestArticle(version: ArticleVersion): ArticleInfo = {
     val decreasedFetchInterval = fetchInterval.map(schedulingPolicy.decreaseInterval)
     copy(
-      nextFetchAt = decreasedFetchInterval.map(currentDateTime plusMinutes _.toMinutes.toInt),
+      nextFetchAt = decreasedFetchInterval.map(schedulingPolicy.nextFetchAfterSuccess),
       fetchInterval = decreasedFetchInterval,
       latestVersion = Some(version),
       oldestVersion = oldestVersion orElse Some(version)
@@ -86,7 +85,7 @@ case class ArticleInfo(
   private def withoutChange: ArticleInfo = {
     val increasedFetchInterval = fetchInterval.map(schedulingPolicy.increaseInterval)
     copy(
-      nextFetchAt = increasedFetchInterval.map(currentDateTime plusMinutes _.toMinutes.toInt),
+      nextFetchAt = increasedFetchInterval.map(schedulingPolicy.nextFetchAfterSuccess),
       fetchInterval = increasedFetchInterval
     )
   }
