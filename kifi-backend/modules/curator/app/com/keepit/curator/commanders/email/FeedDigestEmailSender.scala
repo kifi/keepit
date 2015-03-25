@@ -271,7 +271,7 @@ class FeedDigestEmailSender @Inject() (
           digestRecos.foreach(digestReco => uriRecommendationRepo.incrementDeliveredCount(digestReco.uriRecommendation.id.get, withLastPushedAt = true))
           curatorAnalytics.trackDeliveredItems(digestRecos.map(_.uriRecommendation), Some(RecommendationSource.Email))
         }
-        sendAnonymoizedEmailToQa(emailToSend, emailData)
+        if (Random.nextFloat() > 0.99) sendAnonymoizedEmailToQa(emailToSend, emailData)
       } else {
         val recoIds = digestRecos.map(_.uri.id.get).mkString(",")
         val libKeepIds = newLibraryItems.map(_.uri.id.get).mkString(",")

@@ -1,6 +1,6 @@
 <ul class="kf-keep-tags">
   <li class="kf-keep-tag" data-id="{{tag.id}}" ng-repeat="tag in tagsToShow">
-    <a class="kf-keep-tag-a" href="{{searchTagUrl(tag.name)}}" ng-click="onTagClick()">{{tag.name}}</a>
+    <a class="kf-keep-tag-a" ui-sref="^.search({q: tagQuery(tag.name), f: ''})" ng-click="onTagClick($event)">{{tag.name}}</a>
     <div class="kf-keep-tag-x" ng-if="!tag.readOnly" ng-click="removeTag(tag.name)">×</div>
   </li>
   <li class="kf-keep-tag-add-tag-wrapper" ng-class="{'kf-adding': addingTag.enabled}" ng-if="!readOnlyMode()">

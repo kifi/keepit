@@ -47,7 +47,7 @@ angular.module('kifi')
       replace: true,
       restrict: 'A',
       templateUrl: 'invite/inviteWell.tpl.html',
-      link: function (/*scope, element, attrs*/) {
+      link: function () {
 
       }
     };
@@ -62,7 +62,7 @@ angular.module('kifi')
       replace: true,
       restrict: 'A',
       templateUrl: 'invite/socialNetworkStatus.tpl.html',
-      link: function (scope/*, element, attrs*/) {
+      link: function (scope) {
         scope.numNetworks = socialService.networks.length;
         scope.$watch(function () {
           return socialService.networks.length;
@@ -178,7 +178,7 @@ angular.module('kifi')
       replace: true,
       restrict: 'A',
       templateUrl: 'invite/inviteSearch.tpl.html',
-      link: function (scope, element/*, attrs*/) {
+      link: function (scope, element) {
         scope.search = {};
         scope.search.showDropdown = false;
         scope.data = scope.data || {};

@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfTagList', [
-  '$document', '$sce', '$log', 'keyIndices', 'hashtagService', '$location', '$stateParams', '$analytics', '$rootScope', 'env',
-  function ($document, $sce, $log, keyIndices, hashtagService, $location, $stateParams, $analytics, $rootScope, env) {
+  '$document', '$sce', '$log', 'keyIndices', 'hashtagService', '$location', '$state', '$analytics', '$rootScope',
+  function ($document, $sce, $log, keyIndices, hashtagService, $location, $state, $analytics, $rootScope) {
     var dropdownSuggestionCount = 5;
 
     return {
@@ -19,7 +19,7 @@ angular.module('kifi')
       replace: true,
       restrict: 'A',
       templateUrl: 'tags/tagList.tpl.html',
-      link: function (scope, element/*, attrs*/) {
+      link: function (scope, element) {
         scope.data = {};
         scope.data.isClickingInList = false;
         scope.newTagLabel = 'NEW';
@@ -27,34 +27,8 @@ angular.module('kifi')
         scope.tagTypeAheadResults = [];
         scope.shouldGiveFocus = false;
 
-        scope.searchTagUrl = function (tag) {
-          var tagPath;
-          var n = tag;
-          if (n.indexOf(' ') !== -1) {
-            tagPath = '"' + n + '"';
-          } else {
-            tagPath = n;
-          }
-
-          // Perform global tag search for logged-in users.
-          if (scope.userLoggedIn) {
-            return '/find?q=tag:' + encodeURIComponent(tagPath);
-          } else {
-            // Perform library tag search for logged-out users if they are on a library page.
-            if (scope.library && scope.library.url) {
-              return env.origin + scope.library.url + '/find?q=tag:' + encodeURIComponent(tagPath);
-            }
-            else {
-              // If they are in library search, replace query with tag.
-              if ($stateParams.username && $stateParams.librarySlug) {
-                return '/' + $stateParams.username + '/' + $stateParams.librarySlug + '/find?q=tag:' + encodeURIComponent(tagPath);
-              }
-              // Nothing we can do; just stay put.
-              else {
-                return $location.url();
-              }
-            }
-          }
+        scope.tagQuery = function (tag) {
+          return 'tag:' + (tag.indexOf(' ') >= 0 ? '"' + tag + '"' : tag);
         };
 
         scope.$watch('getSelectedKeeps', function () {
@@ -345,7 +319,10 @@ angular.module('kifi')
           }
         };
 
-        scope.onTagClick = function () {
+        scope.onTagClick = function (event) {
+          if ($state.current.controller === 'SearchCtrl') {
+            $location.url(event.target.getAttribute('href'));
+          }
           $rootScope.$emit('trackLibraryEvent', 'click', { action: 'clickedTag' });
         };
 

@@ -12,6 +12,7 @@ import com.keepit.common.domain.DomainToNameMapper
 
 import com.google.inject.Inject
 import com.keepit.normalizer.NormalizedURIInterner
+import com.keepit.search.util.LongSetIdFilter
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.{ JsNull, Json }
@@ -234,6 +235,14 @@ class RecommendationsCommander @Inject() (
   }
 
   def topPublicLibraryRecos(userId: Id[User], limit: Int, source: RecommendationSource, subSource: RecommendationSubSource, trackDelivery: Boolean = true, context: Option[String]): Future[FullLibRecoResults] = {
+    def generateNewContext(oldContext: String, newLibs: Set[Id[Library]]): String = {
+      val filter = new LongSetIdFilter() {}
+      val oldSet = filter.fromBase64ToSet(oldContext)
+      val newSet = oldSet ++ newLibs.map { _.id }
+      val newContext = filter.fromSetToBase64(newSet)
+      newContext
+    }
+
     // get extra recos from curator incase we filter out some below
     curator.topLibraryRecos(userId, Some(limit * 4), context) flatMap { libResults =>
       val libInfos = libResults.recos
@@ -255,9 +264,11 @@ class RecommendationsCommander @Inject() (
         val deliveredIds = libraries.map(_._1).toSet
         curator.notifyLibraryRecosDelivered(userId, deliveredIds, source, subSource)
       }
+      // context from curator is generated with limit * 4 items. Not right.
+      val newContext = generateNewContext(context.getOrElse(""), idToLibraryMap.keySet)
 
       createFullLibraryInfos(userId, libraries map (_._2), id => Some(libToRecoInfoMap(id).explain)).map {
-        recosInfo => FullLibRecoResults(recosInfo, libResults.context)
+        recosInfo => FullLibRecoResults(recosInfo, newContext)
       }
     }
   }

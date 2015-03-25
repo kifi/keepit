@@ -75,10 +75,10 @@ menu, ol, ul
   // during page transitions when content is removed or inserted
   min-height: 101vh
   box-sizing: border-box
-  padding-top: appHeaderHeight1
+  padding-top: appHeaderHeight2
 
-  @media screen and (min-height: appHeaderHeight2MinHeight)
-    padding-top: appHeaderHeight2
+  @media (max-height: appHeaderHeight1MaxDim) and (max-width: appHeaderHeight1MaxDim)
+    padding-top: appHeaderHeight1
 
 .ng-cloak
   display: none !important

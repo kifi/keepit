@@ -51,42 +51,18 @@ angular.module('kifi')
         }
 
         // Data augmentation.
-        // TODO(yiping): make new libraryDecoratorService to do this. Then, DRY up the code that is
-        // currently in nav.js too.
         function augmentData() {
-          // Libraries created with the extension do not have the description field.
-          if (!scope.library.description) {
-            scope.library.description = '';
-          }
-
-          // TODO(yiping): get real owner data when owner is not user.
-          if (!scope.library.owner) {
-            scope.library.owner = profileService.me;
-          }
-
-          var maxLength = 150;
-          if (scope.library.description.length > maxLength && $rootScope.userLoggedIn) {
-            // Try to chop off at a word boundary, using a simple space as the word boundary delimiter.
-            var clipLastIndex = maxLength;
-            var lastSpaceIndex = scope.library.description.lastIndexOf(' ', maxLength);
-            if (lastSpaceIndex !== -1) {
-              clipLastIndex = lastSpaceIndex + 1;  // Grab the space too.
-            }
-
-            scope.library.shortDescription = util.linkify(scope.library.description.substr(0, clipLastIndex));
+          var maxLength = 300, clipLength = 180;  // numbers differ significantly so that clicking More will show significantly more
+          var description = scope.library.description || '';
+          if (description.length > maxLength && $rootScope.userLoggedIn) {
+            // Try to chop off at a word boundary, using a simple space as the delimiter. Grab the space too.
+            var clipLastIndex = description.lastIndexOf(' ', clipLength) + 1 || clipLength;
+            scope.library.shortDescription = util.linkify(description.substr(0, clipLastIndex));
             scope.clippedDescription = true;
           }
-          scope.library.formattedDescription = '<p>' + util.linkify(scope.library.description).replace(/\n+/g, '<p>');
+          scope.library.formattedDescription = '<p>' + util.linkify(description).replace(/\n+/g, '<p>');
 
-          scope.library.shareUrl = env.origin + scope.library.url;
-          scope.library.shareFbUrl = scope.library.shareUrl +
-            '?utm_medium=vf_facebook&utm_source=library_share&utm_content=lid_' + scope.library.id +
-            '&kcid=na-vf_facebook-library_share-lid_' + scope.library.id;
-
-          scope.library.shareTwitterUrl = encodeURIComponent(scope.library.shareUrl +
-            '?utm_medium=vf_twitter&utm_source=library_share&utm_content=lid_' + scope.library.id +
-            '&kcid=na-vf_twitter-library_share-lid_' + scope.library.id);
-          scope.library.shareText = 'Discover this amazing @Kifi library about ' + scope.library.name + '!';
+          scope.library.absUrl = env.origin + scope.library.url;
 
           var image = scope.library.image;
           if (image) {
@@ -562,7 +538,9 @@ angular.module('kifi')
           trackShareEvent('clickedShareFacebook');
           $FB.ui({
             method: 'share',
-            href: scope.library.shareFbUrl
+            href: scope.library.absUrl +
+              '?utm_medium=vf_facebook&utm_source=library_share&utm_content=lid_' + scope.library.id +
+              '&kcid=na-vf_facebook-library_share-lid_' + scope.library.id
           });
         };
 
@@ -570,8 +548,16 @@ angular.module('kifi')
           $twitter.load();
         };
 
-        scope.shareTwitter = function () {
+        scope.shareTwitter = function (event) {
           trackShareEvent('clickedShareTwitter');
+          event.target.href = 'https://twitter.com/intent/tweet' + util.formatQueryString({
+            original_referer: scope.library.absUrl,
+            text: 'Discover this amazing @Kifi library about ' + scope.library.name + '!',
+            tw_p: 'tweetbutton',
+            url: scope.library.absUrl +
+              '?utm_medium=vf_twitter&utm_source=library_share&utm_content=lid_' + scope.library.id +
+              '&kcid=na-vf_twitter-library_share-lid_' + scope.library.id
+          });
         };
 
         // TODO: determine this on the server side in the library response. For now, doing it client side.

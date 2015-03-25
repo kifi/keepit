@@ -273,7 +273,7 @@ angular.module('kifi')
         showImprovementModal: '&'
       },
       templateUrl: 'recos/recoDropdownMenu.tpl.html',
-      link: function (scope, element/*, attrs*/) {
+      link: function (scope, element) {
         var dropdownArrow = element.find('.kf-reco-dropdown-menu-down');
         var dropdownMenu = element.find('.kf-dropdown-menu');
         var show = false;

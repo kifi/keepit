@@ -43,7 +43,7 @@ angular.module('kifi')
       scope: {
         origin: '@kfTrackOrigin'
       },
-      link: function (scope, element /*, attrs*/) {
+      link: function (scope, element) {
         element.on('click', function () {
           originTrackingService.set(scope.origin);
         });

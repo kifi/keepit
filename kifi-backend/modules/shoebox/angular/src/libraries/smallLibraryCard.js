@@ -14,7 +14,7 @@ angular.module('kifi')
         origin: '@'
       },
       templateUrl: 'libraries/smallLibraryCard.tpl.html',
-      link: function (scope/*, element, attrs*/) {
+      link: function (scope) {
         scope.clickCard = function () {
           scope.$emit('trackLibraryEvent', 'click', { action: scope.action });
         };

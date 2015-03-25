@@ -34,13 +34,18 @@ class MobileRecommendationsController @Inject() (
     }
   }
 
-  def topRecosV3(recencyWeight: Float, uriContext: Option[String], libContext: Option[String]) = UserAction.async { request =>
+  // _uctx and _lctx are meant to support an iOS bug. Should not be supported in the future.
+  def topRecosV3(recencyWeight: Float, uriContext: Option[String], libContext: Option[String], uctx: Option[String], lctx: Option[String]) = UserAction.async { request =>
+    val uriContext2 = uriContext orElse uctx
+    val libContext2 = libContext orElse lctx
     log.info(s"mobile reco for user: ${request.userId}")
-    log.info(s"uriContext: ${uriContext.getOrElse("n/a")}")
-    log.info(s"libContext: ${libContext.getOrElse("n/a")}")
+    log.info(s"uriContext: ${uriContext2.getOrElse("n/a")}")
+    log.info(s"libContext: ${libContext2.getOrElse("n/a")}")
+
     val libCnt = libraryRecoCount(request.userId)
-    val uriRecosF = commander.topRecos(request.userId, getRecommendationSource(request), RecommendationSubSource.RecommendationsFeed, uriContext.isDefined, recencyWeight, context = uriContext)
-    val libRecosF = commander.topPublicLibraryRecos(request.userId, libCnt, getRecommendationSource(request), RecommendationSubSource.RecommendationsFeed, context = libContext)
+
+    val uriRecosF = commander.topRecos(request.userId, getRecommendationSource(request), RecommendationSubSource.RecommendationsFeed, uriContext.isDefined, recencyWeight, context = uriContext2)
+    val libRecosF = commander.topPublicLibraryRecos(request.userId, libCnt, getRecommendationSource(request), RecommendationSubSource.RecommendationsFeed, context = libContext2)
 
     for (libs <- libRecosF; uris <- uriRecosF) yield Ok {
       val FullUriRecoResults(urisReco, newUrisContext) = uris

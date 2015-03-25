@@ -451,6 +451,7 @@ invite-banner-orange = #ff7c3c
   font-size: 11px
 
 .kf-lh-desc
+  margin: 1em 0
   line-height: 1.42
   font-size: 12px
 
@@ -462,6 +463,9 @@ invite-banner-orange = #ff7c3c
 
   @media (min-width: 720px)
     font-size: 16px
+
+  &>p
+    margin: .5em 0
 
 .kf-lh-stats-line
   box-shadow: 0 -.5px #dadae2
@@ -571,6 +575,14 @@ a.kf-lh-stat
     .kf-button-icon
       width: 16px
 
+.kf-lh-buttons .library-share-button
+.kf-lh-manage-btn
+  @media (max-width: 640px)
+    font-size: 0
+
+    .kf-button-icon
+      margin: 0
+
 .kf-lh-follow-btn-wrap
   display: inline-block
   vertical-align: top
@@ -582,13 +594,13 @@ a.kf-lh-stat
 
   .kf-loh-right>&
     position: absolute
-    top: 10px
+    top: 14px
     right: 0
 
-    @media (min-height: appHeaderHeight2MinHeight)
-      top: 14px
+    @media (max-height: appHeaderHeight1MaxDim) and (max-width: appHeaderHeight1MaxDim)
+      top: 10px
 
-.kf-lh-buttons>.kf-button
+.kf-lh-buttons .kf-button
 .kf-lh-follow-btn
 .kf-lh-unfollow-btn
   @media (max-width: (480px - 1px))

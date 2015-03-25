@@ -51,7 +51,7 @@ angular.module('kifi')
       },
       replace: true,
       templateUrl: 'keep/keepCard.tpl.html',
-      link: function (scope, element/*, attrs*/) {
+      link: function (scope, element) {
         if (!scope.keep) {
           return;
         }
@@ -348,7 +348,7 @@ angular.module('kifi')
       },
       replace: false,
       templateUrl: 'keep/keepMasterButton.tpl.html',
-      link: function (scope/*, element, attrs*/) {
+      link: function (scope) {
         //
         // Internal methods.
         //

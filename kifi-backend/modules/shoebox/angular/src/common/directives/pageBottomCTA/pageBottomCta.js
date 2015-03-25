@@ -11,7 +11,7 @@ angular.module('kifi')
       scope: {
         library: '='
       },
-      link: function (scope/*element, attrs*/) {
+      link: function (scope) {
         scope.show = false;
 
         scope.join = function ($event) {

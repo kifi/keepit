@@ -12,7 +12,7 @@
 'use strict';
 angular.module('kifi')
 
-.directive('kfEllipsis', ['$timeout', '$window', function($timeout, $window) {
+.directive('kfEllipsis', ['$timeout', '$window', function ($timeout, $window) {
 
   return {
     restrict :'A',
@@ -22,9 +22,9 @@ angular.module('kifi')
       maxNumLines: '=',
       numReloads: '='
     },
-    compile: function(/*elem, attr, linker*/) {
+    compile: function () {
 
-      return function(scope, element) {
+      return function (scope, element) {
         var copyElement = element.clone()
           .css({
             'display': 'block',
