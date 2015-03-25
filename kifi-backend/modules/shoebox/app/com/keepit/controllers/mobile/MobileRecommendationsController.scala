@@ -33,9 +33,9 @@ class MobileRecommendationsController @Inject() (
   }
 
   // _uctx and _lctx are meant to support an iOS bug. Should not be supported in the future.
-  def topRecosV3(recencyWeight: Float, uriContext: Option[String], libContext: Option[String], _uctx: Option[String], _lctx: Option[String]) = UserAction.async { request =>
-    val uriContext2 = uriContext orElse _uctx
-    val libContext2 = libContext orElse _lctx
+  def topRecosV3(recencyWeight: Float, uriContext: Option[String], libContext: Option[String], uctx: Option[String], lctx: Option[String]) = UserAction.async { request =>
+    val uriContext2 = uriContext orElse uctx
+    val libContext2 = libContext orElse lctx
     log.info(s"mobile reco for user: ${request.userId}")
     log.info(s"uriContext: ${uriContext2.getOrElse("n/a")}")
     log.info(s"libContext: ${libContext2.getOrElse("n/a")}")
