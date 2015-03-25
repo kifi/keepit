@@ -35,10 +35,17 @@
           </div>
         </button>
 
-        <a class="kf-uph-settings-a" ng-switch-when="self" ui-sref="settings" ng-click="trackClickedSettings()">
-          <span class="kf-uph-settings-icon svg-settings-gear"></span>
-          <span class="kf-uph-action-text">Settings</span>
-        </a>
+        <span class="kf-uph-dropdown-parent" kf-hover-menu ng-switch-when="self">
+          <a ui-sref="settings" ng-click="trackClickedSettings()">
+            <span class="kf-uph-settings-icon svg-settings-gear"></span>
+            <span class="kf-uph-action-text">Settings</span>
+          </a>
+          <menu class="kf-dropdown-menu">
+            <button class="kf-dropdown-menu-item" ng-click="showBiographyModal()">Edit your biography</button>
+            <a class="kf-dropdown-menu-item" ui-sref="settings" ng-click="trackClickedSettings()">More settings</a>
+          </menu>
+        </span>
+
       </div>
       <div class="kf-uph-progress" ng-if="connectionWithUser==='not_friends'">
         <div class="kf-uph-progress-bar"></div>
