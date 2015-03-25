@@ -4,7 +4,7 @@ import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.actor.TestKitSupport
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.crypto.FakeCryptoModule
-import com.keepit.common.mail.FakeMailModule
+import com.keepit.common.mail.{ElectronicMailRepo, FakeMailModule}
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.common.time._
@@ -38,6 +38,7 @@ class TwitterWaitlistCommanderTest extends TestKitSupport with ShoeboxTestInject
       withDb(modules: _*) { implicit injector =>
         val twitterWaitlistCommander = inject[TwitterWaitlistCommander]
         val twitterWaitlistRepo = inject[TwitterWaitlistRepo]
+        val emailRepo = inject[ElectronicMailRepo]
         val user1 = db.readWrite { implicit s =>
           user().withName("Captain", "Falcon").withUsername("cfalc").saved
         }
@@ -45,18 +46,21 @@ class TwitterWaitlistCommanderTest extends TestKitSupport with ShoeboxTestInject
         db.readOnlyMaster { implicit s =>
           userRepo.count === 1
           twitterWaitlistRepo.count === 0
+          emailRepo.count === 0
         }
 
         // add a new entry
         twitterWaitlistCommander.addEntry(user1.id.get, "therealcaptainfalcon").isRight === true
         db.readOnlyMaster { implicit s =>
           twitterWaitlistRepo.getByUserAndHandle(user1.id.get, "therealcaptainfalcon").nonEmpty === true
+          emailRepo.count === 1
         }
 
         // add a duplicate entry
         twitterWaitlistCommander.addEntry(user1.id.get, "therealcaptainfalcon").isRight === false
         db.readOnlyMaster { implicit s =>
           twitterWaitlistRepo.getByUserAndHandle(user1.id.get, "therealcaptainfalcon").nonEmpty === true
+          emailRepo.count === 1
         }
       }
     }

@@ -1,11 +1,12 @@
 package com.keepit.commanders
 
-import com.google.inject.{ Singleton, Inject, ImplementedBy }
+import com.google.inject.{ Provider, Singleton, Inject, ImplementedBy }
+import com.keepit.commanders.emails.TwitterWaitlistEmailSender
 import com.keepit.common.db.{ State, Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
-import com.keepit.model.{ TwitterWaitlistEntryStates, TwitterWaitlistRepo, User, TwitterWaitlistEntry }
+import com.keepit.model.{ TwitterWaitlistEntryStates, TwitterWaitlistRepo, User, TwitterWaitlistEntry, UserRepo }
 
 @ImplementedBy(classOf[TwitterWaitlistCommanderImpl])
 trait TwitterWaitlistCommander {
@@ -17,7 +18,9 @@ trait TwitterWaitlistCommander {
 @Singleton
 class TwitterWaitlistCommanderImpl @Inject() (
     db: Database,
+    userRepo: UserRepo,
     twitterWaitlistRepo: TwitterWaitlistRepo,
+    twitterEmailSender: Provider[TwitterWaitlistEmailSender],
     clock: Clock) extends TwitterWaitlistCommander with Logging {
 
   private val WAITLIST_LENGTH_SHIFT = 1152
@@ -39,9 +42,15 @@ class TwitterWaitlistCommanderImpl @Inject() (
       }
     }
     entryOpt.right.map { entry =>
-      db.readWrite { implicit s =>
-        twitterWaitlistRepo.save(entry)
+      val (user, savedEntry) = db.readWrite { implicit s =>
+        val user = userRepo.get(userId)
+        val savedEntry = twitterWaitlistRepo.save(entry)
+        (user, savedEntry)
       }
+      user.primaryEmail.map { emailAddress =>
+        twitterEmailSender.get.sendToUser(emailAddress, userId)
+      }
+      savedEntry
     }
   }
 
