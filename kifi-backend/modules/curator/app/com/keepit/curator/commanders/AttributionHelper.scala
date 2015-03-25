@@ -2,6 +2,7 @@ package com.keepit.curator.commanders
 
 import com.google.inject.{ Inject }
 import com.keepit.common.db.slick.Database
+import com.keepit.common.logging.NamedStatsdTimer
 import com.keepit.cortex.CortexServiceClient
 import com.keepit.curator.model._
 import com.keepit.search.{ SearchServiceClient }
@@ -19,6 +20,7 @@ class SeedAttributionHelper @Inject() (
     libMemRepo: CuratorLibraryMembershipInfoRepo) {
 
   def getAttributions(seeds: Seq[ScoredSeedItem]): Future[Seq[ScoredSeedItemWithAttribution]] = {
+    val timer = new NamedStatsdTimer("SeedAttributionHelper.getAttributions")
     val userAttrFut = getUserAttribution(seeds)
     val keepAttrFut = getKeepAttribution(seeds)
     val topicAttrFut = getTopicAttribution(seeds)
@@ -29,6 +31,7 @@ class SeedAttributionHelper @Inject() (
       topicAttr <- topicAttrFut
       libraryAttr <- libraryAttrFut
     } yield {
+      timer.stopAndReport()
       (0 until seeds.size).map { i =>
         val attr = SeedAttribution(userAttr(i), keepAttr(i), topicAttr(i), libraryAttr(i))
         ScoredSeedItemWithAttribution(seeds(i).userId, seeds(i).uriId, seeds(i).uriScores, attr,

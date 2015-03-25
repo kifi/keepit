@@ -2,7 +2,7 @@ package com.keepit.curator.commanders
 
 import com.google.inject.Inject
 import com.keepit.common.db.Id
-import com.keepit.common.logging.Logging
+import com.keepit.common.logging.{ NamedStatsdTimer, Logging }
 import com.keepit.common.time.currentDateTime
 import com.keepit.cortex.CortexServiceClient
 import com.keepit.curator.model.{
@@ -48,8 +48,10 @@ class PublicUriScoringHelper @Inject() (
 
   val uriHelpRankScores = TrieMap[Id[NormalizedURI], HelpRankInfo]() //This needs to go when we have proper caching on the help rank scores
   def getRawHelpRankScores(items: Seq[PublicSeedItemWithMultiplier]): Future[(Seq[Float], Seq[Float])] = {
+    val timer = new NamedStatsdTimer("PublicUriScoringHelper.getRawHelpRankScores")
     val helpRankInfos = heimdal.getHelpRankInfos(items.map(_.uriId).filterNot(uriHelpRankScores.contains))
     helpRankInfos.map { infos =>
+      timer.stopAndReport()
       infos.foreach { info => uriHelpRankScores += (info.uriId -> info) }
       items.map { item =>
         val info = uriHelpRankScores(item.uriId)
