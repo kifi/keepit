@@ -162,7 +162,7 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
 
         // 2 sent to users
         // 2 copied to QA
-        shoebox.sentMail.size === 4
+        shoebox.sentMail.size === 2
 
         val (mail42, mail43) = {
           val (xs, ys) = shoebox.sentMail.filter(_.senderUserId.isDefined).partition(_.senderUserId.get == Id[User](42))
@@ -301,7 +301,7 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
 
         // 1 sent to user
         // 1 copied to QA
-        shoebox.sentMail.size === 2
+        shoebox.sentMail.size === 1
 
         sumU43.recommendations.size === 2
         sumU43.newKeeps.size === 3
