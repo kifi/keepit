@@ -1418,6 +1418,9 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           val users = Set(1, 2, 100).map { Id[User](_) }
           val map = libraryRepo.getOwnerLibraryCounts(users)
           map === Map(Id[User](1) -> 3, Id[User](2) -> 2, Id[User](100) -> 0)
+
+          val map2 = libraryRepo.getOwnerLibraryCounts(Set[Id[User]]())
+          map2.size === 0
         }
 
       }

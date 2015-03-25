@@ -85,14 +85,13 @@ trait UserLibraryCountSortingHelper {
   val libCommander: LibraryCommander
 
   protected def sortUserByLibraryCount(users: Seq[Id[User]]): Seq[Id[User]] = {
-    users
-    //    val libCnts = libCommander.getOwnerLibraryCounts(users.toSet)
-    //    val gpSize = 3
-    //    if (libCnts.values.forall(_ == 0)) {
-    //      users
-    //    } else {
-    //      // within each group, sort by library count (desc)
-    //      users.sliding(gpSize, gpSize).toArray.map { subUsers => subUsers.toArray.sortBy(u => -1 * libCnts.getOrElse(u, 0)) }.flatten.toSeq
-    //    }
+    val libCnts = libCommander.getOwnerLibraryCounts(users.toSet)
+    val gpSize = 3
+    if (libCnts.values.forall(_ == 0)) {
+      users
+    } else {
+      // within each group, sort by library count (desc)
+      users.sliding(gpSize, gpSize).toArray.map { subUsers => subUsers.toArray.sortBy(u => -1 * libCnts.getOrElse(u, 0)) }.flatten.toSeq
+    }
   }
 }
