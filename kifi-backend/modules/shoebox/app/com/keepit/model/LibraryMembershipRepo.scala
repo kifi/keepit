@@ -22,7 +22,6 @@ import scala.concurrent.duration.FiniteDuration
 trait LibraryMembershipRepo extends Repo[LibraryMembership] with RepoWithDelete[LibraryMembership] with SeqNumberFunction[LibraryMembership] {
   def getIdsWithLibraryId(libraryId: Id[Library])(implicit session: RSession): Seq[Id[LibraryMembership]]
   def getWithLibraryId(libraryId: Id[Library], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Seq[LibraryMembership]
-  def getWithLibraryIdAndLimit(libraryId: Id[Library], limit: Int)(implicit session: RSession): Seq[LibraryMembership]
   def getWithUserId(userId: Id[User], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Seq[LibraryMembership]
   def getLibrariesWithWriteAccess(userId: Id[User])(implicit session: RSession): Set[Id[Library]]
   def getLatestUpdatedLibraryUserFollow(userId: Id[User])(implicit session: RSession): Option[Library]
@@ -113,10 +112,6 @@ class LibraryMembershipRepoImpl @Inject() (
       case None => getWithLibraryIdCompiled(libraryId).list
       case Some(exclude) => getWithLibraryIdWithExcludeCompiled(libraryId, exclude).list
     }
-  }
-
-  def getWithLibraryIdAndLimit(libraryId: Id[Library], limit: Int)(implicit session: RSession): Seq[LibraryMembership] = {
-    (for (row <- rows if row.libraryId === libraryId) yield row).sortBy(_.createdAt).take(limit).list
   }
 
   def getIdsWithLibraryId(libraryId: Id[Library])(implicit session: RSession): Seq[Id[LibraryMembership]] = {
