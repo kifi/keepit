@@ -19,7 +19,7 @@ angular.module('kifi')
       link: function (scope, element) {
         function calcPicWidth(winWidth) {
           var widths = scope.followerWidths;
-          for (var i = 1; i < widths.length && winWidth >= widths[i][0]; i++);
+          for (var i = 1; i < widths.length && winWidth >= widths[i][0]; i++); // jshint ignore:line
           return widths[i-1][1];
         }
 
