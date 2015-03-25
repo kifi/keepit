@@ -98,7 +98,7 @@ class LibraryRecommendationsControllerTest extends TestKitSupport with Specifica
         val libPubId = Library.publicId(lib1.id.get)
         val call = com.keepit.controllers.website.routes.LibraryRecommendationsController.updateLibraryRecommendationFeedback(libPubId)
 
-        call.url === "/site/libraries/recos/feedback?id=" + libPubId.id
+        call.url === "/m/1/libraries/recos/feedback?id=" + libPubId.id
         call.method === "POST"
 
         inject[FakeUserActionsHelper].setUser(user1)
