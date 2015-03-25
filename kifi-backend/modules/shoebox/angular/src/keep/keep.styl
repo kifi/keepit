@@ -13,7 +13,8 @@ kifiGreen = #73c583
   box-shadow: 0 0 0 .5px defaultBorderColor  // half-pixel border workaround crbug.com/236371
 
   @media (min-width: 480px)
-    box-shadow: 0 0 0 1px defaultBorderColor
+    box-shadow: none  // important not to use box-shadow here (for recommended keep cards)
+    border: defaultBorder
 
 .kf-keep-selection-tools-body
   padding: 0 0 7px 27px
