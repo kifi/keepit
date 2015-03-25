@@ -45,17 +45,17 @@
               <div class="kf-lh-owner-label">Curator:</div>
               <div class="kf-lh-owner-name" itemprop="name">{{library.owner.firstName}} {{library.owner.lastName}}</div>
             </div>
-            <div class="kf-lh-twitter-handle" ng-if="library.attr.twitter.handle">
-              <a class="kf-lh-owner-image-a" href="https://twitter.com/{{library.attr.twitter.handle}}" target="_blank">
-                <div class="svg-twitter-logo kf-lh-twitter-logo"></div>
-              </a>
+
+            <a class="kf-lh-twitter-handle" href="https://twitter.com/{{library.attr.twitter.handle}}" target="_blank" ng-if="library.attr.twitter.handle">
+              <div class="kf-lh-twitter-handle-img">
+                <div class="kf-lh-twitter-logo svg-twitter-logo"></div>
+              </div>
               <div class="kf-lh-owner-text">
-                <div class="kf-lh-owner-label">Twitter Username:</div>
                 <div class="kf-lh-owner-name">
                   @{{library.attr.twitter.handle}}
                 </div>
               </div>
-            </div>
+            </a>
           </div>
 
           <div ng-switch="clippedDescription" class="kf-lh-desc-wrap">

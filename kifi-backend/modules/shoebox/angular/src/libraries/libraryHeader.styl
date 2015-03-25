@@ -448,20 +448,29 @@ invite-banner-orange = #ff7c3c
   display: inline-block
   margin-left: 15px
 
+  &:hover .kf-lh-twitter-handle-img
+    background-color: #e0e0e0
+
   @media (max-width: 480px)
     margin-left: 0px
-    margin-top: 15px
 
-  .kf-lh-owner-image-a
-    background-color: #ededed
-    border-radius: 50%
-    height: 42px
-    width: 42px
-    vertical-align: -17px
-    outline: none
+  .kf-lh-owner-text
+    margin-left: 10px
 
-    &:hover
-      background-color: #e0e0e0
+    @media (max-width: 480px)
+      margin-top: -15px
+      margin-left: 0px
+
+.kf-lh-twitter-handle-img
+  display: inline-block
+  background-color: #ededed
+  border-radius: 50%
+  height: 42px
+  width: 42px
+  vertical-align: -17px
+
+  @media (max-width: 480px)
+    display: none
 
 .kf-lh-twitter-logo
   position: relative
