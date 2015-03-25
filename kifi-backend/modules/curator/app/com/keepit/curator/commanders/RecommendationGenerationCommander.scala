@@ -46,7 +46,7 @@ class RecommendationGenerationCommander @Inject() (
   val perUserRecommendationGenerationLocks = TrieMap[Id[User], ReactiveLock]()
   val candidateURILock = new ReactiveLock(4)
 
-  val superSpecialUsers = Seq(273)
+  val superSpecialUsers = Seq(Id[User](273))
   val superSpecialLock = new ReactiveLock(1)
 
   private def usersToPrecomputeRecommendationsFor(): Seq[Id[User]] = Random.shuffle((seedCommander.getUsersWithSufficientData()).toSeq)
@@ -212,7 +212,10 @@ class RecommendationGenerationCommander @Inject() (
     lock.withLockFuture {
       getPerUserGenerationLock(userId).withLockFuture {
         if (schedulingProperties.isRunnerFor(CuratorTasks.uriRecommendationPrecomputation)) {
-          val alwaysInclude: Set[Id[NormalizedURI]] = alwaysIncludeOpt.getOrElse(db.readOnlyReplica { implicit session => uriRecRepo.getTopUriIdsForUser(userId) })
+          val alwaysInclude: Set[Id[NormalizedURI]] = alwaysIncludeOpt.getOrElse {
+            if (superSpecialUsers.contains(userId)) db.readOnlyReplica { implicit session => uriRecRepo.getTopUriIdsForUser(userId) }
+            else db.readOnlyReplica { implicit session => uriRecRepo.getUriIdsForUser(userId) }
+          }
           val state: UserRecommendationGenerationState = getStateOfUser(userId)
           val seedsAndSeqFuture: Future[(Seq[SeedItem], SequenceNumber[SeedItem])] = getCandidateSeedsForUser(userId, state)
           val res: Future[Boolean] = seedsAndSeqFuture.flatMap {
