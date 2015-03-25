@@ -2,13 +2,14 @@ package com.keepit.controllers.website
 
 import com.google.inject.Inject
 import com.keepit.commanders.{ LocalUserExperimentCommander, RecommendationsCommander }
-import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
+import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper, UserRequest }
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.curator.model._
 import com.keepit.model.{ LibraryRecommendationFeedback, Library, ExperimentType, NormalizedURI, UriRecommendationFeedback, UriRecommendationScores }
+import com.keepit.common.net.UserAgent
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.{ JsArray, Json }
 
@@ -45,12 +46,22 @@ class RecommendationsController @Inject() (
   }
 
   def updateUriRecommendationFeedback(id: ExternalId[NormalizedURI]) = UserAction.async(parse.tolerantJson) { request =>
-    val feedback = request.body.as[UriRecommendationFeedback]
+    val feedback = request.body.as[UriRecommendationFeedback].copy(
+      source = Some(getRecommendationSource(request)),
+      subSource = Some(RecommendationSubSource.RecommendationsFeed)
+    )
     commander.updateUriRecommendationFeedback(request.userId, id, feedback).map(fkis => Ok(Json.toJson(fkis)))
   }
 
   def trash(id: ExternalId[NormalizedURI]) = UserAction.async { request =>
     commander.updateUriRecommendationFeedback(request.userId, id, UriRecommendationFeedback(trashed = Some(true))).map(fkis => Ok(Json.toJson(fkis)))
+  }
+
+  private def getRecommendationSource(request: UserRequest[_]): RecommendationSource = {
+    val agent = UserAgent(request)
+    if (agent.isKifiAndroidApp) RecommendationSource.Android
+    else if (agent.isKifiIphoneApp) RecommendationSource.IOS
+    else RecommendationSource.Site
   }
 
 }
