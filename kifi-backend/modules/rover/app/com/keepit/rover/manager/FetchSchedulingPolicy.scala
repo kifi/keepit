@@ -32,8 +32,8 @@ case class FetchSchedulingPolicy(
     currentDateTime plusSeconds secondsToNextFetch
   }
 
-  def increaseInterval(currentInterval: Duration): Duration = minInterval max (currentInterval - intervalDecrement) min maxInterval
-  def decreaseInterval(currentInterval: Duration): Duration = minInterval max (currentInterval + intervalIncrement) min maxInterval
+  def decreaseInterval(currentInterval: Duration): Duration = minInterval max (currentInterval - intervalDecrement) min maxInterval
+  def increaseInterval(currentInterval: Duration): Duration = minInterval max (currentInterval + intervalIncrement) min maxInterval
 }
 
 object FetchSchedulingPolicy {
