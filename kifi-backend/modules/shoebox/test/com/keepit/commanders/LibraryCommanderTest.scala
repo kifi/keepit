@@ -1411,8 +1411,8 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         val libraryCommander = inject[LibraryCommander]
         db.readWrite { implicit s =>
           val libs = libraries(5)
-          val user1 = libs.take(3).map { _.withUser(Id[User](1)) }.saved
-          val user2 = libs.drop(3).map { _.withUser(Id[User](2)) }.saved
+          val user1 = libs.take(3).map { _.withUser(Id[User](1)).published() }.saved
+          val user2 = libs.drop(3).map { _.withUser(Id[User](2)).published() }.saved
         }
 
         db.readOnlyMaster { implicit s =>
