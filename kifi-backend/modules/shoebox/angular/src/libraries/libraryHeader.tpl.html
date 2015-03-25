@@ -1,6 +1,6 @@
 <div class="kf-lh-wrapper">
   <div class="kf-lh" itemscope itemtype="http://schema.org/CollectionPage">
-    <meta itemtype="url" content="{{library.shareUrl}}" />
+    <meta itemtype="url" content="{{library.absUrl}}"/>
     <div class="kf-lh-card">
       <div class="kf-lh-invite-banner" ng-if="library.invite && !library.invite.actedOn">
         <button class="kf-lh-invite-banner-button kf-lh-invite-banner-accept" ng-click="acceptInvitation()">Accept</button>
@@ -84,7 +84,7 @@
             <span class="kf-button-icon svg-pen"></span> Manage Library
           </button>
         </div>
-        <a ng-if="isPublic()" class="kf-button kf-button-text-optional kf-lh-share-external" ng-focus="preloadTwitter()" ng-mouseenter="preloadTwitter()" ng-click="shareTwitter()" ng-href="https://twitter.com/intent/tweet?original_referer={{library.shareUrl}}&text={{library.shareText}}&tw_p=tweetbutton&url={{library.shareTwitterUrl}}">
+        <a ng-if="isPublic()" class="kf-button kf-button-text-optional kf-lh-share-external" ng-focus="preloadTwitter()" ng-mouseenter="preloadTwitter()" ng-click="shareTwitter($event)" href="https://twitter.com/intent/tweet" target="_blank">
           <span class="kf-button-icon svg-twitter"></span>
           <span class="kf-button-icon svg-twitter-white"></span><!-- for non-logged-in users -->
           Tweet
