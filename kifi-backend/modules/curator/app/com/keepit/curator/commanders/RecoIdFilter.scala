@@ -5,7 +5,7 @@ import com.keepit.search.util.LongSetIdFilter
 
 import scala.collection.mutable.ArrayBuffer
 
-trait RecoIdFilter[R] extends Logging{
+trait RecoIdFilter[R] extends Logging {
   type FilterResult = (Seq[R], String) // accepted recos, and new context string
 
   def filter(recos: Seq[R], context: Option[String])(idFunc: R => Long): FilterResult = {
