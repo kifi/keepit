@@ -11,8 +11,7 @@ uphSmallMaxDim = 736px // for @media max-height and max-width
 .kf-uph-top
   position: relative
   padding-top: 20px
-  width: 100%
-  max-width: 906px
+  max-width: appMaxWidth
   margin: 0 auto
 
   @media (max-height: uphSmallMaxDim) and (max-width: uphSmallMaxDim)
@@ -198,7 +197,9 @@ uphSmallMaxDim = 736px // for @media max-height and max-width
     transition: visibility 0s, opacity linear dur, transform dur
 
     .kf-dropdown-menu-item
-      padding: 0px 26px 0px 16px
+      font-smoothing: antialiased
+      padding: 0px 20px 0px 16px
+      width: initial
 
   &:not(.kf-open)>.kf-dropdown-menu
     dur = .16s
