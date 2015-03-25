@@ -19,7 +19,7 @@ angular.module('kifi')
       replace: true,
       restrict: 'A',
       templateUrl: 'tags/tagList.tpl.html',
-      link: function (scope, element/*, attrs*/) {
+      link: function (scope, element) {
         scope.data = {};
         scope.data.isClickingInList = false;
         scope.newTagLabel = 'NEW';

@@ -13,7 +13,7 @@ angular.module('kifi')
         invite: '='
       },
       templateUrl: 'libraries/libraryMiniCard.tpl.html',
-      link: function (scope/*, element, attrs*/) {
+      link: function (scope) {
         scope.library = _.cloneDeep(scope.refLibrary());
         scope.showMiniCard = true;
 

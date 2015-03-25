@@ -41,7 +41,7 @@ angular.module('kifi')
         libSelectMaxUpOffset: '=',
         libSelectLeftOffset: '='
       },
-      link: function (scope, element/*, attrs*/) {
+      link: function (scope, element) {
         //
         // Internal data.
         //
