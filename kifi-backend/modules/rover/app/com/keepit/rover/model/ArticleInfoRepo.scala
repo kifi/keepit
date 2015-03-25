@@ -17,7 +17,6 @@ import scala.concurrent.duration.Duration
 
 @ImplementedBy(classOf[ArticleInfoRepoImpl])
 trait ArticleInfoRepo extends Repo[ArticleInfo] with SeqNumberFunction[ArticleInfo] {
-  def getByUris(uriIds: Set[Id[NormalizedURI]], excludeState: Option[State[ArticleInfo]] = Some(ArticleInfoStates.INACTIVE))(implicit session: RSession): Map[Id[NormalizedURI], Set[ArticleInfo]]
   def getByUri(uriId: Id[NormalizedURI], excludeState: Option[State[ArticleInfo]] = Some(ArticleInfoStates.INACTIVE))(implicit session: RSession): Set[ArticleInfo]
   def internByUri(uriId: Id[NormalizedURI], url: String, kinds: Set[ArticleKind[_ <: Article]])(implicit session: RWSession): Map[ArticleKind[_ <: Article], ArticleInfo]
   def deactivateByUri(uriId: Id[NormalizedURI])(implicit session: RWSession): Unit
@@ -62,10 +61,6 @@ class ArticleInfoRepoImpl @Inject() (
 
   override def save(model: ArticleInfo)(implicit session: RWSession): ArticleInfo = {
     super.save(model.copy(seq = deferredSeqNum()))
-  }
-
-  def getByUris(uriIds: Set[Id[NormalizedURI]], excludeState: Option[State[ArticleInfo]] = Some(ArticleInfoStates.INACTIVE))(implicit session: RSession): Map[Id[NormalizedURI], Set[ArticleInfo]] = {
-    (for (r <- rows if r.uriId.inSet(uriIds) && r.state =!= excludeState.orNull) yield r).list.toSet.groupBy(_.uriId)
   }
 
   def getByUri(uriId: Id[NormalizedURI], excludeState: Option[State[ArticleInfo]] = Some(ArticleInfoStates.INACTIVE))(implicit session: RSession): Set[ArticleInfo] = {
