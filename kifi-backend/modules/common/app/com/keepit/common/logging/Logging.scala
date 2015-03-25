@@ -119,6 +119,14 @@ class LoggingStatsdClient(log: Logger) {
   }
 }
 
+class NamedStatsdTimer(name: String) extends Logging {
+  private val t0 = System.currentTimeMillis
+  def stopAndReport(): Unit = {
+    val elapsed = System.currentTimeMillis - t0
+    statsd.timing(name, elapsed, 1.0)
+  }
+}
+
 object Logging {
   implicit class LoggerWithPrefix(val log: Logger) extends AnyVal {
     def traceP(message: => String)(implicit prefix: LogPrefix = LogPrefix.EMPTY) = if (prefix == LogPrefix.EMPTY) log.trace(message) else log.trace(s"[$prefix] $message")

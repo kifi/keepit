@@ -9,7 +9,7 @@ import com.keepit.common.concurrent.ReactiveLock
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ Id, SequenceNumber }
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.logging.Logging
+import com.keepit.common.logging.{ NamedStatsdTimer, Logging }
 import com.keepit.common.plugin.SchedulingProperties
 import com.keepit.common.service.ServiceStatus
 import com.keepit.common.zookeeper.ServiceDiscovery
@@ -132,12 +132,14 @@ class RecommendationGenerationCommander @Inject() (
     }
 
   private def getCandidateSeedsForUser(userId: Id[User], state: UserRecommendationGenerationState): Future[(Seq[SeedItem], SequenceNumber[SeedItem])] = {
+    val timer = new NamedStatsdTimer("RecommendationGenerationCommander.getCandidateSeedsForUser")
     val result = for {
       seeds <- seedCommander.getDiscoverableBySeqNumAndUser(state.seq, userId, 200)
       candidateURIs <- candidateURILock.withLockFuture(getCandidateURIs(seeds.map(_.uriId)))
     } yield {
       val candidateSeeds = (seeds zip candidateURIs) filter (_._2) map (_._1)
       eliza.checkUrisDiscussed(userId, candidateSeeds.map(_.uriId)).map { checkThreads =>
+        timer.stopAndReport()
         val candidates = (candidateSeeds zip checkThreads).collect { case (cand, hasChat) if !hasChat => cand }
         (candidates, if (seeds.isEmpty) state.seq else seeds.map(_.seq).max)
       }
