@@ -13,7 +13,11 @@
       <div class="kf-keep-subtitle">
         <span class="kf-keep-url" ng-attr-title="{{keep.url}}" ng-bind-html="keep.descHtml"></span>
 
-        <span class="kf-keep-twitter-attr" ng-if="keep.sourceAttribution.twitter.screenName"><div class="kf-keep-twitter-logo svg-twitter-logo"></div>@{{keep.sourceAttribution.twitter.screenName}}</span>
+        <span class="kf-keep-twitter-attr" ng-if="keep.sourceAttribution.twitter.screenName">
+          <a href="https://www.twitter.com/{{keep.sourceAttribution.twitter.screenName}}/status/{{keep.sourceAttribution.twitter.idString}}" target="_blank">
+            <div class="kf-keep-twitter-logo svg-twitter-logo"></div>@{{keep.sourceAttribution.twitter.screenName}}
+          </a>
+        </span>
         <span class="kf-keep-time" ng-show="keep.createdAt">kept&nbsp;<time ng-attr-datetime="{{keep.createdAt}}" am-time-ago="keep.createdAt"></time></span>
         <span class="kf-keep-length" ng-show="keep.summary.wordCount && keep.readTime && cardType !== 'youtube'"><span class="sprite sprite-small-clock"></span>{{keep.readTime}} read</span>
       </div>
