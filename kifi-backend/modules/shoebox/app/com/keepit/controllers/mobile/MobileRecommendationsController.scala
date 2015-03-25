@@ -6,9 +6,9 @@ import com.keepit.common.controller.{ UserRequest, UserActions, UserActionsHelpe
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
 import com.keepit.common.net.UserAgent
-import com.keepit.controllers.website.RecoMixingHelper
+import com.keepit.controllers.website.RecommendationControllerHelper
 import com.keepit.curator.model.{ FullLibRecoResults, FullUriRecoResults, RecommendationSubSource, RecommendationSource }
-import com.keepit.model.{ ExperimentType, NormalizedURI, UriRecommendationFeedback }
+import com.keepit.model._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
 
@@ -18,7 +18,9 @@ class MobileRecommendationsController @Inject() (
     val userActionsHelper: UserActionsHelper,
     commander: RecommendationsCommander,
     userExperimentCommander: LocalUserExperimentCommander,
-    db: Database) extends UserActions with ShoeboxServiceController with RecoMixingHelper {
+    val db: Database,
+    val userRepo: UserRepo,
+    val libMemRepo: LibraryMembershipRepo) extends UserActions with ShoeboxServiceController with RecommendationControllerHelper {
 
   def topRecosV2(recencyWeight: Float, more: Boolean) = UserAction.async { request =>
     val uriRecosF = commander.topRecos(request.userId, getRecommendationSource(request), RecommendationSubSource.RecommendationsFeed, more, recencyWeight, None)
@@ -40,8 +42,10 @@ class MobileRecommendationsController @Inject() (
     log.info(s"uriContext: ${uriContext2.getOrElse("n/a")}")
     log.info(s"libContext: ${libContext2.getOrElse("n/a")}")
 
+    val libCnt = libraryRecoCount(request.userId)
+
     val uriRecosF = commander.topRecos(request.userId, getRecommendationSource(request), RecommendationSubSource.RecommendationsFeed, uriContext.isDefined, recencyWeight, context = uriContext2)
-    val libRecosF = commander.topPublicLibraryRecos(request.userId, 10, getRecommendationSource(request), RecommendationSubSource.RecommendationsFeed, context = libContext2)
+    val libRecosF = commander.topPublicLibraryRecos(request.userId, libCnt, getRecommendationSource(request), RecommendationSubSource.RecommendationsFeed, context = libContext2)
 
     for (libs <- libRecosF; uris <- uriRecosF) yield Ok {
       val FullUriRecoResults(urisReco, newUrisContext) = uris
