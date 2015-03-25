@@ -279,7 +279,7 @@ angular.module('kifi')
         }
       });
       searchActionService.reportSearchAnalyticsOnUnload($scope.resultKeeps.length, resultsWithLibs);
-    };
+    }
 
     $window.addEventListener('beforeunload', onUnload);
 
