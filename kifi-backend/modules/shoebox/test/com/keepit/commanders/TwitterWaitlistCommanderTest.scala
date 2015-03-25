@@ -2,9 +2,10 @@ package com.keepit.commanders
 
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.actor.TestKitSupport
+import com.keepit.common.akka.SafeFuture
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.crypto.FakeCryptoModule
-import com.keepit.common.mail.{ElectronicMailRepo, FakeMailModule}
+import com.keepit.common.mail.{ ElectronicMailRepo, FakeMailModule }
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.common.time._
@@ -17,6 +18,8 @@ import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.test.ShoeboxTestInjector
 import org.joda.time.DateTime
+import scala.concurrent._
+import scala.concurrent.duration.Duration
 
 class TwitterWaitlistCommanderTest extends TestKitSupport with ShoeboxTestInjector {
   def modules = Seq(
@@ -40,7 +43,7 @@ class TwitterWaitlistCommanderTest extends TestKitSupport with ShoeboxTestInject
         val twitterWaitlistRepo = inject[TwitterWaitlistRepo]
         val emailRepo = inject[ElectronicMailRepo]
         val user1 = db.readWrite { implicit s =>
-          user().withName("Captain", "Falcon").withUsername("cfalc").saved
+          user().withName("Captain", "Falcon").withUsername("cfalc").withEmailAddress("cfalc@nintendo.com").saved
         }
 
         db.readOnlyMaster { implicit s =>
@@ -50,7 +53,10 @@ class TwitterWaitlistCommanderTest extends TestKitSupport with ShoeboxTestInject
         }
 
         // add a new entry
-        twitterWaitlistCommander.addEntry(user1.id.get, "therealcaptainfalcon").isRight === true
+        val res1 = twitterWaitlistCommander.addEntry(user1.id.get, "therealcaptainfalcon")
+        res1.isRight === true
+        val emailFuture = res1.right.get._2.get
+        Await.result(emailFuture, Duration(10, "seconds"))
         db.readOnlyMaster { implicit s =>
           twitterWaitlistRepo.getByUserAndHandle(user1.id.get, "therealcaptainfalcon").nonEmpty === true
           emailRepo.count === 1
