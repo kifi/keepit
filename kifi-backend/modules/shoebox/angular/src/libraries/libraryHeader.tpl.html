@@ -46,13 +46,13 @@
               <div class="kf-lh-owner-name" itemprop="name">{{library.owner.firstName}} {{library.owner.lastName}}</div>
             </div>
 
-            <a class="kf-lh-twitter-handle" href="https://twitter.com/{{library.attr.twitter.handle}}" target="_blank" ng-if="library.attr.twitter.handle">
-              <div class="kf-lh-twitter-handle-img">
+            <a class="kf-lh-twitter-name" href="https://twitter.com/{{library.attr.twitter.screenName}}" target="_blank" ng-if="library.attr.twitter.screenName">
+              <div class="kf-lh-twitter-img">
                 <div class="kf-lh-twitter-logo svg-twitter-logo"></div>
               </div>
               <div class="kf-lh-owner-text">
                 <div class="kf-lh-owner-name">
-                  @{{library.attr.twitter.handle}}
+                  @{{library.attr.twitter.screenName}}
                 </div>
               </div>
             </a>
