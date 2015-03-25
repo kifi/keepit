@@ -64,15 +64,10 @@ angular.module('kifi')
             scope.library.owner = profileService.me;
           }
 
-          var maxLength = 150;
+          var maxLength = 300, clipLength = 180;  // numbers differ significantly so that clicking More will show significantly more
           if (scope.library.description.length > maxLength && $rootScope.userLoggedIn) {
-            // Try to chop off at a word boundary, using a simple space as the word boundary delimiter.
-            var clipLastIndex = maxLength;
-            var lastSpaceIndex = scope.library.description.lastIndexOf(' ', maxLength);
-            if (lastSpaceIndex !== -1) {
-              clipLastIndex = lastSpaceIndex + 1;  // Grab the space too.
-            }
-
+            // Try to chop off at a word boundary, using a simple space as the delimiter. Grab the space too.
+            var clipLastIndex = scope.library.description.lastIndexOf(' ', clipLength) + 1 || clipLength;
             scope.library.shortDescription = util.linkify(scope.library.description.substr(0, clipLastIndex));
             scope.clippedDescription = true;
           }
