@@ -1,6 +1,6 @@
 package com.keepit.rover.manager
 
-import com.keepit.rover.article.{EmbedlyArticle, ArticleKind, Article}
+import com.keepit.rover.article.{ EmbedlyArticle, ArticleKind, Article }
 import org.joda.time.DateTime
 import com.keepit.common.time._
 

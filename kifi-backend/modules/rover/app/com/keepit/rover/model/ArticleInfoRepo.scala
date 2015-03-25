@@ -6,6 +6,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.{ SchedulingProperties, SequencingPlugin, SequencingActor }
 import com.keepit.rover.article.{ Article, ArticleKind }
 import com.keepit.model._
+import com.keepit.rover.manager.FailureRecoveryPolicy
 import org.joda.time.DateTime
 import com.keepit.common.time._
 import com.google.inject.{ Singleton, Inject, ImplementedBy }
@@ -14,20 +15,23 @@ import com.keepit.common.db.{ DbSequenceAssigner, VersionNumber, State, Id }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 
 import scala.concurrent.duration.Duration
+import scala.util.{ Success, Failure, Try }
 
 @ImplementedBy(classOf[ArticleInfoRepoImpl])
 trait ArticleInfoRepo extends Repo[ArticleInfo] with SeqNumberFunction[ArticleInfo] {
+  def getByUriAndKind[A <: Article](uriId: Id[NormalizedURI], kind: ArticleKind[A], excludeState: Option[State[ArticleInfo]] = Some(ArticleInfoStates.INACTIVE))(implicit session: RSession): Option[ArticleInfo]
   def getByUri(uriId: Id[NormalizedURI], excludeState: Option[State[ArticleInfo]] = Some(ArticleInfoStates.INACTIVE))(implicit session: RSession): Set[ArticleInfo]
   def internByUri(uriId: Id[NormalizedURI], url: String, kinds: Set[ArticleKind[_ <: Article]])(implicit session: RWSession): Map[ArticleKind[_ <: Article], ArticleInfo]
   def deactivateByUri(uriId: Id[NormalizedURI])(implicit session: RWSession): Unit
+  def updateAfterFetch[A <: Article](uriId: Id[NormalizedURI], kind: ArticleKind[A], fetched: Try[Option[ArticleVersion]])(implicit session: RWSession): Unit
 }
 
 @Singleton
 class ArticleInfoRepoImpl @Inject() (
-  val db: DataBaseComponent,
-  val clock: Clock,
-  airbrake: AirbrakeNotifier)
-    extends DbRepo[ArticleInfo] with ArticleInfoRepo with SeqNumberDbFunction[ArticleInfo] with Logging {
+    val db: DataBaseComponent,
+    val clock: Clock,
+    airbrake: AirbrakeNotifier,
+    implicit val failurePolicy: FailureRecoveryPolicy) extends DbRepo[ArticleInfo] with ArticleInfoRepo with SeqNumberDbFunction[ArticleInfo] with Logging {
 
   import db.Driver.simple._
 
@@ -63,6 +67,15 @@ class ArticleInfoRepoImpl @Inject() (
     super.save(model.copy(seq = deferredSeqNum()))
   }
 
+  // Dangerous: this does *not* increment the sequence number - use only if you want an update *not* to be broadcasted!
+  private def saveSilently(model: ArticleInfo)(implicit session: RWSession): ArticleInfo = {
+    super.save(model)
+  }
+
+  def getByUriAndKind[A <: Article](uriId: Id[NormalizedURI], kind: ArticleKind[A], excludeState: Option[State[ArticleInfo]] = Some(ArticleInfoStates.INACTIVE))(implicit session: RSession): Option[ArticleInfo] = {
+    (for (r <- rows if r.uriId === uriId && r.kind === kind.typeCode && r.state =!= excludeState.orNull) yield r).firstOption
+  }
+
   def getByUri(uriId: Id[NormalizedURI], excludeState: Option[State[ArticleInfo]] = Some(ArticleInfoStates.INACTIVE))(implicit session: RSession): Set[ArticleInfo] = {
     (for (r <- rows if r.uriId === uriId && r.state =!= excludeState.orNull) yield r).list.toSet
   }
@@ -94,6 +107,16 @@ class ArticleInfoRepoImpl @Inject() (
     }
   }
 
+  def updateAfterFetch[A <: Article](uriId: Id[NormalizedURI], kind: ArticleKind[A], fetched: Try[Option[ArticleVersion]])(implicit session: RWSession): Unit = {
+    getByUriAndKind(uriId, kind).foreach { articleInfo =>
+      val withFetchComplete = articleInfo.withLatestFetchComplete
+      fetched match {
+        case Failure(error) => saveSilently(withFetchComplete.withFailure(error))
+        case Success(None) => saveSilently(withFetchComplete.withoutChange)
+        case Success(Some(articleVersion)) => save(withFetchComplete.withLatestArticle(articleVersion))
+      }
+    }
+  }
 }
 
 trait ArticleInfoSequencingPlugin extends SequencingPlugin

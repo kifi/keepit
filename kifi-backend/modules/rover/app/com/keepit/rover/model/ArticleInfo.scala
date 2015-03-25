@@ -4,10 +4,9 @@ import com.keepit.common.db._
 import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.rover.article.{ ArticleFetchRequest, Article, ArticleKind }
-import com.keepit.rover.manager.FetchSchedulingPolicy
+import com.keepit.rover.manager.{ FailureRecoveryPolicy, FetchSchedulingPolicy }
 import org.joda.time.DateTime
 import scala.concurrent.duration.Duration
-import scala.util.{ Success, Failure, Try }
 
 object ArticleInfoStates extends States[ArticleInfo]
 
@@ -54,39 +53,44 @@ case class ArticleInfo(
     fetchInterval = Some(schedulingPolicy.initialInterval)
   )
 
-  def withLatestFetch(fetchedVersion: Try[Option[ArticleVersion]]): ArticleInfo = {
-    val withFetchInfo = fetchedVersion match {
-      case Failure(error) => withFailure(error)
-      case Success(Some(version)) => withLatestArticle(version)
-      case Success(None) => withoutChange
-    }
-    withFetchInfo.copy(lastFetchedAt = Some(currentDateTime), lastQueuedAt = None)
-  }
+  def withLatestFetchComplete: ArticleInfo = copy(
+    lastFetchedAt = Some(currentDateTime),
+    lastQueuedAt = None
+  )
 
-  private def withFailure(error: Throwable): ArticleInfo = {
+  def withFailure(error: Throwable)(implicit recoveryPolicy: FailureRecoveryPolicy): ArticleInfo = {
     val updatedFailureCount = failureCount + 1
+    val updatedNextFetchAt = {
+      if (recoveryPolicy.shouldRetry(url, error, updatedFailureCount)) {
+        Some(schedulingPolicy.nextFetchAfterFailure(updatedFailureCount))
+      } else None
+    }
     copy(
-      nextFetchAt = Some(schedulingPolicy.nextFetchAfterFailure(updatedFailureCount)),
+      nextFetchAt = updatedNextFetchAt,
       failureCount = updatedFailureCount,
       failureInfo = Some(error.toString)
     )
   }
 
-  private def withLatestArticle(version: ArticleVersion): ArticleInfo = {
+  def withLatestArticle(version: ArticleVersion): ArticleInfo = {
     val decreasedFetchInterval = fetchInterval.map(schedulingPolicy.decreaseInterval)
     copy(
       nextFetchAt = decreasedFetchInterval.map(schedulingPolicy.nextFetchAfterSuccess),
       fetchInterval = decreasedFetchInterval,
       latestVersion = Some(version),
-      oldestVersion = oldestVersion orElse Some(version)
+      oldestVersion = oldestVersion orElse Some(version),
+      failureCount = 0,
+      failureInfo = None
     )
   }
 
-  private def withoutChange: ArticleInfo = {
+  def withoutChange: ArticleInfo = {
     val increasedFetchInterval = fetchInterval.map(schedulingPolicy.increaseInterval)
     copy(
       nextFetchAt = increasedFetchInterval.map(schedulingPolicy.nextFetchAfterSuccess),
-      fetchInterval = increasedFetchInterval
+      fetchInterval = increasedFetchInterval,
+      failureCount = 0,
+      failureInfo = None
     )
   }
 }
