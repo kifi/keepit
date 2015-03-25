@@ -1,6 +1,6 @@
 package com.keepit.rover.manager
 
-import com.keepit.rover.article.{ ArticleKind, Article }
+import com.keepit.rover.article.{EmbedlyArticle, ArticleKind, Article}
 import org.joda.time.DateTime
 import com.keepit.common.time._
 
@@ -39,9 +39,21 @@ case class FetchSchedulingPolicy(
 object FetchSchedulingPolicy {
   def apply[A <: Article](implicit kind: ArticleKind[A]): FetchSchedulingPolicy = {
     kind match {
+      case EmbedlyArticle => embedlySchedulingPolicy
       case _ => defaultSchedulingPolicy
     }
   }
+
+  private val embedlySchedulingPolicy = FetchSchedulingPolicy(
+    maxRandomDelay = 1 hour,
+    initialInterval = 14 days,
+    minInterval = 7 days,
+    maxInterval = 120 days,
+    intervalIncrement = 0 days,
+    intervalDecrement = 0 days,
+    maxBackoff = 2 days,
+    backoffIncrement = 6 hours
+  )
 
   private val defaultSchedulingPolicy = FetchSchedulingPolicy(
     maxRandomDelay = 6 hours,
