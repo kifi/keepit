@@ -4,7 +4,9 @@ import com.keepit.common.db._
 import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.rover.article.{ ArticleFetchRequest, Article, ArticleKind }
+import com.keepit.rover.manager.{ FailureRecoveryPolicy, FetchSchedulingPolicy }
 import org.joda.time.DateTime
+import scala.concurrent.duration.Duration
 
 object ArticleInfoStates extends States[ArticleInfo]
 
@@ -20,23 +22,77 @@ case class ArticleInfo(
     bestVersion: Option[ArticleVersion] = None,
     latestVersion: Option[ArticleVersion] = None,
     oldestVersion: Option[ArticleVersion] = None,
-    lastQueuedAt: Option[DateTime] = None,
     lastFetchedAt: Option[DateTime] = None,
     nextFetchAt: Option[DateTime] = None,
-    fetchInterval: Float = 24.0f) extends ModelWithState[ArticleInfo] with ModelWithSeqNumber[ArticleInfo] with ArticleKeyHolder {
+    fetchInterval: Option[Duration] = None,
+    failureCount: Int = 0,
+    failureInfo: Option[String] = None,
+    lastQueuedAt: Option[DateTime] = None) extends ModelWithState[ArticleInfo] with ModelWithSeqNumber[ArticleInfo] with ArticleKeyHolder {
   def withId(id: Id[ArticleInfo]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def isActive = (state == ArticleInfoStates.ACTIVE)
+
   def getFetchRequest[A <: Article](implicit kind: ArticleKind[A]) = ArticleFetchRequest(kind, url, lastFetchedAt, getLatestKey)
+
   def clean: ArticleInfo = copy(
     bestVersion = None,
     latestVersion = None,
     oldestVersion = None,
-    lastQueuedAt = None,
     lastFetchedAt = None,
     nextFetchAt = None,
-    fetchInterval = 24.0f
+    fetchInterval = None,
+    failureCount = 0,
+    failureInfo = None,
+    lastQueuedAt = None
   )
+
+  private def schedulingPolicy = FetchSchedulingPolicy(articleKind)
+
+  def initializeSchedulingPolicy: ArticleInfo = copy(
+    nextFetchAt = Some(currentDateTime),
+    fetchInterval = Some(schedulingPolicy.initialInterval)
+  )
+
+  def withLatestFetchComplete: ArticleInfo = copy(
+    lastFetchedAt = Some(currentDateTime),
+    lastQueuedAt = None
+  )
+
+  def withFailure(error: Throwable)(implicit recoveryPolicy: FailureRecoveryPolicy): ArticleInfo = {
+    val updatedFailureCount = failureCount + 1
+    val updatedNextFetchAt = {
+      if (recoveryPolicy.shouldRetry(url, error, updatedFailureCount)) {
+        Some(schedulingPolicy.nextFetchAfterFailure(updatedFailureCount))
+      } else None
+    }
+    copy(
+      nextFetchAt = updatedNextFetchAt,
+      failureCount = updatedFailureCount,
+      failureInfo = Some(error.toString)
+    )
+  }
+
+  def withLatestArticle(version: ArticleVersion): ArticleInfo = {
+    val decreasedFetchInterval = fetchInterval.map(schedulingPolicy.decreaseInterval)
+    copy(
+      nextFetchAt = decreasedFetchInterval.map(schedulingPolicy.nextFetchAfterSuccess),
+      fetchInterval = decreasedFetchInterval,
+      latestVersion = Some(version),
+      oldestVersion = oldestVersion orElse Some(version),
+      failureCount = 0,
+      failureInfo = None
+    )
+  }
+
+  def withoutChange: ArticleInfo = {
+    val increasedFetchInterval = fetchInterval.map(schedulingPolicy.increaseInterval)
+    copy(
+      nextFetchAt = increasedFetchInterval.map(schedulingPolicy.nextFetchAfterSuccess),
+      fetchInterval = increasedFetchInterval,
+      failureCount = 0,
+      failureInfo = None
+    )
+  }
 }
 
 object ArticleInfo {
@@ -44,6 +100,8 @@ object ArticleInfo {
   implicit def toArticleInfoSeq(seq: SequenceNumber[BasicArticleInfo]): SequenceNumber[ArticleInfo] = seq.copy()
   implicit def fromArticleInfoState(state: State[ArticleInfo]): State[BasicArticleInfo] = state.copy()
   implicit def toArticleInfoState(state: State[BasicArticleInfo]): State[ArticleInfo] = state.copy()
+
+  // Warning: if you add fields to BasicArticleInfo, make sure ArticleInfo.seq is incremented when they change
   implicit def toBasicArticleInfo(info: ArticleInfo): BasicArticleInfo = {
     BasicArticleInfo(
       info.state == ArticleInfoStates.INACTIVE,
@@ -51,8 +109,7 @@ object ArticleInfo {
       info.uriId,
       info.kind,
       info.bestVersion,
-      info.latestVersion,
-      info.lastFetchedAt
+      info.latestVersion
     )
   }
 
@@ -71,14 +128,16 @@ object ArticleInfo {
     latestVersionMinor: Option[VersionNumber[Article]],
     oldestVersionMajor: Option[VersionNumber[Article]],
     oldestVersionMinor: Option[VersionNumber[Article]],
-    lastQueuedAt: Option[DateTime],
     lastFetchedAt: Option[DateTime],
     nextFetchAt: Option[DateTime],
-    fetchInterval: Float): ArticleInfo = {
+    fetchInterval: Option[Duration],
+    failureCount: Int,
+    failureInfo: Option[String],
+    lastQueuedAt: Option[DateTime]): ArticleInfo = {
     val bestVersion = articleVersionFromDb(bestVersionMajor, bestVersionMinor)
     val latestVersion = articleVersionFromDb(latestVersionMajor, latestVersionMinor)
     val oldestVersion = articleVersionFromDb(oldestVersionMajor, oldestVersionMinor)
-    ArticleInfo(id, createdAt, updatedAt, state, seq, uriId, url, kind, bestVersion, latestVersion, oldestVersion, lastQueuedAt, lastFetchedAt, nextFetchAt, fetchInterval)
+    ArticleInfo(id, createdAt, updatedAt, state, seq, uriId, url, kind, bestVersion, latestVersion, oldestVersion, lastFetchedAt, nextFetchAt, fetchInterval, failureCount, failureInfo, lastQueuedAt)
   }
 
   def unapplyToDbRow(info: ArticleInfo) = {
@@ -100,10 +159,12 @@ object ArticleInfo {
       latestVersionMinor,
       oldestVersionMajor,
       oldestVersionMinor,
-      info.lastQueuedAt,
       info.lastFetchedAt,
       info.nextFetchAt,
-      info.fetchInterval
+      info.fetchInterval,
+      info.failureCount,
+      info.failureInfo,
+      info.lastQueuedAt
     )
   }
 

@@ -17,7 +17,6 @@ case class State[T](value: String) {
 trait States[T] {
   val ACTIVE = State[T]("active")
   val INACTIVE = State[T]("inactive")
-  val NO_DEVICES = State[T]("no_devices")
 }
 
 class StateException(message: String) extends Exception(message)

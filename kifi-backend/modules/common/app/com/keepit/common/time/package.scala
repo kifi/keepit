@@ -1,16 +1,14 @@
 package com.keepit.common
 
 import java.util.Locale
-import com.keepit.common.db.Id
 import org.joda.time.format._
 import org.joda.time.{ DateTime, DateTimeZone, LocalDate, LocalTime }
 import com.google.inject.{ ImplementedBy, Singleton }
-import play.api.libs.json.JsError
-import play.api.libs.json.JsString
-import play.api.libs.json.JsSuccess
-import play.api.libs.json.{ JsValue, Format }
-import play.api.libs.json.JsNumber
+import play.api.libs.json._
+import play.api.libs.functional.syntax._
 import play.api.mvc.{ PathBindable, QueryStringBindable }
+
+import scala.concurrent.duration._
 
 package object time {
 
@@ -172,4 +170,6 @@ package object time {
   implicit class RichLocalDate(val date: LocalDate) extends AnyVal {
     def toStandardDateString: String = STANDARD_DATE_FORMAT.print(date)
   }
+
+  implicit val durationFormat: Format[Duration] = __.format[Long].inmap(_ millis, _.toMillis)
 }
