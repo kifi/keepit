@@ -1,5 +1,5 @@
 <div class="kf-lfp">
-  <span class="kf-lfp-pics">
+  <span class="kf-lfp-pics" ng-style="{width: followersToShow.length * picWidth + 'px'}">
     <a ng-repeat="follower in followersToShow" href="{{follower|profileUrl}}" kf-track-origin="{{currentPageOrigin}}/follower">
       <img ng-src="{{follower | pic:100}}"
         class="kf-lfp-pic"
