@@ -96,6 +96,8 @@ object ArticleInfo {
   implicit def toArticleInfoSeq(seq: SequenceNumber[BasicArticleInfo]): SequenceNumber[ArticleInfo] = seq.copy()
   implicit def fromArticleInfoState(state: State[ArticleInfo]): State[BasicArticleInfo] = state.copy()
   implicit def toArticleInfoState(state: State[BasicArticleInfo]): State[ArticleInfo] = state.copy()
+
+  // Warning: if you add fields to BasicArticleInfo, make sure ArticleInfo.seq is incremented when they change
   implicit def toBasicArticleInfo(info: ArticleInfo): BasicArticleInfo = {
     BasicArticleInfo(
       info.state == ArticleInfoStates.INACTIVE,
@@ -103,8 +105,7 @@ object ArticleInfo {
       info.uriId,
       info.kind,
       info.bestVersion,
-      info.latestVersion,
-      info.lastFetchedAt
+      info.latestVersion
     )
   }
 

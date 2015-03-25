@@ -47,8 +47,7 @@ case class BasicArticleInfo(
   uriId: Id[NormalizedURI],
   kind: String, // todo(Léo): make this kind: ArticleKind[_ <: Article] with Scala 2.11, (with proper mapper, serialization is unchanged)
   bestVersion: Option[ArticleVersion],
-  latestVersion: Option[ArticleVersion],
-  lastFetchedAt: Option[DateTime]) extends ArticleKeyHolder
+  latestVersion: Option[ArticleVersion]) extends ArticleKeyHolder
 
 object BasicArticleInfo {
   implicit val format = (
@@ -57,7 +56,6 @@ object BasicArticleInfo {
     (__ \ 'uriId).format(Id.format[NormalizedURI]) and
     (__ \ 'kind).format[String] and
     (__ \ 'bestVersion).formatNullable[ArticleVersion] and
-    (__ \ 'latestVersion).formatNullable[ArticleVersion] and
-    (__ \ 'lastFetchedAt).formatNullable[DateTime]
+    (__ \ 'latestVersion).formatNullable[ArticleVersion]
   )(BasicArticleInfo.apply, unlift(BasicArticleInfo.unapply))
 }
