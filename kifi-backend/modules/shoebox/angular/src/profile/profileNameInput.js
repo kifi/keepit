@@ -13,7 +13,7 @@ angular.module('kifi')
         explicitEnabling: '='
       },
       templateUrl: 'profile/profileNameInput.tpl.html',
-      link: function (scope, element/*, attrs*/) {
+      link: function (scope, element) {
         // Scope data.
         scope.badFirstName = false;
         scope.badLastName = false;
