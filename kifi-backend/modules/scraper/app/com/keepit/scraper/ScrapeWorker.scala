@@ -264,6 +264,9 @@ class ScrapeWorkerImpl @Inject() (
         if (contentLang == Lang("en") && content.size > 100) {
           val detector = new SlidingWindowPornDetector(pornDetectorFactory())
           val isPorn = detector.isPorn(content.take(100000)) || detector.isPorn(title) || detector.isPorn(description)
+          if (isPorn && normalizedUri.restriction.exists(_ != Restriction.ADULT)) {
+            log.warn(s"uri ${normalizedUri.id.get} is detected as porn. However, existing restirction found: ${normalizedUri.restriction}. Not going to mark it.")
+          }
           isPorn match {
             case true if normalizedUri.restriction == None => shoeboxCommander.updateURIRestriction(normalizedUri.id.get, Some(Restriction.ADULT)) // don't override other restrictions
             case false if normalizedUri.restriction == Some(Restriction.ADULT) => shoeboxCommander.updateURIRestriction(normalizedUri.id.get, None)
