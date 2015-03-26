@@ -51,7 +51,8 @@ GET     /m/2/eliza/notifications/system    @com.keepit.eliza.controllers.mobile.
 # INTERNAL ROUTES/Eliza
 ##########################################
 
-POST  /internal/eliza/sendPushNotification      @com.keepit.eliza.controllers.internal.ElizaController.sendPushNotification
+POST  /internal/eliza/sendGeneralPushNotification      @com.keepit.eliza.controllers.internal.ElizaController.sendGeneralPushNotification
+POST  /internal/eliza/sendLibraryPushNotification      @com.keepit.eliza.controllers.internal.ElizaController.sendLibraryPushNotification
 POST  /internal/eliza/sendToUserNoBroadcast     @com.keepit.eliza.controllers.internal.ElizaController.sendToUserNoBroadcast
 POST  /internal/eliza/sendToUser                @com.keepit.eliza.controllers.internal.ElizaController.sendToUser
 POST  /internal/eliza/sendToAllUsers            @com.keepit.eliza.controllers.internal.ElizaController.sendToAllUsers
