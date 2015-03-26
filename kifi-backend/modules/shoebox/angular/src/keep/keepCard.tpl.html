@@ -13,7 +13,7 @@
       <div class="kf-keep-subtitle">
         <span class="kf-keep-url" ng-attr-title="{{keep.url}}" ng-bind-html="keep.descHtml"></span>
         <span class="kf-keep-twitter-attr" ng-if="keep.sourceAttribution.twitter.screenName">
-          <a href="https://www.twitter.com/{{keep.sourceAttribution.twitter.screenName}}/status/{{keep.sourceAttribution.twitter.idString}}" target="_blank">
+          <a ng-click="trackTweet()" href="https://www.twitter.com/{{keep.sourceAttribution.twitter.screenName}}/status/{{keep.sourceAttribution.twitter.idString}}" target="_blank">
             <span class="kf-keep-twitter-logo svg-twitter-blue"></span>@{{keep.sourceAttribution.twitter.screenName}}
           </a>
         </span>

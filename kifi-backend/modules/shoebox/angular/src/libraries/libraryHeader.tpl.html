@@ -46,7 +46,7 @@
               <div class="kf-lh-owner-name" itemprop="name">{{library.owner.firstName}} {{library.owner.lastName}}</div>
             </div>
 
-            <a class="kf-lh-twitter" href="https://twitter.com/{{library.attr.twitter.screenName}}" target="_blank" ng-if="library.attr.twitter.screenName">
+            <a class="kf-lh-twitter" ng-click="trackTwitterProfile()" href="https://www.twitter.com/{{library.attr.twitter.screenName}}" ng-if="library.attr.twitter.screenName" target="_blank">
               <div class="kf-lh-twitter-img">
                 <div class="kf-lh-twitter-logo svg-twitter-blue"></div>
               </div>

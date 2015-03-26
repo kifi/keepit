@@ -34,8 +34,8 @@ angular.module('kifi')
 ])
 
 .directive('kfKeepCard', [
-  '$rootScope', 'installService', 'libraryService', 'modalService', 'util',
-  function ($rootScope, installService, libraryService, modalService, util) {
+  '$rootScope', 'installService', 'libraryService', 'modalService', 'util', '$analytics',
+  function ($rootScope, installService, libraryService, modalService, util, $analytics) {
     return {
       restrict: 'A',
       scope: {
@@ -293,6 +293,10 @@ angular.module('kifi')
             scope: scope
           });
         };
+
+        scope.trackTweet = function () {
+          $analytics.eventTrack('user_clicked_page', {type: 'library', action: 'clickedViewOriginalTweetURL'});
+        }
 
 
         //
