@@ -296,8 +296,7 @@ angular.module('kifi')
 
         scope.trackTweet = function () {
           $analytics.eventTrack('user_clicked_page', {type: 'library', action: 'clickedViewOriginalTweetURL'});
-        }
-
+        };
 
         //
         // Watches and listeners.
