@@ -1,7 +1,9 @@
 package com.keepit.common.social
 
 import com.google.inject.Inject
+import com.keepit.common.akka.SafeFuture
 import com.keepit.common.concurrent.FutureHelpers
+import com.keepit.common.db.Id
 import com.keepit.common.store.LibraryImageStore
 import com.keepit.common.time._
 import com.keepit.common.core._
@@ -18,7 +20,6 @@ import com.keepit.model._
 import com.keepit.social._
 import com.ning.http.client.providers.netty.NettyResponse
 import play.api.http.Status._
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.Play.current
 import play.api.libs.json.JsValue
 import play.api.libs.oauth.OAuthCalculator
@@ -29,7 +30,7 @@ import twitter4j.{ StatusUpdate, TwitterFactory, Twitter }
 import twitter4j.media.{ ImageUpload, MediaProvider, ImageUploadFactory }
 import twitter4j.conf.ConfigurationBuilder
 
-import scala.concurrent.{ Await, Future }
+import scala.concurrent.{ ExecutionContext, Await, Future }
 import scala.concurrent.duration._
 import scala.util.{ Success, Failure, Try }
 import scala.collection.JavaConversions._
@@ -81,7 +82,10 @@ class TwitterSocialGraphImpl @Inject() (
     oauth1Config: OAuth1Configuration,
     twtrOAuthProvider: TwitterOAuthProvider,
     userValueRepo: UserValueRepo,
-    socialRepo: SocialUserInfoRepo) extends TwitterSocialGraph with Logging {
+    twitterSyncStateRepo: TwitterSyncStateRepo,
+    libraryMembershipRepo: LibraryMembershipRepo,
+    socialRepo: SocialUserInfoRepo,
+    implicit val executionContext: ExecutionContext) extends TwitterSocialGraph with Logging {
 
   val providerConfig = oauth1Config.getProviderConfig(ProviderIds.Twitter.id).get
 
@@ -168,6 +172,27 @@ class TwitterSocialGraphImpl @Inject() (
     } yield {
       val mutualFollows = followerIds.toSet.intersect(friendIds.toSet)
       log.info(s"[fetchSocialUserInfo(${socialUserInfo.socialId})] friendIds(len=${friendIds.length}):${friendIds.take(10)} followerIds(len=${followerIds.length}):${followerIds.take(10)} mutual(len=${mutualFollows.size}):${mutualFollows.take(10)}")
+
+      SafeFuture {
+        db.readOnlyMaster { implicit s =>
+          log.info(s"[fetchSocialUserInfo(${socialUserInfo.socialId})] fetching twitter_syncs for ${friendIds.length} friends...")
+          twitterSyncStateRepo.getTwitterSyncsByFriendIds(friendIds.map(Id[User](_)).toSet)
+        }.grouped(100).foreach { syncStateMap =>
+          syncStateMap.map { case (userId, twitterSyncState) =>
+            db.readWrite { implicit s =>
+              val libraryId = twitterSyncState.libraryId
+              libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId, None) match {
+                case None =>
+                  log.info(s"[fetchSocialUserInfo(${socialUserInfo.socialId})] auto-joining user ${userId} twitter_sync library ${libraryId}")
+                  libraryMembershipRepo.save(LibraryMembership(libraryId = libraryId, userId = userId, access = LibraryAccess.READ_ONLY))
+                case _ =>
+              }
+            }
+          }
+        }
+        log.info(s"[fetchSocialUserInfo(${socialUserInfo.socialId})] finished auto-joining all twitter_sync libraries")
+      }
+
       mutualFollows
     }
 
