@@ -31,14 +31,21 @@ object ArticleVersion {
 }
 
 trait ArticleKeyHolder {
-  def kind: String
-  def articleKind = ArticleKind.byTypeCode(kind)
+  type A <: Article
+  def articleKind: ArticleKind[A]
   def uriId: Id[NormalizedURI]
   def bestVersion: Option[ArticleVersion]
   def latestVersion: Option[ArticleVersion]
-  def getLatestKey[A <: Article](implicit kind: ArticleKind[A]): Option[ArticleKey[A]] = latestVersion.map(toKey(_))
-  def getBestKey[A <: Article](implicit kind: ArticleKind[A]): Option[ArticleKey[A]] = bestVersion.map(toKey(_))
-  private def toKey[A <: Article](version: ArticleVersion)(implicit kind: ArticleKind[A]) = ArticleKey(uriId, kind, version)
+  def getLatestKey: Option[ArticleKey[A]] = latestVersion.map(toKey)
+  def getBestKey: Option[ArticleKey[A]] = bestVersion.map(toKey)
+  private def toKey(version: ArticleVersion): ArticleKey[A] = ArticleKey(uriId, articleKind, version)
+}
+
+trait ArticleKindHolder {
+  val kind: String
+  protected val rawKind = ArticleKind.byTypeCode(kind)
+  type A = rawKind.article
+  def articleKind: ArticleKind[A] = rawKind.self
 }
 
 case class BasicArticleInfo(
@@ -47,7 +54,7 @@ case class BasicArticleInfo(
   uriId: Id[NormalizedURI],
   kind: String, // todo(Léo): make this kind: ArticleKind[_ <: Article] with Scala 2.11, (with proper mapper, serialization is unchanged)
   bestVersion: Option[ArticleVersion],
-  latestVersion: Option[ArticleVersion]) extends ArticleKeyHolder
+  latestVersion: Option[ArticleVersion]) extends ArticleKeyHolder with ArticleKindHolder
 
 object BasicArticleInfo {
   implicit val format = (
