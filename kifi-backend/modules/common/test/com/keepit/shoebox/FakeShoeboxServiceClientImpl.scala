@@ -753,6 +753,6 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
     allLibraryMemberships.values.collect { case membership if membership.userId == userId && membership.canWrite => membership.libraryId }.toSet
   }
 
-  def getUserActivePersonas(userId: Id[User]): Future[UserActivePersonas] = ???
+  def getUserActivePersonas(userId: Id[User]): Future[UserActivePersonas] = Future.successful(UserActivePersonas(Seq(), Seq()))
 
 }
