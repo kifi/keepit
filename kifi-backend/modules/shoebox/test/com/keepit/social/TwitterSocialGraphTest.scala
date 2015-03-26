@@ -6,7 +6,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.oauth._
 import com.keepit.common.social.TwitterSocialGraphImpl
 import com.keepit.common.time.Clock
-import com.keepit.model.{ UserValueRepo, UserFactory, OAuth1TokenInfo, SocialUserInfo }
+import com.keepit.model._
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.Specification
 import play.api.libs.json.{ JsArray, Json, JsNull, JsValue }
@@ -22,12 +22,14 @@ class TwitterSocialGraphTest extends Specification with ShoeboxTestInjector with
     val airbrake = inject[AirbrakeNotifier]
     val oauth1Config = inject[OAuth1Configuration]
     val userValueRepo = inject[UserValueRepo]
+    val twitterSyncStateRepo = inject[TwitterSyncStateRepo]
+    val libraryMembershipRepo = inject[LibraryMembershipRepo]
     val twtrOAuthProvider = new TwitterOAuthProviderImpl(airbrake, oauth1Config) {
       override def getUserProfileInfo(accessToken: OAuth1TokenInfo): Future[UserProfileInfo] = Future.successful {
         TwitterUserInfo.toUserProfileInfo(tweetfortytwoInfo.copy(screenName = "tweet42"))
       }
     }
-    val twtrGraph: TwitterSocialGraphImpl = new TwitterSocialGraphImpl(airbrake, db, clock, oauth1Config, twtrOAuthProvider, userValueRepo, socialUserInfoRepo) {
+    val twtrGraph: TwitterSocialGraphImpl = new TwitterSocialGraphImpl(airbrake, db, clock, oauth1Config, twtrOAuthProvider, userValueRepo, twitterSyncStateRepo, libraryMembershipRepo, socialUserInfoRepo) {
       override protected def lookupUsers(socialUserInfo: SocialUserInfo, accessToken: OAuth1TokenInfo, mutualFollows: Set[Long]): Future[JsValue] = Future.successful {
         socialUserInfo.socialId.id.toLong match {
           case tweetfortytwoInfo.id =>
@@ -102,6 +104,9 @@ class TwitterSocialGraphTest extends Specification with ShoeboxTestInjector with
     "fetch from twitter" in {
       withDb() { implicit injector =>
         val (twtrGraph, sui) = setup()
+        db.readOnlyMaster { implicit s =>
+          inject[TwitterSyncStateRepo].count === 0
+        }
         val Some(raw) = twtrGraph.fetchSocialUserRawInfo(sui)
         raw.socialId === SocialId(tweetfortytwoInfo.id.toString)
         val jsonSeq = raw.jsons.head.as[JsArray].value // ok for small data set
