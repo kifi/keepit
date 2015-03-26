@@ -442,7 +442,48 @@ invite-banner-orange = #ff7c3c
     font-size: 14px
 
 .kf-lh-owner-name
+.kf-lh-twitter-screenname
   color: #939393
+
+.kf-lh-twitter
+  display: inline-block
+  margin-left: 15px
+
+  @media (max-width: 480px)
+    margin-left: 0px
+
+  .kf-lh-twitter-text
+    display: inline-block
+    vertical-align: middle
+    margin-left: 8px
+
+    @media (max-width: 480px)
+      margin-top: -10px
+      margin-left: 0px
+      font-size: 12px
+
+.kf-lh-twitter-img
+  display: inline-block
+  background-color: #ededed
+  border-radius: 50%
+  height: 42px
+  width: 42px
+  vertical-align: -17px
+
+  :hover>&
+    background-color: #e0e0e0
+
+  @media (max-width: 480px)
+    display: none
+
+.kf-lh-twitter-logo
+  position: relative
+  top: 50%
+  left: 50%
+  transform: translate(-50%, -50%)
+  width: 20px
+  height: 18px
+  background-size: cover
 
 .kf-lh-desc-wrap
   padding-bottom: 5px

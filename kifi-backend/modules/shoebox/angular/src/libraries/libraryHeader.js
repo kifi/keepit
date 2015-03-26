@@ -669,6 +669,10 @@ angular.module('kifi')
           }
         };
 
+        scope.trackTwitterProfile = function () {
+          libraryService.trackEvent('user_clicked_page', scope.library, { action: 'clickedTwitterProfileURL' });
+        };
+
 
         //
         // Watches and listeners.
