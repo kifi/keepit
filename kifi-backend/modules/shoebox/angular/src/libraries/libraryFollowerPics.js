@@ -13,6 +13,7 @@ angular.module('kifi')
         numFollowers: '=',
         followerWidths: '=',  // pic period (width + gap) for each window width range (should match stylesheet)
         showFollowers: '&',
+        tooltips: '@',
         currentPageOrigin: '@'
       },
       link: function (scope, element) {
