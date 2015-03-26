@@ -18,10 +18,10 @@
     <div ng-repeat="mutualFriendPair in mutualFriendsPairs" class="kf-mutual-friend-pair">
       <div ng-repeat="mutualFriend in mutualFriendPair" class="kf-mutual-friend-card">
         <a href="{{mutualFriend|profileUrl}}" ng-click="close()" kf-track-origin="pymk/mutualFriends">
-          <img class="kf-mutual-friends-image" title="{{mutualFriend.firstName}} {{mutualFriend.lastName}}" ng-src="{{mutualFriend | pic:200}}" onerror="this.src='https://www.kifi.com/assets/img/ghost.200.png'">
+          <img class="kf-mutual-friends-image" title="{{mutualFriend|name}}" ng-src="{{mutualFriend|pic:200}}" onerror="this.src='https://www.kifi.com/assets/img/ghost.200.png'">
         </a>
         <div class="kf-mutual-friend-card-info">
-          <a class="kf-mutual-friend-card-name" href="{{mutualFriend|profileUrl}}" ng-click="close()" kf-track-origin="pymk/mutualFriends">{{mutualFriend.firstName}} {{mutualFriend.lastName}}</a>
+          <a class="kf-mutual-friend-card-name" href="{{mutualFriend|profileUrl}}" ng-click="close()" kf-track-origin="pymk/mutualFriends">{{mutualFriend|name}}</a>
           <div><ng-pluralize count="mutualFriend.connections" when="{'one': '1 connection ', 'other': '{} connections '}"></ng-pluralize>on Kifi</div>
         </div>
       </div>

@@ -39,11 +39,11 @@
 
           <div class="kf-lh-owner" itemprop="creator" itemscope itemtype="http://schema.org/Person">
             <a class="kf-lh-owner-image-a" href="{{library.owner|profileUrl}}" itemprop="url" kf-track-origin="libraryPage/curator">
-              <img class="kf-lh-owner-image" ng-src="{{library.owner | pic:100}}" itemprop="image" alt="{{library.owner.firstName}} {{library.owner.lastName}}">
+              <img class="kf-lh-owner-image" ng-src="{{library.owner | pic:100}}" itemprop="image" alt="{{library.owner|name}}">
             </a>
             <div class="kf-lh-owner-text">
               <div class="kf-lh-owner-label">Curator:</div>
-              <div class="kf-lh-owner-name" itemprop="name">{{library.owner.firstName}} {{library.owner.lastName}}</div>
+              <div class="kf-lh-owner-name" itemprop="name">{{library.owner|name}}</div>
             </div>
           </div>
 

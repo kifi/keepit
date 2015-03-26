@@ -9,7 +9,7 @@
         <span class="kf-lih-search-left">
           <span class="kf-lih-search-icon svg-search-icon-gray"></span>
           <span class="kf-lih-search-icon-lit svg-search-icon-blue"></span>
-          <a class="kf-lih-search-lib-owner-img" ng-if="search.libraryChip" style="background-image:url({{library.owner | pic:100}})" href="{{library.owner|profileUrl}}" title="{{library.owner.firstName}} {{library.owner.lastName}}"></a>
+          <a class="kf-lih-search-lib-owner-img" ng-if="search.libraryChip" style="background-image:url({{library.owner|pic:100}})" href="{{library.owner|profileUrl}}" title="{{library.owner|name}}"></a>
           <span class="kf-lih-search-lib-name" ng-if="search.libraryChip" style="background-color:{{library.color}}">{{library.name}}</span>
           <a class="kf-lih-search-lib-x" ng-if="search.libraryChip" style="background-color:{{library.color}}" ng-mousedown="onMouseDownLibX($event)" ng-click="onClickLibX()" href="javascript:">&times;</a>
         </span>
@@ -39,7 +39,7 @@
         </menu>
       </div>
       <div class="kf-lih-dropdown-parent" kf-hover-menu>
-        <a href="{{me|profileUrl}}" class="kf-lih-profile" style="background-image:url({{me | pic:100}})"></a>
+        <a href="{{me|profileUrl}}" class="kf-lih-profile" style="background-image:url({{me|pic:100}})"></a>
         <menu class="kf-dropdown-menu">
           <a class="kf-dropdown-menu-item" href="{{me|profileUrl}}">Your Profile</a>
           <a class="kf-dropdown-menu-item" href="/profile">Settings</a>
