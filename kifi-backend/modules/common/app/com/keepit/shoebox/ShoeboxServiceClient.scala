@@ -106,7 +106,6 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getIndexableSocialConnections(seqNum: SequenceNumber[SocialConnection], fetchSize: Int): Future[Seq[IndexableSocialConnection]]
   def getIndexableSocialUserInfos(seqNum: SequenceNumber[SocialUserInfo], fetchSize: Int): Future[Seq[SocialUserInfo]]
   def getEmailAccountUpdates(seqNum: SequenceNumber[EmailAccountUpdate], fetchSize: Int): Future[Seq[EmailAccountUpdate]]
-  def getLibraryMembership(id: Id[LibraryMembership]): Future[LibraryMembership]
   def getKeepsAndTagsChanged(seqNum: SequenceNumber[Keep], fetchSize: Int): Future[Seq[KeepAndTags]]
   def getLapsedUsersForDelighted(maxCount: Int, skipCount: Int, after: DateTime, before: Option[DateTime]): Future[Seq[DelightedUserRegistrationInfo]]
   def getAllFakeUsers(): Future[Set[Id[User]]]
@@ -156,7 +155,6 @@ class ShoeboxServiceClientImpl @Inject() (
   override val httpClient: HttpClient,
   val airbrakeNotifier: AirbrakeNotifier,
   cacheProvider: ShoeboxCacheProvider,
-  libraryMembershipCache: LibraryMembershipIdCache,
   implicit val executionContext: ScalaExecutionContext)
     extends ShoeboxServiceClient with Logging {
 
@@ -680,12 +678,6 @@ class ShoeboxServiceClientImpl @Inject() (
   def getEmailAccountUpdates(seqNum: SequenceNumber[EmailAccountUpdate], fetchSize: Int): Future[Seq[EmailAccountUpdate]] = {
     call(Shoebox.internal.getEmailAccountUpdates(seqNum, fetchSize), callTimeouts = extraLongTimeout, routingStrategy = offlinePriority).map { r =>
       r.json.as[Seq[EmailAccountUpdate]]
-    }
-  }
-
-  def getLibraryMembership(id: Id[LibraryMembership]): Future[LibraryMembership] = libraryMembershipCache.getOrElseFuture(LibraryMembershipIdKey(id)) {
-    call(Shoebox.internal.getLibraryMembership(id), callTimeouts = extraLongTimeout, routingStrategy = offlinePriority).map { r =>
-      r.json.as[LibraryMembership]
     }
   }
 
