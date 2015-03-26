@@ -132,8 +132,8 @@ class ActivityPusher @Inject() (
     val res: Option[PushNotificationMessage] = db.readOnlyReplica { implicit s =>
       libraryMembershipRepo.getLatestUpdatedLibraryUserFollow(userId) map { lib =>
         val message = {
-          if (experiment == PushNotificationExperiment.Experiment1) s"""Your personalized feed has been updated based on "${lib.name.abbreviate(25)}", a library you follow."""
-          else s"""A library you follow has been updated: "${lib.name.abbreviate(25)}" Check out your updated feed."""
+          if (experiment == PushNotificationExperiment.Experiment1) s"""New keeps in "${lib.name.abbreviate(25)}""""
+          else s""""${lib.name.abbreviate(25)}" library has updates"""
         }
         LibraryPushNotificationMessage(message, lib.id.get)
       } orElse {
