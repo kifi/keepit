@@ -31,8 +31,8 @@ trait URILDATopicRepo extends DbRepo[URILDATopic] {
   def getSmartRecentUserTopicHistograms(userId: Id[User], version: ModelVersion[DenseLDA], noOlderThan: DateTime, preferablyNewerThan: DateTime, minNum: Int, maxNum: Int)(implicit session: RSession): Seq[(LDATopic, Int)]
   def getLatestURIsInTopic(topicId: LDATopic, version: ModelVersion[DenseLDA], limit: Int)(implicit session: RSession): Seq[(Id[NormalizedURI], Float)]
   def getFeaturesSince(seq: SequenceNumber[NormalizedURI], version: ModelVersion[DenseLDA], limit: Int)(implicit session: RSession): Seq[URILDATopic]
-  def countUserURIFeatures(userId: Id[User], version: ModelVersion[DenseLDA], min_num_words: Int)(implicit session: RSession): Int
-  def getUserURIFeatures(userId: Id[User], version: ModelVersion[DenseLDA], min_num_words: Int)(implicit session: RSession): Seq[LDATopicFeature]
+  def countUserURIFeatures(userId: Id[User], version: ModelVersion[DenseLDA], min_num_words: Int, keeperOnly: Boolean = false)(implicit session: RSession): Int
+  def getUserURIFeatures(userId: Id[User], version: ModelVersion[DenseLDA], min_num_words: Int, keeperOnly: Boolean = false)(implicit session: RSession): Seq[LDATopicFeature]
   def getUserRecentURIFeatures(userId: Id[User], version: ModelVersion[DenseLDA], min_num_words: Int, limit: Int)(implicit session: RSession): Seq[(Id[Keep], Seq[LDATopic], LDATopicFeature)]
   def getTopicCounts(version: ModelVersion[DenseLDA])(implicit session: RSession): Seq[(Int, Int)] // (topic_id, counts)
   def getFirstTopicAndScore(uriId: Id[NormalizedURI], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[(LDATopic, Float)]
@@ -176,18 +176,19 @@ class URILDATopicRepoImpl @Inject() (
     q.list
   }
 
-  def countUserURIFeatures(userId: Id[User], version: ModelVersion[DenseLDA], min_num_words: Int)(implicit session: RSession): Int = {
+  def countUserURIFeatures(userId: Id[User], version: ModelVersion[DenseLDA], min_num_words: Int, keeperOnly: Boolean = false)(implicit session: RSession): Int = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    val q = sql"""select count(ck.uri_id) from cortex_keep as ck inner join uri_lda_topic as tp on ck.uri_id = tp.uri_id where ck.user_id = ${userId.id} and tp.version = ${version.version} and ck.state = 'active' and ck.source != 'default' and tp.state = 'active' and tp.num_words > ${min_num_words}"""
+    val sourceConstrain = if (keeperOnly) """and ck.source = 'keeper' """ else ""
+    val q = sql"""select count(ck.uri_id) from cortex_keep as ck inner join uri_lda_topic as tp on ck.uri_id = tp.uri_id where ck.user_id = ${userId.id} and tp.version = ${version.version} and ck.state = 'active' and ck.source != 'default' #${sourceConstrain} and tp.state = 'active' and tp.num_words > ${min_num_words}"""
     q.as[Int].list.head
   }
 
-  def getUserURIFeatures(userId: Id[User], version: ModelVersion[DenseLDA], min_num_words: Int)(implicit session: RSession): Seq[LDATopicFeature] = {
+  def getUserURIFeatures(userId: Id[User], version: ModelVersion[DenseLDA], min_num_words: Int, keeperOnly: Boolean = false)(implicit session: RSession): Seq[LDATopicFeature] = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     import scala.slick.jdbc.GetResult
     implicit val getLDATopicFeature = getResultFromMapper[LDATopicFeature]
-
-    val q = sql"""select tp.feature from cortex_keep as ck inner join uri_lda_topic as tp on ck.uri_id = tp.uri_id where ck.user_id = ${userId.id} and ck.state = 'active' and tp.version = ${version.version} and ck.source != 'default' and tp.state = 'active' and tp.num_words > ${min_num_words}"""
+    val sourceConstrain = if (keeperOnly) """and ck.source = 'keeper' """ else ""
+    val q = sql"""select tp.feature from cortex_keep as ck inner join uri_lda_topic as tp on ck.uri_id = tp.uri_id where ck.user_id = ${userId.id} and ck.state = 'active' and tp.version = ${version.version} and ck.source != 'default' #${sourceConstrain} and tp.state = 'active' and tp.num_words > ${min_num_words}"""
     q.as[LDATopicFeature].list
   }
 

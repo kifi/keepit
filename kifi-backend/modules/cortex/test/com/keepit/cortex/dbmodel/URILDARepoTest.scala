@@ -335,4 +335,72 @@ class URILDATopicRepoTest extends Specification with CortexTestInjector {
 
     }
   }
+
+  "can put more constrain on keep source" in {
+    withDb() { implicit injector =>
+      val keepRepo = inject[CortexKeepRepo]
+      val topicRepo = inject[URILDATopicRepo]
+
+      val keeps = List(CortexKeep(
+        id = None,
+        createdAt = currentDateTime,
+        updatedAt = currentDateTime,
+        keptAt = new DateTime(2014, 7, 1, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE),
+        keepId = Id[Keep](1),
+        userId = Id[User](1),
+        uriId = Id[NormalizedURI](1),
+        isPrivate = false,
+        state = State[CortexKeep]("active"),
+        source = KeepSource.keeper,
+        seq = SequenceNumber[CortexKeep](1L)
+      ),
+        CortexKeep(
+          id = None,
+          createdAt = currentDateTime,
+          updatedAt = currentDateTime,
+          keptAt = new DateTime(2014, 7, 20, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE),
+          keepId = Id[Keep](20),
+          userId = Id[User](1),
+          uriId = Id[NormalizedURI](2),
+          isPrivate = false,
+          state = State[CortexKeep]("active"),
+          source = KeepSource.bookmarkImport,
+          seq = SequenceNumber[CortexKeep](2L)
+        ))
+
+      val topics = List(
+        URILDATopic(
+          id = None,
+          uriId = Id[NormalizedURI](1),
+          uriSeq = SequenceNumber[NormalizedURI](1L),
+          version = ModelVersion[DenseLDA](1),
+          numOfWords = 100,
+          firstTopic = Some(LDATopic(1)),
+          feature = Some(LDATopicFeature(Array(1f, 0f))),
+          state = URILDATopicStates.ACTIVE
+        ),
+        URILDATopic(
+          id = None,
+          uriId = Id[NormalizedURI](2),
+          uriSeq = SequenceNumber[NormalizedURI](2L),
+          version = ModelVersion[DenseLDA](1),
+          numOfWords = 100,
+          firstTopic = Some(LDATopic(2)),
+          feature = Some(LDATopicFeature(Array(0.5f, 0.5f))),
+          state = URILDATopicStates.ACTIVE
+        )
+      )
+
+      db.readWrite { implicit s =>
+        keeps.foreach { keepRepo.save(_) }
+        topics.foreach { topicRepo.save(_) }
+
+        topicRepo.countUserURIFeatures(Id[User](1), ModelVersion[DenseLDA](1), 1, false) === 2
+        topicRepo.countUserURIFeatures(Id[User](1), ModelVersion[DenseLDA](1), 1, true) === 1
+        topicRepo.getUserURIFeatures(Id[User](1), ModelVersion[DenseLDA](1), 1, false).size === 2
+        topicRepo.getUserURIFeatures(Id[User](1), ModelVersion[DenseLDA](1), 1, true).size === 1
+      }
+
+    }
+  }
 }

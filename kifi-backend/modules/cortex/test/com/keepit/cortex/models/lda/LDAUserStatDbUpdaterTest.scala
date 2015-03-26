@@ -6,13 +6,14 @@ import com.keepit.cortex.CortexTestInjector
 import com.keepit.cortex.core.ModelVersion
 import com.keepit.cortex.dbmodel._
 import com.keepit.model.{ NormalizedURI, KeepSource, Keep, User }
+import com.keepit.shoebox.{ FakeShoeboxServiceModule, FakeShoeboxServiceClientImpl, ShoeboxServiceClient }
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
 
 class LDAUserStatDbUpdaterTest extends Specification with CortexTestInjector with LDADbTestHelper {
   "lda user stat db updater " should {
     "work" in {
-      withDb() { implicit injector =>
+      withDb(FakeShoeboxServiceModule()) { implicit injector =>
         val keepRepo = inject[CortexKeepRepo]
         val commitRepo = inject[FeatureCommitInfoRepo]
         val uriTopicRepo = inject[URILDATopicRepo]
@@ -26,7 +27,7 @@ class LDAUserStatDbUpdaterTest extends Specification with CortexTestInjector wit
           uriTopicRepo.save(URILDATopic(uriId = Id[NormalizedURI](2L), uriSeq = SequenceNumber[NormalizedURI](2L), version = ModelVersion[DenseLDA](1), numOfWords = 200, feature = Some(LDATopicFeature(Array(0.1f, 0.9f, 0f))), state = URILDATopicStates.ACTIVE))
         }
 
-        val updater = new LDAUserStatDbUpdaterImpl(uriReps, db, keepRepo, uriTopicRepo, userLDAStatsRepo, commitRepo) {
+        val updater = new LDAUserStatDbUpdaterImpl(uriReps, db, keepRepo, uriTopicRepo, userLDAStatsRepo, commitRepo, inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]) {
           override val min_num_evidence = 1
         }
 
@@ -60,7 +61,7 @@ class LDAUserStatDbUpdaterTest extends Specification with CortexTestInjector wit
         uriTopicRepo.save(URILDATopic(uriId = Id[NormalizedURI](2L), uriSeq = SequenceNumber[NormalizedURI](2L), version = ModelVersion[DenseLDA](1), numOfWords = 200, feature = Some(LDATopicFeature(Array(0.1f, 0.9f, 0f))), state = URILDATopicStates.ACTIVE))
       }
 
-      val updater = new LDAUserStatDbUpdaterImpl(uriReps, db, keepRepo, uriTopicRepo, userLDAStatsRepo, commitRepo) {
+      val updater = new LDAUserStatDbUpdaterImpl(uriReps, db, keepRepo, uriTopicRepo, userLDAStatsRepo, commitRepo, inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]) {
         override val min_num_evidence = 1
       }
 
