@@ -22,7 +22,7 @@ object RoverIngestionActor {
   def shouldDelete(uri: IndexableUri): Boolean = toBeDeletedStates.contains(uri.state)
   sealed trait RoverIngestionActorMessage
   case object StartIngestion extends RoverIngestionActorMessage
-  case class Ingest(uris: Seq[IndexableUri], done: Boolean) extends RoverIngestionActorMessage
+  case class Ingest(uris: Seq[IndexableUri], mayHaveMore: Boolean) extends RoverIngestionActorMessage
   case object CancelIngestion extends RoverIngestionActorMessage
 }
 
@@ -47,9 +47,9 @@ class RoverIngestionActor @Inject() (
             startIngestion()
           }
         case CancelIngestion => endIngestion()
-        case Ingest(updates, done) =>
+        case Ingest(updates, mayHaveMore) =>
           ingest(updates)
-          if (done) endIngestion() else startIngestion()
+          if (mayHaveMore) startIngestion() else endIngestion()
       }
     }
     case m => throw new UnsupportedActorMessage(m)
@@ -68,7 +68,7 @@ class RoverIngestionActor @Inject() (
       }
       case Success(uris) => {
         log.info(s"Fetched ${uris.length} uri updates")
-        self ! Ingest(uris, uris.isEmpty)
+        self ! Ingest(uris, mayHaveMore = uris.nonEmpty)
       }
     }
   }
