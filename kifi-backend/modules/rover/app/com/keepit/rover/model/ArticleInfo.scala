@@ -10,6 +10,7 @@ import scala.concurrent.duration.Duration
 
 object ArticleInfoStates extends States[ArticleInfo]
 
+// Warning: Do not cache - we're not using a strict ORM approach with this model (see saveSilently, update).
 case class ArticleInfo(
     id: Option[Id[ArticleInfo]] = None,
     createdAt: DateTime = currentDateTime,
