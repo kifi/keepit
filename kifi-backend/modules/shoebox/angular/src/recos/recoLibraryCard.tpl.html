@@ -12,11 +12,11 @@
           <div class="kf-rcl-owner">
             <a href="{{library.owner|profileUrl}}" kf-track-origin="recommendationsPage/curator">
               <img ng-src="{{library.owner | pic:100}}"
-                class="kf-rcl-owner-image" alt="{{library.owner.firstName}} {{library.owner.lastName}}">
+                class="kf-rcl-owner-image" alt="{{library.owner|name}}">
             </a>
             <div class="kf-rcl-owner-text">
               <div>Curator:</div>
-              <div class="kf-rcl-owner-name">{{library.owner.firstName}} {{library.owner.lastName}}</div>
+              <div class="kf-rcl-owner-name">{{library.owner|name}}</div>
             </div>
           </div>
           <div ng-switch="clippedDescription" class="kf-rcl-desc-wrap">

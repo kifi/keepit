@@ -6,7 +6,7 @@
     </div>
     <div class="kf-uph-top" itemscope itemtype="http://schema.org/Person">
       <a class="kf-uph-pic-a" href="{{profile|profileUrl}}" itemprop="url">
-        <img class="kf-uph-pic" ng-src="{{profile|pic:200}}" alt="{{profile.firstName}} {{profile.lastName}}" itemprop="image">
+        <img class="kf-uph-pic" ng-src="{{profile|pic:200}}" alt="{{profile|name}}" itemprop="image">
       </a>
 
       <div class="kf-uph-action" ng-if="!isKifiCurator" ng-switch="connectionWithUser">
@@ -52,7 +52,7 @@
         <div class="kf-uph-progress-check"></div>
       </div>
 
-      <h1 class="kf-uph-name" itemprop="name">{{profile.firstName}} {{profile.lastName}}</h1>
+      <h1 class="kf-uph-name" itemprop="name">{{profile|name}}</h1>
       <div class="kf-uph-bio">
         {{profile.biography}}
         <button class="kf-uph-bio-add" ng-click="showBiographyModal()" ng-if="viewingOwnProfile && !profile.biography">Add a Bio</button>

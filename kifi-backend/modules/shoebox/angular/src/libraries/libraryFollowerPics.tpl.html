@@ -7,7 +7,7 @@
       ng-mouseenter="showTooltip()"
       ng-mouseleave="hideTooltip()"
       ng-click="hideTooltip()"
-      alt="{{follower.firstName}} {{follower.lastName}}">
+      alt="{{follower|name}}">
   </a>
   <button class="kf-lfp-more" ng-if="moreCount" ng-click="showFollowers()">
     <span class="kf-lfp-more-text kf-{{moreCountText.length}}">{{moreCountText}}</span>

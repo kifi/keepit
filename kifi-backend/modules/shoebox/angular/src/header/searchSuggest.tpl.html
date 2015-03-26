@@ -19,7 +19,7 @@
     <div class="kf-ssg-lib-icon" ng-class="{'svg-card-lock': library.visibility === 'secret', 'svg-card-star': library.visibility === 'discoverable'}" ng-if="library.visibility !== 'published'"></div>
     <div class="kf-ssg-lib-owner-pic-wrap"><img class="kf-ssg-lib-owner-pic" ng-src="{{library.owner|pic:100}}"></div>
     <div class="kf-ssg-lib-name">{{library.name}}</div>
-    <div class="kf-ssg-lib-owner-name">{{library.owner.firstName}} {{library.owner.lastName}}</div>
+    <div class="kf-ssg-lib-owner-name">{{library.owner|name}}</div>
     <div class="kf-ssg-lib-counts">
       <span ng-pluralize count="library.keepCount" when="{'one': '1 keep', 'other': '{{library.keepCount|number}} keeps'}" ng-if="library.keepCount"></span>
       <span ng-pluralize count="library.followerCount" when="{'one': '1 follower', 'other': '{{library.followerCount|number}} followers'}" ng-if="library.followerCount"></span>
