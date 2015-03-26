@@ -58,7 +58,7 @@ class RecommendationsControllerTest extends TestKitSupport with SpecificationLik
         val url = "id1"
         val route = com.keepit.controllers.website.routes.RecommendationsController.
           updateUriRecommendationFeedback(ExternalId[NormalizedURI]("58328718-0222-47bf-9b12-d2d781cb8b0c")).url
-        route === "/site/recos/feedback?id=58328718-0222-47bf-9b12-d2d781cb8b0c"
+        route === "/m/1/recos/feedback?id=58328718-0222-47bf-9b12-d2d781cb8b0c"
 
         val input = Json.parse(
           s"""{"clicked": true}""".stripMargin)

@@ -34,8 +34,8 @@ angular.module('kifi')
 ])
 
 .directive('kfKeepCard', [
-  '$rootScope', 'installService', 'libraryService', 'modalService', 'util',
-  function ($rootScope, installService, libraryService, modalService, util) {
+  '$rootScope', 'installService', 'libraryService', 'modalService', 'util', '$analytics',
+  function ($rootScope, installService, libraryService, modalService, util, $analytics) {
     return {
       restrict: 'A',
       scope: {
@@ -51,7 +51,7 @@ angular.module('kifi')
       },
       replace: true,
       templateUrl: 'keep/keepCard.tpl.html',
-      link: function (scope, element/*, attrs*/) {
+      link: function (scope, element) {
         if (!scope.keep) {
           return;
         }
@@ -294,6 +294,9 @@ angular.module('kifi')
           });
         };
 
+        scope.trackTweet = function () {
+          $analytics.eventTrack('user_clicked_page', {type: 'library', action: 'clickedViewOriginalTweetURL'});
+        };
 
         //
         // Watches and listeners.
@@ -348,7 +351,7 @@ angular.module('kifi')
       },
       replace: false,
       templateUrl: 'keep/keepMasterButton.tpl.html',
-      link: function (scope/*, element, attrs*/) {
+      link: function (scope) {
         //
         // Internal methods.
         //

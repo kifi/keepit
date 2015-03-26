@@ -8,6 +8,12 @@ angular.module('kifi')
   };
 })
 
+.filter('name', function () {
+  return function (o) {
+    return o.firstName + ' ' + o.lastName;
+  };
+})
+
 .filter('pic', [
   'routeService',
   function (routeService) {

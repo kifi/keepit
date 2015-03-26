@@ -178,11 +178,6 @@ case class RoverCacheModule(cachePluginModules: CachePluginModule*) extends Cach
 
   @Singleton
   @Provides
-  def libraryMemberIdCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
-    new LibraryMembershipIdCache(stats, accessLog, (outerRepo, 10 days))
-
-  @Singleton
-  @Provides
   def httpProxyAllCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new RoverHttpProxyAllCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 30 days))
 

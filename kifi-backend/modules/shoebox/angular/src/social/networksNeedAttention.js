@@ -9,7 +9,7 @@ angular.module('kifi')
       replace: true,
       restrict: 'A',
       templateUrl: 'social/networksNeedAttention.tpl.html',
-      link: function (scope/*, element, attrs*/) {
+      link: function (scope) {
         scope.networksNeedAttention = function () {
           return Object.keys(socialService.expiredTokens).length > 0;
         };

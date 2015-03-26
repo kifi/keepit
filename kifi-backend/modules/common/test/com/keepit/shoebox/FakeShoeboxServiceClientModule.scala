@@ -21,7 +21,7 @@ case class FakeShoeboxServiceClientModule() extends ShoeboxServiceClientModule {
     serviceCluster: ServiceCluster,
     airbrakeNotifier: AirbrakeNotifier,
     executionContext: ExecutionContext): ShoeboxServiceClient =
-    new ShoeboxServiceClientImpl(serviceCluster, httpClient, airbrakeNotifier, shoeboxCacheProvided, null, executionContext)
+    new ShoeboxServiceClientImpl(serviceCluster, httpClient, airbrakeNotifier, shoeboxCacheProvided, executionContext)
 }
 
 case class FakeShoeboxScraperClientModule() extends ShoeboxScraperClientModule {

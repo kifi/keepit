@@ -100,7 +100,7 @@ class MobileUserSearchControllerTest extends Specification with SearchTestInject
                   "isFriend":false
                 }
               ],
-            "context":"AgAJAAcBBQ=="
+            "context":"AgAJAAcBBQ"
             }
           """)
         Json.parse(contentAsString(result)) === expected

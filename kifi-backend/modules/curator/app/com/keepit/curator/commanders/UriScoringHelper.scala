@@ -1,7 +1,7 @@
 package com.keepit.curator.commanders
 
 import com.keepit.common.db.Id
-import com.keepit.common.logging.Logging
+import com.keepit.common.logging.{ NamedStatsdTimer, Logging }
 import com.keepit.cortex.models.lda.LDATopic
 import com.keepit.curator.model.{ SeedItemWithMultiplier, CuratorKeepInfoRepo, Keepers, ScoredSeedItem, UriScores }
 import com.keepit.common.time._
@@ -32,8 +32,10 @@ class UriScoringHelper @Inject() (
   }
 
   private def getRawInterestScores(items: Seq[SeedItemWithMultiplier]): Future[Seq[RawInterestScores]] = {
+    val timer = new NamedStatsdTimer("UriScoringHelper.getRawInterestScores")
     val interestScores = cortex.batchUserURIsInterests(items.head.userId, items.map(_.uriId))
     interestScores.map { scores =>
+      timer.stopAndReport()
       scores.map { score =>
         RawInterestScores(
           overallInterestScore = score.global.map(uis => if (uis.confidence > 0.3 && uis.score > 0) uis.score else 0f).getOrElse(0f),
@@ -48,7 +50,9 @@ class UriScoringHelper @Inject() (
   // assume all items have same userId
   private def getRawSocialScores(items: Seq[SeedItemWithMultiplier], boostedKeepers: Set[Id[User]]): Future[Seq[Float]] = {
     //convert user scores seq to map, assume there is no duplicate userId from graph service
+    val timer = new NamedStatsdTimer("UriScoringHelper.getRawSocialScores")
     graph.getConnectedUserScores(items.head.userId, avoidFirstDegreeConnections = false).map { socialScores =>
+      timer.stopAndReport()
       val socialScoreMap = socialScores.map { socialScore =>
         (socialScore.userId, socialScore.score.toFloat)
       }.toMap
@@ -64,6 +68,7 @@ class UriScoringHelper @Inject() (
         })
     }.recover { //This needs to go once the graph is fixed
       case t: Throwable =>
+        timer.stopAndReport()
         log.warn("Can't get social scores from graph.")
         Seq.fill[Float](items.size)(0.0f)
     }

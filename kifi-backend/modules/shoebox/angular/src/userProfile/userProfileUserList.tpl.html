@@ -1,0 +1,9 @@
+<div>
+  <h2 class="kf-upul-title">{{listTitle}}</h2>
+  <div class="kf-upul" smart-scroll scroll-distance="'100%'" scroll-disabled="!hasMore()" scroll-next="fetchMore()">
+    <ul class="kf-upul-cards">
+      <li kf-user-profile-user="user" ng-repeat="user in users"></li>
+      <li class="kf-upul-empty" ng-if="users.length === 0">{{emptyText}}</li>
+    </ul>
+  </div>
+</div>

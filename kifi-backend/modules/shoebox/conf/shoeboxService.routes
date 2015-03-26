@@ -248,9 +248,10 @@ POST    /m/1/attribution/appsflyer              @com.keepit.controllers.mobile.M
 POST    /m/1/disconnect/:provider               @com.keepit.controllers.mobile.MobileUserController.disconnect(provider)
 
 GET     /m/2/recos/top                          @com.keepit.controllers.mobile.MobileRecommendationsController.topRecosV2(recency: Float, more: Boolean ?= false)
-GET     /m/3/recos/top                          @com.keepit.controllers.mobile.MobileRecommendationsController.topRecosV3(recency: Float, uriContext: Option[String] ?= None, libContext: Option[String] ?= None)
+GET     /m/3/recos/top                          @com.keepit.controllers.mobile.MobileRecommendationsController.topRecosV3(recency: Float, uriContext: Option[String] ?= None, libContext: Option[String] ?= None, uctx: Option[String] ?= None, lctx: Option[String] ?= None)
 GET     /m/1/recos/public                       @com.keepit.controllers.mobile.MobileRecommendationsController.topPublicRecos()
 POST    /m/1/recos/trash                        @com.keepit.controllers.mobile.MobileRecommendationsController.trash(id: ExternalId[NormalizedURI])
+POST    /m/1/recos/feedback                     @com.keepit.controllers.website.RecommendationsController.updateUriRecommendationFeedback(id: ExternalId[NormalizedURI])
 
 GET     /m/1/users/:userStr/libraries/:slug     @com.keepit.controllers.mobile.MobileLibraryController.getLibraryByPath(userStr:String, slug: String, is: Option[String] ?= None)
 POST    /m/1/libraries/add                      @com.keepit.controllers.mobile.MobileLibraryController.createLibrary()
@@ -269,6 +270,8 @@ POST    /m/1/libraries/:id/invite               @com.keepit.controllers.mobile.M
 GET     /m/1/libraries/:id/members              @com.keepit.controllers.mobile.MobileLibraryController.getLibraryMembers(id: PublicId[Library], offset: Int ?= 0, limit: Int ?= 20)
 GET     /m/1/libraries/:id/members/suggest      @com.keepit.controllers.mobile.MobileLibraryController.suggestMembers(id: PublicId[Library], q: Option[String] ?= None, n: Int ?= 5)
 GET     /m/1/libraries/:id/inviteInfo           @com.keepit.controllers.website.InviteController.getLibraryInviteInfo(id: PublicId[Library])
+POST    /m/1/libraries/recos/feedback      @com.keepit.controllers.website.LibraryRecommendationsController.updateLibraryRecommendationFeedback(id: PublicId[Library])
+
 
 
 GET     /m/1/keeps/:id                      @com.keepit.controllers.mobile.MobileKeepsController.getKeepInfo(id: ExternalId[Keep], withFullInfo: Boolean ?= false, imageWidth: Option[Int] ?= None, imageHeight: Option[Int] ?= None)
@@ -852,7 +855,6 @@ GET     /internal/shoebox/database/getSearchFriendsChanged     @com.keepit.contr
 GET     /internal/shoebox/database/getIndexableSocialConnections   @com.keepit.controllers.internal.ShoeboxDataPipeController.getIndexableSocialConnections(seqNum: SequenceNumber[SocialConnection], fetchSize: Int)
 GET     /internal/shoebox/database/getIndexableSocialUserInfos   @com.keepit.controllers.internal.ShoeboxDataPipeController.getIndexableSocialUserInfos(seqNum: SequenceNumber[SocialUserInfo], fetchSize: Int)
 GET     /internal/shoebox/database/getEmailAccountUpdates       @com.keepit.controllers.internal.ShoeboxDataPipeController.getEmailAccountUpdates(seqNum: SequenceNumber[EmailAccountUpdate], fetchSize: Int)
-GET     /internal/shoebox/database/getLibraryMembership                    @com.keepit.controllers.internal.ShoeboxDataPipeController.getLibraryMembership(id: Id[LibraryMembership])
 GET     /internal/shoebox/database/getKeepsAndTagsChanged                  @com.keepit.controllers.internal.ShoeboxDataPipeController.getKeepsAndTagsChanged(seqNum: SequenceNumber[Keep], fetchSize: Int)
 GET     /internal/shoebox/database/getLibrariesChanged                     @com.keepit.controllers.internal.ShoeboxDataPipeController.getLibrariesChanged(seqNum: SequenceNumber[Library], fetchSize: Int)
 GET     /internal/shoebox/database/getDetailedLibrariesChanged             @com.keepit.controllers.internal.ShoeboxDataPipeController.getDetailedLibrariesChanged(seqNum: SequenceNumber[Library], fetchSize: Int)

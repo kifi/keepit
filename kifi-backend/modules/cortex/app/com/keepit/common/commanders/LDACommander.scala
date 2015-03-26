@@ -148,10 +148,7 @@ class LDACommanderImpl @Inject() (
 
     // tweak
     def combineScores(keepInduced: Option[LDAUserURIInterestScore], personaInduced: Option[LDAUserURIInterestScore], userKeeps: Option[Int], personaWeight: Float): Option[LDAUserURIInterestScore] = {
-      val keepWeight = {
-        val exponent = (userKeeps.getOrElse(-1000) - 50) / 50
-        1.0 / (1 + exp(-exponent))
-      }
+      val keepWeight = 4.0*Math.tanh(userKeeps.getOrElse(0) / 25)
 
       (keepInduced, personaInduced) match {
         case (Some(kscore), Some(pscore)) =>
@@ -198,7 +195,7 @@ class LDACommanderImpl @Inject() (
             val score = scores.max
             val idx = scores.indexOf(score)
             val days = Days.daysBetween(updatedTimes(idx), currentDateTime).getDays
-            val weight = exp(-days / 1.0)
+            val weight = 1.0
             val conf = computeURIConfidence(feat.numOfWords, feat.timesFirstTopicChanged)
             (LDAUserURIInterestScore(score, conf), weight.toFloat)
           }

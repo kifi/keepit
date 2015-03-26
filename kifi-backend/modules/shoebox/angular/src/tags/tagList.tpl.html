@@ -1,21 +1,19 @@
-<div class="kf-keep-tags-new">
-  <ul class="kf-tag-list-new clearfix">
-    <li class="kf-keep-tag-new" data-id="{{tag.id}}" ng-repeat="tag in tagsToShow">
-      <div class="kf-keep-tag-link-new"><a href="{{searchTagUrl(tag.name)}}" ng-click="onTagClick()">{{tag.name}}</a></div>
-      <div class="kf-keep-tag-x-new" ng-if="!tag.readOnly" ng-click="removeTag(tag.name)">×</div>
-    </li>
-    <li class="kf-keep-tag-add-tag-wrapper" ng-if="!readOnlyMode()">
-      <span class="kf-keep-add-tag-button-new svg-add-tag-icon" ng-click="showAddTagDropdown()" ng-if="!addingTag.enabled"></span>
-      <span kf-tag-suggestions ng-if="addingTag.enabled">
-        <input focus-when="shouldGiveFocus" class="kf-keep-tag-input-new" type="text" placeholder="Tag name…" ng-model="tagFilter.name" ng-keydown="onKeydown($event)" ng-blur="hideAddTagDropdown()">
-        <div class="kf-keep-tag-opts-container" ng-show="isAddTagShown() || tagTypeAheadResults.length > 0">
-          <ul class="kf-keep-tag-opts-new">
-            <li class="kf-keep-tag-opt" ng-repeat="tag in tagTypeAheadResults" ng-class="{ current: isTagHighlighted(tag) }" ng-mousedown="addTag(tag.name)" ng-bind-html="tag.prettyHtml" ng-mouseover="highlightTag(tag)"></li>
-            <li class="kf-keep-tag-opt kf-keep-tag-opt-new kf-kc" ng-if="isAddTagShown()" ng-mousedown="addTag(null)" ng-class="{ current: isTagHighlighted(null) }" ng-mouseover="highlightTag(null)"><div class="kf-keep-tag-opt-new-label">{{newTagLabel}}</div><div class="kf-keep-tag-opt-new-text">{{tagFilter.name}}</div></li>
-          </ul>
-          <span class="kf-keep-tag-hidden"></span>
-        </div>
-      </span>
-    </li>
-  </ul>
-</div>
+<ul class="kf-keep-tags">
+  <li class="kf-keep-tag" data-id="{{tag.id}}" ng-repeat="tag in tagsToShow">
+    <a class="kf-keep-tag-a" ui-sref="^.search({q: tagQuery(tag.name), f: ''})" ng-click="onTagClick($event)">{{tag.name}}</a>
+    <div class="kf-keep-tag-x" ng-if="!tag.readOnly" ng-click="removeTag(tag.name)">×</div>
+  </li>
+  <li class="kf-keep-tag-add-tag-wrapper" ng-class="{'kf-adding': addingTag.enabled}" ng-if="!readOnlyMode()">
+    <span class="kf-keep-add-tag-button-new svg-add-tag-icon" ng-click="showAddTagDropdown()" ng-if="!addingTag.enabled"></span>
+    <span kf-tag-suggestions ng-if="addingTag.enabled">
+      <input class="kf-keep-tag-input-new" focus-when="shouldGiveFocus" type="text" placeholder="Tag name…" ng-model="tagFilter.name" ng-keydown="onKeydown($event)">
+      <div class="kf-keep-tag-opts-container" ng-show="isAddTagShown() || tagTypeAheadResults.length > 0">
+        <ul class="kf-keep-tag-opts-new">
+          <li class="kf-keep-tag-opt" ng-repeat="tag in tagTypeAheadResults" ng-class="{ current: isTagHighlighted(tag) }" ng-mousedown="addTag(tag.name)" ng-bind-html="tag.prettyHtml" ng-mouseover="highlightTag(tag)"></li>
+          <li class="kf-keep-tag-opt kf-keep-tag-opt-new kf-kc" ng-if="isAddTagShown()" ng-mousedown="addTag(null)" ng-class="{ current: isTagHighlighted(null) }" ng-mouseover="highlightTag(null)"><div class="kf-keep-tag-opt-new-label">{{newTagLabel}}</div><div class="kf-keep-tag-opt-new-text">{{tagFilter.name}}</div></li>
+        </ul>
+        <span class="kf-keep-tag-hidden"></span>
+      </div>
+    </span>
+  </li>
+</ul>

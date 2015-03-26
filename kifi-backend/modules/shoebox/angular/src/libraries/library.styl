@@ -1,33 +1,52 @@
+twoColMinWidth = 720px
 rightColWidth = 210px
+colGapWidth = 24px
 
-.kf-lib-cols
-  display: table
+.kf-lib-content
   margin: 0 auto
-  padding: 10px appSidePad 0
   min-height: 100vh  // for auto-scrolling down to search results
-  table-layout: fixed
+  max-width: appMaxWidth
+  padding: 10px appSidePad1 0
 
-.kf-lib-col
-  display: table-cell
-  vertical-align: top
-  width: appMinWidth - rightColWidth
-  max-width: appMinWidth - rightColWidth
+  @media (min-width: appSidePad2MinWidth)
+    padding-left: appSidePad2
+    padding-right: appSidePad2
 
-.kf-lib-right-col
-  display: table-cell
-  vertical-align: top
-  width: rightColWidth
-  padding: 20px 0 0
-  .kf-mobile &
-    display: block
-    width: auto
-    padding: 0
-    text-align: center
+  @media (min-width: twoColMinWidth)
+    display: table
+    table-layout: fixed
+
+.kf-lib-content-1
+  @media (min-width: twoColMinWidth)
+    display: table-cell
+    vertical-align: top
+    width: appMaxWidth - rightColWidth
+    max-width: appMaxWidth - rightColWidth
+    box-sizing: border-box
+    padding-right: colGapWidth
+
+.kf-lib-content-2
+  margin-top: 20px
+  text-align: center
+
+  @media (min-width: twoColMinWidth)
+    margin-top: 0
+    display: table-cell
+    vertical-align: top
+    width: rightColWidth
+    padding: 20px 0 0
+    text-align: initial
 
 .kf-lib-footer
   padding-bottom: 30px
   text-align: center
-  font-size: 13px
+  font-size: 15px
+  line-height: 24px
+  color: #bbb
+
+  @media (min-width: 480px)
+    font-size: 13px
+    line-height: 18px
 
 .kf-lib-footer-1
   display: inline-block
@@ -37,4 +56,7 @@ rightColWidth = 210px
 
 .kf-lib-footer-a
   color: linkBlueColor
-  margin: 0 10px
+  margin: 0 6px
+
+  @media (min-width: 480px)
+    margin: 0 10px

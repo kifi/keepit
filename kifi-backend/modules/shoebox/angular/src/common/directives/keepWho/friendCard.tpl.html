@@ -2,7 +2,7 @@
   <div class="kifi-fr-kcard-top">
     <img class="kifi-fr-kcard-pic" ng-src="{{keeper | pic:200}}">
     <div class="kifi-fr-kcard-info">
-      <div class="kifi-fr-kcard-name">{{keeper.firstName}} {{keeper.lastName}}</div>
+      <div class="kifi-fr-kcard-name">{{keeper|name}}</div>
       <div ng-hide="hideWhoInfo" class="kifi-fr-kcard-desc">Your Kifi connection</div>
     </div>
   </div>

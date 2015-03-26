@@ -2,6 +2,7 @@ package com.keepit.shoebox.cron
 
 import scala.concurrent.ExecutionContext
 import java.util.concurrent.atomic.AtomicInteger
+import scala.concurrent.{ Future, Promise }
 
 import com.google.inject.Inject
 import com.keepit.common.actor.ActorInstance
@@ -20,6 +21,10 @@ import org.joda.time.DateTime
 import scala.collection.mutable
 import scala.concurrent.duration._
 import scala.util.Random
+
+trait PushNotificationMessage
+case class GeneralActivityPushNotificationMessage(message: String) extends PushNotificationMessage
+case class LibraryPushNotificationMessage(message: String, id: Id[Library]) extends PushNotificationMessage
 
 object PushActivities
 object CreatePushActivityEntities
@@ -87,9 +92,16 @@ class ActivityPusher @Inject() (
     }
     if (canNotify) {
       getMessage(activity.userId) match {
-        case Some((message, pushMessageType, experimant)) =>
-          log.info(s"pushing activity update to ${activity.userId} of type $pushMessageType [$experimant]: $message")
-          elizaServiceClient.sendPushNotification(activity.userId, message, pushMessageType, experimant) map { deviceCount =>
+        case Some((message, experimant)) =>
+          val res: Future[Int] = message match {
+            case libMessage: LibraryPushNotificationMessage =>
+              log.info(s"pushing library activity update to ${activity.userId} [$experimant]: $message")
+              elizaServiceClient.sendLibraryPushNotification(activity.userId, libMessage.message, libMessage.id, experimant)
+            case generalMessage: GeneralActivityPushNotificationMessage =>
+              log.info(s"pushing general activity update to ${activity.userId} [$experimant]: $message")
+              elizaServiceClient.sendGeneralPushNotification(activity.userId, generalMessage.message, experimant)
+          }
+          res map { deviceCount =>
             log.info(s"push successful to $deviceCount devices")
             if (deviceCount <= 0) {
               db.readWrite { implicit s =>
@@ -115,15 +127,15 @@ class ActivityPusher @Inject() (
     }
   }
 
-  def getMessage(userId: Id[User]): Option[(String, PushNotificationCategory, PushNotificationExperiment)] = {
+  def getMessage(userId: Id[User]): Option[(PushNotificationMessage, PushNotificationExperiment)] = {
     val experiment = if (Random.nextBoolean()) PushNotificationExperiment.Experiment1 else PushNotificationExperiment.Experiment2
-    val res: Option[(String, PushNotificationCategory)] = db.readOnlyReplica { implicit s =>
+    val res: Option[PushNotificationMessage] = db.readOnlyReplica { implicit s =>
       libraryMembershipRepo.getLatestUpdatedLibraryUserFollow(userId) map { lib =>
         val message = {
-          if (experiment == PushNotificationExperiment.Experiment1) s"""Your personalized feed has been updated based on "${lib.name.abbreviate(25)}", a library you follow."""
-          else s"""A library you follow has been updated: "${lib.name.abbreviate(25)}" Check out your updated feed."""
+          if (experiment == PushNotificationExperiment.Experiment1) s"""New keeps in "${lib.name.abbreviate(25)}""""
+          else s""""${lib.name.abbreviate(25)}" library has updates"""
         }
-        message -> PushNotificationCategory.LibraryChanged
+        LibraryPushNotificationMessage(message, lib.id.get)
       } orElse {
         val personas = Random.shuffle(userPersonaRepo.getPersonasForUser(userId))
         val message = {
@@ -142,10 +154,10 @@ class ActivityPusher @Inject() (
             Some(msg)
           }
         }
-        message.map(m => m -> PushNotificationCategory.PersonaUpdate)
+        message.map(m => GeneralActivityPushNotificationMessage(m))
       }
     }
-    res.map(r => (r._1, r._2, experiment))
+    res.map(message => (message, experiment))
   }
 
   def getLastActivity(userId: Id[User]): DateTime = {

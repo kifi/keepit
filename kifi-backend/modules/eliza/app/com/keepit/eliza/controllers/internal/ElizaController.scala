@@ -5,7 +5,7 @@ import com.keepit.eliza.{ PushNotificationCategory, PushNotificationExperiment }
 import com.keepit.eliza.controllers.WebSocketRouter
 import com.keepit.common.controller.ElizaServiceController
 import com.keepit.common.logging.Logging
-import com.keepit.model.{ User }
+import com.keepit.model.{ Library, User }
 import com.keepit.common.db.{ Id }
 import com.keepit.realtime._
 
@@ -39,14 +39,25 @@ class ElizaController @Inject() (
     Ok(UserThreadStats.format.writes(elizaStatsCommander.getUserThreadStats(userId)))
   }
 
-  def sendPushNotification() = Action.async { request =>
+  def sendLibraryPushNotification() = Action.async { request =>
     val req = request.body.asJson.get.as[JsObject]
     val userId = Id[User]((req \ "userId").as[Long])
     val message = (req \ "message").as[String]
     val pushNotificationExperiment = (req \ "pushNotificationExperiment").as[PushNotificationExperiment]
-    val pushNotificationCategory = (req \ "pushNotificationCategory").as[PushNotificationCategory]
+    val libraryId = (req \ "libraryId").as[Id[Library]]
     SafeFuture {
-      val deviceCount = messagingCommander.sendPushNotification(userId, message, pushNotificationCategory, pushNotificationExperiment)
+      val deviceCount = messagingCommander.sendLibraryPushNotification(userId, message, libraryId, pushNotificationExperiment)
+      Ok(JsNumber(deviceCount))
+    }
+  }
+
+  def sendGeneralPushNotification() = Action.async { request =>
+    val req = request.body.asJson.get.as[JsObject]
+    val userId = Id[User]((req \ "userId").as[Long])
+    val message = (req \ "message").as[String]
+    val pushNotificationExperiment = (req \ "pushNotificationExperiment").as[PushNotificationExperiment]
+    SafeFuture {
+      val deviceCount = messagingCommander.sendGeneralPushNotification(userId, message, pushNotificationExperiment)
       Ok(JsNumber(deviceCount))
     }
   }

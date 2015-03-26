@@ -3,6 +3,7 @@ package com.keepit.eliza.commanders
 import com.google.inject.Inject
 
 import com.keepit.abook.{ ABookServiceClient }
+import com.keepit.common.crypto.PublicId
 import com.keepit.common.net.URI
 import com.keepit.eliza.{ PushNotificationExperiment, PushNotificationCategory }
 import com.keepit.eliza.model._
@@ -15,7 +16,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.time._
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
-import com.keepit.realtime.SimplePushNotification
+import com.keepit.realtime.{ LibraryUpdatePushNotification, SimplePushNotification }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.{ BasicUser, NonUserKinds }
 import com.keepit.common.concurrent.PimpMyFuture._
@@ -63,8 +64,13 @@ class MessagingCommander @Inject() (
     messageSearchHistoryRepo: MessageSearchHistoryRepo,
     implicit val executionContext: ExecutionContext) extends Logging {
 
-  def sendPushNotification(userId: Id[User], message: String, pushNotificationCategory: PushNotificationCategory, pushNotificationExperiment: PushNotificationExperiment): Int = {
-    val notification = SimplePushNotification(message = Some(message), unvisitedCount = getUnreadUnmutedThreadCount(userId), category = pushNotificationCategory, experiment = pushNotificationExperiment)
+  def sendLibraryPushNotification(userId: Id[User], message: String, libraryId: Id[Library], pushNotificationExperiment: PushNotificationExperiment): Int = {
+    val notification = LibraryUpdatePushNotification(message = Some(message), libraryId = libraryId, unvisitedCount = getUnreadUnmutedThreadCount(userId), category = PushNotificationCategory.LibraryChanged, experiment = pushNotificationExperiment)
+    notificationCommander.sendPushNotification(userId, notification)
+  }
+
+  def sendGeneralPushNotification(userId: Id[User], message: String, pushNotificationExperiment: PushNotificationExperiment): Int = {
+    val notification = SimplePushNotification(message = Some(message), unvisitedCount = getUnreadUnmutedThreadCount(userId), category = PushNotificationCategory.PersonaUpdate, experiment = pushNotificationExperiment)
     notificationCommander.sendPushNotification(userId, notification)
   }
 

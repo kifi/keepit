@@ -178,10 +178,5 @@ case class FakeCacheModule() extends CacheModule(HashMapMemoryCacheModule()) {
   def userActivePersonasCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new UserActivePersonasCache(stats, accessLog, (innerRepo, 24 hours), (outerRepo, 14 days))
 
-  @Singleton
-  @Provides
-  def libraryMemberIdCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
-    new LibraryMembershipIdCache(stats, accessLog, (outerRepo, 10 days))
-
 }
 

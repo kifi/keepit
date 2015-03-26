@@ -10,7 +10,7 @@ angular.module('kifi')
       scope: {
         focusWhen: '='
       },
-      link: function (scope, element /*, attrs*/ ) {
+      link: function (scope, element) {
 
         function focus() {
           element.focus();

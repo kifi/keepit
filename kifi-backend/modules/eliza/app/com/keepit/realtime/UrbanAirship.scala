@@ -1,13 +1,12 @@
 package com.keepit.realtime
 
+import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.eliza.commanders.MessagingAnalytics
 import com.keepit.eliza.{ PushNotificationExperiment, PushNotificationCategory }
 
 import scala.concurrent.duration._
-import java.util.concurrent.TimeUnit
 
 import akka.actor.Scheduler
-import com.google.common.cache.{ CacheLoader, CacheBuilder, LoadingCache }
 import com.google.inject.{ Singleton, ImplementedBy, Inject }
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
@@ -16,12 +15,11 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.strings._
 import com.keepit.common.time._
 import com.keepit.eliza.model._
-import com.keepit.model.User
+import com.keepit.model.{ Library, User }
 import org.joda.time.Days
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
 
-import scala.collection
 import scala.concurrent.{ Future }
 import scala.util.{ Try, Success, Failure }
 
@@ -36,6 +34,7 @@ sealed trait PushNotification {
 
 case class MessageThreadPushNotification(id: ExternalId[MessageThread], unvisitedCount: Int, message: Option[String], sound: Option[NotificationSound]) extends PushNotification
 case class SimplePushNotification(unvisitedCount: Int, message: Option[String], sound: Option[NotificationSound] = None, category: PushNotificationCategory, experiment: PushNotificationExperiment) extends PushNotification
+case class LibraryUpdatePushNotification(unvisitedCount: Int, message: Option[String], libraryId: Id[Library], sound: Option[NotificationSound] = None, category: PushNotificationCategory, experiment: PushNotificationExperiment) extends PushNotification
 
 case class NotificationSound(name: String) extends AnyVal
 
@@ -60,6 +59,7 @@ class UrbanAirshipImpl @Inject() (
     messagingAnalytics: MessagingAnalytics,
     db: Database,
     clock: Clock,
+    implicit val publicIdConfig: PublicIdConfiguration,
     scheduler: Scheduler) extends UrbanAirship with Logging {
 
   def registerDevice(userId: Id[User], token: String, deviceType: DeviceType, isDev: Boolean, signatureOpt: Option[String]): Device = synchronized {
@@ -139,11 +139,14 @@ class UrbanAirshipImpl @Inject() (
     activeDevices.size
   }
 
+  // see https://docs.google.com/a/kifi.com/document/d/1efEGk8Wdj2dAjWjUWvsHW5UC0p2srjIXiju8tLpuOMU/edit# for spec
   private def jsonMessageExtra(notification: PushNotification) = {
     val json = Json.obj("unreadCount" -> notification.unvisitedCount)
     notification match {
       case spn: SimplePushNotification => json
       case mtpn: MessageThreadPushNotification => json.as[JsObject] + ("id" -> JsString(mtpn.id.id))
+      case lupn: LibraryUpdatePushNotification => json.as[JsObject] ++ Json.obj("t" -> "lr", "lid" -> JsString(Library.publicId(lupn.libraryId).id))
+      case _ => throw new Exception(s"Don't recognize push notification $notification")
     }
   }
 
@@ -220,6 +223,8 @@ class UrbanAirshipImpl @Inject() (
         (Some(1 minute), "retry in five seconds")
       case 3 =>
         (None, s"stop retries")
+      case _ =>
+        throw new Exception(s"WOW, how did I get to trial #$trial for device $device notification $notification)?!?")
     }
     airbrake.notify(s"fail to send a push notification $notification for device $device, $retryText: $throwable")
     retry foreach { timeout =>
@@ -240,6 +245,8 @@ class UrbanAirshipImpl @Inject() (
         log.info(s"Sending SimplePushNotification to user ${device.userId} device [${device.token}] with: $json")
       case mtpn: MessageThreadPushNotification =>
         log.info(s"Sending MessageThreadPushNotification to user ${device.userId} device: [${device.token}] message ${mtpn.id}")
+      case lupn: LibraryUpdatePushNotification =>
+        log.info(s"Sending LibraryUpdatePushNotification to user ${device.userId} device: [${device.token}] library ${lupn.libraryId} message ${lupn.message}")
     }
 
     client.send(json, device, notification) andThen {

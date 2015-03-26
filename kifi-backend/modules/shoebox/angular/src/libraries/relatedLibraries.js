@@ -10,10 +10,11 @@ angular.module('kifi')
       replace: true,
       scope: {
         parentLibrary: '&',
-        relatedLibraries: '='
+        relatedLibraries: '=',
+        isMobile: '='
       },
       templateUrl: 'libraries/relatedLibraries.tpl.html',
-      link: function (scope/*, element, attrs*/) {
+      link: function (scope) {
         var parentLibrary = scope.parentLibrary();
         scope.join = function ($event) {
           $event.preventDefault();

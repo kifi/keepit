@@ -2,21 +2,29 @@
   white-space: nowrap
   font-size: 0
 
-.kf-lfp-pics
+.kf-lfp-pic-a
   display: inline-block
+  border-radius: 50%
+  margin-right: 6px
+
+  @media (min-width: 480px)
+    margin-right: 8px
 
 .kf-lfp-pic
   display: inline-block
-  margin-right: 8px
   border-radius: 50%
-  width: 42px
-  height: 42px
+  width: 32px
+  height: 32px
+
+  @media (min-width: 480px)
+    width: 42px
+    height: 42px
 
 .kf-lfp-more
   display: inline-block
   border-radius: 50%
-  height: 42px
-  min-width: 42px
+  height: 32px
+  min-width: 32px
   border: none
   padding: 0
   background-color: kifiBlack
@@ -25,20 +33,39 @@
   text-align: center
   cursor: pointer
 
+  @media (min-width: 480px)
+    height: 42px
+    min-width: 42px
+
 .kf-lfp-more-text
-  line-height: 42px
-  font-size: 15px
-  padding: 0 5px
+  padding: 0 4px
+  line-height: 32px
+  font-size: 12px
 
   &.kf-3
-    font-size: 13px
+    font-size: 10px
 
   &.kf-4
-    font-size: 11px
+    font-size: 9px
 
   &.kf-5
   &.kf-6
-    font-size: 10px
+    font-size: 8px
+
+  @media (min-width: 480px)
+    padding: 0 5px
+    line-height: 42px
+    font-size: 15px
+
+    &.kf-3
+      font-size: 13px
+
+    &.kf-4
+      font-size: 11px
+
+    &.kf-5
+    &.kf-6
+      font-size: 10px
 
   &::before
     content: '+\2009'

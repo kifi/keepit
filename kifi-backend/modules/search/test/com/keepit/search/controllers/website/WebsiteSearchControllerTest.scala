@@ -49,7 +49,7 @@ class WebsiteSearchControllerTest extends SpecificationLike with SearchTestInjec
         val expected = Json.parse("""
           {
             "uuid":"98765432-1234-5678-9abc-fedcba987654",
-            "context":"AgFJAN8CZHg=",
+            "context":"AgFJAN8CZHg",
             "experimentId":null,
             "mayHaveMore":true,
             "myTotal":12,
