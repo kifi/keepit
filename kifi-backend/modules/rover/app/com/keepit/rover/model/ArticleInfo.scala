@@ -4,10 +4,13 @@ import com.keepit.common.db._
 import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.rover.article.{ ArticleFetchRequest, Article, ArticleKind }
+import com.keepit.rover.manager.{ FailureRecoveryPolicy, FetchSchedulingPolicy }
 import org.joda.time.DateTime
+import scala.concurrent.duration.Duration
 
 object ArticleInfoStates extends States[ArticleInfo]
 
+// Warning: Do not cache - we're not using a strict ORM approach with this model (see saveSilently, update).
 case class ArticleInfo(
     id: Option[Id[ArticleInfo]] = None,
     createdAt: DateTime = currentDateTime,
@@ -19,13 +22,78 @@ case class ArticleInfo(
     kind: String, // todo(Léo): make this kind: ArticleKind[_ <: Article] with Scala 2.11, (with proper mapper, serialization is unchanged)
     bestVersion: Option[ArticleVersion] = None,
     latestVersion: Option[ArticleVersion] = None,
-    lastQueuedAt: Option[DateTime] = None,
+    oldestVersion: Option[ArticleVersion] = None,
     lastFetchedAt: Option[DateTime] = None,
     nextFetchAt: Option[DateTime] = None,
-    fetchInterval: Float = 24.0f) extends ModelWithState[ArticleInfo] with ModelWithSeqNumber[ArticleInfo] with ArticleKeyHolder {
+    fetchInterval: Option[Duration] = None,
+    failureCount: Int = 0,
+    failureInfo: Option[String] = None,
+    lastQueuedAt: Option[DateTime] = None) extends ModelWithState[ArticleInfo] with ModelWithSeqNumber[ArticleInfo] with ArticleKeyHolder {
   def withId(id: Id[ArticleInfo]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
+  def isActive = (state == ArticleInfoStates.ACTIVE)
+
   def getFetchRequest[A <: Article](implicit kind: ArticleKind[A]) = ArticleFetchRequest(kind, url, lastFetchedAt, getLatestKey)
+
+  def clean: ArticleInfo = copy(
+    bestVersion = None,
+    latestVersion = None,
+    oldestVersion = None,
+    lastFetchedAt = None,
+    nextFetchAt = None,
+    fetchInterval = None,
+    failureCount = 0,
+    failureInfo = None,
+    lastQueuedAt = None
+  )
+
+  private def schedulingPolicy = FetchSchedulingPolicy(articleKind)
+
+  def initializeSchedulingPolicy: ArticleInfo = copy(
+    nextFetchAt = Some(currentDateTime),
+    fetchInterval = Some(schedulingPolicy.initialInterval)
+  )
+
+  def withLatestFetchComplete: ArticleInfo = copy(
+    lastFetchedAt = Some(currentDateTime),
+    lastQueuedAt = None
+  )
+
+  def withFailure(error: Throwable)(implicit recoveryPolicy: FailureRecoveryPolicy): ArticleInfo = {
+    val updatedFailureCount = failureCount + 1
+    val updatedNextFetchAt = {
+      if (recoveryPolicy.shouldRetry(url, error, updatedFailureCount)) {
+        Some(schedulingPolicy.nextFetchAfterFailure(updatedFailureCount))
+      } else None
+    }
+    copy(
+      nextFetchAt = updatedNextFetchAt,
+      failureCount = updatedFailureCount,
+      failureInfo = Some(error.toString)
+    )
+  }
+
+  def withLatestArticle(version: ArticleVersion): ArticleInfo = {
+    val decreasedFetchInterval = fetchInterval.map(schedulingPolicy.decreaseInterval)
+    copy(
+      nextFetchAt = decreasedFetchInterval.map(schedulingPolicy.nextFetchAfterSuccess),
+      fetchInterval = decreasedFetchInterval,
+      latestVersion = Some(version),
+      oldestVersion = oldestVersion orElse Some(version),
+      failureCount = 0,
+      failureInfo = None
+    )
+  }
+
+  def withoutChange: ArticleInfo = {
+    val increasedFetchInterval = fetchInterval.map(schedulingPolicy.increaseInterval)
+    copy(
+      nextFetchAt = increasedFetchInterval.map(schedulingPolicy.nextFetchAfterSuccess),
+      fetchInterval = increasedFetchInterval,
+      failureCount = 0,
+      failureInfo = None
+    )
+  }
 }
 
 object ArticleInfo {
@@ -33,6 +101,8 @@ object ArticleInfo {
   implicit def toArticleInfoSeq(seq: SequenceNumber[BasicArticleInfo]): SequenceNumber[ArticleInfo] = seq.copy()
   implicit def fromArticleInfoState(state: State[ArticleInfo]): State[BasicArticleInfo] = state.copy()
   implicit def toArticleInfoState(state: State[BasicArticleInfo]): State[ArticleInfo] = state.copy()
+
+  // Warning: if you add fields to BasicArticleInfo, make sure ArticleInfo.seq is incremented when they change
   implicit def toBasicArticleInfo(info: ArticleInfo): BasicArticleInfo = {
     BasicArticleInfo(
       info.state == ArticleInfoStates.INACTIVE,
@@ -40,8 +110,7 @@ object ArticleInfo {
       info.uriId,
       info.kind,
       info.bestVersion,
-      info.latestVersion,
-      info.lastFetchedAt
+      info.latestVersion
     )
   }
 
@@ -58,18 +127,24 @@ object ArticleInfo {
     bestVersionMinor: Option[VersionNumber[Article]],
     latestVersionMajor: Option[VersionNumber[Article]],
     latestVersionMinor: Option[VersionNumber[Article]],
-    lastQueuedAt: Option[DateTime],
+    oldestVersionMajor: Option[VersionNumber[Article]],
+    oldestVersionMinor: Option[VersionNumber[Article]],
     lastFetchedAt: Option[DateTime],
     nextFetchAt: Option[DateTime],
-    fetchInterval: Float): ArticleInfo = {
+    fetchInterval: Option[Duration],
+    failureCount: Int,
+    failureInfo: Option[String],
+    lastQueuedAt: Option[DateTime]): ArticleInfo = {
     val bestVersion = articleVersionFromDb(bestVersionMajor, bestVersionMinor)
     val latestVersion = articleVersionFromDb(latestVersionMajor, latestVersionMinor)
-    ArticleInfo(id, createdAt, updatedAt, state, seq, uriId, url, kind, bestVersion, latestVersion, lastQueuedAt, lastFetchedAt, nextFetchAt, fetchInterval)
+    val oldestVersion = articleVersionFromDb(oldestVersionMajor, oldestVersionMinor)
+    ArticleInfo(id, createdAt, updatedAt, state, seq, uriId, url, kind, bestVersion, latestVersion, oldestVersion, lastFetchedAt, nextFetchAt, fetchInterval, failureCount, failureInfo, lastQueuedAt)
   }
 
   def unapplyToDbRow(info: ArticleInfo) = {
     val (bestVersionMajor, bestVersionMinor) = articleVersionToDb(info.bestVersion)
     val (latestVersionMajor, latestVersionMinor) = articleVersionToDb(info.latestVersion)
+    val (oldestVersionMajor, oldestVersionMinor) = articleVersionToDb(info.oldestVersion)
     Some(
       info.id,
       info.createdAt,
@@ -83,10 +158,14 @@ object ArticleInfo {
       bestVersionMinor,
       latestVersionMajor,
       latestVersionMinor,
-      info.lastQueuedAt,
+      oldestVersionMajor,
+      oldestVersionMinor,
       info.lastFetchedAt,
       info.nextFetchAt,
-      info.fetchInterval
+      info.fetchInterval,
+      info.failureCount,
+      info.failureInfo,
+      info.lastQueuedAt
     )
   }
 
@@ -100,52 +179,3 @@ object ArticleInfo {
   private def articleVersionToDb(version: Option[ArticleVersion]) = (version.map(_.major), version.map(_.minor))
 }
 
-import com.google.inject.{ Singleton, ImplementedBy }
-import com.google.inject.Inject
-import com.keepit.common.time.Clock
-import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.logging.Logging
-import com.keepit.common.db.Id
-import com.keepit.common.db.slick._
-import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
-import org.joda.time.DateTime
-
-@ImplementedBy(classOf[ArticleInfoRepoImpl])
-trait ArticleInfoRepo extends Repo[ArticleInfo] with SeqNumberFunction[ArticleInfo]
-
-@Singleton
-class ArticleInfoRepoImpl @Inject() (
-  val db: DataBaseComponent,
-  val clock: Clock,
-  airbrake: AirbrakeNotifier)
-    extends DbRepo[ArticleInfo] with ArticleInfoRepo with SeqNumberDbFunction[ArticleInfo] with Logging {
-
-  import db.Driver.simple._
-
-  type RepoImpl = ArticleInfoTable
-  class ArticleInfoTable(tag: Tag) extends RepoTable[ArticleInfo](db, tag, "article_info") with SeqNumberColumn[ArticleInfo] {
-    def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)
-    def url = column[String]("url", O.NotNull)
-    def kind = column[String]("kind", O.NotNull)
-    def bestVersionMajor = column[VersionNumber[Article]]("best_version_major", O.Nullable)
-    def bestVersionMinor = column[VersionNumber[Article]]("best_version_minor", O.Nullable)
-    def latestVersionMajor = column[VersionNumber[Article]]("latest_version_major", O.Nullable)
-    def latestVersionMinor = column[VersionNumber[Article]]("latest_version_minor", O.Nullable)
-    def lastQueuedAt = column[DateTime]("last_queued_at", O.Nullable)
-    def lastFetchedAt = column[DateTime]("last_fetched_at", O.Nullable)
-    def nextFetchAt = column[DateTime]("next_fetch_at", O.Nullable)
-    def fetchInterval = column[Float]("fetch_interval", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, state, seq, uriId, url, kind, bestVersionMajor.?, bestVersionMinor.?, latestVersionMajor.?, latestVersionMinor.?, lastQueuedAt.?, lastFetchedAt.?, nextFetchAt.?, fetchInterval) <> ((ArticleInfo.applyFromDbRow _).tupled, ArticleInfo.unapplyToDbRow _)
-  }
-
-  def table(tag: Tag) = new ArticleInfoTable(tag)
-  initTable()
-
-  override def deleteCache(model: ArticleInfo)(implicit session: RSession): Unit = {}
-
-  override def invalidateCache(model: ArticleInfo)(implicit session: RSession): Unit = {}
-
-  override def save(model: ArticleInfo)(implicit session: RWSession): ArticleInfo = {
-    super.save(model.copy(seq = deferredSeqNum()))
-  }
-}

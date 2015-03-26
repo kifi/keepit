@@ -3,6 +3,7 @@ package com.keepit.social
 import java.io.File
 
 import com.google.inject.Inject
+import com.keepit.common.concurrent.WatchableExecutionContext
 import com.keepit.common.core._
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -23,8 +24,11 @@ class FakeTwitterSocialGraph @Inject() (
     airbrake: AirbrakeNotifier,
     db: Database,
     clock: Clock,
+    executionContext: WatchableExecutionContext,
     oauth1Config: OAuth1Configuration,
     userValueRepo: UserValueRepo,
+    twitterSyncStateRepo: TwitterSyncStateRepo,
+    libraryMembershipRepo: LibraryMembershipRepo,
     socialRepo: SocialUserInfoRepo) extends TwitterSocialGraph with TwitterGraphTestHelper {
 
   val twtrOAuthProvider = new TwitterOAuthProviderImpl(airbrake, oauth1Config) {
@@ -33,7 +37,7 @@ class FakeTwitterSocialGraph @Inject() (
     }
   }
 
-  val twtrGraph: TwitterSocialGraphImpl = new TwitterSocialGraphImpl(airbrake, db, clock, oauth1Config, twtrOAuthProvider, userValueRepo, socialRepo) {
+  val twtrGraph: TwitterSocialGraphImpl = new TwitterSocialGraphImpl(airbrake, db, clock, oauth1Config, twtrOAuthProvider, userValueRepo, twitterSyncStateRepo, libraryMembershipRepo, socialRepo, executionContext) {
     override protected def lookupUsers(socialUserInfo: SocialUserInfo, accessToken: OAuth1TokenInfo, mutualFollows: Set[Long]): Future[JsValue] = Future.successful {
       socialUserInfo.socialId.id.toLong match {
         case tweetfortytwoInfo.id =>

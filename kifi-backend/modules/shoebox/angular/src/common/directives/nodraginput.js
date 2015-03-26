@@ -6,7 +6,7 @@ angular.module('nodraginput', [])
   function () {
     return {
       restrict: 'A',
-      link: function (scope, element /*, attrs */ ) {
+      link: function (scope, element) {
 
         function disableDragEffect(event) {
           if (event.dataTransfer) {

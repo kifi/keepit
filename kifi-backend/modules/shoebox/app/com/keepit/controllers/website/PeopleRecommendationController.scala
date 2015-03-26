@@ -1,13 +1,13 @@
 package com.keepit.controllers.website
 
-import com.keepit.commanders.{ UserCommander, InviteCommander, UserConnectionsCommander }
+import com.keepit.commanders.{ LibraryCommander, UserCommander, InviteCommander, UserConnectionsCommander }
 import com.keepit.common.controller.{ UserActions, UserActionsHelper, ShoeboxServiceController }
 import com.google.inject.Inject
 import com.keepit.abook.ABookServiceClient
 import com.keepit.model._
 import play.api.libs.json.{ Json, JsNumber, JsArray }
 import com.keepit.social.{ SocialNetworks, SocialNetworkType, BasicUser }
-import com.keepit.common.db.ExternalId
+import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.db.slick.Database
 import com.keepit.abook.model.InviteRecommendation
@@ -23,13 +23,14 @@ class PeopleRecommendationController @Inject() (
     db: Database,
     peopleRecoCommander: UserCommander,
     socialUserRepo: SocialUserInfoRepo,
-    inviteCommander: InviteCommander) extends UserActions with ShoeboxServiceController {
+    inviteCommander: InviteCommander,
+    val libCommander: LibraryCommander) extends UserActions with ShoeboxServiceController with UserLibraryCountSortingHelper {
 
   def getFriendRecommendations(offset: Int, limit: Int) = UserAction.async { request =>
     peopleRecoCommander.getFriendRecommendations(request.userId, offset, limit).map {
       case None => Ok(Json.obj("users" -> JsArray()))
       case Some(recoData) => {
-        val recommendedUsers = recoData.recommendedUsers
+        val recommendedUsers = sortUserByLibraryCount(recoData.recommendedUsers)
         val basicUsers = recoData.basicUsers
         val mutualFriends = recoData.mutualFriends
         val mutualFriendConnectionCounts = recoData.mutualFriendConnectionCounts
@@ -76,6 +77,21 @@ class PeopleRecommendationController @Inject() (
     }
     abookServiceClient.hideInviteRecommendation(request.userId, network, irrelevantFriendId).map { _ =>
       Ok(Json.obj("hidden" -> true))
+    }
+  }
+}
+
+trait UserLibraryCountSortingHelper {
+  val libCommander: LibraryCommander
+
+  protected def sortUserByLibraryCount(users: Seq[Id[User]]): Seq[Id[User]] = {
+    val libCnts = libCommander.getOwnerLibraryCounts(users.toSet)
+    val gpSize = 3
+    if (libCnts.values.forall(_ == 0)) {
+      users
+    } else {
+      // within each group, sort by library count (desc)
+      users.sliding(gpSize, gpSize).toArray.map { subUsers => subUsers.toArray.sortBy(u => -1 * libCnts.getOrElse(u, 0)) }.flatten.toSeq
     }
   }
 }

@@ -12,11 +12,11 @@
           <div class="kf-rcl-owner">
             <a href="{{library.owner|profileUrl}}" kf-track-origin="recommendationsPage/curator">
               <img ng-src="{{library.owner | pic:100}}"
-                class="kf-rcl-owner-image" alt="{{library.owner.firstName}} {{library.owner.lastName}}">
+                class="kf-rcl-owner-image" alt="{{library.owner|name}}">
             </a>
             <div class="kf-rcl-owner-text">
               <div>Curator:</div>
-              <div class="kf-rcl-owner-name">{{library.owner.firstName}} {{library.owner.lastName}}</div>
+              <div class="kf-rcl-owner-name">{{library.owner|name}}</div>
             </div>
           </div>
           <div ng-switch="clippedDescription" class="kf-rcl-desc-wrap">
@@ -37,8 +37,8 @@
                 <span class="kf-rcl-stat-val">{{Math.max(library.numFollowers, library.followers.length) | number}}</span>
               </a>
             </div>
-            <div kf-library-follower-pics num-followers="library.numFollowers" followers="library.followers"
-              show-followers="showFollowers()" current-page-origin="recommendationsPage"></div>
+            <div class="kf-rcl-followers" kf-library-follower-pics="library.followers" follower-widths="[[0,32,6],[480,42,8]]" num-followers="library.numFollowers"
+              show-followers="showFollowers()" tooltips="yes" current-page-origin="recommendationsPage"></div>
           </div>
         </div>
       </div>
@@ -48,7 +48,7 @@
           <button class="kf-button kf-rcl-unfollow-btn" ng-if="alreadyFollowingLibrary()" ng-click="unfollowLibrary()"></button>
           <button class="kf-button kf-rcl-follow-btn" ng-if="!alreadyFollowingLibrary()" ng-click="followLibrary()">Follow Library</button>
         </div>
-        <a class="kf-button kf-button-text-optional" ng-focus="preloadTwitter()" ng-mouseenter="preloadTwitter()" ng-click="shareTwitter()" ng-href="https://twitter.com/intent/tweet?original_referer={{library.shareUrl}}&text={{library.shareText}}&tw_p=tweetbutton&url={{library.shareTwitterUrl}}">
+        <a class="kf-button kf-button-text-optional" ng-focus="preloadTwitter()" ng-mouseenter="preloadTwitter()" ng-click="shareTwitter($event)" href="https://twitter.com/intent/tweet" target="_blank">
           <span class="kf-button-icon svg-twitter"></span> Tweet
         </a>
         <button class="kf-button kf-button-text-optional" ng-focus="preloadFB()" ng-mouseenter="preloadFB()" ng-click="shareFB()">

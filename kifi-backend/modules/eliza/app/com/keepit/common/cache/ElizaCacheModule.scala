@@ -180,11 +180,6 @@ case class ElizaCacheModule(cachePluginModules: CachePluginModule*) extends Cach
   def userActivePersonasCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new UserActivePersonasCache(stats, accessLog, (innerRepo, 5 minutes), (outerRepo, 14 days))
 
-  @Singleton
-  @Provides
-  def libraryMemberIdCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
-    new LibraryMembershipIdCache(stats, accessLog, (outerRepo, 10 days))
-
   @Provides @Singleton
   def urlSignatureCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new UrlSignatureCache(stats, accessLog, (innerRepo, 5 minutes), (outerRepo, 24 hours))

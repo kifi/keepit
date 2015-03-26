@@ -10,7 +10,7 @@ angular.module('kifi')
       replace: true,
       restrict: 'A',
       templateUrl: 'social/connectNetworks.tpl.html',
-      link: function (scope/*, element, attrs*/) {
+      link: function (scope) {
         scope.facebook = socialService.facebook;
         scope.linkedin = socialService.linkedin;
         scope.gmail = socialService.gmail;

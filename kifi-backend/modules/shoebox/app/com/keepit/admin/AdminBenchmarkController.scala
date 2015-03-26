@@ -33,7 +33,7 @@ class AdminBenchmarkController @Inject() (
     val internalPing = pingSearchProcess()
     for {
       searchBenchmark <- searchServiceClient.benchmarks()
-      shoeboxBenchmark <- future { benchmarkRunner.runBenchmark() }
+      shoeboxBenchmark <- Future { benchmarkRunner.runBenchmark() }
     } yield Ok(html.admin.benchmark(shoeboxBenchmark, searchBenchmark, internalPing))
   }
 

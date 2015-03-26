@@ -49,17 +49,17 @@ class SocialUserInfoRepoImpl @Inject() (
 
   type RepoImpl = SocialUserInfoTable
   class SocialUserInfoTable(tag: Tag) extends RepoTable[SocialUserInfo](db, tag, "social_user_info") with SeqNumberColumn[SocialUserInfo] {
-    def userId = column[Id[User]]("user_id", O.Nullable)
+    def userId = column[Option[Id[User]]]("user_id", O.Nullable)
     def fullName = column[String]("full_name", O.NotNull)
     def socialId = column[SocialId]("social_id", O.NotNull)
-    def socialHash = column[Long]("social_hash", O.Nullable)
+    def socialHash = column[Option[Long]]("social_hash", O.Nullable)
     def networkType = column[SocialNetworkType]("network_type", O.NotNull)
-    def credentials = column[SocialUser]("credentials", O.Nullable)
-    def lastGraphRefresh = column[DateTime]("last_graph_refresh", O.Nullable)
-    def pictureUrl = column[String]("picture_url", O.Nullable)
-    def profileUrl = column[String]("profile_url", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, userId.?, fullName, pictureUrl.?, profileUrl.?, state, socialId,
-      networkType, credentials.?, lastGraphRefresh.?, seq, socialHash.?) <> ((applyFromDbRow _).tupled, unapplyToDbRow _)
+    def credentials = column[Option[SocialUser]]("credentials", O.Nullable)
+    def lastGraphRefresh = column[Option[DateTime]]("last_graph_refresh", O.Nullable)
+    def pictureUrl = column[Option[String]]("picture_url", O.Nullable)
+    def profileUrl = column[Option[String]]("profile_url", O.Nullable)
+    def * = (id.?, createdAt, updatedAt, userId, fullName, pictureUrl, profileUrl, state, socialId,
+      networkType, credentials, lastGraphRefresh, seq, socialHash) <> ((applyFromDbRow _).tupled, unapplyToDbRow _)
   }
 
   private def applyFromDbRow(id: Option[Id[SocialUserInfo]], createdAt: DateTime, updatedAt: DateTime,
@@ -141,7 +141,7 @@ class SocialUserInfoRepoImpl @Inject() (
   def get(id: SocialId, networkType: SocialNetworkType)(implicit session: RSession): SocialUserInfo = try {
     networkCache.getOrElse(SocialUserInfoNetworkKey(networkType, id)) {
       val hashed = socialIdToSocialHash(id)
-      (for (f <- rows if (f.socialHash === hashed || f.socialHash.isNull) && f.socialId === id && f.networkType === networkType && f.state =!= SocialUserInfoStates.INACTIVE) yield f).first
+      (for (f <- rows if (f.socialHash === hashed || f.socialHash.isEmpty) && f.socialId === id && f.networkType === networkType && f.state =!= SocialUserInfoStates.INACTIVE) yield f).first
     }
   } catch {
     case e: Throwable => throw new Exception(s"Can't get social user info for social id [$id] on network [$networkType]", e)
@@ -149,7 +149,7 @@ class SocialUserInfoRepoImpl @Inject() (
 
   def getAllUsersToRefresh()(implicit session: RSession): Seq[SocialUserInfo] = {
     (for (
-      f <- rows if f.userId.isNotNull && f.credentials.isNotNull
+      f <- rows if f.userId.isDefined && f.credentials.isDefined
         && f.networkType.inSet(SocialNetworks.REFRESHING) && f.state.inSet(REFRESHING_STATES)
     ) yield f).list
   }
@@ -157,7 +157,7 @@ class SocialUserInfoRepoImpl @Inject() (
   def getUnprocessed()(implicit session: RSession): Seq[SocialUserInfo] = {
     (for (
       f <- rows if f.state.inSet(UNPROCESSED_STATES) &&
-        f.userId.isNotNull && f.credentials.isNotNull &&
+        f.userId.isDefined && f.credentials.isDefined &&
         f.networkType.inSet(SocialNetworks.REFRESHING) &&
         f.createdAt < clock.now.minusMinutes(15)
     ) yield f).list
@@ -165,22 +165,22 @@ class SocialUserInfoRepoImpl @Inject() (
 
   def getNeedToBeRefreshed()(implicit session: RSession): Seq[SocialUserInfo] = {
     (for (
-      f <- rows if f.userId.isNotNull && f.credentials.isNotNull
+      f <- rows if f.userId.isDefined && f.credentials.isDefined
         && f.networkType.inSet(SocialNetworks.REFRESHING) && f.state.inSet(REFRESHING_STATES)
-        && (f.lastGraphRefresh.isNull || f.lastGraphRefresh < clock.now.minusDays(REFRESH_FREQUENCY))
+        && (f.lastGraphRefresh.isEmpty || f.lastGraphRefresh < clock.now.minusDays(REFRESH_FREQUENCY))
     ) yield f).list
   }
 
   def getOpt(id: SocialId, networkType: SocialNetworkType)(implicit session: RSession): Option[SocialUserInfo] =
     networkCache.getOrElseOpt(SocialUserInfoNetworkKey(networkType, id)) {
       val hashed = socialIdToSocialHash(id)
-      (for (f <- rows if (f.socialHash === hashed || f.socialHash.isNull) && f.socialId === id && f.networkType === networkType) yield f).firstOption
+      (for (f <- rows if (f.socialHash === hashed || f.socialHash.isEmpty) && f.socialId === id && f.networkType === networkType) yield f).firstOption
     }
 
   def getSocialUserOpt(id: SocialId, networkType: SocialNetworkType)(implicit session: RSession): Option[SocialUser] =
     socialUserNetworkCache.getOrElseOpt(SocialUserNetworkKey(networkType, id)) {
       val hashed = socialIdToSocialHash(id)
-      (for (f <- rows if (f.socialHash === hashed || f.socialHash.isNull) && f.socialId === id && f.networkType === networkType) yield f).firstOption.map(_.credentials).flatten
+      (for (f <- rows if (f.socialHash === hashed || f.socialHash.isEmpty) && f.socialId === id && f.networkType === networkType) yield f).firstOption.map(_.credentials).flatten
     }
 
   def getSocialUserBasicInfos(ids: Seq[Id[SocialUserInfo]])(implicit session: RSession): Map[Id[SocialUserInfo], SocialUserBasicInfo] = {

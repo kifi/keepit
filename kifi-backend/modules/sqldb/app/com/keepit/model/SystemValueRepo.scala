@@ -72,7 +72,7 @@ class SystemValueRepoImpl @Inject() (
   }
 
   def getDbConnectionStats()(implicit session: RSession): Map[String, Int] = {
-    import StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     sql"SELECT LEFT(host, (LOCATE(':', host) -1)) hostname, count(host) AS connections FROM information_schema.processlist GROUP BY hostname order by connections;".as[(String, Int)].list.toMap
   }
 

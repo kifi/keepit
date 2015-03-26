@@ -7,7 +7,7 @@ import com.keepit.common.time.Clock
 import org.joda.time.format.DateTimeFormat
 import org.joda.time.DateTime
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import scala.concurrent.future
+import scala.concurrent.{ Future, future }
 import com.keepit.common.concurrent.ExecutionContext
 
 sealed abstract class AccessLogEventType(val name: String, val ignore: Boolean = false)
@@ -137,7 +137,7 @@ class AccessLog @Inject() (clock: Clock) {
         case Access.CACHE =>
         //todo(eishay) create in memory stats and reporting since we kill the log
         case _ =>
-          future {
+          Future {
             accessLog.info(format(e))
           }(ExecutionContext.singleThread)
       }

@@ -7,6 +7,7 @@ import play.api.Mode._
 import play.api._
 import com.keepit.eliza.mail.{ MailMessageReceiverPlugin, ElizaEmailNotifierPlugin }
 import com.keepit.eliza.commanders.EmailMessageProcessingCommander
+import net.codingwell.scalaguice.InjectorExtensions._
 
 object ElizaGlobal extends FortyTwoGlobal(Prod) with ElizaServices {
   val module = ElizaProdModule()

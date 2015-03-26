@@ -14,7 +14,7 @@ angular.module('kifi')
       restrict: 'A',
       transclude: true,
       templateUrl: 'common/directives/alertBanner/alertBanner.tpl.html',
-      link: function (/*scope, element, attrs*/) {
+      link: function () {
       }
     };
   }

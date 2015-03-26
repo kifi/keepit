@@ -1,16 +1,16 @@
 <div class="kf-loh" ng-controller="LoggedOutHeaderCtrl">
-  <div class="kf-loh-inner kf-width-bounded" ng-class="{'kf-lit': search.focused || search.text}">
+  <div class="kf-loh-inner" ng-class="{'kf-lit': search.focused || search.text}">
     <div class="kf-loh-left">
       <a class="kf-loh-logo svg-kifi-clover-dark-text" href="/" target="_self" ng-click="clickLogo()"></a>
       <span class="kf-loh-tagline">Connecting people<br>with knowledge</span>
     </div>
-    <div class="kf-loh-center" ng-if="library && !isMobile">
+    <div class="kf-loh-center" ng-if="library">
       <label class="kf-loh-search">
         <span class="kf-loh-search-left" style="background-color:{{library.color}}">
           <span class="kf-loh-search-icon svg-search-icon-gray"></span>
           <span class="kf-loh-search-lib-icon svg-search-icon-white"></span>
           <span class="kf-loh-search-lib">
-            <a class="kf-loh-search-lib-owner-img" style="background-image:url({{library.owner | pic:100}})" href="{{library.owner|profileUrl}}" title="{{library.owner.firstName}} {{library.owner.lastName}}"></a>
+            <a class="kf-loh-search-lib-owner-img" style="background-image:url({{library.owner | pic:100}})" href="{{library.owner|profileUrl}}" title="{{library.owner|name}}"></a>
             {{library.name}}
           </span>
         </span>
@@ -25,7 +25,7 @@
     <div class="kf-loh-right">
       <div class="kf-loh-links">
         <a class="kf-loh-link" ng-click="join($event)" href="/signup" target="_self">Join Kifi</a>
-        <span class="kf-loh-dot">•</span>
+        <span class="kf-loh-dot">&middot;</span>
         <a class="kf-loh-link" ng-click="login($event)" href="/login" target="_self" rel="nofollow">Log in</a>
       </div>
     </div>

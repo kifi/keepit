@@ -1,23 +1,56 @@
 .kf-lh-wrapper
   background: #fff
 
+.kf-lh
+  max-width: appMaxWidth
+  box-sizing: border-box
+  margin: 0 auto
+  padding: 0 appSidePad1
+
+  @media (min-width: appSidePad2MinWidth)
+    padding: 0 appSidePad2
+
 lh-cover-image-dur = .6s
 
 .kf-lh-color
-  height: 3px
+  height: 1px
+
+  @media (min-width: 480px)
+    height: 2px
+
+  @media (min-width: 720px)
+    height: 3px
 
   .kf-loaded &
     transition: height
     transition-duration: lh-cover-image-dur
 
   &.kf-above-image
-    height: 6px
+    height: 3px
+
+    @media (min-width: 480px)
+      height: 4px
+
+    @media (min-width: 560px)
+      height: 5px
+
+    @media (min-width: 720px)
+      height: 6px
 
 .kf-lh-cover-image
-  height: 210px
+  height: 120px
   background-color: #eee
   background-size: cover
   position: relative
+
+  @media (min-width: 480px)
+    height: 150px
+
+  @media (min-width: 560px)
+    height: 180px
+
+  @media (min-width: 720px)
+    height: 210px
 
   .kf-loaded &.ng-enter
   .kf-loaded &.ng-leave
@@ -328,17 +361,30 @@ invite-banner-orange = #ff7c3c
     color: #fff
 
 .kf-lh-name
-  padding-top: 28px
-  padding-bottom: 19px
-  font: bold 42px/1.23em Merriweather, Lato, Helvetica, Arial, sans-serif
+  padding: 20px 0 12px
+  font: bold 22px/1.23em Merriweather, Lato, Helvetica, Arial, sans-serif
   text-align: center
   word-break: break-word
 
+  @media (min-width: 480px)
+    padding: 23px 0 14px
+    font-size: 28px
+
+  @media (min-width: 560px)
+    padding: 26px 0 17px
+    font-size: 36px
+
+  @media (min-width: 720px)
+    padding: 28px 0 19px
+    font-size: 42px
+
 .kf-lh-info
   margin-top: 16px
-  padding-top: 5px
   color: kifiBlack
   vertical-align: top
+
+  @media (min-width: 480px)
+    padding-top: 5px
 
 .kf-lh-private-wrap
   position: absolute
@@ -360,104 +406,226 @@ invite-banner-orange = #ff7c3c
 
 .kf-lh-owner
   position: relative
-  padding-bottom: 10px
+  padding-bottom: 2px
+  text-align: center
+
+  @media (min-width: 480px)
+    padding-bottom: 10px
+    text-align: initial
+
+.kf-lh-owner-image-a
+  display: inline-block
+
+  @media (min-width: 480px)
+    margin-right: 10px
 
 .kf-lh-owner-image
   display: inline-block
-  margin-right: 10px
+  width: 64px
+  height: 64px
   border-radius: 50%
-  width: 42px
-  height: 42px
+
+  @media (min-width: 480px)
+    width: 42px
+    height: 42px
 
 .kf-lh-owner-text
-  display: inline-block
-  font-size: 14px
-  line-height: 1.3em
-  vertical-align: middle
+  margin-top: 10px
+  line-height: 14px
+  font-size: 12px
+
+  @media (min-width: 480px)
+    margin-top: 0
+    display: inline-block
+    vertical-align: middle
+    line-height: 18px
+    font-size: 14px
 
 .kf-lh-owner-name
+.kf-lh-twitter-screenname
   color: #939393
+
+.kf-lh-twitter
+  display: inline-block
+  margin-left: 15px
+
+  @media (max-width: 480px)
+    margin-left: 0px
+
+  .kf-lh-twitter-text
+    display: inline-block
+    vertical-align: middle
+    margin-left: 8px
+
+    @media (max-width: 480px)
+      margin-top: -10px
+      margin-left: 0px
+      font-size: 12px
+
+.kf-lh-twitter-img
+  display: inline-block
+  background-color: #ededed
+  border-radius: 50%
+  height: 42px
+  width: 42px
+  vertical-align: -17px
+
+  :hover>&
+    background-color: #e0e0e0
+
+  @media (max-width: 480px)
+    display: none
+
+.kf-lh-twitter-logo
+  position: relative
+  top: 50%
+  left: 50%
+  transform: translate(-50%, -50%)
+  width: 20px
+  height: 18px
+  background-size: cover
 
 .kf-lh-desc-wrap
   padding-bottom: 5px
 
-  .kf-lh-desc-more
-    font-size: 11px
+.kf-lh-desc-more
+  font-size: 11px
 
 .kf-lh-desc
-  line-height: 23px
+  margin: 1em 0
+  line-height: 1.42
+  font-size: 12px
+
+  @media (min-width: 480px)
+    font-size: 13px
+
+  @media (min-width: 560px)
+    font-size: 14px
+
+  @media (min-width: 720px)
+    font-size: 16px
+
+  &>p
+    margin: .5em 0
 
 .kf-lh-stats-line
-  display: table
-  width: 100%
-  height: 72px
-  border-top: 1px solid #dadae2
+  box-shadow: 0 -.5px #dadae2
+  text-align: center
+
+  @media (min-width: 480px)
+    box-shadow: 0 -1px #dadae2
+    display: table
+    width: 100%
+    height: 72px
+    text-align: initial
 
 .kf-lh-stats
-  display: table-cell
-  vertical-align: top
-  padding-top: 15px
-  width: 1%
+  padding-top: 10px
   white-space: nowrap
+
+  @media (min-width: 480px)
+    display: table-cell
+    padding-top: 15px
+    vertical-align: top
+    width: 1%
 
 .kf-lh-stat
   display: inline-block
-  padding: 0 20px 0 5px
-  font-size: 12px
+  padding: 0 10px
+  font-size: 10px
+
+  @media (min-width: 480px)
+    padding: 0 20px 0 5px
+    font-size: 12px
 
 a.kf-lh-stat
   color: inherit
   font-smoothing: inherit
 
-  &:hover
-    .kf-lh-stat-val
-      text-decoration: underline
-
 .kf-lh-stat-name
-.kf-lh-stat-val
   display: block
-
-.kf-lh-stat-name
   color: textDarkGrey
   text-transform: uppercase
 
 .kf-lh-stat-val
+  display: block
   padding-top: 3px
-  font-size: 16px
+  font-size: 15px
   font-weight: bold
   text-align: center
 
-.kf-lh-stats-line>.kf-lfp
-  display: table-cell
-  width: 99%
-  vertical-align: middle
+  @media (min-width: 480px)
+    font-size: 16px
+
+  :hover>&
+    text-decoration: underline
+
+.kf-lh-followers
+  padding: 10px 0
+
+  @media (min-width: 480px)
+    display: table-cell
+    width: 99%
+    padding: 15px 0
+
+    &>.kf-lfp
+      position: absolute
 
 .kf-lh-buttons
-  border-top: 2px solid #f5f5f5
-  padding: 15px 0
-  line-height: 37px
+  border-top: 1px solid #f5f5f5
+  padding: 12px 0
+  line-height: 26px
   font-size: 0
 
-  .kf-button:not(:last-child):not(.library-share-contact-button)
-    margin-right: 15px
+  @media (min-width: 480px)
+    border-top-width: 2px
+    padding: 15px 0
+    line-height: 37px
 
-  .kf-logged-out & .kf-lh-share-external
-    background: #5b6273
-    border-color: #5b6273
-    color: #fff
-    font-smoothing: antialiased
+  .kf-button
+    &:not(:last-child):not(.library-share-contact-button)
+      margin-right: 10px
 
-  .kf-logged-in & .svg-twitter-white
-  .kf-logged-in & .svg-facebook-white
-  .kf-logged-out & .svg-twitter
-  .kf-logged-out & .svg-facebook
-    display: none
+      @media (min-width: 480px)
+        margin-right: 15px
+
+  .kf-button-text-optional
+    @media (max-width: (480px - 1px))
+      font-size: 0
+
+      .kf-button-icon
+        margin: 0
 
   a:active
     color: #92add3
 
   .kf-library-share-search
     vertical-align: top
+
+.kf-lh-share-external
+  .kf-logged-out &
+    background: #5b6273
+    border-color: #5b6273
+    color: #fff
+    font-smoothing: antialiased
+
+  .kf-logged-in &>.svg-twitter-white
+  .kf-logged-in &>.svg-facebook-white
+  .kf-logged-out &>.svg-twitter
+  .kf-logged-out &>.svg-facebook
+    display: none
+
+  @media (max-width: (480px - 1px))
+    .kf-button-icon
+      width: 16px
+
+.kf-lh-buttons .library-share-button
+.kf-lh-manage-btn
+  @media (max-width: 640px)
+    font-size: 0
+
+    .kf-button-icon
+      margin: 0
 
 .kf-lh-follow-btn-wrap
   display: inline-block
@@ -473,12 +641,28 @@ a.kf-lh-stat
     top: 14px
     right: 0
 
-follow-unfollow-width = 112px
+    @media (max-height: appHeaderHeight1MaxDim) and (max-width: appHeaderHeight1MaxDim)
+      top: 10px
+
+.kf-lh-buttons .kf-button
+.kf-lh-follow-btn
+.kf-lh-unfollow-btn
+  @media (max-width: (480px - 1px))
+    height: 26px
+    line-height: 26px
+    border-radius: 3px
+    padding: 0 10px
+
+.kf-lh-follow-btn
+.kf-lh-unfollow-btn
+  width: 92px
+
+  @media (max-width: (480px - 1px))
+    width: 84px
+    font-size: 11px
 
 .kf-lh-follow-btn
   border-color: transparent
-  width: follow-unfollow-width
-  padding: 0
   background: #008aee
   color: #fff
   position: relative  // to stack in front of its hover callout
@@ -489,8 +673,6 @@ follow-unfollow-width = 112px
 
 .kf-lh-unfollow-btn
   border-color: #20a1f1
-  width: follow-unfollow-width
-  padding: 0
   background: #fff
   color: #20a1f1
 

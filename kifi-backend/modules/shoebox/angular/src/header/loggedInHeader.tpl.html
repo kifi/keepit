@@ -1,5 +1,5 @@
 <div class="kf-lih" ng-controller="LoggedInHeaderCtrl">
-  <div class="kf-lih-inner kf-width-bounded">
+  <div class="kf-lih-inner">
     <div class="kf-lih-left">
       <a class="kf-lih-logo svg-kifi-clover-white-text" ui-sref="home"></a>
       <div class="kifi-guide-target-1"></div><!-- TODO: remove all kifi-guide-target-# after all extension users at 3.3.50 -->
@@ -9,7 +9,7 @@
         <span class="kf-lih-search-left">
           <span class="kf-lih-search-icon svg-search-icon-gray"></span>
           <span class="kf-lih-search-icon-lit svg-search-icon-blue"></span>
-          <a class="kf-lih-search-lib-owner-img" ng-if="search.libraryChip" style="background-image:url({{library.owner | pic:100}})" href="{{library.owner|profileUrl}}" title="{{library.owner.firstName}} {{library.owner.lastName}}"></a>
+          <a class="kf-lih-search-lib-owner-img" ng-if="search.libraryChip" style="background-image:url({{library.owner|pic:100}})" href="{{library.owner|profileUrl}}" title="{{library.owner|name}}"></a>
           <span class="kf-lih-search-lib-name" ng-if="search.libraryChip" style="background-color:{{library.color}}">{{library.name}}</span>
           <a class="kf-lih-search-lib-x" ng-if="search.libraryChip" style="background-color:{{library.color}}" ng-mousedown="onMouseDownLibX($event)" ng-click="onClickLibX()" href="javascript:">&times;</a>
         </span>
@@ -31,21 +31,21 @@
     <div class="kf-lih-right kifi-guide-target-3 kifi-guide-2">
       <button class="kf-lih-add-link sprite sprite-add-link" ng-click="addKeeps()">Add a link</button>
       <a href="/tags/manage" class="kf-lih-tags"><span class="svg-tag-white"></span>Manage tags</a>
-      <span class="kf-lih-dropdown-parent" kf-hover-menu>
+      <div class="kf-lih-dropdown-parent" kf-hover-menu>
         <a href="{{me|profileUrl:'connections'}}" class="kf-lih-friends"><span class="svg-friends-white"></span>Connections</a>
         <menu class="kf-dropdown-menu">
           <a class="kf-dropdown-menu-item" href="{{me|profileUrl:'connections'}}">Your Kifi connections</a>
           <a class="kf-dropdown-menu-item" href="/invite">Invite someone to Kifi</a>
         </menu>
-      </span>
-      <span class="kf-lih-dropdown-parent" kf-hover-menu>
-        <a href="{{me|profileUrl}}" class="kf-lih-profile" style="background-image:url({{me | pic:100}})"></a>
+      </div>
+      <div class="kf-lih-dropdown-parent" kf-hover-menu>
+        <a href="{{me|profileUrl}}" class="kf-lih-profile" style="background-image:url({{me|pic:100}})"></a>
         <menu class="kf-dropdown-menu">
           <a class="kf-dropdown-menu-item" href="{{me|profileUrl}}">Your Profile</a>
           <a class="kf-dropdown-menu-item" href="/profile">Settings</a>
           <a class="kf-dropdown-menu-item" href="/logout" target="_top">Log out</a>
         </menu>
-      </span>
+      </div>
     </div>
   </div>
 </div>

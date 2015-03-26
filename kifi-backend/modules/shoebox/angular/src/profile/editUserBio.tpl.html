@@ -1,0 +1,18 @@
+<div class="dialog-content">
+  <a class="dialog-x" ng-click="close()"></a>
+  <div class="dialog-body-wrap">
+    <h1 class="dialog-header">Edit your profile biography</h1>
+
+    <div class="dialog-body dialog-centered">
+      <textarea class="kf-bio-input" type="text" placeholder="Edit your biography here... Limit to 160 characters" ng-model="bioText" ng-change="checkOverLimit()">{{bioText}}</textarea>
+      <div class="kf-bio-chars" ng-class="{'kf-over': charactersLeft < 0}">
+        <ng-pluralize count="charactersLeft" when="{'0': 'No characters left', '1': '1 character left', 'other': '{} characters left'}">
+        </ng-pluralize>
+      </div>
+    </div>
+  </div>
+
+  <div class="kf-bio-buttons">
+    <button class="kf-bio-save" ng-class="{'kf-over': charactersLeft < 0}" ng-click="saveBiography()">Save</button>
+  </div>
+</div>

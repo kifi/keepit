@@ -71,7 +71,7 @@ class HttpFetchEnforcer(q: ConcurrentLinkedQueue[WeakReference[ApacheFetchReques
       }
     } catch {
       case t: Throwable =>
-        airbrake.notify(s"[enforcer] Caught exception $t; queue=$q; cause=${t.getCause}; stack=${t.getStackTraceString}")
+        airbrake.notify(s"[enforcer] Caught exception $t; queue=$q; cause=${t.getCause}; stack=${t.getStackTrace.mkString("", "\n", "\n")}")
     }
   }
 

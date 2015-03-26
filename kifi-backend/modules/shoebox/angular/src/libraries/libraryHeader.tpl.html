@@ -1,6 +1,6 @@
 <div class="kf-lh-wrapper">
-  <div class="kf-lh kf-width-bounded" itemscope itemtype="http://schema.org/CollectionPage">
-    <meta itemtype="url" content="{{library.shareUrl}}" />
+  <div class="kf-lh" itemscope itemtype="http://schema.org/CollectionPage">
+    <meta itemtype="url" content="{{library.absUrl}}"/>
     <div class="kf-lh-card">
       <div class="kf-lh-invite-banner" ng-if="library.invite && !library.invite.actedOn">
         <button class="kf-lh-invite-banner-button kf-lh-invite-banner-accept" ng-click="acceptInvitation()">Accept</button>
@@ -38,14 +38,24 @@
           </div>
 
           <div class="kf-lh-owner" itemprop="creator" itemscope itemtype="http://schema.org/Person">
-            <a href="{{library.owner|profileUrl}}" itemprop="url"
-               kf-track-origin="libraryPage/curator">
-              <img class="kf-lh-owner-image" ng-src="{{library.owner | pic:100}}" itemprop="image" alt="{{library.owner.firstName}} {{library.owner.lastName}}">
+            <a class="kf-lh-owner-image-a" href="{{library.owner|profileUrl}}" itemprop="url" kf-track-origin="libraryPage/curator">
+              <img class="kf-lh-owner-image" ng-src="{{library.owner | pic:100}}" itemprop="image" alt="{{library.owner|name}}">
             </a>
             <div class="kf-lh-owner-text">
               <div class="kf-lh-owner-label">Curator:</div>
-              <div class="kf-lh-owner-name" itemprop="name">{{library.owner.firstName}} {{library.owner.lastName}}</div>
+              <div class="kf-lh-owner-name" itemprop="name">{{library.owner|name}}</div>
             </div>
+
+            <a class="kf-lh-twitter" ng-click="trackTwitterProfile()" href="https://www.twitter.com/{{library.attr.twitter.screenName}}" ng-if="library.attr.twitter.screenName" target="_blank">
+              <div class="kf-lh-twitter-img">
+                <div class="kf-lh-twitter-logo svg-twitter-blue"></div>
+              </div>
+              <div class="kf-lh-twitter-text">
+                <div class="kf-lh-twitter-screenname">
+                  @{{library.attr.twitter.screenName}}
+                </div>
+              </div>
+            </a>
           </div>
 
           <div ng-switch="clippedDescription" class="kf-lh-desc-wrap">
@@ -67,25 +77,25 @@
                 <span class="kf-lh-stat-val">{{Math.max(library.numFollowers, library.followers.length) | number}}</span>
               </a>
             </div>
-            <div kf-library-follower-pics num-followers="library.numFollowers" followers="library.followers"
-              show-followers="showFollowers()" current-page-origin="libraryPage"></div>
+            <div class="kf-lh-followers" kf-library-follower-pics="library.followers" follower-widths="[[0,32,6],[480,42,8]]" num-followers="library.numFollowers"
+              show-followers="showFollowers()" tooltips="yes" current-page-origin="libraryPage"></div>
           </div>
         </div>
       </div>
       <div class="kf-lh-buttons clearfix">
         <div style="float:right">
           <div kf-library-share-search ng-if="canBeShared()" library="library" current-page-origin="libraryPage"></div>
-          <div class="kf-lh-follow-btn-wrap" kf-sticky sticky-if="!$root.userLoggedIn" sticky-top="isMobile ? 25 : 14" sticky-toggle="followButtonToggleStuck" sticky-near="followButtonNearlyStuck" sticky-near-px="isMobile ? 90 : 40" ng-if="canFollowLibrary()">
+          <div class="kf-lh-follow-btn-wrap" kf-sticky sticky-if="!$root.userLoggedIn" sticky-top="followButtonStickyTop" sticky-toggle="followButtonToggleStuck" sticky-near="followButtonNearlyStuck" sticky-near-px="40" ng-if="canFollowLibrary()">
             <div kf-library-header-follow-button-cta library="library" ng-if="!isMobile && library.abTest.name === 'exp_follow_popup' && library.abTestTreatment.data"></div>
             <button class="kf-button kf-lh-follow-btn" ng-click="followLibrary()">{{library.abTestTreatment.data.buttonText || 'Follow Library'}}</button>
           </div>
           <button class="kf-button kf-lh-unfollow-btn" ng-click="unfollowLibrary()" ng-if="alreadyFollowingLibrary()"></button>
           <button class="kf-button" ng-click="toggleEditKeeps()" ng-if="isMyLibrary() && library.numKeeps > 0">{{editKeepsText}}</button>
-          <button class="kf-button kf-button-text-optional" ng-click="manageLibrary()" ng-if="isMyLibrary() && isUserCreatedLibrary()">
+          <button class="kf-button kf-button-text-optional kf-lh-manage-btn" ng-click="manageLibrary()" ng-if="isMyLibrary() && isUserCreatedLibrary()">
             <span class="kf-button-icon svg-pen"></span> Manage Library
           </button>
         </div>
-        <a ng-if="isPublic()" class="kf-button kf-button-text-optional kf-lh-share-external" ng-focus="preloadTwitter()" ng-mouseenter="preloadTwitter()" ng-click="shareTwitter()" ng-href="https://twitter.com/intent/tweet?original_referer={{library.shareUrl}}&text={{library.shareText}}&tw_p=tweetbutton&url={{library.shareTwitterUrl}}">
+        <a ng-if="isPublic()" class="kf-button kf-button-text-optional kf-lh-share-external" ng-focus="preloadTwitter()" ng-mouseenter="preloadTwitter()" ng-click="shareTwitter($event)" href="https://twitter.com/intent/tweet" target="_blank">
           <span class="kf-button-icon svg-twitter"></span>
           <span class="kf-button-icon svg-twitter-white"></span><!-- for non-logged-in users -->
           Tweet

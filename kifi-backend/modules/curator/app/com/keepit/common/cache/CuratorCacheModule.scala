@@ -152,7 +152,7 @@ case class CuratorCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   @Singleton
   @Provides
   def userScoreCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new ConnectedUserScoreCache(stats, accessLog, (innerRepo, 10 minute, 20 minute), (outerRepo, 6 hours, 12 hours))
+    new ConnectedUserScoreCache(stats, accessLog, (outerRepo, 40 hours, 60 hours))
 
   @Provides @Singleton
   def allFakeUsersCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
@@ -174,10 +174,5 @@ case class CuratorCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   @Provides @Singleton
   def userActivePersonasCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new UserActivePersonasCache(stats, accessLog, (innerRepo, 5 minutes), (outerRepo, 14 days))
-
-  @Singleton
-  @Provides
-  def libraryMemberIdCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
-    new LibraryMembershipIdCache(stats, accessLog, (outerRepo, 10 days))
 
 }

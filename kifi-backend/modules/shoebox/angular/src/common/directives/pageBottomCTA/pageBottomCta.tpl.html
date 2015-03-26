@@ -1,8 +1,15 @@
 <div class="kf-page-bottom-cta" ng-show="show">
   <div class="kf-pbc-content">
-    <div class="kf-pbc-title">There's more to see...</div>
-    <div class="kf-pbc-subtitle">Sign up to see the rest of what's here!</div>
-    <a class="kf-pbc-link kf-pbc-link-continue" ng-click="join($event)" href="/signup" target="_self">Continue</a>
-    <a class="kf-pbc-link kf-pbc-link-login" ng-click="login($event)" href="/login" target="_self" rel="nofollow">Log in</a>
+    <div class="kf-pbc-title">{{title}}</div>
+    <div class="kf-pbc-subtitle">{{subtitle}}</div>
+
+    <div ng-if="twitterHandle">
+      <a class="kf-pbc-link kf-pbc-link-continue" ng-click="join($event, 'twitter')" href="/twitter/request" target="_self">Join Now</a>
+    </div>
+
+    <div ng-if="!twitterHandle">
+      <a class="kf-pbc-link kf-pbc-link-continue" ng-click="join($event)" href="/signup" target="_self">Continue</a>
+      <a class="kf-pbc-link kf-pbc-link-login" ng-click="login($event)" href="/login" target="_self" rel="nofollow">Log in</a>
+    </div>
   </div>
 </div>

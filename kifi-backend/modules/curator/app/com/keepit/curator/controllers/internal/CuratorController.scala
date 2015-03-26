@@ -138,7 +138,7 @@ class CuratorController @Inject() (
     val selectionParams = request.body.as[Option[LibraryRecoSelectionParams]]
     log.info(s"refreshLibraryRecos called userId=$userId await=$await selectionParams=$selectionParams")
     val precomputeF = libraryRecoGenCommander.precomputeRecommendationsForUser(userId, selectionParams)
-    (if (await) precomputeF else Future.successful()) map { _ => Ok }
+    (if (await) precomputeF else Future.successful(())) map { _ => Ok }
   }
 
   def notifyLibraryRecosDelivered(userId: Id[User]) = Action(parse.tolerantJson) { request =>
@@ -205,11 +205,11 @@ class CuratorController @Inject() (
     Ok
   }
 
-  def ingestPersonaRecos(userId: Id[User]) = Action.async(parse.tolerantJson) { request =>
+  def ingestPersonaRecos(userId: Id[User], reverseIngestion: Boolean) = Action.async(parse.tolerantJson) { request =>
     val js = request.body
     val pids = (js \ "personaIds").as[Seq[Id[Persona]]]
     val t1 = System.currentTimeMillis()
-    personaRecoIngestor.ingestUserRecosByPersonas(userId, pids).collect {
+    personaRecoIngestor.ingestUserRecosByPersonas(userId, pids, reverseIngestion).collect {
       case _ =>
         val t2 = System.currentTimeMillis()
         log.info(s"persona reco ingestion: ${(t2 - t1) / 1000f} seconds")

@@ -87,7 +87,7 @@ class MobileSearchControllerTest extends SpecificationLike with SearchTestInject
             "mayHaveMore":false,
             "show":true,
             "experimentId":10,
-            "context":"AgFJAN8CZHg=",
+            "context":"AgFJAN8CZHg",
             "experts":[]
           }
         """)

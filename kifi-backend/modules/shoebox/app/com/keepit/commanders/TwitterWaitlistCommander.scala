@@ -1,15 +1,19 @@
 package com.keepit.commanders
 
-import com.google.inject.{ Singleton, Inject, ImplementedBy }
+import com.google.inject.{ Provider, Singleton, Inject, ImplementedBy }
+import com.keepit.commanders.emails.TwitterWaitlistEmailSender
 import com.keepit.common.db.{ State, Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
+import com.keepit.common.mail.ElectronicMail
 import com.keepit.common.time._
-import com.keepit.model.{ TwitterWaitlistEntryStates, TwitterWaitlistRepo, User, TwitterWaitlistEntry }
+import com.keepit.model.{ TwitterWaitlistEntryStates, TwitterWaitlistRepo, User, TwitterWaitlistEntry, UserRepo }
+
+import scala.concurrent.Future
 
 @ImplementedBy(classOf[TwitterWaitlistCommanderImpl])
 trait TwitterWaitlistCommander {
-  def addEntry(userId: Id[User], handle: String): Either[String, TwitterWaitlistEntry]
+  def addEntry(userId: Id[User], handle: String): Either[String, (TwitterWaitlistEntry, Option[Future[ElectronicMail]])]
   def getFakeWaitlistPosition(userId: Id[User], handle: String): Option[Long]
   def getFakeWaitlistLength(): Long
 }
@@ -17,13 +21,15 @@ trait TwitterWaitlistCommander {
 @Singleton
 class TwitterWaitlistCommanderImpl @Inject() (
     db: Database,
+    userRepo: UserRepo,
     twitterWaitlistRepo: TwitterWaitlistRepo,
+    twitterEmailSender: Provider[TwitterWaitlistEmailSender],
     clock: Clock) extends TwitterWaitlistCommander with Logging {
 
   private val WAITLIST_LENGTH_SHIFT = 1152
   private val WAITLIST_MULTIPLIER = 3
 
-  def addEntry(userId: Id[User], handle: String): Either[String, TwitterWaitlistEntry] = {
+  def addEntry(userId: Id[User], handle: String): Either[String, (TwitterWaitlistEntry, Option[Future[ElectronicMail]])] = {
     val waitlistEntry = db.readOnlyMaster { implicit s =>
       twitterWaitlistRepo.getByUserAndHandle(userId, handle)
     }
@@ -39,9 +45,15 @@ class TwitterWaitlistCommanderImpl @Inject() (
       }
     }
     entryOpt.right.map { entry =>
-      db.readWrite { implicit s =>
-        twitterWaitlistRepo.save(entry)
+      val (user, savedEntry) = db.readWrite { implicit s =>
+        val user = userRepo.get(userId)
+        val savedEntry = twitterWaitlistRepo.save(entry)
+        (user, savedEntry)
       }
+      val emailToSend = user.primaryEmail.map { email =>
+        twitterEmailSender.get.sendToUser(email, userId)
+      }
+      (savedEntry, emailToSend)
     }
   }
 

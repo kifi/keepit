@@ -149,7 +149,6 @@ object Shoebox extends Service {
     def getIndexableSocialConnections(seqNum: SequenceNumber[SocialConnection], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getIndexableSocialConnections", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getIndexableSocialUserInfos(seqNum: SequenceNumber[SocialUserInfo], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getIndexableSocialUserInfos", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getEmailAccountUpdates(seqNum: SequenceNumber[EmailAccountUpdate], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getEmailAccountUpdates", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
-    def getLibraryMembership(id: Id[LibraryMembership]) = ServiceRoute(GET, "/internal/shoebox/database/getLibraryMembership", Param("id", id))
     def getKeepsAndTagsChanged(seqNum: SequenceNumber[Keep], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getKeepsAndTagsChanged", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getLapsedUsersForDelighted(maxCount: Int, skipCount: Int, after: DateTime, before: Option[DateTime]) = ServiceRoute(GET, "/internal/shoebox/database/getLapsedUsersForDelighted", Param("maxCount", maxCount), Param("skipCount", skipCount), Param("after", after), Param("before", before))
     def getAllFakeUsers() = ServiceRoute(GET, "/internal/shoebox/database/getAllFakeUsers")
@@ -222,7 +221,8 @@ object Search extends Service {
 
 object Eliza extends Service {
   object internal {
-    def sendPushNotification() = ServiceRoute(POST, "/internal/eliza/sendPushNotification")
+    def sendGeneralPushNotification() = ServiceRoute(POST, "/internal/eliza/sendGeneralPushNotification")
+    def sendLibraryPushNotification() = ServiceRoute(POST, "/internal/eliza/sendLibraryPushNotification")
     def sendToUserNoBroadcast() = ServiceRoute(POST, "/internal/eliza/sendToUserNoBroadcast")
     def sendToUser() = ServiceRoute(POST, "/internal/eliza/sendToUser")
     def sendToAllUsers() = ServiceRoute(POST, "/internal/eliza/sendToAllUsers")
@@ -414,7 +414,7 @@ object Curator extends Service {
     def topLibraryRecos(userId: Id[User], limit: Option[Int]) = ServiceRoute(POST, "/internal/curator/topLibraryRecos", Param("userId", userId), Param("limit", limit))
     def refreshLibraryRecos(userId: Id[User], await: Boolean) = ServiceRoute(POST, "/internal/curator/refreshLibraryRecos", Param("userId", userId), Param("await", await))
     def notifyLibraryRecosDelivered(userId: Id[User]) = ServiceRoute(POST, "/internal/curator/notifyLibraryRecosDelivered", Param("userId", userId))
-    def ingestPersonaRecos(userId: Id[User]) = ServiceRoute(POST, "/internal/curator/ingestPersonaRecos", Param("userId", userId))
+    def ingestPersonaRecos(userId: Id[User], reverseIngestion: Boolean) = ServiceRoute(POST, "/internal/curator/ingestPersonaRecos", Param("userId", userId), Param("reverseIngestion", reverseIngestion))
   }
 }
 

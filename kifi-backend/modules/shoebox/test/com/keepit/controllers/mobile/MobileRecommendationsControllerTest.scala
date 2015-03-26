@@ -190,7 +190,7 @@ class MobileRecommendationsControllerTest extends TestKitSupport with Specificat
           call.method === "GET"
 
           val request = FakeRequest(call).withHeaders(USER_AGENT -> "iKeefee/0.0.0 (Device-Type: NA, OS: iOS NA)")
-          val result = inject[MobileRecommendationsController].topRecosV3(0.75f, None, None)(request)
+          val result = inject[MobileRecommendationsController].topRecosV3(0.75f, None, None, None, None)(request)
 
           status(result) must equalTo(OK)
           contentType(result) must beSome("application/json")

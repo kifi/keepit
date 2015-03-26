@@ -53,7 +53,7 @@ class DomainRepoImpl @Inject() (
     (for (d <- rows if d.hostname.inSet(domains) && d.state =!= excludeState.orNull) yield d).list
 
   def getOverrides(excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))(implicit session: RSession): Seq[Domain] =
-    (for (d <- rows if d.state =!= excludeState.orNull && d.manualSensitive.isNotNull) yield d).list
+    (for (d <- rows if d.state =!= excludeState.orNull && d.manualSensitive.isDefined) yield d).list
 
   def updateAutoSensitivity(domainIds: Seq[Id[Domain]], value: Option[Boolean])(implicit session: RWSession): Int = {
     val count = (for (d <- rows if d.id.inSet(domainIds)) yield (d.autoSensitive, d.updatedAt)).update(value -> clock.now())

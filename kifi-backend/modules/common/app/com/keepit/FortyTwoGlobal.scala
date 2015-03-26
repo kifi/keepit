@@ -30,6 +30,7 @@ import com.amazonaws.services.elasticloadbalancing.model._
 import com.amazonaws.services.elasticloadbalancing.AmazonElasticLoadBalancingClient
 import com.keepit.common.shutdown.ShutdownCommander
 import java.util.concurrent.atomic.AtomicLong
+import net.codingwell.scalaguice.InjectorExtensions._
 
 abstract class FortyTwoGlobal(val mode: Mode.Mode)
     extends WithFilters(new LoggingFilter()) with Logging with EmptyInjector {

@@ -68,6 +68,6 @@ class EmailInviteRecommendationRepoImpl @Inject() (
   }
 
   def getIrrelevantRecommendations(userId: Id[User])(implicit session: RSession): Set[Id[EmailAccount]] = {
-    compiledIrrelevantRecommendations(userId).list().toSet
+    compiledIrrelevantRecommendations(userId).list.toSet
   }
 }

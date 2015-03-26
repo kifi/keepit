@@ -205,7 +205,7 @@ class NotificationCommander @Inject() (
             "id" -> message.externalId.id,
             "time" -> message.createdAt,
             "thread" -> message.threadExtId.id,
-            "unread" -> true,
+            "unread" -> unread,
             "category" -> categoryString,
             "fullCategory" -> category.category,
             "title" -> title,
@@ -279,9 +279,7 @@ class NotificationCommander @Inject() (
   }
 
   def sendPushNotification(userId: Id[User], notification: PushNotification): Int = {
-    val deviceCount = urbanAirship.notifyUser(userId, notification)
-    messagingAnalytics.sentPushNotification(userId, notification)
-    deviceCount
+    urbanAirship.notifyUser(userId, notification)
   }
 
   def sendNotificationForMessage(userId: Id[User], message: Message, thread: MessageThread, messageWithBasicUser: MessageWithBasicUser, orderedActivityInfo: Seq[UserThreadActivity]): Unit = {

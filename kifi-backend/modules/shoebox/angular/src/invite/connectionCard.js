@@ -13,7 +13,7 @@ angular.module('kifi')
     replace: true,
     restrict: 'A',
     templateUrl: 'invite/connectionCard.tpl.html',
-    link: function (scope/*, element, attrs*/) {
+    link: function (scope) {
       var friend = scope.friend();
       var network = friend.network;
       var inNetworkId = friend.identifier;

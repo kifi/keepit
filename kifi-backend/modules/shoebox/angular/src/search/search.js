@@ -71,10 +71,10 @@ angular.module('kifi')
 
       $timeout(function () {
         if (library) {
-          var cols = angular.element('.kf-lib-cols');
+          var content = angular.element('.kf-lib-content');
           var header = angular.element('.kf-lih,.kf-loh');
-          if (cols.length && header.length) {
-            smoothScroll(cols[0].getBoundingClientRect().top - header[0].offsetHeight);
+          if (content.length && header.length) {
+            smoothScroll(content[0].getBoundingClientRect().top - header[0].offsetHeight);
           }
         } else {
           $window.document.body.scrollTop = 0;
@@ -270,7 +270,7 @@ angular.module('kifi')
     });
 
     // Report search analytics on unload.
-    var onUnload = function () {
+    function onUnload() {
       var resultsWithLibs = 0;
       $scope.resultKeeps.forEach( function (keep) {
         // does there exist a library that's not system_created?
@@ -279,7 +279,8 @@ angular.module('kifi')
         }
       });
       searchActionService.reportSearchAnalyticsOnUnload($scope.resultKeeps.length, resultsWithLibs);
-    };
+    }
+
     $window.addEventListener('beforeunload', onUnload);
 
     $scope.$on('$destroy', function () {

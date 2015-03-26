@@ -8,6 +8,7 @@ import com.keepit.curator.commanders.CuratorTasksPlugin
 
 import play.api.Application
 import play.api.Mode.Prod
+import net.codingwell.scalaguice.InjectorExtensions._
 
 object CuratorGlobal extends FortyTwoGlobal(Prod) with CuratorServices {
   val module = CuratorProdModule()

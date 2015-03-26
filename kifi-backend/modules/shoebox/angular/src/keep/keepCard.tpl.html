@@ -11,11 +11,14 @@
         <a class="kf-keep-title-link" ng-href="{{keep.url}}" target="_blank" ng-attr-title="{{keep.titleAttr}}" ng-bind-html="keep.titleHtml" ng-click="clickCallback({ 'keep': keep, event: $event })" rel="nofollow" click-action="clickedArticleTitle"></a>
       </div>
       <div class="kf-keep-subtitle">
-        <span class="kf-keep-subtitle-element kf-keep-url" ng-attr-title="{{keep.url}}" ng-bind-html="keep.descHtml"></span>
-        <span class="kf-keep-subtitle-element kf-keep-dot" ng-if="keep.createdAt">·</span>
-        <span class="kf-keep-time" ng-show="keep.createdAt">kept&nbsp;<time class="kf-keep-subtitle-element" ng-attr-datetime="{{keep.createdAt}}" am-time-ago="keep.createdAt"></time></span>
-        <span class="kf-keep-subtitle-element kf-keep-dot" ng-if="keep.summary.wordCount && keep.readTime && cardType !== 'youtube'">·</span>
-        <div class="kf-keep-subtitle-element kf-keep-read-time" ng-show="keep.summary.wordCount && keep.readTime && cardType !== 'youtube'"><span class="sprite sprite-small-clock"></span>{{keep.readTime}} read</div>
+        <span class="kf-keep-url" ng-attr-title="{{keep.url}}" ng-bind-html="keep.descHtml"></span>
+        <span class="kf-keep-twitter-attr" ng-if="keep.sourceAttribution.twitter.screenName">
+          <a ng-click="trackTweet()" href="https://www.twitter.com/{{keep.sourceAttribution.twitter.screenName}}/status/{{keep.sourceAttribution.twitter.idString}}" target="_blank">
+            <span class="kf-keep-twitter-logo svg-twitter-blue"></span>@{{keep.sourceAttribution.twitter.screenName}}
+          </a>
+        </span>
+        <span class="kf-keep-time" ng-show="keep.createdAt">kept&nbsp;<time ng-attr-datetime="{{keep.createdAt}}" am-time-ago="keep.createdAt"></time></span>
+        <span class="kf-keep-length" ng-show="keep.summary.wordCount && keep.readTime && cardType !== 'youtube'"><span class="sprite sprite-small-clock"></span>{{keep.readTime}} read</span>
       </div>
 
       <!-- Description only or Description + Small Image-->
@@ -29,7 +32,6 @@
         <div class="kf-keep-info-wrap" ng-if="cardType=='small'">
           <div kf-ellipsis full-text="keep.summary.description" max-num-lines="linesToShow" class="kf-keep-description"></div>
         </div>
-
       </div>
 
       <!-- Large Image or Special Card -->
@@ -44,10 +46,10 @@
 
     <div class="kf-keep-who" ng-if="keep.showSocial">
       <div kf-keep-who-text keep="keep"></div>
-      <div kf-keep-who-libs-and-pics keep="keep" current-page-origin="{{currentPageOrigin}}" class="kf-keep-who-libs-and-pics"></div>
+      <div kf-keep-who-libs-and-pics keep="keep" current-page-origin="{{currentPageOrigin}}"></div>
     </div>
 
-    <div kf-tag-list class="kf-keep-tag-list" get-selected-keeps="getSingleSelectedKeep(keep)" adding-tag="addingTag" is-shown="showTags(keep)" ng-show="showTags(keep)" keep="keep" read-only-mode="!isTaggable(keep)" user-logged-in="userLoggedIn" library="library"></div>
+    <div kf-tag-list get-selected-keeps="getSingleSelectedKeep(keep)" adding-tag="addingTag" is-shown="showTags(keep)" ng-show="showTags(keep)" keep="keep" read-only-mode="!isTaggable(keep)" user-logged-in="userLoggedIn" library="library"></div>
   </div>
 
   <div class="kf-keep-footer kf-keep-footer-buttons-wrapper clearfix" ng-if="userLoggedIn">

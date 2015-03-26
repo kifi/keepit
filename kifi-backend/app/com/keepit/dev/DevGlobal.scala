@@ -23,6 +23,7 @@ import com.keepit.cortex.CortexServices
 import com.keepit.graph.GraphServices
 import com.keepit.rover.RoverServices
 import com.keepit.rover.dev.RoverDevModule
+import net.codingwell.scalaguice.InjectorExtensions._
 
 import scala.concurrent.Future
 

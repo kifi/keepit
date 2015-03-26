@@ -49,12 +49,12 @@ class ActivityPushTaskRepoImpl @Inject() (
   }
 
   def getByPushAndActivity(pushTimeBefore: DateTime, activeTimeAfter: LocalTime, limit: Int)(implicit session: RSession): Seq[Id[ActivityPushTask]] = {
-    import StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     sql"select id from activity_push_task where state = 'active' and ((last_push is null) or (last_push < $pushTimeBefore)) and last_active_time < $activeTimeAfter limit $limit".as[Id[ActivityPushTask]].list
   }
 
   def getUsersWithoutActivityPushTask(limit: Int)(implicit session: RSession): Seq[Id[User]] = {
-    import StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     sql"select user.id from user left join activity_push_task on user.id = activity_push_task.user_id where activity_push_task.user_id is null limit $limit".as[Id[User]].list
   }
 }

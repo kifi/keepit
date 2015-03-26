@@ -183,7 +183,7 @@ class FeedDigestEmailSender @Inject() (
         queueLock.withLockFuture { queue.send(SendFeedDigestToUserMessage(userId)) }
       }
 
-      Future.sequence(seqF) map (_ -> ())
+      Future.sequence(seqF) map (_ -> (()))
     } else {
       airbrake.notify("FeedDigestEmailSender.send() should not be called by non-leader!")
       Future.successful(())
@@ -213,7 +213,7 @@ class FeedDigestEmailSender @Inject() (
       }
     }
 
-    val doneF = FutureHelpers.whilef(fetchFromQueue())()
+    val doneF = FutureHelpers.whilef(fetchFromQueue())(())
     doneF.onFailure {
       case e => airbrake.notify(s"SQS queue(${queue.queue.name}) nextWithLock failed", e)
     }
@@ -271,7 +271,7 @@ class FeedDigestEmailSender @Inject() (
           digestRecos.foreach(digestReco => uriRecommendationRepo.incrementDeliveredCount(digestReco.uriRecommendation.id.get, withLastPushedAt = true))
           curatorAnalytics.trackDeliveredItems(digestRecos.map(_.uriRecommendation), Some(RecommendationSource.Email))
         }
-        sendAnonymoizedEmailToQa(emailToSend, emailData)
+        if (Random.nextFloat() > 0.99) sendAnonymoizedEmailToQa(emailToSend, emailData)
       } else {
         val recoIds = digestRecos.map(_.uri.id.get).mkString(",")
         val libKeepIds = newLibraryItems.map(_.uri.id.get).mkString(",")

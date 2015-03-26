@@ -1,10 +1,10 @@
 package com.keepit.inject
 
-import com.google.inject._
+import com.google.inject.{ Injector, Guice, Stage, Module, Key, Provider }
 
 import play.api.Mode._
 import play.api.Mode
-import net.codingwell.scalaguice.InjectorExtensions.ScalaInjector
+import net.codingwell.scalaguice.InjectorExtensions._
 import java.util.concurrent.atomic.AtomicBoolean
 import com.google.inject.util.Modules
 import com.keepit.FortyTwoGlobal
@@ -16,7 +16,7 @@ sealed trait InjectorProvider {
   def module: Module
   def injector: Injector
 
-  implicit def richInjector(injector: Injector): ScalaInjector = new ScalaInjector(injector)
+  //implicit def richInjector(injector: Injector): ScalaInjector = new ScalaInjector(injector)
 
   protected def createInjector(modules: Module*) = {
     val modeModule = new ScalaModule {

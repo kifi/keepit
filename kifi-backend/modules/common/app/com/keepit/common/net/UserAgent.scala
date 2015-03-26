@@ -60,17 +60,20 @@ object UserAgent extends Logging {
         UserAgent(trimmed, appName, os, os, false, typeName = "Android", version = "unknown")
       case _ =>
         val agent: SFUserAgent = parser.parse(trimmed)
-        UserAgent(trim(trimmed),
+        val os = agent.getOperatingSystem
+        val osName = os.getName
+        val agentType = agent.getType
+        UserAgent(truncate(trimmed),
           normalizeChrome(normalize(agent.getName)),
-          normalize(agent.getOperatingSystem.getFamilyName),
-          normalize(agent.getOperatingSystem.getName),
-          agent.getType == null || PossiblyBot.contains(agent.getType),
+          normalize(os.getFamilyName),
+          normalize(osName),
+          agentType == null || PossiblyBot.contains(agentType) || osName == "Linux" && trimmed.contains("Google Markup Tester"),
           normalize(agent.getTypeName),
           normalize(agent.getVersionNumber.toVersionString))
     }
   }
 
-  private def trim(str: String) = {
+  private def truncate(str: String) = {
     if (str.length > MAX_USER_AGENT_LENGTH) {
       log.warn(s"trunking user agent string since its too long: $str")
       str.substring(0, MAX_USER_AGENT_LENGTH - 3) + "..."

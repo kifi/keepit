@@ -15,7 +15,7 @@ angular.module('kifi')
         close: '&'
       },
       templateUrl: 'libraries/libraryShareSearch.tpl.html',
-      link: function (scope, element/*, attrs*/) {
+      link: function (scope, element) {
         //
         // Internal data.
         //

@@ -215,7 +215,7 @@ class UserAgentTest extends Specification {
       agent.possiblyBot === false
     }
 
-    "Twitterbot/1.0" in {
+    "detect Twitterbot" in {
       val str = "Twitterbot/1.0)"
       val agent = UserAgent(str)
       agent.isMobile === false
@@ -227,7 +227,7 @@ class UserAgentTest extends Specification {
       agent.isOldIE === false
       agent.possiblyBot === true
     }
-    "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)" in {
+    "detect Googlebot" in {
       val str = "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)"
       val agent = UserAgent(str)
       agent.isMobile === false
@@ -239,7 +239,18 @@ class UserAgentTest extends Specification {
       agent.isOldIE === false
       agent.possiblyBot === true
     }
-    "Mozilla/5.0 (compatible; Embedly/0.2; +http://support.embed.ly/)" in {
+    "detect Google Markup Tester" in {
+      val str = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko; Google Markup Tester) Chrome/27.0.1453 Safari/537.36"
+      val agent = UserAgent(str)
+      agent.isMobile === false
+      agent.isKifiIphoneApp === false
+      agent.isKifiAndroidApp === false
+      agent.isIphone === false
+      agent.isAndroid === false
+      agent.isOldIE === false
+      agent.possiblyBot === true
+    }
+    "detect Embedly" in {
       val str = "Mozilla/5.0 (compatible; Embedly/0.2; +http://support.embed.ly/)"
       val agent = UserAgent(str)
       agent.isMobile === false
@@ -251,7 +262,7 @@ class UserAgentTest extends Specification {
       agent.isOldIE === false
       agent.possiblyBot === true
     }
-    "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)" in {
+    "detect Facebook" in {
       val str = "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)"
       val agent = UserAgent(str)
       agent.isMobile === false

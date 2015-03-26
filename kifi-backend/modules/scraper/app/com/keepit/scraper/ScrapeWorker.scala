@@ -65,11 +65,11 @@ class ScrapeWorkerImpl @Inject() (
   private def recordScrapeFailure(uri: NormalizedURI): Future[Unit] = {
     shoeboxCommander.getNormalizedUri(uri).flatMap { latestUriOpt =>
       latestUriOpt match {
-        case None => Future.successful[Unit]()
+        case None => Future.successful(())
         case Some(latestUri) =>
           if (latestUri.state != NormalizedURIStates.INACTIVE && latestUri.state != NormalizedURIStates.REDIRECTED) {
             shoeboxCommander.updateNormalizedURIState(latestUri.id.get, NormalizedURIStates.SCRAPE_FAILED)
-          } else Future.successful[Unit]()
+          } else Future.successful(())
       }
     }
   }
@@ -113,7 +113,7 @@ class ScrapeWorkerImpl @Inject() (
     // scrape has happened. Excellent cleanup task for anyone learning scraper architecture.
 
     @inline def postProcess(scrapedURI: NormalizedURI, article: Article, signature: Signature): Future[Option[String]] = {
-      article.canonicalUrl.fold(Future.successful())(recordScrapedNormalization(latestUri, signature, _, article.alternateUrls)) flatMap { _ =>
+      article.canonicalUrl.fold(Future.successful(()))(recordScrapedNormalization(latestUri, signature, _, article.alternateUrls)) flatMap { _ =>
         scrapedURI.id.fold(Future.successful[Option[String]](None))(id => shoeboxScraperClient.getUriImage(id))
       }
     }
@@ -258,12 +258,13 @@ class ScrapeWorkerImpl @Inject() (
     }
   }
 
-  private def runPornDetectorIfNecessary(normalizedUri: NormalizedURI, content: String, contentLang: Lang): Future[Unit] = {
+  private def runPornDetectorIfNecessary(normalizedUri: NormalizedURI, content: String, title: String, description: String, contentLang: Lang): Future[Unit] = {
     uriCommander.isNonSensitive(normalizedUri.url).map { nonSensitive =>
       if (!nonSensitive) {
         if (contentLang == Lang("en") && content.size > 100) {
           val detector = new SlidingWindowPornDetector(pornDetectorFactory())
-          detector.isPorn(content.take(100000)) match {
+          val isPorn = detector.isPorn(content.take(100000)) || detector.isPorn(title) || detector.isPorn(description)
+          isPorn match {
             case true if normalizedUri.restriction == None => shoeboxCommander.updateURIRestriction(normalizedUri.id.get, Some(Restriction.ADULT)) // don't override other restrictions
             case false if normalizedUri.restriction == Some(Restriction.ADULT) => shoeboxCommander.updateURIRestriction(normalizedUri.id.get, None)
             case _ => Future.successful(())
@@ -300,7 +301,7 @@ class ScrapeWorkerImpl @Inject() (
                 case Some(desc) => LangDetector.detect(content + " " + desc)
                 case None => LangDetector.detect(content)
               }
-              runPornDetectorIfNecessary(normalizedUri, content, contentLang) map { _ =>
+              runPornDetectorIfNecessary(normalizedUri, content, title, description.getOrElse(""), contentLang) map { _ =>
                 val article: Article = Article(
                   id = normalizedUri.id.get,
                   title = title,

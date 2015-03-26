@@ -76,14 +76,14 @@
           <ul class="manage-lib-members">
             <a href="{{library.owner|profileUrl}}" class="manage-lib-member manage-lib-owner" ng-click="close()" kf-track-origin="{{currentPageOrigin}}/curator">
               <img ng-src="{{library.owner | pic:100}}" class="manage-lib-member-image">
-              <div class="manage-lib-member-name">{{library.owner.firstName}} {{library.owner.lastName}}</div>
+              <div class="manage-lib-member-name">{{library.owner|name}}</div>
               <div class="manage-lib-member-status">Owner</div>
             </a>
 
             <li class="manage-lib-member" ng-repeat="member in memberList">
               <a ng-if="member.id" href="{{member|profileUrl}}" ng-click="close()" class="manage-lib-member-user" kf-track-origin="{{currentPageOrigin}}/follower">
                 <img ng-src="{{member | pic:100}}" class="manage-lib-member-image">
-                <div class="manage-lib-member-name">{{member.firstName}} {{member.lastName}}</div>
+                <div class="manage-lib-member-name">{{member|name}}</div>
               </a>
 
               <div class="manage-lib-member-email" ng-if="member.email">

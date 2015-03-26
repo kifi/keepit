@@ -20,7 +20,7 @@ case class FakeSocialGraphModule() extends SocialGraphModule {
 
 class FakeSocialGraphPlugin extends SocialGraphPlugin {
   def asyncFetch(socialUserInfo: SocialUserInfo, broadcastToOthers: Boolean = true): Future[Unit] =
-    Promise.successful().future
+    Promise.successful(()).future
   def asyncRevokePermissions(socialUserInfo: SocialUserInfo): Future[Unit] =
-    Promise.successful().future
+    Promise.successful(()).future
 }

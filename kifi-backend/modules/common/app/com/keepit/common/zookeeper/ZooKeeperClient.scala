@@ -83,7 +83,7 @@ trait ZooKeeperSession {
   def watchChildrenWithData[T](node: Node, updateChildren: Seq[(Node, T)] => Unit)(implicit deserializer: Array[Byte] => T): Unit
 
   def create(node: Node): Node
-  def createChild(parent: Node, childName: String, createMode: CreateMode = CreateMode.PERSISTENT): Node
+  def createChild(parent: Node, childName: String, createMode: CreateMode): Node
   def createChild[T](parent: Node, childName: String, data: T, createMode: CreateMode = CreateMode.PERSISTENT)(implicit serializer: T => Array[Byte]): Node
 
   def get(node: Node): Option[Node]
@@ -127,7 +127,7 @@ class ZooKeeperClientImpl(val servers: String, val sessionTimeout: Int,
     zk.execOnConnectHandler(handler) // if already connected, this executes the handler immediately
   }
 
-  def refreshSession(): Unit = future {
+  def refreshSession(): Unit = Future {
     val old = zkSession.getAndSet(Await.result(connect(), Duration.Inf))
     if (old != null) try { old.close() } catch { case _: Throwable => } // make sure the old session is closed
   }
@@ -167,7 +167,7 @@ class ZooKeeperSessionImpl(zkClient: ZooKeeperClientImpl, promise: Promise[Unit]
       event.getState match {
         case KeeperState.SyncConnected => {
           // invoke onConnected handlers by completing the promise
-          val isNewConnection = promise.trySuccess()
+          val isNewConnection = promise.trySuccess(())
           // if not a new connection, we must have recovered from connection loss
           if (!isNewConnection) ZooKeeperSessionImpl.this.recover()
         }
@@ -264,7 +264,7 @@ class ZooKeeperSessionImpl(zkClient: ZooKeeperClientImpl, promise: Promise[Unit]
     }
   }
 
-  def createChild(parent: Node, childName: String, createMode: CreateMode = CreateMode.PERSISTENT): Node = {
+  def createChild(parent: Node, childName: String, createMode: CreateMode): Node = {
     Node(zk.create(Node(parent, childName), null, Ids.OPEN_ACL_UNSAFE, createMode))
   }
 

@@ -73,9 +73,9 @@ describe('util', function () {
       expect(util.linkify('Email me: jo@flo.com')).toBe('Email me: <a href="mailto:jo@flo.com">jo@flo.com</a>');
       expect(util.linkify('I hang out at https://example.com. You?')).toBe(
         'I hang out at <a target="_blank" rel="nofollow" href="https:&#x2F;&#x2F;example.com">https:&#x2F;&#x2F;example.com</a>. You?');
-      expect(util.linkify('a+b@c.com www.google.com/maps/123+Main/@37.4,-122.7/data=!3m1!1s:0xa\tb@c.d\ntwitter.com/example')).toBe(
+      expect(util.linkify('a+b@c.com & www.google.com/maps/123+Main/@37.4,-122.7/data=!3m1!1s:0xa\tb@c.d\ntwitter.com/example')).toBe(
         '<a href="mailto:a+b@c.com">a+b@c.com</a>' +
-        ' <a target="_blank" rel="nofollow" href="http://www.google.com&#x2F;maps&#x2F;123+Main&#x2F;@37.4,-122.7&#x2F;data=!3m1!1s:0xa">' +
+        ' &amp; <a target="_blank" rel="nofollow" href="http://www.google.com&#x2F;maps&#x2F;123+Main&#x2F;@37.4,-122.7&#x2F;data=!3m1!1s:0xa">' +
         'www.google.com&#x2F;maps&#x2F;123+Main&#x2F;@37.4,-122.7&#x2F;data=!3m1!1s:0xa</a>' +
         '\t<a href="mailto:b@c.d">b@c.d</a>' +
         '\n<a target="_blank" rel="nofollow" href="http://twitter.com&#x2F;example">twitter.com&#x2F;example</a>');

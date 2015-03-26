@@ -9,14 +9,13 @@ import com.keepit.common.time._
 import com.keepit.common.cache.TransactionalCaching
 import com.keepit.common.logging.Logging
 import scala.slick.jdbc.{ ResultSetConcurrency, ResultSetType, ResultSetHoldability }
-import scala.slick.jdbc.JdbcBackend.Session
-import scala.slick.driver.JdbcProfile
+import scala.slick.jdbc.JdbcBackend.{ Session, SessionDef }
 import com.keepit.common.util.TrackingId
 import com.keepit.macros.Location
 import com.keepit.common.db.slick.Database.Master
 
 object DBSession {
-  abstract class SessionWrapper(val name: String, val masterSlave: Database.DBMasterReplica, _session: => Session, location: Location) extends Session with Logging with TransactionalCaching {
+  abstract class SessionWrapper(val name: String, val masterSlave: Database.DBMasterReplica, _session: => Session, location: Location) extends SessionDef with Logging with TransactionalCaching {
     def database = _session.database
     private var open = false
     private var wasOpened = false
@@ -100,7 +99,7 @@ object DBSession {
           } else if (open) {
             conn.commit()
             commitCacheTransaction()
-            transaction.get.success()
+            transaction.get.success(())
           }
         }
       } finally {

@@ -1,21 +1,29 @@
-.kf-main-keeps:before
-  content: " "
+keepBorderRadius = 10px
+
+.kf-main-keeps::before
+  content: ''
   border-top: 1px none #f9f9f9
   z-index: 1
 
 .kf-keeps-load-more
   display: block
   margin: 10px 0
+  padding: 4px 0
   font-size: 16px
   line-height: 30px
   text-align: center
+  border-radius: keepBorderRadius
   background-color: #fcfdff
+  box-shadow: 0 0 0 .5px defaultBorderColor  // half-pixel border workaround crbug.com/236371
+
+  @media (min-width: 480px)
+    padding: 0
+    box-shadwow: none
 
   &:link
     color: linkBlueColor
   &:hover
     background-color: #f3fbff
-
   &:active
     background-color: #f3f5f9
 
@@ -27,7 +35,8 @@
   margin: 40px auto
 
 .kf-my-keeps
-  padding: 0 25px 20px 0
+  @media (min-width: 480px)
+    padding-bottom: 20px
 
 
 //

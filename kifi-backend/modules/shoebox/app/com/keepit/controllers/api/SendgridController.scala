@@ -20,7 +20,7 @@ class SendgridController @Inject() (
     extends UserActions with ShoeboxServiceController with Logging {
 
   def parseEvent() = Action(parse.tolerantJson) { request =>
-    val events: Seq[SendgridEvent] = try {
+    val events: Seq[SendgridEvent] = {
       val json = request.body
       Json.fromJson[Seq[SendgridEvent]](json) match {
         case JsSuccess(e, _) => e

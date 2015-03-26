@@ -121,7 +121,7 @@ class MultiplicativeBoostScorer(weight: MultiplicativeBoostWeight, textScorer: S
         scr = score
       } catch {
         case e: Exception =>
-          log.error("scorer error: scoredDoc=%d doc=%d textScorer.docID=%s exception=%s stack=\n%s\n".format(scoredDoc, doc, textScorer.docID, e.toString, e.getStackTraceString))
+          log.error("scorer error: scoredDoc=%d doc=%d textScorer.docID=%s exception=%s stack=\n%s\n".format(scoredDoc, doc, textScorer.docID, e.toString, e.getStackTrace.mkString("", "\n", "\n")))
           scr = 0.0f
       }
       scoredDoc = doc

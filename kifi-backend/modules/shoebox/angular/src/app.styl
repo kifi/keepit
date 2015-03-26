@@ -75,19 +75,19 @@ menu, ol, ul
   // during page transitions when content is removed or inserted
   min-height: 101vh
   box-sizing: border-box
-  padding-top: appHeaderHeight
+  padding-top: appHeaderHeight2
+
+  @media (max-height: appHeaderHeight1MaxDim) and (max-width: appHeaderHeight1MaxDim)
+    padding-top: appHeaderHeight1
 
 .ng-cloak
   display: none !important
 
-.kf-width-bounded
+.kf-width-bounded  // for pages that are not yet responsive
   margin: 0 auto
   min-width: appMinWidth
   max-width: appMinWidth
-  padding: 0 appSidePad
-
-.kf-min-width-bounded
-  min-width: appMinWidth + 2 * appSidePad
+  padding: 0 appSidePad2
 
 .kf-button
   display: inline-block
