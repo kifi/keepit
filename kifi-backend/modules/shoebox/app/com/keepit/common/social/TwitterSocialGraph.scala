@@ -177,8 +177,8 @@ class TwitterSocialGraphImpl @Inject() (
         db.readOnlyMaster { implicit s =>
           log.info(s"[fetchSocialUserInfo(${socialUserInfo.socialId})] fetching twitter_syncs for ${friendIds.length} friends...")
           twitterSyncStateRepo.getTwitterSyncsByFriendIds(friendIds.map(Id[User](_)).toSet)
-        }.map {
-          case (userId, twitterSyncState) =>
+        }.grouped(100).foreach { syncStateMap =>
+          syncStateMap.map { case (userId, twitterSyncState) =>
             db.readWrite { implicit s =>
               val libraryId = twitterSyncState.libraryId
               libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId, None) match {
@@ -188,6 +188,7 @@ class TwitterSocialGraphImpl @Inject() (
                 case _ =>
               }
             }
+          }
         }
         log.info(s"[fetchSocialUserInfo(${socialUserInfo.socialId})] finished auto-joining all twitter_sync libraries")
       }
