@@ -23,6 +23,9 @@ trait ArticleInfoRepo extends Repo[ArticleInfo] with SeqNumberFunction[ArticleIn
   def getByUri(uriId: Id[NormalizedURI], excludeState: Option[State[ArticleInfo]] = Some(ArticleInfoStates.INACTIVE))(implicit session: RSession): Set[ArticleInfo]
   def internByUri(uriId: Id[NormalizedURI], url: String, kinds: Set[ArticleKind[_ <: Article]])(implicit session: RWSession): Map[ArticleKind[_ <: Article], ArticleInfo]
   def deactivateByUri(uriId: Id[NormalizedURI])(implicit session: RWSession): Unit
+  def getRipeForFetching(limit: Int, queuedForMoreThan: Duration)(implicit session: RSession): Seq[ArticleInfo]
+  def markAsQueued(ids: Id[ArticleInfo]*)(implicit session: RWSession): Unit
+  def unmarkAsQueued(ids: Id[ArticleInfo]*)(implicit session: RWSession): Unit
   def updateAfterFetch[A <: Article](uriId: Id[NormalizedURI], kind: ArticleKind[A], fetched: Try[Option[ArticleVersion]])(implicit session: RWSession): Unit
 }
 
@@ -40,20 +43,20 @@ class ArticleInfoRepoImpl @Inject() (
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)
     def url = column[String]("url", O.NotNull)
     def kind = column[String]("kind", O.NotNull)
-    def bestVersionMajor = column[VersionNumber[Article]]("best_version_major", O.Nullable)
-    def bestVersionMinor = column[VersionNumber[Article]]("best_version_minor", O.Nullable)
-    def latestVersionMajor = column[VersionNumber[Article]]("latest_version_major", O.Nullable)
-    def latestVersionMinor = column[VersionNumber[Article]]("latest_version_minor", O.Nullable)
-    def oldestVersionMajor = column[VersionNumber[Article]]("oldest_version_major", O.Nullable)
-    def oldestVersionMinor = column[VersionNumber[Article]]("oldest_version_minor", O.Nullable)
-    def lastFetchedAt = column[DateTime]("last_fetched_at", O.Nullable)
-    def nextFetchAt = column[DateTime]("next_fetch_at", O.Nullable)
-    def fetchInterval = column[Duration]("fetch_interval", O.Nullable)
+    def bestVersionMajor = column[Option[VersionNumber[Article]]]("best_version_major", O.Nullable)
+    def bestVersionMinor = column[Option[VersionNumber[Article]]]("best_version_minor", O.Nullable)
+    def latestVersionMajor = column[Option[VersionNumber[Article]]]("latest_version_major", O.Nullable)
+    def latestVersionMinor = column[Option[VersionNumber[Article]]]("latest_version_minor", O.Nullable)
+    def oldestVersionMajor = column[Option[VersionNumber[Article]]]("oldest_version_major", O.Nullable)
+    def oldestVersionMinor = column[Option[VersionNumber[Article]]]("oldest_version_minor", O.Nullable)
+    def lastFetchedAt = column[Option[DateTime]]("last_fetched_at", O.Nullable)
+    def nextFetchAt = column[Option[DateTime]]("next_fetch_at", O.Nullable)
+    def fetchInterval = column[Option[Duration]]("fetch_interval", O.Nullable)
     def failureCount = column[Int]("failure_count", O.NotNull)
-    def failureInfo = column[String]("failure_info", O.Nullable)
-    def lastQueuedAt = column[DateTime]("last_queued_at", O.Nullable)
+    def failureInfo = column[Option[String]]("failure_info", O.Nullable)
+    def lastQueuedAt = column[Option[DateTime]]("last_queued_at", O.Nullable)
 
-    def * = (id.?, createdAt, updatedAt, state, seq, uriId, url, kind, bestVersionMajor.?, bestVersionMinor.?, latestVersionMajor.?, latestVersionMinor.?, oldestVersionMajor.?, oldestVersionMinor.?, lastFetchedAt.?, nextFetchAt.?, fetchInterval.?, failureCount, failureInfo.?, lastQueuedAt.?) <> ((ArticleInfo.applyFromDbRow _).tupled, ArticleInfo.unapplyToDbRow _)
+    def * = (id.?, createdAt, updatedAt, state, seq, uriId, url, kind, bestVersionMajor, bestVersionMinor, latestVersionMajor, latestVersionMinor, oldestVersionMajor, oldestVersionMinor, lastFetchedAt, nextFetchAt, fetchInterval, failureCount, failureInfo, lastQueuedAt) <> ((ArticleInfo.applyFromDbRow _).tupled, ArticleInfo.unapplyToDbRow _)
   }
 
   def table(tag: Tag) = new ArticleInfoTable(tag)
@@ -107,6 +110,24 @@ class ArticleInfoRepoImpl @Inject() (
     }
   }
 
+  def getRipeForFetching(limit: Int, queuedForMoreThan: Duration)(implicit session: RSession): Seq[ArticleInfo] = {
+    val ripeRows = {
+      val now = clock.now()
+      val lastQueuedTooLongAgo = now minusSeconds queuedForMoreThan.toSeconds.toInt
+      for (r <- rows if r.state === ArticleInfoStates.ACTIVE && r.nextFetchAt < now && (r.lastQueuedAt.isEmpty || r.lastQueuedAt < lastQueuedTooLongAgo)) yield r
+    }
+    ripeRows.sortBy(_.nextFetchAt).take(limit).list
+  }
+
+  def markAsQueued(ids: Id[ArticleInfo]*)(implicit session: RWSession): Unit = updateLastQueuedAt(ids, Some(clock.now()))
+
+  def unmarkAsQueued(ids: Id[ArticleInfo]*)(implicit session: RWSession): Unit = updateLastQueuedAt(ids, None)
+
+  private def updateLastQueuedAt(ids: Seq[Id[ArticleInfo]], lastQueuedAt: Option[DateTime])(implicit session: RWSession): Unit = {
+    (for (r <- rows if r.id.inSet(ids.toSet)) yield r.lastQueuedAt).update(lastQueuedAt)
+  }
+
+  // todo(Léo): probably be smarter about this, we always get the Embedly response but we may still want to delay future fetches
   def updateAfterFetch[A <: Article](uriId: Id[NormalizedURI], kind: ArticleKind[A], fetched: Try[Option[ArticleVersion]])(implicit session: RWSession): Unit = {
     getByUriAndKind(uriId, kind).foreach { articleInfo =>
       val withFetchComplete = articleInfo.withLatestFetchComplete
