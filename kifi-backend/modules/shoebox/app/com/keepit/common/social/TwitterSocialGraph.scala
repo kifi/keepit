@@ -20,7 +20,6 @@ import com.keepit.model._
 import com.keepit.social._
 import com.ning.http.client.providers.netty.NettyResponse
 import play.api.http.Status._
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.Play.current
 import play.api.libs.json.JsValue
 import play.api.libs.oauth.OAuthCalculator
@@ -31,7 +30,7 @@ import twitter4j.{ StatusUpdate, TwitterFactory, Twitter }
 import twitter4j.media.{ ImageUpload, MediaProvider, ImageUploadFactory }
 import twitter4j.conf.ConfigurationBuilder
 
-import scala.concurrent.{ Await, Future }
+import scala.concurrent.{ ExecutionContext, Await, Future }
 import scala.concurrent.duration._
 import scala.util.{ Success, Failure, Try }
 import scala.collection.JavaConversions._
@@ -85,7 +84,8 @@ class TwitterSocialGraphImpl @Inject() (
     userValueRepo: UserValueRepo,
     twitterSyncStateRepo: TwitterSyncStateRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
-    socialRepo: SocialUserInfoRepo) extends TwitterSocialGraph with Logging {
+    socialRepo: SocialUserInfoRepo,
+    implicit val executionContext: ExecutionContext) extends TwitterSocialGraph with Logging {
 
   val providerConfig = oauth1Config.getProviderConfig(ProviderIds.Twitter.id).get
 
@@ -176,8 +176,7 @@ class TwitterSocialGraphImpl @Inject() (
       SafeFuture {
         db.readOnlyMaster { implicit s =>
           log.info(s"[fetchSocialUserInfo(${socialUserInfo.socialId})] fetching twitter_syncs for ${friendIds.length} friends...")
-          //twitterSyncStateRepo.getTwitterSyncsByFriendIds(friendIds.map(Id[User](_)).toSet)
-          Map.empty[Id[User], TwitterSyncState]
+          twitterSyncStateRepo.getTwitterSyncsByFriendIds(friendIds.map(Id[User](_)).toSet)
         }.map {
           case (userId, twitterSyncState) =>
             db.readWrite { implicit s =>
