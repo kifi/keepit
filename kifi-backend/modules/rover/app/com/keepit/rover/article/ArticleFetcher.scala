@@ -61,4 +61,6 @@ class ArticleFetcherProvider @Inject() (
     case LinkedInProfileArticle => linkedInProfileArticleFetcher
     case GithubArticle => githubArticleFetcher
   }
+
+  def fetch[A <: Article](request: ArticleFetchRequest[A]): Future[Option[A]] = get(request.kind).fetch(request)
 }

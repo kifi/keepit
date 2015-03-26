@@ -33,6 +33,7 @@ case class ArticleInfo(
   def withId(id: Id[ArticleInfo]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def isActive = (state == ArticleInfoStates.ACTIVE)
+  def shouldFetch = isActive && lastQueuedAt.isDefined
 
   def getFetchRequest: ArticleFetchRequest[A] = ArticleFetchRequest(articleKind, url, lastFetchedAt, getLatestKey)
 
