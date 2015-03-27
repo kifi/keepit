@@ -69,6 +69,5 @@ class MobileUriControllerTest extends Specification with ShoeboxTestInjector {
     inject[FakeUserActionsHelper].setUser(user)
   }
   private def controller(implicit injector: Injector) = inject[MobileUriController]
-  //private def uriRepo(implicit injector: Injector) = inject[NormalizedURIRepo]
   private def uriIntern(implicit injector: Injector) = inject[NormalizedURIInterner]
 }

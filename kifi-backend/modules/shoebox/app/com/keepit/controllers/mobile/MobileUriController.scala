@@ -27,7 +27,7 @@ class MobileUriController @Inject() (
             normalizedUriRepo.updateURIRestriction(uri.id.get, Some(Restriction.ADULT))
             NoContent
           case _ =>
-            BadRequest(Json.obj("error" -> "reason_not_found"))
+            BadRequest(Json.obj("error" -> "reason_unknown"))
         }
       }
     }.getOrElse(BadRequest(Json.obj("error" -> "uri_not_found")))
