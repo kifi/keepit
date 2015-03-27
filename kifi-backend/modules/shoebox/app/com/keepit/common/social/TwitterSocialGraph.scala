@@ -174,11 +174,11 @@ class TwitterSocialGraphImpl @Inject() (
       log.info(s"[fetchSocialUserInfo(${socialUserInfo.socialId})] friendIds(len=${friendIds.length}):${friendIds.take(10)} followerIds(len=${followerIds.length}):${followerIds.take(10)} mutual(len=${mutualFollows.size}):${mutualFollows.take(10)}")
 
       SafeFuture {
-        db.readOnlyMaster { implicit s =>
-          log.info(s"[fetchSocialUserInfo(${socialUserInfo.socialId})] fetching twitter_syncs for ${friendIds.length} friends...")
-          twitterSyncStateRepo.getTwitterSyncsByFriendIds(friendIds.map(Id[User](_)).toSet)
-        }.grouped(100).foreach { syncStateMap =>
-          syncStateMap.map {
+        log.info(s"[fetchSocialUserInfo(${socialUserInfo.socialId})] fetching twitter_syncs for ${friendIds.length} friends...")
+        friendIds.map(Id[User](_)).grouped(100) foreach { userIds =>
+          db.readOnlyMaster { implicit s =>
+            twitterSyncStateRepo.getTwitterSyncsByFriendIds(userIds.toSet)
+          }.map {
             case (userId, twitterSyncState) =>
               db.readWrite { implicit s =>
                 val libraryId = twitterSyncState.libraryId

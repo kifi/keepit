@@ -1,5 +1,7 @@
 package com.keepit.learning.porndetector
 
+import com.keepit.common.logging.Logging
+
 import scala.math.{ log, exp }
 
 trait PornDetector {
@@ -36,7 +38,7 @@ class NaiveBayesPornDetector(
   override def isPorn(text: String): Boolean = posterior(text) >= 0.75f // shifted threshold
 }
 
-class SlidingWindowPornDetector(detector: PornDetector, windowSize: Int = 10) extends PornDetector {
+class SlidingWindowPornDetector(detector: PornDetector, windowSize: Int = 10) extends PornDetector with Logging {
   if (windowSize <= 4) throw new IllegalArgumentException(s"window size for SlidingWindowPornDetector too small: get ${windowSize}, need at least 4")
   def detectBlocks(text: String): (Int, Int) = {
     val blocks = PornDetectorUtil.tokenize(text).sliding(windowSize, windowSize).toArray
@@ -47,9 +49,11 @@ class SlidingWindowPornDetector(detector: PornDetector, windowSize: Int = 10) ex
   override def isPorn(text: String): Boolean = posterior(text) > 0.5f
 
   override def posterior(text: String): Float = {
+    log.info(s"[SlidingWindowPornDetector]: detecting for: ${text.take(100)}")
     val (blocks, badBlocks) = detectBlocks(text)
     if (blocks == 0) return 0f
     val r = badBlocks / blocks.toFloat
+    log.info(s"[SlidingWindowPornDetector]: ratio = ${r}, num of bad blocks: ${badBlocks}")
     if (r > 0.05 || badBlocks > 10) return 1f else 0f // not smooth (for performance reason). could use more Bayesian style
   }
 }
