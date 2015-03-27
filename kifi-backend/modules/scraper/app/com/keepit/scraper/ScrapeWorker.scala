@@ -17,8 +17,7 @@ import com.keepit.common.time._
 import com.keepit.common.net.URI
 import org.apache.http.HttpStatus
 import scala.util.{ Try, Failure, Success }
-import com.keepit.learning.porndetector.PornDetectorFactory
-import com.keepit.learning.porndetector.SlidingWindowPornDetector
+import com.keepit.learning.porndetector.{ PornDomains, PornDetectorFactory, SlidingWindowPornDetector }
 import com.keepit.search.Lang
 import com.keepit.shoebox.ShoeboxScraperClient
 import scala.concurrent.Future
@@ -258,12 +257,16 @@ class ScrapeWorkerImpl @Inject() (
     }
   }
 
-  private def runPornDetectorIfNecessary(normalizedUri: NormalizedURI, content: String, contentLang: Lang): Future[Unit] = {
+  private def runPornDetectorIfNecessary(normalizedUri: NormalizedURI, content: String, title: String, description: String, contentLang: Lang): Future[Unit] = {
     uriCommander.isNonSensitive(normalizedUri.url).map { nonSensitive =>
       if (!nonSensitive) {
         if (contentLang == Lang("en") && content.size > 100) {
           val detector = new SlidingWindowPornDetector(pornDetectorFactory())
-          detector.isPorn(content.take(100000)) match {
+          val isPorn = PornDomains.isPornDomain(normalizedUri.url) || detector.isPorn(content.take(100000)) || detector.isPorn(title) || detector.isPorn(description)
+          if (isPorn && normalizedUri.restriction.exists(_ != Restriction.ADULT)) {
+            log.warn(s"uri ${normalizedUri.id.get} is detected as porn. However, existing restirction found: ${normalizedUri.restriction}. Not going to mark it.")
+          }
+          isPorn match {
             case true if normalizedUri.restriction == None => shoeboxCommander.updateURIRestriction(normalizedUri.id.get, Some(Restriction.ADULT)) // don't override other restrictions
             case false if normalizedUri.restriction == Some(Restriction.ADULT) => shoeboxCommander.updateURIRestriction(normalizedUri.id.get, None)
             case _ => Future.successful(())
@@ -300,7 +303,7 @@ class ScrapeWorkerImpl @Inject() (
                 case Some(desc) => LangDetector.detect(content + " " + desc)
                 case None => LangDetector.detect(content)
               }
-              runPornDetectorIfNecessary(normalizedUri, content, contentLang) map { _ =>
+              runPornDetectorIfNecessary(normalizedUri, content, title, description.getOrElse(""), contentLang) map { _ =>
                 val article: Article = Article(
                   id = normalizedUri.id.get,
                   title = title,

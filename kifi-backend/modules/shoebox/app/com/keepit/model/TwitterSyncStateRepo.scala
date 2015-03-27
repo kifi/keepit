@@ -1,6 +1,6 @@
 package com.keepit.model
 
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ State, Id }
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.db.slick.{ DbRepo, DataBaseComponent }
 import com.keepit.common.time._
@@ -54,6 +54,10 @@ class TwitterSyncStateRepo @Inject() (
       } yield row.twitterHandle
       q.list.headOption
     }
+  }
+
+  def getTwitterSyncsByFriendIds(friendIds: Set[Id[User]])(implicit session: RSession): Map[Id[User], TwitterSyncState] = {
+    (for (r <- rows if r.userId.inSet(friendIds) && r.state === TwitterSyncStateStates.ACTIVE) yield (r.userId, r)).list.toMap
   }
 
 }

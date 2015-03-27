@@ -148,7 +148,7 @@ class LDACommanderImpl @Inject() (
 
     // tweak
     def combineScores(keepInduced: Option[LDAUserURIInterestScore], personaInduced: Option[LDAUserURIInterestScore], userKeeps: Option[Int], personaWeight: Float): Option[LDAUserURIInterestScore] = {
-      val keepWeight = 4.0*Math.tanh(userKeeps.getOrElse(0) / 25)
+      val keepWeight = 4.0 * Math.tanh(userKeeps.getOrElse(0) / 25)
 
       (keepInduced, personaInduced) match {
         case (Some(kscore), Some(pscore)) =>
