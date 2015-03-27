@@ -3,14 +3,14 @@ package com.keepit.rover.manager
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.db.Id
 import com.keepit.common.queue.ProbabilisticMultiQueue
-import com.keepit.rover.model.ArticleInfo
+import com.keepit.rover.model.RoverArticleInfo
 import com.kifi.franz.SQSQueue
 import com.kifi.macros.json
 import org.joda.time.DateTime
 import com.keepit.common.time._
 
 @json
-case class FetchTask(id: Id[ArticleInfo], createdAt: DateTime = currentDateTime)
+case class FetchTask(id: Id[RoverArticleInfo], createdAt: DateTime = currentDateTime)
 
 sealed trait FetchTaskQueue {
   def queue: SQSQueue[FetchTask]

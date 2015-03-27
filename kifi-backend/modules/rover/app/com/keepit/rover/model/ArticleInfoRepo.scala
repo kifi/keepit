@@ -18,15 +18,15 @@ import scala.concurrent.duration.Duration
 import scala.util.{ Success, Failure, Try }
 
 @ImplementedBy(classOf[ArticleInfoRepoImpl])
-trait ArticleInfoRepo extends Repo[ArticleInfo] with SeqNumberFunction[ArticleInfo] {
-  def getAll(ids: Set[Id[ArticleInfo]])(implicit session: RSession): Map[Id[ArticleInfo], ArticleInfo]
-  def getByUriAndKind[A <: Article](uriId: Id[NormalizedURI], kind: ArticleKind[A], excludeState: Option[State[ArticleInfo]] = Some(ArticleInfoStates.INACTIVE))(implicit session: RSession): Option[ArticleInfo]
-  def getByUri(uriId: Id[NormalizedURI], excludeState: Option[State[ArticleInfo]] = Some(ArticleInfoStates.INACTIVE))(implicit session: RSession): Set[ArticleInfo]
-  def internByUri(uriId: Id[NormalizedURI], url: String, kinds: Set[ArticleKind[_ <: Article]])(implicit session: RWSession): Map[ArticleKind[_ <: Article], ArticleInfo]
+trait ArticleInfoRepo extends Repo[RoverArticleInfo] with SeqNumberFunction[RoverArticleInfo] {
+  def getAll(ids: Set[Id[RoverArticleInfo]])(implicit session: RSession): Map[Id[RoverArticleInfo], RoverArticleInfo]
+  def getByUriAndKind[A <: Article](uriId: Id[NormalizedURI], kind: ArticleKind[A], excludeState: Option[State[RoverArticleInfo]] = Some(ArticleInfoStates.INACTIVE))(implicit session: RSession): Option[RoverArticleInfo]
+  def getByUri(uriId: Id[NormalizedURI], excludeState: Option[State[RoverArticleInfo]] = Some(ArticleInfoStates.INACTIVE))(implicit session: RSession): Set[RoverArticleInfo]
+  def internByUri(uriId: Id[NormalizedURI], url: String, kinds: Set[ArticleKind[_ <: Article]])(implicit session: RWSession): Map[ArticleKind[_ <: Article], RoverArticleInfo]
   def deactivateByUri(uriId: Id[NormalizedURI])(implicit session: RWSession): Unit
-  def getRipeForFetching(limit: Int, queuedForMoreThan: Duration)(implicit session: RSession): Seq[ArticleInfo]
-  def markAsQueued(ids: Id[ArticleInfo]*)(implicit session: RWSession): Unit
-  def unmarkAsQueued(ids: Id[ArticleInfo]*)(implicit session: RWSession): Unit
+  def getRipeForFetching(limit: Int, queuedForMoreThan: Duration)(implicit session: RSession): Seq[RoverArticleInfo]
+  def markAsQueued(ids: Id[RoverArticleInfo]*)(implicit session: RWSession): Unit
+  def unmarkAsQueued(ids: Id[RoverArticleInfo]*)(implicit session: RWSession): Unit
   def updateAfterFetch[A <: Article](uriId: Id[NormalizedURI], kind: ArticleKind[A], fetched: Try[Option[ArticleVersion]])(implicit session: RWSession): Unit
 }
 
@@ -35,12 +35,12 @@ class ArticleInfoRepoImpl @Inject() (
     val db: DataBaseComponent,
     val clock: Clock,
     airbrake: AirbrakeNotifier,
-    implicit val failurePolicy: FailureRecoveryPolicy) extends DbRepo[ArticleInfo] with ArticleInfoRepo with SeqNumberDbFunction[ArticleInfo] with Logging {
+    implicit val failurePolicy: FailureRecoveryPolicy) extends DbRepo[RoverArticleInfo] with ArticleInfoRepo with SeqNumberDbFunction[RoverArticleInfo] with Logging {
 
   import db.Driver.simple._
 
   type RepoImpl = ArticleInfoTable
-  class ArticleInfoTable(tag: Tag) extends RepoTable[ArticleInfo](db, tag, "article_info") with SeqNumberColumn[ArticleInfo] {
+  class ArticleInfoTable(tag: Tag) extends RepoTable[RoverArticleInfo](db, tag, "article_info") with SeqNumberColumn[RoverArticleInfo] {
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)
     def url = column[String]("url", O.NotNull)
     def kind = column[String]("kind", O.NotNull)
@@ -57,41 +57,41 @@ class ArticleInfoRepoImpl @Inject() (
     def failureInfo = column[Option[String]]("failure_info", O.Nullable)
     def lastQueuedAt = column[Option[DateTime]]("last_queued_at", O.Nullable)
 
-    def * = (id.?, createdAt, updatedAt, state, seq, uriId, url, kind, bestVersionMajor, bestVersionMinor, latestVersionMajor, latestVersionMinor, oldestVersionMajor, oldestVersionMinor, lastFetchedAt, nextFetchAt, fetchInterval, failureCount, failureInfo, lastQueuedAt) <> ((ArticleInfo.applyFromDbRow _).tupled, ArticleInfo.unapplyToDbRow _)
+    def * = (id.?, createdAt, updatedAt, state, seq, uriId, url, kind, bestVersionMajor, bestVersionMinor, latestVersionMajor, latestVersionMinor, oldestVersionMajor, oldestVersionMinor, lastFetchedAt, nextFetchAt, fetchInterval, failureCount, failureInfo, lastQueuedAt) <> ((RoverArticleInfo.applyFromDbRow _).tupled, RoverArticleInfo.unapplyToDbRow _)
   }
 
   def table(tag: Tag) = new ArticleInfoTable(tag)
   initTable()
 
-  override def deleteCache(model: ArticleInfo)(implicit session: RSession): Unit = {}
+  override def deleteCache(model: RoverArticleInfo)(implicit session: RSession): Unit = {}
 
-  override def invalidateCache(model: ArticleInfo)(implicit session: RSession): Unit = {}
+  override def invalidateCache(model: RoverArticleInfo)(implicit session: RSession): Unit = {}
 
-  override def save(model: ArticleInfo)(implicit session: RWSession): ArticleInfo = {
+  override def save(model: RoverArticleInfo)(implicit session: RWSession): RoverArticleInfo = {
     super.save(model.copy(seq = deferredSeqNum()))
   }
 
   // Dangerous: this does *not* increment the sequence number - use only if you want an update *not* to be broadcasted!
-  private def saveSilently(model: ArticleInfo)(implicit session: RWSession): ArticleInfo = {
+  private def saveSilently(model: RoverArticleInfo)(implicit session: RWSession): RoverArticleInfo = {
     super.save(model)
   }
 
-  def getAll(ids: Set[Id[ArticleInfo]])(implicit session: RSession): Map[Id[ArticleInfo], ArticleInfo] = {
+  def getAll(ids: Set[Id[RoverArticleInfo]])(implicit session: RSession): Map[Id[RoverArticleInfo], RoverArticleInfo] = {
     (for (r <- rows if r.id.inSet(ids)) yield (r.id, r)).toMap
   }
 
-  def getByUriAndKind[A <: Article](uriId: Id[NormalizedURI], kind: ArticleKind[A], excludeState: Option[State[ArticleInfo]] = Some(ArticleInfoStates.INACTIVE))(implicit session: RSession): Option[ArticleInfo] = {
+  def getByUriAndKind[A <: Article](uriId: Id[NormalizedURI], kind: ArticleKind[A], excludeState: Option[State[RoverArticleInfo]] = Some(ArticleInfoStates.INACTIVE))(implicit session: RSession): Option[RoverArticleInfo] = {
     (for (r <- rows if r.uriId === uriId && r.kind === kind.typeCode && r.state =!= excludeState.orNull) yield r).firstOption
   }
 
-  def getByUri(uriId: Id[NormalizedURI], excludeState: Option[State[ArticleInfo]] = Some(ArticleInfoStates.INACTIVE))(implicit session: RSession): Set[ArticleInfo] = {
+  def getByUri(uriId: Id[NormalizedURI], excludeState: Option[State[RoverArticleInfo]] = Some(ArticleInfoStates.INACTIVE))(implicit session: RSession): Set[RoverArticleInfo] = {
     (for (r <- rows if r.uriId === uriId && r.state =!= excludeState.orNull) yield r).list.toSet
   }
 
-  def internByUri(uriId: Id[NormalizedURI], url: String, kinds: Set[ArticleKind[_ <: Article]])(implicit session: RWSession): Map[ArticleKind[_ <: Article], ArticleInfo] = {
-    if (kinds.isEmpty) Map.empty[ArticleKind[_ <: Article], ArticleInfo]
+  def internByUri(uriId: Id[NormalizedURI], url: String, kinds: Set[ArticleKind[_ <: Article]])(implicit session: RWSession): Map[ArticleKind[_ <: Article], RoverArticleInfo] = {
+    if (kinds.isEmpty) Map.empty[ArticleKind[_ <: Article], RoverArticleInfo]
     else {
-      val existingByKind: Map[ArticleKind[_ <: Article], ArticleInfo] = getByUri(uriId, excludeState = None).map { info => (info.articleKind -> info) }.toMap
+      val existingByKind: Map[ArticleKind[_ <: Article], RoverArticleInfo] = getByUri(uriId, excludeState = None).map { info => (info.articleKind -> info) }.toMap
       kinds.map { kind =>
         val savedInfo = existingByKind.get(kind) match {
           case Some(articleInfo) if articleInfo.isActive => articleInfo
@@ -100,7 +100,7 @@ class ArticleInfoRepoImpl @Inject() (
             save(reactivatedInfo)
           }
           case None => {
-            val newInfo = ArticleInfo(uriId = uriId, url = url, kind = kind.typeCode).initializeSchedulingPolicy
+            val newInfo = RoverArticleInfo(uriId = uriId, url = url, kind = kind.typeCode).initializeSchedulingPolicy
             save(newInfo)
           }
         }
@@ -115,7 +115,7 @@ class ArticleInfoRepoImpl @Inject() (
     }
   }
 
-  def getRipeForFetching(limit: Int, queuedForMoreThan: Duration)(implicit session: RSession): Seq[ArticleInfo] = {
+  def getRipeForFetching(limit: Int, queuedForMoreThan: Duration)(implicit session: RSession): Seq[RoverArticleInfo] = {
     val ripeRows = {
       val now = clock.now()
       val lastQueuedTooLongAgo = now minusSeconds queuedForMoreThan.toSeconds.toInt
@@ -124,11 +124,11 @@ class ArticleInfoRepoImpl @Inject() (
     ripeRows.sortBy(_.nextFetchAt).take(limit).list
   }
 
-  def markAsQueued(ids: Id[ArticleInfo]*)(implicit session: RWSession): Unit = updateLastQueuedAt(ids, Some(clock.now()))
+  def markAsQueued(ids: Id[RoverArticleInfo]*)(implicit session: RWSession): Unit = updateLastQueuedAt(ids, Some(clock.now()))
 
-  def unmarkAsQueued(ids: Id[ArticleInfo]*)(implicit session: RWSession): Unit = updateLastQueuedAt(ids, None)
+  def unmarkAsQueued(ids: Id[RoverArticleInfo]*)(implicit session: RWSession): Unit = updateLastQueuedAt(ids, None)
 
-  private def updateLastQueuedAt(ids: Seq[Id[ArticleInfo]], lastQueuedAt: Option[DateTime])(implicit session: RWSession): Unit = {
+  private def updateLastQueuedAt(ids: Seq[Id[RoverArticleInfo]], lastQueuedAt: Option[DateTime])(implicit session: RWSession): Unit = {
     (for (r <- rows if r.id.inSet(ids.toSet)) yield r.lastQueuedAt).update(lastQueuedAt)
   }
 
@@ -153,7 +153,7 @@ class ArticleInfoSequencingPluginImpl @Inject() (
 
 @Singleton
 class ArticleInfoSequenceNumberAssigner @Inject() (db: Database, repo: ArticleInfoRepo, airbrake: AirbrakeNotifier)
-  extends DbSequenceAssigner[ArticleInfo](db, repo, airbrake)
+  extends DbSequenceAssigner[RoverArticleInfo](db, repo, airbrake)
 
 class ArticleInfoSequencingActor @Inject() (
   assigner: ArticleInfoSequenceNumberAssigner,

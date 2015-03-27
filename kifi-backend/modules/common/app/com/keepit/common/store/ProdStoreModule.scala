@@ -1,7 +1,6 @@
 package com.keepit.common.store
 
 import com.amazonaws.services.s3.transfer.TransferManager
-import com.keepit.rover.store.{ InMemoryRoverUnderlyingArticleStoreImpl, S3RoverUnderlyingArticleStoreImpl, RoverUnderlyingArticleStore }
 import com.keepit.search.tracking.{ InMemoryProbablisticLRUStoreImpl, S3ProbablisticLRUStoreImpl, ProbablisticLRUStore }
 import play.api.Play.current
 import net.codingwell.scalaguice.ScalaModule
@@ -52,12 +51,6 @@ trait ProdStoreModule extends StoreModule {
     new S3ArticleStoreImpl(bucketName, amazonS3Client, accessLog)
   }
 
-  @Provides @Singleton
-  def roverArticleStore(amazonS3Client: AmazonS3, accessLog: AccessLog): RoverUnderlyingArticleStore = {
-    val bucketName = S3Bucket(current.configuration.getString("amazon.s3.rover.bucket").get)
-    new S3RoverUnderlyingArticleStoreImpl(bucketName, amazonS3Client, accessLog)
-  }
-
   @Singleton
   @Provides
   def kifiInstallationStore(amazonS3Client: AmazonS3, accessLog: AccessLog): KifiInstallationStore = {
@@ -99,12 +92,6 @@ abstract class DevStoreModule[T <: ProdStoreModule](override val prodStoreModule
     whenConfigured("amazon.s3.article.bucket")(
       prodStoreModule.articleStore(amazonS3ClientProvider.get, accessLog)
     ).getOrElse(new InMemoryArticleStoreImpl())
-
-  @Provides @Singleton
-  def roverArticleStore(amazonS3ClientProvider: Provider[AmazonS3], accessLog: AccessLog): RoverUnderlyingArticleStore =
-    whenConfigured("amazon.s3.rover.bucket")(
-      prodStoreModule.roverArticleStore(amazonS3ClientProvider.get, accessLog)
-    ).getOrElse(new InMemoryRoverUnderlyingArticleStoreImpl())
 
   @Singleton
   @Provides

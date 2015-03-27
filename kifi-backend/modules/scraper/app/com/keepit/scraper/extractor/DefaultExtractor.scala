@@ -1,6 +1,6 @@
 package com.keepit.scraper.extractor
 
-import com.keepit.rover.extractor.tika.{ KeywordValidator, HtmlMappers, MainContentHandler }
+import com.keepit.rover.document.tika.{ KeywordValidator, HtmlMappers, MainContentHandler }
 import com.keepit.scraper.ScraperConfig
 import org.apache.tika.parser.html.HtmlMapper
 import org.xml.sax.ContentHandler

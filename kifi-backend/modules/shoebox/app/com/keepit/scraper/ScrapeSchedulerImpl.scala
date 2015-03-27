@@ -6,7 +6,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.{ AirbrakeNotifier, SystemAdminMailSender }
 import com.keepit.common.logging.Logging
 import com.keepit.model._
-import com.keepit.rover.article.Signature
+import com.keepit.rover.document.utils.Signature
 import com.keepit.scraper.extractor.ExtractorProviderType
 import org.joda.time.DateTime
 

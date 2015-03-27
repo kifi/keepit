@@ -6,6 +6,7 @@ import com.keepit.common.performance._
 import com.keepit.common.cache.TransactionalCaching
 import com.keepit.common.logging.Logging
 import com.google.inject.{ Singleton, Inject }
+import com.keepit.rover.article.content.EmbedlyKeyword
 import org.apache.commons.lang3.RandomStringUtils
 import scala.concurrent.Future
 import com.keepit.model._
@@ -21,7 +22,6 @@ import com.keepit.scraper.embedly.EmbedlyStore
 import com.keepit.common.db.Id
 import com.keepit.cortex.CortexServiceClient
 import com.keepit.search.ArticleStore
-import com.keepit.rover.article.EmbedlyKeyword
 import com.keepit.normalizer.NormalizedURIInterner
 import com.keepit.common.service.RequestConsolidator
 import scala.concurrent.duration._
