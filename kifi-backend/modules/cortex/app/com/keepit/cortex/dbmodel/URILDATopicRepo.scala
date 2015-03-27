@@ -178,7 +178,7 @@ class URILDATopicRepoImpl @Inject() (
 
   def countUserURIFeatures(userId: Id[User], version: ModelVersion[DenseLDA], min_num_words: Int, keeperOnly: Boolean = false)(implicit session: RSession): Int = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    val sourceConstrain = if (keeperOnly) """and ck.source = 'keeper' """ else ""
+    val sourceConstrain = if (keeperOnly) """and ck.source in ('keeper', 'mobile', 'site', 'twitterSync') """ else ""
     val q = sql"""select count(ck.uri_id) from cortex_keep as ck inner join uri_lda_topic as tp on ck.uri_id = tp.uri_id where ck.user_id = ${userId.id} and tp.version = ${version.version} and ck.state = 'active' and ck.source != 'default' #${sourceConstrain} and tp.state = 'active' and tp.num_words > ${min_num_words}"""
     q.as[Int].list.head
   }
@@ -187,7 +187,7 @@ class URILDATopicRepoImpl @Inject() (
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     import scala.slick.jdbc.GetResult
     implicit val getLDATopicFeature = getResultFromMapper[LDATopicFeature]
-    val sourceConstrain = if (keeperOnly) """and ck.source = 'keeper' """ else ""
+    val sourceConstrain = if (keeperOnly) """and ck.source in ('keeper', 'mobile', 'site', 'twitterSync') """ else ""
     val q = sql"""select tp.feature from cortex_keep as ck inner join uri_lda_topic as tp on ck.uri_id = tp.uri_id where ck.user_id = ${userId.id} and ck.state = 'active' and tp.version = ${version.version} and ck.source != 'default' #${sourceConstrain} and tp.state = 'active' and tp.num_words > ${min_num_words}"""
     q.as[LDATopicFeature].list
   }
