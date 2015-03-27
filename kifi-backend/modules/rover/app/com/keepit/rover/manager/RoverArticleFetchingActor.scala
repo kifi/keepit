@@ -15,18 +15,19 @@ import com.keepit.common.core._
 import scala.concurrent.{ Future, ExecutionContext }
 import scala.util.{ Failure, Success }
 
-object RoverFetchingActor {
+object RoverArticleFetchingActor {
   val minConcurrentFetchTasks: Int = 5
   val maxConcurrentFetchTasks: Int = 10
   val lockTimeOut = 5 minutes
   sealed trait RoverFetchingActorMessage
-  case object StartPulling extends RoverFetchingActorMessage
+  case object Close extends RoverFetchingActorMessage
+  case object StartPullingTasks extends RoverFetchingActorMessage
+  case class CancelPulling(limit: Int) extends RoverFetchingActorMessage
   case class Pulled(tasks: Seq[SQSMessage[FetchTask]], limit: Int) extends RoverFetchingActorMessage
   case class Fetched(task: SQSMessage[FetchTask]) extends RoverFetchingActorMessage
-  case class CancelPulling(limit: Int) extends RoverFetchingActorMessage
 }
 
-class RoverFetchingActor @Inject() (
+class RoverArticleFetchingActor @Inject() (
     db: Database,
     articleInfoRepo: ArticleInfoRepo,
     taskQueue: ProbabilisticFetchTaskQueue,
@@ -35,25 +36,32 @@ class RoverFetchingActor @Inject() (
     articleStore: RoverArticleStore,
     implicit val executionContext: ExecutionContext) extends FortyTwoActor(airbrake) with Logging {
 
-  import RoverFetchingActor._
+  import RoverArticleFetchingActor._
 
-  private var pulling = 0
-  private var fetching = Set.empty[SQSMessage[FetchTask]] // todo(Léo): a count might be enough here, but this might be useful to release SQS tasks in panic mode
+  private[this] var closing = false
+  private[this] var pulling = 0
+  private[this] var fetching = Set.empty[SQSMessage[FetchTask]]
+
+  private def concurrentFetchTasks = pulling + fetching.size
 
   def receive = {
     case fetchingMessage: RoverFetchingActorMessage => {
       fetchingMessage match {
-        case StartPulling => startPulling()
+        case StartPullingTasks => startPulling()
         case CancelPulling(limit) => endPulling(limit)
-        case Pulled(tasks, limit) => processTasks(tasks, limit)
+        case Pulled(tasks, limit) => {
+          endPulling(limit)
+          processTasks(tasks)
+        }
         case Fetched(task) => endFetching(task)
+        case Close => close()
       }
     }
     case m => throw new UnsupportedActorMessage(m)
   }
 
-  private def startPulling(): Unit = {
-    val limit = maxConcurrentFetchTasks - pulling - fetching.size
+  private def startPulling(): Unit = if (!closing) {
+    val limit = maxConcurrentFetchTasks - concurrentFetchTasks
     if (limit > 0) {
       pulling += limit
       taskQueue.nextBatchWithLock(limit, lockTimeOut).onComplete {
@@ -74,9 +82,8 @@ class RoverFetchingActor @Inject() (
     pulling -= limit
   }
 
-  private def processTasks(tasks: Seq[SQSMessage[FetchTask]], limit: Int): Unit = {
-    endPulling(limit)
-    if (tasks.nonEmpty) {
+  private def processTasks(tasks: Seq[SQSMessage[FetchTask]]): Unit = {
+    if (!closing && tasks.nonEmpty) {
       val articleInfosById = db.readOnlyMaster { implicit session =>
         articleInfoRepo.getAll(tasks.map(_.body.id).toSet)
       }
@@ -108,8 +115,12 @@ class RoverFetchingActor @Inject() (
 
   private def endFetching(task: SQSMessage[FetchTask]): Unit = {
     fetching -= task
-    if (fetching.size < minConcurrentFetchTasks) {
+    if (concurrentFetchTasks < minConcurrentFetchTasks) {
       startPulling()
     }
+  }
+
+  private def close(): Unit = {
+    closing = true
   }
 }

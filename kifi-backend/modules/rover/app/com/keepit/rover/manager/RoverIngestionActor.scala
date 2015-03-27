@@ -36,7 +36,7 @@ class RoverIngestionActor @Inject() (
 
   import RoverIngestionActor._
 
-  private var ingesting = false
+  private[this] var ingesting = false
 
   def receive = {
     case ingestionMessage: RoverIngestionActorMessage => {
