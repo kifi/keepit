@@ -3,7 +3,7 @@ package com.keepit.rover.model
 import com.keepit.common.db._
 import com.keepit.common.time._
 import com.keepit.model._
-import com.keepit.rover.article.{ ArticleFetchRequest, Article, ArticleKind }
+import com.keepit.rover.article.{ ArticleFetchRequest, Article }
 import com.keepit.rover.manager.{ FailureRecoveryPolicy, FetchSchedulingPolicy }
 import org.joda.time.DateTime
 import scala.concurrent.duration.Duration
@@ -28,12 +28,14 @@ case class ArticleInfo(
     fetchInterval: Option[Duration] = None,
     failureCount: Int = 0,
     failureInfo: Option[String] = None,
-    lastQueuedAt: Option[DateTime] = None) extends ModelWithState[ArticleInfo] with ModelWithSeqNumber[ArticleInfo] with ArticleKeyHolder {
+    lastQueuedAt: Option[DateTime] = None) extends ModelWithState[ArticleInfo] with ModelWithSeqNumber[ArticleInfo] with ArticleKeyHolder with ArticleKindHolder {
+
   def withId(id: Id[ArticleInfo]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def isActive = (state == ArticleInfoStates.ACTIVE)
+  def shouldFetch = isActive && lastQueuedAt.isDefined
 
-  def getFetchRequest[A <: Article](implicit kind: ArticleKind[A]) = ArticleFetchRequest(kind, url, lastFetchedAt, getLatestKey)
+  def getFetchRequest: ArticleFetchRequest[A] = ArticleFetchRequest(articleKind, url, lastFetchedAt, getLatestKey)
 
   def clean: ArticleInfo = copy(
     bestVersion = None,

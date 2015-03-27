@@ -11,6 +11,9 @@ import scala.ref.WeakReference
 import java.util.concurrent.{ TimeUnit, ThreadFactory, Executors, ConcurrentLinkedQueue }
 
 case class HttpFetchEnforcerConfig(httpFetcherEnforcerFreq: Int, httpFetcherQSizeThreshold: Int)
+object HttpFetchEnforcerConfig {
+  val default = HttpFetchEnforcerConfig(5, 100)
+}
 
 class HttpFetchEnforcer(q: ConcurrentLinkedQueue[WeakReference[ApacheFetchRequest]], Q_SIZE_THRESHOLD: Int, airbrake: AirbrakeNotifier) extends Runnable with Logging {
 

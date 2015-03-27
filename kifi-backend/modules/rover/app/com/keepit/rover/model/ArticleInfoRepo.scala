@@ -19,6 +19,7 @@ import scala.util.{ Success, Failure, Try }
 
 @ImplementedBy(classOf[ArticleInfoRepoImpl])
 trait ArticleInfoRepo extends Repo[ArticleInfo] with SeqNumberFunction[ArticleInfo] {
+  def getAll(ids: Set[Id[ArticleInfo]])(implicit session: RSession): Map[Id[ArticleInfo], ArticleInfo]
   def getByUriAndKind[A <: Article](uriId: Id[NormalizedURI], kind: ArticleKind[A], excludeState: Option[State[ArticleInfo]] = Some(ArticleInfoStates.INACTIVE))(implicit session: RSession): Option[ArticleInfo]
   def getByUri(uriId: Id[NormalizedURI], excludeState: Option[State[ArticleInfo]] = Some(ArticleInfoStates.INACTIVE))(implicit session: RSession): Set[ArticleInfo]
   def internByUri(uriId: Id[NormalizedURI], url: String, kinds: Set[ArticleKind[_ <: Article]])(implicit session: RWSession): Map[ArticleKind[_ <: Article], ArticleInfo]
@@ -73,6 +74,10 @@ class ArticleInfoRepoImpl @Inject() (
   // Dangerous: this does *not* increment the sequence number - use only if you want an update *not* to be broadcasted!
   private def saveSilently(model: ArticleInfo)(implicit session: RWSession): ArticleInfo = {
     super.save(model)
+  }
+
+  def getAll(ids: Set[Id[ArticleInfo]])(implicit session: RSession): Map[Id[ArticleInfo], ArticleInfo] = {
+    (for (r <- rows if r.id.inSet(ids)) yield (r.id, r)).toMap
   }
 
   def getByUriAndKind[A <: Article](uriId: Id[NormalizedURI], kind: ArticleKind[A], excludeState: Option[State[ArticleInfo]] = Some(ArticleInfoStates.INACTIVE))(implicit session: RSession): Option[ArticleInfo] = {

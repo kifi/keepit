@@ -8,7 +8,6 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.model.NormalizedURIStates._
 import com.keepit.model.{ Name, IndexableUri, SystemValueRepo, NormalizedURI }
-import com.keepit.rover.article.{ Article, ArticleKind }
 import com.keepit.rover.model.ArticleInfoRepo
 import com.keepit.shoebox.ShoeboxServiceClient
 
@@ -37,7 +36,7 @@ class RoverIngestionActor @Inject() (
 
   import RoverIngestionActor._
 
-  private var ingesting = false
+  private[this] var ingesting = false
 
   def receive = {
     case ingestionMessage: RoverIngestionActorMessage => {
