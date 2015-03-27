@@ -3,6 +3,7 @@ package com.keepit.learning.porndetector
 import com.keepit.common.logging.Logging
 
 import scala.math.{ log, exp }
+import scala.util.matching.Regex
 
 trait PornDetector {
   def posterior(text: String): Float // probability being porn
@@ -19,7 +20,7 @@ trait PornDetector {
 class NaiveBayesPornDetector(
     likelihoodRatio: Map[String, Float],
     priorOfPorn: Float = 0.5f,
-    oovRatio: Float = 0.001f) extends PornDetector{
+    oovRatio: Float = 0.001f) extends PornDetector {
 
   private def logPosteriorRatio(text: String): Double = {
     PornDetectorUtil.tokenize(text).foldLeft(0.0) {
@@ -38,7 +39,7 @@ class NaiveBayesPornDetector(
   override def isPorn(text: String): Boolean = posterior(text) >= 0.75f // shifted threshold
 }
 
-class SlidingWindowPornDetector(detector: PornDetector, windowSize: Int = 10) extends PornDetector with Logging{
+class SlidingWindowPornDetector(detector: PornDetector, windowSize: Int = 10) extends PornDetector with Logging {
   if (windowSize <= 4) throw new IllegalArgumentException(s"window size for SlidingWindowPornDetector too small: get ${windowSize}, need at least 4")
   def detectBlocks(text: String): (Int, Int) = {
     val blocks = PornDetectorUtil.tokenize(text).sliding(windowSize, windowSize).toArray
@@ -61,5 +62,18 @@ class SlidingWindowPornDetector(detector: PornDetector, windowSize: Int = 10) ex
 object PornDetectorUtil {
   def tokenize(text: String): Array[String] = {
     text.split("[^a-zA-Z0-9]").filter(!_.isEmpty).map { _.toLowerCase }
+  }
+}
+
+object PornDomains {
+  private def toRegex(domain: String): Regex = {
+    val domainRegex = domain.toLowerCase.replaceAllLiterally(".", "\\.")
+    new Regex("""^https?:\/\/.*""" + domainRegex + "/.*")
+  }
+
+  private val domains: Seq[String] = Seq("2porno.tv", "3xhen.com", "4tube.com", "4sex4.com", "alotporn.com", "alphaporno.com", "anyporn.com", "anysex.com", "backpage.com", "beeg.com", "bravotube.net", "cityvibe.com", "cum.com", "drtuber.com", "empflix.com", "eskimotube.com", "extremetube.com", "fapdu.com", "fc2.com", "h2porn.com", "hardsextube.com", "hellporno.com", "highfashion4less.com", "hotmovies.com", "hotshame.com", "imagefap.com", "javfree.me", "jizzhut.com", "keezmovies.com", "madthumbs.com", "motherless.com", "nuvid.com", "porn.com", "pornerbros.com", "pornhub.com", "pornoid.com", "pornoxo.com", "pornsharing.com", "porntube.com", "redtube.com", "s3exy.com", "slutload.com", "spankwire.com", "surfgayvideo.com", "sweetkiss.me", "tnaflix.com", "touchbyvenus.com", "tube8.com", "tubepornstars.com", "tubewolf.com", "vid2c.com", "vintagetubesex.com", "vporn.com", "wanknews.com", "warnet.ws", "woodmancastingx.com", "xblboys.com", "xhamster.com", "xnxx.com", "xtube.com", "xvideos.com", "xxxbunker.com", "xxxkinky.com", "yobt.com", "youjizz.com", "youngpornvideos.com", "yourlust.com", "youporn.com")
+  private val domainRegexes = domains.map { toRegex(_) }
+  def isPornDomain(url: String): Boolean = {
+    domainRegexes.exists(reg => reg.findFirstMatchIn(url).isDefined)
   }
 }

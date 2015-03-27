@@ -41,4 +41,13 @@ class PornDetectorTest extends Specification {
       detector.isPorn("*&^%$#@#$ *&^%$$#") === false
     }
   }
+
+  "regex filter works" should {
+    "work" in {
+      val safe = "http://kifi.com"
+      val bad = "http://youporn.com/xyz"
+      PornDomains.isPornDomain(safe) === false
+      PornDomains.isPornDomain(bad) === true
+    }
+  }
 }
