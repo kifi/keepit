@@ -5,7 +5,7 @@ import com.keepit.common.akka.{ UnsupportedActorMessage, FortyTwoActor }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.rover.model.{ ArticleInfo, ArticleInfoRepo }
+import com.keepit.rover.model.{ RoverArticleInfo, ArticleInfoRepo }
 import scala.concurrent.duration._
 import com.keepit.common.core._
 
@@ -73,7 +73,7 @@ class RoverFetchSchedulingActor @Inject() (
     }
   }
 
-  private def getRelevantQueue(articleInfo: ArticleInfo): FetchTaskQueue = articleInfo.latestVersion match {
+  private def getRelevantQueue(articleInfo: RoverArticleInfo): FetchTaskQueue = articleInfo.latestVersion match {
     case None => firstTimeQueue
     case Some(version) => if (version.major < articleInfo.articleKind.version) newVersionQueue else refreshQueue
   }

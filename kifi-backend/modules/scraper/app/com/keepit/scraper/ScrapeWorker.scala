@@ -6,7 +6,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.net.URI._
 import com.keepit.model._
-import com.keepit.rover.article.Signature
+import com.keepit.rover.document.utils.Signature
 import com.keepit.rover.fetcher.{ FetchRequest, HttpRedirect }
 import com.keepit.scraper.extractor._
 import com.keepit.scraper.fetcher.DeprecatedHttpFetcher

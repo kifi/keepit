@@ -3,7 +3,7 @@ package com.keepit.normalizer
 import com.keepit.model.{ NormalizedURI, RawKeep, Normalization }
 import com.keepit.common.db.Id
 import com.keepit.commanders.RawBookmarkRepresentation
-import com.keepit.rover.article.Signature
+import com.keepit.rover.document.utils.Signature
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 

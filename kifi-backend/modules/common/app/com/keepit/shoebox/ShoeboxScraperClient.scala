@@ -9,7 +9,7 @@ import com.keepit.common.routes.Shoebox
 import com.keepit.common.service.ThrottledServiceClient
 import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.model._
-import com.keepit.rover.article.Signature
+import com.keepit.rover.document.utils.Signature
 import com.keepit.rover.fetcher.HttpRedirect
 import com.keepit.scraper.ScrapeRequest
 import org.joda.time.DateTime

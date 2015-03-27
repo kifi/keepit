@@ -1,8 +1,7 @@
 package com.keepit.scraper.extractor
 
 import com.keepit.common.net.URI
-import com.keepit.rover.article.{ SignatureBuilder, Signature }
-import com.keepit.rover.extractor.utils.DateTimeMetadataParser
+import com.keepit.rover.document.utils.{ SignatureBuilder, Signature, DateTimeMetadataParser }
 import com.keepit.rover.fetcher.{ FetchResult, HttpInputStream }
 import com.keepit.scraper.mediatypes.MediaTypes
 import com.keepit.scraper.BasicArticle
