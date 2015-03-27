@@ -598,6 +598,7 @@ GET     /admin/data/scraperRequests     @com.keepit.controllers.admin.ScraperAdm
 POST    /admin/data/scrape/regex        @com.keepit.controllers.admin.ScraperAdminController.rescrapeByRegex()
 GET     /admin/data/remigrate           @com.keepit.controllers.admin.UrlController.fixRedirectedUriStates(doIt: Boolean ?= false)
 POST    /admin/data/clearRestriction    @com.keepit.controllers.admin.UrlController.clearRestriction(uriId: Id[NormalizedURI])
+POST    /admin/data/flagAsAdult    @com.keepit.controllers.admin.UrlController.flagAsAdult(uriId: Id[NormalizedURI])
 GET     /admin/data/cleanKeepsByUri    @com.keepit.controllers.admin.UrlController.cleanKeepsByUri(firstPage: Int ?= 0, pageSize: Int ?= 100)
 
 GET     /admin/article/index        @com.keepit.controllers.admin.AdminArticleIndexerController.index
