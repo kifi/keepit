@@ -8,11 +8,7 @@ import com.kifi.macros.json
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
-case class ArticleKey[A <: Article](uriId: Id[NormalizedURI], kind: ArticleKind[A], version: ArticleVersion) {
-  // todo(NOT): do not change this unless you actually want to break stuff
-  def toKey: String = s"${uriId.id}/${kind.typeCode}/${version.major.value}/${version.minor.value}"
-  override def toString = toKey
-}
+case class ArticleKey[A <: Article](uriId: Id[NormalizedURI], kind: ArticleKind[A], version: ArticleVersion)
 
 @json
 case class ArticleVersion(major: VersionNumber[Article], minor: VersionNumber[Article]) extends Ordered[ArticleVersion] {

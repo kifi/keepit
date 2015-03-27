@@ -27,7 +27,7 @@ class RoverArticleStore @Inject() (underlying: RoverUnderlyingArticleStore, impl
   def add[A <: Article](uriId: Id[NormalizedURI], previousVersion: Option[ArticleVersion], article: A)(implicit kind: ArticleKind[A]): Future[ArticleKey[A]] = {
     SafeFuture {
       val key = ArticleKey(uriId, kind, ArticleVersion.next[A](previousVersion))
-      underlying += (key -> article)
+      underlying += (ArticleStoreKey(key) -> article)
       key
     }
   }

@@ -7,11 +7,19 @@ import com.keepit.rover.article.Article
 import com.keepit.rover.model.ArticleKey
 import play.api.libs.json.Format
 
-private[store] trait RoverUnderlyingArticleStore extends ObjectStore[ArticleKey[_], Article]
+private[store] class ArticleStoreKey(key: ArticleKey[_]) {
+  override def toString = s"${key.uriId.id}/${key.kind.typeCode}/${key.version.major.value}/${key.version.minor.value}"
+}
+
+private[store] object ArticleStoreKey {
+  implicit def apply[A <: Article](key: ArticleKey[A]): ArticleStoreKey = new ArticleStoreKey(key)
+}
+
+private[store] trait RoverUnderlyingArticleStore extends ObjectStore[ArticleStoreKey, Article]
 
 private[store] class S3RoverUnderlyingArticleStoreImpl(val bucketName: S3Bucket, val amazonS3Client: AmazonS3, val accessLog: AccessLog)
-    extends S3JsonStore[ArticleKey[_], Article] with RoverUnderlyingArticleStore {
+    extends S3JsonStore[ArticleStoreKey, Article] with RoverUnderlyingArticleStore {
   val formatter: Format[Article] = Article.format
 }
 
-private[store] class InMemoryRoverUnderlyingArticleStoreImpl extends InMemoryObjectStore[ArticleKey[_], Article] with RoverUnderlyingArticleStore
+private[store] class InMemoryRoverUnderlyingArticleStoreImpl extends InMemoryObjectStore[ArticleStoreKey, Article] with RoverUnderlyingArticleStore
