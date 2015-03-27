@@ -14,9 +14,12 @@ angular.module('kifi')
       link: function (scope) {
         scope.show = false;
 
-        scope.twitterHandle = scope.library.attr && scope.library.attr.twitter.screenName;
-        scope.title = scope.twitterHandle ? 'Create a library of your tweeted links' : 'There\'s more to see...';
-        scope.subtitle = scope.twitterHandle ? 'Sign up for the Twitter Deep Search Beta' : 'Sign up to see the rest of what\'s here!';
+        scope.title = 'There\'s more to see...';
+        scope.subtitle = 'Sign up to see the rest of what\'s here!';
+        // (todo) aaron: remove to release twitter waitlist
+        //scope.twitterHandle = scope.library.attr && scope.library.attr.twitter.screenName;
+        //scope.title = scope.twitterHandle ? 'Create a library of your tweeted links' : 'There\'s more to see...';
+        //scope.subtitle = scope.twitterHandle ? 'Sign up for the Twitter Deep Search Beta' : 'Sign up to see the rest of what\'s here!';
 
         scope.join = function ($event, clickCase) {
           $rootScope.$emit('trackLibraryEvent', 'click', {
