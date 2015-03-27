@@ -8,8 +8,6 @@ import com.kifi.macros.json
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
-case class ArticleKey[A <: Article](uriId: Id[NormalizedURI], kind: ArticleKind[A], version: ArticleVersion)
-
 @json
 case class ArticleVersion(major: VersionNumber[Article], minor: VersionNumber[Article]) extends Ordered[ArticleVersion] {
   def compare(that: ArticleVersion) = {
@@ -19,18 +17,9 @@ case class ArticleVersion(major: VersionNumber[Article], minor: VersionNumber[Ar
   override def toString = s"$major.$minor"
 }
 
-object ArticleVersion {
-  def zero[A <: Article](implicit kind: ArticleKind[A]): ArticleVersion = ArticleVersion(kind.version, VersionNumber.ZERO)
-  def next[A <: Article](previous: Option[ArticleVersion])(implicit kind: ArticleKind[A]): ArticleVersion = {
-    previous match {
-      case Some(version) if version.major > kind.version => throw new IllegalStateException(s"Version number of $kind must be increasing (current is ${kind.version}, got $previous)")
-      case Some(version) if version.major == kind.version => version.copy(minor = version.minor + 1)
-      case _ => zero[A]
-    }
-  }
-}
+case class ArticleKey[A <: Article](uriId: Id[NormalizedURI], kind: ArticleKind[A], version: ArticleVersion)
 
-trait ArticleKeyHolder {
+trait ArticleInfoHolder {
   type A <: Article
   def articleKind: ArticleKind[A]
   def uriId: Id[NormalizedURI]
@@ -48,21 +37,21 @@ trait ArticleKindHolder {
   def articleKind: ArticleKind[A] = rawKind.self
 }
 
-case class BasicArticleInfo(
+case class ArticleInfo(
   isDeleted: Boolean,
-  seq: SequenceNumber[BasicArticleInfo],
+  seq: SequenceNumber[ArticleInfo],
   uriId: Id[NormalizedURI],
   kind: String, // todo(Léo): make this kind: ArticleKind[_ <: Article] with Scala 2.11, (with proper mapper, serialization is unchanged)
   bestVersion: Option[ArticleVersion],
-  latestVersion: Option[ArticleVersion]) extends ArticleKeyHolder with ArticleKindHolder
+  latestVersion: Option[ArticleVersion]) extends ArticleInfoHolder with ArticleKindHolder
 
-object BasicArticleInfo {
+object ArticleInfo {
   implicit val format = (
     (__ \ 'isDeleted).format[Boolean] and
-    (__ \ 'seq).format(SequenceNumber.format[BasicArticleInfo]) and
+    (__ \ 'seq).format(SequenceNumber.format[ArticleInfo]) and
     (__ \ 'uriId).format(Id.format[NormalizedURI]) and
     (__ \ 'kind).format[String] and
     (__ \ 'bestVersion).formatNullable[ArticleVersion] and
     (__ \ 'latestVersion).formatNullable[ArticleVersion]
-  )(BasicArticleInfo.apply, unlift(BasicArticleInfo.unapply))
+  )(ArticleInfo.apply, unlift(ArticleInfo.unapply))
 }

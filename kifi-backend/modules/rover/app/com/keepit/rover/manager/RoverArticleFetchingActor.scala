@@ -6,7 +6,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.rover.article.ArticleFetcherProvider
-import com.keepit.rover.model.{ ArticleInfo, ArticleInfoRepo }
+import com.keepit.rover.model.{ RoverArticleInfo, ArticleInfoRepo }
 import com.keepit.rover.store.RoverArticleStore
 import com.kifi.franz.SQSMessage
 import scala.concurrent.duration._
@@ -92,7 +92,7 @@ class RoverArticleFetchingActor @Inject() (
     }
   }
 
-  private def startFetching(task: SQSMessage[FetchTask], articleInfo: ArticleInfo): Boolean = {
+  private def startFetching(task: SQSMessage[FetchTask], articleInfo: RoverArticleInfo): Boolean = {
     if (articleInfo.id != Some(task.body.id)) { throw new IllegalArgumentException(s"ArticleInfo with id ${articleInfo.id} does not match $task") }
 
     articleInfo.shouldFetch tap {

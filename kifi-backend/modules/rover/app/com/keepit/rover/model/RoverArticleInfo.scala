@@ -8,15 +8,15 @@ import com.keepit.rover.manager.{ FailureRecoveryPolicy, FetchSchedulingPolicy }
 import org.joda.time.DateTime
 import scala.concurrent.duration.Duration
 
-object ArticleInfoStates extends States[ArticleInfo]
+object ArticleInfoStates extends States[RoverArticleInfo]
 
 // Warning: Do not cache - we're not using a strict ORM approach with this model (see saveSilently, update).
-case class ArticleInfo(
-    id: Option[Id[ArticleInfo]] = None,
+case class RoverArticleInfo(
+    id: Option[Id[RoverArticleInfo]] = None,
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,
-    state: State[ArticleInfo] = ArticleInfoStates.ACTIVE,
-    seq: SequenceNumber[ArticleInfo] = SequenceNumber.ZERO,
+    state: State[RoverArticleInfo] = ArticleInfoStates.ACTIVE,
+    seq: SequenceNumber[RoverArticleInfo] = SequenceNumber.ZERO,
     uriId: Id[NormalizedURI],
     url: String,
     kind: String, // todo(Léo): make this kind: ArticleKind[_ <: Article] with Scala 2.11, (with proper mapper, serialization is unchanged)
@@ -28,16 +28,16 @@ case class ArticleInfo(
     fetchInterval: Option[Duration] = None,
     failureCount: Int = 0,
     failureInfo: Option[String] = None,
-    lastQueuedAt: Option[DateTime] = None) extends ModelWithState[ArticleInfo] with ModelWithSeqNumber[ArticleInfo] with ArticleKeyHolder with ArticleKindHolder {
+    lastQueuedAt: Option[DateTime] = None) extends ModelWithState[RoverArticleInfo] with ModelWithSeqNumber[RoverArticleInfo] with ArticleInfoHolder with ArticleKindHolder {
 
-  def withId(id: Id[ArticleInfo]) = this.copy(id = Some(id))
+  def withId(id: Id[RoverArticleInfo]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def isActive = (state == ArticleInfoStates.ACTIVE)
   def shouldFetch = isActive && lastQueuedAt.isDefined
 
   def getFetchRequest: ArticleFetchRequest[A] = ArticleFetchRequest(articleKind, url, lastFetchedAt, getLatestKey)
 
-  def clean: ArticleInfo = copy(
+  def clean: RoverArticleInfo = copy(
     bestVersion = None,
     latestVersion = None,
     oldestVersion = None,
@@ -51,17 +51,17 @@ case class ArticleInfo(
 
   private def schedulingPolicy = FetchSchedulingPolicy(articleKind)
 
-  def initializeSchedulingPolicy: ArticleInfo = copy(
+  def initializeSchedulingPolicy: RoverArticleInfo = copy(
     nextFetchAt = Some(currentDateTime),
     fetchInterval = Some(schedulingPolicy.initialInterval)
   )
 
-  def withLatestFetchComplete: ArticleInfo = copy(
+  def withLatestFetchComplete: RoverArticleInfo = copy(
     lastFetchedAt = Some(currentDateTime),
     lastQueuedAt = None
   )
 
-  def withFailure(error: Throwable)(implicit recoveryPolicy: FailureRecoveryPolicy): ArticleInfo = {
+  def withFailure(error: Throwable)(implicit recoveryPolicy: FailureRecoveryPolicy): RoverArticleInfo = {
     val updatedFailureCount = failureCount + 1
     val updatedNextFetchAt = {
       if (recoveryPolicy.shouldRetry(url, error, updatedFailureCount)) {
@@ -75,7 +75,7 @@ case class ArticleInfo(
     )
   }
 
-  def withLatestArticle(version: ArticleVersion): ArticleInfo = {
+  def withLatestArticle(version: ArticleVersion): RoverArticleInfo = {
     val decreasedFetchInterval = fetchInterval.map(schedulingPolicy.decreaseInterval)
     copy(
       nextFetchAt = decreasedFetchInterval.map(schedulingPolicy.nextFetchAfterSuccess),
@@ -87,7 +87,7 @@ case class ArticleInfo(
     )
   }
 
-  def withoutChange: ArticleInfo = {
+  def withoutChange: RoverArticleInfo = {
     val increasedFetchInterval = fetchInterval.map(schedulingPolicy.increaseInterval)
     copy(
       nextFetchAt = increasedFetchInterval.map(schedulingPolicy.nextFetchAfterSuccess),
@@ -98,15 +98,15 @@ case class ArticleInfo(
   }
 }
 
-object ArticleInfo {
-  implicit def fromArticleInfoSeq(seq: SequenceNumber[ArticleInfo]): SequenceNumber[BasicArticleInfo] = seq.copy()
-  implicit def toArticleInfoSeq(seq: SequenceNumber[BasicArticleInfo]): SequenceNumber[ArticleInfo] = seq.copy()
-  implicit def fromArticleInfoState(state: State[ArticleInfo]): State[BasicArticleInfo] = state.copy()
-  implicit def toArticleInfoState(state: State[BasicArticleInfo]): State[ArticleInfo] = state.copy()
+object RoverArticleInfo {
+  implicit def toArticleInfoSeq(seq: SequenceNumber[RoverArticleInfo]): SequenceNumber[ArticleInfo] = seq.copy()
+  implicit def fromArticleInfoSeq(seq: SequenceNumber[ArticleInfo]): SequenceNumber[RoverArticleInfo] = seq.copy()
+  implicit def toArticleInfoState(state: State[RoverArticleInfo]): State[ArticleInfo] = state.copy()
+  implicit def fromArticleInfoState(state: State[ArticleInfo]): State[RoverArticleInfo] = state.copy()
 
-  // Warning: if you add fields to BasicArticleInfo, make sure ArticleInfo.seq is incremented when they change
-  implicit def toBasicArticleInfo(info: ArticleInfo): BasicArticleInfo = {
-    BasicArticleInfo(
+  // Warning: if you add fields to ArticleInfo, make sure RoverArticleInfo.seq is incremented when they change
+  implicit def toArticleInfo(info: RoverArticleInfo): ArticleInfo = {
+    ArticleInfo(
       info.state == ArticleInfoStates.INACTIVE,
       info.seq,
       info.uriId,
@@ -117,11 +117,11 @@ object ArticleInfo {
   }
 
   def applyFromDbRow(
-    id: Option[Id[ArticleInfo]] = None,
+    id: Option[Id[RoverArticleInfo]] = None,
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,
-    state: State[ArticleInfo] = ArticleInfoStates.ACTIVE,
-    seq: SequenceNumber[ArticleInfo] = SequenceNumber.ZERO,
+    state: State[RoverArticleInfo] = ArticleInfoStates.ACTIVE,
+    seq: SequenceNumber[RoverArticleInfo] = SequenceNumber.ZERO,
     uriId: Id[NormalizedURI],
     url: String,
     kind: String,
@@ -136,14 +136,14 @@ object ArticleInfo {
     fetchInterval: Option[Duration],
     failureCount: Int,
     failureInfo: Option[String],
-    lastQueuedAt: Option[DateTime]): ArticleInfo = {
+    lastQueuedAt: Option[DateTime]): RoverArticleInfo = {
     val bestVersion = articleVersionFromDb(bestVersionMajor, bestVersionMinor)
     val latestVersion = articleVersionFromDb(latestVersionMajor, latestVersionMinor)
     val oldestVersion = articleVersionFromDb(oldestVersionMajor, oldestVersionMinor)
-    ArticleInfo(id, createdAt, updatedAt, state, seq, uriId, url, kind, bestVersion, latestVersion, oldestVersion, lastFetchedAt, nextFetchAt, fetchInterval, failureCount, failureInfo, lastQueuedAt)
+    RoverArticleInfo(id, createdAt, updatedAt, state, seq, uriId, url, kind, bestVersion, latestVersion, oldestVersion, lastFetchedAt, nextFetchAt, fetchInterval, failureCount, failureInfo, lastQueuedAt)
   }
 
-  def unapplyToDbRow(info: ArticleInfo) = {
+  def unapplyToDbRow(info: RoverArticleInfo) = {
     val (bestVersionMajor, bestVersionMinor) = articleVersionToDb(info.bestVersion)
     val (latestVersionMajor, latestVersionMinor) = articleVersionToDb(info.latestVersion)
     val (oldestVersionMajor, oldestVersionMinor) = articleVersionToDb(info.oldestVersion)

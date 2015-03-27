@@ -5,7 +5,7 @@ import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.Id
 import com.keepit.model.NormalizedURI
 import com.keepit.rover.article.{ Article, ArticleKind }
-import com.keepit.rover.model.{ ArticleKey, ArticleVersion }
+import com.keepit.rover.model.{ ArticleVersionProvider, ArticleKey, ArticleVersion }
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.reflect.ClassTag
@@ -26,7 +26,7 @@ class RoverArticleStore @Inject() (underlying: RoverUnderlyingArticleStore, impl
 
   def add[A <: Article](uriId: Id[NormalizedURI], previousVersion: Option[ArticleVersion], article: A)(implicit kind: ArticleKind[A]): Future[ArticleKey[A]] = {
     SafeFuture {
-      val key = ArticleKey(uriId, kind, ArticleVersion.next[A](previousVersion))
+      val key = ArticleKey(uriId, kind, ArticleVersionProvider.next[A](previousVersion))
       underlying += (ArticleStoreKey(key) -> article)
       key
     }

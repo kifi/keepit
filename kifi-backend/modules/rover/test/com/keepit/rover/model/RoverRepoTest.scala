@@ -15,7 +15,7 @@ class RoverRepoTest extends Specification with RoverApplicationInjector {
         // ArticleRepo
         val articleInfoRepo = inject[ArticleInfoRepo]
         db.readWrite { implicit session =>
-          val saved = articleInfoRepo.save(ArticleInfo(uriId = Id(1), url = "http://www.lemonde.fr", kind = DefaultArticle.typeCode))
+          val saved = articleInfoRepo.save(RoverArticleInfo(uriId = Id(1), url = "http://www.lemonde.fr", kind = DefaultArticle.typeCode))
           articleInfoRepo.get(saved.id.get).uriId === Id(1)
         }
 
