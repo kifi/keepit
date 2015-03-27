@@ -233,7 +233,8 @@ angular.module('kifi')
       return $http.post(routeService.userBiography, {
         biography: newBiography
       }).then(function (resp) {
-        if (resp.data === 'success') {
+        if (resp.data) {
+          me.biography = newBiography;
           return newBiography;
         }
       });
