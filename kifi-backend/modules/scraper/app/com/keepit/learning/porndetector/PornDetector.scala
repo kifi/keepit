@@ -19,7 +19,7 @@ trait PornDetector {
 class NaiveBayesPornDetector(
     likelihoodRatio: Map[String, Float],
     priorOfPorn: Float = 0.5f,
-    oovRatio: Float = 0.001f) extends PornDetector{
+    oovRatio: Float = 0.001f) extends PornDetector {
 
   private def logPosteriorRatio(text: String): Double = {
     PornDetectorUtil.tokenize(text).foldLeft(0.0) {
@@ -38,7 +38,7 @@ class NaiveBayesPornDetector(
   override def isPorn(text: String): Boolean = posterior(text) >= 0.75f // shifted threshold
 }
 
-class SlidingWindowPornDetector(detector: PornDetector, windowSize: Int = 10) extends PornDetector with Logging{
+class SlidingWindowPornDetector(detector: PornDetector, windowSize: Int = 10) extends PornDetector with Logging {
   if (windowSize <= 4) throw new IllegalArgumentException(s"window size for SlidingWindowPornDetector too small: get ${windowSize}, need at least 4")
   def detectBlocks(text: String): (Int, Int) = {
     val blocks = PornDetectorUtil.tokenize(text).sliding(windowSize, windowSize).toArray
