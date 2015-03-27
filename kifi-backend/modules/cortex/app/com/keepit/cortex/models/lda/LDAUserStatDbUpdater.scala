@@ -13,8 +13,10 @@ import com.keepit.cortex.core.{ ModelVersion, StatModelName, FeatureRepresentati
 import com.keepit.cortex.dbmodel._
 import com.keepit.cortex.plugins.{ BaseFeatureUpdatePlugin, FeatureUpdatePlugin, FeatureUpdateActor, BaseFeatureUpdater, FeaturePluginMessages }
 import com.keepit.model.User
+import com.keepit.shoebox.ShoeboxServiceClient
 import math.abs
 import com.keepit.cortex.utils.MatrixUtils._
+import scala.concurrent.Await
 import scala.concurrent.duration._
 
 case class LDAUserStatUpdate(userId: Id[User])
@@ -55,7 +57,8 @@ class LDAUserStatDbUpdaterImpl @Inject() (
     keepRepo: CortexKeepRepo,
     uriTopicRepo: URILDATopicRepo,
     userLDAStatsRepo: UserLDAStatsRepo,
-    commitRepo: FeatureCommitInfoRepo) extends LDAUserStatDbUpdater with Logging {
+    commitRepo: FeatureCommitInfoRepo,
+    shoebox: ShoeboxServiceClient) extends LDAUserStatDbUpdater with Logging {
 
   private val fetchSize = 10000
   private val modelName = StatModelName.LDA_USER_STATS
@@ -101,10 +104,11 @@ class LDAUserStatDbUpdaterImpl @Inject() (
   }
 
   private def processUser(userId: Id[User])(implicit version: ModelVersion[DenseLDA]): Unit = {
+    val keeperOnly = userHasActivePersona(userId)
     val model = db.readOnlyReplica { implicit s => userLDAStatsRepo.getByUser(userId, version) }
-    val numFeat = db.readOnlyReplica { implicit s => uriTopicRepo.countUserURIFeatures(userId, version, min_num_words) }
+    val numFeat = db.readOnlyReplica { implicit s => uriTopicRepo.countUserURIFeatures(userId, version, min_num_words, keeperOnly) }
     if (shouldComputeFeature(model, numFeat)) {
-      val feats = db.readOnlyReplica { implicit s => uriTopicRepo.getUserURIFeatures(userId, version, min_num_words) }
+      val feats = db.readOnlyReplica { implicit s => uriTopicRepo.getUserURIFeatures(userId, version, min_num_words, keeperOnly) }
       val (mean, variance) = genMeanAndVar(feats)
       val (firstOpt, secondOpt, thirdOpt, firstScoreOpt) = getAuxiliary(mean)
       val state = if (feats.size >= min_num_evidence) UserLDAStatsStates.ACTIVE else UserLDAStatsStates.NOT_APPLICABLE
@@ -146,6 +150,11 @@ class LDAUserStatDbUpdaterImpl @Inject() (
         (Some(LDATopic(first)), Some(LDATopic(second)), Some(LDATopic(third)), Some(firstTopicScore))
       case None => (None, None, None, None)
     }
+  }
+
+  private def userHasActivePersona(userId: Id[User]): Boolean = {
+    val ps = Await.result(shoebox.getUserActivePersonas(userId), 5 second)
+    ps.personas.nonEmpty
   }
 }
 
