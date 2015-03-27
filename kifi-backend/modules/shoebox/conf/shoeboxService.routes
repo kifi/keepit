@@ -191,6 +191,8 @@ POST    /m/1/collections/create             @com.keepit.controllers.mobile.Mobil
 GET     /m/1/collections/all                @com.keepit.controllers.mobile.MobileKeepsController.allCollections(sort: String ?= "last_kept")
 GET     /m/1/user/me                        @com.keepit.controllers.mobile.MobileUserController.currentUser()
 POST    /m/1/user/me                        @com.keepit.controllers.mobile.MobileUserController.updateCurrentUser()
+POST    /m/1/user/me/name          @com.keepit.controllers.mobile.MobileUserController.updateName()
+POST    /m/1/user/me/biography     @com.keepit.controllers.mobile.MobileUserController.updateBiography()
 GET     /m/1/user/prefs                     @com.keepit.controllers.mobile.MobileUserController.getPrefs()
 POST    /m/1/user/notifyPrefs               @com.keepit.controllers.mobile.MobilePreferenceController.setNotifyPreferences()
 POST    /m/1/user/pic/upload                @com.keepit.controllers.mobile.MobileUserController.uploadBinaryUserPicture()
