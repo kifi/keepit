@@ -1,7 +1,7 @@
 package com.keepit.curator.commanders
 
 import com.keepit.common.concurrent.FutureHelpers
-import com.keepit.common.logging.Logging
+import com.keepit.common.logging.{ Logging, NamedStatsdTimer }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.db.{ SequenceNumber, Id }
 import com.keepit.common.concurrent.ReactiveLock
@@ -130,6 +130,7 @@ class SeedIngestionCommander @Inject() (
   )
 
   def getDiscoverableBySeqNumAndUser(start: SequenceNumber[SeedItem], userId: Id[User], maxBatchSize: Int): Future[Seq[SeedItem]] = {
+    val timer = new NamedStatsdTimer("SeedIngestionCommander.getDiscoverableBySeqNumAndUser")
     db.readOnlyReplicaAsync { implicit session =>
       rawSeedsRepo.getDiscoverableBySeqNumAndUser(SequenceNumber[RawSeedItem](start.value), userId, maxBatchSize).map { rawItem =>
         val keepers = if (rawItem.timesKept > MAX_INDIVIDUAL_KEEPERS_TO_CONSIDER) {
@@ -137,7 +138,9 @@ class SeedIngestionCommander @Inject() (
         } else {
           Keepers.ReasonableNumber(keepInfoRepo.getKeepersByUriId(rawItem.uriId))
         }
-        cookSeedItem(userId, rawItem, keepers)
+        val res = cookSeedItem(userId, rawItem, keepers)
+        timer.stopAndReport()
+        res
       }
     }
   }
