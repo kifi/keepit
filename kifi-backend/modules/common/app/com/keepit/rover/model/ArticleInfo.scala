@@ -55,3 +55,4 @@ object ArticleInfo {
     (__ \ 'latestVersion).formatNullable[ArticleVersion]
   )(ArticleInfo.apply, unlift(ArticleInfo.unapply))
 }
+
