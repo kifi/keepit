@@ -6,13 +6,8 @@
     <div class="dialog-body dialog-centered">
       <textarea class="kf-bio-input" type="text" placeholder="Edit your biography here... Limit to 160 characters" ng-model="bioText" ng-change="checkOverLimit()">{{bioText}}</textarea>
 
-      <div class="kf-bio-chars" ng-if="charactersLeft >= 0">
-        <ng-pluralize count="charactersLeft" when="{'0': 'No characters left', '1': '1 character left', 'other': '{} characters left'}">
-        </ng-pluralize>
-      </div>
-      <div class="kf-bio-chars kf-over" ng-if="charactersLeft < 0">
-        <ng-pluralize count="absoluteVal(charactersLeft)" when="{'1': '1 character over', 'other': '{} characters over'}">
-        </ng-pluralize>
+      <div class="kf-bio-chars" ng-if="charactersLeft >= 0" ng-pluralize count="charactersLeft" when="{'0': 'No characters left', '1': '1 character left', 'other': '{} characters left'}"></div>
+      <div class="kf-bio-chars kf-over" ng-if="charactersLeft < 0" ng-pluralize count="-charactersLeft" when="{'1': '1 character over', 'other': '{} characters over'}">
       </div>
 
     </div>

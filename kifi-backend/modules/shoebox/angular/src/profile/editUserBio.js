@@ -33,10 +33,6 @@ angular.module('kifi')
           }
         };
 
-        scope.absoluteVal = function(num) {
-          return Math.abs(num);
-        };
-
         scope.close = function () {
           kfModalCtrl.close();
         };
