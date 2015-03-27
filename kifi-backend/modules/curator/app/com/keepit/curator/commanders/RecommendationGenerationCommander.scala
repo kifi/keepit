@@ -49,7 +49,7 @@ class RecommendationGenerationCommander @Inject() (
   val superSpecialUsers = Seq(Id[User](273))
   val superSpecialLock = new ReactiveLock(1)
 
-  val BATCH_SIZE = 200
+  val BATCH_SIZE = 350
 
   private def usersToPrecomputeRecommendationsFor(): Seq[Id[User]] = Random.shuffle((seedCommander.getUsersWithSufficientData()).toSeq)
 
