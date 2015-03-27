@@ -10,12 +10,14 @@ import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick._
 import com.keepit.common.net.URI
 import com.keepit.common.social._
+import com.keepit.cortex.CortexServiceClient
 import com.keepit.curator.LibraryQualityHelper
 import com.keepit.model._
 import com.keepit.normalizer.NormalizedURIInterner
 import com.keepit.search.SearchServiceClient
 import com.keepit.social.BasicUser
 import com.keepit.common.logging.Logging
+import com.kifi.macros.json
 
 import play.api.libs.json._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -40,6 +42,7 @@ class PageCommander @Inject() (
     searchClient: SearchServiceClient,
     libraryQualityHelper: LibraryQualityHelper,
     userCommander: UserCommander,
+    relatedURICmdr: RelatedURICommander,
     implicit val config: PublicIdConfiguration) extends Logging {
 
   private def getKeepersFuture(userId: Id[User], uri: NormalizedURI): Future[(Seq[BasicUser], Int)] = {
@@ -114,9 +117,20 @@ class PageCommander @Inject() (
       }
       (nUri, nUriStr)
     }
+
+    val relatedUriF = uriInfoF.flatMap {
+      case (uri, _) =>
+        if (uri.isDefined) {
+          relatedURICmdr.getRelatedURIs(uri.get.id.get)
+        } else {
+          Future.successful(Seq[RelatedURIInfo]())
+        }
+    }
+
     val infoF = for {
       (position, neverOnSite) <- domainF
       (nUriOpt, nUriStr) <- uriInfoF
+      relatedUri <- relatedUriF
     } yield {
       val shown = nUriOpt.exists { normUri =>
         historyTracker.getMultiHashFilter(userId).mayContain(normUri.id.get.id)
@@ -124,10 +138,10 @@ class PageCommander @Inject() (
 
       nUriOpt.map { normUri =>
         augmentUriInfo(normUri, userId).map { info =>
-          KeeperPageInfo(nUriStr, position, neverOnSite, shown, info.keepers, info.keepersTotal, info.libraries, info.keeps)
+          KeeperPageInfo(nUriStr, position, neverOnSite, shown, info.keepers, info.keepersTotal, info.libraries, info.keeps, relatedUri)
         }
       }.getOrElse {
-        Future.successful(KeeperPageInfo(nUriStr, position, neverOnSite, shown, Seq.empty[BasicUser], 0, Seq.empty[JsObject], Seq.empty[KeepData]))
+        Future.successful(KeeperPageInfo(nUriStr, position, neverOnSite, shown, Seq.empty[BasicUser], 0, Seq.empty[JsObject], Seq.empty[KeepData], relatedUri))
       }
     }
     infoF.flatten
@@ -234,3 +248,39 @@ case class KeeperPagePartialInfo(
   keepersTotal: Int,
   libraries: Seq[JsObject],
   keeps: Seq[KeepData])
+
+case class RelatedURIInfo(title: String, url: String, image: String)
+object RelatedURIInfo {
+  implicit val writes = Json.writes[RelatedURIInfo]
+}
+
+class RelatedURICommander @Inject() (
+    db: Database,
+    uriRepo: NormalizedURIRepo,
+    uriSummaryCmdr: URISummaryCommander,
+    imageInfoRepo: ImageInfoRepo,
+    cortex: CortexServiceClient) {
+
+  def getRelatedURIs(uriId: Id[NormalizedURI]): Future[Seq[RelatedURIInfo]] = {
+    val urisF = cortex.similarURIs(uriId)(None).map { uriIds =>
+      val uris = db.readOnlyReplica { implicit s => uriIds.map { uriRepo.get(_) } }
+      val filtered = uris.filter { x => x.title.isDefined && x.state == NormalizedURIStates.SCRAPED && x.restriction.isEmpty }
+      val uniqueUris = filtered.groupBy(_.title.get.toLowerCase).map { case (title, uriList) => uriList.head }.toArray
+      uniqueUris
+    }
+
+    val imagesF: Future[Seq[Option[String]]] = urisF.flatMap { uris =>
+      Future.sequence(uris.map { x => uriSummaryCmdr.getURIImage(x) })
+    }
+
+    for {
+      uris <- urisF
+      images <- imagesF
+    } yield {
+      assume(uris.size == images.size)
+      val uriWithImages = (uris zip images).filter(_._2.isDefined)
+      uriWithImages.map { case (uri, image) => RelatedURIInfo(uri.title.get, uri.url, image.get) }
+    }
+
+  }
+}
