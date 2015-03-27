@@ -43,7 +43,7 @@ case class KeeperPageInfo(
   keepersTotal: Int,
   libraries: Seq[JsObject],
   keeps: Seq[KeepData],
-  relatedURIs: Seq[RelatedURIInfo] = Seq())
+  related: Seq[RelatedPageInfo])
 object KeeperPageInfo {
   implicit val writes: Writes[KeeperPageInfo] = (
     (__ \ 'normalized).write[String] and
@@ -54,7 +54,7 @@ object KeeperPageInfo {
     (__ \ 'keepersTotal).writeNullable[Int].contramap[Int](Some(_).filter(_ > 0)) and
     (__ \ 'libraries).writeNullable[Seq[JsObject]].contramap[Seq[JsObject]](Some(_).filter(_.nonEmpty)) and
     (__ \ 'keeps).write[Seq[KeepData]] and
-    (__ \ 'relatedURIs).write[Seq[RelatedURIInfo]]
+    (__ \ 'related).write[Seq[RelatedPageInfo]]
   )(unlift(KeeperPageInfo.unapply))
 }
 

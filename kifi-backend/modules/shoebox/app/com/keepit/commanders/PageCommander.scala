@@ -42,7 +42,7 @@ class PageCommander @Inject() (
     searchClient: SearchServiceClient,
     libraryQualityHelper: LibraryQualityHelper,
     userCommander: UserCommander,
-    relatedURICmdr: RelatedURICommander,
+    relatedPageCommander: RelatedPageCommander,
     implicit val config: PublicIdConfiguration) extends Logging {
 
   private def getKeepersFuture(userId: Id[User], uri: NormalizedURI): Future[(Seq[BasicUser], Int)] = {
@@ -120,10 +120,14 @@ class PageCommander @Inject() (
 
     val relatedUriF = uriInfoF.flatMap {
       case (uri, _) =>
-        if (uri.isDefined) {
-          relatedURICmdr.getRelatedURIs(uri.get.id.get)
+        if (uri.isDefined && experiments.contains(ExperimentType.RELATED_PAGE_INFO)) {
+          relatedPageCommander.getRelatedPageInfo(uri.get.id.get).recover{
+            case _ =>
+              log.error(s"error in getting related page info for uri: ${uri.get.id.get}")
+              Seq[RelatedPageInfo]()
+          }
         } else {
-          Future.successful(Seq[RelatedURIInfo]())
+          Future.successful(Seq[RelatedPageInfo]())
         }
     }
 
@@ -249,37 +253,45 @@ case class KeeperPagePartialInfo(
   libraries: Seq[JsObject],
   keeps: Seq[KeepData])
 
-case class RelatedURIInfo(title: String, url: String, image: String)
-object RelatedURIInfo {
-  implicit val writes = Json.writes[RelatedURIInfo]
+case class RelatedPageInfo(title: String, url: String, image: String, width: Option[Int] = None, height: Option[Int] = None)
+object RelatedPageInfo {
+  implicit val writes = Json.writes[RelatedPageInfo]
 }
 
-class RelatedURICommander @Inject() (
+class RelatedPageCommander @Inject() (
     db: Database,
     uriRepo: NormalizedURIRepo,
     uriSummaryCmdr: URISummaryCommander,
     imageInfoRepo: ImageInfoRepo,
     cortex: CortexServiceClient) {
 
-  def getRelatedURIs(uriId: Id[NormalizedURI]): Future[Seq[RelatedURIInfo]] = {
+  private val MAX_LOOKUP_SIZE = 25
+  private val MIN_POOL_SIZE = 5
+
+  def getRelatedPageInfo(uriId: Id[NormalizedURI]): Future[Seq[RelatedPageInfo]] = {
     val urisF = cortex.similarURIs(uriId)(None).map { uriIds =>
-      val uris = db.readOnlyReplica { implicit s => uriIds.map { uriRepo.get(_) } }
+      val uris = db.readOnlyReplica { implicit s => uriIds.take(MAX_LOOKUP_SIZE).map { uriRepo.get(_) } }
       val filtered = uris.filter { x => x.title.isDefined && x.state == NormalizedURIStates.SCRAPED && x.restriction.isEmpty }
       val uniqueUris = filtered.groupBy(_.title.get.toLowerCase).map { case (title, uriList) => uriList.head }.toArray
       uniqueUris
     }
 
-    val imagesF: Future[Seq[Option[String]]] = urisF.flatMap { uris =>
-      Future.sequence(uris.map { x => uriSummaryCmdr.getURIImage(x) })
+    val summariesF: Future[Seq[URISummary]] = urisF.flatMap { uris =>
+      Future.sequence(uris.map { x => uriSummaryCmdr.getDefaultURISummary(x, waiting = false) })
     }
 
     for {
       uris <- urisF
-      images <- imagesF
+      summaries <- summariesF
     } yield {
-      assume(uris.size == images.size)
-      val uriWithImages = (uris zip images).filter(_._2.isDefined)
-      uriWithImages.map { case (uri, image) => RelatedURIInfo(uri.title.get, uri.url, image.get) }
+      assume(uris.size == summaries.size)
+      val uriWithImages = (uris zip summaries).filter(_._2.imageUrl.isDefined)
+      if (uriWithImages.size >= MIN_POOL_SIZE) {
+        uriWithImages.map { case (uri, summary) => RelatedPageInfo(uri.title.get, uri.url, summary.imageUrl.get, summary.imageWidth, summary.imageHeight) }
+      } else {
+        // pool size too small. Don't show anything
+        Seq()
+      }
     }
 
   }
