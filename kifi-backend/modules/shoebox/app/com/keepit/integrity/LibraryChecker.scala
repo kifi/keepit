@@ -72,7 +72,7 @@ class LibraryChecker @Inject() (
               allKeepsInLib.grouped(100) foreach { keeps =>
                 db.readWriteBatch(keeps) { (s, k) =>
                   if (k.state != KeepStates.INACTIVE) {
-                    keepRepo.save(k.withState(KeepStates.INACTIVE))
+                    keepRepo.save(k.withState(KeepStates.INACTIVE))(s)
                   }
                 }
               }
