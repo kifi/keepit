@@ -68,12 +68,13 @@ object PornDetectorUtil {
 object PornDomains {
   private def toRegex(domain: String): Regex = {
     val domainRegex = domain.toLowerCase.replaceAllLiterally(".", "\\.")
-    new Regex("""^https?:\/\/.*""" + domainRegex + "/.*")
+    new Regex("""^https?:\/\/.*""" + domainRegex + "(/.*)?")
   }
 
   private val domains: Seq[String] = Seq("2porno.tv", "3xhen.com", "4tube.com", "4sex4.com", "alotporn.com", "alphaporno.com", "anyporn.com", "anysex.com", "backpage.com", "beeg.com", "bravotube.net", "cityvibe.com", "cum.com", "drtuber.com", "empflix.com", "eskimotube.com", "extremetube.com", "fapdu.com", "fc2.com", "h2porn.com", "hardsextube.com", "hellporno.com", "highfashion4less.com", "hotmovies.com", "hotshame.com", "imagefap.com", "javfree.me", "jizzhut.com", "keezmovies.com", "madthumbs.com", "motherless.com", "nuvid.com", "porn.com", "pornerbros.com", "pornhub.com", "pornoid.com", "pornoxo.com", "pornsharing.com", "porntube.com", "redtube.com", "s3exy.com", "slutload.com", "spankwire.com", "surfgayvideo.com", "sweetkiss.me", "tnaflix.com", "touchbyvenus.com", "tube8.com", "tubepornstars.com", "tubewolf.com", "vid2c.com", "vintagetubesex.com", "vporn.com", "wanknews.com", "warnet.ws", "woodmancastingx.com", "xblboys.com", "xhamster.com", "xnxx.com", "xtube.com", "xvideos.com", "xxxbunker.com", "xxxkinky.com", "yobt.com", "youjizz.com", "youngpornvideos.com", "yourlust.com", "youporn.com")
   private val domainRegexes = domains.map { toRegex(_) }
   def isPornDomain(url: String): Boolean = {
-    domainRegexes.exists(reg => reg.findFirstMatchIn(url).isDefined)
+    val urlLower = url.toLowerCase
+    domainRegexes.exists(reg => reg.findFirstMatchIn(urlLower).isDefined)
   }
 }
