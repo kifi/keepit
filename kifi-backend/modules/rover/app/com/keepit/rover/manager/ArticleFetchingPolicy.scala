@@ -3,6 +3,7 @@ package com.keepit.rover.manager
 import com.google.inject.{ Singleton, Inject }
 import com.keepit.common.net.{ Host, URI }
 import com.keepit.rover.article._
+import com.keepit.rover.article.content.LinkedInProfile
 
 @Singleton
 class ArticleFetchingPolicy @Inject() () extends Function[String, Set[ArticleKind[_ <: Article]]] {

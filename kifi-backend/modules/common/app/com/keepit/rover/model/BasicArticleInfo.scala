@@ -4,11 +4,15 @@ import com.keepit.common.db.{ VersionNumber, SequenceNumber, Id }
 import com.keepit.common.time.DateTimeJsonFormat
 import com.keepit.model.NormalizedURI
 import com.keepit.rover.article.{ ArticleKind, Article }
-import com.keepit.rover.store.ArticleKey
 import com.kifi.macros.json
-import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
+
+case class ArticleKey[A <: Article](uriId: Id[NormalizedURI], kind: ArticleKind[A], version: ArticleVersion) {
+  // todo(NOT): do not change this unless you actually want to break stuff
+  def toKey: String = s"${uriId.id}/${kind.typeCode}/${version.major.value}/${version.minor.value}"
+  override def toString = toKey
+}
 
 @json
 case class ArticleVersion(major: VersionNumber[Article], minor: VersionNumber[Article]) extends Ordered[ArticleVersion] {

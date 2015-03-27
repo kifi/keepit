@@ -7,7 +7,7 @@ import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.mail.{ SystemEmailAddress, ElectronicMail }
-import com.keepit.rover.article.Signature
+import com.keepit.rover.document.utils.Signature
 import play.api.Play.current
 import com.google.inject.Inject
 import scala.concurrent.Future

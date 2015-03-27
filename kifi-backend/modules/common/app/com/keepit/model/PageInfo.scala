@@ -2,6 +2,7 @@ package com.keepit.model
 
 import com.keepit.common.cache._
 import com.keepit.common.logging.{ Logging, AccessLog }
+import com.keepit.rover.article.content.EmbedlyKeyword
 import com.kifi.macros.json
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
@@ -9,7 +10,6 @@ import com.keepit.common.db._
 import org.joda.time.DateTime
 import com.keepit.common.time._
 import com.keepit.common.store.ImageSize
-import com.keepit.rover.article.EmbedlyKeyword
 import scala.concurrent.duration.Duration
 
 trait PageSafetyInfo {

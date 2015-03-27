@@ -2,7 +2,8 @@ package com.keepit.rover.article
 
 import com.google.inject.Inject
 import com.keepit.common.logging.Logging
-import com.keepit.rover.extractor.JsoupDocument
+import com.keepit.rover.article.content.GithubContent
+import com.keepit.rover.document.JsoupDocument
 import com.keepit.rover.fetcher.{ FetchResult, RoverDocumentFetcher }
 import com.keepit.common.time._
 import com.keepit.rover.store.{ RoverArticleStore, RoverUnderlyingArticleStore }

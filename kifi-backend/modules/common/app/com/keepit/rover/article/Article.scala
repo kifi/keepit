@@ -1,6 +1,7 @@
 package com.keepit.rover.article
 
 import com.keepit.common.db.VersionNumber
+import com.keepit.rover.article.content._
 import org.joda.time.DateTime
 import play.api.libs.json._
 import com.keepit.common.reflection.CompanionTypeSystem

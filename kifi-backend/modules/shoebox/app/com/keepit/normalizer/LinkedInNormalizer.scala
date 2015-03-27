@@ -2,7 +2,7 @@ package com.keepit.normalizer
 
 import com.keepit.common.net.{ Query, Host, URI }
 import com.keepit.common.net.Param
-import com.keepit.rover.article.LinkedInProfile
+import com.keepit.rover.article.content.LinkedInProfile
 
 object LinkedInNormalizer extends StaticNormalizer {
 

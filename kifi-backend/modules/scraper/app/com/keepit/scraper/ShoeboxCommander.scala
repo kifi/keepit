@@ -2,7 +2,7 @@ package com.keepit.scraper
 
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.net.URI
-import com.keepit.rover.article.Signature
+import com.keepit.rover.document.utils.Signature
 import com.keepit.rover.fetcher.HttpRedirect
 import com.keepit.shoebox.{ ShoeboxScraperClient, ShoeboxServiceClient }
 import scala.concurrent.{ Future, Await, Awaitable }

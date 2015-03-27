@@ -1,6 +1,6 @@
 package com.keepit.scraper
 
-import com.keepit.rover.article.Signature
+import com.keepit.rover.document.utils.Signature
 
 import scala.concurrent.Future
 import com.keepit.model.NormalizedURI

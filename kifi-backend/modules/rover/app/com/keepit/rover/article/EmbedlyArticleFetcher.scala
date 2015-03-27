@@ -10,6 +10,7 @@ import com.keepit.common.performance._
 import com.keepit.common.service.RequestConsolidator
 import com.keepit.common.strings.UTF8
 import com.keepit.common.time.{ Clock, _ }
+import com.keepit.rover.article.content.EmbedlyContent
 import play.api.libs.json.Json
 import play.api.libs.ws.WSResponse
 import com.keepit.common.core._

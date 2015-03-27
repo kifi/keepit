@@ -5,7 +5,7 @@ import java.net.URLEncoder
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.net.{ Host, URI }
 import com.keepit.model.HttpProxy
-import com.keepit.rover.article.{ YoutubeTrackInfo, YoutubeTrack }
+import com.keepit.rover.article.content.{ YoutubeTrack, YoutubeTrackInfo }
 import com.keepit.rover.fetcher.FetchRequest
 import com.keepit.scraper.ScraperConfig
 import com.keepit.scraper.fetcher.DeprecatedHttpFetcher
