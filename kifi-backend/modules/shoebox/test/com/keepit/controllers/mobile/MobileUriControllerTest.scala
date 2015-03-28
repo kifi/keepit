@@ -34,10 +34,6 @@ class MobileUriControllerTest extends Specification with ShoeboxTestInjector {
         val result1 = flagContent(user1, Json.obj("reason" -> "adult", "url" -> k1.url))
         status(result1) must equalTo(NO_CONTENT)
 
-        db.readOnlyMaster { implicit s =>
-          uriRepo.get(nUri1.id.get).restriction === Some(Restriction.ADULT)
-        }
-
         val resultBadReason = flagContent(user1, Json.obj("reason" -> "bad", "url" -> k1.url))
         status(resultBadReason) must equalTo(BAD_REQUEST)
 
