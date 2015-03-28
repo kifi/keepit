@@ -23,13 +23,12 @@ import com.keepit.search.SearchServiceClient
 import com.keepit.social.{ SocialId, SocialNetworks, SocialNetworkType, BasicUser }
 
 import play.api.http.Status.{ FORBIDDEN, NOT_FOUND }
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.api.mvc.BodyParsers.parse
 
 import scala.collection.mutable
-import scala.concurrent.Future
+import scala.concurrent.{ ExecutionContext, Future }
 import akka.actor.Scheduler
 import com.keepit.eliza.ElizaServiceClient
 import scala.util.{ Success, Failure }
@@ -95,6 +94,7 @@ class KeepsCommander @Inject() (
     keepDecorator: KeepDecorator,
     twitterPublishingCommander: TwitterPublishingCommander,
     facebookPublishingCommander: FacebookPublishingCommander,
+    implicit val defaultContext: ExecutionContext,
     implicit val publicIdConfig: PublicIdConfiguration) extends Logging {
 
   def getKeepsCountFuture(): Future[Int] = {

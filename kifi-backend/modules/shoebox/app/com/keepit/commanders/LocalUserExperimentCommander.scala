@@ -8,10 +8,8 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 
 import com.google.inject.{ Inject, Singleton }
 
-import scala.concurrent.Future
+import scala.concurrent.{ ExecutionContext, Future }
 
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.math.ProbabilityDensity
 import com.keepit.common.logging.Logging
 
@@ -20,6 +18,7 @@ class LocalUserExperimentCommander @Inject() (
   userExperimentRepo: UserExperimentRepo,
   db: Database,
   generatorRepo: ProbabilisticExperimentGeneratorRepo,
+  implicit val defaultContext: ExecutionContext,
   protected val generatorCache: ProbabilisticExperimentGeneratorAllCache,
   protected val monitoredAwait: MonitoredAwait,
   protected val airbrake: AirbrakeNotifier)

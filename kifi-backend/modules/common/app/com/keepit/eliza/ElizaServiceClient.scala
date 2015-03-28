@@ -12,9 +12,8 @@ import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.search.index.message.ThreadContent
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.collection.mutable
-import scala.concurrent.{ Future, Promise }
+import scala.concurrent.{ ExecutionContext, Future }
 
 import play.api.libs.json.{ JsString, JsValue, JsArray, Json, JsObject }
 
@@ -77,6 +76,7 @@ class ElizaServiceClientImpl @Inject() (
   val airbrakeNotifier: AirbrakeNotifier,
   val httpClient: HttpClient,
   val serviceCluster: ServiceCluster,
+  implicit val defaultContext: ExecutionContext,
   userThreadStatsForUserIdCache: UserThreadStatsForUserIdCache)
     extends ElizaServiceClient with Logging {
 

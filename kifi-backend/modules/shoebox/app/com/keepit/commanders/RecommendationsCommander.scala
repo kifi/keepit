@@ -14,10 +14,9 @@ import com.google.inject.Inject
 import com.keepit.normalizer.NormalizedURIInterner
 import com.keepit.search.util.LongSetIdFilter
 
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.{ JsNull, Json }
 
-import scala.concurrent.Future
+import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success, Random }
 
 class RecommendationsCommander @Inject() (
@@ -30,6 +29,7 @@ class RecommendationsCommander @Inject() (
     uriSummaryCommander: URISummaryCommander,
     basicUserRepo: BasicUserRepo,
     keepRepo: KeepRepo,
+    implicit val defaultContext: ExecutionContext,
     implicit val publicIdConfig: PublicIdConfiguration,
     userExperimentCommander: LocalUserExperimentCommander) {
 

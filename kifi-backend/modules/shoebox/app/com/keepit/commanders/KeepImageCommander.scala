@@ -17,9 +17,8 @@ import com.keepit.model.ImageProcessState.{ ImageLoadedAndHashed, ReadyToPersist
 import com.keepit.model.ProcessImageOperation.Original
 import com.keepit.model._
 import play.api.libs.Files.TemporaryFile
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
-import scala.concurrent.Future
+import scala.concurrent.{ ExecutionContext, Future }
 import scala.concurrent.duration.DurationInt
 import scala.util.{ Failure, Success, Try }
 
@@ -58,6 +57,7 @@ class KeepImageCommanderImpl @Inject() (
     airbrake: AirbrakeNotifier,
     keepImageRepo: KeepImageRepo,
     photoshop: Photoshop,
+    implicit val defaultContext: ExecutionContext,
     val webService: WebService) extends KeepImageCommander with ProcessedImageHelper with Logging {
 
   def getUrl(keepImage: KeepImage): String = {
