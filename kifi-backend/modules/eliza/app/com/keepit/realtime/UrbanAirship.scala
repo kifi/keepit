@@ -111,13 +111,9 @@ class UrbanAirshipImpl @Inject() (
   }
 
   def getDevices(userId: Id[User]): Seq[Device] = {
-    val devices = db.readOnlyMaster { implicit s =>
-      deviceRepo.getByUserId(userId).groupBy(_.deviceType)
+    db.readOnlyMaster { implicit s =>
+      deviceRepo.getByUserId(userId)
     }
-    val onePerType = devices map {
-      case (deviceType, devicesOfType) => deviceType -> devicesOfType.sortBy(_.updatedAt).reverse.head
-    }
-    onePerType.values.toSeq
   }
 
   def notifyUser(userId: Id[User], notification: PushNotification): Int = {
