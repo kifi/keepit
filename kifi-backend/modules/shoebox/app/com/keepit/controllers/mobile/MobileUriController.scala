@@ -33,7 +33,7 @@ class MobileUriController @Inject() (
               to = List(SystemEmailAddress.EISHAY, SystemEmailAddress.ANDREW, SystemEmailAddress.STEPHEN, SystemEmailAddress.MARK),
               subject = s"url [${uri.id.get}]: ${uri.url} flagged as inappropriate!!!",
               htmlBody = s"uri: ${uri} <br>flagged by user ${request.user}.<br>Check it out: <a href=\"https://admin.kifi.com/admin/scraped/${uri.id.get}\"></a>",
-              category = NotificationCategory.System.ADMIN))
+              category = NotificationCategory.toElectronicMailCategory(NotificationCategory.System.ADMIN)))
             NoContent
           case _ =>
             BadRequest(Json.obj("error" -> "reason_unknown"))
