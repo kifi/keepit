@@ -66,9 +66,14 @@ class LibraryChecker @Inject() (
             val numKeeps = keepCountMap(libId)
             if (numKeeps != 0) {
               airbrake.notify(s"Library ${libId} has no last_kept but has $numKeeps active keeps... making them inactive!")
-              db.readWrite { implicit s =>
-                keepRepo.getByLibrary(libId, 0, numKeeps, Set.empty).map { k =>
-                  keepRepo.save(k.withState(KeepStates.INACTIVE))
+              val allKeepsInLib = db.readOnlyMaster { implicit s =>
+                keepRepo.getByLibrary(libId, 0, numKeeps, Set.empty)
+              }
+              allKeepsInLib.grouped(100) foreach { keeps =>
+                db.readWriteBatch(keeps) { (s, k) =>
+                  if (k.state != KeepStates.INACTIVE) {
+                    keepRepo.save(k.withState(KeepStates.INACTIVE))(s)
+                  }
                 }
               }
             }
