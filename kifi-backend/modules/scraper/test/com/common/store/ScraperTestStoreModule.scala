@@ -1,7 +1,6 @@
 package com.keepit.common.store
 
 import com.keepit.search._
-import com.keepit.scraper._
 import com.google.inject.{ Provides, Singleton }
 import com.keepit.learning.porndetector.PornWordLikelihoodStore
 import com.keepit.scraper.embedly.EmbedlyStore
@@ -12,7 +11,7 @@ case class ScraperTestStoreModule() extends StoreModule() {
 
   @Singleton
   @Provides
-  def articleStore(): ArticleStore = new FakeArticleStore()
+  def articleStore(): ArticleStore = new InMemoryArticleStoreImpl()
 
   @Singleton
   @Provides

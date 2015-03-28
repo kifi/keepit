@@ -17,7 +17,7 @@ class RoverArticleStore @Inject() (underlying: RoverUnderlyingArticleStore, impl
 
   def get[A <: Article](key: ArticleKey[A])(implicit classTag: ClassTag[A]): Future[Option[A]] = {
     SafeFuture {
-      underlying.get(key).map {
+      underlying.syncGet(key).map {
         case expectedArticle: A => expectedArticle
         case unexpectedArticle => throw new InconsistentArticleTypeException(key, unexpectedArticle)
       }

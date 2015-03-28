@@ -61,6 +61,6 @@ case class StopwordsModule(store: StopwordsStoreModule) extends ScalaModule {
   def configure { install(store) }
   @Singleton
   @Provides
-  def stopwords(store: StopwordsStore): Stopwords = store.get(MiscPrefix.Stopwords.stopwordsJsonFile).get
+  def stopwords(store: StopwordsStore): Stopwords = store.syncGet(MiscPrefix.Stopwords.stopwordsJsonFile).get
 
 }

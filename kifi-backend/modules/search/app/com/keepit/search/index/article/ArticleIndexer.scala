@@ -94,7 +94,7 @@ object ArticleIndexer extends Logging {
       var retry = maxRetry
       while (retry > 0) {
         try {
-          return articleStore.get(id)
+          return articleStore.syncGet(id)
         } catch {
           case e: Throwable =>
         }
@@ -104,7 +104,7 @@ object ArticleIndexer extends Logging {
         retry -= 1
       }
       try {
-        articleStore.get(id)
+        articleStore.syncGet(id)
       } catch {
         case e: Throwable =>
           log.error(s"failed to get article from ArticleStore id=${id}", e)

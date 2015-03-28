@@ -26,7 +26,7 @@ abstract class BaseURIFeatureRepresenter[M <: StatModel](
   protected def isDefinedAt(article: Article): Boolean
   protected def toDocument(article: Article): Document
 
-  private def getArticle(uri: NormalizedURI): Option[Article] = articleStore.get(uri.id.get)
+  private def getArticle(uri: NormalizedURI): Option[Article] = articleStore.syncGet(uri.id.get)
 
   def genFeatureAndWordCount(uri: NormalizedURI): (Option[FeatureRepresentation[NormalizedURI, M]], Int) = {
     getArticle(uri) match {

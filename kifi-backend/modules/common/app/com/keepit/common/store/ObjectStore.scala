@@ -27,7 +27,7 @@ trait ObjectStore[A, B] {
    *  @return an option value containing the value associated with `key` in this map,
    *          or `None` if none exists.
    */
-  def get(key: A): Option[B]
+  def syncGet(key: A): Option[B]
 
 }
 
@@ -36,5 +36,5 @@ trait ObjMetadata extends Any { // WIP; if proved useful can be folded into main
 }
 
 trait MetadataAccess[A, B] { self: ObjectStore[A, B] =>
-  def getWithMetadata(key: A): Option[(B, Option[ObjMetadata])] = get(key) map { v => (v, None) }
+  def getWithMetadata(key: A): Option[(B, Option[ObjMetadata])] = syncGet(key) map { v => (v, None) }
 }

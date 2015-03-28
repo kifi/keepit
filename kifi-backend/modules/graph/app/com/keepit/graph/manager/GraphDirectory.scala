@@ -16,7 +16,7 @@ trait GraphDirectory {
 trait ArchivedGraphDirectory extends ArchivedDirectory with Logging { self: GraphDirectory =>
   def asFile() = Some(getDirectory())
   protected def store: GraphStore
-  protected def getArchive() = store.get(this).get
+  protected def getArchive() = store.syncGet(this).get
   protected def saveArchive(tarFile: File) = store += (this, tarFile)
   def init(): Unit = {
     val dir = getDirectory()

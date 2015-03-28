@@ -26,7 +26,7 @@ trait InMemoryObjectStore[A, B] extends ObjectStore[A, B] with Logging {
     this
   }
 
-  def get(id: A): Option[B] = localStore.get(id)
+  def syncGet(id: A): Option[B] = localStore.get(id)
 
   override def toString = s"[size=${localStore.size} keys=${localStore.keySet}"
 }
@@ -50,12 +50,12 @@ trait InMemoryFileStore[A] extends ObjectStore[A, File] {
   }
 
   def -=(key: A) = {
-    get(key).foreach(_.delete())
+    syncGet(key).foreach(_.delete())
     pathMap -= key
     this
   }
 
-  def get(key: A): Option[File] = pathMap.get(key).map(new File(_))
+  def syncGet(key: A): Option[File] = pathMap.get(key).map(new File(_))
 
   override def toString = s"[size=${pathMap.size} keys=${pathMap.keySet}"
 
@@ -70,7 +70,7 @@ trait InMemoryBlobStore[A, B] extends ObjectStore[A, B] {
   protected def packValue(obj: B): Array[Byte]
   protected def unpackValue(bytes: Array[Byte]): B
 
-  def get(key: A): Option[B] = localBlobStore.get(key) map unpackValue
+  def syncGet(key: A): Option[B] = localBlobStore.get(key) map unpackValue
 
   def +=(kv: (A, B)) = {
     val (k, v) = kv

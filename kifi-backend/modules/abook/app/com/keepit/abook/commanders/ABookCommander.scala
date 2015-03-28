@@ -204,7 +204,7 @@ class ABookCommander @Inject() (
         a ++ {
           for {
             k <- c.rawInfoLoc
-            v <- s3.get(k)
+            v <- s3.syncGet(k)
           } yield v
         }
     }

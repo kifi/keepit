@@ -89,8 +89,8 @@ class ArticleSearchResultTest extends Specification {
       store += (initialResult.uuid, initialResult)
       store += (nextResult.uuid, nextResult)
 
-      store.get(initialResult.uuid) === Some(initialResult)
-      store.get(nextResult.uuid) === Some(nextResult)
+      store.syncGet(initialResult.uuid) === Some(initialResult)
+      store.syncGet(nextResult.uuid) === Some(nextResult)
 
       store.getInitialSearchId(initialResult) === initialResult.uuid
       store.getInitialSearchId(initialResult.uuid) === initialResult.uuid
