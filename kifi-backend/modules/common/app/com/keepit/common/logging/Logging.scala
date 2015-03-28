@@ -123,7 +123,7 @@ class NamedStatsdTimer(name: String) extends Logging {
   private val t0 = System.currentTimeMillis
   def stopAndReport(scaling: Double = 1.0): Unit = {
     val elapsed = (System.currentTimeMillis - t0) / scaling
-    statsd.timing(name, elapsed.toLong, 0.0)
+    Statsd.timing(name, elapsed.toLong, 1.0)
   }
 }
 
