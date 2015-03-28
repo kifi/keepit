@@ -8,6 +8,7 @@ import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick._
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.net.URI
 import com.keepit.common.social._
 import com.keepit.cortex.CortexServiceClient
@@ -42,6 +43,7 @@ class PageCommander @Inject() (
     searchClient: SearchServiceClient,
     libraryQualityHelper: LibraryQualityHelper,
     userCommander: UserCommander,
+    airbrake: AirbrakeNotifier,
     relatedPageCommander: RelatedPageCommander,
     implicit val config: PublicIdConfiguration) extends Logging {
 
@@ -118,13 +120,13 @@ class PageCommander @Inject() (
       (nUri, nUriStr)
     }
 
-    val relatedUriF = uriInfoF.flatMap {
+    val relatedPagesF = uriInfoF.flatMap {
       case (uri, _) =>
         if (uri.isDefined && experiments.contains(ExperimentType.RELATED_PAGE_INFO)) {
-          relatedPageCommander.getRelatedPageInfo(uri.get.id.get).recover{
+          relatedPageCommander.getRelatedPageInfo(uri.get.id.get).recover {
             case _ =>
-              log.error(s"error in getting related page info for uri: ${uri.get.id.get}")
-              Seq[RelatedPageInfo]()
+              airbrake.notify(s"error in getting related page info for uri: ${uri.get.id.get}")
+              Seq()
           }
         } else {
           Future.successful(Seq[RelatedPageInfo]())
@@ -134,7 +136,7 @@ class PageCommander @Inject() (
     val infoF = for {
       (position, neverOnSite) <- domainF
       (nUriOpt, nUriStr) <- uriInfoF
-      relatedUri <- relatedUriF
+      relatedPages <- relatedPagesF
     } yield {
       val shown = nUriOpt.exists { normUri =>
         historyTracker.getMultiHashFilter(userId).mayContain(normUri.id.get.id)
@@ -142,10 +144,10 @@ class PageCommander @Inject() (
 
       nUriOpt.map { normUri =>
         augmentUriInfo(normUri, userId).map { info =>
-          KeeperPageInfo(nUriStr, position, neverOnSite, shown, info.keepers, info.keepersTotal, info.libraries, info.keeps, relatedUri)
+          KeeperPageInfo(nUriStr, position, neverOnSite, shown, info.keepers, info.keepersTotal, info.libraries, info.keeps, relatedPages)
         }
       }.getOrElse {
-        Future.successful(KeeperPageInfo(nUriStr, position, neverOnSite, shown, Seq.empty[BasicUser], 0, Seq.empty[JsObject], Seq.empty[KeepData], relatedUri))
+        Future.successful(KeeperPageInfo(nUriStr, position, neverOnSite, shown, Seq.empty[BasicUser], 0, Seq.empty[JsObject], Seq.empty[KeepData], relatedPages))
       }
     }
     infoF.flatten
@@ -267,12 +269,14 @@ class RelatedPageCommander @Inject() (
 
   private val MAX_LOOKUP_SIZE = 25
   private val MIN_POOL_SIZE = 5
+  private val RETURN_SIZE = 5
 
   def getRelatedPageInfo(uriId: Id[NormalizedURI]): Future[Seq[RelatedPageInfo]] = {
     val urisF = cortex.similarURIs(uriId)(None).map { uriIds =>
+      val current = db.readOnlyReplica { implicit s => uriRepo.get(uriId) }
       val uris = db.readOnlyReplica { implicit s => uriIds.take(MAX_LOOKUP_SIZE).map { uriRepo.get(_) } }
       val filtered = uris.filter { x => x.title.isDefined && x.state == NormalizedURIStates.SCRAPED && x.restriction.isEmpty }
-      val uniqueUris = filtered.groupBy(_.title.get.toLowerCase).map { case (title, uriList) => uriList.head }.toArray
+      val uniqueUris = filtered.groupBy(_.title.get.toLowerCase).map { case (title, uriList) => uriList.head }.toArray.filter(_.title.get.toLowerCase != current.title.getOrElse("n/a"))
       uniqueUris
     }
 
@@ -287,7 +291,8 @@ class RelatedPageCommander @Inject() (
       assume(uris.size == summaries.size)
       val uriWithImages = (uris zip summaries).filter(_._2.imageUrl.isDefined)
       if (uriWithImages.size >= MIN_POOL_SIZE) {
-        uriWithImages.map { case (uri, summary) => RelatedPageInfo(uri.title.get, uri.url, summary.imageUrl.get, summary.imageWidth, summary.imageHeight) }
+        val pages = uriWithImages.map { case (uri, summary) => RelatedPageInfo(uri.title.get, uri.url, summary.imageUrl.get, summary.imageWidth, summary.imageHeight) }
+        scala.util.Random.shuffle(pages.toSeq).take(RETURN_SIZE)
       } else {
         // pool size too small. Don't show anything
         Seq()
