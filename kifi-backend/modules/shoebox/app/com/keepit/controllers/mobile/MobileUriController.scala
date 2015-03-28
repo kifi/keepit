@@ -31,7 +31,7 @@ class MobileUriController @Inject() (
             systemAdminMailSender.sendMail(ElectronicMail(
               from = SystemEmailAddress.ENG,
               to = List(SystemEmailAddress.EISHAY, SystemEmailAddress.ANDREW, SystemEmailAddress.STEPHEN, SystemEmailAddress.MARK),
-              subject = s"url ${uri.url}} flagged as inappropriate!!!",
+              subject = s"url [${uri.id.get}]: ${uri.url} flagged as inappropriate!!!",
               htmlBody = s"uri: ${uri} <br>flagged by user ${request.user}.<br>Check it out: <a href=\"https://admin.kifi.com/admin/scraped/${uri.id.get}\"></a>",
               category = NotificationCategory.System.ADMIN))
             NoContent
