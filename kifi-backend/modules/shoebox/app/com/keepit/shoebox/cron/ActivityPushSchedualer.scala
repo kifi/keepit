@@ -201,7 +201,7 @@ class ActivityPusher @Inject() (
   def getNextPushBatch(): Seq[Id[ActivityPushTask]] = {
     val ids = db.readOnlyMaster { implicit s =>
       val now = clock.now()
-      activityPushTaskRepo.getByPushAndActivity(now.minusDays(2), now.toLocalTimeInZone(DEFAULT_DATE_TIME_ZONE), 100)
+      activityPushTaskRepo.getByPushAndActivity(now.minusHours(12), now.toLocalTimeInZone(DEFAULT_DATE_TIME_ZONE), 100)
     }
     log.info(s"next push batch size is ${ids.size}")
     ids
