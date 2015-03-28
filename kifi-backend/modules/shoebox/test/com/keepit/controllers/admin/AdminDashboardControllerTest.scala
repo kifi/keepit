@@ -52,7 +52,7 @@ class AdminDashboardControllerTest extends Specification with ShoeboxApplication
       running(new ShoeboxApplication(requiredModules: _*)) {
 
         val now = new DateTime(2020, 5, 31, 4, 3, 2, 1, DEFAULT_DATE_TIME_ZONE)
-        inject[FakeClock].setTimeFunction(() => now.getMillis)
+        inject[FakeClock].setTimeValue(now)
 
         val oAuth2Info = OAuth2Info(
           accessToken = "AAAHiW1ZC8SzYBAOtjXeZBivJ77eNZCIjXOkkZAZBjfLbaP4w0uPnj0XzXQUi6ib8m9eZBlHBBxmzzFbEn7jrZADmHQ1gO05AkSZBsZAA43RZC9dQZDZD",
