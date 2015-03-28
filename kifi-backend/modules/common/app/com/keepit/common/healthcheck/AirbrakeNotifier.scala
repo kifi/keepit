@@ -9,6 +9,8 @@ import com.keepit.common.service.FortyTwoServices
 import com.keepit.model.{ User, NotificationCategory }
 import com.keepit.common.mail.{ SystemEmailAddress, ElectronicMail }
 
+import scala.concurrent.ExecutionContext
+
 import play.api.libs.json.Json
 
 import akka.actor._
@@ -68,9 +70,9 @@ class AirbrakeSender @Inject() (
   healthcheck: HealthcheckPlugin,
   pagerDutySender: PagerDutySender,
   service: FortyTwoServices,
+  implicit val defaultContext: ExecutionContext,
   systemAdminMailSender: SystemAdminMailSender)
     extends Logging {
-  import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
   var firstErrorReported = false
 

@@ -9,11 +9,10 @@ import com.keepit.common.mail.{ SystemEmailAddress, PostOffice, ElectronicMail, 
 import com.keepit.heimdal.{ HeimdalServiceClient, UserEventTypes, UserEvent, HeimdalContextBuilder }
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model.{ User, UserEmailAddressRepo, UserValueName, UserValueRepo }
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
 import play.twirl.api.Html
 
-import scala.concurrent.Future
+import scala.concurrent.{ ExecutionContext, Future }
 
 @ImplementedBy(classOf[EmailTemplateSenderImpl])
 trait EmailTemplateSender {
@@ -28,6 +27,7 @@ class EmailTemplateSenderImpl @Inject() (
     postOffice: LocalPostOffice,
     emailAddrRepo: UserEmailAddressRepo,
     userValueRepo: UserValueRepo,
+    implicit val defaultContext: ExecutionContext,
     config: FortyTwoConfig) extends EmailTemplateSender with Logging {
 
   def send(emailToSend: EmailToSend) = {
