@@ -34,6 +34,7 @@ case class PushNotificationExperiment(name: String)
 object PushNotificationExperiment {
   val Experiment1 = PushNotificationExperiment("Experiment1")
   val Experiment2 = PushNotificationExperiment("Experiment2")
+  val All = Seq(Experiment1, Experiment2)
   implicit val format = Json.format[PushNotificationExperiment]
 }
 
