@@ -617,6 +617,7 @@ GET     /admin/search/performance/viewPerformance @com.keepit.controllers.admin.
 GET     /admin/users/reindex        @com.keepit.controllers.admin.AdminUserIndexController.reindex()
 GET     /admin/users                @com.keepit.controllers.admin.AdminUserController.allUsersView
 POST    /admin/users/createPushActivityEntities  @com.keepit.controllers.admin.AdminUserController.createPushActivityEntities
+POST    /admin/users/pushLibraryActivity  @com.keepit.controllers.admin.AdminUserController.pushLibraryActivity
 POST    /admin/users/reNormalizedUsername        @com.keepit.controllers.admin.AdminUserController.reNormalizedUsername(readOnly: Boolean ?= true, max: Int ?= 10)
 GET     /admin/realUsers            @com.keepit.controllers.admin.AdminUserController.allRegisteredUsersView
 GET     /admin/fakeUsers            @com.keepit.controllers.admin.AdminUserController.allFakeUsersView

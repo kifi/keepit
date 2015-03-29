@@ -13,6 +13,7 @@
 )(implicit request: com.keepit.common.controller.UserRequest[_])
 
 @admin("User: " + user.firstName + " " + user.lastName, stylesheets = List("admin_user")) {
+    <button class="btn" id="library_push" onclick="libraryPush()">Lib Push</button>
     <button class="btn" id="reset_mixpanel" onclick="resetMixpanelProfile()">Reset Mixpanel Profile</button>
     <button class="btn" id="refresh_sui" onclick="refreshAllSocialUserInfo()">Refresh Social User Info!</button>
     <button class="btn" onclick="impersonate()">Impersonate User</button>
@@ -228,6 +229,10 @@
   }
 
   <script type="text/javascript">
+    function libraryPush() {
+      $("#library_push").prop("disabled", true).text("pushing...");
+      location.href="@com.keepit.controllers.admin.routes.AdminUserController.pushLibraryActivity()"
+    }
     function resetMixpanelProfile() {
       $("#reset_mixpanel").prop("disabled", true).text("Resetting Mixpanel Profile...");
       location.href="@com.keepit.controllers.admin.routes.AdminUserController.resetMixpanelProfile(user.id.get)"
