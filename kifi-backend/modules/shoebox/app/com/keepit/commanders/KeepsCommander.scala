@@ -376,7 +376,7 @@ class KeepsCommander @Inject() (
     val saved = keepRepo.save(keep withState KeepStates.INACTIVE)
     log.info(s"[unkeep($userId)] deactivated keep=$saved")
     val library = libraryRepo.get(keep.libraryId.get)
-    libraryRepo.save(library.copy(keepCount = library.keepCount - 1))
+    libraryRepo.save(library.copy(keepCount = keepRepo.getCountByLibrary(keep.libraryId.get)))
     keepToCollectionRepo.getCollectionsForKeep(saved.id.get) foreach { cid => collectionRepo.collectionChanged(cid, inactivateIfEmpty = true) }
     saved
   }
