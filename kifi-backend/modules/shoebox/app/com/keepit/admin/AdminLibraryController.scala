@@ -4,7 +4,7 @@ import com.google.inject.Inject
 import com.keepit.commanders.{ LibrarySuggestedSearchCommander, LibraryCommander }
 import com.keepit.common.controller.{ UserActionsHelper, AdminUserActions }
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ State, Id }
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.net.RichRequestHeader
@@ -171,9 +171,15 @@ class AdminLibraryController @Inject() (
     }
   }
 
-  def libraryKeepsView(libraryId: Id[Library], page: Int = 0, showPrivates: Boolean = false) = AdminUserPage { implicit request =>
+  def libraryKeepsView(libraryId: Id[Library], page: Int = 0, showPrivates: Boolean = false, showInactives: Boolean = false) = AdminUserPage { implicit request =>
     if (showPrivates) {
       log.warn(s"${request.user.firstName} ${request.user.firstName} (${request.userId}) is viewing private library $libraryId")
+    }
+
+    val excludeKeepStateSet = if (showInactives) {
+      Set.empty[State[Keep]]
+    } else {
+      Set(KeepStates.INACTIVE, KeepStates.DUPLICATE)
     }
 
     val pageSize = 50
@@ -181,7 +187,7 @@ class AdminLibraryController @Inject() (
       val lib = libraryRepo.get(libraryId)
       val owner = userRepo.get(lib.ownerId)
       val keepCount = keepRepo.getCountByLibrary(libraryId)
-      val keeps = keepRepo.getByLibrary(libraryId, page * pageSize, pageSize).filter(b => showPrivates || !(b.isPrivate || lib.visibility == LibraryVisibility.SECRET))
+      val keeps = keepRepo.getByLibrary(libraryId, page * pageSize, pageSize, excludeKeepStateSet).filter(b => showPrivates || !(b.isPrivate || lib.visibility == LibraryVisibility.SECRET))
 
       val keepInfos = for (keep <- keeps) yield {
         val tagNames = keepToCollectionRepo.getCollectionsForKeep(keep.id.get).map(collectionRepo.get).map(_.name)
