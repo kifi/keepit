@@ -60,18 +60,19 @@ class LibraryChecker @Inject() (
 
     libraryMap.map {
       case (libId, lib) =>
+        val currentKeptAt = latestKeptAtMap.get(libId).flatten
         lib.lastKept match {
           case None =>
-            latestKeptAtMap(libId) match {
+            currentKeptAt match {
               case Some(keptAt) =>
                 airbrake.notify(s"Library ${libId} has no last_kept but has active keeps... update last_kept!")
                 db.readWrite { implicit s =>
                   libraryRepo.save(lib.copy(lastKept = Some(keptAt)))
                 }
-              case None =>
+              case _ =>
             }
           case Some(lastKeptDate) =>
-            latestKeptAtMap(libId) match {
+            currentKeptAt match {
               case Some(keptAt) if keptAt != lastKeptDate =>
                 airbrake.notify(s"Library ${libId} has inconsistent last_kept state. Library is last kept at $lastKeptDate but keep is ${keptAt}... making them consistent")
                 db.readWrite { implicit s =>

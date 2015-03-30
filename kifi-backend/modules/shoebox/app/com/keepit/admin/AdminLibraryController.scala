@@ -285,5 +285,22 @@ class AdminLibraryController @Inject() (
     suggestedSearchCommander.saveSuggestedSearchTermsForLibrary(Id[Library](libId), SuggestedSearchTerms(terms))
     Ok
   }
+
+  def applyKeepCountToLibrary() = AdminUserAction { implicit request =>
+    db.readOnlyMaster { implicit s =>
+      val numActiveLibs = libraryRepo.countWithState(LibraryStates.ACTIVE)
+      libraryRepo.page(0, numActiveLibs, Set(LibraryStates.INACTIVE))
+    }.grouped(100).foreach { libs =>
+      db.readWrite { implicit s =>
+        val keepCountsMap = keepRepo.getCountsByLibrary(libs.map(_.id.get).toSet)
+        libs.map { lib =>
+          keepCountsMap.get(lib.id.get).map { numKeepsInLibrary =>
+            libraryRepo.save(lib.copy(keepCount = numKeepsInLibrary))
+          }
+        }
+      }
+    }
+    Ok(JsString("done"))
+  }
 }
 

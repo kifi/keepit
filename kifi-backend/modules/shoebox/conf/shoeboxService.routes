@@ -721,6 +721,8 @@ POST    /admin/libraries/migrateKeepImages  @com.keepit.controllers.ext.ExtKeepI
 POST    /admin/libraries/updateLibraryOwner @com.keepit.controllers.admin.AdminLibraryController.updateLibraryOwner(libraryId: Id[Library], fromUserId: Id[User], toUserId: Id[User])
 POST    /admin/libraries/saveSuggestedSearches    @com.keepit.controllers.admin.AdminLibraryController.saveSuggestedSearches
 
+POST    /admin/libraries/applyNumKeeps  @com.keepit.controllers.admin.AdminLibraryController.applyKeepCountToLibrary
+
 GET     /admin/personas             @com.keepit.controllers.admin.AdminPersonaController.getAllPersonas()
 POST    /admin/personas/add         @com.keepit.controllers.admin.AdminPersonaController.createPersona()
 POST    /admin/personas/:id         @com.keepit.controllers.admin.AdminPersonaController.editPersona(id: Id[Persona])
