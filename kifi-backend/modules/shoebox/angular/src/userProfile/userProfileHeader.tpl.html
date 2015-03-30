@@ -1,8 +1,10 @@
 <div class="kf-uph">
     <div class="kf-uph-connect-banner" ng-if="connectionWithUser==='request_received'">
-      <button class="kf-uph-connect-banner-btn kf-accept" ng-click="acceptFriendRequest()">Accept</button>
-      <button class="kf-uph-connect-banner-btn kf-decline" ng-click="ignoreFriendRequest()">Decline</button>
       <span class="kf-uph-connect-banner-text">{{profile.firstName}} wants to connect with you on Kifi</span>
+      <span class="kf-uph-connect-banner-btns">
+        <button class="kf-uph-connect-banner-btn kf-decline" ng-click="ignoreFriendRequest()">Decline</button>
+        <button class="kf-uph-connect-banner-btn kf-accept" ng-click="acceptFriendRequest()">Accept</button>
+      </span>
     </div>
     <div class="kf-uph-top" itemscope itemtype="http://schema.org/Person">
       <a class="kf-uph-pic-a" href="{{profile|profileUrl}}" itemprop="url">
