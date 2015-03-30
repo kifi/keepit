@@ -186,7 +186,7 @@ class AdminLibraryController @Inject() (
     val (library, owner, totalKeepCount, keepInfos) = db.readOnlyReplica { implicit session =>
       val lib = libraryRepo.get(libraryId)
       val owner = userRepo.get(lib.ownerId)
-      val keepCount = keepRepo.getCountByLibrary(libraryId, excludeKeepStateSet)
+      val keepCount = keepRepo.getCountByLibrary(libraryId)
       val keeps = keepRepo.getByLibrary(libraryId, page * pageSize, pageSize, excludeKeepStateSet).filter(b => showPrivates || !(b.isPrivate || lib.visibility == LibraryVisibility.SECRET))
 
       val keepInfos = for (keep <- keeps) yield {
