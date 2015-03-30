@@ -6,6 +6,6 @@ import com.keepit.model._
 import com.keepit.common.db.FakeSlickSessionProvider
 import com.google.inject.Injector
 
-trait ElizaInjectionHelpers { self: InjectorProvider =>
+trait ElizaInjectionHelpers { self: TestInjectorProvider =>
 
 }

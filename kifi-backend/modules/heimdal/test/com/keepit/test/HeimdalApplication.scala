@@ -7,7 +7,7 @@ import com.google.inject.util.Modules
 import com.keepit.common.actor.{ FakeActorSystemModule, FakeSchedulerModule }
 import com.keepit.common.aws.AwsModule
 import com.keepit.common.cache.{ HeimdalCacheModule, HashMapMemoryCacheModule }
-import com.keepit.common.concurrent.{FakeExecutionContextModule, ExecutionContextModule}
+import com.keepit.common.concurrent.{ FakeExecutionContextModule, ExecutionContextModule }
 import com.keepit.common.controller.FakeUserActionsModule
 import com.keepit.common.crypto.FakeCryptoModule
 import com.keepit.common.db.{ TestDbInfo, FakeSlickModule }
