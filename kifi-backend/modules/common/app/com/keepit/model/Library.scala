@@ -41,7 +41,7 @@ case class Library(
     universalLink: String = RandomStringUtils.randomAlphanumeric(40),
     memberCount: Int,
     lastKept: Option[DateTime] = None,
-    keepCount: Int) extends ModelWithPublicId[Library] with ModelWithState[Library] with ModelWithSeqNumber[Library] {
+    keepCount: Int = 0) extends ModelWithPublicId[Library] with ModelWithState[Library] with ModelWithSeqNumber[Library] {
 
   def sanitizeForDelete(): Library = copy(
     name = RandomStringUtils.randomAlphanumeric(20),
