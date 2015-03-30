@@ -25,13 +25,13 @@ class UrlPatternRuleRepoImpl @Inject() (
   type RepoImpl = UrlPatternRuleTable
   case class UrlPatternRuleTable(tag: Tag) extends RepoTable[UrlPatternRule](db, tag, "url_pattern_rule") {
     def pattern = column[String]("pattern", O.NotNull)
-    def example = column[String]("example", O.Nullable)
+    def example = column[Option[String]]("example", O.Nullable)
     def isUnscrapable = column[Boolean]("is_unscrapable", O.NotNull)
-    def useProxy = column[Id[HttpProxy]]("use_proxy", O.Nullable)
-    def normalization = column[Normalization]("normalization", O.Nullable)
-    def trustedDomain = column[String]("trusted_domain", O.Nullable)
-    def nonSensitive = column[Boolean]("non_sensitive")
-    def * = (id.?, createdAt, updatedAt, state, pattern, example.?, isUnscrapable, useProxy.?, normalization.?, trustedDomain.?, nonSensitive) <> ((UrlPatternRule.apply _).tupled, UrlPatternRule.unapply _)
+    def useProxy = column[Option[Id[HttpProxy]]]("use_proxy", O.Nullable)
+    def normalization = column[Option[Normalization]]("normalization", O.Nullable)
+    def trustedDomain = column[Option[String]]("trusted_domain", O.Nullable)
+    def nonSensitive = column[Option[Boolean]]("non_sensitive", O.Nullable)
+    def * = (id.?, createdAt, updatedAt, state, pattern, example, isUnscrapable, useProxy, normalization, trustedDomain, nonSensitive) <> ((UrlPatternRule.apply _).tupled, UrlPatternRule.unapply _)
   }
 
   def table(tag: Tag) = new UrlPatternRuleTable(tag)
