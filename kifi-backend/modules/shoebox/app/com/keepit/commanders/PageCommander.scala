@@ -144,10 +144,11 @@ class PageCommander @Inject() (
 
       nUriOpt.map { normUri =>
         augmentUriInfo(normUri, userId).map { info =>
-          KeeperPageInfo(nUriStr, position, neverOnSite, shown, info.keepers, info.keepersTotal, info.libraries, info.keeps, relatedPages)
+          val related = if (relatedPages.nonEmpty) Some(relatedPages) else None
+          KeeperPageInfo(nUriStr, position, neverOnSite, shown, info.keepers, info.keepersTotal, info.libraries, info.keeps, related)
         }
       }.getOrElse {
-        Future.successful(KeeperPageInfo(nUriStr, position, neverOnSite, shown, Seq.empty[BasicUser], 0, Seq.empty[JsObject], Seq.empty[KeepData], relatedPages))
+        Future.successful(KeeperPageInfo(nUriStr, position, neverOnSite, shown, Seq.empty[BasicUser], 0, Seq.empty[JsObject], Seq.empty[KeepData], None))
       }
     }
     infoF.flatten
