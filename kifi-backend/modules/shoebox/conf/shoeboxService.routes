@@ -708,7 +708,7 @@ POST    /admin/slider/goldenVersion   @com.keepit.controllers.admin.SliderAdminC
 GET     /admin/libraries                 @com.keepit.controllers.admin.AdminLibraryController.index(page: Int ?= 0)
 GET     /admin/libraries/:id             @com.keepit.controllers.admin.AdminLibraryController.libraryView(id: Id[Library])
 GET     /admin/libraries/:id/indexed        @com.keepit.controllers.admin.AdminLibraryController.getLuceneDocument(id: Id[Library])
-GET     /admin/libraries/:id/keeps       @com.keepit.controllers.admin.AdminLibraryController.libraryKeepsView(id: Id[Library], page: Int ?= 0, showPrivates: Boolean ?= false)
+GET     /admin/libraries/:id/keeps       @com.keepit.controllers.admin.AdminLibraryController.libraryKeepsView(id: Id[Library], page: Int ?= 0, showPrivates: Boolean ?= false, showInactives: Boolean ?= false)
 POST    /admin/libraries/internForUser   @com.keepit.controllers.admin.AdminLibraryController.internUserSystemLibraries(userId: Id[User])
 POST    /admin/libraries/internForAllUsers  @com.keepit.controllers.admin.AdminLibraryController.internAllUserSystemLibraries(startingUserId: Id[User], endingUserId: Id[User])
 POST    /admin/libraries/:id/state/:state   @com.keepit.controllers.admin.AdminLibraryController.changeState(id: Id[Library], state: String)
