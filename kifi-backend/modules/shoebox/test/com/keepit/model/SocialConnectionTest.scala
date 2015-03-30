@@ -2,7 +2,7 @@ package com.keepit.model
 
 import com.keepit.common.strings.UTF8
 import com.keepit.abook.FakeABookServiceClientModule
-import com.keepit.common.concurrent.ExecutionContextModule
+import com.keepit.common.concurrent.{ FakeExecutionContextModule, ExecutionContextModule }
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.social._
@@ -22,7 +22,7 @@ import com.keepit.common.mail.{ EmailAddress, FakeMailModule }
 class SocialConnectionTest extends Specification with ShoeboxTestInjector {
 
   val socialConnectionTestModules = Seq(
-    ExecutionContextModule(),
+    FakeExecutionContextModule(),
     FakeHttpClientModule(),
     FakeShoeboxStoreModule(),
     FakeShoeboxServiceClientModule(),

@@ -13,11 +13,10 @@ import com.keepit.inject._
 import com.keepit.macros.Location
 
 import scala.collection.mutable.ListBuffer
-import scala.concurrent.ExecutionContext
 import scala.slick.driver.JdbcDriver.simple.{ Database => SlickDatabase }
 import scala.slick.jdbc.ResultSetConcurrency
 
-trait DbInjectionHelper extends Logging { self: InjectorProvider =>
+trait DbInjectionHelper extends Logging { self: TestInjectorProvider =>
 
   def db(implicit injector: Injector) = inject[Database]
 
@@ -41,17 +40,6 @@ trait DbInjectionHelper extends Logging { self: InjectorProvider =>
         f(injector)
       } finally {
         inScope.set(false)
-        injectOpt[ExecutionContext] match {
-          case Some(ec) => ec match {
-            case watchable: WatchableExecutionContext =>
-              val killed = watchable.kill()
-              if (killed > 0) {
-                println(s"Killed $killed threads at the end of a test, should have those been running?")
-              }
-            case simple: ExecutionContext => println(s"can't close execution context of type ${simple.getClass.getName}")
-          }
-          case None =>
-        }
         readWrite(h2) { implicit session =>
           val conn = session.conn
           // conn.createStatement().execute("SET REFERENTIAL_INTEGRITY FALSE")

@@ -5,7 +5,7 @@ import java.io.File
 import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.strings.UTF8
-import com.keepit.common.concurrent.ExecutionContextModule
+import com.keepit.common.concurrent.{ FakeExecutionContextModule, ExecutionContextModule }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.mail.{ EmailAddress, FakeMailModule, FakeOutbox }
 import com.keepit.common.net.FakeHttpClientModule
@@ -29,7 +29,7 @@ import util.Random
 class UserConnectionCreatorTest extends Specification with ShoeboxTestInjector {
 
   val modules = Seq(
-    ExecutionContextModule(),
+    FakeExecutionContextModule(),
     FakeHttpClientModule(),
     FakeShoeboxStoreModule(),
     FakeShoeboxServiceClientModule(),
