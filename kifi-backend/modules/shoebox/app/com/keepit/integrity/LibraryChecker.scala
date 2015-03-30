@@ -50,32 +50,25 @@ class LibraryChecker @Inject() (
     val minuteInd = currentTime.minuteOfHour().get / 10
     val index = hourInd * 6 + minuteInd // hour * 6 + minute / 10 (int div)
 
-    val (libraryMap, keepCountMap, latestKeptAtMap) = db.readOnlyMaster { implicit s =>
+    val (libraryMap, latestKeptAtMap) = db.readOnlyMaster { implicit s =>
       val pageSize = libraryRepo.countWithState(LibraryStates.ACTIVE) / 144 // 144 = 24 (hours per day) * 6 (10 minute intervals per hour)
       val libraries = libraryRepo.page(index, pageSize, Set(LibraryStates.INACTIVE))
       val libraryMap = libraries.map(lib => lib.id.get -> lib).toMap
-      val keepCountMap = keepRepo.getCountsByLibrary(libraryMap.keySet)
       val latestKeptAtMap = keepRepo.latestKeptAtByLibraryIds(libraryMap.keySet)
-      (libraryMap, keepCountMap, latestKeptAtMap)
+      (libraryMap, latestKeptAtMap)
     }
 
     libraryMap.map {
       case (libId, lib) =>
         lib.lastKept match {
           case None =>
-            val numKeeps = keepCountMap(libId)
-            if (numKeeps != 0) {
-              airbrake.notify(s"Library ${libId} has no last_kept but has $numKeeps active keeps... making them inactive!")
-              val allKeepsInLib = db.readOnlyMaster { implicit s =>
-                keepRepo.getByLibrary(libId, 0, numKeeps, Set.empty)
-              }
-              allKeepsInLib.grouped(100) foreach { keeps =>
-                db.readWriteBatch(keeps) { (s, k) =>
-                  if (k.state != KeepStates.INACTIVE) {
-                    keepRepo.save(k.withState(KeepStates.INACTIVE))(s)
-                  }
+            latestKeptAtMap(libId) match {
+              case Some(keptAt) =>
+                airbrake.notify(s"Library ${libId} has no last_kept but has active keeps... update last_kept!")
+                db.readWrite { implicit s =>
+                  libraryRepo.save(lib.copy(lastKept = Some(keptAt)))
                 }
-              }
+              case None =>
             }
           case Some(lastKeptDate) =>
             latestKeptAtMap(libId) match {
