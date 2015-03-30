@@ -42,7 +42,7 @@ class HeimdalApplication(overridingModules: Module*)(implicit path: File = new F
     FakeCryptoModule()
   ))
 
-trait HeimdalApplicationInjector extends ApplicationInjector with DbInjectionHelper with HeimdalInjectionHelpers
+trait HeimdalApplicationInjector extends TestInjectorProvider with ApplicationInjector with DbInjectionHelper with HeimdalInjectionHelpers
 
 trait HeimdalTestInjector extends TestInjector with DbInjectionHelper with HeimdalInjectionHelpers {
   val module = Modules.combine(
