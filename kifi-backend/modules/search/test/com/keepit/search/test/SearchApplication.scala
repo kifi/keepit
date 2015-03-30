@@ -21,7 +21,7 @@ import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.search.{ FakeDistributedSearchServiceClientModule, SearchConfigModule, FakeSearchServiceClientModule, SearchServiceTypeModule, FakeSearchConfigModule }
-import com.keepit.test.{ TestInjector, TestApplication }
+import com.keepit.test.{ TestInjectorProvider, TestInjector, TestApplication }
 
 class SearchApplication(overridingModules: Module*)(implicit path: File = new File("./modules/search/"))
   extends TestApplication(path, overridingModules, Seq(
@@ -46,7 +46,7 @@ class SearchApplication(overridingModules: Module*)(implicit path: File = new Fi
     FakeActorSystemModule()
   ))
 
-trait SearchApplicationInjector extends ApplicationInjector with SearchInjectionHelpers
+trait SearchApplicationInjector extends TestInjectorProvider with ApplicationInjector with SearchInjectionHelpers
 
 trait SearchTestInjector extends TestInjector with SearchInjectionHelpers {
   implicit val system = ActorSystem("test")
