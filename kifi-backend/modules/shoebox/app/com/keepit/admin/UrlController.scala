@@ -272,7 +272,11 @@ class UrlController @Inject() (
             case scheme => Some(Normalization(scheme))
           },
           trustedDomain = Some(body("trusted_domain_" + key)).filter(!_.isEmpty),
-          nonSensitive = body.contains("non_sensitive_" + key)
+          nonSensitive = body("non_sensitive_" + key) match {
+            case "None" => None
+            case "true" => Some(true)
+            case "false" => Some(false)
+          }
         )
 
         if (newPat != oldPat) {
@@ -295,7 +299,11 @@ class UrlController @Inject() (
             case scheme => Some(Normalization(scheme))
           },
           trustedDomain = Some(body("new_trusted_domain")).filter(!_.isEmpty),
-          nonSensitive = body.contains("new_nonsensitive")
+          nonSensitive = body("new_non_sensitive") match {
+            case "None" => None
+            case "true" => Some(true)
+            case "false" => Some(false)
+          }
         ))
       }
     }
