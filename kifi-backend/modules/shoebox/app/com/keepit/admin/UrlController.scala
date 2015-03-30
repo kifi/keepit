@@ -317,6 +317,11 @@ class UrlController @Inject() (
     Redirect(routes.ScraperAdminController.getScraped(uriId))
   }
 
+  def flagAsAdult(uriId: Id[NormalizedURI]) = AdminUserPage { implicit request =>
+    db.readWrite { implicit session => uriRepo.updateURIRestriction(uriId, Some(Restriction.ADULT)) }
+    Redirect(routes.ScraperAdminController.getScraped(uriId))
+  }
+
   def cleanKeepsByUri(firstPage: Int, pageSize: Int) = AdminUserAction { implicit request =>
     SafeFuture {
       var page = firstPage

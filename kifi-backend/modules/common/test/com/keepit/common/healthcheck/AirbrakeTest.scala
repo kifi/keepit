@@ -41,8 +41,8 @@ class AirbrakeTest extends Specification with CommonTestInjector {
         val error = new IllegalArgumentException("hi there", new Exception("middle thing", new IllegalStateException("its me")))
         val xml = formatter.noticeError(ErrorWithStack(error), None)
         val lines = (xml \\ "line").toVector
-        lines.head === <line method="java.lang.IllegalArgumentException: hi there" file="InjectorProvider.scala" number="39"/>
-        lines(1) === <line method="com.keepit.inject.InjectorProvider#withInjector" file="InjectorProvider.scala" number="39"/>
+        lines.head === <line method="java.lang.IllegalArgumentException: hi there" file="TestInjectorProvider.scala" number="18"/>
+        lines(1) === <line method="com.keepit.test.TestInjectorProvider#withInjector" file="TestInjectorProvider.scala" number="18"/>
         lines.size must be greaterThan 150
       }
     }
@@ -53,8 +53,8 @@ class AirbrakeTest extends Specification with CommonTestInjector {
         val error = new IllegalArgumentException("hi there", new IllegalStateException("its me"))
         val xml = formatter.noticeError(ErrorWithStack(error), None)
         val lines = (xml \\ "line").toVector
-        lines.head === <line method="java.lang.IllegalArgumentException: hi there" file="InjectorProvider.scala" number="39"/>
-        lines(1) === <line method="com.keepit.inject.InjectorProvider#withInjector" file="InjectorProvider.scala" number="39"/>
+        lines.head === <line method="java.lang.IllegalArgumentException: hi there" file="TestInjectorProvider.scala" number="18"/>
+        lines(1) === <line method="com.keepit.test.TestInjectorProvider#withInjector" file="TestInjectorProvider.scala" number="18"/>
         lines.size must be greaterThan 100
       }
     }
@@ -180,8 +180,8 @@ class AirbrakeTest extends Specification with CommonTestInjector {
           case error: Throwable =>
             val xml = formatter.noticeError(ErrorWithStack(error), None)
             val lines = (xml \\ "line").toVector
-            lines.head === <line method="java.lang.IllegalArgumentException: me iae" file="InjectorProvider.scala" number="39"/>
-            lines(1) === <line method="com.keepit.inject.InjectorProvider#withInjector" file="InjectorProvider.scala" number="39"/>
+            lines.head === <line method="java.lang.IllegalArgumentException: me iae" file="TestInjectorProvider.scala" number="18"/>
+            lines(1) === <line method="com.keepit.test.TestInjectorProvider#withInjector" file="TestInjectorProvider.scala" number="18"/>
             lines.size must be greaterThan 100
         }
       }

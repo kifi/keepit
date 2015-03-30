@@ -2,7 +2,7 @@ package com.keepit.commanders.emails
 
 import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
-import com.keepit.common.concurrent.FakeExecutionContextModule
+import com.keepit.common.concurrent.{ WatchableExecutionContext, FakeExecutionContextModule }
 import com.keepit.common.mail.{ EmailAddress, ElectronicMailRepo, FakeMailModule }
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social.FakeSocialGraphModule
@@ -189,6 +189,7 @@ class ActivityFeedEmailSenderTest extends Specification with ShoeboxTestInjector
 
         val senderF = sender(None)
         Await.ready(senderF, Duration(5, "seconds"))
+        inject[WatchableExecutionContext].drain()
 
         val emails = db.readOnlyMaster { implicit s => inject[ElectronicMailRepo].all() }.sortBy(_.to.head.address)
         val email1 :: email2 :: Nil = emails.filter(_.category == NotificationCategory.toElectronicMailCategory(NotificationCategory.User.ACTIVITY))

@@ -26,7 +26,6 @@ import com.keepit.social.{ BasicNonUser, BasicUser }
 import com.kifi.macros.json
 import org.joda.time.DateTime
 import play.api.http.Status._
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import views.html.admin.{ libraries, library }
@@ -77,6 +76,7 @@ class LibraryCommander @Inject() (
     userValueRepo: UserValueRepo,
     systemValueRepo: SystemValueRepo,
     twitterSyncRepo: TwitterSyncStateRepo,
+    implicit val defaultContext: ExecutionContext,
     implicit val publicIdConfig: PublicIdConfiguration,
     clock: Clock) extends Logging {
 

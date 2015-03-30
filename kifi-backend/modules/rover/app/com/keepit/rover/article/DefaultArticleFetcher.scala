@@ -3,6 +3,7 @@ package com.keepit.rover.article
 import com.google.inject.Inject
 import com.keepit.common.logging.Logging
 import com.keepit.common.time.Clock
+import com.keepit.rover.article.content.DefaultContent
 import com.keepit.rover.fetcher.{ FetchResult, RoverDocumentFetcher }
 import com.keepit.common.time._
 import com.keepit.rover.store.RoverArticleStore

@@ -32,7 +32,7 @@ class ElizaApplication(overridingModules: Module*)(implicit path: File = new Fil
     ElizaCacheModule(HashMapMemoryCacheModule())
   ))
 
-trait ElizaApplicationInjector extends ApplicationInjector with DbInjectionHelper with ElizaInjectionHelpers
+trait ElizaApplicationInjector extends TestInjectorProvider with ApplicationInjector with DbInjectionHelper with ElizaInjectionHelpers
 
 trait ElizaTestInjector extends TestInjector with DbInjectionHelper with ElizaInjectionHelpers {
   val module = Modules.combine(

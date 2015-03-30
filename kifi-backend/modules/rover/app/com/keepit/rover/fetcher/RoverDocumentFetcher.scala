@@ -1,8 +1,8 @@
 package com.keepit.rover.fetcher
 
 import com.google.inject.{ Inject, Singleton }
-import com.keepit.rover.extractor.tika.TikaDocument
-import com.keepit.rover.extractor.JsoupDocument
+import com.keepit.rover.document.tika.TikaDocument
+import com.keepit.rover.document.JsoupDocument
 import org.apache.http.HttpStatus
 import org.joda.time.DateTime
 

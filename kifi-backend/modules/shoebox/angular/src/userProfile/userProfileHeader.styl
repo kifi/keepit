@@ -18,37 +18,56 @@ uphSmallMaxDim = 736px // for @media max-height and max-width
     padding-top: 12px
 
 .kf-uph-connect-banner
-  position: relative
+  display: inline-block
+  margin: 0 auto
   border-radius: 8px
-  height: 40px
-  padding: 0 30px
+  padding: 0 10px
   overflow: hidden
   background-color: libraryGreen
+  line-height: 16px
   font-size: 13px
   color: white
-  transition: 0.2s linear height
+
+  &.ng-leave
+    transition: margin-top .2s, opacity .2s
+
+  &.ng-leave-active
+    margin-top: -28px  // TODO: should be actual offsetHeight on small screens too
+    opacity: 0
 
 .kf-uph-connect-banner-text
-  float: left
-  margin-top: 12px
+  display: inline-block
+  margin: 6px 10px 0
+
+.kf-uph-connect-banner-btns
+  display: inline-block
+  margin: 6px 10px
+  white-space: nowrap
 
 .kf-uph-connect-banner-btn
-  float: right
+  display: inline
   padding: 5px 15px
-  margin-left: 10px
-  margin-top: 8px
   border: 1px solid white
   border-radius: 4px
   font-size: 11px
   cursor: pointer
 
+  &:not(:first-child)
+    margin-left: 10px
+
   &.kf-accept
-    background-color: white
+    background-color: alpha(#fff, .9)
     color: libraryGreen
+
+    &:hover:not(:active)
+      background-color: #fff
 
   &.kf-decline
     background-color: transparent
     color: #fff
+
+    &:hover:not(:active)
+      background-color: alpha(#fff, .1)
 
 .kf-uph-action
   position: absolute

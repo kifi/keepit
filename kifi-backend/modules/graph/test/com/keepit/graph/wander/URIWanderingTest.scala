@@ -1,5 +1,6 @@
 package com.keepit.graph.wander
 
+import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.db.{ SequenceNumber, Id }
 import com.keepit.common.time.Clock
 import com.keepit.cortex.core.ModelVersion
@@ -17,6 +18,7 @@ import scala.concurrent.duration.Duration
 class URIWanderingTest extends Specification with URIWanderingTestHelper with GraphTestInjector {
 
   val modules = Seq(
+    FakeExecutionContextModule(),
     SimpleGraphTestModule(),
     GraphCacheModule())
 

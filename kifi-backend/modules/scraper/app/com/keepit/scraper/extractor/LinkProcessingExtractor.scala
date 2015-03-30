@@ -3,8 +3,8 @@ package com.keepit.scraper.extractor
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.net.URI
 import com.keepit.model.HttpProxy
-import com.keepit.rover.extractor.tika.HtmlMappers
-import com.keepit.rover.extractor.utils.LinkClassifier
+import com.keepit.rover.document.tika.HtmlMappers
+import com.keepit.rover.document.utils.LinkClassifier
 import com.keepit.rover.fetcher.FetchRequest
 import com.keepit.scraper.ScraperConfig
 import com.keepit.scraper.fetcher.DeprecatedHttpFetcher

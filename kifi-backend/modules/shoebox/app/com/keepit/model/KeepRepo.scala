@@ -444,12 +444,13 @@ class KeepRepoImpl @Inject() (
   }
 
   def getCountsByLibrary(libraryIds: Set[Id[Library]], excludeSet: Set[State[Keep]] = Set(KeepStates.INACTIVE, KeepStates.DUPLICATE))(implicit session: RSession): Map[Id[Library], Int] = {
-    countByLibraryCache.bulkGetOrElse(libraryIds.map(CountByLibraryKey(_))) { missingKeys =>
+    val map = countByLibraryCache.bulkGetOrElse(libraryIds.map(CountByLibraryKey(_))) { missingKeys =>
       val missingLibraryIds = missingKeys.map(_.id)
       val keepsQuery = (for (b <- rows if b.libraryId.inSet(missingLibraryIds) && !b.state.inSet(excludeSet)) yield b)
       val countQuery = keepsQuery.groupBy(_.libraryId).map { case (libraryId, keeps) => (libraryId, keeps.length) }
       countQuery.run.map { case (libraryIdOpt, keepCount) => (CountByLibraryKey(libraryIdOpt.get), keepCount) }.toMap
     }.map { case (CountByLibraryKey(libraryId), keepCount) => (libraryId, keepCount) }
+    libraryIds.map { libId => libId -> map.getOrElse(libId, 0) }.toMap
   }
 
   private val getByExtIdandLibraryIdCompiled = Compiled { (extId: Column[ExternalId[Keep]], libraryId: Column[Id[Library]]) =>

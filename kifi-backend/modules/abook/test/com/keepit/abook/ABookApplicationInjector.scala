@@ -1,6 +1,6 @@
 package com.keepit.abook
 
-import com.keepit.test.{ TestInjector, DbTestApplication, DbInjectionHelper }
+import com.keepit.test.{ TestInjectorProvider, TestInjector, DbTestApplication, DbInjectionHelper }
 import com.keepit.inject.{ FakeFortyTwoModule, ApplicationInjector }
 import com.google.inject.Module
 import java.io.File
@@ -31,7 +31,7 @@ class ABookApplication(overridingModules: Module*)(implicit path: File = new Fil
   println(s"[ABookApplication] path=$path canonicalPath=${path.getCanonicalPath}")
 }
 
-trait ABookApplicationInjector extends ApplicationInjector with DbInjectionHelper with ABookInjectionHelpers
+trait ABookApplicationInjector extends TestInjectorProvider with ApplicationInjector with DbInjectionHelper with ABookInjectionHelpers
 
 trait ABookTestInjector extends TestInjector with DbInjectionHelper with ABookInjectionHelpers {
   val module = Modules.combine(

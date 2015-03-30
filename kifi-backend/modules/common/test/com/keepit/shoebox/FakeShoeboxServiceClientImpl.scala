@@ -16,7 +16,7 @@ import com.keepit.common.usersegment.UserSegment
 import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.model._
 import com.keepit.model.view.{ LibraryMembershipView, UserSessionView }
-import com.keepit.rover.article.Signature
+import com.keepit.rover.document.utils.Signature
 import com.keepit.rover.fetcher.HttpRedirect
 import com.keepit.scraper.ScrapeRequest
 import com.keepit.search._
@@ -753,6 +753,6 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
     allLibraryMemberships.values.collect { case membership if membership.userId == userId && membership.canWrite => membership.libraryId }.toSet
   }
 
-  def getUserActivePersonas(userId: Id[User]): Future[UserActivePersonas] = ???
+  def getUserActivePersonas(userId: Id[User]): Future[UserActivePersonas] = Future.successful(UserActivePersonas(Seq(), Seq()))
 
 }

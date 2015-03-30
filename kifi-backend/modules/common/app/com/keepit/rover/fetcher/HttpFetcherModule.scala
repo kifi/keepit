@@ -7,7 +7,10 @@ import com.keepit.rover.fetcher.apache.{ ApacheHttpFetcher, HttpFetchEnforcerCon
 import com.keepit.scraper.ScraperSchedulerConfig
 import net.codingwell.scalaguice.ScalaModule
 
-trait HttpFetcherModule extends ScalaModule
+trait HttpFetcherModule extends ScalaModule {
+  @Provides
+  def enforcerConfig: HttpFetchEnforcerConfig = HttpFetchEnforcerConfig.default
+}
 
 case class ProdHttpFetcherModule() extends HttpFetcherModule {
   def configure(): Unit = {

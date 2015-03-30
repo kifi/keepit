@@ -10,7 +10,7 @@ angular.module('kifi')
 
 .filter('name', function () {
   return function (o) {
-    return o.firstName + ' ' + o.lastName;
+    return o ? (o.firstName || '') + ' ' + (o.lastName || '') : '';
   };
 })
 
