@@ -7,7 +7,7 @@ import com.google.inject.util.Modules
 import com.keepit.common.actor.{ FakeActorSystemModule, FakeSchedulerModule }
 import com.keepit.common.aws.AwsModule
 import com.keepit.common.cache.{ HeimdalCacheModule, HashMapMemoryCacheModule }
-import com.keepit.common.concurrent.ExecutionContextModule
+import com.keepit.common.concurrent.{FakeExecutionContextModule, ExecutionContextModule}
 import com.keepit.common.controller.FakeUserActionsModule
 import com.keepit.common.crypto.FakeCryptoModule
 import com.keepit.common.db.{ TestDbInfo, FakeSlickModule }
@@ -23,7 +23,7 @@ import com.keepit.shoebox.FakeShoeboxServiceClientModule
 
 class HeimdalApplication(overridingModules: Module*)(implicit path: File = new File("./modules/shoebox/"))
   extends DbTestApplication(path, overridingModules, Seq(
-    ExecutionContextModule(),
+    FakeFakeExecutionContextModule(),
     HeimdalServiceTypeModule(),
     FakeShoeboxServiceClientModule(),
     FakeElizaServiceClientModule(),
@@ -46,7 +46,7 @@ trait HeimdalApplicationInjector extends ApplicationInjector with DbInjectionHel
 
 trait HeimdalTestInjector extends TestInjector with DbInjectionHelper with HeimdalInjectionHelpers {
   val module = Modules.combine(
-    ExecutionContextModule(),
+    FakeExecutionContextModule(),
     HeimdalServiceTypeModule(),
     FakeShoeboxServiceClientModule(),
     FakeElizaServiceClientModule(),
