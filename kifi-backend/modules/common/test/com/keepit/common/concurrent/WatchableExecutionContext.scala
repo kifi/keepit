@@ -22,27 +22,30 @@ class WatchableExecutionContext extends ScalaExecutionContext {
   override def toString(): String = lock.synchronized { s"WatchableExecutionContext with counter = $counter and maxExeutionCount = $maxExeutionCount" }
 
   def execute(runnable: Runnable): Unit = lock.synchronized {
-    if (closed) throw new Exception(s"pool is closed, no point executing $runnable")
-    val trace = new StackTrace()
-    counter += 1
-    maxExeutionCount += 1
-    addedAnything = true
-    val wrapper = new Runnable {
-      override def run(): Unit = try {
-        runnable.run()
-        lock.synchronized {
-          counter -= 1
-          if (counter < 0) throw new Exception(s"Counter should never be less then zero")
-          if (counter == 0) lock.notifyAll()
+    if (closed) {
+      println(s"pool is closed!, no point executing runnable")
+    } else {
+      val trace = new StackTrace()
+      counter += 1
+      maxExeutionCount += 1
+      addedAnything = true
+      val wrapper = new Runnable {
+        override def run(): Unit = try {
+          runnable.run()
+          lock.synchronized {
+            counter -= 1
+            if (counter < 0) throw new Exception(s"Counter should never be less then zero")
+            if (counter == 0) lock.notifyAll()
+          }
+        } catch {
+          case e: Throwable =>
+            val t = trace.withCause(e)
+            t.printStackTrace()
+            throw t
         }
-      } catch {
-        case e: Throwable =>
-          val t = trace.withCause(e)
-          t.printStackTrace()
-          throw t
       }
+      internalContext.execute(wrapper)
     }
-    internalContext.execute(wrapper)
   }
 
   def drain(waitTime: Long = 1000): Int = {
