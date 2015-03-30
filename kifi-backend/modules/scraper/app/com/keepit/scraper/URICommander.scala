@@ -16,7 +16,7 @@ class URICommander @Inject() (
   def isNonSensitive(url: String): Future[Boolean] = try {
     shoeboxScraperClient.getAllURLPatterns().map { patterns =>
       val pat = patterns.rules.find(rule => url.matches(rule.pattern))
-      pat.exists(_.nonSensitive)
+      pat.exists { x => x.nonSensitive == Some(true) }
     }
   } catch {
     case e: Exception =>

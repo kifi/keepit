@@ -63,11 +63,11 @@ class RoverFetchSchedulingActor @Inject() (
 
     Future.sequence(queuedTaskCountFutures).imap(_.sum).onComplete {
       case Success(queuedTaskCount) => {
-        log.info(s"Scheduled $queuedTaskCount article fetch tasks.")
+        log.info(s"Added $queuedTaskCount article fetch tasks.")
         self ! DoneScheduling(mayHaveMore = ripeArticleInfos.nonEmpty)
       }
       case Failure(error) => {
-        log.error(s"Failed to schedule article fetch tasks.", error)
+        log.error(s"Failed to add article fetch tasks.", error)
         self ! CancelScheduling
       }
     }

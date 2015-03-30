@@ -44,7 +44,7 @@ trait ElizaServiceClient extends ServiceClient {
   def sendToUser(userId: Id[User], data: JsArray): Unit
   def sendToAllUsers(data: JsArray): Unit
 
-  def sendLibraryPushNotification(userId: Id[User], message: String, libraryId: Id[Library], pushNotificationExperiment: PushNotificationExperiment): Future[Int]
+  def sendLibraryPushNotification(userId: Id[User], message: String, libraryId: Id[Library], libraryUrl: String, pushNotificationExperiment: PushNotificationExperiment): Future[Int]
   def sendGeneralPushNotification(userId: Id[User], message: String, pushNotificationExperiment: PushNotificationExperiment): Future[Int]
 
   def connectedClientCount: Future[Seq[Int]]
@@ -81,10 +81,10 @@ class ElizaServiceClientImpl @Inject() (
   userThreadStatsForUserIdCache: UserThreadStatsForUserIdCache)
     extends ElizaServiceClient with Logging {
 
-  def sendLibraryPushNotification(userId: Id[User], message: String, libraryId: Id[Library], pushNotificationExperiment: PushNotificationExperiment): Future[Int] = {
+  def sendLibraryPushNotification(userId: Id[User], message: String, libraryId: Id[Library], libraryUrl: String, pushNotificationExperiment: PushNotificationExperiment): Future[Int] = {
     implicit val userFormatter = Id.format[User]
     implicit val libraryFormatter = Id.format[Library]
-    val payload = Json.obj("userId" -> userId, "message" -> message, "libraryId" -> libraryId, "pushNotificationExperiment" -> pushNotificationExperiment)
+    val payload = Json.obj("userId" -> userId, "message" -> message, "libraryId" -> libraryId, "libraryUrl" -> libraryUrl, "pushNotificationExperiment" -> pushNotificationExperiment)
     call(Eliza.internal.sendLibraryPushNotification, payload).map { response =>
       response.body.toInt
     }
