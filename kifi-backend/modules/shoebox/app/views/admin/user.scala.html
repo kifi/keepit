@@ -230,8 +230,7 @@
 
   <script type="text/javascript">
     function libraryPush() {
-      $("#library_push").prop("disabled", true).text("pushing...");
-      location.href="@com.keepit.controllers.admin.routes.AdminUserController.pushLibraryActivity()"
+      $.post("@com.keepit.controllers.admin.routes.AdminUserController.pushLibraryActivity()")
     }
     function resetMixpanelProfile() {
       $("#reset_mixpanel").prop("disabled", true).text("Resetting Mixpanel Profile...");
