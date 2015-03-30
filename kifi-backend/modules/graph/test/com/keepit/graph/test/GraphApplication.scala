@@ -2,7 +2,7 @@ package com.keepit.graph.test
 
 import com.google.inject.Module
 import java.io.File
-import com.keepit.common.concurrent.{FakeExecutionContextModule, ExecutionContextModule}
+import com.keepit.common.concurrent.{ FakeExecutionContextModule, ExecutionContextModule }
 import com.keepit.test.{ TestInjector, TestApplication }
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.abook.FakeABookServiceClientModule

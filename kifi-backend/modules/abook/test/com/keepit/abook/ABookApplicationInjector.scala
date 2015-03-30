@@ -1,6 +1,6 @@
 package com.keepit.abook
 
-import com.keepit.test.{TestInjectorProvider, TestInjector, DbTestApplication, DbInjectionHelper}
+import com.keepit.test.{ TestInjectorProvider, TestInjector, DbTestApplication, DbInjectionHelper }
 import com.keepit.inject.{ FakeFortyTwoModule, ApplicationInjector }
 import com.google.inject.Module
 import java.io.File
