@@ -3,7 +3,7 @@ package com.keepit.scraper
 import com.google.inject.{ Provides, Singleton }
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.model.{ ScrapeInfoRepo, NormalizedURI }
-import com.keepit.rover.article.Signature
+import com.keepit.rover.document.utils.Signature
 import com.keepit.scraper.extractor.ExtractorProviderType
 import org.joda.time.DateTime
 import play.api.libs.concurrent.Execution.Implicits.defaultContext

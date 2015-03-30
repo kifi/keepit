@@ -1,6 +1,6 @@
 package com.keepit.controllers.admin
 
-import com.keepit.common.concurrent.ExecutionContextModule
+import com.keepit.common.concurrent.{ FakeExecutionContextModule, ExecutionContextModule }
 import com.keepit.curator.FakeCuratorServiceClientModule
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
@@ -31,7 +31,7 @@ import scala.concurrent.Future
 class AdminDashboardControllerTest extends Specification with ShoeboxApplicationInjector {
 
   def requiredModules = Seq(
-    ExecutionContextModule(),
+    FakeExecutionContextModule(),
     FakeUserActionsModule(),
     FakeSearchServiceClientModule(),
     FakeScrapeSchedulerModule(),
@@ -52,7 +52,7 @@ class AdminDashboardControllerTest extends Specification with ShoeboxApplication
       running(new ShoeboxApplication(requiredModules: _*)) {
 
         val now = new DateTime(2020, 5, 31, 4, 3, 2, 1, DEFAULT_DATE_TIME_ZONE)
-        inject[FakeClock].setTimeFunction(() => now.getMillis)
+        inject[FakeClock].setTimeValue(now)
 
         val oAuth2Info = OAuth2Info(
           accessToken = "AAAHiW1ZC8SzYBAOtjXeZBivJ77eNZCIjXOkkZAZBjfLbaP4w0uPnj0XzXQUi6ib8m9eZBlHBBxmzzFbEn7jrZADmHQ1gO05AkSZBsZAA43RZC9dQZDZD",

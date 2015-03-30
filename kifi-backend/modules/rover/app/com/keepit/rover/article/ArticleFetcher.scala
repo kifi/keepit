@@ -1,8 +1,10 @@
 package com.keepit.rover.article
 
 import com.google.inject.{ Inject, Singleton }
+import com.keepit.rover.article.content.ArticleContent
 import com.keepit.rover.fetcher.FetchResult
-import com.keepit.rover.store.{ RoverArticleStore, ArticleKey }
+import com.keepit.rover.model.ArticleKey
+import com.keepit.rover.store.RoverArticleStore
 import org.joda.time.DateTime
 
 import scala.concurrent.{ ExecutionContext, Future }
@@ -61,4 +63,6 @@ class ArticleFetcherProvider @Inject() (
     case LinkedInProfileArticle => linkedInProfileArticleFetcher
     case GithubArticle => githubArticleFetcher
   }
+
+  def fetch[A <: Article](request: ArticleFetchRequest[A]): Future[Option[A]] = get(request.kind).fetch(request)
 }

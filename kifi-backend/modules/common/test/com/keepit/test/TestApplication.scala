@@ -21,6 +21,6 @@ private[test] class TestGlobal(defaultModules: Seq[Module], overridingModules: S
 class TestApplication(path: File, overridingModules: Seq[Module], defaultModules: Seq[Module])
   extends TestApplicationFromGlobal(path, new TestGlobal(defaultModules, overridingModules))
 
-trait TestInjector extends EmptyInjector {
+trait TestInjector extends EmptyInjector with TestInjectorProvider {
   val mode = Mode.Test
 }

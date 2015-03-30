@@ -1,6 +1,6 @@
 package com.keepit.scraper.embedly
 
-import com.keepit.rover.article.{ EmbedlyEntity, EmbedlyKeyword, EmbedlyImage }
+import com.keepit.rover.article.content.{ EmbedlyImage, EmbedlyKeyword, EmbedlyEntity }
 import play.api.libs.functional.syntax._
 import com.keepit.model._
 import com.keepit.common.db.Id

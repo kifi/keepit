@@ -77,6 +77,8 @@ object SystemEmailAddress {
   val LÉO = EmailAddress("leo@42go.com")
   val STEPHEN = EmailAddress("stephen@42go.com")
   val JOSH = EmailAddress("josh@kifi.com")
+  val AARON = EmailAddress("aaron@kifi.com")
+  val MARK = EmailAddress("mark@kifi.com")
   val CONGRATS = EmailAddress("congrats@kifi.com")
   val NOTIFY = EmailAddress("42.notify@gmail.com")
   val SENDGRID = EmailAddress("sendgrid@42go.com")

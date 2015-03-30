@@ -97,6 +97,19 @@ class MobileUserController @Inject() (
     }
   }
 
+  def updateName() = UserAction(parse.tolerantJson) { implicit request =>
+    val newFirstName = (request.body \ "firstName").asOpt[String]
+    val newLastName = (request.body \ "lastName").asOpt[String]
+    userCommander.updateName(request.userId, newFirstName, newLastName)
+    Ok(JsString("success"))
+  }
+
+  def updateBiography() = UserAction(parse.tolerantJson) { implicit request =>
+    val newBio = (request.body \ "biography").as[String]
+    userCommander.updateUserBiography(request.userId, newBio)
+    Ok(JsString("success"))
+  }
+
   def basicUserInfo(id: ExternalId[User], friendCount: Boolean) = UserAction { implicit request =>
     db.readOnlyReplica { implicit session =>
       userRepo.getOpt(id).map { user =>

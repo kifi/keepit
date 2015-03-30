@@ -12,7 +12,7 @@ import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.normalizer._
-import com.keepit.rover.article.Signature
+import com.keepit.rover.document.utils.Signature
 import com.keepit.rover.fetcher.HttpRedirect
 import play.api.mvc.Action
 import play.api.libs.json.{ JsObject, JsArray, JsBoolean, Json }

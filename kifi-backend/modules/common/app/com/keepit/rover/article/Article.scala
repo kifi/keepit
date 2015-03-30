@@ -1,18 +1,20 @@
 package com.keepit.rover.article
 
 import com.keepit.common.db.VersionNumber
+import com.keepit.rover.article.content._
 import org.joda.time.DateTime
 import play.api.libs.json._
 import com.keepit.common.reflection.CompanionTypeSystem
 
 sealed trait ArticleKind[A <: Article] {
-  implicit def kind: ArticleKind[A] = this
+  final type article = A
+  def self: ArticleKind[article] = this
 
   // Serialization helpers
   def typeCode: String
   def version: VersionNumber[Article] // todo(Léo): make VersionNumber[A] with Scala 2.11
-  implicit final def format: Format[A] = formatByVersion(version)
-  def formatByVersion(thatVersion: VersionNumber[Article]): Format[A]
+  implicit final def format: Format[article] = formatByVersion(version)
+  def formatByVersion(thatVersion: VersionNumber[Article]): Format[article]
 }
 
 object ArticleKind {

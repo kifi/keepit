@@ -3,7 +3,7 @@ package com.keepit.commanders
 import java.awt.image.BufferedImage
 
 import com.keepit.common.logging.Logging
-import com.keepit.rover.article.EmbedlyImage
+import com.keepit.rover.article.content.EmbedlyImage
 import com.keepit.shoebox.ShoeboxScraperClient
 
 import com.google.inject.{ ImplementedBy, Inject }

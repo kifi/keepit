@@ -6,7 +6,7 @@ import com.keepit.common.db.FakeSlickSessionProvider
 import com.google.inject.Injector
 import com.keepit.model.helprank.{ UserBookmarkClicksRepo, KeepDiscoveryRepo, ReKeepRepo }
 
-trait HeimdalInjectionHelpers { self: InjectorProvider =>
+trait HeimdalInjectionHelpers { self: TestInjectorProvider =>
 
   def userBookmarkClicksRepo(implicit injector: Injector) = inject[UserBookmarkClicksRepo]
   def keepDiscoveryRepo(implicit injector: Injector) = inject[KeepDiscoveryRepo]

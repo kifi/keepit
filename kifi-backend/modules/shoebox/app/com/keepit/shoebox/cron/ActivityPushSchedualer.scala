@@ -14,7 +14,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.{ SchedulerPlugin, SchedulingProperties }
 import com.keepit.common.strings._
 import com.keepit.common.time._
-import com.keepit.eliza.{ ElizaServiceClient, PushNotificationCategory, PushNotificationExperiment }
+import com.keepit.eliza.{ PushNotificationExperiment, ElizaServiceClient, PushNotificationCategory }
 import com.keepit.model._
 import org.joda.time.DateTime
 
@@ -84,6 +84,17 @@ class ActivityPusher @Inject() (
     implicit val executionContext: ExecutionContext,
     clock: Clock) extends Logging {
 
+  def forcePushLibraryActivityForUser(userId: Id[User]): Unit = {
+    val task = db.readOnlyMaster { implicit s =>
+      activityPushTaskRepo.getByUser(userId)
+    }
+    PushNotificationExperiment.All.foreach { experiment =>
+      getLibraryActivityMessage(experiment, userId) foreach { message =>
+        pushMessage(task.get, message, experiment)
+      }
+    }
+  }
+
   def pushItBaby(activityPushTaskId: Id[ActivityPushTask]): Unit = {
     val (activity, canNotify) = db.readOnlyMaster { implicit s =>
       val activity = activityPushTaskRepo.get(activityPushTaskId)
@@ -91,33 +102,7 @@ class ActivityPusher @Inject() (
       (activity, canNotify)
     }
     if (canNotify) {
-      getMessage(activity.userId) match {
-        case Some((message, experimant)) =>
-          val res: Future[Int] = message match {
-            case libMessage: LibraryPushNotificationMessage =>
-              log.info(s"pushing library activity update to ${activity.userId} [$experimant]: $message")
-              elizaServiceClient.sendLibraryPushNotification(activity.userId, libMessage.message, libMessage.id, experimant)
-            case generalMessage: GeneralActivityPushNotificationMessage =>
-              log.info(s"pushing general activity update to ${activity.userId} [$experimant]: $message")
-              elizaServiceClient.sendGeneralPushNotification(activity.userId, generalMessage.message, experimant)
-          }
-          res map { deviceCount =>
-            log.info(s"push successful to $deviceCount devices")
-            if (deviceCount <= 0) {
-              db.readWrite { implicit s =>
-                //there may be some race conditions with the four lines ahead, we can live with that.
-                log.info(s"disable activity push task $activity until user register with at least one device")
-                activityPushTaskRepo.save(activityPushTaskRepo.get(activity.id.get).copy(state = ActivityPushTaskStates.NO_DEVICES))
-              }
-            }
-          }
-          val lastActivity = getLastActivity(activity.userId)
-          db.readWrite { implicit s =>
-            activityPushTaskRepo.save(activityPushTaskRepo.get(activity.id.get).copy(lastPush = Some(clock.now())).withLastActivity(lastActivity))
-          }
-        case None =>
-          log.info(s"skipping push activity for user ${activity.userId}")
-      }
+      pushActivity(activity)
     } else {
       //todo(eishay) re-enable when user resets prefs
       db.readWrite { implicit s =>
@@ -127,36 +112,78 @@ class ActivityPusher @Inject() (
     }
   }
 
-  def getMessage(userId: Id[User]): Option[(PushNotificationMessage, PushNotificationExperiment)] = {
-    val experiment = if (Random.nextBoolean()) PushNotificationExperiment.Experiment1 else PushNotificationExperiment.Experiment2
-    val res: Option[PushNotificationMessage] = db.readOnlyReplica { implicit s =>
+  private def pushMessage(activity: ActivityPushTask, message: PushNotificationMessage, experimant: PushNotificationExperiment): Unit = {
+    val res: Future[Int] = message match {
+      case libMessage: LibraryPushNotificationMessage =>
+        log.info(s"pushing library activity update to ${activity.userId} [$experimant]: $message")
+        elizaServiceClient.sendLibraryPushNotification(activity.userId, libMessage.message, libMessage.id, experimant)
+      case generalMessage: GeneralActivityPushNotificationMessage =>
+        log.info(s"pushing general activity update to ${activity.userId} [$experimant]: $message")
+        elizaServiceClient.sendGeneralPushNotification(activity.userId, generalMessage.message, experimant)
+    }
+    res map { deviceCount =>
+      log.info(s"push successful to $deviceCount devices")
+      if (deviceCount <= 0) {
+        db.readWrite { implicit s =>
+          //there may be some race conditions with the four lines ahead, we can live with that.
+          log.info(s"disable activity push task $activity until user register with at least one device")
+          activityPushTaskRepo.save(activityPushTaskRepo.get(activity.id.get).copy(state = ActivityPushTaskStates.NO_DEVICES))
+        }
+      }
+    }
+    val lastActivity = getLastActivity(activity.userId)
+    db.readWrite { implicit s =>
+      activityPushTaskRepo.save(activityPushTaskRepo.get(activity.id.get).copy(lastPush = Some(clock.now())).withLastActivity(lastActivity))
+    }
+  }
+
+  private def pushActivity(activity: ActivityPushTask): Unit = {
+    getMessage(activity.userId) match {
+      case Some((message, experimant)) =>
+        pushMessage(activity, message, experimant)
+      case None =>
+        log.info(s"skipping push activity for user ${activity.userId}")
+    }
+  }
+
+  private def getLibraryActivityMessage(experiment: PushNotificationExperiment, userId: Id[User]): Option[LibraryPushNotificationMessage] = {
+    db.readOnlyReplica { implicit s =>
       libraryMembershipRepo.getLatestUpdatedLibraryUserFollow(userId) map { lib =>
         val message = {
           if (experiment == PushNotificationExperiment.Experiment1) s"""New keeps in "${lib.name.abbreviate(25)}""""
           else s""""${lib.name.abbreviate(25)}" library has updates"""
         }
         LibraryPushNotificationMessage(message, lib.id.get)
-      } orElse {
-        val personas = Random.shuffle(userPersonaRepo.getPersonasForUser(userId))
-        val message = {
-          if (personas.isEmpty) None
-          else if (personas.size == 1) {
-            val msg = {
-              if (experiment == PushNotificationExperiment.Experiment1) s"""Your feed has updates. See what other ${personas.head.displayNamePlural} are talking about."""
-              else s"""Your feed has updates. See what other ${personas.head.displayNamePlural} are reading."""
-            }
-            Some(msg)
-          } else {
-            val msg = {
-              if (experiment == PushNotificationExperiment.Experiment1) s"""Your feed has updates. See what other ${personas.head.displayNamePlural} and ${personas(1).displayNamePlural} are talking about."""
-              else s"""Your feed has updates. See what other ${personas.head.displayNamePlural} and ${personas(1).displayNamePlural} are reading."""
-            }
-            Some(msg)
-          }
-        }
-        message.map(m => GeneralActivityPushNotificationMessage(m))
       }
     }
+  }
+
+  private def getPersonaActivityMessage(experiment: PushNotificationExperiment, userId: Id[User]): Option[GeneralActivityPushNotificationMessage] = {
+    db.readOnlyReplica { implicit s =>
+      val personas = Random.shuffle(userPersonaRepo.getPersonasForUser(userId))
+      val message = {
+        if (personas.isEmpty) None
+        else if (personas.size == 1) {
+          val msg = {
+            if (experiment == PushNotificationExperiment.Experiment1) s"""Your feed has updates. See what other ${personas.head.displayNamePlural} are talking about."""
+            else s"""Your feed has updates. See what other ${personas.head.displayNamePlural} are reading."""
+          }
+          Some(msg)
+        } else {
+          val msg = {
+            if (experiment == PushNotificationExperiment.Experiment1) s"""Your feed has updates. See what other ${personas.head.displayNamePlural} and ${personas(1).displayNamePlural} are talking about."""
+            else s"""Your feed has updates. See what other ${personas.head.displayNamePlural} and ${personas(1).displayNamePlural} are reading."""
+          }
+          Some(msg)
+        }
+      }
+      message.map(m => GeneralActivityPushNotificationMessage(m))
+    }
+  }
+
+  def getMessage(userId: Id[User]): Option[(PushNotificationMessage, PushNotificationExperiment)] = {
+    val experiment = if (Random.nextBoolean()) PushNotificationExperiment.Experiment1 else PushNotificationExperiment.Experiment2
+    val res: Option[PushNotificationMessage] = getLibraryActivityMessage(experiment, userId) orElse getPersonaActivityMessage(experiment, userId)
     res.map(message => (message, experiment))
   }
 
@@ -201,7 +228,7 @@ class ActivityPusher @Inject() (
   def getNextPushBatch(): Seq[Id[ActivityPushTask]] = {
     val ids = db.readOnlyMaster { implicit s =>
       val now = clock.now()
-      activityPushTaskRepo.getByPushAndActivity(now.minusDays(2), now.toLocalTimeInZone(DEFAULT_DATE_TIME_ZONE), 100)
+      activityPushTaskRepo.getByPushAndActivity(now.minusHours(12), now.toLocalTimeInZone(DEFAULT_DATE_TIME_ZONE), 100)
     }
     log.info(s"next push batch size is ${ids.size}")
     ids

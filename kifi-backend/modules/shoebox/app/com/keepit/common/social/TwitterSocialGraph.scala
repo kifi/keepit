@@ -174,20 +174,21 @@ class TwitterSocialGraphImpl @Inject() (
       log.info(s"[fetchSocialUserInfo(${socialUserInfo.socialId})] friendIds(len=${friendIds.length}):${friendIds.take(10)} followerIds(len=${followerIds.length}):${followerIds.take(10)} mutual(len=${mutualFollows.size}):${mutualFollows.take(10)}")
 
       SafeFuture {
-        db.readOnlyMaster { implicit s =>
-          log.info(s"[fetchSocialUserInfo(${socialUserInfo.socialId})] fetching twitter_syncs for ${friendIds.length} friends...")
-          twitterSyncStateRepo.getTwitterSyncsByFriendIds(friendIds.map(Id[User](_)).toSet)
-        }.grouped(100).foreach { syncStateMap =>
-          syncStateMap.map { case (userId, twitterSyncState) =>
-            db.readWrite { implicit s =>
-              val libraryId = twitterSyncState.libraryId
-              libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId, None) match {
-                case None =>
-                  log.info(s"[fetchSocialUserInfo(${socialUserInfo.socialId})] auto-joining user ${userId} twitter_sync library ${libraryId}")
-                  libraryMembershipRepo.save(LibraryMembership(libraryId = libraryId, userId = userId, access = LibraryAccess.READ_ONLY))
-                case _ =>
+        log.info(s"[fetchSocialUserInfo(${socialUserInfo.socialId})] fetching twitter_syncs for ${friendIds.length} friends...")
+        friendIds.map(Id[User](_)).grouped(100) foreach { userIds =>
+          db.readOnlyMaster { implicit s =>
+            twitterSyncStateRepo.getTwitterSyncsByFriendIds(userIds.toSet)
+          }.map {
+            case (userId, twitterSyncState) =>
+              db.readWrite { implicit s =>
+                val libraryId = twitterSyncState.libraryId
+                libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId, None) match {
+                  case None =>
+                    log.info(s"[fetchSocialUserInfo(${socialUserInfo.socialId})] auto-joining user ${userId} twitter_sync library ${libraryId}")
+                    libraryMembershipRepo.save(LibraryMembership(libraryId = libraryId, userId = userId, access = LibraryAccess.READ_ONLY))
+                  case _ =>
+                }
               }
-            }
           }
         }
         log.info(s"[fetchSocialUserInfo(${socialUserInfo.socialId})] finished auto-joining all twitter_sync libraries")

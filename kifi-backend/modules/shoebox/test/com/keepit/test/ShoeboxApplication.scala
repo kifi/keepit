@@ -64,7 +64,7 @@ class ShoeboxApplication(overridingModules: Module*)(implicit path: File = new F
     FakeExecutionContextModule()
   ))
 
-trait ShoeboxApplicationInjector extends ApplicationInjector with DbInjectionHelper with ShoeboxInjectionHelpers
+trait ShoeboxApplicationInjector extends TestInjectorProvider with ApplicationInjector with DbInjectionHelper with ShoeboxInjectionHelpers
 
 trait ShoeboxTestInjector extends TestInjector with DbInjectionHelper with ShoeboxInjectionHelpers {
   val module = Modules.combine(

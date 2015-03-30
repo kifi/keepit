@@ -27,7 +27,7 @@ class ScraperApplication(overridingModules: Module*)(implicit path: File = new F
     ScraperCacheModule(HashMapMemoryCacheModule())
   ))
 
-trait ScraperApplicationInjector extends ApplicationInjector with ScraperInjectionHelpers
+trait ScraperApplicationInjector extends TestInjectorProvider with ApplicationInjector with ScraperInjectionHelpers
 
 trait ScraperTestInjector extends TestInjector with ScraperInjectionHelpers {
   val module = Modules.combine(
@@ -40,5 +40,5 @@ trait ScraperTestInjector extends TestInjector with ScraperInjectionHelpers {
   )
 }
 
-trait ScraperInjectionHelpers { self: InjectorProvider =>
+trait ScraperInjectionHelpers { self: TestInjectorProvider =>
 }

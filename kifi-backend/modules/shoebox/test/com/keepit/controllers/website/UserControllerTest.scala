@@ -2,6 +2,7 @@ package com.keepit.controllers.website
 
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.commanders.UserConnectionsCommander
+import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.time._
 import com.keepit.common.controller.FakeUserActionsHelper
 import com.keepit.common.db.ExternalId
@@ -27,6 +28,7 @@ import scala.concurrent.Future
 class UserControllerTest extends Specification with ShoeboxTestInjector {
 
   val controllerTestModules = Seq(
+    FakeExecutionContextModule(),
     FakeScrapeSchedulerModule(),
     FakeABookServiceClientModule(),
     FakeSocialGraphModule()

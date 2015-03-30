@@ -1,7 +1,7 @@
 package com.keepit.normalizer
 
 import com.keepit.common.core._
-import com.keepit.rover.article.Signature
+import com.keepit.rover.document.utils.Signature
 
 import scala.concurrent.Future
 import com.keepit.scraper.ScrapeScheduler

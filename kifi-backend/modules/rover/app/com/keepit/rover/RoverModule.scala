@@ -2,12 +2,13 @@ package com.keepit.rover
 
 import com.keepit.common.controller.UserActionsModule
 import com.keepit.inject.{ CommonServiceModule, ConfigurationModule }
+import com.keepit.rover.fetcher.HttpFetcherModule
 import com.keepit.rover.manager.FetchQueueModule
+import com.keepit.rover.store.RoverStoreModule
 import com.keepit.shoebox.ProdShoeboxServiceClientModule
 import com.keepit.common.zookeeper.ServiceTypeModule
 import com.keepit.common.service.ServiceType
 import com.keepit.rover.common.cache.RoverCacheModule
-import com.keepit.rover.common.store.RoverStoreModule
 
 case class RoverServiceTypeModule() extends ServiceTypeModule {
   val serviceType = ServiceType.ROVER
@@ -23,6 +24,7 @@ trait RoverModule extends ConfigurationModule with CommonServiceModule {
 
   // Rover Functional Modules
   val fetchQueueModule: FetchQueueModule
+  val httpFetcherModule: HttpFetcherModule
   val slickModule = RoverSlickModule()
   val pluginModule: RoverPluginModule = RoverPluginModule()
 

@@ -2,6 +2,7 @@ package com.keepit.commanders
 
 import com.keepit.abook.model.EmailAccountInfo
 import com.keepit.abook.{ FakeABookServiceClientModule, FakeABookServiceClientImpl, ABookServiceClient }
+import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.db.Id
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.graph.model.{ RelatedEntities, SociallyRelatedEntities }
@@ -24,6 +25,7 @@ import concurrent.duration.Duration
 class UserConnectionsCommanderTest extends Specification with ShoeboxTestInjector {
 
   val modules = Seq(
+    FakeExecutionContextModule(),
     FakeABookServiceClientModule(),
     FakeScrapeSchedulerModule(),
     FakeGraphServiceModule(),

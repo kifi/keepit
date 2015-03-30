@@ -25,7 +25,7 @@ class DataIntegrityPluginImpl @Inject() (
 private[integrity] case object CleanOrphans
 private[integrity] case object Cron
 private[integrity] case object SequenceNumberCheck
-private[integrity] case object SystemLibrariesCheck
+private[integrity] case object LibrariesCheck
 
 private[integrity] class DataIntegrityActor @Inject() (
   airbrake: AirbrakeNotifier,
@@ -39,12 +39,12 @@ private[integrity] class DataIntegrityActor @Inject() (
       orphanCleaner.clean(false)
     case SequenceNumberCheck =>
       elizaSequenceNumberChecker.check()
-    case SystemLibrariesCheck =>
+    case LibrariesCheck =>
       libraryChecker.check()
     case Cron =>
       self ! CleanOrphans
       self ! SequenceNumberCheck
-      self ! SystemLibrariesCheck
+      self ! LibrariesCheck
     case m => throw new UnsupportedActorMessage(m)
   }
 }

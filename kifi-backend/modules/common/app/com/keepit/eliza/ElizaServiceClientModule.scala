@@ -1,5 +1,6 @@
 package com.keepit.eliza
 
+import scala.concurrent.ExecutionContext
 import com.google.inject.{ Provides, Singleton }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.net.HttpClient
@@ -21,11 +22,13 @@ case class ProdElizaServiceClientModule() extends ElizaServiceClientModule {
     client: HttpClient,
     serviceDiscovery: ServiceDiscovery,
     airbrakeNotifier: AirbrakeNotifier,
+    defaultContext: ExecutionContext,
     userThreadStatsForUserIdCache: UserThreadStatsForUserIdCache): ElizaServiceClient = {
     new ElizaServiceClientImpl(
       airbrakeNotifier,
       client,
       serviceDiscovery.serviceCluster(ServiceType.ELIZA),
+      defaultContext,
       userThreadStatsForUserIdCache
     )
   }

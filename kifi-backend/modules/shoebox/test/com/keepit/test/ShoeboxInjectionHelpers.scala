@@ -9,7 +9,7 @@ import com.keepit.common.mail.ElectronicMailRepo
 import com.google.inject.Injector
 import com.keepit.normalizer.{ NormalizedURIInterner, NormalizationService }
 
-trait ShoeboxInjectionHelpers { self: InjectorProvider =>
+trait ShoeboxInjectionHelpers { self: TestInjectorProvider =>
 
   def userSessionRepo(implicit injector: Injector) = inject[UserSessionRepo]
   def userRepo(implicit injector: Injector) = inject[UserRepo]

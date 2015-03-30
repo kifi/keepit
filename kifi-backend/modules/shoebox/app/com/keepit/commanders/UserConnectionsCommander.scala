@@ -16,11 +16,9 @@ import com.keepit.model._
 import com.keepit.search.SearchServiceClient
 import com.keepit.social.{ BasicUser, SocialGraphPlugin, SocialNetworkType, SocialNetworks }
 import com.keepit.typeahead.{ KifiUserTypeahead, SocialUserTypeahead }
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
 
-import scala.concurrent.Future
-import scala.concurrent.duration.Duration
+import scala.concurrent.ExecutionContext
 
 case class ConnectionInfo(user: BasicUser, userId: Id[User], unfriended: Boolean, unsearched: Boolean)
 
@@ -42,6 +40,7 @@ class UserConnectionsCommander @Inject() (
     socialUserTypeahead: SocialUserTypeahead,
     emailSender: EmailSenderProvider,
     s3ImageStore: S3ImageStore,
+    implicit val defaultContext: ExecutionContext,
     db: Database) extends Logging {
 
   def ignoreFriendRequest(userId: Id[User], id: ExternalId[User]): (Boolean, String) = {
