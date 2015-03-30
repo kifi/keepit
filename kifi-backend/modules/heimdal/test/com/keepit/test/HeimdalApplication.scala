@@ -23,7 +23,7 @@ import com.keepit.shoebox.FakeShoeboxServiceClientModule
 
 class HeimdalApplication(overridingModules: Module*)(implicit path: File = new File("./modules/shoebox/"))
   extends DbTestApplication(path, overridingModules, Seq(
-    FakeFakeExecutionContextModule(),
+    FakeExecutionContextModule(),
     HeimdalServiceTypeModule(),
     FakeShoeboxServiceClientModule(),
     FakeElizaServiceClientModule(),
