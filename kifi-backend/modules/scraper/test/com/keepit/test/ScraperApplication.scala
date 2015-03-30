@@ -40,5 +40,5 @@ trait ScraperTestInjector extends TestInjector with ScraperInjectionHelpers {
   )
 }
 
-trait ScraperInjectionHelpers { self: InjectorProvider =>
+trait ScraperInjectionHelpers { self: TestInjectorProvider =>
 }
