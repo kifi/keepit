@@ -23,17 +23,18 @@ class SeedAttributionHelper @Inject() (
     val timer = new NamedStatsdTimer("SeedAttributionHelper.getAttributions")
     val userAttrFut = getUserAttribution(seeds)
     val keepAttrFut = getKeepAttribution(seeds)
-    val topicAttrFut = getTopicAttribution(seeds)
-    val libraryAttrFut = getLibraryAttribution(seeds)
+    //these are currently disabled for performance reasons. Likely to be removed entirely soon.
+    //val topicAttrFut = getTopicAttribution(seeds)
+    //val libraryAttrFut = getLibraryAttribution(seeds)
     for {
       userAttr <- userAttrFut
       keepAttr <- keepAttrFut
-      topicAttr <- topicAttrFut
-      libraryAttr <- libraryAttrFut
+      //topicAttr <- topicAttrFut
+      //libraryAttr <- libraryAttrFut
     } yield {
       timer.stopAndReport()
       (0 until seeds.size).map { i =>
-        val attr = SeedAttribution(userAttr(i), keepAttr(i), topicAttr(i), libraryAttr(i))
+        val attr = SeedAttribution(userAttr(i), keepAttr(i))
         ScoredSeedItemWithAttribution(seeds(i).userId, seeds(i).uriId, seeds(i).uriScores, attr,
           seeds(i).topic1, seeds(i).topic2)
       }
