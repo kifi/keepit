@@ -320,7 +320,7 @@ class KeepsCommander @Inject() (
 
   def unkeep(extId: ExternalId[Keep], userId: Id[User])(implicit context: HeimdalContext): Option[KeepInfo] = {
     db.readWrite { implicit session =>
-      keepRepo.getByExtIdAndUser(extId, userId).map(setKeepStateWithSession(_, KeepStates.INACTIVE, userId))
+      keepRepo.getByExtIdAndUser(extId, userId).map(deactivateKeepWithSession(_, userId))
     } map { keep =>
       finalizeUnkeeping(Seq(keep), userId)
       KeepInfo.fromKeep(keep)
@@ -346,7 +346,7 @@ class KeepsCommander @Inject() (
             keepRepo.getByExtIdandLibraryId(kId, libId, excludeSet = Set.empty) match {
               case Some(k) if k.state != KeepStates.INACTIVE =>
                 keepsToFinalize = k +: keepsToFinalize
-                Left(setKeepStateWithSession(k, KeepStates.INACTIVE, userId))
+                Left(deactivateKeepWithSession(k, userId))
               case Some(k) =>
                 Left(k)
               case None =>
@@ -372,9 +372,11 @@ class KeepsCommander @Inject() (
     searchClient.updateKeepIndex()
   }
 
-  private def setKeepStateWithSession(keep: Keep, state: State[Keep], userId: Id[User])(implicit context: HeimdalContext, session: RWSession): Keep = {
-    val saved = keepRepo.save(keep withState state)
+  private def deactivateKeepWithSession(keep: Keep, userId: Id[User])(implicit context: HeimdalContext, session: RWSession): Keep = {
+    val saved = keepRepo.save(keep withState KeepStates.INACTIVE)
     log.info(s"[unkeep($userId)] deactivated keep=$saved")
+    val library = libraryRepo.get(keep.libraryId.get)
+    libraryRepo.save(library.copy(keepCount = library.keepCount - 1))
     keepToCollectionRepo.getCollectionsForKeep(saved.id.get) foreach { cid => collectionRepo.collectionChanged(cid, inactivateIfEmpty = true) }
     saved
   }
