@@ -23,7 +23,7 @@ trait ArticleInfoRepo extends Repo[RoverArticleInfo] with SeqNumberFunction[Rove
   def getByUriAndKind[A <: Article](uriId: Id[NormalizedURI], kind: ArticleKind[A], excludeState: Option[State[RoverArticleInfo]] = Some(ArticleInfoStates.INACTIVE))(implicit session: RSession): Option[RoverArticleInfo]
   def getByUri(uriId: Id[NormalizedURI], excludeState: Option[State[RoverArticleInfo]] = Some(ArticleInfoStates.INACTIVE))(implicit session: RSession): Set[RoverArticleInfo]
   def internByUri(uriId: Id[NormalizedURI], url: String, kinds: Set[ArticleKind[_ <: Article]])(implicit session: RWSession): Map[ArticleKind[_ <: Article], RoverArticleInfo]
-  def deactivateByUri(uriId: Id[NormalizedURI])(implicit session: RWSession): Unit
+  def deactivateByUriAndKinds(uriId: Id[NormalizedURI], kinds: Set[ArticleKind[_ <: Article]])(implicit session: RWSession): Unit
   def getRipeForFetching(limit: Int, queuedForMoreThan: Duration)(implicit session: RSession): Seq[RoverArticleInfo]
   def markAsQueued(ids: Id[RoverArticleInfo]*)(implicit session: RWSession): Unit
   def unmarkAsQueued(ids: Id[RoverArticleInfo]*)(implicit session: RWSession): Unit
@@ -109,9 +109,13 @@ class ArticleInfoRepoImpl @Inject() (
     }
   }
 
-  def deactivateByUri(uriId: Id[NormalizedURI])(implicit session: RWSession): Unit = {
-    getByUri(uriId).foreach { info =>
-      save(info.copy(state = ArticleInfoStates.INACTIVE))
+  def deactivateByUriAndKinds(uriId: Id[NormalizedURI], kinds: Set[ArticleKind[_ <: Article]])(implicit session: RWSession): Unit = {
+    if (kinds.nonEmpty) {
+      getByUri(uriId).foreach { info =>
+        if (kinds.contains(info.articleKind)) {
+          save(info.copy(state = ArticleInfoStates.INACTIVE))
+        }
+      }
     }
   }
 
