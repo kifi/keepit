@@ -3,6 +3,7 @@ package com.keepit.commanders
 import java.io.File
 
 import com.google.inject.Injector
+import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.{ FakeWebService, WebService }
@@ -25,6 +26,7 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
   val logger = log
 
   def modules = Seq(
+    FakeExecutionContextModule(),
     FakeShoeboxStoreModule(),
     FakeWebServiceModule()
   )

@@ -45,8 +45,9 @@ class ElizaController @Inject() (
     val message = (req \ "message").as[String]
     val pushNotificationExperiment = (req \ "pushNotificationExperiment").as[PushNotificationExperiment]
     val libraryId = (req \ "libraryId").as[Id[Library]]
+    val libraryUrl = (req \ "libraryUrl").as[String]
     SafeFuture {
-      val deviceCount = messagingCommander.sendLibraryPushNotification(userId, message, libraryId, pushNotificationExperiment)
+      val deviceCount = messagingCommander.sendLibraryPushNotification(userId, message, libraryId, libraryUrl, pushNotificationExperiment)
       Ok(JsNumber(deviceCount))
     }
   }
