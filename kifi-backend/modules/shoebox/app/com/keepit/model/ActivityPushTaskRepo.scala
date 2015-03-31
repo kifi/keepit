@@ -5,15 +5,18 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick._
 import com.keepit.common.logging.Logging
-import com.keepit.common.time.Clock
+import com.keepit.common.time._
 import org.joda.time.{ LocalTime, DateTime }
+import scala.concurrent.duration._
+import scala.concurrent.duration.Duration._
 
+import scala.concurrent.duration.Duration
 import scala.slick.jdbc.StaticQuery
 
 @ImplementedBy(classOf[ActivityPushTaskRepoImpl])
 trait ActivityPushTaskRepo extends Repo[ActivityPushTask] {
   def getByUser(userId: Id[User])(implicit session: RSession): Option[ActivityPushTask]
-  def getByPushAndActivity(pushTimeBefore: DateTime, lastActivityAfter: LocalTime, limit: Int)(implicit session: RSession): Seq[Id[ActivityPushTask]]
+  def getByPushAndActivity(limit: Int)(implicit session: RSession): Seq[Id[ActivityPushTask]]
   def getUsersWithoutActivityPushTask(limit: Int)(implicit session: RSession): Seq[Id[User]]
 }
 
@@ -33,7 +36,10 @@ class ActivityPushTaskRepoImpl @Inject() (
     def lastPush = column[Option[DateTime]]("last_push", O.Nullable)
     def lastActiveTime = column[LocalTime]("last_active_time", O.NotNull)
     def lastActiveDate = column[DateTime]("last_active_date", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, userId, state, lastPush, lastActiveTime, lastActiveDate) <> ((ActivityPushTask.apply _).tupled, ActivityPushTask.unapply)
+    def nextPush = column[Option[DateTime]]("next_push", O.Nullable)
+    def backoff = column[Option[Duration]]("backoff", O.Nullable)
+
+    def * = (id.?, createdAt, updatedAt, userId, state, lastPush, lastActiveTime, lastActiveDate, nextPush, backoff) <> ((ActivityPushTask.apply _).tupled, ActivityPushTask.unapply)
   }
 
   def table(tag: Tag) = new ActivityPushTable(tag)
@@ -48,9 +54,10 @@ class ActivityPushTaskRepoImpl @Inject() (
     (for (b <- rows if b.userId === id) yield b).firstOption
   }
 
-  def getByPushAndActivity(pushTimeBefore: DateTime, activeTimeAfter: LocalTime, limit: Int)(implicit session: RSession): Seq[Id[ActivityPushTask]] = {
+  def getByPushAndActivity(limit: Int)(implicit session: RSession): Seq[Id[ActivityPushTask]] = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    sql"select id from activity_push_task where state = 'active' and ((last_push is null) or (last_push < $pushTimeBefore)) and last_active_time < $activeTimeAfter limit $limit".as[Id[ActivityPushTask]].list
+    val now = clock.now
+    sql"select id from activity_push_task where state = 'active' and ((last_push is null) or (next_push > $now)) limit $limit".as[Id[ActivityPushTask]].list
   }
 
   def getUsersWithoutActivityPushTask(limit: Int)(implicit session: RSession): Seq[Id[User]] = {

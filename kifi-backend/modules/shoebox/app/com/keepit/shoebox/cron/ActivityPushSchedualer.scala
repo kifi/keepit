@@ -96,6 +96,10 @@ class ActivityPusher @Inject() (
   }
 
   def pushItBaby(activityPushTaskId: Id[ActivityPushTask]): Unit = {
+    /*
+     * activityPushTaskId is for a candidate to push, but may not require a push.
+     * This can happen when the user was active after the last push.
+     */
     val (activity, canNotify) = db.readOnlyMaster { implicit s =>
       val activity = activityPushTaskRepo.get(activityPushTaskId)
       val canNotify = notifyPreferenceRepo.canNotify(activity.userId, NotifyPreference.RECOS_REMINDER)
@@ -219,19 +223,28 @@ class ActivityPusher @Inject() (
       users map {
         case (user, lastKeep) =>
           val lastActiveDate = lastKeep.getOrElse(user.createdAt)
-          val task = ActivityPushTask(userId = user.id.get, lastActiveDate = lastActiveDate, lastActiveTime = lastActiveDate.toLocalTime, state = ActivityPushTaskStates.INACTIVE)
+          val task = ActivityPushTask(
+            userId = user.id.get,
+            lastActiveDate = lastActiveDate,
+            lastActiveTime = lastActiveDate.toLocalTime,
+            state = ActivityPushTaskStates.INACTIVE,
+            nextPush = None,
+            backoff = None)
           activityPushTaskRepo.save(task).id.get
       }
     }
   }
 
   def getNextPushBatch(): Seq[Id[ActivityPushTask]] = {
-    val ids = db.readOnlyMaster { implicit s =>
-      val now = clock.now()
-      activityPushTaskRepo.getByPushAndActivity(now.minusHours(12), now.toLocalTimeInZone(DEFAULT_DATE_TIME_ZONE), 100)
+    val ids = db.readOnlyReplica { implicit s =>
+      activityPushTaskRepo.getByPushAndActivity(100)
     }
     log.info(s"next push batch size is ${ids.size}")
     ids
+  }
+
+  private def shouldNotify(pushTask: ActivityPushTask) = {
+
   }
 
 }
