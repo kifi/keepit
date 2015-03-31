@@ -2,7 +2,7 @@ package com.keepit.curator.commanders
 
 import com.google.inject.{ Singleton, Inject }
 import com.keepit.common.db.slick.DBSession.RWSession
-import com.keepit.common.db.{ Id }
+import com.keepit.common.db.Id
 import com.keepit.common.db.slick.{ Database, ExecutionSkipped }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
