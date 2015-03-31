@@ -74,4 +74,4 @@ trait HttpFetcher {
 }
 
 case class InvalidFetchRequestException(request: FetchRequest, cause: Throwable) extends Throwable(s"$request failed: $cause", cause)
-case class InvalidFetchResponseException[T](responseInfo: FetchResponseInfo, content: Option[T]) extends Throwable(s"Invalid fetch response: $responseInfo, content: $content")
+case class InvalidFetchResponseException[T](responseInfo: FetchResponseInfo, content: Option[T]) extends Throwable(s"Invalid: $responseInfo, content: $content")
