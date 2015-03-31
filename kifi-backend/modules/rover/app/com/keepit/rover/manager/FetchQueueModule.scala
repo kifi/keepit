@@ -25,28 +25,28 @@ case class ProdFetchQueueModule() extends FetchQueueModule with Logging {
 
   @Provides @Singleton
   def topPriorityQueue(client: SQSClient): FetchTaskQueue.TopPriority = {
-    val name = QueueName("top-priority-fetch-task-prod-b")
+    val name = QueueName("rover-top-priority-fetch-task-prod")
     val queue = client.formatted[FetchTask](name)
     FetchTaskQueue.TopPriority(queue)
   }
 
   @Provides @Singleton
   def firstTimeQueue(client: SQSClient): FetchTaskQueue.FirstTime = {
-    val name = QueueName("first-time-fetch-task-prod-b")
+    val name = QueueName("rover-first-time-fetch-task-prod")
     val queue = client.formatted[FetchTask](name)
     FetchTaskQueue.FirstTime(queue)
   }
 
   @Provides @Singleton
   def newVersionQueue(client: SQSClient): FetchTaskQueue.NewVersion = {
-    val name = QueueName("new-version-fetch-task-prod-b")
+    val name = QueueName("rover-new-version-fetch-task-prod")
     val queue = client.formatted[FetchTask](name)
     FetchTaskQueue.NewVersion(queue)
   }
 
   @Provides @Singleton
   def refreshQueue(client: SQSClient): FetchTaskQueue.Refresh = {
-    val name = QueueName("refresh-fetch-task-prod-b")
+    val name = QueueName("rover-refresh-fetch-task-prod")
     val queue = client.formatted[FetchTask](name)
     FetchTaskQueue.Refresh(queue)
   }
