@@ -50,7 +50,7 @@ object RoverHttpProxy {
 
 object RoverHttpProxyStates extends States[RoverHttpProxy]
 
-// @ImplementedBy(classOf[RoverHttpProxyRepoImpl]) todo(Léo): write and apply migration
+@ImplementedBy(classOf[RoverHttpProxyRepoImpl])
 trait RoverHttpProxyRepo extends Repo[RoverHttpProxy] {
   def allActive()(implicit session: RSession): Seq[RoverHttpProxy]
   def getByAlias(alias: String)(implicit session: RSession): Option[RoverHttpProxy]
