@@ -14,7 +14,7 @@ import scala.slick.jdbc.StaticQuery
 trait ActivityPushTaskRepo extends Repo[ActivityPushTask] {
   def getByUser(userId: Id[User])(implicit session: RSession): Option[ActivityPushTask]
   def getByPushAndActivity(pushTimeBefore: DateTime, lastActivityAfter: LocalTime, limit: Int)(implicit session: RSession): Seq[Id[ActivityPushTask]]
-  def getUsersWithoutActivityPushTask(limit: Int)(implicit session: RSession): Seq[Id[User]]
+  def getMobileUsersWithoutActivityPushTask(limit: Int)(implicit session: RSession): Seq[Id[User]]
 }
 
 @Singleton
@@ -53,9 +53,9 @@ class ActivityPushTaskRepoImpl @Inject() (
     sql"select id from activity_push_task where state = 'active' and ((last_push is null) or (last_push < $pushTimeBefore)) and last_active_time < $activeTimeAfter limit $limit".as[Id[ActivityPushTask]].list
   }
 
-  def getUsersWithoutActivityPushTask(limit: Int)(implicit session: RSession): Seq[Id[User]] = {
+  def getMobileUsersWithoutActivityPushTask(limit: Int)(implicit session: RSession): Seq[Id[User]] = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    sql"select user.id from user left join activity_push_task on user.id = activity_push_task.user_id where activity_push_task.user_id is null limit $limit".as[Id[User]].list
+    sql"select distinct ki.user_id from kifi_installation ki left join activity_push_task on ki.user_id = activity_push_task.user_id where activity_push_task.user_id is null and ki.state = 'active' and ki.platform in ('#${KifiInstallationPlatform.IPhone.name}', '#${KifiInstallationPlatform.Android.name}') limit $limit".as[Id[User]].list
   }
 }
 

@@ -13,7 +13,6 @@ trait KifiInstallationRepo extends Repo[KifiInstallation] with ExternalIdColumnF
   def getLatestActiveExtensionVersions(count: Int)(implicit session: RSession): Seq[(KifiExtVersion, DateTime, Int)]
   def getExtensionUserIdsUpdatedSince(when: DateTime)(implicit session: RSession): Set[Id[User]]
   def all(userId: Id[User], excludeState: Option[State[KifiInstallation]] = Some(KifiInstallationStates.INACTIVE))(implicit session: RSession): Seq[KifiInstallation]
-  def lastUpdateMobile(userId: Id[User])(implicit session: RSession): Option[DateTime]
   def lastUpdatedMobile(userId: Id[User])(implicit session: RSession): Option[KifiInstallation]
   def getOpt(userId: Id[User], externalId: ExternalId[KifiInstallation])(implicit session: RSession): Option[KifiInstallation]
 }
@@ -74,12 +73,6 @@ class KifiInstallationRepoImpl @Inject() (val db: DataBaseComponent, val clock: 
 
   def getOpt(userId: Id[User], externalId: ExternalId[KifiInstallation])(implicit session: RSession): Option[KifiInstallation] =
     (for (k <- rows if k.userId === userId && k.externalId === externalId) yield k).firstOption
-
-  def lastUpdateMobile(userId: Id[User])(implicit session: RSession): Option[DateTime] = {
-    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    val date = sql"""select min(updated_at) from kifi_installation where user_id=$userId and platform in ('#${KifiInstallationPlatform.IPhone.name}', '#${KifiInstallationPlatform.Android.name}')""".as[DateTime].first
-    Option(date)
-  }
 
   def lastUpdatedMobile(userId: Id[User])(implicit session: RSession): Option[KifiInstallation] = {
     val q = (for (k <- rows if k.userId === userId && k.platform.inSet(Set(KifiInstallationPlatform.IPhone.name, KifiInstallationPlatform.Android.name))) yield k)
