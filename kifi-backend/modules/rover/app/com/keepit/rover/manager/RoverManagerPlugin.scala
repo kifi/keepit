@@ -25,8 +25,8 @@ class RoverManagerPluginImpl @Inject() (
   val name: String = getClass.toString
 
   override def onStart(): Unit = {
-    scheduleTaskOnOneMachine(ingestionActor.system, 37 seconds, 1 minute, ingestionActor.ref, StartIngestion, "NormalizedURI Ingestion")
-    scheduleTaskOnOneMachine(fetchSchedulingActor.system, 119 seconds, 1 minute, fetchSchedulingActor.ref, ScheduleFetchTasks, "Fetch Scheduling")
+    scheduleTaskOnOneMachine(ingestionActor.system, 187 seconds, 1 minute, ingestionActor.ref, StartIngestion, "NormalizedURI Ingestion")
+    scheduleTaskOnOneMachine(fetchSchedulingActor.system, 200 seconds, 1 minute, fetchSchedulingActor.ref, ScheduleFetchTasks, "Fetch Scheduling")
     scheduleTaskOnAllMachines(fetchingActor.system, (30 + Random.nextInt(60)) seconds, 1 minute, fetchingActor.ref, StartPullingTasks)
     super.onStart()
   }
