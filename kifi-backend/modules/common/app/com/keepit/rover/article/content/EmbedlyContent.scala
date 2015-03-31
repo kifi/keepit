@@ -87,23 +87,7 @@ object EmbedlyContent {
     media: Option[EmbedlyMedia])
 
   object ParsedFields {
-    implicit val reads: Reads[ParsedFields] = (
-      (__ \ 'original_url).read[String] and
-      (__ \ 'url).read[String] and
-      (__ \ 'title).readNullable[String] and
-      (__ \ 'description).readNullable[String] and
-      (__ \ 'content).readNullable[String] and
-      (__ \ 'authors).readNullable[Seq[PageAuthor]] and
-      (__ \ 'type).readNullable[String] and
-      (__ \ 'published).readNullable[DateTime] and
-      (__ \ 'safe).readNullable[Boolean] and
-      (__ \ 'language).readNullable[String] and
-      ((__ \ 'images).read[Seq[EmbedlyImage]] orElse Reads.pure(Seq.empty[EmbedlyImage])) and
-      ((__ \ 'keywords).read[Seq[EmbedlyKeyword]] orElse Reads.pure(Seq.empty[EmbedlyKeyword])) and
-      ((__ \ 'entities).read[Seq[EmbedlyEntity]] orElse Reads.pure(Seq.empty[EmbedlyEntity])) and
-      (__ \ 'favicon_url).readNullable[String] and
-      (__ \ 'media).readNullable[EmbedlyMedia]
-    )(ParsedFields.apply _)
+    implicit val reads: Reads[ParsedFields] = Json.reads[ParsedFields]
   }
   implicit val format: Format[EmbedlyContent] = __.format[JsValue].inmap(new EmbedlyContent(_), _.json)
 }
