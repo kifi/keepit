@@ -17,6 +17,11 @@ class EmbedlyContentTest extends Specification {
       new EmbedlyContent(embedlyJson - "media")
       "Well done!" === "Well done!"
     }
+
+    "parse Embedly response with an empty object media field" in {
+      new EmbedlyContent(embedlyJson + ("media" -> Json.obj()))
+      "Well done!" === "Well done!"
+    }
   }
 }
 

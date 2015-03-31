@@ -81,7 +81,7 @@ trait S3ObjectStore[A, B] extends ObjectStore[A, B] with MetadataAccess[A, B] wi
     this
   }
 
-  def get(id: A): Option[B] = {
+  def syncGet(id: A): Option[B] = {
     val timer = accessLog.timer(S3)
     val key = idToKey(id)
     val value = doWithS3Client[Option[B]]("getting an item from S3BStore") { s3Client =>

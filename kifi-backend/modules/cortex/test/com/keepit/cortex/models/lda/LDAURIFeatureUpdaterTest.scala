@@ -25,7 +25,7 @@ trait LDATestHelper extends WordFeatureTestHelper with URIFeatureTestHelper {
 
   ldaModelStore.+=(version, lda)
 
-  val ldaFromStore = ldaModelStore.get(version).get
+  val ldaFromStore = ldaModelStore.syncGet(version).get
   val articleStore = new InMemoryArticleStoreImpl()
 
   val wordRep = LDAWordRepresenter(version, ldaFromStore)

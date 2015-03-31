@@ -199,7 +199,7 @@ class SearchAnalytics @Inject() (
   private def getArticleSearchResult(uuid: ExternalId[ArticleSearchResult], maxAttempt: Int = 3): Option[ArticleSearchResult] = {
     (0 until maxAttempt).iterator.map { i =>
       if (i != 0) log.warn(s"getArticleSearchResult($uuid) attempt#$i failed to retrieve from S3")
-      articleSearchResultStore.get(uuid)
+      articleSearchResultStore.syncGet(uuid)
     }.collectFirst { case Some(x) => x }
   }
 

@@ -22,7 +22,7 @@ class RoverArticleStore @Inject() (underlying: RoverUnderlyingArticleStore, impl
 
   def get[A <: Article](key: ArticleKey[A])(implicit classTag: ClassTag[A]): Future[Option[A]] = {
     consolidate(key)(storeKey => SafeFuture {
-      underlying.get(storeKey)
+      underlying.syncGet(storeKey)
     }).imap { articleOpt =>
       articleOpt.map {
         case expectedArticle: A => expectedArticle

@@ -30,18 +30,18 @@ class VersionedStoreTest extends Specification {
       val store = new FakeWordFeatureStore()
       store.+=(Word("hello"), v1, FakeFeature("hello-feature"))
 
-      store.get(Word("hello"), v1) === Some(FakeFeature("hello-feature"))
-      store.get(Word("hello"), v2) === None
+      store.syncGet(Word("hello"), v1) === Some(FakeFeature("hello-feature"))
+      store.syncGet(Word("hello"), v2) === None
 
       store.+=(Word("world"), v1, FakeFeature("world-feature-v1"))
       store.+=(Word("world"), v2, FakeFeature("world-feature-v2"))
-      store.get(Word("world"), v1) === Some(FakeFeature("world-feature-v1"))
-      store.get(Word("world"), v2) === Some(FakeFeature("world-feature-v2"))
+      store.syncGet(Word("world"), v1) === Some(FakeFeature("world-feature-v1"))
+      store.syncGet(Word("world"), v2) === Some(FakeFeature("world-feature-v2"))
 
       store.-=(Word("world"), v1)
       store.-=(Word("world"), v2)
-      store.get(Word("world"), v1) === None
-      store.get(Word("world"), v2) === None
+      store.syncGet(Word("world"), v1) === None
+      store.syncGet(Word("world"), v2) === None
     }
   }
 }

@@ -14,7 +14,7 @@ trait ArticleSearchResultStore extends ObjectStore[ExternalId[ArticleSearchResul
     articleSearchResult.last.map(getInitialSearchId) getOrElse articleSearchResult.uuid
 
   def getInitialSearchId(uuid: ExternalId[ArticleSearchResult]): ExternalId[ArticleSearchResult] =
-    get(uuid).map(article => getInitialSearchId(article)) getOrElse uuid
+    syncGet(uuid).map(article => getInitialSearchId(article)) getOrElse uuid
 }
 
 class S3ArticleSearchResultStoreImpl(val bucketName: S3Bucket, val amazonS3Client: AmazonS3, val accessLog: AccessLog, initialSearchIdCache: InitialSearchIdCache, articleCache: ArticleSearchResultCache)
@@ -22,7 +22,7 @@ class S3ArticleSearchResultStoreImpl(val bucketName: S3Bucket, val amazonS3Clien
 
   val formatter = ArticleSearchResult.format
   override def getInitialSearchId(uuid: ExternalId[ArticleSearchResult]): ExternalId[ArticleSearchResult] = initialSearchIdCache.getOrElse(InitialSearchIdSearchIdKey(uuid)) { super.getInitialSearchId(uuid) }
-  override def get(uuid: ExternalId[ArticleSearchResult]): Option[ArticleSearchResult] = articleCache.getOrElseOpt(ArticleSearchResultIdKey(uuid)) { super.get(uuid) }
+  override def syncGet(uuid: ExternalId[ArticleSearchResult]): Option[ArticleSearchResult] = articleCache.getOrElseOpt(ArticleSearchResultIdKey(uuid)) { super.syncGet(uuid) }
   override def +=(uuidAndArticle: (ExternalId[ArticleSearchResult], ArticleSearchResult)) = {
     val (uuid, article) = uuidAndArticle
     articleCache.set(ArticleSearchResultIdKey(uuid), article)

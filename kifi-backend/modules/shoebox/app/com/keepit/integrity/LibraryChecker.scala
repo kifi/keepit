@@ -12,6 +12,7 @@ class LibraryChecker @Inject() (
     db: Database,
     userRepo: UserRepo,
     libraryRepo: LibraryRepo,
+    libraryMembershipRepo: LibraryMembershipRepo,
     keepRepo: KeepRepo,
     libraryCommander: LibraryCommander,
     airbrake: AirbrakeNotifier) extends Logging {
@@ -21,17 +22,15 @@ class LibraryChecker @Inject() (
   def check(): Unit = lock.synchronized {
     checkSystemLibraries()
     checkLibraryKeeps()
+    checkLibraryMembers()
   }
 
   private[integrity] def checkSystemLibraries(): Unit = {
     log.info("start processing user's system generated libraries. One Main & one Secret Library per user")
-    val currentTime = DateTime.now()
-    val hourInd = currentTime.hourOfDay().get
-    val minuteInd = currentTime.minuteOfHour().get / 10
-    val index = hourInd * 6 + minuteInd // hour * 6 + minute / 10 (int div)
+    val (index, numIntervals) = getIndex()
 
     db.readOnlyMaster { implicit s =>
-      val pageSize = userRepo.countIncluding(UserStates.ACTIVE) / 144 // 144 = 24 (hours per day) * 6 (10 minute intervals per hour)
+      val pageSize = userRepo.countIncluding(UserStates.ACTIVE) / numIntervals
       userRepo.pageIncluding(UserStates.ACTIVE)(index, pageSize)
     }.map { u =>
       // libraryCommander.internSystemGeneratedLibraries does the following...
@@ -45,13 +44,10 @@ class LibraryChecker @Inject() (
 
   private[integrity] def checkLibraryKeeps(): Unit = {
     log.info("start processing library's last kept date. A library's last_kept field should match the last kept keep")
-    val currentTime = DateTime.now()
-    val hourInd = currentTime.hourOfDay().get
-    val minuteInd = currentTime.minuteOfHour().get / 10
-    val index = hourInd * 6 + minuteInd // hour * 6 + minute / 10 (int div)
+    val (index, numIntervals) = getIndex()
 
     val (libraryMap, latestKeptAtMap, numKeepsByLibraryMap) = db.readOnlyMaster { implicit s =>
-      val pageSize = libraryRepo.countWithState(LibraryStates.ACTIVE) / 144 // 144 = 24 (hours per day) * 6 (10 minute intervals per hour)
+      val pageSize = libraryRepo.countWithState(LibraryStates.ACTIVE) / numIntervals
       val libraries = libraryRepo.page(index, pageSize, Set(LibraryStates.INACTIVE))
       val libraryMap = libraries.map(lib => lib.id.get -> lib).toMap
       val allLibraryIds = libraryMap.keySet
@@ -96,6 +92,44 @@ class LibraryChecker @Inject() (
         }
 
     }
+  }
+
+  private[integrity] def checkLibraryMembers(): Unit = {
+    log.info("start processing library's last kept date. A library's last_kept field should match the last kept keep")
+    val (index, numIntervals) = getIndex()
+
+    val (libraryMap, numMembersMap) = db.readOnlyMaster { implicit s =>
+      val pageSize = libraryRepo.countWithState(LibraryStates.ACTIVE) / numIntervals
+      val libraries = libraryRepo.page(index, pageSize, Set(LibraryStates.INACTIVE))
+      val libraryMap = libraries.map(lib => lib.id.get -> lib).toMap
+      val allLibraryIds = libraryMap.keySet
+      val numMembersMap = libraryMembershipRepo.countWithAccessByLibraryId(allLibraryIds, LibraryAccess.READ_ONLY).map { case (libId, numFollowers) =>
+        (libId, numFollowers + 1) // all read_only accesses + owner
+      }
+      (libraryMap, numMembersMap)
+    }
+
+    libraryMap.map {
+      case (libId, lib) =>
+        numMembersMap.get(libId).map { numMembers =>
+          if (lib.memberCount != numMembers) {
+            //airbrake.notify(s"Library ${libId} has inconsistent member count. Library's member count is ${lib.memberCount} but there are ${totalNumMembers} active memberships... update library's member_count")
+            db.readWrite { implicit s =>
+              libraryRepo.save(lib.copy(memberCount = numMembers))
+            }
+          }
+        }
+    }
+
+  }
+
+  private def getIndex(): (Int, Int) = {
+    val currentTime = DateTime.now()
+    val hourInd = currentTime.hourOfDay().get
+    val minuteInd = currentTime.minuteOfHour().get / 10 // 10 times per hour
+    val index = hourInd * 6 + minuteInd // hour * 6 + minute / 10 (int div)
+    val numIntervals = 144 // 144 = 24 (hours per day) * 6 (10 minute intervals per hour)
+    (index, numIntervals)
   }
 
 }

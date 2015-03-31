@@ -6,9 +6,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.model.NormalizedURIStates._
-import com.keepit.scraper.FakeArticleStore
-import com.keepit.search.Article
-import com.keepit.search.Lang
+import com.keepit.search.{ InMemoryArticleStoreImpl, Article, Lang }
 import com.keepit.search.index.graph.collection._
 import com.keepit.search.index.graph.user._
 import com.keepit.shoebox.FakeShoeboxServiceClientImpl
@@ -68,7 +66,7 @@ trait GraphTestHelper extends SearchTestInjector {
   }
 
   def setupArticleStore(uris: Seq[NormalizedURI]) = {
-    uris.zipWithIndex.foldLeft(new FakeArticleStore) {
+    uris.zipWithIndex.foldLeft(new InMemoryArticleStoreImpl()) {
       case (store, (uri, idx)) =>
         store += (uri.id.get -> mkArticle(uri.id.get, "title%d".format(idx), "content%d alldocs".format(idx)))
         store

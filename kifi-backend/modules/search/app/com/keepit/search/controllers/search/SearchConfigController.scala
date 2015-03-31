@@ -1,7 +1,5 @@
 package com.keepit.search.controllers.search
 
-import scala.Some
-
 import com.google.inject.Inject
 import com.keepit.common.controller.SearchServiceController
 import com.keepit.common.db._

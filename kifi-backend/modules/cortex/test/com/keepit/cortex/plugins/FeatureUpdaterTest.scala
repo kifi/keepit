@@ -32,8 +32,8 @@ class FeatureUpdaterTest extends Specification with FeaturePluginTestHelper {
       info.seq.value === 500
       info.version.version === 1
 
-      fooFeatStore.get(Id[Foo](42), fooRepresenter.version).get.vectorize === Array(42f, 42f)
-      fooFeatStore.get(Id[Foo](550), fooRepresenter.version) === None
+      fooFeatStore.syncGet(Id[Foo](42), fooRepresenter.version).get.vectorize === Array(42f, 42f)
+      fooFeatStore.syncGet(Id[Foo](550), fooRepresenter.version) === None
 
       // as if we restart server. should continue with last seqNum
       val updater2 = new FeatureUpdater(
@@ -52,7 +52,7 @@ class FeatureUpdaterTest extends Specification with FeaturePluginTestHelper {
       info.seq.value === 550
       info.version.version === 1
 
-      fooFeatStore.get(Id[Foo](550), fooRepresenter.version).get.vectorize === Array(550f, 550f)
+      fooFeatStore.syncGet(Id[Foo](550), fooRepresenter.version).get.vectorize === Array(550f, 550f)
 
     }
   }
