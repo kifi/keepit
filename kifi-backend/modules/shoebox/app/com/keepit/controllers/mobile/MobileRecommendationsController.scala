@@ -9,8 +9,10 @@ import com.keepit.common.net.UserAgent
 import com.keepit.controllers.website.RecommendationControllerHelper
 import com.keepit.curator.model.{ FullLibRecoResults, FullUriRecoResults, RecommendationSubSource, RecommendationSource }
 import com.keepit.model._
+import com.kifi.macros.json
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json.Json
+import play.api.libs.json.{ JsString, Json }
+import play.api.mvc.Result
 
 import scala.concurrent.Future
 
@@ -34,10 +36,21 @@ class MobileRecommendationsController @Inject() (
     }
   }
 
+  @json case class RecosRequest(recencyWeight: Float, uriContext: Option[String], libContext: Option[String])
+  def topRecosV3Post() = UserAction.async { implicit request =>
+    request.body.asJson.flatMap(_.asOpt[RecosRequest]) match {
+      case None =>
+        Future.successful(BadRequest(JsString("bad format for POST request")))
+      case Some(req) =>
+        topRecosV3(req.recencyWeight, req.uriContext, req.libContext, None, None)(request)
+    }
+  }
+
   // _uctx and _lctx are meant to support an iOS bug. Should not be supported in the future.
   def topRecosV3(recencyWeight: Float, uriContext: Option[String], libContext: Option[String], uctx: Option[String], lctx: Option[String]) = UserAction.async { request =>
-    val uriContext2 = uriContext orElse uctx
-    val libContext2 = libContext orElse lctx
+    val contextBankruptcyLength = 3900 // 4k is max request size, leaves some room for other params
+    val uriContext2 = (uriContext orElse uctx).flatMap(ctx => if (ctx.length > contextBankruptcyLength) None else Some(ctx))
+    val libContext2 = (libContext orElse lctx).flatMap(ctx => if (ctx.length > contextBankruptcyLength) None else Some(ctx))
     log.info(s"mobile reco for user: ${request.userId}")
     log.info(s"uriContext: ${uriContext2.getOrElse("n/a")}")
     log.info(s"libContext: ${libContext2.getOrElse("n/a")}")
@@ -47,7 +60,7 @@ class MobileRecommendationsController @Inject() (
     val uriRecosF = commander.topRecos(request.userId, getRecommendationSource(request), RecommendationSubSource.RecommendationsFeed, uriContext.isDefined, recencyWeight, context = uriContext2)
     val libRecosF = commander.topPublicLibraryRecos(request.userId, libCnt, getRecommendationSource(request), RecommendationSubSource.RecommendationsFeed, context = libContext2)
 
-    for (libs <- libRecosF; uris <- uriRecosF) yield Ok {
+    for (libs <- libRecosF; uris <- uriRecosF) yield {
       val FullUriRecoResults(urisReco, newUrisContext) = uris
       val FullLibRecoResults(libsReco, newLibsContext) = libs
       val recos = mix(urisReco, libsReco)
@@ -55,7 +68,7 @@ class MobileRecommendationsController @Inject() (
       log.info(s"newUrisContext: ${newUrisContext}")
       log.info(s"newLibsContext: ${newLibsContext}")
 
-      Json.obj("recos" -> recos, "uctx" -> newUrisContext, "lctx" -> newLibsContext)
+      Ok(Json.obj("recos" -> recos, "uctx" -> newUrisContext, "lctx" -> newLibsContext))
     }
   }
 
