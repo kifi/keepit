@@ -127,8 +127,6 @@ class KifiInstallationRepoTest extends Specification with ShoeboxTestInjector {
           (user1, user2, kin)
         }
         db.readOnlyMaster { implicit s =>
-          inject[KifiInstallationRepo].lastUpdateMobile(user2.id.get) === None
-          inject[KifiInstallationRepo].lastUpdateMobile(user1.id.get) === Some(now)
           inject[KifiInstallationRepo].lastUpdatedMobile(user2.id.get) === None
           inject[KifiInstallationRepo].lastUpdatedMobile(user1.id.get) === Some(kin)
         }
