@@ -2,7 +2,7 @@ package com.keepit.controllers.admin
 
 import com.google.inject.Injector
 import com.keepit.common.actor.FakeActorSystemModule
-import com.keepit.common.concurrent.ExecutionContextModule
+import com.keepit.common.concurrent.{ FakeExecutionContextModule, ExecutionContextModule }
 import com.keepit.common.controller.{ FakeUserActionsModule, FakeUserActionsHelper }
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.common.mail.FakeMailModule
@@ -27,7 +27,7 @@ import play.api.test.Helpers._
 
 class AdminPersonaControllerTest extends Specification with ShoeboxApplicationInjector {
   val modules = Seq(
-    ExecutionContextModule(),
+    FakeExecutionContextModule(),
     FakeUserActionsModule(),
     FakeShoeboxServiceModule(),
     FakeScrapeSchedulerModule(),

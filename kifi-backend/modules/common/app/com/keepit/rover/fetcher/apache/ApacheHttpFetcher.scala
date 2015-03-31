@@ -46,7 +46,8 @@ class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, conne
   private val q = HttpFetchEnforcer.makeQueue(schedulingProperties, scraperHttpConfig, airbrake)
 
   def fetch[A](request: FetchRequest)(f: FetchResult[HttpInputStream] => A): Future[A] = {
-    Future { doFetch(request)(f).get }(ExecutionContext.fj) // not using SafeFuture here, alerting logic in Try
+    // not using SafeFuture here, alerting logic in Try + todo(Léo): inject execution context
+    Future { doFetch(request)(f).get }(ExecutionContext.fj)
   }
 
   def doFetch[A](request: FetchRequest)(f: FetchResult[HttpInputStream] => A): Try[A] = {

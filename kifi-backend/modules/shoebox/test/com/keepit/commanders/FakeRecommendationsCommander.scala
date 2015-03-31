@@ -1,5 +1,6 @@
 package com.keepit.commanders
 
+import scala.concurrent.ExecutionContext
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
@@ -23,6 +24,7 @@ class FakeRecommendationsCommander @Inject() (
   basicUserRepo: BasicUserRepo,
   keepRepo: KeepRepo,
   publicIdConfig: PublicIdConfiguration,
+  defaultContext: ExecutionContext,
   userExperimentCommander: LocalUserExperimentCommander)
     extends RecommendationsCommander(
       curator,
@@ -34,6 +36,7 @@ class FakeRecommendationsCommander @Inject() (
       uriSummaryCommander,
       basicUserRepo,
       keepRepo,
+      defaultContext,
       publicIdConfig,
       userExperimentCommander) {
 

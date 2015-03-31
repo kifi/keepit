@@ -23,13 +23,12 @@ import com.keepit.search.SearchServiceClient
 import com.keepit.social.{ SocialId, SocialNetworks, SocialNetworkType, BasicUser }
 
 import play.api.http.Status.{ FORBIDDEN, NOT_FOUND }
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.api.mvc.BodyParsers.parse
 
 import scala.collection.mutable
-import scala.concurrent.Future
+import scala.concurrent.{ ExecutionContext, Future }
 import akka.actor.Scheduler
 import com.keepit.eliza.ElizaServiceClient
 import scala.util.{ Success, Failure }
@@ -95,6 +94,7 @@ class KeepsCommander @Inject() (
     keepDecorator: KeepDecorator,
     twitterPublishingCommander: TwitterPublishingCommander,
     facebookPublishingCommander: FacebookPublishingCommander,
+    implicit val defaultContext: ExecutionContext,
     implicit val publicIdConfig: PublicIdConfiguration) extends Logging {
 
   def getKeepsCountFuture(): Future[Int] = {
@@ -320,7 +320,7 @@ class KeepsCommander @Inject() (
 
   def unkeep(extId: ExternalId[Keep], userId: Id[User])(implicit context: HeimdalContext): Option[KeepInfo] = {
     db.readWrite { implicit session =>
-      keepRepo.getByExtIdAndUser(extId, userId).map(setKeepStateWithSession(_, KeepStates.INACTIVE, userId))
+      keepRepo.getByExtIdAndUser(extId, userId).map(deactivateKeepWithSession(_, userId))
     } map { keep =>
       finalizeUnkeeping(Seq(keep), userId)
       KeepInfo.fromKeep(keep)
@@ -346,7 +346,7 @@ class KeepsCommander @Inject() (
             keepRepo.getByExtIdandLibraryId(kId, libId, excludeSet = Set.empty) match {
               case Some(k) if k.state != KeepStates.INACTIVE =>
                 keepsToFinalize = k +: keepsToFinalize
-                Left(setKeepStateWithSession(k, KeepStates.INACTIVE, userId))
+                Left(deactivateKeepWithSession(k, userId))
               case Some(k) =>
                 Left(k)
               case None =>
@@ -372,9 +372,11 @@ class KeepsCommander @Inject() (
     searchClient.updateKeepIndex()
   }
 
-  private def setKeepStateWithSession(keep: Keep, state: State[Keep], userId: Id[User])(implicit context: HeimdalContext, session: RWSession): Keep = {
-    val saved = keepRepo.save(keep withState state)
+  private def deactivateKeepWithSession(keep: Keep, userId: Id[User])(implicit context: HeimdalContext, session: RWSession): Keep = {
+    val saved = keepRepo.save(keep withState KeepStates.INACTIVE)
     log.info(s"[unkeep($userId)] deactivated keep=$saved")
+    val library = libraryRepo.get(keep.libraryId.get)
+    libraryRepo.save(library.copy(keepCount = keepRepo.getCountByLibrary(keep.libraryId.get)))
     keepToCollectionRepo.getCollectionsForKeep(saved.id.get) foreach { cid => collectionRepo.collectionChanged(cid, inactivateIfEmpty = true) }
     saved
   }

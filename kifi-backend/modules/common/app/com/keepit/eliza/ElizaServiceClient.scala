@@ -12,9 +12,8 @@ import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.search.index.message.ThreadContent
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.collection.mutable
-import scala.concurrent.{ Future, Promise }
+import scala.concurrent.{ ExecutionContext, Future }
 
 import play.api.libs.json.{ JsString, JsValue, JsArray, Json, JsObject }
 
@@ -35,6 +34,7 @@ case class PushNotificationExperiment(name: String)
 object PushNotificationExperiment {
   val Experiment1 = PushNotificationExperiment("Experiment1")
   val Experiment2 = PushNotificationExperiment("Experiment2")
+  val All = Seq(Experiment1, Experiment2)
   implicit val format = Json.format[PushNotificationExperiment]
 }
 
@@ -44,7 +44,7 @@ trait ElizaServiceClient extends ServiceClient {
   def sendToUser(userId: Id[User], data: JsArray): Unit
   def sendToAllUsers(data: JsArray): Unit
 
-  def sendLibraryPushNotification(userId: Id[User], message: String, libraryId: Id[Library], pushNotificationExperiment: PushNotificationExperiment): Future[Int]
+  def sendLibraryPushNotification(userId: Id[User], message: String, libraryId: Id[Library], libraryUrl: String, pushNotificationExperiment: PushNotificationExperiment): Future[Int]
   def sendGeneralPushNotification(userId: Id[User], message: String, pushNotificationExperiment: PushNotificationExperiment): Future[Int]
 
   def connectedClientCount: Future[Seq[Int]]
@@ -77,13 +77,14 @@ class ElizaServiceClientImpl @Inject() (
   val airbrakeNotifier: AirbrakeNotifier,
   val httpClient: HttpClient,
   val serviceCluster: ServiceCluster,
+  implicit val defaultContext: ExecutionContext,
   userThreadStatsForUserIdCache: UserThreadStatsForUserIdCache)
     extends ElizaServiceClient with Logging {
 
-  def sendLibraryPushNotification(userId: Id[User], message: String, libraryId: Id[Library], pushNotificationExperiment: PushNotificationExperiment): Future[Int] = {
+  def sendLibraryPushNotification(userId: Id[User], message: String, libraryId: Id[Library], libraryUrl: String, pushNotificationExperiment: PushNotificationExperiment): Future[Int] = {
     implicit val userFormatter = Id.format[User]
     implicit val libraryFormatter = Id.format[Library]
-    val payload = Json.obj("userId" -> userId, "message" -> message, "libraryId" -> libraryId, "pushNotificationExperiment" -> pushNotificationExperiment)
+    val payload = Json.obj("userId" -> userId, "message" -> message, "libraryId" -> libraryId, "libraryUrl" -> libraryUrl, "pushNotificationExperiment" -> pushNotificationExperiment)
     call(Eliza.internal.sendLibraryPushNotification, payload).map { response =>
       response.body.toInt
     }

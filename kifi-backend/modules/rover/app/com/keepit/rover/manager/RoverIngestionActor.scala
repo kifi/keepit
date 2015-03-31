@@ -17,8 +17,6 @@ import scala.util.{ Failure, Success }
 object RoverIngestionActor {
   val roverNormalizedUriSeq = Name[SequenceNumber[NormalizedURI]]("rover_normalized_uri")
   val fetchSize: Int = 50
-  private[this] val toBeDeletedStates = Set[State[NormalizedURI]](ACTIVE, INACTIVE, UNSCRAPABLE, REDIRECTED)
-  def shouldDelete(uri: IndexableUri): Boolean = toBeDeletedStates.contains(uri.state)
   sealed trait RoverIngestionActorMessage
   case object StartIngestion extends RoverIngestionActorMessage
   case class Ingest(uris: Seq[IndexableUri], mayHaveMore: Boolean) extends RoverIngestionActorMessage
@@ -80,12 +78,8 @@ class RoverIngestionActor @Inject() (
   private def ingest(uris: Seq[IndexableUri]): Unit = if (uris.nonEmpty) {
     db.readWrite { implicit session =>
       uris.foreach { uri =>
-        if (shouldDelete(uri)) {
-          articleInfoRepo.deactivateByUri(uri.id.get)
-        } else {
-          val kinds = articlePolicy(uri.url)
-          articleInfoRepo.internByUri(uri.id.get, uri.url, kinds)
-        }
+        articleInfoRepo.internByUri(uri.id.get, uri.url, articlePolicy.toBeInterned(uri.url, uri.state))
+        articleInfoRepo.deactivateByUriAndKinds(uri.id.get, articlePolicy.toBeDeactivated(uri.state))
       }
       val maxSeq = uris.map(_.seq).max
       systemValueRepo.setSequenceNumber(roverNormalizedUriSeq, maxSeq)

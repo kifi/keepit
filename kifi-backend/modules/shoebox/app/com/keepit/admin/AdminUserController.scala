@@ -2,7 +2,7 @@ package com.keepit.controllers.admin
 
 import com.keepit.commanders.emails.ActivityFeedEmailSender
 import com.keepit.curator.CuratorServiceClient
-import com.keepit.shoebox.cron.ActivityPushSchedualer
+import com.keepit.shoebox.cron.{ ActivityPusher, ActivityPushSchedualer }
 import scala.concurrent.{ Await, Future, Promise }
 import scala.concurrent.duration.{ Duration, DurationInt }
 import scala.util.{ Try }
@@ -115,11 +115,17 @@ class AdminUserController @Inject() (
     curator: CuratorServiceClient,
     activityEmailSender: ActivityFeedEmailSender,
     activityPushSchedualer: ActivityPushSchedualer,
+    activityPusher: ActivityPusher,
     authCommander: AuthCommander) extends AdminUserActions {
 
   def createPushActivityEntities = AdminUserPage { implicit request =>
     activityPushSchedualer.createPushActivityEntities()
     Ok("started!")
+  }
+
+  def pushLibraryActivity = AdminUserPage { implicit request =>
+    activityPusher.forcePushLibraryActivityForUser(request.userId)
+    Ok("done")
   }
 
   def merge = AdminUserPage { implicit request =>

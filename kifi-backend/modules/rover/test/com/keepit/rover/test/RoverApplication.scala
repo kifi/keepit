@@ -4,7 +4,7 @@ import com.keepit.common.concurrent.ExecutionContextModule
 import com.keepit.common.db.{ TestDbInfo, FakeSlickModule }
 import com.google.inject.Module
 import java.io.File
-import com.keepit.test.{ DbInjectionHelper, TestInjector, TestApplication }
+import com.keepit.test.{ TestInjectorProvider, DbInjectionHelper, TestInjector, TestApplication }
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.healthcheck.{ FakeHealthcheckModule, FakeMemoryUsageModule, FakeAirbrakeModule }
 import com.keepit.common.time.FakeClockModule
@@ -32,7 +32,7 @@ class RoverApplication(overridingModules: Module*)(implicit path: File = new Fil
     RoverCacheModule(HashMapMemoryCacheModule())
   ))
 
-trait RoverApplicationInjector extends ApplicationInjector with DbInjectionHelper
+trait RoverApplicationInjector extends TestInjectorProvider with ApplicationInjector with DbInjectionHelper
 
 trait RoverTestInjector extends TestInjector with DbInjectionHelper {
   val module = Modules.combine(

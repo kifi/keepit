@@ -8,10 +8,9 @@ import com.keepit.common.logging.Logging
 import com.google.inject.{ Singleton, Inject }
 import com.keepit.rover.article.content.EmbedlyKeyword
 import org.apache.commons.lang3.RandomStringUtils
-import scala.concurrent.Future
+import scala.concurrent.{ ExecutionContext, Future }
 import com.keepit.model._
 import com.keepit.common.store.{ S3ImageConfig, ImageSize }
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.db.slick.Database
 import java.awt.image.BufferedImage
 import scala.util.{ Success, Failure }
@@ -42,6 +41,7 @@ class URISummaryCommander @Inject() (
     uriSummaryCache: URISummaryCache,
     airbrake: AirbrakeNotifier,
     clock: Clock,
+    implicit val defaultContext: ExecutionContext,
     val webService: WebService) extends Logging with ProcessedImageHelper {
 
   /**

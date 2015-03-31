@@ -1,6 +1,7 @@
 package com.keepit.common.queue
 
 import com.keepit.common.concurrent.FutureHelpers
+import com.keepit.common.logging.Logging
 import com.keepit.common.math.ProbabilityDensityBuilder
 import com.keepit.common.CollectionHelpers._
 import com.kifi.franz.{ SQSMessage, SQSQueue }
@@ -10,7 +11,7 @@ import scala.concurrent.duration.FiniteDuration
 import scala.util.Random
 import com.keepit.common.core._
 
-class ProbabilisticMultiQueue[T](weights: Map[SQSQueue[T], Double]) {
+class ProbabilisticMultiQueue[T](weights: Map[SQSQueue[T], Double]) extends Logging {
   private val sortedQueues = weights.keySet.toSeq.sortBy(-weights(_))
   private val offsetDensity = {
     val builder = new ProbabilityDensityBuilder[Int]()
@@ -24,7 +25,13 @@ class ProbabilisticMultiQueue[T](weights: Map[SQSQueue[T], Double]) {
       case (tasks, nextQueue) =>
         val numberOfMissingTasks = n - tasks.length
         if (numberOfMissingTasks <= 0) Future.successful((tasks, true))
-        else nextQueue.nextBatchWithLock(numberOfMissingTasks, lockTimeout).imap { moreTasks => (tasks ++ moreTasks, false) }
+        else {
+          log.info(s"Pulling up to $numberOfMissingTasks tasks from $nextQueue")
+          nextQueue.nextBatchWithLock(numberOfMissingTasks, lockTimeout).imap { moreTasks =>
+            log.info(s"Pulled ${moreTasks.size}/$numberOfMissingTasks tasks from $nextQueue")
+            (tasks ++ moreTasks, false)
+          }
+        }
     }
   }
 }

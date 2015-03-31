@@ -444,12 +444,13 @@ class KeepRepoImpl @Inject() (
   }
 
   def getCountsByLibrary(libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Int] = {
-    countByLibraryCache.bulkGetOrElse(libraryIds.map(CountByLibraryKey(_))) { missingKeys =>
+    val map = countByLibraryCache.bulkGetOrElse(libraryIds.map(CountByLibraryKey(_))) { missingKeys =>
       val missingLibraryIds = missingKeys.map(_.id)
       val keepsQuery = (for (b <- rows if b.libraryId.inSet(missingLibraryIds) && b.state === KeepStates.ACTIVE) yield b)
       val countQuery = keepsQuery.groupBy(_.libraryId).map { case (libraryId, keeps) => (libraryId, keeps.length) }
       countQuery.run.map { case (libraryIdOpt, keepCount) => (CountByLibraryKey(libraryIdOpt.get), keepCount) }.toMap
     }.map { case (CountByLibraryKey(libraryId), keepCount) => (libraryId, keepCount) }
+    libraryIds.map { libId => libId -> map.getOrElse(libId, 0) }.toMap
   }
 
   private val getByExtIdandLibraryIdCompiled = Compiled { (extId: Column[ExternalId[Keep]], libraryId: Column[Id[Library]]) =>
@@ -479,10 +480,11 @@ class KeepRepoImpl @Inject() (
   }
   def latestKeptAtByLibraryIds(libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Option[DateTime]] = {
     val keepsGroupedByLibrary = (for (r <- rows if r.libraryId.inSet(libraryIds) && r.state === KeepStates.ACTIVE) yield r).groupBy(_.libraryId)
-    keepsGroupedByLibrary.map { case (libraryId, keeps) => (libraryId, keeps.map(k => k.keptAt).max) }.list
+    val map = keepsGroupedByLibrary.map { case (libraryId, keeps) => (libraryId, keeps.map(k => k.keptAt).max) }.list
       .collect {
         case (Some(libraryId), maxKeptAt) =>
           (libraryId, maxKeptAt)
       }.toMap
+    libraryIds.map { libId => libId -> map.getOrElse(libId, None) }.toMap
   }
 }

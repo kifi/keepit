@@ -34,7 +34,7 @@ sealed trait PushNotification {
 
 case class MessageThreadPushNotification(id: ExternalId[MessageThread], unvisitedCount: Int, message: Option[String], sound: Option[NotificationSound]) extends PushNotification
 case class SimplePushNotification(unvisitedCount: Int, message: Option[String], sound: Option[NotificationSound] = None, category: PushNotificationCategory, experiment: PushNotificationExperiment) extends PushNotification
-case class LibraryUpdatePushNotification(unvisitedCount: Int, message: Option[String], libraryId: Id[Library], sound: Option[NotificationSound] = None, category: PushNotificationCategory, experiment: PushNotificationExperiment) extends PushNotification
+case class LibraryUpdatePushNotification(unvisitedCount: Int, message: Option[String], libraryId: Id[Library], libraryUrl: String, sound: Option[NotificationSound] = None, category: PushNotificationCategory, experiment: PushNotificationExperiment) extends PushNotification
 
 case class NotificationSound(name: String) extends AnyVal
 
@@ -111,13 +111,9 @@ class UrbanAirshipImpl @Inject() (
   }
 
   def getDevices(userId: Id[User]): Seq[Device] = {
-    val devices = db.readOnlyMaster { implicit s =>
-      deviceRepo.getByUserId(userId).groupBy(_.deviceType)
+    db.readOnlyMaster { implicit s =>
+      deviceRepo.getByUserId(userId)
     }
-    val onePerType = devices map {
-      case (deviceType, devicesOfType) => deviceType -> devicesOfType.sortBy(_.updatedAt).reverse.head
-    }
-    onePerType.values.toSeq
   }
 
   def notifyUser(userId: Id[User], notification: PushNotification): Int = {
@@ -140,13 +136,23 @@ class UrbanAirshipImpl @Inject() (
   }
 
   // see https://docs.google.com/a/kifi.com/document/d/1efEGk8Wdj2dAjWjUWvsHW5UC0p2srjIXiju8tLpuOMU/edit# for spec
-  private def jsonMessageExtra(notification: PushNotification) = {
+  private def jsonMessageExtra(notification: PushNotification, deviceType: DeviceType) = {
     val json = Json.obj("unreadCount" -> notification.unvisitedCount)
     notification match {
-      case spn: SimplePushNotification => json
-      case mtpn: MessageThreadPushNotification => json.as[JsObject] + ("id" -> JsString(mtpn.id.id))
-      case lupn: LibraryUpdatePushNotification => json.as[JsObject] ++ Json.obj("t" -> "lr", "lid" -> JsString(Library.publicId(lupn.libraryId).id))
-      case _ => throw new Exception(s"Don't recognize push notification $notification")
+      case spn: SimplePushNotification =>
+        json
+      case mtpn: MessageThreadPushNotification =>
+        json.as[JsObject] + ("id" -> JsString(mtpn.id.id))
+      case lupn: LibraryUpdatePushNotification =>
+        val withLid = json.as[JsObject] ++ Json.obj("t" -> "lr", "lid" -> JsString(Library.publicId(lupn.libraryId).id))
+        deviceType match {
+          case DeviceType.Android =>
+            withLid
+          case DeviceType.IOS =>
+            withLid + ("lu" -> JsString(lupn.libraryUrl))
+        }
+      case _ =>
+        throw new Exception(s"Don't recognize push notification $notification")
     }
   }
 
@@ -160,7 +166,7 @@ class UrbanAirshipImpl @Inject() (
         "notification" -> Json.obj(
           "android" -> Json.obj(
             "alert" -> message,
-            "extra" -> jsonMessageExtra(notification)
+            "extra" -> jsonMessageExtra(notification, device.deviceType)
           )
         )
       )
@@ -170,7 +176,7 @@ class UrbanAirshipImpl @Inject() (
         "device_types" -> Json.arr("android"),
         "notification" -> Json.obj(
           "android" -> Json.obj(
-            "extra" -> jsonMessageExtra(notification)
+            "extra" -> jsonMessageExtra(notification, device.deviceType)
           )
         )
       )
@@ -186,7 +192,7 @@ class UrbanAirshipImpl @Inject() (
           "alert" -> message.abbreviate(1000), //can be replaced with a json https://developer.apple.com/library/mac/documentation/NetworkingInternet/Conceptual/RemoteNotificationsPG/Chapters/ApplePushService.html#//apple_ref/doc/uid/TP40008194-CH100-SW9
           "badge" -> notification.unvisitedCount,
           "content-available" -> true,
-          "extra" -> jsonMessageExtra(notification)
+          "extra" -> jsonMessageExtra(notification, device.deviceType)
         )
         notification.sound match {
           case Some(fileName) => json + ("sound" -> JsString(fileName.name))
@@ -208,7 +214,7 @@ class UrbanAirshipImpl @Inject() (
           "ios" -> Json.obj(
             "badge" -> notification.unvisitedCount,
             "content-available" -> false,
-            "extra" -> jsonMessageExtra(notification)
+            "extra" -> jsonMessageExtra(notification, device.deviceType)
           )
         )
       )

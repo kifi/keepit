@@ -26,7 +26,6 @@ import com.keepit.social.{ BasicNonUser, BasicUser }
 import com.kifi.macros.json
 import org.joda.time.DateTime
 import play.api.http.Status._
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import views.html.admin.{ libraries, library }
@@ -77,6 +76,7 @@ class LibraryCommander @Inject() (
     userValueRepo: UserValueRepo,
     systemValueRepo: SystemValueRepo,
     twitterSyncRepo: TwitterSyncStateRepo,
+    implicit val defaultContext: ExecutionContext,
     implicit val publicIdConfig: PublicIdConfiguration,
     clock: Clock) extends Logging {
 
@@ -467,7 +467,7 @@ class LibraryCommander @Inject() (
               libraryRepo.getOpt(ownerId, validSlug) match {
                 case None =>
                   val lib = libraryRepo.save(Library(ownerId = ownerId, name = libAddReq.name, description = libAddReq.description,
-                    visibility = libAddReq.visibility, slug = validSlug, color = newColor, kind = newKind, memberCount = 1))
+                    visibility = libAddReq.visibility, slug = validSlug, color = newColor, kind = newKind, memberCount = 1, keepCount = 0))
                   libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = ownerId, access = LibraryAccess.OWNER, listed = newListed, lastJoinedAt = Some(currentDateTime)))
                   lib
                 case Some(lib) =>
@@ -820,7 +820,7 @@ class LibraryCommander @Inject() (
 
       // If user is missing a system lib, create it
       val mainOpt = if (sysLibs.find(_._2.kind == LibraryKind.SYSTEM_MAIN).isEmpty) {
-        val mainLib = libraryRepo.save(Library(name = "Main Library", ownerId = userId, visibility = LibraryVisibility.DISCOVERABLE, slug = LibrarySlug("main"), kind = LibraryKind.SYSTEM_MAIN, memberCount = 1))
+        val mainLib = libraryRepo.save(Library(name = "Main Library", ownerId = userId, visibility = LibraryVisibility.DISCOVERABLE, slug = LibrarySlug("main"), kind = LibraryKind.SYSTEM_MAIN, memberCount = 1, keepCount = 0))
         libraryMembershipRepo.save(LibraryMembership(libraryId = mainLib.id.get, userId = userId, access = LibraryAccess.OWNER))
         if (!generateNew) {
           airbrake.notify(s"$userId missing main library")
@@ -830,7 +830,7 @@ class LibraryCommander @Inject() (
       } else None
 
       val secretOpt = if (sysLibs.find(_._2.kind == LibraryKind.SYSTEM_SECRET).isEmpty) {
-        val secretLib = libraryRepo.save(Library(name = "Secret Library", ownerId = userId, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("secret"), kind = LibraryKind.SYSTEM_SECRET, memberCount = 1))
+        val secretLib = libraryRepo.save(Library(name = "Secret Library", ownerId = userId, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("secret"), kind = LibraryKind.SYSTEM_SECRET, memberCount = 1, keepCount = 0))
         libraryMembershipRepo.save(LibraryMembership(libraryId = secretLib.id.get, userId = userId, access = LibraryAccess.OWNER))
         if (!generateNew) {
           airbrake.notify(s"$userId missing secret library")
@@ -1026,14 +1026,14 @@ class LibraryCommander @Inject() (
       case None => Right((): Unit)
       case Some(mem) if mem.access == LibraryAccess.OWNER => Left(LibraryFail(BAD_REQUEST, "cannot_leave_own_library"))
       case Some(mem) =>
-        val (keepCount, lib) = db.readWrite { implicit s =>
+        val (numKeeps, lib) = db.readWrite { implicit s =>
           libraryMembershipRepo.save(mem.copy(state = LibraryMembershipStates.INACTIVE))
           val lib = libraryRepo.get(libraryId)
           libraryRepo.save(lib.copy(memberCount = libraryMembershipRepo.countWithLibraryId(libraryId)))
           (keepRepo.getCountByLibrary(libraryId), lib)
         }
         SafeFuture {
-          libraryAnalytics.unfollowLibrary(userId, lib, keepCount, eventContext)
+          libraryAnalytics.unfollowLibrary(userId, lib, numKeeps, eventContext)
           searchClient.updateLibraryIndex()
         }
         Right((): Unit)

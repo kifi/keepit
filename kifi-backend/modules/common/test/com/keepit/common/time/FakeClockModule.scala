@@ -45,7 +45,8 @@ class FakeClock extends Clock with Logging {
   }
 
   def push(t: DateTime): FakeClock = { stack push t.getMillis; this }
-  def setTimeFunction(timeFunction: () => Long) { this.timeFunction = timeFunction }
+  def setTimeFunction(timeFunction: () => DateTime) { this.timeFunction = { timeFunction().getMillis } }
+  def setTimeValue(time: DateTime) { this.timeFunction = () => time.getMillis }
   override def getMillis(): Long = timeFunction()
 }
 

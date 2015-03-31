@@ -18,6 +18,7 @@ import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model.{ ExperimentType, NormalizedURI, SystemValueRepo, UriRecommendationScores, User }
 import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.modules.statsd.api.Statsd
 
 import scala.collection.JavaConversions._
 import scala.collection.concurrent.TrieMap
@@ -42,7 +43,7 @@ class RecommendationGenerationCommander @Inject() (
     schedulingProperties: SchedulingProperties) extends Logging {
 
   val defaultScore = 0.0f
-  val recommendationGenerationLock = new ReactiveLock(6)
+  val recommendationGenerationLock = new ReactiveLock(8)
   val perUserRecommendationGenerationLocks = TrieMap[Id[User], ReactiveLock]()
   val candidateURILock = new ReactiveLock(4)
 
@@ -143,8 +144,10 @@ class RecommendationGenerationCommander @Inject() (
       candidateURIs <- getCandidateURIs(seeds.map(_.uriId))
     } yield {
       val candidateSeeds = (seeds zip candidateURIs) filter (_._2) map (_._1)
+      val timer2 = new NamedStatsdTimer("RecommendationGenerationCommander.checkUrisDiscussed")
       eliza.checkUrisDiscussed(userId, candidateSeeds.map(_.uriId)).map { checkThreads =>
         timer.stopAndReport()
+        timer2.stopAndReport()
         val candidates = (candidateSeeds zip checkThreads).collect { case (cand, hasChat) if !hasChat => cand }
         (candidates, if (seeds.isEmpty) state.seq else seeds.map(_.seq).max)
       }
@@ -208,6 +211,7 @@ class RecommendationGenerationCommander @Inject() (
       }
 
       toBeSaved.map { items =>
+        Statsd.increment("UriRecosGenerated", items.length)
         saveScoredSeedItems(items, userId, newState)
         precomputeRecommendationsForUser(userId, boostedKeepers, Some(alwaysInclude))
         seedItems.nonEmpty
@@ -278,30 +282,34 @@ class RecommendationGenerationCommander @Inject() (
     .initialCapacity(100000).maximumSize(1000000).expireAfterWrite(24L, TimeUnit.HOURS)
     .build[Id[NormalizedURI], java.lang.Boolean]
 
-  private def getCandidateURIs(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[Boolean]] = candidateURILock.withLockFuture {
-    val uriIdIndexes: Map[Id[NormalizedURI], Int] = (for { i <- 0 until uriIds.size } yield uriIds(i) -> i).toMap
+  private def getCandidateURIs(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[Boolean]] = {
+    val timer = new NamedStatsdTimer("RecommendationGenerationCommander.getCandidateURIs")
+    candidateURILock.withLockFuture {
+      val uriIdIndexes: Map[Id[NormalizedURI], Int] = (for { i <- 0 until uriIds.size } yield uriIds(i) -> i).toMap
 
-    val fromCache: Map[Id[NormalizedURI], Boolean] = candidateUriCache.getAllPresent(uriIds).map {
-      case (id, bool) => (id, bool.booleanValue) // convert from Java Boolean to Scala Boolean
-    }.toMap
-    val notFromCache = uriIds diff fromCache.keys.toSeq
-
-    val candidatesF: Future[Seq[Boolean]] =
-      if (notFromCache.nonEmpty) shoebox.getCandidateURIs(notFromCache) else Future.successful(Seq.empty)
-
-    candidatesF map { candidates =>
-      val notFromCacheResults = (notFromCache zip candidates).map {
-        case (id, bool) =>
-          candidateUriCache.put(id, bool)
-          (id, bool)
+      val fromCache: Map[Id[NormalizedURI], Boolean] = candidateUriCache.getAllPresent(uriIds).map {
+        case (id, bool) => (id, bool.booleanValue) // convert from Java Boolean to Scala Boolean
       }.toMap
+      val notFromCache = uriIds diff fromCache.keys.toSeq
 
-      // puts the candidate booleans back in the order they were passed in
-      val results = Array.fill[Boolean](uriIds.size)(false)
-      (fromCache ++ notFromCacheResults).foreach {
-        case (id, bool) => results.update(uriIdIndexes(id), bool)
+      val candidatesF: Future[Seq[Boolean]] =
+        if (notFromCache.nonEmpty) shoebox.getCandidateURIs(notFromCache) else Future.successful(Seq.empty)
+
+      candidatesF map { candidates =>
+        val notFromCacheResults = (notFromCache zip candidates).map {
+          case (id, bool) =>
+            candidateUriCache.put(id, bool)
+            (id, bool)
+        }.toMap
+
+        // puts the candidate booleans back in the order they were passed in
+        val results = Array.fill[Boolean](uriIds.size)(false)
+        (fromCache ++ notFromCacheResults).foreach {
+          case (id, bool) => results.update(uriIdIndexes(id), bool)
+        }
+        timer.stopAndReport()
+        results.toSeq
       }
-      results.toSeq
     }
   }
 

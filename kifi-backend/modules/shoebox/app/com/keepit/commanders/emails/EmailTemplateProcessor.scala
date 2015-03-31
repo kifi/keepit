@@ -3,6 +3,7 @@ package com.keepit.commanders.emails
 import com.google.inject.{ Provider, ImplementedBy, Inject }
 import com.keepit.commanders.UserCommander
 import com.keepit.commanders.emails.tips.EmailTipProvider
+import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.{ LargeString, Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -85,7 +86,7 @@ class EmailTemplateProcessorImpl @Inject() (
   case class DataNeededResult(users: Map[Id[User], User], imageUrls: Map[Id[User], String],
     libraries: Map[Id[Library], Library])
 
-  def process(emailToSend: EmailToSend) = {
+  def process(emailToSend: EmailToSend) = new SafeFuture[ProcessedEmailResult]({
     val tipHtmlF = emailTipProvider.get().getTipHtml(emailToSend)
 
     val templatesF = tipHtmlF.map { tipHtmlOpt => Seq(emailToSend.htmlTemplate) ++ tipHtmlOpt.map(_._2) }
@@ -147,7 +148,7 @@ class EmailTemplateProcessorImpl @Inject() (
         )
       }
     }
-  }
+  }, Some("Email template processor process process"))
 
   private def loadLayout(emailToSend: EmailToSend, templates: Seq[Html]): (Html, Option[Html]) = {
     val layoutOpt: Option[EmailLayout] = emailToSend.templateOptions.get("layout")

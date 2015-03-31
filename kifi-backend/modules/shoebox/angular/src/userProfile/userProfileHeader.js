@@ -38,11 +38,6 @@ angular.module('kifi')
           }
         }
 
-        function closeFriendRequestHeader(nextAnimation) {
-          var header = angular.element('.kf-uph-connect-banner');
-          header.animate({height: '0px'}, 150, nextAnimation);
-        }
-
         function removeNavLinkHref(state) {
           navLinks.filter('[data-path=' + stateNamePart(state) + ']').removeAttr('href');
         }
@@ -119,16 +114,8 @@ angular.module('kifi')
         scope.acceptFriendRequest = function () {
           $rootScope.$emit('trackUserProfileEvent', 'click', {action: 'clickedAcceptFriend'});
 
-          friendService.acceptRequest(scope.profile.id).then(function() {
-            var friendsIcon = angular.element('.kf-uph-connect-image');
-            var nextAnimation = function() {
-              friendsIcon.animate({opacity: 1}, 300, function() {
-                scope.$evalAsync(function() {
-                  scope.connectionWithUser = 'friends';
-                });
-              });
-            };
-            closeFriendRequestHeader(nextAnimation);
+          friendService.acceptRequest(scope.profile.id).then(function () {
+            scope.connectionWithUser = 'friends';
           });
         };
 
@@ -136,7 +123,6 @@ angular.module('kifi')
           $rootScope.$emit('trackUserProfileEvent', 'click', {action: 'clickedDeclineFriend'});
 
           friendService.ignoreRequest(scope.profile.id).then(function() {
-            closeFriendRequestHeader();
             scope.connectionWithUser = 'not_friends';
           });
         };

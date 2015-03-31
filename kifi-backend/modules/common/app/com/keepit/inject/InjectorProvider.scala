@@ -10,7 +10,7 @@ import com.google.inject.util.Modules
 import com.keepit.FortyTwoGlobal
 import net.codingwell.scalaguice._
 
-sealed trait InjectorProvider {
+trait InjectorProvider {
 
   def mode: Mode
   def module: Module
@@ -32,15 +32,6 @@ sealed trait InjectorProvider {
     Guice.createInjector(stage, modulesWithMode: _*)
   }
 
-  def withInjector[T](overridingModules: Module*)(f: Injector => T) = {
-    val customModules = Modules.`override`(module).`with`(overridingModules: _*)
-    val injector = createInjector(customModules)
-
-    f(injector)
-  }
-
-  def inject[A](implicit m: Manifest[A], injector: Injector): A = injector.instance[A]
-  def injectOpt[A](implicit m: Manifest[A], injector: Injector): Option[A] = if (null == injector.getExistingBinding(Key.get(typeLiteral[A]))) None else Some(inject[A])
   def provide[T](func: => T): Provider[T] = new Provider[T] { def get = func }
 
 }

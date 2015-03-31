@@ -87,8 +87,7 @@ object EmbedlyContent {
     media: Option[EmbedlyMedia])
 
   object ParsedFields {
-    implicit val reads: Reads[ParsedFields] = Json.reads[ParsedFields] // todo(Léo): we may need a more permissive Reads
+    implicit val reads: Reads[ParsedFields] = Json.reads[ParsedFields]
   }
-
   implicit val format: Format[EmbedlyContent] = __.format[JsValue].inmap(new EmbedlyContent(_), _.json)
 }
