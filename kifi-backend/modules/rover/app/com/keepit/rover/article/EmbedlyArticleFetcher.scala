@@ -30,18 +30,17 @@ object EmbedlyArticleFetcher {
 class EmbedlyArticleFetcher @Inject() (
     ws: WebService,
     airbrake: AirbrakeNotifier,
-    clock: Clock,
-    implicit val executionContext: ExecutionContext) extends ArticleFetcher[EmbedlyArticle] with Logging {
+    clock: Clock) extends ArticleFetcher[EmbedlyArticle] with Logging {
 
   import com.keepit.rover.article.EmbedlyArticleFetcher._
 
   private val consolidate = new RequestConsolidator[String, EmbedlyArticle](2 minutes)
 
-  def fetch(request: ArticleFetchRequest[EmbedlyArticle]): Future[Option[EmbedlyArticle]] = {
+  def fetch(request: ArticleFetchRequest[EmbedlyArticle])(implicit ec: ExecutionContext): Future[Option[EmbedlyArticle]] = {
     consolidate(request.url)(doFetch).imap(Some(_))
   }
 
-  private def doFetch(url: String): Future[EmbedlyArticle] = {
+  private def doFetch(url: String)(implicit ec: ExecutionContext): Future[EmbedlyArticle] = {
     val watch = Stopwatch(s"Fetching Embedly content for $url")
     val request = {
       val embedlyUrl = embedlyExtractAPI(url)

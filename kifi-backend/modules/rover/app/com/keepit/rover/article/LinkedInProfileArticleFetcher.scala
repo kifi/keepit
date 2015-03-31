@@ -14,15 +14,14 @@ import scala.concurrent.{ Future, ExecutionContext }
 class LinkedInProfileArticleFetcher @Inject() (
     articleStore: RoverArticleStore,
     documentFetcher: RoverDocumentFetcher,
-    clock: Clock,
-    implicit val executionContext: ExecutionContext) extends ArticleFetcher[LinkedInProfileArticle] with Logging {
+    clock: Clock) extends ArticleFetcher[LinkedInProfileArticle] with Logging {
 
-  def fetch(request: ArticleFetchRequest[LinkedInProfileArticle]): Future[Option[LinkedInProfileArticle]] = {
+  def fetch(request: ArticleFetchRequest[LinkedInProfileArticle])(implicit ec: ExecutionContext): Future[Option[LinkedInProfileArticle]] = {
     val futureFetchedArticle = doFetch(request.url, request.lastFetchedAt)
     ArticleFetcher.resolveAndCompare(articleStore)(futureFetchedArticle, request.latestArticleKey, ArticleFetcher.defaultSimilarityCheck)
   }
 
-  def doFetch(url: String, ifModifiedSince: Option[DateTime]): Future[FetchResult[LinkedInProfileArticle]] = {
+  def doFetch(url: String, ifModifiedSince: Option[DateTime])(implicit ec: ExecutionContext): Future[FetchResult[LinkedInProfileArticle]] = {
     documentFetcher.fetchJsoupDocument(url, ifModifiedSince).map { result =>
       result.map { doc =>
         val content = LinkedInProfileContent(

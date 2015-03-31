@@ -14,15 +14,14 @@ import scala.concurrent.{ Future, ExecutionContext }
 class DefaultArticleFetcher @Inject() (
     articleStore: RoverArticleStore,
     documentFetcher: RoverDocumentFetcher,
-    clock: Clock,
-    implicit val executionContext: ExecutionContext) extends ArticleFetcher[DefaultArticle] with Logging {
+    clock: Clock) extends ArticleFetcher[DefaultArticle] with Logging {
 
-  def fetch(request: ArticleFetchRequest[DefaultArticle]): Future[Option[DefaultArticle]] = {
+  def fetch(request: ArticleFetchRequest[DefaultArticle])(implicit ec: ExecutionContext): Future[Option[DefaultArticle]] = {
     val futureFetchedArticle = doFetch(request.url, request.lastFetchedAt)
     ArticleFetcher.resolveAndCompare(articleStore)(futureFetchedArticle, request.latestArticleKey, ArticleFetcher.defaultSimilarityCheck)
   }
 
-  private def doFetch(url: String, ifModifiedSince: Option[DateTime]): Future[FetchResult[DefaultArticle]] = {
+  private def doFetch(url: String, ifModifiedSince: Option[DateTime])(implicit ec: ExecutionContext): Future[FetchResult[DefaultArticle]] = {
     documentFetcher.fetchTikaDocument(url, ifModifiedSince).map { result =>
       result.map { doc =>
         val content = DefaultContent(
