@@ -37,7 +37,6 @@ class TopUriSeedIngestionHelper @Inject() (
   }
 
   def processUriScores(uriId: Id[NormalizedURI], score: Float, userId: Id[User])(implicit session: RWSession): Unit = {
-    log.info(s"[graph ingest] $uriId $userId")
     rawSeedsRepo.getByUriIdAndUserId(uriId, Some(userId)) match {
       case Some(seedItem) => {
         rawSeedsRepo.save(seedItem.copy(
