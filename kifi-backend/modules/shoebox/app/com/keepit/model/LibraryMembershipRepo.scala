@@ -20,7 +20,6 @@ import scala.concurrent.duration.FiniteDuration
 
 @ImplementedBy(classOf[LibraryMembershipRepoImpl])
 trait LibraryMembershipRepo extends Repo[LibraryMembership] with RepoWithDelete[LibraryMembership] with SeqNumberFunction[LibraryMembership] {
-  def getIdsWithLibraryId(libraryId: Id[Library])(implicit session: RSession): Seq[Id[LibraryMembership]]
   def getWithLibraryId(libraryId: Id[Library], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Seq[LibraryMembership]
   def getWithUserId(userId: Id[User], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Seq[LibraryMembership]
   def getLibrariesWithWriteAccess(userId: Id[User])(implicit session: RSession): Set[Id[Library]]
@@ -112,10 +111,6 @@ class LibraryMembershipRepoImpl @Inject() (
       case None => getWithLibraryIdCompiled(libraryId).list
       case Some(exclude) => getWithLibraryIdWithExcludeCompiled(libraryId, exclude).list
     }
-  }
-
-  def getIdsWithLibraryId(libraryId: Id[Library])(implicit session: RSession): Seq[Id[LibraryMembership]] = {
-    (for (row <- rows if row.libraryId === libraryId) yield row.id).list
   }
 
   private val getWithUserIdCompiled = Compiled { (userId: Column[Id[User]]) =>
