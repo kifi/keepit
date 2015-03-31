@@ -43,7 +43,7 @@ class WordCountCommanderImpl @Inject() (
   }
 
   private def getFromArticleStore(id: Id[NormalizedURI]): Option[Int] = {
-    articleStore.get(id).map { article =>
+    articleStore.syncGet(id).map { article =>
       val wc = wordCount(article.content)
       updateCache(id, wc)
       log.info(s"get from article store. set word count cache for ${id.id}: $wc")

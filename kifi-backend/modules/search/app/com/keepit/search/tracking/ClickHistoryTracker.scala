@@ -51,7 +51,7 @@ class S3ClickHistoryStoreImpl(val bucketName: S3Bucket, val amazonS3Client: Amaz
     this
   }
 
-  override def get(id: Id[User]): Option[MultiHashFilter[ClickedURI]] = cache.getOrElseOpt(ClickHistoryUserIdKey(id))(super.get(id))
+  override def syncGet(id: Id[User]): Option[MultiHashFilter[ClickedURI]] = cache.getOrElseOpt(ClickHistoryUserIdKey(id))(super.syncGet(id))
 }
 
 case class ClickHistoryUserIdKey(userId: Id[User]) extends Key[MultiHashFilter[ClickedURI]] {

@@ -172,7 +172,7 @@ class ABookController @Inject() (
             case _ => throw new IllegalStateException(s"[getContactsRawInfo($userId, $origin)] rawInfoLoc not set for $abookInfo")
           }
         )
-        val stored = s3.get(key)
+        val stored = s3.syncGet(key)
         log.info(s"userId=$userId origin=$origin stored=$stored")
         Json.toJson[ABookRawInfo](stored.getOrElse(ABookRawInfo.EMPTY))
       }

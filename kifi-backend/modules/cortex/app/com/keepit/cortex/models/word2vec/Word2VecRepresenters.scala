@@ -21,7 +21,7 @@ case class RichWord2VecURIRepresenter @Inject() (
 
   private def isDefinedAt(article: Article): Boolean = article.contentLang == Some(Lang("en"))
   private def toDocument(article: Article) = Document(TextTokenizer.LowerCaseTokenizer.tokenize(article.content))
-  private def getArticle(uri: NormalizedURI): Option[Article] = articleStore.get(uri.id.get)
+  private def getArticle(uri: NormalizedURI): Option[Article] = articleStore.syncGet(uri.id.get)
 
   override def genFeatureAndWordCount(uri: NormalizedURI): (Option[RichWord2VecURIFeature], Int) = {
     getArticle(uri) match {

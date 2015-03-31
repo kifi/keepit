@@ -18,22 +18,22 @@ case class VersionedStoreKey[K, M <: StatModel](key: K, version: ModelVersion[M]
 trait VersionedStore[K, M <: StatModel, V <: Versionable[M]] {
   protected def toVersionedKey(k: K, v: ModelVersion[M]): VersionedStoreKey[K, M] = VersionedStoreKey(k, v)
 
-  def get(key: K, version: ModelVersion[M]): Option[V]
+  def syncGet(key: K, version: ModelVersion[M]): Option[V]
 
   def +=(key: K, version: ModelVersion[M], value: V): this.type
 
   def -=(key: K, version: ModelVersion[M]): this.type
 
-  def batchGet(keys: Seq[K], version: ModelVersion[M]): Seq[Option[V]] = {
-    keys.par.map { k => get(k, version) }.seq
+  def syncBatchGet(keys: Seq[K], version: ModelVersion[M]): Seq[Option[V]] = {
+    keys.par.map { k => syncGet(k, version) }.seq
   }
 }
 
 trait VersionedS3Store[K, M <: StatModel, V <: Versionable[M]] extends VersionedStore[K, M, V] with S3ObjectStore[VersionedStoreKey[K, M], V] {
 
-  override def get(key: K, version: ModelVersion[M]): Option[V] = {
+  override def syncGet(key: K, version: ModelVersion[M]): Option[V] = {
     val vkey = toVersionedKey(key, version)
-    super.get(vkey)
+    super.syncGet(vkey)
   }
 
   override def +=(key: K, version: ModelVersion[M], value: V) = {
@@ -48,9 +48,9 @@ trait VersionedS3Store[K, M <: StatModel, V <: Versionable[M]] extends Versioned
 }
 
 trait VersionedInMemoryStore[K, M <: StatModel, V <: Versionable[M]] extends VersionedStore[K, M, V] with InMemoryObjectStore[VersionedStoreKey[K, M], V] {
-  override def get(key: K, version: ModelVersion[M]): Option[V] = {
+  override def syncGet(key: K, version: ModelVersion[M]): Option[V] = {
     val vkey = toVersionedKey(key, version)
-    super.get(vkey)
+    super.syncGet(vkey)
   }
 
   override def +=(key: K, version: ModelVersion[M], value: V) = {

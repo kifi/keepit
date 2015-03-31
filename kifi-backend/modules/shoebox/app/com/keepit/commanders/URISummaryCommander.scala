@@ -248,7 +248,7 @@ class URISummaryCommander @Inject() (
   }
 
   def getStoredEmbedlyKeywords(id: Id[NormalizedURI]): Seq[EmbedlyKeyword] = {
-    embedlyStore.get(id) match {
+    embedlyStore.syncGet(id) match {
       case Some(info) => info.info.keywords.sortBy(-1 * _.score)
       case None => Seq()
     }
@@ -256,7 +256,7 @@ class URISummaryCommander @Inject() (
 
   def getArticleKeywords(id: Id[NormalizedURI]): Seq[String] = {
     val rv = for {
-      article <- articleStore.get(id)
+      article <- articleStore.syncGet(id)
       keywords <- article.keywords
     } yield {
       keywords.toLowerCase.split(" ").filter { x => !x.isEmpty && x.forall(_.isLetterOrDigit) }

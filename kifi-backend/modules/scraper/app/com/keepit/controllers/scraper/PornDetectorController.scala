@@ -30,7 +30,7 @@ class PornDetectorController @Inject() (
   def whitelist() = Action(parse.tolerantJson) { request =>
     val whitelist = (request.body \ "whitelist").as[String]
     val tokens = PornDetectorUtil.tokenize(whitelist)
-    val model = store.get(FILE_NAME).get
+    val model = store.syncGet(FILE_NAME).get
     val likelihood = mutable.Map() ++ model.likelihood
     var cleaned = ""
     tokens.foreach { t =>

@@ -6,9 +6,7 @@ import com.keepit.common.time._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.model.NormalizedURIStates._
 import com.keepit.model._
-import com.keepit.scraper.FakeArticleStore
-import com.keepit.search.Article
-import com.keepit.search.Lang
+import com.keepit.search.{ InMemoryArticleStoreImpl, Article, Lang }
 import com.keepit.search.engine.parser.KQueryExpansion
 import com.keepit.search.engine.parser._
 import com.keepit.search.test.SearchTestInjector
@@ -41,7 +39,7 @@ class ArticleIndexerTest extends Specification with SearchTestInjector {
     implicit val inj = injector
     val fakeShoeboxServiceClient = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
     val ramDir = new VolatileIndexDirectory()
-    val store = new FakeArticleStore()
+    val store = new InMemoryArticleStoreImpl()
     val uriIdArray = new Array[Long](3)
     var indexer = new StandaloneArticleIndexer(ramDir, store, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
 

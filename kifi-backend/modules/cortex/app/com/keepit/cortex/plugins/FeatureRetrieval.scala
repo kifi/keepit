@@ -13,24 +13,24 @@ abstract class FeatureRetrieval[K, T <: ModelWithSeqNumber[T], M <: StatModel, F
   protected def genFeatureKey(datum: T): K
   private def getFeatureStoreSeq(version: ModelVersion[M]): FeatureStoreSequenceNumber[T, M] = {
     val commitKey = CommitInfoKey[T, M](version)
-    commitInfoStore.get(commitKey) match {
+    commitInfoStore.syncGet(commitKey) match {
       case Some(info) => info.seq
       case None => FeatureStoreSequenceNumber[T, M](-1L)
     }
   }
 
   def getByKey(key: K, version: ModelVersion[M]): Option[FT] = {
-    featureStore.get(key, version)
+    featureStore.syncGet(key, version)
   }
 
   def getByKeys(keys: Seq[K], version: ModelVersion[M]): Seq[Option[FT]] = {
-    featureStore.batchGet(keys, version)
+    featureStore.syncBatchGet(keys, version)
   }
 
   private def getFeatureForEntities(entities: Seq[T], version: ModelVersion[M]): Seq[(T, FT)] = {
     val keys = entities.map { genFeatureKey(_) }
     val start = System.currentTimeMillis
-    val values = featureStore.batchGet(keys, version)
+    val values = featureStore.syncBatchGet(keys, version)
     val ret = (entities zip values).filter(_._2.isDefined).map { case (ent, valOpt) => (ent, valOpt.get) }
 
     log.info(s"batch retrieved ${ret.size}/${keys.size}  objects in ${(System.currentTimeMillis - start) / 1000f} seconds")
