@@ -39,16 +39,15 @@ object YoutubeArticleFetcher {
 class YoutubeArticleFetcher @Inject() (
     articleStore: RoverArticleStore,
     documentFetcher: RoverDocumentFetcher,
-    clock: Clock,
-    implicit val executionContext: ExecutionContext) extends ArticleFetcher[YoutubeArticle] with Logging {
+    clock: Clock) extends ArticleFetcher[YoutubeArticle] with Logging {
   import YoutubeArticleFetcher._
 
-  def fetch(request: ArticleFetchRequest[YoutubeArticle]): Future[Option[YoutubeArticle]] = {
+  def fetch(request: ArticleFetchRequest[YoutubeArticle])(implicit ec: ExecutionContext): Future[Option[YoutubeArticle]] = {
     val futureFetchedArticle = doFetch(request.url, request.lastFetchedAt)
     ArticleFetcher.resolveAndCompare(articleStore)(futureFetchedArticle, request.latestArticleKey, ArticleFetcher.defaultSimilarityCheck)
   }
 
-  private def doFetch(url: String, ifModifiedSince: Option[DateTime]): Future[FetchResult[YoutubeArticle]] = {
+  private def doFetch(url: String, ifModifiedSince: Option[DateTime])(implicit ec: ExecutionContext): Future[FetchResult[YoutubeArticle]] = {
     documentFetcher.fetchJsoupDocument(url, ifModifiedSince).flatMap { result =>
       result.flatMap { doc =>
         getVideoContent(doc).imap { videoContent =>
@@ -70,7 +69,7 @@ class YoutubeArticleFetcher @Inject() (
     }
   }
 
-  private def getVideoContent(doc: JsoupDocument): Future[YoutubeVideo] = {
+  private def getVideoContent(doc: JsoupDocument)(implicit ec: ExecutionContext): Future[YoutubeVideo] = {
     val futureTracks = getTracks(doc)
     val headline = Option(doc.doc.getElementById("watch-headline-title")).map(_.text).filter(_.nonEmpty)
     val description = doc.doc.select("#watch-description-text .content").text
@@ -89,7 +88,7 @@ class YoutubeArticleFetcher @Inject() (
     }
   }
 
-  private def getTracks(doc: JsoupDocument): Future[Seq[YoutubeTrack]] = {
+  private def getTracks(doc: JsoupDocument)(implicit ec: ExecutionContext): Future[Seq[YoutubeTrack]] = {
     getTTSParameters(doc) match {
       case None => Future.successful(Seq.empty)
       case Some(ttsParameters) =>
@@ -127,7 +126,7 @@ class YoutubeArticleFetcher @Inject() (
     ttsUrlPattern.findFirstIn(script).map { case ttsUrlPattern(url) => url.replaceAllLiterally("\\/" -> "/", "\\u0026" -> "&") }
   }
 
-  private def fetchTrackList(ttsParameters: Seq[Param]): Future[FetchResult[Seq[YoutubeTrackInfo]]] = {
+  private def fetchTrackList(ttsParameters: Seq[Param])(implicit ec: ExecutionContext): Future[FetchResult[Seq[YoutubeTrackInfo]]] = {
     documentFetcher.fetchJsoupDocument(trackListUrl(ttsParameters)).map { result =>
       result.map { doc =>
         doc.doc.getElementsByTag("track").map(parseTrackElement)
@@ -145,7 +144,7 @@ class YoutubeArticleFetcher @Inject() (
     kind = Option(track.attr("kind"))
   )
 
-  private def fetchTrack(trackInfo: YoutubeTrackInfo, ttsParameters: Seq[Param]): Future[FetchResult[YoutubeTrack]] = {
+  private def fetchTrack(trackInfo: YoutubeTrackInfo, ttsParameters: Seq[Param])(implicit ec: ExecutionContext): Future[FetchResult[YoutubeTrack]] = {
     documentFetcher.fetchJsoupDocument(trackUrl(trackInfo, ttsParameters)).map { result =>
       result.map { doc =>
         val closedCaptions = StringEscapeUtils.unescapeXml(doc.doc.getElementsByTag("text").map(_.text).mkString(" "))

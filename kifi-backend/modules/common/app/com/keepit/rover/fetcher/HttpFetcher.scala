@@ -70,7 +70,7 @@ object FetchContext {
 class HttpInputStream(input: InputStream) extends FilterInputStream(input)
 
 trait HttpFetcher {
-  def fetch[A](request: FetchRequest)(f: FetchResult[HttpInputStream] => A): Future[A]
+  def fetch[A](request: FetchRequest)(f: FetchResult[HttpInputStream] => A)(implicit ec: ExecutionContext): Future[A]
 }
 
 case class InvalidFetchRequestException(request: FetchRequest, cause: Throwable) extends Throwable(s"$request failed: $cause", cause)

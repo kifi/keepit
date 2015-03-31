@@ -14,7 +14,7 @@ import scala.util.{ Failure, Success }
 case class ArticleFetchRequest[A <: Article](kind: ArticleKind[A], url: String, lastFetchedAt: Option[DateTime], latestArticleKey: Option[ArticleKey[A]])
 
 trait ArticleFetcher[A <: Article] {
-  def fetch(request: ArticleFetchRequest[A]): Future[Option[A]]
+  def fetch(request: ArticleFetchRequest[A])(implicit ec: ExecutionContext): Future[Option[A]]
 }
 
 object ArticleFetcher {
@@ -64,5 +64,5 @@ class ArticleFetcherProvider @Inject() (
     case GithubArticle => githubArticleFetcher
   }
 
-  def fetch[A <: Article](request: ArticleFetchRequest[A]): Future[Option[A]] = get(request.kind).fetch(request)
+  def fetch[A <: Article](request: ArticleFetchRequest[A])(implicit ec: ExecutionContext): Future[Option[A]] = get(request.kind).fetch(request)
 }

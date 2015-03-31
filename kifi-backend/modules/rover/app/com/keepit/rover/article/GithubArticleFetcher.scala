@@ -14,15 +14,14 @@ import scala.concurrent.{ Future, ExecutionContext }
 class GithubArticleFetcher @Inject() (
     articleStore: RoverArticleStore,
     documentFetcher: RoverDocumentFetcher,
-    clock: Clock,
-    implicit val executionContext: ExecutionContext) extends ArticleFetcher[GithubArticle] with Logging {
+    clock: Clock) extends ArticleFetcher[GithubArticle] with Logging {
 
-  def fetch(request: ArticleFetchRequest[GithubArticle]): Future[Option[GithubArticle]] = {
+  def fetch(request: ArticleFetchRequest[GithubArticle])(implicit ec: ExecutionContext): Future[Option[GithubArticle]] = {
     val futureFetchedArticle = doFetch(request.url, request.lastFetchedAt)
     ArticleFetcher.resolveAndCompare(articleStore)(futureFetchedArticle, request.latestArticleKey, ArticleFetcher.defaultSimilarityCheck)
   }
 
-  private def doFetch(url: String, ifModifiedSince: Option[DateTime]): Future[FetchResult[GithubArticle]] = {
+  private def doFetch(url: String, ifModifiedSince: Option[DateTime])(implicit ec: ExecutionContext): Future[FetchResult[GithubArticle]] = {
     documentFetcher.fetchJsoupDocument(url, ifModifiedSince).map { result =>
       result.map { doc =>
         val content = GithubContent(
