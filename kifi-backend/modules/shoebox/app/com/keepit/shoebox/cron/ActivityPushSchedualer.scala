@@ -83,6 +83,7 @@ class ActivityPusher @Inject() (
     notifyPreferenceRepo: UserNotifyPreferenceRepo,
     userPersonaRepo: UserPersonaRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
+    kifiInstallationRepo: KifiInstallationRepo,
     actor: ActorInstance[ActivityPushActor],
     implicit val executionContext: ExecutionContext,
     clock: Clock) extends Logging {
@@ -185,10 +186,24 @@ class ActivityPusher @Inject() (
     }
   }
 
+  def canSendPushForLibraries(installation: KifiInstallation): Boolean = {
+    installation.platform match {
+      case KifiInstallationPlatform.Android =>
+        installation.version.compareIt(KifiAndroidVersion("2.2.4")) >= 0
+      case KifiInstallationPlatform.IPhone =>
+        installation.version.compareIt(KifiIPhoneVersion("2.1.0")) >= 0
+      case _ => throw new Exception(s"Don't know platform for $installation")
+    }
+  }
+
   def getMessage(userId: Id[User]): Option[(PushNotificationMessage, PushNotificationExperiment)] = {
     val experiment = if (Random.nextBoolean()) PushNotificationExperiment.Experiment1 else PushNotificationExperiment.Experiment2
-    val res: Option[PushNotificationMessage] = getLibraryActivityMessage(experiment, userId) orElse getPersonaActivityMessage(experiment, userId)
-    res.map(message => (message, experiment))
+    val latestInstallation = db.readOnlyReplica { implicit s => kifiInstallationRepo.lastUpdatedMobile(userId) }
+    latestInstallation.flatMap { installation =>
+      val libMessage = if (canSendPushForLibraries(installation)) getLibraryActivityMessage(experiment, userId) else None
+      val messageOpt = libMessage orElse getPersonaActivityMessage(experiment, userId)
+      messageOpt.map(message => (message, experiment))
+    }
   }
 
   def getLastActivity(userId: Id[User]): DateTime = {

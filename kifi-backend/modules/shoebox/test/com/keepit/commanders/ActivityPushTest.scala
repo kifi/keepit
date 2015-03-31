@@ -1,9 +1,11 @@
 package com.keepit.commanders
 
 import com.keepit.common.concurrent.FakeExecutionContextModule
+import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.net.UserAgent
 import com.keepit.common.time._
 import com.keepit.eliza.FakeElizaServiceClientModule
-import com.keepit.model.ActivityPushTaskRepo
+import com.keepit.model._
 import com.keepit.shoebox.cron.ActivityPusher
 import com.keepit.test.ShoeboxTestInjector
 
@@ -43,6 +45,52 @@ class ActivityPushTest extends Specification with ShoeboxTestInjector {
           repo.all().size === 6
           repo.getByPushAndActivity(END_OF_TIME, new LocalTime(0, 0, 0), 10).size === 0
         }
+      }
+    }
+    "canSendPushForLibraries iPhone" in {
+      withDb(modules: _*) { implicit injector =>
+        val pusher = inject[ActivityPusher]
+        pusher.canSendPushForLibraries(KifiInstallation(
+          userId = Id[User](1),
+          version = KifiIPhoneVersion("2.1.0"),
+          externalId = ExternalId[KifiInstallation](),
+          userAgent = UserAgent("my iphone"),
+          platform = KifiInstallationPlatform.IPhone)) === true
+        pusher.canSendPushForLibraries(KifiInstallation(
+          userId = Id[User](1),
+          version = KifiIPhoneVersion("1.1.0"),
+          externalId = ExternalId[KifiInstallation](),
+          userAgent = UserAgent("my iphone"),
+          platform = KifiInstallationPlatform.IPhone)) === false
+        pusher.canSendPushForLibraries(KifiInstallation(
+          userId = Id[User](1),
+          version = KifiIPhoneVersion("2.2.0"),
+          externalId = ExternalId[KifiInstallation](),
+          userAgent = UserAgent("my iphone"),
+          platform = KifiInstallationPlatform.IPhone)) === true
+      }
+    }
+    "canSendPushForLibraries Android" in {
+      withDb(modules: _*) { implicit injector =>
+        val pusher = inject[ActivityPusher]
+        pusher.canSendPushForLibraries(KifiInstallation(
+          userId = Id[User](1),
+          version = KifiAndroidVersion("2.2.4"),
+          externalId = ExternalId[KifiInstallation](),
+          userAgent = UserAgent("my Android"),
+          platform = KifiInstallationPlatform.Android)) === true
+        pusher.canSendPushForLibraries(KifiInstallation(
+          userId = Id[User](1),
+          version = KifiAndroidVersion("1.1.0"),
+          externalId = ExternalId[KifiInstallation](),
+          userAgent = UserAgent("my Android"),
+          platform = KifiInstallationPlatform.Android)) === false
+        pusher.canSendPushForLibraries(KifiInstallation(
+          userId = Id[User](1),
+          version = KifiAndroidVersion("2.3.0"),
+          externalId = ExternalId[KifiInstallation](),
+          userAgent = UserAgent("my Android"),
+          platform = KifiInstallationPlatform.Android)) === true
       }
     }
   }
