@@ -4,7 +4,6 @@ import com.google.inject.{ Provides, Singleton }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.plugin.SchedulingProperties
 import com.keepit.rover.fetcher.apache.{ ApacheHttpFetcher, HttpFetchEnforcerConfig }
-import com.keepit.scraper.ScraperSchedulerConfig
 import net.codingwell.scalaguice.ScalaModule
 
 trait HttpFetcherModule extends ScalaModule {
@@ -19,7 +18,7 @@ case class ProdHttpFetcherModule() extends HttpFetcherModule {
 
   @Singleton
   @Provides
-  def httpFetcher(airbrake: AirbrakeNotifier, schedulingProperties: SchedulingProperties, enforcerConfig: HttpFetchEnforcerConfig, scheduler: ScraperSchedulerConfig): ApacheHttpFetcher = {
+  def httpFetcher(airbrake: AirbrakeNotifier, schedulingProperties: SchedulingProperties, enforcerConfig: HttpFetchEnforcerConfig): ApacheHttpFetcher = {
     new ApacheHttpFetcher(
       airbrake,
       userAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8_2) AppleWebKit/537.17 (KHTML, like Gecko) Chrome/24.0.1309.0 Safari/537.17",

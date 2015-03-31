@@ -95,7 +95,7 @@ abstract class FeatureUpdater[K, T, M <: StatModel, FT <: FeatureRepresentation[
 
   protected def getCommitInfoFromStore(): Option[CommitInfo[T, M]] = {
     val key = genCommitInfoKey()
-    commitInfoStore.get(key)
+    commitInfoStore.syncGet(key)
   }
 
   private def commit(seq: FeatureStoreSequenceNumber[T, M]): Unit = {

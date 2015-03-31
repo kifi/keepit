@@ -21,7 +21,7 @@ class EmbedlyCommanderImpl @Inject() (
     clock: Clock) extends EmbedlyCommander {
 
   override def getEmbedlyInfoFromStore(id: Id[NormalizedURI]): Option[EmbedlyInfo] = {
-    embedlyStore.get(id) map { _.info }
+    embedlyStore.syncGet(id) map { _.info }
   }
 
   private def needToCallEmbedly(info: StoredEmbedlyInfo): Boolean = {
@@ -40,7 +40,7 @@ class EmbedlyCommanderImpl @Inject() (
   }
 
   override def fetchEmbedlyInfo(id: Id[NormalizedURI], url: String): Future[Option[EmbedlyInfo]] = {
-    embedlyStore.get(id) match {
+    embedlyStore.syncGet(id) match {
       case Some(storedInfo) if (!needToCallEmbedly(storedInfo)) => Future.successful(Some(storedInfo.info))
       case _ => fetchAndPersistEmbedlyInfo(id, url)
     }

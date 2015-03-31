@@ -23,7 +23,7 @@ trait KifiInstallationStore extends ObjectStore[String, KifiInstallationDetails]
 
 class S3KifiInstallationStoreImpl(val bucketName: S3Bucket, val amazonS3Client: AmazonS3, val accessLog: AccessLog, val formatter: Format[KifiInstallationDetails] = S3KifiInstallationStoreImpl.detailsFormat)
     extends S3JsonStore[String, KifiInstallationDetails] with KifiInstallationStore {
-  private val s3Get = (id: String) => super.get(id)
+  private val s3Get = (id: String) => super.syncGet(id)
   private val kifiInstallationKey = "browser_extension"
 
   private val cachedValue = CacheBuilder.newBuilder().concurrencyLevel(1).maximumSize(1).refreshAfterWrite(5, TimeUnit.MINUTES).expireAfterWrite(10, TimeUnit.MINUTES).build(new CacheLoader[String, KifiInstallationDetails] {
@@ -40,7 +40,7 @@ class S3KifiInstallationStoreImpl(val bucketName: S3Bucket, val amazonS3Client: 
     }
   })
 
-  override def get(id: String): Option[KifiInstallationDetails] = {
+  override def syncGet(id: String): Option[KifiInstallationDetails] = {
     Some(cachedValue.get(id))
   }
   def get(): KifiInstallationDetails = cachedValue.get(kifiInstallationKey)
@@ -69,7 +69,7 @@ object S3KifiInstallationStoreImpl {
 
 class InMemoryKifiInstallationStoreImpl extends InMemoryObjectStore[String, KifiInstallationDetails] with KifiInstallationStore {
   private val kifiInstallationKey = "browser_extension"
-  def get(): KifiInstallationDetails = get(kifiInstallationKey).getOrElse(defaultValue)
+  def get(): KifiInstallationDetails = syncGet(kifiInstallationKey).getOrElse(defaultValue)
   def getRaw(): KifiInstallationDetails = get()
   def set(newDetails: KifiInstallationDetails) = {
     super.+=(kifiInstallationKey, newDetails)

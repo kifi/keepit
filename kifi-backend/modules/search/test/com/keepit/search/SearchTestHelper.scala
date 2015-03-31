@@ -10,7 +10,6 @@ import com.keepit.model._
 import com.keepit.model.NormalizedURI
 import com.keepit.model.NormalizedURIStates._
 import com.keepit.model.User
-import com.keepit.scraper.FakeArticleStore
 import com.keepit.search.index.article.ArticleIndexer
 import com.keepit.search.engine.{ LibraryQualityEvaluator, SearchFactory }
 import com.keepit.search.index.graph.collection._
@@ -103,7 +102,7 @@ trait SearchTestHelper { self: SearchTestInjector =>
   }
 
   def mkStore(uris: Seq[NormalizedURI]) = {
-    uris.zipWithIndex.foldLeft(new FakeArticleStore) {
+    uris.zipWithIndex.foldLeft(new InMemoryArticleStoreImpl()) {
       case (store, (uri, idx)) =>
         store += (uri.id.get -> mkArticle(uri.id.get, "title%d".format(idx), "content%d alldocs documents".format(idx)))
         store

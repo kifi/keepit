@@ -28,7 +28,7 @@ case class CortexProdModelModule() extends CortexModelModule with Logging {
   @Provides
   def ldaWordRepresenter(ldaStore: LDAModelStore): MultiVersionedLDAWordRepresenter = {
     val wordReps = ModelVersions.availableLDAVersions.map { version =>
-      val lda = ldaStore.get(version).get
+      val lda = ldaStore.syncGet(version).get
       LDAWordRepresenter(version, lda)
     }
     MultiVersionedLDAWordRepresenter(wordReps: _*)
@@ -53,7 +53,7 @@ case class CortexProdModelModule() extends CortexModelModule with Logging {
   def word2vecWordRepresenter(store: Word2VecStore): Word2VecWordRepresenter = {
     log.info("loading word2vec from model store")
     val version = ModelVersions.word2vecVersion
-    val word2vec = store.get(version).get
+    val word2vec = store.syncGet(version).get
     Word2VecWordRepresenter(version, word2vec)
   }
 }
@@ -74,7 +74,7 @@ case class CortexDevModelModule() extends CortexModelModule() {
   @Provides
   def ldaWordRepresenter(ldaStore: LDAModelStore): MultiVersionedLDAWordRepresenter = {
     val wordReps = ModelVersions.availableLDAVersions.map { version =>
-      val lda = ldaStore.get(version).get
+      val lda = ldaStore.syncGet(version).get
       LDAWordRepresenter(version, lda)
     }
     MultiVersionedLDAWordRepresenter(wordReps: _*)
@@ -98,7 +98,7 @@ case class CortexDevModelModule() extends CortexModelModule() {
   @Provides
   def word2vecWordRepresenter(store: Word2VecStore): Word2VecWordRepresenter = {
     val version = ModelVersions.word2vecVersion
-    val word2vec = store.get(version).get
+    val word2vec = store.syncGet(version).get
     Word2VecWordRepresenter(version, word2vec)
   }
 

@@ -172,7 +172,7 @@ class AdminUserController @Inject() (
       (user, socialUserInfos, socialConnections)
     }
     val rawInfos = socialUserInfos map { info =>
-      socialUserRawInfoStore.get(info.id)
+      socialUserRawInfoStore.syncGet(info.id)
     }
     for {
       abookInfos <- abookInfoF

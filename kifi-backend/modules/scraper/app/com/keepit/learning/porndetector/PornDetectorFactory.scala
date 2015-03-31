@@ -15,7 +15,7 @@ class PornDetectorFactory @Inject() (
     model
   }
 
-  private def load() = store.get(FILE_NAME).get
+  private def load() = store.syncGet(FILE_NAME).get
 
   def apply(): PornDetector = {
     new NaiveBayesPornDetector(model.likelihood)

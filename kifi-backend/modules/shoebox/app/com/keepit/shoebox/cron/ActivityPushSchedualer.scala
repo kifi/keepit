@@ -1,5 +1,7 @@
 package com.keepit.shoebox.cron
 
+import com.keepit.common.social.BasicUserRepo
+
 import scala.concurrent.ExecutionContext
 import java.util.concurrent.atomic.AtomicInteger
 import scala.concurrent.{ Future, Promise }
@@ -24,7 +26,7 @@ import scala.util.Random
 
 trait PushNotificationMessage
 case class GeneralActivityPushNotificationMessage(message: String) extends PushNotificationMessage
-case class LibraryPushNotificationMessage(message: String, id: Id[Library]) extends PushNotificationMessage
+case class LibraryPushNotificationMessage(message: String, id: Id[Library], libraryUrl: String) extends PushNotificationMessage
 
 object PushActivities
 object CreatePushActivityEntities
@@ -77,6 +79,7 @@ class ActivityPusher @Inject() (
     libraryRepo: LibraryRepo,
     keepRepo: KeepRepo,
     userRepo: UserRepo,
+    basicUserRepo: BasicUserRepo,
     notifyPreferenceRepo: UserNotifyPreferenceRepo,
     userPersonaRepo: UserPersonaRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
@@ -116,7 +119,7 @@ class ActivityPusher @Inject() (
     val res: Future[Int] = message match {
       case libMessage: LibraryPushNotificationMessage =>
         log.info(s"pushing library activity update to ${activity.userId} [$experimant]: $message")
-        elizaServiceClient.sendLibraryPushNotification(activity.userId, libMessage.message, libMessage.id, experimant)
+        elizaServiceClient.sendLibraryPushNotification(activity.userId, libMessage.message, libMessage.id, libMessage.libraryUrl, experimant)
       case generalMessage: GeneralActivityPushNotificationMessage =>
         log.info(s"pushing general activity update to ${activity.userId} [$experimant]: $message")
         elizaServiceClient.sendGeneralPushNotification(activity.userId, generalMessage.message, experimant)
@@ -153,7 +156,8 @@ class ActivityPusher @Inject() (
           if (experiment == PushNotificationExperiment.Experiment1) s"""New keeps in "${lib.name.abbreviate(25)}""""
           else s""""${lib.name.abbreviate(25)}" library has updates"""
         }
-        LibraryPushNotificationMessage(message, lib.id.get)
+        val libraryUrl = "https://www.kifi.com" + Library.formatLibraryPathUrlEncoded(basicUserRepo.load(lib.ownerId).username, lib.slug)
+        LibraryPushNotificationMessage(message, lib.id.get, libraryUrl)
       }
     }
   }

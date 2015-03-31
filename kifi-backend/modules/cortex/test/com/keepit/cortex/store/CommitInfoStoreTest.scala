@@ -39,10 +39,10 @@ class CommitInfoStoreTest extends Specification {
       val key = CommitInfoKey[FOO, FakeModel](version)
 
       store.+=(key, info)
-      store.get(key).get === info
+      store.syncGet(key).get === info
 
       val key2 = CommitInfoKey[FOO, FakeModel](ModelVersion[FakeModel](42))
-      store.get(key2) === None
+      store.syncGet(key2) === None
 
     }
   }

@@ -81,23 +81,32 @@ private[mail] class MailSenderActor @Inject() (
     case m => throw new UnsupportedActorMessage(m)
   }
 
+  private val sendAnywayCategories = Set(
+    NotificationCategory.User.RESET_PASSWORD,
+    NotificationCategory.User.APPROVED
+  ).map(c => ElectronicMailCategory(c.category))
   def takeOutOptOuts(mail: ElectronicMail) = { // say that 3 times fast
-    val (newTo, newCC) = db.readOnlyReplica { implicit session =>
-      val newTo = mail.to.filterNot(addressHasOptedOut(_, mail.category))
-      val newCC = mail.cc.filterNot(addressHasOptedOut(_, mail.category))
-      (newTo, newCC)
+    mail.category match {
+      case sendAnyway if sendAnywayCategories.contains(sendAnyway) =>
+        mail
+      case _ =>
+        val (newTo, newCC) = db.readOnlyReplica { implicit session =>
+          val newTo = mail.to.filterNot(addressHasOptedOut(_, mail.category))
+          val newCC = mail.cc.filterNot(addressHasOptedOut(_, mail.category))
+          (newTo, newCC)
+        }
+        if (newTo.toSet != mail.to.toSet || newCC.toSet != mail.cc.toSet) {
+          if (newTo.isEmpty) {
+            db.readWrite { implicit session =>
+              mailRepo.save(mail.copy(state = ElectronicMailStates.OPT_OUT))
+            }
+          } else {
+            db.readWrite { implicit session =>
+              mailRepo.save(mail.copy(to = newTo, cc = newCC))
+            }
+          }
+        } else mail
     }
-    if (newTo.toSet != mail.to.toSet || newCC.toSet != mail.cc.toSet) {
-      if (newTo.isEmpty) {
-        db.readWrite { implicit session =>
-          mailRepo.save(mail.copy(state = ElectronicMailStates.OPT_OUT))
-        }
-      } else {
-        db.readWrite { implicit session =>
-          mailRepo.save(mail.copy(to = newTo, cc = newCC))
-        }
-      }
-    } else mail
   }
 
   def addressHasOptedOut(address: EmailAddress, category: ElectronicMailCategory)(implicit session: RSession) = {

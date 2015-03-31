@@ -38,7 +38,7 @@ class AdminSearchController @Inject() (
 
   def articleSearchResult(id: ExternalId[ArticleSearchResult]) = AdminUserPage { implicit request =>
 
-    articleSearchResultStore.get(id) match {
+    articleSearchResultStore.syncGet(id) match {
       case Some(result) =>
         val metas = db.readOnlyMaster { implicit s =>
           result.hits map { hit => ArticleSearchResultHitMeta(uriRepo.get(hit.uriId), hit) }
