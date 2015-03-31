@@ -103,8 +103,9 @@ class LibraryChecker @Inject() (
       val libraries = libraryRepo.page(index, pageSize, Set(LibraryStates.INACTIVE))
       val libraryMap = libraries.map(lib => lib.id.get -> lib).toMap
       val allLibraryIds = libraryMap.keySet
-      val numMembersMap = libraryMembershipRepo.countWithAccessByLibraryId(allLibraryIds, LibraryAccess.READ_ONLY).map { case (libId, numFollowers) =>
-        (libId, numFollowers + 1) // all read_only accesses + owner
+      val numMembersMap = libraryMembershipRepo.countWithAccessByLibraryId(allLibraryIds, LibraryAccess.READ_ONLY).map {
+        case (libId, numFollowers) =>
+          (libId, numFollowers + 1) // all read_only accesses + owner
       }
       (libraryMap, numMembersMap)
     }

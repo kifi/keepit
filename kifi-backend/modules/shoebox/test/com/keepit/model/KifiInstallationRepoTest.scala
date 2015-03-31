@@ -93,7 +93,7 @@ class KifiInstallationRepoTest extends Specification with ShoeboxTestInjector {
       withDb(FakeClockModule()) { implicit injector =>
         val now = new DateTime(2015, 1, 1, 1, 1, 1, DEFAULT_DATE_TIME_ZONE)
         val clock = inject[FakeClock]
-        val (user1, user2) = db.readWrite { implicit s =>
+        val (user1, user2, kin) = db.readWrite { implicit s =>
           val user1 = userRepo.save(User(firstName = "Dafna", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
           val user2 = userRepo.save(User(firstName = "Shanee", lastName = "Smith", username = Username("test2"), normalizedUsername = "test2"))
           clock.setTimeValue(now.minusDays(4))
@@ -111,7 +111,7 @@ class KifiInstallationRepoTest extends Specification with ShoeboxTestInjector {
             userAgent = UserAgent("my phone"),
             platform = KifiInstallationPlatform.IPhone))
           clock.setTimeValue(now.plusDays(2))
-          installationRepo.save(KifiInstallation(
+          val kin = installationRepo.save(KifiInstallation(
             userId = user1.id.get,
             version = KifiIPhoneVersion("1.1.2"),
             externalId = ExternalId[KifiInstallation](),
@@ -124,11 +124,13 @@ class KifiInstallationRepoTest extends Specification with ShoeboxTestInjector {
             externalId = ExternalId[KifiInstallation](),
             userAgent = UserAgent("my browser"),
             platform = KifiInstallationPlatform.Extension))
-          (user1, user2)
+          (user1, user2, kin)
         }
         db.readOnlyMaster { implicit s =>
-          inject[KifiInstallationRepo].lastUpdate(user2.id.get) === None
-          inject[KifiInstallationRepo].lastUpdate(user1.id.get) === Some(now)
+          inject[KifiInstallationRepo].lastUpdateMobile(user2.id.get) === None
+          inject[KifiInstallationRepo].lastUpdateMobile(user1.id.get) === Some(now)
+          inject[KifiInstallationRepo].lastUpdatedMobile(user2.id.get) === None
+          inject[KifiInstallationRepo].lastUpdatedMobile(user1.id.get) === Some(kin)
         }
       }
     }
