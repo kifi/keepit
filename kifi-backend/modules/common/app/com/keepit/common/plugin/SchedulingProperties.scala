@@ -26,7 +26,6 @@ class SchedulingPropertiesImpl(serviceDiscovery: ServiceDiscovery, val enabled: 
   def isRunningFor(members: Seq[ServiceInstance], me: ServiceInstance, taskName: String): Boolean = {
     val offline = members.filter(_.remoteService.status == ServiceStatus.OFFLINE)
     if (offline.isEmpty) {
-      println("if there's no offline service, consider all UP cluster")
       val healthy = members.filter(_.isHealthy)
       if (healthy.nonEmpty) {
         isRunningFor(taskName, me, healthy)
