@@ -1,12 +1,12 @@
 package com.keepit.rover.manager
 
-import com.google.inject.Inject
+import com.google.inject.{ Inject }
+import com.keepit.common.actor.ActorInstance
 import com.keepit.common.akka.{ UnsupportedActorMessage, FortyTwoActor }
-import com.keepit.common.db.{ State, SequenceNumber }
+import com.keepit.common.db.{ SequenceNumber }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.model.NormalizedURIStates._
 import com.keepit.model.{ Name, IndexableUri, SystemValueRepo, NormalizedURI }
 import com.keepit.rover.model.ArticleInfoRepo
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -29,6 +29,7 @@ class RoverIngestionActor @Inject() (
     systemValueRepo: SystemValueRepo,
     shoebox: ShoeboxServiceClient,
     articlePolicy: ArticleFetchingPolicy,
+    fetchSchedulingActor: ActorInstance[RoverFetchSchedulingActor],
     airbrake: AirbrakeNotifier,
     implicit val executionContext: ExecutionContext) extends FortyTwoActor(airbrake) with Logging {
 
@@ -85,5 +86,6 @@ class RoverIngestionActor @Inject() (
       systemValueRepo.setSequenceNumber(roverNormalizedUriSeq, maxSeq)
     }
     log.info(s"Ingested ${uris.length} uri updates")
+    fetchSchedulingActor.ref ! RoverFetchSchedulingActor.ScheduleFetchTasks
   }
 }

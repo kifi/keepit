@@ -1,6 +1,6 @@
 package com.keepit.rover.manager
 
-import com.google.inject.Inject
+import com.google.inject.{ Singleton, Inject }
 import com.keepit.common.akka.{ UnsupportedActorMessage, FortyTwoActor }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
