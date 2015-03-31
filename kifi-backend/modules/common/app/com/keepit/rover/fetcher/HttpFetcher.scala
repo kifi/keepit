@@ -73,5 +73,5 @@ trait HttpFetcher {
   def fetch[A](request: FetchRequest)(f: FetchResult[HttpInputStream] => A): Future[A]
 }
 
-case class InvalidFetchRequestException(request: FetchRequest, cause: Throwable) extends Throwable(s"$request failed", cause)
+case class InvalidFetchRequestException(request: FetchRequest, cause: Throwable) extends Throwable(s"$request failed: $cause", cause)
 case class InvalidFetchResponseException[T](responseInfo: FetchResponseInfo, content: Option[T]) extends Throwable(s"Invalid fetch response: $responseInfo, content: $content")
