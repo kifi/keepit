@@ -76,7 +76,8 @@ class LibraryRecommendationGenerationCommander @Inject() (
 
     val (recos, newContext) = db.readOnlyReplica { implicit session =>
       val recosByTopScore = libraryRecRepo.getRecommendableByTopMasterScore(userId, 1000) map scoreReco
-      val finalSorted = recoSortStrategy.sort(recosByTopScore)
+      val (accepted, _) = idFilter.filter(recosByTopScore, context)((x: LibraryRecoScore) => x.reco.libraryId.id)
+      val finalSorted = recoSortStrategy.sort(accepted)
       val hackySorted = hackySort(finalSorted) // REMOVE THIS LATER
       idFilter.take(hackySorted, context, limit = howManyMax)((x: LibraryRecoScore) => x.reco.libraryId.id)
     }
