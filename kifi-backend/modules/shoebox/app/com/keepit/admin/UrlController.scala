@@ -310,6 +310,32 @@ class UrlController @Inject() (
     Redirect(routes.UrlController.getPatterns)
   }
 
+  def pornDomainFlag() = AdminUserPage { request =>
+    val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
+    val regex = body.get("regex").get
+    val mode = body.get("mode").get
+    val uris = db.readOnlyReplica { implicit s => uriRepo.getByRegex("%" + regex.trim + "%") }
+
+    if (regex.trim.length <= 3) {
+      Ok("Please check input domain")
+    } else {
+      if (mode == "preview") {
+        val msg = "preview of matched uris: \n" + uris.map { _.url }.mkString("\n")
+        Ok(msg.replaceAll("\n", "\n<br>"))
+      } else {
+        uris.grouped(100).foreach { gp =>
+          db.readWrite { implicit s =>
+            gp.foreach {
+              uri => if (uri.restriction.isEmpty) uriRepo.save(uri.copy(restriction = Some(Restriction.ADULT)))
+            }
+          }
+        }
+        val msg = s"${uris.size} uris processed"
+        Ok(msg)
+      }
+    }
+  }
+
   def fixRedirectedUriStates(doIt: Boolean = false) = AdminUserPage { implicit request =>
     val problematicUris = db.readOnlyMaster { implicit session => uriRepo.toBeRemigrated() }
     if (doIt) db.readWrite { implicit session =>

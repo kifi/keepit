@@ -63,10 +63,28 @@
   <button type="submit" class="btn btn-primary" data-loading-text="Saving...">Save</button>
   <button type="reset" class="btn">Clear unsaved changes</button>
 </form>
+
+
+<br><br>
+
+<form id = "mark_domain_porn">
+    <input id = "porn_regex" type = "text" value = "" placeholder="sql regex, e.g. youporn.com">
+    <select id = "mode">
+      <option value = "preview">preview urls</option>
+      <option value = "readWrite">read-write mode</option>
+    </select>
+
+    <button type = "submit">Apply</button>
+
+</form>
+
+<p id = "previewList"></p>
+<br><br>
+
 }
 
 <script>
-$(function() {
+$(document).ready(function() {
   $(".url-patterns")
   .on("keydown keypress keyup mousedown mouseup blur", ".url-pattern,.url-example", updateRow)
   .submit(function(e) {
@@ -99,5 +117,24 @@ $(function() {
       $match.addClass(re.test(url) ? "match-y" : "match-n");
     }
   }
+
+
+  $("#mark_domain_porn").submit(function(event){
+      event.preventDefault();
+      $("#previewList").empty().prepend("Loading...")
+
+      $.post('@com.keepit.controllers.admin.routes.UrlController.pornDomainFlag()',
+        {regex: $("#porn_regex").val(), mode: $("#mode").val()}
+      ).done(done).fail(fail)
+
+      function done(data) { $("#previewList").empty().prepend(data) }
+      function fail() { alert("bad things happened") }
+    })
+
+
+
 });
+
+
+
 </script>
