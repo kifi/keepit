@@ -34,7 +34,10 @@ object EmailAddress {
     }
   }
 
-  implicit val formMapping: Mapping[EmailAddress] = Forms.email.verifying("invalid_email_address", validate(_).isSuccess).transform(validate(_).get, _.address)
+  implicit val formMapping: Mapping[EmailAddress] = {
+    import play.api.data.format.Formats._
+    Forms.of[String].verifying("error.email", validate(_).isSuccess).transform(validate(_).get, _.address)
+  }
 
   // Regex from http://www.whatwg.org/specs/web-apps/current-work/multipage/states-of-the-type-attribute.html
   private val emailRegex = """^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$""".r
