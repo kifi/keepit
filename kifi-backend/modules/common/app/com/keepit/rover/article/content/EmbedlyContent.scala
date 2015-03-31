@@ -103,8 +103,7 @@ object EmbedlyContent {
       ((__ \ 'entities).read[Seq[EmbedlyEntity]] orElse Reads.pure(Seq.empty[EmbedlyEntity])) and
       (__ \ 'favicon_url).readNullable[String] and
       (__ \ 'media).readNullable[EmbedlyMedia]
-    )(ParsedFields.apply)
+    )(ParsedFields.apply _)
   }
-
   implicit val format: Format[EmbedlyContent] = __.format[JsValue].inmap(new EmbedlyContent(_), _.json)
 }
