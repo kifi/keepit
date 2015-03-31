@@ -159,7 +159,7 @@ class UriIntegrityActor @Inject() (
         }
       }
     } else {
-      db.readWrite { implicit s =>
+      db.readWrite(attempts = 3) { implicit s =>
         normUriRepo.get(newUriId) match {
           case uri if uri.state == NormalizedURIStates.INACTIVE || uri.state == NormalizedURIStates.REDIRECTED =>
             normUriRepo.save(uri.copy(state = NormalizedURIStates.ACTIVE, redirect = None, redirectTime = None))
@@ -167,7 +167,7 @@ class UriIntegrityActor @Inject() (
         }
       }
 
-      val urls = db.readWrite { implicit s =>
+      val urls = db.readWrite(attempts = 3) { implicit s =>
         urlRepo.getByNormUri(oldUriId)
       }
       db.readWriteSeq(urls) { (s, url) =>
@@ -181,27 +181,27 @@ class UriIntegrityActor @Inject() (
       db.readWriteSeq(previouslyRedirectedUris) { (s, uri) =>
         normUriRepo.save(uri.withRedirect(newUriId, currentDateTime))(s)
       }
-      db.readWrite { implicit s =>
+      db.readWrite(attempts = 3) { implicit s =>
         val oldUri = normUriRepo.get(oldUriId)
         normUriRepo.save(oldUri.withRedirect(newUriId, currentDateTime))
       }
 
       // retrieve bms by uri is more robust than by url (against cache bugs), in case bm and its url are pointing to different uris
-      val bms = db.readWrite { implicit s =>
+      val bms = db.readOnlyMaster { implicit s =>
         keepRepo.getByUri(oldUriId, excludeState = None)
       }
       // process keeps for each user
       bms.groupBy(_.userId).foreach {
         case (_, keeps) =>
-          db.readWrite { implicit s => handleBookmarks(keeps) }
+          db.readWrite(attempts = 3) { implicit s => handleBookmarks(keeps) }
       }
 
       // some additional sanity check right away!
-      db.readWrite { implicit s =>
+      db.readWrite(attempts = 3) { implicit s =>
         checkIntegrity(newUriId, readOnly = false, hasKnownKeep = bms.size > 0)
       }
 
-      db.readWrite { implicit s =>
+      db.readWrite(attempts = 3) { implicit s =>
         changedUriRepo.saveWithoutIncreSeqnum(change.withState(ChangedURIStates.APPLIED))
       }
     }
