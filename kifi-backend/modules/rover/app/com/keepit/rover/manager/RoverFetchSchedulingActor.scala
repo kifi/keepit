@@ -13,7 +13,7 @@ import scala.concurrent.{ Future, ExecutionContext }
 import scala.util.{ Try, Failure, Success }
 
 object RoverFetchSchedulingActor {
-  val maxBatchSize = 25
+  val maxBatchSize = 15
   val maxQueuedFor = 7 days // todo(Léo): decrease once we've caught up
 
   sealed trait RoverFetchSchedulingActorMessage
