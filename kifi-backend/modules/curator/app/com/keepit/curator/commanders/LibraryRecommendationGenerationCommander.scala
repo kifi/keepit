@@ -133,7 +133,6 @@ class LibraryRecommendationGenerationCommander @Inject() (
 
     private def precomputeRecommendationsForUser(alwaysInclude: Set[Id[Library]], recoGenState: LibraryRecommendationGenerationState): Future[Unit] = {
       if (schedulingProperties.isRunnerFor(CuratorTasks.libraryRecommendationPrecomputation)) {
-        log.info(s"precomputeRecommendationsForUser called userId=$userId seq=${recoGenState.seq}")
         val (candidateLibraries, excludedLibraries, newSeqNum) = getCandidateLibrariesForUser(recoGenState)
 
         // these libraries were excluded, but it's possible they already exist as library recommendations from a previous precompute

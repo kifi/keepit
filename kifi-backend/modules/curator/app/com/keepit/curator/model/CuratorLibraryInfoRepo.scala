@@ -64,7 +64,6 @@ class CuratorLibraryInfoRepoImpl @Inject() (
 
   def getBySeqNum(start: SequenceNumber[CuratorLibraryInfo], maxBatchSize: Int)(implicit session: RSession): Seq[CuratorLibraryInfo] = try {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    log.info(s"getBySeqNum start=$start maxBatchSize=$maxBatchSize")
     val q = if (db.dialect == H2DatabaseDialect) {
       sql"SELECT * FROM curator_library_info WHERE seq > ${start.value} ORDER BY seq LIMIT $maxBatchSize;"
     } else {
