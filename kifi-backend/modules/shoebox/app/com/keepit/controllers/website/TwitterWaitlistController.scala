@@ -30,23 +30,30 @@ class TwitterWaitlistController @Inject() (
       val emailOpt = Try(userEmailAddressRepo.getByUser(request.userId)).toOption
       (twOpt, emailOpt)
     }
+    val fakeFakePos = commander.getFakeWaitlistLength() + 3
+
     (handleOpt, emailOpt) match {
       case (Some(handle), Some(email)) =>
-        commander.getFakeWaitlistPosition(request.userId, handle).map { pos =>
+        commander.getFakeWaitlistPosition(request.userId, handle).map { realFakePos =>
           Ok(Json.obj(
             "email" -> email,
-            "pos" -> pos
+            "pos" -> realFakePos
           ))
         } getOrElse {
-          val pos = commander.getFakeWaitlistLength() + 1
           Ok(Json.obj(
             "email" -> email,
-            "pos" -> pos
+            "pos" -> fakeFakePos
           ))
         }
-      case _ =>
+      case (_, Some(email)) =>
         Ok(Json.obj(
-          "pos" -> -1
+          "email" -> email,
+          "pos" -> fakeFakePos
+        ))
+      case _ =>
+        log.warn(s"Couldn't find email for user, but they want to get on the twitter waitlist. poo? userid ${request.userId}, $handleOpt, $emailOpt")
+        Ok(Json.obj(
+          "pos" -> fakeFakePos
         ))
     }
   }
