@@ -1,6 +1,6 @@
 package com.keepit.rover.manager
 
-import com.google.inject.Inject
+import com.google.inject.{ Singleton, Inject }
 import com.keepit.common.akka.{ UnsupportedActorMessage, FortyTwoActor }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -13,7 +13,7 @@ import scala.concurrent.{ Future, ExecutionContext }
 import scala.util.{ Try, Failure, Success }
 
 object RoverFetchSchedulingActor {
-  val maxBatchSize = 15
+  val maxBatchSize = 15 // low to balance producer / consumer behavior *on leader* (SQS send / receive), increase if we don't care about leader as a consumer.
   val maxQueuedFor = 7 days // todo(Léo): decrease once we've caught up
 
   sealed trait RoverFetchSchedulingActorMessage

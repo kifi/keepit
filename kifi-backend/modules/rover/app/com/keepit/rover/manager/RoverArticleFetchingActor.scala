@@ -16,8 +16,8 @@ import scala.concurrent.{ Future, ExecutionContext }
 import scala.util.{ Failure, Success }
 
 object RoverArticleFetchingActor {
-  val minConcurrentFetchTasks: Int = 100
-  val maxConcurrentFetchTasks: Int = 150
+  val minConcurrentFetchTasks: Int = 300
+  val maxConcurrentFetchTasks: Int = 400
   val lockTimeOut = 10 minutes
   sealed trait RoverFetchingActorMessage
   case object Close extends RoverFetchingActorMessage
