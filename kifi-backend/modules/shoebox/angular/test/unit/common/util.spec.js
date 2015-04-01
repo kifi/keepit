@@ -66,6 +66,15 @@ describe('util', function () {
     });
   });
 
+  describe('util.preventOrphans', function () {
+    it('makes spaces non-breaking near the end', function () {
+      expect(util.preventOrphans('')).toBe('');
+      expect(util.preventOrphans('Just for Men')).toBe('Just for\u00a0Men');
+      expect(util.preventOrphans('HTML Examples (e.g. <b> and &quot;)')).toBe('HTML Examples (e.g.\u00a0<b>\u00a0and\u00a0&quot;)');
+      expect(util.preventOrphans('Useful handpicked marketing and growth articles')).toBe('Useful handpicked marketing and\u00a0growth\u00a0articles');
+    });
+  });
+
   describe('util.linkify', function () {
     it('correctly identifies and linkifies URLs and email addresses', function () {
       expect(util.linkify('')).toBe('');

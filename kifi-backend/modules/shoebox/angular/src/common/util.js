@@ -158,6 +158,15 @@ angular.module('util', [])
         }
         return str;
       },
+      preventOrphans: function (text) {
+        var n = text.length;
+        var i = text.indexOf(' ', n - Math.min(16, n >> 1));  // jshint ignore:line
+        while (i > 0) {
+          text = text.substr(0, i) + '\u00a0' + text.substr(i + 1);
+          i = text.indexOf(' ', i + 1);
+        }
+        return text;
+      },
       htmlEscape: htmlEscape,
       /**
        * Behaves like $location.search({...}). Keys whose values are an empty array will be omitted entirely.
