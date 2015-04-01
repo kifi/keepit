@@ -4,9 +4,14 @@ import com.google.inject.{ Inject, Singleton, ImplementedBy }
 import com.keepit.common.db.slick._
 import com.keepit.common.db.{ ExternalId, State, Id }
 import com.keepit.common.db.slick.DBSession.RSession
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.time.Clock
 import com.keepit.common.net.UserAgent
+import com.keepit.shoebox.cron.ActivityPusher
 import org.joda.time.DateTime
+
+import scala.concurrent.ExecutionContext
+import scala.util.Try
 
 @ImplementedBy(classOf[KifiInstallationRepoImpl])
 trait KifiInstallationRepo extends Repo[KifiInstallation] with ExternalIdColumnFunction[KifiInstallation] {
@@ -18,7 +23,10 @@ trait KifiInstallationRepo extends Repo[KifiInstallation] with ExternalIdColumnF
 }
 
 @Singleton
-class KifiInstallationRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock, val versionCache: ExtensionVersionInstallationIdCache)
+class KifiInstallationRepoImpl @Inject() (
+  val db: DataBaseComponent,
+  val clock: Clock,
+  val versionCache: ExtensionVersionInstallationIdCache)
     extends DbRepo[KifiInstallation] with KifiInstallationRepo with ExternalIdColumnDbFunction[KifiInstallation] {
   import db.Driver.simple._
   import DBSession._
