@@ -70,7 +70,7 @@ private[social] class SocialGraphActor @Inject() (
       }
 
     case FetchUserInfo(socialUserInfoId) =>
-      val socialUserInfo = db.readOnlyReplica { implicit session =>
+      val socialUserInfo = db.readOnlyMaster { implicit session =>
         socialRepo.get(socialUserInfoId)
       }
       fetchUserInfo(socialUserInfo)
