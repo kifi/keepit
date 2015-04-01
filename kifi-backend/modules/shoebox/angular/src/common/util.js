@@ -160,7 +160,8 @@ angular.module('util', [])
       },
       preventOrphans: function (text) {
         var n = text.length;
-        var i = text.indexOf(' ', n - Math.min(16, n >> 1));  // jshint ignore:line
+        var i = text.indexOf(' ', Math.floor(n * .42));
+        i = text.indexOf(' ', Math.max(i + 1, n - 16));
         while (i > 0) {
           text = text.substr(0, i) + '\u00a0' + text.substr(i + 1);
           i = text.indexOf(' ', i + 1);
