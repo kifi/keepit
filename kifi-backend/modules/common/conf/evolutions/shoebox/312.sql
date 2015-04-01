@@ -1,13 +1,10 @@
-# SHOEBOX
+# ELIZA
 
 # --- !Ups
 
-alter table activity_push_task
-    add column next_push datetime NULL;
+alter table device
+    modify column token varchar(64) DEFAULT NULL;
 
-alter table activity_push_task
-    add column backoff bigint(20) NULL;
-
-insert into evolutions (name, description) values('312.sql', 'add next_push and backoff to activity_push_task table');
+insert into evolutions (name, description) values('312.sql', 'alter eliza device repo, make token nullable');
 
 # --- !Downs
