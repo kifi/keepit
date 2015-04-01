@@ -46,8 +46,7 @@ class ElizaController @Inject() (
     val pushNotificationExperiment = (req \ "pushNotificationExperiment").as[PushNotificationExperiment]
     val libraryId = (req \ "libraryId").as[Id[Library]]
     val libraryUrl = (req \ "libraryUrl").as[String]
-    SafeFuture {
-      val deviceCount = messagingCommander.sendLibraryPushNotification(userId, message, libraryId, libraryUrl, pushNotificationExperiment)
+    messagingCommander.sendLibraryPushNotification(userId, message, libraryId, libraryUrl, pushNotificationExperiment).map { deviceCount =>
       Ok(JsNumber(deviceCount))
     }
   }
@@ -57,8 +56,7 @@ class ElizaController @Inject() (
     val userId = Id[User]((req \ "userId").as[Long])
     val message = (req \ "message").as[String]
     val pushNotificationExperiment = (req \ "pushNotificationExperiment").as[PushNotificationExperiment]
-    SafeFuture {
-      val deviceCount = messagingCommander.sendGeneralPushNotification(userId, message, pushNotificationExperiment)
+    messagingCommander.sendGeneralPushNotification(userId, message, pushNotificationExperiment).map { deviceCount =>
       Ok(JsNumber(deviceCount))
     }
   }

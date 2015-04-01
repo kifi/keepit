@@ -25,33 +25,6 @@ import scala.util.{ Try, Success, Failure }
 
 case class UrbanAirshipConfig(key: String, secret: String, devKey: String, devSecret: String, baseUrl: String = "https://go.urbanairship.com")
 
-// Add fields to this object and handle them properly for each platform
-sealed trait PushNotification {
-  val unvisitedCount: Int
-  val message: Option[String]
-  val sound: Option[NotificationSound]
-}
-
-case class MessageThreadPushNotification(id: ExternalId[MessageThread], unvisitedCount: Int, message: Option[String], sound: Option[NotificationSound]) extends PushNotification
-case class SimplePushNotification(unvisitedCount: Int, message: Option[String], sound: Option[NotificationSound] = None, category: PushNotificationCategory, experiment: PushNotificationExperiment) extends PushNotification
-case class LibraryUpdatePushNotification(unvisitedCount: Int, message: Option[String], libraryId: Id[Library], libraryUrl: String, sound: Option[NotificationSound] = None, category: PushNotificationCategory, experiment: PushNotificationExperiment) extends PushNotification
-
-case class NotificationSound(name: String) extends AnyVal
-
-object UrbanAirship {
-  val DefaultNotificationSound = NotificationSound("notification.aiff")
-  val MoreMessageNotificationSound = NotificationSound("newnotificationoutsidemessage.aiff")
-  val RecheckPeriod = Days.THREE
-}
-
-@ImplementedBy(classOf[UrbanAirshipImpl])
-trait UrbanAirship {
-  def registerDevice(userId: Id[User], token: String, deviceType: DeviceType, isDev: Boolean, signature: Option[String]): Device
-  def notifyUser(userId: Id[User], notification: PushNotification): Int
-  def sendNotification(device: Device, notification: PushNotification, trial: Int = 3): Unit
-}
-
-@Singleton
 class UrbanAirshipImpl @Inject() (
     client: UrbanAirshipClient,
     deviceRepo: DeviceRepo,
@@ -60,7 +33,7 @@ class UrbanAirshipImpl @Inject() (
     db: Database,
     clock: Clock,
     implicit val publicIdConfig: PublicIdConfiguration,
-    scheduler: Scheduler) extends UrbanAirship with Logging {
+    scheduler: Scheduler) extends Logging {
 
   def registerDevice(userId: Id[User], token: String, deviceType: DeviceType, isDev: Boolean, signatureOpt: Option[String]): Device = synchronized {
     log.info(s"Registering device: $deviceType:$token for (user $userId, signature $signatureOpt)")
@@ -81,11 +54,11 @@ class UrbanAirshipImpl @Inject() (
       } match {
         case Some(d) => // update or reactivate an existing device
           db.readWrite { implicit s =>
-            deviceRepo.save(d.copy(token = token, isDev = isDev, state = DeviceStates.ACTIVE))
+            deviceRepo.save(d.copy(token = Some(token), isDev = isDev, state = DeviceStates.ACTIVE))
           }
         case None => // new device for user! save new device!
           db.readWrite { implicit s =>
-            deviceRepo.save(Device(userId = userId, token = token, deviceType = deviceType, isDev = isDev, signature = signatureOpt))
+            deviceRepo.save(Device(userId = userId, token = Some(token), deviceType = deviceType, isDev = isDev, signature = signatureOpt))
           }
       }
 
@@ -99,7 +72,7 @@ class UrbanAirshipImpl @Inject() (
         deviceRepo.get(userId, token, deviceType) match {
           case Some(d) if d.state == DeviceStates.ACTIVE && d.isDev == isDev => d
           case Some(d) => deviceRepo.save(d.copy(state = DeviceStates.ACTIVE, isDev = isDev))
-          case None => deviceRepo.save(Device(userId = userId, token = token, deviceType = deviceType, isDev = isDev))
+          case None => deviceRepo.save(Device(userId = userId, token = Some(token), deviceType = deviceType, isDev = isDev))
         }
       }
     }
@@ -116,20 +89,19 @@ class UrbanAirshipImpl @Inject() (
     }
   }
 
-  def notifyUser(userId: Id[User], notification: PushNotification): Int = {
-    val devices: Seq[Device] = getDevices(userId)
-    log.info(s"Notifying user: $userId with $devices")
+  def notifyUser(userId: Id[User], allDevices: Seq[Device], notification: PushNotification): Int = {
+    log.info(s"[UrbanAirship] Notifying user: $userId with $allDevices")
     //get only active devices
-    val activeDevices = devices filter { d =>
+    val activeDevices = allDevices filter { d =>
       d.state == DeviceStates.ACTIVE
     }
     //send them all a push notification
     activeDevices foreach { device =>
       sendNotification(device, notification)
     }
-    log.info(s"user $userId has ${activeDevices.size} active devices out of ${devices.size} for notification $notification")
+    log.info(s"user $userId has ${activeDevices.size} active devices out of ${allDevices.size} for notification $notification")
     //refresh all devices (even not active ones)
-    devices foreach { device =>
+    allDevices foreach { device =>
       client.updateDeviceState(device)
     }
     activeDevices.size
