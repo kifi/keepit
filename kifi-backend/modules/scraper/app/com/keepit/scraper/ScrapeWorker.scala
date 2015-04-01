@@ -346,9 +346,12 @@ class ScrapeWorkerImpl @Inject() (
   private def processRedirects(uri: NormalizedURI, redirects: Seq[HttpRedirect]): Future[NormalizedURI] = {
     @inline def resolveAndRecord(redirects: Seq[HttpRedirect]): Future[NormalizedURI] = {
       val unrestrictedUri = removeRedirectRestriction(uri)
+      if (redirects.nonEmpty) {
+        log.info(s"Resolving redirects found at uri ${uri.id.get}: ${uri.url}: ${redirects.mkString("\n")}")
+      }
       HttpRedirect.resolve(uri.url, redirects).map { absoluteDestination =>
         val validRedirect = HttpRedirect(HttpStatus.SC_MOVED_PERMANENTLY, unrestrictedUri.url, absoluteDestination)
-        log.debug(s"Found permanent $validRedirect for $uri")
+        log.info(s"Found permanent $validRedirect for $uri")
         shoeboxCommander.recordPermanentRedirect(unrestrictedUri, validRedirect)
       } getOrElse {
         redirects.headOption.foreach(relativeRedirect => log.warn(s"Ignoring relative redirect $relativeRedirect for $uri"))
