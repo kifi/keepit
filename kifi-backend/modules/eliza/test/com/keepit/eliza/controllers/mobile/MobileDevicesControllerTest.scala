@@ -3,6 +3,7 @@ package com.keepit.eliza.controllers.mobile
 import com.google.inject.Injector
 import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.cache.ElizaCacheModule
+import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.controller.{ FakeUserActionsHelper }
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.store.FakeElizaStoreModule
@@ -29,8 +30,10 @@ class MobileDevicesControllerTest extends Specification with ElizaTestInjector {
     FakeHeimdalServiceClientModule(),
     FakeActorSystemModule(),
     FakeUrbanAirshipModule(),
+    FakeAppBoyModule(),
     FakeHttpClientModule(),
-    FakeElizaStoreModule()
+    FakeElizaStoreModule(),
+    FakeExecutionContextModule()
   )
 
   "Mobile Device Controller" should {

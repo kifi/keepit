@@ -14,7 +14,10 @@ import play.api.libs.json.{ JsString, JsObject, Json }
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success }
 
-case class AppBoyConfig(baseUrl: String = "https://api.appboy.com")
+object AppBoyConfig {
+  val baseUrl: String = "https://api.appboy.com"
+  val appGroupId: String = "4212bbb0-d07b-4109-986a-aac019d8062a"
+}
 
 class AppBoyImpl @Inject() (
     client: AppBoyClient,
@@ -29,17 +32,13 @@ class AppBoyImpl @Inject() (
   def registerDevice(userId: Id[User], deviceType: DeviceType, isDev: Boolean, signature: String): Device = {
     log.info(s"[AppBoy] Registering device: $deviceType:(no token) for (user $userId, signature $signature)")
 
-    val updatedDevice = db.readOnlyMaster { implicit s =>
-      deviceRepo.getByUserIdAndDeviceTypeAndSignature(userId, deviceType, signature, None)
-    } match {
-      case Some(d) => // update or reactivate an existing device
-        db.readWrite { implicit s =>
+    val updatedDevice = db.readWrite { implicit s =>
+      deviceRepo.getByUserIdAndDeviceTypeAndSignature(userId, deviceType, signature, None) match {
+        case Some(d) => // update or reactivate an existing device
           deviceRepo.save(d.copy(token = None, isDev = isDev, state = DeviceStates.ACTIVE))
-        }
-      case None => // new device for user! save new device!
-        db.readWrite { implicit s =>
+        case None => // new device for user! save new device!
           deviceRepo.save(Device(userId = userId, token = None, deviceType = deviceType, isDev = isDev, signature = Some(signature)))
-        }
+      }
     }
     // inactivate any devices?
 
@@ -94,7 +93,7 @@ class AppBoyImpl @Inject() (
     val extraJson = addExtraJson(notification, device.deviceType)
 
     val json = Json.obj(
-      "app_group_id" -> "4212bbb0-d07b-4109-986a-aac019d8062a",
+      "app_group_id" -> AppBoyConfig.appGroupId,
       "external_user_ids" -> Json.toJson(Seq(user.externalId)),
       "messages" -> Json.obj(
         deviceMsgType -> Json.obj(

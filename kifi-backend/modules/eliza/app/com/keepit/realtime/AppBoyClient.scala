@@ -17,7 +17,6 @@ trait AppBoyClient {
 class AppBoyClientImpl(
     clock: Clock,
     client: HttpClient,
-    config: AppBoyConfig,
     airbrake: AirbrakeNotifier,
     db: Database,
     deviceRepo: DeviceRepo,
@@ -33,7 +32,7 @@ class AppBoyClientImpl(
   }
 
   protected def post(json: JsObject, device: Device, notification: PushNotification, trial: Int = 1): Future[ClientResponse] = {
-    httpClient.postFuture(DirectUrl(s"${config.baseUrl}/messages/send"), json,
+    httpClient.postFuture(DirectUrl(s"${AppBoyConfig.baseUrl}/messages/send"), json,
       { req =>
         {
           case t: Throwable =>

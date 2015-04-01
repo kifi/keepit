@@ -25,11 +25,11 @@ class DeviceRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) ext
   type RepoImpl = DeviceTable
   class DeviceTable(tag: Tag) extends RepoTable[Device](db, tag, "device") {
     def userId = column[Id[User]]("user_id", O.NotNull)
-    def token = column[String]("token", O.Nullable)
+    def token = column[Option[String]]("token", O.Nullable)
     def deviceType = column[DeviceType]("device_type", O.NotNull)
     def isDev = column[Boolean]("is_dev", O.NotNull)
     def signature = column[String]("signature", O.Nullable)
-    def * = (id.?, userId, token.?, deviceType, state, createdAt, updatedAt, isDev, signature.?) <> ((Device.apply _).tupled, Device.unapply _)
+    def * = (id.?, userId, token, deviceType, state, createdAt, updatedAt, isDev, signature.?) <> ((Device.apply _).tupled, Device.unapply _)
   }
 
   def table(tag: Tag) = new DeviceTable(tag)
