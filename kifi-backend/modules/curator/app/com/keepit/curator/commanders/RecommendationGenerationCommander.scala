@@ -47,7 +47,7 @@ class RecommendationGenerationCommander @Inject() (
   val perUserRecommendationGenerationLocks = TrieMap[Id[User], ReactiveLock]()
   val candidateURILock = new ReactiveLock(4)
 
-  val superSpecialUsers = Seq()
+  val superSpecialUsers = Seq(Id[User](273))
   val superSpecialLock = new ReactiveLock(1)
 
   val BATCH_SIZE = 350
