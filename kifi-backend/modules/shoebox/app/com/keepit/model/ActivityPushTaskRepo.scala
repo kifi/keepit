@@ -59,7 +59,7 @@ class ActivityPushTaskRepoImpl @Inject() (
   def getBatchToPush(limit: Int)(implicit session: RSession): Seq[Id[ActivityPushTask]] = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     val now = clock.now
-    sql"select id from activity_push_task where state = 'active' and ((last_push is null) or (next_push > $now)) limit $limit".as[Id[ActivityPushTask]].list
+    sql"select id from activity_push_task where state = 'active' and next_push < $now limit $limit".as[Id[ActivityPushTask]].list
   }
 
   def getMobileUsersWithoutActivityPushTask(limit: Int)(implicit session: RSession): Seq[Id[User]] = {
