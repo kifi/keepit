@@ -35,21 +35,21 @@ class ActivityPushTaskRepoTest extends Specification with ShoeboxApplicationInje
           repo.getByUser(user1.id.get).get === a1
           repo.getByUser(user2.id.get).get === a2
           repo.getByUser(user3.id.get).get === a3
-          repo.getByPushAndActivity(now.plusHours(1), now.minusHours(1).toLocalTime, 10).isEmpty === true
+          repo.getBatchToPush(now.plusHours(1), now.minusHours(1).toLocalTime, 10).isEmpty === true
         }
         db.readWrite { implicit s =>
           repo.save(repo.getByUser(user1.id.get).get.copy(lastPush = Some(new DateTime(2015, 2, 2, 1, 1, 1, DEFAULT_DATE_TIME_ZONE))))
           repo.save(repo.getByUser(user2.id.get).get.copy(lastPush = Some(new DateTime(2014, 2, 2, 1, 1, 1, DEFAULT_DATE_TIME_ZONE))))
         }
         db.readWrite { implicit s =>
-          repo.getByPushAndActivity(now, now.toLocalTime.minusHours(1), 10) === Seq()
-          repo.getByPushAndActivity(now, now.toLocalTime.plusHours(1), 10) === Seq(a1.id.get)
-          repo.getByPushAndActivity(now.minusDays(1), now.toLocalTime.plusHours(1), 10) === Seq(a1.id.get)
-          repo.getByPushAndActivity(now.plusDays(1), now.toLocalTime.plusHours(1), 10) === Seq(a1.id.get)
+          repo.getBatchToPush(now, now.toLocalTime.minusHours(1), 10) === Seq()
+          repo.getBatchToPush(now, now.toLocalTime.plusHours(1), 10) === Seq(a1.id.get)
+          repo.getBatchToPush(now.minusDays(1), now.toLocalTime.plusHours(1), 10) === Seq(a1.id.get)
+          repo.getBatchToPush(now.plusDays(1), now.toLocalTime.plusHours(1), 10) === Seq(a1.id.get)
 
-          repo.getByPushAndActivity(now.plusDays(1), now.toLocalTime.plusHours(5), 10) === Seq(a1.id.get, a2.id.get, a3.id.get)
-          repo.getByPushAndActivity(now.plusDays(3), now.toLocalTime.plusHours(5), 10) === Seq(a1.id.get, a2.id.get, a3.id.get, a4.id.get, a5.id.get, a6.id.get)
-          repo.getByPushAndActivity(now.plusDays(3), now.toLocalTime.plusHours(3), 10) === Seq(a1.id.get, a2.id.get, a4.id.get, a5.id.get)
+          repo.getBatchToPush(now.plusDays(1), now.toLocalTime.plusHours(5), 10) === Seq(a1.id.get, a2.id.get, a3.id.get)
+          repo.getBatchToPush(now.plusDays(3), now.toLocalTime.plusHours(5), 10) === Seq(a1.id.get, a2.id.get, a3.id.get, a4.id.get, a5.id.get, a6.id.get)
+          repo.getBatchToPush(now.plusDays(3), now.toLocalTime.plusHours(3), 10) === Seq(a1.id.get, a2.id.get, a4.id.get, a5.id.get)
         }
       }
     }

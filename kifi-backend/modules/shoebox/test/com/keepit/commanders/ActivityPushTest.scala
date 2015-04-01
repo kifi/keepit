@@ -55,7 +55,7 @@ class ActivityPushTest extends Specification with ShoeboxTestInjector {
           repo.getByUser(user2.id.get).get.userId === user2.id.get
           repo.getByUser(user3.id.get).get.userId === user3.id.get
           repo.all().size === 3
-          repo.getByPushAndActivity(END_OF_TIME, new LocalTime(0, 0, 0), 10).size === 0
+          repo.getBatchToPush(END_OF_TIME, new LocalTime(0, 0, 0), 10).size === 0
         }
       }
     }
