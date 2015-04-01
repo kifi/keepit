@@ -90,23 +90,10 @@ private[social] class SocialGraphActor @Inject() (
       val connectionsOpt = for {
         userId <- socialUserInfo.userId if !isImportAlreadyInProcess(userId, socialUserInfo.networkType)
         graph <- networkTypeToGraph.get(socialUserInfo.networkType)
-        rawInfo <- {
-          markGraphImportUserValue(userId, socialUserInfo.networkType, "fetching")
-          graph.fetchSocialUserRawInfo(socialUserInfo)
-        }
+        _ <- Some(markGraphImportUserValue(userId, socialUserInfo.networkType, "fetching"))
+        rawInfo <- graph.fetchSocialUserRawInfo(socialUserInfo)
       } yield {
         markGraphImportUserValue(userId, socialUserInfo.networkType, "import_connections")
-
-        val friendsSocialId = rawInfo.jsons.map { json =>
-          graph.extractEmails(json).map(email => userCommander.importSocialEmail(userId, email))
-
-          val friends = graph.extractFriends(json)
-          socialUserImportFriends.importFriends(socialUserInfo, friends)
-          friends.map(_.socialId)
-        }.toList.flatten
-
-        log.info(s"[fetchUserInfo] calling createConnections. sui=$socialUserInfo, friendsId=$friendsSocialId")
-        val connections = socialUserCreateConnections.createConnections(socialUserInfo, friendsSocialId)
 
         val updatedSui = rawInfo.jsons.foldLeft(socialUserInfo)(graph.updateSocialUserInfo)
         val latestUserValues = rawInfo.jsons.map(graph.extractUserValues).reduce(_ ++ _)
@@ -118,6 +105,17 @@ private[social] class SocialGraphActor @Inject() (
           }
           socialRepo.save(updatedSui.withState(SocialUserInfoStates.FETCHED_USING_SELF).withLastGraphRefresh())
         }
+
+        val friendsSocialId = rawInfo.jsons.map { json =>
+          graph.extractEmails(json).map(email => userCommander.importSocialEmail(userId, email))
+
+          val friends = graph.extractFriends(json)
+          socialUserImportFriends.importFriends(socialUserInfo, friends)
+          friends.map(_.socialId)
+        }.toList.flatten
+
+        log.info(s"[fetchUserInfo] calling createConnections. sui=$socialUserInfo, friendsId=$friendsSocialId")
+        val connections = socialUserCreateConnections.createConnections(socialUserInfo, friendsSocialId)
 
         socialUserTypeahead.refresh(userId)
         connections
