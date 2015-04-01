@@ -17,7 +17,7 @@ object ServiceModuleTestHelpers extends Logging {
   def instantiateAllBindings()(implicit injector: Injector): Unit = {
     injector.getAllBindings().keys.foreach { key =>
       val keyClazz = key.getTypeLiteral.getRawType
-      if (excludedBindings.exists(_ isAssignableFrom keyClazz)) log.info(s"Avoiding instantiation of $key}")
+      if (excludedBindings.exists(_ isAssignableFrom keyClazz)) log.info(s"Avoiding instantiation of $key")
       else injector.getInstance(key)
     }
   }

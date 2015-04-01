@@ -9,7 +9,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.eliza.commanders.MessagingAnalytics
 import com.keepit.model.{ Library, User }
 import com.keepit.shoebox.ShoeboxServiceClient
-import play.api.libs.json.{ JsString, JsObject, Json }
+import play.api.libs.json.{ JsNumber, JsString, JsObject, Json }
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success }
@@ -73,13 +73,15 @@ class AppBoyImpl @Inject() (
       case mtpn: MessageThreadPushNotification =>
         json.as[JsObject] + ("id" -> JsString(mtpn.id.id))
       case lupn: LibraryUpdatePushNotification =>
-        val withLid = json.as[JsObject] ++ Json.obj("t" -> "lr", "lid" -> JsString(Library.publicId(lupn.libraryId).id))
+        val withLid = json.as[JsObject] ++ Json.obj("t" -> "lr", "lid" -> Library.publicId(lupn.libraryId).id)
         deviceType match {
           case DeviceType.Android =>
             withLid
           case DeviceType.IOS =>
             withLid + ("lu" -> JsString(lupn.libraryUrl))
         }
+      case upn: UserPushNotification =>
+        json.as[JsObject] ++ Json.obj("t" -> "us", "uid" -> upn.userId.id, "un" -> upn.username.value, "purl" -> upn.pictureUrl)
       case _ =>
         throw new Exception(s"Don't recognize push notification $notification")
     }
@@ -112,6 +114,8 @@ class AppBoyImpl @Inject() (
         log.info(s"[AppBoy] sending MessageThreadPushNotification to user ${device.userId} device: [${device.token}] message ${mtpn.id}")
       case lupn: LibraryUpdatePushNotification =>
         log.info(s"[AppBoy] sending LibraryUpdatePushNotification to user ${device.userId} device: [${device.token}] library ${lupn.libraryId} message ${lupn.message}")
+      case upn: UserPushNotification =>
+        log.info(s"[AppBoy] sending UserPushNotification to user ${device.userId} device: [${device.token}] user ${upn.userId} message ${upn.message}")
     }
 
     client.send(json, device, notification) andThen {

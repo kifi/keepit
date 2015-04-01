@@ -52,6 +52,7 @@ class MessagingAnalytics @Inject() (
     case messageNotification: MessageThreadPushNotification => sentPushNotificationForThread(device, messageNotification)
     case simplePushNotification: SimplePushNotification => sentSimplePushNotification(device, simplePushNotification)
     case libraryUpdatePushNotification: LibraryUpdatePushNotification => sentLibraryUpdatePushNotification(device, libraryUpdatePushNotification)
+    case userPushNotification: UserPushNotification => sentUserPushNotification(device, userPushNotification)
     case _ => throw new Exception(s"can't understand notification $notification")
   }
 
@@ -99,6 +100,24 @@ class MessagingAnalytics @Inject() (
       contextBuilder += ("category", "simple")
       contextBuilder += ("subcategory", notification.category.name)
       contextBuilder += ("library", notification.libraryId.id)
+      contextBuilder += ("os", device.deviceType.name)
+      contextBuilder += ("exp_engagement_push", notification.experiment.name)
+      contextBuilder += ("pendingNotificationCount", notification.unvisitedCount)
+      heimdal.trackEvent(UserEvent(device.userId, contextBuilder.build, UserEventTypes.WAS_NOTIFIED, sentAt))
+    }
+  }
+
+  private def sentUserPushNotification(device: Device, notification: UserPushNotification): Unit = {
+    val sentAt = currentDateTime
+    SafeFuture {
+      val contextBuilder = heimdalContextBuilder()
+      contextBuilder += ("action", "sent")
+      contextBuilder += ("channel", push)
+      contextBuilder.addNotificationCategory(NotificationCategory.User.MESSAGE)
+      contextBuilder += ("global", false)
+      contextBuilder += ("category", "simple")
+      contextBuilder += ("subcategory", notification.category.name)
+      contextBuilder += ("user", notification.userId.id)
       contextBuilder += ("os", device.deviceType.name)
       contextBuilder += ("exp_engagement_push", notification.experiment.name)
       contextBuilder += ("pendingNotificationCount", notification.unvisitedCount)

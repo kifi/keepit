@@ -130,6 +130,39 @@ class AppBoyTest extends Specification with TestInjector with ElizaTestInjector 
       }
     }
 
+    "push user notification" in {
+      withDb(modules: _*) { implicit injector =>
+        val (user1, device) = setupData
+        appBoyClient.jsons.size === 0
+
+        val notification = UserPushNotification(unvisitedCount = 3, message = Some("pika"), username = Username("joe"), userId = user1.id.get, pictureUrl = "http://www.asdf.com/asdfasdf", sound = None, category = null, experiment = null)
+        val notifPushF = appBoy.notifyUser(user1.id.get, Seq(device), notification)
+        Await.result(notifPushF, Duration(5, SECONDS))
+        appBoyClient.jsons.size === 1
+        appBoyClient.jsons.head === Json.parse(
+          s"""
+             {
+              "app_group_id":"${appBoyGroupId}",
+              "external_user_ids":["${user1.externalId}"],
+              "messages":{
+                "apple_push":{
+                  "sound":null,
+                  "title":"pika",
+                  "alert":"pika",
+                  "extra":{
+                    "unreadCount":3,
+                    "t":"us",
+                    "uid":${user1.id.get.id},
+                    "un":"joe",
+                    "purl":"http://www.asdf.com/asdfasdf"
+                  }
+                }
+              }
+            }
+           """)
+      }
+    }
+
   }
 
   private def appBoyGroupId = AppBoyConfig.appGroupId
