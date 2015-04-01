@@ -109,9 +109,9 @@ class AppBoyImpl @Inject() (
       case spn: SimplePushNotification =>
         log.info(s"[AppBoy] sending SimplePushNotification to user ${device.userId} device [${device.token}] with: $json")
       case mtpn: MessageThreadPushNotification =>
-        log.info(s"[AppBoy] sending MessageThreadPushNotification to user ${device.userId} device: [${device.token}] message ${mtpn.id}")
+        log.info(s"[AppBoy] sending MessageThreadPushNotification to user ${device.userId} device: [${device.token}] message ${mtpn.id} with $json")
       case lupn: LibraryUpdatePushNotification =>
-        log.info(s"[AppBoy] sending LibraryUpdatePushNotification to user ${device.userId} device: [${device.token}] library ${lupn.libraryId} message ${lupn.message}")
+        log.info(s"[AppBoy] sending LibraryUpdatePushNotification to user ${device.userId} device: [${device.token}] library ${lupn.libraryId} message ${lupn.message} with $json")
     }
 
     client.send(json, device, notification) andThen {
@@ -123,7 +123,7 @@ class AppBoyImpl @Inject() (
           messagingAnalytics.sentPushNotification(device, notification)
         }
       case Failure(e) =>
-        airbrake.notify(s"[AppBoy] fail to send push notification $notification for device $device")
+        airbrake.notify(s"[AppBoy] fail to send push notification $notification for device $device - error: $e")
     }
   }
 
