@@ -55,6 +55,20 @@ class HttpRedirectTest extends Specification {
       )
 
       resolve("http://www.oracle.com/technology/index.html", withOneRecoverableRelativeRedirect) === Some("http://www.oracle.com/technetwork/index.html")
+
+      val twoShortenersWithPermanentsRedirects = Seq(
+        HttpRedirect(MOVED, "http://tcrn.ch/1FcO6rS", "http://bit.ly/1FcO6rS?cc=f5c993678dd8e5dc2f5bf1380c5de255"),
+        HttpRedirect(MOVED, "http://bit.ly/1FcO6rS?cc=f5c993678dd8e5dc2f5bf1380c5de255", "http://techcrunch.com/2015/03/11/treeline-wants-to-take-the-coding-out-of-building-a-backend/")
+      )
+
+      resolve("http://tcrn.ch/1FcO6rS", twoShortenersWithPermanentsRedirects) === Some("http://techcrunch.com/2015/03/11/treeline-wants-to-take-the-coding-out-of-building-a-backend/")
+
+      val twoShortenersWithOneTemporaryRedirect = Seq(
+        HttpRedirect(TEMP_MOVED, "http://tcrn.ch/1FcO6rS", "http://bit.ly/1FcO6rS?cc=f5c993678dd8e5dc2f5bf1380c5de255"),
+        HttpRedirect(MOVED, "http://bit.ly/1FcO6rS?cc=f5c993678dd8e5dc2f5bf1380c5de255", "http://techcrunch.com/2015/03/11/treeline-wants-to-take-the-coding-out-of-building-a-backend/")
+      )
+
+      resolve("http://tcrn.ch/1FcO6rS", twoShortenersWithPermanentsRedirects) === Some("http://techcrunch.com/2015/03/11/treeline-wants-to-take-the-coding-out-of-building-a-backend/")
     }
   }
 }
