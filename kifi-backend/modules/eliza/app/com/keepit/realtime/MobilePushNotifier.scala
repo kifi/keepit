@@ -57,10 +57,13 @@ class MobilePushDelegator @Inject() (
       deviceRepo.getByUserId(userId, None)
     }.partition(d => d.token.isDefined)
 
-    val numSentUrbanAirship = urbanAirship.get.notifyUser(userId, devicesWithToken, notification)
+    val numSentUrbanAirshipF = urbanAirship.get.notifyUser(userId, devicesWithToken, notification)
     val numSentAppBoyF = appBoy.get.notifyUser(userId, devicesNoToken, notification)
 
-    numSentAppBoyF.map { numSentAppBoy =>
+    for {
+      numSentUrbanAirship <- numSentUrbanAirshipF
+      numSentAppBoy <- numSentAppBoyF
+    } yield {
       numSentUrbanAirship + numSentAppBoy
     }
   }

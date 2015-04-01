@@ -89,7 +89,7 @@ class UrbanAirshipImpl @Inject() (
     }
   }
 
-  def notifyUser(userId: Id[User], allDevices: Seq[Device], notification: PushNotification): Int = {
+  def notifyUser(userId: Id[User], allDevices: Seq[Device], notification: PushNotification): Future[Int] = {
     log.info(s"[UrbanAirship] Notifying user: $userId with $allDevices")
     //get only active devices
     val activeDevices = allDevices filter { d =>
@@ -104,7 +104,7 @@ class UrbanAirshipImpl @Inject() (
     allDevices foreach { device =>
       client.updateDeviceState(device)
     }
-    activeDevices.size
+    Future.successful(activeDevices.size) // to match MobilePushNotifier notifyUser API
   }
 
   // see https://docs.google.com/a/kifi.com/document/d/1efEGk8Wdj2dAjWjUWvsHW5UC0p2srjIXiju8tLpuOMU/edit# for spec
