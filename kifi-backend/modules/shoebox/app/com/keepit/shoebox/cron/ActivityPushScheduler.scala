@@ -43,7 +43,7 @@ class ActivityPushActor @Inject() (
       activityPusher.createPushActivityEntities(100)
     case PushActivities =>
       if (counter.get <= 0) {
-        activityPusher.getNextPushBatch() foreach { activityId =>
+        activityPusher.getNextPushBatch foreach { activityId =>
           self ! PushActivity(activityId)
           counter.incrementAndGet()
         }
