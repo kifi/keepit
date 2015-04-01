@@ -16,7 +16,8 @@ import com.keepit.shoebox.{ FakeShoeboxServiceClientImpl, ShoeboxServiceClient, 
 import com.keepit.test.{ ElizaTestInjector, TestInjector }
 import org.specs2.mutable.Specification
 import play.api.libs.json.Json
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ Await, ExecutionContext }
+import scala.concurrent.duration._
 
 class AppBoyTest extends Specification with TestInjector with ElizaTestInjector {
 
@@ -40,7 +41,8 @@ class AppBoyTest extends Specification with TestInjector with ElizaTestInjector 
         appBoyClient.jsons.size === 0
 
         val notification = SimplePushNotification(unvisitedCount = 3, message = Some("pika"), sound = Some(MobilePushNotifier.DefaultNotificationSound), category = null, experiment = null)
-        appBoy.sendNotification(user1, device, notification)
+        val notifPushF = appBoy.notifyUser(user1.id.get, Seq(device), notification)
+        Await.result(notifPushF, Duration(5, SECONDS))
         appBoyClient.jsons.size === 1
         appBoyClient.jsons.head === Json.parse(
           s"""
@@ -69,7 +71,8 @@ class AppBoyTest extends Specification with TestInjector with ElizaTestInjector 
         appBoyClient.jsons.size === 0
 
         val notification = MessageThreadPushNotification(id = ExternalId[MessageThread]("5fe6e19f-6092-49f1-b446-5d992fda0034"), unvisitedCount = 3, message = Some("pika"), sound = Some(MobilePushNotifier.DefaultNotificationSound))
-        appBoy.sendNotification(user1, device, notification)
+        val notifPushF = appBoy.notifyUser(user1.id.get, Seq(device), notification)
+        Await.result(notifPushF, Duration(5, SECONDS))
         appBoyClient.jsons.size === 1
         appBoyClient.jsons.head === Json.parse(
           s"""
@@ -101,7 +104,8 @@ class AppBoyTest extends Specification with TestInjector with ElizaTestInjector 
         val pubLibId1 = Library.publicId(lib1.id.get)(inject[PublicIdConfiguration])
 
         val notification = LibraryUpdatePushNotification(unvisitedCount = 3, message = Some("pika"), libraryId = lib1.id.get, libraryUrl = Library.formatLibraryPath(user1.username, lib1.slug), sound = Some(MobilePushNotifier.DefaultNotificationSound), category = null, experiment = null)
-        appBoy.sendNotification(user1, device, notification)
+        val notifPushF = appBoy.notifyUser(user1.id.get, Seq(device), notification)
+        Await.result(notifPushF, Duration(5, SECONDS))
         appBoyClient.jsons.size === 1
         appBoyClient.jsons.head === Json.parse(
           s"""

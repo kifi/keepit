@@ -36,7 +36,7 @@ class UrbanAirshipImpl @Inject() (
     scheduler: Scheduler) extends Logging {
 
   def registerDevice(userId: Id[User], token: String, deviceType: DeviceType, isDev: Boolean, signatureOpt: Option[String]): Device = synchronized {
-    log.info(s"Registering device: $deviceType:$token for (user $userId, signature $signatureOpt)")
+    log.info(s"[UrbanAirship] Registering device: $deviceType:$token for (user $userId, signature $signatureOpt)")
 
     val device = if (signatureOpt.isDefined) {
       val signature = signatureOpt.get
@@ -99,7 +99,7 @@ class UrbanAirshipImpl @Inject() (
     activeDevices foreach { device =>
       sendNotification(device, notification)
     }
-    log.info(s"user $userId has ${activeDevices.size} active devices out of ${allDevices.size} for notification $notification")
+    log.info(s"[UrbanAirship] user $userId has ${activeDevices.size} active devices out of ${allDevices.size} for notification $notification")
     //refresh all devices (even not active ones)
     allDevices foreach { device =>
       client.updateDeviceState(device)
@@ -220,11 +220,11 @@ class UrbanAirshipImpl @Inject() (
 
     notification match {
       case spn: SimplePushNotification =>
-        log.info(s"Sending SimplePushNotification to user ${device.userId} device [${device.token}] with: $json")
+        log.info(s"[UrbanAirship] Sending SimplePushNotification to user ${device.userId} device [${device.token}] with: $json")
       case mtpn: MessageThreadPushNotification =>
-        log.info(s"Sending MessageThreadPushNotification to user ${device.userId} device: [${device.token}] message ${mtpn.id}")
+        log.info(s"[UrbanAirship] Sending MessageThreadPushNotification to user ${device.userId} device: [${device.token}] message ${mtpn.id}")
       case lupn: LibraryUpdatePushNotification =>
-        log.info(s"Sending LibraryUpdatePushNotification to user ${device.userId} device: [${device.token}] library ${lupn.libraryId} message ${lupn.message}")
+        log.info(s"[UrbanAirship] Sending LibraryUpdatePushNotification to user ${device.userId} device: [${device.token}] library ${lupn.libraryId} message ${lupn.message}")
     }
 
     client.send(json, device, notification) andThen {
@@ -232,7 +232,7 @@ class UrbanAirshipImpl @Inject() (
         if (res.status / 100 != 2) {
           dealWithFailNotification(device, notification, trial, new Exception(s"bad status ${res.status} on push notification $notification for device $device response: ${res.body}"))
         } else {
-          log.info(s"successful send of push notification on trial $trial for device $deviceRepo: ${res.body}")
+          log.info(s"[UrbanAirship] successful send of push notification on trial $trial for device $deviceRepo: ${res.body}")
           messagingAnalytics.sentPushNotification(device, notification)
         }
       case Failure(e) =>

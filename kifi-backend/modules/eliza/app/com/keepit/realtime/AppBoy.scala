@@ -47,6 +47,7 @@ class AppBoyImpl @Inject() (
   }
 
   def notifyUser(userId: Id[User], allDevices: Seq[Device], notification: PushNotification): Future[Int] = {
+    log.info(s"[AppBoy] Notifying user: $userId with $allDevices")
     val (activeDevices, _) = allDevices.partition(d => d.state == DeviceStates.ACTIVE)
 
     shoeboxClient.getUser(userId).map { userOpt =>
@@ -56,7 +57,6 @@ class AppBoyImpl @Inject() (
             sendNotification(user, device, notification)
           }
           log.info(s"[AppBoy] sent user $userId push notifications to ${activeDevices.size} active devices out of ${allDevices.size}. $notification")
-          // update device state?
           activeDevices.size
 
         case None =>
@@ -86,7 +86,7 @@ class AppBoyImpl @Inject() (
     }
   }
 
-  def sendNotification(user: User, device: Device, notification: PushNotification): Unit = {
+  private def sendNotification(user: User, device: Device, notification: PushNotification): Unit = {
     val deviceMsgType = device.deviceType match {
       case DeviceType.IOS => "apple_push"
       case DeviceType.Android => "android_push"
