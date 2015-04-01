@@ -39,7 +39,7 @@ object ArticleFetcher {
     resolveAndCompare(futureFetchedArticle, futureLatestArticle, areSimilar)
   }
 
-  private def defaultSimilarityCheck[A <: Article](thisArticle: A, thatArticle: A): Boolean = {
+  def defaultSimilarityCheck[A <: Article](thisArticle: A, thatArticle: A): Boolean = {
     thisArticle.content.title == thatArticle.content.title &&
       haveSimilarNormalizationInfo(thisArticle, thatArticle) &&
       haveSimilarySignatures(thisArticle, thatArticle)
@@ -79,5 +79,5 @@ class ArticleFetcherProvider @Inject() (
     case GithubArticle => githubArticleFetcher
   }
 
-  def fetch[A <: Article](request: ArticleFetchRequest[A]): Future[Option[A]] = get(request.kind).fetch(request)
+  def fetch[A <: Article](request: ArticleFetchRequest[A])(implicit ec: ExecutionContext): Future[Option[A]] = get(request.kind).fetch(request)
 }
