@@ -10,11 +10,11 @@ case class FakeAppBoyModule() extends ScalaModule {
 
   @Provides
   @Singleton
-  def urbanAirshipClient(client: FakeAppBoyClient): AppBoyClient = client
+  def appBoyClient(client: FakeAppBoyClient): AppBoyClient = client
 
   @Provides
   @Singleton
-  def fakeUrbanAirshipClient(): FakeAppBoyClient = {
+  def fakeAppBoyClient(): FakeAppBoyClient = {
     new FakeAppBoyClient()
   }
 }
