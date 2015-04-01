@@ -16,7 +16,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.time._
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
-import com.keepit.realtime.{ LibraryUpdatePushNotification, SimplePushNotification }
+import com.keepit.realtime.{ UserPushNotification, LibraryUpdatePushNotification, SimplePushNotification }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.{ BasicUser, NonUserKinds }
 import com.keepit.common.concurrent.PimpMyFuture._
@@ -63,6 +63,11 @@ class MessagingCommander @Inject() (
     notificationCommander: NotificationCommander,
     messageSearchHistoryRepo: MessageSearchHistoryRepo,
     implicit val executionContext: ExecutionContext) extends Logging {
+
+  def sendUserPushNotification(userId: Id[User], message: String, recipientUserId: Id[User], username: Username, pictureUrl: String, pushNotificationExperiment: PushNotificationExperiment): Future[Int] = {
+    val notification = UserPushNotification(message = Some(message), userId = recipientUserId, username = username, pictureUrl = pictureUrl, unvisitedCount = getUnreadUnmutedThreadCount(userId), category = PushNotificationCategory.LibraryChanged, experiment = pushNotificationExperiment)
+    notificationCommander.sendPushNotification(userId, notification)
+  }
 
   def sendLibraryPushNotification(userId: Id[User], message: String, libraryId: Id[Library], libraryUrl: String, pushNotificationExperiment: PushNotificationExperiment): Future[Int] = {
     val notification = LibraryUpdatePushNotification(message = Some(message), libraryId = libraryId, libraryUrl = libraryUrl, unvisitedCount = getUnreadUnmutedThreadCount(userId), category = PushNotificationCategory.LibraryChanged, experiment = pushNotificationExperiment)

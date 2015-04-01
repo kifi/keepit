@@ -110,7 +110,7 @@ class UserController @Inject() (
   }
 
   def friend(id: ExternalId[User]) = UserAction { request =>
-    val (success, code) = userConnectionsCommander.friend(request.userId, id)
+    val (success, code) = userConnectionsCommander.friend(request.user, id)
     if (success) {
       Ok(Json.obj("success" -> true, code -> true))
     } else {

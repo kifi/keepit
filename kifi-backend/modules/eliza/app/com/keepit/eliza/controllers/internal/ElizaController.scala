@@ -5,7 +5,7 @@ import com.keepit.eliza.{ PushNotificationCategory, PushNotificationExperiment }
 import com.keepit.eliza.controllers.WebSocketRouter
 import com.keepit.common.controller.ElizaServiceController
 import com.keepit.common.logging.Logging
-import com.keepit.model.{ Library, User }
+import com.keepit.model.{ Username, Library, User }
 import com.keepit.common.db.{ Id }
 import com.keepit.realtime._
 
@@ -47,6 +47,19 @@ class ElizaController @Inject() (
     val libraryId = (req \ "libraryId").as[Id[Library]]
     val libraryUrl = (req \ "libraryUrl").as[String]
     messagingCommander.sendLibraryPushNotification(userId, message, libraryId, libraryUrl, pushNotificationExperiment).map { deviceCount =>
+      Ok(JsNumber(deviceCount))
+    }
+  }
+  //val payload = Json.obj("userId" -> userId, "message" -> message, "recipientUserId" -> recipientUserId, "username" -> username.value, "pictureUrl" -> pictureUrl, "pushNotificationExperiment" -> pushNotificationExperiment)
+  def sendUserPushNotification() = Action.async { request =>
+    val req = request.body.asJson.get.as[JsObject]
+    val userId = Id[User]((req \ "userId").as[Long])
+    val message = (req \ "message").as[String]
+    val pushNotificationExperiment = (req \ "pushNotificationExperiment").as[PushNotificationExperiment]
+    val recipientUserId = (req \ "recipientUserId").as[Id[User]]
+    val username = (req \ "pictureUrl").as[Username]
+    val pictureUrl = (req \ "pictureUrl").as[String]
+    messagingCommander.sendUserPushNotification(userId, message, recipientUserId, username: Username, pictureUrl, pushNotificationExperiment).map { deviceCount =>
       Ok(JsNumber(deviceCount))
     }
   }

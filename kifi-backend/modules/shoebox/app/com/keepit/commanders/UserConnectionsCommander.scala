@@ -10,7 +10,7 @@ import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.logging.{ AccessLog, Logging }
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.S3ImageStore
-import com.keepit.eliza.ElizaServiceClient
+import com.keepit.eliza.{ PushNotificationExperiment, ElizaServiceClient }
 import com.keepit.graph.GraphServiceClient
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
@@ -40,6 +40,7 @@ class UserConnectionsCommander @Inject() (
     socialUserTypeahead: SocialUserTypeahead,
     emailSender: EmailSenderProvider,
     s3ImageStore: S3ImageStore,
+    kifiInstallationRepo: KifiInstallationRepo,
     implicit val defaultContext: ExecutionContext,
     db: Database) extends Logging {
 
@@ -222,11 +223,32 @@ class UserConnectionsCommander @Inject() (
     emailF flatMap (_ => notifF)
   }
 
-  def sendingFriendRequestEmailAndNotification(request: FriendRequest, myUserId: Id[User], recipient: User): Unit = SafeFuture {
+  def sendingFriendRequestEmailAndNotification(request: FriendRequest, myUser: User, recipient: User): Unit = SafeFuture {
+    val myUserId = myUser.id.get
     val (requestingUser, requestingUserImage) = db.readWrite { implicit session =>
       val requestingUser = userRepo.get(myUserId)
       val requestingUserImage = s3ImageStore.avatarUrlByExternalId(Some(200), requestingUser.externalId, requestingUser.pictureName.getOrElse("0"), Some("https"))
       (requestingUser, requestingUserImage)
+    }
+
+    val canSendPush = db.readOnlyReplica { implicit s => kifiInstallationRepo.lastUpdatedMobile(recipient.id.get) } exists { installation =>
+      installation.platform match {
+        case KifiInstallationPlatform.Android =>
+          installation.version.compareIt(KifiAndroidVersion("2.2.4")) >= 0
+        case KifiInstallationPlatform.IPhone =>
+          installation.version.compareIt(KifiIPhoneVersion("2.1.0")) >= 0
+        case _ =>
+          throw new Exception(s"Don't know platform for $installation")
+      }
+    }
+    if (canSendPush) {
+      elizaServiceClient.sendUserPushNotification(
+        userId = recipient.id.get,
+        message = s"${myUser.fullName} invited you to connect",
+        recipientUserId = myUserId,
+        username = myUser.username,
+        pictureUrl = s3ImageStore.avatarUrlByUser(myUser),
+        pushNotificationExperiment = PushNotificationExperiment.Experiment1)
     }
 
     val emailF = emailSender.friendRequest(recipient.id.get, myUserId)
@@ -250,7 +272,8 @@ class UserConnectionsCommander @Inject() (
     emailF flatMap (_ => friendReqF)
   }
 
-  def friend(senderId: Id[User], recipientExtId: ExternalId[User]): (Boolean, String) = {
+  def friend(sender: User, recipientExtId: ExternalId[User]): (Boolean, String) = {
+    val senderId = sender.id.get
     db.readWrite { implicit s =>
       userRepo.getOpt(recipientExtId) map { recipient =>
         val activeOrIgnored = Set(FriendRequestStates.ACTIVE, FriendRequestStates.IGNORED)
@@ -289,7 +312,7 @@ class UserConnectionsCommander @Inject() (
             (true, "acceptedRequest")
           } getOrElse {
             val request = friendRequestRepo.save(FriendRequest(senderId = senderId, recipientId = recipient.id.get, messageHandle = None))
-            sendingFriendRequestEmailAndNotification(request, senderId, recipient)
+            sendingFriendRequestEmailAndNotification(request, sender, recipient)
             (true, "sentRequest")
           }
         }
