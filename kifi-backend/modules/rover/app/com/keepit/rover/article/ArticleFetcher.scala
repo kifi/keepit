@@ -1,7 +1,7 @@
 package com.keepit.rover.article
 
 import com.google.inject.{ Inject, Singleton }
-import com.keepit.rover.article.content.ArticleContent
+import com.keepit.rover.article.content.{ NormalizationInfoHolder, ArticleContent }
 import com.keepit.rover.fetcher.FetchResult
 import com.keepit.rover.model.ArticleKey
 import com.keepit.rover.store.RoverArticleStore
@@ -39,12 +39,27 @@ object ArticleFetcher {
     resolveAndCompare(futureFetchedArticle, futureLatestArticle, areSimilar)
   }
 
-  private val defaultSimilarityThreshold = 0.75
-  def defaultSimilarityCheck[A <: Article](thisArticle: A, thatArticle: A): Boolean = {
+  private def defaultSimilarityCheck[A <: Article](thisArticle: A, thatArticle: A): Boolean = {
+    thisArticle.content.title == thatArticle.content.title &&
+      haveSimilarNormalizationInfo(thisArticle, thatArticle) &&
+      haveSimilarySignatures(thisArticle, thatArticle)
+  }
+
+  private val defaultSignatureSimilarityThreshold = 0.75
+  private def haveSimilarySignatures[A <: Article](thisArticle: A, thatArticle: A): Boolean = {
     val thisArticleSignature = ArticleContent.defaultSignature(thisArticle.content)
     val thatArticleSignature = ArticleContent.defaultSignature(thatArticle.content)
     val similarity = thisArticleSignature similarTo thatArticleSignature
-    similarity > defaultSimilarityThreshold
+    similarity > defaultSignatureSimilarityThreshold
+  }
+
+  private def haveSimilarNormalizationInfo[A <: Article](thisArticle: A, thatArticle: A): Boolean = {
+    (thisArticle.content.destinationUrl == thatArticle.content.destinationUrl) && {
+      (thisArticle.content, thatArticle.content) match {
+        case (thisInfo: NormalizationInfoHolder, thatInfo: NormalizationInfoHolder) => thisInfo.normalization == thatInfo.normalization
+        case _ => true
+      }
+    }
   }
 }
 
@@ -64,5 +79,5 @@ class ArticleFetcherProvider @Inject() (
     case GithubArticle => githubArticleFetcher
   }
 
-  def fetch[A <: Article](request: ArticleFetchRequest[A])(implicit ec: ExecutionContext): Future[Option[A]] = get(request.kind).fetch(request)
+  def fetch[A <: Article](request: ArticleFetchRequest[A]): Future[Option[A]] = get(request.kind).fetch(request)
 }
