@@ -211,7 +211,7 @@ class LibraryRepoImpl @Inject() (
   }
 
   def countWithState(state: State[Library])(implicit session: RSession): Int = {
-    import StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     val query = sql"select count(*) from library where state = 'active'"
     query.as[Int].firstOption.getOrElse(0)
   }
