@@ -11,7 +11,7 @@ object RedirectInterceptor {
 
   def setRedirectionAttributes(httpContext: HttpContext, destinationUrl: String, redirects: Seq[HttpRedirect]): Unit = {
     httpContext.setAttribute(scraperDestinationUrlAttribute, destinationUrl)
-    httpContext.setAttribute(redirectsAttribute, Seq.empty[HttpRedirect])
+    httpContext.setAttribute(redirectsAttribute, redirects)
   }
 
   def getRedirects(httpContext: HttpContext): Option[Seq[HttpRedirect]] = {
