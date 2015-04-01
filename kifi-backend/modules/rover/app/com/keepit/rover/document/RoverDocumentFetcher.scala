@@ -1,12 +1,12 @@
-package com.keepit.rover.fetcher
+package com.keepit.rover.document
 
-import com.google.inject.{ Inject, Singleton }
+import com.google.inject.{Inject, Singleton}
 import com.keepit.rover.document.tika.TikaDocument
-import com.keepit.rover.document.JsoupDocument
+import com.keepit.rover.fetcher.{FetchRequest, FetchResult, HttpFetcher, HttpInputStream}
 import org.apache.http.HttpStatus
 import org.joda.time.DateTime
 
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class RoverDocumentFetcher @Inject() (httpFetcher: HttpFetcher) {
