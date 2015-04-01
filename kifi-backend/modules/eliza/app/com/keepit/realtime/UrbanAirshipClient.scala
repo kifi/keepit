@@ -50,7 +50,7 @@ abstract class UrbanAirshipClientImpl(clock: Clock, config: UrbanAirshipConfig, 
 
   def updateDeviceState(device: Device): Unit = {
     log.info(s"Checking state of device: ${device.token}")
-    if (device.updatedAt plus UrbanAirship.RecheckPeriod isBefore clock.now()) {
+    if (device.updatedAt plus MobilePushNotifier.RecheckPeriod isBefore clock.now()) {
       val uaUrl = if (device.isChannel) {
         log.info(s"device $device is using a channel")
         s"${config.baseUrl}/api/channels/${device.token}"

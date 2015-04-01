@@ -8,7 +8,7 @@ import org.joda.time.DateTime
 case class Device(
     id: Option[Id[Device]] = None,
     userId: Id[User],
-    token: String,
+    token: Option[String],
     deviceType: DeviceType,
     state: State[Device] = DeviceStates.ACTIVE,
     createdAt: DateTime = currentDateTime,
@@ -16,7 +16,7 @@ case class Device(
     isDev: Boolean = false,
     signature: Option[String] = None) extends ModelWithState[Device] {
 
-  def isChannel: Boolean = ExternalId.UUIDPattern.pattern.matcher(token).matches()
+  def isChannel: Boolean = token.isDefined && ExternalId.UUIDPattern.pattern.matcher(token.get).matches()
   def withId(id: Id[Device]): Device = copy(id = Some(id))
   def withUpdateTime(updateTime: DateTime): Device = copy(updatedAt = updateTime)
 

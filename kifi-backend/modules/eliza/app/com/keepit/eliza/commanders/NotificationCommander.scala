@@ -14,7 +14,7 @@ import com.keepit.eliza.controllers.WebSocketRouter
 import com.keepit.eliza.model.{ Notification, UserThread, UserThreadActivity, _ }
 import com.keepit.eliza.util.MessageFormatter
 import com.keepit.model.{ NotificationCategory, User }
-import com.keepit.realtime.{ MessageThreadPushNotification, PushNotification, UrbanAirship }
+import com.keepit.realtime.{ MobilePushNotifier, MessageThreadPushNotification, PushNotification }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.{ BasicNonUser, BasicUser, BasicUserLikeEntity }
 import org.joda.time.DateTime
@@ -32,7 +32,7 @@ class NotificationCommander @Inject() (
     notificationRouter: WebSocketRouter,
     shoebox: ShoeboxServiceClient,
     messagingAnalytics: MessagingAnalytics,
-    urbanAirship: UrbanAirship,
+    pushNotifier: MobilePushNotifier,
     notificationJsonMaker: NotificationJsonMaker,
     basicMessageCommander: MessageFetchingCommander,
     emailCommander: ElizaEmailCommander,
@@ -278,8 +278,8 @@ class NotificationCommander @Inject() (
     )
   }
 
-  def sendPushNotification(userId: Id[User], notification: PushNotification): Int = {
-    urbanAirship.notifyUser(userId, notification)
+  def sendPushNotification(userId: Id[User], notification: PushNotification): Future[Int] = {
+    pushNotifier.notifyUser(userId, notification)
   }
 
   def sendNotificationForMessage(userId: Id[User], message: Message, thread: MessageThread, messageWithBasicUser: MessageWithBasicUser, orderedActivityInfo: Seq[UserThreadActivity]): Unit = {
@@ -330,7 +330,7 @@ class NotificationCommander @Inject() (
           case _ => ""
         }
         val notifText = sender + MessageFormatter.toText(message.messageText)
-        val sound = if (numMessages > 1) UrbanAirship.MoreMessageNotificationSound else UrbanAirship.DefaultNotificationSound
+        val sound = if (numMessages > 1) MobilePushNotifier.MoreMessageNotificationSound else MobilePushNotifier.DefaultNotificationSound
         val notification = MessageThreadPushNotification(thread.externalId, unreadCount, Some(trimAtBytes(notifText, 128, UTF_8)), Some(sound))
         sendPushNotification(userId, notification)
       }
