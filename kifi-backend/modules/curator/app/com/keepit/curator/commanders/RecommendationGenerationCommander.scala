@@ -196,7 +196,6 @@ class RecommendationGenerationCommander @Inject() (
     boostedKeepers: Set[Id[User]],
     alwaysInclude: Set[Id[NormalizedURI]]): Future[Boolean] =
     {
-      log.info(s"[RecommendationGenerationCommander] process ${seedItems.size} seeds for user ${userId}, alwaysInclude uris size: ${alwaysInclude.size}")
       val cleanedItems = seedItems.filter { seedItem => //discard super popular items and the users own keeps
         seedItem.keepers match {
           case Keepers.ReasonableNumber(users) => !users.contains(userId)
@@ -224,7 +223,6 @@ class RecommendationGenerationCommander @Inject() (
     lock.withLockFuture {
       getPerUserGenerationLock(userId).withLockFuture {
         if (schedulingProperties.isRunnerFor(CuratorTasks.uriRecommendationPrecomputation)) {
-          log.info(s"[RecommendationGenerationCommander] precompute for user ${userId}, alwaysInclude uris size: ${alwaysIncludeOpt.map { _.size }}")
           val timer = new NamedStatsdTimer("perItemPerUser")
           val alwaysInclude: Set[Id[NormalizedURI]] = alwaysIncludeOpt.getOrElse {
             if (superSpecialUsers.contains(userId)) db.readOnlyReplica { implicit session => uriRecRepo.getTopUriIdsForUser(userId) }

@@ -656,7 +656,7 @@ class AuthController @Inject() (
     }
 
     var times = 0
-    def timeoutF = play.api.libs.concurrent.Promise.timeout(None, 300)
+    def timeoutF = play.api.libs.concurrent.Promise.timeout(None, 600)
     def pollCheck(): Future[Option[String]] = {
       timeoutF.flatMap { _ =>
         checkStatusOfTwitterUser() match {
@@ -689,7 +689,7 @@ class AuthController @Inject() (
         if (noTwitter) {
           Redirect("/link/twitter?intent=waitlist").withSession(session + (SecureSocial.OriginalUrlKey -> "/twitter/thanks"))
         } else {
-          pollDbForTwitterHandle(ur.userId, 40).map { twRes =>
+          pollDbForTwitterHandle(ur.userId, iterations = 50).map { twRes =>
             twRes match {
               case Some(handle) =>
                 twitterWaitlistCommander.addEntry(ur.userId, handle)

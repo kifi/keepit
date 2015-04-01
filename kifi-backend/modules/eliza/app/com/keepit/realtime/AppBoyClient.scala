@@ -34,7 +34,9 @@ class AppBoyClientImpl @Inject() (
   }
 
   protected def post(json: JsObject, device: Device, notification: PushNotification, trial: Int = 1): Future[ClientResponse] = {
-    httpClient.postFuture(DirectUrl(s"${AppBoyConfig.baseUrl}/messages/send"), json,
+    val url = s"${AppBoyConfig.baseUrl}/messages/send"
+    log.info(s"[AppBoyClient] POST request to $url with body: $json, with device: $device, with notif: $notification: trial: $trial")
+    httpClient.postFuture(DirectUrl(url), json,
       { req =>
         {
           case t: Throwable =>

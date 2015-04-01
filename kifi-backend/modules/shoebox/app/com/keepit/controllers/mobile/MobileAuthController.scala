@@ -122,7 +122,7 @@ class MobileAuthController @Inject() (
     } else {
       heimdal.trackEvent(UserEvent(userId, builder.build, UserEventTypes.UPDATED_EXTENSION))
     }
-    activityPusher.updatedActivity(installation)
+    activityPusher.updatedActivity(userId)
   }
 
   def accessTokenSignup(providerName: String) = MaybeUserAction.async(parse.tolerantJson) { implicit request =>

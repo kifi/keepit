@@ -2,7 +2,7 @@ package com.keepit.controllers.admin
 
 import com.keepit.commanders.emails.ActivityFeedEmailSender
 import com.keepit.curator.CuratorServiceClient
-import com.keepit.shoebox.cron.{ ActivityPusher, ActivityPushSchedualer }
+import com.keepit.shoebox.cron.{ ActivityPusher, ActivityPushScheduler }
 import scala.concurrent.{ Await, Future, Promise }
 import scala.concurrent.duration.{ Duration, DurationInt }
 import scala.util.{ Try }
@@ -114,7 +114,7 @@ class AdminUserController @Inject() (
     heimdal: HeimdalServiceClient,
     curator: CuratorServiceClient,
     activityEmailSender: ActivityFeedEmailSender,
-    activityPushSchedualer: ActivityPushSchedualer,
+    activityPushSchedualer: ActivityPushScheduler,
     activityPusher: ActivityPusher,
     authCommander: AuthCommander) extends AdminUserActions {
 
