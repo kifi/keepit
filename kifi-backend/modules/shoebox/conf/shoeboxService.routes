@@ -579,6 +579,7 @@ GET     /admin/data/orphanFull      @com.keepit.controllers.admin.UrlController.
 GET     /admin/data/renormalize     @com.keepit.controllers.admin.UrlController.renormalize(readOnly: Boolean ?= true, clearSeq: Boolean ?= false, domainRegex: Option[String] ?= None)
 GET     /admin/data/renormalizeConsole              @com.keepit.controllers.admin.UrlController.urlRenormalizeConsole()
 POST    /admin/data/renormalizeConsole/submit       @com.keepit.controllers.admin.UrlController.urlRenormalizeConsoleSubmit()
+POST    /admin/data/pornDomainFlag                  @com.keepit.controllers.admin.UrlController.pornDomainFlag()
 GET     /admin/data/clearRedirects/:toUriId @com.keepit.controllers.admin.UrlController.clearRedirects(toUriId: Id[NormalizedURI])
 POST    /admin/data/handleDuplicate @com.keepit.controllers.admin.UrlController.handleDuplicate
 POST    /admin/data/handleDuplicates @com.keepit.controllers.admin.UrlController.handleDuplicates
@@ -713,7 +714,7 @@ POST    /admin/slider/goldenVersion   @com.keepit.controllers.admin.SliderAdminC
 GET     /admin/libraries                 @com.keepit.controllers.admin.AdminLibraryController.index(page: Int ?= 0)
 GET     /admin/libraries/:id             @com.keepit.controllers.admin.AdminLibraryController.libraryView(id: Id[Library])
 GET     /admin/libraries/:id/indexed        @com.keepit.controllers.admin.AdminLibraryController.getLuceneDocument(id: Id[Library])
-GET     /admin/libraries/:id/keeps       @com.keepit.controllers.admin.AdminLibraryController.libraryKeepsView(id: Id[Library], page: Int ?= 0, showPrivates: Boolean ?= false)
+GET     /admin/libraries/:id/keeps       @com.keepit.controllers.admin.AdminLibraryController.libraryKeepsView(id: Id[Library], page: Int ?= 0, showPrivates: Boolean ?= false, showInactives: Boolean ?= false)
 POST    /admin/libraries/internForUser   @com.keepit.controllers.admin.AdminLibraryController.internUserSystemLibraries(userId: Id[User])
 POST    /admin/libraries/internForAllUsers  @com.keepit.controllers.admin.AdminLibraryController.internAllUserSystemLibraries(startingUserId: Id[User], endingUserId: Id[User])
 POST    /admin/libraries/:id/state/:state   @com.keepit.controllers.admin.AdminLibraryController.changeState(id: Id[Library], state: String)

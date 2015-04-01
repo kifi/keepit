@@ -8,7 +8,7 @@ import com.keepit.rover.model.ArticleKey
 import play.api.libs.json.Format
 
 private[store] class ArticleStoreKey(key: ArticleKey[_]) {
-  override def toString = s"${key.uriId.id}/${key.kind.typeCode}/${key.version.major.value}/${key.version.minor.value}"
+  override def toString = s"${key.uriId.id}/${key.kind.typeCode}/${key.version.major.value}.${key.version.minor.value}"
 }
 
 private[store] object ArticleStoreKey {

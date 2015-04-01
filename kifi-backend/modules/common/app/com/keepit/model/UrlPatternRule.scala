@@ -20,7 +20,7 @@ case class UrlPatternRule(
     useProxy: Option[Id[HttpProxy]] = None,
     normalization: Option[Normalization] = None,
     trustedDomain: Option[String] = None,
-    nonSensitive: Boolean = false) extends Model[UrlPatternRule] {
+    nonSensitive: Option[Boolean] = None) extends Model[UrlPatternRule] {
 
   def withId(id: Id[UrlPatternRule]) = this.copy(id = Some(id))
   def withState(newState: State[UrlPatternRule]) = this.copy(state = newState)
@@ -41,7 +41,7 @@ object UrlPatternRule {
     (__ \ 'useProxy).formatNullable(Id.format[HttpProxy]) and
     (__ \ 'normalization).formatNullable[Normalization] and
     (__ \ 'trustedDomain).formatNullable[String] and
-    (__ \ 'nonSensitive).format[Boolean]
+    (__ \ 'nonSensitive).format[Option[Boolean]]
   )(UrlPatternRule.apply, unlift(UrlPatternRule.unapply))
 }
 
@@ -59,7 +59,7 @@ object UrlPatternRules {
 }
 
 case class UrlPatternRulesAllKey() extends Key[UrlPatternRules] {
-  override val version = 1
+  override val version = 2
   val namespace = "url_pattern_rules_all"
   def toKey(): String = "all"
 }

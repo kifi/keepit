@@ -2,7 +2,7 @@ package com.keepit.curator.commanders
 
 import com.google.inject.{ Singleton, Inject }
 import com.keepit.common.db.slick.DBSession.RWSession
-import com.keepit.common.db.{ Id }
+import com.keepit.common.db.Id
 import com.keepit.common.db.slick.{ Database, ExecutionSkipped }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
@@ -37,7 +37,6 @@ class TopUriSeedIngestionHelper @Inject() (
   }
 
   def processUriScores(uriId: Id[NormalizedURI], score: Float, userId: Id[User])(implicit session: RWSession): Unit = {
-    log.info(s"[graph ingest] $uriId $userId")
     rawSeedsRepo.getByUriIdAndUserId(uriId, Some(userId)) match {
       case Some(seedItem) => {
         rawSeedsRepo.save(seedItem.copy(

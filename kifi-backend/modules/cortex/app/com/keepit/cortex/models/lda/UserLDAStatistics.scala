@@ -114,7 +114,7 @@ class UserLDAStatisticsRetrieverImpl @Inject() (
 
   def getUserLDAStats(version: ModelVersion[DenseLDA]): Option[UserLDAStatistics] = {
     cache.getOrElseOpt(UserLDAStatisticsCacheKey(version)) {
-      statsStore.get(MiscPrefix.LDA.userLDAStatsJsonFile, version)
+      statsStore.syncGet(MiscPrefix.LDA.userLDAStatsJsonFile, version)
     }
   }
 }

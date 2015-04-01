@@ -2,7 +2,6 @@ package com.keepit.rover.fetcher.apache
 
 import java.util.zip.ZipException
 
-import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.rover.fetcher._
 
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -16,7 +15,7 @@ import org.apache.http.impl.client.HttpClientBuilder
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager
 import com.keepit.common.core._
 
-import scala.concurrent.Future
+import scala.concurrent.{ ExecutionContext, Future }
 import scala.ref.WeakReference
 import scala.util.{ Failure, Try }
 
@@ -45,8 +44,9 @@ class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, conne
 
   private val q = HttpFetchEnforcer.makeQueue(schedulingProperties, scraperHttpConfig, airbrake)
 
-  def fetch[A](request: FetchRequest)(f: FetchResult[HttpInputStream] => A): Future[A] = {
-    Future { doFetch(request)(f).get }(ExecutionContext.fj) // not using SafeFuture here, alerting logic in Try
+  def fetch[A](request: FetchRequest)(f: FetchResult[HttpInputStream] => A)(implicit ec: ExecutionContext): Future[A] = {
+    // not using SafeFuture here, alerting logic in Try
+    Future { doFetch(request)(f).get }
   }
 
   def doFetch[A](request: FetchRequest)(f: FetchResult[HttpInputStream] => A): Try[A] = {

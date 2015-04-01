@@ -52,7 +52,7 @@ class AdminSocialUserController @Inject() (
       socialUserInfo <- db.readOnlyReplicaAsync { implicit s => socialUserInfoRepo.get(socialUserId) }
       socialConnections <- db.readOnlyReplicaAsync { implicit s => socialConnectionRepo.getSocialConnectionInfos(socialUserInfo.id.get).sortWith((a, b) => a.fullName < b.fullName) }
     } yield {
-      val rawInfo = socialUserRawInfoStore.get(socialUserInfo.id.get)
+      val rawInfo = socialUserRawInfoStore.syncGet(socialUserInfo.id.get)
       Ok(html.admin.socialUser(socialUserInfo, socialConnections, rawInfo))
     }
   }

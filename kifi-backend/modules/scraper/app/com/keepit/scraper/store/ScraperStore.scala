@@ -22,6 +22,7 @@ case class ScraperProdStoreModule() extends ProdStoreModule {
     val bucket = current.configuration.getString("cdn.bucket")
     val base = current.configuration.getString("cdn.base")
     S3ImageConfig(bucket.get, base.get)
+
   }
 
   @Singleton
@@ -61,7 +62,7 @@ case class ScraperDevStoreModule() extends DevStoreModule(ScraperProdStoreModule
     whenConfigured("amazon.s3.bayes.porn.detector.bucket")(
       prodStoreModule.bayesPornDetectorStore(amazonS3ClientProvider.get, accessLog)
     ).getOrElse(new InMemoryPornWordLikelihoodStore() {
-        override def get(key: String) = Some(PornWordLikelihood(Map("a" -> 1f)))
+        override def syncGet(key: String) = Some(PornWordLikelihood(Map("a" -> 1f)))
       })
   }
 

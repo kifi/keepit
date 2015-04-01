@@ -77,7 +77,7 @@ class ScraperAdminController @Inject() (
   }
 
   def getScraped(id: Id[NormalizedURI]) = AdminUserPage { implicit request =>
-    val articleOption = articleStore.get(id)
+    val articleOption = articleStore.syncGet(id)
     val (uri, scrapeInfoOption) = db.readOnlyReplica { implicit s => (normalizedURIRepo.get(id), scrapeInfoRepo.getByUriId(id)) }
     Ok(html.admin.article(articleOption, uri, scrapeInfoOption))
   }

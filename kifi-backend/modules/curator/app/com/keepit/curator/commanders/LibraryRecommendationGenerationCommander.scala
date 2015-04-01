@@ -76,7 +76,8 @@ class LibraryRecommendationGenerationCommander @Inject() (
 
     val (recos, newContext) = db.readOnlyReplica { implicit session =>
       val recosByTopScore = libraryRecRepo.getRecommendableByTopMasterScore(userId, 1000) map scoreReco
-      val finalSorted = recoSortStrategy.sort(recosByTopScore)
+      val (accepted, _) = idFilter.filter(recosByTopScore, context)((x: LibraryRecoScore) => x.reco.libraryId.id)
+      val finalSorted = recoSortStrategy.sort(accepted)
       val hackySorted = hackySort(finalSorted) // REMOVE THIS LATER
       idFilter.take(hackySorted, context, limit = howManyMax)((x: LibraryRecoScore) => x.reco.libraryId.id)
     }
@@ -133,7 +134,6 @@ class LibraryRecommendationGenerationCommander @Inject() (
 
     private def precomputeRecommendationsForUser(alwaysInclude: Set[Id[Library]], recoGenState: LibraryRecommendationGenerationState): Future[Unit] = {
       if (schedulingProperties.isRunnerFor(CuratorTasks.libraryRecommendationPrecomputation)) {
-        log.info(s"precomputeRecommendationsForUser called userId=$userId seq=${recoGenState.seq}")
         val (candidateLibraries, excludedLibraries, newSeqNum) = getCandidateLibrariesForUser(recoGenState)
 
         // these libraries were excluded, but it's possible they already exist as library recommendations from a previous precompute

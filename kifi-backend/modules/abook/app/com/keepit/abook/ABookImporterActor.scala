@@ -78,7 +78,7 @@ class ABookImporter @Inject() (
     var processed = 0
     var batchNum = 0
     try {
-      val abookRawInfoOpt = rawJsonRef.flatMap(_.get) flatMap { js => js.asOpt[ABookRawInfo] } orElse { s3.get(s3Key) }
+      val abookRawInfoOpt = rawJsonRef.flatMap(_.get) flatMap { js => js.asOpt[ABookRawInfo] } orElse { s3.syncGet(s3Key) }
       abookRawInfoOpt match {
         case None =>
           db.readWrite(attempts = 2) { implicit s =>

@@ -25,8 +25,8 @@ trait FeaturePluginTestHelper {
   class FooFeatStore extends VersionedInMemoryStore[Id[Foo], FakeModel, FeatureRepresentation[Foo, FakeModel]]
 
   class FooModuloIdInMemoryStore extends VersionedInMemoryStore[Id[Foo], FakeModel, FeatureRepresentation[Foo, FakeModel]] {
-    override def get(key: Id[Foo], version: ModelVersion[FakeModel]): Option[FeatureRepresentation[Foo, FakeModel]] = {
-      if (key.id.toInt % 3 == 1) super.get(key, version)
+    override def syncGet(key: Id[Foo], version: ModelVersion[FakeModel]): Option[FeatureRepresentation[Foo, FakeModel]] = {
+      if (key.id.toInt % 3 == 1) super.syncGet(key, version)
       else None
     }
   }

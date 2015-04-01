@@ -77,8 +77,9 @@ class LibraryRepoImpl @Inject() (
     def universalLink = column[String]("universal_link", O.NotNull)
     def memberCount = column[Int]("member_count", O.NotNull)
     def lastKept = column[Option[DateTime]]("last_kept", O.Nullable)
+    def keepCount = column[Int]("keep_count", O.NotNull)
 
-    def * = (id.?, createdAt, updatedAt, state, name, ownerId, description, visibility, slug, color.?, seq, kind, memberCount, universalLink, lastKept) <> ((Library.applyFromDbRow _).tupled, Library.unapplyToDbRow _)
+    def * = (id.?, createdAt, updatedAt, state, name, ownerId, description, visibility, slug, color.?, seq, kind, memberCount, universalLink, lastKept, keepCount) <> ((Library.applyFromDbRow _).tupled, Library.unapplyToDbRow _)
   }
 
   implicit val getLibraryResult: GetResult[com.keepit.model.Library] = GetResult { r: PositionedResult =>
@@ -97,7 +98,8 @@ class LibraryRepoImpl @Inject() (
       kind = LibraryKind(r.<<[String]),
       memberCount = r.<<[Int],
       universalLink = r.<<[String],
-      lastKept = r.<<[Option[DateTime]]
+      lastKept = r.<<[Option[DateTime]],
+      keepCount = r.<<[Int]
     )
   }
 
@@ -209,7 +211,7 @@ class LibraryRepoImpl @Inject() (
   }
 
   def countWithState(state: State[Library])(implicit session: RSession): Int = {
-    import StaticQuery.interpolation
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     val query = sql"select count(*) from library where state = 'active'"
     query.as[Int].firstOption.getOrElse(0)
   }

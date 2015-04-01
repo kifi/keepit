@@ -20,7 +20,7 @@ trait StoreBackedMultiHashTracker[O, E] extends MultiHashTracker[O, E] {
     filter
   }
 
-  def getMultiHashFilter(owner: O): MultiHashFilter[E] = store.get(owner) getOrElse builder.init()
+  def getMultiHashFilter(owner: O): MultiHashFilter[E] = store.syncGet(owner) getOrElse builder.init()
 }
 
 trait MultiHashFilterBuilder[E] extends BinaryFormat[MultiHashFilter[E]] {

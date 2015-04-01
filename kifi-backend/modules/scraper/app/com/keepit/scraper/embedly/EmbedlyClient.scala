@@ -1,14 +1,12 @@
 package com.keepit.scraper.embedly
 
 import java.net.URLEncoder
-import java.util.concurrent.atomic.AtomicInteger
 import com.keepit.common.net.WebServiceUtils
 import com.keepit.common.performance._
 
 import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
 import com.google.inject.{ Inject, Singleton }
-import com.keepit.common.concurrent.RetryFuture
 import com.keepit.common.logging.Logging
 import com.keepit.common.service.RequestConsolidator
 import com.keepit.common.strings.UTF8

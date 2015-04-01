@@ -272,7 +272,11 @@ class UrlController @Inject() (
             case scheme => Some(Normalization(scheme))
           },
           trustedDomain = Some(body("trusted_domain_" + key)).filter(!_.isEmpty),
-          nonSensitive = body.contains("non_sensitive_" + key)
+          nonSensitive = body("non_sensitive_" + key) match {
+            case "None" => None
+            case "true" => Some(true)
+            case "false" => Some(false)
+          }
         )
 
         if (newPat != oldPat) {
@@ -295,11 +299,41 @@ class UrlController @Inject() (
             case scheme => Some(Normalization(scheme))
           },
           trustedDomain = Some(body("new_trusted_domain")).filter(!_.isEmpty),
-          nonSensitive = body.contains("new_nonsensitive")
+          nonSensitive = body("new_non_sensitive") match {
+            case "None" => None
+            case "true" => Some(true)
+            case "false" => Some(false)
+          }
         ))
       }
     }
     Redirect(routes.UrlController.getPatterns)
+  }
+
+  def pornDomainFlag() = AdminUserPage { request =>
+    val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
+    val regex = body.get("regex").get
+    val mode = body.get("mode").get
+    val uris = db.readOnlyReplica { implicit s => uriRepo.getByRegex("%" + regex.trim + "%") }
+
+    if (regex.trim.length <= 3) {
+      Ok("Please check input domain")
+    } else {
+      if (mode == "preview") {
+        val msg = "preview of matched uris: \n" + uris.map { _.url }.mkString("\n")
+        Ok(msg.replaceAll("\n", "\n<br>"))
+      } else {
+        uris.grouped(100).foreach { gp =>
+          db.readWrite { implicit s =>
+            gp.foreach {
+              uri => if (uri.restriction.isEmpty) uriRepo.save(uri.copy(restriction = Some(Restriction.ADULT)))
+            }
+          }
+        }
+        val msg = s"${uris.size} uris processed"
+        Ok(msg)
+      }
+    }
   }
 
   def fixRedirectedUriStates(doIt: Boolean = false) = AdminUserPage { implicit request =>

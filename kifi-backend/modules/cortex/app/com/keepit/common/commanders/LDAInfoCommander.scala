@@ -74,7 +74,7 @@ class LDAInfoCommander @Inject() (
 
 case class LDATopicWordsCommander(topicWordsStore: LDATopicWordsStore, versions: ModelVersion[DenseLDA]*) {
 
-  private val ldaTopicWords = versions.map { version => version -> topicWordsStore.get(MiscPrefix.LDA.topicWordsJsonFile, version).get }.toMap
+  private val ldaTopicWords = versions.map { version => version -> topicWordsStore.syncGet(MiscPrefix.LDA.topicWordsJsonFile, version).get }.toMap
   private val numTopics = ldaTopicWords.map { case (version, words) => version -> words.topicWords.length }
 
   def getLDADimension(implicit version: ModelVersion[DenseLDA]): Int = numTopics(version)

@@ -5,12 +5,11 @@ import java.net.{ SocketTimeoutException, SocketException }
 import java.util.zip.ZipException
 
 import com.google.inject.{ Inject, Singleton }
-import com.keepit.common.concurrent.ExecutionContext
+import com.keepit.common.concurrent.ExecutionContext.{ immediate, fj }
 import com.keepit.common.logging.Logging
 import com.keepit.rover.fetcher.apache.ApacheHttpFetcher
 import com.keepit.rover.fetcher._
 import org.apache.http.{ ConnectionClosedException, HttpStatus }
-
 import scala.concurrent.Future
 
 case class DeprecatedHttpFetchStatus(statusCode: Int, message: Option[String], context: Option[FetchContext]) {
@@ -33,8 +32,7 @@ class DeprecatedHttpFetcherImpl @Inject() (apacheHttpFetcher: ApacheHttpFetcher)
     apacheHttpFetcher.doFetch(request)(processResultWith(f)).recover(toInternalServerError(request)).get
   }
   def get(request: FetchRequest)(f: FetchResult[HttpInputStream] => Unit): Future[DeprecatedHttpFetchStatus] = {
-    implicit val ec = ExecutionContext.immediate
-    apacheHttpFetcher.fetch(request)(processResultWith(f)).recover(toInternalServerError(request))
+    apacheHttpFetcher.fetch(request)(processResultWith(f))(fj).recover(toInternalServerError(request))(immediate)
   }
 
   private def processResultWith(f: FetchResult[HttpInputStream] => Unit)(result: FetchResult[HttpInputStream]): DeprecatedHttpFetchStatus = {

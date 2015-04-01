@@ -1,13 +1,12 @@
 # SHOEBOX
 
 # --- !Ups
+alter table url_pattern_rule
+    alter column non_sensitive bool DEFAULT NULL;
 
-alter table activity_push_task
-    add column next_push datetime NULL;
+alter table url_pattern_rule
+    alter column non_sensitive set NULL;
 
-alter table activity_push_task
-    add column backoff bigint(20) NULL;
-
-insert into evolutions (name, description) values('310.sql', 'add next_push and backoff to activity_push_task table');
+insert into evolutions (name, description) values('310.sql', 'make non_sensitive optional in url_pattern_rule');
 
 # --- !Downs

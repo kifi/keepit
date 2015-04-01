@@ -16,9 +16,9 @@ import scala.concurrent.{ Future, ExecutionContext }
 import scala.util.{ Failure, Success }
 
 object RoverArticleFetchingActor {
-  val minConcurrentFetchTasks: Int = 5
-  val maxConcurrentFetchTasks: Int = 10
-  val lockTimeOut = 5 minutes
+  val minConcurrentFetchTasks: Int = 100
+  val maxConcurrentFetchTasks: Int = 150
+  val lockTimeOut = 10 minutes
   sealed trait RoverFetchingActorMessage
   case object Close extends RoverFetchingActorMessage
   case object StartPullingTasks extends RoverFetchingActorMessage
@@ -64,6 +64,7 @@ class RoverArticleFetchingActor @Inject() (
     val limit = maxConcurrentFetchTasks - concurrentFetchTasks
     if (limit > 0) {
       pulling += limit
+      log.info(s"Pulling up to $limit fetch tasks.")
       taskQueue.nextBatchWithLock(limit, lockTimeOut).onComplete {
         case Success(tasks) => {
           log.info(s"Pulled ${tasks.length}/$limit fetch tasks.")
@@ -88,6 +89,7 @@ class RoverArticleFetchingActor @Inject() (
         articleInfoRepo.getAll(tasks.map(_.body.id).toSet)
       }
       val moreFetching = tasks.filter(task => startFetching(task, articleInfosById(task.body.id)))
+      log.info(s"Started fetching ${moreFetching.length} articles.")
       fetching ++= moreFetching
     }
   }
@@ -98,10 +100,24 @@ class RoverArticleFetchingActor @Inject() (
     articleInfo.shouldFetch tap {
       case false => task.consume()
       case true => {
+        log.info(s"Fetching ${articleInfo.articleKind} for uri ${articleInfo.uriId}: ${articleInfo.url}")
         articleFetcher.fetch(articleInfo.getFetchRequest).flatMap {
-          case None => Future.successful(None)
-          case Some(article) => articleStore.add(articleInfo.uriId, articleInfo.latestVersion, article)(articleInfo.articleKind).imap(key => Some(key.version))
-        }.onComplete {
+          case None => {
+            log.info(s"No ${articleInfo.articleKind} fetched for uri ${articleInfo.uriId}: ${articleInfo.url}")
+            Future.successful(None)
+          }
+          case Some(article) => {
+            log.info(s"Persisting latest ${articleInfo.articleKind} for uri ${articleInfo.uriId}: ${articleInfo.url}")
+            articleStore.add(articleInfo.uriId, articleInfo.latestVersion, article)(articleInfo.articleKind).imap { key =>
+              log.info(s"Persisted latest ${articleInfo.articleKind} with version ${key.version} for uri ${articleInfo.uriId}: ${articleInfo.url}")
+              Some(key.version)
+            }
+          }
+        } recoverWith {
+          case error =>
+            log.error(s"Failed to fetch ${articleInfo.articleKind} for uri ${articleInfo.uriId}: ${articleInfo.url}", error)
+            Future.failed(error)
+        } onComplete {
           case fetched =>
             db.readWrite { implicit session =>
               articleInfoRepo.updateAfterFetch(articleInfo.uriId, articleInfo.articleKind, fetched)

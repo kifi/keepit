@@ -1,8 +1,11 @@
 package com.keepit.shoebox.cron
 
+import com.keepit.common.db.slick.DBSession.RSession
+import com.keepit.common.social.BasicUserRepo
+
 import scala.concurrent.ExecutionContext
 import java.util.concurrent.atomic.AtomicInteger
-import scala.concurrent.{ Future, Promise }
+import scala.concurrent.Future
 
 import com.google.inject.Inject
 import com.keepit.common.actor.ActorInstance
@@ -14,7 +17,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.{ SchedulerPlugin, SchedulingProperties }
 import com.keepit.common.strings._
 import com.keepit.common.time._
-import com.keepit.eliza.{ PushNotificationExperiment, ElizaServiceClient, PushNotificationCategory }
+import com.keepit.eliza.{ PushNotificationExperiment, ElizaServiceClient }
 import com.keepit.model._
 import org.joda.time.DateTime
 
@@ -24,7 +27,7 @@ import scala.util.Random
 
 trait PushNotificationMessage
 case class GeneralActivityPushNotificationMessage(message: String) extends PushNotificationMessage
-case class LibraryPushNotificationMessage(message: String, id: Id[Library]) extends PushNotificationMessage
+case class LibraryPushNotificationMessage(message: String, id: Id[Library], libraryUrl: String) extends PushNotificationMessage
 
 object PushActivities
 object CreatePushActivityEntities
@@ -77,9 +80,11 @@ class ActivityPusher @Inject() (
     libraryRepo: LibraryRepo,
     keepRepo: KeepRepo,
     userRepo: UserRepo,
+    basicUserRepo: BasicUserRepo,
     notifyPreferenceRepo: UserNotifyPreferenceRepo,
     userPersonaRepo: UserPersonaRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
+    kifiInstallationRepo: KifiInstallationRepo,
     actor: ActorInstance[ActivityPushActor],
     implicit val executionContext: ExecutionContext,
     clock: Clock) extends Logging {
@@ -100,12 +105,17 @@ class ActivityPusher @Inject() (
      * activityPushTaskId is for a candidate to push, but may not require a push.
      * This can happen when the user was active after the last push.
      */
-    val (activity, canNotify) = db.readOnlyMaster { implicit s =>
+    val (activity, canNotify, lastActivity) = db.readOnlyMaster { implicit s =>
       val activity = activityPushTaskRepo.get(activityPushTaskId)
       val canNotify = notifyPreferenceRepo.canNotify(activity.userId, NotifyPreference.RECOS_REMINDER)
-      (activity, canNotify)
+      val lastActivity = getLastActivity(activity.userId)
+      (activity, canNotify, lastActivity)
     }
-    if (canNotify) {
+    if (lastActivity != activity.lastActiveDate) {
+      db.readWrite { implicit s =>
+        activityPushTaskRepo.save(activity.withLastActivity(lastActivity))
+      }
+    } else if (canNotify) {
       pushActivity(activity)
     } else {
       //todo(eishay) re-enable when user resets prefs
@@ -120,7 +130,7 @@ class ActivityPusher @Inject() (
     val res: Future[Int] = message match {
       case libMessage: LibraryPushNotificationMessage =>
         log.info(s"pushing library activity update to ${activity.userId} [$experimant]: $message")
-        elizaServiceClient.sendLibraryPushNotification(activity.userId, libMessage.message, libMessage.id, experimant)
+        elizaServiceClient.sendLibraryPushNotification(activity.userId, libMessage.message, libMessage.id, libMessage.libraryUrl, experimant)
       case generalMessage: GeneralActivityPushNotificationMessage =>
         log.info(s"pushing general activity update to ${activity.userId} [$experimant]: $message")
         elizaServiceClient.sendGeneralPushNotification(activity.userId, generalMessage.message, experimant)
@@ -135,18 +145,19 @@ class ActivityPusher @Inject() (
         }
       }
     }
-    val lastActivity = getLastActivity(activity.userId)
     db.readWrite { implicit s =>
-      activityPushTaskRepo.save(activityPushTaskRepo.get(activity.id.get).copy(lastPush = Some(clock.now())).withLastActivity(lastActivity))
+      activityPushTaskRepo.save(activityPushTaskRepo.get(activity.id.get).copy(lastPush = Some(clock.now())))
     }
   }
 
   private def pushActivity(activity: ActivityPushTask): Unit = {
-    getMessage(activity.userId) match {
-      case Some((message, experimant)) =>
-        pushMessage(activity, message, experimant)
-      case None =>
-        log.info(s"skipping push activity for user ${activity.userId}")
+    db.readOnlyReplica { implicit s => kifiInstallationRepo.lastUpdatedMobile(activity.userId) } map { latestInstallation =>
+      getMessage(activity.userId, latestInstallation) match {
+        case Some((message, experimant)) =>
+          pushMessage(activity, message, experimant)
+        case None =>
+          log.info(s"skipping push activity for user ${activity.userId}")
+      }
     }
   }
 
@@ -157,7 +168,8 @@ class ActivityPusher @Inject() (
           if (experiment == PushNotificationExperiment.Experiment1) s"""New keeps in "${lib.name.abbreviate(25)}""""
           else s""""${lib.name.abbreviate(25)}" library has updates"""
         }
-        LibraryPushNotificationMessage(message, lib.id.get)
+        val libraryUrl = "https://www.kifi.com" + Library.formatLibraryPathUrlEncoded(basicUserRepo.load(lib.ownerId).username, lib.slug)
+        LibraryPushNotificationMessage(message, lib.id.get, libraryUrl)
       }
     }
   }
@@ -185,17 +197,30 @@ class ActivityPusher @Inject() (
     }
   }
 
-  def getMessage(userId: Id[User]): Option[(PushNotificationMessage, PushNotificationExperiment)] = {
-    val experiment = if (Random.nextBoolean()) PushNotificationExperiment.Experiment1 else PushNotificationExperiment.Experiment2
-    val res: Option[PushNotificationMessage] = getLibraryActivityMessage(experiment, userId) orElse getPersonaActivityMessage(experiment, userId)
-    res.map(message => (message, experiment))
+  def canSendPushForLibraries(installation: KifiInstallation): Boolean = {
+    installation.platform match {
+      case KifiInstallationPlatform.Android =>
+        installation.version.compareIt(KifiAndroidVersion("2.2.4")) >= 0
+      case KifiInstallationPlatform.IPhone =>
+        installation.version.compareIt(KifiIPhoneVersion("2.1.0")) >= 0
+      case _ => throw new Exception(s"Don't know platform for $installation")
+    }
   }
 
-  def getLastActivity(userId: Id[User]): DateTime = {
-    val libs = db.readOnlyReplica { implicit s =>
-      libraryRepo.getAllByOwner(userId)
+  def getMessage(userId: Id[User], installation: KifiInstallation): Option[(PushNotificationMessage, PushNotificationExperiment)] = {
+    val experiment = if (Random.nextBoolean()) PushNotificationExperiment.Experiment1 else PushNotificationExperiment.Experiment2
+    val libMessage = if (canSendPushForLibraries(installation)) getLibraryActivityMessage(experiment, userId) else None
+    val messageOpt = libMessage orElse getPersonaActivityMessage(experiment, userId)
+    messageOpt.map(message => (message, experiment))
+  }
+
+  def getLastActivity(userId: Id[User])(implicit session: RSession): DateTime = {
+    val installation = kifiInstallationRepo.lastUpdatedMobile(userId).getOrElse(throw new Exception(s"should not get to this point if user $userId has no mobile installation"))
+    val lastActive = libraryRepo.getAllByOwner(userId).map(lib => lib.lastKept.getOrElse(lib.updatedAt)).sorted.reverse.headOption
+    lastActive match {
+      case Some(time) if time.isAfter(installation.updatedAt) => time
+      case _ => installation.updatedAt
     }
-    libs.map(lib => lib.lastKept.getOrElse(lib.updatedAt)).sorted.reverse.head
   }
 
   def createPushActivityEntities(batchSize: Int): Seq[Id[ActivityPushTask]] = {
@@ -205,28 +230,27 @@ class ActivityPusher @Inject() (
       val batch = createPushActivityEntitiesBatch(batchSize)
       allTasks ++= batch
       lastBatchSize = batch.size
-      log.info(s"created ${lastBatchSize} new activity rows")
+      log.info(s"created $lastBatchSize new activity rows")
     }
     allTasks.toSeq
   }
 
   private def createPushActivityEntitiesBatch(batchSize: Int): Seq[Id[ActivityPushTask]] = {
     val users = db.readOnlyMaster { implicit s => //need to use master since we'll quickly gate to race condition because of replica lag
-      val userIds = activityPushTaskRepo.getUsersWithoutActivityPushTask(batchSize)
+      val userIds = activityPushTaskRepo.getMobileUsersWithoutActivityPushTask(batchSize)
       val usersWithLastKeep = userRepo.getAllUsers(userIds).values map { user =>
-        user -> keepRepo.latestKeep(user.id.get)
+        user -> getLastActivity(user.id.get)
       }
       usersWithLastKeep.toSeq
     }
     db.readWrite { implicit s =>
       log.info(s"creating ${users.size} tasks for users")
       users map {
-        case (user, lastKeep) =>
-          val lastActiveDate = lastKeep.getOrElse(user.createdAt)
+        case (user, lastActive) =>
           val task = ActivityPushTask(
             userId = user.id.get,
-            lastActiveDate = lastActiveDate,
-            lastActiveTime = lastActiveDate.toLocalTime,
+            lastActiveDate = lastActive,
+            lastActiveTime = lastActive.toLocalTime,
             state = ActivityPushTaskStates.INACTIVE,
             nextPush = None,
             backoff = None)

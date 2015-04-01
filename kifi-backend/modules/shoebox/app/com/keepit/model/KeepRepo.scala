@@ -480,10 +480,11 @@ class KeepRepoImpl @Inject() (
   }
   def latestKeptAtByLibraryIds(libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Option[DateTime]] = {
     val keepsGroupedByLibrary = (for (r <- rows if r.libraryId.inSet(libraryIds) && r.state === KeepStates.ACTIVE) yield r).groupBy(_.libraryId)
-    keepsGroupedByLibrary.map { case (libraryId, keeps) => (libraryId, keeps.map(k => k.keptAt).max) }.list
+    val map = keepsGroupedByLibrary.map { case (libraryId, keeps) => (libraryId, keeps.map(k => k.keptAt).max) }.list
       .collect {
         case (Some(libraryId), maxKeptAt) =>
           (libraryId, maxKeptAt)
       }.toMap
+    libraryIds.map { libId => libId -> map.getOrElse(libId, None) }.toMap
   }
 }

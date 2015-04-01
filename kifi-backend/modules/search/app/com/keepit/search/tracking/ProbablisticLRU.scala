@@ -95,7 +95,7 @@ class S3BackedBuffer(cache: ProbablisticLRUChunkCache, dataStore: ProbablisticLR
   private def loadChunk(chunkId: Int): Array[Int] = {
     val fullId = FullFilterChunkId(filterName.name, chunkId)
     val key = ProbablisticLRUChunkKey(fullId)
-    cache.getOrElseOpt(key)(dataStore.get(fullId)) match {
+    cache.getOrElseOpt(key)(dataStore.syncGet(fullId)) match {
       case Some(intArray) => intArray
       case None =>
         val intBuffer = new Array[Int](chunkSize + 1)

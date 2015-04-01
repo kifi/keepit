@@ -26,7 +26,12 @@
       <td class="control-group"><input type="text" class="url-example" name="example_@pattern.id.get" value="@pattern.example.getOrElse("")">
       <td class="url-match">
 
-      <td> <input type="checkbox" class="checkbox" name="non_sensitive_@pattern.id.get" @if(pattern.nonSensitive) {checked}> </td>
+      <td><select name="non_sensitive_@pattern.id.get">
+        <option name = "None" value = "None" @if(pattern.nonSensitive.isEmpty) {selected}>None
+        <option name = "true" value = "true" @if(pattern.nonSensitive == Some(true)) {selected}>WhiteList
+        <option name = "false" value = "false" @if(pattern.nonSensitive == Some(false)) {selected}>BlackList
+        </select>
+      </td>
 
       <td><input type="checkbox" class="checkbox" name="unscrapable_@pattern.id.get" @if(pattern.isUnscrapable) {checked}>
       <td><select name="proxy_@pattern.id.get">
@@ -42,7 +47,10 @@
       <td class="control-group"><input type="text" class="url-pattern" name="new_pattern">
       <td class="control-group"><input type="text" class="url-example" name="new_example">
       <td class="url-match">
-      <td><input type="checkbox" class="checkbox" name="new_nonsensitive">
+      <td><select name="new_non_sensitive">
+        <option name="None" value="None" selected>None
+        <option name="true" value="true">WhiteList
+        <option name="false" value="false">BlackList
       <td><input type="checkbox" class="checkbox" name="new_unscrapable">
       <td><select name="new_proxy">
         <option name="None" value="None" selected>Don't
@@ -55,10 +63,28 @@
   <button type="submit" class="btn btn-primary" data-loading-text="Saving...">Save</button>
   <button type="reset" class="btn">Clear unsaved changes</button>
 </form>
+
+
+<br><br>
+
+<form id = "mark_domain_porn">
+    <input id = "porn_regex" type = "text" value = "" placeholder="sql regex, e.g. youporn.com">
+    <select id = "mode">
+      <option value = "preview">preview urls</option>
+      <option value = "readWrite">read-write mode</option>
+    </select>
+
+    <button type = "submit">Apply</button>
+
+</form>
+
+<p id = "previewList"></p>
+<br><br>
+
 }
 
 <script>
-$(function() {
+$(document).ready(function() {
   $(".url-patterns")
   .on("keydown keypress keyup mousedown mouseup blur", ".url-pattern,.url-example", updateRow)
   .submit(function(e) {
@@ -91,5 +117,24 @@ $(function() {
       $match.addClass(re.test(url) ? "match-y" : "match-n");
     }
   }
+
+
+  $("#mark_domain_porn").submit(function(event){
+      event.preventDefault();
+      $("#previewList").empty().prepend("Loading...")
+
+      $.post('@com.keepit.controllers.admin.routes.UrlController.pornDomainFlag()',
+        {regex: $("#porn_regex").val(), mode: $("#mode").val()}
+      ).done(done).fail(fail)
+
+      function done(data) { $("#previewList").empty().prepend(data) }
+      function fail() { alert("bad things happened") }
+    })
+
+
+
 });
+
+
+
 </script>

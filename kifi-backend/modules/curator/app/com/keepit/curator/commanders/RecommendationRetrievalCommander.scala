@@ -124,7 +124,8 @@ class RecommendationRetrievalCommander @Inject() (
 
     val (recos, newContext) = db.readOnlyReplica { implicit session =>
       val recosByTopScore = uriRecoRepo.getRecommendableByTopMasterScore(userId, 1000) filter badData map scoreReco //ZZZ
-      val finalSorted = recoSortStrategy.sort(recosByTopScore)
+      val (accepted, _) = idFilter.filter(recosByTopScore, context)((x: UriRecoScore) => x.reco.uriId.id)
+      val finalSorted = recoSortStrategy.sort(accepted)
       idFilter.take(finalSorted, context, limit = 10)((x: UriRecoScore) => x.reco.uriId.id)
     }
 
