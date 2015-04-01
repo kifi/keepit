@@ -89,6 +89,10 @@ class ActivityPusher @Inject() (
     implicit val executionContext: ExecutionContext,
     clock: Clock) extends Logging {
 
+  def updatedActivity(kifiInstallation: KifiInstallation): Unit = {
+    //todo(andrew): placeholder
+  }
+
   def forcePushLibraryActivityForUser(userId: Id[User]): Unit = {
     val task = db.readOnlyMaster { implicit s =>
       activityPushTaskRepo.getByUser(userId)

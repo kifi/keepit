@@ -78,8 +78,8 @@ class RawSeedItemRepoImpl @Inject() (
   def deleteCache(model: RawSeedItem)(implicit session: RSession): Unit = {}
   def invalidateCache(model: RawSeedItem)(implicit session: RSession): Unit = {}
 
-  override def save(RawSeedItem: RawSeedItem)(implicit session: RWSession): RawSeedItem = {
-    val toSave = RawSeedItem.copy(seq = deferredSeqNum())
+  override def save(rawSeedItem: RawSeedItem)(implicit session: RWSession): RawSeedItem = {
+    val toSave = rawSeedItem.copy(seq = deferredSeqNum())
     super.save(toSave)
   }
 
