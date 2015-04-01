@@ -1,6 +1,7 @@
 package com.keepit.controllers.mobile
 
 import com.google.inject.Injector
+import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.controller.FakeUserActionsHelper
 import com.keepit.model.{ Restriction, User, NormalizedURIRepo }
 import com.keepit.normalizer.NormalizedURIInterner
@@ -16,7 +17,7 @@ import play.api.test.Helpers._
 
 class MobileUriControllerTest extends Specification with ShoeboxTestInjector {
 
-  val modules = Seq()
+  val modules = Seq(FakeExecutionContextModule())
 
   "MobileUriController" should {
 

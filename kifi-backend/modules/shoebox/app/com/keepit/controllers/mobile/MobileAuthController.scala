@@ -12,6 +12,7 @@ import com.keepit.common.time.Clock
 import com.keepit.controllers.core.{ AuthController, AuthHelper }
 import com.keepit.heimdal.{ ContextDoubleData, HeimdalContext, HeimdalContextBuilderFactory, HeimdalServiceClient, UserEvent, UserEventTypes }
 import com.keepit.model._
+import com.keepit.shoebox.cron.ActivityPusher
 import com.keepit.social.providers.ProviderController
 import com.keepit.social.{ SocialNetworkType, UserIdentity }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -33,6 +34,7 @@ class MobileAuthController @Inject() (
     userRepo: UserRepo,
     installationRepo: KifiInstallationRepo,
     authHelper: AuthHelper,
+    activityPusher: ActivityPusher,
     contextBuilderFactory: HeimdalContextBuilderFactory,
     heimdal: HeimdalServiceClient) extends UserActions with ShoeboxServiceController with Logging {
 
@@ -62,6 +64,7 @@ class MobileAuthController @Inject() (
   }
 
   private def registerMobileVersion[T <: KifiVersion with Ordered[T]](installationIdOpt: Option[ExternalId[KifiInstallation]], version: T, agent: UserAgent, userId: Id[User], platform: KifiInstallationPlatform, context: HeimdalContext) = {
+
     val (installation, newInstallation) = installationIdOpt map { id =>
       db.readOnlyMaster { implicit s => installationRepo.get(id) }
     } match {
@@ -119,6 +122,7 @@ class MobileAuthController @Inject() (
     } else {
       heimdal.trackEvent(UserEvent(userId, builder.build, UserEventTypes.UPDATED_EXTENSION))
     }
+    activityPusher.updatedActivity(installation)
   }
 
   def accessTokenSignup(providerName: String) = MaybeUserAction.async(parse.tolerantJson) { implicit request =>
