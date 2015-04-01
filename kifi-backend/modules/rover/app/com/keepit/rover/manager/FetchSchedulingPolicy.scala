@@ -56,7 +56,7 @@ object FetchSchedulingPolicy {
   )
 
   private val defaultSchedulingPolicy = FetchSchedulingPolicy(
-    maxRandomDelay = 6 hours,
+    maxRandomDelay = 7 days,
     initialInterval = 14 days,
     minInterval = 7 days,
     maxInterval = 120 days,
