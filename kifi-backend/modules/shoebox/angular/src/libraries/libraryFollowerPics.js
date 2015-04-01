@@ -30,8 +30,8 @@ angular.module('kifi')
           var picWidths = calcPicWidths(window.innerWidth);
 
           var numCanFit = Math.floor((maxWidth + picWidths.gap) / picWidths.period);
-          var showPlus = numCanFit < n;
-          var numToShow = Math.min(scope.followers.length, numCanFit - (showPlus ? 1 : 0));
+          var showPlus = Math.min(scope.followers.length, numCanFit) < n;
+          var numToShow = Math.min(scope.followers.length, numCanFit - (numCanFit && showPlus ? 1 : 0));
 
           scope.followersToShow = scope.followers.slice(0, numToShow);
           scope.moreCount = n - numToShow;
