@@ -1,5 +1,6 @@
 package com.keepit.realtime
 
+import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.{ AirbrakeError, AirbrakeNotifier }
 import com.keepit.common.logging.Logging
@@ -10,11 +11,12 @@ import play.api.libs.json.JsObject
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success }
 
+@ImplementedBy(classOf[AppBoyClientImpl])
 trait AppBoyClient {
   def send(json: JsObject, device: Device, notification: PushNotification): Future[ClientResponse]
 }
 
-class AppBoyClientImpl(
+class AppBoyClientImpl @Inject() (
     clock: Clock,
     client: HttpClient,
     airbrake: AirbrakeNotifier,

@@ -18,7 +18,7 @@ import com.keepit.eliza.controllers.internal.MessagingController
 import com.keepit.eliza.model._
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.model.{ NormalizedURI, User }
-import com.keepit.realtime.FakeUrbanAirshipModule
+import com.keepit.realtime.{ FakeAppBoyModule, FakeUrbanAirshipModule }
 import com.keepit.scraper.FakeScraperServiceClientModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
@@ -44,6 +44,7 @@ class MessagingControllerTest extends TestKitSupport with SpecificationLike with
     FakeElizaServiceClientModule(),
     FakeABookServiceClientModule(),
     FakeUrbanAirshipModule(),
+    FakeAppBoyModule(),
     FakeUserActionsModule(),
     FakeCryptoModule(),
     FakeScraperServiceClientModule(),
