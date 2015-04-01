@@ -1,6 +1,7 @@
 package com.keepit.common.store
 
 import com.amazonaws.services.s3.transfer.TransferManager
+import com.keepit.rover.sensitivity.{ PornWordLikelihood, InMemoryPornWordLikelihoodStore, S3PornWordLikelihoodStore, PornWordLikelihoodStore }
 import com.keepit.search.tracking.{ InMemoryProbablisticLRUStoreImpl, S3ProbablisticLRUStoreImpl, ProbablisticLRUStore }
 import play.api.Play.current
 import net.codingwell.scalaguice.ScalaModule
@@ -57,6 +58,12 @@ trait ProdStoreModule extends StoreModule {
     val bucketName = S3Bucket(current.configuration.getString("amazon.s3.install.bucket").get)
     new S3KifiInstallationStoreImpl(bucketName, amazonS3Client, accessLog)
   }
+
+  @Provides @Singleton
+  def bayesPornDetectorStore(amazonS3Client: AmazonS3, accessLog: AccessLog): PornWordLikelihoodStore = {
+    val bucketName = S3Bucket(current.configuration.getString("amazon.s3.bayes.porn.detector.bucket").get)
+    new S3PornWordLikelihoodStore(bucketName, amazonS3Client, accessLog)
+  }
 }
 
 abstract class DevStoreModule[T <: ProdStoreModule](override val prodStoreModule: T) extends ProdOrElseDevStoreModule(prodStoreModule) {
@@ -99,4 +106,13 @@ abstract class DevStoreModule[T <: ProdStoreModule](override val prodStoreModule
     whenConfigured("amazon.s3.install.bucket")(
       prodStoreModule.kifiInstallationStore(amazonS3ClientProvider.get, accessLog)
     ).getOrElse(new InMemoryKifiInstallationStoreImpl())
+
+  @Provides @Singleton
+  def bayesPornDetectorStore(amazonS3ClientProvider: Provider[AmazonS3], accessLog: AccessLog) = {
+    whenConfigured("amazon.s3.bayes.porn.detector.bucket")(
+      prodStoreModule.bayesPornDetectorStore(amazonS3ClientProvider.get, accessLog)
+    ).getOrElse(new InMemoryPornWordLikelihoodStore() {
+        override def syncGet(key: String) = Some(PornWordLikelihood(Map("a" -> 1f)))
+      })
+  }
 }

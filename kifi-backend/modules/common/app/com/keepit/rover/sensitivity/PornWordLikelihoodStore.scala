@@ -1,14 +1,9 @@
-package com.keepit.learning.porndetector
+package com.keepit.rover.sensitivity
 
-import com.keepit.common.store.S3JsonStore
 import com.amazonaws.services.s3.AmazonS3
 import com.keepit.common.logging.AccessLog
-import com.keepit.common.store.S3Bucket
-import com.keepit.common.store.InMemoryObjectStore
-import play.api.libs.json.Format
-import play.api.libs.json._
-import com.keepit.common.store.ObjectStore
-import play.api.libs.functional.syntax._
+import com.keepit.common.store.{ InMemoryObjectStore, ObjectStore, S3Bucket, S3JsonStore }
+import play.api.libs.json.{ Format, _ }
 
 case class PornWordLikelihood(likelihood: Map[String, Float])
 

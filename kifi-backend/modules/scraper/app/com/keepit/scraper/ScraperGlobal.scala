@@ -3,9 +3,9 @@ package com.keepit.scraper
 import com.keepit.FortyTwoGlobal
 import com.keepit.common.cache.{ InMemoryCachePlugin, FortyTwoCachePlugin }
 import com.keepit.common.healthcheck._
+import com.keepit.rover.sensitivity.PornDetectorFactory
 import play.api.Mode._
 import play.api._
-import com.keepit.learning.porndetector.PornDetectorFactory
 import com.keepit.common.concurrent.ForkJoinExecContextPlugin
 import net.codingwell.scalaguice.InjectorExtensions._
 

@@ -4,10 +4,10 @@ import com.google.inject.{ Inject, ImplementedBy }
 import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.net.URI._
 import com.keepit.model._
 import com.keepit.rover.document.utils.Signature
 import com.keepit.rover.fetcher.{ FetchRequest, HttpRedirect }
+import com.keepit.rover.sensitivity.{ PornDetectorFactory, PornDomains, SlidingWindowPornDetector }
 import com.keepit.scraper.extractor._
 import com.keepit.scraper.fetcher.DeprecatedHttpFetcher
 import com.keepit.search.{ LangDetector, Article, ArticleStore }
@@ -17,7 +17,6 @@ import com.keepit.common.time._
 import com.keepit.common.net.URI
 import org.apache.http.HttpStatus
 import scala.util.{ Try, Failure, Success }
-import com.keepit.learning.porndetector.{ PornDomains, PornDetectorFactory, SlidingWindowPornDetector }
 import com.keepit.search.Lang
 import com.keepit.shoebox.ShoeboxScraperClient
 import scala.concurrent.Future

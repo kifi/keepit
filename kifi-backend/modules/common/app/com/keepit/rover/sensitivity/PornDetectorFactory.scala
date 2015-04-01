@@ -1,4 +1,4 @@
-package com.keepit.learning.porndetector
+package com.keepit.rover.sensitivity
 
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.logging.Logging
