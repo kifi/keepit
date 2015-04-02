@@ -1,11 +1,10 @@
 package com.keepit.normalizer
 
-import com.mysql.jdbc.exceptions.jdbc4.MySQLIntegrityConstraintViolationException
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.google.inject.{ Singleton, Inject }
 import com.keepit.common.db.slick.Database
 import com.keepit.model._
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
+import scala.concurrent.ExecutionContext
 import scala.util._
 import com.keepit.queue.NormalizationUpdateTask
 import java.sql.SQLException
@@ -18,9 +17,7 @@ import scala.Left
 import com.keepit.model.NormalizedURIUrlHashKey
 import scala.util.Failure
 import scala.Right
-import scala.Some
 import scala.util.Success
-import scala.Either
 
 @Singleton
 class NormalizedURIInterner @Inject() (
@@ -30,6 +27,7 @@ class NormalizedURIInterner @Inject() (
     updateQueue: SQSQueue[NormalizationUpdateTask],
     urlRepo: URLRepo,
     normalizationService: NormalizationService,
+    implicit val executionContext: ExecutionContext,
     airbrake: AirbrakeNotifier) extends Logging {
 
   /**

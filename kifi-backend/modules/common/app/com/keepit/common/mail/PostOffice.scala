@@ -1,9 +1,9 @@
 package com.keepit.common.mail
 
+import scala.concurrent.ExecutionContext
 import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.common.logging.Logging
 import com.keepit.shoebox.ShoeboxServiceClient
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.collection.mutable.Queue
 import com.keepit.common.akka.{ FortyTwoActor, UnsupportedActorMessage }
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -37,6 +37,7 @@ case object SendQueuedEmails extends PostOfficeMessage
 
 class RemotePostOfficeActor @Inject() (
   airbrake: AirbrakeNotifier,
+  implicit val executionContext: ExecutionContext,
   shoeboxClient: ShoeboxServiceClient)
     extends FortyTwoActor(airbrake) {
 
