@@ -50,7 +50,7 @@ class ElizaController @Inject() (
       Ok(JsNumber(deviceCount))
     }
   }
-  //val payload = Json.obj("userId" -> userId, "message" -> message, "recipientUserId" -> recipientUserId, "username" -> username.value, "pictureUrl" -> pictureUrl, "pushNotificationExperiment" -> pushNotificationExperiment)
+
   def sendUserPushNotification() = Action.async { request =>
     val req = request.body.asJson.get.as[JsObject]
     val userId = Id[User]((req \ "userId").as[Long])

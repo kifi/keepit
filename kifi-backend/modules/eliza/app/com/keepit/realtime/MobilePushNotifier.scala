@@ -39,16 +39,16 @@ trait MobilePushNotifier {
 }
 
 class MobilePushDelegator @Inject() (
-    urbanAirship: Provider[UrbanAirshipImpl],
-    appBoy: Provider[AppBoyImpl],
+    urbanAirship: UrbanAirship,
+    appBoy: AppBoy,
     db: Database,
     deviceRepo: DeviceRepo,
     implicit val executionContext: ExecutionContext) extends MobilePushNotifier with Logging {
 
   def registerDevice(userId: Id[User], token: Option[String], deviceType: DeviceType, isDev: Boolean, signature: Option[String]): Either[String, Device] = {
     token match {
-      case Some(tokenStr) => Right(urbanAirship.get.registerDevice(userId, tokenStr, deviceType, isDev, signature))
-      case None if signature.isDefined => Right(appBoy.get.registerDevice(userId, deviceType, isDev, "ab_" + signature.get))
+      case Some(tokenStr) => Right(urbanAirship.registerDevice(userId, tokenStr, deviceType, isDev, signature))
+      case None if signature.isDefined => Right(appBoy.registerDevice(userId, deviceType, isDev, "ab_" + signature.get))
       case _ => Left("invalid_params")
     }
   }
@@ -58,8 +58,8 @@ class MobilePushDelegator @Inject() (
       deviceRepo.getByUserId(userId, None)
     }.partition(d => d.token.isDefined)
 
-    val numSentUrbanAirshipF = urbanAirship.get.notifyUser(userId, devicesWithToken, notification)
-    val numSentAppBoyF = appBoy.get.notifyUser(userId, devicesNoToken, notification)
+    val numSentUrbanAirshipF = urbanAirship.notifyUser(userId, devicesWithToken, notification)
+    val numSentAppBoyF = appBoy.notifyUser(userId, devicesNoToken, notification)
 
     for {
       numSentUrbanAirship <- numSentUrbanAirshipF

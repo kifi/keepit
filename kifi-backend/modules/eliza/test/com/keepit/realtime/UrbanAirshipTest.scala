@@ -36,7 +36,7 @@ class UrbanAirshipTest extends Specification with TestInjector with ElizaTestInj
     "getDevices" in {
       withDb(modules: _*) { implicit injector =>
 
-        val urbanAirship = inject[UrbanAirshipImpl]
+        val urbanAirship = inject[UrbanAirship]
         val repo = inject[DeviceRepo]
         inject[Database].readWrite { implicit s =>
           repo.save(Device(userId = Id[User](1), token = Some("32e0a1c0cd0860ea392d06d26bbd1d4f289bbc488c29d634aee8ccb10e812f63"), deviceType = DeviceType.IOS, updatedAt = new DateTime(2013, 2, 2, 1, 1, 1)))
@@ -53,7 +53,7 @@ class UrbanAirshipTest extends Specification with TestInjector with ElizaTestInj
     "getDevice" in {
       withDb(modules: _*) { implicit injector =>
 
-        val urbanAirship = inject[UrbanAirshipImpl]
+        val urbanAirship = inject[UrbanAirship]
         val repo = inject[DeviceRepo]
         inject[Database].readWrite { implicit s =>
           repo.save(Device(userId = Id[User](1), token = Some("32e0a1c0cd0860ea392d06d26bbd1d4f289bbc488c29d634aee8ccb10e812f63"), deviceType = DeviceType.IOS, updatedAt = new DateTime(2013, 2, 2, 1, 1, 1)))
@@ -69,7 +69,7 @@ class UrbanAirshipTest extends Specification with TestInjector with ElizaTestInj
     "create ios json for MessageThreadPushNotification" in {
       withInjector(modules: _*) { implicit injector =>
 
-        val urbanAirship = inject[UrbanAirshipImpl]
+        val urbanAirship = inject[UrbanAirship]
         val urbanAirshipClient = inject[FakeUrbanAirshipClient]
         urbanAirshipClient.jsons.size === 0
         val device = Device(userId = Id[User](1), token = Some("32e0a1c0cd0860ea392d06d26bbd1d4f289bbc488c29d634aee8ccb10e812f63"), deviceType = DeviceType.IOS)
@@ -99,7 +99,7 @@ class UrbanAirshipTest extends Specification with TestInjector with ElizaTestInj
   "create ios json for SimplePushNotification" in {
     withInjector(modules: _*) { implicit injector =>
 
-      val urbanAirship = inject[UrbanAirshipImpl]
+      val urbanAirship = inject[UrbanAirship]
       val urbanAirshipClient = inject[FakeUrbanAirshipClient]
       urbanAirshipClient.jsons.size === 0
       val device = Device(userId = Id[User](1), token = Some("32e0a1c0cd0860ea392d06d26bbd1d4f289bbc488c29d634aee8ccb10e812f63"), deviceType = DeviceType.IOS)
@@ -129,7 +129,7 @@ class UrbanAirshipTest extends Specification with TestInjector with ElizaTestInj
   "create ios channel json" in {
     withInjector(modules: _*) { implicit injector =>
 
-      val urbanAirship = inject[UrbanAirshipImpl]
+      val urbanAirship = inject[UrbanAirship]
       val urbanAirshipClient = inject[FakeUrbanAirshipClient]
       urbanAirshipClient.jsons.size === 0
       val device = Device(userId = Id[User](1), token = Some("84d69b89-867f-400f-80e8-ecc53ecfdae4"), deviceType = DeviceType.IOS)
@@ -158,7 +158,7 @@ class UrbanAirshipTest extends Specification with TestInjector with ElizaTestInj
   "create android json" in {
     withInjector(modules: _*) { implicit injector =>
 
-      val urbanAirship = inject[UrbanAirshipImpl]
+      val urbanAirship = inject[UrbanAirship]
       val urbanAirshipClient = inject[FakeUrbanAirshipClient]
       urbanAirshipClient.jsons.size === 0
       val device = Device(userId = Id[User](1), token = Some("8c265c51-16a8-4559-8b2e-d8b46f62bf06"), deviceType = DeviceType.Android)

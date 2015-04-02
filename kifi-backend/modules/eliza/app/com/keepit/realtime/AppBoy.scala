@@ -19,7 +19,7 @@ object AppBoyConfig {
   val appGroupId: String = "4212bbb0-d07b-4109-986a-aac019d8062a"
 }
 
-class AppBoyImpl @Inject() (
+class AppBoy @Inject() (
     client: AppBoyClient,
     db: Database,
     deviceRepo: DeviceRepo,
