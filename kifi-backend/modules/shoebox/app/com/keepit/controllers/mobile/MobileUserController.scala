@@ -349,8 +349,18 @@ class MobileUserController @Inject() (
     }
   }
 
-  def reportData() = Action(parse.tolerantJson) { implicit request =>
-    val body = "<pre>" + Json.prettyPrint(request.body) + "</pre>"
+  def reportData() = MaybeUserAction(parse.tolerantJson) { implicit request =>
+    val body =
+      s"""<pre>
+         |User: ${request.userIdOpt}
+         |Identity: ${request.identityOpt}
+         |IP: ${request.remoteAddress}
+         |Agent: ${request.userAgentOpt}
+         |
+         |Body:
+         |${Json.prettyPrint(request.body)}
+         |</pre>
+       """.stripMargin
     val email = ElectronicMail(
       from = SystemEmailAddress.ANDREW,
       to = Seq(EmailAddress("jeremy@kifi.com"), EmailAddress("thass@kifi.com"), EmailAddress("andrew@kifi.com")),
