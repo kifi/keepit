@@ -25,7 +25,7 @@ import scala.util.{ Try, Success, Failure }
 
 case class UrbanAirshipConfig(key: String, secret: String, devKey: String, devSecret: String, baseUrl: String = "https://go.urbanairship.com")
 
-class UrbanAirshipImpl @Inject() (
+class UrbanAirship @Inject() (
     client: UrbanAirshipClient,
     deviceRepo: DeviceRepo,
     airbrake: AirbrakeNotifier,
