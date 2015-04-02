@@ -227,6 +227,8 @@ class UrbanAirship @Inject() (
         log.info(s"[UrbanAirship] Sending MessageThreadPushNotification to user ${device.userId} device: [${device.token}] message ${mtpn.id}")
       case lupn: LibraryUpdatePushNotification =>
         log.info(s"[UrbanAirship] Sending LibraryUpdatePushNotification to user ${device.userId} device: [${device.token}] library ${lupn.libraryId} message ${lupn.message}")
+      case upn: UserPushNotification =>
+        log.info(s"[UrbanAirship] Sending UserPushNotification to user ${device.userId} device: [${device.token}] from ${upn.userId} message ${upn.message}")
     }
 
     client.send(json, device, notification) andThen {
