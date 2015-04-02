@@ -97,22 +97,30 @@ class AppBoy @Inject() (
   }
 
   private def sendNotification(user: User, device: Device, notification: PushNotification): Unit = {
-    val deviceMsgType = device.deviceType match {
-      case DeviceType.IOS => "apple_push"
-      case DeviceType.Android => "android_push"
+
+    val defaultPushJson = Json.obj(
+      "sound" -> Json.toJson(notification.sound),
+      "alert" -> notification.message,
+      "extra" -> addExtraJson(notification, device.deviceType)
+    )
+
+    val (deviceMsgType, devicePushJson) = device.deviceType match {
+      case DeviceType.IOS =>
+        val applePushJson = notification.message match {
+          case Some(msg) => defaultPushJson
+          case None => defaultPushJson ++ Json.obj("content-available" -> true)
+        }
+        ("apple_push", applePushJson)
+      case DeviceType.Android =>
+        val androidPushJson = defaultPushJson ++ Json.obj("title" -> notification.message)
+        ("android_push", androidPushJson)
     }
-    val extraJson = addExtraJson(notification, device.deviceType)
 
     val json = Json.obj(
       "app_group_id" -> AppBoyConfig.appGroupId,
       "external_user_ids" -> Json.toJson(Seq(user.externalId)),
       "messages" -> Json.obj(
-        deviceMsgType -> Json.obj(
-          "sound" -> Json.toJson(notification.sound),
-          "title" -> notification.message,
-          "alert" -> notification.message,
-          "extra" -> extraJson
-        )
+        deviceMsgType -> devicePushJson
       )
     )
 
