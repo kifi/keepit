@@ -1,5 +1,6 @@
 keepBorderWidth = 1px
 keepBorderRadius = 10px
+keepBorderRadiusEditing = 3px
 keepEditToolsWidth = 28px
 tagOutlineColor = #bdc4c9
 kifiGreen = #73c583
@@ -9,12 +10,15 @@ kifiGreen = #73c583
   box-sizing: border-box
   margin-bottom: 10px
   background-color: white
-  border-radius: keepBorderRadius
   box-shadow: 0 0 0 .5px defaultBorderColor  // half-pixel border workaround crbug.com/236371
 
   @media (min-width: 480px)
     box-shadow: none  // important not to use box-shadow here (for recommended keep cards)
     border: defaultBorder
+
+.kf-keep-selection-tools
+  border-radius: keepBorderRadius keepBorderRadiusEditing keepBorderRadiusEditing keepBorderRadius
+  margin-left: keepBorderWidth - keepEditToolsWidth
 
 .kf-keep-selection-tools-body
   padding: 0 0 7px 27px
@@ -39,10 +43,6 @@ kifiGreen = #73c583
   font-size: 13px
   font-smoothing: antialiased
   line-height: 33px
-
-.kf-keep-selection-tools
-  margin-left: keepBorderWidth - keepEditToolsWidth
-  margin-right: 25px
 
 .kf-keep-selected-count
   text-align: center
@@ -98,6 +98,7 @@ kifiGreen = #73c583
 
 .kf-keep
   position: relative
+  border-radius: keepBorderRadius
 
   &.detailed
     background-color: #eff2f7
@@ -123,7 +124,7 @@ kifiGreen = #73c583
     max-height: 200px
 
   &.editing
-    border-radius: 0 3px 3px
+    border-radius: 0 keepBorderRadiusEditing keepBorderRadiusEditing
 
     .kf-keep-edit-tools
       display: block

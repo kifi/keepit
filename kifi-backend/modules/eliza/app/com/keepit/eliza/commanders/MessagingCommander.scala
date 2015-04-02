@@ -5,7 +5,7 @@ import com.google.inject.Inject
 import com.keepit.abook.{ ABookServiceClient }
 import com.keepit.common.crypto.PublicId
 import com.keepit.common.net.URI
-import com.keepit.eliza.{ PushNotificationExperiment, PushNotificationCategory }
+import com.keepit.eliza.{ SimplePushNotificationCategory, LibraryPushNotificationCategory, UserPushNotificationCategory, PushNotificationExperiment }
 import com.keepit.eliza.model._
 import com.keepit.common.akka.{ SafeFuture, TimeoutFuture }
 import com.keepit.common.db.{ Id, ExternalId }
@@ -64,18 +64,18 @@ class MessagingCommander @Inject() (
     messageSearchHistoryRepo: MessageSearchHistoryRepo,
     implicit val executionContext: ExecutionContext) extends Logging {
 
-  def sendUserPushNotification(userId: Id[User], message: String, recipientUserId: ExternalId[User], username: Username, pictureUrl: String, pushNotificationExperiment: PushNotificationExperiment): Future[Int] = {
-    val notification = UserPushNotification(message = Some(message), userExtId = recipientUserId, username = username, pictureUrl = pictureUrl, unvisitedCount = getUnreadUnmutedThreadCount(userId), category = PushNotificationCategory.LibraryChanged, experiment = pushNotificationExperiment)
+  def sendUserPushNotification(userId: Id[User], message: String, recipientUserId: ExternalId[User], username: Username, pictureUrl: String, pushNotificationExperiment: PushNotificationExperiment, category: UserPushNotificationCategory): Future[Int] = {
+    val notification = UserPushNotification(message = Some(message), userExtId = recipientUserId, username = username, pictureUrl = pictureUrl, unvisitedCount = getUnreadUnmutedThreadCount(userId), category = category, experiment = pushNotificationExperiment)
     notificationCommander.sendPushNotification(userId, notification)
   }
 
-  def sendLibraryPushNotification(userId: Id[User], message: String, libraryId: Id[Library], libraryUrl: String, pushNotificationExperiment: PushNotificationExperiment): Future[Int] = {
-    val notification = LibraryUpdatePushNotification(message = Some(message), libraryId = libraryId, libraryUrl = libraryUrl, unvisitedCount = getUnreadUnmutedThreadCount(userId), category = PushNotificationCategory.LibraryChanged, experiment = pushNotificationExperiment)
+  def sendLibraryPushNotification(userId: Id[User], message: String, libraryId: Id[Library], libraryUrl: String, pushNotificationExperiment: PushNotificationExperiment, category: LibraryPushNotificationCategory): Future[Int] = {
+    val notification = LibraryUpdatePushNotification(message = Some(message), libraryId = libraryId, libraryUrl = libraryUrl, unvisitedCount = getUnreadUnmutedThreadCount(userId), category = category, experiment = pushNotificationExperiment)
     notificationCommander.sendPushNotification(userId, notification)
   }
 
-  def sendGeneralPushNotification(userId: Id[User], message: String, pushNotificationExperiment: PushNotificationExperiment): Future[Int] = {
-    val notification = SimplePushNotification(message = Some(message), unvisitedCount = getUnreadUnmutedThreadCount(userId), category = PushNotificationCategory.PersonaUpdate, experiment = pushNotificationExperiment)
+  def sendGeneralPushNotification(userId: Id[User], message: String, pushNotificationExperiment: PushNotificationExperiment, category: SimplePushNotificationCategory): Future[Int] = {
+    val notification = SimplePushNotification(message = Some(message), unvisitedCount = getUnreadUnmutedThreadCount(userId), category = category, experiment = pushNotificationExperiment)
     notificationCommander.sendPushNotification(userId, notification)
   }
 

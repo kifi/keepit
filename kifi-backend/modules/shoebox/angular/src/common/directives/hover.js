@@ -20,6 +20,7 @@ angular.module('kifi')
       .on('mouseout', function (e) {
         var toEl = e.relatedTarget;
         if (hovering && (!toEl || (this !== toEl && !jQuery.contains(this, toEl)))) {
+          hovering = false;
           element.removeClass('kf-hover');
         }
       });

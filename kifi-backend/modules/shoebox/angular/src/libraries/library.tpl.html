@@ -10,7 +10,13 @@
 <div class="kf-lib-content">
   <div class="kf-lib-content-1" ui-view></div>
   <section class="kf-lib-content-2">
-    <div kf-suggested-searches library="library" ng-if="library.suggestedSearches.length && !isMobile"></div>
+    <a class="kf-lib-tweet" ng-focus="preloadTwitter()" ng-mouseenter="preloadTwitter()" ng-click="shareTwitter($event)" href="https://twitter.com/intent/tweet" target="_blank" ng-if="library.visibility === 'published'">
+      <span class="kf-lib-tweet-icon svg-twitter-white"></span>
+    </a>
+    <button class="kf-lib-fpost" ng-focus="preloadFB()" ng-mouseenter="preloadFB()" ng-click="shareFB()" ng-if="library.visibility === 'published'">
+      <span class="kf-lib-fpost-icon svg-facebook-white"></span>
+    </button>
+    <div kf-suggested-searches library="library" ng-if="library.suggestedSearches.length"></div>
     <div kf-related-libraries related-libraries="relatedLibraries" parent-library="library" is-mobile="isMobile" ng-if="relatedLibraries"></div>
   </section>
 </div>

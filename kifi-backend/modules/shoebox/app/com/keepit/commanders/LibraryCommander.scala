@@ -18,7 +18,7 @@ import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.{ ImageSize, S3ImageStore }
 import com.keepit.common.time._
 import com.keepit.common.util.Paginator
-import com.keepit.eliza.{ PushNotificationExperiment, ElizaServiceClient }
+import com.keepit.eliza.{ UserPushNotificationCategory, PushNotificationExperiment, ElizaServiceClient }
 import com.keepit.heimdal.{ HeimdalContext, HeimdalContextBuilderFactory, HeimdalServiceClient }
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
@@ -944,7 +944,8 @@ class LibraryCommander @Inject() (
           userId = lib.ownerId,
           message = message,
           recipient = follower,
-          pushNotificationExperiment = PushNotificationExperiment.Experiment1)
+          pushNotificationExperiment = PushNotificationExperiment.Experiment1,
+          category = UserPushNotificationCategory.NewLibraryFollower)
       }
     }
   }

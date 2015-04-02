@@ -10,7 +10,7 @@ import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.logging.{ AccessLog, Logging }
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.S3ImageStore
-import com.keepit.eliza.{ PushNotificationExperiment, ElizaServiceClient }
+import com.keepit.eliza.{ UserPushNotificationCategory, PushNotificationExperiment, ElizaServiceClient }
 import com.keepit.graph.GraphServiceClient
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
@@ -246,7 +246,8 @@ class UserConnectionsCommander @Inject() (
         userId = recipient.id.get,
         message = s"${myUser.fullName} invited you to connect",
         recipient = myUser,
-        pushNotificationExperiment = PushNotificationExperiment.Experiment1)
+        pushNotificationExperiment = PushNotificationExperiment.Experiment1,
+        category = UserPushNotificationCategory.UserConnectionRequest)
     }
 
     val emailF = emailSender.friendRequest(recipient.id.get, myUserId)

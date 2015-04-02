@@ -24,13 +24,26 @@ import com.keepit.eliza.model.{ UserThreadView, MessageHandle, UserThreadStatsFo
 import akka.actor.Scheduler
 import com.keepit.common.json.TupleFormat._
 
-sealed case class PushNotificationCategory(name: String)
-object PushNotificationCategory {
-  val LibraryChanged = PushNotificationCategory("LibraryChanged")
-  val UserConnectionRequest = PushNotificationCategory("UserConnectionRequest")
-  val PersonaUpdate = PushNotificationCategory("PersonaUpdate")
-  implicit val format = Json.format[PushNotificationCategory]
+sealed case class LibraryPushNotificationCategory(name: String)
+sealed case class UserPushNotificationCategory(name: String)
+sealed case class SimplePushNotificationCategory(name: String)
+
+object SimplePushNotificationCategory {
+  val PersonaUpdate = SimplePushNotificationCategory("PersonaUpdate")
+  implicit val format = Json.format[SimplePushNotificationCategory]
 }
+
+object UserPushNotificationCategory {
+  val UserConnectionRequest = UserPushNotificationCategory("UserConnectionRequest")
+  val NewLibraryFollower = UserPushNotificationCategory("NewLibraryFollower")
+  implicit val format = Json.format[UserPushNotificationCategory]
+}
+
+object LibraryPushNotificationCategory {
+  val LibraryChanged = LibraryPushNotificationCategory("LibraryChanged")
+  implicit val format = Json.format[LibraryPushNotificationCategory]
+}
+
 case class PushNotificationExperiment(name: String)
 object PushNotificationExperiment {
   val Experiment1 = PushNotificationExperiment("Experiment1")
@@ -45,9 +58,9 @@ trait ElizaServiceClient extends ServiceClient {
   def sendToUser(userId: Id[User], data: JsArray): Unit
   def sendToAllUsers(data: JsArray): Unit
 
-  def sendUserPushNotification(userId: Id[User], message: String, recipient: User, pushNotificationExperiment: PushNotificationExperiment): Future[Int]
-  def sendLibraryPushNotification(userId: Id[User], message: String, libraryId: Id[Library], libraryUrl: String, pushNotificationExperiment: PushNotificationExperiment): Future[Int]
-  def sendGeneralPushNotification(userId: Id[User], message: String, pushNotificationExperiment: PushNotificationExperiment): Future[Int]
+  def sendUserPushNotification(userId: Id[User], message: String, recipient: User, pushNotificationExperiment: PushNotificationExperiment, category: UserPushNotificationCategory): Future[Int]
+  def sendLibraryPushNotification(userId: Id[User], message: String, libraryId: Id[Library], libraryUrl: String, pushNotificationExperiment: PushNotificationExperiment, category: LibraryPushNotificationCategory): Future[Int]
+  def sendGeneralPushNotification(userId: Id[User], message: String, pushNotificationExperiment: PushNotificationExperiment, category: SimplePushNotificationCategory): Future[Int]
 
   def connectedClientCount: Future[Seq[Int]]
 
@@ -83,26 +96,26 @@ class ElizaServiceClientImpl @Inject() (
   userThreadStatsForUserIdCache: UserThreadStatsForUserIdCache)
     extends ElizaServiceClient with Logging {
 
-  def sendUserPushNotification(userId: Id[User], message: String, recipient: User, pushNotificationExperiment: PushNotificationExperiment): Future[Int] = {
+  def sendUserPushNotification(userId: Id[User], message: String, recipient: User, pushNotificationExperiment: PushNotificationExperiment, category: UserPushNotificationCategory): Future[Int] = {
     implicit val userFormatter = Id.format[User]
-    val payload = Json.obj("userId" -> userId, "message" -> message, "recipientId" -> recipient.externalId, "username" -> recipient.username.value, "pictureUrl" -> recipient.pictureName, "pushNotificationExperiment" -> pushNotificationExperiment)
+    val payload = Json.obj("userId" -> userId, "message" -> message, "recipientId" -> recipient.externalId, "username" -> recipient.username.value, "pictureUrl" -> recipient.pictureName, "pushNotificationExperiment" -> pushNotificationExperiment, "category" -> category.name)
     call(Eliza.internal.sendUserPushNotification(), payload).map { response =>
       response.body.toInt
     }
   }
 
-  def sendLibraryPushNotification(userId: Id[User], message: String, libraryId: Id[Library], libraryUrl: String, pushNotificationExperiment: PushNotificationExperiment): Future[Int] = {
+  def sendLibraryPushNotification(userId: Id[User], message: String, libraryId: Id[Library], libraryUrl: String, pushNotificationExperiment: PushNotificationExperiment, category: LibraryPushNotificationCategory): Future[Int] = {
     implicit val userFormatter = Id.format[User]
     implicit val libraryFormatter = Id.format[Library]
-    val payload = Json.obj("userId" -> userId, "message" -> message, "libraryId" -> libraryId, "libraryUrl" -> libraryUrl, "pushNotificationExperiment" -> pushNotificationExperiment)
+    val payload = Json.obj("userId" -> userId, "message" -> message, "libraryId" -> libraryId, "libraryUrl" -> libraryUrl, "pushNotificationExperiment" -> pushNotificationExperiment, "category" -> category.name)
     call(Eliza.internal.sendLibraryPushNotification, payload).map { response =>
       response.body.toInt
     }
   }
 
-  def sendGeneralPushNotification(userId: Id[User], message: String, pushNotificationExperiment: PushNotificationExperiment): Future[Int] = {
+  def sendGeneralPushNotification(userId: Id[User], message: String, pushNotificationExperiment: PushNotificationExperiment, category: SimplePushNotificationCategory): Future[Int] = {
     implicit val userFormatter = Id.format[User]
-    val payload = Json.obj("userId" -> userId, "message" -> message, "pushNotificationExperiment" -> pushNotificationExperiment)
+    val payload = Json.obj("userId" -> userId, "message" -> message, "pushNotificationExperiment" -> pushNotificationExperiment, "category" -> category.name)
     call(Eliza.internal.sendGeneralPushNotification, payload).map { response =>
       response.body.toInt
     }
