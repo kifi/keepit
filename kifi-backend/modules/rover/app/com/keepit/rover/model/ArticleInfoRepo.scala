@@ -8,6 +8,7 @@ import com.keepit.rover.article.{ Article, ArticleKind }
 import com.keepit.model._
 import com.keepit.rover.commanders.{ ArticleInfoUriKey, ArticleInfoUriCache }
 import com.keepit.rover.manager.FailureRecoveryPolicy
+import com.keepit.rover.sensitivity.{ UriSensitivityKey, UriSensitivityCache }
 import org.joda.time.DateTime
 import com.keepit.common.time._
 import com.google.inject.{ Singleton, Inject, ImplementedBy }
@@ -38,6 +39,7 @@ class ArticleInfoRepoImpl @Inject() (
     val db: DataBaseComponent,
     val clock: Clock,
     articleInfoCache: ArticleInfoUriCache,
+    uriSensitivityCache: UriSensitivityCache,
     airbrake: AirbrakeNotifier,
     implicit val failurePolicy: FailureRecoveryPolicy) extends DbRepo[RoverArticleInfo] with ArticleInfoRepo with SeqNumberDbFunction[RoverArticleInfo] with Logging {
 
@@ -69,6 +71,7 @@ class ArticleInfoRepoImpl @Inject() (
 
   override def deleteCache(model: RoverArticleInfo)(implicit session: RSession): Unit = {
     articleInfoCache.remove(ArticleInfoUriKey(model.uriId))
+    uriSensitivityCache.remove(UriSensitivityKey(model.uriId))
   }
 
   override def invalidateCache(model: RoverArticleInfo)(implicit session: RSession): Unit = {}
