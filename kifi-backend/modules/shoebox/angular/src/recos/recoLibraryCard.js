@@ -22,12 +22,6 @@ angular.module('kifi')
         // Internal methods.
         //
 
-        function trackShareEvent(action) {
-          $timeout(function () {
-            $rootScope.$emit('trackLibraryEvent', 'click', { action: action });
-          });
-        }
-
         // Data augmentation.
         function augmentData() {
           var maxLength = 300, clipLength = 180;  // numbers differ significantly so that clicking More will show significantly more
@@ -57,7 +51,7 @@ angular.module('kifi')
         };
 
         scope.shareFB = function () {
-          trackShareEvent('clickedShareFacebook');
+          libraryService.trackEvent('user_clicked_page', scope.library, { type: 'recommendations', action: 'clickedShareFacebook'});
           $FB.ui({
             method: 'share',
             href: scope.library.absUrl +
@@ -71,7 +65,7 @@ angular.module('kifi')
         };
 
         scope.shareTwitter = function (event) {
-          trackShareEvent('clickedShareTwitter');
+          libraryService.trackEvent('user_clicked_page', scope.library, { type: 'recommendations', action: 'clickedShareTwitter'});
           event.target.href = 'https://twitter.com/intent/tweet' + util.formatQueryString({
             original_referer: scope.library.absUrl,
             text: 'Discover this amazing @Kifi library about ' + scope.library.name + '!',
@@ -88,14 +82,12 @@ angular.module('kifi')
 
         scope.followLibrary = function () {
           scope.followCallback();
-          $rootScope.$emit('trackLibraryEvent', 'click', { action: 'clickedFollowButton' });
+          libraryService.trackEvent('user_clicked_page', scope.library, { type: 'recommendations', action: 'clickedFollowButton'});
           libraryService.joinLibrary(scope.library.id)['catch'](modalService.openGenericErrorModal);
         };
 
         scope.unfollowLibrary = function () {
-          // TODO(yrl): ask Jen about whether we can remove this.
-          libraryService.trackEvent('user_clicked_page', scope.library, { action: 'unfollow' });
-          $rootScope.$emit('trackLibraryEvent', 'click', { action: 'clickedUnfollowButton' });
+          libraryService.trackEvent('user_clicked_page', scope.library, { type: 'recommendations', action: 'clickedUnfollowButton'});
           libraryService.leaveLibrary(scope.library.id)['catch'](modalService.openGenericErrorModal);
         };
 
