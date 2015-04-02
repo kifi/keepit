@@ -90,7 +90,7 @@ class AppBoy @Inject() (
             withLid + ("lu" -> JsString(lupn.libraryUrl))
         }
       case upn: UserPushNotification =>
-        json.as[JsObject] ++ Json.obj("t" -> "us", "uid" -> upn.userId.id, "un" -> upn.username.value, "purl" -> upn.pictureUrl)
+        json.as[JsObject] ++ Json.obj("t" -> "us", "uid" -> upn.userId.id.toString, "un" -> upn.username.value, "purl" -> upn.pictureUrl)
       case _ =>
         throw new Exception(s"Don't recognize push notification $notification")
     }

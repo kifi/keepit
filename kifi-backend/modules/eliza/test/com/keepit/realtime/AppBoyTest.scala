@@ -152,7 +152,7 @@ class AppBoyTest extends Specification with TestInjector with ElizaTestInjector 
                   "extra":{
                     "unreadCount":3,
                     "t":"us",
-                    "uid":${user1.id.get.id},
+                    "uid":"${user1.id.get.id}",
                     "un":"joe",
                     "purl":"http://www.asdf.com/asdfasdf"
                   }

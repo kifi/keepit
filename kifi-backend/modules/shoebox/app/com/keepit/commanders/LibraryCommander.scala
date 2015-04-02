@@ -907,7 +907,7 @@ class LibraryCommander @Inject() (
     val (follower, owner, lotsOfFollowers) = db.readOnlyReplica { implicit session =>
       val follower = userRepo.get(newFollowerId)
       val owner = basicUserRepo.load(lib.ownerId)
-      val lotsOfFollowers = libraryMembershipRepo.countMembersForLibrarySince(lib.id.get, DateTime.now().minusDays(1)) > 1
+      val lotsOfFollowers = libraryMembershipRepo.countMembersForLibrarySince(lib.id.get, DateTime.now().minusDays(1)) > 5
       (follower, owner, lotsOfFollowers)
     }
     val message = s"${follower.firstName} ${follower.lastName} is now following your library ${lib.name}"
