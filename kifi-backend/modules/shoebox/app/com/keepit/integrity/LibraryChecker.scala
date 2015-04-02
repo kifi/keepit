@@ -64,7 +64,7 @@ class LibraryChecker @Inject() (
           case None =>
             currentKeptAt match {
               case Some(keptAt) =>
-                //airbrake.notify(s"Library ${libId} has no last_kept but has active keeps... update library's last_kept!")
+                airbrake.notify(s"Library ${libId} has no last_kept but has active keeps... update library's last_kept!")
                 db.readWrite { implicit s =>
                   libraryRepo.save(lib.copy(lastKept = Some(keptAt)))
                 }
@@ -73,7 +73,7 @@ class LibraryChecker @Inject() (
           case Some(lastKeptDate) =>
             currentKeptAt match {
               case Some(keptAt) if keptAt != lastKeptDate =>
-                //airbrake.notify(s"Library ${libId} has inconsistent last_kept state. Library is last kept at $lastKeptDate but keep is ${keptAt}... update library's last_kept")
+                airbrake.notify(s"Library ${libId} has inconsistent last_kept state. Library is last kept at $lastKeptDate but keep is ${keptAt}... update library's last_kept")
                 db.readWrite { implicit s =>
                   libraryRepo.save(lib.copy(lastKept = Some(keptAt)))
                 }
@@ -84,7 +84,7 @@ class LibraryChecker @Inject() (
         // check keep count
         numKeepsByLibraryMap.get(libId).map { numKeeps =>
           if (lib.keepCount != numKeeps) {
-            //airbrake.notify(s"Library ${libId} has inconsistent keep count. Library's keep count is ${lib.keepCount} but there are ${numKeeps} active keeps... update library's keep_count")
+            airbrake.notify(s"Library ${libId} has inconsistent keep count. Library's keep count is ${lib.keepCount} but there are ${numKeeps} active keeps... update library's keep_count")
             db.readWrite { implicit s =>
               libraryRepo.save(lib.copy(keepCount = numKeeps))
             }
@@ -114,7 +114,7 @@ class LibraryChecker @Inject() (
       case (libId, lib) =>
         numMembersMap.get(libId).map { numMembers =>
           if (lib.memberCount != numMembers) {
-            //airbrake.notify(s"Library ${libId} has inconsistent member count. Library's member count is ${lib.memberCount} but there are ${totalNumMembers} active memberships... update library's member_count")
+            airbrake.notify(s"Library ${libId} has inconsistent member count. Library's member count is ${lib.memberCount} but there are ${totalNumMembers} active memberships... update library's member_count")
             db.readWrite { implicit s =>
               libraryRepo.save(lib.copy(memberCount = numMembers))
             }
