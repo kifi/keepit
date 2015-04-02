@@ -48,7 +48,7 @@ class MobilePushDelegator @Inject() (
   def registerDevice(userId: Id[User], token: Option[String], deviceType: DeviceType, isDev: Boolean, signature: Option[String]): Either[String, Device] = {
     token match {
       case Some(tokenStr) => Right(urbanAirship.get.registerDevice(userId, tokenStr, deviceType, isDev, signature))
-      case None if signature.isDefined => Right(appBoy.get.registerDevice(userId, deviceType, isDev, "ab_" + signature.get))
+      case None if signature.isDefined => Right(appBoy.get.registerDevice(userId, deviceType, isDev, signature.get))
       case _ => Left("invalid_params")
     }
   }
