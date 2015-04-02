@@ -117,7 +117,7 @@ class MessagingAnalytics @Inject() (
       contextBuilder += ("global", false)
       contextBuilder += ("category", "simple")
       contextBuilder += ("subcategory", notification.category.name)
-      contextBuilder += ("user", notification.userId.id)
+      contextBuilder += ("user", device.userId.id)
       contextBuilder += ("os", device.deviceType.name)
       contextBuilder += ("exp_engagement_push", notification.experiment.name)
       contextBuilder += ("pendingNotificationCount", notification.unvisitedCount)

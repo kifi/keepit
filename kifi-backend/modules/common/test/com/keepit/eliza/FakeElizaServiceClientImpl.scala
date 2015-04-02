@@ -1,7 +1,7 @@
 package com.keepit.eliza
 
 import com.keepit.model._
-import com.keepit.common.db.{ SequenceNumber, Id }
+import com.keepit.common.db.{ ExternalId, SequenceNumber, Id }
 import com.keepit.common.service.{ ServiceClient, ServiceType }
 import com.keepit.common.logging.Logging
 import com.keepit.common.routes.Eliza
@@ -30,7 +30,7 @@ class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
   var inbox = List.empty[(Id[User], NotificationCategory, String, String)]
 
   def sendToUserNoBroadcast(userId: Id[User], data: JsArray): Unit = {}
-  def sendUserPushNotification(userId: Id[User], message: String, recipientUserId: Id[User], username: Username, pictureUrl: String, pushNotificationExperiment: PushNotificationExperiment): Future[Int] = Future.successful(1)
+  def sendUserPushNotification(userId: Id[User], message: String, recipientUserId: ExternalId[User], username: Username, pictureUrl: String, pushNotificationExperiment: PushNotificationExperiment): Future[Int] = Future.successful(1)
   def sendLibraryPushNotification(userId: Id[User], message: String, libraryId: Id[Library], libraryUrl: String, pushNotificationExperiment: PushNotificationExperiment): Future[Int] = Future.successful(1)
   def sendGeneralPushNotification(userId: Id[User], message: String, pushNotificationExperiment: PushNotificationExperiment): Future[Int] = Future.successful(1)
 

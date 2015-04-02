@@ -245,7 +245,7 @@ class UserConnectionsCommander @Inject() (
       elizaServiceClient.sendUserPushNotification(
         userId = recipient.id.get,
         message = s"${myUser.fullName} invited you to connect",
-        recipientUserId = myUserId,
+        recipientUserId = myUser.externalId,
         username = myUser.username,
         pictureUrl = s3ImageStore.avatarUrlByUser(myUser),
         pushNotificationExperiment = PushNotificationExperiment.Experiment1)

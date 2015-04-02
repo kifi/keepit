@@ -64,8 +64,8 @@ class MessagingCommander @Inject() (
     messageSearchHistoryRepo: MessageSearchHistoryRepo,
     implicit val executionContext: ExecutionContext) extends Logging {
 
-  def sendUserPushNotification(userId: Id[User], message: String, recipientUserId: Id[User], username: Username, pictureUrl: String, pushNotificationExperiment: PushNotificationExperiment): Future[Int] = {
-    val notification = UserPushNotification(message = Some(message), userId = recipientUserId, username = username, pictureUrl = pictureUrl, unvisitedCount = getUnreadUnmutedThreadCount(userId), category = PushNotificationCategory.LibraryChanged, experiment = pushNotificationExperiment)
+  def sendUserPushNotification(userId: Id[User], message: String, recipientUserId: ExternalId[User], username: Username, pictureUrl: String, pushNotificationExperiment: PushNotificationExperiment): Future[Int] = {
+    val notification = UserPushNotification(message = Some(message), userExtId = recipientUserId, username = username, pictureUrl = pictureUrl, unvisitedCount = getUnreadUnmutedThreadCount(userId), category = PushNotificationCategory.LibraryChanged, experiment = pushNotificationExperiment)
     notificationCommander.sendPushNotification(userId, notification)
   }
 

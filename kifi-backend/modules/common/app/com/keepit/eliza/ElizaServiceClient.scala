@@ -2,7 +2,7 @@ package com.keepit.eliza
 
 import com.keepit.common.crypto.PublicId
 import com.keepit.model._
-import com.keepit.common.db.{ SequenceNumber, Id }
+import com.keepit.common.db.{ ExternalId, SequenceNumber, Id }
 import com.keepit.common.service.{ ServiceClient, ServiceType }
 import com.keepit.common.logging.Logging
 import com.keepit.common.routes.Eliza
@@ -45,7 +45,7 @@ trait ElizaServiceClient extends ServiceClient {
   def sendToUser(userId: Id[User], data: JsArray): Unit
   def sendToAllUsers(data: JsArray): Unit
 
-  def sendUserPushNotification(userId: Id[User], message: String, recipientUserId: Id[User], username: Username, pictureUrl: String, pushNotificationExperiment: PushNotificationExperiment): Future[Int]
+  def sendUserPushNotification(userId: Id[User], message: String, recipientUserId: ExternalId[User], username: Username, pictureUrl: String, pushNotificationExperiment: PushNotificationExperiment): Future[Int]
   def sendLibraryPushNotification(userId: Id[User], message: String, libraryId: Id[Library], libraryUrl: String, pushNotificationExperiment: PushNotificationExperiment): Future[Int]
   def sendGeneralPushNotification(userId: Id[User], message: String, pushNotificationExperiment: PushNotificationExperiment): Future[Int]
 
@@ -83,7 +83,7 @@ class ElizaServiceClientImpl @Inject() (
   userThreadStatsForUserIdCache: UserThreadStatsForUserIdCache)
     extends ElizaServiceClient with Logging {
 
-  def sendUserPushNotification(userId: Id[User], message: String, recipientUserId: Id[User], username: Username, pictureUrl: String, pushNotificationExperiment: PushNotificationExperiment): Future[Int] = {
+  def sendUserPushNotification(userId: Id[User], message: String, recipientUserId: ExternalId[User], username: Username, pictureUrl: String, pushNotificationExperiment: PushNotificationExperiment): Future[Int] = {
     implicit val userFormatter = Id.format[User]
     val payload = Json.obj("userId" -> userId, "message" -> message, "recipientUserId" -> recipientUserId, "username" -> username.value, "pictureUrl" -> pictureUrl, "pushNotificationExperiment" -> pushNotificationExperiment)
     call(Eliza.internal.sendLibraryPushNotification, payload).map { response =>
