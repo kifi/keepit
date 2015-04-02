@@ -3,15 +3,19 @@
 angular.module('kifi')
 
 .directive('kfLibraryVisibilityCheckbox', [
-  function () {
+  '$timeout',
+  function ($timeout) {
     return {
       restrict: 'A',
       replace: true,
       templateUrl: 'libraries/libraryVisibilityCheckbox.tpl.html',
       scope: {
-        // This directive contains a checkbox that will change the visibility property
-        // on the library object.
         library: '='
+      },
+      link: function (scope, element) {
+        $timeout(function () {
+          element.find('.library-visibility-custom-input').addClass('kf-transitions');
+        });
       }
     };
   }
