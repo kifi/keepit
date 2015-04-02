@@ -1,6 +1,7 @@
 package com.keepit.commanders
 
 import com.keepit.common.amazon.AmazonInstanceInfo
+import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.net.URI
 import com.keepit.test.ShoeboxTestInjector
 import com.keepit.model._
@@ -158,6 +159,7 @@ class URISummaryCommanderTest extends Specification with ShoeboxTestInjector {
   }
 
   val modules = Seq(
+    FakeExecutionContextModule(),
     URISummaryCommanderTestModule(),
     FakeCortexServiceClientModule()
   )
