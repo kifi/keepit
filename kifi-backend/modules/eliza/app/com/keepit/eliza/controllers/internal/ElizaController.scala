@@ -6,7 +6,7 @@ import com.keepit.eliza.controllers.WebSocketRouter
 import com.keepit.common.controller.ElizaServiceController
 import com.keepit.common.logging.Logging
 import com.keepit.model.{ Username, Library, User }
-import com.keepit.common.db.{ Id }
+import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.realtime._
 
 import scala.concurrent.future
@@ -56,10 +56,10 @@ class ElizaController @Inject() (
     val userId = Id[User]((req \ "userId").as[Long])
     val message = (req \ "message").as[String]
     val pushNotificationExperiment = (req \ "pushNotificationExperiment").as[PushNotificationExperiment]
-    val recipientUserId = (req \ "recipientUserId").as[Id[User]]
+    val recipientExtId = (req \ "recipientId").as[ExternalId[User]]
     val username = (req \ "username").as[Username]
     val pictureUrl = (req \ "pictureUrl").as[String]
-    messagingCommander.sendUserPushNotification(userId, message, recipientUserId, username: Username, pictureUrl, pushNotificationExperiment).map { deviceCount =>
+    messagingCommander.sendUserPushNotification(userId, message, recipientExtId, username: Username, pictureUrl, pushNotificationExperiment).map { deviceCount =>
       Ok(JsNumber(deviceCount))
     }
   }

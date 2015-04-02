@@ -199,7 +199,7 @@ class AppBoyTest extends Specification with TestInjector with ElizaTestInjector 
         val (user1, deviceApple, deviceAndroid) = setupData
         appBoyClient.jsons.size === 0
 
-        val notification = UserPushNotification(unvisitedCount = 3, message = Some("pika"), username = Username("joe"), userId = user1.id.get, pictureUrl = "http://www.asdf.com/asdfasdf", sound = None, category = null, experiment = null)
+        val notification = UserPushNotification(unvisitedCount = 3, message = Some("pika"), username = Username("joe"), userExtId = user1.externalId, pictureUrl = "http://www.asdf.com/asdfasdf", sound = None, category = null, experiment = null)
         val notifPushF = appBoy.notifyUser(user1.id.get, Seq(deviceApple, deviceAndroid), notification)
         Await.result(notifPushF, Duration(5, SECONDS))
         appBoyClient.jsons.size === 2
@@ -217,7 +217,7 @@ class AppBoyTest extends Specification with TestInjector with ElizaTestInjector 
                   "extra":{
                     "unreadCount":3,
                     "t":"us",
-                    "uid":${user1.id.get.id},
+                    "uid":"${user1.externalId}",
                     "un":"joe",
                     "purl":"http://www.asdf.com/asdfasdf"
                   }
@@ -240,7 +240,7 @@ class AppBoyTest extends Specification with TestInjector with ElizaTestInjector 
                   "extra":{
                     "unreadCount":3,
                     "t":"us",
-                    "uid":"${user1.id.get.id}",
+                    "uid":"${user1.externalId}",
                     "un":"joe",
                     "purl":"http://www.asdf.com/asdfasdf"
                   }
