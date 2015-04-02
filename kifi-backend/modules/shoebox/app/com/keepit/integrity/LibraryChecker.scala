@@ -114,7 +114,7 @@ class LibraryChecker @Inject() (
       case (libId, lib) =>
         numMembersMap.get(libId).map { numMembers =>
           if (lib.memberCount != numMembers) {
-            airbrake.notify(s"Library ${libId} has inconsistent member count. Library's member count is ${lib.memberCount} but there are ${totalNumMembers} active memberships... update library's member_count")
+            airbrake.notify(s"Library ${libId} has inconsistent member count. Library's member count is ${lib.memberCount} but there are ${numMembers} active memberships... update library's member_count")
             db.readWrite { implicit s =>
               libraryRepo.save(lib.copy(memberCount = numMembers))
             }
