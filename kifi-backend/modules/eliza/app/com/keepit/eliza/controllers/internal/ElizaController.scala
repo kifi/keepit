@@ -57,7 +57,7 @@ class ElizaController @Inject() (
     val message = (req \ "message").as[String]
     val pushNotificationExperiment = (req \ "pushNotificationExperiment").as[PushNotificationExperiment]
     val recipientUserId = (req \ "recipientUserId").as[Id[User]]
-    val username = (req \ "pictureUrl").as[Username]
+    val username = (req \ "username").as[Username]
     val pictureUrl = (req \ "pictureUrl").as[String]
     messagingCommander.sendUserPushNotification(userId, message, recipientUserId, username: Username, pictureUrl, pushNotificationExperiment).map { deviceCount =>
       Ok(JsNumber(deviceCount))
