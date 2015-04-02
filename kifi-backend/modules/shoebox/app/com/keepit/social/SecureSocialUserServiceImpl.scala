@@ -50,7 +50,7 @@ class SecureSocialUserPluginImpl @Inject() (
 
   private def reportExceptions[T](f: => T): T = try f catch {
     case ex: Throwable =>
-      airbrake.notify("[SecureSocialUserPluginImpl]" + ex)
+      airbrake.notify("[SecureSocialUserPluginImpl] " + ex)
       throw ex
   }
 
@@ -84,20 +84,30 @@ class SecureSocialUserPluginImpl @Inject() (
   }
 
   def save(identity: Identity): SocialUser = reportExceptions {
-    val (userId, socialUser, allowSignup) = getUserIdAndSocialUser(identity)
-    log.info(s"[save] persisting (social|42) user $socialUser")
-    val socialUserInfo = internUser(
-      SocialId(socialUser.identityId.userId),
-      SocialNetworkType(socialUser.identityId.providerId),
-      socialUser,
-      userId, allowSignup
-    )
-    require(socialUserInfo.credentials.isDefined, s"social user info's credentials is not defined: $socialUserInfo")
-    if (!socialUser.identityId.providerId.equals("userpass"))
-      socialGraphPlugin.asyncFetch(socialUserInfo)
-    log.info(s"[save] persisting $socialUser into $socialUserInfo")
-    socialUserInfo.userId.foreach(updateExperimentIfTestUser)
-    socialUser
+    identity match {
+      case UserIdentity(userIdOpt, socialUser, allowSignup) =>
+        log.info(s"[save] persisting (social|42) user $socialUser")
+        val socialUserInfo = internUser(
+          SocialId(socialUser.identityId.userId),
+          SocialNetworkType(socialUser.identityId.providerId),
+          socialUser,
+          userIdOpt,
+          allowSignup
+        )
+        require(socialUserInfo.credentials.isDefined, s"social user info's credentials is not defined: $socialUserInfo")
+
+        if (!socialUser.identityId.providerId.equals("userpass")) {
+          socialGraphPlugin.asyncFetch(socialUserInfo)
+        }
+
+        log.info(s"[save] persisting $socialUser into $socialUserInfo")
+        socialUserInfo.userId.foreach(updateExperimentIfTestUser)
+
+        socialUser
+      case ident =>
+        airbrake.notify(s"using an identity $ident should not be possible at this point!")
+        SocialUser(ident)
+    }
   }
 
   private def updateExperimentIfTestUser(userId: Id[User]): Unit = try {
@@ -157,7 +167,7 @@ class SecureSocialUserPluginImpl @Inject() (
 
   private def internUser(
     socialId: SocialId, socialNetworkType: SocialNetworkType, socialUser: SocialUser,
-    userId: Option[Id[User]], allowSignup: Boolean): SocialUserInfo = timing(s"intern user $socialId") {
+    userIdOpt: Option[Id[User]], allowSignup: Boolean): SocialUserInfo = timing(s"intern user $socialId") {
 
     /*
       This is responsible for SocialUserInfo and User creation.
@@ -167,12 +177,12 @@ class SecureSocialUserPluginImpl @Inject() (
       allowSignup is a weird hack that marks if the user should be created.
      */
 
-    log.debug(s"[internUser] socialId=$socialId snType=$socialNetworkType socialUser=$socialUser userId=$userId")
+    log.debug(s"[internUser] socialId=$socialId snType=$socialNetworkType socialUser=$socialUser userId=$userIdOpt")
 
     // Get existing SocialUserInfo and User records, if they exist
     val (suiOpt, existingUserOpt) = db.readOnlyMaster { implicit session =>
       val suiOpt = socialUserInfoRepo.getOpt(socialId, socialNetworkType)
-      val existingUserOpt = userId orElse {
+      val existingUserOpt = userIdOpt orElse {
         // Automatically connect accounts with existing emails
         socialUser.email.map(EmailAddress(_)).flatMap { emailAddress =>
           emailRepo.getVerifiedOwner(emailAddress) tap {
