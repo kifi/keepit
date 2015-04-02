@@ -32,15 +32,24 @@ class AppBoyImpl @Inject() (
   def registerDevice(userId: Id[User], deviceType: DeviceType, isDev: Boolean, signature: String): Device = {
     log.info(s"[AppBoy] Registering device: $deviceType:(no token) for (user $userId, signature $signature)")
 
+    val appBoySign = "ab_" + signature
+
     val updatedDevice = db.readWrite { implicit s =>
-      deviceRepo.getByUserIdAndDeviceTypeAndSignature(userId, deviceType, signature, None) match {
+
+      // inactivate devices that have non-appboy signature
+      deviceRepo.getByUserIdAndDeviceTypeAndSignature(userId, deviceType, signature) match {
+        case Some(d) => // probably urbanairship, inactivate
+          deviceRepo.save(d.copy(state = DeviceStates.INACTIVE))
+        case _ =>
+      }
+
+      deviceRepo.getByUserIdAndDeviceTypeAndSignature(userId, deviceType, appBoySign, None) match {
         case Some(d) => // update or reactivate an existing device
           deviceRepo.save(d.copy(token = None, isDev = isDev, state = DeviceStates.ACTIVE))
         case None => // new device for user! save new device!
-          deviceRepo.save(Device(userId = userId, token = None, deviceType = deviceType, isDev = isDev, signature = Some(signature)))
+          deviceRepo.save(Device(userId = userId, token = None, deviceType = deviceType, isDev = isDev, signature = Some(appBoySign)))
       }
     }
-    // inactivate any devices?
 
     updatedDevice
   }
