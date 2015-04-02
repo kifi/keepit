@@ -25,7 +25,7 @@ import scala.util.{ Try, Success, Failure }
 
 case class UrbanAirshipConfig(key: String, secret: String, devKey: String, devSecret: String, baseUrl: String = "https://go.urbanairship.com")
 
-class UrbanAirshipImpl @Inject() (
+class UrbanAirship @Inject() (
     client: UrbanAirshipClient,
     deviceRepo: DeviceRepo,
     airbrake: AirbrakeNotifier,
@@ -229,6 +229,7 @@ class UrbanAirshipImpl @Inject() (
         log.info(s"[UrbanAirship] Sending LibraryUpdatePushNotification to user ${device.userId} device: [${device.token}] library ${lupn.libraryId} message ${lupn.message}")
       case upn: UserPushNotification =>
         log.info(s"[UrbanAirship] Sending UserPushNotification to user ${device.userId} device: [${device.token}] ${upn.username}:${upn.userExtId} message ${upn.message}")
+
     }
 
     client.send(json, device, notification) andThen {

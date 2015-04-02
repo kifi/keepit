@@ -50,16 +50,16 @@ class ElizaController @Inject() (
       Ok(JsNumber(deviceCount))
     }
   }
-  //val payload = Json.obj("userId" -> userId, "message" -> message, "recipientUserId" -> recipientUserId, "username" -> username.value, "pictureUrl" -> pictureUrl, "pushNotificationExperiment" -> pushNotificationExperiment)
+
   def sendUserPushNotification() = Action.async { request =>
     val req = request.body.asJson.get.as[JsObject]
     val userId = Id[User]((req \ "userId").as[Long])
     val message = (req \ "message").as[String]
     val pushNotificationExperiment = (req \ "pushNotificationExperiment").as[PushNotificationExperiment]
-    val recipientUserId = (req \ "recipientUserId").as[ExternalId[User]]
-    val username = (req \ "pictureUrl").as[Username]
+    val recipientExtId = (req \ "recipientId").as[ExternalId[User]]
+    val username = (req \ "username").as[Username]
     val pictureUrl = (req \ "pictureUrl").as[String]
-    messagingCommander.sendUserPushNotification(userId, message, recipientUserId, username: Username, pictureUrl, pushNotificationExperiment).map { deviceCount =>
+    messagingCommander.sendUserPushNotification(userId, message, recipientExtId, username: Username, pictureUrl, pushNotificationExperiment).map { deviceCount =>
       Ok(JsNumber(deviceCount))
     }
   }

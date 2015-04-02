@@ -18,7 +18,7 @@ import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.{ ImageSize, S3ImageStore }
 import com.keepit.common.time._
 import com.keepit.common.util.Paginator
-import com.keepit.eliza.ElizaServiceClient
+import com.keepit.eliza.{ PushNotificationExperiment, ElizaServiceClient }
 import com.keepit.heimdal.{ HeimdalContext, HeimdalContextBuilderFactory, HeimdalServiceClient }
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
@@ -76,6 +76,7 @@ class LibraryCommander @Inject() (
     userValueRepo: UserValueRepo,
     systemValueRepo: SystemValueRepo,
     twitterSyncRepo: TwitterSyncStateRepo,
+    kifiInstallationRepo: KifiInstallationRepo,
     implicit val defaultContext: ExecutionContext,
     implicit val publicIdConfig: PublicIdConfiguration,
     clock: Clock) extends Logging {
@@ -906,14 +907,15 @@ class LibraryCommander @Inject() (
     val (follower, owner, lotsOfFollowers) = db.readOnlyReplica { implicit session =>
       val follower = userRepo.get(newFollowerId)
       val owner = basicUserRepo.load(lib.ownerId)
-      val lotsOfFollowers = libraryMembershipRepo.countMembersForLibrarySince(lib.id.get, DateTime.now().minusDays(1)) > 1
+      val lotsOfFollowers = libraryMembershipRepo.countMembersForLibrarySince(lib.id.get, DateTime.now().minusDays(1)) > 5
       (follower, owner, lotsOfFollowers)
     }
+    val message = s"${follower.firstName} ${follower.lastName} is now following your library ${lib.name}"
     val libImageOpt = libraryImageCommander.getBestImageForLibrary(lib.id.get, ProcessedImageSize.Medium.idealSize)
     elizaClient.sendGlobalNotification(
       userIds = Set(lib.ownerId),
       title = "New Library Follower",
-      body = s"${follower.firstName} ${follower.lastName} is now following your Library ${lib.name}",
+      body = message,
       linkText = s"See ${follower.firstName}’s profile",
       linkUrl = s"https://www.kifi.com/${follower.username.value}",
       imageUrl = s3ImageStore.avatarUrlByUser(follower),
@@ -925,6 +927,26 @@ class LibraryCommander @Inject() (
         "library" -> Json.toJson(LibraryNotificationInfo.fromLibraryAndOwner(lib, libImageOpt, owner))
       ))
     )
+    if (!lotsOfFollowers) {
+      //todo(eishay): DRY ME OUT
+      val canSendPush = db.readOnlyReplica { implicit s => kifiInstallationRepo.lastUpdatedMobile(lib.ownerId) } exists { installation =>
+        installation.platform match {
+          case KifiInstallationPlatform.Android =>
+            installation.version.compareIt(KifiAndroidVersion("2.2.4")) >= 0
+          case KifiInstallationPlatform.IPhone =>
+            installation.version.compareIt(KifiIPhoneVersion("2.1.0")) >= 0
+          case _ =>
+            throw new Exception(s"Don't know platform for $installation")
+        }
+      }
+      if (canSendPush) {
+        elizaClient.sendUserPushNotification(
+          userId = lib.ownerId,
+          message = message,
+          recipient = follower,
+          pushNotificationExperiment = PushNotificationExperiment.Experiment1)
+      }
+    }
   }
 
   def notifyFollowersOfNewKeeps(library: Library, newKeeps: Keep*): Unit = {
