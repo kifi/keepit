@@ -17,7 +17,7 @@ class PornDetectorFactory @Inject() (
 
   private def load() = store.syncGet(FILE_NAME).get
 
-  def apply(): PornDetector = {
-    new NaiveBayesPornDetector(model.likelihood)
-  }
+  def naiveBayes(): NaiveBayesPornDetector = new NaiveBayesPornDetector(model.likelihood)
+
+  def slidingWindow(windowSize: Int = 10): SlidingWindowPornDetector = new SlidingWindowPornDetector(naiveBayes(), windowSize)
 }
