@@ -17,7 +17,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.{ SchedulerPlugin, SchedulingProperties }
 import com.keepit.common.strings._
 import com.keepit.common.time._
-import com.keepit.eliza.{ PushNotificationExperiment, ElizaServiceClient }
+import com.keepit.eliza.{ LibraryPushNotificationCategory, SimplePushNotificationCategory, PushNotificationExperiment, ElizaServiceClient }
 import com.keepit.model._
 import org.joda.time.DateTime
 
@@ -144,10 +144,10 @@ class ActivityPusher @Inject() (
     val res: Future[Int] = message match {
       case libMessage: LibraryPushNotificationMessage =>
         log.info(s"pushing library activity update to ${activity.userId} [$experimant]: $message")
-        elizaServiceClient.sendLibraryPushNotification(activity.userId, libMessage.message, libMessage.id, libMessage.libraryUrl, experimant)
+        elizaServiceClient.sendLibraryPushNotification(activity.userId, libMessage.message, libMessage.id, libMessage.libraryUrl, experimant, LibraryPushNotificationCategory.LibraryChanged)
       case generalMessage: GeneralActivityPushNotificationMessage =>
         log.info(s"pushing general activity update to ${activity.userId} [$experimant]: $message")
-        elizaServiceClient.sendGeneralPushNotification(activity.userId, generalMessage.message, experimant)
+        elizaServiceClient.sendGeneralPushNotification(activity.userId, generalMessage.message, experimant, SimplePushNotificationCategory.PersonaUpdate)
     }
     res map { deviceCount =>
       log.info(s"push successful to $deviceCount devices")
