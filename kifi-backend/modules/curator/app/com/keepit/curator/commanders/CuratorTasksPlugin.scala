@@ -37,24 +37,24 @@ class CuratorTasksPlugin @Inject() (
 
   override def onStart() {
     log.info("CuratorTasksPlugin onStart")
-    scheduleTaskOnLeader(system, 15 minutes, 70 minutes, completeDataIngestion) {
+    scheduleTaskOnLeader(system, 5 minutes, 3 minutes, completeDataIngestion) {
       ingestionCommander.ingestAll()
     }
-    scheduleTaskOnOneMachine(system, 25 minutes, 71 minutes, uriRecommendationPrecomputation) {
+    scheduleTaskOnOneMachine(system, 3 minutes, 2 minutes, uriRecommendationPrecomputation) {
       uriRecoGenerationCommander.precomputeRecommendations()
     }
-    scheduleTaskOnOneMachine(system, 45 minutes, 72 minutes, uriRecommendationReaper) {
+    scheduleTaskOnOneMachine(system, 2 minutes, 5 minutes, uriRecommendationReaper) {
       uriRecoCleanupCommander.cleanup()
     }
 
-    scheduleTaskOnOneMachine(system, 2 hours, 5 hours, publicFeedReaper) {
+    scheduleTaskOnOneMachine(system, 1 hours, 5 hours, publicFeedReaper) {
       feedCommander.cleanup()
     }
 
-    scheduleTaskOnOneMachine(system, 35 minutes, 73 minutes, libraryRecommendationPrecomputation) {
+    scheduleTaskOnOneMachine(system, 1 minutes, 3 minutes, libraryRecommendationPrecomputation) {
       libraryRecoGenerationCommander.precomputeRecommendations()
     }
-    scheduleTaskOnOneMachine(system, 55 minutes, 74 minutes, libraryRecommendationReaper) {
+    scheduleTaskOnOneMachine(system, 10 minutes, 10 minutes, libraryRecommendationReaper) {
       libraryRecoCleanupCommander.cleanupLowMasterScoreRecos()
     }
 
