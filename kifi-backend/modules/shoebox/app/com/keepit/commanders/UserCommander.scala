@@ -642,15 +642,17 @@ class UserCommander @Inject() (
       val filler = Seq.fill(4 - name.length)(0)
       s"$name-$filler"
     } else name
-    def randomNumber = scala.util.Random.nextInt(999)
+    def randomNumber(max: Int) = scala.util.Random.nextInt(max)
     val censorList = UsernameOps.censorList.mkString("|")
     val preCandidates = ArrayBuffer[String]()
     preCandidates += seed
-    preCandidates ++= (1 to 30).map(n => s"$seed-$randomNumber").toList
+    preCandidates ++= (1 to 20).map(n => s"$seed-${randomNumber(999)}").toList
+    preCandidates ++= (1 to 10).map(n => s"$seed-${randomNumber(99999)}").toList
+    preCandidates ++= (1 to 10).map(n => s"${randomNumber(999999999)}").toList
     preCandidates ++= (10 to 20).map(n => RandomStringUtils.randomAlphanumeric(n)).toList
     val candidates = preCandidates.map { name =>
       log.info(s"validating username $name for user $firstName $lastName")
-      val valid = if (UsernameOps.isValid(name)) name else name.replaceAll(censorList, s"C${randomNumber}C")
+      val valid = if (UsernameOps.isValid(name)) name else name.replaceAll(censorList, s"C${randomNumber(999)}C")
       log.info(s"username $name is valid")
       valid
     }.filter(UsernameOps.isValid)

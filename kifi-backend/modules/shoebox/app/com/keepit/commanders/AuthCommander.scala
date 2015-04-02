@@ -18,7 +18,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.controllers.core.{ AuthHelper }
 import com.keepit.heimdal._
 import com.keepit.model._
-import com.keepit.social.{ SocialId, SocialNetworks, SocialNetworkType, UserIdentity }
+import com.keepit.social._
 import play.api.http.Status
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -116,7 +116,8 @@ class AuthCommander @Inject() (
     implicit val publicIdConfig: PublicIdConfiguration,
     userExperimentCommander: LocalUserExperimentCommander,
     userCommander: UserCommander,
-    heimdalServiceClient: HeimdalServiceClient) extends Logging {
+    heimdalServiceClient: HeimdalServiceClient,
+    socialService: SecureSocialUserPlugin) extends Logging {
 
   def emailAddressMatchesSomeKifiUser(addr: EmailAddress): Boolean = {
     db.readOnlyMaster { implicit s =>
@@ -145,8 +146,8 @@ class AuthCommander @Inject() (
       allowSignup = true
     )
 
-    val savedIdentity = UserService.save(newIdentity) // Kifi User is created here if it doesn't exist
-    if (!isComplete) { // fix-up: with UserIdentity.isComplete gone, UserService.save creates user in ACTIVE state by default
+    val savedIdentity = socialService.save(newIdentity) // Kifi User is created here if it doesn't exist
+    if (!isComplete) { // fix-up: with UserIdentity.isComplete gone, socialService.save creates user in ACTIVE state by default
       db.readWrite { implicit rw =>
         val maybeId = userIdOpt orElse socialUserInfoRepo.getOpt(SocialId(email.address), SocialNetworks.FORTYTWO).flatMap(_.userId)
         maybeId match {
@@ -168,7 +169,7 @@ class AuthCommander @Inject() (
       }
       userId <- socialUserInfo.userId
     } yield {
-      UserService.save(UserIdentity(userId = Some(userId), socialUser = SocialUser(identity)))
+      socialService.save(UserIdentity(userId = Some(userId), socialUser = SocialUser(identity)))
       userId
     }
 
@@ -296,7 +297,7 @@ class AuthCommander @Inject() (
       provider.fillProfile(SocialUser(IdentityId("", provider.id), "", "", "", None, None, provider.authMethod, oAuth1Info = Some(oauth1Info)))
     }
 
-  def getSocialUserOpt(identityId: IdentityId): Option[Identity] = UserService.find(identityId)
+  def getSocialUserOpt(identityId: IdentityId): Option[Identity] = socialService.find(identityId)
 
   def exchangeLongTermToken(provider: IdentityProvider, oauth2Info: OAuth2Info): Future[OAuth2Info] = {
     oauth2ProviderRegistry.get(ProviderIds.toProviderId(provider.id)) match {
@@ -386,10 +387,10 @@ class AuthCommander @Inject() (
   }
 
   def loginWithTrustedSocialIdentity(identityId: IdentityId)(implicit request: RequestHeader): Result = {
-    log.info(s"[loginWithTrustedSocialIdentity(${identityId})]")
+    log.info(s"[loginWithTrustedSocialIdentity($identityId)]")
     // more fine-grained error handling required
     val resOpt = for {
-      identity <- UserService.find(identityId)
+      identity <- socialService.find(identityId)
       sui <- db.readOnlyMaster { implicit s => socialUserInfoRepo.getOpt(SocialId(identity.identityId.userId), SocialNetworkType(identity.identityId.providerId)) }
       userId <- sui.userId
     } yield {

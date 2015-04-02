@@ -31,6 +31,8 @@ import com.keepit.common.akka.SafeFuture
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.mail.EmailAddress
 
+import scala.util.Try
+
 @Singleton
 class SecureSocialUserPluginImpl @Inject() (
   db: Database,
@@ -48,7 +50,7 @@ class SecureSocialUserPluginImpl @Inject() (
 
   private def reportExceptions[T](f: => T): T = try f catch {
     case ex: Throwable =>
-      airbrake.notify(ex)
+      airbrake.notify("[SecureSocialUserPluginImpl]" + ex)
       throw ex
   }
 
@@ -63,7 +65,6 @@ class SecureSocialUserPluginImpl @Inject() (
         val email = EmailAddress(id.userId)
         db.readOnlyMaster { implicit session =>
           emailRepo.getByAddressOpt(email).flatMap { emailAddr =>
-            // todo(andrew): Don't let unverified people log in. For now, we are, but come up with something better.
             socialUserInfoRepo.getByUser(emailAddr.userId).find(_.networkType == SocialNetworks.FORTYTWO).flatMap { sui =>
               sui.credentials map { creds =>
                 UserIdentity(Some(emailAddr.userId), creds)
@@ -76,30 +77,21 @@ class SecureSocialUserPluginImpl @Inject() (
       case None =>
         log.info(s"No SocialUserInfo found for $id")
         None
-      case Some(user) =>
-        log.info(s"User found: $user for $id")
-        user.credentials map { UserIdentity(user.userId, _) }
+      case Some(sui) =>
+        log.info(s"User found: $sui for $id")
+        sui.credentials map { UserIdentity(sui.userId, _) }
     }
-  }
-
-  private def updateState(socialUserInfo: SocialUserInfo): SocialUserInfo = {
-    if (socialUserInfo.state == SocialUserInfoStates.APP_NOT_AUTHORIZED || socialUserInfo.state == SocialUserInfoStates.INACTIVE) {
-      //assuming that at this point the user re-authenticated so we can alter the satate
-      log.info(s"updating $socialGraphPlugin state to CREATED")
-      db.readWrite { implicit session =>
-        socialUserInfoRepo.save(socialUserInfo.copy(state = SocialUserInfoStates.CREATED))
-      }
-    } else socialUserInfo
   }
 
   def save(identity: Identity): SocialUser = reportExceptions {
     val (userId, socialUser, allowSignup) = getUserIdAndSocialUser(identity)
     log.info(s"[save] persisting (social|42) user $socialUser")
-    val socialUserInfo = updateState(internUser(
+    val socialUserInfo = internUser(
       SocialId(socialUser.identityId.userId),
       SocialNetworkType(socialUser.identityId.providerId),
       socialUser,
-      userId, allowSignup))
+      userId, allowSignup
+    )
     require(socialUserInfo.credentials.isDefined, s"social user info's credentials is not defined: $socialUserInfo")
     if (!socialUser.identityId.providerId.equals("userpass"))
       socialGraphPlugin.asyncFetch(socialUserInfo)
@@ -147,13 +139,6 @@ class SecureSocialUserPluginImpl @Inject() (
     u
   }
 
-  private def getOrCreateUser(existingUserOpt: Option[User], allowSignup: Boolean, socialUser: SocialUser): Option[User] = existingUserOpt orElse {
-    if (allowSignup) {
-      val userOpt: Option[User] = Some(createUser(socialUser))
-      userOpt
-    } else None
-  }
-
   private def saveVerifiedEmail(userId: Id[User], socialUser: SocialUser)(implicit session: RWSession): Unit = timing(s"saveVerifiedEmail $userId") {
     for (emailString <- socialUser.email if socialUser.authMethod != AuthenticationMethod.UserPassword) {
       val email = EmailAddress.validate(emailString).get
@@ -174,167 +159,148 @@ class SecureSocialUserPluginImpl @Inject() (
     socialId: SocialId, socialNetworkType: SocialNetworkType, socialUser: SocialUser,
     userId: Option[Id[User]], allowSignup: Boolean): SocialUserInfo = timing(s"intern user $socialId") {
 
+    /*
+      This is responsible for SocialUserInfo and User creation.
+      socialId is the external ID from socialNetworkType.
+      socialUser is data we get from the social network, including oauth credentials.
+      userId is possibly the existing Kifi user — I'm not sure when this is Some and when it's None, and if it's accurate.
+      allowSignup is a weird hack that marks if the user should be created.
+     */
+
     log.debug(s"[internUser] socialId=$socialId snType=$socialNetworkType socialUser=$socialUser userId=$userId")
 
+    // Get existing SocialUserInfo and User records, if they exist
     val (suiOpt, existingUserOpt) = db.readOnlyMaster { implicit session =>
-      (
-        socialUserInfoRepo.getOpt(socialId, socialNetworkType),
-        userId orElse {
-          // Automatically connect accounts with existing emails
-          socialUser.email.map(EmailAddress(_)).flatMap { emailAddress =>
-            emailRepo.getVerifiedOwner(emailAddress) tap {
-              _.foreach { existingUserId =>
-                log.info(s"[internUser] Found existing user $existingUserId with email address $emailAddress.")
-              }
+      val suiOpt = socialUserInfoRepo.getOpt(socialId, socialNetworkType)
+      val existingUserOpt = userId orElse {
+        // Automatically connect accounts with existing emails
+        socialUser.email.map(EmailAddress(_)).flatMap { emailAddress =>
+          emailRepo.getVerifiedOwner(emailAddress) tap {
+            _.foreach { existingUserId =>
+              log.info(s"[internUser] Found existing user $existingUserId with email address $emailAddress.")
             }
           }
-        } flatMap { existingUserId =>
-          scala.util.Try(userRepo.get(existingUserId)).toOption.filterNot { existingUser =>
-            val isInactive = (existingUser.state == UserStates.INACTIVE)
-            if (isInactive) { log.warn(s"[internUser] User $existingUserId is inactive!") }
-            isInactive
-          }
         }
-      )
+      } flatMap { existingUserId =>
+        scala.util.Try(userRepo.get(existingUserId)).toOption.filterNot { existingUser =>
+          val isInactive = existingUser.state == UserStates.INACTIVE
+          if (isInactive) { log.warn(s"[internUser] User $existingUserId is inactive!") }
+          isInactive
+        }
+      }
+
+      (suiOpt, existingUserOpt)
     }
 
-    val sui: SocialUserInfo = suiOpt.map(_.withCredentials(socialUser)) match {
-
+    suiOpt.map(_.withCredentials(socialUser)) match {
+      // This social user info is already associated with an existing Kifi user
       case Some(socialUserInfo) if socialUserInfo.userId.isDefined =>
-        val sui = db.readWrite(attempts = 3) { implicit session =>
-          // TODO(greg): handle case where user id in socialUserInfo is different from the one in the session
-          val sui = if (suiOpt == Some(socialUserInfo)) socialUserInfo else {
+        db.readWrite(attempts = 3) { implicit session =>
+          // Weird. Attempt to save user's email as verified if it's a social account.
+          Try(saveVerifiedEmail(socialUserInfo.userId.get, socialUserInfo.credentials.get))
+
+          if (!socialUserInfo.credentials.exists(_ == socialUser)) { // The credentials have changed
+            val updatedSui = socialUserInfoRepo.save(socialUserInfo.copy(state = SocialUserInfoStates.CREATED)) // save updated sui
+
+            // This is weird and should be removed when the functionality is verified elsewhere.
+            // This is so that users who were incomplete (email signup, half way) and then complete signup
+            // get marked as active.
             val user = userRepo.get(socialUserInfo.userId.get)
             if (user.state == UserStates.INCOMPLETE_SIGNUP) {
               userRepo.save(user.withName(socialUser.firstName, socialUser.lastName).withState(UserStates.ACTIVE))
             }
-            socialUserInfoRepo.save(socialUserInfo)
-          }
-          sui
-
+            updatedSui
+          } else socialUserInfo
         }
-        try {
-          db.readWrite(attempts = 3) { implicit session =>
-            saveVerifiedEmail(sui.userId.get, sui.credentials.get)
-          }
-        } catch {
-          case e: Exception => airbrake.notify(s"on saving email of $sui", e)
-        }
-        sui
 
       case Some(socialUserInfo) if socialUserInfo.userId.isEmpty =>
-        val userOpt = getOrCreateUser(existingUserOpt, allowSignup, socialUser)
+        // socialUserInfo exists, but has no user associated
+        val userOpt = if (allowSignup) {
+          Some(existingUserOpt getOrElse createUser(socialUser))
+        } else None
 
-        //social user info with user must be FETCHED_USING_SELF, so setting user should trigger a pull
-        //todo(eishay): send a direct fetch request
-        for (
-          user <- userOpt; su <- db.readOnlyMaster { implicit session => socialUserInfoRepo.getByUser(user.id.get) } if su.networkType == socialUserInfo.networkType && su.id.get != socialUserInfo.id.get
-        ) {
-          throw new IllegalStateException(
-            s"Can't connect $socialUserInfo to user ${user.id.get}. " +
-              s"Social user for network ${su.networkType} is already connected to user ${user.id.get}: $su")
-        }
-
-        val sui = db.readWrite(attempts = 3) { implicit session =>
-          socialUserInfoRepo.save(userOpt map socialUserInfo.withUser getOrElse socialUserInfo)
-        }
-        for (user <- userOpt) {
-          if (socialUserInfo.networkType != SocialNetworks.FORTYTWO) {
-            try {
-              imageStore.uploadPictureFromSocialNetwork(sui, user.externalId, setDefault = false)
-            } catch {
-              case e: Exception => airbrake.notify(s"on user $user", e, user)
-            }
-          }
-          try {
-            db.readWrite(attempts = 3) { implicit session =>
-              saveVerifiedEmail(sui.userId.get, sui.credentials.get)
-            }
-          } catch {
-            case e: Exception => airbrake.notify(s"on saving mail of $sui", e, user)
+        // Before we simply connect the user to this socialUserInfo, we want to make sure
+        // that the user doesn't have this network already.
+        userOpt.foreach { user =>
+          db.readOnlyMaster { implicit session =>
+            socialUserInfoRepo.getByUser(user.id.get).find(su => su.networkType == socialUserInfo.networkType && su.id.get != socialUserInfo.id.get)
+          }.foreach { existingSocialAccountTiedToUser =>
+            // This is most certainly not a good idea, but...
+            throw new IllegalStateException(
+              s"Can't connect $socialUserInfo to user ${user.id.get}. " +
+                s"Social user for network ${existingSocialAccountTiedToUser.networkType} is already connected to user ${user.id.get}: $existingSocialAccountTiedToUser")
           }
         }
-        sui
+
+        val suiWithUserOpt = for (user <- userOpt) yield {
+          db.readWrite(attempts = 3) { implicit session =>
+            val updatedSui = socialUserInfoRepo.save(socialUserInfo.copy(userId = Some(user.id.get), state = SocialUserInfoStates.CREATED))
+
+            if (socialUserInfo.networkType != SocialNetworks.FORTYTWO) {
+              // Not sure why we don't trust these calls, but...
+              Try(imageStore.uploadPictureFromSocialNetwork(updatedSui, user.externalId, setDefault = false))
+              Try(saveVerifiedEmail(updatedSui.userId.get, updatedSui.credentials.get))
+            }
+
+            updatedSui
+          }
+        }
+
+        suiWithUserOpt getOrElse socialUserInfo
 
       case None =>
-        val userOpt = getOrCreateUser(existingUserOpt, allowSignup, socialUser)
+        // We've never seen this socialUserInfo before. Create it, possibly the user, etc
+        val userOpt = if (allowSignup) {
+          Some(existingUserOpt getOrElse createUser(socialUser))
+        } else None
         log.info(s"creating new SocialUserInfo for $userOpt, $socialUser")
 
-        val userInfo = SocialUserInfo(userId = userOpt.flatMap(_.id), //verify saved
+        val socialUserInfo = SocialUserInfo(userId = userOpt.flatMap(_.id), //verify saved
           socialId = socialId, networkType = socialNetworkType, pictureUrl = socialUser.avatarUrl,
-          fullName = socialUser.fullName, credentials = Some(socialUser))
-        log.info(s"SocialUserInfo created is $userInfo")
-        val sui = db.readWrite(attempts = 3) { implicit session =>
-          socialUserInfoRepo.save(userInfo)
-        }
-        try {
-          db.readWrite(attempts = 3) { implicit session =>
-            for (user <- userOpt) {
-              if (socialUser.authMethod == AuthenticationMethod.UserPassword) {
-                val email = EmailAddress(socialUser.email.getOrElse(throw new IllegalStateException("user has no email")))
-                val emailAddress = emailRepo.getByAddressOpt(address = email) getOrElse {
-                  emailRepo.save(UserEmailAddress(userId = user.id.get, address = email))
-                }
-                val cred =
-                  UserCred(
-                    userId = user.id.get,
-                    loginName = email.address,
-                    provider = "bcrypt" /* hard-coded */ ,
-                    credentials = socialUser.passwordInfo.get.password,
-                    salt = socialUser.passwordInfo.get.salt.getOrElse(""))
-                log.info(s"[save(userpass)] Saved email is $emailAddress")
-                val savedCred = userCredRepo.save(cred)
-                log.info(s"[save(userpass)] Persisted $cred into userCredRepo as $savedCred")
-              } else {
-                imageStore.uploadPictureFromSocialNetwork(sui, user.externalId, setDefault = false)
+          fullName = socialUser.fullName, credentials = Some(socialUser), state = SocialUserInfoStates.CREATED)
+        log.info(s"SocialUserInfo created is $socialUserInfo")
+        db.readWrite(attempts = 3) { implicit session =>
+          // We fairly often hit race conditions here. So we'll re-look up any possibly existing SUI
+          val newSui = socialUserInfoRepo.getOpt(socialId, socialNetworkType).map { existingSui =>
+            airbrake.notify(s"[internUser] Wanted to create new SUI, but found an existing. $socialNetworkType/$socialId, $socialUserInfo vs existing $existingSui")
+            existingSui
+          }.getOrElse {
+            socialUserInfoRepo.save(socialUserInfo)
+          }
+
+          for (user <- userOpt if allowSignup) {
+            // If the user exists, we just created it.
+            if (socialUser.authMethod == AuthenticationMethod.UserPassword) {
+              val email = EmailAddress(socialUser.email.getOrElse(throw new IllegalStateException("user has no email")))
+
+              // Why would there ever be one here? If there is, it's almost certainly not what we want.
+              emailRepo.getByAddressOpt(address = email) getOrElse {
+                emailRepo.save(UserEmailAddress(userId = user.id.get, address = email))
               }
+
+              val cred = UserCred(
+                userId = user.id.get,
+                loginName = email.address,
+                provider = "bcrypt",
+                credentials = socialUser.passwordInfo.get.password,
+                salt = socialUser.passwordInfo.get.salt.getOrElse("")
+              )
+              userCredRepo.save(cred)
+            } else {
+              imageStore.uploadPictureFromSocialNetwork(newSui, user.externalId, setDefault = false)
             }
           }
-        } catch {
-          case e: Exception => airbrake.notify(s"on user $sui", e)
+          newSui
         }
-        sui
-    }
-    sui
-  }
-
-  def findByEmailAndProvider(email: String, providerId: String): Option[SocialUser] = reportExceptions {
-    db.readOnlyMaster { implicit s =>
-      providerId match {
-        case UsernamePasswordProvider.UsernamePassword =>
-          val cred = userCredRepo.findByEmailOpt(email)
-          log.info(s"[findByEmail] $email provider=$providerId cred=$cred")
-          cred match {
-            case Some(c: UserCred) => {
-              val user = userRepo.get(c.userId)
-              val res = Some(SocialUser(IdentityId(email, providerId), user.firstName, user.lastName, user.firstName + " " + user.lastName, Some(email), None, AuthenticationMethod.UserPassword, None, None, Some(PasswordInfo(c.provider, c.credentials, Some(c.salt)))))
-              log.info(s"[findByEmail] user=$user socialUser=$res")
-              res
-            }
-            case None => {
-              log.info(s"[findByEmail] email=$email not found")
-              None
-            }
-          }
-        case _ => None
-      }
     }
   }
 
-  val tokenMap = collection.mutable.Map.empty[String, Token] // REMOVEME
-
-  def save(token: Token) {
-    log.info(s"[save] token=(${token.email}, ${token.uuid}, ${token.isSignUp}, ${token.isExpired}")
-    tokenMap += (token.uuid -> token)
-  }
-
-  def findToken(token: String): Option[Token] = {
-    val res = tokenMap.get(token)
-    log.info(s"[findToken] token=$token res=$res")
-    res
-  }
-  def deleteToken(uuid: String) {}
-  def deleteExpiredTokens() {}
+  // Not used
+  def findByEmailAndProvider(email: String, providerId: String): Option[SocialUser] = None
+  def save(token: Token): Unit = {}
+  def findToken(token: String): Option[Token] = None
+  def deleteToken(uuid: String): Unit = {}
+  def deleteExpiredTokens(): Unit = {}
 }
 
 @AppScoped
@@ -415,6 +381,7 @@ class SecureSocialAuthenticatorPluginImpl @Inject() (
          * For now it seems to be harmless since we create a new session from scratch.
          * Not worth investigating more since we want to kill secure social soon.
          */
+        // ↑ Behold, a comment from 2014/1/9 ↑
         log.warn(s"error parsing external id[$id]", ex)
         None
     }

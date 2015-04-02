@@ -162,7 +162,7 @@ class TwitterWaitlistController @Inject() (
               case None => // we failed :(
                 log.warn(s"Couldn't get twitter handle in time, we'll try again. userId: ${ur.userId.id}. They want to be waitlisted.")
                 socialGraphPlugin.asyncFetch(twitterSui.get).onComplete { _ =>
-                  pollDbForTwitterHandle(ur.userId, iterations = 20).onComplete {
+                  pollDbForTwitterHandle(ur.userId, iterations = 60).onComplete {
                     case Success(Some(handle)) =>
                       commander.addEntry(ur.userId, handle)
                     case fail => // we failed :(
