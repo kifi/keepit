@@ -404,7 +404,6 @@ object Graph extends Service {
 
 object Curator extends Service {
   object internal {
-    def adHocRecos(userId: Id[User], n: Int) = ServiceRoute(POST, "/internal/curator/adHocRecos", Param("userId", userId), Param("n", n))
     def topRecos(userId: Id[User]) = ServiceRoute(POST, "/internal/curator/topRecos", Param("userId", userId))
     def topPublicRecos(userId: Option[Id[User]]) = ServiceRoute(GET, "/internal/curator/topPublicRecos", Param("userId", userId))
     def generalRecos() = ServiceRoute(GET, "/internal/curator/generalRecos")

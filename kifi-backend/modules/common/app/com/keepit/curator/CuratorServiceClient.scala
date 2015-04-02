@@ -15,7 +15,6 @@ import play.api.libs.json._
 trait CuratorServiceClient extends ServiceClient {
   final val serviceType = ServiceType.CURATOR
 
-  def adHocRecos(userId: Id[User], n: Int, scoreCoefficientsUpdate: UriRecommendationScores): Future[Seq[RecoInfo]]
   def topRecos(userId: Id[User], source: RecommendationSource, subSource: RecommendationSubSource, more: Boolean, recencyWeight: Float, context: Option[String]): Future[URIRecoResults]
   def topPublicRecos(userId: Option[Id[User]]): Future[Seq[RecoInfo]]
   def generalRecos(): Future[Seq[RecoInfo]]
@@ -36,12 +35,6 @@ class CuratorServiceClientImpl(
     val airbrakeNotifier: AirbrakeNotifier) extends CuratorServiceClient {
 
   val longTimeout = CallTimeouts(responseTimeout = Some(30000), maxWaitTime = Some(3000), maxJsonParseTime = Some(10000))
-
-  def adHocRecos(userId: Id[User], n: Int, scoreCoefficientsUpdate: UriRecommendationScores): Future[Seq[RecoInfo]] = {
-    call(Curator.internal.adHocRecos(userId, n), body = Json.toJson(scoreCoefficientsUpdate), callTimeouts = longTimeout).map { response =>
-      response.json.as[Seq[RecoInfo]]
-    }
-  }
 
   def topRecos(userId: Id[User], source: RecommendationSource, subSource: RecommendationSubSource, more: Boolean, recencyWeight: Float, context: Option[String]): Future[URIRecoResults] = {
     val payload = Json.obj(

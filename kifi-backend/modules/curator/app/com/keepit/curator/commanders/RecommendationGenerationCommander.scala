@@ -70,17 +70,6 @@ class RecommendationGenerationCommander @Inject() (
       scores.multiplier.getOrElse(1.0f)
   }
 
-  private def computeAdjustedScoreByTester(scoreCoefficients: UriRecommendationScores, scores: UriScores): Float = {
-    (scoreCoefficients.recencyScore.getOrElse(defaultScore) * scores.recencyScore +
-      scoreCoefficients.overallInterestScore.getOrElse(defaultScore) * scores.overallInterestScore +
-      scoreCoefficients.priorScore.getOrElse(defaultScore) * scores.priorScore +
-      scoreCoefficients.socialScore.getOrElse(defaultScore) * scores.socialScore +
-      scoreCoefficients.popularityScore.getOrElse(defaultScore) * scores.popularityScore +
-      scoreCoefficients.recentInterestScore.getOrElse(defaultScore) * scores.recentInterestScore +
-      scoreCoefficients.rekeepScore.getOrElse(defaultScore) * scores.rekeepScore +
-      scoreCoefficients.discoveryScore.getOrElse(defaultScore) * scores.discoveryScore +
-      scoreCoefficients.curationScore.getOrElse(defaultScore) * scores.curationScore.getOrElse(0.0f)) *
-      scores.multiplier.getOrElse(1.0f)
   }
 
   def getTopRecommendations(userId: Id[User], howManyMax: Int): Future[Seq[UriRecommendation]] = {
@@ -92,21 +81,6 @@ class RecommendationGenerationCommander @Inject() (
   def getTopRecommendationsNotPushed(userId: Id[User], howManyMax: Int, masterScoreThreshold: Float = 0f): Future[Seq[UriRecommendation]] = {
     db.readOnlyReplicaAsync { implicit session =>
       uriRecRepo.getDigestRecommendableByTopMasterScore(userId, howManyMax, masterScoreThreshold)
-    }
-  }
-
-  def getAdHocRecommendations(userId: Id[User], howManyMax: Int, scoreCoefficients: UriRecommendationScores): Future[Seq[RecoInfo]] = {
-    getTopRecommendations(userId, Math.max(howManyMax, 1000)).map { recos =>
-      recos.map { reco =>
-        RecoInfo(
-          userId = Some(reco.userId),
-          uriId = reco.uriId,
-          score =
-            if (scoreCoefficients.isEmpty) computeMasterScore(reco.allScores)
-            else computeAdjustedScoreByTester(scoreCoefficients, reco.allScores),
-          explain = Some(reco.allScores.toString),
-          attribution = Some(reco.attribution))
-      }.sortBy(-1 * _.score).take(howManyMax)
     }
   }
 

@@ -49,13 +49,6 @@ class CuratorController @Inject() (
 
   val nonlinearLibraryRecoScoringStrategy = new NonLinearLibraryRecoScoringStrategy(libraryRecoGenCommander.defaultLibraryScoreParams)
 
-  def adHocRecos(userId: Id[User], n: Int) = Action.async { request =>
-    recoGenCommander.getAdHocRecommendations(userId, n, request.body.asJson match {
-      case Some(json) => json.as[UriRecommendationScores]
-      case None => UriRecommendationScores()
-    }).map(recos => Ok(Json.toJson(recos)))
-  }
-
   def topRecos(userId: Id[User]) = Action.async(parse.tolerantJson) { request =>
     val source = (request.body \ "source").as[RecommendationSource]
     val subSource = (request.body \ "subSource").as[RecommendationSubSource]

@@ -33,41 +33,6 @@ class RecommendationsCommander @Inject() (
     implicit val publicIdConfig: PublicIdConfiguration,
     userExperimentCommander: LocalUserExperimentCommander) {
 
-  def adHocRecos(userId: Id[User], howManyMax: Int, scoreCoefficientsUpdate: UriRecommendationScores): Future[Seq[KeepInfo]] = {
-    curator.adHocRecos(userId, howManyMax, scoreCoefficientsUpdate).flatMap { recos =>
-      val recosWithUris: Seq[(RecoInfo, NormalizedURI)] = db.readOnlyReplica { implicit session =>
-        recos.map { reco => (reco, nUriRepo.get(reco.uriId)) }
-      }.filter(_._2.state == NormalizedURIStates.SCRAPED)
-
-      Future.sequence(recosWithUris.map {
-        case (reco, nUri) =>
-          uriSummaryCommander.getDefaultURISummary(nUri, waiting = false).map { uriSummary =>
-            val extraInfo = reco.attribution.map { attr =>
-              attr.topic.map(_.topicName).map { topicName =>
-                s"[$topicName;${reco.explain.getOrElse("")}]"
-              } getOrElse {
-                s"[${reco.explain.getOrElse("")}]"
-              }
-            } getOrElse ""
-            val augmentedDescription = uriSummary.description.map { desc =>
-              extraInfo + desc
-            } getOrElse {
-              extraInfo
-            }
-            KeepInfo(
-              title = nUri.title,
-              url = nUri.url,
-              isPrivate = false,
-              summary = Some(uriSummary.copy(description = Some(augmentedDescription))),
-              others = reco.attribution.get.user.map(_.others),
-              keepers = db.readOnlyReplica { implicit session => reco.attribution.get.user.map(_.friends.map(basicUserRepo.load)) }
-            )
-          }
-      })
-
-    }
-  }
-
   def updateUriRecommendationFeedback(userId: Id[User], extId: ExternalId[NormalizedURI], feedback: UriRecommendationFeedback): Future[Boolean] = {
     val uriOpt = db.readOnlyMaster { implicit s =>
       nUriRepo.getOpt(extId)
