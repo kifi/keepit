@@ -45,18 +45,23 @@ class UrbanAirship @Inject() (
       db.readWrite { implicit s =>
         val noSignatureDevices = deviceRepo.getByUserIdAndDeviceType(userId, deviceType).filter(_.signature.isEmpty)
         noSignatureDevices.map { d =>
+          log.info(s"[UrbanAirship] deactivate old devices for user $userId: (device: ${d.deviceType}}, token: ${d.token}})")
           deviceRepo.save(d.copy(state = DeviceStates.INACTIVE))
         }
       }
 
-      db.readOnlyMaster { implicit s =>
+      val targetDevice = db.readOnlyMaster { implicit s =>
         deviceRepo.getByUserIdAndDeviceTypeAndSignature(userId, deviceType, signature, None)
-      } match {
-        case Some(d) => // update or reactivate an existing device
+      }
+      log.info(s"[UrbanAirship] search by (userId $userId, deviceType $deviceType, signature $signature) => found: $targetDevice")
+      targetDevice match {
+        case Some(d) =>
+          log.info(s"[UrbanAirship] reactivate/update device for user $userId: (device: $deviceType, signature: $signature) with token $token")
           db.readWrite { implicit s =>
             deviceRepo.save(d.copy(token = Some(token), isDev = isDev, state = DeviceStates.ACTIVE))
           }
-        case None => // new device for user! save new device!
+        case None =>
+          log.info(s"[UrbanAirship] save new device for user $userId: (device: $deviceType, signature: $signature) with token $token")
           db.readWrite { implicit s =>
             deviceRepo.save(Device(userId = userId, token = Some(token), deviceType = deviceType, isDev = isDev, signature = signatureOpt))
           }
@@ -66,6 +71,7 @@ class UrbanAirship @Inject() (
       db.readWrite { implicit s =>
         // deactivate all devices with token & deviceType but don't match current userId and don't have signature
         deviceRepo.get(token, deviceType).filter(d => d.userId != userId && d.signature.isEmpty).map { d =>
+          log.info(s"[UrbanAirship] deactivate old devices for user $userId: (device: ${d.deviceType}}, token: ${d.token}})")
           deviceRepo.save(d.copy(state = DeviceStates.INACTIVE))
         }
         // find device with token & device type
