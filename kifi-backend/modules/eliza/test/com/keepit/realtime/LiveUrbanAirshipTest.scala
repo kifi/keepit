@@ -30,9 +30,9 @@ class LiveUrbanAirshipTest extends Specification with ElizaApplicationInjector {
           UrbanAirshipConfig(key = key, secret = secret, devKey = dev_key, devSecret = dev_secret)
         }
       })) {
-        val urbanAirship = inject[UrbanAirshipImpl]
-        val notification = MessageThreadPushNotification(id = ExternalId[MessageThread](), unvisitedCount = 44, message = Some("Hello ios :-)"), sound = Some(UrbanAirship.DefaultNotificationSound))
-        val device = Device(userId = Id[User](1), token = "cf09d7db6968c11472b65a7050413180fbf98118c52be93aef9e79095bbe73cf", deviceType = DeviceType.IOS, isDev = false)
+        val urbanAirship = inject[UrbanAirship]
+        val notification = MessageThreadPushNotification(id = ExternalId[MessageThread](), unvisitedCount = 44, message = Some("Hello ios :-)"), sound = Some(MobilePushNotifier.DefaultNotificationSound))
+        val device = Device(userId = Id[User](1), token = Some("cf09d7db6968c11472b65a7050413180fbf98118c52be93aef9e79095bbe73cf"), deviceType = DeviceType.IOS, isDev = false)
         val json = urbanAirship.createIosJson(notification, device)
         val client = inject[DevAndProdUrbanAirshipClient]
         val res = Await.result(client.send(json, device, notification), Duration.Inf)
@@ -54,9 +54,9 @@ class LiveUrbanAirshipTest extends Specification with ElizaApplicationInjector {
           UrbanAirshipConfig(key = key, secret = secret, devKey = dev_key, devSecret = dev_secret)
         }
       })) {
-        val urbanAirship = inject[UrbanAirshipImpl]
-        val notification = MessageThreadPushNotification(id = ExternalId[MessageThread](), unvisitedCount = 44, message = Some("Hello android:-)"), sound = Some(UrbanAirship.DefaultNotificationSound))
-        val device = Device(userId = Id[User](1), token = "64edb4bf-ed9c-4139-8d16-1e338558032a", deviceType = DeviceType.Android, isDev = false)
+        val urbanAirship = inject[UrbanAirship]
+        val notification = MessageThreadPushNotification(id = ExternalId[MessageThread](), unvisitedCount = 44, message = Some("Hello android:-)"), sound = Some(MobilePushNotifier.DefaultNotificationSound))
+        val device = Device(userId = Id[User](1), token = Some("64edb4bf-ed9c-4139-8d16-1e338558032a"), deviceType = DeviceType.Android, isDev = false)
         val json = urbanAirship.createAndroidJson(notification, device)
         val client = inject[DevAndProdUrbanAirshipClient]
         val res = Await.result(client.send(json, device, notification), Duration.Inf)

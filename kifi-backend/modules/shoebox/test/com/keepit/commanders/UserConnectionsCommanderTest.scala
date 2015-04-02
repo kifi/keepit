@@ -108,7 +108,7 @@ class UserConnectionsCommanderTest extends Specification with ShoeboxTestInjecto
           (user1, user2, frReq.id.get)
         }
 
-        inject[UserConnectionsCommander].friend(user2.id.get, user1.externalId) === (true, "acceptedRequest")
+        inject[UserConnectionsCommander].friend(user2, user1.externalId) === (true, "acceptedRequest")
 
         db.readOnlyMaster { implicit s =>
           inject[FriendRequestRepo].get(frReqId).state === FriendRequestStates.ACCEPTED

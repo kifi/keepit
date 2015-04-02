@@ -1,6 +1,6 @@
 package com.keepit.shoebox.cron
 
-import com.keepit.common.db.slick.DBSession.RSession
+import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.social.BasicUserRepo
 
 import scala.concurrent.ExecutionContext
@@ -43,7 +43,7 @@ class ActivityPushActor @Inject() (
       activityPusher.createPushActivityEntities(100)
     case PushActivities =>
       if (counter.get <= 0) {
-        activityPusher.getNextPushBatch() foreach { activityId =>
+        activityPusher.getNextPushBatch foreach { activityId =>
           self ! PushActivity(activityId)
           counter.incrementAndGet()
         }
@@ -62,13 +62,13 @@ class ActivityPushActor @Inject() (
   }
 }
 
-class ActivityPushSchedualer @Inject() (
+class ActivityPushScheduler @Inject() (
     activityPushTaskRepo: ActivityPushTaskRepo,
     val scheduling: SchedulingProperties,
     actor: ActorInstance[ActivityPushActor]) extends SchedulerPlugin {
   override def onStart() {
-    scheduleTaskOnOneMachine(actor.system, 21 seconds, 29 seconds, actor.ref, PushActivities, PushActivities.getClass.getSimpleName)
-    scheduleTaskOnOneMachine(actor.system, 1 hour, 1 hours, actor.ref, CreatePushActivityEntities, CreatePushActivityEntities.getClass.getSimpleName)
+    scheduleTaskOnOneMachine(actor.system, 21.seconds, 29.seconds, actor.ref, PushActivities, PushActivities.getClass.getSimpleName)
+    scheduleTaskOnOneMachine(actor.system, 1.hour, 1.hours, actor.ref, CreatePushActivityEntities, CreatePushActivityEntities.getClass.getSimpleName)
   }
   def createPushActivityEntities() = actor.ref ! CreatePushActivityEntities
 }
@@ -89,8 +89,23 @@ class ActivityPusher @Inject() (
     implicit val executionContext: ExecutionContext,
     clock: Clock) extends Logging {
 
-  def updatedActivity(kifiInstallation: KifiInstallation): Unit = {
-    //todo(andrew): placeholder
+  def updatedActivity(userId: Id[User]): Unit = {
+    // Gets called when user opens app.
+    // Updates last active record if it exists, updates all relevant dates and backoff
+    db.readWrite { implicit session =>
+      val now = clock.now
+      val pushTask = activityPushTaskRepo.getByUser(userId).getOrElse {
+        createActivityPushForUser(userId, now, ActivityPushTaskStates.INACTIVE)
+      }
+      val recentInstall = pushTask.createdAt.plusDays(1) > now
+      activityPushTaskRepo.save(pushTask.copy(
+        lastActiveDate = now,
+        lastActiveTime = now.toLocalTime,
+        nextPush = Some(if (recentInstall) now.plusDays(1) else now.plusDays(2)),
+        backoff = Some(2.days)
+      ))
+    }
+
   }
 
   def forcePushLibraryActivityForUser(userId: Id[User]): Unit = {
@@ -105,24 +120,23 @@ class ActivityPusher @Inject() (
   }
 
   def pushItBaby(activityPushTaskId: Id[ActivityPushTask]): Unit = {
-    val (activity, canNotify, lastActivity) = db.readOnlyMaster { implicit s =>
+    /*
+     * activityPushTaskId is for a candidate to push, but may not require a push.
+     * This can happen when the user was active after the last push.
+     */
+    val (activity, canNotify) = db.readOnlyMaster { implicit s =>
       val activity = activityPushTaskRepo.get(activityPushTaskId)
       val canNotify = notifyPreferenceRepo.canNotify(activity.userId, NotifyPreference.RECOS_REMINDER)
-      val lastActivity = getLastActivity(activity.userId)
-      (activity, canNotify, lastActivity)
+      (activity, canNotify)
     }
-    if (lastActivity != activity.lastActiveDate) {
-      db.readWrite { implicit s =>
-        activityPushTaskRepo.save(activity.withLastActivity(lastActivity))
-      }
-    } else if (canNotify) {
-      pushActivity(activity)
-    } else {
+    if (!canNotify) {
       //todo(eishay) re-enable when user resets prefs
       db.readWrite { implicit s =>
         log.info(s"user asked not to be notified on RECOS_REMINDER, disabling his task")
         activityPushTaskRepo.save(activity.copy(state = ActivityPushTaskStates.INACTIVE))
       }
+    } else if (shouldNotify(activity)) {
+      pushActivity(activity)
     }
   }
 
@@ -151,7 +165,7 @@ class ActivityPusher @Inject() (
   }
 
   private def pushActivity(activity: ActivityPushTask): Unit = {
-    db.readOnlyReplica { implicit s => kifiInstallationRepo.lastUpdatedMobile(activity.userId) } map { latestInstallation =>
+    db.readOnlyReplica { implicit s => kifiInstallationRepo.lastUpdatedMobile(activity.userId) } foreach { latestInstallation =>
       getMessage(activity.userId, latestInstallation) match {
         case Some((message, experimant)) =>
           pushMessage(activity, message, experimant)
@@ -244,23 +258,35 @@ class ActivityPusher @Inject() (
       usersWithLastKeep.toSeq
     }
     db.readWrite { implicit s =>
-      log.info(s"creating ${users.size} tasks for users")
+      log.info(s"[createPushActivityEntitiesBatch] creating ${users.size} tasks for users")
       users map {
         case (user, lastActive) =>
-          val lastActiveDate = lastActive
-          val task = ActivityPushTask(userId = user.id.get, lastActiveDate = lastActiveDate, lastActiveTime = lastActiveDate.toLocalTime, state = ActivityPushTaskStates.INACTIVE)
-          activityPushTaskRepo.save(task).id.get
+          createActivityPushForUser(user.id.get, lastActive, ActivityPushTaskStates.INACTIVE).id.get
       }
     }
   }
 
-  def getNextPushBatch(): Seq[Id[ActivityPushTask]] = {
-    val ids = db.readOnlyMaster { implicit s =>
-      val now = clock.now()
-      activityPushTaskRepo.getByPushAndActivity(now.minusHours(12), now.toLocalTimeInZone(DEFAULT_DATE_TIME_ZONE), 100)
+  private def createActivityPushForUser(userId: Id[User], lastActive: DateTime, state: State[ActivityPushTask])(implicit session: RWSession): ActivityPushTask = {
+    val task = ActivityPushTask(
+      userId = userId,
+      lastActiveDate = lastActive,
+      lastActiveTime = lastActive.toLocalTime,
+      state = state,
+      nextPush = None,
+      backoff = None)
+    activityPushTaskRepo.save(task)
+  }
+
+  def getNextPushBatch: Seq[Id[ActivityPushTask]] = {
+    val ids = db.readOnlyReplica { implicit s =>
+      activityPushTaskRepo.getBatchToPush(100)
     }
     log.info(s"next push batch size is ${ids.size}")
     ids
+  }
+
+  private def shouldNotify(pushTask: ActivityPushTask): Boolean = {
+    true // todo, determine if client should recieve a push now
   }
 
 }

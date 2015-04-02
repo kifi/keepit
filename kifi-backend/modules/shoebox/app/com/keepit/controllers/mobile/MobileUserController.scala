@@ -175,7 +175,7 @@ class MobileUserController @Inject() (
   }
 
   def friend(externalId: ExternalId[User]) = UserAction { request =>
-    val (success, code) = userConnectionsCommander.friend(request.userId, externalId)
+    val (success, code) = userConnectionsCommander.friend(request.user, externalId)
     val res = Json.obj("code" -> code)
     if (success) Ok(res) else NotFound(res)
   }

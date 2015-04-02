@@ -190,17 +190,25 @@ class AuthHelper @Inject() (
   }
 
   def finishSignup(user: User, emailAddress: EmailAddress, newIdentity: Identity, emailConfirmedAlready: Boolean, libraryPublicId: Option[PublicId[Library]], isFinalizedImmediately: Boolean)(implicit request: MaybeUserRequest[_]): Result = {
-    if (!emailConfirmedAlready) {
-      val unverifiedEmail = newIdentity.email.map(EmailAddress(_)).getOrElse(emailAddress)
-      SafeFuture { userCommander.sendWelcomeEmail(user, withVerification = true, Some(unverifiedEmail)) }
-    } else {
-      db.readWrite { implicit session =>
-        emailAddressRepo.getByAddressOpt(emailAddress) map { emailAddr =>
-          userRepo.save(user.copy(primaryEmail = Some(emailAddr.address)))
+
+    val cookieTargetLibId = request.cookies.get("publicLibraryId")
+    val cookieIntent = request.cookies.get("intent")
+    val discardedCookies = Seq(cookieTargetLibId, cookieIntent).flatten.map(c => DiscardingCookie(c.name)) :+ DiscardingCookie("inv")
+    val fromTwitterWaitlist = cookieIntent.exists(_.value == "waitlist")
+
+    if (!fromTwitterWaitlist) {
+      if (!emailConfirmedAlready) {
+        val unverifiedEmail = newIdentity.email.map(EmailAddress(_)).getOrElse(emailAddress)
+        SafeFuture { userCommander.sendWelcomeEmail(user, withVerification = true, Some(unverifiedEmail)) }
+      } else {
+        db.readWrite { implicit session =>
+          emailAddressRepo.getByAddressOpt(emailAddress) map { emailAddr =>
+            userRepo.save(user.copy(primaryEmail = Some(emailAddr.address)))
+          }
+          userValueRepo.clearValue(user.id.get, UserValueName.PENDING_PRIMARY_EMAIL)
         }
-        userValueRepo.clearValue(user.id.get, UserValueName.PENDING_PRIMARY_EMAIL)
+        SafeFuture { userCommander.sendWelcomeEmail(user, withVerification = false) }
       }
-      SafeFuture { userCommander.sendWelcomeEmail(user, withVerification = false) }
     }
 
     val uri = request.session.get(SecureSocial.OriginalUrlKey) getOrElse {
@@ -218,13 +226,9 @@ class AuthHelper @Inject() (
     Authenticator.create(newIdentity).fold(
       error => Status(INTERNAL_SERVER_ERROR)("0"),
       authenticator => {
-        val cookieTargetLibId = request.cookies.get("publicLibraryId")
-        val cookieIntent = request.cookies.get("intent")
-        val discardedCookies = Seq(cookieTargetLibId, cookieIntent).flatten.map(c => DiscardingCookie(c.name)) :+ DiscardingCookie("inv")
-
         val result = if (isFinalizedImmediately) {
           Redirect(uri)
-        } else if (cookieIntent.exists(_.value == "waitlist")) {
+        } else if (fromTwitterWaitlist) {
           Ok(Json.obj("uri" -> "/twitter/thanks"))
         } else {
           Ok(Json.obj("uri" -> uri))

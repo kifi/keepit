@@ -8,6 +8,8 @@ import com.keepit.test.{ ShoeboxApplicationInjector, ShoeboxApplication, Shoebox
 import org.joda.time.{ DateTime, LocalTime }
 import org.specs2.mutable.Specification
 import play.api.test.Helpers._
+import scala.concurrent.duration.Duration
+import java.util.concurrent.TimeUnit._
 
 class ActivityPushTaskRepoTest extends Specification with ShoeboxApplicationInjector {
 
@@ -23,33 +25,37 @@ class ActivityPushTaskRepoTest extends Specification with ShoeboxApplicationInje
           val user4 = user().saved
           val user5 = user().saved
           val user6 = user().saved
-          val a1 = repo.save(ActivityPushTask(userId = user1.id.get, lastActiveDate = now, lastActiveTime = now.toLocalTime))
-          val a2 = repo.save(ActivityPushTask(userId = user2.id.get, lastActiveDate = now.plusHours(2), lastActiveTime = now.plusHours(2).toLocalTime))
-          val a3 = repo.save(ActivityPushTask(userId = user3.id.get, lastActiveDate = now.plusHours(4), lastActiveTime = now.plusHours(4).toLocalTime))
-          val a4 = repo.save(ActivityPushTask(userId = user4.id.get, lastPush = Some(now.plusDays(2)), lastActiveDate = now, lastActiveTime = now.toLocalTime))
-          val a5 = repo.save(ActivityPushTask(userId = user5.id.get, lastPush = Some(now.plusDays(2)), lastActiveDate = now.plusHours(2), lastActiveTime = now.plusHours(2).toLocalTime))
-          val a6 = repo.save(ActivityPushTask(userId = user6.id.get, lastPush = Some(now.plusDays(2)), lastActiveDate = now.plusHours(4), lastActiveTime = now.plusHours(4).toLocalTime))
+          val a1 = repo.save(ActivityPushTask(userId = user1.id.get, lastPush = None, lastActiveDate = now, lastActiveTime = now.toLocalTime, nextPush = Some(now.plusDays(1)), backoff = Option(Duration(2, DAYS))))
+          val a2 = repo.save(ActivityPushTask(userId = user2.id.get, lastPush = None, lastActiveDate = now.plusHours(2), lastActiveTime = now.plusHours(2).toLocalTime, nextPush = Some(now.plusDays(2)), backoff = Option(Duration(2, DAYS))))
+          val a3 = repo.save(ActivityPushTask(userId = user3.id.get, lastPush = None, lastActiveDate = now.plusHours(4), lastActiveTime = now.plusHours(4).toLocalTime, nextPush = Some(now.plusDays(3)), backoff = Option(Duration(2, DAYS))))
+          val a4 = repo.save(ActivityPushTask(userId = user4.id.get, lastPush = Some(now.plusDays(2)), lastActiveDate = now, lastActiveTime = now.toLocalTime, nextPush = Some(now.plusDays(4)), backoff = Option(Duration(2, DAYS))))
+          val a5 = repo.save(ActivityPushTask(userId = user5.id.get, lastPush = Some(now.plusDays(2)), lastActiveDate = now.plusHours(2), lastActiveTime = now.plusHours(2).toLocalTime, nextPush = Some(now.plusDays(5)), backoff = Option(Duration(2, DAYS))))
+          val a6 = repo.save(ActivityPushTask(userId = user6.id.get, lastPush = Some(now.plusDays(2)), lastActiveDate = now.plusHours(4), lastActiveTime = now.plusHours(4).toLocalTime, nextPush = Some(now.plusDays(6)), backoff = Option(Duration(2, DAYS))))
           (user1, user2, user3, a1, a2, a3, a4, a5, a6)
         }
+        val clock = inject[FakeClock]
+
         db.readOnlyMaster { implicit s =>
           repo.getByUser(user1.id.get).get === a1
           repo.getByUser(user2.id.get).get === a2
           repo.getByUser(user3.id.get).get === a3
-          repo.getByPushAndActivity(now.plusHours(1), now.minusHours(1).toLocalTime, 10).isEmpty === true
+          clock.push(now.minusDays(10)) // far into the past
+          repo.getBatchToPush(10).isEmpty === true
         }
-        db.readWrite { implicit s =>
-          repo.save(repo.getByUser(user1.id.get).get.copy(lastPush = Some(new DateTime(2015, 2, 2, 1, 1, 1, DEFAULT_DATE_TIME_ZONE))))
-          repo.save(repo.getByUser(user2.id.get).get.copy(lastPush = Some(new DateTime(2014, 2, 2, 1, 1, 1, DEFAULT_DATE_TIME_ZONE))))
-        }
-        db.readWrite { implicit s =>
-          repo.getByPushAndActivity(now, now.toLocalTime.minusHours(1), 10) === Seq()
-          repo.getByPushAndActivity(now, now.toLocalTime.plusHours(1), 10) === Seq(a1.id.get)
-          repo.getByPushAndActivity(now.minusDays(1), now.toLocalTime.plusHours(1), 10) === Seq(a1.id.get)
-          repo.getByPushAndActivity(now.plusDays(1), now.toLocalTime.plusHours(1), 10) === Seq(a1.id.get)
 
-          repo.getByPushAndActivity(now.plusDays(1), now.toLocalTime.plusHours(5), 10) === Seq(a1.id.get, a2.id.get, a3.id.get)
-          repo.getByPushAndActivity(now.plusDays(3), now.toLocalTime.plusHours(5), 10) === Seq(a1.id.get, a2.id.get, a3.id.get, a4.id.get, a5.id.get, a6.id.get)
-          repo.getByPushAndActivity(now.plusDays(3), now.toLocalTime.plusHours(3), 10) === Seq(a1.id.get, a2.id.get, a4.id.get, a5.id.get)
+        db.readWrite { implicit s =>
+          clock.push(now)
+          repo.getBatchToPush(10).length === 0
+
+          clock.push(now.plusDays(2))
+          repo.getBatchToPush(10) === Seq(a1.id.get)
+
+          clock.push(now.plusDays(10))
+          repo.getBatchToPush(10).length === 6
+
+          repo.save(a2.copy(nextPush = Some(now)))
+          clock.push(now.plusSeconds(1))
+          repo.getBatchToPush(10) === Seq(a2.id.get)
         }
       }
     }

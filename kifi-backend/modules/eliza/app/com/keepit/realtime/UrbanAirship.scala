@@ -25,34 +25,7 @@ import scala.util.{ Try, Success, Failure }
 
 case class UrbanAirshipConfig(key: String, secret: String, devKey: String, devSecret: String, baseUrl: String = "https://go.urbanairship.com")
 
-// Add fields to this object and handle them properly for each platform
-sealed trait PushNotification {
-  val unvisitedCount: Int
-  val message: Option[String]
-  val sound: Option[NotificationSound]
-}
-
-case class MessageThreadPushNotification(id: ExternalId[MessageThread], unvisitedCount: Int, message: Option[String], sound: Option[NotificationSound]) extends PushNotification
-case class SimplePushNotification(unvisitedCount: Int, message: Option[String], sound: Option[NotificationSound] = None, category: PushNotificationCategory, experiment: PushNotificationExperiment) extends PushNotification
-case class LibraryUpdatePushNotification(unvisitedCount: Int, message: Option[String], libraryId: Id[Library], libraryUrl: String, sound: Option[NotificationSound] = None, category: PushNotificationCategory, experiment: PushNotificationExperiment) extends PushNotification
-
-case class NotificationSound(name: String) extends AnyVal
-
-object UrbanAirship {
-  val DefaultNotificationSound = NotificationSound("notification.aiff")
-  val MoreMessageNotificationSound = NotificationSound("newnotificationoutsidemessage.aiff")
-  val RecheckPeriod = Days.THREE
-}
-
-@ImplementedBy(classOf[UrbanAirshipImpl])
-trait UrbanAirship {
-  def registerDevice(userId: Id[User], token: String, deviceType: DeviceType, isDev: Boolean, signature: Option[String]): Device
-  def notifyUser(userId: Id[User], notification: PushNotification): Int
-  def sendNotification(device: Device, notification: PushNotification, trial: Int = 3): Unit
-}
-
-@Singleton
-class UrbanAirshipImpl @Inject() (
+class UrbanAirship @Inject() (
     client: UrbanAirshipClient,
     deviceRepo: DeviceRepo,
     airbrake: AirbrakeNotifier,
@@ -60,10 +33,10 @@ class UrbanAirshipImpl @Inject() (
     db: Database,
     clock: Clock,
     implicit val publicIdConfig: PublicIdConfiguration,
-    scheduler: Scheduler) extends UrbanAirship with Logging {
+    scheduler: Scheduler) extends Logging {
 
   def registerDevice(userId: Id[User], token: String, deviceType: DeviceType, isDev: Boolean, signatureOpt: Option[String]): Device = synchronized {
-    log.info(s"Registering device: $deviceType:$token for (user $userId, signature $signatureOpt)")
+    log.info(s"[UrbanAirship] Registering device: $deviceType:$token for (user $userId, signature $signatureOpt)")
 
     val device = if (signatureOpt.isDefined) {
       val signature = signatureOpt.get
@@ -81,11 +54,11 @@ class UrbanAirshipImpl @Inject() (
       } match {
         case Some(d) => // update or reactivate an existing device
           db.readWrite { implicit s =>
-            deviceRepo.save(d.copy(token = token, isDev = isDev, state = DeviceStates.ACTIVE))
+            deviceRepo.save(d.copy(token = Some(token), isDev = isDev, state = DeviceStates.ACTIVE))
           }
         case None => // new device for user! save new device!
           db.readWrite { implicit s =>
-            deviceRepo.save(Device(userId = userId, token = token, deviceType = deviceType, isDev = isDev, signature = signatureOpt))
+            deviceRepo.save(Device(userId = userId, token = Some(token), deviceType = deviceType, isDev = isDev, signature = signatureOpt))
           }
       }
 
@@ -99,7 +72,7 @@ class UrbanAirshipImpl @Inject() (
         deviceRepo.get(userId, token, deviceType) match {
           case Some(d) if d.state == DeviceStates.ACTIVE && d.isDev == isDev => d
           case Some(d) => deviceRepo.save(d.copy(state = DeviceStates.ACTIVE, isDev = isDev))
-          case None => deviceRepo.save(Device(userId = userId, token = token, deviceType = deviceType, isDev = isDev))
+          case None => deviceRepo.save(Device(userId = userId, token = Some(token), deviceType = deviceType, isDev = isDev))
         }
       }
     }
@@ -116,23 +89,22 @@ class UrbanAirshipImpl @Inject() (
     }
   }
 
-  def notifyUser(userId: Id[User], notification: PushNotification): Int = {
-    val devices: Seq[Device] = getDevices(userId)
-    log.info(s"Notifying user: $userId with $devices")
+  def notifyUser(userId: Id[User], allDevices: Seq[Device], notification: PushNotification): Future[Int] = {
+    log.info(s"[UrbanAirship] Notifying user: $userId with $allDevices")
     //get only active devices
-    val activeDevices = devices filter { d =>
+    val activeDevices = allDevices filter { d =>
       d.state == DeviceStates.ACTIVE
     }
     //send them all a push notification
     activeDevices foreach { device =>
       sendNotification(device, notification)
     }
-    log.info(s"user $userId has ${activeDevices.size} active devices out of ${devices.size} for notification $notification")
+    log.info(s"[UrbanAirship] user $userId has ${activeDevices.size} active devices out of ${allDevices.size} for notification $notification")
     //refresh all devices (even not active ones)
-    devices foreach { device =>
+    allDevices foreach { device =>
       client.updateDeviceState(device)
     }
-    activeDevices.size
+    Future.successful(activeDevices.size) // to match MobilePushNotifier notifyUser API
   }
 
   // see https://docs.google.com/a/kifi.com/document/d/1efEGk8Wdj2dAjWjUWvsHW5UC0p2srjIXiju8tLpuOMU/edit# for spec
@@ -151,6 +123,8 @@ class UrbanAirshipImpl @Inject() (
           case DeviceType.IOS =>
             withLid + ("lu" -> JsString(lupn.libraryUrl))
         }
+      case upn: UserPushNotification =>
+        json.as[JsObject] ++ Json.obj("t" -> "us", "uid" -> upn.userId.id, "un" -> upn.username.value, "purl" -> upn.pictureUrl)
       case _ =>
         throw new Exception(s"Don't recognize push notification $notification")
     }
@@ -248,11 +222,11 @@ class UrbanAirshipImpl @Inject() (
 
     notification match {
       case spn: SimplePushNotification =>
-        log.info(s"Sending SimplePushNotification to user ${device.userId} device [${device.token}] with: $json")
+        log.info(s"[UrbanAirship] Sending SimplePushNotification to user ${device.userId} device [${device.token}] with: $json")
       case mtpn: MessageThreadPushNotification =>
-        log.info(s"Sending MessageThreadPushNotification to user ${device.userId} device: [${device.token}] message ${mtpn.id}")
+        log.info(s"[UrbanAirship] Sending MessageThreadPushNotification to user ${device.userId} device: [${device.token}] message ${mtpn.id}")
       case lupn: LibraryUpdatePushNotification =>
-        log.info(s"Sending LibraryUpdatePushNotification to user ${device.userId} device: [${device.token}] library ${lupn.libraryId} message ${lupn.message}")
+        log.info(s"[UrbanAirship] Sending LibraryUpdatePushNotification to user ${device.userId} device: [${device.token}] library ${lupn.libraryId} message ${lupn.message}")
     }
 
     client.send(json, device, notification) andThen {
@@ -260,7 +234,7 @@ class UrbanAirshipImpl @Inject() (
         if (res.status / 100 != 2) {
           dealWithFailNotification(device, notification, trial, new Exception(s"bad status ${res.status} on push notification $notification for device $device response: ${res.body}"))
         } else {
-          log.info(s"successful send of push notification on trial $trial for device $deviceRepo: ${res.body}")
+          log.info(s"[UrbanAirship] successful send of push notification on trial $trial for device $deviceRepo: ${res.body}")
           messagingAnalytics.sentPushNotification(device, notification)
         }
       case Failure(e) =>

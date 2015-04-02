@@ -27,6 +27,7 @@ import com.keepit.common.json.TupleFormat._
 sealed case class PushNotificationCategory(name: String)
 object PushNotificationCategory {
   val LibraryChanged = PushNotificationCategory("LibraryChanged")
+  val UserConnectionRequest = PushNotificationCategory("UserConnectionRequest")
   val PersonaUpdate = PushNotificationCategory("PersonaUpdate")
   implicit val format = Json.format[PushNotificationCategory]
 }
@@ -44,6 +45,7 @@ trait ElizaServiceClient extends ServiceClient {
   def sendToUser(userId: Id[User], data: JsArray): Unit
   def sendToAllUsers(data: JsArray): Unit
 
+  def sendUserPushNotification(userId: Id[User], message: String, recipientUserId: Id[User], username: Username, pictureUrl: String, pushNotificationExperiment: PushNotificationExperiment): Future[Int]
   def sendLibraryPushNotification(userId: Id[User], message: String, libraryId: Id[Library], libraryUrl: String, pushNotificationExperiment: PushNotificationExperiment): Future[Int]
   def sendGeneralPushNotification(userId: Id[User], message: String, pushNotificationExperiment: PushNotificationExperiment): Future[Int]
 
@@ -80,6 +82,14 @@ class ElizaServiceClientImpl @Inject() (
   implicit val defaultContext: ExecutionContext,
   userThreadStatsForUserIdCache: UserThreadStatsForUserIdCache)
     extends ElizaServiceClient with Logging {
+
+  def sendUserPushNotification(userId: Id[User], message: String, recipientUserId: Id[User], username: Username, pictureUrl: String, pushNotificationExperiment: PushNotificationExperiment): Future[Int] = {
+    implicit val userFormatter = Id.format[User]
+    val payload = Json.obj("userId" -> userId, "message" -> message, "recipientUserId" -> recipientUserId, "username" -> username.value, "pictureUrl" -> pictureUrl, "pushNotificationExperiment" -> pushNotificationExperiment)
+    call(Eliza.internal.sendUserPushNotification(), payload).map { response =>
+      response.body.toInt
+    }
+  }
 
   def sendLibraryPushNotification(userId: Id[User], message: String, libraryId: Id[Library], libraryUrl: String, pushNotificationExperiment: PushNotificationExperiment): Future[Int] = {
     implicit val userFormatter = Id.format[User]

@@ -1,14 +1,24 @@
 package com.keepit.common.time
 
-import com.google.inject.Singleton
+import com.google.inject.{ Provides, Singleton }
 import com.keepit.common.logging.Logging
 import scala.collection.mutable
 import org.joda.time.{ ReadablePeriod, DateTime }
 import net.codingwell.scalaguice.ScalaModule
 
 case class FakeClockModule() extends ScalaModule {
-  def configure() {
-    bind[Clock].to[FakeClock]
+  def configure() {}
+
+  @Singleton
+  @Provides
+  def getClock(clock: FakeClock): Clock = {
+    clock
+  }
+
+  @Singleton
+  @Provides
+  def getFakeClock: FakeClock = {
+    new FakeClock()
   }
 }
 

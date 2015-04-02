@@ -4,6 +4,8 @@ import org.joda.time.{ LocalTime, DateTime }
 import com.keepit.common.db._
 import com.keepit.common.time._
 
+import scala.concurrent.duration.Duration
+
 case class ActivityPushTask(
     id: Option[Id[ActivityPushTask]] = None,
     createdAt: DateTime = currentDateTime,
@@ -12,7 +14,10 @@ case class ActivityPushTask(
     state: State[ActivityPushTask] = ActivityPushTaskStates.ACTIVE,
     lastPush: Option[DateTime] = None,
     lastActiveTime: LocalTime,
-    lastActiveDate: DateTime) extends Model[ActivityPushTask] {
+    lastActiveDate: DateTime, // when was user active last? open app, keep, user creation, etc
+    nextPush: Option[DateTime], // when we should push next?
+    backoff: Option[Duration] // how long did we previously wait?
+    ) extends Model[ActivityPushTask] {
 
   def withId(id: Id[ActivityPushTask]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)

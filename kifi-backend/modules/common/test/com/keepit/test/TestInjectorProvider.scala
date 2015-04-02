@@ -22,7 +22,7 @@ trait TestInjectorProvider { this: InjectorProvider =>
           case watchable: WatchableExecutionContext =>
             val killed = watchable.kill()
             if (killed > 0) {
-              println(s"[${getClass.getSimpleName}}] Killed $killed threads at the end of a test, should have those been running?")
+              println(s"[${getClass.getSimpleName}] Killed $killed threads at the end of a test, should have those been running?")
             }
           case simple: ExecutionContext => new Exception(s"[${getClass.getSimpleName}] can't close execution context of type ${simple.getClass.getName}. Make sure you use FakeExecutionContextModule in the test!").printStackTrace
         }

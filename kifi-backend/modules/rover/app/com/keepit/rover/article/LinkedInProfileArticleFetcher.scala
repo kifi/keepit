@@ -3,7 +3,7 @@ package com.keepit.rover.article
 import com.google.inject.Inject
 import com.keepit.common.logging.Logging
 import com.keepit.rover.article.content.{ LinkedInProfile, LinkedInProfileContent }
-import com.keepit.rover.document.{RoverDocumentFetcher, JsoupDocument}
+import com.keepit.rover.document.{ RoverDocumentFetcher, JsoupDocument }
 import com.keepit.rover.fetcher.FetchResult
 import com.keepit.common.time._
 import com.keepit.rover.store.RoverArticleStore
