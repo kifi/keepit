@@ -7,8 +7,7 @@ import com.keepit.model._
 import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.integrity.{ URIMigration, UriIntegrityPlugin }
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import scala.concurrent.Future
+import scala.concurrent.{ ExecutionContext, Future }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.core._
 import com.keepit.common.db.Id
@@ -29,6 +28,7 @@ class NormalizationServiceImpl @Inject() (
     normalizedURIRepo: NormalizedURIRepo,
     uriIntegrityPlugin: UriIntegrityPlugin,
     priorKnowledge: PriorNormalizationKnowledge,
+    implicit val executionContext: ExecutionContext,
     airbrake: AirbrakeNotifier) extends NormalizationService with Logging {
 
   private val tmpDisable = """https:\/\/twitter\.com\/.*\/status\/.*""".r
