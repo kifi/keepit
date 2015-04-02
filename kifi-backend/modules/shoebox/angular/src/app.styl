@@ -97,9 +97,16 @@ menu, ol, ul
   border: 1px solid #bbb
   border-radius: 5px
   padding: 0 15px
-  background: linear-gradient(to top, #f3f3f3, #fff)
+  background: #f3f3f3 linear-gradient(#fff, alpha(#fff, 0))
   font: 13px\/height Lato, Helvetica, Arial, sans-serif
   color: #666
+
+  &:hover
+    background-color: #f8f8f8
+
+    &:active
+      background-color: #eee
+
   a&
     font-smoothing: auto
 
@@ -127,15 +134,3 @@ menu, ol, ul
   font-style: normal
   font-weight: 700
   src: url(https://djty7jcqog9qu.cloudfront.net/fonts/la700.woff) format('woff')
-
-@font-face
-  font-family: 'Merriweather'
-  font-style: normal
-  font-weight: 400
-  src: url(//djty7jcqog9qu.cloudfront.net/fonts/mw400.woff) format('woff')
-
-@font-face
-  font-family: 'Merriweather'
-  font-style: normal
-  font-weight: 700
-  src: url(//djty7jcqog9qu.cloudfront.net/fonts/mw700.woff) format('woff')

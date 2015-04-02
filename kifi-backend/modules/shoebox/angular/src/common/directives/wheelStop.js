@@ -8,7 +8,7 @@ angular.module('kifi')
     restrict: 'A',
     link: function (scope, element) {
       element.on('wheel', function (event) {
-        if (!event.originalEvent.kfAllow) {
+        if (element.attr('kf-wheel-stop') !== 'false' && !event.originalEvent.kfAllow) {
           event.preventDefault();
         }
       });

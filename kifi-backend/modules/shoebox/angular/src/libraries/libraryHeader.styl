@@ -1,67 +1,304 @@
-.kf-lh-wrapper
-  background: #fff
-
 .kf-lh
-  max-width: appMaxWidth
-  box-sizing: border-box
-  margin: 0 auto
-  padding: 0 appSidePad1
-
-  @media (min-width: appSidePad2MinWidth)
-    padding: 0 appSidePad2
-
-lh-cover-image-dur = .6s
-
-.kf-lh-color
-  height: 1px
+  line-height: 1.4
+  font-size: 12px
 
   @media (min-width: 480px)
-    height: 2px
+    font-size: 13px
+
+  @media (min-width: 560px)
+    font-size: 14px
 
   @media (min-width: 720px)
-    height: 3px
+    font-size: 16px
 
-  .kf-loaded &
-    transition: height
-    transition-duration: lh-cover-image-dur
+colorBarHeight = .4em
 
-  &.kf-above-image
-    height: 3px
-
-    @media (min-width: 480px)
-      height: 4px
-
-    @media (min-width: 560px)
-      height: 5px
-
-    @media (min-width: 720px)
-      height: 6px
-
-.kf-lh-cover-image
-  height: 120px
-  background-color: #eee
+.kf-lh-cover
+  height: 22em
   background-size: cover
+  background-repeat: no-repeat
   position: relative
 
   @media (min-width: 480px)
-    height: 150px
+    height: 32em
 
-  @media (min-width: 560px)
-    height: 180px
+invite-banner-orange = #ff7c3c
 
-  @media (min-width: 720px)
-    height: 210px
+.kf-lh-invite-banner
+  position: absolute
+  z-index: 1
+  left: 50%
+  top: 0
+  transform: translate(-50%)
+  border-radius: 0 0 8px 8px
+  padding: .6em 1.25em .9em
+  background-color: invite-banner-orange
+  text-align: center
+  font-size: .8em
 
-  .kf-loaded &.ng-enter
-  .kf-loaded &.ng-leave
-    overflow: hidden
-    transition: height, margin, opacity
-    transition-duration: lh-cover-image-dur
+  &.ng-leave
+    transition: transform .25s, opacity .25s
 
-  .kf-loaded &.ng-enter:not(.ng-enter-active)
-  .kf-loaded &.ng-leave.ng-leave-active
-    height: 0
-    margin: 0
+  &.ng-leave-active
+    transform: translate(-50%, -100%)
+    opacity: 0
+
+.kf-lh-invite-banner-text
+  margin-bottom: .6em
+  color: #fff
+
+.kf-lh-invite-banner-button
+  margin-left: .8em
+  border: 1px solid #fff
+  border-radius: 4px
+  padding: .44em 1.2em
+  font-size: .85em
+
+  &.kf-accept
+    background: alpha(#fff, .9)
+    color: invite-banner-orange
+
+    &:hover:not(:active)
+      background-color: #fff
+
+  &.kf-ignore
+    background: transparent
+    color: #fff
+
+    &:hover:not(:active)
+      background-color: alpha(#fff, .1)
+
+.kf-lh-top
+  box-sizing: border-box
+  max-width: appMaxWidth
+  margin: 0 auto
+  border: solid transparent
+  border-width: 1.6em appSidePad1 0
+  position: relative
+
+  @media (min-width: appSidePad2MinWidth)
+    border: 2em appSidePad2 0
+
+.kf-lh-followers
+  position: absolute
+  top: 0
+  right: 0
+
+  @media (max-width: 479px)
+    font-size: 1.5em
+
+followerPicDiam = 2.2em
+
+.kf-lh-followers-a
+  display: inline-block
+  width: followerPicDiam + .4em
+  text-align: center
+
+  &:not(:last-child)
+    margin-right: .3em
+
+  &:focus
+    outline-color: alpha(#fff,.5)
+
+  &:active:hover
+    box-shadow: none
+
+.kf-lh-followers-pic
+  height: followerPicDiam
+  width: followerPicDiam
+  border-radius: 50%
+  box-shadow: 0 0 .3em rgba(0,0,0,.16)
+
+.kf-lh-followers-name
+  display: none
+  margin-top: .2em
+  color: #fff
+  font-size: .6em
+  text-shadow: 0 1px 1px rgba(0,0,0,.4)
+  overflow: hidden
+  white-space: nowrap
+  text-overflow: ellipsis
+  font-smoothing: auto
+
+  @media (min-width: 480px)
+    display: block
+
+.kf-lh-followers-more
+  display: inline-block
+  vertical-align: top
+  height: followerPicDiam
+  min-width: followerPicDiam
+  border-radius: (followerPicDiam / 2)
+  border: 0
+  padding: 0
+  background-color: rgba(0,0,0,.1)
+  color: #fff
+  line-height: followerPicDiam
+  text-align: center
+  cursor: pointer
+  boxShadowBorder = inset 0 0 0 1px #fff
+  box-shadow: boxShadowBorder, 0 0 .3em rgba(0,0,0,.1)
+
+  &:active:hover
+    box-shadow: boxShadowBorder
+
+  &:focus
+    outline: thin dotted alpha(#fff,.5)
+
+.kf-lh-followers-more-text
+  padding: 0 .2em
+  font-size: .75em
+  text-shadow: 0 1px 1px rgba(0,0,0,.6)
+  vertical-align: top
+
+  &.kf-3
+    font-size: .7em
+
+  &.kf-4
+    font-size: .65em
+
+  &.kf-5
+  &.kf-6
+    font-size: .6em
+
+  &::before
+    content: '+'
+    vertical-align: top
+
+.kf-lh-manage-btn
+  vertical-align: top
+  width: 2em
+  height: 2em
+  border: none
+  background: center no-repeat
+  background-size: contain
+  padding: 0
+  opacity: .8
+
+  &:hover
+  &:focus
+    opacity: .9
+
+  &:hover:active
+    opacity: 1
+
+.kf-lh-cover-menu-parent
+  display: inline-block
+  vertical-align: top
+  margin-left: .8em
+  position: relative
+
+  menuGap = 2px
+
+  &>.kf-dropdown-menu
+    dur = .1s
+    top: 'calc(100% + %s)' % menuGap
+    left: -15px
+    transform-origin: 20% top
+    transition: visibility 0s, opacity linear dur, transform dur
+
+  &:not(.kf-open)>.kf-dropdown-menu
+    dur = .16s
+    visibility: hidden
+    opacity: 0
+    transform: scale(.9)
+    transition-duration: 0s, dur, dur
+    transition-delay: dur, 0s, 0s
+
+  &.kf-open::before
+    content: ''
+    position: absolute
+    top: 'calc(100% - %s)' % menuGap
+    left: -10px
+    right: -10px
+    height: 2 * menuGap
+
+  .kf-dropdown-menu-item
+    text-align: left
+
+.kf-lh-cover-menu-btn
+  vertical-align: top
+  height: 2em
+  width: (2em * 32 / 28)
+  border: none
+  padding: 0
+  background-color: transparent
+  background-repeat: no-repeat
+  background-position: center
+  background-size: auto 1.8em
+  outline: none
+  position: relative // to cover ::before on parent
+  opacity: .8
+
+  &:hover
+  &:focus
+  .kf-open>&
+    opacity: .9
+
+  &:hover:active
+    opacity: 1
+
+.kf-lh-private
+  display: inline-block
+  margin-left: 1em
+  line-height: 2em
+  border-radius: 1em
+  padding: 0 1em 0 2.3em
+  background-position: .9em .46em
+  background-size: .9em auto
+  background-repeat: no-repeat
+  background-color: libraryRed
+
+  &::before
+    content: 'Private'
+    font-size: .9em
+    color: #fff
+
+coverPreviewDur = .6s
+
+.kf-lh-cover-preview
+.kf-lh-cover-farewell
+  position: absolute
+  top: 0
+  left: 0
+  width: 100%
+  height: 100%
+  background-size: cover
+  background-repeat: no-repeat
+
+.kf-lh-cover-preview.ng-enter
+.kf-lh-cover-preview.ng-leave
+.kf-lh-cover-farewell.ng-leave
+  transition: opacity coverPreviewDur
+
+.kf-lh-cover-preview.ng-enter:not(.ng-enter-active)
+.kf-lh-cover-preview.ng-leave-active
+.kf-lh-cover-farewell.ng-leave-active
+  opacity: 0
+
+coverDragShadeHeight = 3em
+
+.kf-lh-cover-glass
+  position: absolute
+  z-index: 1
+  top: 0
+  left: 0
+  width: 100%
+  height: 100%
+  background: linear-gradient(rgba(0,0,0,.25),rgba(0,0,0,.25)) 0 0 no-repeat
+  background-size: 100% coverDragShadeHeight
+  padding-top: .54em
+  color: #fff
+  text-align: center
+  user-select: none
+
+  &.ng-enter
+  &.ng-leave
+    transition: transform coverPreviewDur, opacity coverPreviewDur
+
+  &.ng-enter:not(.ng-enter-active)
+  &.ng-leave.ng-leave-active
+    transform: translate(0, (-(coverDragShadeHeight)))
     opacity: 0
 
   &.kf-ns
@@ -81,607 +318,451 @@ lh-cover-image-dur = .6s
     cursor: -moz-grabbing
     cursor: grabbing
 
-cover-image-adjust-width = 35px
-cover-image-adjust-right = 24px
-.kf-lh-cover-image-adjust
-  position: absolute
-  bottom: 12px
-  right: cover-image-adjust-right
-  height: 31px
-  width: cover-image-adjust-width
-  background: url(/img/camera-over.svg) center no-repeat
-  background-size: 33px 29px
-  outline: none
-  transform: scale(.8)
-  transition: opacity, transform
-  transition-duration: .2s
-
-  :hover>&
-    transition-duration: 20ms
-
-  &:not(:hover):not(:focus):not(.kf-active)
-    opacity: .8
-
-  :not(:hover):not(.kf-fake-hover)>&:not(:focus):not(.kf-active)
-    transform: scale(.3)
-    opacity: 0
-
-  &.ng-enter
-    transition-duration: .16s
-    transform-origin: center bottom
-    &:not(.ng-enter-active)
-      transform: scale(.3) translate(0, 40%) !important
-
-  &:hover:active
-  &.kf-active
-    opacity: 1 !important
-
-.kf-lh-cover-image-menu
-  width = 100px
-  position: absolute
-  bottom: 52px
-  right: ((cover-image-adjust-width - width) / 2) + cover-image-adjust-right
-  width: width
-  border: 1px solid #ccc
-  border-radius: 6px
-  padding: 3px 0
-  background: #fff
-  box-shadow: 0 1px 4px rgba(0,0,0,.2)
-
-  &.ng-enter
-  &.ng-leave
-    transition: opacity .16s, transform .16s
-    transform-origin: center bottom
-
-  &.ng-enter:not(.ng-enter-active)
-  &.ng-leave.ng-leave-active
-    transform: scale(.4) translate(0,16px)
-    opacity: 0
-
-.kf-lh-cover-image-menu-opt
-  display: block
-  font-size: 13px
-  line-height: 28px
-  text-align: center
-  color: #333
-
-  &:not(:last-of-type)
-    border-bottom: 1px solid #ccc
-
-  &:hover
-  &.kf-hover
-    background-color: #f2f2f2
-
-.kf-lh-cover-image-menu-tri
-  position: absolute
-  height: 18px
-  width: 36px
-  left: 50%
-  margin-left: -18px
-  bottom: -18px
-  overflow: hidden
-  border-color: inherit
-
-  &::after
-    content: ''
-    position: absolute
-    height: 18px
-    width: 18px
-    left: 9px
-    top: -14px
-    box-sizing: border-box
-    box-shadow: 1px 2px 12px rgba(0,0,0,.2)
-    border: 1px solid
-    border-color: inherit
-    background-color: #fff
-    transform: rotate(45deg)
-
-.kf-lh-cover-image-preview
-  height = 44px
-  position: absolute
-  bottom: 0
-  left: 0
-  right: 0
-  height: height
-  line-height: height
-  overflow: hidden
-  padding: 0 16px
-  background-color: rgba(0,0,0,.25)
-  color: #fff
-  text-align: right
-  font-size: 14px
-  user-select: none
-  transition: height, opacity
-  transition-duration: .2s
-
-  &.ng-enter:not(.ng-enter-active)
-  &.ng-leave.ng-leave-active
-    height: 0
-    opacity: 0
-
-.kf-lh-cover-image-apply
-.kf-lh-cover-image-cancel
+.kf-lh-cover-prompt
   display: inline-block
-  vertical-align: top
-  margin: 8px 0 8px 8px
+  vertical-align: middle
+  font-size: .9em
+
+.kf-lh-cover-apply
+.kf-lh-cover-cancel
+  display: inline-block
+  vertical-align: middle
+  margin-left: 8px
   width: 56px
+  border: 0
   border-radius: 4px
-  line-height: 28px
-  font-size: 12px
+  line-height: 1.8
+  font-size: .9em
   text-align: center
   user-select: none
 
-.kf-lh-cover-image-apply
+.kf-lh-cover-apply
   $bg = #428bca
   background-color: $bg
   color: white
   margin-left: 16px
 
-  &:hover
+  &:hover:not([disabled])
     background-color: lighten($bg, 6%)
 
     &:active
       background-color: darken($bg, 4%)
 
-.kf-lh-cover-image-cancel
+.kf-lh-cover-cancel
   background-color: #fff
   color: #777
 
-  &:hover
+  &:hover:not([disabled])
     color: #333
 
     &:active
       background-color: darken(#fff, 4%)
 
-.kf-lh-cover-image-progress
+.kf-lh-cover-progress
+  height = 3px
   position: absolute
-  top: 100%
+  top: coverDragShadeHeight
   left: 0
   width: 0
-  height: 3px
+  height: height
+  margin-top: (-(height))
   background: #7bacf1
   transition: width .2s linear
 
-  &.kf-done
-    width: 100% !important
-    transition: width .16s ease-in
-
-  &.kf-fail
-    background: #b00
-    width: 0 !important
-    transition: width .4s ease-in
-
-  &.ng-leave
-    transition: transform .6s
-
-  &.ng-leave-active
-    transform-origin: top
-    transform: scale(1, 0)
-
-.kf-lh-cover-image-error
-  position: absolute
-  right: 24px
-  border-radius: 5px
-  margin-top: 44px
-  padding: 3px 10px
-  background-color: redColor
-  font-size: 13px
-  color: #fff
-  z-index: 10
-
-  .kf-lh-cover-image+&
-    margin-top: -6px
-
-  &.ng-enter
-  &.ng-leave
-    transition: opacity .5s
-
-  &.ng-enter:not(.ng-enter-active)
-  &.ng-leave.ng-leave-active
-    opacity: 0
-
-.kf-lh-cover-image-add
-  float: right
-  margin-top: 15px
-  line-height: 36px
-  padding: 0 6px 0 40px
-  color: #333
-  font-size: 14px
-  outline: none !important
-  position: relative
-  z-index: 1
-
-  &:hover
-  &:focus
-    color: #006bb2
-
-  .kf-loaded &.ng-enter
-  .kf-loaded &.ng-leave
-    transition: opacity lh-cover-image-dur, transform lh-cover-image-dur
-
-  .kf-loaded &.ng-enter:not(.ng-enter-active)
-  .kf-loaded &.ng-leave.ng-leave-active
-    transform: scale(.4)
-    opacity: 0
-
-  &::before
-    content: ''
-    position: absolute
-    height: 31px
-    width: 35px
-    top: 2px
-    left: 2px
-    background: url(/img/camera-line.svg) center no-repeat
-    background-size: 33px 29px
-    transform: scale(.8)
-
-  &:not(:hover):not(:focus)::before
-    opacity: .8
-
-.kf-lh-cover-image-file
+.kf-lh-cover-file
   position: absolute;
   height: 0
   width: 0
   overflow: hidden
 
-invite-banner-orange = #ff7c3c
+.kf-lh-mid
+  position: absolute
+  bottom: -5.5em
+  left: 0
+  width: 100%
+  text-align: center
 
-.kf-lh-invite-banner
-  border-bottom-right-radius: 10px
-  border-bottom-left-radius: 10px
-  padding: 10px 32px
-  max-height: 200px
-  background-color: invite-banner-orange
-  opacity: 1
+  @media (max-width: 479px)
+    z-index: 1
 
-  &.ng-hide
-    transition: opacity .4s, max-height .4s .4s
-    max-height: 0
-    opacity: 0
-
-.kf-lh-invite-banner-info
-  font-size: 13px
-  color: #fff
-  line-height: 25px
-
-.kf-lh-invite-banner-button
-  float: right
-  margin-left: 10px
-  border: 1px solid #fff
-  border-radius: 5px
-  padding: 5px 15px
-  font-size: 11px
-
-  &.kf-lh-invite-banner-accept
-    background: #fff
-    color: invite-banner-orange
-
-  &.kf-lh-invite-banner-ignore
-    background: invite-banner-orange
-    color: #fff
+  @media (min-width: 480px)
+    bottom: 9em
 
 .kf-lh-name
-  padding: 20px 0 12px
-  font: bold 22px/1.23em Merriweather, Lato, Helvetica, Arial, sans-serif
-  text-align: center
+  max-width: 96%
+  width: 13.5em
+  margin: 0 auto
+  font: bold 3.2em/1.1 Lato, Helvetica, Arial, sans-serif
+  color: #fff
+  text-shadow: 1px 1px 1px rgba(0,0,0,.5)
   word-break: break-word
 
-  @media (min-width: 480px)
-    padding: 23px 0 14px
-    font-size: 28px
+  &.kf-long-1
+    width: 14.5em
+    font-size: 2.8em
 
-  @media (min-width: 560px)
-    padding: 26px 0 17px
-    font-size: 36px
+  &.kf-long-2
+    width: 16em
+    font-size: 2.6em
 
-  @media (min-width: 720px)
-    padding: 28px 0 19px
-    font-size: 42px
+  @media (max-width: 479px)
+    width: 94%
+    font-size: 2.6em
 
-.kf-lh-info
-  margin-top: 16px
-  color: kifiBlack
-  vertical-align: top
+    &.kf-long-1
+      font-size: 2.4em
 
-  @media (min-width: 480px)
-    padding-top: 5px
-
-.kf-lh-private-wrap
-  position: absolute
-  left: 0
-  right: 0
-  text-align: center
-
-.kf-lh-private
-  display: inline-block
-  line-height: 42px
-  border-radius: 21px
-  padding: 0 20px 0 44px
-  background-position: 19px 11px
-  background-size: 14px auto
-  background-repeat: no-repeat
-  background-color: libraryRed
-  color: #fff
-  font-size: 16px
-
-.kf-lh-owner
-  position: relative
-  padding-bottom: 2px
-  text-align: center
-
-  @media (min-width: 480px)
-    padding-bottom: 10px
-    text-align: initial
-
-.kf-lh-owner-image-a
-  display: inline-block
-
-  @media (min-width: 480px)
-    margin-right: 10px
-
-.kf-lh-owner-image
-  display: inline-block
-  width: 64px
-  height: 64px
-  border-radius: 50%
-
-  @media (min-width: 480px)
-    width: 42px
-    height: 42px
-
-.kf-lh-owner-text
-  margin-top: 10px
-  line-height: 14px
-  font-size: 12px
-
-  @media (min-width: 480px)
-    margin-top: 0
-    display: inline-block
-    vertical-align: middle
-    line-height: 18px
-    font-size: 14px
-
-.kf-lh-owner-name
-.kf-lh-twitter-screenname
-  color: #939393
-
-.kf-lh-twitter
-  display: inline-block
-  margin-left: 15px
-
-  @media (max-width: 480px)
-    margin-left: 0px
-
-  .kf-lh-twitter-text
-    display: inline-block
-    vertical-align: middle
-    margin-left: 8px
-
-    @media (max-width: 480px)
-      margin-top: -5px
-      margin-left: 0px
-      font-size: 12px
-
-.kf-lh-twitter-img
-  display: inline-block
-  background-color: #ededed
-  border-radius: 50%
-  height: 42px
-  width: 42px
-  vertical-align: -17px
-
-  :hover>&
-    background-color: #e0e0e0
-
-  @media (max-width: 480px)
-    display: none
-
-.kf-lh-twitter-logo
-  position: relative
-  top: 50%
-  left: 50%
-  transform: translate(-50%, -50%)
-  width: 20px
-  height: 18px
-  background-size: cover
-
-.kf-lh-desc-wrap
-  padding-bottom: 5px
-
-.kf-lh-desc-more
-  font-size: 11px
-
-.kf-lh-desc
-  margin: 1em 0
-  line-height: 1.42
-  font-size: 12px
-
-  @media (min-width: 480px)
-    font-size: 13px
-
-  @media (min-width: 560px)
-    font-size: 14px
-
-  @media (min-width: 720px)
-    font-size: 16px
-
-  &>p
-    margin: .5em 0
-
-.kf-lh-stats-line
-  box-shadow: 0 -.5px #dadae2
-  text-align: center
-
-  @media (min-width: 480px)
-    box-shadow: 0 -1px #dadae2
-    display: table
-    width: 100%
-    height: 72px
-    text-align: initial
+    &.kf-long-2
+      font-size: 2.2em
 
 .kf-lh-stats
-  padding-top: 10px
+  margin: 1.5em auto 0
+  font-size: 1.4em
   white-space: nowrap
 
   @media (min-width: 480px)
-    display: table-cell
-    padding-top: 15px
-    vertical-align: top
-    width: 1%
+    margin: .75em auto 0
+    font-size: 1.2em
 
 .kf-lh-stat
+  color: #fff
+  text-shadow: 1px 1px 1px rgba(0,0,0,.2)
+
+  button&
+    padding: 0
+    border: 0
+    background-color: transparent
+
+    &:focus
+      outline: thin dotted alpha(#fff,.5)
+
+    &:hover
+      text-decoration: underline
+
+  &:not(:last-child)::after
+    content: '\2022'
+    margin: 0 .6em 0 .9em
+    font-size: .5em
+    vertical-align: .2em
+
+    @media (min-width: 480px)
+      margin: 0 1em 0 1.5em
+
+.kf-lh-owner
+  margin-top: 2em
+
+  @media (min-width: 480px)
+    margin-top: 1.8em
+
+ownerImageDiam1 = 8em
+ownerImageDiam2 = 3.6em
+
+.kf-lh-owner-image-a
+  display: block
+  margin: 0 auto
+  width: ownerImageDiam1
+
+  &:focus
+    outline-color: alpha(#fff,.5)
+
+  @media (min-width: 480px)
+    width: ownerImageDiam2
+    margin-bottom: .4em
+
+.kf-lh-owner-image
+  width: ownerImageDiam1
+  height: ownerImageDiam1
+  border-radius: 50%
+  background-color: #555
+  box-shadow: 0 1px 5px rgba(0,0,0,.2)
+
+  @media (min-width: 480px)
+    width: ownerImageDiam2
+    height: ownerImageDiam2
+
+.kf-lh-owner-name-wrap
   display: inline-block
-  padding: 0 10px
-  font-size: 10px
+  position: relative
 
-  @media (min-width: 480px)
-    padding: 0 20px 0 5px
-    font-size: 12px
+.kf-lh-owner-name
+  color: #fff
+  text-shadow: 1px 1px 1px rgba(0,0,0,.2)
+  font-smoothing: auto
 
-a.kf-lh-stat
-  color: inherit
-  font-smoothing: inherit
-
-.kf-lh-stat-name
-  display: block
-  color: textDarkGrey
-  text-transform: uppercase
-
-.kf-lh-stat-val
-  display: block
-  padding-top: 3px
-  font-size: 15px
-  font-weight: bold
-  text-align: center
-
-  @media (min-width: 480px)
-    font-size: 16px
-
-  :hover>&
+  &:hover
     text-decoration: underline
 
-.kf-lh-followers
-  padding: 10px 0
+  &:focus
+    outline-color: alpha(#fff,.5)
 
-  @media (min-width: 480px)
-    display: table-cell
-    width: 99%
-    padding: 15px 0
-
-    &>.kf-lfp
-      position: absolute
-
-.kf-lh-buttons
-  border-top: 1px solid #f5f5f5
-  padding: 12px 0
-  line-height: 26px
-  font-size: 0
-
-  @media (min-width: 480px)
-    border-top-width: 2px
-    padding: 15px 0
-    line-height: 37px
-
-  .kf-button
-    &:not(:last-child):not(.library-share-contact-button)
-      margin-right: 10px
-
-      @media (min-width: 480px)
-        margin-right: 15px
-
-  .kf-button-text-optional
-    @media (max-width: (480px - 1px))
-      font-size: 0
-
-      .kf-button-icon
-        margin: 0
-
-  a:active
-    color: #92add3
-
-  .kf-library-share-search
-    vertical-align: top
-
-.kf-lh-share-external
-  .kf-logged-out &
-    background: #5b6273
-    border-color: #5b6273
-    color: #fff
-    font-smoothing: antialiased
-
-  .kf-logged-in &>.svg-twitter-white
-  .kf-logged-in &>.svg-facebook-white
-  .kf-logged-out &>.svg-twitter
-  .kf-logged-out &>.svg-facebook
+  @media (max-width: 479px)
     display: none
 
-  @media (max-width: (480px - 1px))
-    .kf-button-icon
-      width: 16px
+.kf-lh-owner-twitter-a
+  position: absolute
+  background-repeat: no-repeat
 
+  @media (max-width: 479px)
+    bottom: 2.6em
+    left: -11.6em
+    width: 4.8em
+    height: 4.8em
+    background-size: 2.5em auto
+    background-color: #e1e8ed
+    background-position: center
+    border-radius: 50%
+    box-shadow: 0 0 1px rgba(0,0,0,0.4)
+
+    &:hover:not(:active)
+      transform: scale(1.02)
+
+  @media (min-width: 480px)
+    top: .14em
+    right: 100%
+    margin-right: .3em
+    width: 1.2em
+    height: 1em
+    background-size: contain
+
+    &:hover:not(:active)
+      transform: scale(1.1)
+
+.kf-lh-desc-wrap-2
+  position: relative
+  border-top: .4em solid transparent
+  text-align: center
+
+  @media (max-width: 479px)
+    padding: 5em 1.5em 0
+    transition: padding-bottom .2s
+
+    &.kf-long
+      padding-bottom: 3em
+
+  @media (min-width: 480px)
+    border-top: none
+    border-bottom: .4em solid transparent
+
+.kf-lh-desc-wrap
+  overflow: hidden
+
+  @media (max-width: 479px)
+    line-height: 1.4
+    font-size: 1.4em
+    color: #777
+    font-smoothing: antialiased
+    background-color: transparent !important
+
+    .kf-long>&
+      height: 4.2em
+
+    :not(.kf-long)>&
+      max-height: 4.2em
+
+  @media (min-width: 480px)
+    position: absolute
+    bottom: 0
+    left: 50%
+    transform: translate(-50%)
+    width: 38em
+    height: 5.2em
+    line-height: 1.8
+    border: solid transparent
+    border-width: 0 1em 3em
+    border-radius: 8px 8px 0 0
+    color: #fff
+    text-shadow: 1px 1px 1px rgba(0,0,0,.2)
+
+    &.kf-expanded
+    &.kf-expanded-add
+    &.kf-expanded-remove
+      border-top-width: 2.4em
+
+  &.kf-expanded-add
+  &.kf-expanded-remove
+    transition: height, background-color  // values and duration set from JS
+
+.kf-lh-desc
+  @media (min-width: 480px)
+    max-height: 21em
+    padding: 0 2.2em
+    overflow: hidden
+
+  :not(.kf-expanded):not(.kf-expanded-add)>&
+    display: -webkit-box
+    -webkit-line-clamp: 3
+    -webkit-box-orient: vertical
+    text-overflow: ellipsis
+
+  .kf-expanded:not(.kf-expanded-remove)>&
+    overflow: scroll
+
+  &>p
+    margin: 0
+
+  a[href]
+    color: inherit
+
+    &:hover
+      text-decoration: underline
+
+.kf-lh-desc-toggle
+  position: absolute
+  left: 50%
+  transform: translate(-50%)
+  margin-top: .5em
+  border: 0
+  padding: .5em 1em
+  background: transparent
+  font-smoothing: antialiased
+
+  @media (max-width: 479px)
+    margin-top: 1em
+    background-color: #e8e8e8
+    border-radius: 8px
+    color: #777
+
+    &:hover
+      background-color: #ececec
+
+      &:active
+        background-color: #e4e4e4
+
+  @media (min-width: 480px)
+    bottom: 1.3em
+    color: #fff
+    font-size: .75em
+    text-shadow: 1px 1px 1px rgba(0,0,0,.2)
+
+    &:hover
+      text-decoration: underline
+
+  :not(.kf-long)>&
+    display: none
+
+.kf-lh-desc-add
+  border: 2px dashed
+  border-radius: 16px
+  background-color: transparent
+
+  @media (max-width: 479px)
+    display: block
+    width: 80%
+    margin: .5em auto 0
+    border-color: #ccc
+    line-height: 4
+    font-size: 1.4em
+    color: #777
+
+  @media (min-width: 480px)
+    position: absolute
+    bottom: 2em
+    left: 50%
+    transform: translate(-50%)
+    width: 30em
+    line-height: 5
+    border-color: #fff
+    color: #fff
+    text-shadow: 1px 1px 1px rgba(0,0,0,.2)
+
+    &:hover
+      background-color: alpha(#fff, .1)
+
+      &:active
+        background-color: alpha(#fff, .05)
+
+.kf-lh-buttons
+  padding-top: 1.8em
+  text-align: center
+
+.kf-lh-follow-btn
+.kf-lh-unfollow-btn
 .kf-lh-buttons .library-share-button
-.kf-lh-manage-btn
-  @media (max-width: 640px)
-    font-size: 0
+  background-image: none
+  border-radius: 12px
 
-    .kf-button-icon
-      margin: 0
+  &:hover
+    background-color: alpha(#fff, .5)
+
+    &:active
+      background-color: alpha(#000, .02)
 
 .kf-lh-follow-btn-wrap
   display: inline-block
   vertical-align: top
   line-height: 0
-  z-index: 501
-
-  .kf-logged-out &
-    position: relative
-
-  .kf-loh-right>&
-    position: absolute
-    top: 14px
-    right: 0
-
-    @media (max-height: appHeaderHeight1MaxDim) and (max-width: appHeaderHeight1MaxDim)
-      top: 10px
-
-.kf-lh-buttons .kf-button
-.kf-lh-follow-btn
-.kf-lh-unfollow-btn
-  @media (max-width: (480px - 1px))
-    height: 26px
-    line-height: 26px
-    border-radius: 3px
-    padding: 0 10px
+  position: relative // for .kf-lh-fbc
 
 .kf-lh-follow-btn
 .kf-lh-unfollow-btn
-  width: 92px
-
-  @media (max-width: (480px - 1px))
-    width: 84px
-    font-size: 11px
+  width: 8em
 
 .kf-lh-follow-btn
-  border-color: transparent
-  background: #008aee
-  color: #fff
+  border-color: #008aee
+  color: #008aee
   position: relative  // to stack in front of its hover callout
-
-  &::before  // moves the text slightly right
-    content: ''
-    padding-left: 2px
 
 .kf-lh-unfollow-btn
   border-color: #20a1f1
-  background: #fff
   color: #20a1f1
-
-  &:hover
-    border-color: redColor
 
   &::after
     content: 'Following'
 
-  &:hover::after
-    content: 'Unfollow'
-    color: redColor
+  &:not(.kf-no-unfollow):hover
+    border-color: redColor
+
+    &::after
+      content: 'Unfollow'
+      color: redColor
+
+.kf-lh-buttons
+  .kf-library-share-search
+    vertical-align: top
+    text-align: left
+    margin-left: 1em
+
+  .library-share-button
+    border-color: #56b263
+    color: #56b263
+    padding: 0 1.5em
+
+    &>.kf-button-icon
+      width: 15px
+      margin-right: 2px
+
+.kf-lh-edit-keeps
+  float: left
+  border-color: transparent
+  border-left: 0
+  border-right: 0
+  padding-left: 29px
+  padding-right: 0
+  background-position: left center
+  background-size: auto 15px
+  background-repeat: no-repeat
+  color: #56b263
+
+  &
+  &:hover
+  &:hover:active
+    background-color: transparent
+
+  &:hover
+    text-decoration: underline
+
+.kf-lh-buttons.kf-my-lib
+  box-sizing: border-box
+  max-width: appMaxWidth
+  margin: 0 auto
+  border: solid transparent
+  border-width: 0 appSidePad2
+  text-align: right
+
+  @media (min-width: 720px)
+    padding-right: 234px  // rightColWidth + colGapWidth
+
+  .library-share-button
+    &>.kf-button-icon
+      width: 26px
+      margin-right: 4px
