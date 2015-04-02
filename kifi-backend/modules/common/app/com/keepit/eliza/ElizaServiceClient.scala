@@ -30,18 +30,15 @@ sealed case class SimplePushNotificationCategory(name: String)
 
 object SimplePushNotificationCategory {
   val PersonaUpdate = SimplePushNotificationCategory("PersonaUpdate")
-  implicit val format = Json.format[SimplePushNotificationCategory]
 }
 
 object UserPushNotificationCategory {
   val UserConnectionRequest = UserPushNotificationCategory("UserConnectionRequest")
   val NewLibraryFollower = UserPushNotificationCategory("NewLibraryFollower")
-  implicit val format = Json.format[UserPushNotificationCategory]
 }
 
 object LibraryPushNotificationCategory {
   val LibraryChanged = LibraryPushNotificationCategory("LibraryChanged")
-  implicit val format = Json.format[LibraryPushNotificationCategory]
 }
 
 case class PushNotificationExperiment(name: String)
