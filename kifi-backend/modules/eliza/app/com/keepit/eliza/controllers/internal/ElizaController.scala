@@ -43,7 +43,7 @@ class ElizaController @Inject() (
     val req = request.body.asJson.get.as[JsObject]
     val userId = Id[User]((req \ "userId").as[Long])
     val message = (req \ "message").as[String]
-    val category = (req \ "category").as[LibraryPushNotificationCategory]
+    val category = LibraryPushNotificationCategory((req \ "category").as[String])
     val pushNotificationExperiment = (req \ "pushNotificationExperiment").as[PushNotificationExperiment]
     val libraryId = (req \ "libraryId").as[Id[Library]]
     val libraryUrl = (req \ "libraryUrl").as[String]
@@ -58,7 +58,7 @@ class ElizaController @Inject() (
     val message = (req \ "message").as[String]
     val pushNotificationExperiment = (req \ "pushNotificationExperiment").as[PushNotificationExperiment]
     val recipientExtId = (req \ "recipientId").as[ExternalId[User]]
-    val category = (req \ "category").as[UserPushNotificationCategory]
+    val category = UserPushNotificationCategory((req \ "category").as[String])
     val username = (req \ "username").as[Username]
     val pictureUrl = (req \ "pictureUrl").as[String]
     messagingCommander.sendUserPushNotification(userId, message, recipientExtId, username: Username, pictureUrl, pushNotificationExperiment, category).map { deviceCount =>
@@ -70,7 +70,7 @@ class ElizaController @Inject() (
     val req = request.body.asJson.get.as[JsObject]
     val userId = Id[User]((req \ "userId").as[Long])
     val message = (req \ "message").as[String]
-    val category = (req \ "category").as[SimplePushNotificationCategory]
+    val category = SimplePushNotificationCategory((req \ "category").as[String])
     val pushNotificationExperiment = (req \ "pushNotificationExperiment").as[PushNotificationExperiment]
     messagingCommander.sendGeneralPushNotification(userId, message, pushNotificationExperiment, category).map { deviceCount =>
       Ok(JsNumber(deviceCount))
