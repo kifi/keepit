@@ -1,8 +1,8 @@
 package com.keepit.realtime
 
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
+import com.keepit.eliza.UserPushNotificationCategory
 import com.keepit.eliza.commanders.MessagingAnalytics
-import com.keepit.eliza.{ PushNotificationExperiment, PushNotificationCategory }
 
 import scala.concurrent.duration._
 
@@ -124,7 +124,12 @@ class UrbanAirship @Inject() (
             withLid + ("lu" -> JsString(lupn.libraryUrl))
         }
       case upn: UserPushNotification =>
-        json.as[JsObject] ++ Json.obj("t" -> "us", "uid" -> upn.userId.id.toString, "un" -> upn.username.value, "purl" -> upn.pictureUrl)
+        val pushType = upn.category match {
+          case UserPushNotificationCategory.UserConnectionRequest => "fr"
+          case UserPushNotificationCategory.NewLibraryFollower => "nf"
+          case _ => "us"
+        }
+        json.as[JsObject] ++ Json.obj("t" -> pushType, "uid" -> upn.userId.id.toString, "un" -> upn.username.value, "purl" -> upn.pictureUrl)
       case _ =>
         throw new Exception(s"Don't recognize push notification $notification")
     }

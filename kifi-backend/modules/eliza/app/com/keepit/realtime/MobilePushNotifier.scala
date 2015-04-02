@@ -4,7 +4,7 @@ import com.google.inject.{ ImplementedBy, Provider, Inject }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.logging.Logging
-import com.keepit.eliza.{ PushNotificationExperiment, PushNotificationCategory }
+import com.keepit.eliza._
 import com.keepit.eliza.model.MessageThread
 import com.keepit.model.{ Username, User, Library }
 import com.kifi.macros.json
@@ -20,9 +20,9 @@ sealed trait PushNotification {
 }
 
 case class MessageThreadPushNotification(id: ExternalId[MessageThread], unvisitedCount: Int, message: Option[String], sound: Option[NotificationSound]) extends PushNotification
-case class SimplePushNotification(unvisitedCount: Int, message: Option[String], sound: Option[NotificationSound] = None, category: PushNotificationCategory, experiment: PushNotificationExperiment) extends PushNotification
-case class LibraryUpdatePushNotification(unvisitedCount: Int, message: Option[String], libraryId: Id[Library], libraryUrl: String, sound: Option[NotificationSound] = None, category: PushNotificationCategory, experiment: PushNotificationExperiment) extends PushNotification
-case class UserPushNotification(unvisitedCount: Int, message: Option[String], userId: Id[User], pictureUrl: String, username: Username, sound: Option[NotificationSound] = None, category: PushNotificationCategory, experiment: PushNotificationExperiment) extends PushNotification
+case class SimplePushNotification(unvisitedCount: Int, message: Option[String], sound: Option[NotificationSound] = None, category: SimplePushNotificationCategory, experiment: PushNotificationExperiment) extends PushNotification
+case class LibraryUpdatePushNotification(unvisitedCount: Int, message: Option[String], libraryId: Id[Library], libraryUrl: String, sound: Option[NotificationSound] = None, category: LibraryPushNotificationCategory, experiment: PushNotificationExperiment) extends PushNotification
+case class UserPushNotification(unvisitedCount: Int, message: Option[String], userId: Id[User], pictureUrl: String, username: Username, sound: Option[NotificationSound] = None, category: UserPushNotificationCategory, experiment: PushNotificationExperiment) extends PushNotification
 
 @json case class NotificationSound(name: String)
 

@@ -6,6 +6,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
+import com.keepit.eliza.UserPushNotificationCategory
 import com.keepit.eliza.commanders.MessagingAnalytics
 import com.keepit.model.{ Library, User }
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -90,7 +91,12 @@ class AppBoy @Inject() (
             withLid + ("lu" -> JsString(lupn.libraryUrl))
         }
       case upn: UserPushNotification =>
-        json.as[JsObject] ++ Json.obj("t" -> "us", "uid" -> upn.userId.id.toString, "un" -> upn.username.value, "purl" -> upn.pictureUrl)
+        val pushType = upn.category match {
+          case UserPushNotificationCategory.UserConnectionRequest => "fr"
+          case UserPushNotificationCategory.NewLibraryFollower => "nf"
+          case _ => "us"
+        }
+        json.as[JsObject] ++ Json.obj("t" -> pushType, "uid" -> upn.userId.id.toString, "un" -> upn.username.value, "purl" -> upn.pictureUrl)
       case _ =>
         throw new Exception(s"Don't recognize push notification $notification")
     }
