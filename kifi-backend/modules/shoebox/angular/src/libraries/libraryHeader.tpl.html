@@ -1,111 +1,91 @@
-<div class="kf-lh-wrapper">
-  <div class="kf-lh" itemscope itemtype="http://schema.org/CollectionPage">
+<div class="kf-lh" itemscope itemtype="http://schema.org/CollectionPage">
+  <div class="kf-lh-cover" ng-attr-style="{{library|shadedBackground:.2:.6:.3}}">
+    <meta itemtype="image"/>
     <meta itemtype="url" content="{{library.absUrl}}"/>
-    <div class="kf-lh-card">
-      <div class="kf-lh-invite-banner" ng-if="library.invite && !library.invite.actedOn">
-        <button class="kf-lh-invite-banner-button kf-lh-invite-banner-accept" ng-click="acceptInvitation()">Accept</button>
-        <button class="kf-lh-invite-banner-button kf-lh-invite-banner-ignore" ng-click="ignoreInvitation()">Ignore</button>
-        <span class="kf-lh-invite-banner-info">{{library.invite.inviterName}} has invited you to follow this library</span>
+
+    <div class="kf-lh-invite-banner" ng-if="library.invite && !library.invite.actedOn">
+      <div class="kf-lh-invite-banner-text">{{library.invite.inviterName}} has invited<br>you to follow this library</div>
+      <button class="kf-lh-invite-banner-button kf-ignore" ng-click="ignoreInvitation()">Ignore</button>
+      <button class="kf-lh-invite-banner-button kf-accept" ng-click="acceptInvitation()">Accept</button>
+    </div>
+
+    <div class="kf-lh-cover-farewell" ng-attr-style="{{imageFarewell|shadedBackgroundImage:.2:.6}}" ng-if="imageFarewell"></div>
+
+    <div class="kf-lh-top">
+      <button class="kf-lh-manage-btn svg-settings-gear-filled" ng-click="manageLibrary()" ng-if="isMyLibrary() && isUserCreatedLibrary()"></button>
+
+      <div class="kf-lh-cover-menu-parent" kf-hover-menu ng-if="isMyLibrary() && isUserCreatedLibrary()">
+        <button class="kf-lh-cover-menu-btn svg-camera-filled"></button>
+        <menu class="kf-dropdown-menu kf-lh-cover-menu">
+          <button class="kf-dropdown-menu-item kf-lh-cover-add" ng-if="!library.image" kf-hover ng-mouseup="onAddCoverImageMouseUp($event)">Add a cover image</button>
+          <button class="kf-dropdown-menu-item kf-lh-cover-move" ng-if="library.image" kf-hover ng-mouseup="onMoveCoverImageMouseUp($event)">Reposition cover image</button>
+          <button class="kf-dropdown-menu-item kf-lh-cover-change" ng-if="library.image" kf-hover onmouseup="angular.element(this).scope().onChangeCoverImageMouseUp(event)">Change cover image</button>
+          <button class="kf-dropdown-menu-item kf-lh-cover-remove" ng-if="library.image" kf-hover ng-mouseup="onRemoveCoverImageMouseUp($event)">Remove cover image</button>
+        </menu>
       </div>
-      <div class="kf-lh-body">
-        <h1 class="kf-lh-name" itemtype="name">{{library.name}}</h1>
+      <input class="kf-lh-cover-file" type="file" accept="image/jpeg,image/png,image/gif" onchange="angular.element(this).scope().onCoverImageFileChosen(this.files[0]);this.value=null" ng-if="isMyLibrary() && isUserCreatedLibrary()">
 
-        <div class="kf-lh-color" ng-class="{'kf-above-image': coverImageUrl || coverImagePreview}" style="background-color:{{library.color}}"></div>
-        <div ng-if="coverImageUrl || coverImagePreview" class="kf-lh-cover-image" ng-style="{'background-image':'{{coverImageUrl ? 'url(' + coverImageUrl + ')' : ''}}','background-position':'{{coverImagePos}}'}" itemtype="image">
-          <a ng-if="isMyLibrary() && !coverImagePreview" class="kf-lh-cover-image-adjust" href="javascript:" ng-mousedown="onCoverImageAdjustEngage($event)" ng-click="onCoverImageAdjustEngage($event)"></a>
-          <div ng-if="coverImageMenuShowing" class="kf-lh-cover-image-menu">
-            <a class="kf-lh-cover-image-menu-opt kf-lh-cover-image-remove" href="javascript:" kf-hover ng-mouseup="onRemoveCoverImageMouseUp($event)">Remove</a>
-            <a class="kf-lh-cover-image-menu-opt kf-lh-cover-image-change" href="javascript:" kf-hover onmouseup="angular.element(this).scope().onChangeCoverImageMouseUp(event)">Change</a>
-            <a class="kf-lh-cover-image-menu-opt kf-lh-cover-image-move" href="javascript:" kf-hover ng-mouseup="onMoveCoverImageMouseUp($event)">Move</a>
-            <div class="kf-lh-cover-image-menu-tri"></div>
-          </div>
-          <div ng-if="coverImagePreview && !coverImageProgress" class="kf-lh-cover-image-preview">
-            Drag to position image
-            <a class="kf-lh-cover-image-apply" href="javascript:" ng-click="applyCoverImageChange()">Apply</a>
-            <a class="kf-lh-cover-image-cancel" href="javascript:" ng-click="cancelCoverImageChange()">Cancel</a>
-          </div>
-          <div ng-if="coverImageProgress" class="kf-lh-cover-image-progress"></div>
-        </div>
-        <div ng-if="coverImageError" class="kf-lh-cover-image-error">{{coverImageError}}</div>
-        <input ng-if="isMyLibrary() && isUserCreatedLibrary()" type="file" class="kf-lh-cover-image-file" accept="image/jpeg,image/png,image/gif" onchange="angular.element(this).scope().onCoverImageFileChosen(this.files[0]);this.value=null">
-        <a ng-if="isMyLibrary() && isUserCreatedLibrary() && !coverImageUrl" class="kf-lh-cover-image-add" href="javascript:" onclick="angular.element(this).scope().onClickAddCoverImage(event)">
-          Add a cover photo
+      <div class="kf-lh-private svg-card-lock" ng-if="library.visibility === 'secret'"></div>
+
+      <div class="kf-lh-followers">
+        <a class="kf-lh-followers-a" ng-repeat="follower in followersToShow" href="{{follower|profileUrl}}" kf-track-origin="libraryPage/follower">
+          <img class="kf-lh-followers-pic" ng-src="{{follower|pic:100}}" alt="{{follower|name}}">
+          <span class="kf-lh-followers-name">{{follower.firstName}}</span>
         </a>
-
-        <div class="kf-lh-info">
-          <div class="kf-lh-private-wrap" ng-if="library.visibility === 'secret'">
-            <span class="kf-lh-private svg-card-lock">Private</span>
-          </div>
-
-          <div class="kf-lh-owner" itemprop="creator" itemscope itemtype="http://schema.org/Person">
-            <a class="kf-lh-owner-image-a" href="{{library.owner|profileUrl}}" itemprop="url" kf-track-origin="libraryPage/curator">
-              <img class="kf-lh-owner-image" ng-src="{{library.owner | pic:100}}" itemprop="image" alt="{{library.owner|name}}">
-            </a>
-            <div class="kf-lh-owner-text">
-              <div class="kf-lh-owner-label">Curator:</div>
-              <div class="kf-lh-owner-name" itemprop="name">{{library.owner|name}}</div>
-            </div>
-
-            <a class="kf-lh-twitter" ng-click="trackTwitterProfile()" href="https://www.twitter.com/{{library.attr.twitter.screenName}}" ng-if="library.attr.twitter.screenName" target="_blank">
-              <div class="kf-lh-twitter-img">
-                <div class="kf-lh-twitter-logo svg-twitter-blue"></div>
-              </div>
-              <div class="kf-lh-twitter-text">
-                <div class="kf-lh-twitter-screenname">
-                  @{{library.attr.twitter.screenName}}
-                </div>
-              </div>
-            </a>
-          </div>
-
-          <div ng-switch="clippedDescription" class="kf-lh-desc-wrap">
-            <p ng-switch-when="true" class="kf-lh-desc">
-              <span ng-bind-html="library.shortDescription" itemtype="description"></span>&hellip;
-              <a href="javascript:" class="kf-lh-desc-more" ng-click="showLongDescription()">More</a>
-            </p>
-            <p ng-switch-when="false" class="kf-lh-desc" ng-bind-html="library.formattedDescription"></p>
-          </div>
-
-          <div class="kf-lh-stats-line">
-            <div class="kf-lh-stats">
-              <div class="kf-lh-stat">
-                <span class="kf-lh-stat-name">Keeps</span>
-                <span class="kf-lh-stat-val">{{library.numKeeps | number}}</span>
-              </div>
-              <a class="kf-lh-stat" ng-click="showFollowers()" ng-if="isUserCreatedLibrary()" href="javascript:">
-                <span class="kf-lh-stat-name">Followers</span>
-                <span class="kf-lh-stat-val">{{Math.max(library.numFollowers, library.followers.length) | number}}</span>
-              </a>
-            </div>
-            <div class="kf-lh-followers" kf-library-follower-pics="library.followers" follower-widths="[[0,32,6],[480,42,8]]" num-followers="library.numFollowers"
-              show-followers="showFollowers()" tooltips="yes" current-page-origin="libraryPage"></div>
-          </div>
-        </div>
-      </div>
-      <div class="kf-lh-buttons clearfix">
-        <div style="float:right">
-          <div kf-library-share-search ng-if="canBeShared()" library="library" current-page-origin="libraryPage"></div>
-          <div class="kf-lh-follow-btn-wrap" kf-sticky sticky-if="!$root.userLoggedIn" sticky-top="followButtonStickyTop" sticky-toggle="followButtonToggleStuck" sticky-near="followButtonNearlyStuck" sticky-near-px="40" ng-if="canFollowLibrary()">
-            <div kf-library-header-follow-button-cta library="library" ng-if="!isMobile && library.abTest.name === 'exp_follow_popup' && library.abTestTreatment.data"></div>
-            <button class="kf-button kf-lh-follow-btn" ng-click="followLibrary()">{{library.abTestTreatment.data.buttonText || 'Follow Library'}}</button>
-          </div>
-          <button class="kf-button kf-lh-unfollow-btn" ng-click="unfollowLibrary()" ng-if="alreadyFollowingLibrary()"></button>
-          <button class="kf-button" ng-click="toggleEditKeeps()" ng-if="isMyLibrary() && library.numKeeps > 0">{{editKeepsText}}</button>
-          <button class="kf-button kf-button-text-optional kf-lh-manage-btn" ng-click="manageLibrary()" ng-if="isMyLibrary() && isUserCreatedLibrary()">
-            <span class="kf-button-icon svg-pen"></span> Manage Library
-          </button>
-        </div>
-        <a ng-if="isPublic()" class="kf-button kf-button-text-optional kf-lh-share-external" ng-focus="preloadTwitter()" ng-mouseenter="preloadTwitter()" ng-click="shareTwitter($event)" href="https://twitter.com/intent/tweet" target="_blank">
-          <span class="kf-button-icon svg-twitter"></span>
-          <span class="kf-button-icon svg-twitter-white"></span><!-- for non-logged-in users -->
-          Tweet
-        </a>
-        <button ng-if="isPublic()" class="kf-button kf-button-text-optional kf-lh-share-external" ng-focus="preloadFB()" ng-mouseenter="preloadFB()" ng-click="shareFB()">
-          <span class="kf-button-icon svg-facebook"></span>
-          <span class="kf-button-icon svg-facebook-white"></span><!-- for non-logged-in users -->
-          Post
+        <button class="kf-lh-followers-more" ng-if="numMoreFollowersText" ng-click="showFollowers()">
+          <span class="kf-lh-followers-more-text kf-{{numMoreFollowersText.length}}">{{numMoreFollowersText}}</span>
         </button>
       </div>
     </div>
+
+    <div class="kf-lh-cover-preview" ng-attr-style="{{imagePreview|shadedBackgroundImage:.2:.6}}" ng-if="imagePreview"></div>
+    <div class="kf-lh-cover-glass" ng-class="{'kf-ew': imagePreview.progress === undefined && imagePreview.w / imagePreview.natural.w < imagePreview.h / imagePreview.natural.h, 'kf-ns': imagePreview.progress === undefined && imagePreview.w / imagePreview.natural.w >= imagePreview.h / imagePreview.natural.h}" ng-mouseover="onImagePreviewMouseOver($event)" ng-mousedown="onImagePreviewMouseDown($event)" ng-if="imagePreview">
+      <span class="kf-lh-cover-prompt">Drag to position image</span>
+      <button class="kf-lh-cover-apply" ng-click="applyCoverImageChange()">Apply</button>
+      <button class="kf-lh-cover-cancel" ng-click="cancelCoverImageChange()">Cancel</button>
+      <div class="kf-lh-cover-progress" ng-style="{width: imagePreview.progress + '%', 'background-color': imagePreview.progress === 0 ? '#b00' : null, 'transition-timing-function': imagePreview.progress % 100 ? null : 'ease-in', 'transition-duration': imagePreview.progress === 0 ? '.6s' : null}" ng-if="imagePreview.progress >= 0"></div>
+    </div>
+
+    <div class="kf-lh-mid">
+      <h1 class="kf-lh-name" ng-class="{'kf-long-1': library.name.length > 24, 'kf-long-2': library.name.length > 36}" itemtype="name">{{library.nameText}}</h1>
+
+      <div class="kf-lh-stats">
+        <span class="kf-lh-stat" ng-pluralize count="library.numKeeps" when="{'one': '1 keep', 'other': '{{library.numKeeps|number}} keeps'}" ng-if="library.numKeeps"></span>
+        <button class="kf-lh-stat" ng-pluralize count="library.numFollowers" when="{one:'1 follower',other:'{{library.numFollowers|num}} followers'}" ng-click="showFollowers()" ng-if="library.numFollowers"></button>
+      </div>
+
+      <div class="kf-lh-owner" itemprop="creator" itemscope itemtype="http://schema.org/Person">
+        <a class="kf-lh-owner-image-a" href="{{library.owner|profileUrl}}" itemprop="url" kf-track-origin="libraryPage/curator">
+          <img class="kf-lh-owner-image" ng-src="{{library.owner|pic:200}}" itemprop="image" alt="{{library.owner|name}}">
+        </a>
+        <div class="kf-lh-owner-name-wrap">
+          <a class="kf-lh-owner-name" href="{{library.owner|profileUrl}}" itemprop="name" kf-track-origin="libraryPage/curator">{{library.owner|name}}</a>
+          <a class="kf-lh-owner-twitter-a svg-twitter-blue" href="https://www.twitter.com/{{library.attr.twitter.screenName}}" target="_blank" title="@{{library.attr.twitter.screenName}}" ng-if="library.attr.twitter.screenName" ng-click="trackTwitterProfile()"></a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="kf-lh-desc-wrap-2" ng-class="{'kf-long': descFits === false}" ng-attr-style="border-color:{{library.color}}">
+    <div class="kf-lh-desc-wrap" kf-wheel-stop="{{descScrollable}}">
+      <div class="kf-lh-desc" ng-bind-html="library.descriptionHtml" itemtype="description" kf-wheel-allow></div>
+    </div>
+    <button class="kf-lh-desc-toggle" ng-click="descExpanded === false ? expandDescription() : descExpanded === true ? collapseDescription() : null">
+      {{descExpanded === false ? 'Continue reading…' : descExpanded === true ? 'Show less' : ''}}
+    </button>
+    <button class="kf-lh-desc-add" ng-click="manageLibrary()" ng-if="!library.description && isMyLibrary() && isUserCreatedLibrary()">Add a description</button>
+  </div>
+
+  <div class="kf-lh-buttons" ng-if="!isMyLibrary()">
+    <div class="kf-lh-follow-btn-wrap" ng-if="!followingLibrary()">
+      <div kf-library-header-follow-button-cta library="library" ng-if="!isMobile && library.abTest.name === 'exp_follow_popup' && library.abTestTreatment.data"></div>
+      <button class="kf-button kf-lh-follow-btn" ng-click="followLibrary(true)">{{library.abTestTreatment.data.buttonText || 'Follow'}}</button>
+    </div>
+    <button class="kf-button kf-lh-unfollow-btn" ng-class="{'kf-no-unfollow': followBtnJustClicked}" ng-click="unfollowLibrary()" ng-mouseleave="onUnfollowBtnMouseLeave()" ng-if="followingLibrary()"></button>
+    <div kf-library-share-search library="library" current-page-origin="libraryPage" btn-icon-class="svg-share-arrow-green" ng-if="$root.userLoggedIn && library.visibility === 'published'"></div>
+  </div>
+  <div class="kf-lh-buttons kf-my-lib clearfix" ng-if="isMyLibrary()">
+    <button class="kf-button kf-lh-edit-keeps svg-bullet-list-green" ng-click="toggleEditKeeps()" ng-if="library.numKeeps > 0">{{editingKeeps ? 'Done editing' : 'Edit keeps'}}</button>
+    <div kf-library-share-search library="library" current-page-origin="libraryPage" ng-if="isUserCreatedLibrary()"></div>
   </div>
 </div>

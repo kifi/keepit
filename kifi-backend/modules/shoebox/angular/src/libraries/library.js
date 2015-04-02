@@ -3,10 +3,13 @@
 angular.module('kifi')
 
 .controller('LibraryCtrl', [
-  '$scope', '$rootScope', '$analytics', '$location', '$state', '$stateParams', '$timeout', '$window', 'util', 'initParams', 'library',
-  'keepDecoratorService', 'libraryService', 'modalService', 'platformService', 'profileService', 'originTrackingService', 'installService',
-  function ($scope, $rootScope, $analytics, $location, $state, $stateParams, $timeout, $window, util, initParams, library,
-    keepDecoratorService, libraryService, modalService, platformService, profileService, originTrackingService, installService) {
+  '$scope', '$rootScope', '$analytics', '$location', '$state', '$stateParams', '$timeout', '$window',
+  '$FB', '$twitter', 'util', 'initParams', 'library', 'keepDecoratorService', 'libraryService', 'modalService',
+  'platformService', 'profileService', 'originTrackingService', 'installService',
+  function (
+    $scope, $rootScope, $analytics, $location, $state, $stateParams, $timeout, $window,
+    $FB, $twitter, util, initParams, library, keepDecoratorService, libraryService, modalService,
+    platformService, profileService, originTrackingService, installService) {
 
     //
     // Internal data.
@@ -53,6 +56,12 @@ angular.module('kifi')
       }
 
       $analytics.pageTrack(url, attributes);
+    }
+
+    function trackShareEvent(action) {
+      $timeout(function () {
+        $rootScope.$emit('trackLibraryEvent', 'click', { action: action });
+      });
     }
 
     function setTitle() {
@@ -176,6 +185,35 @@ angular.module('kifi')
       });
     };
 
+    $scope.preloadFB = function () {
+      $FB.init();
+    };
+
+    $scope.shareFB = function () {
+      trackShareEvent('clickedShareFacebook');
+      $FB.ui({
+        method: 'share',
+        href: library.absUrl +
+          '?utm_medium=vf_facebook&utm_source=library_share&utm_content=lid_' + library.id +
+          '&kcid=na-vf_facebook-library_share-lid_' + library.id
+      });
+    };
+
+    $scope.preloadTwitter = function () {
+      $twitter.load();
+    };
+
+    $scope.shareTwitter = function (event) {
+      trackShareEvent('clickedShareTwitter');
+      event.target.href = 'https://twitter.com/intent/tweet' + util.formatQueryString({
+        original_referer: library.absUrl,
+        text: 'Discover this amazing @Kifi library about ' + library.name + '!',
+        tw_p: 'tweetbutton',
+        url: library.absUrl +
+          '?utm_medium=vf_twitter&utm_source=library_share&utm_content=lid_' + library.id +
+          '&kcid=na-vf_twitter-library_share-lid_' + library.id
+      });
+    };
 
     //
     // Watches and listeners.
