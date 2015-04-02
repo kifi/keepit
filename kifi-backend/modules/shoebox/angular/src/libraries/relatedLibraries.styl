@@ -1,3 +1,9 @@
+cardSideBySidePad = 9px
+.kf-related-libraries
+  @media (max-width: 719px)
+    margin-left: -(cardSideBySidePad)
+    margin-right: -(cardSideBySidePad)
+
 .kf-related-library-explore-more-header
   text-transform: uppercase
   color: #4e4754
@@ -8,14 +14,18 @@
   margin-bottom: -6px
 
   @media (max-width: 479px)
-    margin-left: (-(appSidePad1))
-    margin-right: (-(appSidePad1))
+    margin-left: cardSideBySidePad - appSidePad1
+    margin-right: cardSideBySidePad - appSidePad1
     padding: 10px 0
     background-color: #e8e8e8
 
 .kf-related-library-card
   display: inline-block
   margin: 23px 0 0
+
+  @media (max-width: 719px)
+    margin-left: cardSideBySidePad
+    margin-right: cardSideBySidePad
 
 .kf-related-library-footer
   margin: 23px auto 40px
