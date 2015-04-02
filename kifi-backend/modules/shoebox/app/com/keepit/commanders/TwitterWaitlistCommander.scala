@@ -26,7 +26,7 @@ class TwitterWaitlistCommanderImpl @Inject() (
     twitterEmailSender: Provider[TwitterWaitlistEmailSender],
     clock: Clock) extends TwitterWaitlistCommander with Logging {
 
-  private val WAITLIST_LENGTH_SHIFT = 50 //1152
+  private val WAITLIST_LENGTH_SHIFT = 1152
   private val WAITLIST_MULTIPLIER = 3
 
   def addEntry(userId: Id[User], handle: String): Either[String, (TwitterWaitlistEntry, Option[Future[ElectronicMail]])] = {
