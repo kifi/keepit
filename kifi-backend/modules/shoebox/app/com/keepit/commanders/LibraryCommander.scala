@@ -943,9 +943,7 @@ class LibraryCommander @Inject() (
         elizaClient.sendUserPushNotification(
           userId = lib.ownerId,
           message = message,
-          recipientUserId = follower.id.get,
-          username = follower.username,
-          pictureUrl = s3ImageStore.avatarUrlByUser(follower),
+          recipient = follower,
           pushNotificationExperiment = PushNotificationExperiment.Experiment1)
       }
     }
