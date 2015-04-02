@@ -32,13 +32,15 @@ angular.module('kifi')
         });
 
         element.on('click', function (event) {
-          $timeout.cancel(timeout);
-          if (openedAt) {
-            if (Date.now() - openedAt > 500 || angular.element(event.target).is('a[href],a[href] *,menu *')) {
-              hideMenu();
+          if (event.which === 1) {
+            $timeout.cancel(timeout);
+            if (openedAt) {
+              if (Date.now() - openedAt > 500 || angular.element(event.target).is('a[href],a[href] *,menu *')) {
+                hideMenu();
+              }
+            } else {
+              showMenu();
             }
-          } else {
-            showMenu();
           }
         });
       }

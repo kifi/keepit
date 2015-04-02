@@ -96,7 +96,7 @@ class AppBoy @Inject() (
           case UserPushNotificationCategory.NewLibraryFollower => "nf"
           case _ => "us"
         }
-        json.as[JsObject] ++ Json.obj("t" -> pushType, "uid" -> upn.userId.id.toString, "un" -> upn.username.value, "purl" -> upn.pictureUrl)
+        json.as[JsObject] ++ Json.obj("t" -> pushType, "uid" -> upn.userExtId, "un" -> upn.username.value, "purl" -> upn.pictureUrl)
       case _ =>
         throw new Exception(s"Don't recognize push notification $notification")
     }
@@ -138,7 +138,7 @@ class AppBoy @Inject() (
       case lupn: LibraryUpdatePushNotification =>
         log.info(s"[AppBoy] sending LibraryUpdatePushNotification to user ${device.userId} device: [${device.token}] library ${lupn.libraryId} message ${lupn.message} with $json")
       case upn: UserPushNotification =>
-        log.info(s"[AppBoy] sending UserPushNotification to user ${device.userId} device: [${device.token}] user ${upn.userId} message ${upn.message}")
+        log.info(s"[AppBoy] sending UserPushNotification to user ${device.userId} device: [${device.token}] user ${upn.username}:${upn.userExtId} message ${upn.message} wtih $json")
     }
 
     client.send(json, device, notification) andThen {

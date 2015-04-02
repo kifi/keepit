@@ -1,7 +1,7 @@
 package com.keepit.eliza
 
 import com.keepit.model._
-import com.keepit.common.db.{ SequenceNumber, Id }
+import com.keepit.common.db.{ ExternalId, SequenceNumber, Id }
 import com.keepit.common.service.{ ServiceClient, ServiceType }
 import com.keepit.common.logging.Logging
 import com.keepit.common.routes.Eliza

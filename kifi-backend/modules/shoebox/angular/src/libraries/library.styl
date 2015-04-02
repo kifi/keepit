@@ -16,6 +16,9 @@ colGapWidth = 24px
     display: table
     table-layout: fixed
 
+  &:last-child
+    padding-bottom: 40px
+
 .kf-lib-content-1
   @media (min-width: twoColMinWidth)
     display: table-cell
@@ -36,6 +39,52 @@ colGapWidth = 24px
     width: rightColWidth
     padding: 20px 0 0
     text-align: initial
+
+.kf-lib-tweet
+.kf-lib-fpost
+  display: none
+
+  @media (min-width: 720px)
+    display: block
+    box-sizing: border-box
+    border-radius: 4px
+    background-repeat: no-repeat
+    color: #fff
+    line-height: 2.4
+    font-size: .85em
+    font-smoothing: antialiased
+    text-align: center
+
+.kf-lib-tweet
+  background-color: #24c5f6
+  margin-bottom: .75em
+
+  &::after
+    content: 'Tweet'
+    vertical-align: middle
+    margin-left: .5em
+
+.kf-lib-fpost
+  width: 100%
+  border: 0
+  padding: 0
+  background-color: #3a57a1
+  margin-bottom: 2.5em
+
+  &::after
+    content: 'Post'
+    vertical-align: middle
+    margin-left: .6em
+
+.kf-lib-tweet-icon
+.kf-lib-fpost-icon
+  display: inline-block
+  vertical-align: middle
+  width: 1.2em
+  height: 1.1em
+  background-repeat: no-repeat
+  background-size: contain
+  margin-left: -.2em
 
 .kf-lib-footer
   padding-bottom: 30px

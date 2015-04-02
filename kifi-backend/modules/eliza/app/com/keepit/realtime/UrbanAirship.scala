@@ -129,7 +129,7 @@ class UrbanAirship @Inject() (
           case UserPushNotificationCategory.NewLibraryFollower => "nf"
           case _ => "us"
         }
-        json.as[JsObject] ++ Json.obj("t" -> pushType, "uid" -> upn.userId.id.toString, "un" -> upn.username.value, "purl" -> upn.pictureUrl)
+        json.as[JsObject] ++ Json.obj("t" -> pushType, "uid" -> upn.userExtId, "un" -> upn.username.value, "purl" -> upn.pictureUrl)
       case _ =>
         throw new Exception(s"Don't recognize push notification $notification")
     }
@@ -233,7 +233,8 @@ class UrbanAirship @Inject() (
       case lupn: LibraryUpdatePushNotification =>
         log.info(s"[UrbanAirship] Sending LibraryUpdatePushNotification to user ${device.userId} device: [${device.token}] library ${lupn.libraryId} message ${lupn.message}")
       case upn: UserPushNotification =>
-        log.info(s"[UrbanAirship] Sending UserPushNotification to user ${device.userId} device: [${device.token}] from ${upn.userId} message ${upn.message}")
+        log.info(s"[UrbanAirship] Sending UserPushNotification to user ${device.userId} device: [${device.token}] ${upn.username}:${upn.userExtId} message ${upn.message}")
+
     }
 
     client.send(json, device, notification) andThen {

@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfLibraryShareSearch', [
-  '$document', '$timeout', 'friendService', 'keyIndices', 'libraryService', 'socialService', 'util',
-  function ($document, $timeout, friendService, keyIndices, libraryService, socialService, util) {
+  '$document', '$timeout', 'friendService', 'keyIndices', 'libraryService', 'socialService', 'profileService', 'util',
+  function ($document, $timeout, friendService, keyIndices, libraryService, socialService, profileService, util) {
     return {
       restrict: 'A',
       replace: true,
@@ -12,6 +12,7 @@ angular.module('kifi')
         library: '=',
         manageLibInvite: '=',
         currentPageOrigin: '@',
+        btnIconClass: '@',
         close: '&'
       },
       templateUrl: 'libraries/libraryShareSearch.tpl.html',
@@ -31,6 +32,7 @@ angular.module('kifi')
         //
         // Scope data.
         //
+        scope.isOwn = scope.library.owner.id === profileService.me.id;
         scope.results = [];
         scope.search = {};
         scope.share = {};
