@@ -12,23 +12,19 @@ angular.module('kifi')
         library: '='
       },
       link: function (scope) {
-        scope.show = false;
-
+        scope.visible = false;
         scope.twitterHandle = scope.library.attr && scope.library.attr.twitter.screenName;
-        scope.title = scope.twitterHandle ? 'Create a library of your tweeted links' : 'There\'s more to see...';
-        scope.subtitle = scope.twitterHandle ? 'Sign up for the Twitter Deep Search Beta' : 'Sign up to see the rest of what\'s here!';
 
-        scope.join = function ($event, clickCase) {
+        scope.join = function ($event) {
           $rootScope.$emit('trackLibraryEvent', 'click', {
             action: 'clickedSignupPopup'
           });
 
-          if (!clickCase) {
+          if (!scope.twitterHandle) {
             $event.preventDefault();
-            scope.show = false;
+            scope.visible = false;
             signupService.register({libraryId: scope.library.id});
           }
-
         };
 
         scope.login = function () {
@@ -38,10 +34,13 @@ angular.module('kifi')
         };
 
         function onScroll() {
-          if (!scope.show) {
-            $rootScope.$emit('trackLibraryEvent', 'view', { type: 'libraryLandingPopup' });
-            scope.show = true;
-            angular.element('.kf-lib-footer').css('padding-bottom', '300px');
+          if (window.pageYOffset > 400) {
+            scope.$apply(function () {
+              $rootScope.$emit('trackLibraryEvent', 'view', { type: 'libraryLandingPopup' });
+              scope.visible = true;
+              angular.element('.kf-lib-footer').css('padding-bottom', '300px');
+              $window.removeEventListener('scroll', onScroll);
+            });
           }
         }
         $window.addEventListener('scroll', onScroll);

@@ -1,15 +1,12 @@
-<div class="kf-page-bottom-cta" ng-show="show">
+<div class="kf-pbc" ng-if="&& visible">
   <div class="kf-pbc-content">
-    <div class="kf-pbc-title">{{title}}</div>
-    <div class="kf-pbc-subtitle">{{subtitle}}</div>
-
+    <div class="kf-pbc-title">{{twitterHandle ? 'Create a library of your tweeted links' : 'There’s more...'}}</div>
+    <div class="kf-pbc-subtitle">{{twitterHandle ? 'Sign up for the Twitter Deep Search Beta' : 'Sign up to see the rest!'}}</div>
     <div ng-if="twitterHandle">
-      <a class="kf-pbc-link kf-pbc-link-continue" ng-click="join($event, 'twitter')" href="/twitter/request" target="_self">Join Now</a>
+      <a class="kf-pbc-continue" ng-click="join($event)" href="/twitter/request" target="_self">Join Now</a>
     </div>
-
     <div ng-if="!twitterHandle">
-      <a class="kf-pbc-link kf-pbc-link-continue" ng-click="join($event)" href="/signup" target="_self">Continue</a>
-      <a class="kf-pbc-link kf-pbc-link-login" ng-click="login($event)" href="/login" target="_self" rel="nofollow">Log in</a>
+      <a class="kf-pbc-continue" ng-click="join($event)" href="/signup" target="_self">Continue</a>
     </div>
   </div>
 </div>
