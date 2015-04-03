@@ -9,7 +9,6 @@ import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.logging.Logging
 import org.joda.time.DateTime
 import com.keepit.normalizer._
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import org.feijoas.mango.common.cache._
 import NormalizedURIStates._
 import com.keepit.common.healthcheck.AirbrakeNotifier
