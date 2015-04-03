@@ -252,10 +252,10 @@ class UriIntegrityActor @Inject() (
       } catch {
         case e: Exception =>
           airbrake.notify(s"Exception in migrating uri ${change.oldUriId} to ${change.newUriId}. Going to delete them from cache", e)
-          db.readWrite { implicit s => changedUriRepo.save(change.withState(ChangedURIStates.ACTIVE)) } // bump up seqNum. Will be retried.
 
           try {
             db.readOnlyMaster { implicit s => List(normUriRepo.get(change.oldUriId), normUriRepo.get(change.newUriId)) foreach { normUriRepo.deleteCache } }
+            db.readWrite { implicit s => changedUriRepo.save(change.withState(ChangedURIStates.ACTIVE)) } // bump up seqNum. Will be retried.
           } catch {
             case e: Exception =>
               db.readWrite { implicit s => changedUriRepo.saveWithoutIncreSeqnum(change.withState(ChangedURIStates.FAILED)) } // failed. Not bumping up seqNum. Not retry actively.
