@@ -414,7 +414,7 @@ angular.module('kifi')
           // TODO: switch to $animate after 1.3 upgrade (takes CSS props to set)
           // $animate.addClass(descWrapEl[0], 'kf-expanded', {height: height});
           scope.descExpanded = true;
-          var ms = Math.max(300, Math.min(600, Math.round(100 * Math.log(height - descWrapEl[0].offsetHeight))));
+          var ms = Math.max(300, Math.min(600, Math.round(100 * Math.log(height - descWrapEl[0].clientHeight))));
           descWrapEl.addClass('kf-expanded-add').css({
             'transition-duration': ms + 'ms,' + (0.6 * ms) + 'ms',
             'transition-delay': '0s'
