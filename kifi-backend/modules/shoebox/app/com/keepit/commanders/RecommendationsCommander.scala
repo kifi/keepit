@@ -11,13 +11,10 @@ import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.domain.DomainToNameMapper
 
 import com.google.inject.Inject
-import com.keepit.normalizer.NormalizedURIInterner
 import com.keepit.search.util.LongSetIdFilter
 
-import play.api.libs.json.{ JsNull, Json }
-
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.{ Failure, Success, Random }
+import scala.util.Random
 
 class RecommendationsCommander @Inject() (
     curator: CuratorServiceClient,
@@ -131,31 +128,7 @@ class RecommendationsCommander @Inject() (
       }
     } getOrElse Seq.empty
 
-    // val keepAttrInfos = attr.keep.map { keepAttr =>
-    //   keepAttr.keeps.map { keepId =>
-    //     db.readOnlyReplica { implicit session => keepRepo.get(keepId) }
-    //   } filter { keep =>
-    //     keep.state == KeepStates.ACTIVE
-    //   } map { keep =>
-    //     RecoAttributionInfo(
-    //       kind = RecoAttributionKind.Keep,
-    //       name = keep.title,
-    //       url = Some(keep.url),
-    //       when = Some(keep.createdAt)
-    //     )
-    //   }
-    // } getOrElse Seq.empty
-
-    val topicAttrInfos = attr.topic.map { topicAttr =>
-      Seq(RecoAttributionInfo(
-        kind = RecoAttributionKind.Topic,
-        name = Some(topicAttr.topicName),
-        url = None,
-        when = None
-      ))
-    } getOrElse Seq.empty
-
-    libraryAttrInfos ++ topicAttrInfos //++ keepAttrInfos
+    libraryAttrInfos
   }
 
   def topRecos(userId: Id[User], source: RecommendationSource, subSource: RecommendationSubSource, more: Boolean, recencyWeight: Float, context: Option[String]): Future[FullUriRecoResults] = {
