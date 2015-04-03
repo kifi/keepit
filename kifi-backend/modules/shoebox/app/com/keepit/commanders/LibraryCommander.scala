@@ -910,7 +910,7 @@ class LibraryCommander @Inject() (
       val lotsOfFollowers = libraryMembershipRepo.countMembersForLibrarySince(lib.id.get, DateTime.now().minusDays(1)) > 5
       (follower, owner, lotsOfFollowers)
     }
-    val message = s"${follower.firstName} ${follower.lastName} is now following your library ${lib.name}"
+    val message = s"${follower.firstName} ${follower.lastName} is now following your Library ${lib.name}"
     val libImageOpt = libraryImageCommander.getBestImageForLibrary(lib.id.get, ProcessedImageSize.Medium.idealSize)
     elizaClient.sendGlobalNotification(
       userIds = Set(lib.ownerId),
