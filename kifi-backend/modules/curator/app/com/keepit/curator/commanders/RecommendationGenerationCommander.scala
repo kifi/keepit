@@ -13,6 +13,7 @@ import com.keepit.common.logging.{ NamedStatsdTimer, Logging }
 import com.keepit.common.plugin.SchedulingProperties
 import com.keepit.common.service.ServiceStatus
 import com.keepit.common.zookeeper.ServiceDiscovery
+import com.keepit.common.time._
 import com.keepit.curator.model._
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model.{ ExperimentType, NormalizedURI, SystemValueRepo, UriRecommendationScores, User }
@@ -24,6 +25,8 @@ import scala.collection.JavaConversions._
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.Future
 import scala.util.Random
+
+import org.joda.time.{ DateTime, Days }
 
 @Singleton
 class RecommendationGenerationCommander @Inject() (
@@ -202,7 +205,7 @@ class RecommendationGenerationCommander @Inject() (
       }
     }
 
-  private def processSeedsNextGen( //ZZZ
+  private def processSeedsNextGen(
     seedItems: Seq[SeedItem],
     newState: UserRecommendationGenerationState,
     userId: Id[User],
@@ -216,19 +219,54 @@ class RecommendationGenerationCommander @Inject() (
         }
       }
 
+      val originalItems: Map[Id[NormalizedURI], SeedItem] = cleanedItems.map { item => (item.uriId, item) }.toMap
+
       val weightedItems: Seq[SeedItemWithMultiplier] = uriWeightingHelper(cleanedItems).filter(_.multiplier != 0.0f)
-      val toBeSaved: Future[Seq[ScoredSeedItemWithAttribution]] = scoringHelper(weightedItems, boostedKeepers).map { scoredItems =>
-        val scores: scoredItems.map { scoredItem: ScoredSeedItem =>
-          scoredItem
-        }
-        scoredItems.filter(si => alwaysInclude.contains(si.uriId) || shouldInclude(si.uriScores))
-      }.flatMap { scoredItems =>
+      val toBeSaved: Future[Seq[(ScoredSeedItemWithAttribution, Float)]] = scoringHelper(weightedItems, boostedKeepers).flatMap { scoredItems =>
         attributionHelper.getAttributions(scoredItems)
+      }.map { itemsWithAttribution =>
+        itemsWithAttribution.map { item =>
+          val daysSinceLastKept: Int = Math.max(Days.daysBetween(originalItems(item.uriId).lastKept, currentDateTime).getDays, 0) //guard agaist keep times in the future (yes!)
+          (item, computeMasterScoreNextGen(item.uriScores, daysSinceLastKept, 4242))
+        }
       }
 
       toBeSaved.map { items =>
         Statsd.increment("UriRecosGeneratedNextGen", items.length)
-        saveScoredSeedItems(items, userId, newState)
+
+        db.readWrite(attempts = 2) { implicit s =>
+          items foreach {
+            case (item, masterScore) =>
+              if (masterScore > 0.5) {
+                val recoOpt = uriRecRepo.getByUriAndUserId(item.uriId, userId, None)
+                recoOpt.map { reco =>
+                  uriRecRepo.save(reco.copy(
+                    state = UriRecommendationStates.ACTIVE,
+                    masterScore = masterScore,
+                    allScores = item.uriScores,
+                    attribution = item.attribution,
+                    topic1 = item.topic1,
+                    topic2 = item.topic2))
+                } getOrElse {
+                  uriRecRepo.save(UriRecommendation(
+                    uriId = item.uriId,
+                    userId = userId,
+                    masterScore = masterScore,
+                    allScores = item.uriScores,
+                    delivered = 0,
+                    clicked = 0,
+                    kept = false,
+                    trashed = false,
+                    attribution = item.attribution,
+                    topic1 = item.topic1,
+                    topic2 = item.topic2))
+                }
+              }
+          }
+
+          genStateRepo.save(newState)
+        }
+
         precomputeRecommendationsForUser(userId, boostedKeepers, true, Some(alwaysInclude))
         seedItems.nonEmpty
       }
