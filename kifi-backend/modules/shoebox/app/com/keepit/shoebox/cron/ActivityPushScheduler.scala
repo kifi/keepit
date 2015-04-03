@@ -55,8 +55,9 @@ class ActivityPushActor @Inject() (
         case e: Exception =>
           airbrake.notify(s"on pushing activity $activityPushTaskId", e)
       } finally {
-        if (counter.decrementAndGet() <= 0) {
-          self ! PushActivities
+        val currCount = counter.decrementAndGet()
+        if (currCount <= 0) {
+          log.info(s"[ActivityPushActor] Would have self-called. $currCount")
         }
       }
   }
@@ -172,7 +173,9 @@ class ActivityPusher @Inject() (
   }
 
   private def pushActivity(activity: ActivityPushTask): Unit = {
-    db.readOnlyReplica { implicit s => kifiInstallationRepo.lastUpdatedMobile(activity.userId) } foreach { latestInstallation =>
+    db.readOnlyReplica { implicit s =>
+      kifiInstallationRepo.lastUpdatedMobile(activity.userId)
+    }.foreach { latestInstallation =>
       getMessage(activity.userId, latestInstallation) match {
         case Some((message, experimant)) =>
           pushMessage(activity, message, experimant)
@@ -285,7 +288,7 @@ class ActivityPusher @Inject() (
   }
 
   def getNextPushBatch: Seq[Id[ActivityPushTask]] = {
-    val ids = db.readOnlyReplica { implicit s =>
+    val ids = db.readOnlyMaster { implicit s =>
       activityPushTaskRepo.getBatchToPush(100)
     }
     log.info(s"next push batch size is ${ids.size}")
