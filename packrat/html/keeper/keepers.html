@@ -1,4 +1,16 @@
 <kifi class="kifi-root kifi-keepers {{cssClass}}">
+  {{#pages.length}}
+    <div class="kifi-keepers-h">Related {{#onePage}}Page{{/onePage}}{{^onePage}}Pages{{/onePage}}</div>
+    <div class="kifi-keepers-pages">
+    {{#pages}}
+      <a class="kifi-keepers-page" href="{{url}}" target="_blank" tabindex="-1">
+        <div class="kifi-keepers-page-pic" style="background-image:url({{image}})"></div>
+        <div class="kifi-keepers-page-title">{{title}}</div>
+        <div class="kifi-keepers-page-domain">{{domain}}</div>
+      </a>
+    {{/pages}}
+    </div>
+  {{/pages.length}}
   {{#libs.length}}
     <div class="kifi-keepers-h">Kept In {{#oneLib}}This Library{{/oneLib}}{{^oneLib}}These Libraries{{/oneLib}}</div>
     <div class="kifi-keepers-libs">
