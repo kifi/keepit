@@ -279,8 +279,8 @@ class RecommendationGenerationCommander @Inject() (
         if (schedulingProperties.isRunnerFor(CuratorTasks.uriRecommendationPrecomputation)) {
           val timer = new NamedStatsdTimer("perItemPerUser")
           val alwaysInclude: Set[Id[NormalizedURI]] = alwaysIncludeOpt.getOrElse {
-            if (superSpecialUsers.contains(userId)) db.readOnlyReplica { implicit session => uriRecRepo.getTopUriIdsForUser(userId) }
-            else db.readOnlyReplica { implicit session => uriRecRepo.getUriIdsForUser(userId) }
+            if (superSpecialUsers.contains(userId)) db.readOnlyReplica { implicit session => uriRecRepo.getUriIdsForUser(userId) }
+            else db.readOnlyReplica { implicit session => uriRecRepo.getTopUriIdsForUser(userId) }
           }
           val state: UserRecommendationGenerationState = getStateOfUser(userId)
           val seedsAndSeqFuture: Future[(Seq[SeedItem], SequenceNumber[SeedItem])] = getCandidateSeedsForUser(userId, state, nextGen)
