@@ -1,6 +1,7 @@
 package com.keepit.realtime
 
 import com.google.inject.Inject
+import com.keepit.common.concurrent.RetryFuture
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
@@ -141,14 +142,12 @@ class AppBoy @Inject() (
         log.info(s"[AppBoy] sending UserPushNotification to user ${device.userId} device: [${device.token}] user ${upn.username}:${upn.userExtId} message ${upn.message} wtih $json")
     }
 
-    client.send(json, device, notification) andThen {
-      case Success(res) =>
-        if (res.status / 100 != 2) {
-          airbrake.notify(s"[AppBoy] bad status ${res.status} on push notification $notification for device $device. response: ${res.body}")
-        } else {
-          log.info(s"[AppBoy] successful push notification to device $device: ${res.body}")
-          messagingAnalytics.sentPushNotification(device, notification)
-        }
+    RetryFuture(attempts = 3)(client.send(json, device, notification)).onComplete {
+      case Success(res) if res.status / 100 == 2 =>
+        log.info(s"[AppBoy] successful push notification to device $device: ${res.body}")
+        messagingAnalytics.sentPushNotification(device, notification)
+      case Success(non200) =>
+        airbrake.notify(s"[AppBoy] bad status ${non200.status} on push notification $notification for device $device. response: ${non200.body}")
       case Failure(e) =>
         airbrake.notify(s"[AppBoy] fail to send push notification $notification for device $device - error: $e")
     }
