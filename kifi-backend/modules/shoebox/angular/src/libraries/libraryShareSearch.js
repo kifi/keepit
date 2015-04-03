@@ -262,7 +262,7 @@ angular.module('kifi')
         function trackShareEvent(eventName, attr) {
           var type = scope.currentPageOrigin === 'recommendationsPage' ? 'recommendations' : 'library';
           var attributes = _.extend({ type: type }, attr || {});
-          libraryService.eventTrack(eventName, scope.library, attributes);
+          libraryService.trackEvent(eventName, scope.library, attributes);
         }
 
         //
