@@ -46,7 +46,7 @@ class RecommendationGenerationCommander @Inject() (
     schedulingProperties: SchedulingProperties) extends Logging {
 
   val defaultScore = 0.0f
-  val recommendationGenerationLock = new ReactiveLock(8)
+  val recommendationGenerationLock = new ReactiveLock(6)
   val perUserRecommendationGenerationLocks = TrieMap[Id[User], ReactiveLock]()
   val candidateURILock = new ReactiveLock(4)
 
@@ -292,7 +292,7 @@ class RecommendationGenerationCommander @Inject() (
                   genStateRepo.save(newState)
                 }
                 if (state.seq < newSeqNum) {
-                  if (lock.waiting < 200) {
+                  if (lock.waiting < 10) {
                     precomputeRecommendationsForUser(userId, boostedKeepers, nextGen, Some(alwaysInclude))
                   } else {
                     precomputeRecommendationsForUser(userId, boostedKeepers, nextGen) //No point in keeping all that data in memory when it's not needed soon
@@ -326,7 +326,7 @@ class RecommendationGenerationCommander @Inject() (
       boostedKeepersSet <- specialCurators()
       nextGenUsersSet <- nextGenUsers()
     } yield {
-      if (recommendationGenerationLock.waiting < userIds.length + 1) {
+      if (recommendationGenerationLock.waiting < userIds.length) {
         Future.sequence(userIds.map(userId => precomputeRecommendationsForUser(userId, boostedKeepersSet, nextGenUsersSet contains userId))).map(_ => ())
       } else {
         Future.successful(())
@@ -335,7 +335,7 @@ class RecommendationGenerationCommander @Inject() (
   }
 
   private val candidateUriCache = CacheBuilder.newBuilder()
-    .initialCapacity(100000).maximumSize(1000000).expireAfterWrite(24L, TimeUnit.HOURS)
+    .initialCapacity(10000).maximumSize(100000).expireAfterWrite(60L, TimeUnit.MINUTES)
     .build[Id[NormalizedURI], java.lang.Boolean]
 
   private def getCandidateURIs(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[Boolean]] = {
