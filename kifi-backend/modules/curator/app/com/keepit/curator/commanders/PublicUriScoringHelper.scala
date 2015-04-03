@@ -52,7 +52,7 @@ class PublicUriScoringHelper @Inject() (
     val helpRankInfos = heimdal.getHelpRankInfos(items.map(_.uriId).filterNot(uriHelpRankScores.contains))
     helpRankInfos.map { infos =>
       timer.stopAndReport()
-      //infos.foreach { info => uriHelpRankScores += (info.uriId -> info) } //trying to see impact on memory usage
+      infos.foreach { info => uriHelpRankScores += (info.uriId -> info) }
       items.map { item =>
         val info = uriHelpRankScores(item.uriId)
         (Math.tanh(info.rekeepCount / 10).toFloat, Math.tanh(info.keepDiscoveryCount / 20).toFloat)

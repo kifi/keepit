@@ -127,7 +127,7 @@ class RecommendationGenerationCommander @Inject() (
   private def getCandidateSeedsForUser(userId: Id[User], state: UserRecommendationGenerationState, nextGen: Boolean): Future[(Seq[SeedItem], SequenceNumber[SeedItem])] = {
     val timer = new NamedStatsdTimer("RecommendationGenerationCommander.getCandidateSeedsForUser")
     val result = for {
-      seeds <- if (nextGen) seedCommander.getPopularDiscoverableBySeqNumAndUser(state.seq, userId, BATCH_SIZE) else seedCommander.getDiscoverableBySeqNumAndUser(state.seq, userId, BATCH_SIZE)
+      seeds <- (if (nextGen) seedCommander.getPopularDiscoverableBySeqNumAndUser(state.seq, userId, BATCH_SIZE) else seedCommander.getDiscoverableBySeqNumAndUser(state.seq, userId, BATCH_SIZE))
       candidateURIs <- getCandidateURIs(seeds.map(_.uriId))
     } yield {
       val candidateSeeds = (seeds zip candidateURIs) filter (_._2) map (_._1)
