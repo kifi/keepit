@@ -159,7 +159,7 @@ class MobileDevicesControllerTest extends Specification with ElizaTestInjector {
         status(result3ForEmpty) must equalTo(OK)
         db.readOnlyMaster { implicit s =>
           deviceRepo.getByUserIdAndDeviceTypeAndSignature(user2.id.get, DeviceType.IOS, "ab_iphone6").isDefined === true
-          deviceRepo.getByUserId(user2.id.get).length === 3 // one with token, one for ab_galaxynote, one for iphone6
+          deviceRepo.getByUserId(user2.id.get).length === 2 // one with token, one for ab_galaxynote, one for iphone6
         }
 
       }
