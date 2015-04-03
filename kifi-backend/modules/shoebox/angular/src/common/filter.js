@@ -84,7 +84,7 @@ angular.module('kifi')
 })
 
 .filter('domain', function () {
-  var re = /^\w+:\/\/([^\/]+)/;
+  var re = /^\w+:\/\/(?:www\.)?([^\/]+)/;
   return function (url) {
     var match = re.exec(url);
     return match && match[1];
