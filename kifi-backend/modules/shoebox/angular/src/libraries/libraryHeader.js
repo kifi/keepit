@@ -55,17 +55,20 @@ angular.module('kifi')
           lib.descriptionHtml = util.linkify(lib.description || '').replace(/\n+/g, '<br>');
           lib.absUrl = env.origin + lib.url;
 
+          $timeout(function () {
+            var lh = parseFloat(descWrapEl.css('line-height'), 10);
+            scope.descFits = descEl[0].scrollHeight <= Math.ceil(3 * lh);
+          });
+        }
+
+        function setFollowersShown() {
+          var lib = scope.library;
           var numFollowers = Math.max(lib.numFollowers, lib.followers.length);  // tolerating incorrect numFollowers
           var numFollowersFit = 5;
           var showPlusFollowers = Math.min(lib.followers.length, numFollowersFit) < numFollowers;
           var numFollowersToShow = Math.min(lib.followers.length, numFollowersFit - (numFollowersFit && showPlusFollowers ? 1 : 0));
           scope.followersToShow = lib.followers.slice(0, numFollowersToShow);
           scope.numMoreFollowersText = showPlusFollowers ? $filter('num')(numFollowers - numFollowersToShow) : '';
-
-          $timeout(function () {
-            var lh = parseFloat(descWrapEl.css('line-height'), 10);
-            scope.descFits = descEl[0].scrollHeight <= Math.ceil(3 * lh);
-          });
         }
 
         function updateInvite() {
@@ -595,6 +598,8 @@ angular.module('kifi')
         //
         // Watches and listeners.
         //
+
+        scope.$watch('library.numFollowers', setFollowersShown);
 
         [
           $rootScope.$on('libraryInfosChanged', updateInvite),
