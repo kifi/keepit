@@ -115,6 +115,7 @@ class SeedIngestionCommander @Inject() (
     priorScore = rawItem.priorScore,
     timesKept = rawItem.timesKept,
     lastSeen = rawItem.lastSeen,
+    lastKept = rawItem.lastKept,
     keepers = keepers,
     discoverable = rawItem.discoverable
   )
@@ -133,6 +134,22 @@ class SeedIngestionCommander @Inject() (
     val timer = new NamedStatsdTimer("SeedIngestionCommander.getDiscoverableBySeqNumAndUser")
     db.readOnlyReplicaAsync { implicit session =>
       rawSeedsRepo.getDiscoverableBySeqNumAndUser(SequenceNumber[RawSeedItem](start.value), userId, maxBatchSize).map { rawItem =>
+        val keepers = if (rawItem.timesKept > MAX_INDIVIDUAL_KEEPERS_TO_CONSIDER) {
+          Keepers.TooMany
+        } else {
+          Keepers.ReasonableNumber(keepInfoRepo.getKeepersByUriId(rawItem.uriId))
+        }
+        val res = cookSeedItem(userId, rawItem, keepers)
+        timer.stopAndReport()
+        res
+      }
+    }
+  }
+
+  def getPopularDiscoverableBySeqNumAndUser(start: SequenceNumber[SeedItem], userId: Id[User], maxBatchSize: Int): Future[Seq[SeedItem]] = {
+    val timer = new NamedStatsdTimer("SeedIngestionCommander.getPopularDiscoverableBySeqNumAndUser")
+    db.readOnlyReplicaAsync { implicit session =>
+      rawSeedsRepo.getPopularDiscoverableBySeqNumAndUser(SequenceNumber[RawSeedItem](start.value), userId, maxBatchSize).map { rawItem =>
         val keepers = if (rawItem.timesKept > MAX_INDIVIDUAL_KEEPERS_TO_CONSIDER) {
           Keepers.TooMany
         } else {

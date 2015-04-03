@@ -24,6 +24,7 @@ case class SeedItem(
   priorScore: Option[Float],
   timesKept: Int,
   lastSeen: DateTime,
+  lastKept: DateTime,
   keepers: Keepers,
   discoverable: Boolean)
 
@@ -104,7 +105,7 @@ case class UriScores(
 object UriScores {
   val oldFormat = Json.format[UriScores]
 
-  def newFormat = ( //ZZZ
+  def newFormat = (
     (__ \ 's).format[Float] and
     (__ \ 'p).format[Float] and
     (__ \ 'oI).format[Float] and
