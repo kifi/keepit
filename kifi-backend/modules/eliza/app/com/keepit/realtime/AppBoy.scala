@@ -39,9 +39,10 @@ class AppBoy @Inject() (
     val updatedDevice = db.readWrite { implicit s =>
 
       // inactivate devices that have non-appboy signature
-      deviceRepo.getByUserIdAndDeviceType(userId, deviceType).collect { case device if !device.signature.exists(_.startsWith("ab_")) =>
-        // We only want non-AppBoy devices
-        deviceRepo.save(device.copy(state = DeviceStates.INACTIVE))
+      deviceRepo.getByUserIdAndDeviceType(userId, deviceType).collect {
+        case device if !device.signature.exists(_.startsWith("ab_")) =>
+          // We only want non-AppBoy devices
+          deviceRepo.save(device.copy(state = DeviceStates.INACTIVE))
       }
 
       deviceRepo.getByUserIdAndDeviceTypeAndSignature(userId, deviceType, appBoySign, None) match {
@@ -141,14 +142,18 @@ class AppBoy @Inject() (
         log.info(s"[AppBoy] sending UserPushNotification to user ${device.userId} device: [${device.token}] user ${upn.username}:${upn.userExtId} message ${upn.message} wtih $json")
     }
 
-    RetryFuture(attempts = 3)(client.send(json, device, notification)).onComplete {
+    RetryFuture(attempts = 3, {
+      case error: Throwable =>
+        airbrake.notify(s"[AppBoy] Error when pushing $notification for device ${device.id}. Will retry. Error: ${error.getClass.getSimpleName} $error")
+        true
+    })(client.send(json, device, notification)).onComplete {
       case Success(res) if res.status / 100 == 2 =>
         log.info(s"[AppBoy] successful push notification to device $device: ${res.body}")
         messagingAnalytics.sentPushNotification(device, notification)
       case Success(non200) =>
         airbrake.notify(s"[AppBoy] bad status ${non200.status} on push notification $notification for device $device. response: ${non200.body}")
       case Failure(e) =>
-        airbrake.notify(s"[AppBoy] fail to send push notification $notification for device $device - error: $e")
+        airbrake.notify(s"[AppBoy] fail to send push notification $notification for device $device - error: ${e.getClass.getSimpleName} $e")
     }
   }
 
