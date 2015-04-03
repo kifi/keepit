@@ -257,7 +257,9 @@ class UriIntegrityActor @Inject() (
           try {
             db.readOnlyMaster { implicit s => List(normUriRepo.get(change.oldUriId), normUriRepo.get(change.newUriId)) foreach { normUriRepo.deleteCache } }
           } catch {
-            case e: Exception => airbrake.notify(s"error in getting uri ${change.oldUriId} or ${change.newUriId} from db by id.")
+            case e: Exception =>
+              db.readWrite { implicit s => changedUriRepo.saveWithoutIncreSeqnum(change.withState(ChangedURIStates.FAILED)) } // failed. Not bumping up seqNum. Not retry actively.
+              airbrake.notify(s"error in getting uri ${change.oldUriId} or ${change.newUriId} from db by id.")
           }
       }
     }
