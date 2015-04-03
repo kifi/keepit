@@ -6,7 +6,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.model._
-import org.joda.time.DateTime
+import org.joda.time.{ Minutes, DateTime }
 
 class LibraryChecker @Inject() (
     db: Database,
@@ -18,6 +18,7 @@ class LibraryChecker @Inject() (
     airbrake: AirbrakeNotifier) extends Logging {
 
   private[this] val lock = new AnyRef
+  private[this] var keptDateErrors = 0
 
   def check(): Unit = lock.synchronized {
     checkSystemLibraries()
@@ -59,26 +60,27 @@ class LibraryChecker @Inject() (
     libraryMap.map {
       case (libId, lib) =>
         // check last_kept
-        val currentKeptAt = latestKeptAtMap.get(libId).flatten
-        lib.lastKept match {
-          case None =>
-            currentKeptAt match {
-              case Some(keptAt) =>
-                airbrake.notify(s"Library ${libId} has no last_kept but has active keeps... update library's last_kept!")
-                db.readWrite { implicit s =>
-                  libraryRepo.save(lib.copy(lastKept = Some(keptAt)))
-                }
-              case _ =>
+        val timeFromKeepRepo = latestKeptAtMap.get(libId).flatten
+        val timeFromLibrary = lib.lastKept
+
+        (timeFromLibrary, timeFromKeepRepo) match {
+          case (None, None) =>
+          case (Some(t1), Some(t2)) =>
+            val secondsDiff = math.abs(t1.getMillis - t2.getMillis) * 1.0 / 1000
+            if (secondsDiff > 30) {
+              keptDateErrors += 1
+              if (keptDateErrors == 1 || keptDateErrors % 50 == 0) {
+                airbrake.notify(s"Library ${libId} has inconsistent last_kept state. Library is last kept at $t1 but keep is ${t2}... update library's last_kept. Total Errors so far: $keptDateErrors")
+              }
+              db.readWrite { implicit s => libraryRepo.save(lib.copy(lastKept = Some(t2))) }
             }
-          case Some(lastKeptDate) =>
-            currentKeptAt match {
-              case Some(keptAt) if keptAt != lastKeptDate =>
-                airbrake.notify(s"Library ${libId} has inconsistent last_kept state. Library is last kept at $lastKeptDate but keep is ${keptAt}... update library's last_kept")
-                db.readWrite { implicit s =>
-                  libraryRepo.save(lib.copy(lastKept = Some(keptAt)))
-                }
-              case _ =>
+          case (Some(t1), None) =>
+          case (None, Some(t2)) =>
+            keptDateErrors += 1
+            if (keptDateErrors == 1 || keptDateErrors % 50 == 0) {
+              airbrake.notify(s"Library ${libId} has no last_kept but has active keeps... update library's last_kept! Total Errors so far: $keptDateErrors")
             }
+            db.readWrite { implicit s => libraryRepo.save(lib.copy(lastKept = Some(t2))) }
         }
 
         // check keep count
