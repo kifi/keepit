@@ -39,10 +39,9 @@ class AppBoy @Inject() (
     val updatedDevice = db.readWrite { implicit s =>
 
       // inactivate devices that have non-appboy signature
-      deviceRepo.getByUserIdAndDeviceTypeAndSignature(userId, deviceType, signature) match {
-        case Some(d) => // probably urbanairship, inactivate
-          deviceRepo.save(d.copy(state = DeviceStates.INACTIVE))
-        case _ =>
+      deviceRepo.getByUserIdAndDeviceType(userId, deviceType).collect { case device if !device.signature.exists(_.startsWith("ab_")) =>
+        // We only want non-AppBoy devices
+        deviceRepo.save(device.copy(state = DeviceStates.INACTIVE))
       }
 
       deviceRepo.getByUserIdAndDeviceTypeAndSignature(userId, deviceType, appBoySign, None) match {
