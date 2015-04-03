@@ -18,4 +18,5 @@ case class ChangedURI(
 
 object ChangedURIStates extends States[ChangedURI] {
   val APPLIED = State[ChangedURI]("applied") // Indicates we actually merged these uris
+  val FAILED = State[ChangedURI]("failed")
 }
