@@ -46,13 +46,6 @@ class RecommendationsControllerTest extends TestKitSupport with SpecificationLik
 
   "RecommendationsController" should {
 
-    "call adHocRecos" in {
-      withInjector(modules: _*) { implicit injector =>
-        val route = com.keepit.controllers.website.routes.RecommendationsController.adHocRecos(1).url
-        route === "/site/recos/adHoc?n=1"
-      }
-    }
-
     "update uri recommendation feedback" in {
       withDb(modules: _*) { implicit injector =>
         val url = "id1"
