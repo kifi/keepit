@@ -160,7 +160,14 @@ class ActivityPusher @Inject() (
       }
     }
     db.readWrite { implicit s =>
-      activityPushTaskRepo.save(activityPushTaskRepo.get(activity.id.get).copy(lastPush = Some(clock.now())))
+      val prevActivity = activityPushTaskRepo.get(activity.id.get)
+      val newBackoff = prevActivity.backoff.getOrElse(1.day).plus(1.day)
+      val newActivity = prevActivity.copy(
+        nextPush = Some(clock.now().plusMillis(newBackoff.toMillis.toInt)),
+        backoff = Some(newBackoff),
+        lastPush = Some(clock.now())
+      )
+      activityPushTaskRepo.save(newActivity)
     }
   }
 
