@@ -260,6 +260,10 @@ angular.module('kifi')
                 scope.library.image = image;
                 revokeImagePreviewObjectUrlWhenDone();
                 scope.imagePreview = coverImageFile = null;
+                scope.settingImage = true;
+                $timeout(function () {
+                  scope.settingImage = false;
+                });
               });
             }) :
             fakeProgress(
@@ -367,12 +371,7 @@ angular.module('kifi')
         scope.onRemoveCoverImageMouseUp = function (event) {
           if (event.which === 1) {
             $http['delete'](routeService.removeLibraryCoverImage(scope.library.id)).then(function done() {
-              scope.imageFarewell = _.pick(scope.library.image, 'x', 'y');
-              scope.imageFarewell.url = env.picBase + '/' + scope.library.image.path;
               scope.library.image = null;
-              $timeout(function () {
-                scope.imageFarewell = null;
-              });
             }, function fail() {
               modalService.openGenericErrorModal();
             });
@@ -640,6 +639,12 @@ angular.module('kifi')
         augmentData();
 
         updateInvite();
+
+        if (scope.library.image) {
+          loadImage(env.picBase + '/' + scope.library.image.path).then(function () {
+            scope.imageLoaded = true;
+          });
+        }
       }
     };
   }
