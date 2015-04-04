@@ -40,7 +40,7 @@ class CuratorTasksPlugin @Inject() (
     scheduleTaskOnLeader(system, 5 minutes, 3 minutes, completeDataIngestion) {
       ingestionCommander.ingestAll()
     }
-    scheduleTaskOnOneMachine(system, 3 minutes, 2 minutes, uriRecommendationPrecomputation) {
+    scheduleTaskOnOneMachine(system, 7 minutes, 5 minutes, uriRecommendationPrecomputation) {
       uriRecoGenerationCommander.precomputeRecommendations()
     }
     scheduleTaskOnOneMachine(system, 2 minutes, 5 minutes, uriRecommendationReaper) {
@@ -51,7 +51,7 @@ class CuratorTasksPlugin @Inject() (
       feedCommander.cleanup()
     }
 
-    scheduleTaskOnOneMachine(system, 1 minutes, 3 minutes, libraryRecommendationPrecomputation) {
+    scheduleTaskOnOneMachine(system, 7 minutes, 5 minutes, libraryRecommendationPrecomputation) {
       libraryRecoGenerationCommander.precomputeRecommendations()
     }
     scheduleTaskOnOneMachine(system, 10 minutes, 10 minutes, libraryRecommendationReaper) {

@@ -43,14 +43,15 @@ class RecommendationGenerationCommander @Inject() (
     genStateRepo: UserRecommendationGenerationStateRepo,
     systemValueRepo: SystemValueRepo,
     experimentCommander: RemoteUserExperimentCommander,
+    keepRepo: CuratorKeepInfoRepo,
     schedulingProperties: SchedulingProperties) extends Logging {
 
   val defaultScore = 0.0f
-  val recommendationGenerationLock = new ReactiveLock(6)
+  val recommendationGenerationLock = new ReactiveLock(8)
   val perUserRecommendationGenerationLocks = TrieMap[Id[User], ReactiveLock]()
   val candidateURILock = new ReactiveLock(4)
 
-  val superSpecialUsers = Seq(Id[User](273))
+  val superSpecialUsers = Seq(Id[User](273), Id[User](243))
   val superSpecialLock = new ReactiveLock(1)
 
   val BATCH_SIZE = 350
@@ -77,7 +78,7 @@ class RecommendationGenerationCommander @Inject() (
 
   private def computeMasterScoreNextGen(scores: UriScores, daysSinceLastKept: Int, numKeepsOfUser: Int): Float = {
     val interestMatchFactor: Double = Math.max(0, Math.max(scores.overallInterestScore - 0.3, scores.libraryInducedScore.map(_ - 0.5).getOrElse(0.0)))
-    val freshnessFactor: Double = 1.0 / Math.log((numKeepsOfUser.toDouble / 42.0) + 2.0)
+    val freshnessFactor: Double = 1.0 / Math.log((daysSinceLastKept.toDouble / 42.0) + 2.0)
     val baseScore: Double = 5 * scores.socialScore + 2 * scores.overallInterestScore + scores.libraryInducedScore.getOrElse(scores.overallInterestScore)
     val adaptiveScoreFactor: Double = Math.tanh(numKeepsOfUser.toDouble / 42)
     val adaptiveScore: Double = adaptiveScoreFactor * scores.overallInterestScore + (1.0 - adaptiveScoreFactor) * scores.libraryInducedScore.getOrElse(scores.overallInterestScore)
@@ -221,13 +222,15 @@ class RecommendationGenerationCommander @Inject() (
 
       val originalItems: Map[Id[NormalizedURI], SeedItem] = cleanedItems.map { item => (item.uriId, item) }.toMap
 
+      val keepCount = db.readOnlyReplica { implicit session => keepRepo.getKeepCountForUser(userId) }
+
       val weightedItems: Seq[SeedItemWithMultiplier] = uriWeightingHelper(cleanedItems).filter(_.multiplier != 0.0f)
       val toBeSaved: Future[Seq[(ScoredSeedItemWithAttribution, Float)]] = scoringHelper(weightedItems, boostedKeepers).flatMap { scoredItems =>
         attributionHelper.getAttributions(scoredItems)
       }.map { itemsWithAttribution =>
         itemsWithAttribution.map { item =>
           val daysSinceLastKept: Int = Math.max(Days.daysBetween(originalItems(item.uriId).lastKept, currentDateTime).getDays, 0) //guard agaist keep times in the future (yes!)
-          (item, computeMasterScoreNextGen(item.uriScores, daysSinceLastKept, 4242))
+          (item, computeMasterScoreNextGen(item.uriScores, daysSinceLastKept, keepCount))
         }
       }
 
@@ -292,7 +295,7 @@ class RecommendationGenerationCommander @Inject() (
                   genStateRepo.save(newState)
                 }
                 if (state.seq < newSeqNum) {
-                  if (lock.waiting < 10) {
+                  if (lock.waiting < 50) {
                     precomputeRecommendationsForUser(userId, boostedKeepers, nextGen, Some(alwaysInclude))
                   } else {
                     precomputeRecommendationsForUser(userId, boostedKeepers, nextGen) //No point in keeping all that data in memory when it's not needed soon
@@ -300,7 +303,7 @@ class RecommendationGenerationCommander @Inject() (
                 }
                 Future.successful(false)
               } else {
-                if (nextGen) processSeeds(seeds, newState, userId, boostedKeepers, alwaysInclude) else processSeeds(seeds, newState, userId, boostedKeepers, alwaysInclude)
+                if (nextGen) processSeedsNextGen(seeds, newState, userId, boostedKeepers, alwaysInclude) else processSeeds(seeds, newState, userId, boostedKeepers, alwaysInclude)
               }
           }
           res.onSuccess {
