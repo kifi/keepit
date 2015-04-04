@@ -589,7 +589,10 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
   }
 
   def getUsersByExperiment(experimentType: ExperimentType): Future[Set[User]] = {
-    Future.successful(allUsers.map(_._2).toSet)
+    Future.successful(allUserExperiments.toSeq.filter {
+      case (user, experiments) =>
+        experiments.map(_.experimentType).contains(experimentType)
+    }.map { case (user, experiment) => allUsers(user) }.toSet)
   }
 
   def getSearchFriends(userId: Id[User]): Future[Set[Id[User]]] = {
