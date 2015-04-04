@@ -42,36 +42,19 @@ angular.module('kifi')
   }
 ])
 
-.filter('shadedBackground', [
+.filter('shadedBackgroundImage', [
   'env',
   function (env) {
-    return function (o, imgGradientOpacityTop, imgGradientOpacityBottom, colorGradientOpacityTop) {
-      if (o.image) {
-        return [
-          'background-image:',
-          'linear-gradient(rgba(0,0,0,', imgGradientOpacityTop, '),rgba(0,0,0,', imgGradientOpacityBottom, ')),',
-          'url(', env.picBase, '/', o.image.path, ');',
-          'background-position:0,', o.image.x, '% ', o.image.y, '%'
-        ].join('');
-      }
-      return [
-        'background-color:', o.color, ';',
-        'background-image:linear-gradient(rgba(0,0,0,', colorGradientOpacityTop, '),rgba(0,0,0,0))'
-      ].join('');
+    return function (o, gradientOpacityTop, gradientOpacityBottom) {
+      return o ? [
+        'background-image:',
+        'linear-gradient(rgba(0,0,0,', gradientOpacityTop, '),rgba(0,0,0,', gradientOpacityBottom, ')),',
+        'url(', o.url || env.picBase + '/' + o.path, ');',
+        'background-position:0,', o.x, '% ', o.y, '%'
+      ].join('') : '';
     };
   }
 ])
-
-.filter('shadedBackgroundImage', function () {
-  return function (o, gradientOpacityTop, gradientOpacityBottom) {
-    return o ? [
-      'background-image:',
-      'linear-gradient(rgba(0,0,0,', gradientOpacityTop, '),rgba(0,0,0,', gradientOpacityBottom, ')),',
-      'url(', o.url, ');',
-      'background-position:0,', o.x, '% ', o.y, '%'
-    ].join('') : '';
-  };
-})
 
 .filter('num', function () {
   return function (n) {
