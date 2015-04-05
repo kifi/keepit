@@ -1,7 +1,7 @@
 package com.keepit.realtime
 
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
-import com.keepit.eliza.UserPushNotificationCategory
+import com.keepit.eliza.{ LibraryPushNotificationCategory, UserPushNotificationCategory }
 import com.keepit.eliza.commanders.MessagingAnalytics
 
 import scala.concurrent.duration._
@@ -122,7 +122,12 @@ class UrbanAirship @Inject() (
       case mtpn: MessageThreadPushNotification =>
         json.as[JsObject] + ("id" -> JsString(mtpn.id.id))
       case lupn: LibraryUpdatePushNotification =>
-        val withLid = json.as[JsObject] ++ Json.obj("t" -> "lr", "lid" -> JsString(Library.publicId(lupn.libraryId).id))
+        val pushType = lupn.category match {
+          case LibraryPushNotificationCategory.LibraryChanged => "lr"
+          case LibraryPushNotificationCategory.LibraryInvitation => "li"
+          case _ => "lr"
+        }
+        val withLid = json.as[JsObject] ++ Json.obj("t" -> pushType, "lid" -> Library.publicId(lupn.libraryId).id)
         deviceType match {
           case DeviceType.Android =>
             withLid
