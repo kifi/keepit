@@ -7,7 +7,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.eliza.UserPushNotificationCategory
+import com.keepit.eliza.{ LibraryPushNotificationCategory, UserPushNotificationCategory }
 import com.keepit.eliza.commanders.MessagingAnalytics
 import com.keepit.model.{ Library, User }
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -76,6 +76,7 @@ class AppBoy @Inject() (
     }
   }
 
+  // see https://docs.google.com/a/kifi.com/document/d/1efEGk8Wdj2dAjWjUWvsHW5UC0p2srjIXiju8tLpuOMU/edit# for spec
   private def addExtraJson(notification: PushNotification, deviceType: DeviceType) = {
     val json = Json.obj("unreadCount" -> notification.unvisitedCount)
     notification match {
@@ -84,7 +85,12 @@ class AppBoy @Inject() (
       case mtpn: MessageThreadPushNotification =>
         json.as[JsObject] + ("id" -> JsString(mtpn.id.id))
       case lupn: LibraryUpdatePushNotification =>
-        val withLid = json.as[JsObject] ++ Json.obj("t" -> "lr", "lid" -> Library.publicId(lupn.libraryId).id)
+        val pushType = lupn.category match {
+          case LibraryPushNotificationCategory.LibraryChanged => "lr"
+          case LibraryPushNotificationCategory.LibraryInvitation => "li"
+          case _ => "lr"
+        }
+        val withLid = json.as[JsObject] ++ Json.obj("t" -> pushType, "lid" -> Library.publicId(lupn.libraryId).id)
         deviceType match {
           case DeviceType.Android =>
             withLid

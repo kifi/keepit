@@ -39,6 +39,7 @@ object UserPushNotificationCategory {
 
 object LibraryPushNotificationCategory {
   val LibraryChanged = LibraryPushNotificationCategory("LibraryChanged")
+  val LibraryInvitation = LibraryPushNotificationCategory("LibraryInvitation")
 }
 
 case class PushNotificationExperiment(name: String)
