@@ -2,7 +2,7 @@ package com.keepit.common.social
 
 import akka.actor.Scheduler
 import com.google.inject.Inject
-import com.keepit.commanders.SendFriendConnectionMadeNotificationHelper
+import com.keepit.commanders.FriendConnectionNotifier
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
@@ -37,7 +37,7 @@ class UserConnectionCreator @Inject() (
   eliza: ElizaServiceClient,
   heimdal: HeimdalServiceClient,
   scheduler: Scheduler,
-  sendFriendConnectionMadeHelper: SendFriendConnectionMadeNotificationHelper)
+  sendFriendConnectionMadeHelper: FriendConnectionNotifier)
     extends Logging {
 
   def createConnections(socialUserInfo: SocialUserInfo, socialIds: Seq[SocialId]): Seq[Id[SocialConnection]] = timing(s"createConnections($socialUserInfo) socialIds(${socialIds.length}):${socialIds.mkString(",")}") {
@@ -65,7 +65,7 @@ class UserConnectionCreator @Inject() (
     val emailsF = newConnections.map { connId =>
       log.info(s"Sending new connection to user $connId (to $userId)")
       eliza.sendToUser(connId, Json.arr("new_friends", Set(userConnections.user)))
-      sendFriendConnectionMadeHelper(userId, connId, networkType) map (_ => ())
+      sendFriendConnectionMadeHelper.sendNotification(userId, connId, networkType) map (_ => ())
     }.toSeq
 
     if (newConnections.nonEmpty) {
