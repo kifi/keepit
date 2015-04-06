@@ -6,9 +6,11 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.rover.article.ArticleFetcherProvider
-import com.keepit.rover.model.{ ArticleInfo, RoverArticleInfo, ArticleInfoRepo }
+import com.keepit.rover.model.{ RoverArticleInfo, ArticleInfoRepo }
 import com.keepit.rover.store.RoverArticleStore
 import com.kifi.franz.SQSMessage
+import scala.collection.mutable.{Map => MutableMap}
+import scala.collection.Map
 import scala.concurrent.duration._
 import com.keepit.common.core._
 
@@ -91,7 +93,7 @@ class RoverArticleFetchingActor @Inject() (
         val articleInfosById = articleInfoRepo.getAll(tasks.map(_.body.id).toSet)
         val recentFetchesByDomain = {
           val uniqueDomains = articleInfosById.values.flatMap(_.domain).toSet
-          articleInfoRepo.countRecentFetchesByDomain(uniqueDomains, domainWideThrottlingWindow)
+          MutableMap().withDefaultValue(0) ++= articleInfoRepo.countRecentFetchesByDomain(uniqueDomains, domainWideThrottlingWindow)
         }
         (articleInfosById, recentFetchesByDomain)
       }
@@ -106,6 +108,7 @@ class RoverArticleFetchingActor @Inject() (
             false // task will show up in the queue again within lockTimeOut
           } else {
             startFetching(task, articleInfo)
+            articleInfo.domain.foreach(recentFetchesByDomain(_) += 1)
             true
           }
         }
