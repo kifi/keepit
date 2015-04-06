@@ -6,7 +6,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.rover.article.ArticleFetcherProvider
-import com.keepit.rover.model.{ RoverArticleInfo, ArticleInfoRepo }
+import com.keepit.rover.model.{ ArticleInfo, RoverArticleInfo, ArticleInfoRepo }
 import com.keepit.rover.store.RoverArticleStore
 import com.kifi.franz.SQSMessage
 import scala.concurrent.duration._
@@ -19,6 +19,8 @@ object RoverArticleFetchingActor {
   val minConcurrentFetchTasks: Int = 300
   val maxConcurrentFetchTasks: Int = 400
   val lockTimeOut = 10 minutes
+  val domainWideThrottlingWindow = 10 minutes
+  val domainWideThrottlingLimit = 5
   sealed trait RoverFetchingActorMessage
   case object Close extends RoverFetchingActorMessage
   case object StartPullingTasks extends RoverFetchingActorMessage
@@ -85,47 +87,62 @@ class RoverArticleFetchingActor @Inject() (
 
   private def processTasks(tasks: Seq[SQSMessage[FetchTask]]): Unit = {
     if (!closing && tasks.nonEmpty) {
-      val articleInfosById = db.readOnlyMaster { implicit session =>
-        articleInfoRepo.getAll(tasks.map(_.body.id).toSet)
+      val (articleInfosById, recentFetchesByDomain) = db.readOnlyMaster { implicit session =>
+        val articleInfosById = articleInfoRepo.getAll(tasks.map(_.body.id).toSet)
+        val recentFetchesByDomain = articleInfoRepo.countRecentFetchesByDomain(domainWideThrottlingWindow)
+        (articleInfosById, recentFetchesByDomain)
       }
-      val moreFetching = tasks.filter(task => startFetching(task, articleInfosById(task.body.id)))
+
+      val moreFetching = tasks.filter { task =>
+        val articleInfo = articleInfosById(task.body.id)
+        if (!articleInfo.shouldFetch) {
+          task.consume()
+          false
+        } else {
+          if (shouldThrottle(recentFetchesByDomain)(articleInfo)) {
+            false // task will show up in the queue again within lockTimeOut
+          } else {
+            startFetching(task, articleInfo)
+            true
+          }
+        }
+      }
+
       log.info(s"Started fetching ${moreFetching.length} articles.")
       fetching ++= moreFetching
     }
   }
 
-  private def startFetching(task: SQSMessage[FetchTask], articleInfo: RoverArticleInfo): Boolean = {
-    if (articleInfo.id != Some(task.body.id)) { throw new IllegalArgumentException(s"ArticleInfo with id ${articleInfo.id} does not match $task") }
+  private def shouldThrottle(recentFetchesByDomain: Map[String, Int])(info: RoverArticleInfo): Boolean = {
+    info.domain.flatMap(recentFetchesByDomain.get).exists(_ >= domainWideThrottlingLimit)
+  }
 
-    articleInfo.shouldFetch tap {
-      case false => task.consume()
-      case true => {
-        log.info(s"Fetching ${articleInfo.articleKind} for uri ${articleInfo.uriId}: ${articleInfo.url}")
-        articleFetcher.fetch(articleInfo.getFetchRequest).flatMap {
-          case None => {
-            log.info(s"No ${articleInfo.articleKind} fetched for uri ${articleInfo.uriId}: ${articleInfo.url}")
-            Future.successful(None)
-          }
-          case Some(article) => {
-            log.info(s"Persisting latest ${articleInfo.articleKind} for uri ${articleInfo.uriId}: ${articleInfo.url}")
-            articleStore.add(articleInfo.uriId, articleInfo.latestVersion, article)(articleInfo.articleKind).imap { key =>
-              log.info(s"Persisted latest ${articleInfo.articleKind} with version ${key.version} for uri ${articleInfo.uriId}: ${articleInfo.url}")
-              Some(key.version)
-            }
-          }
-        } recoverWith {
-          case error =>
-            log.error(s"Failed to fetch ${articleInfo.articleKind} for uri ${articleInfo.uriId}: ${articleInfo.url}", error)
-            Future.failed(error)
-        } onComplete {
-          case fetched =>
-            db.readWrite { implicit session =>
-              articleInfoRepo.updateAfterFetch(articleInfo.uriId, articleInfo.articleKind, fetched)
-            }
-            task.consume()
-            self ! Fetched(task)
+  private def startFetching(task: SQSMessage[FetchTask], articleInfo: RoverArticleInfo): Unit = {
+    if (articleInfo.id != Some(task.body.id)) { throw new IllegalArgumentException(s"ArticleInfo with id ${articleInfo.id} does not match $task") }
+    log.info(s"Fetching ${articleInfo.articleKind} for uri ${articleInfo.uriId}: ${articleInfo.url}")
+    articleFetcher.fetch(articleInfo.getFetchRequest).flatMap {
+      case None => {
+        log.info(s"No ${articleInfo.articleKind} fetched for uri ${articleInfo.uriId}: ${articleInfo.url}")
+        Future.successful(None)
+      }
+      case Some(article) => {
+        log.info(s"Persisting latest ${articleInfo.articleKind} for uri ${articleInfo.uriId}: ${articleInfo.url}")
+        articleStore.add(articleInfo.uriId, articleInfo.latestVersion, article)(articleInfo.articleKind).imap { key =>
+          log.info(s"Persisted latest ${articleInfo.articleKind} with version ${key.version} for uri ${articleInfo.uriId}: ${articleInfo.url}")
+          Some(key.version)
         }
       }
+    } recoverWith {
+      case error =>
+        log.error(s"Failed to fetch ${articleInfo.articleKind} for uri ${articleInfo.uriId}: ${articleInfo.url}", error)
+        Future.failed(error)
+    } onComplete {
+      case fetched =>
+        db.readWrite { implicit session =>
+          articleInfoRepo.updateAfterFetch(articleInfo.uriId, articleInfo.articleKind, fetched)
+        }
+        task.consume()
+        self ! Fetched(task)
     }
   }
 
