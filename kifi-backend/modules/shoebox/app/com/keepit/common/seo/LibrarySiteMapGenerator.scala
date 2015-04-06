@@ -68,15 +68,16 @@ class LibrarySiteMapGenerator @Inject() (
               db.readOnlyMaster { implicit s =>
                 val lib = libraryRepo.get(id)
                 val owner = userRepo.load(lib.ownerId)
-                lib -> owner
+                if (lib.lastKept.isDefined && lib.keepCount > 3) Some(lib -> owner)
+                else None
               }
-            }.map {
-              case (lib, owner) =>
+            }.flatMap {
+              case Some(libInfo) =>
                 <url>
                   <loc>
-                    { path(lib, owner) }
+                    { path(libInfo._1, libInfo._2) }
                   </loc>
-                  <lastmod>{ ISO_8601_DAY_FORMAT.print(lib.lastKept.get) }</lastmod>
+                  <lastmod>{ ISO_8601_DAY_FORMAT.print(libInfo._1.lastKept.get) }</lastmod>
                 </url>
             }
           }
