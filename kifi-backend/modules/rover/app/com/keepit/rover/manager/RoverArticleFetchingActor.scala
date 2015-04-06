@@ -9,7 +9,7 @@ import com.keepit.rover.article.ArticleFetcherProvider
 import com.keepit.rover.model.{ RoverArticleInfo, ArticleInfoRepo }
 import com.keepit.rover.store.RoverArticleStore
 import com.kifi.franz.SQSMessage
-import scala.collection.mutable.{Map => MutableMap}
+import scala.collection.mutable.{ Map => MutableMap }
 import scala.collection.Map
 import scala.concurrent.duration._
 import com.keepit.common.core._
