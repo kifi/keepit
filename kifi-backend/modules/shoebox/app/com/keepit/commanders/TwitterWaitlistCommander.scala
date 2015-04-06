@@ -109,6 +109,7 @@ class TwitterWaitlistCommanderImpl @Inject() (
         libraryCommander.addLibrary(addRequest, userId).fold({ fail =>
           Left(fail.message)
         }, { lib =>
+          twitterWaitlistRepo.save(entry.copy(state = TwitterWaitlistEntryStates.ACCEPTED))
           val sync = twitterSyncCommander.internTwitterSync(Some(sui.userId.get), lib.id.get, handle)
           twitterSyncCommander.syncOne(Some(sui), sync, sui.userId.get)
           Right(sync)
