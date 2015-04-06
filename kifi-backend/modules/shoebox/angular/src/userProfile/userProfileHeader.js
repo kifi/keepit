@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfUserProfileHeader', [
-  '$rootScope', '$state', '$timeout', 'profileService', 'inviteService', 'friendService', '$document', 'modalService',
-  function ($rootScope, $state, $timeout, profileService, inviteService, friendService, $document, modalService) {
+  '$rootScope', '$state', '$timeout', 'profileService', 'inviteService', 'friendService', '$document', 'modalService', 'util',
+  function ($rootScope, $state, $timeout, profileService, inviteService, friendService, $document, modalService, util) {
     return {
       restrict: 'A',
       scope: {
@@ -148,6 +148,10 @@ angular.module('kifi')
         //
         // Watches and listeners
         //
+
+        scope.$watch('profile.biography', function (bio) {
+          scope.bioHtml = util.linkify(scope.profile.biography || '');
+        });
 
         scope.$on('$destroy', $rootScope.$on('$stateChangeSuccess', function (event, toState, toParams, fromState) {
           restoreNavLinkHref(fromState);
