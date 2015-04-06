@@ -182,7 +182,7 @@ class TwitterWaitlistController @Inject() (
     val body = commander.getWaitlist.zipWithIndex.map {
       case (t, idx) =>
         s"""
-          |<tr><td>$idx</td><td><a href="https://twitter.com/${t.twitterHandle}">${t.twitterHandle}</a>/td><td><a href="/admin/twitter/accept?handle=${t.twitterHandle}&userId=${t.userId}">Accept</a></td></tr>
+          |<tr><td>$idx</td><td><a href="https://twitter.com/${t.twitterHandle}">${t.twitterHandle}</a></td><td><a href="/admin/twitter/accept?handle=${t.twitterHandle}&userId=${t.userId}">Accept</a></td></tr>
         """.stripMargin
     }.foldRight("")(_ ++ _)
     Ok(Html(s"""
@@ -193,11 +193,8 @@ class TwitterWaitlistController @Inject() (
       """.stripMargin))
   }
 
-  def acceptUser = UserAction(parse.tolerantJson) { request => // todo: admin
-    val userId = (request.body \ "userId").as[Id[User]]
-    val handle = (request.body \ "handle").as[String]
-    commander.acceptUser(userId, handle)
-    Ok
+  def acceptUser(userId: Id[User], handle: String) = UserAction { request => // todo: admin
+    Ok(commander.acceptUser(userId, handle).toString)
   }
 
 }

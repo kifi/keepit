@@ -101,7 +101,7 @@ class TwitterWaitlistCommanderImpl @Inject() (
           visibility = LibraryVisibility.PUBLISHED,
           slug = s"interesting-links-from-$handle",
           kind = Some(LibraryKind.USER_CREATED), // bad!
-          description = Some(""),
+          description = Some(s"Interesting Articles and Links I've shared: https://twitter.com/$handle"),
           color = Some(LibraryColor.pickRandomLibraryColor()),
           listed = Some(true)
         )
