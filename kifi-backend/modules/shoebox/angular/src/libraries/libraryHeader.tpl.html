@@ -1,6 +1,6 @@
 <div class="kf-lh" itemscope itemtype="http://schema.org/CollectionPage">
   <div class="kf-lh-cover" ng-style="{'background-color': library.color}">
-    <meta itemtype="image"/>
+    <meta itemtype="image" content="{{library.image|libImageUrl}}" ng-if="library.image"/>
     <meta itemtype="url" content="{{library.absUrl}}"/>
 
     <div class="kf-lh-cover-image" ng-class="{'kf-fade-in': !settingImage}" ng-attr-style="{{library.image|shadedBackgroundImage:.2:.6}}" ng-if="library.image && imageLoaded"></div>
