@@ -3,6 +3,7 @@ package com.keepit.rover.model
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.db.slick._
 import com.keepit.common.logging.Logging
+import com.keepit.common.net.URI
 import com.keepit.common.plugin.{ SchedulingProperties, SequencingPlugin, SequencingActor }
 import com.keepit.rover.article.{ Article, ArticleKind }
 import com.keepit.model._
@@ -164,6 +165,12 @@ class ArticleInfoRepoImpl @Inject() (
         }
       }
     }
+  }
+
+  def setDomains(p: Int, s: Int)(implicit session: RWSession): Int = {
+    page(p, s).map { info =>
+      (for (r <- rows if r.id === info.id) yield r.domain).update(URI.parse(info.url).toOption.flatMap(_.host).map(_.name))
+    }.sum
   }
 }
 
