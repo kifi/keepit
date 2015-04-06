@@ -71,8 +71,8 @@ class LibrarySiteMapGenerator @Inject() (
                 if (lib.lastKept.isDefined && lib.keepCount > 3) Some(lib -> owner)
                 else None
               }
-            }.flatMap {
-              case Some(libInfo) =>
+            }.flatten.map {
+              case libInfo =>
                 <url>
                   <loc>
                     { path(libInfo._1, libInfo._2) }

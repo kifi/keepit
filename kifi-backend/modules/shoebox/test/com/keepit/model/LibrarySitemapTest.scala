@@ -49,7 +49,7 @@ class LibrarySitemapTest extends Specification with ShoeboxTestInjector {
       val user2 = userRepo.save(u2)
 
       val lib1 = libraryRepo.save(Library(name = "lib1A", ownerId = user1.id.get, visibility = LibraryVisibility.PUBLISHED,
-        createdAt = t1.plusMinutes(1), slug = LibrarySlug("A"), memberCount = 1, lastKept = Some(new DateTime(2015, 3, 16, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE))))
+        createdAt = t1.plusMinutes(1), slug = LibrarySlug("A"), memberCount = 1, lastKept = Some(new DateTime(2015, 3, 16, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)), keepCount = 10))
       libraryMembershipRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = user1.id.get, access = LibraryAccess.OWNER))
 
       val lib2 = libraryRepo.save(Library(name = "lib1B", ownerId = user1.id.get, visibility = LibraryVisibility.PUBLISHED,
