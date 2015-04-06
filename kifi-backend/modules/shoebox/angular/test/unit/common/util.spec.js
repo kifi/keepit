@@ -91,7 +91,8 @@ describe('util', function () {
         '\n<a target="_blank" rel="nofollow" href="http://twitter.com&#x2F;example">twitter.com&#x2F;example</a>');
       expect(util.linkify('Writer.\nEmail: sarahp@techcrunch.com\nhttp://about.me/sarahperez\nArticles I’ve shared')).toBe(
         'Writer.\nEmail: <a href="mailto:sarahp@techcrunch.com">sarahp@techcrunch.com</a>' +
-        '\n<a target="_blank" rel="nofollow" href="http:&#x2F;&#x2F;about.me&#x2F;sarahperez">http:&#x2F;&#x2F;about.me&#x2F;sarahperez</a>\nArticles I’ve shared');
+        '\n<a target="_blank" rel="nofollow" href="http:&#x2F;&#x2F;about.me&#x2F;sarahperez">http:&#x2F;&#x2F;about.me&#x2F;sarahperez</a>' +
+        '\nArticles I’ve shared');
       expect(util.linkify('about.me/sarahperez')).toBe(
         '<a target="_blank" rel="nofollow" href="http://about.me&#x2F;sarahperez">about.me&#x2F;sarahperez</a>');
       expect(util.linkify('https://about.me/sarahperez')).toBe(
@@ -103,7 +104,7 @@ describe('util', function () {
       expect(util.linkify('lung.cancerresearch/news')).toBe(
         '<a target="_blank" rel="nofollow" href="http://lung.cancerresearch&#x2F;news">lung.cancerresearch&#x2F;news</a>');
       expect(util.linkify('https://lung.cancerresearch/news/')).toBe(
-        '<a target="_blank" rel="nofollow" href="https:&#x2F;&#x2F;lung.cancerresearch&#x2F;news&#x2F;">https:&#x2F;&#x2F;lung.cancerresearch&#x2F;news&#x2F;</a>');
+        '<a target="_blank" rel="nofollow" href="https:&#x2F;&#x2F;lung.cancerresearch&#x2F;news&#x2F;">https:&#x2F;&#x2F;lung.cancerresearch&#x2F;news&#x2F;</a>');  // jshint ignore:line
       expect(util.linkify('王府半島酒店.中國')).toBe(
         '王府半島酒店.中國');  // being conservative, not detected
       expect(util.linkify('http://王府半島酒店.中國')).toBe(
