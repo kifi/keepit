@@ -265,7 +265,10 @@ uphSmallMaxDim = 736px // for @media max-height and max-width
   border: none
   padding: 0
   color: accentGreen
-  font-weight: 100
+  line-height: 1.6em
+  font-size: 0.9em
+  font-smoothing: antialiased
+  -moz-osx-font-smoothing: grayscale;
 
   &:hover
     text-decoration: underline
@@ -276,7 +279,6 @@ uphSmallMaxDim = 736px // for @media max-height and max-width
   color: #d8d8d8
   line-height: 1.6em
   font-size: 0.9em
-  font-weight: 100
   font-smoothing: antialiased
   -moz-osx-font-smoothing: grayscale;
   word-break: break-word
@@ -285,6 +287,12 @@ uphSmallMaxDim = 736px // for @media max-height and max-width
     max-width: 88%
     line-height: 16px
     font-size: 10px
+
+  &>a[href]
+    color: inherit
+
+    &:hover
+      text-decoration: underline
 
 .kf-uph-nav
   margin: 10px auto 0

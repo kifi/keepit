@@ -33,6 +33,15 @@ angular.module('kifi')
   };
 })
 
+.filter('libImageUrl', [
+  'env',
+  function (env) {
+    return function (image) {
+      return env.picBase + '/' + image.path;
+    };
+  }
+])
+
 .filter('bgImageAndPos', [
   'env',
   function (env) {

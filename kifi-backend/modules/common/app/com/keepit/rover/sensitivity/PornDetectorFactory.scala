@@ -1,4 +1,4 @@
-package com.keepit.learning.porndetector
+package com.keepit.rover.sensitivity
 
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.logging.Logging
@@ -17,7 +17,7 @@ class PornDetectorFactory @Inject() (
 
   private def load() = store.syncGet(FILE_NAME).get
 
-  def apply(): PornDetector = {
-    new NaiveBayesPornDetector(model.likelihood)
-  }
+  def naiveBayes(): NaiveBayesPornDetector = new NaiveBayesPornDetector(model.likelihood)
+
+  def slidingWindow(windowSize: Int = 10): SlidingWindowPornDetector = new SlidingWindowPornDetector(naiveBayes(), windowSize)
 }

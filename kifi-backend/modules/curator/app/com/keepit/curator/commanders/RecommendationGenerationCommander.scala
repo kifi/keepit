@@ -18,6 +18,7 @@ import com.keepit.curator.model._
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model.{ ExperimentType, NormalizedURI, SystemValueRepo, UriRecommendationScores, User }
 import com.keepit.shoebox.ShoeboxServiceClient
+import com.keepit.common.concurrent.PimpMyFuture._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.modules.statsd.api.Statsd
 
@@ -51,7 +52,7 @@ class RecommendationGenerationCommander @Inject() (
   val perUserRecommendationGenerationLocks = TrieMap[Id[User], ReactiveLock]()
   val candidateURILock = new ReactiveLock(4)
 
-  val superSpecialUsers = Seq(Id[User](273), Id[User](243))
+  val superSpecialUsers = Seq(Id[User](273), Id[User](243), Id[User](8806), Id[User](1), Id[User](9))
   val superSpecialLock = new ReactiveLock(1)
 
   val BATCH_SIZE = 350
@@ -325,7 +326,7 @@ class RecommendationGenerationCommander @Inject() (
 
   def precomputeRecommendations(): Future[Unit] = { //This is the entry point (what the scheduler calls)
     val userIds = usersToPrecomputeRecommendationsFor()
-    for {
+    val t: Future[Future[Unit]] = for {
       boostedKeepersSet <- specialCurators()
       nextGenUsersSet <- nextGenUsers()
     } yield {
@@ -335,6 +336,7 @@ class RecommendationGenerationCommander @Inject() (
         Future.successful(())
       }
     }
+    t.flatten
   }
 
   private val candidateUriCache = CacheBuilder.newBuilder()

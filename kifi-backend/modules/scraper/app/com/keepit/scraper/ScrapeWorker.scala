@@ -4,10 +4,10 @@ import com.google.inject.{ Inject, ImplementedBy }
 import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.net.URI._
 import com.keepit.model._
 import com.keepit.rover.document.utils.Signature
 import com.keepit.rover.fetcher.{ FetchRequest, HttpRedirect }
+import com.keepit.rover.sensitivity.{ PornDetectorFactory, PornDomains, SlidingWindowPornDetector }
 import com.keepit.scraper.extractor._
 import com.keepit.scraper.fetcher.DeprecatedHttpFetcher
 import com.keepit.search.{ LangDetector, Article, ArticleStore }
@@ -17,7 +17,6 @@ import com.keepit.common.time._
 import com.keepit.common.net.URI
 import org.apache.http.HttpStatus
 import scala.util.{ Try, Failure, Success }
-import com.keepit.learning.porndetector.{ PornDomains, PornDetectorFactory, SlidingWindowPornDetector }
 import com.keepit.search.Lang
 import com.keepit.shoebox.ShoeboxScraperClient
 import scala.concurrent.Future
@@ -261,7 +260,7 @@ class ScrapeWorkerImpl @Inject() (
     uriCommander.isNonSensitive(normalizedUri.url).map { nonSensitive =>
       if (!nonSensitive) {
         if (contentLang == Lang("en") && content.size > 100) {
-          val detector = new SlidingWindowPornDetector(pornDetectorFactory())
+          val detector = pornDetectorFactory.slidingWindow()
           val isPorn = PornDomains.isPornDomain(normalizedUri.url) || detector.isPorn(content.take(100000)) || detector.isPorn(title) || detector.isPorn(description)
           if (isPorn && normalizedUri.restriction.exists(_ != Restriction.ADULT)) {
             log.warn(s"uri ${normalizedUri.id.get} is detected as porn. However, existing restirction found: ${normalizedUri.restriction}. Not going to mark it.")

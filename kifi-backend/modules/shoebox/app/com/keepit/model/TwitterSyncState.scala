@@ -14,7 +14,7 @@ case class TwitterSyncState(
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,
     state: State[TwitterSyncState] = TwitterSyncStateStates.ACTIVE,
-    userId: Option[Id[User]],
+    userId: Option[Id[User]], // Id of user to use to sync with Twitter
     twitterHandle: String,
     lastFetchedAt: Option[DateTime],
     libraryId: Id[Library],

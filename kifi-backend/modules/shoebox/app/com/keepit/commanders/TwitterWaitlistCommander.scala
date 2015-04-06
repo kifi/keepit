@@ -7,7 +7,9 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.ElectronicMail
 import com.keepit.common.time._
-import com.keepit.model.{ TwitterWaitlistEntryStates, TwitterWaitlistRepo, User, TwitterWaitlistEntry, UserRepo }
+import com.keepit.heimdal.HeimdalContextBuilder
+import com.keepit.model._
+import com.keepit.social.{ SocialNetworks, SocialNetworkType }
 
 import scala.concurrent.Future
 
@@ -16,6 +18,8 @@ trait TwitterWaitlistCommander {
   def addEntry(userId: Id[User], handle: String): Either[String, (TwitterWaitlistEntry, Option[Future[ElectronicMail]])]
   def getFakeWaitlistPosition(userId: Id[User], handle: String): Option[Long]
   def getFakeWaitlistLength(): Long
+  def getWaitlist: Seq[TwitterWaitlistEntry]
+  def acceptUser(userId: Id[User], handle: String): Either[String, TwitterSyncState]
 }
 
 @Singleton
@@ -24,6 +28,11 @@ class TwitterWaitlistCommanderImpl @Inject() (
     userRepo: UserRepo,
     twitterWaitlistRepo: TwitterWaitlistRepo,
     twitterEmailSender: Provider[TwitterWaitlistEmailSender],
+    socialUserInfoRepo: SocialUserInfoRepo,
+    libraryCommander: LibraryCommander,
+    twitterSyncCommander: TwitterSyncCommander,
+    heimdalContextBuilder: HeimdalContextBuilder,
+    syncStateRepo: TwitterSyncStateRepo,
     clock: Clock) extends TwitterWaitlistCommander with Logging {
 
   private val WAITLIST_LENGTH_SHIFT = 1152
@@ -45,7 +54,7 @@ class TwitterWaitlistCommanderImpl @Inject() (
       }
     }
     entryOpt.right.map { entry =>
-      val (user, savedEntry) = db.readWrite { implicit s =>
+      val (user, savedEntry) = db.readWrite(attempts = 3) { implicit s =>
         val user = userRepo.get(userId)
         val savedEntry = twitterWaitlistRepo.save(entry)
         (user, savedEntry)
@@ -69,6 +78,48 @@ class TwitterWaitlistCommanderImpl @Inject() (
     db.readOnlyReplica { implicit session =>
       twitterWaitlistRepo.countActiveEntriesBeforeDateTime(currentDateTime)
     } * WAITLIST_MULTIPLIER + WAITLIST_LENGTH_SHIFT
+  }
+
+  def getWaitlist: Seq[TwitterWaitlistEntry] = {
+    db.readOnlyReplica { implicit session =>
+      twitterWaitlistRepo.getPending
+    }
+  }
+
+  def acceptUser(userId: Id[User], handle: String): Either[String, TwitterSyncState] = {
+    val (entryOpt, suiOpt, syncOpt) = db.readWrite { implicit session =>
+      val entryOpt = twitterWaitlistRepo.getByUserAndHandle(userId, handle)
+      val suiOpt = socialUserInfoRepo.getByUser(userId).find(_.networkType == SocialNetworks.TWITTER)
+      val syncOpt = syncStateRepo.getByHandleAndUserIdUsed(handle, userId)
+      (entryOpt, suiOpt, syncOpt)
+    }
+
+    (entryOpt, suiOpt, syncOpt) match {
+      case (Some(entry), Some(sui), None) if entry.state == TwitterWaitlistEntryStates.ACTIVE && sui.credentials.isDefined && sui.userId.isDefined =>
+        val addRequest = LibraryAddRequest(
+          name = s"Interesting links from @$handle",
+          visibility = LibraryVisibility.PUBLISHED,
+          slug = s"interesting-links-from-$handle",
+          kind = Some(LibraryKind.USER_CREATED), // bad!
+          description = Some(s"Interesting Articles and Links I've shared: https://twitter.com/$handle"),
+          color = Some(LibraryColor.pickRandomLibraryColor()),
+          listed = Some(true)
+        )
+        implicit val context = heimdalContextBuilder.build
+        libraryCommander.addLibrary(addRequest, userId).fold({ fail =>
+          Left(fail.message)
+        }, { lib =>
+          db.readWrite { implicit session =>
+            twitterWaitlistRepo.save(entry.copy(state = TwitterWaitlistEntryStates.ACCEPTED))
+          }
+          val sync = twitterSyncCommander.internTwitterSync(Some(sui.userId.get), lib.id.get, handle)
+          twitterSyncCommander.syncOne(Some(sui), sync, sui.userId.get)
+          Right(sync)
+        })
+      case _ =>
+        // invalid
+        Left(s"Couldn't accept $userId. $entryOpt, $suiOpt, $syncOpt")
+    }
   }
 }
 

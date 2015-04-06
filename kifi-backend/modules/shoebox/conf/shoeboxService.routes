@@ -800,6 +800,9 @@ POST    /admin/graph/wander                                @com.keepit.controlle
 GET     /admin/graph/discover                              @com.keepit.controllers.admin.WanderingAdminController.fromParisWithLove()
 GET     /admin/graph/uriWandering                          @com.keepit.controllers.admin.WanderingAdminController.uriWandering(steps: Int ?= 20000)
 
+GET     /admin/twitter                                     @com.keepit.controllers.website.TwitterWaitlistController.getWaitlist()
+GET     /admin/twitter/accept                              @com.keepit.controllers.website.TwitterWaitlistController.acceptUser(userId: Id[User], handle: String)
+
 ##########################################
 # Common Healthcheck / service routes
 ##########################################

@@ -37,28 +37,19 @@ class ActivityPushActor @Inject() (
     activityPusher: ActivityPusher,
     airbrake: AirbrakeNotifier) extends FortyTwoActor(airbrake) with Logging {
 
-  private val counter = new AtomicInteger(0)
   def receive = {
     case CreatePushActivityEntities =>
       activityPusher.createPushActivityEntities(100)
     case PushActivities =>
-      if (counter.get <= 0) {
-        activityPusher.getNextPushBatch foreach { activityId =>
-          self ! PushActivity(activityId)
-          counter.incrementAndGet()
-        }
+      activityPusher.getNextPushBatch.foreach { activityId =>
+        self ! PushActivity(activityId)
       }
     case PushActivity(activityPushTaskId) =>
       try {
         activityPusher.pushItBaby(activityPushTaskId)
       } catch {
         case e: Exception =>
-          airbrake.notify(s"on pushing activity $activityPushTaskId", e)
-      } finally {
-        val currCount = counter.decrementAndGet()
-        if (currCount <= 0) {
-          log.info(s"[ActivityPushActor] Would have self-called. $currCount")
-        }
+          airbrake.notify(s"[ActivityPushActor] on pushing activity $activityPushTaskId", e)
       }
   }
 }

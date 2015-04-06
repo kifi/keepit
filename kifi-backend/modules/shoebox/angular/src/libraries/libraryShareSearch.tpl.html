@@ -1,10 +1,10 @@
-<div class="kf-library-share-search" kf-wheel-stop>
+<div class="kf-library-share-search">
   <button ng-if="!manageLibInvite" class="kf-button kf-button-text-optional library-share-button" ng-click="toggleMenu()">
     <span class="kf-button-icon {{btnIconClass || (isOwn ? 'svg-plus-people-green' : 'svg-share-icon')}}"></span> {{isOwn ? 'Invite followers' : 'Share'}}
   </button>
   <div class="library-share-menu">
     <header ng-if="!manageLibInvite" class="library-share-menu-header">{{isOwn ? 'Invite people to follow' : 'Share'}} this library</header>
-    <div class="library-share-menu-content">
+    <div class="library-share-menu-content" kf-wheel-stop>
       <textarea ng-if="!manageLibInvite" class="library-share-input-box library-share-input library-share-message-input" ng-model="share.message" placeholder="Write something?"></textarea>
       <div class="library-share-input-box">
         <img ng-src="/img/spinner_32.gif" ng-show="showSpinner" class="library-share-search-spinner">

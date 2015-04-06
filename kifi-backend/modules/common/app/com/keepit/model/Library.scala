@@ -302,7 +302,7 @@ object LibraryColor {
     }
   }
 
-  val AllColors = Seq(BLUE, SKY_BLUE, GREEN, ORANGE, RED, MAGENTA, PURPLE)
+  val AllColors: Seq[LibraryColor] = Seq(BLUE, SKY_BLUE, GREEN, ORANGE, RED, MAGENTA, PURPLE)
 
   private lazy val rnd = new Random
 

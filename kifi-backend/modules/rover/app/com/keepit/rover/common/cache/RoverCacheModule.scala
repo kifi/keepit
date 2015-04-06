@@ -6,7 +6,9 @@ import com.keepit.eliza.model.UserThreadStatsForUserIdCache
 import com.keepit.graph.model._
 import com.keepit.model._
 import com.keepit.model.cache.UserSessionViewExternalIdCache
+import com.keepit.rover.commanders.ArticleInfoUriCache
 import com.keepit.rover.model.RoverHttpProxyAllCache
+import com.keepit.rover.sensitivity.UriSensitivityCache
 import com.keepit.social.BasicUserUserIdCache
 import com.keepit.search.{ ArticleSearchResultCache, InitialSearchIdCache, ActiveExperimentsCache }
 import com.keepit.common.usersegment.UserSegmentCache
@@ -180,5 +182,13 @@ case class RoverCacheModule(cachePluginModules: CachePluginModule*) extends Cach
   @Provides
   def httpProxyAllCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new RoverHttpProxyAllCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 30 days))
+
+  @Provides @Singleton
+  def articleInfoUriCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
+    new ArticleInfoUriCache(stats, accessLog, (outerRepo, 30 days))
+
+  @Provides @Singleton
+  def uriSensitivityCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
+    new UriSensitivityCache(stats, accessLog, (outerRepo, 30 days))
 
 }

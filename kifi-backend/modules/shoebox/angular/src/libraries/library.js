@@ -4,11 +4,11 @@ angular.module('kifi')
 
 .controller('LibraryCtrl', [
   '$scope', '$rootScope', '$analytics', '$location', '$state', '$stateParams', '$timeout', '$window',
-  '$FB', '$twitter', 'util', 'initParams', 'library', 'keepDecoratorService', 'libraryService', 'modalService',
+  '$FB', '$twitter', 'env', 'util', 'initParams', 'library', 'keepDecoratorService', 'libraryService', 'modalService',
   'platformService', 'profileService', 'originTrackingService', 'installService',
   function (
     $scope, $rootScope, $analytics, $location, $state, $stateParams, $timeout, $window,
-    $FB, $twitter, util, initParams, library, keepDecoratorService, libraryService, modalService,
+    $FB, $twitter, env, util, initParams, library, keepDecoratorService, libraryService, modalService,
     platformService, profileService, originTrackingService, installService) {
 
     //
@@ -193,7 +193,7 @@ angular.module('kifi')
       trackShareEvent('clickedShareFacebook');
       $FB.ui({
         method: 'share',
-        href: library.absUrl +
+        href: env.origin + library.url +
           '?utm_medium=vf_facebook&utm_source=library_share&utm_content=lid_' + library.id +
           '&kcid=na-vf_facebook-library_share-lid_' + library.id
       });
@@ -205,11 +205,12 @@ angular.module('kifi')
 
     $scope.shareTwitter = function (event) {
       trackShareEvent('clickedShareTwitter');
+      var absUrl = env.origin + library.url;
       event.target.href = 'https://twitter.com/intent/tweet' + util.formatQueryString({
-        original_referer: library.absUrl,
+        original_referer: absUrl,
         text: 'Discover this amazing @Kifi library about ' + library.name + '!',
         tw_p: 'tweetbutton',
-        url: library.absUrl +
+        url: absUrl +
           '?utm_medium=vf_twitter&utm_source=library_share&utm_content=lid_' + library.id +
           '&kcid=na-vf_twitter-library_share-lid_' + library.id
       });

@@ -55,10 +55,8 @@
     </div>
 
     <h1 class="kf-uph-name" itemprop="name">{{profile|name}}</h1>
-    <div class="kf-uph-bio">
-      {{profile.biography}}
-      <button class="kf-uph-bio-add" ng-click="showBiographyModal()" ng-if="viewingOwnProfile && !profile.biography">Add a Bio</button>
-    </div>
+    <button class="kf-uph-bio-add" ng-click="showBiographyModal()" ng-if="viewingOwnProfile && !profile.biography">Add a Bio</button>
+    <div class="kf-uph-bio" ng-bind-html="bioHtml"></div>
   </div>
   <nav class="kf-uph-nav">
     <a class="kf-uph-nav-a" href="{{profile|profileUrl:'libraries'}}" data-path="libraries">
