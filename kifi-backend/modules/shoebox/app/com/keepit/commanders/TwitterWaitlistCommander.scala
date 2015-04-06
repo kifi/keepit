@@ -54,7 +54,7 @@ class TwitterWaitlistCommanderImpl @Inject() (
       }
     }
     entryOpt.right.map { entry =>
-      val (user, savedEntry) = db.readWrite { implicit s =>
+      val (user, savedEntry) = db.readWrite(attempts = 3) { implicit s =>
         val user = userRepo.get(userId)
         val savedEntry = twitterWaitlistRepo.save(entry)
         (user, savedEntry)
