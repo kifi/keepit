@@ -150,7 +150,7 @@ angular.module('kifi')
         //
 
         scope.$watch('profile.biography', function (bio) {
-          scope.bioHtml = util.linkify(scope.profile.biography || '');
+          scope.bioHtml = util.linkify(bio || '');
         });
 
         scope.$on('$destroy', $rootScope.$on('$stateChangeSuccess', function (event, toState, toParams, fromState) {
