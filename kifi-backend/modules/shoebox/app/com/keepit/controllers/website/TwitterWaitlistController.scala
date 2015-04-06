@@ -10,6 +10,7 @@ import com.keepit.common.time.Clock
 import com.keepit.model._
 import com.keepit.social.{ SocialGraphPlugin, SocialNetworks }
 import play.api.libs.json.Json
+import play.twirl.api.Html
 import securesocial.core.SecureSocial
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Success, Try }
@@ -174,6 +175,29 @@ class TwitterWaitlistController @Inject() (
           MarketingSiteRouter.marketingSite("twitter-confirmation")
         }
     }
+  }
+
+  // Admin actions
+  def getWaitlist = UserAction { request => // todo: admin
+    val body = commander.getWaitlist.zipWithIndex.map {
+      case (t, idx) =>
+        s"""
+          |<tr><td>$idx</td><td><a href="https://twitter.com/${t.twitterHandle}">${t.twitterHandle}</a>/td><td><a href="/admin/twitter/accept?handle=${t.twitterHandle}&userId=${t.userId}">Accept</a></td></tr>
+        """.stripMargin
+    }.foldRight("")(_ ++ _)
+    Ok(Html(s"""
+        |<table>
+        | <tr><td>#</td><td>Handle</td><td></td></tr>
+        | $body
+        | </table>
+      """.stripMargin))
+  }
+
+  def acceptUser = UserAction(parse.tolerantJson) { request => // todo: admin
+    val userId = (request.body \ "userId").as[Id[User]]
+    val handle = (request.body \ "handle").as[String]
+    commander.acceptUser(userId, handle)
+    Ok
   }
 
 }
