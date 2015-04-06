@@ -89,6 +89,25 @@ describe('util', function () {
         'www.google.com&#x2F;maps&#x2F;123+Main&#x2F;@37.4,-122.7&#x2F;data=!3m1!1s:0xa</a>' +
         '\t<a href="mailto:b@c.d">b@c.d</a>' +
         '\n<a target="_blank" rel="nofollow" href="http://twitter.com&#x2F;example">twitter.com&#x2F;example</a>');
+      expect(util.linkify('Writer.\nEmail: sarahp@techcrunch.com\nhttp://about.me/sarahperez\nArticles I’ve shared')).toBe(
+        'Writer.\nEmail: <a href="mailto:sarahp@techcrunch.com">sarahp@techcrunch.com</a>' +
+        '\n<a target="_blank" rel="nofollow" href="http:&#x2F;&#x2F;about.me&#x2F;sarahperez">http:&#x2F;&#x2F;about.me&#x2F;sarahperez</a>\nArticles I’ve shared');
+      expect(util.linkify('about.me/sarahperez')).toBe(
+        '<a target="_blank" rel="nofollow" href="http://about.me&#x2F;sarahperez">about.me&#x2F;sarahperez</a>');
+      expect(util.linkify('https://about.me/sarahperez')).toBe(
+        '<a target="_blank" rel="nofollow" href="https:&#x2F;&#x2F;about.me&#x2F;sarahperez">https:&#x2F;&#x2F;about.me&#x2F;sarahperez</a>');
+      expect(util.linkify('fail.wtf')).toBe(
+        '<a target="_blank" rel="nofollow" href="http://fail.wtf">fail.wtf</a>');
+      expect(util.linkify('http://fail.wtf/')).toBe(
+        '<a target="_blank" rel="nofollow" href="http:&#x2F;&#x2F;fail.wtf&#x2F;">http:&#x2F;&#x2F;fail.wtf&#x2F;</a>');
+      expect(util.linkify('lung.cancerresearch/news')).toBe(
+        '<a target="_blank" rel="nofollow" href="http://lung.cancerresearch&#x2F;news">lung.cancerresearch&#x2F;news</a>');
+      expect(util.linkify('https://lung.cancerresearch/news/')).toBe(
+        '<a target="_blank" rel="nofollow" href="https:&#x2F;&#x2F;lung.cancerresearch&#x2F;news&#x2F;">https:&#x2F;&#x2F;lung.cancerresearch&#x2F;news&#x2F;</a>');
+      expect(util.linkify('王府半島酒店.中國')).toBe(
+        '王府半島酒店.中國');  // being conservative, not detected
+      expect(util.linkify('http://王府半島酒店.中國')).toBe(
+        '<a target="_blank" rel="nofollow" href="http:&#x2F;&#x2F;王府半島酒店.中國">http:&#x2F;&#x2F;王府半島酒店.中國</a>');
     });
   });
 
