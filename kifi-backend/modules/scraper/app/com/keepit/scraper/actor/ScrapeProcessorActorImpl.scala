@@ -105,7 +105,8 @@ class ScrapeProcessorActorImpl @Inject() (
         airbrake.notify(s"Failed to obtain qSize from supervisor", e)
     }
     futureTask
-  } else {
+  }
+  else {
     log.warn(s"lock waiting size = ${lock.waiting}. ScrapeProcessorActor doing nothing.")
   }
 
