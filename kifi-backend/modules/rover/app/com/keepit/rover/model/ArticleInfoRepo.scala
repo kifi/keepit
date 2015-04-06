@@ -49,6 +49,7 @@ class ArticleInfoRepoImpl @Inject() (
   class ArticleInfoTable(tag: Tag) extends RepoTable[RoverArticleInfo](db, tag, "article_info") with SeqNumberColumn[RoverArticleInfo] {
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)
     def url = column[String]("url", O.NotNull)
+    def domain = column[Option[String]]("domain", O.Nullable)
     def kind = column[String]("kind", O.NotNull)
     def bestVersionMajor = column[Option[VersionNumber[Article]]]("best_version_major", O.Nullable)
     def bestVersionMinor = column[Option[VersionNumber[Article]]]("best_version_minor", O.Nullable)
@@ -63,7 +64,7 @@ class ArticleInfoRepoImpl @Inject() (
     def failureInfo = column[Option[String]]("failure_info", O.Nullable)
     def lastQueuedAt = column[Option[DateTime]]("last_queued_at", O.Nullable)
 
-    def * = (id.?, createdAt, updatedAt, state, seq, uriId, url, kind, bestVersionMajor, bestVersionMinor, latestVersionMajor, latestVersionMinor, oldestVersionMajor, oldestVersionMinor, lastFetchedAt, nextFetchAt, fetchInterval, failureCount, failureInfo, lastQueuedAt) <> ((RoverArticleInfo.applyFromDbRow _).tupled, RoverArticleInfo.unapplyToDbRow _)
+    def * = (id.?, createdAt, updatedAt, state, seq, uriId, url, domain, kind, bestVersionMajor, bestVersionMinor, latestVersionMajor, latestVersionMinor, oldestVersionMajor, oldestVersionMinor, lastFetchedAt, nextFetchAt, fetchInterval, failureCount, failureInfo, lastQueuedAt) <> ((RoverArticleInfo.applyFromDbRow _).tupled, RoverArticleInfo.unapplyToDbRow _)
   }
 
   def table(tag: Tag) = new ArticleInfoTable(tag)
@@ -115,7 +116,7 @@ class ArticleInfoRepoImpl @Inject() (
             save(reactivatedInfo)
           }
           case None => {
-            val newInfo = RoverArticleInfo(uriId = uriId, url = url, kind = kind.typeCode).initializeSchedulingPolicy
+            val newInfo = RoverArticleInfo.initialize(uriId, url, kind)
             save(newInfo)
           }
         }

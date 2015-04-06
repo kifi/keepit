@@ -1,10 +1,12 @@
 package com.keepit.rover.model
 
 import com.keepit.common.db._
+import com.keepit.common.net.URI
 import com.keepit.common.time._
 import com.keepit.model._
-import com.keepit.rover.article.{ ArticleFetchRequest, Article }
+import com.keepit.rover.article.{ ArticleKind, ArticleFetchRequest, Article }
 import com.keepit.rover.manager.{ FailureRecoveryPolicy, FetchSchedulingPolicy }
+import com.keepit.rover.model.RoverArticleInfo._
 import org.joda.time.DateTime
 import scala.concurrent.duration.Duration
 
@@ -19,6 +21,7 @@ case class RoverArticleInfo(
     seq: SequenceNumber[RoverArticleInfo] = SequenceNumber.ZERO,
     uriId: Id[NormalizedURI],
     url: String,
+    domain: Option[String],
     kind: String, // todo(Léo): make this kind: ArticleKind[_ <: Article] with Scala 2.11, (with proper mapper, serialization is unchanged)
     bestVersion: Option[ArticleVersion] = None,
     latestVersion: Option[ArticleVersion] = None,
@@ -116,6 +119,12 @@ object RoverArticleInfo {
     )
   }
 
+  def initialize(uriId: Id[NormalizedURI], url: String, kind: ArticleKind[_ <: Article]): RoverArticleInfo = {
+    val domain = URI.parse(url).toOption.flatMap(_.host).map(_.name)
+    val newInfo = RoverArticleInfo(uriId = uriId, url = url, domain = domain, kind = kind.typeCode)
+    newInfo.initializeSchedulingPolicy
+  }
+
   def applyFromDbRow(
     id: Option[Id[RoverArticleInfo]] = None,
     createdAt: DateTime = currentDateTime,
@@ -124,6 +133,7 @@ object RoverArticleInfo {
     seq: SequenceNumber[RoverArticleInfo] = SequenceNumber.ZERO,
     uriId: Id[NormalizedURI],
     url: String,
+    domain: Option[String],
     kind: String,
     bestVersionMajor: Option[VersionNumber[Article]],
     bestVersionMinor: Option[VersionNumber[Article]],
@@ -140,7 +150,7 @@ object RoverArticleInfo {
     val bestVersion = articleVersionFromDb(bestVersionMajor, bestVersionMinor)
     val latestVersion = articleVersionFromDb(latestVersionMajor, latestVersionMinor)
     val oldestVersion = articleVersionFromDb(oldestVersionMajor, oldestVersionMinor)
-    RoverArticleInfo(id, createdAt, updatedAt, state, seq, uriId, url, kind, bestVersion, latestVersion, oldestVersion, lastFetchedAt, nextFetchAt, fetchInterval, failureCount, failureInfo, lastQueuedAt)
+    RoverArticleInfo(id, createdAt, updatedAt, state, seq, uriId, url, domain, kind, bestVersion, latestVersion, oldestVersion, lastFetchedAt, nextFetchAt, fetchInterval, failureCount, failureInfo, lastQueuedAt)
   }
 
   def unapplyToDbRow(info: RoverArticleInfo) = {
@@ -155,6 +165,7 @@ object RoverArticleInfo {
       info.seq,
       info.uriId,
       info.url,
+      info.domain,
       info.kind,
       bestVersionMajor,
       bestVersionMinor,
