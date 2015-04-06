@@ -2714,8 +2714,16 @@ function throttle(func, wait, opts) {  // underscore.js
   };
 }
 
+//                           |---- IP v4 address ---||- subs -||-- core --|  |----------- suffix -----------| |- name --|    |-- port? --|
+var domainRe = /^https?:\/\/(\d{1,3}(?:\.\d{1,3}){3}|[^:\/?#]*?([^.:\/?#]+)\.(?:[^.:\/?#]{2,}|com?\.[a-z]{2})|[^.:\/?#]+)\.?(?::\d{2,5})?(?:$|\/|\?|#)/;
 function sameOrLikelyRedirected(url1, url2) {
-  return true;
+  if (url1 === url2) {
+    return true;
+  }
+  var m1 = url1.match(domainRe);
+  var m2 = url2.match(domainRe);
+  // hostnames match exactly or core domain without subdomains and TLDs match (e.g. "google" in docs.google.fr and www.google.co.uk)
+  return m1[1] === m2[1] || m1[2] === (m2[2] || 0);
 }
 
 // ===== Session management
