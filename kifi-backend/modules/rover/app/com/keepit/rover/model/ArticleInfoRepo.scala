@@ -6,13 +6,16 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.{ SchedulingProperties, SequencingPlugin, SequencingActor }
 import com.keepit.rover.article.{ Article, ArticleKind }
 import com.keepit.model._
+import com.keepit.rover.commanders.{ ArticleInfoUriKey, ArticleInfoUriCache }
 import com.keepit.rover.manager.FailureRecoveryPolicy
+import com.keepit.rover.sensitivity.{ UriSensitivityKey, UriSensitivityCache }
 import org.joda.time.DateTime
 import com.keepit.common.time._
 import com.google.inject.{ Singleton, Inject, ImplementedBy }
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.{ DbSequenceAssigner, VersionNumber, State, Id }
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.core._
 
 import scala.concurrent.duration.Duration
 import scala.util.{ Success, Failure, Try }
@@ -22,6 +25,7 @@ trait ArticleInfoRepo extends Repo[RoverArticleInfo] with SeqNumberFunction[Rove
   def getAll(ids: Set[Id[RoverArticleInfo]])(implicit session: RSession): Map[Id[RoverArticleInfo], RoverArticleInfo]
   def getByUriAndKind[A <: Article](uriId: Id[NormalizedURI], kind: ArticleKind[A], excludeState: Option[State[RoverArticleInfo]] = Some(ArticleInfoStates.INACTIVE))(implicit session: RSession): Option[RoverArticleInfo]
   def getByUri(uriId: Id[NormalizedURI], excludeState: Option[State[RoverArticleInfo]] = Some(ArticleInfoStates.INACTIVE))(implicit session: RSession): Set[RoverArticleInfo]
+  def getByUris(uriIds: Set[Id[NormalizedURI]], excludeState: Option[State[RoverArticleInfo]] = Some(ArticleInfoStates.INACTIVE))(implicit session: RSession): Map[Id[NormalizedURI], Set[RoverArticleInfo]]
   def internByUri(uriId: Id[NormalizedURI], url: String, kinds: Set[ArticleKind[_ <: Article]])(implicit session: RWSession): Map[ArticleKind[_ <: Article], RoverArticleInfo]
   def deactivateByUriAndKinds(uriId: Id[NormalizedURI], kinds: Set[ArticleKind[_ <: Article]])(implicit session: RWSession): Unit
   def getRipeForFetching(limit: Int, queuedForMoreThan: Duration)(implicit session: RSession): Seq[RoverArticleInfo]
@@ -34,6 +38,8 @@ trait ArticleInfoRepo extends Repo[RoverArticleInfo] with SeqNumberFunction[Rove
 class ArticleInfoRepoImpl @Inject() (
     val db: DataBaseComponent,
     val clock: Clock,
+    articleInfoCache: ArticleInfoUriCache,
+    uriSensitivityCache: UriSensitivityCache,
     airbrake: AirbrakeNotifier,
     implicit val failurePolicy: FailureRecoveryPolicy) extends DbRepo[RoverArticleInfo] with ArticleInfoRepo with SeqNumberDbFunction[RoverArticleInfo] with Logging {
 
@@ -63,15 +69,18 @@ class ArticleInfoRepoImpl @Inject() (
   def table(tag: Tag) = new ArticleInfoTable(tag)
   initTable()
 
-  override def deleteCache(model: RoverArticleInfo)(implicit session: RSession): Unit = {}
+  override def deleteCache(model: RoverArticleInfo)(implicit session: RSession): Unit = {
+    articleInfoCache.remove(ArticleInfoUriKey(model.uriId))
+    uriSensitivityCache.remove(UriSensitivityKey(model.uriId))
+  }
 
   override def invalidateCache(model: RoverArticleInfo)(implicit session: RSession): Unit = {}
 
   override def save(model: RoverArticleInfo)(implicit session: RWSession): RoverArticleInfo = {
-    super.save(model.copy(seq = deferredSeqNum()))
+    super.save(model.copy(seq = deferredSeqNum())) tap deleteCache
   }
 
-  // Dangerous: this does *not* increment the sequence number - use only if you want an update *not* to be broadcasted!
+  // Dangerous: this does *not* increment the sequence number nor invalidate caches
   private def saveSilently(model: RoverArticleInfo)(implicit session: RWSession): RoverArticleInfo = {
     super.save(model)
   }
@@ -86,6 +95,12 @@ class ArticleInfoRepoImpl @Inject() (
 
   def getByUri(uriId: Id[NormalizedURI], excludeState: Option[State[RoverArticleInfo]] = Some(ArticleInfoStates.INACTIVE))(implicit session: RSession): Set[RoverArticleInfo] = {
     (for (r <- rows if r.uriId === uriId && r.state =!= excludeState.orNull) yield r).list.toSet
+  }
+
+  def getByUris(uriIds: Set[Id[NormalizedURI]], excludeState: Option[State[RoverArticleInfo]] = Some(ArticleInfoStates.INACTIVE))(implicit session: RSession): Map[Id[NormalizedURI], Set[RoverArticleInfo]] = {
+    val existingByUriId = (for (r <- rows if r.uriId.inSet(uriIds) && r.state =!= excludeState.orNull) yield r).list.toSet[RoverArticleInfo].groupBy(_.uriId)
+    val missingUriIds = uriIds -- existingByUriId.keySet
+    existingByUriId ++ missingUriIds.map(_ -> Set.empty[RoverArticleInfo])
   }
 
   def internByUri(uriId: Id[NormalizedURI], url: String, kinds: Set[ArticleKind[_ <: Article]])(implicit session: RWSession): Map[ArticleKind[_ <: Article], RoverArticleInfo] = {
@@ -143,7 +158,9 @@ class ArticleInfoRepoImpl @Inject() (
       fetched match {
         case Failure(error) => saveSilently(withFetchComplete.withFailure(error))
         case Success(None) => saveSilently(withFetchComplete.withoutChange)
-        case Success(Some(articleVersion)) => save(withFetchComplete.withLatestArticle(articleVersion))
+        case Success(Some(articleVersion)) => {
+          save(withFetchComplete.withLatestArticle(articleVersion))
+        }
       }
     }
   }

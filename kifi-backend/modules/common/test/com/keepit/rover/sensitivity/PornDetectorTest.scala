@@ -1,6 +1,7 @@
-package com.keepit.learning.porndetector
+package com.keepit.rover.sensitivity
 
 import org.specs2.mutable.Specification
+
 import scala.math.abs
 
 class PornDetectorTest extends Specification {
