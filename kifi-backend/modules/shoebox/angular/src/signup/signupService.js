@@ -20,7 +20,7 @@ angular.module('kifi')
 
         scope.onError = function (reason) {
           (handlers.onError || function (reason) {
-            $window.location.href = (reason && reason.redirect) || 'https://www.kifi.com/signup';
+            $window.location.href = (reason && reason.redirect) || '/signup';
           })(reason);
         };
 
@@ -188,7 +188,7 @@ angular.module('kifi')
         registrationService.socialFinalize(fields).then(function () {
           // todo: do we need to handle the return resp?
           modalService.close();
-          $location.url('/install');
+          $window.location.href = '/install';
         })['catch'](function () {
           // Would love to get logs of this.
           $scope.onError({'code': 'social_finalize_fail', redirect: 'https://www.kifi.com/signup'});
@@ -206,7 +206,7 @@ angular.module('kifi')
           // todo: do we need to handle the return resp?
           modalService.close();
           trackEvent('visitor_clicked_page', 'signup2', 'signup');
-          $location.url('/install');
+          $window.location.href = '/install';
         })['catch'](function (resp) {
           if (resp.data && resp.data.error === 'user_exists_failed_auth') {
             $scope.requestActive = false;
