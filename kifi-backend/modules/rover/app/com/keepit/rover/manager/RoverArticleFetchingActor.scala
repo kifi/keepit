@@ -89,7 +89,10 @@ class RoverArticleFetchingActor @Inject() (
     if (!closing && tasks.nonEmpty) {
       val (articleInfosById, recentFetchesByDomain) = db.readOnlyMaster { implicit session =>
         val articleInfosById = articleInfoRepo.getAll(tasks.map(_.body.id).toSet)
-        val recentFetchesByDomain = articleInfoRepo.countRecentFetchesByDomain(domainWideThrottlingWindow)
+        val recentFetchesByDomain = {
+          val uniqueDomains = articleInfosById.values.flatMap(_.domain).toSet
+          articleInfoRepo.countRecentFetchesByDomain(uniqueDomains, domainWideThrottlingWindow)
+        }
         (articleInfosById, recentFetchesByDomain)
       }
 
