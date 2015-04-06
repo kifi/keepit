@@ -201,7 +201,7 @@ class URISummaryCommanderTest extends Specification with ShoeboxTestInjector {
 
     "find image from clients" in {
       withDb(modules: _*) { implicit injector =>
-        val URISummaryCommander = inject[URISummaryCommander]
+        val uriSummaryCommander = inject[URISummaryCommander]
         val (nUri1, nUri2) = db.readWrite { implicit session =>
           val nUri1 = normalizedURIInterner.internByUri("http://www.adomain.com")
           val nUri2 = normalizedURIInterner.internByUri("http://www.anotherdomain.com")
@@ -212,7 +212,7 @@ class URISummaryCommanderTest extends Specification with ShoeboxTestInjector {
         type Partial = PartialFunction[Option[String], MatchResult[_]]
 
         // fetch image from embedly
-        val result7Fut = URISummaryCommander.getURISummaryForRequest(embedlyRequest) map { _.imageUrl }
+        val result7Fut = uriSummaryCommander.getURISummaryForRequest(embedlyRequest) map { _.imageUrl }
         result7Fut must beLike({
           case Some(result: String) =>
             result === URISummaryCommanderTestDummyValues.dummyEmbedlyImageUrl
@@ -220,7 +220,7 @@ class URISummaryCommanderTest extends Specification with ShoeboxTestInjector {
 
         // find any kind of image
         val embedlyRequestWithAny = embedlyRequest.copy(imageType = ImageType.ANY)
-        val embedlyImageFut = URISummaryCommander.getURISummaryForRequest(embedlyRequestWithAny) map { _.imageUrl }
+        val embedlyImageFut = uriSummaryCommander.getURISummaryForRequest(embedlyRequestWithAny) map { _.imageUrl }
         embedlyImageFut must beLike({
           case Some(result: String) =>
             result === URISummaryCommanderTestDummyValues.dummyEmbedlyImageUrl
