@@ -33,6 +33,7 @@ trait ArticleInfoRepo extends Repo[RoverArticleInfo] with SeqNumberFunction[Rove
   def markAsQueued(ids: Id[RoverArticleInfo]*)(implicit session: RWSession): Unit
   def unmarkAsQueued(ids: Id[RoverArticleInfo]*)(implicit session: RWSession): Unit
   def updateAfterFetch[A <: Article](uriId: Id[NormalizedURI], kind: ArticleKind[A], fetched: Try[Option[ArticleVersion]])(implicit session: RWSession): Unit
+  def countRecentFetchesByDomain(domains: Set[String], lastFetchedWithin: Duration)(implicit session: RSession): Map[String, Int]
 }
 
 @Singleton
@@ -164,6 +165,17 @@ class ArticleInfoRepoImpl @Inject() (
           save(withFetchComplete.withLatestArticle(articleVersion))
         }
       }
+    }
+  }
+
+  def countRecentFetchesByDomain(domains: Set[String], lastFetchedWithin: Duration)(implicit session: RSession): Map[String, Int] = {
+    val recentlyFetchedRows = {
+      val now = clock.now()
+      val lastFetchedSomeTimeAgo = now minusSeconds lastFetchedWithin.toSeconds.toInt
+      for (r <- rows if r.domain.inSet(domains) && r.lastFetchedAt > lastFetchedSomeTimeAgo) yield r
+    }
+    recentlyFetchedRows.groupBy(_.domain).map { case (domain, infos) => (domain, infos.length) }.toMap.collect {
+      case (Some(domain), recentFetchCount) => (domain -> recentFetchCount)
     }
   }
 
