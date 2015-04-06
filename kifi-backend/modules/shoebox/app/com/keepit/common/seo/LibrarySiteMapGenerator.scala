@@ -71,14 +71,13 @@ class LibrarySiteMapGenerator @Inject() (
                 if (lib.lastKept.isDefined && lib.keepCount > 3) Some(lib -> owner)
                 else None
               }
-            }.flatMap {
-              case Some(libInfo) =>
-                <url>
-                  <loc>
-                    { path(libInfo._1, libInfo._2) }
-                  </loc>
-                  <lastmod>{ ISO_8601_DAY_FORMAT.print(libInfo._1.lastKept.get) }</lastmod>
-                </url>
+            }.flatMap { libInfo =>
+              <url>
+                <loc>
+                  { path(libInfo._1, libInfo._2) }
+                </loc>
+                <lastmod>{ ISO_8601_DAY_FORMAT.print(libInfo._1.lastKept.get) }</lastmod>
+              </url>
             }
           }
         </urlset>
