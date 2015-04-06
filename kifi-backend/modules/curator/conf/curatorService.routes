@@ -5,8 +5,6 @@
 # INTERNAL ROUTES/Curator
 ##########################################
 
-POST   /internal/curator/adHocRecos                                 @com.keepit.curator.controllers.internal.CuratorController.adHocRecos(userId: Id[User], n: Int)
-
 POST   /internal/curator/topRecos                                   @com.keepit.curator.controllers.internal.CuratorController.topRecos(userId: Id[User])
 GET   /internal/curator/topPublicRecos                              @com.keepit.curator.controllers.internal.CuratorController.topPublicRecos(userId: Option[Long])
 GET   /internal/curator/generalRecos                                @com.keepit.curator.controllers.internal.CuratorController.generalRecos()

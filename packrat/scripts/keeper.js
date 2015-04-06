@@ -141,7 +141,7 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
     .hoverfu('.kifi-keep-btn', function (configureHover) {
       var btn = this;
       api.port.emit('get_keepers', function (o) {
-        if (o.libraries.length || o.keepers.length) {
+        if (o.libraries.length || o.keepers.length || o.related.length) {
           var params = setSocialParams(o, {
             cssClass: 'kifi-keepers-hover',
             kept: o.kept
@@ -464,7 +464,15 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
     params.origin = o.origin;
     params.libs = o.libraries.slice(0, 2);
     params.oneLib = params.libs.length === 1;
+    params.pages = o.related.slice(0, 2).map(toRelatedPage);
+    params.onePage = params.pages.length === 1;
     return params;
+  }
+
+  function toRelatedPage(o) {
+    var match = /^\w+:\/\/(?:www\.)?([^\/]+)/.exec(o.url);
+    var domain = match && match[1];
+    return $.extend({domain: domain}, o);
   }
 
   function pick(arr, n) {
@@ -565,7 +573,7 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
       if (lastCreatedAt) return;
       var $tile = $(k.tile);
         api.port.emit('get_keepers', function (o) {
-          if ((o.keepers.length || o.libraries.length) && !lastCreatedAt) {
+          if ((o.keepers.length || o.libraries.length || o.related.length) && !lastCreatedAt) {
             $tile.hoverfu(function (configureHover) {
               // TODO: preload friend pictures
               var params = setSocialParams(o, {cssClass: 'kifi-keepers-promo'});

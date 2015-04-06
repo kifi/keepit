@@ -55,17 +55,20 @@ angular.module('kifi')
           lib.descriptionHtml = util.linkify(lib.description || '').replace(/\n+/g, '<br>');
           lib.absUrl = env.origin + lib.url;
 
+          $timeout(function () {
+            var lh = parseFloat(descWrapEl.css('line-height'), 10);
+            scope.descFits = descEl[0].scrollHeight <= Math.ceil(3 * lh);
+          });
+        }
+
+        function setFollowersShown() {
+          var lib = scope.library;
           var numFollowers = Math.max(lib.numFollowers, lib.followers.length);  // tolerating incorrect numFollowers
           var numFollowersFit = 5;
           var showPlusFollowers = Math.min(lib.followers.length, numFollowersFit) < numFollowers;
           var numFollowersToShow = Math.min(lib.followers.length, numFollowersFit - (numFollowersFit && showPlusFollowers ? 1 : 0));
           scope.followersToShow = lib.followers.slice(0, numFollowersToShow);
           scope.numMoreFollowersText = showPlusFollowers ? $filter('num')(numFollowers - numFollowersToShow) : '';
-
-          $timeout(function () {
-            var lh = parseFloat(descWrapEl.css('line-height'), 10);
-            scope.descFits = descEl[0].scrollHeight <= Math.ceil(3 * lh);
-          });
         }
 
         function updateInvite() {
@@ -255,8 +258,13 @@ angular.module('kifi')
             .then(function done(image) {  // timeout ensures progress bar can transition to complete and register in user's mind
               $q.all([loadImage(env.picBase + '/' + image.path), $timeout(angular.noop, 500)]).then(function () {
                 scope.library.image = image;
+                scope.imageLoaded = true;
                 revokeImagePreviewObjectUrlWhenDone();
                 scope.imagePreview = coverImageFile = null;
+                scope.settingImage = true;
+                $timeout(function () {
+                  scope.settingImage = false;
+                });
               });
             }) :
             fakeProgress(
@@ -364,12 +372,7 @@ angular.module('kifi')
         scope.onRemoveCoverImageMouseUp = function (event) {
           if (event.which === 1) {
             $http['delete'](routeService.removeLibraryCoverImage(scope.library.id)).then(function done() {
-              scope.imageFarewell = _.pick(scope.library.image, 'x', 'y');
-              scope.imageFarewell.url = env.picBase + '/' + scope.library.image.path;
               scope.library.image = null;
-              $timeout(function () {
-                scope.imageFarewell = null;
-              });
             }, function fail() {
               modalService.openGenericErrorModal();
             });
@@ -411,7 +414,7 @@ angular.module('kifi')
           // TODO: switch to $animate after 1.3 upgrade (takes CSS props to set)
           // $animate.addClass(descWrapEl[0], 'kf-expanded', {height: height});
           scope.descExpanded = true;
-          var ms = Math.max(300, Math.min(600, Math.round(100 * Math.log(height - descWrapEl[0].offsetHeight))));
+          var ms = Math.max(300, Math.min(600, Math.round(100 * Math.log(height - descWrapEl[0].clientHeight))));
           descWrapEl.addClass('kf-expanded-add').css({
             'transition-duration': ms + 'ms,' + (0.6 * ms) + 'ms',
             'transition-delay': '0s'
@@ -596,6 +599,8 @@ angular.module('kifi')
         // Watches and listeners.
         //
 
+        scope.$watch('library.numFollowers', setFollowersShown);
+
         [
           $rootScope.$on('libraryInfosChanged', updateInvite),
           $rootScope.$on('libraryKeepCountChanged', function (e, libraryId, keepCount) {
@@ -635,6 +640,12 @@ angular.module('kifi')
         augmentData();
 
         updateInvite();
+
+        if (scope.library.image) {
+          loadImage(env.picBase + '/' + scope.library.image.path).then(function () {
+            scope.imageLoaded = true;
+          });
+        }
       }
     };
   }

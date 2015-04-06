@@ -3,13 +3,14 @@
 angular.module('kifi')
 
 .directive('kfWhoTooltip', [
-  '$window', '$timeout', '$rootElement', '$compile', '$templateCache', 'platformService',
-  function ($window, $timeout, $rootElement, $compile, $templateCache, platformService) {
+  '$window', '$timeout', '$rootElement', '$compile', '$templateCache',
+  function ($window, $timeout, $rootElement, $compile, $templateCache) {
     return {
       restrict: 'A',
       link: function (scope, element) {
         var tooltip;
         var timeout;
+        var touchedAt;
 
         scope.tooltipEnabled = false;
         scope.youText = '';
@@ -26,26 +27,14 @@ angular.module('kifi')
           scope.hideWhoInfo = true;
         }
 
-        function cancelTimeout() {
-          $timeout.cancel(timeout);
-        }
-
-        scope.$on('$destroy', function () {
-          cancelTimeout();
-          if (tooltip) {
-            tooltip.remove();
-          }
-        });
-
         scope.showTooltip = function () {
-          if (platformService.isSupportedMobilePlatform()) {
+          if (Date.now() - touchedAt < 1000) {
             return;
           }
-
           if (!tooltip) {
             // Create tooltip
             tooltip = angular.element($templateCache.get('common/directives/keepWho/friendCard.tpl.html'));
-            $rootElement.find('html').append(tooltip);
+            $rootElement.find('body').append(tooltip);
             $compile(tooltip)(scope);
           }
 
@@ -70,9 +59,20 @@ angular.module('kifi')
         };
 
         scope.hideTooltip = function () {
-          cancelTimeout();
+          $timeout.cancel(timeout);
           scope.tooltipEnabled = false;
         };
+
+        element.on('touchstart touchend', function () {
+          touchedAt = Date.now();
+        });
+
+        scope.$on('$destroy', function () {
+          $timeout.cancel(timeout);
+          if (tooltip) {
+            tooltip.remove();
+          }
+        });
       }
     };
   }

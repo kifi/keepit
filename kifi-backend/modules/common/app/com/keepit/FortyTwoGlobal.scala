@@ -15,11 +15,10 @@ import com.keepit.inject._
 import com.typesafe.config.ConfigFactory
 import com.keepit.common.time.{ currentDateTime, DEFAULT_DATE_TIME_ZONE, RichDateTime }
 import play.api.libs.json.Json
-import scala.concurrent.{ Future, Await }
+import scala.concurrent.{ ExecutionContext, Future, Await }
 import scala.concurrent.duration.Duration
 import scala.collection.JavaConversions._
 import play.api._
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.mvc.Results._
 import play.api.mvc._
 import play.modules.statsd.api.StatsdFilter
@@ -228,7 +227,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
         Logger.error(s"Error while rendering default error page: ${id.id}", e)
         InternalServerError(views.html.error.internalError(id.id))
     }
-  }
+  }(injector.instance[ExecutionContext])
 
   @volatile private var announcedStopping: Boolean = false
 

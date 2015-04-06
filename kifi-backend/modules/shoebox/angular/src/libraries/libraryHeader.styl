@@ -15,8 +15,7 @@ colorBarHeight = .4em
 
 .kf-lh-cover
   height: 22em
-  background-size: cover
-  background-repeat: no-repeat
+  background-image: linear-gradient(rgba(0,0,0,.3), rgba(0,0,0,0))
   position: relative
 
   @media (min-width: 480px)
@@ -256,8 +255,8 @@ followerPicDiam = 2.2em
 
 coverPreviewDur = .6s
 
+.kf-lh-cover-image
 .kf-lh-cover-preview
-.kf-lh-cover-farewell
   position: absolute
   top: 0
   left: 0
@@ -266,14 +265,16 @@ coverPreviewDur = .6s
   background-size: cover
   background-repeat: no-repeat
 
+.kf-lh-cover-image.ng-enter.kf-fade-in
+.kf-lh-cover-image.ng-leave
 .kf-lh-cover-preview.ng-enter
 .kf-lh-cover-preview.ng-leave
-.kf-lh-cover-farewell.ng-leave
   transition: opacity coverPreviewDur
 
+.kf-lh-cover-image.ng-enter:not(.ng-enter-active)
+.kf-lh-cover-image.ng-leave-active
 .kf-lh-cover-preview.ng-enter:not(.ng-enter-active)
 .kf-lh-cover-preview.ng-leave-active
-.kf-lh-cover-farewell.ng-leave-active
   opacity: 0
 
 coverDragShadeHeight = 3em
@@ -559,16 +560,19 @@ ownerImageDiam2 = 3.6em
     :not(.kf-long)>&
       max-height: 4.2em
 
+  width = 38em
+  sideBorderWidth = 1em
+
   @media (min-width: 480px)
     position: absolute
     bottom: 0
     left: 50%
     transform: translate(-50%)
-    width: 38em
+    width: width
     height: 5.2em
     line-height: 1.8
     border: solid transparent
-    border-width: 0 1em 3em
+    border-width: 0 sideBorderWidth 3em
     border-radius: 8px 8px 0 0
     color: #fff
     text-shadow: 1px 1px 1px rgba(0,0,0,.2)
@@ -578,15 +582,28 @@ ownerImageDiam2 = 3.6em
     &.kf-expanded-remove
       border-top-width: 2.4em
 
+  @media (min-width: 480px) and (max-width: 539px)
+    // shaving a total of 3em from sideBorderWidth and .kf-lh-desc sidePad in order to
+    // fully fit the desc within the small window width and avoid horizontal scrollbar.
+    // taking ems from sides instead of from content to avoid changing wrapping and
+    // thus potentially whether or not the description is elided.
+    width: width - 3em
+    border-left-width: sideBorderWidth - .5em
+    border-right-width: sideBorderWidth - .5em
+
   &.kf-expanded-add
   &.kf-expanded-remove
     transition: height, background-color  // values and duration set from JS
 
 .kf-lh-desc
+  sidePad = 2.2em
   @media (min-width: 480px)
     max-height: 21em
-    padding: 0 2.2em
+    padding: 0 sidePad
     overflow: hidden
+
+  @media (min-width: 480px) and (max-width: 539px)
+    padding: 0 (sidePad - 1em)
 
   :not(.kf-expanded):not(.kf-expanded-add)>&
     display: -webkit-box
@@ -756,8 +773,11 @@ ownerImageDiam2 = 3.6em
   max-width: appMaxWidth
   margin: 0 auto
   border: solid transparent
-  border-width: 0 appSidePad2
+  border-width: 0 appSidePad1
   text-align: right
+
+  @media (min-width: appSidePad2MinWidth)
+    border-width: 0 appSidePad2
 
   @media (min-width: 720px)
     padding-right: 234px  // rightColWidth + colGapWidth

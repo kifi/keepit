@@ -106,6 +106,7 @@ PageData.prototype = {
     this.keepers = o.keepers || [];
     this.keepersTotal = o.keepersTotal || this.keepers.length;
     this.libraries = o.libraries || [];
+    this.related = o.related || [];
   },
   howKept: function () {
     var keeps = this.keeps;
@@ -603,6 +604,7 @@ api.port.on({
       keepers: d ? d.keepers : [],
       keepersTotal: d ? d.keepersTotal : 0,
       libraries: d ? d.libraries : [],
+      related: d ? d.related : [],
       origin: webBaseUri()
     });
   },
@@ -2011,9 +2013,11 @@ function kififyWithPageData(tab, d) {
         log('[initTab]', tab.id, 'restricted');
       } else if (d.shown) {
         log('[initTab]', tab.id, 'shown before');
-      } else if (d.keepers.length || d.libraries.length) {
-        tab.keepersSec = 20;
-        if (api.tabs.isFocused(tab)) scheduleAutoEngage(tab, 'keepers');
+      } else if (d.keepers.length || d.libraries.length || d.related.length) {
+        tab.keepersSec = d.related.length ? 10 : 20;
+        if (api.tabs.isFocused(tab)) {
+          scheduleAutoEngage(tab, 'keepers');
+        }
       }
     }
   }

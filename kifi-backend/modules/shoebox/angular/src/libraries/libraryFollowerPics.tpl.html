@@ -4,9 +4,9 @@
       class="kf-lfp-pic"
       kf-who-tooltip
       keeper="follower"
-      ng-mouseenter="tooltips && showTooltip()"
-      ng-mouseleave="tooltips && hideTooltip()"
-      ng-click="tooltips && hideTooltip()"
+      ng-mouseenter="showTooltip()"
+      ng-mouseleave="hideTooltip()"
+      ng-click="hideTooltip()"
       alt="{{follower|name}}">
   </a>
   <button class="kf-lfp-more" ng-if="moreCount" ng-click="showFollowers()">

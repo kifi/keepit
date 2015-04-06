@@ -63,8 +63,9 @@ class ScrapeProcessorActorImpl @Inject() (
 
   private[this] val lock = new ReactiveLock(1, Some(100))
 
-  override def pull(): Unit = if (lock.waiting < 3) lock.withLockFuture {
+  override def pull(): Unit = if (lock.waiting < 100) lock.withLockFuture {
     val futureTask: Future[Unit] = getQueueSize() flatMap { qSize =>
+      log.warn(s"[ScrapeProcessorActorImpl.pull] qSize: $qSize")
       if (qSize <= config.pullThreshold) {
         log.info(s"[ScrapeProcessorActorImpl.pull] qSize=$qSize. Let's get some work.")
         val queuedF = serviceDiscovery.thisInstance.map { inst =>
@@ -85,7 +86,10 @@ class ScrapeProcessorActorImpl @Inject() (
                 airbrake.notify(s"failed si to parse and queue task", e)
             }
             queuedFuture
-          } else Future.successful(())
+          } else {
+            log.warn(s"[ScrapeProcessorActorImpl.pull] Instance is not healthy. Returning 0 tasks.")
+            Future.successful(())
+          }
         }
         queuedF.getOrElse(Future.successful(()))
       } else if (qSize > WARNING_THRESHOLD) {
@@ -101,6 +105,8 @@ class ScrapeProcessorActorImpl @Inject() (
         airbrake.notify(s"Failed to obtain qSize from supervisor", e)
     }
     futureTask
+  } else {
+    log.warn(s"lock waiting size = ${lock.waiting}. ScrapeProcessorActor doing nothing.")
   }
 
 }

@@ -1,15 +1,15 @@
 <div class="kf-lh" itemscope itemtype="http://schema.org/CollectionPage">
-  <div class="kf-lh-cover" ng-attr-style="{{library|shadedBackground:.2:.6:.3}}">
+  <div class="kf-lh-cover" ng-style="{'background-color': library.color}">
     <meta itemtype="image"/>
     <meta itemtype="url" content="{{library.absUrl}}"/>
+
+    <div class="kf-lh-cover-image" ng-class="{'kf-fade-in': !settingImage}" ng-attr-style="{{library.image|shadedBackgroundImage:.2:.6}}" ng-if="library.image && imageLoaded"></div>
 
     <div class="kf-lh-invite-banner" ng-if="library.invite && !library.invite.actedOn">
       <div class="kf-lh-invite-banner-text">{{library.invite.inviterName}} has invited<br>you to follow this library</div>
       <button class="kf-lh-invite-banner-button kf-ignore" ng-click="ignoreInvitation()">Ignore</button>
       <button class="kf-lh-invite-banner-button kf-accept" ng-click="acceptInvitation()">Accept</button>
     </div>
-
-    <div class="kf-lh-cover-farewell" ng-attr-style="{{imageFarewell|shadedBackgroundImage:.2:.6}}" ng-if="imageFarewell"></div>
 
     <div class="kf-lh-top">
       <button class="kf-lh-manage-btn svg-settings-gear-filled" ng-click="manageLibrary()" ng-if="isMyLibrary() && isUserCreatedLibrary()"></button>

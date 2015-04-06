@@ -40,7 +40,7 @@ class UserConnectionsCommander @Inject() (
     socialUserTypeahead: SocialUserTypeahead,
     emailSender: EmailSenderProvider,
     s3ImageStore: S3ImageStore,
-    kifiInstallationRepo: KifiInstallationRepo,
+    kifiInstallationCommander: KifiInstallationCommander,
     implicit val defaultContext: ExecutionContext,
     db: Database) extends Logging {
 
@@ -230,17 +230,7 @@ class UserConnectionsCommander @Inject() (
       val requestingUserImage = s3ImageStore.avatarUrlByExternalId(Some(200), requestingUser.externalId, requestingUser.pictureName.getOrElse("0"), Some("https"))
       (requestingUser, requestingUserImage)
     }
-
-    val canSendPush = db.readOnlyReplica { implicit s => kifiInstallationRepo.lastUpdatedMobile(recipient.id.get) } exists { installation =>
-      installation.platform match {
-        case KifiInstallationPlatform.Android =>
-          installation.version.compareIt(KifiAndroidVersion("2.2.4")) >= 0
-        case KifiInstallationPlatform.IPhone =>
-          installation.version.compareIt(KifiIPhoneVersion("2.1.0")) >= 0
-        case _ =>
-          throw new Exception(s"Don't know platform for $installation")
-      }
-    }
+    val canSendPush = kifiInstallationCommander.isMobileVersionGreaterThen(recipient.id.get, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
     if (canSendPush) {
       elizaServiceClient.sendUserPushNotification(
         userId = recipient.id.get,
