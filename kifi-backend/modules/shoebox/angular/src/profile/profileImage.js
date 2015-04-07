@@ -37,7 +37,6 @@ angular.module('kifi')
           orientation: 'horizontal',
           min: 0,
           max: 100,
-          range: 'min',
           change: refreshZoom,
           slide: refreshZoom
         };
