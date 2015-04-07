@@ -89,14 +89,11 @@ angular.module('kifi')
 
       scope.title = attrs.title || '';
       scope.actionText = attrs.actionText;
+      scope.cancelText = attrs.cancelText;
       scope.withCancel = (attrs.withCancel !== void 0) || false;
       scope.withWarning = (attrs.withWarning !== void 0) || false;
-      scope.cancelText = attrs.cancelText;
+      scope.withoutButtons = 'withoutButtons' in attrs;
       scope.centered = attrs.centered;
-
-      // Note: if there is no 'single-action' attribute,
-      // scope.singleAction will be set to true.
-      scope.singleAction = attrs.singleAction || true;
 
       scope.closeAndCancel = function () {
         kfModalCtrl.close(scope.cancel);

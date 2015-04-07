@@ -4,7 +4,7 @@
     <h1 class="dialog-header" ng-if="title.length" ng-bind-html="title"></h1>
     <div class="dialog-body" ng-transclude ng-class="{'dialog-centered': centered}"></div>
   </div>
-  <div class="dialog-buttons" ng-if="singleAction">
+  <div class="dialog-buttons" ng-if="!withoutButtons">
     <button class="dialog-cancel" ng-click="closeAndCancel()" ng-if="withCancel" tabindex="0">{{cancelText || 'Cancel'}}</button>
     <button class="kf-action-button" ng-class="{'dialog-warn': withWarning}" ng-click="closeAndAction()" tabindex="0">{{actionText || 'Ok'}}</button>
   </div>

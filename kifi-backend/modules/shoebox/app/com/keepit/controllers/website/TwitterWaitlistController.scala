@@ -107,7 +107,7 @@ class TwitterWaitlistController @Inject() (
      */
     def checkStatusOfTwitterUser() = {
       db.readOnlyMaster { implicit session =>
-        socialRepo.getByUser(userId).find(_.networkType == SocialNetworks.TWITTER).flatMap { tsui =>
+        socialRepo.getByUsers(Seq(userId)).find(_.networkType == SocialNetworks.TWITTER).flatMap { tsui =>
           if (tsui.state == SocialUserInfoStates.CREATED) {
             log.info(s"[checkStatusOfTwitterUser] Still waiting on ${tsui.networkType}/${tsui.socialId}")
             None // pending sync, keep polling
