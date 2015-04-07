@@ -762,7 +762,7 @@ class LibraryCommander @Inject() (
             }
 
             // send notifications to kifi users only
-            elizaClient.sendGlobalNotification(
+            elizaClient.sendGlobalNotification( //push sent
               userIds = inviteeIdSet,
               title = s"${inviter.firstName} ${inviter.lastName} invited you to follow a Library!",
               body = s"Browse keeps in ${lib.name} to find some interesting gems kept by ${libOwner.firstName}.",
@@ -931,7 +931,7 @@ class LibraryCommander @Inject() (
     }
     val message = s"${follower.firstName} ${follower.lastName} is now following your Library ${lib.name}"
     val libImageOpt = libraryImageCommander.getBestImageForLibrary(lib.id.get, ProcessedImageSize.Medium.idealSize)
-    elizaClient.sendGlobalNotification(
+    elizaClient.sendGlobalNotification( //push sent
       userIds = Set(lib.ownerId),
       title = "New Library Follower",
       body = message,
@@ -975,7 +975,7 @@ class LibraryCommander @Inject() (
       if (toBeNotified.nonEmpty) {
         val keeper = usersById(newKeep.userId)
         val basicKeeper = BasicUser.fromUser(keeper)
-        elizaClient.sendGlobalNotification(
+        elizaClient.sendGlobalNotification( //no need for push
           userIds = toBeNotified,
           title = s"New Keep in ${library.name}",
           body = s"${keeper.firstName} has just kept ${newKeep.title.getOrElse("a new item")}",

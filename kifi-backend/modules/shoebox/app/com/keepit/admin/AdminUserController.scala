@@ -629,12 +629,12 @@ class AdminUserController @Inject() (
     log.info("Sending global notification via Eliza!")
     usersOpt.map {
       users =>
-        eliza.sendGlobalNotification(users.toSet, title, bodyHtml, linkText, url.getOrElse(""), image, isSticky, category)
+        eliza.sendGlobalNotification(users.toSet, title, bodyHtml, linkText, url.getOrElse(""), image, isSticky, category) //push needed?
     } getOrElse {
       val users = db.readOnlyReplica {
         implicit session => userRepo.getAllIds()
       } //Note: Need to revisit when we have >50k users.
-      eliza.sendGlobalNotification(users, title, bodyHtml, linkText, url.getOrElse(""), image, isSticky, category)
+      eliza.sendGlobalNotification(users, title, bodyHtml, linkText, url.getOrElse(""), image, isSticky, category) //push needed?
     }
 
     Redirect(routes.AdminUserController.notification())
