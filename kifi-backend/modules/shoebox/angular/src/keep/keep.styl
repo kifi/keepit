@@ -106,14 +106,11 @@ kifiGreen = #73c583
   &.selected.detailed
     background-color: #F7F7F5
 
-  &.toggling
-    overflow: hidden
-    transition: height .3s ease-in-out
-
   &.ng-hide-add
   &.ng-hide-remove
-    transition: max-height 0.3s linear
+    transition: max-height 0.3s
     display: block !important
+    overflow: hidden
 
   &.ng-hide-add.ng-hide-add-active
   &.ng-hide-remove
@@ -121,7 +118,7 @@ kifiGreen = #73c583
 
   &.ng-hide-add
   &.ng-hide-remove.ng-hide-remove-active
-    max-height: 200px
+    max-height: 400px
 
   &.editing
     border-radius: 0 keepBorderRadiusEditing keepBorderRadiusEditing
