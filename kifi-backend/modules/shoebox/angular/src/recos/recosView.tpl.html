@@ -49,32 +49,6 @@
             click-callback="trackRecoClick(reco)" current-page-origin="recommendationsPage"></div>
             <div ng-if="reco.recoData.kind === 'library'" kf-reco-library-card library="reco.recoLib"
             follow-callback="trackLibraryFollow(reco.recoLib)" click-library-callback="trackRecoClick(reco)"></div>
-
-            <footer class="kf-reco-bottom" ng-if="hasReason()" ng-class="{ 'kf-reco-multiple-reasons': hasTwoOrMoreReasons() }">
-              <span ng-if="hasTwoOrMoreReasons()">
-                <span class="kf-reco-icon kf-reco-reasons-right" ng-click="gotoNextReason()"></span>
-                <span class="kf-reco-icon kf-reco-reasons-left" ng-click="gotoPrevReason()"></span>
-              </span>
-              <div class="kf-reco-reason" ng-repeat="reason in reasons" ng-if="$index === reasonIndex">
-                <div ng-if="reason.kind === 'keep'">
-                  Because you kept <a ng-href="{{reason.url}}" target="_top" ng-attr-title="{{reason.name}}">{{reason.name}}</a>&nbsp;
-                  <time am-time-ago="reason.when"></time>
-                </div>
-                <div ng-if="reason.kind === 'topic'">
-                  <div>Because it's about a topic you're interested in:
-                  <span class="kf-reco-reason-topic">{{reason.name}}</span></div>
-                </div>
-                <div ng-if="reason.kind === 'users'">
-                  Because lots of users kept it
-                </div>
-                <div ng-if="reason.kind === 'library'">
-                  Because it's in a Library you follow: <a ng-href="{{reason.url}}" ng-attr-title="{{reason.name}}">{{reason.name}}</a>
-                </div>
-              </div>
-              <div class="kf-reason-bullet-container" ng-if="hasTwoOrMoreReasons()">
-                <span ng-repeat="reason in reasons" class="kf-reason-bullet" ng-class="{'kf-dark-reason-bullet': $index === reasonIndex}">&bull;</span>
-              </div>
-            </footer>
           </div>
           <div class="kf-keep-description-sizer kf-keep-description"></div>
         </div>
