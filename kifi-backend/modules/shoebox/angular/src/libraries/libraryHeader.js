@@ -100,20 +100,19 @@ angular.module('kifi')
           }
         };
 
-        scope.onCoverImageFileChosen = function (file) {
-          scope.$apply(function () {
-            if (/^image\/(?:jpeg|png|gif)$/.test(file.type)) {
-              coverImageFile = file;
-              $timeout(readCoverImageFile);
-              libraryService.trackEvent('user_clicked_page', scope.library, { action: 'clickedCoverImageFile' });
-            } else {
-              modalService.openGenericErrorModal({
-                modalData: {
-                  genericErrorMessage: 'Please choose a .jpg, .png or .gif file.'
-                }
-              });
-            }
-          });
+        scope.onCoverImageFileChosen = function (files) {
+          var file = files[0];
+          if (/^image\/(?:jpeg|png|gif)$/.test(file.type)) {
+            coverImageFile = file;
+            $timeout(readCoverImageFile);
+            libraryService.trackEvent('user_clicked_page', scope.library, { action: 'clickedCoverImageFile' });
+          } else {
+            modalService.openGenericErrorModal({
+              modalData: {
+                genericErrorMessage: 'Please choose a .jpg, .png or .gif file.'
+              }
+            });
+          }
         };
 
         function readCoverImageFile() {
@@ -383,7 +382,6 @@ angular.module('kifi')
 
         scope.onChangeCoverImageMouseUp = function (event) {
           if (event.which === 1) {
-            angular.element('.kf-lh-cover-file').click();
             libraryService.trackEvent('user_clicked_page', scope.library, { action: 'clickedChangeCoverImage' });
           }
         };

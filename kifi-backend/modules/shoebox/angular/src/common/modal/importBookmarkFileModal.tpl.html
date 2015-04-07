@@ -28,7 +28,7 @@
           <td class="import-library-how-to-row-heading">Step 2</td>
           <td class="import-library-how-to-row-content">Select
             <a ng-click="openBookmarkFileSelector($event)" href="javascript:">the file you downloaded</a>.
-            <input class="bookmark-file-upload" type="file" name="bookmark-file" accept=".html,text/html,.zip" onchange="angular.element(this).scope().allowUpload(this)">
+            <input class="bookmark-file-upload" type="file" name="bookmark-file" accept=".html,text/html,.zip" kf-file-change="allowUpload">
             <span ng-if="importFilename" class="bookmark-file-upload-name"><i>{{importFilename}}</i> selected.</span>
           </td>
         </tr>
