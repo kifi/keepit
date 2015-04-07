@@ -76,26 +76,6 @@ class RecommendationsCommander @Inject() (
     )
   }
 
-  private def contstructAttributionInfos(attr: SeedAttribution): Seq[RecoAttributionInfo] = {
-    val libraryAttrInfos = attr.library.map { libAttrs =>
-      libAttrs.libraries.map { libId =>
-        val (lib, owner): (Library, User) = db.readOnlyReplica { implicit session =>
-          val lib = libRepo.get(libId)
-          val owner = userRepo.get(lib.ownerId)
-          (lib, owner)
-        }
-        RecoAttributionInfo(
-          kind = RecoAttributionKind.Library,
-          name = Some(lib.name),
-          url = Some(Library.formatLibraryPath(owner.username, lib.slug)),
-          when = None
-        )
-      }
-    } getOrElse Seq.empty
-
-    libraryAttrInfos
-  }
-
   def topRecos(userId: Id[User], source: RecommendationSource, subSource: RecommendationSubSource, more: Boolean, recencyWeight: Float, context: Option[String]): Future[FullUriRecoResults] = {
     curator.topRecos(userId, source, subSource, more, recencyWeight, context).flatMap { recoResults =>
       val recos = recoResults.recos
@@ -105,10 +85,10 @@ class RecommendationsCommander @Inject() (
       val infoF = Future.sequence(recosWithUris.map {
         case (reco, nUri) => uriSummaryCommander.getDefaultURISummary(nUri, waiting = false).map { uriSummary =>
           val itemInfo = constructRecoItemInfo(nUri, uriSummary, reco)
-          val attributionInfo = (reco.attribution map contstructAttributionInfos) map RecoMetaData.apply
+
           FullUriRecoInfo(
             kind = RecoKind.Keep,
-            metaData = attributionInfo,
+            metaData = None,
             itemInfo = itemInfo,
             explain = reco.explain
           )
