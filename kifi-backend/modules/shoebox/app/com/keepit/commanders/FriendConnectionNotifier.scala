@@ -39,7 +39,7 @@ class FriendConnectionNotifier @Inject() (
 
     val emailF = connectionMadeEmailSender(friendUserId, myUserId, category, networkTypeOpt)
 
-    val notificationF = elizaServiceClient.sendGlobalNotification(
+    val notificationF = elizaServiceClient.sendGlobalNotification( //push needed
       userIds = Set(friendUserId),
       title = s"You’re connected with ${respondingUser.firstName} ${respondingUser.lastName} on Kifi!",
       body = s"Enjoy ${respondingUser.firstName}’s keeps in your search results and message ${respondingUser.firstName} directly. Find and invite more connections »",

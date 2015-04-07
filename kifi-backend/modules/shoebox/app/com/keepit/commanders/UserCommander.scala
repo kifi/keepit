@@ -342,7 +342,7 @@ class UserCommander @Inject() (
             log.info("sending new user contact notifications to: " + toNotify)
             val emailsF = toNotify.map { userId => emailSender.contactJoined(userId, newUserId) }
 
-            elizaServiceClient.sendGlobalNotification(
+            elizaServiceClient.sendGlobalNotification( //push sent
               userIds = toNotify,
               title = s"${newUser.firstName} ${newUser.lastName} joined Kifi!",
               body = s"To discover ${newUser.firstName}’s public keeps while searching, get connected! Invite ${newUser.firstName} to connect on Kifi »",
@@ -361,7 +361,7 @@ class UserCommander @Inject() (
                   message = s"${newUser.firstName} ${newUser.lastName} just joined Kifi!",
                   recipient = newUser,
                   pushNotificationExperiment = PushNotificationExperiment.Experiment1,
-                  category = UserPushNotificationCategory.UserConnectionRequest)
+                  category = UserPushNotificationCategory.ContactJoined)
               }
             }
             Future.sequence(emailsF.toSeq) map (_ => toNotify)

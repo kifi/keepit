@@ -100,6 +100,7 @@ class AppBoy @Inject() (
       case upn: UserPushNotification =>
         val pushType = upn.category match {
           case UserPushNotificationCategory.UserConnectionRequest => "fr"
+          case UserPushNotificationCategory.ContactJoined => "us"
           case UserPushNotificationCategory.NewLibraryFollower => "nf"
           case _ => "us"
         }
