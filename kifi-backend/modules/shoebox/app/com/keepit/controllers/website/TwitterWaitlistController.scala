@@ -10,6 +10,7 @@ import com.keepit.common.time.Clock
 import com.keepit.model._
 import com.keepit.social.{ SocialGraphPlugin, SocialNetworks }
 import play.api.libs.json.Json
+import play.twirl.api.Html
 import securesocial.core.SecureSocial
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Success, Try }
@@ -106,7 +107,7 @@ class TwitterWaitlistController @Inject() (
      */
     def checkStatusOfTwitterUser() = {
       db.readOnlyMaster { implicit session =>
-        socialRepo.getByUser(userId).find(_.networkType == SocialNetworks.TWITTER).flatMap { tsui =>
+        socialRepo.getByUsers(Seq(userId)).find(_.networkType == SocialNetworks.TWITTER).flatMap { tsui =>
           if (tsui.state == SocialUserInfoStates.CREATED) {
             log.info(s"[checkStatusOfTwitterUser] Still waiting on ${tsui.networkType}/${tsui.socialId}")
             None // pending sync, keep polling
@@ -162,7 +163,7 @@ class TwitterWaitlistController @Inject() (
               case None => // we failed :(
                 log.warn(s"Couldn't get twitter handle in time, we'll try again. userId: ${ur.userId.id}. They want to be waitlisted.")
                 socialGraphPlugin.asyncFetch(twitterSui.get).onComplete { _ =>
-                  pollDbForTwitterHandle(ur.userId, iterations = 20).onComplete {
+                  pollDbForTwitterHandle(ur.userId, iterations = 60).onComplete {
                     case Success(Some(handle)) =>
                       commander.addEntry(ur.userId, handle)
                     case fail => // we failed :(
@@ -174,6 +175,26 @@ class TwitterWaitlistController @Inject() (
           MarketingSiteRouter.marketingSite("twitter-confirmation")
         }
     }
+  }
+
+  // Admin actions
+  def getWaitlist = UserAction { request => // todo: admin
+    val body = commander.getWaitlist.zipWithIndex.map {
+      case (t, idx) =>
+        s"""
+          |<tr><td>$idx</td><td><a href="https://twitter.com/${t.twitterHandle}">${t.twitterHandle}</a></td><td><a href="/admin/twitter/accept?handle=${t.twitterHandle}&userId=${t.userId}">Accept</a></td></tr>
+        """.stripMargin
+    }.foldRight("")(_ ++ _)
+    Ok(Html(s"""
+        |<table>
+        | <tr><td>#</td><td>Handle</td><td></td></tr>
+        | $body
+        | </table>
+      """.stripMargin))
+  }
+
+  def acceptUser(userId: Id[User], handle: String) = UserAction { request => // todo: admin
+    Ok(commander.acceptUser(userId, handle).toString)
   }
 
 }

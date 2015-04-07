@@ -1,8 +1,8 @@
 package com.keepit.common.store
 
+import com.keepit.rover.sensitivity.PornWordLikelihoodStore
 import com.keepit.search._
 import com.google.inject.{ Provides, Singleton }
-import com.keepit.learning.porndetector.PornWordLikelihoodStore
 import com.keepit.scraper.embedly.EmbedlyStore
 import com.keepit.scraper.embedly.InMemoryEmbedlyStoreImpl
 

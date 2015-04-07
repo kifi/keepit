@@ -15,8 +15,7 @@ colorBarHeight = .4em
 
 .kf-lh-cover
   height: 22em
-  background-size: cover
-  background-repeat: no-repeat
+  background-image: linear-gradient(rgba(0,0,0,.3), rgba(0,0,0,0))
   position: relative
 
   @media (min-width: 480px)
@@ -256,8 +255,8 @@ followerPicDiam = 2.2em
 
 coverPreviewDur = .6s
 
+.kf-lh-cover-image
 .kf-lh-cover-preview
-.kf-lh-cover-farewell
   position: absolute
   top: 0
   left: 0
@@ -266,14 +265,16 @@ coverPreviewDur = .6s
   background-size: cover
   background-repeat: no-repeat
 
+.kf-lh-cover-image.ng-enter.kf-fade-in
+.kf-lh-cover-image.ng-leave
 .kf-lh-cover-preview.ng-enter
 .kf-lh-cover-preview.ng-leave
-.kf-lh-cover-farewell.ng-leave
   transition: opacity coverPreviewDur
 
+.kf-lh-cover-image.ng-enter:not(.ng-enter-active)
+.kf-lh-cover-image.ng-leave-active
 .kf-lh-cover-preview.ng-enter:not(.ng-enter-active)
 .kf-lh-cover-preview.ng-leave-active
-.kf-lh-cover-farewell.ng-leave-active
   opacity: 0
 
 coverDragShadeHeight = 3em

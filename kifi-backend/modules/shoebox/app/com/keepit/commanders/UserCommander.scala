@@ -17,7 +17,7 @@ import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.S3ImageStore
 import com.keepit.common.time._
 import com.keepit.common.usersegment.{ UserSegment, UserSegmentFactory }
-import com.keepit.eliza.ElizaServiceClient
+import com.keepit.eliza.{ UserPushNotificationCategory, PushNotificationExperiment, ElizaServiceClient }
 import com.keepit.heimdal.{ ContextStringData, HeimdalServiceClient, _ }
 import com.keepit.model.{ UserEmailAddress, _ }
 import com.keepit.search.SearchServiceClient
@@ -25,12 +25,11 @@ import com.keepit.social.{ BasicUser, SocialNetworks, UserIdentity }
 import com.keepit.typeahead.{ KifiUserTypeahead, SocialUserTypeahead, TypeaheadHit }
 import com.kifi.macros.json
 import org.apache.commons.lang3.RandomStringUtils
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.{ JsObject, JsString, JsSuccess, _ }
 import securesocial.core.{ Identity, Registry, UserService }
 
 import scala.collection.mutable.ArrayBuffer
-import scala.concurrent.Future
+import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Left, Right, Try }
 
 case class BasicSocialUser(network: String, profileUrl: Option[String], pictureUrl: Option[String])
@@ -115,6 +114,8 @@ class UserCommander @Inject() (
     usernameCache: UsernameCache,
     userExperimentRepo: UserExperimentRepo,
     allFakeUsersCache: AllFakeUsersCache,
+    kifiInstallationCommander: KifiInstallationCommander,
+    implicit val executionContext: ExecutionContext,
     airbrake: AirbrakeNotifier) extends Logging { self =>
 
   def userFromUsername(username: Username): Option[User] = db.readOnlyReplica { implicit session =>
@@ -341,7 +342,7 @@ class UserCommander @Inject() (
             log.info("sending new user contact notifications to: " + toNotify)
             val emailsF = toNotify.map { userId => emailSender.contactJoined(userId, newUserId) }
 
-            elizaServiceClient.sendGlobalNotification(
+            elizaServiceClient.sendGlobalNotification( //push sent
               userIds = toNotify,
               title = s"${newUser.firstName} ${newUser.lastName} joined Kifi!",
               body = s"To discover ${newUser.firstName}’s public keeps while searching, get connected! Invite ${newUser.firstName} to connect on Kifi »",
@@ -352,6 +353,17 @@ class UserCommander @Inject() (
               category = NotificationCategory.User.CONTACT_JOINED
             )
 
+            toNotify.foreach { userId =>
+              val canSendPush = kifiInstallationCommander.isMobileVersionGreaterThen(userId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
+              if (canSendPush) {
+                elizaServiceClient.sendUserPushNotification(
+                  userId = userId,
+                  message = s"${newUser.firstName} ${newUser.lastName} just joined Kifi!",
+                  recipient = newUser,
+                  pushNotificationExperiment = PushNotificationExperiment.Experiment1,
+                  category = UserPushNotificationCategory.ContactJoined)
+              }
+            }
             Future.sequence(emailsF.toSeq) map (_ => toNotify)
           }
           case _ => {

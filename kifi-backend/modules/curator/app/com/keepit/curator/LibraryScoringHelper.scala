@@ -82,8 +82,8 @@ class LibraryScoringHelper @Inject() (
   // TODO(josh) consider date the library was created either for this score or another
   private def getRecencyScore(candidate: CuratorLibraryInfo): Float = {
     candidate.lastKept.map { keptDate =>
-      val interval = new Interval(keptDate.toInstant, currentDateTime.toInstant)
-      (maxIntervalMillis - Math.min(interval.toDurationMillis, maxIntervalMillis)).toFloat / maxIntervalMillis
+      val interval = if (keptDate.isBefore(currentDateTime)) new Interval(keptDate.toInstant, currentDateTime.toInstant).toDurationMillis else 0
+      (maxIntervalMillis - Math.min(interval, maxIntervalMillis)).toFloat / maxIntervalMillis
     } getOrElse 0f
   }
 

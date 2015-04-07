@@ -18,7 +18,7 @@ import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.{ ImageSize, S3ImageStore }
 import com.keepit.common.time._
 import com.keepit.common.util.Paginator
-import com.keepit.eliza.{ UserPushNotificationCategory, PushNotificationExperiment, ElizaServiceClient }
+import com.keepit.eliza.{ LibraryPushNotificationCategory, UserPushNotificationCategory, PushNotificationExperiment, ElizaServiceClient }
 import com.keepit.heimdal.{ HeimdalContext, HeimdalContextBuilderFactory, HeimdalServiceClient }
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
@@ -76,7 +76,7 @@ class LibraryCommander @Inject() (
     userValueRepo: UserValueRepo,
     systemValueRepo: SystemValueRepo,
     twitterSyncRepo: TwitterSyncStateRepo,
-    kifiInstallationRepo: KifiInstallationRepo,
+    kifiInstallationCommander: KifiInstallationCommander,
     implicit val defaultContext: ExecutionContext,
     implicit val publicIdConfig: PublicIdConfiguration,
     clock: Clock) extends Logging {
@@ -299,7 +299,7 @@ class LibraryCommander @Inject() (
 
   private def getSourceAttribution(libId: Id[Library]): Option[LibrarySourceAttribution] = {
     db.readOnlyReplica { implicit s =>
-      twitterSyncRepo.getHandleByLibraryId(libId).map { TwitterLibrarySourceAttribution(_) }
+      twitterSyncRepo.getFirstHandleByLibraryId(libId).map { TwitterLibrarySourceAttribution(_) }
     }
   }
 
@@ -741,23 +741,42 @@ class LibraryCommander @Inject() (
           val libLink = s"""https://www.kifi.com${Library.formatLibraryPath(libOwner.username, lib.slug)}"""
           val libImageOpt = libraryImageCommander.getBestImageForLibrary(libId, ProcessedImageSize.Medium.idealSize)
 
-          // send notifications to kifi users only
           val inviteeIdSet = invitesToPersist.map(_.userId).flatten.toSet
-          elizaClient.sendGlobalNotification(
-            userIds = inviteeIdSet,
-            title = s"${inviter.firstName} ${inviter.lastName} invited you to follow a Library!",
-            body = s"Browse keeps in ${lib.name} to find some interesting gems kept by ${libOwner.firstName}.",
-            linkText = "Let's take a look!",
-            linkUrl = libLink,
-            imageUrl = inviterImage,
-            sticky = false,
-            category = NotificationCategory.User.LIBRARY_INVITATION,
-            extra = Some(Json.obj(
-              "inviter" -> inviter,
-              "library" -> Json.toJson(LibraryNotificationInfo.fromLibraryAndOwner(lib, libImageOpt, libOwner))
-            ))
-          )
+          if (inviteeIdSet.nonEmpty) {
+            //send push notifications to kifi users
+            val libraryUrl = db.readOnlyMaster { implicit s =>
+              "https://www.kifi.com" + Library.formatLibraryPathUrlEncoded(basicUserRepo.load(lib.ownerId).username, lib.slug)
+            }
+            val message = s"""${inviter.firstName} ${inviter.lastName} invited you to follow: ${lib.name}"""
+            inviteeIdSet.foreach { userId =>
+              val canSendPush = kifiInstallationCommander.isMobileVersionGreaterThen(userId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
+              if (canSendPush) {
+                elizaClient.sendLibraryPushNotification(
+                  userId,
+                  message,
+                  lib.id.get,
+                  libraryUrl,
+                  PushNotificationExperiment.Experiment1,
+                  LibraryPushNotificationCategory.LibraryInvitation)
+              }
+            }
 
+            // send notifications to kifi users only
+            elizaClient.sendGlobalNotification( //push sent
+              userIds = inviteeIdSet,
+              title = s"${inviter.firstName} ${inviter.lastName} invited you to follow a Library!",
+              body = s"Browse keeps in ${lib.name} to find some interesting gems kept by ${libOwner.firstName}.",
+              linkText = "Let's take a look!",
+              linkUrl = libLink,
+              imageUrl = inviterImage,
+              sticky = false,
+              category = NotificationCategory.User.LIBRARY_INVITATION,
+              extra = Some(Json.obj(
+                "inviter" -> inviter,
+                "library" -> Json.toJson(LibraryNotificationInfo.fromLibraryAndOwner(lib, libImageOpt, libOwner))
+              ))
+            )
+          }
           // send emails to both users & non-users
           invitesToPersist.map { invite =>
             invite.userId match {
@@ -907,12 +926,12 @@ class LibraryCommander @Inject() (
     val (follower, owner, lotsOfFollowers) = db.readOnlyReplica { implicit session =>
       val follower = userRepo.get(newFollowerId)
       val owner = basicUserRepo.load(lib.ownerId)
-      val lotsOfFollowers = libraryMembershipRepo.countMembersForLibrarySince(lib.id.get, DateTime.now().minusDays(1)) > 5
+      val lotsOfFollowers = libraryMembershipRepo.countMembersForLibrarySince(lib.id.get, DateTime.now().minusDays(1)) > 2
       (follower, owner, lotsOfFollowers)
     }
     val message = s"${follower.firstName} ${follower.lastName} is now following your Library ${lib.name}"
     val libImageOpt = libraryImageCommander.getBestImageForLibrary(lib.id.get, ProcessedImageSize.Medium.idealSize)
-    elizaClient.sendGlobalNotification(
+    elizaClient.sendGlobalNotification( //push sent
       userIds = Set(lib.ownerId),
       title = "New Library Follower",
       body = message,
@@ -928,17 +947,7 @@ class LibraryCommander @Inject() (
       ))
     )
     if (!lotsOfFollowers) {
-      //todo(eishay): DRY ME OUT
-      val canSendPush = db.readOnlyReplica { implicit s => kifiInstallationRepo.lastUpdatedMobile(lib.ownerId) } exists { installation =>
-        installation.platform match {
-          case KifiInstallationPlatform.Android =>
-            installation.version.compareIt(KifiAndroidVersion("2.2.4")) >= 0
-          case KifiInstallationPlatform.IPhone =>
-            installation.version.compareIt(KifiIPhoneVersion("2.1.0")) >= 0
-          case _ =>
-            throw new Exception(s"Don't know platform for $installation")
-        }
-      }
+      val canSendPush = kifiInstallationCommander.isMobileVersionGreaterThen(lib.ownerId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
       if (canSendPush) {
         elizaClient.sendUserPushNotification(
           userId = lib.ownerId,
@@ -966,7 +975,7 @@ class LibraryCommander @Inject() (
       if (toBeNotified.nonEmpty) {
         val keeper = usersById(newKeep.userId)
         val basicKeeper = BasicUser.fromUser(keeper)
-        elizaClient.sendGlobalNotification(
+        elizaClient.sendGlobalNotification( //no need for push
           userIds = toBeNotified,
           title = s"New Keep in ${library.name}",
           body = s"${keeper.firstName} has just kept ${newKeep.title.getOrElse("a new item")}",

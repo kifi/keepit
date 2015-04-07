@@ -37,27 +37,19 @@ class ActivityPushActor @Inject() (
     activityPusher: ActivityPusher,
     airbrake: AirbrakeNotifier) extends FortyTwoActor(airbrake) with Logging {
 
-  private val counter = new AtomicInteger(0)
   def receive = {
     case CreatePushActivityEntities =>
       activityPusher.createPushActivityEntities(100)
     case PushActivities =>
-      if (counter.get <= 0) {
-        activityPusher.getNextPushBatch foreach { activityId =>
-          self ! PushActivity(activityId)
-          counter.incrementAndGet()
-        }
+      activityPusher.getNextPushBatch.foreach { activityId =>
+        self ! PushActivity(activityId)
       }
     case PushActivity(activityPushTaskId) =>
       try {
         activityPusher.pushItBaby(activityPushTaskId)
       } catch {
         case e: Exception =>
-          airbrake.notify(s"on pushing activity $activityPushTaskId", e)
-      } finally {
-        if (counter.decrementAndGet() <= 0) {
-          self ! PushActivities
-        }
+          airbrake.notify(s"[ActivityPushActor] on pushing activity $activityPushTaskId", e)
       }
   }
 }
@@ -160,12 +152,21 @@ class ActivityPusher @Inject() (
       }
     }
     db.readWrite { implicit s =>
-      activityPushTaskRepo.save(activityPushTaskRepo.get(activity.id.get).copy(lastPush = Some(clock.now())))
+      val prevActivity = activityPushTaskRepo.get(activity.id.get)
+      val newBackoff = prevActivity.backoff.getOrElse(1.day).plus(1.day)
+      val newActivity = prevActivity.copy(
+        nextPush = Some(clock.now().plusMillis(newBackoff.toMillis.toInt)),
+        backoff = Some(newBackoff),
+        lastPush = Some(clock.now())
+      )
+      activityPushTaskRepo.save(newActivity)
     }
   }
 
   private def pushActivity(activity: ActivityPushTask): Unit = {
-    db.readOnlyReplica { implicit s => kifiInstallationRepo.lastUpdatedMobile(activity.userId) } foreach { latestInstallation =>
+    db.readOnlyReplica { implicit s =>
+      kifiInstallationRepo.lastUpdatedMobile(activity.userId)
+    }.foreach { latestInstallation =>
       getMessage(activity.userId, latestInstallation) match {
         case Some((message, experimant)) =>
           pushMessage(activity, message, experimant)
@@ -278,7 +279,7 @@ class ActivityPusher @Inject() (
   }
 
   def getNextPushBatch: Seq[Id[ActivityPushTask]] = {
-    val ids = db.readOnlyReplica { implicit s =>
+    val ids = db.readOnlyMaster { implicit s =>
       activityPushTaskRepo.getBatchToPush(100)
     }
     log.info(s"next push batch size is ${ids.size}")

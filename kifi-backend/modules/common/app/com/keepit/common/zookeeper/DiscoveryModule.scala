@@ -16,7 +16,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 
 import play.api.Play.current
 
-import scala.concurrent.{ Await, Future, Promise }
+import scala.concurrent.{ ExecutionContext, Await, Future, Promise }
 import scala.collection.JavaConversions._
 import play.api.libs.ws.WS
 import scala.concurrent.duration._
@@ -143,12 +143,12 @@ case class ProdDiscoveryModule() extends DiscoveryModule with Logging {
   @Provides
   def serviceDiscovery(serviceType: ServiceType, servicesToListenOn: Set[ServiceType],
     zk: ZooKeeperClient, airbrake: Provider[AirbrakeNotifier], services: FortyTwoServices,
-    amazonInstanceInfo: AmazonInstanceInfo, scheduler: Scheduler): ServiceDiscovery = {
+    amazonInstanceInfo: AmazonInstanceInfo, scheduler: Scheduler, executionContext: ExecutionContext): ServiceDiscovery = {
     val isCanary = DiscoveryModule.isCanary
     if (serviceType == ServiceType.SHOEBOX && isCanary) {
-      new ServiceDiscoveryImpl(zk, services, amazonInstanceInfo, scheduler, airbrake, isCanary = isCanary, servicesToListenOn = servicesToListenOn + ServiceType.SHOEBOX)
+      new ServiceDiscoveryImpl(zk, services, amazonInstanceInfo, scheduler, airbrake, isCanary = isCanary, servicesToListenOn = servicesToListenOn + ServiceType.SHOEBOX, executionContext)
     } else {
-      new ServiceDiscoveryImpl(zk, services, amazonInstanceInfo, scheduler, airbrake, isCanary = isCanary, servicesToListenOn = servicesToListenOn)
+      new ServiceDiscoveryImpl(zk, services, amazonInstanceInfo, scheduler, airbrake, isCanary = isCanary, servicesToListenOn = servicesToListenOn, executionContext)
     }
   }
 

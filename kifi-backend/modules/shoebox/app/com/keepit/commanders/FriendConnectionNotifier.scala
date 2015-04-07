@@ -14,15 +14,14 @@ import com.keepit.social.SocialNetworks.{ LINKEDIN, FACEBOOK }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
 
-@Singleton
-class SendFriendConnectionMadeNotificationHelper @Inject() (
+class FriendConnectionNotifier @Inject() (
     db: Database,
     userRepo: UserRepo,
     connectionMadeEmailSender: FriendConnectionMadeEmailSender,
     s3ImageStore: S3ImageStore,
     elizaServiceClient: ElizaServiceClient) {
 
-  def apply(myUserId: Id[User], friendUserId: Id[User], networkTypeOpt: Option[SocialNetworkType] = None) = {
+  def sendNotification(myUserId: Id[User], friendUserId: Id[User], networkTypeOpt: Option[SocialNetworkType] = None) = {
     //sending 'you are friends' email && Notification from auto-created connections from Facebook/LinkedIn
     val (respondingUser, respondingUserImage) = db.readOnlyMaster { implicit session =>
       val respondingUser = userRepo.get(myUserId)
@@ -40,7 +39,7 @@ class SendFriendConnectionMadeNotificationHelper @Inject() (
 
     val emailF = connectionMadeEmailSender(friendUserId, myUserId, category, networkTypeOpt)
 
-    val notificationF = elizaServiceClient.sendGlobalNotification(
+    val notificationF = elizaServiceClient.sendGlobalNotification( //push needed
       userIds = Set(friendUserId),
       title = s"You’re connected with ${respondingUser.firstName} ${respondingUser.lastName} on Kifi!",
       body = s"Enjoy ${respondingUser.firstName}’s keeps in your search results and message ${respondingUser.firstName} directly. Find and invite more connections »",

@@ -33,14 +33,14 @@ class AppBoyClientImpl @Inject() (
     post(json, device, notification)
   }
 
-  protected def post(json: JsObject, device: Device, notification: PushNotification, trial: Int = 1): Future[ClientResponse] = {
+  protected def post(json: JsObject, device: Device, notification: PushNotification): Future[ClientResponse] = {
     val url = s"${AppBoyConfig.baseUrl}/messages/send"
-    log.info(s"[AppBoyClient] POST request to $url with body: $json, with device: $device, with notif: $notification: trial: $trial")
+    log.info(s"[AppBoyClient] POST request to $url with body: $json, with device: $device, with notif: $notification")
     httpClient.postFuture(DirectUrl(url), json,
       { req =>
         {
           case t: Throwable =>
-            throw new Exception(s"[stop trying] error posting to appboy json $json on device $device notification $notification on trial $trial, not attempting more retries", t)
+            throw new Exception(s"[stop trying] error posting to appboy json $json on device $device notification $notification, not attempting more retries", t)
         }
       })
   }

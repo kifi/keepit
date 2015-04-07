@@ -286,19 +286,21 @@
     background-color: @keepers-h-bg-color;
   }
 }
+.kifi-keepers-pages,
 .kifi-keepers-libs {
   min-width: 200px;
   max-width: 300px;
   padding: 6px 0;
 }
+@pageTitleLineHeight: 16px;
 @import (reference) 'lib_icons.less';
+.kifi-keepers-page,
 .kifi-keepers-lib {
   display: block;
-  height: 44px;
-  line-height: 16px;
+  line-height: @pageTitleLineHeight;
   font-size: 12px;
   font-weight: 300;
-  padding: 10px 13px 10px 58px;
+  padding: 10px 13px;
   color: #333 !important;
   position: relative;
   &:hover,
@@ -308,6 +310,44 @@
   &:active:hover {
     background-color: #e8e8e8 !important;
   }
+}
+.kifi-keepers-page {
+  display: flex-box;
+  flex-flow: column;
+  height: 44px;
+  padding-left: 74px;
+}
+.kifi-keepers-page-pic {
+  position: absolute;
+  top: 10px;
+  left: 13px;
+  width: 50px;
+  height: 44px;
+  border-radius: 4px;
+  background-size: cover;
+  box-shadow: 0 0 1px rgba(0,0,0,.2);
+}
+.kifi-keepers-page-title {
+  margin-top: auto;
+  max-height: 2 * @pageTitleLineHeight;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.kifi-keepers-page-domain {
+  margin: 1px 0 auto;
+  line-height: 12px;
+  font-size: 10px;
+  color: #5ab166;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.kifi-keepers-lib {
+  height: 44px;
+  padding-left: 58px;
 }
 .kifi-keepers-lib-icon {
   position: absolute;

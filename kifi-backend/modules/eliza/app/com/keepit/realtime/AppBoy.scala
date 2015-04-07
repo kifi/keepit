@@ -1,12 +1,13 @@
 package com.keepit.realtime
 
 import com.google.inject.Inject
+import com.keepit.common.concurrent.RetryFuture
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.eliza.UserPushNotificationCategory
+import com.keepit.eliza.{ LibraryPushNotificationCategory, UserPushNotificationCategory }
 import com.keepit.eliza.commanders.MessagingAnalytics
 import com.keepit.model.{ Library, User }
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -38,10 +39,10 @@ class AppBoy @Inject() (
     val updatedDevice = db.readWrite { implicit s =>
 
       // inactivate devices that have non-appboy signature
-      deviceRepo.getByUserIdAndDeviceTypeAndSignature(userId, deviceType, signature) match {
-        case Some(d) => // probably urbanairship, inactivate
-          deviceRepo.save(d.copy(state = DeviceStates.INACTIVE))
-        case _ =>
+      deviceRepo.getByUserIdAndDeviceType(userId, deviceType).collect {
+        case device if !device.signature.exists(_.startsWith("ab_")) =>
+          // We only want non-AppBoy devices
+          deviceRepo.save(device.copy(state = DeviceStates.INACTIVE))
       }
 
       deviceRepo.getByUserIdAndDeviceTypeAndSignature(userId, deviceType, appBoySign, None) match {
@@ -75,6 +76,7 @@ class AppBoy @Inject() (
     }
   }
 
+  // see https://docs.google.com/a/kifi.com/document/d/1efEGk8Wdj2dAjWjUWvsHW5UC0p2srjIXiju8tLpuOMU/edit# for spec
   private def addExtraJson(notification: PushNotification, deviceType: DeviceType) = {
     val json = Json.obj("unreadCount" -> notification.unvisitedCount)
     notification match {
@@ -83,7 +85,12 @@ class AppBoy @Inject() (
       case mtpn: MessageThreadPushNotification =>
         json.as[JsObject] + ("id" -> JsString(mtpn.id.id))
       case lupn: LibraryUpdatePushNotification =>
-        val withLid = json.as[JsObject] ++ Json.obj("t" -> "lr", "lid" -> Library.publicId(lupn.libraryId).id)
+        val pushType = lupn.category match {
+          case LibraryPushNotificationCategory.LibraryChanged => "lr"
+          case LibraryPushNotificationCategory.LibraryInvitation => "li"
+          case _ => "lr"
+        }
+        val withLid = json.as[JsObject] ++ Json.obj("t" -> pushType, "lid" -> Library.publicId(lupn.libraryId).id)
         deviceType match {
           case DeviceType.Android =>
             withLid
@@ -93,6 +100,7 @@ class AppBoy @Inject() (
       case upn: UserPushNotification =>
         val pushType = upn.category match {
           case UserPushNotificationCategory.UserConnectionRequest => "fr"
+          case UserPushNotificationCategory.ContactJoined => "us"
           case UserPushNotificationCategory.NewLibraryFollower => "nf"
           case _ => "us"
         }
@@ -141,16 +149,18 @@ class AppBoy @Inject() (
         log.info(s"[AppBoy] sending UserPushNotification to user ${device.userId} device: [${device.token}] user ${upn.username}:${upn.userExtId} message ${upn.message} wtih $json")
     }
 
-    client.send(json, device, notification) andThen {
-      case Success(res) =>
-        if (res.status / 100 != 2) {
-          airbrake.notify(s"[AppBoy] bad status ${res.status} on push notification $notification for device $device. response: ${res.body}")
-        } else {
-          log.info(s"[AppBoy] successful push notification to device $device: ${res.body}")
-          messagingAnalytics.sentPushNotification(device, notification)
-        }
+    RetryFuture(attempts = 3, {
+      case error: Throwable =>
+        airbrake.notify(s"[AppBoy] Error when pushing $notification for device ${device.id}. Will retry. Error: ${error.getClass.getSimpleName} $error")
+        true
+    })(client.send(json, device, notification)).onComplete {
+      case Success(res) if res.status / 100 == 2 =>
+        log.info(s"[AppBoy] successful push notification to device $device: ${res.body}")
+        messagingAnalytics.sentPushNotification(device, notification)
+      case Success(non200) =>
+        airbrake.notify(s"[AppBoy] bad status ${non200.status} on push notification $notification for device $device. response: ${non200.body}")
       case Failure(e) =>
-        airbrake.notify(s"[AppBoy] fail to send push notification $notification for device $device - error: $e")
+        airbrake.notify(s"[AppBoy] fail to send push notification $notification for device $device - error: ${e.getClass.getSimpleName} $e")
     }
   }
 

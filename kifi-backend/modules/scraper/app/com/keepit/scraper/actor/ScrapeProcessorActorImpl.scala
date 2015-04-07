@@ -107,4 +107,3 @@ class ScrapeProcessorActorImpl @Inject() (
     futureTask
   }
 }
-

@@ -128,8 +128,8 @@ class RecommendationGenerationCommanderTest extends Specification with CuratorTe
       // it must has been called again for the first batch of keeps and the cache isn't working
       shoebox.callsGetToCandidateURIs.size < 5
       shoebox.callsGetToCandidateURIs.size > 1
-      //shoebox.callsGetToCandidateURIs(nextIdxToCheck)(0) === Id[NormalizedURI](101)
-      //shoebox.callsGetToCandidateURIs(nextIdxToCheck)(19) === Id[NormalizedURI](120)
+      shoebox.callsGetToCandidateURIs(nextIdxToCheck)(0) === Id[NormalizedURI](101)
+      shoebox.callsGetToCandidateURIs(nextIdxToCheck)(19) === Id[NormalizedURI](120)
     }
   }
 }

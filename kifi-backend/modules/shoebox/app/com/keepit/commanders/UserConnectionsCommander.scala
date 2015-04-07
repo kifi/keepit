@@ -40,7 +40,7 @@ class UserConnectionsCommander @Inject() (
     socialUserTypeahead: SocialUserTypeahead,
     emailSender: EmailSenderProvider,
     s3ImageStore: S3ImageStore,
-    kifiInstallationRepo: KifiInstallationRepo,
+    kifiInstallationCommander: KifiInstallationCommander,
     implicit val defaultContext: ExecutionContext,
     db: Database) extends Logging {
 
@@ -208,7 +208,17 @@ class UserConnectionsCommander @Inject() (
 
     val emailF = emailSender.connectionMade(friend.id.get, myUserId, NotificationCategory.User.FRIEND_ACCEPTED)
 
-    val notifF = elizaServiceClient.sendGlobalNotification(
+    val canSendPush = kifiInstallationCommander.isMobileVersionGreaterThen(friend.id.get, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
+    if (canSendPush) {
+      elizaServiceClient.sendUserPushNotification(
+        userId = friend.id.get,
+        message = s"${respondingUser.firstName} ${respondingUser.lastName} accepted your invitation to connect",
+        recipient = respondingUser,
+        pushNotificationExperiment = PushNotificationExperiment.Experiment1,
+        category = UserPushNotificationCategory.UserConnectionAccepted)
+    }
+
+    val notifF = elizaServiceClient.sendGlobalNotification( //push sent
       userIds = Set(friend.id.get),
       title = s"${respondingUser.firstName} ${respondingUser.lastName} accepted your invitation to connect!",
       body = s"Now you will enjoy ${respondingUser.firstName}’s keeps in your search results and you can message ${respondingUser.firstName} directly.",
@@ -230,17 +240,7 @@ class UserConnectionsCommander @Inject() (
       val requestingUserImage = s3ImageStore.avatarUrlByExternalId(Some(200), requestingUser.externalId, requestingUser.pictureName.getOrElse("0"), Some("https"))
       (requestingUser, requestingUserImage)
     }
-
-    val canSendPush = db.readOnlyReplica { implicit s => kifiInstallationRepo.lastUpdatedMobile(recipient.id.get) } exists { installation =>
-      installation.platform match {
-        case KifiInstallationPlatform.Android =>
-          installation.version.compareIt(KifiAndroidVersion("2.2.4")) >= 0
-        case KifiInstallationPlatform.IPhone =>
-          installation.version.compareIt(KifiIPhoneVersion("2.1.0")) >= 0
-        case _ =>
-          throw new Exception(s"Don't know platform for $installation")
-      }
-    }
+    val canSendPush = kifiInstallationCommander.isMobileVersionGreaterThen(recipient.id.get, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
     if (canSendPush) {
       elizaServiceClient.sendUserPushNotification(
         userId = recipient.id.get,
@@ -252,7 +252,7 @@ class UserConnectionsCommander @Inject() (
 
     val emailF = emailSender.friendRequest(recipient.id.get, myUserId)
 
-    val friendReqF = elizaServiceClient.sendGlobalNotification(
+    val friendReqF = elizaServiceClient.sendGlobalNotification( //push sent
       userIds = Set(recipient.id.get),
       title = s"${requestingUser.firstName} ${requestingUser.lastName} wants to connect with you on Kifi",
       body = s"Enjoy ${requestingUser.firstName}’s keeps in your search results and message ${requestingUser.firstName} directly.",

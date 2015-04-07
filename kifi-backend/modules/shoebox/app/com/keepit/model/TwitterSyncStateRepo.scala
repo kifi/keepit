@@ -1,18 +1,29 @@
 package com.keepit.model
 
 import com.keepit.common.db.{ State, Id }
-import com.google.inject.{ Inject, Singleton }
-import com.keepit.common.db.slick.{ DbRepo, DataBaseComponent }
+import com.google.inject.{ ImplementedBy, Inject, Singleton }
+import com.keepit.common.db.slick.{ Repo, DbRepo, DataBaseComponent }
 import com.keepit.common.time._
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 
 import org.joda.time.DateTime
 
+@ImplementedBy(classOf[TwitterSyncStateRepoImpl])
+trait TwitterSyncStateRepo extends Repo[TwitterSyncState] {
+  def getSyncsToUpdate(refreshWindow: DateTime)(implicit session: RSession): Seq[TwitterSyncState]
+  def getByHandleAndLibraryId(handle: String, libId: Id[Library])(implicit session: RSession): Option[TwitterSyncState]
+  def getFirstHandleByLibraryId(libId: Id[Library])(implicit session: RSession): Option[String]
+  def getByHandleAndUserIdUsed(handle: String, userIdUsed: Id[User])(implicit session: RSession): Option[TwitterSyncState]
+
+  // This needs to be rewritten. Does not work as expected.
+  def getTwitterSyncsByFriendIds(friendIds: Set[Id[User]])(implicit session: RSession): Map[Id[User], TwitterSyncState]
+}
+
 @Singleton
-class TwitterSyncStateRepo @Inject() (
+class TwitterSyncStateRepoImpl @Inject() (
     val db: DataBaseComponent,
     val clock: Clock,
-    val twitterHandleCache: TwitterHandleCache) extends DbRepo[TwitterSyncState] {
+    val twitterHandleCache: TwitterHandleCache) extends TwitterSyncStateRepo with DbRepo[TwitterSyncState] {
   import db.Driver.simple._
 
   type RepoImpl = TwitterSyncStateTable
@@ -29,33 +40,32 @@ class TwitterSyncStateRepo @Inject() (
   def table(tag: Tag) = new TwitterSyncStateTable(tag)
   initTable()
 
-  implicit def toHandleLibraryIdKey(libId: Id[Library]) = TwitterHandleLibraryIdKey(libId)
-
-  override def deleteCache(model: TwitterSyncState)(implicit session: RSession): Unit = {
-    twitterHandleCache.remove(model.libraryId)
+  def deleteCache(model: TwitterSyncState)(implicit session: RSession): Unit = {
+    twitterHandleCache.remove(TwitterHandleLibraryIdKey(model.libraryId))
   }
-  override def invalidateCache(model: TwitterSyncState)(implicit session: RSession): Unit = {
-    twitterHandleCache.set(model.libraryId, model.twitterHandle)
-  }
-
-  override def save(model: TwitterSyncState)(implicit session: RWSession): TwitterSyncState = {
-    invalidateCache(model)
-    super.save(model)
+  def invalidateCache(model: TwitterSyncState)(implicit session: RSession): Unit = {
+    twitterHandleCache.set(TwitterHandleLibraryIdKey(model.libraryId), model.twitterHandle)
   }
 
   def getSyncsToUpdate(refreshWindow: DateTime)(implicit session: RSession): Seq[TwitterSyncState] = {
     (for (row <- rows if (row.lastFetchedAt.isEmpty || row.lastFetchedAt <= refreshWindow) && row.state === TwitterSyncStateStates.ACTIVE) yield row).list
   }
 
-  def getHandleByLibraryId(libId: Id[Library])(implicit session: RSession): Option[String] = {
-    twitterHandleCache.getOrElseOpt(libId) {
-      val q = for {
-        row <- rows if (row.libraryId === libId && row.state === TwitterSyncStateStates.ACTIVE)
-      } yield row.twitterHandle
-      q.list.headOption
+  def getByHandleAndLibraryId(handle: String, libId: Id[Library])(implicit session: RSession): Option[TwitterSyncState] = {
+    (for { row <- rows if row.libraryId === libId && row.twitterHandle === handle } yield row).firstOption
+  }
+
+  def getFirstHandleByLibraryId(libId: Id[Library])(implicit session: RSession): Option[String] = {
+    twitterHandleCache.getOrElseOpt(TwitterHandleLibraryIdKey(libId)) {
+      (for { row <- rows if row.libraryId === libId && row.state === TwitterSyncStateStates.ACTIVE } yield row.twitterHandle).firstOption
     }
   }
 
+  def getByHandleAndUserIdUsed(handle: String, userIdUsed: Id[User])(implicit session: RSession): Option[TwitterSyncState] = {
+    (for { row <- rows if row.userId === userIdUsed && row.twitterHandle === handle } yield row).firstOption
+  }
+
+  // This needs to be rewritten. Does not work as expected.
   def getTwitterSyncsByFriendIds(friendIds: Set[Id[User]])(implicit session: RSession): Map[Id[User], TwitterSyncState] = {
     (for (r <- rows if r.userId.inSet(friendIds) && r.state === TwitterSyncStateStates.ACTIVE) yield (r.userId, r)).list.toMap
   }

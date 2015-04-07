@@ -1,8 +1,8 @@
-package com.keepit.learning.porndetector
+package com.keepit.rover.sensitivity
 
 import com.keepit.common.logging.Logging
 
-import scala.math.{ log, exp }
+import scala.math.{ exp, log }
 import scala.util.matching.Regex
 
 trait PornDetector {

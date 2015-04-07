@@ -34,11 +34,14 @@ object SimplePushNotificationCategory {
 
 object UserPushNotificationCategory {
   val UserConnectionRequest = UserPushNotificationCategory("UserConnectionRequest")
+  val UserConnectionAccepted = UserPushNotificationCategory("UserConnectionAccepted")
+  val ContactJoined = UserPushNotificationCategory("ContactJoined")
   val NewLibraryFollower = UserPushNotificationCategory("NewLibraryFollower")
 }
 
 object LibraryPushNotificationCategory {
   val LibraryChanged = LibraryPushNotificationCategory("LibraryChanged")
+  val LibraryInvitation = LibraryPushNotificationCategory("LibraryInvitation")
 }
 
 case class PushNotificationExperiment(name: String)

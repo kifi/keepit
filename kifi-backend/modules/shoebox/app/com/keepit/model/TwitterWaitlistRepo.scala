@@ -14,6 +14,7 @@ import scala.slick.jdbc.StaticQuery
 trait TwitterWaitlistRepo extends Repo[TwitterWaitlistEntry] {
   def getByUserAndHandle(id: Id[User], handle: String)(implicit session: RSession): Option[TwitterWaitlistEntry]
   def countActiveEntriesBeforeDateTime(time: DateTime)(implicit session: RSession): Int
+  def getPending(implicit session: RSession): Seq[TwitterWaitlistEntry]
 }
 
 @Singleton
@@ -41,7 +42,7 @@ class TwitterWaitlistRepoImpl @Inject() (
   def invalidateCache(model: TwitterWaitlistEntry)(implicit session: RSession): Unit = {}
 
   private val getByUserAndHandleCompiled = Compiled { (userId: Column[Id[User]], handle: Column[String]) =>
-    (for (r <- rows if (r.userId === userId && r.twitterHandle === handle)) yield r)
+    for (r <- rows if r.userId === userId && r.twitterHandle === handle) yield r
   }
   def getByUserAndHandle(userId: Id[User], handle: String)(implicit session: RSession): Option[TwitterWaitlistEntry] = {
     getByUserAndHandleCompiled(userId, handle).firstOption
@@ -51,6 +52,10 @@ class TwitterWaitlistRepoImpl @Inject() (
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     val query = sql"select count(*) from twitter_waitlist tw where tw.state = 'active' and tw.created_at < ${time}"
     query.as[Int].first
+  }
+
+  def getPending(implicit session: RSession): Seq[TwitterWaitlistEntry] = {
+    (for (r <- rows if r.state === TwitterWaitlistEntryStates.ACTIVE) yield r).list
   }
 
 }

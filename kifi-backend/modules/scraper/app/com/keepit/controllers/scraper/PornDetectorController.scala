@@ -1,14 +1,11 @@
 package com.keepit.controllers.scraper
 
-import com.keepit.learning.porndetector.PornDetectorFactory
 import com.keepit.common.controller.ScraperServiceController
 import com.google.inject.Inject
+import com.keepit.rover.sensitivity.{ PornDetectorFactory, PornDetectorUtil, PornWordLikelihood, PornWordLikelihoodStore }
 import play.api.mvc.Action
 import play.api.libs.json._
-import com.keepit.learning.porndetector.PornDetectorUtil
-import com.keepit.learning.porndetector.PornWordLikelihoodStore
 import scala.collection.mutable
-import com.keepit.learning.porndetector.PornWordLikelihood
 
 class PornDetectorController @Inject() (
     factory: PornDetectorFactory,
@@ -21,7 +18,7 @@ class PornDetectorController @Inject() (
 
   def detect() = Action(parse.tolerantJson) { request =>
     val query = (request.body \ "query").as[String]
-    val detector = factory()
+    val detector = factory.naiveBayes()
     val windows = PornDetectorUtil.tokenize(query).sliding(10, 10)
     val badTexts = windows.map { w => val block = w.mkString(" "); (block, detector.posterior(block)) }.filter(_._2 > 0.5f)
     Ok(Json.toJson(badTexts.toMap))

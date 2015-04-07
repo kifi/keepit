@@ -106,6 +106,7 @@ PageData.prototype = {
     this.keepers = o.keepers || [];
     this.keepersTotal = o.keepersTotal || this.keepers.length;
     this.libraries = o.libraries || [];
+    this.related = o.related || [];
   },
   howKept: function () {
     var keeps = this.keeps;
@@ -603,6 +604,7 @@ api.port.on({
       keepers: d ? d.keepers : [],
       keepersTotal: d ? d.keepersTotal : 0,
       libraries: d ? d.libraries : [],
+      related: d ? d.related : [],
       origin: webBaseUri()
     });
   },
@@ -2011,9 +2013,11 @@ function kififyWithPageData(tab, d) {
         log('[initTab]', tab.id, 'restricted');
       } else if (d.shown) {
         log('[initTab]', tab.id, 'shown before');
-      } else if (d.keepers.length || d.libraries.length) {
-        tab.keepersSec = 20;
-        if (api.tabs.isFocused(tab)) scheduleAutoEngage(tab, 'keepers');
+      } else if (d.keepers.length || d.libraries.length || d.related.length) {
+        tab.keepersSec = d.related.length ? 10 : 20;
+        if (api.tabs.isFocused(tab)) {
+          scheduleAutoEngage(tab, 'keepers');
+        }
       }
     }
   }
@@ -2710,8 +2714,16 @@ function throttle(func, wait, opts) {  // underscore.js
   };
 }
 
+//                           |---- IP v4 address ---||- subs -||-- core --|  |----------- suffix -----------| |- name --|    |-- port? --|
+var domainRe = /^https?:\/\/(\d{1,3}(?:\.\d{1,3}){3}|[^:\/?#]*?([^.:\/?#]+)\.(?:[^.:\/?#]{2,}|com?\.[a-z]{2})|[^.:\/?#]+)\.?(?::\d{2,5})?(?:$|\/|\?|#)/;
 function sameOrLikelyRedirected(url1, url2) {
-  return true;
+  if (url1 === url2) {
+    return true;
+  }
+  var m1 = url1.match(domainRe);
+  var m2 = url2.match(domainRe);
+  // hostnames match exactly or core domain without subdomains and TLDs match (e.g. "google" in docs.google.fr and www.google.co.uk)
+  return m1[1] === m2[1] || m1[2] === (m2[2] || 0);
 }
 
 // ===== Session management
