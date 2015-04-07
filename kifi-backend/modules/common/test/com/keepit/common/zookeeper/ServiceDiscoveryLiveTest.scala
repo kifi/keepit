@@ -1,5 +1,6 @@
 package com.keepit.common.zookeeper
 
+import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.test._
 import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.amazon._
@@ -16,6 +17,8 @@ import org.apache.zookeeper.CreateMode._
 import com.google.inject.util._
 import com.google.inject.Injector
 import akka.actor.Scheduler
+
+import scala.concurrent.ExecutionContext
 
 class ServiceDiscoveryLiveTest extends Specification with CommonTestInjector {
 
@@ -43,13 +46,13 @@ class ServiceDiscoveryLiveTest extends Specification with CommonTestInjector {
   "discovery" should {
 
     "register" in {
-      withInjector(FakeActorSystemModule()) { implicit injector =>
+      withInjector(FakeActorSystemModule(), FakeExecutionContextModule()) { implicit injector =>
         val services = new FortyTwoServices(inject[Clock], Mode.Test, None, None, inject[FortyTwoConfig]) {
           override lazy val currentService: ServiceType = ServiceType.SHOEBOX
         }
         val zkClient = new ZooKeeperClientImpl("localhost", 3000,
           Some({ zk1 => println(s"in callback, got $zk1") }))
-        val discovery: ServiceDiscovery = new ServiceDiscoveryImpl(zkClient, services, amazonInstanceInfo(1), inject[Scheduler], Providers.of(new FakeAirbrakeNotifier()), false, Set.empty)
+        val discovery: ServiceDiscovery = new ServiceDiscoveryImpl(zkClient, services, amazonInstanceInfo(1), inject[Scheduler], Providers.of(new FakeAirbrakeNotifier()), false, Set.empty, inject[ExecutionContext])
         zkClient.session { zk =>
           discovery.myClusterSize === 0
           zk.watchChildrenWithData[String](Node("/fortytwo/services/SHOEBOX"), { (children: Seq[(Node, String)]) =>
