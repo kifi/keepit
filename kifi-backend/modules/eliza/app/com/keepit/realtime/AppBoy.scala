@@ -113,7 +113,9 @@ class AppBoy @Inject() (
   private def sendNotification(user: User, device: Device, notification: PushNotification): Unit = {
 
     val defaultPushJson = Json.obj(
+      "badge" -> notification.unvisitedCount,
       "sound" -> Json.toJson(notification.sound),
+      "content-available" -> false,
       "alert" -> notification.message,
       "extra" -> addExtraJson(notification, device.deviceType)
     )

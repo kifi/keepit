@@ -53,7 +53,9 @@ class AppBoyTest extends Specification with TestInjector with ElizaTestInjector 
                 "external_user_ids":["${user1.externalId}"],
                 "messages": {
                   "apple_push": {
+                    "badge":3,
                     "sound":"notification.aiff",
+                    "content-available":false,
                     "alert":"pika",
                     "extra": {
                       "unreadCount":3
@@ -72,8 +74,10 @@ class AppBoyTest extends Specification with TestInjector with ElizaTestInjector 
                 "external_user_ids":["${user1.externalId}"],
                 "messages": {
                   "android_push": {
+                    "badge":3,
                     "sound":"notification.aiff",
                     "title":"pika",
+                    "content-available":false,
                     "alert":"pika",
                     "extra": {
                       "unreadCount":3
@@ -104,7 +108,9 @@ class AppBoyTest extends Specification with TestInjector with ElizaTestInjector 
               "external_user_ids":["${user1.externalId}"],
               "messages":{
                 "apple_push":{
+                  "badge": 3,
                   "sound":"notification.aiff",
+                  "content-available": false,
                   "alert":"pika",
                   "extra":{
                     "unreadCount":3,
@@ -123,8 +129,10 @@ class AppBoyTest extends Specification with TestInjector with ElizaTestInjector 
               "external_user_ids":["${user1.externalId}"],
               "messages":{
                 "android_push":{
+                  "badge": 3,
                   "sound":"notification.aiff",
                   "title":"pika",
+                  "content-available": false,
                   "alert":"pika",
                   "extra":{
                     "unreadCount":3,
@@ -158,7 +166,9 @@ class AppBoyTest extends Specification with TestInjector with ElizaTestInjector 
               "external_user_ids":["${user1.externalId}"],
               "messages":{
                 "apple_push":{
+                  "badge": 3,
                   "sound":"notification.aiff",
+                  "content-available":false,
                   "alert":"pika",
                   "extra":{
                     "unreadCount":3,
@@ -179,7 +189,9 @@ class AppBoyTest extends Specification with TestInjector with ElizaTestInjector 
               "external_user_ids":["${user1.externalId}"],
               "messages":{
                 "android_push":{
+                  "badge": 3,
                   "sound":"notification.aiff",
+                  "content-available":false,
                   "alert":"pika",
                   "extra":{
                     "unreadCount":3,
@@ -212,7 +224,9 @@ class AppBoyTest extends Specification with TestInjector with ElizaTestInjector 
               "external_user_ids":["${user1.externalId}"],
               "messages":{
                 "apple_push":{
+                  "badge": 3,
                   "sound":null,
+                  "content-available":false,
                   "alert":"pika",
                   "extra":{
                     "unreadCount":3,
@@ -234,7 +248,9 @@ class AppBoyTest extends Specification with TestInjector with ElizaTestInjector 
               "external_user_ids":["${user1.externalId}"],
               "messages":{
                 "android_push":{
+                  "badge": 3,
                   "sound":null,
+                  "content-available":false,
                   "title":"pika",
                   "alert":"pika",
                   "extra":{
