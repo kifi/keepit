@@ -5,6 +5,7 @@ angular.module('util', [])
 .factory('util', [
   '$document', '$window', '$location',
   function ($document, $window, $location) {
+    var HTML_QUOTED_ATTR_ESCAPE_CHARS = /"/g;
     var HTML_ESCAPE_CHARS = /[&<>"'\/]/g;
     var HTML_ESCAPES = {
       '&': '&amp;',
@@ -27,6 +28,10 @@ angular.module('util', [])
       return text == null ? '' : String(text).replace(HTML_ESCAPE_CHARS, htmlEscapeReplace);
     }
 
+    function htmlQuotedAttrEscape(text) {
+      return text == null ? '' : String(text).replace(HTML_QUOTED_ATTR_ESCAPE_CHARS, htmlEscapeReplace);
+    }
+
     function htmlEscapeReplace(ch) {
       return HTML_ESCAPES[ch];
     }
@@ -35,8 +40,8 @@ angular.module('util', [])
       if (text.indexOf('@', 1)) {
         var parts = text.split(emailAddrDetectRe);
         for (var i = 1; i < parts.length; i += 2) {
-          var escapedAddr = htmlEscape(parts[i]);
-          parts[i] = '<a href="mailto:' + escapedAddr + '">' + escapedAddr + '</a>';
+          var addr = parts[i];
+          parts[i] = '<a href="mailto:' + htmlQuotedAttrEscape(addr) + '">' + htmlEscape(addr) + '</a>';
         }
         for (var j = 0; j < parts.length; j += 2) {
           parts[j] = process(parts[j]);
@@ -61,9 +66,7 @@ angular.module('util', [])
             continue;
           }
         }
-        var escapedUri = htmlEscape(uri);
-        var escapedUrl = (scheme ? '' : 'http://') + escapedUri;
-        parts[i] = '<a target="_blank" rel="nofollow" href="' + escapedUrl + '">' + escapedUri;
+        parts[i] = '<a target="_blank" rel="nofollow" href="' + (scheme ? '' : 'http://') + htmlQuotedAttrEscape(uri) + '">' + htmlEscape(uri);
         parts[i+1] = '</a>';
       }
       for (i = 0; i < parts.length; i += 3) {
@@ -168,7 +171,6 @@ angular.module('util', [])
         }
         return text;
       },
-      htmlEscape: htmlEscape,
       /**
        * Behaves like $location.search({...}). Keys whose values are an empty array will be omitted entirely.
        * https://docs.angularjs.org/api/ng/service/$location#search
