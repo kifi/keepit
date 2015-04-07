@@ -53,7 +53,7 @@ angular.module('kifi', [
   '$compileProvider', '$FBProvider', 'env',
   function ($compileProvider, $FBProvider, env) {
     // ng-perf.com/2014/10/24/simple-trick-to-speed-up-your-angularjs-app-load-time/
-    $compileProvider.debugInfoEnabled(env.dev);
+    // $compileProvider.debugInfoEnabled(env.dev);
 
     $FBProvider
       .appId(env.dev ? '530357056981814' : '104629159695560')
