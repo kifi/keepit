@@ -80,6 +80,8 @@ class AppBoy @Inject() (
   private def addExtraJson(notification: PushNotification, deviceType: DeviceType) = {
     val json = Json.obj("unreadCount" -> notification.unvisitedCount)
     notification match {
+      case mcpn: MessageCountPushNotification =>
+        json
       case spn: SimplePushNotification =>
         json
       case mtpn: MessageThreadPushNotification =>
@@ -115,7 +117,6 @@ class AppBoy @Inject() (
     val defaultPushJson = Json.obj(
       "badge" -> notification.unvisitedCount,
       "sound" -> Json.toJson(notification.sound),
-      "content-available" -> false,
       "alert" -> notification.message,
       "extra" -> addExtraJson(notification, device.deviceType)
     )
@@ -123,12 +124,15 @@ class AppBoy @Inject() (
     val (deviceMsgType, devicePushJson) = device.deviceType match {
       case DeviceType.IOS =>
         val applePushJson = notification.message match {
-          case Some(msg) => defaultPushJson
+          case Some(msg) => defaultPushJson ++ Json.obj("content-available" -> false)
           case None => defaultPushJson ++ Json.obj("content-available" -> true)
         }
         ("apple_push", applePushJson)
       case DeviceType.Android =>
-        val androidPushJson = defaultPushJson ++ Json.obj("title" -> notification.message)
+        val androidPushJson = notification.message match {
+          case Some(msg) => defaultPushJson ++ Json.obj("title" -> msg) ++ Json.obj("content-available" -> false)
+          case None => defaultPushJson ++ Json.obj("content-available" -> true)
+        }
         ("android_push", androidPushJson)
     }
 
@@ -148,7 +152,9 @@ class AppBoy @Inject() (
       case lupn: LibraryUpdatePushNotification =>
         log.info(s"[AppBoy] sending LibraryUpdatePushNotification to user ${device.userId} device: [${device.token}] library ${lupn.libraryId} message ${lupn.message} with $json")
       case upn: UserPushNotification =>
-        log.info(s"[AppBoy] sending UserPushNotification to user ${device.userId} device: [${device.token}] user ${upn.username}:${upn.userExtId} message ${upn.message} wtih $json")
+        log.info(s"[AppBoy] sending UserPushNotification to user ${device.userId} device: [${device.token}] user ${upn.username}:${upn.userExtId} message ${upn.message} with $json")
+      case mcpn: MessageCountPushNotification =>
+        log.info(s"[AppBoy] sending MessageCountPushNotification to user ${device.userId} device: [${device.token}] with $json")
     }
 
     RetryFuture(attempts = 3, {
