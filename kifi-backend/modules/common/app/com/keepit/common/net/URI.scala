@@ -98,6 +98,19 @@ object URI extends Logging {
     } else {
       None
     }
+
+  def sanitize(baseUrl: String, targetUrl: String): Option[URI] = {
+    val quotedString = """"(.+)"""".r
+    val actualTargetUrlOption = Option(targetUrl) collect {
+      case quotedString(uriString) => uriString
+      case uriString if uriString.nonEmpty => uriString
+    }
+    for {
+      actualTargetUrl <- actualTargetUrlOption
+      absoluteTargetUrl <- URI.absoluteUrl(baseUrl, actualTargetUrl)
+      parsedTargetUri <- URI.safelyParse(absoluteTargetUrl) if Try { java.net.URI.create(parsedTargetUri.toString()) } isSuccess
+    } yield parsedTargetUri
+  }
 }
 
 class URI(val raw: Option[String], val scheme: Option[String], val userInfo: Option[String], val host: Option[Host], val port: Int, val path: Option[String], val query: Option[Query], val fragment: Option[String]) {
