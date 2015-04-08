@@ -63,11 +63,13 @@ class AppBoy @Inject() (
 
     shoeboxClient.getUser(userId).map { userOpt =>
       userOpt match {
-        case Some(user) =>
+        case Some(user) if deviceTypes.nonEmpty =>
           sendNotification(user, deviceTypes, notification)
           log.info(s"[AppBoy] sent user $userId push notifications to ${deviceTypes.length} device types out of ${allDevices.size}. $notification")
           deviceTypes.length
-
+        case Some(user) =>
+          log.info(s"[AppBoy] no devices for $userId push notifications $allDevices devices. notification: $notification")
+          0
         case None =>
           airbrake.notify(s"[AppBoy] user $userId not found to send push notifications! $allDevices devices. notification: $notification)")
           0
@@ -122,17 +124,16 @@ class AppBoy @Inject() (
           "badge" -> notification.unvisitedCount,
           "sound" -> Json.toJson(notification.sound),
           "alert" -> notification.message,
-          //"content-available" -> (if (notification.message.isDefined) false else true), // not used currently, but could be
+          "content-available" -> (if (notification.message.isDefined) false else true),
           "extra" -> addExtraJson(notification, DeviceType.IOS)
         ),
-        "android_push" -> Json.obj(
+        "android_push" -> (Json.obj(
           "badge" -> notification.unvisitedCount,
           "sound" -> Json.toJson(notification.sound),
           "alert" -> notification.message,
-          //"content-available" -> (if (notification.message.isDefined) false else true), // not used currently, but could be
-          "extra" -> addExtraJson(notification, DeviceType.Android),
-          "title" -> (if (notification.message.isDefined) Json.toJson(notification.message.get) else JsNull)
-        )
+          "content-available" -> (if (notification.message.isDefined) false else true),
+          "extra" -> addExtraJson(notification, DeviceType.Android)
+        ) ++ (if (notification.message.isDefined) Json.obj("title" -> Json.toJson(notification.message.get)) else Json.obj()))
       )
     )
 
@@ -151,7 +152,7 @@ class AppBoy @Inject() (
 
     RetryFuture(attempts = 3, {
       case error: Throwable =>
-        airbrake.notify(s"[AppBoy] Error when pushing $notification for user $userId. Will retry. Error: ${error.getClass.getSimpleName} $error")
+        log.error(s"[AppBoy] Error when pushing $notification for user $userId. Will retry. Error: ${error.getClass.getSimpleName} $error", error)
         true
     })(client.send(json, notification)).onComplete {
       case Success(res) if res.status / 100 == 2 =>
@@ -162,7 +163,7 @@ class AppBoy @Inject() (
       case Success(non200) =>
         airbrake.notify(s"[AppBoy] bad status ${non200.status} on push notification $notification for user $userId. response: ${non200.body}")
       case Failure(e) =>
-        airbrake.notify(s"[AppBoy] fail to send push notification $notification for user $userId - error: ${e.getClass.getSimpleName} $e")
+        airbrake.notify(s"[AppBoy] fail to send push notification $notification, json $json for user $userId - error: ${e.getClass.getSimpleName} $e")
     }
   }
 

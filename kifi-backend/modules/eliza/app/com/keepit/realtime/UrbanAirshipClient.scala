@@ -50,14 +50,15 @@ abstract class UrbanAirshipClientImpl(clock: Clock, config: UrbanAirshipConfig, 
 
   def updateDeviceState(device: Device): Unit = {
     log.info(s"Checking state of device: ${device.token}")
-    if (device.updatedAt plus MobilePushNotifier.RecheckPeriod isBefore clock.now()) {
+    if (device.token.isDefined && (device.updatedAt plus MobilePushNotifier.RecheckPeriod isBefore clock.now())) {
+      val token = device.token.get
       val uaUrl = if (device.isChannel) {
         log.info(s"device $device is using a channel")
-        s"${config.baseUrl}/api/channels/${device.token}"
+        s"${config.baseUrl}/api/channels/${token}"
       } else {
         device.deviceType match {
-          case DeviceType.IOS => s"${config.baseUrl}/api/device_tokens/${device.token}"
-          case DeviceType.Android => s"${config.baseUrl}/api/apids/${device.token}"
+          case DeviceType.IOS => s"${config.baseUrl}/api/device_tokens/${token}"
+          case DeviceType.Android => s"${config.baseUrl}/api/apids/${token}"
           case dt => throw new Exception(s"Unknown device type: $dt")
         }
       }
@@ -81,13 +82,13 @@ abstract class UrbanAirshipClientImpl(clock: Clock, config: UrbanAirshipConfig, 
         val active = (json \ "active").as[Boolean]
         db.readWrite { implicit s =>
           val state = if (active) DeviceStates.ACTIVE else DeviceStates.INACTIVE
-          log.info(s"Setting device state to $state: ${device.token}")
+          log.info(s"Setting device state to $state: ${token}")
           deviceRepo.save(device.copy(state = state))
         }
       } recover {
         case e @ NonOKResponseException(url, response, _) if response.status == NOT_FOUND =>
           db.readWrite { implicit s =>
-            log.info(s"Setting device state to inactive: ${device.token}")
+            log.info(s"Setting device state to inactive: ${token}")
             deviceRepo.save(device.copy(state = DeviceStates.INACTIVE))
           }
       }
