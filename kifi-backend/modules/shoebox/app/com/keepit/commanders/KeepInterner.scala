@@ -84,7 +84,6 @@ class KeepInterner @Inject() (
         userValueRepo.setValue(userId, UserValueName.BOOKMARK_IMPORT_TOTAL, total)
         userValueRepo.setValue(userId, UserValueName.bookmarkImportContextName(newImportId), Json.toJson(context))
       }
-
       deduped.grouped(500).toList.map { rawKeepGroup =>
         // insertAll fails if any of the inserts failed
         log.info(s"[persistRawKeeps] Persisting ${rawKeepGroup.length} raw keeps")
@@ -145,7 +144,7 @@ class KeepInterner @Inject() (
   }
 
   private def internUriAndBookmarkBatch(bms: Seq[RawBookmarkRepresentation], userId: Id[User], library: Library, source: KeepSource, installationId: Option[ExternalId[KifiInstallation]]) = {
-    val (persisted, failed) = db.readWriteBatch(bms, attempts = 2) { (session, bm) =>
+    val (persisted, failed) = db.readWriteBatch(bms, attempts = 4) { (session, bm) =>
       internUriAndBookmark(bm, userId, library, source, installationId)(session)
     } map {
       case (bm, res) => bm -> res.flatten
