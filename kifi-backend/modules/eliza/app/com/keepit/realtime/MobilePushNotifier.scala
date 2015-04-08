@@ -65,7 +65,7 @@ class MobilePushDelegator @Inject() (
     val numSentUrbanAirshipF = if (devicesWithToken.nonEmpty) {
       urbanAirship.notifyUser(userId, devicesWithToken, notification)
     } else Future.successful(0)
-    val numSentAppBoyF =  if (devicesNoToken.nonEmpty) {
+    val numSentAppBoyF = if (devicesNoToken.nonEmpty) {
       appBoy.notifyUser(userId, devicesNoToken, notification)
     } else Future.successful(0)
 

@@ -58,6 +58,7 @@ class AppBoyTest extends Specification with TestInjector with ElizaTestInjector 
              |      "badge": 3,
              |      "sound": "notification.aiff",
              |      "alert": "pika",
+             |      "content-available":false,
              |      "extra": {
              |        "unreadCount": 3
              |      }
@@ -66,6 +67,7 @@ class AppBoyTest extends Specification with TestInjector with ElizaTestInjector 
              |      "badge": 3,
              |      "sound": "notification.aiff",
              |      "alert": "pika",
+             |      "content-available":false,
              |      "extra": {
              |        "unreadCount": 3
              |      },
@@ -99,6 +101,7 @@ class AppBoyTest extends Specification with TestInjector with ElizaTestInjector 
                   "badge": 3,
                   "sound":"notification.aiff",
                   "alert":"pika",
+                  "content-available":false,
                   "extra":{
                     "unreadCount":3,
                     "id":"5fe6e19f-6092-49f1-b446-5d992fda0034"
@@ -108,6 +111,7 @@ class AppBoyTest extends Specification with TestInjector with ElizaTestInjector 
                   "badge": 3,
                   "sound":"notification.aiff",
                   "alert":"pika",
+                  "content-available":false,
                   "extra":{
                     "unreadCount":3,
                     "id":"5fe6e19f-6092-49f1-b446-5d992fda0034"
@@ -144,6 +148,7 @@ class AppBoyTest extends Specification with TestInjector with ElizaTestInjector 
                   "badge": 3,
                   "sound":"notification.aiff",
                   "alert":"pika",
+                  "content-available":false,
                   "extra":{
                     "unreadCount":3,
                     "t":"lr",
@@ -155,6 +160,7 @@ class AppBoyTest extends Specification with TestInjector with ElizaTestInjector 
                   "badge": 3,
                   "sound":"notification.aiff",
                   "alert":"pika",
+                  "content-available":false,
                   "extra":{
                     "unreadCount":3,
                     "t":"lr",
@@ -189,6 +195,7 @@ class AppBoyTest extends Specification with TestInjector with ElizaTestInjector 
                   "badge": 3,
                   "sound":null,
                   "alert":"pika",
+                  "content-available":false,
                   "extra":{
                     "unreadCount":3,
                     "t":"us",
@@ -201,6 +208,7 @@ class AppBoyTest extends Specification with TestInjector with ElizaTestInjector 
                   "badge": 3,
                   "sound":null,
                   "alert":"pika",
+                  "content-available":false,
                   "extra":{
                     "unreadCount":3,
                     "t":"us",
