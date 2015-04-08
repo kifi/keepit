@@ -259,7 +259,7 @@ class UrbanAirship @Inject() (
           dealWithFailNotification(device, notification, trial, new Exception(s"bad status ${res.status} on push notification $notification for device $device response: ${res.body}"))
         } else {
           log.info(s"[UrbanAirship] successful send of push notification on trial $trial for device $deviceRepo: ${res.body}")
-          messagingAnalytics.sentPushNotification(device, notification)
+          messagingAnalytics.sentPushNotification(device.userId, device.deviceType, notification)
         }
       case Failure(e) =>
         dealWithFailNotification(device, notification, trial, new Exception(s"fail on push notification $notification for device $device", e))
