@@ -64,7 +64,7 @@ class AppBoy @Inject() (
     shoeboxClient.getUser(userId).map { userOpt =>
       userOpt match {
         case Some(user) =>
-          sendNotification(user, userId, deviceTypes, notification)
+          sendNotification(user, deviceTypes, notification)
           log.info(s"[AppBoy] sent user $userId push notifications to ${deviceTypes.length} device types out of ${allDevices.size}. $notification")
           deviceTypes.length
 
@@ -111,7 +111,8 @@ class AppBoy @Inject() (
     }
   }
 
-  private def sendNotification(user: User, userId: Id[User], deviceTypes: Seq[DeviceType], notification: PushNotification): Unit = {
+  private def sendNotification(user: User, deviceTypes: Seq[DeviceType], notification: PushNotification): Unit = {
+    val userId = user.id.get
 
     val json = Json.obj(
       "app_group_id" -> AppBoyConfig.appGroupId,
