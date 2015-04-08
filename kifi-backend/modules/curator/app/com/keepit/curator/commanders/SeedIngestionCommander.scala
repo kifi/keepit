@@ -109,6 +109,7 @@ class SeedIngestionCommander @Inject() (
     log.info("XYZ: Triggered Top Uri ingestion for " + userId)
     topUrisIngestor(userId).map { _ =>
       log.info("XYZ: Completed Top Uri ingestion for " + userId)
+      rawSeedSeqNumAssigner.assignSequenceNumbers()
       ()
     }
   }
