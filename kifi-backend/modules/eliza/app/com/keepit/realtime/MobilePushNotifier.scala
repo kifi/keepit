@@ -62,8 +62,12 @@ class MobilePushDelegator @Inject() (
       deviceRepo.getByUserId(userId, None)
     }.partition(d => d.token.isDefined)
 
-    val numSentUrbanAirshipF = urbanAirship.notifyUser(userId, devicesWithToken, notification)
-    val numSentAppBoyF = appBoy.notifyUser(userId, devicesNoToken, notification)
+    val numSentUrbanAirshipF = if (devicesWithToken.nonEmpty) {
+      urbanAirship.notifyUser(userId, devicesWithToken, notification)
+    } else Future.successful(0)
+    val numSentAppBoyF =  if (devicesNoToken.nonEmpty) {
+      appBoy.notifyUser(userId, devicesNoToken, notification)
+    } else Future.successful(0)
 
     for {
       numSentUrbanAirship <- numSentUrbanAirshipF
