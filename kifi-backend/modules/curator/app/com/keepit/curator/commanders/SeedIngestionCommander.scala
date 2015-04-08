@@ -53,9 +53,11 @@ class SeedIngestionCommander @Inject() (
         log.info("XYZ: ingest all keeps future completed")
         rawSeedSeqNumAssigner.assignSequenceNumbers()
         val userIds = usersToIngestGraphDataFor()
-        val resFut = FutureHelpers.sequentialExec(userIds)(ingestTopUris)
-        rawSeedSeqNumAssigner.assignSequenceNumbers()
-        resFut
+        FutureHelpers.sequentialExec(userIds)(ingestTopUris).map { res =>
+          rawSeedSeqNumAssigner.assignSequenceNumbers()
+          res
+        }
+
       }
 
       ingestKeepsF.onComplete {
