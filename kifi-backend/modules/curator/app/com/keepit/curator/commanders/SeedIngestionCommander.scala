@@ -28,6 +28,7 @@ class SeedIngestionCommander @Inject() (
     keepInfoRepo: CuratorKeepInfoRepo,
     libMembershipRepo: CuratorLibraryMembershipInfoRepo,
     experimentCommander: RemoteUserExperimentCommander,
+    rawSeedSeqNumAssigner: RawSeedItemSequenceNumberAssigner,
     db: Database) extends Logging {
 
   val INGESTION_BATCH_SIZE = 50
@@ -50,8 +51,11 @@ class SeedIngestionCommander @Inject() (
 
       val ingestKeepsF = ingestAllKeeps().flatMap { _ =>
         log.info("XYZ: ingest all keeps future completed")
+        rawSeedSeqNumAssigner.assignSequenceNumbers()
         val userIds = usersToIngestGraphDataFor()
-        FutureHelpers.sequentialExec(userIds)(ingestTopUris)
+        val resFut = FutureHelpers.sequentialExec(userIds)(ingestTopUris)
+        rawSeedSeqNumAssigner.assignSequenceNumbers()
+        resFut
       }
 
       ingestKeepsF.onComplete {
