@@ -350,7 +350,6 @@ GET     /assets/sitemap-users-0.xml             @com.keepit.controllers.website.
 
 GET     /site/keeps/all             @com.keepit.controllers.website.KeepsController.allKeeps(before: Option[String], after: Option[String], collection: Option[String], helprank: Option[String], count: Int ?= Integer.MAX_VALUE, withPageInfo: Boolean ?= false)
 GET     /site/keeps/count           @com.keepit.controllers.website.KeepsController.numKeeps()
-GET     /site/keeps/import/status   @com.keepit.controllers.website.KeepsController.importStatus()
 GET     /site/keeps/export          @com.keepit.controllers.website.KeepsController.exportKeeps()
 GET     /site/keeps/:id             @com.keepit.controllers.website.KeepsController.getKeepInfo(id: ExternalId[Keep], withFullInfo: Boolean ?= false)
 #### Deprecated: Used by Android now, should be dropped by Nov 1, 2014

@@ -231,21 +231,6 @@ class KeepsController @Inject() (
     ))
   }
 
-  def importStatus() = UserAction { request =>
-    val values = db.readOnlyMaster { implicit session =>
-      userValueRepo.getValues(request.user.id.get, UserValueName.BOOKMARK_IMPORT_LAST_START, UserValueName.BOOKMARK_IMPORT_DONE, UserValueName.BOOKMARK_IMPORT_TOTAL)
-    }
-    val lastStartOpt = values(UserValueName.BOOKMARK_IMPORT_LAST_START)
-    val done = values(UserValueName.BOOKMARK_IMPORT_DONE)
-    val total = values(UserValueName.BOOKMARK_IMPORT_TOTAL)
-    val lastStart = lastStartOpt.map { lastStart =>
-      Seconds.secondsBetween(parseStandardTime(lastStart), clock.now).getSeconds
-    }
-    val doneOpt = Try(done.map(_.toInt)).toOption.flatten
-    val totalOpt = Try(total.map(_.toInt)).toOption.flatten
-    Ok(Json.obj("done" -> doneOpt, "total" -> totalOpt, "lastStart" -> lastStart))
-  }
-
   def searchUserTags(query: String, limit: Option[Int] = None) = UserAction.async { request =>
     keepsCommander.searchTags(request.userId, query, limit).map { hits =>
       implicit val matchesWrites = TupleFormat.tuple2Writes[Int, Int]

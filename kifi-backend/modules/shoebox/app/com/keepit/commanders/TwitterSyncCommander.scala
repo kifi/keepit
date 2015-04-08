@@ -74,14 +74,20 @@ class TwitterSyncCommander @Inject() (
     states.foreach { state =>
       val socialUserInfo: Option[SocialUserInfo] = state.userId.flatMap { userId =>
         db.readOnlyReplica { implicit session =>
-          socialRepo.getByUser(userId).find(_.networkType == SocialNetworks.TWITTER)
+          socialRepo.getByUser(userId).find(s => s.networkType == SocialNetworks.TWITTER)
         }
       }
-      val ownerId = db.readOnlyReplica { implicit session =>
-        libraryRepo.get(state.libraryId).ownerId
+      val library = db.readOnlyReplica { implicit session =>
+        libraryRepo.get(state.libraryId)
       }
-      if (throttle.waiting < states.length) syncOne(socialUserInfo, state, ownerId)
-      else airbrake.notify("Twitter library sync backing up!")
+      if (library.state == LibraryStates.ACTIVE) {
+        if (throttle.waiting < states.length) syncOne(socialUserInfo, state, library.ownerId)
+        else airbrake.notify("Twitter library sync backing up!")
+      } else {
+        db.readWrite { implicit session =>
+          syncStateRepo.save(state.copy(state = TwitterSyncStateStates.INACTIVE))
+        }
+      }
     }
   }
 
