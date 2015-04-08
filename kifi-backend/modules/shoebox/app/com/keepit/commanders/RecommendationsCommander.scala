@@ -190,7 +190,8 @@ class RecommendationsCommander @Inject() (
           owner = owner,
           id = Library.publicId(libraryId),
           name = lib.name,
-          path = Library.formatLibraryPath(owner.username, lib.slug)
+          path = Library.formatLibraryPath(owner.username, lib.slug),
+          color = lib.color.map { _.hex }
         )
     }
 

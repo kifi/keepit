@@ -18,7 +18,7 @@ import play.api.libs.json.{ Json, Writes }
   attribution: Seq[RecoAttributionInfo])
 
 // Library associated with an URI. Not to be confused with LibraryRecommendation
-@json case class RecoLibraryInfo(owner: BasicUser, id: PublicId[Library], name: String, path: String)
+@json case class RecoLibraryInfo(owner: BasicUser, id: PublicId[Library], name: String, path: String, color: Option[String])
 
 @json case class UriRecoItemInfo(
   id: ExternalId[NormalizedURI],
