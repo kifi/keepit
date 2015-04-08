@@ -10,15 +10,15 @@ import com.keepit.common.mail.template.EmailToSend
 import com.keepit.controllers.core.routes
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model.{ PasswordResetRepo, NotificationCategory, User }
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
-import scala.concurrent.Future
+import scala.concurrent.{ ExecutionContext, Future }
 
 class ResetPasswordEmailSender @Inject() (
     db: Database,
     emailTemplateSender: EmailTemplateSender,
     passwordResetRepo: PasswordResetRepo,
     config: FortyTwoConfig,
+    implicit val executionContext: ExecutionContext,
     protected val airbrake: AirbrakeNotifier) extends Logging {
 
   def sendToUser(userId: Id[User], resetEmailAddress: EmailAddress): Future[ElectronicMail] = {

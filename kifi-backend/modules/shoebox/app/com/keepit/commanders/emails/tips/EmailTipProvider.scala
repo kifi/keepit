@@ -8,10 +8,9 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.mail.template.{ EmailToSend, EmailTip }
 import com.keepit.model.{ User, UserEmailAddressRepo }
 import com.keepit.social.SocialNetworks.{ FACEBOOK, LINKEDIN }
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.twirl.api.Html
 
-import scala.concurrent.Future
+import scala.concurrent.{ ExecutionContext, Future }
 
 class EmailTipProvider @Inject() (
     db: Database,
@@ -21,6 +20,7 @@ class EmailTipProvider @Inject() (
     installExtensionTip: InstallExtensionTip,
     importGmail: ImportGmailContacts,
     keepFromEmailTip: KeepFromEmailTip,
+    implicit val executionContext: ExecutionContext,
     bookmarkImportTip: BookmarkImportTip) {
 
   def getTipHtml(emailToSend: EmailToSend) = {

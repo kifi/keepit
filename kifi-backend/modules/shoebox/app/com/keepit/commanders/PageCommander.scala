@@ -21,8 +21,7 @@ import com.keepit.common.logging.Logging
 import com.kifi.macros.json
 
 import play.api.libs.json._
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import scala.concurrent.{ Await, Future }
+import scala.concurrent.{ ExecutionContext, Await, Future }
 import scala.concurrent.duration._
 import scala.util.{ Failure, Success }
 import com.keepit.search.augmentation.AugmentableItem
@@ -45,6 +44,7 @@ class PageCommander @Inject() (
     userCommander: UserCommander,
     airbrake: AirbrakeNotifier,
     relatedPageCommander: RelatedPageCommander,
+    implicit val executionContext: ExecutionContext,
     implicit val config: PublicIdConfiguration) extends Logging {
 
   private def getKeepersFuture(userId: Id[User], uri: NormalizedURI): Future[(Seq[BasicUser], Int)] = {
@@ -265,6 +265,7 @@ class RelatedPageCommander @Inject() (
     uriRepo: NormalizedURIRepo,
     uriSummaryCmdr: URISummaryCommander,
     imageInfoRepo: ImageInfoRepo,
+    implicit val executionContext: ExecutionContext,
     cortex: CortexServiceClient) {
 
   private val MAX_LOOKUP_SIZE = 25
