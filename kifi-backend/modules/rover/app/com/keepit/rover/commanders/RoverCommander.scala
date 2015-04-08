@@ -40,6 +40,7 @@ class RoverCommander @Inject() (
       articleInfo.uriId,
       articleInfo.kind,
       latestArticle.url,
+      latestArticle.content.destinationUrl,
       latestArticle.createdAt,
       latestArticle.content.title,
       sensitivityCommander.isSensitive(latestArticle),

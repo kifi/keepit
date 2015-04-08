@@ -12,6 +12,7 @@ case class ShoeboxArticleUpdate(
   uriId: Id[NormalizedURI],
   kind: String,
   url: String,
+  destinationUrl: String,
   createdAt: DateTime,
   title: Option[String],
   sensitive: Boolean,
