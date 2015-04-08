@@ -10,11 +10,12 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
+import com.keepit.eliza.{ PushNotificationExperiment, SimplePushNotificationCategory }
 import com.keepit.eliza.controllers.WebSocketRouter
 import com.keepit.eliza.model.{ Notification, UserThread, UserThreadActivity, _ }
 import com.keepit.eliza.util.MessageFormatter
 import com.keepit.model.{ NotificationCategory, User }
-import com.keepit.realtime.{ MobilePushNotifier, MessageThreadPushNotification, PushNotification }
+import com.keepit.realtime.{ MessageCountPushNotification, MobilePushNotifier, MessageThreadPushNotification, PushNotification }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.{ BasicNonUser, BasicUser, BasicUserLikeEntity }
 import org.joda.time.DateTime
@@ -162,6 +163,14 @@ class NotificationCommander @Inject() (
     sendToUser(userId, Json.arr("unread_notifications_count", unreadCount))
     val notification = MessageThreadPushNotification(threadExtId, unreadCount, None, None)
     sendPushNotification(userId, notification)
+  }
+
+  def notifyUnreadCount(userId: Id[User]): Unit = {
+    val unreadCount = db.readOnlyMaster { implicit session =>
+      userThreadRepo.getUnreadUnmutedThreadCount(userId)
+    }
+    sendToUser(userId, Json.arr("unread_notifications_count", unreadCount))
+    sendPushNotification(userId, MessageCountPushNotification(unreadCount))
   }
 
   def notifyRemoveThread(userId: Id[User], threadExtId: ExternalId[MessageThread]): Unit =

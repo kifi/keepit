@@ -20,6 +20,10 @@ sealed trait PushNotification {
 }
 
 case class MessageThreadPushNotification(id: ExternalId[MessageThread], unvisitedCount: Int, message: Option[String], sound: Option[NotificationSound]) extends PushNotification
+case class MessageCountPushNotification(unvisitedCount: Int) extends PushNotification {
+  val sound = None
+  val message = None
+}
 case class SimplePushNotification(unvisitedCount: Int, message: Option[String], sound: Option[NotificationSound] = None, category: SimplePushNotificationCategory, experiment: PushNotificationExperiment) extends PushNotification
 case class LibraryUpdatePushNotification(unvisitedCount: Int, message: Option[String], libraryId: Id[Library], libraryUrl: String, sound: Option[NotificationSound] = None, category: LibraryPushNotificationCategory, experiment: PushNotificationExperiment) extends PushNotification
 case class UserPushNotification(unvisitedCount: Int, message: Option[String], userExtId: ExternalId[User], pictureUrl: String, username: Username, sound: Option[NotificationSound] = None, category: UserPushNotificationCategory, experiment: PushNotificationExperiment) extends PushNotification

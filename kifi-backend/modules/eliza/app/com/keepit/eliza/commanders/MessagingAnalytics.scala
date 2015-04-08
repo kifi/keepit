@@ -53,6 +53,7 @@ class MessagingAnalytics @Inject() (
     case simplePushNotification: SimplePushNotification => sentSimplePushNotification(device, simplePushNotification)
     case libraryUpdatePushNotification: LibraryUpdatePushNotification => sentLibraryUpdatePushNotification(device, libraryUpdatePushNotification)
     case userPushNotification: UserPushNotification => sentUserPushNotification(device, userPushNotification)
+    case messageCountPushNotification: MessageCountPushNotification => //do nothing
     case _ => throw new Exception(s"can't understand notification $notification")
   }
 
