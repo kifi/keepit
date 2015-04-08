@@ -13,9 +13,8 @@ import com.keepit.model._
 import com.keepit.common.concurrent.ReactiveLock
 import com.keepit.controllers.website.BookmarkImporter
 
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.JsObject
-import scala.concurrent.Future
+import scala.concurrent.{ ExecutionContext, Future }
 
 case class TwitterStatusesAPIResponse(handle: String, tweets: Seq[JsObject], maxTweetId: Long)
 
@@ -28,6 +27,7 @@ class TwitterSyncCommander @Inject() (
     importer: BookmarkImporter,
     libraryRepo: LibraryRepo,
     clock: Clock,
+    implicit val executionContext: ExecutionContext,
     protected val airbrake: AirbrakeNotifier) extends Logging {
 
   private val throttle = new ReactiveLock(1)
@@ -74,14 +74,20 @@ class TwitterSyncCommander @Inject() (
     states.foreach { state =>
       val socialUserInfo: Option[SocialUserInfo] = state.userId.flatMap { userId =>
         db.readOnlyReplica { implicit session =>
-          socialRepo.getByUser(userId).find(_.networkType == SocialNetworks.TWITTER)
+          socialRepo.getByUser(userId).find(s => s.networkType == SocialNetworks.TWITTER)
         }
       }
-      val ownerId = db.readOnlyReplica { implicit session =>
-        libraryRepo.get(state.libraryId).ownerId
+      val library = db.readOnlyReplica { implicit session =>
+        libraryRepo.get(state.libraryId)
       }
-      if (throttle.waiting < states.length) syncOne(socialUserInfo, state, ownerId)
-      else airbrake.notify("Twitter library sync backing up!")
+      if (library.state == LibraryStates.ACTIVE) {
+        if (throttle.waiting < states.length) syncOne(socialUserInfo, state, library.ownerId)
+        else airbrake.notify("Twitter library sync backing up!")
+      } else {
+        db.readWrite { implicit session =>
+          syncStateRepo.save(state.copy(state = TwitterSyncStateStates.INACTIVE))
+        }
+      }
     }
   }
 

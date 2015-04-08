@@ -20,6 +20,10 @@ sealed trait PushNotification {
 }
 
 case class MessageThreadPushNotification(id: ExternalId[MessageThread], unvisitedCount: Int, message: Option[String], sound: Option[NotificationSound]) extends PushNotification
+case class MessageCountPushNotification(unvisitedCount: Int) extends PushNotification {
+  val sound = None
+  val message = None
+}
 case class SimplePushNotification(unvisitedCount: Int, message: Option[String], sound: Option[NotificationSound] = None, category: SimplePushNotificationCategory, experiment: PushNotificationExperiment) extends PushNotification
 case class LibraryUpdatePushNotification(unvisitedCount: Int, message: Option[String], libraryId: Id[Library], libraryUrl: String, sound: Option[NotificationSound] = None, category: LibraryPushNotificationCategory, experiment: PushNotificationExperiment) extends PushNotification
 case class UserPushNotification(unvisitedCount: Int, message: Option[String], userExtId: ExternalId[User], pictureUrl: String, username: Username, sound: Option[NotificationSound] = None, category: UserPushNotificationCategory, experiment: PushNotificationExperiment) extends PushNotification
@@ -58,8 +62,12 @@ class MobilePushDelegator @Inject() (
       deviceRepo.getByUserId(userId, None)
     }.partition(d => d.token.isDefined)
 
-    val numSentUrbanAirshipF = urbanAirship.notifyUser(userId, devicesWithToken, notification)
-    val numSentAppBoyF = appBoy.notifyUser(userId, devicesNoToken, notification)
+    val numSentUrbanAirshipF = if (devicesWithToken.nonEmpty) {
+      urbanAirship.notifyUser(userId, devicesWithToken, notification)
+    } else Future.successful(0)
+    val numSentAppBoyF =  if (devicesNoToken.nonEmpty) {
+      appBoy.notifyUser(userId, devicesNoToken, notification)
+    } else Future.successful(0)
 
     for {
       numSentUrbanAirship <- numSentUrbanAirshipF

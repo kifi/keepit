@@ -747,19 +747,6 @@ class LibraryCommander @Inject() (
             val libraryUrl = db.readOnlyMaster { implicit s =>
               "https://www.kifi.com" + Library.formatLibraryPathUrlEncoded(basicUserRepo.load(lib.ownerId).username, lib.slug)
             }
-            val message = s"""${inviter.firstName} ${inviter.lastName} invited you to follow: ${lib.name}"""
-            inviteeIdSet.foreach { userId =>
-              val canSendPush = kifiInstallationCommander.isMobileVersionGreaterThen(userId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
-              if (canSendPush) {
-                elizaClient.sendLibraryPushNotification(
-                  userId,
-                  message,
-                  lib.id.get,
-                  libraryUrl,
-                  PushNotificationExperiment.Experiment1,
-                  LibraryPushNotificationCategory.LibraryInvitation)
-              }
-            }
 
             // send notifications to kifi users only
             elizaClient.sendGlobalNotification( //push sent
@@ -775,7 +762,21 @@ class LibraryCommander @Inject() (
                 "inviter" -> inviter,
                 "library" -> Json.toJson(LibraryNotificationInfo.fromLibraryAndOwner(lib, libImageOpt, libOwner))
               ))
-            )
+            ) map { _ =>
+                val message = s"""${inviter.firstName} ${inviter.lastName} invited you to follow: ${lib.name}"""
+                inviteeIdSet.foreach { userId =>
+                  val canSendPush = kifiInstallationCommander.isMobileVersionGreaterThen(userId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
+                  if (canSendPush) {
+                    elizaClient.sendLibraryPushNotification(
+                      userId,
+                      message,
+                      lib.id.get,
+                      libraryUrl,
+                      PushNotificationExperiment.Experiment1,
+                      LibraryPushNotificationCategory.LibraryInvitation)
+                  }
+                }
+              }
           }
           // send emails to both users & non-users
           invitesToPersist.map { invite =>
@@ -945,18 +946,19 @@ class LibraryCommander @Inject() (
         "follower" -> BasicUser.fromUser(follower),
         "library" -> Json.toJson(LibraryNotificationInfo.fromLibraryAndOwner(lib, libImageOpt, owner))
       ))
-    )
-    if (!lotsOfFollowers) {
-      val canSendPush = kifiInstallationCommander.isMobileVersionGreaterThen(lib.ownerId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
-      if (canSendPush) {
-        elizaClient.sendUserPushNotification(
-          userId = lib.ownerId,
-          message = message,
-          recipient = follower,
-          pushNotificationExperiment = PushNotificationExperiment.Experiment1,
-          category = UserPushNotificationCategory.NewLibraryFollower)
+    ) map { _ =>
+        if (!lotsOfFollowers) {
+          val canSendPush = kifiInstallationCommander.isMobileVersionGreaterThen(lib.ownerId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
+          if (canSendPush) {
+            elizaClient.sendUserPushNotification(
+              userId = lib.ownerId,
+              message = message,
+              recipient = follower,
+              pushNotificationExperiment = PushNotificationExperiment.Experiment1,
+              category = UserPushNotificationCategory.NewLibraryFollower)
+          }
+        }
       }
-    }
   }
 
   def notifyFollowersOfNewKeeps(library: Library, newKeeps: Keep*): Unit = {
@@ -1315,7 +1317,7 @@ class LibraryCommander @Inject() (
     (main, secret)
   }
 
-  def getLibraryWithUsernameAndSlug(username: String, slug: LibrarySlug, followRedirect: Boolean = false): Either[LibraryFail, Library] = {
+  def getLibraryWithUsernameAndSlug(username: String, slug: LibrarySlug): Either[LibraryFail, Library] = {
     val ownerIdentifier = ExternalId.asOpt[User](username).map(Left(_)) getOrElse Right(Username(username))
     val ownerOpt = ownerIdentifier match {
       case Left(externalId) => db.readOnlyMaster { implicit s => userRepo.getOpt(externalId).map((_, false)) }
@@ -1326,9 +1328,7 @@ class LibraryCommander @Inject() (
       case Some((owner, isUserAlias)) =>
         getLibraryBySlugOrAlias(owner.id.get, slug) match {
           case None => Left(LibraryFail(NOT_FOUND, "no_library_found"))
-          case Some((library, isLibraryAlias)) =>
-            if ((isUserAlias || isLibraryAlias) && !followRedirect) Left(LibraryFail(MOVED_PERMANENTLY, Library.formatLibraryPath(owner.username, library.slug)))
-            else Right(library)
+          case Some((library, isLibraryAlias)) => Right(library)
         }
     }
   }

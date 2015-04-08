@@ -4,6 +4,6 @@
     <div class="profile-image-change" ng-click="selectFile()"><div class="profile-image-change-inner">change picture</div></div>
   </div>
   <label class="profile-image-label">
-    <input class="profile-image-file" type="file" name="photo" accept="image/*" onchange="angular.element(this).scope().fileChosen(this.files)">
+    <input class="profile-image-file" type="file" name="photo" accept="image/*" kf-file-change="fileChosen">
   </label>
 </div>

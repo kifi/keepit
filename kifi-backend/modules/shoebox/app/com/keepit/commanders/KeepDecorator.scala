@@ -1,7 +1,6 @@
 package com.keepit.commanders
 
 import com.keepit.common.time._
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.google.inject.{ Provider, Inject }
 import com.keepit.common.db.Id
@@ -13,7 +12,7 @@ import com.keepit.model._
 import com.keepit.search.SearchServiceClient
 import com.keepit.search.augmentation.{ LimitedAugmentationInfo, AugmentableItem }
 
-import scala.concurrent.Future
+import scala.concurrent.{ ExecutionContext, Future }
 import com.keepit.common.core._
 
 class KeepDecorator @Inject() (
@@ -29,6 +28,7 @@ class KeepDecorator @Inject() (
     userCommander: Provider[UserCommander],
     searchClient: SearchServiceClient,
     keepSourceAttributionRepo: KeepSourceAttributionRepo,
+    implicit val executionContext: ExecutionContext,
     implicit val publicIdConfig: PublicIdConfiguration) {
 
   def decorateKeepsIntoKeepInfos(perspectiveUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, keeps: Seq[Keep], idealImageSize: ImageSize, withKeepTime: Boolean): Future[Seq[KeepInfo]] = {

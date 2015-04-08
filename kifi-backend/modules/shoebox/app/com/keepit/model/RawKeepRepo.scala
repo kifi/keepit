@@ -65,7 +65,7 @@ class RawKeepRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) ex
   def getUnprocessedAndMarkAsImporting(batchSize: Int)(implicit session: RSession): Seq[RawKeep] = {
     //StaticQuery.queryNA[RawKeep](s"select ")
     val records = (for (row <- rows if row.state === RawKeepStates.ACTIVE) yield row)
-      .sortBy(row => row.id.asc)
+      .sortBy(row => row.createdDate.desc)
       .take(batchSize)
       .list
     if (records.nonEmpty) {

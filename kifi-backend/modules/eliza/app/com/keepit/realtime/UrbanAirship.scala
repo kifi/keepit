@@ -119,6 +119,8 @@ class UrbanAirship @Inject() (
     notification match {
       case spn: SimplePushNotification =>
         json
+      case mcpn: MessageCountPushNotification =>
+        json
       case mtpn: MessageThreadPushNotification =>
         json.as[JsObject] + ("id" -> JsString(mtpn.id.id))
       case lupn: LibraryUpdatePushNotification =>
@@ -246,6 +248,8 @@ class UrbanAirship @Inject() (
         log.info(s"[UrbanAirship] Sending LibraryUpdatePushNotification to user ${device.userId} device: [${device.token}] library ${lupn.libraryId} message ${lupn.message}")
       case upn: UserPushNotification =>
         log.info(s"[UrbanAirship] Sending UserPushNotification to user ${device.userId} device: [${device.token}] ${upn.username}:${upn.userExtId} message ${upn.message}")
+      case mcpn: MessageCountPushNotification =>
+        log.info(s"[UrbanAirship] Sending MessageCountPushNotification to user ${device.userId} device: [${device.token}]")
 
     }
 
@@ -255,7 +259,7 @@ class UrbanAirship @Inject() (
           dealWithFailNotification(device, notification, trial, new Exception(s"bad status ${res.status} on push notification $notification for device $device response: ${res.body}"))
         } else {
           log.info(s"[UrbanAirship] successful send of push notification on trial $trial for device $deviceRepo: ${res.body}")
-          messagingAnalytics.sentPushNotification(device, notification)
+          messagingAnalytics.sentPushNotification(device.userId, device.deviceType, notification)
         }
       case Failure(e) =>
         dealWithFailNotification(device, notification, trial, new Exception(s"fail on push notification $notification for device $device", e))

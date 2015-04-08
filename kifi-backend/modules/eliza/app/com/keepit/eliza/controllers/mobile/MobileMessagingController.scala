@@ -296,6 +296,7 @@ class MobileMessagingController @Inject() (
       case _ =>
         notificationCommander.setAllNotificationsRead(request.userId) // mark all as read
     }
+    notificationCommander.notifyUnreadCount(request.userId)
     NoContent
   }
 }
