@@ -42,16 +42,6 @@ class FriendConnectionNotifier @Inject() (
 
     val emailF = connectionMadeEmailSender(friendUserId, myUserId, category, networkTypeOpt)
 
-    val canSendPush = kifiInstallationCommander.isMobileVersionGreaterThen(friendUserId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
-    if (canSendPush) {
-      elizaServiceClient.sendUserPushNotification(
-        userId = friendUserId,
-        message = s"${respondingUser.fullName} connected to you on Kifi",
-        recipient = respondingUser,
-        pushNotificationExperiment = PushNotificationExperiment.Experiment1,
-        category = UserPushNotificationCategory.UserConnectionAccepted)
-    }
-
     val notificationF = elizaServiceClient.sendGlobalNotification( //push needed
       userIds = Set(friendUserId),
       title = s"You’re connected with ${respondingUser.firstName} ${respondingUser.lastName} on Kifi!",
@@ -62,7 +52,17 @@ class FriendConnectionNotifier @Inject() (
       sticky = false,
       category = category,
       extra = Some(Json.obj("friend" -> BasicUser.fromUser(respondingUser)))
-    )
+    ) map { _ =>
+        val canSendPush = kifiInstallationCommander.isMobileVersionGreaterThen(friendUserId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
+        if (canSendPush) {
+          elizaServiceClient.sendUserPushNotification(
+            userId = friendUserId,
+            message = s"${respondingUser.fullName} connected to you on Kifi",
+            recipient = respondingUser,
+            pushNotificationExperiment = PushNotificationExperiment.Experiment1,
+            category = UserPushNotificationCategory.UserConnectionAccepted)
+        }
+      }
 
     emailF flatMap (_ => notificationF)
   }
