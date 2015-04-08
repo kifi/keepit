@@ -13,7 +13,7 @@ import scala.util.{ Failure, Success }
 
 @ImplementedBy(classOf[AppBoyClientImpl])
 trait AppBoyClient {
-  def send(json: JsObject, device: Device, notification: PushNotification): Future[ClientResponse]
+  def send(json: JsObject, notification: PushNotification): Future[ClientResponse]
 }
 
 class AppBoyClientImpl @Inject() (
@@ -29,18 +29,18 @@ class AppBoyClientImpl @Inject() (
       .withTimeout(CallTimeouts(maxWaitTime = Some(10000), responseTimeout = Some(10000), maxJsonParseTime = Some(1000)))
   }
 
-  def send(json: JsObject, device: Device, notification: PushNotification): Future[ClientResponse] = {
-    post(json, device, notification)
+  def send(json: JsObject, notification: PushNotification): Future[ClientResponse] = {
+    post(json, notification)
   }
 
-  protected def post(json: JsObject, device: Device, notification: PushNotification): Future[ClientResponse] = {
+  protected def post(json: JsObject, notification: PushNotification): Future[ClientResponse] = {
     val url = s"${AppBoyConfig.baseUrl}/messages/send"
-    log.info(s"[AppBoyClient] POST request to $url with body: $json, with device: $device, with notif: $notification")
+    log.info(s"[AppBoyClient] POST request to $url with body: $json, with notif: $notification")
     httpClient.postFuture(DirectUrl(url), json,
       { req =>
         {
           case t: Throwable =>
-            throw new Exception(s"[stop trying] error posting to appboy json $json on device $device notification $notification, not attempting more retries", t)
+            throw new Exception(s"[stop trying] error posting to appboy json $json notification $notification, not attempting more retries", t)
         }
       })
   }
