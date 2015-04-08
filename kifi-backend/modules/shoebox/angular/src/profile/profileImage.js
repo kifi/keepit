@@ -37,7 +37,6 @@ angular.module('kifi')
           orientation: 'horizontal',
           min: 0,
           max: 100,
-          range: 'min',
           change: refreshZoom,
           slide: refreshZoom
         };
@@ -155,20 +154,17 @@ angular.module('kifi')
         };
 
         scope.fileChosen = function (files) {
-          // this function is called via onchange attribute in input field - we need to let angular know about it
-          scope.$apply(function () {
-            isImageLoaded = false;
-            scope.files = files;
-            if (scope.files.length === 0) {
-              return;
-            }
-            // Using a local file reader so that the user can edit the image without uploading it to the server first
-            var reader = new FileReader();
-            reader.onload = function (e) {
-              showImageEditingTool(e.target.result);
-            };
-            reader.readAsDataURL(scope.files[0]);
-          });
+          isImageLoaded = false;
+          scope.files = files;
+          if (scope.files.length === 0) {
+            return;
+          }
+          // Using a local file reader so that the user can edit the image without uploading it to the server first
+          var reader = new FileReader();
+          reader.onload = function (e) {
+            showImageEditingTool(e.target.result);
+          };
+          reader.readAsDataURL(scope.files[0]);
         };
 
         function showImageEditingTool(imageUrl) {

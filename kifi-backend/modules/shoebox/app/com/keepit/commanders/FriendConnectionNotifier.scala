@@ -6,19 +6,22 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.store.S3ImageStore
 import com.keepit.common.time._
-import com.keepit.eliza.ElizaServiceClient
-import com.keepit.model.{ NotificationCategory, User, UserRepo }
+import com.keepit.eliza.{ UserPushNotificationCategory, PushNotificationExperiment, ElizaServiceClient }
+import com.keepit.model._
 import com.keepit.social.{ BasicUser, SocialNetworkType }
 import com.keepit.social.SocialNetworks.{ LINKEDIN, FACEBOOK }
 
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
+
+import scala.concurrent.ExecutionContext
 
 class FriendConnectionNotifier @Inject() (
     db: Database,
     userRepo: UserRepo,
     connectionMadeEmailSender: FriendConnectionMadeEmailSender,
     s3ImageStore: S3ImageStore,
+    kifiInstallationCommander: KifiInstallationCommander,
+    implicit val executionContext: ExecutionContext,
     elizaServiceClient: ElizaServiceClient) {
 
   def sendNotification(myUserId: Id[User], friendUserId: Id[User], networkTypeOpt: Option[SocialNetworkType] = None) = {
@@ -39,7 +42,7 @@ class FriendConnectionNotifier @Inject() (
 
     val emailF = connectionMadeEmailSender(friendUserId, myUserId, category, networkTypeOpt)
 
-    val notificationF = elizaServiceClient.sendGlobalNotification(
+    val notificationF = elizaServiceClient.sendGlobalNotification( //push needed
       userIds = Set(friendUserId),
       title = s"You’re connected with ${respondingUser.firstName} ${respondingUser.lastName} on Kifi!",
       body = s"Enjoy ${respondingUser.firstName}’s keeps in your search results and message ${respondingUser.firstName} directly. Find and invite more connections »",
@@ -49,7 +52,17 @@ class FriendConnectionNotifier @Inject() (
       sticky = false,
       category = category,
       extra = Some(Json.obj("friend" -> BasicUser.fromUser(respondingUser)))
-    )
+    ) map { _ =>
+        val canSendPush = kifiInstallationCommander.isMobileVersionGreaterThen(friendUserId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
+        if (canSendPush) {
+          elizaServiceClient.sendUserPushNotification(
+            userId = friendUserId,
+            message = s"${respondingUser.fullName} connected to you on Kifi",
+            recipient = respondingUser,
+            pushNotificationExperiment = PushNotificationExperiment.Experiment1,
+            category = UserPushNotificationCategory.UserConnectionAccepted)
+        }
+      }
 
     emailF flatMap (_ => notificationF)
   }

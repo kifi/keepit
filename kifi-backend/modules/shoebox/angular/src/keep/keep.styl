@@ -106,14 +106,11 @@ kifiGreen = #73c583
   &.selected.detailed
     background-color: #F7F7F5
 
-  &.toggling
-    overflow: hidden
-    transition: height .3s ease-in-out
-
   &.ng-hide-add
   &.ng-hide-remove
-    transition: max-height 0.3s linear
+    transition: max-height 0.3s
     display: block !important
+    overflow: hidden
 
   &.ng-hide-add.ng-hide-add-active
   &.ng-hide-remove
@@ -121,7 +118,7 @@ kifiGreen = #73c583
 
   &.ng-hide-add
   &.ng-hide-remove.ng-hide-remove-active
-    max-height: 200px
+    max-height: 400px
 
   &.editing
     border-radius: 0 keepBorderRadiusEditing keepBorderRadiusEditing
@@ -623,42 +620,3 @@ input.kf-keep-tag-input-new
   cursor: pointer
   width: 20px
   height: 20px
-
-.kf-keep-loader
-  position: relative
-  top: 2px
-  width: 16px
-  height: 16px
-  border-radius: 50%
-  display: inline-block
-  vertical-align: middle
-  background-color: #6fa6ef
-  margin: 0 8px 5px 0
-
-.kf-keep-loader
-.kf-keep-loader:before
-.kf-keep-loader:after
-    animation: 1s infinite linear
-
-.kf-keep-loader:before
-.kf-keep-loader:after
-    width: 100%
-    height: 100%
-    border-radius: 50%
-    position: absolute
-    top: 0
-    left: 0
-
-.kf-keep-loader
-  animation-name: kf-keep-loader
-
-@keyframes kf-keep-loader {
-  from {
-    transform: scale(0)
-    opacity: 1
-  }
-  to {
-    transform: scale(1)
-    opacity: 0
-  }
-}

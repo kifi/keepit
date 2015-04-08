@@ -153,19 +153,9 @@ class RawSeedItemRepoImpl @Inject() (
   }
 }
 
-trait RawSeedItemSequencingPlugin extends SequencingPlugin
-
-class RawSeedItemSequencingPluginImpl @Inject() (
-    override val actor: ActorInstance[RawSeedItemSequencingActor],
-    override val scheduling: SchedulingProperties) extends RawSeedItemSequencingPlugin {
-
-  override val interval: FiniteDuration = 60 seconds
-}
-
 @Singleton
 class RawSeedItemSequenceNumberAssigner @Inject() (db: Database, repo: RawSeedItemRepo, airbrake: AirbrakeNotifier)
-  extends DbSequenceAssigner[RawSeedItem](db, repo, airbrake)
+    extends DbSequenceAssigner[RawSeedItem](db, repo, airbrake) {
+  override val batchSize: Int = 500
+}
 
-class RawSeedItemSequencingActor @Inject() (
-  assigner: RawSeedItemSequenceNumberAssigner,
-  airbrake: AirbrakeNotifier) extends SequencingActor(assigner, airbrake)

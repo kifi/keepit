@@ -6,7 +6,6 @@ import com.keepit.common.service._
 import com.keepit.common.amazon._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent._
 import scala.collection.concurrent.TrieMap
 import scala.util.{ Success, Failure }
@@ -51,7 +50,8 @@ class ServiceDiscoveryImpl(
   scheduler: Scheduler,
   airbrake: Provider[AirbrakeNotifier],
   val isCanary: Boolean = false,
-  servicesToListenOn: Set[ServiceType])
+  servicesToListenOn: Set[ServiceType],
+  implicit val executionContext: ExecutionContext)
     extends ServiceDiscovery with Logging {
 
   @volatile private[this] var lastStatusChangeTime = System.currentTimeMillis

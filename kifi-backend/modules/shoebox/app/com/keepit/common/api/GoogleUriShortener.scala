@@ -1,12 +1,11 @@
 package com.keepit.common.api
 
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.{ CallTimeouts, DirectUrl, HttpClient }
 import play.api.libs.json.{ Json, JsObject }
 
-import scala.concurrent.Future
+import scala.concurrent.{ ExecutionContext, Future }
 
 /**
  * Example from curl:
@@ -31,6 +30,7 @@ trait UriShortener {
 }
 
 class GoogleUriShortener @Inject() (
+    implicit val executionContext: ExecutionContext,
     httpClient: HttpClient) extends Logging with UriShortener {
 
   def shorten(uri: String): Future[String] = {

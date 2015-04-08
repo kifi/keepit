@@ -8,15 +8,8 @@ angular.module('kifi')
     return {
       restrict: 'A',
       replace: true,
-      scope: {
-        refLibrary: '&library',
-        invite: '='
-      },
       templateUrl: 'libraries/libraryMiniCard.tpl.html',
       link: function (scope) {
-        scope.library = _.cloneDeep(scope.refLibrary());
-        scope.showMiniCard = true;
-
 
         //
         // Internal helper methods.
@@ -53,7 +46,7 @@ angular.module('kifi')
         };
 
         scope.following = function () {
-          return !scope.invite && !scope.isMyLibrary() && scope.isFollowing;
+          return !scope.isMyLibrary() && scope.isFollowing;
         };
 
         scope.toggleFollow = function () {
@@ -74,8 +67,9 @@ angular.module('kifi')
         //
 
         libraryService.getLibraryInfoById(scope.library.id).then(function (data) {
-          _.assign(scope.library, data.library);
+          scope.library = data.library;
           scope.isFollowing = data.membership === 'read_only';
+          scope.showMiniCard = true;
         })['catch'](function () {
           scope.showMiniCard = false;
         });

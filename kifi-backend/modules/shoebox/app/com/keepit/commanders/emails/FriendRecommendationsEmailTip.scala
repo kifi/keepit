@@ -9,10 +9,9 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.mail.template.{ EmailToSend, TipTemplate }
 import com.keepit.model.User
 import com.keepit.common.mail.template.helpers.toHttpsUrl
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.twirl.api.Html
 
-import scala.concurrent.Future
+import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.Random
 
 object FriendRecommendationsEmailTip {
@@ -33,6 +32,7 @@ class FriendRecommendationsEmailTip @Inject() (
     abook: ABookServiceClient,
     userCommander: UserCommander,
     userConnectionsCommander: UserConnectionsCommander,
+    implicit val executionContext: ExecutionContext,
     private val airbrake: AirbrakeNotifier) extends Logging {
 
   import FriendRecommendationsEmailTip._

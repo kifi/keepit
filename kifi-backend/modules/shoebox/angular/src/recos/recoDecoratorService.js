@@ -2,22 +2,16 @@
 
 angular.module('kifi')
 
-.factory('recoDecoratorService', ['keepDecoratorService', 'util',
-  function (keepDecoratorService, util) {
+.factory('recoDecoratorService', [
+  'keepDecoratorService',
+  function (keepDecoratorService) {
 
     function Recommendation(rawReco, type) {
       this.recoData = {
         type: type,  // This is either 'recommended' or 'popular'.
         kind: rawReco.kind,  // This is either 'keep' or 'library'.
-        reasons: rawReco.metaData || [],
         explain: rawReco.explain
       };
-
-      this.recoData.reasons.forEach(function (reason) {
-        if (!reason.name && reason.url) {
-          reason.name = util.formatTitleFromUrl(reason.url);
-        }
-      });
 
       if (this.recoData.kind === 'keep') {
         rawReco.itemInfo.libraries = rawReco.itemInfo.libraries;

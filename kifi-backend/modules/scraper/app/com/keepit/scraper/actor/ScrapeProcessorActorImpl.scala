@@ -61,9 +61,9 @@ class ScrapeProcessorActorImpl @Inject() (
 
   private[this] def getQueueSize(): Future[Int] = actor.ask(QueueSize).mapTo[Int]
 
-  private[this] val lock = new ReactiveLock(1, Some(100))
+  private[this] val lock = new ReactiveLock(1, None)
 
-  override def pull(): Unit = if (lock.waiting < 100) lock.withLockFuture {
+  override def pull(): Unit = lock.withLockFuture {
     val futureTask: Future[Unit] = getQueueSize() flatMap { qSize =>
       log.warn(s"[ScrapeProcessorActorImpl.pull] qSize: $qSize")
       if (qSize <= config.pullThreshold) {
@@ -106,9 +106,4 @@ class ScrapeProcessorActorImpl @Inject() (
     }
     futureTask
   }
-  else {
-    log.warn(s"lock waiting size = ${lock.waiting}. ScrapeProcessorActor doing nothing.")
-  }
-
 }
-

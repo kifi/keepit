@@ -19,11 +19,11 @@
         <menu class="kf-dropdown-menu kf-lh-cover-menu">
           <button class="kf-dropdown-menu-item kf-lh-cover-add" ng-if="!library.image" kf-hover ng-mouseup="onAddCoverImageMouseUp($event)">Add a cover image</button>
           <button class="kf-dropdown-menu-item kf-lh-cover-move" ng-if="library.image" kf-hover ng-mouseup="onMoveCoverImageMouseUp($event)">Reposition cover image</button>
-          <button class="kf-dropdown-menu-item kf-lh-cover-change" ng-if="library.image" kf-hover onmouseup="angular.element(this).scope().onChangeCoverImageMouseUp(event)">Change cover image</button>
+          <button class="kf-dropdown-menu-item kf-lh-cover-change" ng-if="library.image" kf-hover ng-mouseup="onChangeCoverImageMouseUp($event)" onmouseup="event.button?null:angular.element('.kf-lh-cover-file').click()">Change cover image</button>
           <button class="kf-dropdown-menu-item kf-lh-cover-remove" ng-if="library.image" kf-hover ng-mouseup="onRemoveCoverImageMouseUp($event)">Remove cover image</button>
         </menu>
       </div>
-      <input class="kf-lh-cover-file" type="file" accept="image/jpeg,image/png,image/gif" onchange="angular.element(this).scope().onCoverImageFileChosen(this.files[0]);this.value=null" ng-if="isMyLibrary() && isUserCreatedLibrary()">
+      <input class="kf-lh-cover-file" type="file" accept="image/jpeg,image/png,image/gif" kf-file-change="onCoverImageFileChosen" ng-if="isMyLibrary() && isUserCreatedLibrary()">
 
       <div class="kf-lh-private svg-card-lock" ng-if="library.visibility === 'secret'"></div>
 

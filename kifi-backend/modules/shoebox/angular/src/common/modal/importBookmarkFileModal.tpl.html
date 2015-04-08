@@ -1,5 +1,5 @@
 <div kf-modal kf-width="560px" class="import-file-modal" force-close="forceClose">
-  <div kf-basic-modal-content title="Import your links to Kifi" single-action="false" cancel="cancelBookmarkUpload()">
+  <div kf-basic-modal-content title="Import your links to Kifi" without-buttons cancel="cancelBookmarkUpload()">
     <div class="import-library-explanation">
       <img src="/img/others.png" class="import-file-others-icon">
       <div class="arrow-right-icon svg-arrow-right"></div>
@@ -28,7 +28,7 @@
           <td class="import-library-how-to-row-heading">Step 2</td>
           <td class="import-library-how-to-row-content">Select
             <a ng-click="openBookmarkFileSelector($event)" href="javascript:">the file you downloaded</a>.
-            <input class="bookmark-file-upload" type="file" name="bookmark-file" accept=".html,text/html,.zip" onchange="angular.element(this).scope().allowUpload(this)">
+            <input class="bookmark-file-upload" type="file" name="bookmark-file" accept=".html,text/html,.zip" kf-file-change="allowUpload">
             <span ng-if="importFilename" class="bookmark-file-upload-name"><i>{{importFilename}}</i> selected.</span>
           </td>
         </tr>

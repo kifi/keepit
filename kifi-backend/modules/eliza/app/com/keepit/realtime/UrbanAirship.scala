@@ -119,6 +119,8 @@ class UrbanAirship @Inject() (
     notification match {
       case spn: SimplePushNotification =>
         json
+      case mcpn: MessageCountPushNotification =>
+        json
       case mtpn: MessageThreadPushNotification =>
         json.as[JsObject] + ("id" -> JsString(mtpn.id.id))
       case lupn: LibraryUpdatePushNotification =>
@@ -137,6 +139,7 @@ class UrbanAirship @Inject() (
       case upn: UserPushNotification =>
         val pushType = upn.category match {
           case UserPushNotificationCategory.UserConnectionRequest => "fr"
+          case UserPushNotificationCategory.ContactJoined => "us"
           case UserPushNotificationCategory.NewLibraryFollower => "nf"
           case _ => "us"
         }
@@ -245,6 +248,8 @@ class UrbanAirship @Inject() (
         log.info(s"[UrbanAirship] Sending LibraryUpdatePushNotification to user ${device.userId} device: [${device.token}] library ${lupn.libraryId} message ${lupn.message}")
       case upn: UserPushNotification =>
         log.info(s"[UrbanAirship] Sending UserPushNotification to user ${device.userId} device: [${device.token}] ${upn.username}:${upn.userExtId} message ${upn.message}")
+      case mcpn: MessageCountPushNotification =>
+        log.info(s"[UrbanAirship] Sending MessageCountPushNotification to user ${device.userId} device: [${device.token}]")
 
     }
 

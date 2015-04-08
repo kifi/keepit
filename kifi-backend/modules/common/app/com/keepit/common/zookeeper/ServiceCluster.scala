@@ -6,7 +6,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.service._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 import scala.collection.concurrent.TrieMap
 
@@ -129,7 +129,7 @@ class ServiceCluster(val serviceType: ServiceType, airbrake: Provider[AirbrakeNo
     instances
   }
 
-  def update(zk: ZooKeeperSession, children: Seq[(Node, String)]): Unit = synchronized {
+  def update(zk: ZooKeeperSession, children: Seq[(Node, String)])(implicit executionContext: ExecutionContext): Unit = synchronized {
     val newInstances = instances.clone()
     addNewNodes(newInstances, children)
     removeOldNodes(newInstances, children.map(_._1))

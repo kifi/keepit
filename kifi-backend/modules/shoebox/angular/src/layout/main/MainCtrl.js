@@ -117,20 +117,18 @@ angular.module('kifi')
 
     $scope.disableBookmarkImport = true;
 
-    $scope.allowUpload = function (elem) {
-      $scope.$apply(function () {
-        var file = elem && elem.files && elem.files[0];
-        var ext = file && file.name.split('.').pop();
-        if (ext && (ext === 'html' || ext === 'htm' || ext === 'zip')) {
-          $scope.importFilename = file.name;
-          $scope.disableBookmarkImport = false;
-          $scope.importFileStatus = '';
-        } else {
-          $scope.importFilename = '';
-          $scope.disableBookmarkImport = true;
-          $scope.importFileStatus = 'Invalid bookmark file (*.html). Try picking it again.';
-        }
-      });
+    $scope.allowUpload = function (files) {
+      var file = files[0];
+      var ext = file && file.name.split('.').pop();
+      if (ext && (ext === 'html' || ext === 'htm' || ext === 'zip')) {
+        $scope.importFilename = file.name;
+        $scope.disableBookmarkImport = false;
+        $scope.importFileStatus = '';
+      } else {
+        $scope.importFilename = '';
+        $scope.disableBookmarkImport = true;
+        $scope.importFileStatus = 'Invalid bookmark file (*.html). Try picking it again.';
+      }
     };
 
     $scope.openExportPopup = function ($event) {
@@ -179,11 +177,11 @@ angular.module('kifi')
           // });
 
           var tooSlowTimer = $timeout(function () {
-            $scope.importFileStatus = 'Your bookmarks are still uploading... Hang tight!';
+            $scope.importFileStatus = 'Uploading... Hang tight!';
             $scope.disableBookmarkImport = false;
-          }, 8000);
+          }, 3000);
 
-          $scope.importFileStatus = 'Uploading! May take a bit, especially if you have a lot of links.';
+          $scope.importFileStatus = '';
           $scope.importFilename = '';
 
           uploadBookmarkFileToLibraryHelper(file, library.id).then(function success(result) {
