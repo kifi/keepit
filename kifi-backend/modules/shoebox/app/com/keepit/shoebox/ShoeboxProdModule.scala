@@ -9,6 +9,7 @@ import com.keepit.cortex.ProdCortexServiceClientModule
 import com.keepit.eliza.ProdElizaServiceClientModule
 import com.keepit.graph.ProdGraphServiceClientModule
 import com.keepit.heimdal.ProdHeimdalServiceClientModule
+import com.keepit.rover.ProdRoverServiceClientModule
 import com.keepit.search.ProdSearchServiceClientModule
 import com.keepit.social.ProdShoeboxSecureSocialModule
 import com.keepit.common.analytics.ProdAnalyticsModule
@@ -53,4 +54,5 @@ case class ShoeboxProdModule() extends ShoeboxModule with CommonProdModule {
   val cortexServiceClientModule = ProdCortexServiceClientModule()
   val graphServiceClientModule = ProdGraphServiceClientModule()
   val curatorServiceClientModule = ProdCuratorServiceClientModule()
+  val roverServiceClientModule = ProdRoverServiceClientModule()
 }
