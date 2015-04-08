@@ -332,7 +332,7 @@ class UserCommander @Inject() (
 
         // get users who have this user's email in their contacts
         abookServiceClient.getUsersWithContact(email) flatMap {
-          case contacts if contacts.nonEmpty => {
+          case contacts if contacts.nonEmpty =>
             val alreadyConnectedUsers = db.readOnlyReplica { implicit session =>
               userConnectionRepo.getConnectedUsers(newUser.id.get)
             }
@@ -351,25 +351,23 @@ class UserCommander @Inject() (
               imageUrl = s3ImageStore.avatarUrlByUser(newUser),
               sticky = false,
               category = NotificationCategory.User.CONTACT_JOINED
-            )
-
-            toNotify.foreach { userId =>
-              val canSendPush = kifiInstallationCommander.isMobileVersionGreaterThen(userId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
-              if (canSendPush) {
-                elizaServiceClient.sendUserPushNotification(
-                  userId = userId,
-                  message = s"${newUser.firstName} ${newUser.lastName} just joined Kifi!",
-                  recipient = newUser,
-                  pushNotificationExperiment = PushNotificationExperiment.Experiment1,
-                  category = UserPushNotificationCategory.ContactJoined)
+            ) map { _ =>
+                toNotify.foreach { userId =>
+                  val canSendPush = kifiInstallationCommander.isMobileVersionGreaterThen(userId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
+                  if (canSendPush) {
+                    elizaServiceClient.sendUserPushNotification(
+                      userId = userId,
+                      message = s"${newUser.firstName} ${newUser.lastName} just joined Kifi!",
+                      recipient = newUser,
+                      pushNotificationExperiment = PushNotificationExperiment.Experiment1,
+                      category = UserPushNotificationCategory.ContactJoined)
+                  }
+                }
               }
-            }
             Future.sequence(emailsF.toSeq) map (_ => toNotify)
-          }
-          case _ => {
+          case _ =>
             log.info("cannot send contact notifications: primary email empty for user.id=" + newUserId)
             Future.successful(Set.empty)
-          }
         }
       }
     } else Option(Future.successful(Set.empty))
