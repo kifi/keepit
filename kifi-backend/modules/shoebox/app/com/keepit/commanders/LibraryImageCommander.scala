@@ -14,9 +14,8 @@ import com.keepit.common.store.{ ImageSize, LibraryImageStore, S3ImageConfig }
 import com.keepit.model.ProcessImageOperation.Original
 import com.keepit.model._
 import play.api.libs.Files.TemporaryFile
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
-import scala.concurrent.Future
+import scala.concurrent.{ ExecutionContext, Future }
 
 object LibraryImageSizes {
   val scaleSizes = ScaledImageSize.allSizes
@@ -46,6 +45,7 @@ class LibraryImageCommanderImpl @Inject() (
     s3ImageConfig: S3ImageConfig,
     normalizedUriRepo: NormalizedURIRepo,
     photoshop: Photoshop,
+    implicit val executionContext: ExecutionContext,
     val webService: WebService) extends LibraryImageCommander with ProcessedImageHelper with Logging {
 
   def getUrl(libraryImage: LibraryImage): String = {

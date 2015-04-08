@@ -11,11 +11,13 @@ import com.keepit.common.store.ImageSize
 import com.google.inject.{ Singleton, Inject }
 import org.joda.time.DateTime
 import play.api.db
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
+
+import scala.concurrent.ExecutionContext
 
 @Singleton
 class LibraryAnalytics @Inject() (
     db: Database,
+    implicit val executionContext: ExecutionContext,
     keepRepo: KeepRepo)(heimdal: HeimdalServiceClient) {
 
   def sendLibraryInvite(userId: Id[User], library: Library, inviteeList: Seq[(Either[Id[User], EmailAddress])], eventContext: HeimdalContext) = {

@@ -10,13 +10,13 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.commanders.emails.FeatureWaitlistEmailSender
 
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import scala.concurrent.Future
+import scala.concurrent.{ ExecutionContext, Future }
 
 class FeatureWaitlistCommander @Inject() (
     db: Database,
     waitlistRepo: FeatureWaitlistRepo,
     waitListSender: FeatureWaitlistEmailSender,
+    implicit val executionContext: ExecutionContext,
     protected val airbrake: AirbrakeNotifier) extends Logging {
 
   def waitList(email: String, feature: String, userAgent: String, extIdOpt: Option[ExternalId[FeatureWaitlistEntry]] = None): Future[ExternalId[FeatureWaitlistEntry]] = {

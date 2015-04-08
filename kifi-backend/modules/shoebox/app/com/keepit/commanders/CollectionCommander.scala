@@ -7,12 +7,12 @@ import com.keepit.common.db.slick.DBSession._
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
 import play.api.libs.json.{ JsArray, Json }
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.google.inject.Inject
 import com.keepit.heimdal._
-import scala.collection.mutable.{ ArrayBuffer }
+import scala.collection.mutable.ArrayBuffer
 import com.keepit.common.cache._
 import com.keepit.common.logging.AccessLog
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.Duration
 import com.keepit.common.time._
 
@@ -43,6 +43,7 @@ class CollectionCommander @Inject() (
     searchClient: SearchServiceClient,
     libraryAnalytics: LibraryAnalytics,
     basicCollectionCache: BasicCollectionByIdCache,
+    implicit val executionContext: ExecutionContext,
     clock: Clock) extends Logging {
 
   def allCollections(sort: String, userId: Id[User]) = {

@@ -10,9 +10,8 @@ import com.keepit.common.strings._
 import com.keepit.model._
 import com.keepit.social.SocialNetworks
 import play.api.libs.Files.TemporaryFile
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
-import scala.concurrent.Future
+import scala.concurrent.{ ExecutionContext, Future }
 
 class TwitterPublishingCommander @Inject() (
     val experimentCommander: LocalUserExperimentCommander,
@@ -24,6 +23,7 @@ class TwitterPublishingCommander @Inject() (
     libraryImageStore: LibraryImageStore,
     twitterMessages: TwitterMessages,
     keepImageStore: KeepImageStore,
+    implicit val executionContext: ExecutionContext,
     twitterSocialGraph: TwitterSocialGraph) extends SocialPublishingCommander with Logging {
 
   def publishKeep(userId: Id[User], keep: Keep, library: Library): Unit = {

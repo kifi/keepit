@@ -9,10 +9,9 @@ import com.keepit.model._
 import com.keepit.search.engine.library.{ LibrarySearchExplanation, LibrarySearch, LibraryShardHit, LibraryShardResult }
 import com.keepit.search.engine.{ DebugOption, SearchFactory }
 import com.keepit.search.index.sharding.{ ActiveShards, Shard, Sharding }
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 case class LibrarySearchRequest(
   userId: Id[User],
@@ -58,6 +57,7 @@ class LibrarySearchCommanderImpl @Inject() (
     activeShards: ActiveShards,
     searchFactory: SearchFactory,
     languageCommander: LanguageCommander,
+    implicit val context: ExecutionContext,
     val searchClient: DistributedSearchServiceClient) extends LibrarySearchCommander with Sharding with Logging {
 
   def searchLibraries(

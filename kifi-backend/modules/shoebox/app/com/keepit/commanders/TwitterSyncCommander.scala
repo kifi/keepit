@@ -13,9 +13,8 @@ import com.keepit.model._
 import com.keepit.common.concurrent.ReactiveLock
 import com.keepit.controllers.website.BookmarkImporter
 
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.JsObject
-import scala.concurrent.Future
+import scala.concurrent.{ ExecutionContext, Future }
 
 case class TwitterStatusesAPIResponse(handle: String, tweets: Seq[JsObject], maxTweetId: Long)
 
@@ -28,6 +27,7 @@ class TwitterSyncCommander @Inject() (
     importer: BookmarkImporter,
     libraryRepo: LibraryRepo,
     clock: Clock,
+    implicit val executionContext: ExecutionContext,
     protected val airbrake: AirbrakeNotifier) extends Logging {
 
   private val throttle = new ReactiveLock(1)
