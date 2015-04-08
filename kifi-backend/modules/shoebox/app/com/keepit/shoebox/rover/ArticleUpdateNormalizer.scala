@@ -8,9 +8,11 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.net.{ WebService, URI }
 import com.keepit.model._
 import com.keepit.normalizer._
+import com.keepit.rover.article.{ GithubArticle, ArticleKind }
 import com.keepit.rover.article.content.NormalizationInfo
 import com.keepit.rover.fetcher.HttpRedirect
 import com.keepit.rover.model.ShoeboxArticleUpdate
+import org.apache.commons.lang3.StringEscapeUtils._
 import org.apache.http.HttpStatus
 import org.joda.time.DateTime
 import scala.concurrent.duration._
@@ -41,21 +43,18 @@ class ArticleUpdateNormalizer @Inject() (
     hasBeenRedirected map {
       case true => Future.successful(())
       case false => update.normalizationInfo match {
-        case Some(normalizationInfo) => processNormalizationInfo(update.uriId, normalizationInfo)
+        case Some(normalizationInfo) => processNormalizationInfo(update.uriId, update.articleKind, update.destinationUrl, normalizationInfo)
         case None => Future.successful(())
       }
     }
   }
 
-  private def processNormalizationInfo(uriId: Id[NormalizedURI], info: NormalizationInfo): Future[Unit] = {
-    val scrapedCandidates = Seq(
-      info.canonicalUrl.map(ScrapedCandidate(_, Normalization.CANONICAL)),
-      info.openGraphUrl.map(ScrapedCandidate(_, Normalization.OPENGRAPH))
-    ).flatten
+  private def processNormalizationInfo(uriId: Id[NormalizedURI], articleKind: ArticleKind[_], destinationUrl: String, info: NormalizationInfo): Future[Unit] = {
+    val scrapedCandidates = getNormalizationsCandidates(articleKind, destinationUrl, info)
     val currentReference = db.readOnlyMaster { implicit session => NormalizationReference(uriRepo.get(uriId)) }
 
     normalizationService.update(currentReference, scrapedCandidates: _*).map { newReferenceOption =>
-      val alternateUrls = info.alternateUrls ++ info.shortUrl
+      val alternateUrls = (info.alternateUrls ++ info.shortUrl).flatMap(URI.sanitize(destinationUrl, _).map(_.toString()))
       if (alternateUrls.nonEmpty) {
         val bestReference = db.readOnlyMaster { implicit session =>
           uriRepo.get(newReferenceOption getOrElse uriId)
@@ -78,6 +77,33 @@ class ArticleUpdateNormalizer @Inject() (
           }
         }
       }
+    }
+  }
+
+  private def getNormalizationsCandidates(articleKind: ArticleKind[_], destinationUrl: String, info: NormalizationInfo): Seq[ScrapedCandidate] = {
+    articleKind match {
+      case GithubArticle => Seq.empty[ScrapedCandidate] // we don't trust Github's canonical urls
+      case _ => Map(
+        Normalization.CANONICAL -> info.canonicalUrl,
+        Normalization.OPENGRAPH -> info.openGraphUrl
+      ).mapValues(_.flatMap(validateCandidateUrl(destinationUrl, _))).collect {
+          case (normalization, Some(candidateUrl)) => ScrapedCandidate(candidateUrl, normalization)
+        }.toSeq
+    }
+  }
+
+  private def validateCandidateUrl(destinationUrl: String, candidateUrl: String): Option[String] = {
+    URI.sanitize(destinationUrl, candidateUrl).flatMap { parsed =>
+      val sanitizedCandidateUrl = parsed.toString()
+
+      // Question marks are allowed in query parameter names and values, but their presence
+      // in a canonical URL usually indicates a bad url.
+      lazy val hasQuestionMark = (parsed.query.exists(_.params.exists(p => p.name.contains('?') || p.value.exists(_.contains('?')))))
+
+      // A common site error is copying the page URL directly into a canoncial URL tag, escaped an extra time.
+      lazy val isEscaped = (sanitizedCandidateUrl.length > destinationUrl.length && unescapeHtml4(sanitizedCandidateUrl) == destinationUrl)
+
+      if (hasQuestionMark || isEscaped) None else Some(sanitizedCandidateUrl)
     }
   }
 
