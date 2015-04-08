@@ -133,7 +133,7 @@ class RecommendationsCommanderTest extends Specification with ShoeboxTestInjecto
           val uriRepo = inject[NormalizedURIRepo]
 
           db.readWrite { implicit s =>
-            library().withUser(Id[User](1)).withName("scala").withSlug("scala").published().saved
+            library().withUser(Id[User](1)).withName("scala").withSlug("scala").published().withColor(LibraryColor.BLUE).saved
             uriRepo.save(NormalizedURI(title = Some("scala 101"), url = "http://scala101.org", urlHash = UrlHash("xyz"), state = NormalizedURIStates.SCRAPED, externalId = ExternalId[NormalizedURI]("367f1d08-9dfe-43cb-8d60-d39482b00fb7")))
             user().withName("Martin", "Odersky").withUsername("Martin Odersky").withPictureName("cool").withId(ExternalId[User]("786171c5-f0db-4221-b655-e6aeb9a848f6")).saved
           }
@@ -143,9 +143,49 @@ class RecommendationsCommanderTest extends Specification with ShoeboxTestInjecto
           val res = Await.result(resF, Duration(5, "seconds"))
           val reco = res.recos.head
           print(reco)
-          val js = Json.stringify(Json.toJson(reco))
-          val expected = """{"kind":"keep","itemInfo":{"id":"367f1d08-9dfe-43cb-8d60-d39482b00fb7","title":"scala 101","url":"http://scala101.org","keepers":[{"id":"786171c5-f0db-4221-b655-e6aeb9a848f6","firstName":"Martin","lastName":"Odersky","pictureName":"cool.jpg","username":"Martin Odersky"}],"libraries":[{"owner":{"id":"786171c5-f0db-4221-b655-e6aeb9a848f6","firstName":"Martin","lastName":"Odersky","pictureName":"cool.jpg","username":"Martin Odersky"},"id":"l7jlKlnA36Su","name":"scala","path":"/Martin Odersky/scala"}],"others":0,"siteName":"scala101.org","summary":{}},"explain":"fake explain"}"""
-          js === expected
+          val js = Json.toJson(reco)
+          val expected =
+            """
+              |{
+              |  "kind": "keep",
+              |  "itemInfo": {
+              |    "id": "367f1d08-9dfe-43cb-8d60-d39482b00fb7",
+              |    "title": "scala 101",
+              |    "url": "http://scala101.org",
+              |    "keepers": [
+              |      {
+              |        "id": "786171c5-f0db-4221-b655-e6aeb9a848f6",
+              |        "firstName": "Martin",
+              |        "lastName": "Odersky",
+              |        "pictureName": "cool.jpg",
+              |        "username": "Martin Odersky"
+              |      }
+              |    ],
+              |    "libraries": [
+              |      {
+              |        "owner": {
+              |          "id": "786171c5-f0db-4221-b655-e6aeb9a848f6",
+              |          "firstName": "Martin",
+              |          "lastName": "Odersky",
+              |          "pictureName": "cool.jpg",
+              |          "username": "Martin Odersky"
+              |        },
+              |        "id": "l7jlKlnA36Su",
+              |        "name": "scala",
+              |        "path": "/Martin Odersky/scala",
+              |        "color": "#447ab7"
+              |      }
+              |    ],
+              |    "others": 0,
+              |    "siteName": "scala101.org",
+              |    "summary": {
+              |
+              |    }
+              |  },
+              |  "explain": "fake explain"
+              |}
+            """.stripMargin
+          js === Json.parse(expected)
         }
       }
     }
