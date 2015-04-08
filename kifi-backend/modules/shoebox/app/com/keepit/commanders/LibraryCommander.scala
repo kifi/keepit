@@ -1315,7 +1315,7 @@ class LibraryCommander @Inject() (
     (main, secret)
   }
 
-  def getLibraryWithUsernameAndSlug(username: String, slug: LibrarySlug, followRedirect: Boolean = false): Either[LibraryFail, Library] = {
+  def getLibraryWithUsernameAndSlug(username: String, slug: LibrarySlug): Either[LibraryFail, Library] = {
     val ownerIdentifier = ExternalId.asOpt[User](username).map(Left(_)) getOrElse Right(Username(username))
     val ownerOpt = ownerIdentifier match {
       case Left(externalId) => db.readOnlyMaster { implicit s => userRepo.getOpt(externalId).map((_, false)) }
@@ -1326,9 +1326,7 @@ class LibraryCommander @Inject() (
       case Some((owner, isUserAlias)) =>
         getLibraryBySlugOrAlias(owner.id.get, slug) match {
           case None => Left(LibraryFail(NOT_FOUND, "no_library_found"))
-          case Some((library, isLibraryAlias)) =>
-            if ((isUserAlias || isLibraryAlias) && !followRedirect) Left(LibraryFail(MOVED_PERMANENTLY, Library.formatLibraryPath(owner.username, library.slug)))
-            else Right(library)
+          case Some((library, isLibraryAlias)) => Right(library)
         }
     }
   }
