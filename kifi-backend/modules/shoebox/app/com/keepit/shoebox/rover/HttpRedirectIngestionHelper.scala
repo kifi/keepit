@@ -1,118 +1,42 @@
 package com.keepit.shoebox.rover
 
-import com.google.inject.Inject
+import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
-import com.keepit.common.net.{ WebService, URI }
+import com.keepit.common.net.{ URI, WebService }
 import com.keepit.model._
 import com.keepit.normalizer._
-import com.keepit.rover.article.{ GithubArticle, ArticleKind }
-import com.keepit.rover.article.content.NormalizationInfo
 import com.keepit.rover.fetcher.HttpRedirect
-import com.keepit.rover.model.ShoeboxArticleUpdate
-import org.apache.commons.lang3.StringEscapeUtils._
 import org.apache.http.HttpStatus
 import org.joda.time.DateTime
+import com.keepit.common.core._
 import scala.concurrent.duration._
 
-import scala.concurrent.{ ExecutionContext, Future }
-import com.keepit.common.core._
+import scala.concurrent.{ Future, ExecutionContext }
 
-object ArticleUpdateNormalizer {
+object HttpRedirectIngestionHelper {
   val recentKeepWindows = 1 hour
 }
 
-class ArticleUpdateNormalizer @Inject() (
+@Singleton
+class HttpRedirectIngestionHelper @Inject() (
     db: Database,
     keepRepo: KeepRepo,
     uriRepo: NormalizedURIRepo,
-    uriInterner: NormalizedURIInterner,
     ws: WebService,
     normalizationService: NormalizationService,
     implicit val executionContext: ExecutionContext) extends Logging {
 
-  import ArticleUpdateNormalizer._
+  import HttpRedirectIngestionHelper._
 
-  def processUpdate(update: ShoeboxArticleUpdate): Future[Unit] = {
-    val hasBeenRedirected = update.httpInfo match {
-      case None => Future.successful(false)
-      case Some(httpInfo) => processRedirects(update.uriId, update.url, httpInfo.redirects, update.createdAt)
-    }
-    hasBeenRedirected map {
-      case true => Future.successful(())
-      case false => update.normalizationInfo match {
-        case Some(normalizationInfo) => processNormalizationInfo(update.uriId, update.articleKind, update.destinationUrl, normalizationInfo)
-        case None => Future.successful(())
-      }
-    }
-  }
-
-  private def processNormalizationInfo(uriId: Id[NormalizedURI], articleKind: ArticleKind[_], destinationUrl: String, info: NormalizationInfo): Future[Unit] = {
-    val scrapedCandidates = getNormalizationsCandidates(articleKind, destinationUrl, info)
-    val currentReference = db.readOnlyMaster { implicit session => NormalizationReference(uriRepo.get(uriId)) }
-
-    normalizationService.update(currentReference, scrapedCandidates: _*).map { newReferenceOption =>
-      val alternateUrls = (info.alternateUrls ++ info.shortUrl).flatMap(URI.sanitize(destinationUrl, _).map(_.toString()))
-      if (alternateUrls.nonEmpty) {
-        val bestReference = db.readOnlyMaster { implicit session =>
-          uriRepo.get(newReferenceOption getOrElse uriId)
-        }
-        bestReference.normalization.map(AlternateCandidate(bestReference.url, _)).foreach { bestCandidate =>
-          alternateUrls.foreach { alternateUrlString =>
-            val alternateUrl = URI.parse(alternateUrlString).get.toString()
-            db.readWrite { implicit session =>
-              uriInterner.getByUri(alternateUrl) match {
-                case Some(existingUri) if existingUri.id.get == bestReference.id.get => // ignore
-                case _ => {
-                  try {
-                    uriInterner.internByUri(alternateUrl, bestCandidate)
-                  } catch {
-                    case ex: Throwable => log.error(s"Failed to intern alternate url $alternateUrl for $bestCandidate")
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  private def getNormalizationsCandidates(articleKind: ArticleKind[_], destinationUrl: String, info: NormalizationInfo): Seq[ScrapedCandidate] = {
-    articleKind match {
-      case GithubArticle => Seq.empty[ScrapedCandidate] // we don't trust Github's canonical urls
-      case _ => Map(
-        Normalization.CANONICAL -> info.canonicalUrl,
-        Normalization.OPENGRAPH -> info.openGraphUrl
-      ).mapValues(_.flatMap(validateCandidateUrl(destinationUrl, _))).collect {
-          case (normalization, Some(candidateUrl)) => ScrapedCandidate(candidateUrl, normalization)
-        }.toSeq
-    }
-  }
-
-  private def validateCandidateUrl(destinationUrl: String, candidateUrl: String): Option[String] = {
-    URI.sanitize(destinationUrl, candidateUrl).flatMap { parsed =>
-      val sanitizedCandidateUrl = parsed.toString()
-
-      // Question marks are allowed in query parameter names and values, but their presence
-      // in a canonical URL usually indicates a bad url.
-      lazy val hasQuestionMark = (parsed.query.exists(_.params.exists(p => p.name.contains('?') || p.value.exists(_.contains('?')))))
-
-      // A common site error is copying the page URL directly into a canoncial URL tag, escaped an extra time.
-      lazy val isEscaped = (sanitizedCandidateUrl.length > destinationUrl.length && unescapeHtml4(sanitizedCandidateUrl) == destinationUrl)
-
-      if (hasQuestionMark || isEscaped) None else Some(sanitizedCandidateUrl)
-    }
-  }
-
-  private def processRedirects(uriId: Id[NormalizedURI], url: String, redirects: Seq[HttpRedirect], redirectedAt: DateTime): Future[Boolean] = {
+  def processRedirects(uriId: Id[NormalizedURI], url: String, redirects: Seq[HttpRedirect], redirectedAt: DateTime): Future[Boolean] = {
     if (redirects.isEmpty) Future.successful(false)
     else {
       log.info(s"Processing redirects found at uri ${uriId}: ${url}: ${redirects.mkString("\n")}")
       resolve(uriId, url, redirects, redirectedAt).flatMap {
-        case Left(Some(destinationUrl)) => recordPermanentRedirect(uriId, destinationUrl)
+        case Left(Some(destinationUrl)) => renormalizeWithPermanentRedirect(uriId, destinationUrl)
         case Left(None) =>
           log.warn(s"Unable to resolve absolute permanent redirect at uri ${uriId}: ${url}: ${redirects.mkString("\n")}")
           Future.successful(false)
@@ -121,9 +45,9 @@ class ArticleUpdateNormalizer @Inject() (
           Future.successful(false)
       }
     }
-  }
+  } tap { _.imap { hasBeenRenormalized => if (hasBeenRenormalized) log.info(s"Uri $uriId has been renormalized after processing $redirects from $redirectedAt") } }
 
-  private def recordPermanentRedirect(uriId: Id[NormalizedURI], destinationUrl: String): Future[Boolean] = {
+  private def renormalizeWithPermanentRedirect(uriId: Id[NormalizedURI], destinationUrl: String): Future[Boolean] = {
     val uriWithverifiedCandidateOption = normalizationService.prenormalize(destinationUrl).toOption.flatMap { prenormalizedDestinationUrl =>
       db.readWrite { implicit session =>
         val (candidateUrl, candidateNormalizationOption) = uriRepo.getByNormalizedUrl(prenormalizedDestinationUrl) match {
@@ -198,5 +122,4 @@ class ArticleUpdateNormalizer @Inject() (
   private def updateRedirectRestriction(uri: NormalizedURI, restriction: Restriction): NormalizedURI = {
     if (Restriction.redirects.contains(restriction)) uri.copy(restriction = Some(restriction)) else removeRedirectRestriction(uri)
   }
-
 }
