@@ -252,6 +252,6 @@ class URILDATopicRepoImpl @Inject() (
       r <- rows
       if r.firstTopic === firstTopic && r.secondTopic === secondTopic && r.version === version && r.state === URILDATopicStates.ACTIVE
     } yield r
-    ).take(limit).sortBy(_.createdAt desc).list
+    ).sortBy(_.createdAt desc).take(limit).list
   }
 }
