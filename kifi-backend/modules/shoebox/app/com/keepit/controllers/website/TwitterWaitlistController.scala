@@ -32,8 +32,8 @@ class TwitterWaitlistController @Inject() (
   //DO NOT USE THE WORD *FAKE* IN THE ROUTE FOR THIS!!!
   def getFakeWaitlistPosition() = UserAction { request =>
     val (handleOpt, emailOpt) = db.readOnlyReplica { implicit session =>
-      val twOpt = socialRepo.getByUser(request.userId).find(_.networkType == SocialNetworks.TWITTER).flatMap {
-        _.getProfileUrl.map(url => url.substring(url.lastIndexOf('/') + 1))
+      val twOpt = socialRepo.getByUser(request.userId).find(_.networkType == SocialNetworks.TWITTER).flatMap { info =>
+        info.username.orElse(info.getProfileUrl.map(url => url.substring(url.lastIndexOf('/') + 1)))
       }
       val emailOpt = Try(userEmailAddressRepo.getByUser(request.userId)).toOption
       (twOpt, emailOpt)
