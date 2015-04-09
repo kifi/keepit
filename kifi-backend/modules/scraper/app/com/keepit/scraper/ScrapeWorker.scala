@@ -111,7 +111,7 @@ class ScrapeWorkerImpl @Inject() (
     // scrape has happened. Excellent cleanup task for anyone learning scraper architecture.
 
     @inline def postProcess(scrapedURI: NormalizedURI, article: Article, signature: Signature): Future[Option[String]] = {
-      article.canonicalUrl.fold(Future.successful(()))(recordScrapedNormalization(latestUri, signature, _, article.alternateUrls)) flatMap { _ =>
+      article.canonicalUrl.fold(Future.successful(()))(recordScrapedNormalization(latestUri, signature, article.destinationUrl, _, article.alternateUrls)) flatMap { _ =>
         scrapedURI.id.fold(Future.successful[Option[String]](None))(id => shoeboxScraperClient.getUriImage(id))
       }
     }
@@ -408,39 +408,14 @@ class ScrapeWorkerImpl @Inject() (
     }
   }
 
-  private def recordScrapedNormalization(uri: NormalizedURI, signature: Signature, canonicalUrl: String, alternateUrls: Set[String]): Future[Unit] = {
-    sanitize(uri.url, canonicalUrl) match {
+  private def recordScrapedNormalization(uri: NormalizedURI, signature: Signature, destinationUrl: Option[String], canonicalUrl: String, alternateUrls: Set[String]): Future[Unit] = {
+    def sanitize(candidateUrl: String): Option[String] = URI.sanitize(destinationUrl getOrElse uri.url, candidateUrl).map(_.toString())
+    sanitize(canonicalUrl) match {
       case None => Future.successful(())
       case Some(properCanonicalUrl) =>
-        val properAlternateUrls = (alternateUrls.flatMap(sanitize(uri.url, _)) - uri.url - properCanonicalUrl).filterNot(_.length > NormalizedURI.UrlMaxLen).take(3)
+        val properAlternateUrls = (alternateUrls.flatMap(sanitize) - uri.url - properCanonicalUrl).filterNot(_.length > NormalizedURI.UrlMaxLen).take(3)
         shoeboxCommander.recordScrapedNormalization(uri.id.get, signature, properCanonicalUrl, Normalization.CANONICAL, properAlternateUrls)
     }
-  }
-
-  private def sanitize(baseUrl: String, canonicalUrl: String): Option[String] = {
-    val quotedString = """"(.+)"""".r
-    val actualTargetUrlOption = Option(canonicalUrl) collect {
-      case quotedString(uriString) => uriString
-      case uriString if uriString.nonEmpty => uriString
-    }
-    for {
-      actualTargetUrl <- actualTargetUrlOption
-      absoluteTargetUrl <- URI.absoluteUrl(baseUrl, actualTargetUrl)
-      parsedTargetUri <- safelyParse(absoluteTargetUrl)
-    } yield parsedTargetUri.toString()
-  }
-
-  private def safelyParse(uriString: String): Option[URI] = URI.parse(uriString) match {
-    case Success(uri) =>
-      Try { java.net.URI.create(uri.toString()) } match {
-        case Success(_) => Some(uri)
-        case Failure(e) =>
-          log.error(s"uri parsing by java...URI failed: [$uriString]", e)
-          None
-      }
-    case Failure(e) =>
-      log.error(s"uri parsing by keepit...URI failed: [$uriString]", e)
-      None
   }
 
 }
