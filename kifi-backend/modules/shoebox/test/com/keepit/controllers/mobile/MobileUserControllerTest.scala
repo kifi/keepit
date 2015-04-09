@@ -1,5 +1,6 @@
 package com.keepit.controllers.mobile
 
+import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.time._
 import com.keepit.model.KeepFactoryHelper._
 import com.keepit.model.KeepFactory._
@@ -56,6 +57,7 @@ class MobileUserControllerTest extends Specification with ShoeboxApplicationInje
 
   val mobileControllerTestModules = Seq(
     FakeShoeboxServiceModule(),
+    FakeExecutionContextModule(),
     FakeScrapeSchedulerModule(),
     FakeMailModule(),
     FakeHttpClientModule(),
@@ -118,6 +120,7 @@ class FasterMobileUserControllerTest extends Specification with ShoeboxTestInjec
 
   val modules = Seq(
     FakeShoeboxServiceModule(),
+    FakeExecutionContextModule(),
     FakeScrapeSchedulerModule(),
     FakeMailModule(),
     FakeHttpClientModule(),
