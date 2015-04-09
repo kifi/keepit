@@ -462,7 +462,7 @@ class LDACommanderImpl @Inject() (
         val div = KL_divergence(uriFeat.feature.get.value, x.feature.get.value)
         (x.uriId, div)
       }
-      scored.sortBy(_._2).map { _._1 } // smaller divergence => more similar
+      scored.filter(_._2 < 0.4f).sortBy(_._2).map { _._1 } // smaller divergence => more similar
     }
 
     db.readOnlyReplica { implicit s =>
@@ -473,7 +473,7 @@ class LDACommanderImpl @Inject() (
           if (res.size > 10) {
             res
           } else {
-            (res ++ getSimilarByKLDivergence(uriFeat, 25)).distinct.take(10)
+            (res ++ getSimilarByKLDivergence(uriFeat, 50)).distinct.take(10)
           }
         case None => Seq()
       }
