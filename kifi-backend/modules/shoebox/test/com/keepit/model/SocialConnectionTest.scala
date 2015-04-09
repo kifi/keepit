@@ -49,6 +49,24 @@ class SocialConnectionTest extends Specification with ShoeboxTestInjector {
 
   "SocialConnection" should {
 
+    "with username" in {
+      withDb(socialConnectionTestModules: _*) { implicit injector =>
+        val socialUser = inject[Database].readWrite { implicit s =>
+          val u = inject[UserRepo].save(User(firstName = "Andrew", lastName = "Conner", username = Username("test"), normalizedUsername = "test"))
+          val su = inject[SocialUserInfoRepo].save(SocialUserInfo(
+            fullName = "Andrew Conner",
+            socialId = SocialId("71105121"),
+            networkType = SocialNetworks.TWITTER,
+            username = Some("andrew")
+          ).withUser(u))
+          su
+        }
+        inject[Database].readOnlyMaster { implicit s =>
+          inject[SocialUserInfoRepo].get(socialUser.id.get) === socialUser
+        }
+      }
+    }
+
     "give Kifi user's connections (min set)" in {
       withDb(socialConnectionTestModules: _*) { implicit injector =>
 

@@ -123,7 +123,8 @@ class TwitterSocialGraphImpl @Inject() (
       log.info(s"[updateSocialUserInfo] picUrl=${info.pictureUrl} profileUrl=${info.profileUrl}; info=$info")
       sui.copy(
         pictureUrl = info.pictureUrl.map(_.toString) orElse sui.pictureUrl,
-        profileUrl = info.profileUrl.map(_.toString) orElse sui.profileUrl
+        profileUrl = info.profileUrl.map(_.toString) orElse sui.profileUrl,
+        username = info.profileUrl.map(_.toString).map(url => url.substring(url.lastIndexOf("/") + 1)) orElse sui.username
       )
     }
     Await.result(suiF, 5 minutes)

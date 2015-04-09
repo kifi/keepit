@@ -28,6 +28,7 @@ case class SocialUserInfo(
     networkType: SocialNetworkType,
     credentials: Option[SocialUser] = None,
     lastGraphRefresh: Option[DateTime] = Some(currentDateTime),
+    username: Option[String] = None,
     seq: SequenceNumber[SocialUserInfo] = SequenceNumber.ZERO) extends ModelWithState[SocialUserInfo] with ModelWithSeqNumber[SocialUserInfo] {
   def withId(id: Id[SocialUserInfo]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
@@ -63,6 +64,7 @@ object SocialUserInfo {
     (__ \ 'networkType).format[SocialNetworkType] and
     (__ \ 'credentials).formatNullable[SocialUser] and
     (__ \ 'lastGraphRefresh).formatNullable[DateTime] and
+    (__ \ 'username).formatNullable[String] and
     (__ \ 'seq).format(SequenceNumber.format[SocialUserInfo])
   )(SocialUserInfo.apply, unlift(SocialUserInfo.unapply))
 }
@@ -115,7 +117,7 @@ class SocialUserInfoCountCache(stats: CacheStatistics, accessLog: AccessLog, inn
 
 case class SocialUserInfoUserKey(userId: Id[User]) extends Key[Seq[SocialUserInfo]] {
   val namespace = "social_user_info_by_userid"
-  override val version = 6
+  override val version = 7
   def toKey(): String = userId.id.toString
 }
 
