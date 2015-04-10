@@ -10,6 +10,7 @@ import com.keepit.common.db.slick._
 import com.keepit.model._
 import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.core._
 
 import com.keepit.common.time._
 
@@ -114,7 +115,8 @@ private class RawKeepImporterActor @Inject() (
           val openGraph = rk.originalJson.flatMap(json => (json \ Normalization.OPENGRAPH.scheme).asOpt[String])
           val attribution = RawKeep.extractKeepSourceAttribtuion(rk)
           RawBookmarkRepresentation(title = rk.title, url = rk.url, canonical = canonical, openGraph = openGraph, isPrivate = None, keptAt = rk.createdDate, sourceAttribution = attribution)
-        }
+        }.distinctBy(_.url)
+
         val library = db.readWrite { implicit s =>
           if (libraryId.isEmpty)
             getLibFromPrivacy(isPrivate, userId)(s)
