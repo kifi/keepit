@@ -1,10 +1,10 @@
 package com.keepit.shoebox.cron
 
+import com.keepit.commanders.KifiInstallationCommander
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.social.BasicUserRepo
 
 import scala.concurrent.ExecutionContext
-import java.util.concurrent.atomic.AtomicInteger
 import scala.concurrent.Future
 
 import com.google.inject.Inject
@@ -77,6 +77,7 @@ class ActivityPusher @Inject() (
     userPersonaRepo: UserPersonaRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
     kifiInstallationRepo: KifiInstallationRepo,
+    kifiInstallationCommander: KifiInstallationCommander,
     actor: ActorInstance[ActivityPushActor],
     implicit val executionContext: ExecutionContext,
     clock: Clock) extends Logging {
@@ -87,7 +88,8 @@ class ActivityPusher @Inject() (
     db.readWrite { implicit session =>
       val now = clock.now
       val pushTask = activityPushTaskRepo.getByUser(userId).getOrElse {
-        createActivityPushForUser(userId, now, ActivityPushTaskStates.INACTIVE)
+        val canSendPush = kifiInstallationCommander.isMobileVersionGreaterThen(userId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
+        createActivityPushForUser(userId, now, if (canSendPush) ActivityPushTaskStates.ACTIVE else ActivityPushTaskStates.INACTIVE)
       }
       val recentInstall = pushTask.createdAt.plusDays(1) > now
       activityPushTaskRepo.save(pushTask.copy(
@@ -262,7 +264,8 @@ class ActivityPusher @Inject() (
       log.info(s"[createPushActivityEntitiesBatch] creating ${users.size} tasks for users")
       users map {
         case (user, lastActive) =>
-          createActivityPushForUser(user.id.get, lastActive, ActivityPushTaskStates.INACTIVE).id.get
+          val canSendPush = kifiInstallationCommander.isMobileVersionGreaterThen(user.id.get, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
+          createActivityPushForUser(user.id.get, lastActive, if (canSendPush) ActivityPushTaskStates.ACTIVE else ActivityPushTaskStates.INACTIVE).id.get
       }
     }
   }
