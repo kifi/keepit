@@ -16,9 +16,8 @@ import play.api.libs.json._
 import play.api.libs.json.Json.toJson
 
 import com.google.inject.Inject
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.mvc.{ Action, MaxSizeExceeded, Request }
-import scala.concurrent.Future
+import scala.concurrent.{ ExecutionContext, Future }
 import securesocial.core.{ SecureSocial, Authenticator }
 import play.api.libs.json.JsSuccess
 import scala.util.Failure
@@ -44,6 +43,7 @@ class MobileUserController @Inject() (
   db: Database,
   airbrakeNotifier: AirbrakeNotifier,
   postOffice: LocalPostOffice,
+  implicit val executionContext: ExecutionContext,
   s3ImageStore: S3ImageStore)
     extends UserActions with ShoeboxServiceController {
 

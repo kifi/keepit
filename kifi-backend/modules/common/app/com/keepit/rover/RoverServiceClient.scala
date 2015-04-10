@@ -1,22 +1,34 @@
 package com.keepit.rover
 
 import com.google.inject.Inject
+import com.keepit.common.db.SequenceNumber
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.net.HttpClient
+import com.keepit.common.net.{ CallTimeouts, HttpClient }
+import com.keepit.common.routes.Rover
 import com.keepit.common.service.{ ServiceType, ServiceClient }
 import com.keepit.common.zookeeper.ServiceCluster
-import play.api.Mode.Mode
+import com.keepit.rover.model.{ ShoeboxArticleUpdates, ArticleInfo }
+
+import scala.concurrent.{ ExecutionContext, Future }
 
 trait RoverServiceClient extends ServiceClient {
   final val serviceType = ServiceType.ROVER
+  def getShoeboxUpdates(seq: SequenceNumber[ArticleInfo], limit: Int): Future[Option[ShoeboxArticleUpdates]]
 }
 
 class RoverServiceClientImpl(
-  override val serviceCluster: ServiceCluster,
-  override val httpClient: HttpClient,
-  val airbrakeNotifier: AirbrakeNotifier,
-  cacheProvider: RoverCacheProvider,
-  mode: Mode) extends RoverServiceClient with Logging
+    override val serviceCluster: ServiceCluster,
+    override val httpClient: HttpClient,
+    val airbrakeNotifier: AirbrakeNotifier,
+    cacheProvider: RoverCacheProvider,
+    private implicit val executionContext: ExecutionContext) extends RoverServiceClient with Logging {
+
+  private val longTimeout = CallTimeouts(responseTimeout = Some(300000), maxWaitTime = Some(3000), maxJsonParseTime = Some(10000))
+
+  def getShoeboxUpdates(seq: SequenceNumber[ArticleInfo], limit: Int): Future[Option[ShoeboxArticleUpdates]] = {
+    call(Rover.internal.getShoeboxUpdates(seq, limit), callTimeouts = longTimeout).map { r => (r.json).asOpt[ShoeboxArticleUpdates] }
+  }
+}
 
 case class RoverCacheProvider @Inject() ()

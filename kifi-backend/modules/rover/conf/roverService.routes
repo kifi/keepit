@@ -1,2 +1,5 @@
 
 ->  / commonService.Routes
+
+
+GET     /internal/rover/getShoeboxUpdates       @com.keepit.rover.controllers.internal.RoverController.getShoeboxUpdates(seq: SequenceNumber[ArticleInfo], limit: Int)

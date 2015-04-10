@@ -26,7 +26,8 @@ object KeepFactoryHelper {
         val libRepo = injector.getInstance(classOf[LibraryRepo])
         candidate.libraryId match {
           case Some(libraryId) =>
-            libRepo.save(libRepo.get(candidate.libraryId.get).copy(lastKept = Some(candidate.createdAt)))
+            val library = libRepo.get(candidate.libraryId.get)
+            libRepo.save(library.copy(lastKept = Some(candidate.createdAt), keepCount = library.keepCount + 1))
           case None =>
           // This would be great. However, we have tests that test the number of libraries.
           // When keep.libraryId is not optional, this can be uncommented safely.
