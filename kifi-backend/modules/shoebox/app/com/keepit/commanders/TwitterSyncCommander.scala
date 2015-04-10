@@ -1,6 +1,7 @@
 package com.keepit.commanders
 
 import com.google.inject.{ Inject, Singleton }
+import com.keepit.common.core
 
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.db.slick.Database
@@ -44,26 +45,69 @@ class TwitterSyncCommander @Inject() (
         case Some(notActive) =>
           syncStateRepo.save(notActive.copy(state = TwitterSyncStateStates.ACTIVE))
         case None => //create one!
-          val sync = TwitterSyncState(userId = userTokenToUse, twitterHandle = handle, state = TwitterSyncStateStates.ACTIVE, libraryId = libraryId, maxTweetIdSeen = None, lastFetchedAt = None)
+          val sync = TwitterSyncState(userId = userTokenToUse, twitterHandle = handle, state = TwitterSyncStateStates.ACTIVE, libraryId = libraryId, lastFetchedAt = None, minTweetIdSeen = None, maxTweetIdSeen = None)
           syncStateRepo.save(sync)
       }
     }
   }
 
   def syncOne(socialUserInfo: Option[SocialUserInfo], state: TwitterSyncState, libraryOwner: Id[User]): Unit = throttle.withLockFuture {
-    twitter.fetchTweets(socialUserInfo, state.twitterHandle, state.maxTweetIdSeen.getOrElse(0L)).map { tweets =>
-      log.info(s"[TweetSync] Got ${tweets.length} tweets from ${state.twitterHandle}")
-      if (tweets.nonEmpty) {
-        val urls = tweets.map(_ \\ "expanded_url").map(_.toString())
-        log.info(s"[TweetSync] Got urls: $urls")
-        val newMaxTweetId = tweets.map(tweet => (tweet \ "id").as[Long]).max
-        storeTweets(libraryOwner, state.libraryId, tweets)
-        val newState = state.copy(lastFetchedAt = Some(currentDateTime), maxTweetIdSeen = Some(newMaxTweetId))
-        db.readWrite { implicit session =>
-          syncStateRepo.save(newState)
-        }
-        syncOne(socialUserInfo, newState, libraryOwner)
+
+    def fetchAllNewerThanState(syncState: TwitterSyncState, upperBound: Option[Long]): Future[TwitterSyncState] = {
+      (syncState.maxTweetIdSeen, upperBound) match {
+        case (Some(max), Some(batchUb)) if batchUb <= max => // Batch upper bound less than existing max id
+          Future.successful(syncState)
+        case _ =>
+          twitter.fetchTweets(socialUserInfo, syncState.twitterHandle, syncState.maxTweetIdSeen, upperBound).map(persistTweets(syncState, libraryOwner, _)).flatMap {
+            case (newSyncState, Some(batchMin), _) =>
+              fetchAllNewerThanState(newSyncState, Some(batchMin))
+            case (newSyncState, _, _) =>
+              Future.successful(newSyncState)
+          }
       }
+    }
+
+    def fetchAllOlderThanState(syncState: TwitterSyncState, upperBound: Option[Long]): Future[TwitterSyncState] = {
+      (syncState.minTweetIdSeen, upperBound) match {
+        case (Some(min), Some(batchUb)) if batchUb > min => // Batch upper bound greater than existing min id
+          Future.successful(syncState)
+        case _ =>
+          twitter.fetchTweets(socialUserInfo, syncState.twitterHandle, None, upperBound).map(persistTweets(syncState, libraryOwner, _)).flatMap {
+            case (newSyncState, Some(batchMin), _) =>
+              fetchAllOlderThanState(newSyncState, Some(batchMin))
+            case (newSyncState, _, _) =>
+              Future.successful(newSyncState)
+          }
+      }
+    }
+
+    fetchAllNewerThanState(state, None).flatMap { newState =>
+      fetchAllOlderThanState(newState, newState.minTweetIdSeen)
+    }
+  }
+
+  private def persistTweets(syncState: TwitterSyncState, libraryOwner: Id[User], tweets: Seq[JsObject]) = {
+    log.info(s"[TweetSync] Got ${tweets.length} tweets from ${syncState.twitterHandle}")
+    if (tweets.nonEmpty) {
+
+      importer.processDirectTwitterData(libraryOwner, syncState.libraryId, tweets)
+
+      val tweetIds = tweets.map(tweet => (tweet \ "id").as[Long])
+      val batchMinTweetId = tweetIds.min
+      val batchMaxTweetId = tweetIds.max
+
+      val newMin = syncState.minTweetIdSeen.map(Math.min(_, batchMinTweetId)).getOrElse(batchMinTweetId)
+      val newMax = syncState.maxTweetIdSeen.map(Math.max(_, batchMaxTweetId)).getOrElse(batchMaxTweetId)
+
+      val newState = db.readWrite { implicit session =>
+        syncStateRepo.save(syncState.copy(lastFetchedAt = Some(clock.now), maxTweetIdSeen = Some(newMax), minTweetIdSeen = Some(newMin)))
+      }
+      (newState, Some(batchMinTweetId), Some(batchMaxTweetId))
+    } else {
+      val newState = db.readWrite { implicit session =>
+        syncStateRepo.save(syncState.copy(lastFetchedAt = Some(clock.now)))
+      }
+      (newState, None, None)
     }
   }
 
