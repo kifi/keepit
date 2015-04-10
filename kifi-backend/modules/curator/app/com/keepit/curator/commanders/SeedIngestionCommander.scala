@@ -95,6 +95,8 @@ class SeedIngestionCommander @Inject() (
 
   def ingestAllKeeps(): Future[Unit] = FutureHelpers.whilef(allKeepIngestor(INGESTION_BATCH_SIZE)) {
     log.info("XYZ: Ingested one batch of keeps.")
+    rawSeedSeqNumAssigner.assignSequenceNumbers()
+    log.info("XYZ: Assigned Sequence Numbers")
   }
 
   def ingestAllLibraries(): Future[Unit] = FutureHelpers.whilef(allLibraryIngestor(INGESTION_BATCH_SIZE)) {
