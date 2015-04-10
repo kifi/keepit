@@ -206,10 +206,11 @@ class KeepInterner @Inject() (
     title: Option[String], url: String, keptAt: DateTime,
     sourceAttribution: Option[SourceAttribution], note: Option[String])(implicit session: RWSession) = {
 
-    val currentBookmarkOpt = if (library.isDisjoint)
+    val currentBookmarkOpt = if (library.isDisjoint) {
       keepRepo.getPrimaryInDisjointByUriAndUser(uri.id.get, userId)
-    else
+    } else {
       keepRepo.getPrimaryByUriAndLibrary(uri.id.get, library.id.get)
+    }
 
     logAndrewIntensely(userId, "2 " + currentBookmarkOpt.toString, url, Some(keptAt))
 
@@ -233,7 +234,7 @@ class KeepInterner @Inject() (
           libraryId = Some(library.id.get),
           keptAt = keptAt,
           note = note orElse bookmark.note
-          // should we be updating url?
+        // should we be updating url?
         ) |> { keep =>
             if (wasInactiveKeep) {
               keep.copy(url = url, createdAt = clock.now)

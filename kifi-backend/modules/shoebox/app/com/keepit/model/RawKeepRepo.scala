@@ -76,7 +76,7 @@ class RawKeepRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) ex
 
   def getOldUnprocessed(batchSize: Int, before: DateTime)(implicit session: RSession): Seq[RawKeep] = {
     (for (row <- rows if row.state === RawKeepStates.IMPORTING && row.createdAt < before) yield row)
-      .sortBy(row => row.id.desc)
+      .sortBy(row => row.createdAt.desc)
       .take(batchSize)
       .list
   }
