@@ -41,7 +41,8 @@ class FakeTwitterSocialGraph @Inject() (
     libraryImageCommander: LibraryImageCommander,
     elizaServiceClient: ElizaServiceClient,
     s3ImageStore: S3ImageStore,
-    socialRepo: SocialUserInfoRepo) extends TwitterSocialGraph with TwitterGraphTestHelper {
+    socialRepo: SocialUserInfoRepo,
+    userRepo: UserRepo) extends TwitterSocialGraph with TwitterGraphTestHelper {
 
   val twtrOAuthProvider = new TwitterOAuthProviderImpl(airbrake, oauth1Config) {
     override def getUserProfileInfo(accessToken: OAuth1TokenInfo): Future[UserProfileInfo] = Future.successful {
@@ -49,7 +50,7 @@ class FakeTwitterSocialGraph @Inject() (
     }
   }
 
-  val twtrGraph: TwitterSocialGraphImpl = new TwitterSocialGraphImpl(airbrake, db, s3ImageStore, clock, oauth1Config, twtrOAuthProvider, userValueRepo, twitterSyncStateRepo, libraryMembershipRepo, libraryRepo, basicUserRepo, socialUserInfoRepo, libraryImageCommander, elizaServiceClient, kifiInstallationCommander, publicIdConfig, executionContext) {
+  val twtrGraph: TwitterSocialGraphImpl = new TwitterSocialGraphImpl(airbrake, db, s3ImageStore, clock, oauth1Config, twtrOAuthProvider, userValueRepo, twitterSyncStateRepo, libraryMembershipRepo, libraryRepo, basicUserRepo, socialUserInfoRepo, libraryImageCommander, elizaServiceClient, kifiInstallationCommander, publicIdConfig, executionContext, userRepo) {
     override protected def lookupUsers(socialUserInfo: SocialUserInfo, accessToken: OAuth1TokenInfo, mutualFollows: Set[TwitterId]): Future[JsValue] = Future.successful {
       socialUserInfo.socialId.id.toLong match {
         case tweetfortytwoInfo.id =>
