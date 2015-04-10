@@ -60,11 +60,15 @@ trait S3ImageStore {
   def avatarUrlByUser(user: BasicUser): String =
     avatarUrlByExternalId(Some(200), user.externalId, user.pictureName, Some("https"))
 
-  def keyByExternalId(size: String, userId: ExternalId[User], picName: String): String =
-    s"users/$userId/pics/$size/$picName.jpg"
+  def keyByExternalId(size: String, userId: ExternalId[User], picName: String): String = {
+    val pic = if (picName.endsWith(".jpg")) picName else s"$picName.jpg"
+    s"users/$userId/pics/$size/$pic"
+  }
 
-  def tempPath(token: String): String =
-    s"temp/user/pics/$token.jpg"
+  def tempPath(token: String): String = {
+    val pic = if (token.endsWith(".jpg")) token else s"token.jpg"
+    s"temp/user/pics/$pic"
+  }
 }
 
 @Singleton

@@ -1,19 +1,23 @@
 package com.keepit.social
 
 import com.google.inject.Injector
+import com.keepit.commanders.{ KifiInstallationCommander, LibraryImageCommander }
 import com.keepit.common.concurrent.{ WatchableExecutionContext, FakeExecutionContextModule }
+import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.oauth._
-import com.keepit.common.social.TwitterSocialGraphImpl
+import com.keepit.common.social.{ BasicUserRepo, TwitterSocialGraphImpl }
+import com.keepit.common.store.S3ImageStore
 import com.keepit.common.time.Clock
+import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.Specification
 import play.api.libs.json.{ JsArray, Json, JsNull, JsValue }
 import securesocial.core.{ IdentityId, AuthenticationMethod, SocialUser, OAuth1Info }
 
-import scala.concurrent.Future
+import scala.concurrent.{ ExecutionContext, Future }
 
 class TwitterSocialGraphTest extends Specification with ShoeboxTestInjector with TwitterGraphTestHelper {
 
@@ -31,8 +35,8 @@ class TwitterSocialGraphTest extends Specification with ShoeboxTestInjector with
         TwitterUserInfo.toUserProfileInfo(tweetfortytwoInfo.copy(screenName = "tweet42"))
       }
     }
-    val twtrGraph: TwitterSocialGraphImpl = new TwitterSocialGraphImpl(airbrake, db, clock, oauth1Config, twtrOAuthProvider, userValueRepo, twitterSyncStateRepo, libraryMembershipRepo, socialUserInfoRepo, executionContext) {
-      override protected def lookupUsers(socialUserInfo: SocialUserInfo, accessToken: OAuth1TokenInfo, mutualFollows: Set[Long]): Future[JsValue] = Future.successful {
+    val twtrGraph: TwitterSocialGraphImpl = new TwitterSocialGraphImpl(airbrake, db, inject[S3ImageStore], clock, oauth1Config, twtrOAuthProvider, userValueRepo, twitterSyncStateRepo, libraryMembershipRepo, libraryRepo, basicUserRepo, socialUserInfoRepo, inject[LibraryImageCommander], inject[ElizaServiceClient], inject[KifiInstallationCommander], inject[PublicIdConfiguration], inject[WatchableExecutionContext]) {
+      override protected def lookupUsers(socialUserInfo: SocialUserInfo, accessToken: OAuth1TokenInfo, mutualFollows: Set[TwitterId]): Future[JsValue] = Future.successful {
         socialUserInfo.socialId.id.toLong match {
           case tweetfortytwoInfo.id =>
             JsArray(infos.values.collect { case (json, info) if info.id != tweetfortytwoInfo.id => json }.toSeq)
@@ -41,7 +45,7 @@ class TwitterSocialGraphTest extends Specification with ShoeboxTestInjector with
         }
       }
 
-      override protected def fetchIds(socialUserInfo: SocialUserInfo, accessToken: OAuth1TokenInfo, userId: Long, endpoint: String): Future[Seq[Long]] = Future.successful {
+      override def fetchIds(socialUserInfo: SocialUserInfo, accessToken: OAuth1TokenInfo, userId: TwitterId, endpoint: String): Future[Seq[TwitterId]] = Future.successful {
         socialUserInfo.socialId.id.toLong match {
           case tweetfortytwoInfo.id =>
             if (endpoint.contains("followers")) tweetfortytwoFollowerIds
@@ -49,9 +53,9 @@ class TwitterSocialGraphTest extends Specification with ShoeboxTestInjector with
             else Seq.empty
           case _ =>
             if (endpoint.contains("followers")) {
-              Seq(1L, 2L, 3L, 4L)
+              Seq(1L, 2L, 3L, 4L).map(TwitterId(_))
             } else if (endpoint.contains("friends")) {
-              Seq(2L, 3L)
+              Seq(2L, 3L).map(TwitterId(_))
             } else Seq.empty
         }
       }
@@ -112,7 +116,7 @@ class TwitterSocialGraphTest extends Specification with ShoeboxTestInjector with
         val jsonSeq = raw.jsons.head.as[JsArray].value // ok for small data set
         val expectedMutualIds = tweetfortytwoFollowerIds.intersect(tweetfortytwoFriendIds)
         jsonSeq.length === expectedMutualIds.length
-        val extractedIds = jsonSeq.map(json => (json \ "id").as[Long]).toSet
+        val extractedIds = jsonSeq.map(json => (json \ "id").as[Long]).map(TwitterId(_)).toSet
         extractedIds === expectedMutualIds.toSet
       }
     }

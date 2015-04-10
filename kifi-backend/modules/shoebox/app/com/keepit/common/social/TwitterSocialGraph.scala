@@ -88,7 +88,6 @@ class TwitterSocialGraphImpl @Inject() (
     libraryMembershipRepo: LibraryMembershipRepo,
     libraryRepo: LibraryRepo,
     basicUserRepo: BasicUserRepo,
-    socialRepo: SocialUserInfoRepo,
     socialUserInfoRepo: SocialUserInfoRepo,
     libraryImageCommander: LibraryImageCommander,
     elizaServiceClient: ElizaServiceClient,
@@ -153,7 +152,7 @@ class TwitterSocialGraphImpl @Inject() (
   def revokePermissions(socialUserInfo: SocialUserInfo): Future[Unit] = {
     // Twitter does not support this via API; user can revoke permissions via twitter.com
     db.readWriteAsync { implicit s =>
-      socialRepo.save(socialUserInfo.withState(SocialUserInfoStates.APP_NOT_AUTHORIZED).withLastGraphRefresh())
+      socialUserInfoRepo.save(socialUserInfo.withState(SocialUserInfoStates.APP_NOT_AUTHORIZED).withLastGraphRefresh())
     } map { saved =>
       log.info(s"[revokePermissions] updated: $saved")
     }
@@ -281,7 +280,7 @@ class TwitterSocialGraphImpl @Inject() (
           userValueRepo.setValue(sui.userId.get, uvName, cursor)
         }
       case UNAUTHORIZED => // 401: invalid or expired token
-        db.readWrite { implicit s => socialRepo.save(sui.copy(state = APP_NOT_AUTHORIZED, lastGraphRefresh = Some(clock.now))) }
+        db.readWrite { implicit s => socialUserInfoRepo.save(sui.copy(state = APP_NOT_AUTHORIZED, lastGraphRefresh = Some(clock.now))) }
       case _ =>
     }
   }

@@ -12,7 +12,7 @@ class KeepSourceAttributionTest extends Specification with ShoeboxTestInjector {
   "KeepSourceAttribution" should {
     "twitter parsing works" in {
       val attr = TwitterAttribution.fromRawTweetJson(tweetJs)
-      attr.get === TwitterAttribution(TwitterId(505809542656303104L), "connerdelights")
+      attr.get === TwitterAttribution("505809542656303104", "connerdelights")
       attr.get.getOriginalURL === "https://twitter.com/connerdelights/status/505809542656303104"
       attr.get.getHandle === "connerdelights"
     }
@@ -25,7 +25,7 @@ class KeepSourceAttributionTest extends Specification with ShoeboxTestInjector {
         libraryId = None)
 
       val attr = RawKeep.extractKeepSourceAttribtuion(rawKeep)
-      attr.get === TwitterAttribution(TwitterId(505809542656303104L), "connerdelights")
+      attr.get === TwitterAttribution("505809542656303104", "connerdelights")
 
       val rawKeep2 = rawKeep.copy(originalJson = Some(JsString("{}")))
       RawKeep.extractKeepSourceAttribtuion(rawKeep2) === None
@@ -36,7 +36,7 @@ class KeepSourceAttributionTest extends Specification with ShoeboxTestInjector {
     }
 
     "source attribtuion serialize" in {
-      val attr = TwitterAttribution(TwitterId(505809542656303104L), "connerdelights")
+      val attr = TwitterAttribution("505809542656303104", "connerdelights")
       val keepAttr = KeepSourceAttribution(attribution = attr)
       Json.toJson(keepAttr) === Json.obj("twitter" -> Json.obj("idString" -> "505809542656303104", "screenName" -> "connerdelights"))
     }
@@ -50,7 +50,7 @@ class KeepSourceAttributionTest extends Specification with ShoeboxTestInjector {
           val saved = attrRepo.save(keepAttr)
           val model = attrRepo.get(saved.id.get)
           val attr = model.attribution
-          attr === TwitterAttribution(TwitterId(505809542656303104L), "connerdelights")
+          attr === TwitterAttribution("505809542656303104", "connerdelights")
         }
       }
     }

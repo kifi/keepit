@@ -69,21 +69,20 @@ object KeepAttributionType {
 
 sealed trait SourceAttribution
 
-case class TwitterAttribution(id: TwitterId, screenName: String) extends SourceAttribution {
-  def getOriginalURL: String = s"https://twitter.com/$screenName/status/${id.id}"
+case class TwitterAttribution(idString: String, screenName: String) extends SourceAttribution {
+  def getOriginalURL: String = s"https://twitter.com/$screenName/status/$idString"
   def getHandle: String = screenName
 }
 
 object TwitterAttribution {
-  implicit val idFormat = TwitterId.format
   implicit val format = Json.format[TwitterAttribution]
 
   def fromRawTweetJson(js: JsValue): Option[TwitterAttribution] = {
-    val idOpt = (js \ "id").asOpt[TwitterId]
+    val idStringOpt = (js \ "id_str").asOpt[String]
     val screenNameOpt = (js \ "user" \ "screen_name").asOpt[String]
     for {
-      id <- idOpt
+      idString <- idStringOpt
       screenName <- screenNameOpt
-    } yield TwitterAttribution(id, screenName)
+    } yield TwitterAttribution(idString, screenName)
   }
 }
