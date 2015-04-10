@@ -180,7 +180,8 @@ class ArticleInfoRepoImpl @Inject() (
   }
 
   def setDomains(p: Int, s: Int)(implicit session: RWSession): Int = {
-    page(p, s).map { info =>
+    val q = (for (r <- rows if r.domain.isEmpty) yield r)
+    q.sortBy(_.id desc).drop(p * s).take(s).list.map { info =>
       (for (r <- rows if r.id === info.id) yield r.domain).update(URI.parse(info.url).toOption.flatMap(_.host).map(_.name))
     }.sum
   }
