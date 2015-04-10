@@ -5,6 +5,12 @@ import com.keepit.common.time._
 import org.joda.time.DateTime
 import play.api.libs.json._
 
+case class TwitterId(id: Long) // https://groups.google.com/forum/#!topic/twitter-development-talk/ahbvo3VTIYI
+
+object TwitterId {
+  implicit def format = Json.format[TwitterId]
+}
+
 case class KeepSourceAttribution(
     id: Option[Id[KeepSourceAttribution]] = None,
     createdAt: DateTime = currentDateTime,

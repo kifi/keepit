@@ -1,10 +1,11 @@
 package com.keepit.common.social
 
 import com.google.inject.Inject
+import com.keepit.commanders.{ KifiInstallationCommander, LibraryImageCommander, ProcessedImageSize }
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.concurrent.FutureHelpers
-import com.keepit.common.db.Id
-import com.keepit.common.store.LibraryImageStore
+import com.keepit.common.crypto.PublicIdConfiguration
+import com.keepit.common.store.S3ImageStore
 import com.keepit.common.time._
 import com.keepit.common.core._
 import com.keepit.common.strings._
@@ -15,6 +16,7 @@ import com.keepit.common.mail.EmailAddress
 import com.keepit.common.oauth.{ TwitterUserInfo, TwitterOAuthProvider, OAuth1Configuration, ProviderIds }
 import com.keepit.common.core._
 import com.keepit.common.time.Clock
+import com.keepit.eliza.{ LibraryPushNotificationCategory, PushNotificationExperiment, ElizaServiceClient }
 import com.keepit.model.SocialUserInfoStates._
 import com.keepit.model._
 import com.keepit.social._
@@ -25,7 +27,6 @@ import play.api.libs.json.JsValue
 import play.api.libs.oauth.OAuthCalculator
 import play.api.libs.ws.{ WSResponse, WS }
 import securesocial.core.{ IdentityId, OAuth2Settings }
-import twitter4j.auth.OAuthAuthorization
 import twitter4j.{ StatusUpdate, TwitterFactory, Twitter }
 import twitter4j.media.{ ImageUpload, MediaProvider, ImageUploadFactory }
 import twitter4j.conf.ConfigurationBuilder
@@ -39,15 +40,15 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
 case class PagedIds(
-  prev: Long,
-  ids: Seq[Long],
-  next: Long)
+  prev: TwitterId,
+  ids: Seq[TwitterId],
+  next: TwitterId)
 
 object PagedIds {
   implicit val format = (
-    (__ \ 'previous_cursor).format[Long] and
-    (__ \ 'ids).format[Seq[Long]] and
-    (__ \ 'next_cursor).format[Long]
+    (__ \ 'previous_cursor).format[TwitterId] and
+    (__ \ 'ids).format[Seq[TwitterId]] and
+    (__ \ 'next_cursor).format[TwitterId]
   )(PagedIds.apply _, unlift(PagedIds.unapply))
 }
 
@@ -78,13 +79,20 @@ trait TwitterSocialGraph extends SocialGraph {
 class TwitterSocialGraphImpl @Inject() (
     airbrake: AirbrakeNotifier,
     db: Database,
+    s3ImageStore: S3ImageStore,
     clock: Clock,
     oauth1Config: OAuth1Configuration,
     twtrOAuthProvider: TwitterOAuthProvider,
     userValueRepo: UserValueRepo,
     twitterSyncStateRepo: TwitterSyncStateRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
-    socialRepo: SocialUserInfoRepo,
+    libraryRepo: LibraryRepo,
+    basicUserRepo: BasicUserRepo,
+    socialUserInfoRepo: SocialUserInfoRepo,
+    libraryImageCommander: LibraryImageCommander,
+    elizaServiceClient: ElizaServiceClient,
+    kifiInstallationCommander: KifiInstallationCommander,
+    implicit val publicIdConfig: PublicIdConfiguration,
     implicit val executionContext: ExecutionContext) extends TwitterSocialGraph with Logging {
 
   val providerConfig = oauth1Config.getProviderConfig(ProviderIds.Twitter.id).get
@@ -144,7 +152,7 @@ class TwitterSocialGraphImpl @Inject() (
   def revokePermissions(socialUserInfo: SocialUserInfo): Future[Unit] = {
     // Twitter does not support this via API; user can revoke permissions via twitter.com
     db.readWriteAsync { implicit s =>
-      socialRepo.save(socialUserInfo.withState(SocialUserInfoStates.APP_NOT_AUTHORIZED).withLastGraphRefresh())
+      socialUserInfoRepo.save(socialUserInfo.withState(SocialUserInfoStates.APP_NOT_AUTHORIZED).withLastGraphRefresh())
     } map { saved =>
       log.info(s"[revokePermissions] updated: $saved")
     }
@@ -154,7 +162,7 @@ class TwitterSocialGraphImpl @Inject() (
     val credentials = socialUserInfo.credentials.getOrElse(throw new Exception(s"Can't find credentials for $socialUserInfo"))
     credentials.oAuth1Info.getOrElse(throw new Exception(s"Can't find oAuth1Info for $socialUserInfo"))
   }
-  private def getTwtrUserId(socialUserInfo: SocialUserInfo): Long = socialUserInfo.socialId.id.toLong
+  private def getTwtrUserId(socialUserInfo: SocialUserInfo): TwitterId = TwitterId(socialUserInfo.socialId.id.toLong)
 
   // make this async
   def fetchSocialUserRawInfo(socialUserInfo: SocialUserInfo): Option[SocialUserRawInfo] = {
@@ -176,17 +184,52 @@ class TwitterSocialGraphImpl @Inject() (
 
       SafeFuture {
         log.info(s"[fetchSocialUserInfo(${socialUserInfo.socialId})] fetching twitter_syncs for ${friendIds.length} friends...")
-        friendIds.map(Id[User](_)).grouped(100) foreach { userIds =>
+        friendIds.grouped(100) foreach { userIds =>
+          val socialUserInfos = db.readOnlyReplica { implicit s =>
+            socialUserInfoRepo.getBySocialIds(userIds.map(id => SocialId(id.toString)))
+          }
+          val twitterHandles = socialUserInfos.flatMap(_.username).toSet
           db.readOnlyMaster { implicit s =>
-            twitterSyncStateRepo.getTwitterSyncsByFriendIds(userIds.toSet)
+            twitterSyncStateRepo.getTwitterSyncsByFriendIds(twitterHandles)
           }.map {
             case (userId, twitterSyncState) =>
               db.readWrite { implicit s =>
                 val libraryId = twitterSyncState.libraryId
+                val library = libraryRepo.get(libraryId)
+                val libOwner = basicUserRepo.load(library.ownerId)
+                val ownerImage = s3ImageStore.avatarUrlByUser(libOwner)
+                val libLink = s"""https://www.kifi.com${Library.formatLibraryPath(libOwner.username, library.slug)}"""
+                val libImageOpt = libraryImageCommander.getBestImageForLibrary(library.id.get, ProcessedImageSize.Medium.idealSize)
                 libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId, None) match {
                   case None =>
                     log.info(s"[fetchSocialUserInfo(${socialUserInfo.socialId})] auto-joining user ${userId} twitter_sync library ${libraryId}")
                     libraryMembershipRepo.save(LibraryMembership(libraryId = libraryId, userId = userId, access = LibraryAccess.READ_ONLY))
+                    elizaServiceClient.sendGlobalNotification( //push sent
+                      userIds = Set(userId),
+                      title = s"${libOwner.firstName} created a Library",
+                      body = s"You're being notified because you're following @${twitterSyncState.twitterHandle} on Twitter",
+                      linkText = "Let's take a look!",
+                      linkUrl = libLink,
+                      imageUrl = ownerImage,
+                      sticky = false,
+                      category = NotificationCategory.User.LIBRARY_FOLLOWING,
+                      extra = Some(Json.obj(
+                        "inviter" -> libOwner,
+                        "library" -> Json.toJson(LibraryNotificationInfo.fromLibraryAndOwner(library, libImageOpt, libOwner))
+                      ))
+                    ) map { _ =>
+                        val message = s"${libOwner.firstName} created a Twitter Library"
+                        val canSendPush = kifiInstallationCommander.isMobileVersionGreaterThen(userId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
+                        if (canSendPush) {
+                          elizaServiceClient.sendLibraryPushNotification(
+                            userId,
+                            message,
+                            library.id.get,
+                            libLink,
+                            PushNotificationExperiment.Experiment1,
+                            LibraryPushNotificationCategory.LibraryInvitation)
+                        }
+                      }
                   case _ =>
                 }
               }
@@ -216,7 +259,7 @@ class TwitterSocialGraphImpl @Inject() (
     )
   }
 
-  protected def handleError(tag: String, endpoint: String, sui: SocialUserInfo, uvName: UserValueName, cursor: Long, resp: WSResponse): Unit = {
+  protected def handleError(tag: String, endpoint: String, sui: SocialUserInfo, uvName: UserValueName, cursor: TwitterId, resp: WSResponse): Unit = {
     val nettyResp = resp.underlying[NettyResponse]
     def warn(notify: Boolean): Unit = {
       val errorMessage = resp.status match {
@@ -237,16 +280,16 @@ class TwitterSocialGraphImpl @Inject() (
           userValueRepo.setValue(sui.userId.get, uvName, cursor)
         }
       case UNAUTHORIZED => // 401: invalid or expired token
-        db.readWrite { implicit s => socialRepo.save(sui.copy(state = APP_NOT_AUTHORIZED, lastGraphRefresh = Some(clock.now))) }
+        db.readWrite { implicit s => socialUserInfoRepo.save(sui.copy(state = APP_NOT_AUTHORIZED, lastGraphRefresh = Some(clock.now))) }
       case _ =>
     }
   }
 
-  protected def lookupUsers(sui: SocialUserInfo, accessToken: OAuth1TokenInfo, mutualFollows: Set[Long]): Future[JsValue] = {
+  protected def lookupUsers(sui: SocialUserInfo, accessToken: OAuth1TokenInfo, mutualFollows: Set[TwitterId]): Future[JsValue] = {
     log.info(s"[lookupUsers] mutualFollows(len=${mutualFollows.size}): ${mutualFollows.take(20).mkString(",")}... sui=$sui")
     val endpoint = "https://api.twitter.com/1.1/users/lookup.json"
-    val sorted = mutualFollows.toSeq.sorted // expensive
-    val accF = FutureHelpers.foldLeftUntil[Seq[Long], JsArray](sorted.grouped(100).toIterable)(JsArray()) { (a, c) =>
+    val sorted = mutualFollows.toSeq.sortBy(_.id) // expensive
+    val accF = FutureHelpers.foldLeftUntil[Seq[TwitterId], JsArray](sorted.grouped(100).toIterable)(JsArray()) { (a, c) =>
       val params = Map("user_id" -> c.mkString(","), "include_entities" -> false.toString)
       val chunkF = WS.url(endpoint)
         .sign(OAuthCalculator(providerConfig.key, accessToken))
@@ -272,8 +315,8 @@ class TwitterSocialGraphImpl @Inject() (
     }
   }
 
-  protected def fetchIds(sui: SocialUserInfo, accessToken: OAuth1TokenInfo, userId: Long, endpoint: String): Future[Seq[Long]] = {
-    def pagedFetchIds(page: Int, cursor: Long, count: Long): Future[Seq[Long]] = {
+  def fetchIds(sui: SocialUserInfo, accessToken: OAuth1TokenInfo, userId: TwitterId, endpoint: String): Future[Seq[TwitterId]] = {
+    def pagedFetchIds(page: Int, cursor: TwitterId, count: Long): Future[Seq[TwitterId]] = {
       log.info(s"[pagedFetchIds] userId=$userId endpoint=$endpoint count=$count cursor=$cursor")
       val call = WS.url(endpoint)
         .sign(OAuthCalculator(providerConfig.key, accessToken))
@@ -288,7 +331,7 @@ class TwitterSocialGraphImpl @Inject() (
             val pagedIds = resp.json.as[PagedIds]
             log.info(s"[pagedFetchIds#$page] cursor=$cursor userId=$userId endpoint=$endpoint pagedIds=$pagedIds")
             val next = pagedIds.next
-            if (next > 0) {
+            if (next.id > 0) {
               pagedFetchIds(page + 1, next, count) map { seq =>
                 pagedIds.ids ++ seq
               }
@@ -298,11 +341,11 @@ class TwitterSocialGraphImpl @Inject() (
           case _ =>
             val name = if (endpoint.contains("friends")) UserValueName.TWITTER_FRIENDS_CURSOR else UserValueName.TWITTER_FOLLOWERS_CURSOR
             handleError(s"pagedFetchIds#$page", endpoint, sui, name, cursor, resp)
-            Future.successful(Seq.empty[Long])
+            Future.successful(Seq.empty[TwitterId])
         }
       }
     }
-    pagedFetchIds(0, -1, 5000)
+    pagedFetchIds(0, TwitterId(-1), 5000)
   }
 
   def extractUserValues(json: JsValue): Map[UserValueName, String] = Map.empty

@@ -1,6 +1,7 @@
 package com.keepit.social
 
 import com.keepit.common.oauth.TwitterUserInfo
+import com.keepit.model.TwitterId
 import play.api.libs.json.Json
 
 trait TwitterGraphTestHelper {
@@ -218,6 +219,6 @@ trait TwitterGraphTestHelper {
     linked42Info.id -> (linked42Json, linked42Info)
   )
 
-  val tweetfortytwoFollowerIds: Seq[Long] = Seq(2906435114L, 2674660081L, 2905816395L, 1963841390L, 1487633766L)
-  val tweetfortytwoFriendIds: Seq[Long] = Seq(2906435114L, 2674660081L, 2905816395L, 834020252L, 14119808L, 5746452L, 20536157L)
+  val tweetfortytwoFollowerIds: Seq[TwitterId] = Seq(2906435114L, 2674660081L, 2905816395L, 1963841390L, 1487633766L).map(TwitterId(_))
+  val tweetfortytwoFriendIds: Seq[TwitterId] = Seq(2906435114L, 2674660081L, 2905816395L, 834020252L, 14119808L, 5746452L, 20536157L).map(TwitterId(_))
 }

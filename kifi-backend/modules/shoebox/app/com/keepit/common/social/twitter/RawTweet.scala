@@ -2,12 +2,13 @@ package com.keepit.common.social.twitter
 
 import java.util.Locale
 
+import com.keepit.model.TwitterId
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
 case class RawTweet(
-  id: RawTweet.TwitterId,
+  id: TwitterId,
   createdAt: DateTime,
   text: String,
   source: String,
@@ -16,15 +17,15 @@ case class RawTweet(
   retweetedStatus: Option[RawTweet.RawRetweet],
   favoriteCount: Option[Int],
   retweetCount: Option[Int],
-  inReplyToStatusId: Option[RawTweet.TwitterId],
-  inReplyToUserId: Option[RawTweet.TwitterId],
+  inReplyToStatusId: Option[TwitterId],
+  inReplyToUserId: Option[TwitterId],
   inReplyToScreenName: Option[String],
   lang: Option[String], // BCP 47
   possiblySensitive: Option[Boolean],
   originalJson: JsValue)
 object RawTweet {
   implicit def format: Reads[RawTweet] = (
-    (__ \ 'id_str).read[RawTweet.TwitterId] and
+    (__ \ 'id_str).read[TwitterId] and
     (__ \ 'created_at).read[DateTime](twitterDateReads(java.util.Locale.ENGLISH)) and
     (__ \ 'text).read[String] and
     (__ \ 'source).read[String] and
@@ -33,8 +34,8 @@ object RawTweet {
     (__ \ 'retweeted_status).readNullable[RawRetweet] and
     (__ \ 'favorite_count).readNullable[Int] and
     (__ \ 'retweet_count).readNullable[Int] and
-    (__ \ 'in_reply_to_status_id_str).readNullable[RawTweet.TwitterId] and
-    (__ \ 'in_reply_to_user_id_str).readNullable[RawTweet.TwitterId] and
+    (__ \ 'in_reply_to_status_id).readNullable[TwitterId] and
+    (__ \ 'in_reply_to_user_id).readNullable[TwitterId] and
     (__ \ 'in_reply_to_screen_name).readNullable[String] and
     (__ \ 'lang).readNullable[String] and
     (__ \ 'possibly_sensitive).readNullable[Boolean] and
@@ -61,7 +62,7 @@ object RawTweet {
 
   object RawRetweet {
     implicit def format: Reads[RawRetweet] = (
-      (__ \ 'id_str).read[RawTweet.TwitterId] and
+      (__ \ 'id_str).read[TwitterId] and
       (__ \ 'created_at).read[DateTime](twitterDateReads(java.util.Locale.ENGLISH)) and
       (__ \ 'text).read[String] and
       (__ \ 'source).read[String] and
@@ -69,8 +70,8 @@ object RawTweet {
       (__ \ 'entities).read[RawTweet.Entities] and
       (__ \ 'favorite_count).readNullable[Int] and
       (__ \ 'retweet_count).readNullable[Int] and
-      (__ \ 'in_reply_to_status_id_str).readNullable[RawTweet.TwitterId] and
-      (__ \ 'in_reply_to_user_id_str).readNullable[RawTweet.TwitterId] and
+      (__ \ 'in_reply_to_status_id_str).readNullable[TwitterId] and
+      (__ \ 'in_reply_to_user_id_str).readNullable[TwitterId] and
       (__ \ 'in_reply_to_screen_name).readNullable[String] and
       (__ \ 'lang).readNullable[String] and
       (__ \ 'possibly_sensitive).readNullable[Boolean]
@@ -103,11 +104,6 @@ object RawTweet {
   case class TweetIndices(start: Int, end: Int)
   object TweetIndices {
     implicit def format: Reads[TweetIndices] = __.read[JsArray].map(r => TweetIndices(r(0).as[Int], r(1).as[Int]))
-  }
-
-  case class TwitterId(id: String) // https://groups.google.com/forum/#!topic/twitter-development-talk/ahbvo3VTIYI
-  object TwitterId {
-    implicit def format: Reads[TwitterId] = __.read[String].map(TwitterId(_))
   }
 
   // https://dev.twitter.com/overview/api/entities-in-twitter-objects

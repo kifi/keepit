@@ -3,21 +3,25 @@ package com.keepit.social
 import java.io.File
 
 import com.google.inject.Inject
+import com.keepit.commanders.{ LibraryImageCommander, KifiInstallationCommander }
 import com.keepit.common.concurrent.WatchableExecutionContext
 import com.keepit.common.core._
+import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.net.FakeWSResponse
-import com.keepit.common.oauth.{ TwitterUserInfo, UserProfileInfo, TwitterOAuthProviderImpl, OAuth1Configuration }
+import com.keepit.common.oauth._
 import com.keepit.common.social._
+import com.keepit.common.store.S3ImageStore
 import com.keepit.common.time.Clock
+import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
 import play.api.libs.json.{ JsNull, JsArray, JsValue, JsObject }
 import play.api.libs.ws.WSResponse
 import securesocial.core.{ IdentityId, OAuth2Settings }
 
-import scala.concurrent.Future
+import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.Try
 
 class FakeTwitterSocialGraph @Inject() (
@@ -29,6 +33,14 @@ class FakeTwitterSocialGraph @Inject() (
     userValueRepo: UserValueRepo,
     twitterSyncStateRepo: TwitterSyncStateRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
+    kifiInstallationCommander: KifiInstallationCommander,
+    implicit val publicIdConfig: PublicIdConfiguration,
+    libraryRepo: LibraryRepo,
+    basicUserRepo: BasicUserRepo,
+    socialUserInfoRepo: SocialUserInfoRepo,
+    libraryImageCommander: LibraryImageCommander,
+    elizaServiceClient: ElizaServiceClient,
+    s3ImageStore: S3ImageStore,
     socialRepo: SocialUserInfoRepo) extends TwitterSocialGraph with TwitterGraphTestHelper {
 
   val twtrOAuthProvider = new TwitterOAuthProviderImpl(airbrake, oauth1Config) {
@@ -37,8 +49,8 @@ class FakeTwitterSocialGraph @Inject() (
     }
   }
 
-  val twtrGraph: TwitterSocialGraphImpl = new TwitterSocialGraphImpl(airbrake, db, clock, oauth1Config, twtrOAuthProvider, userValueRepo, twitterSyncStateRepo, libraryMembershipRepo, socialRepo, executionContext) {
-    override protected def lookupUsers(socialUserInfo: SocialUserInfo, accessToken: OAuth1TokenInfo, mutualFollows: Set[Long]): Future[JsValue] = Future.successful {
+  val twtrGraph: TwitterSocialGraphImpl = new TwitterSocialGraphImpl(airbrake, db, s3ImageStore, clock, oauth1Config, twtrOAuthProvider, userValueRepo, twitterSyncStateRepo, libraryMembershipRepo, libraryRepo, basicUserRepo, socialUserInfoRepo, libraryImageCommander, elizaServiceClient, kifiInstallationCommander, publicIdConfig, executionContext) {
+    override protected def lookupUsers(socialUserInfo: SocialUserInfo, accessToken: OAuth1TokenInfo, mutualFollows: Set[TwitterId]): Future[JsValue] = Future.successful {
       socialUserInfo.socialId.id.toLong match {
         case tweetfortytwoInfo.id =>
           JsArray(infos.values.collect { case (json, info) if info.id != tweetfortytwoInfo.id => json }.toSeq)
@@ -47,7 +59,7 @@ class FakeTwitterSocialGraph @Inject() (
       }
     }
 
-    override protected def fetchIds(socialUserInfo: SocialUserInfo, accessToken: OAuth1TokenInfo, userId: Long, endpoint: String): Future[Seq[Long]] = Future.successful {
+    protected def fetchIds(socialUserInfo: SocialUserInfo, accessToken: OAuth1TokenInfo, userId: Long, endpoint: String): Future[Seq[TwitterId]] = Future.successful {
       socialUserInfo.socialId.id.toLong match {
         case tweetfortytwoInfo.id =>
           if (endpoint.contains("followers")) tweetfortytwoFollowerIds
@@ -55,9 +67,9 @@ class FakeTwitterSocialGraph @Inject() (
           else Seq.empty
         case _ =>
           if (endpoint.contains("followers")) {
-            Seq(1L, 2L, 3L, 4L)
+            Seq(1L, 2L, 3L, 4L).map(TwitterId(_))
           } else if (endpoint.contains("friends")) {
-            Seq(2L, 3L)
+            Seq(2L, 3L).map(TwitterId(_))
           } else Seq.empty
       }
     }

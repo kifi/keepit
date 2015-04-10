@@ -1,6 +1,6 @@
 package com.keepit.model
 
-import com.keepit.common.db.{ State, Id }
+import com.keepit.common.db.Id
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.db.slick.{ Repo, DbRepo, DataBaseComponent }
 import com.keepit.common.time._
@@ -16,7 +16,7 @@ trait TwitterSyncStateRepo extends Repo[TwitterSyncState] {
   def getByHandleAndUserIdUsed(handle: String, userIdUsed: Id[User])(implicit session: RSession): Option[TwitterSyncState]
 
   // This needs to be rewritten. Does not work as expected.
-  def getTwitterSyncsByFriendIds(friendIds: Set[Id[User]])(implicit session: RSession): Map[Id[User], TwitterSyncState]
+  def getTwitterSyncsByFriendIds(twitterHandles: Set[String])(implicit session: RSession): Map[Id[User], TwitterSyncState]
 }
 
 @Singleton
@@ -68,8 +68,8 @@ class TwitterSyncStateRepoImpl @Inject() (
   }
 
   // This needs to be rewritten. Does not work as expected.
-  def getTwitterSyncsByFriendIds(friendIds: Set[Id[User]])(implicit session: RSession): Map[Id[User], TwitterSyncState] = {
-    (for (r <- rows if r.userId.inSet(friendIds) && r.state === TwitterSyncStateStates.ACTIVE) yield (r.userId, r)).list.toMap
+  def getTwitterSyncsByFriendIds(twitterHandles: Set[String])(implicit session: RSession): Map[Id[User], TwitterSyncState] = {
+    (for (r <- rows if r.twitterHandle.inSet(twitterHandles) && r.state === TwitterSyncStateStates.ACTIVE) yield (r.userId, r)).list.toMap
   }
 
 }
