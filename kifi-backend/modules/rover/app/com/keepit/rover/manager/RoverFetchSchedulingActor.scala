@@ -14,7 +14,7 @@ import scala.util.{ Try, Failure, Success }
 
 object RoverFetchSchedulingActor {
   val maxBatchSize = 15 // low to balance producer / consumer behavior *on leader* (SQS send / receive), increase if we don't care about leader as a consumer.
-  val maxQueuedFor = 7 days // todo(Léo): decrease once we've caught up
+  val maxQueuedFor = 12 hours
 
   sealed trait RoverFetchSchedulingActorMessage
   case object ScheduleFetchTasks extends RoverFetchSchedulingActorMessage

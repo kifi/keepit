@@ -21,7 +21,7 @@ object RoverArticleFetchingActor {
   val minConcurrentFetchTasks: Int = 300
   val maxConcurrentFetchTasks: Int = 400
   val lockTimeOut = 10 minutes
-  val domainWideThrottlingWindow = 10 minutes
+  val domainWideThrottlingWindow = 1 minute
   val domainWideThrottlingLimit = 5
   sealed trait RoverFetchingActorMessage
   case object Close extends RoverFetchingActorMessage
