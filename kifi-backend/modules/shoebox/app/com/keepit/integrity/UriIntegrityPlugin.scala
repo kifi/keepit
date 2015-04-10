@@ -197,9 +197,10 @@ class UriIntegrityActor @Inject() (
       }
 
       // some additional sanity check right away!
-      db.readWrite(attempts = 3) { implicit s =>
-        checkIntegrity(newUriId, readOnly = false, hasKnownKeep = bms.size > 0)
-      }
+      // seems to cause memcache exception inside the method
+      //      db.readWrite(attempts = 3) { implicit s =>
+      //        checkIntegrity(newUriId, readOnly = false, hasKnownKeep = bms.size > 0)
+      //      }
 
       db.readWrite(attempts = 3) { implicit s =>
         changedUriRepo.saveWithoutIncreSeqnum(change.withState(ChangedURIStates.APPLIED))
