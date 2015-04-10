@@ -43,49 +43,39 @@ class AppBoyTest extends Specification with TestInjector with ElizaTestInjector 
         val notification = SimplePushNotification(unvisitedCount = 3, message = Some("pika"), sound = Some(MobilePushNotifier.DefaultNotificationSound), category = null, experiment = null)
         val notifPushF = appBoy.notifyUser(user1.id.get, Seq(deviceApple, deviceAndroid), notification)
         Await.result(notifPushF, Duration(5, SECONDS))
-        appBoyClient.jsons.size === 2
+        appBoyClient.jsons.size === 1
 
-        // test apple push notification
+        // test both platforms push notification
         appBoyClient.jsons(0) === Json.parse(
           s"""
-             {
-                "app_group_id": "${appBoyGroupId}",
-                "external_user_ids":["${user1.externalId}"],
-                "messages": {
-                  "apple_push": {
-                    "badge":3,
-                    "sound":"notification.aiff",
-                    "content-available":false,
-                    "alert":"pika",
-                    "extra": {
-                      "unreadCount":3
-                    }
-                  }
-                }
-             }
-           """
-        )
-
-        // test android push notification
-        appBoyClient.jsons(1) === Json.parse(
-          s"""
-             {
-                "app_group_id": "${appBoyGroupId}",
-                "external_user_ids":["${user1.externalId}"],
-                "messages": {
-                  "android_push": {
-                    "badge":3,
-                    "sound":"notification.aiff",
-                    "title":"pika",
-                    "content-available":false,
-                    "alert":"pika",
-                    "extra": {
-                      "unreadCount":3
-                    }
-                  }
-                }
-             }
-           """
+             |{
+             |  "app_group_id": "$appBoyGroupId",
+             |  "external_user_ids": [
+             |    "${user1.externalId.id}"
+             |  ],
+             |  "messages": {
+             |    "apple_push": {
+             |      "badge": 3,
+             |      "sound": "notification.aiff",
+             |      "alert": "pika",
+             |      "content-available":false,
+             |      "extra": {
+             |        "unreadCount": 3
+             |      }
+             |    },
+             |    "android_push": {
+             |      "badge": 3,
+             |      "sound": "notification.aiff",
+             |      "alert": "pika",
+             |      "content-available":false,
+             |      "extra": {
+             |        "unreadCount": 3
+             |      },
+             |      "title": "pika"
+             |    }
+             |  }
+             |}
+          """.stripMargin
         )
       }
     }
@@ -98,7 +88,7 @@ class AppBoyTest extends Specification with TestInjector with ElizaTestInjector 
         val notification = MessageThreadPushNotification(id = ExternalId[MessageThread]("5fe6e19f-6092-49f1-b446-5d992fda0034"), unvisitedCount = 3, message = Some("pika"), sound = Some(MobilePushNotifier.DefaultNotificationSound))
         val notifPushF = appBoy.notifyUser(user1.id.get, Seq(deviceApple, deviceAndroid), notification)
         Await.result(notifPushF, Duration(5, SECONDS))
-        appBoyClient.jsons.size === 2
+        appBoyClient.jsons.size === 1
 
         // test apple push notification
         appBoyClient.jsons(0) === Json.parse(
@@ -110,34 +100,23 @@ class AppBoyTest extends Specification with TestInjector with ElizaTestInjector 
                 "apple_push":{
                   "badge": 3,
                   "sound":"notification.aiff",
-                  "content-available": false,
                   "alert":"pika",
+                  "content-available":false,
                   "extra":{
                     "unreadCount":3,
                     "id":"5fe6e19f-6092-49f1-b446-5d992fda0034"
                   }
-                }
-              }
-            }
-           """)
-
-        // test android push notification
-        appBoyClient.jsons(1) === Json.parse(
-          s"""
-             {
-              "app_group_id":"${appBoyGroupId}",
-              "external_user_ids":["${user1.externalId}"],
-              "messages":{
+                },
                 "android_push":{
                   "badge": 3,
                   "sound":"notification.aiff",
-                  "title":"pika",
-                  "content-available": false,
                   "alert":"pika",
+                  "content-available":false,
                   "extra":{
                     "unreadCount":3,
                     "id":"5fe6e19f-6092-49f1-b446-5d992fda0034"
-                  }
+                  },
+                  "title":"pika"
                 }
               }
             }
@@ -156,7 +135,7 @@ class AppBoyTest extends Specification with TestInjector with ElizaTestInjector 
         val notification = LibraryUpdatePushNotification(unvisitedCount = 3, message = Some("pika"), libraryId = lib1.id.get, libraryUrl = Library.formatLibraryPath(user1.username, lib1.slug), sound = Some(MobilePushNotifier.DefaultNotificationSound), category = null, experiment = null)
         val notifPushF = appBoy.notifyUser(user1.id.get, Seq(deviceApple, deviceAndroid), notification)
         Await.result(notifPushF, Duration(5, SECONDS))
-        appBoyClient.jsons.size === 2
+        appBoyClient.jsons.size === 1
 
         // test apple push notification
         appBoyClient.jsons(0) === Json.parse(
@@ -168,31 +147,20 @@ class AppBoyTest extends Specification with TestInjector with ElizaTestInjector 
                 "apple_push":{
                   "badge": 3,
                   "sound":"notification.aiff",
-                  "content-available":false,
                   "alert":"pika",
+                  "content-available":false,
                   "extra":{
                     "unreadCount":3,
                     "t":"lr",
                     "lid":"${pubLibId1.id}",
                     "lu":"/pikachu/lib1"
                   }
-                }
-              }
-            }
-           """)
-
-        // test android push notification
-        appBoyClient.jsons(1) === Json.parse(
-          s"""
-             {
-              "app_group_id":"${appBoyGroupId}",
-              "external_user_ids":["${user1.externalId}"],
-              "messages":{
+                },
                 "android_push":{
                   "badge": 3,
                   "sound":"notification.aiff",
-                  "content-available":false,
                   "alert":"pika",
+                  "content-available":false,
                   "extra":{
                     "unreadCount":3,
                     "t":"lr",
@@ -214,7 +182,7 @@ class AppBoyTest extends Specification with TestInjector with ElizaTestInjector 
         val notification = UserPushNotification(unvisitedCount = 3, message = Some("pika"), username = Username("joe"), userExtId = user1.externalId, pictureUrl = "http://www.asdf.com/asdfasdf", sound = None, category = null, experiment = null)
         val notifPushF = appBoy.notifyUser(user1.id.get, Seq(deviceApple, deviceAndroid), notification)
         Await.result(notifPushF, Duration(5, SECONDS))
-        appBoyClient.jsons.size === 2
+        appBoyClient.jsons.size === 1
 
         // test apple push notification
         appBoyClient.jsons(0) === Json.parse(
@@ -226,8 +194,8 @@ class AppBoyTest extends Specification with TestInjector with ElizaTestInjector 
                 "apple_push":{
                   "badge": 3,
                   "sound":null,
-                  "content-available":false,
                   "alert":"pika",
+                  "content-available":false,
                   "extra":{
                     "unreadCount":3,
                     "t":"us",
@@ -235,31 +203,20 @@ class AppBoyTest extends Specification with TestInjector with ElizaTestInjector 
                     "un":"joe",
                     "purl":"http://www.asdf.com/asdfasdf"
                   }
-                }
-              }
-            }
-           """)
-
-        // test android push notification
-        appBoyClient.jsons(1) === Json.parse(
-          s"""
-             {
-              "app_group_id":"${appBoyGroupId}",
-              "external_user_ids":["${user1.externalId}"],
-              "messages":{
+                },
                 "android_push":{
                   "badge": 3,
                   "sound":null,
-                  "content-available":false,
-                  "title":"pika",
                   "alert":"pika",
+                  "content-available":false,
                   "extra":{
                     "unreadCount":3,
                     "t":"us",
                     "uid":"${user1.externalId}",
                     "un":"joe",
                     "purl":"http://www.asdf.com/asdfasdf"
-                  }
+                  },
+                  "title":"pika"
                 }
               }
             }

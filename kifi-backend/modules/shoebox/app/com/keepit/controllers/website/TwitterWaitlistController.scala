@@ -182,12 +182,17 @@ class TwitterWaitlistController @Inject() (
     val body = commander.getWaitlist.zipWithIndex.map {
       case (t, idx) =>
         s"""
-          |<tr><td>$idx</td><td><a href="https://twitter.com/${t.twitterHandle}">${t.twitterHandle}</a></td><td><a href="/admin/twitter/accept?handle=${t.twitterHandle}&userId=${t.userId}">Accept</a></td></tr>
+          |<tr>
+          |  <td>$idx</td>
+          |  <td><a href="https://twitter.com/${t.twitterHandle}">${t.twitterHandle}</a></td>
+          |  <td><a href="/admin/user/${t.userId.id}">user</a></td>
+          |  <td><a href="/admin/twitter/accept?handle=${t.twitterHandle}&userId=${t.userId.id}">Accept</a></td>
+          |</tr>
         """.stripMargin
     }.foldRight("")(_ ++ _)
     Ok(Html(s"""
         |<table>
-        | <tr><td>#</td><td>Handle</td><td></td></tr>
+        | <tr><td>#</td><td>Handle</td><td>User</td><td></td></tr>
         | $body
         | </table>
       """.stripMargin))

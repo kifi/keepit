@@ -125,9 +125,9 @@ class ActivityPusher @Inject() (
       //todo(eishay) re-enable when user resets prefs
       db.readWrite { implicit s =>
         log.info(s"user asked not to be notified on RECOS_REMINDER, disabling his task")
-        activityPushTaskRepo.save(activity.copy(state = ActivityPushTaskStates.INACTIVE))
+        activityPushTaskRepo.save(activity.copy(state = ActivityPushTaskStates.OPTED_OUT))
       }
-    } else if (shouldNotify(activity)) {
+    } else {
       pushActivity(activity)
     }
   }
@@ -284,10 +284,6 @@ class ActivityPusher @Inject() (
     }
     log.info(s"next push batch size is ${ids.size}")
     ids
-  }
-
-  private def shouldNotify(pushTask: ActivityPushTask): Boolean = {
-    true // todo, determine if client should recieve a push now
   }
 
 }

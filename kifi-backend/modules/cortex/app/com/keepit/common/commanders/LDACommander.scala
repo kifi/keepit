@@ -454,11 +454,27 @@ class LDACommanderImpl @Inject() (
   }
 
   def getSimilarURIs(uriId: Id[NormalizedURI])(implicit version: ModelVersion[DenseLDA]): Seq[Id[NormalizedURI]] = {
+
+    def getSimilarByKLDivergence(uriFeat: URILDATopic, limit: Int): Seq[Id[NormalizedURI]] = {
+      val (first, second) = (uriFeat.firstTopic.get, uriFeat.secondTopic.get)
+      val candidates = db.readWrite { implicit s => uriTopicRepo.getURIFeaturesByTopics(first, second, version, limit = limit) }
+      val scored = candidates.map { x =>
+        val div = KL_divergence(uriFeat.feature.get.value, x.feature.get.value)
+        (x.uriId, div)
+      }
+      scored.filter(_._2 < 0.4f).sortBy(_._2).map { _._1 } // smaller divergence => more similar
+    }
+
     db.readOnlyReplica { implicit s =>
       uriTopicRepo.getActiveByURI(uriId, version) match {
         case Some(uriFeat) =>
           val (first, second, third) = (uriFeat.firstTopic.get, uriFeat.secondTopic.get, uriFeat.thirdTopic.get)
-          uriTopicRepo.getURIsByTopics(first, second, third, version, limit = 50)
+          val res = uriTopicRepo.getURIsByTopics(first, second, third, version, limit = 50)
+          if (res.size > 10) {
+            res
+          } else {
+            (res ++ getSimilarByKLDivergence(uriFeat, 50)).distinct.take(10)
+          }
         case None => Seq()
       }
     }

@@ -1,5 +1,7 @@
 package com.keepit.commanders
 
+import com.keepit.search.SearchServiceClient
+
 import scala.concurrent.ExecutionContext
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.crypto.PublicIdConfiguration
@@ -15,6 +17,7 @@ import scala.concurrent.Future
 @Singleton
 class FakeRecommendationsCommander @Inject() (
   curator: CuratorServiceClient,
+  search: SearchServiceClient,
   db: Database,
   nUriRepo: NormalizedURIRepo,
   libRepo: LibraryRepo,
@@ -28,6 +31,7 @@ class FakeRecommendationsCommander @Inject() (
   userExperimentCommander: LocalUserExperimentCommander)
     extends RecommendationsCommander(
       curator,
+      search,
       db,
       nUriRepo,
       libRepo,

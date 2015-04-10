@@ -145,7 +145,11 @@ class AdminUserController @Inject() (
         invitationRepo.save(invitation.withState(InvitationStates.INACTIVE))
       }
       for (su <- socialUsers) {
-        socialUserInfoRepo.save(su.withUser(toUser))
+        val updatedSocialUser = {
+          if (su.networkType == SocialNetworks.FORTYTWO) su.withState(SocialUserInfoStates.INACTIVE)
+          else su.withUser(toUser)
+        }
+        socialUserInfoRepo.save(updatedSocialUser)
       }
       userRepo.save(toUser.withState(UserStates.ACTIVE))
       userRepo.save(fromUser.withState(UserStates.INACTIVE))
