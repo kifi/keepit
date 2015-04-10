@@ -2,6 +2,8 @@ package com.keepit.common
 
 import com.keepit.common.concurrent.ExecutionContext
 
+import scala.collection.IterableLike
+import scala.collection.generic.CanBuildFrom
 import scala.concurrent.Future
 
 final class AnyExtensionOps[A](val x: A) extends AnyVal {
@@ -40,10 +42,28 @@ final class FutureExtensionOps[A](x: => Future[A]) {
   }
 }
 
+final class CollectionExtensionOps[A, Repr](xs: IterableLike[A, Repr]) {
+  def distinctBy[B, That](f: A => B)(implicit cbf: CanBuildFrom[Repr, A, That]) = {
+    val builder = cbf(xs.repr)
+    val i = xs.iterator
+    var set = Set[B]()
+    while (i.hasNext) {
+      val o = i.next()
+      val b = f(o)
+      if (!set(b)) {
+        set += b
+        builder += o
+      }
+    }
+    builder.result()
+  }
+}
+
 trait Implicits {
   implicit def anyExtensionOps[A](x: A): AnyExtensionOps[A] = new AnyExtensionOps[A](x)
   implicit def tryExtensionOps[A](x: scala.util.Try[A]): TryExtensionOps[A] = new TryExtensionOps[A](x)
   implicit def funcExtensionOps[A](x: => A): FuncExtensionOpts[A] = new FuncExtensionOpts[A](x)
   implicit def futureExtensionOps[A](x: => Future[A]): FutureExtensionOps[A] = new FutureExtensionOps[A](x)
+  implicit def collectionExtensionOps[A, Repr](xs: IterableLike[A, Repr]): CollectionExtensionOps[A, Repr] = new CollectionExtensionOps(xs)
 }
 
