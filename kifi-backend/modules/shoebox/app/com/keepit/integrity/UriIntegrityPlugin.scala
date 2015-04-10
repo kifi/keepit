@@ -358,7 +358,7 @@ class UriIntegrityPluginImpl @Inject() (
     val scheduling: SchedulingProperties) extends UriIntegrityPlugin with Logging {
   override def enabled = true
   override def onStart() {
-    scheduleTaskOnOneMachine(actor.system, 47 seconds, 43 seconds, actor.ref, BatchURIMigration(100), BatchURIMigration.getClass.getSimpleName)
+    scheduleTaskOnOneMachine(actor.system, 47 seconds, 43 seconds, actor.ref, BatchURIMigration(50), BatchURIMigration.getClass.getSimpleName)
     scheduleTaskOnOneMachine(actor.system, 55 seconds, 47 seconds, actor.ref, BatchURLMigration(100), BatchURLMigration.getClass.getSimpleName)
     scheduleTaskOnOneMachine(actor.system, 60 seconds, 53 seconds, actor.ref, FixDuplicateKeeps(), FixDuplicateKeeps.getClass.getSimpleName)
   }
