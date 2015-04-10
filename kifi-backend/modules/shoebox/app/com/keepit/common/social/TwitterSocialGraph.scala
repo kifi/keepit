@@ -5,6 +5,7 @@ import com.keepit.commanders.{ KifiInstallationCommander, LibraryImageCommander,
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.crypto.PublicIdConfiguration
+import com.keepit.common.db.Id
 import com.keepit.common.store.S3ImageStore
 import com.keepit.common.time._
 import com.keepit.common.core._
@@ -16,7 +17,7 @@ import com.keepit.common.mail.EmailAddress
 import com.keepit.common.oauth.{ TwitterUserInfo, TwitterOAuthProvider, OAuth1Configuration, ProviderIds }
 import com.keepit.common.core._
 import com.keepit.common.time.Clock
-import com.keepit.eliza.{ LibraryPushNotificationCategory, PushNotificationExperiment, ElizaServiceClient }
+import com.keepit.eliza.{ UserPushNotificationCategory, LibraryPushNotificationCategory, PushNotificationExperiment, ElizaServiceClient }
 import com.keepit.model.SocialUserInfoStates._
 import com.keepit.model._
 import com.keepit.social._
@@ -93,7 +94,8 @@ class TwitterSocialGraphImpl @Inject() (
     elizaServiceClient: ElizaServiceClient,
     kifiInstallationCommander: KifiInstallationCommander,
     implicit val publicIdConfig: PublicIdConfiguration,
-    implicit val executionContext: ExecutionContext) extends TwitterSocialGraph with Logging {
+    implicit val executionContext: ExecutionContext,
+    userRepo: UserRepo) extends TwitterSocialGraph with Logging {
 
   val providerConfig = oauth1Config.getProviderConfig(ProviderIds.Twitter.id).get
 
@@ -166,14 +168,15 @@ class TwitterSocialGraphImpl @Inject() (
 
   // make this async
   def fetchSocialUserRawInfo(socialUserInfo: SocialUserInfo): Option[SocialUserRawInfo] = {
+    val userId = socialUserInfo.userId.get
     val accessToken = getOAuth1Info(socialUserInfo)
-    val userId = getTwtrUserId(socialUserInfo)
+    val twitterUserId = getTwtrUserId(socialUserInfo)
 
     val followerIdsEndpoint = "https://api.twitter.com/1.1/followers/ids.json"
-    val followerIdsF = fetchIds(socialUserInfo, accessToken, userId, followerIdsEndpoint)
+    val followerIdsF = fetchIds(socialUserInfo, accessToken, twitterUserId, followerIdsEndpoint)
 
     val friendIdsEndpoint = "https://api.twitter.com/1.1/friends/ids.json"
-    val friendIdsF = fetchIds(socialUserInfo, accessToken, userId, friendIdsEndpoint)
+    val friendIdsF = fetchIds(socialUserInfo, accessToken, twitterUserId, friendIdsEndpoint)
 
     val mutualFollowsF = for {
       followerIds <- followerIdsF
@@ -191,48 +194,22 @@ class TwitterSocialGraphImpl @Inject() (
           val twitterHandles = socialUserInfos.flatMap(_.username).toSet
           db.readOnlyMaster { implicit s =>
             twitterSyncStateRepo.getTwitterSyncsByFriendIds(twitterHandles)
-          }.map {
-            case (userId, twitterSyncState) =>
-              db.readWrite { implicit s =>
-                val libraryId = twitterSyncState.libraryId
-                val library = libraryRepo.get(libraryId)
-                val libOwner = basicUserRepo.load(library.ownerId)
-                val ownerImage = s3ImageStore.avatarUrlByUser(libOwner)
-                val libLink = s"""https://www.kifi.com${Library.formatLibraryPath(libOwner.username, library.slug)}"""
-                val libImageOpt = libraryImageCommander.getBestImageForLibrary(library.id.get, ProcessedImageSize.Medium.idealSize)
-                libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId, None) match {
-                  case None =>
-                    log.info(s"[fetchSocialUserInfo(${socialUserInfo.socialId})] auto-joining user ${userId} twitter_sync library ${libraryId}")
-                    libraryMembershipRepo.save(LibraryMembership(libraryId = libraryId, userId = userId, access = LibraryAccess.READ_ONLY))
-                    elizaServiceClient.sendGlobalNotification( //push sent
-                      userIds = Set(userId),
-                      title = s"${libOwner.firstName} created a Library",
-                      body = s"You're being notified because you're following @${twitterSyncState.twitterHandle} on Twitter",
-                      linkText = "Let's take a look!",
-                      linkUrl = libLink,
-                      imageUrl = ownerImage,
-                      sticky = false,
-                      category = NotificationCategory.User.LIBRARY_FOLLOWING,
-                      extra = Some(Json.obj(
-                        "inviter" -> libOwner,
-                        "library" -> Json.toJson(LibraryNotificationInfo.fromLibraryAndOwner(library, libImageOpt, libOwner))
-                      ))
-                    ) map { _ =>
-                        val message = s"${libOwner.firstName} created a Twitter Library"
-                        val canSendPush = kifiInstallationCommander.isMobileVersionGreaterThen(userId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
-                        if (canSendPush) {
-                          elizaServiceClient.sendLibraryPushNotification(
-                            userId,
-                            message,
-                            library.id.get,
-                            libLink,
-                            PushNotificationExperiment.Experiment1,
-                            LibraryPushNotificationCategory.LibraryInvitation)
-                        }
-                      }
-                  case _ =>
-                }
+          } map { twitterSyncState =>
+            db.readWrite { implicit s =>
+              val libraryId = twitterSyncState.libraryId
+              val user = userRepo.get(userId)
+              val library = libraryRepo.get(libraryId)
+              val libOwner = basicUserRepo.load(library.ownerId)
+              val ownerImage = s3ImageStore.avatarUrlByUser(libOwner)
+              val libLink = s"""https://www.kifi.com${Library.formatLibraryPath(libOwner.username, library.slug)}"""
+              val libImageOpt = libraryImageCommander.getBestImageForLibrary(library.id.get, ProcessedImageSize.Medium.idealSize)
+              if (library.state == LibraryStates.ACTIVE && libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId, None).isEmpty) {
+                log.info(s"[fetchSocialUserInfo(${socialUserInfo.socialId})] auto-joining user ${userId} twitter_sync library ${libraryId}")
+                libraryMembershipRepo.save(LibraryMembership(libraryId = libraryId, userId = userId, access = LibraryAccess.READ_ONLY))
+                notifyUserOnLibraryFollow(user, twitterSyncState, library, libOwner, ownerImage, libLink, libImageOpt)
+                notifyOwnerOnLibraryFollow(user, library, libOwner, ownerImage, libLink, libImageOpt)
               }
+            }
           }
         }
         log.info(s"[fetchSocialUserInfo(${socialUserInfo.socialId})] finished auto-joining all twitter_sync libraries")
@@ -257,6 +234,68 @@ class TwitterSocialGraphImpl @Inject() (
         Stream(rawInfos)
       )
     )
+  }
+
+  private def notifyUserOnLibraryFollow(user: User, twitterSyncState: TwitterSyncState, library: Library, libOwner: BasicUser, ownerImage: String, libLink: String, libImageOpt: Option[LibraryImage]): Future[Any] = {
+    val userId = user.id.get
+    elizaServiceClient.sendGlobalNotification( //push sent
+      userIds = Set(userId),
+      title = s"${libOwner.firstName} created a Library",
+      body = s"You're being notified because you're following @${twitterSyncState.twitterHandle} on Twitter",
+      linkText = "Let's take a look!",
+      linkUrl = libLink,
+      imageUrl = ownerImage,
+      sticky = false,
+      category = NotificationCategory.User.LIBRARY_FOLLOWING,
+      extra = Some(Json.obj(
+        "inviter" -> libOwner,
+        "library" -> Json.toJson(LibraryNotificationInfo.fromLibraryAndOwner(library, libImageOpt, libOwner))
+      ))
+    ) map { _ =>
+        if (user.createdAt > clock.now.minusMinutes(30)) {
+          //send a push notifications only if the user was created more then 30 minutes ago.
+          val message = s"${libOwner.firstName} created a Twitter Library"
+          val canSendPush = kifiInstallationCommander.isMobileVersionGreaterThen(userId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
+          if (canSendPush) {
+            elizaServiceClient.sendLibraryPushNotification(
+              userId,
+              message,
+              library.id.get,
+              libLink,
+              PushNotificationExperiment.Experiment1,
+              LibraryPushNotificationCategory.LibraryInvitation)
+          }
+        }
+      }
+  }
+
+  private def notifyOwnerOnLibraryFollow(follower: User, lib: Library, owner: BasicUser, ownerImage: String, libLink: String, libImageOpt: Option[LibraryImage]): Future[Any] = {
+    val message = s"${follower.firstName} ${follower.lastName} is following you on Twitter"
+    elizaServiceClient.sendGlobalNotification( //push sent
+      userIds = Set(lib.ownerId),
+      title = "New Library Follower",
+      body = message,
+      linkText = s"See ${follower.firstName}’s profile",
+      linkUrl = s"https://www.kifi.com/${follower.username.value}",
+      imageUrl = s3ImageStore.avatarUrlByUser(follower),
+      sticky = false,
+      category = NotificationCategory.User.LIBRARY_FOLLOWED,
+      unread = false,
+      extra = Some(Json.obj(
+        "follower" -> BasicUser.fromUser(follower),
+        "library" -> Json.toJson(LibraryNotificationInfo.fromLibraryAndOwner(lib, libImageOpt, owner))
+      ))
+    ) map { _ =>
+        val canSendPush = kifiInstallationCommander.isMobileVersionGreaterThen(lib.ownerId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
+        if (canSendPush) {
+          elizaServiceClient.sendUserPushNotification(
+            userId = lib.ownerId,
+            message = message,
+            recipient = follower,
+            pushNotificationExperiment = PushNotificationExperiment.Experiment1,
+            category = UserPushNotificationCategory.NewLibraryFollower)
+        }
+      }
   }
 
   protected def handleError(tag: String, endpoint: String, sui: SocialUserInfo, uvName: UserValueName, cursor: TwitterId, resp: WSResponse): Unit = {
