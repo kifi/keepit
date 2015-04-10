@@ -179,12 +179,13 @@ class ArticleInfoRepoImpl @Inject() (
     }
   }
 
-  def setDomains(p: Int, s: Int)(implicit session: RWSession): Int = {
+  def setDomains(s: Int)(implicit session: RWSession): Int = {
     val q = (for (r <- rows if r.domain.isEmpty) yield r)
-    q.sortBy(_.id desc).drop(p * s).take(s).list.map { info =>
-      try {
-        (for (r <- rows if r.id === info.id) yield r.domain).update(URI.parse(info.url).toOption.flatMap(_.host).map(_.name))
-      } catch { case error: Throwable => airbrake.notify(s"Error while filling in domain of $info", error); 0 }
+    q.sortBy(_.id desc).take(s).list.map { info =>
+      val domain = URI.parse(info.url).toOption.flatMap(_.host).map(_.name)
+      if (domain.exists(_.length < 512)) {
+        (for (r <- rows if r.id === info.id) yield r.domain).update(domain)
+      } else 0
     }
   }.sum
 }

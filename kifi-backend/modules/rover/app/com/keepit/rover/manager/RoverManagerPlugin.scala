@@ -37,13 +37,11 @@ class RoverManagerPluginImpl @Inject() (
 
     SafeFuture("Backfilling domain names") {
       val pageSize = 100
-      var page = 0
       var lastPageSize = 0
       do {
         lastPageSize = db.readWrite { implicit session =>
-          articleInfoRepo.setDomains(page, pageSize)
+          articleInfoRepo.setDomains(pageSize)
         }
-        page += 1
       } while (lastPageSize > 0)
     }
 
