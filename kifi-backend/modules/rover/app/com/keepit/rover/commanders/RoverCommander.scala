@@ -1,21 +1,40 @@
 package com.keepit.rover.commanders
 
 import com.google.inject.{ Inject, Singleton }
-import com.keepit.common.db.SequenceNumber
+import com.keepit.common.db.{ SequenceNumber }
+import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.model.{ IndexableUri }
 import com.keepit.rover.article.content.{ NormalizationInfoHolder, HttpInfoHolder }
+import com.keepit.rover.manager.ArticleFetchingPolicy
 import com.keepit.rover.model.{ ShoeboxArticleUpdates, ArticleInfo, ShoeboxArticleUpdate }
 import com.keepit.rover.sensitivity.RoverSensitivityCommander
 import com.keepit.rover.store.RoverArticleStore
 import com.keepit.common.core._
 
 import scala.concurrent.{ Future, ExecutionContext }
+import scala.util.Failure
 
 @Singleton
 class RoverCommander @Inject() (
     articleCommander: ArticleCommander,
+    fetchCommander: FetchCommander,
     sensitivityCommander: RoverSensitivityCommander,
     articleStore: RoverArticleStore,
-    private implicit val executionContext: ExecutionContext) {
+    articlePolicy: ArticleFetchingPolicy,
+    private implicit val executionContext: ExecutionContext,
+    airbrake: AirbrakeNotifier) {
+
+  def doMeAFavor(uri: IndexableUri): Future[Unit] = {
+    val toBeInternedByPolicy = articlePolicy.toBeInterned(uri.url, uri.state)
+    val interned = articleCommander.internByUri(uri.id.get, uri.url, toBeInternedByPolicy)
+    val neverFetched = interned.collect { case (kind, info) if info.lastFetchedAt.isEmpty => (info.id.get -> info) }
+    fetchCommander.fetchWithTopPriority(neverFetched.keySet).imap { results =>
+      val failed = results.collect { case (infoId, Failure(error)) => neverFetched(infoId).articleKind -> error }
+      if (failed.nonEmpty) {
+        airbrake.notify(s"Failed to schedule top priority fetches for uri ${uri.id.get}: ${uri.url}\n${failed.mkString("\n")}")
+      }
+    }
+  }
 
   def getShoeboxUpdates(seq: SequenceNumber[ArticleInfo], limit: Int): Future[Option[ShoeboxArticleUpdates]] = {
     val updatedInfos = articleCommander.getArticleInfosBySequenceNumber(seq, limit)

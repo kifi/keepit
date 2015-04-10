@@ -2,11 +2,12 @@ package com.keepit.rover.commanders
 
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.cache._
+import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.{ SequenceNumber, Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.AccessLog
-import com.keepit.model.NormalizedURI
-import com.keepit.rover.article.Article
+import com.keepit.model.{ NormalizedURI }
+import com.keepit.rover.article.{ ArticleKind, Article }
 import com.keepit.rover.model.{ RoverArticleInfo, ArticleInfoRepo, ArticleInfo }
 import com.keepit.rover.store.RoverArticleStore
 
@@ -53,6 +54,19 @@ class ArticleCommander @Inject() (
     }
     Future.sequence(futureArticles).imap(_.flatten)
   }
+
+  def internByUri(uriId: Id[NormalizedURI], url: String, kinds: Set[ArticleKind[_ <: Article]]): Map[ArticleKind[_ <: Article], RoverArticleInfo] = {
+    db.readWrite { implicit session =>
+      articleInfoRepo.internByUri(uriId, url, kinds)
+    }
+  }
+
+  def markAsQueued(ids: Id[RoverArticleInfo]*)(implicit session: RWSession): Unit = {
+    db.readWrite { implicit session =>
+      articleInfoRepo.markAsQueued(ids: _*)
+    }
+  }
+
 }
 
 case class ArticleInfoUriKey(uriId: Id[NormalizedURI]) extends Key[Set[ArticleInfo]] {
