@@ -39,6 +39,9 @@ class RoverCommander @Inject() (
     ShoeboxArticleUpdate(
       articleInfo.uriId,
       articleInfo.kind,
+      latestArticle.url,
+      latestArticle.content.destinationUrl,
+      latestArticle.createdAt,
       latestArticle.content.title,
       sensitivityCommander.isSensitive(latestArticle),
       Some(latestArticle.content).collect { case httpContent: HttpInfoHolder => httpContent.http },
