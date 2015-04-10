@@ -1,6 +1,6 @@
 package com.keepit.curator.model
 
-import com.google.inject.Inject
+import com.google.inject.{ Singleton, ImplementedBy, Inject }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.{ DataBaseComponent, DbRepo }
@@ -8,8 +8,10 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.time.Clock
 import com.keepit.model._
 
+@ImplementedBy(classOf[UriRecoFeedbackRepoImpl])
 trait UriRecoFeedbackRepo extends DbRepo[UriRecoFeedback]
 
+@Singleton
 class UriRecoFeedbackRepoImpl @Inject() (
     val db: DataBaseComponent,
     val clock: Clock,
