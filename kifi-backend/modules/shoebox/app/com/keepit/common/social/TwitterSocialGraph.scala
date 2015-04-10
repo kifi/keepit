@@ -346,7 +346,7 @@ class TwitterSocialGraphImpl @Inject() (
     call.get().map { response =>
       if (response.status == 200) {
         response.json.as[JsArray].value.map(_.as[JsObject])
-      } else if (response.status == 420) { //rate limit
+      } else if (response.status == 429 || response.status == 420) { //rate limit
         log.warn(s"[twfetch-err] Rate limited for $handle using ${socialUserInfoOpt.flatMap(_.userId).map(_.toString).getOrElse("system")}")
         Seq.empty
       } else {

@@ -50,7 +50,8 @@ class TwitterSyncStateRepoImpl @Inject() (
   }
 
   def getSyncsToUpdate(refreshWindow: DateTime)(implicit session: RSession): Seq[TwitterSyncState] = {
-    (for (row <- rows if (row.lastFetchedAt.isEmpty || row.lastFetchedAt <= refreshWindow) && row.state === TwitterSyncStateStates.ACTIVE) yield row).list
+    (for (row <- rows if (row.lastFetchedAt.isEmpty || row.lastFetchedAt <= refreshWindow) && row.state === TwitterSyncStateStates.ACTIVE) yield row)
+      .sortBy(_.lastFetchedAt.asc).list
   }
 
   def getByHandleAndLibraryId(handle: String, libId: Id[Library])(implicit session: RSession): Option[TwitterSyncState] = {
