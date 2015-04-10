@@ -8,6 +8,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.rover.article.ArticleFetcherProvider
 import com.keepit.rover.model.{ RoverArticleInfo, ArticleInfoRepo }
 import com.keepit.rover.store.RoverArticleStore
+import com.keepit.scraper.ShortenedUrls
 import com.kifi.franz.SQSMessage
 import scala.collection.mutable.{ Map => MutableMap }
 import scala.collection.Map
@@ -120,7 +121,7 @@ class RoverArticleFetchingActor @Inject() (
   }
 
   private def shouldThrottle(recentFetchesByDomain: Map[String, Int])(info: RoverArticleInfo): Boolean = {
-    info.domain.flatMap(recentFetchesByDomain.get).exists(_ >= domainWideThrottlingLimit)
+    info.domain.exists(domain => !ShortenedUrls.domains.contains(domain) && recentFetchesByDomain.get(domain).exists(_ >= domainWideThrottlingLimit))
   }
 
   private def startFetching(task: SQSMessage[FetchTask], articleInfo: RoverArticleInfo): Unit = {
