@@ -14,7 +14,7 @@ case class UriRecoFeedback(
     viewed: Option[Boolean],
     clicked: Option[Boolean],
     kept: Option[Boolean],
-    like: Option[Boolean],
+    liked: Option[Boolean],
     state: State[UriRecoFeedback] = UriRecoFeedbackStates.ACTIVE) extends ModelWithState[UriRecoFeedback] {
 
   def withId(id: Id[UriRecoFeedback]): UriRecoFeedback = this.copy(id = Some(id))
@@ -23,8 +23,8 @@ case class UriRecoFeedback(
   def onView(): UriRecoFeedback = this.copy(viewed = Some(true))
   def onClick(): UriRecoFeedback = this.copy(clicked = Some(true))
   def onKeep(): UriRecoFeedback = this.copy(kept = Some(true))
-  def onLike(): UriRecoFeedback = this.copy(like = Some(true))
-  def onDislike(): UriRecoFeedback = this.copy(like = Some(false))
+  def onLike(): UriRecoFeedback = this.copy(liked = Some(true))
+  def onDislike(): UriRecoFeedback = this.copy(liked = Some(false))
 }
 
 object UriRecoFeedbackStates extends States[UriRecoFeedback]

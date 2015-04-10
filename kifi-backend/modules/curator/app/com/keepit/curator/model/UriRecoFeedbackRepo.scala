@@ -25,8 +25,8 @@ class UriRecoFeedbackRepoImpl @Inject() (
     def viewed = column[Option[Boolean]]("viewed", O.Nullable)
     def clicked = column[Option[Boolean]]("clicked", O.Nullable)
     def kept = column[Option[Boolean]]("kept", O.Nullable)
-    def like = column[Option[Boolean]]("like", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, userId, uriId, viewed, clicked, kept, like, state) <> ((UriRecoFeedback.apply _).tupled, UriRecoFeedback.unapply _)
+    def liked = column[Option[Boolean]]("liked", O.Nullable)
+    def * = (id.?, createdAt, updatedAt, userId, uriId, viewed, clicked, kept, liked, state) <> ((UriRecoFeedback.apply _).tupled, UriRecoFeedback.unapply _)
   }
 
   def table(tag: Tag) = new UriRecoFeedbackTable(tag)
