@@ -18,7 +18,8 @@ case class TwitterSyncState(
     twitterHandle: String,
     lastFetchedAt: Option[DateTime],
     libraryId: Id[Library],
-    maxTweetIdSeen: Option[Long]) extends ModelWithState[TwitterSyncState] {
+    maxTweetIdSeen: Option[Long],
+    minTweetIdSeen: Option[Long]) extends ModelWithState[TwitterSyncState] {
   def withId(id: Id[TwitterSyncState]): TwitterSyncState = this.copy(id = Some(id))
   def withUpdateTime(updateTime: DateTime) = this.copy(updatedAt = updateTime)
 }
@@ -26,7 +27,7 @@ case class TwitterSyncState(
 object TwitterSyncStateStates extends States[TwitterSyncState]
 
 case class TwitterHandleLibraryIdKey(val id: Id[Library]) extends Key[String] {
-  override val version = 1
+  override val version = 2
   val namespace = "twitter_handle_library_id"
   def toKey(): String = id.id.toString
 }

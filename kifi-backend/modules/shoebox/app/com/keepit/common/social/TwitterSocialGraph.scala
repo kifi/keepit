@@ -72,7 +72,7 @@ trait TwitterSocialGraph extends SocialGraph {
 
   def sendDM(socialUserInfo: SocialUserInfo, receiverUserId: Long, msg: String): Future[WSResponse]
   def sendTweet(socialUserInfo: SocialUserInfo, image: Option[File], msg: String): Unit
-  def fetchTweets(socialUserInfoOpt: Option[SocialUserInfo], handle: String, sinceId: Long): Future[Seq[JsObject]] //uses app auth if no social user info is given
+  def fetchTweets(socialUserInfoOpt: Option[SocialUserInfo], handle: String, lowerBoundId: Option[Long], upperBoundId: Option[Long]): Future[Seq[JsObject]] //uses app auth if no social user info is given
 }
 
 class TwitterSocialGraphImpl @Inject() (
@@ -331,22 +331,23 @@ class TwitterSocialGraphImpl @Inject() (
         s"PhotoSizeLimit:${conf.getPhotoSizeLimit},ShortURLLength:${conf.getShortURLLength},ShortURLLengthHttps:${conf.getShortURLLengthHttps},CharactersReservedPerMedia:${conf.getCharactersReservedPerMedia},limits:$limits", e)
   }
 
-  def fetchTweets(socialUserInfoOpt: Option[SocialUserInfo], handle: String, sinceId: Long): Future[Seq[JsObject]] = {
+  def fetchTweets(socialUserInfoOpt: Option[SocialUserInfo], handle: String, lowerBoundId: Option[Long], upperBoundId: Option[Long]): Future[Seq[JsObject]] = {
     val endpoint = "https://api.twitter.com/1.1/statuses/user_timeline.json"
     val sig = socialUserInfoOpt.map { socialUserInfo =>
       OAuthCalculator(providerConfig.key, getOAuth1Info(socialUserInfo))
     } getOrElse {
       OAuthCalculator(providerConfig.key, OAuth1TokenInfo(providerConfig.accessToken.key, providerConfig.accessToken.secret))
     }
-    val call = if (sinceId > 0) {
-      WS.url(endpoint).sign(sig).withQueryString("screen_name" -> handle, "since_id" -> sinceId.toString, "count" -> "200")
-    } else {
-      WS.url(endpoint).sign(sig).withQueryString("screen_name" -> handle, "count" -> "200")
-    }
+
+    val query = Seq("screen_name" -> Some(handle), "count" -> Some("200"), "since_id" -> lowerBoundId.map(_.toString), "max_id" -> upperBoundId.map(id => (id - 1).toString)).collect { case (k, Some(v)) => k -> v }
+
+    log.info(s"[twfetch] Fetching tweets for $handle using ${socialUserInfoOpt.flatMap(_.userId).map(_.toString).getOrElse("system")} token. ($upperBoundId, $lowerBoundId)")
+    val call = WS.url(endpoint).sign(sig).withQueryString(query: _*)
     call.get().map { response =>
       if (response.status == 200) {
         response.json.as[JsArray].value.map(_.as[JsObject])
       } else if (response.status == 420) { //rate limit
+        log.warn(s"[twfetch-err] Rate limited for ${socialUserInfoOpt.flatMap(_.userId).map(_.toString).getOrElse("system")}")
         Seq.empty
       } else {
         airbrake.notify(s"Failed to get users $handle timeline, status ${response.status}, msg: ${response.json.toString}")
