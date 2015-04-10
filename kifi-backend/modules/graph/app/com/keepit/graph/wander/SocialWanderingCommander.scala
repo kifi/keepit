@@ -103,7 +103,7 @@ class SocialWanderingCommander @Inject() (
 
   private def getIrrelevantVertices(userId: Id[User]): Future[Set[VertexId]] = {
     abook.getIrrelevantPeople(userId).map { irrelevantPeople =>
-      irrelevantPeople.irrelevantUsers.map(VertexId(_)) ++
+      irrelevantPeople.irrelevantUsers.map(VertexId(_)) ++ SocialWanderlust.explicitlyExcludedUsers ++
         irrelevantPeople.irrelevantFacebookAccounts.map(id => VertexId(VertexDataId.fromSocialUserIdToFacebookAccountId(id))) ++
         irrelevantPeople.irrelevantLinkedInAccounts.map(id => VertexId(VertexDataId.fromSocialUserIdToLinkedInAccountId(id))) ++
         irrelevantPeople.irrelevantEmailAccounts.map(VertexId(_))
@@ -139,4 +139,11 @@ object SocialWanderlust {
     Component(EmailAccountReader, AddressBookReader, EmptyEdgeReader),
     Component(AddressBookReader, EmailAccountReader, EmptyEdgeReader)
   )
+
+  val explicitlyExcludedUsers = Seq(
+    10015, // Kifi Editorial
+    11784, // Kifi Product
+    11785, // Kifi Eng
+    16707 // Kifi Twitter
+  ).map(id => VertexId(Id[User](id)))
 }
