@@ -347,12 +347,15 @@ class TwitterSocialGraphImpl @Inject() (
       if (response.status == 200) {
         response.json.as[JsArray].value.map(_.as[JsObject])
       } else if (response.status == 420) { //rate limit
-        log.warn(s"[twfetch-err] Rate limited for ${socialUserInfoOpt.flatMap(_.userId).map(_.toString).getOrElse("system")}")
+        log.warn(s"[twfetch-err] Rate limited for $handle using ${socialUserInfoOpt.flatMap(_.userId).map(_.toString).getOrElse("system")}")
         Seq.empty
       } else {
         airbrake.notify(s"Failed to get users $handle timeline, status ${response.status}, msg: ${response.json.toString}")
         Seq.empty
       }
+    }.recover { case t: Throwable =>
+      log.warn(s"[twfetch-err] Fetching error for $handle using ${socialUserInfoOpt.flatMap(_.userId).map(_.toString).getOrElse("system")}, ${t.getClass.getCanonicalName}", t)
+      Seq.empty
     }
 
   }
