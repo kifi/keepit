@@ -353,9 +353,10 @@ class TwitterSocialGraphImpl @Inject() (
         airbrake.notify(s"Failed to get users $handle timeline, status ${response.status}, msg: ${response.json.toString}")
         Seq.empty
       }
-    }.recover { case t: Throwable =>
-      log.warn(s"[twfetch-err] Fetching error for $handle using ${socialUserInfoOpt.flatMap(_.userId).map(_.toString).getOrElse("system")}, ${t.getClass.getCanonicalName}", t)
-      Seq.empty
+    }.recover {
+      case t: Throwable =>
+        log.warn(s"[twfetch-err] Fetching error for $handle using ${socialUserInfoOpt.flatMap(_.userId).map(_.toString).getOrElse("system")}, ${t.getClass.getCanonicalName}", t)
+        Seq.empty
     }
 
   }
