@@ -5,6 +5,7 @@ import java.io.File
 import com.google.inject.Inject
 import com.keepit.common.concurrent.WatchableExecutionContext
 import com.keepit.common.core._
+import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.mail.EmailAddress
@@ -29,6 +30,7 @@ class FakeTwitterSocialGraph @Inject() (
     userValueRepo: UserValueRepo,
     twitterSyncStateRepo: TwitterSyncStateRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
+    implicit val publicIdConfig: PublicIdConfiguration,
     socialRepo: SocialUserInfoRepo) extends TwitterSocialGraph with TwitterGraphTestHelper {
 
   val twtrOAuthProvider = new TwitterOAuthProviderImpl(airbrake, oauth1Config) {
@@ -37,8 +39,8 @@ class FakeTwitterSocialGraph @Inject() (
     }
   }
 
-  val twtrGraph: TwitterSocialGraphImpl = new TwitterSocialGraphImpl(airbrake, db, clock, oauth1Config, twtrOAuthProvider, userValueRepo, twitterSyncStateRepo, libraryMembershipRepo, socialRepo, executionContext) {
-    override protected def lookupUsers(socialUserInfo: SocialUserInfo, accessToken: OAuth1TokenInfo, mutualFollows: Set[Long]): Future[JsValue] = Future.successful {
+  val twtrGraph: TwitterSocialGraphImpl = new TwitterSocialGraphImpl(airbrake, db, clock, oauth1Config, twtrOAuthProvider, userValueRepo, twitterSyncStateRepo, libraryMembershipRepo, socialRepo, publicIdConfig, executionContext) {
+    override protected def lookupUsers(socialUserInfo: SocialUserInfo, accessToken: OAuth1TokenInfo, mutualFollows: Set[TwitterId]): Future[JsValue] = Future.successful {
       socialUserInfo.socialId.id.toLong match {
         case tweetfortytwoInfo.id =>
           JsArray(infos.values.collect { case (json, info) if info.id != tweetfortytwoInfo.id => json }.toSeq)
@@ -47,7 +49,7 @@ class FakeTwitterSocialGraph @Inject() (
       }
     }
 
-    override protected def fetchIds(socialUserInfo: SocialUserInfo, accessToken: OAuth1TokenInfo, userId: Long, endpoint: String): Future[Seq[Long]] = Future.successful {
+    protected def fetchIds(socialUserInfo: SocialUserInfo, accessToken: OAuth1TokenInfo, userId: Long, endpoint: String): Future[Seq[TwitterId]] = Future.successful {
       socialUserInfo.socialId.id.toLong match {
         case tweetfortytwoInfo.id =>
           if (endpoint.contains("followers")) tweetfortytwoFollowerIds
@@ -55,9 +57,9 @@ class FakeTwitterSocialGraph @Inject() (
           else Seq.empty
         case _ =>
           if (endpoint.contains("followers")) {
-            Seq(1L, 2L, 3L, 4L)
+            Seq(1L, 2L, 3L, 4L).map(TwitterId(_))
           } else if (endpoint.contains("friends")) {
-            Seq(2L, 3L)
+            Seq(2L, 3L).map(TwitterId(_))
           } else Seq.empty
       }
     }

@@ -37,6 +37,7 @@ object NotificationCategory {
     val CONNECTION_MADE = NotificationCategory("connection_made")
     val SOCIAL_FRIEND_JOINED = NotificationCategory("social_friend_joined")
 
+    val LIBRARY_FOLLOWING = NotificationCategory("user_library_following")
     val LIBRARY_INVITATION = NotificationCategory("user_library_invitation")
     val LIBRARY_FOLLOWED = NotificationCategory("library_followed")
     val NEW_KEEP = NotificationCategory("new_keep")
@@ -47,7 +48,7 @@ object NotificationCategory {
 
     val reportToAnalytics = Set(ANNOUNCEMENT, MESSAGE, EMAIL_KEEP, EMAIL_CONFIRMATION, RESET_PASSWORD, FRIEND_REQUEST,
       FRIEND_ACCEPTED, WELCOME, APPROVED, WAITLIST, WHO_KEPT_MY_KEEP, CONTACT_JOINED, CONNECTION_MADE,
-      SOCIAL_FRIEND_JOINED, LIBRARY_INVITATION, DIGEST, ACTIVITY)
+      SOCIAL_FRIEND_JOINED, LIBRARY_FOLLOWING, LIBRARY_INVITATION, DIGEST, ACTIVITY)
 
     // Parent Categories used in analytics
     val fromKifi = Set(ANNOUNCEMENT, WAITLIST, APPROVED, WELCOME, EMAIL_CONFIRMATION, RESET_PASSWORD, EMAIL_KEEP,

@@ -736,17 +736,13 @@ class LibraryCommander @Inject() (
             }
           }
 
-          val imgUrl = s3ImageStore.avatarUrlByExternalId(Some(200), inviter.externalId, inviter.pictureName, Some("https"))
-          val inviterImage = if (imgUrl.endsWith(".jpg.jpg")) imgUrl.dropRight(4) else imgUrl // basicUser appends ".jpg" which causes an extra .jpg in this case
+          val userImage = s3ImageStore.avatarUrlByUser(inviter)
           val libLink = s"""https://www.kifi.com${Library.formatLibraryPath(libOwner.username, lib.slug)}"""
           val libImageOpt = libraryImageCommander.getBestImageForLibrary(libId, ProcessedImageSize.Medium.idealSize)
 
           val inviteeIdSet = invitesToPersist.map(_.userId).flatten.toSet
           if (inviteeIdSet.nonEmpty) {
             //send push notifications to kifi users
-            val libraryUrl = db.readOnlyMaster { implicit s =>
-              "https://www.kifi.com" + Library.formatLibraryPathUrlEncoded(basicUserRepo.load(lib.ownerId).username, lib.slug)
-            }
 
             // send notifications to kifi users only
             elizaClient.sendGlobalNotification( //push sent
@@ -755,7 +751,7 @@ class LibraryCommander @Inject() (
               body = s"Browse keeps in ${lib.name} to find some interesting gems kept by ${libOwner.firstName}.",
               linkText = "Let's take a look!",
               linkUrl = libLink,
-              imageUrl = inviterImage,
+              imageUrl = userImage,
               sticky = false,
               category = NotificationCategory.User.LIBRARY_INVITATION,
               extra = Some(Json.obj(
@@ -771,7 +767,7 @@ class LibraryCommander @Inject() (
                       userId,
                       message,
                       lib.id.get,
-                      libraryUrl,
+                      libLink,
                       PushNotificationExperiment.Experiment1,
                       LibraryPushNotificationCategory.LibraryInvitation)
                   }

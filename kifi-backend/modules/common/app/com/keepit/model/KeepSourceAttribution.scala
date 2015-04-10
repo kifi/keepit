@@ -5,6 +5,12 @@ import com.keepit.common.time._
 import org.joda.time.DateTime
 import play.api.libs.json._
 
+case class TwitterId(id: Long) // https://groups.google.com/forum/#!topic/twitter-development-talk/ahbvo3VTIYI
+
+object TwitterId {
+  implicit def format = Json.format[TwitterId]
+}
+
 case class KeepSourceAttribution(
     id: Option[Id[KeepSourceAttribution]] = None,
     createdAt: DateTime = currentDateTime,
@@ -63,20 +69,21 @@ object KeepAttributionType {
 
 sealed trait SourceAttribution
 
-case class TwitterAttribution(idString: String, screenName: String) extends SourceAttribution {
-  def getOriginalURL: String = s"https://twitter.com/$screenName/status/$idString"
+case class TwitterAttribution(id: TwitterId, screenName: String) extends SourceAttribution {
+  def getOriginalURL: String = s"https://twitter.com/$screenName/status/${id.id}"
   def getHandle: String = screenName
 }
 
 object TwitterAttribution {
+  implicit val idFormat = TwitterId.format
   implicit val format = Json.format[TwitterAttribution]
 
   def fromRawTweetJson(js: JsValue): Option[TwitterAttribution] = {
-    val idStringOpt = (js \ "id_str").asOpt[String]
+    val idOpt = (js \ "id").asOpt[TwitterId]
     val screenNameOpt = (js \ "user" \ "screen_name").asOpt[String]
     for {
-      idString <- idStringOpt
+      id <- idOpt
       screenName <- screenNameOpt
-    } yield TwitterAttribution(idString, screenName)
+    } yield TwitterAttribution(id, screenName)
   }
 }
