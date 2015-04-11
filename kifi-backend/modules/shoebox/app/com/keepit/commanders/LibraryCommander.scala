@@ -712,7 +712,7 @@ class LibraryCommander @Inject() (
           val (inviterId, libId, recipientId, recipientEmail) = key._1
 
           val (inviter, lib, libOwner, lastInviteOpt) = db.readOnlyMaster { implicit s =>
-            val inviter = basicUserRepo.load(inviterId)
+            val inviter = userRepo.get(inviterId)
             val lib = libraryRepo.get(libId)
             val libOwner = basicUserRepo.load(lib.ownerId)
             val lastInviteOpt = (recipientId, recipientEmail) match {
@@ -770,6 +770,34 @@ class LibraryCommander @Inject() (
                       libLink,
                       PushNotificationExperiment.Experiment1,
                       LibraryPushNotificationCategory.LibraryInvitation)
+                  }
+                }
+              }
+            val friendStr = if (inviteeIdSet.size > 1) "friends" else "a friend"
+            elizaClient.sendGlobalNotification( //push sent
+              userIds = inviteeIdSet,
+              title = s"${inviter.firstName} invited someone to your Library!",
+              body = s"${inviter.fullName} invited $friendStr to your library, ${lib.name}.",
+              linkText = s"See ${inviter.firstName}’s profile",
+              linkUrl = s"https://www.kifi.com/${inviter.username.value}",
+              imageUrl = userImage,
+              sticky = false,
+              category = NotificationCategory.User.LIBRARY_FOLLOWED,
+              extra = Some(Json.obj(
+                "inviter" -> inviter,
+                "library" -> Json.toJson(LibraryNotificationInfo.fromLibraryAndOwner(lib, libImageOpt, libOwner))
+              ))
+            ) map { _ =>
+                val message = s"${inviter.firstName} invited someone to your Library ${lib.name}!"
+                inviteeIdSet.foreach { userId =>
+                  val canSendPush = kifiInstallationCommander.isMobileVersionGreaterThen(userId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
+                  if (canSendPush) {
+                    elizaClient.sendUserPushNotification(
+                      userId = lib.ownerId,
+                      message = message,
+                      recipient = inviter,
+                      pushNotificationExperiment = PushNotificationExperiment.Experiment1,
+                      category = UserPushNotificationCategory.NewLibraryFollower)
                   }
                 }
               }
