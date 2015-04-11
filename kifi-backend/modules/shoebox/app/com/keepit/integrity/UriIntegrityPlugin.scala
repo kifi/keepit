@@ -151,6 +151,7 @@ class UriIntegrityActor @Inject() (
    * A migration from uriA to uriB is (almost) equivalent to N url to uriB migrations, where the N urls are currently associated with uriA.
    */
   private def handleURIMigration(change: ChangedURI): Unit = {
+    val t1 = System.currentTimeMillis()
     val (oldUriId, newUriId) = (change.oldUriId, change.newUriId)
     if (oldUriId == newUriId || change.state != ChangedURIStates.ACTIVE) {
       if (oldUriId == newUriId) {
@@ -206,6 +207,9 @@ class UriIntegrityActor @Inject() (
         changedUriRepo.saveWithoutIncreSeqnum(change.withState(ChangedURIStates.APPLIED))
       }
     }
+
+    val t2 = System.currentTimeMillis()
+    log.info(s"one uri migration takes ${t2 - t1} millis")
   }
 
   /**
