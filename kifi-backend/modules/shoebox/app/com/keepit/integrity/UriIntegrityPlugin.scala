@@ -209,7 +209,7 @@ class UriIntegrityActor @Inject() (
     }
 
     val t2 = System.currentTimeMillis()
-    log.info(s"one uri migration takes ${t2 - t1} millis")
+    log.info(s"one uri migration from ${oldUriId} to ${newUriId} takes ${t2 - t1} millis")
   }
 
   /**
