@@ -41,8 +41,8 @@ class LibraryChecker @Inject() (
       // inactivates MAIN/SECRET Libraries created later (airbrakes if multiple MAIN/SECRET libraries for a user)
       // if MAIN/SECRET library not created - airbrake & create!
       libraryCommander.internSystemGeneratedLibraries(u.id.get, false)
-      timer.stopAndReport(appLog = true)
     }
+    timer.stopAndReport(appLog = true)
   }
 
   private[integrity] def checkLibraryKeeps(): Unit = {
