@@ -25,7 +25,7 @@ case class RawTweet(
   originalJson: JsValue)
 object RawTweet {
   implicit def format: Reads[RawTweet] = (
-    (__ \ 'id_str).read[TwitterId] and
+    (__ \ 'id).read[TwitterId] and
     (__ \ 'created_at).read[DateTime](twitterDateReads(java.util.Locale.ENGLISH)) and
     (__ \ 'text).read[String] and
     (__ \ 'source).read[String] and
