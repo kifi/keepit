@@ -121,8 +121,9 @@ class LoggingStatsdClient(log: Logger) {
 
 class NamedStatsdTimer(name: String) extends Logging {
   private val t0 = System.currentTimeMillis
-  def stopAndReport(scaling: Double = 1.0): Unit = {
+  def stopAndReport(scaling: Double = 1.0, appLog: Boolean = false): Unit = {
     val elapsed = (System.currentTimeMillis - t0) / scaling
+    if (appLog) log.info(s"${name}: time elapsed ${elapsed / 1000f} seconds")
     Statsd.timing(name, elapsed.toLong, 1.0)
   }
 }

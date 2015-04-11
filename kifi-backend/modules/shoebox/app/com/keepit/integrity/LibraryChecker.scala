@@ -4,7 +4,7 @@ import com.google.inject.Inject
 import com.keepit.commanders.{ LibraryCommander }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.logging.Logging
+import com.keepit.common.logging.{ NamedStatsdTimer, Logging }
 import com.keepit.model._
 import org.joda.time.{ Minutes, DateTime }
 
@@ -28,6 +28,7 @@ class LibraryChecker @Inject() (
 
   private[integrity] def checkSystemLibraries(): Unit = {
     log.info("start processing user's system generated libraries. One Main & one Secret Library per user")
+    val timer = new NamedStatsdTimer("LibraryChecker.checkSystemLibraries")
     val (index, numIntervals) = getIndex()
 
     db.readOnlyMaster { implicit s =>
@@ -40,11 +41,13 @@ class LibraryChecker @Inject() (
       // inactivates MAIN/SECRET Libraries created later (airbrakes if multiple MAIN/SECRET libraries for a user)
       // if MAIN/SECRET library not created - airbrake & create!
       libraryCommander.internSystemGeneratedLibraries(u.id.get, false)
+      timer.stopAndReport(appLog = true)
     }
   }
 
   private[integrity] def checkLibraryKeeps(): Unit = {
     log.info("start processing library's last kept date. A library's last_kept field should match the last kept keep")
+    val timer = new NamedStatsdTimer("LibraryChecker.checkLibraryKeeps")
     val (index, numIntervals) = getIndex()
 
     val (libraryMap, latestKeptAtMap, numKeepsByLibraryMap) = db.readOnlyMaster { implicit s =>
@@ -94,10 +97,12 @@ class LibraryChecker @Inject() (
         }
 
     }
+    timer.stopAndReport(appLog = true)
   }
 
   private[integrity] def checkLibraryMembers(): Unit = {
     log.info("start processing library's last kept date. A library's last_kept field should match the last kept keep")
+    val timer = new NamedStatsdTimer("LibraryChecker.checkLibraryMembers")
     val (index, numIntervals) = getIndex()
 
     val (libraryMap, numMembersMap) = db.readOnlyMaster { implicit s =>
@@ -123,7 +128,7 @@ class LibraryChecker @Inject() (
           }
         }
     }
-
+    timer.stopAndReport(appLog = true)
   }
 
   private def getIndex(): (Int, Int) = {
