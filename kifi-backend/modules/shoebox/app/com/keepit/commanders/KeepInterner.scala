@@ -179,7 +179,6 @@ class KeepInterner @Inject() (
       }
 
       log.info(s"[keepinterner] Persisting keep ${rawBookmark.url}, ${rawBookmark.keptAt}, ${clock.now}")
-      logAndrewIntensely(userId, "1 ", rawBookmark.url, rawBookmark.keptAt)
       val (isNewKeep, wasInactiveKeep, bookmark) = internKeep(uri, userId, library, installationId, source, rawBookmark.title, rawBookmark.url, rawBookmark.keptAt.getOrElse(clock.now), rawBookmark.sourceAttribution, rawBookmark.note)
       Success(InternedUriAndKeep(bookmark, uri, isNewKeep, wasInactiveKeep))
     } else {
@@ -195,12 +194,6 @@ class KeepInterner @Inject() (
       Failure(e)
   }
 
-  private def logAndrewIntensely(userId: Id[User], str: String, url: String, time: Option[DateTime]) = {
-    if (userId.id == 3) {
-      log.info(s"[andrewlog] $str $url $time ${clock.now}")
-    }
-  }
-
   private def internKeep(uri: NormalizedURI, userId: Id[User], library: Library,
     installationId: Option[ExternalId[KifiInstallation]], source: KeepSource,
     title: Option[String], url: String, keptAt: DateTime,
@@ -212,8 +205,6 @@ class KeepInterner @Inject() (
       keepRepo.getPrimaryByUriAndLibrary(uri.id.get, library.id.get)
     }
 
-    logAndrewIntensely(userId, "2 " + currentBookmarkOpt.toString, url, Some(keptAt))
-
     val trimmedTitle = title.map(_.trim).filter(_.length > 0)
 
     val (isNewKeep, wasInactiveKeep, internedKeep) = currentBookmarkOpt match {
@@ -224,8 +215,6 @@ class KeepInterner @Inject() (
           countByLibraryCache.remove(CountByLibraryKey(bookmark.libraryId.get))
           countByLibraryCache.remove(CountByLibraryKey(library.id.get))
         }
-
-        logAndrewIntensely(userId, "3 ", url, Some(keptAt))
 
         val savedKeep = bookmark.copy(
           title = trimmedTitle orElse bookmark.title orElse uri.title,
@@ -240,14 +229,12 @@ class KeepInterner @Inject() (
               keep.copy(url = url, createdAt = clock.now)
             } else keep
           } |> { keep =>
-            logAndrewIntensely(userId, "4 ", url, Some(keptAt))
             keepRepo.save(keep)
           }
         (false, wasInactiveKeep, savedKeep)
       case None =>
         val urlObj = urlRepo.get(url, uri.id.get).getOrElse(urlRepo.save(URLFactory(url = url, normalizedUriId = uri.id.get)))
         val savedAttr = sourceAttribution.map { attr => sourceAttrRepo.save(KeepSourceAttribution(attribution = attr)) }
-        logAndrewIntensely(userId, "5 ", url, Some(keptAt))
         val keep = Keep(
           title = trimmedTitle orElse uri.title,
           userId = userId,
@@ -270,7 +257,8 @@ class KeepInterner @Inject() (
       keepToCollectionRepo.getCollectionsForKeep(internedKeep.id.get) foreach { cid => collectionRepo.collectionChanged(cid, inactivateIfEmpty = false) }
     }
 
-    libraryRepo.save(library.copy(keepCount = keepRepo.getCountByLibrary(library.id.get))) // todo: this is very expensive
+    // wrapped in a Try because this is super deadlock prone. Needs to be removed.
+    Try(libraryRepo.save(library.copy(keepCount = keepRepo.getCountByLibrary(library.id.get)))) // todo: this is very expensive
 
     (isNewKeep, wasInactiveKeep, internedKeep)
   }
