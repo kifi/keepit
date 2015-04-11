@@ -1,5 +1,7 @@
 package com.keepit.common.cache
 
+import java.util.concurrent.TimeUnit
+
 import net.spy.memcached.{ AddrUtil, MemcachedClient }
 import play.api.Play._
 
@@ -20,6 +22,8 @@ class MemcachedClientProvider() {
   }
 
   def recreate(): Unit = {
+    val old = client
     client = create()
+    old.shutdown(1, TimeUnit.SECONDS)
   }
 }
