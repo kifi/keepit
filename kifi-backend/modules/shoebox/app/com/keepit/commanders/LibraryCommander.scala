@@ -1078,7 +1078,7 @@ class LibraryCommander @Inject() (
       elizaClient.sendGlobalNotification( //push sent
         userIds = Set(inviterId),
         title = s"${invaitee.firstName} is now following ${lib.name}",
-        body = s"You ionvited ${invaitee.fullName} to follow ${lib.name}.",
+        body = s"You invited ${invaitee.fullName} to follow ${lib.name}.",
         linkText = s"See ${invaitee.firstName}’s profile",
         linkUrl = s"https://www.kifi.com/${invaitee.username.value}",
         imageUrl = invaiteeImage,
