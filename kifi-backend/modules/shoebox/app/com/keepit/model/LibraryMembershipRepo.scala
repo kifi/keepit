@@ -254,7 +254,7 @@ class LibraryMembershipRepoImpl @Inject() (
           case (id, idx) =>
             stmt.setLong(idx + 1, id.id)
         }
-        val res = timing(s"countWithAccessByLibraryId(sz=${libraryIds.size};ids=$libraryIds)") { stmt.execute() }
+        val res = timing(s"countWithAccessByLibraryId(sz=${libraryIds.size};ids=${libraryIds.take(10)})") { stmt.execute() }
         if (!res) throw new SQLException(s"[countWithAccessByLibraryId] ($stmt) failed to execute")
         val rs = stmt.getResultSet()
         val buf = collection.mutable.ArrayBuilder.make[(Id[Library], Int)]

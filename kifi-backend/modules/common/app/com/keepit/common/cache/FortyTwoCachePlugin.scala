@@ -151,7 +151,7 @@ class MemcachedCache @Inject() (
   }
 
   override def bulkGet(keys: Set[String]): Map[String, Any] = {
-    if (keys.size > 250) {
+    if (keys.size >= 500) {
       airbrake.notify(s"cache bulkget ${keys.size} keys! First few keys: ${keys.take(5).mkString(", ")}")
     }
     logger.debug("Getting the cached for keys " + keys)
