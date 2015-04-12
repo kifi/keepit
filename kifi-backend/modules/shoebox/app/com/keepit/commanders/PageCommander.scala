@@ -183,8 +183,8 @@ class PageCommander @Inject() (
     val augmentFuture = searchClient.augment(
       userId = Some(userId),
       showPublishedLibraries = true,
-      maxKeepersShown = Int.MaxValue, // TODO: reduce to 5 once most users have extension 3.3.28 or later
-      maxLibrariesShown = Int.MaxValue,
+      maxKeepersShown = 5,
+      maxLibrariesShown = 10, //actually its three, but we're trimming them up a bit
       maxTagsShown = 0,
       items = Seq(AugmentableItem(normUri.id.get)))
 
