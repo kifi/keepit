@@ -37,6 +37,7 @@ object UserPushNotificationCategory {
   val UserConnectionAccepted = UserPushNotificationCategory("UserConnectionAccepted")
   val ContactJoined = UserPushNotificationCategory("ContactJoined")
   val NewLibraryFollower = UserPushNotificationCategory("NewLibraryFollower")
+  val LibraryInviteAccepted = UserPushNotificationCategory("LibraryInviteAccepted")
   val NewLibraryInviter = UserPushNotificationCategory("NewLibraryInviter")
 }
 
