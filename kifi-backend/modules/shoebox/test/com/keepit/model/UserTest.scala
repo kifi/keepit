@@ -1,6 +1,7 @@
 package com.keepit.model
 
 import com.keepit.commanders.UsernameOps
+import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.healthcheck.FakeAirbrakeNotifier
 
 import scala.util.Try
@@ -29,7 +30,7 @@ class UserTest extends Specification with ShoeboxTestInjector {
 
   "UserRepo" should {
     "Update username" in {
-      withDb() { implicit injector =>
+      withDb(FakeExecutionContextModule()) { implicit injector =>
         val user = db.readWrite { implicit session =>
           userRepo.save(User(firstName = "Andrew", lastName = "Conner", username = Username("test"), normalizedUsername = "test"))
         }
@@ -41,7 +42,7 @@ class UserTest extends Specification with ShoeboxTestInjector {
       }
     }
     "Use the cache" in {
-      withDb() { implicit injector =>
+      withDb(FakeExecutionContextModule()) { implicit injector =>
         val userRepoImpl = userRepo.asInstanceOf[UserRepoImpl]
         val user = db.readWrite { implicit session =>
           userRepoImpl.idCache.get(UserIdKey(Id[User](1))).isDefined === false
@@ -65,7 +66,7 @@ class UserTest extends Specification with ShoeboxTestInjector {
     }
 
     "Distinguish real and fake users" in {
-      withDb() { implicit injector =>
+      withDb(FakeExecutionContextModule()) { implicit injector =>
         val userRepoImpl = userRepo.asInstanceOf[UserRepoImpl]
 
         val user = db.readWrite { implicit session =>
