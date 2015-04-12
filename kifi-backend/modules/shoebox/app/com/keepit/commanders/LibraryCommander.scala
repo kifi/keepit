@@ -775,7 +775,7 @@ class LibraryCommander @Inject() (
               }
             val friendStr = if (inviteeIdSet.size > 1) "friends" else "a friend"
             elizaClient.sendGlobalNotification( //push sent
-              userIds = inviteeIdSet,
+              userIds = Set(lib.ownerId),
               title = s"${inviter.firstName} invited someone to your Library!",
               body = s"${inviter.fullName} invited $friendStr to your library, ${lib.name}.",
               linkText = s"See ${inviter.firstName}’s profile",
