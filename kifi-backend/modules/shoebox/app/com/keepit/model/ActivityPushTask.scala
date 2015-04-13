@@ -28,4 +28,5 @@ case class ActivityPushTask(
 
 object ActivityPushTaskStates extends States[ActivityPushTask] {
   val NO_DEVICES = State[ActivityPushTask]("no_devices")
+  val OPTED_OUT = State[ActivityPushTask]("opted_out")
 }

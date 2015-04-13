@@ -151,6 +151,7 @@ class UriIntegrityActor @Inject() (
    * A migration from uriA to uriB is (almost) equivalent to N url to uriB migrations, where the N urls are currently associated with uriA.
    */
   private def handleURIMigration(change: ChangedURI): Unit = {
+    val t1 = System.currentTimeMillis()
     val (oldUriId, newUriId) = (change.oldUriId, change.newUriId)
     if (oldUriId == newUriId || change.state != ChangedURIStates.ACTIVE) {
       if (oldUriId == newUriId) {
@@ -205,6 +206,9 @@ class UriIntegrityActor @Inject() (
         changedUriRepo.saveWithoutIncreSeqnum(change.withState(ChangedURIStates.APPLIED))
       }
     }
+
+    val t2 = System.currentTimeMillis()
+    log.info(s"one uri migration from ${oldUriId} to ${newUriId} takes ${t2 - t1} millis")
   }
 
   /**
@@ -357,7 +361,7 @@ class UriIntegrityPluginImpl @Inject() (
     val scheduling: SchedulingProperties) extends UriIntegrityPlugin with Logging {
   override def enabled = true
   override def onStart() {
-    scheduleTaskOnOneMachine(actor.system, 47 seconds, 43 seconds, actor.ref, BatchURIMigration(50), BatchURIMigration.getClass.getSimpleName)
+    scheduleTaskOnOneMachine(actor.system, 47 seconds, 43 seconds, actor.ref, BatchURIMigration(100), BatchURIMigration.getClass.getSimpleName)
     scheduleTaskOnOneMachine(actor.system, 55 seconds, 47 seconds, actor.ref, BatchURLMigration(100), BatchURLMigration.getClass.getSimpleName)
     scheduleTaskOnOneMachine(actor.system, 60 seconds, 53 seconds, actor.ref, FixDuplicateKeeps(), FixDuplicateKeeps.getClass.getSimpleName)
   }

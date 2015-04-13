@@ -18,6 +18,7 @@ import com.keepit.common.store.S3ImageStore
 import com.keepit.common.time._
 import com.keepit.common.usersegment.{ UserSegment, UserSegmentFactory }
 import com.keepit.eliza.{ UserPushNotificationCategory, PushNotificationExperiment, ElizaServiceClient }
+import com.keepit.graph.GraphServiceClient
 import com.keepit.heimdal.{ ContextStringData, HeimdalServiceClient, _ }
 import com.keepit.model.{ UserEmailAddress, _ }
 import com.keepit.search.SearchServiceClient
@@ -97,6 +98,7 @@ class UserCommander @Inject() (
     socialUserInfoRepo: SocialUserInfoRepo,
     collectionCommander: CollectionCommander,
     abookServiceClient: ABookServiceClient,
+    graphServiceClient: GraphServiceClient,
     postOffice: LocalPostOffice,
     clock: Clock,
     scheduler: Scheduler,
@@ -715,21 +717,31 @@ class UserCommander @Inject() (
   }
 
   def getFriendRecommendations(userId: Id[User], offset: Int, limit: Int): Future[Option[FriendRecommendations]] = {
-    abookServiceClient.getFriendRecommendations(userId, offset, limit).map {
-      _.map { recommendedUsers =>
-        val friends = db.readOnlyMaster { implicit session =>
-          userConnectionRepo.getConnectedUsersForUsers(recommendedUsers.toSet + userId) //cached
+    val futureRecommendedUsers = abookServiceClient.getFriendRecommendations(userId, offset, limit)
+    val futureRelatedUsers = graphServiceClient.getSociallyRelatedEntities(userId)
+    futureRecommendedUsers.flatMap {
+      case None => Future.successful(None)
+      case Some(recommendedUsers) =>
+        futureRelatedUsers.map { sociallyRelatedEntitiesOpt =>
+
+          val friends = db.readOnlyMaster { implicit session =>
+            userConnectionRepo.getConnectedUsersForUsers(recommendedUsers.toSet + userId) //cached
+          }
+
+          val friendshipStrength = {
+            val relatedUsers = sociallyRelatedEntitiesOpt.map(_.users.related) getOrElse Seq.empty
+            relatedUsers.filter { case (userId, _) => friends.contains(userId) }
+          }.toMap[Id[User], Double].withDefaultValue(0d)
+
+          val mutualFriends = recommendedUsers.map { recommendedUserId =>
+            recommendedUserId -> (friends.getOrElse(userId, Set.empty) intersect friends.getOrElse(recommendedUserId, Set.empty)).toSeq.sortBy(-friendshipStrength(_))
+          }.toMap
+
+          val uniqueMutualFriends = mutualFriends.values.flatten.toSet
+          val (basicUsers, mutualFriendConnectionCounts) = loadBasicUsersAndConnectionCounts(uniqueMutualFriends ++ recommendedUsers, uniqueMutualFriends)
+
+          Some(FriendRecommendations(basicUsers, mutualFriendConnectionCounts, recommendedUsers, mutualFriends))
         }
-
-        val mutualFriends = recommendedUsers.map { recommendedUserId =>
-          recommendedUserId -> (friends.getOrElse(userId, Set.empty) intersect friends.getOrElse(recommendedUserId, Set.empty))
-        }.toMap
-
-        val uniqueMutualFriends = mutualFriends.values.flatten.toSet
-        val (basicUsers, mutualFriendConnectionCounts) = loadBasicUsersAndConnectionCounts(uniqueMutualFriends ++ recommendedUsers, uniqueMutualFriends)
-
-        FriendRecommendations(basicUsers, mutualFriendConnectionCounts, recommendedUsers, mutualFriends)
-      }
     }
   }
 

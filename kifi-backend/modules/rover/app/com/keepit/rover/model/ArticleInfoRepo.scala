@@ -179,11 +179,15 @@ class ArticleInfoRepoImpl @Inject() (
     }
   }
 
-  def setDomains(p: Int, s: Int)(implicit session: RWSession): Int = {
-    page(p, s).map { info =>
-      (for (r <- rows if r.id === info.id) yield r.domain).update(URI.parse(info.url).toOption.flatMap(_.host).map(_.name))
-    }.sum
-  }
+  def setDomains(s: Int)(implicit session: RWSession): Int = {
+    val q = (for (r <- rows if r.domain.isEmpty) yield r)
+    q.sortBy(_.id desc).take(s).list.map { info =>
+      val domain = URI.parse(info.url).toOption.flatMap(_.host).map(_.name)
+      if (domain.exists(_.length < 512)) {
+        (for (r <- rows if r.id === info.id) yield r.domain).update(domain)
+      } else 0
+    }
+  }.sum
 }
 
 trait ArticleInfoSequencingPlugin extends SequencingPlugin

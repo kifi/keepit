@@ -1,19 +1,9 @@
-# CURATOR
+# SHOEBOX
 
 # --- !Ups
 
-create table uri_reco_feedback(
-  id bigint(20) NOT NULL AUTO_INCREMENT,
-  created_at datetime NOT NULL,
-  updated_at datetime NOT NULL,
-  user_id bigint(20) NOT NULL,
-  uri_id bigint(20) NOT NULL,
-  feedback varchar(32) NOT NULL,
-  state varchar(20) NOT NULL,
+ALTER TABLE twitter_sync_state ADD COLUMN min_tweet_id_seen bigint(20) NULL;
 
-  PRIMARY KEY (id),
-);
-
-insert into evolutions (name, description) values('316.sql', 'create uri_reco_feedback table');
+INSERT INTO evolutions (name, description) VALUES ('316.sql', 'add min_tweet_id_seen to twitter_sync_state');
 
 # --- !Downs

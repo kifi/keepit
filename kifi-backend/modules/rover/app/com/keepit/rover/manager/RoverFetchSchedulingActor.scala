@@ -1,20 +1,20 @@
 package com.keepit.rover.manager
 
-import com.google.inject.{ Singleton, Inject }
+import com.google.inject.{ Inject }
 import com.keepit.common.akka.{ UnsupportedActorMessage, FortyTwoActor }
-import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.rover.model.{ RoverArticleInfo, ArticleInfoRepo }
+import com.keepit.rover.commanders.FetchCommander
+import com.keepit.rover.model.{ RoverArticleInfo }
 import scala.concurrent.duration._
 import com.keepit.common.core._
 
 import scala.concurrent.{ Future, ExecutionContext }
-import scala.util.{ Try, Failure, Success }
+import scala.util.{ Failure, Success }
 
 object RoverFetchSchedulingActor {
   val maxBatchSize = 15 // low to balance producer / consumer behavior *on leader* (SQS send / receive), increase if we don't care about leader as a consumer.
-  val maxQueuedFor = 7 days // todo(Léo): decrease once we've caught up
+  val maxQueuedFor = 12 hours
 
   sealed trait RoverFetchSchedulingActorMessage
   case object ScheduleFetchTasks extends RoverFetchSchedulingActorMessage
@@ -23,8 +23,7 @@ object RoverFetchSchedulingActor {
 }
 
 class RoverFetchSchedulingActor @Inject() (
-    db: Database,
-    articleInfoRepo: ArticleInfoRepo,
+    fetchCommander: FetchCommander,
     airbrake: AirbrakeNotifier,
     firstTimeQueue: FetchTaskQueue.FirstTime,
     newVersionQueue: FetchTaskQueue.NewVersion,
@@ -51,14 +50,11 @@ class RoverFetchSchedulingActor @Inject() (
 
   private def startScheduling(): Unit = {
     schedulingFetchTasks = true
-    val ripeArticleInfos = db.readWrite { implicit session =>
-      articleInfoRepo.getRipeForFetching(maxBatchSize, maxQueuedFor)
-    }
-
+    val ripeArticleInfos = fetchCommander.getRipeForFetching(maxBatchSize, maxQueuedFor)
     val queuedTaskCountFutures = ripeArticleInfos.groupBy(getRelevantQueue).map {
       case (queue, articleInfos) =>
         val tasks = articleInfos.map { articleInfo => FetchTask(articleInfo.id.get) }
-        add(tasks, queue)
+        fetchCommander.add(tasks, queue).imap(_.count(_._2.isSuccess))
     }
 
     Future.sequence(queuedTaskCountFutures).imap(_.sum).onComplete {
@@ -76,29 +72,5 @@ class RoverFetchSchedulingActor @Inject() (
   private def getRelevantQueue(articleInfo: RoverArticleInfo): FetchTaskQueue = articleInfo.latestVersion match {
     case None => firstTimeQueue
     case Some(version) => if (version.major < articleInfo.articleKind.version) newVersionQueue else refreshQueue
-  }
-
-  private def add(tasks: Seq[FetchTask], queue: FetchTaskQueue): Future[Int] = {
-    val maybeQueuedTaskFutures: Seq[Future[Try[FetchTask]]] = tasks.map { task =>
-      val futureMessage = queue.queue.send(task)
-      futureMessage.imap { _ => Success(task) } recover {
-        case error: Throwable =>
-          log.error(s"Failed to add $task to queue $queue", error)
-          Failure(error)
-      }
-    }
-    Future.sequence(maybeQueuedTaskFutures).map { maybeQueuedTasks =>
-      val queuedTasks = maybeQueuedTasks.collect { case Success(task) => task }
-      val queuedTaskCount = queuedTasks.length
-      val failureCount = tasks.length - queuedTaskCount
-      if (failureCount > 0) { log.error(s"Failed to add $failureCount tasks to $queue") }
-      if (queuedTaskCount > 0) {
-        db.readWrite { implicit session =>
-          articleInfoRepo.markAsQueued(queuedTasks.map(_.id): _*)
-        }
-        log.info(s"Added $queuedTaskCount tasks to $queue")
-      }
-      queuedTaskCount
-    }
   }
 }

@@ -3,6 +3,7 @@ package com.keepit.rover.manager
 import javax.inject.{ Inject, Singleton }
 
 import com.keepit.common.actor.ActorInstance
+import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.slick.Database
 import com.keepit.common.plugin.{ SchedulerPlugin, SchedulingProperties }
 import com.keepit.rover.manager.RoverArticleFetchingActor.{ Close, StartPullingTasks }
@@ -12,6 +13,7 @@ import com.keepit.rover.model.{ ArticleInfoRepoImpl }
 
 import scala.concurrent.duration._
 import scala.util.Random
+import scala.concurrent.ExecutionContext.Implicits._
 
 trait RoverManagerPlugin
 
@@ -33,15 +35,13 @@ class RoverManagerPluginImpl @Inject() (
     scheduleTaskOnOneMachine(fetchSchedulingActor.system, 200 seconds, 1 minute, fetchSchedulingActor.ref, ScheduleFetchTasks, "Fetch Scheduling")
     scheduleTaskOnAllMachines(fetchingActor.system, (30 + Random.nextInt(60)) seconds, 1 minute, fetchingActor.ref, StartPullingTasks)
 
-    scheduleTaskOnOneMachine(fetchingActor.system, 3 minutes, 10 days, "Backfilling domain names") {
+    SafeFuture("Backfilling domain names") {
       val pageSize = 100
-      var page = 0
       var lastPageSize = 0
       do {
         lastPageSize = db.readWrite { implicit session =>
-          articleInfoRepo.setDomains(page, pageSize)
+          articleInfoRepo.setDomains(pageSize)
         }
-        page += 1
       } while (lastPageSize > 0)
     }
 

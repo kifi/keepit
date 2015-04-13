@@ -2,6 +2,7 @@ package com.keepit.controllers.core
 
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.actor.FakeActorSystemModule
+import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.controller.FakeUserActionsHelper
 
 import com.keepit.common.healthcheck.FakeAirbrakeModule
@@ -27,6 +28,7 @@ import scala.concurrent.duration.Duration
 class AuthControllerTest extends Specification with ShoeboxTestInjector {
 
   val modules = Seq(FakeShoeboxServiceModule(),
+    FakeExecutionContextModule(),
     FakeABookServiceClientModule(),
     FakeSocialGraphModule(),
     FakeScrapeSchedulerModule(),

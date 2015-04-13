@@ -10,8 +10,7 @@ import net.sf.ehcache.config.CacheConfiguration
 
 import net.spy.memcached.{ CachedData, MemcachedClient }
 import net.spy.memcached.transcoders.{ Transcoder, SerializingTranscoder }
-import net.spy.memcached.internal.BulkFuture
-import net.spy.memcached.internal.GetFuture
+import net.spy.memcached.internal.{ CheckedOperationTimeoutException, BulkFuture, GetFuture }
 
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.healthcheck.{ AirbrakeNotifier, AirbrakeError }
@@ -49,7 +48,7 @@ trait InMemoryCachePlugin extends FortyTwoCachePlugin {
 
 @Singleton
 class MemcachedCache @Inject() (
-    client: MemcachedClient,
+    clientProvider: MemcachedClientProvider,
     val airbrake: AirbrakeNotifier) extends FortyTwoCachePlugin {
 
   override private[cache] val logAccess = true
@@ -57,6 +56,8 @@ class MemcachedCache @Inject() (
   override def onError(error: AirbrakeError) {
     airbrake.notify(error)
   }
+
+  private def client: MemcachedClient = clientProvider.get()
 
   val compressThreshold: Int = 400000 // TODO: make configurable
   val compressMethod: String = "gzip"
@@ -125,6 +126,15 @@ class MemcachedCache @Inject() (
       future = client.asyncGet(key, tc)
       toOption(future.get(1, TimeUnit.SECONDS))
     } catch {
+      case timeout: CheckedOperationTimeoutException =>
+        airbrake.notify("A timeout error has occurred while getting the value from memcached", timeout)
+        try {
+          clientProvider.recreate()
+        } catch {
+          case e: Exception => airbrake.notify(s"failed to recreate memcached client after CheckedOperationTimeoutException")
+        }
+        if (future != null) future.cancel(false)
+        None
       case e: Throwable =>
         logger.error("An error has occurred while getting the value from memcached", e)
         if (future != null) future.cancel(false)
@@ -150,7 +160,8 @@ class MemcachedCache @Inject() (
     }
   }
 
-  override def bulkGet(keys: Set[String]): Map[String, Any] = {
+  // do not overload cache client with giant bulkget
+  private def smallBulkGet(keys: Set[String]): Map[String, Any] = {
     logger.debug("Getting the cached for keys " + keys)
     var future: BulkFuture[JMap[String, Any]] = null
     try {
@@ -166,6 +177,17 @@ class MemcachedCache @Inject() (
         logger.error("An error has occurred while getting some values from memcached", e)
         if (future != null) future.cancel(false)
         Map.empty[String, Any]
+    }
+  }
+
+  override def bulkGet(keys: Set[String]): Map[String, Any] = {
+    if (keys.size >= 500) {
+      airbrake.notify(s"cache bulkget ${keys.size} keys! First few keys: ${keys.take(5).mkString(", ")}")
+    }
+    if (keys.size >= 200) {
+      keys.grouped(100).map { subkeys => smallBulkGet(subkeys) }.foldLeft(Map.empty[String, Any]) { case (m1, m2) => m1 ++ m2 }
+    } else {
+      smallBulkGet(keys)
     }
   }
 

@@ -9,7 +9,11 @@ object UrlClassifier {
       """http[s]?://4sq.com/.*""",
       """http[s]?://www.periscope.tv/.*""",
       """http[s]?://instagram.com/.*""",
+      """http[s]?://super.me/p/.*""",
+      """http[s]?://mrk.tv/.*""", //http://meerkatapp.co/
       """http[s]?://instagr.am/.*""",
+      """http[s]?://shar.es/.*""",
+      """http[s]?://twitter.com//.*""", //this one is a bit strange and may take out legit twitter articles. the core issue is people linking to other tweets that have nothing but the tweet and it looks bad
       """http[s]?://runkeeper.com/user/.*/activity/.*""",
       """http[s]?://rnkpr.com/.*"""
     ).map("(" + _ + ")").mkString("|") + ")"
