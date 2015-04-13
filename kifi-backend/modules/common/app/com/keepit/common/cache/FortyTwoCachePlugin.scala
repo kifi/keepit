@@ -128,7 +128,11 @@ class MemcachedCache @Inject() (
     } catch {
       case timeout: CheckedOperationTimeoutException =>
         airbrake.notify("A timeout error has occurred while getting the value from memcached", timeout)
-        clientProvider.recreate()
+        try {
+          clientProvider.recreate()
+        } catch {
+          case e: Exception => airbrake.notify(s"failed to recreate memcached client after CheckedOperationTimeoutException")
+        }
         if (future != null) future.cancel(false)
         None
       case e: Throwable =>
