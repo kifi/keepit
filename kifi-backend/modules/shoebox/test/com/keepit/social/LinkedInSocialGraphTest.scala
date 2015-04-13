@@ -1,5 +1,6 @@
 package com.keepit.common.social
 
+import com.keepit.common.concurrent.FakeExecutionContextModule
 import org.specs2.mutable._
 
 import com.keepit.common.db.slick.Database
@@ -34,7 +35,7 @@ class LinkedInSocialGraphTest extends Specification with ShoeboxTestInjector {
 
   "LinkedInSocialGraph" should {
     "fetch from linkedin" in {
-      withDb(FakeHttpClientModule(fakeLinkedInResponse)) { implicit injector =>
+      withDb(FakeHttpClientModule(fakeLinkedInResponse), FakeExecutionContextModule()) { implicit injector =>
 
         val oAuth2Info = OAuth2Info("this_is_my_token")
         val socialUser = SocialUser(IdentityId("rFOBMp35vZ", "linkedin"), "Greg", "Methvin", "Greg Methvin",
