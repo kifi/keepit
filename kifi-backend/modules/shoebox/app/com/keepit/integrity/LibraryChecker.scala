@@ -2,6 +2,7 @@ package com.keepit.integrity
 
 import com.google.inject.Inject
 import com.keepit.commanders.{ LibraryCommander }
+import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.{ NamedStatsdTimer, Logging }
@@ -56,7 +57,7 @@ class LibraryChecker @Inject() (
       val libraryMap = libraries.map(lib => lib.id.get -> lib).toMap
       val allLibraryIds = libraryMap.keySet
       val latestKeptAtMap = keepRepo.latestKeptAtByLibraryIds(allLibraryIds)
-      val numKeepsByLibraryMap = keepRepo.getCountsByLibrary(allLibraryIds)
+      val numKeepsByLibraryMap = allLibraryIds.grouped(200).map { keepRepo.getCountsByLibrary(_) }.foldLeft(Map.empty[Id[Library], Int]) { case (m1, m2) => m1 ++ m2 } // grouped to be more friendly with cache bulkget
       (libraryMap, latestKeptAtMap, numKeepsByLibraryMap)
     }
 
