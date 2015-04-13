@@ -33,6 +33,15 @@ angular.module('kifi')
   };
 })
 
+.filter('absProfileUrl', [
+  'env',
+  function (env) {
+    return function (user) {
+      return user ? env.origin + '/' + user.username : null;
+    };
+  }
+])
+
 .filter('libImageUrl', [
   'env',
   function (env) {
