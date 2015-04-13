@@ -1,8 +1,12 @@
 package com.keepit.shoebox.cron
 
-import com.keepit.commanders.KifiInstallationCommander
+import com.keepit.commanders.{ LibraryImageCommander, ProcessedImageSize, KifiInstallationCommander }
+import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.social.BasicUserRepo
+import com.keepit.common.store.S3ImageStore
+import com.keepit.social.BasicUser
+import play.api.libs.json.Json
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
@@ -11,6 +15,7 @@ import com.google.inject.Inject
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.db._
+import com.keepit.common.concurrent.PimpMyFuture._
 import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
@@ -27,7 +32,7 @@ import scala.util.Random
 
 trait PushNotificationMessage
 case class GeneralActivityPushNotificationMessage(message: String) extends PushNotificationMessage
-case class LibraryPushNotificationMessage(message: String, id: Id[Library], libraryUrl: String) extends PushNotificationMessage
+case class LibraryPushNotificationMessage(message: String, lib: Library, owner: BasicUser, newKeep: Keep, libraryUrl: String, libImageOpt: Option[LibraryImage]) extends PushNotificationMessage
 
 object PushActivities
 object CreatePushActivityEntities
@@ -78,7 +83,10 @@ class ActivityPusher @Inject() (
     libraryMembershipRepo: LibraryMembershipRepo,
     kifiInstallationRepo: KifiInstallationRepo,
     kifiInstallationCommander: KifiInstallationCommander,
+    libraryImageCommander: LibraryImageCommander,
+    s3ImageStore: S3ImageStore,
     actor: ActorInstance[ActivityPushActor],
+    implicit val publicIdConfig: PublicIdConfiguration,
     implicit val executionContext: ExecutionContext,
     clock: Clock) extends Logging {
 
@@ -138,7 +146,27 @@ class ActivityPusher @Inject() (
     val res: Future[Int] = message match {
       case libMessage: LibraryPushNotificationMessage =>
         log.info(s"pushing library activity update to ${activity.userId} [$experimant]: $message")
-        elizaServiceClient.sendLibraryPushNotification(activity.userId, libMessage.message, libMessage.id, libMessage.libraryUrl, experimant, LibraryPushNotificationCategory.LibraryChanged)
+        val devices = elizaServiceClient.sendGlobalNotification( //no need for push
+          userIds = Set(activity.userId),
+          title = s"New Keep in ${libMessage.lib.name}",
+          body = s"${libMessage.owner.firstName} has just kept ${libMessage.newKeep.title.getOrElse("a new item")}",
+          linkText = "Go to Library",
+          linkUrl = libMessage.libraryUrl,
+          imageUrl = s3ImageStore.avatarUrlByUser(libMessage.owner),
+          sticky = false,
+          category = NotificationCategory.User.NEW_KEEP,
+          extra = Some(Json.obj(
+            "keeper" -> libMessage.owner,
+            "library" -> Json.toJson(LibraryNotificationInfo.fromLibraryAndOwner(libMessage.lib, libMessage.libImageOpt, libMessage.owner)),
+            "keep" -> Json.obj(
+              "id" -> libMessage.newKeep.externalId,
+              "url" -> libMessage.newKeep.url
+            )
+          ))
+        ) map { _ =>
+            elizaServiceClient.sendLibraryPushNotification(activity.userId, libMessage.message, libMessage.lib.id.get, libMessage.libraryUrl, experimant, LibraryPushNotificationCategory.LibraryChanged)
+          }
+        devices.flatten
       case generalMessage: GeneralActivityPushNotificationMessage =>
         log.info(s"pushing general activity update to ${activity.userId} [$experimant]: $message")
         elizaServiceClient.sendGeneralPushNotification(activity.userId, generalMessage.message, experimant, SimplePushNotificationCategory.PersonaUpdate)
@@ -185,8 +213,11 @@ class ActivityPusher @Inject() (
           if (experiment == PushNotificationExperiment.Experiment1) s"""New keeps in "${lib.name.abbreviate(25)}""""
           else s""""${lib.name.abbreviate(25)}" library has updates"""
         }
-        val libraryUrl = "https://www.kifi.com" + Library.formatLibraryPathUrlEncoded(basicUserRepo.load(lib.ownerId).username, lib.slug)
-        LibraryPushNotificationMessage(message, lib.id.get, libraryUrl)
+        val owner = basicUserRepo.load(lib.ownerId)
+        val libraryUrl = "https://www.kifi.com" + Library.formatLibraryPathUrlEncoded(owner.username, lib.slug)
+        val newKeep = keepRepo.getByLibrary(lib.id.get, 0, 1).head
+        val libImageOpt = libraryImageCommander.getBestImageForLibrary(lib.id.get, ProcessedImageSize.Medium.idealSize)
+        LibraryPushNotificationMessage(message, lib, owner, newKeep, libraryUrl, libImageOpt)
       }
     }
   }
