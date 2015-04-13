@@ -160,10 +160,8 @@ class MemcachedCache @Inject() (
     }
   }
 
-  override def bulkGet(keys: Set[String]): Map[String, Any] = {
-    if (keys.size >= 500) {
-      airbrake.notify(s"cache bulkget ${keys.size} keys! First few keys: ${keys.take(5).mkString(", ")}")
-    }
+  // do not overload cache client with giant bulkget
+  private def smallBulkGet(keys: Set[String]): Map[String, Any] = {
     logger.debug("Getting the cached for keys " + keys)
     var future: BulkFuture[JMap[String, Any]] = null
     try {
@@ -179,6 +177,17 @@ class MemcachedCache @Inject() (
         logger.error("An error has occurred while getting some values from memcached", e)
         if (future != null) future.cancel(false)
         Map.empty[String, Any]
+    }
+  }
+
+  override def bulkGet(keys: Set[String]): Map[String, Any] = {
+    if (keys.size >= 500) {
+      airbrake.notify(s"cache bulkget ${keys.size} keys! First few keys: ${keys.take(5).mkString(", ")}")
+    }
+    if (keys.size >= 200) {
+      keys.grouped(100).map { subkeys => smallBulkGet(subkeys) }.foldLeft(Map.empty[String, Any]) { case (m1, m2) => m1 ++ m2 }
+    } else {
+      smallBulkGet(keys)
     }
   }
 
