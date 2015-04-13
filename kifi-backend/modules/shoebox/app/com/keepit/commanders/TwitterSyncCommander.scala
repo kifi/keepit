@@ -111,25 +111,33 @@ class TwitterSyncCommander @Inject() (
     }
   }
 
+  private val safeBacklogBuffer = 10
   def syncAll(): Unit = {
     val states = db.readOnlyReplica { implicit session =>
       syncStateRepo.getSyncsToUpdate(clock.now.minusMinutes(15))
     }
-    states.foreach { state =>
-      val socialUserInfo: Option[SocialUserInfo] = state.userId.flatMap { userId =>
-        db.readOnlyReplica { implicit session =>
-          socialRepo.getByUser(userId).find(s => s.networkType == SocialNetworks.TWITTER)
-        }
-      }
-      val library = db.readOnlyReplica { implicit session =>
-        libraryRepo.get(state.libraryId)
-      }
-      if (library.state == LibraryStates.ACTIVE) {
-        if (throttle.waiting < states.length) syncOne(socialUserInfo, state, library.ownerId)
-        else airbrake.notify("Twitter library sync backing up!")
-      } else {
-        db.readWrite { implicit session =>
-          syncStateRepo.save(state.copy(state = TwitterSyncStateStates.INACTIVE))
+
+    if (states.length + safeBacklogBuffer < throttle.waiting) { // it's backed up more than what we're trying to bring in, so is getting worse.
+      airbrake.notify("Twitter library sync backing up! Would like to sync ${states.length} more, waiting on ${throttle.waiting}")
+    } else {
+      states.foreach { state =>
+        if (throttle.waiting < states.length + 1) {
+          val (socialUserInfo, library) = db.readOnlyReplica { implicit session =>
+            val socialUserInfo: Option[SocialUserInfo] = state.userId.flatMap { userId =>
+              socialRepo.getByUser(userId).find(s => s.networkType == SocialNetworks.TWITTER)
+            }
+            val library = libraryRepo.get(state.libraryId)
+
+            (socialUserInfo, library)
+          }
+
+          if (library.state == LibraryStates.ACTIVE) {
+            syncOne(socialUserInfo, state, library.ownerId)
+          } else {
+            db.readWrite { implicit session =>
+              syncStateRepo.save(state.copy(state = TwitterSyncStateStates.INACTIVE))
+            }
+          }
         }
       }
     }

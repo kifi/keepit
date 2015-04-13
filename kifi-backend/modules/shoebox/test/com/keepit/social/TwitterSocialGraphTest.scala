@@ -35,7 +35,7 @@ class TwitterSocialGraphTest extends Specification with ShoeboxTestInjector with
         TwitterUserInfo.toUserProfileInfo(tweetfortytwoInfo.copy(screenName = "tweet42"))
       }
     }
-    val twtrGraph: TwitterSocialGraphImpl = new TwitterSocialGraphImpl(airbrake, db, inject[S3ImageStore], clock, oauth1Config, twtrOAuthProvider, userValueRepo, twitterSyncStateRepo, libraryMembershipRepo, libraryRepo, basicUserRepo, socialUserInfoRepo, inject[LibraryImageCommander], inject[ElizaServiceClient], inject[KifiInstallationCommander], inject[PublicIdConfiguration], inject[WatchableExecutionContext]) {
+    val twtrGraph: TwitterSocialGraphImpl = new TwitterSocialGraphImpl(airbrake, db, inject[S3ImageStore], clock, oauth1Config, twtrOAuthProvider, userValueRepo, twitterSyncStateRepo, libraryMembershipRepo, libraryRepo, basicUserRepo, socialUserInfoRepo, inject[LibraryImageCommander], inject[ElizaServiceClient], inject[KifiInstallationCommander], inject[PublicIdConfiguration], inject[WatchableExecutionContext], inject[UserRepo]) {
       override protected def lookupUsers(socialUserInfo: SocialUserInfo, accessToken: OAuth1TokenInfo, mutualFollows: Set[TwitterId]): Future[JsValue] = Future.successful {
         socialUserInfo.socialId.id.toLong match {
           case tweetfortytwoInfo.id =>

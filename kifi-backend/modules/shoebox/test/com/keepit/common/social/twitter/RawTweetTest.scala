@@ -1,0 +1,17 @@
+package com.keepit.common.social.twitter
+
+import com.keepit.model.TwitterId
+import org.specs2.mutable.Specification
+import play.api.libs.json.Json
+
+class RawTweetTest extends Specification {
+
+  val rawString = """{ "created_at": "Fri Apr 10 06:07:56 +0000 2015", "id": 586410263194157000, "id_str": "586410263194157056", "text": "Kifi Debuts A “Deep” Search Engine For Twitter Based On Your Own Tweets http://t.co/w10ifpAujX via @techcrunch", "source": "<a href=\"http://twitter.com\" rel=\"nofollow\">Twitter Web Client</a>", "truncated": false, "in_reply_to_status_id": null, "in_reply_to_status_id_str": null, "in_reply_to_user_id": null, "in_reply_to_user_id_str": null, "in_reply_to_screen_name": null, "user": { "id": 6795782, "id_str": "6795782", "name": "John Wang (王鉴)", "screen_name": "javasoze", "location": "Mountain View, CA", "profile_location": null, "description": "Search Engineer at Twitter.\r\nAvid open source contributor.\r\nComputer geek living and working in the Silicon Valley, the greatest place to be!", "url": "http://t.co/rgqaX0HLkN", "entities": { "url": { "urls": [ { "url": "http://t.co/rgqaX0HLkN", "expanded_url": "http://www.linkedin.com/in/javasoze", "display_url": "linkedin.com/in/javasoze", "indices": [ 0, 22 ] } ] }, "description": { "urls": [] } }, "protected": false, "followers_count": 2256, "friends_count": 341, "listed_count": 48, "created_at": "Wed Jun 13 19:32:17 +0000 2007", "favourites_count": 115, "utc_offset": -25200, "time_zone": "Pacific Time (US & Canada)", "geo_enabled": true, "verified": false, "statuses_count": 1929, "lang": "en", "contributors_enabled": false, "is_translator": false, "is_translation_enabled": false, "profile_background_color": "9AE4E8", "profile_background_image_url": "http://abs.twimg.com/images/themes/theme1/bg.png", "profile_background_image_url_https": "https://abs.twimg.com/images/themes/theme1/bg.png", "profile_background_tile": false, "profile_image_url": "http://pbs.twimg.com/profile_images/1210294985/Photo_on_2011-01-07_at_23.32__2_normal.jpg", "profile_image_url_https": "https://pbs.twimg.com/profile_images/1210294985/Photo_on_2011-01-07_at_23.32__2_normal.jpg", "profile_banner_url": "https://pbs.twimg.com/profile_banners/6795782/1402341991", "profile_link_color": "00BBFF", "profile_sidebar_border_color": "87BC44", "profile_sidebar_fill_color": "E0FF92", "profile_text_color": "000000", "profile_use_background_image": true, "default_profile": false, "default_profile_image": false, "following": false, "follow_request_sent": false, "notifications": false }, "geo": null, "coordinates": null, "place": null, "contributors": null, "retweet_count": 2, "favorite_count": 6, "entities": { "hashtags": [], "symbols": [], "user_mentions": [ { "screen_name": "TechCrunch", "name": "TechCrunch", "id": 816653, "id_str": "816653", "indices": [ 99, 110 ] } ], "urls": [ { "url": "http://t.co/w10ifpAujX", "expanded_url": "http://tcrn.ch/1IDEiGA", "display_url": "tcrn.ch/1IDEiGA", "indices": [ 72, 94 ] } ] }, "favorited": false, "retweeted": false, "possibly_sensitive": false, "lang": "en" }"""
+
+  "abook controller" should {
+    "support mobile (ios) upload" in {
+      val maybeTweet = RawTweet.format.reads(Json.parse(rawString))
+      maybeTweet.get.id === TwitterId(586410263194157000L)
+    }
+  }
+}

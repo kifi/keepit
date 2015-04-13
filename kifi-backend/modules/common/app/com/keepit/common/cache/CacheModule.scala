@@ -47,13 +47,8 @@ case class MemcachedCacheModule() extends CachePluginModule {
 
   @Singleton
   @Provides
-  def spyMemcachedClient(): MemcachedClient = {
+  def spyMemcachedClient(): MemcachedClientProvider = {
     if (Play.isTest) throw new IllegalStateException("memcached client should not be loaded in test!")
-
-    System.setProperty("net.spy.log.LoggerImpl", "com.keepit.common.cache.MemcachedSlf4JLogger")
-
-    current.configuration.getString("elasticache.config.endpoint").map { endpoint =>
-      new MemcachedClient(AddrUtil.getAddresses(endpoint))
-    }.getOrElse(throw new RuntimeException("Bad configuration for memcached: missing host(s)"))
+    new MemcachedClientProvider()
   }
 }

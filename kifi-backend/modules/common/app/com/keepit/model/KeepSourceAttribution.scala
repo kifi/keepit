@@ -2,14 +2,11 @@ package com.keepit.model
 
 import com.keepit.common.db.{ Id, ModelWithState, State, States }
 import com.keepit.common.time._
+import com.kifi.macros.json
 import org.joda.time.DateTime
 import play.api.libs.json._
 
-case class TwitterId(id: Long) // https://groups.google.com/forum/#!topic/twitter-development-talk/ahbvo3VTIYI
-
-object TwitterId {
-  implicit def format = Json.format[TwitterId]
-}
+@json case class TwitterId(id: Long) // https://groups.google.com/forum/#!topic/twitter-development-talk/ahbvo3VTIYI
 
 case class KeepSourceAttribution(
     id: Option[Id[KeepSourceAttribution]] = None,

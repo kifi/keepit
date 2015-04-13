@@ -5,7 +5,7 @@ import com.keepit.abook.{ FakeABookServiceClientModule, FakeABookServiceClientIm
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.db.Id
 import com.keepit.common.social.FakeSocialGraphModule
-import com.keepit.graph.model.{ RelatedEntities, SociallyRelatedEntities }
+import com.keepit.graph.model.{ SociallyRelatedEntities, RelatedEntities }
 import com.keepit.graph.{ GraphServiceClient, FakeGraphServiceModule, FakeGraphServiceClientImpl }
 import com.keepit.model._
 import com.keepit.scraper.FakeScrapeSchedulerModule
@@ -39,10 +39,17 @@ class UserConnectionsCommanderTest extends Specification with ShoeboxTestInjecto
       "return users and mutual users friend counts" in {
         withDb(modules: _*) { implicit injector =>
           val users = db.readWrite { implicit rw => testFactory.createUsersWithConnections() }
+          val userId = users(0).id.get
           val abook = inject[ABookServiceClient].asInstanceOf[FakeABookServiceClientImpl]
-          abook.addFriendRecommendationsExpectations(users(0).id.get, Seq(users(1).id.get, users(2).id.get, users(3).id.get))
+          abook.addFriendRecommendationsExpectations(userId, Seq(users(1).id.get, users(2).id.get, users(3).id.get))
 
-          val friendRecoDataF = inject[UserCommander].getFriendRecommendations(users(0).id.get, 2, 25)
+          val relatedEntities = {
+            val relatedUsers = RelatedEntities[User, User](userId, Seq(users(2).id.get -> 10d, users(1).id.get -> 5d))
+            SociallyRelatedEntities(relatedUsers, RelatedEntities.empty(userId), RelatedEntities.empty(userId), RelatedEntities.empty(userId))
+          }
+          inject[GraphServiceClient].asInstanceOf[FakeGraphServiceClientImpl].setSociallyRelatedEntities(userId, relatedEntities)
+
+          val friendRecoDataF = inject[UserCommander].getFriendRecommendations(userId, 2, 25)
           val friendRecoData = Await.result(friendRecoDataF, Duration(5, "seconds")).get
 
           friendRecoData.basicUsers === Map(
@@ -53,9 +60,9 @@ class UserConnectionsCommanderTest extends Specification with ShoeboxTestInjecto
           friendRecoData.recommendedUsers === Seq(users(1).id.get, users(2).id.get, users(3).id.get)
           friendRecoData.mutualFriendConnectionCounts === Map(users(1).id.get -> 3, users(2).id.get -> 3)
           friendRecoData.mutualFriends === Map(
-            users(1).id.get -> Set(users(2).id.get),
-            users(2).id.get -> Set(users(1).id.get),
-            users(3).id.get -> Set(users(1).id.get, users(2).id.get)
+            users(1).id.get -> Seq(users(2).id.get),
+            users(2).id.get -> Seq(users(1).id.get),
+            users(3).id.get -> Seq(users(2).id.get, users(1).id.get)
           )
         }
       }
