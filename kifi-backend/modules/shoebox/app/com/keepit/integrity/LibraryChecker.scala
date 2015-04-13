@@ -57,7 +57,7 @@ class LibraryChecker @Inject() (
       val libraryMap = libraries.map(lib => lib.id.get -> lib).toMap
       val allLibraryIds = libraryMap.keySet
       val latestKeptAtMap = keepRepo.latestKeptAtByLibraryIds(allLibraryIds)
-      val numKeepsByLibraryMap = allLibraryIds.grouped(200).map { keepRepo.getCountsByLibrary(_) }.foldLeft(Map.empty[Id[Library], Int]) { case (m1, m2) => m1 ++ m2 } // grouped to be more friendly with cache bulkget
+      val numKeepsByLibraryMap = allLibraryIds.grouped(100).map { keepRepo.getCountsByLibrary(_) }.foldLeft(Map.empty[Id[Library], Int]) { case (m1, m2) => m1 ++ m2 } // grouped to be more friendly with cache bulkget
       (libraryMap, latestKeptAtMap, numKeepsByLibraryMap)
     }
 
