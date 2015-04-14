@@ -1,6 +1,6 @@
 package com.keepit.rover.test
 
-import com.keepit.common.concurrent.{FakeExecutionContextModule, ExecutionContextModule}
+import com.keepit.common.concurrent.{ FakeExecutionContextModule, ExecutionContextModule }
 import com.keepit.common.db.{ TestDbInfo, FakeSlickModule }
 import com.google.inject.Module
 import java.io.File
