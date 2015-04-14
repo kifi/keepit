@@ -76,9 +76,9 @@ class ShoeboxArticleIngestionActor @Inject() (
         log.error("Failed to ingest Shoebox Article updates from Rover.", error)
         self ! CancelIngestion
       }
-      case Success((ingestedUpdateCount, updatedSeq)) => {
-        log.info(s"Ingested $ingestedUpdateCount Shoebox Article updates from Rover (seq $seqNum to $updatedSeq)")
-        self ! DoneIngesting(mayHaveMore = ingestedUpdateCount > 0)
+      case Success((ingestedUpdateCount, updatedSeqNum)) => {
+        log.info(s"Ingested $ingestedUpdateCount Shoebox Article updates from Rover (seq $seqNum to $updatedSeqNum)")
+        self ! DoneIngesting(mayHaveMore = updatedSeqNum > seqNum)
       }
     }
   }
