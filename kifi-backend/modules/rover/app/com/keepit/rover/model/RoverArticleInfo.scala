@@ -120,7 +120,7 @@ object RoverArticleInfo {
   }
 
   def initialize(uriId: Id[NormalizedURI], url: String, kind: ArticleKind[_ <: Article]): RoverArticleInfo = {
-    val domain = URI.parse(url).toOption.flatMap(_.host).map(_.name)
+    val domain = URI.parseDomain(url)
     val newInfo = RoverArticleInfo(uriId = uriId, url = url, domain = domain, kind = kind.typeCode)
     newInfo.initializeSchedulingPolicy
   }
