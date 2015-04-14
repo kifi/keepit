@@ -12,7 +12,7 @@ class WatchableExecutionContextTest extends Specification with Logging {
       try {
         new WatchableExecutionContext(Mode.Prod)
       } catch {
-        case e: IllegalArgumentException => //good!
+        case e: Throwable => //good!
       }
       val good = new WatchableExecutionContext(Mode.Test) //can create
       good.kill() === 0 //cleanup
