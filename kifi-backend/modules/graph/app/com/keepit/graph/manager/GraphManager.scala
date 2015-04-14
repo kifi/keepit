@@ -27,4 +27,4 @@ case class GraphManagerPluginModule() extends ScalaModule {
 }
 
 class IrrelevantGraphUpdatesException(irrelevantUpdates: Seq[GraphUpdate])
-  extends Throwable(s"${irrelevantUpdates.length} graph updates have been received out of order: $irrelevantUpdates")
+  extends Exception(s"${irrelevantUpdates.length} graph updates have been received out of order: $irrelevantUpdates")
