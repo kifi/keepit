@@ -16,14 +16,14 @@ case class ImageInfo(
     seq: SequenceNumber[ImageInfo] = SequenceNumber.ZERO,
     uriId: Id[NormalizedURI],
     url: Option[String],
-    name: String = RandomStringUtils.randomAlphanumeric(5),
+    name: String = RandomStringUtils.randomAlphanumeric(5), //todo(Léo): TAKE OUT
     caption: Option[String] = None,
     width: Option[Int] = None,
     height: Option[Int] = None,
-    size: Option[Int] = None,
-    provider: Option[ImageProvider] = None,
+    size: Option[Int] = None,       //todo(Léo): TAKE OUT
+    provider: Option[ImageProvider] = None, //todo(Léo): USE ARTICLE_KIND or ARTICLE_INFO_ID?
     format: Option[ImageFormat] = None,
-    priority: Option[Int] = None,
+    priority: Option[Int] = None, //todo(Léo): TAKE OUT
     path: String // the s3 bucket key name
     ) extends ModelWithState[ImageInfo] with ModelWithSeqNumber[ImageInfo] {
   val defaultImageFormat = ImageFormat.JPG

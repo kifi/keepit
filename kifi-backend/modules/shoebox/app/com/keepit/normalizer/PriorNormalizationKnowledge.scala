@@ -7,7 +7,7 @@ import com.keepit.scraper.ScrapeScheduler
 import com.google.inject.{ Inject, Singleton }
 import scala.util.{ Failure, Try }
 
-case class PrenormalizationException(cause: Throwable) extends Throwable(cause)
+case class PrenormalizationException(cause: Throwable) extends Exception(cause)
 
 @Singleton
 class PriorNormalizationKnowledge @Inject() (
