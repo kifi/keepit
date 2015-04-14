@@ -4,6 +4,7 @@ import java.io.File
 
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.commanders._
+import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.controller.FakeUserActionsHelper
 import com.keepit.common.crypto.{ FakeCryptoModule, PublicIdConfiguration }
 import com.keepit.common.db.ExternalId
@@ -41,6 +42,7 @@ import scala.concurrent.duration.Duration
 
 class LibraryControllerTest extends Specification with ShoeboxTestInjector {
   val modules = Seq(
+    FakeExecutionContextModule(),
     FakeCryptoModule(),
     FakeShoeboxStoreModule(),
     FakeABookServiceClientModule(),
@@ -880,7 +882,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         val (user1, lib1, keep1, keep2) = db.readWrite { implicit s =>
           val user1 = userRepo.save(User(firstName = "Aaron", lastName = "Hsu", createdAt = t1, username = Username("test"), normalizedUsername = "test"))
 
-          val library1 = libraryRepo.save(Library(name = "Library1", ownerId = user1.id.get, slug = LibrarySlug("lib1"), visibility = LibraryVisibility.DISCOVERABLE, memberCount = 1))
+          val library1 = libraryRepo.save(Library(name = "Library1", ownerId = user1.id.get, slug = LibrarySlug("lib1"), visibility = LibraryVisibility.DISCOVERABLE, memberCount = 1, keepCount = 2))
           libraryMembershipRepo.save(LibraryMembership(libraryId = library1.id.get, userId = user1.id.get, access = LibraryAccess.OWNER))
 
           val uri1 = uriRepo.save(NormalizedURI.withHash(site1, Some("Google")))

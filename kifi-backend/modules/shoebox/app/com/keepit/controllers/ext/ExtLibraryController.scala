@@ -80,7 +80,7 @@ class ExtLibraryController @Inject() (
       libraryCommander.getLibraryWithOwnerAndCounts(libraryId, request.userId) match {
         case Left(fail) =>
           Status(fail.status)(Json.obj("error" -> fail.message))
-        case Right((library, owner, keepCount, followerCount, following)) =>
+        case Right((library, owner, followerCount, following)) =>
           val imageOpt = libraryImageCommander.getBestImageForLibrary(libraryId, ExtLibraryController.defaultImageSize)
           Ok(Json.obj(
             "name" -> library.name,
@@ -89,7 +89,7 @@ class ExtLibraryController @Inject() (
             "color" -> library.color,
             "image" -> imageOpt.map(LibraryImageInfo.createInfo),
             "owner" -> owner,
-            "keeps" -> keepCount,
+            "keeps" -> library.keepCount,
             "followers" -> followerCount,
             "following" -> following))
       }
