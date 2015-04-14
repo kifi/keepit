@@ -2,7 +2,7 @@
 
 angular.module('kifi')
 
-.directive('kfUserProfileUser', [
+.directive('kfUserCard', [
   '$timeout', 'env', '$filter', 'modalService', 'profileService',
   'friendService', 'inviteService', 'signupService', 'platformService',
   function (
@@ -12,10 +12,10 @@ angular.module('kifi')
       restrict: 'A',
       replace: true,
       scope: {
-        user: '=kfUserProfileUser',
+        user: '=kfUserCard',
         mutualUserInfo: '='
       },
-      templateUrl: 'userProfile/userProfileUser.tpl.html',
+      templateUrl: 'userCard/userCard.tpl.html',
       link: function (scope, element) {
         if (scope.$root.userLoggedIn) {
           scope.isSelf = profileService.me.id === scope.user.id;
