@@ -1,6 +1,7 @@
 package com.keepit.integrity
 
 import com.keepit.common.actor.FakeActorSystemModule
+import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.SystemAdminMailSender
 import com.keepit.common.mail.ElectronicMail
@@ -16,7 +17,7 @@ import play.api.test.Helpers.running
 class URLRenormalizeCommanderTest extends Specification with ShoeboxTestInjector {
   "renormalizer" should {
     "word" in {
-      withDb() { implicit injector =>
+      withDb(FakeExecutionContextModule()) { implicit injector =>
         val db = inject[Database]
         val urlRepo = inject[URLRepo]
         val uriRepo = inject[NormalizedURIRepo]

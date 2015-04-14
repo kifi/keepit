@@ -50,6 +50,18 @@ angular.module('kifi')
           return state && state.name.split('.')[1] || '""';
         }
 
+        function onWinMouseDownStopSharing(e) {
+          if (!angular.element(e.target).is('.kf-uph-share,.kf-uph-share *,.kf-uph-share-url')) {
+            scope.$apply(angular.bind(scope, scope.toggleSharing, false));
+          }
+        }
+
+        function onWinKeyDownStopSharing(e) {
+          if (e.keyCode === 9 || e.keyCode === 27) {  // tab or esc
+            scope.$apply(angular.bind(scope, scope.toggleSharing, false));
+          }
+        }
+
         //
         // Scope Variables
         //
@@ -63,6 +75,7 @@ angular.module('kifi')
           scope.profile.friendRequestReceivedAt ? 'request_received' :
           $rootScope.userLoggedIn ? 'not_friends' : '';
         scope.showConnectCallout = scope.intent === 'connect' && scope.connectionWithUser === 'not_friends';
+        scope.sharing = false;
 
         //
         // Scope Functions
@@ -145,6 +158,24 @@ angular.module('kifi')
           });
         };
 
+        scope.toggleSharing = function (sharing) {
+          sharing = scope.sharing = typeof sharing === 'boolean' ? sharing : !scope.sharing;
+          if (sharing) {
+            $timeout(function () {
+              var el = element.find('.kf-uph-share-url')[0];
+              var r = document.createRange();
+              r.selectNodeContents(el);
+              var sel = window.getSelection();
+              sel.removeAllRanges();
+              sel.addRange(r);
+              $rootScope.$emit('trackUserProfileEvent', 'click', {action: 'clickedShare'});
+            });
+          }
+          angular.element(window)
+          [sharing ? 'on' : 'off']('mousedown', onWinMouseDownStopSharing)
+          [sharing ? 'on' : 'off']('keydown', onWinKeyDownStopSharing);
+        };
+
         //
         // Watches and listeners
         //
@@ -157,6 +188,12 @@ angular.module('kifi')
           restoreNavLinkHref(fromState);
           removeNavLinkHref(toState);
         }));
+
+        scope.$on('$destroy', function () {
+          angular.element(window)
+          .off('mousedown', onWinMouseDownStopSharing)
+          .off('keydown', onWinKeyDownStopSharing);
+        });
 
         $timeout(function () {
           navLinks = element.find('.kf-uph-nav-a');

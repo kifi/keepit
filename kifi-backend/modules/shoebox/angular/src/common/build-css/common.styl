@@ -1,6 +1,17 @@
 //
 // Mixins and functions.
 //
+font-smoothing(val)
+  if val in (antialiased grayscale)
+    -webkit-font-smoothing: antialiased
+    -moz-osx-font-smoothing: grayscale
+  else if val in (inherit auto unset)
+    -webkit-font-smoothing: val
+    -moz-osx-font-smoothing: val
+  else
+    -webkit-font-smoothing: initial
+    -moz-osx-font-smoothing: initial
+
 long-text()
   white-space: nowrap
   overflow: hidden

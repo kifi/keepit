@@ -21,6 +21,10 @@ colorBarHeight = .4em
   @media (min-width: 480px)
     height: 32em
 
+    &.kf-system-main
+    &.kf-system-secret
+      height: 16em
+
 invite-banner-orange = #ff7c3c
 
 .kf-lh-invite-banner
@@ -248,6 +252,9 @@ followerPicDiam = 2.2em
   background-repeat: no-repeat
   background-color: libraryRed
 
+  .kf-system-secret &
+    display: none
+
   &::before
     content: 'Private'
     font-size: .9em
@@ -389,6 +396,22 @@ coverDragShadeHeight = 3em
   @media (min-width: 480px)
     bottom: 9em
 
+    .kf-system-main>&
+    .kf-system-secret>&
+      bottom: 3em
+
+.kf-lh-icon
+  position: absolute
+  bottom: 100%
+  left: 0
+  right: 0
+  height: 2.8em
+  margin-bottom: .6em
+  background-repeat: no-repeat
+  background-position: center top
+  background-size: contain
+  opacity: .5
+
 .kf-lh-name
   max-width: 96%
   width: 13.5em
@@ -454,6 +477,10 @@ coverDragShadeHeight = 3em
 
   @media (min-width: 480px)
     margin-top: 1.8em
+
+    .kf-system-main &
+    .kf-system-secret &
+      display: none
 
 ownerImageDiam1 = 8em
 ownerImageDiam2 = 3.6em

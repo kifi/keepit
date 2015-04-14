@@ -54,6 +54,7 @@ angular.module('kifi')
           lib.nameText = util.preventOrphans(lib.name);
           lib.descriptionHtml = util.linkify(lib.description || '').replace(/\n+/g, '<br>');
           lib.absUrl = env.origin + lib.url;
+          lib.isSystem = lib.kind.lastIndexOf('system_', 0) === 0;
 
           $timeout(function () {
             var lh = parseFloat(descWrapEl.css('line-height'), 10);
@@ -489,10 +490,6 @@ angular.module('kifi')
         function easeInCubic(t) {
           return t*t*t;
         }
-
-        scope.isUserCreatedLibrary = function () {
-          return !libraryService.isLibraryMainOrSecret(scope.library);
-        };
 
         scope.isMyLibrary = function () {
           return libraryService.isMyLibrary(scope.library);
