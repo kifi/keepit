@@ -1,0 +1,19 @@
+package com.keepit.common.concurrent
+
+import com.keepit.common.logging.Logging
+import org.specs2.mutable.Specification
+import play.api.Mode
+
+class WatchableExecutionContextTest extends Specification with Logging {
+
+  "WatchableExecutionContext" should {
+
+    "can't run in prod" in {
+      (new WatchableExecutionContext(Mode.Prod)) should throwA[IllegalArgumentException]
+      val good = new WatchableExecutionContext(Mode.Test) //can create
+      good.kill() === 0 //cleanup
+    }
+  }
+
+}
+
