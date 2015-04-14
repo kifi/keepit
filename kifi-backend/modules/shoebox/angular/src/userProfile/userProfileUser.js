@@ -12,17 +12,16 @@ angular.module('kifi')
       restrict: 'A',
       replace: true,
       scope: {
-        user: '=kfUserProfileUser'
+        user: '=kfUserProfileUser',
+        mutualUserInfo: '='
       },
       templateUrl: 'userProfile/userProfileUser.tpl.html',
       link: function (scope, element) {
         if (scope.$root.userLoggedIn) {
-          scope.me = profileService.me;
+          scope.isSelf = profileService.me.id === scope.user.id;
 
           // unpacking information about relationship, since it's (confusingly) not always about the user on this card
-          scope.mutual = _.pick(  // TODO: pass profile all the way down?
-            scope.me && scope.me.id === scope.user.id ? scope.$parent.$parent.$parent.profile : scope.user,
-            'id', 'firstName', 'lastName', 'pictureName', 'username');
+          scope.mutual = _.pick(scope.mutualUserInfo || scope.user, 'id', 'firstName', 'lastName', 'pictureName', 'username');
           scope.mutual.connections = scope.user.mConnections;
           scope.mutual.libraries = scope.user.mLibraries;
           _.assign(scope.mutual, _.pick(scope.user, 'isFriend', 'friendRequestSentAt', 'friendRequestReceivedAt', 'unsearched'));
