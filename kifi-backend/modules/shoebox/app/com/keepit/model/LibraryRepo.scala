@@ -42,7 +42,7 @@ trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
   def countFollowingLibrariesForAnonymous(userId: Id[User])(implicit session: RSession): Int
   def getInvitedLibrariesForSelf(userId: Id[User], page: Paginator)(implicit session: RSession): Seq[Library]
   def getLibrariesForSelf(userId: Id[User], page: Paginator)(implicit session: RSession): Seq[Library]
-  def getAllPublishedNonEmptyLibraries()(implicit session: RSession): Seq[Id[Library]]
+  def getAllPublishedNonEmptyLibraries(minKeepCount: Int)(implicit session: RSession): Seq[Id[Library]]
   def getNewPublishedLibraries(size: Int = 20)(implicit session: RSession): Seq[Library]
   def pagePublished(page: Paginator)(implicit session: RSession): Seq[Library]
   def countPublished(implicit session: RSession): Int
@@ -328,8 +328,8 @@ class LibraryRepoImpl @Inject() (
     query.as[Library].list
   }
 
-  def getAllPublishedNonEmptyLibraries()(implicit session: RSession): Seq[Id[Library]] = {
-    (for (r <- rows if r.visibility === (LibraryVisibility.PUBLISHED: LibraryVisibility) && r.state === LibraryStates.ACTIVE && r.lastKept.isDefined) yield r.id).list
+  def getAllPublishedNonEmptyLibraries(minKeepCount: Int)(implicit session: RSession): Seq[Id[Library]] = {
+    (for (r <- rows if r.visibility === (LibraryVisibility.PUBLISHED: LibraryVisibility) && r.state === LibraryStates.ACTIVE && r.keepCount >= minKeepCount) yield r.id).list
   }
 
   def getNewPublishedLibraries(size: Int = 20)(implicit session: RSession): Seq[Library] = {
