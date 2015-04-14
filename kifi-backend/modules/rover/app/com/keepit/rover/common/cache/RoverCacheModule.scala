@@ -7,6 +7,7 @@ import com.keepit.graph.model._
 import com.keepit.model._
 import com.keepit.model.cache.UserSessionViewExternalIdCache
 import com.keepit.rover.commanders.ArticleInfoUriCache
+import com.keepit.rover.document.{ RecentFetches, RecentFetchesDomainCache }
 import com.keepit.rover.model.RoverHttpProxyAllCache
 import com.keepit.rover.sensitivity.UriSensitivityCache
 import com.keepit.social.BasicUserUserIdCache
@@ -191,4 +192,7 @@ case class RoverCacheModule(cachePluginModules: CachePluginModule*) extends Cach
   def uriSensitivityCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
     new UriSensitivityCache(stats, accessLog, (outerRepo, 30 days))
 
+  @Provides @Singleton
+  def recentFetchesDomainCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
+    new RecentFetchesDomainCache(stats, accessLog, (outerRepo, RecentFetches.recencyWindow))
 }
