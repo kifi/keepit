@@ -1,6 +1,6 @@
 <span ng-if="!library.hidden">
   <span ng-if="!isBot">
-    <span class="kf-keep-who-pic-box" ng-class="{secret: library.visibility === 'secret'}" ng-style="{'background-color': library.color}">
+    <span class="kf-keep-who-pic-box" ng-attr-style="background-color:{{library.color}}">
       <a class="kf-keep-who-pic" href="{{library.keeper||library.owner|profileUrl}}" ng-attr-style="background-image:url({{library.keeper||library.owner|pic:100}})" kf-track-origin="{{currentPageOrigin}}/alsoKeptInLibraryBy"></a>
       <a class="kf-keep-who-lib" href="{{library.absPath||library.url}}" ng-click="onLibraryAttributionClicked()" kf-track-origin="libraryAttributionChip">{{library.name}}</a>
       <span kf-tooltip position="top" padding="10">

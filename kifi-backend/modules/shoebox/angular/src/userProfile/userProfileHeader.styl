@@ -69,7 +69,7 @@ uphSmallMaxDim = 736px // for @media max-height and max-width
     &:hover:not(:active)
       background-color: alpha(#fff, .1)
 
-.kf-uph-action
+.kf-uph-actions
   position: absolute
   top: 10px
   right: appSidePad1
@@ -167,7 +167,6 @@ uphSmallMaxDim = 736px // for @media max-height and max-width
     margin-left: 30px
     margin-right: -8px
     font-size: 0.7em
-    font-weight: 100
     line-height: 20px
 
     &:hover
@@ -187,6 +186,53 @@ uphSmallMaxDim = 736px // for @media max-height and max-width
     top: -11px
     border-width: 0 5px 11px 16px
 
+actionGapBelow = 3px
+
+.kf-uph-share
+  sidePad = 6px
+  display: inline-block
+  vertical-align: top
+  margin: 0 (16px - sidePad) 0 0
+  border: 0
+  padding: 0 sidePad 0 (sidePad + 22px)
+  background-color: transparent
+  background-position: sidePad 0
+  background-repeat: no-repeat
+  line-height: 20px
+
+  &:focus
+    outline: thin dotted alpha(#fff, .4)
+
+    &:hover
+      outline: none
+
+  &:active
+    opacity: .85
+
+.kf-uph-share-url
+  position: absolute
+  right: 0
+  margin-top: actionGapBelow
+  line-height: 1.3
+  font-size: .8em
+  border-radius: 4px
+  border: 1px solid rgba(255,255,255,.5)
+  background-color: tint(pageHeaderColor, 10%)
+  padding: .3em .4em
+  white-space: nowrap
+  font-smoothing: antialiased
+
+  &.ng-enter
+  &.ng-leave
+    transition: opacity .12s, transform .12s
+
+  &.ng-enter:not(.ng-enter-active)
+  &.ng-leave.ng-leave-active
+    opacity: 0
+    transform: translate(0, -10%) scale(.9)
+
+  &::-moz-selection
+    background: rgba(128,184,255,.59)
 
 .kf-uph-settings-icon
   display: inline-block
@@ -205,12 +251,10 @@ uphSmallMaxDim = 736px // for @media max-height and max-width
 .kf-uph-dropdown-parent
   display: inline-block
   position: relative
-  margin-left: btn-space
-  menuGap = 8px
 
   .kf-dropdown-menu
     dur = .1s
-    top: 'calc(100% + %s)' % menuGap
+    top: 'calc(100% + %s)' % actionGapBelow
     right: -24px
     transform-origin: 80% top
     transition: visibility 0s, opacity linear dur, transform dur
@@ -231,7 +275,7 @@ uphSmallMaxDim = 736px // for @media max-height and max-width
   &.kf-open::before
     content: ''
     position: absolute
-    top: 'calc(100% - %s)' % menuGap
+    top: 'calc(100% - %s)' % actionGapBelow
     left: -10px
     right: -10px
     height: 20px
@@ -268,7 +312,6 @@ uphSmallMaxDim = 736px // for @media max-height and max-width
   line-height: 1.6em
   font-size: 0.9em
   font-smoothing: antialiased
-  -moz-osx-font-smoothing: grayscale;
 
   &:hover
     text-decoration: underline
@@ -280,7 +323,6 @@ uphSmallMaxDim = 736px // for @media max-height and max-width
   line-height: 1.6em
   font-size: 0.9em
   font-smoothing: antialiased
-  -moz-osx-font-smoothing: grayscale;
   word-break: break-word
 
   @media (max-height: uphSmallMaxDim) and (max-width: uphSmallMaxDim)

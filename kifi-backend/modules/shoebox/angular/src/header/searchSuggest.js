@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfSearchSuggest', [
-  '$document', '$location', '$timeout', 'searchSuggestService', 'libraryService', 'profileService', 'keyIndices',
-  function ($document, $location, $timeout, searchSuggestService, libraryService, profileService, keyIndices) {
+  '$state', '$document', '$location', '$timeout', 'searchSuggestService', 'libraryService', 'profileService', 'keyIndices',
+  function ($state, $document, $location, $timeout, searchSuggestService, libraryService, profileService, keyIndices) {
     return {
       restrict: 'A',
       scope: {
@@ -23,7 +23,11 @@ angular.module('kifi')
         scope.libraries = null;
         scope.users = null;
 
-        suggest();
+        //
+        // Helper methods
+        //
+
+        scope.href = angular.bind($state, $state.href);
 
         //
         // Watches
@@ -180,6 +184,12 @@ angular.module('kifi')
           }
           angular.element(document.activeElement).filter('.kf-lih-search-input').blur();
         }
+
+        //
+        // Initialization
+        //
+
+        suggest();
       }
     };
   }

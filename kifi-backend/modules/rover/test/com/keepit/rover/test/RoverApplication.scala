@@ -1,6 +1,6 @@
 package com.keepit.rover.test
 
-import com.keepit.common.concurrent.ExecutionContextModule
+import com.keepit.common.concurrent.{ FakeExecutionContextModule, ExecutionContextModule }
 import com.keepit.common.db.{ TestDbInfo, FakeSlickModule }
 import com.google.inject.Module
 import java.io.File
@@ -18,7 +18,7 @@ import com.keepit.rover.RoverServiceTypeModule
 
 class RoverApplication(overridingModules: Module*)(implicit path: File = new File("./modules/rover/"))
   extends TestApplication(path, overridingModules, Seq(
-    ExecutionContextModule(),
+    FakeExecutionContextModule(),
     FakeSlickModule(TestDbInfo.dbInfo),
     RoverServiceTypeModule(),
     FakeHttpClientModule(),

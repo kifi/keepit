@@ -131,8 +131,8 @@ class ExtKeepImageController @Inject() (
         }
         FutureHelpers.foldLeft(libraryIds)(0) {
           case (libraryCount, libraryId) =>
-            val totalKeepInLibraryCount = db.readOnlyMaster(keepRepo.getCountByLibrary(libraryId)(_))
-            val batchPositions = 0 to totalKeepInLibraryCount by 1000
+            val lib = db.readOnlyMaster(implicit s => libraryRepo.get(libraryId))
+            val batchPositions = 0 to lib.keepCount by 1000
             FutureHelpers.foldLeft(batchPositions)(0) {
               case (batchKeepCount, batchPosition) =>
                 val keepIds = db.readOnlyReplica(keepRepo.getByLibrary(libraryId, batchPosition, 1000)(_)).map(_.id.get)

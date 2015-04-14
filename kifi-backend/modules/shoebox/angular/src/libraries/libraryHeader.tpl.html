@@ -1,5 +1,5 @@
 <div class="kf-lh" itemscope itemtype="http://schema.org/CollectionPage">
-  <div class="kf-lh-cover" ng-style="{'background-color': library.color}">
+  <div class="kf-lh-cover" ng-class="{'kf-system-main': library.kind === 'system_main', 'kf-system-secret': library.kind === 'system_secret'}" ng-style="{'background-color': library.color}">
     <meta itemtype="image" content="{{library.image|libImageUrl}}" ng-if="library.image"/>
     <meta itemtype="url" content="{{library.absUrl}}"/>
 
@@ -12,9 +12,9 @@
     </div>
 
     <div class="kf-lh-top">
-      <button class="kf-lh-manage-btn svg-settings-gear-filled" ng-click="manageLibrary()" ng-if="isMyLibrary() && isUserCreatedLibrary()"></button>
+      <button class="kf-lh-manage-btn svg-settings-gear-filled" ng-click="manageLibrary()" ng-if="isMyLibrary() && !library.isSystem"></button>
 
-      <div class="kf-lh-cover-menu-parent" kf-hover-menu ng-if="isMyLibrary() && isUserCreatedLibrary()">
+      <div class="kf-lh-cover-menu-parent" kf-hover-menu ng-if="isMyLibrary() && !library.isSystem">
         <button class="kf-lh-cover-menu-btn svg-camera-filled"></button>
         <menu class="kf-dropdown-menu kf-lh-cover-menu">
           <button class="kf-dropdown-menu-item kf-lh-cover-add" ng-if="!library.image" kf-hover ng-mouseup="onAddCoverImageMouseUp($event)">Add a cover image</button>
@@ -23,7 +23,7 @@
           <button class="kf-dropdown-menu-item kf-lh-cover-remove" ng-if="library.image" kf-hover ng-mouseup="onRemoveCoverImageMouseUp($event)">Remove cover image</button>
         </menu>
       </div>
-      <input class="kf-lh-cover-file" type="file" accept="image/jpeg,image/png,image/gif" kf-file-change="onCoverImageFileChosen" ng-if="isMyLibrary() && isUserCreatedLibrary()">
+      <input class="kf-lh-cover-file" type="file" accept="image/jpeg,image/png,image/gif" kf-file-change="onCoverImageFileChosen" ng-if="isMyLibrary() && !library.isSystem">
 
       <div class="kf-lh-private svg-card-lock" ng-if="library.visibility === 'secret'"></div>
 
@@ -47,6 +47,7 @@
     </div>
 
     <div class="kf-lh-mid">
+      <div class="kf-lh-icon" ng-class="{'svg-card-star': library.kind === 'system_main', 'svg-card-lock': library.kind === 'system_secret'}"></div>
       <h1 class="kf-lh-name" ng-class="{'kf-long-1': library.name.length > 24, 'kf-long-2': library.name.length > 36}" itemtype="name">{{library.nameText}}</h1>
 
       <div class="kf-lh-stats">
@@ -73,7 +74,7 @@
     <button class="kf-lh-desc-toggle" ng-click="descExpanded === false ? expandDescription() : descExpanded === true ? collapseDescription() : null">
       {{descExpanded === false ? 'Continue reading…' : descExpanded === true ? 'Show less' : ''}}
     </button>
-    <button class="kf-lh-desc-add" ng-click="manageLibrary()" ng-if="!library.description && isMyLibrary() && isUserCreatedLibrary()">Add a description</button>
+    <button class="kf-lh-desc-add" ng-click="manageLibrary()" ng-if="!library.description && isMyLibrary() && !library.isSystem">Add a description</button>
   </div>
 
   <div class="kf-lh-buttons" ng-if="!isMyLibrary()">
@@ -85,7 +86,7 @@
     <div kf-library-share-search library="library" current-page-origin="libraryPage" btn-icon-class="svg-share-arrow-green" ng-if="$root.userLoggedIn && library.visibility === 'published'"></div>
   </div>
   <div class="kf-lh-buttons kf-my-lib clearfix" ng-if="isMyLibrary()">
-    <button class="kf-button kf-lh-edit-keeps svg-bullet-list-green" ng-click="toggleEditKeeps()" ng-if="library.numKeeps > 0">{{editingKeeps ? 'Done editing' : 'Edit keeps'}}</button>
-    <div kf-library-share-search library="library" current-page-origin="libraryPage" ng-if="isUserCreatedLibrary()"></div>
+    <button class="kf-button kf-lh-edit-keeps svg-bullet-list-green" ng-click="toggleEditKeeps()" ng-if="library.numKeeps > 0 && !librarySearch">{{editingKeeps ? 'Done editing' : 'Edit keeps'}}</button>
+    <div kf-library-share-search library="library" current-page-origin="libraryPage" ng-if="!library.isSystem"></div>
   </div>
 </div>

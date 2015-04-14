@@ -55,9 +55,11 @@ class LibrarySiteMapGenerator @Inject() (
     sitemap
   }
 
+  private val MinKeepCount = 4
+
   def generate(): Future[String] = {
     db.readOnlyReplicaAsync { implicit ro =>
-      val libIds = libraryRepo.getAllPublishedNonEmptyLibraries().take(50000)
+      val libIds = libraryRepo.getAllPublishedNonEmptyLibraries(MinKeepCount).take(50000)
       if (libIds.size > 40000) airbrake.notify(s"there are ${libIds.size} libraries for sitemap, need to paginate the list!")
       libIds
     } map { ids =>
@@ -68,7 +70,7 @@ class LibrarySiteMapGenerator @Inject() (
               db.readOnlyMaster { implicit s =>
                 val lib = libraryRepo.get(id)
                 val owner = userRepo.load(lib.ownerId)
-                if (lib.lastKept.isDefined && lib.keepCount > 3) Some(lib -> owner)
+                if (lib.lastKept.isDefined && lib.keepCount >= 3) Some(lib -> owner)
                 else None
               }
             }.flatten.map {

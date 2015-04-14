@@ -24,6 +24,7 @@ object LibraryFactory {
     def withUser(id: Id[User]) = new PartialLibrary(library.copy(ownerId = id))
     def withUser(user: User) = new PartialLibrary(library.copy(ownerId = user.id.get))
     def withMemberCount(memberCount: Int) = new PartialLibrary(library.copy(memberCount = memberCount))
+    def withKeepCount(keepCount: Int) = new PartialLibrary(library.copy(keepCount = keepCount))
     def withName(name: String) = new PartialLibrary(library.copy(name = name))
     def withDesc(desc: String) = new PartialLibrary(library.copy(description = Some(desc)))
     def withSlug(slug: String) = new PartialLibrary(library.copy(slug = LibrarySlug(slug)))

@@ -198,10 +198,9 @@ class UriIntegrityActor @Inject() (
       }
 
       // some additional sanity check right away!
-      // seems to cause memcache exception inside the method
-      //      db.readWrite(attempts = 3) { implicit s =>
-      //        checkIntegrity(newUriId, readOnly = false, hasKnownKeep = bms.size > 0)
-      //      }
+      db.readWrite(attempts = 3) { implicit s =>
+        checkIntegrity(newUriId, readOnly = false, hasKnownKeep = bms.size > 0)
+      }
 
       db.readWrite(attempts = 3) { implicit s =>
         changedUriRepo.saveWithoutIncreSeqnum(change.withState(ChangedURIStates.APPLIED))
@@ -362,9 +361,9 @@ class UriIntegrityPluginImpl @Inject() (
     val scheduling: SchedulingProperties) extends UriIntegrityPlugin with Logging {
   override def enabled = true
   override def onStart() {
-    scheduleTaskOnOneMachine(actor.system, 470 seconds, 430 seconds, actor.ref, BatchURIMigration(100), BatchURIMigration.getClass.getSimpleName)
-    scheduleTaskOnOneMachine(actor.system, 550 seconds, 470 seconds, actor.ref, BatchURLMigration(100), BatchURLMigration.getClass.getSimpleName)
-    scheduleTaskOnOneMachine(actor.system, 600 seconds, 530 seconds, actor.ref, FixDuplicateKeeps(), FixDuplicateKeeps.getClass.getSimpleName)
+    scheduleTaskOnOneMachine(actor.system, 47 seconds, 43 seconds, actor.ref, BatchURIMigration(100), BatchURIMigration.getClass.getSimpleName)
+    scheduleTaskOnOneMachine(actor.system, 55 seconds, 47 seconds, actor.ref, BatchURLMigration(100), BatchURLMigration.getClass.getSimpleName)
+    scheduleTaskOnOneMachine(actor.system, 60 seconds, 53 seconds, actor.ref, FixDuplicateKeeps(), FixDuplicateKeeps.getClass.getSimpleName)
   }
 
   def handleChangedUri(change: UriChangeMessage) = {
