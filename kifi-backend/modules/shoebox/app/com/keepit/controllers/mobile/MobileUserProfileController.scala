@@ -1,15 +1,16 @@
 package com.keepit.controllers.mobile
 
-import com.google.inject.{ Provider, Inject }
-import com.keepit.commanders.{ UserCommander }
+import com.google.inject.Inject
+import com.keepit.commanders._
 import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
+import com.keepit.common.social.BasicUserRepo
 import com.keepit.model._
 import play.api.libs.json.{ JsNumber, JsObject, Json, JsValue }
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ Future, ExecutionContext }
 
 case class MobileProfileStats(libs: Int, followers: Int, connections: Int)
 case class MobileProfileMutualStats(libs: Int, connections: Int)
@@ -18,18 +19,18 @@ class MobileUserProfileController @Inject() (
   val userActionsHelper: UserActionsHelper,
   db: Database,
   userRepo: UserRepo,
+  basicUserRepo: BasicUserRepo,
   userConnectionRepo: UserConnectionRepo,
   libraryRepo: LibraryRepo,
-  userCommander: Provider[UserCommander],
-  //userConnectionsCommander: UserConnectionsCommander,
-  //libraryCommander: LibraryCommander,
+  userCommander: UserCommander,
+  userProfileCommander: UserProfileCommander,
+  userConnectionsCommander: UserConnectionsCommander,
+  friendStatusCommander: FriendStatusCommander,
+  libraryCommander: LibraryCommander,
   implicit val executionContext: ExecutionContext)
     extends UserActions with ShoeboxServiceController {
 
-  def getProfileFollowers(username: Username, page: Int = 0, size: Int = 12) = MaybeUserAction { request =>
-    Ok
-
-    /*
+  def getProfileFollowers(username: Username, page: Int = 0, size: Int = 12) = MaybeUserAction.async { request =>
     userCommander.userFromUsername(username) match {
       case None =>
         log.warn(s"can't find username ${username.value}")
@@ -38,8 +39,8 @@ class MobileUserProfileController @Inject() (
         val viewerIdOpt = request.userIdOpt
         userProfileCommander.getFollowersSortedByRelationship(viewerIdOpt, user.id.get) map { followers =>
           val offset = page * size
-          val followersPage = followers.drop(offset).take(limit)
-          val (headUserJsonObjs, userMap) = db.readOnlyMaster { implicit s =>
+          val followersPage = followers.drop(offset).take(size)
+          val (followerJsons, userMap) = db.readOnlyMaster { implicit s =>
             val userMap = basicUserRepo.loadAll(followers.take(200).map(_.userId).toSet)
             val followersMap = Map(followersPage.map(c => c.userId -> userMap(c.userId)): _*)
             val followersWithStatus = viewerIdOpt.map { viewerId =>
@@ -59,10 +60,8 @@ class MobileUserProfileController @Inject() (
           Ok(Json.obj("users" -> followerJsons, "ids" -> extIds, "count" -> followers.size))
         }
     }
-     */
   }
 
-  /*
   private def loadProfileStats(userId: Id[User], viewerIdOpt: Option[Id[User]])(implicit session: RSession): MobileProfileStats = {
     val libCount = viewerIdOpt.map(viewerId => libraryRepo.countLibrariesForOtherUser(userId, viewerId)).getOrElse(libraryRepo.countLibrariesOfUserForAnonymous(userId)) //not cached
     //global
@@ -77,7 +76,7 @@ class MobileUserProfileController @Inject() (
     MobileProfileMutualStats(libs = followingLibCount, connections = mutualConnectionCount)
   }
 
-  private def profileUserJson(user: BasicUserWithFriendStatus, profileStats: ProfileStats, profileMutualStatsOpt: Option[MobileProfileMutualStats])(implicit session: RSession): JsValue = {
+  private def profileUserJson(user: BasicUserWithFriendStatus, profileStats: MobileProfileStats, profileMutualStatsOpt: Option[MobileProfileMutualStats])(implicit session: RSession): JsValue = {
     val json = Json.toJson(user).as[JsObject]
     //global or personalized
     val jsonWithGlobalCounts = json +
@@ -102,5 +101,4 @@ class MobileUserProfileController @Inject() (
     }
     profileUserJson(user, loadProfileStats(userId, viewerIdOpt), mutualStatus)
   }
-  */
 }
