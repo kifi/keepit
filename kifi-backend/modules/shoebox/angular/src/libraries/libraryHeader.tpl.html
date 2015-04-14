@@ -1,5 +1,5 @@
 <div class="kf-lh" itemscope itemtype="http://schema.org/CollectionPage">
-  <div class="kf-lh-cover" ng-style="{'background-color': library.color}">
+  <div class="kf-lh-cover" ng-class="{'kf-system-main': library.kind === 'system_main', 'kf-system-secret': library.kind === 'system_secret'}" ng-style="{'background-color': library.color}">
     <meta itemtype="image" content="{{library.image|libImageUrl}}" ng-if="library.image"/>
     <meta itemtype="url" content="{{library.absUrl}}"/>
 
@@ -47,6 +47,7 @@
     </div>
 
     <div class="kf-lh-mid">
+      <div class="kf-lh-icon" ng-class="{'svg-card-star': library.kind === 'system_main', 'svg-card-lock': library.kind === 'system_secret'}"></div>
       <h1 class="kf-lh-name" ng-class="{'kf-long-1': library.name.length > 24, 'kf-long-2': library.name.length > 36}" itemtype="name">{{library.nameText}}</h1>
 
       <div class="kf-lh-stats">
