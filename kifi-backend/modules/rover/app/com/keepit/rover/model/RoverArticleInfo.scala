@@ -66,11 +66,7 @@ case class RoverArticleInfo(
 
   def withFailure(error: Throwable)(implicit recoveryPolicy: FailureRecoveryPolicy): RoverArticleInfo = {
     val updatedFailureCount = failureCount + 1
-    val updatedNextFetchAt = {
-      if (recoveryPolicy.shouldRetry(url, error, updatedFailureCount)) {
-        Some(schedulingPolicy.nextFetchAfterFailure(updatedFailureCount))
-      } else None
-    }
+    val updatedNextFetchAt = recoveryPolicy.nextFetch(url, error, updatedFailureCount)
     copy(
       nextFetchAt = updatedNextFetchAt,
       failureCount = updatedFailureCount,
@@ -81,7 +77,7 @@ case class RoverArticleInfo(
   def withLatestArticle(version: ArticleVersion): RoverArticleInfo = {
     val decreasedFetchInterval = fetchInterval.map(schedulingPolicy.decreaseInterval)
     copy(
-      nextFetchAt = decreasedFetchInterval.map(schedulingPolicy.nextFetchAfterSuccess),
+      nextFetchAt = decreasedFetchInterval.map(schedulingPolicy.nextFetch),
       fetchInterval = decreasedFetchInterval,
       latestVersion = Some(version),
       oldestVersion = oldestVersion orElse Some(version),
@@ -93,7 +89,7 @@ case class RoverArticleInfo(
   def withoutChange: RoverArticleInfo = {
     val increasedFetchInterval = fetchInterval.map(schedulingPolicy.increaseInterval)
     copy(
-      nextFetchAt = increasedFetchInterval.map(schedulingPolicy.nextFetchAfterSuccess),
+      nextFetchAt = increasedFetchInterval.map(schedulingPolicy.nextFetch),
       fetchInterval = increasedFetchInterval,
       failureCount = 0,
       failureInfo = None
