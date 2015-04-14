@@ -48,7 +48,7 @@ class MobileRecommendationsController @Inject() (
 
   // _uctx and _lctx are meant to support an iOS bug. Should not be supported in the future.
   def topRecosV3(recencyWeight: Float, uriContext: Option[String], libContext: Option[String], uctx: Option[String], lctx: Option[String]) = UserAction.async { request =>
-    val contextBankruptcyLength = 3000 // 4k is max request size, leaves some room for other params
+    val contextBankruptcyLength = 1500 // 4k is max request size, leaves some room for other params
     val uriContext2 = (uriContext orElse uctx).flatMap(ctx => if (ctx.length > contextBankruptcyLength) None else Some(ctx))
     val libContext2 = (libContext orElse lctx).flatMap(ctx => if (ctx.length > contextBankruptcyLength) None else Some(ctx))
     log.info(s"mobile reco for user: ${request.userId}, urictx: ${uriContext2.map(_.length).getOrElse(0)}, libctx: ${libContext2.map(_.length).getOrElse(0)}")
