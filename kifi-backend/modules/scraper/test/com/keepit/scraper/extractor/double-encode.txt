@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Search Everything on SoundCloud - Listen to music</title>
+<meta content="record, sounds, share, sound, audio, tracks, music, soundcloud" name="keywords">
+<meta content="Explore the largest community of artists, bands, podcasters and creators of music &amp; audio" name="description">
+<meta name="referrer" content="origin">
+<meta name="google-site-verification" content="dY0CigqM8Inubs_hgrYMwk-zGchKwrvJLcvI_G8631Q">
+<meta name="viewport" content="width=device-width, minimum-scale=1, maximum-scale=1, user-scalable=no">
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+<meta content="19507961798" property="fb:app_id">
+<meta content="SoundCloud" property="og:site_name">
+<meta content="SoundCloud" property="twitter:site">
+<meta content="SoundCloud" property="twitter:app:name:iphone">
+<meta content="336353151" property="twitter:app:id:iphone">
+<meta content="SoundCloud" property="twitter:app:name:ipad">
+<meta content="336353151" property="twitter:app:id:ipad">
+<meta content="SoundCloud" property="twitter:app:name:googleplay">
+<meta content="com.soundcloud.android" property="twitter:app:id:googleplay">
+<link href="/sc-opensearch.xml" rel="search" title="SoundCloud Search" type="application/opensearchdescription+xml">
+<meta name="robots" content="noindex, nofollow">
+<link rel="canonical" href="https://soundcloud.com/search?q=%25D8%25AF%25DB%258C%25D8%25A7%25D9%2584%25D9%2588%25DA%25AF">
+<meta name="application-name" content="SoundCloud">
+<meta name="msapplication-tooltip" content="Launch SoundCloud">
+<meta name="msapplication-TileImage" content="https://a-v2.sndcdn.com/assets/images/sc-icons/win8-2dc974a1.png">
+<meta name="msapplication-TileColor" content="#ff5500">
+<meta name="msapplication-starturl" content="https://soundcloud.com">
+<link href="https://a-v2.sndcdn.com/assets/images/sc-icons/favicon-cb20269e.ico" rel="icon">
+<link href="https://a-v2.sndcdn.com/assets/images/sc-icons/ios-a62dfc8f.png" rel="apple-touch-icon">
+<link href="https://a-v2.sndcdn.com/assets/images/sc-icons/fluid-b4e7a64b.png" rel="fluid-icon">
+<script type="text/javascript">function uaTest(s){return s.test(ua)}function browserVersion(){var s,e=ua.match(/(opera|chrome|safari|firefox|msie)\/?\s*(\.?\d+(\.\d+)*)/i);return e&&(s=ua.match(/version\/([.\d]+)/i))?parseInt(s[1],10):e?parseInt(e[2],10):null}window.__sc_abortApp=!1;var ua,browserTests,uaVersion,supportedFirefox;ua=navigator.userAgent.toLowerCase(),browserTests={},browserTests.is_opera="undefined"!=typeof window.opera&&"[object Opera]"===window.opera.toString(),browserTests.is_chrome=uaTest(/chrome/),browserTests.is_webkit=uaTest(/webkit/),browserTests.is_safari=!browserTests.is_chrome&&uaTest(/safari/),browserTests.is_ie=!browserTests.is_opera&&uaTest(/msie/),browserTests.is_gecko=!browserTests.is_webkit&&uaTest(/gecko/),browserTests.browserVersion=browserVersion(),browserTests.canUseV2=uaTest(/mobile|android|iphone|ipod|symbianos|nokia|s60|playbook|playstation/),browserTests.is_gecko&&(uaVersion=ua.match(/(firefox)\/?\s*(\.?\d+(\.\d+)*)/i),supportedFirefox=uaVersion&&uaVersion.length>1&&parseInt(uaVersion[2],10)>=13),browserTests.browserVersion&&!browserTests.canUseV2&&(browserTests.is_chrome&&browserTests.browserVersion<=20||browserTests.is_gecko&&supportedFirefox===!1||browserTests.is_safari&&browserTests.browserVersion<=4||browserTests.is_ie&&browserTests.browserVersion<=8||browserTests.is_opera&&browserTests.browserVersion<12)&&(window.__sc_abortApp=!0);</script>
+<link rel="stylesheet" href="https://a-v2.sndcdn.com/assets/css/app-d3222ede.css">
+</head>
+<body>
+<div id="app">
+  <style type="text/css">
+  .header{width:100%;background:#333;height:46px}h1.header__logo{background:#f50;background:linear-gradient(#f70,#f30)}.header__logoLink{background-size:82px 44px;display:block;height:46px;width:84px}.header__logoLink:focus{background-color:rgba(255,72,0,.8);outline:0}#header__loading{margin:13px auto 0;width:16px}
+  </style>
+  <div role="banner" class="header sc-selection-disabled show fixed g-dark g-z-index-header">
+    <div class="header__inner l-container l-fullwidth">
+      <div class="header__left left">
+        <h1 class="header__logo left"><a href="/" title="Home" class="header__logoLink sc-border-box sc-ir">SoundCloud</a></h1>
+      </div>
+      <div id="header__loading" class="sc-hidden"><img id="loading__img" class="hide" src="https://a-v2.sndcdn.com/assets/images/loader-dark-45940ae3.gif" width="16" height="16"></div>
+    </div>
+  </div>
+  <script type="text/javascript">setTimeout(function(){var e=document.getElementById("header__loading");e&&(e.className="")},6e3);</script>
+  <style type="text/css">.errorPage__inner{width:580px;margin:0 auto;position:relative;padding-top:460px;background:url(https://a-v2.sndcdn.com/assets/images/errors/500-e5a180b7.png) no-repeat 50% 80px;text-align:center;transition:all 1s linear}.errorTitle{margin-bottom:10px;font-size:30px}.errorText{line-height:28px;color:#666;font-size:20px}.errorButtons{margin-top:30px}#updateBrowserMessage{width:600px;margin:0 auto;position:relative;padding-top:410px;background:no-repeat 50% 130px;text-align:center;display:none}#updateBrowserMessage .messageText{line-height:26px;font-size:20px;margin-bottom:5px}#updateBrowserMessage .downloadLinks{margin-top:0}@media (max-width:1280px){.errorPage__inner{background-size:80%}}</style>
+  <noscript class="errorPage__inner">
+    <div class="errorPage__inner">
+      <h1 class="errorTitle">JavaScript is disabled</h1>
+      <p class="errorText sc-font-light">You need to enable JavaScript to use SoundCloud</p>
+      <div class="errorButtons">
+        <a href="http://www.enable-javascript.com/" target="_blank" class="sc-button sc-button-medium">Show me how to enable it</a>
+      </div>
+    </div>
+  </noscript>
+  <noscript>
+  <ul>
+    <li><a href="/search">Search for Everything</a></li>
+    <li><a href="/search/sounds">Search for Tracks</a></li>
+    <li><a href="/search/sets">Search for Playlists</a></li>
+    <li><a href="/search/people">Search for People</a></li>
+    <li><a href="/search/groups">Search for Groups</a></li>
+  </ul>
+  </noscript>
+  <div id="updateBrowserMessage"><p class="messageText sc-text-light">Your current browser isn't compatible with SoundCloud.<br>Please download one of our supported browsers. <a href="http://help.soundcloud.com/customer/portal/articles/552882-the-site-won-t-load-for-me-all-i-see-is-the-soundcloud-logo-what-can-i-do-">Need help?</a></p><div class="downloadLinks sc-type-h3 sc-text-light"><a href="http://google.com/chrome" target="_blank" title="Chrome">Chrome</a> | <a href="http://firefox.com" target="_blank" title="Firefox">Firefox</a> | <a href="http://apple.com/safari" target="_blank" title="Safari">Safari</a> | <a href="http://windows.microsoft.com/ie" target="_blank" title="Internet Explorer">Internet Explorer</a></div></div>
+  <div id="error__timeout" class="errorPage__inner sc-hidden"><h1 class="errorTitle">Sorry! Something went wrong</h1><div class="errorText sc-font-light"><p>Is your network connection unstable or browser outdated?</p></div><div class="errorButtons"><a class="sc-button" href="http://help.soundcloud.com" target="_blank" id="try-again">I need help</a> <a href="http://m.soundcloud.com" class="sc-button">Try our mobile site</a></div></div>
+  <script type="text/javascript">window.__sc_abortApp&&(document.getElementById("updateBrowserMessage").style.display="block");</script>
+  <script type="text/javascript">function displayError(){if(!window.__sc_abortApp){var e=document.getElementById("error__timeout"),r=document.getElementById("header__loading");e&&r&&(e.className="errorPage__inner",r.className="sc-hidden")}}setTimeout(displayError,15e3),window.onerror=displayError;</script>
+</div>
+<script type="text/javascript">
+window.__sc_version = "b1ed952";
+window.webpackManifest = {"1":"assets/views-824b8-d0979ac.js","2":"assets/app-3586a-9a1581b.js","3":"assets/3-000d4-244b769.js","4":"assets/4-fef7f-244b769.js","5":"assets/5-c88bb-244b769.js","6":"assets/6-0451c-244b769.js"};
+</script>
+<script src="https://a-v2.sndcdn.com/assets/vendor-47571-98ef9aa.js"></script>
+<script src="https://a-v2.sndcdn.com/assets/views-824b8-d0979ac.js"></script>
+<script src="https://a-v2.sndcdn.com/assets/app-3586a-9a1581b.js"></script>
+<script src="https://a-v2.sndcdn.com/assets/14-8af09-60f4e48.js"></script>
+<script>
+webpackJsonp([],{0:function(e,t,a){var c,n,i={"1028":[{"soundcloud":{"playlists":[11338613,28405516,28910388,29985144],"tracks":[100114713,100172105,100174469,100204582],"users":[10012217,10017716,10032807,10045055,1007622]}}]},r=Date.now();for(c in i)try{n=a(c),i[c].forEach(function(e){var t,a=r;e.lastFetchTime&&(a=e.lastFetchTime,delete e.lastFetchTime),t=new n(e,{parse:!0}),t.lastFetchTime=a,t.release()})}catch(s){}}});
+</script>
+</body>
+</html>

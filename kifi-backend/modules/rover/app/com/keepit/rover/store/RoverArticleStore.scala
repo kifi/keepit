@@ -43,4 +43,4 @@ class RoverArticleStore @Inject() (underlying: RoverUnderlyingArticleStore, priv
 }
 
 case class InconsistentArticleTypeException[A <: Article](key: ArticleKey[A], article: Article)
-  extends Throwable(s"Found inconsistent article for key $key: $article")
+  extends Exception(s"Found inconsistent article for key $key: $article")

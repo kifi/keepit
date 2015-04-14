@@ -18,8 +18,8 @@ import com.keepit.common.core._
 
 object ShoeboxArticleIngestionActor {
   val shoeboxArticleInfoSeq = Name[SequenceNumber[ArticleInfo]]("shoebox_article_info")
-  val fetchSize: Int = 50
-  val throttle = new ReactiveLock(5)
+  val fetchSize: Int = 500
+  val throttle = new ReactiveLock(50)
   sealed trait ShoeboxArticleIngestionActorMessage
   case object StartIngestion extends ShoeboxArticleIngestionActorMessage
   case class DoneIngesting(mayHaveMore: Boolean) extends ShoeboxArticleIngestionActorMessage
@@ -62,23 +62,23 @@ class ShoeboxArticleIngestionActor @Inject() (
       systemValueRepo.getSequenceNumber(shoeboxArticleInfoSeq) getOrElse SequenceNumber.ZERO
     }
     rover.getShoeboxUpdates(seqNum, fetchSize).flatMap {
-      case Some(ShoeboxArticleUpdates(updates, maxSeq)) if updates.nonEmpty =>
+      case Some(ShoeboxArticleUpdates(updates, maxSeq)) =>
         processRedirectsAndNormalizationInfo(updates).map { partiallyProcessedUpdatesByUri =>
           db.readWrite { implicit session =>
             updateActiveUris(partiallyProcessedUpdatesByUri)
             systemValueRepo.setSequenceNumber(shoeboxArticleInfoSeq, maxSeq)
           }
-          updates.length
+          (updates.length, maxSeq)
         }
-      case _ => Future.successful(0)
+      case None => Future.successful((0, seqNum))
     } onComplete {
       case Failure(error) => {
         log.error("Failed to ingest Shoebox Article updates from Rover.", error)
         self ! CancelIngestion
       }
-      case Success(ingestedUpdateCount) => {
-        log.info(s"Ingested $ingestedUpdateCount Shoebox Article updates from Rover.")
-        self ! DoneIngesting(mayHaveMore = ingestedUpdateCount > 0)
+      case Success((ingestedUpdateCount, updatedSeqNum)) => {
+        log.info(s"Ingested $ingestedUpdateCount Shoebox Article updates from Rover (seq $seqNum to $updatedSeqNum)")
+        self ! DoneIngesting(mayHaveMore = updatedSeqNum > seqNum)
       }
     }
   }

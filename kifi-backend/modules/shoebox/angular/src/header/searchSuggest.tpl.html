@@ -1,7 +1,7 @@
 <menu class="kf-ssg">
   <img class="kf-ssg-spinner" src="/img/spinner_32.gif" ng-show="working">
   <div class="kf-ssg-group-title" ng-if="search.text">Keeps <span ng-if="inLibrary">in this library</span></div>
-  <a class="kf-ssg-a kf-ssg-query kf-selected" ui-sref="{{inLibrary ? 'library.search' : 'search'}}({q: search.text})" ng-if="search.text && (!uris || uris.length) || !libraries">
+  <a class="kf-ssg-a kf-ssg-query kf-selected" ng-href="{{href(inLibrary ? 'library.search' : 'search', {q: search.text})}}" ng-if="search.text && (!uris || uris.length) || !libraries">
     <div class="kf-ssg-query-icon svg-search-icon-gray"></div>
     See all matching keeps <span ng-if="inLibrary">in this library</span>
   </a>

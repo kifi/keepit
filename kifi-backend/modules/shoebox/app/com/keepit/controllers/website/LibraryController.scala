@@ -86,13 +86,12 @@ class LibraryController @Inject() (
       case Left(fail) =>
         Status(fail.status)(Json.obj("error" -> fail.message))
       case Right(lib) =>
-        val (owner, numKeeps, membership) = db.readOnlyMaster { implicit s =>
+        val (owner, membership) = db.readOnlyMaster { implicit s =>
           val basicUser = basicUserRepo.load(lib.ownerId)
-          val numKeeps = keepRepo.getCountByLibrary(id)
           val membership = libraryMembershipRepo.getWithLibraryIdAndUserId(lib.id.get, request.userId)
-          (basicUser, numKeeps, membership)
+          (basicUser, membership)
         }
-        val libInfo = Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, None, owner, numKeeps))
+        val libInfo = Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, None, owner))
         Ok(Json.obj("library" -> libInfo, "listed" -> membership.map(_.listed)))
     }
   }
@@ -159,8 +158,7 @@ class LibraryController @Inject() (
       db.readOnlyReplica { implicit session =>
         for ((mem, library) <- libsWithMemberships) yield {
           val owner = basicUsers(library.ownerId)
-          val numKeeps = keepRepo.getCountByLibrary(library.id.get)
-          (LibraryInfo.fromLibraryAndOwner(library, None, owner, numKeeps), mem) // should have library image, but this endpoint doesn't use it and is already slow & heavy.
+          (LibraryInfo.fromLibraryAndOwner(library, None, owner), mem) // should have library image, but this endpoint doesn't use it and is already slow & heavy.
         }
       }
     }
@@ -169,8 +167,7 @@ class LibraryController @Inject() (
         for ((invite, lib) <- libsWithInvites) yield {
           val owner = basicUsers(lib.ownerId)
           val inviter = basicUsers(invite.inviterId)
-          val numKeeps = keepRepo.getCountByLibrary(lib.id.get)
-          (LibraryInfo.fromLibraryAndOwner(lib, None, owner, numKeeps, Some(inviter)), invite) // should have library image, but this endpoint doesn't use it and is already slow & heavy.
+          (LibraryInfo.fromLibraryAndOwner(lib, None, owner, Some(inviter)), invite) // should have library image, but this endpoint doesn't use it and is already slow & heavy.
         }
       }
     }
@@ -252,16 +249,16 @@ class LibraryController @Inject() (
               case Left(fail) =>
                 Status(fail.status)(Json.obj("error" -> fail.message))
               case Right(lib) =>
-                val (owner, numKeeps) = db.readOnlyMaster { implicit s => (basicUserRepo.load(lib.ownerId), keepRepo.getCountByLibrary(libId)) }
-                Ok(Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, None, owner, numKeeps)))
+                val owner = db.readOnlyMaster { implicit s => basicUserRepo.load(lib.ownerId) }
+                Ok(Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, None, owner)))
             }
           case Some(membership) =>
             log.info(s"user ${request.userId} is already following library $libId, possible race condition")
-            val (lib, owner, numKeeps) = db.readOnlyMaster { implicit s =>
+            val (lib, owner) = db.readOnlyMaster { implicit s =>
               val lib = libraryRepo.get(libId)
-              (lib, basicUserRepo.load(lib.ownerId), keepRepo.getCountByLibrary(libId))
+              (lib, basicUserRepo.load(lib.ownerId))
             }
-            val res = Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, None, owner, numKeeps))
+            val res = Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, None, owner))
             Ok(res.as[JsObject] + ("alreadyJoined" -> JsBoolean(true)))
         }
     }

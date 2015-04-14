@@ -83,7 +83,7 @@ object LibraryInfo {
     (__ \ 'inviter).formatNullable[BasicUser]
   )(LibraryInfo.apply, unlift(LibraryInfo.unapply))
 
-  def fromLibraryAndOwner(lib: Library, image: Option[LibraryImage], owner: BasicUser, keepCount: Int, inviter: Option[BasicUser] = None)(implicit config: PublicIdConfiguration): LibraryInfo = {
+  def fromLibraryAndOwner(lib: Library, image: Option[LibraryImage], owner: BasicUser, inviter: Option[BasicUser] = None)(implicit config: PublicIdConfiguration): LibraryInfo = {
     LibraryInfo(
       id = Library.publicId(lib.id.get),
       name = lib.name,
@@ -93,7 +93,7 @@ object LibraryInfo {
       color = lib.color,
       image = image.map(LibraryImageInfo.createInfo(_)),
       owner = owner,
-      numKeeps = keepCount,
+      numKeeps = lib.keepCount,
       numFollowers = lib.memberCount - 1, // remove owner from count
       kind = lib.kind,
       lastKept = lib.lastKept,

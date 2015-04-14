@@ -2,34 +2,33 @@
 
 angular.module('kifi')
 
-.directive('kfUserProfileUser', [
-  '$timeout', 'env', '$filter', 'modalService', 'profileService', 'userProfileActionService',
+.directive('kfUserCard', [
+  '$timeout', 'env', '$filter', 'modalService', 'profileService',
   'friendService', 'inviteService', 'signupService', 'platformService',
   function (
-      $timeout, env, $filter, modalService, profileService, userProfileActionService,
+      $timeout, env, $filter, modalService, profileService,
       friendService, inviteService, signupService, platformService) {
     return {
       restrict: 'A',
       replace: true,
       scope: {
-        user: '=kfUserProfileUser'
+        user: '=kfUserCard',
+        mutualUserInfo: '='
       },
-      templateUrl: 'userProfile/userProfileUser.tpl.html',
+      templateUrl: 'userCard/userCard.tpl.html',
       link: function (scope, element) {
         if (scope.$root.userLoggedIn) {
-          scope.me = profileService.me;
+          scope.isSelf = profileService.me.id === scope.user.id;
 
           // unpacking information about relationship, since it's (confusingly) not always about the user on this card
-          scope.mutual = _.pick(  // TODO: pass profile all the way down?
-            scope.me && scope.me.id === scope.user.id ? scope.$parent.$parent.$parent.profile : scope.user,
-            'id', 'firstName', 'lastName', 'pictureName', 'username');
+          scope.mutual = _.pick(scope.mutualUserInfo || scope.user, 'id', 'firstName', 'lastName', 'pictureName', 'username');
           scope.mutual.connections = scope.user.mConnections;
           scope.mutual.libraries = scope.user.mLibraries;
           _.assign(scope.mutual, _.pick(scope.user, 'isFriend', 'friendRequestSentAt', 'friendRequestReceivedAt', 'unsearched'));
         }
 
         scope.showMutualConnections = function () {
-          userProfileActionService.getMutualConnections(scope.mutual.id).then(function (data) {
+          friendService.getMutualConnections(scope.mutual.id).then(function (data) {
             var person = _.pick(scope.mutual, 'id', 'username', 'pictureName', 'isFriend');
             person.fullName = scope.mutual.firstName + ' ' + scope.mutual.lastName;
             person.numMutualFriends = scope.mutual.connections;

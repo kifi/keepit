@@ -58,7 +58,7 @@ object Article {
 }
 
 case class UnknownArticleVersionException[A <: Article](kind: ArticleKind[A], currentVersion: VersionNumber[Article], unknownVersion: VersionNumber[Article])
-  extends Throwable(s"[$kind] Unknown version: $unknownVersion (Latest version: $currentVersion)")
+  extends Exception(s"[$kind] Unknown version: $unknownVersion (Latest version: $currentVersion)")
 
 case class EmbedlyArticle(url: String, createdAt: DateTime, content: EmbedlyContent) extends Article {
   type A = EmbedlyArticle

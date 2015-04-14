@@ -33,6 +33,15 @@ angular.module('kifi')
   };
 })
 
+.filter('absProfileUrl', [
+  'env',
+  function (env) {
+    return function (user) {
+      return user ? env.origin + '/' + user.username : null;
+    };
+  }
+])
+
 .filter('libImageUrl', [
   'env',
   function (env) {
@@ -74,6 +83,13 @@ angular.module('kifi')
     return hundreds.slice(-1) === '0' ? hundreds.slice(0, -1) + 'K' : hundreds.replace(/(\d)$/, '.$1') + 'K';
   };
 })
+
+.filter('preventOrphans', [
+  'util',
+  function (util) {
+    return util.preventOrphans;
+  }
+])
 
 .filter('domain', function () {
   var re = /^\w+:\/\/(?:www\.)?([^\/]+)/;

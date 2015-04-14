@@ -1,12 +1,16 @@
 package com.keepit.common.concurrent
 
-import java.util.concurrent.{ LinkedBlockingQueue, TimeUnit, ThreadPoolExecutor, Executors }
+import java.util.concurrent.{ LinkedBlockingQueue, ThreadPoolExecutor, TimeUnit }
 
 import com.keepit.common.healthcheck.StackTrace
+import play.api.Mode
 
 import scala.concurrent.{ ExecutionContext => ScalaExecutionContext }
 
-class WatchableExecutionContext extends ScalaExecutionContext {
+class WatchableExecutionContext(mode: Mode.Mode) extends ScalaExecutionContext {
+
+  if (mode == Mode.Prod) throw new IllegalStateException(s"Should not run in production!")
+
   @volatile private[this] var closed = false
   @volatile private[this] var initiated = false
   private[this] lazy val originExecutor = new ThreadPoolExecutor(0, 2, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue[Runnable]())

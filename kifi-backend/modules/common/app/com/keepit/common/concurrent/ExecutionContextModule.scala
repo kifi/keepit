@@ -5,7 +5,11 @@ import net.codingwell.scalaguice.ScalaModule
 
 import scala.concurrent.{ ExecutionContext => ScalaExecutionContext }
 
-case class ExecutionContextModule() extends ScalaModule {
+trait ExecutionContextModule extends ScalaModule {
+
+}
+
+case class PlayDefaultExecutionContextModule() extends ExecutionContextModule {
 
   def configure {}
 
@@ -14,7 +18,7 @@ case class ExecutionContextModule() extends ScalaModule {
   def executionContext: ScalaExecutionContext = play.api.libs.concurrent.Execution.Implicits.defaultContext
 }
 
-case class FJExecutionContextModule() extends ScalaModule {
+case class FJExecutionContextModule() extends ExecutionContextModule {
 
   def configure {}
 

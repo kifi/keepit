@@ -68,11 +68,45 @@ describe('util', function () {
 
   describe('util.preventOrphans', function () {
     it('makes spaces non-breaking near the end', function () {
-      expect(util.preventOrphans('')).toBe('');
-      expect(util.preventOrphans('Just for Men')).toBe('Just for Men');
-      expect(util.preventOrphans('Useful Information for Parents')).toBe('Useful Information for\u00a0Parents');
-      expect(util.preventOrphans('HTML Examples (e.g. <b> and &quot;)')).toBe('HTML Examples (e.g. <b>\u00a0and\u00a0&quot;)');
-      expect(util.preventOrphans('Useful handpicked marketing and growth articles')).toBe('Useful handpicked marketing and\u00a0growth\u00a0articles');
+      expect(util.preventOrphans(''), 16, 0.6).toBe('');
+      expect(util.preventOrphans('Just for Men', 16, 0.6)).toBe(
+        'Just for\u00a0Men');
+      expect(util.preventOrphans('Expectant  + New Moms', 16, 0.6)).toBe(
+        'Expectant + New\u00a0Moms');
+      expect(util.preventOrphans('Become a Better Person', 16, 0.6)).toBe(
+        'Become a Better\u00a0Person');
+      expect(util.preventOrphans('Interesting Art History', 16, 0.6)).toBe(
+        'Interesting Art\u00a0History');
+      expect(util.preventOrphans('The art of body language', 16, 0.6)).toBe(
+        'The art of body\u00a0language');
+      expect(util.preventOrphans('Inspiration landing pages ', 16, 0.6)).toBe(
+        'Inspiration landing\u00a0pages');
+      expect(util.preventOrphans('Inspiring adventure films', 16, 0.6)).toBe(
+        'Inspiring adventure\u00a0films');
+      expect(util.preventOrphans('Overcoming Procrastination', 16, 0.6)).toBe(
+        'Overcoming Procrastination');
+      expect(util.preventOrphans('Anthropology & Archaeology', 16, 0.6)).toBe(
+        'Anthropology & Archaeology');
+      expect(util.preventOrphans('Useful Information for Parents ', 16, 0.6)).toBe(
+        'Useful Information for\u00a0Parents');
+      expect(util.preventOrphans('Useful how to tips and tricks', 16, 0.6)).toBe(
+        'Useful how to tips\u00a0and\u00a0tricks');
+      expect(util.preventOrphans('Inspiration from the tech world', 16, 0.6)).toBe(
+        'Inspiration from the\u00a0tech\u00a0world');
+      expect(util.preventOrphans('HTML Examples (e.g. <b> and &quot;)', 16, 0.6)).toBe(
+        'HTML Examples (e.g.\u00a0<b>\u00a0and\u00a0&quot;)');
+      expect(util.preventOrphans('Best Places to Eat Hummus in the Bay Area', 16, 0.6)).toBe(
+        'Best Places to Eat Hummus\u00a0in\u00a0the\u00a0Bay\u00a0Area');
+      expect(util.preventOrphans('Best Places to Eat Hummus in the Bay Area', 16, 1/3)).toBe(
+        'Best Places to Eat Hummus in the\u00a0Bay\u00a0Area');
+      expect(util.preventOrphans('The Internet of Things Will Thrive by 2025', 16, 1/3)).toBe(
+        'The Internet of Things Will Thrive\u00a0by\u00a02025');
+      expect(util.preventOrphans('The World of E-Sports and Competitive Gaming', 16, 1/3)).toBe(
+        'The World of E\u2011Sports and Competitive Gaming');
+      expect(util.preventOrphans('Useful handpicked marketing and growth articles', 16, 1/3)).toBe(
+        'Useful handpicked marketing and growth\u00a0articles');
+      expect(util.preventOrphans('Useful handpicked marketing and growth articles', 16, 0.6)).toBe(
+        'Useful handpicked marketing and\u00a0growth\u00a0articles');
     });
   });
 

@@ -7,6 +7,7 @@ import com.keepit.rover.article.Article
 import com.keepit.rover.model.ArticleKey
 import play.api.libs.json.Format
 
+// todo(not): do not change this unless you actually want to break the store
 private[store] class ArticleStoreKey(key: ArticleKey[_]) {
   override def toString = s"${key.uriId.id}/${key.kind.typeCode}/${key.version.major.value}.${key.version.minor.value}"
 }

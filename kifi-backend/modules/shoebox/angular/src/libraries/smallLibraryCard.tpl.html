@@ -5,7 +5,7 @@
     </div>
     <div class="kf-slc-card-name-align">
       <div class="kf-slc-card-name">
-        <div class="kf-slc-card-name-clip">{{library.name}}</div>
+        <div class="kf-slc-card-name-clip">{{library.name|preventOrphans:16:(lib.name.length > 36 ? 1/3 : 0.6)}}</div>
       </div>
     </div>
     <a class="kf-slc-card-owner" href="{{library.owner|profileUrl}}"

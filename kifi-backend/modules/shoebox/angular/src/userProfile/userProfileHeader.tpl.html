@@ -11,7 +11,7 @@
       <img class="kf-uph-pic" ng-src="{{profile|pic:200}}" alt="{{profile|name}}" itemprop="image">
     </a>
 
-    <div class="kf-uph-action" ng-if="!isKifiCurator" ng-switch="connectionWithUser">
+    <div class="kf-uph-actions" ng-if="!isKifiCurator" ng-switch="connectionWithUser">
       <button class="kf-uph-connect connect" ng-switch-when="not_friends" ng-click="sendFriendRequest()">
         <div class="kf-uph-action-text connect">Connect</div>
         <span class="kf-uph-connect-image add-friend"></span>
@@ -37,17 +37,24 @@
         </div>
       </button>
 
-      <div class="kf-uph-dropdown-parent" kf-hover-menu ng-switch-when="self">
-        <a ui-sref="settings" ng-click="trackClickedSettings()">
-          <span class="kf-uph-settings-icon svg-settings-gear"></span>
-          <span class="kf-uph-action-text">Settings</span>
-        </a>
-        <menu class="kf-dropdown-menu">
-          <button class="kf-dropdown-menu-item" ng-click="showBiographyModal()">Edit your biography</button>
-          <a class="kf-dropdown-menu-item" ui-sref="settings" ng-click="trackClickedSettings()">More settings</a>
-        </menu>
+      <div ng-switch-when="self">
+        <button class="kf-uph-share svg-share-arrow-white" ng-click="toggleSharing($event)">
+          <span class="kf-uph-action-text">Share</span>
+        </button>
+        <div class="kf-uph-dropdown-parent" kf-hover-menu>
+          <a ui-sref="settings" ng-click="trackClickedSettings()">
+            <span class="kf-uph-settings-icon svg-settings-gear"></span>
+            <span class="kf-uph-action-text">Settings</span>
+          </a>
+          <menu class="kf-dropdown-menu">
+            <button class="kf-dropdown-menu-item" ng-click="showBiographyModal()">Edit your biography</button>
+            <a class="kf-dropdown-menu-item" ui-sref="settings" ng-click="trackClickedSettings()">More settings</a>
+          </menu>
+        </div>
+        <div class="kf-uph-share-url" ng-if="sharing">
+          {{profile|absProfileUrl}}
+        </div>
       </div>
-
     </div>
     <div class="kf-uph-progress" ng-if="connectionWithUser==='not_friends'">
       <div class="kf-uph-progress-bar"></div>
