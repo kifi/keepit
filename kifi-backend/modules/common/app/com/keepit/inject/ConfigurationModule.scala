@@ -1,7 +1,7 @@
 package com.keepit.inject
 
 import _root_.net.codingwell.scalaguice.ScalaModule
-import com.keepit.common.concurrent.{ PlayDefaultExecutionContextModule, FakeExecutionContextModule, ExecutionContextModule }
+import com.keepit.common.concurrent.{ PlayDefaultExecutionContextModule, FakeExecutionContextModule }
 import com.keepit.common.logging.Logging
 import com.keepit.common.crypto.ShoeboxCryptoModule
 import com.keepit.common.actor.{ ActorSystemModule, ProdActorSystemModule, DevActorSystemModule }
