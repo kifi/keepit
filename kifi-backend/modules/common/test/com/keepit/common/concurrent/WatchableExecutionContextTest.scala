@@ -9,7 +9,11 @@ class WatchableExecutionContextTest extends Specification with Logging {
   "WatchableExecutionContext" should {
 
     "can't run in prod" in {
-      (new WatchableExecutionContext(Mode.Prod)) should throwA[IllegalArgumentException]
+      try {
+        new WatchableExecutionContext(Mode.Prod)
+      } catch {
+        case e: IllegalArgumentException => //good!
+      }
       val good = new WatchableExecutionContext(Mode.Test) //can create
       good.kill() === 0 //cleanup
     }
