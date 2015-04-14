@@ -216,8 +216,7 @@ class ShoeboxDataPipeController @Inject() (
     SafeFuture {
       val libs = db.readOnlyReplica { implicit s =>
         val libraries = libraryRepo.getBySequenceNumber(seqNum, fetchSize)
-        val keepCountsByLibraryId = keepRepo.getCountsByLibrary(libraries.map(_.id.get).toSet).withDefaultValue(0)
-        libraries map { library => Library.toDetailedLibraryView(library, keepCountsByLibraryId(library.id.get)) }
+        libraries map { library => Library.toDetailedLibraryView(library, library.keepCount) }
       }
       Ok(Json.toJson(libs))
     }
