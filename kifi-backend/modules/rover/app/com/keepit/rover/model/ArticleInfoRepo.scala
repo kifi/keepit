@@ -33,7 +33,6 @@ trait ArticleInfoRepo extends Repo[RoverArticleInfo] with SeqNumberFunction[Rove
   def markAsQueued(ids: Id[RoverArticleInfo]*)(implicit session: RWSession): Unit
   def unmarkAsQueued(ids: Id[RoverArticleInfo]*)(implicit session: RWSession): Unit
   def updateAfterFetch[A <: Article](uriId: Id[NormalizedURI], kind: ArticleKind[A], fetched: Try[Option[ArticleVersion]])(implicit session: RWSession): Unit
-  def countRecentFetchesByDomain(domains: Set[String], lastFetchedWithin: Duration)(implicit session: RSession): Map[String, Int]
 }
 
 @Singleton
@@ -51,7 +50,6 @@ class ArticleInfoRepoImpl @Inject() (
   class ArticleInfoTable(tag: Tag) extends RepoTable[RoverArticleInfo](db, tag, "article_info") with SeqNumberColumn[RoverArticleInfo] {
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)
     def url = column[String]("url", O.NotNull)
-    def domain = column[Option[String]]("domain", O.Nullable)
     def kind = column[String]("kind", O.NotNull)
     def bestVersionMajor = column[Option[VersionNumber[Article]]]("best_version_major", O.Nullable)
     def bestVersionMinor = column[Option[VersionNumber[Article]]]("best_version_minor", O.Nullable)
@@ -66,7 +64,7 @@ class ArticleInfoRepoImpl @Inject() (
     def failureInfo = column[Option[String]]("failure_info", O.Nullable)
     def lastQueuedAt = column[Option[DateTime]]("last_queued_at", O.Nullable)
 
-    def * = (id.?, createdAt, updatedAt, state, seq, uriId, url, domain, kind, bestVersionMajor, bestVersionMinor, latestVersionMajor, latestVersionMinor, oldestVersionMajor, oldestVersionMinor, lastFetchedAt, nextFetchAt, fetchInterval, failureCount, failureInfo, lastQueuedAt) <> ((RoverArticleInfo.applyFromDbRow _).tupled, RoverArticleInfo.unapplyToDbRow _)
+    def * = (id.?, createdAt, updatedAt, state, seq, uriId, url, kind, bestVersionMajor, bestVersionMinor, latestVersionMajor, latestVersionMinor, oldestVersionMajor, oldestVersionMinor, lastFetchedAt, nextFetchAt, fetchInterval, failureCount, failureInfo, lastQueuedAt) <> ((RoverArticleInfo.applyFromDbRow _).tupled, RoverArticleInfo.unapplyToDbRow _)
   }
 
   def table(tag: Tag) = new ArticleInfoTable(tag)
@@ -167,27 +165,6 @@ class ArticleInfoRepoImpl @Inject() (
       }
     }
   }
-
-  def countRecentFetchesByDomain(domains: Set[String], lastFetchedWithin: Duration)(implicit session: RSession): Map[String, Int] = {
-    val recentlyFetchedRows = {
-      val now = clock.now()
-      val lastFetchedSomeTimeAgo = now minusSeconds lastFetchedWithin.toSeconds.toInt
-      for (r <- rows if r.domain.inSet(domains) && r.lastFetchedAt > lastFetchedSomeTimeAgo) yield r
-    }
-    recentlyFetchedRows.groupBy(_.domain).map { case (domain, infos) => (domain, infos.length) }.toMap.collect {
-      case (Some(domain), recentFetchCount) => (domain -> recentFetchCount)
-    }
-  }
-
-  def setDomains(s: Int)(implicit session: RWSession): Int = {
-    val q = (for (r <- rows if r.domain.isEmpty) yield r)
-    q.sortBy(_.id desc).take(s).list.map { info =>
-      val domain = URI.parse(info.url).toOption.flatMap(_.host).map(_.name)
-      if (domain.exists(_.length < 512)) {
-        (for (r <- rows if r.id === info.id) yield r.domain).update(domain)
-      } else 0
-    }
-  }.sum
 }
 
 trait ArticleInfoSequencingPlugin extends SequencingPlugin

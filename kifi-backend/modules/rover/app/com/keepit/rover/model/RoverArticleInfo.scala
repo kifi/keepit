@@ -21,7 +21,6 @@ case class RoverArticleInfo(
     seq: SequenceNumber[RoverArticleInfo] = SequenceNumber.ZERO,
     uriId: Id[NormalizedURI],
     url: String,
-    domain: Option[String],
     kind: String, // todo(Léo): make this kind: ArticleKind[_ <: Article] with Scala 2.11, (with proper mapper, serialization is unchanged)
     bestVersion: Option[ArticleVersion] = None,
     latestVersion: Option[ArticleVersion] = None,
@@ -116,8 +115,7 @@ object RoverArticleInfo {
   }
 
   def initialize(uriId: Id[NormalizedURI], url: String, kind: ArticleKind[_ <: Article]): RoverArticleInfo = {
-    val domain = URI.parseDomain(url)
-    val newInfo = RoverArticleInfo(uriId = uriId, url = url, domain = domain, kind = kind.typeCode)
+    val newInfo = RoverArticleInfo(uriId = uriId, url = url, kind = kind.typeCode)
     newInfo.initializeSchedulingPolicy
   }
 
@@ -129,7 +127,6 @@ object RoverArticleInfo {
     seq: SequenceNumber[RoverArticleInfo] = SequenceNumber.ZERO,
     uriId: Id[NormalizedURI],
     url: String,
-    domain: Option[String],
     kind: String,
     bestVersionMajor: Option[VersionNumber[Article]],
     bestVersionMinor: Option[VersionNumber[Article]],
@@ -146,7 +143,7 @@ object RoverArticleInfo {
     val bestVersion = articleVersionFromDb(bestVersionMajor, bestVersionMinor)
     val latestVersion = articleVersionFromDb(latestVersionMajor, latestVersionMinor)
     val oldestVersion = articleVersionFromDb(oldestVersionMajor, oldestVersionMinor)
-    RoverArticleInfo(id, createdAt, updatedAt, state, seq, uriId, url, domain, kind, bestVersion, latestVersion, oldestVersion, lastFetchedAt, nextFetchAt, fetchInterval, failureCount, failureInfo, lastQueuedAt)
+    RoverArticleInfo(id, createdAt, updatedAt, state, seq, uriId, url, kind, bestVersion, latestVersion, oldestVersion, lastFetchedAt, nextFetchAt, fetchInterval, failureCount, failureInfo, lastQueuedAt)
   }
 
   def unapplyToDbRow(info: RoverArticleInfo) = {
@@ -161,7 +158,6 @@ object RoverArticleInfo {
       info.seq,
       info.uriId,
       info.url,
-      info.domain,
       info.kind,
       bestVersionMajor,
       bestVersionMinor,
