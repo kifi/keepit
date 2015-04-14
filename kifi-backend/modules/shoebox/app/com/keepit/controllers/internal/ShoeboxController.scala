@@ -444,7 +444,7 @@ class ShoeboxController @Inject() (
   }
 
   def getSocialConnections(userId: Id[User]) = Action { request =>
-    val connectionsByNetwork = db.readOnlyReplica { implicit session => socialConnectionRepo.getSocialConnectionInfosByUser(userId) }
+    val connectionsByNetwork = db.readOnlyMaster { implicit session => socialConnectionRepo.getSocialConnectionInfosByUser(userId) }
     val allConnections = connectionsByNetwork.valuesIterator.flatten.toSeq
     Ok(Json.toJson(allConnections))
   }
