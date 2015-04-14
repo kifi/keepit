@@ -3,10 +3,10 @@
 angular.module('kifi')
 
 .directive('kfUserProfileUser', [
-  '$timeout', 'env', '$filter', 'modalService', 'profileService', 'userProfileActionService',
+  '$timeout', 'env', '$filter', 'modalService', 'profileService',
   'friendService', 'inviteService', 'signupService', 'platformService',
   function (
-      $timeout, env, $filter, modalService, profileService, userProfileActionService,
+      $timeout, env, $filter, modalService, profileService,
       friendService, inviteService, signupService, platformService) {
     return {
       restrict: 'A',
@@ -28,7 +28,7 @@ angular.module('kifi')
         }
 
         scope.showMutualConnections = function () {
-          userProfileActionService.getMutualConnections(scope.mutual.id).then(function (data) {
+          friendService.getMutualConnections(scope.mutual.id).then(function (data) {
             var person = _.pick(scope.mutual, 'id', 'username', 'pictureName', 'isFriend');
             person.fullName = scope.mutual.firstName + ' ' + scope.mutual.lastName;
             person.numMutualFriends = scope.mutual.connections;
