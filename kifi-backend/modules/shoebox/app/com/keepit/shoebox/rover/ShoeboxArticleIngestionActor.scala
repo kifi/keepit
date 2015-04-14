@@ -62,22 +62,22 @@ class ShoeboxArticleIngestionActor @Inject() (
       systemValueRepo.getSequenceNumber(shoeboxArticleInfoSeq) getOrElse SequenceNumber.ZERO
     }
     rover.getShoeboxUpdates(seqNum, fetchSize).flatMap {
-      case Some(ShoeboxArticleUpdates(updates, maxSeq)) if updates.nonEmpty =>
+      case Some(ShoeboxArticleUpdates(updates, maxSeq)) =>
         processRedirectsAndNormalizationInfo(updates).map { partiallyProcessedUpdatesByUri =>
           db.readWrite { implicit session =>
             updateActiveUris(partiallyProcessedUpdatesByUri)
             systemValueRepo.setSequenceNumber(shoeboxArticleInfoSeq, maxSeq)
           }
-          updates.length
+          (updates.length, maxSeq)
         }
-      case _ => Future.successful(0)
+      case None => Future.successful((0, seqNum))
     } onComplete {
       case Failure(error) => {
         log.error("Failed to ingest Shoebox Article updates from Rover.", error)
         self ! CancelIngestion
       }
-      case Success(ingestedUpdateCount) => {
-        log.info(s"Ingested $ingestedUpdateCount Shoebox Article updates from Rover.")
+      case Success((ingestedUpdateCount, updatedSeq)) => {
+        log.info(s"Ingested $ingestedUpdateCount Shoebox Article updates from Rover (seq $seqNum to $updatedSeq)")
         self ! DoneIngesting(mayHaveMore = ingestedUpdateCount > 0)
       }
     }
