@@ -48,7 +48,7 @@
 
     <div class="kf-lh-mid">
       <div class="kf-lh-icon" ng-class="{'svg-card-star': library.kind === 'system_main', 'svg-card-lock': library.kind === 'system_secret'}"></div>
-      <h1 class="kf-lh-name" ng-class="{'kf-long-1': library.name.length > 24, 'kf-long-2': library.name.length > 36}" itemtype="name">{{library.nameText}}</h1>
+      <h1 class="kf-lh-name" ng-class="{'kf-long-1': library.name.length > 24, 'kf-long-2': library.name.length > 36}" itemtype="name">{{library.name|preventOrphans:16:0.6}}</h1>
 
       <div class="kf-lh-stats">
         <span class="kf-lh-stat" ng-pluralize count="library.numKeeps" when="{'one': '1 keep', 'other': '{{library.numKeeps|number}} keeps'}" ng-if="library.numKeeps"></span>
