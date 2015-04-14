@@ -21,7 +21,6 @@ case class RoverArticleInfo(
     seq: SequenceNumber[RoverArticleInfo] = SequenceNumber.ZERO,
     uriId: Id[NormalizedURI],
     url: String,
-    domain: Option[String],
     kind: String, // todo(Léo): make this kind: ArticleKind[_ <: Article] with Scala 2.11, (with proper mapper, serialization is unchanged)
     bestVersion: Option[ArticleVersion] = None,
     latestVersion: Option[ArticleVersion] = None,
@@ -66,11 +65,7 @@ case class RoverArticleInfo(
 
   def withFailure(error: Throwable)(implicit recoveryPolicy: FailureRecoveryPolicy): RoverArticleInfo = {
     val updatedFailureCount = failureCount + 1
-    val updatedNextFetchAt = {
-      if (recoveryPolicy.shouldRetry(url, error, updatedFailureCount)) {
-        Some(schedulingPolicy.nextFetchAfterFailure(updatedFailureCount))
-      } else None
-    }
+    val updatedNextFetchAt = recoveryPolicy.nextFetch(url, error, updatedFailureCount)
     copy(
       nextFetchAt = updatedNextFetchAt,
       failureCount = updatedFailureCount,
@@ -81,7 +76,7 @@ case class RoverArticleInfo(
   def withLatestArticle(version: ArticleVersion): RoverArticleInfo = {
     val decreasedFetchInterval = fetchInterval.map(schedulingPolicy.decreaseInterval)
     copy(
-      nextFetchAt = decreasedFetchInterval.map(schedulingPolicy.nextFetchAfterSuccess),
+      nextFetchAt = decreasedFetchInterval.map(schedulingPolicy.nextFetch),
       fetchInterval = decreasedFetchInterval,
       latestVersion = Some(version),
       oldestVersion = oldestVersion orElse Some(version),
@@ -93,7 +88,7 @@ case class RoverArticleInfo(
   def withoutChange: RoverArticleInfo = {
     val increasedFetchInterval = fetchInterval.map(schedulingPolicy.increaseInterval)
     copy(
-      nextFetchAt = increasedFetchInterval.map(schedulingPolicy.nextFetchAfterSuccess),
+      nextFetchAt = increasedFetchInterval.map(schedulingPolicy.nextFetch),
       fetchInterval = increasedFetchInterval,
       failureCount = 0,
       failureInfo = None
@@ -120,8 +115,7 @@ object RoverArticleInfo {
   }
 
   def initialize(uriId: Id[NormalizedURI], url: String, kind: ArticleKind[_ <: Article]): RoverArticleInfo = {
-    val domain = URI.parse(url).toOption.flatMap(_.host).map(_.name)
-    val newInfo = RoverArticleInfo(uriId = uriId, url = url, domain = domain, kind = kind.typeCode)
+    val newInfo = RoverArticleInfo(uriId = uriId, url = url, kind = kind.typeCode)
     newInfo.initializeSchedulingPolicy
   }
 
@@ -133,7 +127,6 @@ object RoverArticleInfo {
     seq: SequenceNumber[RoverArticleInfo] = SequenceNumber.ZERO,
     uriId: Id[NormalizedURI],
     url: String,
-    domain: Option[String],
     kind: String,
     bestVersionMajor: Option[VersionNumber[Article]],
     bestVersionMinor: Option[VersionNumber[Article]],
@@ -150,7 +143,7 @@ object RoverArticleInfo {
     val bestVersion = articleVersionFromDb(bestVersionMajor, bestVersionMinor)
     val latestVersion = articleVersionFromDb(latestVersionMajor, latestVersionMinor)
     val oldestVersion = articleVersionFromDb(oldestVersionMajor, oldestVersionMinor)
-    RoverArticleInfo(id, createdAt, updatedAt, state, seq, uriId, url, domain, kind, bestVersion, latestVersion, oldestVersion, lastFetchedAt, nextFetchAt, fetchInterval, failureCount, failureInfo, lastQueuedAt)
+    RoverArticleInfo(id, createdAt, updatedAt, state, seq, uriId, url, kind, bestVersion, latestVersion, oldestVersion, lastFetchedAt, nextFetchAt, fetchInterval, failureCount, failureInfo, lastQueuedAt)
   }
 
   def unapplyToDbRow(info: RoverArticleInfo) = {
@@ -165,7 +158,6 @@ object RoverArticleInfo {
       info.seq,
       info.uriId,
       info.url,
-      info.domain,
       info.kind,
       bestVersionMajor,
       bestVersionMinor,

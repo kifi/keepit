@@ -13,7 +13,7 @@
       </div>
       <div class="kf-upl-card-name-align">
         <div class="kf-upl-card-name">
-          <div class="kf-upl-card-name-clip">{{lib.name}}</div>
+          <div class="kf-upl-card-name-clip">{{lib.name|preventOrphans:16:(lib.name.length > 36 ? 1/3 : 0.6)}}</div>
         </div>
       </div>
     </a>

@@ -6,7 +6,6 @@ import com.keepit.common.time._
 
 import scala.concurrent.duration.Duration
 import scala.concurrent.duration._
-import scala.util.Random
 
 case class FetchSchedulingPolicy(
     maxRandomDelay: Duration,
@@ -14,21 +13,12 @@ case class FetchSchedulingPolicy(
     minInterval: Duration,
     maxInterval: Duration,
     intervalIncrement: Duration,
-    intervalDecrement: Duration,
-    maxBackoff: Duration,
-    backoffIncrement: Duration) {
+    intervalDecrement: Duration) {
 
-  private val maxRandomDelaySeconds: Int = maxRandomDelay.toSeconds.toInt
-  private def randomDelay: Duration = Random.nextInt(maxRandomDelaySeconds) seconds
+  private val randomDelay = new RandomDelay(maxRandomDelay)
 
-  def nextFetchAfterFailure(failureCount: Int): DateTime = {
-    val backoff = (backoffIncrement * (1 << failureCount)) min maxBackoff
-    val secondsToNextFetch = (backoff + randomDelay).toSeconds.toInt
-    currentDateTime plusSeconds secondsToNextFetch
-  }
-
-  def nextFetchAfterSuccess(interval: Duration): DateTime = {
-    val secondsToNextFetch = (interval + randomDelay).toSeconds.toInt
+  def nextFetch(interval: Duration): DateTime = {
+    val secondsToNextFetch = (interval + randomDelay()).toSeconds.toInt
     currentDateTime plusSeconds secondsToNextFetch
   }
 
@@ -50,9 +40,7 @@ object FetchSchedulingPolicy {
     minInterval = 7 days,
     maxInterval = 120 days,
     intervalIncrement = 0 days,
-    intervalDecrement = 0 days,
-    maxBackoff = 2 days,
-    backoffIncrement = 6 hours
+    intervalDecrement = 0 days
   )
 
   private val defaultSchedulingPolicy = FetchSchedulingPolicy(
@@ -61,8 +49,6 @@ object FetchSchedulingPolicy {
     minInterval = 7 days,
     maxInterval = 120 days,
     intervalIncrement = 5 days,
-    intervalDecrement = 5 days,
-    maxBackoff = 40 days,
-    backoffIncrement = 6 hours
+    intervalDecrement = 5 days
   )
 }

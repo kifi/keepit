@@ -1,10 +1,8 @@
 package com.keepit.common.net
 
 import com.keepit.common.logging.Logging
-import com.keepit.common.net.URIParserUtil._
 import com.keepit.common.strings.UTF8
 import scala.util.{ Failure, Success, Try }
-import scala.util.matching.Regex
 
 object URI extends Logging {
 
@@ -111,6 +109,8 @@ object URI extends Logging {
       parsedTargetUri <- URI.safelyParse(absoluteTargetUrl) if Try { java.net.URI.create(parsedTargetUri.toString()) } isSuccess
     } yield parsedTargetUri
   }
+
+  def parseDomain(url: String): Option[String] = URI.parse(url).toOption.flatMap(_.host).map(_.name)
 }
 
 class URI(val raw: Option[String], val scheme: Option[String], val userInfo: Option[String], val host: Option[Host], val port: Int, val path: Option[String], val query: Option[Query], val fragment: Option[String]) {

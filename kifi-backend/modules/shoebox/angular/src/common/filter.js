@@ -84,6 +84,13 @@ angular.module('kifi')
   };
 })
 
+.filter('preventOrphans', [
+  'util',
+  function (util) {
+    return util.preventOrphans;
+  }
+])
+
 .filter('domain', function () {
   var re = /^\w+:\/\/(?:www\.)?([^\/]+)/;
   return function (url) {

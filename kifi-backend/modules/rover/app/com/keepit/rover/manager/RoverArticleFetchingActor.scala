@@ -8,10 +8,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.rover.article.ArticleFetcherProvider
 import com.keepit.rover.model.{ RoverArticleInfo, ArticleInfoRepo }
 import com.keepit.rover.store.RoverArticleStore
-import com.keepit.scraper.ShortenedUrls
 import com.kifi.franz.SQSMessage
-import scala.collection.mutable.{ Map => MutableMap }
-import scala.collection.Map
 import scala.concurrent.duration._
 import com.keepit.common.core._
 
@@ -22,8 +19,6 @@ object RoverArticleFetchingActor {
   val minConcurrentFetchTasks: Int = 300
   val maxConcurrentFetchTasks: Int = 400
   val lockTimeOut = 10 minutes
-  val domainWideThrottlingWindow = 1 minute
-  val domainWideThrottlingLimit = 5
   sealed trait RoverFetchingActorMessage
   case object Close extends RoverFetchingActorMessage
   case object StartPullingTasks extends RoverFetchingActorMessage
@@ -90,38 +85,21 @@ class RoverArticleFetchingActor @Inject() (
 
   private def processTasks(tasks: Seq[SQSMessage[FetchTask]]): Unit = {
     if (!closing && tasks.nonEmpty) {
-      val (articleInfosById, recentFetchesByDomain) = db.readOnlyMaster { implicit session =>
-        val articleInfosById = articleInfoRepo.getAll(tasks.map(_.body.id).toSet)
-        val recentFetchesByDomain = {
-          val uniqueDomains = articleInfosById.values.flatMap(_.domain).toSet
-          MutableMap().withDefaultValue(0) ++= articleInfoRepo.countRecentFetchesByDomain(uniqueDomains, domainWideThrottlingWindow)
-        }
-        (articleInfosById, recentFetchesByDomain)
+      val articleInfosById = db.readOnlyMaster { implicit session =>
+        articleInfoRepo.getAll(tasks.map(_.body.id).toSet)
       }
 
       val moreFetching = tasks.filter { task =>
         val articleInfo = articleInfosById(task.body.id)
-        if (!articleInfo.shouldFetch) {
-          task.consume()
-          false
-        } else {
-          if (shouldThrottle(recentFetchesByDomain)(articleInfo)) {
-            false // task will show up in the queue again within lockTimeOut
-          } else {
-            startFetching(task, articleInfo)
-            articleInfo.domain.foreach(recentFetchesByDomain(_) += 1)
-            true
-          }
+        articleInfo.shouldFetch tap {
+          case true => startFetching(task, articleInfo)
+          case false => task.consume()
         }
       }
 
       log.info(s"Started fetching ${moreFetching.length} articles.")
       fetching ++= moreFetching
     }
-  }
-
-  private def shouldThrottle(recentFetchesByDomain: Map[String, Int])(info: RoverArticleInfo): Boolean = {
-    info.domain.exists(domain => !ShortenedUrls.domains.contains(domain) && recentFetchesByDomain.get(domain).exists(_ >= domainWideThrottlingLimit))
   }
 
   private def startFetching(task: SQSMessage[FetchTask], articleInfo: RoverArticleInfo): Unit = {
