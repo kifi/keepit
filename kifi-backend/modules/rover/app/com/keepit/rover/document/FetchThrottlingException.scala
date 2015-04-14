@@ -13,7 +13,7 @@ import scala.concurrent.duration._
 import play.api.libs.json.{ JsValue, Json, Format }
 
 case class FetchThrottlingException(url: String, destinationUrl: String, nextFetch: DateTime)
-  extends Throwable(s"Throttling fetch of $url with destination $destinationUrl. Try again at $nextFetch")
+  extends Exception(s"Throttling fetch of $url with destination $destinationUrl. Try again at $nextFetch")
 
 object FetchThrottlingException {
   val domainWideThrottlingWindow = 1 minute
