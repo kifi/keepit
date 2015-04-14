@@ -119,6 +119,14 @@ class MemcachedCache @Inject() (
 
   lazy val tc = new CustomSerializing().asInstanceOf[Transcoder[Any]]
 
+  private def handleTimeoutException(): Unit = {
+    try {
+      clientProvider.recreate()
+    } catch {
+      case e: Exception => airbrake.notify(s"failed to recreate memcached client after CheckedOperationTimeoutException")
+    }
+  }
+
   def get(key: String) = {
     logger.debug("Getting the cached for key " + key)
     var future: GetFuture[Any] = null
@@ -128,11 +136,7 @@ class MemcachedCache @Inject() (
     } catch {
       case timeout: CheckedOperationTimeoutException =>
         airbrake.notify("A timeout error has occurred while getting the value from memcached", timeout)
-        try {
-          clientProvider.recreate()
-        } catch {
-          case e: Exception => airbrake.notify(s"failed to recreate memcached client after CheckedOperationTimeoutException")
-        }
+        handleTimeoutException()
         if (future != null) future.cancel(false)
         None
       case e: Throwable =>
@@ -173,6 +177,12 @@ class MemcachedCache @Inject() (
         }
       }
     } catch {
+      case timeout: CheckedOperationTimeoutException =>
+        airbrake.notify(s"A timeout error has occurred while bulk getting ${keys.size} values from memcached", timeout)
+        handleTimeoutException()
+        if (future != null) future.cancel(false)
+        Map.empty[String, Any]
+
       case e: Throwable =>
         logger.error("An error has occurred while getting some values from memcached", e)
         if (future != null) future.cancel(false)
