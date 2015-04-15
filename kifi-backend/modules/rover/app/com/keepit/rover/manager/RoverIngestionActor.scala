@@ -2,7 +2,7 @@ package com.keepit.rover.manager
 
 import com.google.inject.{ Inject }
 import com.keepit.common.actor.ActorInstance
-import com.keepit.common.akka.{ UnsupportedActorMessage, FortyTwoActor }
+import com.keepit.common.akka.{ SafeFuture, UnsupportedActorMessage, FortyTwoActor }
 import com.keepit.common.db.{ SequenceNumber }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -11,7 +11,7 @@ import com.keepit.model.{ Name, IndexableUri, SystemValueRepo, NormalizedURI }
 import com.keepit.rover.model.ArticleInfoRepo
 import com.keepit.shoebox.ShoeboxServiceClient
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ Future, ExecutionContext }
 import scala.util.{ Failure, Success }
 
 object RoverIngestionActor {
@@ -40,10 +40,7 @@ class RoverIngestionActor @Inject() (
   def receive = {
     case ingestionMessage: RoverIngestionActorMessage => {
       ingestionMessage match {
-        case StartIngestion =>
-          if (!ingesting) {
-            startIngestion()
-          }
+        case StartIngestion => if (!ingesting) startIngestion()
         case CancelIngestion => endIngestion()
         case Ingest(updates, mayHaveMore) =>
           ingest(updates)
@@ -54,12 +51,18 @@ class RoverIngestionActor @Inject() (
   }
 
   private def startIngestion(): Unit = {
-    ingesting = true
     log.info(s"Starting ingestion...")
-    val seqNum = db.readOnlyMaster { implicit session =>
-      systemValueRepo.getSequenceNumber(roverNormalizedUriSeq) getOrElse SequenceNumber.ZERO
+    ingesting = true
+
+    val futureUris = SafeFuture {
+      db.readOnlyMaster { implicit session =>
+        systemValueRepo.getSequenceNumber(roverNormalizedUriSeq) getOrElse SequenceNumber.ZERO
+      }
+    } flatMap { seqNum =>
+      shoebox.getIndexableUris(seqNum, fetchSize)
     }
-    shoebox.getIndexableUris(seqNum, fetchSize).onComplete {
+
+    futureUris onComplete {
       case Failure(error) => {
         log.error("Could not fetch uri updates", error)
         self ! CancelIngestion
