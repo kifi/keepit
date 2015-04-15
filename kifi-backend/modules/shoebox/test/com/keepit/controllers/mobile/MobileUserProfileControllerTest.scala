@@ -4,16 +4,11 @@ import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.controller.FakeUserActionsHelper
-import com.keepit.common.crypto.FakeCryptoModule
 import com.keepit.common.db.ExternalId
-import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.social.FakeSocialGraphModule
-import com.keepit.common.store.FakeShoeboxStoreModule
-import com.keepit.eliza.FakeElizaServiceClientModule
-import com.keepit.heimdal.FakeHeimdalServiceClientModule
-import com.keepit.model.{ BasicUserWithFriendStatus, UserConnectionRepo, Username, User }
+import com.keepit.model.KeepFactory._
+import com.keepit.model._
 import com.keepit.scraper.FakeScrapeSchedulerModule
-import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.test.ShoeboxTestInjector
 import com.keepit.model.UserFactory._
@@ -24,6 +19,8 @@ import com.keepit.model.LibraryFactory._
 import com.keepit.model.LibraryFactoryHelper._
 import com.keepit.model.LibraryMembershipFactory._
 import com.keepit.model.LibraryMembershipFactoryHelper._
+import com.keepit.model.KeepFactory._
+import com.keepit.model.KeepFactoryHelper._
 import org.specs2.mutable.Specification
 import play.api.libs.json.Json
 import play.api.mvc.{ Result, Call }
@@ -42,6 +39,108 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
   )
 
   "MobileUserProfileController" should {
+
+    "get profile for self" in {
+      withDb(modules: _*) { implicit injector =>
+        val userConnectionRepo = inject[UserConnectionRepo]
+        val (user1, user2, user3, user4, user5, lib1) = db.readWrite { implicit session =>
+          val user1 = user().withName("George", "Washington").withUsername("GDubs").withPictureName("pic1").saved
+          val user2 = user().withName("Abe", "Lincoln").withUsername("abe").saved
+          val user3 = user().withName("Thomas", "Jefferson").withUsername("TJ").saved
+          val user4 = user().withName("John", "Adams").withUsername("jayjayadams").saved
+          val user5 = user().withName("Ben", "Franklin").withUsername("Benji").saved
+
+          inject[UserValueRepo].save(UserValue(userId = user1.id.get, name = UserValueName.USER_DESCRIPTION, value = "First Prez yo!"))
+          connect(user1 -> user2,
+            user1 -> user3,
+            user4 -> user1,
+            user2 -> user3).saved
+
+          val user1secretLib = libraries(3).map(_.withUser(user1).secret()).saved.head.savedFollowerMembership(user2)
+
+          val user1lib = library().withUser(user1).published().saved.savedFollowerMembership(user5, user4)
+          user1lib.visibility === LibraryVisibility.PUBLISHED
+
+          val user3lib = library().withUser(user3).published().saved
+          val user5lib = library().withUser(user5).published().saved.savedFollowerMembership(user1)
+          membership().withLibraryFollower(library().withUser(user5).published().saved, user1).unlisted().saved
+
+          keeps(2).map(_.withLibrary(user1secretLib)).saved
+          keeps(3).map(_.withLibrary(user1lib)).saved
+          keep().withLibrary(user3lib).saved
+
+          (user1, user2, user3, user4, user5, user1lib)
+        }
+
+        //non existing username
+        status(getProfile(Some(user1), Username("foo"))) must equalTo(NOT_FOUND)
+
+        //seeing a profile from an anonymos user
+        val anonViewer = getProfile(None, user1.username)
+        status(anonViewer) must equalTo(OK)
+        contentType(anonViewer) must beSome("application/json")
+        contentAsJson(anonViewer) === Json.parse(
+          s"""
+            {
+              "id":"${user1.externalId.id}",
+              "firstName":"George",
+              "lastName":"Washington",
+              "pictureName":"pic1.jpg",
+              "username": "GDubs",
+              "numLibraries":1,
+              "numFollowedLibraries": 1,
+              "numKeeps": 5,
+              "numConnections": 3,
+              "numFollowers": 2,
+              "biography":"First Prez yo!"
+            }
+          """)
+
+        //seeing a profile from another user (friend)
+        val friendViewer = getProfile(Some(user2), user1.username)
+        status(friendViewer) must equalTo(OK)
+        contentType(friendViewer) must beSome("application/json")
+        contentAsJson(friendViewer) === Json.parse(
+          s"""
+            {
+              "id":"${user1.externalId.id}",
+              "firstName":"George",
+              "lastName":"Washington",
+              "pictureName":"pic1.jpg",
+              "username": "GDubs",
+              "isFriend": true,
+              "numLibraries":2,
+              "numFollowedLibraries": 1,
+              "numKeeps": 5,
+              "numConnections": 3,
+              "numFollowers": 3,
+              "biography":"First Prez yo!"
+            }
+          """)
+
+        //seeing a profile of my own
+        val selfViewer = getProfile(Some(user1), user1.username)
+        status(selfViewer) must equalTo(OK)
+        contentType(selfViewer) must beSome("application/json")
+        contentAsJson(selfViewer) === Json.parse(
+          s"""
+            {
+              "id":"${user1.externalId.id}",
+              "firstName":"George",
+              "lastName":"Washington",
+              "pictureName":"pic1.jpg",
+              "username": "GDubs",
+              "numLibraries":4,
+              "numFollowedLibraries": 2,
+              "numKeeps": 5,
+              "numConnections": 3,
+              "numFollowers": 3,
+              "numInvitedLibraries": 0,
+              "biography":"First Prez yo!"
+            }
+          """)
+      }
+    }
 
     "get followers" in {
       withDb(modules: _*) { implicit injector =>
@@ -80,6 +179,17 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
         (selfViewerResponse2 \ "users").as[Seq[BasicUserWithFriendStatus]].map(_.externalId) === Seq(user2.externalId)
       }
     }
+  }
+
+  private def getProfile(viewer: Option[User], username: Username)(implicit injector: Injector): Future[Result] = {
+    viewer match {
+      case None => inject[FakeUserActionsHelper].unsetUser()
+      case Some(user) => inject[FakeUserActionsHelper].setUser(user)
+    }
+    val url = routes.MobileUserProfileController.profile(username.value).url
+    url === s"/m/1/user/${username.value}/profile"
+    val request = FakeRequest("GET", url)
+    controller.profile(username.value)(request)
   }
 
   private def getProfileFollowers(viewer: User, username: Username, page: Int, size: Int)(implicit injector: Injector): Future[Result] = {
