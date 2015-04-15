@@ -7,6 +7,10 @@ import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.controller._
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db._
+import com.keepit.model.LibraryFactory._
+import com.keepit.model.LibraryFactoryHelper._
+import com.keepit.model.KeepFactory._
+import com.keepit.model.KeepFactoryHelper._
 
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.common.helprank.HelpRankTestHelper
@@ -24,8 +28,11 @@ import com.keepit.test.ShoeboxTestInjector
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
 import play.api.libs.json._
+import play.api.mvc.Result
 import play.api.test.Helpers._
 import play.api.test._
+
+import scala.concurrent.Future
 
 class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector with HelpRankTestHelper {
 
@@ -820,6 +827,58 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
         }
         val jsonRes3 = Json.parse(contentAsString(result3)).toString
         jsonRes3.contains("tagB") && jsonRes3.contains("tagD") && !jsonRes3.contains("tagA") && !jsonRes3.contains("tagC") && !jsonRes3.contains("tagE") === true
+      }
+    }
+
+    "edit note" in {
+      withDb(controllerTestModules: _*) { implicit injector =>
+        val (user, keep, keepInactive) = db.readWrite { implicit session =>
+          val user = userRepo.save(User(firstName = "Eishay", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
+          val lib = library().withUser(user).saved
+          val keep = KeepFactory.keep().withUser(user).withLibrary(lib).withTitle("default").saved
+          val keepInactive = KeepFactory.keep().withUser(user).withLibrary(lib).withState(KeepStates.INACTIVE).saved
+
+          val targetKeep = keepRepo.get(keep.externalId)
+          targetKeep.title === Some("default")
+          targetKeep.note === None
+
+          (user, keep, keepInactive)
+        }
+
+        def editKeepInfo(user: User, keep: Keep, body: JsObject): Future[Result] = {
+          inject[FakeUserActionsHelper].setUser(user)
+          val path = com.keepit.controllers.mobile.routes.MobileKeepsController.editKeepInfo(keep.externalId).url
+          val request = FakeRequest("POST", path).withBody(body)
+          inject[MobileKeepsController].editKeepInfo(keep.externalId)(request)
+        }
+
+        val testInactiveKeep = editKeepInfo(user, keepInactive, Json.obj("title" -> "blahablhablhahbla"))
+        status(testInactiveKeep) must equalTo(NOT_FOUND)
+
+        val testEditTitle = editKeepInfo(user, keep, Json.obj("title" -> ""))
+        status(testEditTitle) must equalTo(NO_CONTENT)
+        db.readOnlyMaster { implicit s =>
+          val currentKeep = keepRepo.get(keep.externalId)
+          currentKeep.title === None
+          currentKeep.note === None
+        }
+
+        val testEditNote = editKeepInfo(user, keep, Json.obj("note" -> "first comment!"))
+        status(testEditNote) must equalTo(NO_CONTENT)
+        db.readOnlyMaster { implicit s =>
+          val currentKeep = keepRepo.get(keep.externalId)
+          currentKeep.title === None
+          currentKeep.note === Some("first comment!")
+        }
+
+        val testEditBoth = editKeepInfo(user, keep, Json.obj("title" -> "a real keep", "note" -> "a real note"))
+        status(testEditBoth) must equalTo(NO_CONTENT)
+        db.readOnlyMaster { implicit s =>
+          val currentKeep = keepRepo.get(keep.externalId)
+          currentKeep.title === Some("a real keep")
+          currentKeep.note === Some("a real note")
+        }
+
       }
     }
 
