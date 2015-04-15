@@ -24,6 +24,10 @@ import com.keepit.common.db.Id
 import com.keepit.scraper.embedly.EmbedlyCommander
 import com.keepit.common.core._
 
+object ScrapeWorker {
+  val DEACTIVATE_SHOEBOX_CALLBACKS = false
+}
+
 @ImplementedBy(classOf[ScrapeWorkerImpl])
 trait ScrapeWorker {
   def safeProcess(uri: NormalizedURI, info: ScrapeInfo, pageInfoOpt: Option[PageInfo], proxyOpt: Option[HttpProxy]): Future[Option[Article]]
@@ -129,7 +133,10 @@ class ScrapeWorkerImpl @Inject() (
         articleStore += (latestUri.id.get -> article)
         updateWordCountCache(latestUri.id.get, Some(article))
         for {
-          scrapedURI <- shoeboxCommander.saveNormalizedUri(updatedUri.withTitle(article.title).withState(NormalizedURIStates.SCRAPED))
+          scrapedURI <- {
+            if (ScrapeWorker.DEACTIVATE_SHOEBOX_CALLBACKS) Future.successful(updatedUri.withState(NormalizedURIStates.SCRAPED))
+            else shoeboxCommander.saveNormalizedUri(updatedUri.withTitle(article.title).withState(NormalizedURIStates.SCRAPED))
+          }
           _ <- shoeboxCommander.saveScrapeInfo(info.withDestinationUrl(article.destinationUrl).withDocumentChanged(signature.toBase64))
           uriImage <- postProcess(scrapedURI, article, signature)
         } yield {
@@ -257,23 +264,25 @@ class ScrapeWorkerImpl @Inject() (
   }
 
   private def runPornDetectorIfNecessary(normalizedUri: NormalizedURI, content: String, title: String, description: String, contentLang: Lang): Future[Unit] = {
-    uriCommander.isNonSensitive(normalizedUri.url).map { nonSensitive =>
-      if (!nonSensitive) {
-        if (contentLang == Lang("en") && content.size > 100) {
-          val detector = pornDetectorFactory.slidingWindow()
-          val isPorn = PornDomains.isPornDomain(normalizedUri.url) || detector.isPorn(content.take(100000)) || detector.isPorn(title) || detector.isPorn(description)
-          if (isPorn && normalizedUri.restriction.exists(_ != Restriction.ADULT)) {
-            log.warn(s"uri ${normalizedUri.id.get} is detected as porn. However, existing restirction found: ${normalizedUri.restriction}. Not going to mark it.")
+    if (ScrapeWorker.DEACTIVATE_SHOEBOX_CALLBACKS) Future.successful(()) else {
+      uriCommander.isNonSensitive(normalizedUri.url).map { nonSensitive =>
+        if (!nonSensitive) {
+          if (contentLang == Lang("en") && content.size > 100) {
+            val detector = pornDetectorFactory.slidingWindow()
+            val isPorn = PornDomains.isPornDomain(normalizedUri.url) || detector.isPorn(content.take(100000)) || detector.isPorn(title) || detector.isPorn(description)
+            if (isPorn && normalizedUri.restriction.exists(_ != Restriction.ADULT)) {
+              log.warn(s"uri ${normalizedUri.id.get} is detected as porn. However, existing restirction found: ${normalizedUri.restriction}. Not going to mark it.")
+            }
+            isPorn match {
+              case true if normalizedUri.restriction == None => shoeboxCommander.updateURIRestriction(normalizedUri.id.get, Some(Restriction.ADULT)) // don't override other restrictions
+              case false if normalizedUri.restriction == Some(Restriction.ADULT) => shoeboxCommander.updateURIRestriction(normalizedUri.id.get, None)
+              case _ => Future.successful(())
+            }
           }
-          isPorn match {
-            case true if normalizedUri.restriction == None => shoeboxCommander.updateURIRestriction(normalizedUri.id.get, Some(Restriction.ADULT)) // don't override other restrictions
-            case false if normalizedUri.restriction == Some(Restriction.ADULT) => shoeboxCommander.updateURIRestriction(normalizedUri.id.get, None)
-            case _ => Future.successful(())
-          }
+        } else {
+          log.debug(s"uri $normalizedUri is exempted from sensitive check!")
+          Future.successful(())
         }
-      } else {
-        log.debug(s"uri $normalizedUri is exempted from sensitive check!")
-        Future.successful(())
       }
     }
   }
@@ -343,37 +352,39 @@ class ScrapeWorkerImpl @Inject() (
 
   // Watch out: the NormalizedURI may come back as REDIRECTED
   private def processRedirects(uri: NormalizedURI, redirects: Seq[HttpRedirect]): Future[NormalizedURI] = {
-    @inline def resolveAndRecord(redirects: Seq[HttpRedirect]): Future[NormalizedURI] = {
-      val unrestrictedUri = removeRedirectRestriction(uri)
-      if (redirects.nonEmpty) {
-        log.info(s"Resolving redirects found at uri ${uri.id.get}: ${uri.url}: ${redirects.mkString("\n")}")
-      }
-      HttpRedirect.resolve(uri.url, redirects).map { absoluteDestination =>
-        val validRedirect = HttpRedirect(HttpStatus.SC_MOVED_PERMANENTLY, unrestrictedUri.url, absoluteDestination)
-        log.info(s"Found permanent $validRedirect for $uri")
-        shoeboxCommander.recordPermanentRedirect(unrestrictedUri, validRedirect)
-      } getOrElse {
-        redirects.headOption.foreach(relativeRedirect => log.warn(s"Ignoring relative redirect $relativeRedirect for $uri"))
-        Future.successful(unrestrictedUri)
-      }
-    }
-
-    val relevantRedirects = redirects.dropWhile(!_.isLocatedAt(uri.url))
-
-    relevantRedirects.headOption match {
-      case Some(redirect) if redirect.isShortener => resolveAndRecord(relevantRedirects)
-      case Some(redirect) if redirect.isPermanent =>
-        hasFishy301(uri) flatMap { isFishy =>
-          if (isFishy) {
-            Future.successful(updateRedirectRestriction(uri, redirect))
-          } else resolveAndRecord(relevantRedirects)
+    if (ScrapeWorker.DEACTIVATE_SHOEBOX_CALLBACKS) Future.successful(uri) else {
+      @inline def resolveAndRecord(redirects: Seq[HttpRedirect]): Future[NormalizedURI] = {
+        val unrestrictedUri = removeRedirectRestriction(uri)
+        if (redirects.nonEmpty) {
+          log.info(s"Resolving redirects found at uri ${uri.id.get}: ${uri.url}: ${redirects.mkString("\n")}")
         }
+        HttpRedirect.resolve(uri.url, redirects).map { absoluteDestination =>
+          val validRedirect = HttpRedirect(HttpStatus.SC_MOVED_PERMANENTLY, unrestrictedUri.url, absoluteDestination)
+          log.info(s"Found permanent $validRedirect for $uri")
+          shoeboxCommander.recordPermanentRedirect(unrestrictedUri, validRedirect)
+        } getOrElse {
+          redirects.headOption.foreach(relativeRedirect => log.warn(s"Ignoring relative redirect $relativeRedirect for $uri"))
+          Future.successful(unrestrictedUri)
+        }
+      }
 
-      case Some(temporaryRedirect) =>
-        Future.successful(updateRedirectRestriction(uri, temporaryRedirect))
+      val relevantRedirects = redirects.dropWhile(!_.isLocatedAt(uri.url))
 
-      case None => // no redirects
-        Future.successful(uri)
+      relevantRedirects.headOption match {
+        case Some(redirect) if redirect.isShortener => resolveAndRecord(relevantRedirects)
+        case Some(redirect) if redirect.isPermanent =>
+          hasFishy301(uri) flatMap { isFishy =>
+            if (isFishy) {
+              Future.successful(updateRedirectRestriction(uri, redirect))
+            } else resolveAndRecord(relevantRedirects)
+          }
+
+        case Some(temporaryRedirect) =>
+          Future.successful(updateRedirectRestriction(uri, temporaryRedirect))
+
+        case None => // no redirects
+          Future.successful(uri)
+      }
     }
   }
 
@@ -409,12 +420,14 @@ class ScrapeWorkerImpl @Inject() (
   }
 
   private def recordScrapedNormalization(uri: NormalizedURI, signature: Signature, destinationUrl: Option[String], canonicalUrl: String, alternateUrls: Set[String]): Future[Unit] = {
-    def sanitize(candidateUrl: String): Option[String] = URI.sanitize(destinationUrl getOrElse uri.url, candidateUrl).map(_.toString())
-    sanitize(canonicalUrl) match {
-      case None => Future.successful(())
-      case Some(properCanonicalUrl) =>
-        val properAlternateUrls = (alternateUrls.flatMap(sanitize) - uri.url - properCanonicalUrl).filterNot(_.length > NormalizedURI.UrlMaxLen).take(3)
-        shoeboxCommander.recordScrapedNormalization(uri.id.get, signature, properCanonicalUrl, Normalization.CANONICAL, properAlternateUrls)
+    if (ScrapeWorker.DEACTIVATE_SHOEBOX_CALLBACKS) Future.successful(()) else {
+      def sanitize(candidateUrl: String): Option[String] = URI.sanitize(destinationUrl getOrElse uri.url, candidateUrl).map(_.toString())
+      sanitize(canonicalUrl) match {
+        case None => Future.successful(())
+        case Some(properCanonicalUrl) =>
+          val properAlternateUrls = (alternateUrls.flatMap(sanitize) - uri.url - properCanonicalUrl).filterNot(_.length > NormalizedURI.UrlMaxLen).take(3)
+          shoeboxCommander.recordScrapedNormalization(uri.id.get, signature, properCanonicalUrl, Normalization.CANONICAL, properAlternateUrls)
+      }
     }
   }
 
