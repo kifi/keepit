@@ -204,12 +204,12 @@ class NormalizationServiceImpl @Inject() (
     val haveBeenUpdated = Set(currentReference.url, newReference.url)
     val toBeUpdated = for {
       url <- haveBeenUpdated
-      (_, normalizedURI) <- findVariations(url) if normalizedURI.normalization.isEmpty || normalizedURI.normalization.get <= newReference.normalization.get
+      (_, normalizedURI) <- findVariations(url) if !normalizedURI.normalization.exists(_ > newReference.normalization.get)
       toBeUpdated <- (normalizedURI.state, normalizedURI.redirect) match {
         case (NormalizedURIStates.INACTIVE, _) => None
         case (NormalizedURIStates.REDIRECTED, Some(id)) =>
           val redirectionURI = normalizedURIRepo.get(id)
-          if (redirectionURI.state != NormalizedURIStates.INACTIVE && redirectionURI.normalization.get <= newReference.normalization.get) Some(redirectionURI) else None
+          if (redirectionURI.state != NormalizedURIStates.INACTIVE && !redirectionURI.normalization.exists(_ > newReference.normalization.get)) Some(redirectionURI) else None
         case (_, _) => Some(normalizedURI)
       }
     } yield toBeUpdated
