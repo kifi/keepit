@@ -162,7 +162,7 @@ class MemcachedCache @Inject() (
   def remove(key: String) {
     val client = getClient
     try {
-      getClient.delete(key)
+      client.delete(key)
     } catch {
       case timeout: CheckedOperationTimeoutException =>
         handleTimeoutException(client)
