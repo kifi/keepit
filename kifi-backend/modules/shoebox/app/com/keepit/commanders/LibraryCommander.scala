@@ -1030,12 +1030,12 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def joinLibrary(userId: Id[User], libraryId: Id[Library], authToken: Option[String] = None)(implicit eventContext: HeimdalContext): Either[LibraryFail, Library] = {
+  def joinLibrary(userId: Id[User], libraryId: Id[Library], authToken: Option[String] = None, hashedPassPhrase: Option[HashedPassPhrase] = None)(implicit eventContext: HeimdalContext): Either[LibraryFail, Library] = {
     val (lib, inviteList) = db.readOnlyMaster { implicit s =>
       val lib = libraryRepo.get(libraryId)
-      val tokenInvites = authToken.map { token =>
-        libraryInviteRepo.getByLibraryIdAndAuthToken(libraryId, token)
-      } getOrElse Seq.empty
+      val tokenInvites = if (authToken.isDefined && hashedPassPhrase.isDefined) {
+        getValidLibInvitesFromAuthTokenAndPassPhrase(libraryId, authToken, hashedPassPhrase)
+      } else Seq.empty
       val libInvites = libraryInviteRepo.getWithLibraryIdAndUserId(libraryId, userId)
       val allInvites = tokenInvites ++ libInvites
       (lib, allInvites)
@@ -1043,7 +1043,7 @@ class LibraryCommander @Inject() (
 
     if (lib.kind == LibraryKind.SYSTEM_MAIN || lib.kind == LibraryKind.SYSTEM_SECRET)
       Left(LibraryFail(FORBIDDEN, "cant_join_system_generated_library"))
-    else if (lib.visibility != LibraryVisibility.PUBLISHED && inviteList.isEmpty) // private library & no library invites with matching authtokens
+    else if (lib.visibility != LibraryVisibility.PUBLISHED && inviteList.isEmpty) // private library & no library invites with matching authtoken/passphrase
       Left(LibraryFail(FORBIDDEN, "cant_join_nonpublished_library"))
     else {
       val maxAccess = if (inviteList.isEmpty) LibraryAccess.READ_ONLY else inviteList.sorted.last.access

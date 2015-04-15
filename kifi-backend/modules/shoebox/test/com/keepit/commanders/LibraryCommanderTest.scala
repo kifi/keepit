@@ -652,8 +652,11 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           libraryInviteRepo.save(LibraryInvite(libraryId = libShield.id.get, inviterId = userAgent.id.get, emailAddress = Some(EmailAddress("incrediblehulk@gmail.com")), access = LibraryAccess.READ_ONLY, authToken = "asdf", passPhrase = "unlock"))
           libraryInviteRepo.getByLibraryIdAndAuthToken(libShield.id.get, "asdf").exists(i => i.state == LibraryInviteStates.ACCEPTED) === false
         }
+        val hashedPassPhrase1 = HashedPassPhrase.generateHashedPhrase("attempt") // wrong passphrase)
+        libraryCommander.joinLibrary(userHulk.id.get, libShield.id.get, Some("asdf"), Some(hashedPassPhrase1)).isLeft === true
 
-        val successJoin = libraryCommander.joinLibrary(userHulk.id.get, libShield.id.get, Some("asdf"))
+        val hashedPassPhrase2 = HashedPassPhrase.generateHashedPhrase("unlock")
+        val successJoin = libraryCommander.joinLibrary(userHulk.id.get, libShield.id.get, Some("asdf"), Some(hashedPassPhrase2))
         successJoin.isRight === true
         db.readOnlyMaster { implicit s =>
           libraryInviteRepo.getByLibraryIdAndAuthToken(libShield.id.get, "asdf").exists(i => i.state == LibraryInviteStates.ACCEPTED) === true
