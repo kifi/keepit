@@ -654,12 +654,12 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         }
 
         // no authtoken or passphrase (invite by email) - should Fail
-        libraryCommander.joinLibrary(userHulk.id.get, libShield.id.get, None, None).isLeft === true
+        libraryCommander.joinLibrary(userHulk.id.get, libShield.id.get, None, None).isRight === false
 
         // incorrect passphrases (invite by email) - should Fail
         val hashedPassPhraseFail = HashedPassPhrase.generateHashedPhrase("attempt")
         libraryCommander.joinLibrary(userHulk.id.get, libShield.id.get, Some("asdf"), Some(hashedPassPhraseFail)).isLeft === true
-        libraryCommander.joinLibrary(userHulk.id.get, libShield.id.get, Some("asdf"), None).isLeft === true
+        libraryCommander.joinLibrary(userHulk.id.get, libShield.id.get, Some("asdf"), None).isRight === false
 
         // correct authtoken & passphrase (invite by email)
         val hashedPassPhrase2 = HashedPassPhrase.generateHashedPhrase("unlock")
@@ -668,6 +668,17 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         db.readOnlyMaster { implicit s =>
           libraryInviteRepo.getByLibraryIdAndAuthToken(libShield.id.get, "asdf").exists(i => i.state == LibraryInviteStates.ACCEPTED) === true
         }
+
+        // Joining a private library from a kifi invite (library invite with a userId)
+        db.readWrite { implicit s =>
+          libraryInviteRepo.save(LibraryInvite(libraryId = libShield.id.get, inviterId = userAgent.id.get, userId = userIron.id, access = LibraryAccess.READ_ONLY, authToken = "qwer", passPhrase = "unlock"))
+          libraryInviteRepo.getByLibraryIdAndAuthToken(libShield.id.get, "qwer").exists(i => i.state == LibraryInviteStates.ACCEPTED) === false
+        }
+        libraryCommander.joinLibrary(userIron.id.get, libShield.id.get, None, None).isRight === true
+        db.readOnlyMaster { implicit s =>
+          libraryInviteRepo.getByLibraryIdAndAuthToken(libShield.id.get, "qwer").exists(i => i.state == LibraryInviteStates.ACCEPTED) === true
+        }
+
       }
     }
 
