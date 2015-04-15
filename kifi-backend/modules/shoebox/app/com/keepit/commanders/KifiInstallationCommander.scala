@@ -16,7 +16,7 @@ class KifiInstallationCommander @Inject() (
     installation.updatedAt
   }
 
-  def isMobileVersionGreaterThen(userId: Id[User], android: KifiAndroidVersion, ios: KifiIPhoneVersion): Boolean = {
+  def isMobileVersionEqualOrGreaterThen(userId: Id[User], android: KifiAndroidVersion, ios: KifiIPhoneVersion): Boolean = {
     db.readOnlyReplica { implicit s => kifiInstallationRepo.lastUpdatedMobile(userId) } exists { installation =>
       installation.platform match {
         case KifiInstallationPlatform.Android =>

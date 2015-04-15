@@ -781,7 +781,7 @@ class LibraryCommander @Inject() (
     ) map { _ =>
         val message = s"${inviter.firstName} invited someone to your Library ${lib.name}!"
         inviteeIdSet.foreach { userId =>
-          val canSendPush = kifiInstallationCommander.isMobileVersionGreaterThen(userId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
+          val canSendPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(userId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
           if (canSendPush) {
             elizaClient.sendUserPushNotification(
               userId = lib.ownerId,
@@ -811,7 +811,7 @@ class LibraryCommander @Inject() (
     ) map { _ =>
         val message = s"""${inviter.firstName} ${inviter.lastName} invited you to follow: ${lib.name}"""
         inviteeIdSet.foreach { userId =>
-          val canSendPush = kifiInstallationCommander.isMobileVersionGreaterThen(userId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
+          val canSendPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(userId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
           if (canSendPush) {
             elizaClient.sendLibraryPushNotification(
               userId,
@@ -979,7 +979,7 @@ class LibraryCommander @Inject() (
       ))
     ) map { _ =>
         if (!lotsOfFollowers) {
-          val canSendPush = kifiInstallationCommander.isMobileVersionGreaterThen(lib.ownerId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
+          val canSendPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(lib.ownerId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
           if (canSendPush) {
             elizaClient.sendUserPushNotification(
               userId = lib.ownerId,
@@ -1095,7 +1095,7 @@ class LibraryCommander @Inject() (
         ))
       ) map { _ =>
           val message = s"${invaitee.firstName} is now following ${lib.name}"
-          val canSendPush = kifiInstallationCommander.isMobileVersionGreaterThen(inviterId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
+          val canSendPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(inviterId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
           if (canSendPush) {
             elizaClient.sendUserPushNotification(
               userId = inviterId,

@@ -95,7 +95,7 @@ class ActivityPusher @Inject() (
     db.readWrite { implicit session =>
       val now = clock.now
       val pushTask = activityPushTaskRepo.getByUser(userId).getOrElse {
-        val canSendPush = kifiInstallationCommander.isMobileVersionGreaterThen(userId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
+        val canSendPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(userId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
         createActivityPushForUser(userId, now, if (canSendPush) ActivityPushTaskStates.ACTIVE else ActivityPushTaskStates.INACTIVE)
       }
       val recentInstall = pushTask.createdAt.plusDays(1) > now
@@ -221,8 +221,10 @@ class ActivityPusher @Inject() (
     db.readOnlyReplica { implicit s =>
       val personas = Random.shuffle(userPersonaRepo.getPersonasForUser(userId))
       val message = {
-        if (personas.isEmpty) None
-        else if (personas.size == 1) {
+        if (personas.isEmpty) {
+          log.warn(s"no personas user $userId")
+          None
+        } else if (personas.size == 1) {
           val msg = {
             if (experiment == PushNotificationExperiment.Experiment1) s"""Your feed has updates. See what other ${personas.head.displayNamePlural} are talking about."""
             else s"""Your feed has updates. See what other ${personas.head.displayNamePlural} are reading."""
@@ -241,7 +243,7 @@ class ActivityPusher @Inject() (
   }
 
   private def getMessage(userId: Id[User]): Option[(PushNotificationMessage, PushNotificationExperiment)] = {
-    val canSendLibPush = kifiInstallationCommander.isMobileVersionGreaterThen(userId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
+    val canSendLibPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(userId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
     val experiment = if (Random.nextBoolean()) PushNotificationExperiment.Experiment1 else PushNotificationExperiment.Experiment2
     val libMessage = if (canSendLibPush) getLibraryActivityMessage(experiment, userId) else None
     val messageOpt = libMessage orElse getPersonaActivityMessage(experiment, userId)
@@ -269,7 +271,7 @@ class ActivityPusher @Inject() (
       users map {
         case user =>
           val lastActive = kifiInstallationCommander.lastMobileAppStartTime(user)
-          val canSendPush = kifiInstallationCommander.isMobileVersionGreaterThen(user, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
+          val canSendPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(user, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
           createActivityPushForUser(user, lastActive, if (canSendPush) ActivityPushTaskStates.ACTIVE else ActivityPushTaskStates.INACTIVE).id.get
       }
     }
