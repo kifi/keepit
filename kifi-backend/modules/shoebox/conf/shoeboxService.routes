@@ -467,7 +467,7 @@ GET     /site/user/incomingFriendRequests @com.keepit.controllers.website.UserCo
 
 GET     /site/user/friends          @com.keepit.controllers.website.UserController.friends(page: Int ?= 0, pageSize: Int ?= 1000)
 GET     /site/user/friends/recommended   @com.keepit.controllers.website.PeopleRecommendationController.getFriendRecommendations(offset: Int ?= 0, limit: Int ?= 5)
-GET     /site/user/friends/recommendedCards @com.keepit.controllers.website.UserProfileController.getFriendRecommendations(fullInfoLimit: Int ?= 12, maxExtraIds: Int ?= 12)
+GET     /site/user/friends/recommended/cards @com.keepit.controllers.website.UserProfileController.getFriendRecommendations(n: Int ?= 12, ids: Int ?= 12)
 GET     /site/user/invite/recommended    @com.keepit.controllers.website.PeopleRecommendationController.getInviteRecommendations(offset: Int ?= 0, limit: Int ?= 5)
 POST    /site/user/invite/hide           @com.keepit.controllers.website.PeopleRecommendationController.hideInviteRecommendation()
 POST    /site/user/:id/hide              @com.keepit.controllers.website.PeopleRecommendationController.hideFriendRecommendation(id: ExternalId[User])
