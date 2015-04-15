@@ -121,20 +121,18 @@ class NormalizationServiceImpl @Inject() (
           assert(weakerCandidates.isEmpty || weakerCandidates.head.normalization <= strongerCandidate.normalization, s"Normalization candidates ${weakerCandidates.head} and $strongerCandidate have not been sorted properly for $currentReference")
           assert(currentReference.normalization.isEmpty || currentReference.normalization.get <= strongerCandidate.normalization, s"Normalization candidate $strongerCandidate has not been filtered properly for $currentReference")
 
-          db.readOnlyMaster { implicit session =>
-            action(strongerCandidate) match {
-              case Accept => Future.successful((Some(strongerCandidate), weakerCandidates))
-              case Reject => findCandidate(weakerCandidates)
-              case Check(contentCheck) =>
-                if (currentReference.url == strongerCandidate.url) Future.successful(Some(strongerCandidate), weakerCandidates)
-                else for {
-                  contentCheck <- contentCheck(strongerCandidate)
-                  (successful, weaker) <- {
-                    if (contentCheck) Future.successful((Some(strongerCandidate), weakerCandidates))
-                    else findCandidate(weakerCandidates)
-                  }
-                } yield (successful, weaker)
-            }
+          action(strongerCandidate) match {
+            case Accept => Future.successful((Some(strongerCandidate), weakerCandidates))
+            case Reject => findCandidate(weakerCandidates)
+            case Check(contentCheck) =>
+              if (currentReference.url == strongerCandidate.url) Future.successful(Some(strongerCandidate), weakerCandidates)
+              else for {
+                contentCheck <- contentCheck(strongerCandidate)
+                (successful, weaker) <- {
+                  if (contentCheck) Future.successful((Some(strongerCandidate), weakerCandidates))
+                  else findCandidate(weakerCandidates)
+                }
+              } yield (successful, weaker)
           }
       }
     }
