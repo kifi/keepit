@@ -81,7 +81,6 @@ class ActivityPusher @Inject() (
     notifyPreferenceRepo: UserNotifyPreferenceRepo,
     userPersonaRepo: UserPersonaRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
-    kifiInstallationRepo: KifiInstallationRepo,
     kifiInstallationCommander: KifiInstallationCommander,
     libraryImageCommander: LibraryImageCommander,
     s3ImageStore: S3ImageStore,
@@ -96,7 +95,7 @@ class ActivityPusher @Inject() (
     db.readWrite { implicit session =>
       val now = clock.now
       val pushTask = activityPushTaskRepo.getByUser(userId).getOrElse {
-        val canSendPush = kifiInstallationCommander.isMobileVersionGreaterThen(userId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
+        val canSendPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(userId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
         createActivityPushForUser(userId, now, if (canSendPush) ActivityPushTaskStates.ACTIVE else ActivityPushTaskStates.INACTIVE)
       }
       val recentInstall = pushTask.createdAt.plusDays(1) > now
@@ -194,15 +193,11 @@ class ActivityPusher @Inject() (
   }
 
   private def pushActivity(activity: ActivityPushTask): Unit = {
-    db.readOnlyReplica { implicit s =>
-      kifiInstallationRepo.lastUpdatedMobile(activity.userId)
-    }.foreach { latestInstallation =>
-      getMessage(activity.userId, latestInstallation) match {
-        case Some((message, experimant)) =>
-          pushMessage(activity, message, experimant)
-        case None =>
-          log.info(s"skipping push activity for user ${activity.userId}")
-      }
+    getMessage(activity.userId) match {
+      case Some((message, experimant)) =>
+        pushMessage(activity, message, experimant)
+      case None =>
+        log.info(s"skipping push activity for user ${activity.userId}")
     }
   }
 
@@ -226,8 +221,10 @@ class ActivityPusher @Inject() (
     db.readOnlyReplica { implicit s =>
       val personas = Random.shuffle(userPersonaRepo.getPersonasForUser(userId))
       val message = {
-        if (personas.isEmpty) None
-        else if (personas.size == 1) {
+        if (personas.isEmpty) {
+          log.warn(s"no personas user $userId")
+          None
+        } else if (personas.size == 1) {
           val msg = {
             if (experiment == PushNotificationExperiment.Experiment1) s"""Your feed has updates. See what other ${personas.head.displayNamePlural} are talking about."""
             else s"""Your feed has updates. See what other ${personas.head.displayNamePlural} are reading."""
@@ -245,30 +242,12 @@ class ActivityPusher @Inject() (
     }
   }
 
-  def canSendPushForLibraries(installation: KifiInstallation): Boolean = {
-    installation.platform match {
-      case KifiInstallationPlatform.Android =>
-        installation.version.compareIt(KifiAndroidVersion("2.2.4")) >= 0
-      case KifiInstallationPlatform.IPhone =>
-        installation.version.compareIt(KifiIPhoneVersion("2.1.0")) >= 0
-      case _ => throw new Exception(s"Don't know platform for $installation")
-    }
-  }
-
-  def getMessage(userId: Id[User], installation: KifiInstallation): Option[(PushNotificationMessage, PushNotificationExperiment)] = {
+  private def getMessage(userId: Id[User]): Option[(PushNotificationMessage, PushNotificationExperiment)] = {
+    val canSendLibPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(userId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
     val experiment = if (Random.nextBoolean()) PushNotificationExperiment.Experiment1 else PushNotificationExperiment.Experiment2
-    val libMessage = if (canSendPushForLibraries(installation)) getLibraryActivityMessage(experiment, userId) else None
+    val libMessage = if (canSendLibPush) getLibraryActivityMessage(experiment, userId) else None
     val messageOpt = libMessage orElse getPersonaActivityMessage(experiment, userId)
     messageOpt.map(message => (message, experiment))
-  }
-
-  def getLastActivity(userId: Id[User])(implicit session: RSession): DateTime = {
-    val installation = kifiInstallationRepo.lastUpdatedMobile(userId).getOrElse(throw new Exception(s"should not get to this point if user $userId has no mobile installation"))
-    val lastActive = libraryRepo.getAllByOwner(userId).map(lib => lib.lastKept.getOrElse(lib.updatedAt)).sorted.reverse.headOption
-    lastActive match {
-      case Some(time) if time.isAfter(installation.updatedAt) => time
-      case _ => installation.updatedAt
-    }
   }
 
   def createPushActivityEntities(batchSize: Int): Seq[Id[ActivityPushTask]] = {
@@ -285,18 +264,15 @@ class ActivityPusher @Inject() (
 
   private def createPushActivityEntitiesBatch(batchSize: Int): Seq[Id[ActivityPushTask]] = {
     val users = db.readOnlyMaster { implicit s => //need to use master since we'll quickly gate to race condition because of replica lag
-      val userIds = activityPushTaskRepo.getMobileUsersWithoutActivityPushTask(batchSize)
-      val usersWithLastKeep = userRepo.getAllUsers(userIds).values map { user =>
-        user -> getLastActivity(user.id.get)
-      }
-      usersWithLastKeep.toSeq
+      activityPushTaskRepo.getMobileUsersWithoutActivityPushTask(batchSize)
     }
     db.readWrite { implicit s =>
       log.info(s"[createPushActivityEntitiesBatch] creating ${users.size} tasks for users")
       users map {
-        case (user, lastActive) =>
-          val canSendPush = kifiInstallationCommander.isMobileVersionGreaterThen(user.id.get, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
-          createActivityPushForUser(user.id.get, lastActive, if (canSendPush) ActivityPushTaskStates.ACTIVE else ActivityPushTaskStates.INACTIVE).id.get
+        case user =>
+          val lastActive = kifiInstallationCommander.lastMobileAppStartTime(user)
+          val canSendPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(user, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
+          createActivityPushForUser(user, lastActive, if (canSendPush) ActivityPushTaskStates.ACTIVE else ActivityPushTaskStates.INACTIVE).id.get
       }
     }
   }

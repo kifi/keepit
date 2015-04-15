@@ -59,51 +59,5 @@ class ActivityPushTest extends Specification with ShoeboxTestInjector {
         }
       }
     }
-    "canSendPushForLibraries iPhone" in {
-      withDb(modules: _*) { implicit injector =>
-        val pusher = inject[ActivityPusher]
-        pusher.canSendPushForLibraries(KifiInstallation(
-          userId = Id[User](1),
-          version = KifiIPhoneVersion("2.1.0"),
-          externalId = ExternalId[KifiInstallation](),
-          userAgent = UserAgent("my iphone"),
-          platform = KifiInstallationPlatform.IPhone)) === true
-        pusher.canSendPushForLibraries(KifiInstallation(
-          userId = Id[User](1),
-          version = KifiIPhoneVersion("1.1.0"),
-          externalId = ExternalId[KifiInstallation](),
-          userAgent = UserAgent("my iphone"),
-          platform = KifiInstallationPlatform.IPhone)) === false
-        pusher.canSendPushForLibraries(KifiInstallation(
-          userId = Id[User](1),
-          version = KifiIPhoneVersion("2.2.0"),
-          externalId = ExternalId[KifiInstallation](),
-          userAgent = UserAgent("my iphone"),
-          platform = KifiInstallationPlatform.IPhone)) === true
-      }
-    }
-    "canSendPushForLibraries Android" in {
-      withDb(modules: _*) { implicit injector =>
-        val pusher = inject[ActivityPusher]
-        pusher.canSendPushForLibraries(KifiInstallation(
-          userId = Id[User](1),
-          version = KifiAndroidVersion("2.2.4"),
-          externalId = ExternalId[KifiInstallation](),
-          userAgent = UserAgent("my Android"),
-          platform = KifiInstallationPlatform.Android)) === true
-        pusher.canSendPushForLibraries(KifiInstallation(
-          userId = Id[User](1),
-          version = KifiAndroidVersion("1.1.0"),
-          externalId = ExternalId[KifiInstallation](),
-          userAgent = UserAgent("my Android"),
-          platform = KifiInstallationPlatform.Android)) === false
-        pusher.canSendPushForLibraries(KifiInstallation(
-          userId = Id[User](1),
-          version = KifiAndroidVersion("2.3.0"),
-          externalId = ExternalId[KifiInstallation](),
-          userAgent = UserAgent("my Android"),
-          platform = KifiInstallationPlatform.Android)) === true
-      }
-    }
   }
 }

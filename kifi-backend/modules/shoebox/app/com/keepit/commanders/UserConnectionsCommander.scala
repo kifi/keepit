@@ -219,7 +219,7 @@ class UserConnectionsCommander @Inject() (
       category = NotificationCategory.User.FRIEND_ACCEPTED,
       extra = Some(Json.obj("friend" -> BasicUser.fromUser(respondingUser)))
     ) map { _ =>
-        val canSendPush = kifiInstallationCommander.isMobileVersionGreaterThen(friend.id.get, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
+        val canSendPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(friend.id.get, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
         if (canSendPush) {
           elizaServiceClient.sendUserPushNotification(
             userId = friend.id.get,
@@ -254,7 +254,7 @@ class UserConnectionsCommander @Inject() (
       category = NotificationCategory.User.FRIEND_REQUEST,
       extra = Some(Json.obj("friend" -> BasicUser.fromUser(requestingUser)))
     ) map { id =>
-        val canSendPush = kifiInstallationCommander.isMobileVersionGreaterThen(recipient.id.get, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
+        val canSendPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(recipient.id.get, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
         if (canSendPush) {
           elizaServiceClient.sendUserPushNotification(
             userId = recipient.id.get,
