@@ -1030,25 +1030,23 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def joinLibrary(userId: Id[User], libraryId: Id[Library], authToken: Option[String] = None, hashedPassPhrase: Option[HashedPassPhrase] = None)(implicit eventContext: HeimdalContext): Either[LibraryFail, Library] = {
-    val (lib, listInvites) = db.readOnlyMaster { implicit s =>
+  def joinLibrary(userId: Id[User], libraryId: Id[Library], authToken: Option[String] = None)(implicit eventContext: HeimdalContext): Either[LibraryFail, Library] = {
+    val (lib, inviteList) = db.readOnlyMaster { implicit s =>
       val lib = libraryRepo.get(libraryId)
-      val listInvites = if (lib.visibility != LibraryVisibility.PUBLISHED && authToken.isDefined) { // private library & auth token (opened by email) requires checking of pass phrase
-        getValidLibInvitesFromAuthTokenAndPassPhrase(libraryId, authToken, hashedPassPhrase)
-      } else if (authToken.isDefined) { // public library & auth token (opened by email)
-        libraryInviteRepo.getByLibraryIdAndAuthToken(libraryId, authToken.get)
-      } else { // public or private library (called from kifi.com)
-        libraryInviteRepo.getWithLibraryIdAndUserId(libraryId, userId)
-      }
-      (lib, listInvites)
+      val tokenInvites = authToken.map { token =>
+        libraryInviteRepo.getByLibraryIdAndAuthToken(libraryId, token)
+      } getOrElse Seq.empty
+      val libInvites = libraryInviteRepo.getWithLibraryIdAndUserId(libraryId, userId)
+      val allInvites = tokenInvites ++ libInvites
+      (lib, allInvites)
     }
 
     if (lib.kind == LibraryKind.SYSTEM_MAIN || lib.kind == LibraryKind.SYSTEM_SECRET)
       Left(LibraryFail(FORBIDDEN, "cant_join_system_generated_library"))
-    else if (lib.visibility != LibraryVisibility.PUBLISHED && listInvites.isEmpty)
+    else if (lib.visibility != LibraryVisibility.PUBLISHED && inviteList.isEmpty) // private library & no library invites with matching authtokens
       Left(LibraryFail(FORBIDDEN, "cant_join_nonpublished_library"))
     else {
-      val maxAccess = if (listInvites.isEmpty) LibraryAccess.READ_ONLY else listInvites.sorted.last.access
+      val maxAccess = if (inviteList.isEmpty) LibraryAccess.READ_ONLY else inviteList.sorted.last.access
       val updatedLib = db.readWrite(attempts = 3) { implicit s =>
         libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId, None) match {
           case None =>
@@ -1061,10 +1059,10 @@ class LibraryCommander @Inject() (
             libraryMembershipRepo.save(mem.copy(access = maxWithExisting, state = LibraryMembershipStates.ACTIVE, lastJoinedAt = Some(currentDateTime)))
         }
         val updatedLib = libraryRepo.save(lib.copy(memberCount = libraryMembershipRepo.countWithLibraryId(libraryId)))
-        listInvites.foreach { inv =>
+        inviteList.foreach { inv =>
           libraryInviteRepo.save(inv.copy(state = LibraryInviteStates.ACCEPTED))
         }
-        val invitesToAlert = listInvites.filterNot(_.inviterId == lib.ownerId)
+        val invitesToAlert = inviteList.filterNot(_.inviterId == lib.ownerId)
         if (invitesToAlert.nonEmpty) {
           val invaitee = userRepo.get(userId)
           val owner = basicUserRepo.load(lib.ownerId)
