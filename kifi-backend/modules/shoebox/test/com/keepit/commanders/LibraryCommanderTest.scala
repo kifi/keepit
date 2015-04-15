@@ -652,9 +652,16 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           libraryInviteRepo.save(LibraryInvite(libraryId = libShield.id.get, inviterId = userAgent.id.get, emailAddress = Some(EmailAddress("incrediblehulk@gmail.com")), access = LibraryAccess.READ_ONLY, authToken = "asdf", passPhrase = "unlock"))
           libraryInviteRepo.getByLibraryIdAndAuthToken(libShield.id.get, "asdf").exists(i => i.state == LibraryInviteStates.ACCEPTED) === false
         }
-        val hashedPassPhrase1 = HashedPassPhrase.generateHashedPhrase("attempt") // wrong passphrase)
-        libraryCommander.joinLibrary(userHulk.id.get, libShield.id.get, Some("asdf"), Some(hashedPassPhrase1)).isLeft === true
 
+        // no authtoken or passphrase (invite by email) - should Fail
+        libraryCommander.joinLibrary(userHulk.id.get, libShield.id.get, None, None).isLeft === true
+
+        // incorrect passphrases (invite by email) - should Fail
+        val hashedPassPhraseFail = HashedPassPhrase.generateHashedPhrase("attempt")
+        libraryCommander.joinLibrary(userHulk.id.get, libShield.id.get, Some("asdf"), Some(hashedPassPhraseFail)).isLeft === true
+        libraryCommander.joinLibrary(userHulk.id.get, libShield.id.get, Some("asdf"), None).isLeft === true
+
+        // correct authtoken & passphrase (invite by email)
         val hashedPassPhrase2 = HashedPassPhrase.generateHashedPhrase("unlock")
         val successJoin = libraryCommander.joinLibrary(userHulk.id.get, libShield.id.get, Some("asdf"), Some(hashedPassPhrase2))
         successJoin.isRight === true
