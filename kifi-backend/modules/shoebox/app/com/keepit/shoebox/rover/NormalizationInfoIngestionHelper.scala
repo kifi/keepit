@@ -1,10 +1,11 @@
 package com.keepit.shoebox.rover
 
 import com.google.inject.{ Inject, Singleton }
+import com.keepit.common.CollectionHelpers
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
-import com.keepit.common.net.URI
+import com.keepit.common.net.{ Query, URI }
 import com.keepit.model.{ Normalization, NormalizedURI, NormalizedURIRepo }
 import com.keepit.normalizer._
 import com.keepit.rover.article.{ GithubArticle, ArticleKind }
@@ -32,7 +33,7 @@ class NormalizationInfoIngestionHelper @Inject() (
   } tap { _.imap { hasBeenRenormalized => if (hasBeenRenormalized) log.info(s"Uri $uriId has been renormalized after processing $info found at $destinationUrl") } }
 
   private def getUriNormalizationsCandidates(articleKind: ArticleKind[_], destinationUrl: String, info: NormalizationInfo): Seq[ScrapedCandidate] = {
-    articleKind match {
+    val scrapedCandidates = articleKind match {
       case GithubArticle => Seq.empty[ScrapedCandidate] // we don't trust Github's canonical urls
       case _ => Map(
         Normalization.CANONICAL -> info.canonicalUrl,
@@ -41,6 +42,7 @@ class NormalizationInfoIngestionHelper @Inject() (
           case (normalization, Some(candidateUrl)) => ScrapedCandidate(candidateUrl, normalization)
         }.toSeq
     }
+    CollectionHelpers.dedupBy(scrapedCandidates.sortBy(_.normalization).reverse)(_.url)
   }
 
   private def processAlternateUrls(bestReferenceUriId: Id[NormalizedURI], destinationUrl: String, info: NormalizationInfo): Unit = {
@@ -75,12 +77,28 @@ class NormalizationInfoIngestionHelper @Inject() (
 
       // Question marks are allowed in query parameter names and values, but their presence
       // in a canonical URL usually indicates a bad url.
-      lazy val hasQuestionMark = (parsed.query.exists(_.params.exists(p => p.name.contains('?') || p.value.exists(_.contains('?')))))
+      lazy val hasQuestionMarkInQueryParameters = (parsed.query.exists(_.params.exists(p => p.name.contains('?') || p.value.exists(_.contains('?')))))
 
       // A common site error is copying the page URL directly into a canoncial URL tag, escaped an extra time.
-      lazy val isEscaped = (sanitizedCandidateUrl.length > destinationUrl.length && unescapeHtml4(sanitizedCandidateUrl) == destinationUrl)
+      lazy val isEscapedUrl = (sanitizedCandidateUrl.length > destinationUrl.length && unescapeHtml4(sanitizedCandidateUrl) == destinationUrl)
 
-      if (hasQuestionMark || isEscaped) None else Some(sanitizedCandidateUrl)
+      // A less common but also cascading site error is URL-encoding query parameters an extra time.
+      lazy val hasEscapedQueryParameter = parsed.query.exists(_.params.exists(_.value.exists(_.contains("%25")))) && decodePercents(parsed) == destinationUrl
+
+      if (hasQuestionMarkInQueryParameters || isEscapedUrl || hasEscapedQueryParameter) None else Some(sanitizedCandidateUrl)
     }
+  }
+
+  private def decodePercents(uri: URI): String = { // just doing query parameter values for now
+    URI(
+      raw = None,
+      scheme = uri.scheme,
+      userInfo = uri.userInfo,
+      host = uri.host,
+      port = uri.port,
+      path = uri.path,
+      query = uri.query.map(q => Query(q.params.map(p => p.copy(value = p.value.map(_.replace("%25", "%")))))),
+      fragment = uri.fragment
+    ).toString
   }
 }
