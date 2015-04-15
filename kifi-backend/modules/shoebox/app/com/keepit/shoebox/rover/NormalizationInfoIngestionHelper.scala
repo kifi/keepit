@@ -1,6 +1,7 @@
 package com.keepit.shoebox.rover
 
 import com.google.inject.{ Inject, Singleton }
+import com.keepit.common.CollectionHelpers
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
@@ -32,7 +33,7 @@ class NormalizationInfoIngestionHelper @Inject() (
   } tap { _.imap { hasBeenRenormalized => if (hasBeenRenormalized) log.info(s"Uri $uriId has been renormalized after processing $info found at $destinationUrl") } }
 
   private def getUriNormalizationsCandidates(articleKind: ArticleKind[_], destinationUrl: String, info: NormalizationInfo): Seq[ScrapedCandidate] = {
-    articleKind match {
+    val scrapedCandidates = articleKind match {
       case GithubArticle => Seq.empty[ScrapedCandidate] // we don't trust Github's canonical urls
       case _ => Map(
         Normalization.CANONICAL -> info.canonicalUrl,
@@ -41,6 +42,7 @@ class NormalizationInfoIngestionHelper @Inject() (
           case (normalization, Some(candidateUrl)) => ScrapedCandidate(candidateUrl, normalization)
         }.toSeq
     }
+    CollectionHelpers.dedupBy(scrapedCandidates.sortBy(_.normalization).reverse)(_.url)
   }
 
   private def processAlternateUrls(bestReferenceUriId: Id[NormalizedURI], destinationUrl: String, info: NormalizationInfo): Unit = {
