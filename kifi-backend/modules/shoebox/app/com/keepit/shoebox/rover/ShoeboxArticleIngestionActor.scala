@@ -53,28 +53,28 @@ class ShoeboxArticleIngestionActor @Inject() (
   }
 
   private def startIngestion(): Unit = {
-    ingesting = true
     log.info(s"Starting ingestion of Shoebox Article updates from Rover...")
+    ingesting = true
 
-    {
-      SafeFuture {
-        db.readOnlyMaster { implicit session =>
-          systemValueRepo.getSequenceNumber(shoeboxArticleInfoSeq) getOrElse SequenceNumber.ZERO
-        }
-      } flatMap { seqNum =>
-        rover.getShoeboxUpdates(seqNum, fetchSize).flatMap {
-          case Some(ShoeboxArticleUpdates(updates, maxSeq)) =>
-            processRedirectsAndNormalizationInfo(updates).map { partiallyProcessedUpdatesByUri =>
-              db.readWrite { implicit session =>
-                updateActiveUris(partiallyProcessedUpdatesByUri)
-                systemValueRepo.setSequenceNumber(shoeboxArticleInfoSeq, maxSeq)
-              }
-              (updates.length, seqNum, maxSeq)
-            }
-          case None => Future.successful((0, seqNum, seqNum))
-        }
+    val futureIngestionResult = SafeFuture {
+      db.readOnlyMaster { implicit session =>
+        systemValueRepo.getSequenceNumber(shoeboxArticleInfoSeq) getOrElse SequenceNumber.ZERO
       }
-    } onComplete {
+    } flatMap { seqNum =>
+      rover.getShoeboxUpdates(seqNum, fetchSize).flatMap {
+        case Some(ShoeboxArticleUpdates(updates, maxSeq)) =>
+          processRedirectsAndNormalizationInfo(updates).map { partiallyProcessedUpdatesByUri =>
+            db.readWrite { implicit session =>
+              updateActiveUris(partiallyProcessedUpdatesByUri)
+              systemValueRepo.setSequenceNumber(shoeboxArticleInfoSeq, maxSeq)
+            }
+            (updates.length, seqNum, maxSeq)
+          }
+        case None => Future.successful((0, seqNum, seqNum))
+      }
+    }
+
+    futureIngestionResult onComplete {
       case Failure(error) => {
         log.error("Failed to ingest Shoebox Article updates from Rover.", error)
         self ! CancelIngestion
