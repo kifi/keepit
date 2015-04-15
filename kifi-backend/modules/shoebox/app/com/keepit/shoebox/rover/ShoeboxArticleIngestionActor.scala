@@ -76,7 +76,9 @@ class ShoeboxArticleIngestionActor @Inject() (
 
     futureIngestionResult onComplete {
       case Failure(error) => {
-        log.error("Failed to ingest Shoebox Article updates from Rover.", error)
+        val msg = "Failed to ingest Shoebox Article updates from Rover."
+        log.error(msg, error)
+        airbrake.notify(msg, error)
         self ! CancelIngestion
       }
       case Success((ingestedUpdateCount, initialSeqNum, updatedSeqNum)) => {
