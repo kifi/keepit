@@ -148,18 +148,24 @@ class MemcachedCache @Inject() (
   }
 
   def set(key: String, value: Any, expiration: Int): Unit = {
+    val client = getClient
     try {
-      getClient.set(key, expiration, value, tc)
+      client.set(key, expiration, value, tc)
     } catch {
+      case timeout: CheckedOperationTimeoutException =>
+        handleTimeoutException(client)
       case t: Throwable =>
         logger.error("An error has occurred while setting the value to memcached", t)
     }
   }
 
   def remove(key: String) {
+    val client = getClient
     try {
       getClient.delete(key)
     } catch {
+      case timeout: CheckedOperationTimeoutException =>
+        handleTimeoutException(client)
       case t: Throwable =>
         logger.error("An error has occurred while deleting the value from memcached", t)
     }
