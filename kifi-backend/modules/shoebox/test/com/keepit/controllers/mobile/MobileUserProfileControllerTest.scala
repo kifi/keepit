@@ -4,8 +4,10 @@ import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.controller.FakeUserActionsHelper
+import com.keepit.common.crypto.{ FakeCryptoModule, PublicIdConfiguration }
 import com.keepit.common.db.ExternalId
 import com.keepit.common.social.FakeSocialGraphModule
+import com.keepit.common.time._
 import com.keepit.model.KeepFactory._
 import com.keepit.model._
 import com.keepit.scraper.FakeScrapeSchedulerModule
@@ -21,8 +23,9 @@ import com.keepit.model.LibraryMembershipFactory._
 import com.keepit.model.LibraryMembershipFactoryHelper._
 import com.keepit.model.KeepFactory._
 import com.keepit.model.KeepFactoryHelper._
+import org.joda.time.DateTime
 import org.specs2.mutable.Specification
-import play.api.libs.json.Json
+import play.api.libs.json.{ JsObject, Json }
 import play.api.mvc.{ Result, Call }
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
@@ -35,7 +38,8 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
     FakeExecutionContextModule(),
     FakeSocialGraphModule(),
     FakeScrapeSchedulerModule(),
-    FakeABookServiceClientModule()
+    FakeABookServiceClientModule(),
+    FakeCryptoModule()
   )
 
   "MobileUserProfileController" should {
@@ -142,6 +146,68 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
       }
     }
 
+    "get profile libraries" in {
+      withDb(modules: _*) { implicit injector =>
+        val (user1, lib1, lib2) = db.readWrite { implicit s =>
+          val t1 = new DateTime(2014, 12, 1, 12, 0, 0, 0, DEFAULT_DATE_TIME_ZONE)
+          val user1 = userRepo.save(User(firstName = "Spongebob", lastName = "Squarepants", username = Username("spongebob"), normalizedUsername = "spongebob", createdAt = t1))
+          val library1 = libraryRepo.save(Library(name = "Krabby Patty", ownerId = user1.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("krabby-patty"), memberCount = 1, createdAt = t1.plusMinutes(1)))
+          libraryMembershipRepo.save(LibraryMembership(userId = user1.id.get, libraryId = library1.id.get, access = LibraryAccess.OWNER))
+          val library2 = libraryRepo.save(Library(name = "Catching Jellyfish", ownerId = user1.id.get, visibility = LibraryVisibility.PUBLISHED, slug = LibrarySlug("catching-jellyfish"), memberCount = 1, createdAt = t1.plusMinutes(1)))
+          libraryMembershipRepo.save(LibraryMembership(userId = user1.id.get, libraryId = library2.id.get, access = LibraryAccess.OWNER))
+          (user1, library1, library2)
+        }
+        val pubId1 = Library.publicId(lib1.id.get)(inject[PublicIdConfiguration])
+        val pubId2 = Library.publicId(lib2.id.get)(inject[PublicIdConfiguration])
+
+        val result1 = getProfileLibraries(user1, 0, 10, "own")
+        status(result1) must equalTo(OK)
+        Json.parse(contentAsString(result1)) === Json.parse(
+          s"""
+             {
+              "own" : [
+                {
+                  "id":"${pubId2.id}",
+                  "name":"Catching Jellyfish",
+                  "numFollowers":0,
+                  "numKeeps":0,
+                  "followers":[],
+                  "slug":"catching-jellyfish",
+                  "kind" : "user_created",
+                  "visibility" : "published",
+                  "numKeeps" : 0,
+                  "numFollowers" : 0,
+                  "followers": [],
+                  "lastKept": ${lib2.createdAt.getMillis},
+                  "listed": true
+                },
+                {
+                  "id":"${pubId1.id}",
+                  "name":"Krabby Patty",
+                  "numFollowers":0,
+                  "numKeeps":0,
+                  "followers":[],
+                  "slug":"krabby-patty",
+                  "kind" : "user_created",
+                  "visibility" : "secret",
+                  "numKeeps" : 0,
+                  "numFollowers" : 0,
+                  "followers": [],
+                  "lastKept": ${lib1.createdAt.getMillis},
+                  "listed": true
+                }
+              ]
+            }
+           """)
+        val result2 = getProfileLibraries(user1, 0, 10, "all")
+        status(result2) must equalTo(OK)
+        val resultJson2 = contentAsJson(result2)
+        (resultJson2 \ "own").as[Seq[JsObject]].length === 2
+        (resultJson2 \ "following").as[Seq[JsObject]].length === 0
+        (resultJson2 \ "invited").as[Seq[JsObject]].length === 0
+      }
+    }
+
     "get followers" in {
       withDb(modules: _*) { implicit injector =>
         val profileUsername = Username("cfalc")
@@ -190,6 +256,11 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
     url === s"/m/1/user/${username.value}/profile"
     val request = FakeRequest("GET", url)
     controller.profile(username.value)(request)
+  }
+
+  private def getProfileLibraries(user: User, page: Int, size: Int, filter: String)(implicit injector: Injector): Future[Result] = {
+    inject[FakeUserActionsHelper].setUser(user)
+    controller.getProfileLibraries(user.username, page, size, filter)(request(routes.MobileUserProfileController.getProfileLibraries(user.username, page, size, filter)))
   }
 
   private def getProfileFollowers(viewer: User, username: Username, page: Int, size: Int)(implicit injector: Injector): Future[Result] = {
