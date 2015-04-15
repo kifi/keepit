@@ -134,7 +134,9 @@ class ScrapeWorkerImpl @Inject() (
         updateWordCountCache(latestUri.id.get, Some(article))
         for {
           scrapedURI <- {
-            if (ScrapeWorker.DEACTIVATE_SHOEBOX_CALLBACKS) Future.successful(updatedUri.withState(NormalizedURIStates.SCRAPED))
+            if (ScrapeWorker.DEACTIVATE_SHOEBOX_CALLBACKS) {
+              shoeboxCommander.updateNormalizedURIState(latestUri.id.get, NormalizedURIStates.SCRAPED).map { _ => latestUri.withState(NormalizedURIStates.SCRAPED }
+            }
             else shoeboxCommander.saveNormalizedUri(updatedUri.withTitle(article.title).withState(NormalizedURIStates.SCRAPED))
           }
           _ <- shoeboxCommander.saveScrapeInfo(info.withDestinationUrl(article.destinationUrl).withDocumentChanged(signature.toBase64))

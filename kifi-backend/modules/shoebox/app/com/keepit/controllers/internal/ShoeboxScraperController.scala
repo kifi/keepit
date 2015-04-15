@@ -213,9 +213,6 @@ class ShoeboxScraperController @Inject() (
           scrapeInfoRepo.save(info.withStateAndNextScrape(ScrapeInfoStates.INACTIVE))
           airbrake.notify(s"can't parse $nuri, not passing it to the scraper, marking as unscrapable")
         } else {
-          if (nuri.state != NormalizedURIStates.SCRAPED && info.signature != scrapeInfoRepo.get(info.id.get).signature) {
-            normUriRepo.save(nuri.withState(NormalizedURIStates.SCRAPED))
-          }
           scrapeInfoRepo.save(info)
         }
       }
