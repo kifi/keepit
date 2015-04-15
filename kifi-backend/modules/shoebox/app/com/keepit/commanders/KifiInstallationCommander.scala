@@ -5,10 +5,16 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
 import com.keepit.model._
+import org.joda.time.DateTime
 
 class KifiInstallationCommander @Inject() (
     kifiInstallationRepo: KifiInstallationRepo,
     db: Database) extends Logging {
+
+  def lastMobileAppStartTime(userId: Id[User]): DateTime = db.readOnlyReplica { implicit s =>
+    val installation = kifiInstallationRepo.lastUpdatedMobile(userId).getOrElse(throw new Exception(s"should not get to this point if user $userId has no mobile installation"))
+    installation.updatedAt
+  }
 
   def isMobileVersionGreaterThen(userId: Id[User], android: KifiAndroidVersion, ios: KifiIPhoneVersion): Boolean = {
     db.readOnlyReplica { implicit s => kifiInstallationRepo.lastUpdatedMobile(userId) } exists { installation =>
