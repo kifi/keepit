@@ -279,6 +279,7 @@ POST    /m/1/libraries/recos/feedback      @com.keepit.controllers.website.Libra
 POST    /m/1/content/flagUrl                @com.keepit.controllers.mobile.MobileUriController.flagContent()
 
 GET     /m/1/keeps/:id                      @com.keepit.controllers.mobile.MobileKeepsController.getKeepInfo(id: ExternalId[Keep], withFullInfo: Boolean ?= false, imageWidth: Option[Int] ?= None, imageHeight: Option[Int] ?= None)
+POST    /m/1/keeps/:id                      @com.keepit.controllers.mobile.MobileKeepsController.editKeepInfo(id: ExternalId[Keep])
 GET     /m/1/inviteInfo                     @com.keepit.controllers.website.InviteController.getGeneralInviteInfo()
 
 
