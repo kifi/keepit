@@ -17,6 +17,7 @@ import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.ImageSize
 import com.keepit.common.time._
 import com.keepit.model._
+import com.keepit.rover.RoverServiceClient
 import com.keepit.shoebox.model.ids.UserSessionExternalId
 import com.keepit.normalizer._
 import com.keepit.scraper._
@@ -69,7 +70,8 @@ class ShoeboxController @Inject() (
   newKeepsInLibraryCommander: NewKeepsInLibraryCommander,
   userConnectionsCommander: UserConnectionsCommander,
   userPersonaRepo: UserPersonaRepo,
-  verifiedEmailUserIdCache: VerifiedEmailUserIdCache)(implicit private val clock: Clock,
+  verifiedEmailUserIdCache: VerifiedEmailUserIdCache,
+  rover: RoverServiceClient)(implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices)
     extends ShoeboxServiceController with Logging {
 
@@ -189,7 +191,10 @@ class ShoeboxController @Inject() (
       normalizedURIInterner.internByUri(url, NormalizationCandidate(o): _*)
     }
     val scrapeWanted = (o \ "scrapeWanted").asOpt[Boolean] getOrElse false
-    if (scrapeWanted) SafeFuture { db.readWrite { implicit session => scrapeScheduler.scheduleScrape(uri) } }
+    if (scrapeWanted) SafeFuture {
+      db.readWrite { implicit session => scrapeScheduler.scheduleScrape(uri) }
+      rover.fetchAsap(IndexableUri(uri))
+    }
     Ok(Json.toJson(uri))
   }
 
