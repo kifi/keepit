@@ -57,7 +57,7 @@ class MemcachedCache @Inject() (
     airbrake.notify(error)
   }
 
-  private def client: MemcachedClient = clientProvider.get()
+  private def getClient: MemcachedClient = clientProvider.get()
 
   val compressThreshold: Int = 400000 // TODO: make configurable
   val compressMethod: String = "gzip"
@@ -119,9 +119,9 @@ class MemcachedCache @Inject() (
 
   lazy val tc = new CustomSerializing().asInstanceOf[Transcoder[Any]]
 
-  private def handleTimeoutException(): Unit = {
+  private def handleTimeoutException(client: MemcachedClient): Unit = {
     try {
-      clientProvider.recreate()
+      clientProvider.recreate(client)
     } catch {
       case e: Exception => airbrake.notify(s"failed to recreate memcached client after CheckedOperationTimeoutException")
     }
@@ -130,13 +130,14 @@ class MemcachedCache @Inject() (
   def get(key: String) = {
     logger.debug("Getting the cached for key " + key)
     var future: GetFuture[Any] = null
+    val client = getClient
     try {
       future = client.asyncGet(key, tc)
       toOption(future.get(1, TimeUnit.SECONDS))
     } catch {
       case timeout: CheckedOperationTimeoutException =>
         airbrake.notify("A timeout error has occurred while getting the value from memcached", timeout)
-        handleTimeoutException()
+        handleTimeoutException(client)
         if (future != null) future.cancel(false)
         None
       case e: Throwable =>
@@ -148,7 +149,7 @@ class MemcachedCache @Inject() (
 
   def set(key: String, value: Any, expiration: Int): Unit = {
     try {
-      client.set(key, expiration, value, tc)
+      getClient.set(key, expiration, value, tc)
     } catch {
       case t: Throwable =>
         logger.error("An error has occurred while setting the value to memcached", t)
@@ -157,7 +158,7 @@ class MemcachedCache @Inject() (
 
   def remove(key: String) {
     try {
-      client.delete(key)
+      getClient.delete(key)
     } catch {
       case t: Throwable =>
         logger.error("An error has occurred while deleting the value from memcached", t)
@@ -168,6 +169,7 @@ class MemcachedCache @Inject() (
   private def smallBulkGet(keys: Set[String]): Map[String, Any] = {
     logger.debug("Getting the cached for keys " + keys)
     var future: BulkFuture[JMap[String, Any]] = null
+    val client = getClient
     try {
       future = client.asyncGetBulk(keys.asJava, tc)
       future.getSome(1, TimeUnit.SECONDS).asScala.foldLeft(Map.empty[String, Any]) { (m, kv) =>
@@ -179,7 +181,7 @@ class MemcachedCache @Inject() (
     } catch {
       case timeout: CheckedOperationTimeoutException =>
         airbrake.notify(s"A timeout error has occurred while bulk getting ${keys.size} values from memcached", timeout)
-        handleTimeoutException()
+        handleTimeoutException(client)
         if (future != null) future.cancel(false)
         Map.empty[String, Any]
 

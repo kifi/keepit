@@ -21,9 +21,10 @@ class MemcachedClientProvider() {
     client
   }
 
-  def recreate(): Unit = {
-    val old = client
-    client = create()
-    old.shutdown(1, TimeUnit.SECONDS)
+  def recreate(old: MemcachedClient): Unit = {
+    if (client == old) {
+      client = create()
+      old.shutdown(1, TimeUnit.SECONDS)
+    }
   }
 }
