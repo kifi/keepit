@@ -9,12 +9,11 @@ angular.module('kifi')
       restrict: 'A',
       replace: true,
       scope: {
-        parentLibrary: '&',
+        libraryId: '@',
         relatedLibraries: '='
       },
       templateUrl: 'libraries/relatedLibraries.tpl.html',
       link: function (scope) {
-        var parentLibrary = scope.parentLibrary();
         scope.join = function ($event) {
           $event.preventDefault();
           scope.$emit('trackLibraryEvent', 'click', { action: 'clickedLibraryRecJoinNow' });
@@ -22,7 +21,7 @@ angular.module('kifi')
           if (platformService.isSupportedMobilePlatform()) {
             platformService.goToAppOrStore();
           } else {
-            signupService.register({ libraryId: parentLibrary.id });
+            signupService.register({libraryId: scope.libraryId});
           }
         };
 
