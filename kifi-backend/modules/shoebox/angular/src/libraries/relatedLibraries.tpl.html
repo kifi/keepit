@@ -3,7 +3,7 @@
   <div class="kf-related-library-card" kf-small-library-card library="library" action="clickedLibraryRec" origin="libraryRec" ng-repeat="library in relatedLibraries"></div>
   <footer ng-if="!$root.userLoggedIn" class="kf-related-library-footer">
     <a href="/libraries/featured" class="kf-related-libraries-see-more" ng-click="clickSeeMore($event)" target="_blank">See more &raquo;</a>
-    <div class="kf-related-libraries-card-your-own-card" ng-if="!isMobile">
+    <div class="kf-related-libraries-card-your-own-card">
       <div>Create Your Own Library</div>
       <a href="/signup" ng-click="join($event)" class="kf-related-libraries-card-your-own-card-btn">Join now</a>
     </div>
