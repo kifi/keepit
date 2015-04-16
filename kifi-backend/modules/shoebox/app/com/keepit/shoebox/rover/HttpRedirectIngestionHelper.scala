@@ -36,13 +36,12 @@ class HttpRedirectIngestionHelper @Inject() (
     else {
       log.info(s"Processing redirects found at uri ${uriId}: ${url}: ${redirects.mkString("\n")}")
       resolve(uriId, url, redirects, redirectedAt).flatMap {
-        case Left(Some(destinationUrl)) => renormalizeWithPermanentRedirect(uriId, destinationUrl)
-        case Left(None) =>
-          log.warn(s"Unable to resolve absolute permanent redirect at uri ${uriId}: ${url}: ${redirects.mkString("\n")}")
+        case Some(validDestinationUrl) => renormalizeWithPermanentRedirect(uriId, validDestinationUrl)
+        case None => {
+          log.warn(s"Adding restriction to uri ${uriId}: ${url}: ${redirects.mkString("\n")}")
+          getUriWithUpdatedRestriction(uriId, redirects.headOption.map(redirect => Restriction.http(redirect.statusCode)))
           Future.successful(false)
-        case Right(restriction) =>
-          getUriWithUpdatedRestriction(uriId, restriction)
-          Future.successful(false)
+        }
       }
     }
   } tap { _.imap { hasBeenRenormalized => if (hasBeenRenormalized) log.info(s"Uri $uriId has been renormalized after processing $redirects from $redirectedAt") } }
@@ -74,17 +73,19 @@ class HttpRedirectIngestionHelper @Inject() (
     }
   }
 
-  private def resolve(uriId: Id[NormalizedURI], url: String, redirects: Seq[HttpRedirect], redirectedAt: DateTime): Future[Either[Option[String], Option[Restriction]]] = {
+  private def resolve(uriId: Id[NormalizedURI], url: String, redirects: Seq[HttpRedirect], redirectedAt: DateTime): Future[Option[String]] = {
     val relevantRedirects = redirects.dropWhile(!_.isLocatedAt(url))
-    relevantRedirects.headOption match {
-      case Some(redirect) if redirect.isShortener => Future.successful(Left(HttpRedirect.resolve(url, relevantRedirects)))
-      case Some(redirect) if redirect.isPermanent =>
-        hasFishy301(uriId, url, redirectedAt).map {
-          case false => Left(HttpRedirect.resolve(url, relevantRedirects))
-          case true => Right(Some(Restriction.http(redirect.statusCode)))
-        }
-      case Some(temporaryRedirect) => Future.successful(Right(Some(Restriction.http(temporaryRedirect.statusCode))))
-      case None => Future.successful(Right(None))
+    val isActuallyPermanent = relevantRedirects.headOption match {
+      case Some(redirect) if redirect.isShortener => Future.successful(true)
+      case Some(redirect) if redirect.isPermanent => hasFishy301(uriId, url, redirectedAt)
+      case _ => Future.successful(false)
+    }
+
+    isActuallyPermanent map {
+      case true => HttpRedirect.resolve(url, relevantRedirects).flatMap { candidateUrl =>
+        NormalizationCandidateSanitizer.validateCandidateUrl(url, candidateUrl)
+      }
+      case false => None
     }
   }
 
@@ -106,10 +107,10 @@ class HttpRedirectIngestionHelper @Inject() (
     }
   }
 
-  private def getUriWithUpdatedRestriction(uriId: Id[NormalizedURI], restriction: Option[Restriction]): NormalizedURI = {
+  private def getUriWithUpdatedRestriction(uriId: Id[NormalizedURI], redirectRestriction: Option[Restriction]): NormalizedURI = {
     db.readWrite { implicit session =>
       val uri = uriRepo.get(uriId)
-      val updatedUri = restriction.map(updateRedirectRestriction(uri, _)) getOrElse removeRedirectRestriction(uri)
+      val updatedUri = redirectRestriction.map(updateRedirectRestriction(uri, _)) getOrElse removeRedirectRestriction(uri)
       if (updatedUri == uri) uri else uriRepo.save(updatedUri)
     }
   }

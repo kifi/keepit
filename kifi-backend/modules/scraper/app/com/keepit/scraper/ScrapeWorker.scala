@@ -5,6 +5,7 @@ import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.model._
+import com.keepit.normalizer.NormalizationCandidateSanitizer
 import com.keepit.rover.document.utils.Signature
 import com.keepit.rover.fetcher.{ FetchRequest, HttpRedirect }
 import com.keepit.rover.sensitivity.{ PornDetectorFactory, PornDomains, SlidingWindowPornDetector }
@@ -409,7 +410,7 @@ class ScrapeWorkerImpl @Inject() (
   }
 
   private def recordScrapedNormalization(uri: NormalizedURI, signature: Signature, destinationUrl: Option[String], canonicalUrl: String, alternateUrls: Set[String]): Future[Unit] = {
-    def sanitize(candidateUrl: String): Option[String] = URI.sanitize(destinationUrl getOrElse uri.url, candidateUrl).map(_.toString())
+    def sanitize(candidateUrl: String): Option[String] = NormalizationCandidateSanitizer.validateCandidateUrl(destinationUrl getOrElse uri.url, candidateUrl)
     sanitize(canonicalUrl) match {
       case None => Future.successful(())
       case Some(properCanonicalUrl) =>

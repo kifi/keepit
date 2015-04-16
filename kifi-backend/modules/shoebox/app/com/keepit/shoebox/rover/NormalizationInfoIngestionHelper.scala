@@ -5,13 +5,13 @@ import com.keepit.common.CollectionHelpers
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
-import com.keepit.common.net.{ Query, URI }
+import com.keepit.common.net.URI
 import com.keepit.model.{ Normalization, NormalizedURI, NormalizedURIRepo }
 import com.keepit.normalizer._
 import com.keepit.rover.article.{ GithubArticle, ArticleKind }
 import com.keepit.rover.article.content.NormalizationInfo
-import org.apache.commons.lang3.StringEscapeUtils._
 import com.keepit.common.core._
+import com.keepit.normalizer.NormalizationCandidateSanitizer
 
 import scala.concurrent.{ Future, ExecutionContext }
 
@@ -38,7 +38,7 @@ class NormalizationInfoIngestionHelper @Inject() (
       case _ => Map(
         Normalization.CANONICAL -> info.canonicalUrl,
         Normalization.OPENGRAPH -> info.openGraphUrl
-      ).mapValues(_.flatMap(validateCandidateUrl(destinationUrl, _))).collect {
+      ).mapValues(_.flatMap(NormalizationCandidateSanitizer.validateCandidateUrl(destinationUrl, _))).collect {
           case (normalization, Some(candidateUrl)) => ScrapedCandidate(candidateUrl, normalization)
         }.toSeq
     }
@@ -46,7 +46,7 @@ class NormalizationInfoIngestionHelper @Inject() (
   }
 
   private def processAlternateUrls(bestReferenceUriId: Id[NormalizedURI], destinationUrl: String, info: NormalizationInfo): Unit = {
-    val alternateUrls = (info.alternateUrls ++ info.shortUrl).flatMap(URI.sanitize(destinationUrl, _).map(_.toString()))
+    val alternateUrls = (info.alternateUrls ++ info.shortUrl).flatMap(NormalizationCandidateSanitizer.validateCandidateUrl(destinationUrl, _).map(_.toString()))
     if (alternateUrls.nonEmpty) {
       val bestReference = db.readOnlyMaster { implicit session =>
         uriRepo.get(bestReferenceUriId)
@@ -69,36 +69,5 @@ class NormalizationInfoIngestionHelper @Inject() (
         }
       }
     }
-  }
-
-  private def validateCandidateUrl(destinationUrl: String, candidateUrl: String): Option[String] = {
-    URI.sanitize(destinationUrl, candidateUrl).flatMap { parsed =>
-      val sanitizedCandidateUrl = parsed.toString()
-
-      // Question marks are allowed in query parameter names and values, but their presence
-      // in a canonical URL usually indicates a bad url.
-      lazy val hasQuestionMarkInQueryParameters = (parsed.query.exists(_.params.exists(p => p.name.contains('?') || p.value.exists(_.contains('?')))))
-
-      // A common site error is copying the page URL directly into a canoncial URL tag, escaped an extra time.
-      lazy val isEscapedUrl = (sanitizedCandidateUrl.length > destinationUrl.length && unescapeHtml4(sanitizedCandidateUrl) == destinationUrl)
-
-      // A less common but also cascading site error is URL-encoding query parameters an extra time.
-      lazy val hasEscapedQueryParameter = parsed.query.exists(_.params.exists(_.value.exists(_.contains("%25")))) && decodePercents(parsed) == destinationUrl
-
-      if (hasQuestionMarkInQueryParameters || isEscapedUrl || hasEscapedQueryParameter) None else Some(sanitizedCandidateUrl)
-    }
-  }
-
-  private def decodePercents(uri: URI): String = { // just doing query parameter values for now
-    URI(
-      raw = None,
-      scheme = uri.scheme,
-      userInfo = uri.userInfo,
-      host = uri.host,
-      port = uri.port,
-      path = uri.path,
-      query = uri.query.map(q => Query(q.params.map(p => p.copy(value = p.value.map(_.replace("%25", "%")))))),
-      fragment = uri.fragment
-    ).toString
   }
 }
