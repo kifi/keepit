@@ -12,11 +12,6 @@ angular.module('kifi')
     platformService, profileService, originTrackingService, installService) {
 
     //
-    // Internal data.
-    //
-    var selectedCount = 0;
-
-    //
     // Internal functions
     //
     function showInstallModal() {
@@ -144,33 +139,6 @@ angular.module('kifi')
         }
       }
     }
-
-    $scope.getSubtitle = function () {
-      if ($scope.loading) {
-        return 'Loading...';
-      }
-
-      // If there are selected keeps, display the number of keeps
-      // in the subtitle.
-      if (selectedCount > 0) {
-        return (selectedCount === 1) ? '1 Keep selected' : selectedCount + ' Keeps selected';
-      }
-
-      var numShown = $scope.keeps.length;
-      switch (numShown) {
-      case 0:
-        return 'No Keeps';
-      case 1:
-        return 'Showing the only Keep';
-      case 2:
-        return 'Showing both Keeps';
-      }
-      return 'Showing ' + numShown + ' of ' + library.numKeeps + ' Keeps';
-    };
-
-    $scope.updateSelectedCount = function (numSelected) {
-      selectedCount = numSelected;
-    };
 
     $scope.libraryKeepClicked = function (keep, event) {
       var eventAction = event.target.getAttribute('click-action');

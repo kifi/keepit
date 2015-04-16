@@ -1,0 +1,28 @@
+<div>
+  <div class="kf-smk-head">
+    <div class="kf-smk-filters" ng-if="$root.userLoggedIn && !isLibrarySearch">
+      <a class="kf-smk-filter" ng-class="{ selected: isFilterSelected('a'), enabled: isEnabled('a') }" ui-sref=".({f:'a'})" ng-click="onClickSearchFilter('a')">All keeps</a>
+      <a class="kf-smk-filter" ng-class="{ selected: isFilterSelected('m'), enabled: isEnabled('m') }" ui-sref=".({f:'m'})" ng-click="onClickSearchFilter('m')">Your keeps ({{resultTotals.myTotal | number}})</a>
+      <a class="kf-smk-filter" ng-class="{ selected: isFilterSelected('f'), enabled: isEnabled('f') }" ui-sref=".({f:'f'})" ng-click="onClickSearchFilter('f')">Connections’ keeps ({{resultTotals.friendsTotal | number}})</a>
+    </div>
+    <div class="kf-smk-top">
+      <span class="kf-smk-heading" ng-if="loading">Searching...</span>
+      <span class="kf-smk-heading" ng-if="!loading" ng-pluralize count="resultKeeps.length" when="{0: 'No matching keeps', 1: '1 matching keep', other: 'Top {} results'}"></span>
+      <div class="kf-smk-bulk-add" ng-click="edit.enabled = !edit.enabled" ng-if="$root.userLoggedIn && resultKeeps.length > 1">
+        <span class="sprite sprite-edit-pencil-icon"></span>
+        <span class="kf-smk-bulk-add-text">{{edit.enabled ? 'Done' : 'Bulk keep to library'}}</span>
+      </div>
+    </div>
+  </div>
+
+  <div kf-keeps
+    keeps="resultKeeps"
+    keeps-loading="loading"
+    keeps-has-more="hasMore"
+    scroll-disabled="!hasMore"
+    scroll-next="getNextKeeps()"
+    keep-click="analyticsTrack"
+    edit="edit"
+    current-page-origin="searchResultsPage"
+  ></div>
+</div>

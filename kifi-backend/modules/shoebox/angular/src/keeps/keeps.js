@@ -17,7 +17,6 @@ angular.module('kifi')
         scrollDisabled: '=',
         scrollNext: '&',
         edit: '=',
-        updateSelectedCount: '&',
         currentPageOrigin: '@'
       },
       templateUrl: 'keeps/keeps.tpl.html',
@@ -203,9 +202,8 @@ angular.module('kifi')
         //
         scope.$watch(function () {
           return scope.selection.getSelected(scope.keeps).length;
-        }, function (numSelected) {
+        }, function () {
           scope.disableEditTags();
-          scope.updateSelectedCount({ numSelected: numSelected });
         });
 
         scope.$watch('edit.enabled', function (newVal, oldVal) {

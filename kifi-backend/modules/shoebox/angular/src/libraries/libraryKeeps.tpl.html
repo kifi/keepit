@@ -1,4 +1,4 @@
-<div class="kf-library-results-wrapper">
+<div>
   <div class="kf-empty-state" ng-if="keeps.length === 0" ng-show="!loading">
     <div ng-if="userIsOwner">
       You don’t have any keeps in this library yet. You can:
@@ -26,7 +26,6 @@
     scroll-distance="scrollDistance"
     scroll-next="getNextKeeps"
     edit="edit"
-    update-selected-count="updateSelectedCount(numSelected)"
     keep-click="libraryKeepClicked"
     current-page-origin="libraryPage"
   ></div>
