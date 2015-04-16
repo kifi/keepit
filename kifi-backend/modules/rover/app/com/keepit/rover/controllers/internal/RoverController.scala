@@ -4,6 +4,7 @@ import com.google.inject.Inject
 import com.keepit.common.controller.RoverServiceController
 import com.keepit.common.db.SequenceNumber
 import com.keepit.common.logging.Logging
+import com.keepit.model.IndexableUri
 import com.keepit.rover.commanders.RoverCommander
 import com.keepit.rover.model.{ ShoeboxArticleUpdates, ArticleInfo }
 import play.api.libs.json.Json
@@ -18,6 +19,11 @@ class RoverController @Inject() (roverCommander: RoverCommander, private implici
       val json = Json.toJson(updates)
       Ok(json)
     }
+  }
+
+  def fetchAsap() = Action.async(parse.json) { request =>
+    val uri = request.body.as[IndexableUri]
+    roverCommander.doMeAFavor(uri).map(_ => Ok)
   }
 
 }
