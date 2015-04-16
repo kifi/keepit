@@ -14,7 +14,7 @@ import com.google.inject.{ Inject, Singleton }
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
-import scala.util.Failure
+import scala.util.{ Failure, Random }
 import scala.concurrent.Future
 
 @Singleton
@@ -95,7 +95,7 @@ class SeedIngestionCommander @Inject() (
 
   def ingestAllKeeps(): Future[Unit] = FutureHelpers.whilef(allKeepIngestor(INGESTION_BATCH_SIZE)) {
     log.info("XYZ: Ingested one batch of keeps.")
-    rawSeedSeqNumAssigner.assignSequenceNumbers()
+    if (Random.nextFloat > 0.9) rawSeedSeqNumAssigner.assignSequenceNumbers()
     log.info("XYZ: Assigned Sequence Numbers")
   }
 
@@ -111,7 +111,7 @@ class SeedIngestionCommander @Inject() (
     log.info("XYZ: Triggered Top Uri ingestion for " + userId)
     topUrisIngestor(userId).map { _ =>
       log.info("XYZ: Completed Top Uri ingestion for " + userId)
-      rawSeedSeqNumAssigner.assignSequenceNumbers()
+      if (Random.nextFloat > 0.9) rawSeedSeqNumAssigner.assignSequenceNumbers()
       ()
     }
   }

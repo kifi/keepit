@@ -1,7 +1,7 @@
 package com.keepit.rover.manager
 
 import com.google.inject.{ Inject }
-import com.keepit.common.akka.{ UnsupportedActorMessage, FortyTwoActor }
+import com.keepit.common.akka.{ SafeFuture, UnsupportedActorMessage, FortyTwoActor }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.rover.commanders.FetchCommander
@@ -49,18 +49,29 @@ class RoverFetchSchedulingActor @Inject() (
   }
 
   private def startScheduling(): Unit = {
+    log.info(s"Queuing up to $maxBatchSize article fetch tasks...")
     schedulingFetchTasks = true
-    val ripeArticleInfos = fetchCommander.getRipeForFetching(maxBatchSize, maxQueuedFor)
-    val queuedTaskCountFutures = ripeArticleInfos.groupBy(getRelevantQueue).map {
-      case (queue, articleInfos) =>
-        val tasks = articleInfos.map { articleInfo => FetchTask(articleInfo.id.get) }
-        fetchCommander.add(tasks, queue).imap(_.count(_._2.isSuccess))
+    val futureQueuedTaskCount = SafeFuture {
+      fetchCommander.getRipeForFetching(maxBatchSize, maxQueuedFor)
+    } flatMap { ripeArticleInfos =>
+      val maybeQueuedFutures = ripeArticleInfos.groupBy(getRelevantQueue).map {
+        case (queue, articleInfos) =>
+          val tasks = articleInfos.map { articleInfo => FetchTask(articleInfo.id.get) }
+          fetchCommander.add(tasks, queue)
+      }
+      Future.sequence(maybeQueuedFutures).imap { maybeQueuedByQueue =>
+        {
+          val maybeQueued = maybeQueuedByQueue.flatten
+          val queuedCount = maybeQueued.count(_._2.isSuccess)
+          (queuedCount, maybeQueued.size)
+        }
+      }
     }
 
-    Future.sequence(queuedTaskCountFutures).imap(_.sum).onComplete {
-      case Success(queuedTaskCount) => {
-        log.info(s"Added $queuedTaskCount article fetch tasks.")
-        self ! DoneScheduling(mayHaveMore = ripeArticleInfos.nonEmpty)
+    futureQueuedTaskCount onComplete {
+      case Success((queuedTaskCount, totalTaskCount)) => {
+        log.info(s"Added $queuedTaskCount / $totalTaskCount article fetch tasks.")
+        self ! DoneScheduling(mayHaveMore = totalTaskCount > 0)
       }
       case Failure(error) => {
         log.error(s"Failed to add article fetch tasks.", error)

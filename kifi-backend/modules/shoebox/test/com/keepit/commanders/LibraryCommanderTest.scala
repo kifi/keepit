@@ -652,15 +652,33 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           libraryInviteRepo.save(LibraryInvite(libraryId = libShield.id.get, inviterId = userAgent.id.get, emailAddress = Some(EmailAddress("incrediblehulk@gmail.com")), access = LibraryAccess.READ_ONLY, authToken = "asdf", passPhrase = "unlock"))
           libraryInviteRepo.getByLibraryIdAndAuthToken(libShield.id.get, "asdf").exists(i => i.state == LibraryInviteStates.ACCEPTED) === false
         }
-        val hashedPassPhrase1 = HashedPassPhrase.generateHashedPhrase("attempt") // wrong passphrase)
-        libraryCommander.joinLibrary(userHulk.id.get, libShield.id.get, Some("asdf"), Some(hashedPassPhrase1)).isLeft === true
 
+        // no authtoken or passphrase (invite by email) - should Fail
+        libraryCommander.joinLibrary(userHulk.id.get, libShield.id.get, None, None).isRight === false
+
+        // incorrect passphrases (invite by email) - should Fail
+        val hashedPassPhraseFail = HashedPassPhrase.generateHashedPhrase("attempt")
+        libraryCommander.joinLibrary(userHulk.id.get, libShield.id.get, Some("asdf"), Some(hashedPassPhraseFail)).isLeft === true
+        libraryCommander.joinLibrary(userHulk.id.get, libShield.id.get, Some("asdf"), None).isRight === false
+
+        // correct authtoken & passphrase (invite by email)
         val hashedPassPhrase2 = HashedPassPhrase.generateHashedPhrase("unlock")
         val successJoin = libraryCommander.joinLibrary(userHulk.id.get, libShield.id.get, Some("asdf"), Some(hashedPassPhrase2))
         successJoin.isRight === true
         db.readOnlyMaster { implicit s =>
           libraryInviteRepo.getByLibraryIdAndAuthToken(libShield.id.get, "asdf").exists(i => i.state == LibraryInviteStates.ACCEPTED) === true
         }
+
+        // Joining a private library from a kifi invite (library invite with a userId)
+        db.readWrite { implicit s =>
+          libraryInviteRepo.save(LibraryInvite(libraryId = libShield.id.get, inviterId = userAgent.id.get, userId = userIron.id, access = LibraryAccess.READ_ONLY, authToken = "qwer", passPhrase = "unlock"))
+          libraryInviteRepo.getByLibraryIdAndAuthToken(libShield.id.get, "qwer").exists(i => i.state == LibraryInviteStates.ACCEPTED) === false
+        }
+        libraryCommander.joinLibrary(userIron.id.get, libShield.id.get, None, None).isRight === true
+        db.readOnlyMaster { implicit s =>
+          libraryInviteRepo.getByLibraryIdAndAuthToken(libShield.id.get, "qwer").exists(i => i.state == LibraryInviteStates.ACCEPTED) === true
+        }
+
       }
     }
 
@@ -1120,9 +1138,9 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         )
 
         Await.result(libraryCommander.processInvites(newInvites), Duration(10, "seconds"))
-        eliza.inbox.size === 8
+        eliza.inbox.size === 4
         println(eliza.inbox)
-        eliza.inbox.count(t => t._2 == NotificationCategory.User.LIBRARY_FOLLOWED && t._4.endsWith("/0.jpg")) === 4
+        eliza.inbox.count(t => t._2 == NotificationCategory.User.LIBRARY_FOLLOWED && t._4.endsWith("/0.jpg")) === 0
         eliza.inbox.count(t => t._2 == NotificationCategory.User.LIBRARY_INVITATION && t._4.endsWith("/0.jpg")) === 4
         eliza.inbox.count(t => t._3 == "https://www.kifi.com/captainamerica/murica") === 3
         db.readOnlyMaster { implicit s => emailRepo.count === 4 }
@@ -1135,7 +1153,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           LibraryInvite(libraryId = libScience.id.get, inviterId = userIron.id.get, userId = Some(userHulk.id.get), access = LibraryAccess.READ_INSERT, createdAt = t2)
         )
         Await.result(libraryCommander.processInvites(newInvitesAgain), Duration(10, "seconds"))
-        eliza.inbox.size === 8
+        eliza.inbox.size === 4
         db.readOnlyMaster { implicit s => emailRepo.count === 4 }
       }
     }

@@ -121,20 +121,18 @@ class NormalizationServiceImpl @Inject() (
           assert(weakerCandidates.isEmpty || weakerCandidates.head.normalization <= strongerCandidate.normalization, s"Normalization candidates ${weakerCandidates.head} and $strongerCandidate have not been sorted properly for $currentReference")
           assert(currentReference.normalization.isEmpty || currentReference.normalization.get <= strongerCandidate.normalization, s"Normalization candidate $strongerCandidate has not been filtered properly for $currentReference")
 
-          db.readOnlyMaster { implicit session =>
-            action(strongerCandidate) match {
-              case Accept => Future.successful((Some(strongerCandidate), weakerCandidates))
-              case Reject => findCandidate(weakerCandidates)
-              case Check(contentCheck) =>
-                if (currentReference.url == strongerCandidate.url) Future.successful(Some(strongerCandidate), weakerCandidates)
-                else for {
-                  contentCheck <- contentCheck(strongerCandidate)
-                  (successful, weaker) <- {
-                    if (contentCheck) Future.successful((Some(strongerCandidate), weakerCandidates))
-                    else findCandidate(weakerCandidates)
-                  }
-                } yield (successful, weaker)
-            }
+          action(strongerCandidate) match {
+            case Accept => Future.successful((Some(strongerCandidate), weakerCandidates))
+            case Reject => findCandidate(weakerCandidates)
+            case Check(contentCheck) =>
+              if (currentReference.url == strongerCandidate.url) Future.successful(Some(strongerCandidate), weakerCandidates)
+              else for {
+                contentCheck <- contentCheck(strongerCandidate)
+                (successful, weaker) <- {
+                  if (contentCheck) Future.successful((Some(strongerCandidate), weakerCandidates))
+                  else findCandidate(weakerCandidates)
+                }
+              } yield (successful, weaker)
           }
       }
     }
@@ -206,12 +204,12 @@ class NormalizationServiceImpl @Inject() (
     val haveBeenUpdated = Set(currentReference.url, newReference.url)
     val toBeUpdated = for {
       url <- haveBeenUpdated
-      (_, normalizedURI) <- findVariations(url) if normalizedURI.normalization.isEmpty || normalizedURI.normalization.get <= newReference.normalization.get
+      (_, normalizedURI) <- findVariations(url) if !normalizedURI.normalization.exists(_ > newReference.normalization.get)
       toBeUpdated <- (normalizedURI.state, normalizedURI.redirect) match {
         case (NormalizedURIStates.INACTIVE, _) => None
         case (NormalizedURIStates.REDIRECTED, Some(id)) =>
           val redirectionURI = normalizedURIRepo.get(id)
-          if (redirectionURI.state != NormalizedURIStates.INACTIVE && redirectionURI.normalization.get <= newReference.normalization.get) Some(redirectionURI) else None
+          if (redirectionURI.state != NormalizedURIStates.INACTIVE && !redirectionURI.normalization.exists(_ > newReference.normalization.get)) Some(redirectionURI) else None
         case (_, _) => Some(normalizedURI)
       }
     } yield toBeUpdated

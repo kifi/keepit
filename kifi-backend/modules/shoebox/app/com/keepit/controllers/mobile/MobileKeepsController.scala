@@ -180,6 +180,26 @@ class MobileKeepsController @Inject() (
     }
   }
 
+  def editKeepInfo(id: ExternalId[Keep]) = UserAction(parse.tolerantJson) { request =>
+    val keepOpt = db.readOnlyMaster { implicit s => keepRepo.getOpt(id).filter(_.isActive) }
+    keepOpt match {
+      case None =>
+        NotFound(Json.obj("error" -> "not_found"))
+      case Some(keep) =>
+        val json = request.body
+        val titleOpt = (json \ "title").asOpt[String]
+        val noteOpt = (json \ "note").asOpt[String]
+
+        val newTitle = titleOpt map { _.trim } filterNot { _.isEmpty }
+        val newNote = noteOpt map { _.trim } filterNot { _.isEmpty }
+
+        db.readWrite { implicit s =>
+          keepRepo.save(keep.copy(title = newTitle, note = newNote))
+        }
+        NoContent
+    }
+  }
+
   def numKeeps() = UserAction { request =>
     Ok(Json.obj(
       "numKeeps" -> keepsCommander.numKeeps(request.userId)

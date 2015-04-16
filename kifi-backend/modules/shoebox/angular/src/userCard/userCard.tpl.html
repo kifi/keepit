@@ -1,5 +1,5 @@
-<li class="kf-upu-card" ng-class="{'kf-self': user.id === me.id}">
-  <div class="kf-upu-settings" kf-hover-menu ng-if="mutual.isFriend && user.id !== me.id">
+<li class="kf-upu-card" ng-class="{'kf-self': isSelf}">
+  <div class="kf-upu-settings" kf-hover-menu ng-if="mutual.isFriend && !isSelf">
     <button class="kf-upu-settings-btn svg-settings-gear-gray"></button>
     <menu class="kf-upu-settings-menu kf-dropdown-menu">
       <button class="kifi-upu-settings-unsearch kf-dropdown-menu-item" ng-click="toggleSearch()">{{mutual.unsearched ? 'Show' : 'Hide'}} {{mutual.firstName}}’s keeps in my search results</button>

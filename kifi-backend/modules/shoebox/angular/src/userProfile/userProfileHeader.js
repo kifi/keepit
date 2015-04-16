@@ -158,8 +158,8 @@ angular.module('kifi')
           });
         };
 
-        scope.toggleSharing = function (sharing) {
-          sharing = scope.sharing = typeof sharing === 'boolean' ? sharing : !scope.sharing;
+        scope.toggleSharing = function (arg) {
+          var sharing = scope.sharing = typeof arg === 'boolean' ? arg : !scope.sharing;
           if (sharing) {
             $timeout(function () {
               var el = element.find('.kf-uph-share-url')[0];
@@ -169,6 +169,9 @@ angular.module('kifi')
               sel.removeAllRanges();
               sel.addRange(r);
               $rootScope.$emit('trackUserProfileEvent', 'click', {action: 'clickedShare'});
+              if (typeof arg === 'object' && arg.pageX && arg.currentTarget === document.activeElement) {  // button clicked, and not via a key press
+                arg.currentTarget.blur();
+              }
             });
           }
           angular.element(window)
