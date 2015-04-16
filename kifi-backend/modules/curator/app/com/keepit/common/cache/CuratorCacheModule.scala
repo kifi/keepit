@@ -1,5 +1,6 @@
 package com.keepit.common.cache
 
+import com.keepit.curator.model.UserRecoFeedbackCounterUserCache
 import com.keepit.eliza.model.UserThreadStatsForUserIdCache
 import com.keepit.graph.model._
 import com.keepit.model.cache.UserSessionViewExternalIdCache
@@ -174,5 +175,9 @@ case class CuratorCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   @Provides @Singleton
   def userActivePersonasCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new UserActivePersonasCache(stats, accessLog, (innerRepo, 5 minutes), (outerRepo, 14 days))
+
+  @Provides @Singleton
+  def userRecoFeedbackCounterUserCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new UserRecoFeedbackCounterUserCache(stats, accessLog, (innerRepo, 5 minutes), (outerRepo, 30 days))
 
 }
