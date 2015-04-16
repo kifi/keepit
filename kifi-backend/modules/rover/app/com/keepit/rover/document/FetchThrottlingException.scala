@@ -17,8 +17,8 @@ case class FetchThrottlingException(url: String, destinationUrl: String, nextFet
 
 object FetchThrottlingException {
   val domainWideThrottlingWindow = 1 minute
-  val domainWideThrottlingLimit = 5
-  val throttlingBackoff: Duration = 10 minutes
+  val domainWideThrottlingLimit = 10
+  val throttlingBackoff: Duration = 1 minutes
   val throttlingMaxRandomDelay: Duration = 10 minutes
 
   val randomDelay = new RandomDelay(throttlingMaxRandomDelay)

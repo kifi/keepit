@@ -1,7 +1,7 @@
 package com.keepit.shoebox.rover
 
 import com.google.inject.Inject
-import com.keepit.common.akka.{ UnsupportedActorMessage, FortyTwoActor }
+import com.keepit.common.akka.{ SafeFuture, UnsupportedActorMessage, FortyTwoActor }
 import com.keepit.common.concurrent.{ FutureHelpers, ReactiveLock }
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.{ Id, SequenceNumber }
@@ -18,8 +18,8 @@ import com.keepit.common.core._
 
 object ShoeboxArticleIngestionActor {
   val shoeboxArticleInfoSeq = Name[SequenceNumber[ArticleInfo]]("shoebox_article_info")
-  val fetchSize: Int = 50
-  val throttle = new ReactiveLock(5)
+  val fetchSize: Int = 500
+  val throttle = new ReactiveLock(50)
   sealed trait ShoeboxArticleIngestionActorMessage
   case object StartIngestion extends ShoeboxArticleIngestionActorMessage
   case class DoneIngesting(mayHaveMore: Boolean) extends ShoeboxArticleIngestionActorMessage
@@ -44,10 +44,7 @@ class ShoeboxArticleIngestionActor @Inject() (
   def receive = {
     case ingestionMessage: ShoeboxArticleIngestionActorMessage => {
       ingestionMessage match {
-        case StartIngestion =>
-          if (!ingesting) {
-            startIngestion()
-          }
+        case StartIngestion => if (!ingesting) startIngestion()
         case CancelIngestion => endIngestion()
         case DoneIngesting(mayHaveMore) => if (mayHaveMore) startIngestion() else endIngestion()
       }
@@ -56,29 +53,37 @@ class ShoeboxArticleIngestionActor @Inject() (
   }
 
   private def startIngestion(): Unit = {
-    ingesting = true
     log.info(s"Starting ingestion of Shoebox Article updates from Rover...")
-    val seqNum = db.readOnlyMaster { implicit session =>
-      systemValueRepo.getSequenceNumber(shoeboxArticleInfoSeq) getOrElse SequenceNumber.ZERO
-    }
-    rover.getShoeboxUpdates(seqNum, fetchSize).flatMap {
-      case Some(ShoeboxArticleUpdates(updates, maxSeq)) if updates.nonEmpty =>
-        processRedirectsAndNormalizationInfo(updates).map { partiallyProcessedUpdatesByUri =>
-          db.readWrite { implicit session =>
-            updateActiveUris(partiallyProcessedUpdatesByUri)
-            systemValueRepo.setSequenceNumber(shoeboxArticleInfoSeq, maxSeq)
+    ingesting = true
+
+    val futureIngestionResult = SafeFuture {
+      db.readOnlyMaster { implicit session =>
+        systemValueRepo.getSequenceNumber(shoeboxArticleInfoSeq) getOrElse SequenceNumber.ZERO
+      }
+    } flatMap { seqNum =>
+      rover.getShoeboxUpdates(seqNum, fetchSize).flatMap {
+        case Some(ShoeboxArticleUpdates(updates, maxSeq)) =>
+          processRedirectsAndNormalizationInfo(updates).map { partiallyProcessedUpdatesByUri =>
+            db.readWrite { implicit session =>
+              updateActiveUris(partiallyProcessedUpdatesByUri)
+              systemValueRepo.setSequenceNumber(shoeboxArticleInfoSeq, maxSeq)
+            }
+            (updates.length, seqNum, maxSeq)
           }
-          updates.length
-        }
-      case _ => Future.successful(0)
-    } onComplete {
+        case None => Future.successful((0, seqNum, seqNum))
+      }
+    }
+
+    futureIngestionResult onComplete {
       case Failure(error) => {
-        log.error("Failed to ingest Shoebox Article updates from Rover.", error)
+        val msg = "Failed to ingest Shoebox Article updates from Rover."
+        log.error(msg, error)
+        airbrake.notify(msg, error)
         self ! CancelIngestion
       }
-      case Success(ingestedUpdateCount) => {
-        log.info(s"Ingested $ingestedUpdateCount Shoebox Article updates from Rover.")
-        self ! DoneIngesting(mayHaveMore = ingestedUpdateCount > 0)
+      case Success((ingestedUpdateCount, initialSeqNum, updatedSeqNum)) => {
+        log.info(s"Ingested $ingestedUpdateCount Shoebox Article updates from Rover (seq $initialSeqNum to $updatedSeqNum)")
+        self ! DoneIngesting(mayHaveMore = updatedSeqNum > initialSeqNum)
       }
     }
   }

@@ -19,11 +19,6 @@ trait ContentCheck extends PartialFunction[NormalizationCandidate, Future[Boolea
 
 case class SignatureCheck(referenceUrl: String, referenceSignature: Option[Signature] = None, trustedDomain: Option[String] = None)(implicit scraperPlugin: ScrapeScheduler) extends ContentCheck with Logging {
 
-  Try { java.net.URI.create(referenceUrl) } match { // for debugging bad reference urls
-    case Success(uri) => log.debug(s"[SignatureCheck] refUrl=$referenceUrl uri=$uri")
-    case Failure(t) => throw new IllegalArgumentException(s"SignatureCheck -- failed to parse refUrl=$referenceUrl; Exception=$t; Cause=${t.getCause}", t)
-  }
-
   def isDefinedAt(candidate: NormalizationCandidate) = {
     val isTrustedSource = trustedDomain.map(candidate.url.matches) getOrElse candidate.isTrusted
     lazy val isJavaUri = Try(java.net.URI.create(candidate.url)).isSuccess

@@ -3,7 +3,8 @@
 angular.module('kifi')
 
 .directive('kfUserProfileUserList', [
-  function () {
+  'profileService',
+  function (profileService) {
     return {
       restrict: 'A',
       replace: true,
@@ -14,7 +15,10 @@ angular.module('kifi')
         fetchMore: '&',
         emptyText: '@'
       },
-      templateUrl: 'userProfile/userProfileUserList.tpl.html'
+      templateUrl: 'userProfile/userProfileUserList.tpl.html',
+      link: function (scope) {
+        scope.me = profileService.me;
+      }
     };
   }
 ]);

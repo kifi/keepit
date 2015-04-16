@@ -1,13 +1,11 @@
 package com.keepit.scraper.extractor
 
-import com.keepit.common.net.URI
+import com.keepit.common.net.{ Query, URI }
+import com.keepit.normalizer.NormalizationCandidateSanitizer
 import com.keepit.rover.document.utils.{ SignatureBuilder, Signature, DateTimeMetadataParser }
 import com.keepit.rover.fetcher.{ FetchResult, HttpInputStream }
 import com.keepit.scraper.mediatypes.MediaTypes
 import com.keepit.scraper.BasicArticle
-
-import scala.util.{ Failure, Success }
-import org.apache.commons.lang3.StringEscapeUtils.unescapeHtml4
 import org.joda.time.DateTime
 
 trait Extractor {
@@ -17,24 +15,8 @@ trait Extractor {
   def getKeywords(): Option[String]
   def getLinks(key: String): Set[String]
   def getCanonicalUrl(destinationUrl: String): Option[String] = {
-    getLinks("canonical").headOption orElse getMetadata("og:url") flatMap { url =>
-      URI.absoluteUrl(destinationUrl, url).flatMap { absoluteUrl =>
-        URI.parse(absoluteUrl) match {
-          case Success(parsed) =>
-            // Question marks are allowed in query parameter names and values, but their presence
-            // in a canonical URL usually indicates a bad url.
-            if (parsed.query.exists(_.params.exists(p => p.name.contains('?') || p.value.exists(_.contains('?'))))) {
-              None
-              // A common site error is copying the page URL directly into a canoncial URL tag, escaped an extra time.
-            } else if (absoluteUrl.length > destinationUrl.length && unescapeHtml4(absoluteUrl) == destinationUrl) {
-              None
-            } else {
-              Some(absoluteUrl)
-            }
-          case Failure(_) =>
-            None
-        }
-      }
+    (getLinks("canonical").headOption orElse getMetadata("og:url")).flatMap { candidateUrl =>
+      NormalizationCandidateSanitizer.validateCandidateUrl(destinationUrl, candidateUrl)
     }
   }
 
@@ -68,6 +50,18 @@ trait Extractor {
       destinationUrl = destinationUrl,
       signature = getSignature
     )
+  def decodePercents(uri: URI): String = { // just doing query parameter values for now
+    URI(
+      raw = None,
+      scheme = uri.scheme,
+      userInfo = uri.userInfo,
+      host = uri.host,
+      port = uri.port,
+      path = uri.path,
+      query = uri.query.map(q => Query(q.params.map(p => p.copy(value = p.value.map(_.replace("%25", "%")))))),
+      fragment = uri.fragment
+    ).toString
+  }
 }
 
 trait ExtractorFactory extends Function[URI, Extractor]

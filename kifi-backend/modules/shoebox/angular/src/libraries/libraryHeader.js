@@ -16,7 +16,7 @@ angular.module('kifi')
         library: '=',
         username: '=',
         librarySlug: '=',
-        toggleEdit: '=',
+        editMode: '=',
         librarySearch: '=',
         followCallback: '&',
         clickLibraryCallback: '&'
@@ -37,7 +37,6 @@ angular.module('kifi')
         // Scope data.
         //
         scope.Math = Math;
-        scope.editingKeeps = false;
         scope.search = { 'text': $stateParams.q || '' };
         scope.isMobile = platformService.isSupportedMobilePlatform();
         scope.descExpanded = false;
@@ -51,7 +50,6 @@ angular.module('kifi')
 
         function augmentData() {
           var lib = scope.library;
-          lib.nameText = util.preventOrphans(lib.name);
           lib.descriptionHtml = util.linkify(lib.description || '').replace(/\n+/g, '<br>');
           lib.absUrl = env.origin + lib.url;
           lib.isSystem = lib.kind.lastIndexOf('system_', 0) === 0;
@@ -553,8 +551,7 @@ angular.module('kifi')
 
         scope.toggleEditKeeps = function () {
           $rootScope.$emit('trackLibraryEvent', 'click', { action: 'clickedEditKeeps' });
-          scope.toggleEdit();
-          scope.editingKeeps = !scope.editingKeeps;
+          scope.editMode = !scope.editMode;
         };
 
         scope.showFollowers = function () {

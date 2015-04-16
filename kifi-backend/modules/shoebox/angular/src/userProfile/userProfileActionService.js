@@ -40,9 +40,6 @@ angular.module('kifi')
       },
       getUsers: function (ids) {
         return $http.get(routeService.getProfileUsers(ids)).then(getData);
-      },
-      getMutualConnections: function (id) {
-        return $http.get(routeService.getMutualConnections(id)).then(getData);
       }
     };
   }

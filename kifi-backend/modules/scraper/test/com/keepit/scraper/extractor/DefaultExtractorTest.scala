@@ -65,6 +65,12 @@ class DefaultExtractorTest extends Specification {
       extractor.getCanonicalUrl(longUrl) === None
     }
 
+    "ignore canonical URLs that are the page URL with parameter values URL-encoded twice" in {
+      val url = "https://soundcloud.com/search?q=%D8%AF%DB%8C%D8%A7%D9%84%D9%88%DA%AF"
+      val extractor = setup(url, "double-encode.txt")
+      extractor.getCanonicalUrl(url) === None
+    }
+
     "stop when limit reached" in {
       val extractor = setup("https://cnn.com/url2", "www.cnn.com.health.txt", Some(500))
       extractor.getCanonicalUrl("") === Some("http://www.cnn.com/video/data/2.0/video/us/2014/01/24/newday-live-larson-u-s-olympic-team-uniforms.cnn-ap.html")

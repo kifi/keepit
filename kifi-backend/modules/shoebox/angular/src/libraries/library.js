@@ -89,6 +89,15 @@ angular.module('kifi')
     $scope.passphrase = $scope.passphrase || {};
     $scope.$error = $scope.$error || {};
     $scope.userIsOwner = $rootScope.userLoggedIn && library.owner.id === profileService.me.id;
+    $scope.edit = {
+      enabled: false,
+      actions: {
+        bulkUnkeep: true,
+        copyToLibrary: true,
+        moveToLibrary: true,
+        editTags: true
+      }
+    };
 
 
     //

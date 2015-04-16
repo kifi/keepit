@@ -227,8 +227,9 @@ GET     /m/1/contacts/search                    @com.keepit.controllers.mobile.M
 POST    /m/1/invite                             @com.keepit.controllers.mobile.MobileInviteController.inviteConnection
 
 # Profile Page
-GET     /m/1/user/:username/profile             @com.keepit.controllers.mobile.MobileUserController.profile(username)
-GET     /m/1/user/:username/libraries           @com.keepit.controllers.mobile.MobileLibraryController.getProfileLibraries(username: Username, page: Int ?= 0, size: Int ?= 12, filter: String ?= "own")
+GET     /m/1/user/:username/profile             @com.keepit.controllers.mobile.MobileUserProfileController.profile(username)
+GET     /m/1/user/:username/libraries           @com.keepit.controllers.mobile.MobileUserProfileController.getProfileLibraries(username: Username, page: Int ?= 0, size: Int ?= 12, filter: String ?= "own")
+GET     /m/1/user/:username/followers           @com.keepit.controllers.mobile.MobileUserProfileController.getProfileFollowers(username: Username, page: Int ?= 0, size: Int ?= 12)
 
 POST    /m/1/user/:id/unfriend                  @com.keepit.controllers.mobile.MobileUserController.unfriend(id: ExternalId[User])
 POST    /m/1/user/:id/friend                    @com.keepit.controllers.mobile.MobileUserController.friend(id: ExternalId[User])
@@ -278,6 +279,7 @@ POST    /m/1/libraries/recos/feedback      @com.keepit.controllers.website.Libra
 POST    /m/1/content/flagUrl                @com.keepit.controllers.mobile.MobileUriController.flagContent()
 
 GET     /m/1/keeps/:id                      @com.keepit.controllers.mobile.MobileKeepsController.getKeepInfo(id: ExternalId[Keep], withFullInfo: Boolean ?= false, imageWidth: Option[Int] ?= None, imageHeight: Option[Int] ?= None)
+POST    /m/1/keeps/:id                      @com.keepit.controllers.mobile.MobileKeepsController.editKeepInfo(id: ExternalId[Keep])
 GET     /m/1/inviteInfo                     @com.keepit.controllers.website.InviteController.getGeneralInviteInfo()
 
 
@@ -465,7 +467,7 @@ GET     /site/user/incomingFriendRequests @com.keepit.controllers.website.UserCo
 
 GET     /site/user/friends          @com.keepit.controllers.website.UserController.friends(page: Int ?= 0, pageSize: Int ?= 1000)
 GET     /site/user/friends/recommended   @com.keepit.controllers.website.PeopleRecommendationController.getFriendRecommendations(offset: Int ?= 0, limit: Int ?= 5)
-GET     /site/user/friends/recommendedCards @com.keepit.controllers.website.UserProfileController.getFriendRecommendations(fullInfoLimit: Int ?= 12, maxExtraIds: Int ?= 12)
+GET     /site/user/friends/recommended/cards @com.keepit.controllers.website.UserProfileController.getFriendRecommendations(n: Int ?= 12, ids: Int ?= 12)
 GET     /site/user/invite/recommended    @com.keepit.controllers.website.PeopleRecommendationController.getInviteRecommendations(offset: Int ?= 0, limit: Int ?= 5)
 POST    /site/user/invite/hide           @com.keepit.controllers.website.PeopleRecommendationController.hideInviteRecommendation()
 POST    /site/user/:id/hide              @com.keepit.controllers.website.PeopleRecommendationController.hideFriendRecommendation(id: ExternalId[User])
