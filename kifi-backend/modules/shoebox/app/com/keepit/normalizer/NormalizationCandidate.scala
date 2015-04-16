@@ -85,6 +85,6 @@ case class NormalizationReference(uri: NormalizedURI, isNew: Boolean = false, co
   def uriId: Id[NormalizedURI] = uri.id.get
   def url = uri.url
   def persistedNormalization: Option[Normalization] = uri.normalization
-  lazy val normalization: Option[Normalization] = correctedNormalization orElse persistedNormalization orElse SchemeNormalizer.findSchemeNormalization(uri.url)
+  def normalization: Option[Normalization] = correctedNormalization orElse persistedNormalization
 }
 
