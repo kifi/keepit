@@ -1,9 +1,11 @@
 package com.keepit.normalizer
 
+import com.keepit.common.net.{ Query, URI }
 import com.keepit.model.{ NormalizedURI, RawKeep, Normalization }
 import com.keepit.common.db.Id
 import com.keepit.commanders.RawBookmarkRepresentation
 import com.keepit.rover.document.utils.Signature
+import org.apache.commons.lang3.StringEscapeUtils._
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 
@@ -76,7 +78,6 @@ object NormalizationCandidate {
     (__ \ 'normalization).format[Normalization] and
     (__ \ 'isTrusted).format[Boolean]
   )(NormalizationCandidate.apply(_: String, _: String, _: Normalization, _: Boolean), unlift(NormalizationCandidate.unapply))
-
 }
 
 case class NormalizationReference(uri: NormalizedURI, isNew: Boolean = false, correctedNormalization: Option[Normalization] = None, signature: Option[Signature] = None) {
@@ -87,4 +88,3 @@ case class NormalizationReference(uri: NormalizedURI, isNew: Boolean = false, co
   def persistedNormalization: Option[Normalization] = uri.normalization
   def normalization: Option[Normalization] = correctedNormalization orElse persistedNormalization
 }
-
