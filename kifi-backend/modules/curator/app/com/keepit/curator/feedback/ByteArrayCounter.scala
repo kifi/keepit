@@ -45,11 +45,16 @@ class ByteArrayCounter(bytes: Array[Byte]) {
     ByteArrayCounter.fromArray(arr)
   }
 
+  def rescale(idx: Int): ByteArrayCounter = {
+    val x = get(idx)
+    set(idx, x / 2)
+  }
+
   def toArray(): Array[Int] = Array.tabulate(bytes.size) { i => get(i) }
 }
 
 object ByteArrayCounter {
-  val MAX_COUNT = 255
+  val MAX_COUNT = 255 // DO NOT CHANGE
 
   def empty(n: Int): ByteArrayCounter = {
     new ByteArrayCounter(new Array[Byte](n))

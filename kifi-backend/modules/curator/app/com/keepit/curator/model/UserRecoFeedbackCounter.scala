@@ -17,35 +17,64 @@ case class UserRecoFeedbackCounter(
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,
     userId: Id[User],
-    voteUps: ByteArrayCounter,
-    voteDowns: ByteArrayCounter,
+    upVotes: ByteArrayCounter,
+    downVotes: ByteArrayCounter,
+    posSignals: ByteArrayCounter,
+    negSignals: ByteArrayCounter,
+    votesRescaleCount: Int,
+    signalsRescaleCount: Int,
     state: State[UserRecoFeedbackCounter] = UserRecoFeedbackCounterStates.ACTIVE) extends ModelWithState[UserRecoFeedbackCounter] {
 
   def withId(id: Id[UserRecoFeedbackCounter]): UserRecoFeedbackCounter = this.copy(id = Some(id))
   def withUpdateTime(updateTime: DateTime): UserRecoFeedbackCounter = this.copy(updatedAt = updateTime)
 
-  private def rescaleOnOverflow(idx: Int): UserRecoFeedbackCounter = {
-    val (ups, downs) = (voteUps.get(idx), voteDowns.get(idx))
-    val (newUps, newDowns) = (voteUps.set(idx, ups / 2), voteDowns.set(idx, downs / 2))
-    this.copy(voteUps = newUps, voteDowns = newDowns)
+  private def rescaleVotesOnOverflow(idx: Int): UserRecoFeedbackCounter = {
+    this.copy(upVotes = upVotes.rescale(idx), downVotes = downVotes.rescale(idx), votesRescaleCount = this.votesRescaleCount + 1)
   }
 
-  def updateWithFeedback(idx: Int, fb: UriRecoFeedbackValue): UserRecoFeedbackCounter = {
-    FeedbackIncreConfig.getIncreValue(fb) match {
-      case Some(VoteUpIncre(x)) =>
-        val scaled = if (!voteUps.canIncrement(idx, x)) {
-          rescaleOnOverflow(idx)
-        } else this
-        scaled.copy(voteUps = scaled.voteUps.increment(idx, x))
+  private def rescaleSignalsOnOverflow(idx: Int): UserRecoFeedbackCounter = {
+    this.copy(posSignals = posSignals.rescale(idx), negSignals = negSignals.rescale(idx), signalsRescaleCount = this.signalsRescaleCount + 1)
+  }
 
-      case Some(VoteDownIncre(x)) =>
-        val scaled = if (!voteDowns.canIncrement(idx: Int, x)) {
-          rescaleOnOverflow(idx)
+  private def handleSingal(idx: Int, fb: UriRecoFeedbackValue): UserRecoFeedbackCounter = {
+    FeedbackIncreConfig.getIncreValue(fb) match {
+      case Some(PositiveSingalIncre(x)) =>
+        val scaled = if (!posSignals.canIncrement(idx, x)) {
+          rescaleSignalsOnOverflow(idx)
         } else this
-        scaled.copy(voteDowns = scaled.voteDowns.increment(idx, x))
+        scaled.copy(posSignals = scaled.posSignals.increment(idx, x))
+
+      case Some(NegativeSignalIncre(x)) =>
+        val scaled = if (!negSignals.canIncrement(idx: Int, x)) {
+          rescaleSignalsOnOverflow(idx)
+        } else this
+        scaled.copy(negSignals = scaled.negSignals.increment(idx, x))
 
       case None => this
     }
+  }
+
+  private def handleVote(idx: Int, fb: UriRecoFeedbackValue): UserRecoFeedbackCounter = {
+    fb match {
+      case UriRecoFeedbackValue.LIKE =>
+        val scaled = if (!upVotes.canIncrement(idx)) {
+          rescaleVotesOnOverflow(idx)
+        } else this
+        scaled.copy(upVotes = scaled.upVotes.increment(idx))
+
+      case UriRecoFeedbackValue.DISLIKE =>
+        val scaled = if (!downVotes.canIncrement(idx)) {
+          rescaleVotesOnOverflow(idx)
+        } else this
+        scaled.copy(downVotes = scaled.downVotes.increment(idx))
+
+      case _ => this
+    }
+  }
+
+  def updateWithFeedback(idx: Int, fb: UriRecoFeedbackValue): UserRecoFeedbackCounter = {
+    val updated = handleSingal(idx, fb)
+    updated.handleVote(idx, fb)
   }
 }
 
@@ -60,12 +89,23 @@ object UserRecoFeedbackCounter {
     (__ \ 'createdAt).format(DateTimeJsonFormat) and
     (__ \ 'updatedAt).format(DateTimeJsonFormat) and
     (__ \ 'userId).format[Id[User]] and
-    (__ \ 'voteUps).format[ByteArrayCounter] and
-    (__ \ 'voteDowns).format[ByteArrayCounter] and
+    (__ \ 'upVotes).format[ByteArrayCounter] and
+    (__ \ 'downVotes).format[ByteArrayCounter] and
+    (__ \ 'posSignals).format[ByteArrayCounter] and
+    (__ \ 'negSignals).format[ByteArrayCounter] and
+    (__ \ 'votesRescaleCount).format[Int] and
+    (__ \ 'signalsRescaleCount).format[Int] and
     (__ \ 'state).format[State[UserRecoFeedbackCounter]]
   )(UserRecoFeedbackCounter.apply, unlift(UserRecoFeedbackCounter.unapply))
 
-  def empty(userId: Id[User], bucketSize: Int) = UserRecoFeedbackCounter(userId = userId, voteUps = ByteArrayCounter.empty(bucketSize), voteDowns = ByteArrayCounter.empty(bucketSize))
+  def empty(userId: Id[User], bucketSize: Int) = UserRecoFeedbackCounter(
+    userId = userId,
+    upVotes = ByteArrayCounter.empty(bucketSize),
+    downVotes = ByteArrayCounter.empty(bucketSize),
+    posSignals = ByteArrayCounter.empty(bucketSize),
+    negSignals = ByteArrayCounter.empty(bucketSize),
+    votesRescaleCount = 0,
+    signalsRescaleCount = 0)
 
 }
 
@@ -79,8 +119,8 @@ class UserRecoFeedbackCounterUserCache(stats: CacheStatistics, accessLog: Access
   extends JsonCacheImpl[UserRecoFeedbackCounterUserKey, UserRecoFeedbackCounter](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 sealed trait FeedbackIncreValue
-case class VoteUpIncre(x: Int) extends FeedbackIncreValue
-case class VoteDownIncre(x: Int) extends FeedbackIncreValue
+case class PositiveSingalIncre(x: Int) extends FeedbackIncreValue
+case class NegativeSignalIncre(x: Int) extends FeedbackIncreValue
 
 object FeedbackIncreConfig {
   import UriRecoFeedbackValue._
@@ -93,10 +133,10 @@ object FeedbackIncreConfig {
 
   def getIncreValue(fb: UriRecoFeedbackValue): Option[FeedbackIncreValue] = {
     fb match {
-      case CLICKED => Some(VoteUpIncre(clicked))
-      case KEPT => Some(VoteUpIncre(kept))
-      case LIKE => Some(VoteUpIncre(liked))
-      case DISLIKE => Some(VoteDownIncre(disliked))
+      case CLICKED => Some(PositiveSingalIncre(clicked))
+      case KEPT => Some(PositiveSingalIncre(kept))
+      case LIKE => Some(PositiveSingalIncre(liked))
+      case DISLIKE => Some(NegativeSignalIncre(disliked))
       case _ => None
     }
   }

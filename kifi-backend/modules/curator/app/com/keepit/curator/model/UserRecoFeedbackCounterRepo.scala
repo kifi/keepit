@@ -35,9 +35,13 @@ class UserRecoFeedbackCounterRepoImpl @Inject() (
 
   class UserRecoFeedbackCounterTable(tag: Tag) extends RepoTable[UserRecoFeedbackCounter](db, tag, "user_reco_feedback_counter") {
     def userId = column[Id[User]]("user_id", O.NotNull)
-    def voteUps = column[ByteArrayCounter]("vote_ups", O.NotNull)
-    def voteDowns = column[ByteArrayCounter]("vote_downs", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, userId, voteUps, voteDowns, state) <> ((UserRecoFeedbackCounter.apply _).tupled, UserRecoFeedbackCounter.unapply _)
+    def upVotes = column[ByteArrayCounter]("up_votes", O.NotNull)
+    def downVotes = column[ByteArrayCounter]("down_votes", O.NotNull)
+    def posSignals = column[ByteArrayCounter]("pos_signals", O.NotNull)
+    def negSignals = column[ByteArrayCounter]("neg_signals", O.NotNull)
+    def votesRescaleCount = column[Int]("votes_rescale_count", O.NotNull)
+    def signalsRescaleCount = column[Int]("signals_rescale_count", O.NotNull)
+    def * = (id.?, createdAt, updatedAt, userId, upVotes, downVotes, posSignals, negSignals, votesRescaleCount, signalsRescaleCount, state) <> ((UserRecoFeedbackCounter.apply _).tupled, UserRecoFeedbackCounter.unapply _)
   }
 
   def table(tag: Tag) = new UserRecoFeedbackCounterTable(tag)

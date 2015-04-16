@@ -42,15 +42,15 @@ class UserRecoFeedbackCommanderTest extends Specification with CuratorTestInject
 
         commander.trackFeedback(item, UriRecoFeedbackValue.CLICKED)
         var counter = db.readOnlyReplica { implicit s => repo.getByUser(Id[User](1)) }.get
-        counter.voteUps.get(bucketId) === 1
-        counter.voteUps.toArray().sum === 1
-        counter.voteDowns.toArray().sum === 0
+        counter.posSignals.get(bucketId) === 1
+        counter.posSignals.toArray().sum === 1
+        counter.negSignals.toArray().sum === 0
 
         commander.trackFeedback(item, UriRecoFeedbackValue.DISLIKE)
         counter = db.readOnlyReplica { implicit s => repo.getByUser(Id[User](1)) }.get
-        counter.voteDowns.get(bucketId) === 5
-        counter.voteUps.toArray().sum === 1
-        counter.voteDowns.toArray().sum === 5
+        counter.negSignals.get(bucketId) === 5
+        counter.posSignals.toArray().sum === 1
+        counter.negSignals.toArray().sum === 5
 
       }
     }
