@@ -136,7 +136,7 @@ class MemcachedCache @Inject() (
       toOption(future.get(1, TimeUnit.SECONDS))
     } catch {
       case timeout: CheckedOperationTimeoutException =>
-        airbrake.notify("A timeout error has occurred while getting the value from memcached", timeout)
+        //airbrake.notify("A timeout error has occurred while getting the value from memcached", timeout)
         handleTimeoutException(client)
         if (future != null) future.cancel(false)
         None
