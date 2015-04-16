@@ -111,7 +111,7 @@ angular.module('kifi')
       })
       .state('library.search', {
         url: '/find?q&f',
-        templateUrl: 'search/search.tpl.html',
+        templateUrl: 'search/matchingKeeps.tpl.html',
         controller: 'SearchCtrl',
         reloadOnSearch: false  // controller handles search query changes itself
       });

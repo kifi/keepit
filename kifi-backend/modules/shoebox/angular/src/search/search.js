@@ -14,7 +14,6 @@ angular.module('kifi')
     var query;
     var filter;
     var context;
-    var selectedCount;
     var renderTimeout;
     var smoothScrollStep;  // used to ensure that only one smooth scroll animation happens at a time
 
@@ -62,13 +61,13 @@ angular.module('kifi')
       }
 
       context = null;
-      selectedCount = 0;
       $timeout.cancel(renderTimeout);
       renderTimeout = null;
 
       $scope.hasMore = true;
       $scope.scrollDistance = '100%';
       $scope.loading = false;
+      $scope.edit.enabled = false;
 
       document.title = (library && library.name ? library.name + ' • ' : '') + query.replace(/^tag:/, '') + ' • Kifi';
 
@@ -195,33 +194,6 @@ angular.module('kifi')
     $scope.analyticsTrack = function (keep, $event) {
       searchActionService.reportSearchClickAnalytics(keep, $scope.resultKeeps.indexOf(keep), $scope.resultKeeps.length);
       return [keep, $event]; // log analytics for search click here
-    };
-
-    $scope.getSubtitle = function () {
-      if ($scope.loading) {
-        return 'Searching…';
-      }
-
-      // If there are selected keeps, display the number of keeps
-      // in the subtitle.
-      if (selectedCount > 0) {
-        return (selectedCount === 1) ? '1 Keep selected' : selectedCount + ' Keeps selected';
-      }
-
-      // If there are no selected keep, the display the number of
-      // search results in the subtitle.
-      switch ($scope.resultKeeps.length) {
-        case 0:
-          return 'Sorry, no results found for “' + query + '”';
-        case 1:
-          return '1 result found';
-        default:
-          return 'Top ' + $scope.resultKeeps.length + ' results';
-      }
-    };
-
-    $scope.updateSelectedCount = function (numSelected) {
-      selectedCount = numSelected;
     };
 
     $scope.onClickSearchFilter = function (newSearchFilter) {
