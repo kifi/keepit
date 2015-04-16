@@ -3,11 +3,14 @@ package com.keepit.curator.feedback
 import play.api.libs.json._
 
 // Immutable operations. Optimized for thread-safe.
-case class ByteArrayCounter(bytes: Array[Byte]) {
+class ByteArrayCounter(bytes: Array[Byte]) {
 
   private def unsignedbyte2Int(b: Byte): Int = (b & 0xFF)
   private def isValidIndex(idx: Int): Boolean = idx >= 0 && idx < bytes.size
   private def canStoreCount(x: Int): Boolean = x >= 0 && x <= ByteArrayCounter.MAX_COUNT
+
+  // never expose internal bytes
+  def getBytes(): Array[Byte] = Array.tabulate(bytes.size) { i => bytes(i) }
 
   def canIncrement(idx: Int, delta: Int = 1): Boolean = {
     require(delta >= 1 && isValidIndex(idx), s"invalid parameters: idx = ${idx}, delta = ${delta}")
@@ -49,12 +52,12 @@ object ByteArrayCounter {
   val MAX_COUNT = 255
 
   def empty(n: Int): ByteArrayCounter = {
-    ByteArrayCounter(new Array[Byte](n))
+    new ByteArrayCounter(new Array[Byte](n))
   }
 
   def fromArray(xs: Array[Int]): ByteArrayCounter = {
     require(xs.forall(x => x >= 0 && x <= MAX_COUNT))
-    ByteArrayCounter(xs.map { x => x.toByte })
+    new ByteArrayCounter(xs.map { x => x.toByte })
   }
 
   implicit val reads = new Reads[ByteArrayCounter] {

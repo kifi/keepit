@@ -27,8 +27,8 @@ class UserRecoFeedbackCounterRepoImpl @Inject() (
   type RepoImpl = UserRecoFeedbackCounterTable
 
   private implicit def counterTypeMapper = MappedColumnType.base[ByteArrayCounter, Blob](
-    { counter => new SerialBlob(counter.bytes) },
-    { blob => val len = blob.length().toInt; val arr = blob.getBytes(1, len); ByteArrayCounter(arr) }
+    { counter => new SerialBlob(counter.getBytes()) },
+    { blob => val len = blob.length().toInt; val arr = blob.getBytes(1, len); new ByteArrayCounter(arr) }
   )
 
   private implicit def userToUserKey(userId: Id[User]) = UserRecoFeedbackCounterUserKey(userId)
