@@ -137,8 +137,7 @@ class ScrapeWorkerImpl @Inject() (
           scrapedURI <- {
             if (ScrapeWorker.DEACTIVATE_SHOEBOX_CALLBACKS) {
               shoeboxCommander.updateNormalizedURIState(latestUri.id.get, NormalizedURIStates.SCRAPED).map { _ => latestUri.withState(NormalizedURIStates.SCRAPED) }
-            }
-            else shoeboxCommander.saveNormalizedUri(updatedUri.withTitle(article.title).withState(NormalizedURIStates.SCRAPED))
+            } else shoeboxCommander.saveNormalizedUri(updatedUri.withTitle(article.title).withState(NormalizedURIStates.SCRAPED))
           }
           _ <- shoeboxCommander.saveScrapeInfo(info.withDestinationUrl(article.destinationUrl).withDocumentChanged(signature.toBase64))
           uriImage <- postProcess(scrapedURI, article, signature)
