@@ -1,4 +1,4 @@
-<div class="kf-keep" ng-hide="keep.unkept && !keep.isProtected && keep.itemType !== 'reco'" ng-class="{'editing': editMode.enabled}">
+<div class="kf-keep" ng-hide="keep.unkept && !keep.isProtected && keep.itemType !== 'reco'" ng-class="{'editing': selectable}">
   <div class="kf-keep-edit-tools">
     <div class="kf-keep-checkbox-icon sprite sprite-checkbox-icon" ng-if="!isSelected({keep: keep})" ng-click="toggleSelect({keep: keep})"></div>
     <div class="kf-keep-checkbox-icon sprite sprite-checkbox-icon-active" ng-if="isSelected({keep: keep})" ng-click="toggleSelect({keep: keep})"></div>

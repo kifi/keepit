@@ -255,7 +255,7 @@ class TwitterSocialGraphImpl @Inject() (
         if (user.createdAt > clock.now.minusMinutes(30)) {
           //send a push notifications only if the user was created more then 30 minutes ago.
           val message = s"${libOwner.firstName} created a Twitter Library"
-          val canSendPush = kifiInstallationCommander.isMobileVersionGreaterThen(userId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
+          val canSendPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(userId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
           if (canSendPush) {
             elizaServiceClient.sendLibraryPushNotification(
               userId,
@@ -286,7 +286,7 @@ class TwitterSocialGraphImpl @Inject() (
         "library" -> Json.toJson(LibraryNotificationInfo.fromLibraryAndOwner(lib, libImageOpt, owner))
       ))
     ) map { _ =>
-        val canSendPush = kifiInstallationCommander.isMobileVersionGreaterThen(lib.ownerId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
+        val canSendPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(lib.ownerId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
         if (canSendPush) {
           elizaServiceClient.sendUserPushNotification(
             userId = lib.ownerId,

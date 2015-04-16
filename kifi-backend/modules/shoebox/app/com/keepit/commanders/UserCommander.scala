@@ -355,7 +355,7 @@ class UserCommander @Inject() (
               category = NotificationCategory.User.CONTACT_JOINED
             ) map { _ =>
                 toNotify.foreach { userId =>
-                  val canSendPush = kifiInstallationCommander.isMobileVersionGreaterThen(userId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
+                  val canSendPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(userId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
                   if (canSendPush) {
                     elizaServiceClient.sendUserPushNotification(
                       userId = userId,

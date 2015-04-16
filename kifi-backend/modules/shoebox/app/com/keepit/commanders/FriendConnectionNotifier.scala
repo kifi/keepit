@@ -53,7 +53,7 @@ class FriendConnectionNotifier @Inject() (
       category = category,
       extra = Some(Json.obj("friend" -> BasicUser.fromUser(respondingUser)))
     ) map { _ =>
-        val canSendPush = kifiInstallationCommander.isMobileVersionGreaterThen(friendUserId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
+        val canSendPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(friendUserId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
         if (canSendPush) {
           elizaServiceClient.sendUserPushNotification(
             userId = friendUserId,

@@ -98,13 +98,13 @@ case class UrlHash(hash: String) extends AnyVal {
 }
 
 case class NormalizedURIKey(id: Id[NormalizedURI]) extends Key[NormalizedURI] {
-  override val version = 6
+  override val version = 7
   val namespace = "uri_by_id"
   def toKey(): String = id.id.toString
 }
 
 case class NormalizedURIUrlHashKey(urlHash: UrlHash) extends Key[NormalizedURI] {
-  override val version = 5
+  override val version = 6
   val namespace = "uri_by_hash"
   def toKey(): String = urlHash.hash
 }

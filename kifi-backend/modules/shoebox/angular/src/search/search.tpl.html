@@ -7,9 +7,9 @@
     </div>
     <div class="kf-subtitle">
       <span class="kf-subtitle-text">{{getSubtitle()}}</span>
-      <div class="kf-edit-keeps" ng-click="toggleEdit()" ng-if="$root.userLoggedIn && resultKeeps.length > 1">
+      <div class="kf-edit-keeps" ng-click="edit.enabled = !edit.enabled" ng-if="$root.userLoggedIn && resultKeeps.length > 1">
         <span class="sprite sprite-edit-pencil-icon"></span>
-        <span class="kf-edit-keeps-label">{{editKeepsLabel()}}</span>
+        <span class="kf-edit-keeps-label">{{edit.enabled ? 'Done' : 'Bulk keep to library'}}</span>
       </div>
     </div>
   </div>
@@ -22,9 +22,7 @@
     scroll-disabled="!hasMore"
     scroll-next="getNextKeeps()"
     keep-click="analyticsTrack"
-    edit-mode="editMode"
-    edit-options="editOptions"
-    toggle-edit="toggleEdit"
+    edit="edit"
     update-selected-count="updateSelectedCount(numSelected)"
     current-page-origin="searchResultsPage"
   ></div>
