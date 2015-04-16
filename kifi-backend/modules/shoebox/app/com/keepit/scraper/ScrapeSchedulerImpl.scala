@@ -26,24 +26,29 @@ class ScrapeSchedulerImpl @Inject() (
 
   def scheduleScrape(uri: NormalizedURI, date: DateTime)(implicit session: RWSession): Unit = scrapeInfoRepo.scheduleScrape(uri, date)
 
-  @inline private def sanityCheck(url: String): Unit = {
+  @inline private def sanityCheck(url: String): Boolean = {
     val parseUriTr = Try(java.net.URI.create(url)) // java.net.URI needed for current impl of HttpFetcher
-    require(parseUriTr.isSuccess, s"java.net.URI parser failed to parse url=($url) error=${parseUriTr.failed.get}")
+    if (parseUriTr.isFailure) log.warn(s"java.net.URI parser failed to parse url=($url) error=${parseUriTr.failed.get}")
+    parseUriTr.isSuccess
   }
 
   @inline private def getProxy(url: String): Option[HttpProxy] = db.readOnlyMaster { implicit s => urlPatternRules.getProxy(url) } // cached; use master
 
   def scrapeBasicArticle(url: String, extractorProviderType: Option[ExtractorProviderType]): Future[Option[BasicArticle]] = {
-    sanityCheck(url)
-    val proxyOpt = getProxy(url)
-    log.info(s"[scrapeBasicArticle] invoke (remote) Scraper service; url=$url proxy=$proxyOpt extractorProviderType=$extractorProviderType")
-    scraperClient.getBasicArticle(url, proxyOpt, extractorProviderType)
+    if (!sanityCheck(url)) Future.successful(None)
+    else {
+      val proxyOpt = getProxy(url)
+      log.info(s"[scrapeBasicArticle] invoke (remote) Scraper service; url=$url proxy=$proxyOpt extractorProviderType=$extractorProviderType")
+      scraperClient.getBasicArticle(url, proxyOpt, extractorProviderType)
+    }
   }
 
   def getSignature(url: String, extractorProviderType: Option[ExtractorProviderType]): Future[Option[Signature]] = {
-    sanityCheck(url)
-    val proxyOpt = getProxy(url)
-    log.info(s"[getSignature] invoke (remote) Scraper service; url=$url proxy=$proxyOpt extractorProviderType=$extractorProviderType")
-    scraperClient.getSignature(url, proxyOpt, extractorProviderType)
+    if (!sanityCheck(url)) Future.successful(None)
+    else {
+      val proxyOpt = getProxy(url)
+      log.info(s"[getSignature] invoke (remote) Scraper service; url=$url proxy=$proxyOpt extractorProviderType=$extractorProviderType")
+      scraperClient.getSignature(url, proxyOpt, extractorProviderType)
+    }
   }
 }
