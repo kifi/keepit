@@ -190,8 +190,8 @@ class MobileKeepsController @Inject() (
         val titleOpt = (json \ "title").asOpt[String]
         val noteOpt = (json \ "note").asOpt[String]
 
-        val newTitle = titleOpt map { _.trim } filterNot { _.isEmpty }
-        val newNote = noteOpt map { _.trim } filterNot { _.isEmpty }
+        val newTitle = titleOpt orElse keep.title map { _.trim } filterNot { _.isEmpty }
+        val newNote = noteOpt orElse keep.note map { _.trim } filterNot { _.isEmpty }
 
         db.readWrite { implicit s =>
           keepRepo.save(keep.copy(title = newTitle, note = newNote))
