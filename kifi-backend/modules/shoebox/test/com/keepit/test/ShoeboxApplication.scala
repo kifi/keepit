@@ -28,6 +28,7 @@ import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.inject.{ ApplicationInjector, FakeFortyTwoModule }
 import com.keepit.normalizer.FakeNormalizationServiceModule
 import com.keepit.queue.FakeNormalizationUpdateJobQueueModule
+import com.keepit.rover.FakeRoverServiceClientModule
 import com.keepit.scraper.FakeScraperServiceClientModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox._
@@ -40,6 +41,7 @@ class ShoeboxApplication(overridingModules: Module*)(implicit path: File = new F
     FakeABookServiceClientModule(),
     FakeHeimdalServiceClientModule(),
     FakeElizaServiceClientModule(),
+    FakeRoverServiceClientModule(),
     FakeAirbrakeModule(),
     FakeMemoryUsageModule(),
     FakeClockModule(),
@@ -73,6 +75,7 @@ trait ShoeboxTestInjector extends TestInjector with DbInjectionHelper with Shoeb
     FakeOAuth2ConfigurationModule(),
     FakeHeimdalServiceClientModule(),
     FakeElizaServiceClientModule(),
+    FakeRoverServiceClientModule(),
     FakeAirbrakeModule(),
     FakeMemoryUsageModule(),
     FakeClockModule(),
