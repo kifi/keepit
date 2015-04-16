@@ -879,6 +879,14 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
           currentKeep.note === Some("a real note")
         }
 
+        val testEditNothing = editKeepInfo(user, keep, Json.obj())
+        status(testEditNothing) must equalTo(NO_CONTENT)
+        db.readOnlyMaster { implicit s =>
+          val currentKeep = keepRepo.get(keep.externalId)
+          currentKeep.title === Some("a real keep")
+          currentKeep.note === Some("a real note")
+        }
+
       }
     }
 
