@@ -349,8 +349,8 @@ class ScrapeWorkerImpl @Inject() (
       if (redirects.nonEmpty) {
         log.info(s"Resolving redirects found at uri ${uri.id.get}: ${uri.url}: ${redirects.mkString("\n")}")
       }
-      HttpRedirect.resolve(uri.url, redirects).map { absoluteDestination =>
-        val validRedirect = HttpRedirect(HttpStatus.SC_MOVED_PERMANENTLY, unrestrictedUri.url, absoluteDestination)
+      HttpRedirect.resolve(uri.url, redirects).flatMap(NormalizationCandidateSanitizer.validateCandidateUrl(uri.url, _)).map { validDestination =>
+        val validRedirect = HttpRedirect(HttpStatus.SC_MOVED_PERMANENTLY, unrestrictedUri.url, validDestination)
         log.info(s"Found permanent $validRedirect for $uri")
         shoeboxCommander.recordPermanentRedirect(unrestrictedUri, validRedirect)
       } getOrElse {
