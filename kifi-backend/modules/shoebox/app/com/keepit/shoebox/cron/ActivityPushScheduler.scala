@@ -2,7 +2,7 @@ package com.keepit.shoebox.cron
 
 import com.keepit.commanders.{ LibraryImageCommander, ProcessedImageSize, KifiInstallationCommander }
 import com.keepit.common.crypto.PublicIdConfiguration
-import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
+import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.S3ImageStore
 import com.keepit.social.BasicUser
@@ -193,12 +193,8 @@ class ActivityPusher @Inject() (
   }
 
   private def pushActivity(activity: ActivityPushTask): Unit = {
-    getMessage(activity.userId) match {
-      case Some((message, experimant)) =>
-        pushMessage(activity, message, experimant)
-      case None =>
-        log.info(s"skipping push activity for user ${activity.userId}")
-    }
+    val (message, experimant) = getMessage(activity.userId)
+    pushMessage(activity, message, experimant)
   }
 
   private def getLibraryActivityMessage(experiment: PushNotificationExperiment, userId: Id[User]): Option[LibraryPushNotificationMessage] = {
@@ -242,12 +238,22 @@ class ActivityPusher @Inject() (
     }
   }
 
-  private def getMessage(userId: Id[User]): Option[(PushNotificationMessage, PushNotificationExperiment)] = {
+  private def getGeneralMessage(experiment: PushNotificationExperiment, userId: Id[User]): GeneralActivityPushNotificationMessage = {
+    db.readOnlyReplica { implicit s =>
+      val msg = {
+        if (experiment == PushNotificationExperiment.Experiment1) s"""Your Kifi feed has updates. Check out what's new."""
+        else s"""Kifi has been redesigned! Check it out."""
+      }
+      GeneralActivityPushNotificationMessage(msg)
+    }
+  }
+
+  private def getMessage(userId: Id[User]): (PushNotificationMessage, PushNotificationExperiment) = {
     val canSendLibPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(userId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
     val experiment = if (Random.nextBoolean()) PushNotificationExperiment.Experiment1 else PushNotificationExperiment.Experiment2
     val libMessage = if (canSendLibPush) getLibraryActivityMessage(experiment, userId) else None
-    val messageOpt = libMessage orElse getPersonaActivityMessage(experiment, userId)
-    messageOpt.map(message => (message, experiment))
+    val message = libMessage orElse getPersonaActivityMessage(experiment, userId) getOrElse getGeneralMessage(experiment, userId)
+    message -> experiment
   }
 
   def createPushActivityEntities(batchSize: Int): Seq[Id[ActivityPushTask]] = {
