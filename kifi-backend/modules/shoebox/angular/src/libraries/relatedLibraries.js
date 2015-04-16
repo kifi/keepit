@@ -10,8 +10,7 @@ angular.module('kifi')
       replace: true,
       scope: {
         parentLibrary: '&',
-        relatedLibraries: '=',
-        isMobile: '='
+        relatedLibraries: '='
       },
       templateUrl: 'libraries/relatedLibraries.tpl.html',
       link: function (scope) {
