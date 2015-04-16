@@ -1,10 +1,9 @@
 package com.keepit.common.cache
 
-import java.util.concurrent.TimeUnit
-
 import com.keepit.common.logging.Logging
 import net.spy.memcached.{ AddrUtil, MemcachedClient }
 import play.api.Play._
+import scala.collection.JavaConversions._
 
 class MemcachedClientProvider() extends Logging {
 
@@ -30,7 +29,7 @@ class MemcachedClientProvider() extends Logging {
       client = create()
       recreateCount += 1
       log.info(s"memcached client recreated ${recreateCount} times. shutting down client ${old}")
-      old.shutdown(1, TimeUnit.SECONDS)
+      log.info(s"old client status: ${old.getStats().values().mkString("\n\n====\n\n")}")
     } else {
       log.info(s"trying to recreate client, but referring to a retried client ${old}. Ignored")
     }
