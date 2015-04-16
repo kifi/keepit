@@ -29,6 +29,12 @@ angular.module('kifi')
       friendsTotal: 0,
       othersTotal: 0
     };
+    $scope.edit = {
+      enabled: false,
+      actions: {
+        keepToLibrary: true
+      }
+    };
 
 
     //
@@ -216,12 +222,6 @@ angular.module('kifi')
 
     $scope.updateSelectedCount = function (numSelected) {
       selectedCount = numSelected;
-    };
-
-    $scope.editOptions = {
-      actions: {
-        keepToLibrary: true
-      }
     };
 
     $scope.onClickSearchFilter = function (newSearchFilter) {

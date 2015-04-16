@@ -16,9 +16,7 @@ angular.module('kifi')
         keepClick: '=',
         scrollDisabled: '=',
         scrollNext: '&',
-        editMode: '=',
-        editOptions: '&',
-        toggleEdit: '=',
+        edit: '=',
         updateSelectedCount: '&',
         currentPageOrigin: '@'
       },
@@ -72,40 +70,19 @@ angular.module('kifi')
         scope.scrollDistance = '100%';
         scope.editingTags = false;
         scope.addingTag = {enabled: false};
-
-        // 'selection' keeps track of which keeps have been selected.
         scope.selection = new KeepSelection();
-
-        // set default edit-mode options if it's not set by parent
-        scope.editOptions = _.isObject(scope.editOptions()) ? scope.editOptions : function() {
-          return {
-            actions: {
-              bulkUnkeep: true,
-              copyToLibrary: true,
-              moveToLibrary: true,
-              editTags: true
-            }
-          };
-        };
 
 
         //
         // Scope methods.
         //
         scope.keepClickAction = function (event, keep) {
-          if (event.metaKey && event.target.tagName !== 'A' && event.target.tagName !== 'IMG') {
-            if (!scope.editMode.enabled) {
-              scope.toggleEdit(true);
-            }
-            scope.editMode.enabled = true;
-            scope.selection.toggleSelect(keep);
-          } else if (scope.keepClick) {
+          if (scope.keepClick) {
             // the timeout is to prevent pop-up blocker
             setTimeout(function () {
               scope.keepClick(keep, event);
             });
           }
-          return true;
         };
 
         scope.isMultiChecked = function (keeps) {
@@ -231,10 +208,8 @@ angular.module('kifi')
           scope.updateSelectedCount({ numSelected: numSelected });
         });
 
-        scope.$watch(function () {
-          return scope.editMode.enabled;
-        }, function(enabled) {
-          if (!enabled) {
+        scope.$watch('edit.enabled', function (newVal, oldVal) {
+          if (oldVal && !newVal) {
             scope.selection.unselectAll();
           }
         });
@@ -244,7 +219,6 @@ angular.module('kifi')
 
         scope.$on('$destroy', function () {
           $window.removeEventListener('resize', lazyResizeListener);
-          scope.editMode.enabled = false;
         });
       }
     };
