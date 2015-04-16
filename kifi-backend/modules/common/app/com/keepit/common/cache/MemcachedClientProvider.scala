@@ -1,7 +1,6 @@
 package com.keepit.common.cache
 
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.locks.ReentrantLock
 
 import com.keepit.common.logging.Logging
 import net.spy.memcached.{ AddrUtil, MemcachedClient }
@@ -12,7 +11,6 @@ class MemcachedClientProvider() extends Logging {
   private var client = create()
 
   private var recreateCount = 0
-  private val qlock = new ReentrantLock()
 
   private def create() = {
     System.setProperty("net.spy.log.LoggerImpl", "com.keepit.common.cache.MemcachedSlf4JLogger")
@@ -23,24 +21,18 @@ class MemcachedClientProvider() extends Logging {
   }
 
   def get(): MemcachedClient = {
-    qlock.synchronized {
-      client
-    }
+    client
   }
 
   def recreate(old: MemcachedClient): Unit = {
-    qlock.lock()
 
     if (client == old) {
       client = create()
       recreateCount += 1
-      log.info(s"memcached client recreated ${recreateCount} times")
-      qlock.unlock()
-
+      log.info(s"memcached client recreated ${recreateCount} times. shutting down client ${old}")
       old.shutdown(1, TimeUnit.SECONDS)
     } else {
-      qlock.unlock()
-      log.info(s"trying to recreate client, but referring to a retried client. Ignored")
+      log.info(s"trying to recreate client, but referring to a retried client ${old}. Ignored")
     }
 
   }
