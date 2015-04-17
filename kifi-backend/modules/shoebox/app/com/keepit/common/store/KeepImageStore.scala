@@ -1,8 +1,7 @@
 package com.keepit.common.store
 
-import java.io.InputStream
+import java.io.{ File, InputStream }
 
-import com.amazonaws.services.s3.AmazonS3
 import com.amazonaws.services.s3.model.ObjectMetadata
 import com.amazonaws.services.s3.transfer.TransferManager
 import com.amazonaws.services.s3.transfer.model.UploadResult
@@ -21,6 +20,7 @@ trait KeepImageStore {
 @Singleton
 class KeepImageStoreImpl @Inject() (
     s3ImageConfig: S3ImageConfig,
+    val inbox: KeepImageStoreInbox,
     implicit val transferManager: TransferManager) extends KeepImageStore with S3AsyncHelper {
 
   def put(key: String, is: InputStream, contentLength: Int, mimeType: String): Future[UploadResult] = {
@@ -46,3 +46,4 @@ class KeepImageStoreImpl @Inject() (
   }
 }
 
+case class KeepImageStoreInbox(dir: File) extends S3InboxDirectory

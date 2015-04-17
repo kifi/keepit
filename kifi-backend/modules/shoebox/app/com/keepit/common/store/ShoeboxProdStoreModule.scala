@@ -24,6 +24,18 @@ case class ShoeboxProdStoreModule() extends ProdStoreModule {
     S3ImageConfig(bucket.get, base.get)
   }
 
+  @Provides @Singleton
+  def keepImageStoreInbox: KeepImageStoreInbox = {
+    val inboxDir = forceMakeTemporaryDirectory(current.configuration.getString("shoebox.temporary.directory").get, "keep_images")
+    KeepImageStoreInbox(inboxDir)
+  }
+
+  @Provides @Singleton
+  def libraryImageStoreInbox: LibraryImageStoreInbox = {
+    val inboxDir = forceMakeTemporaryDirectory(current.configuration.getString("shoebox.temporary.directory").get, "library_images")
+    LibraryImageStoreInbox(inboxDir)
+  }
+
   @Singleton
   @Provides
   def socialUserRawInfoStore(amazonS3Client: AmazonS3, accessLog: AccessLog): SocialUserRawInfoStore = {

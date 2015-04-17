@@ -1,13 +1,12 @@
 package com.keepit.scraper.store
 
-import java.io.InputStream
+import java.io.{ File, InputStream }
 
-import com.amazonaws.services.s3.AmazonS3
 import com.amazonaws.services.s3.model.ObjectMetadata
 import com.amazonaws.services.s3.transfer.TransferManager
 import com.amazonaws.services.s3.transfer.model.UploadResult
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
-import com.keepit.common.store.{ S3AsyncHelper, S3ImageConfig }
+import com.keepit.common.store.{ S3InboxDirectory, S3AsyncHelper, S3ImageConfig }
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
@@ -22,6 +21,7 @@ trait UriImageStore {
 @Singleton
 class UriImageStoreImpl @Inject() (
     s3ImageConfig: S3ImageConfig,
+    val inbox: UriImageStoreInbox,
     implicit val transferManager: TransferManager) extends UriImageStore with S3AsyncHelper {
 
   def put(key: String, is: InputStream, contentLength: Int, mimeType: String): Future[UploadResult] = {
@@ -46,4 +46,6 @@ class UriImageStoreImpl @Inject() (
     asyncDownload(s3ImageConfig.bucketName, key)
   }
 }
+
+case class UriImageStoreInbox(dir: File) extends S3InboxDirectory
 

@@ -3,6 +3,7 @@ package com.keepit.common.store
 import com.google.inject.{ Provides, Singleton }
 import com.amazonaws.services.s3.{ AmazonS3 }
 import com.keepit.common.healthcheck.{ AirbrakeNotifier }
+import com.keepit.scraper.store.UriImageStoreInbox
 import play.api.Play._
 import com.keepit.common.logging.AccessLog
 import com.google.inject.Provider
@@ -19,6 +20,12 @@ case class ScraperProdStoreModule() extends ProdStoreModule {
     val base = current.configuration.getString("cdn.base")
     S3ImageConfig(bucket.get, base.get)
 
+  }
+
+  @Provides @Singleton
+  def uriImageStoreInbox: UriImageStoreInbox = {
+    val inboxDir = forceMakeTemporaryDirectory(current.configuration.getString("scraper.temporary.directory").get, "uri_images")
+    UriImageStoreInbox(inboxDir)
   }
 
   @Singleton

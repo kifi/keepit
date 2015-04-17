@@ -1,8 +1,11 @@
 package com.keepit.common.store
 
+import java.io.File
+
 import com.amazonaws.services.s3.transfer.TransferManager
 import com.keepit.rover.sensitivity.{ PornWordLikelihood, InMemoryPornWordLikelihoodStore, S3PornWordLikelihoodStore, PornWordLikelihoodStore }
 import com.keepit.search.tracking.{ InMemoryProbablisticLRUStoreImpl, S3ProbablisticLRUStoreImpl, ProbablisticLRUStore }
+import org.apache.commons.io.FileUtils
 import play.api.Play.current
 import net.codingwell.scalaguice.ScalaModule
 import com.google.inject.{ Provider, Provides, Singleton }
@@ -19,6 +22,14 @@ abstract class ProdOrElseDevStoreModule[T <: StoreModule](val prodStoreModule: T
 }
 
 trait ProdStoreModule extends StoreModule {
+
+  protected def forceMakeTemporaryDirectory(parent: String, child: String): File = {
+    val temp = new File(parent, child).getCanonicalFile
+    FileUtils.deleteDirectory(temp)
+    FileUtils.forceMkdir(temp)
+    temp.deleteOnExit()
+    temp
+  }
 
   @Singleton
   @Provides

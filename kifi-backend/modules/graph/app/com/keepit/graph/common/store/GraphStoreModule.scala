@@ -18,10 +18,7 @@ case class GraphProdStoreModule() extends ProdStoreModule with GraphStoreModule 
   @Provides @Singleton
   def graphStore(amazonS3Client: AmazonS3, accessLog: AccessLog): GraphStore = {
     val bucketName = S3Bucket(current.configuration.getString("amazon.s3.graph.bucket").get)
-    val inboxDir = new File(current.configuration.getString("graph.temporary.directory").get, "s3").getCanonicalFile
-    FileUtils.deleteDirectory(inboxDir)
-    FileUtils.forceMkdir(inboxDir)
-    inboxDir.deleteOnExit()
+    val inboxDir = forceMakeTemporaryDirectory(current.configuration.getString("graph.temporary.directory").get, "s3")
     new S3GraphStoreImpl(bucketName, amazonS3Client, accessLog, GraphStoreInbox(inboxDir))
   }
 }
