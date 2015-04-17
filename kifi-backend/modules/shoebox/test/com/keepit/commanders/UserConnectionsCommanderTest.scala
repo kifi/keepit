@@ -58,7 +58,7 @@ class UserConnectionsCommanderTest extends Specification with ShoeboxTestInjecto
             users(3).id.get -> com.keepit.social.BasicUser.fromUser(users(3))
           )
           friendRecoData.recommendedUsers === Seq(users(1).id.get, users(2).id.get, users(3).id.get)
-          friendRecoData.userConnectionCounts === Map(users(1).id.get -> 3, users(2).id.get -> 3)
+          friendRecoData.userConnectionCounts === Map(users(1).id.get -> 3, users(2).id.get -> 3, users(3).id.get -> 2)
           friendRecoData.mutualFriends === Map(
             users(1).id.get -> Seq(users(2).id.get),
             users(2).id.get -> Seq(users(1).id.get),
