@@ -65,7 +65,7 @@ class AppBoy @Inject() (
     shoeboxClient.getUser(userId).map { userOpt =>
       userOpt match {
         case Some(user) if deviceTypes.nonEmpty =>
-          sendNotification(user, deviceTypes, notification)
+          sendNotification(user, deviceTypes, notification, force)
           log.info(s"[AppBoy] sent user $userId push notifications to ${deviceTypes.length} device types out of ${allDevices.size}. $notification")
           deviceTypes.length
         case Some(user) =>
@@ -114,7 +114,7 @@ class AppBoy @Inject() (
     }
   }
 
-  private def sendNotification(user: User, deviceTypes: Seq[DeviceType], notification: PushNotification): Unit = {
+  private def sendNotification(user: User, deviceTypes: Seq[DeviceType], notification: PushNotification, wasForced: Boolean): Unit = {
     val userId = user.id.get
 
     val json = Json.obj(
@@ -162,9 +162,9 @@ class AppBoy @Inject() (
           messagingAnalytics.sentPushNotification(userId, deviceType, notification)
         }
       case Success(non200) =>
-        airbrake.notify(s"[AppBoy] bad status ${non200.status} on push notification $notification for user $userId. response: ${non200.body}")
+        if (!wasForced) airbrake.notify(s"[AppBoy] bad status ${non200.status} on push notification $notification for user $userId. response: ${non200.body}")
       case Failure(e) =>
-        airbrake.notify(s"[AppBoy] fail to send push notification $notification, json $json for user $userId - error: ${e.getClass.getSimpleName} $e")
+        if (!wasForced) airbrake.notify(s"[AppBoy] fail to send push notification $notification, json $json for user $userId - error: ${e.getClass.getSimpleName} $e")
     }
   }
 
