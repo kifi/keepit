@@ -9,6 +9,8 @@ class ByteArrayCounter(bytes: Array[Byte]) {
   private def isValidIndex(idx: Int): Boolean = idx >= 0 && idx < bytes.size
   private def canStoreCount(x: Int): Boolean = x >= 0 && x <= ByteArrayCounter.MAX_COUNT
 
+  def getSize(): Int = bytes.size
+
   // never expose internal bytes
   def getBytes(): Array[Byte] = Array.tabulate(bytes.size) { i => bytes(i) }
 
