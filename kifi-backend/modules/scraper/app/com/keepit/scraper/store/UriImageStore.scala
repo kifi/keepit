@@ -22,7 +22,6 @@ trait UriImageStore {
 @Singleton
 class UriImageStoreImpl @Inject() (
     s3ImageConfig: S3ImageConfig,
-    val s3Client: AmazonS3,
     implicit val transferManager: TransferManager) extends UriImageStore with S3AsyncHelper {
 
   def put(key: String, is: InputStream, contentLength: Int, mimeType: String): Future[UploadResult] = {

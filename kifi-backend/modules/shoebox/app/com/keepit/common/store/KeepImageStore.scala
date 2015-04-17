@@ -21,7 +21,6 @@ trait KeepImageStore {
 @Singleton
 class KeepImageStoreImpl @Inject() (
     s3ImageConfig: S3ImageConfig,
-    val s3Client: AmazonS3,
     implicit val transferManager: TransferManager) extends KeepImageStore with S3AsyncHelper {
 
   def put(key: String, is: InputStream, contentLength: Int, mimeType: String): Future[UploadResult] = {
