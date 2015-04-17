@@ -94,8 +94,10 @@ class LocalRichConnectionCommander @Inject() (
     try {
       message match {
         case InternRichConnection(user1: SocialUserInfo, user2: SocialUserInfo) => {
-          db.readWrite(attempts = 2) { implicit session =>
+          db.readWrite(attempts = 3) { implicit session =>
             user1.userId.foreach { userId1 => repo.internRichConnection(userId1, user1.id, Left(user2)) }
+          }
+          db.readWrite(attempts = 3) { implicit session =>
             user2.userId.foreach { userId2 => repo.internRichConnection(userId2, user2.id, Left(user1)) }
           }
         }
