@@ -26,7 +26,7 @@ import com.keepit.scraper.embedly.EmbedlyCommander
 import com.keepit.common.core._
 
 object ScrapeWorker {
-  val DEACTIVATE_SHOEBOX_CALLBACKS = false
+  val DEACTIVATE_SHOEBOX_CALLBACKS = true
 }
 
 @ImplementedBy(classOf[ScrapeWorkerImpl])
