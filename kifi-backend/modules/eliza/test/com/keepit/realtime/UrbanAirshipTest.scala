@@ -74,7 +74,7 @@ class UrbanAirshipTest extends Specification with TestInjector with ElizaTestInj
         urbanAirshipClient.jsons.size === 0
         val device = Device(userId = Id[User](1), token = Some("32e0a1c0cd0860ea392d06d26bbd1d4f289bbc488c29d634aee8ccb10e812f63"), deviceType = DeviceType.IOS)
         val notification = MessageThreadPushNotification(id = ExternalId[MessageThread]("5fe6e19f-6092-49f1-b446-5d992fda0034"), unvisitedCount = 3, message = Some("bar"), sound = Some(MobilePushNotifier.DefaultNotificationSound))
-        urbanAirship.sendNotification(device, notification)
+        urbanAirship.sendNotification(device, notification, false)
         urbanAirshipClient.jsons.size === 1
         urbanAirshipClient.jsons.head === Json.parse(
           """
@@ -104,7 +104,7 @@ class UrbanAirshipTest extends Specification with TestInjector with ElizaTestInj
       urbanAirshipClient.jsons.size === 0
       val device = Device(userId = Id[User](1), token = Some("32e0a1c0cd0860ea392d06d26bbd1d4f289bbc488c29d634aee8ccb10e812f63"), deviceType = DeviceType.IOS)
       val notification = SimplePushNotification(unvisitedCount = 3, message = Some("bar"), sound = Some(MobilePushNotifier.DefaultNotificationSound), category = null, experiment = null)
-      urbanAirship.sendNotification(device, notification)
+      urbanAirship.sendNotification(device, notification, false)
       urbanAirshipClient.jsons.size === 1
       urbanAirshipClient.jsons.head === Json.parse(
         """
@@ -134,7 +134,7 @@ class UrbanAirshipTest extends Specification with TestInjector with ElizaTestInj
       urbanAirshipClient.jsons.size === 0
       val device = Device(userId = Id[User](1), token = Some("84d69b89-867f-400f-80e8-ecc53ecfdae4"), deviceType = DeviceType.IOS)
       val notification = MessageThreadPushNotification(id = ExternalId[MessageThread]("5fe6e19f-6092-49f1-b446-5d992fda0034"), unvisitedCount = 3, message = Some("bar"), sound = Some(MobilePushNotifier.DefaultNotificationSound))
-      urbanAirship.sendNotification(device, notification)
+      urbanAirship.sendNotification(device, notification, false)
       urbanAirshipClient.jsons.size === 1
       urbanAirshipClient.jsons.head === Json.parse(
         """
@@ -163,7 +163,7 @@ class UrbanAirshipTest extends Specification with TestInjector with ElizaTestInj
       urbanAirshipClient.jsons.size === 0
       val device = Device(userId = Id[User](1), token = Some("8c265c51-16a8-4559-8b2e-d8b46f62bf06"), deviceType = DeviceType.Android)
       val notification = MessageThreadPushNotification(id = ExternalId[MessageThread]("5fe6e19f-6092-49f1-b446-5d992fda0034"), unvisitedCount = 3, message = Some("bar"), sound = Some(NotificationSound("sound.mp3")))
-      urbanAirship.sendNotification(device, notification)
+      urbanAirship.sendNotification(device, notification, false)
       urbanAirshipClient.jsons.size === 1
       urbanAirshipClient.jsons.head === Json.parse(
         """
