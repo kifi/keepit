@@ -738,9 +738,9 @@ class UserCommander @Inject() (
           }.toMap
 
           val uniqueMutualFriends = mutualFriends.values.flatten.toSet
-          val (basicUsers, mutualFriendConnectionCounts) = loadBasicUsersAndConnectionCounts(uniqueMutualFriends ++ recommendedUsers, uniqueMutualFriends)
+          val (basicUsers, userConnectionCounts) = loadBasicUsersAndConnectionCounts(uniqueMutualFriends ++ recommendedUsers, uniqueMutualFriends ++ recommendedUsers)
 
-          Some(FriendRecommendations(basicUsers, mutualFriendConnectionCounts, recommendedUsers, mutualFriends))
+          Some(FriendRecommendations(basicUsers, userConnectionCounts, recommendedUsers, mutualFriends))
         }
     }
   }
