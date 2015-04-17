@@ -3,10 +3,10 @@
 angular.module('kifi')
 
 .controller('SearchCtrl', [
-  '$scope', '$rootScope', '$location', '$q', '$state', '$stateParams', '$timeout', '$window', '$$rAF',
-  'keepDecoratorService', 'searchActionService', 'libraryService', 'util', 'library',
-  function ($scope, $rootScope, $location, $q, $state, $stateParams, $timeout, $window, $$rAF,
-            keepDecoratorService, searchActionService, libraryService, util, library) {
+  '$scope', '$rootScope', '$location', '$q', '$state', '$stateParams', '$timeout', '$window', '$$rAF', '$http',
+  'keepDecoratorService', 'searchActionService', 'libraryService', 'routeService', 'util', 'library',
+  function ($scope, $rootScope, $location, $q, $state, $stateParams, $timeout, $window, $$rAF, $http,
+            keepDecoratorService, searchActionService, libraryService, routeService, util, library) {
     //
     // Internal data.
     //
@@ -136,12 +136,13 @@ angular.module('kifi')
       }
 
       $scope.loading = true;
+      var firstBatch = !context;
       searchActionService.find(query, filter, library, context, $rootScope.userLoggedIn).then(function (queryNumber, result) {
         if (queryNumber !== queryCount) {  // results are for an old query
           return;
         }
 
-        context = result.context;
+        context = result.uris.context;
 
         if (resetExistingResults) {
           $scope.resultKeeps.length = 0;
@@ -149,17 +150,24 @@ angular.module('kifi')
           $scope.resultTotals.friendsTotal = 0;
           $scope.resultTotals.othersTotal = 0;
         }
-        $scope.resultTotals.myTotal = $scope.resultTotals.myTotal || result.myTotal;
-        $scope.resultTotals.friendsTotal = $scope.resultTotals.friendsTotal || result.friendsTotal;
-        $scope.resultTotals.othersTotal = $scope.resultTotals.othersTotal || result.othersTotal;
+        $scope.resultTotals.myTotal = $scope.resultTotals.myTotal || result.uris.myTotal;
+        $scope.resultTotals.friendsTotal = $scope.resultTotals.friendsTotal || result.uris.friendsTotal;
+        $scope.resultTotals.othersTotal = $scope.resultTotals.othersTotal || result.uris.othersTotal;
 
-        var hits = result.hits;
+        var hits = result.uris.hits;
         if (hits.length) {
-          $scope.hasMore = !!result.mayHaveMore;
+          $scope.hasMore = !!result.uris.mayHaveMore;
           renderTimeout = $timeout(angular.bind(null, renderNextKeep, hits.slice()));
         } else {
           $scope.hasMore = false;
           onDoneWithBatchOfKeeps();
+        }
+
+        if (firstBatch) {
+          var libs = $scope.matchingLibraries = result.libraries.hits.map(unpackLibrary);
+          if (libs.length) {
+            loadImagesAndAugment(libs);
+          }
         }
       }.bind(null, queryCount));
     };
@@ -181,6 +189,30 @@ angular.module('kifi')
 
     function onDoneWithBatchOfKeeps() {
       $scope.loading = false;
+    }
+
+    function unpackLibrary(library) {
+      return {
+        id: library.id,
+        owner: library.owner,
+        numFollowers: library.memberCount - 1,
+        numKeeps: library.keepCount,
+        name: library.name,
+        description: library.description,
+        color: library.color,
+        image: library.image,
+        path: library.path,
+        reason: 'topic'
+      };
+    }
+
+    function loadImagesAndAugment(libs) {
+      $http.get(routeService.getLibraryCoverImages(_.pluck(libs, 'id'), 400, 400)).then(function (res) {
+        var imagesById = res.data;
+        _.each(libs, function (lib) {
+          lib.image = imagesById[lib.id];
+        });
+      });
     }
 
     $scope.isFilterSelected = function (type) {

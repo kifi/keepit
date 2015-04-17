@@ -1,3 +1,14 @@
-<div class="kf-width-bounded">
-  <div ng-include="'search/matchingKeeps.tpl.html'"></div>
+<div class="kf-sr kf-width-bounded">
+  <section class="kf-sr-1">
+    <div ng-include="'search/matchingKeeps.tpl.html'"></div>
+  </section>
+  <section class="kf-sr-2">
+    <div kf-related-libraries related-libraries="matchingLibraries" heading="Matching Libraries" ng-if="matchingLibraries.length"></div>
+    <div ng-if="matchingLibraries && matchingLibraries.length === 0">
+      <header class="kf-related-library-explore-more-header">Matching Libraries</header>
+      <div class="kf-sr-no-libs">
+        No matching Kifi libraries
+      </div>
+    </div>
+  </section>
 </div>

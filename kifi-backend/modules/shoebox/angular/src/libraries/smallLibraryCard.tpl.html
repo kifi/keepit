@@ -1,32 +1,32 @@
 <div class="kf-slc-card" ng-style="{'background-color': library.color}">
-  <a class="kf-slc-card-link" href="{{library.path}}" ng-click="clickCard()" ng-attr-title="{{library.description}}" kf-track-origin="{{origin}}">
+  <a class="kf-slc-card-link" href="{{::library.path}}" ng-click="clickCard()" ng-attr-title="{{::library.description}}" kf-track-origin="{{::origin}}">
     <div class="kf-slc-card-cover">
       <div class="kf-slc-card-cover-image" style="{{library.image|bgImageAndPos}}" ng-if="library.image"></div>
     </div>
     <div class="kf-slc-card-name-align">
       <div class="kf-slc-card-name">
-        <div class="kf-slc-card-name-clip">{{library.name|preventOrphans:16:(lib.name.length > 36 ? 1/3 : 0.6)}}</div>
+        <div class="kf-slc-card-name-clip">{{::library.name|preventOrphans:16:(lib.name.length > 36 ? 1/3 : 0.6)}}</div>
       </div>
     </div>
-    <a class="kf-slc-card-owner" href="{{library.owner|profileUrl}}"
-      kf-track-origin="libraryPage.RelatedLibraries/curator">
-      <img class="kf-slc-card-owner-pic" ng-src="{{library.owner | pic:100}}" alt="{{library.owner|name}}">
+    <a class="kf-slc-card-owner" href="{{::library.owner|profileUrl}}"
+      kf-track-origin="::libraryPage.RelatedLibraries/curator">
+      <img class="kf-slc-card-owner-pic" ng-src="{{::library.owner|pic:100}}" alt="{{::library.owner|name}}">
       <span class="kf-slc-card-by">by</span>
-      <span class="kf-slc-card-by-name">{{library.owner|name}}</span>
+      <span class="kf-slc-card-by-name">{{::library.owner|name}}</span>
     </a>
-    <div class="kf-slc-card-foot" ng-switch on="library.reason">
+    <div class="kf-slc-card-foot" ng-switch on="::library.reason">
       <span ng-switch-when="owner">More from this curator</span>
       <span ng-switch-when="popular">From Community</span>
       <span ng-switch-when="topic">Related</span>
     </div>
   </a>
   <div class="kf-slc-counts">
-    <a class="kf-slc-count" href="{{library.path}}" ng-click="clickCard()" kf-track-origin="{{origin}}">
-      <ng-pluralize count="library.numKeeps" when="{'1':'{} Keep','other':'{{library.numKeeps|num}} Keeps'}"></ng-pluralize>
+    <a class="kf-slc-count" href="{{::library.path}}" ng-click="clickCard()" kf-track-origin="{{::origin}}">
+      <ng-pluralize count="::library.numKeeps" when="{'1':'{} Keep','other':'{{::library.numKeeps|num}} Keeps'}"></ng-pluralize>
     </a>
-    <span class="kf-slc-count-dot" ng-if="library.numFollowers > 0">·</span>
-    <a class="kf-slc-count kf-slc-count-followers" href="javascript:" ng-click="openFollowersList(library)" ng-if="library.numFollowers > 0">
-      <ng-pluralize count="library.numFollowers" when="{'1':'{} Follower','other':'{{library.numFollowers|num}} Followers'}"></ng-pluralize>
+    <span class="kf-slc-count-dot" ng-if="::library.numFollowers > 0">·</span>
+    <a class="kf-slc-count kf-slc-count-followers" href="javascript:" ng-click="openFollowersList(library)" ng-if="::library.numFollowers > 0">
+      <ng-pluralize count="::library.numFollowers" when="{'1':'{} Follower','other':'{{::library.numFollowers|num}} Followers'}"></ng-pluralize>
     </a>
   </div>
 </div>

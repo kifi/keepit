@@ -204,7 +204,7 @@ angular.module('kifi')
 
     var clutch = new Clutch(function (q, libraryId) {
       var params = {q: q, l: libraryId || [], maxUsers: 3, maxLibraries: 3, maxUris: 3};
-      return $http.get(routeService.searchSuggest(params)).then(getData);
+      return $http.get(routeService.search(params)).then(getData);
     }, {cacheDuration: 15000});
 
     return {
