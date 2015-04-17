@@ -1,7 +1,7 @@
 package com.keepit.controllers.mobile
 
 import com.google.inject.Injector
-import com.keepit.common.concurrent.FakeExecutionContextModule
+import com.keepit.common.concurrent.{ WatchableExecutionContext, FakeExecutionContextModule }
 import com.keepit.common.controller.FakeUserActionsHelper
 import com.keepit.model.{ Restriction, User, NormalizedURIRepo }
 import com.keepit.normalizer.NormalizedURIInterner
@@ -53,8 +53,11 @@ class MobileUriControllerTest extends Specification with ShoeboxTestInjector {
     val (user1, keep1) = db.readWrite { implicit s =>
       val user1 = user().withName("Katniss", "Everdeen").saved
       val keep1 = keep().withUser(user1).saved
-      uriIntern.getByUri(keep1.url).isDefined === true
       (user1, keep1)
+    }
+    inject[WatchableExecutionContext].drain()
+    db.readOnlyMaster { implicit s =>
+      uriIntern.getByUri(keep1.url).isDefined === true
     }
     (user1, keep1)
   }
