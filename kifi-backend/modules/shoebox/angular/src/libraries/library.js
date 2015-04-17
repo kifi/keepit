@@ -5,11 +5,11 @@ angular.module('kifi')
 .controller('LibraryCtrl', [
   '$scope', '$rootScope', '$analytics', '$location', '$state', '$stateParams', '$timeout', '$window',
   '$FB', '$twitter', 'env', 'util', 'initParams', 'library', 'keepDecoratorService', 'libraryService', 'modalService',
-  'platformService', 'profileService', 'originTrackingService', 'installService',
+  'platformService', 'profileService', 'originTrackingService', 'installService', 'libraryImageLoaded',
   function (
     $scope, $rootScope, $analytics, $location, $state, $stateParams, $timeout, $window,
     $FB, $twitter, env, util, initParams, library, keepDecoratorService, libraryService, modalService,
-    platformService, profileService, originTrackingService, installService) {
+    platformService, profileService, originTrackingService, installService, libraryImageLoaded) {
 
     //
     // Internal functions
@@ -77,6 +77,7 @@ angular.module('kifi')
     $scope.librarySlug = $stateParams.librarySlug;
     $scope.keeps = [];
     $scope.library = library;
+    $scope.libraryImageLoaded = libraryImageLoaded === true; // can also be an object containing a promise
     $scope.scrollDistance = '100%';
     $scope.loading = true;  // whether keeps are currently loading
     $scope.hasMore = true;   // whether there may be more keeps in this library than those currently in $scope.keeps
@@ -266,6 +267,12 @@ angular.module('kifi')
     //
 
     setTitle();
+
+    if (libraryImageLoaded.promise) {
+      libraryImageLoaded.promise.then(function () {
+        $scope.libraryImageLoaded = true;
+      });
+    }
 
     $rootScope.$emit('libraryOnPage', library);
 
