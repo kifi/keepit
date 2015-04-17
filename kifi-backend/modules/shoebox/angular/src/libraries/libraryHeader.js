@@ -16,6 +16,7 @@ angular.module('kifi')
         library: '=',
         username: '=',
         librarySlug: '=',
+        imageLoaded: '=',
         editMode: '=',
         librarySearch: '=',
         followCallback: '&',
@@ -23,6 +24,7 @@ angular.module('kifi')
       },
       templateUrl: 'libraries/libraryHeader.tpl.html',
       link: function (scope, element) {
+
         //
         // Internal data.
         //
@@ -632,12 +634,6 @@ angular.module('kifi')
         augmentData();
 
         updateInvite();
-
-        if (scope.library.image) {
-          loadImage(env.picBase + '/' + scope.library.image.path).then(function () {
-            scope.imageLoaded = true;
-          });
-        }
       }
     };
   }
