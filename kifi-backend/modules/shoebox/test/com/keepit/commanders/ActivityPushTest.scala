@@ -55,7 +55,15 @@ class ActivityPushTest extends Specification with ShoeboxTestInjector {
           repo.getByUser(user2.id.get).get.userId === user2.id.get
           repo.getByUser(user3.id.get).get.userId === user3.id.get
           repo.all().size === 3
-          repo.getBatchToPush(10).size === 0
+          repo.getBatchToPush(10).size === 3
+          repo.getBatchNoDevicesToPush(10).size === 0
+        }
+        db.readWrite { implicit s =>
+          repo.save(repo.getByUser(user1.id.get).get.copy(state = ActivityPushTaskStates.NO_DEVICES, nextPush = None))
+        }
+        db.readOnlyMaster { implicit s =>
+          repo.getBatchToPush(10).size === 2
+          repo.getBatchNoDevicesToPush(10).size === 1
         }
       }
     }

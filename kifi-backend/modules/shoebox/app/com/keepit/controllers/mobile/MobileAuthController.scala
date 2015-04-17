@@ -1,5 +1,7 @@
 package com.keepit.controllers.mobile
 
+import java.util
+
 import com.google.inject.Inject
 import com.keepit.commanders.AuthCommander
 import com.keepit.common.controller._
@@ -15,10 +17,13 @@ import com.keepit.model._
 import com.keepit.shoebox.cron.ActivityPusher
 import com.keepit.social.providers.ProviderController
 import com.keepit.social.{ SocialNetworkType, UserIdentity }
+import play.api.http.MediaRange
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.{ JsNumber, JsValue, Json }
 import play.api.libs.oauth.RequestToken
 import play.api.mvc.{ Cookie, Result, Session }
+import play.i18n.Lang
+import play.mvc.Http.{ RequestBody, Cookies, Request }
 import securesocial.core.{ IdentityId, OAuth2Info, Registry, SecureSocial, SocialUser, UserService }
 
 import scala.concurrent.Future

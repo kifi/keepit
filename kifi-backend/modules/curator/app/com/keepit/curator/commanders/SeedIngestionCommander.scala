@@ -71,14 +71,14 @@ class SeedIngestionCommander @Inject() (
     }
 
     libraryIngestionLock.withLockFuture {
-      log.info("XYZ: starting ingestAll inside libraryIngestLock")
+      log.info("starting ingestAll inside libraryIngestLock")
 
       val ingestLibMembershipsF = ingestLibraryMemberships()
       ingestLibMembershipsF.onComplete {
         case Failure(ex) =>
           log.error("Failure occurred during library membership ingestion.")
           airbrake.notify("Failure occurred during library membership ingestion.", ex)
-        case _ => log.info("XYZ: ingest library membership future completed")
+        case _ => log.info("ingest library membership future completed")
       }
 
       val ingestLibrariesF = ingestAllLibraries()
@@ -86,7 +86,7 @@ class SeedIngestionCommander @Inject() (
         case Failure(ex) =>
           log.error("Failure occurred during library ingestion.")
           airbrake.notify("Failure occurred during library ingestion.", ex)
-        case _ => log.info("XYZ: ingest library future completed")
+        case _ => log.info("ingest library future completed")
       }
 
       Future.sequence(ingestLibMembershipsF :: ingestLibrariesF :: Nil) map (_ => ())
@@ -100,11 +100,11 @@ class SeedIngestionCommander @Inject() (
   }
 
   def ingestAllLibraries(): Future[Unit] = FutureHelpers.whilef(allLibraryIngestor(INGESTION_BATCH_SIZE)) {
-    log.info("XYZ: Ingested one batch of libraries.")
+    log.info("Ingested one batch of libraries.")
   }
 
   def ingestLibraryMemberships(): Future[Unit] = FutureHelpers.whilef(libraryMembershipIngestor(INGESTION_BATCH_SIZE)) {
-    log.info("XYZ: Ingested one batch of library memberships.")
+    log.info("Ingested one batch of library memberships.")
   }
 
   def ingestTopUris(userId: Id[User]): Future[Unit] = {
@@ -242,6 +242,7 @@ class SeedIngestionCommander @Inject() (
   }
 
   def forceIngestGraphData(userId: Id[User]): Future[Unit] = {
+    log.info("XYZ: Completed Forced Top Uri ingestion for " + userId)
     topUrisIngestor(userId, force = true).map(_ => ())
   }
 

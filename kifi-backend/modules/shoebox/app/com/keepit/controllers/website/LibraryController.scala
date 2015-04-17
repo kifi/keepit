@@ -41,7 +41,6 @@ class LibraryController @Inject() (
   keepsCommander: KeepsCommander,
   keepDecorator: KeepDecorator,
   userCommander: UserCommander,
-  libraryImageCommander: LibraryImageCommander,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
   collectionRepo: CollectionRepo,
   fortyTwoConfig: FortyTwoConfig,

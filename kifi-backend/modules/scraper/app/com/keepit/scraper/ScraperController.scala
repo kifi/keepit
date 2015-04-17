@@ -32,7 +32,7 @@ class ScraperController @Inject() (
 
   def getSignature() = Action.async(parse.json) { request =>
     log.info(s"getSignature body=${request.body}")
-    processBasicArticleRequest(request.body).map { articleOption =>
+    processBasicArticleRequest(request.body) recover { case _: java.util.concurrent.TimeoutException => None } map { articleOption =>
       val url = (request.body \ "url").as[String]
       val signatureOption = articleOption.collect { case article if article.destinationUrl == url => article.signature }
       val json = Json.toJson(signatureOption.map(_.toBase64()))

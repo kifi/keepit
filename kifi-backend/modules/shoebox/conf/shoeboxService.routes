@@ -421,6 +421,7 @@ POST    /site/libraries/:id/import-file  @com.keepit.controllers.website.Bookmar
 POST    /site/libraries/:id/image/upload    @com.keepit.controllers.website.LibraryImageController.uploadLibraryImage(id: PublicId[Library], is: Option[String] ?= None, x: Option[Int] ?= None, y: Option[Int] ?= None)
 POST    /site/libraries/:id/image/position  @com.keepit.controllers.website.LibraryImageController.positionLibraryImage(id: PublicId[Library])
 DELETE  /site/libraries/:id/image           @com.keepit.controllers.website.LibraryImageController.removeLibraryImage(id: PublicId[Library])
+GET     /site/libraries/:ids/images         @com.keepit.controllers.website.LibraryImageController.getLibraryImages(ids: String, is: Option[String] ?= None)
 
 GET     /site/libraries/recos/top           @com.keepit.controllers.website.LibraryRecommendationsController.topLibRecos()
 POST    /site/libraries/recos/feedback      @com.keepit.controllers.website.LibraryRecommendationsController.updateLibraryRecommendationFeedback(id: PublicId[Library])

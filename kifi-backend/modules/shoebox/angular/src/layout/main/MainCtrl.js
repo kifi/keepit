@@ -17,10 +17,6 @@ angular.module('kifi')
     };
 
     $scope.data = $scope.data || {};
-    $scope.editMode = {
-      enabled: false
-    };
-
     $scope.undo = undoService;
 
     (function (m) {
@@ -233,27 +229,9 @@ angular.module('kifi')
 
     // END For importing bookmarks.
 
-    $scope.editKeepsLabel = function () {
-      if ($scope.editMode.enabled) {
-        return 'Done';
-      } else {
-        return 'Bulk keep to library';
-      }
-    };
-
-    $scope.toggleEdit = function (moveWindow) {
-      if (!$scope.editMode.enabled) {
-        if (moveWindow) {
-          $window.scrollBy(0, 118); // todo: scroll based on edit mode size. problem is that it's not on the page yet.
-        }
-      }
-      $scope.editMode.enabled = !$scope.editMode.enabled;
-    };
-
     if (/^Mac/.test($window.navigator.platform)) {
       $rootElement.find('body').addClass('mac');
     }
-
 
     var unregisterAutoShowGuide = $rootScope.$watch(function () {
       return Boolean(installService.installedVersion && profileService.prefs.auto_show_guide && !profileService.prefs.auto_show_persona);

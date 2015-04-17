@@ -15,7 +15,7 @@ object KeepFactory {
       uriId = Id[NormalizedURI](-1 * idx.incrementAndGet()),
       inDisjointLib = true,
       urlId = Id[URL](-1 * idx.incrementAndGet()),
-      url = s"http://${random(5)}.com/${random(5)}",
+      url = s"http://${random(5, "abcdefghijklmnopqrstuvwxyz")}.com/${random(5, "abcdefghijklmnopqrstuvwxyz")}",
       visibility = LibraryVisibility.PUBLISHED,
       userId = Id[User](-1 * idx.incrementAndGet()),
       source = KeepSource.keeper,
