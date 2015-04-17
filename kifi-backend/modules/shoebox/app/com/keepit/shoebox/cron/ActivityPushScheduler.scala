@@ -309,7 +309,9 @@ class ActivityPusher @Inject() (
     val ids = db.readOnlyMaster { implicit s =>
       val tasks = activityPushTaskRepo.getBatchToPush(100)
       if (tasks.isEmpty) { //adding a low priority queue that would nibble on the tasks we think did not register on push notification yet
-        activityPushTaskRepo.getBatchNoDevicesToPush(100)
+        val dormant = activityPushTaskRepo.getBatchNoDevicesToPush(100)
+        log.info(s"loading ${dormant.size} dorment users")
+        dormant
       } else tasks
     }
     log.info(s"next push batch size is ${ids.size}")
