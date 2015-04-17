@@ -32,6 +32,8 @@ class UserRecoFeedbackCounterTest extends Specification with CuratorTestInjector
       counter = counter.updateWithFeedback(0, UriRecoFeedbackValue.KEPT) // rescaled
       counter.posSignals.get(0) === 255 / 2 + 5
       counter.negSignals.get(0) === 5
+      counter.upVotes.get(0) === 0
+      counter.downVotes.get(0) === 2
       counter.signalsRescaleCount === 1
 
       counter = UserRecoFeedbackCounter.empty(Id[User](1), 16)
@@ -57,6 +59,7 @@ class UserRecoFeedbackCounterTest extends Specification with CuratorTestInjector
         counter.negSignals.get(0) === 5
         counter.upVotes.get(0) === 0
         counter.downVotes.get(0) === 1
+        counter.upVotes.getSize === 512
 
         db.readWrite { implicit s => repo.save(counter.updateWithFeedback(0, UriRecoFeedbackValue.CLICKED)) }
         counter = db.readOnlyMaster { implicit s => repo.getByUser(counter.userId) }.get

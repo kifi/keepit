@@ -11,6 +11,16 @@ class ByteArrayCounterTest extends Specification {
       (0 until 256).map { counter.get(_) }.toList === (0 until 256).toList
     }
 
+    "multiple set and rescale works" in {
+      var counter = ByteArrayCounter.empty(16)
+      counter = counter.setMultiple((0 until 16), (0 until 16))
+      counter.toArray().toList === (0 until 16).toList
+      counter = counter.rescale(1)
+      counter.get(1) === 0
+      counter = counter.rescale(2)
+      counter.get(2) === 1
+    }
+
     "increments correctly" in {
       var counter = ByteArrayCounter.empty(256)
       (0 until 10).foreach { i => counter = counter.increment(i, i + 1) }

@@ -16,7 +16,7 @@ create table user_reco_feedback_counter(
   state varchar(20) NOT NULL,
 
   PRIMARY KEY (id),
-  index user_reco_feedback_counter_i_user_id (user_id)
+  unique index user_reco_feedback_counter_i_user_id (user_id)
 );
 
 insert into evolutions (name, description) values('320.sql', 'create user_reco_feedback_counter table');
