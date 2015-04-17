@@ -59,8 +59,8 @@ class LibraryTest extends Specification with ShoeboxTestInjector {
     "owner and follower" in {
       withDb() { implicit injector =>
         val (l1, l2, l3, s1, s2, user1, user2, user3) = setup()
-        db.readOnlyMaster(implicit session => libraryRepo.getOwnerLibrariesOtherFollow(user1.id.get, user2.id.get)) === Seq(l2.id.get)
-        db.readOnlyMaster(implicit session => libraryRepo.getOwnerLibrariesOtherFollow(user1.id.get, user3.id.get)) === Seq(l2.id.get)
+        db.readOnlyMaster(implicit session => libraryRepo.getOwnerLibrariesOtherFollow(user1.id.get, user2.id.get)) === Seq(l2)
+        db.readOnlyMaster(implicit session => libraryRepo.getOwnerLibrariesOtherFollow(user1.id.get, user3.id.get)) === Seq(l2)
         db.readOnlyMaster(implicit session => libraryRepo.getOwnerLibrariesOtherFollow(user2.id.get, user1.id.get)) === Seq()
       }
     }
@@ -68,7 +68,7 @@ class LibraryTest extends Specification with ShoeboxTestInjector {
     "both follow" in {
       withDb() { implicit injector =>
         val (l1, l2, l3, s1, s2, user1, user2, user3) = setup()
-        db.readOnlyMaster(implicit session => libraryRepo.getLibrariesBothFollow(user3.id.get, user2.id.get)) === Seq(l2.id.get)
+        db.readOnlyMaster(implicit session => libraryRepo.getLibrariesBothFollow(user3.id.get, user2.id.get)) === Seq(l2)
         db.readOnlyMaster(implicit session => libraryRepo.getLibrariesBothFollow(user1.id.get, user2.id.get)) === Seq()
         db.readOnlyMaster(implicit session => libraryRepo.getLibrariesBothFollow(user1.id.get, user3.id.get)) === Seq()
       }
