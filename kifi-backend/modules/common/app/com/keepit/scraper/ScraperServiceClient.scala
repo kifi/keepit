@@ -191,9 +191,9 @@ class ScraperServiceClientImpl @Inject() (
   def getSignature(url: String, proxy: Option[HttpProxy], extractorProviderType: Option[ExtractorProviderType]): Future[Option[Signature]] = consolidateGetSignatureReq(url) { url =>
     val key = UrlSignatureKey(NormalizedURI.hashUrl(url), extractorProviderType)
     cacheProvider.signatureCache.getOrElseFuture(key) {
-      call(Scraper.internal.getSignature, Json.obj("url" -> url, "proxy" -> Json.toJson(proxy), "extractorProviderType" -> extractorProviderType.map(_.name)), callTimeouts = longTimeout).map { r =>
+      call(Scraper.internal.getSignature, Json.obj("url" -> url, "proxy" -> Json.toJson(proxy), "extractorProviderType" -> extractorProviderType.map(_.name)), callTimeouts = superExtraLongTimeoutJustForEmbedly).map { r =>
         r.json.asOpt[String].map(Signature(_))
-      }
+      } recover { case _: java.util.concurrent.TimeoutException => None }
     }
   }
 
