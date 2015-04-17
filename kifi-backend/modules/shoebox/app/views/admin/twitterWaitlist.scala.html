@@ -1,0 +1,29 @@
+@(entriesList: Seq[TwitterWaitlistEntry]
+)(implicit request: com.keepit.common.controller.UserRequest[_])
+
+
+@admin("Twitter Waitlist", stylesheets = List("admin_user")) {
+    <br>
+
+    <h2>Showing All @{entriesList.length} Twitter Waitlist Entries</h2>
+
+    <table class="table table-bordered">
+        <tr>
+            <th>idx</th>
+            <th>Twitter Handle</th>
+            <th>User Id</th>
+            <th>Accept to Waitlist</th>
+        </tr>
+        @for((entry, i) <- entriesList.zipWithIndex) {
+            <tr>
+                <td>@{i+1}</td>
+                <td><a href="https://twitter.com/@{entry.twitterHandle}">@{entry.twitterHandle}</a></td>
+                <td><a href="/admin/user/@{entry.userId.id}">user</a></td>
+                <td><a href="/admin/twitter/accept?handle=@{entry.twitterHandle}&userId=@{entry.userId.id}">Accept</a></td>
+            </tr>
+        }
+    </table>
+}
+
+<script type="text/javascript">
+</script>

@@ -152,7 +152,7 @@ class TwitterWaitlistCommanderImpl @Inject() (
         })
       case _ =>
         // invalid
-        Left(s"Couldn't accept $userId. $entryOpt, $suiOpt, $syncOpt")
+        Left(s"Couldn't accept User $userId. Entry: $entryOpt, SocialUserInfo: $suiOpt, SyncState: $syncOpt")
     }
   }
 
