@@ -308,11 +308,11 @@ class ActivityPusher @Inject() (
   def getNextPushBatch: Seq[Id[ActivityPushTask]] = {
     val ids = db.readOnlyMaster { implicit s =>
       val tasks = activityPushTaskRepo.getBatchToPush(100)
-      //enable the next few lines in the morning after we're done with eliza deployment
-      //      if (tasks.isEmpty) { //adding a low priority queue that would nibble on the tasks we think did not register on push notification yet
-      //        activityPushTaskRepo.getBatchNoDevicesToPush(100)
-      //      } else tasks
-      tasks
+      if (tasks.isEmpty) { //adding a low priority queue that would nibble on the tasks we think did not register on push notification yet
+        val dormant = activityPushTaskRepo.getBatchNoDevicesToPush(100)
+        log.info(s"loading ${dormant.size} dorment users")
+        dormant
+      } else tasks
     }
     log.info(s"next push batch size is ${ids.size}")
     ids
