@@ -11,6 +11,7 @@ class MemcachedClientProvider() extends Logging {
   private var client = create()
 
   private var recreateCount = 0
+  private val lock = new AnyRef
 
   private def create() = {
     System.setProperty("net.spy.log.LoggerImpl", "com.keepit.common.cache.MemcachedSlf4JLogger")
@@ -26,13 +27,16 @@ class MemcachedClientProvider() extends Logging {
 
   def recreate(old: MemcachedClient): Unit = {
 
-    if (client == old) {
-      client = create()
-      recreateCount += 1
-      log.info(s"memcached client recreated ${recreateCount} times. shutting down client ${old}")
-      old.shutdown(1, TimeUnit.SECONDS)
-    } else {
-      log.info(s"trying to recreate client, but referring to a retried client ${old}. Ignored")
+    lock.synchronized {
+      if (client == old) {
+        client = create()
+        recreateCount += 1
+        log.info(s"new memached client created: ${client}")
+        log.info(s"memcached client recreated ${recreateCount} times. shutting down old client ${old}")
+        old.shutdown(1, TimeUnit.SECONDS)
+      } else {
+        log.info(s"trying to recreate client, but referring to a retried client ${old}. Ignored")
+      }
     }
 
   }
