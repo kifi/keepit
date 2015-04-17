@@ -95,10 +95,10 @@ class UrbanAirship @Inject() (
     }
   }
 
-  def notifyUser(userId: Id[User], allDevices: Seq[Device], notification: PushNotification): Future[Int] = {
+  def notifyUser(userId: Id[User], allDevices: Seq[Device], notification: PushNotification, force: Boolean): Future[Int] = {
     log.info(s"[UrbanAirship] Notifying user: $userId with $allDevices")
     //get only active devices
-    val activeDevices = allDevices filter { d =>
+    val activeDevices = if (force) allDevices else allDevices.filter { d =>
       d.state == DeviceStates.ACTIVE
     }
     //send them all a push notification

@@ -95,11 +95,11 @@ class ActivityPusher @Inject() (
     db.readWrite { implicit session =>
       val now = clock.now
       val pushTask = activityPushTaskRepo.getByUser(userId).getOrElse {
-        val canSendPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(userId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
-        createActivityPushForUser(userId, now, if (canSendPush) ActivityPushTaskStates.ACTIVE else ActivityPushTaskStates.INACTIVE)
+        createActivityPushForUser(userId, now)
       }
       val recentInstall = pushTask.createdAt.plusDays(1) > now
       activityPushTaskRepo.save(pushTask.copy(
+        state = ActivityPushTaskStates.ACTIVE,
         lastActiveDate = now,
         lastActiveTime = now.toLocalTime,
         nextPush = Some(if (recentInstall) now.plusDays(1) else now.plusDays(2)),
@@ -163,12 +163,12 @@ class ActivityPusher @Inject() (
             )
           ))
         ) map { _ =>
-            elizaServiceClient.sendLibraryPushNotification(activity.userId, libMessage.message, libMessage.lib.id.get, libMessage.libraryUrl, experimant, LibraryPushNotificationCategory.LibraryChanged)
+            elizaServiceClient.sendLibraryPushNotification(activity.userId, libMessage.message, libMessage.lib.id.get, libMessage.libraryUrl, experimant, LibraryPushNotificationCategory.LibraryChanged, activity.state == ActivityPushTaskStates.NO_DEVICES)
           }
         devices.flatten
       case generalMessage: GeneralActivityPushNotificationMessage =>
         log.info(s"pushing general activity update to ${activity.userId} [$experimant]: $message")
-        elizaServiceClient.sendGeneralPushNotification(activity.userId, generalMessage.message, experimant, SimplePushNotificationCategory.PersonaUpdate)
+        elizaServiceClient.sendGeneralPushNotification(activity.userId, generalMessage.message, experimant, SimplePushNotificationCategory.PersonaUpdate, activity.state == ActivityPushTaskStates.NO_DEVICES)
     }
     res map { deviceCount =>
       log.info(s"push successful to $deviceCount devices")
@@ -176,7 +176,15 @@ class ActivityPusher @Inject() (
         db.readWrite { implicit s =>
           //there may be some race conditions with the four lines ahead, we can live with that.
           log.info(s"disable activity push task $activity until user register with at least one device")
-          activityPushTaskRepo.save(activityPushTaskRepo.get(activity.id.get).copy(state = ActivityPushTaskStates.NO_DEVICES))
+          val prevActivity = activityPushTaskRepo.get(activity.id.get)
+          val newBackoff = prevActivity.backoff.getOrElse(7.day).plus(7.day)
+          val newActivity = prevActivity.copy(
+            state = ActivityPushTaskStates.NO_DEVICES,
+            nextPush = Some(clock.now().plusMillis(newBackoff.toMillis.toInt)),
+            backoff = Some(newBackoff),
+            lastPush = Some(clock.now())
+          )
+          activityPushTaskRepo.save(newActivity)
         }
       }
     }
@@ -184,6 +192,7 @@ class ActivityPusher @Inject() (
       val prevActivity = activityPushTaskRepo.get(activity.id.get)
       val newBackoff = prevActivity.backoff.getOrElse(1.day).plus(1.day)
       val newActivity = prevActivity.copy(
+        state = ActivityPushTaskStates.ACTIVE,
         nextPush = Some(clock.now().plusMillis(newBackoff.toMillis.toInt)),
         backoff = Some(newBackoff),
         lastPush = Some(clock.now())
@@ -199,16 +208,19 @@ class ActivityPusher @Inject() (
 
   private def getLibraryActivityMessage(experiment: PushNotificationExperiment, userId: Id[User]): Option[LibraryPushNotificationMessage] = {
     db.readOnlyReplica { implicit s =>
-      libraryMembershipRepo.getLatestUpdatedLibraryUserFollow(userId) map { lib =>
+      libraryMembershipRepo.getLatestUpdatedLibraryUserFollow(userId) flatMap { lib =>
         val message = {
           if (experiment == PushNotificationExperiment.Experiment1) s"""New keeps in "${lib.name.abbreviate(25)}""""
           else s""""${lib.name.abbreviate(25)}" library has updates"""
         }
         val owner = basicUserRepo.load(lib.ownerId)
         val libraryUrl = "https://www.kifi.com" + Library.formatLibraryPathUrlEncoded(owner.username, lib.slug)
-        val newKeep = keepRepo.getByLibrary(lib.id.get, 0, 1).head
-        val libImageOpt = libraryImageCommander.getBestImageForLibrary(lib.id.get, ProcessedImageSize.Medium.idealSize)
-        LibraryPushNotificationMessage(message, lib, owner, newKeep, libraryUrl, libImageOpt)
+        keepRepo.getByLibrary(lib.id.get, 0, 1) match {
+          case keeps if keeps.nonEmpty =>
+            val libImageOpt = libraryImageCommander.getBestImageForLibrary(lib.id.get, ProcessedImageSize.Medium.idealSize)
+            Some(LibraryPushNotificationMessage(message, lib, owner, keeps.head, libraryUrl, libImageOpt))
+          case _ => None
+        }
       }
     }
   }
@@ -277,18 +289,17 @@ class ActivityPusher @Inject() (
       users map {
         case user =>
           val lastActive = kifiInstallationCommander.lastMobileAppStartTime(user)
-          val canSendPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(user, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
-          createActivityPushForUser(user, lastActive, if (canSendPush) ActivityPushTaskStates.ACTIVE else ActivityPushTaskStates.INACTIVE).id.get
+          createActivityPushForUser(user, lastActive).id.get
       }
     }
   }
 
-  private def createActivityPushForUser(userId: Id[User], lastActive: DateTime, state: State[ActivityPushTask])(implicit session: RWSession): ActivityPushTask = {
+  private def createActivityPushForUser(userId: Id[User], lastActive: DateTime)(implicit session: RWSession): ActivityPushTask = {
     val task = ActivityPushTask(
       userId = userId,
       lastActiveDate = lastActive,
       lastActiveTime = lastActive.toLocalTime,
-      state = state,
+      state = ActivityPushTaskStates.ACTIVE,
       nextPush = None,
       backoff = None)
     activityPushTaskRepo.save(task)
@@ -296,7 +307,12 @@ class ActivityPusher @Inject() (
 
   def getNextPushBatch: Seq[Id[ActivityPushTask]] = {
     val ids = db.readOnlyMaster { implicit s =>
-      activityPushTaskRepo.getBatchToPush(100)
+      val tasks = activityPushTaskRepo.getBatchToPush(100)
+      //enable the next few lines in the morning after we're done with eliza deployment
+      //      if (tasks.isEmpty) { //adding a low priority queue that would nibble on the tasks we think did not register on push notification yet
+      //        activityPushTaskRepo.getBatchNoDevicesToPush(100)
+      //      } else tasks
+      tasks
     }
     log.info(s"next push batch size is ${ids.size}")
     ids

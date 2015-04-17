@@ -287,8 +287,8 @@ class NotificationCommander @Inject() (
     )
   }
 
-  def sendPushNotification(userId: Id[User], notification: PushNotification): Future[Int] = {
-    pushNotifier.notifyUser(userId, notification)
+  def sendPushNotification(userId: Id[User], notification: PushNotification, force: Boolean = false): Future[Int] = {
+    pushNotifier.notifyUser(userId, notification, force)
   }
 
   def sendNotificationForMessage(userId: Id[User], message: Message, thread: MessageThread, messageWithBasicUser: MessageWithBasicUser, orderedActivityInfo: Seq[UserThreadActivity]): Unit = {
