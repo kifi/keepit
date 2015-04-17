@@ -57,9 +57,10 @@ class AppBoy @Inject() (
   }
 
   // When this is the only push provider, refactor this to just take userId and notification. No need to get list of devices.
-  def notifyUser(userId: Id[User], allDevices: Seq[Device], notification: PushNotification): Future[Int] = {
+  def notifyUser(userId: Id[User], allDevices: Seq[Device], notification: PushNotification, force: Boolean): Future[Int] = {
     log.info(s"[AppBoy] Notifying user: $userId with $allDevices")
-    val deviceTypes = allDevices.filter(_.state == DeviceStates.ACTIVE).groupBy(_.deviceType).keys.toList
+    val activeDevices = if (force) allDevices else allDevices.filter(_.state == DeviceStates.ACTIVE)
+    val deviceTypes = activeDevices.groupBy(_.deviceType).keys.toList
 
     shoeboxClient.getUser(userId).map { userOpt =>
       userOpt match {

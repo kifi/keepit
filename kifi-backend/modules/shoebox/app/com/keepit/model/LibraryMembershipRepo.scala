@@ -134,7 +134,7 @@ class LibraryMembershipRepoImpl @Inject() (
 
   def getLatestUpdatedLibraryUserFollow(userId: Id[User])(implicit session: RSession): Option[Library] = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    sql"""select l.* from library_membership lm, library l where l.id = lm.library_id and lm.state='active' and l.state='active' and lm.access != 'owner' and lm.user_id = $userId and l.last_kept is not null order by l.last_kept desc limit 1""".as[Library].firstOption
+    sql"""select l.* from library_membership lm, library l where l.id = lm.library_id and lm.state='active' and l.state='active' and lm.access != 'owner' and lm.user_id = $userId and l.last_kept is not null and l.keep_count > 0 order by l.last_kept desc limit 1""".as[Library].firstOption
   }
 
   private val getWithLibraryIdAndUserIdCompiled = Compiled { (libraryId: Column[Id[Library]], userId: Column[Id[User]]) =>
