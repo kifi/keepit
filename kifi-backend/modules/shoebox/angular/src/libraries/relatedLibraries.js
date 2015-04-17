@@ -9,6 +9,7 @@ angular.module('kifi')
       restrict: 'A',
       replace: true,
       scope: {
+        heading: '@',
         libraryId: '@',
         relatedLibraries: '='
       },

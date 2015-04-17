@@ -89,10 +89,9 @@ angular.module('kifi')
       hideUserRecommendation: function (id) {
         return route('/user/' + id + '/hide');
       },
-      searchSuggest: function (params) {
+      search: function (params) {
         return searchRoute('/site/search', params);
       },
-      search: searchRoute('/site/search2'),
       searchResultClicked: searchRoute('/site/search/events/resultClicked'),
       searchedAnalytics: searchRoute('/site/search/events/searched'),
       searchResultClickedAnalytics: searchRoute('/site/search/events/resultClicked'),
@@ -210,6 +209,9 @@ angular.module('kifi')
       },
       removeLibraryCoverImage: function (libraryId) {
         return route('/libraries/' + libraryId + '/image');
+      },
+      getLibraryCoverImages: function (libraryIds, w, h) {
+        return route('/libraries/' + libraryIds.join('.') + '/images', {is: w && h ? w + 'x' + h : []});
       },
       authIntoLibrary: function (username, slug, authToken) {
         return route('/users/' + username + '/libraries/' + slug + '/auth', {authToken: authToken || []});
