@@ -35,7 +35,7 @@ object ImageSource {
   case object TwitterSync extends UserInitiated("twitter_sync")
   case object Unknown extends ImageSource("unknown")
 
-  private val all: Seq[ImageSource] = Seq(Unknown, Embedly, PagePeeker, EmbedlyOrPagePeeker, UserUpload, UserPicked)
+  private val all: Seq[ImageSource] = Seq(Unknown, Embedly, PagePeeker, EmbedlyOrPagePeeker, UserUpload, UserPicked, TwitterSync)
   def apply(name: String) = {
     all.find(_.name == name).getOrElse(throw new Exception(s"Can't find ImageSource for $name"))
   }
