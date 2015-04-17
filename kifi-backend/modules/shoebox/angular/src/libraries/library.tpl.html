@@ -17,7 +17,7 @@
       <span class="kf-lib-fpost-icon svg-facebook-white"></span>
     </button>
     <div kf-suggested-searches library="library" ng-if="library.suggestedSearches.length"></div>
-    <div kf-related-libraries related-libraries="relatedLibraries" parent-library="library" is-mobile="isMobile" ng-if="relatedLibraries"></div>
+    <div kf-related-libraries related-libraries="::relatedLibraries" library-id="{{::library.id}}" ng-if="::relatedLibraries"></div>
   </section>
 </div>
 

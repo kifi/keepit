@@ -84,6 +84,24 @@ class LibraryImageController @Inject() (
     libraryImageCommander.removeImageForLibrary(libraryId, request.userId)
     NoContent
   }
+
+  def getLibraryImages(idStrings: String, idealSize: Option[String]) = MaybeUserAction { request =>
+    val libIds = idStrings.split('.').flatMap(id => Library.decodePublicId(PublicId[Library](id)).toOption)
+    if (libIds.nonEmpty) {
+      val accessibleLibIds = db.readOnlyReplica { implicit session =>
+        libraryRepo.getLibraries(libIds.toSet)
+      } filter {
+        case (_, lib) => libraryCommander.canViewLibrary(request.userIdOpt, lib)
+      } keySet
+      val size = idealSize.map(ImageSize(_)).getOrElse(ProcessedImageSize.Medium.idealSize)
+      val imagesByPublicId = libraryImageCommander.getBestImageForLibraries(accessibleLibIds, size) map {
+        case (id, img) => Library.publicId(id).id -> LibraryImageInfo.createInfo(img)
+      }
+      Ok(Json.toJson(imagesByPublicId))
+    } else {
+      BadRequest(Json.obj("error" -> "invalid_ids"))
+    }
+  }
 }
 
 object LibraryImageController {

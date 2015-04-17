@@ -1,4 +1,3 @@
-=======
 # CURATOR
 
 # --- !Ups
@@ -12,7 +11,7 @@ create table uri_reco_feedback(
   feedback varchar(32) NOT NULL,
   state varchar(20) NOT NULL,
 
-  PRIMARY KEY (id),
+  PRIMARY KEY (id)
 );
 
 insert into evolutions (name, description) values('317.sql', 'create uri_reco_feedback table');
