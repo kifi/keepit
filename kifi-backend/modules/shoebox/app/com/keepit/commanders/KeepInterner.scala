@@ -17,6 +17,7 @@ import com.keepit.heimdal.{ HeimdalContext, HeimdalServiceClient }
 import com.keepit.integrity.UriIntegrityHelpers
 import com.keepit.model._
 import com.keepit.normalizer.{ NormalizationCandidate, NormalizedURIInterner }
+import com.keepit.rover.RoverServiceClient
 import com.keepit.scraper.ScrapeScheduler
 import org.joda.time.DateTime
 import play.api.libs.json.Json
@@ -47,6 +48,7 @@ class KeepInterner @Inject() (
   rawKeepImporterPlugin: RawKeepImporterPlugin,
   elizaClient: ElizaServiceClient,
   heimdalClient: HeimdalServiceClient,
+  roverClient: RoverServiceClient,
   libraryCommander: LibraryCommander,
   integrityHelpers: UriIntegrityHelpers,
   sourceAttrRepo: KeepSourceAttributionRepo,
@@ -176,6 +178,7 @@ class KeepInterner @Inject() (
           case _ => currentDateTime // todo: useful to de-prioritize bulk imports.
         }
         scraper.scheduleScrape(uri, date)
+        if (KeepSource.discrete.contains(source)) { roverClient.fetchAsap(IndexableUri(uri)) }
       }
 
       log.info(s"[keepinterner] Persisting keep ${rawBookmark.url}, ${rawBookmark.keptAt}, ${clock.now}")

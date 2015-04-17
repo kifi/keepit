@@ -43,7 +43,9 @@ class FakeFacebookOAuthProvider extends FacebookOAuthProvider with FakeOAuth2Pro
 @Singleton
 class FakeLinkedInOAuthProvider extends LinkedInOAuthProvider with FakeOAuth2Provider
 @Singleton
-class FakeTwitterOAuthProvider extends TwitterOAuthProvider with FakeOAuth1Provider
+class FakeTwitterOAuthProvider extends TwitterOAuthProvider with FakeOAuth1Provider {
+  def getUserShow(accessToken: OAuth1TokenInfo, screenName: String): Future[TwitterUserShow] = Future.successful(TwitterUserShow(None, None, None, None))
+}
 
 case class FakeOAuth1ConfigurationModule() extends OAuth1ConfigurationModule {
   override def configure(): Unit = {

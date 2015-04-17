@@ -95,15 +95,15 @@ class UrbanAirship @Inject() (
     }
   }
 
-  def notifyUser(userId: Id[User], allDevices: Seq[Device], notification: PushNotification): Future[Int] = {
+  def notifyUser(userId: Id[User], allDevices: Seq[Device], notification: PushNotification, force: Boolean): Future[Int] = {
     log.info(s"[UrbanAirship] Notifying user: $userId with $allDevices")
     //get only active devices
-    val activeDevices = allDevices filter { d =>
+    val activeDevices = if (force) allDevices else allDevices.filter { d =>
       d.state == DeviceStates.ACTIVE
     }
     //send them all a push notification
     activeDevices foreach { device =>
-      sendNotification(device, notification)
+      sendNotification(device, notification, force)
     }
     log.info(s"[UrbanAirship] user $userId has ${activeDevices.size} active devices out of ${allDevices.size} for notification $notification")
     //refresh all devices (even not active ones)
@@ -214,7 +214,7 @@ class UrbanAirship @Inject() (
     }
   }
 
-  private def dealWithFailNotification(device: Device, notification: PushNotification, trial: Int, throwable: Throwable): Unit = {
+  private def dealWithFailNotification(device: Device, notification: PushNotification, trial: Int, throwable: Throwable, wasForced: Boolean): Unit = {
     val (retry, retryText) = trial match {
       case 1 =>
         (Some(5 seconds), "retry in five seconds")
@@ -225,15 +225,15 @@ class UrbanAirship @Inject() (
       case _ =>
         throw new Exception(s"WOW, how did I get to trial #$trial for device $device notification $notification)?!?")
     }
-    airbrake.notify(s"fail to send a push notification $notification for device $device, $retryText: $throwable")
+    if (!wasForced) airbrake.notify(s"fail to send a push notification $notification for device $device, $retryText: $throwable")
     retry foreach { timeout =>
       scheduler.scheduleOnce(timeout) {
-        sendNotification(device, notification, trial + 1)
+        sendNotification(device, notification, wasForced, trial + 1)
       }
     }
   }
 
-  def sendNotification(device: Device, notification: PushNotification, trial: Int = 3): Unit = {
+  def sendNotification(device: Device, notification: PushNotification, wasForced: Boolean, trial: Int = 3): Unit = {
     val json = device.deviceType match {
       case DeviceType.IOS => createIosJson(notification, device)
       case DeviceType.Android => createAndroidJson(notification, device)
@@ -256,13 +256,13 @@ class UrbanAirship @Inject() (
     client.send(json, device, notification) andThen {
       case Success(res) =>
         if (res.status / 100 != 2) {
-          dealWithFailNotification(device, notification, trial, new Exception(s"bad status ${res.status} on push notification $notification for device $device response: ${res.body}"))
+          dealWithFailNotification(device, notification, trial, new Exception(s"bad status ${res.status} on push notification $notification for device $device response: ${res.body}"), wasForced)
         } else {
           log.info(s"[UrbanAirship] successful send of push notification on trial $trial for device $deviceRepo: ${res.body}")
           messagingAnalytics.sentPushNotification(device.userId, device.deviceType, notification)
         }
       case Failure(e) =>
-        dealWithFailNotification(device, notification, trial, new Exception(s"fail on push notification $notification for device $device", e))
+        dealWithFailNotification(device, notification, trial, new Exception(s"fail on push notification $notification for device $device", e), wasForced)
     }
   }
 
