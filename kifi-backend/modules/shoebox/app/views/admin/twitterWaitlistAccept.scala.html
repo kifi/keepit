@@ -1,0 +1,38 @@
+@(result: Either[String, (TwitterSyncState, String, Option[EmailAddress])]
+)(implicit request: com.keepit.common.controller.UserRequest[_])
+
+@admin("Twitter Waitlist Accepting User...", stylesheets = List("admin_user")) {
+    <br>
+
+        @result match {
+            case Left(error) => {
+                <h2>Error accepting twitter handle!</h2>
+                <p>@{result.left.get}</p>
+            }
+            case Right((syncState, libraryPath, primaryEmail)) => {
+                <h2>Twitter Handle @{syncState.twitterHandle} successfully accepted!</h2>
+                <table class="table table-bordered">
+                    <tr>
+                        <th>Twitter Page</th>
+                        <th>User Admin Page</th>
+                        <th>User Primary Email</th>
+                        <th>LibraryId</th>
+                        <th>Library Admin Page</th>
+                        <th>Library Kifi Page</th>
+                    </tr>
+                    <tr>
+                        <td><a href="https://twitter.com/@{syncState.twitterHandle}">@{syncState.twitterHandle}</a></td>
+                        <td>@if(syncState.userId.isDefined){<a href="/admin/user/@{syncState.userId.get.id}">UserId @{syncState.userId.get.id}</a>}</td>
+                        <td>@if(primaryEmail.isDefined){@{primaryEmail.get}}</td>
+                        <td>@{syncState.libraryId.id}</td>
+                        <td><a href="/admin/libraries/@{syncState.libraryId.id}">Admin</a></td>
+                        <td><a href="https://www.kifi.com/@{libraryPath}">Kifi</a></td>
+                    </tr>
+                </table>
+            }
+        }
+
+}
+
+<script type="text/javascript">
+</script>
