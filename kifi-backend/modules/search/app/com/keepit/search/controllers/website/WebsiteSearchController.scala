@@ -222,7 +222,7 @@ class WebsiteSearchController @Inject() (
     userContext: Option[String],
     disablePrefixSearch: Boolean,
     libraryAuth: Option[String],
-    debug: Option[String]) = UserAction.async { request =>
+    debug: Option[String]) = MaybeUserAction.async { request =>
 
     val acceptLangs = getAcceptLangs(request)
     val (userId, experiments) = getUserAndExperiments(request)
