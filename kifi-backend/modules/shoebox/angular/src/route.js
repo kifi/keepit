@@ -101,6 +101,21 @@ angular.module('kifi')
           libraryService: 'libraryService',
           library: ['libraryService', '$stateParams', function (libraryService, $stateParams) {
             return libraryService.getLibraryByUserSlug($stateParams.username, $stateParams.librarySlug, $stateParams.authToken);
+          }],
+          libraryImageLoaded: ['$q', '$timeout', 'env', 'library', function ($q, $timeout, env, library) {
+            if (library.image) {
+              var deferred = $q.defer();
+              var promise = loadImage($q, env.picBase + '/' + library.image.path).then(function () {
+                deferred.resolve(true);
+              }, function () {
+                deferred.resolve(false);
+              });
+              $timeout(function () {
+                deferred.resolve({promise: promise});
+              }, 12);  // low number b/c it delays many library page loads
+              return deferred.promise;
+            }
+            return false;
           }]
         },
         'abstract': true
@@ -111,9 +126,23 @@ angular.module('kifi')
       })
       .state('library.search', {
         url: '/find?q&f',
-        templateUrl: 'search/search.tpl.html',
+        templateUrl: 'search/matchingKeeps.tpl.html',
         controller: 'SearchCtrl',
         reloadOnSearch: false  // controller handles search query changes itself
       });
       // ↑↑↑↑↑ Important: This needs to be last! ↑↑↑↑↑
-}]);
+
+    function loadImage($q, url) {
+      var deferred = $q.defer();
+      var img = new Image();
+      img.onload = function () {
+        deferred.resolve(img);
+      };
+      img.onerror = function (e) {
+        deferred.reject(e);
+      };
+      img.src = url;
+      return deferred.promise;
+    }
+  }
+]);

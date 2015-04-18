@@ -16,13 +16,15 @@ angular.module('kifi')
         library: '=',
         username: '=',
         librarySlug: '=',
-        toggleEdit: '=',
+        imageLoaded: '=',
+        editMode: '=',
         librarySearch: '=',
         followCallback: '&',
         clickLibraryCallback: '&'
       },
       templateUrl: 'libraries/libraryHeader.tpl.html',
       link: function (scope, element) {
+
         //
         // Internal data.
         //
@@ -37,7 +39,6 @@ angular.module('kifi')
         // Scope data.
         //
         scope.Math = Math;
-        scope.editingKeeps = false;
         scope.search = { 'text': $stateParams.q || '' };
         scope.isMobile = platformService.isSupportedMobilePlatform();
         scope.descExpanded = false;
@@ -552,8 +553,7 @@ angular.module('kifi')
 
         scope.toggleEditKeeps = function () {
           $rootScope.$emit('trackLibraryEvent', 'click', { action: 'clickedEditKeeps' });
-          scope.toggleEdit();
-          scope.editingKeeps = !scope.editingKeeps;
+          scope.editMode = !scope.editMode;
         };
 
         scope.showFollowers = function () {
@@ -634,12 +634,6 @@ angular.module('kifi')
         augmentData();
 
         updateInvite();
-
-        if (scope.library.image) {
-          loadImage(env.picBase + '/' + scope.library.image.path).then(function () {
-            scope.imageLoaded = true;
-          });
-        }
       }
     };
   }

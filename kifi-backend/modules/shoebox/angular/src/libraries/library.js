@@ -5,16 +5,11 @@ angular.module('kifi')
 .controller('LibraryCtrl', [
   '$scope', '$rootScope', '$analytics', '$location', '$state', '$stateParams', '$timeout', '$window',
   '$FB', '$twitter', 'env', 'util', 'initParams', 'library', 'keepDecoratorService', 'libraryService', 'modalService',
-  'platformService', 'profileService', 'originTrackingService', 'installService',
+  'platformService', 'profileService', 'originTrackingService', 'installService', 'libraryImageLoaded',
   function (
     $scope, $rootScope, $analytics, $location, $state, $stateParams, $timeout, $window,
     $FB, $twitter, env, util, initParams, library, keepDecoratorService, libraryService, modalService,
-    platformService, profileService, originTrackingService, installService) {
-
-    //
-    // Internal data.
-    //
-    var selectedCount = 0;
+    platformService, profileService, originTrackingService, installService, libraryImageLoaded) {
 
     //
     // Internal functions
@@ -82,6 +77,7 @@ angular.module('kifi')
     $scope.librarySlug = $stateParams.librarySlug;
     $scope.keeps = [];
     $scope.library = library;
+    $scope.libraryImageLoaded = libraryImageLoaded === true; // can also be an object containing a promise
     $scope.scrollDistance = '100%';
     $scope.loading = true;  // whether keeps are currently loading
     $scope.hasMore = true;   // whether there may be more keeps in this library than those currently in $scope.keeps
@@ -89,6 +85,15 @@ angular.module('kifi')
     $scope.passphrase = $scope.passphrase || {};
     $scope.$error = $scope.$error || {};
     $scope.userIsOwner = $rootScope.userLoggedIn && library.owner.id === profileService.me.id;
+    $scope.edit = {
+      enabled: false,
+      actions: {
+        bulkUnkeep: true,
+        copyToLibrary: true,
+        moveToLibrary: true,
+        editTags: true
+      }
+    };
 
 
     //
@@ -135,33 +140,6 @@ angular.module('kifi')
         }
       }
     }
-
-    $scope.getSubtitle = function () {
-      if ($scope.loading) {
-        return 'Loading...';
-      }
-
-      // If there are selected keeps, display the number of keeps
-      // in the subtitle.
-      if (selectedCount > 0) {
-        return (selectedCount === 1) ? '1 Keep selected' : selectedCount + ' Keeps selected';
-      }
-
-      var numShown = $scope.keeps.length;
-      switch (numShown) {
-      case 0:
-        return 'No Keeps';
-      case 1:
-        return 'Showing the only Keep';
-      case 2:
-        return 'Showing both Keeps';
-      }
-      return 'Showing ' + numShown + ' of ' + library.numKeeps + ' Keeps';
-    };
-
-    $scope.updateSelectedCount = function (numSelected) {
-      selectedCount = numSelected;
-    };
 
     $scope.libraryKeepClicked = function (keep, event) {
       var eventAction = event.target.getAttribute('click-action');
@@ -289,6 +267,12 @@ angular.module('kifi')
     //
 
     setTitle();
+
+    if (libraryImageLoaded.promise) {
+      libraryImageLoaded.promise.then(function () {
+        $scope.libraryImageLoaded = true;
+      });
+    }
 
     $rootScope.$emit('libraryOnPage', library);
 

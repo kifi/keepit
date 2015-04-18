@@ -421,6 +421,7 @@ POST    /site/libraries/:id/import-file  @com.keepit.controllers.website.Bookmar
 POST    /site/libraries/:id/image/upload    @com.keepit.controllers.website.LibraryImageController.uploadLibraryImage(id: PublicId[Library], is: Option[String] ?= None, x: Option[Int] ?= None, y: Option[Int] ?= None)
 POST    /site/libraries/:id/image/position  @com.keepit.controllers.website.LibraryImageController.positionLibraryImage(id: PublicId[Library])
 DELETE  /site/libraries/:id/image           @com.keepit.controllers.website.LibraryImageController.removeLibraryImage(id: PublicId[Library])
+GET     /site/libraries/:ids/images         @com.keepit.controllers.website.LibraryImageController.getLibraryImages(ids: String, is: Option[String] ?= None)
 
 GET     /site/libraries/recos/top           @com.keepit.controllers.website.LibraryRecommendationsController.topLibRecos()
 POST    /site/libraries/recos/feedback      @com.keepit.controllers.website.LibraryRecommendationsController.updateLibraryRecommendationFeedback(id: PublicId[Library])
@@ -801,8 +802,8 @@ POST    /admin/graph/wander                                @com.keepit.controlle
 GET     /admin/graph/discover                              @com.keepit.controllers.admin.WanderingAdminController.fromParisWithLove()
 GET     /admin/graph/uriWandering                          @com.keepit.controllers.admin.WanderingAdminController.uriWandering(steps: Int ?= 20000)
 
-GET     /admin/twitter                                     @com.keepit.controllers.website.TwitterWaitlistController.getWaitlist()
-GET     /admin/twitter/accept                              @com.keepit.controllers.website.TwitterWaitlistController.acceptUser(userId: Id[User], handle: String)
+GET     /admin/twitter                                     @com.keepit.controllers.admin.AdminTwitterWaitlistController.getWaitlist()
+GET     /admin/twitter/accept                              @com.keepit.controllers.admin.AdminTwitterWaitlistController.acceptUser(userId: Id[User], handle: String)
 
 ##########################################
 # Common Healthcheck / service routes

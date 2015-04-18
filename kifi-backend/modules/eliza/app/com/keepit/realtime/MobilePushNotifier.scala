@@ -39,7 +39,7 @@ object MobilePushNotifier {
 @ImplementedBy(classOf[MobilePushDelegator])
 trait MobilePushNotifier {
   def registerDevice(userId: Id[User], token: Option[String], deviceType: DeviceType, isDev: Boolean, signature: Option[String]): Either[String, Device]
-  def notifyUser(userId: Id[User], notification: PushNotification): Future[Int]
+  def notifyUser(userId: Id[User], notification: PushNotification, force: Boolean): Future[Int]
 }
 
 class MobilePushDelegator @Inject() (
@@ -57,16 +57,16 @@ class MobilePushDelegator @Inject() (
     }
   }
 
-  def notifyUser(userId: Id[User], notification: PushNotification): Future[Int] = {
+  def notifyUser(userId: Id[User], notification: PushNotification, force: Boolean): Future[Int] = {
     val (devicesWithToken, devicesNoToken) = db.readOnlyMaster { implicit s =>
       deviceRepo.getByUserId(userId, None)
     }.partition(d => d.token.isDefined)
 
     val numSentUrbanAirshipF = if (devicesWithToken.nonEmpty) {
-      urbanAirship.notifyUser(userId, devicesWithToken, notification)
+      urbanAirship.notifyUser(userId, devicesWithToken, notification, force)
     } else Future.successful(0)
     val numSentAppBoyF = if (devicesNoToken.nonEmpty) {
-      appBoy.notifyUser(userId, devicesNoToken, notification)
+      appBoy.notifyUser(userId, devicesNoToken, notification, force)
     } else Future.successful(0)
 
     for {

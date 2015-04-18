@@ -1,17 +1,33 @@
-<div class="kf-library-results-wrapper">
-  <div class="kf-empty-state" ng-if="keeps.length === 0" ng-show="!loading">
+<div>
+  <div class="kf-lk-empty" ng-if="keeps.length === 0" ng-show="!loading">
     <div ng-if="userIsOwner">
       You don’t have any keeps in this library yet. You can:
       <ul>
-        <li><a href="javascript:" ng-click="callAddKeep()"><span class="sprite sprite-add-link"></span>Add any page by pasting the URL here</a></li>
-        <li><a href="javascript:" ng-click="callImportBookmarks()"><span class="sprite sprite-import-bookmarks-icon"></span>Import your bookmarks from your browser</a></li>
-        <li><a href="javascript:" ng-click="callImportBookmarkFile()"><span class="sprite sprite-import-from-other-services-icon"></span>Import links from sites like Delicious, Pocket, Pinboard</a></li>
-        <li class="kf-library-results-empty-install"><a href="javascript:" ng-click="triggerInstall()"><span class="sprite sprite-install-extension-icon"></span>Install our browser extension on Chrome and Firefox</a></li>
+        <li>
+          <button class="kf-lk-empty-btn" ng-click="callAddKeep()">
+            <span class="sprite sprite-add-link"></span>Add any page by pasting the URL here
+          </button>
+        </li>
+        <li>
+          <button class="kf-lk-empty-btn" ng-click="callImportBookmarks()">
+            <span class="sprite sprite-import-bookmarks-icon"></span>Import your bookmarks from your browser
+          </button>
+        </li>
+        <li>
+          <button class="kf-lk-empty-btn" ng-click="callImportBookmarkFile()">
+            <span class="sprite sprite-import-from-other-services-icon"></span>Import links from sites like Delicious, Pocket, Pinboard
+          </button>
+        </li>
+        <li class="kf-lk-empty-install">
+          <button class="kf-lk-empty-btn" ng-click="triggerInstall()">
+            <span class="sprite sprite-install-extension-icon"></span>Install our browser extension on Chrome and Firefox
+          </button>
+        </li>
       </ul>
     </div>
     <div ng-if="!userIsOwner">
-      <p class="public-library-empty-explain">{{library.owner.firstName || 'The curator'}} hasn’t added anything to this library yet.</p>
-      <p class="public-library-empty-explain" ng-hide="$root.userLoggedIn">
+      <p>{{library.owner.firstName || 'The curator'}} hasn’t added anything to this library yet.</p>
+      <p ng-hide="$root.userLoggedIn">
         Want to create and share your own libraries? <a href="/signup" target="_self">Sign up</a> to join the Kifi family.
       </p>
     </div>
@@ -25,9 +41,7 @@
     scroll-disabled="!hasMore"
     scroll-distance="scrollDistance"
     scroll-next="getNextKeeps"
-    edit-mode="editMode"
-    toggle-edit="toggleEdit"
-    update-selected-count="updateSelectedCount(numSelected)"
+    edit="edit"
     keep-click="libraryKeepClicked"
     current-page-origin="libraryPage"
   ></div>

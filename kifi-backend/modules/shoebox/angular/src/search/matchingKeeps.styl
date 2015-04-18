@@ -1,0 +1,51 @@
+.kf-smk-head
+  position: relative
+  padding: 10px 25px 0 30px
+  box-sizing: border-box
+
+.kf-smk-filters
+  padding-bottom: 10px
+
+.kf-smk-filter
+  display: inline
+  color: #ccc
+  text-decoration: none
+  title-text()
+  font-size: 17px
+
+  &.enabled
+    color: linkColor
+
+    &:hover
+      text-decoration: underline
+
+  &.selected
+    color: #333
+
+  &:not(:first-child)
+    border-left: defaultBorder
+    padding-left: 10px
+    margin-left: 10px
+
+.kf-smk-top
+  padding: 10px 0
+  font-size: 13px
+  line-height: 20px
+  font-smoothing: antialiased
+
+.kf-smk-heading
+  color: #999
+  vertical-align: middle
+
+.kf-smk-bulk-add
+  padding-left: 16px
+  float: right
+  vertical-align: middle
+
+  &>.sprite-edit-pencil-icon
+    margin-right: 5px
+
+.kf-smk-bulk-add-text
+  color: linkColor
+  cursor: pointer
+  user-select: none
