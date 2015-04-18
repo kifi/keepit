@@ -38,14 +38,19 @@ class CuratorAnalytics @Inject() (
   }
 
   private def addFeedbackToLearningLoop(userId: Id[User], uriId: Id[NormalizedURI], feedback: UriRecommendationFeedback): Unit = {
-    val dumpRecordOpt = UriRecoFeedback.fromUserFeedback(userId, uriId, feedback)
-    dumpRecordOpt.foreach { r => db.readWrite { implicit s => uriRecoFeedbackRepo.save(r) } }
-
     val recoItemOpt = db.readOnlyReplica { implicit s => uriRecoRepo.getByUriAndUserId(uriId, userId, None) }
-    recoItemOpt.foreach { item =>
-      dumpRecordOpt.map { _.feedback }.foreach { fbValue =>
-        fbTrackingCmdr.trackFeedback(item, fbValue)
+
+    if (recoItemOpt.exists(r => r.delivered > 0)) {
+      val dumpRecordOpt = UriRecoFeedback.fromUserFeedback(userId, uriId, feedback)
+      dumpRecordOpt.foreach { r => db.readWrite { implicit s => uriRecoFeedbackRepo.save(r) } }
+
+      recoItemOpt.foreach { item =>
+        dumpRecordOpt.map { _.feedback }.foreach { fbValue =>
+          fbTrackingCmdr.trackFeedback(item, fbValue)
+        }
       }
+    } else {
+      // purely a user keep action. not from recommendation
     }
   }
 
