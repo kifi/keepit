@@ -18,7 +18,7 @@
             <tr>
                 <td>@{i+1}</td>
                 <td><a href="https://twitter.com/@{entry.twitterHandle}">@{entry.twitterHandle}</a></td>
-                <td><a href="/admin/user/@{entry.userId.id}">user</a></td>
+                <td><a href="/admin/user/@{entry.userId.id}">@{entry.userId.id}</a></td>
                 <td><a href="/admin/twitter/accept?handle=@{entry.twitterHandle}&userId=@{entry.userId.id}">Accept</a></td>
             </tr>
         }

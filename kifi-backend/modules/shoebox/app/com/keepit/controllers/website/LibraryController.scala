@@ -667,7 +667,7 @@ class LibraryController @Inject() (
         val (ofUser, ofViewer, mutualFollow, basicUsers) = db.readOnlyReplica { implicit s =>
           val ofUser = libraryRepo.getOwnerLibrariesOtherFollow(userId, viewer)
           val ofViewer = libraryRepo.getOwnerLibrariesOtherFollow(viewer, userId)
-          val mutualFollow = libraryRepo.getLibrariesBothFollow(viewer, userId)
+          val mutualFollow = libraryRepo.getMutualLibrariesForUser(viewer, userId)
           val mutualFollowOwners = mutualFollow.map(_.ownerId)
           val basicUsers = basicUserRepo.loadAll(Set(userId, viewer) ++ mutualFollowOwners)
           (ofUser, ofViewer, mutualFollow, basicUsers)
