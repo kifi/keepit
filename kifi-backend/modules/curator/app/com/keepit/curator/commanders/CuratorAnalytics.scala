@@ -56,7 +56,7 @@ class CuratorAnalytics @Inject() (
 
   def trackUserFeedback(userId: Id[User], uriId: Id[NormalizedURI], feedback: UriRecommendationFeedback): Unit = {
     log.info(s"[analytics] Received user $userId reco feedback on $uriId to track: $feedback")
-    addFeedbackToLearningLoop(userId, uriId, feedback)
+    //addFeedbackToLearningLoop(userId, uriId, feedback)
 
     val contexts = toRecoUserActionContexts(userId, uriId, feedback)
     contexts.foreach { context =>
