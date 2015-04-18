@@ -1,9 +1,10 @@
 package com.keepit.curator.feedback
 
-import com.google.inject.Inject
+import com.google.inject.{ Singleton, Inject }
 import com.keepit.common.db.slick.Database
 import com.keepit.curator.model.{ UserRecoFeedbackCounter, UriRecoFeedbackValue, UriRecommendation, UserRecoFeedbackCounterRepo }
 
+@Singleton
 class UserRecoFeedbackTrackingCommander @Inject() (
     db: Database,
     feedbackRepo: UserRecoFeedbackCounterRepo) {
