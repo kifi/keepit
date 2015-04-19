@@ -7,6 +7,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
+import com.keepit.common.net.NonOKResponseException
 import com.keepit.eliza.{ LibraryPushNotificationCategory, UserPushNotificationCategory }
 import com.keepit.eliza.commanders.MessagingAnalytics
 import com.keepit.model.{ Library, User }
@@ -65,7 +66,7 @@ class AppBoy @Inject() (
     shoeboxClient.getUser(userId).map { userOpt =>
       userOpt match {
         case Some(user) if deviceTypes.nonEmpty =>
-          sendNotification(user, deviceTypes, notification, force)
+          sendNotification(user, deviceTypes, notification, force, activeDevices)
           log.info(s"[AppBoy] sent user $userId push notifications to ${deviceTypes.length} device types out of ${allDevices.size}. $notification")
           deviceTypes.length
         case Some(user) =>
@@ -114,7 +115,7 @@ class AppBoy @Inject() (
     }
   }
 
-  private def sendNotification(user: User, deviceTypes: Seq[DeviceType], notification: PushNotification, wasForced: Boolean): Unit = {
+  private def sendNotification(user: User, deviceTypes: Seq[DeviceType], notification: PushNotification, wasForced: Boolean, devices: Seq[Device]): Unit = {
     val userId = user.id.get
 
     val json = Json.obj(
@@ -164,7 +165,19 @@ class AppBoy @Inject() (
       case Success(non200) =>
         if (!wasForced) airbrake.notify(s"[AppBoy] bad status ${non200.status} on push notification $notification for user $userId. response: ${non200.body}")
       case Failure(e) =>
-        if (!wasForced) airbrake.notify(s"[AppBoy] fail to send push notification $notification, json $json for user $userId - error: ${e.getClass.getSimpleName} $e")
+        if (!wasForced) {
+          e match {
+            case statError: NonOKResponseException if statError.response.status / 100 == 4 =>
+              db.readWrite { implicit s =>
+                devices foreach { device =>
+                  deviceRepo.save(device.copy(state = DeviceStates.REJECTED_BY_APPBOY))
+                }
+              }
+              airbrake.notify(s"[AppBoy] 4xx error from server, disabling device for user $userId. fail to send push notification $notification, json $json - error: ${e.getClass.getSimpleName} $e")
+            case _ =>
+              airbrake.notify(s"[AppBoy] fail to send push notification $notification, json $json for user $userId - error: ${e.getClass.getSimpleName} $e")
+          }
+        }
     }
   }
 
