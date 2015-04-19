@@ -3,7 +3,7 @@ package com.keepit.common.zookeeper
 import com.google.inject.Inject
 import com.keepit.common.db.Id
 import com.keepit.common.service.ServiceStatus
-import com.keepit.common.service.ServiceStatus.{SELFCHECK_FAIL, SICK, UP}
+import com.keepit.common.service.ServiceStatus.{ SELFCHECK_FAIL, SICK, UP }
 import com.keepit.model.User
 
 class ShardingCommander @Inject() (
