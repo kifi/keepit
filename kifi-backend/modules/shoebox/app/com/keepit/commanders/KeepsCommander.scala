@@ -604,7 +604,6 @@ class KeepsCommander @Inject() (
             collectionRepo.collectionChanged(tagId, false, inactivateIfEmpty = true)
           }
           keepRepo.save(keep) // notify keep index
-          curator.updateUriRecommendationFeedback(userId, keep.uriId, UriRecommendationFeedback(kept = Some(true)))
           keepToCollectionRepo.getCollectionsForKeep(keep.id.get).map { id => collectionRepo.get(id) }
         }
         postSingleKeepReporting(keep, isNewKeep, library, socialShare)

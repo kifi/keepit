@@ -44,11 +44,11 @@ class CuratorAnalytics @Inject() (
       val dumpRecordOpt = UriRecoFeedback.fromUserFeedback(userId, uriId, feedback)
       dumpRecordOpt.foreach { r => db.readWrite { implicit s => uriRecoFeedbackRepo.save(r) } }
 
-      recoItemOpt.foreach { item =>
-        dumpRecordOpt.map { _.feedback }.foreach { fbValue =>
-          fbTrackingCmdr.trackFeedback(item, fbValue)
-        }
-      }
+//      recoItemOpt.foreach { item =>
+//        dumpRecordOpt.map { _.feedback }.foreach { fbValue =>
+//          fbTrackingCmdr.trackFeedback(item, fbValue)
+//        }
+//      }
     } else {
       // purely a user keep action. not from recommendation
     }
@@ -56,7 +56,7 @@ class CuratorAnalytics @Inject() (
 
   def trackUserFeedback(userId: Id[User], uriId: Id[NormalizedURI], feedback: UriRecommendationFeedback): Unit = {
     log.info(s"[analytics] Received user $userId reco feedback on $uriId to track: $feedback")
-    //addFeedbackToLearningLoop(userId, uriId, feedback)
+    addFeedbackToLearningLoop(userId, uriId, feedback)
 
     val contexts = toRecoUserActionContexts(userId, uriId, feedback)
     contexts.foreach { context =>
