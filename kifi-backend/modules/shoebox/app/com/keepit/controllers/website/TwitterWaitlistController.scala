@@ -23,6 +23,8 @@ class TwitterWaitlistController @Inject() (
     airbrakeNotifier: AirbrakeNotifier,
     socialGraphPlugin: SocialGraphPlugin,
     val userActionsHelper: UserActionsHelper,
+    twitterSyncStateRepo: TwitterSyncStateRepo,
+    libraryRepo: LibraryRepo,
     implicit val ec: ExecutionContext) extends UserActions with ShoeboxServiceController {
 
   def twitterWaitlistLanding() = MaybeUserAction { implicit request =>
@@ -146,15 +148,22 @@ class TwitterWaitlistController @Inject() (
       case requestNonUser: NonUserRequest[_] =>
         Redirect("/twitter/request")
       case ur: UserRequest[_] =>
-        val twitterSui = db.readOnlyMaster { implicit session =>
-          socialRepo.getByUser(ur.userId).find { s =>
+        val (twitterSui, existingSync) = db.readOnlyMaster { implicit session =>
+          val sui = socialRepo.getByUser(ur.userId).find { s =>
             s.networkType == SocialNetworks.TWITTER &&
               (s.state == SocialUserInfoStates.FETCHED_USING_SELF ||
                 s.state == SocialUserInfoStates.CREATED)
           }
+          val existingSync = twitterSyncStateRepo.getByUserIdUsed(ur.userId).sortBy(_.id).reverse.headOption
+          (sui, existingSync)
         }
         if (twitterSui.isEmpty) {
           Redirect("/link/twitter?intent=waitlist").withSession(session + (SecureSocial.OriginalUrlKey -> "/twitter/thanks"))
+        } else if (existingSync.nonEmpty) {
+          val library = db.readOnlyReplica { implicit session =>
+            libraryRepo.get(existingSync.get.libraryId)
+          }
+          Redirect(Library.formatLibraryPath(ur.user.username, library.slug))
         } else {
           pollDbForTwitterHandle(ur.userId, iterations = 60).map { twRes =>
             twRes match {
