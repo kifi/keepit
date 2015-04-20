@@ -289,6 +289,7 @@ GET     /about/team                 @com.keepit.controllers.website.HomeControll
 GET     /about/team.html            @com.keepit.controllers.website.HomeController.moved(uri  = "about/team")
 GET     /about/join_us              @com.keepit.controllers.website.HomeController.route(path = "about/join_us")
 GET     /about/join_us.html         @com.keepit.controllers.website.HomeController.moved(uri = "/about/join_us")
+GET     /about/user_feedback        @com.keepit.controllers.website.HomeController.route(path = "/about/user_feedback")
 GET     /how_it_works               @com.keepit.controllers.website.HomeController.route(path = "how_it_works")
 GET     /contact                    @com.keepit.controllers.website.HomeController.route(path = "contact")
 GET     /install                    @com.keepit.controllers.website.HomeController.install
@@ -790,6 +791,7 @@ GET     /admin/graph/uriWandering                          @com.keepit.controlle
 
 GET     /admin/twitter                                     @com.keepit.controllers.admin.AdminTwitterWaitlistController.getWaitlist()
 GET     /admin/twitter/accept                              @com.keepit.controllers.admin.AdminTwitterWaitlistController.acceptUser(userId: Id[User], handle: String)
+GET     /admin/twitter/email                               @com.keepit.controllers.admin.AdminTwitterWaitlistController.sendAcceptEmail(syncStateId: Id[TwitterSyncState], userId: Id[User], safe: Boolean ?= true)
 
 ##########################################
 # Common Healthcheck / service routes
