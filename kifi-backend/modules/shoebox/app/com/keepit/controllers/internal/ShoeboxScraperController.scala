@@ -32,25 +32,11 @@ class ShoeboxScraperController @Inject() (
   normalizedURIInterner: NormalizedURIInterner,
   scrapeInfoRepo: ScrapeInfoRepo,
   keepRepo: KeepRepo,
-  latestKeepUrlCache: LatestKeepUrlCache,
   scraperHelper: ScraperCallbackHelper)(implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices)
     extends ShoeboxServiceController with Logging {
 
   val MaxContentLength = 6000
-
-  def getLatestKeep() = Action(parse.json) { request =>
-    val url = request.body.as[String]
-    val bookmarkOpt = db.readOnlyMaster(2) { implicit session =>
-      latestKeepUrlCache.getOrElseOpt(LatestKeepUrlKey(url)) {
-        normUriRepo.getByNormalizedUrl(url).flatMap { uri =>
-          keepRepo.latestKeep(uri.id.get, url)
-        }
-      }
-    }
-    log.debug(s"[getLatestKeep($url)] $bookmarkOpt")
-    Ok(Json.toJson(bookmarkOpt))
-  }
 
   def getAllURLPatternRules() = Action { request =>
     val patterns = urlPatternRules.rules().rules

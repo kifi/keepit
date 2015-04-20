@@ -45,8 +45,6 @@ class FakeShoeboxScraperClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def saveScrapeInfo(info: ScrapeInfo): Future[Unit] = ???
 
-  def saveNormalizedURI(uri: NormalizedURI): Future[NormalizedURI] = ???
-
   def updateNormalizedURIState(uriId: Id[NormalizedURI], state: State[NormalizedURI]): Future[Unit] = ???
 
   def updateNormalizedURI(uriId: => Id[NormalizedURI],
@@ -71,8 +69,6 @@ class FakeShoeboxScraperClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   def getProxy(url: String): Future[Option[HttpProxy]] = ???
 
   def getProxyP(url: String): Future[Option[HttpProxy]] = ???
-
-  def getLatestKeep(url: String): Future[Option[Keep]] = ???
 
 }
 // code below should be sync with code in ShoeboxController

@@ -33,7 +33,6 @@ trait ShoeboxScraperClient extends ThrottledServiceClient {
   def recordScrapedNormalization(uriId: Id[NormalizedURI], uriSignature: Signature, candidateUrl: String, candidateNormalization: Normalization, alternateUrls: Set[String]): Future[Unit]
   def getProxy(url: String): Future[Option[HttpProxy]]
   def getProxyP(url: String): Future[Option[HttpProxy]]
-  def getLatestKeep(url: String): Future[Option[Keep]]
   def getUriImage(nUriId: Id[NormalizedURI]): Future[Option[String]]
 }
 
@@ -151,12 +150,4 @@ class ShoeboxScraperClientImpl @Inject() (
       if (r.json == null) None else r.json.asOpt[HttpProxy]
     }
   }
-
-  def getLatestKeep(url: String): Future[Option[Keep]] = limiter.withLockFuture {
-    statsd.gauge("getLatestKeep", 1)
-    call(Shoebox.internal.getLatestKeep(), callTimeouts = longTimeout, body = JsString(url), routingStrategy = offlinePriority).map { r =>
-      Json.fromJson[Option[Keep]](r.json).get
-    }
-  }
-
 }

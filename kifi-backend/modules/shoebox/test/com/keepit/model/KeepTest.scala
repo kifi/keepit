@@ -177,45 +177,6 @@ class KeepTest extends Specification with ShoeboxTestInjector {
       }
     }
 
-    "get the latest updated bookmark for a specific uri" in {
-      withDb() { implicit injector =>
-        val (uri, uriId, url, firstUserId, secondUserId, urlId, lib1) = db.readWrite { implicit s =>
-          val uri = uriRepo.save(NormalizedURI.withHash("http://www.kifi.com"))
-          val urlId = urlRepo.save(URL(url = uri.url, domain = Some("kifi.com"), normalizedUriId = uri.id.get)).id.get
-          val uriId = uri.id.get
-          val url = uri.url
-          val firstUserId = userRepo.save(User(firstName = "Léo", lastName = "Grimaldi", username = Username("test"), normalizedUsername = "test")).id.get
-          val secondUserId = userRepo.save(User(firstName = "Eishay", lastName = "Smith", username = Username("test2"), normalizedUsername = "test2")).id.get
-          val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = firstUserId, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("asdf"), memberCount = 1))
-
-          (uri, uriId, url, firstUserId, secondUserId, urlId, lib1)
-        }
-        db.readOnlyMaster { implicit s =>
-          keepRepo.latestKeep(uriId, url) === None
-        }
-        val firstUserBookmark = db.readWrite { implicit s =>
-          keepRepo.save(Keep(userId = firstUserId, uriId = uriId, urlId = urlId, url = url, source = hover,
-            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
-        }
-        db.readOnlyMaster { implicit s =>
-          keepRepo.latestKeep(uriId, url).flatMap(_.id) === firstUserBookmark.id
-        }
-        val secondUserBookmark = db.readWrite { implicit s =>
-          keepRepo.save(Keep(userId = secondUserId, uriId = uriId, urlId = urlId, url = url, source = hover,
-            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get), inDisjointLib = lib1.isDisjoint))
-        }
-        db.readOnlyMaster { implicit s =>
-          keepRepo.latestKeep(uriId, url).flatMap(_.id) === secondUserBookmark.id
-        }
-        db.readWrite { implicit s =>
-          keepRepo.save(firstUserBookmark)
-        }
-        db.readOnlyMaster { implicit s =>
-          keepRepo.latestKeep(uriId, url).flatMap(_.id) === secondUserBookmark.id
-        }
-      }
-    }
-
     "get latest keeps uri by user" in {
       withDb() { implicit injector =>
         val t1 = new DateTime(2013, 2, 14, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
