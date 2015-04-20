@@ -166,6 +166,7 @@ class ExtLibraryController @Inject() (
           val moarKeepData = MoarKeepData(
             title = keep.title,
             image = image,
+            note = keep.note,
             tags = tags.map(_.tag).toSeq)
           Ok(Json.toJson(keepData).as[JsObject] ++ Json.toJson(moarKeepData).as[JsObject])
         case _ =>
@@ -185,7 +186,7 @@ class ExtLibraryController @Inject() (
           val tags = db.readOnlyReplica { implicit s =>
             collectionRepo.getTagsByKeepId(keep.id.get)
           }
-          Ok(Json.toJson(MoarKeepData(keep.title, keepImageUrl, tags.map(_.tag).toSeq)))
+          Ok(Json.toJson(MoarKeepData(keep.title, keepImageUrl, keep.note, tags.map(_.tag).toSeq)))
       }
     }
   }
