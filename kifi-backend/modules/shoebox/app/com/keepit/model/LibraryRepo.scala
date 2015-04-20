@@ -364,10 +364,14 @@ class LibraryRepoImpl @Inject() (
   }
   def getMutualLibrariesForUsers(user1: Id[User], users: Set[Id[User]])(implicit session: RSession): Map[Id[User], Seq[Library]] = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    val userIdSet = users.mkString(",")
-    val query = sql"""select * from library lib where lib.id in (select lm1.library_id from library_membership lm1 inner join library_membership lm2 on lm1.library_id = lm2.library_id where lm1.user_id = $user1 and lm1.access != 'owner' and lm1.state = 'active' and (lm2.user_id in (#$userIdSet)) and lm2.access != 'owner' and lm2.state = 'active') order by member_count desc, last_kept desc"""
-    val allLibraries = query.as[Library].list
-    allLibraries.groupBy(_.ownerId)
+    if (users.size > 0) {
+      val userIdSet = users.mkString(",")
+      val query = sql"""select * from library lib where lib.id in (select lm1.library_id from library_membership lm1 inner join library_membership lm2 on lm1.library_id = lm2.library_id where lm1.user_id = $user1 and lm1.access != 'owner' and lm1.state = 'active' and (lm2.user_id in (#$userIdSet)) and lm2.access != 'owner' and lm2.state = 'active') order by member_count desc, last_kept desc"""
+      val allLibraries = query.as[Library].list
+      allLibraries.groupBy(_.ownerId)
+    } else {
+      Map.empty[Id[User], Seq[Library]]
+    }
   }
 
   def getOwnerLibrariesOtherFollow(owner: Id[User], other: Id[User])(implicit session: RSession): Seq[Library] = {
