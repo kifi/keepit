@@ -44,11 +44,11 @@ class CuratorAnalytics @Inject() (
       val dumpRecordOpt = UriRecoFeedback.fromUserFeedback(userId, uriId, feedback)
       dumpRecordOpt.foreach { r => db.readWrite { implicit s => uriRecoFeedbackRepo.save(r) } }
 
-//      recoItemOpt.foreach { item =>
-//        dumpRecordOpt.map { _.feedback }.foreach { fbValue =>
-//          fbTrackingCmdr.trackFeedback(item, fbValue)
-//        }
-//      }
+      //      recoItemOpt.foreach { item =>
+      //        dumpRecordOpt.map { _.feedback }.foreach { fbValue =>
+      //          fbTrackingCmdr.trackFeedback(item, fbValue)
+      //        }
+      //      }
     } else {
       // purely a user keep action. not from recommendation
     }
