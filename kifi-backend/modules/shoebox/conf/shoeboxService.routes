@@ -289,7 +289,7 @@ GET     /about/team                 @com.keepit.controllers.website.HomeControll
 GET     /about/team.html            @com.keepit.controllers.website.HomeController.moved(uri  = "about/team")
 GET     /about/join_us              @com.keepit.controllers.website.HomeController.route(path = "about/join_us")
 GET     /about/join_us.html         @com.keepit.controllers.website.HomeController.moved(uri = "/about/join_us")
-GET     /about/user_feedback        @com.keepit.controllers.website.HomeController.route(path = "/about/user_feedback")
+GET     /about/user_feedback        @com.keepit.controllers.website.HomeController.route(path = "about/user_feedback")
 GET     /how_it_works               @com.keepit.controllers.website.HomeController.route(path = "how_it_works")
 GET     /contact                    @com.keepit.controllers.website.HomeController.route(path = "contact")
 GET     /install                    @com.keepit.controllers.website.HomeController.install
