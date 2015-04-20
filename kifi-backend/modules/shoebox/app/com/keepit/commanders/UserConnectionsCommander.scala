@@ -165,39 +165,6 @@ class UserConnectionsCommander @Inject() (
     }
   }
 
-  def getFriends(user: User, experiments: Set[ExperimentType]): Set[BasicUser] = {
-    val basicUsers = db.readOnlyMaster { implicit s =>
-      if (canMessageAllUsers(user.id.get)) {
-        userRepo.allExcluding(UserStates.PENDING, UserStates.BLOCKED, UserStates.INACTIVE)
-          .collect { case u if u.id.get != user.id.get => BasicUser.fromUser(u) }.toSet
-      } else {
-        basicUserRepo.loadAll(userConnectionRepo.getConnectedUsers(user.id.get)).values.toSet
-      }
-    }
-
-    // Apologies for this code. "Personal favor" for Danny. Doing it right should be speced and requires
-    // two models, service clients, and caches.
-    val iNeededToDoThisIn20Minutes = if (experiments.contains(ExperimentType.ADMIN)) {
-      Seq(
-        BasicUser(ExternalId[User]("42424242-4242-4242-4242-424242424201"), "FortyTwo Engineering", "", "0.jpg", Username("foo1")),
-        BasicUser(ExternalId[User]("42424242-4242-4242-4242-424242424202"), "FortyTwo Family", "", "0.jpg", Username("foo2")),
-        BasicUser(ExternalId[User]("42424242-4242-4242-4242-424242424203"), "FortyTwo Product", "", "0.jpg", Username("foo3"))
-      )
-    } else {
-      Seq()
-    }
-
-    // This will eventually be a lot more complex. However, for now, tricking the client is the way to go.
-    // ^^^^^^^^^ Unrelated to the offensive code above ^^^^^^^^^
-    val kifiSupport = Seq(
-      BasicUser(ExternalId[User]("aa345838-70fe-45f2-914c-f27c865bdb91"), "Tamila, Kifi Help", "", "tmilz.jpg", Username("foo4")))
-    basicUsers ++ iNeededToDoThisIn20Minutes ++ kifiSupport
-  }
-
-  private def canMessageAllUsers(userId: Id[User]): Boolean = {
-    userExperimentCommander.userHasExperiment(userId, ExperimentType.CAN_MESSAGE_ALL_USERS)
-  }
-
   private def sendFriendRequestAcceptedEmailAndNotification(myUserId: Id[User], friend: User): Unit = SafeFuture {
     //sending 'friend request accepted' email && Notification
     val (respondingUser, respondingUserImage) = db.readWrite { implicit session =>

@@ -189,9 +189,14 @@ class MobileKeepsController @Inject() (
         val json = request.body
         val titleOpt = (json \ "title").asOpt[String]
         val noteOpt = (json \ "note").asOpt[String]
+        val tagsOpt = (json \ "tags").asOpt[Seq[String]]
 
         val newTitle = titleOpt orElse keep.title map { _.trim } filterNot { _.isEmpty }
         val newNote = noteOpt orElse keep.note map { _.trim } filterNot { _.isEmpty }
+        tagsOpt.map { tagNames =>
+          implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
+          keepsCommander.persistHashtagsForKeep(request.userId, keep.id.get, tagNames)
+        }
 
         db.readWrite { implicit s =>
           keepRepo.save(keep.copy(title = newTitle, note = newNote))

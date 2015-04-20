@@ -67,6 +67,8 @@ object UserValueName {
   val TWITTER_FRIENDS_CURSOR = UserValueName("twitter_friends_cursor")
   val TWITTER_LOOKUP_CURSOR = UserValueName("twitter_lookup_cursor")
 
+  val TWITTER_SYNC_ACCEPT_SENT = UserValueName("twitter_sync_accept_sent")
+
   val TWITTER_FOLLOWERS_COUNT = UserValueName("twitter_followers_count")
   val TWITTER_DESCRIPTION = UserValueName("twitter_description")
   val TWITTER_BANNER_IMAGE = UserValueName("twitter_banner_image")
@@ -165,6 +167,8 @@ object UserValues {
   val hasNoPassword = UserValueBooleanHandler(UserValueName.HAS_NO_PASSWORD, false)
 
   val lastSmsSent = UserValueDateTimeHandler(UserValueName.LAST_SMS_SENT, START_OF_TIME)
+
+  val twitterSyncAcceptSent = UserValueBooleanHandler(UserValueName.TWITTER_SYNC_ACCEPT_SENT, false)
 }
 
 @json case class UserValueSettings(showFollowedLibraries: Boolean)
