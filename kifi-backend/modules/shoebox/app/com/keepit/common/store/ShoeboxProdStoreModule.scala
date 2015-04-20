@@ -2,12 +2,12 @@ package com.keepit.common.store
 
 import com.amazonaws.services.s3.AmazonS3
 import com.google.inject.{ Provider, Provides, Singleton }
-import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.AccessLog
 import com.keepit.inject.AppScoped
 import com.keepit.scraper.embedly.{ EmbedlyStore, InMemoryEmbedlyStoreImpl, S3EmbedlyStoreImpl }
 import com.keepit.social.{ InMemorySocialUserRawInfoStoreImpl, S3SocialUserRawInfoStoreImpl, SocialUserRawInfoStore }
 import com.keepit.typeahead._
+import org.apache.commons.io.FileUtils
 
 import play.api.Play.current
 
@@ -45,12 +45,6 @@ case class ShoeboxProdStoreModule() extends ProdStoreModule {
 
   @Singleton
   @Provides
-  def uriImageStore(amazonS3Client: AmazonS3, config: S3ImageConfig, airbrake: AirbrakeNotifier): S3URIImageStore = {
-    new S3URIImageStoreImpl(amazonS3Client, config, airbrake)
-  }
-
-  @Singleton
-  @Provides
   def socialUserTypeaheadStore(amazonS3Client: AmazonS3, accessLog: AccessLog): SocialUserTypeaheadStore = {
     val bucketName = S3Bucket(current.configuration.getString("amazon.s3.typeahead.social.bucket").get)
     new S3SocialUserTypeaheadStore(bucketName, amazonS3Client, accessLog)
@@ -82,18 +76,22 @@ case class ShoeboxDevStoreModule() extends DevStoreModule(ShoeboxProdStoreModule
   def s3ImageConfig: S3ImageConfig =
     whenConfigured("cdn.bucket")(prodStoreModule.s3ImageConfig).getOrElse(S3ImageConfig("", "http://dev.ezkeep.com:9000", true))
 
+  @Provides @Singleton
+  def keepImageStoreInbox: KeepImageStoreInbox = whenConfigured("shoebox.temporary.directory")(prodStoreModule.keepImageStoreInbox) getOrElse {
+    KeepImageStoreInbox(FileUtils.getTempDirectory)
+  }
+
+  @Provides @Singleton
+  def libraryImageStoreInbox: LibraryImageStoreInbox = whenConfigured("shoebox.temporary.directory")(prodStoreModule.libraryImageStoreInbox) getOrElse {
+    LibraryImageStoreInbox(FileUtils.getTempDirectory)
+  }
+
   @Singleton
   @Provides
   def socialUserRawInfoStore(amazonS3ClientProvider: Provider[AmazonS3], accessLog: AccessLog): SocialUserRawInfoStore =
     whenConfigured("amazon.s3.social.bucket")(
       prodStoreModule.socialUserRawInfoStore(amazonS3ClientProvider.get, accessLog)
     ).getOrElse(new InMemorySocialUserRawInfoStoreImpl())
-
-  @Singleton
-  @Provides
-  def uriImageStore(amazonS3Client: AmazonS3, config: S3ImageConfig, airbrake: AirbrakeNotifier): S3URIImageStore = {
-    new S3URIImageStoreImpl(amazonS3Client, config, airbrake)
-  }
 
   @Singleton
   @Provides
