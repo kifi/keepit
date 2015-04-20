@@ -19,16 +19,16 @@ class ShardingCommander @Inject() (
     if (offline.isEmpty) {
       val healthy = members.filter(_.isHealthy)
       if (healthy.nonEmpty) {
-        isRunningFor(id, me, healthy)
+        isInShard(id, me, healthy)
       } else {
         val alive = Seq(UP, SICK, SELFCHECK_FAIL)
         val stillAlive = members.filter(m => alive.contains(m.remoteService.status))
-        isRunningFor(id, me, stillAlive)
+        isInShard(id, me, stillAlive)
       }
     } else {
       if (offline.contains(me)) {
         //if there's at least one offline service and I'm offline as well, use only offline services for the check
-        isRunningFor(id, me, offline)
+        isInShard(id, me, offline)
       } else {
         //if i'm not an offline services and at least one like this exist in my cluster, don't even consider me
         false
