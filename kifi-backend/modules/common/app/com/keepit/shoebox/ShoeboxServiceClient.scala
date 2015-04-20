@@ -97,7 +97,6 @@ trait ShoeboxServiceClient extends ServiceClient {
   def triggerSocialGraphFetch(id: Id[SocialUserInfo]): Future[Unit]
   def getUserConnectionsChanged(seqNum: SequenceNumber[UserConnection], fetchSize: Int): Future[Seq[UserConnection]]
   def getSearchFriendsChanged(seqNum: SequenceNumber[SearchFriend], fetchSize: Int): Future[Seq[SearchFriend]]
-  def updateURIRestriction(id: Id[NormalizedURI], r: Option[Restriction]): Future[Unit]
   def getUriSummary(request: URISummaryRequest): Future[URISummary]
   def getUriSummaries(uriIds: Seq[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], URISummary]]
   def getCandidateURIs(uris: Seq[Id[NormalizedURI]]): Future[Seq[Boolean]]
@@ -610,14 +609,6 @@ class ShoeboxServiceClientImpl @Inject() (
     call(Shoebox.internal.getSearchFriendsChanged(seqNum, fetchSize), callTimeouts = extraLongTimeout, routingStrategy = offlinePriority).map { r =>
       Json.fromJson[Seq[SearchFriend]](r.json).get
     }
-  }
-
-  def updateURIRestriction(id: Id[NormalizedURI], r: Option[Restriction]) = {
-    val payload = r match {
-      case Some(res) => Json.obj("uriId" -> id, "restriction" -> res)
-      case None => Json.obj("uriId" -> id, "restriction" -> JsNull)
-    }
-    call(Shoebox.internal.updateURIRestriction(), payload).map { r => }
   }
 
   def getUriSummary(request: URISummaryRequest): Future[URISummary] = {

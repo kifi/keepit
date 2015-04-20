@@ -411,18 +411,6 @@ class ShoeboxController @Inject() (
     }
   }
 
-  def updateURIRestriction() = SafeAsyncAction(parse.tolerantJson) { request =>
-    val uriId = Json.fromJson[Id[NormalizedURI]](request.body \ "uriId").get
-    val r = request.body \ "restriction" match {
-      case JsNull => None
-      case x => Some(Json.fromJson[Restriction](x).get)
-    }
-    db.readWrite { implicit s =>
-      normUriRepo.updateURIRestriction(uriId, r)
-    }
-    Ok
-  }
-
   def getUserImageUrl(id: Id[User], width: Int) = Action.async { request =>
     userCommander.getUserImageUrl(id, width).map { url =>
       Ok(Json.toJson(url))
