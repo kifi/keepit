@@ -52,14 +52,6 @@ class ShoeboxScraperController @Inject() (
     Ok(Json.toJson(bookmarkOpt))
   }
 
-  def saveNormalizedURI() = SafeAsyncAction(parse.tolerantJson(maxLength = MaxContentLength)) { request =>
-    val ts = System.currentTimeMillis
-    val normalizedUri = request.body.as[NormalizedURI]
-    val saved = scraperHelper.saveNormalizedURI(normalizedUri)
-    log.debug(s"[saveNormalizedURI] time-lapsed:${System.currentTimeMillis - ts} url=(${normalizedUri.url}) result=$saved")
-    Ok(Json.toJson(saved))
-  }
-
   def getAllURLPatternRules() = Action { request =>
     val patterns = urlPatternRules.rules().rules
     Ok(Json.toJson(patterns))

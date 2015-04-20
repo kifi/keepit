@@ -34,7 +34,6 @@ class ShoeboxCommander @Inject() (
       case None => shoeboxServiceClient.getNormalizedURIByURL(uri.url)
     }
   }
-  def saveNormalizedUri(uri: NormalizedURI): Future[NormalizedURI] = uriUpdateLock.withLockFuture(shoeboxScraperClient.saveNormalizedURI(uri))
   def updateNormalizedURIState(uriId: Id[NormalizedURI], state: State[NormalizedURI]): Future[Unit] = uriUpdateLock.withLockFuture(shoeboxScraperClient.updateNormalizedURIState(uriId, state))
   def saveScrapeInfo(info: ScrapeInfo): Future[Unit] = saveScrapeLock.withLockFuture(shoeboxScraperClient.saveScrapeInfo(if (info.state == ScrapeInfoStates.INACTIVE) info else info.withState(ScrapeInfoStates.ACTIVE)))
   def getLatestKeep(url: String): Future[Option[Keep]] = shoeboxScraperClient.getLatestKeep(url)

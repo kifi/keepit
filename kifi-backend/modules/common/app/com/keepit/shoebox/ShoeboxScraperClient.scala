@@ -27,7 +27,6 @@ trait ShoeboxScraperClient extends ThrottledServiceClient {
   def getAllURLPatterns(): Future[UrlPatternRules]
   def assignScrapeTasks(zkId: Long, max: Int): Future[Seq[ScrapeRequest]]
   def saveScrapeInfo(info: ScrapeInfo): Future[Unit]
-  def saveNormalizedURI(uri: NormalizedURI): Future[NormalizedURI]
   def updateNormalizedURIState(uriId: Id[NormalizedURI], state: State[NormalizedURI]): Future[Unit]
   def updateNormalizedURI(uriId: => Id[NormalizedURI], createdAt: => DateTime = ?, updatedAt: => DateTime = ?, externalId: => ExternalId[NormalizedURI] = ?, title: => Option[String] = ?, url: => String = ?, urlHash: => UrlHash = UrlHash(?), state: => State[NormalizedURI] = ?, seq: => SequenceNumber[NormalizedURI] = SequenceNumber(-1), screenshotUpdatedAt: => Option[DateTime] = ?, restriction: => Option[Restriction] = ?, normalization: => Option[Normalization] = ?, redirect: => Option[Id[NormalizedURI]] = ?, redirectTime: => Option[DateTime] = ?): Future[Unit]
   def recordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect): Future[NormalizedURI]
@@ -76,14 +75,6 @@ class ShoeboxScraperClientImpl @Inject() (
   def saveScrapeInfo(info: ScrapeInfo): Future[Unit] = limiter.withLockFuture {
     statsd.gauge(s"saveScrapeInfo.${info.state}", 1)
     call(Shoebox.internal.saveScrapeInfo(), Json.toJson(info), callTimeouts = longTimeout, routingStrategy = offlinePriority).map { r => Unit }
-  }
-
-  @deprecated("Dangerous call. Use updateNormalizedURI instead.", "2014-01-30")
-  def saveNormalizedURI(uri: NormalizedURI): Future[NormalizedURI] = limiter.withLockFuture {
-    statsd.gauge("saveNormalizedURI", 1)
-    call(Shoebox.internal.saveNormalizedURI(), Json.toJson(uri), callTimeouts = longTimeout, routingStrategy = offlinePriority).map { r =>
-      r.json.as[NormalizedURI]
-    }
   }
 
   def updateNormalizedURIState(uriId: Id[NormalizedURI], state: State[NormalizedURI]): Future[Unit] = limiter.withLockFuture {
