@@ -1,7 +1,5 @@
 package com.keepit.commanders
 
-import java.awt.image.BufferedImage
-
 import com.keepit.common.logging.Logging
 import com.keepit.rover.article.content.EmbedlyImage
 import com.keepit.shoebox.ShoeboxScraperClient
@@ -9,11 +7,10 @@ import com.keepit.shoebox.ShoeboxScraperClient
 import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.images.ImageFetcher
-import com.keepit.scraper.{ URIPreviewFetchResult, NormalizedURIRef }
+import com.keepit.scraper.{ URIPreviewFetchResult }
 
 import com.keepit.common.net.URI
-import com.keepit.common.store.{ S3ImageConfig, S3URIImageStore }
-import com.keepit.model.{ ImageStoreFailureWithException, ImageInfo }
+import com.keepit.model.{ ImageStoreFailureWithException }
 import com.keepit.scraper.embedly.EmbedlyClient
 import com.keepit.scraper._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -30,9 +27,6 @@ trait ScraperURISummaryCommander {
 class ScraperURISummaryCommanderImpl @Inject() (
     imageFetcher: ImageFetcher,
     embedlyClient: EmbedlyClient,
-    s3URIImageStore: S3URIImageStore,
-    uriImageStore: S3URIImageStore,
-    imageConfig: S3ImageConfig,
     airbrake: AirbrakeNotifier,
     uriImageCommander: UriImageCommander,
     shoeboxScraperClient: ShoeboxScraperClient) extends ScraperURISummaryCommander with Logging {
@@ -80,23 +74,6 @@ class ScraperURISummaryCommanderImpl @Inject() (
 
       case None =>
         Future.successful(None)
-    }
-  }
-
-  // Internal:
-
-  /**
-   * Stores image to S3
-   */
-  private def storeImage(info: ImageInfo, image: BufferedImage, nUri: NormalizedURIRef): Option[ImageInfo] = {
-    uriImageStore.storeImage(info, image, nUri.externalId) match {
-      case Success(result) =>
-        val (url, size) = result
-        val imageInfoWithUrl = if (info.url.isEmpty) info.copy(url = Some(url), size = Some(size)) else info
-        Some(imageInfoWithUrl)
-      case Failure(ex) =>
-        airbrake.notify(s"Failed to upload URL image to S3: ${ex.getMessage}")
-        None
     }
   }
 
