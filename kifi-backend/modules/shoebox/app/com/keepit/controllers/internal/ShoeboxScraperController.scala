@@ -90,45 +90,6 @@ class ShoeboxScraperController @Inject() (
     }
   }
 
-  def recordScrapedNormalization() = Action.async(parse.tolerantJson) { request =>
-    val candidateUrlString = (request.body \ "url").as[String]
-    val candidateUrl = URI.parse(candidateUrlString).get.toString()
-    timing(s"recordScrapedNormalization.$candidateUrl") {
-      val candidateNormalization = (request.body \ "normalization").as[Normalization]
-      val scrapedCandidate = ScrapedCandidate(candidateUrl, candidateNormalization)
-
-      val uriId = (request.body \ "id").as[Id[NormalizedURI]](Id.format)
-      val signature = Signature((request.body \ "signature").as[String])
-      val scrapedUri = db.readOnlyMaster { implicit session => normUriRepo.get(uriId) }
-      normalizationServiceProvider.get.update(NormalizationReference(scrapedUri, signature = Some(signature)), scrapedCandidate).map { newReferenceOption =>
-        (request.body \ "alternateUrls").asOpt[Set[String]].foreach { alternateUrls =>
-          val bestReference = newReferenceOption.map { newReferenceId =>
-            db.readOnlyMaster { implicit session =>
-              normUriRepo.get(newReferenceId)
-            }
-          } getOrElse scrapedUri
-          bestReference.normalization.map(AlternateCandidate(scrapedUri.url, _)).foreach { bestCandidate =>
-            alternateUrls.foreach { alternateUrlString =>
-              val alternateUrl = URI.parse(alternateUrlString).get.toString()
-              val uri = db.readOnlyMaster { implicit session =>
-                normalizedURIInterner.getByUri(alternateUrl)
-              }
-              uri match {
-                case Some(existingUri) if existingUri.id.get == bestReference.id.get => // ignore
-                case _ => try {
-                  db.readWrite { implicit session =>
-                    normalizedURIInterner.internByUri(alternateUrl, bestCandidate)
-                  }
-                } catch { case ex: Throwable => log.error(s"Failed to intern alternate url $alternateUrl for $bestCandidate") }
-              }
-            }
-          }
-        }
-        Ok
-      }
-    }
-  }
-
   // todo: revisit
   def recordPermanentRedirect() = Action.async(parse.tolerantJson) { request =>
     val ts = System.currentTimeMillis

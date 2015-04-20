@@ -64,8 +64,6 @@ class FakeShoeboxScraperClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def recordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect): Future[NormalizedURI] = ???
 
-  def recordScrapedNormalization(uriId: Id[NormalizedURI], signature: Signature, candidateUrl: String, candidateNormalization: Normalization, alternateUrls: Set[String]): Future[Unit] = ???
-
   def getProxy(url: String): Future[Option[HttpProxy]] = ???
 
   def getProxyP(url: String): Future[Option[HttpProxy]] = ???

@@ -30,7 +30,6 @@ trait ShoeboxScraperClient extends ThrottledServiceClient {
   def updateNormalizedURIState(uriId: Id[NormalizedURI], state: State[NormalizedURI]): Future[Unit]
   def updateNormalizedURI(uriId: => Id[NormalizedURI], createdAt: => DateTime = ?, updatedAt: => DateTime = ?, externalId: => ExternalId[NormalizedURI] = ?, title: => Option[String] = ?, url: => String = ?, urlHash: => UrlHash = UrlHash(?), state: => State[NormalizedURI] = ?, seq: => SequenceNumber[NormalizedURI] = SequenceNumber(-1), screenshotUpdatedAt: => Option[DateTime] = ?, restriction: => Option[Restriction] = ?, normalization: => Option[Normalization] = ?, redirect: => Option[Id[NormalizedURI]] = ?, redirectTime: => Option[DateTime] = ?): Future[Unit]
   def recordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect): Future[NormalizedURI]
-  def recordScrapedNormalization(uriId: Id[NormalizedURI], uriSignature: Signature, candidateUrl: String, candidateNormalization: Normalization, alternateUrls: Set[String]): Future[Unit]
   def getProxy(url: String): Future[Option[HttpProxy]]
   def getProxyP(url: String): Future[Option[HttpProxy]]
   def getUriImage(nUriId: Id[NormalizedURI]): Future[Option[String]]
@@ -125,18 +124,6 @@ class ShoeboxScraperClientImpl @Inject() (
     call(Shoebox.internal.recordPermanentRedirect(), JsArray(Seq(Json.toJson[NormalizedURI](uri), Json.toJson[HttpRedirect](redirect))), callTimeouts = longTimeout, routingStrategy = offlinePriority).map { r =>
       r.json.as[NormalizedURI]
     }
-  }
-
-  def recordScrapedNormalization(uriId: Id[NormalizedURI], uriSignature: Signature, candidateUrl: String, candidateNormalization: Normalization, alternateUrls: Set[String]): Future[Unit] = limiter.withLockFuture {
-    statsd.gauge("recordScrapedNormalization", 1)
-    val payload = Json.obj(
-      "id" -> uriId.id,
-      "signature" -> uriSignature.toBase64(),
-      "url" -> candidateUrl,
-      "normalization" -> candidateNormalization,
-      "alternateUrls" -> alternateUrls
-    )
-    call(Shoebox.internal.recordScrapedNormalization(), payload, callTimeouts = longTimeout, routingStrategy = offlinePriority).imap(_ => {})
   }
 
   def getProxy(url: String): Future[Option[HttpProxy]] = limiter.withLockFuture {
