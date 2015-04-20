@@ -36,5 +36,4 @@ class ShoeboxCommander @Inject() (
   }
   def updateNormalizedURIState(uriId: Id[NormalizedURI], state: State[NormalizedURI]): Future[Unit] = uriUpdateLock.withLockFuture(shoeboxScraperClient.updateNormalizedURIState(uriId, state))
   def saveScrapeInfo(info: ScrapeInfo): Future[Unit] = saveScrapeLock.withLockFuture(shoeboxScraperClient.saveScrapeInfo(if (info.state == ScrapeInfoStates.INACTIVE) info else info.withState(ScrapeInfoStates.ACTIVE)))
-  def recordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect): Future[NormalizedURI] = uriUpdateLock.withLockFuture(shoeboxScraperClient.recordPermanentRedirect(uri, redirect))
 }

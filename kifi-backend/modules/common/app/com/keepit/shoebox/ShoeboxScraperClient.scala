@@ -29,7 +29,6 @@ trait ShoeboxScraperClient extends ThrottledServiceClient {
   def saveScrapeInfo(info: ScrapeInfo): Future[Unit]
   def updateNormalizedURIState(uriId: Id[NormalizedURI], state: State[NormalizedURI]): Future[Unit]
   def updateNormalizedURI(uriId: => Id[NormalizedURI], createdAt: => DateTime = ?, updatedAt: => DateTime = ?, externalId: => ExternalId[NormalizedURI] = ?, title: => Option[String] = ?, url: => String = ?, urlHash: => UrlHash = UrlHash(?), state: => State[NormalizedURI] = ?, seq: => SequenceNumber[NormalizedURI] = SequenceNumber(-1), screenshotUpdatedAt: => Option[DateTime] = ?, restriction: => Option[Restriction] = ?, normalization: => Option[Normalization] = ?, redirect: => Option[Id[NormalizedURI]] = ?, redirectTime: => Option[DateTime] = ?): Future[Unit]
-  def recordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect): Future[NormalizedURI]
   def getProxy(url: String): Future[Option[HttpProxy]]
   def getProxyP(url: String): Future[Option[HttpProxy]]
   def getUriImage(nUriId: Id[NormalizedURI]): Future[Option[String]]
@@ -117,13 +116,6 @@ class ShoeboxScraperClientImpl @Inject() (
     val payload = Json.obj(safeJsonParams: _*)
     val stripped = payload.stripJsNulls()
     call(Shoebox.internal.updateNormalizedURI(uriId), stripped, callTimeouts = longTimeout, routingStrategy = offlinePriority).imap(_ => {})
-  }
-
-  def recordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect): Future[NormalizedURI] = limiter.withLockFuture {
-    statsd.gauge("recordPermanentRedirect", 1)
-    call(Shoebox.internal.recordPermanentRedirect(), JsArray(Seq(Json.toJson[NormalizedURI](uri), Json.toJson[HttpRedirect](redirect))), callTimeouts = longTimeout, routingStrategy = offlinePriority).map { r =>
-      r.json.as[NormalizedURI]
-    }
   }
 
   def getProxy(url: String): Future[Option[HttpProxy]] = limiter.withLockFuture {

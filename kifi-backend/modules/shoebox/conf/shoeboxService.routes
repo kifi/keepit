@@ -892,7 +892,6 @@ POST    /internal/geckoboard/refresh                  @com.keepit.reports.Geckob
 GET      /internal/shoebox/database/assignScrapeTasks @com.keepit.controllers.internal.ShoeboxScraperController.assignScrapeTasks(zkId:Id[ScraperWorker], max:Int ?= 1)
 POST     /internal/shoebox/database/saveScrapeInfo    @com.keepit.controllers.internal.ShoeboxScraperController.saveScrapeInfo
 POST     /internal/shoebox/database/updateNormalizedURI @com.keepit.controllers.internal.ShoeboxScraperController.updateNormalizedURI(uriId: Id[NormalizedURI])
-POST     /internal/shoebox/database/recordPermanentRedirect @com.keepit.controllers.internal.ShoeboxScraperController.recordPermanentRedirect
 GET      /internal/shoebox/database/getProxy          @com.keepit.controllers.internal.ShoeboxScraperController.getProxy(url:String)
 POST     /internal/shoebox/database/getProxyP         @com.keepit.controllers.internal.ShoeboxScraperController.getProxyP()
 GET      /internal/shoebox/database/getFriendRequestRecipientIdBySender @com.keepit.controllers.internal.ShoeboxController.getFriendRequestsRecipientIdBySender(senderId: Id[User])

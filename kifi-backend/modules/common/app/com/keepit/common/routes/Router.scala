@@ -125,7 +125,6 @@ object Shoebox extends Service {
     def assignScrapeTasks(zkId: Long, max: Int) = ServiceRoute(GET, "/internal/shoebox/database/assignScrapeTasks", Param("zkId", zkId), Param("max", max))
     def saveScrapeInfo() = ServiceRoute(POST, "/internal/shoebox/database/saveScrapeInfo")
     def updateNormalizedURI(uriId: Id[NormalizedURI]) = ServiceRoute(POST, "/internal/shoebox/database/updateNormalizedURI", Param("uriId", uriId))
-    def recordPermanentRedirect() = ServiceRoute(POST, "/internal/shoebox/database/recordPermanentRedirect")
     def getProxy(url: String) = ServiceRoute(GET, "/internal/shoebox/database/getProxy", Param("url"))
     def getProxyP() = ServiceRoute(POST, "/internal/shoebox/database/getProxyP")
     def getFriendRequestRecipientIdBySender(senderId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/getFriendRequestRecipientIdBySender", Param("senderId", senderId))

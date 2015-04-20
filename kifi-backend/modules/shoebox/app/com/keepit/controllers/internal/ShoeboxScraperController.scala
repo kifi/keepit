@@ -28,10 +28,7 @@ class ShoeboxScraperController @Inject() (
   normUriRepo: NormalizedURIRepo,
   airbrake: AirbrakeNotifier,
   pageInfoRepo: PageInfoRepo,
-  normalizationServiceProvider: Provider[NormalizationService],
-  normalizedURIInterner: NormalizedURIInterner,
   scrapeInfoRepo: ScrapeInfoRepo,
-  keepRepo: KeepRepo,
   scraperHelper: ScraperCallbackHelper)(implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices)
     extends ShoeboxServiceController with Logging {
@@ -88,56 +85,6 @@ class ShoeboxScraperController @Inject() (
     scraperHelper.assignTasks(zkId, max) map { res =>
       Ok(Json.toJson(res))
     }
-  }
-
-  // todo: revisit
-  def recordPermanentRedirect() = Action.async(parse.tolerantJson) { request =>
-    val ts = System.currentTimeMillis
-    log.debug(s"[recordPermanentRedirect] body=${request.body}")
-    val args = request.body.as[JsArray].value
-    require(!args.isEmpty && args.length == 2, "Both uri and redirect need to be supplied")
-    val uri = args(0).as[NormalizedURI]
-    val redirect = args(1).as[HttpRedirect]
-    require(redirect.isLocatedAt(uri.url), "Current Location of HTTP redirect does not match normalized Uri.")
-    require(redirect.isPermanent || redirect.isShortener, "HTTP redirect is neither permanent nor from a shortener.")
-    val verifiedCandidateOption = normalizationServiceProvider.get.prenormalize(redirect.newDestination).toOption.flatMap { prenormalizedDestination =>
-      db.readWrite { implicit session =>
-        val (candidateUrl, candidateNormalizationOption) = normUriRepo.getByNormalizedUrl(prenormalizedDestination) match {
-          case None => (prenormalizedDestination, SchemeNormalizer.findSchemeNormalization(prenormalizedDestination))
-          case Some(referenceUri) if referenceUri.state != NormalizedURIStates.REDIRECTED => (referenceUri.url, referenceUri.normalization)
-          case Some(reverseRedirectUri) if reverseRedirectUri.redirect == Some(uri.id.get) =>
-            (reverseRedirectUri.url, SchemeNormalizer.findSchemeNormalization(reverseRedirectUri.url))
-          case Some(redirectedUri) =>
-            val referenceUri = normUriRepo.get(redirectedUri.redirect.get)
-            (referenceUri.url, referenceUri.normalization)
-        }
-        candidateNormalizationOption.map(VerifiedCandidate(candidateUrl, _))
-      }
-    }
-
-    val resFutureOption = verifiedCandidateOption.map { verifiedCandidate =>
-      val toBeRedirected = NormalizationReference(uri, correctedNormalization = Some(Normalization.MOVED))
-      val updateFuture = normalizationServiceProvider.get.update(toBeRedirected, verifiedCandidate)
-      // Scraper reports entire NormalizedUri objects with a major chance of stale data / race conditions
-      // The following is meant for synchronisation and should be revisited when scraper apis are rewritten to report modified fields only
-
-      updateFuture.map {
-        case Some(update) =>
-          val redirectedUri = db.readOnlyMaster { implicit session => normUriRepo.get(uri.id.get) }
-          log.debug(s"[recordedPermanentRedirect($uri, $redirect)] time-lapsed: ${System.currentTimeMillis - ts} result=$redirectedUri")
-          redirectedUri
-        case None =>
-          log.warn(s"[failedToRecordPermanentRedirect($uri, $redirect)] Normalization update failed - time-lapsed: ${System.currentTimeMillis - ts} result=$uri")
-          uri
-      }
-    }
-
-    val resFuture = resFutureOption getOrElse {
-      log.warn(s"[failedToRecordPermanentRedirect($uri, $redirect)] Redirection normalization empty - time-lapsed: ${System.currentTimeMillis - ts} result=$uri")
-      Future.successful(uri)
-    }
-
-    resFuture.map { res => Ok(Json.toJson(res)) }
   }
 
   def saveScrapeInfo() = SafeAsyncAction(parse.tolerantJson) { request =>
