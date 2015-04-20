@@ -9,4 +9,4 @@ case class FriendRecommendations(
   userConnectionCounts: Map[Id[User], Int],
   recommendedUsers: Seq[Id[User]],
   mutualFriends: Map[Id[User], Seq[Id[User]]],
-  mutualLibraries: Map[Id[User], Seq[Library]])
+  mutualLibrariesCounts: Map[Id[User], Int])

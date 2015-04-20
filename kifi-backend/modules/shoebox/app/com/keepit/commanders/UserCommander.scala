@@ -738,14 +738,14 @@ class UserCommander @Inject() (
             recommendedUserId -> (friends.getOrElse(userId, Set.empty) intersect friends.getOrElse(recommendedUserId, Set.empty)).toSeq.sortBy(-friendshipStrength(_))
           }.toMap
 
-          val mutualLibraries = db.readOnlyMaster { implicit session =>
-            libraryRepo.getMutualLibrariesForUsers(userId, recommendedUsers.toSet)
+          val mutualLibrariesCounts = db.readOnlyMaster { implicit session =>
+            libraryRepo.countMutualLibrariesForUsers(userId, recommendedUsers.toSet)
           }
 
           val uniqueMutualFriends = mutualFriends.values.flatten.toSet
           val (basicUsers, userConnectionCounts) = loadBasicUsersAndConnectionCounts(uniqueMutualFriends ++ recommendedUsers, uniqueMutualFriends ++ recommendedUsers)
 
-          Some(FriendRecommendations(basicUsers, userConnectionCounts, recommendedUsers, mutualFriends, mutualLibraries))
+          Some(FriendRecommendations(basicUsers, userConnectionCounts, recommendedUsers, mutualFriends, mutualLibrariesCounts))
         }
     }
   }
