@@ -62,7 +62,7 @@ object MarketingSiteRouter extends AssetsBuilder with Controller with Logging {
   def landing(implicit request: Request[_]): String = {
     val possiblyBot = request.userAgentOpt.map(_.possiblyBot).getOrElse(true)
     val version: LandingVersion = if (possiblyBot) {
-      Version3
+      Version4
     } else {
       val pickOpt = Try {
         request.getQueryString("v").map(_.toInt)
