@@ -110,7 +110,7 @@ object UserRecoFeedbackCounter {
 }
 
 case class UserRecoFeedbackCounterUserKey(userId: Id[User]) extends Key[UserRecoFeedbackCounter] {
-  override val version = 2
+  override val version = 3
   val namespace = "user_reco_feedback_counter_by_user"
   def toKey(): String = userId.id.toString
 }
