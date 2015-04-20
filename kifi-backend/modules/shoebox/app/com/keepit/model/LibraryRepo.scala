@@ -370,9 +370,7 @@ class LibraryRepoImpl @Inject() (
       val allLibraries = query.as[Library].list
       allLibraries.groupBy(_.ownerId)
     } else {
-      users.map { userId =>
-        userId -> Seq.empty[Library]
-      }.toMap
+      Map.empty[Id[User], Library]
     }
   }
 
