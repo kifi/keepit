@@ -105,15 +105,9 @@ GET     /i/:id                      @com.keepit.controllers.website.InviteContro
 
 POST    /ext/events                 @com.keepit.controllers.tracking.EventProxyController.track()
 
-# Note: /kifi/start is deprecated. 3.2.12 and later use /ext/start instead.
-POST    /kifi/start                 @com.keepit.controllers.ext.ExtAuthController.start
 POST    /ext/start                  @com.keepit.controllers.ext.ExtAuthController.start
 POST    /ext/auth/:provider         @com.keepit.controllers.ext.ExtAuthController.jsTokenLogin(provider: String)
-# Note: /ext/authed is deprecated. 3.2.12 and later use /ext/auth instead.
-GET     /ext/authed                 @com.keepit.controllers.ext.ExtAuthController.getLoggedIn()
 GET     /ext/auth                   @com.keepit.controllers.ext.ExtAuthController.getLoggedIn()
-# Note: /ext/session/end is deprecated. 3.2.12 and later use DELETE /ext/auth instead.
-POST    /ext/session/end            @com.keepit.controllers.ext.ExtAuthController.logOut
 DELETE  /ext/auth                   @com.keepit.controllers.ext.ExtAuthController.logOut
 
 POST    /ext/page                   @com.keepit.controllers.ext.ExtPageController.getPageInfo()
@@ -122,8 +116,6 @@ GET     /ext/pref/rules             @com.keepit.controllers.ext.ExtPreferenceCon
 GET     /ext/prefs                  @com.keepit.controllers.ext.ExtPreferenceController.getPrefs(version: Int ?= 1)
 POST    /ext/pref/keeperPosition    @com.keepit.controllers.ext.ExtPreferenceController.setKeeperPositionOnSite()
 POST    /ext/pref/keeperHidden      @com.keepit.controllers.ext.ExtPreferenceController.setKeeperHiddenOnSite()
-# Note: /users/slider/suppress is deprecated. 3.2.8 and later use /ext/pref/keeperHidden instead.
-POST    /users/slider/suppress      @com.keepit.controllers.ext.ExtPreferenceController.setKeeperHiddenOnSite()
 POST    /ext/pref/lookHereMode      @com.keepit.controllers.ext.ExtPreferenceController.setLookHereMode(on: Boolean)
 POST    /ext/pref/enterToSend       @com.keepit.controllers.ext.ExtPreferenceController.setEnterToSend(enterToSend: Boolean)
 POST    /ext/pref/maxResults        @com.keepit.controllers.ext.ExtPreferenceController.setMaxResults(n: Int)
@@ -131,14 +123,8 @@ POST    /ext/pref/showExtMsgIntro   @com.keepit.controllers.ext.ExtPreferenceCon
 POST    /ext/pref/showLibraryIntro  @com.keepit.controllers.ext.ExtPreferenceController.setShowLibraryIntro(show: Boolean)
 POST    /ext/pref/email/:kind/:send @com.keepit.controllers.ext.ExtPreferenceController.setEmailNotifyPreference(kind: com.keepit.common.mail.ElectronicMailCategory, send: Boolean)
 
-# Note: /ext/user/friends is deprecated. 3.2.4 and later use /ext/contacts/search instead and do not cache friends.
-GET     /ext/user/friends           @com.keepit.controllers.ext.ExtUserController.getFriends()
 GET     /ext/contacts/search        @com.keepit.controllers.ext.ExtUserController.searchForContacts(query:Option[String], limit:Option[Int])
-# Note: /ext/contacts is deprecated. 3.2.4 and later use /ext/contacts/search instead.
-GET     /ext/contacts               @com.keepit.controllers.ext.ExtNonUserSearchController.findPeopleToMessage(q: String, n: Int ?= 4)
 POST    /ext/contacts/hide          @com.keepit.controllers.ext.ExtNonUserSearchController.hideEmailFromUser()
-# Note: /ext/invite has not been in use since 2.9.31.
-POST    /ext/invite                 @com.keepit.controllers.ext.ExtInviteController.invite()
 
 GET     /ext/libraries              @com.keepit.controllers.ext.ExtLibraryController.getLibraries()
 POST    /ext/libraries              @com.keepit.controllers.ext.ExtLibraryController.createLibrary()

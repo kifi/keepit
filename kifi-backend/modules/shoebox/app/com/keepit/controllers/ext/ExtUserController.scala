@@ -1,6 +1,6 @@
 package com.keepit.controllers.ext
 
-import com.keepit.commanders.{ UserConnectionsCommander, EmailContactResult, TypeaheadCommander, UserCommander, UserContactResult, UserPersonaCommander }
+import com.keepit.commanders.{ EmailContactResult, TypeaheadCommander, UserCommander, UserContactResult, UserPersonaCommander }
 import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.model.Library
@@ -13,14 +13,9 @@ import com.google.inject.Inject
 class ExtUserController @Inject() (
   val userActionsHelper: UserActionsHelper,
   typeAheadCommander: TypeaheadCommander,
-  userCommander: UserConnectionsCommander,
   userPersonaCommander: UserPersonaCommander,
   implicit val config: PublicIdConfiguration)
     extends UserActions with ShoeboxServiceController {
-
-  def getFriends() = UserAction { request =>
-    Ok(Json.toJson(userCommander.getFriends(request.user, request.experiments)))
-  }
 
   def searchForContacts(query: Option[String], limit: Option[Int]) = UserAction.async { request =>
     typeAheadCommander.searchForContacts(request.userId, query.getOrElse(""), limit) map { res =>
