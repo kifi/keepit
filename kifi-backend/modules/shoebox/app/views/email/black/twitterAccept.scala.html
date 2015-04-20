@@ -1,0 +1,23 @@
+@(userId: com.keepit.common.db.Id[User], twitterLibUrl: String, urlEncodedTwitterLibUrl: String)
+@import com.keepit.common.mail.template.helpers._
+
+<p>Hi @fullName(userId),</p>
+
+<p>Welcome to Kifi’s new Twitter deep search. You can check out your new library here: <a href="@twitterLibUrl">@twitterLibUrl</a>.</p>
+
+<p>You’re one of the very first to get access, so we’re still ironing out issues.
+  Please take a few minutes and explore the library — we’d love to hear your feedback.
+  You can share the library with your Twitter followers by clicking <a href="https://twitter.com/intent/tweet?text=Browse%2Fsearch%20all%20the%20links%20I%E2%80%99ve%20shared%20on%20Twitter%20@urlEncodedTwitterLibUrl%20via%20%40Kifi.%20Join%20the%20beta%20%26%20create%20your%20own%3A&url=https%3A%2F%2Fwww.kifi.com%2Ftwitter&source=kifi&related=kifi">here</a>.
+  Want to get even more life out of your links and library?
+  <a href="https://support.twitter.com/articles/127871-customizing-your-profile">Pin a tweet</a> to your library to the top of your Twitter feed or add your library link to your bio.</p>
+
+<p>Twitter limits how many tweets we can grab to 3200. If you have more than that and would like a full index of your Twitter history, you can <a href="http://support.kifi.com/hc/en-us/articles/204865195-Importing-Your-Twitter-Archive-Into-A-Library">import your Twitter archive</a>.</p>
+
+<p>The library automatically updates a few times an hour, all links are fully searchable, and reference the original tweet.</p>
+
+<p>Let me know if you have any questions or I can help in any way.</p>
+
+<p>Best,</p>
+
+<p>Ashley McGregor Dey<br />Content &amp; Community</p>
+

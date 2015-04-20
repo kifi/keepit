@@ -19,6 +19,7 @@
                         <th>LibraryId</th>
                         <th>Library Admin Page</th>
                         <th>Library Kifi Page</th>
+                        <th>Email user</th>
                     </tr>
                     <tr>
                         <td><a href="https://twitter.com/@{syncState.twitterHandle}">@{syncState.twitterHandle}</a></td>
@@ -27,6 +28,7 @@
                         <td>@{syncState.libraryId.id}</td>
                         <td><a href="/admin/libraries/@{syncState.libraryId.id}">Admin</a></td>
                         <td><a href="https://www.kifi.com/@{libraryPath}">Kifi</a></td>
+                        <td><a href="/admin/twitter/email?userId=@syncState.userId&syncStateId=@syncState.id.get">Send email</a></td>
                     </tr>
                 </table>
             }
