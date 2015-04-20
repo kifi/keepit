@@ -907,7 +907,6 @@ GET      /internal/shoebox/database/getLapsedUsersForDelighted    @com.keepit.co
 
 GET      /internal/shoebox/emailSenderTest                 @com.keepit.controllers.internal.EmailTestController.testEmailSender(name: String)
 
-POST     /internal/shoebox/database/updateURIRestriction  @com.keepit.controllers.internal.ShoeboxController.updateURIRestriction()
 GET      /internal/shoebox/database/urlPatternRules         @com.keepit.controllers.internal.ShoeboxScraperController.getAllURLPatternRules()
 GET      /internal/shoebox/database/getAllFakeUsers         @com.keepit.controllers.internal.ShoeboxController.getAllFakeUsers()
 GET      /internal/shoebox/database/getInvitations          @com.keepit.controllers.internal.ShoeboxController.getInvitations(senderId: Id[User])

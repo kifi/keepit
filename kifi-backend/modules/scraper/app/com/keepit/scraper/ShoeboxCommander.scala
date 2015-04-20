@@ -41,5 +41,4 @@ class ShoeboxCommander @Inject() (
     uriUpdateLock.withLockFuture(shoeboxScraperClient.recordScrapedNormalization(uriId, uriSignature, candidateUrl, candidateNormalization, alternateUrls))
   }
 
-  def updateURIRestriction(uriId: Id[NormalizedURI], r: Option[Restriction]): Future[Unit] = uriUpdateLock.withLockFuture(shoeboxServiceClient.updateURIRestriction(uriId, r))
 }

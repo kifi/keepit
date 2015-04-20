@@ -642,8 +642,6 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
     Future.successful(if (fetchSize < 0) changed else changed.take(fetchSize))
   }
 
-  def updateURIRestriction(id: Id[NormalizedURI], r: Option[Restriction]): Future[Unit] = ???
-
   def getUriSummary(request: URISummaryRequest): Future[URISummary] = Future.successful(URISummary())
 
   def getUriSummaries(uriIds: Seq[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], URISummary]] = Future.successful {
