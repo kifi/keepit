@@ -8,7 +8,7 @@ import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.mail.{ SystemEmailAddress, EmailAddress }
-import com.keepit.common.mail.template.EmailToSend
+import com.keepit.common.mail.template.{ TemplateOptions, EmailToSend }
 import com.keepit.model._
 import play.twirl.api.Html
 import views.html
@@ -76,7 +76,8 @@ class AdminTwitterWaitlistController @Inject() (
         category = NotificationCategory.User.WAITLIST,
         htmlTemplate = views.html.email.black.twitterAccept(userId, libraryPath, libPathEncoded),
         textTemplate = Some(views.html.email.black.twitterAccept(userId, libraryPath, libPathEncoded)),
-        campaign = Some("passwordReset")
+        campaign = Some("passwordReset"),
+        templateOptions = Seq(TemplateOptions.CustomLayout).toMap
       )
       emailTemplateSender.send(emailToSend).map { result =>
         Ok(s"Email sent to $email")
