@@ -18,12 +18,12 @@ trait RecoSelectionStrategy {
   def sort(recosByTopScore: Seq[UriRecoScore]): Seq[UriRecoScore]
 }
 
-class TopScoreRecoSelectionStrategy(val minScore: Float = 5f) extends RecoSelectionStrategy {
+class TopScoreRecoSelectionStrategy(val minScore: Float = 0.5f) extends RecoSelectionStrategy {
   def sort(recosByTopScore: Seq[UriRecoScore]) =
     recosByTopScore filter (_.score > minScore) sortBy (-_.score)
 }
 
-class DiverseRecoSelectionStrategy(val minScore: Float = 5f) extends RecoSelectionStrategy {
+class DiverseRecoSelectionStrategy(val minScore: Float = 0.5f) extends RecoSelectionStrategy {
 
   def sort(recosByTopScore: Seq[UriRecoScore]) = recosByTopScore.groupBy(_.reco.topic1).map {
     // sorts the recos by score (desc) and rescores them using the exponential decay
