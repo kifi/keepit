@@ -1,32 +1,25 @@
 package com.keepit.controllers.admin
 
-import java.util.concurrent.atomic.AtomicInteger
-
 import com.google.inject.Inject
 import com.keepit.commanders.{ CollectionCommander, KeepsCommander, LibraryCommander, RichWhoKeptMyKeeps, URISummaryCommander }
 import com.keepit.common.controller.{ AdminUserActions, UserActionsHelper, UserRequest }
-import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db.slick._
 import com.keepit.common.net._
 import com.keepit.common.performance._
-import com.keepit.common.store.S3URIImageStore
 import com.keepit.common.time._
 import com.keepit.heimdal._
 import com.keepit.model.{ KeepStates, _ }
 import com.keepit.scraper.ScrapeScheduler
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.iteratee.Enumerator
 import play.api.libs.json._
 import play.api.mvc.{ Action, AnyContent }
 import views.html
 
 import scala.collection.mutable
-import scala.collection.mutable.{ SynchronizedMap, HashMap => MutableMap }
+import scala.collection.mutable.{ HashMap => MutableMap }
 import scala.concurrent._
-import com.keepit.common.akka.SafeFuture
-
-import scala.util.Failure
 
 class AdminBookmarksController @Inject() (
   val userActionsHelper: UserActionsHelper,
