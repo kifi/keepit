@@ -179,7 +179,6 @@ class MobilePageControllerTest extends TestKit(ActorSystem()) with Specification
         val result = inject[MobilePageController].queryExtension(0, 1000)(request)
 
         status(result) must equalTo(OK)
-        contentType(result) must beSome("application/json")
       }
     }
   }
