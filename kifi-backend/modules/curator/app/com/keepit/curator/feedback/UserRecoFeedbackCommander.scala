@@ -1,8 +1,12 @@
 package com.keepit.curator.feedback
 
 import com.google.inject.{ Singleton, Inject }
+import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
+import com.keepit.common.logging.Logging
+import com.keepit.curator.commanders.UriRecoScore
 import com.keepit.curator.model.{ UserRecoFeedbackCounter, UriRecoFeedbackValue, UriRecommendation, UserRecoFeedbackCounterRepo }
+import com.keepit.model.User
 
 @Singleton
 class UserRecoFeedbackTrackingCommander @Inject() (
@@ -50,4 +54,24 @@ object FeedbackBucketMapper {
   }
 
   def getBucketId(item: UriRecommendation): Option[Int] = item.topic1.flatMap { tid => getBucketId(item.allScores.socialScore, tid.index) }
+}
+
+@Singleton
+class UserRecoFeedbackInferenceCommander @Inject() (
+    db: Database,
+    feedbackRepo: UserRecoFeedbackCounterRepo) extends Logging {
+
+  private def getInferencer(userId: Id[User]): Option[UserRecoFeedbackInferencer] = {
+    db.readOnlyReplica { implicit s => feedbackRepo.getByUser(userId) }.map { counter => new UserRecoFeedbackInferencer(counter) }
+  }
+
+  def applyMultipliers(userId: Id[User], recos: Seq[UriRecoScore]): Seq[UriRecoScore] = {
+    val inferOpt = getInferencer(userId)
+    inferOpt match {
+      case Some(infer) =>
+        log.info(s"applying feedback to user ${userId}. ")
+        recos.map { reco => infer.applyMultiplier(reco) }
+      case None => recos
+    }
+  }
 }

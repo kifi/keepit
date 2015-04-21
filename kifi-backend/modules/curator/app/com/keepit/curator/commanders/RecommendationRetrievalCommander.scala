@@ -1,6 +1,7 @@
 package com.keepit.curator.commanders
 
 import com.keepit.common.db.Id
+import com.keepit.curator.feedback.{ UserRecoFeedbackInferenceCommander, UserRecoFeedbackInferencer }
 import com.keepit.curator.model._
 import com.keepit.model.User
 import com.keepit.common.db.slick.Database
@@ -110,11 +111,12 @@ class RecommendationRetrievalCommander @Inject() (
     db: Database,
     uriRecoRepo: UriRecommendationRepo,
     analytics: CuratorAnalytics,
-    publicFeedRepo: PublicFeedRepo) {
+    publicFeedRepo: PublicFeedRepo,
+    feedbackInferenceCommander: UserRecoFeedbackInferenceCommander) {
 
   val idFilter = new RecoIdFilter[UriRecoScore] {}
 
-  def topRecos(userId: Id[User], more: Boolean = false, recencyWeight: Float = 0.5f, source: RecommendationSource, subSource: RecommendationSubSource, recoSortStrategy: RecoSelectionStrategy, scoringStrategy: RecoScoringStrategy, context: Option[String] = None): URIRecoResults = {
+  def topRecos(userId: Id[User], more: Boolean = false, recencyWeight: Float = 0.5f, source: RecommendationSource, subSource: RecommendationSubSource, recoSortStrategy: RecoSelectionStrategy, scoringStrategy: RecoScoringStrategy, context: Option[String] = None, applyFeedback: Boolean = false): URIRecoResults = {
     require(recencyWeight <= 1.0f && recencyWeight >= 0.0f, "recencyWeight must be between 0 and 1")
 
     def scoreReco(reco: UriRecommendation) =
@@ -133,7 +135,8 @@ class RecommendationRetrievalCommander @Inject() (
 
     val (recos, newContext) = db.readOnlyReplica { implicit session =>
       val recosByTopScore = uriRecoRepo.getRecommendableByTopMasterScore(userId, 1000) filter badData map scoreReco
-      val (accepted, _) = idFilter.filter(recosByTopScore, context)((x: UriRecoScore) => x.reco.uriId.id)
+      val scoreWithFeedback = if (applyFeedback) feedbackInferenceCommander.applyMultipliers(userId, recosByTopScore) else recosByTopScore
+      val (accepted, _) = idFilter.filter(scoreWithFeedback, context)((x: UriRecoScore) => x.reco.uriId.id)
       val finalSorted = recoSortStrategy.sort(accepted)
       idFilter.take(finalSorted, context, limit = 10)((x: UriRecoScore) => x.reco.uriId.id)
     }
