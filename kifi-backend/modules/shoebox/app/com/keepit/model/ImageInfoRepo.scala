@@ -125,19 +125,21 @@ class ImageInfoRepoImpl @Inject() (
       case Some(provider) =>
         (for (
           f <- rows if f.uriId === id && f.state === ImageInfoStates.ACTIVE &&
-            f.width > minSize.width && f.height > minSize.height && f.provider === provider
+            f.width > minSize.width && f.height > minSize.height && f.provider === provider &&
+            f.width < 3000 && f.height < 3000
         ) yield f).list
       case None =>
         (for (
           f <- rows if f.uriId === id && f.state === ImageInfoStates.ACTIVE &&
-            f.width > minSize.width && f.height > minSize.height
+            f.width > minSize.width && f.height > minSize.height &&
+            f.width < 3000 && f.height < 3000
         ) yield f).list
     }
     if (candidates.nonEmpty) {
       Some(candidates.minBy { i =>
         val size = if (i.width.isDefined && i.height.isDefined) i.width.get + i.height.get else 0
         // Sort by priority, image size (lower is better, since we already filtered out min sizes), -id (newer is better)
-        (i.priority.getOrElse(Int.MaxValue), -1 * size, -1 * i.id.get.id)
+        (i.priority.getOrElse(Int.MaxValue), -1 * i.id.get.id, -1 * size)
       })
     } else {
       None
