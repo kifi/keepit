@@ -116,7 +116,7 @@ case class NormalizedURIWordCountKey(id: Id[NormalizedURI]) extends Key[Int] {
 }
 
 case class URISummaryKey(val id: Id[NormalizedURI]) extends Key[URISummary] {
-  override val version = 3
+  override val version = 4
   val namespace = "uri_summary_by_id"
   def toKey(): String = id.id.toString
 }
