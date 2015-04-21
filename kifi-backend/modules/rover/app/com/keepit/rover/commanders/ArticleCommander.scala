@@ -61,9 +61,9 @@ class ArticleCommander @Inject() (
     }
   }
 
-  def markAsQueued(ids: Id[RoverArticleInfo]*)(implicit session: RWSession): Unit = {
+  def markAsFetching(ids: Id[RoverArticleInfo]*)(implicit session: RWSession): Unit = {
     db.readWrite { implicit session =>
-      articleInfoRepo.markAsQueued(ids: _*)
+      articleInfoRepo.markAsFetching(ids: _*)
     }
   }
 

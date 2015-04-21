@@ -27,15 +27,15 @@ case class RoverArticleInfo(
     oldestVersion: Option[ArticleVersion] = None,
     lastFetchedAt: Option[DateTime] = None,
     nextFetchAt: Option[DateTime] = None,
+    lastFetchingAt: Option[DateTime] = None,
     fetchInterval: Option[Duration] = None,
     failureCount: Int = 0,
-    failureInfo: Option[String] = None,
-    lastQueuedAt: Option[DateTime] = None) extends ModelWithState[RoverArticleInfo] with ModelWithSeqNumber[RoverArticleInfo] with ArticleInfoHolder with ArticleKindHolder {
+    failureInfo: Option[String] = None) extends ModelWithState[RoverArticleInfo] with ModelWithSeqNumber[RoverArticleInfo] with ArticleInfoHolder with ArticleKindHolder {
 
   def withId(id: Id[RoverArticleInfo]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def isActive = (state == ArticleInfoStates.ACTIVE)
-  def shouldFetch = isActive && lastQueuedAt.isDefined
+  def shouldFetch = isActive && lastFetchingAt.isDefined
 
   def getFetchRequest: ArticleFetchRequest[A] = ArticleFetchRequest(articleKind, url, lastFetchedAt, getLatestKey)
 
@@ -45,10 +45,10 @@ case class RoverArticleInfo(
     oldestVersion = None,
     lastFetchedAt = None,
     nextFetchAt = None,
+    lastFetchingAt = None,
     fetchInterval = None,
     failureCount = 0,
-    failureInfo = None,
-    lastQueuedAt = None
+    failureInfo = None
   )
 
   private def schedulingPolicy = FetchSchedulingPolicy(articleKind)
@@ -60,7 +60,7 @@ case class RoverArticleInfo(
 
   def withLatestFetchComplete: RoverArticleInfo = copy(
     lastFetchedAt = Some(currentDateTime),
-    lastQueuedAt = None
+    lastFetchingAt = None
   )
 
   def withFailure(error: Throwable)(implicit recoveryPolicy: FailureRecoveryPolicy): RoverArticleInfo = {
@@ -136,14 +136,14 @@ object RoverArticleInfo {
     oldestVersionMinor: Option[VersionNumber[Article]],
     lastFetchedAt: Option[DateTime],
     nextFetchAt: Option[DateTime],
+    lastFetchingAt: Option[DateTime],
     fetchInterval: Option[Duration],
     failureCount: Int,
-    failureInfo: Option[String],
-    lastQueuedAt: Option[DateTime]): RoverArticleInfo = {
+    failureInfo: Option[String]): RoverArticleInfo = {
     val bestVersion = articleVersionFromDb(bestVersionMajor, bestVersionMinor)
     val latestVersion = articleVersionFromDb(latestVersionMajor, latestVersionMinor)
     val oldestVersion = articleVersionFromDb(oldestVersionMajor, oldestVersionMinor)
-    RoverArticleInfo(id, createdAt, updatedAt, state, seq, uriId, url, kind, bestVersion, latestVersion, oldestVersion, lastFetchedAt, nextFetchAt, fetchInterval, failureCount, failureInfo, lastQueuedAt)
+    RoverArticleInfo(id, createdAt, updatedAt, state, seq, uriId, url, kind, bestVersion, latestVersion, oldestVersion, lastFetchedAt, nextFetchAt, lastFetchingAt, fetchInterval, failureCount, failureInfo)
   }
 
   def unapplyToDbRow(info: RoverArticleInfo) = {
@@ -167,10 +167,10 @@ object RoverArticleInfo {
       oldestVersionMinor,
       info.lastFetchedAt,
       info.nextFetchAt,
+      info.lastFetchingAt,
       info.fetchInterval,
       info.failureCount,
-      info.failureInfo,
-      info.lastQueuedAt
+      info.failureInfo
     )
   }
 
