@@ -7,7 +7,7 @@ import com.keepit.inject.AppScoped
 import com.google.inject.{ Singleton, Provides }
 import play.api.Play
 import play.api.Play._
-import com.keepit.common.zookeeper.{ DiscoveryModule, ServiceDiscovery }
+import com.keepit.common.zookeeper.{ ShardingCommander, DiscoveryModule, ServiceDiscovery }
 import com.keepit.common.plugin.{ SchedulingPropertiesImpl, SchedulingProperties }
 
 trait ActorSystemModule extends ScalaModule
@@ -23,8 +23,8 @@ case class ProdActorSystemModule() extends ActorSystemModule {
   def schedulerProvider(system: ActorSystem): Scheduler = system.scheduler
 
   @Provides
-  def globalSchedulingEnabled(serviceDiscovery: ServiceDiscovery): SchedulingProperties =
-    new SchedulingPropertiesImpl(serviceDiscovery, !(DiscoveryModule.isCanary)) // can allow some (e.g. heimdal) to run on canary later
+  def globalSchedulingEnabled(shardingCommander: ShardingCommander, serviceDiscovery: ServiceDiscovery): SchedulingProperties =
+    new SchedulingPropertiesImpl(serviceDiscovery, shardingCommander, !(DiscoveryModule.isCanary)) // can allow some (e.g. heimdal) to run on canary later
 
   @Provides
   @Singleton

@@ -45,6 +45,8 @@ class CuratorController @Inject() (
 
   val nonlinearRecoScoringStrategy = new NonLinearRecoScoringStrategy()
 
+  val dumbRecoScoringStrategy = new DumbRecoScoringStrategy()
+
   val topScoreLibraryRecoStrategy = new TopScoreLibraryRecoSelectionStrategy()
 
   val nonlinearLibraryRecoScoringStrategy = new NonLinearLibraryRecoScoringStrategy(libraryRecoGenCommander.defaultLibraryScoreParams)
@@ -60,7 +62,7 @@ class CuratorController @Inject() (
       val sortStrategy =
         if (experiments.contains(ExperimentType.CURATOR_DIVERSE_TOPIC_RECOS)) diverseRecoStrategy
         else topScoreRecoStrategy
-      val scoringStrategy = nonlinearRecoScoringStrategy
+      val scoringStrategy = if (experiments.contains(ExperimentType.NEXT_GEN_RECOS)) dumbRecoScoringStrategy else nonlinearRecoScoringStrategy
 
       val recoResults = recoRetrievalCommander.topRecos(userId, more, recencyWeight, source, subSource, sortStrategy, scoringStrategy, context)
 

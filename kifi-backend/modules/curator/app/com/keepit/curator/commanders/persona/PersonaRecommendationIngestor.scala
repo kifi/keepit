@@ -65,10 +65,10 @@ class PersonaRecommendationIngestor @Inject() (
     }
     if (existing.isEmpty) {
       if (!reverseIngestion) {
-        db.readWrite { implicit s => libRecRepo.insertAll(uniqueLibRecosToIngest) }
+        db.readWrite(attempts = 2) { implicit s => libRecRepo.insertAll(uniqueLibRecosToIngest) }
       }
     } else {
-      db.readWrite { implicit s => uniqueLibRecosToIngest.foreach { ingestLibraryReco(_, reverseIngestion) } }
+      db.readWrite(attempts = 2) { implicit s => uniqueLibRecosToIngest.foreach { ingestLibraryReco(_, reverseIngestion) } }
     }
   }
 
@@ -78,10 +78,10 @@ class PersonaRecommendationIngestor @Inject() (
     val existing = db.readOnlyMaster { implicit s => uriRecRepo.getUriIdsForUser(userId) }
     if (existing.isEmpty) {
       if (!reverseIngestion) {
-        db.readWrite { implicit s => uriRecRepo.insertAll(uniqueUriRecos) }
+        db.readWrite(attempts = 2) { implicit s => uriRecRepo.insertAll(uniqueUriRecos) }
       }
     } else {
-      db.readWrite { implicit s => uniqueUriRecos.foreach(ingestURIReco(_, reverseIngestion)) }
+      db.readWrite(attempts = 2) { implicit s => uniqueUriRecos.foreach(ingestURIReco(_, reverseIngestion)) }
     }
   }
 

@@ -46,8 +46,9 @@ class MobilePeopleRecommendationControllerTest extends Specification with Shoebo
             membership().withLibraryFollower(lib.id.get, user3.id.get).saved
             libraryMembershipRepo.countWithLibraryIdAndAccess(lib.id.get, LibraryAccess.READ_ONLY) === 3
 
-            libraryRepo.getMutualLibrariesForUser(user1.id.get, user2.id.get).length === 1
-            libraryRepo.getMutualLibrariesForUser(user1.id.get, user3.id.get).length === 1
+            libraryRepo.getMutualLibrariesForUser(user1.id.get, user2.id.get, 0, 5).length === 1
+            libraryRepo.getMutualLibrariesForUser(user1.id.get, user3.id.get, 0, 5).length === 1
+            libraryRepo.getMutualLibrariesForUser(user1.id.get, user4.id.get, 0, 5).length === 0
 
             (user1, user2, user3, user4, lib)
           }
@@ -56,7 +57,7 @@ class MobilePeopleRecommendationControllerTest extends Specification with Shoebo
 
           inject[FakeUserActionsHelper].setUser(User(id = Some(Id[User](1L)), firstName = "Foo", lastName = "Bar", username = Username("test"), normalizedUsername = "test"))
           val controller = inject[MobilePeopleRecommendationController]
-          val resultF = controller.getFriendRecommendations(1, 25)(FakeRequest())
+          val resultF = controller.getFriendRecommendations(1, 10)(FakeRequest())
 
           status(resultF) === 200
           contentType(resultF) must beSome("application/json")
@@ -68,7 +69,7 @@ class MobilePeopleRecommendationControllerTest extends Specification with Shoebo
                   {
                     "id":"${user3.externalId}","firstName":"Anna","lastName":"Gunn","username":"test3","pictureName":"0.jpg","numFriends":3
                   }],
-                "mutualLibraries":[]
+                "mutualLibraries":1
                 },
                {
                 "id":"${user3.externalId}","firstName":"Anna","lastName":"Gunn","pictureName":"0.jpg","username":"test3","numFriends": 3,
@@ -76,7 +77,7 @@ class MobilePeopleRecommendationControllerTest extends Specification with Shoebo
                   {
                     "id":"${user2.externalId}","firstName":"Bryan","lastName":"Cranston","username":"test2","pictureName":"0.jpg","numFriends":3
                   }],
-                  "mutualLibraries":[]
+                  "mutualLibraries":1
                 },
                {
                 "id":"${user4.externalId}","firstName":"Dean","lastName":"Norris","pictureName":"0.jpg","username":"test4","numFriends": 2,
@@ -87,8 +88,7 @@ class MobilePeopleRecommendationControllerTest extends Specification with Shoebo
                   {
                     "id":"${user3.externalId}","firstName":"Anna","lastName":"Gunn","pictureName":"0.jpg","username":"test3","numFriends":3
                   }],
-                "mutualLibraries":[
-                  {"id":"${pubLibId.id}","name":"${lib.name}","visibility":"${lib.visibility.value}","url":"/${user4.username.value}/${lib.slug.value}","owner":{"id":"${user4.externalId}","firstName":"${user4.firstName}","lastName":"${user4.lastName}","pictureName":"0.jpg","username":"${user4.username.value}"},"numKeeps":0,"numFollowers":0,"kind":"${lib.kind.value}"}]
+                "mutualLibraries":0
                 }
              ]}
              """)

@@ -6,7 +6,7 @@ import com.keepit.common.db.ExternalId
 import com.keepit.common.time.DateTimeJsonFormat
 import com.keepit.model._
 import com.kifi.macros.json
-import play.api.libs.json.{ __, JsObject, Writes }
+import play.api.libs.json.{ __, JsObject, JsValue, Writes }
 import play.api.libs.functional.syntax._
 
 case class KeeperInfo(
@@ -80,13 +80,27 @@ object KeepData {
 case class MoarKeepData(
   title: Option[String],
   image: Option[String],
+  note: Option[String],
   tags: Seq[String])
 object MoarKeepData {
-  implicit val writes: Writes[MoarKeepData] = (
+  private val simpleWrites: Writes[MoarKeepData] = (
     (__ \ 'title).writeNullable[String] and
     (__ \ 'image).writeNullable[String] and
+    (__ \ 'note).writeNullable[String] and
     (__ \ 'tags).writeNullable[Seq[String]].contramap[Seq[String]](Some(_).filter(_.nonEmpty))
   )(unlift(MoarKeepData.unapply))
+
+  // temporarily auto-populating note field with tags if necessary
+  implicit val writes = new Writes[MoarKeepData] {
+    def writes(o: MoarKeepData): JsValue = {
+      val o2 = if (o.tags.nonEmpty && o.note.isEmpty) {
+        o.copy(note = Some(o.tags.map(t => '#' + t.replace(' ', '\u00a0')).mkString(" ")))
+      } else {
+        o
+      }
+      simpleWrites.writes(o2)
+    }
+  }
 }
 
 case class LibraryData(

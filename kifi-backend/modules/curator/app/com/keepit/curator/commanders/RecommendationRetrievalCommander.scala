@@ -18,12 +18,12 @@ trait RecoSelectionStrategy {
   def sort(recosByTopScore: Seq[UriRecoScore]): Seq[UriRecoScore]
 }
 
-class TopScoreRecoSelectionStrategy(val minScore: Float = 5f) extends RecoSelectionStrategy {
+class TopScoreRecoSelectionStrategy(val minScore: Float = 0.5f) extends RecoSelectionStrategy {
   def sort(recosByTopScore: Seq[UriRecoScore]) =
     recosByTopScore filter (_.score > minScore) sortBy (-_.score)
 }
 
-class DiverseRecoSelectionStrategy(val minScore: Float = 5f) extends RecoSelectionStrategy {
+class DiverseRecoSelectionStrategy(val minScore: Float = 0.5f) extends RecoSelectionStrategy {
 
   def sort(recosByTopScore: Seq[UriRecoScore]) = recosByTopScore.groupBy(_.reco.topic1).map {
     // sorts the recos by score (desc) and rescores them using the exponential decay
@@ -60,6 +60,15 @@ trait RecoScoringStrategy {
 }
 
 class DefaultRecoScoringStrategy extends RecoScoringStrategy
+
+class DumbRecoScoringStrategy extends RecoScoringStrategy {
+  override def scoreItem(masterScore: Float, scores: UriScores, timesDelivered: Int, timesClicked: Int, goodBad: Option[Boolean], heavyPenalty: Boolean, recencyWeight: Float): Float = {
+    val basePenaltyFactor = Math.pow(0.97, timesDelivered) * Math.pow(0.8, timesClicked)
+    val votePenaltyFactor = goodBad.map { vote => if (vote) 0.97 else 0.5 }.getOrElse(1.0)
+    val finalPenaltyFactor = Math.pow(basePenaltyFactor * votePenaltyFactor, if (heavyPenalty) 5 else 1)
+    finalPenaltyFactor.toFloat * masterScore
+  }
+}
 
 class NonLinearRecoScoringStrategy extends RecoScoringStrategy {
   private[this] val rnd = new Random

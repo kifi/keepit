@@ -29,20 +29,16 @@ class MobilePeopleRecommendationController @Inject() (
         val basicUsers = recoData.basicUsers
         val mutualFriends = recoData.mutualFriends
         val userConnectionCounts = recoData.userConnectionCounts
-        val mutualLibraries = recoData.mutualLibraries
+        val mutualLibrariesCounts = recoData.mutualLibrariesCounts
 
         val recommendedUsersArray = JsArray(recommendedUsers.map { recommendedUserId =>
           val mutualFriendsArray = JsArray(mutualFriends(recommendedUserId).toSeq.map { mutualFriendId =>
             BasicUser.format.writes(basicUsers(mutualFriendId)) + ("numFriends" -> JsNumber(userConnectionCounts(mutualFriendId)))
           })
-          val mutualLibrariesArray = JsArray(
-            mutualLibraries.get(recommendedUserId).map { mutualLibraries =>
-              mutualLibraries.map { lib =>
-                Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, None, basicUsers(lib.ownerId)))
-              }
-            } getOrElse Seq.empty
-          )
-          BasicUser.format.writes(basicUsers(recommendedUserId)) + ("numFriends" -> JsNumber(userConnectionCounts(recommendedUserId))) + ("mutualFriends" -> mutualFriendsArray) + ("mutualLibraries" -> mutualLibrariesArray)
+          val numUserConnections = userConnectionCounts.get(recommendedUserId).getOrElse(0)
+          val numMutualLibraries = mutualLibrariesCounts.get(recommendedUserId).getOrElse(0)
+
+          BasicUser.format.writes(basicUsers(recommendedUserId)) + ("numFriends" -> JsNumber(numUserConnections)) + ("mutualFriends" -> mutualFriendsArray) + ("mutualLibraries" -> JsNumber(numMutualLibraries))
         })
         val json = Json.obj("users" -> recommendedUsersArray)
         Ok(json)

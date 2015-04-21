@@ -206,24 +206,6 @@ case class CountByLibraryKey(id: Id[Library]) extends Key[Int] {
 class CountByLibraryCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends JsonCacheImpl[CountByLibraryKey, Int](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
-case class LatestKeepUriKey(uriId: Id[NormalizedURI]) extends Key[Keep] {
-  override val version = 8
-  val namespace = "latest_keep_uri"
-  def toKey(): String = uriId.toString
-}
-
-class LatestKeepUriCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[LatestKeepUriKey, Keep](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
-
-case class LatestKeepUrlKey(url: String) extends Key[Keep] {
-  override val version = 7
-  val namespace = "latest_keep_url"
-  def toKey(): String = NormalizedURI.hashUrl(url).hash
-}
-
-class LatestKeepUrlCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[LatestKeepUrlKey, Keep](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
-
 object KeepStates extends States[Keep] {
   val DUPLICATE = State[Keep]("duplicate")
 }

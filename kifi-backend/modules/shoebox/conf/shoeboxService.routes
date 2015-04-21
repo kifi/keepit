@@ -105,15 +105,9 @@ GET     /i/:id                      @com.keepit.controllers.website.InviteContro
 
 POST    /ext/events                 @com.keepit.controllers.tracking.EventProxyController.track()
 
-# Note: /kifi/start is deprecated. 3.2.12 and later use /ext/start instead.
-POST    /kifi/start                 @com.keepit.controllers.ext.ExtAuthController.start
 POST    /ext/start                  @com.keepit.controllers.ext.ExtAuthController.start
 POST    /ext/auth/:provider         @com.keepit.controllers.ext.ExtAuthController.jsTokenLogin(provider: String)
-# Note: /ext/authed is deprecated. 3.2.12 and later use /ext/auth instead.
-GET     /ext/authed                 @com.keepit.controllers.ext.ExtAuthController.getLoggedIn()
 GET     /ext/auth                   @com.keepit.controllers.ext.ExtAuthController.getLoggedIn()
-# Note: /ext/session/end is deprecated. 3.2.12 and later use DELETE /ext/auth instead.
-POST    /ext/session/end            @com.keepit.controllers.ext.ExtAuthController.logOut
 DELETE  /ext/auth                   @com.keepit.controllers.ext.ExtAuthController.logOut
 
 POST    /ext/page                   @com.keepit.controllers.ext.ExtPageController.getPageInfo()
@@ -122,8 +116,6 @@ GET     /ext/pref/rules             @com.keepit.controllers.ext.ExtPreferenceCon
 GET     /ext/prefs                  @com.keepit.controllers.ext.ExtPreferenceController.getPrefs(version: Int ?= 1)
 POST    /ext/pref/keeperPosition    @com.keepit.controllers.ext.ExtPreferenceController.setKeeperPositionOnSite()
 POST    /ext/pref/keeperHidden      @com.keepit.controllers.ext.ExtPreferenceController.setKeeperHiddenOnSite()
-# Note: /users/slider/suppress is deprecated. 3.2.8 and later use /ext/pref/keeperHidden instead.
-POST    /users/slider/suppress      @com.keepit.controllers.ext.ExtPreferenceController.setKeeperHiddenOnSite()
 POST    /ext/pref/lookHereMode      @com.keepit.controllers.ext.ExtPreferenceController.setLookHereMode(on: Boolean)
 POST    /ext/pref/enterToSend       @com.keepit.controllers.ext.ExtPreferenceController.setEnterToSend(enterToSend: Boolean)
 POST    /ext/pref/maxResults        @com.keepit.controllers.ext.ExtPreferenceController.setMaxResults(n: Int)
@@ -131,14 +123,8 @@ POST    /ext/pref/showExtMsgIntro   @com.keepit.controllers.ext.ExtPreferenceCon
 POST    /ext/pref/showLibraryIntro  @com.keepit.controllers.ext.ExtPreferenceController.setShowLibraryIntro(show: Boolean)
 POST    /ext/pref/email/:kind/:send @com.keepit.controllers.ext.ExtPreferenceController.setEmailNotifyPreference(kind: com.keepit.common.mail.ElectronicMailCategory, send: Boolean)
 
-# Note: /ext/user/friends is deprecated. 3.2.4 and later use /ext/contacts/search instead and do not cache friends.
-GET     /ext/user/friends           @com.keepit.controllers.ext.ExtUserController.getFriends()
 GET     /ext/contacts/search        @com.keepit.controllers.ext.ExtUserController.searchForContacts(query:Option[String], limit:Option[Int])
-# Note: /ext/contacts is deprecated. 3.2.4 and later use /ext/contacts/search instead.
-GET     /ext/contacts               @com.keepit.controllers.ext.ExtNonUserSearchController.findPeopleToMessage(q: String, n: Int ?= 4)
 POST    /ext/contacts/hide          @com.keepit.controllers.ext.ExtNonUserSearchController.hideEmailFromUser()
-# Note: /ext/invite has not been in use since 2.9.31.
-POST    /ext/invite                 @com.keepit.controllers.ext.ExtInviteController.invite()
 
 GET     /ext/libraries              @com.keepit.controllers.ext.ExtLibraryController.getLibraries()
 POST    /ext/libraries              @com.keepit.controllers.ext.ExtLibraryController.createLibrary()
@@ -234,6 +220,8 @@ GET     /m/1/user/:username/followers           @com.keepit.controllers.mobile.M
 POST    /m/1/user/:id/unfriend                  @com.keepit.controllers.mobile.MobileUserController.unfriend(id: ExternalId[User])
 POST    /m/1/user/:id/friend                    @com.keepit.controllers.mobile.MobileUserController.friend(id: ExternalId[User])
 POST    /m/1/user/:id/ignoreRequest             @com.keepit.controllers.mobile.MobileUserController.ignoreFriendRequest(id: ExternalId[User])
+GET     /m/1/user/:id/connections/mutual        @com.keepit.controllers.mobile.MobileMutualUserController.getMutualConnections(id: ExternalId[User], page: Int ?= 0, size: Int ?= 10)
+GET     /m/1/user/:id/libraries/mutual          @com.keepit.controllers.mobile.MobileMutualUserController.getMutualLibraries(id: ExternalId[User], page: Int ?= 0, size: Int ?= 10)
 GET     /m/1/user/outgoingFriendRequests        @com.keepit.controllers.mobile.MobileUserController.outgoingFriendRequests
 GET     /m/1/user/incomingFriendRequests        @com.keepit.controllers.mobile.MobileUserController.incomingFriendRequests
 POST    /m/1/user/delighted/answer              @com.keepit.controllers.mobile.MobileUserController.postDelightedAnswer()
@@ -303,6 +291,7 @@ GET     /about/team                 @com.keepit.controllers.website.HomeControll
 GET     /about/team.html            @com.keepit.controllers.website.HomeController.moved(uri  = "about/team")
 GET     /about/join_us              @com.keepit.controllers.website.HomeController.route(path = "about/join_us")
 GET     /about/join_us.html         @com.keepit.controllers.website.HomeController.moved(uri = "/about/join_us")
+GET     /about/user_feedback        @com.keepit.controllers.website.HomeController.route(path = "user_feedback")
 GET     /how_it_works               @com.keepit.controllers.website.HomeController.route(path = "how_it_works")
 GET     /contact                    @com.keepit.controllers.website.HomeController.route(path = "contact")
 GET     /install                    @com.keepit.controllers.website.HomeController.install
@@ -382,9 +371,9 @@ GET     /site/user/:name/profile    @com.keepit.controllers.website.UserProfileC
 GET     /site/user/:name/libraries  @com.keepit.controllers.website.LibraryController.getProfileLibraries(name: Username, page: Int ?= 0, size: Int ?= 12, filter: String ?= "own")
 GET     /site/users/:name/connections @com.keepit.controllers.website.UserProfileController.getProfileConnections(name: Username, n: Int ?= 12)
 GET     /site/users/:name/followers  @com.keepit.controllers.website.UserProfileController.getProfileFollowers(name: Username, n: Int ?= 12)
-GET     /site/users/:name/mutual/libraries  @com.keepit.controllers.website.LibraryController.getMutualLibraries(name: Username)
 GET     /site/users/:ids            @com.keepit.controllers.website.UserProfileController.getProfileUsers(ids)
 GET     /site/users/:id/connections/mutual @com.keepit.controllers.website.UserProfileController.getMutualConnections(id: ExternalId[User])
+GET     /site/users/:id/libraries/mutual  @com.keepit.controllers.website.LibraryController.getMutualLibraries(id: ExternalId[User], page: Int ?= 0, size: Int ?= 12)
 
 GET     /site/libraries             @com.keepit.controllers.website.LibraryController.getLibrarySummariesByUser()
 POST    /site/libraries/add         @com.keepit.controllers.website.LibraryController.addLibrary()
@@ -804,6 +793,7 @@ GET     /admin/graph/uriWandering                          @com.keepit.controlle
 
 GET     /admin/twitter                                     @com.keepit.controllers.admin.AdminTwitterWaitlistController.getWaitlist()
 GET     /admin/twitter/accept                              @com.keepit.controllers.admin.AdminTwitterWaitlistController.acceptUser(userId: Id[User], handle: String)
+GET     /admin/twitter/email                               @com.keepit.controllers.admin.AdminTwitterWaitlistController.sendAcceptEmail(syncStateId: Id[TwitterSyncState], userId: Id[User], safe: Boolean ?= true)
 
 ##########################################
 # Common Healthcheck / service routes
@@ -847,7 +837,6 @@ GET     /internal/shoebox/database/getConnectedUsers  @com.keepit.controllers.in
 GET     /internal/shoebox/database/bookmark           @com.keepit.controllers.internal.ShoeboxController.getBookmarks(userId: Id[User])
 GET     /internal/shoebox/database/changedBookmark    @com.keepit.controllers.internal.ShoeboxDataPipeController.getBookmarksChanged(seqNum: SequenceNumber[Keep], fetchSize: Int)
 GET     /internal/shoebox/database/bookmarkByUriUser  @com.keepit.controllers.internal.ShoeboxController.getBookmarkByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])
-POST    /internal/shoebox/database/getLatestKeep  @com.keepit.controllers.internal.ShoeboxScraperController.getLatestKeep()
 POST    /internal/shoebox/database/sendMail           @com.keepit.controllers.internal.ShoeboxController.sendMail
 POST    /internal/shoebox/database/sendMailToUser     @com.keepit.controllers.internal.ShoeboxController.sendMailToUser
 POST    /internal/shoebox/database/processAndSendMail @com.keepit.controllers.internal.ShoeboxController.processAndSendMail
@@ -892,10 +881,7 @@ POST    /internal/geckoboard/refresh                  @com.keepit.reports.Geckob
 
 GET      /internal/shoebox/database/assignScrapeTasks @com.keepit.controllers.internal.ShoeboxScraperController.assignScrapeTasks(zkId:Id[ScraperWorker], max:Int ?= 1)
 POST     /internal/shoebox/database/saveScrapeInfo    @com.keepit.controllers.internal.ShoeboxScraperController.saveScrapeInfo
-POST     /internal/shoebox/database/saveNormalizedURI @com.keepit.controllers.internal.ShoeboxScraperController.saveNormalizedURI
 POST     /internal/shoebox/database/updateNormalizedURI @com.keepit.controllers.internal.ShoeboxScraperController.updateNormalizedURI(uriId: Id[NormalizedURI])
-POST     /internal/shoebox/database/recordPermanentRedirect @com.keepit.controllers.internal.ShoeboxScraperController.recordPermanentRedirect
-POST     /internal/shoebox/database/recordScrapedNormalization @com.keepit.controllers.internal.ShoeboxScraperController.recordScrapedNormalization
 GET      /internal/shoebox/database/getProxy          @com.keepit.controllers.internal.ShoeboxScraperController.getProxy(url:String)
 POST     /internal/shoebox/database/getProxyP         @com.keepit.controllers.internal.ShoeboxScraperController.getProxyP()
 GET      /internal/shoebox/database/getFriendRequestRecipientIdBySender @com.keepit.controllers.internal.ShoeboxController.getFriendRequestsRecipientIdBySender(senderId: Id[User])
@@ -909,7 +895,6 @@ GET      /internal/shoebox/database/getLapsedUsersForDelighted    @com.keepit.co
 
 GET      /internal/shoebox/emailSenderTest                 @com.keepit.controllers.internal.EmailTestController.testEmailSender(name: String)
 
-POST     /internal/shoebox/database/updateURIRestriction  @com.keepit.controllers.internal.ShoeboxController.updateURIRestriction()
 GET      /internal/shoebox/database/urlPatternRules         @com.keepit.controllers.internal.ShoeboxScraperController.getAllURLPatternRules()
 GET      /internal/shoebox/database/getAllFakeUsers         @com.keepit.controllers.internal.ShoeboxController.getAllFakeUsers()
 GET      /internal/shoebox/database/getInvitations          @com.keepit.controllers.internal.ShoeboxController.getInvitations(senderId: Id[User])
