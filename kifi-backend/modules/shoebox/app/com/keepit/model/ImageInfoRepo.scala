@@ -137,9 +137,18 @@ class ImageInfoRepoImpl @Inject() (
     }
     if (candidates.nonEmpty) {
       Some(candidates.minBy { i =>
-        val size = if (i.width.isDefined && i.height.isDefined) i.width.get + i.height.get else 0
-        // Sort by priority, image size (lower is better, since we already filtered out min sizes), -id (newer is better)
-        (i.priority.getOrElse(Int.MaxValue), -1 * i.id.get.id, -1 * size)
+        val size = (i.width, i.height) match {
+          case (Some(w), Some(h)) => w * h
+          case _ => Int.MaxValue
+        }
+        // This is as weird as it looks. Originally this API returned the smallest image bigger than minSize.
+        // This was problematic because we're passing in 0,0 almost always (why?!), so we basically returned icons
+        // for everything. Then we returned the largest, which is again problematic because mobile phones can't
+        // deal with big images. So now we're returning based on the score below, which optimizes for images
+        // around 800x800px
+        val sizeScore = 800 - Math.sqrt(size) // higher is better, so needs to be inverted
+        // Sort by priority, image size score (lower is better), -id (newer is better)
+        (i.priority.getOrElse(Int.MaxValue), -1 * sizeScore, -1 * i.id.get.id)
       })
     } else {
       None
