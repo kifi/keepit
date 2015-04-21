@@ -36,7 +36,7 @@ class FetchCommander @Inject() (
       if (queuedTaskCount > 0) {
         // queues should be configured to have a very short delivery delay to make sure tasks are marked before they are consumed
         db.readWrite { implicit session =>
-          articleInfoRepo.markAsQueued(queuedTasks.map(_.id): _*)
+          articleInfoRepo.markAsFetching(queuedTasks.map(_.id): _*)
         }
         log.info(s"Added $queuedTaskCount tasks to $queue")
       }

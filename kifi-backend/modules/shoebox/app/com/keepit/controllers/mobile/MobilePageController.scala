@@ -75,23 +75,7 @@ class MobilePageController @Inject() (
             "unfriended" -> unfriended
           )
       }
-      Ok(
-        Json.obj(
-          "pageInfo" -> pageInfo,
-          "userInfo" -> (toJson(basicUserInfo.basicUser).as[JsObject] ++
-            toJson(basicUserInfo.info).as[JsObject] ++
-            Json.obj(
-              "notAuthed" -> basicUserInfo.notAuthed,
-              "experiments" -> request.experiments.map(_.value),
-              "clickCount" -> userAttributionInfo.clickCount,
-              "rekeepCount" -> userAttributionInfo.rekeepCount,
-              "rekeepTotalCount" -> userAttributionInfo.rekeepTotalCount
-            )),
-          "numKeeps" -> numKeeps,
-          "collections" -> collections,
-          "friends" -> friendsJsons
-        )
-      )
+      Ok
     }
   }
 
