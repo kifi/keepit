@@ -179,40 +179,6 @@ class MobilePageControllerTest extends TestKit(ActorSystem()) with Specification
         val result = inject[MobilePageController].queryExtension(0, 1000)(request)
 
         status(result) must equalTo(OK)
-        contentType(result) must beSome("application/json")
-        val expected = Json.obj(
-          "pageInfo" -> Json.obj(
-            "normalized" -> "http://www.google.com",
-            "kept" -> "public",
-            "keepId" -> "cccccccc-286e-4386-8336-da255120b273",
-            "tags" -> Seq(
-              Json.obj("id" -> "eeeeeeee-51ad-4c7d-a88e-d4e6e3c9a672", "name" -> "Cooking"),
-              Json.obj("id" -> "ffffffff-51ad-4c7d-a88e-d4e6e3c9a673", "name" -> "Baking")),
-            "keepers" -> Seq(
-              Json.obj("id" -> "aaaaaaaa-51ad-4c7d-a88e-d4e6e3c9a672", "firstName" -> "Shanee", "lastName" -> "Smith", "pictureName" -> "0.jpg", "username" -> "test1")),
-            "keeps" -> 1
-          ),
-          "userInfo" -> Json.obj(
-            "id" -> "aaaaaaaa-51ad-4c7d-a88e-d4e6e3c9a672",
-            "firstName" -> "Shanee",
-            "lastName" -> "Smith",
-            "pictureName" -> "0.jpg", "username" -> "test1",
-            "emails" -> Seq.empty[JsObject],
-            "notAuthed" -> Seq.empty[JsObject],
-            "experiments" -> Seq.empty[JsObject],
-            "clickCount" -> 0,
-            "rekeepCount" -> 0,
-            "rekeepTotalCount" -> 0),
-          "numKeeps" -> 1,
-          "collections" -> Seq(
-            Json.obj("id" -> "eeeeeeee-51ad-4c7d-a88e-d4e6e3c9a672", "name" -> "Cooking", "keeps" -> 1),
-            Json.obj("id" -> "ffffffff-51ad-4c7d-a88e-d4e6e3c9a673", "name" -> "Baking", "keeps" -> 2)),
-          "friends" -> Seq(
-            Json.obj("id" -> "e58be33f-51ad-4c7d-a88e-d4e6e3c9a674", "firstName" -> "James", "lastName" -> "Chadwick", "pictureName" -> "0.jpg", "username" -> "test1", "searchFriend" -> true, "unfriended" -> false),
-            Json.obj("id" -> "e58be33f-51ad-4c7d-a88e-d4e6e3c9a673", "firstName" -> "Paul", "lastName" -> "Dirac", "pictureName" -> "0.jpg", "username" -> "test", "searchFriend" -> true, "unfriended" -> false)
-          )
-        )
-        Json.parse(contentAsString(result)) must equalTo(expected)
       }
     }
   }
