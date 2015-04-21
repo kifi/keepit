@@ -39,6 +39,6 @@ CREATE TABLE if not exists article_image (
     CONSTRAINT article_image_f_article_info FOREIGN KEY (uri_id, kind) REFERENCES article_info(uri_id, kind)
 );
 
-insert into evolutions (name, description) values('321.sql', 'create rover_image_info, article_image tables');
+insert into evolutions (name, description) values('322.sql', 'create rover_image_info, article_image tables');
 
 # --- !Downs
