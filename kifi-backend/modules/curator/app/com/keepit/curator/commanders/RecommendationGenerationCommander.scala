@@ -52,6 +52,7 @@ class RecommendationGenerationCommander @Inject() (
   val recommendationGenerationLock = new ReactiveLock(10)
   val perUserRecommendationGenerationLocks = TrieMap[Id[User], ReactiveLock]()
   val candidateURILock = new ReactiveLock(4)
+  val dbWriteThrottleLock = new ReactiveLock(2)
 
   val superSpecialLock = new ReactiveLock(1)
 
@@ -197,11 +198,14 @@ class RecommendationGenerationCommander @Inject() (
         attributionHelper.getAttributions(scoredItems)
       }
 
-      toBeSaved.map { items =>
-        Statsd.increment("UriRecosGenerated", items.length)
-        saveScoredSeedItems(items, userId, newState)
-        precomputeRecommendationsForUser(userId, boostedKeepers, Some(alwaysInclude))
-        seedItems.nonEmpty
+      toBeSaved.flatMap { items =>
+        Statsd.gauge("RecosWaitingForSave", items.length, true)
+        dbWriteThrottleLock.withLock { saveScoredSeedItems(items, userId, newState) }.map { _ =>
+          Statsd.gauge("RecosWaitingForSave", -1 * items.length, true)
+          Statsd.increment("UriRecosGenerated", items.length)
+          precomputeRecommendationsForUser(userId, boostedKeepers, Some(alwaysInclude))
+          seedItems.nonEmpty
+        }
       }
     }
 
@@ -233,44 +237,48 @@ class RecommendationGenerationCommander @Inject() (
         }
       }
 
-      toBeSaved.map { items =>
-        Statsd.increment("UriRecosGeneratedNextGen", items.length)
-
-        db.readWrite(attempts = 2) { implicit s =>
-          items foreach {
-            case (item, masterScore) =>
-              if (masterScore > 16.0f) {
-                val recoOpt = uriRecRepo.getByUriAndUserId(item.uriId, userId, None)
-                recoOpt.map { reco =>
-                  uriRecRepo.save(reco.copy(
-                    state = UriRecommendationStates.ACTIVE,
-                    masterScore = masterScore,
-                    allScores = item.uriScores,
-                    attribution = item.attribution,
-                    topic1 = item.topic1,
-                    topic2 = item.topic2))
-                } getOrElse {
-                  uriRecRepo.save(UriRecommendation(
-                    uriId = item.uriId,
-                    userId = userId,
-                    masterScore = masterScore,
-                    allScores = item.uriScores,
-                    delivered = 0,
-                    clicked = 0,
-                    kept = false,
-                    trashed = false,
-                    attribution = item.attribution,
-                    topic1 = item.topic1,
-                    topic2 = item.topic2))
+      toBeSaved.flatMap { items =>
+        Statsd.gauge("RecosWaitingForSave", items.length, true)
+        dbWriteThrottleLock.withLock {
+          val timer = new NamedStatsdTimer("RecommendationGenerationCommander.saveScoredSeedItems")
+          db.readWrite(attempts = 2) { implicit s =>
+            items foreach {
+              case (item, masterScore) =>
+                if (masterScore > 16.0f) {
+                  val recoOpt = uriRecRepo.getByUriAndUserId(item.uriId, userId, None)
+                  recoOpt.map { reco =>
+                    uriRecRepo.save(reco.copy(
+                      state = UriRecommendationStates.ACTIVE,
+                      masterScore = masterScore,
+                      allScores = item.uriScores,
+                      attribution = item.attribution,
+                      topic1 = item.topic1,
+                      topic2 = item.topic2))
+                  } getOrElse {
+                    uriRecRepo.save(UriRecommendation(
+                      uriId = item.uriId,
+                      userId = userId,
+                      masterScore = masterScore,
+                      allScores = item.uriScores,
+                      delivered = 0,
+                      clicked = 0,
+                      kept = false,
+                      trashed = false,
+                      attribution = item.attribution,
+                      topic1 = item.topic1,
+                      topic2 = item.topic2))
+                  }
                 }
-              }
+            }
+
+            genStateRepo.save(newState)
           }
-
-          genStateRepo.save(newState)
+          timer.stopAndReport()
+          Statsd.increment("UriRecosGenerated", items.length)
+          Statsd.gauge("RecosWaitingForSave", -1 * items.length, true)
+          precomputeRecommendationsForUser(userId, boostedKeepers, Some(alwaysInclude))
+          seedItems.nonEmpty
         }
-
-        precomputeRecommendationsForUser(userId, boostedKeepers, Some(alwaysInclude))
-        seedItems.nonEmpty
       }
     }
 
