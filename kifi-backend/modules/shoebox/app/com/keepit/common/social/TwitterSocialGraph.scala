@@ -358,7 +358,7 @@ class TwitterSocialGraphImpl @Inject() (
   def fetchIds(sui: SocialUserInfo, accessToken: OAuth1TokenInfo, userId: TwitterId, endpoint: String): Future[Seq[TwitterId]] = {
     def pagedFetchIds(page: Int, cursor: TwitterId, count: Long): Future[Seq[TwitterId]] = {
       log.info(s"[pagedFetchIds] userId=$userId endpoint=$endpoint count=$count cursor=$cursor")
-      val queryStrings = Seq("user_id" -> userId.toString, "cursor" -> cursor.toString, "count" -> count.toString)
+      val queryStrings = Seq("user_id" -> userId.id.toString, "cursor" -> cursor.id.toString, "count" -> count.toString)
       val call = WS.url(endpoint)
         .sign(OAuthCalculator(providerConfig.key, accessToken))
         .withQueryString(queryStrings: _*)

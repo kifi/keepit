@@ -46,9 +46,9 @@ class MobilePeopleRecommendationControllerTest extends Specification with Shoebo
             membership().withLibraryFollower(lib.id.get, user3.id.get).saved
             libraryMembershipRepo.countWithLibraryIdAndAccess(lib.id.get, LibraryAccess.READ_ONLY) === 3
 
-            libraryRepo.getMutualLibrariesForUser(user1.id.get, user2.id.get).length === 1
-            libraryRepo.getMutualLibrariesForUser(user1.id.get, user3.id.get).length === 1
-            libraryRepo.getMutualLibrariesForUser(user1.id.get, user4.id.get).length === 0
+            libraryRepo.getMutualLibrariesForUser(user1.id.get, user2.id.get, 0, 5).length === 1
+            libraryRepo.getMutualLibrariesForUser(user1.id.get, user3.id.get, 0, 5).length === 1
+            libraryRepo.getMutualLibrariesForUser(user1.id.get, user4.id.get, 0, 5).length === 0
 
             (user1, user2, user3, user4, lib)
           }

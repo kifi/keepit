@@ -230,7 +230,7 @@
 
   <script type="text/javascript">
     function libraryPush() {
-      $.post("@com.keepit.controllers.admin.routes.AdminUserController.pushLibraryActivity()")
+      $.post("@com.keepit.controllers.admin.routes.AdminUserController.pushLibraryActivity(user.id.get)")
     }
     function resetMixpanelProfile() {
       $("#reset_mixpanel").prop("disabled", true).text("Resetting Mixpanel Profile...");

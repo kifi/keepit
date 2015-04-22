@@ -68,9 +68,9 @@ class LibraryTest extends Specification with ShoeboxTestInjector {
     "both follow" in {
       withDb() { implicit injector =>
         val (l1, l2, l3, s1, s2, user1, user2, user3) = setup()
-        db.readOnlyMaster(implicit session => libraryRepo.getMutualLibrariesForUser(user3.id.get, user2.id.get)) === Seq(l2)
-        db.readOnlyMaster(implicit session => libraryRepo.getMutualLibrariesForUser(user1.id.get, user2.id.get)) === Seq()
-        db.readOnlyMaster(implicit session => libraryRepo.getMutualLibrariesForUser(user1.id.get, user3.id.get)) === Seq()
+        db.readOnlyMaster(implicit session => libraryRepo.getMutualLibrariesForUser(user3.id.get, user2.id.get, 0, 10)) === Seq(l2)
+        db.readOnlyMaster(implicit session => libraryRepo.getMutualLibrariesForUser(user1.id.get, user2.id.get, 0, 10)) === Seq()
+        db.readOnlyMaster(implicit session => libraryRepo.getMutualLibrariesForUser(user1.id.get, user3.id.get, 0, 10)) === Seq()
       }
     }
 

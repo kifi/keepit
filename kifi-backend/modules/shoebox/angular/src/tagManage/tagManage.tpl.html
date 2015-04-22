@@ -1,36 +1,27 @@
-<div ng-controller="ManageTagCtrl">
-
   <div class="manage-tag-wrapper kf-width-bounded">
     <div class="manage-tag">
       <h2>Manage your tags</h2>
       <div class="manage-tag-container">
         <div class="manage-tag-header">
-
           <div class="manage-tag-search-box">
             <div class="manage-tag-input-box" ng-class="{ 'focused': isFilterFocused }">
               <a class="manage-tag-input-clear" href="javascript:" ng-click="clearFilter(true)" ng-show="filter.name">&times;</a>
               <input class="manage-tag-filter-input" kf-no-drag-input name="filterName" placeholder="Search tags..." maxlength="32" ng-model="filter.name" ng-change="onFilterChange()" ng-focus="focusFilter()" ng-blur="blurFilter()">
             </div>
           </div>
-
           <div class="manage-tag-sort-by">
             <div class="manage-tag-sort-text">Sort by:</div>
             <div class="manage-tag-sort-button" ng-class="{'on': selectedSort == 'num_keeps'}" ng-click="selectedSort = 'num_keeps'">Most used</div>
             <div class="manage-tag-sort-button" ng-class="{'on': selectedSort == 'name'}" ng-click="selectedSort = 'name'">ABC</div>
           </div>
         </div>
-
         <div class="manage-tag-content" smart-scroll scroll-distance="tagsScrollDistance" scroll-disabled="isTagScrollDisabled()" scroll-next="manageTagScrollNext()">
           <ul class="manage-tag-list">
             <li class="manage-tag-row" ng-repeat="tag in tagsToShow">
               <div class="manage-tag-row-name-section">
-                <a class="manage-tag-row-name" title="{{tag.name}}" ng-href="{{tag.href}}" ng-class="{'selected-tag': tag.selected}">{{tag.name}}</a>
+                <a class="manage-tag-row-name" title="{{tag.name}}" ng-href="{{tag.name|tagUrl}}" ng-class="{'selected-tag': tag.selected}">{{tag.name}}</a>
               </div>
-              <span class="manage-tag-row-num-keeps-section">
-                <ng-pluralize count="tag.keeps | number:0"
-                            when="{'0': 'no keeps', 'one': '1 keep', 'other':'{} keeps'}">
-                </ng-pluralize>
-              </span>
+              <span class="manage-tag-row-num-keeps-section" ng-pluralize count="tag.keeps|number:0" when="{'0': 'no keeps', 'one': '1 keep', 'other':'{} keeps'}"></span>
               <span class="manage-tag-row-links-section">
                 <span class="manage-tag-row-link-convert manage-tag-copy" title="Copy tagged keeps to a library" ng-click="changeSelection(tag)"
                   kf-keep-to-library-widget widget-action-text="Copy" library-click-action="onWidgetCopyLibraryClicked(clickedLibrary)" widget-exit-action="onWidgetExit()"
@@ -55,4 +46,3 @@
 
     </div>
   </div>
-</div>

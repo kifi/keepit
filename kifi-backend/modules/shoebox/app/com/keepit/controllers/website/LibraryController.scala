@@ -656,18 +656,20 @@ class LibraryController @Inject() (
     }
   }
 
-  def getMutualLibraries(username: Username) = UserAction { request =>
-    userCommander.userFromUsername(username) match {
+  def getMutualLibraries(id: ExternalId[User], page: Int = 0, size: Int = 12) = UserAction { request =>
+    db.readOnlyMaster { implicit s =>
+      userRepo.getOpt(id)
+    } match {
       case None =>
-        log.warn(s"unknown username ${username.value} requested")
-        NotFound(username.value)
+        log.warn(s"unknown external userId ${id} requested")
+        NotFound(Json.obj("id" -> id))
       case Some(user) =>
         val viewer = request.userId
         val userId = user.id.get
         val (ofUser, ofViewer, mutualFollow, basicUsers) = db.readOnlyReplica { implicit s =>
           val ofUser = libraryRepo.getOwnerLibrariesOtherFollow(userId, viewer)
           val ofViewer = libraryRepo.getOwnerLibrariesOtherFollow(viewer, userId)
-          val mutualFollow = libraryRepo.getMutualLibrariesForUser(viewer, userId)
+          val mutualFollow = libraryRepo.getMutualLibrariesForUser(viewer, userId, page * size, size)
           val mutualFollowOwners = mutualFollow.map(_.ownerId)
           val basicUsers = basicUserRepo.loadAll(Set(userId, viewer) ++ mutualFollowOwners)
           (ofUser, ofViewer, mutualFollow, basicUsers)

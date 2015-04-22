@@ -13,11 +13,12 @@ import com.keepit.common.time._
 import com.keepit.curator.commanders.email.{ RecentInterestRankStrategy, EngagementEmailActor, FeedDigestEmailSender }
 import com.keepit.curator.commanders._
 import com.keepit.curator.commanders.persona.PersonaRecommendationIngestor
+import com.keepit.curator.feedback.UserRecoFeedbackInferenceCommander
 import com.keepit.curator.model.{ RecommendationSubSource, LibraryRecoSelectionParams, LibraryRecoInfo, RecommendationSource, LibraryRecommendation }
 import com.keepit.model._
 import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json.{ JsBoolean, JsValue, JsString, Json }
+import play.api.libs.json._
 import play.api.mvc.Action
 
 import concurrent.Future
@@ -38,6 +39,7 @@ class CuratorController @Inject() (
     feedEmailSender: FeedDigestEmailSender,
     userExperimentCommander: RemoteUserExperimentCommander,
     personaRecoIngestor: PersonaRecommendationIngestor,
+    feedbackInferenceCommander: UserRecoFeedbackInferenceCommander,
     protected val airbrake: AirbrakeNotifier) extends CuratorServiceController with Logging {
 
   val topScoreRecoStrategy = new TopScoreRecoSelectionStrategy()
@@ -63,8 +65,9 @@ class CuratorController @Inject() (
         if (experiments.contains(ExperimentType.CURATOR_DIVERSE_TOPIC_RECOS)) diverseRecoStrategy
         else topScoreRecoStrategy
       val scoringStrategy = if (experiments.contains(ExperimentType.NEXT_GEN_RECOS)) dumbRecoScoringStrategy else nonlinearRecoScoringStrategy
+      val applyFeedback = experiments.contains(ExperimentType.APPLY_RECO_FEEDBACK)
 
-      val recoResults = recoRetrievalCommander.topRecos(userId, more, recencyWeight, source, subSource, sortStrategy, scoringStrategy, context)
+      val recoResults = recoRetrievalCommander.topRecos(userId, more, recencyWeight, source, subSource, sortStrategy, scoringStrategy, context, applyFeedback)
 
       Ok(Json.toJson(recoResults))
     }
@@ -212,4 +215,15 @@ class CuratorController @Inject() (
         Ok
     }
   }
+
+  def examineUserFeedbackCounter(userId: Id[User]) = Action { request =>
+    feedbackInferenceCommander.getInferencer(userId) match {
+      case Some(infer) =>
+        val votes = infer.getNontrivialVotes
+        val signals = infer.getNontrivialSignals
+        Ok(Json.obj("votes" -> Json.toJson(votes), "signals" -> Json.toJson(signals)))
+      case None => Ok(JsNull)
+    }
+  }
+
 }

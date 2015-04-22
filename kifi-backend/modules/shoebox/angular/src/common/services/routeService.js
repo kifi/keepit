@@ -53,16 +53,21 @@ angular.module('kifi')
       ////////////////////////////
       // Tags                   //
       ////////////////////////////
-      tagOrdering: route('/collections/ordering'),
-      reorderTag: route('/collections/reorderTag'),
-      pageTags: route('/collections/page'),
-
+      pageTags: function (sort, offset, pageSize) {
+        return route('/collections/page', {sort: sort, offset: offset, pageSize: pageSize});
+      },
       searchTags: function (query, limit) {
         return route('/collections/search', {query: query, limit: limit});
       },
       suggestTags: function (libraryId, keepId, query) {
         // TODO: stop using extension endpoint
         return env.navBase + '/ext/libraries/' + libraryId + '/keeps/' + keepId + '/tags/suggest' + queryStr({q: query});
+      },
+      deleteTag: function (tagId) {
+        return route('/collections/' + tagId + '/delete');
+      },
+      undeleteTag: function (tagId) {
+        return route('/collections/' + tagId + '/undelete');
       },
       tagKeep: function (libraryId, keepId, tag) {
         return route('/libraries/' + libraryId + '/keeps/' + keepId + '/tags/' + encodeURIComponent(tag));

@@ -3,58 +3,49 @@
 angular.module('kifi')
 
 .factory('manageTagService', [
-  '$http', 'routeService', 'Clutch', '$q',
-  function ($http, routeService, Clutch, $q) {
-    var pageSize = 100;
-    var searchLimit = 30;
+  '$http', '$q', '$state', '$analytics', 'routeService', 'undoService', 'Clutch',
+  function ($http, $q, $state, $analytics, routeService, undoService, Clutch) {
 
-    var decorate = function (tags) {
-      return _.map(tags || [], function (t) {
-        var tagPath;
-        var n = t.name;
-        if (n.indexOf(' ') !== -1) {
-          tagPath = '"' + n + '"';
-        } else {
-          tagPath = n;
-        }
-        t.href = '/find?q=tag:' + encodeURIComponent(tagPath);
-        return t;
+    var pageClutch = new Clutch(function (sort, offset) {
+      return $http.get(routeService.pageTags(sort, offset, 100)).then(function (res) {
+        return res.data.tags;
       });
-    };
-
-    var manageTagRemoteService = new Clutch(function (sort, offset) {
-      return $http.get(routeService.pageTags + '?sort=' + sort + '&offset=' + offset + '&pageSize=' + pageSize
-        ).then(function (res) {
-          return decorate(res.data.tags);
-        }
-      );
     });
 
-    var tagSearchService = new Clutch(function (query) {
+    var searchClutch = new Clutch(function (query) {
       if (!query || !query.trim()) {
         return $q.when([]);
       }
-      return $http.get(routeService.searchTags(query, searchLimit)).then(function (res) {
-        var results = res.data && res.data.results || [];
-        var tags = _.map(results, function (tag) {
-          return { name : tag.tag, keeps: tag.keepCount };
+      return $http.get(routeService.searchTags(query, 30)).then(function (res) {
+        return _.map(res.data.results, function (r) {
+          return {name: r.tag, keeps: r.keepCount};
         });
-        return decorate(tags);
       });
     });
 
-    var api = {
+    return {
       reset: function () {
-        manageTagRemoteService.expireAll();
+        pageClutch.expireAll();
       },
       getMore: function (sort, offset) {
-        return manageTagRemoteService.get(sort, offset);
+        return pageClutch.get(sort, offset);
       },
-      search: function(query) {
-        return tagSearchService.get(query);
+      search: function (query) {
+        return searchClutch.get(query);
+      },
+      remove: function (tag) {
+        var promise = $http.post(routeService.deleteTag(tag.id)).then(function () {
+          undoService.add('Tag deleted.', function () {
+            $http.post(routeService.undeleteTag(tag.id)).then(function () {
+              $state.go($state.current, undefined, {reload: true});
+              $analytics.eventTrack('user_clicked_page', {action: 'unremoveTag', path: $state.href($state.current)});
+            });
+         });
+        });
+        $analytics.eventTrack('user_clicked_page', {action: 'removeTag', path: $state.href($state.current)});
+        return promise;
       }
     };
 
-    return api;
   }
 ]);
