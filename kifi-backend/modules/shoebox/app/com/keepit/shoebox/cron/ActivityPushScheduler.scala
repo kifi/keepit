@@ -120,6 +120,17 @@ class ActivityPusher @Inject() (
     }
   }
 
+  def forcePersonaActivityForUser(userId: Id[User]): Unit = {
+    val task = db.readOnlyMaster { implicit s =>
+      activityPushTaskRepo.getByUser(userId)
+    }
+    PushNotificationExperiment.All.foreach { experiment =>
+      getPersonaActivityMessage(experiment, userId) foreach { message =>
+        pushMessage(task.get, message, experiment)
+      }
+    }
+  }
+
   def pushItBaby(activityPushTaskId: Id[ActivityPushTask]): Unit = {
     /*
      * activityPushTaskId is for a candidate to push, but may not require a push.
