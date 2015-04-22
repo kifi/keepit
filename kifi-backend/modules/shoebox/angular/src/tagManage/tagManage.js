@@ -21,9 +21,7 @@ angular.module('kifi')
     //
     // Smart Scroll
     //
-    $scope.$watch(function () {
-      return $scope.tagList;
-    }, function (res) {
+    $scope.$watch('tagList', function (res) {
       if (res) {
         $scope.tagsToShow = $scope.tagList;
       }
@@ -37,9 +35,7 @@ angular.module('kifi')
     };
 
 
-    $scope.$watch(function () {
-      return $scope.selectedSort;
-    }, function () {
+    $scope.$watch('selectedSort', function () {
       if ($scope.filter.name === '') {
         $scope.tagList.length = 0;
         $scope.offset = 0;
@@ -70,7 +66,7 @@ angular.module('kifi')
     //
     // Watchers & Listeners
     //
-    $scope.$watch(function() {
+    $scope.$watch(function () {
       return $window.innerWidth;
     }, function (width) {
       if (width < 1220) {
