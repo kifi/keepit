@@ -129,7 +129,7 @@ private[commanders] class NotificationJsonMaker @Inject() (
 }
 
 case class InboxUriSummaryCacheKey(uriId: Id[NormalizedURI]) extends Key[URISummary] {
-  override val version = 0
+  override val version = 1
   val namespace = "inbox_uri_summary"
   def toKey(): String = uriId.id.toString
 }
