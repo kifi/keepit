@@ -174,7 +174,9 @@ class UserConnectionRepoImpl @Inject() (
         case (id, connections) => UserConnectionIdKey(id) -> connections.map(_._2.id).toArray
       }.toMap
     }
-    ret.map { case (key, value) => key.userId -> value.map(Id[User]).toSet }.toMap
+    ids.map { id =>
+      id -> ret.get(UserConnectionIdKey(id)).getOrElse(Array.empty).map(Id[User]).toSet
+    }.toMap
   }
 
   def getUnfriendedUsers(id: Id[User])(implicit session: RSession): Set[Id[User]] = {
