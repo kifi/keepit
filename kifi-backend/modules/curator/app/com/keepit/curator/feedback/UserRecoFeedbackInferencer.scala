@@ -1,7 +1,7 @@
 package com.keepit.curator.feedback
 
 import com.keepit.curator.commanders.UriRecoScore
-import com.keepit.curator.model.UserRecoFeedbackCounter
+import com.keepit.curator.model.{ UserFeedbackCountView, UserRecoFeedbackCounter }
 
 class UserRecoFeedbackInferencer(fb: UserRecoFeedbackCounter) {
 
@@ -17,5 +17,22 @@ class UserRecoFeedbackInferencer(fb: UserRecoFeedbackCounter) {
       case None => reco
     }
   }
+
+  def getNontrivialVotes: Seq[UserFeedbackCountView] = {
+    (0 until fb.upVotes.getSize()).flatMap { i =>
+      val (up, down) = (fb.upVotes.get(i), fb.downVotes.get(i))
+      val (socialBkt, topicBkt) = FeedbackBucketMapper.toComponentIds(i)
+      if (up + down > 0) Some(UserFeedbackCountView(socialBkt, topicBkt, up, down)) else None
+    }
+  }
+
+  def getNontrivialSignals: Seq[UserFeedbackCountView] = {
+    (0 until fb.posSignals.getSize()).flatMap { i =>
+      val (pos, neg) = (fb.posSignals.get(i), fb.negSignals.get(i))
+      val (socialBkt, topicBkt) = FeedbackBucketMapper.toComponentIds(i)
+      if (pos + neg > 0) Some(UserFeedbackCountView(socialBkt, topicBkt, pos, neg)) else None
+    }
+  }
+
 }
 

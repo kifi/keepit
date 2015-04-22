@@ -4,10 +4,10 @@ angular.module('kifi')
 
 .controller('ManageTagCtrl', [
   '$scope', '$window', 'manageTagService', 'libraryService',
-  'routeService', '$http', '$location', 'modalService', '$timeout', '$rootScope',
+  'routeService', '$http', '$location', 'modalService', '$timeout',
   function (
       $scope, $window, manageTagService, libraryService,
-      routeService, $http, $location, modalService, $timeout, $rootScope) {
+      routeService, $http, $location, modalService, $timeout) {
     $window.document.title = 'Kifi • Manage Your Tags';
 
     $scope.selected = {};
