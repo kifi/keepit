@@ -48,6 +48,7 @@ class HashtagCommanderTest extends Specification with ShoeboxTestInjector {
         commander.removeHashtagsFromString("#turtles I love #lizards", Set("turtles")) === "I love #lizards"
         commander.removeHashtagsFromString("#turtles I love #reptiles #lizards", Set("lizards")) === "#turtles I love #reptiles"
         commander.removeHashtagsFromString("#turtles I love #reptiles #lizards", Set("turtles", "reptiles")) === "I love #lizards"
+        commander.removeHashtagsFromString("#turtles #reptiles #lizards", Set("lizards", "turtles", "reptiles")) === ""
         commander.removeHashtagsFromString("I love #reptiles#", Set("reptiles")) === "I love #reptiles#"
       }
     }
