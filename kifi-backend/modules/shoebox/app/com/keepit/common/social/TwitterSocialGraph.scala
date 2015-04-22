@@ -298,7 +298,7 @@ class TwitterSocialGraphImpl @Inject() (
       }
   }
 
-  protected def handleError(tag: String, endpoint: String, sui: SocialUserInfo, uvName: UserValueName, cursor: TwitterId, resp: WSResponse): Unit = {
+  protected def handleError(tag: String, endpoint: String, sui: SocialUserInfo, uvName: UserValueName, cursor: TwitterId, resp: WSResponse, params: Any): Unit = {
     val nettyResp = resp.underlying[NettyResponse]
     def warn(notify: Boolean): Unit = {
       val errorMessage = resp.status match {
@@ -306,7 +306,7 @@ class TwitterSocialGraphImpl @Inject() (
         case UNAUTHORIZED => "unauthorized or invalid/expired token"
         case _ => "non-OK response"
       }
-      val errMsg = s"[$tag] Error for user ${sui.userId} ${sui.fullName} sui ${sui.id}: $errorMessage for $endpoint. status=${resp.status} body=${resp.body}; request.uri=${nettyResp.getUri}"
+      val errMsg = s"[$tag] Error for user ${sui.userId} ${sui.fullName} sui ${sui.id}: $errorMessage for $endpoint. status=${resp.status} body=${resp.body}; request.uri=${nettyResp.getUri}; request params=$params"
       if (notify)
         airbrake.notify(errMsg)
       else
@@ -330,15 +330,16 @@ class TwitterSocialGraphImpl @Inject() (
     val sorted = mutualFollows.toSeq.sortBy(_.id) // expensive
     val accF = FutureHelpers.foldLeftUntil[Seq[TwitterId], JsArray](sorted.grouped(100).toIterable)(JsArray()) { (a, c) =>
       val params = Map("user_id" -> c.mkString(","), "include_entities" -> false.toString)
+      val serializedParams = params.map(kv => (kv._1, Seq(kv._2)))
       val chunkF = WS.url(endpoint)
         .sign(OAuthCalculator(providerConfig.key, accessToken))
-        .post(params.map(kv => (kv._1, Seq(kv._2))))
+        .post(serializedParams)
         .map { resp =>
           log.info(s"[lookupUsers] prevAcc.len=${a.value.length} cursor=${c.head} response.json=${resp.json.toString.abbreviate(400)}")
           resp.status match {
             case OK => resp.json
             case _ =>
-              handleError("lookupUsers", endpoint, sui, UserValueName.TWITTER_LOOKUP_CURSOR, c.head, resp)
+              handleError("lookupUsers", endpoint, sui, UserValueName.TWITTER_LOOKUP_CURSOR, c.head, resp, serializedParams)
               JsArray(Seq.empty[JsValue])
           }
         }
@@ -357,12 +358,10 @@ class TwitterSocialGraphImpl @Inject() (
   def fetchIds(sui: SocialUserInfo, accessToken: OAuth1TokenInfo, userId: TwitterId, endpoint: String): Future[Seq[TwitterId]] = {
     def pagedFetchIds(page: Int, cursor: TwitterId, count: Long): Future[Seq[TwitterId]] = {
       log.info(s"[pagedFetchIds] userId=$userId endpoint=$endpoint count=$count cursor=$cursor")
+      val queryStrings = Seq("user_id" -> userId.id.toString, "cursor" -> cursor.id.toString, "count" -> count.toString)
       val call = WS.url(endpoint)
         .sign(OAuthCalculator(providerConfig.key, accessToken))
-        .withQueryString(
-          "user_id" -> userId.id.toString,
-          "cursor" -> cursor.id.toString,
-          "count" -> count.toString)
+        .withQueryString(queryStrings: _*)
         .get()
       call flatMap { resp =>
         resp.status match {
@@ -379,7 +378,7 @@ class TwitterSocialGraphImpl @Inject() (
             }
           case _ =>
             val name = if (endpoint.contains("friends")) UserValueName.TWITTER_FRIENDS_CURSOR else UserValueName.TWITTER_FOLLOWERS_CURSOR
-            handleError(s"pagedFetchIds#$page", endpoint, sui, name, cursor, resp)
+            handleError(s"pagedFetchIds#$page", endpoint, sui, name, cursor, resp, queryStrings)
             Future.successful(Seq.empty[TwitterId])
         }
       }

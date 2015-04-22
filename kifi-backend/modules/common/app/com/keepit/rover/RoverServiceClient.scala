@@ -13,7 +13,6 @@ import com.keepit.rover.model.{ ShoeboxArticleUpdates, ArticleInfo }
 import play.api.libs.json.Json
 
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.Failure
 
 trait RoverServiceClient extends ServiceClient {
   final val serviceType = ServiceType.ROVER
