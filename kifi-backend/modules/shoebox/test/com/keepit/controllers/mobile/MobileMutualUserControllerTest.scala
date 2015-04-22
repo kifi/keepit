@@ -61,18 +61,21 @@ class MobileMutualUserControllerTest extends Specification with ShoeboxTestInjec
         contentType(testUser2) must beSome("application/json")
         val json2 = contentAsJson(testUser2)
         (json2 \\ "username").map(_.as[Username].value) === Seq("poisonivy")
+        (json2 \ "totalMutualConnections").as[Int] === 1
 
         val testUser3 = getMutualConnections(user1, user3)
         status(testUser3) must equalTo(OK)
         contentType(testUser3) must beSome("application/json")
         val json3 = contentAsJson(testUser3)
         (json3 \\ "username").map(_.as[Username].value) === Seq("poisonivy")
+        (json3 \ "totalMutualConnections").as[Int] === 1
 
         val testUser4 = getMutualConnections(user1, user4)
         status(testUser4) must equalTo(OK)
         contentType(testUser4) must beSome("application/json")
         val json4 = contentAsJson(testUser4)
         (json4 \\ "username").map(_.as[Username].value) === Seq("thejoker", "mrfreeze")
+        (json4 \ "totalMutualConnections").as[Int] === 2
       }
     }
 
@@ -110,18 +113,21 @@ class MobileMutualUserControllerTest extends Specification with ShoeboxTestInjec
         contentType(testLibs1) must beSome("application/json")
         val json1 = contentAsJson(testLibs1)
         (json1 \\ "url").map(_.as[LibrarySlug].value) === Seq() // shouldn't return anything. Even thought user1 follows user2's library, they are not mutually following
+        (json1 \ "totalMutualLibraries").as[Int] === 0
 
         val testLibs3 = getMutualFollowedLibraries(user1, user3)
         status(testLibs3) must equalTo(OK)
         contentType(testLibs3) must beSome("application/json")
         val json3 = contentAsJson(testLibs3)
         (json3 \\ "url").map(_.as[LibrarySlug].value) === Seq()
+        (json3 \ "totalMutualLibraries").as[Int] === 0
 
         val testLibs4 = getMutualFollowedLibraries(user1, user4)
         status(testLibs4) must equalTo(OK)
         contentType(testLibs4) must beSome("application/json")
         val json4 = contentAsJson(testLibs4)
         (json4 \\ "url").map(_.as[LibrarySlug].value) === Seq("/mrfreeze/ice-ice-baby", "/thejoker/gotham-sucks")
+        (json4 \ "totalMutualLibraries").as[Int] === 2
       }
     }
   }
