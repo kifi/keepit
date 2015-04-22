@@ -182,21 +182,10 @@ angular.module('kifi')
       });
     };
 
-    var removedIndex = -1;
-    var removedTag = {};
     $scope.deleteTag = function () {
-      removedIndex = _.findIndex($scope.tagsToShow, function(t) { return t === $scope.selectedTag; });
-      removedTag = $scope.tagsToShow[removedIndex];
-      $scope.tagsToShow.splice(removedIndex, 1);
+      manageTagService.remove($scope.selectedTag).then(function () {
+        _.remove($scope.tagsToShow, $scope.selectedTag);
+      });
     };
-
-    var deregisterUndoRemoveTag = $rootScope.$on('undoRemoveTag', function () {
-      if (removedIndex > 0) {
-        $scope.tagsToShow.splice(removedIndex, 0, removedTag);
-        removedIndex = -1;
-        removedTag = {};
-      }
-    });
-    $scope.$on('$destroy', deregisterUndoRemoveTag);
   }
 ]);

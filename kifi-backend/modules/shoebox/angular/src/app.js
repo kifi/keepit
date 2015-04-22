@@ -139,7 +139,7 @@ angular.module('kifi', [
     }
 
     function paramsDiffer(stateName, p1, p2) {
-      var paramNames = $state.get(stateName).url.match(/[:?&]\w+/g).map(function (prop) {
+      var paramNames = ($state.get(stateName).url.match(/[:?&]\w+/g) || []).map(function (prop) {
         return prop.slice(1);  // remove leading [:?&]
       });
       return !_.isEqual(_.pick(p1, paramNames), _.pick(p2, paramNames));
