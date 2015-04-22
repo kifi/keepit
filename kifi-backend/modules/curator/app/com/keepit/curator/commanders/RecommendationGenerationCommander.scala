@@ -240,6 +240,7 @@ class RecommendationGenerationCommander @Inject() (
       toBeSaved.flatMap { items =>
         Statsd.gauge("RecosWaitingForSave", items.length, true)
         dbWriteThrottleLock.withLock {
+          val timer = new NamedStatsdTimer("RecommendationGenerationCommander.saveScoredSeedItems")
           db.readWrite(attempts = 2) { implicit s =>
             items foreach {
               case (item, masterScore) =>
@@ -272,6 +273,7 @@ class RecommendationGenerationCommander @Inject() (
 
             genStateRepo.save(newState)
           }
+          timer.stopAndReport()
           Statsd.increment("UriRecosGenerated", items.length)
           Statsd.gauge("RecosWaitingForSave", -1 * items.length, true)
           precomputeRecommendationsForUser(userId, boostedKeepers, Some(alwaysInclude))
