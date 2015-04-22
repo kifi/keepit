@@ -36,7 +36,8 @@ class LDARelatedLibraryCommanderImpl @Inject() (
 
   private val TOP_K = 50
   private val MIN_WEIGHT = 0.7f
-  private val MIN_EVIDENCE = 2
+  private val SOURCE_MIN_EVIDENCE = 2
+  private val DEST_MIN_EVIDENCE = 5
   private var hasFullyUpdated = false
 
   def fullyUpdateMode: Boolean = !hasFullyUpdated
@@ -53,8 +54,9 @@ class LDARelatedLibraryCommanderImpl @Inject() (
   // completely reconstruct an asymetric graph
   def fullUpdate(version: ModelVersion[DenseLDA]): Unit = {
     log.info(s"update LDA related library graph for version ${version.version}")
-    val libTopics = db.readOnlyReplica { implicit s => libTopicRepo.getAllActiveByVersion(version, MIN_EVIDENCE) }
-    libTopics.foreach { source => computeAndPersistEdges(source, libTopics)(version) }
+    val sourceLibs = db.readOnlyReplica { implicit s => libTopicRepo.getAllActiveByVersion(version, SOURCE_MIN_EVIDENCE) }
+    val destLibs = sourceLibs.filter(_.numOfEvidence >= DEST_MIN_EVIDENCE)
+    sourceLibs.foreach { source => computeAndPersistEdges(source, destLibs)(version) }
     log.info(s"finished updating LDA related library graph for version ${version.version}")
   }
 
@@ -83,8 +85,8 @@ class LDARelatedLibraryCommanderImpl @Inject() (
     val (newSources, _) = active.partition { x => db.readOnlyReplica { implicit s => relatedLibRepo.getNeighborIdsAndWeights(x.libraryId, version).isEmpty } } // query could be optimized
 
     if (newSources.size > 0) {
-      val libTopics = db.readOnlyReplica { implicit s => libTopicRepo.getAllActiveByVersion(version, MIN_EVIDENCE) }
-      newSources.foreach { source => computeAndPersistEdges(source, libTopics)(version) }
+      val destLibs = db.readOnlyReplica { implicit s => libTopicRepo.getAllActiveByVersion(version, DEST_MIN_EVIDENCE) }
+      newSources.foreach { source => computeAndPersistEdges(source, destLibs)(version) }
     }
 
     others.foreach { x => deactivateEdges(x.libraryId, version) }
