@@ -7,36 +7,61 @@ class HashtagCommander {
   // Given a string, return a list of all hashtags
   // A hashtag is defined as a substring that starts with '#' and ends at a space or newline
   // note: This function returns the hashtag NAME without the '#'
-  def findAllHashtags(str: String): Seq[String] = {
+  def findAllHashtags(str: String): Set[String] = {
     var idx = 0
-    var hashtags = Seq.empty[String]
+    val hashtags = scala.collection.mutable.Set[String]()
     while (idx < str.length) {
       val currChar = str.charAt(idx)
       if (currChar == '#') {
-        // find space or end of line
-        val nextSpaceIdx = str.indexOf(' ', idx)
+        val nextSpaceIdx = str.indexOf(' ', idx) // find space or end of line
         val potentialHashtag = if (nextSpaceIdx == -1) { // reached end of line
           str.substring(idx)
         } else {
           str.substring(idx, nextSpaceIdx)
         }
-        if (potentialHashtag.length > 1 && potentialHashtag.indexOf("#", 1) == -1) { // potentialHashtag contains '#'
-          hashtags = hashtags :+ potentialHashtag.substring(1)
+        if (potentialHashtag.length > 1 && potentialHashtag.indexOf("#", 1) == -1) { // potentialHashtag does not contain '#'
+          hashtags.add(potentialHashtag.substring(1))
         }
-        idx = idx + potentialHashtag.length
+        idx += potentialHashtag.length
       } else {
         idx += 1
       }
     }
-    hashtags
+    hashtags.toSet
   }
 
-  def appendHashtagsToString(str: String, hashtagNames: Seq[String]) = {
-
+  // Given tag names, append a '#' before it, separated by white spaces
+  def appendHashtagsToString(str: String, hashtagNames: Set[String]): String = {
+    val tagsStr = hashtagNames.filter(_.nonEmpty).map("#" + _).mkString(" ")
+    (str + " " + tagsStr).trim
   }
 
-  def removeHashtagsFromString(str: String, hashtagNames: Seq[String]) = {
-
+  // given tag names, remove all instances of #tagName from string
+  def removeHashtagsFromString(str: String, hashtagNames: Set[String]): String = {
+    var idx = 0
+    var editedStr = str
+    while (idx < editedStr.length) {
+      val currChar = editedStr.charAt(idx)
+      if (currChar == '#') {
+        val nextSpaceIdx = editedStr.indexOf(' ', idx) // find space or end of line
+        val (potentialHashtag, charsToTruncate) = if (nextSpaceIdx == -1) { // reached end of line
+          val hashTag = editedStr.substring(idx)
+          (hashTag, hashTag.length)
+        } else {
+          val hashTag = editedStr.substring(idx, nextSpaceIdx)
+          (hashTag, hashTag.length + 1) // remove space as well
+        }
+        val potentialHashtagName = potentialHashtag.substring(1)
+        if (potentialHashtagName.length >= 1 && hashtagNames.contains(potentialHashtagName)) {
+          editedStr = editedStr.substring(0, idx) + editedStr.substring(idx + charsToTruncate)
+        } else {
+          idx += charsToTruncate
+        }
+      } else {
+        idx += 1
+      }
+    }
+    editedStr.trim
   }
 
 }

@@ -35,6 +35,7 @@ class MobileKeepsController @Inject() (
   normalizedURIInterner: NormalizedURIInterner,
   libraryCommander: LibraryCommander,
   rawBookmarkFactory: RawBookmarkFactory,
+  hashtagCommander: HashtagCommander,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
   implicit val publicIdConfig: PublicIdConfiguration)
     extends UserActions with ShoeboxServiceController {
@@ -193,13 +194,23 @@ class MobileKeepsController @Inject() (
 
         val newTitle = titleOpt orElse keep.title map { _.trim } filterNot { _.isEmpty }
         val newNote = noteOpt orElse keep.note map { _.trim } filterNot { _.isEmpty }
-        tagsOpt.map { tagNames =>
+
+        val newNoteWithTags = tagsOpt.map { tagNames =>
           implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
           keepsCommander.persistHashtagsForKeep(request.userId, keep.id.get, tagNames)
-        }
+
+          // append any new tags to note, remove any tags not in tagNames
+          val origNote = newNote getOrElse ""
+          val existingTags = hashtagCommander.findAllHashtags(origNote)
+          val tagsToAdd = tagNames.toSet.filterNot(t => existingTags.contains(t))
+          val tagsToRemove = existingTags.filterNot(t => tagNames.contains(t))
+          val noteWithTagsAdded = hashtagCommander.appendHashtagsToString(origNote, tagsToAdd)
+          hashtagCommander.removeHashtagsFromString(noteWithTagsAdded, tagsToRemove)
+        } orElse newNote
 
         db.readWrite { implicit s =>
-          keepRepo.save(keep.copy(title = newTitle, note = newNote))
+          if (newTitle != keep.title || newNoteWithTags != keep.note)
+            keepRepo.save(keep.copy(title = newTitle, note = newNoteWithTags))
         }
         NoContent
     }
