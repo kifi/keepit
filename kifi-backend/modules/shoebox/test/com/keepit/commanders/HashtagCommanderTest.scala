@@ -1,5 +1,6 @@
 package com.keepit.commanders
 
+import com.keepit.model.Hashtag
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.Specification
 
@@ -11,46 +12,47 @@ class HashtagCommanderTest extends Specification with ShoeboxTestInjector {
     "find hashtags in string" in {
       withDb(modules: _*) { implicit injector =>
         val commander = inject[HashtagCommander]
-        commander.findAllHashtags("") === Set()
-        commander.findAllHashtags("#TLDR") === Set()
-        commander.findAllHashtags("\\[#TLDR\\]") === Set()
-        commander.findAllHashtags("[#TLDR]") === Set("TLDR")
-        commander.findAllHashtags("[#TLDR] I love [#turtles]") === Set("TLDR", "turtles")
-        commander.findAllHashtags("[#TLDR] I love [#turtles and lobsters]") === Set("TLDR", "turtles and lobsters")
-        commander.findAllHashtags("[#TLDR] something something [#TLDR]") === Set("TLDR")
-        commander.findAllHashtags("[#] something something [#]") === Set()
-        commander.findAllHashtags("[#TLDR] something [#asdf] something [#qwer]") === Set("TLDR", "asdf", "qwer")
-        commander.findAllHashtags("[#a] [#b] [#c]") === Set("a", "b", "c")
+        commander.findAllHashtagNames("") === Set()
+        commander.findAllHashtagNames("#TLDR") === Set()
+        commander.findAllHashtagNames("\\[#TLDR\\]") === Set()
+        commander.findAllHashtagNames("[#TLDR]") === Set("TLDR")
+        commander.findAllHashtagNames("[#TLDR] I love [#turtles]") === Set("TLDR", "turtles")
+        commander.findAllHashtagNames("[#TLDR] I love [#turtles and lobsters]") === Set("TLDR", "turtles and lobsters")
+        commander.findAllHashtagNames("[#TLDR] something something [#TLDR]") === Set("TLDR")
+        commander.findAllHashtagNames("[#] something something [#]") === Set()
+        commander.findAllHashtagNames("[#TLDR] something [#asdf] something [#qwer]") === Set("TLDR", "asdf", "qwer")
+        commander.findAllHashtagNames("[#a] [#b] [#c]") === Set("a", "b", "c")
       }
     }
 
     "add set of hashtags to string" in {
       withDb(modules: _*) { implicit injector =>
         val commander = inject[HashtagCommander]
-        commander.appendHashtagsToString("TLDR", Set()) === "TLDR"
-        commander.appendHashtagsToString("", Set("TLDR")) === "[#TLDR]"
-        commander.appendHashtagsToString("I love", Set("turtles")) === "I love [#turtles]"
-        commander.appendHashtagsToString("#turtles I love", Set("TLDR", "reptiles")) === "#turtles I love [#TLDR] [#reptiles]"
-        commander.appendHashtagsToString("TLDR", Set("TLDR")) === "TLDR [#TLDR]"
-        commander.appendHashtagsToString("[#TLDR]", Set("TLDR")) === "[#TLDR] [#TLDR]" // ?
+
+        commander.appendHashtagNamesToString("TLDR", Set()) === "TLDR"
+        commander.appendHashtagNamesToString("", Set("TLDR")) === "[#TLDR]"
+        commander.appendHashtagNamesToString("I love", Set("turtles")) === "I love [#turtles]"
+        commander.appendHashtagNamesToString("#turtles I love", Set("TLDR", "reptiles")) === "#turtles I love [#TLDR] [#reptiles]"
+        commander.appendHashtagNamesToString("TLDR", Set("TLDR")) === "TLDR [#TLDR]"
+        commander.appendHashtagNamesToString("[#TLDR]", Set("TLDR")) === "[#TLDR] [#TLDR]" // ?
       }
     }
 
     "remove set of hashtags from string" in {
       withDb(modules: _*) { implicit injector =>
         val commander = inject[HashtagCommander]
-        commander.removeHashtagsFromString("", Set("asdf")) === ""
-        commander.removeHashtagsFromString("asdf", Set()) === "asdf"
-        commander.removeHashtagsFromString("[#TLDR]", Set("TLDR")) === ""
-        commander.removeHashtagsFromString("I like [#turtles]", Set("turtles")) === "I like"
-        commander.removeHashtagsFromString("I like [#turtles]", Set("turtles", "lizards")) === "I like"
-        commander.removeHashtagsFromString("[#turtles] I like [#lizards]", Set("turtles", "lizards")) === "I like"
-        commander.removeHashtagsFromString("[#turtles] I like [#lizards]", Set("lizards")) === "[#turtles] I like"
-        commander.removeHashtagsFromString("[#turtles] I like [#lizards]", Set("turtles")) === "I like [#lizards]"
-        commander.removeHashtagsFromString("[#turtles] I like [#reptiles] [#lizards]", Set("lizards")) === "[#turtles] I like [#reptiles]"
-        commander.removeHashtagsFromString("[#turtles] I like [#reptiles] [#lizards]", Set("turtles", "reptiles")) === "I like [#lizards]"
-        commander.removeHashtagsFromString("[#a] [#b] [#c]", Set("a", "b", "c")) === ""
-        commander.removeHashtagsFromString("[#a] [#a] [#a]", Set("a", "b", "c")) === ""
+        commander.removeHashtagNamesFromString("", Set("asdf")) === ""
+        commander.removeHashtagNamesFromString("asdf", Set()) === "asdf"
+        commander.removeHashtagNamesFromString("[#TLDR]", Set("TLDR")) === ""
+        commander.removeHashtagNamesFromString("I like [#turtles]", Set("turtles")) === "I like"
+        commander.removeHashtagNamesFromString("I like [#turtles]", Set("turtles", "lizards")) === "I like"
+        commander.removeHashtagNamesFromString("[#turtles] I like [#lizards]", Set("turtles", "lizards")) === "I like"
+        commander.removeHashtagNamesFromString("[#turtles] I like [#lizards]", Set("lizards")) === "[#turtles] I like"
+        commander.removeHashtagNamesFromString("[#turtles] I like [#lizards]", Set("turtles")) === "I like [#lizards]"
+        commander.removeHashtagNamesFromString("[#turtles] I like [#reptiles] [#lizards]", Set("lizards")) === "[#turtles] I like [#reptiles]"
+        commander.removeHashtagNamesFromString("[#turtles] I like [#reptiles] [#lizards]", Set("turtles", "reptiles")) === "I like [#lizards]"
+        commander.removeHashtagNamesFromString("[#a] [#b] [#c]", Set("a", "b", "c")) === ""
+        commander.removeHashtagNamesFromString("[#a] [#a] [#a]", Set("a", "b", "c")) === ""
       }
     }
 
