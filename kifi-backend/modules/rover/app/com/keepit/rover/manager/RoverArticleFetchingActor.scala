@@ -25,7 +25,7 @@ class RoverArticleFetchingActor @Inject() (
     airbrake: AirbrakeNotifier,
     articleFetcher: ArticleFetcherProvider,
     articleStore: RoverArticleStore,
-    implicit val executionContext: ExecutionContext) extends TaskProcessingActor[SQSMessage[FetchTask]](airbrake) {
+    implicit val executionContext: ExecutionContext) extends ConcurrentTaskProcessingActor[SQSMessage[FetchTask]](airbrake) {
 
   protected val minConcurrentTasks: Int = RoverArticleFetchingActor.minConcurrentTasks
   protected val maxConcurrentTasks: Int = RoverArticleFetchingActor.maxConcurrentTasks

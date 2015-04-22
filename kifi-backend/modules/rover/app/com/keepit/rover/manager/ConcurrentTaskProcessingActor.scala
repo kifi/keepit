@@ -7,16 +7,17 @@ import com.keepit.common.concurrent.ExecutionContext
 
 import scala.concurrent.{ Future }
 import scala.util.{ Failure, Success }
+import com.keepit.common.core._
 
-object TaskProcessingActor {
-  trait TaskProcessingMessage
-  case object Close extends TaskProcessingMessage
-  case object StartPullingTasks extends TaskProcessingMessage
+object ConcurrentTaskProcessingActor {
+  trait TaskProcessingActorMessage
+  case object Close extends TaskProcessingActorMessage
+  case object IfYouCouldJustGoAhead extends TaskProcessingActorMessage
 
   case class UnknownTaskStatusException[T](task: T) extends Exception(s"Unknown task status: $task")
 }
 
-abstract class TaskProcessingActor[T](airbrake: AirbrakeNotifier) extends FortyTwoActor(airbrake) with Logging {
+abstract class ConcurrentTaskProcessingActor[T](airbrake: AirbrakeNotifier) extends FortyTwoActor(airbrake) with Logging {
 
   protected val minConcurrentTasks: Int
   protected val maxConcurrentTasks: Int
@@ -24,11 +25,11 @@ abstract class TaskProcessingActor[T](airbrake: AirbrakeNotifier) extends FortyT
   protected def pullTasks(limit: Int): Future[Seq[T]]
   protected def processTasks(tasks: Seq[T]): Map[T, Future[Unit]]
 
-  import TaskProcessingActor._
+  import ConcurrentTaskProcessingActor._
 
-  private[this] case class Pulled(tasks: Seq[T], limit: Int) extends TaskProcessingMessage
-  private[this] case class Processed(task: T) extends TaskProcessingMessage
-  private[this] case class CancelPulling(limit: Int) extends TaskProcessingMessage
+  private[this] case class Pulled(tasks: Seq[T], limit: Int) extends TaskProcessingActorMessage
+  private[this] case class Processed(task: T) extends TaskProcessingActorMessage
+  private[this] case class CancelPulling(limit: Int) extends TaskProcessingActorMessage
 
   private[this] var closing = false
   private[this] var pulling = 0
@@ -37,9 +38,9 @@ abstract class TaskProcessingActor[T](airbrake: AirbrakeNotifier) extends FortyT
   private def concurrentFetchTasks = pulling + processing.size
 
   def receive = {
-    case taskProcessingMessage: TaskProcessingMessage => {
+    case taskProcessingMessage: TaskProcessingActorMessage => {
       taskProcessingMessage match {
-        case StartPullingTasks => startPulling()
+        case IfYouCouldJustGoAhead => startPulling()
         case CancelPulling(limit) => endPulling(limit)
         case Pulled(tasks, limit) => {
           endPulling(limit)
@@ -117,4 +118,19 @@ abstract class TaskProcessingActor[T](airbrake: AirbrakeNotifier) extends FortyT
     closing = true
     log.info(s"Closed $this.")
   }
+}
+
+abstract class BatchProcessingActor[T](airbrake: AirbrakeNotifier) extends ConcurrentTaskProcessingActor[Seq[T]](airbrake) {
+  final protected val minConcurrentTasks: Int = 1
+  final protected val maxConcurrentTasks: Int = 1
+
+  final protected def pullTasks(limit: Int): Future[Seq[Seq[T]]] = {
+    if (limit == 1) nextBatch.imap(Seq(_).filter(_.nonEmpty)) else Future.successful(Seq.empty)
+  }
+  final protected def processTasks(tasks: Seq[Seq[T]]): Map[Seq[T], Future[Unit]] = {
+    tasks.map { batch => batch -> processBatch(batch) }.toMap
+  }
+
+  protected def nextBatch: Future[Seq[T]]
+  protected def processBatch(batch: Seq[T]): Future[Unit]
 }
