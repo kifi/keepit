@@ -20,27 +20,15 @@ class FetchCommander @Inject() (
     private implicit val executionContext: ExecutionContext) extends Logging {
 
   def add(tasks: Seq[FetchTask], queue: FetchTaskQueue): Future[Map[FetchTask, Try[Unit]]] = {
-    val maybeQueuedTaskFutures: Seq[Future[(FetchTask, Try[Unit])]] = tasks.map { task =>
-      val futureMessage = queue.queue.send(task)
-      futureMessage.imap { _ => task -> Success(()) } recover {
-        case error: Throwable =>
-          log.error(s"Failed to add $task to queue $queue", error)
-          task -> Failure(error)
-      }
-    }
-    Future.sequence(maybeQueuedTaskFutures).map { maybeQueuedTasks =>
-      val queuedTasks = maybeQueuedTasks.collect { case (task, Success(())) => task }
-      val queuedTaskCount = queuedTasks.length
-      val failureCount = tasks.length - queuedTaskCount
-      if (failureCount > 0) { log.error(s"Failed to add $failureCount tasks to $queue") }
-      if (queuedTaskCount > 0) {
+    queue.add(tasks).map { maybeQueuedTasks =>
+      val queuedTasks = maybeQueuedTasks.collect { case (task, Success(())) => task } toSeq
+      if (queuedTasks.nonEmpty) {
         // queues should be configured to have a very short delivery delay to make sure tasks are marked before they are consumed
         db.readWrite { implicit session =>
           articleInfoRepo.markAsFetching(queuedTasks.map(_.id): _*)
         }
-        log.info(s"Added $queuedTaskCount tasks to $queue")
       }
-      maybeQueuedTasks.toMap
+      maybeQueuedTasks
     }
   }
 
