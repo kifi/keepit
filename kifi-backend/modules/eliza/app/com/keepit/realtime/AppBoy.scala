@@ -7,6 +7,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
+import com.keepit.common.net.NonOKResponseException
 import com.keepit.eliza.{ LibraryPushNotificationCategory, UserPushNotificationCategory }
 import com.keepit.eliza.commanders.MessagingAnalytics
 import com.keepit.model.{ Library, User }
@@ -57,14 +58,15 @@ class AppBoy @Inject() (
   }
 
   // When this is the only push provider, refactor this to just take userId and notification. No need to get list of devices.
-  def notifyUser(userId: Id[User], allDevices: Seq[Device], notification: PushNotification): Future[Int] = {
+  def notifyUser(userId: Id[User], allDevices: Seq[Device], notification: PushNotification, force: Boolean): Future[Int] = {
     log.info(s"[AppBoy] Notifying user: $userId with $allDevices")
-    val deviceTypes = allDevices.filter(_.state == DeviceStates.ACTIVE).groupBy(_.deviceType).keys.toList
+    val activeDevices = if (force) allDevices else allDevices.filter(_.state == DeviceStates.ACTIVE)
+    val deviceTypes = activeDevices.groupBy(_.deviceType).keys.toList
 
     shoeboxClient.getUser(userId).map { userOpt =>
       userOpt match {
         case Some(user) if deviceTypes.nonEmpty =>
-          sendNotification(user, deviceTypes, notification)
+          sendNotification(user, deviceTypes, notification, force, activeDevices)
           log.info(s"[AppBoy] sent user $userId push notifications to ${deviceTypes.length} device types out of ${allDevices.size}. $notification")
           deviceTypes.length
         case Some(user) =>
@@ -113,7 +115,7 @@ class AppBoy @Inject() (
     }
   }
 
-  private def sendNotification(user: User, deviceTypes: Seq[DeviceType], notification: PushNotification): Unit = {
+  private def sendNotification(user: User, deviceTypes: Seq[DeviceType], notification: PushNotification, wasForced: Boolean, devices: Seq[Device]): Unit = {
     val userId = user.id.get
 
     val json = Json.obj(
@@ -161,9 +163,25 @@ class AppBoy @Inject() (
           messagingAnalytics.sentPushNotification(userId, deviceType, notification)
         }
       case Success(non200) =>
-        airbrake.notify(s"[AppBoy] bad status ${non200.status} on push notification $notification for user $userId. response: ${non200.body}")
+        if (!wasForced) airbrake.notify(s"[AppBoy] bad status ${non200.status} on push notification $notification for user $userId. response: ${non200.body}")
       case Failure(e) =>
-        airbrake.notify(s"[AppBoy] fail to send push notification $notification, json $json for user $userId - error: ${e.getClass.getSimpleName} $e")
+        if (!wasForced) {
+          e match {
+            case statError: NonOKResponseException if statError.response.status / 100 == 4 =>
+              db.readWrite { implicit s =>
+                devices foreach { device =>
+                  deviceRepo.save(device.copy(state = DeviceStates.REJECTED_BY_APPBOY))
+                }
+              }
+              if (json == Json.parse("""{"message":"Missing recipients"}""")) {
+                log.error(s""""Missing recipients" Error from Appboy. disabling device for user $userId. fail to send push notification $notification, json $json - error: ${e.getClass.getSimpleName} $e"""")
+              } else {
+                airbrake.notify(s"[AppBoy] 4xx error from server, disabling device for user $userId. fail to send push notification $notification, json $json - error: ${e.getClass.getSimpleName} $e")
+              }
+            case _ =>
+              airbrake.notify(s"[AppBoy] fail to send push notification $notification, json $json for user $userId - error: ${e.getClass.getSimpleName} $e")
+          }
+        }
     }
   }
 

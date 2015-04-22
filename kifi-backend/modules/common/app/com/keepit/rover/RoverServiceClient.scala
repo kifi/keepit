@@ -8,13 +8,17 @@ import com.keepit.common.net.{ CallTimeouts, HttpClient }
 import com.keepit.common.routes.Rover
 import com.keepit.common.service.{ ServiceType, ServiceClient }
 import com.keepit.common.zookeeper.ServiceCluster
+import com.keepit.model.IndexableUri
 import com.keepit.rover.model.{ ShoeboxArticleUpdates, ArticleInfo }
+import play.api.libs.json.Json
 
 import scala.concurrent.{ ExecutionContext, Future }
+import scala.util.Failure
 
 trait RoverServiceClient extends ServiceClient {
   final val serviceType = ServiceType.ROVER
   def getShoeboxUpdates(seq: SequenceNumber[ArticleInfo], limit: Int): Future[Option[ShoeboxArticleUpdates]]
+  def fetchAsap(uri: IndexableUri): Future[Unit]
 }
 
 class RoverServiceClientImpl(
@@ -28,6 +32,11 @@ class RoverServiceClientImpl(
 
   def getShoeboxUpdates(seq: SequenceNumber[ArticleInfo], limit: Int): Future[Option[ShoeboxArticleUpdates]] = {
     call(Rover.internal.getShoeboxUpdates(seq, limit), callTimeouts = longTimeout).map { r => (r.json).asOpt[ShoeboxArticleUpdates] }
+  }
+
+  def fetchAsap(uri: IndexableUri): Future[Unit] = {
+    val payload = Json.toJson(uri)
+    call(Rover.internal.fetchAsap, payload).map { _ => () }
   }
 }
 

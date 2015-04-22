@@ -41,7 +41,7 @@ class AppBoyTest extends Specification with TestInjector with ElizaTestInjector 
         appBoyClient.jsons.size === 0
 
         val notification = SimplePushNotification(unvisitedCount = 3, message = Some("pika"), sound = Some(MobilePushNotifier.DefaultNotificationSound), category = null, experiment = null)
-        val notifPushF = appBoy.notifyUser(user1.id.get, Seq(deviceApple, deviceAndroid), notification)
+        val notifPushF = appBoy.notifyUser(user1.id.get, Seq(deviceApple, deviceAndroid), notification, false)
         Await.result(notifPushF, Duration(5, SECONDS))
         appBoyClient.jsons.size === 1
 
@@ -86,7 +86,7 @@ class AppBoyTest extends Specification with TestInjector with ElizaTestInjector 
         appBoyClient.jsons.size === 0
 
         val notification = MessageThreadPushNotification(id = ExternalId[MessageThread]("5fe6e19f-6092-49f1-b446-5d992fda0034"), unvisitedCount = 3, message = Some("pika"), sound = Some(MobilePushNotifier.DefaultNotificationSound))
-        val notifPushF = appBoy.notifyUser(user1.id.get, Seq(deviceApple, deviceAndroid), notification)
+        val notifPushF = appBoy.notifyUser(user1.id.get, Seq(deviceApple, deviceAndroid), notification, false)
         Await.result(notifPushF, Duration(5, SECONDS))
         appBoyClient.jsons.size === 1
 
@@ -133,7 +133,7 @@ class AppBoyTest extends Specification with TestInjector with ElizaTestInjector 
         val pubLibId1 = Library.publicId(lib1.id.get)(inject[PublicIdConfiguration])
 
         val notification = LibraryUpdatePushNotification(unvisitedCount = 3, message = Some("pika"), libraryId = lib1.id.get, libraryUrl = Library.formatLibraryPath(user1.username, lib1.slug), sound = Some(MobilePushNotifier.DefaultNotificationSound), category = null, experiment = null)
-        val notifPushF = appBoy.notifyUser(user1.id.get, Seq(deviceApple, deviceAndroid), notification)
+        val notifPushF = appBoy.notifyUser(user1.id.get, Seq(deviceApple, deviceAndroid), notification, false)
         Await.result(notifPushF, Duration(5, SECONDS))
         appBoyClient.jsons.size === 1
 
@@ -180,7 +180,7 @@ class AppBoyTest extends Specification with TestInjector with ElizaTestInjector 
         appBoyClient.jsons.size === 0
 
         val notification = UserPushNotification(unvisitedCount = 3, message = Some("pika"), username = Username("joe"), userExtId = user1.externalId, pictureUrl = "http://www.asdf.com/asdfasdf", sound = None, category = null, experiment = null)
-        val notifPushF = appBoy.notifyUser(user1.id.get, Seq(deviceApple, deviceAndroid), notification)
+        val notifPushF = appBoy.notifyUser(user1.id.get, Seq(deviceApple, deviceAndroid), notification, false)
         Await.result(notifPushF, Duration(5, SECONDS))
         appBoyClient.jsons.size === 1
 

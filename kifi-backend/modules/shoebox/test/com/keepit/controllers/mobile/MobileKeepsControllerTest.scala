@@ -842,6 +842,8 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
           targetKeep.title === Some("default")
           targetKeep.note === None
 
+          keepToCollectionRepo.count === 0
+
           (user, keep, keepInactive)
         }
 
@@ -879,6 +881,21 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
           currentKeep.note === Some("a real note")
         }
 
+        val testEditNothing = editKeepInfo(user, keep, Json.obj())
+        status(testEditNothing) must equalTo(NO_CONTENT)
+        db.readOnlyMaster { implicit s =>
+          val currentKeep = keepRepo.get(keep.externalId)
+          currentKeep.title === Some("a real keep")
+          currentKeep.note === Some("a real note")
+          keepToCollectionRepo.count === 0
+        }
+
+        val testEditTags = editKeepInfo(user, keep, Json.obj("tags" -> Seq("a", "b", "c")))
+        status(testEditTags) must equalTo(NO_CONTENT)
+        db.readOnlyMaster { implicit s =>
+          keepToCollectionRepo.count === 3
+          collectionRepo.count(user.id.get) === 3
+        }
       }
     }
 

@@ -1,6 +1,5 @@
 package com.keepit.commanders
 
-import com.keepit.common.amazon.AmazonInstanceInfo
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.net.URI
 import com.keepit.test.ShoeboxTestInjector
@@ -10,15 +9,11 @@ import com.google.inject.Injector
 import com.keepit.common.store._
 import com.keepit.scraper.embedly._
 import net.codingwell.scalaguice.ScalaModule
-import com.keepit.common.db.{ ExternalId, Id }
-import scala.concurrent.ExecutionContext.Implicits.global
+import com.keepit.common.db.Id
 import java.awt.image.BufferedImage
 import com.keepit.common.images.ImageFetcher
 import org.specs2.mutable.Specification
 import org.specs2.matcher.MatchResult
-import scala.Some
-import scala.concurrent.duration.Duration
-import scala.util.{ Success, Try }
 import akka.actor.Scheduler
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.scraper._
@@ -47,13 +42,6 @@ object URISummaryCommanderTestDummyValues {
 
 class URISummaryCommanderTestImageFetcher extends ImageFetcher {
   override def fetchRawImage(url: URI): Future[Option[BufferedImage]] = Future.successful(Some(URISummaryCommanderTestDummyValues.dummyBufferedImage))
-}
-
-case class URISummaryCommanderTestS3URIImageStore() extends S3URIImageStore {
-  def storeImage(info: ImageInfo, rawImage: BufferedImage, extNormUriId: ExternalId[NormalizedURI]): Try[(String, Int)] = Success((FakeS3URIImageStore.placeholderImageURL, FakeS3URIImageStore.placeholderSize))
-  def getImageURL(imageInfo: ImageInfo, extNormUriId: ExternalId[NormalizedURI]): Option[String] = imageInfo.url // returns the original ImageInfo url (important!)
-  def getImageKey(imageInfo: ImageInfo, extNormUriId: ExternalId[NormalizedURI], forceAllProviders: Boolean = false): String = ""
-  def getEmbedlyImageKey(extNormUriId: ExternalId[NormalizedURI], name: String, suffix: String): String = ""
 }
 
 case class MockScraperServiceClient(override val airbrakeNotifier: AirbrakeNotifier, scheduler: Scheduler) extends FakeScraperServiceClientImpl(airbrakeNotifier, scheduler) {
@@ -91,7 +79,7 @@ class URISummaryCommanderTest extends Specification with ShoeboxTestInjector {
         uriId = nUri2.id.get,
         url = Some("http://www.google.com/test2.jpg"),
         width = Some(1500),
-        height = Some(3500),
+        height = Some(2500),
         size = Some(4242),
         provider = Some(ImageProvider.EMBEDLY),
         format = Some(ImageFormat.JPG),
@@ -102,7 +90,7 @@ class URISummaryCommanderTest extends Specification with ShoeboxTestInjector {
         uriId = nUri1.id.get,
         url = Some("http://www.google.com/test3.jpg"),
         width = Some(1000),
-        height = Some(3000),
+        height = Some(2000),
         size = Some(4242),
         provider = Some(ImageProvider.PAGEPEEKER),
         format = Some(ImageFormat.JPG),
@@ -113,7 +101,7 @@ class URISummaryCommanderTest extends Specification with ShoeboxTestInjector {
         uriId = nUri1.id.get,
         url = Some("http://www.google.com/test4.jpg"),
         width = Some(1000),
-        height = Some(3000),
+        height = Some(2000),
         size = Some(4242),
         provider = Some(ImageProvider.EMBEDLY),
         format = Some(ImageFormat.JPG),
@@ -124,7 +112,7 @@ class URISummaryCommanderTest extends Specification with ShoeboxTestInjector {
         uriId = nUri1.id.get,
         url = Some("http://www.google.com/test5.jpg"),
         width = Some(2000),
-        height = Some(6000),
+        height = Some(2500),
         size = Some(4242),
         provider = Some(ImageProvider.EMBEDLY),
         format = Some(ImageFormat.JPG),
@@ -140,7 +128,6 @@ class URISummaryCommanderTest extends Specification with ShoeboxTestInjector {
   case class URISummaryCommanderTestModule() extends ScalaModule {
     def configure() {
       bind[ImageFetcher].to[URISummaryCommanderTestImageFetcher]
-      bind[S3URIImageStore].to[URISummaryCommanderTestS3URIImageStore]
     }
 
     @Singleton

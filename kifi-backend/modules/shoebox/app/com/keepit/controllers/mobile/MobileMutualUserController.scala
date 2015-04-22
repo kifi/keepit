@@ -44,6 +44,7 @@ class MobileMutualUserController @Inject() (
         case Some(user) =>
           val offset = page * size
           val countMutualLibraries = libraryRepo.countMutualLibrariesForUsers(request.userId, Set(user.id.get)).get(user.id.get).getOrElse(0)
+
           val mutualLibraries = libraryRepo.getMutualLibrariesForUser(request.userId, user.id.get, offset, size)
           val libOwners = basicUserRepo.loadAll(mutualLibraries.map(_.ownerId).toSet)
           val libsJson = mutualLibraries.map { lib =>

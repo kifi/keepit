@@ -3,8 +3,10 @@ package com.keepit.curator.commanders
 import com.google.inject.{ Singleton, Inject }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.curator.RecommendationUserAction
-import com.keepit.curator.model.{ LibraryRecommendationRepo, LibraryRecommendation, RecommendationSubSource, RecommendationSource, UriRecommendationRepo, UriRecommendation }
+import com.keepit.curator.feedback.UserRecoFeedbackTrackingCommander
+import com.keepit.curator.model._
 import com.keepit.heimdal.{ ContextList, SimpleContextData, HeimdalContext, ContextData, UserEventTypes, HeimdalContextBuilderFactory, UserEvent, HeimdalServiceClient }
 import com.keepit.model.{ LibraryRecommendationFeedback, Library, NormalizedURI, User, UriRecommendationFeedback, ExperimentType }
 import com.keepit.common.logging.Logging
@@ -18,8 +20,11 @@ import scala.concurrent.Future
 @Singleton
 class CuratorAnalytics @Inject() (
     db: Database,
+    airbrake: AirbrakeNotifier,
     uriRecoRepo: UriRecommendationRepo,
     libraryRecoRepo: LibraryRecommendationRepo,
+    uriRecoFeedbackRepo: UriRecoFeedbackRepo,
+    fbTrackingCmdr: UserRecoFeedbackTrackingCommander,
     heimdalContextBuilder: HeimdalContextBuilderFactory,
     heimdal: HeimdalServiceClient,
     userExperimentCommander: RemoteUserExperimentCommander) extends Logging {
@@ -34,8 +39,31 @@ class CuratorAnalytics @Inject() (
     }
   }
 
+  private def addFeedbackToLearningLoop(userId: Id[User], uriId: Id[NormalizedURI], feedback: UriRecommendationFeedback): Unit = {
+    val recoItemOpt = db.readOnlyReplica { implicit s => uriRecoRepo.getByUriAndUserId(uriId, userId, None) }
+
+    if (recoItemOpt.exists(r => r.delivered > 0)) {
+      val dumpRecordOpt = UriRecoFeedback.fromUserFeedback(userId, uriId, feedback)
+      dumpRecordOpt.foreach { r => db.readWrite { implicit s => uriRecoFeedbackRepo.save(r) } }
+
+      recoItemOpt.foreach { item =>
+        dumpRecordOpt.map { _.feedback }.foreach { fbValue =>
+          fbTrackingCmdr.trackFeedback(item, fbValue)
+        }
+      }
+    } else {
+      // purely a user keep action. not from recommendation
+    }
+  }
+
   def trackUserFeedback(userId: Id[User], uriId: Id[NormalizedURI], feedback: UriRecommendationFeedback): Unit = {
     log.info(s"[analytics] Received user $userId reco feedback on $uriId to track: $feedback")
+    try {
+      addFeedbackToLearningLoop(userId, uriId, feedback)
+    } catch {
+      case e: Exception => airbrake.notify("error during feedback loop learning.", e)
+    }
+
     val contexts = toRecoUserActionContexts(userId, uriId, feedback)
     contexts.foreach { context =>
       new SafeFuture(toHeimdalEvent(context).map { event =>

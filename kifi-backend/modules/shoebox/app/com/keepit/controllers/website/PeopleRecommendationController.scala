@@ -33,7 +33,7 @@ class PeopleRecommendationController @Inject() (
         val recommendedUsers = sortUserByLibraryCount(recoData.recommendedUsers)
         val basicUsers = recoData.basicUsers
         val mutualFriends = recoData.mutualFriends
-        val mutualFriendConnectionCounts = recoData.mutualFriendConnectionCounts
+        val mutualFriendConnectionCounts = recoData.userConnectionCounts
 
         val recommendedUsersArray = JsArray(recommendedUsers.map { recommendedUserId =>
           val mutualFriendsArray = JsArray(mutualFriends(recommendedUserId).toSeq.map { mutualFriendId =>

@@ -47,7 +47,8 @@ class ElizaController @Inject() (
     val pushNotificationExperiment = (req \ "pushNotificationExperiment").as[PushNotificationExperiment]
     val libraryId = (req \ "libraryId").as[Id[Library]]
     val libraryUrl = (req \ "libraryUrl").as[String]
-    messagingCommander.sendLibraryPushNotification(userId, message, libraryId, libraryUrl, pushNotificationExperiment, category).map { deviceCount =>
+    val force = (req \ "force").asOpt[Boolean] //backward compatibility. remove option when done deploing shoebox
+    messagingCommander.sendLibraryPushNotification(userId, message, libraryId, libraryUrl, pushNotificationExperiment, category, force.getOrElse(false)).map { deviceCount =>
       Ok(JsNumber(deviceCount))
     }
   }
@@ -72,7 +73,8 @@ class ElizaController @Inject() (
     val message = (req \ "message").as[String]
     val category = SimplePushNotificationCategory((req \ "category").as[String])
     val pushNotificationExperiment = (req \ "pushNotificationExperiment").as[PushNotificationExperiment]
-    messagingCommander.sendGeneralPushNotification(userId, message, pushNotificationExperiment, category).map { deviceCount =>
+    val force = (req \ "force").asOpt[Boolean] //backward compatibility. remove option when done deploing shoebox
+    messagingCommander.sendGeneralPushNotification(userId, message, pushNotificationExperiment, category, force.getOrElse(false)).map { deviceCount =>
       Ok(JsNumber(deviceCount))
     }
   }

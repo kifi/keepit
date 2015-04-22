@@ -23,7 +23,9 @@ case class Device(
   override def toString(): String = s"Device[id:$id,user:$userId,type:$deviceType,dev:$isDev]"
 }
 
-object DeviceStates extends States[Device]
+object DeviceStates extends States[Device] {
+  val REJECTED_BY_APPBOY = State[Device]("REJECTED_BY_APPBOY") //returned a 400
+}
 
 sealed abstract class DeviceType(val name: String) {
   override def toString: String = name

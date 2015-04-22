@@ -1,7 +1,6 @@
 package com.keepit.common.store
 
 import com.google.inject.{ Singleton, Provides }
-import com.keepit.shoebox.FakeKeepImportsModule
 import com.keepit.typeahead.{ InMemoryKifiUserTypeaheadStoreImpl, KifiUserTypeaheadStore, InMemorySocialUserTypeaheadStoreImpl, SocialUserTypeaheadStore }
 import com.keepit.scraper.embedly.EmbedlyStore
 import com.keepit.scraper.embedly.InMemoryEmbedlyStoreImpl
@@ -16,9 +15,6 @@ case class FakeShoeboxStoreModule() extends FakeStoreModule {
 
   @Provides @Singleton
   def libraryImageStore(s3ImageConfig: S3ImageConfig): LibraryImageStore = new FakeLibraryImageStore(s3ImageConfig)
-
-  @Provides @Singleton
-  def uriImageStore: S3URIImageStore = FakeS3URIImageStore()
 
   @Provides @Singleton
   def kifiInstallationStore(): KifiInstallationStore = {

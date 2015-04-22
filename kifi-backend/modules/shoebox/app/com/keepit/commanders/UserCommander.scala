@@ -95,6 +95,7 @@ class UserCommander @Inject() (
     userConnectionRepo: UserConnectionRepo,
     basicUserRepo: BasicUserRepo,
     keepRepo: KeepRepo,
+    libraryRepo: LibraryRepo,
     socialUserInfoRepo: SocialUserInfoRepo,
     collectionCommander: CollectionCommander,
     abookServiceClient: ABookServiceClient,
@@ -355,7 +356,7 @@ class UserCommander @Inject() (
               category = NotificationCategory.User.CONTACT_JOINED
             ) map { _ =>
                 toNotify.foreach { userId =>
-                  val canSendPush = kifiInstallationCommander.isMobileVersionGreaterThen(userId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
+                  val canSendPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(userId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
                   if (canSendPush) {
                     elizaServiceClient.sendUserPushNotification(
                       userId = userId,
@@ -737,10 +738,14 @@ class UserCommander @Inject() (
             recommendedUserId -> (friends.getOrElse(userId, Set.empty) intersect friends.getOrElse(recommendedUserId, Set.empty)).toSeq.sortBy(-friendshipStrength(_))
           }.toMap
 
-          val uniqueMutualFriends = mutualFriends.values.flatten.toSet
-          val (basicUsers, mutualFriendConnectionCounts) = loadBasicUsersAndConnectionCounts(uniqueMutualFriends ++ recommendedUsers, uniqueMutualFriends)
+          val mutualLibrariesCounts = db.readOnlyMaster { implicit session =>
+            libraryRepo.countMutualLibrariesForUsers(userId, recommendedUsers.toSet)
+          }
 
-          Some(FriendRecommendations(basicUsers, mutualFriendConnectionCounts, recommendedUsers, mutualFriends))
+          val uniqueMutualFriends = mutualFriends.values.flatten.toSet
+          val (basicUsers, userConnectionCounts) = loadBasicUsersAndConnectionCounts(uniqueMutualFriends ++ recommendedUsers, uniqueMutualFriends ++ recommendedUsers)
+
+          Some(FriendRecommendations(basicUsers, userConnectionCounts, recommendedUsers, mutualFriends, mutualLibrariesCounts))
         }
     }
   }

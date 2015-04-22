@@ -19,6 +19,7 @@ import scala.util.Try
 trait ActivityPushTaskRepo extends Repo[ActivityPushTask] {
   def getByUser(userId: Id[User])(implicit session: RSession): Option[ActivityPushTask]
   def getBatchToPush(limit: Int)(implicit session: RSession): Seq[Id[ActivityPushTask]]
+  def getBatchNoDevicesToPush(limit: Int)(implicit session: RSession): Seq[Id[ActivityPushTask]]
   def getMobileUsersWithoutActivityPushTask(limit: Int)(implicit session: RSession): Seq[Id[User]]
 }
 
@@ -59,7 +60,13 @@ class ActivityPushTaskRepoImpl @Inject() (
   def getBatchToPush(limit: Int)(implicit session: RSession): Seq[Id[ActivityPushTask]] = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     val now = clock.now
-    sql"select id from activity_push_task where state = 'active' and next_push < $now limit $limit".as[Id[ActivityPushTask]].list
+    sql"select id from activity_push_task where state = 'active' and (next_push < $now or next_push is null) limit $limit".as[Id[ActivityPushTask]].list
+  }
+
+  def getBatchNoDevicesToPush(limit: Int)(implicit session: RSession): Seq[Id[ActivityPushTask]] = {
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
+    val now = clock.now
+    sql"select id from activity_push_task where state = 'no_devices' and (next_push < $now or next_push is null) limit $limit".as[Id[ActivityPushTask]].list
   }
 
   def getMobileUsersWithoutActivityPushTask(limit: Int)(implicit session: RSession): Seq[Id[User]] = {

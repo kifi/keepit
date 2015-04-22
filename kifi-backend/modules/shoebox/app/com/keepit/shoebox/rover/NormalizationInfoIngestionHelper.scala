@@ -1,6 +1,7 @@
 package com.keepit.shoebox.rover
 
 import com.google.inject.{ Inject, Singleton }
+import com.keepit.common.CollectionHelpers
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
@@ -9,8 +10,8 @@ import com.keepit.model.{ Normalization, NormalizedURI, NormalizedURIRepo }
 import com.keepit.normalizer._
 import com.keepit.rover.article.{ GithubArticle, ArticleKind }
 import com.keepit.rover.article.content.NormalizationInfo
-import org.apache.commons.lang3.StringEscapeUtils._
 import com.keepit.common.core._
+import com.keepit.normalizer.NormalizationCandidateSanitizer
 
 import scala.concurrent.{ Future, ExecutionContext }
 
@@ -32,19 +33,20 @@ class NormalizationInfoIngestionHelper @Inject() (
   } tap { _.imap { hasBeenRenormalized => if (hasBeenRenormalized) log.info(s"Uri $uriId has been renormalized after processing $info found at $destinationUrl") } }
 
   private def getUriNormalizationsCandidates(articleKind: ArticleKind[_], destinationUrl: String, info: NormalizationInfo): Seq[ScrapedCandidate] = {
-    articleKind match {
+    val scrapedCandidates = articleKind match {
       case GithubArticle => Seq.empty[ScrapedCandidate] // we don't trust Github's canonical urls
       case _ => Map(
         Normalization.CANONICAL -> info.canonicalUrl,
         Normalization.OPENGRAPH -> info.openGraphUrl
-      ).mapValues(_.flatMap(validateCandidateUrl(destinationUrl, _))).collect {
+      ).mapValues(_.flatMap(NormalizationCandidateSanitizer.validateCandidateUrl(destinationUrl, _))).collect {
           case (normalization, Some(candidateUrl)) => ScrapedCandidate(candidateUrl, normalization)
         }.toSeq
     }
+    CollectionHelpers.dedupBy(scrapedCandidates.sortBy(_.normalization).reverse)(_.url)
   }
 
   private def processAlternateUrls(bestReferenceUriId: Id[NormalizedURI], destinationUrl: String, info: NormalizationInfo): Unit = {
-    val alternateUrls = (info.alternateUrls ++ info.shortUrl).flatMap(URI.sanitize(destinationUrl, _).map(_.toString()))
+    val alternateUrls = (info.alternateUrls ++ info.shortUrl).flatMap(NormalizationCandidateSanitizer.validateCandidateUrl(destinationUrl, _).map(_.toString()))
     if (alternateUrls.nonEmpty) {
       val bestReference = db.readOnlyMaster { implicit session =>
         uriRepo.get(bestReferenceUriId)
@@ -66,21 +68,6 @@ class NormalizationInfoIngestionHelper @Inject() (
           }
         }
       }
-    }
-  }
-
-  private def validateCandidateUrl(destinationUrl: String, candidateUrl: String): Option[String] = {
-    URI.sanitize(destinationUrl, candidateUrl).flatMap { parsed =>
-      val sanitizedCandidateUrl = parsed.toString()
-
-      // Question marks are allowed in query parameter names and values, but their presence
-      // in a canonical URL usually indicates a bad url.
-      lazy val hasQuestionMark = (parsed.query.exists(_.params.exists(p => p.name.contains('?') || p.value.exists(_.contains('?')))))
-
-      // A common site error is copying the page URL directly into a canoncial URL tag, escaped an extra time.
-      lazy val isEscaped = (sanitizedCandidateUrl.length > destinationUrl.length && unescapeHtml4(sanitizedCandidateUrl) == destinationUrl)
-
-      if (hasQuestionMark || isEscaped) None else Some(sanitizedCandidateUrl)
     }
   }
 }
