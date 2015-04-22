@@ -360,8 +360,8 @@ class TwitterSocialGraphImpl @Inject() (
       val call = WS.url(endpoint)
         .sign(OAuthCalculator(providerConfig.key, accessToken))
         .withQueryString(
-          "user_id" -> userId.toString,
-          "cursor" -> cursor.toString,
+          "user_id" -> userId.id.toString,
+          "cursor" -> cursor.id.toString,
           "count" -> count.toString)
         .get()
       call flatMap { resp =>
