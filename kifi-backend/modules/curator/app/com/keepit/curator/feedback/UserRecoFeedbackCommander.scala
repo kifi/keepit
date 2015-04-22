@@ -45,6 +45,10 @@ object FeedbackBucketMapper {
     socialBucket * topicBucketSize + topicBucket
   }
 
+  def toComponentIds(bucketId: Int): (Int, Int) = {
+    (bucketId / topicBucketSize, bucketId % topicBucketSize)
+  }
+
   def getBucketId(socialScore: Float, topicId: Int): Option[Int] = {
     if (topicId < 0 || topicId >= topicBucketSize) None
     else {
@@ -61,7 +65,7 @@ class UserRecoFeedbackInferenceCommander @Inject() (
     db: Database,
     feedbackRepo: UserRecoFeedbackCounterRepo) extends Logging {
 
-  private def getInferencer(userId: Id[User]): Option[UserRecoFeedbackInferencer] = {
+  def getInferencer(userId: Id[User]): Option[UserRecoFeedbackInferencer] = {
     db.readOnlyReplica { implicit s => feedbackRepo.getByUser(userId) }.map { counter => new UserRecoFeedbackInferencer(counter) }
   }
 
