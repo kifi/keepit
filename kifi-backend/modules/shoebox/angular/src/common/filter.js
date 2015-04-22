@@ -25,6 +25,12 @@ angular.module('kifi')
   }
 ])
 
+.filter('tagUrl', function () {
+  return function (tag) {
+    return '/find?q=tag:' + encodeURIComponent(tag.indexOf(' ') >= 0 ? '"' + tag + '"' : tag);
+  };
+})
+
 .filter('profileUrl', function () {
   return function (user, sub) {
     if (user) {

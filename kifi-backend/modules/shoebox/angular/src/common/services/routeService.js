@@ -55,8 +55,9 @@ angular.module('kifi')
       ////////////////////////////
       tagOrdering: route('/collections/ordering'),
       reorderTag: route('/collections/reorderTag'),
-      pageTags: route('/collections/page'),
-
+      pageTags: function (sort, offset, pageSize) {
+        return route('/collections/page', {sort: sort, offset: offset, pageSize: pageSize});
+      },
       searchTags: function (query, limit) {
         return route('/collections/search', {query: query, limit: limit});
       },
