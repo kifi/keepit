@@ -128,6 +128,11 @@ class AdminUserController @Inject() (
     Ok("done")
   }
 
+  def pushPersonaActivity = AdminUserPage { implicit request =>
+    activityPusher.forcePersonaActivityForUser(request.userId)
+    Ok("done")
+  }
+
   def merge = AdminUserPage { implicit request =>
     // This doesn't do a complete merge. It's designed for cases where someone accidentally creates a new user when
     // logging in and wants to associate the newly-created user's social users with an existing user
