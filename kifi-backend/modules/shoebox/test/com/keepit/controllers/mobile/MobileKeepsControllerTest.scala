@@ -895,7 +895,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
         db.readOnlyMaster { implicit s =>
           val currentKeep = keepRepo.get(keep.externalId)
           currentKeep.title === Some("a real keep")
-          currentKeep.note === Some("a real note #a #b #c")
+          currentKeep.note === Some("a real note [#a] [#b] [#c]")
           keepToCollectionRepo.count === 3
           collectionRepo.count(user.id.get) === 3
         }
@@ -905,7 +905,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
         db.readOnlyMaster { implicit s =>
           val currentKeep = keepRepo.get(keep.externalId)
           currentKeep.title === Some("a real keep")
-          currentKeep.note === Some("a real note #a #b #d #e")
+          currentKeep.note === Some("a real note [#a] [#b] [#d] [#e]")
           keepToCollectionRepo.count === 5
           collectionRepo.count(user.id.get) === 5
         }
