@@ -31,7 +31,7 @@ class MobileMutualUserController @Inject() (
             case (userId, basicUser) =>
               Json.toJson(basicUser)
           }
-          Ok(Json.obj("mutualConnections" -> JsArray(friendsJson)))
+          Ok(Json.obj("mutualConnections" -> JsArray(friendsJson), "totalMutualConnections" -> mutualConnections.size))
       }
     }
   }
@@ -43,13 +43,15 @@ class MobileMutualUserController @Inject() (
           BadRequest(Json.obj("error" -> "user_not_recognized"))
         case Some(user) =>
           val offset = page * size
+          val countMutualLibraries = libraryRepo.countMutualLibrariesForUsers(request.userId, Set(user.id.get)).get(user.id.get).getOrElse(0)
+
           val mutualLibraries = libraryRepo.getMutualLibrariesForUser(request.userId, user.id.get, offset, size)
           val libOwners = basicUserRepo.loadAll(mutualLibraries.map(_.ownerId).toSet)
           val libsJson = mutualLibraries.map { lib =>
             val owner = libOwners(lib.ownerId)
             Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, None, owner)(config))
           }
-          Ok(Json.obj("mutualLibraries" -> JsArray(libsJson)))
+          Ok(Json.obj("mutualLibraries" -> JsArray(libsJson), "totalMutualLibraries" -> countMutualLibraries))
       }
     }
   }
