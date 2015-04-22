@@ -65,4 +65,5 @@ class FakeCuratorServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   val updatedLibraryRecommendationFeedback = ListBuffer[(Id[User], Id[Library], LibraryRecommendationFeedback)]()
   val topLibraryRecosExpectations = collection.mutable.Map[Id[User], Seq[LibraryRecoInfo]]().withDefaultValue(Seq.empty)
 
+  def examineUserFeedbackCounter(userId: Id[User]): Future[(UserFeedbackCounts, UserFeedbackCounts)] = ???
 }
