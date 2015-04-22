@@ -4,9 +4,7 @@ import javax.inject.{ Inject, Singleton }
 
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.plugin.{ SchedulerPlugin, SchedulingProperties }
-import com.keepit.rover.manager.RoverArticleFetchingActor.{ Close, StartPullingTasks }
-import com.keepit.rover.manager.RoverFetchSchedulingActor.ScheduleFetchTasks
-import com.keepit.rover.manager.RoverIngestionActor.StartIngestion
+import com.keepit.rover.manager.ConcurrentTaskProcessingActor.{ Close, IfYouCouldJustGoAhead }
 
 import scala.concurrent.duration._
 import scala.util.Random
@@ -25,15 +23,15 @@ class RoverManagerPluginImpl @Inject() (
   val name: String = getClass.toString
 
   override def onStart(): Unit = {
-    scheduleTaskOnOneMachine(ingestionActor.system, 187 seconds, 1 minute, ingestionActor.ref, StartIngestion, "NormalizedURI Ingestion")
-    scheduleTaskOnOneMachine(fetchSchedulingActor.system, 200 seconds, 1 minute, fetchSchedulingActor.ref, ScheduleFetchTasks, "Fetch Scheduling")
-    scheduleTaskOnAllMachines(fetchingActor.system, (30 + Random.nextInt(60)) seconds, 1 minute, fetchingActor.ref, StartPullingTasks)
+    scheduleTaskOnOneMachine(ingestionActor.system, 187 seconds, 1 minute, ingestionActor.ref, IfYouCouldJustGoAhead, "NormalizedURI Ingestion")
+    scheduleTaskOnOneMachine(fetchSchedulingActor.system, 200 seconds, 1 minute, fetchSchedulingActor.ref, IfYouCouldJustGoAhead, "Fetch Scheduling")
+    scheduleTaskOnAllMachines(fetchingActor.system, (30 + Random.nextInt(60)) seconds, 1 minute, fetchingActor.ref, IfYouCouldJustGoAhead)
 
     super.onStart()
   }
 
   override def onStop(): Unit = {
-    fetchingActor.ref ! Close
+    Seq(ingestionActor, fetchingActor, fetchSchedulingActor).foreach(_.ref ! Close)
     super.onStop()
   }
 }
