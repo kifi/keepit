@@ -3,8 +3,8 @@ package com.keepit.rover.manager
 import com.keepit.common.logging.Logging
 import com.kifi.franz.SQSQueue
 
-import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Success, Try}
+import scala.concurrent.{ ExecutionContext, Future }
+import scala.util.{ Failure, Success, Try }
 import com.keepit.common.core._
 
 trait TaskQueue[T] { self: Logging =>

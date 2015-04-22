@@ -4,7 +4,7 @@ import javax.inject.{ Inject, Singleton }
 
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.plugin.{ SchedulerPlugin, SchedulingProperties }
-import com.keepit.rover.manager.RoverArticleFetchingActor.{ Close, StartPullingTasks }
+import com.keepit.rover.manager.TaskProcessingActor.{ Close, StartPullingTasks }
 import com.keepit.rover.manager.RoverFetchSchedulingActor.ScheduleFetchTasks
 import com.keepit.rover.manager.RoverIngestionActor.StartIngestion
 

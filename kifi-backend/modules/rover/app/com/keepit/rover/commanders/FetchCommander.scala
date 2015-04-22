@@ -21,7 +21,7 @@ class FetchCommander @Inject() (
 
   def add(tasks: Seq[FetchTask], queue: FetchTaskQueue): Future[Map[FetchTask, Try[Unit]]] = {
     queue.add(tasks).map { maybeQueuedTasks =>
-      val queuedTasks = maybeQueuedTasks.collect { case (task, Success(())) => task } toSeq
+      val queuedTasks = maybeQueuedTasks.collect { case (task, Success(())) => task }.toSeq
       if (queuedTasks.nonEmpty) {
         // queues should be configured to have a very short delivery delay to make sure tasks are marked before they are consumed
         db.readWrite { implicit session =>
