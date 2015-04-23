@@ -202,10 +202,10 @@ class UriRecommendationRepoImpl @Inject() (
   def insertOrUpdate(reco: UriRecommendation)(implicit session: RWSession): Unit = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
 
-    val lastPush = reco.lastPushedAt.map(t => s"'${SQL_DATETIME_FORMAT.print(t)}'").getOrElse("null")
-    def topic(maybeTopic: Option[LDATopic]) = maybeTopic.map(t => s"'${t.index}'").getOrElse("null")
+    val lastPush: String = reco.lastPushedAt.map(t => s"'${SQL_DATETIME_FORMAT.print(t)}'").getOrElse("null")
+    def topic(maybeTopic: Option[LDATopic]): String = maybeTopic.map(t => s"'${t.index}'").getOrElse("null")
 
-    val query = sqlu"""
+    val query = sql"""
           INSERT into uri_recommendation
             (created_at,updated_at,state,vote,uri_id,user_id,master_score,all_scores,
              delivered,clicked,kept,trashed,last_pushed_at,attribution,topic1,topic2)
@@ -215,10 +215,10 @@ class UriRecommendationRepoImpl @Inject() (
               ${reco.delivered},${reco.clicked},${reco.kept},${reco.trashed},$lastPush,'${stringify(toJson(reco.attribution))}',${topic(reco.topic1)},${topic(reco.topic2)}'
             )
           ON DUPLICATE KEY UPDATE
-             created_at='${reco.createdAt}',updated_at='${reco.updatedAt}',state='${reco.state.value}',vote=${reco.vote},uri_id=${reco.uriId},user_id=${reco.userId.id},master_score=${reco.masterScore},all_scores='${stringify(toJson(reco.allScores))}',
-             delivered=${reco.delivered},clicked=${reco.clicked},kept=${reco.kept},trashed=${reco.trashed},last_pushed_at=$lastPush,attribution='${stringify(toJson(reco.attribution))}',topic1=${topic(reco.topic1)},topic2=${topic(reco.topic2)}
+             updated_at='${reco.updatedAt}',state='${reco.state.value}',master_score=${reco.masterScore},all_scores='${stringify(toJson(reco.allScores))}',
+             attribution='${stringify(toJson(reco.attribution))}',topic1=${topic(reco.topic1)},topic2=${topic(reco.topic2)}
         """
-    query.first
+    query.as[Int].first
   }
 
 }
