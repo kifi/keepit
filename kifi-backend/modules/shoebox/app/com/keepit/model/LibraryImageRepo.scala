@@ -23,9 +23,6 @@ class LibraryImageRepoImpl @Inject() (
 
   import db.Driver.simple._
 
-  implicit val LibraryImageSourceMapper = MappedColumnType.base[ImageSource, String](_.name, ImageSource.apply)
-  implicit val imageHashMapper = MappedColumnType.base[ImageHash, String](_.hash, ImageHash.apply)
-
   type RepoImpl = LibraryImageTable
   class LibraryImageTable(tag: Tag) extends RepoTable[LibraryImage](db, tag, "library_image") {
 

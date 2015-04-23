@@ -1,0 +1,36 @@
+@()(implicit request: com.keepit.common.controller.UserRequest[_])
+
+@admin.admin("Feedback") {
+  <h2>View User Feedback</h2>
+
+  <form id = "view_fb">
+    <input id = "view_fb_userId" type = "text" value = "userId">
+    <button type = "submit">submit</button>
+  </form>
+
+  <p id = "view_fb_result"></p>
+
+  <script type="text/javascript">
+
+  $(document).ready(function(){
+
+    $('#view_fb').submit(function(event){
+        event.preventDefault();
+
+        $.post('@com.keepit.controllers.admin.routes.AdminCuratorController.examineUserFeedbackCounter',
+          {userId: $('#view_fb_userId').val()}
+        ).done(done).fail(fail);
+
+        function done(data){ $("#view_fb_result").empty().prepend(data) }
+        function fail() { alert("bad things happened") }
+
+      })
+
+
+
+  });
+
+
+  </script>
+
+}

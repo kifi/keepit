@@ -26,6 +26,7 @@ trait CuratorServiceClient extends ServiceClient {
   def refreshLibraryRecos(userId: Id[User], await: Boolean = false, selectionParams: Option[LibraryRecoSelectionParams] = None): Future[Unit]
   def notifyLibraryRecosDelivered(userId: Id[User], libraryIds: Set[Id[Library]], source: RecommendationSource, subSource: RecommendationSubSource): Future[Unit]
   def ingestPersonaRecos(userId: Id[User], personaIds: Seq[Id[Persona]], reverseIngestion: Boolean = false): Future[Unit]
+  def examineUserFeedbackCounter(userId: Id[User]): Future[(Seq[UserFeedbackCountView], Seq[UserFeedbackCountView])] // votes and signals
 }
 
 class CuratorServiceClientImpl(
@@ -119,5 +120,15 @@ class CuratorServiceClientImpl(
   def ingestPersonaRecos(userId: Id[User], personaIds: Seq[Id[Persona]], reverseIngestion: Boolean = false): Future[Unit] = {
     val payload = Json.obj("personaIds" -> personaIds)
     call(Curator.internal.ingestPersonaRecos(userId, reverseIngestion), payload).map { _ => Unit }
+  }
+
+  def examineUserFeedbackCounter(userId: Id[User]): Future[(Seq[UserFeedbackCountView], Seq[UserFeedbackCountView])] = {
+    call(Curator.internal.examineUserFeedbackCounter(userId)).map { r =>
+      r.json match {
+        case JsNull => (Seq(), Seq())
+        case js =>
+          ((js \ "votes").as[Seq[UserFeedbackCountView]], (js \ "signals").as[Seq[UserFeedbackCountView]])
+      }
+    }
   }
 }

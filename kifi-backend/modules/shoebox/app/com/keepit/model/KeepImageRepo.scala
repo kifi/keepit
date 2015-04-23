@@ -21,10 +21,6 @@ class KeepImageRepoImpl @Inject() (
 
   import db.Driver.simple._
 
-  implicit val KeepImageSourceMapper = MappedColumnType.base[ImageSource, String](_.name, ImageSource.apply)
-  implicit val imageHashMapper = MappedColumnType.base[ImageHash, String](_.hash, ImageHash.apply)
-  implicit val processImageOperationMapper = MappedColumnType.base[ProcessImageOperation, String](_.kind, ProcessImageOperation.apply)
-
   type RepoImpl = KeepImageTable
   class KeepImageTable(tag: Tag) extends RepoTable[KeepImage](db, tag, "keep_image") {
 
