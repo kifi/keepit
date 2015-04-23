@@ -19,6 +19,9 @@ import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model.{ ExperimentType, NormalizedURI, SystemValueRepo, UriRecommendationScores, User }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.concurrent.PimpMyFuture._
+import com.keepit.common.core._
+import com.keepit.common.amazon.AmazonInstanceInfo
+
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.modules.statsd.api.Statsd
 
@@ -46,12 +49,14 @@ class RecommendationGenerationCommander @Inject() (
     experimentCommander: RemoteUserExperimentCommander,
     keepRepo: CuratorKeepInfoRepo,
     schedulingProperties: SchedulingProperties,
-    shardingCommander: ShardingCommander) extends Logging {
+    shardingCommander: ShardingCommander,
+    amazonInstanceInfo: AmazonInstanceInfo) extends Logging {
 
   val defaultScore = 0.0f
-  val recommendationGenerationLock = new ReactiveLock(6)
+  val recommendationGenerationLock = new ReactiveLock(16)
   val perUserRecommendationGenerationLocks = TrieMap[Id[User], ReactiveLock]()
   val candidateURILock = new ReactiveLock(4)
+  val dbWriteThrottleLock = new ReactiveLock(3)
 
   val superSpecialLock = new ReactiveLock(1)
 
@@ -142,38 +147,42 @@ class RecommendationGenerationCommander @Inject() (
     result.flatMap(x => x)
   }
 
-  private def saveScoredSeedItems(items: Seq[ScoredSeedItemWithAttribution], userId: Id[User], newState: UserRecommendationGenerationState) = {
-    val timer = new NamedStatsdTimer("RecommendationGenerationCommander.saveScoredSeedItems")
-    db.readWrite(attempts = 2) { implicit s =>
-      items foreach { item =>
-        val recoOpt = uriRecRepo.getByUriAndUserId(item.uriId, userId, None)
-        recoOpt.map { reco =>
-          uriRecRepo.save(reco.copy(
-            state = UriRecommendationStates.ACTIVE,
-            masterScore = computeMasterScore(item.uriScores),
-            allScores = item.uriScores,
-            attribution = item.attribution,
-            topic1 = item.topic1,
-            topic2 = item.topic2))
-        } getOrElse {
-          uriRecRepo.save(UriRecommendation(
-            uriId = item.uriId,
-            userId = userId,
-            masterScore = computeMasterScore(item.uriScores),
-            allScores = item.uriScores,
-            delivered = 0,
-            clicked = 0,
-            kept = false,
-            trashed = false,
-            attribution = item.attribution,
-            topic1 = item.topic1,
-            topic2 = item.topic2))
+  private def saveScoredSeedItems(items: Seq[ScoredSeedItemWithAttribution], userId: Id[User], newState: UserRecommendationGenerationState): Unit = {
+    if (items.length > 0) {
+      val timer = new NamedStatsdTimer("RecommendationGenerationCommander.saveScoredSeedItems")
+      val timerPer = new NamedStatsdTimer("RecommendationGenerationCommander.saveScoredSeedItemsPerItem")
+      db.readWrite(attempts = 2) { implicit s =>
+        items foreach { item =>
+          val recoOpt = uriRecRepo.getByUriAndUserId(item.uriId, userId, None)
+          recoOpt.map { reco =>
+            uriRecRepo.save(reco.copy(
+              state = UriRecommendationStates.ACTIVE,
+              masterScore = computeMasterScore(item.uriScores),
+              allScores = item.uriScores,
+              attribution = item.attribution,
+              topic1 = item.topic1,
+              topic2 = item.topic2))
+          } getOrElse {
+            uriRecRepo.save(UriRecommendation(
+              uriId = item.uriId,
+              userId = userId,
+              masterScore = computeMasterScore(item.uriScores),
+              allScores = item.uriScores,
+              delivered = 0,
+              clicked = 0,
+              kept = false,
+              trashed = false,
+              attribution = item.attribution,
+              topic1 = item.topic1,
+              topic2 = item.topic2))
+          }
         }
-      }
 
-      genStateRepo.save(newState)
+        genStateRepo.save(newState)
+      }
+      timer.stopAndReport()
+      timerPer.stopAndReport(items.length)
     }
-    timer.stopAndReport()
   }
 
   private def processSeeds(
@@ -197,11 +206,16 @@ class RecommendationGenerationCommander @Inject() (
         attributionHelper.getAttributions(scoredItems)
       }
 
-      toBeSaved.map { items =>
-        Statsd.increment("UriRecosGenerated", items.length)
-        saveScoredSeedItems(items, userId, newState)
-        precomputeRecommendationsForUser(userId, boostedKeepers, Some(alwaysInclude))
-        seedItems.nonEmpty
+      toBeSaved.flatMap { items =>
+        Statsd.gauge("RecosWaitingForSave", items.length, true)
+        dbWriteThrottleLock.withLock {
+          saveScoredSeedItems(items, userId, newState)
+        }.tap(_ => Statsd.gauge(s"${amazonInstanceInfo.name.getOrElse("unknown-instance")}.RecoBatchesWaitingForSave", dbWriteThrottleLock.waiting)).map { _ =>
+          Statsd.gauge("RecosWaitingForSave", -1 * items.length, true)
+          Statsd.increment("UriRecosGenerated", items.length)
+          precomputeRecommendationsForUser(userId, boostedKeepers, Some(alwaysInclude))
+          seedItems.nonEmpty
+        }
       }
     }
 
@@ -233,49 +247,57 @@ class RecommendationGenerationCommander @Inject() (
         }
       }
 
-      toBeSaved.map { items =>
-        Statsd.increment("UriRecosGeneratedNextGen", items.length)
+      toBeSaved.flatMap { items =>
+        val filteredItems = items.filter { _._2 > 16.0f }
+        Statsd.gauge("RecosWaitingForSave", filteredItems.length, true)
+        dbWriteThrottleLock.withLock {
+          if (filteredItems.length > 0) {
+            val timer = new NamedStatsdTimer("RecommendationGenerationCommander.saveScoredSeedItems")
+            val timerPer = new NamedStatsdTimer("RecommendationGenerationCommander.saveScoredSeedItemsPerItem")
+            db.readWrite(attempts = 2) { implicit s =>
+              filteredItems foreach {
+                case (item, masterScore) =>
+                  val recoOpt = uriRecRepo.getByUriAndUserId(item.uriId, userId, None)
+                  recoOpt.map { reco =>
+                    uriRecRepo.save(reco.copy(
+                      state = UriRecommendationStates.ACTIVE,
+                      masterScore = masterScore,
+                      allScores = item.uriScores,
+                      attribution = item.attribution,
+                      topic1 = item.topic1,
+                      topic2 = item.topic2))
+                  } getOrElse {
+                    uriRecRepo.save(UriRecommendation(
+                      uriId = item.uriId,
+                      userId = userId,
+                      masterScore = masterScore,
+                      allScores = item.uriScores,
+                      delivered = 0,
+                      clicked = 0,
+                      kept = false,
+                      trashed = false,
+                      attribution = item.attribution,
+                      topic1 = item.topic1,
+                      topic2 = item.topic2))
+                  }
 
-        db.readWrite(attempts = 2) { implicit s =>
-          items foreach {
-            case (item, masterScore) =>
-              if (masterScore > 16.0f) {
-                val recoOpt = uriRecRepo.getByUriAndUserId(item.uriId, userId, None)
-                recoOpt.map { reco =>
-                  uriRecRepo.save(reco.copy(
-                    state = UriRecommendationStates.ACTIVE,
-                    masterScore = masterScore,
-                    allScores = item.uriScores,
-                    attribution = item.attribution,
-                    topic1 = item.topic1,
-                    topic2 = item.topic2))
-                } getOrElse {
-                  uriRecRepo.save(UriRecommendation(
-                    uriId = item.uriId,
-                    userId = userId,
-                    masterScore = masterScore,
-                    allScores = item.uriScores,
-                    delivered = 0,
-                    clicked = 0,
-                    kept = false,
-                    trashed = false,
-                    attribution = item.attribution,
-                    topic1 = item.topic1,
-                    topic2 = item.topic2))
-                }
               }
+
+              genStateRepo.save(newState)
+            }
+            timer.stopAndReport()
+            timerPer.stopAndReport(filteredItems.length)
+            Statsd.increment("UriRecosGenerated", filteredItems.length)
+            Statsd.gauge("RecosWaitingForSave", -1 * filteredItems.length, true)
           }
-
-          genStateRepo.save(newState)
-        }
-
-        precomputeRecommendationsForUser(userId, boostedKeepers, Some(alwaysInclude))
-        seedItems.nonEmpty
+          precomputeRecommendationsForUser(userId, boostedKeepers, Some(alwaysInclude))
+          seedItems.nonEmpty
+        }.tap(_ => Statsd.gauge(s"${amazonInstanceInfo.name.getOrElse("unknown-instance")}.RecoBatchesWaitingForSave", dbWriteThrottleLock.waiting))
       }
     }
 
   private def precomputeRecommendationsForUser(userId: Id[User], boostedKeepers: Set[Id[User]], alwaysIncludeOpt: Option[Set[Id[NormalizedURI]]] = None): Future[Unit] = {
-    if (shardingCommander.isRunnerFor(userId.id.toInt)) {
+    if (shardingCommander.isRunnerFor(userId.id.toInt) && dbWriteThrottleLock.waiting < 1000) {
       experimentCommander.getExperimentsByUser(userId).flatMap { experiments =>
         val lock = if (experiments.contains(ExperimentType.RECO_FASTLANE)) superSpecialLock else recommendationGenerationLock
         lock.withLockFuture {

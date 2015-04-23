@@ -272,6 +272,9 @@ class LibraryCommander @Inject() (
         val owner = usersById(lib.ownerId)
         val followers = followerInfosByLibraryId(lib.id.get)._1.map(usersById(_))
         val attr = getSourceAttribution(libId)
+        if (keepInfos.size > keepCount) {
+          airbrake.notify(s"keep count $keepCount for library is lower then num of keeps ${keepInfos.size} for $lib")
+        }
         lib.id.get -> FullLibraryInfo(
           id = Library.publicId(lib.id.get),
           name = lib.name,
@@ -1012,8 +1015,8 @@ class LibraryCommander @Inject() (
           userIds = toBeNotified,
           title = s"New Keep in ${library.name}",
           body = s"${keeper.firstName} has just kept ${newKeep.title.getOrElse("a new item")}",
-          linkText = "Go to Library",
-          linkUrl = "https://www.kifi.com" + Library.formatLibraryPath(owner.username, library.slug),
+          linkText = "Go to Page",
+          linkUrl = newKeep.url,
           imageUrl = s3ImageStore.avatarUrlByUser(keeper),
           sticky = false,
           category = NotificationCategory.User.NEW_KEEP,

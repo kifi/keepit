@@ -2,6 +2,7 @@ package com.keepit.rover.manager
 
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.db.Id
+import com.keepit.common.logging.Logging
 import com.keepit.common.queue.ProbabilisticMultiQueue
 import com.keepit.rover.model.RoverArticleInfo
 import com.kifi.franz.SQSQueue
@@ -12,9 +13,7 @@ import com.keepit.common.time._
 @json
 case class FetchTask(id: Id[RoverArticleInfo], createdAt: DateTime = currentDateTime)
 
-sealed trait FetchTaskQueue {
-  def queue: SQSQueue[FetchTask]
-}
+sealed trait FetchTaskQueue extends TaskQueue[FetchTask] with Logging
 
 object FetchTaskQueue {
   case class TopPriority(queue: SQSQueue[FetchTask]) extends FetchTaskQueue

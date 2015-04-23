@@ -220,6 +220,8 @@ GET     /m/1/user/:username/followers           @com.keepit.controllers.mobile.M
 POST    /m/1/user/:id/unfriend                  @com.keepit.controllers.mobile.MobileUserController.unfriend(id: ExternalId[User])
 POST    /m/1/user/:id/friend                    @com.keepit.controllers.mobile.MobileUserController.friend(id: ExternalId[User])
 POST    /m/1/user/:id/ignoreRequest             @com.keepit.controllers.mobile.MobileUserController.ignoreFriendRequest(id: ExternalId[User])
+GET     /m/1/user/:id/connections/mutual        @com.keepit.controllers.mobile.MobileMutualUserController.getMutualConnections(id: ExternalId[User], page: Int ?= 0, size: Int ?= 10)
+GET     /m/1/user/:id/libraries/mutual          @com.keepit.controllers.mobile.MobileMutualUserController.getMutualLibraries(id: ExternalId[User], page: Int ?= 0, size: Int ?= 10)
 GET     /m/1/user/outgoingFriendRequests        @com.keepit.controllers.mobile.MobileUserController.outgoingFriendRequests
 GET     /m/1/user/incomingFriendRequests        @com.keepit.controllers.mobile.MobileUserController.incomingFriendRequests
 POST    /m/1/user/delighted/answer              @com.keepit.controllers.mobile.MobileUserController.postDelightedAnswer()
@@ -369,9 +371,9 @@ GET     /site/user/:name/profile    @com.keepit.controllers.website.UserProfileC
 GET     /site/user/:name/libraries  @com.keepit.controllers.website.LibraryController.getProfileLibraries(name: Username, page: Int ?= 0, size: Int ?= 12, filter: String ?= "own")
 GET     /site/users/:name/connections @com.keepit.controllers.website.UserProfileController.getProfileConnections(name: Username, n: Int ?= 12)
 GET     /site/users/:name/followers  @com.keepit.controllers.website.UserProfileController.getProfileFollowers(name: Username, n: Int ?= 12)
-GET     /site/users/:name/mutual/libraries  @com.keepit.controllers.website.LibraryController.getMutualLibraries(name: Username)
 GET     /site/users/:ids            @com.keepit.controllers.website.UserProfileController.getProfileUsers(ids)
 GET     /site/users/:id/connections/mutual @com.keepit.controllers.website.UserProfileController.getMutualConnections(id: ExternalId[User])
+GET     /site/users/:id/libraries/mutual  @com.keepit.controllers.website.LibraryController.getMutualLibraries(id: ExternalId[User], page: Int ?= 0, size: Int ?= 12)
 
 GET     /site/libraries             @com.keepit.controllers.website.LibraryController.getLibrarySummariesByUser()
 POST    /site/libraries/add         @com.keepit.controllers.website.LibraryController.addLibrary()
@@ -606,8 +608,6 @@ GET     /admin/search/performance/viewPerformance @com.keepit.controllers.admin.
 
 GET     /admin/users/reindex        @com.keepit.controllers.admin.AdminUserIndexController.reindex()
 GET     /admin/users                @com.keepit.controllers.admin.AdminUserController.allUsersView
-POST    /admin/users/createPushActivityEntities  @com.keepit.controllers.admin.AdminUserController.createPushActivityEntities
-POST    /admin/users/pushLibraryActivity  @com.keepit.controllers.admin.AdminUserController.pushLibraryActivity
 POST    /admin/users/reNormalizedUsername        @com.keepit.controllers.admin.AdminUserController.reNormalizedUsername(readOnly: Boolean ?= true, max: Int ?= 10)
 GET     /admin/realUsers            @com.keepit.controllers.admin.AdminUserController.allRegisteredUsersView
 GET     /admin/fakeUsers            @com.keepit.controllers.admin.AdminUserController.allFakeUsersView
@@ -686,6 +686,9 @@ GET     /admin/explainUserResult        @com.keepit.controllers.admin.AdminSearc
 
 GET     /admin/search/results/:id   @com.keepit.controllers.admin.AdminSearchController.articleSearchResult(id: ExternalId[ArticleSearchResult])
 
+POST    /admin/users/createPushActivityEntities     @com.keepit.controllers.admin.AdminUserController.createPushActivityEntities
+POST    /admin/users/:id/pushLibraryActivity        @com.keepit.controllers.admin.AdminUserController.pushLibraryActivity(id: Id[User])
+POST    /admin/users/:id/pushPersonaActivity        @com.keepit.controllers.admin.AdminUserController.pushPersonaActivity(id: Id[User])
 
 GET     /admin/slider/patterns      @com.keepit.controllers.admin.SliderAdminController.getPatterns
 POST    /admin/slider/patterns      @com.keepit.controllers.admin.SliderAdminController.savePatterns
@@ -754,6 +757,8 @@ POST    /admin/learning/pornDetect/whitelist               @com.keepit.controlle
 GET     /admin/curator/librecos                            @com.keepit.controllers.admin.AdminLibraryRecommendationsController.index
 GET     /admin/curator/librecos/view                       @com.keepit.controllers.admin.AdminLibraryRecommendationsController.view
 GET     /admin/curator/generalRecos                        @com.keepit.controllers.admin.AdminGeneralRecommendationsController.view
+GET     /admin/curator/feedback                            @com.keepit.controllers.admin.AdminCuratorController.view
+POST    /admin/curator/feedback/counter                    @com.keepit.controllers.admin.AdminCuratorController.examineUserFeedbackCounter
 
 GET     /adimin/cortex/word2vec                            @com.keepit.controllers.admin.AdminWord2VecController.index
 POST    /admin/cortex/word2vec/wordSimilarity              @com.keepit.controllers.admin.AdminWord2VecController.wordSimilarity

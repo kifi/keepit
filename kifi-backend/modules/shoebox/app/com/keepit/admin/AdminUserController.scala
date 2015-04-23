@@ -123,8 +123,13 @@ class AdminUserController @Inject() (
     Ok("started!")
   }
 
-  def pushLibraryActivity = AdminUserPage { implicit request =>
-    activityPusher.forcePushLibraryActivityForUser(request.userId)
+  def pushLibraryActivity(userId: Id[User]) = AdminUserPage { implicit request =>
+    activityPusher.forcePushLibraryActivityForUser(userId)
+    Ok("done")
+  }
+
+  def pushPersonaActivity(userId: Id[User]) = AdminUserPage { implicit request =>
+    activityPusher.forcePersonaActivityForUser(userId)
     Ok("done")
   }
 
