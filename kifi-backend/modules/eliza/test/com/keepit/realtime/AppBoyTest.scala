@@ -53,8 +53,10 @@ class AppBoyTest extends Specification with TestInjector with ElizaTestInjector 
              |  "external_user_ids": [
              |    "${user1.externalId.id}"
              |  ],
+             |  "campaign_id": "2c22f953-902a-4f3c-88f0-34fe07edeccf",
              |  "messages": {
              |    "apple_push": {
+             |      "message_variation_id": "iosPush-9",
              |      "badge": 3,
              |      "sound": "notification.aiff",
              |      "alert": "pika",
@@ -64,6 +66,7 @@ class AppBoyTest extends Specification with TestInjector with ElizaTestInjector 
              |      }
              |    },
              |    "android_push": {
+             |      "message_variation_id": "androidPush-12",
              |      "badge": 3,
              |      "sound": "notification.aiff",
              |      "alert": "pika",
@@ -96,8 +99,10 @@ class AppBoyTest extends Specification with TestInjector with ElizaTestInjector 
              {
               "app_group_id":"${appBoyGroupId}",
               "external_user_ids":["${user1.externalId}"],
+              "campaign_id": "2c22f953-902a-4f3c-88f0-34fe07edeccf",
               "messages":{
                 "apple_push":{
+                  "message_variation_id": "iosPush-9",
                   "badge": 3,
                   "sound":"notification.aiff",
                   "alert":"pika",
@@ -108,6 +113,7 @@ class AppBoyTest extends Specification with TestInjector with ElizaTestInjector 
                   }
                 },
                 "android_push":{
+                  "message_variation_id": "androidPush-12",
                   "badge": 3,
                   "sound":"notification.aiff",
                   "alert":"pika",
@@ -143,8 +149,10 @@ class AppBoyTest extends Specification with TestInjector with ElizaTestInjector 
              {
               "app_group_id":"${appBoyGroupId}",
               "external_user_ids":["${user1.externalId}"],
+              "campaign_id": "2c22f953-902a-4f3c-88f0-34fe07edeccf",
               "messages":{
                 "apple_push":{
+                  "message_variation_id": "iosPush-9",
                   "badge": 3,
                   "sound":"notification.aiff",
                   "alert":"pika",
@@ -157,6 +165,7 @@ class AppBoyTest extends Specification with TestInjector with ElizaTestInjector 
                   }
                 },
                 "android_push":{
+                  "message_variation_id": "androidPush-12",
                   "badge": 3,
                   "sound":"notification.aiff",
                   "alert":"pika",
@@ -190,8 +199,10 @@ class AppBoyTest extends Specification with TestInjector with ElizaTestInjector 
              {
               "app_group_id":"${appBoyGroupId}",
               "external_user_ids":["${user1.externalId}"],
+              "campaign_id": "2c22f953-902a-4f3c-88f0-34fe07edeccf",
               "messages":{
                 "apple_push":{
+                  "message_variation_id": "iosPush-9",
                   "badge": 3,
                   "sound":null,
                   "alert":"pika",
@@ -205,6 +216,7 @@ class AppBoyTest extends Specification with TestInjector with ElizaTestInjector 
                   }
                 },
                 "android_push":{
+                  "message_variation_id": "androidPush-12",
                   "badge": 3,
                   "sound":null,
                   "alert":"pika",

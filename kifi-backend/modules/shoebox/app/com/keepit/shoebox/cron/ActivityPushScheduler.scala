@@ -31,7 +31,8 @@ import scala.concurrent.duration._
 import scala.util.Random
 
 trait PushNotificationMessage
-case class GeneralActivityPushNotificationMessage(message: String) extends PushNotificationMessage
+case class GeneralUpdatePushNotificationMessage(message: String) extends PushNotificationMessage
+case class PersonaActivityPushNotificationMessage(message: String) extends PushNotificationMessage
 case class LibraryPushNotificationMessage(message: String, lib: Library, owner: BasicUser, newKeep: Keep, libraryUrl: String, libImageOpt: Option[LibraryImage]) extends PushNotificationMessage
 
 object PushActivities
@@ -177,9 +178,12 @@ class ActivityPusher @Inject() (
             elizaServiceClient.sendLibraryPushNotification(activity.userId, libMessage.message, libMessage.lib.id.get, libMessage.libraryUrl, experimant, LibraryPushNotificationCategory.LibraryChanged, activity.state == ActivityPushTaskStates.NO_DEVICES)
           }
         devices.flatten
-      case generalMessage: GeneralActivityPushNotificationMessage =>
-        log.info(s"pushing general activity update to ${activity.userId} [$experimant]: $message")
-        elizaServiceClient.sendGeneralPushNotification(activity.userId, generalMessage.message, experimant, SimplePushNotificationCategory.PersonaUpdate, activity.state == ActivityPushTaskStates.NO_DEVICES)
+      case personaMessage: PersonaActivityPushNotificationMessage =>
+        log.info(s"pushing general persona activity update to ${activity.userId} [$experimant]: $message")
+        elizaServiceClient.sendGeneralPushNotification(activity.userId, personaMessage.message, experimant, SimplePushNotificationCategory.PersonaUpdate, activity.state == ActivityPushTaskStates.NO_DEVICES)
+      case updateMessage: GeneralUpdatePushNotificationMessage =>
+        log.info(s"pushing HailMerry update activity update to ${activity.userId} [$experimant]: $message")
+        elizaServiceClient.sendGeneralPushNotification(activity.userId, updateMessage.message, experimant, SimplePushNotificationCategory.HailMerryUpdate, activity.state == ActivityPushTaskStates.NO_DEVICES)
     }
     res map { deviceCount =>
       log.info(s"push successful to $deviceCount devices")
@@ -236,7 +240,7 @@ class ActivityPusher @Inject() (
     }
   }
 
-  private def getPersonaActivityMessage(experiment: PushNotificationExperiment, userId: Id[User]): Option[GeneralActivityPushNotificationMessage] = {
+  private def getPersonaActivityMessage(experiment: PushNotificationExperiment, userId: Id[User]): Option[PersonaActivityPushNotificationMessage] = {
     db.readOnlyReplica { implicit s =>
       val personas = Random.shuffle(userPersonaRepo.getPersonasForUser(userId))
       val message = {
@@ -257,17 +261,17 @@ class ActivityPusher @Inject() (
           Some(msg)
         }
       }
-      message.map(m => GeneralActivityPushNotificationMessage(m))
+      message.map(m => PersonaActivityPushNotificationMessage(m))
     }
   }
 
-  private def getGeneralMessage(experiment: PushNotificationExperiment, userId: Id[User]): GeneralActivityPushNotificationMessage = {
+  private def getGeneralMessage(experiment: PushNotificationExperiment, userId: Id[User]): GeneralUpdatePushNotificationMessage = {
     db.readOnlyReplica { implicit s =>
       val msg = {
         if (experiment == PushNotificationExperiment.Experiment1) s"""Your Kifi feed has updates. Check out what's new."""
         else s"""Kifi has been redesigned! Check it out."""
       }
-      GeneralActivityPushNotificationMessage(msg)
+      GeneralUpdatePushNotificationMessage(msg)
     }
   }
 

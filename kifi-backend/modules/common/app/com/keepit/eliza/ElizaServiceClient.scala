@@ -30,6 +30,7 @@ sealed case class SimplePushNotificationCategory(name: String)
 
 object SimplePushNotificationCategory {
   val PersonaUpdate = SimplePushNotificationCategory("PersonaUpdate")
+  val HailMerryUpdate = SimplePushNotificationCategory("HailMerryUpdate")
 }
 
 object UserPushNotificationCategory {
@@ -200,7 +201,7 @@ class ElizaServiceClientImpl @Inject() (
   }
 
   def checkUrisDiscussed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[Boolean]] = {
-    call(Eliza.internal.checkUrisDiscussed(userId), body = Json.toJson(uriIds)).map { r =>
+    call(Eliza.internal.checkUrisDiscussed(userId), body = Json.toJson(uriIds), attempts = 2, callTimeouts = longTimeout).map { r =>
       r.json.as[Seq[Boolean]]
     }
   }

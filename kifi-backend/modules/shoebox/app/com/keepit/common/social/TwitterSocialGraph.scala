@@ -200,10 +200,10 @@ class TwitterSocialGraphImpl @Inject() (
               val user = userRepo.get(userId)
               val library = libraryRepo.get(libraryId)
               val libOwner = basicUserRepo.load(library.ownerId)
-              val ownerImage = s3ImageStore.avatarUrlByUser(libOwner)
-              val libLink = s"""https://www.kifi.com${Library.formatLibraryPath(libOwner.username, library.slug)}"""
-              val libImageOpt = libraryImageCommander.getBestImageForLibrary(library.id.get, ProcessedImageSize.Medium.idealSize)
-              if (library.state == LibraryStates.ACTIVE && libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId, None).isEmpty) {
+              if (library.visibility == LibraryVisibility.PUBLISHED && library.state == LibraryStates.ACTIVE && user.state == UserStates.ACTIVE && libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId, None).isEmpty) {
+                val ownerImage = s3ImageStore.avatarUrlByUser(libOwner)
+                val libLink = s"""https://www.kifi.com${Library.formatLibraryPath(libOwner.username, library.slug)}"""
+                val libImageOpt = libraryImageCommander.getBestImageForLibrary(library.id.get, ProcessedImageSize.Medium.idealSize)
                 log.info(s"[fetchSocialUserInfo(${socialUserInfo.socialId})] auto-joining user ${userId} twitter_sync library ${libraryId}")
                 libraryMembershipRepo.save(LibraryMembership(libraryId = libraryId, userId = userId, access = LibraryAccess.READ_ONLY))
                 notifyUserOnLibraryFollow(user, twitterSyncState, library, libOwner, ownerImage, libLink, libImageOpt)
@@ -329,7 +329,7 @@ class TwitterSocialGraphImpl @Inject() (
     val endpoint = "https://api.twitter.com/1.1/users/lookup.json"
     val sorted = mutualFollows.toSeq.sortBy(_.id) // expensive
     val accF = FutureHelpers.foldLeftUntil[Seq[TwitterId], JsArray](sorted.grouped(100).toIterable)(JsArray()) { (a, c) =>
-      val params = Map("user_id" -> c.mkString(","), "include_entities" -> false.toString)
+      val params = Map("user_id" -> c.map(_.id).mkString(","), "include_entities" -> false.toString)
       val serializedParams = params.map(kv => (kv._1, Seq(kv._2)))
       val chunkF = WS.url(endpoint)
         .sign(OAuthCalculator(providerConfig.key, accessToken))

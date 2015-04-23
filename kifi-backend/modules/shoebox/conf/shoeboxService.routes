@@ -162,6 +162,7 @@ GET     /m/1/user/networks                  @com.keepit.controllers.mobile.Mobil
 POST    /m/1/user/:origin/uploadContacts    @com.keepit.controllers.mobile.MobileUserController.uploadContacts(origin:ABookOriginType)
 GET     /m/1/user/abooks                    @com.keepit.controllers.mobile.MobileUserController.abookInfo()
 GET     /m/1/user/friends/recommended       @com.keepit.controllers.mobile.MobilePeopleRecommendationController.getFriendRecommendations(offset: Int ?= 0, limit: Int ?= 5)
+POST    /m/1/user/friends/:id/hide          @com.keepit.controllers.mobile.MobilePeopleRecommendationController.hideFriendRecommendation(id: ExternalId[User])
 
 POST    /m/1/page/details                   @com.keepit.controllers.mobile.MobilePageController.getPageDetails()
 POST    /m/1/page/extensionQuery            @com.keepit.controllers.mobile.MobilePageController.queryExtension(page: Int ?= 0, pageSize: Int ?= 1000)
