@@ -4,7 +4,7 @@ import com.keepit.model.Hashtag
 
 class HashtagCommander {
 
-  // look for [
+  // look for all occurences of '[#...]' in str. Hashtags cannot be '#' and \[ does not count as a beginning delimiter for hashtags
   def findAllHashtagNames(str: String): Set[String] = {
     var idx = 0
     val hashtags = scala.collection.mutable.Set[String]()
@@ -39,6 +39,8 @@ class HashtagCommander {
     }
   }
 
+
+  // append hashtags to the end of a string, separated by spaces
   def appendHashtagsToString(str: String, hashtags: Set[Hashtag]): String = {
     val hashtagNames = hashtags.map(_.tag)
     appendHashtagNamesToString(str, hashtagNames)
@@ -49,6 +51,8 @@ class HashtagCommander {
     (str + " " + tagsStr).trim
   }
 
+
+  // remove hashtags from a string. Look for '[#...]' and only remove hashtags specified by the given set.
   def removeHashtagsFromString(str: String, hashtags: Set[Hashtag]): String = {
     val hashtagNames = hashtags.map(_.tag)
     removeHashtagNamesFromString(str, hashtagNames)
