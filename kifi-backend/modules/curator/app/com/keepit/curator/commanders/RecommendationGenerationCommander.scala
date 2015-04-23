@@ -53,7 +53,7 @@ class RecommendationGenerationCommander @Inject() (
     amazonInstanceInfo: AmazonInstanceInfo) extends Logging {
 
   val defaultScore = 0.0f
-  val recommendationGenerationLock = new ReactiveLock(10)
+  val recommendationGenerationLock = new ReactiveLock(16)
   val perUserRecommendationGenerationLocks = TrieMap[Id[User], ReactiveLock]()
   val candidateURILock = new ReactiveLock(4)
   val dbWriteThrottleLock = new ReactiveLock(3)
