@@ -1,12 +1,14 @@
 package com.keepit.controllers.mobile
 
 import com.google.inject.Inject
+import com.keepit.abook.ABookServiceClient
 import com.keepit.commanders.{ LibraryCommander, UserCommander }
 import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.crypto.PublicIdConfiguration
+import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
 import com.keepit.controllers.website.UserLibraryCountSortingHelper
-import com.keepit.model.{ LibraryInfo, LibraryRepo, SocialUserInfoRepo }
+import com.keepit.model._
 import com.keepit.social.BasicUser
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.{ JsArray, JsNumber, Json }
@@ -17,6 +19,8 @@ class MobilePeopleRecommendationController @Inject() (
     socialUserRepo: SocialUserInfoRepo,
     db: Database,
     libraryRepo: LibraryRepo,
+    userRepo: UserRepo,
+    abookServiceClient: ABookServiceClient,
     val libCommander: LibraryCommander,
     implicit val config: PublicIdConfiguration) extends UserActions with ShoeboxServiceController with UserLibraryCountSortingHelper {
 
@@ -43,6 +47,13 @@ class MobilePeopleRecommendationController @Inject() (
         val json = Json.obj("users" -> recommendedUsersArray)
         Ok(json)
       }
+    }
+  }
+
+  def hideFriendRecommendation(id: ExternalId[User]) = UserAction.async { request =>
+    val irrelevantUserId = db.readOnlyReplica { implicit session => userRepo.get(id).id.get }
+    abookServiceClient.hideFriendRecommendation(request.userId, irrelevantUserId).map { _ =>
+      Ok(Json.obj("hidden" -> true))
     }
   }
 }
