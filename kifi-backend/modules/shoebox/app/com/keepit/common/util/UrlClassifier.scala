@@ -15,6 +15,7 @@ object UrlClassifier {
       """http[s]?://shar.es/.*""",
       """http[s]?://twitter.com//.*""", //this one is a bit strange and may take out legit twitter articles. the core issue is people linking to other tweets that have nothing but the tweet and it looks bad
       """http[s]?://runkeeper.com/user/.*/activity/.*""",
+      """http[s]?://techmeme.com/.*""",
       """http[s]?://rnkpr.com/.*"""
     ).map("(" + _ + ")").mkString("|") + ")"
   }.r
