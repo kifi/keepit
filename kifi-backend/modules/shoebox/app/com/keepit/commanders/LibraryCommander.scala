@@ -272,6 +272,9 @@ class LibraryCommander @Inject() (
         val owner = usersById(lib.ownerId)
         val followers = followerInfosByLibraryId(lib.id.get)._1.map(usersById(_))
         val attr = getSourceAttribution(libId)
+        if (keepInfos.size > keepCount) {
+          airbrake.notify(s"keep count $keepCount for library is lower then num of keeps ${keepInfos.size} for $lib")
+        }
         lib.id.get -> FullLibraryInfo(
           id = Library.publicId(lib.id.get),
           name = lib.name,
