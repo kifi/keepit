@@ -1212,8 +1212,8 @@ class LibraryCommander @Inject() (
           case Right(successKeep) => goodKeeps += successKeep
         }
       }
-      if (badKeeps.size != keeps.size)
-        libraryRepo.updateLastKept(dstLibraryId)
+      if (goodKeeps.nonEmpty) libraryRepo.updateLastKept(dstLibraryId)
+
       groupedKeeps.keys.flatten
     }
     searchClient.updateKeepIndex()
@@ -1223,7 +1223,21 @@ class LibraryCommander @Inject() (
       countByLibraryCache.remove(CountByLibraryKey(srcLibId))
     }
     countByLibraryCache.remove(CountByLibraryKey(dstLibraryId))
+
+    // fix keep count after we cleared cache
+    fixLibraryKeepCount(dstLibraryId :: srcLibs.toList)
+
     (goodKeeps.toSeq, badKeeps.toSeq)
+  }
+
+  def fixLibraryKeepCount(libIds: Seq[Id[Library]]) = {
+    db.readWrite { implicit s =>
+      val counts = keepRepo.getCountsByLibrary(libIds.toSet)
+      libIds.foreach { libId =>
+        val lib = libraryRepo.get(libId)
+        libraryRepo.save(lib.copy(keepCount = counts(lib.id.get)))
+      }
+    }
   }
 
   def copyKeepsFromCollectionToLibrary(userId: Id[User], libraryId: Id[Library], tagName: Hashtag)(implicit context: HeimdalContext): Either[LibraryFail, (Seq[Keep], Seq[(Keep, LibraryError)])] = {
