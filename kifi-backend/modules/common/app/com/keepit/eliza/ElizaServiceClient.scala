@@ -30,6 +30,7 @@ sealed case class SimplePushNotificationCategory(name: String)
 
 object SimplePushNotificationCategory {
   val PersonaUpdate = SimplePushNotificationCategory("PersonaUpdate")
+  val HailMerryUpdate = SimplePushNotificationCategory("HailMerryUpdate")
 }
 
 object UserPushNotificationCategory {
