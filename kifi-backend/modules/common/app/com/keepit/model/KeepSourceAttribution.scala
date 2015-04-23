@@ -6,8 +6,10 @@ import com.kifi.macros.json
 import org.joda.time.DateTime
 import play.api.libs.json._
 
-@json case class TwitterId(id: Long) // https://groups.google.com/forum/#!topic/twitter-development-talk/ahbvo3VTIYI
-
+@json case class TwitterId(id: Long) {
+  // https://groups.google.com/forum/#!topic/twitter-development-talk/ahbvo3VTIYI
+  override def toString = id.toString
+}
 case class KeepSourceAttribution(
     id: Option[Id[KeepSourceAttribution]] = None,
     createdAt: DateTime = currentDateTime,
