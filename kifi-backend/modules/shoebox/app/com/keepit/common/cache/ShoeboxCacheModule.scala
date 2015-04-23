@@ -378,7 +378,7 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
 
   @Provides @Singleton
   def RelatedLibrariesCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new RelatedLibrariesCache(stats, accessLog, (innerRepo, 30 minutes), (outerRepo, 2 hours))
+    new RelatedLibrariesCache(stats, accessLog, (innerRepo, 15 minutes), (outerRepo, 1 hours))
 
   @Provides @Singleton
   def userToDomainCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
