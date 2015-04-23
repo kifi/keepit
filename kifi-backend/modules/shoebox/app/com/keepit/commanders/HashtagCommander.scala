@@ -39,7 +39,6 @@ class HashtagCommander {
     }
   }
 
-
   def appendHashtagsToString(str: String, hashtags: Set[Hashtag]): String = {
     val hashtagNames = hashtags.map(_.tag)
     appendHashtagNamesToString(str, hashtagNames)
@@ -49,7 +48,6 @@ class HashtagCommander {
     val tagsStr = hashtagNames.filter(_.nonEmpty).map("[#" + _ + "]").mkString(" ")
     (str + " " + tagsStr).trim
   }
-
 
   def removeHashtagsFromString(str: String, hashtags: Set[Hashtag]): String = {
     val hashtagNames = hashtags.map(_.tag)

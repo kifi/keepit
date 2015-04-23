@@ -33,6 +33,7 @@ trait CollectionRepo extends Repo[Collection] with ExternalIdColumnFunction[Coll
   def getCollectionsChanged(num: SequenceNumber[Collection], limit: Int)(implicit session: RSession): Seq[Collection]
   def collectionChanged(collectionId: Id[Collection], isNewKeep: Boolean = false, inactivateIfEmpty: Boolean)(implicit session: RWSession): Collection
   def getTagsByKeepId(keepId: Id[Keep])(implicit session: RSession): Set[Hashtag]
+  def getTagsByKeepIds(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], Set[Hashtag]]
   def getByUserSortedByLastKept(userId: Id[User], page: Int, size: Int)(implicit session: RSession): Seq[(CollectionSummary, Int)]
   def getByUserSortedByNumKeeps(userId: Id[User], page: Int, size: Int)(implicit session: RSession): Seq[(CollectionSummary, Int)]
   def getByUserSortedByName(userId: Id[User], page: Int, size: Int)(implicit session: RSession): Seq[(CollectionSummary, Int)]
@@ -165,6 +166,20 @@ class CollectionRepoImpl @Inject() (
     val query = sql"select DISTINCT c.name from keep_to_collection kc, collection c where kc.bookmark_id = ${keepId} and c.id = kc.collection_id and c.state='#${CollectionStates.ACTIVE}' and kc.state='#${KeepToCollectionStates.ACTIVE}'"
 
     query.as[String].list.map(tag => Hashtag(tag)).toSet
+  }
+
+  def getTagsByKeepIds(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], Set[Hashtag]] = {
+    if (keepIds.nonEmpty) {
+      val idSet = "(" + keepIds.mkString(",") + ")"
+      import com.keepit.common.db.slick.StaticQueryFixed.interpolation
+      val query = sql"select DISTINCT kc.bookmark_id, c.name from keep_to_collection kc, collection c where kc.bookmark_id in #$idSet and c.id = kc.collection_id and c.state='#${CollectionStates.ACTIVE}' and kc.state='#${KeepToCollectionStates.ACTIVE}'"
+      query.as[(Id[Keep], String)].list.groupBy(_._1).map {
+        case (keepId, pairs) =>
+          keepId -> pairs.map { pair => Hashtag(pair._2) }.toSet
+      }
+    } else {
+      Map.empty[Id[Keep], Set[Hashtag]]
+    }
   }
 
   private def pageTagsByUserQuery[S](userId: Id[User], page: Int, size: Int, sortBy: String) = {

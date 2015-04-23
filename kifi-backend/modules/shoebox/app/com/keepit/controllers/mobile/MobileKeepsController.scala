@@ -176,7 +176,15 @@ class MobileKeepsController @Inject() (
             h <- idealImageHeight
           } yield ImageSize(w, h)
         } getOrElse ProcessedImageSize.Large.idealSize
-        keepDecorator.decorateKeepsIntoKeepInfos(request.userIdOpt, false, Seq(keep), idealImageSize, withKeepTime = true).imap { case Seq(keepInfo) => Ok(Json.toJson(keepInfo)) }
+        keepDecorator.decorateKeepsIntoKeepInfos(request.userIdOpt, false, Seq(keep), idealImageSize, withKeepTime = true).imap {
+          case Seq(keepInfo) =>
+            val editedNote = (keepInfo.note, keepInfo.hashtags) match {
+              case (Some(note), Some(hashtags)) =>
+                Some(hashtagCommander.removeHashtagsFromString(note, hashtags))
+              case (note, _) => note
+            }
+            Ok(Json.toJson(keepInfo.copy(note = editedNote))) // todo (aaron): remove editedNote once tags are gone!
+        }
       case Some(keep) => Future.successful(Ok(Json.toJson(KeepInfo.fromKeep(keep))))
     }
   }
@@ -201,11 +209,11 @@ class MobileKeepsController @Inject() (
 
           // append any new tags to note, remove any tags not in tagNames
           val origNote = newNote getOrElse ""
-          val existingTags = hashtagCommander.findAllHashtags(origNote)
+          val existingTags = hashtagCommander.findAllHashtagNames(origNote)
           val tagsToAdd = tagNames.toSet.filterNot(t => existingTags.contains(t))
           val tagsToRemove = existingTags.filterNot(t => tagNames.contains(t))
-          val noteWithTagsAdded = hashtagCommander.appendHashtagsToString(origNote, tagsToAdd)
-          hashtagCommander.removeHashtagsFromString(noteWithTagsAdded, tagsToRemove)
+          val noteWithTagsAdded = hashtagCommander.appendHashtagNamesToString(origNote, tagsToAdd)
+          hashtagCommander.removeHashtagNamesFromString(noteWithTagsAdded, tagsToRemove)
         } orElse newNote
 
         db.readWrite { implicit s =>
