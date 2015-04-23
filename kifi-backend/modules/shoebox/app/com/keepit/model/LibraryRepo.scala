@@ -59,7 +59,6 @@ class LibraryRepoImpl @Inject() (
   val clock: Clock,
   val libraryMembershipRepo: Provider[LibraryMembershipRepoImpl],
   val libraryMetadataCache: LibraryMetadataCache,
-  val relatedLibrariesCache: RelatedLibrariesCache,
   val topLibsCache: TopFollowedLibrariesCache,
   val idCache: LibraryIdCache)
     extends DbRepo[Library] with LibraryRepo with SeqNumberDbFunction[Library] with Logging {
@@ -123,7 +122,6 @@ class LibraryRepoImpl @Inject() (
     library.id.map { id =>
       libraryMetadataCache.remove(LibraryMetadataKey(id))
       idCache.remove(LibraryIdKey(id))
-      relatedLibrariesCache.remove(RelatedLibariesKey(id))
     }
     if (library.memberCount >= 5 + 1) {
       topLibsCache.remove(new TopFollowedLibrariesKey()) // lib with fewer than 5 followers will never enter that cache. This threshold need to by synced with RelatedLibraryCommanderImpl
@@ -137,7 +135,6 @@ class LibraryRepoImpl @Inject() (
         deleteCache(library)
       } else {
         idCache.set(LibraryIdKey(id), library)
-        relatedLibrariesCache.remove(RelatedLibariesKey(id))
       }
     }
   }
