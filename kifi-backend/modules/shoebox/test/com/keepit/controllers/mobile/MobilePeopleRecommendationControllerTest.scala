@@ -59,7 +59,7 @@ class MobilePeopleRecommendationControllerTest extends Specification with Shoebo
 
         status(resultF) === 200
         contentType(resultF) must beSome("application/json")
-        Json.parse(contentAsString(resultF)) === Json.parse( s"""
+        Json.parse(contentAsString(resultF)) === Json.parse(s"""
            {"users":[
              {
               "id":"${user2.externalId}","firstName":"Bryan","lastName":"Cranston","pictureName":"0.jpg","username":"test2","numFriends": 3,

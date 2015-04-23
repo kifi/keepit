@@ -329,7 +329,7 @@ class TwitterSocialGraphImpl @Inject() (
     val endpoint = "https://api.twitter.com/1.1/users/lookup.json"
     val sorted = mutualFollows.toSeq.sortBy(_.id) // expensive
     val accF = FutureHelpers.foldLeftUntil[Seq[TwitterId], JsArray](sorted.grouped(100).toIterable)(JsArray()) { (a, c) =>
-      val params = Map("user_id" -> c.mkString(","), "include_entities" -> false.toString)
+      val params = Map("user_id" -> c.map(_.id).mkString(","), "include_entities" -> false.toString)
       val serializedParams = params.map(kv => (kv._1, Seq(kv._2)))
       val chunkF = WS.url(endpoint)
         .sign(OAuthCalculator(providerConfig.key, accessToken))
