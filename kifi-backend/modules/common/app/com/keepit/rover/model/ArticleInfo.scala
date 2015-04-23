@@ -10,10 +10,7 @@ import play.api.libs.json._
 
 @json
 case class ArticleVersion(major: VersionNumber[Article], minor: VersionNumber[Article]) extends Ordered[ArticleVersion] {
-  def compare(that: ArticleVersion) = {
-    val majorComparison = (major compare that.major)
-    if (majorComparison == 0) { minor compare that.minor } else majorComparison
-  }
+  def compare(that: ArticleVersion) = (major, minor) compare (that.major, that.minor)
   override def toString = s"$major.$minor"
 }
 
