@@ -663,7 +663,7 @@ class MessagingCommander @Inject() (
       }
       shoebox.addInteractions(userId, actions)
       val (thread, message) = sendNewMessage(userId, userRecipients, nonUserRecipients, urls, title, text, source)(context)
-      val messageThreadFut = basicMessageCommander.getThreadMessagesWithBasicUser(thread)
+      val messageThreadFut = basicMessageCommander.getThreadMessagesWithBasicUser(userId, thread)
 
       val threadInfoOpt = url.map { url =>
         buildThreadInfos(userId, Seq(thread), Some(url)).headOption
