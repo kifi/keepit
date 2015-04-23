@@ -199,7 +199,7 @@ class UriRecommendationRepoImpl @Inject() (
     rows.insertAll(recos: _*).get
   }
 
-  def insertOrUpdate(reco: UriRecommendation)(implicit session: RWSession): Unit = {
+  def insertOrUpdate(reco: UriRecommendation)(implicit session: RWSession): Int = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
 
     val lastPush: String = reco.lastPushedAt.map(t => s"'${SQL_DATETIME_FORMAT.print(t)}'").getOrElse("null")
@@ -211,7 +211,7 @@ class UriRecommendationRepoImpl @Inject() (
              delivered,clicked,kept,trashed,last_pushed_at,attribution,topic1,topic2)
           values
             (
-              '${reco.createdAt}','${reco.updatedAt}','${reco.state.value}',${reco.vote},${reco.uriId},${reco.userId.id},${reco.masterScore},'${stringify(toJson(reco.allScores))}',
+              '${reco.createdAt}','${reco.updatedAt}','UriRecommendationStates.ACTIVE',${reco.vote},${reco.uriId},${reco.userId.id},${reco.masterScore},'${stringify(toJson(reco.allScores))}',
               ${reco.delivered},${reco.clicked},${reco.kept},${reco.trashed},$lastPush,'${stringify(toJson(reco.attribution))}',${topic(reco.topic1)},${topic(reco.topic2)}'
             )
           ON DUPLICATE KEY UPDATE
