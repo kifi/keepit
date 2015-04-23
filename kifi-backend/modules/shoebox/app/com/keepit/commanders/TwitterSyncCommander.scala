@@ -118,7 +118,7 @@ class TwitterSyncCommander @Inject() (
     }
 
     if (states.length + safeBacklogBuffer < throttle.waiting) { // it's backed up more than what we're trying to bring in, so is getting worse.
-      airbrake.notify("Twitter library sync backing up! Would like to sync ${states.length} more, waiting on ${throttle.waiting}")
+      airbrake.notify(s"Twitter library sync backing up! Would like to sync ${states.length} more, waiting on ${throttle.waiting}")
     } else {
       states.foreach { state =>
         if (throttle.waiting < states.length + 1) {

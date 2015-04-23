@@ -121,8 +121,10 @@ class AppBoy @Inject() (
     val json = Json.obj(
       "app_group_id" -> AppBoyConfig.appGroupId,
       "external_user_ids" -> Json.toJson(Seq(user.externalId)),
+      "campaign_id" -> "2c22f953-902a-4f3c-88f0-34fe07edeccf",
       "messages" -> Json.obj(
         "apple_push" -> Json.obj(
+          "message_variation_id" -> "iosPush-9",
           "badge" -> notification.unvisitedCount,
           "sound" -> Json.toJson(notification.sound),
           "alert" -> notification.message,
@@ -130,6 +132,7 @@ class AppBoy @Inject() (
           "extra" -> addExtraJson(notification, DeviceType.IOS)
         ),
         "android_push" -> (Json.obj(
+          "message_variation_id" -> "androidPush-12",
           "badge" -> notification.unvisitedCount,
           "sound" -> Json.toJson(notification.sound),
           "alert" -> notification.message,
