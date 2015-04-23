@@ -178,12 +178,12 @@ class MobileKeepsController @Inject() (
         } getOrElse ProcessedImageSize.Large.idealSize
         keepDecorator.decorateKeepsIntoKeepInfos(request.userIdOpt, false, Seq(keep), idealImageSize, withKeepTime = true).imap {
           case Seq(keepInfo) =>
-            val editedNote = (keepInfo.note, keepInfo.hashtags) match {
-              case (Some(note), Some(hashtags)) =>
-                Some(hashtagCommander.removeHashtagsFromString(note, hashtags))
-              case (note, _) => note
-            }
-            Ok(Json.toJson(keepInfo.copy(note = editedNote))) // todo (aaron): remove editedNote once tags are gone!
+            val editedNote = keepInfo.note.map { note =>
+              // remove hashtags, then turn all '[\#' -> '[#'
+              val noteWithoutHashtags = hashtagCommander.removeHashtagsFromString(note)
+              keepDecorator.unescapeMarkupNotes(noteWithoutHashtags).trim
+            } filterNot (_.isEmpty)
+            Ok(Json.toJson(keepInfo.copy(note = editedNote)))
         }
       case Some(keep) => Future.successful(Ok(Json.toJson(KeepInfo.fromKeep(keep))))
     }
@@ -207,14 +207,16 @@ class MobileKeepsController @Inject() (
           implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
           keepsCommander.persistHashtagsForKeep(request.userId, keep.id.get, tagNames)
 
-          // append any new tags to note, remove any tags not in tagNames
+          // first turn all '[#' -> '[\#'
           val origNote = newNote getOrElse ""
-          val existingTags = hashtagCommander.findAllHashtagNames(origNote)
-          val tagsToAdd = tagNames.toSet.filterNot(t => existingTags.contains(t))
-          val tagsToRemove = existingTags.filterNot(t => tagNames.contains(t))
-          val noteWithTagsAdded = hashtagCommander.appendHashtagNamesToString(origNote, tagsToAdd)
-          hashtagCommander.removeHashtagNamesFromString(noteWithTagsAdded, tagsToRemove)
-        } orElse newNote
+          val editedNote = keepDecorator.escapeMarkupNotes(origNote)
+
+          // remove all hashtags. Anything user typed in with [#...] has already been converted to [\#...]
+          val noteWithHashtagsRemoved = hashtagCommander.removeHashtagsFromString(editedNote)
+
+          // append all the correct hashtags (in order)
+          hashtagCommander.appendHashtagNamesToString(noteWithHashtagsRemoved, tagNames).trim
+        } orElse newNote filterNot { _.isEmpty }
 
         db.readWrite { implicit s =>
           if (newTitle != keep.title || newNoteWithTags != keep.note)

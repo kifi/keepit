@@ -172,12 +172,19 @@ class KeepRepoImpl @Inject() (
   }
 
   def getByExtIds(extIds: Set[ExternalId[Keep]])(implicit session: RSession): Map[ExternalId[Keep], Option[Keep]] = {
-    val keepMap = (for (b <- rows if b.externalId.inSet(extIds) && b.state === KeepStates.ACTIVE) yield b).list.map { keep =>
-      (keep.externalId, keep)
-    }.toMap
-    extIds.map { extId =>
-      extId -> (keepMap.get(extId) orElse None)
-    }.toMap
+    if (extIds.size == 0) {
+      Map.empty[ExternalId[Keep], Option[Keep]] // return immediately, don't search through table
+    } else if (extIds.size == 1) {
+      val extId = extIds.head
+      Map((extId, getOpt(extId))) // defer to precompiled query
+    } else {
+      val keepMap = (for (b <- rows if b.externalId.inSet(extIds) && b.state === KeepStates.ACTIVE) yield b).list.map { keep =>
+        (keep.externalId, keep)
+      }.toMap
+      extIds.map { extId =>
+        extId -> (keepMap.get(extId) orElse None)
+      }.toMap
+    }
   }
 
   // preserved for backward compatibility

@@ -4,92 +4,35 @@ import com.keepit.model.Hashtag
 
 class HashtagCommander {
 
-  // look for all occurences of '[#...]' in str. Hashtags cannot be '#' and \[ does not count as a beginning delimiter for hashtags
-  def findAllHashtagNames(str: String): Set[String] = {
-    var idx = 0
-    val hashtags = scala.collection.mutable.Set[String]()
+  // matches '[#...]'.
+  // A literal '[#' indicates the start of a hashtag
+  // A literal ']' indicates the end of the hashtag
+  // inside that (...), all ']' & '\' will be escaped to indicate they are part of the hashtag
+  val hashTagRe = """\[#((?:\\[\\\]]|[^\]])+)\]""".r
+  val backslashEscapeRe = """[\]\\]""".r
+  val backslashUnescapeRe = """\\(.)""".r
 
-    while (idx < str.length) {
-      val currChar = str.charAt(idx)
-      if (currChar == '[' && (idx == 0 || (str.charAt(idx - 1) != '\\'))) { // beginning of hashtag
-        val closingIdx = str.indexOf(']', idx)
-        if (closingIdx > idx) { // end of hashtag
-          isValidHashtagName(str.substring(idx + 1, closingIdx)) match {
-            case Some(hashtagName) =>
-              hashtags.add(hashtagName)
-            case _ =>
-          }
-          idx = closingIdx + 1
-        } else {
-          idx = str.length // no closing ']' in string, so no more potential hashtags
-        }
-      } else {
-        idx += 1
-      }
-    }
-    hashtags.toSet
+  def findAllHashtagNames(s: String): Set[String] = {
+    hashTagRe.findAllMatchIn(s).map(_ group 1).map { escapedName =>
+      backslashUnescapeRe.replaceAllIn(escapedName, "$1")
+    } toSet
   }
-
-  // i.e. '#a' '#hashtag' '#asdf'. But cannot be '#'
-  private def isValidHashtagName(str: String): Option[String] = {
-    if (str.startsWith("#") && str.length > 1) {
-      Some(str.substring(1))
-    } else {
-      None
-    }
-  }
-
 
   // append hashtags to the end of a string, separated by spaces
-  def appendHashtagsToString(str: String, hashtags: Set[Hashtag]): String = {
+  def appendHashtagsToString(str: String, hashtags: Seq[Hashtag]): String = {
     val hashtagNames = hashtags.map(_.tag)
     appendHashtagNamesToString(str, hashtagNames)
   }
 
-  def appendHashtagNamesToString(str: String, hashtagNames: Set[String]): String = {
-    val tagsStr = hashtagNames.filter(_.nonEmpty).map("[#" + _ + "]").mkString(" ")
+  def appendHashtagNamesToString(str: String, hashtagNames: Seq[String]): String = {
+    val tagsStr = hashtagNames.filter(_.nonEmpty).map { tag =>
+      "[#" + backslashEscapeRe.replaceAllIn(tag, """\\$0""") + "]"
+    }.mkString(" ")
     (str + " " + tagsStr).trim
   }
 
-
-  // remove hashtags from a string. Look for '[#...]' and only remove hashtags specified by the given set.
-  def removeHashtagsFromString(str: String, hashtags: Set[Hashtag]): String = {
-    val hashtagNames = hashtags.map(_.tag)
-    removeHashtagNamesFromString(str, hashtagNames)
-  }
-
-  def removeHashtagNamesFromString(str: String, hashtagNames: Set[String]): String = {
-    var idx = 0
-    var editedStr = str
-    while (idx < editedStr.length) {
-      val currChar = editedStr.charAt(idx)
-      if (currChar == '[') {
-        val closingIdx = editedStr.indexOf(']', idx)
-        if (closingIdx > idx) {
-          isValidHashtagName(editedStr.substring(idx + 1, closingIdx)) match {
-            case Some(name) =>
-              if (hashtagNames.contains(name)) {
-                // remove the space after the tagname if there is one
-                val strToKeep = if ((closingIdx + 1 < editedStr.length) && (editedStr.charAt(closingIdx + 1) == ' ')) {
-                  editedStr.substring(closingIdx + 2)
-                } else {
-                  editedStr.substring(closingIdx + 1)
-                }
-                editedStr = editedStr.substring(0, idx) + strToKeep
-              } else {
-                idx = closingIdx + 1 // not a tagname in `hashtagNames`
-              }
-            case _ =>
-              idx = closingIdx + 1 // not a valid tag
-          }
-        } else {
-          idx = editedStr.length // no closing ']', there should not be any more hashtags in string
-        }
-      } else {
-        idx += 1
-      }
-    }
-    editedStr.trim
+  def removeHashtagsFromString(str: String): String = {
+    hashTagRe.replaceAllIn(str, "").trim
   }
 
 }

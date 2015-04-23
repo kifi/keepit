@@ -160,18 +160,17 @@ class MobileLibraryController @Inject() (
         val completeKeepData = db.readOnlyMaster { implicit s =>
           val allKeepExtIds = keepDataList.map(_.id).toSet
           val keepMap = keepRepo.getByExtIds(allKeepExtIds)
-          val allKeeps = keepMap.values.flatten.toSeq
-          val keepToHashtagNamesMap = collectionRepo.getTagsByKeepIds(allKeeps.map(_.id.get).toSet)
 
           keepDataList.map { keepData =>
             keepMap(keepData.id) match {
               case Some(keep) =>
                 val keepImageUrl = keepImageCommander.getBestImageForKeep(keep.id.get, ScaleImageRequest(MobileLibraryController.defaultKeepImageSize)).flatten.map(keepImageCommander.getUrl)
 
-                // (todo aaron): remove modified notes and persist database notes once tagging is moved off
-                val noteStr = keep.note getOrElse ""
-                val hashtags = keepToHashtagNamesMap(keep.id.get)
-                val editedKeepNote = hashtagCommander.removeHashtagsFromString(noteStr, hashtags)
+                // remove hashtags, then turn all '[\#' -> '[#'
+                val editedKeepNote = keep.note.map { note =>
+                  val noteWithoutHashtags = hashtagCommander.removeHashtagsFromString(note)
+                  keepDecorator.unescapeMarkupNotes(noteWithoutHashtags).trim
+                }
 
                 val keepObj = Json.obj("id" -> keep.externalId, "title" -> keep.title, "note" -> editedKeepNote, "imageUrl" -> keepImageUrl, "hashtags" -> Json.toJson(collectionRepo.getTagsByKeepId(keep.id.get)))
                 Json.obj("keep" -> keepObj) ++ Json.toJson(keepData).as[JsObject] - ("id")

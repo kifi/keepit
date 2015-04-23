@@ -186,4 +186,15 @@ class KeepDecorator @Inject() (
       }
     }.toMap
   }
+
+  val escapeMarkupsRe = """\[([#@])""".r
+  def escapeMarkupNotes(str: String): String = {
+    escapeMarkupsRe.replaceAllIn(str, """[\\$1""")
+  }
+
+  val unescapeMarkupsRe = """\[\\([#@])""".r
+  def unescapeMarkupNotes(str: String): String = {
+    unescapeMarkupsRe.replaceAllIn(str, """[$1""")
+  }
+
 }
