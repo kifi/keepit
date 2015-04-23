@@ -31,7 +31,7 @@ class LDALibraryUpdaterImpl @Inject() (
   private val cleanupSeq = StatModelName.LDA_LIBRARY_CLEANUP
   private val cleanupBatch = 2000
   private val min_num_words = 50
-  protected val min_num_evidence = 1
+  protected val min_num_evidence = 2
 
   type Auxiliary = (Option[LDATopic], Option[LDATopic], Option[LDATopic], Option[Float], Option[Float]) // (1st topic, 2nd topic, 3rd topic, 1st topic score, entropy)
 
