@@ -32,6 +32,8 @@ import scala.collection.concurrent.TrieMap
 import scala.concurrent.Future
 import scala.util.Random
 
+import java.util.concurrent.atomic.AtomicInteger
+
 import org.joda.time.{ DateTime, Days }
 
 @Singleton
@@ -77,6 +79,7 @@ class RecommendationGenerationCommander @Inject() (
       )
     )
   }
+  private val diagnosticsSentCounter: AtomicInteger = new AtomicInteger(0)
 
   private def usersToPrecomputeRecommendationsFor(): Seq[Id[User]] = Random.shuffle((seedCommander.getUsersWithSufficientData()).toSeq)
 
@@ -192,6 +195,23 @@ class RecommendationGenerationCommander @Inject() (
               topic1 = item.topic1,
               topic2 = item.topic2))
           }
+
+          if (Random.nextFloat() > 0.75 && diagnosticsSentCounter.getAndIncrement() < 20) {
+            sendDiagnosticEmail(recoOpt.isDefined.toString, uriRecRepo.insertOrUpdate(UriRecommendation(
+              uriId = item.uriId,
+              userId = userId,
+              masterScore = computeMasterScore(item.uriScores),
+              allScores = item.uriScores,
+              delivered = 0,
+              clicked = 0,
+              kept = false,
+              trashed = false,
+              attribution = item.attribution,
+              topic1 = item.topic1,
+              topic2 = item.topic2)
+            ))
+          }
+
         }
 
         genStateRepo.save(newState)
@@ -295,22 +315,6 @@ class RecommendationGenerationCommander @Inject() (
                       attribution = item.attribution,
                       topic1 = item.topic1,
                       topic2 = item.topic2))
-                  }
-
-                  if (Random.nextFloat() > 0.99 && userId.id < 1000) {
-                    sendDiagnosticEmail(recoOpt.isDefined.toString, uriRecRepo.insertOrUpdate(UriRecommendation(
-                      uriId = item.uriId,
-                      userId = userId,
-                      masterScore = masterScore,
-                      allScores = item.uriScores,
-                      delivered = 0,
-                      clicked = 0,
-                      kept = false,
-                      trashed = false,
-                      attribution = item.attribution,
-                      topic1 = item.topic1,
-                      topic2 = item.topic2)
-                    ))
                   }
 
               }
