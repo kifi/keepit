@@ -297,7 +297,7 @@ class RecommendationGenerationCommander @Inject() (
                       topic2 = item.topic2))
                   }
 
-                  if (Random.nextFloat() > 0.98 && userId == Id[User](243)) {
+                  if (Random.nextFloat() > 0.99 && userId.id < 1000) {
                     sendDiagnosticEmail(recoOpt.isDefined.toString, uriRecRepo.insertOrUpdate(UriRecommendation(
                       uriId = item.uriId,
                       userId = userId,
@@ -388,7 +388,7 @@ class RecommendationGenerationCommander @Inject() (
       boostedKeepersSet <- specialCurators()
     } yield {
       if (recommendationGenerationLock.waiting < userIds.length) {
-        Future.sequence(userIds.map(userId => precomputeRecommendationsForUser(userId, boostedKeepersSet))).map(_ => ())
+        Future.sequence(Random.shuffle(userIds).map(userId => precomputeRecommendationsForUser(userId, boostedKeepersSet))).map(_ => ())
       } else {
         Future.successful(())
       }
