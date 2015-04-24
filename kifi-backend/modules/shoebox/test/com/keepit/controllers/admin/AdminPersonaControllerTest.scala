@@ -191,7 +191,7 @@ class AdminPersonaControllerTest extends Specification with ShoeboxApplicationIn
         db.readOnlyMaster { implicit s =>
           keepRepo.get(k1.id.get).note === None // null field -> null field
           keepRepo.get(k2.id.get).note === Some("[#first] [#second]") // null field populated to have two tags
-          keepRepo.get(k3.id.get).note === Some("[\\#asdf] [#first] [#second]") // nonempty field populated to have two tags
+          keepRepo.get(k3.id.get).note === Some("[#asdf] [#first] [#second]") // nonempty field populated to have two tags
         }
       }
     }

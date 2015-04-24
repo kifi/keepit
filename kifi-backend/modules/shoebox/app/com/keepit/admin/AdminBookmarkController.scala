@@ -339,13 +339,13 @@ class AdminBookmarksController @Inject() (
         collectionRepo.getHashtagsByKeepIds(keepIds)
       }
       val keepNotesMap = keepGroup.map { k =>
-        // given a keep note, escape characters: [#...] -> [\#...] and [@...] -> [\@...]
-        val escapedNote = k.note.map(keepDecorator.escapeMarkupNotes(_))
         // look for all hashtags for a keep
         val newNote = keepHashtagsMap.get(k.id.get) match {
           case Some(tags) if tags.nonEmpty =>
-            val noteStr = escapedNote getOrElse ""
-            Some(hashtagCommander.appendHashtagsToString(noteStr, tags).trim) filterNot (_.isEmpty)
+            val noteStr = k.note getOrElse ""
+            val existingTags = hashtagCommander.findAllHashtagNames(noteStr)
+            val tagsToAppend = tags.map(_.tag) diff existingTags.toSeq
+            Some(hashtagCommander.appendHashtagNamesToString(noteStr, tagsToAppend).trim) filterNot (_.isEmpty)
           case _ =>
             k.note
         }
