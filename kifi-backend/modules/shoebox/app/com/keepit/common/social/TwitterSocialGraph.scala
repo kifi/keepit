@@ -431,7 +431,7 @@ class TwitterSocialGraphImpl @Inject() (
         log.warn(s"[twfetch-err] Rate limited for $handle using ${socialUserInfoOpt.flatMap(_.userId).map(_.toString).getOrElse("system")}")
         Seq.empty
       } else {
-        airbrake.notify(s"Failed to get users $handle timeline, status ${response.status}, msg: ${response.json.toString}")
+        airbrake.notify(s"Failed to get users $handle timeline, status ${response.status}, msg: ${response.json.toString}, social user info $socialUserInfoOpt , signature $sig")
         Seq.empty
       }
     }.recover {
