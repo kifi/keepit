@@ -15,6 +15,7 @@ import com.keepit.common.core._
 @ImplementedBy(classOf[KeepRepoImpl])
 trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNumberFunction[Keep] {
   def page(page: Int, size: Int, includePrivate: Boolean, excludeStates: Set[State[Keep]])(implicit session: RSession): Seq[Keep]
+  def getByExtIds(extIds: Set[ExternalId[Keep]])(implicit session: RSession): Map[ExternalId[Keep], Option[Keep]]
   def getByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[Keep] //todo: replace option with seq
   def getByUserAndUriIds(userId: Id[User], uriIds: Set[Id[NormalizedURI]])(implicit session: RSession): Seq[Keep]
   def getByExtIdAndUser(extId: ExternalId[Keep], userId: Id[User])(implicit session: RSession): Option[Keep]
@@ -167,6 +168,22 @@ class KeepRepoImpl @Inject() (
     } else {
       keepUriUserCache.set(KeepUriUserKey(keep.uriId, keep.userId), keep)
       countCache.remove(KeepCountKey(keep.userId))
+    }
+  }
+
+  def getByExtIds(extIds: Set[ExternalId[Keep]])(implicit session: RSession): Map[ExternalId[Keep], Option[Keep]] = {
+    if (extIds.size == 0) {
+      Map.empty[ExternalId[Keep], Option[Keep]] // return immediately, don't search through table
+    } else if (extIds.size == 1) {
+      val extId = extIds.head
+      Map((extId, getOpt(extId))) // defer to precompiled query
+    } else {
+      val keepMap = (for (b <- rows if b.externalId.inSet(extIds) && b.state === KeepStates.ACTIVE) yield b).list.map { keep =>
+        (keep.externalId, keep)
+      }.toMap
+      extIds.map { extId =>
+        extId -> (keepMap.get(extId) orElse None)
+      }.toMap
     }
   }
 
