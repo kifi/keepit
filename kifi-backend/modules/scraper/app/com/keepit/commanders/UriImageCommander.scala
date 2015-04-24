@@ -5,7 +5,6 @@ import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.images.Photoshop
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.WebService
-import com.keepit.common.store.S3ImageConfig
 import com.keepit.model._
 import com.keepit.scraper.store.UriImageStore
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -14,8 +13,6 @@ import scala.concurrent.Future
 
 @ImplementedBy(classOf[UriImageCommanderImpl])
 trait UriImageCommander {
-  def getUrl(libraryImage: UriImage): String
-
   // Fetch, resize, persist to S3:
   def processRemoteImage(remoteImageUrl: String): Future[Either[Seq[ImageProcessState.UploadedImage], ImageStoreFailure]]
 }
@@ -30,13 +27,8 @@ object UriImageSizes {
 @Singleton
 class UriImageCommanderImpl @Inject() (
     uriImageStore: UriImageStore,
-    s3ImageConfig: S3ImageConfig,
     photoshop: Photoshop,
     val webService: WebService) extends UriImageCommander with ProcessedImageHelper with Logging {
-
-  def getUrl(uriImage: UriImage): String = {
-    s3ImageConfig.cdnBase + "/" + uriImage.imagePath
-  }
 
   def processRemoteImage(remoteImageUrl: String): Future[Either[Seq[ImageProcessState.UploadedImage], ImageStoreFailure]] = {
     fetchAndHashRemoteImage(remoteImageUrl).flatMap {
