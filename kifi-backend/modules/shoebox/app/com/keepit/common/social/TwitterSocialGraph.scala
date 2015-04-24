@@ -287,7 +287,7 @@ class TwitterSocialGraphImpl @Inject() (
       ))
     ) map { _ =>
         val canSendPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(lib.ownerId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
-        if (canSendPush) {
+        if (canSendPush && false) {
           elizaServiceClient.sendUserPushNotification(
             userId = lib.ownerId,
             message = message,
