@@ -380,7 +380,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
         db.readOnlyMaster { implicit s =>
           val keeps = keepRepo.getByLibrary(lib1.id.get, 0, 10)
           keeps(0).title.get === "Bikini Bottom"
-          collectionRepo.getTagsByKeepId(keeps(0).id.get).map(_.tag) === Set("vacation")
+          collectionRepo.getHashtagsByKeepId(keeps(0).id.get).map(_.tag) === Set("vacation")
         }
 
         // add same keep with different title & different set of tags
@@ -393,7 +393,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
         db.readOnlyMaster { implicit s =>
           val keeps = keepRepo.getByLibrary(lib1.id.get, 0, 10)
           keeps(0).title.get === "Airbnb"
-          collectionRepo.getTagsByKeepId(keeps(0).id.get).map(_.tag) === Set("tagA", "tagB")
+          collectionRepo.getHashtagsByKeepId(keeps(0).id.get).map(_.tag) === Set("tagA", "tagB")
         }
       }
     }
