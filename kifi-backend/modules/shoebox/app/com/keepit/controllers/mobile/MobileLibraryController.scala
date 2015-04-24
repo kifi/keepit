@@ -172,7 +172,7 @@ class MobileLibraryController @Inject() (
                   keepDecorator.unescapeMarkupNotes(noteWithoutHashtags).trim
                 }
 
-                val keepObj = Json.obj("id" -> keep.externalId, "title" -> keep.title, "note" -> editedKeepNote, "imageUrl" -> keepImageUrl, "hashtags" -> Json.toJson(collectionRepo.getTagsByKeepId(keep.id.get)))
+                val keepObj = Json.obj("id" -> keep.externalId, "title" -> keep.title, "note" -> editedKeepNote, "imageUrl" -> keepImageUrl, "hashtags" -> Json.toJson(collectionRepo.getHashtagsByKeepId(keep.id.get)))
                 Json.obj("keep" -> keepObj) ++ Json.toJson(keepData).as[JsObject] - ("id")
 
               case _ => Json.obj()

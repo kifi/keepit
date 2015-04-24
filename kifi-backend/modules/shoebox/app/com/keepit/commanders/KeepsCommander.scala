@@ -638,7 +638,7 @@ class KeepsCommander @Inject() (
     val futureHits = searchTags(userId, query, None)
     val existingTags = db.readOnlyMaster { implicit session =>
       val keep = keepRepo.get(keepId)
-      collectionRepo.getTagsByKeepId(keep.id.get)
+      collectionRepo.getHashtagsByKeepId(keep.id.get)
     }
     futureHits.imap { hits =>
       val validHits = hits.filterNot(hit => existingTags.contains(hit.tag))
@@ -650,7 +650,7 @@ class KeepsCommander @Inject() (
     val keep = db.readOnlyMaster { implicit session => keepRepo.get(keepId) }
     val item = AugmentableItem(keep.uriId, Some(keep.libraryId.get))
     val futureAugmentationResponse = searchClient.augmentation(ItemAugmentationRequest.uniform(userId, item))
-    val existingNormalizedTags = db.readOnlyMaster { implicit session => collectionRepo.getTagsByKeepId(keep.id.get).map(_.normalized) }
+    val existingNormalizedTags = db.readOnlyMaster { implicit session => collectionRepo.getHashtagsByKeepId(keep.id.get).map(_.normalized) }
     futureAugmentationResponse.map { response =>
       val suggestedTags = {
         val restrictedKeeps = response.infos(item).keeps.toSet
