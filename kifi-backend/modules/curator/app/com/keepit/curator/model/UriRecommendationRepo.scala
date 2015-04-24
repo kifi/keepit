@@ -12,7 +12,7 @@ import com.keepit.cortex.models.lda.LDATopic
 import com.keepit.model.{ UriRecommendationFeedback, User, NormalizedURI }
 import org.joda.time.DateTime
 import play.api.libs.json.Json
-import play.api.libs.json.Json._
+import scala.slick.jdbc.StaticQuery
 
 @ImplementedBy(classOf[UriRecommendationRepoImpl])
 trait UriRecommendationRepo extends DbRepo[UriRecommendation] {
@@ -32,7 +32,6 @@ trait UriRecommendationRepo extends DbRepo[UriRecommendation] {
   def getGeneralRecommendationCandidates(limit: Int, minClickedUsers: Int = 3)(implicit session: RSession): Seq[Id[NormalizedURI]]
   def deleteByUriId(uriId: Id[NormalizedURI])(implicit session: RWSession): Unit
   def insertAll(recos: Seq[UriRecommendation])(implicit session: RWSession): Int
-  def insertOrUpdate(reco: UriRecommendation)(implicit session: RWSession): Int
 }
 
 @Singleton
@@ -45,12 +44,12 @@ class UriRecommendationRepoImpl @Inject() (
   import db.Driver.simple._
 
   implicit val uriScoresMapper = MappedColumnType.base[UriScores, String](
-    { scores => stringify(toJson(scores)) },
-    { jstr => parse(jstr).as[UriScores] })
+    { scores => Json.stringify(Json.toJson(scores)) },
+    { jstr => Json.parse(jstr).as[UriScores] })
 
   implicit val attributionMapper = MappedColumnType.base[SeedAttribution, String](
-    { attr => stringify(toJson(attr)) },
-    { jstr => parse(jstr).as[SeedAttribution] })
+    { attr => Json.stringify(Json.toJson(attr)) },
+    { jstr => Json.parse(jstr).as[SeedAttribution] })
 
   type RepoImpl = UriRecommendationTable
 
@@ -198,28 +197,5 @@ class UriRecommendationRepoImpl @Inject() (
   def insertAll(recos: Seq[UriRecommendation])(implicit session: RWSession): Int = {
     rows.insertAll(recos: _*).get
   }
-
-  def insertOrUpdate(reco: UriRecommendation)(implicit session: RWSession): Int = {
-    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-
-    val lastPush: String = reco.lastPushedAt.map(t => s"'${SQL_DATETIME_FORMAT.print(t)}'").getOrElse("null")
-    def topic(maybeTopic: Option[LDATopic]): String = maybeTopic.map(t => s"'${t.index}'").getOrElse("null")
-
-    val query = sql"""
-          INSERT into uri_recommendation
-            (created_at,updated_at,state,vote,uri_id,user_id,master_score,all_scores,
-             delivered,clicked,kept,trashed,last_pushed_at,attribution,topic1,topic2)
-          values
-            (
-              '${reco.createdAt}','${reco.updatedAt}','UriRecommendationStates.ACTIVE',${reco.vote},${reco.uriId},${reco.userId.id},${reco.masterScore},'${stringify(toJson(reco.allScores))}',
-              ${reco.delivered},${reco.clicked},${reco.kept},${reco.trashed},$lastPush,'${stringify(toJson(reco.attribution))}',${topic(reco.topic1)},${topic(reco.topic2)}'
-            )
-          ON DUPLICATE KEY UPDATE
-             updated_at='${reco.updatedAt}',state='${reco.state.value}',master_score=${reco.masterScore},all_scores='${stringify(toJson(reco.allScores))}',
-             attribution='${stringify(toJson(reco.attribution))}',topic1=${topic(reco.topic1)},topic2=${topic(reco.topic2)}
-        """
-    query.as[Int].first
-  }
-
 }
 
