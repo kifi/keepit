@@ -16,11 +16,13 @@ import com.keepit.common.zookeeper.{ ServiceDiscovery, ShardingCommander }
 import com.keepit.common.time._
 import com.keepit.curator.model._
 import com.keepit.eliza.ElizaServiceClient
-import com.keepit.model.{ ExperimentType, NormalizedURI, SystemValueRepo, UriRecommendationScores, User }
+import com.keepit.model.{ ExperimentType, NormalizedURI, SystemValueRepo, UriRecommendationScores, User, NotificationCategory }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.concurrent.PimpMyFuture._
 import com.keepit.common.core._
 import com.keepit.common.amazon.AmazonInstanceInfo
+import com.keepit.common.healthcheck.SystemAdminMailSender
+import com.keepit.common.mail.{ SystemEmailAddress, ElectronicMail, ElectronicMailCategory }
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.modules.statsd.api.Statsd
@@ -50,7 +52,8 @@ class RecommendationGenerationCommander @Inject() (
     keepRepo: CuratorKeepInfoRepo,
     schedulingProperties: SchedulingProperties,
     shardingCommander: ShardingCommander,
-    amazonInstanceInfo: AmazonInstanceInfo) extends Logging {
+    amazonInstanceInfo: AmazonInstanceInfo,
+    systemAdminMailSender: SystemAdminMailSender) extends Logging {
 
   val defaultScore = 0.0f
   val recommendationGenerationLock = new ReactiveLock(16)
@@ -61,6 +64,19 @@ class RecommendationGenerationCommander @Inject() (
   val superSpecialLock = new ReactiveLock(1)
 
   val BATCH_SIZE = 350
+
+  //This method better not be here any more after May 1st 2015 (short term debugging use only!!!)
+  private def sendDiagnosticEmail(subject: String, body: String) = {
+    systemAdminMailSender.sendMail(
+      ElectronicMail(
+        from = SystemEmailAddress.ENG,
+        to = List(SystemEmailAddress.STEPHEN),
+        subject = s"Reco Diagnostics: $subject",
+        htmlBody = body,
+        category = NotificationCategory.toElectronicMailCategory(NotificationCategory.System.ADMIN)
+      )
+    )
+  }
 
   private def usersToPrecomputeRecommendationsFor(): Seq[Id[User]] = Random.shuffle((seedCommander.getUsersWithSufficientData()).toSeq)
 
@@ -279,6 +295,22 @@ class RecommendationGenerationCommander @Inject() (
                       attribution = item.attribution,
                       topic1 = item.topic1,
                       topic2 = item.topic2))
+                  }
+
+                  if (Random.nextFloat() > 0.98 && userId == Id[User](243)) {
+                    sendDiagnosticEmail(recoOpt.isDefined.toString, uriRecRepo.insertOrUpdate(UriRecommendation(
+                      uriId = item.uriId,
+                      userId = userId,
+                      masterScore = masterScore,
+                      allScores = item.uriScores,
+                      delivered = 0,
+                      clicked = 0,
+                      kept = false,
+                      trashed = false,
+                      attribution = item.attribution,
+                      topic1 = item.topic1,
+                      topic2 = item.topic2)
+                    ))
                   }
 
               }
