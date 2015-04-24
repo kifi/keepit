@@ -13,8 +13,11 @@ import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.model.UserFactory._
+import com.keepit.model.LibraryFactoryHelper._
+import com.keepit.model.LibraryFactory._
+import com.keepit.model.KeepFactoryHelper._
+import com.keepit.model.KeepFactory._
 import com.keepit.common.social.{ FakeShoeboxAppSecureSocialModule }
-import com.keepit.model.UserFactory._
 import com.keepit.model._
 import com.keepit.scraper.{ FakeScraperServiceClientModule, FakeScrapeSchedulerModule }
 import com.keepit.search.FakeSearchServiceClientModule
@@ -153,6 +156,42 @@ class AdminPersonaControllerTest extends Specification with ShoeboxApplicationIn
           personaRepo.getByState(PersonaStates.ACTIVE).length === 4
           val changedPersona = personaRepo.getByName(PersonaName("foodie")).get
           changedPersona.displayName === "chef1"
+        }
+      }
+    }
+
+    "temporary keep note backfill" in {
+      running(new ShoeboxApplication(modules: _*)) {
+        val (user1, k1, k2, k3) = db.readWrite { implicit s =>
+          val user1 = user().withUsername("drogo").saved
+          val lib1 = library().withUser(user1).saved
+          val keep1 = keep().withLibrary(lib1).saved
+          val keep2 = keep().withLibrary(lib1).withNote(None).saved
+          val keep3 = keep().withLibrary(lib1).withNote(Some("[#asdf]")).saved
+
+          val tag1 = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("first")))
+          val tag2 = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("second")))
+          keepToCollectionRepo.save(KeepToCollection(keepId = keep2.id.get, collectionId = tag1.id.get))
+          keepToCollectionRepo.save(KeepToCollection(keepId = keep2.id.get, collectionId = tag2.id.get))
+          keepToCollectionRepo.save(KeepToCollection(keepId = keep3.id.get, collectionId = tag1.id.get))
+          keepToCollectionRepo.save(KeepToCollection(keepId = keep3.id.get, collectionId = tag2.id.get))
+
+          (user1, keep1, keep2, keep3)
+        }
+
+        val controller1 = inject[AdminBookmarksController]
+        val testPath = com.keepit.controllers.admin.routes.AdminBookmarksController.populateKeepNotesWithTag(0, 10, 10).url
+        inject[FakeUserActionsHelper].setUser(user1, experiments = Set(ExperimentType.ADMIN))
+
+        // create new persona
+        val request1 = FakeRequest("POST", testPath)
+        val result1 = controller1.populateKeepNotesWithTag(0, 10, 10)(request1)
+        status(result1) must equalTo(OK)
+
+        db.readOnlyMaster { implicit s =>
+          keepRepo.get(k1.id.get).note === None // null field -> null field
+          keepRepo.get(k2.id.get).note === Some("[#first] [#second]") // null field populated to have two tags
+          keepRepo.get(k3.id.get).note === Some("[\\#asdf] [#first] [#second]") // nonempty field populated to have two tags
         }
       }
     }

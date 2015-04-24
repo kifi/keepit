@@ -33,6 +33,7 @@ trait CollectionRepo extends Repo[Collection] with ExternalIdColumnFunction[Coll
   def getCollectionsChanged(num: SequenceNumber[Collection], limit: Int)(implicit session: RSession): Seq[Collection]
   def collectionChanged(collectionId: Id[Collection], isNewKeep: Boolean = false, inactivateIfEmpty: Boolean)(implicit session: RWSession): Collection
   def getTagsByKeepId(keepId: Id[Keep])(implicit session: RSession): Set[Hashtag]
+  def getHashtagsByKeepIds(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], Seq[Hashtag]]
   def getByUserSortedByLastKept(userId: Id[User], page: Int, size: Int)(implicit session: RSession): Seq[(CollectionSummary, Int)]
   def getByUserSortedByNumKeeps(userId: Id[User], page: Int, size: Int)(implicit session: RSession): Seq[(CollectionSummary, Int)]
   def getByUserSortedByName(userId: Id[User], page: Int, size: Int)(implicit session: RSession): Seq[(CollectionSummary, Int)]
@@ -165,6 +166,26 @@ class CollectionRepoImpl @Inject() (
     val query = sql"select DISTINCT c.name from keep_to_collection kc, collection c where kc.bookmark_id = ${keepId} and c.id = kc.collection_id and c.state='#${CollectionStates.ACTIVE}' and kc.state='#${KeepToCollectionStates.ACTIVE}'"
 
     query.as[String].list.map(tag => Hashtag(tag)).toSet
+  }
+
+  def getHashtagsByKeepIds(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], Seq[Hashtag]] = {
+    if (keepIds.size == 0) {
+      Map.empty[Id[Keep], Seq[Hashtag]]
+    } else {
+      import com.keepit.common.db.slick.StaticQueryFixed.interpolation
+      val query = sql"select kc.bookmark_id, c.name from keep_to_collection kc, collection c where kc.bookmark_id in (1,2,3) and c.id = kc.collection_id and c.state='#${CollectionStates.ACTIVE}' and kc.state='#${KeepToCollectionStates.ACTIVE}'"
+      val b = query.as[(Id[Keep], String)].list.map {
+        case (id, tagName) =>
+          (id, Hashtag(tagName))
+      }.groupBy(_._1).map {
+        case (id, pair) =>
+          (id, pair.map(_._2).toSeq)
+      }
+
+      keepIds.map { kId =>
+        kId -> (b.get(kId) getOrElse Seq.empty)
+      }.toMap
+    }
   }
 
   private def pageTagsByUserQuery[S](userId: Id[User], page: Int, size: Int, sortBy: String) = {
