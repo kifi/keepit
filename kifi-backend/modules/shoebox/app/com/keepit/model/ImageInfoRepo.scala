@@ -145,8 +145,8 @@ class ImageInfoRepoImpl @Inject() (
         // This was problematic because we're passing in 0,0 almost always (why?!), so we basically returned icons
         // for everything. Then we returned the largest, which is again problematic because mobile phones can't
         // deal with big images. So now we're returning based on the score below, which optimizes for images
-        // around 500x500px
-        val sizeScore = Math.abs(500 - Math.sqrt(size)) // lower is better
+        // around 800x800px
+        val sizeScore = Math.abs(800 - Math.sqrt(size)) // lower is better
         // Sort by priority, image size score (lower is better), -id (newer is better)
         (i.priority.getOrElse(Int.MaxValue), sizeScore, -1 * i.id.get.id)
       })
