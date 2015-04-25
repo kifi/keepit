@@ -207,19 +207,20 @@ class UriRecommendationRepoImpl @Inject() (
     def topic(maybeTopic: Option[LDATopic]): String = maybeTopic.map(t => s"'${t.index}'").getOrElse("null")
 
     val query = sqlu"""
-          INSERT into uri_recommendation
+          INSERT INTO uri_recommendation
             (created_at,updated_at,state,vote,uri_id,user_id,master_score,all_scores,
              delivered,clicked,kept,trashed,last_pushed_at,attribution,topic1,topic2)
           values
             (
-              '${reco.createdAt}','${reco.updatedAt}','UriRecommendationStates.ACTIVE',${reco.vote},${reco.uriId},${reco.userId.id},${reco.masterScore},'${stringify(toJson(reco.allScores))}',
-              ${reco.delivered},${reco.clicked},${reco.kept},${reco.trashed},$lastPush,'${stringify(toJson(reco.attribution))}',${topic(reco.topic1)},${topic(reco.topic2)}'
+              ${reco.createdAt},${reco.updatedAt},'active',${reco.vote},${reco.uriId},${reco.userId.id},${reco.masterScore},${stringify(toJson(reco.allScores))},
+              ${reco.delivered},${reco.clicked},${reco.kept},${reco.trashed},'#$lastPush',${stringify(toJson(reco.attribution))},${topic(reco.topic1)},${topic(reco.topic2)}
             )
           ON DUPLICATE KEY UPDATE
-             updated_at='${reco.updatedAt}',state='${reco.state.value}',master_score=${reco.masterScore},all_scores='${stringify(toJson(reco.allScores))}',
-             attribution='${stringify(toJson(reco.attribution))}',topic1=${topic(reco.topic1)},topic2=${topic(reco.topic2)}
+             updated_at=VALUES(updated_at),state=VALUES(state),master_score=VALUES(master_score),all_scores=VALUES(all_scores),
+             attribution=VALUES(attribution),topic1=VALUES(topic1),topic2=VALUES(topic2)
         """
-    query.getStatement
+    val stmt = query.getStatement
+    stmt + " ==> " + query.first.toString
   }
 }
 
