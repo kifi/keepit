@@ -35,7 +35,7 @@ class CuratorServiceClientImpl(
     implicit val defaultContext: ExecutionContext,
     val airbrakeNotifier: AirbrakeNotifier) extends CuratorServiceClient {
 
-  val longTimeout = CallTimeouts(responseTimeout = Some(30000), maxWaitTime = Some(3000), maxJsonParseTime = Some(10000))
+  val longTimeout = CallTimeouts(responseTimeout = Some(30000), maxWaitTime = Some(10000), maxJsonParseTime = Some(10000))
 
   def topRecos(userId: Id[User], source: RecommendationSource, subSource: RecommendationSubSource, more: Boolean, recencyWeight: Float, context: Option[String]): Future[URIRecoResults] = {
     val payload = Json.obj(
@@ -119,7 +119,7 @@ class CuratorServiceClientImpl(
 
   def ingestPersonaRecos(userId: Id[User], personaIds: Seq[Id[Persona]], reverseIngestion: Boolean = false): Future[Unit] = {
     val payload = Json.obj("personaIds" -> personaIds)
-    call(Curator.internal.ingestPersonaRecos(userId, reverseIngestion), payload).map { _ => Unit }
+    call(Curator.internal.ingestPersonaRecos(userId, reverseIngestion), payload, callTimeouts = longTimeout).map { _ => Unit }
   }
 
   def examineUserFeedbackCounter(userId: Id[User]): Future[(Seq[UserFeedbackCountView], Seq[UserFeedbackCountView])] = {
