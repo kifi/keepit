@@ -267,7 +267,7 @@ trait ExternalIdColumnDbFunction[M <: ModelWithExternalId[M]] extends ExternalId
   protected def rowsWithExternalIdColumn = TableQuery(tableWithExternalIdColumn)
   implicit val externalIdMapper = MappedColumnType.base[ExternalId[M], String](_.id, ExternalId[M])
 
-  def get(id: ExternalId[M])(implicit session: RSession): M = getOpt(id).get
+  def get(id: ExternalId[M])(implicit session: RSession): M = getOpt(id).getOrElse(throw new Exception(s"Can't find entity for id $id"))
 
   protected val getByExtIdCompiled = Compiled { id: Column[ExternalId[M]] =>
     for (f <- rowsWithExternalIdColumn if f.externalId === id) yield f
