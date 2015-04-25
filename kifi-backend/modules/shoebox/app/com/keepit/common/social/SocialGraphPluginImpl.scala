@@ -97,7 +97,7 @@ private[social] class SocialGraphActor @Inject() (
 
         val updatedSui = rawInfo.jsons.foldLeft(socialUserInfo)(graph.updateSocialUserInfo)
         val latestUserValues = rawInfo.jsons.map(graph.extractUserValues).reduce(_ ++ _)
-        db.readWrite { implicit c =>
+        db.readWrite(attempts = 3) { implicit c =>
           latestUserValues.collect {
             case (key, value) if userValueRepo.getValueStringOpt(userId, key) != Some(value) =>
               userValueRepo.setValue(userId, key, value)
