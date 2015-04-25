@@ -26,7 +26,7 @@ import play.api.http.Status._
 import play.api.Play.current
 import play.api.libs.json.JsValue
 import play.api.libs.oauth.OAuthCalculator
-import play.api.libs.ws.{ WSResponse, WS }
+import play.api.libs.ws.{ WSSignatureCalculator, WSResponse, WS }
 import securesocial.core.{ IdentityId, OAuth2Settings }
 import twitter4j.{ StatusUpdate, TwitterFactory, Twitter }
 import twitter4j.media.{ ImageUpload, MediaProvider, ImageUploadFactory }
@@ -414,30 +414,45 @@ class TwitterSocialGraphImpl @Inject() (
 
   def fetchTweets(socialUserInfoOpt: Option[SocialUserInfo], handle: String, lowerBoundId: Option[Long], upperBoundId: Option[Long]): Future[Seq[JsObject]] = {
     val endpoint = "https://api.twitter.com/1.1/statuses/user_timeline.json"
-    val sig = socialUserInfoOpt.map { socialUserInfo =>
-      OAuthCalculator(providerConfig.key, getOAuth1Info(socialUserInfo))
-    } getOrElse {
-      OAuthCalculator(providerConfig.key, OAuth1TokenInfo(providerConfig.accessToken.key, providerConfig.accessToken.secret))
+    val sigOpt: Option[OAuthCalculator] = socialUserInfoOpt.flatMap { socialUserInfo =>
+      if (socialUserInfo.state != SocialUserInfoStates.TOKEN_EXPIRED)
+        Some(OAuthCalculator(providerConfig.key, getOAuth1Info(socialUserInfo)))
+      else
+        None
+    } orElse {
+      Some(OAuthCalculator(providerConfig.key, OAuth1TokenInfo(providerConfig.accessToken.key, providerConfig.accessToken.secret)))
     }
+    sigOpt match {
+      case Some(sig) =>
+        val query = Seq("screen_name" -> Some(handle), "count" -> Some("200"), "since_id" -> lowerBoundId.map(_.toString), "max_id" -> upperBoundId.map(id => (id - 1).toString)).collect { case (k, Some(v)) => k -> v }
 
-    val query = Seq("screen_name" -> Some(handle), "count" -> Some("200"), "since_id" -> lowerBoundId.map(_.toString), "max_id" -> upperBoundId.map(id => (id - 1).toString)).collect { case (k, Some(v)) => k -> v }
-
-    log.info(s"[twfetch] Fetching tweets for $handle using ${socialUserInfoOpt.flatMap(_.userId).map(_.toString).getOrElse("system")} token. ($upperBoundId, $lowerBoundId)")
-    val call = WS.url(endpoint).sign(sig).withQueryString(query: _*)
-    call.get().map { response =>
-      if (response.status == 200) {
-        response.json.as[JsArray].value.map(_.as[JsObject])
-      } else if (response.status == 429 || response.status == 420) { //rate limit
-        log.warn(s"[twfetch-err] Rate limited for $handle using ${socialUserInfoOpt.flatMap(_.userId).map(_.toString).getOrElse("system")}")
-        Seq.empty
-      } else {
-        airbrake.notify(s"Failed to get users $handle timeline, status ${response.status}, msg: ${response.json.toString}")
-        Seq.empty
-      }
-    }.recover {
-      case t: Throwable =>
-        log.warn(s"[twfetch-err] Fetching error for $handle using ${socialUserInfoOpt.flatMap(_.userId).map(_.toString).getOrElse("system")}, ${t.getClass.getCanonicalName}", t)
-        Seq.empty
+        log.info(s"[twfetch] Fetching tweets for $handle using ${socialUserInfoOpt.flatMap(_.userId).map(_.toString).getOrElse("system")} token. ($upperBoundId, $lowerBoundId)")
+        val call = WS.url(endpoint).sign(sig).withQueryString(query: _*)
+        call.get().map { response =>
+          if (response.status == 200) {
+            response.json.as[JsArray].value.map(_.as[JsObject])
+          } else if (response.status == 429 || response.status == 420) { //rate limit
+            log.warn(s"[twfetch-err] Rate limited for $handle using ${socialUserInfoOpt.flatMap(_.userId).map(_.toString).getOrElse("system")}")
+            Seq.empty
+          } else if (response.status == 401) { //token not good
+            airbrake.notify(s"Token expired for $handle, status ${response.status}, msg: ${response.json.toString}, social user info $socialUserInfoOpt , signature $sig")
+            socialUserInfoOpt.foreach { sui =>
+              db.readWrite { implicit s =>
+                socialUserInfoRepo.save(sui.copy(state = SocialUserInfoStates.TOKEN_EXPIRED))
+              }
+            }
+            Seq.empty
+          } else {
+            airbrake.notify(s"Failed to get users $handle timeline, status ${response.status}, msg: ${response.json.toString}, social user info $socialUserInfoOpt , signature $sig")
+            Seq.empty
+          }
+        }.recover {
+          case t: Throwable =>
+            log.warn(s"[twfetch-err] Fetching error for $handle using ${socialUserInfoOpt.flatMap(_.userId).map(_.toString).getOrElse("system")}, ${t.getClass.getCanonicalName}", t)
+            Seq.empty
+        }
+      case None =>
+        Future.successful(Seq.empty)
     }
 
   }
