@@ -312,7 +312,7 @@ class TwitterSocialGraphImpl @Inject() (
       else
         log.error(errMsg)
     }
-    warn(true) // set to false to reduce noise: see LinkedInSocialGraph
+    warn(false) // set to false to reduce noise
     resp.status match {
       case TOO_MANY_REQUEST => // 429: rate-limit exceeded
         db.readWrite { implicit s =>
