@@ -213,7 +213,7 @@ class UriRecommendationRepoImpl @Inject() (
           values
             (
               ${reco.createdAt},${reco.updatedAt},'active',${reco.vote},${reco.uriId},${reco.userId.id},${reco.masterScore},${stringify(toJson(reco.allScores))},
-              ${reco.delivered},${reco.clicked},${reco.kept},${reco.trashed},'#$lastPush',${stringify(toJson(reco.attribution))},${topic(reco.topic1)},${topic(reco.topic2)}
+              ${reco.delivered},${reco.clicked},${reco.kept},${reco.trashed},#$lastPush,${stringify(toJson(reco.attribution))},${topic(reco.topic1)},${topic(reco.topic2)}
             )
           ON DUPLICATE KEY UPDATE
              updated_at=VALUES(updated_at),state=VALUES(state),master_score=VALUES(master_score),all_scores=VALUES(all_scores),
