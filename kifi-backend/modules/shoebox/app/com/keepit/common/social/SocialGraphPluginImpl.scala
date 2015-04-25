@@ -122,7 +122,12 @@ private[social] class SocialGraphActor @Inject() (
       }
       connectionsOpt getOrElse Seq.empty
     } catch {
-      case ex: NonOKResponseException if ex.response.status == 500 =>
+      case ex: NonOKResponseException if ex.response.status / 100 == 5 =>
+        log.warn(s"Remote server error fetching SocialUserInfo: $socialUserInfo", ex)
+        Seq()
+      case ex: NonOKResponseException if ex.response.status / 100 == 4 =>
+        db.readWrite { implicit s => socialRepo.save(socialUserInfo.withState(SocialUserInfoStates.TOKEN_EXPIRED).withLastGraphRefresh()) }
+        log.warn(s"SocialUserInfo token expired: $socialUserInfo", ex)
         Seq()
       case ex: Exception =>
         db.readWrite { implicit s => socialRepo.save(socialUserInfo.withState(SocialUserInfoStates.FETCH_FAIL).withLastGraphRefresh()) }
