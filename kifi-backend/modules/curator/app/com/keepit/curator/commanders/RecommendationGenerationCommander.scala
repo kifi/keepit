@@ -172,17 +172,9 @@ class RecommendationGenerationCommander @Inject() (
       val timerPer = new NamedStatsdTimer("RecommendationGenerationCommander.saveScoredSeedItemsPerItem")
       db.readWrite(attempts = 2) { implicit s =>
         items foreach { item =>
-          val recoOpt = uriRecRepo.getByUriAndUserId(item.uriId, userId, None)
-          recoOpt.map { reco =>
-            uriRecRepo.save(reco.copy(
-              state = UriRecommendationStates.ACTIVE,
-              masterScore = computeMasterScore(item.uriScores),
-              allScores = item.uriScores,
-              attribution = item.attribution,
-              topic1 = item.topic1,
-              topic2 = item.topic2))
-          } getOrElse {
-            uriRecRepo.save(UriRecommendation(
+
+          uriRecRepo.insertOrUpdate(
+            UriRecommendation(
               uriId = item.uriId,
               userId = userId,
               masterScore = computeMasterScore(item.uriScores),
@@ -193,8 +185,9 @@ class RecommendationGenerationCommander @Inject() (
               trashed = false,
               attribution = item.attribution,
               topic1 = item.topic1,
-              topic2 = item.topic2))
-          }
+              topic2 = item.topic2
+            )
+          )
 
           if (Random.nextFloat() > 0.75 && diagnosticsSentCounter.getAndIncrement() < 5) {
             val info: String = try {
@@ -214,7 +207,7 @@ class RecommendationGenerationCommander @Inject() (
             } catch {
               case t: Throwable => t.toString
             }
-            sendDiagnosticEmail(recoOpt.isDefined.toString, info)
+            sendDiagnosticEmail("", info)
           }
 
         }
@@ -298,17 +291,8 @@ class RecommendationGenerationCommander @Inject() (
             db.readWrite(attempts = 2) { implicit s =>
               filteredItems foreach {
                 case (item, masterScore) =>
-                  val recoOpt = uriRecRepo.getByUriAndUserId(item.uriId, userId, None)
-                  recoOpt.map { reco =>
-                    uriRecRepo.save(reco.copy(
-                      state = UriRecommendationStates.ACTIVE,
-                      masterScore = masterScore,
-                      allScores = item.uriScores,
-                      attribution = item.attribution,
-                      topic1 = item.topic1,
-                      topic2 = item.topic2))
-                  } getOrElse {
-                    uriRecRepo.save(UriRecommendation(
+                  uriRecRepo.insertOrUpdate(
+                    UriRecommendation(
                       uriId = item.uriId,
                       userId = userId,
                       masterScore = masterScore,
@@ -319,9 +303,9 @@ class RecommendationGenerationCommander @Inject() (
                       trashed = false,
                       attribution = item.attribution,
                       topic1 = item.topic1,
-                      topic2 = item.topic2))
-                  }
-
+                      topic2 = item.topic2
+                    )
+                  )
               }
 
               genStateRepo.save(newState)
