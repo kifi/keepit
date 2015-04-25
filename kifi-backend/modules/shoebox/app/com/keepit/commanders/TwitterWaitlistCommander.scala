@@ -164,6 +164,9 @@ class TwitterWaitlistCommanderImpl @Inject() (
     } yield {
       twitterOAuthProvider.getUserShow(OAuth1TokenInfo.fromOAuth1Info(oauth), handle).map { show =>
         db.readWrite { implicit session =>
+          if (sui.state == SocialUserInfoStates.TOKEN_EXPIRED) {
+            socialUserInfoRepo.save(sui.copy(state = SocialUserInfoStates.CREATED))
+          }
           show.profile_banner_url.foreach { img =>
             userValueRepo.setValue(userId, UserValueName.TWITTER_BANNER_IMAGE, img)
           }
