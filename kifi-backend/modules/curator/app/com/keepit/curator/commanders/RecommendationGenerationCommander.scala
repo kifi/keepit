@@ -196,20 +196,25 @@ class RecommendationGenerationCommander @Inject() (
               topic2 = item.topic2))
           }
 
-          if (Random.nextFloat() > 0.75 && diagnosticsSentCounter.getAndIncrement() < 20) {
-            sendDiagnosticEmail(recoOpt.isDefined.toString, uriRecRepo.insertOrUpdate(UriRecommendation(
-              uriId = item.uriId,
-              userId = userId,
-              masterScore = computeMasterScore(item.uriScores),
-              allScores = item.uriScores,
-              delivered = 0,
-              clicked = 0,
-              kept = false,
-              trashed = false,
-              attribution = item.attribution,
-              topic1 = item.topic1,
-              topic2 = item.topic2)
-            ))
+          if (Random.nextFloat() > 0.75 && diagnosticsSentCounter.getAndIncrement() < 5) {
+            val info: String = try {
+              uriRecRepo.insertOrUpdate(UriRecommendation(
+                uriId = item.uriId,
+                userId = userId,
+                masterScore = computeMasterScore(item.uriScores),
+                allScores = item.uriScores,
+                delivered = 0,
+                clicked = 0,
+                kept = false,
+                trashed = false,
+                attribution = item.attribution,
+                topic1 = item.topic1,
+                topic2 = item.topic2
+              ))
+            } catch {
+              case t: Throwable => t.toString
+            }
+            sendDiagnosticEmail(recoOpt.isDefined.toString, info)
           }
 
         }
