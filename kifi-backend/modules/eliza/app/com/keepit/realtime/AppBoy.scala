@@ -176,11 +176,7 @@ class AppBoy @Inject() (
                   deviceRepo.save(device.copy(state = DeviceStates.REJECTED_BY_APPBOY))
                 }
               }
-              if (json == Json.parse("""{"message":"Missing recipients"}""")) {
-                log.error(s""""Missing recipients" Error from Appboy. disabling device for user $userId. fail to send push notification $notification, json $json - error: ${e.getClass.getSimpleName} $e"""")
-              } else {
-                airbrake.notify(s"[AppBoy] 4xx error from server, disabling device for user $userId. fail to send push notification $notification, json $json - error: ${e.getClass.getSimpleName} $e")
-              }
+              log.warn(s"[AppBoy] 4xx error from server, disabling device for user $userId. fail to send push notification $notification, json $json - error: ${e.getClass.getSimpleName} $e")
             case _ =>
               airbrake.notify(s"[AppBoy] fail to send push notification $notification, json $json for user $userId - error: ${e.getClass.getSimpleName} $e")
           }
