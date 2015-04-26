@@ -88,7 +88,7 @@ class ShoeboxController @Inject() (
   def getSocialUserInfoByNetworkAndSocialId(id: String, networkType: String) = Action {
     val socialId = SocialId(id)
     val network = SocialNetworkType(networkType)
-    val sui = db.readOnlyReplica { implicit session =>
+    val sui = db.readOnlyMaster { implicit session =>
       socialUserInfoRepo.get(socialId, network) //using cache
     }
     Ok(Json.toJson(sui))
