@@ -442,6 +442,10 @@ class TwitterSocialGraphImpl @Inject() (
               }
             }
             Seq.empty
+          } else if (response.status == 404) { // {"errors":[{"code":34,"message":"Sorry, that page does not exist."}]} ->
+            //something in twitter is bad or our api is broken, happen a lots recentrly, in check
+            log.warn(s"Failed to get users $handle timeline, status ${response.status}, msg: ${response.json.toString}, social user info $socialUserInfoOpt , signature $sig")
+            Seq.empty
           } else {
             airbrake.notify(s"Failed to get users $handle timeline, status ${response.status}, msg: ${response.json.toString}, social user info $socialUserInfoOpt , signature $sig")
             Seq.empty
