@@ -223,7 +223,7 @@ class OAuth2Controller @Inject() (
               }
               case "facebook" => {
                 if (Play.maybeApplication.isDefined && !Play.isProd) {
-                  val friendsUrl = "https://graph.facebook.com/me/friends"
+                  val friendsUrl = "https://graph.facebook.com/v2.0/me/friends"
                   val friendsF = WS.url(friendsUrl).withQueryString(("access_token", tokenResp.accessToken), ("fields", "id,name,first_name,last_name,username,picture,email")).get
                   friendsF.map { friendsResp =>
                     val friends = friendsResp.json

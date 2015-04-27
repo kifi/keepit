@@ -16,7 +16,7 @@ import play.api.Play.current
 
 trait FacebookOAuthProvider extends OAuth2Support {
 
-  val MeApi = "https://graph.facebook.com/me?fields=name,first_name,last_name,picture,email&return_ssl_resources=1&access_token="
+  val MeApi = "https://graph.facebook.com/v2.0/me?fields=name,first_name,last_name,picture,email&return_ssl_resources=1&access_token="
   val Error = "error"
   val Message = "message"
   val Type = "type"
@@ -58,7 +58,7 @@ class FacebookOAuthProviderImpl @Inject() (
           val name = (me \ Name).as[String]
           val firstName = (me \ FirstName).asOpt[String]
           val lastName = (me \ LastName).asOpt[String]
-          val picture = (me \ Picture)
+          val picture = me \ Picture
           val avatarUrl = (picture \ Data \ Url).asOpt[String]
           val email = (me \ Email).asOpt[String]
           UserProfileInfo(
