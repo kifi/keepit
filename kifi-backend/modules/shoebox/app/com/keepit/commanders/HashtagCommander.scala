@@ -29,8 +29,8 @@ class HashtagCommander {
     HashtagRegex.hashTagRe.replaceAllIn(str, "").trim
   }
 
-  def removeHashtagsFromString(str: String, hashtagNames: Set[Hashtag]): String = {
-    removeHashtagNamesFromString(str, hashtagNames.map(_.tag))
+  def removeHashtagsFromString(str: String, hashtags: Set[Hashtag]): String = {
+    removeHashtagNamesFromString(str, hashtags.map(_.tag))
   }
 
   def removeHashtagNamesFromString(str: String, hashtagNames: Set[String]): String = {

@@ -474,7 +474,7 @@ class KeepsCommander @Inject() (
               } else {
                 hashtagCommander.appendHashtagsToString(noteStr, Seq(collection.name))
               }
-            }
+            } filterNot (_.isEmpty)
             keepRepo.save(targetKeep.copy(note = editedNote)) // notify keep index
             libraryAnalytics.taggedPage(updatedCollection, keepsById(ktc.keepId), context, taggingAt)
           }
