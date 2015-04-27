@@ -119,7 +119,7 @@ class CuratorServiceClientImpl(
 
   def ingestPersonaRecos(userId: Id[User], personaIds: Seq[Id[Persona]], reverseIngestion: Boolean = false): Future[Unit] = {
     val payload = Json.obj("personaIds" -> personaIds)
-    call(Curator.internal.ingestPersonaRecos(userId, reverseIngestion), payload, callTimeouts = longTimeout).map { _ => Unit }
+    call(Curator.internal.ingestPersonaRecos(userId, reverseIngestion), payload).map { _ => Unit }
   }
 
   def examineUserFeedbackCounter(userId: Id[User]): Future[(Seq[UserFeedbackCountView], Seq[UserFeedbackCountView])] = {
