@@ -102,7 +102,7 @@ class ElizaServiceClientImpl @Inject() (
   def sendUserPushNotification(userId: Id[User], message: String, recipient: User, pushNotificationExperiment: PushNotificationExperiment, category: UserPushNotificationCategory): Future[Int] = {
     implicit val userFormatter = Id.format[User]
     val payload = Json.obj("userId" -> userId, "message" -> message, "recipientId" -> recipient.externalId, "username" -> recipient.username.value, "pictureUrl" -> recipient.pictureName, "pushNotificationExperiment" -> pushNotificationExperiment, "category" -> category.name)
-    call(Eliza.internal.sendUserPushNotification(), payload).map { response =>
+    call(Eliza.internal.sendUserPushNotification(), payload, callTimeouts = longTimeout).map { response =>
       response.body.toInt
     }
   }
@@ -111,7 +111,7 @@ class ElizaServiceClientImpl @Inject() (
     implicit val userFormatter = Id.format[User]
     implicit val libraryFormatter = Id.format[Library]
     val payload = Json.obj("userId" -> userId, "message" -> message, "libraryId" -> libraryId, "libraryUrl" -> libraryUrl, "pushNotificationExperiment" -> pushNotificationExperiment, "category" -> category.name, "force" -> force)
-    call(Eliza.internal.sendLibraryPushNotification, payload).map { response =>
+    call(Eliza.internal.sendLibraryPushNotification, payload, callTimeouts = longTimeout).map { response =>
       response.body.toInt
     }
   }
@@ -119,7 +119,7 @@ class ElizaServiceClientImpl @Inject() (
   def sendGeneralPushNotification(userId: Id[User], message: String, pushNotificationExperiment: PushNotificationExperiment, category: SimplePushNotificationCategory, force: Boolean = false): Future[Int] = {
     implicit val userFormatter = Id.format[User]
     val payload = Json.obj("userId" -> userId, "message" -> message, "pushNotificationExperiment" -> pushNotificationExperiment, "category" -> category.name, "force" -> force)
-    call(Eliza.internal.sendGeneralPushNotification, payload).map { response =>
+    call(Eliza.internal.sendGeneralPushNotification, payload, callTimeouts = longTimeout).map { response =>
       response.body.toInt
     }
   }
