@@ -23,10 +23,6 @@ angular.module('kifi', [
 //              is still needed (probably because ui-view is nested inside ng-include).
 .run(['$state', angular.noop])
 
-.constant('linkedinConfigSettings', {
-  appKey: 'r11loldy9zlg'
-})
-
 .constant('env', (function () {
   var location = window.location;
   var host = location.hostname;

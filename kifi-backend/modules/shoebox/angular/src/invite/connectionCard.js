@@ -31,15 +31,8 @@ angular.module('kifi')
       scope.hidden = false;
 
       scope.facebook = network === 'facebook';
-      scope.linkedin = network === 'linkedin';
       scope.email    = network === 'email';
       scope.twitter  = network === 'twitter';
-
-      scope.reconnectLinkedIn = function () {
-        modalService.open({
-          template: 'social/addNetworksModal.tpl.html'
-        });
-      };
 
       scope.action = function () {
         inviteService.invite(network, inNetworkId).then(function () {
@@ -52,21 +45,10 @@ angular.module('kifi')
           } else {
             scope.byline = inviteText;
           }
-        }, function (err) {
-          if (err === 'token_expired') {
-            modalService.open({
-              template: 'invite/linkedinTokenExpiredModal.tpl.html',
-              scope: scope
-            });
-          } else if (err === 'hit_rate_limit_reached') {
-            modalService.open({
-              template: 'invite/linkedinHitRateLimitModal.tpl.html'
-            });
-          } else {
+        }, function () {
             modalService.open({
               template: 'invite/genericInviteErrorModal.tpl.html'
             });
-          }
         });
       };
 
@@ -91,7 +73,7 @@ angular.module('kifi')
       } else {
         scope.invited = false;
         scope.byline = network === 'email' ? inNetworkId :
-          (network === 'linkedin' ? 'LinkedIn' : network.charAt(0).toUpperCase() + network.slice(1));
+          (network.charAt(0).toUpperCase() + network.slice(1));
         scope.actionText = 'Invite';
       }
     }

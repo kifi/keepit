@@ -12,12 +12,10 @@ angular.module('kifi')
       templateUrl: 'social/connectNetworks.tpl.html',
       link: function (scope) {
         scope.facebook = socialService.facebook;
-        scope.linkedin = socialService.linkedin;
         scope.gmail = socialService.gmail;
         scope.twitter = socialService.twitter;
         scope.expiredTokens = socialService.expiredTokens;
         scope.connectFacebook = socialService.connectFacebook;
-        scope.connectLinkedIn = socialService.connectLinkedIn;
         scope.connectTwitter = socialService.connectTwitter;
         scope.importGmail = socialService.importGmail;
 
@@ -28,15 +26,6 @@ angular.module('kifi')
           if (scope.refreshingGraphs.network.facebook) {
             return 'refreshing';
           } else if (scope.expiredTokens.facebook) {
-            return 'expired';
-          }
-          return 'good';
-        };
-
-        scope.linkedinStatus = function () {
-          if (scope.refreshingGraphs.network.linkedin) {
-            return 'refreshing';
-          } else if (scope.expiredTokens.linkedin) {
             return 'expired';
           }
           return 'good';

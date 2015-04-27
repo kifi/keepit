@@ -14,7 +14,7 @@ angular.module('kifi')
         selected,
         lastSearch;
 
-    var friendlyNetworks = {'facebook': 'Facebook', 'linkedin': 'LinkedIn', 'twitter': 'Twitter'};
+    var friendlyNetworks = {'facebook': 'Facebook', 'twitter': 'Twitter'};
     var socialSearchService = new Clutch(function (name) {
       if (!name || !name.trim()) {
         return $q.when([]);
@@ -137,13 +137,7 @@ angular.module('kifi')
               deferred.resolve('');
             } else if (res.data.error) {
               $log.log(res.data.error);
-              if (res.data.error.code === 'linkedin_error_{401}') {
-                deferred.reject('token_expired'); // technically the token could also just be invalid, but we don't get that info from the backend
-              } else if (res.data.error.code === 'linkedin_error_{403}') {
-                deferred.reject('hit_rate_limit_reached');
-              } else {
                 deferred.reject('generic_error');
-              }
             } else {
               deferred.resolve('');
             }

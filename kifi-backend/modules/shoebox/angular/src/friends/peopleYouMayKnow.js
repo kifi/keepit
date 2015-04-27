@@ -15,7 +15,6 @@ angular.module('kifi')
         var networkNamesMap = {
           facebook: 'Facebook',
           twitter: 'Twitter',
-          linkedin: 'LinkedIn',
           email: 'email'
         };
 
@@ -121,14 +120,13 @@ angular.module('kifi')
         //
 
         scope.connect = function (network) {
-          socialService[{fb: 'connectFacebook', tw: 'connectTwitter', li: 'connectLinkedIn', gm: 'importGmail'}[network]]();
+          socialService[{fb: 'connectFacebook', tw: 'connectTwitter', gm: 'importGmail'}[network]]();
         };
 
         function getEligibleNetworksCsv() {
           return _.compact([
             socialService.facebook && socialService.facebook.profileUrl ? null : 'fb',
             socialService.twitter && socialService.twitter.profileUrl ? null : 'tw',
-            socialService.linkedin && socialService.linkedin.profileUrl ? null : 'li',
             socialService.gmail && socialService.gmail.length ? null : 'gm'
           ]).join(',');
         }

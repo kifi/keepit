@@ -52,17 +52,6 @@
               <a class="profile-disconnect" href="javascript:" ng-click="disconnectFacebook()">Disconnect?</a>
             </span>
           </li>
-
-          <li kf-linkedin-connect-button data-network="linkedin" ng-class="{ 'connected': isLinkedInConnected }">
-            <a class="profile-nw nw-linkedin" href="https://www.kifi.com/link/linkedin" target="_self" ng-click="connectLinkedIn()" ng-show="!isLinkedInConnected">LinkedIn</a>
-            <a class="profile-nw nw-linkedin" ng-href="{{liProfileUrl}}" target="_blank" ng-show="isLinkedInConnected">LinkedIn</a>
-            <span class="profile-nw-connected">
-              <span class="profile-placeholder">&nbsp;</span>
-              <span class="profile-connected">Connected</span>
-              <a class="profile-disconnect" href="javascript:" ng-click="disconnectLinkedIn()">Disconnect?</a>
-            </span>
-          </li>
-
           <li kf-twitter-connect-button data-network="twitter" ng-class="{ 'connected': isTwitterConnected }">
             <a class="profile-nw nw-twitter" href="https://www.kifi.com/link/twitter" target="_self" ng-click="connectTwitter()" ng-show="!isTwitterConnected">Twitter</a>
             <a class="profile-nw nw-twitter" ng-href="{{twProfileUrl}}" target="_blank" ng-show="isTwitterConnected">Twitter</a>
@@ -72,7 +61,6 @@
               <a class="profile-disconnect" href="javascript:" ng-click="disconnectTwitter()">Disconnect?</a>
             </span>
           </li>
-
         </ul>
       </div>
       <div class="profile-section" kf-email-import></div>
