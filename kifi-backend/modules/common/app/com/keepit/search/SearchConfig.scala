@@ -44,13 +44,13 @@ object SearchConfig {
       "tailCutting" -> "0.3",
 
       // LibrarySearch
-      "librarySourceBoost" -> "3.0",
+      "librarySourceBoost" -> "100.0",
       "libraryOwnerBoost" -> "0.5",
       "myLibraryBoost" -> "1.5",
       "minMyLibraries" -> "1",
 
       // UserSearch
-      "userSourceBoost" -> "10.0",
+      "userSourceBoost" -> "100.0",
       "myFriendBoost" -> "1.5",
 
       "proximityBoost" -> "0.95",

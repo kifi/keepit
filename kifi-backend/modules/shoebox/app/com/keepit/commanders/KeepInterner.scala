@@ -178,7 +178,11 @@ class KeepInterner @Inject() (
           case _ => currentDateTime // todo: useful to de-prioritize bulk imports.
         }
         scraper.scheduleScrape(uri, date)
-        if (KeepSource.discrete.contains(source)) { roverClient.fetchAsap(IndexableUri(uri)) }
+        if (KeepSource.discrete.contains(source)) {
+          session.onTransactionSuccess {
+            roverClient.fetchAsap(IndexableUri(uri))
+          }
+        }
       }
 
       log.info(s"[keepinterner] Persisting keep ${rawBookmark.url}, ${rawBookmark.keptAt}, ${clock.now}")

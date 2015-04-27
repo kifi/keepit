@@ -110,10 +110,15 @@ class ArticleInfoRepoImpl @Inject() (
       val existingByKind: Map[ArticleKind[_ <: Article], RoverArticleInfo] = getByUri(uriId, excludeState = None).map { info => (info.articleKind -> info) }.toMap
       kinds.map { kind =>
         val savedInfo = existingByKind.get(kind) match {
-          case Some(articleInfo) if articleInfo.isActive => articleInfo
-          case Some(inactiveArticleInfo) => {
+          case Some(articleInfo) if articleInfo.isActive && articleInfo.url == url => articleInfo
+          case Some(inactiveArticleInfo) if !articleInfo.isActive => {
             val reactivatedInfo = inactiveArticleInfo.clean.copy(url = url, state = ArticleInfoStates.ACTIVE).initializeSchedulingPolicy
             save(reactivatedInfo)
+          }
+          case Some(invalidArticleInfo) if articleInfo.url != url => {
+            airbrake.notify(s"Fixed ArticleInfo $kind for uri $uriId with inconsistent url: expected $url, had ${invalidArticleInfo.url}")
+            val validArticleInfo = invalidArticleInfo.copy(url = url)
+            save(validArticleInfo)
           }
           case None => {
             val newInfo = RoverArticleInfo.initialize(uriId, url, kind)
