@@ -334,7 +334,7 @@ class UriSearchCommanderImpl @Inject() (
         }
 
         // search is a little slow after service restart. allow some grace period
-        val timeLimit = 1000
+        val timeLimit = 1500
         if (timing.getTotalTime > timeLimit && timing.timestamp - searchFactory.searchServiceStartedAt > 1000 * 60 * 8) {
           val link = "https://admin.kifi.com/admin/search/results/" + plainResult.uuid.id
           val msg = s"search time exceeds limit! searchUUID = ${plainResult.uuid.id}, Limit time = $timeLimit, ${timing.toString}. More details at: $link"
