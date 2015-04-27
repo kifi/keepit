@@ -1,0 +1,6 @@
+<div class="kf-bm" ng-if="undoMessage || message">
+  <span class="kf-bm-box">
+    {{undoMessage || message}}
+    <a class="kf-bm-undo" href="javascript:" ng-click="undo()" ng-if="undoMessage">Undo</a>
+  </span>
+</div>

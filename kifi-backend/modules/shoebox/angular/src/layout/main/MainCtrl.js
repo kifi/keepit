@@ -4,29 +4,25 @@ angular.module('kifi')
 
 .controller('MainCtrl', [
   '$scope', '$rootScope', '$window', '$timeout', '$rootElement', '$q',
-  'initParams', 'undoService', 'installService', 'profileService', 'routeService',
+  'initParams', 'installService', 'profileService', 'routeService',
   'modalService', 'libraryService', 'extensionLiaison',
   function ($scope, $rootScope, $window, $timeout, $rootElement, $q,
-    initParams, undoService, installService, profileService, routeService,
+    initParams, installService, profileService, routeService,
     modalService, libraryService, extensionLiaison) {
 
     var importBookmarksMessageEvent;
-    var tooltipMessages = {
+    var bannerMessages = {
       0: 'Welcome back!',
       2: 'Bookmark import in progress. Reload the page to update.'
     };
 
     $scope.data = $scope.data || {};
-    $scope.undo = undoService;
 
     (function (m) {
       if (m === '1') {
         $scope.showEmailVerifiedModal = true;
-      } else if (m in tooltipMessages) { // show small tooltip
-        $scope.tooltipMessage = tooltipMessages[m];
-        $timeout(function () {
-          $scope.tooltipMessage = null;
-        }, 5000);
+      } else if (m in bannerMessages) {
+        $scope.bannerMessage = bannerMessages[m];
       }
     }(initParams.getAndClear('m')));
 
