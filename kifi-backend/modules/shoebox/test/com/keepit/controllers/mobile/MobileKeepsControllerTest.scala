@@ -909,6 +909,26 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
           keepToCollectionRepo.count === 5
           collectionRepo.count(user.id.get) === 5
         }
+
+        val testEditTags3 = editKeepInfo(user, keep, Json.obj("note" -> "a real [#note] thing"))
+        status(testEditTags3) must equalTo(NO_CONTENT)
+        db.readOnlyMaster { implicit s =>
+          val currentKeep = keepRepo.get(keep.externalId)
+          currentKeep.title === Some("a real keep")
+          currentKeep.note === Some("a real [\\#note] thing [#a] [#b] [#d] [#e]")
+          keepToCollectionRepo.count === 5
+          collectionRepo.count(user.id.get) === 5
+        }
+
+        val testEditTags4 = editKeepInfo(user, keep, Json.obj("note" -> "a real [#note] thing", "tags" -> Json.toJson(Seq(): Seq[String])))
+        status(testEditTags4) must equalTo(NO_CONTENT)
+        db.readOnlyMaster { implicit s =>
+          val currentKeep = keepRepo.get(keep.externalId)
+          currentKeep.title === Some("a real keep")
+          currentKeep.note === Some("a real [\\#note] thing")
+          keepToCollectionRepo.count === 5
+          collectionRepo.count(user.id.get) === 5
+        }
       }
     }
 

@@ -180,7 +180,7 @@ class MobileKeepsController @Inject() (
           case Seq(keepInfo) =>
             val editedNote = keepInfo.note.map { note =>
               // remove hashtags, then turn all '[\#' -> '[#'
-              val noteWithoutHashtags = hashtagCommander.removeHashtagsFromString(note)
+              val noteWithoutHashtags = hashtagCommander.removeAllHashtagsFromString(note)
               keepDecorator.unescapeMarkupNotes(noteWithoutHashtags).trim
             } filterNot (_.isEmpty)
             Ok(Json.toJson(keepInfo.copy(note = editedNote)))
@@ -200,28 +200,22 @@ class MobileKeepsController @Inject() (
         val noteOpt = (json \ "note").asOpt[String]
         val tagsOpt = (json \ "tags").asOpt[Seq[String]]
 
-        val newTitle = titleOpt orElse keep.title map { _.trim } filterNot { _.isEmpty }
-        val newNote = noteOpt orElse keep.note map { _.trim } filterNot { _.isEmpty }
+        val titleToPersist = titleOpt orElse keep.title map (_.trim) filterNot (_.isEmpty)
+        val noteToPersist = noteOpt orElse keep.note map (_.trim) filterNot (_.isEmpty)
+        val tagsToPersist = tagsOpt.getOrElse(
+          db.readOnlyMaster { implicit s =>
+            collectionRepo.getHashtagsByKeepId(keep.id.get).map(_.tag).toSeq
+          }
+        )
 
-        val newNoteWithTags = tagsOpt.map { tagNames =>
-          implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
-          keepsCommander.persistHashtagsForKeep(request.userId, keep.id.get, tagNames)
+        val updatedKeep = if (titleToPersist != keep.title || noteToPersist != keep.note) {
+          db.readWrite { implicit s =>
+            keepRepo.save(keep.copy(title = titleToPersist, note = noteToPersist))
+          }
+        } else keep
 
-          // first turn all '[#' -> '[\#'
-          val origNote = newNote getOrElse ""
-          val editedNote = keepDecorator.escapeMarkupNotes(origNote)
-
-          // remove all hashtags. Anything user typed in with [#...] has already been converted to [\#...]
-          val noteWithHashtagsRemoved = hashtagCommander.removeHashtagsFromString(editedNote)
-
-          // append all the correct hashtags (in order)
-          hashtagCommander.appendHashtagNamesToString(noteWithHashtagsRemoved, tagNames).trim
-        } orElse newNote filterNot { _.isEmpty }
-
-        db.readWrite { implicit s =>
-          if (newTitle != keep.title || newNoteWithTags != keep.note)
-            keepRepo.save(keep.copy(title = newTitle, note = newNoteWithTags))
-        }
+        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
+        keepsCommander.persistHashtagsForKeep(request.userId, updatedKeep, tagsToPersist)
         NoContent
     }
   }
