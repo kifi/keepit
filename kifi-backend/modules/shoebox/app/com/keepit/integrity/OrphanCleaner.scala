@@ -119,7 +119,7 @@ class OrphanCleaner @Inject() (
           case Some(libId) =>
             val library = libraryRepo.get(libId)(s)
             if (library.visibility != bookmark.visibility) {
-              airbrake.notify(s"Bookmark ${bookmark.id.get} has inconsistent visibility with library ${library.id.get}. Expected: ${bookmark.visibility} Actual: ${library.visibility}")
+              log.error(s"Bookmark ${bookmark.id.get} has inconsistent visibility with library ${library.id.get}. Expected: ${bookmark.visibility} Actual: ${library.visibility}")
               keepRepo.save(bookmark.copy(visibility = library.visibility))(s)
             }
           case _ =>

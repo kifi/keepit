@@ -164,6 +164,7 @@ class SocialUserBasicInfoCache(stats: CacheStatistics, accessLog: AccessLog, inn
 
 object SocialUserInfoStates {
   val CREATED = State[SocialUserInfo]("created")
+  val TOKEN_EXPIRED = State[SocialUserInfo]("token_expired")
   val FETCHED_USING_FRIEND = State[SocialUserInfo]("fetched_using_friend")
   val FETCHED_USING_SELF = State[SocialUserInfo]("fetched_using_self")
   val FETCH_FAIL = State[SocialUserInfo]("fetch_fail")

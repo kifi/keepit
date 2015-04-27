@@ -27,7 +27,7 @@ class RoverServiceClientImpl(
     cacheProvider: RoverCacheProvider,
     private implicit val executionContext: ExecutionContext) extends RoverServiceClient with Logging {
 
-  private val longTimeout = CallTimeouts(responseTimeout = Some(300000), maxWaitTime = Some(3000), maxJsonParseTime = Some(10000))
+  private val longTimeout = CallTimeouts(responseTimeout = Some(300000), maxWaitTime = Some(30000), maxJsonParseTime = Some(10000))
 
   def getShoeboxUpdates(seq: SequenceNumber[ArticleInfo], limit: Int): Future[Option[ShoeboxArticleUpdates]] = {
     call(Rover.internal.getShoeboxUpdates(seq, limit), callTimeouts = longTimeout).map { r => (r.json).asOpt[ShoeboxArticleUpdates] }
@@ -35,7 +35,7 @@ class RoverServiceClientImpl(
 
   def fetchAsap(uri: IndexableUri): Future[Unit] = {
     val payload = Json.toJson(uri)
-    call(Rover.internal.fetchAsap, payload).map { _ => () }
+    call(Rover.internal.fetchAsap, payload, callTimeouts = longTimeout).map { _ => () }
   }
 }
 

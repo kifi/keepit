@@ -8,7 +8,6 @@ angular.module('kifi')
 
     var networks = [],
         facebook = {},
-        linkedin = {},
         twitter = {},
         gmail = [],
         addressBooks = [],
@@ -81,9 +80,6 @@ angular.module('kifi')
         util.replaceObjectInPlace(facebook, _.find(networks, function (n) {
           return n.network === 'facebook';
         }));
-        util.replaceObjectInPlace(linkedin, _.find(networks, function (n) {
-          return n.network === 'linkedin';
-        }));
         util.replaceObjectInPlace(twitter, _.find(networks, function (n) {
           return n.network === 'twitter';
         }));
@@ -110,7 +106,6 @@ angular.module('kifi')
         return $q.all([addressBooksBackend.get(), networksBackend.get()]);
       },
       facebook: facebook,
-      linkedin: linkedin,
       twitter: twitter,
       gmail: gmail,
 
@@ -136,14 +131,6 @@ angular.module('kifi')
         $window.location.href = routeService.linkNetwork('facebook');
       },
 
-      connectLinkedIn: function () {
-        $analytics.eventTrack('user_clicked_page', {
-          'action': 'connectLinkedIn',
-          'path': $location.path()
-        });
-        $window.location.href = routeService.linkNetwork('linkedin');
-      },
-
       connectTwitter: function () {
         $analytics.eventTrack('user_clicked_page', {
           'action': 'connectTwitter',
@@ -165,17 +152,6 @@ angular.module('kifi')
           util.replaceObjectInPlace(facebook, {});
           $analytics.eventTrack('user_clicked_page', {
             'action': 'disconnectFacebook',
-            'path': $location.path()
-          });
-          return res;
-        });
-      },
-
-      disconnectLinkedIn: function () {
-        return $http.post(routeService.disconnectNetwork('linkedin')).then(function (res) {
-          util.replaceObjectInPlace(linkedin, {});
-          $analytics.eventTrack('user_clicked_page', {
-            'action': 'disconnectLinkedin',
             'path': $location.path()
           });
           return res;

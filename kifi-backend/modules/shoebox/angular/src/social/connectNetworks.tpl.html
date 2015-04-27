@@ -61,36 +61,6 @@
       </div>
     </div>
 
-    <!-- LinkedIn -->
-    <div class="kf-social-connect-row">
-      <div ng-if="linkedin.profileUrl">
-        <div class="kf-social-connected-button kf-linkedin">LinkedIn Connected</div>
-
-        <span class="kf-social-notice-badge" ng-if="linkedinStatus() === 'kf-good'">
-          <span class="kf-notice-button kf-good"></span>
-        </span>
-
-        <span class="kf-social-notice-badge" ng-if="linkedinStatus() === 'refreshing'">
-          <span class="kf-notice-message kf-import">
-            <div class="kf-bouncy-ball">
-              <div class="pace pace-active"><div class="pace-progress"></div><div class="pace-activity"></div></div>
-            </div>
-            Importing your contacts
-          </span>
-        </span>
-
-        <span class="kf-social-notice-badge" ng-if="linkedinStatus() === 'expired'"  ng-click="connectLinkedIn()">
-          <span class="kf-notice-button kf-warn">×</span>
-          <span class="kf-notice-message kf-refresh">Refresh connection</span>
-        </span>
-
-      </div>
-      <div ng-if="!linkedin.profileUrl">
-        <a class="kf-social-connect-button kf-linkedin" href="javascript:" ng-click="connectLinkedIn()">Connect LinkedIn</a>
-      </div>
-    </div>
-
-
     <!-- Gmail -->
     <div class="kf-social-connect-row" ng-if="gmail.length === 0">
       <a class="kf-social-connect-button kf-gmail" href="javascript:" ng-click="importGmail()">Connect Gmail</a>

@@ -16,11 +16,13 @@ import com.keepit.common.zookeeper.{ ServiceDiscovery, ShardingCommander }
 import com.keepit.common.time._
 import com.keepit.curator.model._
 import com.keepit.eliza.ElizaServiceClient
-import com.keepit.model.{ ExperimentType, NormalizedURI, SystemValueRepo, UriRecommendationScores, User }
+import com.keepit.model.{ ExperimentType, NormalizedURI, SystemValueRepo, UriRecommendationScores, User, NotificationCategory }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.concurrent.PimpMyFuture._
 import com.keepit.common.core._
 import com.keepit.common.amazon.AmazonInstanceInfo
+import com.keepit.common.healthcheck.SystemAdminMailSender
+import com.keepit.common.mail.{ SystemEmailAddress, ElectronicMail, ElectronicMailCategory }
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.modules.statsd.api.Statsd
@@ -29,6 +31,8 @@ import scala.collection.JavaConversions._
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.Future
 import scala.util.Random
+
+import java.util.concurrent.atomic.AtomicInteger
 
 import org.joda.time.{ DateTime, Days }
 
@@ -50,7 +54,8 @@ class RecommendationGenerationCommander @Inject() (
     keepRepo: CuratorKeepInfoRepo,
     schedulingProperties: SchedulingProperties,
     shardingCommander: ShardingCommander,
-    amazonInstanceInfo: AmazonInstanceInfo) extends Logging {
+    amazonInstanceInfo: AmazonInstanceInfo,
+    systemAdminMailSender: SystemAdminMailSender) extends Logging {
 
   val defaultScore = 0.0f
   val recommendationGenerationLock = new ReactiveLock(16)
@@ -61,6 +66,20 @@ class RecommendationGenerationCommander @Inject() (
   val superSpecialLock = new ReactiveLock(1)
 
   val BATCH_SIZE = 350
+
+  //This method better not be here any more after May 1st 2015 (short term debugging use only!!!)
+  private def sendDiagnosticEmail(subject: String, body: String) = {
+    systemAdminMailSender.sendMail(
+      ElectronicMail(
+        from = SystemEmailAddress.ENG,
+        to = List(SystemEmailAddress.STEPHEN),
+        subject = s"Reco Diagnostics: $subject",
+        htmlBody = body,
+        category = NotificationCategory.toElectronicMailCategory(NotificationCategory.System.ADMIN)
+      )
+    )
+  }
+  private val diagnosticsSentCounter: AtomicInteger = new AtomicInteger(0)
 
   private def usersToPrecomputeRecommendationsFor(): Seq[Id[User]] = Random.shuffle((seedCommander.getUsersWithSufficientData()).toSeq)
 
@@ -153,17 +172,9 @@ class RecommendationGenerationCommander @Inject() (
       val timerPer = new NamedStatsdTimer("RecommendationGenerationCommander.saveScoredSeedItemsPerItem")
       db.readWrite(attempts = 2) { implicit s =>
         items foreach { item =>
-          val recoOpt = uriRecRepo.getByUriAndUserId(item.uriId, userId, None)
-          recoOpt.map { reco =>
-            uriRecRepo.save(reco.copy(
-              state = UriRecommendationStates.ACTIVE,
-              masterScore = computeMasterScore(item.uriScores),
-              allScores = item.uriScores,
-              attribution = item.attribution,
-              topic1 = item.topic1,
-              topic2 = item.topic2))
-          } getOrElse {
-            uriRecRepo.save(UriRecommendation(
+
+          uriRecRepo.insertOrUpdate(
+            UriRecommendation(
               uriId = item.uriId,
               userId = userId,
               masterScore = computeMasterScore(item.uriScores),
@@ -174,8 +185,31 @@ class RecommendationGenerationCommander @Inject() (
               trashed = false,
               attribution = item.attribution,
               topic1 = item.topic1,
-              topic2 = item.topic2))
+              topic2 = item.topic2
+            )
+          )
+
+          if (Random.nextFloat() > 0.75 && diagnosticsSentCounter.getAndIncrement() < 5) {
+            val info: String = try {
+              uriRecRepo.insertOrUpdate(UriRecommendation(
+                uriId = item.uriId,
+                userId = userId,
+                masterScore = computeMasterScore(item.uriScores),
+                allScores = item.uriScores,
+                delivered = 0,
+                clicked = 0,
+                kept = false,
+                trashed = false,
+                attribution = item.attribution,
+                topic1 = item.topic1,
+                topic2 = item.topic2
+              ))
+            } catch {
+              case t: Throwable => t.toString
+            }
+            sendDiagnosticEmail("", info)
           }
+
         }
 
         genStateRepo.save(newState)
@@ -257,17 +291,8 @@ class RecommendationGenerationCommander @Inject() (
             db.readWrite(attempts = 2) { implicit s =>
               filteredItems foreach {
                 case (item, masterScore) =>
-                  val recoOpt = uriRecRepo.getByUriAndUserId(item.uriId, userId, None)
-                  recoOpt.map { reco =>
-                    uriRecRepo.save(reco.copy(
-                      state = UriRecommendationStates.ACTIVE,
-                      masterScore = masterScore,
-                      allScores = item.uriScores,
-                      attribution = item.attribution,
-                      topic1 = item.topic1,
-                      topic2 = item.topic2))
-                  } getOrElse {
-                    uriRecRepo.save(UriRecommendation(
+                  uriRecRepo.insertOrUpdate(
+                    UriRecommendation(
                       uriId = item.uriId,
                       userId = userId,
                       masterScore = masterScore,
@@ -278,9 +303,9 @@ class RecommendationGenerationCommander @Inject() (
                       trashed = false,
                       attribution = item.attribution,
                       topic1 = item.topic1,
-                      topic2 = item.topic2))
-                  }
-
+                      topic2 = item.topic2
+                    )
+                  )
               }
 
               genStateRepo.save(newState)
@@ -356,7 +381,7 @@ class RecommendationGenerationCommander @Inject() (
       boostedKeepersSet <- specialCurators()
     } yield {
       if (recommendationGenerationLock.waiting < userIds.length) {
-        Future.sequence(userIds.map(userId => precomputeRecommendationsForUser(userId, boostedKeepersSet))).map(_ => ())
+        Future.sequence(Random.shuffle(userIds).map(userId => precomputeRecommendationsForUser(userId, boostedKeepersSet))).map(_ => ())
       } else {
         Future.successful(())
       }

@@ -35,6 +35,7 @@ class MobileKeepsController @Inject() (
   normalizedURIInterner: NormalizedURIInterner,
   libraryCommander: LibraryCommander,
   rawBookmarkFactory: RawBookmarkFactory,
+  hashtagCommander: HashtagCommander,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
   implicit val publicIdConfig: PublicIdConfiguration)
     extends UserActions with ShoeboxServiceController {
@@ -175,7 +176,15 @@ class MobileKeepsController @Inject() (
             h <- idealImageHeight
           } yield ImageSize(w, h)
         } getOrElse ProcessedImageSize.Large.idealSize
-        keepDecorator.decorateKeepsIntoKeepInfos(request.userIdOpt, false, Seq(keep), idealImageSize, withKeepTime = true).imap { case Seq(keepInfo) => Ok(Json.toJson(keepInfo)) }
+        keepDecorator.decorateKeepsIntoKeepInfos(request.userIdOpt, false, Seq(keep), idealImageSize, withKeepTime = true).imap {
+          case Seq(keepInfo) =>
+            val editedNote = keepInfo.note.map { note =>
+              // remove hashtags, then turn all '[\#' -> '[#'
+              val noteWithoutHashtags = hashtagCommander.removeHashtagsFromString(note)
+              keepDecorator.unescapeMarkupNotes(noteWithoutHashtags).trim
+            } filterNot (_.isEmpty)
+            Ok(Json.toJson(keepInfo.copy(note = editedNote)))
+        }
       case Some(keep) => Future.successful(Ok(Json.toJson(KeepInfo.fromKeep(keep))))
     }
   }
@@ -193,13 +202,25 @@ class MobileKeepsController @Inject() (
 
         val newTitle = titleOpt orElse keep.title map { _.trim } filterNot { _.isEmpty }
         val newNote = noteOpt orElse keep.note map { _.trim } filterNot { _.isEmpty }
-        tagsOpt.map { tagNames =>
+
+        val newNoteWithTags = tagsOpt.map { tagNames =>
           implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
           keepsCommander.persistHashtagsForKeep(request.userId, keep.id.get, tagNames)
-        }
+
+          // first turn all '[#' -> '[\#'
+          val origNote = newNote getOrElse ""
+          val editedNote = keepDecorator.escapeMarkupNotes(origNote)
+
+          // remove all hashtags. Anything user typed in with [#...] has already been converted to [\#...]
+          val noteWithHashtagsRemoved = hashtagCommander.removeHashtagsFromString(editedNote)
+
+          // append all the correct hashtags (in order)
+          hashtagCommander.appendHashtagNamesToString(noteWithHashtagsRemoved, tagNames).trim
+        } orElse newNote filterNot { _.isEmpty }
 
         db.readWrite { implicit s =>
-          keepRepo.save(keep.copy(title = newTitle, note = newNote))
+          if (newTitle != keep.title || newNoteWithTags != keep.note)
+            keepRepo.save(keep.copy(title = newTitle, note = newNoteWithTags))
         }
         NoContent
     }

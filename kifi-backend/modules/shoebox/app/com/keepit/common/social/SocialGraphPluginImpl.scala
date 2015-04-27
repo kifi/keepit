@@ -97,7 +97,7 @@ private[social] class SocialGraphActor @Inject() (
 
         val updatedSui = rawInfo.jsons.foldLeft(socialUserInfo)(graph.updateSocialUserInfo)
         val latestUserValues = rawInfo.jsons.map(graph.extractUserValues).reduce(_ ++ _)
-        db.readWrite { implicit c =>
+        db.readWrite(attempts = 3) { implicit c =>
           latestUserValues.collect {
             case (key, value) if userValueRepo.getValueStringOpt(userId, key) != Some(value) =>
               userValueRepo.setValue(userId, key, value)
@@ -122,7 +122,12 @@ private[social] class SocialGraphActor @Inject() (
       }
       connectionsOpt getOrElse Seq.empty
     } catch {
-      case ex: NonOKResponseException if ex.response.status == 500 =>
+      case ex: NonOKResponseException if ex.response.status / 100 == 5 =>
+        log.warn(s"Remote server error fetching SocialUserInfo: $socialUserInfo", ex)
+        Seq()
+      case ex: NonOKResponseException if ex.response.status / 100 == 4 =>
+        db.readWrite { implicit s => socialRepo.save(socialUserInfo.withState(SocialUserInfoStates.TOKEN_EXPIRED).withLastGraphRefresh()) }
+        log.warn(s"SocialUserInfo token expired: $socialUserInfo", ex)
         Seq()
       case ex: Exception =>
         db.readWrite { implicit s => socialRepo.save(socialUserInfo.withState(SocialUserInfoStates.FETCH_FAIL).withLastGraphRefresh()) }

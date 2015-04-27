@@ -28,6 +28,7 @@ class MobileLibraryController @Inject() (
   db: Database,
   libraryRepo: LibraryRepo,
   keepRepo: KeepRepo,
+  keepToCollectionRepo: KeepToCollectionRepo,
   collectionRepo: CollectionRepo,
   userRepo: UserRepo,
   basicUserRepo: BasicUserRepo,
@@ -37,6 +38,7 @@ class MobileLibraryController @Inject() (
   userCommander: UserCommander,
   keepImageCommander: KeepImageCommander,
   libraryImageCommander: LibraryImageCommander,
+  hashtagCommander: HashtagCommander,
   normalizedUriInterner: NormalizedURIInterner,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
   clock: Clock,
@@ -156,11 +158,25 @@ class MobileLibraryController @Inject() (
         Json.obj("error" -> error)
       case Right(keepDataList) if keepDataList.nonEmpty =>
         val completeKeepData = db.readOnlyMaster { implicit s =>
+          val allKeepExtIds = keepDataList.map(_.id).toSet
+          val keepMap = keepRepo.getByExtIds(allKeepExtIds)
+
           keepDataList.map { keepData =>
-            val keep = keepRepo.get(keepData.id)
-            val keepImageUrl = keepImageCommander.getBestImageForKeep(keep.id.get, ScaleImageRequest(MobileLibraryController.defaultKeepImageSize)).flatten.map(keepImageCommander.getUrl)
-            val keepObj = Json.obj("id" -> keep.externalId, "title" -> keep.title, "note" -> keep.note, "imageUrl" -> keepImageUrl, "hashtags" -> Json.toJson(collectionRepo.getTagsByKeepId(keep.id.get)))
-            Json.obj("keep" -> keepObj) ++ Json.toJson(keepData).as[JsObject] - ("id")
+            keepMap(keepData.id) match {
+              case Some(keep) =>
+                val keepImageUrl = keepImageCommander.getBestImageForKeep(keep.id.get, ScaleImageRequest(MobileLibraryController.defaultKeepImageSize)).flatten.map(keepImageCommander.getUrl)
+
+                // remove hashtags, then turn all '[\#' -> '[#'
+                val editedKeepNote = keep.note.map { note =>
+                  val noteWithoutHashtags = hashtagCommander.removeHashtagsFromString(note)
+                  keepDecorator.unescapeMarkupNotes(noteWithoutHashtags).trim
+                }
+
+                val keepObj = Json.obj("id" -> keep.externalId, "title" -> keep.title, "note" -> editedKeepNote, "imageUrl" -> keepImageUrl, "hashtags" -> Json.toJson(collectionRepo.getHashtagsByKeepId(keep.id.get)))
+                Json.obj("keep" -> keepObj) ++ Json.toJson(keepData).as[JsObject] - ("id")
+
+              case _ => Json.obj()
+            }
           }
         }
         Json.obj("alreadyKept" -> completeKeepData)

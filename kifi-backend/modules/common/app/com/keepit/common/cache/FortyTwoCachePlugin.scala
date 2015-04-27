@@ -207,8 +207,8 @@ class MemcachedCache @Inject() (
     if (keys.size >= 1000) {
       airbrake.notify(s"cache bulkget ${keys.size} keys! First few keys: ${keys.take(5).mkString(", ")}")
     }
-    if (keys.size >= 200) {
-      keys.grouped(100).map { subkeys => smallBulkGet(subkeys) }.foldLeft(Map.empty[String, Any]) { case (m1, m2) => m1 ++ m2 }
+    if (keys.size >= 1000) {
+      keys.grouped(500).map { subkeys => smallBulkGet(subkeys) }.foldLeft(Map.empty[String, Any]) { case (m1, m2) => m1 ++ m2 }
     } else {
       smallBulkGet(keys)
     }

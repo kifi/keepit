@@ -179,7 +179,7 @@ class Doc2Vec(mapper: Map[String, Array[Float]], dim: Int) extends Logging {
     if (samples.isEmpty) return None
 
     val weights = samples.map { res => 1f / res.bagOfWords.size }.toArray
-    val target = if (normalize) weightedAverage(samples.map { s => toDoubleArray(s.vec) }, weights) else average(samples.map { s => toDoubleArray(s.vec) })
+    val target = if (normalize) weightedAverage(samples.map { s => s.vec }, weights) else average(samples.map { s => s.vec })
 
     val keyStat = scala.collection.mutable.Map[String, Int]().withDefaultValue(0)
 

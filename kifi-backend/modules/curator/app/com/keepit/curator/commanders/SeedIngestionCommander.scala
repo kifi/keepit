@@ -49,14 +49,14 @@ class SeedIngestionCommander @Inject() (
     keepIngestionLock.withLockFuture {
       log.info("XYZ: starting ingestAll inside keepIngestLock")
 
-      val ingestKeepsF = ingestAllKeeps().flatMap { _ =>
+      val ingestKeepsF = ingestAllKeeps().map { _ =>
         log.info("XYZ: ingest all keeps future completed")
         rawSeedSeqNumAssigner.assignSequenceNumbers()
-        val userIds = usersToIngestGraphDataFor()
-        FutureHelpers.sequentialExec(userIds)(ingestTopUris).map { res =>
-          rawSeedSeqNumAssigner.assignSequenceNumbers()
-          res
-        }
+        //val userIds = usersToIngestGraphDataFor()
+        // FutureHelpers.sequentialExec(userIds)(ingestTopUris).map { res =>
+        //   rawSeedSeqNumAssigner.assignSequenceNumbers()
+        //   res
+        // }
 
       }
 
@@ -242,8 +242,9 @@ class SeedIngestionCommander @Inject() (
   }
 
   def forceIngestGraphData(userId: Id[User]): Future[Unit] = {
-    log.info("XYZ: Completed Forced Top Uri ingestion for " + userId)
-    topUrisIngestor(userId, force = true).map(_ => ())
+    //log.info("XYZ: Completed Forced Top Uri ingestion for " + userId)
+    //topUrisIngestor(userId, force = true).map(_ => ())
+    Future.successful(())
   }
 
 }

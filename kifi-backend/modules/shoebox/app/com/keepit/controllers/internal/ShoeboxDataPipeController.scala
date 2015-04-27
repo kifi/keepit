@@ -199,7 +199,7 @@ class ShoeboxDataPipeController @Inject() (
     SafeFuture {
       val keepAndTagsChanged = db.readOnlyReplica { implicit session =>
         val changedKeeps = keepRepo.getBySequenceNumber(seqNum, fetchSize)
-        changedKeeps.map { keep => KeepAndTags(keep, if (keep.isActive) collectionRepo.getTagsByKeepId(keep.id.get) else Set()) }
+        changedKeeps.map { keep => KeepAndTags(keep, if (keep.isActive) collectionRepo.getHashtagsByKeepId(keep.id.get) else Set()) }
       }
       Ok(Json.toJson(keepAndTagsChanged))
     }
