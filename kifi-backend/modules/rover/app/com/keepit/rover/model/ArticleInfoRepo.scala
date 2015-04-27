@@ -115,7 +115,7 @@ class ArticleInfoRepoImpl @Inject() (
             val reactivatedInfo = inactiveArticleInfo.clean.copy(url = url, state = ArticleInfoStates.ACTIVE).initializeSchedulingPolicy
             save(reactivatedInfo)
           }
-          case Some(invalidArticleInfo) if articleInfo.url != url => {
+          case Some(invalidArticleInfo) if invalidArticleInfo.url != url => {
             airbrake.notify(s"Fixed ArticleInfo $kind for uri $uriId with inconsistent url: expected $url, had ${invalidArticleInfo.url}")
             val validArticleInfo = invalidArticleInfo.copy(url = url)
             save(validArticleInfo)
