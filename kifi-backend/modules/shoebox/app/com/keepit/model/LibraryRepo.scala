@@ -1,7 +1,7 @@
 package com.keepit.model
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton, Provider }
-import com.keepit.commanders.{ TopFollowedLibrariesKey, TopFollowedLibrariesCache, LibraryMetadataKey, LibraryMetadataCache }
+import com.keepit.commanders._
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick._
@@ -42,13 +42,14 @@ trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
   def countFollowingLibrariesForAnonymous(userId: Id[User])(implicit session: RSession): Int
   def getInvitedLibrariesForSelf(userId: Id[User], page: Paginator)(implicit session: RSession): Seq[Library]
   def getLibrariesForSelf(userId: Id[User], page: Paginator)(implicit session: RSession): Seq[Library]
-  def getAllPublishedNonEmptyLibraries()(implicit session: RSession): Seq[Id[Library]]
+  def getAllPublishedNonEmptyLibraries(minKeepCount: Int)(implicit session: RSession): Seq[Id[Library]]
   def getNewPublishedLibraries(size: Int = 20)(implicit session: RSession): Seq[Library]
   def pagePublished(page: Paginator)(implicit session: RSession): Seq[Library]
   def countPublished(implicit session: RSession): Int
   def filterPublishedByMemberCount(minCount: Int, limit: Int = 100)(implicit session: RSession): Seq[Library]
-  def getLibrariesBothFollow(user1: Id[User], user2: Id[User])(implicit session: RSession): Seq[Id[Library]]
-  def getOwnerLibrariesOtherFollow(onwer: Id[User], other: Id[User])(implicit session: RSession): Seq[Id[Library]]
+  def countMutualLibrariesForUsers(user1: Id[User], users: Set[Id[User]])(implicit session: RSession): Map[Id[User], Int]
+  def getMutualLibrariesForUser(user1: Id[User], user2: Id[User], offset: Int, size: Int)(implicit session: RSession): Seq[Library]
+  def getOwnerLibrariesOtherFollow(onwer: Id[User], other: Id[User])(implicit session: RSession): Seq[Library]
   def getOwnerLibraryCounts(owners: Set[Id[User]])(implicit session: RSession): Map[Id[User], Int]
 }
 
@@ -219,7 +220,7 @@ class LibraryRepoImpl @Inject() (
   // non user: number of libraries I own that are published and "displayable on profile"
   def countLibrariesOfUserForAnonymous(userId: Id[User])(implicit session: RSession): Int = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    val query = sql"select count(*) from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $userId and lib.state = 'active' and lm.state = 'active' and lm.listed and lib.visibility = 'published' and lm.access='owner' and lib.last_kept is not null"
+    val query = sql"select count(*) from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $userId and lib.state = 'active' and lm.state = 'active' and lm.listed and lib.visibility = 'published' and lm.access='owner' and lib.keep_count > 0"
     query.as[Int].firstOption.getOrElse(0)
   }
 
@@ -232,7 +233,7 @@ class LibraryRepoImpl @Inject() (
       case 1 => s"or (lib.id = ${libsFriendFollow.head})"
       case _ => s"or (lib.id in (${libsFriendFollow mkString ","}))"
     }
-    val query = sql"select count(*) from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $userId and lib.state = 'active' and lm.state = 'active' and lib.last_kept is not null and ((lm.listed and lib.visibility = 'published' and lm.access='owner') #$libVisibility)"
+    val query = sql"select count(*) from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $userId and lib.state = 'active' and lm.state = 'active' and lib.keep_count > 0 and ((lm.listed and lib.visibility = 'published' and lm.access='owner') #$libVisibility)"
     query.as[Int].firstOption.getOrElse(0)
   }
 
@@ -268,7 +269,7 @@ class LibraryRepoImpl @Inject() (
       case 1 => s"or (lib.id = ${libsFriendFollow.head})"
       case _ => s"or (lib.id in (${libsFriendFollow mkString ","}))"
     }
-    val query = sql"select lib.* from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $userId and lib.state = 'active' and lm.state = 'active' and lm.access = 'owner' and lib.last_kept is not null and ((lm.listed and lib.visibility = 'published') #$libVisibility) order by lib.member_count desc, lib.last_kept desc, lib.id desc limit ${page.itemsToDrop}, ${page.size}"
+    val query = sql"select lib.* from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $userId and lib.state = 'active' and lm.state = 'active' and lm.access = 'owner' and lib.keep_count > 0 and ((lm.listed and lib.visibility = 'published') #$libVisibility) order by lib.member_count desc, lib.last_kept desc, lib.id desc limit ${page.itemsToDrop}, ${page.size}"
     query.as[Library].list
   }
 
@@ -328,8 +329,8 @@ class LibraryRepoImpl @Inject() (
     query.as[Library].list
   }
 
-  def getAllPublishedNonEmptyLibraries()(implicit session: RSession): Seq[Id[Library]] = {
-    (for (r <- rows if r.visibility === (LibraryVisibility.PUBLISHED: LibraryVisibility) && r.state === LibraryStates.ACTIVE && r.lastKept.isDefined) yield r.id).list
+  def getAllPublishedNonEmptyLibraries(minKeepCount: Int)(implicit session: RSession): Seq[Id[Library]] = {
+    (for (r <- rows if r.visibility === (LibraryVisibility.PUBLISHED: LibraryVisibility) && r.state === LibraryStates.ACTIVE && r.keepCount >= minKeepCount) yield r.id).list
   }
 
   def getNewPublishedLibraries(size: Int = 20)(implicit session: RSession): Seq[Library] = {
@@ -355,16 +356,28 @@ class LibraryRepoImpl @Inject() (
     } yield t).sortBy(_.updatedAt.desc).take(limit).list
   }
 
-  def getLibrariesBothFollow(user1: Id[User], user2: Id[User])(implicit session: RSession): Seq[Id[Library]] = {
+  def countMutualLibrariesForUsers(user1: Id[User], users: Set[Id[User]])(implicit session: RSession): Map[Id[User], Int] = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    val query = sql"""select lm1.library_id from library_membership lm1 inner join library_membership lm2 on lm1.library_id = lm2.library_id where lm1.user_id = $user1 and lm1.access != 'owner' and lm1.state = 'active' and lm2.user_id = $user2 and lm2.access != 'owner' and lm2.state = 'active' order by lm1.library_id desc """
-    query.as[Id[Library]].list
+    if (users.size > 0) {
+      val userIdSet = users.mkString(",")
+      val query = sql"""select lm2.user_id, count(*) from library_membership lm1 inner join library_membership lm2 on lm1.library_id = lm2.library_id where lm1.user_id = $user1 and lm1.access != 'owner' and lm1.state = 'active' and (lm2.user_id in (#$userIdSet)) and lm2.access != 'owner' and lm2.state = 'active' group by lm2.user_id"""
+      query.as[(Id[User], Int)].list.toMap
+    } else {
+      Map.empty[Id[User], Int]
+    }
   }
 
-  def getOwnerLibrariesOtherFollow(owner: Id[User], other: Id[User])(implicit session: RSession): Seq[Id[Library]] = {
+  // get libraries we both follow
+  def getMutualLibrariesForUser(user1: Id[User], user2: Id[User], offset: Int, size: Int)(implicit session: RSession): Seq[Library] = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    val query = sql"""select lm1.library_id from library_membership lm1 inner join library_membership lm2 on lm1.library_id = lm2.library_id where lm1.user_id = $owner and lm1.access = 'owner' and lm1.state = 'active' and lm2.user_id = $other and lm2.access != 'owner' and lm2.state = 'active' order by lm1.library_id desc """
-    query.as[Id[Library]].list
+    val query = sql"""select * from library lib where lib.id in (select lm1.library_id from library_membership lm1 inner join library_membership lm2 on lm1.library_id = lm2.library_id where lm1.user_id = $user1 and lm1.access != 'owner' and lm1.state = 'active' and lm2.user_id = $user2 and lm2.access != 'owner' and lm2.state = 'active') order by member_count desc, last_kept desc limit $size offset $offset"""
+    query.as[Library].list
+  }
+
+  def getOwnerLibrariesOtherFollow(owner: Id[User], other: Id[User])(implicit session: RSession): Seq[Library] = {
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
+    val query = sql"""select * from library lib where lib.id in (select lm1.library_id from library_membership lm1 inner join library_membership lm2 on lm1.library_id = lm2.library_id where lm1.user_id = $owner and lm1.access = 'owner' and lm1.state = 'active' and lm2.user_id = $other and lm2.access != 'owner' and lm2.state = 'active') order by member_count desc, last_kept desc"""
+    query.as[Library].list
   }
 
   def getOwnerLibraryCounts(owners: Set[Id[User]])(implicit session: RSession): Map[Id[User], Int] = {

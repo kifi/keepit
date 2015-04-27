@@ -20,13 +20,11 @@
     <button class="kf-pymk-network-btn" ng-click="connect(network)" ng-if="network">
       <span class="kf-pymk-network-icon svg-facebook-f" ng-if="network === 'fb'"></span>
       <span class="kf-pymk-network-icon svg-twitter-white" ng-if="network === 'tw'"></span>
-      <span class="kf-pymk-network-icon svg-linkedin-in" ng-if="network === 'li'"></span>
       <span class="kf-pymk-network-icon svg-gmail-envelope" ng-if="network === 'gm'"></span>
       <span class="kf-pymk-network-1">Find people you already know</span>
       <span class="kf-pymk-network-2" ng-switch="network">
         <span ng-switch-when="fb">Check my Facebook friends</span>
         <span ng-switch-when="tw">Check my Twitter contacts</span>
-        <span ng-switch-when="li">Check my LinkedIn contacts</span>
         <span ng-switch-when="gm">Check my Gmail contacts</span>
       </span>
     </button>

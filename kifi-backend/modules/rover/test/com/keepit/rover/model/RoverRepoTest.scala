@@ -1,11 +1,12 @@
 package com.keepit.rover.model
 
-import com.keepit.model.{ Name, NormalizedURI, SystemValueRepo }
-import com.keepit.rover.article.DefaultArticle
+import com.keepit.model._
+import com.keepit.rover.article.{ EmbedlyArticle, DefaultArticle }
 import com.keepit.rover.test.{ RoverApplication, RoverApplicationInjector }
 import org.specs2.mutable.Specification
 import com.keepit.common.db.{ SequenceNumber, Id }
 import play.api.test.Helpers._
+import com.keepit.common.time._
 
 class RoverRepoTest extends Specification with RoverApplicationInjector {
   "Rover" should {
@@ -15,7 +16,7 @@ class RoverRepoTest extends Specification with RoverApplicationInjector {
         // ArticleRepo
         val articleInfoRepo = inject[ArticleInfoRepo]
         db.readWrite { implicit session =>
-          val saved = articleInfoRepo.save(RoverArticleInfo(uriId = Id(1), url = "http://www.lemonde.fr", kind = DefaultArticle.typeCode))
+          val saved = articleInfoRepo.save(RoverArticleInfo.initialize(uriId = Id(1), url = "http://www.lemonde.fr", kind = EmbedlyArticle))
           articleInfoRepo.get(saved.id.get).uriId === Id(1)
         }
 
@@ -33,6 +34,37 @@ class RoverRepoTest extends Specification with RoverApplicationInjector {
           systemValueRepo.getSequenceNumber(name) === None
           systemValueRepo.setSequenceNumber(name, SequenceNumber(42))
           systemValueRepo.getSequenceNumber(name) === Some(SequenceNumber(42))
+        }
+
+        // RoverImageInfoRepo
+        val imageInfoRepo = inject[RoverImageInfoRepo]
+        db.readWrite { implicit session =>
+          val saved = imageInfoRepo.save(RoverImageInfo(
+            format = ImageFormat.GIF,
+            width = 100,
+            height = 100,
+            kind = ProcessImageOperation.Original,
+            path = "path",
+            source = ImageSource.RoverArticle(EmbedlyArticle),
+            sourceImageHash = ImageHash("hash"),
+            sourceImageUrl = None
+          ))
+
+          imageInfoRepo.get(saved.id.get).path === "path"
+        }
+
+        // ArticleImage
+        val articleImageRepo = inject[ArticleImageRepo]
+        db.readWrite { implicit session =>
+          val saved = articleImageRepo.save(ArticleImage(
+            Id(1),
+            EmbedlyArticle,
+            ArticleVersionProvider.zero(EmbedlyArticle),
+            imageUrl = "imageUrl",
+            imageHash = ImageHash("hash")
+          ))
+          articleImageRepo.get(saved.id.get).articleKind === EmbedlyArticle
+          articleImageRepo.get(saved.id.get).uriId.id === 1
         }
       }
     }

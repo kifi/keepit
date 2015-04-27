@@ -36,7 +36,6 @@ class LiveUrbanAirshipTest extends Specification with ElizaApplicationInjector {
         val json = urbanAirship.createIosJson(notification, device)
         val client = inject[DevAndProdUrbanAirshipClient]
         val res = Await.result(client.send(json, device, notification), Duration.Inf)
-        println(s"res from the ship: $res")
         1 === 1
       }
     }
@@ -60,7 +59,6 @@ class LiveUrbanAirshipTest extends Specification with ElizaApplicationInjector {
         val json = urbanAirship.createAndroidJson(notification, device)
         val client = inject[DevAndProdUrbanAirshipClient]
         val res = Await.result(client.send(json, device, notification), Duration.Inf)
-        println(s"res from the ship: $res")
         1 === 1
       }
     }

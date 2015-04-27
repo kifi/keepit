@@ -151,6 +151,7 @@ class UriIntegrityActor @Inject() (
    * A migration from uriA to uriB is (almost) equivalent to N url to uriB migrations, where the N urls are currently associated with uriA.
    */
   private def handleURIMigration(change: ChangedURI): Unit = {
+    val t1 = System.currentTimeMillis()
     val (oldUriId, newUriId) = (change.oldUriId, change.newUriId)
     if (oldUriId == newUriId || change.state != ChangedURIStates.ACTIVE) {
       if (oldUriId == newUriId) {
@@ -205,6 +206,9 @@ class UriIntegrityActor @Inject() (
         changedUriRepo.saveWithoutIncreSeqnum(change.withState(ChangedURIStates.APPLIED))
       }
     }
+
+    val t2 = System.currentTimeMillis()
+    log.info(s"one uri migration from ${oldUriId} to ${newUriId} takes ${t2 - t1} millis")
   }
 
   /**
@@ -252,12 +256,14 @@ class UriIntegrityActor @Inject() (
       } catch {
         case e: Exception =>
           airbrake.notify(s"Exception in migrating uri ${change.oldUriId} to ${change.newUriId}. Going to delete them from cache", e)
-          db.readWrite { implicit s => changedUriRepo.save(change.withState(ChangedURIStates.ACTIVE)) } // bump up seqNum. Will be retried.
 
           try {
             db.readOnlyMaster { implicit s => List(normUriRepo.get(change.oldUriId), normUriRepo.get(change.newUriId)) foreach { normUriRepo.deleteCache } }
+            db.readWrite { implicit s => changedUriRepo.save(change.withState(ChangedURIStates.ACTIVE)) } // bump up seqNum. Will be retried.
           } catch {
-            case e: Exception => airbrake.notify(s"error in getting uri ${change.oldUriId} or ${change.newUriId} from db by id.")
+            case e: Exception =>
+              db.readWrite { implicit s => changedUriRepo.saveWithoutIncreSeqnum(change.withState(ChangedURIStates.FAILED)) } // failed. Not bumping up seqNum. Not retry actively.
+              airbrake.notify(s"error in getting uri ${change.oldUriId} or ${change.newUriId} from db by id.")
           }
       }
     }
@@ -355,7 +361,7 @@ class UriIntegrityPluginImpl @Inject() (
     val scheduling: SchedulingProperties) extends UriIntegrityPlugin with Logging {
   override def enabled = true
   override def onStart() {
-    scheduleTaskOnOneMachine(actor.system, 47 seconds, 43 seconds, actor.ref, BatchURIMigration(50), BatchURIMigration.getClass.getSimpleName)
+    scheduleTaskOnOneMachine(actor.system, 47 seconds, 43 seconds, actor.ref, BatchURIMigration(100), BatchURIMigration.getClass.getSimpleName)
     scheduleTaskOnOneMachine(actor.system, 55 seconds, 47 seconds, actor.ref, BatchURLMigration(100), BatchURLMigration.getClass.getSimpleName)
     scheduleTaskOnOneMachine(actor.system, 60 seconds, 53 seconds, actor.ref, FixDuplicateKeeps(), FixDuplicateKeeps.getClass.getSimpleName)
   }

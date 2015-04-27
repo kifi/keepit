@@ -18,13 +18,12 @@ import com.keepit.model.{ Library, LibraryRepo, UserEmailAddressRepo, UserRepo, 
 import com.keepit.social.BasicUser
 import org.jsoup.Jsoup
 import play.api.libs.json.{ Json, JsValue }
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.twirl.api.Html
 import org.jsoup.nodes.Element
 
 import scala.collection.JavaConversions.asScalaIterator
 
-import scala.concurrent.Future
+import scala.concurrent.{ ExecutionContext, Future }
 
 sealed trait EmailHtmlError
 case class EmailHtmlMissingImgAlt(element: Element) extends EmailHtmlError
@@ -69,6 +68,7 @@ class EmailTemplateProcessorImpl @Inject() (
     htmlDecorator: EmailTemplateHtmlDecorator,
     emailTipProvider: Provider[EmailTipProvider],
     emailOptOutCommander: EmailOptOutCommander,
+    implicit val defaultContext: ExecutionContext,
     private val airbrake: AirbrakeNotifier) extends EmailTemplateProcessor with Logging {
 
   /* for the lack of a better name, this is just a trait that encapsulates

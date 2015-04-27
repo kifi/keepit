@@ -10,7 +10,7 @@ class FakeAppBoyClient extends AppBoyClient {
 
   val jsons = ArrayBuffer[JsObject]()
 
-  def send(json: JsObject, device: Device, notification: PushNotification): Future[ClientResponse] = {
+  def send(json: JsObject, notification: PushNotification): Future[ClientResponse] = {
     jsons.append(json)
     Future.successful(FakeClientResponse.emptyFakeHttpClient(DirectUrl("/")))
   }

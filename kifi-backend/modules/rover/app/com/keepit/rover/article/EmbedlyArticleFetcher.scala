@@ -61,4 +61,4 @@ class EmbedlyArticleFetcher @Inject() (
 }
 
 case class InvalidEmbedlyResponseException(url: String, response: WSResponse, error: Throwable)
-  extends Throwable(s"Error: $error \n Original url: $url \n Response body: ${response.body}")
+  extends Exception(s"Error: $error \n Original url: $url \n Response body: ${response.body}")

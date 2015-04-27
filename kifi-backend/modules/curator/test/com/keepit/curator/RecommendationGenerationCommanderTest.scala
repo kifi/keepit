@@ -8,6 +8,7 @@ import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.cortex.models.lda.LDATopic
 import com.keepit.curator.commanders.{ SeedIngestionCommander, RecommendationGenerationCommander }
 import com.keepit.common.healthcheck.FakeHealthcheckModule
+import com.keepit.common.actor.FakeActorSystemModule
 
 import com.keepit.curator.model._
 import com.keepit.eliza.FakeElizaServiceClientModule
@@ -30,7 +31,8 @@ class RecommendationGenerationCommanderTest extends Specification with CuratorTe
     FakeHeimdalServiceClientModule(),
     FakeSearchServiceClientModule(),
     FakeElizaServiceClientModule(),
-    FakeHealthcheckModule())
+    FakeHealthcheckModule(),
+    FakeActorSystemModule())
 
   private def setup()(implicit injector: Injector) = {
     val shoebox = shoeboxClientInstance()

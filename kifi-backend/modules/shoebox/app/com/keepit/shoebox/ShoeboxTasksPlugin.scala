@@ -4,7 +4,7 @@ import akka.actor.ActorSystem
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.plugin.{ SchedulerPlugin, SchedulingProperties }
-import com.keepit.common.time._
+import com.keepit.shoebox.rover.ShoeboxArticleIngestionActor
 import us.theatr.akka.quartz.QuartzActor
 import com.keepit.commanders.TwitterSyncCommander
 
@@ -19,15 +19,18 @@ class ShoeboxTasksPlugin @Inject() (
     twitterSyncCommander: TwitterSyncCommander,
     system: ActorSystem,
     quartz: ActorInstance[QuartzActor],
+    articleIngestionActor: ActorInstance[ShoeboxArticleIngestionActor],
     val scheduling: SchedulingProperties) extends SchedulerPlugin {
 
   import ShoeboxTasks._
 
   override def onStart() {
     log.info("ShoeboxTasksPlugin onStart")
-    scheduleTaskOnOneMachine(system, 1 minute, 20 minutes, twitterSync) {
+    scheduleTaskOnOneMachine(system, 3 minute, 1 minutes, twitterSync) {
       twitterSyncCommander.syncAll()
     }
+
+    scheduleTaskOnOneMachine(articleIngestionActor.system, 3 minutes, 1 minute, articleIngestionActor.ref, ShoeboxArticleIngestionActor.StartIngestion, "ArticleUpdate Ingestion")
   }
 
 }

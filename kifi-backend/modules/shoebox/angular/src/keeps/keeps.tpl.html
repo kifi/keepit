@@ -1,5 +1,5 @@
 <div class="kf-main-keeps">
-  <div kf-sticky max-top="52" sticky-width-mode="calculated" class="kf-keep-selection-tools" ng-if="editMode.enabled" ng-show="availableKeeps.length > 0">
+  <div class="kf-keep-selection-tools" ng-if="edit.enabled" ng-show="availableKeeps.length > 0">
     <div class="kf-keep-checkbox-icon sprite" ng-class="{ 'sprite-checkbox-icon': isUnchecked(availableKeeps), 'sprite-checkbox-icon-partial': isMultiChecked(availableKeeps), 'sprite-checkbox-icon-active': selection.isSelectedAll(availableKeeps) }" ng-click="selection.toggleSelectAll(availableKeeps)"></div>
     <div class="kf-keep-selection-tools-body">
       <div class="kf-keep-selected-count">
@@ -7,29 +7,29 @@
         <span class="kf-keep-selected-count-text" ng-pluralize count="selection.getSelected(keeps).length" when="{'1': 'keep selected', 'other': 'keeps selected'}"></span>
       </div>
       <div class="kf-keep-selection-options" ng-class="{disabled: editingTags || selection.getSelected(keeps).length === 0}">
-        <div ng-if="editOptions().actions.copyToLibrary" class="kf-keep-selection-option copy-to-library">
+        <div ng-if="edit.actions.copyToLibrary" class="kf-keep-selection-option copy-to-library">
           <span kf-keep-to-library-widget widget-action-text="Copy"
             library-click-action="onWidgetCopyLibraryClicked(clickedLibrary)"
             lib-select-down-offset="0" lib-select-max-up-offset="100" lib-select-left-offset="50">
             Copy to library
           </span>
         </div>
-        <div ng-if="editOptions().actions.moveToLibrary" class="kf-keep-selection-option move-to-library">
+        <div ng-if="edit.actions.moveToLibrary" class="kf-keep-selection-option move-to-library">
           <span kf-keep-to-library-widget widget-action-text="Move"
             library-click-action="onWidgetMoveLibraryClicked(clickedLibrary)"
             lib-select-down-offset="0" lib-select-max-up-offset="100" lib-select-left-offset="50">
             Move to library
           </span>
         </div>
-        <div ng-if="editOptions().actions.keepToLibrary" class="kf-keep-selection-option keep-to-library">
+        <div ng-if="edit.actions.keepToLibrary" class="kf-keep-selection-option keep-to-library">
           <span kf-keep-to-library-widget widget-action-text="Keep"
             library-click-action="onWidgetKeepToLibraryClicked(clickedLibrary)"
             lib-select-down-offset="0" lib-select-max-up-offset="100" lib-select-left-offset="50">
             Keep to library
           </span>
         </div>
-        <div ng-if="editOptions().actions.moveToLibrary" class="kf-keep-selection-option"><span ng-click="unkeep(keeps)">Unkeep</span></div>
-        <div ng-if="editOptions().actions.editTags" class="kf-keep-selection-option" ng-click="enableEditTags()"><span>Edit Tags</span></div>
+        <div ng-if="edit.actions.moveToLibrary" class="kf-keep-selection-option"><span ng-click="unkeep(keeps)">Unkeep</span></div>
+        <div ng-if="edit.actions.editTags" class="kf-keep-selection-option" ng-click="enableEditTags()"><span>Edit Tags</span></div>
         <div class="kf-keep-selection-options-mask"></div>
       </div>
       <div class="kf-keep-selection-tags" ng-if="editingTags">
@@ -39,10 +39,9 @@
     </div>
   </div>
   <ol class="kf-my-keeps" smart-scroll scroll-distance="scrollDistance" scroll-disabled="isScrollDisabled()" scroll-next="scrollNext()(keeps.length)">
-    <div ng-repeat="keep in keeps" kf-keep-card is-selected="!!selection.isSelected(keep)"
-      keep="keep" library="library" me="me" current-page-origin="{{currentPageOrigin}}"
-      toggle-select="selection.toggleSelect(keep)" click-callback="keepClickAction(event, keep)"
-      edit-mode="editMode" edit-options="editOptions()"></div>
+    <div ng-repeat="keep in keeps" kf-keep-card keep="keep" library="library" me="me" current-page-origin="{{currentPageOrigin}}"
+      selectable="edit.enabled" is-selected="!!selection.isSelected(keep)" toggle-select="selection.toggleSelect(keep)"
+      click-callback="keepClickAction(event, keep)"></div>
   </ol>
   <img class="kf-keeps-loading" ng-show="keepsLoading" src="/img/load.gif">
   <a class="kf-keeps-load-more" ng-show="isShowMore()" href="javascript:" ng-click="scrollNext()(keeps.length)">Show more</a>

@@ -10,6 +10,7 @@ import com.keepit.common.db.slick._
 import com.keepit.model._
 import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.core._
 
 import com.keepit.common.time._
 
@@ -61,10 +62,13 @@ private class RawKeepImporterActor @Inject() (
       log.info(s"[RawKeepImporterActor] Running raw keep process")
       val activeBatch = fetchActiveBatch()
       processBatch(activeBatch, "active")
-      val oldBatch = fetchOldBatch()
-      processBatch(oldBatch, "old")
+      val oldBatchSize = if (activeBatch.length <= 10) {
+        val oldBatch = fetchOldBatch()
+        processBatch(oldBatch, "old")
+        oldBatch.length
+      } else 0
 
-      val totalProcessed = activeBatch.length + oldBatch.length
+      val totalProcessed = activeBatch.length + oldBatchSize
       if (totalProcessed >= batchSize) { // batch was non-empty, so there may be more to process
         log.info(s"[RawKeepImporterActor] Looks like there may be more. Self-calling myself.")
         self ! ProcessKeeps
@@ -80,7 +84,7 @@ private class RawKeepImporterActor @Inject() (
 
   private def fetchOldBatch() = {
     db.readOnlyReplica { implicit session =>
-      rawKeepRepo.getOldUnprocessed(batchSize, clock.now.minusMinutes(20))
+      rawKeepRepo.getOldUnprocessed(batchSize, clock.now.minusMinutes(5))
     }
   }
 
@@ -111,7 +115,8 @@ private class RawKeepImporterActor @Inject() (
           val openGraph = rk.originalJson.flatMap(json => (json \ Normalization.OPENGRAPH.scheme).asOpt[String])
           val attribution = RawKeep.extractKeepSourceAttribtuion(rk)
           RawBookmarkRepresentation(title = rk.title, url = rk.url, canonical = canonical, openGraph = openGraph, isPrivate = None, keptAt = rk.createdDate, sourceAttribution = attribution)
-        }
+        }.distinctBy(_.url)
+
         val library = db.readWrite { implicit s =>
           if (libraryId.isEmpty)
             getLibFromPrivacy(isPrivate, userId)(s)
@@ -173,13 +178,13 @@ private class RawKeepImporterActor @Inject() (
             }
           }
 
-          tagIdToKeeps.map {
+          tagIdToKeeps.foreach {
             case (tagId, keeps) =>
               // Make sure tag actually exists still
               Try(bookmarksCommanderProvider.get.addToCollection(tagId, keeps, false)(context)) match {
                 case Success(r) => // yay!
                 case Failure(e) =>
-                  log.info(s"[RawKeepImporterActor] Had problems applying tagId $tagId to ${keeps.length} keeps. Moving along.")
+                  log.warn(s"[RawKeepImporterActor] Had problems applying tagId $tagId to ${keeps.length} keeps. Moving along.", e)
               }
           }
 

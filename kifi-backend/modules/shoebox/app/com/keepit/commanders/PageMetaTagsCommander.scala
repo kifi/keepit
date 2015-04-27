@@ -13,10 +13,9 @@ import com.keepit.model.LibraryVisibility.PUBLISHED
 import com.keepit.model._
 import com.keepit.social.SocialNetworks
 import org.im4java.utils.NoiseFilter.Threshold
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import views.html.admin.library
 
-import scala.concurrent.Future
+import scala.concurrent.{ ExecutionContext, Future }
 
 trait UserProfileTab {
   def paths: Seq[String]
@@ -49,6 +48,7 @@ class PageMetaTagsCommander @Inject() (
     socialUserInfoRepo: SocialUserInfoRepo,
     libraryRepo: LibraryRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
+    implicit val executionContext: ExecutionContext,
     implicit val publicIdConfig: PublicIdConfiguration) extends Logging {
 
   private def imageUrl(image: LibraryImage): String = addProtocol(libraryImageCommander.getUrl(image))

@@ -5,7 +5,7 @@ import com.google.inject.Inject
 import com.keepit.abook.{ ABookServiceClient }
 import com.keepit.common.crypto.PublicId
 import com.keepit.common.net.URI
-import com.keepit.eliza.{ PushNotificationExperiment, PushNotificationCategory }
+import com.keepit.eliza.{ SimplePushNotificationCategory, LibraryPushNotificationCategory, UserPushNotificationCategory, PushNotificationExperiment }
 import com.keepit.eliza.model._
 import com.keepit.common.akka.{ SafeFuture, TimeoutFuture }
 import com.keepit.common.db.{ Id, ExternalId }
@@ -64,19 +64,19 @@ class MessagingCommander @Inject() (
     messageSearchHistoryRepo: MessageSearchHistoryRepo,
     implicit val executionContext: ExecutionContext) extends Logging {
 
-  def sendUserPushNotification(userId: Id[User], message: String, recipientUserId: ExternalId[User], username: Username, pictureUrl: String, pushNotificationExperiment: PushNotificationExperiment): Future[Int] = {
-    val notification = UserPushNotification(message = Some(message), userExtId = recipientUserId, username = username, pictureUrl = pictureUrl, unvisitedCount = getUnreadUnmutedThreadCount(userId), category = PushNotificationCategory.LibraryChanged, experiment = pushNotificationExperiment)
+  def sendUserPushNotification(userId: Id[User], message: String, recipientUserId: ExternalId[User], username: Username, pictureUrl: String, pushNotificationExperiment: PushNotificationExperiment, category: UserPushNotificationCategory): Future[Int] = {
+    val notification = UserPushNotification(message = Some(message), userExtId = recipientUserId, username = username, pictureUrl = pictureUrl, unvisitedCount = getUnreadUnmutedThreadCount(userId), category = category, experiment = pushNotificationExperiment)
     notificationCommander.sendPushNotification(userId, notification)
   }
 
-  def sendLibraryPushNotification(userId: Id[User], message: String, libraryId: Id[Library], libraryUrl: String, pushNotificationExperiment: PushNotificationExperiment): Future[Int] = {
-    val notification = LibraryUpdatePushNotification(message = Some(message), libraryId = libraryId, libraryUrl = libraryUrl, unvisitedCount = getUnreadUnmutedThreadCount(userId), category = PushNotificationCategory.LibraryChanged, experiment = pushNotificationExperiment)
-    notificationCommander.sendPushNotification(userId, notification)
+  def sendLibraryPushNotification(userId: Id[User], message: String, libraryId: Id[Library], libraryUrl: String, pushNotificationExperiment: PushNotificationExperiment, category: LibraryPushNotificationCategory, force: Boolean): Future[Int] = {
+    val notification = LibraryUpdatePushNotification(message = Some(message), libraryId = libraryId, libraryUrl = libraryUrl, unvisitedCount = getUnreadUnmutedThreadCount(userId), category = category, experiment = pushNotificationExperiment)
+    notificationCommander.sendPushNotification(userId, notification, force)
   }
 
-  def sendGeneralPushNotification(userId: Id[User], message: String, pushNotificationExperiment: PushNotificationExperiment): Future[Int] = {
-    val notification = SimplePushNotification(message = Some(message), unvisitedCount = getUnreadUnmutedThreadCount(userId), category = PushNotificationCategory.PersonaUpdate, experiment = pushNotificationExperiment)
-    notificationCommander.sendPushNotification(userId, notification)
+  def sendGeneralPushNotification(userId: Id[User], message: String, pushNotificationExperiment: PushNotificationExperiment, category: SimplePushNotificationCategory, force: Boolean): Future[Int] = {
+    val notification = SimplePushNotification(message = Some(message), unvisitedCount = getUnreadUnmutedThreadCount(userId), category = category, experiment = pushNotificationExperiment)
+    notificationCommander.sendPushNotification(userId, notification, force)
   }
 
   private def buildThreadInfos(userId: Id[User], threads: Seq[MessageThread], requestUrl: Option[String]): Seq[ElizaThreadInfo] = {
@@ -663,7 +663,7 @@ class MessagingCommander @Inject() (
       }
       shoebox.addInteractions(userId, actions)
       val (thread, message) = sendNewMessage(userId, userRecipients, nonUserRecipients, urls, title, text, source)(context)
-      val messageThreadFut = basicMessageCommander.getThreadMessagesWithBasicUser(thread)
+      val messageThreadFut = basicMessageCommander.getThreadMessagesWithBasicUser(userId, thread)
 
       val threadInfoOpt = url.map { url =>
         buildThreadInfos(userId, Seq(thread), Some(url)).headOption
@@ -723,4 +723,4 @@ class MessagingCommander @Inject() (
   }
 }
 
-class ExternalMessagingRateLimitException(message: String) extends Throwable(message)
+class ExternalMessagingRateLimitException(message: String) extends Exception(message)

@@ -141,7 +141,7 @@ class MobileMessagingController @Inject() (
 
   // todo(eishay, léo): the next version of this endpoint should rename the "uri" field to "url"
   def getPagedThread(threadId: String, pageSize: Int, fromMessageId: Option[String]) = UserAction.async { request =>
-    basicMessageCommander.getThreadMessagesWithBasicUser(ExternalId[MessageThread](threadId)) map {
+    basicMessageCommander.getThreadMessagesWithBasicUser(request.userId, ExternalId[MessageThread](threadId)) map {
       case (thread, allMsgs) =>
         val url = thread.url.getOrElse("") // needs to change when we have detached threads
         val nUrl = thread.nUrl.getOrElse("") // needs to change when we have detached threads
@@ -190,7 +190,7 @@ class MobileMessagingController @Inject() (
 
   @deprecated(message = "use getPagedThread", since = "April 23, 2014")
   def getCompactThread(threadId: String) = UserAction.async { request =>
-    basicMessageCommander.getThreadMessagesWithBasicUser(ExternalId[MessageThread](threadId)) map {
+    basicMessageCommander.getThreadMessagesWithBasicUser(request.userId, ExternalId[MessageThread](threadId)) map {
       case (thread, msgs) =>
         val url = thread.url.getOrElse("") // needs to change when we have detached threads
         val nUrl = thread.nUrl.getOrElse("") // needs to change when we have detached threads
@@ -296,6 +296,7 @@ class MobileMessagingController @Inject() (
       case _ =>
         notificationCommander.setAllNotificationsRead(request.userId) // mark all as read
     }
+    notificationCommander.notifyUnreadCount(request.userId)
     NoContent
   }
 }

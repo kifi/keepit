@@ -21,7 +21,6 @@ import com.keepit.model._
 import com.keepit.social._
 import play.api.http.Status
 
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.api.libs.oauth.RequestToken
@@ -31,7 +30,7 @@ import play.api.mvc.{ Request, RequestHeader, Result }
 import play.api.mvc.Results.{ NotFound, Ok }
 
 import scala.Some
-import scala.concurrent.Future
+import scala.concurrent.{ ExecutionContext, Future }
 
 import securesocial.core._
 import securesocial.core.providers.utils.GravatarHelper
@@ -114,6 +113,7 @@ class AuthCommander @Inject() (
     inviteCommander: InviteCommander,
     libraryCommander: LibraryCommander,
     implicit val publicIdConfig: PublicIdConfiguration,
+    implicit val executionContext: ExecutionContext,
     userExperimentCommander: LocalUserExperimentCommander,
     userCommander: UserCommander,
     heimdalServiceClient: HeimdalServiceClient,

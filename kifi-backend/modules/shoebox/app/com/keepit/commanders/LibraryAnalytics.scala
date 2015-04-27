@@ -11,11 +11,13 @@ import com.keepit.common.store.ImageSize
 import com.google.inject.{ Singleton, Inject }
 import org.joda.time.DateTime
 import play.api.db
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
+
+import scala.concurrent.ExecutionContext
 
 @Singleton
 class LibraryAnalytics @Inject() (
     db: Database,
+    implicit val executionContext: ExecutionContext,
     keepRepo: KeepRepo)(heimdal: HeimdalServiceClient) {
 
   def sendLibraryInvite(userId: Id[User], library: Library, inviteeList: Seq[(Either[Id[User], EmailAddress])], eventContext: HeimdalContext) = {
@@ -51,7 +53,7 @@ class LibraryAnalytics @Inject() (
     }
   }
 
-  def followLibrary(userId: Id[User], library: Library, keepCount: Int, context: HeimdalContext): Unit = {
+  def followLibrary(userId: Id[User], library: Library, context: HeimdalContext): Unit = {
     val when = currentDateTime
     val numDays = getDaysSinceLibraryCreated(library)
     SafeFuture {
@@ -63,13 +65,13 @@ class LibraryAnalytics @Inject() (
       contextBuilder += ("libraryOwnerId", library.ownerId.toString)
       contextBuilder += ("libraryKind", library.kind.value)
       contextBuilder += ("followerCount", library.memberCount - 1)
-      contextBuilder += ("keepCount", keepCount)
+      contextBuilder += ("keepCount", library.keepCount)
       contextBuilder += ("daysSinceLibraryCreated", numDays)
       heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.FOLLOWED_LIBRARY, when))
     }
   }
 
-  def unfollowLibrary(userId: Id[User], library: Library, keepCount: Int, context: HeimdalContext): Unit = {
+  def unfollowLibrary(userId: Id[User], library: Library, context: HeimdalContext): Unit = {
     val when = currentDateTime
     val numDays = getDaysSinceLibraryCreated(library)
     SafeFuture {
@@ -81,7 +83,7 @@ class LibraryAnalytics @Inject() (
       contextBuilder += ("libraryOwnerId", library.ownerId.toString)
       contextBuilder += ("libraryKind", library.kind.value)
       contextBuilder += ("followerCount", library.memberCount - 1)
-      contextBuilder += ("keepCount", keepCount)
+      contextBuilder += ("keepCount", library.keepCount)
       contextBuilder += ("daysSinceLibraryCreated", numDays)
       heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.FOLLOWED_LIBRARY, when))
     }
@@ -243,10 +245,7 @@ class LibraryAnalytics @Inject() (
   }
 
   private def populateLibraryInfoForKeep(library: Library): HeimdalContext = {
-    val numKeepsInLibrary = db.readOnlyMaster { implicit s =>
-      keepRepo.getCountByLibrary(library.id.get)
-    }
-
+    val numKeepsInLibrary = library.keepCount
     val numDays = getDaysSinceLibraryCreated(library)
     val contextBuilder = new HeimdalContextBuilder
     contextBuilder += ("libraryId", library.id.get.toString)

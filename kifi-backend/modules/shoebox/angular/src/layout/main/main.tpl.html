@@ -3,11 +3,6 @@
   <div kf-error-not-found ng-if="(errorStatus === 403 && !errorParams.authToken) || errorStatus === 404"></div>
   <div ng-if="errorStatus !== 403 && errorStatus !== 404">
     <div ui-view></div>
-    <div class="kf-small-tooltip" ng-if="undo.isSet() || tooltipMessage">
-      <span class="kf-small-tooltip-box">
-        <span class="kf-small-tooltip-message">{{undo.message || tooltipMessage}}</span>
-        <a class="kf-small-tooltip-link" href="javascript:" ng-click="undo.undo()" ng-if="undo.isSet()">Undo</a>
-      </span>
-    </div>
+    <div kf-banner-message="::bannerMessage"></div>
   </div>
 </div>

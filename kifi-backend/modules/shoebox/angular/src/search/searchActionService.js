@@ -125,51 +125,43 @@ angular.module('kifi')
     // Exposed API methods.
     //
     function find(query, filter, library, context, userLoggedIn) {
-      var url = routeService.search,
-        reqData = {
-          params: {
-            q: query || void 0,
-            f: filter || 'm',
-            l: library && library.id || void 0,
-            maxHits: 5,
-            context: context || void 0
-          }
-        };
+      var params = {
+        q: query,
+        f: filter || [],
+        l: library && library.id || [],
+        disablePrefixSearch: 1,
+        maxUris: 5,
+        maxLibraries: context ? [] : 6,
+        uriContext: context || []
+      };
+      var searchActionPromise = $http.get(routeService.search(params));
+      var librarySummariesPromise = userLoggedIn ? libraryService.fetchLibraryInfos(false) : null;
 
-      //$log.log('searchActionService.find() req', reqData);
-
-      var searchActionPromise = $http.get(url, reqData);
-      var librarySummariesPromise = userLoggedIn ? libraryService.fetchLibraryInfos(false) : true;
-      var resultsFetched = $q.all([librarySummariesPromise, searchActionPromise]);
-
-      // ensures that the libraries have been loaded before the hits are decompressed
-      return resultsFetched.then(function (results) {
-        var res = results[1];
-        var resData = res.data;
-
-        //$log.log('searchActionService.find() res', resData);
-
-        var hits = resData.hits || [];
+      // ensuring library summaries have been loaded before the hits are decompressed
+      return $q.all([librarySummariesPromise, searchActionPromise]).then(function (results) {
+        var resData = results[1].data;
+        var uris = resData.uris || {};
+        var hits = uris.hits || [];
         _.forEach(hits, function (hit) {
-          decompressHit(hit, resData.users, resData.libraries, userLoggedIn);
+          decompressHit(hit, uris.keepers, uris.libraries, userLoggedIn);
         });
 
         _.forEach(hits, processHit);
 
         $analytics.eventTrack('user_clicked_page', {
           'action': 'searchKifi',
-          'hits': hits.size,
-          'mayHaveMore': resData.mayHaveMore,
+          'hits': hits.length,
+          'mayHaveMore': uris.mayHaveMore,
           'path': $location.path()
         });
 
         lastSearchContext = {
           origin: $location.origin,
-          uuid: res.data.uuid,
-          experimentId: res.data.experimentId,
-          query: reqData.params.q,
-          filter: reqData.params.f,
-          maxResults: reqData.params.maxHits,
+          uuid: uris.uuid,
+          experimentId: resData.experimentId,
+          query: params.q,
+          filter: params.f,
+          maxResults: params.maxUris,
           kifiTime: null,
           kifiShownTime: null,
           kifiResultsClicked: null,

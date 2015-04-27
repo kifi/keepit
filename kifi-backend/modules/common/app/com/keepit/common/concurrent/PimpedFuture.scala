@@ -107,6 +107,10 @@ object FutureHelpers {
     promised.future
   }
 
+  def exists[I](items: Iterable[I])(predicate: I => Future[Boolean])(implicit ec: ScalaExecutionContext): Future[Boolean] = {
+    foldLeftUntil(items)(false) { case (_, item) => predicate(item).imap(found => (found, found)) }
+  }
+
   def whilef(f: => Future[Boolean], p: Promise[Unit] = Promise[Unit]())(body: => Unit)(implicit ec: ScalaExecutionContext): Future[Unit] = {
     f.onComplete {
       case Success(true) => {

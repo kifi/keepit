@@ -5,43 +5,36 @@ angular.module('kifi')
 .factory('undoService', [
   '$timeout',
   function ($timeout) {
+    var message = null;
+    var undo;
+    var timeout;
 
-    var DEFAULT_DURATION = 30000;
+    function clear() {
+      if (timeout) {
+        $timeout.cancel(timeout);
+      }
+      message = undo = timeout = null;
+    }
 
-    var api = {
-      isSet: function () {
-        return !!api.callback;
+    return {
+      add: function (messageText, undoFunction, duration) {
+        clear();
+        message = messageText;
+        undo = undoFunction;
+        timeout = $timeout(function () {
+          timeout = null;
+          clear();
+        }, duration || 30000);
       },
-      add: function (message, callback, duration) {
-        api.message = message;
-        api.callback = callback;
-
-        if (api.promise) {
-          $timeout.cancel(api.promise);
-        }
-
-        api.promise = $timeout(function () {
-          api.promise = null;
-          api.clear();
-        }, duration == null ? DEFAULT_DURATION : duration);
-      },
-      clear: function () {
-        if (api.promise) {
-          $timeout.cancel(api.promise);
-        }
-        api.message = api.callback = api.promise = null;
+      clear: clear,
+      getMessage: function () {
+        return message;
       },
       undo: function () {
-        var res = null;
-        if (api.callback) {
-          res = api.callback.call();
-        }
-        api.clear();
-
+        var res = undo && undo.call();
+        clear();
         return res;
       }
     };
-
-    return api;
   }
 ]);

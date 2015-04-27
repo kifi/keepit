@@ -25,6 +25,6 @@ trait GraphWriter extends GraphReader {
   }
 }
 
-case class VertexNotFoundException(vertexId: VertexId) extends Throwable(s"Vertex $vertexId could not be found.")
-case class EdgeNotFoundException(sourceId: VertexId, destinationId: VertexId, edgeKind: EdgeType) extends Throwable(s"Edge of kind $edgeKind from $sourceId to $destinationId could not be found.")
-case class UninitializedReaderException(message: String) extends Throwable(message)
+case class VertexNotFoundException(vertexId: VertexId) extends Exception(s"Vertex $vertexId could not be found.")
+case class EdgeNotFoundException(sourceId: VertexId, destinationId: VertexId, edgeKind: EdgeType) extends Exception(s"Edge of kind $edgeKind from $sourceId to $destinationId could not be found.")
+case class UninitializedReaderException(message: String) extends Exception(message)

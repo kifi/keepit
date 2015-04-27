@@ -1,5 +1,6 @@
 keepBorderWidth = 1px
 keepBorderRadius = 10px
+keepBorderRadiusEditing = 3px
 keepEditToolsWidth = 28px
 tagOutlineColor = #bdc4c9
 kifiGreen = #73c583
@@ -9,12 +10,15 @@ kifiGreen = #73c583
   box-sizing: border-box
   margin-bottom: 10px
   background-color: white
-  border-radius: keepBorderRadius
   box-shadow: 0 0 0 .5px defaultBorderColor  // half-pixel border workaround crbug.com/236371
 
   @media (min-width: 480px)
     box-shadow: none  // important not to use box-shadow here (for recommended keep cards)
     border: defaultBorder
+
+.kf-keep-selection-tools
+  border-radius: keepBorderRadius keepBorderRadiusEditing keepBorderRadiusEditing keepBorderRadius
+  margin-left: keepBorderWidth - keepEditToolsWidth
 
 .kf-keep-selection-tools-body
   padding: 0 0 7px 27px
@@ -27,22 +31,13 @@ kifiGreen = #73c583
 
 .kf-keep-selection-tags-done
   float: right
-
-.kf-edit-keeps-label
-.kf-keep-selection-tags-done
   color: linkColor
   cursor: pointer
   user-select: none
-
-.kf-keep-selection-tags-done
   vertical-align: middle
   font-size: 13px
   font-smoothing: antialiased
   line-height: 33px
-
-.kf-keep-selection-tools
-  margin-left: keepBorderWidth - keepEditToolsWidth
-  margin-right: 25px
 
 .kf-keep-selected-count
   text-align: center
@@ -98,6 +93,7 @@ kifiGreen = #73c583
 
 .kf-keep
   position: relative
+  border-radius: keepBorderRadius
 
   &.detailed
     background-color: #eff2f7
@@ -105,14 +101,11 @@ kifiGreen = #73c583
   &.selected.detailed
     background-color: #F7F7F5
 
-  &.toggling
-    overflow: hidden
-    transition: height .3s ease-in-out
-
   &.ng-hide-add
   &.ng-hide-remove
-    transition: max-height 0.3s linear
+    transition: max-height 0.3s
     display: block !important
+    overflow: hidden
 
   &.ng-hide-add.ng-hide-add-active
   &.ng-hide-remove
@@ -120,10 +113,10 @@ kifiGreen = #73c583
 
   &.ng-hide-add
   &.ng-hide-remove.ng-hide-remove-active
-    max-height: 200px
+    max-height: 400px
 
   &.editing
-    border-radius: 0 3px 3px
+    border-radius: 0 keepBorderRadiusEditing keepBorderRadiusEditing
 
     .kf-keep-edit-tools
       display: block
@@ -622,42 +615,3 @@ input.kf-keep-tag-input-new
   cursor: pointer
   width: 20px
   height: 20px
-
-.kf-keep-loader
-  position: relative
-  top: 2px
-  width: 16px
-  height: 16px
-  border-radius: 50%
-  display: inline-block
-  vertical-align: middle
-  background-color: #6fa6ef
-  margin: 0 8px 5px 0
-
-.kf-keep-loader
-.kf-keep-loader:before
-.kf-keep-loader:after
-    animation: 1s infinite linear
-
-.kf-keep-loader:before
-.kf-keep-loader:after
-    width: 100%
-    height: 100%
-    border-radius: 50%
-    position: absolute
-    top: 0
-    left: 0
-
-.kf-keep-loader
-  animation-name: kf-keep-loader
-
-@keyframes kf-keep-loader {
-  from {
-    transform: scale(0)
-    opacity: 1
-  }
-  to {
-    transform: scale(1)
-    opacity: 0
-  }
-}

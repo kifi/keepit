@@ -4,33 +4,25 @@ angular.module('kifi')
 
 .controller('MainCtrl', [
   '$scope', '$rootScope', '$window', '$timeout', '$rootElement', '$q',
-  'initParams', 'undoService', 'installService', 'profileService', 'routeService',
+  'initParams', 'installService', 'profileService', 'routeService',
   'modalService', 'libraryService', 'extensionLiaison',
   function ($scope, $rootScope, $window, $timeout, $rootElement, $q,
-    initParams, undoService, installService, profileService, routeService,
+    initParams, installService, profileService, routeService,
     modalService, libraryService, extensionLiaison) {
 
     var importBookmarksMessageEvent;
-    var tooltipMessages = {
+    var bannerMessages = {
       0: 'Welcome back!',
       2: 'Bookmark import in progress. Reload the page to update.'
     };
 
     $scope.data = $scope.data || {};
-    $scope.editMode = {
-      enabled: false
-    };
-
-    $scope.undo = undoService;
 
     (function (m) {
       if (m === '1') {
         $scope.showEmailVerifiedModal = true;
-      } else if (m in tooltipMessages) { // show small tooltip
-        $scope.tooltipMessage = tooltipMessages[m];
-        $timeout(function () {
-          $scope.tooltipMessage = null;
-        }, 5000);
+      } else if (m in bannerMessages) {
+        $scope.bannerMessage = bannerMessages[m];
       }
     }(initParams.getAndClear('m')));
 
@@ -117,20 +109,18 @@ angular.module('kifi')
 
     $scope.disableBookmarkImport = true;
 
-    $scope.allowUpload = function (elem) {
-      $scope.$apply(function () {
-        var file = elem && elem.files && elem.files[0];
-        var ext = file && file.name.split('.').pop();
-        if (ext && (ext === 'html' || ext === 'htm' || ext === 'zip')) {
-          $scope.importFilename = file.name;
-          $scope.disableBookmarkImport = false;
-          $scope.importFileStatus = '';
-        } else {
-          $scope.importFilename = '';
-          $scope.disableBookmarkImport = true;
-          $scope.importFileStatus = 'Invalid bookmark file (*.html). Try picking it again.';
-        }
-      });
+    $scope.allowUpload = function (files) {
+      var file = files[0];
+      var ext = file && file.name.split('.').pop();
+      if (ext && (ext === 'html' || ext === 'htm' || ext === 'zip')) {
+        $scope.importFilename = file.name;
+        $scope.disableBookmarkImport = false;
+        $scope.importFileStatus = '';
+      } else {
+        $scope.importFilename = '';
+        $scope.disableBookmarkImport = true;
+        $scope.importFileStatus = 'Invalid bookmark file (*.html). Try picking it again.';
+      }
     };
 
     $scope.openExportPopup = function ($event) {
@@ -179,11 +169,11 @@ angular.module('kifi')
           // });
 
           var tooSlowTimer = $timeout(function () {
-            $scope.importFileStatus = 'Your bookmarks are still uploading... Hang tight!';
+            $scope.importFileStatus = 'Uploading... Hang tight!';
             $scope.disableBookmarkImport = false;
-          }, 8000);
+          }, 3000);
 
-          $scope.importFileStatus = 'Uploading! May take a bit, especially if you have a lot of links.';
+          $scope.importFileStatus = '';
           $scope.importFilename = '';
 
           uploadBookmarkFileToLibraryHelper(file, library.id).then(function success(result) {
@@ -235,27 +225,9 @@ angular.module('kifi')
 
     // END For importing bookmarks.
 
-    $scope.editKeepsLabel = function () {
-      if ($scope.editMode.enabled) {
-        return 'Done';
-      } else {
-        return 'Bulk keep to library';
-      }
-    };
-
-    $scope.toggleEdit = function (moveWindow) {
-      if (!$scope.editMode.enabled) {
-        if (moveWindow) {
-          $window.scrollBy(0, 118); // todo: scroll based on edit mode size. problem is that it's not on the page yet.
-        }
-      }
-      $scope.editMode.enabled = !$scope.editMode.enabled;
-    };
-
     if (/^Mac/.test($window.navigator.platform)) {
       $rootElement.find('body').addClass('mac');
     }
-
 
     var unregisterAutoShowGuide = $rootScope.$watch(function () {
       return Boolean(installService.installedVersion && profileService.prefs.auto_show_guide && !profileService.prefs.auto_show_persona);

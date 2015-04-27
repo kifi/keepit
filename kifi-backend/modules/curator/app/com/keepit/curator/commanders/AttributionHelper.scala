@@ -22,36 +22,14 @@ class SeedAttributionHelper @Inject() (
   def getAttributions(seeds: Seq[ScoredSeedItem]): Future[Seq[ScoredSeedItemWithAttribution]] = {
     val timer = new NamedStatsdTimer("SeedAttributionHelper.getAttributions")
     val userAttrFut = getUserAttribution(seeds)
-    val keepAttrFut = getKeepAttribution(seeds)
-    //these are currently disabled for performance reasons. Likely to be removed entirely soon.
-    //val topicAttrFut = getTopicAttribution(seeds)
-    //val libraryAttrFut = getLibraryAttribution(seeds)
     for {
       userAttr <- userAttrFut
-      keepAttr <- keepAttrFut
-      //topicAttr <- topicAttrFut
-      //libraryAttr <- libraryAttrFut
     } yield {
       timer.stopAndReport()
       (0 until seeds.size).map { i =>
-        val attr = SeedAttribution(userAttr(i), keepAttr(i))
+        val attr = SeedAttribution(userAttr(i))
         ScoredSeedItemWithAttribution(seeds(i).userId, seeds(i).uriId, seeds(i).uriScores, attr,
           seeds(i).topic1, seeds(i).topic2)
-      }
-    }
-  }
-
-  private def getLibraryAttribution(seeds: Seq[ScoredSeedItem]): Future[Seq[Option[LibraryAttribution]]] = {
-    val timer = new NamedStatsdTimer("SeedAttributionHelper.getLibraryAttribution")
-    db.readOnlyReplicaAsync { implicit session =>
-      seeds.map { seed =>
-        val libs = libMemRepo.getFollowedLibrariesWithUri(seed.userId, seed.uriId)
-        timer.stopAndReport()
-        if (libs.isEmpty) {
-          None
-        } else {
-          Some(LibraryAttribution(libs.toSeq))
-        }
       }
     }
   }
@@ -84,30 +62,6 @@ class SeedAttributionHelper @Inject() (
             ret
           }
         }
-    }
-  }
-
-  private def getKeepAttribution(seeds: Seq[ScoredSeedItem]): Future[Seq[Option[KeepAttribution]]] = {
-    require(seeds.map(_.userId).toSet.size <= 1, "Batch keep attribution must be all for the same user")
-    val timer = new NamedStatsdTimer("SeedAttributionHelper.getKeepAttribution")
-
-    val empty = Seq.fill(seeds.size)(None)
-    seeds.headOption.map { _.userId } match {
-      case None => Future.successful(empty)
-      case Some(userId) =>
-        val uriIds = seeds.map { _.uriId }
-        cortex.explainFeed(userId, uriIds).map { res =>
-          timer.stopAndReport()
-          res.map { keepIds => if (!keepIds.isEmpty) Some(KeepAttribution(keepIds)) else None }
-        }
-    }
-  }
-
-  private def getTopicAttribution(seeds: Seq[ScoredSeedItem]): Future[Seq[Option[TopicAttribution]]] = {
-    val timer = new NamedStatsdTimer("SeedAttributionHelper.getTopicAttribution")
-    cortex.getTopicNames(seeds.map { _.uriId }, seeds.headOption.map { _.userId }).map { names =>
-      timer.stopAndReport()
-      names.map { nameOpt => nameOpt.map { TopicAttribution(_) } }
     }
   }
 

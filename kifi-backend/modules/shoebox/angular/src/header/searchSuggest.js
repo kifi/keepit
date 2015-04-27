@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfSearchSuggest', [
-  '$document', '$location', '$timeout', 'searchSuggestService', 'libraryService', 'profileService', 'keyIndices',
-  function ($document, $location, $timeout, searchSuggestService, libraryService, profileService, keyIndices) {
+  '$state', '$document', '$location', '$timeout', 'searchSuggestService', 'libraryService', 'profileService', 'keyIndices',
+  function ($state, $document, $location, $timeout, searchSuggestService, libraryService, profileService, keyIndices) {
     return {
       restrict: 'A',
       scope: {
@@ -23,7 +23,11 @@ angular.module('kifi')
         scope.libraries = null;
         scope.users = null;
 
-        suggest();
+        //
+        // Helper methods
+        //
+
+        scope.href = angular.bind($state, $state.href);
 
         //
         // Watches
@@ -180,6 +184,12 @@ angular.module('kifi')
           }
           angular.element(document.activeElement).filter('.kf-lih-search-input').blur();
         }
+
+        //
+        // Initialization
+        //
+
+        suggest();
       }
     };
   }
@@ -194,7 +204,7 @@ angular.module('kifi')
 
     var clutch = new Clutch(function (q, libraryId) {
       var params = {q: q, l: libraryId || [], maxUsers: 3, maxLibraries: 3, maxUris: 3};
-      return $http.get(routeService.searchSuggest(params)).then(getData);
+      return $http.get(routeService.search(params)).then(getData);
     }, {cacheDuration: 15000});
 
     return {

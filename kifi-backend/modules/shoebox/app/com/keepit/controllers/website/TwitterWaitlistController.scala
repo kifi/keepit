@@ -10,6 +10,7 @@ import com.keepit.common.time.Clock
 import com.keepit.model._
 import com.keepit.social.{ SocialGraphPlugin, SocialNetworks }
 import play.api.libs.json.Json
+import play.twirl.api.Html
 import securesocial.core.SecureSocial
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Success, Try }
@@ -22,6 +23,8 @@ class TwitterWaitlistController @Inject() (
     airbrakeNotifier: AirbrakeNotifier,
     socialGraphPlugin: SocialGraphPlugin,
     val userActionsHelper: UserActionsHelper,
+    twitterSyncStateRepo: TwitterSyncStateRepo,
+    libraryRepo: LibraryRepo,
     implicit val ec: ExecutionContext) extends UserActions with ShoeboxServiceController {
 
   def twitterWaitlistLanding() = MaybeUserAction { implicit request =>
@@ -31,8 +34,8 @@ class TwitterWaitlistController @Inject() (
   //DO NOT USE THE WORD *FAKE* IN THE ROUTE FOR THIS!!!
   def getFakeWaitlistPosition() = UserAction { request =>
     val (handleOpt, emailOpt) = db.readOnlyReplica { implicit session =>
-      val twOpt = socialRepo.getByUser(request.userId).find(_.networkType == SocialNetworks.TWITTER).flatMap {
-        _.getProfileUrl.map(url => url.substring(url.lastIndexOf('/') + 1))
+      val twOpt = socialRepo.getByUser(request.userId).find(_.networkType == SocialNetworks.TWITTER).flatMap { info =>
+        info.username.orElse(info.getProfileUrl.map(url => url.substring(url.lastIndexOf('/') + 1)))
       }
       val emailOpt = Try(userEmailAddressRepo.getByUser(request.userId)).toOption
       (twOpt, emailOpt)
@@ -106,7 +109,7 @@ class TwitterWaitlistController @Inject() (
      */
     def checkStatusOfTwitterUser() = {
       db.readOnlyMaster { implicit session =>
-        socialRepo.getByUser(userId).find(_.networkType == SocialNetworks.TWITTER).flatMap { tsui =>
+        socialRepo.getByUsers(Seq(userId)).find(_.networkType == SocialNetworks.TWITTER).flatMap { tsui =>
           if (tsui.state == SocialUserInfoStates.CREATED) {
             log.info(s"[checkStatusOfTwitterUser] Still waiting on ${tsui.networkType}/${tsui.socialId}")
             None // pending sync, keep polling
@@ -145,15 +148,22 @@ class TwitterWaitlistController @Inject() (
       case requestNonUser: NonUserRequest[_] =>
         Redirect("/twitter/request")
       case ur: UserRequest[_] =>
-        val twitterSui = db.readOnlyMaster { implicit session =>
-          socialRepo.getByUser(ur.userId).find { s =>
+        val (twitterSui, existingSync) = db.readOnlyMaster { implicit session =>
+          val sui = socialRepo.getByUser(ur.userId).find { s =>
             s.networkType == SocialNetworks.TWITTER &&
               (s.state == SocialUserInfoStates.FETCHED_USING_SELF ||
                 s.state == SocialUserInfoStates.CREATED)
           }
+          val existingSync = twitterSyncStateRepo.getByUserIdUsed(ur.userId).sortBy(_.id).reverse.headOption
+          (sui, existingSync)
         }
         if (twitterSui.isEmpty) {
           Redirect("/link/twitter?intent=waitlist").withSession(session + (SecureSocial.OriginalUrlKey -> "/twitter/thanks"))
+        } else if (existingSync.nonEmpty) {
+          val library = db.readOnlyReplica { implicit session =>
+            libraryRepo.get(existingSync.get.libraryId)
+          }
+          Redirect(Library.formatLibraryPath(ur.user.username, library.slug))
         } else {
           pollDbForTwitterHandle(ur.userId, iterations = 60).map { twRes =>
             twRes match {

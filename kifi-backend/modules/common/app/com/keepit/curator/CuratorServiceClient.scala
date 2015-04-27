@@ -15,7 +15,6 @@ import play.api.libs.json._
 trait CuratorServiceClient extends ServiceClient {
   final val serviceType = ServiceType.CURATOR
 
-  def adHocRecos(userId: Id[User], n: Int, scoreCoefficientsUpdate: UriRecommendationScores): Future[Seq[RecoInfo]]
   def topRecos(userId: Id[User], source: RecommendationSource, subSource: RecommendationSubSource, more: Boolean, recencyWeight: Float, context: Option[String]): Future[URIRecoResults]
   def topPublicRecos(userId: Option[Id[User]]): Future[Seq[RecoInfo]]
   def generalRecos(): Future[Seq[RecoInfo]]
@@ -27,6 +26,7 @@ trait CuratorServiceClient extends ServiceClient {
   def refreshLibraryRecos(userId: Id[User], await: Boolean = false, selectionParams: Option[LibraryRecoSelectionParams] = None): Future[Unit]
   def notifyLibraryRecosDelivered(userId: Id[User], libraryIds: Set[Id[Library]], source: RecommendationSource, subSource: RecommendationSubSource): Future[Unit]
   def ingestPersonaRecos(userId: Id[User], personaIds: Seq[Id[Persona]], reverseIngestion: Boolean = false): Future[Unit]
+  def examineUserFeedbackCounter(userId: Id[User]): Future[(Seq[UserFeedbackCountView], Seq[UserFeedbackCountView])] // votes and signals
 }
 
 class CuratorServiceClientImpl(
@@ -35,13 +35,7 @@ class CuratorServiceClientImpl(
     implicit val defaultContext: ExecutionContext,
     val airbrakeNotifier: AirbrakeNotifier) extends CuratorServiceClient {
 
-  val longTimeout = CallTimeouts(responseTimeout = Some(30000), maxWaitTime = Some(3000), maxJsonParseTime = Some(10000))
-
-  def adHocRecos(userId: Id[User], n: Int, scoreCoefficientsUpdate: UriRecommendationScores): Future[Seq[RecoInfo]] = {
-    call(Curator.internal.adHocRecos(userId, n), body = Json.toJson(scoreCoefficientsUpdate), callTimeouts = longTimeout).map { response =>
-      response.json.as[Seq[RecoInfo]]
-    }
-  }
+  val longTimeout = CallTimeouts(responseTimeout = Some(30000), maxWaitTime = Some(10000), maxJsonParseTime = Some(10000))
 
   def topRecos(userId: Id[User], source: RecommendationSource, subSource: RecommendationSubSource, more: Boolean, recencyWeight: Float, context: Option[String]): Future[URIRecoResults] = {
     val payload = Json.obj(
@@ -126,5 +120,15 @@ class CuratorServiceClientImpl(
   def ingestPersonaRecos(userId: Id[User], personaIds: Seq[Id[Persona]], reverseIngestion: Boolean = false): Future[Unit] = {
     val payload = Json.obj("personaIds" -> personaIds)
     call(Curator.internal.ingestPersonaRecos(userId, reverseIngestion), payload).map { _ => Unit }
+  }
+
+  def examineUserFeedbackCounter(userId: Id[User]): Future[(Seq[UserFeedbackCountView], Seq[UserFeedbackCountView])] = {
+    call(Curator.internal.examineUserFeedbackCounter(userId)).map { r =>
+      r.json match {
+        case JsNull => (Seq(), Seq())
+        case js =>
+          ((js \ "votes").as[Seq[UserFeedbackCountView]], (js \ "signals").as[Seq[UserFeedbackCountView]])
+      }
+    }
   }
 }

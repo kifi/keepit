@@ -25,6 +25,7 @@ import com.keepit.social.{ SocialId, SocialNetworks }
 import com.kifi.franz.SQSQueue
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
+import com.keepit.common.actor.FakeActorSystemModule
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
@@ -42,7 +43,8 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
     FakeCacheModule(),
     FakeElizaServiceClientModule(),
     FakeABookServiceClientModule(),
-    FakeFeedDigestEmailQueueModule())
+    FakeFeedDigestEmailQueueModule(),
+    FakeActorSystemModule())
 
   implicit def userToIdInt(user: User): Int = user.id.get.id.toInt
 

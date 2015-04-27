@@ -20,6 +20,7 @@ trait CuratorKeepInfoRepo extends DbRepo[CuratorKeepInfo] {
   def checkDiscoverableByUriId(uriId: Id[NormalizedURI])(implicit session: RSession): Boolean
   def getUserURIsAndKeeps(userId: Id[User])(implicit session: RSession): Seq[(Id[NormalizedURI], Id[Keep])]
   def getUsersWithKeepsCounts()(implicit session: RSession): Seq[(Id[User], Int)]
+  def getKeepCountForUser(userId: Id[User])(implicit session: RSession): Int
 }
 
 @Singleton
@@ -72,6 +73,11 @@ class CuratorKeepInfoRepoImpl @Inject() (
   def getUsersWithKeepsCounts()(implicit session: RSession): Seq[(Id[User], Int)] = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     sql"SELECT user_id, COUNT(*) FROM curator_keep_info WHERE state='active' GROUP BY user_id".as[(Id[User], Int)].list
+  }
+
+  def getKeepCountForUser(userId: Id[User])(implicit session: RSession): Int = {
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
+    sql"SELECT COUNT(*) FROM curator_keep_info WHERE state='active' AND user_id=$userId".as[Int].firstOption.getOrElse(0)
   }
 
 }

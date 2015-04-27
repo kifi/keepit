@@ -587,28 +587,37 @@ class KeepsCommander @Inject() (
       case Failure(e) => Left(e.getMessage)
       case Success((keep, isNewKeep)) =>
         val tags = db.readWrite { implicit s =>
-          val selectedTagIds = selectedTagNames.map { getOrCreateTag(userId, _).id.get }
-          val activeTagIds = keepToCollectionRepo.getCollectionsForKeep(keep.id.get)
-          val tagsToAdd = selectedTagIds.filterNot(activeTagIds.contains(_))
-          val tagsToRemove = activeTagIds.filterNot(selectedTagIds.contains(_))
-
-          tagsToAdd.map { tagId =>
-            keepToCollectionRepo.getOpt(keep.id.get, tagId) match {
-              case None => keepToCollectionRepo.save(KeepToCollection(keepId = keep.id.get, collectionId = tagId))
-              case Some(k2c) => keepToCollectionRepo.save(k2c.copy(state = KeepToCollectionStates.ACTIVE))
-            }
-            collectionRepo.collectionChanged(tagId, true, inactivateIfEmpty = false)
-          }
-          tagsToRemove.map { tagId =>
-            keepToCollectionRepo.remove(keep.id.get, tagId)
-            collectionRepo.collectionChanged(tagId, false, inactivateIfEmpty = true)
-          }
+          persistHashtags(userId, keep.id.get, selectedTagNames)(s, context)
           keepRepo.save(keep) // notify keep index
-          curator.updateUriRecommendationFeedback(userId, keep.uriId, UriRecommendationFeedback(kept = Some(true)))
           keepToCollectionRepo.getCollectionsForKeep(keep.id.get).map { id => collectionRepo.get(id) }
         }
         postSingleKeepReporting(keep, isNewKeep, library, socialShare)
         Right((keep, tags))
+    }
+  }
+
+  private def persistHashtags(userId: Id[User], keepId: Id[Keep], selectedTagNames: Seq[String])(implicit session: RWSession, context: HeimdalContext) = {
+    val selectedTagIds = selectedTagNames.map { getOrCreateTag(userId, _).id.get }
+    val activeTagIds = keepToCollectionRepo.getCollectionsForKeep(keepId)
+    val tagsToAdd = selectedTagIds.filterNot(activeTagIds.contains(_))
+    val tagsToRemove = activeTagIds.filterNot(selectedTagIds.contains(_))
+
+    tagsToAdd.map { tagId =>
+      keepToCollectionRepo.getOpt(keepId, tagId) match {
+        case None => keepToCollectionRepo.save(KeepToCollection(keepId = keepId, collectionId = tagId))
+        case Some(k2c) => keepToCollectionRepo.save(k2c.copy(state = KeepToCollectionStates.ACTIVE))
+      }
+      collectionRepo.collectionChanged(tagId, true, inactivateIfEmpty = false)
+    }
+    tagsToRemove.map { tagId =>
+      keepToCollectionRepo.remove(keepId, tagId)
+      collectionRepo.collectionChanged(tagId, false, inactivateIfEmpty = true)
+    }
+  }
+
+  def persistHashtagsForKeep(userId: Id[User], keepId: Id[Keep], selectedTags: Seq[String])(implicit context: HeimdalContext) = {
+    db.readWrite { implicit s =>
+      persistHashtags(userId, keepId, selectedTags)(s, context)
     }
   }
 
@@ -629,7 +638,7 @@ class KeepsCommander @Inject() (
     val futureHits = searchTags(userId, query, None)
     val existingTags = db.readOnlyMaster { implicit session =>
       val keep = keepRepo.get(keepId)
-      collectionRepo.getTagsByKeepId(keep.id.get)
+      collectionRepo.getHashtagsByKeepId(keep.id.get)
     }
     futureHits.imap { hits =>
       val validHits = hits.filterNot(hit => existingTags.contains(hit.tag))
@@ -641,7 +650,7 @@ class KeepsCommander @Inject() (
     val keep = db.readOnlyMaster { implicit session => keepRepo.get(keepId) }
     val item = AugmentableItem(keep.uriId, Some(keep.libraryId.get))
     val futureAugmentationResponse = searchClient.augmentation(ItemAugmentationRequest.uniform(userId, item))
-    val existingNormalizedTags = db.readOnlyMaster { implicit session => collectionRepo.getTagsByKeepId(keep.id.get).map(_.normalized) }
+    val existingNormalizedTags = db.readOnlyMaster { implicit session => collectionRepo.getHashtagsByKeepId(keep.id.get).map(_.normalized) }
     futureAugmentationResponse.map { response =>
       val suggestedTags = {
         val restrictedKeeps = response.infos(item).keeps.toSet

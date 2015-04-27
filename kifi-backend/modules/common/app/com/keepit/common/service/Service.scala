@@ -62,7 +62,12 @@ object ServiceType {
 
   case object CORTEX extends ServiceType("CORTEX", "CT", loadFactor = 5)
 
-  case object CURATOR extends ServiceType("CURATOR", "CU", loadFactor = 5)
+  case object CURATOR extends ServiceType("CURATOR", "CU", loadFactor = 5) {
+    override def healthyStatus(instance: AmazonInstanceInfo): ServiceStatus = {
+      val capabilities = instance.capabilities
+      if (capabilities.contains(ServiceStatus.OFFLINE.name)) ServiceStatus.OFFLINE else ServiceStatus.UP
+    }
+  }
 
   case object ROVER extends ServiceType("ROVER", "RO", loadFactor = 5) {
     override val minInstances = 0

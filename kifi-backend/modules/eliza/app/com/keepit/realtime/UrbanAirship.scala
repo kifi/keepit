@@ -1,8 +1,8 @@
 package com.keepit.realtime
 
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
+import com.keepit.eliza.{ LibraryPushNotificationCategory, UserPushNotificationCategory }
 import com.keepit.eliza.commanders.MessagingAnalytics
-import com.keepit.eliza.{ PushNotificationExperiment, PushNotificationCategory }
 
 import scala.concurrent.duration._
 
@@ -45,18 +45,23 @@ class UrbanAirship @Inject() (
       db.readWrite { implicit s =>
         val noSignatureDevices = deviceRepo.getByUserIdAndDeviceType(userId, deviceType).filter(_.signature.isEmpty)
         noSignatureDevices.map { d =>
+          log.info(s"[UrbanAirship] deactivate old devices for user $userId: (device: ${d.deviceType}}, token: ${d.token}})")
           deviceRepo.save(d.copy(state = DeviceStates.INACTIVE))
         }
       }
 
-      db.readOnlyMaster { implicit s =>
+      val targetDevice = db.readOnlyMaster { implicit s =>
         deviceRepo.getByUserIdAndDeviceTypeAndSignature(userId, deviceType, signature, None)
-      } match {
-        case Some(d) => // update or reactivate an existing device
+      }
+      log.info(s"[UrbanAirship] search by (userId $userId, deviceType $deviceType, signature $signature) => found: $targetDevice")
+      targetDevice match {
+        case Some(d) =>
+          log.info(s"[UrbanAirship] reactivate/update device for user $userId: (device: $deviceType, signature: $signature) with token $token")
           db.readWrite { implicit s =>
             deviceRepo.save(d.copy(token = Some(token), isDev = isDev, state = DeviceStates.ACTIVE))
           }
-        case None => // new device for user! save new device!
+        case None =>
+          log.info(s"[UrbanAirship] save new device for user $userId: (device: $deviceType, signature: $signature) with token $token")
           db.readWrite { implicit s =>
             deviceRepo.save(Device(userId = userId, token = Some(token), deviceType = deviceType, isDev = isDev, signature = signatureOpt))
           }
@@ -66,6 +71,7 @@ class UrbanAirship @Inject() (
       db.readWrite { implicit s =>
         // deactivate all devices with token & deviceType but don't match current userId and don't have signature
         deviceRepo.get(token, deviceType).filter(d => d.userId != userId && d.signature.isEmpty).map { d =>
+          log.info(s"[UrbanAirship] deactivate old devices for user $userId: (device: ${d.deviceType}}, token: ${d.token}})")
           deviceRepo.save(d.copy(state = DeviceStates.INACTIVE))
         }
         // find device with token & device type
@@ -89,15 +95,15 @@ class UrbanAirship @Inject() (
     }
   }
 
-  def notifyUser(userId: Id[User], allDevices: Seq[Device], notification: PushNotification): Future[Int] = {
+  def notifyUser(userId: Id[User], allDevices: Seq[Device], notification: PushNotification, force: Boolean): Future[Int] = {
     log.info(s"[UrbanAirship] Notifying user: $userId with $allDevices")
     //get only active devices
-    val activeDevices = allDevices filter { d =>
+    val activeDevices = if (force) allDevices else allDevices.filter { d =>
       d.state == DeviceStates.ACTIVE
     }
     //send them all a push notification
     activeDevices foreach { device =>
-      sendNotification(device, notification)
+      sendNotification(device, notification, force)
     }
     log.info(s"[UrbanAirship] user $userId has ${activeDevices.size} active devices out of ${allDevices.size} for notification $notification")
     //refresh all devices (even not active ones)
@@ -113,10 +119,17 @@ class UrbanAirship @Inject() (
     notification match {
       case spn: SimplePushNotification =>
         json
+      case mcpn: MessageCountPushNotification =>
+        json
       case mtpn: MessageThreadPushNotification =>
         json.as[JsObject] + ("id" -> JsString(mtpn.id.id))
       case lupn: LibraryUpdatePushNotification =>
-        val withLid = json.as[JsObject] ++ Json.obj("t" -> "lr", "lid" -> JsString(Library.publicId(lupn.libraryId).id))
+        val pushType = lupn.category match {
+          case LibraryPushNotificationCategory.LibraryChanged => "lr"
+          case LibraryPushNotificationCategory.LibraryInvitation => "li"
+          case _ => "lr"
+        }
+        val withLid = json.as[JsObject] ++ Json.obj("t" -> pushType, "lid" -> Library.publicId(lupn.libraryId).id)
         deviceType match {
           case DeviceType.Android =>
             withLid
@@ -124,7 +137,13 @@ class UrbanAirship @Inject() (
             withLid + ("lu" -> JsString(lupn.libraryUrl))
         }
       case upn: UserPushNotification =>
-        json.as[JsObject] ++ Json.obj("t" -> "us", "uid" -> upn.userExtId, "un" -> upn.username.value, "purl" -> upn.pictureUrl)
+        val pushType = upn.category match {
+          case UserPushNotificationCategory.UserConnectionRequest => "fr"
+          case UserPushNotificationCategory.ContactJoined => "us"
+          case UserPushNotificationCategory.NewLibraryFollower => "nf"
+          case _ => "us"
+        }
+        json.as[JsObject] ++ Json.obj("t" -> pushType, "uid" -> upn.userExtId, "un" -> upn.username.value, "purl" -> upn.pictureUrl)
       case _ =>
         throw new Exception(s"Don't recognize push notification $notification")
     }
@@ -195,7 +214,7 @@ class UrbanAirship @Inject() (
     }
   }
 
-  private def dealWithFailNotification(device: Device, notification: PushNotification, trial: Int, throwable: Throwable): Unit = {
+  private def dealWithFailNotification(device: Device, notification: PushNotification, trial: Int, throwable: Throwable, wasForced: Boolean): Unit = {
     val (retry, retryText) = trial match {
       case 1 =>
         (Some(5 seconds), "retry in five seconds")
@@ -206,15 +225,15 @@ class UrbanAirship @Inject() (
       case _ =>
         throw new Exception(s"WOW, how did I get to trial #$trial for device $device notification $notification)?!?")
     }
-    airbrake.notify(s"fail to send a push notification $notification for device $device, $retryText: $throwable")
+    if (!wasForced) airbrake.notify(s"fail to send a push notification $notification for device $device, $retryText", throwable)
     retry foreach { timeout =>
       scheduler.scheduleOnce(timeout) {
-        sendNotification(device, notification, trial + 1)
+        sendNotification(device, notification, wasForced, trial + 1)
       }
     }
   }
 
-  def sendNotification(device: Device, notification: PushNotification, trial: Int = 3): Unit = {
+  def sendNotification(device: Device, notification: PushNotification, wasForced: Boolean, trial: Int = 3): Unit = {
     val json = device.deviceType match {
       case DeviceType.IOS => createIosJson(notification, device)
       case DeviceType.Android => createAndroidJson(notification, device)
@@ -229,19 +248,21 @@ class UrbanAirship @Inject() (
         log.info(s"[UrbanAirship] Sending LibraryUpdatePushNotification to user ${device.userId} device: [${device.token}] library ${lupn.libraryId} message ${lupn.message}")
       case upn: UserPushNotification =>
         log.info(s"[UrbanAirship] Sending UserPushNotification to user ${device.userId} device: [${device.token}] ${upn.username}:${upn.userExtId} message ${upn.message}")
+      case mcpn: MessageCountPushNotification =>
+        log.info(s"[UrbanAirship] Sending MessageCountPushNotification to user ${device.userId} device: [${device.token}]")
 
     }
 
     client.send(json, device, notification) andThen {
       case Success(res) =>
         if (res.status / 100 != 2) {
-          dealWithFailNotification(device, notification, trial, new Exception(s"bad status ${res.status} on push notification $notification for device $device response: ${res.body}"))
+          dealWithFailNotification(device, notification, trial, new Exception(s"bad status ${res.status} on push notification $notification for device $device response: ${res.body}"), wasForced)
         } else {
           log.info(s"[UrbanAirship] successful send of push notification on trial $trial for device $deviceRepo: ${res.body}")
-          messagingAnalytics.sentPushNotification(device, notification)
+          messagingAnalytics.sentPushNotification(device.userId, device.deviceType, notification)
         }
       case Failure(e) =>
-        dealWithFailNotification(device, notification, trial, new Exception(s"fail on push notification $notification for device $device", e))
+        dealWithFailNotification(device, notification, trial, new Exception(s"fail on push notification $notification for device $device", e), wasForced)
     }
   }
 

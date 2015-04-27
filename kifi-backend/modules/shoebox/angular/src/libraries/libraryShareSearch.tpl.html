@@ -1,10 +1,10 @@
-<div class="kf-library-share-search" kf-wheel-stop>
+<div class="kf-library-share-search">
   <button ng-if="!manageLibInvite" class="kf-button kf-button-text-optional library-share-button" ng-click="toggleMenu()">
-    <span class="kf-button-icon svg-share-icon"></span> Share
+    <span class="kf-button-icon {{btnIconClass || (isOwn ? 'svg-plus-people-green' : 'svg-share-icon')}}"></span> {{isOwn ? 'Invite followers' : 'Share'}}
   </button>
   <div class="library-share-menu">
-    <header ng-if="!manageLibInvite" class="library-share-menu-header">Share this library</header>
-    <div class="library-share-menu-content">
+    <header ng-if="!manageLibInvite" class="library-share-menu-header">{{isOwn ? 'Invite people to follow' : 'Share'}} this library</header>
+    <div class="library-share-menu-content" kf-wheel-stop>
       <textarea ng-if="!manageLibInvite" class="library-share-input-box library-share-input library-share-message-input" ng-model="share.message" placeholder="Write something?"></textarea>
       <div class="library-share-input-box">
         <img ng-src="/img/spinner_32.gif" ng-show="showSpinner" class="library-share-search-spinner">
@@ -23,7 +23,7 @@
               <div class="library-share-contact-network">Kifi user</div>
             </div>
             <button ng-show="!result.sent && !result.isFollowing" ng-click="shareLibraryKifiFriend(result)" class="kf-button library-share-contact-button">
-              <span class="kf-button-icon svg-share-icon"></span>Share
+              <span class="kf-button-icon svg-share-icon"></span>Send
             </button>
             <div ng-show="result.isFollowing" class="library-share-following">Following</div>
             <div ng-show="result.sent" class="library-share-sent">Sent!</div>
@@ -36,7 +36,7 @@
               <div class="library-share-contact-network" ng-bind-html="result.name ? result.emailFormatted : 'An email contact'"></div>
             </div>
             <button ng-show="!result.sent" ng-click="shareLibraryExistingEmail(result)" class="kf-button library-share-contact-button">
-              <span class="kf-button-icon svg-share-icon"></span>Share
+              <span class="kf-button-icon svg-share-icon"></span>Send
             </button>
             <div ng-show="result.sent" class="library-share-sent">Sent!</div>
           </div>
@@ -48,7 +48,7 @@
               <div class="library-share-contact-network">{{emailHelp}}</div>
             </div>
             <button ng-show="!result.sent && !result.hideButton" ng-click="shareLibraryNewEmail(result)" class="kf-button library-share-contact-button">
-              <span class="kf-button-icon svg-share-icon"></span>Share
+              <span class="kf-button-icon svg-share-icon"></span>Send
             </button>
             <div ng-show="result.sent" class="library-share-sent">Sent!</div>
           </div>

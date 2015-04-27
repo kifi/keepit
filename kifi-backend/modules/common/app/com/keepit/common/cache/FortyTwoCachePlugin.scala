@@ -10,8 +10,7 @@ import net.sf.ehcache.config.CacheConfiguration
 
 import net.spy.memcached.{ CachedData, MemcachedClient }
 import net.spy.memcached.transcoders.{ Transcoder, SerializingTranscoder }
-import net.spy.memcached.internal.BulkFuture
-import net.spy.memcached.internal.GetFuture
+import net.spy.memcached.internal.{ CheckedOperationTimeoutException, BulkFuture, GetFuture }
 
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.healthcheck.{ AirbrakeNotifier, AirbrakeError }
@@ -49,7 +48,7 @@ trait InMemoryCachePlugin extends FortyTwoCachePlugin {
 
 @Singleton
 class MemcachedCache @Inject() (
-    client: MemcachedClient,
+    clientProvider: MemcachedClientProvider,
     val airbrake: AirbrakeNotifier) extends FortyTwoCachePlugin {
 
   override private[cache] val logAccess = true
@@ -57,6 +56,9 @@ class MemcachedCache @Inject() (
   override def onError(error: AirbrakeError) {
     airbrake.notify(error)
   }
+
+  private def getClient: MemcachedClient = clientProvider.get()
+  private def getBulkClient: MemcachedClient = clientProvider.getBulkClient()
 
   val compressThreshold: Int = 400000 // TODO: make configurable
   val compressMethod: String = "gzip"
@@ -118,13 +120,31 @@ class MemcachedCache @Inject() (
 
   lazy val tc = new CustomSerializing().asInstanceOf[Transcoder[Any]]
 
+  private def handleTimeoutException(client: MemcachedClient, bulk: Boolean = false): Unit = {
+    try {
+      if (bulk) {
+        clientProvider.recreateBulk(client)
+      } else {
+        clientProvider.recreate(client)
+      }
+    } catch {
+      case e: Exception => airbrake.notify(s"failed to recreate memcached client after CheckedOperationTimeoutException")
+    }
+  }
+
   def get(key: String) = {
     logger.debug("Getting the cached for key " + key)
     var future: GetFuture[Any] = null
+    val client = getClient
     try {
       future = client.asyncGet(key, tc)
       toOption(future.get(1, TimeUnit.SECONDS))
     } catch {
+      case timeout: CheckedOperationTimeoutException =>
+        //airbrake.notify("A timeout error has occurred while getting the value from memcached", timeout)
+        handleTimeoutException(client)
+        if (future != null) future.cancel(false)
+        None
       case e: Throwable =>
         logger.error("An error has occurred while getting the value from memcached", e)
         if (future != null) future.cancel(false)
@@ -133,26 +153,34 @@ class MemcachedCache @Inject() (
   }
 
   def set(key: String, value: Any, expiration: Int): Unit = {
+    val client = getClient
     try {
       client.set(key, expiration, value, tc)
     } catch {
+      case timeout: CheckedOperationTimeoutException =>
+        handleTimeoutException(client)
       case t: Throwable =>
         logger.error("An error has occurred while setting the value to memcached", t)
     }
   }
 
   def remove(key: String) {
+    val client = getClient
     try {
       client.delete(key)
     } catch {
+      case timeout: CheckedOperationTimeoutException =>
+        handleTimeoutException(client)
       case t: Throwable =>
         logger.error("An error has occurred while deleting the value from memcached", t)
     }
   }
 
-  override def bulkGet(keys: Set[String]): Map[String, Any] = {
+  // do not overload cache client with giant bulkget
+  private def smallBulkGet(keys: Set[String]): Map[String, Any] = {
     logger.debug("Getting the cached for keys " + keys)
     var future: BulkFuture[JMap[String, Any]] = null
+    val client = getBulkClient
     try {
       future = client.asyncGetBulk(keys.asJava, tc)
       future.getSome(1, TimeUnit.SECONDS).asScala.foldLeft(Map.empty[String, Any]) { (m, kv) =>
@@ -162,10 +190,27 @@ class MemcachedCache @Inject() (
         }
       }
     } catch {
+      case timeout: CheckedOperationTimeoutException =>
+        airbrake.notify(s"A timeout error has occurred while bulk getting ${keys.size} values from memcached", timeout)
+        handleTimeoutException(client, bulk = true)
+        if (future != null) future.cancel(false)
+        Map.empty[String, Any]
+
       case e: Throwable =>
         logger.error("An error has occurred while getting some values from memcached", e)
         if (future != null) future.cancel(false)
         Map.empty[String, Any]
+    }
+  }
+
+  override def bulkGet(keys: Set[String]): Map[String, Any] = {
+    if (keys.size >= 1000) {
+      airbrake.notify(s"cache bulkget ${keys.size} keys! First few keys: ${keys.take(5).mkString(", ")}")
+    }
+    if (keys.size >= 1000) {
+      keys.grouped(500).map { subkeys => smallBulkGet(subkeys) }.foldLeft(Map.empty[String, Any]) { case (m1, m2) => m1 ++ m2 }
+    } else {
+      smallBulkGet(keys)
     }
   }
 

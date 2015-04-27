@@ -149,36 +149,6 @@ angular.module('kifi')
   }
 ])
 
-.directive('kfLinkedinConnectButton', [
-  'socialService',
-  function (socialService) {
-    return {
-      restrict: 'A',
-      link: function (scope) {
-        scope.isLinkedInConnected = socialService.linkedin && !!socialService.linkedin.profileUrl;
-
-        scope.linkedin = socialService.linkedin;
-
-        scope.$watch(function () {
-          return socialService.linkedin && socialService.linkedin.profileUrl;
-        }, function () {
-          var linkedin = socialService.linkedin;
-          if (linkedin && linkedin.profileUrl) {
-            scope.isLinkedInConnected = true;
-            scope.liProfileUrl = linkedin.profileUrl;
-          } else {
-            scope.isLinkedInConnected = false;
-            scope.liProfileUrl = '';
-          }
-        });
-
-        scope.connectLinkedIn = socialService.connectLinkedIn;
-        scope.disconnectLinkedIn = socialService.disconnectLinkedIn;
-      }
-    };
-  }
-])
-
 .directive('kfFacebookConnectButton', [
   'socialService',
   function (socialService) {

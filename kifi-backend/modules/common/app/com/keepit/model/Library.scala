@@ -145,8 +145,8 @@ object Library extends ModelWithPublicIdCompanion[Library] {
 
   def toLibraryView(lib: Library): LibraryView = LibraryView(id = lib.id, ownerId = lib.ownerId, state = lib.state, seq = lib.seq, kind = lib.kind)
 
-  def toDetailedLibraryView(lib: Library, keepCount: Int = 0): DetailedLibraryView = DetailedLibraryView(id = lib.id, ownerId = lib.ownerId, state = lib.state,
-    seq = lib.seq, kind = lib.kind, memberCount = lib.memberCount, keepCount = keepCount, lastKept = lib.lastKept, lastFollowed = None, visibility = lib.visibility,
+  def toDetailedLibraryView(lib: Library): DetailedLibraryView = DetailedLibraryView(id = lib.id, ownerId = lib.ownerId, state = lib.state,
+    seq = lib.seq, kind = lib.kind, memberCount = lib.memberCount, keepCount = lib.keepCount, lastKept = lib.lastKept, lastFollowed = None, visibility = lib.visibility,
     updatedAt = lib.updatedAt, name = lib.name, description = lib.description, color = lib.color, slug = lib.slug)
 }
 
@@ -302,7 +302,7 @@ object LibraryColor {
     }
   }
 
-  val AllColors = Seq(BLUE, SKY_BLUE, GREEN, ORANGE, RED, MAGENTA, PURPLE)
+  val AllColors: Seq[LibraryColor] = Seq(BLUE, SKY_BLUE, GREEN, ORANGE, RED, MAGENTA, PURPLE)
 
   private lazy val rnd = new Random
 

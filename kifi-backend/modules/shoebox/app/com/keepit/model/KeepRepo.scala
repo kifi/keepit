@@ -6,6 +6,7 @@ import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db._
 import com.keepit.common.time._
 import org.joda.time.DateTime
+import scala.concurrent.duration.Duration
 import scala.slick.jdbc.{ PositionedResult, GetResult, StaticQuery }
 import com.keepit.common.logging.Logging
 import com.keepit.commanders.{ LibraryMetadataKey, LibraryMetadataCache, WhoKeptMyKeeps }
@@ -14,6 +15,7 @@ import com.keepit.common.core._
 @ImplementedBy(classOf[KeepRepoImpl])
 trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNumberFunction[Keep] {
   def page(page: Int, size: Int, includePrivate: Boolean, excludeStates: Set[State[Keep]])(implicit session: RSession): Seq[Keep]
+  def getByExtIds(extIds: Set[ExternalId[Keep]])(implicit session: RSession): Map[ExternalId[Keep], Option[Keep]]
   def getByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[Keep] //todo: replace option with seq
   def getByUserAndUriIds(userId: Id[User], uriIds: Set[Id[NormalizedURI]])(implicit session: RSession): Seq[Keep]
   def getByExtIdAndUser(extId: ExternalId[Keep], userId: Id[User])(implicit session: RSession): Option[Keep]
@@ -40,7 +42,6 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def delete(id: Id[Keep])(implicit session: RWSession): Unit
   def save(model: Keep)(implicit session: RWSession): Keep
   def detectDuplicates()(implicit session: RSession): Seq[(Id[User], Id[NormalizedURI])]
-  def latestKeep(uriId: Id[NormalizedURI], url: String)(implicit session: RSession): Option[Keep]
   def getByTitle(title: String)(implicit session: RSession): Seq[Keep]
   def exists(uriId: Id[NormalizedURI])(implicit session: RSession): Boolean
   def getSourcesByUser()(implicit session: RSession): Map[Id[User], Seq[KeepSource]]
@@ -55,6 +56,7 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def librariesWithMostKeepsSince(count: Int, since: DateTime)(implicit session: RSession): Seq[(Id[Library], Int)]
   def latestKeep(userId: Id[User])(implicit session: RSession): Option[DateTime]
   def latestKeptAtByLibraryIds(libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Option[DateTime]]
+  def getKeepsByTimeWindow(uriId: Id[NormalizedURI], url: String, keptAfter: DateTime, keptBefore: DateTime)(implicit session: RSession): Set[Keep]
 }
 
 @Singleton
@@ -64,9 +66,7 @@ class KeepRepoImpl @Inject() (
     val countCache: KeepCountCache,
     keepUriUserCache: KeepUriUserCache,
     libraryMetadataCache: LibraryMetadataCache,
-    countByLibraryCache: CountByLibraryCache,
-    latestKeepUriCache: LatestKeepUriCache,
-    latestKeepUrlCache: LatestKeepUrlCache) extends DbRepo[Keep] with KeepRepo with ExternalIdColumnDbFunction[Keep] with SeqNumberDbFunction[Keep] with Logging {
+    countByLibraryCache: CountByLibraryCache) extends DbRepo[Keep] with KeepRepo with ExternalIdColumnDbFunction[Keep] with SeqNumberDbFunction[Keep] with Logging {
 
   import db.Driver.simple._
 
@@ -156,8 +156,6 @@ class KeepRepoImpl @Inject() (
     }
     keepUriUserCache.remove(KeepUriUserKey(keep.uriId, keep.userId))
     countCache.remove(KeepCountKey(keep.userId))
-    latestKeepUriCache.remove(LatestKeepUriKey(keep.uriId))
-    latestKeepUrlCache.remove(LatestKeepUrlKey(keep.url))
   }
 
   override def invalidateCache(keep: Keep)(implicit session: RSession): Unit = {
@@ -170,10 +168,22 @@ class KeepRepoImpl @Inject() (
     } else {
       keepUriUserCache.set(KeepUriUserKey(keep.uriId, keep.userId), keep)
       countCache.remove(KeepCountKey(keep.userId))
-      val latestKeepUriKey = LatestKeepUriKey(keep.uriId)
-      if (!latestKeepUriCache.get(latestKeepUriKey).exists(_.keptAt.isAfter(keep.keptAt))) { latestKeepUriCache.set(latestKeepUriKey, keep) }
-      val latestKeepUrlKey = LatestKeepUrlKey(keep.url)
-      if (!latestKeepUrlCache.get(latestKeepUrlKey).exists(_.keptAt.isAfter(keep.keptAt))) { latestKeepUrlCache.set(latestKeepUrlKey, keep) }
+    }
+  }
+
+  def getByExtIds(extIds: Set[ExternalId[Keep]])(implicit session: RSession): Map[ExternalId[Keep], Option[Keep]] = {
+    if (extIds.size == 0) {
+      Map.empty[ExternalId[Keep], Option[Keep]] // return immediately, don't search through table
+    } else if (extIds.size == 1) {
+      val extId = extIds.head
+      Map((extId, getOpt(extId))) // defer to precompiled query
+    } else {
+      val keepMap = (for (b <- rows if b.externalId.inSet(extIds) && b.state === KeepStates.ACTIVE) yield b).list.map { keep =>
+        (keep.externalId, keep)
+      }.toMap
+      extIds.map { extId =>
+        extId -> (keepMap.get(extId) orElse None)
+      }.toMap
     }
   }
 
@@ -397,15 +407,6 @@ class KeepRepoImpl @Inject() (
     q.list.distinct
   }
 
-  def latestKeep(uriId: Id[NormalizedURI], url: String)(implicit session: RSession): Option[Keep] = {
-    latestKeepUriCache.getOrElseOpt(LatestKeepUriKey(uriId)) {
-      val bookmarks = for { bookmark <- rows if bookmark.uriId === uriId && bookmark.url === url } yield bookmark
-      val max = bookmarks.map(_.keptAt).max
-      val latest = for { bookmark <- bookmarks if bookmark.keptAt >= max } yield bookmark
-      latest.sortBy(_.keptAt desc).firstOption
-    }
-  }
-
   def exists(uriId: Id[NormalizedURI])(implicit session: RSession): Boolean = {
     (for (b <- rows if b.uriId === uriId && b.state === KeepStates.ACTIVE) yield b).firstOption.isDefined
   }
@@ -487,4 +488,10 @@ class KeepRepoImpl @Inject() (
       }.toMap
     libraryIds.map { libId => libId -> map.getOrElse(libId, None) }.toMap
   }
+
+  def getKeepsByTimeWindow(uriId: Id[NormalizedURI], url: String, keptAfter: DateTime, keptBefore: DateTime)(implicit session: RSession): Set[Keep] = {
+    val keeps = for { r <- rows if r.uriId === uriId && r.url === url && r.keptAt > keptAfter && r.keptAt < keptBefore } yield r
+    keeps.list.toSet
+  }
+
 }

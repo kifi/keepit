@@ -15,8 +15,7 @@ import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.mail.template.helpers.fullName
 import com.keepit.model.{ UserEmailAddressRepo, NotificationCategory, User, LibraryInvite, LibraryRepo, LibraryVisibility, KeepRepo }
 
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import scala.concurrent.Future
+import scala.concurrent.{ ExecutionContext, Future }
 
 class LibraryInviteEmailSender @Inject() (
     db: Database,
@@ -26,6 +25,7 @@ class LibraryInviteEmailSender @Inject() (
     userEmailRepo: UserEmailAddressRepo,
     libraryRepo: LibraryRepo,
     libraryImageCommander: LibraryImageCommander,
+    implicit val executionContext: ExecutionContext,
     protected val airbrake: AirbrakeNotifier) extends Logging {
 
   def sendInvite(invite: LibraryInvite)(implicit publicIdConfig: PublicIdConfiguration): Future[Option[ElectronicMail]] = {
@@ -39,9 +39,8 @@ class LibraryInviteEmailSender @Inject() (
         val library = libraryRepo.get(invite.libraryId)
         val libOwner = basicUserRepo.load(library.ownerId)
         val inviter = basicUserRepo.load(invite.inviterId)
-        val numKeeps = keepRepo.getCountByLibrary(library.id.get)
         val libImage = libraryImageCommander.getBestImageForLibrary(library.id.get, ProcessedImageSize.Large.idealSize)
-        val libraryInfo = LibraryInfo.fromLibraryAndOwner(library, libImage, libOwner, numKeeps, Some(inviter))
+        val libraryInfo = LibraryInfo.fromLibraryAndOwner(library, libImage, libOwner, Some(inviter))
         (library, libraryInfo)
       }
 

@@ -14,7 +14,7 @@ import com.google.inject.{ Inject, Singleton }
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
-import scala.util.Failure
+import scala.util.{ Failure, Random }
 import scala.concurrent.Future
 
 @Singleton
@@ -28,6 +28,7 @@ class SeedIngestionCommander @Inject() (
     keepInfoRepo: CuratorKeepInfoRepo,
     libMembershipRepo: CuratorLibraryMembershipInfoRepo,
     experimentCommander: RemoteUserExperimentCommander,
+    rawSeedSeqNumAssigner: RawSeedItemSequenceNumberAssigner,
     db: Database) extends Logging {
 
   val INGESTION_BATCH_SIZE = 50
@@ -48,10 +49,15 @@ class SeedIngestionCommander @Inject() (
     keepIngestionLock.withLockFuture {
       log.info("XYZ: starting ingestAll inside keepIngestLock")
 
-      val ingestKeepsF = ingestAllKeeps().flatMap { _ =>
+      val ingestKeepsF = ingestAllKeeps().map { _ =>
         log.info("XYZ: ingest all keeps future completed")
-        val userIds = usersToIngestGraphDataFor()
-        FutureHelpers.sequentialExec(userIds)(ingestTopUris)
+        rawSeedSeqNumAssigner.assignSequenceNumbers()
+        //val userIds = usersToIngestGraphDataFor()
+        // FutureHelpers.sequentialExec(userIds)(ingestTopUris).map { res =>
+        //   rawSeedSeqNumAssigner.assignSequenceNumbers()
+        //   res
+        // }
+
       }
 
       ingestKeepsF.onComplete {
@@ -65,14 +71,14 @@ class SeedIngestionCommander @Inject() (
     }
 
     libraryIngestionLock.withLockFuture {
-      log.info("XYZ: starting ingestAll inside libraryIngestLock")
+      log.info("starting ingestAll inside libraryIngestLock")
 
       val ingestLibMembershipsF = ingestLibraryMemberships()
       ingestLibMembershipsF.onComplete {
         case Failure(ex) =>
           log.error("Failure occurred during library membership ingestion.")
           airbrake.notify("Failure occurred during library membership ingestion.", ex)
-        case _ => log.info("XYZ: ingest library membership future completed")
+        case _ => log.info("ingest library membership future completed")
       }
 
       val ingestLibrariesF = ingestAllLibraries()
@@ -80,7 +86,7 @@ class SeedIngestionCommander @Inject() (
         case Failure(ex) =>
           log.error("Failure occurred during library ingestion.")
           airbrake.notify("Failure occurred during library ingestion.", ex)
-        case _ => log.info("XYZ: ingest library future completed")
+        case _ => log.info("ingest library future completed")
       }
 
       Future.sequence(ingestLibMembershipsF :: ingestLibrariesF :: Nil) map (_ => ())
@@ -89,20 +95,23 @@ class SeedIngestionCommander @Inject() (
 
   def ingestAllKeeps(): Future[Unit] = FutureHelpers.whilef(allKeepIngestor(INGESTION_BATCH_SIZE)) {
     log.info("XYZ: Ingested one batch of keeps.")
+    if (Random.nextFloat > 0.9) rawSeedSeqNumAssigner.assignSequenceNumbers()
+    log.info("XYZ: Assigned Sequence Numbers")
   }
 
   def ingestAllLibraries(): Future[Unit] = FutureHelpers.whilef(allLibraryIngestor(INGESTION_BATCH_SIZE)) {
-    log.info("XYZ: Ingested one batch of libraries.")
+    log.info("Ingested one batch of libraries.")
   }
 
   def ingestLibraryMemberships(): Future[Unit] = FutureHelpers.whilef(libraryMembershipIngestor(INGESTION_BATCH_SIZE)) {
-    log.info("XYZ: Ingested one batch of library memberships.")
+    log.info("Ingested one batch of library memberships.")
   }
 
   def ingestTopUris(userId: Id[User]): Future[Unit] = {
     log.info("XYZ: Triggered Top Uri ingestion for " + userId)
     topUrisIngestor(userId).map { _ =>
       log.info("XYZ: Completed Top Uri ingestion for " + userId)
+      if (Random.nextFloat > 0.9) rawSeedSeqNumAssigner.assignSequenceNumbers()
       ()
     }
   }
@@ -115,6 +124,7 @@ class SeedIngestionCommander @Inject() (
     priorScore = rawItem.priorScore,
     timesKept = rawItem.timesKept,
     lastSeen = rawItem.lastSeen,
+    lastKept = rawItem.lastKept,
     keepers = keepers,
     discoverable = rawItem.discoverable
   )
@@ -133,6 +143,22 @@ class SeedIngestionCommander @Inject() (
     val timer = new NamedStatsdTimer("SeedIngestionCommander.getDiscoverableBySeqNumAndUser")
     db.readOnlyReplicaAsync { implicit session =>
       rawSeedsRepo.getDiscoverableBySeqNumAndUser(SequenceNumber[RawSeedItem](start.value), userId, maxBatchSize).map { rawItem =>
+        val keepers = if (rawItem.timesKept > MAX_INDIVIDUAL_KEEPERS_TO_CONSIDER) {
+          Keepers.TooMany
+        } else {
+          Keepers.ReasonableNumber(keepInfoRepo.getKeepersByUriId(rawItem.uriId))
+        }
+        val res = cookSeedItem(userId, rawItem, keepers)
+        timer.stopAndReport()
+        res
+      }
+    }
+  }
+
+  def getPopularDiscoverableBySeqNumAndUser(start: SequenceNumber[SeedItem], userId: Id[User], maxBatchSize: Int): Future[Seq[SeedItem]] = {
+    val timer = new NamedStatsdTimer("SeedIngestionCommander.getPopularDiscoverableBySeqNumAndUser")
+    db.readOnlyReplicaAsync { implicit session =>
+      rawSeedsRepo.getPopularDiscoverableBySeqNumAndUser(SequenceNumber[RawSeedItem](start.value), userId, maxBatchSize).map { rawItem =>
         val keepers = if (rawItem.timesKept > MAX_INDIVIDUAL_KEEPERS_TO_CONSIDER) {
           Keepers.TooMany
         } else {
@@ -216,7 +242,9 @@ class SeedIngestionCommander @Inject() (
   }
 
   def forceIngestGraphData(userId: Id[User]): Future[Unit] = {
-    topUrisIngestor(userId, force = true).map(_ => ())
+    //log.info("XYZ: Completed Forced Top Uri ingestion for " + userId)
+    //topUrisIngestor(userId, force = true).map(_ => ())
+    Future.successful(())
   }
 
 }

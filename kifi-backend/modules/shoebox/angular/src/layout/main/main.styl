@@ -1,133 +1,5 @@
-.kf-main-keeps
-  position: relative
-  padding-top: 10px
-
-  @media (min-width: 480px)
-    padding-top: 14px
-
-  @media (min-width: 720px)
-    padding-top: 20px
-
-.kf-main-head
-  position: relative
-  padding: 13px 25px 0 30px
-  box-sizing: border-box
-
-  .kf-main-search &
-    padding-top: 10px
-
-  .kf-keeps-card-icon
-    float: left
-    margin-right: 8px
-
-.kf-main-title
-  font-size: 25px
-  line-height: 30px
-  font-weight: 300
-
-.kf-subtitle
-  padding: 10px 0
-  font-size: 13px
-  line-height: 20px
-  -webkit-font-smoothing: antialiased;
-
-  .kf-subtitle-text
-    color: #999
-    vertical-align: middle
-
-  .kf-edit-keeps
-    padding-left: 16px
-    float: right
-    vertical-align: middle
-
-  .sprite-edit-pencil-icon
-    margin-right: 5px
-
-.kf-check-all
-  position: absolute
-  top: 1px
-  left: 0
-  width: 17px
-  height: 17px
-  border: 1px solid #e3e6ee
-  background: url(/img/check.png) 99px/12px 8px no-repeat #fff
-  box-sizing: border-box
-
-  &.enabled
-    cursor: pointer
-
-    &:hover
-      border-color: #b8c5d2
-
-  &.checked
-    background-position: 2px 4px
-
-  &.multi-checked
-    background: url(/img/multi-check.png) 99px/12px 8px no-repeat #fff
-    background-position: 2px 4px
-
 input::-ms-clear
   display: none
-
-.kf-search-clear-wrapper
-  position: relative
-  right: 50px
-  font-size: 14px
-
-.kf-small-tooltip
-  position: fixed
-  left: 0
-  right: 0
-  top: 52px
-  text-align: center
-  z-index: 500
-
-.kf-small-tooltip-box
-  display: inline-block
-  height: 18px
-  padding: 0 12px
-  border: 1px solid #f8f4e8
-  border-radius: 2px
-  font-size: 13px
-  font-weight: 300
-  line-height: 17px
-  background-color: #ffc
-  white-space: nowrap
-
-.kf-small-tooltip-link
-  font-weight: 500
-  margin-left: 4px
-
-  &:hover
-    text-decoration: underline
-
-.kf-search-filters
-  padding-bottom: 10px
-
-.kf-search-filter.kf-search-filter
-  display: inline
-  color: #cccccc
-  text-decoration: none
-  title-text()
-  font-size: 17px
-
-  &:last-child:after
-    display: none
-    content: ''
-
-  &.enabled
-    color: linkColor
-
-    &:hover
-      text-decoration: underline
-
-  &.selected
-    color: #333333
-
-.kf-search-filter + .kf-search-filter
-  border-left: defaultBorder
-  padding-left: 10px
-  margin-left: 10px
 
 .import-modal
 .import-file-modal
@@ -142,7 +14,6 @@ input::-ms-clear
     background-repeat: no-repeat
 
 .import-modal
-
   .import-star-to-kifi
     margin: 12px 168px 16px
     width: 127px
@@ -159,7 +30,6 @@ input::-ms-clear
     width: 160px
     margin: 10px
 
-.import-modal
   .import-button
     margin: 0
     width: 150px
@@ -274,7 +144,9 @@ input::-ms-clear
     text-align: left
 
     .import-file-others-icon
-      position: relative  // placeholder for now.
+      height: 79px
+      width: 83px
+      border-radius: 9px
 
     .arrow-right-icon
       display: inline-block
@@ -339,28 +211,6 @@ input::-ms-clear
 
   .add-keep-to-library-dropdown
     margin: 10px auto 15px
-
-.kf-empty-state
-
-  .sprite-add-link
-    margin-right: 17px
-    position: relative
-    left: 4px
-
-  .sprite-import-bookmarks-icon
-  .sprite-import-from-other-services-icon
-    margin-right: 12px
-
-  .sprite-install-extension-icon
-    margin-right:16px
-    position: relative
-    left: 3px
-
-  a
-    display: inline-block
-
-    &:hover
-      text-decoration: underline
 
 .install-extension-error
   .dialog-body-wrap

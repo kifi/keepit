@@ -49,8 +49,8 @@ class SendFriendConnectionMadeNotificationHelperTest extends Specification with 
         val outbox = inject[FakeOutbox]
         val (user1, user2) = setup()
 
-        val helper = inject[SendFriendConnectionMadeNotificationHelper]
-        Await.ready(helper(user2.id.get, user1.id.get), Duration(5, "seconds"))
+        val helper = inject[FriendConnectionNotifier]
+        Await.ready(helper.sendNotification(user2.id.get, user1.id.get), Duration(5, "seconds"))
 
         //content check
         val htmlBody: String = outbox(0).htmlBody.toString

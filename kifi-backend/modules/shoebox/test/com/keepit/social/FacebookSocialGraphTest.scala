@@ -47,7 +47,7 @@ class FacebookSocialGraphTest extends Specification with ShoeboxTestInjector {
 
     "fetch from facebook" in {
       withDb() { implicit injector =>
-        val expectedUrl = DirectUrl("https://graph.facebook.com/eishay?access_token=AAAHiW1ZC8SzYBAOtjXeZBivJ77eNZCIjXOkkZAZBjfLbaP4w0uPnj0XzXQUi6ib8m9eZBlHBBxmzzFbEn7jrZADmHQ1gO05AkSZBsZAA43RZC9dQZDZD&fields=name,first_name,middle_name,last_name,gender,username,email,picture,friends.fields(name).limit(500)")
+        val expectedUrl = DirectUrl("https://graph.facebook.com/v2.0/646386018?access_token=AAAHiW1ZC8SzYBAOtjXeZBivJ77eNZCIjXOkkZAZBjfLbaP4w0uPnj0XzXQUi6ib8m9eZBlHBBxmzzFbEn7jrZADmHQ1gO05AkSZBsZAA43RZC9dQZDZD&fields=name,first_name,middle_name,last_name,gender,email,picture.type(large),friends.fields(name).limit(500)")
         val json = io.Source.fromFile(new File("test/com/keepit/common/social/data/facebook_graph_eishay_super_min.json"), UTF8).mkString
         val httpClient = new FakeHttpClient(Some(Map(expectedUrl -> json)))
 
@@ -59,14 +59,14 @@ class FacebookSocialGraphTest extends Specification with ShoeboxTestInjector {
         val user = inject[Database].readWrite { implicit s =>
           userRepo.save(User(firstName = "Eishay", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
         }
-        val unsaved = SocialUserInfo(userId = user.id, fullName = "Eishay Smith", socialId = SocialId("eishay"), networkType = SocialNetworks.FACEBOOK, credentials = Some(socialUser))
+        val unsaved = SocialUserInfo(userId = user.id, fullName = "Eishay Smith", socialId = SocialId("646386018"), networkType = SocialNetworks.FACEBOOK, credentials = Some(socialUser))
         val socialUserInfo = inject[Database].readWrite { implicit s =>
           inject[SocialUserInfoRepo].save(unsaved)
         }
         unsaved.userId === user.id
         socialUserInfo.userId === user.id
         socialUserInfo.fullName === "Eishay Smith"
-        socialUserInfo.socialId.id === "eishay"
+        socialUserInfo.socialId.id === "646386018"
         socialUserInfo.credentials.get === socialUser
 
         val graph = new FacebookSocialGraph(httpClient, db, null, null, socialUserInfoRepo, null)
@@ -74,7 +74,7 @@ class FacebookSocialGraphTest extends Specification with ShoeboxTestInjector {
         rawInfo.fullName === "Eishay Smith"
         rawInfo.userId === socialUserInfo.userId
 
-        rawInfo.socialId.id === "eishay"
+        rawInfo.socialId.id === "646386018"
       }
     }
 

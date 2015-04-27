@@ -199,7 +199,7 @@ class ShoeboxDataPipeController @Inject() (
     SafeFuture {
       val keepAndTagsChanged = db.readOnlyReplica { implicit session =>
         val changedKeeps = keepRepo.getBySequenceNumber(seqNum, fetchSize)
-        changedKeeps.map { keep => KeepAndTags(keep, if (keep.isActive) collectionRepo.getTagsByKeepId(keep.id.get) else Set()) }
+        changedKeeps.map { keep => KeepAndTags(keep, if (keep.isActive) collectionRepo.getHashtagsByKeepId(keep.id.get) else Set()) }
       }
       Ok(Json.toJson(keepAndTagsChanged))
     }
@@ -216,8 +216,7 @@ class ShoeboxDataPipeController @Inject() (
     SafeFuture {
       val libs = db.readOnlyReplica { implicit s =>
         val libraries = libraryRepo.getBySequenceNumber(seqNum, fetchSize)
-        val keepCountsByLibraryId = keepRepo.getCountsByLibrary(libraries.map(_.id.get).toSet).withDefaultValue(0)
-        libraries map { library => Library.toDetailedLibraryView(library, keepCountsByLibraryId(library.id.get)) }
+        libraries map { library => Library.toDetailedLibraryView(library) }
       }
       Ok(Json.toJson(libs))
     }

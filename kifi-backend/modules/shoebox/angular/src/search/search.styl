@@ -1,0 +1,49 @@
+// twoColMinWidth = 720px (not yet responsive)
+rightColWidth = 210px
+colGapWidth = 24px
+
+.kf-sr
+  margin: 0 auto
+  min-height: 100vh  // for auto-scrolling down to search results
+  max-width: appMaxWidth
+  padding: 10px appSidePad1 0
+
+  @media (min-width: appSidePad2MinWidth)
+    padding-left: appSidePad2
+    padding-right: appSidePad2
+
+  // @media (min-width: twoColMinWidth)
+  display: table
+  table-layout: fixed
+
+  &:last-child
+    padding-bottom: 40px
+
+.kf-sr-1
+  // @media (min-width: twoColMinWidth)
+  display: table-cell
+  vertical-align: top
+  width: appMinWidth - rightColWidth
+  max-width: appMinWidth - rightColWidth
+  box-sizing: border-box
+  padding-right: colGapWidth
+
+.kf-sr-2
+  margin-top: 20px
+  text-align: center
+
+  // @media (min-width: twoColMinWidth)
+  margin-top: 0
+  display: table-cell
+  vertical-align: top
+  width: rightColWidth
+  padding: 13px 0 0
+  text-align: initial
+
+.kf-sr-no-libs
+  color: #999
+  margin-top: 29px
+  line-height: 20px
+  font-size: 13px
+  font-smoothing: antialiased
+  text-align: center

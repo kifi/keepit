@@ -4,6 +4,7 @@ import java.awt.image.BufferedImage
 import java.io.ByteArrayInputStream
 
 import com.keepit.common.store.ImageSize
+import com.keepit.rover.article.{ ArticleKind, Article }
 import org.joda.time.DateTime
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.json.{ JsString, JsValue, Json, Format }
@@ -11,13 +12,13 @@ import play.api.libs.json.{ JsString, JsValue, Json, Format }
 abstract class BaseImage {
   val createdAt: DateTime
   val updatedAt: DateTime
-  val imagePath: String
   val format: ImageFormat
   val width: Int
   val height: Int
   val source: ImageSource
-  val sourceFileHash: ImageHash
-  val isOriginal: Boolean
+  def sourceFileHash: ImageHash
+  def imagePath: String
+  def isOriginal: Boolean
   val imageSize = ImageSize(width, height)
 }
 
@@ -32,12 +33,12 @@ object ImageSource {
   case object EmbedlyOrPagePeeker extends SystemInitiated("embedly_or_pagepeeker")
   case object UserPicked extends UserInitiated("user_picked")
   case object UserUpload extends UserInitiated("user_upload")
+  case object TwitterSync extends UserInitiated("twitter_sync")
   case object Unknown extends ImageSource("unknown")
+  case class RoverArticle[A <: Article](kind: ArticleKind[A]) extends SystemInitiated(s"${kind.typeCode}_article")
 
-  private val all: Seq[ImageSource] = Seq(Unknown, Embedly, PagePeeker, EmbedlyOrPagePeeker, UserUpload, UserPicked)
-  def apply(name: String) = {
-    all.find(_.name == name).getOrElse(throw new Exception(s"Can't find ImageSource for $name"))
-  }
+  private val all: Seq[ImageSource] = Seq(Unknown, Embedly, PagePeeker, EmbedlyOrPagePeeker, UserUpload, UserPicked, TwitterSync) ++ ArticleKind.all.map(RoverArticle(_))
+  def apply(name: String) = all.find(_.name == name).getOrElse(throw new Exception(s"Can't find ImageSource for $name"))
 
   implicit val format = new Format[ImageSource] {
     def writes(imageSource: ImageSource) = JsString(imageSource.name)

@@ -11,8 +11,8 @@ import com.keepit.common.net.{ HttpClient, DirectUrl, CallTimeouts }
 import com.keepit.common.strings._
 import com.keepit.model._
 import com.keepit.social.SocialNetworks
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
+import scala.concurrent.ExecutionContext
 import scala.util.{ Failure, Success }
 
 class FacebookPublishingCommander @Inject() (
@@ -21,6 +21,7 @@ class FacebookPublishingCommander @Inject() (
     socialUserInfoRepo: SocialUserInfoRepo,
     userRepo: UserRepo,
     httpClient: HttpClient,
+    implicit val executionContext: ExecutionContext,
     airbrake: AirbrakeNotifier) extends SocialPublishingCommander with Logging {
 
   private val facebookNameSpace = PublicPageMetaTags.facebookNameSpace

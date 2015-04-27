@@ -5,15 +5,19 @@ import com.keepit.rover.document.tika.TikaDocument
 import com.keepit.rover.fetcher.{ FetchRequest, FetchResult, HttpFetcher, HttpInputStream }
 import org.apache.http.HttpStatus
 import org.joda.time.DateTime
-
 import scala.concurrent.{ ExecutionContext, Future }
 
 @Singleton
-class RoverDocumentFetcher @Inject() (httpFetcher: HttpFetcher) {
+class RoverDocumentFetcher @Inject() (httpFetcher: HttpFetcher, throttler: DomainFetchThrottler) {
 
   def fetch[A](url: String, ifModifiedSince: Option[DateTime] = None)(f: FetchResult[HttpInputStream] => A)(implicit ec: ExecutionContext): Future[A] = {
     val proxy = None // todo(Léo): Implement proxy repo, proxy rules
-    httpFetcher.fetch(FetchRequest(url, proxy, ifModifiedSince))(f)
+    def throttled(fetchResult: FetchResult[HttpInputStream]): A = {
+      val destinationUrl = fetchResult.context.request.destinationUrl
+      if (throttler.throttle(destinationUrl)) throw FetchThrottlingException(url, destinationUrl)
+      else f(fetchResult)
+    }
+    httpFetcher.fetch(FetchRequest(url, proxy, ifModifiedSince))(throttled)
   }
 
   def fetchJsoupDocument(url: String, ifModifiedSince: Option[DateTime] = None)(implicit ec: ExecutionContext): Future[FetchResult[JsoupDocument]] = {

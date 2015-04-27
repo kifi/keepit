@@ -6,6 +6,7 @@ import com.keepit.common.actor.ActorInstance
 import com.keepit.common.plugin.{ SchedulerPlugin, SchedulingProperties }
 import com.keepit.common.time._
 import com.keepit.curator.LibraryRecommendationCleanupCommander
+import com.keepit.curator.model.RawSeedItemSequenceNumberAssigner
 import email.{ FeedDigestMessage, EngagementEmailActor }
 import us.theatr.akka.quartz.QuartzActor
 
@@ -18,6 +19,7 @@ object CuratorTasks {
   val publicFeedReaper = "public feed reaper"
   val libraryRecommendationPrecomputation = "library recommendation precomputation"
   val libraryRecommendationReaper = "library recommendation reaper"
+  val rawSeedItemSeqNumChecks = "rawSeedItem sequence number sanity check"
 }
 
 @Singleton
@@ -31,6 +33,7 @@ class CuratorTasksPlugin @Inject() (
     system: ActorSystem,
     emailActor: ActorInstance[EngagementEmailActor],
     quartz: ActorInstance[QuartzActor],
+    rawSeedSeqNumAssigner: RawSeedItemSequenceNumberAssigner,
     val scheduling: SchedulingProperties) extends SchedulerPlugin {
 
   import CuratorTasks._
@@ -40,18 +43,22 @@ class CuratorTasksPlugin @Inject() (
     scheduleTaskOnLeader(system, 5 minutes, 3 minutes, completeDataIngestion) {
       ingestionCommander.ingestAll()
     }
-    scheduleTaskOnOneMachine(system, 3 minutes, 2 minutes, uriRecommendationPrecomputation) {
+    scheduleTaskOnAllMachines(system, 5 minutes, 5 minutes, uriRecommendationPrecomputation) {
       uriRecoGenerationCommander.precomputeRecommendations()
     }
     scheduleTaskOnOneMachine(system, 2 minutes, 5 minutes, uriRecommendationReaper) {
       uriRecoCleanupCommander.cleanup()
     }
 
+    scheduleTaskOnAllMachines(system, 20 minutes, 120 minutes, rawSeedItemSeqNumChecks) {
+      rawSeedSeqNumAssigner.sanityCheck()
+    }
+
     scheduleTaskOnOneMachine(system, 1 hours, 5 hours, publicFeedReaper) {
       feedCommander.cleanup()
     }
 
-    scheduleTaskOnOneMachine(system, 1 minutes, 3 minutes, libraryRecommendationPrecomputation) {
+    scheduleTaskOnOneMachine(system, 7 minutes, 5 minutes, libraryRecommendationPrecomputation) {
       libraryRecoGenerationCommander.precomputeRecommendations()
     }
     scheduleTaskOnOneMachine(system, 10 minutes, 10 minutes, libraryRecommendationReaper) {

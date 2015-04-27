@@ -1,32 +1,25 @@
 package com.keepit.controllers.admin
 
-import java.util.concurrent.atomic.AtomicInteger
-
 import com.google.inject.Inject
-import com.keepit.commanders.{ CollectionCommander, KeepsCommander, LibraryCommander, RichWhoKeptMyKeeps, URISummaryCommander }
+import com.keepit.commanders._
 import com.keepit.common.controller.{ AdminUserActions, UserActionsHelper, UserRequest }
-import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db.slick._
 import com.keepit.common.net._
 import com.keepit.common.performance._
-import com.keepit.common.store.S3URIImageStore
 import com.keepit.common.time._
 import com.keepit.heimdal._
 import com.keepit.model.{ KeepStates, _ }
 import com.keepit.scraper.ScrapeScheduler
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.iteratee.Enumerator
 import play.api.libs.json._
 import play.api.mvc.{ Action, AnyContent }
 import views.html
 
 import scala.collection.mutable
-import scala.collection.mutable.{ SynchronizedMap, HashMap => MutableMap }
+import scala.collection.mutable.{ HashMap => MutableMap }
 import scala.concurrent._
-import com.keepit.common.akka.SafeFuture
-
-import scala.util.Failure
 
 class AdminBookmarksController @Inject() (
   val userActionsHelper: UserActionsHelper,
@@ -44,6 +37,8 @@ class AdminBookmarksController @Inject() (
   collectionCommander: CollectionCommander,
   collectionRepo: CollectionRepo,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
+  hashtagCommander: HashtagCommander,
+  keepDecorator: KeepDecorator,
   clock: Clock)
     extends AdminUserActions {
 
@@ -329,6 +324,39 @@ class AdminBookmarksController @Inject() (
   def www$youtube$com$watch$v$otCpCn0l4Wo(keepId: Id[Keep]) = UserAction {
     db.readWrite { implicit session =>
       keepRepo.save(keepRepo.get(keepId).copy(keptAt = clock.now().plusDays(1000)))
+    }
+    Ok
+  }
+
+  def populateKeepNotesWithTag(page: Int = 0, size: Int = 500, grouping: Int = 500) = AdminUserAction {
+    log.info(s"[Admin] populating keep notes with its tags page: $page, size: $size, offset: ${page * size}")
+    db.readOnlyMaster { implicit s =>
+      keepRepo.page(page, size, Set.empty)
+    }.grouped(grouping).foreach { keepGroup =>
+      val keepIds = keepGroup.map(_.id.get).toSet
+      // look for hashtags for every keep
+      val keepHashtagsMap = db.readOnlyMaster { implicit s =>
+        collectionRepo.getHashtagsByKeepIds(keepIds)
+      }
+      val keepNotesMap = keepGroup.map { k =>
+        // look for all hashtags for a keep
+        val newNote = keepHashtagsMap.get(k.id.get) match {
+          case Some(tags) if tags.nonEmpty =>
+            val noteStr = k.note getOrElse ""
+            val existingTags = hashtagCommander.findAllHashtagNames(noteStr)
+            val tagsToAppend = tags.map(_.tag) diff existingTags.toSeq
+            Some(hashtagCommander.appendHashtagNamesToString(noteStr, tagsToAppend).trim) filterNot (_.isEmpty)
+          case _ =>
+            k.note
+        }
+        (k.id.get, newNote)
+      }.toMap
+      db.readWriteBatch(keepGroup) { (s, k) =>
+        val newNote = keepNotesMap(k.id.get)
+        if (newNote != k.note) {
+          keepRepo.save(k.copy(note = newNote))(s)
+        }
+      }
     }
     Ok
   }

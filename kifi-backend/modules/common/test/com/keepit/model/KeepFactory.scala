@@ -15,11 +15,13 @@ object KeepFactory {
       uriId = Id[NormalizedURI](-1 * idx.incrementAndGet()),
       inDisjointLib = true,
       urlId = Id[URL](-1 * idx.incrementAndGet()),
-      url = s"http://${random(5)}.com/${random(5)}",
+      url = s"http://${random(5, "abcdefghijklmnopqrstuvwxyz")}.com/${random(5, "abcdefghijklmnopqrstuvwxyz")}",
       visibility = LibraryVisibility.PUBLISHED,
       userId = Id[User](-1 * idx.incrementAndGet()),
       source = KeepSource.keeper,
-      libraryId = None))
+      libraryId = None,
+      note = None
+    ))
   }
 
   def keeps(count: Int): Seq[PartialKeep] = List.fill(count)(keep())
@@ -39,6 +41,7 @@ object KeepFactory {
     def secret() = new PartialKeep(keep.copy(visibility = LibraryVisibility.SECRET))
     def withLibrary(library: Library) = new PartialKeep(keep.copy(libraryId = library.id, userId = library.ownerId, visibility = library.visibility))
     def withLibrary(library: Id[Library]) = new PartialKeep(keep.copy(libraryId = Some(library)))
+    def withNote(note: Option[String]) = new PartialKeep(keep.copy(note = note))
     def withState(state: State[Keep]) = new PartialKeep(keep.copy(state = state))
     def get: Keep = keep
   }

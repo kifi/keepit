@@ -12,10 +12,14 @@ cardSideBySidePad = 9px
   font-weight: bold
   text-align: center
   margin-bottom: -6px
+  margin-left: cardSideBySidePad - appSidePad1
+  margin-right: cardSideBySidePad - appSidePad1
 
-  @media (max-width: 479px)
-    margin-left: cardSideBySidePad - appSidePad1
-    margin-right: cardSideBySidePad - appSidePad1
+  @media (min-width: appSidePad2MinWidth) and (max-width: 719px)
+    margin-left: cardSideBySidePad - appSidePad2
+    margin-right: cardSideBySidePad - appSidePad2
+
+  @media (max-width: 719px)
     padding: 10px 0
     background-color: #e8e8e8
 
@@ -48,6 +52,9 @@ cardSideBySidePad = 9px
   color: #fff
   padding: 21px 10px
   margin-top: 40px
+
+  @media (max-width: 719px)
+    display: none
 
 .kf-related-libraries-card-your-own-card-btn
   display: inline-block

@@ -123,8 +123,13 @@ class AdminUserController @Inject() (
     Ok("started!")
   }
 
-  def pushLibraryActivity = AdminUserPage { implicit request =>
-    activityPusher.forcePushLibraryActivityForUser(request.userId)
+  def pushLibraryActivity(userId: Id[User]) = AdminUserPage { implicit request =>
+    activityPusher.forcePushLibraryActivityForUser(userId)
+    Ok("done")
+  }
+
+  def pushPersonaActivity(userId: Id[User]) = AdminUserPage { implicit request =>
+    activityPusher.forcePersonaActivityForUser(userId)
     Ok("done")
   }
 
@@ -145,7 +150,11 @@ class AdminUserController @Inject() (
         invitationRepo.save(invitation.withState(InvitationStates.INACTIVE))
       }
       for (su <- socialUsers) {
-        socialUserInfoRepo.save(su.withUser(toUser))
+        val updatedSocialUser = {
+          if (su.networkType == SocialNetworks.FORTYTWO) su.withState(SocialUserInfoStates.INACTIVE)
+          else su.withUser(toUser)
+        }
+        socialUserInfoRepo.save(updatedSocialUser)
       }
       userRepo.save(toUser.withState(UserStates.ACTIVE))
       userRepo.save(fromUser.withState(UserStates.INACTIVE))
@@ -629,12 +638,12 @@ class AdminUserController @Inject() (
     log.info("Sending global notification via Eliza!")
     usersOpt.map {
       users =>
-        eliza.sendGlobalNotification(users.toSet, title, bodyHtml, linkText, url.getOrElse(""), image, isSticky, category)
+        eliza.sendGlobalNotification(users.toSet, title, bodyHtml, linkText, url.getOrElse(""), image, isSticky, category) //push needed?
     } getOrElse {
       val users = db.readOnlyReplica {
         implicit session => userRepo.getAllIds()
       } //Note: Need to revisit when we have >50k users.
-      eliza.sendGlobalNotification(users, title, bodyHtml, linkText, url.getOrElse(""), image, isSticky, category)
+      eliza.sendGlobalNotification(users, title, bodyHtml, linkText, url.getOrElse(""), image, isSticky, category) //push needed?
     }
 
     Redirect(routes.AdminUserController.notification())

@@ -51,7 +51,8 @@ object TwitterUserInfo {
       networkType = SocialNetworks.TWITTER,
       state = state,
       pictureUrl = tui.pictureUrl.map(_.toString),
-      profileUrl = Some(tui.profileUrl.toString)
+      profileUrl = Some(tui.profileUrl.toString),
+      username = Some(tui.screenName)
     )
   }
 

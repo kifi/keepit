@@ -21,8 +21,7 @@ import com.keepit.common.logging.Logging
 import com.kifi.macros.json
 
 import play.api.libs.json._
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import scala.concurrent.{ Await, Future }
+import scala.concurrent.{ ExecutionContext, Await, Future }
 import scala.concurrent.duration._
 import scala.util.{ Failure, Success }
 import com.keepit.search.augmentation.AugmentableItem
@@ -45,6 +44,7 @@ class PageCommander @Inject() (
     userCommander: UserCommander,
     airbrake: AirbrakeNotifier,
     relatedPageCommander: RelatedPageCommander,
+    implicit val executionContext: ExecutionContext,
     implicit val config: PublicIdConfiguration) extends Logging {
 
   private def getKeepersFuture(userId: Id[User], uri: NormalizedURI): Future[(Seq[BasicUser], Int)] = {
@@ -169,8 +169,8 @@ class PageCommander @Inject() (
     } sortBy (lib => (lib.kind != LibraryKind.USER_CREATED, -1 * lib.memberCount))
   }
 
-  def secondQualityFilter(libraries: Seq[Library], keepCounts: Map[Id[Library], Int]): Seq[Library] = libraries.filter { lib =>
-    val count = keepCounts(lib.id.get)
+  def secondQualityFilter(libraries: Seq[Library]): Seq[Library] = libraries.filter { lib =>
+    val count = lib.keepCount
     val followers = lib.memberCount
     val descriptionCredit = lib.description.map(d => (d.size / 10).max(2)).getOrElse(0)
     val credit = followers + descriptionCredit
@@ -183,8 +183,8 @@ class PageCommander @Inject() (
     val augmentFuture = searchClient.augment(
       userId = Some(userId),
       showPublishedLibraries = true,
-      maxKeepersShown = Int.MaxValue, // TODO: reduce to 5 once most users have extension 3.3.28 or later
-      maxLibrariesShown = Int.MaxValue,
+      maxKeepersShown = 5,
+      maxLibrariesShown = 10, //actually its three, but we're trimming them up a bit
       maxTagsShown = 0,
       items = Seq(AugmentableItem(normUri.id.get)))
 
@@ -193,11 +193,10 @@ class PageCommander @Inject() (
     augmentFuture map {
       case Seq(info) =>
         val userIdSet = info.keepers.toSet
-        val (basicUserMap, libraries, keepCounts) = db.readOnlyMaster { implicit session =>
+        val (basicUserMap, libraries) = db.readOnlyMaster { implicit session =>
           val notMyLibs = filterLibrariesUserDoesNotOwnOrFollow(info.libraries, userId)
           val libraries = firstQualityFilterAndSort(notMyLibs)
-          val keepCounts = keepRepo.getCountsByLibrary(libraries.map(_.id.get).toSet)
-          val qualityLibraries = secondQualityFilter(libraries, keepCounts)
+          val qualityLibraries = secondQualityFilter(libraries)
           val basicUserMap = basicUserRepo.loadAll(userIdSet ++ qualityLibraries.map(_.ownerId) - userId)
           val topLibs = if (qualityLibraries.isEmpty) {
             qualityLibraries
@@ -205,7 +204,7 @@ class PageCommander @Inject() (
             val fakeUsers = userCommander.getAllFakeUsers()
             qualityLibraries.takeWhile(lib => !fakeUsers.contains(lib.ownerId)).take(2)
           }
-          (basicUserMap, topLibs, keepCounts)
+          (basicUserMap, topLibs)
         }
 
         val keeperIdsToExclude = Set(userId) ++ libraries.map(_.ownerId)
@@ -220,7 +219,7 @@ class PageCommander @Inject() (
             "slug" -> lib.slug,
             "color" -> lib.color,
             "owner" -> basicUserMap(lib.ownerId),
-            "keeps" -> keepCounts(lib.id.get),
+            "keeps" -> lib.keepCount,
             "followers" -> followerCounts(lib.id.get))
         }
         KeeperPagePartialInfo(keepers, otherKeepersTotal, libraryObjs, keepDatas)
@@ -265,6 +264,7 @@ class RelatedPageCommander @Inject() (
     uriRepo: NormalizedURIRepo,
     uriSummaryCmdr: URISummaryCommander,
     imageInfoRepo: ImageInfoRepo,
+    implicit val executionContext: ExecutionContext,
     cortex: CortexServiceClient) {
 
   private val MAX_LOOKUP_SIZE = 25

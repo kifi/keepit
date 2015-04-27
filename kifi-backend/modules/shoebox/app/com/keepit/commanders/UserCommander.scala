@@ -17,7 +17,8 @@ import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.S3ImageStore
 import com.keepit.common.time._
 import com.keepit.common.usersegment.{ UserSegment, UserSegmentFactory }
-import com.keepit.eliza.ElizaServiceClient
+import com.keepit.eliza.{ UserPushNotificationCategory, PushNotificationExperiment, ElizaServiceClient }
+import com.keepit.graph.GraphServiceClient
 import com.keepit.heimdal.{ ContextStringData, HeimdalServiceClient, _ }
 import com.keepit.model.{ UserEmailAddress, _ }
 import com.keepit.search.SearchServiceClient
@@ -25,12 +26,11 @@ import com.keepit.social.{ BasicUser, SocialNetworks, UserIdentity }
 import com.keepit.typeahead.{ KifiUserTypeahead, SocialUserTypeahead, TypeaheadHit }
 import com.kifi.macros.json
 import org.apache.commons.lang3.RandomStringUtils
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.{ JsObject, JsString, JsSuccess, _ }
 import securesocial.core.{ Identity, Registry, UserService }
 
 import scala.collection.mutable.ArrayBuffer
-import scala.concurrent.Future
+import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Left, Right, Try }
 
 case class BasicSocialUser(network: String, profileUrl: Option[String], pictureUrl: Option[String])
@@ -95,9 +95,11 @@ class UserCommander @Inject() (
     userConnectionRepo: UserConnectionRepo,
     basicUserRepo: BasicUserRepo,
     keepRepo: KeepRepo,
+    libraryRepo: LibraryRepo,
     socialUserInfoRepo: SocialUserInfoRepo,
     collectionCommander: CollectionCommander,
     abookServiceClient: ABookServiceClient,
+    graphServiceClient: GraphServiceClient,
     postOffice: LocalPostOffice,
     clock: Clock,
     scheduler: Scheduler,
@@ -115,6 +117,8 @@ class UserCommander @Inject() (
     usernameCache: UsernameCache,
     userExperimentRepo: UserExperimentRepo,
     allFakeUsersCache: AllFakeUsersCache,
+    kifiInstallationCommander: KifiInstallationCommander,
+    implicit val executionContext: ExecutionContext,
     airbrake: AirbrakeNotifier) extends Logging { self =>
 
   def userFromUsername(username: Username): Option[User] = db.readOnlyReplica { implicit session =>
@@ -331,7 +335,7 @@ class UserCommander @Inject() (
 
         // get users who have this user's email in their contacts
         abookServiceClient.getUsersWithContact(email) flatMap {
-          case contacts if contacts.nonEmpty => {
+          case contacts if contacts.nonEmpty =>
             val alreadyConnectedUsers = db.readOnlyReplica { implicit session =>
               userConnectionRepo.getConnectedUsers(newUser.id.get)
             }
@@ -341,7 +345,7 @@ class UserCommander @Inject() (
             log.info("sending new user contact notifications to: " + toNotify)
             val emailsF = toNotify.map { userId => emailSender.contactJoined(userId, newUserId) }
 
-            elizaServiceClient.sendGlobalNotification(
+            elizaServiceClient.sendGlobalNotification( //push sent
               userIds = toNotify,
               title = s"${newUser.firstName} ${newUser.lastName} joined Kifi!",
               body = s"To discover ${newUser.firstName}’s public keeps while searching, get connected! Invite ${newUser.firstName} to connect on Kifi »",
@@ -350,14 +354,23 @@ class UserCommander @Inject() (
               imageUrl = s3ImageStore.avatarUrlByUser(newUser),
               sticky = false,
               category = NotificationCategory.User.CONTACT_JOINED
-            )
-
+            ) map { _ =>
+                toNotify.foreach { userId =>
+                  val canSendPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(userId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
+                  if (canSendPush) {
+                    elizaServiceClient.sendUserPushNotification(
+                      userId = userId,
+                      message = s"${newUser.firstName} ${newUser.lastName} just joined Kifi!",
+                      recipient = newUser,
+                      pushNotificationExperiment = PushNotificationExperiment.Experiment1,
+                      category = UserPushNotificationCategory.ContactJoined)
+                  }
+                }
+              }
             Future.sequence(emailsF.toSeq) map (_ => toNotify)
-          }
-          case _ => {
+          case _ =>
             log.info("cannot send contact notifications: primary email empty for user.id=" + newUserId)
             Future.successful(Set.empty)
-          }
         }
       }
     } else Option(Future.successful(Set.empty))
@@ -707,21 +720,35 @@ class UserCommander @Inject() (
   }
 
   def getFriendRecommendations(userId: Id[User], offset: Int, limit: Int): Future[Option[FriendRecommendations]] = {
-    abookServiceClient.getFriendRecommendations(userId, offset, limit).map {
-      _.map { recommendedUsers =>
-        val friends = db.readOnlyMaster { implicit session =>
-          userConnectionRepo.getConnectedUsersForUsers(recommendedUsers.toSet + userId) //cached
+    val futureRecommendedUsers = abookServiceClient.getFriendRecommendations(userId, offset, limit)
+    val futureRelatedUsers = graphServiceClient.getSociallyRelatedEntities(userId)
+    futureRecommendedUsers.flatMap {
+      case None => Future.successful(None)
+      case Some(recommendedUsers) =>
+        futureRelatedUsers.map { sociallyRelatedEntitiesOpt =>
+
+          val friends = db.readOnlyMaster { implicit session =>
+            userConnectionRepo.getConnectedUsersForUsers(recommendedUsers.toSet + userId) //cached
+          }
+
+          val friendshipStrength = {
+            val relatedUsers = sociallyRelatedEntitiesOpt.map(_.users.related) getOrElse Seq.empty
+            relatedUsers.filter { case (userId, _) => friends.contains(userId) }
+          }.toMap[Id[User], Double].withDefaultValue(0d)
+
+          val mutualFriends = recommendedUsers.map { recommendedUserId =>
+            recommendedUserId -> (friends.getOrElse(userId, Set.empty) intersect friends.getOrElse(recommendedUserId, Set.empty)).toSeq.sortBy(-friendshipStrength(_))
+          }.toMap
+
+          val mutualLibrariesCounts = db.readOnlyMaster { implicit session =>
+            libraryRepo.countMutualLibrariesForUsers(userId, recommendedUsers.toSet)
+          }
+
+          val uniqueMutualFriends = mutualFriends.values.flatten.toSet
+          val (basicUsers, userConnectionCounts) = loadBasicUsersAndConnectionCounts(uniqueMutualFriends ++ recommendedUsers, uniqueMutualFriends ++ recommendedUsers)
+
+          Some(FriendRecommendations(basicUsers, userConnectionCounts, recommendedUsers, mutualFriends, mutualLibrariesCounts))
         }
-
-        val mutualFriends = recommendedUsers.map { recommendedUserId =>
-          recommendedUserId -> (friends.getOrElse(userId, Set.empty) intersect friends.getOrElse(recommendedUserId, Set.empty))
-        }.toMap
-
-        val uniqueMutualFriends = mutualFriends.values.flatten.toSet
-        val (basicUsers, mutualFriendConnectionCounts) = loadBasicUsersAndConnectionCounts(uniqueMutualFriends ++ recommendedUsers, uniqueMutualFriends)
-
-        FriendRecommendations(basicUsers, mutualFriendConnectionCounts, recommendedUsers, mutualFriends)
-      }
     }
   }
 

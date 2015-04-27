@@ -17,6 +17,7 @@ import com.keepit.heimdal.{ HeimdalContext, HeimdalServiceClient }
 import com.keepit.integrity.UriIntegrityHelpers
 import com.keepit.model._
 import com.keepit.normalizer.{ NormalizationCandidate, NormalizedURIInterner }
+import com.keepit.rover.RoverServiceClient
 import com.keepit.scraper.ScrapeScheduler
 import org.joda.time.DateTime
 import play.api.libs.json.Json
@@ -47,6 +48,7 @@ class KeepInterner @Inject() (
   rawKeepImporterPlugin: RawKeepImporterPlugin,
   elizaClient: ElizaServiceClient,
   heimdalClient: HeimdalServiceClient,
+  roverClient: RoverServiceClient,
   libraryCommander: LibraryCommander,
   integrityHelpers: UriIntegrityHelpers,
   sourceAttrRepo: KeepSourceAttributionRepo,
@@ -84,7 +86,6 @@ class KeepInterner @Inject() (
         userValueRepo.setValue(userId, UserValueName.BOOKMARK_IMPORT_TOTAL, total)
         userValueRepo.setValue(userId, UserValueName.bookmarkImportContextName(newImportId), Json.toJson(context))
       }
-
       deduped.grouped(500).toList.map { rawKeepGroup =>
         // insertAll fails if any of the inserts failed
         log.info(s"[persistRawKeeps] Persisting ${rawKeepGroup.length} raw keeps")
@@ -145,7 +146,7 @@ class KeepInterner @Inject() (
   }
 
   private def internUriAndBookmarkBatch(bms: Seq[RawBookmarkRepresentation], userId: Id[User], library: Library, source: KeepSource, installationId: Option[ExternalId[KifiInstallation]]) = {
-    val (persisted, failed) = db.readWriteBatch(bms, attempts = 2) { (session, bm) =>
+    val (persisted, failed) = db.readWriteBatch(bms, attempts = 4) { (session, bm) =>
       internUriAndBookmark(bm, userId, library, source, installationId)(session)
     } map {
       case (bm, res) => bm -> res.flatten
@@ -177,8 +178,14 @@ class KeepInterner @Inject() (
           case _ => currentDateTime // todo: useful to de-prioritize bulk imports.
         }
         scraper.scheduleScrape(uri, date)
+        if (KeepSource.discrete.contains(source)) {
+          session.onTransactionSuccess {
+            roverClient.fetchAsap(IndexableUri(uri))
+          }
+        }
       }
 
+      log.info(s"[keepinterner] Persisting keep ${rawBookmark.url}, ${rawBookmark.keptAt}, ${clock.now}")
       val (isNewKeep, wasInactiveKeep, bookmark) = internKeep(uri, userId, library, installationId, source, rawBookmark.title, rawBookmark.url, rawBookmark.keptAt.getOrElse(clock.now), rawBookmark.sourceAttribution, rawBookmark.note)
       Success(InternedUriAndKeep(bookmark, uri, isNewKeep, wasInactiveKeep))
     } else {
@@ -199,10 +206,11 @@ class KeepInterner @Inject() (
     title: Option[String], url: String, keptAt: DateTime,
     sourceAttribution: Option[SourceAttribution], note: Option[String])(implicit session: RWSession) = {
 
-    val currentBookmarkOpt = if (library.isDisjoint)
+    val currentBookmarkOpt = if (library.isDisjoint) {
       keepRepo.getPrimaryInDisjointByUriAndUser(uri.id.get, userId)
-    else
+    } else {
       keepRepo.getPrimaryByUriAndLibrary(uri.id.get, library.id.get)
+    }
 
     val trimmedTitle = title.map(_.trim).filter(_.length > 0)
 
@@ -220,8 +228,9 @@ class KeepInterner @Inject() (
           state = KeepStates.ACTIVE,
           visibility = library.visibility,
           libraryId = Some(library.id.get),
-          keptAt = clock.now,
+          keptAt = keptAt,
           note = note orElse bookmark.note
+        // should we be updating url?
         ) |> { keep =>
             if (wasInactiveKeep) {
               keep.copy(url = url, createdAt = clock.now)
@@ -255,7 +264,8 @@ class KeepInterner @Inject() (
       keepToCollectionRepo.getCollectionsForKeep(internedKeep.id.get) foreach { cid => collectionRepo.collectionChanged(cid, inactivateIfEmpty = false) }
     }
 
-    libraryRepo.save(library.copy(keepCount = keepRepo.getCountByLibrary(library.id.get)))
+    // wrapped in a Try because this is super deadlock prone. Needs to be removed.
+    Try(libraryRepo.save(library.copy(keepCount = keepRepo.getCountByLibrary(library.id.get)))) // todo: this is very expensive
 
     (isNewKeep, wasInactiveKeep, internedKeep)
   }

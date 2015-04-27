@@ -17,6 +17,7 @@ import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.ImageSize
 import com.keepit.common.time._
 import com.keepit.model._
+import com.keepit.rover.RoverServiceClient
 import com.keepit.shoebox.model.ids.UserSessionExternalId
 import com.keepit.normalizer._
 import com.keepit.scraper._
@@ -69,7 +70,8 @@ class ShoeboxController @Inject() (
   newKeepsInLibraryCommander: NewKeepsInLibraryCommander,
   userConnectionsCommander: UserConnectionsCommander,
   userPersonaRepo: UserPersonaRepo,
-  verifiedEmailUserIdCache: VerifiedEmailUserIdCache)(implicit private val clock: Clock,
+  verifiedEmailUserIdCache: VerifiedEmailUserIdCache,
+  rover: RoverServiceClient)(implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices)
     extends ShoeboxServiceController with Logging {
 
@@ -86,7 +88,7 @@ class ShoeboxController @Inject() (
   def getSocialUserInfoByNetworkAndSocialId(id: String, networkType: String) = Action {
     val socialId = SocialId(id)
     val network = SocialNetworkType(networkType)
-    val sui = db.readOnlyReplica { implicit session =>
+    val sui = db.readOnlyMaster { implicit session =>
       socialUserInfoRepo.get(socialId, network) //using cache
     }
     Ok(Json.toJson(sui))
@@ -189,7 +191,10 @@ class ShoeboxController @Inject() (
       normalizedURIInterner.internByUri(url, NormalizationCandidate(o): _*)
     }
     val scrapeWanted = (o \ "scrapeWanted").asOpt[Boolean] getOrElse false
-    if (scrapeWanted) SafeFuture { db.readWrite { implicit session => scrapeScheduler.scheduleScrape(uri) } }
+    if (scrapeWanted) SafeFuture {
+      db.readWrite { implicit session => scrapeScheduler.scheduleScrape(uri) }
+      rover.fetchAsap(IndexableUri(uri))
+    }
     Ok(Json.toJson(uri))
   }
 
@@ -406,18 +411,6 @@ class ShoeboxController @Inject() (
     }
   }
 
-  def updateURIRestriction() = SafeAsyncAction(parse.tolerantJson) { request =>
-    val uriId = Json.fromJson[Id[NormalizedURI]](request.body \ "uriId").get
-    val r = request.body \ "restriction" match {
-      case JsNull => None
-      case x => Some(Json.fromJson[Restriction](x).get)
-    }
-    db.readWrite { implicit s =>
-      normUriRepo.updateURIRestriction(uriId, r)
-    }
-    Ok
-  }
-
   def getUserImageUrl(id: Id[User], width: Int) = Action.async { request =>
     userCommander.getUserImageUrl(id, width).map { url =>
       Ok(Json.toJson(url))
@@ -444,7 +437,7 @@ class ShoeboxController @Inject() (
   }
 
   def getSocialConnections(userId: Id[User]) = Action { request =>
-    val connectionsByNetwork = db.readOnlyReplica { implicit session => socialConnectionRepo.getSocialConnectionInfosByUser(userId) }
+    val connectionsByNetwork = db.readOnlyMaster { implicit session => socialConnectionRepo.getSocialConnectionInfosByUser(userId) }
     val allConnections = connectionsByNetwork.valuesIterator.flatten.toSeq
     Ok(Json.toJson(allConnections))
   }

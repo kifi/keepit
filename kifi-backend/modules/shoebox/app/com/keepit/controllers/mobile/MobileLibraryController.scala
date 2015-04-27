@@ -28,6 +28,7 @@ class MobileLibraryController @Inject() (
   db: Database,
   libraryRepo: LibraryRepo,
   keepRepo: KeepRepo,
+  keepToCollectionRepo: KeepToCollectionRepo,
   collectionRepo: CollectionRepo,
   userRepo: UserRepo,
   basicUserRepo: BasicUserRepo,
@@ -37,6 +38,7 @@ class MobileLibraryController @Inject() (
   userCommander: UserCommander,
   keepImageCommander: KeepImageCommander,
   libraryImageCommander: LibraryImageCommander,
+  hashtagCommander: HashtagCommander,
   normalizedUriInterner: NormalizedURIInterner,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
   clock: Clock,
@@ -59,9 +61,9 @@ class MobileLibraryController @Inject() (
     libraryCommander.addLibrary(addRequest, request.userId) match {
       case Left(fail) => Status(fail.status)(Json.obj("error" -> fail.message))
       case Right(lib) =>
-        val (owner, numKeeps) = db.readOnlyMaster { implicit s => (basicUserRepo.load(lib.ownerId), keepRepo.getCountByLibrary(lib.id.get)) }
+        val owner = db.readOnlyMaster { implicit s => basicUserRepo.load(lib.ownerId) }
         val libImage = libraryImageCommander.getBestImageForLibrary(lib.id.get, MobileLibraryController.defaultLibraryImageSize)
-        Ok(Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, libImage, owner, numKeeps)))
+        Ok(Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, libImage, owner)))
     }
   }
 
@@ -82,9 +84,9 @@ class MobileLibraryController @Inject() (
       case Left(fail) =>
         Status(fail.status)(Json.obj("error" -> fail.message))
       case Right(lib) =>
-        val (owner, numKeeps) = db.readOnlyMaster { implicit s => (basicUserRepo.load(lib.ownerId), keepRepo.getCountByLibrary(libId)) }
+        val owner = db.readOnlyMaster { implicit s => basicUserRepo.load(lib.ownerId) }
         val libImage = libraryImageCommander.getBestImageForLibrary(lib.id.get, MobileLibraryController.defaultLibraryImageSize)
-        Ok(Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, libImage, owner, numKeeps)))
+        Ok(Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, libImage, owner)))
     }
   }
 
@@ -108,7 +110,7 @@ class MobileLibraryController @Inject() (
   }
 
   def getLibraryByPath(userStr: String, slugStr: String, imageSize: Option[String] = None) = MaybeUserAction.async { request =>
-    libraryCommander.getLibraryWithUsernameAndSlug(userStr, LibrarySlug(slugStr), followRedirect = true) match {
+    libraryCommander.getLibraryWithUsernameAndSlug(userStr, LibrarySlug(slugStr)) match {
       case Right(library) =>
         LibraryViewAction(Library.publicId(library.id.get)).invokeBlock(request, { _: MaybeUserRequest[_] =>
           request.userIdOpt.map { userId => libraryCommander.updateLastView(userId, library.id.get) }
@@ -138,11 +140,11 @@ class MobileLibraryController @Inject() (
     val libraryImages = libraryImageCommander.getBestImageForLibraries(writeableLibraries.map(_._2.id.get).toSet, MobileLibraryController.defaultLibraryImageSize)
     val writeableLibraryInfos = writeableLibraries.map {
       case (mem, library) =>
-        val (owner, numKeeps) = db.readOnlyMaster { implicit s =>
-          (basicUserRepo.load(library.ownerId), keepRepo.getCountByLibrary(library.id.get))
+        val owner = db.readOnlyMaster { implicit s =>
+          basicUserRepo.load(library.ownerId)
         }
         val libImage = libraryImages.get(library.id.get)
-        val info = LibraryInfo.fromLibraryAndOwner(lib = library, image = libImage, owner = owner, keepCount = numKeeps)
+        val info = LibraryInfo.fromLibraryAndOwner(lib = library, image = libImage, owner = owner)
         var memInfo = Json.obj("access" -> mem.access)
         if (mem.lastViewed.nonEmpty) {
           memInfo = memInfo ++ Json.obj("lastViewed" -> mem.lastViewed)
@@ -156,11 +158,25 @@ class MobileLibraryController @Inject() (
         Json.obj("error" -> error)
       case Right(keepDataList) if keepDataList.nonEmpty =>
         val completeKeepData = db.readOnlyMaster { implicit s =>
+          val allKeepExtIds = keepDataList.map(_.id).toSet
+          val keepMap = keepRepo.getByExtIds(allKeepExtIds)
+
           keepDataList.map { keepData =>
-            val keep = keepRepo.get(keepData.id)
-            val keepImageUrl = keepImageCommander.getBestImageForKeep(keep.id.get, ScaleImageRequest(MobileLibraryController.defaultKeepImageSize)).flatten.map(keepImageCommander.getUrl)
-            val keepObj = Json.obj("id" -> keep.externalId, "title" -> keep.title, "imageUrl" -> keepImageUrl, "hashtags" -> Json.toJson(collectionRepo.getTagsByKeepId(keep.id.get)))
-            Json.obj("keep" -> keepObj) ++ Json.toJson(keepData).as[JsObject] - ("id")
+            keepMap(keepData.id) match {
+              case Some(keep) =>
+                val keepImageUrl = keepImageCommander.getBestImageForKeep(keep.id.get, ScaleImageRequest(MobileLibraryController.defaultKeepImageSize)).flatten.map(keepImageCommander.getUrl)
+
+                // remove hashtags, then turn all '[\#' -> '[#'
+                val editedKeepNote = keep.note.map { note =>
+                  val noteWithoutHashtags = hashtagCommander.removeHashtagsFromString(note)
+                  keepDecorator.unescapeMarkupNotes(noteWithoutHashtags).trim
+                }
+
+                val keepObj = Json.obj("id" -> keep.externalId, "title" -> keep.title, "note" -> editedKeepNote, "imageUrl" -> keepImageUrl, "hashtags" -> Json.toJson(collectionRepo.getHashtagsByKeepId(keep.id.get)))
+                Json.obj("keep" -> keepObj) ++ Json.toJson(keepData).as[JsObject] - ("id")
+
+              case _ => Json.obj()
+            }
           }
         }
         Json.obj("alreadyKept" -> completeKeepData)
@@ -180,24 +196,23 @@ class MobileLibraryController @Inject() (
     val libImages = libraryImageCommander.getBestImageForLibraries((librariesWithMemberships.map(_._2.id.get) ++ librariesWithInvites.map(_._2.id.get)).toSet, MobileLibraryController.defaultLibraryImageSize)
 
     val libsFollowing = for ((mem, library) <- librariesWithMemberships) yield {
-      val (owner, numKeeps) = db.readOnlyMaster { implicit s =>
-        (basicUserRepo.load(library.ownerId), keepRepo.getCountByLibrary(library.id.get))
+      val owner = db.readOnlyMaster { implicit s =>
+        basicUserRepo.load(library.ownerId)
       }
       val libImage = libImages.get(library.id.get)
-      val info = LibraryInfo.fromLibraryAndOwner(lib = library, image = libImage, owner = owner, keepCount = numKeeps)
+      val info = LibraryInfo.fromLibraryAndOwner(lib = library, image = libImage, owner = owner)
       val memInfo = if (mem.lastViewed.nonEmpty) Json.obj("access" -> mem.access, "lastViewed" -> mem.lastViewed) else Json.obj("access" -> mem.access)
       Json.toJson(info).as[JsObject] ++ memInfo
     }
     val libsInvitedTo = for (invitePair <- invitesToShow) yield {
       val invite = invitePair._1
       val lib = invitePair._2
-      val (libOwner, inviter, numKeeps) = db.readOnlyMaster { implicit s =>
+      val (libOwner, inviter) = db.readOnlyMaster { implicit s =>
         (basicUserRepo.load(lib.ownerId),
-          basicUserRepo.load(invite.inviterId),
-          keepRepo.getCountByLibrary(lib.id.get))
+          basicUserRepo.load(invite.inviterId))
       }
       val libImage = libImages.get(lib.id.get)
-      val info = LibraryInfo.fromLibraryAndOwner(lib = lib, image = libImage, owner = libOwner, keepCount = numKeeps, inviter = Some(inviter))
+      val info = LibraryInfo.fromLibraryAndOwner(lib = lib, image = libImage, owner = libOwner, inviter = Some(inviter))
       Json.toJson(info).as[JsObject] ++ Json.obj("access" -> invite.access)
     }
     Ok(Json.obj("libraries" -> libsFollowing, "invited" -> libsInvitedTo))
@@ -249,8 +264,8 @@ class MobileLibraryController @Inject() (
           case Left(fail) =>
             Status(fail.status)(Json.obj("error" -> fail.message))
           case Right(lib) =>
-            val (owner, numKeeps) = db.readOnlyMaster { implicit s => (basicUserRepo.load(lib.ownerId), keepRepo.getCountByLibrary(libId)) }
-            Ok(Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, None, owner, numKeeps)))
+            val owner = db.readOnlyMaster { implicit s => basicUserRepo.load(lib.ownerId) }
+            Ok(Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, None, owner)))
         }
     }
   }
@@ -361,56 +376,6 @@ class MobileLibraryController @Inject() (
         }
       }
       case _ => Future.successful(Forbidden)
-    }
-  }
-
-  def getProfileLibraries(username: Username, page: Int, pageSize: Int, filter: String) = MaybeUserAction.async { request =>
-    userCommander.userFromUsername(username) match {
-      case None =>
-        log.warn(s"unknown username ${username.value} requested")
-        Future.successful(NotFound(username.value))
-      case Some(user) =>
-        val viewer = request.userOpt
-        val paginator = Paginator(page, pageSize)
-        val imageSize = ProcessedImageSize.Large.idealSize
-        filter match {
-          case "own" =>
-            val libs = if (viewer.exists(_.id == user.id)) {
-              Json.toJson(libraryCommander.getOwnProfileLibrariesForSelf(user, paginator, imageSize).seq)
-            } else {
-              Json.toJson(libraryCommander.getOwnProfileLibraries(user, viewer, paginator, imageSize).map(LibraryCardInfo.writesWithoutOwner.writes).seq)
-            }
-            Future.successful(Ok(Json.obj("own" -> libs)))
-          case "following" =>
-            val libs = libraryCommander.getFollowingLibraries(user, viewer, paginator, imageSize).seq
-            Future.successful(Ok(Json.obj("following" -> libs)))
-          case "invited" =>
-            val libs = libraryCommander.getInvitedLibraries(user, viewer, paginator, imageSize).seq
-            Future.successful(Ok(Json.obj("invited" -> libs)))
-          case "all" if page == 0 =>
-            val ownLibsF = if (viewer.exists(_.id == user.id)) {
-              SafeFuture(Json.toJson(libraryCommander.getOwnProfileLibrariesForSelf(user, paginator, imageSize).seq))
-            } else {
-              SafeFuture(Json.toJson(libraryCommander.getOwnProfileLibraries(user, viewer, paginator, imageSize).map(LibraryCardInfo.writesWithoutOwner.writes).seq))
-            }
-            val followLibsF = SafeFuture(libraryCommander.getFollowingLibraries(user, viewer, paginator, imageSize).seq)
-            val invitedLibsF = SafeFuture(libraryCommander.getInvitedLibraries(user, viewer, paginator, imageSize).seq)
-            for {
-              ownLibs <- ownLibsF
-              followLibs <- followLibsF
-              invitedLibs <- invitedLibsF
-            } yield {
-              Ok(Json.obj(
-                "own" -> ownLibs,
-                "following" -> followLibs,
-                "invited" -> invitedLibs
-              ))
-            }
-          case "all" if page != 0 =>
-            Future.successful(BadRequest(Json.obj("error" -> "cannot_page_all_filters")))
-          case _ =>
-            Future.successful(BadRequest(Json.obj("error" -> "no_such_filter")))
-        }
     }
   }
 }

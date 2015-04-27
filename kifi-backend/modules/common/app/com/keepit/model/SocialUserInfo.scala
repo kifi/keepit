@@ -28,6 +28,7 @@ case class SocialUserInfo(
     networkType: SocialNetworkType,
     credentials: Option[SocialUser] = None,
     lastGraphRefresh: Option[DateTime] = Some(currentDateTime),
+    username: Option[String] = None,
     seq: SequenceNumber[SocialUserInfo] = SequenceNumber.ZERO) extends ModelWithState[SocialUserInfo] with ModelWithSeqNumber[SocialUserInfo] {
   def withId(id: Id[SocialUserInfo]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
@@ -38,11 +39,11 @@ case class SocialUserInfo(
   def withLastGraphRefresh(lastGraphRefresh: Option[DateTime] = Some(currentDateTime)) = copy(lastGraphRefresh = lastGraphRefresh)
   def getPictureUrl(preferredWidth: Int = 50, preferredHeight: Int = 50): Option[String] = networkType match {
     case SocialNetworks.FACEBOOK =>
-      Some(s"https://graph.facebook.com/$socialId/picture?width=$preferredWidth&height=$preferredHeight")
+      Some(s"https://graph.facebook.com/v2.0/$socialId/picture?width=$preferredWidth&height=$preferredHeight")
     case _ => pictureUrl
   }
   def getProfileUrl: Option[String] = profileUrl orElse (networkType match {
-    case SocialNetworks.FACEBOOK => Some(s"http://facebook.com/$socialId")
+    case SocialNetworks.FACEBOOK => Some(s"https://www.facebook.com/$socialId")
     case _ => None
   })
   override def toString(): String = s"SocialUserInfo[Id=$id,User=$userId,Name=$fullName,network=$networkType,socialId=$socialId,state=$state]"
@@ -63,6 +64,7 @@ object SocialUserInfo {
     (__ \ 'networkType).format[SocialNetworkType] and
     (__ \ 'credentials).formatNullable[SocialUser] and
     (__ \ 'lastGraphRefresh).formatNullable[DateTime] and
+    (__ \ 'username).formatNullable[String] and
     (__ \ 'seq).format(SequenceNumber.format[SocialUserInfo])
   )(SocialUserInfo.apply, unlift(SocialUserInfo.unapply))
 }
@@ -77,7 +79,7 @@ case class SocialUserBasicInfo(
 
   def getPictureUrl(preferredWidth: Int = 50, preferredHeight: Int = 50): Option[String] = networkType match {
     case SocialNetworks.FACEBOOK =>
-      Some(s"https://graph.facebook.com/$socialId/picture?width=$preferredWidth&height=$preferredHeight")
+      Some(s"https://graph.facebook.com/v2.0/$socialId/picture?width=$preferredWidth&height=$preferredHeight")
     case _ => pictureUrl
   }
 }
@@ -115,7 +117,7 @@ class SocialUserInfoCountCache(stats: CacheStatistics, accessLog: AccessLog, inn
 
 case class SocialUserInfoUserKey(userId: Id[User]) extends Key[Seq[SocialUserInfo]] {
   val namespace = "social_user_info_by_userid"
-  override val version = 6
+  override val version = 7
   def toKey(): String = userId.id.toString
 }
 
@@ -160,6 +162,7 @@ class SocialUserBasicInfoCache(stats: CacheStatistics, accessLog: AccessLog, inn
 
 object SocialUserInfoStates {
   val CREATED = State[SocialUserInfo]("created")
+  val TOKEN_EXPIRED = State[SocialUserInfo]("token_expired")
   val FETCHED_USING_FRIEND = State[SocialUserInfo]("fetched_using_friend")
   val FETCHED_USING_SELF = State[SocialUserInfo]("fetched_using_self")
   val FETCH_FAIL = State[SocialUserInfo]("fetch_fail")

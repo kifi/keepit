@@ -49,6 +49,9 @@ col-gap = 20px
     color: #81cd91
 
 .kf-recos-title
+  font-size: 25px
+  line-height: 30px
+  font-weight: 300
   padding: 16px 0
 
 .kf-reco-cols
@@ -137,7 +140,6 @@ col-gap = 20px
     padding-bottom: 10px
 
 .kf-reco-top
-.kf-reco-bottom
   border-left: 1px solid #dadae2
   border-right: 1px solid #dadae2
 
@@ -156,52 +158,6 @@ col-gap = 20px
   &+.kf-keep
     border-top-left-radius: 0
     border-top-right-radius: 0
-
-.kf-reco-bottom
-  position:relative
-  margin: 0 auto
-  border-bottom: 1px solid #dadae2
-  border-bottom-left-radius: 3px
-  border-bottom-right-radius: 3px
-  padding: 15px 0 15px
-  width: 90%
-  font-size: 13px
-  text-align: center
-
-  &.kf-reco-multiple-reasons
-    padding-bottom: 10px
-
-.kf-reco-reason
-  margin: 0 auto
-  width: calc(100% - 120px);
-  line-height: 1.5em
-  height: 19px
-  overflow: hidden
-
-  a
-    color: linkBlueColor
-
-  time
-    white-space: nowrap
-
-.kf-reco-multiple-reasons
-  .kf-reco-reason
-    position: relative
-    left: -15px
-
-.kf-reco-reason-topic
-    white-space: nowrap
-
-.kf-reason-bullet-container
-  margin: 0px 40px -5px 0
-
-.kf-reason-bullet
-  padding: 0 1px
-  font-size: 19px
-  color: #ddd
-
-  &.kf-dark-reason-bullet
-    color: #bbb
 
 // Icons
 .kf-reco-icon
@@ -273,38 +229,6 @@ col-gap = 20px
   transform: translate(-4px) rotate(-45deg)
 .kf-reco-dropdown-menu-down::after
   transform: translate(2px) rotate(45deg)
-
-// Left and right arrow Icons
-.kf-reco-reasons-left::before
-.kf-reco-reasons-left::after
-.kf-reco-reasons-right::before
-.kf-reco-reasons-right::after
-  top: 4px
-  bottom: 4px
-  border-top-left-radius: 2px
-  border-top-right-radius: 2px
-
-// Left arrow icon
-.kf-reco-reasons-left
-  right: 41px
-.kf-reco-reasons-left::before
-  transform: translate(-2px, -3px) rotate(45deg)
-.kf-reco-reasons-left::after
-  transform: translate(-2px, 3px) rotate(135deg)
-
-// Right arrow icon
-.kf-reco-reasons-right
-  right: 20px
-.kf-reco-reasons-right::before
-  transform: translate(-2px, -3px) rotate(-45deg)
-.kf-reco-reasons-right::after
-  transform: translate(-2px, 3px) rotate(-135deg)
-
-.kf-reco-bottom
-  .kf-reco-icon
-    position: absolute
-    top: 20px
-    margin: auto
 
 // Dropdown menu
 .kf-reco-dropdown-menu-container

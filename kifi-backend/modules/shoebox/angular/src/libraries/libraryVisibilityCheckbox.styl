@@ -10,8 +10,10 @@
   height: 28px
   background-color: #ddd
   vertical-align: middle
-  transition: background-color 0.2s
   cursor: pointer
+
+  &.kf-transitions
+    transition: background-color 0.2s
 
   .library-visibility-input:checked ~ &
     background-color: libraryRed
@@ -29,8 +31,10 @@
     height: 26px
     background-color: #fff
     box-shadow: rgba(0, 0, 0, 0.14902) 0px 1px 1px
-    transition: transform 0.2s
     content: '';
+
+  &.kf-transitions::after
+    transition: transform 0.2s
 
   &:focus::after
   &:hover::after

@@ -55,54 +55,16 @@ class ActivityPushTest extends Specification with ShoeboxTestInjector {
           repo.getByUser(user2.id.get).get.userId === user2.id.get
           repo.getByUser(user3.id.get).get.userId === user3.id.get
           repo.all().size === 3
-          repo.getBatchToPush(10).size === 0
+          repo.getBatchToPush(10).size === 3
+          repo.getBatchNoDevicesToPush(10).size === 0
         }
-      }
-    }
-    "canSendPushForLibraries iPhone" in {
-      withDb(modules: _*) { implicit injector =>
-        val pusher = inject[ActivityPusher]
-        pusher.canSendPushForLibraries(KifiInstallation(
-          userId = Id[User](1),
-          version = KifiIPhoneVersion("2.1.0"),
-          externalId = ExternalId[KifiInstallation](),
-          userAgent = UserAgent("my iphone"),
-          platform = KifiInstallationPlatform.IPhone)) === true
-        pusher.canSendPushForLibraries(KifiInstallation(
-          userId = Id[User](1),
-          version = KifiIPhoneVersion("1.1.0"),
-          externalId = ExternalId[KifiInstallation](),
-          userAgent = UserAgent("my iphone"),
-          platform = KifiInstallationPlatform.IPhone)) === false
-        pusher.canSendPushForLibraries(KifiInstallation(
-          userId = Id[User](1),
-          version = KifiIPhoneVersion("2.2.0"),
-          externalId = ExternalId[KifiInstallation](),
-          userAgent = UserAgent("my iphone"),
-          platform = KifiInstallationPlatform.IPhone)) === true
-      }
-    }
-    "canSendPushForLibraries Android" in {
-      withDb(modules: _*) { implicit injector =>
-        val pusher = inject[ActivityPusher]
-        pusher.canSendPushForLibraries(KifiInstallation(
-          userId = Id[User](1),
-          version = KifiAndroidVersion("2.2.4"),
-          externalId = ExternalId[KifiInstallation](),
-          userAgent = UserAgent("my Android"),
-          platform = KifiInstallationPlatform.Android)) === true
-        pusher.canSendPushForLibraries(KifiInstallation(
-          userId = Id[User](1),
-          version = KifiAndroidVersion("1.1.0"),
-          externalId = ExternalId[KifiInstallation](),
-          userAgent = UserAgent("my Android"),
-          platform = KifiInstallationPlatform.Android)) === false
-        pusher.canSendPushForLibraries(KifiInstallation(
-          userId = Id[User](1),
-          version = KifiAndroidVersion("2.3.0"),
-          externalId = ExternalId[KifiInstallation](),
-          userAgent = UserAgent("my Android"),
-          platform = KifiInstallationPlatform.Android)) === true
+        db.readWrite { implicit s =>
+          repo.save(repo.getByUser(user1.id.get).get.copy(state = ActivityPushTaskStates.NO_DEVICES, nextPush = None))
+        }
+        db.readOnlyMaster { implicit s =>
+          repo.getBatchToPush(10).size === 2
+          repo.getBatchNoDevicesToPush(10).size === 1
+        }
       }
     }
   }

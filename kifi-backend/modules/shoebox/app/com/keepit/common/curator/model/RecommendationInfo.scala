@@ -17,7 +17,8 @@ import play.api.libs.json.{ Json, Writes }
 @json case class RecoMetaData( //WARNING, adding another field here will break clients, due to the way the @json macro behaves with classes with only one field
   attribution: Seq[RecoAttributionInfo])
 
-@json case class RecoLibraryInfo(owner: BasicUser, id: PublicId[Library], name: String, path: String)
+// Library associated with an URI. Not to be confused with LibraryRecommendation
+@json case class RecoLibraryInfo(owner: BasicUser, id: PublicId[Library], name: String, path: String, color: Option[String])
 
 @json case class UriRecoItemInfo(
   id: ExternalId[NormalizedURI],

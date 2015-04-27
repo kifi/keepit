@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfUserProfileHeader', [
-  '$rootScope', '$state', '$timeout', 'profileService', 'inviteService', 'friendService', '$document', 'modalService',
-  function ($rootScope, $state, $timeout, profileService, inviteService, friendService, $document, modalService) {
+  '$rootScope', '$state', '$timeout', 'profileService', 'inviteService', 'friendService', '$document', 'modalService', 'util',
+  function ($rootScope, $state, $timeout, profileService, inviteService, friendService, $document, modalService, util) {
     return {
       restrict: 'A',
       scope: {
@@ -50,6 +50,18 @@ angular.module('kifi')
           return state && state.name.split('.')[1] || '""';
         }
 
+        function onWinMouseDownStopSharing(e) {
+          if (!angular.element(e.target).is('.kf-uph-share,.kf-uph-share *,.kf-uph-share-url')) {
+            scope.$apply(angular.bind(scope, scope.toggleSharing, false));
+          }
+        }
+
+        function onWinKeyDownStopSharing(e) {
+          if (e.keyCode === 9 || e.keyCode === 27) {  // tab or esc
+            scope.$apply(angular.bind(scope, scope.toggleSharing, false));
+          }
+        }
+
         //
         // Scope Variables
         //
@@ -63,6 +75,7 @@ angular.module('kifi')
           scope.profile.friendRequestReceivedAt ? 'request_received' :
           $rootScope.userLoggedIn ? 'not_friends' : '';
         scope.showConnectCallout = scope.intent === 'connect' && scope.connectionWithUser === 'not_friends';
+        scope.sharing = false;
 
         //
         // Scope Functions
@@ -145,14 +158,45 @@ angular.module('kifi')
           });
         };
 
+        scope.toggleSharing = function (arg) {
+          var sharing = scope.sharing = typeof arg === 'boolean' ? arg : !scope.sharing;
+          if (sharing) {
+            $timeout(function () {
+              var el = element.find('.kf-uph-share-url')[0];
+              var r = document.createRange();
+              r.selectNodeContents(el);
+              var sel = window.getSelection();
+              sel.removeAllRanges();
+              sel.addRange(r);
+              $rootScope.$emit('trackUserProfileEvent', 'click', {action: 'clickedShare'});
+              if (typeof arg === 'object' && arg.pageX && arg.currentTarget === document.activeElement) {  // button clicked, and not via a key press
+                arg.currentTarget.blur();
+              }
+            });
+          }
+          angular.element(window)
+          [sharing ? 'on' : 'off']('mousedown', onWinMouseDownStopSharing)
+          [sharing ? 'on' : 'off']('keydown', onWinKeyDownStopSharing);
+        };
+
         //
         // Watches and listeners
         //
+
+        scope.$watch('profile.biography', function (bio) {
+          scope.bioHtml = util.linkify(bio || '');
+        });
 
         scope.$on('$destroy', $rootScope.$on('$stateChangeSuccess', function (event, toState, toParams, fromState) {
           restoreNavLinkHref(fromState);
           removeNavLinkHref(toState);
         }));
+
+        scope.$on('$destroy', function () {
+          angular.element(window)
+          .off('mousedown', onWinMouseDownStopSharing)
+          .off('keydown', onWinKeyDownStopSharing);
+        });
 
         $timeout(function () {
           navLinks = element.find('.kf-uph-nav-a');

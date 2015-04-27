@@ -10,6 +10,10 @@ angular.module('kifi')
       cacheDuration: 20000
     };
 
+    function getData(res) {
+      return res.data;
+    }
+
     var kifiPeopleYouMayKnowService = new Clutch(function (offset, limit) {
       return $http.get(routeService.peopleYouMayKnow(offset, limit)).then(function (res) {
         return (res && res.data && res.data.users) ? res.data.users : [];
@@ -60,6 +64,10 @@ angular.module('kifi')
             'path': $location.path()
           });
         });
+      },
+
+      getMutualConnections: function (id) {
+        return $http.get(routeService.getMutualConnections(id)).then(getData);
       },
 
       getPeopleYouMayKnow: function (offset, limit) {

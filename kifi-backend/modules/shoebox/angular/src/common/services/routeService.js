@@ -53,16 +53,21 @@ angular.module('kifi')
       ////////////////////////////
       // Tags                   //
       ////////////////////////////
-      tagOrdering: route('/collections/ordering'),
-      reorderTag: route('/collections/reorderTag'),
-      pageTags: route('/collections/page'),
-
+      pageTags: function (sort, offset, pageSize) {
+        return route('/collections/page', {sort: sort, offset: offset, pageSize: pageSize});
+      },
       searchTags: function (query, limit) {
         return route('/collections/search', {query: query, limit: limit});
       },
       suggestTags: function (libraryId, keepId, query) {
         // TODO: stop using extension endpoint
         return env.navBase + '/ext/libraries/' + libraryId + '/keeps/' + keepId + '/tags/suggest' + queryStr({q: query});
+      },
+      deleteTag: function (tagId) {
+        return route('/collections/' + tagId + '/delete');
+      },
+      undeleteTag: function (tagId) {
+        return route('/collections/' + tagId + '/undelete');
       },
       tagKeep: function (libraryId, keepId, tag) {
         return route('/libraries/' + libraryId + '/keeps/' + keepId + '/tags/' + encodeURIComponent(tag));
@@ -89,10 +94,9 @@ angular.module('kifi')
       hideUserRecommendation: function (id) {
         return route('/user/' + id + '/hide');
       },
-      searchSuggest: function (params) {
+      search: function (params) {
         return searchRoute('/site/search', params);
       },
-      search: searchRoute('/site/search2'),
       searchResultClicked: searchRoute('/site/search/events/resultClicked'),
       searchedAnalytics: searchRoute('/site/search/events/searched'),
       searchResultClickedAnalytics: searchRoute('/site/search/events/resultClicked'),
@@ -210,6 +214,9 @@ angular.module('kifi')
       },
       removeLibraryCoverImage: function (libraryId) {
         return route('/libraries/' + libraryId + '/image');
+      },
+      getLibraryCoverImages: function (libraryIds, w, h) {
+        return route('/libraries/' + libraryIds.join('.') + '/images', {is: w && h ? w + 'x' + h : []});
       },
       authIntoLibrary: function (username, slug, authToken) {
         return route('/users/' + username + '/libraries/' + slug + '/auth', {authToken: authToken || []});

@@ -3,15 +3,13 @@
 angular.module('kifi')
 
 .controller('LibraryCtrl', [
-  '$scope', '$rootScope', '$analytics', '$location', '$state', '$stateParams', '$timeout', '$window', 'util', 'initParams', 'library',
-  'keepDecoratorService', 'libraryService', 'modalService', 'platformService', 'profileService', 'originTrackingService', 'installService',
-  function ($scope, $rootScope, $analytics, $location, $state, $stateParams, $timeout, $window, util, initParams, library,
-    keepDecoratorService, libraryService, modalService, platformService, profileService, originTrackingService, installService) {
-
-    //
-    // Internal data.
-    //
-    var selectedCount = 0;
+  '$scope', '$rootScope', '$analytics', '$location', '$state', '$stateParams', '$timeout', '$window',
+  '$FB', '$twitter', 'env', 'util', 'initParams', 'library', 'keepDecoratorService', 'libraryService', 'modalService',
+  'platformService', 'profileService', 'originTrackingService', 'installService', 'libraryImageLoaded',
+  function (
+    $scope, $rootScope, $analytics, $location, $state, $stateParams, $timeout, $window,
+    $FB, $twitter, env, util, initParams, library, keepDecoratorService, libraryService, modalService,
+    platformService, profileService, originTrackingService, installService, libraryImageLoaded) {
 
     //
     // Internal functions
@@ -55,6 +53,12 @@ angular.module('kifi')
       $analytics.pageTrack(url, attributes);
     }
 
+    function trackShareEvent(action) {
+      $timeout(function () {
+        $rootScope.$emit('trackLibraryEvent', 'click', { action: action });
+      });
+    }
+
     function setTitle() {
       if (!$scope.librarySearch) {  // search.js does it for library search
         $window.document.title = library.name + ' by ' + library.owner.firstName + ' ' + library.owner.lastName + ' • Kifi' ;
@@ -73,6 +77,7 @@ angular.module('kifi')
     $scope.librarySlug = $stateParams.librarySlug;
     $scope.keeps = [];
     $scope.library = library;
+    $scope.libraryImageLoaded = libraryImageLoaded === true; // can also be an object containing a promise
     $scope.scrollDistance = '100%';
     $scope.loading = true;  // whether keeps are currently loading
     $scope.hasMore = true;   // whether there may be more keeps in this library than those currently in $scope.keeps
@@ -80,6 +85,15 @@ angular.module('kifi')
     $scope.passphrase = $scope.passphrase || {};
     $scope.$error = $scope.$error || {};
     $scope.userIsOwner = $rootScope.userLoggedIn && library.owner.id === profileService.me.id;
+    $scope.edit = {
+      enabled: false,
+      actions: {
+        bulkUnkeep: true,
+        copyToLibrary: true,
+        moveToLibrary: true,
+        editTags: true
+      }
+    };
 
 
     //
@@ -127,33 +141,6 @@ angular.module('kifi')
       }
     }
 
-    $scope.getSubtitle = function () {
-      if ($scope.loading) {
-        return 'Loading...';
-      }
-
-      // If there are selected keeps, display the number of keeps
-      // in the subtitle.
-      if (selectedCount > 0) {
-        return (selectedCount === 1) ? '1 Keep selected' : selectedCount + ' Keeps selected';
-      }
-
-      var numShown = $scope.keeps.length;
-      switch (numShown) {
-      case 0:
-        return 'No Keeps';
-      case 1:
-        return 'Showing the only Keep';
-      case 2:
-        return 'Showing both Keeps';
-      }
-      return 'Showing ' + numShown + ' of ' + library.numKeeps + ' Keeps';
-    };
-
-    $scope.updateSelectedCount = function (numSelected) {
-      selectedCount = numSelected;
-    };
-
     $scope.libraryKeepClicked = function (keep, event) {
       var eventAction = event.target.getAttribute('click-action');
       $rootScope.$emit('trackLibraryEvent', 'click', { action: eventAction });
@@ -176,6 +163,36 @@ angular.module('kifi')
       });
     };
 
+    $scope.preloadFB = function () {
+      $FB.init();
+    };
+
+    $scope.shareFB = function () {
+      trackShareEvent('clickedShareFacebook');
+      $FB.ui({
+        method: 'share',
+        href: env.origin + library.url +
+          '?utm_medium=vf_facebook&utm_source=library_share&utm_content=lid_' + library.id +
+          '&kcid=na-vf_facebook-library_share-lid_' + library.id
+      });
+    };
+
+    $scope.preloadTwitter = function () {
+      $twitter.load();
+    };
+
+    $scope.shareTwitter = function (event) {
+      trackShareEvent('clickedShareTwitter');
+      var absUrl = env.origin + library.url;
+      event.target.href = 'https://twitter.com/intent/tweet' + util.formatQueryString({
+        original_referer: absUrl,
+        text: 'Discover this amazing @Kifi library about ' + library.name + '!',
+        tw_p: 'tweetbutton',
+        url: absUrl +
+          '?utm_medium=vf_twitter&utm_source=library_share&utm_content=lid_' + library.id +
+          '&kcid=na-vf_twitter-library_share-lid_' + library.id
+      });
+    };
 
     //
     // Watches and listeners.
@@ -250,6 +267,12 @@ angular.module('kifi')
     //
 
     setTitle();
+
+    if (libraryImageLoaded.promise) {
+      libraryImageLoaded.promise.then(function () {
+        $scope.libraryImageLoaded = true;
+      });
+    }
 
     $rootScope.$emit('libraryOnPage', library);
 

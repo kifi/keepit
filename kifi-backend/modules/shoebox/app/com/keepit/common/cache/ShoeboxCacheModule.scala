@@ -62,16 +62,6 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
 
   @Singleton
   @Provides
-  def latestBookmarkUriCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
-    new LatestKeepUriCache(stats, accessLog, (outerRepo, 7 days))
-
-  @Singleton
-  @Provides
-  def latestBookmarkUrlCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
-    new LatestKeepUrlCache(stats, accessLog, (outerRepo, 30 days))
-
-  @Singleton
-  @Provides
   def userCollectionCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
     new UserCollectionsCache(stats, accessLog, (outerRepo, 7 day))
 
@@ -388,7 +378,7 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
 
   @Provides @Singleton
   def RelatedLibrariesCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new RelatedLibrariesCache(stats, accessLog, (innerRepo, 30 minutes), (outerRepo, 2 hours))
+    new RelatedLibrariesCache(stats, accessLog, (innerRepo, 15 minutes), (outerRepo, 1 hours))
 
   @Provides @Singleton
   def userToDomainCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =

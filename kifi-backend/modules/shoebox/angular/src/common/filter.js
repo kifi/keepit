@@ -25,6 +25,12 @@ angular.module('kifi')
   }
 ])
 
+.filter('tagUrl', function () {
+  return function (tag) {
+    return '/find?q=tag:' + encodeURIComponent(tag.indexOf(' ') >= 0 ? '"' + tag + '"' : tag);
+  };
+})
+
 .filter('profileUrl', function () {
   return function (user, sub) {
     if (user) {
@@ -33,11 +39,43 @@ angular.module('kifi')
   };
 })
 
+.filter('absProfileUrl', [
+  'env',
+  function (env) {
+    return function (user) {
+      return user ? env.origin + '/' + user.username : null;
+    };
+  }
+])
+
+.filter('libImageUrl', [
+  'env',
+  function (env) {
+    return function (image) {
+      return env.picBase + '/' + image.path;
+    };
+  }
+])
+
 .filter('bgImageAndPos', [
   'env',
   function (env) {
     return function (image) {
       return image ? ['background-image:url(', env.picBase, '/', image.path, ');background-position:', image.x, '% ', image.y, '%'].join('') : '';
+    };
+  }
+])
+
+.filter('shadedBackgroundImage', [
+  'env',
+  function (env) {
+    return function (o, gradientOpacityTop, gradientOpacityBottom) {
+      return o ? [
+        'background-image:',
+        'linear-gradient(rgba(0,0,0,', gradientOpacityTop, '),rgba(0,0,0,', gradientOpacityBottom, ')),',
+        'url(', o.url || env.picBase + '/' + o.path, ');',
+        'background-position:0,', o.x, '% ', o.y, '%'
+      ].join('') : '';
     };
   }
 ])
@@ -52,8 +90,15 @@ angular.module('kifi')
   };
 })
 
+.filter('preventOrphans', [
+  'util',
+  function (util) {
+    return util.preventOrphans;
+  }
+])
+
 .filter('domain', function () {
-  var re = /^\w+:\/\/([^\/]+)/;
+  var re = /^\w+:\/\/(?:www\.)?([^\/]+)/;
   return function (url) {
     var match = re.exec(url);
     return match && match[1];

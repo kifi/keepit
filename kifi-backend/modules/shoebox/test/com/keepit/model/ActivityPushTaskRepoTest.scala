@@ -56,6 +56,7 @@ class ActivityPushTaskRepoTest extends Specification with ShoeboxApplicationInje
           repo.save(a2.copy(nextPush = Some(now)))
           clock.push(now.plusSeconds(1))
           repo.getBatchToPush(10) === Seq(a2.id.get)
+          repo.getBatchNoDevicesToPush(10) === Seq()
         }
       }
     }

@@ -30,10 +30,9 @@ class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
   var inbox = List.empty[(Id[User], NotificationCategory, String, String)]
 
   def sendToUserNoBroadcast(userId: Id[User], data: JsArray): Unit = {}
-
-  def sendUserPushNotification(userId: Id[User], message: String, recipient: User, pushNotificationExperiment: PushNotificationExperiment): Future[Int] = Future.successful(1)
-  def sendLibraryPushNotification(userId: Id[User], message: String, libraryId: Id[Library], libraryUrl: String, pushNotificationExperiment: PushNotificationExperiment): Future[Int] = Future.successful(1)
-  def sendGeneralPushNotification(userId: Id[User], message: String, pushNotificationExperiment: PushNotificationExperiment): Future[Int] = Future.successful(1)
+  def sendUserPushNotification(userId: Id[User], message: String, recipient: User, pushNotificationExperiment: PushNotificationExperiment, category: UserPushNotificationCategory): Future[Int] = Future.successful(1)
+  def sendLibraryPushNotification(userId: Id[User], message: String, libraryId: Id[Library], libraryUrl: String, pushNotificationExperiment: PushNotificationExperiment, category: LibraryPushNotificationCategory, force: Boolean): Future[Int] = Future.successful(1)
+  def sendGeneralPushNotification(userId: Id[User], message: String, pushNotificationExperiment: PushNotificationExperiment, category: SimplePushNotificationCategory, force: Boolean): Future[Int] = Future.successful(1)
 
   def sendToUser(userId: Id[User], data: JsArray): Unit = {}
 

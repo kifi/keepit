@@ -3,6 +3,7 @@ package com.keepit.common.routes
 import com.keepit.common.db.{ Id, ExternalId, State, SurrogateExternalId, SequenceNumber }
 import com.keepit.curator.model.LibraryRecoSelectionParams
 import com.keepit.model._
+import com.keepit.rover.model.ArticleInfo
 import com.keepit.shoebox.model.ids.UserSessionExternalId
 import com.keepit.search.SearchConfigExperiment
 import java.net.URLEncoder
@@ -123,10 +124,7 @@ object Shoebox extends Service {
     def getHelpRankInfo() = ServiceRoute(POST, "/internal/shoebox/database/getHelpRankInfo")
     def assignScrapeTasks(zkId: Long, max: Int) = ServiceRoute(GET, "/internal/shoebox/database/assignScrapeTasks", Param("zkId", zkId), Param("max", max))
     def saveScrapeInfo() = ServiceRoute(POST, "/internal/shoebox/database/saveScrapeInfo")
-    def saveNormalizedURI() = ServiceRoute(POST, "/internal/shoebox/database/saveNormalizedURI")
     def updateNormalizedURI(uriId: Id[NormalizedURI]) = ServiceRoute(POST, "/internal/shoebox/database/updateNormalizedURI", Param("uriId", uriId))
-    def recordPermanentRedirect() = ServiceRoute(POST, "/internal/shoebox/database/recordPermanentRedirect")
-    def recordScrapedNormalization() = ServiceRoute(POST, "/internal/shoebox/database/recordScrapedNormalization")
     def getProxy(url: String) = ServiceRoute(GET, "/internal/shoebox/database/getProxy", Param("url"))
     def getProxyP() = ServiceRoute(POST, "/internal/shoebox/database/getProxyP")
     def getFriendRequestRecipientIdBySender(senderId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/getFriendRequestRecipientIdBySender", Param("senderId", senderId))
@@ -138,7 +136,6 @@ object Shoebox extends Service {
     def triggerSocialGraphFetch(socialUserInfoId: Id[SocialUserInfo]) = ServiceRoute(POST, "/internal/shoebox/database/triggerSocialGraphFetch", Param("id", socialUserInfoId))
     def getUserConnectionsChanged(seqNum: SequenceNumber[UserConnection], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getUserConnectionsChanged", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getSearchFriendsChanged(seqNum: SequenceNumber[SearchFriend], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getSearchFriendsChanged", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
-    def updateURIRestriction() = ServiceRoute(POST, "/internal/shoebox/database/updateURIRestriction")
     def allURLPatternRules() = ServiceRoute(GET, "/internal/shoebox/database/urlPatternRules")
     def getUriImage(id: Id[NormalizedURI]) = ServiceRoute(GET, "/internal/shoebox/image/getUriImage", Param("id", id))
     def getUriSummary() = ServiceRoute(POST, "/internal/shoebox/image/getUriSummary")
@@ -404,7 +401,6 @@ object Graph extends Service {
 
 object Curator extends Service {
   object internal {
-    def adHocRecos(userId: Id[User], n: Int) = ServiceRoute(POST, "/internal/curator/adHocRecos", Param("userId", userId), Param("n", n))
     def topRecos(userId: Id[User]) = ServiceRoute(POST, "/internal/curator/topRecos", Param("userId", userId))
     def topPublicRecos(userId: Option[Id[User]]) = ServiceRoute(GET, "/internal/curator/topPublicRecos", Param("userId", userId))
     def generalRecos() = ServiceRoute(GET, "/internal/curator/generalRecos")
@@ -416,6 +412,14 @@ object Curator extends Service {
     def refreshLibraryRecos(userId: Id[User], await: Boolean) = ServiceRoute(POST, "/internal/curator/refreshLibraryRecos", Param("userId", userId), Param("await", await))
     def notifyLibraryRecosDelivered(userId: Id[User]) = ServiceRoute(POST, "/internal/curator/notifyLibraryRecosDelivered", Param("userId", userId))
     def ingestPersonaRecos(userId: Id[User], reverseIngestion: Boolean) = ServiceRoute(POST, "/internal/curator/ingestPersonaRecos", Param("userId", userId), Param("reverseIngestion", reverseIngestion))
+    def examineUserFeedbackCounter(userId: Id[User]) = ServiceRoute(GET, "/internal/curator/examineUserFeedbackCounter", Param("userId", userId))
+  }
+}
+
+object Rover extends Service {
+  object internal {
+    def getShoeboxUpdates(seq: SequenceNumber[ArticleInfo], limit: Int) = ServiceRoute(GET, "/internal/rover/getShoeboxUpdates", Param("seq", seq), Param("limit", limit))
+    def fetchAsap() = ServiceRoute(POST, "/internal/rover/fetchAsap")
   }
 }
 

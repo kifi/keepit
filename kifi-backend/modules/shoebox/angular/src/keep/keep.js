@@ -42,8 +42,7 @@ angular.module('kifi')
         keep: '=',
         library: '=',
         currentPageOrigin: '@',
-        editMode: '=',
-        editOptions: '&',
+        selectable: '=',
         toggleSelect: '&',
         isSelected: '&',
         keepCallback: '&',
@@ -340,8 +339,9 @@ angular.module('kifi')
   }
 ])
 
-.directive('kfKeepMasterButton', ['keepActionService', 'keepDecoratorService', 'libraryService', 'modalService',
-  function (keepActionService, keepDecoratorService, libraryService, modalService) {
+.directive('kfKeepMasterButton', [
+  'keepActionService', 'keepDecoratorService', 'libraryService', 'undoService', 'modalService',
+  function (keepActionService, keepDecoratorService, libraryService, undoService, modalService) {
     return {
       restrict: 'A',
       scope: {
@@ -381,14 +381,28 @@ angular.module('kifi')
           if (clickedLibrary && scope.keptToLibraryIds.indexOf(clickedLibrary.id) >= 0) {
             var keepToUnkeep = _.find(scope.keep.keeps, { libraryId: clickedLibrary.id });
             keepActionService.unkeepFromLibrary(clickedLibrary.id, keepToUnkeep.id).then(function () {
+              var removedKeeps;
               if (clickedLibrary.id === scope.keep.libraryId) {
                 scope.keep.makeUnkept();
               } else {
-                _.remove(scope.keep.keeps, { libraryId: clickedLibrary.id });
+                removedKeeps = _.remove(scope.keep.keeps, { libraryId: clickedLibrary.id });
               }
 
               libraryService.addToLibraryCount(clickedLibrary.id, -1);
               scope.$emit('keepRemoved', { url: scope.keep.url }, clickedLibrary);
+
+              undoService.add('keep deleted', function () {  // TODO: rekeepToLibrary endpoint that takes a keep ID
+                keepActionService.keepToLibrary([{url: scope.keep.url}], clickedLibrary.id).then(function () {
+                  if (removedKeeps) {
+                    scope.keep.keeps.push(removedKeeps[0]);
+                  } else {
+                    scope.keep.makeKept();
+                  }
+
+                  libraryService.addToLibraryCount(clickedLibrary.id, 1);
+                  scope.$emit('keepAdded', [scope.keep], clickedLibrary);
+                })['catch'](modalService.openGenericErrorModal);
+              });
             })['catch'](modalService.openGenericErrorModal);
 
           // Keep.

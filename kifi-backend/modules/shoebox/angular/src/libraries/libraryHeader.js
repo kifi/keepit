@@ -3,11 +3,11 @@
 angular.module('kifi')
 
 .directive('kfLibraryHeader', [
-  '$FB', '$http', '$location', '$q', '$rootScope', '$state', '$stateParams', '$timeout', '$twitter', '$window',
-  'env', 'libraryService', 'modalService','profileService', 'platformService', 'signupService',
+  '$http', '$location', '$q', '$rootScope', '$state', '$stateParams', '$timeout', '$window', '$$rAF',
+  '$filter', 'env', 'libraryService', 'modalService','profileService', 'platformService', 'signupService',
   'routeService', 'util',
-  function ($FB, $http, $location, $q, $rootScope, $state, $stateParams, $timeout, $twitter, $window,
-            env, libraryService, modalService, profileService, platformService, signupService,
+  function ($http, $location, $q, $rootScope, $state, $stateParams, $timeout, $window, $$rAF,
+            $filter, env, libraryService, modalService, profileService, platformService, signupService,
             routeService, util) {
     return {
       restrict: 'A',
@@ -16,59 +16,60 @@ angular.module('kifi')
         library: '=',
         username: '=',
         librarySlug: '=',
-        toggleEdit: '=',
+        imageLoaded: '=',
+        editMode: '=',
         librarySearch: '=',
         followCallback: '&',
         clickLibraryCallback: '&'
       },
       templateUrl: 'libraries/libraryHeader.tpl.html',
       link: function (scope, element) {
+
         //
         // Internal data.
         //
         var authToken = $location.search().authToken || '';
         var coverImageFile;
-        var coverImagePos;
         var coverImageMoveTracked;
         var URL = $window.URL || $window.webkitURL;
+        var descWrapEl = element.find('.kf-lh-desc-wrap');
+        var descEl = descWrapEl.find('.kf-lh-desc');
 
         //
         // Scope data.
         //
         scope.Math = Math;
-        scope.clippedDescription = false;
-        scope.editKeepsText = 'Edit Keeps';
         scope.search = { 'text': $stateParams.q || '' };
         scope.isMobile = platformService.isSupportedMobilePlatform();
+        scope.descExpanded = false;
+        scope.descScrollable = false;
+        scope.imagePreview = null;
+        scope.followBtnJustClicked = false;
 
         //
         // Internal methods.
         //
-        function trackShareEvent(action) {
+
+        function augmentData() {
+          var lib = scope.library;
+          lib.descriptionHtml = util.linkify(lib.description || '').replace(/\n+/g, '<br>');
+          lib.absUrl = env.origin + lib.url;
+          lib.isSystem = lib.kind.lastIndexOf('system_', 0) === 0;
+
           $timeout(function () {
-            $rootScope.$emit('trackLibraryEvent', 'click', { action: action });
+            var lh = parseFloat(descWrapEl.css('line-height'), 10);
+            scope.descFits = descEl[0].scrollHeight <= Math.ceil(3 * lh);
           });
         }
 
-        // Data augmentation.
-        function augmentData() {
-          var maxLength = 300, clipLength = 180;  // numbers differ significantly so that clicking More will show significantly more
-          var description = scope.library.description || '';
-          if (description.length > maxLength && $rootScope.userLoggedIn) {
-            // Try to chop off at a word boundary, using a simple space as the delimiter. Grab the space too.
-            var clipLastIndex = description.lastIndexOf(' ', clipLength) + 1 || clipLength;
-            scope.library.shortDescription = util.linkify(description.substr(0, clipLastIndex));
-            scope.clippedDescription = true;
-          }
-          scope.library.formattedDescription = '<p>' + util.linkify(description).replace(/\n+/g, '<p>');
-
-          scope.library.absUrl = env.origin + scope.library.url;
-
-          var image = scope.library.image;
-          if (image) {
-            scope.coverImageUrl = env.picBase + '/' + image.path;
-            scope.coverImagePos = formatCoverImagePos(image);
-          }
+        function setFollowersShown() {
+          var lib = scope.library;
+          var numFollowers = Math.max(lib.numFollowers, lib.followers.length);  // tolerating incorrect numFollowers
+          var numFollowersFit = 5;
+          var showPlusFollowers = Math.min(lib.followers.length, numFollowersFit) < numFollowers;
+          var numFollowersToShow = Math.min(lib.followers.length, numFollowersFit - (numFollowersFit && showPlusFollowers ? 1 : 0));
+          scope.followersToShow = lib.followers.slice(0, numFollowersToShow);
+          scope.numMoreFollowersText = showPlusFollowers ? $filter('num')(numFollowers - numFollowersToShow) : '';
         }
 
         function updateInvite() {
@@ -79,7 +80,6 @@ angular.module('kifi')
           };
         }
 
-
         //
         // Scope methods.
         //
@@ -89,37 +89,32 @@ angular.module('kifi')
 
         scope.ignoreInvitation = function () {
           if (scope.library.invite) {
-            libraryService.declineToJoinLibrary(scope.library.id).then(function () {
-              scope.library.invite.actedOn = true;
-            })['catch'](modalService.openGenericErrorModal);
+            scope.library.invite.actedOn = true;
+            libraryService.declineToJoinLibrary(scope.library.id)['catch'](modalService.openGenericErrorModal);
           }
         };
 
-        scope.onClickAddCoverImage = function (event) {
+        scope.onAddCoverImageMouseUp = function (event) {
           if (event.which === 1) {
-            angular.element('.kf-lh-cover-image-file').click();
+            angular.element('.kf-lh-cover-file').click();
             libraryService.trackEvent('user_clicked_page', scope.library, { action: 'clickedAddCoverImage' });
           }
         };
 
-        scope.onCoverImageFileChosen = function (file) {
-          scope.$apply(function () {
-            if (/^image\/(?:jpeg|png|gif)$/.test(file.type)) {
-              coverImageFile = file;
-              $timeout(readCoverImageFile);
-              libraryService.trackEvent('user_clicked_page', scope.library, { action: 'clickedCoverImageFile' });
-            } else {
-              scope.coverImageError = 'Please choose a .jpg, .png or .gif file.';
-              $timeout(function () {
-                scope.coverImageError = null;
-              }, 2400);
-            }
-          });
+        scope.onCoverImageFileChosen = function (files) {
+          var file = files[0];
+          if (/^image\/(?:jpeg|png|gif)$/.test(file.type)) {
+            coverImageFile = file;
+            $timeout(readCoverImageFile);
+            libraryService.trackEvent('user_clicked_page', scope.library, { action: 'clickedCoverImageFile' });
+          } else {
+            modalService.openGenericErrorModal({
+              modalData: {
+                genericErrorMessage: 'Please choose a .jpg, .png or .gif file.'
+              }
+            });
+          }
         };
-
-        function formatCoverImagePos(pos) {
-          return pos ? pos.x + '% ' + pos.y + '%' : '50% 50%';
-        }
 
         function readCoverImageFile() {
           var file = coverImageFile;
@@ -136,73 +131,71 @@ angular.module('kifi')
 
         function useCoverImageFileUrl(url, isObjectUrl) {
           loadImage(url).then(function (img) {
-            var pos = {x: 50, y: 50};
-            var posCss = formatCoverImagePos(pos);
-            scope.coverImagePreview = true;
-            scope.coverImageUrl = url;
-            scope.coverImagePos = posCss;
-            $timeout(function () {
-              var $image = angular.element('.kf-lh-cover-image')
-              .data({naturalSize: [img.naturalWidth, img.naturalHeight], objectUrl: isObjectUrl ? url : null})
-              .css({
-                'background-image': 'url(' + url + ')',
-                'background-position': posCss
-              });
-              enterCoverImagePosMode($image, pos);
-            });
+            var el = element.find('.kf-lh-cover')[0];
+            scope.imagePreview = {
+              url: url,
+              isObjectUrl: isObjectUrl,
+              natural: {w: img.naturalWidth, h: img.naturalHeight},
+              w: el.clientWidth,
+              h: el.clientHeight,
+              x: 50, y: 50
+            };
           });
+        }
+
+        function revokeImagePreviewObjectUrlWhenDone() {
+          if (scope.imagePreview.isObjectUrl) {
+            var revoke = _.once(angular.bind(URL, URL.revokeObjectURL, scope.imagePreview.url));
+            element.find('.kf-lh-cover-preview').on('transitionend', revoke);
+            $timeout(revoke, 1000);
+          }
         }
 
         function loadImage(url) {
           var deferred = $q.defer();
           var img = new Image();
           img.onload = function () {
-            deferred.resolve(this);
+            scope.$apply(function () {
+              deferred.resolve(img);
+            });
           };
           img.onerror = function (e) {
-            deferred.reject(e);
+            scope.$apply(function () {
+              deferred.reject(e);
+            });
           };
           img.src = url;
           return deferred.promise;
         }
 
-        function enterCoverImagePosMode($image, pos) {
-          coverImagePos = pos;
-          $image
-            .on('mouseover', onCoverImageMouseOver)
-            .on('mousedown', onCoverImageMouseDown)
-            .triggerHandler('mouseover');
-        }
+        scope.onImagePreviewMouseOver = function (event) {
+          scope.imagePreview.w = event.target.offsetWidth;
+          scope.imagePreview.h = event.target.offsetHeight;
+        };
 
-        function leaveCoverImagePosMode($image) {
-          $image
-            .off('mouseover', onCoverImageMouseOver)
-            .off('mousedown', onCoverImageMouseDown)
-            .removeClass('kf-ew kf-ns');
-          coverImagePos = null;
-        }
-
-        function onCoverImageMouseDown(e) {
-          if (!e.target.href && e.which === 1) {
+        scope.onImagePreviewMouseDown = function (e) {
+          if (e.which === 1 && e.target.tagName !== 'button' && scope.imagePreview.progress === undefined) {
             e.preventDefault();
             var x0 = e.screenX;
             var y0 = e.screenY;
-            var $image = angular.element(this);
-            var data = $image.data();
 
-            var vw = this.offsetWidth, nw = data.naturalSize[0], hScale = vw / nw;
-            var vh = this.offsetHeight, nh = data.naturalSize[1], vScale = vh / nh;
+            var vw = scope.imagePreview.w, nw = scope.imagePreview.natural.w, hScale = vw / nw;
+            var vh = scope.imagePreview.h, nh = scope.imagePreview.natural.h, vScale = vh / nh;
             var pctPerPx =
               hScale > vScale ? {x: 0, y: 100 / (vh - nh * hScale)} :
               hScale < vScale ? {x: 100 / (vw - nw * vScale), y: 0} : {x: 0, y: 0};
 
-            data.mousemove = _.throttle(onCoverImageMouseMove.bind(this, data, coverImagePos, x0, y0, pctPerPx), 10);
-            data.mouseup = onCoverImageMouseUp.bind(this, data);
-            data.mouseout = onCoverImageMouseOut.bind(this, data);
-            document.addEventListener('mousemove', data.mousemove, true);
-            document.addEventListener('mouseup', data.mouseup, true);
-            document.addEventListener('mouseout', data.mouseout, true);
-            $image.addClass('kf-dragging');
+            var el = e.currentTarget;
+            var previewEl = element.find('.kf-lh-cover-preview')[0];
+            var handlers = scope.imagePreview.handlers = {
+              mousemove: _.throttle(onImagePreviewDocMouseMove.bind(el, previewEl, _.pick(scope.imagePreview, 'x', 'y'), x0, y0, pctPerPx), 10),
+              mouseup: onImagePreviewDocMouseUp.bind(el),
+              mouseout: onImagePreviewDocMouseOut.bind(el)
+            };
+            document.addEventListener('mousemove', handlers.mousemove, true);
+            document.addEventListener('mouseup', handlers.mouseup, true);
+            document.addEventListener('mouseout', handlers.mouseout, true);
+            angular.element(el).addClass('kf-dragging');
             var sel = $window.getSelection();
             if (sel && sel.rangeCount) {
               sel.collapseToEnd();
@@ -212,137 +205,92 @@ angular.module('kifi')
               coverImageMoveTracked = true;
             }
           }
+        };
+
+        function onImagePreviewDocMouseMove(el, pos0, x0, y0, pctPerPx, e) {
+          var x = Math.min(100, Math.max(0, pos0.x + pctPerPx.x * (e.screenX - x0)));
+          var y = Math.min(100, Math.max(0, pos0.y + pctPerPx.y * (e.screenY - y0)));
+          if (x !== scope.imagePreview.x || y !== scope.imagePreview.y) {
+            scope.imagePreview.x = x;
+            scope.imagePreview.y = y;
+            el.style.backgroundPosition = x + '% ' + y + '%';  // avoiding scope.$apply for responsiveness
+          }
         }
 
-        function onCoverImageMouseMove(data, pos0, x0, y0, pctPerPx, e) {
-          var pos = {
-            x: Math.min(100, Math.max(0, pos0.x + pctPerPx.x * (e.screenX - x0))),
-            y: Math.min(100, Math.max(0, pos0.y + pctPerPx.y * (e.screenY - y0)))
-          };
-          coverImagePos = pos;
-          this.style.backgroundPosition = formatCoverImagePos(pos);
-        }
-
-        function onCoverImageMouseUp(data) {
-          document.removeEventListener('mousemove', data.mousemove, true);
-          document.removeEventListener('mouseup', data.mouseup, true);
-          document.removeEventListener('mouseout', data.mouseout, true);
-          delete data.mousemove;
-          delete data.mouseup;
-          delete data.mouseout;
+        function onImagePreviewDocMouseUp() {
+          var handlers = scope.imagePreview.handlers;
+          document.removeEventListener('mousemove', handlers.mousemove, true);
+          document.removeEventListener('mouseup', handlers.mouseup, true);
+          document.removeEventListener('mouseout', handlers.mouseout, true);
+          delete handlers.mousemove;
+          delete handlers.mouseup;
+          delete handlers.mouseout;
           angular.element(this).removeClass('kf-dragging');
         }
 
-        function onCoverImageMouseOut(data, e) {
+        function onImagePreviewDocMouseOut(e) {
           if (!e.relatedTarget) {
-            data.mouseup();
+            scope.imagePreview.handlers.mouseup();
           }
-        }
-
-        function onCoverImageMouseOver() {
-          var $image = angular.element(this);
-          var naturalSize = $image.data('naturalSize');
-          var hScale = this.offsetWidth / naturalSize[0];
-          var vScale = this.offsetHeight / naturalSize[1];
-          $image
-            .removeClass('kf-ew kf-ns')
-            .addClass(hScale > vScale ? 'kf-ns' : hScale < vScale ? 'kf-ew' : '');
         }
 
         scope.cancelCoverImageChange = function () {
-          scope.coverImagePreview = false;
-          var image = scope.library.image;
-          var $image = angular.element('.kf-lh-cover-image');
-          leaveCoverImagePosMode($image);
-          if (coverImageFile) {
-            var url = image ? env.picBase + '/' + image.path : null;
-            scope.coverImageUrl = url;
-            if (url) {
-              $image.css({
-                'background-image': 'url(' + url + ')',
-                'background-position': formatCoverImagePos(image)
-              });
-            }
-            var objectUrl = $image.data('objectUrl');
-            if (objectUrl) {
-              if (url) {
-                URL.revokeObjectURL(objectUrl);
-              } else {
-                $image.on('transitionend', function f(e) {
-                  if (e.target === this && e.originalEvent.propertyName === 'height') {
-                    angular.element(this).off(e.type, f);
-                    URL.revokeObjectURL(objectUrl);
-                  }
-                });
-              }
-            }
-          } else {
-            $image.css('background-position', formatCoverImagePos(image));
-          }
           libraryService.trackEvent('user_clicked_page', scope.library, {
             action: coverImageFile ? 'clickedCancelCoverImage' : 'clickedCancelCoverImageMove'
           });
-          coverImageFile = null;
+          revokeImagePreviewObjectUrlWhenDone();
+          scope.imagePreview = coverImageFile = null;
         };
 
         scope.applyCoverImageChange = function () {
-          var $image = angular.element('.kf-lh-cover-image');
-          var $shade = $image.find('.kf-lh-cover-image-preview');
-          var $progress = angular.element();
-          var pos = coverImagePos;
-          leaveCoverImagePosMode($image);
-          $shade.find('a').removeAttr('href');
-          scope.coverImageProgress = true;
-          $timeout(function () {
-            $progress = $image.find('.kf-lh-cover-image-progress');
-          });
+          var preview = scope.imagePreview;
+          var pos = {
+            x: Math.round(preview.x),
+            y: Math.round(preview.y)
+          };
+
+          // In Angular 1.3, use ng-attr-disabled="{{disabled || undefined}}".
+          var buttons = element.find('.kf-lh-cover-apply,.kf-lh-cover-cancel').prop('disabled', true);
+          preview.progress = 0;
 
           var promise = coverImageFile ?
             uploadCoverImage(coverImageFile, pos)
-            .then(function done(image) {
-              scope.library.image = image;
-              var url = env.picBase + '/' + image.path;
-              loadImage(url).then(function () {
-                $image.css('background-image', 'url(' + url + ')');
-                var objectUrl = $image.data('objectUrl');
-                if (objectUrl) {
-                  URL.revokeObjectURL(objectUrl);
-                }
+            .then(function done(image) {  // timeout ensures progress bar can transition to complete and register in user's mind
+              $q.all([loadImage(env.picBase + '/' + image.path), $timeout(angular.noop, 500)]).then(function () {
+                scope.library.image = image;
+                scope.imageLoaded = true;
+                revokeImagePreviewObjectUrlWhenDone();
+                scope.imagePreview = coverImageFile = null;
+                scope.settingImage = true;
+                $timeout(function () {
+                  scope.settingImage = false;
+                });
               });
-              $timeout(function () {
-                coverImageFile = null;
-                scope.coverImageUrl = url;
-                scope.coverImagePreview = false;
-                scope.coverImageProgress = false;
-                fakeHover($image);
-              }, 500); // allowing progress bar transition to complete and register in user's mind
             }) :
             fakeProgress(
               $http.post(routeService.positionLibraryCoverImage(scope.library.id), {
                 path: scope.library.image.path,
-                x: Math.round(pos.x),
-                y: Math.round(pos.y)
+                x: pos.x,
+                y: pos.y
               }))
             .then(function done() {
-              scope.library.image.x = Math.round(pos.x);
-              scope.library.image.y = Math.round(pos.y);
+              scope.library.image.x = pos.x;
+              scope.library.image.y = pos.y;
               $timeout(function () {
-                scope.coverImagePreview = false;
-                scope.coverImageProgress = false;
-                fakeHover($image);
+                scope.imagePreview = null;
               }, 500); // allowing progress bar transition to complete and register in user's mind
             });
 
           promise.then(function done() {
-            $progress.addClass('kf-done');
+            preview.progress = 100;
           }, function fail() {
-            $progress.on('transitionend', function () {
-              scope.coverImageProgress = false;
-              $shade.find('a').prop('href', 'javascript:'); // jshint ignore:line
-              enterCoverImagePosMode($image, pos);
-            }).addClass('kf-fail');
+            preview.progress = 0;
+            $timeout(function () {
+              delete preview.progress;
+              buttons.prop('disabled', false);
+            }, 500); // allowing progress bar transition to complete and register in user's mind
           }, function progress(fraction) {
-            $progress.css('width', fraction * 100 + '%');
+            preview.progress = fraction * 100;
           });
 
           libraryService.trackEvent('user_clicked_page', scope.library, {
@@ -351,7 +299,7 @@ angular.module('kifi')
         };
 
         function uploadCoverImage(file, pos) {
-          var url = routeService.uploadLibraryCoverImage(scope.library.id, Math.round(pos.x), Math.round(pos.y));
+          var url = routeService.uploadLibraryCoverImage(scope.library.id, pos.x, pos.y);
           var xhr = new $window.XMLHttpRequest();
           xhr.withCredentials = true;
           var deferred = $q.defer(), fraction = 0, timeout, tickMs = 200;
@@ -421,63 +369,12 @@ angular.module('kifi')
           return deferred.promise;
         }
 
-        function fakeHover($image) {
-          $image.not(':hover').addClass('kf-fake-hover').one('mouseover', function () {
-            $image.removeClass('kf-fake-hover');
-          });
-        }
-
-        scope.onCoverImageAdjustEngage = function (event) {
-          // only honoring clicks not triggered using the mouse (e.g. Enter key) to avoid double-handling mousedown + click
-          if (event.which === 1 && !event.isDefaultPrevented() && (event.type !== 'click' || !event.screenY)) {
-            event.preventDefault();
-            if (!scope.coverImageMenuShowing) {
-              angular.element('.kf-lh-cover-image-adjust').addClass('kf-active');
-              document.addEventListener('mousedown', onCoverImageAdjustDocMouseDown, true);
-              scope.coverImageMenuShowing = true;
-            }
-          }
-        };
-
-        function hideCoverImageMenu() {
-          angular.element('.kf-lh-cover-image-adjust').removeClass('kf-active');
-          document.removeEventListener('mousedown', onCoverImageAdjustDocMouseDown, true);
-          scope.coverImageMenuShowing = false;
-        }
-
-        function onCoverImageAdjustDocMouseDown(event) {
-          if (!angular.element(event.target).is('.kf-lh-cover-image-menu,.kf-lh-cover-image-menu *')) {
-            hideCoverImageMenu();
-            event.preventDefault();
-          }
-        }
-
         scope.onRemoveCoverImageMouseUp = function (event) {
           if (event.which === 1) {
-            hideCoverImageMenu();
-
-            var $image = angular.element('.kf-lh-cover-image');
-            var $progress = angular.element();
-            scope.coverImageProgress = true;
-            $timeout(function () {
-              $progress = $image.find('.kf-lh-cover-image-progress');
-            });
-
-            fakeProgress($http['delete'](routeService.removeLibraryCoverImage(scope.library.id)))
-            .then(function done() {
-              $progress.addClass('kf-done');
-              $timeout(function () {
-                scope.library.image = null;
-                scope.coverImageUrl = null;
-                scope.coverImagePreview = false;
-                scope.coverImageProgress = false;
-              }, 500); // allowing progress bar transition to complete and register in user's mind
+            $http['delete'](routeService.removeLibraryCoverImage(scope.library.id)).then(function done() {
+              scope.library.image = null;
             }, function fail() {
-              $progress.on('transitionend', function () {
-                scope.coverImageProgress = false;
-              }).addClass('kf-fail');
-            }, function progress(fraction) {
-              $progress.css('width', fraction * 100 + '%');
+              modalService.openGenericErrorModal();
             });
 
             libraryService.trackEvent('user_clicked_page', scope.library, { action: 'clickedRemoveCoverImage' });
@@ -486,90 +383,123 @@ angular.module('kifi')
 
         scope.onChangeCoverImageMouseUp = function (event) {
           if (event.which === 1) {
-            $timeout(hideCoverImageMenu);
-            angular.element('.kf-lh-cover-image-file').click();
             libraryService.trackEvent('user_clicked_page', scope.library, { action: 'clickedChangeCoverImage' });
           }
         };
 
         scope.onMoveCoverImageMouseUp = function (event) {
           if (event.which === 1) {
-            hideCoverImageMenu();
-            var url = scope.coverImageUrl;
+            var url = env.picBase + '/' + scope.library.image.path;
             loadImage(url).then(function (img) {
-              var $image = angular.element('.kf-lh-cover-image')
-                .data('naturalSize', [img.naturalWidth, img.naturalHeight]);
-              scope.coverImagePreview = true;
-              enterCoverImagePosMode($image, {x: scope.library.image.x, y: scope.library.image.y});
+              var el = element.find('.kf-lh-cover')[0];
+              scope.imagePreview = {
+                url: url,
+                natural: {w: img.naturalWidth, h: img.naturalHeight},
+                w: el.offsetWidth,
+                h: el.offsetHeight,
+                x: scope.library.image.x,
+                y: scope.library.image.y
+              };
             });
             libraryService.trackEvent('user_clicked_page', scope.library, { action: 'clickedMoveCoverImage' });
           }
         };
 
-        scope.showLongDescription = function () {
-          scope.clippedDescription = false;
+        scope.expandDescription = function () {
+          if ('webkitLineClamp' in descEl[0].style) {
+            descEl[0].style.display = 'block';
+          }
+          var height = descEl[0].offsetHeight;
+          // TODO: switch to $animate after 1.3 upgrade (takes CSS props to set)
+          // $animate.addClass(descWrapEl[0], 'kf-expanded', {height: height});
+          scope.descExpanded = true;
+          var ms = Math.max(300, Math.min(600, Math.round(100 * Math.log(height - descWrapEl[0].clientHeight))));
+          descWrapEl.addClass('kf-expanded-add').css({
+            'transition-duration': ms + 'ms,' + (0.6 * ms) + 'ms',
+            'transition-delay': '0s'
+          });
+          descWrapEl.addClass('kf-expanded-add-active').css({'height': height, 'background-color': scope.library.color});
+          $timeout(function () {
+            descWrapEl.addClass('kf-expanded').removeClass('kf-expanded-add kf-expanded-add-active');
+            scope.descScrollable = descEl[0].scrollHeight > descEl[0].clientHeight;
+          }, ms);
         };
 
-        scope.isUserCreatedLibrary = function () {
-          return !libraryService.isLibraryMainOrSecret(scope.library);
+        scope.collapseDescription = function () {
+          scope.descExpanded = false;
+          scope.descScrollable = false;
+
+          var collapse = function () {
+            // TODO: switch to $animate after 1.3 upgrade (takes CSS props to set)
+            // $animate.removeClass(descWrapEl[0], 'kf-expanded', {height: ''});
+            var ms = parseDurationMs(descWrapEl);
+            descWrapEl.addClass('kf-expanded-remove').css({
+              'transition-duration': ms + 'ms,' + (0.8 * ms) + 'ms',
+              'transition-delay': '0s,' + (0.2 * ms) + 'ms'
+            });
+            descWrapEl.addClass('kf-expanded-remove-active').css({'height': '', 'background-color': ''});
+            $timeout(function () {
+              descWrapEl.removeClass('kf-expanded-remove-active kf-expanded-remove kf-expanded');
+              if ('webkitLineClamp' in descEl[0].style) {
+                descEl[0].style.display = '';
+              }
+            }, ms);
+          };
+
+          var scrollTop = descEl[0].scrollTop;
+          if (scrollTop > 0) {
+            smoothScroll(descEl[0], scrollTop, 0, Math.max(100, Math.min(500, 100 * Math.log(scrollTop))))
+            .then(angular.noop, angular.noop, function progress(frac) {
+              if (collapse && frac >= 0.5) {
+                collapse();
+                collapse = null;
+              }
+            });
+          } else {
+            collapse();
+          }
         };
+
+        function parseDurationMs(el) {
+          return Math.max.apply(Math, el.css('transition-duration').split(/,/).map(function (dur) {
+            var n = parseFloat(dur, 10);
+            return dur.replace(/[^a-z]/g, '') === 's' ? n * 1000 : n;
+          }));
+        }
+
+        function smoothScroll(el, top0, topN, ms) {
+          var deferred = $q.defer();
+          var t0, ms_1 = 1 / ms, px = topN - top0;
+          function step(t) {
+            if (!t0) {
+              t0 = t;
+            }
+            var alpha = easeInCubic(Math.min(1, (t - t0) * ms_1));
+            var top = el.scrollTop = top0 + Math.round(px * alpha);
+            deferred.notify(alpha);
+            if (top !== topN) {
+              $$rAF(step);
+            } else {
+              deferred.resolve();
+            }
+          }
+          $$rAF(step);
+          return deferred.promise;
+        }
+
+        function easeInCubic(t) {
+          return t*t*t;
+        }
 
         scope.isMyLibrary = function () {
           return libraryService.isMyLibrary(scope.library);
         };
 
-        scope.canBeShared = function () {
-          // Only user-created (i.e. not Main or Secret) libraries can be shared.
-          // Of the user-created libraries, public libraries can be shared by any Kifi user;
-          // discoverable/secret libraries can be shared only by the library owner.
-          return $rootScope.userLoggedIn && scope.isUserCreatedLibrary() &&
-                 (scope.isPublic() || scope.isMyLibrary());
-        };
-
-        scope.isPublic = function () {
-          return scope.library.visibility === 'published';
-        };
-
-        scope.preloadFB = function () {
-          $FB.init();
-        };
-
-        scope.shareFB = function () {
-          trackShareEvent('clickedShareFacebook');
-          $FB.ui({
-            method: 'share',
-            href: scope.library.absUrl +
-              '?utm_medium=vf_facebook&utm_source=library_share&utm_content=lid_' + scope.library.id +
-              '&kcid=na-vf_facebook-library_share-lid_' + scope.library.id
-          });
-        };
-
-        scope.preloadTwitter = function () {
-          $twitter.load();
-        };
-
-        scope.shareTwitter = function (event) {
-          trackShareEvent('clickedShareTwitter');
-          event.target.href = 'https://twitter.com/intent/tweet' + util.formatQueryString({
-            original_referer: scope.library.absUrl,
-            text: 'Discover this amazing @Kifi library about ' + scope.library.name + '!',
-            tw_p: 'tweetbutton',
-            url: scope.library.absUrl +
-              '?utm_medium=vf_twitter&utm_source=library_share&utm_content=lid_' + scope.library.id +
-              '&kcid=na-vf_twitter-library_share-lid_' + scope.library.id
-          });
-        };
-
-        // TODO: determine this on the server side in the library response. For now, doing it client side.
-        scope.canFollowLibrary = function () {
-          return !scope.alreadyFollowingLibrary() && !scope.isMyLibrary();
-        };
-
-        scope.alreadyFollowingLibrary = function () {
+        scope.followingLibrary = function () {
           return libraryService.isFollowingLibrary(scope.library);
         };
 
-        scope.followLibrary = function () {
+        scope.followLibrary = function (btnJustClicked) {
           scope.followCallback();
           $rootScope.$emit('trackLibraryEvent', 'click', { action: 'clickedFollowButton' });
 
@@ -580,6 +510,8 @@ angular.module('kifi')
           } else if (!$rootScope.userLoggedIn) {
             return signupService.register({libraryId: scope.library.id, intent: 'follow'});
           }
+
+          scope.followBtnJustClicked = !!btnJustClicked;
           libraryService.joinLibrary(scope.library.id, authToken)['catch'](modalService.openGenericErrorModal);
         };
 
@@ -591,24 +523,8 @@ angular.module('kifi')
           libraryService.leaveLibrary(scope.library.id)['catch'](modalService.openGenericErrorModal);
         };
 
-        var elemLohRight = angular.element('.kf-loh-right');
-        var elemLohLinks = elemLohRight.find('.kf-loh-links');
-
-        scope.followButtonNearlyStuck = function (elem, px, maxNearPx) {
-          elemLohLinks.css({bottom: maxNearPx - px, opacity: Math.max(0, 2 * px / maxNearPx - 1)});
-        };
-
-        scope.followButtonToggleStuck = function (elem, stuck) {
-          if (stuck) {
-            elem.data({parent: elem.parent(), next: elem.next()}).appendTo(elemLohRight);
-          } else {
-            var data = elem.data();
-            if (data.next.length) {
-              elem.insertBefore(data.next);
-            } else {
-              elem.appendTo(data.parent);
-            }
-          }
+        scope.onUnfollowBtnMouseLeave = function () {
+          scope.followBtnJustClicked = false;
         };
 
         scope.manageLibrary = function () {
@@ -637,8 +553,7 @@ angular.module('kifi')
 
         scope.toggleEditKeeps = function () {
           $rootScope.$emit('trackLibraryEvent', 'click', { action: 'clickedEditKeeps' });
-          scope.toggleEdit();
-          scope.editKeepsText = scope.editKeepsText === 'Edit Keeps' ? 'Done Editing' : 'Edit Keeps';
+          scope.editMode = !scope.editMode;
         };
 
         scope.showFollowers = function () {
@@ -678,6 +593,8 @@ angular.module('kifi')
         // Watches and listeners.
         //
 
+        scope.$watch('library.numFollowers', setFollowersShown);
+
         [
           $rootScope.$on('libraryInfosChanged', updateInvite),
           $rootScope.$on('libraryKeepCountChanged', function (e, libraryId, keepCount) {
@@ -704,11 +621,7 @@ angular.module('kifi')
               lib.numFollowers--;
               _.remove(lib.followers, {id: profileService.me.id});
             }
-          }),
-          function () {
-            elemLohRight.find('.kf-lh-follow-btn-wrap').remove();
-            elemLohLinks.css({bottom: '', opacity: ''});
-          }
+          })
         ].forEach(function (deregister) {
           scope.$on('$destroy', deregister);
         });
@@ -721,15 +634,6 @@ angular.module('kifi')
         augmentData();
 
         updateInvite();
-
-        $timeout(function () {
-          element.addClass('kf-loaded');  // enables transitions/animations
-
-          if (elemLohRight.length) {
-            // delaying DOM measurements for smoother initial rendering
-            scope.followButtonStickyTop = (elemLohRight[0].offsetHeight - element.find('.kf-lh-follow-btn-wrap')[0].offsetHeight) / 2;
-          }
-        });
       }
     };
   }

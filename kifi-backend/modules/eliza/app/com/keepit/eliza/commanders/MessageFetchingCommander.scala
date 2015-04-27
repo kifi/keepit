@@ -34,12 +34,14 @@ class MessageFetchingCommander @Inject() (
     modifyMessageWithAuxData(MessageWithBasicUser(id, createdAt, text, source, auxData, url, nUrl, user, participants))
   }
 
+  //this is for internal use (not just this class, also several other commanders and tests). Do not use from a controller!
   def getThreadMessages(thread: MessageThread): Seq[Message] = db.readOnlyMaster { implicit session =>
     log.info(s"[get_thread] trying to get thread messages for thread extId ${thread.externalId}")
     messageRepo.get(thread.id.get, 0)
   }
 
-  def getThreadMessagesWithBasicUser(thread: MessageThread): Future[(MessageThread, Seq[MessageWithBasicUser])] = {
+  def getThreadMessagesWithBasicUser(userId: Id[User], thread: MessageThread): Future[(MessageThread, Seq[MessageWithBasicUser])] = {
+    if (!thread.containsUser(userId)) throw NotAuthorizedException(s"User $userId not authorized to view messages of thread ${thread.id.get}")
     val userParticipantSet = if (thread.replyable) thread.participants.map(_.allUsers).getOrElse(Set()) else Set()
     log.info(s"[get_thread] got participants for extId ${thread.externalId}: $userParticipantSet")
     val messagesFut: Future[Seq[MessageWithBasicUser]] = new SafeFuture(shoebox.getBasicUsers(userParticipantSet.toSeq) map { id2BasicUser =>
@@ -69,9 +71,9 @@ class MessageFetchingCommander @Inject() (
     } map { (thread, _) }
   }
 
-  def getThreadMessagesWithBasicUser(threadExtId: ExternalId[MessageThread]): Future[(MessageThread, Seq[MessageWithBasicUser])] = {
+  def getThreadMessagesWithBasicUser(userId: Id[User], threadExtId: ExternalId[MessageThread]): Future[(MessageThread, Seq[MessageWithBasicUser])] = {
     val thread = db.readOnlyMaster(threadRepo.get(threadExtId)(_))
-    getThreadMessagesWithBasicUser(thread)
+    getThreadMessagesWithBasicUser(userId, thread)
   }
 
   def processParticipantsMessage(jsAdderUserId: String, jsAddedUsers: Seq[JsValue], isInitialMessage: Boolean = false): Future[(String, JsArray)] = {

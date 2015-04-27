@@ -29,9 +29,9 @@ class MobileUriController @Inject() (
         log.info(s"[MobileUriController] ${uri} marked as ${reason} content!")
         systemAdminMailSender.sendMail(ElectronicMail(
           from = SystemEmailAddress.ENG,
-          to = List(SystemEmailAddress.EISHAY, SystemEmailAddress.ANDREW, SystemEmailAddress.STEPHEN, SystemEmailAddress.MARK),
+          to = List(SystemEmailAddress.EISHAY, SystemEmailAddress.ANDREW, SystemEmailAddress.STEPHEN),
           subject = s"url [${uri.id.get}]: ${uri.url} flagged as ${reason} content!!!",
-          htmlBody = s"""uri: ${uri} <br>flagged by user ${request.user}.<br>Check it out: <a href="https://admin.kifi.com/admin/scraped/${uri.id.get}"></a>""",
+          htmlBody = s"""uri: ${uri.url} (${uri.id.get})<br>flagged by user ${request.user.fullName} (${request.user.username} ${request.user.id}).<br>Check it out: <a href="https://admin.kifi.com/admin/scraped/${uri.id.get}"></a>""",
           category = NotificationCategory.toElectronicMailCategory(NotificationCategory.System.ADMIN)))
         NoContent
       }

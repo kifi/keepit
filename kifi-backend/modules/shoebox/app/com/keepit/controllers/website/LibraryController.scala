@@ -41,7 +41,6 @@ class LibraryController @Inject() (
   keepsCommander: KeepsCommander,
   keepDecorator: KeepDecorator,
   userCommander: UserCommander,
-  libraryImageCommander: LibraryImageCommander,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
   collectionRepo: CollectionRepo,
   fortyTwoConfig: FortyTwoConfig,
@@ -86,13 +85,12 @@ class LibraryController @Inject() (
       case Left(fail) =>
         Status(fail.status)(Json.obj("error" -> fail.message))
       case Right(lib) =>
-        val (owner, numKeeps, membership) = db.readOnlyMaster { implicit s =>
+        val (owner, membership) = db.readOnlyMaster { implicit s =>
           val basicUser = basicUserRepo.load(lib.ownerId)
-          val numKeeps = keepRepo.getCountByLibrary(id)
           val membership = libraryMembershipRepo.getWithLibraryIdAndUserId(lib.id.get, request.userId)
-          (basicUser, numKeeps, membership)
+          (basicUser, membership)
         }
-        val libInfo = Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, None, owner, numKeeps))
+        val libInfo = Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, None, owner))
         Ok(Json.obj("library" -> libInfo, "listed" -> membership.map(_.listed)))
     }
   }
@@ -126,7 +124,7 @@ class LibraryController @Inject() (
   }
 
   def getLibraryByPath(userStr: String, slugStr: String, showPublishedLibraries: Boolean, imageSize: Option[String] = None) = MaybeUserAction.async { request =>
-    libraryCommander.getLibraryWithUsernameAndSlug(userStr, LibrarySlug(slugStr), followRedirect = false) match {
+    libraryCommander.getLibraryWithUsernameAndSlug(userStr, LibrarySlug(slugStr)) match {
       case Right(library) =>
         LibraryViewAction(Library.publicId(library.id.get)).invokeBlock(request, { _: MaybeUserRequest[_] =>
           val idealSize = imageSize.flatMap { s => Try(ImageSize(s)).toOption }.getOrElse(LibraryController.defaultLibraryImageSize)
@@ -159,8 +157,7 @@ class LibraryController @Inject() (
       db.readOnlyReplica { implicit session =>
         for ((mem, library) <- libsWithMemberships) yield {
           val owner = basicUsers(library.ownerId)
-          val numKeeps = keepRepo.getCountByLibrary(library.id.get)
-          (LibraryInfo.fromLibraryAndOwner(library, None, owner, numKeeps), mem) // should have library image, but this endpoint doesn't use it and is already slow & heavy.
+          (LibraryInfo.fromLibraryAndOwner(library, None, owner), mem) // should have library image, but this endpoint doesn't use it and is already slow & heavy.
         }
       }
     }
@@ -169,8 +166,7 @@ class LibraryController @Inject() (
         for ((invite, lib) <- libsWithInvites) yield {
           val owner = basicUsers(lib.ownerId)
           val inviter = basicUsers(invite.inviterId)
-          val numKeeps = keepRepo.getCountByLibrary(lib.id.get)
-          (LibraryInfo.fromLibraryAndOwner(lib, None, owner, numKeeps, Some(inviter)), invite) // should have library image, but this endpoint doesn't use it and is already slow & heavy.
+          (LibraryInfo.fromLibraryAndOwner(lib, None, owner, Some(inviter)), invite) // should have library image, but this endpoint doesn't use it and is already slow & heavy.
         }
       }
     }
@@ -252,16 +248,16 @@ class LibraryController @Inject() (
               case Left(fail) =>
                 Status(fail.status)(Json.obj("error" -> fail.message))
               case Right(lib) =>
-                val (owner, numKeeps) = db.readOnlyMaster { implicit s => (basicUserRepo.load(lib.ownerId), keepRepo.getCountByLibrary(libId)) }
-                Ok(Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, None, owner, numKeeps)))
+                val owner = db.readOnlyMaster { implicit s => basicUserRepo.load(lib.ownerId) }
+                Ok(Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, None, owner)))
             }
           case Some(membership) =>
             log.info(s"user ${request.userId} is already following library $libId, possible race condition")
-            val (lib, owner, numKeeps) = db.readOnlyMaster { implicit s =>
+            val (lib, owner) = db.readOnlyMaster { implicit s =>
               val lib = libraryRepo.get(libId)
-              (lib, basicUserRepo.load(lib.ownerId), keepRepo.getCountByLibrary(libId))
+              (lib, basicUserRepo.load(lib.ownerId))
             }
-            val res = Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, None, owner, numKeeps))
+            val res = Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, None, owner))
             Ok(res.as[JsObject] + ("alreadyJoined" -> JsBoolean(true)))
         }
     }
@@ -459,7 +455,7 @@ class LibraryController @Inject() (
   }
 
   def authToLibrary(userStr: String, slug: String, authToken: Option[String]) = MaybeUserAction(parse.tolerantJson) { implicit request =>
-    libraryCommander.getLibraryWithUsernameAndSlug(userStr, LibrarySlug(slug), followRedirect = false) match {
+    libraryCommander.getLibraryWithUsernameAndSlug(userStr, LibrarySlug(slug)) match {
       case Right(library) if libraryCommander.canViewLibrary(request.userIdOpt, library) =>
         NoContent // Don't need to check anything, they already have access
       case Right(library) =>
@@ -660,24 +656,29 @@ class LibraryController @Inject() (
     }
   }
 
-  def getMutualLibraries(username: Username) = UserAction { request =>
-    userCommander.userFromUsername(username) match {
+  def getMutualLibraries(id: ExternalId[User], page: Int = 0, size: Int = 12) = UserAction { request =>
+    db.readOnlyMaster { implicit s =>
+      userRepo.getOpt(id)
+    } match {
       case None =>
-        log.warn(s"unknown username ${username.value} requested")
-        NotFound(username.value)
+        log.warn(s"unknown external userId ${id} requested")
+        NotFound(Json.obj("id" -> id))
       case Some(user) =>
         val viewer = request.userId
         val userId = user.id.get
-        db.readOnlyReplica { implicit s =>
+        val (ofUser, ofViewer, mutualFollow, basicUsers) = db.readOnlyReplica { implicit s =>
           val ofUser = libraryRepo.getOwnerLibrariesOtherFollow(userId, viewer)
           val ofViewer = libraryRepo.getOwnerLibrariesOtherFollow(viewer, userId)
-          val mutualFollow = libraryRepo.getLibrariesBothFollow(viewer, userId)
-          Ok(Json.obj(
-            "ofUser" -> ofUser,
-            "ofOwner" -> ofViewer,
-            "mutualFollow" -> mutualFollow
-          ))
+          val mutualFollow = libraryRepo.getMutualLibrariesForUser(viewer, userId, page * size, size)
+          val mutualFollowOwners = mutualFollow.map(_.ownerId)
+          val basicUsers = basicUserRepo.loadAll(Set(userId, viewer) ++ mutualFollowOwners)
+          (ofUser, ofViewer, mutualFollow, basicUsers)
         }
+        Ok(Json.obj(
+          "ofUser" -> Json.toJson(ofUser.map(LibraryInfo.fromLibraryAndOwner(_, None, basicUsers(userId)))),
+          "ofOwner" -> Json.toJson(ofViewer.map(LibraryInfo.fromLibraryAndOwner(_, None, basicUsers(viewer)))),
+          "mutualFollow" -> Json.toJson(mutualFollow.map(lib => LibraryInfo.fromLibraryAndOwner(lib, None, basicUsers(lib.ownerId))))
+        ))
     }
   }
 

@@ -80,7 +80,7 @@ class ExtLibraryController @Inject() (
       libraryCommander.getLibraryWithOwnerAndCounts(libraryId, request.userId) match {
         case Left(fail) =>
           Status(fail.status)(Json.obj("error" -> fail.message))
-        case Right((library, owner, keepCount, followerCount, following)) =>
+        case Right((library, owner, followerCount, following)) =>
           val imageOpt = libraryImageCommander.getBestImageForLibrary(libraryId, ExtLibraryController.defaultImageSize)
           Ok(Json.obj(
             "name" -> library.name,
@@ -89,7 +89,7 @@ class ExtLibraryController @Inject() (
             "color" -> library.color,
             "image" -> imageOpt.map(LibraryImageInfo.createInfo),
             "owner" -> owner,
-            "keeps" -> keepCount,
+            "keeps" -> library.keepCount,
             "followers" -> followerCount,
             "following" -> following))
       }
@@ -151,7 +151,7 @@ class ExtLibraryController @Inject() (
             (Seq.empty, existingImageUri) // optimizing the common case
           } else {
             val tags = db.readOnlyReplica { implicit s =>
-              collectionRepo.getTagsByKeepId(keep.id.get)
+              collectionRepo.getHashtagsByKeepId(keep.id.get)
             }
             val image = keepImageCommander.getBestImageForKeep(keep.id.get, ScaleImageRequest(ExtLibraryController.defaultImageSize)).flatten.map(keepImageCommander.getUrl)
             (tags, image)
@@ -166,6 +166,7 @@ class ExtLibraryController @Inject() (
           val moarKeepData = MoarKeepData(
             title = keep.title,
             image = image,
+            note = keep.note,
             tags = tags.map(_.tag).toSeq)
           Ok(Json.toJson(keepData).as[JsObject] ++ Json.toJson(moarKeepData).as[JsObject])
         case _ =>
@@ -183,9 +184,9 @@ class ExtLibraryController @Inject() (
           val idealSize = imgSize.flatMap { s => Try(ImageSize(s)).toOption }.getOrElse(ExtLibraryController.defaultImageSize)
           val keepImageUrl = keepImageCommander.getBestImageForKeep(keep.id.get, ScaleImageRequest(idealSize)).flatten.map(keepImageCommander.getUrl)
           val tags = db.readOnlyReplica { implicit s =>
-            collectionRepo.getTagsByKeepId(keep.id.get)
+            collectionRepo.getHashtagsByKeepId(keep.id.get)
           }
-          Ok(Json.toJson(MoarKeepData(keep.title, keepImageUrl, tags.map(_.tag).toSeq)))
+          Ok(Json.toJson(MoarKeepData(keep.title, keepImageUrl, keep.note, tags.map(_.tag).toSeq)))
       }
     }
   }

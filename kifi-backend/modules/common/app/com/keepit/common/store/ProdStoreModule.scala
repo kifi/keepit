@@ -1,7 +1,11 @@
 package com.keepit.common.store
 
+import java.io.File
+
 import com.amazonaws.services.s3.transfer.TransferManager
+import com.keepit.rover.sensitivity.{ PornWordLikelihood, InMemoryPornWordLikelihoodStore, S3PornWordLikelihoodStore, PornWordLikelihoodStore }
 import com.keepit.search.tracking.{ InMemoryProbablisticLRUStoreImpl, S3ProbablisticLRUStoreImpl, ProbablisticLRUStore }
+import org.apache.commons.io.FileUtils
 import play.api.Play.current
 import net.codingwell.scalaguice.ScalaModule
 import com.google.inject.{ Provider, Provides, Singleton }
@@ -18,6 +22,14 @@ abstract class ProdOrElseDevStoreModule[T <: StoreModule](val prodStoreModule: T
 }
 
 trait ProdStoreModule extends StoreModule {
+
+  protected def forceMakeTemporaryDirectory(parent: String, child: String): File = {
+    val temp = new File(parent, child).getCanonicalFile
+    FileUtils.deleteDirectory(temp)
+    FileUtils.forceMkdir(temp)
+    temp.deleteOnExit()
+    temp
+  }
 
   @Singleton
   @Provides
@@ -56,6 +68,12 @@ trait ProdStoreModule extends StoreModule {
   def kifiInstallationStore(amazonS3Client: AmazonS3, accessLog: AccessLog): KifiInstallationStore = {
     val bucketName = S3Bucket(current.configuration.getString("amazon.s3.install.bucket").get)
     new S3KifiInstallationStoreImpl(bucketName, amazonS3Client, accessLog)
+  }
+
+  @Provides @Singleton
+  def bayesPornDetectorStore(amazonS3Client: AmazonS3, accessLog: AccessLog): PornWordLikelihoodStore = {
+    val bucketName = S3Bucket(current.configuration.getString("amazon.s3.bayes.porn.detector.bucket").get)
+    new S3PornWordLikelihoodStore(bucketName, amazonS3Client, accessLog)
   }
 }
 
@@ -99,4 +117,13 @@ abstract class DevStoreModule[T <: ProdStoreModule](override val prodStoreModule
     whenConfigured("amazon.s3.install.bucket")(
       prodStoreModule.kifiInstallationStore(amazonS3ClientProvider.get, accessLog)
     ).getOrElse(new InMemoryKifiInstallationStoreImpl())
+
+  @Provides @Singleton
+  def bayesPornDetectorStore(amazonS3ClientProvider: Provider[AmazonS3], accessLog: AccessLog) = {
+    whenConfigured("amazon.s3.bayes.porn.detector.bucket")(
+      prodStoreModule.bayesPornDetectorStore(amazonS3ClientProvider.get, accessLog)
+    ).getOrElse(new InMemoryPornWordLikelihoodStore() {
+        override def syncGet(key: String) = Some(PornWordLikelihood(Map("a" -> 1f)))
+      })
+  }
 }

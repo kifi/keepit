@@ -1,20 +1,23 @@
 package com.keepit.common.social
 
 import com.google.inject.Inject
+import com.keepit.commanders.{ KifiInstallationCommander, LibraryImageCommander, ProcessedImageSize }
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.concurrent.FutureHelpers
+import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
-import com.keepit.common.store.LibraryImageStore
+import com.keepit.common.store.S3ImageStore
 import com.keepit.common.time._
 import com.keepit.common.core._
 import com.keepit.common.strings._
 import com.keepit.common.db.slick.Database
-import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.healthcheck.{ StackTrace, AirbrakeNotifier }
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.oauth.{ TwitterUserInfo, TwitterOAuthProvider, OAuth1Configuration, ProviderIds }
 import com.keepit.common.core._
 import com.keepit.common.time.Clock
+import com.keepit.eliza.{ UserPushNotificationCategory, LibraryPushNotificationCategory, PushNotificationExperiment, ElizaServiceClient }
 import com.keepit.model.SocialUserInfoStates._
 import com.keepit.model._
 import com.keepit.social._
@@ -23,9 +26,8 @@ import play.api.http.Status._
 import play.api.Play.current
 import play.api.libs.json.JsValue
 import play.api.libs.oauth.OAuthCalculator
-import play.api.libs.ws.{ WSResponse, WS }
+import play.api.libs.ws.{ WSSignatureCalculator, WSResponse, WS }
 import securesocial.core.{ IdentityId, OAuth2Settings }
-import twitter4j.auth.OAuthAuthorization
 import twitter4j.{ StatusUpdate, TwitterFactory, Twitter }
 import twitter4j.media.{ ImageUpload, MediaProvider, ImageUploadFactory }
 import twitter4j.conf.ConfigurationBuilder
@@ -39,15 +41,15 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
 case class PagedIds(
-  prev: Long,
-  ids: Seq[Long],
-  next: Long)
+  prev: TwitterId,
+  ids: Seq[TwitterId],
+  next: TwitterId)
 
 object PagedIds {
   implicit val format = (
-    (__ \ 'previous_cursor).format[Long] and
-    (__ \ 'ids).format[Seq[Long]] and
-    (__ \ 'next_cursor).format[Long]
+    (__ \ 'previous_cursor).format[TwitterId] and
+    (__ \ 'ids).format[Seq[TwitterId]] and
+    (__ \ 'next_cursor).format[TwitterId]
   )(PagedIds.apply _, unlift(PagedIds.unapply))
 }
 
@@ -72,20 +74,28 @@ trait TwitterSocialGraph extends SocialGraph {
 
   def sendDM(socialUserInfo: SocialUserInfo, receiverUserId: Long, msg: String): Future[WSResponse]
   def sendTweet(socialUserInfo: SocialUserInfo, image: Option[File], msg: String): Unit
-  def fetchTweets(socialUserInfoOpt: Option[SocialUserInfo], handle: String, sinceId: Long): Future[Seq[JsObject]] //uses app auth if no social user info is given
+  def fetchTweets(socialUserInfoOpt: Option[SocialUserInfo], handle: String, lowerBoundId: Option[Long], upperBoundId: Option[Long]): Future[Seq[JsObject]] //uses app auth if no social user info is given
 }
 
 class TwitterSocialGraphImpl @Inject() (
     airbrake: AirbrakeNotifier,
     db: Database,
+    s3ImageStore: S3ImageStore,
     clock: Clock,
     oauth1Config: OAuth1Configuration,
     twtrOAuthProvider: TwitterOAuthProvider,
     userValueRepo: UserValueRepo,
     twitterSyncStateRepo: TwitterSyncStateRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
-    socialRepo: SocialUserInfoRepo,
-    implicit val executionContext: ExecutionContext) extends TwitterSocialGraph with Logging {
+    libraryRepo: LibraryRepo,
+    basicUserRepo: BasicUserRepo,
+    socialUserInfoRepo: SocialUserInfoRepo,
+    libraryImageCommander: LibraryImageCommander,
+    elizaServiceClient: ElizaServiceClient,
+    kifiInstallationCommander: KifiInstallationCommander,
+    implicit val publicIdConfig: PublicIdConfiguration,
+    implicit val executionContext: ExecutionContext,
+    userRepo: UserRepo) extends TwitterSocialGraph with Logging {
 
   val providerConfig = oauth1Config.getProviderConfig(ProviderIds.Twitter.id).get
 
@@ -123,7 +133,8 @@ class TwitterSocialGraphImpl @Inject() (
       log.info(s"[updateSocialUserInfo] picUrl=${info.pictureUrl} profileUrl=${info.profileUrl}; info=$info")
       sui.copy(
         pictureUrl = info.pictureUrl.map(_.toString) orElse sui.pictureUrl,
-        profileUrl = info.profileUrl.map(_.toString) orElse sui.profileUrl
+        profileUrl = info.profileUrl.map(_.toString) orElse sui.profileUrl,
+        username = info.profileUrl.map(_.toString).map(url => url.substring(url.lastIndexOf("/") + 1)) orElse sui.username
       )
     }
     Await.result(suiF, 5 minutes)
@@ -143,7 +154,7 @@ class TwitterSocialGraphImpl @Inject() (
   def revokePermissions(socialUserInfo: SocialUserInfo): Future[Unit] = {
     // Twitter does not support this via API; user can revoke permissions via twitter.com
     db.readWriteAsync { implicit s =>
-      socialRepo.save(socialUserInfo.withState(SocialUserInfoStates.APP_NOT_AUTHORIZED).withLastGraphRefresh())
+      socialUserInfoRepo.save(socialUserInfo.withState(SocialUserInfoStates.APP_NOT_AUTHORIZED).withLastGraphRefresh())
     } map { saved =>
       log.info(s"[revokePermissions] updated: $saved")
     }
@@ -153,18 +164,19 @@ class TwitterSocialGraphImpl @Inject() (
     val credentials = socialUserInfo.credentials.getOrElse(throw new Exception(s"Can't find credentials for $socialUserInfo"))
     credentials.oAuth1Info.getOrElse(throw new Exception(s"Can't find oAuth1Info for $socialUserInfo"))
   }
-  private def getTwtrUserId(socialUserInfo: SocialUserInfo): Long = socialUserInfo.socialId.id.toLong
+  private def getTwtrUserId(socialUserInfo: SocialUserInfo): TwitterId = TwitterId(socialUserInfo.socialId.id.toLong)
 
   // make this async
   def fetchSocialUserRawInfo(socialUserInfo: SocialUserInfo): Option[SocialUserRawInfo] = {
+    val userId = socialUserInfo.userId.get
     val accessToken = getOAuth1Info(socialUserInfo)
-    val userId = getTwtrUserId(socialUserInfo)
+    val twitterUserId = getTwtrUserId(socialUserInfo)
 
     val followerIdsEndpoint = "https://api.twitter.com/1.1/followers/ids.json"
-    val followerIdsF = fetchIds(socialUserInfo, accessToken, userId, followerIdsEndpoint)
+    val followerIdsF = fetchIds(socialUserInfo, accessToken, twitterUserId, followerIdsEndpoint)
 
     val friendIdsEndpoint = "https://api.twitter.com/1.1/friends/ids.json"
-    val friendIdsF = fetchIds(socialUserInfo, accessToken, userId, friendIdsEndpoint)
+    val friendIdsF = fetchIds(socialUserInfo, accessToken, twitterUserId, friendIdsEndpoint)
 
     val mutualFollowsF = for {
       followerIds <- followerIdsF
@@ -175,20 +187,29 @@ class TwitterSocialGraphImpl @Inject() (
 
       SafeFuture {
         log.info(s"[fetchSocialUserInfo(${socialUserInfo.socialId})] fetching twitter_syncs for ${friendIds.length} friends...")
-        friendIds.map(Id[User](_)).grouped(100) foreach { userIds =>
+        friendIds.grouped(100) foreach { userIds =>
+          val socialUserInfos = db.readOnlyReplica { implicit s =>
+            socialUserInfoRepo.getBySocialIds(userIds.map(id => SocialId(id.toString)))
+          }
+          val twitterHandles = socialUserInfos.flatMap(_.username).toSet
           db.readOnlyMaster { implicit s =>
-            twitterSyncStateRepo.getTwitterSyncsByFriendIds(userIds.toSet)
-          }.map {
-            case (userId, twitterSyncState) =>
-              db.readWrite { implicit s =>
-                val libraryId = twitterSyncState.libraryId
-                libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId, None) match {
-                  case None =>
-                    log.info(s"[fetchSocialUserInfo(${socialUserInfo.socialId})] auto-joining user ${userId} twitter_sync library ${libraryId}")
-                    libraryMembershipRepo.save(LibraryMembership(libraryId = libraryId, userId = userId, access = LibraryAccess.READ_ONLY))
-                  case _ =>
-                }
+            twitterSyncStateRepo.getTwitterSyncsByFriendIds(twitterHandles)
+          } map { twitterSyncState =>
+            db.readWrite { implicit s =>
+              val libraryId = twitterSyncState.libraryId
+              val user = userRepo.get(userId)
+              val library = libraryRepo.get(libraryId)
+              val libOwner = basicUserRepo.load(library.ownerId)
+              if (library.visibility == LibraryVisibility.PUBLISHED && library.state == LibraryStates.ACTIVE && user.state == UserStates.ACTIVE && libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId, None).isEmpty) {
+                val ownerImage = s3ImageStore.avatarUrlByUser(libOwner)
+                val libLink = s"""https://www.kifi.com${Library.formatLibraryPath(libOwner.username, library.slug)}"""
+                val libImageOpt = libraryImageCommander.getBestImageForLibrary(library.id.get, ProcessedImageSize.Medium.idealSize)
+                log.info(s"[fetchSocialUserInfo(${socialUserInfo.socialId})] auto-joining user ${userId} twitter_sync library ${libraryId}")
+                libraryMembershipRepo.save(LibraryMembership(libraryId = libraryId, userId = userId, access = LibraryAccess.READ_ONLY))
+                //notifyUserOnLibraryFollow(user, twitterSyncState, library, libOwner, ownerImage, libLink, libImageOpt)
+                //notifyOwnerOnLibraryFollow(user, library, libOwner, ownerImage, libLink, libImageOpt)
               }
+            }
           }
         }
         log.info(s"[fetchSocialUserInfo(${socialUserInfo.socialId})] finished auto-joining all twitter_sync libraries")
@@ -215,7 +236,69 @@ class TwitterSocialGraphImpl @Inject() (
     )
   }
 
-  protected def handleError(tag: String, endpoint: String, sui: SocialUserInfo, uvName: UserValueName, cursor: Long, resp: WSResponse): Unit = {
+  private def notifyUserOnLibraryFollow(user: User, twitterSyncState: TwitterSyncState, library: Library, libOwner: BasicUser, ownerImage: String, libLink: String, libImageOpt: Option[LibraryImage]): Future[Any] = {
+    val userId = user.id.get
+    elizaServiceClient.sendGlobalNotification( //push sent
+      userIds = Set(userId),
+      title = s"${libOwner.firstName} created a Library",
+      body = s"You're being notified because you're following @${twitterSyncState.twitterHandle} on Twitter",
+      linkText = "Let's take a look!",
+      linkUrl = libLink,
+      imageUrl = ownerImage,
+      sticky = false,
+      category = NotificationCategory.User.LIBRARY_FOLLOWING,
+      extra = Some(Json.obj(
+        "inviter" -> libOwner,
+        "library" -> Json.toJson(LibraryNotificationInfo.fromLibraryAndOwner(library, libImageOpt, libOwner))
+      ))
+    ) map { _ =>
+        if (user.createdAt > clock.now.minusMinutes(30)) {
+          //send a push notifications only if the user was created more then 30 minutes ago.
+          val message = s"${libOwner.firstName} created a Twitter Library"
+          val canSendPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(userId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
+          if (canSendPush) {
+            elizaServiceClient.sendLibraryPushNotification(
+              userId,
+              message,
+              library.id.get,
+              libLink,
+              PushNotificationExperiment.Experiment1,
+              LibraryPushNotificationCategory.LibraryInvitation)
+          }
+        }
+      }
+  }
+
+  private def notifyOwnerOnLibraryFollow(follower: User, lib: Library, owner: BasicUser, ownerImage: String, libLink: String, libImageOpt: Option[LibraryImage]): Future[Any] = {
+    val message = s"${follower.firstName} ${follower.lastName} is following you on Twitter"
+    elizaServiceClient.sendGlobalNotification( //push sent
+      userIds = Set(lib.ownerId),
+      title = "New Library Follower",
+      body = message,
+      linkText = s"See ${follower.firstName}’s profile",
+      linkUrl = s"https://www.kifi.com/${follower.username.value}",
+      imageUrl = s3ImageStore.avatarUrlByUser(follower),
+      sticky = false,
+      category = NotificationCategory.User.LIBRARY_FOLLOWED,
+      unread = false,
+      extra = Some(Json.obj(
+        "follower" -> BasicUser.fromUser(follower),
+        "library" -> Json.toJson(LibraryNotificationInfo.fromLibraryAndOwner(lib, libImageOpt, owner))
+      ))
+    ) map { _ =>
+        val canSendPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(lib.ownerId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
+        if (canSendPush) {
+          elizaServiceClient.sendUserPushNotification(
+            userId = lib.ownerId,
+            message = message,
+            recipient = follower,
+            pushNotificationExperiment = PushNotificationExperiment.Experiment1,
+            category = UserPushNotificationCategory.NewLibraryFollower)
+        }
+      }
+  }
+
+  protected def handleError(tag: String, endpoint: String, sui: SocialUserInfo, uvName: UserValueName, cursor: TwitterId, resp: WSResponse, params: Any): Unit = {
     val nettyResp = resp.underlying[NettyResponse]
     def warn(notify: Boolean): Unit = {
       val errorMessage = resp.status match {
@@ -223,39 +306,40 @@ class TwitterSocialGraphImpl @Inject() (
         case UNAUTHORIZED => "unauthorized or invalid/expired token"
         case _ => "non-OK response"
       }
-      val errMsg = s"[$tag] Error for user ${sui.userId} ${sui.fullName} sui ${sui.id}: $errorMessage for $endpoint. status=${resp.status} body=${resp.body}; request.uri=${nettyResp.getUri}"
+      val errMsg = s"[$tag] Error for user ${sui.userId} ${sui.fullName} sui ${sui.id}: $errorMessage for $endpoint. status=${resp.status} body=${resp.body}; request.uri=${nettyResp.getUri}; request params=$params"
       if (notify)
         airbrake.notify(errMsg)
       else
         log.error(errMsg)
     }
-    warn(true) // set to false to reduce noise: see LinkedInSocialGraph
+    warn(false) // set to false to reduce noise
     resp.status match {
       case TOO_MANY_REQUEST => // 429: rate-limit exceeded
         db.readWrite { implicit s =>
           userValueRepo.setValue(sui.userId.get, uvName, cursor)
         }
       case UNAUTHORIZED => // 401: invalid or expired token
-        db.readWrite { implicit s => socialRepo.save(sui.copy(state = APP_NOT_AUTHORIZED, lastGraphRefresh = Some(clock.now))) }
+        db.readWrite { implicit s => socialUserInfoRepo.save(sui.copy(state = APP_NOT_AUTHORIZED, lastGraphRefresh = Some(clock.now))) }
       case _ =>
     }
   }
 
-  protected def lookupUsers(sui: SocialUserInfo, accessToken: OAuth1TokenInfo, mutualFollows: Set[Long]): Future[JsValue] = {
+  protected def lookupUsers(sui: SocialUserInfo, accessToken: OAuth1TokenInfo, mutualFollows: Set[TwitterId]): Future[JsValue] = {
     log.info(s"[lookupUsers] mutualFollows(len=${mutualFollows.size}): ${mutualFollows.take(20).mkString(",")}... sui=$sui")
     val endpoint = "https://api.twitter.com/1.1/users/lookup.json"
-    val sorted = mutualFollows.toSeq.sorted // expensive
-    val accF = FutureHelpers.foldLeftUntil[Seq[Long], JsArray](sorted.grouped(100).toIterable)(JsArray()) { (a, c) =>
-      val params = Map("user_id" -> c.mkString(","), "include_entities" -> false.toString)
+    val sorted = mutualFollows.toSeq.sortBy(_.id) // expensive
+    val accF = FutureHelpers.foldLeftUntil[Seq[TwitterId], JsArray](sorted.grouped(100).toIterable)(JsArray()) { (a, c) =>
+      val params = Map("user_id" -> c.map(_.id).mkString(","), "include_entities" -> false.toString)
+      val serializedParams = params.map(kv => (kv._1, Seq(kv._2)))
       val chunkF = WS.url(endpoint)
         .sign(OAuthCalculator(providerConfig.key, accessToken))
-        .post(params.map(kv => (kv._1, Seq(kv._2))))
+        .post(serializedParams)
         .map { resp =>
           log.info(s"[lookupUsers] prevAcc.len=${a.value.length} cursor=${c.head} response.json=${resp.json.toString.abbreviate(400)}")
           resp.status match {
             case OK => resp.json
             case _ =>
-              handleError("lookupUsers", endpoint, sui, UserValueName.TWITTER_LOOKUP_CURSOR, c.head, resp)
+              handleError("lookupUsers", endpoint, sui, UserValueName.TWITTER_LOOKUP_CURSOR, c.head, resp, serializedParams)
               JsArray(Seq.empty[JsValue])
           }
         }
@@ -271,15 +355,13 @@ class TwitterSocialGraphImpl @Inject() (
     }
   }
 
-  protected def fetchIds(sui: SocialUserInfo, accessToken: OAuth1TokenInfo, userId: Long, endpoint: String): Future[Seq[Long]] = {
-    def pagedFetchIds(page: Int, cursor: Long, count: Long): Future[Seq[Long]] = {
+  def fetchIds(sui: SocialUserInfo, accessToken: OAuth1TokenInfo, userId: TwitterId, endpoint: String): Future[Seq[TwitterId]] = {
+    def pagedFetchIds(page: Int, cursor: TwitterId, count: Long): Future[Seq[TwitterId]] = {
       log.info(s"[pagedFetchIds] userId=$userId endpoint=$endpoint count=$count cursor=$cursor")
+      val queryStrings = Seq("user_id" -> userId.id.toString, "cursor" -> cursor.id.toString, "count" -> count.toString)
       val call = WS.url(endpoint)
         .sign(OAuthCalculator(providerConfig.key, accessToken))
-        .withQueryString(
-          "user_id" -> userId.toString,
-          "cursor" -> cursor.toString,
-          "count" -> count.toString)
+        .withQueryString(queryStrings: _*)
         .get()
       call flatMap { resp =>
         resp.status match {
@@ -287,7 +369,7 @@ class TwitterSocialGraphImpl @Inject() (
             val pagedIds = resp.json.as[PagedIds]
             log.info(s"[pagedFetchIds#$page] cursor=$cursor userId=$userId endpoint=$endpoint pagedIds=$pagedIds")
             val next = pagedIds.next
-            if (next > 0) {
+            if (next.id > 0) {
               pagedFetchIds(page + 1, next, count) map { seq =>
                 pagedIds.ids ++ seq
               }
@@ -296,12 +378,12 @@ class TwitterSocialGraphImpl @Inject() (
             }
           case _ =>
             val name = if (endpoint.contains("friends")) UserValueName.TWITTER_FRIENDS_CURSOR else UserValueName.TWITTER_FOLLOWERS_CURSOR
-            handleError(s"pagedFetchIds#$page", endpoint, sui, name, cursor, resp)
-            Future.successful(Seq.empty[Long])
+            handleError(s"pagedFetchIds#$page", endpoint, sui, name, cursor, resp, queryStrings)
+            Future.successful(Seq.empty[TwitterId])
         }
       }
     }
-    pagedFetchIds(0, -1, 5000)
+    pagedFetchIds(0, TwitterId(-1), 5000)
   }
 
   def extractUserValues(json: JsValue): Map[UserValueName, String] = Map.empty
@@ -330,27 +412,52 @@ class TwitterSocialGraphImpl @Inject() (
         s"PhotoSizeLimit:${conf.getPhotoSizeLimit},ShortURLLength:${conf.getShortURLLength},ShortURLLengthHttps:${conf.getShortURLLengthHttps},CharactersReservedPerMedia:${conf.getCharactersReservedPerMedia},limits:$limits", e)
   }
 
-  def fetchTweets(socialUserInfoOpt: Option[SocialUserInfo], handle: String, sinceId: Long): Future[Seq[JsObject]] = {
+  def fetchTweets(socialUserInfoOpt: Option[SocialUserInfo], handle: String, lowerBoundId: Option[Long], upperBoundId: Option[Long]): Future[Seq[JsObject]] = {
+    val stackTrace = new StackTrace()
     val endpoint = "https://api.twitter.com/1.1/statuses/user_timeline.json"
-    val sig = socialUserInfoOpt.map { socialUserInfo =>
-      OAuthCalculator(providerConfig.key, getOAuth1Info(socialUserInfo))
-    } getOrElse {
-      OAuthCalculator(providerConfig.key, OAuth1TokenInfo(providerConfig.accessToken.key, providerConfig.accessToken.secret))
+    val sigOpt: Option[OAuthCalculator] = socialUserInfoOpt.flatMap { socialUserInfo =>
+      if (socialUserInfo.state != SocialUserInfoStates.TOKEN_EXPIRED)
+        Some(OAuthCalculator(providerConfig.key, getOAuth1Info(socialUserInfo)))
+      else
+        None
+    } orElse {
+      Some(OAuthCalculator(providerConfig.key, OAuth1TokenInfo(providerConfig.accessToken.key, providerConfig.accessToken.secret)))
     }
-    val call = if (sinceId > 0) {
-      WS.url(endpoint).sign(sig).withQueryString("screen_name" -> handle, "since_id" -> sinceId.toString, "count" -> "200")
-    } else {
-      WS.url(endpoint).sign(sig).withQueryString("screen_name" -> handle, "count" -> "200")
-    }
-    call.get().map { response =>
-      if (response.status == 200) {
-        response.json.as[JsArray].value.map(_.as[JsObject])
-      } else if (response.status == 420) { //rate limit
-        Seq.empty
-      } else {
-        airbrake.notify(s"Failed to get users $handle timeline, status ${response.status}, msg: ${response.json.toString}")
-        Seq.empty
-      }
+    sigOpt match {
+      case Some(sig) =>
+        val query = Seq("screen_name" -> Some(handle), "count" -> Some("200"), "since_id" -> lowerBoundId.map(_.toString), "max_id" -> upperBoundId.map(id => (id - 1).toString)).collect { case (k, Some(v)) => k -> v }
+
+        log.info(s"[twfetch] Fetching tweets for $handle using ${socialUserInfoOpt.flatMap(_.userId).map(_.toString).getOrElse("system")} token. ($upperBoundId, $lowerBoundId)")
+        val call = WS.url(endpoint).sign(sig).withQueryString(query: _*)
+        call.get().map { response =>
+          if (response.status == 200) {
+            response.json.as[JsArray].value.map(_.as[JsObject])
+          } else if (response.status == 429 || response.status == 420) { //rate limit
+            log.warn(s"[twfetch-err] Rate limited for [$endpoint] $handle using ${socialUserInfoOpt.flatMap(_.userId).map(_.toString).getOrElse("system")}", stackTrace)
+            Seq.empty
+          } else if (response.status == 401) { //token not good
+            airbrake.notify(s"Token expired for $handle [$endpoint], status ${response.status}, msg: ${response.json.toString}, social user info $socialUserInfoOpt , signature $sig", stackTrace)
+            socialUserInfoOpt.foreach { sui =>
+              db.readWrite { implicit s =>
+                socialUserInfoRepo.save(sui.copy(state = SocialUserInfoStates.TOKEN_EXPIRED))
+              }
+            }
+            Seq.empty
+          } else if (response.status == 404) { // {"errors":[{"code":34,"message":"Sorry, that page does not exist."}]} ->
+            //something in twitter is bad or our api is broken, happen a lots recentrly, in check
+            log.warn(s"Failed to get users $handle timeline, status ${response.status}, msg: ${response.json.toString}, social user info $socialUserInfoOpt , signature $sig", stackTrace)
+            Seq.empty
+          } else {
+            airbrake.notify(s"Failed to get [$endpoint] users $handle timeline, status ${response.status}, msg: ${response.json.toString}, social user info $socialUserInfoOpt , signature $sig", stackTrace)
+            Seq.empty
+          }
+        }.recover {
+          case t: Throwable =>
+            log.warn(s"[twfetch-err] Fetching [$endpoint] error for $handle using ${socialUserInfoOpt.flatMap(_.userId).map(_.toString).getOrElse("system")}, ${t.getClass.getCanonicalName}", stackTrace.withCause(t))
+            Seq.empty
+        }
+      case None =>
+        Future.successful(Seq.empty)
     }
 
   }

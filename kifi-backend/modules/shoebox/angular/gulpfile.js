@@ -281,7 +281,7 @@ gulp.task('svg-sprite', function() {
       .pipe(mapToCss)
       .pipe(order())
       .pipe(concat('svg.css'))
-      .pipe(cssmin())
+      .pipe(cssmin({keepBreaks: true}))
       .pipe(gulp.dest('./dist'));
 });
 

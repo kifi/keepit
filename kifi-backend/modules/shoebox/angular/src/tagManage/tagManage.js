@@ -4,10 +4,10 @@ angular.module('kifi')
 
 .controller('ManageTagCtrl', [
   '$scope', '$window', 'manageTagService', 'libraryService',
-  'routeService', '$http', '$location', 'modalService', '$timeout', '$rootScope',
+  'routeService', '$http', '$location', 'modalService', '$timeout',
   function (
       $scope, $window, manageTagService, libraryService,
-      routeService, $http, $location, modalService, $timeout, $rootScope) {
+      routeService, $http, $location, modalService, $timeout) {
     $window.document.title = 'Kifi • Manage Your Tags';
 
     $scope.selected = {};
@@ -21,9 +21,7 @@ angular.module('kifi')
     //
     // Smart Scroll
     //
-    $scope.$watch(function () {
-      return $scope.tagList;
-    }, function (res) {
+    $scope.$watch('tagList', function (res) {
       if (res) {
         $scope.tagsToShow = $scope.tagList;
       }
@@ -37,9 +35,7 @@ angular.module('kifi')
     };
 
 
-    $scope.$watch(function () {
-      return $scope.selectedSort;
-    }, function () {
+    $scope.$watch('selectedSort', function () {
       if ($scope.filter.name === '') {
         $scope.tagList.length = 0;
         $scope.offset = 0;
@@ -70,7 +66,7 @@ angular.module('kifi')
     //
     // Watchers & Listeners
     //
-    $scope.$watch(function() {
+    $scope.$watch(function () {
       return $window.innerWidth;
     }, function (width) {
       if (width < 1220) {
@@ -186,21 +182,10 @@ angular.module('kifi')
       });
     };
 
-    var removedIndex = -1;
-    var removedTag = {};
     $scope.deleteTag = function () {
-      removedIndex = _.findIndex($scope.tagsToShow, function(t) { return t === $scope.selectedTag; });
-      removedTag = $scope.tagsToShow[removedIndex];
-      $scope.tagsToShow.splice(removedIndex, 1);
+      manageTagService.remove($scope.selectedTag).then(function () {
+        _.remove($scope.tagsToShow, $scope.selectedTag);
+      });
     };
-
-    var deregisterUndoRemoveTag = $rootScope.$on('undoRemoveTag', function () {
-      if (removedIndex > 0) {
-        $scope.tagsToShow.splice(removedIndex, 0, removedTag);
-        removedIndex = -1;
-        removedTag = {};
-      }
-    });
-    $scope.$on('$destroy', deregisterUndoRemoveTag);
   }
 ]);

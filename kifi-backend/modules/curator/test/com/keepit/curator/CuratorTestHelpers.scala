@@ -184,10 +184,10 @@ trait CuratorTestHelpers { this: CuratorTestInjector =>
   }
 
   def makeSeedItems(userId: Id[User]): Seq[SeedItem] = {
-    val seedItem1 = SeedItem(userId = userId, uriId = Id[NormalizedURI](1), url = "url1", seq = SequenceNumber[SeedItem](1), priorScore = None, timesKept = 1000, lastSeen = currentDateTime, keepers = Keepers.TooMany, discoverable = true)
-    val seedItem2 = SeedItem(userId = userId, uriId = Id[NormalizedURI](2), url = "url2", seq = SequenceNumber[SeedItem](2), priorScore = None, timesKept = 10, lastSeen = currentDateTime, keepers = Keepers.ReasonableNumber(Seq(Id[User](1), Id[User](3))), discoverable = true)
-    val seedItem3 = SeedItem(userId = userId, uriId = Id[NormalizedURI](3), url = "url3", seq = SequenceNumber[SeedItem](3), priorScore = None, timesKept = 93, lastSeen = currentDateTime, keepers = Keepers.ReasonableNumber(Seq(Id[User](2))), discoverable = true)
-    val seedItem4 = SeedItem(userId = userId, uriId = Id[NormalizedURI](4), url = "url4", seq = SequenceNumber[SeedItem](4), priorScore = None, timesKept = 20, lastSeen = currentDateTime, keepers = Keepers.ReasonableNumber(Seq(Id[User](1), Id[User](2))), discoverable = true)
+    val seedItem1 = SeedItem(userId = userId, uriId = Id[NormalizedURI](1), url = "url1", seq = SequenceNumber[SeedItem](1), priorScore = None, timesKept = 1000, lastSeen = currentDateTime, lastKept = currentDateTime, keepers = Keepers.TooMany, discoverable = true)
+    val seedItem2 = SeedItem(userId = userId, uriId = Id[NormalizedURI](2), url = "url2", seq = SequenceNumber[SeedItem](2), priorScore = None, timesKept = 10, lastSeen = currentDateTime, lastKept = currentDateTime, keepers = Keepers.ReasonableNumber(Seq(Id[User](1), Id[User](3))), discoverable = true)
+    val seedItem3 = SeedItem(userId = userId, uriId = Id[NormalizedURI](3), url = "url3", seq = SequenceNumber[SeedItem](3), priorScore = None, timesKept = 93, lastSeen = currentDateTime, lastKept = currentDateTime, keepers = Keepers.ReasonableNumber(Seq(Id[User](2))), discoverable = true)
+    val seedItem4 = SeedItem(userId = userId, uriId = Id[NormalizedURI](4), url = "url4", seq = SequenceNumber[SeedItem](4), priorScore = None, timesKept = 20, lastSeen = currentDateTime, lastKept = currentDateTime, keepers = Keepers.ReasonableNumber(Seq(Id[User](1), Id[User](2))), discoverable = true)
     seedItem1 :: seedItem2 :: seedItem3 :: seedItem4 :: Nil
   }
 

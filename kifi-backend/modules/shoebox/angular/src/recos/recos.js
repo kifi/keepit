@@ -213,27 +213,6 @@ angular.module('kifi')
 .controller('RecoCtrl', [
   '$scope', 'modalService', 'recoActionService',
   function ($scope, modalService, recoActionService) {
-    $scope.reasons = $scope.reco.recoData.reasons;
-    $scope.reasonIndex = 0;
-
-    $scope.hasReason = function () {
-      return $scope.reco.recoData.reasons &&
-        ($scope.reco.recoData.reasons.length > 0) &&
-        $scope.reco.recoData.reasons[$scope.reasonIndex].kind;
-    };
-
-    $scope.hasTwoOrMoreReasons = function () {
-      return $scope.hasReason() && ($scope.reco.recoData.reasons.length > 1);
-    };
-
-    $scope.gotoNextReason = function () {
-      $scope.reasonIndex = ($scope.reasonIndex + 1) % $scope.reco.recoData.reasons.length;
-    };
-
-    $scope.gotoPrevReason = function () {
-      $scope.reasonIndex = ($scope.reco.recoData.reasons.length + $scope.reasonIndex - 1) % $scope.reco.recoData.reasons.length;
-    };
-
     $scope.improvement = {};
 
     $scope.showImprovementModal = function () {

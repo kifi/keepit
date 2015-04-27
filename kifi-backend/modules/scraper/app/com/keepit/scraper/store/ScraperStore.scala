@@ -1,14 +1,11 @@
 package com.keepit.common.store
 
 import com.google.inject.{ Provides, Singleton }
-import com.amazonaws.services.s3.{ AmazonS3Client, AmazonS3 }
-import com.keepit.common.healthcheck.{ SystemAdminMailSender, AirbrakeNotifier }
-import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.common.time.Clock
+import com.amazonaws.services.s3.{ AmazonS3 }
+import com.keepit.scraper.store.UriImageStoreInbox
+import org.apache.commons.io.FileUtils
 import play.api.Play._
-import com.keepit.common.aws.AwsModule
 import com.keepit.common.logging.AccessLog
-import com.keepit.learning.porndetector._
 import com.google.inject.Provider
 import com.keepit.scraper.embedly._
 
@@ -25,11 +22,10 @@ case class ScraperProdStoreModule() extends ProdStoreModule {
 
   }
 
-  @Singleton
-  @Provides
-  def bayesPornDetectorStore(amazonS3Client: AmazonS3, accessLog: AccessLog): PornWordLikelihoodStore = {
-    val bucketName = S3Bucket(current.configuration.getString("amazon.s3.bayes.porn.detector.bucket").get)
-    new S3PornWordLikelihoodStore(bucketName, amazonS3Client, accessLog)
+  @Provides @Singleton
+  def uriImageStoreInbox: UriImageStoreInbox = {
+    val inboxDir = forceMakeTemporaryDirectory(current.configuration.getString("scraper.temporary.directory").get, "uri_images")
+    UriImageStoreInbox(inboxDir)
   }
 
   @Singleton
@@ -38,13 +34,6 @@ case class ScraperProdStoreModule() extends ProdStoreModule {
     val bucketName = S3Bucket(current.configuration.getString("amazon.s3.embedly.bucket").get)
     new S3EmbedlyStoreImpl(bucketName, amazonS3Client, accessLog)
   }
-
-  @Singleton
-  @Provides
-  def uriImageStore(amazonS3Client: AmazonS3, config: S3ImageConfig, airbrake: AirbrakeNotifier): S3URIImageStore = {
-    new S3URIImageStoreImpl(amazonS3Client, config, airbrake)
-  }
-
 }
 
 case class ScraperDevStoreModule() extends DevStoreModule(ScraperProdStoreModule()) {
@@ -56,14 +45,9 @@ case class ScraperDevStoreModule() extends DevStoreModule(ScraperProdStoreModule
   def s3ImageConfig: S3ImageConfig =
     whenConfigured("cdn.bucket")(prodStoreModule.s3ImageConfig).getOrElse(S3ImageConfig("", "http://dev.ezkeep.com:9000", true))
 
-  @Singleton
-  @Provides
-  def bayesPornDetectorStore(amazonS3ClientProvider: Provider[AmazonS3], accessLog: AccessLog) = {
-    whenConfigured("amazon.s3.bayes.porn.detector.bucket")(
-      prodStoreModule.bayesPornDetectorStore(amazonS3ClientProvider.get, accessLog)
-    ).getOrElse(new InMemoryPornWordLikelihoodStore() {
-        override def syncGet(key: String) = Some(PornWordLikelihood(Map("a" -> 1f)))
-      })
+  @Provides @Singleton
+  def uriImageStoreInbox: UriImageStoreInbox = whenConfigured("scraper.temporary.directory")(prodStoreModule.uriImageStoreInbox) getOrElse {
+    UriImageStoreInbox(FileUtils.getTempDirectory)
   }
 
   @Singleton
@@ -72,11 +56,5 @@ case class ScraperDevStoreModule() extends DevStoreModule(ScraperProdStoreModule
     whenConfigured("amazon.s3.embedly.bucket")(
       prodStoreModule.embedlyStore(amazonS3ClientProvider.get, accessLog)
     ).getOrElse(new InMemoryEmbedlyStoreImpl())
-  }
-
-  @Singleton
-  @Provides
-  def uriImageStore(amazonS3Client: AmazonS3, config: S3ImageConfig, airbrake: AirbrakeNotifier): S3URIImageStore = {
-    new S3URIImageStoreImpl(amazonS3Client, config, airbrake)
   }
 }

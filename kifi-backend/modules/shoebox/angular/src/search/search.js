@@ -3,10 +3,10 @@
 angular.module('kifi')
 
 .controller('SearchCtrl', [
-  '$scope', '$rootScope', '$location', '$q', '$state', '$stateParams', '$timeout', '$window', '$$rAF',
-  'keepDecoratorService', 'searchActionService', 'libraryService', 'util', 'library',
-  function ($scope, $rootScope, $location, $q, $state, $stateParams, $timeout, $window, $$rAF,
-            keepDecoratorService, searchActionService, libraryService, util, library) {
+  '$scope', '$rootScope', '$location', '$q', '$state', '$stateParams', '$timeout', '$window', '$$rAF', '$http',
+  'keepDecoratorService', 'searchActionService', 'libraryService', 'routeService', 'util', 'library',
+  function ($scope, $rootScope, $location, $q, $state, $stateParams, $timeout, $window, $$rAF, $http,
+            keepDecoratorService, searchActionService, libraryService, routeService, util, library) {
     //
     // Internal data.
     //
@@ -14,7 +14,6 @@ angular.module('kifi')
     var query;
     var filter;
     var context;
-    var selectedCount;
     var renderTimeout;
     var smoothScrollStep;  // used to ensure that only one smooth scroll animation happens at a time
 
@@ -28,6 +27,12 @@ angular.module('kifi')
       myTotal: 0,
       friendsTotal: 0,
       othersTotal: 0
+    };
+    $scope.edit = {
+      enabled: false,
+      actions: {
+        keepToLibrary: true
+      }
     };
 
 
@@ -56,13 +61,13 @@ angular.module('kifi')
       }
 
       context = null;
-      selectedCount = 0;
       $timeout.cancel(renderTimeout);
       renderTimeout = null;
 
       $scope.hasMore = true;
       $scope.scrollDistance = '100%';
       $scope.loading = false;
+      $scope.edit.enabled = false;
 
       document.title = (library && library.name ? library.name + ' • ' : '') + query.replace(/^tag:/, '') + ' • Kifi';
 
@@ -131,12 +136,13 @@ angular.module('kifi')
       }
 
       $scope.loading = true;
+      var firstBatch = !context;
       searchActionService.find(query, filter, library, context, $rootScope.userLoggedIn).then(function (queryNumber, result) {
         if (queryNumber !== queryCount) {  // results are for an old query
           return;
         }
 
-        context = result.context;
+        context = result.uris.context;
 
         if (resetExistingResults) {
           $scope.resultKeeps.length = 0;
@@ -144,17 +150,24 @@ angular.module('kifi')
           $scope.resultTotals.friendsTotal = 0;
           $scope.resultTotals.othersTotal = 0;
         }
-        $scope.resultTotals.myTotal = $scope.resultTotals.myTotal || result.myTotal;
-        $scope.resultTotals.friendsTotal = $scope.resultTotals.friendsTotal || result.friendsTotal;
-        $scope.resultTotals.othersTotal = $scope.resultTotals.othersTotal || result.othersTotal;
+        $scope.resultTotals.myTotal = $scope.resultTotals.myTotal || result.uris.myTotal;
+        $scope.resultTotals.friendsTotal = $scope.resultTotals.friendsTotal || result.uris.friendsTotal;
+        $scope.resultTotals.othersTotal = $scope.resultTotals.othersTotal || result.uris.othersTotal;
 
-        var hits = result.hits;
+        var hits = result.uris.hits;
         if (hits.length) {
-          $scope.hasMore = !!result.mayHaveMore;
+          $scope.hasMore = !!result.uris.mayHaveMore;
           renderTimeout = $timeout(angular.bind(null, renderNextKeep, hits.slice()));
         } else {
           $scope.hasMore = false;
           onDoneWithBatchOfKeeps();
+        }
+
+        if (firstBatch) {
+          var libs = $scope.matchingLibraries = result.libraries.hits.map(unpackLibrary);
+          if (libs.length) {
+            loadImagesAndAugment(libs);
+          }
         }
       }.bind(null, queryCount));
     };
@@ -178,6 +191,30 @@ angular.module('kifi')
       $scope.loading = false;
     }
 
+    function unpackLibrary(library) {
+      return {
+        id: library.id,
+        owner: library.owner,
+        numFollowers: library.memberCount - 1,
+        numKeeps: library.keepCount,
+        name: library.name,
+        description: library.description,
+        color: library.color,
+        image: library.image,
+        path: library.path,
+        reason: 'topic'
+      };
+    }
+
+    function loadImagesAndAugment(libs) {
+      $http.get(routeService.getLibraryCoverImages(_.pluck(libs, 'id'), 400, 400)).then(function (res) {
+        var imagesById = res.data;
+        _.each(libs, function (lib) {
+          lib.image = imagesById[lib.id];
+        });
+      });
+    }
+
     $scope.isFilterSelected = function (type) {
       return filter === type;
     };
@@ -189,39 +226,6 @@ angular.module('kifi')
     $scope.analyticsTrack = function (keep, $event) {
       searchActionService.reportSearchClickAnalytics(keep, $scope.resultKeeps.indexOf(keep), $scope.resultKeeps.length);
       return [keep, $event]; // log analytics for search click here
-    };
-
-    $scope.getSubtitle = function () {
-      if ($scope.loading) {
-        return 'Searching…';
-      }
-
-      // If there are selected keeps, display the number of keeps
-      // in the subtitle.
-      if (selectedCount > 0) {
-        return (selectedCount === 1) ? '1 Keep selected' : selectedCount + ' Keeps selected';
-      }
-
-      // If there are no selected keep, the display the number of
-      // search results in the subtitle.
-      switch ($scope.resultKeeps.length) {
-        case 0:
-          return 'Sorry, no results found for “' + query + '”';
-        case 1:
-          return '1 result found';
-        default:
-          return 'Top ' + $scope.resultKeeps.length + ' results';
-      }
-    };
-
-    $scope.updateSelectedCount = function (numSelected) {
-      selectedCount = numSelected;
-    };
-
-    $scope.editOptions = {
-      actions: {
-        keepToLibrary: true
-      }
     };
 
     $scope.onClickSearchFilter = function (newSearchFilter) {

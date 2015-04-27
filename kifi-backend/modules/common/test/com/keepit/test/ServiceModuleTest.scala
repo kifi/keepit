@@ -1,5 +1,6 @@
 package com.keepit.test
 
+import com.keepit.common.concurrent.WatchableExecutionContext
 import com.keepit.common.controller._
 import play.api.mvc.Controller
 import scala.collection.JavaConversions._
@@ -9,6 +10,8 @@ import java.io.File
 import com.keepit.inject.{ ApplicationInjector, ConfigurationModule }
 import org.specs2.mutable.Specification
 import play.api.test.Helpers.running
+import net.codingwell.scalaguice._
+import net.codingwell.scalaguice.InjectorExtensions._
 
 object ServiceModuleTestHelpers extends Logging {
 
@@ -61,7 +64,7 @@ abstract class ServiceModuleTest(expectedModule: ConfigurationModule) extends Sp
           injector.getInstance(controller)
         }
         log.info(s"All controllers could be instantiated.")
-
+        injector.instance[WatchableExecutionContext].kill()
         val happy = s"$expectedModule is all good"
         happy === happy
       }

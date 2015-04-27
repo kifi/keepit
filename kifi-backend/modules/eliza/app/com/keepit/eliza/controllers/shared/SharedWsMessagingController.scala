@@ -68,7 +68,7 @@ class SharedWsMessagingController @Inject() (
     "get_thread" -> {
       case JsString(threadId) +: _ =>
         log.info(s"[get_thread] user ${socket.userId} thread $threadId")
-        basicMessageCommander.getThreadMessagesWithBasicUser(ExternalId[MessageThread](threadId)) map {
+        basicMessageCommander.getThreadMessagesWithBasicUser(socket.userId, ExternalId[MessageThread](threadId)) map {
           case (thread, msgs) =>
             val url = thread.url.getOrElse("") // needs to change when we have detached threads
             SafeFuture(socket.channel.push(Json.arr("thread", Json.obj("id" -> threadId, "uri" -> url, "messages" -> msgs.reverse))))

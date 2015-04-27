@@ -380,7 +380,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
         db.readOnlyMaster { implicit s =>
           val keeps = keepRepo.getByLibrary(lib1.id.get, 0, 10)
           keeps(0).title.get === "Bikini Bottom"
-          collectionRepo.getTagsByKeepId(keeps(0).id.get).map(_.tag) === Set("vacation")
+          collectionRepo.getHashtagsByKeepId(keeps(0).id.get).map(_.tag) === Set("vacation")
         }
 
         // add same keep with different title & different set of tags
@@ -393,7 +393,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
         db.readOnlyMaster { implicit s =>
           val keeps = keepRepo.getByLibrary(lib1.id.get, 0, 10)
           keeps(0).title.get === "Airbnb"
-          collectionRepo.getTagsByKeepId(keeps(0).id.get).map(_.tag) === Set("tagA", "tagB")
+          collectionRepo.getHashtagsByKeepId(keeps(0).id.get).map(_.tag) === Set("tagA", "tagB")
         }
       }
     }
@@ -420,10 +420,10 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
     "get writeable libraries" in {
       withDb(controllerTestModules: _*) { implicit injector =>
         val (user1, lib1, lib2, _, _) = setupTwoUsersThreeLibraries()
-        val pubId1 = Library.publicId(lib1.id.get)(inject[PublicIdConfiguration])
-        val pubId2 = Library.publicId(lib2.id.get)(inject[PublicIdConfiguration])
+        val pubLibId1 = Library.publicId(lib1.id.get)(inject[PublicIdConfiguration])
+        val pubLibId2 = Library.publicId(lib2.id.get)(inject[PublicIdConfiguration])
         val k1 = db.readWrite { implicit s =>
-          setupKeepInLibrary(user1, lib1, "http://www.yelp.com/krustykrab", "krustykrab", Seq("food1", "food2"))
+          setupKeepInLibrary(user1, lib1, "http://www.yelp.com/krustykrab", "krustykrab", Seq("food1", "food2"), Some("[#food1] [#food2]"))
         }
 
         val emptyBody = Json.obj()
@@ -453,9 +453,22 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
         (response3 \ "libraries").as[Seq[LibraryInfo]].length === 2
         (response3 \ "error").asOpt[String] === None
         val keepData = (response3 \ "alreadyKept")
-        (keepData \\ "id").map(_.as[ExternalId[Keep]]) === Seq(k1.externalId)
-        (keepData \\ "libraryId").map(_.as[PublicId[Library]]) === Seq(pubId1)
-        (keepData \\ "hashtags").map(_.as[Seq[Hashtag]].map(_.tag)) === Seq(Seq("food1", "food2"))
+        keepData === Json.parse(s"""
+            [
+             { "keep": {
+                "id":"${k1.externalId}",
+                "title":"krustykrab",
+                "note":"",
+                "imageUrl":null,
+                "hashtags":["food1","food2"]
+               },
+               "mine":true,
+               "removable":true,
+               "secret":true,
+               "libraryId":"${pubLibId1.id}"
+              }
+             ]
+           """)
 
         val result4 = getSummariesWithUrl(user1, Json.obj("url" -> url3))
         status(result4) must equalTo(OK)
@@ -466,59 +479,6 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
       }
     }
 
-    "get profile libraries" in {
-      withDb(controllerTestModules: _*) { implicit injector =>
-        val (user1, lib1, lib2, _, _) = setupTwoUsersThreeLibraries()
-        val pubId1 = Library.publicId(lib1.id.get)(inject[PublicIdConfiguration])
-        val pubId2 = Library.publicId(lib2.id.get)(inject[PublicIdConfiguration])
-
-        val result1 = getProfileLibraries(user1, 0, 10, "own")
-        status(result1) must equalTo(OK)
-        Json.parse(contentAsString(result1)) === Json.parse(
-          s"""
-             {
-              "own" : [
-                {
-                  "id":"${pubId2.id}",
-                  "name":"Catching Jellyfish",
-                  "numFollowers":0,
-                  "numKeeps":0,
-                  "followers":[],
-                  "slug":"catching-jellyfish",
-                  "kind" : "user_created",
-                  "visibility" : "published",
-                  "numKeeps" : 0,
-                  "numFollowers" : 0,
-                  "followers": [],
-                  "lastKept": ${lib2.createdAt.getMillis},
-                  "listed": true
-                },
-                {
-                  "id":"${pubId1.id}",
-                  "name":"Krabby Patty",
-                  "numFollowers":0,
-                  "numKeeps":0,
-                  "followers":[],
-                  "slug":"krabby-patty",
-                  "kind" : "user_created",
-                  "visibility" : "secret",
-                  "numKeeps" : 0,
-                  "numFollowers" : 0,
-                  "followers": [],
-                  "lastKept": ${lib1.createdAt.getMillis},
-                  "listed": true
-                }
-              ]
-            }
-           """)
-        val result2 = getProfileLibraries(user1, 0, 10, "all")
-        status(result2) must equalTo(OK)
-        val resultJson2 = contentAsJson(result2)
-        (resultJson2 \ "own").as[Seq[JsObject]].length === 2
-        (resultJson2 \ "following").as[Seq[JsObject]].length === 0
-        (resultJson2 \ "invited").as[Seq[JsObject]].length === 0
-      }
-    }
   }
 
   private def createLibrary(user: User, body: JsObject)(implicit injector: Injector): Future[Result] = {
@@ -576,11 +536,6 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
     controller.getLibrarySummariesWithUrl()(request(routes.MobileLibraryController.getLibrarySummariesWithUrl()).withBody(body))
   }
 
-  private def getProfileLibraries(user: User, page: Int, size: Int, filter: String)(implicit injector: Injector): Future[Result] = {
-    inject[FakeUserActionsHelper].setUser(user)
-    controller.getProfileLibraries(user.username, page, size, filter)(request(routes.MobileLibraryController.getProfileLibraries(user.username, page, size, filter)))
-  }
-
   // User 'Spongebob' has one library called "Krabby Patty" (secret)
   private def setupOneUserOneLibrary()(implicit injector: Injector) = {
     val t1 = new DateTime(2014, 12, 1, 12, 0, 0, 0, DEFAULT_DATE_TIME_ZONE)
@@ -609,11 +564,11 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
     (user1, library1a, library1b, user2, library2a)
   }
 
-  private def setupKeepInLibrary(user: User, lib: Library, url: String, title: String, tags: Seq[String] = Seq.empty)(implicit injector: Injector, session: RWSession): Keep = {
+  private def setupKeepInLibrary(user: User, lib: Library, url: String, title: String, tags: Seq[String] = Seq.empty, note: Option[String] = None)(implicit injector: Injector, session: RWSession): Keep = {
     val uri = uriRepo.save(NormalizedURI(url = url, urlHash = UrlHash(url.hashCode.toString)))
     val urlId = urlRepo.save(URLFactory(url = uri.url, normalizedUriId = uri.id.get)).id.get
     val keep = keepRepo.save(Keep(
-      title = Some(title), userId = user.id.get, uriId = uri.id.get, urlId = urlId, url = uri.url,
+      title = Some(title), userId = user.id.get, uriId = uri.id.get, urlId = urlId, url = uri.url, note = note,
       source = KeepSource.keeper, visibility = lib.visibility, libraryId = lib.id, inDisjointLib = lib.isDisjoint))
     tags.foreach { tag =>
       val coll = collectionRepo.save(Collection(userId = keep.userId, name = Hashtag(tag)))

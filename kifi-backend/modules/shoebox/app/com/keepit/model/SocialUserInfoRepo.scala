@@ -58,22 +58,23 @@ class SocialUserInfoRepoImpl @Inject() (
     def lastGraphRefresh = column[Option[DateTime]]("last_graph_refresh", O.Nullable)
     def pictureUrl = column[Option[String]]("picture_url", O.Nullable)
     def profileUrl = column[Option[String]]("profile_url", O.Nullable)
+    def username = column[Option[String]]("username", O.Nullable)
     def * = (id.?, createdAt, updatedAt, userId, fullName, pictureUrl, profileUrl, state, socialId,
-      networkType, credentials, lastGraphRefresh, seq, socialHash) <> ((applyFromDbRow _).tupled, unapplyToDbRow _)
+      networkType, credentials, lastGraphRefresh, username, seq, socialHash) <> ((applyFromDbRow _).tupled, unapplyToDbRow _)
   }
 
   private def applyFromDbRow(id: Option[Id[SocialUserInfo]], createdAt: DateTime, updatedAt: DateTime,
     userId: Option[Id[User]], fullName: String, pictureUrl: Option[String],
     profileUrl: Option[String], state: State[SocialUserInfo], socialId: SocialId,
     networkType: SocialNetworkType, credentials: Option[SocialUser],
-    lastGraphRefresh: Option[DateTime], seq: SequenceNumber[SocialUserInfo], socialHash: Option[Long]) = {
+    lastGraphRefresh: Option[DateTime], username: Option[String], seq: SequenceNumber[SocialUserInfo], socialHash: Option[Long]) = {
     SocialUserInfo(id, createdAt, updatedAt, userId, fullName, pictureUrl, profileUrl, state, socialId,
-      networkType, credentials, lastGraphRefresh, seq)
+      networkType, credentials, lastGraphRefresh, username, seq)
   }
 
   private def unapplyToDbRow(s: SocialUserInfo) = {
     Some((s.id, s.createdAt, s.updatedAt, s.userId, s.fullName, s.pictureUrl, s.profileUrl, s.state, s.socialId,
-      s.networkType, s.credentials, s.lastGraphRefresh, s.seq, Option(socialIdToSocialHash(s.socialId))))
+      s.networkType, s.credentials, s.lastGraphRefresh, s.username, s.seq, Option(socialIdToSocialHash(s.socialId))))
   }
 
   def table(tag: Tag) = new SocialUserInfoTable(tag)

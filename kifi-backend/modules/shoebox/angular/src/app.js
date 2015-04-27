@@ -23,10 +23,6 @@ angular.module('kifi', [
 //              is still needed (probably because ui-view is nested inside ng-include).
 .run(['$state', angular.noop])
 
-.constant('linkedinConfigSettings', {
-  appKey: 'r11loldy9zlg'
-})
-
 .constant('env', (function () {
   var location = window.location;
   var host = location.hostname;
@@ -50,8 +46,11 @@ angular.module('kifi', [
 }()))
 
 .config([
-  '$FBProvider', 'env',
-  function ($FBProvider, env) {
+  '$compileProvider', '$FBProvider', 'env',
+  function ($compileProvider, $FBProvider, env) {
+    // ng-perf.com/2014/10/24/simple-trick-to-speed-up-your-angularjs-app-load-time/
+    $compileProvider.debugInfoEnabled(env.dev);
+
     $FBProvider
       .appId(env.dev ? '530357056981814' : '104629159695560')
       // https://developers.facebook.com/docs/facebook-login/permissions
@@ -136,7 +135,7 @@ angular.module('kifi', [
     }
 
     function paramsDiffer(stateName, p1, p2) {
-      var paramNames = $state.get(stateName).url.match(/[:?&]\w+/g).map(function (prop) {
+      var paramNames = ($state.get(stateName).url.match(/[:?&]\w+/g) || []).map(function (prop) {
         return prop.slice(1);  // remove leading [:?&]
       });
       return !_.isEqual(_.pick(p1, paramNames), _.pick(p2, paramNames));

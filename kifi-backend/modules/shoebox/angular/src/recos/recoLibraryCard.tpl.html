@@ -38,13 +38,13 @@
               </a>
             </div>
             <div class="kf-rcl-followers" kf-library-follower-pics="library.followers" follower-widths="[[0,32,6],[480,42,8]]" num-followers="library.numFollowers"
-              show-followers="showFollowers()" tooltips="yes" current-page-origin="recommendationsPage"></div>
+              show-followers="showFollowers()" current-page-origin="recommendationsPage"></div>
           </div>
         </div>
       </div>
       <div class="kf-rcl-buttons clearfix">
         <div style="float:right">
-          <div kf-library-share-search library="library" current-page-origin="libraryPage"></div>
+          <div kf-library-share-search library="library" current-page-origin="recommendationsPage"></div>
           <button class="kf-button kf-rcl-unfollow-btn" ng-if="alreadyFollowingLibrary()" ng-click="unfollowLibrary()"></button>
           <button class="kf-button kf-rcl-follow-btn" ng-if="!alreadyFollowingLibrary()" ng-click="followLibrary()">Follow Library</button>
         </div>

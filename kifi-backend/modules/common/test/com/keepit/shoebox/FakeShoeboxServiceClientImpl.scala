@@ -45,8 +45,6 @@ class FakeShoeboxScraperClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def saveScrapeInfo(info: ScrapeInfo): Future[Unit] = ???
 
-  def saveNormalizedURI(uri: NormalizedURI): Future[NormalizedURI] = ???
-
   def updateNormalizedURIState(uriId: Id[NormalizedURI], state: State[NormalizedURI]): Future[Unit] = ???
 
   def updateNormalizedURI(uriId: => Id[NormalizedURI],
@@ -64,15 +62,9 @@ class FakeShoeboxScraperClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
     redirect: => Option[Id[NormalizedURI]],
     redirectTime: => Option[DateTime]): Future[Unit] = Future.successful(Unit)
 
-  def recordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect): Future[NormalizedURI] = ???
-
-  def recordScrapedNormalization(uriId: Id[NormalizedURI], signature: Signature, candidateUrl: String, candidateNormalization: Normalization, alternateUrls: Set[String]): Future[Unit] = ???
-
   def getProxy(url: String): Future[Option[HttpProxy]] = ???
 
   def getProxyP(url: String): Future[Option[HttpProxy]] = ???
-
-  def getLatestKeep(url: String): Future[Option[Keep]] = ???
 
 }
 // code below should be sync with code in ShoeboxController
@@ -589,7 +581,10 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
   }
 
   def getUsersByExperiment(experimentType: ExperimentType): Future[Set[User]] = {
-    Future.successful(allUsers.map(_._2).toSet)
+    Future.successful(allUserExperiments.toSeq.filter {
+      case (user, experiments) =>
+        experiments.map(_.experimentType).contains(experimentType)
+    }.map { case (user, experiment) => allUsers(user) }.toSet)
   }
 
   def getSearchFriends(userId: Id[User]): Future[Set[Id[User]]] = {
@@ -642,8 +637,6 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
     val changed = allSearchFriends.values.filter(_.seq > seq).toSeq.sortBy(_.seq)
     Future.successful(if (fetchSize < 0) changed else changed.take(fetchSize))
   }
-
-  def updateURIRestriction(id: Id[NormalizedURI], r: Option[Restriction]): Future[Unit] = ???
 
   def getUriSummary(request: URISummaryRequest): Future[URISummary] = Future.successful(URISummary())
 

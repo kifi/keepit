@@ -1,15 +1,18 @@
 package com.keepit.realtime
 
 import com.google.inject.Inject
+import com.keepit.common.concurrent.RetryFuture
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
+import com.keepit.common.net.NonOKResponseException
+import com.keepit.eliza.{ LibraryPushNotificationCategory, UserPushNotificationCategory }
 import com.keepit.eliza.commanders.MessagingAnalytics
 import com.keepit.model.{ Library, User }
 import com.keepit.shoebox.ShoeboxServiceClient
-import play.api.libs.json.{ JsNumber, JsString, JsObject, Json }
+import play.api.libs.json._
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success }
@@ -37,10 +40,10 @@ class AppBoy @Inject() (
     val updatedDevice = db.readWrite { implicit s =>
 
       // inactivate devices that have non-appboy signature
-      deviceRepo.getByUserIdAndDeviceTypeAndSignature(userId, deviceType, signature) match {
-        case Some(d) => // probably urbanairship, inactivate
-          deviceRepo.save(d.copy(state = DeviceStates.INACTIVE))
-        case _ =>
+      deviceRepo.getByUserIdAndDeviceType(userId, deviceType).collect {
+        case device if !device.signature.exists(_.startsWith("ab_")) =>
+          // We only want non-AppBoy devices
+          deviceRepo.save(device.copy(state = DeviceStates.INACTIVE))
       }
 
       deviceRepo.getByUserIdAndDeviceTypeAndSignature(userId, deviceType, appBoySign, None) match {
@@ -54,19 +57,21 @@ class AppBoy @Inject() (
     updatedDevice
   }
 
-  def notifyUser(userId: Id[User], allDevices: Seq[Device], notification: PushNotification): Future[Int] = {
+  // When this is the only push provider, refactor this to just take userId and notification. No need to get list of devices.
+  def notifyUser(userId: Id[User], allDevices: Seq[Device], notification: PushNotification, force: Boolean): Future[Int] = {
     log.info(s"[AppBoy] Notifying user: $userId with $allDevices")
-    val (activeDevices, _) = allDevices.partition(d => d.state == DeviceStates.ACTIVE)
+    val activeDevices = if (force) allDevices else allDevices.filter(_.state == DeviceStates.ACTIVE)
+    val deviceTypes = activeDevices.groupBy(_.deviceType).keys.toList
 
     shoeboxClient.getUser(userId).map { userOpt =>
       userOpt match {
+        case Some(user) if deviceTypes.nonEmpty =>
+          sendNotification(user, deviceTypes, notification, force, activeDevices)
+          log.info(s"[AppBoy] sent user $userId push notifications to ${deviceTypes.length} device types out of ${allDevices.size}. $notification")
+          deviceTypes.length
         case Some(user) =>
-          activeDevices foreach { device =>
-            sendNotification(user, device, notification)
-          }
-          log.info(s"[AppBoy] sent user $userId push notifications to ${activeDevices.size} active devices out of ${allDevices.size}. $notification")
-          activeDevices.size
-
+          log.info(s"[AppBoy] no devices for $userId push notifications $allDevices devices. notification: $notification")
+          0
         case None =>
           airbrake.notify(s"[AppBoy] user $userId not found to send push notifications! $allDevices devices. notification: $notification)")
           0
@@ -74,15 +79,23 @@ class AppBoy @Inject() (
     }
   }
 
+  // see https://docs.google.com/a/kifi.com/document/d/1efEGk8Wdj2dAjWjUWvsHW5UC0p2srjIXiju8tLpuOMU/edit# for spec
   private def addExtraJson(notification: PushNotification, deviceType: DeviceType) = {
     val json = Json.obj("unreadCount" -> notification.unvisitedCount)
     notification match {
+      case mcpn: MessageCountPushNotification =>
+        json
       case spn: SimplePushNotification =>
         json
       case mtpn: MessageThreadPushNotification =>
         json.as[JsObject] + ("id" -> JsString(mtpn.id.id))
       case lupn: LibraryUpdatePushNotification =>
-        val withLid = json.as[JsObject] ++ Json.obj("t" -> "lr", "lid" -> Library.publicId(lupn.libraryId).id)
+        val pushType = lupn.category match {
+          case LibraryPushNotificationCategory.LibraryChanged => "lr"
+          case LibraryPushNotificationCategory.LibraryInvitation => "li"
+          case _ => "lr"
+        }
+        val withLid = json.as[JsObject] ++ Json.obj("t" -> pushType, "lid" -> Library.publicId(lupn.libraryId).id)
         deviceType match {
           case DeviceType.Android =>
             withLid
@@ -90,61 +103,84 @@ class AppBoy @Inject() (
             withLid + ("lu" -> JsString(lupn.libraryUrl))
         }
       case upn: UserPushNotification =>
-        json.as[JsObject] ++ Json.obj("t" -> "us", "uid" -> upn.userExtId, "un" -> upn.username.value, "purl" -> upn.pictureUrl)
+        val pushType = upn.category match {
+          case UserPushNotificationCategory.UserConnectionRequest => "fr"
+          case UserPushNotificationCategory.ContactJoined => "us"
+          case UserPushNotificationCategory.NewLibraryFollower => "nf"
+          case _ => "us"
+        }
+        json.as[JsObject] ++ Json.obj("t" -> pushType, "uid" -> upn.userExtId, "un" -> upn.username.value, "purl" -> upn.pictureUrl)
       case _ =>
         throw new Exception(s"Don't recognize push notification $notification")
     }
   }
 
-  private def sendNotification(user: User, device: Device, notification: PushNotification): Unit = {
-
-    val defaultPushJson = Json.obj(
-      "sound" -> Json.toJson(notification.sound),
-      "alert" -> notification.message,
-      "extra" -> addExtraJson(notification, device.deviceType)
-    )
-
-    val (deviceMsgType, devicePushJson) = device.deviceType match {
-      case DeviceType.IOS =>
-        val applePushJson = notification.message match {
-          case Some(msg) => defaultPushJson
-          case None => defaultPushJson ++ Json.obj("content-available" -> true)
-        }
-        ("apple_push", applePushJson)
-      case DeviceType.Android =>
-        val androidPushJson = defaultPushJson ++ Json.obj("title" -> notification.message)
-        ("android_push", androidPushJson)
-    }
+  private def sendNotification(user: User, deviceTypes: Seq[DeviceType], notification: PushNotification, wasForced: Boolean, devices: Seq[Device]): Unit = {
+    val userId = user.id.get
 
     val json = Json.obj(
       "app_group_id" -> AppBoyConfig.appGroupId,
       "external_user_ids" -> Json.toJson(Seq(user.externalId)),
+      "campaign_id" -> "2c22f953-902a-4f3c-88f0-34fe07edeccf",
       "messages" -> Json.obj(
-        deviceMsgType -> devicePushJson
+        "apple_push" -> Json.obj(
+          "message_variation_id" -> "iosPush-9",
+          "badge" -> notification.unvisitedCount,
+          "sound" -> Json.toJson(notification.sound),
+          "alert" -> notification.message,
+          "content-available" -> (if (notification.message.isDefined) false else true),
+          "extra" -> addExtraJson(notification, DeviceType.IOS)
+        ),
+        "android_push" -> (Json.obj(
+          "message_variation_id" -> "androidPush-12",
+          "badge" -> notification.unvisitedCount,
+          "sound" -> Json.toJson(notification.sound),
+          "alert" -> notification.message,
+          "content-available" -> (if (notification.message.isDefined) false else true),
+          "extra" -> addExtraJson(notification, DeviceType.Android)
+        ) ++ (if (notification.message.isDefined) Json.obj("title" -> Json.toJson(notification.message.get)) else Json.obj()))
       )
     )
 
     notification match {
       case spn: SimplePushNotification =>
-        log.info(s"[AppBoy] sending SimplePushNotification to user ${device.userId} device [${device.token}] with: $json")
+        log.info(s"[AppBoy] sending SimplePushNotification to user $userId with: $json")
       case mtpn: MessageThreadPushNotification =>
-        log.info(s"[AppBoy] sending MessageThreadPushNotification to user ${device.userId} device: [${device.token}] message ${mtpn.id} with $json")
+        log.info(s"[AppBoy] sending MessageThreadPushNotification to user $userId message ${mtpn.id} with $json")
       case lupn: LibraryUpdatePushNotification =>
-        log.info(s"[AppBoy] sending LibraryUpdatePushNotification to user ${device.userId} device: [${device.token}] library ${lupn.libraryId} message ${lupn.message} with $json")
+        log.info(s"[AppBoy] sending LibraryUpdatePushNotification to user $userId library ${lupn.libraryId} message ${lupn.message} with $json")
       case upn: UserPushNotification =>
-        log.info(s"[AppBoy] sending UserPushNotification to user ${device.userId} device: [${device.token}] user ${upn.username}:${upn.userExtId} message ${upn.message} wtih $json")
+        log.info(s"[AppBoy] sending UserPushNotification to user $userId user ${upn.username}:${upn.userExtId} message ${upn.message} with $json")
+      case mcpn: MessageCountPushNotification =>
+        log.info(s"[AppBoy] sending MessageCountPushNotification to user $userId with $json")
     }
 
-    client.send(json, device, notification) andThen {
-      case Success(res) =>
-        if (res.status / 100 != 2) {
-          airbrake.notify(s"[AppBoy] bad status ${res.status} on push notification $notification for device $device. response: ${res.body}")
-        } else {
-          log.info(s"[AppBoy] successful push notification to device $device: ${res.body}")
-          messagingAnalytics.sentPushNotification(device, notification)
+    RetryFuture(attempts = 3, {
+      case error: Throwable =>
+        log.error(s"[AppBoy] Error when pushing $notification for user $userId. Will retry. Error: ${error.getClass.getSimpleName} $error", error)
+        true
+    })(client.send(json, notification)).onComplete {
+      case Success(res) if res.status / 100 == 2 =>
+        log.info(s"[AppBoy] successful push notification to user $userId: ${res.body}")
+        deviceTypes.foreach { deviceType =>
+          messagingAnalytics.sentPushNotification(userId, deviceType, notification)
         }
+      case Success(non200) =>
+        if (!wasForced) airbrake.notify(s"[AppBoy] bad status ${non200.status} on push notification $notification for user $userId. response: ${non200.body}")
       case Failure(e) =>
-        airbrake.notify(s"[AppBoy] fail to send push notification $notification for device $device - error: $e")
+        if (!wasForced) {
+          e match {
+            case statError: NonOKResponseException if statError.response.status / 100 == 4 =>
+              db.readWrite { implicit s =>
+                devices foreach { device =>
+                  deviceRepo.save(device.copy(state = DeviceStates.REJECTED_BY_APPBOY))
+                }
+              }
+              log.warn(s"[AppBoy] 4xx error from server, disabling device for user $userId. fail to send push notification $notification, json $json - error: ${e.getClass.getSimpleName} $e")
+            case _ =>
+              airbrake.notify(s"[AppBoy] fail to send push notification $notification, json $json for user $userId - error: ${e.getClass.getSimpleName} $e")
+          }
+        }
     }
   }
 

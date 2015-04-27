@@ -1,48 +1,55 @@
-.kf-page-bottom-cta
+.kf-pbc
   position: fixed
+  z-index: 1000
   bottom: 0
   width: 100%
-  background: rgba(0, 0, 0, 0.75)
-  opacity: 1
-  transition: opacity 0.8s ease 0.8s
-  z-index: 1000
+  background: rgba(0,0,0,.75)
+  line-height: 1.4
+  font-size: 12px
 
-  &.ng-hide
+  @media (min-width: 480px) and (min-height: 480px)
+    font-size: 13px
+
+  @media (min-width: 560px) and (min-height: 560px)
+    font-size: 14px
+
+  @media (min-width: 720px) and (min-height: 720px)
+    font-size: 16px
+
+  &.ng-enter
+  &.ng-leave
+    transition: transform .8s, opacity .8s
+
+  &.ng-enter:not(.ng-enter-active)
+  &.ng-leave-active
+    transform: translate(0, 30%)
     opacity: 0
-    transition: opacity 0
 
 .kf-pbc-content
-  padding: 40px 0
+  padding: 1.5em 0
   text-align: center
 
 .kf-pbc-title
-  margin-bottom: 5px
-  font-size: 32px
+  font-size: 2em
   font-weight: bold
   color: #fff
 
 .kf-pbc-subtitle
-  margin-bottom: 20px
-  font-size: 17px
+  margin-bottom: 1.2em
   color: #ccc
 
-.kf-pbc-link
+.kf-pbc-continue
   display: block
   vertical-align: top
   margin: 0 auto
-  border-radius: 5px
-  width: 225px
-  line-height: 35px
-  font-size: 18px
+  border-radius: 8px
+  width: 10em
+  line-height: 1.9
+  font-size: 1.1em
   font-smoothing: auto
-  &:focus
-    outline: none
-
-.kf-pbc-link-continue
-  margin-bottom: 15px
+  margin-bottom: .8em
   background: #32c561
   color: #fff
 
-.kf-pbc-link-login
-  background: #fff
-  color: #333
+  &:focus
+    outline-color: alpha(#fff, .5)

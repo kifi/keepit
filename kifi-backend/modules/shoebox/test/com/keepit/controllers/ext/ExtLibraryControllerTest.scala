@@ -364,7 +364,7 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
           val lib = libraryRepo.save(Library(name = "L", ownerId = user1.id.get, visibility = LibraryVisibility.DISCOVERABLE, slug = LibrarySlug("l"), memberCount = 1))
           val mem1 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user1.id.get, access = LibraryAccess.OWNER))
           val mem2 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user2.id.get, access = LibraryAccess.READ_ONLY))
-          val keep = keepInLibrary(user1, lib, "http://foo.com", "Foo", Seq("Bar", "Baz"))
+          val keep = keepInLibrary(user1, lib, "http://foo.com", "Ya", Seq("Do run run", "Yeah"))
           (user1, user2, lib, mem1, mem2, keep)
         }
         val libPubId = Library.publicId(lib.id.get)(inject[PublicIdConfiguration])
@@ -373,7 +373,7 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
         val result1 = getKeep(user1, libPubId, keep.externalId)
         status(result1) === OK
         contentType(result1) must beSome("application/json")
-        contentAsString(result1) === """{"title":"Foo","tags":["Bar","Baz"]}"""
+        contentAsString(result1) === """{"title":"Ya","note":"#Do\u00a0run\u00a0run #Yeah","tags":["Do run run","Yeah"]}"""
 
         // invalid keep ID
         val result2 = getKeep(user1, libPubId, ExternalId())
@@ -385,7 +385,7 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
         val result3 = getKeep(user2, libPubId, keep.externalId)
         status(result3) === OK
         contentType(result3) must beSome("application/json")
-        contentAsString(result3) === """{"title":"Foo","tags":["Bar","Baz"]}"""
+        contentAsString(result3) === """{"title":"Ya","note":"#Do\u00a0run\u00a0run #Yeah","tags":["Do run run","Yeah"]}"""
 
         // other user with library access revoked cannot get keep
         db.readWrite { implicit s => libraryMembershipRepo.save(mem2.withState(LibraryMembershipStates.INACTIVE)) }
@@ -504,8 +504,8 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
         status(tagKeep(user1, libPubId, keep1.externalId, "dd")) === OK
         status(tagKeep(user1, libPubId, keep2.externalId, "e e e")) === OK
         db.readOnlyMaster { implicit s =>
-          collectionRepo.getTagsByKeepId(keep1.id.get) === Set(Hashtag("c"), Hashtag("dd"))
-          collectionRepo.getTagsByKeepId(keep2.id.get) === Set(Hashtag("aa aa"), Hashtag("b b"), Hashtag("e e e"))
+          collectionRepo.getHashtagsByKeepId(keep1.id.get) === Set(Hashtag("c"), Hashtag("dd"))
+          collectionRepo.getHashtagsByKeepId(keep2.id.get) === Set(Hashtag("aa aa"), Hashtag("b b"), Hashtag("e e e"))
         }
 
         // user can untag own keeps in own library
@@ -514,8 +514,8 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
         status(untagKeep(user1, libPubId, keep1.externalId, "xyz")) === NO_CONTENT // succeeds when a no-op
         status(untagKeep(user1, libPubId, keep2.externalId, "b b")) === NO_CONTENT
         db.readOnlyMaster { implicit s =>
-          collectionRepo.getTagsByKeepId(keep1.id.get) === Set(Hashtag("c"))
-          collectionRepo.getTagsByKeepId(keep2.id.get) === Set(Hashtag("aa aa"), Hashtag("e e e"))
+          collectionRepo.getHashtagsByKeepId(keep1.id.get) === Set(Hashtag("c"))
+          collectionRepo.getHashtagsByKeepId(keep2.id.get) === Set(Hashtag("aa aa"), Hashtag("e e e"))
         }
 
         // invalid keep ID
@@ -524,13 +524,13 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
         // other user with read-only library access cannot tag or untag keep
         status(tagKeep(user2, libPubId, keep1.externalId, "pwned")) === FORBIDDEN
         status(untagKeep(user2, libPubId, keep1.externalId, "c")) === FORBIDDEN
-        db.readOnlyMaster { implicit s => collectionRepo.getTagsByKeepId(keep1.id.get) === Set(Hashtag("c")) }
+        db.readOnlyMaster { implicit s => collectionRepo.getHashtagsByKeepId(keep1.id.get) === Set(Hashtag("c")) }
 
         // other user with write access cannot yet tag or untag keep. TODO: fix when tags are in libraries
         db.readWrite { implicit s => libraryMembershipRepo.save(mem2.copy(access = LibraryAccess.READ_WRITE)) }
         status(tagKeep(user2, libPubId, keep1.externalId, "collab")) === FORBIDDEN
         status(untagKeep(user2, libPubId, keep1.externalId, "c")) === FORBIDDEN
-        db.readOnlyMaster { implicit s => collectionRepo.getTagsByKeepId(keep1.id.get) === Set(Hashtag("c")) }
+        db.readOnlyMaster { implicit s => collectionRepo.getHashtagsByKeepId(keep1.id.get) === Set(Hashtag("c")) }
       }
     }
 

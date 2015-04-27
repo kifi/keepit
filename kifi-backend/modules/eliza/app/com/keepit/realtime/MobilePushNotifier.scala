@@ -1,10 +1,10 @@
 package com.keepit.realtime
 
-import com.google.inject.{ ImplementedBy, Provider, Inject }
+import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.logging.Logging
-import com.keepit.eliza.{ PushNotificationExperiment, PushNotificationCategory }
+import com.keepit.eliza._
 import com.keepit.eliza.model.MessageThread
 import com.keepit.model.{ Username, User, Library }
 import com.kifi.macros.json
@@ -20,9 +20,13 @@ sealed trait PushNotification {
 }
 
 case class MessageThreadPushNotification(id: ExternalId[MessageThread], unvisitedCount: Int, message: Option[String], sound: Option[NotificationSound]) extends PushNotification
-case class SimplePushNotification(unvisitedCount: Int, message: Option[String], sound: Option[NotificationSound] = None, category: PushNotificationCategory, experiment: PushNotificationExperiment) extends PushNotification
-case class LibraryUpdatePushNotification(unvisitedCount: Int, message: Option[String], libraryId: Id[Library], libraryUrl: String, sound: Option[NotificationSound] = None, category: PushNotificationCategory, experiment: PushNotificationExperiment) extends PushNotification
-case class UserPushNotification(unvisitedCount: Int, message: Option[String], userExtId: ExternalId[User], pictureUrl: String, username: Username, sound: Option[NotificationSound] = None, category: PushNotificationCategory, experiment: PushNotificationExperiment) extends PushNotification
+case class MessageCountPushNotification(unvisitedCount: Int) extends PushNotification {
+  val sound = None
+  val message = None
+}
+case class SimplePushNotification(unvisitedCount: Int, message: Option[String], sound: Option[NotificationSound] = None, category: SimplePushNotificationCategory, experiment: PushNotificationExperiment) extends PushNotification
+case class LibraryUpdatePushNotification(unvisitedCount: Int, message: Option[String], libraryId: Id[Library], libraryUrl: String, sound: Option[NotificationSound] = None, category: LibraryPushNotificationCategory, experiment: PushNotificationExperiment) extends PushNotification
+case class UserPushNotification(unvisitedCount: Int, message: Option[String], userExtId: ExternalId[User], pictureUrl: String, username: Username, sound: Option[NotificationSound] = None, category: UserPushNotificationCategory, experiment: PushNotificationExperiment) extends PushNotification
 
 @json case class NotificationSound(name: String)
 
@@ -35,7 +39,7 @@ object MobilePushNotifier {
 @ImplementedBy(classOf[MobilePushDelegator])
 trait MobilePushNotifier {
   def registerDevice(userId: Id[User], token: Option[String], deviceType: DeviceType, isDev: Boolean, signature: Option[String]): Either[String, Device]
-  def notifyUser(userId: Id[User], notification: PushNotification): Future[Int]
+  def notifyUser(userId: Id[User], notification: PushNotification, force: Boolean): Future[Int]
 }
 
 class MobilePushDelegator @Inject() (
@@ -53,13 +57,17 @@ class MobilePushDelegator @Inject() (
     }
   }
 
-  def notifyUser(userId: Id[User], notification: PushNotification): Future[Int] = {
+  def notifyUser(userId: Id[User], notification: PushNotification, force: Boolean): Future[Int] = {
     val (devicesWithToken, devicesNoToken) = db.readOnlyMaster { implicit s =>
       deviceRepo.getByUserId(userId, None)
     }.partition(d => d.token.isDefined)
 
-    val numSentUrbanAirshipF = urbanAirship.notifyUser(userId, devicesWithToken, notification)
-    val numSentAppBoyF = appBoy.notifyUser(userId, devicesNoToken, notification)
+    val numSentUrbanAirshipF = if (devicesWithToken.nonEmpty) {
+      urbanAirship.notifyUser(userId, devicesWithToken, notification, force)
+    } else Future.successful(0)
+    val numSentAppBoyF = if (devicesNoToken.nonEmpty) {
+      appBoy.notifyUser(userId, devicesNoToken, notification, force)
+    } else Future.successful(0)
 
     for {
       numSentUrbanAirship <- numSentUrbanAirshipF

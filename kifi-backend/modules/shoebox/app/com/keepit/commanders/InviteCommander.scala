@@ -24,10 +24,9 @@ import java.net.URLEncoder
 
 import com.ning.http.client.providers.netty.NettyResponse
 import play.api.http.Status
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
 
-import scala.concurrent.{ Await, Future }
+import scala.concurrent.{ ExecutionContext, Await, Future }
 import scala.concurrent.duration._
 import scala.util.Try
 import com.keepit.common.queue.{ CancelInvitation }
@@ -111,6 +110,7 @@ class InviteCommander @Inject() (
     shoeboxRichConnectionCommander: ShoeboxRichConnectionCommander,
     abookServiceClient: ABookServiceClient,
     emailSenderProvider: EmailSenderProvider,
+    implicit val executionContext: ExecutionContext,
     scheduler: Scheduler) extends Logging {
 
   private lazy val baseUrl = fortytwoConfig.applicationBaseUrl

@@ -10,7 +10,7 @@ import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.logging.{ AccessLog, Logging }
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.S3ImageStore
-import com.keepit.eliza.{ PushNotificationExperiment, ElizaServiceClient }
+import com.keepit.eliza.{ UserPushNotificationCategory, PushNotificationExperiment, ElizaServiceClient }
 import com.keepit.graph.GraphServiceClient
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
@@ -40,7 +40,7 @@ class UserConnectionsCommander @Inject() (
     socialUserTypeahead: SocialUserTypeahead,
     emailSender: EmailSenderProvider,
     s3ImageStore: S3ImageStore,
-    kifiInstallationRepo: KifiInstallationRepo,
+    kifiInstallationCommander: KifiInstallationCommander,
     implicit val defaultContext: ExecutionContext,
     db: Database) extends Logging {
 
@@ -165,39 +165,6 @@ class UserConnectionsCommander @Inject() (
     }
   }
 
-  def getFriends(user: User, experiments: Set[ExperimentType]): Set[BasicUser] = {
-    val basicUsers = db.readOnlyMaster { implicit s =>
-      if (canMessageAllUsers(user.id.get)) {
-        userRepo.allExcluding(UserStates.PENDING, UserStates.BLOCKED, UserStates.INACTIVE)
-          .collect { case u if u.id.get != user.id.get => BasicUser.fromUser(u) }.toSet
-      } else {
-        basicUserRepo.loadAll(userConnectionRepo.getConnectedUsers(user.id.get)).values.toSet
-      }
-    }
-
-    // Apologies for this code. "Personal favor" for Danny. Doing it right should be speced and requires
-    // two models, service clients, and caches.
-    val iNeededToDoThisIn20Minutes = if (experiments.contains(ExperimentType.ADMIN)) {
-      Seq(
-        BasicUser(ExternalId[User]("42424242-4242-4242-4242-424242424201"), "FortyTwo Engineering", "", "0.jpg", Username("foo1")),
-        BasicUser(ExternalId[User]("42424242-4242-4242-4242-424242424202"), "FortyTwo Family", "", "0.jpg", Username("foo2")),
-        BasicUser(ExternalId[User]("42424242-4242-4242-4242-424242424203"), "FortyTwo Product", "", "0.jpg", Username("foo3"))
-      )
-    } else {
-      Seq()
-    }
-
-    // This will eventually be a lot more complex. However, for now, tricking the client is the way to go.
-    // ^^^^^^^^^ Unrelated to the offensive code above ^^^^^^^^^
-    val kifiSupport = Seq(
-      BasicUser(ExternalId[User]("aa345838-70fe-45f2-914c-f27c865bdb91"), "Tamila, Kifi Help", "", "tmilz.jpg", Username("foo4")))
-    basicUsers ++ iNeededToDoThisIn20Minutes ++ kifiSupport
-  }
-
-  private def canMessageAllUsers(userId: Id[User]): Boolean = {
-    userExperimentCommander.userHasExperiment(userId, ExperimentType.CAN_MESSAGE_ALL_USERS)
-  }
-
   private def sendFriendRequestAcceptedEmailAndNotification(myUserId: Id[User], friend: User): Unit = SafeFuture {
     //sending 'friend request accepted' email && Notification
     val (respondingUser, respondingUserImage) = db.readWrite { implicit session =>
@@ -208,7 +175,7 @@ class UserConnectionsCommander @Inject() (
 
     val emailF = emailSender.connectionMade(friend.id.get, myUserId, NotificationCategory.User.FRIEND_ACCEPTED)
 
-    val notifF = elizaServiceClient.sendGlobalNotification(
+    val notifF = elizaServiceClient.sendGlobalNotification( //push sent
       userIds = Set(friend.id.get),
       title = s"${respondingUser.firstName} ${respondingUser.lastName} accepted your invitation to connect!",
       body = s"Now you will enjoy ${respondingUser.firstName}’s keeps in your search results and you can message ${respondingUser.firstName} directly.",
@@ -218,7 +185,17 @@ class UserConnectionsCommander @Inject() (
       sticky = false,
       category = NotificationCategory.User.FRIEND_ACCEPTED,
       extra = Some(Json.obj("friend" -> BasicUser.fromUser(respondingUser)))
-    )
+    ) map { _ =>
+        val canSendPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(friend.id.get, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
+        if (canSendPush) {
+          elizaServiceClient.sendUserPushNotification(
+            userId = friend.id.get,
+            message = s"${respondingUser.firstName} ${respondingUser.lastName} accepted your invitation to connect",
+            recipient = respondingUser,
+            pushNotificationExperiment = PushNotificationExperiment.Experiment1,
+            category = UserPushNotificationCategory.UserConnectionAccepted)
+        }
+      }
 
     emailF flatMap (_ => notifF)
   }
@@ -231,27 +208,9 @@ class UserConnectionsCommander @Inject() (
       (requestingUser, requestingUserImage)
     }
 
-    val canSendPush = db.readOnlyReplica { implicit s => kifiInstallationRepo.lastUpdatedMobile(recipient.id.get) } exists { installation =>
-      installation.platform match {
-        case KifiInstallationPlatform.Android =>
-          installation.version.compareIt(KifiAndroidVersion("2.2.4")) >= 0
-        case KifiInstallationPlatform.IPhone =>
-          installation.version.compareIt(KifiIPhoneVersion("2.1.0")) >= 0
-        case _ =>
-          throw new Exception(s"Don't know platform for $installation")
-      }
-    }
-    if (canSendPush) {
-      elizaServiceClient.sendUserPushNotification(
-        userId = recipient.id.get,
-        message = s"${myUser.fullName} invited you to connect",
-        recipient = myUser,
-        pushNotificationExperiment = PushNotificationExperiment.Experiment1)
-    }
-
     val emailF = emailSender.friendRequest(recipient.id.get, myUserId)
 
-    val friendReqF = elizaServiceClient.sendGlobalNotification(
+    val friendReqF = elizaServiceClient.sendGlobalNotification( //push sent
       userIds = Set(recipient.id.get),
       title = s"${requestingUser.firstName} ${requestingUser.lastName} wants to connect with you on Kifi",
       body = s"Enjoy ${requestingUser.firstName}’s keeps in your search results and message ${requestingUser.firstName} directly.",
@@ -262,6 +221,15 @@ class UserConnectionsCommander @Inject() (
       category = NotificationCategory.User.FRIEND_REQUEST,
       extra = Some(Json.obj("friend" -> BasicUser.fromUser(requestingUser)))
     ) map { id =>
+        val canSendPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(recipient.id.get, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
+        if (canSendPush) {
+          elizaServiceClient.sendUserPushNotification(
+            userId = recipient.id.get,
+            message = s"${myUser.fullName} invited you to connect",
+            recipient = myUser,
+            pushNotificationExperiment = PushNotificationExperiment.Experiment1,
+            category = UserPushNotificationCategory.UserConnectionRequest)
+        }
         db.readWrite { implicit session =>
           friendRequestRepo.save(request.copy(messageHandle = Some(id)))
         }

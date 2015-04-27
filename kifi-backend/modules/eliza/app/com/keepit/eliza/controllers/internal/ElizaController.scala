@@ -1,7 +1,7 @@
 package com.keepit.eliza.controllers.internal
 
 import com.keepit.common.akka.SafeFuture
-import com.keepit.eliza.{ PushNotificationCategory, PushNotificationExperiment }
+import com.keepit.eliza._
 import com.keepit.eliza.controllers.WebSocketRouter
 import com.keepit.common.controller.ElizaServiceController
 import com.keepit.common.logging.Logging
@@ -43,10 +43,12 @@ class ElizaController @Inject() (
     val req = request.body.asJson.get.as[JsObject]
     val userId = Id[User]((req \ "userId").as[Long])
     val message = (req \ "message").as[String]
+    val category = LibraryPushNotificationCategory((req \ "category").as[String])
     val pushNotificationExperiment = (req \ "pushNotificationExperiment").as[PushNotificationExperiment]
     val libraryId = (req \ "libraryId").as[Id[Library]]
     val libraryUrl = (req \ "libraryUrl").as[String]
-    messagingCommander.sendLibraryPushNotification(userId, message, libraryId, libraryUrl, pushNotificationExperiment).map { deviceCount =>
+    val force = (req \ "force").asOpt[Boolean] //backward compatibility. remove option when done deploing shoebox
+    messagingCommander.sendLibraryPushNotification(userId, message, libraryId, libraryUrl, pushNotificationExperiment, category, force.getOrElse(false)).map { deviceCount =>
       Ok(JsNumber(deviceCount))
     }
   }
@@ -57,9 +59,10 @@ class ElizaController @Inject() (
     val message = (req \ "message").as[String]
     val pushNotificationExperiment = (req \ "pushNotificationExperiment").as[PushNotificationExperiment]
     val recipientExtId = (req \ "recipientId").as[ExternalId[User]]
+    val category = UserPushNotificationCategory((req \ "category").as[String])
     val username = (req \ "username").as[Username]
     val pictureUrl = (req \ "pictureUrl").as[String]
-    messagingCommander.sendUserPushNotification(userId, message, recipientExtId, username: Username, pictureUrl, pushNotificationExperiment).map { deviceCount =>
+    messagingCommander.sendUserPushNotification(userId, message, recipientExtId, username: Username, pictureUrl, pushNotificationExperiment, category).map { deviceCount =>
       Ok(JsNumber(deviceCount))
     }
   }
@@ -68,8 +71,10 @@ class ElizaController @Inject() (
     val req = request.body.asJson.get.as[JsObject]
     val userId = Id[User]((req \ "userId").as[Long])
     val message = (req \ "message").as[String]
+    val category = SimplePushNotificationCategory((req \ "category").as[String])
     val pushNotificationExperiment = (req \ "pushNotificationExperiment").as[PushNotificationExperiment]
-    messagingCommander.sendGeneralPushNotification(userId, message, pushNotificationExperiment).map { deviceCount =>
+    val force = (req \ "force").asOpt[Boolean] //backward compatibility. remove option when done deploing shoebox
+    messagingCommander.sendGeneralPushNotification(userId, message, pushNotificationExperiment, category, force.getOrElse(false)).map { deviceCount =>
       Ok(JsNumber(deviceCount))
     }
   }
