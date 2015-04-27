@@ -259,20 +259,22 @@ k.tile = k.tile || function () {  // idempotent for Chrome
       window.removeEventListener('resize', onResize);
       onResize.bound = false;
     }
-    if (tile) {
-      if (trigger) {
-        if (k.keeper) {
-          k.keeper.hide(trigger);
-        }
-        tile.removeAttribute('data-kept');
-      } else {
-        if (tileObserver) tileObserver.disconnect();
-        tileObserver = tileParent = null;
-        tile.remove();
-      }
-    }
-    if (k.pane) {
+    if (k.pane && k.pane.showing()) {
       k.pane.hide();
+    } else if (trigger && k.keeper && k.keeper.showing()) {
+      k.keeper.hide(trigger);
+    }
+    if (trigger) {
+      tile.removeAttribute('data-kept');
+      if (trigger === 'silence') {
+        tile.style.display = 'none';
+      }
+    } else if (tile) {
+      if (tileObserver) {
+        tileObserver.disconnect();
+      }
+      tileObserver = tileParent = null;
+      tile.remove();
     }
   }
 
