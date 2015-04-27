@@ -612,37 +612,33 @@ class KeepsCommander @Inject() (
 
   // Changes a keep's notes based on the hashtags to persist!
   private def persistHashtags(userId: Id[User], keep: Keep, selectedTagNames: Seq[String])(implicit session: RWSession, context: HeimdalContext) = {
-    val selectedTagIds = selectedTagNames.map { getOrCreateTag(userId, _).id.get }
-    val activeTagIds = keepToCollectionRepo.getCollectionsForKeep(keep.id.get)
-    val tagsToAdd = selectedTagIds.filterNot(activeTagIds.contains(_))
-    val tagsToRemove = activeTagIds.filterNot(selectedTagIds.contains(_))
 
-    tagsToAdd.map { tagId =>
+    val selectedCollections = selectedTagNames.map { getOrCreateTag(userId, _) }
+    val selectedTagIds = selectedCollections.map(_.id.get).toSet
+    val activeTagIds = keepToCollectionRepo.getCollectionsForKeep(keep.id.get).toSet
+
+    val tagIdsToAdd = selectedTagIds.filterNot(activeTagIds.contains(_))
+    val tagIdsToRemove = activeTagIds.filterNot(selectedTagIds.contains(_))
+    val hashtagsToRemove = selectedCollections.filter(c => tagIdsToRemove.contains(c.id.get)).map(_.name.tag)
+    val hashtagsToPersist = selectedCollections.filter(c => !tagIdsToRemove.contains(c.id.get) || activeTagIds.contains(c.id.get)).map(_.name.tag)
+
+    tagIdsToAdd.map { tagId =>
       keepToCollectionRepo.getOpt(keep.id.get, tagId) match {
         case None => keepToCollectionRepo.save(KeepToCollection(keepId = keep.id.get, collectionId = tagId))
         case Some(k2c) => keepToCollectionRepo.save(k2c.copy(state = KeepToCollectionStates.ACTIVE))
       }
       collectionRepo.collectionChanged(tagId, true, inactivateIfEmpty = false)
     }
-    val collectionsRemoved = tagsToRemove.map { tagId =>
+    tagIdsToRemove.map { tagId =>
       keepToCollectionRepo.remove(keep.id.get, tagId)
       collectionRepo.collectionChanged(tagId, false, inactivateIfEmpty = true)
     }
 
-    // first turn all '[#' -> '[\#'
     val origNote = keep.note getOrElse ""
     val editedNote = keepDecorator.escapeMarkupNotes(origNote)
-
-    // remove all hashtags. Anything user typed in with [#...] has already been converted to [\#...]
-    val noteWithHashtagsRemoved = hashtagCommander.removeHashtagsFromString(editedNote, collectionsRemoved.map(_.name).toSet)
-
-    val hashtagsInNote = hashtagCommander.findAllHashtagNames(noteWithHashtagsRemoved)
-    val currentHashtags = collectionRepo.getHashtagsByKeepId(keep.id.get).map(_.tag)
-    val tagsToAppend = currentHashtags diff hashtagsInNote
-
-    // append all active hashtags not in note (in order)
-    val noteWithHashtagsAppended = hashtagCommander.appendHashtagNamesToString(noteWithHashtagsRemoved, tagsToAppend.toSeq)
-    val finalNote = Some(noteWithHashtagsAppended.trim) filterNot (_.isEmpty)
+    val noteWithHashtagsRemoved = hashtagCommander.removeHashtagNamesFromString(editedNote, hashtagsToRemove.toSet)
+    val noteWithHashtagsAppended = hashtagCommander.appendHashtagNamesToString(noteWithHashtagsRemoved, hashtagsToPersist)
+    val finalNote = Some(noteWithHashtagsAppended.trim).filterNot(_.isEmpty)
     keepRepo.save(keep.copy(note = finalNote)) // notify keep index
   }
 
