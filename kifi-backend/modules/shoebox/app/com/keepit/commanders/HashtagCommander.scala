@@ -2,6 +2,8 @@ package com.keepit.commanders
 
 import com.keepit.model.Hashtag
 
+import scala.util.matching.Regex.Match
+
 class HashtagCommander {
 
   def findAllHashtagNames(s: String): Set[String] = {
@@ -23,8 +25,17 @@ class HashtagCommander {
     (str + " " + tagsStr).trim
   }
 
-  def removeHashtagsFromString(str: String): String = {
+  def removeAllHashtagsFromString(str: String): String = {
     HashtagRegex.hashTagRe.replaceAllIn(str, "").trim
+  }
+
+  def removeHashtagsFromString(str: String, hashtagNames: Set[Hashtag]): String = {
+    removeHashtagNamesFromString(str, hashtagNames.map(_.tag))
+  }
+
+  def removeHashtagNamesFromString(str: String, hashtagNames: Set[String]): String = {
+    val mapper = (m: Match) => if (hashtagNames.contains(m.group(1))) Some("") else None
+    HashtagRegex.hashTagRe.replaceSomeIn(str, mapper).trim
   }
 }
 
