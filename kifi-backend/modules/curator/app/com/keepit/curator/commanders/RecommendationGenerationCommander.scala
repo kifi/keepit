@@ -67,20 +67,6 @@ class RecommendationGenerationCommander @Inject() (
 
   val BATCH_SIZE = 350
 
-  //This method better not be here any more after May 1st 2015 (short term debugging use only!!!)
-  private def sendDiagnosticEmail(subject: String, body: String) = {
-    systemAdminMailSender.sendMail(
-      ElectronicMail(
-        from = SystemEmailAddress.ENG,
-        to = List(SystemEmailAddress.STEPHEN),
-        subject = s"Reco Diagnostics: $subject",
-        htmlBody = body,
-        category = NotificationCategory.toElectronicMailCategory(NotificationCategory.System.ADMIN)
-      )
-    )
-  }
-  private val diagnosticsSentCounter: AtomicInteger = new AtomicInteger(0)
-
   private def usersToPrecomputeRecommendationsFor(): Seq[Id[User]] = Random.shuffle((seedCommander.getUsersWithSufficientData()).toSeq)
 
   private def specialCurators(): Future[Set[Id[User]]] = experimentCommander.getUsersByExperiment(ExperimentType.SPECIAL_CURATOR).map(users => users.map(_.id.get).toSet)
@@ -188,27 +174,6 @@ class RecommendationGenerationCommander @Inject() (
               topic2 = item.topic2
             )
           )
-
-          if (Random.nextFloat() > 0.75 && diagnosticsSentCounter.getAndIncrement() < 5) {
-            val info: String = try {
-              uriRecRepo.insertOrUpdate(UriRecommendation(
-                uriId = item.uriId,
-                userId = userId,
-                masterScore = computeMasterScore(item.uriScores),
-                allScores = item.uriScores,
-                delivered = 0,
-                clicked = 0,
-                kept = false,
-                trashed = false,
-                attribution = item.attribution,
-                topic1 = item.topic1,
-                topic2 = item.topic2
-              ))
-            } catch {
-              case t: Throwable => t.toString
-            }
-            sendDiagnosticEmail("", info)
-          }
 
         }
 
