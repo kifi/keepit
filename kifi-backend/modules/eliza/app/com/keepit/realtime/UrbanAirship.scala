@@ -225,7 +225,7 @@ class UrbanAirship @Inject() (
       case _ =>
         throw new Exception(s"WOW, how did I get to trial #$trial for device $device notification $notification)?!?")
     }
-    if (!wasForced) airbrake.notify(s"fail to send a push notification $notification for device $device, $retryText: $throwable")
+    if (!wasForced) airbrake.notify(s"fail to send a push notification $notification for device $device, $retryText", throwable)
     retry foreach { timeout =>
       scheduler.scheduleOnce(timeout) {
         sendNotification(device, notification, wasForced, trial + 1)
