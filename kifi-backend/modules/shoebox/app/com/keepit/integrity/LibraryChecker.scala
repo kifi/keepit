@@ -6,8 +6,9 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.{ NamedStatsdTimer, Logging }
+import com.keepit.common.time.Clock
 import com.keepit.model._
-import org.joda.time.{ Minutes, DateTime }
+import com.keepit.common.time._
 
 class LibraryChecker @Inject() (
     db: Database,
@@ -16,7 +17,8 @@ class LibraryChecker @Inject() (
     libraryMembershipRepo: LibraryMembershipRepo,
     keepRepo: KeepRepo,
     libraryCommander: LibraryCommander,
-    airbrake: AirbrakeNotifier) extends Logging {
+    airbrake: AirbrakeNotifier,
+    clock: Clock) extends Logging {
 
   private[this] val lock = new AnyRef
   private[this] var keptDateErrors = 0
@@ -32,7 +34,7 @@ class LibraryChecker @Inject() (
     val timer = new NamedStatsdTimer("LibraryChecker.checkSystemLibraries")
     val (index, numIntervals) = getIndex()
 
-    db.readOnlyMaster { implicit s =>
+    db.readOnlyReplica { implicit s =>
       val pageSize = userRepo.countIncluding(UserStates.ACTIVE) / numIntervals
       userRepo.pageIncluding(UserStates.ACTIVE)(index, pageSize)
     }.map { u =>
@@ -51,7 +53,7 @@ class LibraryChecker @Inject() (
     val timer = new NamedStatsdTimer("LibraryChecker.checkLibraryKeeps")
     val (index, numIntervals) = getIndex()
 
-    val (libraryMap, latestKeptAtMap, numKeepsByLibraryMap) = db.readOnlyMaster { implicit s =>
+    val (libraryMap, latestKeptAtMap, numKeepsByLibraryMap) = db.readOnlyReplica { implicit s =>
       val pageSize = libraryRepo.countWithState(LibraryStates.ACTIVE) / numIntervals
       val libraries = libraryRepo.page(index, pageSize, Set(LibraryStates.INACTIVE))
       val libraryMap = libraries.map(lib => lib.id.get -> lib).toMap
@@ -106,7 +108,7 @@ class LibraryChecker @Inject() (
     val timer = new NamedStatsdTimer("LibraryChecker.checkLibraryMembers")
     val (index, numIntervals) = getIndex()
 
-    val (libraryMap, numMembersMap) = db.readOnlyMaster { implicit s =>
+    val (libraryMap, numMembersMap) = db.readOnlyReplica { implicit s =>
       val pageSize = libraryRepo.countWithState(LibraryStates.ACTIVE) / numIntervals
       val libraries = libraryRepo.page(index, pageSize, Set(LibraryStates.INACTIVE))
       val libraryMap = libraries.map(lib => lib.id.get -> lib).toMap
@@ -133,10 +135,10 @@ class LibraryChecker @Inject() (
   }
 
   private def getIndex(): (Int, Int) = {
-    val currentTime = DateTime.now()
+    val currentTime = clock.now()
     val hourInd = currentTime.hourOfDay().get
-    val minuteInd = currentTime.minuteOfHour().get / 10 // 10 times per hour
-    val index = hourInd * 6 + minuteInd // hour * 6 + minute / 10 (int div)
+    val minuteInd = currentTime.minuteOfHour().get
+    val index = hourInd * 6 + (minuteInd / 10) // hour * 6 + minute / 10 (int div)
     val numIntervals = 144 // 144 = 24 (hours per day) * 6 (10 minute intervals per hour)
     (index, numIntervals)
   }
