@@ -16,7 +16,7 @@ object OAuth2Providers {
     name = FB,
     authUrl = new URL("https://www.facebook.com/v2.0/dialog/oauth"),
     accessTokenUrl = new URL("https://graph.facebook.com/v2.0/oauth/access_token"),
-    scope = "email"
+    scope = "email,user_friends"
   )
 
   val lnkdConfigBuilder = OAuth2Configuration.build(
