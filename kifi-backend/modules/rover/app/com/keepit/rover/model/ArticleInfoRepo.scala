@@ -111,7 +111,7 @@ class ArticleInfoRepoImpl @Inject() (
       kinds.map { kind =>
         val savedInfo = existingByKind.get(kind) match {
           case Some(articleInfo) if articleInfo.isActive && articleInfo.url == url => articleInfo
-          case Some(inactiveArticleInfo) if !articleInfo.isActive => {
+          case Some(inactiveArticleInfo) if !inactiveArticleInfo.isActive => {
             val reactivatedInfo = inactiveArticleInfo.clean.copy(url = url, state = ArticleInfoStates.ACTIVE).initializeSchedulingPolicy
             save(reactivatedInfo)
           }
