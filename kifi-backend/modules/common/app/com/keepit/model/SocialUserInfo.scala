@@ -39,11 +39,11 @@ case class SocialUserInfo(
   def withLastGraphRefresh(lastGraphRefresh: Option[DateTime] = Some(currentDateTime)) = copy(lastGraphRefresh = lastGraphRefresh)
   def getPictureUrl(preferredWidth: Int = 50, preferredHeight: Int = 50): Option[String] = networkType match {
     case SocialNetworks.FACEBOOK =>
-      Some(s"https://graph.facebook.com/$socialId/picture?width=$preferredWidth&height=$preferredHeight")
+      Some(s"https://graph.facebook.com/v2.0/$socialId/picture?width=$preferredWidth&height=$preferredHeight")
     case _ => pictureUrl
   }
   def getProfileUrl: Option[String] = profileUrl orElse (networkType match {
-    case SocialNetworks.FACEBOOK => Some(s"http://facebook.com/$socialId")
+    case SocialNetworks.FACEBOOK => Some(s"https://www.facebook.com/$socialId")
     case _ => None
   })
   override def toString(): String = s"SocialUserInfo[Id=$id,User=$userId,Name=$fullName,network=$networkType,socialId=$socialId,state=$state]"
@@ -79,7 +79,7 @@ case class SocialUserBasicInfo(
 
   def getPictureUrl(preferredWidth: Int = 50, preferredHeight: Int = 50): Option[String] = networkType match {
     case SocialNetworks.FACEBOOK =>
-      Some(s"https://graph.facebook.com/$socialId/picture?width=$preferredWidth&height=$preferredHeight")
+      Some(s"https://graph.facebook.com/v2.0/$socialId/picture?width=$preferredWidth&height=$preferredHeight")
     case _ => pictureUrl
   }
 }

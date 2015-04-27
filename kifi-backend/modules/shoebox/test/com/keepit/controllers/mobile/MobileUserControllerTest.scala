@@ -301,8 +301,8 @@ class FasterMobileUserControllerTest extends Specification with ShoeboxTestInjec
         route === "/m/1/user/networks"
         inject[Database].readWrite { implicit s =>
           val user = userRepo.save(User(firstName = "Richard", lastName = "Feynman", externalId = ExternalId("e58be33f-51ad-4c7d-a88e-d4e6e3c9a672"), username = Username("test"), normalizedUsername = "test"))
-          socialUserInfoRepo.save(SocialUserInfo(userId = user.id, fullName = "Richard Feynman", state = SocialUserInfoStates.CREATED, socialId = SocialId("FRF"), networkType = SocialNetworks.FACEBOOK))
-          socialUserInfoRepo.save(SocialUserInfo(userId = user.id, fullName = "Richard Feynman", state = SocialUserInfoStates.CREATED, socialId = SocialId("LRF"), networkType = SocialNetworks.LINKEDIN,
+          socialUserInfoRepo.save(SocialUserInfo(userId = user.id, fullName = "Richard Feynman", state = SocialUserInfoStates.CREATED, socialId = SocialId("314159265359"), networkType = SocialNetworks.FACEBOOK))
+          socialUserInfoRepo.save(SocialUserInfo(userId = user.id, fullName = "Richard Feynman", state = SocialUserInfoStates.CREATED, socialId = SocialId("271828"), networkType = SocialNetworks.LINKEDIN,
             profileUrl = Some("http://www.linkedin.com/in/rf"), pictureUrl = Some("http://my.pic.com/pic.jpg")))
           inject[FakeUserActionsHelper].setUser(user)
         }
@@ -311,7 +311,7 @@ class FasterMobileUserControllerTest extends Specification with ShoeboxTestInjec
         status(result) must equalTo(OK)
         contentType(result) must beSome("application/json")
         val expected = Json.parse("""[
-            {"network":"facebook","profileUrl":"http://facebook.com/FRF","pictureUrl":"https://graph.facebook.com/FRF/picture?width=50&height=50"},
+            {"network":"facebook","profileUrl":"https://www.facebook.com/314159265359","pictureUrl":"https://graph.facebook.com/v2.0/314159265359/picture?width=50&height=50"},
             {"network":"linkedin","profileUrl":"http://www.linkedin.com/in/rf","pictureUrl":"http://my.pic.com/pic.jpg"}
           ]""")
         Json.parse(contentAsString(result)) must equalTo(expected)

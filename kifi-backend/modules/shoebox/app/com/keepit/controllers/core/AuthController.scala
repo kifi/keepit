@@ -531,7 +531,7 @@ class AuthController @Inject() (
   private def identityPicture(identity: Identity) = {
     identity.identityId.providerId match {
       case "facebook" =>
-        s"//graph.facebook.com/${identity.identityId.userId}/picture?width=200&height=200"
+        s"//graph.facebook.com/v2.0/${identity.identityId.userId}/picture?width=200&height=200"
       case _ => identity.avatarUrl.getOrElse(S3UserPictureConfig.defaultImage)
     }
   }

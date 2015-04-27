@@ -30,7 +30,7 @@ import securesocial.core.{ IdentityId, OAuth2Settings }
 import securesocial.core.providers.FacebookProvider.Facebook
 
 object FacebookSocialGraph {
-  val PERSONAL_PROFILE = "name,first_name,middle_name,last_name,gender,username,email,picture"
+  val PERSONAL_PROFILE = "name,first_name,middle_name,last_name,gender,email,picture.type(large)"
   val FRIEND_PROFILE = "name"
 
   object ErrorCodes {
@@ -131,7 +131,7 @@ class FacebookSocialGraph @Inject() (
         SocialUserRawInfo(
           socialUserInfo.userId,
           socialUserInfo.id,
-          SocialId((json \ "username").asOpt[String].getOrElse((json \ "id").as[String])),
+          SocialId((json \ "id").as[String]),
           SocialNetworks.FACEBOOK,
           (json \ "name").asOpt[String].getOrElse(socialUserInfo.fullName),
           jsons)
@@ -151,7 +151,7 @@ class FacebookSocialGraph @Inject() (
 
   def revokePermissions(socialUserInfo: SocialUserInfo): Future[Unit] = {
     val accessToken = getAccessToken(socialUserInfo)
-    val url = s"https://graph.facebook.com/${socialUserInfo.socialId}/permissions?access_token=$accessToken"
+    val url = s"https://graph.facebook.com/v2.0/${socialUserInfo.socialId}/permissions?access_token=$accessToken"
     httpClient.withTimeout(CallTimeouts(responseTimeout = Some(TWO_MINUTES), maxJsonParseTime = Some(20000))).deleteFuture(DirectUrl(url)).map(_ => ())
   }
 
@@ -224,7 +224,7 @@ class FacebookSocialGraph @Inject() (
   }
 
   private def url(id: SocialId, accessToken: String) =
-    s"https://graph.facebook.com/${id.id}?access_token=$accessToken&fields=${FacebookSocialGraph.PERSONAL_PROFILE},friends.fields(${FacebookSocialGraph.FRIEND_PROFILE}).limit($FETCH_LIMIT)"
+    s"https://graph.facebook.com/v2.0/${id.id}?access_token=$accessToken&fields=${FacebookSocialGraph.PERSONAL_PROFILE},friends.fields(${FacebookSocialGraph.FRIEND_PROFILE}).limit($FETCH_LIMIT)"
 
   private def createSocialUserInfo(friend: JsValue): SocialUserInfo =
     SocialUserInfo(
