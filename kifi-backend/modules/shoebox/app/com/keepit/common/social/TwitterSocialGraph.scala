@@ -11,7 +11,7 @@ import com.keepit.common.time._
 import com.keepit.common.core._
 import com.keepit.common.strings._
 import com.keepit.common.db.slick.Database
-import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.healthcheck.{ StackTrace, AirbrakeNotifier }
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.oauth.{ TwitterUserInfo, TwitterOAuthProvider, OAuth1Configuration, ProviderIds }
@@ -413,6 +413,7 @@ class TwitterSocialGraphImpl @Inject() (
   }
 
   def fetchTweets(socialUserInfoOpt: Option[SocialUserInfo], handle: String, lowerBoundId: Option[Long], upperBoundId: Option[Long]): Future[Seq[JsObject]] = {
+    val stackTrace = new StackTrace()
     val endpoint = "https://api.twitter.com/1.1/statuses/user_timeline.json"
     val sigOpt: Option[OAuthCalculator] = socialUserInfoOpt.flatMap { socialUserInfo =>
       if (socialUserInfo.state != SocialUserInfoStates.TOKEN_EXPIRED)
@@ -432,10 +433,10 @@ class TwitterSocialGraphImpl @Inject() (
           if (response.status == 200) {
             response.json.as[JsArray].value.map(_.as[JsObject])
           } else if (response.status == 429 || response.status == 420) { //rate limit
-            log.warn(s"[twfetch-err] Rate limited for $handle using ${socialUserInfoOpt.flatMap(_.userId).map(_.toString).getOrElse("system")}")
+            log.warn(s"[twfetch-err] Rate limited for [$endpoint] $handle using ${socialUserInfoOpt.flatMap(_.userId).map(_.toString).getOrElse("system")}", stackTrace)
             Seq.empty
           } else if (response.status == 401) { //token not good
-            airbrake.notify(s"Token expired for $handle, status ${response.status}, msg: ${response.json.toString}, social user info $socialUserInfoOpt , signature $sig")
+            airbrake.notify(s"Token expired for $handle [$endpoint], status ${response.status}, msg: ${response.json.toString}, social user info $socialUserInfoOpt , signature $sig", stackTrace)
             socialUserInfoOpt.foreach { sui =>
               db.readWrite { implicit s =>
                 socialUserInfoRepo.save(sui.copy(state = SocialUserInfoStates.TOKEN_EXPIRED))
@@ -444,15 +445,15 @@ class TwitterSocialGraphImpl @Inject() (
             Seq.empty
           } else if (response.status == 404) { // {"errors":[{"code":34,"message":"Sorry, that page does not exist."}]} ->
             //something in twitter is bad or our api is broken, happen a lots recentrly, in check
-            log.warn(s"Failed to get users $handle timeline, status ${response.status}, msg: ${response.json.toString}, social user info $socialUserInfoOpt , signature $sig")
+            log.warn(s"Failed to get users $handle timeline, status ${response.status}, msg: ${response.json.toString}, social user info $socialUserInfoOpt , signature $sig", stackTrace)
             Seq.empty
           } else {
-            airbrake.notify(s"Failed to get users $handle timeline, status ${response.status}, msg: ${response.json.toString}, social user info $socialUserInfoOpt , signature $sig")
+            airbrake.notify(s"Failed to get [$endpoint] users $handle timeline, status ${response.status}, msg: ${response.json.toString}, social user info $socialUserInfoOpt , signature $sig", stackTrace)
             Seq.empty
           }
         }.recover {
           case t: Throwable =>
-            log.warn(s"[twfetch-err] Fetching error for $handle using ${socialUserInfoOpt.flatMap(_.userId).map(_.toString).getOrElse("system")}, ${t.getClass.getCanonicalName}", t)
+            log.warn(s"[twfetch-err] Fetching [$endpoint] error for $handle using ${socialUserInfoOpt.flatMap(_.userId).map(_.toString).getOrElse("system")}, ${t.getClass.getCanonicalName}", stackTrace.withCause(t))
             Seq.empty
         }
       case None =>
