@@ -443,9 +443,16 @@ class TwitterSocialGraphImpl @Inject() (
               }
             }
             Seq.empty
-          } else if (response.status == 404) { // {"errors":[{"code":34,"message":"Sorry, that page does not exist."}]} ->
-            //something in twitter is bad or our api is broken, happen a lots recentrly, in check
+          } else if (response.status == 404) {
             log.warn(s"Failed to get users $handle timeline, status ${response.status}, msg: ${response.json.toString}, social user info $socialUserInfoOpt , signature $sig", stackTrace)
+            val errorCode = (response.json \\ "code").map(_.as[Int])
+            if (errorCode.contains(34)) { // {"errors":[{"code":34, "message":"Sorry, that page does not exist."}]}
+              socialUserInfoOpt.map { sui =>
+                db.readWrite { implicit s =>
+                  socialUserInfoRepo.save(sui.copy(state = SocialUserInfoStates.FETCH_PAGE_NOT_FOUND))
+                }
+              }
+            }
             Seq.empty
           } else {
             airbrake.notify(s"Failed to get [$endpoint] users $handle timeline, status ${response.status}, msg: ${response.json.toString}, social user info $socialUserInfoOpt , signature $sig", stackTrace)

@@ -18,8 +18,15 @@ class DataIntegrityPluginImpl @Inject() (
   // plugin lifecycle methods
   override def enabled: Boolean = true
   override def onStart() {
-    scheduleTaskOnOneMachine(actor.system, 7 minutes, 10 minutes, actor.ref, Cron, getClass.getSimpleName)
+    scheduleTaskOnOneMachine(actor.system, DataIntegrityScheduling.delayDuration, DataIntegrityScheduling.frequencyDuration, actor.ref, Cron, getClass.getSimpleName)
   }
+}
+
+object DataIntegrityScheduling {
+  val frequency = 10
+  val frequencyDuration = frequency minutes
+  val delay = 7
+  val delayDuration = delay minutes
 }
 
 private[integrity] case object CleanOrphans
