@@ -30,7 +30,7 @@ import securesocial.core.{ IdentityId, OAuth2Settings }
 import securesocial.core.providers.FacebookProvider.Facebook
 
 object FacebookSocialGraph {
-  val PERSONAL_PROFILE = "name,first_name,middle_name,last_name,gender,username,email,picture"
+  val PERSONAL_PROFILE = "name,first_name,middle_name,last_name,gender,email,picture.type(large)"
   val FRIEND_PROFILE = "name"
 
   object ErrorCodes {
@@ -131,7 +131,7 @@ class FacebookSocialGraph @Inject() (
         SocialUserRawInfo(
           socialUserInfo.userId,
           socialUserInfo.id,
-          SocialId((json \ "username").asOpt[String].getOrElse((json \ "id").as[String])),
+          SocialId((json \ "id").as[String]),
           SocialNetworks.FACEBOOK,
           (json \ "name").asOpt[String].getOrElse(socialUserInfo.fullName),
           jsons)

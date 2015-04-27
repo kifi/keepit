@@ -311,7 +311,7 @@ class FasterMobileUserControllerTest extends Specification with ShoeboxTestInjec
         status(result) must equalTo(OK)
         contentType(result) must beSome("application/json")
         val expected = Json.parse("""[
-            {"network":"facebook","profileUrl":"http://facebook.com/FRF","pictureUrl":"https://graph.facebook.com/FRF/picture?width=50&height=50"},
+            {"network":"facebook","profileUrl":"https://www.facebook.com/FRF","pictureUrl":"https://graph.facebook.com/v2.0/FRF/picture?width=50&height=50"},
             {"network":"linkedin","profileUrl":"http://www.linkedin.com/in/rf","pictureUrl":"http://my.pic.com/pic.jpg"}
           ]""")
         Json.parse(contentAsString(result)) must equalTo(expected)

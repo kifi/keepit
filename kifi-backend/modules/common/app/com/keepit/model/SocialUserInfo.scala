@@ -39,8 +39,7 @@ case class SocialUserInfo(
   def withLastGraphRefresh(lastGraphRefresh: Option[DateTime] = Some(currentDateTime)) = copy(lastGraphRefresh = lastGraphRefresh)
   def getPictureUrl(preferredWidth: Int = 50, preferredHeight: Int = 50): Option[String] = networkType match {
     case SocialNetworks.FACEBOOK =>
-      // todo(Andrew): This may break with FB API 2.0. Need to investigate. FBAPI
-      Some(s"https://graph.facebook.com/$socialId/picture?width=$preferredWidth&height=$preferredHeight")
+      Some(s"https://graph.facebook.com/v2.0/$socialId/picture?width=$preferredWidth&height=$preferredHeight")
     case _ => pictureUrl
   }
   def getProfileUrl: Option[String] = profileUrl orElse (networkType match {
@@ -80,8 +79,7 @@ case class SocialUserBasicInfo(
 
   def getPictureUrl(preferredWidth: Int = 50, preferredHeight: Int = 50): Option[String] = networkType match {
     case SocialNetworks.FACEBOOK =>
-      // todo(Andrew): This may break with FB API 2.0. Need to investigate. FBAPI
-      Some(s"https://graph.facebook.com/$socialId/picture?width=$preferredWidth&height=$preferredHeight")
+      Some(s"https://graph.facebook.com/v2.0/$socialId/picture?width=$preferredWidth&height=$preferredHeight")
     case _ => pictureUrl
   }
 }
