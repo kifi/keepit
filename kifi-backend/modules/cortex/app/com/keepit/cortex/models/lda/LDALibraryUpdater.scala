@@ -152,7 +152,7 @@ class LDALibraryUpdaterImpl @Inject() (
   private def getLibraryTopicMean(feats: Seq[LDATopicFeature]): Option[LibraryTopicMean] = {
     if (feats.size < min_num_evidence) None
     else {
-      val vecs = feats.map { x => x.value }
+      val vecs = feats.map { x => toDoubleArray(x.value) }
       val mean = average(vecs)
       Some(LibraryTopicMean(mean))
     }

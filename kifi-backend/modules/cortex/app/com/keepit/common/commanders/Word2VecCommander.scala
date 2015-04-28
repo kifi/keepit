@@ -80,7 +80,7 @@ class Word2VecCommander @Inject() (
       userVecs.map { vec => dot(vec, feedVec).toFloat }.filter(_ > 0.7f)
     }
 
-    val userVecs = userUris.map { uri => uriFeatureRetriever.getByKey(uri, word2vec.version) }.flatten.map { x => L2Normalize(x.vectorize) }
+    val userVecs = userUris.map { uri => uriFeatureRetriever.getByKey(uri, word2vec.version) }.flatten.map { x => toFloatArray(L2Normalize(x.vectorize)) }
     val scoredUris = feeds.flatMap { uri =>
       uriFeatureRetriever.getByKey(uri, word2vec.version).flatMap { rep =>
         val vec = L2Normalize(rep.vectorize)
@@ -123,7 +123,7 @@ class Word2VecCommander @Inject() (
   }
 
   def similarity(query: String, uri: Id[NormalizedURI]): Option[Float] = {
-    val vecs = TextUtils.TextTokenizer.LowerCaseTokenizer.tokenize(query).flatMap { word2vec.apply(_) }.map { x => x.vectorize }
+    val vecs = TextUtils.TextTokenizer.LowerCaseTokenizer.tokenize(query).flatMap { word2vec.apply(_) }.map { x => toDoubleArray(x.vectorize) }
     if (vecs.isEmpty) return None
 
     val queryVec = vecs.reduce(add)
