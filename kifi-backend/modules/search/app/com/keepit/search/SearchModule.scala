@@ -2,10 +2,10 @@ package com.keepit.search
 
 import com.keepit.common.cache.CacheModule
 import com.keepit.common.controller.UserActionsModule
-import com.keepit.common.store.StoreModule
 import com.keepit.eliza.ElizaServiceClientModule
 import com.keepit.heimdal.HeimdalServiceClientModule
 import com.keepit.inject.{ CommonServiceModule, ConfigurationModule }
+import com.keepit.search.common.store.SearchStoreModule
 import com.keepit.search.index.IndexModule
 import com.keepit.search.tracking.TrackingModule
 import com.keepit.shoebox.ShoeboxServiceClientModule
@@ -22,7 +22,7 @@ trait SearchModule extends ConfigurationModule with CommonServiceModule {
 
   // Common Functional Modules
   val cacheModule: CacheModule
-  val storeModule: StoreModule
+  val storeModule: SearchStoreModule
   val userActionsModule: UserActionsModule
 
   // Search Functional Modules

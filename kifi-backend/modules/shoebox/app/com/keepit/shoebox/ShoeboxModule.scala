@@ -12,7 +12,7 @@ import com.keepit.common.mail.MailModule
 import com.keepit.common.analytics.AnalyticsModule
 import com.keepit.model.{ ProdSliderHistoryTrackerModule }
 import com.keepit.scraper.{ ScraperHealthMonitorModule, ScrapeSchedulerModule, ScraperServiceClientModule }
-import com.keepit.common.store.ShoeboxDevStoreModule
+import com.keepit.common.store.ShoeboxStoreModule
 import com.keepit.inject.{ CommonServiceModule, ConfigurationModule }
 import com.keepit.integrity.DataIntegrityModule
 import com.keepit.search.{ SearchServiceClientModule }
@@ -42,7 +42,7 @@ trait ShoeboxModule extends ConfigurationModule with CommonServiceModule {
   val mailModule: MailModule
   val reaperModule: ReaperModule
   val siteMapModule: SiteMapGeneratorModule
-  val storeModule: ShoeboxDevStoreModule
+  val storeModule: ShoeboxStoreModule
   val sqsModule: SimpleQueueModule
   val normalizationQueueModule: NormalizationUpdateJobQueueModule
 
