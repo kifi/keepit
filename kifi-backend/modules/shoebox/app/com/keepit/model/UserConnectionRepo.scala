@@ -143,13 +143,9 @@ class UserConnectionRepoImpl @Inject() (
     (for (c <- rows if c.user1 === u1 && c.user2 === u2 || c.user2 === u1 && c.user1 === u2) yield c).firstOption
 
   def getConnectedUsers(id: Id[User])(implicit session: RSession): Set[Id[User]] = {
-    userConnCache.get(UserConnectionIdKey(id)) match {
-      case Some(conns) => conns.map { Id[User](_) }.toSet
-      case _ =>
-        val conns = ((for (c <- rows if c.user1 === id && c.state === UserConnectionStates.ACTIVE) yield c.user2) union
-          (for (c <- rows if c.user2 === id && c.state === UserConnectionStates.ACTIVE) yield c.user1)).list.toSet
-        userConnCache.set(UserConnectionIdKey(id), conns.map(_.id).toArray)
-        conns
+    userConnCache.getOrElse(UserConnectionIdKey(id)) {
+      ((for (c <- rows if c.user1 === id && c.state === UserConnectionStates.ACTIVE) yield c.user2) union
+        (for (c <- rows if c.user2 === id && c.state === UserConnectionStates.ACTIVE) yield c.user1)).list.toSet
     }
   }
 
@@ -171,11 +167,11 @@ class UserConnectionRepoImpl @Inject() (
           (for (c <- rows if c.user2.inSet(missing) && c.state === UserConnectionStates.ACTIVE) yield (c.user2, c.user1)))
 
       query.list.groupBy(_._1).map {
-        case (id, connections) => UserConnectionIdKey(id) -> connections.map(_._2.id).toArray
-      }.toMap
+        case (id, connections) => UserConnectionIdKey(id) -> connections.map(_._2).toSet
+      }
     }
     ids.map { id =>
-      id -> ret.get(UserConnectionIdKey(id)).getOrElse(Array.empty).map(Id[User]).toSet
+      id -> ret.getOrElse(UserConnectionIdKey(id), Set.empty)
     }.toMap
   }
 

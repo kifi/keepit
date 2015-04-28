@@ -32,6 +32,7 @@ import com.keepit.social.BasicUserUserIdKey
 import play.api.libs.json._
 import com.keepit.common.usersegment.UserSegmentKey
 import com.keepit.common.json.TupleFormat
+import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 
 trait ShoeboxServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SHOEBOX
@@ -175,7 +176,7 @@ class ShoeboxServiceClientImpl @Inject() (
       call(Shoebox.internal.getUserOpt(id)).map { r =>
         r.json match {
           case JsNull => None
-          case js: JsValue => Some(Json.fromJson[User](js).get)
+          case js: JsValue => Some(js.as[User])
         }
       }
     }
@@ -186,7 +187,7 @@ class ShoeboxServiceClientImpl @Inject() (
       cacheProvider.socialUserNetworkCache.get(k) match {
         case Some(sui) => Future.successful(Some(sui))
         case None => call(Shoebox.internal.getSocialUserInfoByNetworkAndSocialId(id.id, networkType.name)) map { resp =>
-          Json.fromJson[SocialUserInfo](resp.json).asOpt
+          resp.json.asOpt[SocialUserInfo]
         }
       }
     }
@@ -196,27 +197,27 @@ class ShoeboxServiceClientImpl @Inject() (
     cacheProvider.socialUserCache.get(SocialUserInfoUserKey(userId)) match {
       case Some(sui) => Future.successful(sui)
       case None => call(Shoebox.internal.getSocialUserInfosByUserId(userId)) map { resp =>
-        Json.fromJson[Seq[SocialUserInfo]](resp.json).get
+        resp.json.as[Seq[SocialUserInfo]]
       }
     }
   }
 
   def getBookmarks(userId: Id[User]): Future[Seq[Keep]] = {
     call(Shoebox.internal.getBookmarks(userId)).map { r =>
-      r.json.as[JsArray].value.map(js => Json.fromJson[Keep](js).get)
+      r.json.as[Seq[Keep]]
     }
   }
 
   def getBookmarksChanged(seqNum: SequenceNumber[Keep], fetchSize: Int): Future[Seq[Keep]] = {
     call(Shoebox.internal.getBookmarksChanged(seqNum, fetchSize), callTimeouts = extraLongTimeout, routingStrategy = offlinePriority).map { r =>
-      r.json.as[JsArray].value.map(js => Json.fromJson[Keep](js).get)
+      r.json.as[Seq[Keep]]
     }
   }
 
   def getBookmarkByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User]): Future[Option[Keep]] = {
     cacheProvider.bookmarkUriUserCache.getOrElseFutureOpt(KeepUriUserKey(uriId, userId)) {
       call(Shoebox.internal.getBookmarkByUriAndUser(uriId, userId)).map { r =>
-        Json.fromJson[Option[Keep]](r.json).get
+        r.json.asOpt[Keep]
       }
     }
   }
@@ -268,7 +269,7 @@ class ShoeboxServiceClientImpl @Inject() (
     (needToGetUsers match {
       case Seq() => Future.successful(cachedUsers)
       case users => call(Shoebox.internal.getUserIdsByExternalIds(needToGetUsers.mkString(","))).map { r =>
-        cachedUsers ++ users.zip(r.json.as[Seq[Long]].map(Id[User](_)))
+        cachedUsers ++ users.zip(r.json.as[Seq[Id[User]]])
       }
     }) map { extId2Id =>
       userIds.map(extId2Id(_))
