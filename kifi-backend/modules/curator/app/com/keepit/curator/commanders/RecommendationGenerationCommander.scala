@@ -61,7 +61,7 @@ class RecommendationGenerationCommander @Inject() (
   val recommendationGenerationLock = new ReactiveLock(16)
   val perUserRecommendationGenerationLocks = TrieMap[Id[User], ReactiveLock]()
   val candidateURILock = new ReactiveLock(4)
-  val dbWriteThrottleLock = new ReactiveLock(1)
+  val dbWriteThrottleLock = new ReactiveLock(4)
 
   val superSpecialLock = new ReactiveLock(1)
 
