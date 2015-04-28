@@ -45,13 +45,12 @@ class PersonaRecommendationIngestor @Inject() (
   }
 
   private def ingestURIReco(uriReco: UriRecommendation, reverseIngestion: Boolean)(implicit session: RWSession): Unit = {
-    uriRecRepo.getByUriAndUserId(uriReco.uriId, uriReco.userId, excludeUriRecommendationState = None) match {
-      case None => if (!reverseIngestion) uriRecRepo.save(uriReco)
-      case Some(existing) => {
-        val state = if (reverseIngestion) UriRecommendationStates.INACTIVE else uriReco.state
-        val toSave = existing.copy(masterScore = uriReco.masterScore, allScores = uriReco.allScores, state = state)
-        uriRecRepo.save(toSave)
+    if (reverseIngestion) {
+      uriRecRepo.getByUriAndUserId(uriReco.uriId, uriReco.userId, excludeUriRecommendationState = None).foreach { existing =>
+        uriRecRepo.save(existing.copy(masterScore = uriReco.masterScore, allScores = uriReco.allScores, state = UriRecommendationStates.INACTIVE))
       }
+    } else {
+      uriRecRepo.insertOrUpdate(uriReco)
     }
   }
 
@@ -78,7 +77,11 @@ class PersonaRecommendationIngestor @Inject() (
     val existing = db.readOnlyMaster { implicit s => uriRecRepo.getUriIdsForUser(userId) }
     if (existing.isEmpty) {
       if (!reverseIngestion) {
-        db.readWrite(attempts = 2) { implicit s => uriRecRepo.insertAll(uniqueUriRecos) }
+        try {
+          db.readWrite { implicit s => uriRecRepo.insertAll(uniqueUriRecos) }
+        } catch {
+          case ex: com.mysql.jdbc.exceptions.jdbc4.MySQLIntegrityConstraintViolationException => db.readWrite { implicit s => uniqueUriRecos.foreach(ingestURIReco(_, false)) }
+        }
       }
     } else {
       db.readWrite(attempts = 2) { implicit s => uniqueUriRecos.foreach(ingestURIReco(_, reverseIngestion)) }
