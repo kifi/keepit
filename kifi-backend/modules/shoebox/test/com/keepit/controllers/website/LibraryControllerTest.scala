@@ -1379,6 +1379,50 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
       }
     }
 
+    "update keep note in library" in {
+      withDb(modules: _*) { implicit injector =>
+        val (user1, keep1, lib1) = db.readWrite { implicit s =>
+          val user = UserFactory.user().withUsername("spiderman").saved
+          val lib = library().withUser(user).saved
+          val keep = KeepFactory.keep().withUser(user).withLibrary(lib).saved
+          (user, keep, lib)
+        }
+        val libraryController = inject[LibraryController]
+        val pubId1 = Library.publicId(lib1.id.get)(inject[PublicIdConfiguration])
+        val testPath = com.keepit.controllers.website.routes.LibraryController.editKeepNote(pubId1, keep1.externalId).url
+        inject[FakeUserActionsHelper].setUser(user1)
+
+        // test adding a note (without hashtags)
+        val result1 = libraryController.editKeepNote(pubId1, keep1.externalId)(FakeRequest("POST", testPath).withBody(Json.obj("note" -> "thwip!")))
+        status(result1) must equalTo(NO_CONTENT)
+        db.readOnlyMaster { implicit s =>
+          val keep = keepRepo.getOpt(keep1.externalId).get
+          keep.note === Some("thwip!")
+          collectionRepo.getHashtagsByKeepId(keep.id.get) === Set.empty
+        }
+
+        // test removing a note
+        val result2 = libraryController.editKeepNote(pubId1, keep1.externalId)(FakeRequest("POST", testPath).withBody(Json.obj("note" -> "")))
+        status(result2) must equalTo(NO_CONTENT)
+        db.readOnlyMaster { implicit s =>
+          val keep = keepRepo.getOpt(keep1.externalId).get
+          keep.note === None
+          collectionRepo.getHashtagsByKeepId(keep.id.get) === Set.empty
+        }
+
+        // test adding a note (with hashtags)
+        val result3 = libraryController.editKeepNote(pubId1, keep1.externalId)(FakeRequest("POST", testPath).withBody(Json.obj("note" -> "thwip! #spiders [#avengers] [#tonysucks] blah")))
+        status(result3) must equalTo(NO_CONTENT)
+        db.readOnlyMaster { implicit s =>
+          val keep = keepRepo.getOpt(keep1.externalId).get
+          keep.note === Some("thwip! #spiders [#avengers] [#tonysucks] blah")
+          collectionRepo.getHashtagsByKeepId(keep.id.get).map(_.tag) === Set("tonysucks", "avengers")
+        }
+
+      }
+
+    }
+
     "marketingSiteSuggestedLibraries" should {
       "return json array of library info" in {
         withDb(modules: _*) { implicit injector =>
