@@ -31,7 +31,7 @@ object URISummaryCommanderTestDummyValues {
     provider = None,
     format = Some(ImageFormat.JPG),
     priority = Some(0),
-    path = "dummy.jpg"
+    path = ImagePath("dummy.jpg")
   );
   val dummyEmbedlyImageUrl = "http://localhost/S3_KEY.jpg"
   val dummyPagePeekerImageUrl = "http://www.testimg.com/thedummypagepeekerscreenshot.jpg"
@@ -46,7 +46,7 @@ class URISummaryCommanderTestImageFetcher extends ImageFetcher {
 
 case class MockScraperServiceClient(override val airbrakeNotifier: AirbrakeNotifier, scheduler: Scheduler) extends FakeScraperServiceClientImpl(airbrakeNotifier, scheduler) {
   override def fetchAndPersistURIPreview(url: String): Future[Option[URIPreviewFetchResult]] = Future.successful {
-    Some(URIPreviewFetchResult(url, Some("title"), Some("desc"), Seq.empty, None, Some(true), None, None, Some(PersistedImageRef(Seq(PersistedImageVersion(100, 100, "S3_KEY.jpg", "https://original.url/image.jpg")), None))))
+    Some(URIPreviewFetchResult(url, Some("title"), Some("desc"), Seq.empty, None, Some(true), None, None, Some(PersistedImageRef(Seq(PersistedImageVersion(100, 100, ImagePath("S3_KEY.jpg"), "https://original.url/image.jpg")), None))))
   }
 }
 
@@ -73,7 +73,7 @@ class URISummaryCommanderTest extends Specification with ShoeboxTestInjector {
         provider = Some(ImageProvider.EMBEDLY),
         format = Some(ImageFormat.JPG),
         priority = Some(0),
-        path = "foo.jpg"
+        path = ImagePath("foo.jpg")
       ))
       val image2 = imageInfo.save(ImageInfo(
         uriId = nUri2.id.get,
@@ -84,7 +84,7 @@ class URISummaryCommanderTest extends Specification with ShoeboxTestInjector {
         provider = Some(ImageProvider.EMBEDLY),
         format = Some(ImageFormat.JPG),
         priority = Some(1),
-        path = "bar.jpg"
+        path = ImagePath("bar.jpg")
       ))
       val image3 = imageInfo.save(ImageInfo(
         uriId = nUri1.id.get,
@@ -95,7 +95,7 @@ class URISummaryCommanderTest extends Specification with ShoeboxTestInjector {
         provider = Some(ImageProvider.PAGEPEEKER),
         format = Some(ImageFormat.JPG),
         priority = Some(0),
-        path = "dar.jpg"
+        path = ImagePath("dar.jpg")
       ))
       val image4 = imageInfo.save(ImageInfo(
         uriId = nUri1.id.get,
@@ -106,7 +106,7 @@ class URISummaryCommanderTest extends Specification with ShoeboxTestInjector {
         provider = Some(ImageProvider.EMBEDLY),
         format = Some(ImageFormat.JPG),
         priority = Some(3),
-        path = "zar.jpg"
+        path = ImagePath("zar.jpg")
       ))
       val image5 = imageInfo.save(ImageInfo(
         uriId = nUri1.id.get,
@@ -117,7 +117,7 @@ class URISummaryCommanderTest extends Specification with ShoeboxTestInjector {
         provider = Some(ImageProvider.EMBEDLY),
         format = Some(ImageFormat.JPG),
         priority = Some(4),
-        path = "gar.jpg"
+        path = ImagePath("gar.jpg")
       ))
 
       (getCDNURL(cdnBase, image1), getCDNURL(cdnBase, image2), getCDNURL(cdnBase, image3), getCDNURL(cdnBase, image4), getCDNURL(cdnBase, image5), nUri1, nUri2, nUri3, nUri4)

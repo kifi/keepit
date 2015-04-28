@@ -1,7 +1,7 @@
 package com.keepit.model
 
 import com.keepit.common.db._
-import com.keepit.common.store.ImageSize
+import com.keepit.common.store.{ ImagePath, ImageSize }
 import com.keepit.common.time._
 import org.apache.commons.lang3.RandomStringUtils
 import org.joda.time.DateTime
@@ -24,7 +24,7 @@ case class ImageInfo(
     provider: Option[ImageProvider] = None,
     format: Option[ImageFormat] = None,
     priority: Option[Int] = None,
-    path: String // the s3 bucket key name
+    path: ImagePath // the s3 bucket key name
     ) extends ModelWithState[ImageInfo] with ModelWithSeqNumber[ImageInfo] {
   val defaultImageFormat = ImageFormat.JPG
   def withId(imageInfoId: Id[ImageInfo]) = copy(id = Some(imageInfoId))
@@ -56,7 +56,7 @@ object ImageInfo {
     (__ \ 'provider).formatNullable[ImageProvider] and
     (__ \ 'format).formatNullable[ImageFormat] and
     (__ \ 'priority).formatNullable[Int] and
-    (__ \ 'path).format[String]
+    (__ \ 'path).format[ImagePath]
   )(ImageInfo.apply _, unlift(ImageInfo.unapply))
 }
 
