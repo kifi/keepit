@@ -77,11 +77,6 @@ trait ProdStoreModule extends StoreModule {
     val bucketName = S3Bucket(current.configuration.getString("amazon.s3.bayes.porn.detector.bucket").get)
     new S3PornWordLikelihoodStore(bucketName, amazonS3Client, accessLog)
   }
-
-  @Provides @Singleton
-  def roverImageStore(s3ImageConfig: S3ImageConfig, inbox: RoverImageStoreInbox, transferManager: TransferManager, executionContext: ExecutionContext): RoverImageStore = {
-    new S3RoverImageStoreImpl(s3ImageConfig, inbox, transferManager, executionContext)
-  }
 }
 
 abstract class DevStoreModule[T <: ProdStoreModule](override val prodStoreModule: T) extends ProdOrElseDevStoreModule(prodStoreModule) {
@@ -133,7 +128,4 @@ abstract class DevStoreModule[T <: ProdStoreModule](override val prodStoreModule
         override def syncGet(key: String) = Some(PornWordLikelihood(Map("a" -> 1f)))
       })
   }
-
-  @Provides @Singleton
-  def roverImageStore(): RoverImageStore = new InMemoryRoverImageStoreImpl()
 }

@@ -1,15 +1,14 @@
 package com.keepit.common.store
 
-import java.io.{ File, FileOutputStream, InputStream }
+import java.io.{ File, InputStream }
 
 import com.amazonaws.services.s3.model.ObjectMetadata
 import com.amazonaws.services.s3.transfer.TransferManager
+import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.core._
 import com.keepit.model.{ ImageFormat, ImageHash, ProcessImageOperation }
-import org.apache.commons.io.{ FileUtils, IOUtils }
 import play.api.Play
 import play.api.libs.Files.TemporaryFile
-import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.api.Play.current
 
@@ -36,7 +35,8 @@ trait RoverImageStore {
 
 case class RoverImageStoreInbox(dir: File) extends S3InboxDirectory
 
-class S3RoverImageStoreImpl(
+@Singleton
+class S3RoverImageStoreImpl @Inject() (
     s3ImageConfig: S3ImageConfig,
     val inbox: RoverImageStoreInbox,
     implicit val transferManager: TransferManager,
