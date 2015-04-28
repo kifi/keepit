@@ -471,7 +471,7 @@ class KeepsCommander @Inject() (
         }
       } catch {
         case t: Throwable =>
-          airbrake.notify(s"error attaching collection id $collectionId to a batch of ${keeps.length} keeps (out of ${allKeeps.length})})", t)
+          airbrake.notify(s"error attaching collection id $collectionId to a batch of ${keeps.length} of ${allKeeps.length} keeps. 3 sample keeps: ${allKeeps.take(3)}", t)
           Set.empty[KeepToCollection]
       }
     }
