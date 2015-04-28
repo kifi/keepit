@@ -48,6 +48,17 @@ class HashtagCommanderTest extends Specification with ShoeboxTestInjector {
       }
     }
 
+    "add new hashtags to string" in {
+      withDb(modules: _*) { implicit injector =>
+        val commander = inject[HashtagCommander]
+        commander.addNewHashtagNamesToString("", Seq.empty) === ""
+        commander.addNewHashtagNamesToString("a", Seq.empty) === "a"
+        commander.addNewHashtagNamesToString("a", Seq("b")) === "a [#b]"
+        commander.addNewHashtagNamesToString("[#b] a", Seq("b")) === "[#b] a"
+        commander.addNewHashtagNamesToString("[#b] a", Seq("b", "c")) === "[#b] a [#c]"
+      }
+    }
+
     "remove all hashtags from a string" in {
       withDb(modules: _*) { implicit injector =>
         val commander = inject[HashtagCommander]
