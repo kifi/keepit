@@ -646,10 +646,8 @@ class KeepsCommander @Inject() (
     val noteWithHashtagsAppended = hashtagCommander.appendHashtagNamesToString(noteWithHashtagsRemoved, hashtagsToAppend)
     val finalNote = Some(noteWithHashtagsAppended.trim).filterNot(_.isEmpty)
 
-    if (finalNote != keep.note) {
-      val updatedKeep = keepRepo.save(keep.copy(note = finalNote))
-      libraryAnalytics.updatedKeep(keep, updatedKeep, context)
-    }
+    val updatedKeep = keepRepo.save(keep.copy(note = finalNote))
+    libraryAnalytics.updatedKeep(keep, updatedKeep, context)
   }
 
   private def postSingleKeepReporting(keep: Keep, isNewKeep: Boolean, library: Library, socialShare: SocialShare): Unit = SafeFuture {
