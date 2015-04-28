@@ -89,14 +89,14 @@ class LDAPersonaCommanderTest extends Specification with CortexTestInjector {
       val expect = Array(-0.68100522, -0.34050261, 0.51075392, 0.51075392) // python output
       (grad1 zip expect).map { case (a, b) => math.abs(a - b) }.forall(_ < 1e-6) === true
 
-      val newt = add(theta, grad1.map { _ * 0.01f })
+      val newt = add(theta, grad1.map { _ * 0.01 })
       (cosineDistance(x, newt) < cosineDistance(x, theta)) === true // less now
 
       val grad2 = PersonaFeatureTrainer.negativeGradient(x, 1, theta) // make it more similar
       val expect2 = expect.map { -1 * _ }
       (grad2 zip expect2).map { case (a, b) => math.abs(a - b) }.forall(_ < 1e-6) === true
 
-      val newt2 = add(theta, grad2.map { _ * 0.01f })
+      val newt2 = add(theta, grad2.map { _ * 0.01 })
       (cosineDistance(x, newt2) > cosineDistance(x, theta)) === true // more now
 
     }

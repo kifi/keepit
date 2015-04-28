@@ -53,7 +53,7 @@ class LDAPersonaCommanderImpl @Inject() (
 
     val feature: Array[Float] = if (vecs.size > 0) {
       val weights = Array.tabulate(vecs.size) { i => 1f / vecs.size }
-      weightedAverage(vecs, weights)
+      weightedAverage(vecs.map { toDoubleArray(_) }, weights)
     } else {
       new Array[Float](dim)
     }
@@ -141,8 +141,8 @@ object PersonaFeatureTrainer {
   def negativeGradient(x: Array[Float], label: Int, theta: Array[Float]): Array[Float] = {
     require(x.size == theta.size)
     require(label == 1 || label == -1)
-    val xNorm = sqrt(dot(x, x)).toFloat
-    val tNorm = sqrt(dot(theta, theta)).toFloat
+    val xNorm = sqrt(dot(x, x))
+    val tNorm = sqrt(dot(theta, theta))
     val f = cosineDistance(x, theta)
 
     // grad = x / (t_norm * x_norm) - t * (f / (t_norm * t_norm))
