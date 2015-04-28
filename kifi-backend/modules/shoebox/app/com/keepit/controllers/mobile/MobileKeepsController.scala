@@ -200,8 +200,11 @@ class MobileKeepsController @Inject() (
         val noteOpt = (json \ "note").asOpt[String]
         val tagsOpt = (json \ "tags").asOpt[Seq[String]]
 
-        val titleToPersist = titleOpt orElse keep.title map (_.trim) filterNot (_.isEmpty)
-        val noteToPersist = noteOpt orElse keep.note map (_.trim) filterNot (_.isEmpty)
+        val titleToPersist = (titleOpt orElse keep.title) map (_.trim) filterNot (_.isEmpty)
+        val noteToPersist = (noteOpt orElse keep.note).map { note =>
+          keepDecorator.escapeMarkupNotes(note).trim
+        }.filter(_.nonEmpty)
+
         val tagsToPersist = tagsOpt.getOrElse(
           db.readOnlyMaster { implicit s =>
             collectionRepo.getHashtagsByKeepId(keep.id.get).map(_.tag).toSeq

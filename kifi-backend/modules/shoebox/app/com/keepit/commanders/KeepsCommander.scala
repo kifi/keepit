@@ -639,8 +639,7 @@ class KeepsCommander @Inject() (
     val hashtagsToRemove = hashtagsInNote.filterNot(hashtagsToPersistSet.contains(_))
     val hashtagsToAppend = selectedTagNames.filterNot(hashtagsInNote.contains(_))
     val noteWithHashtagsRemoved = hashtagCommander.removeHashtagNamesFromString(keepNote, hashtagsToRemove.toSet)
-    val markedNote = keepDecorator.escapeMarkupNotes(noteWithHashtagsRemoved)
-    val noteWithHashtagsAppended = hashtagCommander.appendHashtagNamesToString(markedNote, hashtagsToAppend)
+    val noteWithHashtagsAppended = hashtagCommander.appendHashtagNamesToString(noteWithHashtagsRemoved, hashtagsToAppend)
     val finalNote = Some(noteWithHashtagsAppended.trim).filterNot(_.isEmpty)
 
     keepRepo.save(keep.copy(note = finalNote))
