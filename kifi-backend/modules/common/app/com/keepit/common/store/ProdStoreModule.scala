@@ -126,4 +126,7 @@ abstract class DevStoreModule[T <: ProdStoreModule](override val prodStoreModule
         override def syncGet(key: String) = Some(PornWordLikelihood(Map("a" -> 1f)))
       })
   }
+
+  @Provides @Singleton
+  def roverImageStore(): RoverImageStore = new InMemoryRoverImageStoreImpl()
 }

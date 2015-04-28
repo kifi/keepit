@@ -8,14 +8,17 @@ import com.keepit.common.core._
 import com.keepit.model.{ ImageFormat, ImageHash, ProcessImageOperation }
 import org.apache.commons.io.{ FileUtils, IOUtils }
 import play.api.Play
+import play.api.libs.Files.TemporaryFile
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.api.Play.current
 
-import scala.collection.mutable.HashMap
+import scala.collection.mutable
 import scala.concurrent.{ ExecutionContext, Future }
 
-case class ImagePath(path: String)
+case class ImagePath(path: String) extends AnyVal {
+  override def toString() = path
+}
 
 object ImagePath {
   def apply(prefix: String, hash: ImageHash, size: ImageSize, kind: ProcessImageOperation, format: ImageFormat): ImagePath = {
@@ -23,12 +26,12 @@ object ImagePath {
     ImagePath(prefix + "/" + fileName)
   }
 
-  implicit val format: Format[ImagePath] = __.format[String].inmap(ImagePath(_), _.path)
+  implicit val format: Format[ImagePath] = Format(__.read[String].map(ImagePath(_)), Writes(path => JsString(path.path)))
 }
 
 trait RoverImageStore {
   def put(key: ImagePath, is: InputStream, contentLength: Int, mimeType: String): Future[Unit]
-  def get(key: ImagePath): Future[File]
+  def get(key: ImagePath): Future[TemporaryFile]
 }
 
 case class RoverImageStoreInbox(dir: File) extends S3InboxDirectory
@@ -53,36 +56,32 @@ class S3RoverImageStoreImpl(
     }
   } andThen { case _ => is.close() }
 
-  def get(key: ImagePath): Future[File] = {
-    asyncDownload(s3ImageConfig.bucketName, key.path).imap(_.file)
+  def get(key: ImagePath): Future[TemporaryFile] = {
+    asyncDownload(s3ImageConfig.bucketName, key.path)
   }
 }
 
-class InMemoryRoverImageStoreImpl extends RoverImageStore {
+class InMemoryRoverImageStoreImpl() extends RoverImageStore {
 
   require(!(Play.maybeApplication.isDefined && Play.isProd), "Can't have in memory file store in production")
 
-  private val pathMap = new HashMap[ImagePath, String]()
-  private val localStore = FileUtils.getTempDirectory
+  val cache = mutable.HashMap[ImagePath, TemporaryFile]()
 
   def put(key: ImagePath, is: InputStream, contentLength: Int, mimeType: String): Future[Unit] = {
-    try {
-      val copy = new File(localStore, key.path)
-      copy.deleteOnExit()
-      val copyStream = new FileOutputStream(copy)
-      IOUtils.copy(is, copyStream)
-      copyStream.close()
-      pathMap += (key -> copy.getAbsolutePath)
-      Future.successful(())
-    } catch {
-      case error: Exception => Future.failed(error)
-    } finally {
-      is.close()
+    val tf = TemporaryFile(prefix = "test-file", suffix = ".png")
+    tf.file.deleteOnExit()
+    // Intentionally does not write the data to the actual file. If this is needed, please add a mutable flag in this class.
+    cache.put(key, tf)
+    is.close()
+    Future.successful(())
+  }
+  def get(key: ImagePath): Future[TemporaryFile] = {
+    cache.get(key) match {
+      case Some(f) => Future.successful(f)
+      case None => Future.failed(new RuntimeException("Key not there!"))
     }
   }
 
-  def get(key: ImagePath): Future[File] = {
-    try { Future.successful(pathMap.get(key).map(new File(_)).get) }
-    catch { case error: Exception => Future.failed(error) }
-  }
+  def all: Map[ImagePath, TemporaryFile] = cache.toMap
+
 }
