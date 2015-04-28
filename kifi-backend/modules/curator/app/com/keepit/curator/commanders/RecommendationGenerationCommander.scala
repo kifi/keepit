@@ -181,6 +181,8 @@ class RecommendationGenerationCommander @Inject() (
       }
       timer.stopAndReport()
       timerPer.stopAndReport(items.length)
+    } else {
+      db.readWrite(attempts = 2) { implicit session => genStateRepo.save(newState) }
     }
   }
 
@@ -279,6 +281,8 @@ class RecommendationGenerationCommander @Inject() (
             timerPer.stopAndReport(filteredItems.length)
             Statsd.increment("UriRecosGenerated", filteredItems.length)
             Statsd.gauge("RecosWaitingForSave", -1 * filteredItems.length, true)
+          } else {
+            db.readWrite(attempts = 2) { implicit session => genStateRepo.save(newState) }
           }
           precomputeRecommendationsForUser(userId, boostedKeepers, Some(alwaysInclude))
           seedItems.nonEmpty
