@@ -7,14 +7,14 @@ import com.keepit.common.logging.AccessLog
 import com.keepit.common.db.Id
 import com.keepit.serializer.ArrayBinaryFormat
 
-case class UserConnectionIdKey(userId: Id[User]) extends Key[Array[Long]] {
+case class UserConnectionIdKey(userId: Id[User]) extends Key[Set[Id[User]]] {
   override val version = 5
   val namespace = "user_connections"
   def toKey(): String = userId.id.toString
 }
 
 class UserConnectionIdCache(stats: CacheStatistics, accessLog: AccessLog, inner: (FortyTwoCachePlugin, Duration), outer: (FortyTwoCachePlugin, Duration)*)
-  extends BinaryCacheImpl[UserConnectionIdKey, Array[Long]](stats, accessLog, inner, outer: _*)(ArrayBinaryFormat.longArrayFormat)
+  extends BinaryCacheImpl[UserConnectionIdKey, Set[Id[User]]](stats, accessLog, inner, outer: _*)(ArrayBinaryFormat.longArrayFormat.map(_.map(_.id).toArray, _.map(Id[User](_)).toSet))
 
 case class UserConnectionCountKey(userId: Id[User]) extends Key[Int] {
   override val version = 2
