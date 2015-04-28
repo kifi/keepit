@@ -58,13 +58,7 @@ class SearchFriendRepoImpl @Inject() (
   }
 
   def getSearchFriends(userId: Id[User])(implicit session: RSession): Set[Id[User]] = {
-    searchFriendsCache.get(SearchFriendsKey(userId)) match {
-      case Some(friends) => friends.map(Id[User]).toSet
-      case _ =>
-        val friends = getSearchFriendsFromDb(userId)
-        searchFriendsCache.set(SearchFriendsKey(userId), friends.map(_.id).toArray)
-        friends
-    }
+    searchFriendsCache.getOrElse(SearchFriendsKey(userId)) { getSearchFriendsFromDb(userId) }
   }
 
   def getUnfriends(userId: Id[User])(implicit session: RSession): Set[Id[User]] = {
@@ -84,7 +78,7 @@ class SearchFriendRepoImpl @Inject() (
     rows.insertAll(idsToInsert.map { friendId => SearchFriend(userId = userId, friendId = friendId, seq = sequence.incrementAndGet()) }.toSeq: _*)
     val numChanged = idsToInsert.size + ids.size
     if (numChanged > 0) {
-      searchFriendsCache.set(SearchFriendsKey(userId), getSearchFriendsFromDb(userId).map(_.id).toArray)
+      searchFriendsCache.set(SearchFriendsKey(userId), getSearchFriendsFromDb(userId))
     }
     numChanged
   }
@@ -99,7 +93,7 @@ class SearchFriendRepoImpl @Inject() (
     }
 
     if (ids.size > 0) {
-      searchFriendsCache.set(SearchFriendsKey(userId), getSearchFriendsFromDb(userId).map(_.id).toArray)
+      searchFriendsCache.set(SearchFriendsKey(userId), getSearchFriendsFromDb(userId))
     }
     ids.size
   }
