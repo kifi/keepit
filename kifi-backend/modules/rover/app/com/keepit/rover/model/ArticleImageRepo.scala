@@ -35,9 +35,8 @@ class ArticleImageRepoImpl @Inject() (
     def fetchedAt = column[DateTime]("fetched_at", O.NotNull)
     def imageUrl = column[String]("image_url", O.NotNull)
     def imageHash = column[ImageHash]("image_hash", O.NotNull)
-    def priority = column[Option[Int]]("priority", O.Nullable)
 
-    def * = (id.?, createdAt, updatedAt, state, uriId, kind, versionMajor, versionMinor, fetchedAt, imageUrl, imageHash, priority) <> ((ArticleImage.applyFromDbRow _).tupled, ArticleImage.unapplyToDbRow _)
+    def * = (id.?, createdAt, updatedAt, state, uriId, kind, versionMajor, versionMinor, fetchedAt, imageUrl, imageHash) <> ((ArticleImage.applyFromDbRow _).tupled, ArticleImage.unapplyToDbRow _)
   }
 
   def table(tag: Tag) = new ArticleImageTable(tag)
