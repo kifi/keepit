@@ -87,7 +87,7 @@ class ExtKeepImageControllerTest extends Specification with ShoeboxTestInjector 
           contentAsString(uploadResp) === "\"success\""
 
           db.readOnlyMaster { implicit session =>
-            keepImageRepo.all().head.imagePath === "keep/26dbdc56d54dbc94830f7cfc85031481_66x38_o.png"
+            keepImageRepo.all().head.imagePath.path === "keep/26dbdc56d54dbc94830f7cfc85031481_66x38_o.png"
           }
         }
 

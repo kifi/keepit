@@ -2,7 +2,7 @@ package com.keepit.model
 
 import com.keepit.commanders.{ CropImageRequest, ProcessImageRequest, ScaleImageRequest }
 import com.keepit.common.db.{ Id, Model, State, States }
-import com.keepit.common.store.ImageSize
+import com.keepit.common.store.{ ImagePath, ImageSize }
 import com.keepit.common.time._
 import org.joda.time.DateTime
 
@@ -12,7 +12,7 @@ case class KeepImage(
     updatedAt: DateTime = currentDateTime,
     state: State[KeepImage] = KeepImageStates.ACTIVE,
     keepId: Id[Keep],
-    imagePath: String,
+    imagePath: ImagePath,
     format: ImageFormat,
     width: Int,
     height: Int,

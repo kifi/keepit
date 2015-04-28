@@ -2,6 +2,10 @@
 
 # --- !Ups
 
+ALTER TABLE article_info add column last_image_processing_version_major int NULL;
+ALTER TABLE article_info add column last_image_processing_version_minor int NULL;
+ALTER TABLE article_info add column last_image_processing_at datetime NULL;
+
 CREATE TABLE if not exists rover_image_info (
     id bigint(20) NOT NULL AUTO_INCREMENT,
     created_at datetime NOT NULL,

@@ -1,5 +1,6 @@
 package com.keepit.controllers.website
 
+import com.keepit.common.store.ImagePath
 import com.keepit.model.LibraryMembershipFactory._
 import com.keepit.model.LibraryMembershipFactoryHelper._
 import java.io.File
@@ -151,26 +152,28 @@ class LibraryImageControllerTest extends Specification with ShoeboxTestInjector 
         val libPubId1 = Library.publicId(lib1.id.get)
         val libPubId2 = Library.publicId(lib2.id.get)
 
+        val expectedImagePath = ImagePath("library/26dbdc56d54dbc94830f7cfc85031481_66x38_o.png")
+
         status(uploadFile(user1, libPubId1, fakeFile, None, Some(20), Some(90))) === OK
 
         val result1 = getImages(Some(user1), Seq(libPubId1.id, libPubId2.id).mkString("."))
         status(result1) === OK
         contentAsJson(result1) === Json.obj(
-          libPubId1.id -> LibraryImageInfo("library/26dbdc56d54dbc94830f7cfc85031481_66x38_o.png", 20, 90))
+          libPubId1.id -> LibraryImageInfo(expectedImagePath, 20, 90))
 
         status(uploadFile(user1, libPubId2, fakeFile, None, None, None)) === OK
 
         val result2 = getImages(Some(user2), Seq(libPubId1.id, libPubId2.id).mkString("."))
         status(result2) === OK
         contentAsJson(result2) === Json.obj(
-          libPubId1.id -> LibraryImageInfo("library/26dbdc56d54dbc94830f7cfc85031481_66x38_o.png", 20, 90),
-          libPubId2.id -> LibraryImageInfo("library/26dbdc56d54dbc94830f7cfc85031481_66x38_o.png", 50, 50))
+          libPubId1.id -> LibraryImageInfo(expectedImagePath, 20, 90),
+          libPubId2.id -> LibraryImageInfo(expectedImagePath, 50, 50))
 
         val result3 = getImages(None, Seq(libPubId1.id, libPubId2.id).mkString("."))
         status(result3) === OK
         contentAsJson(result3) === Json.obj(
-          libPubId1.id -> LibraryImageInfo("library/26dbdc56d54dbc94830f7cfc85031481_66x38_o.png", 20, 90),
-          libPubId2.id -> LibraryImageInfo("library/26dbdc56d54dbc94830f7cfc85031481_66x38_o.png", 50, 50))
+          libPubId1.id -> LibraryImageInfo(expectedImagePath, 20, 90),
+          libPubId2.id -> LibraryImageInfo(expectedImagePath, 50, 50))
       }
     }
 

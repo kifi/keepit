@@ -202,7 +202,7 @@ class URISummaryCommander @Inject() (
             // todo handle existing images
             // Persist images largest to smallest
             images.sizes.sortBy(i => i.height + i.width).reverse.map { image =>
-              val format = image.path.substring(image.path.lastIndexOf(".") + 1).toLowerCase match {
+              val format = image.path.path.substring(image.path.path.lastIndexOf(".") + 1).toLowerCase match {
                 case "png" => ImageFormat.PNG
                 case "jpg" | "jpeg" => ImageFormat.JPG
                 case "gif" => ImageFormat.GIF

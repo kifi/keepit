@@ -15,7 +15,7 @@ import com.keepit.cortex.dbmodel._
 import com.keepit.cortex.plugins.{ BaseFeatureUpdatePlugin, FeatureUpdatePlugin, FeatureUpdateActor, BaseFeatureUpdater }
 import com.keepit.curator.CuratorServiceClient
 import com.keepit.model.User
-import com.keepit.cortex.utils.MatrixUtils.cosineDistance
+import com.keepit.cortex.utils.MatrixUtils.{ toDoubleArray, cosineDistance }
 import org.joda.time.DateTime
 
 import scala.concurrent.duration._

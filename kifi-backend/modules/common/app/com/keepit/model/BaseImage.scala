@@ -3,7 +3,7 @@ package com.keepit.model
 import java.awt.image.BufferedImage
 import java.io.ByteArrayInputStream
 
-import com.keepit.common.store.ImageSize
+import com.keepit.common.store.{ ImagePath, ImageSize }
 import com.keepit.rover.article.{ ArticleKind, Article }
 import org.joda.time.DateTime
 import play.api.libs.Files.TemporaryFile
@@ -17,7 +17,7 @@ abstract class BaseImage {
   val height: Int
   val source: ImageSource
   def sourceFileHash: ImageHash
-  def imagePath: String
+  def imagePath: ImagePath
   def isOriginal: Boolean
   val imageSize = ImageSize(width, height)
 }
@@ -60,8 +60,8 @@ object ImageProcessState {
   // In-progress
   case class ImageLoadedAndHashed(file: TemporaryFile, format: ImageFormat, hash: ImageHash, sourceImageUrl: Option[String]) extends ImageStoreInProgress
   case class ImageValid(image: BufferedImage, format: ImageFormat, hash: ImageHash, processOperation: ProcessImageOperation) extends ImageStoreInProgress
-  case class ReadyToPersist(key: String, format: ImageFormat, is: ByteArrayInputStream, image: BufferedImage, bytes: Int, processOperation: ProcessImageOperation) extends ImageStoreInProgress
-  case class UploadedImage(key: String, format: ImageFormat, image: BufferedImage, processOperation: ProcessImageOperation) extends ImageStoreInProgress
+  case class ReadyToPersist(key: ImagePath, format: ImageFormat, is: ByteArrayInputStream, image: BufferedImage, bytes: Int, processOperation: ProcessImageOperation) extends ImageStoreInProgress
+  case class UploadedImage(key: ImagePath, format: ImageFormat, image: BufferedImage, processOperation: ProcessImageOperation) extends ImageStoreInProgress
 
   // Failures
   case class UpstreamProviderFailed(ex: Throwable) extends ImageStoreFailureWithException(ex, "upstream_provider_failed")

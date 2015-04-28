@@ -456,6 +456,7 @@ class KeepsCommander @Inject() (
   }
 
   def addToCollection(collectionId: Id[Collection], allKeeps: Seq[Keep], updateIndex: Boolean = true)(implicit context: HeimdalContext): Set[KeepToCollection] = timing(s"addToCollection($collectionId,${allKeeps.length})") {
+    val trace = new StackTrace()
     val result: Iterator[KeepToCollection] = allKeeps.grouped(50) flatMap { keeps =>
       try {
         db.readWrite(attempts = 3) { implicit s =>
@@ -484,7 +485,7 @@ class KeepsCommander @Inject() (
         }
       } catch {
         case t: Throwable =>
-          airbrake.notify(s"error attaching collection id $collectionId to a batch of ${keeps.length} keeps (out of ${allKeeps.length})})", t)
+          airbrake.notify(s"error attaching collection id $collectionId to a batch of ${keeps.length} of ${allKeeps.length} keeps. 3 sample keeps: ${allKeeps.take(3)}", trace.withCause(t))
           Set.empty[KeepToCollection]
       }
     }

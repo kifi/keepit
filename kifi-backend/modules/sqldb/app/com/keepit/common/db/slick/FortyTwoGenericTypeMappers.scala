@@ -1,6 +1,7 @@
 package com.keepit.common.db.slick
 
 import com.keepit.common.db._
+import com.keepit.common.store.ImagePath
 import com.keepit.common.time._
 import com.keepit.cortex.models.lda.LDATopic
 import com.keepit.heimdal.DelightedAnswerSource
@@ -89,6 +90,7 @@ trait FortyTwoGenericTypeMappers { self: { val db: DataBaseComponent } =>
   implicit def ldaTopicMapper = MappedColumnType.base[LDATopic, Int](_.index, LDATopic(_))
   implicit val imageHashMapper = MappedColumnType.base[ImageHash, String](_.hash, ImageHash.apply)
   implicit val imageSourceMapper = MappedColumnType.base[ImageSource, String](_.name, ImageSource.apply)
+  implicit val imageStoreKeyMapper = MappedColumnType.base[ImagePath, String](_.path, ImagePath.apply)
   implicit val processImageOperationMapper = MappedColumnType.base[ProcessImageOperation, String](_.kind, ProcessImageOperation.apply)
   implicit val seqPageAuthorMapper = MappedColumnType.base[Seq[PageAuthor], String](
     authors => Json.stringify(Json.toJson(authors)),

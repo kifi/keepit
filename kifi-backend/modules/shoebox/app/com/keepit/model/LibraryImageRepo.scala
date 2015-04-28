@@ -6,6 +6,7 @@ import com.google.inject.{ Inject, Singleton, ImplementedBy }
 import com.keepit.common.db.{ Id, State }
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.{ DbRepo, DataBaseComponent, Repo }
+import com.keepit.common.store.ImagePath
 import com.keepit.common.time.Clock
 
 @ImplementedBy(classOf[LibraryImageRepoImpl])
@@ -27,7 +28,7 @@ class LibraryImageRepoImpl @Inject() (
   class LibraryImageTable(tag: Tag) extends RepoTable[LibraryImage](db, tag, "library_image") {
 
     def libraryId = column[Id[Library]]("library_id", O.NotNull)
-    def imagePath = column[String]("image_path", O.NotNull)
+    def imagePath = column[ImagePath]("image_path", O.NotNull)
     def format = column[ImageFormat]("image_format", O.NotNull)
     def width = column[Int]("width", O.NotNull)
     def height = column[Int]("height", O.NotNull)

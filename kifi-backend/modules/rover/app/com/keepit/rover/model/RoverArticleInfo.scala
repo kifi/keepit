@@ -1,12 +1,10 @@
 package com.keepit.rover.model
 
 import com.keepit.common.db._
-import com.keepit.common.net.URI
 import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.rover.article.{ ArticleKind, ArticleFetchRequest, Article }
 import com.keepit.rover.manager.{ FailureRecoveryPolicy, FetchSchedulingPolicy }
-import com.keepit.rover.model.RoverArticleInfo._
 import org.joda.time.DateTime
 import scala.concurrent.duration.Duration
 
@@ -30,7 +28,9 @@ case class RoverArticleInfo(
     lastFetchingAt: Option[DateTime] = None,
     fetchInterval: Option[Duration] = None,
     failureCount: Int = 0,
-    failureInfo: Option[String] = None) extends ModelWithState[RoverArticleInfo] with ModelWithSeqNumber[RoverArticleInfo] with ArticleInfoHolder with ArticleKindHolder {
+    failureInfo: Option[String] = None,
+    lastImageProcessingVersion: Option[ArticleVersion] = None,
+    lastImageProcessingAt: Option[DateTime] = None) extends ModelWithState[RoverArticleInfo] with ModelWithSeqNumber[RoverArticleInfo] with ArticleInfoHolder with ArticleKindHolder {
 
   def withId(id: Id[RoverArticleInfo]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
@@ -48,7 +48,9 @@ case class RoverArticleInfo(
     lastFetchingAt = None,
     fetchInterval = None,
     failureCount = 0,
-    failureInfo = None
+    failureInfo = None,
+    lastImageProcessingVersion = None,
+    lastImageProcessingAt = None
   )
 
   private def schedulingPolicy = FetchSchedulingPolicy(articleKind)
@@ -94,6 +96,13 @@ case class RoverArticleInfo(
       failureInfo = None
     )
   }
+
+  def withImageProcessingComplete(version: ArticleVersion) = {
+    copy(
+      lastImageProcessingVersion = Some(version),
+      lastImageProcessingAt = None
+    )
+  }
 }
 
 object RoverArticleInfo {
@@ -120,37 +129,30 @@ object RoverArticleInfo {
   }
 
   def applyFromDbRow(
-    id: Option[Id[RoverArticleInfo]] = None,
-    createdAt: DateTime = currentDateTime,
-    updatedAt: DateTime = currentDateTime,
-    state: State[RoverArticleInfo] = ArticleInfoStates.ACTIVE,
-    seq: SequenceNumber[RoverArticleInfo] = SequenceNumber.ZERO,
+    id: Option[Id[RoverArticleInfo]],
+    createdAt: DateTime,
+    updatedAt: DateTime,
+    state: State[RoverArticleInfo],
+    seq: SequenceNumber[RoverArticleInfo],
     uriId: Id[NormalizedURI],
     url: String,
     kind: String,
-    bestVersionMajor: Option[VersionNumber[Article]],
-    bestVersionMinor: Option[VersionNumber[Article]],
-    latestVersionMajor: Option[VersionNumber[Article]],
-    latestVersionMinor: Option[VersionNumber[Article]],
-    oldestVersionMajor: Option[VersionNumber[Article]],
-    oldestVersionMinor: Option[VersionNumber[Article]],
+    bestVersion: Option[ArticleVersion],
+    latestVersion: Option[ArticleVersion],
+    oldestVersion: Option[ArticleVersion],
     lastFetchedAt: Option[DateTime],
     nextFetchAt: Option[DateTime],
     lastFetchingAt: Option[DateTime],
     fetchInterval: Option[Duration],
     failureCount: Int,
-    failureInfo: Option[String]): RoverArticleInfo = {
-    val bestVersion = articleVersionFromDb(bestVersionMajor, bestVersionMinor)
-    val latestVersion = articleVersionFromDb(latestVersionMajor, latestVersionMinor)
-    val oldestVersion = articleVersionFromDb(oldestVersionMajor, oldestVersionMinor)
-    RoverArticleInfo(id, createdAt, updatedAt, state, seq, uriId, url, kind, bestVersion, latestVersion, oldestVersion, lastFetchedAt, nextFetchAt, lastFetchingAt, fetchInterval, failureCount, failureInfo)
+    failureInfo: Option[String],
+    lastImageProcessingVersion: Option[ArticleVersion],
+    lastImageProcessingAt: Option[DateTime]): RoverArticleInfo = {
+    RoverArticleInfo(id, createdAt, updatedAt, state, seq, uriId, url, kind, bestVersion, latestVersion, oldestVersion, lastFetchedAt, nextFetchAt, lastFetchingAt, fetchInterval, failureCount, failureInfo, lastImageProcessingVersion, lastImageProcessingAt)
   }
 
   def unapplyToDbRow(info: RoverArticleInfo) = {
-    val (bestVersionMajor, bestVersionMinor) = articleVersionToDb(info.bestVersion)
-    val (latestVersionMajor, latestVersionMinor) = articleVersionToDb(info.latestVersion)
-    val (oldestVersionMajor, oldestVersionMinor) = articleVersionToDb(info.oldestVersion)
-    Some(
+    Some((
       info.id,
       info.createdAt,
       info.updatedAt,
@@ -159,28 +161,18 @@ object RoverArticleInfo {
       info.uriId,
       info.url,
       info.kind,
-      bestVersionMajor,
-      bestVersionMinor,
-      latestVersionMajor,
-      latestVersionMinor,
-      oldestVersionMajor,
-      oldestVersionMinor,
+      info.bestVersion,
+      info.latestVersion,
+      info.oldestVersion,
       info.lastFetchedAt,
       info.nextFetchAt,
       info.lastFetchingAt,
       info.fetchInterval,
       info.failureCount,
-      info.failureInfo
-    )
+      info.failureInfo,
+      info.lastImageProcessingVersion,
+      info.lastImageProcessingAt
+    ))
   }
-
-  private def articleVersionFromDb(versionMajor: Option[VersionNumber[Article]], versionMinor: Option[VersionNumber[Article]]) = {
-    for {
-      major <- versionMajor
-      minor <- versionMinor
-    } yield ArticleVersion(major, minor)
-  }
-
-  private def articleVersionToDb(version: Option[ArticleVersion]) = (version.map(_.major), version.map(_.minor))
 }
 

@@ -7,7 +7,7 @@ import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.{ FakeWebService, WebService }
-import com.keepit.common.store.{ FakeKeepImageStore, FakeShoeboxStoreModule, ImageSize, KeepImageStore, S3ImageConfig }
+import com.keepit.common.store._
 import com.keepit.model.LibraryFactory._
 import com.keepit.model.LibraryFactoryHelper._
 import com.keepit.model._
@@ -79,8 +79,8 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
           val saved = Await.result(savedF, Duration("10 seconds"))
           saved === ImageProcessState.StoreSuccess(ImageFormat.PNG, ImageSize(66, 38), 612)
         }
-        // If this complains about not having an `all`, then it's not using FakeKeepImageStore
-        inject[KeepImageStore].asInstanceOf[FakeKeepImageStore].all.keySet.size === 1
+
+        inject[RoverImageStore].asInstanceOf[InMemoryRoverImageStoreImpl].all.keySet.size === 1
 
         val keepImage1 = commander.getBestImageForKeep(keep1.id.get, ScaleImageRequest(200, 200)).flatten
         keepImage1.nonEmpty === true
@@ -106,12 +106,12 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
           saved === ImageProcessState.StoreSuccess(ImageFormat.PNG, ImageSize(400, 482), 73259)
         }
 
-        val keys = inject[KeepImageStore].asInstanceOf[FakeKeepImageStore].all.keySet
+        val keys = inject[RoverImageStore].asInstanceOf[InMemoryRoverImageStoreImpl].all.keySet.map(_.path)
         keys.size === 5
         keys.exists(_.contains("150x150_c")) must beTrue
 
         // Dependant on image1.png — if changed, this needs to change too.
-        inject[KeepImageStore].asInstanceOf[FakeKeepImageStore].all.find(_._1 == "keep/26dbdc56d54dbc94830f7cfc85031481_66x38_o.png").nonEmpty === true
+        inject[RoverImageStore].asInstanceOf[InMemoryRoverImageStoreImpl].all.find(_._1.path == "keep/26dbdc56d54dbc94830f7cfc85031481_66x38_o.png").nonEmpty === true
 
         val keepImage3 = commander.getBestImageForKeep(keep2.id.get, ScaleImageRequest(100, 100)).flatten
         keepImage2.get.id !== keepImage3.get.id
@@ -166,7 +166,7 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
           val path = db.readOnlyMaster { implicit session =>
             keepImageRepo.all().head.imagePath
           }
-          val existingUrl = inject[S3ImageConfig].cdnBase + "/" + path
+          val existingUrl = inject[S3ImageConfig].cdnBase + "/" + path.path
           val savedF = commander.setKeepImageFromUrl(existingUrl, keep1.id.get, ImageSource.UserPicked)
           val saved = Await.result(savedF, Duration("10 seconds"))
 

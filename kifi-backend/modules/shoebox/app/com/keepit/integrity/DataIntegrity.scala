@@ -15,10 +15,12 @@ class DataIntegrityPluginImpl @Inject() (
   val scheduling: SchedulingProperties) //only on leader
     extends Logging with DataIntegrityPlugin {
 
+  import DataIntegrityPlugin._
+
   // plugin lifecycle methods
   override def enabled: Boolean = true
   override def onStart() {
-    scheduleTaskOnOneMachine(actor.system, 7 minutes, 10 minutes, actor.ref, Cron, getClass.getSimpleName)
+    scheduleTaskOnOneMachine(actor.system, 7 minutes, EVERY_N_MINUTE minutes, actor.ref, Cron, getClass.getSimpleName)
   }
 }
 
@@ -47,4 +49,8 @@ private[integrity] class DataIntegrityActor @Inject() (
       self ! LibrariesCheck
     case m => throw new UnsupportedActorMessage(m)
   }
+}
+
+object DataIntegrityPlugin {
+  val EVERY_N_MINUTE = 10
 }
