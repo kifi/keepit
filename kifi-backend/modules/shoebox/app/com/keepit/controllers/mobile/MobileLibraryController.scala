@@ -168,7 +168,7 @@ class MobileLibraryController @Inject() (
 
                 // remove hashtags, then turn all '[\#' -> '[#'
                 val editedKeepNote = keep.note.map { note =>
-                  val noteWithoutHashtags = hashtagCommander.removeHashtagsFromString(note)
+                  val noteWithoutHashtags = hashtagCommander.removeAllHashtagsFromString(note)
                   keepDecorator.unescapeMarkupNotes(noteWithoutHashtags).trim
                 }
 
