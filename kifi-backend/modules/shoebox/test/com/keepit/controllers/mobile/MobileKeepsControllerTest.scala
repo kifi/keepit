@@ -832,22 +832,22 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
 
     "edit note" in {
       withDb(controllerTestModules: _*) { implicit injector =>
-        val (user, keep, oldKeep, keepInactive) = db.readWrite { implicit session =>
+        val (user, keep1, keepWithTags, keepInactive) = db.readWrite { implicit session =>
           val user = userRepo.save(User(firstName = "Eishay", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
           val lib = library().withUser(user).saved
-          val keep = KeepFactory.keep().withUser(user).withLibrary(lib).withTitle("default").saved
-          val oldKeep = KeepFactory.keep().withUser(user).withLibrary(lib).withTitle("default1").saved
+          val keep1 = KeepFactory.keep().withUser(user).withLibrary(lib).withTitle("default").saved
+          val keep2 = KeepFactory.keep().withUser(user).withLibrary(lib).withTitle("default1").saved
           val keepInactive = KeepFactory.keep().withUser(user).withLibrary(lib).withState(KeepStates.INACTIVE).saved
 
           val tag1 = collectionRepo.save(Collection(userId = user.id.get, name = Hashtag("tag1")))
           val tag2 = collectionRepo.save(Collection(userId = user.id.get, name = Hashtag("tag2")))
-          keepToCollectionRepo.save(KeepToCollection(keepId = oldKeep.id.get, collectionId = tag1.id.get))
-          keepToCollectionRepo.save(KeepToCollection(keepId = oldKeep.id.get, collectionId = tag2.id.get))
+          keepToCollectionRepo.save(KeepToCollection(keepId = keep2.id.get, collectionId = tag1.id.get))
+          keepToCollectionRepo.save(KeepToCollection(keepId = keep2.id.get, collectionId = tag2.id.get))
 
           collectionRepo.count(user.id.get) === 2
           keepToCollectionRepo.count === 2
 
-          (user, keep, oldKeep, keepInactive)
+          (user, keep1, keep2, keepInactive)
         }
 
         def editKeepInfo(user: User, keep: Keep, body: JsObject): Future[Result] = {
@@ -860,87 +860,87 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
         val testInactiveKeep = editKeepInfo(user, keepInactive, Json.obj("title" -> "blahablhablhahbla"))
         status(testInactiveKeep) must equalTo(NOT_FOUND)
 
-        val testEditTitle = editKeepInfo(user, keep, Json.obj("title" -> ""))
+        val testEditTitle = editKeepInfo(user, keep1, Json.obj("title" -> ""))
         status(testEditTitle) must equalTo(NO_CONTENT)
         db.readOnlyMaster { implicit s =>
-          val currentKeep = keepRepo.get(keep.externalId)
+          val currentKeep = keepRepo.get(keep1.externalId)
           currentKeep.title === None
           currentKeep.note === None
         }
 
-        val testEditNote = editKeepInfo(user, keep, Json.obj("note" -> "first comment!"))
+        val testEditNote = editKeepInfo(user, keep1, Json.obj("note" -> "first comment!"))
         status(testEditNote) must equalTo(NO_CONTENT)
         db.readOnlyMaster { implicit s =>
-          val currentKeep = keepRepo.get(keep.externalId)
+          val currentKeep = keepRepo.get(keep1.externalId)
           currentKeep.title === None
           currentKeep.note === Some("first comment!")
         }
 
-        val testEditBoth = editKeepInfo(user, keep, Json.obj("title" -> "a real keep", "note" -> "a real note"))
+        val testEditBoth = editKeepInfo(user, keep1, Json.obj("title" -> "a real keep", "note" -> "a real note"))
         status(testEditBoth) must equalTo(NO_CONTENT)
         db.readOnlyMaster { implicit s =>
-          val currentKeep = keepRepo.get(keep.externalId)
+          val currentKeep = keepRepo.get(keep1.externalId)
           currentKeep.title === Some("a real keep")
           currentKeep.note === Some("a real note")
         }
 
-        val testEditNothing = editKeepInfo(user, keep, Json.obj())
+        val testEditNothing = editKeepInfo(user, keep1, Json.obj())
         status(testEditNothing) must equalTo(NO_CONTENT)
         db.readOnlyMaster { implicit s =>
-          val currentKeep = keepRepo.get(keep.externalId)
+          val currentKeep = keepRepo.get(keep1.externalId)
           currentKeep.title === Some("a real keep")
           currentKeep.note === Some("a real note")
           keepToCollectionRepo.count === 2
         }
 
-        val testEditTags1 = editKeepInfo(user, keep, Json.obj("tags" -> Seq("a", "b", "c")))
+        val testEditTags1 = editKeepInfo(user, keep1, Json.obj("tags" -> Seq("a", "b", "c")))
         status(testEditTags1) must equalTo(NO_CONTENT)
         db.readOnlyMaster { implicit s =>
-          val currentKeep = keepRepo.get(keep.externalId)
+          val currentKeep = keepRepo.get(keep1.externalId)
           currentKeep.title === Some("a real keep")
           currentKeep.note === Some("a real note [#a] [#b] [#c]")
           keepToCollectionRepo.count === 5
           collectionRepo.count(user.id.get) === 5
         }
 
-        val testEditTags2 = editKeepInfo(user, keep, Json.obj("note" -> "a real [#note]", "tags" -> Seq("a", "b", "d", "e")))
+        val testEditTags2 = editKeepInfo(user, keep1, Json.obj("note" -> "a real [#note]", "tags" -> Seq("a", "b", "d", "e")))
         status(testEditTags2) must equalTo(NO_CONTENT)
         db.readOnlyMaster { implicit s =>
-          val currentKeep = keepRepo.get(keep.externalId)
+          val currentKeep = keepRepo.get(keep1.externalId)
           currentKeep.title === Some("a real keep")
           currentKeep.note === Some("a real [\\#note] [#a] [#b] [#d] [#e]")
           keepToCollectionRepo.count === 7
           collectionRepo.count(user.id.get) === 7
         }
 
-        val testEditTags3 = editKeepInfo(user, keep, Json.obj("note" -> "a real [#note] thing"))
+        val testEditTags3 = editKeepInfo(user, keep1, Json.obj("note" -> "a real [#note] thing"))
         status(testEditTags3) must equalTo(NO_CONTENT)
         db.readOnlyMaster { implicit s =>
-          val currentKeep = keepRepo.get(keep.externalId)
+          val currentKeep = keepRepo.get(keep1.externalId)
           currentKeep.title === Some("a real keep")
           currentKeep.note === Some("a real [\\#note] thing [#a] [#b] [#d] [#e]")
         }
 
-        val testEditTags4 = editKeepInfo(user, keep, Json.obj("note" -> "a real [#note] thing", "tags" -> Json.toJson(Seq(): Seq[String])))
+        val testEditTags4 = editKeepInfo(user, keep1, Json.obj("note" -> "a real [#note] thing", "tags" -> Seq.empty[String]))
         status(testEditTags4) must equalTo(NO_CONTENT)
         db.readOnlyMaster { implicit s =>
-          val currentKeep = keepRepo.get(keep.externalId)
+          val currentKeep = keepRepo.get(keep1.externalId)
           currentKeep.title === Some("a real keep")
           currentKeep.note === Some("a real [\\#note] thing")
         }
 
         // test a keep that already has tags persisted
-        val testEditExistingTags1 = editKeepInfo(user, oldKeep, Json.obj("note" -> "this keep already has [#tags]"))
+        val testEditExistingTags1 = editKeepInfo(user, keepWithTags, Json.obj("note" -> "this keep already has [#tags]"))
         status(testEditExistingTags1) must equalTo(NO_CONTENT)
         db.readOnlyMaster { implicit s =>
-          val currentKeep = keepRepo.get(oldKeep.externalId)
+          val currentKeep = keepRepo.get(keepWithTags.externalId)
           currentKeep.title === Some("default1")
           currentKeep.note === Some("this keep already has [\\#tags] [#tag1] [#tag2]")
         }
-        val testEditExistingTags2 = editKeepInfo(user, oldKeep, Json.obj("note" -> "this keep already has [#tags]", "tags" -> JsArray(Seq(JsString("tag1")))))
+        val testEditExistingTags2 = editKeepInfo(user, keepWithTags, Json.obj("note" -> "this keep already has [#tags]", "tags" -> Seq("tag1")))
         status(testEditExistingTags2) must equalTo(NO_CONTENT)
         db.readOnlyMaster { implicit s =>
-          val currentKeep = keepRepo.get(oldKeep.externalId)
+          val currentKeep = keepRepo.get(keepWithTags.externalId)
           currentKeep.title === Some("default1")
           currentKeep.note === Some("this keep already has [\\#tags] [#tag1]")
         }

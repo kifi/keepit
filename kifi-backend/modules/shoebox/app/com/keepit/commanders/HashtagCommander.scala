@@ -12,6 +12,16 @@ class HashtagCommander {
     } toSet
   }
 
+  def addNewHashtagsToString(str: String, hashtags: Seq[Hashtag]): String = {
+    addNewHashtagNamesToString(str, hashtags.map(_.tag))
+  }
+
+  def addNewHashtagNamesToString(str: String, hashtagNames: Seq[String]): String = {
+    val existingHashtags = findAllHashtagNames(str).map(_.toLowerCase)
+    val tagsToAppend = hashtagNames.filterNot(t => existingHashtags.contains(t.toLowerCase))
+    appendHashtagNamesToString(str, tagsToAppend)
+  }
+
   // append hashtags to the end of a string, separated by spaces
   def appendHashtagsToString(str: String, hashtags: Seq[Hashtag]): String = {
     val hashtagNames = hashtags.map(_.tag)
