@@ -182,10 +182,15 @@ class MobileKeepsController @Inject() (
               // remove hashtags, then turn all '[\#' -> '[#'
               val noteWithoutHashtags = hashtagCommander.removeAllHashtagsFromString(note)
               keepDecorator.unescapeMarkupNotes(noteWithoutHashtags).trim
-            } filterNot (_.isEmpty)
+            } filter (_.nonEmpty)
             Ok(Json.toJson(keepInfo.copy(note = editedNote)))
         }
-      case Some(keep) => Future.successful(Ok(Json.toJson(KeepInfo.fromKeep(keep))))
+      case Some(keep) =>
+        val editedNote = keep.note.map { noteStr =>
+          val noteWithoutHashtags = hashtagCommander.removeAllHashtagsFromString(noteStr)
+          keepDecorator.unescapeMarkupNotes(noteWithoutHashtags).trim
+        } filter (_.nonEmpty)
+        Future.successful(Ok(Json.toJson(KeepInfo.fromKeep(keep.copy(note = editedNote)))))
     }
   }
 
