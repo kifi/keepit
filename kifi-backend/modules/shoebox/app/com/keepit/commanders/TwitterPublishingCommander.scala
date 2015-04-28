@@ -5,7 +5,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.social.TwitterSocialGraph
-import com.keepit.common.store.{ ImageSize, KeepImageStore, LibraryImageStore }
+import com.keepit.common.store.{ RoverImageStore, ImageSize }
 import com.keepit.common.strings._
 import com.keepit.model._
 import com.keepit.social.SocialNetworks
@@ -20,9 +20,8 @@ class TwitterPublishingCommander @Inject() (
     keepImageCommander: KeepImageCommander,
     libraryImageCommander: LibraryImageCommander,
     userRepo: UserRepo,
-    libraryImageStore: LibraryImageStore,
+    imageStore: RoverImageStore,
     twitterMessages: TwitterMessages,
-    keepImageStore: KeepImageStore,
     implicit val executionContext: ExecutionContext,
     twitterSocialGraph: TwitterSocialGraph) extends SocialPublishingCommander with Logging {
 
@@ -41,12 +40,11 @@ class TwitterPublishingCommander @Inject() (
           val title = keep.title.getOrElse("interesting link")
           twitterMessages.keepMessage(title.trim, keep.url.trim, library.name.trim, libraryUrl.trim) map { msg =>
             log.info(s"twitting about user $userId keeping $title with msg = $msg of size ${msg.size}")
-            val imageOpt: Option[Future[TemporaryFile]] = keepImageCommander.getBestImageForKeep(keep.id.get, ScaleImageRequest(1024, 512)).flatten.map { keepImage =>
-              keepImageStore.get(keepImage.imagePath)
-            } orElse {
-              libraryImageCommander.getBestImageForLibrary(library.id.get, ImageSize(1024, 512)) map { libImage =>
-                libraryImageStore.get(libImage.imagePath)
+            val imageOpt: Option[Future[TemporaryFile]] = {
+              val imagePath = keepImageCommander.getBestImageForKeep(keep.id.get, ScaleImageRequest(1024, 512)).flatten.map(_.imagePath) orElse {
+                libraryImageCommander.getBestImageForLibrary(library.id.get, ImageSize(1024, 512)).map(_.imagePath)
               }
+              imagePath.map(imageStore.get)
             }
             imageOpt match {
               case None => twitterSocialGraph.sendTweet(sui, None, msg)
@@ -77,7 +75,7 @@ class TwitterPublishingCommander @Inject() (
           val name = twitterHandle(libOwner.id.get).getOrElse(libOwner.fullName.trim)
           val message = s"following @kifi library ${libName.trim} $libraryUrl by $name"
           val imageOpt: Option[Future[TemporaryFile]] = libraryImageCommander.getBestImageForLibrary(library.id.get, ImageSize(1024, 512)) map { libImage =>
-            libraryImageStore.get(libImage.imagePath)
+            imageStore.get(libImage.imagePath)
           }
           imageOpt match {
             case None => twitterSocialGraph.sendTweet(sui, None, message)

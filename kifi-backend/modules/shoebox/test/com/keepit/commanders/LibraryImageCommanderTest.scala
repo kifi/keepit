@@ -4,7 +4,7 @@ import java.io.File
 import com.keepit.model.LibraryFactoryHelper._
 import com.google.inject.Injector
 import com.keepit.common.logging.Logging
-import com.keepit.common.store.{ FakeLibraryImageStore, LibraryImageStore, ImageSize }
+import com.keepit.common.store.{ InMemoryRoverImageStoreImpl, RoverImageStore, ImageSize }
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.LibraryFactory._
 import com.keepit.model._
@@ -60,8 +60,8 @@ class LibraryImageCommanderTest extends Specification with ShoeboxTestInjector w
           saved === ImageProcessState.StoreSuccess(ImageFormat.PNG, ImageSize(66, 38), 612)
           // if this test fails, make sure imagemagick is installed. Use `brew install imagemagick`
         }
-        // If this complains about not having an `all`, then it's not using FakeKeepImageStore
-        inject[LibraryImageStore].asInstanceOf[FakeLibraryImageStore].all.keySet.size === 1
+
+        inject[RoverImageStore].asInstanceOf[InMemoryRoverImageStoreImpl].all.keySet.size === 1
 
         db.readOnlyMaster { implicit s =>
           val libImages = libraryImageRepo.getActiveForLibraryId(lib.id.get)
@@ -76,7 +76,7 @@ class LibraryImageCommanderTest extends Specification with ShoeboxTestInjector w
           val saved = Await.result(savedF, Duration("10 seconds"))
           saved === ImageProcessState.StoreSuccess(ImageFormat.PNG, ImageSize(66, 38), 612)
         }
-        inject[LibraryImageStore].asInstanceOf[FakeLibraryImageStore].all.keySet.size === 1
+        inject[RoverImageStore].asInstanceOf[InMemoryRoverImageStoreImpl].all.keySet.size === 1
         db.readOnlyMaster { implicit s =>
           val libImages = libraryImageRepo.getActiveForLibraryId(lib.id.get)
           libImages.length === 1
@@ -91,8 +91,7 @@ class LibraryImageCommanderTest extends Specification with ShoeboxTestInjector w
           saved === ImageProcessState.StoreSuccess(ImageFormat.PNG, ImageSize(400, 482), 73259)
         }
 
-        val keys = inject[LibraryImageStore].asInstanceOf[FakeLibraryImageStore].all.keySet
-        keys.size === 4
+        inject[RoverImageStore].asInstanceOf[InMemoryRoverImageStoreImpl].all.keySet.size === 4
 
         db.readOnlyMaster { implicit s =>
           val libImages = libraryImageRepo.getActiveForLibraryId(lib.id.get)

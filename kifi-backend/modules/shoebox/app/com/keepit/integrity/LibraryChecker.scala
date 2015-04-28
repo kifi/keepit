@@ -135,11 +135,10 @@ class LibraryChecker @Inject() (
   }
 
   private def getIndex(): (Int, Int) = {
-    val currentTime = clock.now()
-    val hourInd = currentTime.hourOfDay().get
-    val minuteInd = currentTime.minuteOfHour().get
-    val index = hourInd * 6 + (minuteInd / 10) // hour * 6 + minute / 10 (int div)
-    val numIntervals = 144 // 144 = 24 (hours per day) * 6 (10 minute intervals per hour)
+    val minute = clock.now().minuteOfDay().get()
+    val freq = DataIntegrityPlugin.EVERY_N_MINUTE
+    val index = minute / freq
+    val numIntervals = 24 * 60 / freq
     (index, numIntervals)
   }
 

@@ -4,6 +4,7 @@ import com.keepit.common.db.slick.DataBaseComponent
 import com.keepit.common.db.slick.DbRepo
 import com.keepit.common.db.slick.Repo
 import com.keepit.common.logging.Logging
+import com.keepit.common.store.ImagePath
 import com.keepit.common.time.Clock
 import com.keepit.model._
 import com.google.inject.{ Singleton, Inject, ImplementedBy }
@@ -27,7 +28,7 @@ class RoverImageInfoRepoImpl @Inject() (
     def width = column[Int]("width", O.NotNull)
     def height = column[Int]("height", O.NotNull)
     def kind = column[ProcessImageOperation]("kind", O.NotNull)
-    def path = column[String]("path", O.NotNull)
+    def path = column[ImagePath]("path", O.NotNull)
     def source = column[ImageSource]("source", O.NotNull)
     def sourceImageHash = column[ImageHash]("source_image_hash", O.NotNull)
     def sourceImageUrl = column[Option[String]]("source_image_url", O.Nullable)

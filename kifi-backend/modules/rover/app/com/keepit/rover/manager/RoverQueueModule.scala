@@ -7,7 +7,7 @@ import com.keepit.common.logging.Logging
 import com.kifi.franz._
 import net.codingwell.scalaguice.{ ScalaMultibinder, ScalaModule }
 
-abstract class FetchQueueModule extends ScalaModule {
+abstract class RoverQueueModule extends ScalaModule {
   def configure(): Unit = {
     import FetchTaskQueue._
     val fetchQueueBinder = ScalaMultibinder.newSetBinder[FetchTaskQueue](binder)
@@ -15,10 +15,16 @@ abstract class FetchQueueModule extends ScalaModule {
     fetchQueueBinder.addBinding.to[FirstTime]
     fetchQueueBinder.addBinding.to[NewVersion]
     fetchQueueBinder.addBinding.to[Refresh]
+
+    import ArticleImageProcessingTaskQueue._
+    val articleImageProcessingQueueBinder = ScalaMultibinder.newSetBinder[ArticleImageProcessingTaskQueue](binder)
+    articleImageProcessingQueueBinder.addBinding.to[FastFollow]
+    articleImageProcessingQueueBinder.addBinding.to[CatchUp]
   }
+
 }
 
-case class ProdFetchQueueModule() extends FetchQueueModule with Logging {
+case class ProdRoverQueueModule() extends RoverQueueModule with Logging {
 
   @Provides @Singleton
   def sqsClient(basicAWSCreds: BasicAWSCredentials): SQSClient = SimpleSQSClient(basicAWSCreds, Regions.US_WEST_1, buffered = false)
@@ -51,10 +57,24 @@ case class ProdFetchQueueModule() extends FetchQueueModule with Logging {
     FetchTaskQueue.Refresh(queue)
   }
 
+  @Provides @Singleton
+  def fastFollowQueue(client: SQSClient): ArticleImageProcessingTaskQueue.FastFollow = {
+    val name = QueueName("rover-fast-follow-image-processing-task-prod")
+    val queue = client.formatted[ArticleImageProcessingTask](name)
+    ArticleImageProcessingTaskQueue.FastFollow(queue)
+  }
+
+  @Provides @Singleton
+  def catchUpQueue(client: SQSClient): ArticleImageProcessingTaskQueue.CatchUp = {
+    val name = QueueName("rover-catch-up-image-processing-task-prod")
+    val queue = client.formatted[ArticleImageProcessingTask](name)
+    ArticleImageProcessingTaskQueue.CatchUp(queue)
+  }
+
 }
 
 @Singleton
-case class DevFetchQueueModule() extends FetchQueueModule with Logging {
+case class DevRoverQueueModule() extends RoverQueueModule with Logging {
 
   @Provides @Singleton
   def topPriorityQueue: FetchTaskQueue.TopPriority = FetchTaskQueue.TopPriority(new FakeSQSQueue[FetchTask] {})
@@ -68,4 +88,9 @@ case class DevFetchQueueModule() extends FetchQueueModule with Logging {
   @Provides @Singleton
   def refetchQueue: FetchTaskQueue.Refresh = FetchTaskQueue.Refresh(new FakeSQSQueue[FetchTask] {})
 
+  @Provides @Singleton
+  def fastFollowQueue: ArticleImageProcessingTaskQueue.FastFollow = ArticleImageProcessingTaskQueue.FastFollow(new FakeSQSQueue[ArticleImageProcessingTask] {})
+
+  @Provides @Singleton
+  def catchUpQueue: ArticleImageProcessingTaskQueue.CatchUp = ArticleImageProcessingTaskQueue.CatchUp(new FakeSQSQueue[ArticleImageProcessingTask] {})
 }

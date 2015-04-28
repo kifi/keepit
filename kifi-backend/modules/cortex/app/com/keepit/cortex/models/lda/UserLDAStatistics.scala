@@ -94,8 +94,8 @@ class UserLDAStatisticsUpdater @Inject() (
   }
 
   private def genStats(vecs: Seq[Array[Float]], version: ModelVersion[DenseLDA]): UserLDAStatistics = {
-    val (min, max) = getMinAndMax(vecs)
-    val (mean, std) = getMeanAndStd(vecs)
+    val (min, max) = getMinAndMax(vecs.map { vec => toDoubleArray(vec) })
+    val (mean, std) = getMeanAndStd(vecs.map { vec => toDoubleArray(vec) })
     UserLDAStatistics(currentDateTime, version, mean, std, min, max)
   }
 }

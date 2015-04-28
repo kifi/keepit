@@ -1,6 +1,7 @@
 package com.keepit.rover.article.content
 
 import com.keepit.common.db.Id
+import com.keepit.common.store.ImagePath
 import com.keepit.common.time.DateTimeJsonFormat
 import com.keepit.model._
 import com.keepit.rover.article.EmbedlyArticle
@@ -49,12 +50,12 @@ case class EmbedlyImage(
     width: Option[Int] = None,
     height: Option[Int] = None,
     size: Option[Int] = None) extends ImageGenericInfo {
-  def toImageInfoWithPriority(nuriId: Id[NormalizedURI], priority: Option[Int], path: String, name: String): ImageInfo = {
+  def toImageInfoWithPriority(nuriId: Id[NormalizedURI], priority: Option[Int], path: ImagePath, name: String): ImageInfo = {
     ImageInfo(uriId = nuriId, url = Some(this.url), caption = this.caption, width = this.width, height = this.height,
       size = this.size, provider = Some(ImageProvider.EMBEDLY), priority = priority, path = path, name = name)
   }
 
-  def toImageInfo(nuriId: Id[NormalizedURI], path: String, name: String): ImageInfo = toImageInfoWithPriority(nuriId, None, path = path, name = name)
+  def toImageInfo(nuriId: Id[NormalizedURI], path: ImagePath, name: String): ImageInfo = toImageInfoWithPriority(nuriId, None, path = path, name = name)
 }
 
 object EmbedlyImage {

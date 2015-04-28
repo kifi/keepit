@@ -14,6 +14,8 @@ import com.keepit.search._
 import com.amazonaws.auth.BasicAWSCredentials
 import com.keepit.common.logging.AccessLog
 
+import scala.concurrent.ExecutionContext
+
 trait StoreModule extends ScalaModule
 
 abstract class ProdOrElseDevStoreModule[T <: StoreModule](val prodStoreModule: T) extends StoreModule {

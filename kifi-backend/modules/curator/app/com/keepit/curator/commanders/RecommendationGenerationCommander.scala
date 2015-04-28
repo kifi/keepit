@@ -61,7 +61,7 @@ class RecommendationGenerationCommander @Inject() (
   val recommendationGenerationLock = new ReactiveLock(16)
   val perUserRecommendationGenerationLocks = TrieMap[Id[User], ReactiveLock]()
   val candidateURILock = new ReactiveLock(4)
-  val dbWriteThrottleLock = new ReactiveLock(2)
+  val dbWriteThrottleLock = new ReactiveLock(4)
 
   val superSpecialLock = new ReactiveLock(1)
 
@@ -181,6 +181,8 @@ class RecommendationGenerationCommander @Inject() (
       }
       timer.stopAndReport()
       timerPer.stopAndReport(items.length)
+    } else {
+      db.readWrite(attempts = 2) { implicit session => genStateRepo.save(newState) }
     }
   }
 
@@ -279,6 +281,8 @@ class RecommendationGenerationCommander @Inject() (
             timerPer.stopAndReport(filteredItems.length)
             Statsd.increment("UriRecosGenerated", filteredItems.length)
             Statsd.gauge("RecosWaitingForSave", -1 * filteredItems.length, true)
+          } else {
+            db.readWrite(attempts = 2) { implicit session => genStateRepo.save(newState) }
           }
           precomputeRecommendationsForUser(userId, boostedKeepers, Some(alwaysInclude))
           seedItems.nonEmpty
@@ -320,7 +324,10 @@ class RecommendationGenerationCommander @Inject() (
                   }
               }
               res.onSuccess {
-                case _ => timer.stopAndReport(BATCH_SIZE.toDouble)
+                case _ => {
+                  timer.stopAndReport(BATCH_SIZE.toDouble)
+                  Statsd.increment("UriCandidatesTested", BATCH_SIZE)
+                }
               }
 
               res.onFailure {

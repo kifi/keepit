@@ -5,7 +5,7 @@ import java.io.{ File, FileInputStream }
 
 import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
-import com.keepit.common.store.ImageSize
+import com.keepit.common.store.{ ImagePath, ImageSize }
 import com.keepit.model._
 import com.keepit.test.ShoeboxTestInjector
 import org.apache.commons.codec.binary.Base64
@@ -198,7 +198,7 @@ class ProcessedImageHelperTest extends Specification with ShoeboxTestInjector wi
 
     "pick the best KeepImage for a target size" in {
       def genKeepImage(width: Int, height: Int) = {
-        KeepImage(keepId = Id[Keep](0), imagePath = "", format = ImageFormat.PNG, width = width, height = height, source = ImageSource.UserPicked, sourceFileHash = ImageHash("000"), sourceImageUrl = None, isOriginal = false, kind = ProcessImageOperation.Scale)
+        KeepImage(keepId = Id[Keep](0), imagePath = ImagePath(""), format = ImageFormat.PNG, width = width, height = height, source = ImageSource.UserPicked, sourceFileHash = ImageHash("000"), sourceImageUrl = None, isOriginal = false, kind = ProcessImageOperation.Scale)
       }
       val keepImages = for {
         width <- 10 to 140 by 11
