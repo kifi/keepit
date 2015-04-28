@@ -1,5 +1,6 @@
 package com.keepit.commanders
 
+import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.UserFactory._
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.abook.FakeABookServiceClientModule
@@ -19,6 +20,10 @@ import org.joda.time.DateTime
 import org.specs2.mutable.Specification
 import com.keepit.shoebox.{ FakeShoeboxServiceModule, FakeKeepImportsModule }
 import com.keepit.common.store.FakeShoeboxStoreModule
+import com.keepit.model.UserFactory._
+import com.keepit.model.UserFactoryHelper._
+import com.keepit.model.KeepFactory._
+import com.keepit.model.KeepFactoryHelper._
 
 class KeepsCommanderTest extends Specification with ShoeboxTestInjector {
 
@@ -34,6 +39,8 @@ class KeepsCommanderTest extends Specification with ShoeboxTestInjector {
     FakeABookServiceClientModule() ::
     FakeSocialGraphModule() ::
     Nil
+
+  implicit val context = HeimdalContext.empty
 
   "KeepsCommander" should {
 
@@ -136,5 +143,58 @@ class KeepsCommanderTest extends Specification with ShoeboxTestInjector {
         result must equalTo(expected)
       }
     }
+
+    "persist hashtags in keep notes" in {
+      withDb(modules: _*) { implicit injector =>
+        val (user1, keep1) = db.readWrite { implicit s =>
+          val user = UserFactory.user().withUsername("captainfalcon").saved
+          val keep1 = KeepFactory.keep().withUser(user).saved
+
+          collectionRepo.count(user.id.get) === 0
+          keepToCollectionRepo.count === 0
+          (user, keep1)
+        }
+        val keepsCommander = inject[KeepsCommander]
+
+        def call(userId: Id[User], keepId: Id[Keep], note: Option[String]): Unit = {
+          db.readWrite { implicit s =>
+            val keep = keepRepo.get(keepId)
+            keepRepo.save(keep.copy(note = note))
+          }
+          keepsCommander.persistHashtagsInKeepNote(userId, keepId, note)
+        }
+
+        // from empty note -> nonempty note (no hashtags)
+        call(user1.id.get, keep1.id.get, Some("asdf"))
+        db.readOnlyMaster { implicit s =>
+          collectionRepo.getHashtagsByKeepId(keep1.id.get) === Set.empty
+        }
+
+        // from nonempty note -> empty note
+        call(user1.id.get, keep1.id.get, None)
+        db.readOnlyMaster { implicit s =>
+          collectionRepo.getHashtagsByKeepId(keep1.id.get) === Set.empty
+        }
+
+        // from empty note -> nonempty note (with hashtags)
+        call(user1.id.get, keep1.id.get, Some("asdf [#a] [#b] qwer [#c]"))
+        db.readOnlyMaster { implicit s =>
+          collectionRepo.getHashtagsByKeepId(keep1.id.get).map(_.tag) === Set("a", "b", "c")
+        }
+
+        // from nonempty note (with hashtags) -> nonempty note (with other hashtags)
+        call(user1.id.get, keep1.id.get, Some("asdf [#d] [#e] z [#b]"))
+        db.readOnlyMaster { implicit s =>
+          collectionRepo.getHashtagsByKeepId(keep1.id.get).map(_.tag) === Set("b", "d", "e")
+        }
+
+        // from nonempty note (with hashtags) -> nonempty note no hashtags
+        call(user1.id.get, keep1.id.get, Some("asdf zxcv"))
+        db.readOnlyMaster { implicit s =>
+          collectionRepo.getHashtagsByKeepId(keep1.id.get).map(_.tag) === Set.empty
+        }
+      }
+    }
+
   }
 }

@@ -641,27 +641,28 @@ class KeepsCommander @Inject() (
     val hashtagNamesToPersist = hashtagCommander.findAllHashtagNames(persistedNote.getOrElse(""))
     val activeTagIds = db.readOnlyMaster { implicit s =>
       keepToCollectionRepo.getCollectionsForKeep(keepId)
-    }
-    val allTags = hashtagNamesToPersist.map { getOrCreateTag(userId, _) }
-    val tagsToRemove = allTags.filter(c => activeTagIds.contains(c.id.get) && !hashtagNamesToPersist.contains(c.name.tag))
-    val tagsToAdd = allTags.filter(c => !activeTagIds.contains(c.id.get) && hashtagNamesToPersist.contains(c.name.tag))
+    }.toSet
+
+    val tagsToPersist = hashtagNamesToPersist.map { getOrCreateTag(userId, _) }
+    val tagIdsToPersist = tagsToPersist.map(_.id.get)
+    val tagIdsToRemove = activeTagIds.filterNot(c => tagIdsToPersist.contains(c))
+    val tagIdsToAdd = tagIdsToPersist.filterNot(c => activeTagIds.contains(c))
 
     db.readWrite { implicit s =>
-      tagsToAdd.map { tag =>
-        keepToCollectionRepo.getOpt(keepId, tag.id.get) match {
-          case None => keepToCollectionRepo.save(KeepToCollection(keepId = keepId, collectionId = tag.id.get))
+      tagIdsToAdd.map { tagId =>
+        keepToCollectionRepo.getOpt(keepId, tagId) match {
+          case None => keepToCollectionRepo.save(KeepToCollection(keepId = keepId, collectionId = tagId))
           case Some(k2c) => keepToCollectionRepo.save(k2c.copy(state = KeepToCollectionStates.ACTIVE))
         }
-        collectionRepo.collectionChanged(tag.id.get, true, inactivateIfEmpty = false)
+        collectionRepo.collectionChanged(tagId, true, inactivateIfEmpty = false)
       }
 
-      tagsToRemove.map { tag =>
-        keepToCollectionRepo.remove(keepId, tag.id.get)
-        collectionRepo.collectionChanged(tag.id.get, false, inactivateIfEmpty = true)
+      tagIdsToRemove.map { tagId =>
+        keepToCollectionRepo.remove(keepId, tagId)
+        collectionRepo.collectionChanged(tagId, false, inactivateIfEmpty = true)
       }
     }
   }
-
 
   private def postSingleKeepReporting(keep: Keep, isNewKeep: Boolean, library: Library, socialShare: SocialShare): Unit = SafeFuture {
     log.info(s"postSingleKeepReporting for user ${keep.userId} with $socialShare keep ${keep.title}")
