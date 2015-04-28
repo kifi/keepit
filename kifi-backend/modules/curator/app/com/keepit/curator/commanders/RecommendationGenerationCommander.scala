@@ -324,7 +324,10 @@ class RecommendationGenerationCommander @Inject() (
                   }
               }
               res.onSuccess {
-                case _ => timer.stopAndReport(BATCH_SIZE.toDouble)
+                case _ => {
+                  timer.stopAndReport(BATCH_SIZE.toDouble)
+                  Statsd.increment("UriCandidatesTested", BATCH_SIZE)
+                }
               }
 
               res.onFailure {
