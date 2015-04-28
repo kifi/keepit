@@ -21,7 +21,7 @@ CREATE TABLE if not exists rover_image_info (
     source_image_url varchar(3072) NULL,
 
     PRIMARY KEY (id),
-    UNIQUE INDEX rover_image_info_u_source_image_hash_size_kind_format (source_image_hash, width, height, kind, format)
+    UNIQUE INDEX rover_image_info_u_source_image_hash_size_kind_format (source_image_hash, kind, width, height, format)
 );
 
 CREATE TABLE if not exists article_image (
@@ -36,6 +36,7 @@ CREATE TABLE if not exists article_image (
     fetched_at datetime NOT NULL,
     image_url varchar(3072) NOT NULL,
     image_hash varchar(32) NOT NULL,
+    priority int NULL,
 
     PRIMARY KEY (id),
     UNIQUE INDEX article_image_u_uri_id_kind_image_hash (uri_id, kind, image_hash),

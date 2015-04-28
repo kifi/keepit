@@ -18,14 +18,15 @@ case class ArticleImage(
     version: ArticleVersion,
     fetchedAt: DateTime,
     imageUrl: String,
-    imageHash: ImageHash) extends Model[ArticleImage] with ArticleKindHolder {
+    imageHash: ImageHash,
+    priority: Option[Int]) extends Model[ArticleImage] with ArticleKindHolder {
   def withId(id: Id[ArticleImage]) = copy(id = Some(id))
   def withUpdateTime(now: DateTime) = copy(updatedAt = now)
 }
 
 object ArticleImage {
-  def apply(uriId: Id[NormalizedURI], kind: ArticleKind[_], version: ArticleVersion, imageUrl: String, imageHash: ImageHash): ArticleImage = {
-    ArticleImage(uriId = uriId, kind = kind.typeCode, version = version, fetchedAt = currentDateTime, imageUrl = imageUrl, imageHash = imageHash)
+  def apply(uriId: Id[NormalizedURI], kind: ArticleKind[_], version: ArticleVersion, imageUrl: String, imageHash: ImageHash, priority: Option[Int]): ArticleImage = {
+    ArticleImage(uriId = uriId, kind = kind.typeCode, version = version, fetchedAt = currentDateTime, imageUrl = imageUrl, imageHash = imageHash, priority = priority)
   }
 
   def applyFromDbRow(
@@ -39,9 +40,10 @@ object ArticleImage {
     versionMinor: VersionNumber[Article],
     fetchedAt: DateTime,
     imageUrl: String,
-    imageHash: ImageHash): ArticleImage = {
+    imageHash: ImageHash,
+    priority: Option[Int]): ArticleImage = {
     val version = ArticleVersion(versionMajor, versionMinor)
-    ArticleImage(id, createdAt, updatedAt, state, uriId, kind, version, fetchedAt, imageUrl, imageHash)
+    ArticleImage(id, createdAt, updatedAt, state, uriId, kind, version, fetchedAt, imageUrl, imageHash, priority)
   }
 
   def unapplyToDbRow(articleImage: ArticleImage) = {
@@ -56,7 +58,8 @@ object ArticleImage {
       articleImage.version.minor,
       articleImage.fetchedAt,
       articleImage.imageUrl,
-      articleImage.imageHash
+      articleImage.imageHash,
+      articleImage.priority
     )
   }
 }
