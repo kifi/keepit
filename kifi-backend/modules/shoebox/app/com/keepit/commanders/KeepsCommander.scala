@@ -609,13 +609,11 @@ class KeepsCommander @Inject() (
 
   // Changes a keep's notes based on the hashtags to persist!
   def persistHashtagsForKeep(userId: Id[User], keep: Keep, selectedTagNames: Seq[String])(implicit session: RWSession, context: HeimdalContext) = {
-
-    // get all tags from HT list
+    // get all tags from hashtag names list
     val selectedTags = selectedTagNames.map { getOrCreateTag(userId, _) }
     val selectedTagIds = selectedTags.map(_.id.get).toSet
-    // get all active tags for keep
+    // get all active tags for keep to figure out which tags to add & which tags to remove
     val activeTagIds = keepToCollectionRepo.getCollectionsForKeep(keep.id.get).toSet
-
     val tagIdsToAdd = selectedTagIds.filterNot(activeTagIds.contains(_))
     val tagIdsToRemove = activeTagIds.filterNot(selectedTagIds.contains(_))
 
@@ -632,12 +630,12 @@ class KeepsCommander @Inject() (
       collectionRepo.collectionChanged(tagId, false, inactivateIfEmpty = true)
     }
 
-    // go through note and find all HT
+    // go through note field and find all hashtags
     val keepNote = keep.note.getOrElse("")
     val hashtagsInNote = hashtagCommander.findAllHashtagNames(keepNote)
     val hashtagsToPersistSet = selectedTagNames.toSet
 
-    // find tags to remove & to append
+    // find hashtags to remove & to append
     val hashtagsToRemove = hashtagsInNote.filterNot(hashtagsToPersistSet.contains(_))
     val hashtagsToAppend = selectedTagNames.filterNot(hashtagsInNote.contains(_))
     val noteWithHashtagsRemoved = hashtagCommander.removeHashtagNamesFromString(keepNote, hashtagsToRemove.toSet)
@@ -645,8 +643,7 @@ class KeepsCommander @Inject() (
     val noteWithHashtagsAppended = hashtagCommander.appendHashtagNamesToString(markedNote, hashtagsToAppend)
     val finalNote = Some(noteWithHashtagsAppended.trim).filterNot(_.isEmpty)
 
-    // save keep
-    keepRepo.save(keep.copy(note = finalNote)) // notify keep index
+    keepRepo.save(keep.copy(note = finalNote))
     // todo: update search index
     // todo: report to analytics
   }
