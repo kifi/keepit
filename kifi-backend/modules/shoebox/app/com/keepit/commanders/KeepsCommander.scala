@@ -467,16 +467,13 @@ class KeepsCommander @Inject() (
           val taggingAt = currentDateTime
           tagged.foreach { ktc =>
             val targetKeep = keepsById(ktc.keepId)
-            val editedNote = targetKeep.note.map { noteStr =>
-              val existingTags = hashtagCommander.findAllHashtagNames(noteStr)
-              if (existingTags.contains(collection.name.tag)) {
-                noteStr
-              } else {
-                hashtagCommander.appendHashtagsToString(noteStr, Seq(collection.name))
-              }
-            } filterNot (_.isEmpty)
-            keepRepo.save(targetKeep.copy(note = editedNote)) // notify keep index
-            libraryAnalytics.taggedPage(updatedCollection, keepsById(ktc.keepId), context, taggingAt)
+            val noteStr = targetKeep.note.getOrElse("")
+            val existingTags = hashtagCommander.findAllHashtagNames(noteStr)
+            if (!existingTags.contains(collection.name.tag)) {
+              val editedNote = Some(hashtagCommander.appendHashtagsToString(noteStr, Seq(collection.name))).filterNot(_.isEmpty)
+              val updatedKeep = keepRepo.save(targetKeep.copy(note = editedNote)) // notify keep index
+              libraryAnalytics.taggedPage(updatedCollection, updatedKeep, context, taggingAt)
+            }
           }
           tagged
         }
@@ -602,7 +599,7 @@ class KeepsCommander @Inject() (
       case Failure(e) => Left(e.getMessage)
       case Success((keep, isNewKeep)) =>
         val tags = db.readWrite { implicit s =>
-          persistHashtags(userId, keep, selectedTagNames)(s, context)
+          persistHashtagsForKeep(userId, keep, selectedTagNames)(s, context)
           keepToCollectionRepo.getCollectionsForKeep(keep.id.get).map { id => collectionRepo.get(id) }
         }
         postSingleKeepReporting(keep, isNewKeep, library, socialShare)
@@ -611,7 +608,7 @@ class KeepsCommander @Inject() (
   }
 
   // Changes a keep's notes based on the hashtags to persist!
-  private def persistHashtags(userId: Id[User], keep: Keep, selectedTagNames: Seq[String])(implicit session: RWSession, context: HeimdalContext) = {
+  def persistHashtagsForKeep(userId: Id[User], keep: Keep, selectedTagNames: Seq[String])(implicit session: RWSession, context: HeimdalContext) = {
 
     val selectedCollections = selectedTagNames.map { getOrCreateTag(userId, _) }
     val selectedTagIds = selectedCollections.map(_.id.get).toSet
@@ -635,17 +632,11 @@ class KeepsCommander @Inject() (
     }
 
     val origNote = keep.note getOrElse ""
-    val editedNote = keepDecorator.escapeMarkupNotes(origNote)
-    val noteWithHashtagsRemoved = hashtagCommander.removeHashtagNamesFromString(editedNote, hashtagsToRemove.toSet)
-    val noteWithHashtagsAppended = hashtagCommander.appendHashtagNamesToString(noteWithHashtagsRemoved, hashtagsToPersist)
+    val noteWithHashtagsRemoved = hashtagCommander.removeHashtagNamesFromString(origNote, hashtagsToRemove.toSet)
+    val editedNote = keepDecorator.escapeMarkupNotes(noteWithHashtagsRemoved)
+    val noteWithHashtagsAppended = hashtagCommander.appendHashtagNamesToString(editedNote, hashtagsToPersist)
     val finalNote = Some(noteWithHashtagsAppended.trim).filterNot(_.isEmpty)
     keepRepo.save(keep.copy(note = finalNote)) // notify keep index
-  }
-
-  def persistHashtagsForKeep(userId: Id[User], keep: Keep, selectedTags: Seq[String])(implicit context: HeimdalContext) = {
-    db.readWrite { implicit s =>
-      persistHashtags(userId, keep, selectedTags)(s, context)
-    }
   }
 
   private def postSingleKeepReporting(keep: Keep, isNewKeep: Boolean, library: Library, socialShare: SocialShare): Unit = SafeFuture {

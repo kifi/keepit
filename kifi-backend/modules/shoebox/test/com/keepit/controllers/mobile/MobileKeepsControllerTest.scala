@@ -832,19 +832,22 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
 
     "edit note" in {
       withDb(controllerTestModules: _*) { implicit injector =>
-        val (user, keep, keepInactive) = db.readWrite { implicit session =>
+        val (user, keep, oldKeep, keepInactive) = db.readWrite { implicit session =>
           val user = userRepo.save(User(firstName = "Eishay", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
           val lib = library().withUser(user).saved
           val keep = KeepFactory.keep().withUser(user).withLibrary(lib).withTitle("default").saved
+          val oldKeep = KeepFactory.keep().withUser(user).withLibrary(lib).withTitle("default1").saved
           val keepInactive = KeepFactory.keep().withUser(user).withLibrary(lib).withState(KeepStates.INACTIVE).saved
 
-          val targetKeep = keepRepo.get(keep.externalId)
-          targetKeep.title === Some("default")
-          targetKeep.note === None
+          val tag1 = collectionRepo.save(Collection(userId = user.id.get, name = Hashtag("tag1")))
+          val tag2 = collectionRepo.save(Collection(userId = user.id.get, name = Hashtag("tag2")))
+          keepToCollectionRepo.save(KeepToCollection(keepId = oldKeep.id.get, collectionId = tag1.id.get))
+          keepToCollectionRepo.save(KeepToCollection(keepId = oldKeep.id.get, collectionId = tag2.id.get))
 
-          keepToCollectionRepo.count === 0
+          collectionRepo.count(user.id.get) === 2
+          keepToCollectionRepo.count === 2
 
-          (user, keep, keepInactive)
+          (user, keep, oldKeep, keepInactive)
         }
 
         def editKeepInfo(user: User, keep: Keep, body: JsObject): Future[Result] = {
@@ -887,7 +890,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
           val currentKeep = keepRepo.get(keep.externalId)
           currentKeep.title === Some("a real keep")
           currentKeep.note === Some("a real note")
-          keepToCollectionRepo.count === 0
+          keepToCollectionRepo.count === 2
         }
 
         val testEditTags1 = editKeepInfo(user, keep, Json.obj("tags" -> Seq("a", "b", "c")))
@@ -896,8 +899,8 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
           val currentKeep = keepRepo.get(keep.externalId)
           currentKeep.title === Some("a real keep")
           currentKeep.note === Some("a real note [#a] [#b] [#c]")
-          keepToCollectionRepo.count === 3
-          collectionRepo.count(user.id.get) === 3
+          keepToCollectionRepo.count === 5
+          collectionRepo.count(user.id.get) === 5
         }
 
         val testEditTags2 = editKeepInfo(user, keep, Json.obj("note" -> "a real [#note]", "tags" -> Seq("a", "b", "d", "e")))
@@ -906,8 +909,8 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
           val currentKeep = keepRepo.get(keep.externalId)
           currentKeep.title === Some("a real keep")
           currentKeep.note === Some("a real [\\#note] [#a] [#b] [#d] [#e]")
-          keepToCollectionRepo.count === 5
-          collectionRepo.count(user.id.get) === 5
+          keepToCollectionRepo.count === 7
+          collectionRepo.count(user.id.get) === 7
         }
 
         val testEditTags3 = editKeepInfo(user, keep, Json.obj("note" -> "a real [#note] thing"))
@@ -916,8 +919,6 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
           val currentKeep = keepRepo.get(keep.externalId)
           currentKeep.title === Some("a real keep")
           currentKeep.note === Some("a real [\\#note] thing [#a] [#b] [#d] [#e]")
-          keepToCollectionRepo.count === 5
-          collectionRepo.count(user.id.get) === 5
         }
 
         val testEditTags4 = editKeepInfo(user, keep, Json.obj("note" -> "a real [#note] thing", "tags" -> Json.toJson(Seq(): Seq[String])))
@@ -926,9 +927,24 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
           val currentKeep = keepRepo.get(keep.externalId)
           currentKeep.title === Some("a real keep")
           currentKeep.note === Some("a real [\\#note] thing")
-          keepToCollectionRepo.count === 5
-          collectionRepo.count(user.id.get) === 5
         }
+
+        // test a keep that already has tags persisted
+        val testEditExistingTags1 = editKeepInfo(user, oldKeep, Json.obj("note" -> "this keep already has [#tags]"))
+        status(testEditExistingTags1) must equalTo(NO_CONTENT)
+        db.readOnlyMaster { implicit s =>
+          val currentKeep = keepRepo.get(oldKeep.externalId)
+          currentKeep.title === Some("default1")
+          currentKeep.note === Some("this keep already has [\\#tags] [#tag1] [#tag2]")
+        }
+        val testEditExistingTags2 = editKeepInfo(user, oldKeep, Json.obj("note" -> "this keep already has [#tags]", "tags" -> JsArray(Seq(JsString("tag1")))))
+        status(testEditExistingTags2) must equalTo(NO_CONTENT)
+        db.readOnlyMaster { implicit s =>
+          val currentKeep = keepRepo.get(oldKeep.externalId)
+          currentKeep.title === Some("default1")
+          currentKeep.note === Some("this keep already has [\\#tags] [#tag1]")
+        }
+
       }
     }
 

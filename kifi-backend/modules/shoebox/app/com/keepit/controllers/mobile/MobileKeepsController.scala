@@ -207,15 +207,12 @@ class MobileKeepsController @Inject() (
             collectionRepo.getHashtagsByKeepId(keep.id.get).map(_.tag).toSeq
           }
         )
-
-        val updatedKeep = if (titleToPersist != keep.title || noteToPersist != keep.note) {
-          db.readWrite { implicit s =>
-            keepRepo.save(keep.copy(title = titleToPersist, note = noteToPersist))
-          }
-        } else keep
+        val updatedKeep = keep.copy(title = titleToPersist, note = noteToPersist)
 
         implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
-        keepsCommander.persistHashtagsForKeep(request.userId, updatedKeep, tagsToPersist)
+        db.readWrite { implicit s =>
+          keepsCommander.persistHashtagsForKeep(request.userId, updatedKeep, tagsToPersist)(s, context)
+        }
         NoContent
     }
   }
