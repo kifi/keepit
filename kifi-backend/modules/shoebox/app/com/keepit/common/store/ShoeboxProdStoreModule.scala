@@ -25,15 +25,9 @@ case class ShoeboxProdStoreModule() extends ProdStoreModule {
   }
 
   @Provides @Singleton
-  def keepImageStoreInbox: KeepImageStoreInbox = {
-    val inboxDir = forceMakeTemporaryDirectory(current.configuration.getString("shoebox.temporary.directory").get, "keep_images")
-    KeepImageStoreInbox(inboxDir)
-  }
-
-  @Provides @Singleton
-  def libraryImageStoreInbox: LibraryImageStoreInbox = {
-    val inboxDir = forceMakeTemporaryDirectory(current.configuration.getString("shoebox.temporary.directory").get, "library_images")
-    LibraryImageStoreInbox(inboxDir)
+  def roverImageStoreInbox: RoverImageStoreInbox = {
+    val inboxDir = forceMakeTemporaryDirectory(current.configuration.getString("shoebox.temporary.directory").get, "images")
+    RoverImageStoreInbox(inboxDir)
   }
 
   @Singleton
@@ -77,13 +71,8 @@ case class ShoeboxDevStoreModule() extends DevStoreModule(ShoeboxProdStoreModule
     whenConfigured("cdn.bucket")(prodStoreModule.s3ImageConfig).getOrElse(S3ImageConfig("", "http://dev.ezkeep.com:9000", true))
 
   @Provides @Singleton
-  def keepImageStoreInbox: KeepImageStoreInbox = whenConfigured("shoebox.temporary.directory")(prodStoreModule.keepImageStoreInbox) getOrElse {
-    KeepImageStoreInbox(FileUtils.getTempDirectory)
-  }
-
-  @Provides @Singleton
-  def libraryImageStoreInbox: LibraryImageStoreInbox = whenConfigured("shoebox.temporary.directory")(prodStoreModule.libraryImageStoreInbox) getOrElse {
-    LibraryImageStoreInbox(FileUtils.getTempDirectory)
+  def roverImageStoreInbox: RoverImageStoreInbox = whenConfigured("shoebox.temporary.directory")(prodStoreModule.roverImageStoreInbox) getOrElse {
+    RoverImageStoreInbox(FileUtils.getTempDirectory)
   }
 
   @Singleton

@@ -11,7 +11,7 @@ import com.keepit.common.core.File
 import com.keepit.common.images.Photoshop
 import com.keepit.common.net.{ URI, WebService }
 import com.keepit.common.service.RequestConsolidator
-import com.keepit.common.store.ImageSize
+import com.keepit.common.store.{ ImagePath, ImageSize }
 import com.keepit.model._
 import play.api.Logger
 import play.api.libs.Files.TemporaryFile
@@ -107,7 +107,7 @@ trait ProcessedImageHelper {
           case Right(resizedSet) =>
             val original = bufferedImageToInputStream(image, inputFormatToOutputFormat(sourceImage.format)).map {
               case (is, bytes) =>
-                val key = generateImageKey(baseLabel, sourceImage.hash, sourceImage.format, image.getWidth, image.getHeight, ProcessImageOperation.Original)
+                val key = ImagePath(baseLabel, sourceImage.hash, imageSize, ProcessImageOperation.Original, sourceImage.format)
                 ImageProcessState.ReadyToPersist(key, outFormat, is, image, bytes, ProcessImageOperation.Original)
             }
             original match {
@@ -135,7 +135,7 @@ trait ProcessedImageHelper {
       process().map { resizedImage =>
         bufferedImageToInputStream(resizedImage, outFormat).map {
           case (is, bytes) =>
-            val key = generateImageKey(baseLabel, hash, outFormat, resizedImage.getWidth, resizedImage.getHeight, processImageSize.operation)
+            val key = ImagePath(baseLabel, hash, ImageSize(resizedImage.getWidth, resizedImage.getHeight), processImageSize.operation, outFormat)
             ImageProcessState.ReadyToPersist(key, outFormat, is, resizedImage, bytes, processImageSize.operation)
         }
       }.flatten match {
@@ -151,10 +151,6 @@ trait ProcessedImageHelper {
       case None =>
         Right(resizedImages.map(_.right.get))
     }
-  }
-
-  def generateImageKey(baseLabel: String, hash: ImageHash, outFormat: ImageFormat, width: Int, height: Int, operation: ProcessImageOperation) = {
-    baseLabel + "/" + hash.hash + "_" + width + "x" + height + operation.fileNameSuffix + "." + outFormat.value
   }
 
   // Returns Set of bounding box sizes

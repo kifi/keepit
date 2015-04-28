@@ -3,7 +3,7 @@ package com.keepit.model
 import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
 import com.keepit.common.db._
 import com.keepit.common.logging.AccessLog
-import com.keepit.common.store.ImageSize
+import com.keepit.common.store.{ ImagePath, ImageSize }
 import com.keepit.common.time._
 import org.joda.time.DateTime
 import com.kifi.macros.json
@@ -22,7 +22,7 @@ case class LibraryImage(
     height: Int,
     positionX: Option[Int], // rounded percent value
     positionY: Option[Int], // rounded percent value
-    imagePath: String,
+    imagePath: ImagePath,
     format: ImageFormat,
     source: ImageSource,
     sourceFileHash: ImageHash,
@@ -45,7 +45,7 @@ object LibraryImage {
     (__ \ 'height).format[Int] and
     (__ \ 'positionX).formatNullable[Int] and
     (__ \ 'positionY).formatNullable[Int] and
-    (__ \ 'imagePath).format[String] and
+    (__ \ 'imagePath).format[ImagePath] and
     (__ \ 'format).format[ImageFormat] and
     (__ \ 'source).format[ImageSource] and
     (__ \ 'sourceFileHash).format[ImageHash] and
@@ -53,7 +53,7 @@ object LibraryImage {
   )(LibraryImage.apply, unlift(LibraryImage.unapply))
 }
 
-@json case class LibraryImageInfo(path: String, x: Int, y: Int)
+@json case class LibraryImageInfo(path: ImagePath, x: Int, y: Int)
 
 object LibraryImageInfo {
   def createInfo(img: LibraryImage) = LibraryImageInfo(img.imagePath, img.positionX.getOrElse(50), img.positionY.getOrElse(50))

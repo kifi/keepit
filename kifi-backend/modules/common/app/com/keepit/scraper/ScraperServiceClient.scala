@@ -13,7 +13,7 @@ import com.keepit.common.logging.{ AccessLog, Logging }
 import com.keepit.common.net.{ CallTimeouts, HttpClient }
 import com.keepit.common.routes.Scraper
 import com.keepit.common.service.{ RequestConsolidator, ServiceClient, ServiceType }
-import com.keepit.common.store.ImageSize
+import com.keepit.common.store.{ ImagePath, ImageSize }
 import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.model._
 import com.keepit.rover.document.utils.Signature
@@ -123,7 +123,7 @@ case class ScraperThreadInstanceInfo(info: AmazonInstanceInfo, jobInfo: Either[S
 
 @json case class NormalizedURIRef(id: Id[NormalizedURI], url: String, externalId: ExternalId[NormalizedURI])
 
-@json case class PersistedImageVersion(width: Int, height: Int, path: String, originalUrl: String)
+@json case class PersistedImageVersion(width: Int, height: Int, path: ImagePath, originalUrl: String)
 @json case class PersistedImageRef(sizes: Seq[PersistedImageVersion], caption: Option[String])
 @json case class URIPreviewFetchResult(
   pageUrl: String,

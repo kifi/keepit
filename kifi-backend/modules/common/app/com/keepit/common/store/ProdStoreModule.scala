@@ -14,6 +14,8 @@ import com.keepit.search._
 import com.amazonaws.auth.BasicAWSCredentials
 import com.keepit.common.logging.AccessLog
 
+import scala.concurrent.ExecutionContext
+
 trait StoreModule extends ScalaModule
 
 abstract class ProdOrElseDevStoreModule[T <: StoreModule](val prodStoreModule: T) extends StoreModule {
@@ -74,6 +76,11 @@ trait ProdStoreModule extends StoreModule {
   def bayesPornDetectorStore(amazonS3Client: AmazonS3, accessLog: AccessLog): PornWordLikelihoodStore = {
     val bucketName = S3Bucket(current.configuration.getString("amazon.s3.bayes.porn.detector.bucket").get)
     new S3PornWordLikelihoodStore(bucketName, amazonS3Client, accessLog)
+  }
+
+  @Provides @Singleton
+  def roverImageStore(s3ImageConfig: S3ImageConfig, inbox: RoverImageStoreInbox, transferManager: TransferManager, executionContext: ExecutionContext): RoverImageStore = {
+    new S3RoverImageStoreImpl(s3ImageConfig, inbox, transferManager, executionContext)
   }
 }
 

@@ -37,7 +37,7 @@ class UriImageCommanderImpl @Inject() (
           case Right(toPersist) =>
             val uploads = toPersist.map { image =>
               log.info(s"[uic] Persisting ${image.key} (${image.bytes} B)")
-              uriImageStore.put(image.key, image.is, image.bytes, imageFormatToMimeType(image.format)).map { r =>
+              uriImageStore.put(image.key.path, image.is, image.bytes, imageFormatToMimeType(image.format)).map { r =>
                 ImageProcessState.UploadedImage(image.key, image.format, image.image, image.processOperation)
               }
             }
