@@ -1,6 +1,5 @@
 package com.keepit.model
 
-import java.util.UUID
 import java.net.URLEncoder
 
 import play.api.mvc.{ PathBindable, QueryStringBindable }

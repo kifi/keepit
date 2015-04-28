@@ -1,6 +1,7 @@
 package com.keepit.rover.model
 
 import com.keepit.common.db._
+import com.keepit.common.store.ImagePath
 import com.keepit.common.time._
 import com.keepit.model._
 import org.joda.time.DateTime
@@ -16,7 +17,7 @@ case class RoverImageInfo(
     width: Int,
     height: Int,
     kind: ProcessImageOperation,
-    path: String,
+    path: ImagePath,
     source: ImageSource,
     sourceImageHash: ImageHash,
     sourceImageUrl: Option[String]) extends BaseImage with Model[RoverImageInfo] {
@@ -37,7 +38,7 @@ object RoverImageInfo {
     width: Int,
     height: Int,
     kind: ProcessImageOperation,
-    path: String,
+    path: ImagePath,
     source: ImageSource,
     sourceImageHash: ImageHash,
     sourceImageUrl: Option[String]): RoverImageInfo = {

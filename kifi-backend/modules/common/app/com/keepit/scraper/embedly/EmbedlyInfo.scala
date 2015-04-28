@@ -1,5 +1,6 @@
 package com.keepit.scraper.embedly
 
+import com.keepit.common.store.ImagePath
 import com.keepit.rover.article.content.{ EmbedlyImage, EmbedlyKeyword, EmbedlyEntity }
 import play.api.libs.functional.syntax._
 import com.keepit.model._
@@ -34,13 +35,6 @@ case class EmbedlyInfo(
       lang = this.lang,
       faviconUrl = (this.faviconUrl.collect { case f: String if f.startsWith("http") => f }) // embedly bug
     )
-
-  def buildImageInfo(nUriId: Id[NormalizedURI], path: String, name: String) = {
-    images.zipWithIndex flatMap {
-      case (embedlyImage, priority) =>
-        Some(embedlyImage.toImageInfoWithPriority(nUriId, Some(priority), path = path, name = name))
-    }
-  }
 }
 
 object EmbedlyInfo {

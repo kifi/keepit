@@ -9,7 +9,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
-import com.keepit.common.store.ImageSize
+import com.keepit.common.store.{ ImagePath, ImageSize }
 import com.keepit.common.time._
 import scala.slick.jdbc.StaticQuery
 
@@ -45,7 +45,7 @@ class ImageInfoRepoImpl @Inject() (
     def provider = column[ImageProvider]("provider", O.Nullable)
     def format = column[ImageFormat]("format", O.Nullable)
     def priority = column[Int]("priority", O.Nullable)
-    def path = column[String]("path", O.NotNull)
+    def path = column[ImagePath]("path", O.NotNull)
     def * = (id.?, createdAt, updatedAt, state, seq, uriId, url.?, name, caption.?, width.?, height.?, sz.?, provider.?, format.?, priority.?, path) <> ((ImageInfo.apply _).tupled, ImageInfo.unapply)
   }
 

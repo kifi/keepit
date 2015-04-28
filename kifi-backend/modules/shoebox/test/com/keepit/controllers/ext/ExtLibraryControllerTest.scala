@@ -9,6 +9,7 @@ import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social.FakeSocialGraphModule
+import com.keepit.common.store.ImagePath
 import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.scraper.{ FakeScrapeSchedulerModule, FakeScraperServiceClientModule }
@@ -151,7 +152,7 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
             height = 256,
             positionX = Some(40),
             positionY = Some(50),
-            imagePath = "path/to/image.png",
+            imagePath = ImagePath("path/to/image.png"),
             format = ImageFormat.PNG,
             source = ImageSource.UserUpload,
             sourceFileHash = ImageHash("000"),

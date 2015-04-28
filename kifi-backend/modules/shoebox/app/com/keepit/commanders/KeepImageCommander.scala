@@ -46,7 +46,7 @@ trait KeepImageCommander {
 
 @Singleton
 class KeepImageCommanderImpl @Inject() (
-    keepImageStore: KeepImageStore,
+    imageStore: RoverImageStore,
     db: Database,
     keepRepo: KeepRepo,
     uriSummaryCommander: URISummaryCommander,
@@ -61,7 +61,7 @@ class KeepImageCommanderImpl @Inject() (
     val webService: WebService) extends KeepImageCommander with ProcessedImageHelper with Logging {
 
   def getUrl(keepImage: KeepImage): String = {
-    s3ImageConfig.cdnBase + "/" + keepImage.imagePath
+    s3ImageConfig.cdnBase + "/" + keepImage.imagePath.path
   }
 
   def getBestImageForKeep(keepId: Id[Keep], imageRequest: ProcessImageRequest): Option[Option[KeepImage]] = {
@@ -390,7 +390,7 @@ class KeepImageCommanderImpl @Inject() (
     overwriteExistingImage: Boolean, amendExistingImages: Boolean): Future[ImageProcessDone] = {
     val uploads = toPersist.map { image =>
       log.info(s"[kic] Persisting ${image.key} (${image.bytes} B)")
-      keepImageStore.put(image.key, image.is, image.bytes, imageFormatToMimeType(image.format)).map { r =>
+      imageStore.put(image.key, image.is, image.bytes, imageFormatToMimeType(image.format)).map { r =>
         ImageProcessState.UploadedImage(image.key, image.format, image.image, image.processOperation)
       }
     }

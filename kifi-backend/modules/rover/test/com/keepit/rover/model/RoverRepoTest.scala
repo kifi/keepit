@@ -1,5 +1,6 @@
 package com.keepit.rover.model
 
+import com.keepit.common.store.ImagePath
 import com.keepit.model._
 import com.keepit.rover.article.{ EmbedlyArticle, DefaultArticle }
 import com.keepit.rover.test.{ RoverApplication, RoverApplicationInjector }
@@ -44,13 +45,13 @@ class RoverRepoTest extends Specification with RoverApplicationInjector {
             width = 100,
             height = 100,
             kind = ProcessImageOperation.Original,
-            path = "path",
+            path = ImagePath("path"),
             source = ImageSource.RoverArticle(EmbedlyArticle),
             sourceImageHash = ImageHash("hash"),
             sourceImageUrl = None
           ))
 
-          imageInfoRepo.get(saved.id.get).path === "path"
+          imageInfoRepo.get(saved.id.get).path.path === "path"
         }
 
         // ArticleImage

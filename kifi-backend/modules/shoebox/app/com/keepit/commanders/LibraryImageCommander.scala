@@ -10,7 +10,7 @@ import com.keepit.heimdal.HeimdalContext
 import com.keepit.common.images.Photoshop
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.WebService
-import com.keepit.common.store.{ ImageSize, LibraryImageStore, S3ImageConfig }
+import com.keepit.common.store.{ RoverImageStore, ImageSize, S3ImageConfig }
 import com.keepit.model.ProcessImageOperation.Original
 import com.keepit.model._
 import play.api.libs.Files.TemporaryFile
@@ -39,7 +39,7 @@ class LibraryImageCommanderImpl @Inject() (
     libraryRepo: LibraryRepo,
     libraryImageRepo: LibraryImageRepo,
     libraryImageRequestRepo: LibraryImageRequestRepo,
-    libraryImageStore: LibraryImageStore,
+    imageStore: RoverImageStore,
     libraryAnalytics: LibraryAnalytics,
     imageInfoRepo: ImageInfoRepo,
     s3ImageConfig: S3ImageConfig,
@@ -49,7 +49,7 @@ class LibraryImageCommanderImpl @Inject() (
     val webService: WebService) extends LibraryImageCommander with ProcessedImageHelper with Logging {
 
   def getUrl(libraryImage: LibraryImage): String = {
-    s3ImageConfig.cdnBase + "/" + libraryImage.imagePath
+    s3ImageConfig.cdnBase + "/" + libraryImage.imagePath.path
   }
 
   def getBestImageForLibrary(libraryId: Id[Library], idealSize: ImageSize): Option[LibraryImage] = {
@@ -144,7 +144,7 @@ class LibraryImageCommanderImpl @Inject() (
   private def uploadAndPersistImages(originalImage: ImageProcessState.ImageLoadedAndHashed, toPersist: Set[ImageProcessState.ReadyToPersist], libraryId: Id[Library], position: LibraryImagePosition, source: ImageSource)(implicit requestId: Option[Id[LibraryImageRequest]]): Future[ImageProcessDone] = {
     val uploads = toPersist.map { image =>
       log.info(s"[lic] Persisting ${image.key} (${image.bytes} B)")
-      libraryImageStore.put(image.key, image.is, image.bytes, imageFormatToMimeType(image.format)).map { r =>
+      imageStore.put(image.key, image.is, image.bytes, imageFormatToMimeType(image.format)).map { r =>
         ImageProcessState.UploadedImage(image.key, image.format, image.image, image.processOperation)
       }
     }
