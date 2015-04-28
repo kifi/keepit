@@ -12,7 +12,9 @@ import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.healthcheck.AirbrakeNotifier
 
 @ImplementedBy(classOf[RoverImageInfoRepoImpl])
-trait RoverImageInfoRepo extends Repo[RoverImageInfo]
+trait RoverImageInfoRepo extends Repo[RoverImageInfo] {
+  def getByImageHash(hash: ImageHash)(implicit session: RSession): Set[RoverImageInfo]
+}
 
 @Singleton
 class RoverImageInfoRepoImpl @Inject() (
@@ -43,4 +45,8 @@ class RoverImageInfoRepoImpl @Inject() (
 
   override def invalidateCache(model: RoverImageInfo)(implicit session: RSession): Unit = {}
 
+  def getByImageHash(hash: ImageHash)(implicit session: RSession): Set[RoverImageInfo] = {
+    val q = for (r <- rows if r.state === RoverImageInfoStates.ACTIVE && r.sourceImageHash === hash) yield r
+    q.list.toSet
+  }
 }
