@@ -154,29 +154,32 @@ class RecommendationGenerationCommander @Inject() (
 
   private def saveScoredSeedItems(items: Seq[ScoredSeedItemWithAttribution], userId: Id[User], newState: UserRecommendationGenerationState): Unit = {
     if (items.length > 0) {
+      val itemsForSave = items.map { item =>
+        UriRecommendation(
+          uriId = item.uriId,
+          userId = userId,
+          masterScore = computeMasterScore(item.uriScores),
+          allScores = item.uriScores,
+          delivered = 0,
+          clicked = 0,
+          kept = false,
+          trashed = false,
+          attribution = item.attribution,
+          topic1 = item.topic1,
+          topic2 = item.topic2
+        )
+      }
+
       val timer = new NamedStatsdTimer("RecommendationGenerationCommander.saveScoredSeedItems")
       val timerPer = new NamedStatsdTimer("RecommendationGenerationCommander.saveScoredSeedItemsPerItem")
       db.readWrite(attempts = 2) { implicit s =>
-        items foreach { item =>
+        val existing = uriRecRepo.getUriIdsForUser(userId)
+        val (updateItems, newItems) = itemsForSave.partition { x => existing.contains(x.uriId) }
 
-          uriRecRepo.insertOrUpdate(
-            UriRecommendation(
-              uriId = item.uriId,
-              userId = userId,
-              masterScore = computeMasterScore(item.uriScores),
-              allScores = item.uriScores,
-              delivered = 0,
-              clicked = 0,
-              kept = false,
-              trashed = false,
-              attribution = item.attribution,
-              topic1 = item.topic1,
-              topic2 = item.topic2
-            )
-          )
+        log.info(s"saving scored reco for user ${userId}. insertAll for ${newItems.size} items, upsert for ${updateItems.size} items. New items ratio: ${newItems.size * 1f / itemsForSave.size}")
 
-        }
-
+        uriRecRepo.insertAll(newItems)
+        updateItems.foreach { uriRecRepo.insertOrUpdate(_) }
         genStateRepo.save(newState)
       }
       timer.stopAndReport()
