@@ -341,7 +341,6 @@ class AdminBookmarksController @Inject() (
         collectionRepo.getHashtagsByKeepIds(keepIds)
       }
       val keepNotesMap = keepGroup.map { k =>
-        // look for all hashtags for a keep
         val newNote = keepHashtagsMap.get(k.id.get) match {
           case Some(tags) if tags.nonEmpty =>
             val noteStr = k.note getOrElse ""

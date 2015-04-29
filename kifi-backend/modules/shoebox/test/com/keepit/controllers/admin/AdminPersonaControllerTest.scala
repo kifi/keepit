@@ -162,12 +162,13 @@ class AdminPersonaControllerTest extends Specification with ShoeboxApplicationIn
 
     "temporary keep note backfill" in {
       running(new ShoeboxApplication(modules: _*)) {
-        val (user1, k1, k2, k3) = db.readWrite { implicit s =>
+        val (user1, k1, k2, k3, k4) = db.readWrite { implicit s =>
           val user1 = user().withUsername("drogo").saved
           val lib1 = library().withUser(user1).saved
-          val keep1 = keep().withLibrary(lib1).withNote(None).saved
-          val keep2 = keep().withLibrary(lib1).withNote(Some("")).saved
+          val keep1 = keep().withLibrary(lib1).withNote(Some("")).saved
+          val keep2 = keep().withLibrary(lib1).withNote(None).saved
           val keep3 = keep().withLibrary(lib1).withNote(Some("[#asdf]")).saved
+          val keep4 = keep().withLibrary(lib1).withNote(Some("[#first] [\\#qwer]")).saved
 
           val tag1 = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("first")))
           val tag2 = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("second")))
@@ -175,8 +176,10 @@ class AdminPersonaControllerTest extends Specification with ShoeboxApplicationIn
           keepToCollectionRepo.save(KeepToCollection(keepId = keep2.id.get, collectionId = tag2.id.get))
           keepToCollectionRepo.save(KeepToCollection(keepId = keep3.id.get, collectionId = tag1.id.get))
           keepToCollectionRepo.save(KeepToCollection(keepId = keep3.id.get, collectionId = tag2.id.get))
+          keepToCollectionRepo.save(KeepToCollection(keepId = keep4.id.get, collectionId = tag1.id.get))
+          keepToCollectionRepo.save(KeepToCollection(keepId = keep4.id.get, collectionId = tag2.id.get))
 
-          (user1, keep1, keep2, keep3)
+          (user1, keep1, keep2, keep3, keep4)
         }
 
         val controller1 = inject[AdminBookmarksController]
@@ -192,6 +195,7 @@ class AdminPersonaControllerTest extends Specification with ShoeboxApplicationIn
           keepRepo.get(k1.id.get).note === None // null field -> null field
           keepRepo.get(k2.id.get).note === Some("[#first] [#second]") // null field populated to have two tags
           keepRepo.get(k3.id.get).note === Some("[#asdf] [#first] [#second]") // nonempty field populated to have two tags
+          keepRepo.get(k4.id.get).note === Some("[#first] [\\#qwer] [#second]") // nonempty field (with a fake tag and tag that already exists) populated to have two tags
         }
       }
     }
