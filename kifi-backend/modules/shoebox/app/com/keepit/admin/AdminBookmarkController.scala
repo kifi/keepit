@@ -37,7 +37,6 @@ class AdminBookmarksController @Inject() (
   collectionCommander: CollectionCommander,
   collectionRepo: CollectionRepo,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
-  hashtagCommander: HashtagCommander,
   keepDecorator: KeepDecorator,
   clock: Clock)
     extends AdminUserActions {
@@ -344,7 +343,7 @@ class AdminBookmarksController @Inject() (
         val newNote = keepHashtagsMap.get(k.id.get) match {
           case Some(tags) if tags.nonEmpty =>
             val noteStr = k.note getOrElse ""
-            Some(hashtagCommander.addNewHashtagsToString(noteStr, tags))
+            Some(Hashtags.addNewHashtagsToString(noteStr, tags))
           case _ =>
             k.note
         }

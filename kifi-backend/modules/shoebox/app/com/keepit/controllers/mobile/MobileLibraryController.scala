@@ -38,7 +38,6 @@ class MobileLibraryController @Inject() (
   userCommander: UserCommander,
   keepImageCommander: KeepImageCommander,
   libraryImageCommander: LibraryImageCommander,
-  hashtagCommander: HashtagCommander,
   normalizedUriInterner: NormalizedURIInterner,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
   clock: Clock,
@@ -168,7 +167,7 @@ class MobileLibraryController @Inject() (
 
                 // remove hashtags, then turn all '[\#' -> '[#'
                 val editedKeepNote = keep.note.map { note =>
-                  val noteWithoutHashtags = hashtagCommander.removeAllHashtagsFromString(note)
+                  val noteWithoutHashtags = Hashtags.removeAllHashtagsFromString(note)
                   keepDecorator.unescapeMarkupNotes(noteWithoutHashtags).trim
                 }
 
