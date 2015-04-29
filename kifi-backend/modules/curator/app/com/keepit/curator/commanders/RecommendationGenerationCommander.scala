@@ -181,7 +181,7 @@ class RecommendationGenerationCommander @Inject() (
         uriRecRepo.insertAll(newItems)
         updateItems.foreach { uriRecRepo.insertOrUpdate(_) }
 
-        log.info(s"saving scored reco for user ${userId} done. ${itemsForSave.size} saved in ${timer.millisSinceCreation() / 1000f} seconds")
+        log.info(s"saving scored reco for user ${userId} done. ${itemsForSave.size} saved in ${timer.millisSinceCreation() / 1000f} seconds. User previously had ${existing.size} reco items")
 
         genStateRepo.save(newState)
       }

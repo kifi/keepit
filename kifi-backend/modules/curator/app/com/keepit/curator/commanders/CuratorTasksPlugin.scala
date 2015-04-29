@@ -46,7 +46,7 @@ class CuratorTasksPlugin @Inject() (
     scheduleTaskOnAllMachines(system, 5 minutes, 5 minutes, uriRecommendationPrecomputation) {
       uriRecoGenerationCommander.precomputeRecommendations()
     }
-    scheduleTaskOnOneMachine(system, 2 minutes, 5 minutes, uriRecommendationReaper) {
+    scheduleTaskOnOneMachine(system, 200 minutes, 500 minutes, uriRecommendationReaper) {
       uriRecoCleanupCommander.cleanup()
     }
 
