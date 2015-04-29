@@ -438,7 +438,8 @@ class KeepsCommander @Inject() (
       val updatedKeep = db.readWrite { implicit s =>
         keepRepo.save(oldKeep.copy(note = noteToPersist))
       }
-      persistHashtagsInKeepNote(userId, oldKeep.id.get, noteToPersist)
+      val hashtagNamesToPersist = hashtagCommander.findAllHashtagNames(noteToPersist.getOrElse(""))
+      persistHashtagsForKeep(userId, updatedKeep.id.get, hashtagNamesToPersist.toSeq)
       searchClient.updateKeepIndex()
       libraryAnalytics.updatedKeep(oldKeep, updatedKeep, context)
     }
@@ -632,35 +633,6 @@ class KeepsCommander @Inject() (
   def persistHashtagsForKeep(userId: Id[User], keepId: Id[Keep], selectedTags: Seq[String])(implicit context: HeimdalContext) = {
     db.readWrite { implicit s =>
       persistHashtags(userId, keepId, selectedTags)(s, context)
-    }
-  }
-
-  // given a keepId & a note to persist, parse out hashtags to persist from note field.
-  // activate/deactivate any keepToCollections
-  def persistHashtagsInKeepNote(userId: Id[User], keepId: Id[Keep], persistedNote: Option[String])(implicit context: HeimdalContext) = {
-    val hashtagNamesToPersist = hashtagCommander.findAllHashtagNames(persistedNote.getOrElse(""))
-    val activeTagIds = db.readOnlyMaster { implicit s =>
-      keepToCollectionRepo.getCollectionsForKeep(keepId)
-    }.toSet
-
-    val tagsToPersist = hashtagNamesToPersist.map { getOrCreateTag(userId, _) }
-    val tagIdsToPersist = tagsToPersist.map(_.id.get)
-    val tagIdsToRemove = activeTagIds.filterNot(c => tagIdsToPersist.contains(c))
-    val tagIdsToAdd = tagIdsToPersist.filterNot(c => activeTagIds.contains(c))
-
-    db.readWrite { implicit s =>
-      tagIdsToAdd.map { tagId =>
-        keepToCollectionRepo.getOpt(keepId, tagId) match {
-          case None => keepToCollectionRepo.save(KeepToCollection(keepId = keepId, collectionId = tagId))
-          case Some(k2c) => keepToCollectionRepo.save(k2c.copy(state = KeepToCollectionStates.ACTIVE))
-        }
-        collectionRepo.collectionChanged(tagId, true, inactivateIfEmpty = false)
-      }
-
-      tagIdsToRemove.map { tagId =>
-        keepToCollectionRepo.remove(keepId, tagId)
-        collectionRepo.collectionChanged(tagId, false, inactivateIfEmpty = true)
-      }
     }
   }
 
