@@ -43,6 +43,7 @@ trait MobilePushNotifier {
 }
 
 class MobilePushDelegator @Inject() (
+    urbanAirship: UrbanAirship,
     appBoy: AppBoy,
     db: Database,
     deviceRepo: DeviceRepo,
@@ -50,9 +51,7 @@ class MobilePushDelegator @Inject() (
 
   def registerDevice(userId: Id[User], token: Option[String], deviceType: DeviceType, isDev: Boolean, signature: Option[String]): Either[String, Device] = {
     token match {
-      case Some(tokenStr) =>
-        log.warn(s"[MobilePush] $userId tried to register UrbanAirship device. $token, $deviceType $isDev $signature")
-        Left("unsupported_platform")
+      case Some(tokenStr) => Right(urbanAirship.registerDevice(userId, tokenStr, deviceType, isDev, signature))
       case None if signature.isDefined => Right(appBoy.registerDevice(userId, deviceType, isDev, signature.get))
       case _ => Left("invalid_params")
     }
@@ -63,14 +62,18 @@ class MobilePushDelegator @Inject() (
       deviceRepo.getByUserId(userId, None)
     }.partition(d => d.token.isDefined)
 
+    val numSentUrbanAirshipF = if (devicesWithToken.nonEmpty) {
+      urbanAirship.notifyUser(userId, devicesWithToken, notification, force)
+    } else Future.successful(0)
     val numSentAppBoyF = if (devicesNoToken.nonEmpty) {
       appBoy.notifyUser(userId, devicesNoToken, notification, force)
     } else Future.successful(0)
 
     for {
+      numSentUrbanAirship <- numSentUrbanAirshipF
       numSentAppBoy <- numSentAppBoyF
     } yield {
-      numSentAppBoy
+      numSentUrbanAirship + numSentAppBoy
     }
   }
 
