@@ -343,13 +343,11 @@ class AdminBookmarksController @Inject() (
         val newNote = keepHashtagsMap.get(k.id.get) match {
           case Some(tags) if tags.nonEmpty =>
             val noteStr = k.note getOrElse ""
-            val existingTags = hashtagCommander.findAllHashtagNames(noteStr)
-            val tagsToAppend = tags.map(_.tag) diff existingTags.toSeq
-            Some(hashtagCommander.appendHashtagNamesToString(noteStr, tagsToAppend).trim) filterNot (_.isEmpty)
+            Some(hashtagCommander.addNewHashtagsToString(noteStr, tags))
           case _ =>
             k.note
         }
-        (k.id.get, newNote)
+        (k.id.get, newNote.map(_.trim).filter(_.nonEmpty))
       }.toMap
       db.readWriteBatch(keepGroup) { (s, k) =>
         val newNote = keepNotesMap(k.id.get)

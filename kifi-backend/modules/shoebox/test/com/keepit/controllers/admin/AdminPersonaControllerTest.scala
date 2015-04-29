@@ -165,8 +165,8 @@ class AdminPersonaControllerTest extends Specification with ShoeboxApplicationIn
         val (user1, k1, k2, k3) = db.readWrite { implicit s =>
           val user1 = user().withUsername("drogo").saved
           val lib1 = library().withUser(user1).saved
-          val keep1 = keep().withLibrary(lib1).saved
-          val keep2 = keep().withLibrary(lib1).withNote(None).saved
+          val keep1 = keep().withLibrary(lib1).withNote(None).saved
+          val keep2 = keep().withLibrary(lib1).withNote(Some("")).saved
           val keep3 = keep().withLibrary(lib1).withNote(Some("[#asdf]")).saved
 
           val tag1 = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("first")))
