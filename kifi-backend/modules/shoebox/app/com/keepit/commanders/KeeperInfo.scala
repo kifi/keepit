@@ -94,7 +94,7 @@ object MoarKeepData {
   implicit val writes = new Writes[MoarKeepData] {
     def writes(o: MoarKeepData): JsValue = {
       val o2 = if (o.tags.nonEmpty && o.note.isEmpty) {
-        o.copy(note = Some(o.tags.map(t => '#' + t.replace(' ', '\u00a0')).mkString(" ")))
+        o.copy(note = Some(Hashtags.appendHashtagNamesToString("", o.tags)))
       } else {
         o
       }

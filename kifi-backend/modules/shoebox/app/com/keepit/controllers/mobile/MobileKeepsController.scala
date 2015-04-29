@@ -35,7 +35,6 @@ class MobileKeepsController @Inject() (
   normalizedURIInterner: NormalizedURIInterner,
   libraryCommander: LibraryCommander,
   rawBookmarkFactory: RawBookmarkFactory,
-  hashtagCommander: HashtagCommander,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
   implicit val publicIdConfig: PublicIdConfiguration)
     extends UserActions with ShoeboxServiceController {
@@ -180,14 +179,14 @@ class MobileKeepsController @Inject() (
           case Seq(keepInfo) =>
             val editedNote = keepInfo.note.map { note =>
               // remove hashtags, then turn all '[\#' -> '[#'
-              val noteWithoutHashtags = hashtagCommander.removeAllHashtagsFromString(note)
+              val noteWithoutHashtags = Hashtags.removeAllHashtagsFromString(note)
               keepDecorator.unescapeMarkupNotes(noteWithoutHashtags).trim
             } filter (_.nonEmpty)
             Ok(Json.toJson(keepInfo.copy(note = editedNote)))
         }
       case Some(keep) =>
         val editedNote = keep.note.map { noteStr =>
-          val noteWithoutHashtags = hashtagCommander.removeAllHashtagsFromString(noteStr)
+          val noteWithoutHashtags = Hashtags.removeAllHashtagsFromString(noteStr)
           keepDecorator.unescapeMarkupNotes(noteWithoutHashtags).trim
         } filter (_.nonEmpty)
         Future.successful(Ok(Json.toJson(KeepInfo.fromKeep(keep.copy(note = editedNote)))))

@@ -4,11 +4,11 @@ import com.keepit.model.Hashtag
 
 import scala.util.matching.Regex.Match
 
-class HashtagCommander {
+object Hashtags {
 
   def findAllHashtagNames(s: String): Set[String] = {
-    HashtagRegex.hashTagRe.findAllMatchIn(s).map(_ group 1).map { escapedName =>
-      HashtagRegex.backslashUnescapeRe.replaceAllIn(escapedName, "$1")
+    hashTagRe.findAllMatchIn(s).map(_ group 1).map { escapedName =>
+      backslashUnescapeRe.replaceAllIn(escapedName, "$1")
     } toSet
   }
 
@@ -30,13 +30,13 @@ class HashtagCommander {
 
   def appendHashtagNamesToString(str: String, hashtagNames: Seq[String]): String = {
     val tagsStr = hashtagNames.filter(_.nonEmpty).map { tag =>
-      "[#" + HashtagRegex.backslashEscapeRe.replaceAllIn(tag, """\\$0""") + "]"
+      "[#" + backslashEscapeRe.replaceAllIn(tag, """\\$0""") + "]"
     }.mkString(" ")
     (str + " " + tagsStr).trim
   }
 
   def removeAllHashtagsFromString(str: String): String = {
-    HashtagRegex.hashTagRe.replaceAllIn(str, "").trim
+    hashTagRe.replaceAllIn(str, "").trim
   }
 
   def removeHashtagsFromString(str: String, hashtags: Set[Hashtag]): String = {
@@ -45,11 +45,9 @@ class HashtagCommander {
 
   def removeHashtagNamesFromString(str: String, hashtagNames: Set[String]): String = {
     val mapper = (m: Match) => if (hashtagNames.contains(m.group(1))) Some("") else None
-    HashtagRegex.hashTagRe.replaceSomeIn(str, mapper).trim
+    hashTagRe.replaceSomeIn(str, mapper).trim
   }
-}
 
-object HashtagRegex {
   // matches '[#...]'.
   // A literal '[#' indicates the start of a hashtag
   // A literal ']' indicates the end of the hashtag
@@ -57,4 +55,5 @@ object HashtagRegex {
   val hashTagRe = """\[#((?:\\[\\\]]|[^\]])+)\]""".r
   val backslashEscapeRe = """[\]\\]""".r
   val backslashUnescapeRe = """\\(.)""".r
+
 }
