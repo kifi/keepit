@@ -171,7 +171,8 @@ class CollectionRepoImpl @Inject() (
       Map.empty[Id[Keep], Seq[Hashtag]]
     } else {
       import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-      val query = sql"select kc.bookmark_id, c.name from keep_to_collection kc, collection c where kc.bookmark_id in (1,2,3) and c.id = kc.collection_id and c.state='#${CollectionStates.ACTIVE}' and kc.state='#${KeepToCollectionStates.ACTIVE}'"
+      val idSet = "(" + keepIds.mkString(",") + ")"
+      val query = sql"select kc.bookmark_id, c.name from keep_to_collection kc, collection c where kc.bookmark_id in #$idSet and c.id = kc.collection_id and c.state='#${CollectionStates.ACTIVE}' and kc.state='#${KeepToCollectionStates.ACTIVE}'"
       val b = query.as[(Id[Keep], String)].list.map {
         case (id, tagName) =>
           (id, Hashtag(tagName))
