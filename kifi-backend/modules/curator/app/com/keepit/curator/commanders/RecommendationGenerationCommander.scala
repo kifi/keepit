@@ -61,7 +61,7 @@ class RecommendationGenerationCommander @Inject() (
   val recommendationGenerationLock = new ReactiveLock(16)
   val perUserRecommendationGenerationLocks = TrieMap[Id[User], ReactiveLock]()
   val candidateURILock = new ReactiveLock(4)
-  val dbWriteThrottleLock = new ReactiveLock(2)
+  val dbWriteThrottleLock = new ReactiveLock(1)
 
   val superSpecialLock = new ReactiveLock(1)
 
@@ -181,7 +181,7 @@ class RecommendationGenerationCommander @Inject() (
         uriRecRepo.insertAll(newItems)
         updateItems.foreach { uriRecRepo.insertOrUpdate(_) }
 
-        log.info(s"saving scored reco for user ${userId} done. ${itemsForSave.size} saved")
+        log.info(s"saving scored reco for user ${userId} done. ${itemsForSave.size} saved in ${timer.millisSinceCreation() / 1000f} seconds")
 
         genStateRepo.save(newState)
       }
