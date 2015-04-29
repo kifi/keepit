@@ -353,6 +353,7 @@ class AdminBookmarksController @Inject() (
       log.info(s"[Admin] populating ${keepGroup.length} keeps with hashtags in note field")
       db.readWriteBatch(keepGroup) { (s, k) =>
         val newNote = keepNotesMap(k.id.get)
+        log.info(s"[Admin] updating note... new:_${newNote}_ vs. original:_${k.note}_ ${newNote != k.note}")
         if (newNote != k.note) {
           keepRepo.save(k.copy(note = newNote))(s)
         }
