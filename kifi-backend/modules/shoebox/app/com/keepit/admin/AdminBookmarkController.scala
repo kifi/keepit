@@ -331,7 +331,9 @@ class AdminBookmarksController @Inject() (
   def populateKeepNotesWithTag(page: Int = 0, size: Int = 500, grouping: Int = 500) = AdminUserAction {
     log.info(s"[Admin] populating keep notes with its tags page: $page, size: $size, offset: ${page * size}")
     db.readOnlyMaster { implicit s =>
-      keepRepo.page(page, size, Set.empty)
+      val keeps = keepRepo.page(page, size, Set.empty)
+      log.info(s"[Admin] paging through ${keeps.length} keeps...")
+      keeps
     }.grouped(grouping).foreach { keepGroup =>
       val keepIds = keepGroup.map(_.id.get).toSet
       // look for hashtags for every keep
@@ -349,6 +351,7 @@ class AdminBookmarksController @Inject() (
         }
         (k.id.get, newNote.map(_.trim).filter(_.nonEmpty))
       }.toMap
+      log.info(s"[Admin] populating ${keepGroup.length} keeps with hashtags in note field")
       db.readWriteBatch(keepGroup) { (s, k) =>
         val newNote = keepNotesMap(k.id.get)
         if (newNote != k.note) {
