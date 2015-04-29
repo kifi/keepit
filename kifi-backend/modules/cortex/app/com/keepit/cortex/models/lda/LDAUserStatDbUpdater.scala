@@ -135,7 +135,7 @@ class LDAUserStatDbUpdaterImpl @Inject() (
     if (feats.size < min_num_evidence) {
       (None, None)
     } else {
-      val vecs = feats.map { x => toDoubleArray(x.value) }
+      val vecs = feats.map { x => x.value }
       val (mean, std) = getMeanAndStd(vecs)
       val variance = std.map { x => x * x }
       (Some(UserTopicMean(mean)), Some(UserTopicVar(variance)))
