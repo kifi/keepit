@@ -2,7 +2,7 @@ package com.keepit.common.store
 
 import com.amazonaws.services.s3.AmazonS3
 import com.google.inject.{ Provider, Provides, Singleton }
-import com.keepit.common.logging.{Logging, AccessLog}
+import com.keepit.common.logging.{ Logging, AccessLog }
 import com.keepit.inject.AppScoped
 import com.keepit.scraper.embedly.{ EmbedlyStore, InMemoryEmbedlyStoreImpl, S3EmbedlyStoreImpl }
 import com.keepit.social.{ InMemorySocialUserRawInfoStoreImpl, S3SocialUserRawInfoStoreImpl, SocialUserRawInfoStore }
