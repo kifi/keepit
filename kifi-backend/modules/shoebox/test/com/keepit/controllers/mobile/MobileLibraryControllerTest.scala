@@ -458,7 +458,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
              { "keep": {
                 "id":"${k1.externalId}",
                 "title":"krustykrab",
-                "note":"",
+                "note":null,
                 "imageUrl":null,
                 "hashtags":["food1","food2"]
                },
