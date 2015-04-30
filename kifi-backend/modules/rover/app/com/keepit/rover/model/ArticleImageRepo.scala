@@ -7,15 +7,16 @@ import com.keepit.model._
 import org.joda.time.DateTime
 import com.keepit.common.time._
 import com.google.inject.{ Singleton, Inject, ImplementedBy }
-import com.keepit.common.db.slick.DBSession.RSession
+import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.{ VersionNumber, State, Id }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 
 @ImplementedBy(classOf[ArticleImageRepoImpl])
 trait ArticleImageRepo extends Repo[ArticleImage] {
-  def getByUriAndKind[A <: Article](uriId: Id[NormalizedURI], kind: ArticleKind[A], excludeState: Option[State[ArticleImage]] = Some(ArticleImageStates.INACTIVE))(implicit session: RSession): Option[ArticleImage]
+  def getByUriAndKind[A <: Article](uriId: Id[NormalizedURI], kind: ArticleKind[A], excludeState: Option[State[ArticleImage]] = Some(ArticleImageStates.INACTIVE))(implicit session: RSession): Set[ArticleImage]
   def getByUri(uriId: Id[NormalizedURI], excludeState: Option[State[ArticleImage]] = Some(ArticleImageStates.INACTIVE))(implicit session: RSession): Set[ArticleImage]
   def getByUris(uriIds: Set[Id[NormalizedURI]], excludeState: Option[State[ArticleImage]] = Some(ArticleImageStates.INACTIVE))(implicit session: RSession): Map[Id[NormalizedURI], Set[ArticleImage]]
+  def intern[A <: Article](uriId: Id[NormalizedURI], kind: ArticleKind[A], imageHash: ImageHash, imageUrl: String, version: ArticleVersion)(implicit session: RWSession): ArticleImage
 }
 
 @Singleton
@@ -46,8 +47,8 @@ class ArticleImageRepoImpl @Inject() (
 
   override def invalidateCache(model: ArticleImage)(implicit session: RSession): Unit = {}
 
-  def getByUriAndKind[A <: Article](uriId: Id[NormalizedURI], kind: ArticleKind[A], excludeState: Option[State[ArticleImage]] = Some(ArticleImageStates.INACTIVE))(implicit session: RSession): Option[ArticleImage] = {
-    (for (r <- rows if r.uriId === uriId && r.kind === kind.typeCode && r.state =!= excludeState.orNull) yield r).firstOption
+  def getByUriAndKind[A <: Article](uriId: Id[NormalizedURI], kind: ArticleKind[A], excludeState: Option[State[ArticleImage]] = Some(ArticleImageStates.INACTIVE))(implicit session: RSession): Set[ArticleImage] = {
+    (for (r <- rows if r.uriId === uriId && r.kind === kind.typeCode && r.state =!= excludeState.orNull) yield r).list.toSet
   }
 
   def getByUri(uriId: Id[NormalizedURI], excludeState: Option[State[ArticleImage]] = Some(ArticleImageStates.INACTIVE))(implicit session: RSession): Set[ArticleImage] = {
@@ -60,4 +61,21 @@ class ArticleImageRepoImpl @Inject() (
     existingByUriId ++ missingUriIds.map(_ -> Set.empty[ArticleImage])
   }
 
+  private def getByUriAndKindAndImageHash[A <: Article](uriId: Id[NormalizedURI], kind: ArticleKind[A], imageHash: ImageHash)(implicit session: RSession): Option[ArticleImage] = {
+    val q = (for (r <- rows if r.uriId === uriId && r.kind === kind.typeCode && r.imageHash === imageHash) yield r)
+    q.firstOption
+  }
+
+  def intern[A <: Article](uriId: Id[NormalizedURI], kind: ArticleKind[A], imageHash: ImageHash, imageUrl: String, version: ArticleVersion)(implicit session: RWSession): ArticleImage = {
+    getByUriAndKindAndImageHash(uriId, kind, imageHash) match {
+      case Some(existingImage) => {
+        val updatedImage = existingImage.copy(state = ArticleImageStates.ACTIVE, imageUrl = imageUrl, version = version, fetchedAt = currentDateTime)
+        save(updatedImage)
+      }
+      case None => {
+        val newImage = ArticleImage(uriId, kind, version, imageUrl, imageHash)
+        save(newImage)
+      }
+    }
+  }
 }
