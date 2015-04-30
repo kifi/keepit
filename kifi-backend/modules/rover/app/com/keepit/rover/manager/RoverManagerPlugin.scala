@@ -34,6 +34,7 @@ class RoverManagerPluginImpl @Inject() (
     // scheduleTaskOnAllMachines(imageProcessingActor.system, (30 + Random.nextInt(60)) seconds, 1 minute, fetchingActor.ref, IfYouCouldJustGoAhead) todo(Léo): Turn on.
 
     scheduleTaskOnOneMachine(ingestionActor.system, 50 seconds, 30 days, "ImageInfo ingestion") {
+      log.info("Starting ImageInfo ingestion")
       imageInfoCommander.ingestEmbedlyImagesFromShoebox()
     }
     super.onStart()
