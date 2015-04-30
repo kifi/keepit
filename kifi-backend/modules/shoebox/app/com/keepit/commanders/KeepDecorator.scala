@@ -159,10 +159,10 @@ class KeepDecorator @Inject() (
   }
 
   def getBasicKeeps(userId: Id[User], uriIds: Set[Id[NormalizedURI]]): Map[Id[NormalizedURI], Set[BasicKeep]] = {
-    val (allKeeps, libraryMemberships) = db.readOnlyReplica { implicit session =>
-      val allKeeps = keepRepo.getByUserAndUriIds(userId, uriIds)
-      val libraryMemberships = libraryMembershipRepo.getWithLibraryIdsAndUserId(allKeeps.map(_.libraryId.get).toSet, userId)
-      (allKeeps, libraryMemberships)
+    val allKeeps = db.readOnlyReplica { implicit session =>
+      val writeableLibs = libraryMembershipRepo.getLibrariesWithWriteAccess(userId)
+      val allKeeps = keepRepo.getByLibraryIdsAndUriIds(writeableLibs, uriIds)
+      allKeeps
     }
     val grouped = allKeeps.groupBy(_.uriId)
     uriIds.map { uriId =>
@@ -171,7 +171,7 @@ class KeepDecorator @Inject() (
           val userKeeps = keeps.map { keep =>
             val mine = userId == keep.userId
             val libraryId = keep.libraryId.get
-            val removable = libraryMemberships.get(libraryId).exists(_.canWrite)
+            val removable = true // all keeps here are writeable
             BasicKeep(
               id = keep.externalId,
               mine = mine,
