@@ -1,9 +1,11 @@
 package com.keepit.rover.manager
 
 import com.google.inject.Inject
+import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.rover.article.ArticleFetcherProvider
+import com.keepit.rover.commanders.ImageProcessingCommander
 import com.keepit.rover.model.{ RoverArticleInfo, ArticleInfoRepo }
 import com.keepit.rover.store.RoverArticleStore
 import com.kifi.franz.SQSMessage
@@ -25,6 +27,7 @@ class RoverArticleFetchingActor @Inject() (
     airbrake: AirbrakeNotifier,
     articleFetcher: ArticleFetcherProvider,
     articleStore: RoverArticleStore,
+    imageProcessingCommander: ImageProcessingCommander,
     implicit val executionContext: ExecutionContext) extends ConcurrentTaskProcessingActor[SQSMessage[FetchTask]](airbrake) {
 
   protected val minConcurrentTasks: Int = RoverArticleFetchingActor.minConcurrentTasks
@@ -75,6 +78,11 @@ class RoverArticleFetchingActor @Inject() (
             db.readWrite { implicit session =>
               articleInfoRepo.updateAfterFetch(articleInfo.uriId, articleInfo.articleKind, fetched)
             }
+
+          // todo(Léo): Turn on.
+          /*if (fetched.toOption.flatten.isDefined) SafeFuture {
+              imageProcessingCommander.processArticleImagesAsap(articleInfo.id.toSet)
+            }*/
         }
       } imap { _ => () }
     }
