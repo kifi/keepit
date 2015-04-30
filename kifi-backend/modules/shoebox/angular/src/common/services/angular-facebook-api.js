@@ -141,7 +141,7 @@ angular.module('jun.facebook', [])
 				}
 				js = d.createElement(s);
 				js.id = id;
-				js.src = '//connect.facebook.net/en_US/all.js';
+				js.src = '//connect.facebook.net/en_US/sdk.js';
 				js.addEventListener('error', failedToLoadHander);
 				fjs.parentNode.insertBefore(js, fjs);
 			}(window.document, 'script', 'facebook-jssdk'));
@@ -166,7 +166,8 @@ angular.module('jun.facebook', [])
 					xfbml: options.xfbml,
 					authResponse: options.authResponse,
 					frictionlessRequests: options.frictionlessRequests,
-					hideFlashCallback: options.hideFlashCallback
+					hideFlashCallback: options.hideFlashCallback,
+					version: 'v2.0'
 				}, params);
 
 				if (!params.appId) {
