@@ -7,7 +7,7 @@ import com.keepit.curator.model.{ PublicFeedRepo, UriRecommendationRepo }
 import org.joda.time.DateTime
 import com.keepit.common.time._
 import scala.util.{ Failure, Random }
-import com.keepit.common.logging.{NamedStatsdTimer, Logging}
+import com.keepit.common.logging.{ NamedStatsdTimer, Logging }
 
 class RecommendationCleanupCommander @Inject() (
     db: Database,
