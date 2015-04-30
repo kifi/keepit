@@ -35,7 +35,7 @@ document.addEventListener('keydown', function (e) {
         pics.hide('facebook');
       }
     });
-    FB.init({appId: appIds.facebook, status: true});
+    FB.init({appId: appIds.facebook, status: true, version: 'v2.0'});
   };
 
   window.onLoadLinkedInApi = function () {
@@ -84,7 +84,7 @@ document.addEventListener('keydown', function (e) {
   };
 
   var s = document.createElement('SCRIPT');
-  s.src = '//connect.facebook.net/en_US/all.js';
+  s.src = '//connect.facebook.net/en_US/sdk.js';
   s.id = 'facebook-jssdk';
   document.head.appendChild(s);
 
