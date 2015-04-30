@@ -120,6 +120,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getLibraryImageUrls(libraryIds: Set[Id[Library]], idealImageSize: ImageSize): Future[Map[Id[Library], String]]
   def getLibrariesWithWriteAccess(userId: Id[User]): Future[Set[Id[Library]]]
   def getUserActivePersonas(userId: Id[User]): Future[UserActivePersonas]
+  def getImageInfosChanged(seqNum: SequenceNumber[ImageInfo], fetchSize: Int): Future[Seq[ImageInfo]]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -777,5 +778,9 @@ class ShoeboxServiceClientImpl @Inject() (
     cacheProvider.userActivePersonaCache.getOrElseFuture(UserActivePersonasKey(userId)) {
       call(Shoebox.internal.getUserActivePersonas(userId), callTimeouts = longTimeout).map { _.json.as[UserActivePersonas] }
     }
+  }
+
+  def getImageInfosChanged(seqNum: SequenceNumber[ImageInfo], fetchSize: Int): Future[Seq[ImageInfo]] = {
+    call(Shoebox.internal.getImageInfosChanged(seqNum, fetchSize)).map { _.json.as[Seq[ImageInfo]] }
   }
 }

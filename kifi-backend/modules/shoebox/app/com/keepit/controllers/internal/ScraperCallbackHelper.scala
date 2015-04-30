@@ -23,7 +23,6 @@ class ScraperCallbackHelper @Inject() (
     urlPatternRules: UrlPatternRulesCommander,
     normUriRepo: NormalizedURIRepo,
     pageInfoRepo: PageInfoRepo,
-    imageInfoRepo: ImageInfoRepo,
     scrapeInfoRepo: ScrapeInfoRepo,
     implicit val scraperConfig: ScraperSchedulerConfig,
     integrityHelpers: UriIntegrityHelpers) extends Logging {
