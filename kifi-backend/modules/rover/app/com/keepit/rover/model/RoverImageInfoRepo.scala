@@ -4,16 +4,18 @@ import com.keepit.common.db.slick.DataBaseComponent
 import com.keepit.common.db.slick.DbRepo
 import com.keepit.common.db.slick.Repo
 import com.keepit.common.logging.Logging
-import com.keepit.common.store.ImagePath
+import com.keepit.common.store.{ ImageSize, ImagePath }
 import com.keepit.common.time.Clock
+import com.keepit.model.ImageProcessState.UploadedImage
 import com.keepit.model._
 import com.google.inject.{ Singleton, Inject, ImplementedBy }
-import com.keepit.common.db.slick.DBSession.RSession
+import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 
 @ImplementedBy(classOf[RoverImageInfoRepoImpl])
 trait RoverImageInfoRepo extends Repo[RoverImageInfo] {
   def getByImageHash(hash: ImageHash)(implicit session: RSession): Set[RoverImageInfo]
+  def intern(sourceImageHash: ImageHash, imageSource: ImageSource, sourceImageUrl: Option[String], uploadedImage: UploadedImage)(implicit session: RWSession): RoverImageInfo
 }
 
 @Singleton
@@ -49,4 +51,33 @@ class RoverImageInfoRepoImpl @Inject() (
     val q = for (r <- rows if r.state === RoverImageInfoStates.ACTIVE && r.sourceImageHash === hash) yield r
     q.list.toSet
   }
+
+  private def getByImage(sourceImageHash: ImageHash, size: ImageSize, kind: ProcessImageOperation, format: ImageFormat)(implicit session: RSession): Option[RoverImageInfo] = {
+    val q = for (r <- rows if r.sourceImageHash === sourceImageHash && r.width === size.width && r.height === size.height && r.kind === kind && r.format === format) yield r
+    q.firstOption
+  }
+
+  def intern(sourceImageHash: ImageHash, imageSource: ImageSource, sourceImageUrl: Option[String], uploadedImage: UploadedImage)(implicit session: RWSession): RoverImageInfo = {
+    val imageSize = ImageSize(uploadedImage.image)
+    getByImage(sourceImageHash, imageSize, uploadedImage.processOperation, uploadedImage.format) match {
+      case Some(existingInfo) => {
+        val updatedInfo = existingInfo.copy(state = RoverImageInfoStates.ACTIVE, sourceImageUrl = sourceImageUrl, path = uploadedImage.key)
+        save(updatedInfo)
+      }
+      case None => {
+        val newInfo = RoverImageInfo(
+          sourceImageHash = sourceImageHash,
+          width = imageSize.width,
+          height = imageSize.height,
+          kind = uploadedImage.processOperation,
+          format = uploadedImage.format,
+          path = uploadedImage.key,
+          source = imageSource,
+          sourceImageUrl = sourceImageUrl
+        )
+        save(newInfo)
+      }
+    }
+  }
+
 }

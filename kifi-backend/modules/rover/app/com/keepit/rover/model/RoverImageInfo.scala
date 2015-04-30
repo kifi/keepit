@@ -26,6 +26,7 @@ case class RoverImageInfo(
   def isOriginal = (kind == ProcessImageOperation.Original)
   def sourceFileHash = sourceImageHash
   def imagePath = path
+  def isActive = (state == RoverImageInfoStates.ACTIVE)
 }
 
 object RoverImageInfo {

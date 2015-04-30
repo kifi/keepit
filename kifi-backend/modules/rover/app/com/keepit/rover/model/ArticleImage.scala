@@ -24,7 +24,7 @@ case class ArticleImage(
 }
 
 object ArticleImage {
-  def apply(uriId: Id[NormalizedURI], kind: ArticleKind[_], version: ArticleVersion, imageUrl: String, imageHash: ImageHash): ArticleImage = {
+  def apply[A <: Article](uriId: Id[NormalizedURI], kind: ArticleKind[A], version: ArticleVersion, imageUrl: String, imageHash: ImageHash): ArticleImage = {
     ArticleImage(uriId = uriId, kind = kind.typeCode, version = version, fetchedAt = currentDateTime, imageUrl = imageUrl, imageHash = imageHash)
   }
 
