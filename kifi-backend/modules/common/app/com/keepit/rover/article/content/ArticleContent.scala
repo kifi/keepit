@@ -14,7 +14,7 @@ trait ArticleContent[A <: Article] {
   def content: Option[String]
   def keywords: Seq[String]
   def authors: Seq[PageAuthor]
-  def mediaType: Option[String]
+  def contentType: Option[String]
   def publishedAt: Option[DateTime]
 }
 

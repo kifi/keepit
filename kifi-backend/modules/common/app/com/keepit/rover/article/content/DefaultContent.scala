@@ -17,5 +17,5 @@ case class DefaultContent(
     publishedAt: Option[DateTime],
     http: HttpInfo,
     normalization: NormalizationInfo) extends ArticleContent[DefaultArticle] with HttpInfoHolder with NormalizationInfoHolder {
-  def mediaType = openGraphType
+  def contentType = openGraphType
 }
