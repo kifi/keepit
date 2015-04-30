@@ -1,5 +1,9 @@
 .kifi-root.kifi-root.kifi-root,
-.kifi-root.kifi-root.kifi-root * {
+.kifi-root.kifi-root.kifi-root::before,
+.kifi-root.kifi-root.kifi-root::after,
+.kifi-root.kifi-root.kifi-root *,
+.kifi-root.kifi-root.kifi-root *::before,
+.kifi-root.kifi-root.kifi-root *::after {
   -moz-appearance: initial;
   -moz-background-inline-policy: initial;
   -moz-binding: initial;

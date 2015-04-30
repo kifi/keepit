@@ -1289,7 +1289,7 @@ class LibraryCommander @Inject() (
           currentKeepOpt match {
             case None =>
               val newKeep = keepRepo.save(Keep(title = k.title, uriId = k.uriId, url = k.url, urlId = k.urlId, visibility = toLibrary.visibility,
-                userId = userId, source = withSource.getOrElse(k.source), libraryId = Some(toLibraryId), inDisjointLib = toLibrary.isDisjoint))
+                userId = userId, note = k.note, source = withSource.getOrElse(k.source), libraryId = Some(toLibraryId), inDisjointLib = toLibrary.isDisjoint))
               combineTags(k.id.get, newKeep.id.get)
               Right(newKeep)
             case Some(existingKeep) if existingKeep.state == KeepStates.INACTIVE =>

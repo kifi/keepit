@@ -9,7 +9,9 @@ import play.api.Play._
 trait RoverStoreModule
 
 case class RoverProdStoreModule() extends ProdStoreModule with RoverStoreModule {
-  def configure() = {}
+  def configure() = {
+    bind[RoverImageStore].to[S3RoverImageStoreImpl]
+  }
 
   @Provides @Singleton
   def roverArticleStore(amazonS3Client: AmazonS3, accessLog: AccessLog): RoverUnderlyingArticleStore = {
@@ -25,7 +27,9 @@ case class RoverProdStoreModule() extends ProdStoreModule with RoverStoreModule 
 }
 
 case class RoverDevStoreModule() extends DevStoreModule(RoverProdStoreModule()) with RoverStoreModule {
-  def configure() = {}
+  def configure() = {
+    bind[RoverImageStore].to[InMemoryRoverImageStoreImpl]
+  }
 
   @Provides @Singleton
   def roverArticleStore(amazonS3ClientProvider: Provider[AmazonS3], accessLog: AccessLog): RoverUnderlyingArticleStore =

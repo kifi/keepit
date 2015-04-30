@@ -35,7 +35,6 @@ class MobileKeepsController @Inject() (
   normalizedURIInterner: NormalizedURIInterner,
   libraryCommander: LibraryCommander,
   rawBookmarkFactory: RawBookmarkFactory,
-  hashtagCommander: HashtagCommander,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
   implicit val publicIdConfig: PublicIdConfiguration)
     extends UserActions with ShoeboxServiceController {
@@ -180,12 +179,17 @@ class MobileKeepsController @Inject() (
           case Seq(keepInfo) =>
             val editedNote = keepInfo.note.map { note =>
               // remove hashtags, then turn all '[\#' -> '[#'
-              val noteWithoutHashtags = hashtagCommander.removeHashtagsFromString(note)
+              val noteWithoutHashtags = Hashtags.removeAllHashtagsFromString(note)
               keepDecorator.unescapeMarkupNotes(noteWithoutHashtags).trim
-            } filterNot (_.isEmpty)
+            } filter (_.nonEmpty)
             Ok(Json.toJson(keepInfo.copy(note = editedNote)))
         }
-      case Some(keep) => Future.successful(Ok(Json.toJson(KeepInfo.fromKeep(keep))))
+      case Some(keep) =>
+        val editedNote = keep.note.map { noteStr =>
+          val noteWithoutHashtags = Hashtags.removeAllHashtagsFromString(noteStr)
+          keepDecorator.unescapeMarkupNotes(noteWithoutHashtags).trim
+        } filter (_.nonEmpty)
+        Future.successful(Ok(Json.toJson(KeepInfo.fromKeep(keep.copy(note = editedNote)))))
     }
   }
 
@@ -200,27 +204,21 @@ class MobileKeepsController @Inject() (
         val noteOpt = (json \ "note").asOpt[String]
         val tagsOpt = (json \ "tags").asOpt[Seq[String]]
 
-        val newTitle = titleOpt orElse keep.title map { _.trim } filterNot { _.isEmpty }
-        val newNote = noteOpt orElse keep.note map { _.trim } filterNot { _.isEmpty }
+        val titleToPersist = (titleOpt orElse keep.title) map (_.trim) filterNot (_.isEmpty)
+        val noteToPersist = noteOpt map { note =>
+          keepDecorator.escapeMarkupNotes(note).trim
+        } orElse keep.note filter (_.nonEmpty)
 
-        val newNoteWithTags = tagsOpt.map { tagNames =>
-          implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
-          keepsCommander.persistHashtagsForKeep(request.userId, keep.id.get, tagNames)
+        val tagsToPersist = tagsOpt.getOrElse(
+          db.readOnlyMaster { implicit s =>
+            collectionRepo.getHashtagsByKeepId(keep.id.get).map(_.tag).toSeq
+          }
+        )
+        val updatedKeep = keep.copy(title = titleToPersist, note = noteToPersist)
 
-          // first turn all '[#' -> '[\#'
-          val origNote = newNote getOrElse ""
-          val editedNote = keepDecorator.escapeMarkupNotes(origNote)
-
-          // remove all hashtags. Anything user typed in with [#...] has already been converted to [\#...]
-          val noteWithHashtagsRemoved = hashtagCommander.removeHashtagsFromString(editedNote)
-
-          // append all the correct hashtags (in order)
-          hashtagCommander.appendHashtagNamesToString(noteWithHashtagsRemoved, tagNames).trim
-        } orElse newNote filterNot { _.isEmpty }
-
+        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
         db.readWrite { implicit s =>
-          if (newTitle != keep.title || newNoteWithTags != keep.note)
-            keepRepo.save(keep.copy(title = newTitle, note = newNoteWithTags))
+          keepsCommander.persistHashtagsForKeep(request.userId, updatedKeep, tagsToPersist)(s, context)
         }
         NoContent
     }

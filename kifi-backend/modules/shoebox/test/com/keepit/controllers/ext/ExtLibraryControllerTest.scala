@@ -380,7 +380,7 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
         val result1 = getKeep(user1, libPubId, keep.externalId)
         status(result1) === OK
         contentType(result1) must beSome("application/json")
-        contentAsString(result1) === """{"title":"Ya","note":"#Do\u00a0run\u00a0run #Yeah","tags":["Do run run","Yeah"]}"""
+        contentAsString(result1) === """{"title":"Ya","note":"[#Do run run] [#Yeah]","tags":["Do run run","Yeah"]}"""
 
         // invalid keep ID
         val result2 = getKeep(user1, libPubId, ExternalId())
@@ -392,7 +392,7 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
         val result3 = getKeep(user2, libPubId, keep.externalId)
         status(result3) === OK
         contentType(result3) must beSome("application/json")
-        contentAsString(result3) === """{"title":"Ya","note":"#Do\u00a0run\u00a0run #Yeah","tags":["Do run run","Yeah"]}"""
+        contentAsString(result3) === """{"title":"Ya","note":"[#Do run run] [#Yeah]","tags":["Do run run","Yeah"]}"""
 
         // other user with library access revoked cannot get keep
         db.readWrite { implicit s => libraryMembershipRepo.save(mem2.withState(LibraryMembershipStates.INACTIVE)) }

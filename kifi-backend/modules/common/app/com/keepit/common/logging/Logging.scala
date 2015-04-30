@@ -126,6 +126,8 @@ class NamedStatsdTimer(name: String) extends Logging {
     if (appLog) log.info(s"${name}: time elapsed ${elapsed / 1000f} seconds")
     Statsd.timing(name, elapsed.toLong, 1.0)
   }
+
+  def millisSinceCreation(): Long = System.currentTimeMillis - t0
 }
 
 object Logging {
