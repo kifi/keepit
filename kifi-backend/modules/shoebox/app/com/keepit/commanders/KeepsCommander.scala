@@ -433,12 +433,10 @@ class KeepsCommander @Inject() (
 
   def updateKeepNote(userId: Id[User], oldKeep: Keep, newNote: String)(implicit context: HeimdalContext) = {
     val noteToPersist = Some(newNote.trim).filter(_.nonEmpty)
-    if (noteToPersist != oldKeep.note) {
-      val updatedKeep = oldKeep.copy(note = noteToPersist)
-      val hashtagNamesToPersist = Hashtags.findAllHashtagNames(noteToPersist.getOrElse(""))
-      db.readWrite { implicit s =>
-        persistHashtagsForKeep(userId, updatedKeep, hashtagNamesToPersist.toSeq)(s, context)
-      }
+    val updatedKeep = oldKeep.copy(note = noteToPersist)
+    val hashtagNamesToPersist = Hashtags.findAllHashtagNames(noteToPersist.getOrElse(""))
+    db.readWrite { implicit s =>
+      persistHashtagsForKeep(userId, updatedKeep, hashtagNamesToPersist.toSeq)(s, context)
     }
   }
 

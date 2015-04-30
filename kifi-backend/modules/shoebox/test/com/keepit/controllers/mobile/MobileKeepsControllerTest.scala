@@ -952,6 +952,87 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
       }
     }
 
+    "edit note 2" in {
+      withDb(controllerTestModules: _*) { implicit injector =>
+        val (user, keep1, keepWithTags, keepInactive) = db.readWrite { implicit session =>
+          val user = userRepo.save(User(firstName = "Eishay", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
+          val lib = library().withUser(user).saved
+          val keep1 = KeepFactory.keep().withUser(user).withLibrary(lib).withTitle("default").saved
+          val keep2 = KeepFactory.keep().withUser(user).withLibrary(lib).withTitle("default1").saved
+          val keepInactive = KeepFactory.keep().withUser(user).withLibrary(lib).withState(KeepStates.INACTIVE).saved
+
+          val tag1 = collectionRepo.save(Collection(userId = user.id.get, name = Hashtag("tag1")))
+          val tag2 = collectionRepo.save(Collection(userId = user.id.get, name = Hashtag("tag2")))
+          keepToCollectionRepo.save(KeepToCollection(keepId = keep2.id.get, collectionId = tag1.id.get))
+          keepToCollectionRepo.save(KeepToCollection(keepId = keep2.id.get, collectionId = tag2.id.get))
+
+          collectionRepo.count(user.id.get) === 2
+          keepToCollectionRepo.count === 2
+
+          (user, keep1, keep2, keepInactive)
+        }
+
+        def editKeepInfo2(user: User, keep: Keep, body: JsObject): Future[Result] = {
+          inject[FakeUserActionsHelper].setUser(user)
+          val path = com.keepit.controllers.mobile.routes.MobileKeepsController.editKeepInfo2(keep.externalId).url
+          val request = FakeRequest("POST", path).withBody(body)
+          inject[MobileKeepsController].editKeepInfo2(keep.externalId)(request)
+        }
+
+        val testInactiveKeep = editKeepInfo2(user, keepInactive, Json.obj("title" -> "blahablhablhahbla"))
+        status(testInactiveKeep) must equalTo(NOT_FOUND)
+
+        val testEditTitle = editKeepInfo2(user, keep1, Json.obj("title" -> ""))
+        status(testEditTitle) must equalTo(NO_CONTENT)
+        db.readOnlyMaster { implicit s =>
+          val currentKeep = keepRepo.get(keep1.externalId)
+          currentKeep.title === None
+          currentKeep.note === None
+        }
+
+        val testEditNote = editKeepInfo2(user, keep1, Json.obj("note" -> "first comment!"))
+        status(testEditNote) must equalTo(NO_CONTENT)
+        db.readOnlyMaster { implicit s =>
+          val currentKeep = keepRepo.get(keep1.externalId)
+          currentKeep.title === None
+          currentKeep.note === Some("first comment!")
+        }
+
+        val testEditBoth = editKeepInfo2(user, keep1, Json.obj("title" -> "a real keep", "note" -> "a real note"))
+        status(testEditBoth) must equalTo(NO_CONTENT)
+        db.readOnlyMaster { implicit s =>
+          val currentKeep = keepRepo.get(keep1.externalId)
+          currentKeep.title === Some("a real keep")
+          currentKeep.note === Some("a real note")
+        }
+
+        val testEditNothing = editKeepInfo2(user, keep1, Json.obj())
+        status(testEditNothing) must equalTo(NO_CONTENT)
+        db.readOnlyMaster { implicit s =>
+          val currentKeep = keepRepo.get(keep1.externalId)
+          currentKeep.title === Some("a real keep")
+          currentKeep.note === Some("a real note")
+        }
+
+        val testEditWithHashtag = editKeepInfo2(user, keep1, Json.obj("note" -> "a real [#note]"))
+        status(testEditWithHashtag) must equalTo(NO_CONTENT)
+        db.readOnlyMaster { implicit s =>
+          val currentKeep = keepRepo.get(keep1.externalId)
+          currentKeep.title === Some("a real keep")
+          currentKeep.note === Some("a real [#note]")
+          collectionRepo.getHashtagsByKeepId(currentKeep.id.get).map(_.tag) === Set("note")
+        }
+
+        val testEditWithHashtag2 = editKeepInfo2(user, keep1, Json.obj("note" -> "a real [#hashtag] [#anotherHashtag] #asdf"))
+        status(testEditWithHashtag2) must equalTo(NO_CONTENT)
+        db.readOnlyMaster { implicit s =>
+          val currentKeep = keepRepo.get(keep1.externalId)
+          currentKeep.title === Some("a real keep")
+          currentKeep.note === Some("a real [#hashtag] [#anotherHashtag] #asdf")
+          collectionRepo.getHashtagsByKeepId(currentKeep.id.get).map(_.tag) === Set("hashtag", "anotherHashtag")
+        }
+      }
+    }
   }
 
 }

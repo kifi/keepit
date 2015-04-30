@@ -172,7 +172,9 @@ POST    /m/1/page/extensionQuery            @com.keepit.controllers.mobile.Mobil
 POST    /m/1/keeps/add                      @com.keepit.controllers.mobile.MobileKeepsController.keepMultiple()
 POST    /m/1/keeps/addWithTags              @com.keepit.controllers.mobile.MobileKeepsController.addKeepWithTags()
 POST    /m/1/keeps/remove                   @com.keepit.controllers.mobile.MobileKeepsController.unkeepMultiple()
-
+GET     /m/1/keeps/:id                      @com.keepit.controllers.mobile.MobileKeepsController.getKeepInfo(id: ExternalId[Keep], withFullInfo: Boolean ?= false, imageWidth: Option[Int] ?= None, imageHeight: Option[Int] ?= None)
+POST    /m/1/keeps/:id                      @com.keepit.controllers.mobile.MobileKeepsController.editKeepInfo(id: ExternalId[Keep])
+POST    /m/2/keeps/:id                      @com.keepit.controllers.mobile.MobileKeepsController.editKeepInfo2(id: ExternalId[Keep])
 GET     /m/1/keeps/count                    @com.keepit.controllers.mobile.MobileKeepsController.numKeeps()
 
 
@@ -254,6 +256,7 @@ POST    /m/1/libraries/:id/modify               @com.keepit.controllers.mobile.M
 POST    /m/1/libraries/:id/delete               @com.keepit.controllers.mobile.MobileLibraryController.deleteLibrary(id: PublicId[Library])
 GET     /m/1/libraries                          @com.keepit.controllers.mobile.MobileLibraryController.getLibrarySummariesByUser()
 POST    /m/1/libraries                          @com.keepit.controllers.mobile.MobileLibraryController.getLibrarySummariesWithUrl()
+POST    /m/2/libraries                          @com.keepit.controllers.mobile.MobileLibraryController.getLibrarySummariesWithUrl2()
 GET     /m/1/libraries/:id                      @com.keepit.controllers.mobile.MobileLibraryController.getLibraryById(id: PublicId[Library], is: Option[String] ?= None)
 POST    /m/1/libraries/:id/join                 @com.keepit.controllers.mobile.MobileLibraryController.joinLibrary(id: PublicId[Library])
 POST    /m/1/libraries/:id/decline              @com.keepit.controllers.mobile.MobileLibraryController.declineLibrary(id: PublicId[Library])
@@ -269,8 +272,6 @@ POST    /m/1/libraries/recos/feedback      @com.keepit.controllers.website.Libra
 
 POST    /m/1/content/flagUrl                @com.keepit.controllers.mobile.MobileUriController.flagContent()
 
-GET     /m/1/keeps/:id                      @com.keepit.controllers.mobile.MobileKeepsController.getKeepInfo(id: ExternalId[Keep], withFullInfo: Boolean ?= false, imageWidth: Option[Int] ?= None, imageHeight: Option[Int] ?= None)
-POST    /m/1/keeps/:id                      @com.keepit.controllers.mobile.MobileKeepsController.editKeepInfo(id: ExternalId[Keep])
 GET     /m/1/inviteInfo                     @com.keepit.controllers.website.InviteController.getGeneralInviteInfo()
 
 
