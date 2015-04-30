@@ -3,6 +3,7 @@ package com.keepit.commanders
 import java.sql.SQLException
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
+import com.keepit.commanders.ScaleImageRequest
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick.Database
@@ -106,14 +107,8 @@ class KeepImageCommanderImpl @Inject() (
 
           val processDoneFOpt = originalImageOpt.map { originalImage =>
 
-            // hack to eliminate expecting scale versions that have the same scaled bounding box
-            val existingScaleBoundingBoxes = keepImages.filter { _.kind == ProcessImageOperation.Scale }.map { ki => Math.max(ki.width, ki.height) }
-            val expectedVersions = calcSizesForImage(originalImage.imageSize, KeepImageSizes.scaleSizes, KeepImageSizes.cropSizes) filter {
-              case sir: ScaleImageRequest => !existingScaleBoundingBoxes.contains(Math.max(sir.size.width, sir.size.height))
-              case _ => true
-            }
-
-            val missingVersions = expectedVersions -- existingVersions
+            val expectedVersions = calcSizesForImage(originalImage.imageSize, KeepImageSizes.scaleSizes, KeepImageSizes.cropSizes)
+            val missingVersions = filterProcessImageRequests(expectedVersions, existingVersions)
 
             if (missingVersions.nonEmpty) {
               log.info(s"[getBestImagesForKeepsPatiently] keepId=$keepId has missing versions: $missingVersions; existing: $existingVersions; expected $expectedVersions")
@@ -307,7 +302,7 @@ class KeepImageCommanderImpl @Inject() (
             persistSet match {
               case Right(toPersist) =>
                 val loadedImageSize = toPersist.find(_.processOperation == ProcessImageOperation.Original).map { toPersist =>
-                  ImageSize(toPersist.image.getWidth, toPersist.image.getHeight)
+                  ImageSize(toPersist.image)
                 }.get
                 persistImageSet(keepId, source, loadedImage, loadedImageSize, toPersist, overwriteExistingImage, amendExistingImages = false)
               case Left(e) => Future.successful(e)

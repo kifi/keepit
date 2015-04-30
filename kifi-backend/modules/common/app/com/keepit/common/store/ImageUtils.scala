@@ -24,6 +24,8 @@ object ImageSize {
     val xRe(w, h) = size
     ImageSize(w.toInt, h.toInt)
   }
+
+  def apply(bufferedImage: BufferedImage): ImageSize = ImageSize(bufferedImage.getWidth, bufferedImage.getHeight)
 }
 
 //                        w
