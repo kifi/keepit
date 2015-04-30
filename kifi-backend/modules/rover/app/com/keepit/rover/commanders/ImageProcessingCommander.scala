@@ -2,16 +2,18 @@ package com.keepit.rover.commanders
 
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.commanders._
-import com.keepit.common.db.Id
+import com.keepit.common.concurrent.FutureHelpers
+import com.keepit.common.db.{ SequenceNumber, Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.images.Photoshop
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.WebService
 import com.keepit.common.store.{ ImageSize, ImagePath, RoverImageStore }
 import com.keepit.model._
-import com.keepit.rover.article.{ Article, ArticleKind }
+import com.keepit.rover.article.{ EmbedlyArticle, Article, ArticleKind }
 import com.keepit.rover.manager.{ ArticleImageProcessingTask, ArticleImageProcessingTaskQueue }
 import com.keepit.rover.model._
+import com.keepit.shoebox.ShoeboxServiceClient
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.concurrent.duration.Duration
@@ -28,6 +30,8 @@ case class ImageStoreFailureException(failure: ImageStoreFailure) extends Except
 
 @Singleton
 class ImageProcessingCommander @Inject() (
+    shoeboxServiceClient: ShoeboxServiceClient,
+    systemValueRepo: SystemValueRepo,
     db: Database,
     articleInfoRepo: ArticleInfoRepo,
     articleImageRepo: ArticleImageRepo,
@@ -186,4 +190,56 @@ class ImageProcessingCommander @Inject() (
     }
   }
 
+  val imageInfoSeq = Name[SequenceNumber[ImageInfo]]("image_info_migration")
+  val pathPattern = s"""i/([a-z0-9]+)_([0-9]{1,4})x([0-9]{1,4})(${ProcessImageOperation.all.map(_.fileNameSuffix).mkString("|")})[.](jpg|png)""".r
+  def ingestEmbedlyImagesFromShoebox(): Future[Unit] = {
+    FutureHelpers.doUntil {
+      val seq = db.readOnlyMaster { implicit session =>
+        systemValueRepo.getSequenceNumber(imageInfoSeq) getOrElse SequenceNumber.ZERO
+      }
+      shoeboxServiceClient.getImageInfosChanged(seq, 100).map {
+        case Seq() => true
+        case imageInfos => {
+          db.readWrite { implicit session =>
+            imageInfos.foreach { imageInfo =>
+              if (imageInfo.state == ImageInfoStates.ACTIVE && imageInfo.provider.exists(_ == ImageProvider.EMBEDLY)) Try {
+
+                // Parse image path
+                val pathPattern(hashString, width, height, operationSuffix, formatSuffix) = imageInfo.path.path
+                val hash = ImageHash(hashString)
+                val imageSize = ImageSize(width.toInt, height.toInt)
+                val List(processOperation) = ProcessImageOperation.all.filter(_.fileNameSuffix == operationSuffix)
+                val format = formatSuffix match {
+                  case "jpg" => ImageFormat.JPG
+                  case "png" => ImageFormat.PNG
+                }
+
+                // If consistent image path (conservative) ingest
+                if (imageInfo.getImageSize.exists(_ == imageSize) && imageInfo.format.exists(_ == format) && imageInfo.url.isDefined) {
+                  imageInfoRepo.getByImage(hash, imageSize, processOperation, format) match {
+                    case Some(existingInfo) => // ignore
+                    case None => {
+                      val newInfo = RoverImageInfo(
+                        sourceImageHash = hash,
+                        width = imageSize.width,
+                        height = imageSize.height,
+                        kind = processOperation,
+                        format = format,
+                        path = imageInfo.path,
+                        source = ImageSource.RoverArticle(EmbedlyArticle),
+                        sourceImageUrl = Some(imageInfo.url.get)
+                      )
+                      imageInfoRepo.save(newInfo)
+                    }
+                  }
+                }
+              }
+            }
+            systemValueRepo.setSequenceNumber(imageInfoSeq, imageInfos.map(_.seq).max)
+          }
+          false
+        }
+      }
+    }
+  }
 }
