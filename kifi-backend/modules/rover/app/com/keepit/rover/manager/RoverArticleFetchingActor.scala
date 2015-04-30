@@ -45,7 +45,7 @@ class RoverArticleFetchingActor @Inject() (
   }
 
   private def process(task: SQSMessage[FetchTask], articleInfo: RoverArticleInfo): Future[Unit] = {
-    fetch(task, articleInfo) andThen { case _ => task.consume() }
+    fetch(task, articleInfo) andThen { case _ => task.consume() } // failures are handled and persisted to the database, always consume
   }
 
   private def fetch(task: SQSMessage[FetchTask], articleInfo: RoverArticleInfo): Future[Unit] = {
