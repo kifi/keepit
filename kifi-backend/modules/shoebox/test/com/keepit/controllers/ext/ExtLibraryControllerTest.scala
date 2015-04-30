@@ -11,6 +11,12 @@ import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.ImagePath
 import com.keepit.common.time._
+import com.keepit.model.UserFactory._
+import com.keepit.model.UserFactoryHelper._
+import com.keepit.model.LibraryFactory._
+import com.keepit.model.LibraryFactoryHelper._
+import com.keepit.model.KeepFactory._
+import com.keepit.model.KeepFactoryHelper._
 import com.keepit.model._
 import com.keepit.scraper.{ FakeScrapeSchedulerModule, FakeScraperServiceClientModule }
 import com.keepit.shoebox.{ FakeKeepImportsModule, FakeShoeboxServiceModule }
@@ -485,6 +491,50 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
       }
     }
 
+    "update keep note in library" in {
+      withDb(controllerTestModules: _*) { implicit injector =>
+        val (user1, keep1, lib1) = db.readWrite { implicit s =>
+          val user = UserFactory.user().withUsername("spiderman").saved
+          val lib = LibraryFactory.library().withUser(user).saved
+          val keep = KeepFactory.keep().withUser(user).withLibrary(lib).saved
+          (user, keep, lib)
+        }
+        val libPubId1 = Library.publicId(lib1.id.get)(inject[PublicIdConfiguration])
+
+        // empty note -> nonempty note (no hashtags)
+        status(editKeepNote(user1, libPubId1, keep1.externalId, Json.obj("note" -> "thwip!"))) === NO_CONTENT
+        db.readOnlyMaster { implicit s =>
+          val keep = keepRepo.getOpt(keep1.externalId).get
+          keep.note === Some("thwip!")
+          collectionRepo.getHashtagsByKeepId(keep.id.get) === Set.empty
+        }
+
+        // nonempty note -> nonempty note (with hashtags)
+        status(editKeepNote(user1, libPubId1, keep1.externalId, Json.obj("note" -> "thwip! #lol [#tony[sucks\\]] [#avengers] blah"))) === NO_CONTENT
+        db.readOnlyMaster { implicit s =>
+          val keep = keepRepo.getOpt(keep1.externalId).get
+          keep.note === Some("thwip! #lol [#tony[sucks\\]] [#avengers] blah")
+          collectionRepo.getHashtagsByKeepId(keep.id.get).map(_.tag) === Set("tony[sucks]", "avengers")
+        }
+
+        // nonempty note (with hashtags) -> empty note
+        status(editKeepNote(user1, libPubId1, keep1.externalId, Json.obj("note" -> ""))) === NO_CONTENT
+        db.readOnlyMaster { implicit s =>
+          val keep = keepRepo.getOpt(keep1.externalId).get
+          keep.note === None
+          collectionRepo.getHashtagsByKeepId(keep.id.get) === Set.empty
+        }
+
+        // empty note -> non-empty note (with "fake" hashtag)
+        status(editKeepNote(user1, libPubId1, keep1.externalId, Json.obj("note" -> "[\\#trololol]"))) === NO_CONTENT
+        db.readOnlyMaster { implicit s =>
+          val keep = keepRepo.getOpt(keep1.externalId).get
+          keep.note === Some("[\\#trololol]")
+          collectionRepo.getHashtagsByKeepId(keep.id.get) === Set.empty
+        }
+      }
+    }
+
     "tag and untag keep in library" in {
       withDb(controllerTestModules: _*) { implicit injector =>
         val (user1, user2, lib, mem1, mem2, keep1, keep2) = db.readWrite { implicit s =>
@@ -621,6 +671,11 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
   private def updateKeep(user: User, libraryId: PublicId[Library], keepId: ExternalId[Keep], body: JsObject)(implicit injector: Injector): Future[Result] = {
     inject[FakeUserActionsHelper].setUser(user)
     controller.updateKeep(libraryId, keepId)(request(routes.ExtLibraryController.updateKeep(libraryId, keepId)).withBody(body))
+  }
+
+  private def editKeepNote(user: User, libraryId: PublicId[Library], keepId: ExternalId[Keep], body: JsObject)(implicit injector: Injector): Future[Result] = {
+    inject[FakeUserActionsHelper].setUser(user)
+    controller.editKeepNote(libraryId, keepId)(request(routes.ExtLibraryController.editKeepNote(libraryId, keepId)).withBody(body))
   }
 
   private def tagKeep(user: User, libraryId: PublicId[Library], keepId: ExternalId[Keep], tag: String)(implicit injector: Injector): Future[Result] = {

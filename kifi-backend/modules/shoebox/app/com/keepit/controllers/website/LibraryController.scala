@@ -524,6 +524,21 @@ class LibraryController @Inject() (
     }
   }
 
+  def editKeepNote(libraryPubId: PublicId[Library], keepExtId: ExternalId[Keep]) = (UserAction andThen LibraryWriteAction(libraryPubId))(parse.tolerantJson) { request =>
+    db.readOnlyMaster { implicit s =>
+      keepRepo.getOpt(keepExtId)
+    } match {
+      case None =>
+        NotFound(Json.obj("error" -> "keep_id_not_found"))
+      case Some(keep) =>
+        val body = request.body.as[JsObject]
+        val newNote = (body \ "note").as[String]
+        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
+        keepsCommander.updateKeepNote(request.userId, keep, newNote)
+        NoContent
+    }
+  }
+
   def tagKeep(libraryPubId: PublicId[Library], keepExtId: ExternalId[Keep], tag: String) = (UserAction andThen LibraryWriteAction(libraryPubId)) { request =>
     val libraryId = Library.decodePublicId(libraryPubId).get;
 
