@@ -19,14 +19,6 @@ case class ShoeboxProdStoreModule() extends ProdStoreModule with ShoeboxStoreMod
     bind[RoverImageStore].to[S3RoverImageStoreImpl]
   }
 
-  @Singleton
-  @Provides
-  def s3ImageConfig: S3ImageConfig = {
-    val bucket = current.configuration.getString("cdn.bucket")
-    val base = current.configuration.getString("cdn.base")
-    S3ImageConfig(bucket.get, base.get)
-  }
-
   @Provides @Singleton
   def roverImageStoreInbox: RoverImageStoreInbox = {
     val inboxDir = forceMakeTemporaryDirectory(current.configuration.getString("shoebox.temporary.directory").get, "images")
@@ -68,11 +60,6 @@ case class ShoeboxDevStoreModule() extends DevStoreModule(ShoeboxProdStoreModule
     bind[ImageDataIntegrityPlugin].to[ImageDataIntegrityPluginImpl].in[AppScoped]
     bind[RoverImageStore].to[InMemoryRoverImageStoreImpl]
   }
-
-  @Singleton
-  @Provides
-  def s3ImageConfig: S3ImageConfig =
-    whenConfigured("cdn.bucket")(prodStoreModule.s3ImageConfig).getOrElse(S3ImageConfig("", "http://dev.ezkeep.com:9000", true))
 
   @Singleton
   @Provides
