@@ -350,11 +350,15 @@ class AdminBookmarksController @Inject() (
         (k.id.get, newNote.map(_.trim).filter(_.nonEmpty))
       }.toMap
       log.info(s"[Admin] populating ${keepGroup.length} keeps with hashtags in note field")
-      db.readWriteBatch(keepGroup) { (s, k) =>
-        val newNote = keepNotesMap(k.id.get)
-        log.info(s"[Admin] updating note... new:_${newNote}_ vs. original:_${k.note}_ ${newNote != k.note}")
-        if (newNote != k.note) {
-          keepRepo.save(k.copy(note = newNote))(s)
+      db.readWrite { implicit s =>
+        keepGroup.map { k =>
+          val newNote = keepNotesMap(k.id.get)
+          log.info(s"[Admin] updating note... new:_${newNote}_ vs. original:_${k.note}_ ${newNote != k.note}")
+          if (newNote != k.note) {
+            log.info(s"[Admin] really updating note... ${k.id.get}")
+            val updatedK = keepRepo.save(k.copy(note = newNote))
+            log.info(s"[Admin] UPDATED! ${updatedK}")
+          }
         }
       }
     }
