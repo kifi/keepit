@@ -125,13 +125,27 @@ class MobileLibraryController @Inject() (
     }
   }
 
+  // this endpoint gives you a list of libraries you can keep to
+  // with information about active keeps (in those libraries) with the same url
+  // this endpoint also strips out hashtags in keep notes
   def getLibrarySummariesWithUrl = UserAction(parse.tolerantJson) { request =>
     val urlOpt = (request.body \ "url").asOpt[String]
-    val parseUrl = urlOpt.map { url =>
-      pageCommander.getUrlInfo(url, request.userId)
-    }
+    Ok(getWritableLibrariesForUrl(request.userId, urlOpt, true))
+  }
 
-    val (librariesWithMemberships, _) = libraryCommander.getLibrariesByUser(request.userId)
+  // this endpoint gives you a list of libraries you can keep to
+  // with information about active keeps (in those libraries) with the same url
+  // this endpoint gives keep notes as is from the database
+  def getLibrarySummariesWithUrl2 = UserAction(parse.tolerantJson) { request =>
+    val urlOpt = (request.body \ "url").asOpt[String]
+    Ok(getWritableLibrariesForUrl(request.userId, urlOpt, false))
+  }
+
+  private def getWritableLibrariesForUrl(userId: Id[User], urlOpt: Option[String], parseNote: Boolean): JsObject = {
+    val parseUrl = urlOpt.map { url =>
+      pageCommander.getUrlInfo(url, userId)
+    }
+    val (librariesWithMemberships, _) = libraryCommander.getLibrariesByUser(userId)
     val writeableLibraries = librariesWithMemberships.filter {
       case (membership, _) =>
         membership.canWrite
@@ -163,15 +177,16 @@ class MobileLibraryController @Inject() (
           keepDataList.map { keepData =>
             keepMap(keepData.id) match {
               case Some(keep) =>
-                val keepImageUrl = keepImageCommander.getBestImageForKeep(keep.id.get, ScaleImageRequest(MobileLibraryController.defaultKeepImageSize)).flatten.map(keepImageCommander.getUrl)
-
-                // remove hashtags, then turn all '[\#' -> '[#'
-                val editedKeepNote = keep.note.map { note =>
-                  val noteWithoutHashtags = Hashtags.removeAllHashtagsFromString(note)
-                  keepDecorator.unescapeMarkupNotes(noteWithoutHashtags).trim
+                val keepNoteToShow = if (parseNote) {
+                  keep.note.map { note =>
+                    val noteWithoutHashtags = Hashtags.removeAllHashtagsFromString(note)
+                    keepDecorator.unescapeMarkupNotes(noteWithoutHashtags).trim
+                  }
+                } else {
+                  keep.note
                 }
-
-                val keepObj = Json.obj("id" -> keep.externalId, "title" -> keep.title, "note" -> editedKeepNote, "imageUrl" -> keepImageUrl, "hashtags" -> Json.toJson(collectionRepo.getHashtagsByKeepId(keep.id.get)))
+                val keepImageUrl = keepImageCommander.getBestImageForKeep(keep.id.get, ScaleImageRequest(MobileLibraryController.defaultKeepImageSize)).flatten.map(keepImageCommander.getUrl)
+                val keepObj = Json.obj("id" -> keep.externalId, "title" -> keep.title, "note" -> keepNoteToShow, "imageUrl" -> keepImageUrl, "hashtags" -> Json.toJson(collectionRepo.getHashtagsByKeepId(keep.id.get)))
                 Json.obj("keep" -> keepObj) ++ Json.toJson(keepData).as[JsObject] - ("id")
 
               case _ => Json.obj()
@@ -180,7 +195,7 @@ class MobileLibraryController @Inject() (
         }
         Json.obj("alreadyKept" -> completeKeepData)
     }.getOrElse(Json.obj())
-    Ok(libsResponse ++ keepResponse)
+    libsResponse ++ keepResponse
   }
 
   def getLibrarySummariesByUser = UserAction { request =>

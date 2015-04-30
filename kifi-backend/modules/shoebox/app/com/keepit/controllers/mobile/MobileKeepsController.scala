@@ -14,6 +14,7 @@ import play.api.libs.json._
 import com.keepit.common.akka.SafeFuture
 import com.google.inject.Inject
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.api.mvc.Result
 import scala.concurrent.Future
 import com.keepit.common.store.ImageSize
 import com.keepit.commanders.CollectionSaveFail
@@ -163,9 +164,18 @@ class MobileKeepsController @Inject() (
     Ok(Json.obj())
   }
 
+  // this endpoint strips out any hashtags in note field (this version for before hashtags were allowed in notes)
   def getKeepInfo(id: ExternalId[Keep], withFullInfo: Boolean, idealImageWidth: Option[Int], idealImageHeight: Option[Int]) = UserAction.async { request =>
-    val keepOpt = db.readOnlyMaster { implicit s => keepRepo.getOpt(id).filter(_.isActive) }
+    getKeepInfoForKeep(request.userIdOpt, id, withFullInfo, idealImageWidth, idealImageHeight, true)
+  }
 
+  // this endpoint gets keep information as is (with hashtags in the note field)
+  def getKeepInfo2(id: ExternalId[Keep], withFullInfo: Boolean, idealImageWidth: Option[Int], idealImageHeight: Option[Int]) = UserAction.async { request =>
+    getKeepInfoForKeep(request.userIdOpt, id, withFullInfo, idealImageWidth, idealImageHeight, false)
+  }
+
+  private def getKeepInfoForKeep(userIdOpt: Option[Id[User]], id: ExternalId[Keep], withFullInfo: Boolean, idealImageWidth: Option[Int], idealImageHeight: Option[Int], parseNote: Boolean): Future[Result] = {
+    val keepOpt = db.readOnlyMaster { implicit s => keepRepo.getOpt(id).filter(_.isActive) }
     keepOpt match {
       case None => Future.successful(NotFound(Json.obj("error" -> "not_found")))
       case Some(keep) if withFullInfo =>
@@ -175,24 +185,36 @@ class MobileKeepsController @Inject() (
             h <- idealImageHeight
           } yield ImageSize(w, h)
         } getOrElse ProcessedImageSize.Large.idealSize
-        keepDecorator.decorateKeepsIntoKeepInfos(request.userIdOpt, false, Seq(keep), idealImageSize, withKeepTime = true).imap {
+        keepDecorator.decorateKeepsIntoKeepInfos(userIdOpt, false, Seq(keep), idealImageSize, withKeepTime = true).imap {
           case Seq(keepInfo) =>
-            val editedNote = keepInfo.note.map { note =>
-              // remove hashtags, then turn all '[\#' -> '[#'
-              val noteWithoutHashtags = Hashtags.removeAllHashtagsFromString(note)
-              keepDecorator.unescapeMarkupNotes(noteWithoutHashtags).trim
-            } filter (_.nonEmpty)
-            Ok(Json.toJson(keepInfo.copy(note = editedNote)))
+            val noteToShow = if (parseNote) {
+              keepInfo.note.map { note =>
+                // remove hashtags, then turn all '[\#' -> '[#'
+                val noteWithoutHashtags = Hashtags.removeAllHashtagsFromString(note)
+                keepDecorator.unescapeMarkupNotes(noteWithoutHashtags).trim
+              } filter (_.nonEmpty)
+            } else {
+              keepInfo.note
+            }
+            Ok(Json.toJson(keepInfo.copy(note = noteToShow)))
         }
       case Some(keep) =>
-        val editedNote = keep.note.map { noteStr =>
-          val noteWithoutHashtags = Hashtags.removeAllHashtagsFromString(noteStr)
-          keepDecorator.unescapeMarkupNotes(noteWithoutHashtags).trim
-        } filter (_.nonEmpty)
-        Future.successful(Ok(Json.toJson(KeepInfo.fromKeep(keep.copy(note = editedNote)))))
+        val noteToShow = if (parseNote) {
+          keep.note.map { note =>
+            // remove hashtags, then turn all '[\#' -> '[#'
+            val noteWithoutHashtags = Hashtags.removeAllHashtagsFromString(note)
+            keepDecorator.unescapeMarkupNotes(noteWithoutHashtags).trim
+          } filter (_.nonEmpty)
+        } else {
+          keep.note
+        }
+        Future.successful(Ok(Json.toJson(KeepInfo.fromKeep(keep.copy(note = noteToShow)))))
     }
   }
 
+  // this endpoint takes in a notes & tags field
+  // it escapes any "fake" hashtags in the notes field
+  // and any tags that persist update the keep's note field
   def editKeepInfo(id: ExternalId[Keep]) = UserAction(parse.tolerantJson) { request =>
     val keepOpt = db.readOnlyMaster { implicit s => keepRepo.getOpt(id).filter(_.isActive) }
     keepOpt match {
@@ -219,6 +241,30 @@ class MobileKeepsController @Inject() (
         implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
         db.readWrite { implicit s =>
           keepsCommander.persistHashtagsForKeep(request.userId, updatedKeep, tagsToPersist)(s, context)
+        }
+        NoContent
+    }
+  }
+
+  // This endpoint doesn't consider a 'tags' field.
+  // Instead, it will persist the given note field as is in the database & persist hashtags for that keep
+  def editKeepInfo2(id: ExternalId[Keep]) = UserAction(parse.tolerantJson) { request =>
+    db.readOnlyMaster { implicit s =>
+      keepRepo.getOpt(id).filter(_.isActive)
+    } match {
+      case None =>
+        NotFound(Json.obj("error" -> "not_found"))
+      case Some(keep) =>
+        val json = request.body
+        val titleOpt = (json \ "title").asOpt[String]
+        val noteOpt = (json \ "note").asOpt[String]
+
+        val titleToPersist = (titleOpt orElse keep.title) map (_.trim) filter (_.nonEmpty)
+        val noteToPersist = (noteOpt orElse keep.note) map (_.trim) filter (_.nonEmpty)
+
+        if (titleToPersist != keep.title || noteToPersist != keep.note) {
+          implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
+          keepsCommander.updateKeepNote(request.userId, keep.copy(title = titleToPersist), noteToPersist.getOrElse(""))
         }
         NoContent
     }
