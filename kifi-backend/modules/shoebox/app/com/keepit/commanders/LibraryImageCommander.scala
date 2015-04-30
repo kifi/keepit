@@ -41,7 +41,6 @@ class LibraryImageCommanderImpl @Inject() (
     libraryImageRequestRepo: LibraryImageRequestRepo,
     imageStore: RoverImageStore,
     libraryAnalytics: LibraryAnalytics,
-    imageInfoRepo: ImageInfoRepo,
     s3ImageConfig: S3ImageConfig,
     normalizedUriRepo: NormalizedURIRepo,
     photoshop: Photoshop,
