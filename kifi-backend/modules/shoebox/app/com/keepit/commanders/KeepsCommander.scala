@@ -91,7 +91,6 @@ class KeepsCommander @Inject() (
     userExperimentRepo: UserExperimentRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
     hashtagTypeahead: HashtagTypeahead,
-    hashtagCommander: HashtagCommander,
     keepDecorator: KeepDecorator,
     twitterPublishingCommander: TwitterPublishingCommander,
     facebookPublishingCommander: FacebookPublishingCommander,
@@ -435,13 +434,11 @@ class KeepsCommander @Inject() (
   def updateKeepNote(userId: Id[User], oldKeep: Keep, newNote: String)(implicit context: HeimdalContext) = {
     val noteToPersist = Some(newNote.trim).filter(_.nonEmpty)
     if (noteToPersist != oldKeep.note) {
-      val updatedKeep = db.readWrite { implicit s =>
-        keepRepo.save(oldKeep.copy(note = noteToPersist))
+      val updatedKeep = oldKeep.copy(note = noteToPersist)
+      val hashtagNamesToPersist = Hashtags.findAllHashtagNames(noteToPersist.getOrElse(""))
+      db.readWrite { implicit s =>
+        persistHashtagsForKeep(userId, updatedKeep, hashtagNamesToPersist.toSeq)(s, context)
       }
-      val hashtagNamesToPersist = hashtagCommander.findAllHashtagNames(noteToPersist.getOrElse(""))
-      persistHashtagsForKeep(userId, updatedKeep.id.get, hashtagNamesToPersist.toSeq)
-      searchClient.updateKeepIndex()
-      libraryAnalytics.updatedKeep(oldKeep, updatedKeep, context)
     }
   }
 

@@ -20,10 +20,6 @@ import org.joda.time.DateTime
 import org.specs2.mutable.Specification
 import com.keepit.shoebox.{ FakeShoeboxServiceModule, FakeKeepImportsModule }
 import com.keepit.common.store.FakeShoeboxStoreModule
-import com.keepit.model.UserFactory._
-import com.keepit.model.UserFactoryHelper._
-import com.keepit.model.KeepFactory._
-import com.keepit.model.KeepFactoryHelper._
 
 class KeepsCommanderTest extends Specification with ShoeboxTestInjector {
 
