@@ -7,7 +7,7 @@ import com.keepit.curator.model.{ PublicFeedRepo, UriRecommendationRepo }
 import org.joda.time.DateTime
 import com.keepit.common.time._
 import scala.util.{ Failure, Random }
-import com.keepit.common.logging.Logging
+import com.keepit.common.logging.{ NamedStatsdTimer, Logging }
 
 class RecommendationCleanupCommander @Inject() (
     db: Database,
@@ -18,6 +18,7 @@ class RecommendationCleanupCommander @Inject() (
   private val defaultLimitNumRecosForUser = 300
   def cleanup(overrideLimit: Option[Int] = None, overrideTimeCutoff: Option[DateTime] = None): Unit = {
     val userToClean = Random.shuffle(db.readOnlyReplica { implicit session => uriRecoRepo.getUsersWithRecommendations() }.toSeq).take(75)
+    val timer = new NamedStatsdTimer("RecommendationCleanupCommander.cleanup")
     log.info(s"Running Uri Reco Cleanup for $userToClean")
     db.readWriteBatch(userToClean) { (session, userId) =>
       uriRecoRepo.cleanupOldRecos(userId, currentDateTime.minusDays(recosTTL))(session)
@@ -29,5 +30,6 @@ class RecommendationCleanupCommander @Inject() (
           case _ =>
         }
     }
+    timer.stopAndReport(appLog = true)
   }
 }
