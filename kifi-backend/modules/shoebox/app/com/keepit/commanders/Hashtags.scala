@@ -48,6 +48,21 @@ object Hashtags {
     hashTagRe.replaceSomeIn(str, mapper).trim
   }
 
+  // gives back a note with hashtags stripped out & markups unescaped (reverted back to normal)
+  def formatMobileNoteV1(note: Option[String]) = {
+    note.map { noteStr =>
+      val noteWithoutHashtags = Hashtags.removeAllHashtagsFromString(noteStr)
+      val note2 = if (noteWithoutHashtags.nonEmpty && noteWithoutHashtags != noteStr) {
+        hashTagRe.replaceAllIn(noteStr, m => {
+          "#" + backslashUnescapeRe.replaceAllIn(m.group(1), "$1")
+        })
+      } else {
+        noteWithoutHashtags
+      }
+      KeepDecorator.unescapeMarkupNotes(note2).trim
+    } filter (_.nonEmpty)
+  }
+
   // matches '[#...]'.
   // A literal '[#' indicates the start of a hashtag
   // A literal ']' indicates the end of the hashtag

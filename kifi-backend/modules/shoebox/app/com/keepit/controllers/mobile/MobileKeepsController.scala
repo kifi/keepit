@@ -49,7 +49,7 @@ class MobileKeepsController @Inject() (
         }
       }
       val helprank = helprankOpt map (selector => Json.obj("helprank" -> selector)) getOrElse Json.obj()
-      val sanitizedKeeps = res.map(k => k.copy(url = URISanitizer.sanitize(k.url)))
+      val sanitizedKeeps = res.map(k => k.copy(url = URISanitizer.sanitize(k.url), note = Hashtags.formatMobileNoteV1(k.note)))
       Ok(Json.obj(
         "collection" -> basicCollection,
         "before" -> before,
@@ -177,19 +177,10 @@ class MobileKeepsController @Inject() (
         } getOrElse ProcessedImageSize.Large.idealSize
         keepDecorator.decorateKeepsIntoKeepInfos(request.userIdOpt, false, Seq(keep), idealImageSize, withKeepTime = true).imap {
           case Seq(keepInfo) =>
-            val editedNote = keepInfo.note.map { note =>
-              // remove hashtags, then turn all '[\#' -> '[#'
-              val noteWithoutHashtags = Hashtags.removeAllHashtagsFromString(note)
-              keepDecorator.unescapeMarkupNotes(noteWithoutHashtags).trim
-            } filter (_.nonEmpty)
-            Ok(Json.toJson(keepInfo.copy(note = editedNote)))
+            Ok(Json.toJson(keepInfo.copy(note = Hashtags.formatMobileNoteV1(keepInfo.note))))
         }
       case Some(keep) =>
-        val editedNote = keep.note.map { noteStr =>
-          val noteWithoutHashtags = Hashtags.removeAllHashtagsFromString(noteStr)
-          keepDecorator.unescapeMarkupNotes(noteWithoutHashtags).trim
-        } filter (_.nonEmpty)
-        Future.successful(Ok(Json.toJson(KeepInfo.fromKeep(keep.copy(note = editedNote)))))
+        Future.successful(Ok(Json.toJson(KeepInfo.fromKeep(keep.copy(note = Hashtags.formatMobileNoteV1(keep.note))))))
     }
   }
 
@@ -206,7 +197,7 @@ class MobileKeepsController @Inject() (
 
         val titleToPersist = (titleOpt orElse keep.title) map (_.trim) filterNot (_.isEmpty)
         val noteToPersist = noteOpt map { note =>
-          keepDecorator.escapeMarkupNotes(note).trim
+          KeepDecorator.escapeMarkupNotes(note).trim
         } orElse keep.note filter (_.nonEmpty)
 
         val tagsToPersist = tagsOpt.getOrElse(

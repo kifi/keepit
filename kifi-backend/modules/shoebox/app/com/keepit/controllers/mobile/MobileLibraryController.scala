@@ -104,7 +104,10 @@ class MobileLibraryController @Inject() (
     libraryCommander.getLibraryById(request.userIdOpt, false, libraryId, idealSize) map { libInfo =>
       val memOpt = libraryCommander.getMaybeMembership(request.userIdOpt, libraryId)
       val accessStr = memOpt.map(_.access.value).getOrElse("none")
-      Ok(Json.obj("library" -> Json.toJson(libInfo), "membership" -> accessStr))
+      val editedLibInfo = libInfo.copy(keeps = libInfo.keeps.map { k =>
+        k.copy(note = Hashtags.formatMobileNoteV1(k.note))
+      })
+      Ok(Json.obj("library" -> Json.toJson(editedLibInfo), "membership" -> accessStr))
     }
   }
 
@@ -164,14 +167,7 @@ class MobileLibraryController @Inject() (
             keepMap(keepData.id) match {
               case Some(keep) =>
                 val keepImageUrl = keepImageCommander.getBestImageForKeep(keep.id.get, ScaleImageRequest(MobileLibraryController.defaultKeepImageSize)).flatten.map(keepImageCommander.getUrl)
-
-                // remove hashtags, then turn all '[\#' -> '[#'
-                val editedKeepNote = keep.note.map { note =>
-                  val noteWithoutHashtags = Hashtags.removeAllHashtagsFromString(note)
-                  keepDecorator.unescapeMarkupNotes(noteWithoutHashtags).trim
-                }
-
-                val keepObj = Json.obj("id" -> keep.externalId, "title" -> keep.title, "note" -> editedKeepNote, "imageUrl" -> keepImageUrl, "hashtags" -> Json.toJson(collectionRepo.getHashtagsByKeepId(keep.id.get)))
+                val keepObj = Json.obj("id" -> keep.externalId, "title" -> keep.title, "note" -> Hashtags.formatMobileNoteV1(keep.note), "imageUrl" -> keepImageUrl, "hashtags" -> Json.toJson(collectionRepo.getHashtagsByKeepId(keep.id.get)))
                 Json.obj("keep" -> keepObj) ++ Json.toJson(keepData).as[JsObject] - ("id")
 
               case _ => Json.obj()
@@ -309,7 +305,10 @@ class MobileLibraryController @Inject() (
           keeps <- libraryCommander.getKeeps(libraryId, offset, limit)
           keepInfos <- keepDecorator.decorateKeepsIntoKeepInfos(request.userIdOpt, false, keeps, idealImageSize, withKeepTime = true)
         } yield {
-          Ok(Json.obj("keeps" -> keepInfos))
+          val editedKeepInfos = keepInfos.map { kInfo =>
+            kInfo.copy(note = Hashtags.formatMobileNoteV1(kInfo.note))
+          }
+          Ok(Json.obj("keeps" -> editedKeepInfos))
         }
     }
   }
