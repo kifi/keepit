@@ -17,10 +17,10 @@ class RecommendationCleanupCommander @Inject() (
 
   private val recosTTL = 30 // days (by updateAt)
   private val defaultLimitNumRecosForUser = 300
-  def cleanup(overrideLimit: Option[Int] = None, overrideTimeCutoff: Option[DateTime] = None): Unit = {
+  def cleanup(overrideLimit: Option[Int] = None, overrideTimeCutoff: Option[DateTime] = None, useSubset: Boolean = true): Unit = {
     val usersWithReco = db.readOnlyReplica { implicit session => uriRecoRepo.getUsersWithRecommendations() }.toSeq
     val (idx, ringSize) = getIndexAndTotalSize
-    val userToClean = usersWithReco.filter(_.id % ringSize == idx)
+    val userToClean = if (useSubset) usersWithReco.filter(_.id % ringSize == idx) else usersWithReco
 
     val timer = new NamedStatsdTimer("RecommendationCleanupCommander.cleanup")
     log.info(s"Running Uri Reco Cleanup for ${userToClean.size} users. slice $idx out of $ringSize")
