@@ -4,8 +4,8 @@ import java.io.File
 
 import com.amazonaws.services.s3.AmazonS3
 import com.google.inject.{ Provides, Singleton }
-import com.keepit.common.logging.{Logging, AccessLog}
-import com.keepit.common.store.{StoreModule, DevStoreModule, ProdStoreModule, S3Bucket}
+import com.keepit.common.logging.{ Logging, AccessLog }
+import com.keepit.common.store.{ StoreModule, DevStoreModule, ProdStoreModule, S3Bucket }
 import com.keepit.search.index.{ InMemoryIndexStoreImpl, IndexStore, IndexStoreInbox, S3IndexStoreImpl }
 import com.keepit.search.tracking.{ ClickHistoryBuilder, ClickHistoryStore, ClickHistoryUserIdCache, InMemoryClickHistoryStoreImpl, S3ClickHistoryStoreImpl }
 import org.apache.commons.io.FileUtils
