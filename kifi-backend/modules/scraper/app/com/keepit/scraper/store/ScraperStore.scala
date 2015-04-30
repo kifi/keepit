@@ -13,15 +13,6 @@ case class ScraperProdStoreModule() extends ProdStoreModule {
   def configure() {
   }
 
-  @Singleton
-  @Provides
-  def s3ImageConfig: S3ImageConfig = {
-    val bucket = current.configuration.getString("cdn.bucket")
-    val base = current.configuration.getString("cdn.base")
-    S3ImageConfig(bucket.get, base.get)
-
-  }
-
   @Provides @Singleton
   def uriImageStoreInbox: UriImageStoreInbox = {
     val inboxDir = forceMakeTemporaryDirectory(current.configuration.getString("scraper.temporary.directory").get, "uri_images")
@@ -39,11 +30,6 @@ case class ScraperProdStoreModule() extends ProdStoreModule {
 case class ScraperDevStoreModule() extends DevStoreModule(ScraperProdStoreModule()) {
   def configure() {
   }
-
-  @Singleton
-  @Provides
-  def s3ImageConfig: S3ImageConfig =
-    whenConfigured("cdn.bucket")(prodStoreModule.s3ImageConfig).getOrElse(S3ImageConfig("", "http://dev.ezkeep.com:9000", true))
 
   @Provides @Singleton
   def uriImageStoreInbox: UriImageStoreInbox = whenConfigured("scraper.temporary.directory")(prodStoreModule.uriImageStoreInbox) getOrElse {
