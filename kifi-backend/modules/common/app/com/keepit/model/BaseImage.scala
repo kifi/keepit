@@ -51,10 +51,7 @@ sealed trait ImageStoreInProgress extends ImageProcessState
 sealed trait ImageProcessDone extends ImageProcessState
 
 sealed trait ImageProcessSuccess extends ImageProcessDone
-sealed abstract class ImageStoreFailure(val reason: String) extends ImageProcessState with ImageProcessDone
-sealed abstract class ImageStoreFailureWithException(ex: Throwable, reason: String) extends ImageStoreFailure(reason) {
-  def getCause: Throwable = ex
-}
+sealed abstract class ImageStoreFailure(val reason: String, val cause: Option[Throwable] = None) extends ImageProcessState with ImageProcessDone
 
 object ImageProcessState {
   // In-progress
@@ -64,13 +61,13 @@ object ImageProcessState {
   case class UploadedImage(key: ImagePath, format: ImageFormat, image: BufferedImage, processOperation: ProcessImageOperation) extends ImageStoreInProgress
 
   // Failures
-  case class UpstreamProviderFailed(ex: Throwable) extends ImageStoreFailureWithException(ex, "upstream_provider_failed")
+  case class UpstreamProviderFailed(ex: Throwable) extends ImageStoreFailure("upstream_provider_failed", Some(ex))
   case object UpstreamProviderNoImage extends ImageStoreFailure("upstream_provider_no_image")
-  case class SourceFetchFailed(ex: Throwable) extends ImageStoreFailureWithException(ex, "source_fetch_failed")
-  case class HashFailed(ex: Throwable) extends ImageStoreFailureWithException(ex, "image_hash_failed")
-  case class InvalidImage(ex: Throwable) extends ImageStoreFailureWithException(ex, "invalid_image")
-  case class DbPersistFailed(ex: Throwable) extends ImageStoreFailureWithException(ex, "db_persist_failed")
-  case class CDNUploadFailed(ex: Throwable) extends ImageStoreFailureWithException(ex, "cdn_upload_failed")
+  case class SourceFetchFailed(ex: Throwable) extends ImageStoreFailure("source_fetch_failed", Some(ex))
+  case class HashFailed(ex: Throwable) extends ImageStoreFailure("image_hash_failed", Some(ex))
+  case class InvalidImage(ex: Throwable) extends ImageStoreFailure("invalid_image", Some(ex))
+  case class DbPersistFailed(ex: Throwable) extends ImageStoreFailure("db_persist_failed", Some(ex))
+  case class CDNUploadFailed(ex: Throwable) extends ImageStoreFailure("cdn_upload_failed", Some(ex))
 
   // Success
   case class StoreSuccess(format: ImageFormat, size: ImageSize, bytes: Int) extends ImageProcessState with ImageProcessSuccess
