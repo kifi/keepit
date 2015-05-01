@@ -44,14 +44,17 @@ class ExtLibraryController @Inject() (
     extends UserActions with LibraryAccessActions with ShoeboxServiceController {
 
   def getLibraries() = UserAction { request =>
-    val datas = libraryCommander.getLibrariesUserCanKeepTo(request.userId) map { lib =>
-      val owner = db.readOnlyMaster { implicit s => basicUserRepo.load(lib.ownerId) }
-      LibraryData(
-        id = Library.publicId(lib.id.get),
-        name = lib.name,
-        color = lib.color,
-        visibility = lib.visibility,
-        path = Library.formatLibraryPath(owner.username, lib.slug))
+    val datas = libraryCommander.getLibrariesUserCanKeepTo(request.userId) map {
+      case (lib, hasCollaborators) =>
+        val owner = db.readOnlyMaster { implicit s => basicUserRepo.load(lib.ownerId) }
+        LibraryData(
+          id = Library.publicId(lib.id.get),
+          name = lib.name,
+          color = lib.color,
+          visibility = lib.visibility,
+          path = Library.formatLibraryPath(owner.username, lib.slug),
+          hasCollaborators = hasCollaborators
+        )
     }
     Ok(Json.obj("libraries" -> datas))
   }
@@ -71,7 +74,8 @@ class ExtLibraryController @Inject() (
           name = lib.name,
           color = lib.color,
           visibility = lib.visibility,
-          path = Library.formatLibraryPath(request.user.username, lib.slug))))
+          path = Library.formatLibraryPath(request.user.username, lib.slug),
+          hasCollaborators = false)))
     }
   }
 

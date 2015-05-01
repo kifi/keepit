@@ -162,8 +162,13 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def countFollowerInfosByLibraryId(libraries: Seq[Library], maxMembersShown: Int, viewerUserIdOpt: Option[Id[User]]): Map[Id[Library], (Seq[Id[User]], CountWithLibraryIdByAccess)] = libraries.map { library =>
-    val info: (Seq[Id[User]], CountWithLibraryIdByAccess) = library.kind match {
+  private case class LibMembersAndCounts(counts: CountWithLibraryIdByAccess, inviters: Seq[Id[User]], collaborators: Seq[Id[User]], followers: Seq[Id[User]]) {
+    // Users that should be shown as members. Doesn't include collaborators because they're highighted elsewhere.
+    def shown: Seq[Id[User]] = inviters ++ followers.filter(!inviters.contains(_))
+    def all = inviters ++ collaborators ++ followers
+  }
+  private def countMemberInfosByLibraryId(libraries: Seq[Library], maxMembersShown: Int, viewerUserIdOpt: Option[Id[User]]): Map[Id[Library], LibMembersAndCounts] = libraries.map { library =>
+    val info: LibMembersAndCounts = library.kind match {
       case LibraryKind.USER_CREATED | LibraryKind.SYSTEM_PERSONA =>
         val (collaborators, followers, _, counts) = getLibraryMembers(library.id.get, 0, maxMembersShown, fillInWithInvites = false)
         val inviters: Seq[LibraryMembership] = viewerUserIdOpt.map { userId =>
@@ -175,10 +180,9 @@ class LibraryCommander @Inject() (
             }
           }.flatten
         }.getOrElse(Seq.empty)
-        val all = (inviters ++ collaborators.filter(!inviters.contains(_)) ++ followers.filter(!inviters.contains(_))).map(_.userId)
-        (all, counts)
+        LibMembersAndCounts(counts, inviters.map(_.userId), collaborators.map(_.userId), followers.map(_.userId))
       case _ =>
-        (Seq.empty, CountWithLibraryIdByAccess.empty)
+        LibMembersAndCounts(CountWithLibraryIdByAccess.empty, Seq.empty, Seq.empty, Seq.empty)
     }
     library.id.get -> info
   }.toMap
@@ -210,10 +214,10 @@ class LibraryCommander @Inject() (
       }
     }.toMap
 
-    val followerInfosByLibraryId = countFollowerInfosByLibraryId(libraries, maxMembersShown, viewerUserIdOpt)
+    val memberInfosByLibraryId = countMemberInfosByLibraryId(libraries, maxMembersShown, viewerUserIdOpt)
 
     val usersByIdF = {
-      val allUsersShown = libraries.flatMap { library => followerInfosByLibraryId(library.id.get)._1 :+ library.ownerId }.toSet
+      val allUsersShown = libraries.flatMap { library => memberInfosByLibraryId(library.id.get).all :+ library.ownerId }.toSet
       db.readOnlyMasterAsync { implicit s => basicUserRepo.loadAll(allUsersShown) } //cached
     }
 
@@ -247,7 +251,7 @@ class LibraryCommander @Inject() (
       }
       libraries.map { library =>
         library.id.get -> SafeFuture {
-          val counts = followerInfosByLibraryId(library.id.get)._2
+          val counts = memberInfosByLibraryId(library.id.get).counts
           val collaboratorCount = counts.readWrite
           val followerCount = counts.readInsert + counts.readOnly
           val keepCount = keepCountsByLibraries.getOrElse(library.id.get, 0)
@@ -270,7 +274,9 @@ class LibraryCommander @Inject() (
       } yield {
         val (collaboratorCount, followerCount, keepCount) = counts
         val owner = usersById(lib.ownerId)
-        val followers = followerInfosByLibraryId(lib.id.get)._1.map(usersById(_))
+        val followers = memberInfosByLibraryId(lib.id.get).shown.map(usersById(_))
+        val collaborators = memberInfosByLibraryId(lib.id.get).collaborators.map(usersById(_))
+
         val attr = getSourceAttribution(libId)
         if (keepInfos.size > keepCount) {
           airbrake.notify(s"keep count $keepCount for library is lower then num of keeps ${keepInfos.size} for $lib")
@@ -287,6 +293,7 @@ class LibraryCommander @Inject() (
           visibility = lib.visibility,
           image = libImageOpt.map(LibraryImageInfo.createInfo),
           followers = followers,
+          collaborators = followers,
           keeps = keepInfos,
           numKeeps = keepCount,
           numCollaborators = collaboratorCount,
@@ -682,9 +689,9 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def getLibrariesUserCanKeepTo(userId: Id[User]): Seq[Library] = {
+  def getLibrariesUserCanKeepTo(userId: Id[User]): Seq[(Library, Boolean)] = {
     db.readOnlyMaster { implicit s =>
-      libraryRepo.getByUser(userId, excludeAccess = Some(LibraryAccess.READ_ONLY)).map(_._2)
+      libraryRepo.getByUserWithCollab(userId, excludeAccess = Some(LibraryAccess.READ_ONLY)).map(r => (r._2, r._3))
     }
   }
 
