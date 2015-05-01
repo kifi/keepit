@@ -28,8 +28,8 @@ class RoverManagerPluginImpl @Inject() (
     scheduleTaskOnOneMachine(ingestionActor.system, 187 seconds, 1 minute, ingestionActor.ref, IfYouCouldJustGoAhead, "NormalizedURI Ingestion")
     scheduleTaskOnOneMachine(fetchSchedulingActor.system, 200 seconds, 1 minute, fetchSchedulingActor.ref, IfYouCouldJustGoAhead, "Fetch Scheduling")
     scheduleTaskOnAllMachines(fetchingActor.system, (30 + Random.nextInt(60)) seconds, 1 minute, fetchingActor.ref, IfYouCouldJustGoAhead)
-    scheduleTaskOnOneMachine(imageSchedulingActor.system, 200 seconds, 1 minute, fetchSchedulingActor.ref, IfYouCouldJustGoAhead, "ArticleImage Scheduling")
-    scheduleTaskOnAllMachines(imageProcessingActor.system, (30 + Random.nextInt(60)) seconds, 1 minute, fetchingActor.ref, IfYouCouldJustGoAhead)
+    scheduleTaskOnOneMachine(imageSchedulingActor.system, 200 seconds, 1 minute, imageSchedulingActor.ref, IfYouCouldJustGoAhead, "ArticleImage Scheduling")
+    scheduleTaskOnAllMachines(imageProcessingActor.system, (30 + Random.nextInt(60)) seconds, 1 minute, imageProcessingActor.ref, IfYouCouldJustGoAhead)
 
     super.onStart()
   }
