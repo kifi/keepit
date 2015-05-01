@@ -79,10 +79,9 @@ class RoverArticleFetchingActor @Inject() (
               articleInfoRepo.updateAfterFetch(articleInfo.uriId, articleInfo.articleKind, fetched)
             }
 
-          // todo(Léo): Turn on.
-          /*if (fetched.toOption.flatten.isDefined) SafeFuture {
-              imageProcessingCommander.processArticleImagesAsap(articleInfo.id.toSet)
-            }*/
+            if (fetched.toOption.flatten.isDefined) {
+              SafeFuture { imageProcessingCommander.processArticleImagesAsap(articleInfo.id.toSet) }
+            }
         }
       } imap { _ => () }
     }
