@@ -3,7 +3,6 @@ package com.keepit.commanders
 import java.sql.SQLException
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
-import com.keepit.commanders.ScaleImageRequest
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick.Database

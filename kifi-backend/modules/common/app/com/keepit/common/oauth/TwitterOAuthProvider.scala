@@ -43,11 +43,11 @@ class TwitterOAuthProviderImpl @Inject() (
       .get()
     call map { resp =>
       if (resp.status != 200) {
-        throw new AuthException(s"[fetchSocialUserInfo] non-OK response from $verifyCredsEndpoint. status=${resp.status} body=${resp.body}; request=${resp.underlying[NettyResponse]} request.uri=${resp.underlying[NettyResponse].getUri}")
+        throw new AuthException(s"[fetchSocialUserInfo] non-OK response from $verifyCredsEndpoint. status=${resp.status} body=${resp.body}; request=${resp.underlying[NettyResponse]} request.uri=${resp.underlying[NettyResponse].getUri}", resp)
       } else {
         resp.json.asOpt[TwitterUserInfo] match {
           case None =>
-            throw new AuthException(s"[fillProfile] Failed to parse response.body=${resp.body}")
+            throw new AuthException(s"[fillProfile] Failed to parse response.body=${resp.body}", resp)
           case Some(tui) =>
             log.info(s"[fillProfile] tui=$tui; response.body=${resp.body}")
             TwitterUserInfo.toUserProfileInfo(tui)
