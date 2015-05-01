@@ -103,8 +103,8 @@ class BookmarkImporter @Inject() (
     }.toMap
     val taggedKeeps = parsed.map {
       case Bookmark(t, h, tagNames, createdDate, originalJson) =>
-        val keepTags = tagNames.map(tags.get).flatten.map(_.id.get)
-        BookmarkWithTagIds(t, h, keepTags, createdDate, originalJson)
+        val keepTagNames = tagNames.map(tags.get).flatten.map(_.name.tag)
+        BookmarkWithHashtags(t, h, keepTagNames, createdDate, originalJson)
     }
 
     val (importId, rawKeeps) = createRawKeeps(userId, sourceOpt, taggedKeeps, libraryId)
@@ -132,8 +132,8 @@ class BookmarkImporter @Inject() (
       }.toMap
       val taggedKeeps = parsed.map {
         case Bookmark(t, h, tagNames, createdDate, originalJson) =>
-          val keepTags = tagNames.map(tags.get).flatten.map(_.id.get) :+ importTag.id.get
-          BookmarkWithTagIds(t, h, keepTags, createdDate, originalJson)
+          val keepTags = tagNames.map(tags.get).flatten :+ importTag
+          BookmarkWithHashtags(t, h, keepTags.map(_.name.tag), createdDate, originalJson)
       }
       log.info(s"[bmFileImport:${lf.id}] Tags extracted in ${clock.getMillis() - lf.startMillis}ms")
 
@@ -209,14 +209,15 @@ class BookmarkImporter @Inject() (
     (source, extracted)
   }
 
-  private def createRawKeeps(userId: Id[User], source: Option[KeepSource], bookmarks: Seq[BookmarkWithTagIds], libraryId: Id[Library]) = {
+  private def createRawKeeps(userId: Id[User], source: Option[KeepSource], bookmarks: Seq[BookmarkWithHashtags], libraryId: Id[Library]) = {
     val importId = UUID.randomUUID.toString
     val rawKeeps = bookmarks.map {
-      case BookmarkWithTagIds(title, href, tagIds, createdDate, originalJson) =>
+      case BookmarkWithHashtags(title, href, hashtags, createdDate, originalJson) =>
         val titleOpt = if (title.nonEmpty && title.exists(_.nonEmpty)) Some(title.get) else None
-        val tags = tagIds.map(_.id.toString).mkString(",") match {
-          case s if s.isEmpty => None
-          case s => Some(s)
+        val hashtagsArray = if (hashtags.nonEmpty) {
+          Some(JsArray(hashtags.map(Json.toJson(_))))
+        } else {
+          None
         }
 
         RawKeep(userId = userId,
@@ -227,7 +228,7 @@ class BookmarkImporter @Inject() (
           source = source.getOrElse(KeepSource.bookmarkFileImport),
           originalJson = originalJson,
           installationId = None,
-          tagIds = tags,
+          keepTags = hashtagsArray,
           libraryId = Some(libraryId),
           createdDate = createdDate)
     }
@@ -237,4 +238,4 @@ class BookmarkImporter @Inject() (
 }
 
 case class Bookmark(title: Option[String], href: String, tags: List[String], createdDate: Option[DateTime], originalJson: Option[JsValue])
-case class BookmarkWithTagIds(title: Option[String], href: String, tags: List[Id[Collection]], createdAt: Option[DateTime], originalJson: Option[JsValue])
+case class BookmarkWithHashtags(title: Option[String], href: String, hashtags: List[String], createdAt: Option[DateTime], originalJson: Option[JsValue])
