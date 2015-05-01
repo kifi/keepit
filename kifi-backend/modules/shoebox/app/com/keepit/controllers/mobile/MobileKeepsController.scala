@@ -47,7 +47,7 @@ class MobileKeepsController @Inject() (
     getAllKeeps(request.userId, before, after, collectionOpt, helprankOpt, count, withPageInfo, false)
   }
 
-  private def getAllKeeps(userId: Id[User], before: Option[String], after: Option[String], collectionOpt: Option[String], helprankOpt: Option[String], count: Int, withPageInfo: Boolean, parseKeepNote: Boolean) = {
+  private def getAllKeeps(userId: Id[User], before: Option[String], after: Option[String], collectionOpt: Option[String], helprankOpt: Option[String], count: Int, withPageInfo: Boolean, v1: Boolean) = {
     keepsCommander.allKeeps(before map ExternalId[Keep], after map ExternalId[Keep], collectionOpt map ExternalId[Collection], helprankOpt, count, userId) map { res =>
       val basicCollection = collectionOpt.flatMap { collStrExtId =>
         ExternalId.asOpt[Collection](collStrExtId).flatMap { collExtId =>
@@ -57,7 +57,7 @@ class MobileKeepsController @Inject() (
         }
       }
       val helprank = helprankOpt map (selector => Json.obj("helprank" -> selector)) getOrElse Json.obj()
-      val sanitizedKeeps = res.map(k => k.copy(url = URISanitizer.sanitize(k.url), note = Hashtags.formatMobileNote(k.note, parseKeepNote)))
+      val sanitizedKeeps = res.map(k => k.copy(url = URISanitizer.sanitize(k.url), note = Hashtags.formatMobileNote(k.note, v1)))
       Ok(Json.obj(
         "collection" -> basicCollection,
         "before" -> before,
@@ -179,7 +179,7 @@ class MobileKeepsController @Inject() (
     getKeepInfo(request.userIdOpt, id, withFullInfo, idealImageWidth, idealImageHeight, false)
   }
 
-  private def getKeepInfo(userIdOpt: Option[Id[User]], id: ExternalId[Keep], withFullInfo: Boolean, idealImageWidth: Option[Int], idealImageHeight: Option[Int], parseKeepNote: Boolean) = {
+  private def getKeepInfo(userIdOpt: Option[Id[User]], id: ExternalId[Keep], withFullInfo: Boolean, idealImageWidth: Option[Int], idealImageHeight: Option[Int], v1: Boolean) = {
     db.readOnlyMaster { implicit s =>
       keepRepo.getOpt(id).filter(_.isActive)
     } match {
@@ -193,10 +193,10 @@ class MobileKeepsController @Inject() (
         } getOrElse ProcessedImageSize.Large.idealSize
         keepDecorator.decorateKeepsIntoKeepInfos(userIdOpt, false, Seq(keep), idealImageSize, withKeepTime = true).imap {
           case Seq(keepInfo) =>
-            Ok(Json.toJson(keepInfo.copy(note = Hashtags.formatMobileNote(keepInfo.note, parseKeepNote))))
+            Ok(Json.toJson(keepInfo.copy(note = Hashtags.formatMobileNote(keepInfo.note, v1))))
         }
       case Some(keep) =>
-        Future.successful(Ok(Json.toJson(KeepInfo.fromKeep(keep.copy(note = Hashtags.formatMobileNote(keep.note, parseKeepNote))))))
+        Future.successful(Ok(Json.toJson(KeepInfo.fromKeep(keep.copy(note = Hashtags.formatMobileNote(keep.note, v1))))))
     }
   }
 
