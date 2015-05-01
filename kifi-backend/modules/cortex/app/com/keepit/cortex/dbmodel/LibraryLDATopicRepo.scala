@@ -19,7 +19,7 @@ trait LibraryLDATopicRepo extends DbRepo[LibraryLDATopic] {
   def getByLibraryId(libId: Id[Library], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[LibraryLDATopic]
   def getActiveByLibraryId(libId: Id[Library], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[LibraryLDATopic]
   def getActiveByLibraryIds(libIds: Seq[Id[Library]], version: ModelVersion[DenseLDA])(implicit session: RSession): Seq[LibraryLDATopic]
-  def getUserFollowedLibraryFeatures(userId: Id[User], version: ModelVersion[DenseLDA], minEvidence: Int = 5)(implicit session: RSession): Seq[LibraryTopicMean]
+  def getUserFollowedLibraryFeatures(userId: Id[User], version: ModelVersion[DenseLDA], minEvidence: Int = 5, limit: Int = 100)(implicit session: RSession): Seq[LibraryTopicMean]
   def getLibraryByTopics(firstTopic: LDATopic, secondTopic: Option[LDATopic] = None, thirdTopic: Option[LDATopic] = None, version: ModelVersion[DenseLDA], minKeeps: Int = 5, limit: Int)(implicit session: RSession): Seq[LibraryLDATopic]
   def getAllActiveByVersion(version: ModelVersion[DenseLDA], minEvidence: Int = 5)(implicit session: RSession): Seq[LibraryLDATopic]
   def getRecentUpdated(version: ModelVersion[DenseLDA], since: DateTime)(implicit session: RSession): Seq[LibraryLDATopic]
@@ -66,7 +66,7 @@ class LibraryLDATopicRepoImpl @Inject() (
     (for { r <- rows if r.libraryId.inSet(libIds) && r.version === version && r.state === LibraryLDATopicStates.ACTIVE } yield r).list
   }
 
-  def getUserFollowedLibraryFeatures(userId: Id[User], version: ModelVersion[DenseLDA], minEvidence: Int = 5)(implicit session: RSession): Seq[LibraryTopicMean] = {
+  def getUserFollowedLibraryFeatures(userId: Id[User], version: ModelVersion[DenseLDA], minEvidence: Int = 5, limit: Int = 100)(implicit session: RSession): Seq[LibraryTopicMean] = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     implicit val getLibraryFeature = getResultFromMapper[LibraryTopicMean]
 
@@ -75,7 +75,7 @@ class LibraryLDATopicRepoImpl @Inject() (
            library_lda_topic as tp inner join cortex_library_membership as mem
            on tp.library_id = mem.library_id
            where mem.user_id = ${userId.id} and mem.state = 'active'
-           and tp.version = ${version.version} and tp.state = 'active' and tp.num_of_evidence >= ${minEvidence} """
+           and tp.version = ${version.version} and tp.state = 'active' and tp.num_of_evidence >= ${minEvidence} order by mem.updated_at desc limit ${limit}"""
     q.as[LibraryTopicMean].list
   }
 
