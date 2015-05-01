@@ -432,14 +432,14 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
         val url3 = Json.toJson("http://www.google.com")
 
         // no url in body
-        val result1 = getSummariesWithUrl(user1, emptyBody)
+        val result1 = getWriteableLibraries(user1, emptyBody)
         status(result1) must equalTo(OK)
         val response1 = contentAsJson(result1)
         (response1 \ "libraries").as[Seq[LibraryInfo]].length === 2
 
         // unparseable url in body
         println("********* Intended ERROR parsing url! *********")
-        val result2 = getSummariesWithUrl(user1, Json.obj("url" -> url1))
+        val result2 = getWriteableLibraries(user1, Json.obj("url" -> url1))
         status(result2) must equalTo(OK)
         val response2 = contentAsJson(result2)
         (response2 \ "libraries").as[Seq[LibraryInfo]].length === 2
@@ -447,7 +447,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
         println("********* End intended ERROR! *********")
 
         // parseable url in body (kept in other libraries)
-        val result3 = getSummariesWithUrl(user1, Json.obj("url" -> url2))
+        val result3 = getWriteableLibraries(user1, Json.obj("url" -> url2))
         status(result3) must equalTo(OK)
         val response3 = contentAsJson(result3)
         (response3 \ "libraries").as[Seq[LibraryInfo]].length === 2
@@ -470,7 +470,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
              ]
            """)
 
-        val result4 = getSummariesWithUrl(user1, Json.obj("url" -> url3))
+        val result4 = getWriteableLibraries(user1, Json.obj("url" -> url3))
         status(result4) must equalTo(OK)
         val response4 = contentAsJson(result4)
         (response4 \ "libraries").as[Seq[LibraryInfo]].length === 2
@@ -513,7 +513,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
 
   private def getLibraryById(user: User, libId: PublicId[Library])(implicit injector: Injector): Future[Result] = {
     inject[FakeUserActionsHelper].setUser(user)
-    controller.getLibraryById(libId)(request(routes.MobileLibraryController.getLibraryById(libId)))
+    controller.getLibraryByIdV1(libId)(request(routes.MobileLibraryController.getLibraryByIdV1(libId)))
   }
 
   private def getMembers(user: User, libId: PublicId[Library], offset: Int, limit: Int)(implicit injector: Injector): Future[Result] = {
@@ -531,9 +531,9 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
     controller.unkeepFromLibrary(libId, keepId)(request(routes.MobileLibraryController.unkeepFromLibrary(libId, keepId)))
   }
 
-  private def getSummariesWithUrl(user: User, body: JsObject)(implicit injector: Injector): Future[Result] = {
+  private def getWriteableLibraries(user: User, body: JsObject)(implicit injector: Injector): Future[Result] = {
     inject[FakeUserActionsHelper].setUser(user)
-    controller.getLibrarySummariesWithUrl()(request(routes.MobileLibraryController.getLibrarySummariesWithUrl()).withBody(body))
+    controller.getWriteableLibrariesWithUrlV1()(request(routes.MobileLibraryController.getWriteableLibrariesWithUrlV1()).withBody(body))
   }
 
   // User 'Spongebob' has one library called "Krabby Patty" (secret)
