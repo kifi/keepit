@@ -23,7 +23,7 @@ class RecommendationCleanupCommander @Inject() (
     val userToClean = if (useSubset) usersWithReco.filter(_.id % ringSize == idx) else usersWithReco
 
     val timer = new NamedStatsdTimer("RecommendationCleanupCommander.cleanup")
-    log.info(s"Running Uri Reco Cleanup for ${userToClean.size} users. slice $idx out of $ringSize")
+    log.info(s"Running Uri Reco Cleanup for ${userToClean.size} users. slice $idx out of $ringSize. Users are ${userToClean.take(5).mkString(", ")} ...")
 
     db.readWriteBatch(userToClean) { (session, userId) =>
       uriRecoRepo.cleanupOldRecos(userId, currentDateTime.minusDays(recosTTL))(session)
