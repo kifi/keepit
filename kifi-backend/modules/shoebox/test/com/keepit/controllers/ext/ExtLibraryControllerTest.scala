@@ -66,10 +66,6 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
         val pubId1 = Library.publicId(lib1.id.get).id
         val pubId2 = Library.publicId(lib2.id.get).id
 
-        db.readOnlyMaster { implicit session =>
-          println("xxxxxxxxxxxxxxxxx: " + libraryMembershipRepo.getWithLibraryId(lib1.id.get))
-        }
-
         val result = getLibraries(user1)
         status(result) must equalTo(OK)
         contentType(result) must beSome("application/json")
