@@ -200,9 +200,10 @@ class MobileKeepsController @Inject() (
     }
   }
 
-  def editKeepInfo(id: ExternalId[Keep]) = UserAction(parse.tolerantJson) { request =>
-    val keepOpt = db.readOnlyMaster { implicit s => keepRepo.getOpt(id).filter(_.isActive) }
-    keepOpt match {
+  def editKeepInfoV1(id: ExternalId[Keep]) = UserAction(parse.tolerantJson) { request =>
+    db.readOnlyMaster { implicit s =>
+      keepRepo.getOpt(id).filter(_.isActive)
+    } match {
       case None =>
         NotFound(Json.obj("error" -> "not_found"))
       case Some(keep) =>
@@ -227,6 +228,33 @@ class MobileKeepsController @Inject() (
         db.readWrite { implicit s =>
           keepsCommander.persistHashtagsForKeep(request.userId, updatedKeep, tagsToPersist)(s, context)
         }
+        NoContent
+    }
+  }
+
+  def editKeepInfoV2(id: ExternalId[Keep]) = UserAction(parse.tolerantJson) { request =>
+    db.readOnlyMaster { implicit s =>
+      keepRepo.getOpt(id).filter(_.isActive)
+    } match {
+      case None =>
+        NotFound(Json.obj("error" -> "not_found"))
+      case Some(keep) =>
+        val json = request.body
+        val titleOpt = (json \ "title").asOpt[String]
+        val noteOpt = (json \ "note").asOpt[String]
+
+        val titleToPersist = (titleOpt orElse keep.title) map (_.trim) filterNot (_.isEmpty)
+        val noteToPersist = (noteOpt orElse keep.note) map (_.trim) filterNot (_.isEmpty)
+
+        if (titleToPersist != keep.title || noteToPersist != keep.note) {
+          val updatedKeep = keep.copy(title = titleToPersist, note = noteToPersist)
+          implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
+          val hashtagNamesToPersist = Hashtags.findAllHashtagNames(noteToPersist.getOrElse(""))
+          db.readWrite { implicit s =>
+            keepsCommander.persistHashtagsForKeep(request.userId, updatedKeep, hashtagNamesToPersist.toSeq)(s, context)
+          }
+        }
+
         NoContent
     }
   }
