@@ -37,7 +37,7 @@ class LibraryLDATopicRepoTest extends Specification with CortexTestInjector {
 
         db.readOnlyReplica { implicit s =>
           var feats = libTopicRepo.getUserFollowedLibraryFeatures(Id[User](1), ModelVersion[DenseLDA](1))
-          feats.map { _.value }.flatten.toList === List(1f, 0f, 0.8f, 0.2f)
+          feats.map { _.value.toList }.toSet === Set(List(1f, 0f), List(0.8f, 0.2f))
 
           feats = libTopicRepo.getUserFollowedLibraryFeatures(Id[User](2), ModelVersion[DenseLDA](1))
           feats.map { _.value }.flatten.toList === List(0.7f, 0.3f)
