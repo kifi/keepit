@@ -103,8 +103,8 @@ class BookmarkImporter @Inject() (
     }.toMap
     val taggedKeeps = parsed.map {
       case Bookmark(t, h, tagNames, createdDate, originalJson) =>
-        val keepTags = tagNames.map(tags.get).flatten
-        BookmarkWithTags(t, h, keepTags, createdDate, originalJson)
+        val keepTagNames = tagNames.map(tags.get).flatten.map(_.name.tag)
+        BookmarkWithHashtags(t, h, keepTagNames, createdDate, originalJson)
     }
 
     val (importId, rawKeeps) = createRawKeeps(userId, sourceOpt, taggedKeeps, libraryId)
@@ -133,7 +133,7 @@ class BookmarkImporter @Inject() (
       val taggedKeeps = parsed.map {
         case Bookmark(t, h, tagNames, createdDate, originalJson) =>
           val keepTags = tagNames.map(tags.get).flatten :+ importTag
-          BookmarkWithTags(t, h, keepTags, createdDate, originalJson)
+          BookmarkWithHashtags(t, h, keepTags.map(_.name.tag), createdDate, originalJson)
       }
       log.info(s"[bmFileImport:${lf.id}] Tags extracted in ${clock.getMillis() - lf.startMillis}ms")
 
@@ -209,14 +209,13 @@ class BookmarkImporter @Inject() (
     (source, extracted)
   }
 
-  private def createRawKeeps(userId: Id[User], source: Option[KeepSource], bookmarks: Seq[BookmarkWithTags], libraryId: Id[Library]) = {
+  private def createRawKeeps(userId: Id[User], source: Option[KeepSource], bookmarks: Seq[BookmarkWithHashtags], libraryId: Id[Library]) = {
     val importId = UUID.randomUUID.toString
     val rawKeeps = bookmarks.map {
-      case BookmarkWithTags(title, href, tags, createdDate, originalJson) =>
+      case BookmarkWithHashtags(title, href, hashtags, createdDate, originalJson) =>
         val titleOpt = if (title.nonEmpty && title.exists(_.nonEmpty)) Some(title.get) else None
-        val hashtagsArray = if (tags.nonEmpty) {
-          val hashtagNames = tags.map(c => Json.toJson(c.name.tag)).toSeq
-          Some(JsArray(hashtagNames))
+        val hashtagsArray = if (hashtags.nonEmpty) {
+          Some(JsArray(hashtags.map(Json.toJson(_))))
         } else {
           None
         }
@@ -239,4 +238,4 @@ class BookmarkImporter @Inject() (
 }
 
 case class Bookmark(title: Option[String], href: String, tags: List[String], createdDate: Option[DateTime], originalJson: Option[JsValue])
-case class BookmarkWithTags(title: Option[String], href: String, tags: List[Collection], createdAt: Option[DateTime], originalJson: Option[JsValue])
+case class BookmarkWithHashtags(title: Option[String], href: String, hashtags: List[String], createdAt: Option[DateTime], originalJson: Option[JsValue])
