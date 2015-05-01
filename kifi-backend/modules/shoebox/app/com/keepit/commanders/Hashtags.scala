@@ -2,7 +2,7 @@ package com.keepit.commanders
 
 import com.keepit.model.Hashtag
 
-import scala.util.matching.Regex.Match
+import scala.util.matching.Regex
 
 object Hashtags {
 
@@ -44,24 +44,24 @@ object Hashtags {
   }
 
   def removeHashtagNamesFromString(str: String, hashtagNames: Set[String]): String = {
-    val mapper = (m: Match) => if (hashtagNames.contains(m.group(1))) Some("") else None
-    hashTagRe.replaceSomeIn(str, mapper).trim
+    hashTagRe.replaceSomeIn(str, m => if (hashtagNames.contains(m.group(1))) Some("") else None).trim
   }
 
   // gives back a note with hashtags stripped out & markups unescaped (reverted back to normal)
   def formatMobileNoteV1(note: Option[String]) = {
     note.map { noteStr =>
       val noteWithoutHashtags = Hashtags.removeAllHashtagsFromString(noteStr)
-      /* // todo: add this logic in once hashtags are supported!
-      val note2 = if (noteWithoutHashtags.nonEmpty && noteWithoutHashtags != noteStr) {
+
+      // todo(jared|aaron): remove false below once notes + hashtags are launched on any platform
+      val note2 = if (false && noteWithoutHashtags.nonEmpty && noteWithoutHashtags != noteStr) {
         hashTagRe.replaceAllIn(noteStr, m => {
-          "#" + backslashUnescapeRe.replaceAllIn(m.group(1), "$1")
+          Regex.quoteReplacement("#" + backslashUnescapeRe.replaceAllIn(m.group(1), "$1"))
         })
       } else {
         noteWithoutHashtags
       }
-      */
-      KeepDecorator.unescapeMarkupNotes(noteWithoutHashtags).trim
+
+      KeepDecorator.unescapeMarkupNotes(note2).trim
     } filter (_.nonEmpty)
   }
 
