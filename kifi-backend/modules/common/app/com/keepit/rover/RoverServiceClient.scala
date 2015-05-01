@@ -1,14 +1,16 @@
 package com.keepit.rover
 
 import com.google.inject.Inject
-import com.keepit.common.db.SequenceNumber
+import com.keepit.common.db.{ Id, SequenceNumber }
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.json.TupleFormat
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.{ CallTimeouts, HttpClient }
 import com.keepit.common.routes.Rover
 import com.keepit.common.service.{ ServiceType, ServiceClient }
 import com.keepit.common.zookeeper.ServiceCluster
-import com.keepit.model.IndexableUri
+import com.keepit.model.{ NormalizedURI, IndexableUri }
+import com.keepit.rover.article.Article
 import com.keepit.rover.model.{ ShoeboxArticleUpdates, ArticleInfo }
 import play.api.libs.json.Json
 
@@ -18,6 +20,7 @@ trait RoverServiceClient extends ServiceClient {
   final val serviceType = ServiceType.ROVER
   def getShoeboxUpdates(seq: SequenceNumber[ArticleInfo], limit: Int): Future[Option[ShoeboxArticleUpdates]]
   def fetchAsap(uri: IndexableUri): Future[Unit]
+  def getArticlesByUris(uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[Article]]]
 }
 
 class RoverServiceClientImpl(
@@ -36,6 +39,14 @@ class RoverServiceClientImpl(
   def fetchAsap(uri: IndexableUri): Future[Unit] = {
     val payload = Json.toJson(uri)
     call(Rover.internal.fetchAsap, payload, callTimeouts = longTimeout).map { _ => () }
+  }
+
+  def getArticlesByUris(uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[Article]]] = {
+    val payload = Json.toJson(uriIds)
+    call(Rover.internal.getArticlesByUris, payload, callTimeouts = longTimeout).map { r =>
+      implicit val reads = TupleFormat.tuple2Reads[Id[NormalizedURI], Set[Article]]
+      (r.json).as[Seq[(Id[NormalizedURI], Set[Article])]].toMap
+    }
   }
 }
 

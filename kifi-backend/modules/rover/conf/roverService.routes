@@ -4,3 +4,4 @@
 
 GET     /internal/rover/getShoeboxUpdates       @com.keepit.rover.controllers.internal.RoverController.getShoeboxUpdates(seq: SequenceNumber[ArticleInfo], limit: Int)
 POST    /internal/rover/fetchAsap               @com.keepit.rover.controllers.internal.RoverController.fetchAsap()
+POST    /internal/rover/getArticlesByUris       @com.keepit.rover.controllers.internal.RoverController.getArticlesByUris()

@@ -1,9 +1,10 @@
 package com.keepit.rover.commanders
 
 import com.google.inject.{ Inject, Singleton }
-import com.keepit.common.db.{ SequenceNumber }
+import com.keepit.common.db.{ Id, SequenceNumber }
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.model.{ IndexableUri }
+import com.keepit.model.{ NormalizedURI, IndexableUri }
+import com.keepit.rover.article.Article
 import com.keepit.rover.article.content.{ NormalizationInfoHolder, HttpInfoHolder }
 import com.keepit.rover.manager.ArticleFetchingPolicy
 import com.keepit.rover.model.{ ShoeboxArticleUpdates, ArticleInfo, ShoeboxArticleUpdate }
@@ -52,6 +53,14 @@ class RoverCommander @Inject() (
         Some(ShoeboxArticleUpdates(updates.flatten, maxSeq))
       }
     }
+  }
+
+  def getArticlesByUris(uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[Article]]] = {
+    val futureUriIdWithArticles = articleCommander.getArticlesByUris(uriIds).map {
+      case (uriId, futureArticles) =>
+        futureArticles.imap(uriId -> _)
+    }
+    Future.sequence(futureUriIdWithArticles).imap(_.toMap)
   }
 
   private def toShoeboxArticleUpdate(articleInfo: ArticleInfo)(latestArticle: articleInfo.A) = {
