@@ -449,6 +449,7 @@ class TwitterSocialGraphImpl @Inject() (
           } else if (response.status == 404) {
             val errorCodes = (response.json \\ "code").map(_.as[Int])
             if (errorCodes.contains(34)) { // "Sorry, that page does not exist"
+              log.warn(s"Failed to fetch page $handle because it does not exist. Inactivating Twitter Sync State... resp: ${response.json}")
               socialUserInfoOpt.flatMap(_.userId).map { userId =>
                 db.readWrite { implicit s =>
                   twitterSyncStateRepo.getByHandleAndUserIdUsed(handle, userId).map { twitterSync =>
