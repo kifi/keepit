@@ -153,7 +153,7 @@ case class LibraryCardInfo(
 
 object LibraryCardInfo {
   val writesWithoutOwner = Writes[LibraryCardInfo] { o => // for case when receiving end already knows the owner
-    JsObject((Json.toJson(o).asInstanceOf[JsObject].value - "owner").toSeq)
+    JsObject((Json.toJson(o).as[JsObject].value - "owner").toSeq)
   }
 
   def showable(followers: Seq[BasicUser]): Seq[BasicUser] = {
@@ -199,6 +199,7 @@ case class FullLibraryInfo(
   lastKept: Option[DateTime],
   owner: BasicUser,
   followers: Seq[BasicUser],
+  collaborators: Seq[BasicUser],
   keeps: Seq[KeepInfo],
   numKeeps: Int,
   numCollaborators: Int,

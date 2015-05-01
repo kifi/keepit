@@ -310,6 +310,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
              |  "username":"${basicUser1.username.value}"
              |  },
              |"followers":[],
+             |"collaborators":[],
              |"keeps":[],
              |"numKeeps":0,
              |"numCollaborators":0,
@@ -353,6 +354,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
              |  "username":"${basicUser1.username.value}"
              |},
              |"followers":[],
+             |"collaborators":[],
              |"keeps":[],
              |"numKeeps":0,
              |"numCollaborators":0,
@@ -436,6 +438,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                |  "username":"${basicUser1.username.value}"
                |  },
                |"followers":[],
+               |"collaborators":[],
                |"keeps":[],
                |"numKeeps":0,
                |"numCollaborators":0,
