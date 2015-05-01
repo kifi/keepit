@@ -52,6 +52,7 @@ object Hashtags {
   def formatMobileNoteV1(note: Option[String]) = {
     note.map { noteStr =>
       val noteWithoutHashtags = Hashtags.removeAllHashtagsFromString(noteStr)
+      /* // todo: add this logic in once hashtags are supported!
       val note2 = if (noteWithoutHashtags.nonEmpty && noteWithoutHashtags != noteStr) {
         hashTagRe.replaceAllIn(noteStr, m => {
           "#" + backslashUnescapeRe.replaceAllIn(m.group(1), "$1")
@@ -59,7 +60,8 @@ object Hashtags {
       } else {
         noteWithoutHashtags
       }
-      KeepDecorator.unescapeMarkupNotes(note2).trim
+      */
+      KeepDecorator.unescapeMarkupNotes(noteWithoutHashtags).trim
     } filter (_.nonEmpty)
   }
 
