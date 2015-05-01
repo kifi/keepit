@@ -98,14 +98,22 @@ class MobileLibraryController @Inject() (
     }
   }
 
-  def getLibraryById(pubId: PublicId[Library], imageSize: Option[String] = None) = (MaybeUserAction andThen LibraryViewAction(pubId)).async { request =>
+  def getLibraryByIdV1(pubId: PublicId[Library], imageSize: Option[String] = None) = (MaybeUserAction andThen LibraryViewAction(pubId)).async { request =>
+    getLibraryById(request.userIdOpt, pubId, imageSize, true)
+  }
+
+  def getLibraryByIdV2(pubId: PublicId[Library], imageSize: Option[String] = None) = (MaybeUserAction andThen LibraryViewAction(pubId)).async { request =>
+    getLibraryById(request.userIdOpt, pubId, imageSize, false)
+  }
+
+  private def getLibraryById(userIdOpt: Option[Id[User]], pubId: PublicId[Library], imageSize: Option[String] = None, parseKeepNote: Boolean) = {
     val libraryId = Library.decodePublicId(pubId).get
     val idealSize = imageSize.flatMap { s => Try(ImageSize(s)).toOption }.getOrElse(MobileLibraryController.defaultLibraryImageSize)
-    libraryCommander.getLibraryById(request.userIdOpt, false, libraryId, idealSize) map { libInfo =>
-      val memOpt = libraryCommander.getMaybeMembership(request.userIdOpt, libraryId)
+    libraryCommander.getLibraryById(userIdOpt, false, libraryId, idealSize) map { libInfo =>
+      val memOpt = libraryCommander.getMaybeMembership(userIdOpt, libraryId)
       val accessStr = memOpt.map(_.access.value).getOrElse("none")
       val editedLibInfo = libInfo.copy(keeps = libInfo.keeps.map { k =>
-        k.copy(note = Hashtags.formatMobileNoteV1(k.note))
+        k.copy(note = Hashtags.formatMobileNote(k.note, parseKeepNote))
       })
       Ok(Json.obj("library" -> Json.toJson(editedLibInfo), "membership" -> accessStr))
     }
@@ -128,13 +136,21 @@ class MobileLibraryController @Inject() (
     }
   }
 
-  def getLibrarySummariesWithUrl = UserAction(parse.tolerantJson) { request =>
+  def getWriteableLibrariesWithUrlV1 = UserAction(parse.tolerantJson) { request =>
     val urlOpt = (request.body \ "url").asOpt[String]
+    getWriteableLibrariesWithUrl(request.userId, urlOpt, true)
+  }
+  def getWriteableLibrariesWithUrlV2 = UserAction(parse.tolerantJson) { request =>
+    val urlOpt = (request.body \ "url").asOpt[String]
+    getWriteableLibrariesWithUrl(request.userId, urlOpt, false)
+  }
+
+  private def getWriteableLibrariesWithUrl(userId: Id[User], urlOpt: Option[String], parseKeepNote: Boolean) = {
     val parseUrl = urlOpt.map { url =>
-      pageCommander.getUrlInfo(url, request.userId)
+      pageCommander.getUrlInfo(url, userId)
     }
 
-    val (librariesWithMemberships, _) = libraryCommander.getLibrariesByUser(request.userId)
+    val (librariesWithMemberships, _) = libraryCommander.getLibrariesByUser(userId)
     val writeableLibraries = librariesWithMemberships.filter {
       case (membership, _) =>
         membership.canWrite
@@ -167,7 +183,7 @@ class MobileLibraryController @Inject() (
             keepMap(keepData.id) match {
               case Some(keep) =>
                 val keepImageUrl = keepImageCommander.getBestImageForKeep(keep.id.get, ScaleImageRequest(MobileLibraryController.defaultKeepImageSize)).flatten.map(keepImageCommander.getUrl)
-                val keepObj = Json.obj("id" -> keep.externalId, "title" -> keep.title, "note" -> Hashtags.formatMobileNoteV1(keep.note), "imageUrl" -> keepImageUrl, "hashtags" -> Json.toJson(collectionRepo.getHashtagsByKeepId(keep.id.get)))
+                val keepObj = Json.obj("id" -> keep.externalId, "title" -> keep.title, "note" -> Hashtags.formatMobileNote(keep.note, parseKeepNote), "imageUrl" -> keepImageUrl, "hashtags" -> Json.toJson(collectionRepo.getHashtagsByKeepId(keep.id.get)))
                 Json.obj("keep" -> keepObj) ++ Json.toJson(keepData).as[JsObject] - ("id")
 
               case _ => Json.obj()
@@ -290,7 +306,15 @@ class MobileLibraryController @Inject() (
     }
   }
 
-  def getKeeps(pubId: PublicId[Library], offset: Int, limit: Int, idealImageWidth: Option[Int], idealImageHeight: Option[Int]) = (MaybeUserAction andThen LibraryViewAction(pubId)).async { request =>
+  def getKeepsV1(pubId: PublicId[Library], offset: Int, limit: Int, idealImageWidth: Option[Int], idealImageHeight: Option[Int]) = (MaybeUserAction andThen LibraryViewAction(pubId)).async { request =>
+    getKeeps(request.userIdOpt, pubId, offset, limit, idealImageWidth, idealImageHeight, true)
+  }
+
+  def getKeepsV2(pubId: PublicId[Library], offset: Int, limit: Int, idealImageWidth: Option[Int], idealImageHeight: Option[Int]) = (MaybeUserAction andThen LibraryViewAction(pubId)).async { request =>
+    getKeeps(request.userIdOpt, pubId, offset, limit, idealImageWidth, idealImageHeight, false)
+  }
+
+  private def getKeeps(userIdOpt: Option[Id[User]], pubId: PublicId[Library], offset: Int, limit: Int, idealImageWidth: Option[Int], idealImageHeight: Option[Int], parseKeepNote: Boolean) = {
     if (limit > 30) { Future.successful(BadRequest(Json.obj("error" -> "invalid_limit"))) }
     else Library.decodePublicId(pubId) match {
       case Failure(ex) => Future.successful(BadRequest(Json.obj("error" -> "invalid_id")))
@@ -303,10 +327,10 @@ class MobileLibraryController @Inject() (
         } getOrElse ProcessedImageSize.Large.idealSize
         for {
           keeps <- libraryCommander.getKeeps(libraryId, offset, limit)
-          keepInfos <- keepDecorator.decorateKeepsIntoKeepInfos(request.userIdOpt, false, keeps, idealImageSize, withKeepTime = true)
+          keepInfos <- keepDecorator.decorateKeepsIntoKeepInfos(userIdOpt, false, keeps, idealImageSize, withKeepTime = true)
         } yield {
           val editedKeepInfos = keepInfos.map { kInfo =>
-            kInfo.copy(note = Hashtags.formatMobileNoteV1(kInfo.note))
+            kInfo.copy(note = Hashtags.formatMobileNote(kInfo.note, parseKeepNote))
           }
           Ok(Json.obj("keeps" -> editedKeepInfos))
         }

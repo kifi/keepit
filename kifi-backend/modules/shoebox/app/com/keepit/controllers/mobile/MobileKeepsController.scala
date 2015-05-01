@@ -39,17 +39,25 @@ class MobileKeepsController @Inject() (
   implicit val publicIdConfig: PublicIdConfiguration)
     extends UserActions with ShoeboxServiceController {
 
-  def allKeeps(before: Option[String], after: Option[String], collectionOpt: Option[String], helprankOpt: Option[String], count: Int, withPageInfo: Boolean) = UserAction.async { request =>
-    keepsCommander.allKeeps(before map ExternalId[Keep], after map ExternalId[Keep], collectionOpt map ExternalId[Collection], helprankOpt, count, request.userId) map { res =>
+  def allKeepsV1(before: Option[String], after: Option[String], collectionOpt: Option[String], helprankOpt: Option[String], count: Int, withPageInfo: Boolean) = UserAction.async { request =>
+    getAllKeeps(request.userId, before, after, collectionOpt, helprankOpt, count, withPageInfo, true)
+  }
+
+  def allKeepsV2(before: Option[String], after: Option[String], collectionOpt: Option[String], helprankOpt: Option[String], count: Int, withPageInfo: Boolean) = UserAction.async { request =>
+    getAllKeeps(request.userId, before, after, collectionOpt, helprankOpt, count, withPageInfo, false)
+  }
+
+  private def getAllKeeps(userId: Id[User], before: Option[String], after: Option[String], collectionOpt: Option[String], helprankOpt: Option[String], count: Int, withPageInfo: Boolean, parseKeepNote: Boolean) = {
+    keepsCommander.allKeeps(before map ExternalId[Keep], after map ExternalId[Keep], collectionOpt map ExternalId[Collection], helprankOpt, count, userId) map { res =>
       val basicCollection = collectionOpt.flatMap { collStrExtId =>
         ExternalId.asOpt[Collection](collStrExtId).flatMap { collExtId =>
-          db.readOnlyMaster(collectionRepo.getByUserAndExternalId(request.userId, collExtId)(_)).map { c =>
+          db.readOnlyMaster(collectionRepo.getByUserAndExternalId(userId, collExtId)(_)).map { c =>
             BasicCollection.fromCollection(c.summary)
           }
         }
       }
       val helprank = helprankOpt map (selector => Json.obj("helprank" -> selector)) getOrElse Json.obj()
-      val sanitizedKeeps = res.map(k => k.copy(url = URISanitizer.sanitize(k.url), note = Hashtags.formatMobileNoteV1(k.note)))
+      val sanitizedKeeps = res.map(k => k.copy(url = URISanitizer.sanitize(k.url), note = Hashtags.formatMobileNote(k.note, parseKeepNote)))
       Ok(Json.obj(
         "collection" -> basicCollection,
         "before" -> before,
@@ -163,10 +171,18 @@ class MobileKeepsController @Inject() (
     Ok(Json.obj())
   }
 
-  def getKeepInfo(id: ExternalId[Keep], withFullInfo: Boolean, idealImageWidth: Option[Int], idealImageHeight: Option[Int]) = UserAction.async { request =>
-    val keepOpt = db.readOnlyMaster { implicit s => keepRepo.getOpt(id).filter(_.isActive) }
+  def getKeepInfoV1(id: ExternalId[Keep], withFullInfo: Boolean, idealImageWidth: Option[Int], idealImageHeight: Option[Int]) = UserAction.async { request =>
+    getKeepInfo(request.userIdOpt, id, withFullInfo, idealImageWidth, idealImageHeight, true)
+  }
 
-    keepOpt match {
+  def getKeepInfoV2(id: ExternalId[Keep], withFullInfo: Boolean, idealImageWidth: Option[Int], idealImageHeight: Option[Int]) = UserAction.async { request =>
+    getKeepInfo(request.userIdOpt, id, withFullInfo, idealImageWidth, idealImageHeight, false)
+  }
+
+  private def getKeepInfo(userIdOpt: Option[Id[User]], id: ExternalId[Keep], withFullInfo: Boolean, idealImageWidth: Option[Int], idealImageHeight: Option[Int], parseKeepNote: Boolean) = {
+    db.readOnlyMaster { implicit s =>
+      keepRepo.getOpt(id).filter(_.isActive)
+    } match {
       case None => Future.successful(NotFound(Json.obj("error" -> "not_found")))
       case Some(keep) if withFullInfo =>
         val idealImageSize = {
@@ -175,12 +191,12 @@ class MobileKeepsController @Inject() (
             h <- idealImageHeight
           } yield ImageSize(w, h)
         } getOrElse ProcessedImageSize.Large.idealSize
-        keepDecorator.decorateKeepsIntoKeepInfos(request.userIdOpt, false, Seq(keep), idealImageSize, withKeepTime = true).imap {
+        keepDecorator.decorateKeepsIntoKeepInfos(userIdOpt, false, Seq(keep), idealImageSize, withKeepTime = true).imap {
           case Seq(keepInfo) =>
-            Ok(Json.toJson(keepInfo.copy(note = Hashtags.formatMobileNoteV1(keepInfo.note))))
+            Ok(Json.toJson(keepInfo.copy(note = Hashtags.formatMobileNote(keepInfo.note, parseKeepNote))))
         }
       case Some(keep) =>
-        Future.successful(Ok(Json.toJson(KeepInfo.fromKeep(keep.copy(note = Hashtags.formatMobileNoteV1(keep.note))))))
+        Future.successful(Ok(Json.toJson(KeepInfo.fromKeep(keep.copy(note = Hashtags.formatMobileNote(keep.note, parseKeepNote))))))
     }
   }
 

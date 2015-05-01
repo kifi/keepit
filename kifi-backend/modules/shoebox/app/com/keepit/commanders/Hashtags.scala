@@ -65,6 +65,14 @@ object Hashtags {
     } filter (_.nonEmpty)
   }
 
+  def formatMobileNote(note: Option[String], parseNote: Boolean) = {
+    if (parseNote) {
+      formatMobileNoteV1(note)
+    } else {
+      note
+    }
+  }
+
   // matches '[#...]'.
   // A literal '[#' indicates the start of a hashtag
   // A literal ']' indicates the end of the hashtag
