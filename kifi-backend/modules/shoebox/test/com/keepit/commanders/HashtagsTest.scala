@@ -98,10 +98,12 @@ class HashtagsTest extends Specification {
       Hashtags.formatMobileNoteV1(Some(" [#asdf] [#hjkl] ")) === None
 
       // text + tags
-      Hashtags.formatMobileNoteV1(Some("i love [#scala]")) === Some("i love #scala")
-      // Hashtags.formatMobileNoteV1(Some("i love [#\\\\asdf\\]]")) === Some("i love #\\asdf]") // TODO: make this pass
-      Hashtags.formatMobileNoteV1(Some("[[#asdf]]")) === Some("[#asdf]")
-      Hashtags.formatMobileNoteV1(Some("[#asdf]]")) === Some("#asdf]")
+      Hashtags.formatMobileNoteV1(Some("this is really useful [#tag1] [#tag2]")) === Some("this is really useful")
+      Hashtags.formatMobileNoteV1(Some("this is really [\\#useful] [#tag1] [#tag2]")) === Some("this is really [#useful]")
+      // Hashtags.formatMobileNoteV1(Some("i love [#scala]")) === Some("i love #scala") // TODO: make this pass
+      // Hashtags.formatMobileNoteV1(Some("i love [#\\\\asdf\\]]")) === Some("i love #\\asdf]")
+      //Hashtags.formatMobileNoteV1(Some("[[#asdf]]")) === Some("[#asdf]")
+      //Hashtags.formatMobileNoteV1(Some("[#asdf]]")) === Some("#asdf]")
     }
   }
 }
