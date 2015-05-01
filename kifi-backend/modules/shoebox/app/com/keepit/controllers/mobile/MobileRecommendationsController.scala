@@ -46,25 +46,24 @@ class MobileRecommendationsController @Inject() (
     }
   }
 
-  // _uctx and _lctx are meant to support an iOS bug. Should not be supported in the future.
-  def topRecosV3(recencyWeight: Float, uriContext: Option[String], libContext: Option[String], uctx: Option[String], lctx: Option[String]) = UserAction.async { request =>
-
-    def sanitizeContext(uriContext: String, libContext: String): (String, String) = {
-      val contextBankruptcyLength = 3000 // 4k is max request size, leaves some room for other params
-      val uctxLen = uriContext.length
-      val lctxLen = libContext.length
-      if (uctxLen + lctxLen <= contextBankruptcyLength) {
-        (uriContext, libContext)
+  private def sanitizeContext(uriContext: String, libContext: String): (String, String) = {
+    val contextBankruptcyLength = 3000 // 4k is max request size, leaves some room for other params
+    val uctxLen = uriContext.length
+    val lctxLen = libContext.length
+    if (uctxLen + lctxLen <= contextBankruptcyLength) {
+      (uriContext, libContext)
+    } else {
+      if (uctxLen >= contextBankruptcyLength && lctxLen >= contextBankruptcyLength) {
+        ("", "")
       } else {
-        if (uctxLen >= contextBankruptcyLength && lctxLen >= contextBankruptcyLength) {
-          ("", "")
-        } else {
-          if (uctxLen >= lctxLen) ("", libContext)
-          else (uriContext, "")
-        }
+        if (uctxLen >= lctxLen) ("", libContext)
+        else (uriContext, "")
       }
     }
+  }
 
+  // _uctx and _lctx are meant to support an iOS bug. Should not be supported in the future.
+  def topRecosV3(recencyWeight: Float, uriContext: Option[String], libContext: Option[String], uctx: Option[String], lctx: Option[String]) = UserAction.async { request =>
     val uriContext2 = uriContext orElse uctx
     val libContext2 = libContext orElse lctx
 
@@ -95,6 +94,36 @@ class MobileRecommendationsController @Inject() (
     val feedback = UriRecommendationFeedback(trashed = Some(true), source = Some(getRecommendationSource(request)),
       subSource = Some(RecommendationSubSource.RecommendationsFeed))
     commander.updateUriRecommendationFeedback(request.userId, id, feedback).map(fkis => Ok(Json.toJson(fkis)))
+  }
+
+  def feedV1Post() = UserAction.async { request =>
+    request.body.asJson.flatMap(_.asOpt[RecosRequest]) match {
+      case None =>
+        Future.successful(BadRequest(JsString("bad format for POST request")))
+      case Some(req) =>
+        feedV1(req)(request)
+    }
+  }
+
+  def feedV1Test() = UserAction.async { request =>
+    feedV1(RecosRequest(0.75f, None, None))(request)
+  }
+
+  def feedV1(req: RecosRequest) = UserAction.async { request =>
+    val libCnt = libraryRecoCount(request.userId)
+
+    val uriRecosF = commander.topRecos(request.userId, getRecommendationSource(request), RecommendationSubSource.RecommendationsFeed, req.uriContext.isDefined, req.recencyWeight, context = req.uriContext)
+    val libRecosF = commander.topPublicLibraryRecos(request.userId, libCnt, getRecommendationSource(request), RecommendationSubSource.RecommendationsFeed, context = req.libContext)
+    val libUpdatesF = commander.updatesFromFollowedLibraries(request.userId)
+
+    for (libs <- libRecosF; uris <- uriRecosF; libUpdates <- libUpdatesF) yield {
+      val FullUriRecoResults(urisReco, newUrisContext) = uris
+      val FullLibRecoResults(libsReco, newLibsContext) = libs
+      val recos = libUpdates +: mix(urisReco, libsReco)
+      val (goodUriContext, goodLibContext) = sanitizeContext(newUrisContext, newLibsContext)
+
+      Ok(Json.obj("recos" -> recos, "uctx" -> goodUriContext, "lctx" -> goodLibContext))
+    }
   }
 
   private def getRecommendationSource(request: UserRequest[_]): RecommendationSource = {

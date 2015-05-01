@@ -248,6 +248,10 @@ GET     /m/1/recos/public                       @com.keepit.controllers.mobile.M
 POST    /m/1/recos/trash                        @com.keepit.controllers.mobile.MobileRecommendationsController.trash(id: ExternalId[NormalizedURI])
 POST    /m/1/recos/feedback                     @com.keepit.controllers.website.RecommendationsController.updateUriRecommendationFeedback(id: ExternalId[NormalizedURI])
 
+POST     /m/1/feed                              @com.keepit.controllers.mobile.MobileRecommendationsController.feedV1Post()
+GET     /m/1/feed/test                          @com.keepit.controllers.mobile.MobileRecommendationsController.feedV1Test()
+
+
 GET     /m/1/users/:userStr/libraries/:slug     @com.keepit.controllers.mobile.MobileLibraryController.getLibraryByPath(userStr:String, slug: String, is: Option[String] ?= None)
 POST    /m/1/libraries/add                      @com.keepit.controllers.mobile.MobileLibraryController.createLibrary()
 POST    /m/1/libraries/:id/modify               @com.keepit.controllers.mobile.MobileLibraryController.modifyLibrary(id: PublicId[Library])

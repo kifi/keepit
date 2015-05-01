@@ -24,6 +24,7 @@ object RecoAttributionKind {
 object RecoKind {
   object Keep extends RecoKind("keep")
   object Library extends RecoKind("library")
+  object LibraryUpdates extends RecoKind("libraryUpdates")
 }
 
 @json case class RecoInfo(
