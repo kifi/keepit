@@ -52,7 +52,7 @@ class FacebookOAuthProviderImpl @Inject() (
           val errorType = (error \ Type).as[String]
           val exMsg = s"[getUserProfileInfo] error retrieving profile info from Facebook. errorType=$errorType, msg=$message"
           airbrake.notify(exMsg)
-          throw new AuthException(exMsg)
+          throw new AuthException(exMsg, response)
         case _ =>
           val userId = (me \ Id).as[String]
           val name = (me \ Name).as[String]

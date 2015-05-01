@@ -1,6 +1,7 @@
 package com.keepit.common.social
 
 import com.keepit.commanders.UserCommander
+import com.keepit.common.auth.AuthException
 import com.keepit.common.net.NonOKResponseException
 import com.keepit.model._
 import com.google.inject.Inject
@@ -128,6 +129,9 @@ private[social] class SocialGraphActor @Inject() (
       case ex: NonOKResponseException if ex.response.status / 100 == 4 =>
         db.readWrite { implicit s => socialRepo.save(socialUserInfo.withState(SocialUserInfoStates.TOKEN_EXPIRED).withLastGraphRefresh()) }
         log.warn(s"SocialUserInfo token expired: $socialUserInfo", ex)
+        Seq()
+      case ae: AuthException =>
+        db.readWrite { implicit s => socialRepo.save(socialUserInfo.withState(SocialUserInfoStates.USER_NOT_FOUND).withLastGraphRefresh()) }
         Seq()
       case ex: Exception =>
         db.readWrite { implicit s => socialRepo.save(socialUserInfo.withState(SocialUserInfoStates.FETCH_FAIL).withLastGraphRefresh()) }

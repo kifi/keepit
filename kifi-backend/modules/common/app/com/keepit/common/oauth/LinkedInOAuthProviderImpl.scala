@@ -54,7 +54,7 @@ class LinkedInOAuthProviderImpl @Inject() (
           val timestamp = (me \ Timestamp).asOpt[String]
           val exMsg = s"[getUserProfileInfo] error retrieving profile info from LinkedIn. Error code=$code requestId=$requestId message=$message timestamp=$timestamp"
           airbrake.notify(exMsg)
-          throw new AuthException(exMsg)
+          throw new AuthException(exMsg, response)
         }
         case _ => {
           val userId = (me \ Id).as[String]
