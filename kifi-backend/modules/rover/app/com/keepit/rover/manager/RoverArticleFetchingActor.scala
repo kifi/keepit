@@ -16,8 +16,8 @@ import scala.concurrent.{ Future, ExecutionContext }
 
 object RoverArticleFetchingActor {
   val lockTimeOut = 10 minutes
-  val minConcurrentTasks: Int = 300
-  val maxConcurrentTasks: Int = 400
+  val minConcurrentTasks: Int = 150
+  val maxConcurrentTasks: Int = 200
 }
 
 class RoverArticleFetchingActor @Inject() (
