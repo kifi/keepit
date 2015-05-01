@@ -38,13 +38,13 @@ class RecommendationCleanupCommander @Inject() (
     timer.stopAndReport(appLog = true)
   }
 
-  // approximately goes through everyone in 4 weeks. 4 * 7 * slicesPerDay buckets. about 8K buckets with current setting.
+  // approximately goes through everyone in 2 weeks. 2 * 7 * slicesPerDay buckets. about 10K buckets with current setting.
   private def getIndexAndTotalSize: (Int, Int) = {
     val t = clock.now()
-    val callFreq = 5 // scheduler calls this every 5 minutes.
+    val callFreq = CuratorTasksPlugin.CLEAN_FREQ
     val slicesPerDay = 60 * 24 / callFreq
-    val (wi, di, mi) = (t.weekOfWeekyear.get % 4, t.dayOfWeek.get % 7, (t.minuteOfDay.get / callFreq) % slicesPerDay)
+    val (wi, di, mi) = (t.weekOfWeekyear.get % 2, t.dayOfWeek.get % 7, (t.minuteOfDay.get / callFreq) % slicesPerDay)
     val idx = wi * (7 * slicesPerDay) + di * slicesPerDay + mi
-    (idx, 4 * 7 * slicesPerDay)
+    (idx, 2 * 7 * slicesPerDay)
   }
 }
