@@ -502,7 +502,7 @@ class KeepRepoImpl @Inject() (
 
   def getRecentKeepsFromFollowedLibraries(userId: Id[User], num: Int)(implicit session: RSession): Seq[Keep] = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    sql"""SELECT #bookmarkColumnOrder FROM bookmark WHERE library_id IN (SELECT library_id FROM library_membership WHERE user_id=$userId AND state='active') AND state='active' AND user_id!=$userId ORDER BY kept_at DESC LIMIT $num;""".as[Keep].list
+    sql"""SELECT #$bookmarkColumnOrder FROM bookmark bm WHERE library_id IN (SELECT library_id FROM library_membership WHERE user_id=$userId AND state='active') AND state='active' AND user_id!=$userId ORDER BY kept_at DESC LIMIT $num;""".as[Keep].list
   }
 
 }
