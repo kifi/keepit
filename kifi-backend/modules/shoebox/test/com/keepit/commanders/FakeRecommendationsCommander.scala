@@ -28,6 +28,7 @@ class FakeRecommendationsCommander @Inject() (
   keepRepo: KeepRepo,
   publicIdConfig: PublicIdConfiguration,
   defaultContext: ExecutionContext,
+  keepDecorator: KeepDecorator,
   userExperimentCommander: LocalUserExperimentCommander)
     extends RecommendationsCommander(
       curator,
@@ -40,6 +41,7 @@ class FakeRecommendationsCommander @Inject() (
       uriSummaryCommander,
       basicUserRepo,
       keepRepo,
+      keepDecorator,
       defaultContext,
       publicIdConfig,
       userExperimentCommander) {
