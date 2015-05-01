@@ -1,5 +1,6 @@
 package com.keepit.cortex.features
 
+import com.keepit.cortex.article.{ CortexArticleProvider, BasicCortexArticle, CortexArticle }
 import com.keepit.cortex.core.FeatureRepresenter
 import com.keepit.cortex.core.StatModel
 import com.keepit.model.NormalizedURI
@@ -18,15 +19,15 @@ trait URIFeatureRepresenter[M <: StatModel, +FT <: FeatureRepresentation[Normali
 
 abstract class BaseURIFeatureRepresenter[M <: StatModel](
     docRepresenter: DocRepresenter[M, FeatureRepresentation[Document, M]],
-    articleStore: ArticleStore) extends URIFeatureRepresenter[M, FeatureRepresentation[NormalizedURI, M]] {
+    articleProvider: CortexArticleProvider) extends URIFeatureRepresenter[M, FeatureRepresentation[NormalizedURI, M]] {
 
   override val version = docRepresenter.version
   override val dimension = docRepresenter.dimension
 
-  protected def isDefinedAt(article: Article): Boolean
-  protected def toDocument(article: Article): Document
+  protected def isDefinedAt(article: CortexArticle): Boolean
+  protected def toDocument(article: CortexArticle): Document
 
-  private def getArticle(uri: NormalizedURI): Option[Article] = articleStore.syncGet(uri.id.get)
+  private def getArticle(uri: NormalizedURI): Option[CortexArticle] = articleProvider.getArticle(uri.id.get)
 
   def genFeatureAndWordCount(uri: NormalizedURI): (Option[FeatureRepresentation[NormalizedURI, M]], Int) = {
     getArticle(uri) match {

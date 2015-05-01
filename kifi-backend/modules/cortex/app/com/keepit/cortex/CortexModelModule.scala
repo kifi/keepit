@@ -2,6 +2,7 @@ package com.keepit.cortex
 
 import com.google.inject.Provides
 import com.google.inject.Singleton
+import com.keepit.cortex.article.CortexArticleProvider
 import com.keepit.cortex.models.lda._
 import com.keepit.cortex.models.word2vec._
 import com.keepit.cortex.nlp.Stopwords
@@ -43,8 +44,8 @@ case class CortexProdModelModule() extends CortexModelModule with Logging {
 
   @Singleton
   @Provides
-  def ldaUriRepresenter(docRep: MultiVersionedLDADocRepresenter, articleStore: ArticleStore): MultiVersionedLDAURIRepresenter = {
-    val uriReps = docRep.representers.map { docRep => LDAURIRepresenter(docRep, articleStore) }
+  def ldaUriRepresenter(docRep: MultiVersionedLDADocRepresenter, articleProvider: CortexArticleProvider): MultiVersionedLDAURIRepresenter = {
+    val uriReps = docRep.representers.map { docRep => LDAURIRepresenter(docRep, articleProvider) }
     MultiVersionedLDAURIRepresenter(uriReps: _*)
   }
 
@@ -89,8 +90,8 @@ case class CortexDevModelModule() extends CortexModelModule() {
 
   @Singleton
   @Provides
-  def ldaUriRepresenter(docRep: MultiVersionedLDADocRepresenter, articleStore: ArticleStore): MultiVersionedLDAURIRepresenter = {
-    val uriReps = docRep.representers.map { docRep => LDAURIRepresenter(docRep, articleStore) }
+  def ldaUriRepresenter(docRep: MultiVersionedLDADocRepresenter, articleProvider: CortexArticleProvider): MultiVersionedLDAURIRepresenter = {
+    val uriReps = docRep.representers.map { docRep => LDAURIRepresenter(docRep, articleProvider) }
     MultiVersionedLDAURIRepresenter(uriReps: _*)
   }
 

@@ -1,5 +1,6 @@
 package com.keepit.cortex.models.lda
 
+import com.keepit.cortex.article.StoreBasedArticleProvider
 import com.keepit.cortex.nlp.Stopwords
 import org.specs2.mutable.Specification
 import com.keepit.cortex.features.WordFeatureTestHelper
@@ -32,7 +33,7 @@ trait LDATestHelper extends WordFeatureTestHelper with URIFeatureTestHelper {
   val docRep = new LDADocRepresenter(wordRep, Stopwords(Set())) {
     override val minValidTerms = 1
   }
-  val uriRep = LDAURIRepresenter(docRep, articleStore)
+  val uriRep = LDAURIRepresenter(docRep, new StoreBasedArticleProvider(articleStore))
 
   val uri1 = NormalizedURI(id = Some(Id[NormalizedURI](1)), url = "http://intel.com", urlHash = UrlHash("intel"), seq = SequenceNumber[NormalizedURI](1))
   val uri2 = NormalizedURI(id = Some(Id[NormalizedURI](2)), url = "http://amd.com", urlHash = UrlHash("amd"), seq = SequenceNumber[NormalizedURI](2))
