@@ -2,11 +2,6 @@ package com.keepit.rover.document.tika
 
 import com.keepit.search.util.AhoCorasick
 
-object KeywordValidator {
-  val specialRegex = """[,;:/]\s*""".r
-  val spaceRegex = """\s+""".r
-}
-
 class KeywordValidator(keywordCandidates: Seq[String]) {
 
   private[this] val matcher = new AhoCorasick[Char, (String, Int)](keywordCandidates.zipWithIndex.map { case (k, i) => (s" ${k.toLowerCase} ".toCharArray().toSeq, (k, i)) })
@@ -46,4 +41,20 @@ class KeywordValidator(keywordCandidates: Seq[String]) {
   def keywords: Seq[String] = validatedKeywords.toSeq.sortBy(_._2).map(_._1)
 
   def coverage: Double = validatedKeywords.size.toDouble / matcher.size.toDouble
+}
+
+object KeywordValidator {
+  val specialRegex = """[,;:/]\s*""".r
+  val spaceRegex = """\s+""".r
+
+  def validate(keywordCandidates: Seq[String], text: Seq[String]): Seq[String] = {
+    val validator = new KeywordValidator(keywordCandidates)
+    validator.startDocument()
+    text.foreach { section =>
+      validator.characters(section.toCharArray)
+      validator.break()
+    }
+    validator.endDocument()
+    validator.keywords
+  }
 }

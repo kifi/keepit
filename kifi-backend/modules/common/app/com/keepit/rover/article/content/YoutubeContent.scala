@@ -50,7 +50,7 @@ case class YoutubeContent(
     preferredTrack.map(_.content).getOrElse("")
   ).filter(_.nonEmpty).mkString("\n")).filter(_.nonEmpty)
 
-  def mediaType: Option[String] = openGraphType
+  def contentType: Option[String] = openGraphType
 
   private def preferredTrack: Option[YoutubeTrack] = {
     video.tracks.find(_.info.isDefault) orElse {
