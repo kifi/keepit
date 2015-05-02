@@ -203,7 +203,7 @@ class ArticleInfoRepoImpl @Inject() (
             (r.lastImageProcessingAt.isDefined && r.lastImageProcessingAt < lastImageProcessingTooLongAgo) || { // stale
               // due
               r.lastImageProcessingAt.isEmpty && r.lastFetchedAt.isDefined && r.lastFetchedAt < lastFetchedTooLongAgo && r.latestVersionMajor.isDefined && r.latestVersionMinor.isDefined && {
-                r.lastImageProcessingVersionMajor.isEmpty || r.lastImageProcessingVersionMinor.isEmpty || (r.lastImageProcessingVersionMajor < r.latestVersionMajor) || ((r.lastImageProcessingVersionMajor === r.latestVersionMajor) && (r.lastImageProcessingVersionMajor < r.latestVersionMinor))
+                r.lastImageProcessingVersionMajor.isEmpty || r.lastImageProcessingVersionMinor.isEmpty || (r.lastImageProcessingVersionMajor < r.latestVersionMajor) || ((r.lastImageProcessingVersionMajor === r.latestVersionMajor) && (r.lastImageProcessingVersionMinor < r.latestVersionMinor))
               }
             }
           }

@@ -9,7 +9,7 @@ import com.keepit.rover.model.{ RoverArticleInfo, ArticleInfoRepo }
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.concurrent.duration.Duration
-import scala.util.{ Failure, Success, Try }
+import scala.util.{ Failure, Try }
 import com.keepit.common.core._
 
 @Singleton
