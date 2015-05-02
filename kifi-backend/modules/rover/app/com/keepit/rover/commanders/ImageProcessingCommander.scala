@@ -42,12 +42,14 @@ class ImageProcessingCommander @Inject() (
     private implicit val executionContext: ExecutionContext) extends ProcessedImageHelper with Logging {
 
   def add(tasks: Seq[ArticleImageProcessingTask], queue: ArticleImageProcessingTaskQueue): Future[Map[ArticleImageProcessingTask, Try[Unit]]] = {
+    db.readWrite { implicit session =>
+      articleInfoRepo.markAsImageProcessing(tasks.map(_.id): _*)
+    }
     queue.add(tasks).map { maybeQueuedTasks =>
-      val queuedTasks = maybeQueuedTasks.collect { case (task, Success(())) => task }.toSeq
-      if (queuedTasks.nonEmpty) {
-        // queues should be configured to have a very short delivery delay to make sure tasks are marked before they are consumed
+      val failedTasks = maybeQueuedTasks.collect { case (task, Failure(_)) => task }.toSeq
+      if (failedTasks.nonEmpty) {
         db.readWrite { implicit session =>
-          articleInfoRepo.markAsImageProcessing(queuedTasks.map(_.id): _*)
+          articleInfoRepo.unmarkAsImageProcessing(failedTasks.map(_.id): _*)
         }
       }
       maybeQueuedTasks
