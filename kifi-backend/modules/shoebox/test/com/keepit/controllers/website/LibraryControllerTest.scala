@@ -6,8 +6,8 @@ import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.commanders._
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.controller.FakeUserActionsHelper
-import com.keepit.common.crypto.{ FakeCryptoModule, PublicIdConfiguration }
-import com.keepit.common.db.ExternalId
+import com.keepit.common.crypto.{ PublicId, FakeCryptoModule, PublicIdConfiguration }
+import com.keepit.common.db.{ Id, ExternalId }
 
 import com.keepit.common.mail.{ EmailAddress, FakeMailModule }
 import com.keepit.common.social.FakeSocialGraphModule
@@ -1421,6 +1421,41 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
       }
 
+    }
+
+    "update library membership" in {
+      withDb(modules: _*) { implicit injector =>
+        val (user1, user2, user3, lib1) = db.readWrite { implicit s =>
+          val user1 = user().withUsername("nickfury").saved
+          val user2 = user().withUsername("quicksilver").saved
+          val user3 = user().withUsername("scarletwitch").saved
+          val lib1 = library().withUser(user1).saved // user1 owns lib1
+          membership().withLibraryFollower(lib1, user2).saved // user2 follows lib1 (has read_only access)
+
+          libraryMembershipRepo.getWithLibraryIdAndUserId(lib1.id.get, user1.id.get).get.access === LibraryAccess.OWNER
+          libraryMembershipRepo.getWithLibraryIdAndUserId(lib1.id.get, user2.id.get).get.access === LibraryAccess.READ_ONLY
+          (user1, user2, user3, lib1)
+        }
+
+        def updateLibraryMembership(user: User, targetUser: User, lib: Library, access: String) = {
+          val libraryController = inject[LibraryController]
+          val pubLibId = Library.publicId(lib.id.get)(inject[PublicIdConfiguration])
+          val testPath = com.keepit.controllers.website.routes.LibraryController.updateLibraryMembership(pubLibId, targetUser.externalId, access).url
+          libraryController.updateLibraryMembership(pubLibId, targetUser.externalId, access)(FakeRequest("POST", testPath))
+        }
+
+        // test invalid library write access
+        status(updateLibraryMembership(user2, user2, lib1, "owner")) must equalTo(FORBIDDEN)
+
+        // test change membership access
+        status(updateLibraryMembership(user1, user2, lib1, "read_write")) must equalTo(NO_CONTENT)
+
+        // test deactivate membership
+        status(updateLibraryMembership(user1, user2, lib1, "none")) must equalTo(NO_CONTENT)
+
+        // test membership not found
+        status(updateLibraryMembership(user1, user2, lib1, "read_only")) must equalTo(NOT_FOUND)
+      }
     }
 
     "marketingSiteSuggestedLibraries" should {

@@ -700,6 +700,38 @@ class LibraryController @Inject() (
   def marketingSiteSuggestedLibraries() = Action.async {
     libraryCommander.getMarketingSiteSuggestedLibraries() map { infos => Ok(Json.toJson(infos)) }
   }
+
+  ///////////////////
+  // Collaborators!
+  ///////////////////
+
+  def updateLibraryMembership(pubId: PublicId[Library], extUserId: ExternalId[User], access: String) = (UserAction andThen LibraryWriteAction(pubId)) { request =>
+    val libraryId = Library.decodePublicId(pubId).get
+    db.readOnlyMaster { implicit s =>
+      userRepo.getOpt(extUserId)
+    } match {
+      case None =>
+        NotFound(Json.obj("error" -> "user_id_not_found"))
+      case Some(targetUser) =>
+        val result = access.toLowerCase match {
+          case "none" =>
+            libraryCommander.updateLibraryMembershipAccess(libraryId, targetUser.id.get, None)
+          case "read_only" =>
+            libraryCommander.updateLibraryMembershipAccess(libraryId, targetUser.id.get, Some(LibraryAccess.READ_ONLY))
+          case "read_insert" =>
+            libraryCommander.updateLibraryMembershipAccess(libraryId, targetUser.id.get, Some(LibraryAccess.READ_INSERT))
+          case "read_write" =>
+            libraryCommander.updateLibraryMembershipAccess(libraryId, targetUser.id.get, Some(LibraryAccess.READ_WRITE))
+          case _ =>
+            Left(LibraryFail(BAD_REQUEST, "invalid_access_request"))
+        }
+        result match {
+          case Left(fail) => Status(fail.status)(Json.obj("error" -> fail.message))
+          case Right(_) => NoContent
+        }
+    }
+  }
+
 }
 
 object LibraryController {

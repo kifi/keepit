@@ -23,6 +23,8 @@ object LibraryMembershipFactory {
     def withLibraryFollower(lib: Library, userId: Id[User]) = new PartialLibraryMembership(membership.copy(userId = userId, libraryId = lib.id.get, access = LibraryAccess.READ_ONLY))
     def withLibraryFollower(lib: Id[Library], userId: Id[User]) = new PartialLibraryMembership(membership.copy(userId = userId, libraryId = lib, access = LibraryAccess.READ_ONLY))
     def withLibraryFollower(lib: Library, user: User) = new PartialLibraryMembership(membership.copy(userId = user.id.get, libraryId = lib.id.get, access = LibraryAccess.READ_ONLY))
+    def withLibraryCollaborator(libId: Id[Library], userId: Id[User], access: LibraryAccess) = new PartialLibraryMembership(membership.copy(userId = userId, libraryId = libId, access = access))
+    def withLibraryCollaborator(lib: Library, user: User, access: LibraryAccess) = new PartialLibraryMembership(membership.copy(userId = user.id.get, libraryId = lib.id.get, access = access))
     def withUser(id: Int) = new PartialLibraryMembership(membership.copy(userId = Id[User](id)))
     def withUser(id: Id[User]) = new PartialLibraryMembership(membership.copy(userId = id))
     def withUser(user: User) = new PartialLibraryMembership(membership.copy(userId = user.id.get))
