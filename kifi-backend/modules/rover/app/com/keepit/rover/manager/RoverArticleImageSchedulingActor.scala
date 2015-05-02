@@ -33,7 +33,7 @@ class RoverArticleImageSchedulingActor @Inject() (
 
   protected def nextBatch: Future[Seq[RoverArticleInfo]] = {
     SafeFuture {
-      log.info(s"Queuing up to $maxBatchSize article fetch tasks...")
+      log.info(s"Queuing up to $maxBatchSize article image processing tasks...")
       imageProcessingCommander.getRipeForImageProcessing(maxBatchSize, dueAfterFetchWithin, maxQueuedFor)
     }
   }
@@ -49,8 +49,8 @@ class RoverArticleImageSchedulingActor @Inject() (
       val queuedCount = maybeQueued.count(_._2.isSuccess)
       (queuedCount, maybeQueued.size)
     } andThen {
-      case Success((queuedTaskCount, totalTaskCount)) => log.info(s"Added $queuedTaskCount / $totalTaskCount article fetch tasks.")
-      case Failure(error) => log.error(s"Failed to add article fetch tasks.", error)
+      case Success((queuedTaskCount, totalTaskCount)) => log.info(s"Added $queuedTaskCount / $totalTaskCount article image processing tasks.")
+      case Failure(error) => log.error(s"Failed to add article image processing tasks.", error)
     }
   } imap { _ => () }
 

@@ -9,7 +9,7 @@ import com.keepit.rover.model.{ RoverArticleInfo, ArticleInfoRepo }
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.concurrent.duration.Duration
-import scala.util.{ Failure, Success, Try }
+import scala.util.{ Failure, Try }
 import com.keepit.common.core._
 
 @Singleton
@@ -20,12 +20,14 @@ class FetchCommander @Inject() (
     private implicit val executionContext: ExecutionContext) extends Logging {
 
   def add(tasks: Seq[FetchTask], queue: FetchTaskQueue): Future[Map[FetchTask, Try[Unit]]] = {
+    db.readWrite { implicit session =>
+      articleInfoRepo.markAsFetching(tasks.map(_.id): _*)
+    }
     queue.add(tasks).map { maybeQueuedTasks =>
-      val queuedTasks = maybeQueuedTasks.collect { case (task, Success(())) => task }.toSeq
-      if (queuedTasks.nonEmpty) {
-        // queues should be configured to have a very short delivery delay to make sure tasks are marked before they are consumed
+      val failedTasks = maybeQueuedTasks.collect { case (task, Failure(_)) => task }.toSeq
+      if (failedTasks.nonEmpty) {
         db.readWrite { implicit session =>
-          articleInfoRepo.markAsFetching(queuedTasks.map(_.id): _*)
+          articleInfoRepo.unmarkAsFetching(failedTasks.map(_.id): _*)
         }
       }
       maybeQueuedTasks

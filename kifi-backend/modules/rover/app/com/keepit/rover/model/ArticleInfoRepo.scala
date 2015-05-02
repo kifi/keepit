@@ -30,9 +30,11 @@ trait ArticleInfoRepo extends Repo[RoverArticleInfo] with SeqNumberFunction[Rove
   def deactivateByUriAndKinds(uriId: Id[NormalizedURI], kinds: Set[ArticleKind[_ <: Article]])(implicit session: RWSession): Unit
   def getRipeForFetching(limit: Int, fetchingForMoreThan: Duration)(implicit session: RSession): Seq[RoverArticleInfo]
   def markAsFetching(ids: Id[RoverArticleInfo]*)(implicit session: RWSession): Unit
+  def unmarkAsFetching(ids: Id[RoverArticleInfo]*)(implicit session: RWSession): Unit
   def updateAfterFetch[A <: Article](uriId: Id[NormalizedURI], kind: ArticleKind[A], fetched: Try[Option[ArticleVersion]])(implicit session: RWSession): Unit
   def getRipeForImageProcessing(limit: Int, fetchedForMoreThan: Duration, imageProcessingForMoreThan: Duration)(implicit session: RSession): Seq[RoverArticleInfo]
   def markAsImageProcessing(ids: Id[RoverArticleInfo]*)(implicit session: RWSession): Unit
+  def unmarkAsImageProcessing(ids: Id[RoverArticleInfo]*)(implicit session: RWSession): Unit
   def updateAfterImageProcessing[A <: Article](uriId: Id[NormalizedURI], kind: ArticleKind[A], version: ArticleVersion)(implicit session: RWSession): Unit
 }
 
@@ -169,6 +171,7 @@ class ArticleInfoRepoImpl @Inject() (
   }
 
   def markAsFetching(ids: Id[RoverArticleInfo]*)(implicit session: RWSession): Unit = updateLastFetchingAt(ids, Some(clock.now()))
+  def unmarkAsFetching(ids: Id[RoverArticleInfo]*)(implicit session: RWSession): Unit = updateLastFetchingAt(ids, None)
 
   private def updateLastFetchingAt(ids: Seq[Id[RoverArticleInfo]], lastFetchingAt: Option[DateTime])(implicit session: RWSession): Unit = {
     (for (r <- rows if r.id.inSet(ids.toSet)) yield r.lastFetchingAt).update(lastFetchingAt)
@@ -200,7 +203,7 @@ class ArticleInfoRepoImpl @Inject() (
             (r.lastImageProcessingAt.isDefined && r.lastImageProcessingAt < lastImageProcessingTooLongAgo) || { // stale
               // due
               r.lastImageProcessingAt.isEmpty && r.lastFetchedAt.isDefined && r.lastFetchedAt < lastFetchedTooLongAgo && r.latestVersionMajor.isDefined && r.latestVersionMinor.isDefined && {
-                r.lastImageProcessingVersionMajor.isEmpty || r.lastImageProcessingVersionMinor.isEmpty || (r.lastImageProcessingVersionMajor < r.latestVersionMajor) || ((r.lastImageProcessingVersionMajor === r.latestVersionMajor) && (r.lastImageProcessingVersionMajor < r.latestVersionMinor))
+                r.lastImageProcessingVersionMajor.isEmpty || r.lastImageProcessingVersionMinor.isEmpty || (r.lastImageProcessingVersionMajor < r.latestVersionMajor) || ((r.lastImageProcessingVersionMajor === r.latestVersionMajor) && (r.lastImageProcessingVersionMinor < r.latestVersionMinor))
               }
             }
           }
@@ -211,6 +214,7 @@ class ArticleInfoRepoImpl @Inject() (
   }
 
   def markAsImageProcessing(ids: Id[RoverArticleInfo]*)(implicit session: RWSession): Unit = updateLastImageProcessingAt(ids, Some(clock.now()))
+  def unmarkAsImageProcessing(ids: Id[RoverArticleInfo]*)(implicit session: RWSession): Unit = updateLastImageProcessingAt(ids, None)
 
   private def updateLastImageProcessingAt(ids: Seq[Id[RoverArticleInfo]], lastImageProcessingAt: Option[DateTime])(implicit session: RWSession): Unit = {
     (for (r <- rows if r.id.inSet(ids.toSet)) yield r.lastImageProcessingAt).update(lastImageProcessingAt)
