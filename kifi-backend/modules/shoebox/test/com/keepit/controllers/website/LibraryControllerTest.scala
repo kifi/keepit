@@ -1440,6 +1440,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         def updateLibraryMembership(user: User, targetUser: User, lib: Library, access: String) = {
           val libraryController = inject[LibraryController]
           val pubLibId = Library.publicId(lib.id.get)(inject[PublicIdConfiguration])
+          inject[FakeUserActionsHelper].setUser(user)
           val testPath = com.keepit.controllers.website.routes.LibraryController.updateLibraryMembership(pubLibId, targetUser.externalId, access).url
           libraryController.updateLibraryMembership(pubLibId, targetUser.externalId, access)(FakeRequest("POST", testPath))
         }

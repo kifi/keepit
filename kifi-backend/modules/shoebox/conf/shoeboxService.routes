@@ -413,9 +413,9 @@ POST    /site/libraries/:id/keeps/:k/note         @com.keepit.controllers.websit
 
 GET     /site/libraries/:id/related                @com.keepit.controllers.website.LibraryController.relatedLibraries(id: PublicId[Library])
 
-POST    /site/libraries/:id/members/:uId/access/:access @com.keepit.controllers.website.LibraryController.updateLibraryMembership(id: PublicId[Library], uId: ExternalId[User], access: String)
 GET     /site/libraries/:id/members @com.keepit.controllers.website.LibraryController.getLibraryMembers(id: PublicId[Library], offset: Int ?= 0, limit: Int ?= 10)
 GET     /site/libraries/:id/members/suggest  @com.keepit.controllers.website.LibraryController.suggestMembers(id: PublicId[Library], q: Option[String] ?= None, n: Int ?= 5)
+POST    /site/libraries/:id/members/:uId/access/:access @com.keepit.controllers.website.LibraryController.updateLibraryMembership(id: PublicId[Library], uId: ExternalId[User], access: String)
 
 POST    /site/libraries/:id/importTag   @com.keepit.controllers.website.LibraryController.copyKeepsFromCollectionToLibrary(id: PublicId[Library], tag: String)
 POST    /site/libraries/:id/moveTag     @com.keepit.controllers.website.LibraryController.moveKeepsFromCollectionToLibrary(id: PublicId[Library], tag: String)
