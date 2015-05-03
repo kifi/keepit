@@ -1,5 +1,6 @@
 package com.keepit.cortex.models.lda
 
+import com.keepit.cortex.article.StoreBasedArticleProvider
 import com.keepit.cortex.nlp.Stopwords
 import org.specs2.mutable.Specification
 import com.keepit.cortex.features.URIFeatureTestHelper
@@ -151,7 +152,7 @@ trait LDADbTestHelper extends URIFeatureTestHelper {
     override val minValidTerms = 1
   }
   val articleStore = new InMemoryArticleStoreImpl()
-  val uriRep = LDAURIRepresenter(docRep, articleStore)
+  val uriRep = LDAURIRepresenter(docRep, new StoreBasedArticleProvider(articleStore))
   val uriReps = MultiVersionedLDAURIRepresenter(uriRep)
 
   def makeURI(idx: Int, seq: Option[SequenceNumber[NormalizedURI]] = None, state: State[NormalizedURI] = NormalizedURIStates.SCRAPED) = {

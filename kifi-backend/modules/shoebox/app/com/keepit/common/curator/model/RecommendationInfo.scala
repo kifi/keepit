@@ -2,7 +2,7 @@ package com.keepit.curator.model
 
 import com.keepit.common.crypto.PublicId
 import com.keepit.common.db.{ Id, ExternalId }
-import com.keepit.model.{ FullLibraryInfo, Library, NormalizedURI, URISummary }
+import com.keepit.model.{ FullLibraryInfo, Library, NormalizedURI, URISummary, KeepInfo }
 import com.keepit.social.BasicUser
 import com.kifi.macros.json
 import org.joda.time.DateTime
@@ -56,11 +56,20 @@ object FullLibRecoInfo {
 
 case class FullLibRecoResults(recos: Seq[(Id[Library], FullLibRecoInfo)], context: String)
 
+case class FullLibUpdatesRecoInfo(
+  kind: RecoKind = RecoKind.LibraryUpdates,
+  itemInfo: Seq[KeepInfo]) extends FullRecoInfo
+
+object FullLibUpdatesRecoInfo {
+  implicit val writes = Json.writes[FullLibUpdatesRecoInfo]
+}
+
 object FullRecoInfo {
   implicit val writes = new Writes[FullRecoInfo] {
     def writes(obj: FullRecoInfo) = obj match {
       case uri: FullUriRecoInfo => Json.toJson(uri)
       case lib: FullLibRecoInfo => Json.toJson(lib)
+      case libUpdates: FullLibUpdatesRecoInfo => Json.toJson(libUpdates)
     }
   }
 }

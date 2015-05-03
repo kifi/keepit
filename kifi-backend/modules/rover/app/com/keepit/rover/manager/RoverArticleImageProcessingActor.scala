@@ -17,8 +17,8 @@ import scala.util.{ Failure, Success }
 
 object RoverArticleImageProcessingActor {
   val lockTimeOut = 10 minutes
-  val minConcurrentTasks: Int = 300
-  val maxConcurrentTasks: Int = 400
+  val minConcurrentTasks: Int = 150
+  val maxConcurrentTasks: Int = 200
 }
 
 class RoverArticleImageProcessingActor @Inject() (

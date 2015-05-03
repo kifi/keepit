@@ -224,16 +224,17 @@ class KeepInterner @Inject() (
         }
 
         val savedKeep = bookmark.copy(
+          userId = userId,
           title = trimmedTitle orElse bookmark.title orElse uri.title,
           state = KeepStates.ACTIVE,
           visibility = library.visibility,
           libraryId = Some(library.id.get),
           keptAt = keptAt,
-          note = note orElse bookmark.note
-        // should we be updating url?
+          note = note orElse bookmark.note,
+          url = url
         ) |> { keep =>
             if (wasInactiveKeep) {
-              keep.copy(url = url, createdAt = clock.now)
+              keep.copy(createdAt = clock.now)
             } else keep
           } |> { keep =>
             keepRepo.save(keep)

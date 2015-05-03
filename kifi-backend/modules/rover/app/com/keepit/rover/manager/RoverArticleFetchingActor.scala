@@ -16,8 +16,8 @@ import scala.concurrent.{ Future, ExecutionContext }
 
 object RoverArticleFetchingActor {
   val lockTimeOut = 10 minutes
-  val minConcurrentTasks: Int = 300
-  val maxConcurrentTasks: Int = 400
+  val minConcurrentTasks: Int = 150
+  val maxConcurrentTasks: Int = 200
 }
 
 class RoverArticleFetchingActor @Inject() (
@@ -79,10 +79,9 @@ class RoverArticleFetchingActor @Inject() (
               articleInfoRepo.updateAfterFetch(articleInfo.uriId, articleInfo.articleKind, fetched)
             }
 
-          // todo(Léo): Turn on.
-          /*if (fetched.toOption.flatten.isDefined) SafeFuture {
-              imageProcessingCommander.processArticleImagesAsap(articleInfo.id.toSet)
-            }*/
+            if (fetched.toOption.flatten.isDefined) {
+              SafeFuture { imageProcessingCommander.processArticleImagesAsap(articleInfo.id.toSet) }
+            }
         }
       } imap { _ => () }
     }

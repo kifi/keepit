@@ -2,15 +2,14 @@ package com.keepit.rover.commanders
 
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.commanders._
-import com.keepit.common.concurrent.FutureHelpers
-import com.keepit.common.db.{ SequenceNumber, Id }
+import com.keepit.common.db.{ Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.images.Photoshop
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.WebService
 import com.keepit.common.store.{ ImageSize, ImagePath, RoverImageStore }
 import com.keepit.model._
-import com.keepit.rover.article.{ EmbedlyArticle, Article, ArticleKind }
+import com.keepit.rover.article.{ Article, ArticleKind }
 import com.keepit.rover.manager.{ ArticleImageProcessingTask, ArticleImageProcessingTaskQueue }
 import com.keepit.rover.model._
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -43,12 +42,14 @@ class ImageProcessingCommander @Inject() (
     private implicit val executionContext: ExecutionContext) extends ProcessedImageHelper with Logging {
 
   def add(tasks: Seq[ArticleImageProcessingTask], queue: ArticleImageProcessingTaskQueue): Future[Map[ArticleImageProcessingTask, Try[Unit]]] = {
+    db.readWrite { implicit session =>
+      articleInfoRepo.markAsImageProcessing(tasks.map(_.id): _*)
+    }
     queue.add(tasks).map { maybeQueuedTasks =>
-      val queuedTasks = maybeQueuedTasks.collect { case (task, Success(())) => task }.toSeq
-      if (queuedTasks.nonEmpty) {
-        // queues should be configured to have a very short delivery delay to make sure tasks are marked before they are consumed
+      val failedTasks = maybeQueuedTasks.collect { case (task, Failure(_)) => task }.toSeq
+      if (failedTasks.nonEmpty) {
         db.readWrite { implicit session =>
-          articleInfoRepo.markAsImageProcessing(queuedTasks.map(_.id): _*)
+          articleInfoRepo.unmarkAsImageProcessing(failedTasks.map(_.id): _*)
         }
       }
       maybeQueuedTasks
@@ -186,59 +187,6 @@ class ImageProcessingCommander @Inject() (
       case Left(fetchError) => {
         log.error(s"Could not fetch remote image from $remoteImageUrl: $fetchError")
         Future.successful(Left(fetchError))
-      }
-    }
-  }
-
-  val imageInfoSeq = Name[SequenceNumber[ImageInfo]]("image_info_migration")
-  val pathPattern = s"""i/([a-z0-9]+)_([0-9]{1,4})x([0-9]{1,4})(${ProcessImageOperation.all.map(_.fileNameSuffix).mkString("|")})[.](jpg|png)""".r
-  def ingestEmbedlyImagesFromShoebox(): Future[Unit] = {
-    FutureHelpers.doUntil {
-      val seq = db.readOnlyMaster { implicit session =>
-        systemValueRepo.getSequenceNumber(imageInfoSeq) getOrElse SequenceNumber.ZERO
-      }
-      shoeboxServiceClient.getImageInfosChanged(seq, 100).map {
-        case Seq() => true
-        case imageInfos => {
-          db.readWrite { implicit session =>
-            imageInfos.foreach { imageInfo =>
-              if (imageInfo.state == ImageInfoStates.ACTIVE && imageInfo.provider.exists(_ == ImageProvider.EMBEDLY)) Try {
-
-                // Parse image path
-                val pathPattern(hashString, width, height, operationSuffix, formatSuffix) = imageInfo.path.path
-                val hash = ImageHash(hashString)
-                val imageSize = ImageSize(width.toInt, height.toInt)
-                val List(processOperation) = ProcessImageOperation.all.filter(_.fileNameSuffix == operationSuffix)
-                val format = formatSuffix match {
-                  case "jpg" => ImageFormat.JPG
-                  case "png" => ImageFormat.PNG
-                }
-
-                // If consistent image path (conservative) ingest
-                if (imageInfo.getImageSize.exists(_ == imageSize) && imageInfo.format.exists(_ == format) && imageInfo.url.isDefined) {
-                  imageInfoRepo.getByImage(hash, imageSize, processOperation, format) match {
-                    case Some(existingInfo) => // ignore
-                    case None => {
-                      val newInfo = RoverImageInfo(
-                        sourceImageHash = hash,
-                        width = imageSize.width,
-                        height = imageSize.height,
-                        kind = processOperation,
-                        format = format,
-                        path = imageInfo.path,
-                        source = ImageSource.RoverArticle(EmbedlyArticle),
-                        sourceImageUrl = Some(imageInfo.url.get)
-                      )
-                      imageInfoRepo.save(newInfo)
-                    }
-                  }
-                }
-              }
-            }
-            systemValueRepo.setSequenceNumber(imageInfoSeq, imageInfos.map(_.seq).max)
-          }
-          false
-        }
       }
     }
   }

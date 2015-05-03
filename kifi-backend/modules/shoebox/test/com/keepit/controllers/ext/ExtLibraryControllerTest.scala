@@ -59,7 +59,7 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
           // Give READ_INSERT access to Freeman
           val lib2 = libraryRepo.save(Library(name = "Dark Knight", ownerId = user2.id.get, visibility = LibraryVisibility.PUBLISHED, slug = LibrarySlug("darkknight"), color = Some(LibraryColor.BLUE), memberCount = 1))
           libraryMembershipRepo.save(LibraryMembership(libraryId = lib2.id.get, userId = user2.id.get, access = LibraryAccess.OWNER))
-          libraryMembershipRepo.save(LibraryMembership(libraryId = lib2.id.get, userId = user1.id.get, access = LibraryAccess.READ_INSERT))
+          libraryMembershipRepo.save(LibraryMembership(libraryId = lib2.id.get, userId = user1.id.get, access = LibraryAccess.READ_WRITE))
 
           // Give READ_ONLY access to Freeman
           val lib3 = libraryRepo.save(Library(name = "Now You See Me", ownerId = user2.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("magic"), color = Some(LibraryColor.GREEN), memberCount = 1))
@@ -83,13 +83,15 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
               "name" -> "Million Dollar Baby",
               "color" -> LibraryColor.RED,
               "visibility" -> "published",
-              "path" -> "/morgan/baby"),
+              "path" -> "/morgan/baby",
+              "hasCollaborators" -> false),
             Json.obj(
               "id" -> pubId2,
               "name" -> "Dark Knight",
               "color" -> LibraryColor.BLUE,
               "visibility" -> "published",
-              "path" -> "/michael/darkknight")))
+              "path" -> "/michael/darkknight",
+              "hasCollaborators" -> true)))
       }
     }
 
