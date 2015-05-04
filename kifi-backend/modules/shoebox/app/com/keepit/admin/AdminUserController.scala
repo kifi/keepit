@@ -76,6 +76,8 @@ object UserViewTypes {
 }
 import UserViewTypes._
 
+case class SuperAdminAccessDenied() extends Exception
+
 class AdminUserController @Inject() (
     val userActionsHelper: UserActionsHelper,
     db: Database,
@@ -499,21 +501,40 @@ class AdminUserController @Inject() (
     Redirect(routes.AdminUserController.userView(user1))
   }
 
-  def addExperiment(userId: Id[User], experiment: String) = AdminUserAction { request =>
-    val expType = ExperimentType.get(experiment)
-    db.readWrite { implicit session =>
-      (userExperimentRepo.get(userId, expType, excludeState = None) match {
-        case Some(ue) if ue.isActive => None
-        case Some(ue) => Some(userExperimentRepo.save(ue.withState(UserExperimentStates.ACTIVE)))
-        case None => Some(userExperimentRepo.save(UserExperiment(userId = userId, experimentType = expType)))
-      }) foreach { _ =>
-        val experiments = userExperimentRepo.getUserExperiments(userId)
-        eliza.sendToUser(userId, Json.arr("experiments", experiments.map(_.value)))
-        heimdal.setUserProperties(userId, "experiments" -> ContextList(experiments.map(exp => ContextStringData(exp.value)).toSeq))
-      }
-      userRepo.save(userRepo.getNoCache(userId)) // update user index sequence number
+  def isSuperAdmin(userId: Id[User]) = {
+    val superAdminSet: Set[Id[User]] = Set(Id[User](1))
+    superAdminSet contains userId
+  }
+
+  def isAdminExperiment(expType: ExperimentType) = expType == ExperimentType.ADMIN
+
+  def addExperimentAction(userId: Id[User], experiment: String) = AdminUserAction { request =>
+    try {
+      addExperiment(request.userId, userId, experiment)
+      Ok(Json.obj(experiment -> true))
+    } catch {
+      case SuperAdminAccessDenied() => Forbidden
     }
-    Ok(Json.obj(experiment -> true))
+  }
+
+  def addExperiment(requesterUserId: Id[User], userId: Id[User], experiment: String) {
+    val expType = ExperimentType.get(experiment)
+    if (isAdminExperiment(expType) && !isSuperAdmin(requesterUserId)) {
+      throw SuperAdminAccessDenied()
+    } else {
+      db.readWrite { implicit session =>
+        (userExperimentRepo.get(userId, expType, excludeState = None) match {
+          case Some(ue) if ue.isActive => None
+          case Some(ue) => Some(userExperimentRepo.save(ue.withState(UserExperimentStates.ACTIVE)))
+          case None => Some(userExperimentRepo.save(UserExperiment(userId = userId, experimentType = expType)))
+        }) foreach { _ =>
+          val experiments = userExperimentRepo.getUserExperiments(userId)
+          eliza.sendToUser(userId, Json.arr("experiments", experiments.map(_.value)))
+          heimdal.setUserProperties(userId, "experiments" -> ContextList(experiments.map(exp => ContextStringData(exp.value)).toSeq))
+        }
+        userRepo.save(userRepo.getNoCache(userId)) // update user index sequence number
+      }
+    }
   }
 
   def changeUsersName(userId: Id[User]) = AdminUserPage { request =>
@@ -582,18 +603,31 @@ class AdminUserController @Inject() (
     Ok
   }
 
-  def removeExperiment(userId: Id[User], experiment: String) = AdminUserAction { request =>
-    db.readWrite { implicit session =>
-      val ue: Option[UserExperiment] = userExperimentRepo.get(userId, ExperimentType(experiment))
-      ue foreach { ue =>
-        userExperimentRepo.save(ue.withState(UserExperimentStates.INACTIVE))
-        val experiments = userExperimentRepo.getUserExperiments(userId)
-        eliza.sendToUser(userId, Json.arr("experiments", experiments.map(_.value)))
-        heimdal.setUserProperties(userId, "experiments" -> ContextList(experiments.map(exp => ContextStringData(exp.value)).toSeq))
-        userRepo.save(userRepo.getNoCache(userId)) // update user index sequence number
+  def removeExperimentAction(userId: Id[User], experiment: String) = AdminUserAction { request =>
+    try {
+      removeExperiment(request.userId, userId, experiment)
+      Ok(Json.obj(experiment -> false))
+    } catch {
+      case SuperAdminAccessDenied() => Forbidden
+    }
+  }
+
+  def removeExperiment(requesterUserId: Id[User], userId: Id[User], experiment: String) {
+    val expType = ExperimentType(experiment)
+    if (isAdminExperiment(expType) && !isSuperAdmin(requesterUserId)) {
+      throw SuperAdminAccessDenied()
+    } else {
+      db.readWrite { implicit session =>
+        val ue: Option[UserExperiment] = userExperimentRepo.get(userId, ExperimentType(experiment))
+        ue foreach { ue =>
+          userExperimentRepo.save(ue.withState(UserExperimentStates.INACTIVE))
+          val experiments = userExperimentRepo.getUserExperiments(userId)
+          eliza.sendToUser(userId, Json.arr("experiments", experiments.map(_.value)))
+          heimdal.setUserProperties(userId, "experiments" -> ContextList(experiments.map(exp => ContextStringData(exp.value)).toSeq))
+          userRepo.save(userRepo.getNoCache(userId)) // update user index sequence number
+        }
       }
     }
-    Ok(Json.obj(experiment -> false))
   }
 
   def refreshAllSocialInfo(userId: Id[User]) = AdminUserPage { implicit request =>

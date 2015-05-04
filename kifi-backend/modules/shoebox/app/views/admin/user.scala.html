@@ -299,10 +299,10 @@
         var $sp = $("<img src=/assets/images/spinner.15.gif>").appendTo($td);
         if (this.checked) {
           console.log($(this).data("exp"))
-          $.post('@com.keepit.controllers.admin.routes.AdminUserController.addExperiment(user.id.get, "____")'.replace("____", $(this).data("exp")))
+          $.post('@com.keepit.controllers.admin.routes.AdminUserController.addExperimentAction(user.id.get, "____")'.replace("____", $(this).data("exp")))
             .done(done).fail(fail);
         } else {
-          $.ajax('@com.keepit.controllers.admin.routes.AdminUserController.removeExperiment(user.id.get, "____")'.replace("____", $(this).data("exp")),
+          $.ajax('@com.keepit.controllers.admin.routes.AdminUserController.removeExperimentAction(user.id.get, "____")'.replace("____", $(this).data("exp")),
             {type: "DELETE"}).done(done).fail(fail);
         }
         function done() {
