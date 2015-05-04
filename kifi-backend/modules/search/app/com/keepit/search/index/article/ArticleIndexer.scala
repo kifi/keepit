@@ -151,7 +151,7 @@ object ArticleIndexer extends Logging {
           }
 
           // store title and url in the index
-          val r = ArticleRecord(article.title, uri.url, article.id)
+          val r = ArticleRecord(Some(article.title), uri.url, article.id)
           doc.add(buildBinaryDocValuesField(recordField, r))
 
           doc
