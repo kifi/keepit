@@ -273,13 +273,15 @@ GET     /m/2/libraries/:id/keeps                @com.keepit.controllers.mobile.M
 POST    /m/1/libraries/:id/keeps                @com.keepit.controllers.mobile.MobileLibraryController.keepToLibrary(id: PublicId[Library])
 DELETE  /m/1/libraries/:id/keeps/:kId           @com.keepit.controllers.mobile.MobileLibraryController.unkeepFromLibrary(id: PublicId[Library], kId: ExternalId[Keep])
 POST    /m/1/libraries/:id/invite               @com.keepit.controllers.mobile.MobileLibraryController.inviteUsersToLibrary(id: PublicId[Library])
+
 GET     /m/1/libraries/:id/members              @com.keepit.controllers.mobile.MobileLibraryController.getLibraryMembers(id: PublicId[Library], offset: Int ?= 0, limit: Int ?= 20)
 GET     /m/1/libraries/:id/members/suggest      @com.keepit.controllers.mobile.MobileLibraryController.suggestMembers(id: PublicId[Library], q: Option[String] ?= None, n: Int ?= 5)
+POST    /m/1/libraries/:id/members/:uId/access/:access @com.keepit.controllers.mobile.MobileLibraryController.updateLibraryMembership(id: PublicId[Library], uId: ExternalId[User], access: String)
+
 GET     /m/1/libraries/:id/inviteInfo           @com.keepit.controllers.website.InviteController.getLibraryInviteInfo(id: PublicId[Library])
 POST    /m/1/libraries/recos/feedback      @com.keepit.controllers.website.LibraryRecommendationsController.updateLibraryRecommendationFeedback(id: PublicId[Library])
 
 POST    /m/1/content/flagUrl                @com.keepit.controllers.mobile.MobileUriController.flagContent()
-
 GET     /m/1/inviteInfo                     @com.keepit.controllers.website.InviteController.getGeneralInviteInfo()
 
 
@@ -402,19 +404,22 @@ POST    /site/libraries/:id/invite  @com.keepit.controllers.website.LibraryContr
 POST    /site/libraries/:id/join    @com.keepit.controllers.website.LibraryController.joinLibrary(id: PublicId[Library], authToken: Option[String] ?= None)
 POST    /site/libraries/:id/decline @com.keepit.controllers.website.LibraryController.declineLibrary(id: PublicId[Library])
 POST    /site/libraries/:id/leave   @com.keepit.controllers.website.LibraryController.leaveLibrary(id: PublicId[Library])
+
 GET     /site/libraries/:id/keeps   @com.keepit.controllers.website.LibraryController.getKeeps(id: PublicId[Library], offset: Int ?= 0, limit: Int ?= 10, showPublishedLibraries: Boolean ?= false)
 POST    /site/libraries/:id/keeps   @com.keepit.controllers.website.LibraryController.addKeeps(id: PublicId[Library])
-GET     /site/libraries/:id/members @com.keepit.controllers.website.LibraryController.getLibraryMembers(id: PublicId[Library], offset: Int ?= 0, limit: Int ?= 10)
-GET     /site/libraries/:id/members/suggest  @com.keepit.controllers.website.LibraryController.suggestMembers(id: PublicId[Library], q: Option[String] ?= None, n: Int ?= 5)
 POST    /site/libraries/:id/keeps/delete   @com.keepit.controllers.website.LibraryController.removeKeeps(id: PublicId[Library])
 DELETE  /site/libraries/:id/keeps/:k   @com.keepit.controllers.website.LibraryController.removeKeep(id: PublicId[Library], k: ExternalId[Keep])
 GET     /site/libraries/:id/keeps/:k/tags/suggest  @com.keepit.controllers.website.LibraryController.suggestTags(id: PublicId[Library], k: ExternalId[Keep], q: Option[String] ?= None, n: Int ?= 5)
-GET     /site/libraries/:id/related                @com.keepit.controllers.website.LibraryController.relatedLibraries(id: PublicId[Library])
-
 POST    /site/libraries/:id/keeps/:k/update       @com.keepit.controllers.website.LibraryController.updateKeep(id:PublicId[Library], k: ExternalId[Keep])
 POST    /site/libraries/:id/keeps/:k/tags/:tag    @com.keepit.controllers.website.LibraryController.tagKeep(id: PublicId[Library], k: ExternalId[Keep], tag: String)
 DELETE  /site/libraries/:id/keeps/:k/tags/:tag    @com.keepit.controllers.website.LibraryController.untagKeep(id: PublicId[Library], k: ExternalId[Keep], tag: String)
 POST    /site/libraries/:id/keeps/:k/note         @com.keepit.controllers.website.LibraryController.editKeepNote(id: PublicId[Library], k: ExternalId[Keep])
+
+GET     /site/libraries/:id/related                @com.keepit.controllers.website.LibraryController.relatedLibraries(id: PublicId[Library])
+
+GET     /site/libraries/:id/members @com.keepit.controllers.website.LibraryController.getLibraryMembers(id: PublicId[Library], offset: Int ?= 0, limit: Int ?= 10)
+GET     /site/libraries/:id/members/suggest  @com.keepit.controllers.website.LibraryController.suggestMembers(id: PublicId[Library], q: Option[String] ?= None, n: Int ?= 5)
+POST    /site/libraries/:id/members/:uId/access/:access @com.keepit.controllers.website.LibraryController.updateLibraryMembership(id: PublicId[Library], uId: ExternalId[User], access: String)
 
 POST    /site/libraries/:id/importTag   @com.keepit.controllers.website.LibraryController.copyKeepsFromCollectionToLibrary(id: PublicId[Library], tag: String)
 POST    /site/libraries/:id/moveTag     @com.keepit.controllers.website.LibraryController.moveKeepsFromCollectionToLibrary(id: PublicId[Library], tag: String)

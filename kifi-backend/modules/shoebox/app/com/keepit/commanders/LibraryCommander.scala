@@ -1689,4 +1689,35 @@ class LibraryCommander @Inject() (
     }
   }
 
+  ///////////////////
+  // Collaborators!
+  ///////////////////
+
+  def updateLibraryMembershipAccess(libraryId: Id[Library], targetUserId: Id[User], newAccess: Option[LibraryAccess]): Either[LibraryFail, LibraryMembership] = {
+    if (newAccess.isDefined && newAccess.get == LibraryAccess.OWNER) {
+      Left(LibraryFail(BAD_REQUEST, "cannot_change_access_to_owner"))
+    } else {
+      db.readOnlyMaster { implicit s =>
+        libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, targetUserId)
+      } match {
+        case None =>
+          Left(LibraryFail(NOT_FOUND, "membership_not_found"))
+        case Some(targetMembership) =>
+          if (targetMembership.access == LibraryAccess.OWNER) {
+            Left(LibraryFail(BAD_REQUEST, "cannot_change_owner_access"))
+          } else {
+            val updatedMembership = db.readWrite { implicit s =>
+              newAccess match {
+                case None =>
+                  libraryMembershipRepo.save(targetMembership.copy(state = LibraryMembershipStates.INACTIVE))
+                case Some(access) =>
+                  libraryMembershipRepo.save(targetMembership.copy(access = access))
+              }
+            }
+            Right(updatedMembership)
+          }
+      }
+    }
+  }
+
 }

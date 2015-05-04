@@ -58,7 +58,7 @@ class MobileLibraryController @Inject() (
 
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
     libraryCommander.addLibrary(addRequest, request.userId) match {
-      case Left(fail) => Status(fail.status)(Json.obj("error" -> fail.message))
+      case Left(fail) => sendFailResponse(fail)
       case Right(lib) =>
         val owner = db.readOnlyMaster { implicit s => basicUserRepo.load(lib.ownerId) }
         val libImage = libraryImageCommander.getBestImageForLibrary(lib.id.get, MobileLibraryController.defaultLibraryImageSize)
@@ -80,8 +80,7 @@ class MobileLibraryController @Inject() (
     val modifyRequest = LibraryModifyRequest(newName, newSlug, newVisibility, newDescription, newColor, newListed)
     val res = libraryCommander.modifyLibrary(libId, request.userId, modifyRequest)
     res match {
-      case Left(fail) =>
-        Status(fail.status)(Json.obj("error" -> fail.message))
+      case Left(fail) => sendFailResponse(fail)
       case Right(lib) =>
         val owner = db.readOnlyMaster { implicit s => basicUserRepo.load(lib.ownerId) }
         val libImage = libraryImageCommander.getBestImageForLibrary(lib.id.get, MobileLibraryController.defaultLibraryImageSize)
@@ -93,7 +92,7 @@ class MobileLibraryController @Inject() (
     val libId = Library.decodePublicId(pubId).get
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
     libraryCommander.removeLibrary(libId, request.userId) match {
-      case Some(fail) => Status(fail.status)(Json.obj("error" -> fail.message))
+      case Some(fail) => sendFailResponse(fail)
       case _ => NoContent
     }
   }
@@ -132,7 +131,7 @@ class MobileLibraryController @Inject() (
           }
         })
       case Left(fail) =>
-        Future.successful(Status(fail.status)(Json.obj("error" -> fail.message)))
+        Future.successful(sendFailResponse(fail))
     }
   }
 
@@ -251,8 +250,7 @@ class MobileLibraryController @Inject() (
         }
         implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
         libraryCommander.inviteUsersToLibrary(id, request.userId, validInviteList).map {
-          case Left(fail) =>
-            Status(fail.status)(Json.obj("error" -> fail.message))
+          case Left(fail) => sendFailResponse(fail)
           case Right(inviteesWithAccess) =>
             val result = inviteesWithAccess.map {
               case (Left(user), access) => Json.obj("user" -> user.externalId, "access" -> access)
@@ -272,8 +270,7 @@ class MobileLibraryController @Inject() (
         implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
         val res = libraryCommander.joinLibrary(request.userId, libId)
         res match {
-          case Left(fail) =>
-            Status(fail.status)(Json.obj("error" -> fail.message))
+          case Left(fail) => sendFailResponse(fail)
           case Right(lib) =>
             val owner = db.readOnlyMaster { implicit s => basicUserRepo.load(lib.ownerId) }
             Ok(Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, None, owner)))
@@ -300,7 +297,7 @@ class MobileLibraryController @Inject() (
       case Success(id) =>
         implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
         libraryCommander.leaveLibrary(id, request.userId) match {
-          case Left(fail) => Status(fail.status)(Json.obj("error" -> fail.message))
+          case Left(fail) => sendFailResponse(fail)
           case Right(_) => Ok(JsString("success"))
         }
     }
@@ -400,6 +397,40 @@ class MobileLibraryController @Inject() (
       case _ => Future.successful(Forbidden)
     }
   }
+
+  ///////////////////
+  // Collaborators!
+  ///////////////////
+
+  def updateLibraryMembership(pubId: PublicId[Library], extUserId: ExternalId[User], access: String) = (UserAction andThen LibraryWriteAction(pubId)) { request =>
+    val libraryId = Library.decodePublicId(pubId).get
+    db.readOnlyMaster { implicit s =>
+      userRepo.getOpt(extUserId)
+    } match {
+      case None =>
+        NotFound(Json.obj("error" -> "user_id_not_found"))
+      case Some(targetUser) =>
+        val result = access.toLowerCase match {
+          case "none" =>
+            libraryCommander.updateLibraryMembershipAccess(libraryId, targetUser.id.get, None)
+          case "read_only" =>
+            libraryCommander.updateLibraryMembershipAccess(libraryId, targetUser.id.get, Some(LibraryAccess.READ_ONLY))
+          case "read_insert" =>
+            libraryCommander.updateLibraryMembershipAccess(libraryId, targetUser.id.get, Some(LibraryAccess.READ_INSERT))
+          case "read_write" =>
+            libraryCommander.updateLibraryMembershipAccess(libraryId, targetUser.id.get, Some(LibraryAccess.READ_WRITE))
+          case _ =>
+            Left(LibraryFail(BAD_REQUEST, "invalid_access_request"))
+        }
+        result match {
+          case Left(fail) => sendFailResponse(fail)
+          case Right(_) => NoContent
+        }
+    }
+  }
+
+  private def sendFailResponse(fail: LibraryFail) = Status(fail.status)(Json.obj("error" -> fail.message))
+
 }
 
 object MobileLibraryController {

@@ -11,8 +11,6 @@ import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.DBSession.RWSession
 
-import com.keepit.model.LibraryFactory._
-import com.keepit.model.LibraryFactoryHelper._
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.social.FakeSocialGraphModule
@@ -21,6 +19,12 @@ import com.keepit.common.time._
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext }
+import com.keepit.model.UserFactory._
+import com.keepit.model.UserFactoryHelper._
+import com.keepit.model.LibraryFactory._
+import com.keepit.model.LibraryFactoryHelper._
+import com.keepit.model.LibraryMembershipFactory._
+import com.keepit.model.LibraryMembershipFactoryHelper._
 import com.keepit.model._
 import com.keepit.scraper.{ FakeScrapeSchedulerModule, FakeScraperServiceClientModule }
 import com.keepit.search.FakeSearchServiceClientModule
@@ -480,6 +484,35 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
       }
     }
 
+    "update library membership" in {
+      withDb(controllerTestModules: _*) { implicit injector =>
+        val (user1, user2, user3, lib1) = db.readWrite { implicit s =>
+          val user1 = user().withUsername("nickfury").saved
+          val user2 = user().withUsername("quicksilver").saved
+          val user3 = user().withUsername("scarletwitch").saved
+          val lib1 = library().withUser(user1).saved // user1 owns lib1
+          membership().withLibraryFollower(lib1, user2).saved // user2 follows lib1 (has read_only access)
+
+          libraryMembershipRepo.getWithLibraryIdAndUserId(lib1.id.get, user1.id.get).get.access === LibraryAccess.OWNER
+          libraryMembershipRepo.getWithLibraryIdAndUserId(lib1.id.get, user2.id.get).get.access === LibraryAccess.READ_ONLY
+          (user1, user2, user3, lib1)
+        }
+        val pubLibId1 = Library.publicId(lib1.id.get)(inject[PublicIdConfiguration])
+
+        // test invalid library write access
+        status(updateLibraryMembership(user2, user2, pubLibId1, "owner")) must equalTo(FORBIDDEN)
+
+        // test change membership access
+        status(updateLibraryMembership(user1, user2, pubLibId1, "read_write")) must equalTo(NO_CONTENT)
+
+        // test deactivate membership
+        status(updateLibraryMembership(user1, user2, pubLibId1, "none")) must equalTo(NO_CONTENT)
+
+        // test membership not found
+        status(updateLibraryMembership(user1, user2, pubLibId1, "read_only")) must equalTo(NOT_FOUND)
+      }
+    }
+
   }
 
   private def createLibrary(user: User, body: JsObject)(implicit injector: Injector): Future[Result] = {
@@ -535,6 +568,11 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
   private def getWriteableLibraries(user: User, body: JsObject)(implicit injector: Injector): Future[Result] = {
     inject[FakeUserActionsHelper].setUser(user)
     controller.getWriteableLibrariesWithUrlV1()(request(routes.MobileLibraryController.getWriteableLibrariesWithUrlV1()).withBody(body))
+  }
+
+  private def updateLibraryMembership(user: User, targetUser: User, libId: PublicId[Library], access: String)(implicit injector: Injector): Future[Result] = {
+    inject[FakeUserActionsHelper].setUser(user)
+    controller.updateLibraryMembership(libId, targetUser.externalId, access)(request(routes.MobileLibraryController.updateLibraryMembership(libId, targetUser.externalId, access)))
   }
 
   // User 'Spongebob' has one library called "Krabby Patty" (secret)
