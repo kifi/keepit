@@ -210,6 +210,9 @@ class ArticleInfoRepoImpl @Inject() (
         }
       ) yield r
     }
+
+    log.info(s"ArticleInfoRepo.getRipeForImageProcessing SQL Statement:\n${ripeRows.sortBy(_.lastFetchedAt).take(limit).selectStatement}")
+
     ripeRows.sortBy(_.lastFetchedAt).take(limit).list
   }
 
