@@ -3,7 +3,6 @@ package com.keepit.search.index.sharding
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.search.index.article.ArticleRecord
-import com.keepit.search.index.article.ArticleRecordSerializer
 import com.keepit.search.index.graph.keep.{ KeepRecord, KeepFields, ShardedKeepIndexer }
 import com.keepit.search.test.SearchTestInjector
 import org.apache.lucene.index.Term
@@ -57,7 +56,7 @@ class IndexShardingTest extends Specification with SearchTestInjector with Searc
             val articleSearcher = indexer.getIndexer(shard).getSearcher
 
             uris.foreach { uri =>
-              articleSearcher.getDecodedDocValue[ArticleRecord]("rec", uri.id.get.id)(ArticleRecordSerializer.fromByteArray).isDefined === shard.contains(uri.id.get)
+              articleSearcher.getDecodedDocValue[ArticleRecord]("rec", uri.id.get.id).isDefined === shard.contains(uri.id.get)
             }
 
             val keepSearcher = keepIndexer.getIndexer(shard).getSearcher

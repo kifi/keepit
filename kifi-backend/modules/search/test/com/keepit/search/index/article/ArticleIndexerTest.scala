@@ -318,14 +318,13 @@ class ArticleIndexerTest extends Specification with SearchTestInjector {
         new IndexerScope(injector) {
           indexer.update()
           indexer.numDocs === 3
-          import com.keepit.search.index.article.ArticleRecordSerializer._
 
           val searcher = indexer.getSearcher
           Seq(uri1, uri2, uri3).map { uri =>
             val recOpt: Option[ArticleRecord] = searcher.getDecodedDocValue("rec", uri.id.get.id)
             recOpt must beSome[ArticleRecord]
             recOpt.map { rec =>
-              rec.title === uri.title.get
+              rec.title === uri.title
               rec.url === uri.url
             }
           }
