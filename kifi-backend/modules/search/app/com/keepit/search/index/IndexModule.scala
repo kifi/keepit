@@ -63,7 +63,7 @@ trait IndexModule extends ScalaModule with Logging {
 
   def configure() {
     bind[PhraseIndexerPlugin].to[PhraseIndexerPluginImpl].in[AppScoped]
-    bind[ArticleIndexerPlugin].to[ArticleIndexerPluginImpl].in[AppScoped]
+    bind[DeprecatedArticleIndexerPlugin].to[DeprecatedArticleIndexerPluginImpl].in[AppScoped]
     bind[CollectionGraphPlugin].to[CollectionGraphPluginImpl].in[AppScoped]
     bind[MessageIndexerPlugin].to[MessageIndexerPluginImpl].in[AppScoped]
     bind[UserIndexerPlugin].to[UserIndexerPluginImpl].in[AppScoped]

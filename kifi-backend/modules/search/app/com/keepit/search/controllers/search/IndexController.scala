@@ -8,7 +8,7 @@ import com.keepit.search.index.graph.library.membership.{ LibraryMembershipIndex
 import com.keepit.search.index.graph.library.{ LibraryIndexer, LibraryIndexable, LibraryIndexerPlugin }
 import play.api.libs.json.Json
 import play.api.mvc.Action
-import com.keepit.search.index.article.ArticleIndexerPlugin
+import com.keepit.search.index.article.DeprecatedArticleIndexerPlugin
 import com.keepit.search.index.graph.collection.CollectionGraphPlugin
 import com.keepit.search.index.graph.user._
 import com.keepit.search.index.user.UserIndexerPlugin
@@ -17,7 +17,7 @@ import com.keepit.search.index.phrase.PhraseIndexerPlugin
 import views.html
 
 class IndexController @Inject() (
-    articleIndexerPlugin: ArticleIndexerPlugin,
+    articleIndexerPlugin: DeprecatedArticleIndexerPlugin,
     collectionGraphPlugin: CollectionGraphPlugin,
     userIndexerPlugin: UserIndexerPlugin,
     userGraphPlugin: UserGraphPlugin,
