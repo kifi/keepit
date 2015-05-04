@@ -32,8 +32,8 @@ object ArticleKind {
 
 sealed trait Article { self =>
   type A >: self.type <: Article
-  protected def kind: ArticleKind[A]
-  protected def instance: A = self
+  def kind: ArticleKind[A]
+  def instance: A = self
 
   def url: String
   def createdAt: DateTime
