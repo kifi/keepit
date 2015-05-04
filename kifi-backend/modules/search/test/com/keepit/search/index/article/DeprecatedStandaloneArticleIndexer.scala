@@ -8,11 +8,11 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
-class StandaloneArticleIndexer(
+class DeprecatedStandaloneArticleIndexer(
     indexDirectory: IndexDirectory,
     articleStore: ArticleStore,
     airbrake: AirbrakeNotifier,
-    shoeboxClient: ShoeboxServiceClient) extends ArticleIndexer(indexDirectory, articleStore, airbrake) {
+    shoeboxClient: ShoeboxServiceClient) extends DeprecatedArticleIndexer(indexDirectory, articleStore, airbrake) {
 
   override def update(): Int = updateLock.synchronized {
     resetSequenceNumberIfReindex()

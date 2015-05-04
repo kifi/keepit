@@ -16,13 +16,13 @@ import com.keepit.search.index.IndexInfo
 import com.keepit.search.index.sharding.Shard
 import com.keepit.search.util.MultiStringReader
 
-class ArticleIndexer(
+class DeprecatedArticleIndexer(
   indexDirectory: IndexDirectory,
   articleStore: ArticleStore,
   override val airbrake: AirbrakeNotifier)
-    extends Indexer[NormalizedURI, NormalizedURI, ArticleIndexer](indexDirectory) {
+    extends Indexer[NormalizedURI, NormalizedURI, DeprecatedArticleIndexer](indexDirectory) {
 
-  import ArticleIndexer.ArticleIndexable
+  import DeprecatedArticleIndexer.ArticleIndexable
 
   override val commitBatchSize = 1000
 
@@ -46,7 +46,7 @@ class ArticleIndexer(
     new ArticleIndexable(
       id = uri.id.get,
       sequenceNumber = uri.seq,
-      isDeleted = ArticleIndexer.shouldDelete(uri),
+      isDeleted = DeprecatedArticleIndexer.shouldDelete(uri),
       uri = uri,
       articleStore = articleStore,
       airbrake = airbrake)
@@ -57,7 +57,7 @@ class ArticleIndexer(
   }
 }
 
-object ArticleIndexer extends Logging {
+object DeprecatedArticleIndexer extends Logging {
   private[this] val toBeDeletedStates = Set[State[NormalizedURI]](ACTIVE, INACTIVE, UNSCRAPABLE, REDIRECTED)
   def shouldDelete(uri: IndexableUri): Boolean = toBeDeletedStates.contains(uri.state)
 

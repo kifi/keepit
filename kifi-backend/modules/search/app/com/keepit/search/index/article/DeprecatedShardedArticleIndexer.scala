@@ -3,18 +3,18 @@ package com.keepit.search.index.sharding
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.model.NormalizedURI
 import com.keepit.search.ArticleStore
-import com.keepit.search.index.article.ArticleIndexer
+import com.keepit.search.index.article.DeprecatedArticleIndexer
 import com.keepit.shoebox.ShoeboxServiceClient
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import com.keepit.common.db.SequenceNumber
 import com.keepit.common.logging.Logging
 
-class ShardedArticleIndexer(
-    override val indexShards: Map[Shard[NormalizedURI], ArticleIndexer],
+class DeprecatedShardedArticleIndexer(
+    override val indexShards: Map[Shard[NormalizedURI], DeprecatedArticleIndexer],
     articleStore: ArticleStore,
     override val airbrake: AirbrakeNotifier,
-    shoeboxClient: ShoeboxServiceClient) extends ShardedIndexer[NormalizedURI, NormalizedURI, ArticleIndexer] with Logging {
+    shoeboxClient: ShoeboxServiceClient) extends ShardedIndexer[NormalizedURI, NormalizedURI, DeprecatedArticleIndexer] with Logging {
 
   private val fetchSize = 2000
 

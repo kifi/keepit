@@ -44,7 +44,7 @@ class IndexShardingTest extends Specification with SearchTestInjector with Searc
         val store = mkStore(uris)
         val (_, indexer, _, _, _, keepIndexer, _, _) = initIndexes(store)
 
-        indexer.isInstanceOf[ShardedArticleIndexer] === true
+        indexer.isInstanceOf[DeprecatedShardedArticleIndexer] === true
         keepIndexer.isInstanceOf[ShardedKeepIndexer] === true
 
         indexer.update() === uris.size
@@ -100,7 +100,7 @@ class IndexShardingTest extends Specification with SearchTestInjector with Searc
         val store = mkStore(uris)
         val (collectionGraph, indexer, _, _, _, keepIndexer, _, _) = initIndexes(store)
 
-        indexer.isInstanceOf[ShardedArticleIndexer] === true
+        indexer.isInstanceOf[DeprecatedShardedArticleIndexer] === true
         collectionGraph.isInstanceOf[ShardedCollectionIndexer] === true
 
         Await.result(keepIndexer.asyncUpdate(), Duration(60, SECONDS))
@@ -171,7 +171,7 @@ class IndexShardingTest extends Specification with SearchTestInjector with Searc
         }
         val store = mkStore(uris)
         val (_, indexer, _, _, _, _, _, _) = initIndexes(store)
-        indexer.isInstanceOf[ShardedArticleIndexer] === true
+        indexer.isInstanceOf[DeprecatedShardedArticleIndexer] === true
         indexer.update() === 5 // both subindexer's catch up seqNum = 5
         shoebox.saveURIs(uris(4).withState(NormalizedURIStates.INACTIVE)) // a4
         indexer.update() === 1 // one subindexer's catup seqNum = 6
@@ -201,7 +201,7 @@ class IndexShardingTest extends Specification with SearchTestInjector with Searc
         val savedUris = shoebox.saveURIs(uris: _*)
         val store = mkStore(savedUris)
         val (_, indexer, _, _, _, _, _, _) = initIndexes(store)
-        indexer.isInstanceOf[ShardedArticleIndexer] === true
+        indexer.isInstanceOf[DeprecatedShardedArticleIndexer] === true
         indexer.update === 5
         indexer.catchUpSeqNumber.value === 10
         indexer.sequenceNumber.value === 10

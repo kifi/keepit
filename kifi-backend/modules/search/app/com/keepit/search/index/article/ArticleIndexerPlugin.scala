@@ -7,18 +7,18 @@ import com.keepit.common.plugin.SchedulingProperties
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.model.NormalizedURI
 import com.keepit.search.index.BasicIndexerActor
-import com.keepit.search.index.sharding.ShardedArticleIndexer
+import com.keepit.search.index.sharding.DeprecatedShardedArticleIndexer
 import com.keepit.search.index.sharding.ShardedIndexerPlugin
 import com.keepit.search.index.sharding.ShardedIndexerPluginImpl
 
-trait ArticleIndexerPlugin extends ShardedIndexerPlugin[NormalizedURI, NormalizedURI, ArticleIndexer]
+trait ArticleIndexerPlugin extends ShardedIndexerPlugin[NormalizedURI, NormalizedURI, DeprecatedArticleIndexer]
 
 class ArticleIndexerPluginImpl @Inject() (
   actor: ActorInstance[ArticleIndexerActor],
-  indexer: ShardedArticleIndexer,
+  indexer: DeprecatedShardedArticleIndexer,
   serviceDiscovery: ServiceDiscovery,
-  val scheduling: SchedulingProperties) extends ShardedIndexerPluginImpl[NormalizedURI, NormalizedURI, ArticleIndexer, ArticleIndexerActor](indexer, actor, serviceDiscovery) with ArticleIndexerPlugin
+  val scheduling: SchedulingProperties) extends ShardedIndexerPluginImpl[NormalizedURI, NormalizedURI, DeprecatedArticleIndexer, ArticleIndexerActor](indexer, actor, serviceDiscovery) with ArticleIndexerPlugin
 
 class ArticleIndexerActor @Inject() (
   airbrake: AirbrakeNotifier,
-  indexer: ShardedArticleIndexer) extends BasicIndexerActor[NormalizedURI, ArticleIndexer](airbrake, indexer)
+  indexer: DeprecatedShardedArticleIndexer) extends BasicIndexerActor[NormalizedURI, DeprecatedArticleIndexer](airbrake, indexer)

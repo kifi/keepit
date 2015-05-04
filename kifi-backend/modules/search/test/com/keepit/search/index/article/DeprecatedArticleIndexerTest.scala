@@ -17,7 +17,7 @@ import com.keepit.shoebox.{ FakeShoeboxServiceClientImpl, ShoeboxServiceClient }
 import com.keepit.search.index.{ SearcherHit, Analyzer, DefaultAnalyzer, VolatileIndexDirectory }
 import com.keepit.common.util.PlayAppConfigurationModule
 
-class ArticleIndexerTest extends Specification with SearchTestInjector {
+class DeprecatedArticleIndexerTest extends Specification with SearchTestInjector {
 
   val helperModules = Seq(PlayAppConfigurationModule())
 
@@ -41,7 +41,7 @@ class ArticleIndexerTest extends Specification with SearchTestInjector {
     val ramDir = new VolatileIndexDirectory()
     val store = new InMemoryArticleStoreImpl()
     val uriIdArray = new Array[Long](3)
-    var indexer = new StandaloneArticleIndexer(ramDir, store, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
+    var indexer = new DeprecatedStandaloneArticleIndexer(ramDir, store, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
 
     val Seq(user1, user2) = fakeShoeboxServiceClient.saveUsers(User(firstName = "Joe", lastName = "Smith", username = Username("test"), normalizedUsername = "test"), User(firstName = "Moo", lastName = "Brown", username = Username("test"), normalizedUsername = "test"))
     var Seq(uri1, uri2, uri3) = fakeShoeboxServiceClient.saveURIs(
@@ -81,7 +81,7 @@ class ArticleIndexerTest extends Specification with SearchTestInjector {
         contentLang = Some(en))
     }
 
-    class Searchable(indexer: ArticleIndexer) {
+    class Searchable(indexer: DeprecatedArticleIndexer) {
       def search(queryString: String): Seq[SearcherHit] = {
         val searcher = indexer.getSearcher
         (new TstQueryParser).parse(queryString) match {
@@ -90,7 +90,7 @@ class ArticleIndexerTest extends Specification with SearchTestInjector {
         }
       }
     }
-    implicit def toSearchable(indexer: ArticleIndexer) = new Searchable(indexer)
+    implicit def toSearchable(indexer: DeprecatedArticleIndexer) = new Searchable(indexer)
   }
 
   "ArticleIndexer" should {
@@ -124,7 +124,7 @@ class ArticleIndexerTest extends Specification with SearchTestInjector {
           indexer.numDocs === 3
           indexer.close()
 
-          indexer = new StandaloneArticleIndexer(ramDir, store, null, shoeboxClient)
+          indexer = new DeprecatedStandaloneArticleIndexer(ramDir, store, null, shoeboxClient)
           indexer.sequenceNumber.value === currentSeqNum
         }
       }

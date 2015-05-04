@@ -34,7 +34,7 @@ import com.keepit.common.core._
 
 @Singleton
 class SearchFactory @Inject() (
-    shardedArticleIndexer: ShardedArticleIndexer,
+    shardedArticleIndexer: DeprecatedShardedArticleIndexer,
     shardedKeepIndexer: ShardedKeepIndexer,
     libraryIndexer: LibraryIndexer,
     libraryMembershipIndexer: LibraryMembershipIndexer,

@@ -106,16 +106,16 @@ trait IndexModule extends ScalaModule with Logging {
 
   @Singleton
   @Provides
-  def shardedArticleIndexer(activeShards: ActiveShards, articleStore: ArticleStore, backup: IndexStore, airbrake: AirbrakeNotifier, shoeboxClient: ShoeboxServiceClient, conf: Configuration, serviceDisovery: ServiceDiscovery): ShardedArticleIndexer = {
+  def shardedArticleIndexer(activeShards: ActiveShards, articleStore: ArticleStore, backup: IndexStore, airbrake: AirbrakeNotifier, shoeboxClient: ShoeboxServiceClient, conf: Configuration, serviceDisovery: ServiceDiscovery): DeprecatedShardedArticleIndexer = {
     val version = IndexerVersionProviders.Article.getVersionByStatus(serviceDisovery)
     def articleIndexer(shard: Shard[NormalizedURI]) = {
       val dir = getIndexDirectory("index.article.directory", shard, version, backup, conf, IndexerVersionProviders.Article.getVersionsForCleanup())
       log.info(s"storing ArticleIndex${indexNameSuffix(shard, version)} in $dir")
-      new ArticleIndexer(dir, articleStore, airbrake)
+      new DeprecatedArticleIndexer(dir, articleStore, airbrake)
     }
 
     val indexShards = activeShards.local.map { shard => (shard, articleIndexer(shard)) }
-    new ShardedArticleIndexer(indexShards.toMap, articleStore, airbrake, shoeboxClient)
+    new DeprecatedShardedArticleIndexer(indexShards.toMap, articleStore, airbrake, shoeboxClient)
   }
 
   @Singleton
