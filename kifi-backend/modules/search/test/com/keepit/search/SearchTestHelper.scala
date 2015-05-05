@@ -10,7 +10,7 @@ import com.keepit.model._
 import com.keepit.model.NormalizedURI
 import com.keepit.model.NormalizedURIStates._
 import com.keepit.model.User
-import com.keepit.search.index.article.ArticleIndexer
+import com.keepit.search.index.article.DeprecatedArticleIndexer
 import com.keepit.search.engine.{ LibraryQualityEvaluator, SearchFactory }
 import com.keepit.search.index.graph.collection._
 import com.keepit.search.index.graph.keep.{ ShardedKeepIndexer, KeepIndexer }
@@ -52,10 +52,10 @@ trait SearchTestHelper { self: SearchTestInjector =>
 
   def initIndexes(store: ArticleStore)(implicit activeShards: ActiveShards, injector: Injector) = {
     val articleIndexers = activeShards.local.map { shard =>
-      val articleIndexer = new ArticleIndexer(new VolatileIndexDirectory, store, inject[AirbrakeNotifier])
+      val articleIndexer = new DeprecatedArticleIndexer(new VolatileIndexDirectory, store, inject[AirbrakeNotifier])
       (shard -> articleIndexer)
     }
-    val shardedArticleIndexer = new ShardedArticleIndexer(articleIndexers.toMap, store, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
+    val shardedArticleIndexer = new DeprecatedShardedArticleIndexer(articleIndexers.toMap, store, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
 
     val keepIndexers = activeShards.local.map { shard =>
       val keepIndexer = new KeepIndexer(new VolatileIndexDirectory, shard, inject[AirbrakeNotifier])

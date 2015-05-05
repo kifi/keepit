@@ -94,7 +94,7 @@ object ExtSearchControllerTest {
             visibility = 0,
             libraryId = 678,
             keepId = 456,
-            title = "Example Site",
+            title = Some("Example Site"),
             url = "http://example.com",
             externalId = ExternalId[Keep]("604754fb-182d-4c39-a314-2d1994b24159"))),
         myTotal = 12,

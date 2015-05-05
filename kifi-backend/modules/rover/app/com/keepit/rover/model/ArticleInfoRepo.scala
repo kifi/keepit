@@ -32,10 +32,10 @@ trait ArticleInfoRepo extends Repo[RoverArticleInfo] with SeqNumberFunction[Rove
   def markAsFetching(ids: Id[RoverArticleInfo]*)(implicit session: RWSession): Unit
   def unmarkAsFetching(ids: Id[RoverArticleInfo]*)(implicit session: RWSession): Unit
   def updateAfterFetch[A <: Article](uriId: Id[NormalizedURI], kind: ArticleKind[A], fetched: Try[Option[ArticleVersion]])(implicit session: RWSession): Unit
-  def getRipeForImageProcessing(limit: Int, fetchedForMoreThan: Duration, imageProcessingForMoreThan: Duration)(implicit session: RSession): Seq[RoverArticleInfo]
+  def getRipeForImageProcessing(limit: Int, requestedForMoreThan: Duration, imageProcessingForMoreThan: Duration)(implicit session: RSession): Seq[RoverArticleInfo]
   def markAsImageProcessing(ids: Id[RoverArticleInfo]*)(implicit session: RWSession): Unit
   def unmarkAsImageProcessing(ids: Id[RoverArticleInfo]*)(implicit session: RWSession): Unit
-  def updateAfterImageProcessing[A <: Article](uriId: Id[NormalizedURI], kind: ArticleKind[A], version: ArticleVersion)(implicit session: RWSession): Unit
+  def updateAfterImageProcessing[A <: Article](uriId: Id[NormalizedURI], kind: ArticleKind[A], version: Option[ArticleVersion])(implicit session: RWSession): Unit
 }
 
 @Singleton
@@ -76,6 +76,7 @@ class ArticleInfoRepoImpl @Inject() (
     def fetchInterval = column[Option[Duration]]("fetch_interval", O.Nullable)
     def failureCount = column[Int]("failure_count", O.NotNull)
     def failureInfo = column[Option[String]]("failure_info", O.Nullable)
+    def imageProcessingRequestedAt = column[Option[DateTime]]("image_processing_requested_at", O.Nullable)
     def lastImageProcessingVersionMajor = column[Option[VersionNumber[Article]]]("last_image_processing_version_major", O.Nullable)
     def lastImageProcessingVersionMinor = column[Option[VersionNumber[Article]]]("last_image_processing_version_minor", O.Nullable)
     def lastImageProcessingAt = column[Option[DateTime]]("last_image_processing_at", O.Nullable)
@@ -85,7 +86,7 @@ class ArticleInfoRepoImpl @Inject() (
     def oldestVersion = (oldestVersionMajor, oldestVersionMinor) <> ((articleVersionFromDb _).tupled, articleVersionToDb _)
     def lastImageProcessingVersion = (lastImageProcessingVersionMajor, lastImageProcessingVersionMinor) <> ((articleVersionFromDb _).tupled, articleVersionToDb _)
 
-    def * = (id.?, createdAt, updatedAt, state, seq, uriId, url, kind, bestVersion, latestVersion, oldestVersion, lastFetchedAt, nextFetchAt, lastFetchingAt, fetchInterval, failureCount, failureInfo, lastImageProcessingVersion, lastImageProcessingAt) <> ((RoverArticleInfo.applyFromDbRow _).tupled, RoverArticleInfo.unapplyToDbRow _)
+    def * = (id.?, createdAt, updatedAt, state, seq, uriId, url, kind, bestVersion, latestVersion, oldestVersion, lastFetchedAt, nextFetchAt, lastFetchingAt, fetchInterval, failureCount, failureInfo, imageProcessingRequestedAt, lastImageProcessingVersion, lastImageProcessingAt) <> ((RoverArticleInfo.applyFromDbRow _).tupled, RoverArticleInfo.unapplyToDbRow _)
   }
 
   def table(tag: Tag) = new ArticleInfoTable(tag)
@@ -191,29 +192,21 @@ class ArticleInfoRepoImpl @Inject() (
     }
   }
 
-  def getRipeForImageProcessing(limit: Int, lastFetchedForMoreThan: Duration, imageProcessingForMoreThan: Duration)(implicit session: RSession): Seq[RoverArticleInfo] = {
-    val ripeRows = {
-      val now = clock.now()
-      val lastFetchedTooLongAgo = now minusSeconds lastFetchedForMoreThan.toSeconds.toInt
-      val lastImageProcessingTooLongAgo = now minusSeconds imageProcessingForMoreThan.toSeconds.toInt
+  def getRipeForImageProcessing(limit: Int, requestedForMoreThan: Duration, imageProcessingForMoreThan: Duration)(implicit session: RSession): Seq[RoverArticleInfo] = {
+    val now = clock.now()
+    val imageProcessingRequestedLongEnoughAgo = now minusSeconds requestedForMoreThan.toSeconds.toInt
+    val lastImageProcessingTooLongAgo = now minusSeconds imageProcessingForMoreThan.toSeconds.toInt
 
-      for (
-        r <- rows if {
-          r.state === ArticleInfoStates.ACTIVE && {
-            (r.lastImageProcessingAt.isDefined && r.lastImageProcessingAt < lastImageProcessingTooLongAgo) || { // stale
-              // due
-              r.lastImageProcessingAt.isEmpty && r.lastFetchedAt.isDefined && r.lastFetchedAt < lastFetchedTooLongAgo && r.latestVersionMajor.isDefined && r.latestVersionMinor.isDefined && {
-                r.lastImageProcessingVersionMajor.isEmpty || r.lastImageProcessingVersionMinor.isEmpty || (r.lastImageProcessingVersionMajor < r.latestVersionMajor) || ((r.lastImageProcessingVersionMajor === r.latestVersionMajor) && (r.lastImageProcessingVersionMinor < r.latestVersionMinor))
-              }
-            }
-          }
-        }
-      ) yield r
+    val stale = for (r <- rows if r.state === ArticleInfoStates.ACTIVE && (r.lastImageProcessingAt.isDefined && r.lastImageProcessingAt < lastImageProcessingTooLongAgo)) yield r
+    val due = for (r <- rows if r.state === ArticleInfoStates.ACTIVE && (r.lastImageProcessingAt.isEmpty && r.imageProcessingRequestedAt.isDefined && r.imageProcessingRequestedAt < imageProcessingRequestedLongEnoughAgo)) yield r
+
+    val ripe = {
+      @inline def take(q: Query[ArticleInfoTable, RoverArticleInfo, Seq]) = q.sortBy(r => (r.imageProcessingRequestedAt, r.lastImageProcessingAt)).take(limit)
+      take(Seq(due, stale).map(take).reduce(_ union _))
     }
 
-    log.info(s"ArticleInfoRepo.getRipeForImageProcessing SQL Statement:\n${ripeRows.sortBy(_.lastFetchedAt).take(limit).selectStatement}")
-
-    ripeRows.sortBy(_.lastFetchedAt).take(limit).list
+    log.info(s"ArticleInfoRepo.getRipeForImageProcessing SQL Statement:\n${ripe.selectStatement}")
+    ripe.list
   }
 
   def markAsImageProcessing(ids: Id[RoverArticleInfo]*)(implicit session: RWSession): Unit = updateLastImageProcessingAt(ids, Some(clock.now()))
@@ -223,11 +216,9 @@ class ArticleInfoRepoImpl @Inject() (
     (for (r <- rows if r.id.inSet(ids.toSet)) yield r.lastImageProcessingAt).update(lastImageProcessingAt)
   }
 
-  def updateAfterImageProcessing[A <: Article](uriId: Id[NormalizedURI], kind: ArticleKind[A], version: ArticleVersion)(implicit session: RWSession): Unit = {
+  def updateAfterImageProcessing[A <: Article](uriId: Id[NormalizedURI], kind: ArticleKind[A], version: Option[ArticleVersion])(implicit session: RWSession): Unit = {
     getByUriAndKind(uriId, kind).foreach { articleInfo =>
-      if (!articleInfo.lastImageProcessingVersion.exists(_ > version)) {
-        saveSilently(articleInfo.withImageProcessingComplete(version))
-      }
+      saveSilently(articleInfo.withImageProcessingComplete(version))
     }
   }
 

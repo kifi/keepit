@@ -11,6 +11,7 @@ import com.keepit.cortex.models.lda.LDAInfoStoreDevModule
 import com.keepit.cortex.store.{ StatModelDevStoreModule, CommitInfoDevStoreModule, FeatureDevStoreModule, CortexCommonDevStoreModule }
 import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.model.{ Library, User }
+import com.keepit.rover.FakeRoverServiceClientModule
 import org.specs2.mutable.Specification
 import play.api.libs.json.Json
 import play.api.test.Helpers._
@@ -24,6 +25,7 @@ class LDAControllerTest extends Specification with CortexTestInjector {
     CortexCommonDevStoreModule(),
     CortexDevModelModule(),
     FakeCuratorServiceClientModule(),
+    FakeRoverServiceClientModule(),
     FakeActorSystemModule(),
     FeatureDevStoreModule(),
     CommitInfoDevStoreModule(),

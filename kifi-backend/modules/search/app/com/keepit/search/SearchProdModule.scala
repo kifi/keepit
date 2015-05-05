@@ -5,6 +5,7 @@ import com.keepit.common.controller.ProdRemoteUserActionsHelperModule
 import com.keepit.eliza.ProdElizaServiceClientModule
 import com.keepit.heimdal.ProdHeimdalServiceClientModule
 import com.keepit.inject.CommonProdModule
+import com.keepit.rover.ProdRoverServiceClientModule
 import com.keepit.search.common.cache.SearchCacheModule
 import com.keepit.search.common.store.SearchProdStoreModule
 import com.keepit.search.tracking.ProdTrackingModule
@@ -29,6 +30,7 @@ case class SearchProdModule() extends SearchModule with CommonProdModule {
   val shoeboxServiceClientModule = ProdShoeboxServiceClientModule()
   val elizaServiceClientModule = ProdElizaServiceClientModule()
   val heimdalServiceClientModule = ProdHeimdalServiceClientModule()
+  val roverServiceClientModule = ProdRoverServiceClientModule()
   val configurationModule = PlayAppConfigurationModule()
 }
 

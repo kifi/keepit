@@ -7,16 +7,16 @@ import org.apache.lucene.store.OutputStreamDataOutput
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 
-case class ArticleRecord(title: String, url: String, id: Id[NormalizedURI])
+case class ArticleRecord(title: Option[String], url: String, id: Id[NormalizedURI])
 
-object ArticleRecordSerializer {
+object ArticleRecord {
   implicit def toByteArray(r: ArticleRecord): Array[Byte] = {
     val baos = new ByteArrayOutputStream()
     val out = new OutputStreamDataOutput(baos)
 
     // version
     out.writeByte(2)
-    out.writeString(r.title)
+    out.writeString(r.title.getOrElse(""))
     out.writeString(r.url)
     out.writeVLong(r.id.id)
 
@@ -36,7 +36,7 @@ object ArticleRecordSerializer {
     }
 
     ArticleRecord(
-      in.readString(), // title
+      Some(in.readString()).filter(_.nonEmpty), // title
       in.readString(), // url
       Id[NormalizedURI](in.readVLong()))
   }

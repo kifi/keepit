@@ -4,7 +4,7 @@ import com.google.inject.Inject
 import com.keepit.common.controller.SearchServiceController
 import com.keepit.common.db._
 import com.keepit.model._
-import com.keepit.search.index.article.ArticleIndexerPlugin
+import com.keepit.search.index.article.DeprecatedArticleIndexerPlugin
 import com.keepit.search.index.phrase.PhraseIndexer
 import com.keepit.shoebox.ShoeboxServiceClient
 import org.apache.lucene.document.Document
@@ -16,7 +16,7 @@ import scala.concurrent.duration._
 
 class ArticleIndexerController @Inject() (
   phraseIndexer: PhraseIndexer,
-  indexerPlugin: ArticleIndexerPlugin,
+  indexerPlugin: DeprecatedArticleIndexerPlugin,
   shoeboxClient: ShoeboxServiceClient)
     extends SearchServiceController {
 

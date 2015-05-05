@@ -2,13 +2,13 @@ package com.keepit.search.controllers.search
 
 import com.google.inject.Inject
 import com.keepit.common.controller.SearchServiceController
-import com.keepit.model.{ DetailedLibraryView, Library, LibraryAndMemberships }
+import com.keepit.model.{ DetailedLibraryView }
 import com.keepit.search.index.graph.keep.KeepIndexerPlugin
 import com.keepit.search.index.graph.library.membership.{ LibraryMembershipIndexer, LibraryMembershipIndexerPlugin }
 import com.keepit.search.index.graph.library.{ LibraryIndexer, LibraryIndexable, LibraryIndexerPlugin }
 import play.api.libs.json.Json
 import play.api.mvc.Action
-import com.keepit.search.index.article.ArticleIndexerPlugin
+import com.keepit.search.index.article.{ ArticleIndexerPlugin, DeprecatedArticleIndexerPlugin }
 import com.keepit.search.index.graph.collection.CollectionGraphPlugin
 import com.keepit.search.index.graph.user._
 import com.keepit.search.index.user.UserIndexerPlugin
@@ -17,6 +17,7 @@ import com.keepit.search.index.phrase.PhraseIndexerPlugin
 import views.html
 
 class IndexController @Inject() (
+    deprecatedArticleIndexerPlugin: DeprecatedArticleIndexerPlugin,
     articleIndexerPlugin: ArticleIndexerPlugin,
     collectionGraphPlugin: CollectionGraphPlugin,
     userIndexerPlugin: UserIndexerPlugin,
@@ -44,6 +45,7 @@ class IndexController @Inject() (
 
   def listIndexInfo() = Action { implicit request =>
     val infos = (
+      deprecatedArticleIndexerPlugin.indexInfos ++
       articleIndexerPlugin.indexInfos ++
       collectionGraphPlugin.indexInfos ++
       userIndexerPlugin.indexInfos ++

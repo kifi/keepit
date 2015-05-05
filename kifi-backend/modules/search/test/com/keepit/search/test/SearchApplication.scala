@@ -13,6 +13,7 @@ import com.keepit.common.cache.HashMapMemoryCacheModule
 import com.keepit.common.zookeeper.FakeDiscoveryModule
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.common.net.FakeHttpClientModule
+import com.keepit.rover.FakeRoverServiceClientModule
 import com.keepit.search.common.cache.SearchCacheModule
 import com.keepit.search.index.{ DevIndexModule, FakeIndexModule }
 import com.keepit.search.tracking.{ DevTrackingModule, FakeTrackingModule }
@@ -29,6 +30,7 @@ class SearchApplication(overridingModules: Module*)(implicit path: File = new Fi
     SearchServiceTypeModule(),
     FakeHttpClientModule(),
     FakeHeimdalServiceClientModule(),
+    FakeRoverServiceClientModule(),
     FakeAirbrakeModule(),
     FakeMemoryUsageModule(),
     FakeClockModule(),
@@ -57,6 +59,7 @@ trait SearchTestInjector extends TestInjector with SearchInjectionHelpers {
     FakeHttpClientModule(),
     FakeUserActionsModule(),
     FakeHeimdalServiceClientModule(),
+    FakeRoverServiceClientModule(),
     SearchServiceTypeModule(),
     FakeAirbrakeModule(),
     FakeMemoryUsageModule(),
