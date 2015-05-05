@@ -2,7 +2,7 @@
   <a class="kf-lfp-pic-a" ng-repeat="follower in followersToShow" href="{{follower|profileUrl}}" kf-track-origin="{{currentPageOrigin}}/follower">
     <img ng-src="{{follower|pic:100}}"
       class="kf-lfp-pic"
-      kf-who-tooltip
+      kf-user-tooltip
       keeper="follower"
       ng-mouseenter="showTooltip()"
       ng-mouseleave="hideTooltip()"

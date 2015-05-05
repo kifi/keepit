@@ -37,15 +37,16 @@
       <a ng-href="{{keep.url}}" target="_blank" rel="nofollow"><img class="kf-keep-big-image" ng-if="showBigImage(keep)" ng-src="{{keep.summary.imageUrl}}" ng-click="clickCallback({ 'keep': keep, event: $event })" click-action="clickedArticleImage"></a>
 
       <div ng-if="cardType=='youtube'" class="kf-keep-youtube-content">
-        <div ng-click="clickCallback({ 'keep': keep, event: $event })"><div kf-youtube video-id=youtubeId></div></div>
+        <div ng-click="clickCallback({keep: keep, event: $event})"><div kf-youtube video-id=youtubeId></div></div>
         <div kf-ellipsis full-text="keep.summary.description" max-num-lines=3 class="kf-keep-description"></div>
       </div>
-
     </div>
 
-    <div class="kf-keep-who" ng-if="keep.showSocial">
-      <div kf-keep-who-text keep="keep"></div>
-      <div kf-keep-who-libs-and-pics keep="keep" current-page-origin="{{currentPageOrigin}}"></div>
+    <div class="kf-keep-who" ng-if="keep.keepersTotal || keep.keepers.length">
+      <span class="kf-keep-who-text" ng-if="keep.keepersTotal" ng-pluralize count="keep.keepersTotal" when="{'one': 'Kept 1 time', 'other': 'Kept {} times'}"></span>
+      <span class="kf-keep-who-pic-box" ng-if="!keeper.hidden" ng-repeat="keeper in keep.keepers | limitTo:9" kf-user-tooltip ng-mouseenter="showTooltip()" ng-mouseleave="hideTooltip()" ng-click="hideTooltip()">
+        <a class="kf-keep-who-pic" ng-attr-style="background-image:url({{keeper|pic:100}})" href="{{keeper|profileUrl}}" kf-track-origin="{{currentPageOrigin}}/alsoKeptBy"></a>
+      </span>
     </div>
 
     <div kf-tag-list get-selected-keeps="getSingleSelectedKeep(keep)" adding-tag="addingTag" is-shown="showTags(keep)" ng-show="showTags(keep)" keep="keep" read-only-mode="!isTaggable(keep)" user-logged-in="userLoggedIn" library="library"></div>

@@ -2,7 +2,7 @@
 
 angular.module('kifi')
 
-.directive('kfWhoTooltip', [
+.directive('kfUserTooltip', [
   '$window', '$timeout', '$rootElement', '$compile', '$templateCache',
   function ($window, $timeout, $rootElement, $compile, $templateCache) {
     return {
@@ -33,7 +33,7 @@ angular.module('kifi')
           }
           if (!tooltip) {
             // Create tooltip
-            tooltip = angular.element($templateCache.get('common/directives/keepWho/friendCard.tpl.html'));
+            tooltip = angular.element($templateCache.get('common/directives/userTooltip/userTooltip.tpl.html'));
             $rootElement.find('body').append(tooltip);
             $compile(tooltip)(scope);
           }
@@ -41,7 +41,7 @@ angular.module('kifi')
           // Set position
           var triangleOffset = 42;
           var triangleWidth = 1;
-          var triangle = tooltip.find('.kifi-fr-kcard-tri');
+          var triangle = tooltip.find('.kifi-wtt-tri');
           var left = element.offset().left + element.width() / 2 - triangleOffset;
           var top = element.offset().top - 91;
           var triangleLeft = triangleOffset - triangleWidth;

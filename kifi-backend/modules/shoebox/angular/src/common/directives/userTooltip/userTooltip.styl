@@ -1,0 +1,87 @@
+.kifi-wtt
+  position: absolute
+  left: -21px
+  top: -90px
+  background-color: #fff
+  color: #faf9f9
+  box-shadow: rgba(103,130,156,.35) 2px 3px
+  border: 1px solid #b8c5d2
+  border-radius: 3px
+  text-align: left
+  cursor: default
+  z-index: 10
+
+  &.showing
+    opacity: 1
+
+  &.ng-hide-add
+  &.ng-hide-remove
+    transition: opacity linear, padding-top linear
+    transition-duration: 50ms
+    display: block!important
+
+  &.ng-hide-add.ng-hide-add-active
+  &.ng-hide-remove
+    opacity: 0
+    padding-top: 3px
+
+  &.ng-hide-add
+  &.ng-hide-remove.ng-hide-remove-active
+    opacity: 1
+    padding-top: 0
+
+.kifi-wtt-top
+  display: table
+  table-layout: fixed
+  border-collapse: collapse
+  max-width: 320px
+
+.kifi-wtt-pic
+  display: table-cell
+  height: 72px
+  width: 72px
+  margin: 1px
+  border-radius: 2px 0 0 2px
+
+.kifi-wtt-info
+  display: table-cell
+  vertical-align: middle
+  padding: 0 14px
+  font-size: 12px
+  line-height: 13px
+  color: #808080
+
+.kifi-wtt-name
+  font-size: 16px
+  line-height: 18px
+  color: #444
+  margin-bottom: 4px
+
+.kifi-wtt-desc
+  color: #929496
+
+.kifi-wtt-tri
+  position: absolute
+  height: 14px
+  width: 28px
+  bottom: -14px
+  left: 40px
+  margin-left: -14px
+  overflow: hidden
+  border-color: inherit
+
+.kifi-wtt-tri::after
+  content: ' '
+  position: absolute
+  height: 14px
+  width: 14px
+  left: 7px
+  top: -7px
+  -webkit-transform: rotate(45deg)
+  transform: rotate(45deg)
+  -moz-box-sizing: border-box
+  box-sizing: border-box
+  box-shadow: rgba(103, 130, 156, .35) 2px 1px
+  border: 1px solid
+  border-color: inherit
+  background-color: #fff
