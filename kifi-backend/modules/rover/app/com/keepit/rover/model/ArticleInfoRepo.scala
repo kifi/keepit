@@ -202,7 +202,7 @@ class ArticleInfoRepoImpl @Inject() (
         r <- rows if {
           r.state === ArticleInfoStates.ACTIVE && {
             (r.lastImageProcessingAt.isDefined && r.lastImageProcessingAt < lastImageProcessingTooLongAgo) || {
-              (r.imageProcessingRequestedAt.isDefined && r.imageProcessingRequestedAt < imageProcessingRequestedLongEnoughAgo)
+              (r.lastImageProcessingAt.isEmpty && r.imageProcessingRequestedAt.isDefined && r.imageProcessingRequestedAt < imageProcessingRequestedLongEnoughAgo)
             }
           }
         }
@@ -211,7 +211,7 @@ class ArticleInfoRepoImpl @Inject() (
 
     log.info(s"ArticleInfoRepo.getRipeForImageProcessing SQL Statement:\n${ripeRows.sortBy(_.lastFetchedAt).take(limit).selectStatement}")
 
-    ripeRows.sortBy(_.lastFetchedAt).take(limit).list
+    ripeRows.sortBy(_.imageProcessingRequestedAt).take(limit).list
   }
 
   def markAsImageProcessing(ids: Id[RoverArticleInfo]*)(implicit session: RWSession): Unit = updateLastImageProcessingAt(ids, Some(clock.now()))
