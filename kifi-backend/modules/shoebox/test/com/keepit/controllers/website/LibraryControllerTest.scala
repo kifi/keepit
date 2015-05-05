@@ -1433,7 +1433,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
           val user2 = user().withUsername("quicksilver").saved
           val user3 = user().withUsername("scarletwitch").saved
           val lib1 = library().withUser(user1).saved // user1 owns lib1
-          membership().withLibraryCollaborator(lib1, user2).saved // user2 follows lib1 (has read_only access)
+          membership().withLibraryCollaborator(lib1, user2).saved // user2 is a collaborator in lib1 (has read_write access)
 
           libraryMembershipRepo.getWithLibraryIdAndUserId(lib1.id.get, user1.id.get).get.access === LibraryAccess.OWNER
           libraryMembershipRepo.getWithLibraryIdAndUserId(lib1.id.get, user2.id.get).get.access === LibraryAccess.READ_WRITE
@@ -1449,19 +1449,19 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
           libraryController.updateLibraryMembership(pubLibId, targetUser.externalId)(FakeRequest("POST", testPath).withBody(jsonBody))
         }
 
-        // test invalid library write access
-        status(updateLibraryMembership(user2, user2, lib1, "owner")) must equalTo(FORBIDDEN)
+        // test invalid library write access (error)
+        status(updateLibraryMembership(user2, user2, lib1, "owner")) must equalTo(BAD_REQUEST)
 
-        // test change membership access
-        status(updateLibraryMembership(user1, user2, lib1, "collaborator")) must equalTo(NO_CONTENT)
-
-        // test change membership access
+        // test demote membership access
         status(updateLibraryMembership(user1, user2, lib1, "follower")) must equalTo(NO_CONTENT)
+
+        // test promote membership access (error)
+        status(updateLibraryMembership(user1, user2, lib1, "collaborator")) must equalTo(BAD_REQUEST)
 
         // test deactivate membership
         status(updateLibraryMembership(user1, user2, lib1, "none")) must equalTo(NO_CONTENT)
 
-        // test membership not found
+        // test membership not found (error)
         status(updateLibraryMembership(user1, user2, lib1, "follower")) must equalTo(NOT_FOUND)
       }
     }

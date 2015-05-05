@@ -1709,29 +1709,23 @@ class LibraryCommander @Inject() (
           Left(LibraryFail(BAD_REQUEST, "cannot_change_owner_access"))
 
         case (Some(mem), Some(targetMem)) =>
-          def demoteMembership(membership: LibraryMembership, newAccess: Option[LibraryAccess]): Either[LibraryFail, LibraryMembership] = {
+          if ((mem.isOwner && !targetMem.isOwner) || // owners can edit anyone except themselves
+            (mem.isCollaborator && mem.userId == targetMem.userId) || // a collaborator can only edit herself
+            (mem.isFollower && mem.userId == targetMem.userId)) { // a follower can only edit herself
             db.readWrite { implicit s =>
               newAccess match {
                 case None =>
-                  Right(libraryMembershipRepo.save(membership.copy(state = LibraryMembershipStates.INACTIVE)))
-                case Some(newAccess) if (LibraryAccess.compare(membership.access, newAccess) >= 0) => // can only demote membership
-                  Right(libraryMembershipRepo.save(membership.copy(access = newAccess)))
+                  Right(libraryMembershipRepo.save(targetMem.copy(state = LibraryMembershipStates.INACTIVE)))
+                case Some(newAccess) if targetMem.access.isHigherAccess(newAccess) => // can only demote membership
+                  Right(libraryMembershipRepo.save(targetMem.copy(access = newAccess)))
                 case _ =>
-                  log.warn(s"[updateLibraryMembership] attempting to membership ${membership.userId}:${membership.access} access to ${newAccess}")
+                  log.warn(s"[updateLibraryMembership] attempting to promote membership ${targetMem.userId}:${targetMem.access} access to ${newAccess}")
                   Left(LibraryFail(BAD_REQUEST, "cannot_promote_access"))
               }
             }
-          }
-
-          if (mem.isOwner && !targetMem.isOwner) { // owners can edit anyone except themselves
-            demoteMembership(targetMem, newAccess)
-          } else if (mem.isCollaborator && mem.userId == targetMem.userId) { // a collaborator can only edit herself
-            demoteMembership(targetMem, newAccess)
-          } else if (mem.isFollower && mem.userId == targetMem.userId) { // a follower can only edit herself
-            demoteMembership(targetMem, newAccess)
           } else { // invalid permissions
             log.warn(s"[updateLibraryMembership] invalid permission ${mem} trying to change ${targetMem}'s membership to ${newAccess}")
-            Left(LibraryFail(BAD_REQUEST, "invalid_permissions"))
+            Left(LibraryFail(FORBIDDEN, "invalid_permissions"))
           }
       }
     }

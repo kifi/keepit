@@ -63,7 +63,11 @@ object LibraryMembership {
 
 object LibraryMembershipStates extends States[LibraryMembership]
 
-sealed abstract class LibraryAccess(val value: String, val priority: Int)
+sealed abstract class LibraryAccess(val value: String, val priority: Int) {
+  def isHigherAccess(x: LibraryAccess): Boolean = {
+    this.priority > x.priority
+  }
+}
 
 object LibraryAccess {
   case object READ_ONLY extends LibraryAccess("read_only", 0)
@@ -74,10 +78,8 @@ object LibraryAccess {
   implicit def format[T]: Format[LibraryAccess] =
     Format(__.read[String].map(LibraryAccess(_)), new Writes[LibraryAccess] { def writes(o: LibraryAccess) = JsString(o.value) })
 
-  def compare(x: LibraryAccess, y: LibraryAccess): Int = x.priority compare y.priority
-
   implicit def ord: Ordering[LibraryAccess] = new Ordering[LibraryAccess] {
-    def compare(x: LibraryAccess, y: LibraryAccess): Int = this.compare(x, y)
+    def compare(x: LibraryAccess, y: LibraryAccess): Int = x.priority compare y.priority
   }
 
   def apply(str: String) = {
