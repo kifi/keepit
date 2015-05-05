@@ -76,7 +76,7 @@ class LibraryController @Inject() (
     }
   }
 
-  def modifyLibrary(pubId: PublicId[Library]) = (UserAction andThen LibraryWriteAction(pubId))(parse.tolerantJson) { request =>
+  def modifyLibrary(pubId: PublicId[Library]) = (UserAction andThen LibraryOwnerAction(pubId))(parse.tolerantJson) { request =>
     val id = Library.decodePublicId(pubId).get
     val libModifyRequest = request.body.as[LibraryModifyRequest]
 
@@ -95,7 +95,7 @@ class LibraryController @Inject() (
     }
   }
 
-  def removeLibrary(pubId: PublicId[Library]) = (UserAction andThen LibraryWriteAction(pubId)) { request =>
+  def removeLibrary(pubId: PublicId[Library]) = (UserAction andThen LibraryOwnerAction(pubId)) { request =>
     val id = Library.decodePublicId(pubId).get
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
     libraryCommander.removeLibrary(id, request.userId) match {

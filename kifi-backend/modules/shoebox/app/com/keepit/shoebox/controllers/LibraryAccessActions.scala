@@ -29,6 +29,10 @@ trait LibraryAccessActions {
     def filter[A](input: UserRequest[A]): Future[Option[Result]] = Future.successful(lookupWriteAccess(id, input))
   }
 
+  def LibraryOwnerAction(id: PublicId[Library]): ActionFilter[UserRequest] = new ActionFilter[UserRequest] {
+    def filter[A](input: UserRequest[A]): Future[Option[Result]] = Future.successful(lookupOwnerAccess(id, input))
+  }
+
   // Helpers:
 
   private def lookupViewAccess[A](libraryPubId: PublicId[Library], input: MaybeUserRequest[A]) = {
@@ -50,6 +54,20 @@ trait LibraryAccessActions {
       case Some((libraryId, Some(userId), accessToken, hashedPassPhrase)) =>
         libraryCommander.userAccess(userId, libraryId, None) match {
           case Some(LibraryAccess.OWNER) | Some(LibraryAccess.READ_WRITE) =>
+            None
+          case _ =>
+            Some(Forbidden(Json.obj("error" -> "permission_denied")))
+        }
+      case _ =>
+        Some(BadRequest(Json.obj("error" -> "invalid_id")))
+    }
+  }
+
+  private def lookupOwnerAccess[A](libraryPubId: PublicId[Library], input: MaybeUserRequest[A]) = {
+    parseRequest(libraryPubId, input) match {
+      case Some((libraryId, Some(userId), accessToken, hashedPassPhrase)) =>
+        libraryCommander.userAccess(userId, libraryId, None) match {
+          case Some(LibraryAccess.OWNER) =>
             None
           case _ =>
             Some(Forbidden(Json.obj("error" -> "permission_denied")))
