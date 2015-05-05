@@ -366,7 +366,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
       }
     }
 
-    "keep to library" in {
+    "keep to library v1" in {
       withDb(controllerTestModules: _*) { implicit injector =>
         val (user1, lib1) = setupOneUserOneLibrary()
         db.readOnlyMaster { implicit s =>
@@ -378,7 +378,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
 
         // add new keep
         val add1 = Json.obj("title" -> "Bikini Bottom", "url" -> keepUrl, "hashtags" -> Seq("vacation"))
-        val result1 = keepToLibrary(user1, pubId1, add1)
+        val result1 = keepToLibraryV1(user1, pubId1, add1)
         status(result1) must equalTo(OK)
         contentType(result1) must beSome("application/json")
 
@@ -390,7 +390,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
 
         // add same keep with different title & different set of tags
         val add2 = Json.obj("title" -> "Airbnb", "url" -> keepUrl, "hashtags" -> Seq("tagA", "tagB"))
-        val result2 = keepToLibrary(user1, pubId1, add2)
+        val result2 = keepToLibraryV1(user1, pubId1, add2)
         status(result2) must equalTo(OK)
         contentType(result2) must beSome("application/json")
         (contentAsJson(result2) \ "hashtags").as[Seq[Hashtag]].map(_.tag) === Seq("tagA", "tagB")
@@ -399,6 +399,46 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
           val keeps = keepRepo.getByLibrary(lib1.id.get, 0, 10)
           keeps(0).title.get === "Airbnb"
           collectionRepo.getHashtagsByKeepId(keeps(0).id.get).map(_.tag) === Set("tagA", "tagB")
+        }
+      }
+    }
+
+    "keep to library v2" in {
+      withDb(controllerTestModules: _*) { implicit injector =>
+        val (user1, lib1) = setupOneUserOneLibrary()
+        db.readOnlyMaster { implicit s =>
+          keepRepo.getCountByLibrary(lib1.id.get) === 0
+        }
+
+        val pubId1 = Library.publicId(lib1.id.get)(inject[PublicIdConfiguration])
+        val keepUrl = "http://www.airbnb.com/bikinibottom"
+
+        // add new keep
+        val add1 = Json.obj("title" -> "Bikini Bottom", "url" -> keepUrl, "note" -> "I love [#scala]")
+        val result1 = keepToLibraryV2(user1, pubId1, add1)
+        status(result1) must equalTo(OK)
+        contentType(result1) must beSome("application/json")
+
+        db.readOnlyMaster { implicit s =>
+          val keeps = keepRepo.getByLibrary(lib1.id.get, 0, 10)
+          val keep = keeps(0)
+          keep.title.get === "Bikini Bottom"
+          keep.note.get === "I love [#scala]"
+          collectionRepo.getHashtagsByKeepId(keep.id.get).map(_.tag) === Set("scala")
+        }
+
+        // add same keep with different title & note
+        val add2 = Json.obj("title" -> "Airbnb", "url" -> keepUrl, "note" -> "Just kidding, I like nothing")
+        val result2 = keepToLibraryV2(user1, pubId1, add2)
+        status(result2) must equalTo(OK)
+        contentType(result2) must beSome("application/json")
+
+        db.readOnlyMaster { implicit s =>
+          val keeps = keepRepo.getByLibrary(lib1.id.get, 0, 10)
+          val keep = keeps(0)
+          keep.title.get === "Airbnb"
+          keep.note.get === "Just kidding, I like nothing"
+          collectionRepo.getHashtagsByKeepId(keep.id.get).map(_.tag) === Set()
         }
       }
     }
@@ -555,9 +595,14 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
     controller.getLibraryMembers(libId, offset, limit)(request(routes.MobileLibraryController.getLibraryMembers(libId, offset, limit)))
   }
 
-  private def keepToLibrary(user: User, libId: PublicId[Library], body: JsObject)(implicit injector: Injector): Future[Result] = {
+  private def keepToLibraryV1(user: User, libId: PublicId[Library], body: JsObject)(implicit injector: Injector): Future[Result] = {
     inject[FakeUserActionsHelper].setUser(user)
-    controller.keepToLibrary(libId)(request(routes.MobileLibraryController.keepToLibrary(libId)).withBody(body))
+    controller.keepToLibraryV1(libId)(request(routes.MobileLibraryController.keepToLibraryV1(libId)).withBody(body))
+  }
+
+  private def keepToLibraryV2(user: User, libId: PublicId[Library], body: JsObject)(implicit injector: Injector): Future[Result] = {
+    inject[FakeUserActionsHelper].setUser(user)
+    controller.keepToLibraryV2(libId)(request(routes.MobileLibraryController.keepToLibraryV2(libId)).withBody(body))
   }
 
   private def unkeepFromLibrary(user: User, libId: PublicId[Library], keepId: ExternalId[Keep])(implicit injector: Injector): Future[Result] = {
