@@ -90,8 +90,7 @@ angular.module('kifi')
       actions: {
         bulkUnkeep: true,
         copyToLibrary: true,
-        moveToLibrary: true,
-        editTags: true
+        moveToLibrary: true
       }
     };
 

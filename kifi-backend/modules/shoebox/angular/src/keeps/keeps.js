@@ -67,8 +67,6 @@ angular.module('kifi')
         //
         scope.me = profileService.me;
         scope.scrollDistance = '100%';
-        scope.editingTags = false;
-        scope.addingTag = {enabled: false};
         scope.selection = new KeepSelection();
 
 
@@ -132,14 +130,6 @@ angular.module('kifi')
           })['catch'](modalService.openGenericErrorModal);
         };
 
-        scope.enableEditTags = function () {
-          scope.editingTags = true;
-        };
-
-        scope.disableEditTags = function () {
-          scope.editingTags = false;
-        };
-
         scope.onWidgetKeepToLibraryClicked = function (clickedLibrary) {
           var selectedKeeps = scope.selection.getSelected(scope.availableKeeps);
           var keepInfos = selectedKeeps.map(function (keep) {
@@ -192,11 +182,6 @@ angular.module('kifi')
         //
         // Watches and listeners.
         //
-        scope.$watch(function () {
-          return scope.selection.getSelected(scope.keeps).length;
-        }, function () {
-          scope.disableEditTags();
-        });
 
         scope.$watch('edit.enabled', function (newVal, oldVal) {
           if (oldVal && !newVal) {

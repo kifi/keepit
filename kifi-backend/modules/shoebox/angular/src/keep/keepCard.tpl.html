@@ -48,13 +48,10 @@
         <a class="kf-keep-who-pic" ng-attr-style="background-image:url({{keeper|pic:100}})" href="{{keeper|profileUrl}}" kf-track-origin="{{currentPageOrigin}}/alsoKeptBy"></a>
       </span>
     </div>
-
-    <div kf-tag-list get-selected-keeps="getSingleSelectedKeep(keep)" adding-tag="addingTag" is-shown="showTags(keep)" ng-show="showTags(keep)" keep="keep" read-only-mode="!isTaggable(keep)" user-logged-in="userLoggedIn" library="library"></div>
   </div>
 
   <div class="kf-keep-footer kf-keep-footer-buttons-wrapper clearfix" ng-if="userLoggedIn">
     <span kf-keep-master-button keep="keep" ng-if="keep" library="library" libraries="libraries"></span>
     <span kf-keep-share-button keep="keep" show-install-extension-modal="showInstallExtensionModal()" ng-if="keep"></span>
-    <span kf-keep-tag-button keep="keep" ng-show="isTaggable(keep) && !hasTag(keep)" show-add-tag="showAddTag()"></span>
   </div>
 </div>

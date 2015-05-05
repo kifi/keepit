@@ -2,37 +2,6 @@
 
 angular.module('kifi')
 
-.controller('KeepCtrl', [
-  '$scope',
-  function ($scope) {
-    $scope.isMyBookmark = function (keep) {
-      return (keep && keep.isMyBookmark) || false;
-    };
-
-    $scope.isExampleTag = function (tag) {
-      return (tag && tag.name && tag.name.toLowerCase()) === 'example keep';
-    };
-
-    function hasExampleTag(tags) {
-      if (tags && tags.length) {
-        for (var i = 0, l = tags.length; i < l; i++) {
-          if ($scope.isExampleTag(tags[i])) {
-            return true;
-          }
-        }
-      }
-      return false;
-    }
-
-    $scope.isExample = function (keep) {
-      if (keep && keep.isExample == null) {
-        keep.isExample = hasExampleTag($scope.getTags());
-        return keep.isExample;
-      }
-    };
-  }
-])
-
 .directive('kfKeepCard', [
   '$rootScope', 'installService', 'libraryService', 'modalService', 'util', '$analytics',
   function ($rootScope, installService, libraryService, modalService, util, $analytics) {
@@ -55,8 +24,6 @@ angular.module('kifi')
           return;
         }
 
-        scope.isMyLibrary = scope.library && libraryService.isMyLibrary(scope.library);
-
         //
         // Internal data.
         //
@@ -67,7 +34,6 @@ angular.module('kifi')
         //
         // Scope data.
         //
-        scope.addingTag = {enabled: false};
         scope.userLoggedIn = $rootScope.userLoggedIn;
         scope.cardType = '';
         scope.youtubeId = '';
@@ -233,17 +199,6 @@ angular.module('kifi')
         //
         // Scope methods.
         //
-        scope.getReadOnlyTags = function (keep) {
-          return (!scope.isTaggable(keep) && !_.isEmpty(keep.tags)) ? keep.tags : [];
-        };
-
-        scope.hasReadyOnlyTags = function (keep) {
-          return scope.getReadOnlyTags(keep).length > 0;
-        };
-
-        scope.isTaggable = function (keep) {
-          return scope.isMyLibrary && keep.isMyBookmark;
-        };
 
         scope.showSmallImage = function (keep) {
           var hasImage = keep.summary.imageWidth > 110 && keep.summary.imageHeight > 110;
@@ -253,23 +208,6 @@ angular.module('kifi')
         scope.showBigImage = function (keep) {
           var bigImageReady = keep.hasBigImage || (keep.summary && useBigLayout);
           return bigImageReady && scope.cardType === 'big';
-        };
-
-        scope.hasTag = function (keep) {
-          return keep.hashtags && keep.hashtags.length > 0;
-        };
-
-        scope.showTags = function (keep) {
-          return scope.hasReadyOnlyTags(keep) ||
-            (scope.isTaggable(keep) && (scope.hasTag(keep) || scope.addingTag.enabled));
-        };
-
-        scope.showAddTag = function () {
-          scope.addingTag.enabled = true;
-        };
-
-        scope.getSingleSelectedKeep = function (keep) {
-          return [keep];
         };
 
         scope.onCheck = function (e, keep) {
@@ -483,20 +421,6 @@ angular.module('kifi')
           }
         };
       }
-    };
-  }
-])
-
-.directive('kfKeepTagButton', [
-  function () {
-    return {
-      restrict: 'A',
-      scope: {
-        keep: '=',
-        showAddTag: '&'
-      },
-      replace: false,
-      templateUrl: 'keep/keepTagButton.tpl.html'
     };
   }
 ]);

@@ -6,7 +6,7 @@ angular.module('kifi')
   'util', 'profileService',
   function (util, profileService) {
     function processLibraries(item) {
-      if (item.libraries && item.libraries.length > 0 && Array.isArray(item.libraries[0])) {
+      if (item.libraries && item.libraries.length) {
         item.libraries = _(item.libraries).filter(function (lib) {
           return lib[1].id !== profileService.me.id;
         }).map(function (lib) {
@@ -16,8 +16,7 @@ angular.module('kifi')
       }
     }
 
-
-    function Keep (item, itemType) {
+    function Keep(item, itemType) {
       if (!item) {
         return {};
       }
@@ -77,55 +76,7 @@ angular.module('kifi')
     Keep.prototype.buildKeep = function (keptItem, isMyBookmark) {
       this.id = keptItem.id;
       this.libraryId = keptItem.libraryId;
-
       this.isMyBookmark = _.isBoolean(isMyBookmark) ? isMyBookmark : true;
-      this.tagList = this.tagList || [];
-      this.collections = this.collections || [];
-
-      // deprecated: user addHashtag
-      this.addTag = function (tag) {
-        this.tagList.push(tag);
-        this.collections.push(tag.id);
-      };
-
-      // deprecated: user removeHashtag
-      this.removeTag = function (tagId) {
-        var idx1 = _.findIndex(this.tagList, function (tag) {
-          return tag.id === tagId;
-        });
-        if (idx1 > -1) {
-          this.tagList.splice(idx1, 1);
-        }
-        var idx2 = this.collections.indexOf(tagId);
-        if (idx2 > -1) {
-          this.collections.splice(idx2, 1);
-          return true;
-        } else {
-          return false;
-        }
-      };
-
-      this.hasHashtag = function (hashtag) {
-        return _.contains(this.hashtags, hashtag);
-      };
-
-      this.addHashtag = function (hashtag) {
-        this.addTag(hashtag); // to maintain backwards compatibility; eventually to be removed
-        this.hashtags.push(hashtag);
-      };
-
-      this.removeHashtag = function (hashtag) {
-        this.removeTag(hashtag); // to maintain backwards compatibility; eventually to be removed
-        var idx = _.findIndex(this.hashtags, function (tag) {
-          return tag === hashtag;
-        });
-        if (idx > -1) {
-          this.hashtags.splice(idx, 1);
-          return true;
-        } else {
-          return false;
-        }
-      };
     };
 
     Keep.prototype.makeUnkept = function () {
@@ -144,11 +95,6 @@ angular.module('kifi')
       return _.extend(new Keep(keep), {isMyBookmark: keep.isMyBookmark});
     }
 
-    var api = {
-      Keep: Keep,
-      reconstituteKeepFromJson: reconstituteKeepFromJson
-    };
-
-    return api;
+    return {Keep: Keep};
   }
 ]);

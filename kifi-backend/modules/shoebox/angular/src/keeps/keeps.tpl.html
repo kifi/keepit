@@ -6,7 +6,7 @@
         <span class="kf-keep-selected-count-number">{{selection.getSelected(keeps).length}}</span>
         <span class="kf-keep-selected-count-text" ng-pluralize count="selection.getSelected(keeps).length" when="{'1': 'keep selected', 'other': 'keeps selected'}"></span>
       </div>
-      <div class="kf-keep-selection-options" ng-class="{disabled: editingTags || selection.getSelected(keeps).length === 0}">
+      <div class="kf-keep-selection-options" ng-class="{disabled: selection.getSelected(keeps).length === 0}">
         <div ng-if="edit.actions.copyToLibrary" class="kf-keep-selection-option copy-to-library">
           <span kf-keep-to-library-widget widget-action-text="Copy"
             library-click-action="onWidgetCopyLibraryClicked(clickedLibrary)"
@@ -29,12 +29,7 @@
           </span>
         </div>
         <div ng-if="edit.actions.moveToLibrary" class="kf-keep-selection-option"><span ng-click="unkeep(keeps)">Unkeep</span></div>
-        <div ng-if="edit.actions.editTags" class="kf-keep-selection-option" ng-click="enableEditTags()"><span>Edit Tags</span></div>
         <div class="kf-keep-selection-options-mask"></div>
-      </div>
-      <div class="kf-keep-selection-tags" ng-if="editingTags">
-        <div class="kf-keep-selection-tags-done" ng-click="disableEditTags()">Done tagging</div>
-        <div kf-tag-list class="kf-keep-selection-tags-list" adding-tag="addingTag" get-selected-keeps="selection.getSelected(keeps)"></div>
       </div>
     </div>
   </div>
