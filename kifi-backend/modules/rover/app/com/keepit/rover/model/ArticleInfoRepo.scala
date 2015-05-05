@@ -193,25 +193,20 @@ class ArticleInfoRepoImpl @Inject() (
   }
 
   def getRipeForImageProcessing(limit: Int, requestedForMoreThan: Duration, imageProcessingForMoreThan: Duration)(implicit session: RSession): Seq[RoverArticleInfo] = {
-    val ripeRows = {
-      val now = clock.now()
-      val imageProcessingRequestedLongEnoughAgo = now minusSeconds requestedForMoreThan.toSeconds.toInt // due
-      val lastImageProcessingTooLongAgo = now minusSeconds imageProcessingForMoreThan.toSeconds.toInt // stale
+    val now = clock.now()
+    val imageProcessingRequestedLongEnoughAgo = now minusSeconds requestedForMoreThan.toSeconds.toInt
+    val lastImageProcessingTooLongAgo = now minusSeconds imageProcessingForMoreThan.toSeconds.toInt
 
-      for (
-        r <- rows if {
-          r.state === ArticleInfoStates.ACTIVE && {
-            (r.lastImageProcessingAt.isDefined && r.lastImageProcessingAt < lastImageProcessingTooLongAgo) || {
-              (r.lastImageProcessingAt.isEmpty && r.imageProcessingRequestedAt.isDefined && r.imageProcessingRequestedAt < imageProcessingRequestedLongEnoughAgo)
-            }
-          }
-        }
-      ) yield r
+    val stale = for (r <- rows if r.state === ArticleInfoStates.ACTIVE && (r.lastImageProcessingAt.isDefined && r.lastImageProcessingAt < lastImageProcessingTooLongAgo)) yield r
+    val due = for (r <- rows if r.state === ArticleInfoStates.ACTIVE && (r.lastImageProcessingAt.isEmpty && r.imageProcessingRequestedAt.isDefined && r.imageProcessingRequestedAt < imageProcessingRequestedLongEnoughAgo)) yield r
+
+    val ripe = {
+      @inline def take(q: Query[ArticleInfoTable, RoverArticleInfo, Seq]) = q.sortBy(r => (r.imageProcessingRequestedAt, r.lastImageProcessingAt)).take(limit)
+      take(Seq(due, stale).map(take).reduce(_ union _))
     }
 
-    log.info(s"ArticleInfoRepo.getRipeForImageProcessing SQL Statement:\n${ripeRows.sortBy(_.lastFetchedAt).take(limit).selectStatement}")
-
-    ripeRows.sortBy(_.imageProcessingRequestedAt).take(limit).list
+    log.info(s"ArticleInfoRepo.getRipeForImageProcessing SQL Statement:\n${ripe.selectStatement}")
+    ripe.list
   }
 
   def markAsImageProcessing(ids: Id[RoverArticleInfo]*)(implicit session: RWSession): Unit = updateLastImageProcessingAt(ids, Some(clock.now()))
