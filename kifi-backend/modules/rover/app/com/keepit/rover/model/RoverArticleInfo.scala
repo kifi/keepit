@@ -29,6 +29,7 @@ case class RoverArticleInfo(
     fetchInterval: Option[Duration] = None,
     failureCount: Int = 0,
     failureInfo: Option[String] = None,
+    imageProcessingRequestedAt: Option[DateTime] = None,
     lastImageProcessingVersion: Option[ArticleVersion] = None,
     lastImageProcessingAt: Option[DateTime] = None) extends ModelWithState[RoverArticleInfo] with ModelWithSeqNumber[RoverArticleInfo] with ArticleInfoHolder with ArticleKindHolder {
 
@@ -49,6 +50,7 @@ case class RoverArticleInfo(
     fetchInterval = None,
     failureCount = 0,
     failureInfo = None,
+    imageProcessingRequestedAt = None,
     lastImageProcessingVersion = None,
     lastImageProcessingAt = None
   )
@@ -148,9 +150,10 @@ object RoverArticleInfo {
     fetchInterval: Option[Duration],
     failureCount: Int,
     failureInfo: Option[String],
+    imageProcessingRequestedAt: Option[DateTime],
     lastImageProcessingVersion: Option[ArticleVersion],
     lastImageProcessingAt: Option[DateTime]): RoverArticleInfo = {
-    RoverArticleInfo(id, createdAt, updatedAt, state, seq, uriId, url, kind, bestVersion, latestVersion, oldestVersion, lastFetchedAt, nextFetchAt, lastFetchingAt, fetchInterval, failureCount, failureInfo, lastImageProcessingVersion, lastImageProcessingAt)
+    RoverArticleInfo(id, createdAt, updatedAt, state, seq, uriId, url, kind, bestVersion, latestVersion, oldestVersion, lastFetchedAt, nextFetchAt, lastFetchingAt, fetchInterval, failureCount, failureInfo, imageProcessingRequestedAt, lastImageProcessingVersion, lastImageProcessingAt)
   }
 
   def unapplyToDbRow(info: RoverArticleInfo) = {
@@ -172,6 +175,7 @@ object RoverArticleInfo {
       info.fetchInterval,
       info.failureCount,
       info.failureInfo,
+      info.imageProcessingRequestedAt,
       info.lastImageProcessingVersion,
       info.lastImageProcessingAt
     ))

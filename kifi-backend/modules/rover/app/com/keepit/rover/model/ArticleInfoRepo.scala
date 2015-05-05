@@ -76,6 +76,7 @@ class ArticleInfoRepoImpl @Inject() (
     def fetchInterval = column[Option[Duration]]("fetch_interval", O.Nullable)
     def failureCount = column[Int]("failure_count", O.NotNull)
     def failureInfo = column[Option[String]]("failure_info", O.Nullable)
+    def imageProcessingRequestedAt = column[Option[DateTime]]("image_processing_requested_at", O.Nullable)
     def lastImageProcessingVersionMajor = column[Option[VersionNumber[Article]]]("last_image_processing_version_major", O.Nullable)
     def lastImageProcessingVersionMinor = column[Option[VersionNumber[Article]]]("last_image_processing_version_minor", O.Nullable)
     def lastImageProcessingAt = column[Option[DateTime]]("last_image_processing_at", O.Nullable)
@@ -85,7 +86,7 @@ class ArticleInfoRepoImpl @Inject() (
     def oldestVersion = (oldestVersionMajor, oldestVersionMinor) <> ((articleVersionFromDb _).tupled, articleVersionToDb _)
     def lastImageProcessingVersion = (lastImageProcessingVersionMajor, lastImageProcessingVersionMinor) <> ((articleVersionFromDb _).tupled, articleVersionToDb _)
 
-    def * = (id.?, createdAt, updatedAt, state, seq, uriId, url, kind, bestVersion, latestVersion, oldestVersion, lastFetchedAt, nextFetchAt, lastFetchingAt, fetchInterval, failureCount, failureInfo, lastImageProcessingVersion, lastImageProcessingAt) <> ((RoverArticleInfo.applyFromDbRow _).tupled, RoverArticleInfo.unapplyToDbRow _)
+    def * = (id.?, createdAt, updatedAt, state, seq, uriId, url, kind, bestVersion, latestVersion, oldestVersion, lastFetchedAt, nextFetchAt, lastFetchingAt, fetchInterval, failureCount, failureInfo, imageProcessingRequestedAt, lastImageProcessingVersion, lastImageProcessingAt) <> ((RoverArticleInfo.applyFromDbRow _).tupled, RoverArticleInfo.unapplyToDbRow _)
   }
 
   def table(tag: Tag) = new ArticleInfoTable(tag)
