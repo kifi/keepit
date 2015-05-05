@@ -7,8 +7,9 @@ import com.keepit.model.NormalizedURIStates._
 import com.keepit.model.{ IndexableUri, NormalizedURI }
 import com.keepit.rover.article.content.{ ArticleContentExtractor }
 import com.keepit.rover.article.Article
+import com.keepit.search.index.sharding.Shard
 import com.keepit.search.util.MultiStringReader
-import com.keepit.search.index.{ Indexable, DefaultAnalyzer }
+import com.keepit.search.index.{ FieldDecoder, Indexable, DefaultAnalyzer }
 
 object ArticleFields {
   val titleField = "t"
@@ -23,6 +24,8 @@ object ArticleFields {
   val recordField = "rec"
 
   val textSearchFields = Set(titleField, titleStemmedField, contentField, contentStemmedField, siteField, homePageField, mediaField)
+
+  val decoders: Map[String, FieldDecoder] = Map.empty
 }
 
 object ArticleIndexable {
@@ -30,10 +33,10 @@ object ArticleIndexable {
   def shouldDelete(uri: IndexableUri): Boolean = toBeDeletedStates.contains(uri.state)
 }
 
-class ArticleIndexable(uri: IndexableUri, articles: Set[Article]) extends Indexable[NormalizedURI, NormalizedURI] {
+case class ArticleIndexable(uri: IndexableUri, articles: Set[Article], shard: Shard[NormalizedURI]) extends Indexable[NormalizedURI, NormalizedURI] {
   val id = uri.id.get
   val sequenceNumber = uri.seq
-  val isDeleted = ArticleIndexable.shouldDelete(uri)
+  val isDeleted = ArticleIndexable.shouldDelete(uri) || !shard.contains(uri.id.get)
 
   implicit def toReader(text: String) = new StringReader(text)
 
