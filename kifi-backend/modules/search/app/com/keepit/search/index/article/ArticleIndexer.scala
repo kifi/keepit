@@ -61,7 +61,10 @@ class ShardedArticleIndexer(
 
   private def fetchIndexables(seq: SequenceNumber[NormalizedURI], fetchSize: Int): Future[Option[(Map[Shard[NormalizedURI], Seq[ArticleIndexable]], SequenceNumber[NormalizedURI])]] = {
     shoebox.getIndexableUris(seq, fetchSize).flatMap {
-      case Seq() => Future.successful(None)
+      case Seq() => {
+        log.info("ShardedArticleIndexer: Looks like we're done on the back up machine!")
+        Future.successful(None)
+      }
       case uris => rover.getArticlesByUris(uris.map(_.id.get).toSet).map { articlesByUriId =>
         val shardedIndexables = indexShards.keys.map { shard =>
           val indexables = uris.map { uri => new ArticleIndexable(uri, articlesByUriId(uri.id.get), shard) }
@@ -93,8 +96,16 @@ class ArticleIndexerActor @Inject() (
 trait ArticleIndexerPlugin extends IndexerPlugin[NormalizedURI, ArticleIndexer]
 
 class ArticleIndexerPluginImpl @Inject() (
-  actor: ActorInstance[ArticleIndexerActor],
-  indexer: ShardedArticleIndexer,
-  airbrake: AirbrakeNotifier,
-  serviceDiscovery: ServiceDiscovery,
-  val scheduling: SchedulingProperties) extends IndexerPluginImpl(indexer, actor, serviceDiscovery) with ArticleIndexerPlugin
+    actor: ActorInstance[ArticleIndexerActor],
+    indexer: ShardedArticleIndexer,
+    airbrake: AirbrakeNotifier,
+    serviceDiscovery: ServiceDiscovery,
+    val scheduling: SchedulingProperties) extends IndexerPluginImpl(indexer, actor, serviceDiscovery) with ArticleIndexerPlugin {
+  override def onStart() = {
+    if (serviceDiscovery.hasBackupCapability) {
+      log.info("Build the new article index on backup machine.")
+      super.onStart()
+    }
+  }
+  override def enabled = serviceDiscovery.hasBackupCapability
+}

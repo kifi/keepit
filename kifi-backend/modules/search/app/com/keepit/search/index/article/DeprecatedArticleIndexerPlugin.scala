@@ -14,11 +14,16 @@ import com.keepit.search.index.sharding.ShardedIndexerPluginImpl
 trait DeprecatedArticleIndexerPlugin extends ShardedIndexerPlugin[NormalizedURI, NormalizedURI, DeprecatedArticleIndexer]
 
 class DeprecatedArticleIndexerPluginImpl @Inject() (
-  actor: ActorInstance[DeprecatedArticleIndexerActor],
-  indexer: DeprecatedShardedArticleIndexer,
-  serviceDiscovery: ServiceDiscovery,
-  val scheduling: SchedulingProperties) extends ShardedIndexerPluginImpl[NormalizedURI, NormalizedURI, DeprecatedArticleIndexer, DeprecatedArticleIndexerActor](indexer, actor, serviceDiscovery) with DeprecatedArticleIndexerPlugin
+    actor: ActorInstance[DeprecatedArticleIndexerActor],
+    indexer: DeprecatedShardedArticleIndexer,
+    serviceDiscovery: ServiceDiscovery,
+    val scheduling: SchedulingProperties) extends ShardedIndexerPluginImpl[NormalizedURI, NormalizedURI, DeprecatedArticleIndexer, DeprecatedArticleIndexerActor](indexer, actor, serviceDiscovery) with DeprecatedArticleIndexerPlugin {
+  override def onStart() = {
+    if (!serviceDiscovery.hasBackupCapability) super.onStart()
+  }
+  override def enabled = !serviceDiscovery.hasBackupCapability
+}
 
 class DeprecatedArticleIndexerActor @Inject() (
   airbrake: AirbrakeNotifier,
-  indexer: DeprecatedShardedArticleIndexer) extends BasicIndexerActor[NormalizedURI, DeprecatedArticleIndexer](airbrake, indexer)
+  indexer: DeprecatedShardedArticleIndexer) extends BasicIndexerActor[NormalizedURI, DeprecatedArticleIndexer](airbrake, indexer) {}
