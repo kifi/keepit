@@ -32,7 +32,7 @@ class DeprecatedArticleIndexer(
   }
 
   def update(name: String, uris: Seq[IndexableUri], shard: Shard[NormalizedURI]): Int = updateLock.synchronized {
-    doUpdate("ArticleIndex" + name) {
+    doUpdate("DeprecatedArticleIndex" + name) {
       uris.foreach { u =>
         if (!shard.contains(u.id.get)) throw new Exception(s"URI (id=${u.id.get}) does not belong to this shard ($shard)")
       }
@@ -53,7 +53,7 @@ class DeprecatedArticleIndexer(
   }
 
   override def indexInfos(name: String): Seq[IndexInfo] = {
-    super.indexInfos("ArticleIndex" + name)
+    super.indexInfos("DeprecatedArticleIndex" + name)
   }
 }
 
