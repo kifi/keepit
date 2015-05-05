@@ -64,7 +64,6 @@ class ShardedArticleIndexer(
   private def fetchIndexables(seq: SequenceNumber[NormalizedURI], fetchSize: Int): Future[Option[(Map[Shard[NormalizedURI], Seq[ArticleIndexable]], SequenceNumber[NormalizedURI])]] = {
     shoebox.getIndexableUris(seq, fetchSize).andThen {
       case Success(uris) if uris.size < fetchSize =>
-        airbrake.notify("ShardedArticleIndexer: Looks like we're done on the back up machine!")
         log.info("ShardedArticleIndexer: Looks like we're done on the back up machine!")
     }.flatMap {
       case Seq() => Future.successful(None)
