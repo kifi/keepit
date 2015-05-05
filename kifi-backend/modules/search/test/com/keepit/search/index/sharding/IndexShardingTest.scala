@@ -3,7 +3,6 @@ package com.keepit.search.index.sharding
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.search.index.article.ArticleRecord
-import com.keepit.search.index.article.ArticleRecordSerializer
 import com.keepit.search.index.graph.keep.{ KeepRecord, KeepFields, ShardedKeepIndexer }
 import com.keepit.search.test.SearchTestInjector
 import org.apache.lucene.index.Term
@@ -45,7 +44,7 @@ class IndexShardingTest extends Specification with SearchTestInjector with Searc
         val store = mkStore(uris)
         val (_, indexer, _, _, _, keepIndexer, _, _) = initIndexes(store)
 
-        indexer.isInstanceOf[ShardedArticleIndexer] === true
+        indexer.isInstanceOf[DeprecatedShardedArticleIndexer] === true
         keepIndexer.isInstanceOf[ShardedKeepIndexer] === true
 
         indexer.update() === uris.size
@@ -57,7 +56,7 @@ class IndexShardingTest extends Specification with SearchTestInjector with Searc
             val articleSearcher = indexer.getIndexer(shard).getSearcher
 
             uris.foreach { uri =>
-              articleSearcher.getDecodedDocValue[ArticleRecord]("rec", uri.id.get.id)(ArticleRecordSerializer.fromByteArray).isDefined === shard.contains(uri.id.get)
+              articleSearcher.getDecodedDocValue[ArticleRecord]("rec", uri.id.get.id).isDefined === shard.contains(uri.id.get)
             }
 
             val keepSearcher = keepIndexer.getIndexer(shard).getSearcher
@@ -101,7 +100,7 @@ class IndexShardingTest extends Specification with SearchTestInjector with Searc
         val store = mkStore(uris)
         val (collectionGraph, indexer, _, _, _, keepIndexer, _, _) = initIndexes(store)
 
-        indexer.isInstanceOf[ShardedArticleIndexer] === true
+        indexer.isInstanceOf[DeprecatedShardedArticleIndexer] === true
         collectionGraph.isInstanceOf[ShardedCollectionIndexer] === true
 
         Await.result(keepIndexer.asyncUpdate(), Duration(60, SECONDS))
@@ -172,7 +171,7 @@ class IndexShardingTest extends Specification with SearchTestInjector with Searc
         }
         val store = mkStore(uris)
         val (_, indexer, _, _, _, _, _, _) = initIndexes(store)
-        indexer.isInstanceOf[ShardedArticleIndexer] === true
+        indexer.isInstanceOf[DeprecatedShardedArticleIndexer] === true
         indexer.update() === 5 // both subindexer's catch up seqNum = 5
         shoebox.saveURIs(uris(4).withState(NormalizedURIStates.INACTIVE)) // a4
         indexer.update() === 1 // one subindexer's catup seqNum = 6
@@ -202,7 +201,7 @@ class IndexShardingTest extends Specification with SearchTestInjector with Searc
         val savedUris = shoebox.saveURIs(uris: _*)
         val store = mkStore(savedUris)
         val (_, indexer, _, _, _, _, _, _) = initIndexes(store)
-        indexer.isInstanceOf[ShardedArticleIndexer] === true
+        indexer.isInstanceOf[DeprecatedShardedArticleIndexer] === true
         indexer.update === 5
         indexer.catchUpSeqNumber.value === 10
         indexer.sequenceNumber.value === 10

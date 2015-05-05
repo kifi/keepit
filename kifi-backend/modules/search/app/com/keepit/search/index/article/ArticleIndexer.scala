@@ -1,162 +1,111 @@
 package com.keepit.search.index.article
 
-import com.keepit.common.db._
-import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.logging.Logging
-import com.keepit.model._
-import com.keepit.model.NormalizedURIStates._
-import com.keepit.search.Article
-import com.keepit.search.ArticleStore
-import java.io.StringReader
-import com.keepit.search.index.article.ArticleRecordSerializer._
-import com.keepit.search.index.IndexDirectory
-import com.keepit.search.index.Indexer
-import com.keepit.search.index.Indexable
-import com.keepit.search.index.DefaultAnalyzer
+import com.keepit.rover.RoverServiceClient
 import com.keepit.search.index.IndexInfo
-import com.keepit.search.index.sharding.Shard
-import com.keepit.search.util.MultiStringReader
+import com.keepit.search.index._
+import com.keepit.shoebox.ShoeboxServiceClient
+import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.model.NormalizedURI
+import scala.concurrent.{ ExecutionContext, Future }
+import com.keepit.common.db.SequenceNumber
+import com.keepit.search.index.sharding.{ ShardedIndexer, Shard }
+import com.google.inject.Inject
+import com.keepit.common.logging.Logging
+import com.keepit.common.actor.ActorInstance
+import com.keepit.common.zookeeper.ServiceDiscovery
+import com.keepit.common.plugin.SchedulingProperties
 
-object ArticleFields {
-  val titleField = "t"
-  val titleStemmedField = "ts"
-  val titleLangField = "tl"
-  val contentField = "c"
-  val contentStemmedField = "cs"
-  val contentLangField = "cl"
-  val siteField = "site"
-  val homePageField = "home_page"
-  val mediaField = "media"
-  val recordField = "rec"
-
-  val textSearchFields = Set(titleField, titleStemmedField, contentField, contentStemmedField, siteField, homePageField, mediaField)
-}
-
-class ArticleIndexer(
-  indexDirectory: IndexDirectory,
-  articleStore: ArticleStore,
-  override val airbrake: AirbrakeNotifier)
-    extends Indexer[NormalizedURI, NormalizedURI, ArticleIndexer](indexDirectory) {
-
-  import ArticleIndexer.ArticleIndexable
-
-  override val commitBatchSize = 1000
-
-  override def onFailure(indexable: Indexable[NormalizedURI, NormalizedURI], e: Throwable) {
-    airbrake.notify(s"Error indexing article from normalized uri ${indexable.id}", e)
-    super.onFailure(indexable, e)
-  }
-
-  def update(name: String, uris: Seq[IndexableUri], shard: Shard[NormalizedURI]): Int = updateLock.synchronized {
-    doUpdate("ArticleIndex" + name) {
-      uris.foreach { u =>
-        if (!shard.contains(u.id.get)) throw new Exception(s"URI (id=${u.id.get}) does not belong to this shard ($shard)")
-      }
-      uris.iterator.map(buildIndexable)
-    }
-  }
-
+class ArticleIndexer(indexDirectory: IndexDirectory, shard: Shard[NormalizedURI], val airbrake: AirbrakeNotifier) extends Indexer[NormalizedURI, NormalizedURI, ArticleIndexer](indexDirectory, ArticleFields.decoders) {
+  val name = "ArticleIndexer" + shard.indexNameSuffix
   def update(): Int = throw new UnsupportedOperationException()
 
-  def buildIndexable(uri: IndexableUri): ArticleIndexable = {
-    new ArticleIndexable(
-      id = uri.id.get,
-      sequenceNumber = uri.seq,
-      isDeleted = ArticleIndexer.shouldDelete(uri),
-      uri = uri,
-      articleStore = articleStore,
-      airbrake = airbrake)
+  override val commitBatchSize = 200
+
+  private[article] def processIndexables(indexables: Seq[ArticleIndexable]): Int = updateLock.synchronized {
+    indexables.foreach(validate)
+    doUpdate(name)(indexables.iterator)
+  }
+
+  private def validate(indexable: ArticleIndexable): Unit = {
+    val isValidIndexable = shard.contains(indexable.uri.id.get) || indexable.isDeleted
+    if (!isValidIndexable) { throw new IllegalArgumentException(s"$indexable does not belong to $shard") }
   }
 
   override def indexInfos(name: String): Seq[IndexInfo] = {
-    super.indexInfos("ArticleIndex" + name)
+    super.indexInfos(this.name)
+  }
+
+}
+
+class ShardedArticleIndexer(
+    val indexShards: Map[Shard[NormalizedURI], ArticleIndexer],
+    shoebox: ShoeboxServiceClient,
+    rover: RoverServiceClient,
+    val airbrake: AirbrakeNotifier,
+    implicit val executionContext: ExecutionContext) extends ShardedIndexer[NormalizedURI, NormalizedURI, ArticleIndexer] {
+
+  def update(): Int = throw new UnsupportedOperationException()
+
+  val fetchSize = 200
+
+  def asyncUpdate(): Future[Boolean] = updateLock.synchronized {
+    resetSequenceNumberIfReindex()
+    fetchIndexables(sequenceNumber, fetchSize).map {
+      case Some((shardedIndexables, maxSeq)) =>
+        processShardedIndexables(shardedIndexables, maxSeq)
+        false
+      case None =>
+        true
+    }
+  }
+
+  private def fetchIndexables(seq: SequenceNumber[NormalizedURI], fetchSize: Int): Future[Option[(Map[Shard[NormalizedURI], Seq[ArticleIndexable]], SequenceNumber[NormalizedURI])]] = {
+    shoebox.getIndexableUris(seq, fetchSize).flatMap {
+      case Seq() => {
+        log.info("ShardedArticleIndexer: Looks like we're done on the back up machine!")
+        Future.successful(None)
+      }
+      case uris => rover.getArticlesByUris(uris.map(_.id.get).toSet).map { articlesByUriId =>
+        val shardedIndexables = indexShards.keys.map { shard =>
+          val indexables = uris.map { uri => new ArticleIndexable(uri, articlesByUriId(uri.id.get), shard) }
+          shard -> indexables
+        }.toMap
+        val maxSeq = uris.map(_.seq).max
+        Some((shardedIndexables, maxSeq))
+      }
+    }
+  }
+
+  //todo(Léo): promote this pattern into ShardedIndexer, make asynchronous and parallelize over shards
+  private def processShardedIndexables(shardedIndexables: Map[Shard[NormalizedURI], Seq[ArticleIndexable]], maxSeq: SequenceNumber[NormalizedURI]): Int = updateLock.synchronized {
+    val count = indexShards.map {
+      case (shard, indexer) =>
+        shardedIndexables.get(shard).map(indexer.processIndexables).getOrElse(0)
+    }.sum
+    sequenceNumber = maxSeq
+    count
   }
 }
 
-object ArticleIndexer extends Logging {
-  private[this] val toBeDeletedStates = Set[State[NormalizedURI]](ACTIVE, INACTIVE, UNSCRAPABLE, REDIRECTED)
-  def shouldDelete(uri: IndexableUri): Boolean = toBeDeletedStates.contains(uri.state)
+class ArticleIndexerActor @Inject() (
+    airbrake: AirbrakeNotifier,
+    indexer: ShardedArticleIndexer) extends CoordinatingIndexerActor(airbrake, indexer) with Logging {
+  protected def update(): Future[Boolean] = indexer.asyncUpdate()
+}
 
-  class ArticleIndexable(
-      override val id: Id[NormalizedURI],
-      override val sequenceNumber: SequenceNumber[NormalizedURI],
-      override val isDeleted: Boolean,
-      val uri: IndexableUri,
-      articleStore: ArticleStore,
-      airbrake: AirbrakeNotifier) extends Indexable[NormalizedURI, NormalizedURI] {
+trait ArticleIndexerPlugin extends IndexerPlugin[NormalizedURI, ArticleIndexer]
 
-    import ArticleFields._
-
-    implicit def toReader(text: String) = new StringReader(text)
-
-    private def getArticle(id: Id[NormalizedURI], maxRetry: Int, minSleepTime: Long): Option[Article] = {
-      var sleepTime = minSleepTime
-      var retry = maxRetry
-      while (retry > 0) {
-        try {
-          return articleStore.syncGet(id)
-        } catch {
-          case e: Throwable =>
-        }
-        log.info(s"failed to get article from ArticleStore. retry in {$sleepTime}ms")
-        Thread.sleep(sleepTime)
-        sleepTime *= 2 // exponential back off
-        retry -= 1
-      }
-      try {
-        articleStore.syncGet(id)
-      } catch {
-        case e: Throwable =>
-          log.error(s"failed to get article from ArticleStore id=${id}", e)
-          airbrake.notify(s"failed to get article from ArticleStore id=${id}")
-          None // skip this doc
-      }
-    }
-
-    override def buildDocument = {
-      val doc = super.buildDocument
-      getArticle(id = uri.id.get, maxRetry = 5, minSleepTime = 1000) match {
-        case Some(article) =>
-          uri.restriction.map { reason =>
-            doc.add(buildKeywordField(ArticleVisibility.restrictedTerm.field(), ArticleVisibility.restrictedTerm.text()))
-          }
-          val titleLang = article.titleLang.getOrElse(DefaultAnalyzer.defaultLang)
-          val contentLang = article.contentLang.getOrElse(DefaultAnalyzer.defaultLang)
-          doc.add(buildKeywordField(contentLangField, contentLang.lang))
-          doc.add(buildKeywordField(titleLangField, titleLang.lang))
-
-          val titleAnalyzer = DefaultAnalyzer.getAnalyzer(titleLang)
-          val titleAnalyzerWithStemmer = DefaultAnalyzer.getAnalyzerWithStemmer(titleLang)
-          val contentAnalyzer = DefaultAnalyzer.getAnalyzer(contentLang)
-          val contentAnalyzerWithStemmer = DefaultAnalyzer.getAnalyzerWithStemmer(contentLang)
-
-          val content = Array(
-            article.content, "\n\n",
-            article.description.getOrElse(""), "\n\n",
-            article.keywords.getOrElse(""), "\n\n",
-            article.media.getOrElse(""))
-          val titleAndUrl = Array(article.title, "\n\n", urlToIndexableString(uri.url).getOrElse(""))
-
-          doc.add(buildTextField(titleField, new MultiStringReader(titleAndUrl), titleAnalyzer))
-          doc.add(buildTextField(titleStemmedField, new MultiStringReader(titleAndUrl), titleAnalyzerWithStemmer))
-
-          doc.add(buildTextField(contentField, new MultiStringReader(content), contentAnalyzer))
-          doc.add(buildTextField(contentStemmedField, new MultiStringReader(content), contentAnalyzerWithStemmer))
-
-          buildDomainFields(uri.url, siteField, homePageField).foreach(doc.add)
-
-          // media keyword field
-          article.media.foreach { media =>
-            doc.add(buildTextField(mediaField, media, DefaultAnalyzer.defaultAnalyzer))
-          }
-
-          // store title and url in the index
-          val r = ArticleRecord(article.title, uri.url, article.id)
-          doc.add(buildBinaryDocValuesField(recordField, r))
-
-          doc
-        case None => doc
-      }
+class ArticleIndexerPluginImpl @Inject() (
+    actor: ActorInstance[ArticleIndexerActor],
+    indexer: ShardedArticleIndexer,
+    airbrake: AirbrakeNotifier,
+    serviceDiscovery: ServiceDiscovery,
+    val scheduling: SchedulingProperties) extends IndexerPluginImpl(indexer, actor, serviceDiscovery) with ArticleIndexerPlugin {
+  override def onStart() = {
+    if (serviceDiscovery.hasBackupCapability) {
+      log.info("Build the new article index on backup machine.")
+      super.onStart()
     }
   }
+  override def enabled = serviceDiscovery.hasBackupCapability
 }

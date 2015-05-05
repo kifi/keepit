@@ -42,10 +42,13 @@ class RoverServiceClientImpl(
   }
 
   def getArticlesByUris(uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[Article]]] = {
-    val payload = Json.toJson(uriIds)
-    call(Rover.internal.getArticlesByUris, payload, callTimeouts = longTimeout).map { r =>
-      implicit val reads = TupleFormat.tuple2Reads[Id[NormalizedURI], Set[Article]]
-      (r.json).as[Seq[(Id[NormalizedURI], Set[Article])]].toMap
+    if (uriIds.isEmpty) Future.successful(Map.empty)
+    else {
+      val payload = Json.toJson(uriIds)
+      call(Rover.internal.getArticlesByUris, payload, callTimeouts = longTimeout).map { r =>
+        implicit val reads = TupleFormat.tuple2Reads[Id[NormalizedURI], Set[Article]]
+        (r.json).as[Seq[(Id[NormalizedURI], Set[Article])]].toMap
+      }
     }
   }
 }

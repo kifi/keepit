@@ -79,7 +79,7 @@ class UriSearchNonUserImpl(
   override def toKifiShardHit(h: Hit): UriShardHit = {
     getKeepRecord(h.secondaryId) match {
       case Some(r) =>
-        UriShardHit(h.id, h.score, h.visibility, r.libraryId, h.secondaryId, r.title.getOrElse(""), r.url, r.externalId)
+        UriShardHit(h.id, h.score, h.visibility, r.libraryId, h.secondaryId, r.title, r.url, r.externalId)
       case None =>
         val r = getArticleRecord(h.id).getOrElse(throw new Exception(s"missing article record: uri id = ${h.id}"))
         UriShardHit(h.id, h.score, h.visibility, -1L, -1L, r.title, r.url, null)
