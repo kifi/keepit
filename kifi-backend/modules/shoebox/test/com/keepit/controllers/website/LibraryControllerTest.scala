@@ -1433,10 +1433,10 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
           val user2 = user().withUsername("quicksilver").saved
           val user3 = user().withUsername("scarletwitch").saved
           val lib1 = library().withUser(user1).saved // user1 owns lib1
-          membership().withLibraryFollower(lib1, user2).saved // user2 follows lib1 (has read_only access)
+          membership().withLibraryCollaborator(lib1, user2).saved // user2 follows lib1 (has read_only access)
 
           libraryMembershipRepo.getWithLibraryIdAndUserId(lib1.id.get, user1.id.get).get.access === LibraryAccess.OWNER
-          libraryMembershipRepo.getWithLibraryIdAndUserId(lib1.id.get, user2.id.get).get.access === LibraryAccess.READ_ONLY
+          libraryMembershipRepo.getWithLibraryIdAndUserId(lib1.id.get, user2.id.get).get.access === LibraryAccess.READ_WRITE
           (user1, user2, user3, lib1)
         }
 
@@ -1444,21 +1444,25 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
           val libraryController = inject[LibraryController]
           val pubLibId = Library.publicId(lib.id.get)(inject[PublicIdConfiguration])
           inject[FakeUserActionsHelper].setUser(user)
-          val testPath = com.keepit.controllers.website.routes.LibraryController.updateLibraryMembership(pubLibId, targetUser.externalId, access).url
-          libraryController.updateLibraryMembership(pubLibId, targetUser.externalId, access)(FakeRequest("POST", testPath))
+          val testPath = com.keepit.controllers.website.routes.LibraryController.updateLibraryMembership(pubLibId, targetUser.externalId).url
+          val jsonBody = Json.obj("access" -> access)
+          libraryController.updateLibraryMembership(pubLibId, targetUser.externalId)(FakeRequest("POST", testPath).withBody(jsonBody))
         }
 
         // test invalid library write access
         status(updateLibraryMembership(user2, user2, lib1, "owner")) must equalTo(FORBIDDEN)
 
         // test change membership access
-        status(updateLibraryMembership(user1, user2, lib1, "read_write")) must equalTo(NO_CONTENT)
+        status(updateLibraryMembership(user1, user2, lib1, "collaborator")) must equalTo(NO_CONTENT)
+
+        // test change membership access
+        status(updateLibraryMembership(user1, user2, lib1, "follower")) must equalTo(NO_CONTENT)
 
         // test deactivate membership
         status(updateLibraryMembership(user1, user2, lib1, "none")) must equalTo(NO_CONTENT)
 
         // test membership not found
-        status(updateLibraryMembership(user1, user2, lib1, "read_only")) must equalTo(NOT_FOUND)
+        status(updateLibraryMembership(user1, user2, lib1, "follower")) must equalTo(NOT_FOUND)
       }
     }
 

@@ -36,6 +36,8 @@ case class LibraryMembership(
   def canInsert: Boolean = access == LibraryAccess.OWNER || access == LibraryAccess.READ_WRITE || access == LibraryAccess.READ_INSERT
   def canWrite: Boolean = access == LibraryAccess.OWNER || access == LibraryAccess.READ_WRITE
   def isOwner: Boolean = access == LibraryAccess.OWNER
+  def isCollaborator: Boolean = access == LibraryAccess.READ_WRITE
+  def isFollower: Boolean = access == LibraryAccess.READ_ONLY
 
   def toLibraryMembershipView: LibraryMembershipView =
     LibraryMembershipView(id = id.get, libraryId = libraryId, userId = userId, access = access, createdAt = createdAt, state = state, seq = seq, showInSearch = showInSearch)
@@ -72,8 +74,10 @@ object LibraryAccess {
   implicit def format[T]: Format[LibraryAccess] =
     Format(__.read[String].map(LibraryAccess(_)), new Writes[LibraryAccess] { def writes(o: LibraryAccess) = JsString(o.value) })
 
+  def compare(x: LibraryAccess, y: LibraryAccess): Int = x.priority compare y.priority
+
   implicit def ord: Ordering[LibraryAccess] = new Ordering[LibraryAccess] {
-    def compare(x: LibraryAccess, y: LibraryAccess): Int = x.priority compare y.priority
+    def compare(x: LibraryAccess, y: LibraryAccess): Int = this.compare(x, y)
   }
 
   def apply(str: String) = {

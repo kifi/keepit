@@ -705,7 +705,7 @@ class LibraryController @Inject() (
   // Collaborators!
   ///////////////////
 
-  def updateLibraryMembership(pubId: PublicId[Library], extUserId: ExternalId[User], access: String) = (UserAction andThen LibraryWriteAction(pubId)) { request =>
+  def updateLibraryMembership(pubId: PublicId[Library], extUserId: ExternalId[User]) = UserAction(parse.tolerantJson) { request =>
     val libraryId = Library.decodePublicId(pubId).get
     db.readOnlyMaster { implicit s =>
       userRepo.getOpt(extUserId)
@@ -713,15 +713,14 @@ class LibraryController @Inject() (
       case None =>
         NotFound(Json.obj("error" -> "user_id_not_found"))
       case Some(targetUser) =>
+        val access = (request.body \ "access").as[String]
         val result = access.toLowerCase match {
           case "none" =>
-            libraryCommander.updateLibraryMembershipAccess(libraryId, targetUser.id.get, None)
-          case "read_only" =>
-            libraryCommander.updateLibraryMembershipAccess(libraryId, targetUser.id.get, Some(LibraryAccess.READ_ONLY))
-          case "read_insert" =>
-            libraryCommander.updateLibraryMembershipAccess(libraryId, targetUser.id.get, Some(LibraryAccess.READ_INSERT))
-          case "read_write" =>
-            libraryCommander.updateLibraryMembershipAccess(libraryId, targetUser.id.get, Some(LibraryAccess.READ_WRITE))
+            libraryCommander.updateLibraryMembershipAccess(request.userId, libraryId, targetUser.id.get, None)
+          case "follower" =>
+            libraryCommander.updateLibraryMembershipAccess(request.userId, libraryId, targetUser.id.get, Some(LibraryAccess.READ_ONLY))
+          case "collaborator" =>
+            libraryCommander.updateLibraryMembershipAccess(request.userId, libraryId, targetUser.id.get, Some(LibraryAccess.READ_WRITE))
           case _ =>
             Left(LibraryFail(BAD_REQUEST, "invalid_access_request"))
         }
