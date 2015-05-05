@@ -17,7 +17,7 @@ import scala.util.{ Success, Failure }
 object RoverArticleImageSchedulingActor {
   val maxBatchSize = 15 // low to balance producer / consumer behavior *on leader* (SQS send / receive), increase if we don't care about leader as a consumer.
   val maxQueuedFor = 2 days
-  val dueAfterFetchWithin = 1 minute // schedule image processing if it hasn't been already 1 minute after a fetch
+  val dueAfterRequestedWithin = 1 minute // schedule image processing if it hasn't been already 1 minute after a fetch
   val fastFollowWindow = 1 hour
 }
 
@@ -34,7 +34,7 @@ class RoverArticleImageSchedulingActor @Inject() (
   protected def nextBatch: Future[Seq[RoverArticleInfo]] = {
     SafeFuture {
       log.info(s"Queuing up to $maxBatchSize article image processing tasks...")
-      imageProcessingCommander.getRipeForImageProcessing(maxBatchSize, dueAfterFetchWithin, maxQueuedFor)
+      imageProcessingCommander.getRipeForImageProcessing(maxBatchSize, dueAfterRequestedWithin, maxQueuedFor)
     }
   }
 

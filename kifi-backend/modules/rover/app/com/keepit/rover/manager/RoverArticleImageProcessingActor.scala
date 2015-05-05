@@ -56,17 +56,17 @@ class RoverArticleImageProcessingActor @Inject() (
   }
 
   private def process(articleInfo: RoverArticleInfo): Future[Unit] = {
-    articleInfo.shouldProcessLatestArticleImages match {
-      case false => Future.successful(())
+    val futureImageProcessedVersion = articleInfo.shouldProcessLatestArticleImages match {
+      case false => Future.successful(None)
       case true => articleInfo.getLatestKey match {
-        case None => Future.successful(())
-        case Some(latestArticleKey) => {
-          processArticleImages(latestArticleKey).imap { _ =>
-            db.readWrite(attempts = 3) { implicit session =>
-              articleInfoRepo.updateAfterImageProcessing(latestArticleKey.uriId, latestArticleKey.kind, latestArticleKey.version)
-            }
-          }
-        }
+        case None => Future.successful(None)
+        case Some(latestArticleKey) => processArticleImages(latestArticleKey).imap(_ => Some(latestArticleKey.version))
+      }
+    }
+
+    futureImageProcessedVersion.imap { imageProcessedVersion =>
+      db.readWrite(attempts = 3) { implicit session =>
+        articleInfoRepo.updateAfterImageProcessing(articleInfo.uriId, articleInfo.articleKind, imageProcessedVersion)
       }
     }
   }

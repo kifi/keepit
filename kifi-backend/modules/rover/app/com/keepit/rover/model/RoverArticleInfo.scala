@@ -85,7 +85,8 @@ case class RoverArticleInfo(
       latestVersion = Some(version),
       oldestVersion = oldestVersion orElse Some(version),
       failureCount = 0,
-      failureInfo = None
+      failureInfo = None,
+      imageProcessingRequestedAt = Some(currentDateTime)
     )
   }
 
@@ -101,9 +102,10 @@ case class RoverArticleInfo(
 
   def shouldProcessLatestArticleImages = isActive && lastImageProcessingAt.isDefined
 
-  def withImageProcessingComplete(version: ArticleVersion) = {
+  def withImageProcessingComplete(version: Option[ArticleVersion]) = {
     copy(
-      lastImageProcessingVersion = Some(version),
+      imageProcessingRequestedAt = None,
+      lastImageProcessingVersion = version orElse lastImageProcessingVersion,
       lastImageProcessingAt = None
     )
   }
