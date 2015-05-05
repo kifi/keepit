@@ -1450,41 +1450,57 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
     "update membership to a library" in {
       withDb(modules: _*) { implicit injector =>
         val libraryCommander = inject[LibraryCommander]
-        val (user1, user2, user3, lib1) = db.readWrite { implicit s =>
+        val (user1, user2, user3, user4, lib1) = db.readWrite { implicit s =>
           val user1 = user().withUsername("nickfury").saved
           val user2 = user().withUsername("quicksilver").saved
           val user3 = user().withUsername("scarletwitch").saved
+          val user4 = user().withUsername("thevision").saved
           val lib1 = library().withUser(user1).saved // user1 owns lib1
-          membership().withLibraryFollower(lib1, user2).saved // user2 follows lib1 (has read_only access)
+          membership().withLibraryCollaborator(lib1, user2).saved // user2 is a collaborator lib1 (has read_write access)
+          membership().withLibraryFollower(lib1, user3).saved // user3 is a follower to lib1 (has read_only access)
 
           libraryMembershipRepo.getWithLibraryIdAndUserId(lib1.id.get, user1.id.get).get.access === LibraryAccess.OWNER
-          libraryMembershipRepo.getWithLibraryIdAndUserId(lib1.id.get, user2.id.get).get.access === LibraryAccess.READ_ONLY
-          (user1, user2, user3, lib1)
+          libraryMembershipRepo.getWithLibraryIdAndUserId(lib1.id.get, user2.id.get).get.access === LibraryAccess.READ_WRITE
+          (user1, user2, user3, user4, lib1)
         }
 
-        // test changing owner access
-        libraryCommander.updateLibraryMembershipAccess(lib1.id.get, user1.id.get, None).isRight === false
+        val userId1 = user1.id.get
+        val userId2 = user2.id.get
+        val userId3 = user3.id.get
+        val userId4 = user4.id.get
 
-        // test changing membership that does not exist
-        libraryCommander.updateLibraryMembershipAccess(lib1.id.get, user3.id.get, None).isRight === false
+        // test changing owner access (error)
+        libraryCommander.updateLibraryMembershipAccess(userId1, lib1.id.get, userId1, None).isRight === false
 
-        // test changing access to owner
-        libraryCommander.updateLibraryMembershipAccess(lib1.id.get, user2.id.get, Some(LibraryAccess.OWNER)).isRight === false
+        // test changing membership that does not exist (error)
+        libraryCommander.updateLibraryMembershipAccess(userId1, lib1.id.get, userId4, None).isRight === false
 
-        // test changing access
-        libraryCommander.updateLibraryMembershipAccess(lib1.id.get, user2.id.get, Some(LibraryAccess.READ_WRITE)).isRight === true
+        // test changing access to owner (error)
+        libraryCommander.updateLibraryMembershipAccess(userId1, lib1.id.get, userId2, Some(LibraryAccess.OWNER)).isRight === false
+
+        // test invalid permissions to editing a follower's access (error)
+        libraryCommander.updateLibraryMembershipAccess(userId2, lib1.id.get, userId3, None).isRight === false
+
+        // test demoting access
+        libraryCommander.updateLibraryMembershipAccess(userId1, lib1.id.get, userId2, Some(LibraryAccess.READ_ONLY)).isRight === true
         db.readOnlyMaster { implicit s =>
-          libraryMembershipRepo.getWithLibraryIdAndUserId(lib1.id.get, user2.id.get).get.access === LibraryAccess.READ_WRITE
+          libraryMembershipRepo.getWithLibraryIdAndUserId(lib1.id.get, userId2).get.access === LibraryAccess.READ_ONLY
+        }
+
+        // test promoting access (error)
+        libraryCommander.updateLibraryMembershipAccess(userId1, lib1.id.get, userId2, Some(LibraryAccess.READ_WRITE)).isRight === false
+        db.readOnlyMaster { implicit s =>
+          libraryMembershipRepo.getWithLibraryIdAndUserId(lib1.id.get, userId2).get.access === LibraryAccess.READ_ONLY
         }
 
         // test removing access
-        libraryCommander.updateLibraryMembershipAccess(lib1.id.get, user2.id.get, None).isRight === true
+        libraryCommander.updateLibraryMembershipAccess(userId1, lib1.id.get, userId2, None).isRight === true
         db.readOnlyMaster { implicit s =>
-          libraryMembershipRepo.getWithLibraryIdAndUserId(lib1.id.get, user2.id.get) === None
+          libraryMembershipRepo.getWithLibraryIdAndUserId(lib1.id.get, userId2) === None
         }
 
-        // test non-active membership (after removing access)
-        libraryCommander.updateLibraryMembershipAccess(lib1.id.get, user2.id.get, None).isRight === false
+        // test non-active membership (after removing access) (error)
+        libraryCommander.updateLibraryMembershipAccess(userId1, lib1.id.get, userId2, None).isRight === false
       }
     }
   }

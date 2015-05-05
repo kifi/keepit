@@ -1693,28 +1693,39 @@ class LibraryCommander @Inject() (
   // Collaborators!
   ///////////////////
 
-  def updateLibraryMembershipAccess(libraryId: Id[Library], targetUserId: Id[User], newAccess: Option[LibraryAccess]): Either[LibraryFail, LibraryMembership] = {
+  def updateLibraryMembershipAccess(requestUserId: Id[User], libraryId: Id[Library], targetUserId: Id[User], newAccess: Option[LibraryAccess]): Either[LibraryFail, LibraryMembership] = {
     if (newAccess.isDefined && newAccess.get == LibraryAccess.OWNER) {
       Left(LibraryFail(BAD_REQUEST, "cannot_change_access_to_owner"))
     } else {
       db.readOnlyMaster { implicit s =>
-        libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, targetUserId)
+        val membershipMap = libraryMembershipRepo.getWithLibraryIdAndUserIds(libraryId, Set(requestUserId, targetUserId))
+        (membershipMap.get(requestUserId), membershipMap.get(targetUserId))
       } match {
-        case None =>
-          Left(LibraryFail(NOT_FOUND, "membership_not_found"))
-        case Some(targetMembership) =>
-          if (targetMembership.access == LibraryAccess.OWNER) {
-            Left(LibraryFail(BAD_REQUEST, "cannot_change_owner_access"))
-          } else {
-            val updatedMembership = db.readWrite { implicit s =>
+        case (None, _) =>
+          Left(LibraryFail(NOT_FOUND, "request_membership_not_found"))
+        case (_, None) =>
+          Left(LibraryFail(NOT_FOUND, "target_membership_not_found"))
+        case (Some(mem), Some(targetMem)) if targetMem.access == LibraryAccess.OWNER =>
+          Left(LibraryFail(BAD_REQUEST, "cannot_change_owner_access"))
+
+        case (Some(mem), Some(targetMem)) =>
+          if ((mem.isOwner && !targetMem.isOwner) || // owners can edit anyone except themselves
+            (mem.isCollaborator && mem.userId == targetMem.userId) || // a collaborator can only edit herself
+            (mem.isFollower && mem.userId == targetMem.userId)) { // a follower can only edit herself
+            db.readWrite { implicit s =>
               newAccess match {
                 case None =>
-                  libraryMembershipRepo.save(targetMembership.copy(state = LibraryMembershipStates.INACTIVE))
-                case Some(access) =>
-                  libraryMembershipRepo.save(targetMembership.copy(access = access))
+                  Right(libraryMembershipRepo.save(targetMem.copy(state = LibraryMembershipStates.INACTIVE)))
+                case Some(newAccess) if targetMem.access.isHigherAccess(newAccess) => // can only demote membership
+                  Right(libraryMembershipRepo.save(targetMem.copy(access = newAccess)))
+                case _ =>
+                  log.warn(s"[updateLibraryMembership] attempting to promote membership ${targetMem.userId}:${targetMem.access} access to ${newAccess}")
+                  Left(LibraryFail(BAD_REQUEST, "cannot_promote_access"))
               }
             }
-            Right(updatedMembership)
+          } else { // invalid permissions
+            log.warn(s"[updateLibraryMembership] invalid permission ${mem} trying to change ${targetMem}'s membership to ${newAccess}")
+            Left(LibraryFail(FORBIDDEN, "invalid_permissions"))
           }
       }
     }

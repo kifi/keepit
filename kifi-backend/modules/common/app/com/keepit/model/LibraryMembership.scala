@@ -36,6 +36,8 @@ case class LibraryMembership(
   def canInsert: Boolean = access == LibraryAccess.OWNER || access == LibraryAccess.READ_WRITE || access == LibraryAccess.READ_INSERT
   def canWrite: Boolean = access == LibraryAccess.OWNER || access == LibraryAccess.READ_WRITE
   def isOwner: Boolean = access == LibraryAccess.OWNER
+  def isCollaborator: Boolean = access == LibraryAccess.READ_WRITE
+  def isFollower: Boolean = access == LibraryAccess.READ_ONLY
 
   def toLibraryMembershipView: LibraryMembershipView =
     LibraryMembershipView(id = id.get, libraryId = libraryId, userId = userId, access = access, createdAt = createdAt, state = state, seq = seq, showInSearch = showInSearch)
@@ -61,7 +63,11 @@ object LibraryMembership {
 
 object LibraryMembershipStates extends States[LibraryMembership]
 
-sealed abstract class LibraryAccess(val value: String, val priority: Int)
+sealed abstract class LibraryAccess(val value: String, val priority: Int) {
+  def isHigherAccess(x: LibraryAccess): Boolean = {
+    this.priority > x.priority
+  }
+}
 
 object LibraryAccess {
   case object READ_ONLY extends LibraryAccess("read_only", 0)

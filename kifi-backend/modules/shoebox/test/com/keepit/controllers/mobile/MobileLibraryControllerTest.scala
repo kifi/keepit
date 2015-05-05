@@ -491,25 +491,25 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
           val user2 = user().withUsername("quicksilver").saved
           val user3 = user().withUsername("scarletwitch").saved
           val lib1 = library().withUser(user1).saved // user1 owns lib1
-          membership().withLibraryFollower(lib1, user2).saved // user2 follows lib1 (has read_only access)
+          membership().withLibraryCollaborator(lib1, user2).saved // user2 is a collaborator lib1 (has read_write access)
 
           libraryMembershipRepo.getWithLibraryIdAndUserId(lib1.id.get, user1.id.get).get.access === LibraryAccess.OWNER
-          libraryMembershipRepo.getWithLibraryIdAndUserId(lib1.id.get, user2.id.get).get.access === LibraryAccess.READ_ONLY
+          libraryMembershipRepo.getWithLibraryIdAndUserId(lib1.id.get, user2.id.get).get.access === LibraryAccess.READ_WRITE
           (user1, user2, user3, lib1)
         }
         val pubLibId1 = Library.publicId(lib1.id.get)(inject[PublicIdConfiguration])
 
         // test invalid library write access
-        status(updateLibraryMembership(user2, user2, pubLibId1, "owner")) must equalTo(FORBIDDEN)
+        status(updateLibraryMembership(user2, user2, pubLibId1, "owner")) must equalTo(BAD_REQUEST)
 
         // test change membership access
-        status(updateLibraryMembership(user1, user2, pubLibId1, "read_write")) must equalTo(NO_CONTENT)
+        status(updateLibraryMembership(user1, user2, pubLibId1, "follower")) must equalTo(NO_CONTENT)
 
         // test deactivate membership
         status(updateLibraryMembership(user1, user2, pubLibId1, "none")) must equalTo(NO_CONTENT)
 
         // test membership not found
-        status(updateLibraryMembership(user1, user2, pubLibId1, "read_only")) must equalTo(NOT_FOUND)
+        status(updateLibraryMembership(user1, user2, pubLibId1, "follower")) must equalTo(NOT_FOUND)
       }
     }
 
@@ -572,7 +572,8 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
 
   private def updateLibraryMembership(user: User, targetUser: User, libId: PublicId[Library], access: String)(implicit injector: Injector): Future[Result] = {
     inject[FakeUserActionsHelper].setUser(user)
-    controller.updateLibraryMembership(libId, targetUser.externalId, access)(request(routes.MobileLibraryController.updateLibraryMembership(libId, targetUser.externalId, access)))
+    val body = Json.obj("access" -> access)
+    controller.updateLibraryMembership(libId, targetUser.externalId)(request(routes.MobileLibraryController.updateLibraryMembership(libId, targetUser.externalId)).withBody(body))
   }
 
   // User 'Spongebob' has one library called "Krabby Patty" (secret)
