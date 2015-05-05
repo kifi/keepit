@@ -15,6 +15,8 @@ import com.keepit.common.actor.ActorInstance
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.common.plugin.SchedulingProperties
 
+import scala.util.Success
+
 class ArticleIndexer(indexDirectory: IndexDirectory, shard: Shard[NormalizedURI], val airbrake: AirbrakeNotifier) extends Indexer[NormalizedURI, NormalizedURI, ArticleIndexer](indexDirectory, ArticleFields.decoders) {
   val name = "ArticleIndexer" + shard.indexNameSuffix
   def update(): Int = throw new UnsupportedOperationException()
@@ -60,11 +62,12 @@ class ShardedArticleIndexer(
   }
 
   private def fetchIndexables(seq: SequenceNumber[NormalizedURI], fetchSize: Int): Future[Option[(Map[Shard[NormalizedURI], Seq[ArticleIndexable]], SequenceNumber[NormalizedURI])]] = {
-    shoebox.getIndexableUris(seq, fetchSize).flatMap {
-      case Seq() => {
+    shoebox.getIndexableUris(seq, fetchSize).andThen {
+      case Success(uris) if uris.size < fetchSize =>
+        airbrake.notify("ShardedArticleIndexer: Looks like we're done on the back up machine!")
         log.info("ShardedArticleIndexer: Looks like we're done on the back up machine!")
-        Future.successful(None)
-      }
+    }.flatMap {
+      case Seq() => Future.successful(None)
       case uris => rover.getArticlesByUris(uris.map(_.id.get).toSet).map { articlesByUriId =>
         val shardedIndexables = indexShards.keys.map { shard =>
           val indexables = uris.map { uri => new ArticleIndexable(uri, articlesByUriId(uri.id.get), shard) }
