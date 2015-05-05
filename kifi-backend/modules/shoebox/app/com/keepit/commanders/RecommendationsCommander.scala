@@ -10,6 +10,7 @@ import com.keepit.curator.model._
 import com.keepit.common.db.slick.Database
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.domain.DomainToNameMapper
+import com.keepit.common.time._
 
 import com.google.inject.Inject
 import com.keepit.search.SearchServiceClient
@@ -31,6 +32,7 @@ class RecommendationsCommander @Inject() (
     basicUserRepo: BasicUserRepo,
     keepRepo: KeepRepo,
     keepDecorator: KeepDecorator,
+    userValueRepo: UserValueRepo,
     implicit val defaultContext: ExecutionContext,
     implicit val publicIdConfig: PublicIdConfiguration,
     userExperimentCommander: LocalUserExperimentCommander) {
@@ -134,14 +136,24 @@ class RecommendationsCommander @Inject() (
     }
   }
 
-  def updatesFromFollowedLibraries(userId: Id[User]): Future[FullLibUpdatesRecoInfo] = {
-    val keeps = db.readOnlyReplica { implicit session =>
-      keepRepo.getRecentKeepsFromFollowedLibraries(userId, 10)
+  def maybeUpdatesFromFollowedLibraries(userId: Id[User]): Future[Option[FullLibUpdatesRecoInfo]] = {
+    val keepsOpt: Option[Seq[Keep]] = db.readWrite { implicit session =>
+      val lastSeen = userValueRepo.getValue(userId, UserValues.libraryUpdatesLastSeen)
+      if (lastSeen.isBefore(currentDateTime.minusDays(1))) {
+        userValueRepo.setValue(userId, UserValueName.UPDATED_LIBRARIES_LAST_SEEN, currentDateTime)
+        Some(keepRepo.getRecentKeepsFromFollowedLibraries(userId, 10))
+      } else {
+        None
+      }
     }
 
-    keepDecorator.decorateKeepsIntoKeepInfos(Some(userId), false, keeps, ProcessedImageSize.Large.idealSize, true).map { keepInfos =>
-      FullLibUpdatesRecoInfo(itemInfo = keepInfos)
-    }
+    keepsOpt.map { keeps =>
+      keepDecorator.decorateKeepsIntoKeepInfos(Some(userId), false, keeps, ProcessedImageSize.Large.idealSize, true).map { keepInfos =>
+        FullLibUpdatesRecoInfo(itemInfo = keepInfos)
+      }
+    }.map { keepInfoFuture =>
+      keepInfoFuture.map(Some(_))
+    }.getOrElse(Future.successful(None))
 
   }
 

@@ -87,6 +87,8 @@ object UserValueName {
 
   val LAST_SMS_SENT = UserValueName("last_sms_sent")
 
+  val UPDATED_LIBRARIES_LAST_SEEN = UserValueName("updated_libraries_last_seen")
+
   // Please use lower_underscore_case for new value names (and not lowerCamelCase)
 
   def bookmarkImportContextName(newImportId: String) = UserValueName(s"bookmark_import_${newImportId}_context")
@@ -169,6 +171,8 @@ object UserValues {
   val lastSmsSent = UserValueDateTimeHandler(UserValueName.LAST_SMS_SENT, START_OF_TIME)
 
   val twitterSyncAcceptSent = UserValueBooleanHandler(UserValueName.TWITTER_SYNC_ACCEPT_SENT, false)
+
+  val libraryUpdatesLastSeen = UserValueDateTimeHandler(UserValueName.UPDATED_LIBRARIES_LAST_SEEN, START_OF_TIME)
 }
 
 @json case class UserValueSettings(showFollowedLibraries: Boolean)
