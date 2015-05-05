@@ -124,7 +124,6 @@ angular.module('kifi')
         _.forEach(hits, function (hit) {
           decompressHit(hit, uris.keepers, uris.libraries, userLoggedIn);
 
-          hit.isPrivate = hit.secret || false;
           hit.isProtected = !hit.isMyBookmark; // will not be hidden if user keeps then unkeeps
         });
 
@@ -176,7 +175,7 @@ angular.module('kifi')
         }
         var hitContext = {
           isMyBookmark: keep.isMyBookmark,
-          isPrivate: keep.isPrivate,
+          isPrivate: _.all(keep.keeps, {visibility: 'secret'}),
           count: numResults,
           keepers: keep.keepers.map(function (elem) {
             return elem.id;

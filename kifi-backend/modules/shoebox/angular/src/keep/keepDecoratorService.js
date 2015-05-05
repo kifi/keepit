@@ -77,7 +77,6 @@ angular.module('kifi')
     Keep.prototype.buildKeep = function (keptItem, isMyBookmark) {
       this.id = keptItem.id;
       this.libraryId = keptItem.libraryId;
-      this.isPrivate = keptItem.isPrivate;
 
       this.isMyBookmark = _.isBoolean(isMyBookmark) ? isMyBookmark : true;
       this.tagList = this.tagList || [];

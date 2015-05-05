@@ -132,14 +132,6 @@ angular.module('kifi')
           })['catch'](modalService.openGenericErrorModal);
         };
 
-        scope.selectionPrivacyState = function (keeps) {
-          if (_.every(scope.selection.getSelected(keeps), 'isPrivate')) {
-            return 'Public';
-          } else {
-            return 'Private';
-          }
-        };
-
         scope.enableEditTags = function () {
           scope.editingTags = true;
         };
