@@ -44,7 +44,7 @@
 
     <div class="kf-keep-who" ng-if="keep.keepersTotal || keep.keepers.length">
       <span class="kf-keep-who-text" ng-if="keep.keepersTotal" ng-pluralize count="keep.keepersTotal" when="{'one': 'Kept 1 time', 'other': 'Kept {} times'}"></span>
-      <span class="kf-keep-who-pic-box" ng-if="!keeper.hidden" ng-repeat="keeper in keep.keepers | limitTo:9" kf-user-tooltip ng-mouseenter="showTooltip()" ng-mouseleave="hideTooltip()" ng-click="hideTooltip()">
+      <span class="kf-keep-who-pic-box" ng-repeat="keeper in keep.keepers | limitTo:9" kf-user-tooltip ng-mouseenter="showTooltip()" ng-mouseleave="hideTooltip()" ng-click="hideTooltip()">
         <a class="kf-keep-who-pic" ng-attr-style="background-image:url({{keeper|pic:100}})" href="{{keeper|profileUrl}}" kf-track-origin="{{currentPageOrigin}}/alsoKeptBy"></a>
       </span>
     </div>

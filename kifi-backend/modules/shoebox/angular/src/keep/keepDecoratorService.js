@@ -7,24 +7,12 @@ angular.module('kifi')
   function (util, profileService) {
     function processLibraries(item) {
       if (item.libraries && item.libraries.length > 0 && Array.isArray(item.libraries[0])) {
-        var cleanedLibraries = [];
-        var usersWithLibs = {};
-        item.libraries.forEach( function (lib) {
+        item.libraries = _(item.libraries).filter(function (lib) {
+          return lib[1].id !== profileService.me.id;
+        }).map(function (lib) {
           lib[0].keeper = lib[1];
-          lib[0].keeperName = lib[1].firstName + ' ' + lib[1].lastName;
-          if (lib[1].id !== profileService.me.id) {
-            usersWithLibs[lib[1].id] = true;
-            cleanedLibraries.push(lib[0]);
-          }
-        });
-
-        item.keepers.forEach(function (keeper) {
-          if (usersWithLibs[keeper.id]) {
-            keeper.hidden = true;
-          }
-        });
-
-        item.libraries = cleanedLibraries;
+          return lib[0];
+        }).value();
       }
     }
 

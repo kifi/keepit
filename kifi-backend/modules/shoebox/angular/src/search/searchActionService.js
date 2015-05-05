@@ -14,22 +14,10 @@ angular.module('kifi')
       return Math.random().toString(16).slice(2);
     }
 
-    function processHit(hit) {
-      _.extend(hit, hit.bookmark); //still need this??
-
-      hit.isPrivate = hit.secret || false;
-      hit.isProtected = !hit.isMyBookmark; // will not be hidden if user keeps then unkeeps
-    }
-
-    function copy(obj) {
-      return JSON.parse(JSON.stringify(obj));
-    }
-
     function decompressHit(hit, users, libraries, userLoggedIn) {
       var decompressedKeepers = [];
       var decompressedLibraries = [];
       var myLibraries = [];  // myLibraries doesn't seem to be used anywhere.
-      var libUsers = {};
 
       hit.isMyBookmark = false;
       hit.keepers = hit.keepers || [];
@@ -43,13 +31,10 @@ angular.module('kifi')
 
         if (idxUser !== -1) {
           user = users[idxUser];
-          lib.keeperName = user.firstName + ' ' + user.lastName;
           lib.owner = user;
           decompressedLibraries.push(lib);
-          libUsers[idxUser] = true;
         } else if (userLoggedIn) {
           user = profileService.me;
-          lib.keeperName = user.firstName + ' ' + user.lastName;
           lib.owner = user;
 
           if (!libraryService.isLibraryIdMainOrSecret(lib.id)) {
@@ -65,13 +50,7 @@ angular.module('kifi')
           if (keeperIdx === -1) {
             hit.isMyBookmark = true;
           } else {
-            if (!libUsers[keeperIdx]){
-              decompressedKeepers.push(users[keeperIdx]);
-            } else {
-              var user = copy(users[keeperIdx]);
-              user.hidden = true;
-              decompressedKeepers.push(user);
-            }
+            decompressedKeepers.push(users[keeperIdx]);
           }
         });
       }
@@ -144,9 +123,10 @@ angular.module('kifi')
         var hits = uris.hits || [];
         _.forEach(hits, function (hit) {
           decompressHit(hit, uris.keepers, uris.libraries, userLoggedIn);
-        });
 
-        _.forEach(hits, processHit);
+          hit.isPrivate = hit.secret || false;
+          hit.isProtected = !hit.isMyBookmark; // will not be hidden if user keeps then unkeeps
+        });
 
         $analytics.eventTrack('user_clicked_page', {
           'action': 'searchKifi',
