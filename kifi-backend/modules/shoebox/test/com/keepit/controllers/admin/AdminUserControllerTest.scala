@@ -63,7 +63,7 @@ class AdminUserControllerTest extends Specification with ShoeboxTestInjector {
   }
 
   "AdminUserController" should {
-    "deny non-superAdmins from adding or removing admins" in {
+    "deny non-superAdmins from adding/removing admins, allow superAdmins to do so" in {
 
       withDb(modules: _*) { implicit injector =>
         val (userNonAdminOpt, userAdminOpt, userSuperAdminOpt) = setup()
@@ -72,18 +72,19 @@ class AdminUserControllerTest extends Specification with ShoeboxTestInjector {
         val userRepo = inject[UserRepo]
 
         db.readWrite { implicit session =>
-          
+          // nonadmins cannot add/remove admins
+          adminUserController.addExperiment(requesterUserId = userNonAdminOpt.id.get, userId = userNonAdminOpt.id.get, "admin") === Left("Failure")
+          adminUserController.removeExperiment(requesterUserId = userNonAdminOpt.id.get, userId = userAdminOpt.id.get, "admin") === Left("Failure")
 
-          adminUserController.addExperiment(requesterUserId = userNonAdminOpt.id.get, userId = userNonAdminOpt.id.get, "admin") must throwA[SuperAdminAccessDenied]
-          adminUserController.removeExperiment(requesterUserId = userNonAdminOpt.id.get, userId = userAdminOpt.id.get, "admin") must throwA[SuperAdminAccessDenied]
+          // admins cannot add/remove admins
+          adminUserController.addExperiment(requesterUserId = userAdminOpt.id.get, userId = userNonAdminOpt.id.get, "admin") === Left("Failure")
+          adminUserController.removeExperiment(requesterUserId = userAdminOpt.id.get, userId = userNonAdminOpt.id.get, "admin") === Left("Failure")
 
-          adminUserController.addExperiment(requesterUserId = userAdminOpt.id.get, userId = userNonAdminOpt.id.get, "admin") must throwA[SuperAdminAccessDenied]
-          adminUserController.removeExperiment(requesterUserId = userAdminOpt.id.get, userId = userNonAdminOpt.id.get, "admin") must throwA[SuperAdminAccessDenied]
-
-          adminUserController.addExperiment(requesterUserId = userSuperAdminOpt.id.get, userId = userNonAdminOpt.id.get, "admin")
+          // superAdmins can add or remove admins
+          adminUserController.addExperiment(requesterUserId = userSuperAdminOpt.id.get, userId = userNonAdminOpt.id.get, "admin") === Right(ExperimentType.ADMIN)
           userExperimentRepo.getUserExperiments(userNonAdminOpt.id.get).contains(ExperimentType.ADMIN) must equalTo(true)
 
-          adminUserController.removeExperiment(requesterUserId = userSuperAdminOpt.id.get, userId = userAdminOpt.id.get, "admin")
+          adminUserController.removeExperiment(requesterUserId = userSuperAdminOpt.id.get, userId = userAdminOpt.id.get, "admin") === Right(ExperimentType.ADMIN)
           userExperimentRepo.getUserExperiments(userAdminOpt.id.get).contains(ExperimentType.ADMIN) must equalTo(false)
         }
 
