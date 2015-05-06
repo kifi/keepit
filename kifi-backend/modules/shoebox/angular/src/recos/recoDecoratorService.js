@@ -12,10 +12,15 @@ angular.module('kifi')
         kind: rawReco.kind  // 'keep' or 'library'
       };
 
-      if (this.recoData.kind === 'keep') {
-        this.recoKeep = new keepDecoratorService.Keep(rawReco.itemInfo, 'reco');
+      var info = rawReco.itemInfo;
+      if (rawReco.kind === 'keep') {
+        // TODO: update server to pass 'urlId' instead of 'id'
+        info.urlId = info.id;
+        delete info.id;
+
+        this.recoKeep = new keepDecoratorService.Keep(info, 'reco');
       } else {
-        this.recoLib = rawReco.itemInfo;
+        this.recoLib = info;
 
         // All recommended libraries are published user-created libraries.
         this.recoLib.kind = 'user_created';

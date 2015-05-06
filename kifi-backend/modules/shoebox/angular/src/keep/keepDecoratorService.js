@@ -22,16 +22,6 @@ angular.module('kifi')
       _.assign(this, item);
       this.itemType = itemType;
 
-      // For recommendations, the id field in the recommended page coming from the backend is
-      // actually the url id of the page. To disambiguate from a page's keep id,
-      // use 'urlId' as the property name for the url id.
-      // TODO: update backend to pass 'urlId' instead of 'id' in the JSON object.
-      // This really shouldn't be happening on the client side.
-      if (this.itemType === 'reco') {
-        this.urlId = this.id;
-        delete this.id;
-      }
-
       // Helper functions.
       function shouldShowSmallImage(summary) {
         var imageWidthThreshold = 200;
