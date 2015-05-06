@@ -8,9 +8,8 @@ angular.module('kifi')
 
     function Recommendation(rawReco, type) {
       this.recoData = {
-        type: type,  // This is either 'recommended' or 'popular'.
-        kind: rawReco.kind,  // This is either 'keep' or 'library'.
-        explain: rawReco.explain
+        type: type,  // 'recommended' or 'popular'
+        kind: rawReco.kind  // 'keep' or 'library'
       };
 
       if (this.recoData.kind === 'keep') {
@@ -25,7 +24,7 @@ angular.module('kifi')
       }
     }
 
-    var api = {
+    return {
       newUserRecommendation: function (rawReco) {
         return new Recommendation(rawReco, 'recommended');
       },
@@ -34,7 +33,5 @@ angular.module('kifi')
         return new Recommendation(rawReco, 'popular');
       }
     };
-
-    return api;
   }
 ]);

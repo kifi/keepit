@@ -5,23 +5,18 @@ angular.module('kifi')
 .factory('keepDecoratorService', [
   'util', 'profileService',
   function (util, profileService) {
-    function processLibraries(item) {
-      if (item.libraries && item.libraries.length) {
-        item.libraries = _(item.libraries).filter(function (lib) {
-          return lib[1].id !== profileService.me.id;
-        }).map(function (lib) {
-          lib[0].keeper = lib[1];
-          return lib[0];
-        }).value();
-      }
-    }
 
     function Keep(item, itemType) {
       if (!item) {
         return {};
       }
 
-      processLibraries(item);
+      item.libraries = _(item.libraries).filter(function (lib) {
+        return lib[1].id !== profileService.me.id;
+      }).map(function (lib) {
+        lib[0].keeper = lib[1];
+        return lib[0];
+      }).value();
 
       this.keeps = []; // default value in case `item` doesn't have it
       _.assign(this, item);
@@ -88,12 +83,6 @@ angular.module('kifi')
       this.unkept = false;
       this.isMyBookmark = true;
     };
-
-    // angular.toJSON does not copy over the Keep prototype methods.
-    // This function reconstitutes a Keep object with all the prototype methods.
-    function reconstituteKeepFromJson(keep) {
-      return _.extend(new Keep(keep), {isMyBookmark: keep.isMyBookmark});
-    }
 
     return {Keep: Keep};
   }

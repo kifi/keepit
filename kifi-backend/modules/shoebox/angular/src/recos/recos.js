@@ -109,20 +109,6 @@ angular.module('kifi')
       profileService.savePrefs({'auto_show_persona' : null});
     };
 
-
-    /*
-    This is intended be called from the console only, for debugging.
-    Specifically, running `$(".kf-recos-view").scope().toggleExplain(); $(".kf-recos-view").scope().$digest();`
-    in the bowser console while on the recommendations page will toggle between showing the page description and the score breakdown in the card.
-    */
-    $scope.toggleExplain = function () {
-      $scope.recos.forEach(function (reco) {
-        var temp = reco.recoKeep.summary.description;
-        reco.recoKeep.summary.description = reco.recoData.explain;
-        reco.recoData.explain = temp;
-      });
-    };
-
     function reloadRecos(invalidate, setRecosDelivered) {
       $scope.loading = true;
 
