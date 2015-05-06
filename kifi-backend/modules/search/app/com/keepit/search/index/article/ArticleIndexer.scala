@@ -67,7 +67,7 @@ class ShardedArticleIndexer(
         log.info("ShardedArticleIndexer: Looks like we're done on the back up machine!")
     }.flatMap {
       case Seq() => Future.successful(None)
-      case uris => rover.getArticlesByUris(uris.map(_.id.get).toSet).map { articlesByUriId =>
+      case uris => rover.getBestArticlesByUris(uris.map(_.id.get).toSet).map { articlesByUriId =>
         val shardedIndexables = indexShards.keys.map { shard =>
           val indexables = uris.map { uri => new ArticleIndexable(uri, articlesByUriId(uri.id.get), shard) }
           shard -> indexables

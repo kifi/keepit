@@ -421,7 +421,7 @@ object Rover extends Service {
   object internal {
     def getShoeboxUpdates(seq: SequenceNumber[ArticleInfo], limit: Int) = ServiceRoute(GET, "/internal/rover/getShoeboxUpdates", Param("seq", seq), Param("limit", limit))
     def fetchAsap() = ServiceRoute(POST, "/internal/rover/fetchAsap")
-    def getArticlesByUris() = ServiceRoute(POST, "/internal/rover/getArticlesByUris")
+    def getBestArticlesByUris() = ServiceRoute(POST, "/internal/rover/getBestArticlesByUris")
     def getArticleInfosByUris() = ServiceRoute(POST, "/internal/rover/getArticleInfosByUris")
   }
 }

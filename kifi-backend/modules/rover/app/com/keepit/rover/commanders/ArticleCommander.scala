@@ -29,7 +29,7 @@ class ArticleCommander @Inject() (
     }
   }
 
-  def getArticlesByUris(uriIds: Set[Id[NormalizedURI]]): Map[Id[NormalizedURI], Future[Set[Article]]] = {
+  def getBestArticlesByUris(uriIds: Set[Id[NormalizedURI]]): Map[Id[NormalizedURI], Future[Set[Article]]] = {
     getArticleInfosByUris(uriIds).mapValues(getBestArticles)
   }
 
