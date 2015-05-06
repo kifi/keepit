@@ -85,5 +85,5 @@ class CuratorTasksPlugin @Inject() (
 }
 
 object CuratorTasksPlugin {
-  val CLEAN_FREQ = 2 // minutes
+  val CLEAN_FREQ: Int = 1 // minutes
 }
