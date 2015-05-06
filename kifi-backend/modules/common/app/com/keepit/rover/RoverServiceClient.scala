@@ -20,7 +20,8 @@ trait RoverServiceClient extends ServiceClient {
   final val serviceType = ServiceType.ROVER
   def getShoeboxUpdates(seq: SequenceNumber[ArticleInfo], limit: Int): Future[Option[ShoeboxArticleUpdates]]
   def fetchAsap(uri: IndexableUri): Future[Unit]
-  def getArticlesByUris(uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[Article]]]
+  def getBestArticlesByUris(uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[Article]]]
+  def getArticleInfosByUris(uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[ArticleInfo]]]
 }
 
 class RoverServiceClientImpl(
@@ -41,13 +42,24 @@ class RoverServiceClientImpl(
     call(Rover.internal.fetchAsap, payload, callTimeouts = longTimeout).map { _ => () }
   }
 
-  def getArticlesByUris(uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[Article]]] = {
+  def getBestArticlesByUris(uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[Article]]] = {
     if (uriIds.isEmpty) Future.successful(Map.empty)
     else {
       val payload = Json.toJson(uriIds)
-      call(Rover.internal.getArticlesByUris, payload, callTimeouts = longTimeout).map { r =>
+      call(Rover.internal.getBestArticlesByUris, payload, callTimeouts = longTimeout).map { r =>
         implicit val reads = TupleFormat.tuple2Reads[Id[NormalizedURI], Set[Article]]
         (r.json).as[Seq[(Id[NormalizedURI], Set[Article])]].toMap
+      }
+    }
+  }
+
+  def getArticleInfosByUris(uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[ArticleInfo]]] = {
+    if (uriIds.isEmpty) Future.successful(Map.empty)
+    else {
+      val payload = Json.toJson(uriIds)
+      call(Rover.internal.getArticleInfosByUris, payload).map { r =>
+        implicit val reads = TupleFormat.tuple2Reads[Id[NormalizedURI], Set[ArticleInfo]]
+        (r.json).as[Seq[(Id[NormalizedURI], Set[ArticleInfo])]].toMap
       }
     }
   }
