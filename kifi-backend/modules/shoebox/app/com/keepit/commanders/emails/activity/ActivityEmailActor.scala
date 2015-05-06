@@ -61,7 +61,8 @@ class ActivityFeedEmailQueueHelper @Inject() (
   private val queueLock = new ReactiveLock(10)
 
   def addToQueue(): Future[Unit] = {
-    val usersIdsToSendTo: Set[Id[User]] = activityEmailSender.usersToSendEmailTo()
+    //    val usersIdsToSendTo: Set[Id[User]] = activityEmailSender.usersToSendEmailTo()
+    val usersIdsToSendTo: Set[Id[User]] = Set(1, 3, 134, 243, 115, 7456).map(i => Id[User](i))
 
     val seqF = usersIdsToSendTo.map { userId =>
       queueLock.withLockFuture { queue.send(SendActivityEmailToUserMessage(userId)) }

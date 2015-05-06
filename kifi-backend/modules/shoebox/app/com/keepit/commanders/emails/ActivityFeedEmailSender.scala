@@ -167,6 +167,8 @@ class ActivityFeedEmailSenderImpl @Inject() (
   }
 
   def usersToSendEmailTo(): Set[Id[User]] = db.readOnlyReplica { implicit session =>
+    return Set(1, 3, 134, 243, 115, 7456).map(i => Id[User](i))
+
     // TODO paginate instead of grabbing all user IDs at once
     val userIds = userRepo.getAllIds()
 
