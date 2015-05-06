@@ -130,6 +130,7 @@ object FeedbackIncreConfig {
   private val kept = 5
   private val liked = 5
   private val disliked = 5
+  private val viewed = 1 // with probability 5% to give negative value (so that we can use Byte instead of Float)
 
   def getIncreValue(fb: UriRecoFeedbackValue): Option[FeedbackIncreValue] = {
     fb match {
@@ -137,6 +138,7 @@ object FeedbackIncreConfig {
       case KEPT => Some(PositiveSingalIncre(kept))
       case LIKE => Some(PositiveSingalIncre(liked))
       case DISLIKE => Some(NegativeSignalIncre(disliked))
+      case VIEWED => if (scala.util.Random.nextFloat() < 0.05f) Some(NegativeSignalIncre(viewed)) else None
       case _ => None
     }
   }

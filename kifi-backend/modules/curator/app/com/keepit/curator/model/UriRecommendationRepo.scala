@@ -119,6 +119,9 @@ class UriRecommendationRepoImpl @Inject() (
   def updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI], feedback: UriRecommendationFeedback)(implicit session: RWSession): Boolean = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
 
+    val viewedResult = if (feedback.viewed.exists(_ == true))
+      sql"UPDATE uri_recommendation SET delivered=delivered+1, updated_at=$currentDateTime WHERE user_id=$userId AND uri_id=$uriId".asUpdate.first > 0
+    else true
     val clickedResult = if (feedback.clicked.isDefined && feedback.clicked.get)
       sql"UPDATE uri_recommendation SET clicked=clicked+1, updated_at=$currentDateTime WHERE user_id=$userId AND uri_id=$uriId".asUpdate.first > 0
     else true
@@ -127,7 +130,7 @@ class UriRecommendationRepoImpl @Inject() (
     val trashedResult = if (feedback.trashed.isDefined)
       (for (row <- byUser(userId)(rows) |> byUri(uriId)) yield (row.trashed, row.updatedAt)).update((feedback.trashed.get, currentDateTime)) > 0 else true
 
-    clickedResult && keptResult && trashedResult
+    viewedResult && clickedResult && keptResult && trashedResult
   }
 
   def incrementDeliveredCount(recoId: Id[UriRecommendation], withlastPushedAt: Boolean = false)(implicit session: RWSession): Unit = {
