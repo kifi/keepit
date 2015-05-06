@@ -193,27 +193,26 @@ class ActivityFeedEmailSenderTest extends Specification with ShoeboxTestInjector
         Await.ready(activityQueueHelper.processQueue(), Duration(10, "seconds"))
         inject[WatchableExecutionContext].drain()
 
-        1 === 1
-        //        val emails = db.readOnlyMaster { implicit s => inject[ElectronicMailRepo].all() }.sortBy(_.to.head.address)
-        //        val email1 :: email2 :: Nil = emails.filter(_.category == NotificationCategory.toElectronicMailCategory(NotificationCategory.User.ACTIVITY))
-        //
-        //        val activityEmails = db.readOnlyMaster { implicit s => inject[ActivityEmailRepo].all }
-        //        activityEmails.size === 2
-        //
-        //        val activityEmail1 = activityEmails.find(_.userId == user1.id.get).get
-        //        activityEmail1.otherFollowedLibraries.get.size === 4
-        //        activityEmail1.userFollowedLibraries.get.size === 1
-        //        activityEmail1.libraryRecommendations.get.size === 3
-        //
-        //        // useful for quick-and-dirty testing
-        //        //        val html1: String = email1.htmlBody
-        //        //        val html2: String = email2.htmlBody
-        //        //        val fw = new java.io.FileWriter("activity.html")
-        //        //        fw.write(html1)
-        //        //        fw.close()
-        //
-        //        email1.to === Seq(EmailAddress("u1@kifi.com"))
-        //        email2.to === Seq(EmailAddress("u2@kifi.com"))
+        val emails = db.readOnlyMaster { implicit s => inject[ElectronicMailRepo].all() }.sortBy(_.to.head.address)
+        val email1 :: email2 :: Nil = emails.filter(_.category == NotificationCategory.toElectronicMailCategory(NotificationCategory.User.ACTIVITY))
+
+        val activityEmails = db.readOnlyMaster { implicit s => inject[ActivityEmailRepo].all }
+        activityEmails.size === 2
+
+        val activityEmail1 = activityEmails.find(_.userId == user1.id.get).get
+        activityEmail1.otherFollowedLibraries.get.size === 4
+        activityEmail1.userFollowedLibraries.get.size === 1
+        activityEmail1.libraryRecommendations.get.size === 3
+
+        // useful for quick-and-dirty testing
+        //        val html1: String = email1.htmlBody
+        //        val html2: String = email2.htmlBody
+        //        val fw = new java.io.FileWriter("activity.html")
+        //        fw.write(html1)
+        //        fw.close()
+
+        email1.to === Seq(EmailAddress("u1@kifi.com"))
+        email2.to === Seq(EmailAddress("u2@kifi.com"))
 
       }
     }
@@ -239,17 +238,17 @@ class ActivityFeedEmailSenderTest extends Specification with ShoeboxTestInjector
         val activityQueueHelper = inject[ActivityFeedEmailQueueHelper]
 
         Await.ready(activityQueueHelper.addToQueue(), Duration(5, "seconds"))
-        fakeQueue.messages.size === 6
+        fakeQueue.messages.size === 2
         fakeQueue.lockedMessages.size === 0
         fakeQueue.consumedMessages.size === 0
 
-        //        fakeQueue.messages(0).body.userId === u1.id.get
-        //        fakeQueue.messages(1).body.userId === u2.id.get
+        fakeQueue.messages(0).body.userId === u1.id.get
+        fakeQueue.messages(1).body.userId === u2.id.get
 
         Await.ready(activityQueueHelper.processQueue(), Duration(5, "seconds"))
         fakeQueue.messages.size === 0
         fakeQueue.lockedMessages.size === 0
-        fakeQueue.consumedMessages.size === 6
+        fakeQueue.consumedMessages.size === 2
       }
     }
   }
