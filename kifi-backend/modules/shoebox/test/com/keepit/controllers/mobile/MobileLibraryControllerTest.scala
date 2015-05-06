@@ -195,7 +195,8 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
              |    "numKeeps" : 0,
              |    "numCollaborators" : 0,
              |    "numFollowers" : 0 },
-             |  "membership" : "owner"
+             |  "membership" : "owner",
+             |"subscribedToUpdates":false
              |}
            """.stripMargin)
 

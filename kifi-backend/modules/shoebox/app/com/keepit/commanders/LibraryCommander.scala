@@ -147,15 +147,17 @@ class LibraryCommander @Inject() (
     (libInfo.copy(image = imageOpt), memOpt)
   }
 
-  def getLibraryWithOwnerAndCounts(libraryId: Id[Library], viewerUserId: Id[User]): Either[LibraryFail, (Library, BasicUser, Int, Option[Boolean])] = {
+  def getLibraryWithOwnerAndCounts(libraryId: Id[Library], viewerUserId: Id[User]): Either[LibraryFail, (Library, BasicUser, Int, Option[Boolean], Boolean)] = {
     db.readOnlyReplica { implicit s =>
       val library = libraryRepo.get(libraryId)
       val mine = library.ownerId == viewerUserId
-      val following = if (mine) None else Some(libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, viewerUserId).isDefined)
+      val memOpt = libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, viewerUserId)
+      val following = if (mine) None else Some(memOpt.isDefined)
+      val subscribedToUpdates = memOpt.map(_.subscribedToUpdates).getOrElse(false)
       if (library.visibility == LibraryVisibility.PUBLISHED || mine || following.get) {
         val owner = basicUserRepo.load(library.ownerId)
         val followerCount = libraryMembershipRepo.countWithLibraryIdByAccess(library.id.get).readOnly
-        Right(library, owner, followerCount, following)
+        Right(library, owner, followerCount, following, subscribedToUpdates)
       } else {
         Left(LibraryFail(FORBIDDEN, "library_access_denied"))
       }
@@ -689,9 +691,9 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def getLibrariesUserCanKeepTo(userId: Id[User]): Seq[(Library, Boolean)] = {
+  def getLibrariesUserCanKeepTo(userId: Id[User]): Seq[(Library, Boolean, Boolean)] = {
     db.readOnlyMaster { implicit s =>
-      libraryRepo.getByUserWithCollab(userId, excludeAccess = Some(LibraryAccess.READ_ONLY)).map(r => (r._2, r._3))
+      libraryRepo.getByUserWithCollab(userId, excludeAccess = Some(LibraryAccess.READ_ONLY)).map(r => (r._2, r._3, r._1.subscribedToUpdates))
     }
   }
 
@@ -1007,7 +1009,7 @@ class LibraryCommander @Inject() (
       if (newKeep.libraryId.get != library.id.get) { throw new IllegalArgumentException(s"Keep ${newKeep.id.get} does not belong to expected library ${library.id.get}") }
     }
     val (relevantFollowers, usersById) = db.readOnlyReplica { implicit session =>
-      val relevantFollowers = libraryMembershipRepo.getWithLibraryId(library.id.get).map(_.userId).filter(experimentCommander.userHasExperiment(_, ExperimentType.NEW_KEEP_NOTIFICATIONS)).toSet
+      val relevantFollowers: Set[Id[User]] = libraryMembershipRepo.getWithLibraryId(library.id.get).filter(_.subscribedToUpdates).map(_.userId).toSet
       val usersById = userRepo.getUsers(newKeeps.map(_.userId) :+ library.ownerId)
       (relevantFollowers, usersById)
     }
@@ -1686,6 +1688,20 @@ class LibraryCommander @Inject() (
   def getOwnerLibraryCounts(users: Set[Id[User]]): Map[Id[User], Int] = {
     db.readOnlyReplica { implicit s =>
       libraryRepo.getOwnerLibraryCounts(users)
+    }
+  }
+
+  def updatedLibraryUpdateSusbcription(userId: Id[User], libraryId: Id[Library], subscribedToUpdatesNew: Boolean): Either[LibraryFail, LibraryMembership] = {
+    db.readOnlyMaster { implicit s =>
+      libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId)
+    } match {
+      case None => Left(LibraryFail(NOT_FOUND, "Can't subscribe to updaes from a library you are not following"))
+      case Some(mem) => {
+        val updatedMembership = db.readWrite { implicit s =>
+          libraryMembershipRepo.save(mem.copy(subscribedToUpdates = subscribedToUpdatesNew))
+        }
+        Right(updatedMembership)
+      }
     }
   }
 

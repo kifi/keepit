@@ -111,10 +111,11 @@ class MobileLibraryController @Inject() (
     libraryCommander.getLibraryById(userIdOpt, false, libraryId, idealSize) map { libInfo =>
       val memOpt = libraryCommander.getMaybeMembership(userIdOpt, libraryId)
       val accessStr = memOpt.map(_.access.value).getOrElse("none")
+      val subscribedToUpdates = memOpt.map(_.subscribedToUpdates).getOrElse(false)
       val editedLibInfo = libInfo.copy(keeps = libInfo.keeps.map { k =>
         k.copy(note = Hashtags.formatMobileNote(k.note, v1))
       })
-      Ok(Json.obj("library" -> Json.toJson(editedLibInfo), "membership" -> accessStr))
+      Ok(Json.obj("library" -> Json.toJson(editedLibInfo), "membership" -> accessStr, "subscribedToUpdates" -> subscribedToUpdates))
     }
   }
 
@@ -126,8 +127,9 @@ class MobileLibraryController @Inject() (
           val idealSize = imageSize.flatMap { s => Try(ImageSize(s)).toOption }.getOrElse(MobileLibraryController.defaultLibraryImageSize)
           libraryCommander.createFullLibraryInfo(request.userIdOpt, false, library, idealSize).map { libInfo =>
             val memOpt = libraryCommander.getMaybeMembership(request.userIdOpt, library.id.get)
+            val subscribedToUpdates = memOpt.map(_.subscribedToUpdates).getOrElse(false)
             val accessStr = memOpt.map(_.access.value).getOrElse("none")
-            Ok(Json.obj("library" -> Json.toJson(libInfo), "membership" -> accessStr))
+            Ok(Json.obj("library" -> Json.toJson(libInfo), "membership" -> accessStr, "subscribedToUpdates" -> subscribedToUpdates))
           }
         })
       case Left(fail) =>
@@ -212,7 +214,7 @@ class MobileLibraryController @Inject() (
       val libImage = libImages.get(library.id.get)
       val info = LibraryInfo.fromLibraryAndOwner(lib = library, image = libImage, owner = owner)
       val memInfo = if (mem.lastViewed.nonEmpty) Json.obj("access" -> mem.access, "lastViewed" -> mem.lastViewed) else Json.obj("access" -> mem.access)
-      Json.toJson(info).as[JsObject] ++ memInfo
+      Json.toJson(info).as[JsObject] ++ memInfo ++ Json.obj("subscribedToUpdates" -> mem.subscribedToUpdates)
     }
     val libsInvitedTo = for (invitePair <- invitesToShow) yield {
       val invite = invitePair._1
@@ -395,6 +397,14 @@ class MobileLibraryController @Inject() (
         }
       }
       case _ => Future.successful(Forbidden)
+    }
+  }
+
+  def setSubscribedToUpdates(pubId: PublicId[Library], newSubscripedToUpdate: Boolean) = UserAction { request =>
+    val libraryId = Library.decodePublicId(pubId).get
+    libraryCommander.updatedLibraryUpdateSusbcription(request.userId, libraryId, newSubscripedToUpdate) match {
+      case Right(mem) => Ok
+      case Left(fail) => Status(fail.status)(Json.obj("error" -> fail.message))
     }
   }
 

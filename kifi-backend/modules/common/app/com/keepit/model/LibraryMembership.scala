@@ -25,7 +25,8 @@ case class LibraryMembership(
     listed: Boolean = true, // whether library appears on user's profile
     lastViewed: Option[DateTime] = None,
     lastEmailSent: Option[DateTime] = None,
-    lastJoinedAt: Option[DateTime] = None) extends ModelWithState[LibraryMembership] with ModelWithSeqNumber[LibraryMembership] {
+    lastJoinedAt: Option[DateTime] = None,
+    subscribedToUpdates: Boolean = false) extends ModelWithState[LibraryMembership] with ModelWithSeqNumber[LibraryMembership] {
 
   def withId(id: Id[LibraryMembership]): LibraryMembership = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime): LibraryMembership = this.copy(updatedAt = now)
@@ -55,7 +56,8 @@ object LibraryMembership {
     (__ \ 'listed).format[Boolean] and
     (__ \ 'lastViewed).formatNullable[DateTime] and
     (__ \ 'lastEmailSent).formatNullable[DateTime] and
-    (__ \ 'lastJoinedAt).formatNullable[DateTime]
+    (__ \ 'lastJoinedAt).formatNullable[DateTime] and
+    (__ \ 'subscribedToUpdates).format[Boolean]
   )(LibraryMembership.apply, unlift(LibraryMembership.unapply))
 }
 
