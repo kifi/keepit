@@ -1725,14 +1725,10 @@ class LibraryCommander @Inject() (
             db.readWrite { implicit s =>
               newAccess match {
                 case None =>
-                  if (targetMem.access == LibraryAccess.READ_WRITE) {
-                    convertKeepOwnershipToLibraryOwner(targetMem.userId, library)
-                  }
+                  SafeFuture { convertKeepOwnershipToLibraryOwner(targetMem.userId, library) }
                   Right(libraryMembershipRepo.save(targetMem.copy(state = LibraryMembershipStates.INACTIVE)))
                 case Some(newAccess) if targetMem.access.isHigherAccess(newAccess) => // can only demote membership
-                  if (targetMem.access == LibraryAccess.READ_WRITE) {
-                    convertKeepOwnershipToLibraryOwner(targetMem.userId, library)
-                  }
+                  SafeFuture { convertKeepOwnershipToLibraryOwner(targetMem.userId, library) }
                   Right(libraryMembershipRepo.save(targetMem.copy(access = newAccess)))
                 case _ =>
                   log.warn(s"[updateLibraryMembership] attempting to promote membership ${targetMem} access to ${newAccess}")
