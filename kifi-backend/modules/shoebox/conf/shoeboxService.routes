@@ -619,7 +619,7 @@ GET     /admin/article/index        @com.keepit.controllers.admin.AdminArticleIn
 GET     /admin/article/reindex      @com.keepit.controllers.admin.AdminArticleIndexerController.reindex
 GET     /admin/article/sequenceNumber @com.keepit.controllers.admin.AdminArticleIndexerController.getSequenceNumber
 GET     /admin/article/refreshSearcher @com.keepit.controllers.admin.AdminArticleIndexerController.refreshSearcher
-GET     /admin/article/dumpDoc/:uriId  @com.keepit.controllers.admin.AdminArticleIndexerController.dumpLuceneDocument(uriId: Id[NormalizedURI])
+GET     /admin/article/dumpDoc/:uriId  @com.keepit.controllers.admin.AdminArticleIndexerController.dumpLuceneDocument(uriId: Id[NormalizedURI], deprecated: Boolean ?= false)
 
 GET     /admin/indexInfo/all        @com.keepit.controllers.admin.AdminIndexInfoController.all
 GET     /admin/indexInfo/growth     @com.keepit.controllers.admin.AdminIndexInfoController.viewIndexGrowth
