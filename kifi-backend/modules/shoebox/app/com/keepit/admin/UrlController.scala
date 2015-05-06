@@ -5,6 +5,8 @@ import com.keepit.common.db.slick._
 import com.keepit.model._
 import com.keepit.common.time._
 import com.keepit.rover.fetcher.HttpRedirect
+import com.keepit.rover.RoverServiceClient
+import com.keepit.rover.model.ArticleInfo
 import com.keepit.scraper.ScrapeScheduler
 import scala.concurrent.duration._
 import views.html
@@ -21,7 +23,7 @@ import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
 
-import scala.util.Random
+import scala.util.{ Failure, Success, Random }
 
 class UrlController @Inject() (
     val userActionsHelper: UserActionsHelper,
@@ -45,7 +47,8 @@ class UrlController @Inject() (
     normalizedURIInterner: NormalizedURIInterner,
     airbrake: AirbrakeNotifier,
     uriIntegrityHelpers: UriIntegrityHelpers,
-    scrapeScheduler: ScrapeScheduler) extends AdminUserActions {
+    scrapeScheduler: ScrapeScheduler,
+    roverServiceClient: RoverServiceClient) extends AdminUserActions {
 
   implicit val timeout = BabysitterTimeout(5 minutes, 5 minutes)
 
@@ -354,6 +357,17 @@ class UrlController @Inject() (
   def flagAsAdult(uriId: Id[NormalizedURI]) = AdminUserPage { implicit request =>
     db.readWrite { implicit session => uriRepo.updateURIRestriction(uriId, Some(Restriction.ADULT)) }
     Redirect(routes.ScraperAdminController.getScraped(uriId))
+  }
+
+  def getURIInfo(id: Id[NormalizedURI]) = AdminUserPage.async { implicit request =>
+    val articleInfoMapFuture = roverServiceClient.getArticleInfosByUris(Set(id))
+    val uri = db.readOnlyReplica { implicit s => uriRepo.get(id) }
+    articleInfoMapFuture.map { articleInfoMap =>
+      articleInfoMap.get(id) match {
+        case Some(articleInfoSet) => Ok(html.admin.uriId(uri, articleInfoSet))
+        case None => NotFound("Article Info not found for uri" + id.toString)
+      }
+    }
   }
 
   def cleanKeepsByUri(firstPage: Int, pageSize: Int) = AdminUserAction { implicit request =>

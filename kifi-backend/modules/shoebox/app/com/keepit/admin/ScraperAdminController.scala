@@ -5,6 +5,9 @@ import com.keepit.common.controller.{ UserActionsHelper, AdminUserActions }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.model._
+import com.keepit.rover.RoverServiceClient
+
+import com.keepit.rover.model.ArticleInfo
 import com.keepit.search.ArticleStore
 import views.html
 import com.keepit.common.db.slick.Database.Replica
@@ -26,7 +29,8 @@ class ScraperAdminController @Inject() (
   normalizedURIRepo: NormalizedURIRepo,
   articleStore: ArticleStore,
   httpProxyRepo: HttpProxyRepo,
-  scraperServiceClient: ScraperServiceClient)
+  scraperServiceClient: ScraperServiceClient,
+  roverServiceClient: RoverServiceClient)
     extends AdminUserActions {
 
   val MAX_COUNT_DISPLAY = 25
