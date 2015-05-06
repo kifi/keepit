@@ -293,7 +293,7 @@ class LibraryCommander @Inject() (
           visibility = lib.visibility,
           image = libImageOpt.map(LibraryImageInfo.createInfo),
           followers = followers,
-          collaborators = followers,
+          collaborators = collaborators,
           keeps = keepInfos,
           numKeeps = keepCount,
           numCollaborators = collaboratorCount,
@@ -1146,10 +1146,19 @@ class LibraryCommander @Inject() (
           lib
         }
         SafeFuture {
+          convertKeepOwnershipToLibraryOwner(userId, lib)
           libraryAnalytics.unfollowLibrary(userId, lib, eventContext)
           searchClient.updateLibraryIndex()
         }
         Right((): Unit)
+    }
+  }
+
+  private def convertKeepOwnershipToLibraryOwner(userId: Id[User], library: Library) = {
+    db.readWrite { implicit s =>
+      keepRepo.getByUserIdAndLibraryId(userId, library.id.get).map { keep =>
+        keepRepo.save(keep.copy(userId = library.ownerId))
+      }
     }
   }
 
@@ -1699,32 +1708,35 @@ class LibraryCommander @Inject() (
     } else {
       db.readOnlyMaster { implicit s =>
         val membershipMap = libraryMembershipRepo.getWithLibraryIdAndUserIds(libraryId, Set(requestUserId, targetUserId))
-        (membershipMap.get(requestUserId), membershipMap.get(targetUserId))
+        val library = libraryRepo.get(libraryId)
+        (membershipMap.get(requestUserId), membershipMap.get(targetUserId), library)
       } match {
-        case (None, _) =>
+        case (None, _, _) =>
           Left(LibraryFail(NOT_FOUND, "request_membership_not_found"))
-        case (_, None) =>
+        case (_, None, _) =>
           Left(LibraryFail(NOT_FOUND, "target_membership_not_found"))
-        case (Some(mem), Some(targetMem)) if targetMem.access == LibraryAccess.OWNER =>
+        case (Some(mem), Some(targetMem), _) if targetMem.access == LibraryAccess.OWNER =>
           Left(LibraryFail(BAD_REQUEST, "cannot_change_owner_access"))
 
-        case (Some(mem), Some(targetMem)) =>
+        case (Some(mem), Some(targetMem), library) =>
           if ((mem.isOwner && !targetMem.isOwner) || // owners can edit anyone except themselves
             (mem.isCollaborator && mem.userId == targetMem.userId) || // a collaborator can only edit herself
             (mem.isFollower && mem.userId == targetMem.userId)) { // a follower can only edit herself
             db.readWrite { implicit s =>
               newAccess match {
                 case None =>
+                  SafeFuture { convertKeepOwnershipToLibraryOwner(targetMem.userId, library) }
                   Right(libraryMembershipRepo.save(targetMem.copy(state = LibraryMembershipStates.INACTIVE)))
                 case Some(newAccess) if targetMem.access.isHigherAccess(newAccess) => // can only demote membership
+                  SafeFuture { convertKeepOwnershipToLibraryOwner(targetMem.userId, library) }
                   Right(libraryMembershipRepo.save(targetMem.copy(access = newAccess)))
                 case _ =>
-                  log.warn(s"[updateLibraryMembership] attempting to promote membership ${targetMem.userId}:${targetMem.access} access to ${newAccess}")
+                  log.warn(s"[updateLibraryMembership] attempting to promote membership ${targetMem} access to ${newAccess}")
                   Left(LibraryFail(BAD_REQUEST, "cannot_promote_access"))
               }
             }
           } else { // invalid permissions
-            log.warn(s"[updateLibraryMembership] invalid permission ${mem} trying to change ${targetMem}'s membership to ${newAccess}")
+            log.warn(s"[updateLibraryMembership] invalid permission ${mem} trying to change membership ${targetMem} to ${newAccess}")
             Left(LibraryFail(FORBIDDEN, "invalid_permissions"))
           }
       }

@@ -83,7 +83,7 @@ POST        /internal/search/index/reindex        @com.keepit.search.controllers
 GET         /internal/search/index/sequenceNumber        @com.keepit.search.controllers.search.ArticleIndexerController.getSequenceNumber()
 POST        /internal/search/index/refreshSearcher        @com.keepit.search.controllers.search.ArticleIndexerController.refreshSearcher()
 POST        /internal/search/index/refreshPhrases        @com.keepit.search.controllers.search.ArticleIndexerController.refreshPhrases()
-POST        /internal/search/index/dumpDoc/:id        @com.keepit.search.controllers.search.ArticleIndexerController.dumpLuceneDocument(id: Id[NormalizedURI])
+POST        /internal/search/index/dumpDoc/:id        @com.keepit.search.controllers.search.ArticleIndexerController.dumpLuceneDocument(id: Id[NormalizedURI], deprecated: Boolean)
 GET         /internal/search/index/refreshWriter        @com.keepit.search.controllers.search.ArticleIndexerController.refreshWriter()
 
 GET         /internal/search/indexInfo/listAll        @com.keepit.search.controllers.search.IndexController.listIndexInfo

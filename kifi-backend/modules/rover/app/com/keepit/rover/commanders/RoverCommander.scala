@@ -55,8 +55,8 @@ class RoverCommander @Inject() (
     }
   }
 
-  def getArticlesByUris(uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[Article]]] = {
-    val futureUriIdWithArticles = articleCommander.getArticlesByUris(uriIds).map {
+  def getBestArticlesByUris(uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[Article]]] = {
+    val futureUriIdWithArticles = articleCommander.getBestArticlesByUris(uriIds).map {
       case (uriId, futureArticles) =>
         futureArticles.imap(uriId -> _)
     }

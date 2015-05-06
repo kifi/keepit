@@ -179,7 +179,7 @@ object Search extends Service {
     def userReindex() = ServiceRoute(POST, "/internal/search/user/reindex")
     def refreshSearcher() = ServiceRoute(POST, "/internal/search/index/refreshSearcher")
     def refreshPhrases() = ServiceRoute(POST, "/internal/search/index/refreshPhrases")
-    def searchDumpLuceneDocument(id: Id[NormalizedURI]) = ServiceRoute(POST, s"/internal/search/index/dumpDoc/${id.id}")
+    def searchDumpLuceneDocument(id: Id[NormalizedURI], deprecated: Boolean) = ServiceRoute(POST, s"/internal/search/index/dumpDoc/${id.id}", Param("deprecated", deprecated))
     def getLibraryDocument() = ServiceRoute(POST, s"/internal/search/index/library/document")
     def searchKeeps(userId: Id[User], query: String) = ServiceRoute(POST, "/internal/search/search/keeps", Param("userId", userId), Param("query", query))
     def searchUsers() = ServiceRoute(POST, "/internal/search/search/users")
@@ -421,7 +421,8 @@ object Rover extends Service {
   object internal {
     def getShoeboxUpdates(seq: SequenceNumber[ArticleInfo], limit: Int) = ServiceRoute(GET, "/internal/rover/getShoeboxUpdates", Param("seq", seq), Param("limit", limit))
     def fetchAsap() = ServiceRoute(POST, "/internal/rover/fetchAsap")
-    def getArticlesByUris() = ServiceRoute(POST, "/internal/rover/getArticlesByUris")
+    def getBestArticlesByUris() = ServiceRoute(POST, "/internal/rover/getBestArticlesByUris")
+    def getArticleInfosByUris() = ServiceRoute(POST, "/internal/rover/getArticleInfosByUris")
   }
 }
 

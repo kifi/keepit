@@ -2,8 +2,9 @@ package com.keepit.commanders.emails
 
 import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
-import com.keepit.common.concurrent.{ WatchableExecutionContext, FakeExecutionContextModule }
-import com.keepit.common.mail.{ EmailAddress, ElectronicMailRepo, FakeMailModule }
+import com.keepit.commanders.emails.activity.{ ActivityFeedEmailQueueHelper, SendActivityEmailToUserMessage }
+import com.keepit.common.concurrent.{ FakeExecutionContextModule, WatchableExecutionContext }
+import com.keepit.common.mail.{ ElectronicMailRepo, EmailAddress, FakeMailModule }
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.cortex.FakeCortexServiceClientModule
@@ -24,6 +25,7 @@ import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.ProdShoeboxServiceClientModule
 import com.keepit.test.ShoeboxTestInjector
+import com.kifi.franz.SQSQueue
 import org.specs2.mutable.Specification
 
 import scala.concurrent.Await
@@ -41,7 +43,8 @@ class ActivityFeedEmailSenderTest extends Specification with ShoeboxTestInjector
     FakeScrapeSchedulerModule(),
     FakeABookServiceClientModule(),
     FakeCortexServiceClientModule(),
-    FakeCuratorServiceClientModule()
+    FakeCuratorServiceClientModule(),
+    FakeActivityFeedEmailQueueModule()
   )
 
   def createLibWithKeeps(label: String, numLibraries: Int = 3, numKeeps: Int = 3)(implicit injector: Injector): Seq[(Library, Seq[Keep])] = {
@@ -69,8 +72,6 @@ class ActivityFeedEmailSenderTest extends Specification with ShoeboxTestInjector
   "ActivityFeedEmailSender" should {
     "work" in {
       withDb(modules: _*) { implicit injector =>
-        val sender = inject[ActivityFeedEmailSender]
-
         val (user1, user2) = db.readWrite { implicit rw =>
           val u1 = user().withName("Kifi", "User1").withEmailAddress("u1@kifi.com").withExperiments(ExperimentType.ACTIVITY_EMAIL).saved
           val u2 = user().withName("Kifi", "User2").withEmailAddress("u2@kifi.com").withExperiments(ExperimentType.ACTIVITY_EMAIL).saved
@@ -187,8 +188,9 @@ class ActivityFeedEmailSenderTest extends Specification with ShoeboxTestInjector
           }
         }
 
-        val senderF = sender(None)
-        Await.ready(senderF, Duration(5, "seconds"))
+        val activityQueueHelper = inject[ActivityFeedEmailQueueHelper]
+        Await.ready(activityQueueHelper.addToQueue(), Duration(5, "seconds"))
+        Await.ready(activityQueueHelper.processQueue(), Duration(10, "seconds"))
         inject[WatchableExecutionContext].drain()
 
         val emails = db.readOnlyMaster { implicit s => inject[ElectronicMailRepo].all() }.sortBy(_.to.head.address)
@@ -212,6 +214,41 @@ class ActivityFeedEmailSenderTest extends Specification with ShoeboxTestInjector
         email1.to === Seq(EmailAddress("u1@kifi.com"))
         email2.to === Seq(EmailAddress("u2@kifi.com"))
 
+      }
+    }
+
+    "adds and processes jobs from a queue" in {
+      withDb(modules: _*) { implicit injector =>
+        val fakeQueue = inject[SQSQueue[SendActivityEmailToUserMessage]].asInstanceOf[FakeActivityEmailQueue]
+
+        val sender = inject[ActivityFeedEmailSender]
+        var (u1, u2, u3) = db.readWrite { implicit rw =>
+          val u1 = user().withName("Kifi", "User1").withEmailAddress("u1@kifi.com").saved
+          val u2 = user().withName("Kifi", "User2").withEmailAddress("u2@kifi.com").saved
+          val u3 = user().withName("Kifi", "User3").withEmailAddress("u3@kifi.com").saved
+          keeps(20).foreach(_.withUser(u1).saved)
+          keeps(20).foreach(_.withUser(u2).saved)
+
+          // ensure that user with not enough keeps won't get queued to receive an email
+          keeps(2).foreach(_.withUser(u3).saved)
+
+          (u1, u2, u3)
+        }
+
+        val activityQueueHelper = inject[ActivityFeedEmailQueueHelper]
+
+        Await.ready(activityQueueHelper.addToQueue(), Duration(5, "seconds"))
+        fakeQueue.messages.size === 2
+        fakeQueue.lockedMessages.size === 0
+        fakeQueue.consumedMessages.size === 0
+
+        fakeQueue.messages(0).body.userId === u1.id.get
+        fakeQueue.messages(1).body.userId === u2.id.get
+
+        Await.ready(activityQueueHelper.processQueue(), Duration(5, "seconds"))
+        fakeQueue.messages.size === 0
+        fakeQueue.lockedMessages.size === 0
+        fakeQueue.consumedMessages.size === 2
       }
     }
   }

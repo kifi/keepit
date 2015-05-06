@@ -3,13 +3,14 @@ package com.keepit.search.index.graph.collection
 import com.keepit.model._
 import com.keepit.model.NormalizedURIStates._
 import com.keepit.common.strings._
+import com.keepit.search.index.article.ArticleFields
 import com.keepit.search.test.SearchTestInjector
 import org.specs2.mutable._
 import org.apache.lucene.index.Term
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.TermQuery
 import scala.collection.JavaConversions._
-import com.keepit.search.index.VolatileIndexDirectory
+import com.keepit.search.index.{ Indexable, VolatileIndexDirectory }
 import com.keepit.search.index.graph.BaseGraphSearcher
 import com.keepit.search.index.graph.GraphTestHelper
 import com.keepit.common.util.PlayAppConfigurationModule
@@ -197,7 +198,7 @@ class CollectionIndexerTest extends Specification with SearchTestInjector with G
         val collectionIndexer = mkCollectionIndexer()
         val (col, bm) = CollectionIndexer.fetchData(collection.id.get, user.id.get, shoeboxClient)
         val doc = collectionIndexer.buildIndexable(col, bm).buildDocument
-        doc.getFields.forall { f => collectionIndexer.getFieldDecoder(f.name).apply(f).length > 0 } === true
+        doc.getFields.forall { f => Indexable.getFieldDecoder(CollectionFields.decoders)(f.name).apply(f).length > 0 } === true
       }
     }
   }
