@@ -293,7 +293,7 @@ class LibraryCommander @Inject() (
           visibility = lib.visibility,
           image = libImageOpt.map(LibraryImageInfo.createInfo),
           followers = followers,
-          collaborators = followers,
+          collaborators = collaborators,
           keeps = keepInfos,
           numKeeps = keepCount,
           numCollaborators = collaboratorCount,
