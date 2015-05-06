@@ -17,7 +17,7 @@ import com.keepit.common.plugin.SchedulingProperties
 
 import scala.util.Success
 
-class ArticleIndexer(indexDirectory: IndexDirectory, shard: Shard[NormalizedURI], val airbrake: AirbrakeNotifier) extends Indexer[NormalizedURI, NormalizedURI, ArticleIndexer](indexDirectory) {
+class ArticleIndexer(val indexDirectory: IndexDirectory, shard: Shard[NormalizedURI], val airbrake: AirbrakeNotifier) extends Indexer[NormalizedURI, NormalizedURI, ArticleIndexer](indexDirectory) {
   val name = "ArticleIndexer" + shard.indexNameSuffix
   def update(): Int = throw new UnsupportedOperationException()
 
@@ -64,7 +64,7 @@ class ShardedArticleIndexer(
   private def fetchIndexables(seq: SequenceNumber[NormalizedURI], fetchSize: Int): Future[Option[(Map[Shard[NormalizedURI], Seq[ArticleIndexable]], SequenceNumber[NormalizedURI])]] = {
     shoebox.getIndexableUris(seq, fetchSize).andThen {
       case Success(uris) if uris.size < fetchSize =>
-        log.info("ShardedArticleIndexer: Looks like we're done on the back up machine!")
+        log.info(s"Looks like we're done on the back up machine! [Shards: ${indexShards.mapValues(_.indexDirectory.asFile().map(_.getName))}] ")
     }.flatMap {
       case Seq() => Future.successful(None)
       case uris => rover.getBestArticlesByUris(uris.map(_.id.get).toSet).map { articlesByUriId =>
@@ -105,7 +105,7 @@ class ArticleIndexerPluginImpl @Inject() (
     val scheduling: SchedulingProperties) extends IndexerPluginImpl(indexer, actor, serviceDiscovery) with ArticleIndexerPlugin {
   override def onStart() = {
     if (serviceDiscovery.hasBackupCapability) {
-      log.info("Build the new article index on backup machine.")
+      log.info(s"Build the new article index on backup machine. [Version: ${IndexerVersionProviders.Article.getVersionByStatus(serviceDiscovery)}]")
       super.onStart()
     }
   }
