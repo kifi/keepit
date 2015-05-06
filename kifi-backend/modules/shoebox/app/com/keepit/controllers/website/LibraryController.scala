@@ -175,7 +175,7 @@ class LibraryController @Inject() (
       libInfosWithMemberships <- libInfosWithMembershipsF
       libInfosWithInvites <- libInfosWithInvitesF
     } yield {
-      val (ownWithMemberships, followingWithMemberships) = libInfosWithMemberships.partition(_._2.access == LibraryAccess.OWNER)
+      val (ownWithMemberships, followingWithMemberships) = libInfosWithMemberships.partition(l => LibraryAccess.collaborativePermissions.contains(l._2.access))
       Ok(Json.obj(
         "libraries" -> ownWithMemberships.map(libInfoToJsonWithLastViewed),
         "following" -> followingWithMemberships.map(libInfoToJsonWithLastViewed),
