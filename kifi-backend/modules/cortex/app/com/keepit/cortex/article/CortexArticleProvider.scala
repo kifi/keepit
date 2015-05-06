@@ -9,7 +9,7 @@ import com.keepit.search.ArticleStore
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
-@ImplementedBy(classOf[RoverArticleProvider])
+@ImplementedBy(classOf[StoreBasedArticleProvider])
 trait CortexArticleProvider {
   def getArticle(uriId: Id[NormalizedURI]): Option[CortexArticle]
 }
