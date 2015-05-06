@@ -227,10 +227,10 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
             val freshReco = inject[UriRecommendationRepo].get(reco.id.get)
             if (sentRecoIds.contains(uri.id.get.id)) {
               freshReco.lastPushedAt must beSome
-              freshReco.delivered === 1
+              freshReco.viewed === 1
             } else {
               freshReco.lastPushedAt must (if (reco.id.get.id == 6L) beSome else beNone)
-              freshReco.delivered === 0
+              freshReco.viewed === 0
             }
           }
         }

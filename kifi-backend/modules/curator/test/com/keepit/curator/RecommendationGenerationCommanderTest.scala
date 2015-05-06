@@ -54,7 +54,7 @@ class RecommendationGenerationCommanderTest extends Specification with CuratorTe
         curationScore = None,
         multiplier = Some(0.01f),
         libraryInducedScore = Some(0f)),
-      delivered = 0, clicked = 0, kept = false, attribution = SeedAttribution.EMPTY,
+      viewed = 0, clicked = 0, kept = false, attribution = SeedAttribution.EMPTY,
       topic1 = None, topic2 = None)
 
     val rec2 = UriRecommendation(uriId = Id[NormalizedURI](2), userId = Id[User](42), masterScore = 0.99f,
@@ -69,7 +69,7 @@ class RecommendationGenerationCommanderTest extends Specification with CuratorTe
         curationScore = None,
         multiplier = Some(1.5f),
         libraryInducedScore = Some(0f)),
-      delivered = 0, clicked = 0, kept = false, attribution = SeedAttribution.EMPTY,
+      viewed = 0, clicked = 0, kept = false, attribution = SeedAttribution.EMPTY,
       topic1 = Some(LDATopic(1)), topic2 = Some(LDATopic(2)))
 
     val rec3 = UriRecommendation(uriId = Id[NormalizedURI](3), userId = Id[User](42), masterScore = 0.5f,
@@ -84,7 +84,7 @@ class RecommendationGenerationCommanderTest extends Specification with CuratorTe
         curationScore = None,
         multiplier = Some(1.0f),
         libraryInducedScore = Some(0f)),
-      delivered = 0, clicked = 0, kept = false, attribution = SeedAttribution(topic = Some(TopicAttribution("fun"))),
+      viewed = 0, clicked = 0, kept = false, attribution = SeedAttribution(topic = Some(TopicAttribution("fun"))),
       topic1 = None, topic2 = None)
 
     Seq(rec1, rec2, rec3)

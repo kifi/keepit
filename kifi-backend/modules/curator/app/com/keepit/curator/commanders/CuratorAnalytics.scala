@@ -40,7 +40,7 @@ class CuratorAnalytics @Inject() (
   }
 
   private def userDidInteractWithUriReco(recoFromDB: Option[UriRecommendation], feedback: UriRecommendationFeedback) = {
-    feedback.viewed.exists(_ == true) || recoFromDB.exists(r => r.delivered > 0)
+    feedback.viewed.exists(_ == true) || recoFromDB.exists(r => r.viewed > 0)
   }
 
   private def addFeedbackToLearningLoop(userId: Id[User], uriId: Id[NormalizedURI], feedback: UriRecommendationFeedback): Unit = {
