@@ -1,5 +1,6 @@
 package com.keepit.dev
 
+import com.keepit.commanders.emails.activity.DevActivityEmailQueueModule
 import com.keepit.controllers.internal.DevDataPipelineExecutorModule
 import com.keepit.abook.ProdABookServiceClientModule
 import com.keepit.common.controller.ProdShoeboxUserActionsModule
@@ -35,6 +36,7 @@ case class ShoeboxDevModule() extends ShoeboxModule with CommonDevModule {
   val storeModule = ShoeboxDevStoreModule()
   val sqsModule = DevSimpleQueueModule()
   val normalizationQueueModule = DevNormalizationUpdateJobQueueModule()
+  val activityEmailActorModule = DevActivityEmailQueueModule()
 
   // Shoebox Functional Modules
   val analyticsModule = DevAnalyticsModule()
