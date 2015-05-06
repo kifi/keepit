@@ -56,7 +56,7 @@ class UriRecommendationRepoImpl @Inject() (
 
   private object QueryBuilder {
     def recommendable(rows: RepoQuery) =
-      for (row <- active(rows) if row.kept === false && row.trashed === false && row.delivered < 10) yield row
+      for (row <- active(rows) if row.kept === false && row.trashed === false && row.viewed < 10) yield row
 
     def byUri(uriId: Id[NormalizedURI])(rows: RepoQuery): RepoQuery =
       for (row <- rows if row.uriId === uriId) yield row
@@ -81,7 +81,7 @@ class UriRecommendationRepoImpl @Inject() (
     def userId = column[Id[User]]("user_id", O.NotNull)
     def masterScore = column[Float]("master_score", O.NotNull)
     def allScores = column[UriScores]("all_scores", O.NotNull)
-    def delivered = column[Int]("delivered", O.NotNull)
+    def viewed = column[Int]("delivered", O.NotNull) // discrepancy due to legacy code/DB table design
     def clicked = column[Int]("clicked", O.NotNull)
     def kept = column[Boolean]("kept", O.NotNull)
     def trashed = column[Boolean]("trashed", O.NotNull)
@@ -89,7 +89,7 @@ class UriRecommendationRepoImpl @Inject() (
     def attribution = column[SeedAttribution]("attribution", O.NotNull)
     def topic1 = column[LDATopic]("topic1", O.Nullable)
     def topic2 = column[LDATopic]("topic2", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, state, vote.?, uriId, userId, masterScore, allScores, delivered, clicked,
+    def * = (id.?, createdAt, updatedAt, state, vote.?, uriId, userId, masterScore, allScores, viewed, clicked,
       kept, trashed, lastPushedAt, attribution, topic1.?, topic2.?) <> ((UriRecommendation.apply _).tupled, UriRecommendation.unapply _)
   }
 
@@ -119,6 +119,9 @@ class UriRecommendationRepoImpl @Inject() (
   def updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI], feedback: UriRecommendationFeedback)(implicit session: RWSession): Boolean = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
 
+    val viewedResult = if (feedback.viewed.exists(_ == true))
+      sql"UPDATE uri_recommendation SET delivered=delivered+1, updated_at=$currentDateTime WHERE user_id=$userId AND uri_id=$uriId".asUpdate.first > 0
+    else true
     val clickedResult = if (feedback.clicked.isDefined && feedback.clicked.get)
       sql"UPDATE uri_recommendation SET clicked=clicked+1, updated_at=$currentDateTime WHERE user_id=$userId AND uri_id=$uriId".asUpdate.first > 0
     else true
@@ -127,7 +130,7 @@ class UriRecommendationRepoImpl @Inject() (
     val trashedResult = if (feedback.trashed.isDefined)
       (for (row <- byUser(userId)(rows) |> byUri(uriId)) yield (row.trashed, row.updatedAt)).update((feedback.trashed.get, currentDateTime)) > 0 else true
 
-    clickedResult && keptResult && trashedResult
+    viewedResult && clickedResult && keptResult && trashedResult
   }
 
   def incrementDeliveredCount(recoId: Id[UriRecommendation], withlastPushedAt: Boolean = false)(implicit session: RWSession): Unit = {
@@ -213,7 +216,7 @@ class UriRecommendationRepoImpl @Inject() (
           values
             (
               ${reco.createdAt},${reco.updatedAt},'active',${reco.vote},${reco.uriId},${reco.userId.id},${reco.masterScore},${stringify(toJson(reco.allScores))},
-              ${reco.delivered},${reco.clicked},${reco.kept},${reco.trashed},#$lastPush,${stringify(toJson(reco.attribution))},#${topic(reco.topic1)},#${topic(reco.topic2)}
+              ${reco.viewed},${reco.clicked},${reco.kept},${reco.trashed},#$lastPush,${stringify(toJson(reco.attribution))},#${topic(reco.topic1)},#${topic(reco.topic2)}
             )
           ON DUPLICATE KEY UPDATE
              updated_at=VALUES(updated_at),state=VALUES(state),master_score=VALUES(master_score),all_scores=VALUES(all_scores),
