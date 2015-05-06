@@ -65,7 +65,7 @@ class ArticleIndexerController @Inject() (
       } else {
         val articles = Await.result(rover.getBestArticlesByUris(Set(uri.id.get)), 30 seconds)(uri.id.get)
         val doc = ArticleIndexable(uri, articles, Shard(1, 1)).buildDocument
-        html.admin.luceneDocDump("DeprecatedArticle", doc, getDecoder)
+        html.admin.luceneDocDump("Article", doc, getDecoder)
       }
       Ok(htmlDoc)
     } catch {
