@@ -12,7 +12,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.shoebox.ShoeboxServiceClient
 import scala.concurrent.Future
 
-class UserIndexer(indexDirectory: IndexDirectory, shoebox: ShoeboxServiceClient, val airbrake: AirbrakeNotifier) extends Indexer[User, User, UserIndexer](indexDirectory, UserFields.decoders, UserFields.PREFIX_MAX_LEN) {
+class UserIndexer(indexDirectory: IndexDirectory, shoebox: ShoeboxServiceClient, val airbrake: AirbrakeNotifier) extends Indexer[User, User, UserIndexer](indexDirectory, UserFields.PREFIX_MAX_LEN) {
   val name = "UserIndexer"
 
   def update(): Int = throw new UnsupportedOperationException()

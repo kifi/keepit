@@ -1,13 +1,12 @@
 package com.keepit.search.index.phrase
 
-import com.keepit.search.index.{ Indexable, Indexer, IndexDirectory }
+import com.keepit.search.index._
 import com.keepit.model.{ Collection, Phrase }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.logging.Logging
 import scala.concurrent.Await
 import com.keepit.common.db.{ SequenceNumber, Id }
-import com.keepit.search.index.IndexInfo
 import com.keepit.search.Lang
 import scala.concurrent.duration._
 
@@ -61,15 +60,21 @@ class PhraseIndexerImpl(
   }
 }
 
+object PhraseFields {
+  val phraseField = "p"
+  val decoders = Map.empty[String, FieldDecoder]
+}
+
 class PhraseIndexable(
   override val id: Id[Phrase],
   override val sequenceNumber: SequenceNumber[Phrase],
   override val isDeleted: Boolean,
   phrase: String, lang: Lang)
     extends Indexable[Phrase, Phrase] with PhraseFieldBuilder {
+  import PhraseFields._
   override def buildDocument = {
     val doc = super.buildDocument
-    doc.add(buildPhraseField("p", phrase, lang))
+    doc.add(buildPhraseField(phraseField, phrase, lang))
     doc
   }
 }

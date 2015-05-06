@@ -17,7 +17,7 @@ import com.keepit.common.plugin.SchedulingProperties
 
 import scala.util.Success
 
-class ArticleIndexer(indexDirectory: IndexDirectory, shard: Shard[NormalizedURI], val airbrake: AirbrakeNotifier) extends Indexer[NormalizedURI, NormalizedURI, ArticleIndexer](indexDirectory, ArticleFields.decoders) {
+class ArticleIndexer(indexDirectory: IndexDirectory, shard: Shard[NormalizedURI], val airbrake: AirbrakeNotifier) extends Indexer[NormalizedURI, NormalizedURI, ArticleIndexer](indexDirectory) {
   val name = "ArticleIndexer" + shard.indexNameSuffix
   def update(): Int = throw new UnsupportedOperationException()
 
