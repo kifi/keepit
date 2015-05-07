@@ -25,12 +25,12 @@ class RoverController @Inject() (roverCommander: RoverCommander, articleCommande
 
   def fetchAsap() = Action.async(parse.json) { request =>
     val uri = request.body.as[IndexableUri]
-    roverCommander.doMeAFavor(uri).map(_ => Ok)
+    roverCommander.fetchAsap(uri).map(_ => Ok)
   }
 
   def getBestArticlesByUris() = Action.async(parse.json) { request =>
     val uriIds = request.body.as[Set[Id[NormalizedURI]]]
-    roverCommander.getBestArticlesByUris(uriIds).map { articlesByUris =>
+    articleCommander.getBestArticlesByUris(uriIds).map { articlesByUris =>
       implicit val writes = TupleFormat.tuple2Writes[Id[NormalizedURI], Set[Article]]
       val json = Json.toJson(articlesByUris.toSeq)
       Ok(json)
