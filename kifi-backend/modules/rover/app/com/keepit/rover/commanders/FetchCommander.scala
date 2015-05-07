@@ -6,7 +6,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.rover.article.{ ArticleFetcherProvider }
 import com.keepit.rover.manager.{ FetchTaskQueue, FetchTask }
-import com.keepit.rover.model.{ ArticleVersion, RoverArticleInfo, ArticleInfoRepo }
+import com.keepit.rover.model.{ RoverArticleInfo, ArticleInfoRepo }
 import com.keepit.rover.store.RoverArticleStore
 
 import scala.concurrent.{ ExecutionContext, Future }

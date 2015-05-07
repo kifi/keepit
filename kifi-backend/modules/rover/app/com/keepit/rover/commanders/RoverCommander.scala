@@ -4,10 +4,10 @@ import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.db.{ Id, SequenceNumber }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.model.{ NormalizedURI, IndexableUri }
-import com.keepit.rover.article.Article
+import com.keepit.rover.article.{ ArticleKind, Article }
 import com.keepit.rover.article.content.{ NormalizationInfoHolder, HttpInfoHolder }
 import com.keepit.rover.manager.ArticleFetchingPolicy
-import com.keepit.rover.model.{ ShoeboxArticleUpdates, ArticleInfo, ShoeboxArticleUpdate }
+import com.keepit.rover.model.{ RoverArticleInfo, ShoeboxArticleUpdates, ArticleInfo, ShoeboxArticleUpdate }
 import com.keepit.rover.sensitivity.RoverSensitivityCommander
 import com.keepit.rover.store.RoverArticleStore
 import com.keepit.common.core._
@@ -61,6 +61,16 @@ class RoverCommander @Inject() (
         futureArticles.imap(uriId -> _)
     }
     Future.sequence(futureUriIdWithArticles).imap(_.toMap)
+  }
+
+  def getOrElseFetchBestArticle(info: RoverArticleInfo): Future[Option[info.A]] = {
+      articleCommander.getBestArticle(info) flatMap {
+      case None if (info.lastFetchedAt.isEmpty) => {
+        articleCommander.markAsFetching(info.id.get)
+        fetchCommander.fetchAndPersist(info)
+      }
+      case fetchedArticleOpt: Option[info.A] => Future.successful(fetchedArticleOpt)
+    }
   }
 
   private def toShoeboxArticleUpdate(articleInfo: ArticleInfo)(latestArticle: articleInfo.A) = {
