@@ -375,22 +375,22 @@ class UrlController @Inject() (
     }
   }
 
-  def getArticle(articleKey: ArticleKey[_]) = AdminUserPage.async { implicit request =>
+  def getArticle(uriId: Id[NormalizedURI], kind: ArticleKind[_ <: Article], version: ArticleVersion) = AdminUserPage.async { implicit request =>
     // TODO: Cam: expand functionality for any version, currently returns just the best
 
-    val fBestArticleWithId = roverServiceClient.getBestArticlesByUris((Set(articleKey.uriId)))
+    val fBestArticleWithId = roverServiceClient.getBestArticlesByUris((Set(uriId)))
     fBestArticleWithId.map { bestArticleWithId: Map[Id[NormalizedURI], Set[Article]] =>
-      val bestArticles = bestArticleWithId.getOrElse(articleKey.uriId, Set.empty)
-      val targetArticle = bestArticles.filter(article => article.kind.typeCode == articleKey.kind.typeCode).head
+      val bestArticles = bestArticleWithId.getOrElse(uriId, Set.empty)
+      val targetArticle = bestArticles.filter(article => article.kind == kind).head
       Ok(Json.obj(("content", targetArticle)))
     }
   }
 
-  def getBestArticle(uriId: Id[NormalizedURI], kind: ArticleKind[_]) = AdminUserPage.async { implicit request =>
+  def getBestArticle(uriId: Id[NormalizedURI], kind: ArticleKind[_ <: Article]) = AdminUserPage.async { implicit request =>
     val fBestArticleWithId = roverServiceClient.getBestArticlesByUris((Set(uriId)))
     fBestArticleWithId.map { bestArticleWithId: Map[Id[NormalizedURI], Set[Article]] =>
       val bestArticles = bestArticleWithId.getOrElse(uriId, Set.empty)
-      val targetArticle = bestArticles.filter(article => article.kind.typeCode == kind.typeCode).head
+      val targetArticle = bestArticles.filter(article => article.kind == kind).head
       Ok(Json.obj("content" -> targetArticle.content.toString))
     }
   }
