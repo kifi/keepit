@@ -175,7 +175,7 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
         val mail42body = mail42.htmlBody.value
         val mail42text = mail42.textBody.get.value
         // checking the domain-to-name mapper
-        mail42body must contain(">www.kifi&#8203;.com<")
+        mail42body must contain(">Kifi<")
         mail42body must contain(">Google<")
 
         // check that uri's for the recos are in the emails
