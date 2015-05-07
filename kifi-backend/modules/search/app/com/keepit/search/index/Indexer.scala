@@ -308,24 +308,21 @@ abstract class Indexer[T, S, I <: Indexer[T, S, I]](
     if (refresh) refreshSearcher()
   }
 
-  def commitData: CommitData[S] = {
+  def getCommitData: CommitData[S] = {
     // Get the latest commit.
-    // DirectoryReader.openIfChanged does not re-open the directory if only the commit data has been changed (as opposed to documents).
-    // Using DirectoryReader.repo to make sure we have the latest commit data (in particular the latest sequence number, even if no document has been actually modified)
-    val isSearcherDirectoryReaderCurrent = searcher.indexReader.inner.isCurrent
-    val directoryReader = Option(DirectoryReader.openIfChanged(searcher.indexReader.inner)) getOrElse searcher.indexReader.inner
-    val isDirectoryReaderCurrent = directoryReader.isCurrent
-    log.info(s"Is current? Searcher: $isSearcherDirectoryReaderCurrent vs Re-opened: $isDirectoryReaderCurrent")
-    val indexCommit = directoryReader.getIndexCommit
+    // Looks like DirectoryReader.openIfChanged does not re-open the directory if only the commit data has been changed (as opposed to documents).
+    // Using DirectoryReader.open (expensive) instead to make sure we return the latest commit data
+    // (especially the latest sequence number, even if no document has been actually modified)
+    val indexCommit = DirectoryReader.open(indexDirectory).getIndexCommit
     val mutableMap = indexCommit.getUserData()
     CommitData(mutableMap.toMap)
   }
 
-  def commitSequenceNumber: SequenceNumber[S] = commitData.sequenceNumber
+  def commitSequenceNumber: SequenceNumber[S] = getCommitData.sequenceNumber
 
-  def commitCatchUpSequenceNumber: SequenceNumber[S] = commitData.catchUpSequenceNumber
+  def commitCatchUpSequenceNumber: SequenceNumber[S] = getCommitData.catchUpSequenceNumber
 
-  def committedAt: Option[String] = commitData.committedAt
+  def committedAt: Option[String] = getCommitData.committedAt
 
   def numDocs: Int = (indexWriter.numDocs() - 1) // minus the seed doc
 
