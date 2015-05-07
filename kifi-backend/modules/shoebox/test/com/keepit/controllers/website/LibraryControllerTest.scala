@@ -458,14 +458,15 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         implicit val config = inject[PublicIdConfiguration]
         val libraryController = inject[LibraryController]
 
-        val (user1, user2, lib1, lib2, lib3, keep1) = db.readWrite { implicit s =>
+        val (user1, user2, user3, lib1, lib2, lib3, keep1) = db.readWrite { implicit s =>
           val user1 = user().withName("first", "user").withUsername("firstuser").saved
           val user2 = user().withName("second", "user").withUsername("seconduser").withPictureName("alf").saved
-          val library1 = library().withName("lib1").withUser(user1).published.withSlug("lib1").withMemberCount(11).withColor("blue").withDesc("My first library!").saved.savedFollowerMembership(user2)
+          val user3 = user().withName("third", "user").withUsername("thirduser").withPictureName("asdf").saved
+          val library1 = library().withName("lib1").withUser(user1).published.withSlug("lib1").withMemberCount(11).withColor("blue").withDesc("My first library!").saved.savedFollowerMembership(user2).savedCollaboratorMembership(user3)
           val library2 = library().withName("lib2").withUser(user2).secret.withSlug("lib2").withMemberCount(22).saved
           val library3 = library().withName("lib3").withUser(user2).secret.withSlug("lib3").withMemberCount(33).saved.savedFollowerMembership(user1)
           val k1 = keep().withLibrary(library1).saved
-          (user1, user2, library1, library2, library3, k1)
+          (user1, user2, user3, library1, library2, library3, k1)
         }
 
         { // upload an image for lib1
@@ -512,6 +513,15 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                       "pictureName": "alf.jpg",
                       "username": "seconduser"
                     }],
+                  "numCollaborators":1,
+                  "collaborators":[
+                    {
+                      "id": "${user3.externalId.id}",
+                      "firstName": "third",
+                      "lastName": "user",
+                      "pictureName": "asdf.jpg",
+                      "username": "thirduser"
+                    }],
                   "lastKept":${keep1.createdAt.getMillis},
                   "listed": true
                 }
@@ -543,6 +553,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                   "numKeeps":0,
                   "numFollowers":1,
                   "followers":[],
+                  "numCollaborators":0,
+                  "collaborators":[],
                   "lastKept":${lib3.createdAt.getMillis}
                 }
               ]
