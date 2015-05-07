@@ -63,7 +63,12 @@ class RoverCommander @Inject() (
     Future.sequence(futureUriIdWithArticles).imap(_.toMap)
   }
 
-  def getOrElseFetchBestArticle(info: RoverArticleInfo): Future[Option[info.A]] = {
+  def getOrElseFetchBestArticle[A <: Article](uri: IndexableUri)(implicit kind: ArticleKind[A]): Future[Option[A]] = {
+    val info = articleCommander.internByUri(uri.id.get, uri.url, Set(kind))(kind)
+    getOrElseFetchBestArticle(info).imap(_.map(_.asExpected[A]))
+  }
+
+  private def getOrElseFetchBestArticle(info: RoverArticleInfo): Future[Option[info.A]] = {
       articleCommander.getBestArticle(info) flatMap {
       case None if (info.lastFetchedAt.isEmpty) => {
         articleCommander.markAsFetching(info.id.get)

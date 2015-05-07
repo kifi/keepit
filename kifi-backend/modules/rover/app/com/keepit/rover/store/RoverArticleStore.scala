@@ -23,10 +23,7 @@ class RoverArticleStore @Inject() (underlying: RoverUnderlyingArticleStore, priv
     consolidate(key)(storeKey => SafeFuture {
       underlying.syncGet(storeKey)
     }).imap { articleOpt =>
-      articleOpt.map {
-        case expectedArticle if expectedArticle.kind == key.kind => expectedArticle.asInstanceOf[A]
-        case unexpectedArticle => throw new InconsistentArticleTypeException(key, unexpectedArticle)
-      }
+      articleOpt.map(_.asExpected(key.kind))
     }
   }
 
@@ -40,6 +37,3 @@ class RoverArticleStore @Inject() (underlying: RoverUnderlyingArticleStore, priv
     }
   }
 }
-
-case class InconsistentArticleTypeException[A <: Article](key: ArticleKey[A], article: Article)
-  extends Exception(s"Found inconsistent article for key $key: $article")
