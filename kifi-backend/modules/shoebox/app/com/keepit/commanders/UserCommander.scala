@@ -77,6 +77,7 @@ case class UserProfile(userId: Id[User], basicUserWithFriendStatus: BasicUserWit
 case class UserProfileStats(
   numLibraries: Int,
   numFollowedLibraries: Int,
+  numCollabLibraries: Int,
   numKeeps: Int,
   numConnections: Int,
   numFollowers: Int,

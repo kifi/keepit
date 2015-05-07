@@ -234,7 +234,7 @@ class LibraryMembershipRepoImpl @Inject() (
       val existingAccessMap = sql"""select access, count(*) from library_membership where library_id=$libraryId and state='active' group by access""".as[(String, Int)].list
         .map(t => (LibraryAccess(t._1), t._2))
         .toMap
-      val counts: Map[LibraryAccess, Int] = LibraryAccess.getAll.map(access => access -> existingAccessMap.getOrElse(access, 0)).toMap
+      val counts: Map[LibraryAccess, Int] = LibraryAccess.all.map(access => access -> existingAccessMap.getOrElse(access, 0)).toMap
       CountWithLibraryIdByAccess.fromMap(counts)
     }
   }

@@ -1521,31 +1521,38 @@ class LibraryCommander @Inject() (
   }
 
   // number of libraries user owns that the viewer can see
+  // number of libraries user collaborates to that the viewer can see
   // number of libraries user follows that the viewer can see
   // number of libraries user is invited to (only if user is viewing his/her own profile)
-  def countLibraries(userId: Id[User], viewer: Option[Id[User]]): (Int, Int, Option[Int]) = {
+  def countLibraries(userId: Id[User], viewer: Option[Id[User]]): (Int, Int, Int, Option[Int]) = {
     viewer match {
       case None =>
         db.readOnlyReplica { implicit s =>
-          val numLibsOwned = libraryRepo.countLibrariesOfUserForAnonymous(userId)
-          val numLibsFollowing = libraryRepo.countFollowingLibrariesForAnonymous(userId)
-          (numLibsOwned, numLibsFollowing, None)
+          val counts = libraryRepo.countMemberLibrariesForAnonymous(userId)
+          val numLibsOwned = counts.getOrElse(LibraryAccess.OWNER, 0)
+          val numLibsCollab = counts.getOrElse(LibraryAccess.READ_WRITE, 0) + counts.getOrElse(LibraryAccess.READ_INSERT, 0)
+          val numLibsFollowing = counts.getOrElse(LibraryAccess.READ_ONLY, 0)
+          (numLibsOwned, numLibsCollab, numLibsFollowing, None)
         }
       case Some(id) if id == userId =>
-        val (numLibsOwned, numLibsFollowing) = db.readOnlyMaster { implicit s =>
-          val numLibsOwned = libraryMembershipRepo.countWithUserIdAndAccess(userId, LibraryAccess.OWNER) // cached
-          val numLibsFollowing = libraryMembershipRepo.countWithUserIdAndAccess(userId, LibraryAccess.READ_ONLY) // cached
-          (numLibsOwned, numLibsFollowing)
+        val (numLibsOwned, numLibsCollab, numLibsFollowing) = db.readOnlyMaster { implicit s =>
+          val counts = libraryMembershipRepo.countsWithUserIdAndAccesses(userId, LibraryAccess.all.toSet)
+          val numLibsOwned = counts.getOrElse(LibraryAccess.OWNER, 0)
+          val numLibsCollab = counts.getOrElse(LibraryAccess.READ_WRITE, 0) + counts.getOrElse(LibraryAccess.READ_INSERT, 0)
+          val numLibsFollowing = counts.getOrElse(LibraryAccess.READ_ONLY, 0)
+          (numLibsOwned, numLibsCollab, numLibsFollowing)
         }
         val numLibsInvited = db.readOnlyReplica { implicit s =>
           libraryInviteRepo.countDistinctWithUserId(userId)
         }
-        (numLibsOwned, numLibsFollowing, Some(numLibsInvited))
+        (numLibsOwned, numLibsCollab, numLibsFollowing, Some(numLibsInvited))
       case Some(viewerId) =>
         db.readOnlyReplica { implicit s =>
-          val numLibsOwned = libraryRepo.countLibrariesForOtherUser(userId, viewerId)
-          val numLibsFollowing = libraryRepo.countFollowingLibrariesForOtherUser(userId, viewerId)
-          (numLibsOwned, numLibsFollowing, None)
+          val counts = libraryRepo.countMemberLibrariesForOtherUser(userId, viewerId)
+          val numLibsOwned = counts.getOrElse(LibraryAccess.OWNER, 0)
+          val numLibsCollab = counts.getOrElse(LibraryAccess.READ_WRITE, 0) + counts.getOrElse(LibraryAccess.READ_ONLY, 0)
+          val numLibsFollowing = counts.getOrElse(LibraryAccess.READ_ONLY, 0)
+          (numLibsOwned, numLibsCollab, numLibsFollowing, None)
         }
     }
   }

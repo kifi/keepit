@@ -82,7 +82,7 @@ object LibraryAccess {
     def compare(x: LibraryAccess, y: LibraryAccess): Int = x.priority compare y.priority
   }
 
-  def apply(str: String) = {
+  def apply(str: String): LibraryAccess = {
     str match {
       case READ_ONLY.value => READ_ONLY
       case READ_INSERT.value => READ_INSERT
@@ -91,7 +91,8 @@ object LibraryAccess {
     }
   }
 
-  def getAll() = Seq(OWNER, READ_WRITE, READ_INSERT, READ_ONLY)
+  def all: Seq[LibraryAccess] = Seq(OWNER, READ_WRITE, READ_INSERT, READ_ONLY)
+  def collaborativePermissions: Set[LibraryAccess] = Set(OWNER, READ_WRITE, READ_INSERT)
 }
 
 case class CountWithLibraryIdByAccess(readOnly: Int, readInsert: Int, readWrite: Int, owner: Int)

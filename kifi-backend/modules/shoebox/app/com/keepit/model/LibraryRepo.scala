@@ -39,8 +39,8 @@ trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
   def getFollowingLibrariesForSelf(userId: Id[User], page: Paginator)(implicit session: RSession): Seq[Library]
   def getFollowingLibrariesForAnonymous(userId: Id[User], page: Paginator)(implicit session: RSession): Seq[Library]
   // def countFollowingLibrariesForSelf(userId: Id[User])(implicit session: RSession): Int  // use LibraryMembershipRepo.countWithUserIdAndAccess(userId, READ_ONLY) instead (cached)
-  def countFollowingLibrariesForOtherUser(userId: Id[User], viewerId: Id[User])(implicit session: RSession): Int
-  def countFollowingLibrariesForAnonymous(userId: Id[User])(implicit session: RSession): Int
+  def countMemberLibrariesForOtherUser(userId: Id[User], viewerId: Id[User])(implicit session: RSession): Map[LibraryAccess, Int]
+  def countMemberLibrariesForAnonymous(userId: Id[User])(implicit session: RSession): Map[LibraryAccess, Int]
   def getInvitedLibrariesForSelf(userId: Id[User], page: Paginator)(implicit session: RSession): Seq[Library]
   def getLibrariesForSelf(userId: Id[User], page: Paginator)(implicit session: RSession): Seq[Library]
   def getAllPublishedNonEmptyLibraries(minKeepCount: Int)(implicit session: RSession): Seq[Id[Library]]
@@ -311,7 +311,7 @@ class LibraryRepoImpl @Inject() (
   }
 
   // TODO: share query logic with getFollowingLibrariesForOtherUser (above)
-  def countFollowingLibrariesForOtherUser(userId: Id[User], viewerId: Id[User])(implicit session: RSession): Int = {
+  def countMemberLibrariesForOtherUser(userId: Id[User], viewerId: Id[User])(implicit session: RSession): Map[LibraryAccess, Int] = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     val libsFriendFollow = sql"select lib.id from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $viewerId and lib.state = 'active' and lm.state = 'active'".as[Id[Library]].list
     val libVisibility = libsFriendFollow.size match {
@@ -319,15 +319,15 @@ class LibraryRepoImpl @Inject() (
       case 1 => s"or (lib.id = ${libsFriendFollow.head})"
       case _ => s"or (lib.id in (${libsFriendFollow mkString ","}))"
     }
-    val query = sql"select count(lib.id) from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $userId and lib.state = 'active' and lm.state = 'active' and lm.access != 'owner' and ((lm.listed and lib.visibility = 'published' and lm.access != 'owner') #$libVisibility)"
-    query.as[Int].first
+    val query = sql"select lm.access, count(lib.id) from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $userId and lib.state = 'active' and lm.state = 'active' and ((lm.listed and lib.visibility = 'published') #$libVisibility) group by lm.access"
+    query.as[(String, Int)].list.toMap.map { case (a, c) => LibraryAccess(a) -> c }
   }
 
   // TODO: share query logic with getFollowingLibrariesForAnonymous (above)
-  def countFollowingLibrariesForAnonymous(userId: Id[User])(implicit session: RSession): Int = {
+  def countMemberLibrariesForAnonymous(userId: Id[User])(implicit session: RSession): Map[LibraryAccess, Int] = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    val query = sql"select count(lib.id) from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $userId and lib.state = 'active' and lm.state = 'active' and lm.listed and lib.visibility = 'published' and lm.access != 'owner'"
-    query.as[Int].first
+    val query = sql"select lm.access, count(lib.id) from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $userId and lib.state = 'active' and lm.state = 'active' and lm.listed and lib.visibility = 'published' group by lm.access"
+    query.as[(String, Int)].list.toMap.map { case (a, c) => LibraryAccess(a) -> c }
   }
 
   def getInvitedLibrariesForSelf(userId: Id[User], page: Paginator)(implicit session: RSession): Seq[Library] = {
