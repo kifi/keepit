@@ -610,7 +610,9 @@ class LibraryController @Inject() (
               owner = info.owner,
               numKeeps = info.numKeeps,
               numFollowers = info.numFollowers,
-              followers = LibraryCardInfo.showable(info.followers),
+              followers = LibraryCardInfo.makeMembersShowable(info.followers, true),
+              numCollaborators = info.numCollaborators,
+              collaborators = LibraryCardInfo.makeMembersShowable(info.collaborators, false),
               lastKept = info.lastKept.getOrElse(new DateTime(0)),
               following = None,
               caption = None)
