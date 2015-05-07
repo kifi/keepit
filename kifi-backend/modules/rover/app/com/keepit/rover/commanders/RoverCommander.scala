@@ -1,9 +1,9 @@
 package com.keepit.rover.commanders
 
 import com.google.inject.{ Inject, Singleton }
-import com.keepit.common.db.{ Id, SequenceNumber }
+import com.keepit.common.db.{ SequenceNumber }
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.model.{ NormalizedURI, IndexableUri }
+import com.keepit.model.{ IndexableUri }
 import com.keepit.rover.article.{ ArticleKind, Article }
 import com.keepit.rover.article.content.{ NormalizationInfoHolder, HttpInfoHolder }
 import com.keepit.rover.manager.ArticleFetchingPolicy
@@ -25,15 +25,30 @@ class RoverCommander @Inject() (
     private implicit val executionContext: ExecutionContext,
     airbrake: AirbrakeNotifier) {
 
-  def doMeAFavor(uri: IndexableUri): Future[Unit] = {
+  def fetchAsap(uri: IndexableUri): Future[Unit] = {
     val toBeInternedByPolicy = articlePolicy.toBeInterned(uri.url, uri.state)
-    val interned = articleCommander.internByUri(uri.id.get, uri.url, toBeInternedByPolicy)
+    val interned = articleCommander.internArticleInfoByUri(uri.id.get, uri.url, toBeInternedByPolicy)
     val neverFetched = interned.collect { case (kind, info) if info.lastFetchedAt.isEmpty => (info.id.get -> info) }
     fetchCommander.fetchWithTopPriority(neverFetched.keySet).imap { results =>
       val failed = results.collect { case (infoId, Failure(error)) => neverFetched(infoId).articleKind -> error }
       if (failed.nonEmpty) {
         airbrake.notify(s"Failed to schedule top priority fetches for uri ${uri.id.get}: ${uri.url}\n${failed.mkString("\n")}")
       }
+    }
+  }
+
+  def getOrElseFetchBestArticle[A <: Article](uri: IndexableUri)(implicit kind: ArticleKind[A]): Future[Option[A]] = {
+    val info = articleCommander.internArticleInfoByUri(uri.id.get, uri.url, Set(kind))(kind)
+    getOrElseFetchBestArticle(info).imap(_.map(_.asExpected[A]))
+  }
+
+  private def getOrElseFetchBestArticle(info: RoverArticleInfo): Future[Option[info.A]] = {
+    articleCommander.getBestArticle(info) flatMap {
+      case None if (info.lastFetchedAt.isEmpty) => {
+        articleCommander.markAsFetching(info.id.get)
+        fetchCommander.fetchAndPersist(info)
+      }
+      case fetchedArticleOpt: Option[info.A] => Future.successful(fetchedArticleOpt)
     }
   }
 
@@ -52,21 +67,6 @@ class RoverCommander @Inject() (
       Future.sequence(futureUpdates).imap { updates =>
         Some(ShoeboxArticleUpdates(updates.flatten, maxSeq))
       }
-    }
-  }
-
-  def getOrElseFetchBestArticle[A <: Article](uri: IndexableUri)(implicit kind: ArticleKind[A]): Future[Option[A]] = {
-    val info = articleCommander.internByUri(uri.id.get, uri.url, Set(kind))(kind)
-    getOrElseFetchBestArticle(info).imap(_.map(_.asExpected[A]))
-  }
-
-  private def getOrElseFetchBestArticle(info: RoverArticleInfo): Future[Option[info.A]] = {
-      articleCommander.getBestArticle(info) flatMap {
-      case None if (info.lastFetchedAt.isEmpty) => {
-        articleCommander.markAsFetching(info.id.get)
-        fetchCommander.fetchAndPersist(info)
-      }
-      case fetchedArticleOpt: Option[info.A] => Future.successful(fetchedArticleOpt)
     }
   }
 
