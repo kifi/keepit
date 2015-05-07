@@ -122,6 +122,7 @@ object PlayGlobal {
     "com.keepit.common.db.{ExternalId, Id, State, SequenceNumber}",
     "com.keepit.model._",
     "com.keepit.social._",
+    "com.keepit.search.{ArticleSearchResult, SearchConfigExperiment}",
     "com.keepit.cortex.core._",
     "com.keepit.cortex.models.lda._",
     "com.keepit.common.mail.EmailAddress",
