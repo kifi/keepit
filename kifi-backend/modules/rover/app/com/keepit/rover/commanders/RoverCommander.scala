@@ -55,14 +55,6 @@ class RoverCommander @Inject() (
     }
   }
 
-  def getBestArticlesByUris(uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[Article]]] = {
-    val futureUriIdWithArticles = articleCommander.getBestArticlesByUris(uriIds).map {
-      case (uriId, futureArticles) =>
-        futureArticles.imap(uriId -> _)
-    }
-    Future.sequence(futureUriIdWithArticles).imap(_.toMap)
-  }
-
   def getOrElseFetchBestArticle[A <: Article](uri: IndexableUri)(implicit kind: ArticleKind[A]): Future[Option[A]] = {
     val info = articleCommander.internByUri(uri.id.get, uri.url, Set(kind))(kind)
     getOrElseFetchBestArticle(info).imap(_.map(_.asExpected[A]))

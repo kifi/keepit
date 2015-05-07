@@ -2,7 +2,6 @@ package com.keepit.rover.commanders
 
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.cache._
-import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.{ SequenceNumber, Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.AccessLog
@@ -29,10 +28,18 @@ class ArticleCommander @Inject() (
     }
   }
 
-  def getBestArticlesByUris(uriIds: Set[Id[NormalizedURI]]): Map[Id[NormalizedURI], Future[Set[Article]]] = {
+  def getBestArticleFuturesByUris(uriIds: Set[Id[NormalizedURI]]): Map[Id[NormalizedURI], Future[Set[Article]]] = {
     getArticleInfosByUris(uriIds).mapValues { infos =>
       Future.sequence(infos.map(getBestArticle(_))).imap(_.flatten)
     }
+  }
+
+  def getBestArticlesByUris(uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[Article]]] = {
+    val futureUriIdWithArticles = getBestArticleFuturesByUris(uriIds).map {
+      case (uriId, futureArticles) =>
+        futureArticles.imap(uriId -> _)
+    }
+    Future.sequence(futureUriIdWithArticles).imap(_.toMap)
   }
 
   def getArticleInfosByUris(uriIds: Set[Id[NormalizedURI]]): Map[Id[NormalizedURI], Set[ArticleInfo]] = {
@@ -51,7 +58,17 @@ class ArticleCommander @Inject() (
     (info.getBestKey orElse info.getLatestKey).map(articleStore.get) getOrElse Future.successful(None)
   }
 
-  def internByUri(uriId: Id[NormalizedURI], url: String, kinds: Set[ArticleKind[_ <: Article]]): Map[ArticleKind[_ <: Article], RoverArticleInfo] = {
+  def getBestArticle[A <: Article](uriId: Id[NormalizedURI])(implicit kind: ArticleKind[A]): Future[Option[A]] = {
+    getArticleInfoByUriAndKind[A](uriId).map(getBestArticle(_).imap(_.map(_.asExpected[A]))) getOrElse Future.successful(None)
+  }
+
+  def getArticleInfoByUriAndKind[A <: Article](uriId: Id[NormalizedURI])(implicit kind: ArticleKind[A]): Option[RoverArticleInfo] = {
+    db.readWrite { implicit session =>
+      articleInfoRepo.getByUriAndKind(uriId, kind)
+    }
+  }
+
+  def internArticleInfoByUri(uriId: Id[NormalizedURI], url: String, kinds: Set[ArticleKind[_ <: Article]]): Map[ArticleKind[_ <: Article], RoverArticleInfo] = {
     db.readWrite { implicit session =>
       articleInfoRepo.internByUri(uriId, url, kinds)
     }
