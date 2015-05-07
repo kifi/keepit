@@ -5,6 +5,7 @@ import com.keepit.rover.article.content._
 import org.joda.time.DateTime
 import play.api.libs.json._
 import com.keepit.common.reflection.CompanionTypeSystem
+import play.api.mvc.PathBindable
 
 sealed trait ArticleKind[A <: Article] {
   final type article = A
@@ -27,6 +28,18 @@ object ArticleKind {
   implicit val format: Format[ArticleKind[_ <: Article]] = new Format[ArticleKind[_ <: Article]] {
     def reads(json: JsValue) = json.validate[String].map(ArticleKind.byTypeCode)
     def writes(kind: ArticleKind[_ <: Article]) = JsString(kind.typeCode)
+  }
+
+  implicit def pathBinder(implicit stringBinder: PathBindable[String]) = new PathBindable[ArticleKind[_ <: Article]] {
+    override def bind(key: String, value: String): Either[String, ArticleKind[_ <: Article]] =
+      stringBinder.bind(key, value) match {
+        case Right(typeCode) => byTypeCode.get(typeCode) match {
+          case Some(kind) => Right(kind)
+          case None => Left(s"Unknown ArticleKind: $typeCode")
+        }
+        case _ => Left("Unable to bind an ArticleKind")
+      }
+    override def unbind(key: String, kind: ArticleKind[_ <: Article]): String = kind.typeCode
   }
 }
 
