@@ -71,7 +71,9 @@ object ApplicationBuild extends Build {
 
   lazy val graphDependencies = Seq()
 
-  lazy val curatorDependencies = Seq()
+  lazy val curatorDependencies = Seq(
+    "org.apache.commons" % "commons-math3" % "3.4.1"
+  )
 
   lazy val roverDependencies = Seq()
 
