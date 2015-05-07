@@ -122,7 +122,6 @@ object PlayGlobal {
     "com.keepit.common.db.{ExternalId, Id, State, SequenceNumber}",
     "com.keepit.model._",
     "com.keepit.social._",
-    "com.keepit.search._",
     "com.keepit.cortex.core._",
     "com.keepit.cortex.models.lda._",
     "com.keepit.common.mail.EmailAddress",
@@ -131,7 +130,7 @@ object PlayGlobal {
     "com.keepit.common.time._",
     "com.keepit.shoebox.model.ids._",
     "com.keepit.rover.model._",
-    "com.keepit.rover.article.ArticleKind"
+    "com.keepit.rover.article._"
   )
 
   val _templateImports = Seq(
