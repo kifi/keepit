@@ -6,7 +6,9 @@ import com.keepit.model._
 import com.keepit.common.time._
 import com.keepit.rover.fetcher.HttpRedirect
 import com.keepit.rover.RoverServiceClient
-import com.keepit.rover.model.ArticleInfo
+import com.keepit.rover.article.{ ArticleKind, Article }
+import com.keepit.rover.article.content.ArticleContentExtractor
+import com.keepit.rover.model.{ ArticleKey, ArticleVersion }
 import com.keepit.scraper.ScrapeScheduler
 import scala.concurrent.duration._
 import views.html
@@ -360,10 +362,36 @@ class UrlController @Inject() (
   }
 
   def getURIInfo(id: Id[NormalizedURI]) = AdminUserPage.async { implicit request =>
-    val articleInfoMapFuture = roverServiceClient.getArticleInfosByUris(Set(id))
-    val uri = db.readOnlyReplica { implicit s => uriRepo.get(id) }
-    articleInfoMapFuture.map { articleInfoMap =>
-      Ok(html.admin.uri(uri, articleInfoSet = articleInfoMap.getOrElse(id, Set.empty)))
+    val fArticleInfoWithUri = roverServiceClient.getArticleInfosByUris(Set(id))
+    val fBestArticlesWithUri = roverServiceClient.getBestArticlesByUris(Set(id))
+    val uri: NormalizedURI = db.readOnlyReplica { implicit s => uriRepo.get(id) }
+
+    fArticleInfoWithUri.flatMap { articleInfoWithUri =>
+      fBestArticlesWithUri.map { bestArticlesWithUri =>
+        val bestArticles = bestArticlesWithUri.getOrElse(id, Set.empty)
+        val aggregateContent: ArticleContentExtractor = ArticleContentExtractor(bestArticles)
+        Ok(html.admin.uri(uri, articleInfoWithUri.getOrElse(id, Set.empty), aggregateContent))
+      }
+    }
+  }
+
+  def getArticle(articleKey: ArticleKey[_]) = AdminUserPage.async { implicit request =>
+    // TODO: Cam: expand functionality for any version, currently returns just the best
+
+    val fBestArticleWithId = roverServiceClient.getBestArticlesByUris((Set(articleKey.uriId)))
+    fBestArticleWithId.map { bestArticleWithId: Map[Id[NormalizedURI], Set[Article]] =>
+      val bestArticles = bestArticleWithId.getOrElse(articleKey.uriId, Set.empty)
+      val targetArticle = bestArticles.filter(article => article.kind.typeCode == articleKey.kind.typeCode).head
+      Ok(Json.obj(("content", targetArticle)))
+    }
+  }
+
+  def getBestArticle(uriId: Id[NormalizedURI], kind: ArticleKind[_]) = AdminUserPage.async { implicit request =>
+    val fBestArticleWithId = roverServiceClient.getBestArticlesByUris((Set(uriId)))
+    fBestArticleWithId.map { bestArticleWithId: Map[Id[NormalizedURI], Set[Article]] =>
+      val bestArticles = bestArticleWithId.getOrElse(uriId, Set.empty)
+      val targetArticle = bestArticles.filter(article => article.kind.typeCode == kind.typeCode).head
+      Ok(Json.obj("content" -> targetArticle.content.toString))
     }
   }
 
