@@ -76,7 +76,7 @@ class LibraryMembershipRepoImpl @Inject() (
     def lastEmailSent = column[Option[DateTime]]("last_email_sent", O.Nullable)
     def listed = column[Boolean]("listed", O.NotNull)
     def lastJoinedAt = column[Option[DateTime]]("last_joined_at", O.Nullable)
-    def subscribedToUpdates = column[Boolean]("subscribed_to_updates", O.Nullable)
+    def subscribedToUpdates = column[Boolean]("subscribed_to_updates", O.NotNull)
     def * = (id.?, libraryId, userId, access, createdAt, updatedAt, state, seq, showInSearch, listed, lastViewed, lastEmailSent, lastJoinedAt, subscribedToUpdates) <> ((LibraryMembership.apply _).tupled, LibraryMembership.unapply)
   }
 

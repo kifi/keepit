@@ -706,7 +706,7 @@ class LibraryController @Inject() (
 
   def setSubscribedToUpdates(pubId: PublicId[Library], newSubscripedToUpdate: Boolean) = UserAction { request =>
     val libraryId = Library.decodePublicId(pubId).get
-    libraryCommander.updatedLibraryUpdateSusbcription(request.userId, libraryId, newSubscripedToUpdate) match {
+    libraryCommander.updatedLibraryUpdateSubscription(request.userId, libraryId, newSubscripedToUpdate) match {
       case Right(mem) => Ok
       case Left(fail) => Status(fail.status)(Json.obj("error" -> fail.message))
     }

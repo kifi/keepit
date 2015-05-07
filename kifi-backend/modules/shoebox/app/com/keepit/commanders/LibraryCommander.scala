@@ -157,7 +157,7 @@ class LibraryCommander @Inject() (
       if (library.visibility == LibraryVisibility.PUBLISHED || mine || following.get) {
         val owner = basicUserRepo.load(library.ownerId)
         val followerCount = libraryMembershipRepo.countWithLibraryIdByAccess(library.id.get).readOnly
-        Right(library, owner, followerCount, following, subscribedToUpdates)
+        Right((library, owner, followerCount, following, subscribedToUpdates))
       } else {
         Left(LibraryFail(FORBIDDEN, "library_access_denied"))
       }
@@ -1691,11 +1691,11 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def updatedLibraryUpdateSusbcription(userId: Id[User], libraryId: Id[Library], subscribedToUpdatesNew: Boolean): Either[LibraryFail, LibraryMembership] = {
+  def updatedLibraryUpdateSubscription(userId: Id[User], libraryId: Id[Library], subscribedToUpdatesNew: Boolean): Either[LibraryFail, LibraryMembership] = {
     db.readOnlyMaster { implicit s =>
       libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId)
     } match {
-      case None => Left(LibraryFail(NOT_FOUND, "Can't subscribe to updaes from a library you are not following"))
+      case None => Left(LibraryFail(NOT_FOUND, "need_to_follow_to_subscribe"))
       case Some(mem) => {
         val updatedMembership = db.readWrite { implicit s =>
           libraryMembershipRepo.save(mem.copy(subscribedToUpdates = subscribedToUpdatesNew))
