@@ -930,8 +930,7 @@ class LibraryCommander @Inject() (
 
       futureInvitedContactsByEmailAddress.map { invitedContactsByEmailAddress =>
         val invitesAndInvitees = db.readOnlyMaster { implicit s =>
-          for ((recipient, inviteAccess, msgOpt) <- inviteList) yield {
-            val access = if (targetLib.ownerId != inviterId) LibraryAccess.READ_ONLY else inviteAccess
+          for ((recipient, access, msgOpt) <- inviteList) yield {
             recipient match {
               case Left(userId) =>
                 if (userId == targetLib.ownerId) {

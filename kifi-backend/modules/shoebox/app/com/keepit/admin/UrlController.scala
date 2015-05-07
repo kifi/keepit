@@ -363,7 +363,7 @@ class UrlController @Inject() (
     val articleInfoMapFuture = roverServiceClient.getArticleInfosByUris(Set(id))
     val uri = db.readOnlyReplica { implicit s => uriRepo.get(id) }
     articleInfoMapFuture.map { articleInfoMap =>
-      Ok(html.admin.uri(uri, articleInfoSet = articleInfoMap.getOrElse(id,Set.empty)))
+      Ok(html.admin.uri(uri, articleInfoSet = articleInfoMap.getOrElse(id, Set.empty)))
     }
   }
 
