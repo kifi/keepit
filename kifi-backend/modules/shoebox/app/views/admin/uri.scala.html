@@ -6,21 +6,6 @@
 
 <table class="table table-bordered">
     <tr>
-        <th>Created at</th><td>@adminHelper.dateTimeDisplay(uri.createdAt)</td>
-    </tr>
-    <tr>
-        <th>Updated at</th><td>@adminHelper.dateTimeDisplay(uri.updatedAt)</td>
-    </tr>
-    @*
-    <tr>
-        <th>Last scrape</th><td>@info.map(scrapeInfo => adminHelper.dateTimeDisplay(scrapeInfo.lastScrape))</td>
-    </tr>
-    <tr>
-        <th>Next scrape</th><td>@info.map(scrapeInfo => adminHelper.dateTimeDisplay(scrapeInfo.nextScrape))</td>
-    </tr>
-    *@
-
-    <tr>
         <th>URI URL</th><td><a href="@uri.url">@uri.url</a></td>
     </tr>
 
@@ -41,10 +26,10 @@
             <th>Article Kind</th><td>articleInfo.kind</td>
         </tr>
         <tr>
-            <th>Best Version</th><td>articleInfo.bestVersion.getOrElse("Not found")</td>
+            <th>Best Version</th><td>articleInfo.bestVersion.getOrElse("None")</td>
         </tr>
         <tr>
-            <th>Latest Version</th><td>articleInfo.latestVersion.getOrElse("Not found")</td>
+            <th>Latest Version</th><td>articleInfo.latestVersion.getOrElse("None")</td>
         </tr>
     }
     </table>
