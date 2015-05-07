@@ -130,7 +130,8 @@ object PlayGlobal {
     "org.joda.time.DateTime",
     "com.keepit.common.time._",
     "com.keepit.shoebox.model.ids._",
-    "com.keepit.rover.model._"
+    "com.keepit.rover.model._",
+    "com.keepit.rover.article.ArticleKind"
   )
 
   val _templateImports = Seq(
