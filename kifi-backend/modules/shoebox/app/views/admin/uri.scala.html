@@ -1,0 +1,36 @@
+@(uri: com.keepit.model.NormalizedURI, articleInfoSet: Set[com.keepit.rover.model.ArticleInfo])(implicit request: com.keepit.common.controller.UserRequest[_])
+
+@admin(uri.title.getOrElse("Title Not Found")) {
+
+<h2><a href = "@{com.keepit.controllers.admin.routes.AdminLDAController.similarURIs(uri.id.get)}">similar uris</a></h2>
+
+<table class="table table-bordered">
+    <tr>
+        <th>URI URL</th><td><a href="@uri.url">@uri.url</a></td>
+    </tr>
+
+    <tr>
+        <th>State</th><td>@uri.state</a></td>
+    </tr>
+
+    <tr>
+        <th>Restriction</th>
+        <td>@uri.restriction.map { restriction =>
+            <form class="form-inline" action="@com.keepit.controllers.admin.routes.UrlController.clearRestriction(uri.id.get)" method = "POST">@restriction.context <button type="submit" class="btn">Clear</button></form>
+            }.getOrElse {
+            <form class="form-inline" action="@com.keepit.controllers.admin.routes.UrlController.flagAsAdult(uri.id.get)" method = "POST"><button type="submit" class="btn">Flag as adult</button></form>
+            }</td>
+    </tr>
+    @for(articleInfo <- articleInfoSet) {
+        <tr>
+            <th>Article Kind</th><td>articleInfo.kind</td>
+        </tr>
+        <tr>
+            <th>Best Version</th><td>articleInfo.bestVersion.getOrElse("None")</td>
+        </tr>
+        <tr>
+            <th>Latest Version</th><td>articleInfo.latestVersion.getOrElse("None")</td>
+        </tr>
+    }
+    </table>
+}

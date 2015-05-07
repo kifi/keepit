@@ -12,9 +12,9 @@ trait ActivityEmailCronPlugin extends SchedulerPlugin
 
 @Singleton
 class ActivityEmailCronPluginImpl @Inject() (
-    actor: ActorInstance[ActivityEmailActor],
-    quartz: ActorInstance[QuartzActor],
-    val scheduling: SchedulingProperties) extends ActivityEmailCronPlugin with Logging {
+  actor: ActorInstance[ActivityEmailActor],
+  quartz: ActorInstance[QuartzActor],
+  val scheduling: SchedulingProperties) extends ActivityEmailCronPlugin with Logging {
 
   // plugin lifecycle methods
   override def enabled: Boolean = true
