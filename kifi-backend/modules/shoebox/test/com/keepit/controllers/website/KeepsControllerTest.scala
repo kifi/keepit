@@ -327,7 +327,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
                       "tags":[],
                       "hashtags":[],
                       "summary":{},
-                      "siteName":"kifi.com",
+                      "siteName":"Kifi",
                       "libraryId":"l7jlKlnA36Su"
                     },
                     {
