@@ -48,7 +48,7 @@ class LibraryInviteEmailSender @Inject() (
       val fromAddress = db.readOnlyReplica { implicit session => userEmailRepo.getByUser(invite.inviterId).address }
       val passPhrase = if (library.visibility == LibraryVisibility.PUBLISHED || toRecipient.isLeft) None else Some(invite.passPhrase)
       val authToken = invite.authToken
-      val subjectAction = if (invite.access == LibraryAccess.READ_WRITE) "collaborate on" else "follow"
+      val subjectAction = if (invite.access == LibraryAccess.READ_ONLY) "follow" else "collaborate on"
       val emailToSend = EmailToSend(
         fromName = Some(Left(invite.inviterId)),
         from = SystemEmailAddress.NOTIFICATIONS,
