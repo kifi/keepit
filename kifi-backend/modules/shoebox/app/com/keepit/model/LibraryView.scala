@@ -162,8 +162,13 @@ object LibraryCardInfo {
     JsObject((Json.toJson(o).as[JsObject].value - "owner").toSeq)
   }
 
-  def showable(members: Seq[BasicUser]): Seq[BasicUser] = {
-    members.filter(_.pictureName != "0.jpg")
+  def makeMembersShowable(members: Seq[BasicUser], filterBadPics: Boolean): Seq[BasicUser] = {
+    if (filterBadPics) {
+      members.filter(_.pictureName != "0.jpg").take(3)
+    } else {
+      val (membersWithPics, membersNoPics) = members.partition(_.pictureName != "0.jpg")
+      membersWithPics ++ membersNoPics
+    }
   }
 }
 

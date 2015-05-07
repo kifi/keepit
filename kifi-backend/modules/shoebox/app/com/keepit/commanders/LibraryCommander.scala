@@ -1697,9 +1697,9 @@ class LibraryCommander @Inject() (
       owner = owner,
       numKeeps = lib.keepCount,
       numFollowers = numFollowers,
-      followers = LibraryCardInfo.showable(followers),
+      followers = LibraryCardInfo.makeMembersShowable(followers, true),
       numCollaborators = numCollaborators,
-      collaborators = LibraryCardInfo.showable(collaborators),
+      collaborators = LibraryCardInfo.makeMembersShowable(collaborators, false),
       lastKept = lib.lastKept.getOrElse(lib.createdAt),
       following = isFollowing,
       caption = None)
