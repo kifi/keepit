@@ -4,13 +4,15 @@ import com.keepit.common.net.URI
 
 object DomainToNameMapper {
 
+  val HostPrefixToTrim = """^www\.""".r
+
   def getNameFromUrl(url: String): Option[String] = {
     val hostOpt = URI.parse(url).toOption.flatMap(_.host)
     hostOpt map { host =>
       def nameForSuffixLength(n: Int) = domainToName.get(host.domain.take(n).reverse.mkString("."))
       // Attempts to map more restrictive subdomains first
       val candidates = (host.domain.length to 2 by -1).toStream map nameForSuffixLength
-      candidates.collectFirst { case Some(name) => name }.getOrElse(host.name)
+      candidates.collectFirst { case Some(name) => name }.getOrElse(HostPrefixToTrim.replaceFirstIn(host.name, ""))
     }
   }
 
@@ -40,6 +42,7 @@ object DomainToNameMapper {
     "ask.com" -> "Ask",
     "avg.com" -> "AVG Technologies",
     "babylon.com" -> "Babylon",
+    "babycenter.com" -> "BabyCenter",
     "baidu.com" -> "Baidu",
     "bankofamerica.com" -> "Bank of America",
     "news.bbc.co.uk" -> "BBC",
@@ -57,7 +60,6 @@ object DomainToNameMapper {
     "cnet.com" -> "CNET",
     "news.com" -> "CNET",
     "cnn.com" -> "CNN",
-    "cnn.com/" -> "CNN",
     "codecademy.com" -> "Codecademy",
     "codedicks.com" -> "codedicks",
     "colourlovers.com" -> "COLOURlovers",
@@ -69,6 +71,7 @@ object DomainToNameMapper {
     "dailymail.co.uk" -> "Daily Mail",
     "dailymotion.com" -> "Dailymotion",
     "dell.com" -> "Dell",
+    "deseretnews.com" -> "Deseret News",
     "deviantart.com" -> "deviantART",
     "digg.com" -> "Digg",
     "disney.go.com" -> "Disney",
@@ -138,7 +141,7 @@ object DomainToNameMapper {
     "kayak.com" -> "Kayak",
     "khanacademy.org" -> "Khan Academy",
     "kickstarter.com" -> "Kickstarter",
-    "kifi.com/" -> "Kifi",
+    "kifi.com" -> "Kifi",
     "blog.kifi.com" -> "Kifi Blog",
     "support.kifi.com" -> "Kifi Support",
     "lifehacker.com" -> "Lifehacker",
@@ -163,6 +166,7 @@ object DomainToNameMapper {
     "netflix.com" -> "Netflix",
     "movies.netflix.com" -> "Netflix",
     "npr.org" -> "NPR",
+    "nymag.com" -> "New York magazine",
     "odnoklassniki.ru" -> "Odnoklassniki",
     "orbitz.com" -> "Orbitz",
     "outbrain.com" -> "Outbrain",
@@ -186,6 +190,8 @@ object DomainToNameMapper {
     "reddit.com" -> "reddit",
     "redtube.com" -> "RedTube",
     "safeway.com" -> "Safeway",
+    "salon.com" -> "Salon",
+    "scientificamerican.com" -> "Scientific American",
     "screencast.com" -> "Screencast",
     "scribd.com" -> "Scribd",
     "silo.co" -> "Silo",
@@ -210,6 +216,7 @@ object DomainToNameMapper {
     "techcrunch.com" -> "TechCrunch",
     "ted.com" -> "TED",
     "qq.com" -> "Tencent QQ",
+    "qz.com" -> "Quartz",
     "theatlantic.com" -> "The Atlantic",
     "thedailyshow.cc.com" -> "The Daily Show",
     "telegraph.co.uk" -> "The Daily Telegraph",
@@ -225,6 +232,7 @@ object DomainToNameMapper {
     "wsj.com" -> "The Wall Street Journal",
     "themarker.com" -> "TheMarker",
     "tmall.com" -> "Tmall",
+    "time.com" -> "Time",
     "torrentz.eu" -> "Torrentz",
     "travelocity.com" -> "Travelocity",
     "trello.com" -> "Trello",
@@ -232,7 +240,6 @@ object DomainToNameMapper {
     "tumblr.com" -> "Tumblr",
     "twistedsifter.com" -> "TwistedSifter",
     "twitter.com" -> "Twitter",
-    "twitter.com/" -> "Twitter",
     "ubiome.com" -> "uBiome",
     "ubuntu.com" -> "Unbuntu",
     "uol.com.br" -> "Universo Online",
@@ -246,6 +253,7 @@ object DomainToNameMapper {
     "wikia.com" -> "Wikia",
     "wikipedia.org" -> "Wikipedia",
     "live.com" -> "Windows Live",
+    "webmd.com" -> "WebMD",
     "wired.com" -> "Wired",
     "wolframalpha.com" -> "Wolfram Alpha",
     "wordpress.com" -> "WordPress",
