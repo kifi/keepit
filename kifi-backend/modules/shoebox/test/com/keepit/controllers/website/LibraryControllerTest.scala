@@ -723,7 +723,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
         val inputJson1 = Json.obj(
           "invites" -> Seq(
-            Json.obj("type" -> "user", "id" -> user2.externalId, "access" -> LibraryAccess.READ_ONLY),
+            Json.obj("type" -> "user", "id" -> user2.externalId, "access" -> LibraryAccess.READ_WRITE),
             Json.obj("type" -> "user", "id" -> user3.externalId, "access" -> LibraryAccess.READ_ONLY),
             Json.obj("type" -> "email", "id" -> "squirtle@gmail.com", "access" -> LibraryAccess.READ_ONLY))
         )
@@ -735,7 +735,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         val expected1 = Json.parse(
           s"""
             |[
-            | {"user":"${user2.externalId}","access":"${LibraryAccess.READ_ONLY.value}"},
+            | {"user":"${user2.externalId}","access":"${LibraryAccess.READ_WRITE.value}"},
             | {"user":"${user3.externalId}","access":"${LibraryAccess.READ_ONLY.value}"},
             | {"email":"squirtle@gmail.com","access":"${LibraryAccess.READ_ONLY.value}"}
             |]
