@@ -45,7 +45,7 @@ class ExtLibraryController @Inject() (
 
   def getLibraries() = UserAction { request =>
     val datas = libraryCommander.getLibrariesUserCanKeepTo(request.userId) map {
-      case (lib, hasCollaborators) =>
+      case (lib, hasCollaborators, subscribedToUpdates) =>
         val owner = db.readOnlyMaster { implicit s => basicUserRepo.load(lib.ownerId) }
         LibraryData(
           id = Library.publicId(lib.id.get),
@@ -53,7 +53,8 @@ class ExtLibraryController @Inject() (
           color = lib.color,
           visibility = lib.visibility,
           path = Library.formatLibraryPath(owner.username, lib.slug),
-          hasCollaborators = hasCollaborators
+          hasCollaborators = hasCollaborators,
+          subscribedToUpdates = subscribedToUpdates
         )
     }
     Ok(Json.obj("libraries" -> datas))
@@ -75,7 +76,8 @@ class ExtLibraryController @Inject() (
           color = lib.color,
           visibility = lib.visibility,
           path = Library.formatLibraryPath(request.user.username, lib.slug),
-          hasCollaborators = false)))
+          hasCollaborators = false,
+          subscribedToUpdates = false)))
     }
   }
 
@@ -84,7 +86,7 @@ class ExtLibraryController @Inject() (
       libraryCommander.getLibraryWithOwnerAndCounts(libraryId, request.userId) match {
         case Left(fail) =>
           Status(fail.status)(Json.obj("error" -> fail.message))
-        case Right((library, owner, followerCount, following)) =>
+        case Right((library, owner, followerCount, following, subscribedToUpdates)) =>
           val imageOpt = libraryImageCommander.getBestImageForLibrary(libraryId, ExtLibraryController.defaultImageSize)
           Ok(Json.obj(
             "name" -> library.name,
@@ -95,7 +97,8 @@ class ExtLibraryController @Inject() (
             "owner" -> owner,
             "keeps" -> library.keepCount,
             "followers" -> followerCount,
-            "following" -> following))
+            "following" -> following,
+            "subscribedToUpdates" -> subscribedToUpdates))
       }
     }
   }
@@ -127,6 +130,14 @@ class ExtLibraryController @Inject() (
         case Left(fail) => Status(fail.status)(Json.obj("error" -> fail.message))
         case Right(_) => NoContent
       }
+    }
+  }
+
+  def setSubscribedToUpdates(pubId: PublicId[Library], newSubscripedToUpdate: Boolean) = UserAction { request =>
+    val libraryId = Library.decodePublicId(pubId).get
+    libraryCommander.updatedLibraryUpdateSubscription(request.userId, libraryId, newSubscripedToUpdate) match {
+      case Right(mem) => Ok
+      case Left(fail) => Status(fail.status)(Json.obj("error" -> fail.message))
     }
   }
 

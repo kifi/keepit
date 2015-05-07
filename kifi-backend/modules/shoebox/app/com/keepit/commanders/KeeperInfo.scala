@@ -109,7 +109,8 @@ case class LibraryData(
   color: Option[LibraryColor],
   visibility: LibraryVisibility,
   path: String,
-  hasCollaborators: Boolean)
+  hasCollaborators: Boolean,
+  subscribedToUpdates: Boolean)
 object LibraryData {
   implicit val writes: Writes[LibraryData] = (
     (__ \ 'id).write[PublicId[Library]] and
@@ -117,6 +118,7 @@ object LibraryData {
     (__ \ 'color).writeNullable[LibraryColor] and
     (__ \ 'visibility).write[LibraryVisibility] and
     (__ \ 'path).write[String] and
-    (__ \ 'hasCollaborators).write[Boolean]
+    (__ \ 'hasCollaborators).write[Boolean] and
+    (__ \ 'subscribedToUpdates).write[Boolean]
   )(unlift(LibraryData.unapply))
 }
