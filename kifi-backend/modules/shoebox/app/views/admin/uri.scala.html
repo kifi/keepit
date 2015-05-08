@@ -1,4 +1,4 @@
-@(uri: com.keepit.model.NormalizedURI, articleInfoSet: Set[com.keepit.rover.model.ArticleInfo])(implicit request: com.keepit.common.controller.UserRequest[_])
+@(uri: com.keepit.model.NormalizedURI, articleInfos: Set[com.keepit.rover.model.ArticleInfo], aggregateContent: com.keepit.rover.article.content.ArticleContentExtractor)(implicit request: com.keepit.common.controller.UserRequest[_])
 
 @admin(uri.title.getOrElse("Title Not Found")) {
 
@@ -10,7 +10,31 @@
     </tr>
 
     <tr>
+        <th>External Id</th><td>@uri.externalId</a></td>
+    </tr>
+
+    <tr>
         <th>State</th><td>@uri.state</a></td>
+    </tr>
+
+    <tr>
+        <th>Created At</th><td>@uri.createdAt</a></td>
+    </tr>
+
+    <tr>
+        <th>Updated At</th><td>@uri.updatedAt</a></td>
+    </tr>
+
+    <tr>
+        <th>Normalization</th><td>@uri.normalization</a></td>
+    </tr>
+
+    <tr>
+        <th>Redirect</th><td>@uri.redirect</a></td>
+    </tr>
+
+    <tr>
+        <th>Redirect Time</th><td>@uri.redirectTime</a></td>
     </tr>
 
     <tr>
@@ -21,15 +45,55 @@
             <form class="form-inline" action="@com.keepit.controllers.admin.routes.UrlController.flagAsAdult(uri.id.get)" method = "POST"><button type="submit" class="btn">Flag as adult</button></form>
             }</td>
     </tr>
-    @for(articleInfo <- articleInfoSet) {
+
+    <tr>
+        <th>Aggregate Content</th>
+    </tr>
+
+    <tr>
+        <th>Title</th><td>@aggregateContent.title.getOrElse("None")</a></td>
+    </tr>
+
+    <tr>
+        <th>Description</th><td>@aggregateContent.description.getOrElse("None")</a></td>
+    </tr>
+
+    <tr>
+        <th>Keywords</th><td>@aggregateContent.keywords.mkString(",")</a></td>
+    </tr>
+
+    <tr>
+        <th>Authors</th><td>@aggregateContent.authors.mkString(",")</a></td>
+    </tr>
+
+    <tr>
+        <th>Content</th><td>@aggregateContent.content.getOrElse("None")</a></td>
+    </tr>
+
+    <tr>
+        <th>Published</th><td>@aggregateContent.publishedAt.getOrElse("None")</a></td>
+    </tr>
+
+    <tr>
+        <th>Content Type</th><td>@aggregateContent.contentType.getOrElse("None")</a></td>
+    </tr>
+
+
+    @for(articleInfo <- articleInfos) {
         <tr>
-            <th>Article Kind</th><td>articleInfo.kind</td>
+            <th>Article Kind</th><td>@articleInfo.kind</td>
         </tr>
         <tr>
-            <th>Best Version</th><td>articleInfo.bestVersion.getOrElse("None")</td>
+            <th>Best Version</th><td>@articleInfo.bestVersion.getOrElse("None")</td>
         </tr>
         <tr>
-            <th>Latest Version</th><td>articleInfo.latestVersion.getOrElse("None")</td>
+            <th>Latest Version</th><td>@articleInfo.latestVersion.getOrElse("None")</td>
+        </tr>
+        <tr>
+            @*
+            <th href="@com.keepit.controllers.admin.routes.UrlController.getArticle(uri.id.get, articleInfo.articlekind, articleInfo.bestVersion.getOrElse(articleInfo.latestVersion).get)">Best Version Content</th>
+            *@
+            <th href="@com.keepit.controllers.admin.routes.UrlController.getArticleByKind(uri.id.get, articleInfo.articleKind)">Best Version Content</th>
         </tr>
     }
     </table>
