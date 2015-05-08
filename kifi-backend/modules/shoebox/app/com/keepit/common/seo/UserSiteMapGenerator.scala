@@ -82,11 +82,10 @@ class UserSiteMapGenerator @Inject() (airbrake: AirbrakeNotifier,
         } filter { user =>
           user.state == UserStates.ACTIVE
         } filter { user =>
-          val countLibraries = db.readOnlyMaster { implicit s =>
-            libraryMembershipRepo.countNonTrivialLibrariesWithUserIdAndAccess(user.id.get, LibraryAccess.OWNER, 2) +
-              libraryMembershipRepo.countNonTrivialLibrariesWithUserIdAndAccess(user.id.get, LibraryAccess.READ_ONLY, 3)
+          db.readOnlyMaster { implicit s =>
+            libraryMembershipRepo.countNonTrivialLibrariesWithUserIdAndAccess(user.id.get, LibraryAccess.OWNER, 2) > 1 ||
+              libraryMembershipRepo.countNonTrivialLibrariesWithUserIdAndAccess(user.id.get, LibraryAccess.READ_ONLY, 3) > 3
           }
-          countLibraries > 1
         }
         usersWithLibraries foreach { user =>
           xml.append(s"""<url>
