@@ -10,31 +10,31 @@
     </tr>
 
     <tr>
-        <th>External Id</th><td>@uri.externalId</a></td>
+        <th>External Id</th><td>@uri.externalId</td>
     </tr>
 
     <tr>
-        <th>State</th><td>@uri.state</a></td>
+        <th>State</th><td>@uri.state</td>
     </tr>
 
     <tr>
-        <th>Created At</th><td>@uri.createdAt</a></td>
+        <th>Created At</th><td>@adminHelper.dateTimeDisplay(uri.createdAt)</td>
     </tr>
 
     <tr>
-        <th>Updated At</th><td>@uri.updatedAt</a></td>
+        <th>Updated At</th><td>@adminHelper.dateTimeDisplay(uri.updatedAt)</td>
     </tr>
 
     <tr>
-        <th>Normalization</th><td>@uri.normalization</a></td>
+        <th>Normalization</th><td>@uri.normalization</td>
     </tr>
 
     <tr>
-        <th>Redirect</th><td>@uri.redirect</a></td>
+        <th>Redirect</th><td>@uri.redirect.getOrElse("")</td>
     </tr>
 
     <tr>
-        <th>Redirect Time</th><td>@uri.redirectTime</a></td>
+        <th>Redirect Time</th><td>@uri.redirectTime.getOrElse("")</td>
     </tr>
 
     <tr>
@@ -47,35 +47,31 @@
     </tr>
 
     <tr>
-        <th>Aggregate Content</th>
+        <th>Aggregate Content</th><td></td>
     </tr>
 
     <tr>
-        <th>Title</th><td>@aggregateContent.title.getOrElse("None")</a></td>
+        <th>Title</th><td>@aggregateContent.title.getOrElse("None")</td>
     </tr>
 
     <tr>
-        <th>Description</th><td>@aggregateContent.description.getOrElse("None")</a></td>
+        <th>Description</th><td>@aggregateContent.description.getOrElse("None")</td>
     </tr>
 
     <tr>
-        <th>Keywords</th><td>@aggregateContent.keywords.mkString(",")</a></td>
+        <th>Keywords</th><td>@aggregateContent.keywords.mkString(", ")</td>
     </tr>
 
     <tr>
-        <th>Authors</th><td>@aggregateContent.authors.mkString(",")</a></td>
+        <th>Authors</th><td>@aggregateContent.authors.mkString(", ")</td>
     </tr>
 
     <tr>
-        <th>Content</th><td>@aggregateContent.content.getOrElse("None")</a></td>
+        <th>Published</th><td>@aggregateContent.publishedAt.getOrElse("")</td>
     </tr>
 
     <tr>
-        <th>Published</th><td>@aggregateContent.publishedAt.getOrElse("None")</a></td>
-    </tr>
-
-    <tr>
-        <th>Content Type</th><td>@aggregateContent.contentType.getOrElse("None")</a></td>
+        <th>Content Type</th><td>@aggregateContent.contentType.getOrElse("")</td>
     </tr>
 
 
@@ -91,9 +87,9 @@
         </tr>
         <tr>
             @*
-            <th href="@com.keepit.controllers.admin.routes.UrlController.getArticle(uri.id.get, articleInfo.articlekind, articleInfo.bestVersion.getOrElse(articleInfo.latestVersion).get)">Best Version Content</th>
+            <th>Content</th><td><a href="@com.keepit.controllers.admin.routes.UrlController.getArticle(uri.id.get, articleInfo.articlekind, articleInfo.bestVersion.getOrElse(articleInfo.latestVersion).get)">Best Content</a></td>
             *@
-            <th href="@com.keepit.controllers.admin.routes.UrlController.getArticleByKind(uri.id.get, articleInfo.articleKind)">Best Version Content</th>
+            <th>Content</th><td><a href="@com.keepit.controllers.admin.routes.UrlController.getArticleByKind(uri.id.get, articleInfo.articleKind)">Best</a></td>
         </tr>
     }
     </table>
