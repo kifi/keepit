@@ -91,9 +91,9 @@
         </tr>
         <tr>
             @*
-            <th href="@com.keepit.controllers.admin.routes.UrlController.getArticle(uri.id.get, articleInfo.kind, articleInfo.bestVersion.getOrElse(articleInfo.latestVersion).get)">Best Version Content</th>
+            <th href="@com.keepit.controllers.admin.routes.UrlController.getArticle(uri.id.get, articleInfo.articlekind, articleInfo.bestVersion.getOrElse(articleInfo.latestVersion).get)">Best Version Content</th>
             *@
-            <th href="@com.keepit.controllers.admin.routes.UrlController.getArticleByKind(uri.id.get, articleInfo.kind)">Best Version Content</th>
+            <th href="@com.keepit.controllers.admin.routes.UrlController.getArticleByKind(uri.id.get, articleInfo.articleKind)">Best Version Content</th>
         </tr>
     }
     </table>
