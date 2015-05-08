@@ -24,41 +24,16 @@ angular.module('kifi')
         //
         // Internal data.
         //
-        var lastSizedAt = $window.innerWidth;
+        var winWidth = $window.innerWidth;
         var twoColMinWidth = 720;  // also in stylesheet
-
-        scope.$watchCollection(function () {
-          return scope.keeps;
-        }, function (keeps) {
-          scope.availableKeeps = _.reject(keeps, {unkept: true});
-        });
 
 
         //
         // Internal methods.
         //
-        function sizeKeeps() {
-          scope.$broadcast('resizeImage');
 
-          $timeout(function () {
-            scope.keeps.forEach(function (keep) {
-              if (keep.calcSizeCard) {
-                keep.calcSizeCard(keep);
-              }
-            });
-            scope.keeps.forEach(function (keep) {
-              if (keep.sizeCard) {
-                keep.sizeCard();
-              }
-            });
-          });
-        }
-
-        function resizeWindowListener() {
-          if (Math.abs($window.innerWidth - lastSizedAt) > 250) {
-            lastSizedAt = $window.innerWidth;
-            sizeKeeps();
-          }
+        function onWinResize() {
+          winWidth = $window.innerWidth;
         }
 
 
@@ -66,6 +41,7 @@ angular.module('kifi')
         // Scope data.
         //
         scope.me = profileService.me;
+        scope.availableKeeps = [];
         scope.scrollDistance = '100%';
         scope.selection = new KeepSelection();
 
@@ -95,7 +71,7 @@ angular.module('kifi')
         };
 
         scope.isScrollDisabled = function () {
-          return scope.scrollDisabled || lastSizedAt < twoColMinWidth;
+          return scope.scrollDisabled || winWidth < twoColMinWidth;
         };
 
         scope.unkeep = function (keeps) {
@@ -183,17 +159,21 @@ angular.module('kifi')
         // Watches and listeners.
         //
 
+        scope.$watchCollection(function () {
+          return scope.keeps;
+        }, function (keeps) {
+          scope.availableKeeps = _.reject(keeps, {unkept: true});
+        });
+
         scope.$watch('edit.enabled', function (newVal, oldVal) {
           if (oldVal && !newVal) {
             scope.selection.unselectAll();
           }
         });
 
-        var lazyResizeListener = _.debounce(resizeWindowListener, 250);
-        $window.addEventListener('resize', lazyResizeListener);
-
+        $window.addEventListener('resize', onWinResize);
         scope.$on('$destroy', function () {
-          $window.removeEventListener('resize', lazyResizeListener);
+          $window.removeEventListener('resize', onWinResize);
         });
       }
     };

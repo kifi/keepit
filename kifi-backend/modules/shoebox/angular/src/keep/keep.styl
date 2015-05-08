@@ -1,7 +1,8 @@
 keepBorderWidth = 1px
-keepBorderRadius = 10px
+keepBorderRadius = 8px
 keepBorderRadiusEditing = 3px
 keepEditToolsWidth = 28px
+keepRectBorderRadius = 4px
 tagOutlineColor = #bdc4c9
 kifiGreen = #73c583
 
@@ -75,6 +76,16 @@ kifiGreen = #73c583
 .kf-keep
   position: relative
   border-radius: keepBorderRadius
+  padding: 10px 3px
+
+  @media (min-width: 480px)
+    padding: 12px 4px
+
+  @media (min-width: 560px)
+    padding: 15px 5px
+
+  @media (min-width: 720px)
+    padding: 20px
 
   &.detailed
     background-color: #eff2f7
@@ -102,49 +113,161 @@ kifiGreen = #73c583
     .kf-keep-edit-tools
       display: block
 
+keepFooterMarginTop = 16px
+
 .kf-keep-body
-  padding: 0 16px 3px
-
-  @media (min-width: 480px)
-    padding: 0 20px 4px
-
-  @media (min-width: 560px)
-    padding: 0 24px 5px
-
-  @media (min-width: 720px)
-    padding: 0 30px 5px
-
-.kf-keep-contents
-  padding: 20px 0 0
+  border-radius: keepRectBorderRadius
   overflow: hidden
+  box-shadow: 0 1px 2px rgba(0,0,0,.05), inset 0 0 0 1px #eee // dfdfdf
+
+.kf-keep-content
+  padding: 0 20px
+
+  .kf-side-by-side>&
+    overflow: hidden
+
+.kf-keep-image
+  display: block
+  height: 280px
+  background-size: cover
+  background-position: center
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.05)
+
+  .kf-side-by-side>&
+    float: left
+    margin: 16px 0 keepFooterMarginTop 20px
+
+  &.kf-bottom-clip
+    background-position: center top
+
+.kf-keep-video
+  position: relative
+
+  &::before
+    content: ''
+    display: block
+    padding-top: 56.25% // enforcing 16:9 ratio, 496px x 279px at time of writing
+
+.kf-youtube
+  position: absolute
+  top: 0
+  left: 0
+  right: 0
+  bottom: 0
+  cursor: pointer
+  background-color: #000
+
+  &.kf-with-video  // webkit needs this block to hide iframe corners
+    -webkit-transform: translate3d(0)
+    border-radius: (keepRectBorderRadius + 2px) (keepRectBorderRadius + 2px) 0 0
+    overflow: hidden
+
+.kf-youtube-img
+  width: 100%
+  height: 100%
+  background-position: center
+  background-size: cover
+
+.kf-youtube-play
+  width = 70px
+  height = 50px
+  position: absolute
+  top: 'calc(50% - %s)' % (height / 2)
+  left: 'calc(50% - %s)' % (width / 2)
+  width: width
+  height: height
+  background: url(/img/youtube-play-red.png)
+  background-size: 70px 50px
+  background-repeat: no-repeat
+  opacity: 0.8
+
+  &:hover
+    opacity: 1.0
+
+.kf-keep-footer
+  display: table
+  width: 100%
+  margin-top: keepFooterMarginTop
+  border-top: 1px solid #eee // dfdfdf
+  line-height: 16px
+  font-size: 14px
+  min-height: 42px
+
+.kf-keep-actions
+  display: table-cell
+  vertical-align: middle
+  text-align: left
+  padding-left: 20px
+
+  &>button
+    sidePad = 8px
+    border: 0
+    padding: 6px sidePad
+    background: none
+    border-radius: 4px
+    color: #56b263
+    cursor: pointer
+
+    &:first-child
+      margin-left: -(sidePad)
+
+    &:hover
+      box-shadow: inset 0 0 0 1px #f6f6f6
+
+      &:active
+        background-color: #fcfcfc
+
+.kf-keep-keep-btn
+  &.state-kept-private
+    color: libraryRed
+
+  &>.svg-hearts-green
+    display: inline-block
+    vertical-align: top
+    width: 18px
+    height: 18px
+    background-repeat: no-repeat
+    background-position: center
+    background-size: contain
+    margin-right: 3px
+    transform: translate(0, 1px)
+
+  &>.svg-small-lock
+    display: inline-block
+    vertical-align: top
+    width: 10px
+    height: 12px
+    background-repeat: no-repeat
+    background-position: center
+    background-size: contain
+    margin-right: 3px
+
+.kf-keep-share-btn
+  &>.svg-share-arrow-green
+    display: inline-block
+    vertical-align: top
+    width: 18px
+    height: 18px
+    background-repeat: no-repeat
+    background-position: center
+    background-size: contain
+    margin-right: 1px
 
 .kf-keep-who
-  display: inline-block
-  margin: 8px 0
-  padding: 6px 35px 5px 0
-  background-size: 9px 10px
-  background-repeat: no-repeat
-  background-position: 0 0
-
-  @media (max-width: 479px)
-    margin: 6px 0
-
-.kf-keep-who-text
-  font-size: 12px
-  color: #99a3b3
-
-  @media (max-width: 479px)
-    font-size: 11px
-    font-smoothing: antialiased
+  display: table-cell
+  vertical-align: middle
+  text-align: right
+  padding-right: 20px
 
 .kf-keep-who-pic-box
   display: inline-block
-  margin: 4px 4px 0 0
+  vertical-align: middle
   height: 23px
   border-radius: 50%
+  margin-left: 4px
 
   @media (max-width: 479px)
-    margin: 2px 1px 0 0
+    margin-left: 1px
     height: 18px
 
 .kf-keep-who-pic
@@ -160,61 +283,24 @@ kifiGreen = #73c583
     width: 18px
     height: 18px
 
-.kf-keep-footer
-  background-color: #f9f9f9
-  font-size: 12px
-  font-weight: 200
-  color: #5983bd
-  padding: 0 20px
-  line-height: 37px
-  border-bottom-left-radius: inherit
-  border-bottom-right-radius: inherit
+  &::after
+    content: ''
+    position: absolute
+    top: 0
+    left: 0
+    right: 0
+    bottom: 0
+    border-radius: 50%
+    box-shadow: inset 0 0 1px rgba(0,0,0,.15)
 
-  a:active
-    color: #92add3
+.kf-keep-who-text
+  color: #888
+  font-smoothing: antialiased
+  vertical-align: middle
+  margin-left: 2px
 
-.kf-keep-footer-buttons-wrapper
-  padding: 7px 5px
-
-  .kf-button
-    float: right
-    height: 30px
-    line-height: 30px
-    padding: 0 10px 0 12px
-    margin-right: 10px
-
-  .kf-button-icon
-    width: 16px
-
-.kf-keep-master-btn
-  &.state-kept-public
-    color: #73c885
-
-  &.state-kept-private
-    color: libraryRed
-
-  .kf-button-icon
-    margin-right: 3px
-
-  .svg-small-lock
-    width: 10px
-    margin-top: -1px
-    margin-left: -2px
-
-.kf-keep-footer-link a
-  color: linkBlueColor
-  cursor: pointer
-
-  &:hover
-    text-decoration: underline
-
-  &:active
-    text-decoration: underline
-
-.kf-keep-footer-link + .kf-keep-footer-link:before
-    content: "·"
-    color: textGreyColor
-    padding: 0 6px 0 5px
+  @media (max-width: 479px)
+    font-smoothing: antialiased
 
 .kf-keep-edit-tools
   display: none
@@ -232,135 +318,43 @@ kifiGreen = #73c583
   float: left
   margin: 20px 0 20px 5px
 
-.kf-keep-big-image-container
-  width: 100%
-
-.kf-keep-content-line
-  width: 100%
-  position: relative
-
-.kf-keep-big-image
-  margin: 4px 0 11px
-
-.kf-keep-big-image
-  display: block
-  max-width: 100%
-  max-height: 400px
-  margin: 0 auto
-
-.kf-keep-small-image
-  width: 150px
-  vertical-align: top
-  float: right
-  padding-top: 5px
-  padding-left: 20px
-  min-width: 90px
-
-  @media screen and (min-width: 1150px) and (max-width: 1250px)
-    width: 150px
-
-  @media screen and (min-width: 1024px) and (max-width: 1149px)
-    width: 100px
-
-  @media screen and (min-width: 800px) and (max-width: 950px)
-    width: 150px
-
-  @media screen and (max-width: 319px)
-    display: none
-
-.kf-keep-image
-  width: 100%
-
-.kf-keep-small-image + .kf-keep-info
-  padding-left: 20px
-
-.kf-keep-info-wrap
-  position: relative
-  display: block
-  overflow: hidden
-
 .kf-keep-title
-  margin-bottom: 12px
-  font: 900 18px/1.12 Lato,sans-serif
+  margin: 12px 0
+  font: bold 20px/24px Lato,sans-serif
   font-smoothing: antialiased
   word-break: break-word
 
-  @media (min-width: 480px)
-    font-size: 21px
-
-  @media (min-width: 560px)
-    font-size: 24px
-
-  @media (min-width: 720px)
-    font-size: 27px
+  @media (max-width: 479px)
+    line-height: 22px
+    font-size: 18px
 
 .kf-keep-title-link[href]
   color: textBlackColor
+  outline-color: #ddd
 
-.kf-keep-youtube-content
-  width: 100%
-
-.kf-youtube
-  height: 360px
-  margin-bottom: 5px
-  cursor: pointer
-  background-color: #000
-
-.kf-youtube-img
-  width: 100%
-  height: 100%
-  background-position: center center
-  background-size: cover
-
-.kf-youtube-play
-  height: 50px
-  width: 70px
-  background: url(/img/youtube-play-red.png)
-  background-size: 70px 50px;
-  background-repeat: no-repeat;
-  position: relative
-  top: calc(-50% - 25px)
-  left: calc(50% - 35px)
-  opacity: 0.8
-
-  &:hover
-    opacity: 1.0
-
-.kf-keep-loading
-  padding-right: 5px
-
-.kf-keep-subtitle
-  margin-bottom: 14px
-  line-height: 11px
-  color: #909aa8
-  vertical-align: middle
-  font-smoothing: antialiased
+.kf-keep-meta
+  padding-top: 16px
+  height: 1.2em
+  line-height: 1.2em
   font-size: 12px
+  font-smoothing: antialiased
+  color: #909aa8
+  overflow: hidden
 
   @media (min-width: 480px)
-    font-size: 13px
+    font-size: 14px
 
-.kf-keep-url
-  display: inline-block
-  vertical-align: text-bottom
-  height: 13px
-  font-weight: 500
-  long-text()
-  max-width: calc(100% - 60px)
-  color: #74C485
+    .kf-side-by-side &
+      font-size: 12px
 
-  @media (min-width: 480px)
-    max-width: calc(100% - 100px)
+.kf-keep-source
+  white-space: nowrap
+  color: #56b263
 
 .kf-keep-twitter-attr
-  margin-left: 15px
-
   a
     color: #909aa8
     outline: none
-
-  @media (max-width: 479px)
-    margin-left: 8px
 
 .kf-keep-twitter-logo
   display: inline-block
@@ -368,29 +362,39 @@ kifiGreen = #73c583
   height: 14px
   margin-right: 5px
   background-size: cover
-  vertical-align: -3px
+  vertical-align: text-bottom
 
   @media (max-width: 479px)
     width: 14px
     height: 12px
 
 .kf-keep-time
+  white-space: nowrap  // hides entire element (including bullet) if it does not fit
+
   @media (max-width: 479px)
     display: none
 
 .kf-keep-length
+  white-space: nowrap  // hides entire element (including bullet) if it does not fit
+
+  .sprite-clock
+    margin-right: 2px
+
+    .kf-side-by-side &
+      transform: translate(0, -0.6px)
+
   @media (max-width: 479px)
     font-size: 11px
 
-    .sprite-small-clock
+    .sprite-clock
       display: none
 
+.kf-keep-twitter-attr::before
 .kf-keep-time::before
 .kf-keep-length::before
   content: '\2022'
-  display: inline-block
   vertical-align: 2px
-  padding: 0 8px 0 6px
+  padding: 0 9px 0 6px
   font-size: 7px
 
   @media (max-width: 479px)
@@ -398,23 +402,15 @@ kifiGreen = #73c583
     font-size: 6px
 
 .kf-keep-description
-  font: 12px/1.4 Lato,Helvetica,Arial,sans-serif
+  font: 12px/18px Lato,Helvetica,Arial,sans-serif
   font-smoothing: antialiased
   color: textBlackColor
   word-break: break-word
 
   @media (min-width: 480px)
+    line-height: 19px
     font-size: 13px
 
   @media (min-width: 560px)
+    line-height: 20px
     font-size: 14px
-
-  @media (min-width: 720px)
-    font-size: 16px
-
-.kf-keep-description-sizer
-  position: absolute
-  visibility: hidden
-  z-index: -1
-  top: -999px
-  left: -999px

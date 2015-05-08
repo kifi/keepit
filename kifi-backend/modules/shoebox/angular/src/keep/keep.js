@@ -3,8 +3,77 @@
 angular.module('kifi')
 
 .directive('kfKeepCard', [
-  '$rootScope', 'installService', 'libraryService', 'modalService', 'util', '$analytics',
-  function ($rootScope, installService, libraryService, modalService, util, $analytics) {
+  '$analytics', 'extensionLiaison', 'util', 'installService', 'libraryService',
+  'modalService', 'keepActionService', 'keepDecoratorService', 'undoService',
+  function ($analytics, extensionLiaison, util, installService, libraryService,
+      modalService, keepActionService, keepDecoratorService, undoService) {
+
+    // constants for side-by-side layout image sizing heuristic, based on large screen stylesheet values
+    var cardW = 496;
+    var cardInnerW = cardW - 2 * 20;
+    var gutterW = 20;
+    var titleLineHeight = 24;
+    var descLineHeight = 20;
+    var metaAndOtherHeight = 38;  // meta line plus margins
+    var titleCharsPerMaxWidthLine = 75;
+    var descCharsPerMaxWidthLine = 48;
+    var maxSizedImageW = 0.4 * (cardInnerW - gutterW);
+
+    function calcImageSize(summary, title) {
+      var url = summary.imageUrl;
+      if (url) {
+        var imgNaturalW = summary.imageWidth;
+        var imgNaturalH = summary.imageHeight;
+        var aspectRatio = imgNaturalW / imgNaturalH;
+        if (imgNaturalW >= 0.6 * cardW) {  // full bleed
+          return {
+            url: url,
+            clipBottom: aspectRatio < 0.8,  // align tall images to top instead of center
+            maxDescLines: 3
+          };
+        }
+        if (imgNaturalW >= 50 && imgNaturalH >= 50) {  // sized
+          // +-----------------------------------------------+
+          // |                                               |
+          // |    +---------+    meta #### #### ####         |
+          // |    | \     / |                                |
+          // |    |  \   /  |    title #### ### #######      |
+          // |    |   \ /   |                                |
+          // |    |    X    |    description #### ######     |
+          // |    |   / \   |    #### ## ##### ####          |
+          // |    |  /   \  |    ························    |
+          // |    | /     \ |    : penalized empty area :    |
+          // |    +---------+    ························    |
+          // |                                               |
+          // +-----------------------------------------------+
+          var descWideLines = (summary.description || '').length / descCharsPerMaxWidthLine;
+          var titleWideLines = title.length / titleCharsPerMaxWidthLine;
+          var image = {url: url, w: 0, h: 0, penalty: Infinity, clipBottom: false};
+          for (var imgW = Math.min(imgNaturalW, maxSizedImageW), imgH = imgW / aspectRatio; imgW >= 60 && imgH >= 40; imgW -= 20, imgH = imgW / aspectRatio) {
+            imgH = Math.min(360, imgH);
+            var contentW = cardInnerW - gutterW - imgW;
+            var titleLines = Math.ceil(titleWideLines * cardInnerW / contentW);
+            var descLines = Math.ceil(descWideLines * cardInnerW / contentW);
+            var contentH = metaAndOtherHeight + titleLineHeight * titleLines + descLineHeight * descLines;
+            if (contentH > imgH) { // jshint ignore:line
+              var fewerDescLines = Math.min(descLines - 2, Math.ceil((contentH - imgH) / descLineHeight));
+              descLines -= fewerDescLines;
+              contentH -= fewerDescLines * descLineHeight;
+            }
+            var penalty = imgH > contentH ? (imgH - contentH) * contentW : (contentH - imgH) * imgW;
+            if (penalty < image.penalty) { // jshint ignore:line
+              image.w = imgW;
+              image.h = imgH;
+              image.penalty = penalty;
+              image.clipBottom = true;
+              image.maxDescLines = descLines;
+            }
+          }
+          return image;
+        }
+      }
+    }
+
     return {
       restrict: 'A',
       scope: {
@@ -19,301 +88,33 @@ angular.module('kifi')
       },
       replace: true,
       templateUrl: 'keep/keepCard.tpl.html',
-      link: function (scope, element) {
-        if (!scope.keep) {
-          return;
-        }
-
-        //
-        // Internal data.
-        //
-        var useBigLayout = false;
-        var strippedSchemeRe = /^https?:\/\//;
-        var domainTrailingSlashRe = /^([^\/]*)\/$/;
+      link: function (scope) {
 
         //
         // Scope data.
         //
-        scope.userLoggedIn = $rootScope.userLoggedIn;
-        scope.cardType = '';
-        scope.youtubeId = '';
+
+        (function (keep) {
+          scope.youtubeId = util.getYoutubeIdFromUrl(keep.url);
+          scope.keepSource = keep.siteName || keep.url.replace(/^(?:[a-z]*:\/\/)?(?:www\.)?([^\/]*).*$/, '$1');
+          scope.displayTitle = keep.title || keep.summary && keep.summary.title || util.formatTitleFromUrl(keep.url);
+          scope.image = scope.youtubeId ? null : calcImageSize(keep.summary, scope.displayTitle);
+        }(scope.keep));
 
         //
         // Internal methods.
         //
-        function init() {
-          updateSiteDescHtml(scope.keep);
-          setCardType(scope.keep.url);
-        }
 
-        function bolded(text, start, len) {
-          return text.substr(0, start) + '<b>' + text.substr(start, len) + '</b>' + text.substr(start + len);
-        }
-
-        function boldSearchTerms(text, matches) {
-          for (var i = matches && matches.length; i--;) {
-            var match = matches[i];
-            var start = match[0];
-            if (start >= 0) {
-              text = bolded(text, start, match[1]);
-            }
-          }
-          return text;
-        }
-
-        function setCardType(url) {
-          scope.youtubeId = util.getYoutubeIdFromUrl(url);
-          if (scope.youtubeId) {
-            scope.cardType = 'youtube';
-          } else if (scope.keep.hasBigImage) {
-            scope.cardType = 'big';
-          } else {
-            scope.cardType = 'small';
-          }
-        }
-
-        function formatDesc(url, matches) {
-          if (url) {
-            var strippedSchemeLen = (url.match(strippedSchemeRe) || [''])[0].length;
-            url = url.substr(strippedSchemeLen).replace(domainTrailingSlashRe, '$1');
-            for (var i = matches && matches.length; i--;) {
-              matches[i][0] -= strippedSchemeLen;
-            }
-            return boldSearchTerms(url, matches);
-          }
-        }
-
-        function updateSiteDescHtml(keep) {
-          keep.descHtml = formatDesc(keep.siteName || keep.url);
-        }
-
-        function sizeImage(keep) {
-          if (!keep || !keep.summary || !keep.summary.description) {
-            return;
-          }
-
-          var $sizer = angular.element('.kf-keep-description-sizer');
-          var img = { w: keep.summary.imageWidth, h: keep.summary.imageHeight };
-          var cardWidth = element.find('.kf-keep-contents')[0].offsetWidth;
-          var optimalWidth = Math.floor(cardWidth * 0.50); // ideal image size is 45% of card
-          var textHeight = parseInt($sizer.css('line-height'), 10);
-
-          $sizer[0].style.width = '';
-
-          function trimDesc(desc) {
-            $sizer.text(desc);
-            var singleLineWidthPx = $sizer[0].offsetWidth * ($sizer[0].offsetHeight / textHeight);
-
-            if (desc.length > 150) {
-              // If description is quite long, trim it. We're drawing it, because for non-latin
-              // languages, character length is very misleading regarding how long the text
-              // will be.
-              if (singleLineWidthPx > 5000) { // Roughly 8 lines at max text width
-                var showRatio = 5000 / singleLineWidthPx;
-                return desc.substr(0, Math.floor(showRatio * desc.length));
-              }
-            } else {
-              if (singleLineWidthPx < cardWidth && img.w > 0.75 * cardWidth) {
-                // If the text draws as one line, we may be interested in using the big image layout.
-                return false;
-              }
-            }
-            return desc;
-          }
-
-          if (!keep.summary.trimmedDesc) {
-            var trimmed = trimDesc(keep.summary.description);
-            if (trimmed === false) {
-              if (scope.cardType === 'small') {
-                scope.cardType = 'big';
-              }
-              useBigLayout = true;
-              return;
-            }
-            keep.summary.trimmedDesc = trimmed;
-          }
-
-          $sizer.text(keep.summary.trimmedDesc);
-
-          function calcHeightDelta(guessWidth) {
-            function tryWidth(width) {
-              $sizer[0].style.width = width + 'px';
-              //$sizer.width(width);
-              var height = $sizer[0].offsetHeight;
-              return height;
-            }
-            var imageWidth = cardWidth - guessWidth;
-            var imageHeight = imageWidth / (img.w / img.h);
-            var textHeight = tryWidth(guessWidth);
-            var delta = textHeight - imageHeight;
-            var score = Math.abs(delta) + 0.5 * Math.abs(optimalWidth - imageWidth); // 30% penalty for distance away from optimal width
-
-            if (imageHeight > img.h) {
-              score += (imageHeight - img.h);
-            }
-            if (imageWidth > img.w) {
-              score += (imageWidth - img.w);
-            }
-
-            return { guess: guessWidth, delta: delta, score: score, ht: Math.ceil(textHeight), hi: imageHeight};
-          }
-
-          var i = 0;
-          var low = 200, high = cardWidth - 140; // text must be minimum 200px wide, max total-80
-          var guess = (high - low) / 2 + low;
-          var res = calcHeightDelta(guess);
-          var bestRes = res;
-
-          while (low + i < high && bestRes.score > 20) {
-            res = calcHeightDelta(low + i);
-            if (bestRes.score > res.score) {
-              bestRes = res;
-            }
-            i += 40;
-          }
-
-          var asideWidthPercent = Math.floor(((cardWidth - bestRes.guess) / cardWidth) * 100);
-          var linesToShow = Math.ceil((bestRes.hi / textHeight)); // line height
-          scope.linesToShow = linesToShow;
-
-          keep.sizeCard = function () {
-            var $content = element.find('.kf-keep-content-line');
-            //$content.height(Math.floor(bestRes.hi) + 4); // 4px padding on image
-            $content.find('.kf-keep-small-image').width(asideWidthPercent + '%');
-            $content.find('.kf-keep-image').on('error', function () {
-              $content.find('.kf-keep-small-image').hide();
-            });
-          };
-        }
-
-        function maybeSizeImage(keep) {
-          if (keep && keep.summary) {
-            var hasImage = keep.summary.imageWidth > 110 && keep.summary.imageHeight > 110;
-            if (hasImage && keep.summary.description && keep.hasSmallImage) {
-              keep.sizeCard = null;
-              keep.calcSizeCard = sizeImage;
-            }
-          }
+        function setHowKept() {
+          scope.howKept = scope.keep.keeps.length ?
+            _.all(scope.keep.keeps, {visibility: 'secret'}) ?
+            'private' : 'public' : null;
         }
 
         //
         // Scope methods.
         //
 
-        scope.showSmallImage = function (keep) {
-          var hasImage = keep.summary.imageWidth > 110 && keep.summary.imageHeight > 110;
-          return hasImage && keep.hasSmallImage && !useBigLayout && scope.cardType === 'small';
-        };
-
-        scope.showBigImage = function (keep) {
-          var bigImageReady = keep.hasBigImage || (keep.summary && useBigLayout);
-          return bigImageReady && scope.cardType === 'big';
-        };
-
-        scope.onCheck = function (e, keep) {
-          // needed to prevent previewing
-          e.stopPropagation();
-          return scope.toggleSelect(keep);
-        };
-
-        scope.triggerInstall = function () {
-          installService.triggerInstall(function () {
-            modalService.open({
-              template: 'common/modal/installExtensionErrorModal.tpl.html'
-            });
-          });
-        };
-
-        scope.showInstallExtensionModal = function () {
-          modalService.open({
-            template: 'common/modal/installExtensionModal.tpl.html',
-            scope: scope
-          });
-        };
-
-        scope.trackTweet = function () {
-          $analytics.eventTrack('user_clicked_page', {type: 'library', action: 'clickedViewOriginalTweetURL'});
-        };
-
-        //
-        // Watches and listeners.
-        //
-        scope.$watch('keep.url', function () {
-          updateSiteDescHtml(scope.keep);
-        });
-
-        scope.$on('resizeImage', function () {
-          maybeSizeImage(scope.keep);
-        });
-
-        scope.$watch('keep', function () {
-          if (scope.keep.summary) {
-            maybeSizeImage(scope.keep);
-            if (scope.keep.calcSizeCard) {
-              scope.keep.calcSizeCard(scope.keep);
-              scope.keep.calcSizeCard = null; // only want it called once.
-              if (scope.keep.sizeCard) {
-                scope.keep.sizeCard();
-              }
-            }
-          }
-        });
-
-        scope.$watch(function () {
-          return libraryService.getOwnInfos().length;
-        }, function (newVal) {
-          if (newVal) {
-            scope.libraries = _.reject(libraryService.getOwnInfos(), {id: scope.keep.libraryId});
-          }
-        });
-
-
-        //
-        // On link.
-        //
-        init();
-      }
-    };
-  }
-])
-
-.directive('kfKeepMasterButton', [
-  'keepActionService', 'keepDecoratorService', 'libraryService', 'undoService', 'modalService',
-  function (keepActionService, keepDecoratorService, libraryService, undoService, modalService) {
-    return {
-      restrict: 'A',
-      scope: {
-        keep: '=',
-        library: '=',
-        libraries: '='
-      },
-      replace: false,
-      templateUrl: 'keep/keepMasterButton.tpl.html',
-      link: function (scope) {
-        //
-        // Internal methods.
-        //
-        function init() {
-          updateKeepStatus();
-        }
-
-        function updateKeepStatus() {
-          scope.isNotKept = scope.isKeptPublic = scope.isKeptPrivate = false; // reset
-          if (scope.keep.keeps.length === 0) {
-            scope.isNotKept = true;
-          } else {
-            if (_.all(scope.keep.keeps, { visibility: 'secret' })) {
-              scope.isKeptPrivate = true;
-            } else {
-              scope.isKeptPublic = true;
-            }
-          }
-        }
-
-
-        //
-        // Scope methods.
-        //
         scope.onWidgetLibraryClicked = function (clickedLibrary) {
           // Unkeep. TODO: only if unkeep button was clicked
           if (clickedLibrary && scope.keptToLibraryIds.indexOf(clickedLibrary.id) >= 0) {
@@ -378,15 +179,35 @@ angular.module('kifi')
           }
         };
 
+        scope.shareAction = function () {
+          if (installService.hasMinimumVersion('3.0.7')) {
+            extensionLiaison.openDeepLink(scope.keep.url, '/messages:all#compose');
+          } else {
+            modalService.open({
+              template: 'common/modal/installExtensionModal.tpl.html',
+              scope: scope
+            });
+            // installService.triggerInstall(function () {
+            //   modalService.open({
+            //     template: 'common/modal/installExtensionErrorModal.tpl.html'
+            //   });
+            // });
+          }
+        };
+
+        scope.trackTweet = function () {
+          $analytics.eventTrack('user_clicked_page', {type: 'library', action: 'clickedViewOriginalTweetURL'});
+        };
 
         //
         // Watches and listeners.
         //
+
         scope.$watchCollection(function () {
           return _.pluck(scope.keep.keeps, 'visibility');
-        }, updateKeepStatus);
+        }, setHowKept);
 
-        scope.$watch('keep.isMyBookmark', updateKeepStatus);
+        scope.$watch('keep.isMyBookmark', setHowKept);
 
         scope.$watchCollection(function () {
           return _.pluck(scope.keep.keeps, 'libraryId');
@@ -394,32 +215,13 @@ angular.module('kifi')
           scope.keptToLibraryIds = libraryIds;
         });
 
-
-        init();
-      }
-    };
-  }
-])
-
-.directive('kfKeepShareButton', [
-  'extensionLiaison', 'installService',
-  function (extensionLiaison, installService) {
-    return {
-      restrict: 'A',
-      scope: {
-        keep: '=',
-        showInstallExtensionModal: '&'
-      },
-      replace: false,
-      templateUrl: 'keep/keepShareButton.tpl.html',
-      link: function (scope) {
-        scope.shareAction = function () {
-          if (installService.hasMinimumVersion('3.0.7')) {
-            extensionLiaison.openDeepLink(scope.keep.url, '/messages:all#compose');
-          } else {
-            scope.showInstallExtensionModal();
+        scope.$watch(function () {
+          return libraryService.getOwnInfos().length;
+        }, function (newVal) {
+          if (newVal) {
+            scope.libraries = _.reject(libraryService.getOwnInfos(), {id: scope.keep.libraryId});
           }
-        };
+        });
       }
     };
   }

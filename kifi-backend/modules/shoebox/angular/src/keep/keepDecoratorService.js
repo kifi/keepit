@@ -3,14 +3,10 @@
 angular.module('kifi')
 
 .factory('keepDecoratorService', [
-  'util', 'profileService',
-  function (util, profileService) {
+  'profileService',
+  function (profileService) {
 
     function Keep(item, itemType) {
-      if (!item) {
-        return {};
-      }
-
       item.libraries = _(item.libraries).filter(function (lib) {
         return lib[1].id !== profileService.me.id;
       }).map(function (lib) {
@@ -22,38 +18,18 @@ angular.module('kifi')
       _.assign(this, item);
       this.itemType = itemType;
 
-      // Helper functions.
-      function shouldShowSmallImage(summary) {
-        var imageWidthThreshold = 200;
-        return (summary.imageWidth && summary.imageWidth < imageWidthThreshold) || summary.description;
-      }
-
-      function hasSaneAspectRatio(summary) {
-        var aspectRatio = summary.imageWidth && summary.imageHeight && summary.imageWidth / summary.imageHeight;
-        var saneAspectRatio = aspectRatio > 0.5 && aspectRatio < 3;
-        var bigEnough = summary.imageWidth + summary.imageHeight > 200;
-        return bigEnough && saneAspectRatio;
-      }
-
       function getKeepReadTime(summary) {
-        var read_times = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 30, 60];
-
         var wc = summary && summary.wordCount;
         if (wc < 0) {
           return null;
         } else {
           var minutesEstimate = wc / 250;
-          var found = _.find(read_times, function (t) { return minutesEstimate < t; });
-          return found ? found + ' min' : '> 1 h';
+          var n = _.find([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 30, 60], function (t) { return minutesEstimate < t; });
+          return n ? n + ' min' : '1h';
         }
       }
 
       // Add new properties to the keep.
-      this.titleAttr = this.title || this.url;
-      this.titleHtml = this.title || (this.summary && this.summary.title) || util.formatTitleFromUrl(this.url);
-      if (this.summary && hasSaneAspectRatio(this.summary)) {
-        this[shouldShowSmallImage(this.summary) ? 'hasSmallImage' : 'hasBigImage'] = true;
-      }
       this.readTime = getKeepReadTime(this.summary);
     }
 

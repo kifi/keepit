@@ -4,54 +4,52 @@
     <div class="kf-keep-checkbox-icon sprite sprite-checkbox-icon-active" ng-if="isSelected({keep: keep})" ng-click="toggleSelect({keep: keep})"></div>
   </div>
 
-  <div class="kf-keep-body">
-    <div class="kf-keep-contents">
-      <div class="kf-keep-title">
-        <a class="kf-keep-title-link" ng-href="{{keep.url}}" target="_blank" ng-attr-title="{{keep.titleAttr}}" ng-bind-html="keep.titleHtml" ng-click="clickCallback({ 'keep': keep, event: $event })" rel="nofollow" click-action="clickedArticleTitle"></a>
-      </div>
-      <div class="kf-keep-subtitle">
-        <span class="kf-keep-url" ng-attr-title="{{keep.url}}" ng-bind-html="keep.descHtml"></span>
-        <span class="kf-keep-twitter-attr" ng-if="keep.sourceAttribution.twitter.screenName">
-          <a ng-click="trackTweet()" href="https://www.twitter.com/{{keep.sourceAttribution.twitter.screenName}}/status/{{keep.sourceAttribution.twitter.idString}}" target="_blank">
-            <span class="kf-keep-twitter-logo svg-twitter-blue"></span>@{{keep.sourceAttribution.twitter.screenName}}
+  <div class="kf-keep-body" ng-class="::{'kf-side-by-side': image.w}">
+    <div class="kf-keep-video" ng-if="::youtubeId" ng-click="clickCallback({keep: keep, event: $event})">
+      <div kf-youtube video-id="youtubeId"></div>
+    </div>
+    <a class="kf-keep-image" ng-if="::image" ng-class="::{'kf-bottom-clip': image.clipBottom}"
+      ng-style="::{'background-image': 'url(\'' + image.url + '\')', width: image.w ? image.w + 'px' : '', height: image.h ? image.h + 'px' : ''}"
+      ng-href="{{::keep.url}}" target="_blank" rel="nofollow" tabindex="-1"
+      ng-click="clickCallback({keep: keep, event: $event})" click-action="clickedArticleImage">
+    </a>
+    <div class="kf-keep-content">
+      <div class="kf-keep-meta">
+        <span class="kf-keep-source">{{::keepSource}}</span>
+        <span class="kf-keep-twitter-attr" ng-if="::keep.sourceAttribution.twitter.screenName">
+          <a href="https://www.twitter.com/{{::keep.sourceAttribution.twitter.screenName}}/status/{{::keep.sourceAttribution.twitter.idString}}" target="_blank" ng-click="trackTweet()">
+            <span class="kf-keep-twitter-logo svg-twitter-blue"></span>@{{::keep.sourceAttribution.twitter.screenName}}
           </a>
         </span>
-        <span class="kf-keep-time" ng-show="keep.createdAt">kept&nbsp;<time ng-attr-datetime="{{keep.createdAt}}" am-time-ago="keep.createdAt"></time></span>
-        <span class="kf-keep-length" ng-show="keep.summary.wordCount && keep.readTime && cardType !== 'youtube'"><span class="sprite sprite-small-clock"></span>{{keep.readTime}} read</span>
+        <span class="kf-keep-time" ng-if="::keep.createdAt">kept&nbsp;<time ng-attr-datetime="{{::keep.createdAt}}" am-time-ago="::keep.createdAt"></time></span>
+        <span class="kf-keep-length" ng-if="::keep.readTime && !youtubeId"><span class="sprite sprite-clock"></span>{{::keep.readTime}} read</span>
       </div>
-
-      <!-- Description only or Description + Small Image-->
-      <div class="kf-keep-content-line">
-        <div class="kf-keep-small-image" ng-if="showSmallImage(keep)">
-          <a ng-href="{{keep.url}}" target="_blank" rel="nofollow">
-            <img class="kf-keep-image" ng-src="{{keep.summary.imageUrl}}" ng-click="clickCallback({ 'keep': keep, event: $event })" click-action="clickedArticleImage" alt="{{keep.titleAttr}}">
-          </a>
-        </div>
-
-        <div class="kf-keep-info-wrap" ng-if="cardType=='small'">
-          <div kf-ellipsis full-text="keep.summary.description" max-num-lines="linesToShow" class="kf-keep-description"></div>
-        </div>
+      <div class="kf-keep-title">
+        <a class="kf-keep-title-link" ng-href="{{::keep.url}}" target="_blank" ng-click="clickCallback({keep: keep, event: $event})" rel="nofollow" click-action="clickedArticleTitle">{{displayTitle}}</a>
       </div>
-
-      <!-- Large Image or Special Card -->
-      <a ng-href="{{keep.url}}" target="_blank" rel="nofollow"><img class="kf-keep-big-image" ng-if="showBigImage(keep)" ng-src="{{keep.summary.imageUrl}}" ng-click="clickCallback({ 'keep': keep, event: $event })" click-action="clickedArticleImage"></a>
-
-      <div ng-if="cardType=='youtube'" class="kf-keep-youtube-content">
-        <div ng-click="clickCallback({keep: keep, event: $event})"><div kf-youtube video-id=youtubeId></div></div>
-        <div kf-ellipsis full-text="keep.summary.description" max-num-lines=3 class="kf-keep-description"></div>
-      </div>
+      <div class="kf-keep-description" kf-ellipsis full-text="::keep.summary.description" max-num-lines="::image.maxDescLines || 8"></div>
     </div>
 
-    <div class="kf-keep-who" ng-if="keep.keepersTotal || keep.keepers.length">
-      <span class="kf-keep-who-text" ng-if="keep.keepersTotal" ng-pluralize count="keep.keepersTotal" when="{'one': 'Kept 1 time', 'other': 'Kept {} times'}"></span>
-      <span class="kf-keep-who-pic-box" ng-repeat="keeper in keep.keepers | limitTo:9" kf-user-tooltip ng-mouseenter="showTooltip()" ng-mouseleave="hideTooltip()" ng-click="hideTooltip()">
-        <a class="kf-keep-who-pic" ng-attr-style="background-image:url({{keeper|pic:100}})" href="{{keeper|profileUrl}}" kf-track-origin="{{currentPageOrigin}}/alsoKeptBy"></a>
-      </span>
+    <div class="kf-keep-footer">
+      <div class="kf-keep-actions" ng-if="$root.userLoggedIn">
+        <button ng-attr-class="kf-keep-keep-btn {{howKept ? 'state-kept-' + howKept : 'state-not-kept'}}"
+          kf-keep-to-library-widget widget-action-text="Keep" library-click-action="onWidgetLibraryClicked(clickedLibrary)" kept-to-library-ids="keptToLibraryIds"
+          lib-select-down-offset="100" lib-select-max-up-offset="500" lib-select-left-offset="190">
+          <span ng-attr-class="{{howKept === 'public' ? 'svg-hearts-green' : howKept ? 'svg-small-lock' : 'svg-hearts-green'}}"></span>
+          {{howKept === 'public' ? 'Kept' : howKept ? 'Kept Private' : 'Keep'}}
+        </button>
+        <button class="kf-keep-share-btn" ng-click="shareAction()">
+          <span class="svg-share-arrow-green"></span> Share
+        </button>
+      </div>
+      <div class="kf-keep-who" ng-if="keep.keepersTotal || keep.keepers.length">
+        <span class="kf-keep-who-pic-box" ng-repeat="keeper in keep.keepers | limitTo:9" kf-user-tooltip ng-mouseenter="showTooltip()" ng-mouseleave="hideTooltip()" ng-click="hideTooltip()">
+          <a class="kf-keep-who-pic" ng-attr-style="background-image:url({{::keeper|pic:100}})" href="{{::keeper|profileUrl}}" kf-track-origin="{{::currentPageOrigin}}/alsoKeptBy"></a>
+        </span>
+        <span class="kf-keep-who-text" ng-if="keep.keepersTotal > (keep.keepers.length || 0)">
+          + {{keep.keepersTotal - (keep.keepers.length || 0) | num}} kept
+        </span>
+      </div>
     </div>
-  </div>
-
-  <div class="kf-keep-footer kf-keep-footer-buttons-wrapper clearfix" ng-if="userLoggedIn">
-    <span kf-keep-master-button keep="keep" ng-if="keep" library="library" libraries="libraries"></span>
-    <span kf-keep-share-button keep="keep" show-install-extension-modal="showInstallExtensionModal()" ng-if="keep"></span>
   </div>
 </div>
