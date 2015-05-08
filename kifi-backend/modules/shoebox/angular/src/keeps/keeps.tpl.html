@@ -34,9 +34,14 @@
     </div>
   </div>
   <ol class="kf-my-keeps" smart-scroll scroll-distance="scrollDistance" scroll-disabled="isScrollDisabled()" scroll-next="scrollNext()(keeps.length)">
-    <div ng-repeat="keep in keeps" kf-keep-card keep="keep" library="library" me="me" current-page-origin="{{currentPageOrigin}}"
-      selectable="edit.enabled" is-selected="!!selection.isSelected(keep)" toggle-select="selection.toggleSelect(keep)"
-      click-callback="keepClickAction(event, keep)"></div>
+    <div class="kf-keep" ng-hide="keep.unkept && keep.libraryId === library.id" ng-class="{'editing': edit.enabled}" ng-repeat="keep in keeps">
+      <div class="kf-keep-edit-tools">
+        <div class="kf-keep-checkbox-icon sprite sprite-checkbox-icon" ng-if="!selection.isSelected(keep)" ng-click="selection.toggleSelect(keep)"></div>
+        <div class="kf-keep-checkbox-icon sprite sprite-checkbox-icon-active" ng-if="selection.isSelected(keep)" ng-click="selection.toggleSelect(keep)"></div>
+      </div>
+      <div kf-keep-card keep="keep" me="me" current-page-origin="{{currentPageOrigin}}"
+        click-callback="keepClickAction(event, keep)"></div>
+    </div>
   </ol>
   <img class="kf-keeps-loading" ng-show="keepsLoading" src="/img/load.gif">
   <a class="kf-keeps-load-more" ng-show="isShowMore()" href="javascript:" ng-click="scrollNext()(keeps.length)">Show more</a>

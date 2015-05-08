@@ -80,7 +80,8 @@ angular.module('kifi')
 
           keepActionService.unkeepManyFromLibrary(libraryId, selectedKeeps).then(function () {
             _.forEach(selectedKeeps, function (selectedKeep) {
-              selectedKeep.makeUnkept();
+              selectedKeep.unkept = true;
+              selectedKeep.keepersTotal--;
             });
 
             libraryService.addToLibraryCount(libraryId, -selectedKeeps.length);
@@ -91,10 +92,11 @@ angular.module('kifi')
               scope.scrollNext()(scope.availableKeeps.length);
             }
 
-            undoService.add(selectedKeeps.length > 1 ? selectedKeeps.length + ' keeps deleted' : 'keep deleted', function () {
+            undoService.add(selectedKeeps.length > 1 ? selectedKeeps.length + ' keeps deleted.' : 'Keep deleted.', function () {
               keepActionService.keepToLibrary(_.map(selectedKeeps, function (keep) { return _.pick(keep, 'url', 'title'); }), libraryId).then(function () {
                 _.forEach(selectedKeeps, function (keep) {
-                  keep.makeKept();
+                  keep.unkept = false;
+                  keep.keepersTotal++;
                 });
 
                 libraryService.addToLibraryCount(libraryId, selectedKeeps.length);
@@ -143,7 +145,7 @@ angular.module('kifi')
             // TODO: look at result and flag errors. Right now, even a partial error is flagged so that's
             //       not good.
             _.forEach(selectedKeeps, function (selectedKeep) {
-              selectedKeep.makeUnkept();
+              selectedKeep.unkept = true;
             });
 
             libraryService.fetchLibraryInfos(true);

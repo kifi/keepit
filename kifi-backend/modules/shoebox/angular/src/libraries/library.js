@@ -4,11 +4,11 @@ angular.module('kifi')
 
 .controller('LibraryCtrl', [
   '$scope', '$rootScope', '$analytics', '$location', '$state', '$stateParams', '$timeout', '$window',
-  '$FB', '$twitter', 'env', 'util', 'initParams', 'library', 'keepDecoratorService', 'libraryService', 'modalService',
+  '$FB', '$twitter', 'env', 'util', 'initParams', 'library', 'libraryService', 'modalService',
   'platformService', 'profileService', 'originTrackingService', 'installService', 'libraryImageLoaded',
   function (
     $scope, $rootScope, $analytics, $location, $state, $stateParams, $timeout, $window,
-    $FB, $twitter, env, util, initParams, library, keepDecoratorService, libraryService, modalService,
+    $FB, $twitter, env, util, initParams, library, libraryService, modalService,
     platformService, profileService, originTrackingService, installService, libraryImageLoaded) {
 
     //
@@ -116,10 +116,7 @@ angular.module('kifi')
     };
 
     function renderNextRawKeep(rawKeeps) {
-      var keep = new keepDecoratorService.Keep(rawKeeps.shift());
-      keep.buildKeep(keep);
-      keep.makeKept();
-      $scope.keeps.push(keep);
+      $scope.keeps.push(rawKeeps.shift());
       if (rawKeeps.length) {
         $timeout(angular.bind(null, renderNextRawKeep, rawKeeps));
       } else {

@@ -141,13 +141,11 @@ angular.module('kifi')
 
     function removeAlreadyKeptKeeps() {
       _.remove($scope.recos, function (reco) {
-        return reco && reco.recoKeep && reco.recoKeep.isMyBookmark;
+        return reco.recoKeep && _.any(reco.recoKeep.keeps, _.identity);
       });
     }
 
     function initRecos() {
-      // Load a new set of recommendations only on page refresh.
-      // Otherwise, load the recommendations we have previously shown.
       removeAlreadyKeptKeeps();
       if ($scope.recos.length > 0) {
         $scope.recosState = 'hasRecos';

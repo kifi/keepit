@@ -4,9 +4,9 @@ angular.module('kifi')
 
 .directive('kfAddKeep', [
   '$document', '$rootScope', '$location', '$state', '$timeout',
-  'keyIndices', 'keepDecoratorService', 'keepActionService', 'libraryService', 'modalService', 'util',
+  'keyIndices', 'keepActionService', 'libraryService', 'modalService', 'util',
   function ($document, $rootScope, $location, $state, $timeout,
-    keyIndices, keepDecoratorService, keepActionService, libraryService, modalService, util) {
+    keyIndices, keepActionService, libraryService, modalService, util) {
     return {
       restrict: 'A',
       require: '^kfModal',
@@ -95,10 +95,7 @@ angular.module('kifi')
                 if ((result.alreadyKept.length === 0) &&
                     ($state.href($state.current.name) === scope.selectedLibrary.url)) {
                   return keepActionService.fetchFullKeepInfo(result.keeps[0]).then(function (fullKeep) {
-                    var keep = new keepDecoratorService.Keep(fullKeep);
-                    keep.buildKeep(keep);
-                    keep.makeKept();
-                    $rootScope.$emit('keepAdded', [keep], scope.selectedLibrary);
+                    $rootScope.$emit('keepAdded', [fullKeep], scope.selectedLibrary);
                   });
                 }
               }

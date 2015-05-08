@@ -4,9 +4,9 @@ angular.module('kifi')
 
 .directive('kfKeepCard', [
   '$analytics', 'extensionLiaison', 'util', 'installService', 'libraryService',
-  'modalService', 'keepActionService', 'keepDecoratorService', 'undoService',
+  'modalService', 'keepActionService', 'undoService',
   function ($analytics, extensionLiaison, util, installService, libraryService,
-      modalService, keepActionService, keepDecoratorService, undoService) {
+      modalService, keepActionService, undoService) {
 
     // constants for side-by-side layout image sizing heuristic, based on large screen stylesheet values
     var cardW = 496;
@@ -74,11 +74,7 @@ angular.module('kifi')
       restrict: 'A',
       scope: {
         keep: '=',
-        library: '=',
         currentPageOrigin: '@',
-        selectable: '=',
-        toggleSelect: '&',
-        isSelected: '&',
         keepCallback: '&',
         clickCallback: '&'
       },
@@ -102,7 +98,7 @@ angular.module('kifi')
         //
 
         function setHowKept() {
-          scope.howKept = scope.keep.keeps.length ?
+          scope.howKept = _.any(scope.keep.keeps, _.identity) ?
             _.all(scope.keep.keeps, {visibility: 'secret'}) ?
             'private' : 'public' : null;
         }
@@ -118,21 +114,23 @@ angular.module('kifi')
             keepActionService.unkeepFromLibrary(clickedLibrary.id, keepToUnkeep.id).then(function () {
               var removedKeeps;
               if (clickedLibrary.id === scope.keep.libraryId) {
-                scope.keep.makeUnkept();
+                scope.keep.unkept = true;
               } else {
                 removedKeeps = _.remove(scope.keep.keeps, { libraryId: clickedLibrary.id });
               }
+              scope.keep.keepersTotal--;
 
               libraryService.addToLibraryCount(clickedLibrary.id, -1);
               scope.$emit('keepRemoved', { url: scope.keep.url }, clickedLibrary);
 
-              undoService.add('keep deleted', function () {  // TODO: rekeepToLibrary endpoint that takes a keep ID
+              undoService.add('Keep deleted.', function () {  // TODO: rekeepToLibrary endpoint that takes a keep ID
                 keepActionService.keepToLibrary([{url: scope.keep.url}], clickedLibrary.id).then(function () {
                   if (removedKeeps) {
                     scope.keep.keeps.push(removedKeeps[0]);
                   } else {
-                    scope.keep.makeKept();
+                    scope.keep.unkept = false;
                   }
+                  scope.keep.keepersTotal++;
 
                   libraryService.addToLibraryCount(clickedLibrary.id, 1);
                   scope.$emit('keepAdded', [scope.keep], clickedLibrary);
@@ -148,10 +146,7 @@ angular.module('kifi')
 
               scope.keep.keeps = fullKeep.keeps;
 
-              var keep = new keepDecoratorService.Keep(fullKeep);
-              keep.buildKeep(keep);
-              keep.makeKept();
-              scope.$emit('keepAdded', [keep], clickedLibrary);
+              scope.$emit('keepAdded', [fullKeep], clickedLibrary);
             };
 
             var keepToLibrary;
@@ -202,8 +197,6 @@ angular.module('kifi')
         scope.$watchCollection(function () {
           return _.pluck(scope.keep.keeps, 'visibility');
         }, setHowKept);
-
-        scope.$watch('keep.isMyBookmark', setHowKept);
 
         scope.$watchCollection(function () {
           return _.pluck(scope.keep.keeps, 'libraryId');

@@ -17,9 +17,7 @@ angular.module('kifi')
     function decompressHit(hit, users, libraries, userLoggedIn) {
       var decompressedKeepers = [];
       var decompressedLibraries = [];
-      var myLibraries = [];  // myLibraries doesn't seem to be used anywhere.
 
-      hit.isMyBookmark = false;
       hit.keepers = hit.keepers || [];
       hit.libraries = hit.libraries || [];
 
@@ -40,16 +38,12 @@ angular.module('kifi')
           if (!libraryService.isLibraryIdMainOrSecret(lib.id)) {
             decompressedLibraries.push(lib);
           }
-
-          myLibraries.push(lib);
         }
       }
 
       if (userLoggedIn) {
         hit.keepers.forEach(function (keeperIdx) {
-          if (keeperIdx === -1) {
-            hit.isMyBookmark = true;
-          } else {
+          if (keeperIdx >= 0) {
             decompressedKeepers.push(users[keeperIdx]);
           }
         });
@@ -57,7 +51,6 @@ angular.module('kifi')
 
       hit.keepers = decompressedKeepers;
       hit.libraries = decompressedLibraries;
-      hit.myLibraries = myLibraries;
     }
 
     function reportSearchAnalytics(endedWith, numResults, numResultsWithLibraries) {
@@ -123,8 +116,6 @@ angular.module('kifi')
         var hits = uris.hits || [];
         _.forEach(hits, function (hit) {
           decompressHit(hit, uris.keepers, uris.libraries, userLoggedIn);
-
-          hit.isProtected = !hit.isMyBookmark; // will not be hidden if user keeps then unkeeps
         });
 
         $analytics.eventTrack('user_clicked_page', {
@@ -173,13 +164,12 @@ angular.module('kifi')
         if ($location.$$port) {
           origin = origin + ':' + $location.$$port;
         }
+        var isMyBookmark = _.any(keep.keeps, _.identity);
         var hitContext = {
-          isMyBookmark: keep.isMyBookmark,
-          isPrivate: _.all(keep.keeps, {visibility: 'secret'}),
+          isMyBookmark: isMyBookmark,
+          isPrivate: isMyBookmark && _.all(keep.keeps, {visibility: 'secret'}),
           count: numResults,
-          keepers: keep.keepers.map(function (elem) {
-            return elem.id;
-          }),
+          keepers: _.map(keep.keepers, 'id'),
           libraries: keep.libraries.map(function (elem) {
             return [elem.id, elem.owner.id];
           }),
@@ -215,14 +205,12 @@ angular.module('kifi')
     }
 
 
-    var api = {
+    return {
       find: find,
       reset: reset,
       reportSearchAnalyticsOnUnload: reportSearchAnalyticsOnUnload,
       reportSearchAnalyticsOnRefine: reportSearchAnalyticsOnRefine,
       reportSearchClickAnalytics: reportSearchClickAnalytics
     };
-
-    return api;
   }
 ]);
