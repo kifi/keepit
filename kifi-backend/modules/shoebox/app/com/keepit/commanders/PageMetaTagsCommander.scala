@@ -176,7 +176,7 @@ class PageMetaTagsCommander @Inject() (
       (imageUrl, facebookId)
     }
     val countLibrariesF = db.readOnlyMasterAsync { implicit s =>
-      libraryMembershipRepo.countWithUserIdAndAccess(user.id.get, LibraryAccess.OWNER) + libraryMembershipRepo.countWithUserIdAndAccess(user.id.get, LibraryAccess.READ_ONLY)
+      libraryMembershipRepo.countNonTrivialLibrariesWithUserIdAndAccess(user.id.get, LibraryAccess.OWNER) + libraryMembershipRepo.countNonTrivialLibrariesWithUserIdAndAccess(user.id.get, LibraryAccess.READ_ONLY)
     }
     for {
       (imageUrl, facebookId) <- metaInfoF
@@ -195,7 +195,7 @@ class PageMetaTagsCommander @Inject() (
         unsafeFirstName = user.firstName,
         unsafeLastName = user.lastName,
         profileUrl = url,
-        noIndex = countLibraries <= 2, //means at least one library they follow or own, ignoring the main and private libs
+        noIndex = countLibraries == 0, //no public libraries - no index
         related = Seq.empty)
     }
   }

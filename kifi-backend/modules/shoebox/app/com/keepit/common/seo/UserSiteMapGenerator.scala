@@ -73,22 +73,21 @@ class UserSiteMapGenerator @Inject() (airbrake: AirbrakeNotifier,
          |<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
        """.stripMargin.trim)
     db.readOnlyReplicaAsync { implicit ro =>
-      val users = userRepo.getAllActiveIds()
-      if (users.size > 40000) airbrake.notify(s"there are ${users.size} libraries for sitemap, need to paginate the list!")
-      users
+      userRepo.getAllActiveIds()
     } map { userIds =>
-      userIds.grouped(100) foreach { group =>
+      val batchSizes = userIds.grouped(100) map { group =>
         val realUsers = group.filterNot(fakeUsers.contains)
-        db.readOnlyMaster { implicit ro =>
+        val usersWithLibraries = db.readOnlyMaster { implicit ro =>
           userRepo.getAllUsers(realUsers.toSeq).values.toSeq
         } filter { user =>
           user.state == UserStates.ACTIVE
         } filter { user =>
           val countLibraries = db.readOnlyMaster { implicit s =>
-            libraryMembershipRepo.countWithUserIdAndAccess(user.id.get, LibraryAccess.OWNER) + libraryMembershipRepo.countWithUserIdAndAccess(user.id.get, LibraryAccess.READ_ONLY)
+            libraryMembershipRepo.countNonTrivialLibrariesWithUserIdAndAccess(user.id.get, LibraryAccess.OWNER) + libraryMembershipRepo.countNonTrivialLibrariesWithUserIdAndAccess(user.id.get, LibraryAccess.READ_ONLY)
           }
-          countLibraries > 2
-        } foreach { user =>
+          countLibraries != 0
+        }
+        usersWithLibraries foreach { user =>
           xml.append(s"""<url>
                   |  <loc>
                   |    https://www.kifi.com/${user.username.value}
@@ -96,9 +95,12 @@ class UserSiteMapGenerator @Inject() (airbrake: AirbrakeNotifier,
                   |  <lastmod>${ISO_8601_DAY_FORMAT.print(lastMod(user))}</lastmod>
                   |</url>""".stripMargin)
         }
+        usersWithLibraries.size
       }
       xml.append("</urlset>")
-      log.info(s"[generate] done with sitemap generation")
+      val totalUserCount = batchSizes.sum
+      if (totalUserCount > 45000) airbrake.notify(s"there are $totalUserCount users with more then one viable library for sitemap, need to paginate the list!")
+      log.info(s"[generate] done with sitemap generation for $totalUserCount users")
       xml.toString()
     }
   }

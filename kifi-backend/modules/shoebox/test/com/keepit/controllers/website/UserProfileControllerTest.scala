@@ -178,15 +178,15 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
             user4 -> user1,
             user2 -> user3).saved
 
-          val user1secretLib = libraries(3).map(_.withUser(user1).secret()).saved.head.savedFollowerMembership(user2)
+          val user1secretLib = libraries(3).map(_.withUser(user1).withKind(LibraryKind.USER_CREATED).withKeepCount(3).withMemberCount(4).secret()).saved.head.savedFollowerMembership(user2)
 
-          val user1lib = library().withUser(user1).published().saved.savedFollowerMembership(user5, user4)
+          val user1lib = library().withUser(user1).withKind(LibraryKind.USER_CREATED).withKeepCount(3).published().withMemberCount(4).saved.savedFollowerMembership(user5, user4)
           user1lib.visibility === LibraryVisibility.PUBLISHED
 
-          val user3lib = library().withUser(user3).published().saved
-          val user5lib = library().withUser(user5).published().saved.savedFollowerMembership(user1)
+          val user3lib = library().withUser(user3).published().withKind(LibraryKind.USER_CREATED).withKeepCount(3).withMemberCount(4).saved
+          val user5lib = library().withUser(user5).published().withKind(LibraryKind.USER_CREATED).withKeepCount(3).withMemberCount(4).saved.savedFollowerMembership(user1)
           keep().withLibrary(user5lib).saved
-          membership().withLibraryFollower(library().withUser(user5).published().saved, user1).unlisted().saved
+          membership().withLibraryFollower(library().withUser(user5).published().withKind(LibraryKind.USER_CREATED).withKeepCount(3).saved, user1).unlisted().saved
 
           invite().fromLibraryOwner(user3lib).toUser(user1.id.get).withState(LibraryInviteStates.ACTIVE).saved
           invite().fromLibraryOwner(user3lib).toUser(user1.id.get).withState(LibraryInviteStates.ACTIVE).saved // duplicate library invite
@@ -209,11 +209,11 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
           val ret2 = sql"select count(*) from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = 4 and lib.state = 'active' and lm.state = 'active' and lm.listed and lib.visibility = 'published'".as[Int].firstOption.getOrElse(0)
           ret2 === 1
 
-          libraryMembershipRepo.countWithUserIdAndAccess(user1.id.get, LibraryAccess.OWNER) === 4
-          libraryMembershipRepo.countWithUserIdAndAccess(user2.id.get, LibraryAccess.OWNER) === 0
-          libraryMembershipRepo.countWithUserIdAndAccess(user3.id.get, LibraryAccess.OWNER) === 1
-          libraryMembershipRepo.countWithUserIdAndAccess(user4.id.get, LibraryAccess.OWNER) === 0
-          libraryMembershipRepo.countWithUserIdAndAccess(user5.id.get, LibraryAccess.OWNER) === 2
+          libraryMembershipRepo.countNonTrivialLibrariesWithUserIdAndAccess(user1.id.get, LibraryAccess.OWNER) === 4
+          libraryMembershipRepo.countNonTrivialLibrariesWithUserIdAndAccess(user2.id.get, LibraryAccess.OWNER) === 0
+          libraryMembershipRepo.countNonTrivialLibrariesWithUserIdAndAccess(user3.id.get, LibraryAccess.OWNER) === 1
+          libraryMembershipRepo.countNonTrivialLibrariesWithUserIdAndAccess(user4.id.get, LibraryAccess.OWNER) === 0
+          libraryMembershipRepo.countNonTrivialLibrariesWithUserIdAndAccess(user5.id.get, LibraryAccess.OWNER) === 2
 
           libraryRepo.countLibrariesOfUserForAnonymous(user1.id.get) === 1
           libraryRepo.countLibrariesOfUserForAnonymous(user2.id.get) === 0
