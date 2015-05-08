@@ -4,10 +4,11 @@ import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.cache._
 import com.keepit.common.db.{ SequenceNumber, Id }
 import com.keepit.common.db.slick.Database
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.{ Logging, AccessLog }
-import com.keepit.model.{ NormalizedURI }
+import com.keepit.model.{IndexableUri, NormalizedURI}
 import com.keepit.rover.article.{ ArticleFetcherProvider, ArticleKind, Article }
-import com.keepit.rover.manager.{ FetchTaskQueue, FetchTask }
+import com.keepit.rover.manager.{ArticleFetchingPolicy, FetchTaskQueue, FetchTask}
 import com.keepit.rover.model._
 import com.keepit.rover.store.RoverArticleStore
 
@@ -25,7 +26,10 @@ class ArticleCommander @Inject() (
     articleStore: RoverArticleStore,
     topPriorityQueue: FetchTaskQueue.TopPriority,
     articleFetcher: ArticleFetcherProvider,
-    private implicit val executionContext: ExecutionContext) extends Logging {
+    articlePolicy: ArticleFetchingPolicy,
+    airbrake: AirbrakeNotifier,
+    private implicit val executionContext: ExecutionContext
+) extends Logging {
 
   def getArticleInfosBySequenceNumber(seq: SequenceNumber[ArticleInfo], limit: Int): Seq[ArticleInfo] = {
     db.readOnlyMaster { implicit session =>
@@ -59,44 +63,42 @@ class ArticleCommander @Inject() (
     }.map { case (key, infos) => key.uriId -> infos }
   }
 
-  def getBestArticle(info: ArticleInfoHolder): Future[Option[info.A]] = {
-    (info.getBestKey orElse info.getLatestKey).map(articleStore.get) getOrElse Future.successful(None)
-  }
-
   def getBestArticle[A <: Article](uriId: Id[NormalizedURI])(implicit kind: ArticleKind[A]): Future[Option[A]] = {
     getArticleInfoByUriAndKind[A](uriId).map(getBestArticle(_).imap(_.map(_.asExpected[A]))) getOrElse Future.successful(None)
   }
 
-  def getArticleInfoByUriAndKind[A <: Article](uriId: Id[NormalizedURI])(implicit kind: ArticleKind[A]): Option[RoverArticleInfo] = {
+  def getOrElseFetchBestArticle[A <: Article](uri: IndexableUri)(implicit kind: ArticleKind[A]): Future[Option[A]] = {
+    val info = internArticleInfoByUri(uri.id.get, uri.url, Set(kind))(kind)
+    getOrElseFetchBestArticle(info).imap(_.map(_.asExpected[A]))
+  }
+
+  def getLatestArticle(info: ArticleInfoHolder): Future[Option[info.A]] = {
+    info.getLatestKey.map(articleStore.get) getOrElse Future.successful(None)
+  }
+
+  private def getBestArticle(info: ArticleInfoHolder): Future[Option[info.A]] = {
+    (info.getBestKey orElse info.getLatestKey).map(articleStore.get) getOrElse Future.successful(None)
+  }
+
+  private def getOrElseFetchBestArticle(info: RoverArticleInfo): Future[Option[info.A]] = {
+    getBestArticle(info) flatMap {
+      case None if (info.lastFetchedAt.isEmpty) => {
+        markAsFetching(info.id.get)
+        fetchAndPersist(info)
+      }
+      case fetchedArticleOpt: Option[info.A] => Future.successful(fetchedArticleOpt)
+    }
+  }
+
+  private def getArticleInfoByUriAndKind[A <: Article](uriId: Id[NormalizedURI])(implicit kind: ArticleKind[A]): Option[RoverArticleInfo] = {
     db.readWrite { implicit session =>
       articleInfoRepo.getByUriAndKind(uriId, kind)
     }
   }
 
-  def internArticleInfoByUri(uriId: Id[NormalizedURI], url: String, kinds: Set[ArticleKind[_ <: Article]]): Map[ArticleKind[_ <: Article], RoverArticleInfo] = {
+  private def internArticleInfoByUri(uriId: Id[NormalizedURI], url: String, kinds: Set[ArticleKind[_ <: Article]]): Map[ArticleKind[_ <: Article], RoverArticleInfo] = {
     db.readWrite { implicit session =>
       articleInfoRepo.internByUri(uriId, url, kinds)
-    }
-  }
-
-  def markAsFetching(ids: Id[RoverArticleInfo]*): Unit = {
-    db.readWrite { implicit session =>
-      articleInfoRepo.markAsFetching(ids: _*)
-    }
-  }
-
-  def add(tasks: Seq[FetchTask], queue: FetchTaskQueue): Future[Map[FetchTask, Try[Unit]]] = {
-    db.readWrite { implicit session =>
-      articleInfoRepo.markAsFetching(tasks.map(_.id): _*)
-    }
-    queue.add(tasks).map { maybeQueuedTasks =>
-      val failedTasks = maybeQueuedTasks.collect { case (task, Failure(_)) => task }.toSeq
-      if (failedTasks.nonEmpty) {
-        db.readWrite { implicit session =>
-          articleInfoRepo.unmarkAsFetching(failedTasks.map(_.id): _*)
-        }
-      }
-      maybeQueuedTasks
     }
   }
 
@@ -106,7 +108,42 @@ class ArticleCommander @Inject() (
     }
   }
 
-  def fetchWithTopPriority(ids: Set[Id[RoverArticleInfo]]): Future[Map[Id[RoverArticleInfo], Try[Unit]]] = {
+  def add(tasks: Seq[FetchTask], queue: FetchTaskQueue): Future[Map[FetchTask, Try[Unit]]] = {
+    markAsFetching(tasks.map(_.id): _*)
+    queue.add(tasks).map { maybeQueuedTasks =>
+      val failedTasks = maybeQueuedTasks.collect { case (task, Failure(_)) => task }.toSeq
+      if (failedTasks.nonEmpty) {
+        unmarkAsFetching(failedTasks.map(_.id): _*)
+      }
+      maybeQueuedTasks
+    }
+  }
+
+  private def markAsFetching(ids: Id[RoverArticleInfo]*): Unit = {
+    db.readWrite { implicit session =>
+      articleInfoRepo.markAsFetching(ids: _*)
+    }
+  }
+
+  private def unmarkAsFetching(ids: Id[RoverArticleInfo]*): Unit = {
+    db.readWrite { implicit session =>
+      articleInfoRepo.unmarkAsFetching(ids: _*)
+    }
+  }
+
+  def fetchAsap(uri: IndexableUri): Future[Unit] = {
+    val toBeInternedByPolicy = articlePolicy.toBeInterned(uri.url, uri.state)
+    val interned = internArticleInfoByUri(uri.id.get, uri.url, toBeInternedByPolicy)
+    val neverFetched = interned.collect { case (kind, info) if info.lastFetchedAt.isEmpty => (info.id.get -> info) }
+    fetchWithTopPriority(neverFetched.keySet).imap { results =>
+      val failed = results.collect { case (infoId, Failure(error)) => neverFetched(infoId).articleKind -> error }
+      if (failed.nonEmpty) {
+        airbrake.notify(s"Failed to schedule top priority fetches for uri ${uri.id.get}: ${uri.url}\n${failed.mkString("\n")}")
+      }
+    }
+  }
+
+  private def fetchWithTopPriority(ids: Set[Id[RoverArticleInfo]]): Future[Map[Id[RoverArticleInfo], Try[Unit]]] = {
     val tasks = ids.map(FetchTask(_)).toSeq
     add(tasks, topPriorityQueue).imap { _.map { case (task, result) => (task.id -> result) } }
   }
