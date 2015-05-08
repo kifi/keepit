@@ -1,15 +1,16 @@
-package com.keepit.rover.article
+package com.keepit.rover.article.fetcher
 
 import com.google.inject.Inject
 import com.keepit.common.logging.Logging
-import com.keepit.rover.article.content.{ LinkedInProfile, LinkedInProfileContent }
-import com.keepit.rover.document.{ RoverDocumentFetcher, JsoupDocument }
-import com.keepit.rover.fetcher.FetchResult
 import com.keepit.common.time._
+import com.keepit.rover.article.LinkedInProfileArticle
+import com.keepit.rover.article.content.{ LinkedInProfile, LinkedInProfileContent }
+import com.keepit.rover.document.{ JsoupDocument, RoverDocumentFetcher }
+import com.keepit.rover.fetcher.FetchResult
 import com.keepit.rover.store.RoverArticleStore
 import org.joda.time.DateTime
 
-import scala.concurrent.{ Future, ExecutionContext }
+import scala.concurrent.{ ExecutionContext, Future }
 
 class LinkedInProfileArticleFetcher @Inject() (
     articleStore: RoverArticleStore,
