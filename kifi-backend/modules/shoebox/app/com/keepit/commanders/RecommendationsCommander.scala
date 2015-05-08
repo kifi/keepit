@@ -139,7 +139,7 @@ class RecommendationsCommander @Inject() (
       keepRepo.getRecentKeepsFromFollowedLibraries(userId, 10)
     }
 
-    keepDecorator.decorateKeepsIntoKeepInfos(Some(userId), false, keeps, ProcessedImageSize.Large.idealSize, true).map { keepInfos =>
+    keepDecorator.decorateKeepsIntoKeepInfos(Some(userId), true, keeps, ProcessedImageSize.Large.idealSize, true).map { keepInfos =>
       FullLibUpdatesRecoInfo(itemInfo = keepInfos)
     }
 
