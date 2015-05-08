@@ -382,7 +382,7 @@ class UrlController @Inject() (
     fBestArticleWithId.map { bestArticleWithId: Map[Id[NormalizedURI], Set[Article]] =>
       val bestArticles = bestArticleWithId.getOrElse(uriId, Set.empty)
       val targetArticle = bestArticles.filter(article => article.kind == kind).head
-      Ok(Json.obj(("content", targetArticle)))
+      Ok(Json.obj(("content" -> targetArticle.content.content.getOrElse("").toString)))
     }
   }
 
@@ -391,7 +391,7 @@ class UrlController @Inject() (
     fBestArticleWithId.map { bestArticleWithId: Map[Id[NormalizedURI], Set[Article]] =>
       val bestArticles = bestArticleWithId.getOrElse(uriId, Set.empty)
       val targetArticle = bestArticles.filter(article => article.kind == kind).head
-      Ok(Json.obj("content" -> targetArticle.content.toString))
+      Ok(Json.obj("content" -> targetArticle.content.content.getOrElse("").toString))
     }
   }
 
