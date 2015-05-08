@@ -1,4 +1,4 @@
-<div class="kf-keep" ng-hide="keep.unkept && !keep.isProtected && keep.itemType !== 'reco'" ng-class="{'editing': selectable}">
+<div class="kf-keep" ng-hide="keep.unkept && !keep.isProtected" ng-class="{'editing': selectable}">
   <div class="kf-keep-edit-tools">
     <div class="kf-keep-checkbox-icon sprite sprite-checkbox-icon" ng-if="!isSelected({keep: keep})" ng-click="toggleSelect({keep: keep})"></div>
     <div class="kf-keep-checkbox-icon sprite sprite-checkbox-icon-active" ng-if="isSelected({keep: keep})" ng-click="toggleSelect({keep: keep})"></div>
@@ -22,7 +22,7 @@
           </a>
         </span>
         <span class="kf-keep-time" ng-if="::keep.createdAt">kept&nbsp;<time ng-attr-datetime="{{::keep.createdAt}}" am-time-ago="::keep.createdAt"></time></span>
-        <span class="kf-keep-length" ng-if="::keep.readTime && !youtubeId"><span class="sprite sprite-clock"></span>{{::keep.readTime}} read</span>
+        <span class="kf-keep-length" ng-if="::keep.summary.wordCount > 0 && !youtubeId"><span class="sprite sprite-clock"></span>{{::keep.summary.wordCount|timeToRead}} read</span>
       </div>
       <div class="kf-keep-title">
         <a class="kf-keep-title-link" ng-href="{{::keep.url}}" target="_blank" ng-click="clickCallback({keep: keep, event: $event})" rel="nofollow" click-action="clickedArticleTitle">{{displayTitle}}</a>
@@ -47,7 +47,7 @@
           <a class="kf-keep-who-pic" ng-attr-style="background-image:url({{::keeper|pic:100}})" href="{{::keeper|profileUrl}}" kf-track-origin="{{::currentPageOrigin}}/alsoKeptBy"></a>
         </span>
         <span class="kf-keep-who-text" ng-if="keep.keepersTotal > (keep.keepers.length || 0)">
-          + {{keep.keepersTotal - (keep.keepers.length || 0) | num}} kept
+          {{keep.keepersTotal - (keep.keepers.length || 0) | num}} kept
         </span>
       </div>
     </div>

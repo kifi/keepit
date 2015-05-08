@@ -14,11 +14,12 @@ angular.module('kifi')
 
       var info = rawReco.itemInfo;
       if (rawReco.kind === 'keep') {
+        info.isProtected = true;
         // TODO: update server to pass 'urlId' instead of 'id'
         info.urlId = info.id;
         delete info.id;
 
-        this.recoKeep = new keepDecoratorService.Keep(info, 'reco');
+        this.recoKeep = new keepDecoratorService.Keep(info);
       } else {
         this.recoLib = info;
 

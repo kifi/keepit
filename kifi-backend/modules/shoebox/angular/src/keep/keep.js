@@ -48,7 +48,7 @@ angular.module('kifi')
           // +-----------------------------------------------+
           var descWideLines = (summary.description || '').length / descCharsPerMaxWidthLine;
           var titleWideLines = title.length / titleCharsPerMaxWidthLine;
-          var image = {url: url, w: 0, h: 0, penalty: Infinity, clipBottom: false};
+          var image;
           for (var imgW = Math.min(imgNaturalW, maxSizedImageW), imgH = imgW / aspectRatio; imgW >= 60 && imgH >= 40; imgW -= 20, imgH = imgW / aspectRatio) {
             imgH = Math.min(360, imgH);
             var contentW = cardInnerW - gutterW - imgW;
@@ -61,12 +61,8 @@ angular.module('kifi')
               contentH -= fewerDescLines * descLineHeight;
             }
             var penalty = imgH > contentH ? (imgH - contentH) * contentW : (contentH - imgH) * imgW;
-            if (penalty < image.penalty) { // jshint ignore:line
-              image.w = imgW;
-              image.h = imgH;
-              image.penalty = penalty;
-              image.clipBottom = true;
-              image.maxDescLines = descLines;
+            if (penalty < (image ? image.penalty : Infinity)) { // jshint ignore:line
+              image = {url: url, w: imgW, h: imgH, penalty: penalty, clipBottom: true, maxDescLines: descLines};
             }
           }
           return image;

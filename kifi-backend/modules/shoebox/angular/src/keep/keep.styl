@@ -236,11 +236,11 @@ keepFooterMarginTop = 16px
     display: inline-block
     vertical-align: top
     width: 10px
-    height: 12px
+    height: 13px
     background-repeat: no-repeat
     background-position: center
     background-size: contain
-    margin-right: 3px
+    margin: 2px 3px 0 0
 
 .kf-keep-share-btn
   &>.svg-share-arrow-green
@@ -301,6 +301,9 @@ keepFooterMarginTop = 16px
 
   @media (max-width: 479px)
     font-smoothing: antialiased
+
+  &:not(:first-child)::before
+    content: '+ '
 
 .kf-keep-edit-tools
   display: none

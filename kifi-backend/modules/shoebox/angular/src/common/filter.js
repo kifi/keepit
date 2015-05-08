@@ -90,6 +90,15 @@ angular.module('kifi')
   };
 })
 
+.filter('timeToRead', function () {
+  var roundedMinutes = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 30, 60];
+  return function (numWords) {
+    var minutes = numWords / 250;
+    minutes = _.find(roundedMinutes, function (n) { return minutes < n; });
+    return minutes ? minutes + ' min' : '1h';
+  };
+})
+
 .filter('preventOrphans', [
   'util',
   function (util) {
