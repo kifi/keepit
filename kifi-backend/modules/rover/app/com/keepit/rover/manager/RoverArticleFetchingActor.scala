@@ -4,7 +4,7 @@ import com.google.inject.Inject
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.rover.commanders.{ ArticleCommander, ImageProcessingCommander }
+import com.keepit.rover.commanders.{ ArticleCommander, ImageCommander }
 import com.keepit.rover.model.{ RoverArticleInfo, ArticleInfoRepo }
 import com.kifi.franz.SQSMessage
 import scala.concurrent.duration._
@@ -24,7 +24,7 @@ class RoverArticleFetchingActor @Inject() (
     taskQueue: ProbabilisticFetchTaskQueue,
     articleCommander: ArticleCommander,
     airbrake: AirbrakeNotifier,
-    imageProcessingCommander: ImageProcessingCommander,
+    imageProcessingCommander: ImageCommander,
     implicit val executionContext: ExecutionContext) extends ConcurrentTaskProcessingActor[SQSMessage[FetchTask]](airbrake) {
 
   protected val minConcurrentTasks: Int = RoverArticleFetchingActor.minConcurrentTasks

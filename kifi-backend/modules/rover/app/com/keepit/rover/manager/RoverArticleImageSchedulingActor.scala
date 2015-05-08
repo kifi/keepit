@@ -5,7 +5,7 @@ import com.keepit.common.akka.SafeFuture
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.time.Clock
-import com.keepit.rover.commanders.ImageProcessingCommander
+import com.keepit.rover.commanders.ImageCommander
 import com.keepit.rover.model.{ RoverArticleInfo }
 import scala.concurrent.duration._
 import com.keepit.common.core._
@@ -22,7 +22,7 @@ object RoverArticleImageSchedulingActor {
 }
 
 class RoverArticleImageSchedulingActor @Inject() (
-    imageProcessingCommander: ImageProcessingCommander,
+    imageProcessingCommander: ImageCommander,
     airbrake: AirbrakeNotifier,
     fastFollowQueue: ArticleImageProcessingTaskQueue.FastFollow,
     catchUpQueue: ArticleImageProcessingTaskQueue.CatchUp,
