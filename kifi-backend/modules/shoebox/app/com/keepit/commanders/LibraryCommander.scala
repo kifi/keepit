@@ -801,7 +801,7 @@ class LibraryCommander @Inject() (
           "library" -> Json.toJson(LibraryNotificationInfo.fromLibraryAndOwner(lib, libImageOpt, libOwner))
         ))
       )
-    } else { Future.successful() }
+    } else { Future.successful((): Unit) }
 
     val followInvitesF = if (followInviteeSet.size > 0) {
       elizaClient.sendGlobalNotification( //push sent
@@ -818,7 +818,7 @@ class LibraryCommander @Inject() (
           "library" -> Json.toJson(LibraryNotificationInfo.fromLibraryAndOwner(lib, libImageOpt, libOwner))
         ))
       )
-    } else { Future.successful() }
+    } else { Future.successful((): Unit) }
 
     for {
       collabInvites <- collabInvitesF
