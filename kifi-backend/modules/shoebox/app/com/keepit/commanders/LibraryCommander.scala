@@ -1039,6 +1039,9 @@ class LibraryCommander @Inject() (
             )
           ))
         ).foreach { _ =>
+            if (toBeNotified.size > 100) {
+              airbrake.notify("Warning: Library with lots of subscribers. Time to make the code better!")
+            }
             FutureHelpers.sequentialExec(toBeNotified) { userId =>
               elizaClient.sendLibraryPushNotification(
                 userId,
