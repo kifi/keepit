@@ -8,28 +8,29 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.model.{ Name, IndexableUri, SystemValueRepo, NormalizedURI }
+import com.keepit.rover.article.policy.ArticleInfoPolicy
 import com.keepit.rover.model.ArticleInfoRepo
 import com.keepit.shoebox.ShoeboxServiceClient
 
 import scala.concurrent.{ Future, ExecutionContext }
 import scala.util.{ Failure, Success }
 
-object RoverIngestionActor {
+object RoverArticleInfoIngestionActor {
   val roverNormalizedUriSeq = Name[SequenceNumber[NormalizedURI]]("rover_normalized_uri")
   val fetchSize: Int = 50
 }
 
-class RoverIngestionActor @Inject() (
+class RoverArticleInfoIngestionActor @Inject() (
     db: Database,
     articleInfoRepo: ArticleInfoRepo,
     systemValueRepo: SystemValueRepo,
     shoebox: ShoeboxServiceClient,
-    articlePolicy: ArticleFetchingPolicy,
+    articlePolicy: ArticleInfoPolicy,
     fetchSchedulingActor: ActorInstance[RoverFetchSchedulingActor],
     airbrake: AirbrakeNotifier,
     implicit val executionContext: ExecutionContext) extends BatchProcessingActor[IndexableUri](airbrake) with Logging {
 
-  import RoverIngestionActor._
+  import RoverArticleInfoIngestionActor._
 
   protected def nextBatch: Future[Seq[IndexableUri]] = {
     log.info(s"Starting ingestion...")

@@ -13,7 +13,7 @@ trait RoverManagerPlugin
 
 @Singleton
 class RoverManagerPluginImpl @Inject() (
-    ingestionActor: ActorInstance[RoverIngestionActor],
+    ingestionActor: ActorInstance[RoverArticleInfoIngestionActor],
     fetchSchedulingActor: ActorInstance[RoverFetchSchedulingActor],
     fetchingActor: ActorInstance[RoverArticleFetchingActor],
     imageSchedulingActor: ActorInstance[RoverArticleImageSchedulingActor],

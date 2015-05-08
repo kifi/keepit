@@ -1,15 +1,15 @@
-package com.keepit.rover.commanders
+package com.keepit.rover.image
 
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.commanders._
+import com.keepit.common.core._
 import com.keepit.common.db.slick.Database
 import com.keepit.common.images.Photoshop
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.WebService
-import com.keepit.common.store.{ RoverImageStore, ImagePath, ImageSize }
+import com.keepit.common.store.{ ImagePath, ImageSize, RoverImageStore }
 import com.keepit.model._
-import com.keepit.rover.model.{ RoverImageInfoRepo }
-import com.keepit.common.core._
+import com.keepit.rover.model.RoverImageInfoRepo
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success }

@@ -5,8 +5,7 @@ import com.keepit.common.cache._
 import com.keepit.common.db.Id
 import com.keepit.common.logging.AccessLog
 import com.keepit.model.NormalizedURI
-import com.keepit.rover.article.{ EmbedlyArticle, Article }
-import com.keepit.rover.commanders.ArticleCommander
+import com.keepit.rover.article.{ ArticleCommander, EmbedlyArticle, Article }
 import com.keepit.search.{ LangDetector, Lang }
 
 import scala.concurrent.{ ExecutionContext, Future }

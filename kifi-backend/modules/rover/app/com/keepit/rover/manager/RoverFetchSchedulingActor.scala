@@ -4,7 +4,7 @@ import com.google.inject.{ Inject }
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.rover.commanders.ArticleCommander
+import com.keepit.rover.article.ArticleCommander
 import com.keepit.rover.model.{ RoverArticleInfo }
 import scala.concurrent.duration._
 import com.keepit.common.core._

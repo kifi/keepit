@@ -4,7 +4,8 @@ import com.google.inject.Inject
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.rover.commanders.{ ArticleCommander, ImageCommander }
+import com.keepit.rover.article.ArticleCommander
+import com.keepit.rover.image.ImageCommander
 import com.keepit.rover.model.{ RoverArticleInfo, ArticleInfoRepo }
 import com.kifi.franz.SQSMessage
 import scala.concurrent.duration._

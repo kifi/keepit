@@ -6,8 +6,8 @@ import com.keepit.common.db.{ Id, SequenceNumber }
 import com.keepit.common.json.TupleFormat
 import com.keepit.common.logging.Logging
 import com.keepit.model.{ NormalizedURI, IndexableUri }
-import com.keepit.rover.article.Article
-import com.keepit.rover.commanders.{ ArticleCommander, RoverCommander }
+import com.keepit.rover.RoverCommander
+import com.keepit.rover.article.{ ArticleCommander, Article }
 import com.keepit.rover.model.{ ArticleInfo }
 import play.api.libs.json.Json
 import play.api.mvc.Action

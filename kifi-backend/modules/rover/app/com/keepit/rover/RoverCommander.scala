@@ -1,21 +1,22 @@
-package com.keepit.rover.commanders
+package com.keepit.rover
 
 import com.google.inject.{ Inject, Singleton }
-import com.keepit.common.db.{ SequenceNumber }
-import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.rover.article.content.{ NormalizationInfoHolder, HttpInfoHolder }
-import com.keepit.rover.manager.ArticleFetchingPolicy
-import com.keepit.rover.model.{ ShoeboxArticleUpdates, ArticleInfo, ShoeboxArticleUpdate }
-import com.keepit.rover.sensitivity.RoverSensitivityCommander
 import com.keepit.common.core._
+import com.keepit.common.db.SequenceNumber
+import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.rover.article.ArticleCommander
+import com.keepit.rover.article.content.{ HttpInfoHolder, NormalizationInfoHolder }
+import com.keepit.rover.article.policy.ArticleInfoPolicy
+import com.keepit.rover.model.{ ArticleInfo, ShoeboxArticleUpdate, ShoeboxArticleUpdates }
+import com.keepit.rover.sensitivity.RoverSensitivityCommander
 
-import scala.concurrent.{ Future, ExecutionContext }
+import scala.concurrent.{ ExecutionContext, Future }
 
 @Singleton
 class RoverCommander @Inject() (
     articleCommander: ArticleCommander,
     sensitivityCommander: RoverSensitivityCommander,
-    articlePolicy: ArticleFetchingPolicy,
+    articlePolicy: ArticleInfoPolicy,
     private implicit val executionContext: ExecutionContext,
     airbrake: AirbrakeNotifier) {
 

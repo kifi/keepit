@@ -1,16 +1,16 @@
-package com.keepit.rover.article
+package com.keepit.rover.article.fetcher
 
 import com.google.inject.Inject
 import com.keepit.common.logging.Logging
-import com.keepit.common.time.Clock
+import com.keepit.common.time.{ Clock, _ }
+import com.keepit.rover.article.DefaultArticle
 import com.keepit.rover.article.content.DefaultContent
 import com.keepit.rover.document.RoverDocumentFetcher
 import com.keepit.rover.fetcher.FetchResult
-import com.keepit.common.time._
 import com.keepit.rover.store.RoverArticleStore
 import org.joda.time.DateTime
 
-import scala.concurrent.{ Future, ExecutionContext }
+import scala.concurrent.{ ExecutionContext, Future }
 
 class DefaultArticleFetcher @Inject() (
     articleStore: RoverArticleStore,

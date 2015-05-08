@@ -1,22 +1,22 @@
-package com.keepit.rover.commanders
+package com.keepit.rover.article
 
-import com.google.inject.{ Inject, Singleton }
+import com.google.inject.{Inject, Singleton}
 import com.keepit.common.cache._
-import com.keepit.common.db.{ SequenceNumber, Id }
+import com.keepit.common.core._
 import com.keepit.common.db.slick.Database
+import com.keepit.common.db.{Id, SequenceNumber}
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.logging.{ Logging, AccessLog }
+import com.keepit.common.logging.{AccessLog, Logging}
 import com.keepit.model.{IndexableUri, NormalizedURI}
-import com.keepit.rover.article.{ ArticleFetcherProvider, ArticleKind, Article }
-import com.keepit.rover.manager.{ArticleFetchingPolicy, FetchTaskQueue, FetchTask}
+import com.keepit.rover.article.fetcher.ArticleFetcherProvider
+import com.keepit.rover.article.policy.ArticleInfoPolicy
+import com.keepit.rover.manager.{FetchTask, FetchTaskQueue}
 import com.keepit.rover.model._
 import com.keepit.rover.store.RoverArticleStore
 
-import scala.concurrent.{ ExecutionContext, Future }
 import scala.concurrent.duration.Duration
-import com.keepit.common.core._
-
-import scala.util.{ Failure, Try }
+import scala.concurrent.{ExecutionContext, Future}
+import scala.util.{Failure, Try}
 
 @Singleton
 class ArticleCommander @Inject() (
@@ -26,7 +26,7 @@ class ArticleCommander @Inject() (
     articleStore: RoverArticleStore,
     topPriorityQueue: FetchTaskQueue.TopPriority,
     articleFetcher: ArticleFetcherProvider,
-    articlePolicy: ArticleFetchingPolicy,
+    articlePolicy: ArticleInfoPolicy,
     airbrake: AirbrakeNotifier,
     private implicit val executionContext: ExecutionContext
 ) extends Logging {

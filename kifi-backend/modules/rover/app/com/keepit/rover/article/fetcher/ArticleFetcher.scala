@@ -1,7 +1,8 @@
-package com.keepit.rover.article
+package com.keepit.rover.article.fetcher
 
 import com.google.inject.{ Inject, Singleton }
-import com.keepit.rover.article.content.{ NormalizationInfoHolder, ArticleContent }
+import com.keepit.rover.article._
+import com.keepit.rover.article.content.{ ArticleContent, NormalizationInfoHolder }
 import com.keepit.rover.fetcher.FetchResult
 import com.keepit.rover.model.ArticleKey
 import com.keepit.rover.store.RoverArticleStore

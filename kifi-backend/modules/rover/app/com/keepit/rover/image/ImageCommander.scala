@@ -1,8 +1,9 @@
-package com.keepit.rover.commanders
+package com.keepit.rover.image
 
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.commanders._
-import com.keepit.common.db.{ Id }
+import com.keepit.common.core._
+import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.model._
@@ -10,10 +11,9 @@ import com.keepit.rover.article.{ Article, ArticleKind }
 import com.keepit.rover.manager.{ ArticleImageProcessingTask, ArticleImageProcessingTaskQueue }
 import com.keepit.rover.model._
 
-import scala.concurrent.{ ExecutionContext, Future }
 import scala.concurrent.duration.Duration
+import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Try }
-import com.keepit.common.core._
 
 object ArticleImageConfiguration {
   val scaleSizes = ScaledImageSize.allSizes.toSet
@@ -59,7 +59,7 @@ class ImageCommander @Inject() (
   }
 
   def processRemoteArticleImage(uriId: Id[NormalizedURI], kind: ArticleKind[_ <: Article], version: ArticleVersion, remoteImageUrl: String): Future[Unit] = {
-    import ArticleImageConfiguration._
+    import com.keepit.rover.image.ArticleImageConfiguration._
     val result = imageFetcher.fetchAndStoreRemoteImage(remoteImageUrl, ImageSource.RoverArticle(kind), imagePathPrefix, scaleSizes, cropSizes).map {
       case Right(sourceImageHash) => {
         try {
