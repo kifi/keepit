@@ -34,7 +34,7 @@
     </tr>
 
     <tr>
-        <th>Redirect Time</th><td>@uri.redirectTime.getOrElse("")</td>
+        <th>Redirect Time</th><td>@{ uri.redirectTime.map( dt => adminHelper.dateTimeDisplay(dt).toString ).getOrElse("") }</td>
     </tr>
 
     <tr>
@@ -67,7 +67,7 @@
     </tr>
 
     <tr>
-        <th>Published</th><td>@adminHelper.dateTimeDisplay(aggregateContent.publishedAt.get)</td>
+        <th>Published</th><td>@{ aggregateContent.publishedAt.map( dt => adminHelper.dateTimeDisplay(dt).toString ).getOrElse("") }</td>
     </tr>
 
     <tr>
