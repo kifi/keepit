@@ -97,9 +97,9 @@ class UserSiteMapGenerator @Inject() (airbrake: AirbrakeNotifier,
         }
         usersWithLibraries.size
       }
-      xml.append("</urlset>")
       val totalUserCount = batchSizes.sum
       if (totalUserCount > 45000) airbrake.notify(s"there are $totalUserCount users with more then one viable library for sitemap, need to paginate the list!")
+      xml.append("</urlset>")
       log.info(s"[generate] done with sitemap generation for $totalUserCount users")
       xml.toString()
     }
