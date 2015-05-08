@@ -18,7 +18,6 @@ import scala.util.Failure
 @Singleton
 class RoverCommander @Inject() (
     articleCommander: ArticleCommander,
-    fetchCommander: FetchCommander,
     sensitivityCommander: RoverSensitivityCommander,
     articleStore: RoverArticleStore,
     articlePolicy: ArticleFetchingPolicy,
@@ -29,7 +28,7 @@ class RoverCommander @Inject() (
     val toBeInternedByPolicy = articlePolicy.toBeInterned(uri.url, uri.state)
     val interned = articleCommander.internArticleInfoByUri(uri.id.get, uri.url, toBeInternedByPolicy)
     val neverFetched = interned.collect { case (kind, info) if info.lastFetchedAt.isEmpty => (info.id.get -> info) }
-    fetchCommander.fetchWithTopPriority(neverFetched.keySet).imap { results =>
+    articleCommander.fetchWithTopPriority(neverFetched.keySet).imap { results =>
       val failed = results.collect { case (infoId, Failure(error)) => neverFetched(infoId).articleKind -> error }
       if (failed.nonEmpty) {
         airbrake.notify(s"Failed to schedule top priority fetches for uri ${uri.id.get}: ${uri.url}\n${failed.mkString("\n")}")
@@ -46,7 +45,7 @@ class RoverCommander @Inject() (
     articleCommander.getBestArticle(info) flatMap {
       case None if (info.lastFetchedAt.isEmpty) => {
         articleCommander.markAsFetching(info.id.get)
-        fetchCommander.fetchAndPersist(info)
+        articleCommander.fetchAndPersist(info)
       }
       case fetchedArticleOpt: Option[info.A] => Future.successful(fetchedArticleOpt)
     }
