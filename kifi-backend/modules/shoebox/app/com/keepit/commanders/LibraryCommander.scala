@@ -23,6 +23,7 @@ import com.keepit.heimdal.{ HeimdalContext, HeimdalContextBuilderFactory, Heimda
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
 import com.keepit.social.{ BasicNonUser, BasicUser }
+import com.keepit.common.concurrent.FutureHelpers
 import com.kifi.macros.json
 import org.joda.time.DateTime
 import play.api.http.Status._
@@ -1096,7 +1097,7 @@ class LibraryCommander @Inject() (
       if (toBeNotified.nonEmpty) {
         val keeper = usersById(newKeep.userId)
         val basicKeeper = BasicUser.fromUser(keeper)
-        elizaClient.sendGlobalNotification( //no need for push
+        elizaClient.sendGlobalNotification(
           userIds = toBeNotified,
           title = s"New Keep in ${library.name}",
           body = s"${keeper.firstName} has just kept ${newKeep.title.getOrElse("a new item")}",
@@ -1113,7 +1114,21 @@ class LibraryCommander @Inject() (
               "url" -> newKeep.url
             )
           ))
-        )
+        ).foreach { _ =>
+            if (toBeNotified.size > 100) {
+              airbrake.notify("Warning: Library with lots of subscribers. Time to make the code better!")
+            }
+            FutureHelpers.sequentialExec(toBeNotified) { userId =>
+              elizaClient.sendLibraryPushNotification(
+                userId,
+                message = s"New Keep in ${library.name}",
+                libraryId = library.id.get,
+                libraryUrl = "https://www.kifi.com" + Library.formatLibraryPath(owner.username, library.slug),
+                pushNotificationExperiment = PushNotificationExperiment.Experiment1,
+                category = LibraryPushNotificationCategory.LibraryChanged
+              )
+            }
+          }
       }
     }
   }
