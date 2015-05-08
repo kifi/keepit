@@ -22,7 +22,7 @@
     @for((keep, i) <- richWhoKeptMyKeeps.zipWithIndex) {
     <tr>
       <td>@{i+1}</td>
-      <td><a href="@com.keepit.controllers.admin.routes.ScraperAdminController.getScraped(keep.uri.id.get)">@keep.uri.title.getOrElse("No Title")</td>
+      <td><a href="@com.keepit.controllers.admin.routes.UrlController.getURIInfo(keep.uri.id.get)">@keep.uri.title.getOrElse("No Title")</td>
       <td>@adminHelper.dateDisplay(keep.latestKeep)</td>
       <td>@adminHelper.userDisplay(keep.users.head)</td>
       <td>@for(user <- keep.users.tail) {
