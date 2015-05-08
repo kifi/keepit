@@ -165,7 +165,7 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
 
     "get profile" in {
       withDb(controllerTestModules: _*) { implicit injector =>
-        val (user1, user2, user3, user4, user5, lib1) = db.readWrite { implicit session =>
+        val (user1, user2, user3, user4, user5, lib1, user5lib) = db.readWrite { implicit session =>
           val user1 = user().withName("George", "Washington").withUsername("GDubs").withPictureName("pic1").saved
           val user2 = user().withName("Abe", "Lincoln").withUsername("abe").saved
           val user3 = user().withName("Thomas", "Jefferson").withUsername("TJ").saved
@@ -178,15 +178,15 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
             user4 -> user1,
             user2 -> user3).saved
 
-          val user1secretLib = libraries(3).map(_.withUser(user1).secret()).saved.head.savedFollowerMembership(user2)
+          val user1secretLib = libraries(3).map(_.withUser(user1).withKind(LibraryKind.USER_CREATED).withKeepCount(3).withMemberCount(4).secret()).saved.head.savedFollowerMembership(user2)
 
-          val user1lib = library().withUser(user1).published().saved.savedFollowerMembership(user5, user4)
+          val user1lib = library().withUser(user1).withKind(LibraryKind.USER_CREATED).withKeepCount(3).published().withMemberCount(4).saved.savedFollowerMembership(user5, user4)
           user1lib.visibility === LibraryVisibility.PUBLISHED
 
-          val user3lib = library().withUser(user3).published().saved
-          val user5lib = library().withUser(user5).published().saved.savedFollowerMembership(user1)
+          val user3lib = library().withUser(user3).published().withKind(LibraryKind.USER_CREATED).withKeepCount(3).withMemberCount(4).saved
+          val user5lib = library().withUser(user5).published().withKind(LibraryKind.USER_CREATED).withKeepCount(3).withMemberCount(4).saved.savedFollowerMembership(user1)
           keep().withLibrary(user5lib).saved
-          membership().withLibraryFollower(library().withUser(user5).published().saved, user1).unlisted().saved
+          membership().withLibraryFollower(library().withUser(user5).published().withKind(LibraryKind.USER_CREATED).withKeepCount(3).saved, user1).unlisted().saved
 
           invite().fromLibraryOwner(user3lib).toUser(user1.id.get).withState(LibraryInviteStates.ACTIVE).saved
           invite().fromLibraryOwner(user3lib).toUser(user1.id.get).withState(LibraryInviteStates.ACTIVE).saved // duplicate library invite
@@ -196,7 +196,7 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
           keeps(3).map(_.withLibrary(user1lib)).saved
           keep().withLibrary(user3lib).saved
 
-          (user1, user2, user3, user4, user5, user1lib)
+          (user1, user2, user3, user4, user5, user1lib, user5lib)
         }
         db.readOnlyMaster { implicit s =>
           val libMem = libraryMembershipRepo.getWithLibraryIdAndUserId(lib1.id.get, user4.id.get).get
@@ -209,23 +209,29 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
           val ret2 = sql"select count(*) from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = 4 and lib.state = 'active' and lm.state = 'active' and lm.listed and lib.visibility = 'published'".as[Int].firstOption.getOrElse(0)
           ret2 === 1
 
-          libraryMembershipRepo.countWithUserIdAndAccess(user1.id.get, LibraryAccess.OWNER) === 4
-          libraryMembershipRepo.countWithUserIdAndAccess(user2.id.get, LibraryAccess.OWNER) === 0
-          libraryMembershipRepo.countWithUserIdAndAccess(user3.id.get, LibraryAccess.OWNER) === 1
-          libraryMembershipRepo.countWithUserIdAndAccess(user4.id.get, LibraryAccess.OWNER) === 0
-          libraryMembershipRepo.countWithUserIdAndAccess(user5.id.get, LibraryAccess.OWNER) === 2
+          libraryMembershipRepo.countNonTrivialLibrariesWithUserIdAndAccess(user1.id.get, LibraryAccess.OWNER) === 4
+          libraryMembershipRepo.countNonTrivialLibrariesWithUserIdAndAccess(user2.id.get, LibraryAccess.OWNER) === 0
+          libraryMembershipRepo.countNonTrivialLibrariesWithUserIdAndAccess(user3.id.get, LibraryAccess.OWNER) === 1
+          libraryMembershipRepo.countNonTrivialLibrariesWithUserIdAndAccess(user4.id.get, LibraryAccess.OWNER) === 0
+          val ret3 = StaticQuery.queryNA[Long](
+            s"select l.id from library_membership lm, library l where " +
+              s"lm.library_id = l.id and l.kind = 'user_created' and l.last_kept is not null and l.keep_count > 1 and l.state = 'active' and " +
+              s"lm.user_id = ${user5.id.get} and lm.access = '${LibraryAccess.OWNER.value}' and lm.state = 'active'")
+            .list
+          ret3 === Seq(user5lib.id.get.id)
+          libraryMembershipRepo.countNonTrivialLibrariesWithUserIdAndAccess(user5.id.get, LibraryAccess.OWNER) === 1
 
           libraryRepo.countLibrariesOfUserForAnonymous(user1.id.get) === 1
           libraryRepo.countLibrariesOfUserForAnonymous(user2.id.get) === 0
           libraryRepo.countLibrariesOfUserForAnonymous(user3.id.get) === 1
           libraryRepo.countLibrariesOfUserForAnonymous(user4.id.get) === 0
-          libraryRepo.countLibrariesOfUserForAnonymous(user5.id.get) === 1
+          libraryRepo.countLibrariesOfUserForAnonymous(user5.id.get) === 2
           libraryRepo.countLibrariesForOtherUser(user1.id.get, user5.id.get) === 1
           libraryRepo.countLibrariesForOtherUser(user1.id.get, user2.id.get) === 2
           libraryRepo.countLibrariesForOtherUser(user2.id.get, user5.id.get) === 0
           libraryRepo.countLibrariesForOtherUser(user3.id.get, user5.id.get) === 1
           libraryRepo.countLibrariesForOtherUser(user4.id.get, user5.id.get) === 0
-          libraryRepo.countLibrariesForOtherUser(user5.id.get, user1.id.get) === 1
+          libraryRepo.countLibrariesForOtherUser(user5.id.get, user1.id.get) === 2
         }
 
         //non existing username
