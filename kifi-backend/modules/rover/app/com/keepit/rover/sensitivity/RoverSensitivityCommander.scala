@@ -20,7 +20,7 @@ class RoverSensitivityCommander @Inject() (
     articleCommander: ArticleCommander,
     private implicit val executionContext: ExecutionContext) {
 
-  def areSensitive(uriIds: Set[Id[NormalizedURI]], getContent: Set[Id[NormalizedURI]] => Map[Id[NormalizedURI], Future[Set[Article]]] = articleCommander.getBestArticlesByUris): Future[Map[Id[NormalizedURI], Option[Boolean]]] = {
+  def areSensitive(uriIds: Set[Id[NormalizedURI]], getContent: Set[Id[NormalizedURI]] => Map[Id[NormalizedURI], Future[Set[Article]]] = articleCommander.getBestArticleFuturesByUris): Future[Map[Id[NormalizedURI], Option[Boolean]]] = {
     val keys = uriIds.map(UriSensitivityKey.apply)
     import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
     uriSensitivityCache.bulkGetOrElseFutureOpt(keys) { missingKeys =>

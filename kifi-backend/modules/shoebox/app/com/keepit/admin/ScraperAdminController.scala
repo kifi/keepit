@@ -5,9 +5,9 @@ import com.keepit.common.controller.{ UserActionsHelper, AdminUserActions }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.model._
+
 import com.keepit.search.ArticleStore
 import views.html
-import com.keepit.common.db.slick.Database.Replica
 import play.api.libs.concurrent.Execution.Implicits._
 import com.keepit.scraper.ScrapeScheduler
 import play.api.mvc.Action

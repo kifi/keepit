@@ -23,6 +23,7 @@ import com.keepit.heimdal.{ HeimdalContext, HeimdalContextBuilderFactory, Heimda
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
 import com.keepit.social.{ BasicNonUser, BasicUser }
+import com.keepit.common.concurrent.FutureHelpers
 import com.kifi.macros.json
 import org.joda.time.DateTime
 import play.api.http.Status._
@@ -147,15 +148,17 @@ class LibraryCommander @Inject() (
     (libInfo.copy(image = imageOpt), memOpt)
   }
 
-  def getLibraryWithOwnerAndCounts(libraryId: Id[Library], viewerUserId: Id[User]): Either[LibraryFail, (Library, BasicUser, Int, Option[Boolean])] = {
+  def getLibraryWithOwnerAndCounts(libraryId: Id[Library], viewerUserId: Id[User]): Either[LibraryFail, (Library, BasicUser, Int, Option[Boolean], Boolean)] = {
     db.readOnlyReplica { implicit s =>
       val library = libraryRepo.get(libraryId)
       val mine = library.ownerId == viewerUserId
-      val following = if (mine) None else Some(libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, viewerUserId).isDefined)
+      val memOpt = libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, viewerUserId)
+      val following = if (mine) None else Some(memOpt.isDefined)
+      val subscribedToUpdates = memOpt.map(_.subscribedToUpdates).getOrElse(false)
       if (library.visibility == LibraryVisibility.PUBLISHED || mine || following.get) {
         val owner = basicUserRepo.load(library.ownerId)
         val followerCount = libraryMembershipRepo.countWithLibraryIdByAccess(library.id.get).readOnly
-        Right(library, owner, followerCount, following)
+        Right((library, owner, followerCount, following, subscribedToUpdates))
       } else {
         Left(LibraryFail(FORBIDDEN, "library_access_denied"))
       }
@@ -253,7 +256,7 @@ class LibraryCommander @Inject() (
         library.id.get -> SafeFuture {
           val counts = memberInfosByLibraryId(library.id.get).counts
           val collaboratorCount = counts.readWrite
-          val followerCount = counts.readInsert + counts.readOnly
+          val followerCount = counts.readOnly
           val keepCount = keepCountsByLibraries.getOrElse(library.id.get, 0)
           (collaboratorCount, followerCount, keepCount)
         }
@@ -689,9 +692,9 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def getLibrariesUserCanKeepTo(userId: Id[User]): Seq[(Library, Boolean)] = {
+  def getLibrariesUserCanKeepTo(userId: Id[User]): Seq[(Library, Boolean, Boolean)] = {
     db.readOnlyMaster { implicit s =>
-      libraryRepo.getByUserWithCollab(userId, excludeAccess = Some(LibraryAccess.READ_ONLY)).map(r => (r._2, r._3))
+      libraryRepo.getByUserWithCollab(userId, excludeAccess = Some(LibraryAccess.READ_ONLY)).map(r => (r._2, r._3, r._1.subscribedToUpdates))
     }
   }
 
@@ -749,12 +752,16 @@ class LibraryCommander @Inject() (
           val libLink = s"""https://www.kifi.com${Library.formatLibraryPath(libOwner.username, lib.slug)}"""
           val libImageOpt = libraryImageCommander.getBestImageForLibrary(libId, ProcessedImageSize.Medium.idealSize)
 
-          val inviteeIdSet = invitesToPersist.map(_.userId).flatten.toSet
-          if (inviteeIdSet.nonEmpty) {
-            // send notifications to kifi users only
-            notifyInviteeAboutInvitationToJoinLIbrary(inviter, lib, libOwner, userImage, libLink, libImageOpt, inviteeIdSet)
+          val userInviteesMap = invitesToPersist.collect {
+            case invite if invite.userId.isDefined =>
+              invite.userId.get -> invite
+          }.toMap
+
+          // send notifications to kifi users only
+          if (userInviteesMap.nonEmpty) {
+            notifyInviteeAboutInvitationToJoinLIbrary(inviter, lib, libOwner, userImage, libLink, libImageOpt, userInviteesMap)
             if (inviterId != lib.ownerId) {
-              notifyLibOwnerAboutInvitationToTheirLibrary(inviter, lib, libOwner, userImage, libImageOpt, inviteeIdSet)
+              notifyLibOwnerAboutInvitationToTheirLibrary(inviter, lib, libOwner, userImage, libImageOpt, userInviteesMap)
             }
           }
           // send emails to both users & non-users
@@ -773,40 +780,95 @@ class LibraryCommander @Inject() (
     emailsF map (_.filter(_.isDefined).map(_.get))
   }
 
-  def notifyLibOwnerAboutInvitationToTheirLibrary(inviter: User, lib: Library, libOwner: BasicUser, userImage: String, libImageOpt: Option[LibraryImage], inviteeIdSet: Set[Id[User]]): Unit = {
-    val friendStr = if (inviteeIdSet.size > 1) "friends" else "a friend"
-    elizaClient.sendGlobalNotification( //push sent
-      userIds = Set(lib.ownerId),
-      title = s"${inviter.firstName} invited someone to your Library!",
-      body = s"${inviter.fullName} invited $friendStr to your library, ${lib.name}.",
-      linkText = s"See ${inviter.firstName}’s profile",
-      linkUrl = s"https://www.kifi.com/${inviter.username.value}",
+  def notifyLibOwnerAboutInvitationToTheirLibrary(inviter: User, lib: Library, libOwner: BasicUser, userImage: String, libImageOpt: Option[LibraryImage], inviteeMap: Map[Id[User], LibraryInvite]): Unit = {
+    val (collabInvitees, followInvitees) = inviteeMap.partition { case (userId, invite) => invite.isCollaborator }
+    val collabInviteeSet = collabInvitees.keySet
+    val followInviteeSet = followInvitees.keySet
+    val collabFriendStr = if (collabInviteeSet.size > 1) "friends" else "a friend"
+    val followFriendStr = if (followInviteeSet.size > 1) "friends" else "a friend"
+
+    val collabInvitesF = if (collabInviteeSet.size > 0) {
+      elizaClient.sendGlobalNotification( //push sent
+        userIds = Set(lib.ownerId),
+        title = s"${inviter.firstName} invited someone to contribute to your Library!",
+        body = s"${inviter.fullName} invited $collabFriendStr to contribute to your library, ${lib.name}.",
+        linkText = s"See ${inviter.firstName}’s profile",
+        linkUrl = s"https://www.kifi.com/${inviter.username.value}",
+        imageUrl = userImage,
+        sticky = false,
+        category = NotificationCategory.User.LIBRARY_FOLLOWED,
+        extra = Some(Json.obj(
+          "inviter" -> inviter,
+          "library" -> Json.toJson(LibraryNotificationInfo.fromLibraryAndOwner(lib, libImageOpt, libOwner))
+        ))
+      )
+    } else { Future.successful((): Unit) }
+
+    val followInvitesF = if (followInviteeSet.size > 0) {
+      elizaClient.sendGlobalNotification( //push sent
+        userIds = Set(lib.ownerId),
+        title = s"${inviter.firstName} invited someone to follow your Library!",
+        body = s"${inviter.fullName} invited $followFriendStr to follow your library, ${lib.name}.",
+        linkText = s"See ${inviter.firstName}’s profile",
+        linkUrl = s"https://www.kifi.com/${inviter.username.value}",
+        imageUrl = userImage,
+        sticky = false,
+        category = NotificationCategory.User.LIBRARY_FOLLOWED,
+        extra = Some(Json.obj(
+          "inviter" -> inviter,
+          "library" -> Json.toJson(LibraryNotificationInfo.fromLibraryAndOwner(lib, libImageOpt, libOwner))
+        ))
+      )
+    } else { Future.successful((): Unit) }
+
+    for {
+      collabInvites <- collabInvitesF
+      followInvites <- followInvitesF
+    } yield {
+      val canSendPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(lib.ownerId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
+      if (canSendPush) {
+        if (collabInviteeSet.size > 0) {
+          elizaClient.sendUserPushNotification(
+            userId = lib.ownerId,
+            message = s"${inviter.firstName} invited $collabFriendStr to contribute to your library ${lib.name}!",
+            recipient = inviter,
+            pushNotificationExperiment = PushNotificationExperiment.Experiment1,
+            category = UserPushNotificationCategory.NewLibraryFollower)
+        }
+        if (followInviteeSet.size > 0) {
+          elizaClient.sendUserPushNotification(
+            userId = lib.ownerId,
+            message = s"${inviter.firstName} invited $followFriendStr to follow your library ${lib.name}!",
+            recipient = inviter,
+            pushNotificationExperiment = PushNotificationExperiment.Experiment1,
+            category = UserPushNotificationCategory.NewLibraryFollower)
+        }
+      }
+    }
+  }
+
+  def notifyInviteeAboutInvitationToJoinLIbrary(inviter: User, lib: Library, libOwner: BasicUser, userImage: String, libLink: String, libImageOpt: Option[LibraryImage], inviteeMap: Map[Id[User], LibraryInvite]): Unit = {
+    val (collabInvitees, followInvitees) = inviteeMap.partition { case (userId, invite) => invite.isCollaborator }
+    val collabInviteeSet = collabInvitees.keySet
+    val followInviteeSet = followInvitees.keySet
+
+    val collabInvitesF = elizaClient.sendGlobalNotification( //push sent
+      userIds = collabInviteeSet,
+      title = s"${inviter.firstName} ${inviter.lastName} invited you to collaborate on a Library!",
+      body = s"Help ${libOwner.firstName} by sharing your knowledge in the library ${lib.name}.",
+      linkText = "Let's do it!",
+      linkUrl = libLink,
       imageUrl = userImage,
       sticky = false,
-      category = NotificationCategory.User.LIBRARY_FOLLOWED,
+      category = NotificationCategory.User.LIBRARY_INVITATION,
       extra = Some(Json.obj(
         "inviter" -> inviter,
         "library" -> Json.toJson(LibraryNotificationInfo.fromLibraryAndOwner(lib, libImageOpt, libOwner))
       ))
-    ) map { _ =>
-        val message = s"${inviter.firstName} invited someone to your Library ${lib.name}!"
-        inviteeIdSet.foreach { userId =>
-          val canSendPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(userId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
-          if (canSendPush) {
-            elizaClient.sendUserPushNotification(
-              userId = lib.ownerId,
-              message = message,
-              recipient = inviter,
-              pushNotificationExperiment = PushNotificationExperiment.Experiment1,
-              category = UserPushNotificationCategory.NewLibraryFollower)
-          }
-        }
-      }
-  }
+    )
 
-  def notifyInviteeAboutInvitationToJoinLIbrary(inviter: User, lib: Library, libOwner: BasicUser, userImage: String, libLink: String, libImageOpt: Option[LibraryImage], inviteeIdSet: Set[Id[User]]): Unit = {
-    elizaClient.sendGlobalNotification( //push sent
-      userIds = inviteeIdSet,
+    val followInvitesF = elizaClient.sendGlobalNotification( //push sent
+      userIds = followInviteeSet,
       title = s"${inviter.firstName} ${inviter.lastName} invited you to follow a Library!",
       body = s"Browse keeps in ${lib.name} to find some interesting gems kept by ${libOwner.firstName}.",
       linkText = "Let's take a look!",
@@ -818,21 +880,38 @@ class LibraryCommander @Inject() (
         "inviter" -> inviter,
         "library" -> Json.toJson(LibraryNotificationInfo.fromLibraryAndOwner(lib, libImageOpt, libOwner))
       ))
-    ) map { _ =>
-        val message = s"""${inviter.firstName} ${inviter.lastName} invited you to follow: ${lib.name}"""
-        inviteeIdSet.foreach { userId =>
-          val canSendPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(userId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
-          if (canSendPush) {
-            elizaClient.sendLibraryPushNotification(
-              userId,
-              message,
-              lib.id.get,
-              libLink,
-              PushNotificationExperiment.Experiment1,
-              LibraryPushNotificationCategory.LibraryInvitation)
-          }
+    )
+
+    for {
+      collabInvites <- collabInvitesF
+      followInvites <- followInvitesF
+    } yield {
+      collabInviteeSet.foreach { userId =>
+        val canSendPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(userId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
+        if (canSendPush) {
+          elizaClient.sendLibraryPushNotification(
+            userId,
+            s"""${inviter.firstName} ${inviter.lastName} invited you to contribute to: ${lib.name}""",
+            lib.id.get,
+            libLink,
+            PushNotificationExperiment.Experiment1,
+            LibraryPushNotificationCategory.LibraryInvitation)
         }
       }
+
+      followInviteeSet.foreach { userId =>
+        val canSendPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(userId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
+        if (canSendPush) {
+          elizaClient.sendLibraryPushNotification(
+            userId,
+            s"""${inviter.firstName} ${inviter.lastName} invited you to follow: ${lib.name}""",
+            lib.id.get,
+            libLink,
+            PushNotificationExperiment.Experiment1,
+            LibraryPushNotificationCategory.LibraryInvitation)
+        }
+      }
+    }
   }
 
   def internSystemGeneratedLibraries(userId: Id[User], generateNew: Boolean = true): (Library, Library) = {
@@ -1007,7 +1086,7 @@ class LibraryCommander @Inject() (
       if (newKeep.libraryId.get != library.id.get) { throw new IllegalArgumentException(s"Keep ${newKeep.id.get} does not belong to expected library ${library.id.get}") }
     }
     val (relevantFollowers, usersById) = db.readOnlyReplica { implicit session =>
-      val relevantFollowers = libraryMembershipRepo.getWithLibraryId(library.id.get).map(_.userId).filter(experimentCommander.userHasExperiment(_, ExperimentType.NEW_KEEP_NOTIFICATIONS)).toSet
+      val relevantFollowers: Set[Id[User]] = libraryMembershipRepo.getWithLibraryId(library.id.get).filter(_.subscribedToUpdates).map(_.userId).toSet
       val usersById = userRepo.getUsers(newKeeps.map(_.userId) :+ library.ownerId)
       (relevantFollowers, usersById)
     }
@@ -1018,7 +1097,7 @@ class LibraryCommander @Inject() (
       if (toBeNotified.nonEmpty) {
         val keeper = usersById(newKeep.userId)
         val basicKeeper = BasicUser.fromUser(keeper)
-        elizaClient.sendGlobalNotification( //no need for push
+        elizaClient.sendGlobalNotification(
           userIds = toBeNotified,
           title = s"New Keep in ${library.name}",
           body = s"${keeper.firstName} has just kept ${newKeep.title.getOrElse("a new item")}",
@@ -1035,7 +1114,21 @@ class LibraryCommander @Inject() (
               "url" -> newKeep.url
             )
           ))
-        )
+        ).foreach { _ =>
+            if (toBeNotified.size > 100) {
+              airbrake.notify("Warning: Library with lots of subscribers. Time to make the code better!")
+            }
+            FutureHelpers.sequentialExec(toBeNotified) { userId =>
+              elizaClient.sendLibraryPushNotification(
+                userId,
+                message = s"New Keep in ${library.name}",
+                libraryId = library.id.get,
+                libraryUrl = "https://www.kifi.com" + Library.formatLibraryPath(owner.username, library.slug),
+                pushNotificationExperiment = PushNotificationExperiment.Experiment1,
+                category = LibraryPushNotificationCategory.LibraryChanged
+              )
+            }
+          }
       }
     }
   }
@@ -1493,6 +1586,8 @@ class LibraryCommander @Inject() (
               numKeeps = info.numKeeps,
               numFollowers = info.numFollowers,
               followers = Seq.empty,
+              numCollaborators = info.numCollaborators,
+              collaborators = Seq.empty,
               lastKept = info.lastKept,
               following = None,
               caption = extraInfo.caption)
@@ -1596,6 +1691,8 @@ class LibraryCommander @Inject() (
           numKeeps = info.numKeeps,
           numFollowers = info.numFollowers,
           followers = info.followers,
+          numCollaborators = info.numCollaborators,
+          collaborators = info.collaborators,
           lastKept = lib.lastKept.getOrElse(lib.createdAt),
           listed = memberships(lib.id.get).listed)
     }
@@ -1661,13 +1758,20 @@ class LibraryCommander @Inject() (
   private def createLibraryCardInfos(libs: Seq[Library], owners: Map[Id[User], BasicUser], viewer: Option[User], withFollowing: Boolean, idealSize: ImageSize)(implicit session: RSession): ParSeq[LibraryCardInfo] = {
     libs.par map { lib => // may want to optimize queries below into bulk queries
       val image = ProcessedImageSize.pickBestImage(idealSize, libraryImageRepo.getActiveForLibraryId(lib.id.get), false)
-      val (numFollowers, followersSample) = if (lib.memberCount > 1) {
-        val count = libraryMembershipRepo.countWithLibraryIdAndAccess(lib.id.get, LibraryAccess.READ_ONLY)
-        val followersIds = libraryMembershipRepo.pageWithLibraryIdAndAccess(lib.id.get, 0, 3, Set(LibraryAccess.READ_ONLY)).map(_.userId).toSet
-        val sample = basicUserRepo.loadAll(followersIds).values.toSeq //we don't care about the order now anyway
-        (count, sample)
+      val (numFollowers, followersSample, numCollaborators, collabsSample) = if (lib.memberCount > 1) {
+        val countMap = libraryMembershipRepo.countWithLibraryIdByAccess(lib.id.get)
+        val numFollowers = countMap.readOnly
+        val numCollaborators = countMap.readWrite
+
+        val (collaborators, followers) = libraryMembershipRepo.pageWithLibraryIdAndAccess(lib.id.get, 0, 3, Set(LibraryAccess.READ_ONLY, LibraryAccess.READ_WRITE)).partition(mem => mem.canWrite)
+        val collabIds = collaborators.map(_.userId).toSet
+        val followerIds = followers.map(_.userId).toSet
+        val userSample = basicUserRepo.loadAll(followerIds ++ collabIds) //we don't care about the order now anyway
+        val followersSample = followerIds.map(id => userSample(id)).toSeq
+        val collabsSample = collabIds.map(id => userSample(id)).toSeq
+        (numFollowers, followersSample, numCollaborators, collabsSample)
       } else {
-        (0, Seq.empty)
+        (0, Seq.empty, 0, Seq.empty)
       }
 
       val owner = owners(lib.ownerId)
@@ -1676,12 +1780,12 @@ class LibraryCommander @Inject() (
       } else {
         None
       }
-      createLibraryCardInfo(lib, image, owner, numFollowers, followersSample, isFollowing)
+      createLibraryCardInfo(lib, image, owner, numFollowers, followersSample, numCollaborators, collabsSample, isFollowing)
     }
   }
 
   private def createLibraryCardInfo(lib: Library, image: Option[LibraryImage], owner: BasicUser, numFollowers: Int,
-    followers: Seq[BasicUser], isFollowing: Option[Boolean]): LibraryCardInfo = {
+    followers: Seq[BasicUser], numCollaborators: Int, collaborators: Seq[BasicUser], isFollowing: Option[Boolean]): LibraryCardInfo = {
     LibraryCardInfo(
       id = Library.publicId(lib.id.get),
       name = lib.name,
@@ -1693,7 +1797,9 @@ class LibraryCommander @Inject() (
       owner = owner,
       numKeeps = lib.keepCount,
       numFollowers = numFollowers,
-      followers = LibraryCardInfo.showable(followers),
+      followers = LibraryCardInfo.makeMembersShowable(followers, true),
+      numCollaborators = numCollaborators,
+      collaborators = LibraryCardInfo.makeMembersShowable(collaborators, false),
       lastKept = lib.lastKept.getOrElse(lib.createdAt),
       following = isFollowing,
       caption = None)
@@ -1702,6 +1808,20 @@ class LibraryCommander @Inject() (
   def getOwnerLibraryCounts(users: Set[Id[User]]): Map[Id[User], Int] = {
     db.readOnlyReplica { implicit s =>
       libraryRepo.getOwnerLibraryCounts(users)
+    }
+  }
+
+  def updatedLibraryUpdateSubscription(userId: Id[User], libraryId: Id[Library], subscribedToUpdatesNew: Boolean): Either[LibraryFail, LibraryMembership] = {
+    db.readOnlyMaster { implicit s =>
+      libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId)
+    } match {
+      case None => Left(LibraryFail(NOT_FOUND, "need_to_follow_to_subscribe"))
+      case Some(mem) => {
+        val updatedMembership = db.readWrite { implicit s =>
+          libraryMembershipRepo.save(mem.copy(subscribedToUpdates = subscribedToUpdatesNew))
+        }
+        Right(updatedMembership)
+      }
     }
   }
 

@@ -5,6 +5,7 @@ import com.keepit.rover.article.content._
 import org.joda.time.DateTime
 import play.api.libs.json._
 import com.keepit.common.reflection.CompanionTypeSystem
+import play.api.mvc.PathBindable
 
 sealed trait ArticleKind[A <: Article] {
   final type article = A
@@ -28,12 +29,28 @@ object ArticleKind {
     def reads(json: JsValue) = json.validate[String].map(ArticleKind.byTypeCode)
     def writes(kind: ArticleKind[_ <: Article]) = JsString(kind.typeCode)
   }
+
+  implicit def pathBinder(implicit stringBinder: PathBindable[String]) = new PathBindable[ArticleKind[_ <: Article]] {
+    override def bind(key: String, value: String): Either[String, ArticleKind[_ <: Article]] =
+      stringBinder.bind(key, value) match {
+        case Right(typeCode) => byTypeCode.get(typeCode) match {
+          case Some(kind) => Right(kind)
+          case None => Left(s"Unknown ArticleKind: $typeCode")
+        }
+        case _ => Left("Unable to bind an ArticleKind")
+      }
+    override def unbind(key: String, kind: ArticleKind[_ <: Article]): String = kind.typeCode
+  }
 }
 
 sealed trait Article { self =>
   type A >: self.type <: Article
-  def kind: ArticleKind[A]
+  val kind: ArticleKind[A]
   def instance: A = self
+  def asExpected[B <: Article](implicit expectedKind: ArticleKind[B]): B = {
+    if (kind == expectedKind) self.asInstanceOf[B]
+    else throw UnexpectedArticleKindException(self, expectedKind)
+  }
 
   def url: String
   def createdAt: DateTime
@@ -60,9 +77,12 @@ object Article {
 case class UnknownArticleVersionException[A <: Article](kind: ArticleKind[A], currentVersion: VersionNumber[Article], unknownVersion: VersionNumber[Article])
   extends Exception(s"[$kind] Unknown version: $unknownVersion (Latest version: $currentVersion)")
 
+case class UnexpectedArticleKindException[A <: Article, B <: Article](article: A, expectedKind: ArticleKind[B])
+  extends Exception(s"${article.kind} does not match expected kind $expectedKind: $article")
+
 case class EmbedlyArticle(url: String, createdAt: DateTime, content: EmbedlyContent) extends Article {
   type A = EmbedlyArticle
-  def kind = EmbedlyArticle
+  val kind = EmbedlyArticle
 }
 
 case object EmbedlyArticle extends ArticleKind[EmbedlyArticle] {
@@ -79,7 +99,7 @@ case class DefaultArticle(
     url: String,
     content: DefaultContent) extends Article {
   type A = DefaultArticle
-  def kind = DefaultArticle
+  val kind = DefaultArticle
 }
 
 case object DefaultArticle extends ArticleKind[DefaultArticle] {
@@ -96,7 +116,7 @@ case class YoutubeArticle(
     url: String,
     content: YoutubeContent) extends Article {
   type A = YoutubeArticle
-  def kind = YoutubeArticle
+  val kind = YoutubeArticle
 }
 
 case object YoutubeArticle extends ArticleKind[YoutubeArticle] {
@@ -113,7 +133,7 @@ case class GithubArticle(
     url: String,
     content: GithubContent) extends Article {
   type A = GithubArticle
-  def kind = GithubArticle
+  val kind = GithubArticle
 }
 
 case object GithubArticle extends ArticleKind[GithubArticle] {
@@ -130,7 +150,7 @@ case class LinkedInProfileArticle(
     url: String,
     content: LinkedInProfileContent) extends Article {
   type A = LinkedInProfileArticle
-  def kind = LinkedInProfileArticle
+  val kind = LinkedInProfileArticle
 }
 
 case object LinkedInProfileArticle extends ArticleKind[LinkedInProfileArticle] {

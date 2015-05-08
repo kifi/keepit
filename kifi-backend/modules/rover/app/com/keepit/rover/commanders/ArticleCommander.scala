@@ -2,13 +2,12 @@ package com.keepit.rover.commanders
 
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.cache._
-import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.{ SequenceNumber, Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.AccessLog
 import com.keepit.model.{ NormalizedURI }
 import com.keepit.rover.article.{ ArticleKind, Article }
-import com.keepit.rover.model.{ RoverArticleInfo, ArticleInfoRepo, ArticleInfo }
+import com.keepit.rover.model._
 import com.keepit.rover.store.RoverArticleStore
 
 import scala.concurrent.{ ExecutionContext, Future }
@@ -29,8 +28,18 @@ class ArticleCommander @Inject() (
     }
   }
 
-  def getBestArticlesByUris(uriIds: Set[Id[NormalizedURI]]): Map[Id[NormalizedURI], Future[Set[Article]]] = {
-    getArticleInfosByUris(uriIds).mapValues(getBestArticles)
+  def getBestArticleFuturesByUris(uriIds: Set[Id[NormalizedURI]]): Map[Id[NormalizedURI], Future[Set[Article]]] = {
+    getArticleInfosByUris(uriIds).mapValues { infos =>
+      Future.sequence(infos.map(getBestArticle(_))).imap(_.flatten)
+    }
+  }
+
+  def getBestArticlesByUris(uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[Article]]] = {
+    val futureUriIdWithArticles = getBestArticleFuturesByUris(uriIds).map {
+      case (uriId, futureArticles) =>
+        futureArticles.imap(uriId -> _)
+    }
+    Future.sequence(futureUriIdWithArticles).imap(_.toMap)
   }
 
   def getArticleInfosByUris(uriIds: Set[Id[NormalizedURI]]): Map[Id[NormalizedURI], Set[ArticleInfo]] = {
@@ -45,23 +54,27 @@ class ArticleCommander @Inject() (
     }.map { case (key, infos) => key.uriId -> infos }
   }
 
-  private def getBestArticles(infos: Set[ArticleInfo]): Future[Set[Article]] = {
-    val futureArticles: Set[Future[Option[Article]]] = infos.map { info =>
-      (info.getBestKey orElse info.getLatestKey) match {
-        case None => Future.successful(None)
-        case Some(articleKey) => articleStore.get(articleKey)
-      }
-    }
-    Future.sequence(futureArticles).imap(_.flatten)
+  def getBestArticle(info: ArticleInfoHolder): Future[Option[info.A]] = {
+    (info.getBestKey orElse info.getLatestKey).map(articleStore.get) getOrElse Future.successful(None)
   }
 
-  def internByUri(uriId: Id[NormalizedURI], url: String, kinds: Set[ArticleKind[_ <: Article]]): Map[ArticleKind[_ <: Article], RoverArticleInfo] = {
+  def getBestArticle[A <: Article](uriId: Id[NormalizedURI])(implicit kind: ArticleKind[A]): Future[Option[A]] = {
+    getArticleInfoByUriAndKind[A](uriId).map(getBestArticle(_).imap(_.map(_.asExpected[A]))) getOrElse Future.successful(None)
+  }
+
+  def getArticleInfoByUriAndKind[A <: Article](uriId: Id[NormalizedURI])(implicit kind: ArticleKind[A]): Option[RoverArticleInfo] = {
+    db.readWrite { implicit session =>
+      articleInfoRepo.getByUriAndKind(uriId, kind)
+    }
+  }
+
+  def internArticleInfoByUri(uriId: Id[NormalizedURI], url: String, kinds: Set[ArticleKind[_ <: Article]]): Map[ArticleKind[_ <: Article], RoverArticleInfo] = {
     db.readWrite { implicit session =>
       articleInfoRepo.internByUri(uriId, url, kinds)
     }
   }
 
-  def markAsFetching(ids: Id[RoverArticleInfo]*)(implicit session: RWSession): Unit = {
+  def markAsFetching(ids: Id[RoverArticleInfo]*): Unit = {
     db.readWrite { implicit session =>
       articleInfoRepo.markAsFetching(ids: _*)
     }

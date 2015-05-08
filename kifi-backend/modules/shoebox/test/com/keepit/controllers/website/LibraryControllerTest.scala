@@ -318,7 +318,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
            |},
            |"membership":"owner",
            |"listed": true,
-           |"suggestedSearches": {"terms": [], "weights": []}
+           |"suggestedSearches": {"terms": [], "weights": []},
+           |"subscribedToUpdates": false
           }""".stripMargin))
 
         // viewed by another user with an invite
@@ -362,7 +363,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
            |},
            |"membership":"none",
            |"listed": null,
-           |"suggestedSearches": {"terms": [], "weights": []}
+           |"suggestedSearches": {"terms": [], "weights": []},
+           |"subscribedToUpdates": false
           }""".stripMargin))
       }
     }
@@ -446,7 +448,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
              |},
              |"membership":"owner",
              |"listed": false,
-             |"suggestedSearches": {"terms": [], "weights": []}
+             |"suggestedSearches": {"terms": [], "weights": []},
+             |"subscribedToUpdates": false
             |}""".stripMargin)
         Json.parse(contentAsString(result1)) must equalTo(expected)
         Json.parse(contentAsString(result2)) must equalTo(expected)
@@ -458,14 +461,15 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         implicit val config = inject[PublicIdConfiguration]
         val libraryController = inject[LibraryController]
 
-        val (user1, user2, lib1, lib2, lib3, keep1) = db.readWrite { implicit s =>
+        val (user1, user2, user3, lib1, lib2, lib3, keep1) = db.readWrite { implicit s =>
           val user1 = user().withName("first", "user").withUsername("firstuser").saved
           val user2 = user().withName("second", "user").withUsername("seconduser").withPictureName("alf").saved
-          val library1 = library().withName("lib1").withUser(user1).published.withSlug("lib1").withMemberCount(11).withColor("blue").withDesc("My first library!").saved.savedFollowerMembership(user2)
+          val user3 = user().withName("third", "user").withUsername("thirduser").withPictureName("asdf").saved
+          val library1 = library().withName("lib1").withUser(user1).published.withSlug("lib1").withMemberCount(11).withColor("blue").withDesc("My first library!").saved.savedFollowerMembership(user2).savedCollaboratorMembership(user3)
           val library2 = library().withName("lib2").withUser(user2).secret.withSlug("lib2").withMemberCount(22).saved
           val library3 = library().withName("lib3").withUser(user2).secret.withSlug("lib3").withMemberCount(33).saved.savedFollowerMembership(user1)
           val k1 = keep().withLibrary(library1).saved
-          (user1, user2, library1, library2, library3, k1)
+          (user1, user2, user3, library1, library2, library3, k1)
         }
 
         { // upload an image for lib1
@@ -512,6 +516,15 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                       "pictureName": "alf.jpg",
                       "username": "seconduser"
                     }],
+                  "numCollaborators":1,
+                  "collaborators":[
+                    {
+                      "id": "${user3.externalId.id}",
+                      "firstName": "third",
+                      "lastName": "user",
+                      "pictureName": "asdf.jpg",
+                      "username": "thirduser"
+                    }],
                   "lastKept":${keep1.createdAt.getMillis},
                   "listed": true
                 }
@@ -543,6 +556,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                   "numKeeps":0,
                   "numFollowers":1,
                   "followers":[],
+                  "numCollaborators":0,
+                  "collaborators":[],
                   "lastKept":${lib3.createdAt.getMillis}
                 }
               ]
@@ -708,7 +723,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
         val inputJson1 = Json.obj(
           "invites" -> Seq(
-            Json.obj("type" -> "user", "id" -> user2.externalId, "access" -> LibraryAccess.READ_ONLY),
+            Json.obj("type" -> "user", "id" -> user2.externalId, "access" -> LibraryAccess.READ_WRITE),
             Json.obj("type" -> "user", "id" -> user3.externalId, "access" -> LibraryAccess.READ_ONLY),
             Json.obj("type" -> "email", "id" -> "squirtle@gmail.com", "access" -> LibraryAccess.READ_ONLY))
         )
@@ -720,7 +735,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         val expected1 = Json.parse(
           s"""
             |[
-            | {"user":"${user2.externalId}","access":"${LibraryAccess.READ_ONLY.value}"},
+            | {"user":"${user2.externalId}","access":"${LibraryAccess.READ_WRITE.value}"},
             | {"user":"${user3.externalId}","access":"${LibraryAccess.READ_ONLY.value}"},
             | {"email":"squirtle@gmail.com","access":"${LibraryAccess.READ_ONLY.value}"}
             |]

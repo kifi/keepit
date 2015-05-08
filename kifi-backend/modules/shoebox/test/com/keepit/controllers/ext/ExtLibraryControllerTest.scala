@@ -84,14 +84,16 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
               "color" -> LibraryColor.RED,
               "visibility" -> "published",
               "path" -> "/morgan/baby",
-              "hasCollaborators" -> false),
+              "hasCollaborators" -> false,
+              "subscribedToUpdates" -> false),
             Json.obj(
               "id" -> pubId2,
               "name" -> "Dark Knight",
               "color" -> LibraryColor.BLUE,
               "visibility" -> "published",
               "path" -> "/michael/darkknight",
-              "hasCollaborators" -> true)))
+              "hasCollaborators" -> true,
+              "subscribedToUpdates" -> false)))
       }
     }
 
@@ -146,7 +148,8 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
           "owner" -> BasicUser.fromUser(user1),
           "keeps" -> 0,
           "followers" -> 0,
-          "following" -> JsNull)
+          "following" -> JsNull,
+          "subscribedToUpdates" -> false)
 
         status(getLibrary(user2, lib2PubId)) === OK
 
@@ -176,7 +179,8 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
           "owner" -> BasicUser.fromUser(user1),
           "keeps" -> 0,
           "followers" -> 1,
-          "following" -> true)
+          "following" -> true,
+          "subscribedToUpdates" -> false)
       }
     }
 

@@ -5,6 +5,10 @@ import com.keepit.common.db.slick._
 import com.keepit.model._
 import com.keepit.common.time._
 import com.keepit.rover.fetcher.HttpRedirect
+import com.keepit.rover.RoverServiceClient
+import com.keepit.rover.article.{ ArticleKind, Article }
+import com.keepit.rover.article.content.ArticleContentExtractor
+import com.keepit.rover.model.{ ArticleKey, ArticleVersion }
 import com.keepit.scraper.ScrapeScheduler
 import scala.concurrent.duration._
 import views.html
@@ -21,7 +25,7 @@ import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
 
-import scala.util.Random
+import scala.util.{ Failure, Success, Random }
 
 class UrlController @Inject() (
     val userActionsHelper: UserActionsHelper,
@@ -45,7 +49,8 @@ class UrlController @Inject() (
     normalizedURIInterner: NormalizedURIInterner,
     airbrake: AirbrakeNotifier,
     uriIntegrityHelpers: UriIntegrityHelpers,
-    scrapeScheduler: ScrapeScheduler) extends AdminUserActions {
+    scrapeScheduler: ScrapeScheduler,
+    roverServiceClient: RoverServiceClient) extends AdminUserActions {
 
   implicit val timeout = BabysitterTimeout(5 minutes, 5 minutes)
 
@@ -354,6 +359,40 @@ class UrlController @Inject() (
   def flagAsAdult(uriId: Id[NormalizedURI]) = AdminUserPage { implicit request =>
     db.readWrite { implicit session => uriRepo.updateURIRestriction(uriId, Some(Restriction.ADULT)) }
     Redirect(routes.ScraperAdminController.getScraped(uriId))
+  }
+
+  def getURIInfo(id: Id[NormalizedURI]) = AdminUserPage.async { implicit request =>
+    val fArticleInfoWithUri = roverServiceClient.getArticleInfosByUris(Set(id))
+    val fBestArticlesWithUri = roverServiceClient.getBestArticlesByUris(Set(id))
+    val uri: NormalizedURI = db.readOnlyReplica { implicit s => uriRepo.get(id) }
+
+    fArticleInfoWithUri.flatMap { articleInfoWithUri =>
+      fBestArticlesWithUri.map { bestArticlesWithUri =>
+        val bestArticles = bestArticlesWithUri.getOrElse(id, Set.empty)
+        val aggregateContent: ArticleContentExtractor = ArticleContentExtractor(bestArticles)
+        Ok(html.admin.uri(uri, articleInfoWithUri.getOrElse(id, Set.empty), aggregateContent))
+      }
+    }
+  }
+
+  def getArticle(uriId: Id[NormalizedURI], kind: ArticleKind[_ <: Article], version: ArticleVersion) = AdminUserPage.async { implicit request =>
+    // TODO: Cam: expand functionality for any version, currently returns just the best
+
+    val fBestArticleWithId = roverServiceClient.getBestArticlesByUris((Set(uriId)))
+    fBestArticleWithId.map { bestArticleWithId: Map[Id[NormalizedURI], Set[Article]] =>
+      val bestArticles = bestArticleWithId.getOrElse(uriId, Set.empty)
+      val targetArticle = bestArticles.filter(article => article.kind == kind).head
+      Ok(Json.obj(("content", targetArticle)))
+    }
+  }
+
+  def getArticleByKind(uriId: Id[NormalizedURI], kind: ArticleKind[_ <: Article]) = AdminUserPage.async { implicit request =>
+    val fBestArticleWithId = roverServiceClient.getBestArticlesByUris((Set(uriId)))
+    fBestArticleWithId.map { bestArticleWithId: Map[Id[NormalizedURI], Set[Article]] =>
+      val bestArticles = bestArticleWithId.getOrElse(uriId, Set.empty)
+      val targetArticle = bestArticles.filter(article => article.kind == kind).head
+      Ok(Json.obj("content" -> targetArticle.content.toString))
+    }
   }
 
   def cleanKeepsByUri(firstPage: Int, pageSize: Int) = AdminUserAction { implicit request =>

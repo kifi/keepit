@@ -112,7 +112,8 @@ class LibraryController @Inject() (
       val accessStr = memOpt.map(_.access.value).getOrElse("none")
       val listed = memOpt.map(_.listed)
       val suggestedSearches = getSuggestedSearchesAsJson(libraryId)
-      Ok(Json.obj("library" -> Json.toJson(libInfo), "membership" -> accessStr, "listed" -> listed, "suggestedSearches" -> suggestedSearches))
+      val subscribedToUpdates = memOpt.map(_.subscribedToUpdates).getOrElse(false)
+      Ok(Json.obj("library" -> Json.toJson(libInfo), "membership" -> accessStr, "listed" -> listed, "suggestedSearches" -> suggestedSearches, "subscribedToUpdates" -> subscribedToUpdates))
     }
   }
 
@@ -120,7 +121,8 @@ class LibraryController @Inject() (
     val id = Library.decodePublicId(pubId).get
     val (libInfo, memOpt) = libraryCommander.getLibrarySummaryAndMembership(request.userIdOpt, id)
     val accessStr = memOpt.map(_.access.value).getOrElse("none")
-    Ok(Json.obj("library" -> Json.toJson(libInfo), "membership" -> accessStr))
+    val subscribedToUpdates = memOpt.map(_.subscribedToUpdates).getOrElse(false)
+    Ok(Json.obj("library" -> Json.toJson(libInfo), "membership" -> accessStr, "subscribedToUpdates" -> subscribedToUpdates))
   }
 
   def getLibraryByPath(userStr: String, slugStr: String, showPublishedLibraries: Boolean, imageSize: Option[String] = None) = MaybeUserAction.async { request =>
@@ -135,7 +137,8 @@ class LibraryController @Inject() (
             val accessStr = memOpt.map(_.access.value).getOrElse("none")
             val listed = memOpt.map(_.listed)
             val suggestedSearches = getSuggestedSearchesAsJson(library.id.get)
-            Ok(Json.obj("library" -> Json.toJson(libInfo), "membership" -> accessStr, "listed" -> listed, "suggestedSearches" -> suggestedSearches))
+            val subscribedToUpdates = memOpt.map(_.subscribedToUpdates).getOrElse(false)
+            Ok(Json.obj("library" -> Json.toJson(libInfo), "membership" -> accessStr, "listed" -> listed, "suggestedSearches" -> suggestedSearches, "subscribedToUpdates" -> subscribedToUpdates))
           }
         })
       case Left(fail) => Future.successful {
@@ -610,7 +613,9 @@ class LibraryController @Inject() (
               owner = info.owner,
               numKeeps = info.numKeeps,
               numFollowers = info.numFollowers,
-              followers = LibraryCardInfo.showable(info.followers),
+              followers = LibraryCardInfo.makeMembersShowable(info.followers, true),
+              numCollaborators = info.numCollaborators,
+              collaborators = LibraryCardInfo.makeMembersShowable(info.collaborators, false),
               lastKept = info.lastKept.getOrElse(new DateTime(0)),
               following = None,
               caption = None)
@@ -699,6 +704,14 @@ class LibraryController @Inject() (
 
   def marketingSiteSuggestedLibraries() = Action.async {
     libraryCommander.getMarketingSiteSuggestedLibraries() map { infos => Ok(Json.toJson(infos)) }
+  }
+
+  def setSubscribedToUpdates(pubId: PublicId[Library], newSubscripedToUpdate: Boolean) = UserAction { request =>
+    val libraryId = Library.decodePublicId(pubId).get
+    libraryCommander.updatedLibraryUpdateSubscription(request.userId, libraryId, newSubscripedToUpdate) match {
+      case Right(mem) => Ok
+      case Left(fail) => Status(fail.status)(Json.obj("error" -> fail.message))
+    }
   }
 
   ///////////////////

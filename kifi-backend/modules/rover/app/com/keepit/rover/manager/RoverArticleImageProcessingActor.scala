@@ -1,6 +1,7 @@
 package com.keepit.rover.manager
 
 import com.google.inject.Inject
+import com.keepit.common.amazon.AmazonInstanceInfo
 import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -17,8 +18,6 @@ import scala.util.{ Failure, Success }
 
 object RoverArticleImageProcessingActor {
   val lockTimeOut = 10 minutes
-  val minConcurrentTasks: Int = 150
-  val maxConcurrentTasks: Int = 200
 }
 
 class RoverArticleImageProcessingActor @Inject() (
@@ -29,10 +28,11 @@ class RoverArticleImageProcessingActor @Inject() (
     articleFetcher: ArticleFetcherProvider,
     articleStore: RoverArticleStore,
     imageProcessingCommander: ImageProcessingCommander,
+    instanceInfo: AmazonInstanceInfo,
     implicit val executionContext: ExecutionContext) extends ConcurrentTaskProcessingActor[SQSMessage[ArticleImageProcessingTask]](airbrake) {
 
-  protected val minConcurrentTasks: Int = RoverArticleImageProcessingActor.minConcurrentTasks
-  protected val maxConcurrentTasks: Int = RoverArticleImageProcessingActor.maxConcurrentTasks
+  protected val minConcurrentTasks: Int = instanceInfo.instantTypeInfo.cores * 3
+  protected val maxConcurrentTasks: Int = instanceInfo.instantTypeInfo.cores * 3
 
   protected def pullTasks(limit: Int): Future[Seq[SQSMessage[ArticleImageProcessingTask]]] = {
     taskQueue.nextBatchWithLock(limit, RoverArticleImageProcessingActor.lockTimeOut)
