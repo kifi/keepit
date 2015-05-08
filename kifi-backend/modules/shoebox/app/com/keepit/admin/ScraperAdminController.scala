@@ -76,12 +76,6 @@ class ScraperAdminController @Inject() (
     )
   }
 
-  def getScraped(id: Id[NormalizedURI]) = AdminUserPage { implicit request =>
-    val articleOption = articleStore.syncGet(id)
-    val (uri, scrapeInfoOption) = db.readOnlyReplica { implicit s => (normalizedURIRepo.get(id), scrapeInfoRepo.getByUriId(id)) }
-    Ok(html.admin.article(articleOption, uri, scrapeInfoOption))
-  }
-
   def getProxies = AdminUserPage { implicit request =>
     val proxies = db.readOnlyReplica { implicit session => httpProxyRepo.all() }
     Ok(html.admin.proxies(proxies))
