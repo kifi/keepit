@@ -1,6 +1,6 @@
 @(uri: com.keepit.model.NormalizedURI, articleInfos: Set[com.keepit.rover.model.ArticleInfo], aggregateContent: com.keepit.rover.article.content.ArticleContentExtractor)(implicit request: com.keepit.common.controller.UserRequest[_])
 
-@admin(uri.title.getOrElse("Title Not Found")) {
+@admin(aggregateContent.title.getOrElse("Title Not Found")) {
 
 <h2><a href = "@{com.keepit.controllers.admin.routes.AdminLDAController.similarURIs(uri.id.get)}">similar uris</a></h2>
 
@@ -63,18 +63,20 @@
     </tr>
 
     <tr>
-        <th>Authors</th><td>@aggregateContent.authors.mkString(", ")</td>
+        <th>Authors</th><td>@aggregateContent.authors</td>
     </tr>
 
     <tr>
-        <th>Published</th><td>@aggregateContent.publishedAt.getOrElse("")</td>
+        <th>Published</th><td>@adminHelper.dateTimeDisplay(aggregateContent.publishedAt.get)</td>
     </tr>
 
     <tr>
         <th>Content Type</th><td>@aggregateContent.contentType.getOrElse("")</td>
     </tr>
 
-
+    <tr>
+        <th>List of Articles By Kind:</th><td></td>
+    </tr>
     @for(articleInfo <- articleInfos) {
         <tr>
             <th>Article Kind</th><td>@articleInfo.kind</td>
@@ -89,7 +91,7 @@
             @*
             <th>Content</th><td><a href="@com.keepit.controllers.admin.routes.UrlController.getArticle(uri.id.get, articleInfo.articlekind, articleInfo.bestVersion.getOrElse(articleInfo.latestVersion).get)">Best Content</a></td>
             *@
-            <th>Content</th><td><a href="@com.keepit.controllers.admin.routes.UrlController.getArticleByKind(uri.id.get, articleInfo.articleKind)">Best</a></td>
+            <th>Content</th><td><a href="@com.keepit.controllers.admin.routes.UrlController.getBestArticle(uri.id.get, articleInfo.articleKind)">Best</a></td>
         </tr>
     }
     </table>

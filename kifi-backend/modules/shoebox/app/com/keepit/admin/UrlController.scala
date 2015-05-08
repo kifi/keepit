@@ -382,16 +382,17 @@ class UrlController @Inject() (
     fBestArticleWithId.map { bestArticleWithId: Map[Id[NormalizedURI], Set[Article]] =>
       val bestArticles = bestArticleWithId.getOrElse(uriId, Set.empty)
       val targetArticle = bestArticles.filter(article => article.kind == kind).head
-      Ok(Json.obj(("content" -> targetArticle.content.content.getOrElse("").toString)))
+      Ok(Json.toJson(targetArticle))
     }
   }
 
-  def getArticleByKind(uriId: Id[NormalizedURI], kind: ArticleKind[_ <: Article]) = AdminUserPage.async { implicit request =>
+  def getBestArticle(uriId: Id[NormalizedURI], kind: ArticleKind[_ <: Article]) = AdminUserPage.async { implicit request =>
+
     val fBestArticleWithId = roverServiceClient.getBestArticlesByUris((Set(uriId)))
     fBestArticleWithId.map { bestArticleWithId: Map[Id[NormalizedURI], Set[Article]] =>
       val bestArticles = bestArticleWithId.getOrElse(uriId, Set.empty)
       val targetArticle = bestArticles.filter(article => article.kind == kind).head
-      Ok(Json.obj("content" -> targetArticle.content.content.getOrElse("").toString))
+      Ok(Json.toJson(targetArticle))
     }
   }
 
