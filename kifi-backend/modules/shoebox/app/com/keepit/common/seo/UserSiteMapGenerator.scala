@@ -84,7 +84,7 @@ class UserSiteMapGenerator @Inject() (airbrake: AirbrakeNotifier,
         } filter { user =>
           db.readOnlyMaster { implicit s =>
             libraryMembershipRepo.countNonTrivialLibrariesWithUserIdAndAccess(user.id.get, LibraryAccess.OWNER, 2) > 1 ||
-              libraryMembershipRepo.countNonTrivialLibrariesWithUserIdAndAccess(user.id.get, LibraryAccess.READ_ONLY, 3) > 3
+              libraryMembershipRepo.countNonTrivialLibrariesWithUserIdAndAccess(user.id.get, LibraryAccess.READ_ONLY, 3) > 4
           }
         }
         usersWithLibraries foreach { user =>
