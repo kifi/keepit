@@ -151,6 +151,8 @@ class ShoeboxArticleIngestionActor @Inject() (
       Some(Restriction.ADULT)
     } else uri.restriction
 
-    uriRepo.save(uri.copy(title = preferredTitle, restriction = restriction)) // always save to increment sequence numbers for other services
+    val state = if (uri.state == NormalizedURIStates.ACTIVE) NormalizedURIStates.SCRAPED else uri.state
+
+    uriRepo.save(uri.copy(title = preferredTitle, restriction = restriction, state = state)) // always save to increment sequence numbers for other services
   }
 }
