@@ -13,6 +13,7 @@ import com.keepit.search.engine.library.LibrarySearch
 import com.keepit.search.engine.parser.KQueryParser
 import com.keepit.search.engine.uri.{ UriSearch, UriSearchImpl, UriSearchNonUserImpl }
 import com.keepit.search.engine.user.UserSearch
+import com.keepit.search.index.article.ShardedArticleIndexer
 import com.keepit.search.index.graph.keep.{ KeepFields, ShardedKeepIndexer }
 import com.keepit.search.index.graph.library.membership.{ LibraryMembershipIndexer, LibraryMembershipIndexable }
 import com.keepit.search.index.graph.library.{ LibraryFields, LibraryIndexable, LibraryIndexer }
@@ -34,7 +35,7 @@ import com.keepit.common.core._
 
 @Singleton
 class SearchFactory @Inject() (
-    shardedArticleIndexer: DeprecatedShardedArticleIndexer,
+    shardedArticleIndexer: ShardedArticleIndexer,
     shardedKeepIndexer: ShardedKeepIndexer,
     libraryIndexer: LibraryIndexer,
     libraryMembershipIndexer: LibraryMembershipIndexer,

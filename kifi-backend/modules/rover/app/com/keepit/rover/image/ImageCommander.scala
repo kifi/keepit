@@ -47,7 +47,7 @@ class ImageCommander @Inject() (
     }
   }
 
-  def getRipeForImageProcessing(limit: Int, fetchedForMoreThan: Duration, imageProcessingForMoreThan: Duration) = {
+  def getArticleInfosForImageProcessing(limit: Int, fetchedForMoreThan: Duration, imageProcessingForMoreThan: Duration) = {
     db.readOnlyMaster { implicit session =>
       articleInfoRepo.getRipeForImageProcessing(limit, fetchedForMoreThan, imageProcessingForMoreThan)
     }
