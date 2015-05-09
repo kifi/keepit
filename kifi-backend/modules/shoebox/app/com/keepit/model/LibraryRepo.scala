@@ -319,14 +319,14 @@ class LibraryRepoImpl @Inject() (
       case 1 => s"or (lib.id = ${libsFriendFollow.head})"
       case _ => s"or (lib.id in (${libsFriendFollow mkString ","}))"
     }
-    val query = sql"select lm.access, count(lib.id) from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $userId and lib.state = 'active' and lm.state = 'active' and ((lm.listed and lib.visibility = 'published') #$libVisibility) group by lm.access"
+    val query = sql"select lm.access, count(lib.id) from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $userId and lib.state = 'active' and lm.state = 'active' and ((lm.listed and lib.visibility = 'published') #$libVisibility) and lib.keep_count > 0 group by lm.access"
     query.as[(String, Int)].list.toMap.map { case (a, c) => LibraryAccess(a) -> c }
   }
 
   // TODO: share query logic with getFollowingLibrariesForAnonymous (above)
   def countMemberLibrariesForAnonymous(userId: Id[User])(implicit session: RSession): Map[LibraryAccess, Int] = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    val query = sql"select lm.access, count(lib.id) from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $userId and lib.state = 'active' and lm.state = 'active' and lm.listed and lib.visibility = 'published' group by lm.access"
+    val query = sql"select lm.access, count(lib.id) from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $userId and lib.state = 'active' and lm.state = 'active' and lm.listed and lib.visibility = 'published' and lib.keep_count > 0 group by lm.access"
     query.as[(String, Int)].list.toMap.map { case (a, c) => LibraryAccess(a) -> c }
   }
 
