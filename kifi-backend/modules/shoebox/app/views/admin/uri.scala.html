@@ -31,7 +31,7 @@
     </tr>
 
     <tr>
-        <th>Normalization</th><td>@uri.normalization.scheme</td>
+        <th>Normalization</th><td>@uri.normalization.map( normalization => normalization.scheme ).getOrElse("")</td>
     </tr>
 
     <tr>
@@ -50,6 +50,21 @@
             <form class="form-inline" action="@com.keepit.controllers.admin.routes.UrlController.flagAsAdult(uri.id.get)" method = "POST"><button type="submit" class="btn">Flag as adult</button></form>
             }</td>
     </tr>
+
+    @for(articleInfo <- articleInfos) {
+    <tr>
+        <th>Article Kind</th>
+        <th>Best Version</th>
+        <th>Latest Version</th>
+        <th>Content</th>
+    </tr>
+    <tr>
+        <td>@articleInfo.kind</td>
+        <td>@articleInfo.bestVersion.getOrElse("None")</td>
+        <td>@articleInfo.latestVersion.getOrElse("None")</td>
+        <td><a href="@com.keepit.controllers.admin.routes.UrlController.getBestArticle(uri.id.get, articleInfo.articleKind)">Here</a></td>
+    </tr>
+    }
 
     <tr>
         <th>Aggregate Content</th><td></td>
@@ -72,7 +87,7 @@
     </tr>
 
     <tr>
-        <th>Published</th><td>@{ aggregateContent.publishedAt.map( dt => adminHelper.dateTimeDisplay(dt).toString ).getOrElse("") }</td>
+        <th>Published At</th><td>@{ aggregateContent.publishedAt.map( dt => adminHelper.dateTimeDisplay(dt).toString ).getOrElse("") }</td>
     </tr>
 
     <tr>
@@ -80,24 +95,8 @@
     </tr>
 
     <tr>
-        <th>List of Articles By Kind:</th><td></td>
+        <th>Content</th><td>@aggregateContent.content.getOrElse("")</td>
     </tr>
-    @for(articleInfo <- articleInfos) {
-        <tr>
-            <th>Article Kind</th><td>@articleInfo.kind</td>
-        </tr>
-        <tr>
-            <th>Best Version</th><td>@articleInfo.bestVersion.getOrElse("None")</td>
-        </tr>
-        <tr>
-            <th>Latest Version</th><td>@articleInfo.latestVersion.getOrElse("None")</td>
-        </tr>
-        <tr>
-            @*
-            <th>Content</th><td><a href="@com.keepit.controllers.admin.routes.UrlController.getArticle(uri.id.get, articleInfo.articlekind, articleInfo.bestVersion.getOrElse(articleInfo.latestVersion).get)">Best Content</a></td>
-            *@
-            <th>Content</th><td><a href="@com.keepit.controllers.admin.routes.UrlController.getBestArticle(uri.id.get, articleInfo.articleKind)">Best</a></td>
-        </tr>
-    }
+
     </table>
 }
