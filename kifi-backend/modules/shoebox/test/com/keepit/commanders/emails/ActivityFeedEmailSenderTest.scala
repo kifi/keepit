@@ -242,8 +242,7 @@ class ActivityFeedEmailSenderTest extends Specification with ShoeboxTestInjector
         fakeQueue.lockedMessages.size === 0
         fakeQueue.consumedMessages.size === 0
 
-        fakeQueue.messages(0).body.userId === u1.id.get
-        fakeQueue.messages(1).body.userId === u2.id.get
+        Set(fakeQueue.messages(0).body.userId, fakeQueue.messages(1).body.userId) === Set(u1.id.get, u2.id.get)
 
         Await.ready(activityQueueHelper.processQueue(), Duration(5, "seconds"))
         fakeQueue.messages.size === 0
