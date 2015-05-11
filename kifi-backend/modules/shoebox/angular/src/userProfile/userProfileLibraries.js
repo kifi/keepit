@@ -157,9 +157,10 @@ angular.module('kifi')
           currentPageOrigin: $scope.currentPageOrigin,
           returnAction: function () {
             libraryService.getLibraryById(library.id, true).then(function (data) {
-              _.assign(library, data.library);
-              library.listed = data.listed;
+              _.assign(library, _.pick(data.library, 'name', 'slug', 'description', 'visibility', 'color', 'numFollowers'));
               library.path = data.library.url;
+              library.listed = data.listed;
+              library.followers = _.take(data.library.followers, 3);
             })['catch'](modalService.openGenericErrorModal);
           }
         }
