@@ -130,8 +130,8 @@ class UserProfileController @Inject() (
         val viewer = request.userId
         val userId = user.id.get
         val (ofUser, ofViewer, mutualFollow, basicUsers) = db.readOnlyReplica { implicit s =>
-          val ofUser = libraryRepo.getOwnerLibrariesOtherFollow(userId, viewer)
-          val ofViewer = libraryRepo.getOwnerLibrariesOtherFollow(viewer, userId)
+          val ofUser = libraryRepo.getOwnerLibrariesUserFollows(userId, viewer)
+          val ofViewer = libraryRepo.getOwnerLibrariesUserFollows(viewer, userId)
           val mutualFollow = libraryRepo.getMutualLibrariesForUser(viewer, userId, page * size, size)
           val mutualFollowOwners = mutualFollow.map(_.ownerId)
           val basicUsers = basicUserRepo.loadAll(Set(userId, viewer) ++ mutualFollowOwners)
@@ -276,7 +276,7 @@ class UserProfileController @Inject() (
   }
 
   private def loadProfileStats(userId: Id[User], viewerIdOpt: Option[Id[User]])(implicit session: RSession): ProfileStats = {
-    val libCount = viewerIdOpt.map(viewerId => libraryRepo.countLibrariesForOtherUser(userId, viewerId)).getOrElse(libraryRepo.countLibrariesOfUserForAnonymous(userId)) //not cached
+    val libCount = viewerIdOpt.map(viewerId => libraryRepo.countLibrariesForOtherUser(userId, viewerId)).getOrElse(libraryRepo.countLibrariesForAnonymous(userId)) //not cached
     //global
     val followersCount = libraryCommander.countFollowers(userId, viewerIdOpt)
     val connectionCount = userConnectionRepo.getConnectionCount(userId) //cached
@@ -284,7 +284,7 @@ class UserProfileController @Inject() (
   }
 
   private def loadProfileMutualStats(userId: Id[User], viewerId: Id[User])(implicit session: RSession): ProfileMutualStats = {
-    val followingLibCount = libraryRepo.countLibrariesOfOwnerUserFollow(userId, viewerId) //not cached
+    val followingLibCount = libraryRepo.countOwnerLibrariesUserFollows(userId, viewerId) //not cached
     val mutualConnectionCount = userConnectionRepo.getMutualConnectionCount(userId, viewerId) //cached
     ProfileMutualStats(libs = followingLibCount, connections = mutualConnectionCount)
   }

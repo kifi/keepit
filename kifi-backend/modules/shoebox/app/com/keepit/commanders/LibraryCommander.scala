@@ -1623,7 +1623,7 @@ class LibraryCommander @Inject() (
     viewer match {
       case None =>
         db.readOnlyReplica { implicit s =>
-          val counts = libraryRepo.countMemberLibrariesForAnonymous(userId)
+          val counts = libraryRepo.countLibrariesForAnonymousByAccess(userId)
           val numLibsOwned = counts.getOrElse(LibraryAccess.OWNER, 0)
           val numLibsCollab = counts.getOrElse(LibraryAccess.READ_WRITE, 0) + counts.getOrElse(LibraryAccess.READ_INSERT, 0)
           val numLibsFollowing = counts.getOrElse(LibraryAccess.READ_ONLY, 0)
@@ -1643,7 +1643,7 @@ class LibraryCommander @Inject() (
         (numLibsOwned, numLibsCollab, numLibsFollowing, Some(numLibsInvited))
       case Some(viewerId) =>
         db.readOnlyReplica { implicit s =>
-          val counts = libraryRepo.countMemberLibrariesForOtherUser(userId, viewerId)
+          val counts = libraryRepo.countLibrariesForOtherUserByAccess(userId, viewerId)
           val numLibsOwned = counts.getOrElse(LibraryAccess.OWNER, 0)
           val numLibsCollab = counts.getOrElse(LibraryAccess.READ_WRITE, 0) + counts.getOrElse(LibraryAccess.READ_ONLY, 0)
           val numLibsFollowing = counts.getOrElse(LibraryAccess.READ_ONLY, 0)
@@ -1670,7 +1670,7 @@ class LibraryCommander @Inject() (
 
   def getOwnProfileLibrariesForSelf(user: User, page: Paginator, idealSize: ImageSize): ParSeq[OwnLibraryCardInfo] = {
     val (libraryInfos, memberships) = db.readOnlyMaster { implicit session =>
-      val libs = libraryRepo.getLibrariesForSelf(user.id.get, page)
+      val libs = libraryRepo.getOwnerLibrariesForSelf(user.id.get, page)
       val libraryIds = libs.map(_.id.get).toSet
       val owners = Map(user.id.get -> BasicUser.fromUser(user))
       val memberships = libraryMembershipRepo.getWithLibraryIdsAndUserId(libraryIds, user.id.get)
@@ -1702,9 +1702,9 @@ class LibraryCommander @Inject() (
     db.readOnlyMaster { implicit session =>
       val libs = viewer match {
         case None =>
-          libraryRepo.getLibrariesOfUserForAnonymous(user.id.get, page)
+          libraryRepo.getOwnerLibrariesForAnonymous(user.id.get, page)
         case Some(other) =>
-          libraryRepo.getOwnedLibrariesForOtherUser(user.id.get, other.id.get, page)
+          libraryRepo.getOwnerLibrariesForOtherUser(user.id.get, other.id.get, page)
       }
       val owners = Map(user.id.get -> BasicUser.fromUser(user))
       createLibraryCardInfos(libs, owners, viewer, viewer.exists(_.id != user.id), idealSize)

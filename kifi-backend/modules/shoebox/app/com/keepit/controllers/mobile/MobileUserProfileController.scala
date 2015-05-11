@@ -144,7 +144,7 @@ class MobileUserProfileController @Inject() (
   }
 
   private def loadProfileStats(userId: Id[User], viewerIdOpt: Option[Id[User]])(implicit session: RSession): MobileProfileStats = {
-    val libCount = viewerIdOpt.map(viewerId => libraryRepo.countLibrariesForOtherUser(userId, viewerId)).getOrElse(libraryRepo.countLibrariesOfUserForAnonymous(userId)) //not cached
+    val libCount = viewerIdOpt.map(viewerId => libraryRepo.countLibrariesForOtherUser(userId, viewerId)).getOrElse(libraryRepo.countLibrariesForAnonymous(userId)) //not cached
     //global
     val followersCount = libraryCommander.countFollowers(userId, viewerIdOpt)
     val connectionCount = userConnectionRepo.getConnectionCount(userId) //cached
@@ -152,7 +152,7 @@ class MobileUserProfileController @Inject() (
   }
 
   private def loadProfileMutualStats(userId: Id[User], viewerId: Id[User])(implicit session: RSession): MobileProfileMutualStats = {
-    val followingLibCount = libraryRepo.countLibrariesOfOwnerUserFollow(userId, viewerId) //not cached
+    val followingLibCount = libraryRepo.countOwnerLibrariesUserFollows(userId, viewerId) //not cached
     val mutualConnectionCount = userConnectionRepo.getMutualConnectionCount(userId, viewerId) //cached
     MobileProfileMutualStats(libs = followingLibCount, connections = mutualConnectionCount)
   }
