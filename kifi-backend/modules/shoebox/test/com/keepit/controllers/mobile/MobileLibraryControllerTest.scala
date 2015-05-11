@@ -586,13 +586,13 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
         status(updateLibraryMembership(user2, user2, pubLibId1, "owner")) must equalTo(BAD_REQUEST)
 
         // test change membership access
-        status(updateLibraryMembership(user1, user2, pubLibId1, "follower")) must equalTo(NO_CONTENT)
+        status(updateLibraryMembership(user1, user2, pubLibId1, "read_only")) must equalTo(NO_CONTENT)
 
         // test deactivate membership
         status(updateLibraryMembership(user1, user2, pubLibId1, "none")) must equalTo(NO_CONTENT)
 
         // test membership not found
-        status(updateLibraryMembership(user1, user2, pubLibId1, "follower")) must equalTo(NOT_FOUND)
+        status(updateLibraryMembership(user1, user2, pubLibId1, "read_only")) must equalTo(NOT_FOUND)
       }
     }
 
