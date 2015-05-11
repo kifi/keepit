@@ -1,13 +1,16 @@
-package com.keepit.rover.article
+package com.keepit.rover.article.fetcher
 
 import java.net.URLEncoder
 
 import com.google.inject.Inject
+import com.keepit.common.core._
 import com.keepit.common.logging.Logging
 import com.keepit.common.net._
-import com.keepit.common.time.Clock
-import com.keepit.rover.article.content.{ YoutubeVideo, YoutubeTrack, YoutubeTrackInfo, YoutubeContent }
-import com.keepit.rover.document.{ RoverDocumentFetcher, JsoupDocument }
+import com.keepit.common.strings._
+import com.keepit.common.time.{ Clock, _ }
+import com.keepit.rover.article.YoutubeArticle
+import com.keepit.rover.article.content.{ YoutubeContent, YoutubeTrack, YoutubeTrackInfo, YoutubeVideo }
+import com.keepit.rover.document.{ JsoupDocument, RoverDocumentFetcher }
 import com.keepit.rover.fetcher.FetchResult
 import com.keepit.rover.store.RoverArticleStore
 import com.keepit.search.Lang
@@ -16,10 +19,7 @@ import org.joda.time.DateTime
 import org.jsoup.nodes.Element
 
 import scala.collection.JavaConversions._
-import com.keepit.common.strings._
-import com.keepit.common.core._
 import scala.concurrent.{ ExecutionContext, Future }
-import com.keepit.common.time._
 
 object YoutubeArticleFetcher {
   val ttsUrlPattern = """(?:'TTS_URL'|"ttsurl): "(http.*)",""".r
@@ -40,7 +40,7 @@ class YoutubeArticleFetcher @Inject() (
     articleStore: RoverArticleStore,
     documentFetcher: RoverDocumentFetcher,
     clock: Clock) extends ArticleFetcher[YoutubeArticle] with Logging {
-  import YoutubeArticleFetcher._
+  import com.keepit.rover.article.fetcher.YoutubeArticleFetcher._
 
   def fetch(request: ArticleFetchRequest[YoutubeArticle])(implicit ec: ExecutionContext): Future[Option[YoutubeArticle]] = {
     val futureFetchedArticle = doFetch(request.url, request.lastFetchedAt)

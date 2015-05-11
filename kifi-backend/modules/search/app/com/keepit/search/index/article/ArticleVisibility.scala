@@ -13,7 +13,7 @@ object ArticleVisibility {
   @inline
   def apply(reader: WrappedSubReader): ArticleVisibility = {
     val iter: DocIdSetIterator = {
-      val it = reader.termDocsEnum(deprecatedRestrictedTerm)
+      val it = reader.termDocsEnum(restrictedTerm)
       if (it == null) QueryUtil.emptyDocsEnum else it
     }
     new ArticleVisibility(iter)

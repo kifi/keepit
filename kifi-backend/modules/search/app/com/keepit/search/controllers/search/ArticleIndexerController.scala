@@ -6,7 +6,7 @@ import com.keepit.common.db._
 import com.keepit.model._
 import com.keepit.rover.RoverServiceClient
 import com.keepit.search.index.Indexable
-import com.keepit.search.index.article.{ ArticleFields, ArticleIndexable, ArticleIndexerPlugin, DeprecatedArticleIndexerPlugin }
+import com.keepit.search.index.article.{ ArticleFields, ArticleIndexable, ArticleIndexerPlugin }
 import com.keepit.search.index.phrase.PhraseIndexer
 import com.keepit.search.index.sharding.Shard
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -19,28 +19,27 @@ import scala.concurrent.duration._
 
 class ArticleIndexerController @Inject() (
   phraseIndexer: PhraseIndexer,
-  deprecatedIndexerPlugin: DeprecatedArticleIndexerPlugin,
   indexerPlugin: ArticleIndexerPlugin,
   shoeboxClient: ShoeboxServiceClient,
   rover: RoverServiceClient)
     extends SearchServiceController {
 
   def index() = Action { implicit request =>
-    deprecatedIndexerPlugin.update()
+    indexerPlugin.update()
     Ok(JsObject(Seq("articles" -> JsString("ok"))))
   }
 
   def reindex() = Action { implicit request =>
-    deprecatedIndexerPlugin.reindex()
+    indexerPlugin.reindex()
     Ok(JsObject(Seq("started" -> JsString("ok"))))
   }
 
   def getSequenceNumber = Action { implicit request =>
-    Ok(JsObject(Seq("sequenceNumber" -> JsNumber(deprecatedIndexerPlugin.sequenceNumber.value))))
+    Ok(JsObject(Seq("sequenceNumber" -> JsNumber(indexerPlugin.sequenceNumber.value))))
   }
 
   def refreshSearcher = Action { implicit request =>
-    deprecatedIndexerPlugin.refreshSearcher()
+    indexerPlugin.refreshSearcher()
     Ok("searcher refreshed")
   }
 
@@ -50,7 +49,7 @@ class ArticleIndexerController @Inject() (
   }
 
   def refreshWriter = Action { implicit request =>
-    deprecatedIndexerPlugin.refreshWriter()
+    indexerPlugin.refreshWriter()
     Ok("writer refreshed")
   }
 
@@ -58,11 +57,7 @@ class ArticleIndexerController @Inject() (
     val getDecoder = Indexable.getFieldDecoder(ArticleFields.decoders) _
     try {
       val uri = IndexableUri(Await.result(shoeboxClient.getNormalizedURI(id), 30 seconds))
-      val htmlDoc = if (deprecated) {
-        val indexer = deprecatedIndexerPlugin.getIndexerFor(id)
-        val doc = indexer.buildIndexable(uri).buildDocument
-        html.admin.luceneDocDump("DeprecatedArticle", doc, getDecoder)
-      } else {
+      val htmlDoc = {
         val articles = Await.result(rover.getBestArticlesByUris(Set(uri.id.get)), 30 seconds)(uri.id.get)
         val doc = ArticleIndexable(uri, articles, Shard(1, 1)).buildDocument
         html.admin.luceneDocDump("Article", doc, getDecoder)

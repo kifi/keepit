@@ -4,10 +4,9 @@ import com.keepit.common.actor.ActorInstance
 import com.keepit.common.db.slick._
 import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.{ SchedulingProperties, SequencingPlugin, SequencingActor }
-import com.keepit.rover.article.{ Article, ArticleKind }
+import com.keepit.rover.article.policy.FailureRecoveryPolicy
+import com.keepit.rover.article.{ ArticleInfoUriCache, ArticleInfoUriKey, Article, ArticleKind }
 import com.keepit.model._
-import com.keepit.rover.commanders.{ ArticleInfoUriKey, ArticleInfoUriCache }
-import com.keepit.rover.manager.FailureRecoveryPolicy
 import com.keepit.rover.sensitivity.{ UriSensitivityKey, UriSensitivityCache }
 import org.joda.time.DateTime
 import com.keepit.common.time._

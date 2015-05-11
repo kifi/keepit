@@ -39,7 +39,7 @@ trait LibraryMembershipRepo extends Repo[LibraryMembership] with RepoWithDelete[
   def mostMembersSince(count: Int, since: DateTime)(implicit session: RSession): Seq[(Id[Library], Int)]
   def percentGainSince(since: DateTime, totalMoreThan: Int, recentMoreThan: Int, count: Int)(implicit session: RSession): Seq[(Id[Library], Int, Int, Double)]
   def mostMembersSinceForUser(count: Int, since: DateTime, ownerId: Id[User])(implicit session: RSession): Seq[(Id[Library], Int)]
-  def countWithUserIdAndAccess(userId: Id[User], access: LibraryAccess)(implicit session: RSession): Int
+  def countNonTrivialLibrariesWithUserIdAndAccess(userId: Id[User], access: LibraryAccess, minKeepCount: Int = 1)(implicit session: RSession): Int
   def countsWithUserIdAndAccesses(userId: Id[User], accesses: Set[LibraryAccess])(implicit session: RSession): Map[LibraryAccess, Int]
   def getFollowersForAnonymous(ownerId: Id[User])(implicit session: RSession): Seq[Id[User]]
   def getFollowersForOwner(ownerId: Id[User])(implicit session: RSession): Seq[Id[User]]
@@ -311,9 +311,12 @@ class LibraryMembershipRepoImpl @Inject() (
     countWithLibraryIdByAccessCache.remove(CountWithLibraryIdByAccessKey(libMem.libraryId))
   }
 
-  def countWithUserIdAndAccess(userId: Id[User], access: LibraryAccess)(implicit session: RSession): Int = {
+  def countNonTrivialLibrariesWithUserIdAndAccess(userId: Id[User], access: LibraryAccess, minKeepCount: Int = 1)(implicit session: RSession): Int = {
     libraryMembershipCountCache.getOrElse(LibraryMembershipCountKey(userId, access)) {
-      StaticQuery.queryNA[Int](s"select count(*) from library_membership where user_id = $userId and access = '${access.value}' and state = 'active'").firstOption.getOrElse(0)
+      StaticQuery.queryNA[Int](
+        s"select count(*) from library_membership lm, library l where " +
+          s"lm.library_id = l.id and l.kind = 'user_created' and l.last_kept is not null and l.keep_count > $minKeepCount and l.state = 'active' and lm.user_id = $userId and lm.access = '${access.value}' and lm.state = 'active'")
+        .firstOption.getOrElse(0)
     }
   }
 

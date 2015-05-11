@@ -6,13 +6,13 @@ import com.keepit.common.db.{ Id, SequenceNumber }
 import com.keepit.common.json.TupleFormat
 import com.keepit.common.logging.Logging
 import com.keepit.model.{ NormalizedURI, IndexableUri }
-import com.keepit.rover.article.Article
-import com.keepit.rover.commanders.{ ArticleCommander, RoverCommander }
-import com.keepit.rover.model.{ ShoeboxArticleUpdates, ArticleInfo }
+import com.keepit.rover.RoverCommander
+import com.keepit.rover.article.{ ArticleCommander, Article }
+import com.keepit.rover.model.{ ArticleInfo }
 import play.api.libs.json.Json
 import play.api.mvc.Action
 
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ ExecutionContext }
 
 class RoverController @Inject() (roverCommander: RoverCommander, articleCommander: ArticleCommander, implicit val executionContext: ExecutionContext) extends RoverServiceController with Logging {
 
@@ -25,7 +25,7 @@ class RoverController @Inject() (roverCommander: RoverCommander, articleCommande
 
   def fetchAsap() = Action.async(parse.json) { request =>
     val uri = request.body.as[IndexableUri]
-    roverCommander.fetchAsap(uri).map(_ => Ok)
+    articleCommander.fetchAsap(uri).map(_ => Ok)
   }
 
   def getBestArticlesByUris() = Action.async(parse.json) { request =>

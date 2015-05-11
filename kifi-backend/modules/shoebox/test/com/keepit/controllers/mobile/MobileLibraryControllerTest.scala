@@ -463,7 +463,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
       }
     }
 
-    "get writeable libraries" in {
+    "get writeable libraries v1" in {
       withDb(controllerTestModules: _*) { implicit injector =>
         val (user1, lib1, lib2, _, _) = setupTwoUsersThreeLibraries()
         val pubLibId1 = Library.publicId(lib1.id.get)(inject[PublicIdConfiguration])
@@ -478,14 +478,14 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
         val url3 = Json.toJson("http://www.google.com")
 
         // no url in body
-        val result1 = getWriteableLibraries(user1, emptyBody)
+        val result1 = getWriteableLibrariesV1(user1, emptyBody)
         status(result1) must equalTo(OK)
         val response1 = contentAsJson(result1)
         (response1 \ "libraries").as[Seq[LibraryInfo]].length === 2
 
         // unparseable url in body
         println("********* Intended ERROR parsing url! *********")
-        val result2 = getWriteableLibraries(user1, Json.obj("url" -> url1))
+        val result2 = getWriteableLibrariesV1(user1, Json.obj("url" -> url1))
         status(result2) must equalTo(OK)
         val response2 = contentAsJson(result2)
         (response2 \ "libraries").as[Seq[LibraryInfo]].length === 2
@@ -493,7 +493,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
         println("********* End intended ERROR! *********")
 
         // parseable url in body (kept in other libraries)
-        val result3 = getWriteableLibraries(user1, Json.obj("url" -> url2))
+        val result3 = getWriteableLibrariesV1(user1, Json.obj("url" -> url2))
         status(result3) must equalTo(OK)
         val response3 = contentAsJson(result3)
         (response3 \ "libraries").as[Seq[LibraryInfo]].length === 2
@@ -516,7 +516,49 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
              ]
            """)
 
-        val result4 = getWriteableLibraries(user1, Json.obj("url" -> url3))
+        val result4 = getWriteableLibrariesV1(user1, Json.obj("url" -> url3))
+        status(result4) must equalTo(OK)
+        val response4 = contentAsJson(result4)
+        (response4 \ "libraries").as[Seq[LibraryInfo]].length === 2
+        (response4 \ "error").asOpt[String] === None
+        (response4 \ "alreadyKept").asOpt[Seq[JsObject]] === None
+      }
+    }
+
+    "get writeable libraries v2" in {
+      withDb(controllerTestModules: _*) { implicit injector =>
+        val (user1, lib1, lib2, _, _) = setupTwoUsersThreeLibraries()
+        val pubLibId1 = Library.publicId(lib1.id.get)(inject[PublicIdConfiguration])
+        val pubLibId2 = Library.publicId(lib2.id.get)(inject[PublicIdConfiguration])
+        val k1 = db.readWrite { implicit s =>
+          setupKeepInLibrary(user1, lib1, "http://www.yelp.com/krustykrab", "krustykrab", Seq("food1", "food2"), Some("[#food1] [#food2]"))
+        }
+
+        val emptyBody = Json.obj()
+        val url1 = Json.toJson("www.yelp.com/krustykrab")
+        val url2 = Json.toJson("http://www.yelp.com/krustykrab")
+        val url3 = Json.toJson("http://www.google.com")
+
+        // parseable url in body (kept in other libraries)
+        val result3 = getWriteableLibrariesV2(user1, Json.obj("url" -> url2))
+        status(result3) must equalTo(OK)
+        val response3 = contentAsJson(result3)
+        (response3 \ "libraries").as[Seq[LibraryInfo]].length === 2
+        (response3 \ "error").asOpt[String] === None
+        val keepData = (response3 \ "alreadyKept")
+        keepData === Json.parse(s"""
+            [
+             {
+                "id":"${k1.externalId}",
+                "title":"krustykrab",
+                "note":"[#food1] [#food2]",
+                "imageUrl":null,
+                "libraryId":"${pubLibId1.id}"
+             }
+            ]
+           """)
+
+        val result4 = getWriteableLibrariesV2(user1, Json.obj("url" -> url3))
         status(result4) must equalTo(OK)
         val response4 = contentAsJson(result4)
         (response4 \ "libraries").as[Seq[LibraryInfo]].length === 2
@@ -544,13 +586,13 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
         status(updateLibraryMembership(user2, user2, pubLibId1, "owner")) must equalTo(BAD_REQUEST)
 
         // test change membership access
-        status(updateLibraryMembership(user1, user2, pubLibId1, "follower")) must equalTo(NO_CONTENT)
+        status(updateLibraryMembership(user1, user2, pubLibId1, "read_only")) must equalTo(NO_CONTENT)
 
         // test deactivate membership
         status(updateLibraryMembership(user1, user2, pubLibId1, "none")) must equalTo(NO_CONTENT)
 
         // test membership not found
-        status(updateLibraryMembership(user1, user2, pubLibId1, "follower")) must equalTo(NOT_FOUND)
+        status(updateLibraryMembership(user1, user2, pubLibId1, "read_only")) must equalTo(NOT_FOUND)
       }
     }
 
@@ -611,9 +653,13 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
     controller.unkeepFromLibrary(libId, keepId)(request(routes.MobileLibraryController.unkeepFromLibrary(libId, keepId)))
   }
 
-  private def getWriteableLibraries(user: User, body: JsObject)(implicit injector: Injector): Future[Result] = {
+  private def getWriteableLibrariesV1(user: User, body: JsObject)(implicit injector: Injector): Future[Result] = {
     inject[FakeUserActionsHelper].setUser(user)
     controller.getWriteableLibrariesWithUrlV1()(request(routes.MobileLibraryController.getWriteableLibrariesWithUrlV1()).withBody(body))
+  }
+  private def getWriteableLibrariesV2(user: User, body: JsObject)(implicit injector: Injector): Future[Result] = {
+    inject[FakeUserActionsHelper].setUser(user)
+    controller.getWriteableLibrariesWithUrlV2()(request(routes.MobileLibraryController.getWriteableLibrariesWithUrlV2()).withBody(body))
   }
 
   private def updateLibraryMembership(user: User, targetUser: User, libId: PublicId[Library], access: String)(implicit injector: Injector): Future[Result] = {

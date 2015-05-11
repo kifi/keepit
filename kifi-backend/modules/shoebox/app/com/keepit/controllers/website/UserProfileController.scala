@@ -3,11 +3,14 @@ package com.keepit.controllers.website
 import com.google.inject.Inject
 import com.keepit.abook.ABookServiceClient
 import com.keepit.commanders._
+import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller._
+import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.social.BasicUserRepo
+import com.keepit.common.util.Paginator
 import com.keepit.model._
 import com.keepit.social.BasicUser
 import play.api.libs.concurrent.Execution.Implicits._
@@ -34,7 +37,8 @@ class UserProfileController @Inject() (
     friendStatusCommander: FriendStatusCommander,
     libraryCommander: LibraryCommander,
     libraryRepo: LibraryRepo,
-    basicUserRepo: BasicUserRepo) extends UserActions with ShoeboxServiceController {
+    basicUserRepo: BasicUserRepo,
+    implicit val config: PublicIdConfiguration) extends UserActions with ShoeboxServiceController {
 
   def getProfile(username: Username) = MaybeUserAction { request =>
     val viewer = request.userOpt
@@ -43,7 +47,7 @@ class UserProfileController @Inject() (
         log.warn(s"can't find username ${username.value}")
         NotFound(s"username ${username.value}")
       case Some(profile) =>
-        val (numLibraries, numCollabLibraries, numFollowedLibraries, numInvitedLibs) = libraryCommander.countLibraries(profile.userId, viewer.map(_.id.get))
+        val (numLibraries, numCollabLibraries, numFollowedLibraries, numInvitedLibs) = userProfileCommander.countLibraries(profile.userId, viewer.map(_.id.get))
         val (numConnections, userBiography) = db.readOnlyMaster { implicit s =>
           val numConnections = userConnectionRepo.getConnectionCount(profile.userId)
           val userBio = userValueRepo.getValueStringOpt(profile.userId, UserValueName.USER_DESCRIPTION)
@@ -57,7 +61,7 @@ class UserProfileController @Inject() (
           numCollabLibraries = numCollabLibraries,
           numKeeps = profile.numKeeps,
           numConnections = numConnections,
-          numFollowers = libraryCommander.countFollowers(profile.userId, viewer.map(_.id.get)),
+          numFollowers = userProfileCommander.countFollowers(profile.userId, viewer.map(_.id.get)),
           numInvitedLibraries = numInvitedLibs,
           biography = userBiography
         )).as[JsObject]
@@ -65,29 +69,79 @@ class UserProfileController @Inject() (
     }
   }
 
-  /**
-   * @param fullInfoLimit trying to get at least this number of full card info
-   * @param maxExtraIds if available, returning external id of additional maxExtraIds ids that the frontend can iterate on as it does with getProfileConnections
-   */
-  def getFriendRecommendations(fullInfoLimit: Int, maxExtraIds: Int) = UserAction.async { request =>
-    abookServiceClient.getFriendRecommendations(request.userId, 0, fullInfoLimit + maxExtraIds, true) map {
-      case None => Ok(Json.obj("users" -> JsArray()))
-      case Some(recommendedUserIds) => {
-        val head = recommendedUserIds.take(fullInfoLimit)
-        val (headUserJsonObjs, userMap) = db.readOnlyMaster { implicit s =>
-          val userMap = basicUserRepo.loadAll(recommendedUserIds.toSet)
-          val headUserMap = Map(head.map(id => id -> userMap(id)): _*)
-          val headUserWithStatus = headUserMap.mapValues(BasicUserWithFriendStatus.fromWithoutFriendStatus)
-          val sortedHeadUserWithStatus = head.map(id => id -> headUserWithStatus(id))
-          val headUserJsonObjs = sortedHeadUserWithStatus map {
-            case (userId, userWFS) =>
-              loadProfileUser(userId, userWFS, request.userIdOpt, request.userIdOpt)
-          }
-          (headUserJsonObjs, userMap)
+  def getProfileLibraries(username: Username, page: Int, pageSize: Int, filter: String) = MaybeUserAction.async { request =>
+    userCommander.userFromUsername(username) match {
+      case None =>
+        log.warn(s"unknown username ${username.value} requested")
+        Future.successful(NotFound(username.value))
+      case Some(user) =>
+        val viewer = request.userOpt
+        val paginator = Paginator(page, pageSize)
+        val imageSize = ProcessedImageSize.Medium.idealSize
+        filter match {
+          case "own" =>
+            val libs = if (viewer.exists(_.id == user.id)) {
+              Json.toJson(userProfileCommander.getOwnLibrariesForSelf(user, paginator, imageSize).seq)
+            } else {
+              Json.toJson(userProfileCommander.getOwnLibraries(user, viewer, paginator, imageSize).map(LibraryCardInfo.writesWithoutOwner.writes).seq)
+            }
+            Future.successful(Ok(Json.obj("own" -> libs)))
+          case "following" =>
+            val libs = userProfileCommander.getFollowingLibraries(user, viewer, paginator, imageSize).seq
+            Future.successful(Ok(Json.obj("following" -> libs)))
+          case "invited" =>
+            val libs = userProfileCommander.getInvitedLibraries(user, viewer, paginator, imageSize).seq
+            Future.successful(Ok(Json.obj("invited" -> libs)))
+          case "all" if page == 0 =>
+            val ownLibsF = if (viewer.exists(_.id == user.id)) {
+              SafeFuture(Json.toJson(userProfileCommander.getOwnLibrariesForSelf(user, paginator, imageSize).seq))
+            } else {
+              SafeFuture(Json.toJson(userProfileCommander.getOwnLibraries(user, viewer, paginator, imageSize).map(LibraryCardInfo.writesWithoutOwner.writes).seq))
+            }
+            val followLibsF = SafeFuture(userProfileCommander.getFollowingLibraries(user, viewer, paginator, imageSize).seq)
+            val invitedLibsF = SafeFuture(userProfileCommander.getInvitedLibraries(user, viewer, paginator, imageSize).seq)
+            for {
+              ownLibs <- ownLibsF
+              followLibs <- followLibsF
+              invitedLibs <- invitedLibsF
+            } yield {
+              Ok(Json.obj(
+                "own" -> ownLibs,
+                "following" -> followLibs,
+                "invited" -> invitedLibs
+              ))
+            }
+          case "all" if page != 0 =>
+            Future.successful(BadRequest(Json.obj("error" -> "cannot_page_all_filters")))
+          case _ =>
+            Future.successful(BadRequest(Json.obj("error" -> "no_such_filter")))
         }
-        val extIds = recommendedUserIds.drop(fullInfoLimit).flatMap(u => userMap.get(u)).map(_.externalId)
-        Ok(Json.obj("users" -> headUserJsonObjs, "ids" -> extIds, "count" -> recommendedUserIds.size))
-      }
+    }
+  }
+
+  def getMutualLibraries(id: ExternalId[User], page: Int = 0, size: Int = 12) = UserAction { request =>
+    db.readOnlyMaster { implicit s =>
+      userRepo.getOpt(id)
+    } match {
+      case None =>
+        log.warn(s"unknown external userId ${id} requested")
+        NotFound(Json.obj("id" -> id))
+      case Some(user) =>
+        val viewer = request.userId
+        val userId = user.id.get
+        val (ofUser, ofViewer, mutualFollow, basicUsers) = db.readOnlyReplica { implicit s =>
+          val ofUser = libraryRepo.getOwnerLibrariesUserFollows(userId, viewer)
+          val ofViewer = libraryRepo.getOwnerLibrariesUserFollows(viewer, userId)
+          val mutualFollow = libraryRepo.getMutualLibrariesForUser(viewer, userId, page * size, size)
+          val mutualFollowOwners = mutualFollow.map(_.ownerId)
+          val basicUsers = basicUserRepo.loadAll(Set(userId, viewer) ++ mutualFollowOwners)
+          (ofUser, ofViewer, mutualFollow, basicUsers)
+        }
+        Ok(Json.obj(
+          "ofUser" -> Json.toJson(ofUser.map(LibraryInfo.fromLibraryAndOwner(_, None, basicUsers(userId)))),
+          "ofOwner" -> Json.toJson(ofViewer.map(LibraryInfo.fromLibraryAndOwner(_, None, basicUsers(viewer)))),
+          "mutualFollow" -> Json.toJson(mutualFollow.map(lib => LibraryInfo.fromLibraryAndOwner(lib, None, basicUsers(lib.ownerId))))
+        ))
     }
   }
 
@@ -195,16 +249,42 @@ class UserProfileController @Inject() (
     }
   }
 
+  /**
+   * @param fullInfoLimit trying to get at least this number of full card info
+   * @param maxExtraIds if available, returning external id of additional maxExtraIds ids that the frontend can iterate on as it does with getProfileConnections
+   */
+  def getFriendRecommendations(fullInfoLimit: Int, maxExtraIds: Int) = UserAction.async { request =>
+    abookServiceClient.getFriendRecommendations(request.userId, 0, fullInfoLimit + maxExtraIds, true) map {
+      case None => Ok(Json.obj("users" -> JsArray()))
+      case Some(recommendedUserIds) => {
+        val head = recommendedUserIds.take(fullInfoLimit)
+        val (headUserJsonObjs, userMap) = db.readOnlyMaster { implicit s =>
+          val userMap = basicUserRepo.loadAll(recommendedUserIds.toSet)
+          val headUserMap = Map(head.map(id => id -> userMap(id)): _*)
+          val headUserWithStatus = headUserMap.mapValues(BasicUserWithFriendStatus.fromWithoutFriendStatus)
+          val sortedHeadUserWithStatus = head.map(id => id -> headUserWithStatus(id))
+          val headUserJsonObjs = sortedHeadUserWithStatus map {
+            case (userId, userWFS) =>
+              loadProfileUser(userId, userWFS, request.userIdOpt, request.userIdOpt)
+          }
+          (headUserJsonObjs, userMap)
+        }
+        val extIds = recommendedUserIds.drop(fullInfoLimit).flatMap(u => userMap.get(u)).map(_.externalId)
+        Ok(Json.obj("users" -> headUserJsonObjs, "ids" -> extIds, "count" -> recommendedUserIds.size))
+      }
+    }
+  }
+
   private def loadProfileStats(userId: Id[User], viewerIdOpt: Option[Id[User]])(implicit session: RSession): ProfileStats = {
-    val libCount = viewerIdOpt.map(viewerId => libraryRepo.countLibrariesForOtherUser(userId, viewerId)).getOrElse(libraryRepo.countLibrariesOfUserForAnonymous(userId)) //not cached
+    val libCount = viewerIdOpt.map(viewerId => libraryRepo.countLibrariesForOtherUser(userId, viewerId)).getOrElse(libraryRepo.countLibrariesForAnonymous(userId)) //not cached
     //global
-    val followersCount = libraryCommander.countFollowers(userId, viewerIdOpt)
+    val followersCount = userProfileCommander.countFollowers(userId, viewerIdOpt)
     val connectionCount = userConnectionRepo.getConnectionCount(userId) //cached
     ProfileStats(libs = libCount, followers = followersCount, connections = connectionCount)
   }
 
   private def loadProfileMutualStats(userId: Id[User], viewerId: Id[User])(implicit session: RSession): ProfileMutualStats = {
-    val followingLibCount = libraryRepo.countLibrariesOfOwnerUserFollow(userId, viewerId) //not cached
+    val followingLibCount = libraryRepo.countOwnerLibrariesUserFollows(userId, viewerId) //not cached
     val mutualConnectionCount = userConnectionRepo.getMutualConnectionCount(userId, viewerId) //cached
     ProfileMutualStats(libs = followingLibCount, connections = mutualConnectionCount)
   }

@@ -1,11 +1,10 @@
-package com.keepit.rover.manager
+package com.keepit.rover.article.policy
 
-import com.keepit.rover.article.{ EmbedlyArticle, ArticleKind, Article }
-import org.joda.time.DateTime
 import com.keepit.common.time._
+import com.keepit.rover.article.{ Article, ArticleKind, EmbedlyArticle }
+import org.joda.time.DateTime
 
-import scala.concurrent.duration.Duration
-import scala.concurrent.duration._
+import scala.concurrent.duration.{ Duration, _ }
 
 case class FetchSchedulingPolicy(
     maxRandomDelay: Duration,

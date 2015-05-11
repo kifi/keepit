@@ -3,8 +3,9 @@ package com.keepit.rover.model
 import com.keepit.common.db._
 import com.keepit.common.time._
 import com.keepit.model._
-import com.keepit.rover.article.{ ArticleKind, ArticleFetchRequest, Article }
-import com.keepit.rover.manager.{ FailureRecoveryPolicy, FetchSchedulingPolicy }
+import com.keepit.rover.article.fetcher.ArticleFetchRequest
+import com.keepit.rover.article.policy.{ FailureRecoveryPolicy, FetchSchedulingPolicy }
+import com.keepit.rover.article.{ ArticleKind, Article }
 import org.joda.time.DateTime
 import scala.concurrent.duration.Duration
 

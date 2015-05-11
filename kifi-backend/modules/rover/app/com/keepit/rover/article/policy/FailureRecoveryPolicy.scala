@@ -1,12 +1,11 @@
-package com.keepit.rover.manager
+package com.keepit.rover.article.policy
 
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.time._
 import com.keepit.rover.document.FetchThrottlingException
 import org.joda.time.DateTime
 
-import scala.concurrent.duration.Duration
-import scala.concurrent.duration._
+import scala.concurrent.duration.{ Duration, _ }
 
 object FailureRecoveryPolicy {
   val maxBackoff: Duration = 2 days
@@ -18,7 +17,7 @@ object FailureRecoveryPolicy {
 @Singleton
 class FailureRecoveryPolicy @Inject() () {
 
-  import FailureRecoveryPolicy._
+  import com.keepit.rover.article.policy.FailureRecoveryPolicy._
 
   private val randomDelay = new RandomDelay(maxRandomDelay)
 
