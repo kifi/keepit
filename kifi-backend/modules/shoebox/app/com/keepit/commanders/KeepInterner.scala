@@ -255,7 +255,8 @@ class KeepInterner @Inject() (
           inDisjointLib = library.isDisjoint,
           keptAt = keptAt,
           sourceAttributionId = savedAttr.flatMap { _.id },
-          note = note
+          note = note,
+          originalKeeperId = Some(userId)
         )
         val improvedKeep = integrityHelpers.improveKeepSafely(uri, keep)
         (true, false, keepRepo.save(improvedKeep))
