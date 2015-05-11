@@ -29,9 +29,9 @@ class WelcomeEmailSender @Inject() (
       category = NotificationCategory.User.WELCOME,
       htmlTemplate = if (isPlainEmail) { views.html.email.black.welcomePlain(userId) } else { views.html.email.black.welcome(userId) },
       textTemplate = Some(views.html.email.black.welcomeText(userId)),
+      templateOptions = { if (isPlainEmail) { Map("layout" -> CustomLayout) } else { Map.empty } },
+      tips = { if (isPlainEmail) { Seq.empty } else { Seq(EmailTip.ConnectFacebook, EmailTip.ConnectLinkedIn) } }
       // TODO(josh) add EmailTip.InstallExtension when it's complete
-      tips = { if (isPlainEmail) { Seq.empty } else { Seq(EmailTip.ConnectFacebook, EmailTip.ConnectLinkedIn) } },
-      templateOptions = { if (isPlainEmail) { Map("layout" -> CustomLayout) } else { Map.empty } }
     )
 
     emailTemplateSender.send(emailToSend)
