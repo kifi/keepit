@@ -6,7 +6,7 @@ import com.keepit.eliza.model.UserThreadStatsForUserIdCache
 import com.keepit.graph.model._
 import com.keepit.model._
 import com.keepit.model.cache.UserSessionViewExternalIdCache
-import com.keepit.rover.commanders.ArticleInfoUriCache
+import com.keepit.rover.article.ArticleInfoUriCache
 import com.keepit.rover.document.{ RecentFetches, RecentFetchesDomainCache }
 import com.keepit.rover.model.RoverHttpProxyAllCache
 import com.keepit.rover.sensitivity.UriSensitivityCache

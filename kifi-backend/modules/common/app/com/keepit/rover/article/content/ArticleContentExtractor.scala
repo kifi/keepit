@@ -29,7 +29,7 @@ case class ArticleContentExtractor(articles: Set[Article]) {
   lazy val description: Option[String] = collectFirst(defaultPreference: _*)(_.description.filter(_.nonEmpty))
   lazy val keywords: Set[String] = articles.map(_.content.keywords).flatten
   lazy val authors: Seq[PageAuthor] = collectFirst(defaultPreference: _*)(c => Some(c.authors).filter(_.nonEmpty)) getOrElse Seq.empty
-  lazy val content: Option[String] = collectFirst(defaultPreference: _*)(_.description.filter(_.nonEmpty))
+  lazy val content: Option[String] = collectFirst(defaultPreference: _*)(_.content.filter(_.nonEmpty))
   lazy val publishedAt: Option[DateTime] = collectFirst(EmbedlyArticle)(_.publishedAt)
   lazy val contentType: Option[String] = collectFirst(EmbedlyArticle)(_.contentType.filter(_.nonEmpty))
 

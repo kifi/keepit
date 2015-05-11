@@ -3,8 +3,9 @@ package com.keepit.rover.model
 import com.keepit.common.db._
 import com.keepit.common.time._
 import com.keepit.model._
-import com.keepit.rover.article.{ ArticleKind, ArticleFetchRequest, Article }
-import com.keepit.rover.manager.{ FailureRecoveryPolicy, FetchSchedulingPolicy }
+import com.keepit.rover.article.fetcher.ArticleFetchRequest
+import com.keepit.rover.article.policy.{ FailureRecoveryPolicy, FetchSchedulingPolicy }
+import com.keepit.rover.article.{ ArticleKind, Article }
 import org.joda.time.DateTime
 import scala.concurrent.duration.Duration
 
@@ -148,13 +149,13 @@ object RoverArticleInfo {
     oldestVersion: Option[ArticleVersion],
     lastFetchedAt: Option[DateTime],
     nextFetchAt: Option[DateTime],
-    lastFetchingAt: Option[DateTime],
     fetchInterval: Option[Duration],
     failureCount: Int,
     failureInfo: Option[String],
-    imageProcessingRequestedAt: Option[DateTime],
+    lastFetchingAt: Option[DateTime],
     lastImageProcessingVersion: Option[ArticleVersion],
-    lastImageProcessingAt: Option[DateTime]): RoverArticleInfo = {
+    lastImageProcessingAt: Option[DateTime],
+    imageProcessingRequestedAt: Option[DateTime]): RoverArticleInfo = {
     RoverArticleInfo(id, createdAt, updatedAt, state, seq, uriId, url, kind, bestVersion, latestVersion, oldestVersion, lastFetchedAt, nextFetchAt, lastFetchingAt, fetchInterval, failureCount, failureInfo, imageProcessingRequestedAt, lastImageProcessingVersion, lastImageProcessingAt)
   }
 
@@ -173,13 +174,13 @@ object RoverArticleInfo {
       info.oldestVersion,
       info.lastFetchedAt,
       info.nextFetchAt,
-      info.lastFetchingAt,
       info.fetchInterval,
       info.failureCount,
       info.failureInfo,
-      info.imageProcessingRequestedAt,
+      info.lastFetchingAt,
       info.lastImageProcessingVersion,
-      info.lastImageProcessingAt
+      info.lastImageProcessingAt,
+      info.imageProcessingRequestedAt
     ))
   }
 }

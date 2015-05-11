@@ -76,7 +76,7 @@ class LibraryController @Inject() (
     }
   }
 
-  def modifyLibrary(pubId: PublicId[Library]) = (UserAction andThen LibraryWriteAction(pubId))(parse.tolerantJson) { request =>
+  def modifyLibrary(pubId: PublicId[Library]) = (UserAction andThen LibraryOwnerAction(pubId))(parse.tolerantJson) { request =>
     val id = Library.decodePublicId(pubId).get
     val libModifyRequest = request.body.as[LibraryModifyRequest]
 
@@ -95,7 +95,7 @@ class LibraryController @Inject() (
     }
   }
 
-  def removeLibrary(pubId: PublicId[Library]) = (UserAction andThen LibraryWriteAction(pubId)) { request =>
+  def removeLibrary(pubId: PublicId[Library]) = (UserAction andThen LibraryOwnerAction(pubId)) { request =>
     val id = Library.decodePublicId(pubId).get
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
     libraryCommander.removeLibrary(id, request.userId) match {
@@ -112,7 +112,8 @@ class LibraryController @Inject() (
       val accessStr = memOpt.map(_.access.value).getOrElse("none")
       val listed = memOpt.map(_.listed)
       val suggestedSearches = getSuggestedSearchesAsJson(libraryId)
-      Ok(Json.obj("library" -> Json.toJson(libInfo), "membership" -> accessStr, "listed" -> listed, "suggestedSearches" -> suggestedSearches))
+      val subscribedToUpdates = memOpt.map(_.subscribedToUpdates).getOrElse(false)
+      Ok(Json.obj("library" -> Json.toJson(libInfo), "membership" -> accessStr, "listed" -> listed, "suggestedSearches" -> suggestedSearches, "subscribedToUpdates" -> subscribedToUpdates))
     }
   }
 
@@ -120,7 +121,8 @@ class LibraryController @Inject() (
     val id = Library.decodePublicId(pubId).get
     val (libInfo, memOpt) = libraryCommander.getLibrarySummaryAndMembership(request.userIdOpt, id)
     val accessStr = memOpt.map(_.access.value).getOrElse("none")
-    Ok(Json.obj("library" -> Json.toJson(libInfo), "membership" -> accessStr))
+    val subscribedToUpdates = memOpt.map(_.subscribedToUpdates).getOrElse(false)
+    Ok(Json.obj("library" -> Json.toJson(libInfo), "membership" -> accessStr, "subscribedToUpdates" -> subscribedToUpdates))
   }
 
   def getLibraryByPath(userStr: String, slugStr: String, showPublishedLibraries: Boolean, imageSize: Option[String] = None) = MaybeUserAction.async { request =>
@@ -135,7 +137,8 @@ class LibraryController @Inject() (
             val accessStr = memOpt.map(_.access.value).getOrElse("none")
             val listed = memOpt.map(_.listed)
             val suggestedSearches = getSuggestedSearchesAsJson(library.id.get)
-            Ok(Json.obj("library" -> Json.toJson(libInfo), "membership" -> accessStr, "listed" -> listed, "suggestedSearches" -> suggestedSearches))
+            val subscribedToUpdates = memOpt.map(_.subscribedToUpdates).getOrElse(false)
+            Ok(Json.obj("library" -> Json.toJson(libInfo), "membership" -> accessStr, "listed" -> listed, "suggestedSearches" -> suggestedSearches, "subscribedToUpdates" -> subscribedToUpdates))
           }
         })
       case Left(fail) => Future.successful {
@@ -175,7 +178,7 @@ class LibraryController @Inject() (
       libInfosWithMemberships <- libInfosWithMembershipsF
       libInfosWithInvites <- libInfosWithInvitesF
     } yield {
-      val (ownWithMemberships, followingWithMemberships) = libInfosWithMemberships.partition(_._2.access == LibraryAccess.OWNER)
+      val (ownWithMemberships, followingWithMemberships) = libInfosWithMemberships.partition(l => LibraryAccess.collaborativePermissions.contains(l._2.access))
       Ok(Json.obj(
         "libraries" -> ownWithMemberships.map(libInfoToJsonWithLastViewed),
         "following" -> followingWithMemberships.map(libInfoToJsonWithLastViewed),
@@ -610,7 +613,9 @@ class LibraryController @Inject() (
               owner = info.owner,
               numKeeps = info.numKeeps,
               numFollowers = info.numFollowers,
-              followers = LibraryCardInfo.showable(info.followers),
+              followers = LibraryCardInfo.makeMembersShowable(info.followers, true),
+              numCollaborators = info.numCollaborators,
+              collaborators = LibraryCardInfo.makeMembersShowable(info.collaborators, false),
               lastKept = info.lastKept.getOrElse(new DateTime(0)),
               following = None,
               caption = None)
@@ -701,11 +706,19 @@ class LibraryController @Inject() (
     libraryCommander.getMarketingSiteSuggestedLibraries() map { infos => Ok(Json.toJson(infos)) }
   }
 
+  def setSubscribedToUpdates(pubId: PublicId[Library], newSubscripedToUpdate: Boolean) = UserAction { request =>
+    val libraryId = Library.decodePublicId(pubId).get
+    libraryCommander.updatedLibraryUpdateSubscription(request.userId, libraryId, newSubscripedToUpdate) match {
+      case Right(mem) => Ok
+      case Left(fail) => Status(fail.status)(Json.obj("error" -> fail.message))
+    }
+  }
+
   ///////////////////
   // Collaborators!
   ///////////////////
 
-  def updateLibraryMembership(pubId: PublicId[Library], extUserId: ExternalId[User], access: String) = (UserAction andThen LibraryWriteAction(pubId)) { request =>
+  def updateLibraryMembership(pubId: PublicId[Library], extUserId: ExternalId[User]) = UserAction(parse.tolerantJson) { request =>
     val libraryId = Library.decodePublicId(pubId).get
     db.readOnlyMaster { implicit s =>
       userRepo.getOpt(extUserId)
@@ -713,15 +726,14 @@ class LibraryController @Inject() (
       case None =>
         NotFound(Json.obj("error" -> "user_id_not_found"))
       case Some(targetUser) =>
+        val access = (request.body \ "access").as[String]
         val result = access.toLowerCase match {
           case "none" =>
-            libraryCommander.updateLibraryMembershipAccess(libraryId, targetUser.id.get, None)
-          case "read_only" =>
-            libraryCommander.updateLibraryMembershipAccess(libraryId, targetUser.id.get, Some(LibraryAccess.READ_ONLY))
-          case "read_insert" =>
-            libraryCommander.updateLibraryMembershipAccess(libraryId, targetUser.id.get, Some(LibraryAccess.READ_INSERT))
-          case "read_write" =>
-            libraryCommander.updateLibraryMembershipAccess(libraryId, targetUser.id.get, Some(LibraryAccess.READ_WRITE))
+            libraryCommander.updateLibraryMembershipAccess(request.userId, libraryId, targetUser.id.get, None)
+          case "follower" =>
+            libraryCommander.updateLibraryMembershipAccess(request.userId, libraryId, targetUser.id.get, Some(LibraryAccess.READ_ONLY))
+          case "collaborator" =>
+            libraryCommander.updateLibraryMembershipAccess(request.userId, libraryId, targetUser.id.get, Some(LibraryAccess.READ_WRITE))
           case _ =>
             Left(LibraryFail(BAD_REQUEST, "invalid_access_request"))
         }

@@ -38,7 +38,7 @@ class MobileUserProfileController @Inject() (
     userCommander.profile(Username(username), viewer) match {
       case None => NotFound(s"can't find username $username")
       case Some(profile) =>
-        val (numLibraries, numFollowedLibs, numInvitedLibs) = libraryCommander.countLibraries(profile.userId, viewer.map(_.id.get))
+        val (numLibraries, numCollabLibraries, numFollowedLibs, numInvitedLibs) = libraryCommander.countLibraries(profile.userId, viewer.map(_.id.get))
         val (numConnections, userBiography) = db.readOnlyMaster { implicit s =>
           val numConnections = userConnectionRepo.getConnectionCount(profile.userId)
           val userBio = userValueRepo.getValueStringOpt(profile.userId, UserValueName.USER_DESCRIPTION)
@@ -49,6 +49,7 @@ class MobileUserProfileController @Inject() (
         val jsonProfileInfo = Json.toJson(UserProfileStats(
           numLibraries = numLibraries,
           numFollowedLibraries = numFollowedLibs,
+          numCollabLibraries = numCollabLibraries,
           numKeeps = profile.numKeeps,
           numConnections = numConnections,
           numFollowers = libraryCommander.countFollowers(profile.userId, viewer.map(_.id.get)),

@@ -3,12 +3,14 @@ inviterId: Id[User],
 inviteMsg: Option[String],
 libraryInfo: com.keepit.model.LibraryInfo,
 passPhrase: Option[String],
-authToken: String)
+authToken: String,
+inviteAccess: LibraryAccess)
 @import com.keepit.common.mail.template.helpers._
 @libraryAssetUrl(path: String) = @{assetUrl("library/" + path)}
 @libraryUrl = {@{baseUrl}@{libraryInfo.url}?@{KifiMobileAppLinkFlag.arg}&authToken=@authToken}
+@inviteAction = @{if (inviteAccess == LibraryAccess.READ_ONLY) "follow" else "collaborate on" }
 
-@fullName(inviterId) invited you to follow a library on Kifi
+@fullName(inviterId) invited you to @inviteAction a library on Kifi
 @inviteMsg.map { msg =>
   "@msg"
 }

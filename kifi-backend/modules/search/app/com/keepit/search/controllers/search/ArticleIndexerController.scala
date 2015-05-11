@@ -4,8 +4,11 @@ import com.google.inject.Inject
 import com.keepit.common.controller.SearchServiceController
 import com.keepit.common.db._
 import com.keepit.model._
-import com.keepit.search.index.article.DeprecatedArticleIndexerPlugin
+import com.keepit.rover.RoverServiceClient
+import com.keepit.search.index.Indexable
+import com.keepit.search.index.article.{ ArticleFields, ArticleIndexable, ArticleIndexerPlugin }
 import com.keepit.search.index.phrase.PhraseIndexer
+import com.keepit.search.index.sharding.Shard
 import com.keepit.shoebox.ShoeboxServiceClient
 import org.apache.lucene.document.Document
 import play.api.libs.json._
@@ -16,8 +19,9 @@ import scala.concurrent.duration._
 
 class ArticleIndexerController @Inject() (
   phraseIndexer: PhraseIndexer,
-  indexerPlugin: DeprecatedArticleIndexerPlugin,
-  shoeboxClient: ShoeboxServiceClient)
+  indexerPlugin: ArticleIndexerPlugin,
+  shoeboxClient: ShoeboxServiceClient,
+  rover: RoverServiceClient)
     extends SearchServiceController {
 
   def index() = Action { implicit request =>
@@ -49,14 +53,18 @@ class ArticleIndexerController @Inject() (
     Ok("writer refreshed")
   }
 
-  def dumpLuceneDocument(id: Id[NormalizedURI]) = Action { implicit request =>
-    val indexer = indexerPlugin.getIndexerFor(id)
+  def dumpLuceneDocument(id: Id[NormalizedURI], deprecated: Boolean = false) = Action { implicit request =>
+    val getDecoder = Indexable.getFieldDecoder(ArticleFields.decoders) _
     try {
-      val uri = Await.result(shoeboxClient.getNormalizedURI(id), 30 seconds)
-      val doc = indexer.buildIndexable(IndexableUri(uri)).buildDocument
-      Ok(html.admin.luceneDocDump("Article", doc, indexer))
+      val uri = IndexableUri(Await.result(shoeboxClient.getNormalizedURI(id), 30 seconds))
+      val htmlDoc = {
+        val articles = Await.result(rover.getBestArticlesByUris(Set(uri.id.get)), 30 seconds)(uri.id.get)
+        val doc = ArticleIndexable(uri, articles, Shard(1, 1)).buildDocument
+        html.admin.luceneDocDump("Article", doc, getDecoder)
+      }
+      Ok(htmlDoc)
     } catch {
-      case e: Throwable => Ok(html.admin.luceneDocDump("No Article", new Document, indexer))
+      case e: Throwable => Ok(html.admin.luceneDocDump("No Article", new Document, getDecoder))
     }
   }
 }

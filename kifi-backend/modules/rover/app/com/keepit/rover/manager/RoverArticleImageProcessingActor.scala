@@ -1,11 +1,13 @@
 package com.keepit.rover.manager
 
 import com.google.inject.Inject
+import com.keepit.common.amazon.AmazonInstanceInfo
 import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.rover.article.{ Article, EmbedlyArticle, ArticleFetcherProvider }
-import com.keepit.rover.commanders.ImageProcessingCommander
+import com.keepit.rover.article.fetcher.ArticleFetcherProvider
+import com.keepit.rover.article.{ Article, EmbedlyArticle }
+import com.keepit.rover.image.ImageCommander
 import com.keepit.rover.model.{ ArticleKey, RoverArticleInfo, ArticleInfoRepo }
 import com.keepit.rover.store.RoverArticleStore
 import com.kifi.franz.SQSMessage
@@ -17,8 +19,6 @@ import scala.util.{ Failure, Success }
 
 object RoverArticleImageProcessingActor {
   val lockTimeOut = 10 minutes
-  val minConcurrentTasks: Int = 150
-  val maxConcurrentTasks: Int = 200
 }
 
 class RoverArticleImageProcessingActor @Inject() (
@@ -28,11 +28,12 @@ class RoverArticleImageProcessingActor @Inject() (
     airbrake: AirbrakeNotifier,
     articleFetcher: ArticleFetcherProvider,
     articleStore: RoverArticleStore,
-    imageProcessingCommander: ImageProcessingCommander,
+    imageProcessingCommander: ImageCommander,
+    instanceInfo: AmazonInstanceInfo,
     implicit val executionContext: ExecutionContext) extends ConcurrentTaskProcessingActor[SQSMessage[ArticleImageProcessingTask]](airbrake) {
 
-  protected val minConcurrentTasks: Int = RoverArticleImageProcessingActor.minConcurrentTasks
-  protected val maxConcurrentTasks: Int = RoverArticleImageProcessingActor.maxConcurrentTasks
+  protected val minConcurrentTasks: Int = instanceInfo.instantTypeInfo.cores * 3
+  protected val maxConcurrentTasks: Int = instanceInfo.instantTypeInfo.cores * 3
 
   protected def pullTasks(limit: Int): Future[Seq[SQSMessage[ArticleImageProcessingTask]]] = {
     taskQueue.nextBatchWithLock(limit, RoverArticleImageProcessingActor.lockTimeOut)

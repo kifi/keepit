@@ -1,0 +1,98 @@
+@(uri: com.keepit.model.NormalizedURI, articleInfos: Set[com.keepit.rover.model.ArticleInfo], aggregateContent: com.keepit.rover.article.content.ArticleContentExtractor)(implicit request: com.keepit.common.controller.UserRequest[_])
+
+@admin("") {
+
+<h2><a href = "@{com.keepit.controllers.admin.routes.AdminLDAController.similarURIs(uri.id.get)}">similar uris</a></h2>
+
+<table class="table table-bordered">
+
+    <tr>
+        <th>URI Id</th><td>@uri.id.get</td>
+    </tr>
+
+    <tr>
+        <th>URI URL</th><td><a href="@uri.url">@uri.url</a></td>
+    </tr>
+
+    <tr>
+        <th>External Id</th><td>@uri.externalId</td>
+    </tr>
+
+    <tr>
+        <th>State</th><td>@uri.state</td>
+    </tr>
+
+    <tr>
+        <th>Created At</th><td>@adminHelper.dateTimeDisplay(uri.createdAt)</td>
+    </tr>
+
+    <tr>
+        <th>Updated At</th><td>@adminHelper.dateTimeDisplay(uri.updatedAt)</td>
+    </tr>
+
+    <tr>
+        <th>Normalization</th><td>@uri.normalization.map( normalization => normalization.scheme ).getOrElse("")</td>
+    </tr>
+
+    <tr>
+        <th>Redirect</th><td>@uri.redirect.getOrElse("")</td>
+    </tr>
+
+    <tr>
+        <th>Redirect Time</th><td>@{ uri.redirectTime.map( dt => adminHelper.dateTimeDisplay(dt).toString ).getOrElse("") }</td>
+    </tr>
+
+    <tr>
+        <th>Restriction</th>
+        <td>@uri.restriction.map { restriction =>
+            <form class="form-inline" action="@com.keepit.controllers.admin.routes.UrlController.clearRestriction(uri.id.get)" method = "POST">@restriction.context <button type="submit" class="btn">Clear</button></form>
+            }.getOrElse {
+            <form class="form-inline" action="@com.keepit.controllers.admin.routes.UrlController.flagAsAdult(uri.id.get)" method = "POST"><button type="submit" class="btn">Flag as adult</button></form>
+            }</td>
+    </tr>
+
+    @for(articleInfo <- articleInfos) {
+    <tr>
+        <th>Article Kind</th>
+        <th>Best Version</th>
+        <th>Latest Version</th>
+        <th>Content</th>
+    </tr>
+    <tr>
+        <td>@articleInfo.kind</td>
+        <td>@articleInfo.bestVersion.getOrElse("None")</td>
+        <td>@articleInfo.latestVersion.getOrElse("None")</td>
+        <td><a href="@com.keepit.controllers.admin.routes.UrlController.getBestArticle(uri.id.get, articleInfo.articleKind)">Here</a></td>
+    </tr>
+    }
+
+    <tr>
+        <th>Aggregate Title</th><td>@aggregateContent.title.getOrElse("None")</td>
+    </tr>
+
+    <tr>
+        <th>Description</th><td>@aggregateContent.description.getOrElse("None")</td>
+    </tr>
+
+    <tr>
+        <th>Keywords</th><td>@aggregateContent.keywords.mkString(", ")</td>
+    </tr>
+
+    <tr>
+        <th>Authors</th><td>@aggregateContent.authors</td>
+    </tr>
+
+    <tr>
+        <th>Published At</th><td>@{ aggregateContent.publishedAt.map( dt => adminHelper.dateTimeDisplay(dt).toString ).getOrElse("") }</td>
+    </tr>
+
+    <tr>
+        <th>Content Type</th><td>@aggregateContent.contentType.getOrElse("")</td>
+    </tr>
+
+    <tr>
+        <th>Content</th><td>@aggregateContent.content.getOrElse("")</td>
+    </tr>
+
+    </table>
+}

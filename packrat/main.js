@@ -2738,7 +2738,7 @@ api.errors.wrap(authenticate.bind(null, function() {
     if (tab) {
       api.tabs.select(tab.id);
     } else {
-      api.tabs.open(baseUri);
+      api.tabs.open(baseUri + '/signup');
     }
   }
 }, 3000))();

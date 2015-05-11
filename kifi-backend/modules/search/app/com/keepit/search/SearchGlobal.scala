@@ -30,7 +30,6 @@ object SearchGlobal extends FortyTwoGlobal(Prod) with SearchServices {
 
 trait SearchServices { self: FortyTwoGlobal =>
   def startSearchServices() {
-    require(injector.instance[DeprecatedArticleIndexerPlugin] != null) //make sure its not lazy loaded
     require(injector.instance[ArticleIndexerPlugin] != null) //make sure its not lazy loaded
     require(injector.instance[CollectionGraphPlugin] != null)
     require(injector.instance[MessageIndexerPlugin] != null) //make sure its not lazy loaded

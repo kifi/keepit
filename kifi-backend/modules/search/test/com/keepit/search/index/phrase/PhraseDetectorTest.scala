@@ -3,7 +3,7 @@ package com.keepit.search.index.phrase
 import com.keepit.common.db.Id
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.search.Lang
-import com.keepit.search.index.{ VolatileIndexDirectory, DefaultAnalyzer }
+import com.keepit.search.index.{ Indexable, VolatileIndexDirectory, DefaultAnalyzer }
 import org.apache.lucene.index.Term
 import org.specs2.mutable._
 import com.keepit.model.Phrase
@@ -45,12 +45,12 @@ class PhraseDetectorTest extends Specification with CommonTestInjector {
         val analyzer = DefaultAnalyzer.getAnalyzerWithStemmer(Lang("en"))
 
         def toTerms(text: String) = {
-          indexer.getFieldDecoder("b").decodeTokenStream(analyzer.tokenStream("b", new StringReader(text))).map { case (t, _, _) => new Term("b", t) }.toArray
+          Indexable.getFieldDecoder(PhraseFields.decoders)("b").decodeTokenStream(analyzer.tokenStream("b", new StringReader(text))).map { case (t, _, _) => new Term("b", t) }.toArray
         }
 
         val ok = testcases.forall {
           case (text, expected) =>
-            var input = toTerms(text)
+            val input = toTerms(text)
             val output = detector.detectAll(input)
             output === expected
             true

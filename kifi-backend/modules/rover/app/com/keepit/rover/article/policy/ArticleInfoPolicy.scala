@@ -1,6 +1,6 @@
-package com.keepit.rover.manager
+package com.keepit.rover.article.policy
 
-import com.google.inject.{ Singleton, Inject }
+import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.db.State
 import com.keepit.common.net.{ Host, URI }
 import com.keepit.model.NormalizedURI
@@ -9,7 +9,7 @@ import com.keepit.rover.article._
 import com.keepit.rover.article.content.LinkedInProfile
 
 @Singleton
-class ArticleFetchingPolicy @Inject() () {
+class ArticleInfoPolicy @Inject() () {
 
   def toBeInterned(url: String, uriState: State[NormalizedURI]): Set[ArticleKind[_ <: Article]] = {
     uriState match {

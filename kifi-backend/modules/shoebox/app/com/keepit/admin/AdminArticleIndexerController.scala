@@ -38,8 +38,8 @@ class AdminArticleIndexerController @Inject() (
     Ok("searcher refreshed")
   }
 
-  def dumpLuceneDocument(id: Id[NormalizedURI]) = AdminUserPage.async { implicit request =>
-    searchClient.dumpLuceneDocument(id).map(Ok(_))
+  def dumpLuceneDocument(id: Id[NormalizedURI], deprecated: Boolean) = AdminUserPage.async { implicit request =>
+    searchClient.dumpLuceneDocument(id, deprecated).map(Ok(_))
   }
 }
 

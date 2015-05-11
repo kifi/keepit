@@ -54,7 +54,7 @@ class RoverRepoTest extends Specification with RoverApplicationInjector {
           imageInfoRepo.get(saved.id.get).path.path === "path"
         }
 
-        // ArticleImage
+        // ArticleImageRepo
         val articleImageRepo = inject[ArticleImageRepo]
         db.readWrite { implicit session =>
           val saved = articleImageRepo.save(ArticleImage(

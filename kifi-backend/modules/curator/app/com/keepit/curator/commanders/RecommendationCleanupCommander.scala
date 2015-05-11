@@ -21,7 +21,7 @@ class RecommendationCleanupCommander @Inject() (
 
   def cleanup(overrideLimit: Option[Int] = None, overrideTimeCutoff: Option[DateTime] = None, useSubset: Boolean = true): Unit = {
     val usersWithReco = db.readOnlyReplica { implicit session => uriRecoRepo.getUsersWithRecommendations() }.toSeq
-    val (idx, ringSize) = timeSlicer.getSliceAndSize(TimeToSliceInDays.TWO_WEEKS, OneSliceInMinutes(CuratorTasksPlugin.CLEAN_FREQ))
+    val (idx, ringSize) = timeSlicer.getSliceAndSize(TimeToSliceInDays.ONE_WEEK, OneSliceInMinutes(CuratorTasksPlugin.CLEAN_FREQ))
     val userToClean = if (useSubset) usersWithReco.filter(_.id % ringSize == idx) else usersWithReco
 
     val timer = new NamedStatsdTimer("RecommendationCleanupCommander.cleanup")

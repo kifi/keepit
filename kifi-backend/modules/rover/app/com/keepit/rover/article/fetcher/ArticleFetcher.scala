@@ -1,14 +1,14 @@
-package com.keepit.rover.article
+package com.keepit.rover.article.fetcher
 
 import com.google.inject.{ Inject, Singleton }
-import com.keepit.rover.article.content.{ NormalizationInfoHolder, ArticleContent }
+import com.keepit.rover.article._
+import com.keepit.rover.article.content.{ ArticleContent, NormalizationInfoHolder }
 import com.keepit.rover.fetcher.FetchResult
 import com.keepit.rover.model.ArticleKey
 import com.keepit.rover.store.RoverArticleStore
 import org.joda.time.DateTime
 
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.reflect.ClassTag
 import scala.util.{ Failure, Success }
 
 case class ArticleFetchRequest[A <: Article](kind: ArticleKind[A], url: String, lastFetchedAt: Option[DateTime], latestArticleKey: Option[ArticleKey[A]])
@@ -31,7 +31,7 @@ object ArticleFetcher {
     }
   }
 
-  def resolveAndCompare[A <: Article](store: RoverArticleStore)(futureFetchedArticle: Future[FetchResult[A]], latestArticleKey: Option[ArticleKey[A]], areSimilar: (A, A) => Boolean)(implicit classTag: ClassTag[A], ec: ExecutionContext): Future[Option[A]] = {
+  def resolveAndCompare[A <: Article](store: RoverArticleStore)(futureFetchedArticle: Future[FetchResult[A]], latestArticleKey: Option[ArticleKey[A]], areSimilar: (A, A) => Boolean)(implicit ec: ExecutionContext): Future[Option[A]] = {
     val futureLatestArticle = latestArticleKey match {
       case None => Future.successful(None)
       case Some(key) => store.get(key)

@@ -34,7 +34,7 @@ class LibraryImageController @Inject() (
   implicit val config: PublicIdConfiguration)
     extends UserActions with LibraryAccessActions with ShoeboxServiceController {
 
-  def uploadLibraryImage(pubId: PublicId[Library], imageSize: Option[String] = None, posX: Option[Int] = None, posY: Option[Int] = None) = (UserAction andThen LibraryWriteAction(pubId)).async(parse.temporaryFile) { request =>
+  def uploadLibraryImage(pubId: PublicId[Library], imageSize: Option[String] = None, posX: Option[Int] = None, posY: Option[Int] = None) = (UserAction andThen LibraryOwnerAction(pubId)).async(parse.temporaryFile) { request =>
     val libraryId = Library.decodePublicId(pubId).get
     val imageRequest = db.readWrite { implicit session =>
       libraryImageRequestRepo.save(LibraryImageRequest(libraryId = libraryId, source = ImageSource.UserUpload))
@@ -56,7 +56,7 @@ class LibraryImageController @Inject() (
     }
   }
 
-  def positionLibraryImage(pubId: PublicId[Library]) = (UserAction andThen LibraryWriteAction(pubId))(parse.tolerantJson) { request =>
+  def positionLibraryImage(pubId: PublicId[Library]) = (UserAction andThen LibraryOwnerAction(pubId))(parse.tolerantJson) { request =>
     val libraryId = Library.decodePublicId(pubId).get
     val imagePath = (request.body \ "path").as[String]
     val posX = (request.body \ "x").asOpt[Int]
@@ -78,7 +78,7 @@ class LibraryImageController @Inject() (
     }
   }
 
-  def removeLibraryImage(pubId: PublicId[Library]) = (UserAction andThen LibraryWriteAction(pubId)) { request =>
+  def removeLibraryImage(pubId: PublicId[Library]) = (UserAction andThen LibraryOwnerAction(pubId)) { request =>
     val libraryId = Library.decodePublicId(pubId).get
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
     libraryImageCommander.removeImageForLibrary(libraryId, request.userId)

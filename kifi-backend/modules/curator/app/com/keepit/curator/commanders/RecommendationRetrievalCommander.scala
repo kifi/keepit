@@ -120,7 +120,7 @@ class RecommendationRetrievalCommander @Inject() (
     require(recencyWeight <= 1.0f && recencyWeight >= 0.0f, "recencyWeight must be between 0 and 1")
 
     def scoreReco(reco: UriRecommendation) =
-      UriRecoScore(scoringStrategy.scoreItem(reco.masterScore, reco.allScores, reco.delivered, reco.clicked, reco.vote, more, recencyWeight), reco)
+      UriRecoScore(scoringStrategy.scoreItem(reco.masterScore, reco.allScores, reco.viewed, reco.clicked, reco.vote, more, recencyWeight), reco)
 
     val (recos, newContext) = db.readOnlyReplica { implicit session =>
       val recosByTopScore = uriRecoRepo.getRecommendableByTopMasterScore(userId, 1000) map scoreReco
@@ -144,7 +144,7 @@ class RecommendationRetrievalCommander @Inject() (
         RecoInfo(
           userId = Some(reco.userId),
           uriId = reco.uriId,
-          score = scoringStrategy.scoreItem(reco.masterScore, reco.allScores, reco.delivered, reco.clicked, reco.vote, more, recencyWeight),
+          score = scoringStrategy.scoreItem(reco.masterScore, reco.allScores, reco.viewed, reco.clicked, reco.vote, more, recencyWeight),
           explain = Some(reco.allScores.toString),
           attribution = Some(reco.attribution)
         )

@@ -8,6 +8,7 @@ import com.keepit.model.{ NormalizedURI, IndexableUri }
 import com.keepit.rover.article.Article
 import com.keepit.rover.model.{ ShoeboxArticleUpdates, ArticleInfo }
 
+import scala.collection.mutable
 import scala.concurrent.Future
 
 class FakeRoverServiceClientImpl(
@@ -15,7 +16,11 @@ class FakeRoverServiceClientImpl(
     override val httpClient: HttpClient,
     val airbrakeNotifier: AirbrakeNotifier) extends RoverServiceClient {
 
+  private val articlesByUri = mutable.Map[Id[NormalizedURI], Set[Article]]().withDefaultValue(Set.empty)
+  def setArticlesForUri(uriId: Id[NormalizedURI], articles: Set[Article]) = articlesByUri += (uriId -> articles)
+
   def getShoeboxUpdates(seq: SequenceNumber[ArticleInfo], limit: Int): Future[Option[ShoeboxArticleUpdates]] = Future.successful(None)
   def fetchAsap(uri: IndexableUri): Future[Unit] = Future.successful(())
-  def getArticlesByUris(uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[Article]]] = Future.successful(uriIds.map(_ -> Set.empty[Article]).toMap)
+  def getBestArticlesByUris(uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[Article]]] = Future.successful(uriIds.map(uriId => uriId -> articlesByUri(uriId)).toMap)
+  def getArticleInfosByUris(uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[ArticleInfo]]] = Future.successful(uriIds.map(_ -> Set.empty[ArticleInfo]).toMap)
 }

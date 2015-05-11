@@ -390,6 +390,10 @@ k.keepBox = k.keepBox || (function () {
 
     var $note = $view.find('.kifi-keep-box-keep-note');
     k.keepNote.init($note, $view, libraryId, keepId, note);
+
+    api.require('scripts/repair_inputs.js', function () {
+      $view.repairInputs();
+    });
   }
 
   function addCreateLibraryBindings($view) {

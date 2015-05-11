@@ -418,7 +418,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
                       "tags":[],
                       "hashtags":[],
                       "summary":{},
-                      "siteName":"kifi.com",
+                      "siteName":"Kifi",
                       "libraryId":"l7jlKlnA36Su"
                     },
                     {

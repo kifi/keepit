@@ -318,7 +318,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
            |},
            |"membership":"owner",
            |"listed": true,
-           |"suggestedSearches": {"terms": [], "weights": []}
+           |"suggestedSearches": {"terms": [], "weights": []},
+           |"subscribedToUpdates": false
           }""".stripMargin))
 
         // viewed by another user with an invite
@@ -362,7 +363,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
            |},
            |"membership":"none",
            |"listed": null,
-           |"suggestedSearches": {"terms": [], "weights": []}
+           |"suggestedSearches": {"terms": [], "weights": []},
+           |"subscribedToUpdates": false
           }""".stripMargin))
       }
     }
@@ -446,7 +448,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
              |},
              |"membership":"owner",
              |"listed": false,
-             |"suggestedSearches": {"terms": [], "weights": []}
+             |"suggestedSearches": {"terms": [], "weights": []},
+             |"subscribedToUpdates": false
             |}""".stripMargin)
         Json.parse(contentAsString(result1)) must equalTo(expected)
         Json.parse(contentAsString(result2)) must equalTo(expected)
@@ -458,14 +461,15 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         implicit val config = inject[PublicIdConfiguration]
         val libraryController = inject[LibraryController]
 
-        val (user1, user2, lib1, lib2, lib3, keep1) = db.readWrite { implicit s =>
+        val (user1, user2, user3, lib1, lib2, lib3, keep1) = db.readWrite { implicit s =>
           val user1 = user().withName("first", "user").withUsername("firstuser").saved
           val user2 = user().withName("second", "user").withUsername("seconduser").withPictureName("alf").saved
-          val library1 = library().withName("lib1").withUser(user1).published.withSlug("lib1").withMemberCount(11).withColor("blue").withDesc("My first library!").saved.savedFollowerMembership(user2)
+          val user3 = user().withName("third", "user").withUsername("thirduser").withPictureName("asdf").saved
+          val library1 = library().withName("lib1").withUser(user1).published.withSlug("lib1").withMemberCount(11).withColor("blue").withDesc("My first library!").saved.savedFollowerMembership(user2).savedCollaboratorMembership(user3)
           val library2 = library().withName("lib2").withUser(user2).secret.withSlug("lib2").withMemberCount(22).saved
           val library3 = library().withName("lib3").withUser(user2).secret.withSlug("lib3").withMemberCount(33).saved.savedFollowerMembership(user1)
           val k1 = keep().withLibrary(library1).saved
-          (user1, user2, library1, library2, library3, k1)
+          (user1, user2, user3, library1, library2, library3, k1)
         }
 
         { // upload an image for lib1
@@ -512,6 +516,15 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                       "pictureName": "alf.jpg",
                       "username": "seconduser"
                     }],
+                  "numCollaborators":1,
+                  "collaborators":[
+                    {
+                      "id": "${user3.externalId.id}",
+                      "firstName": "third",
+                      "lastName": "user",
+                      "pictureName": "asdf.jpg",
+                      "username": "thirduser"
+                    }],
                   "lastKept":${keep1.createdAt.getMillis},
                   "listed": true
                 }
@@ -543,6 +556,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                   "numKeeps":0,
                   "numFollowers":1,
                   "followers":[],
+                  "numCollaborators":0,
+                  "collaborators":[],
                   "lastKept":${lib3.createdAt.getMillis}
                 }
               ]
@@ -708,7 +723,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
         val inputJson1 = Json.obj(
           "invites" -> Seq(
-            Json.obj("type" -> "user", "id" -> user2.externalId, "access" -> LibraryAccess.READ_ONLY),
+            Json.obj("type" -> "user", "id" -> user2.externalId, "access" -> LibraryAccess.READ_WRITE),
             Json.obj("type" -> "user", "id" -> user3.externalId, "access" -> LibraryAccess.READ_ONLY),
             Json.obj("type" -> "email", "id" -> "squirtle@gmail.com", "access" -> LibraryAccess.READ_ONLY))
         )
@@ -720,7 +735,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         val expected1 = Json.parse(
           s"""
             |[
-            | {"user":"${user2.externalId}","access":"${LibraryAccess.READ_ONLY.value}"},
+            | {"user":"${user2.externalId}","access":"${LibraryAccess.READ_WRITE.value}"},
             | {"user":"${user3.externalId}","access":"${LibraryAccess.READ_ONLY.value}"},
             | {"email":"squirtle@gmail.com","access":"${LibraryAccess.READ_ONLY.value}"}
             |]
@@ -1433,10 +1448,10 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
           val user2 = user().withUsername("quicksilver").saved
           val user3 = user().withUsername("scarletwitch").saved
           val lib1 = library().withUser(user1).saved // user1 owns lib1
-          membership().withLibraryFollower(lib1, user2).saved // user2 follows lib1 (has read_only access)
+          membership().withLibraryCollaborator(lib1, user2).saved // user2 is a collaborator in lib1 (has read_write access)
 
           libraryMembershipRepo.getWithLibraryIdAndUserId(lib1.id.get, user1.id.get).get.access === LibraryAccess.OWNER
-          libraryMembershipRepo.getWithLibraryIdAndUserId(lib1.id.get, user2.id.get).get.access === LibraryAccess.READ_ONLY
+          libraryMembershipRepo.getWithLibraryIdAndUserId(lib1.id.get, user2.id.get).get.access === LibraryAccess.READ_WRITE
           (user1, user2, user3, lib1)
         }
 
@@ -1444,21 +1459,25 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
           val libraryController = inject[LibraryController]
           val pubLibId = Library.publicId(lib.id.get)(inject[PublicIdConfiguration])
           inject[FakeUserActionsHelper].setUser(user)
-          val testPath = com.keepit.controllers.website.routes.LibraryController.updateLibraryMembership(pubLibId, targetUser.externalId, access).url
-          libraryController.updateLibraryMembership(pubLibId, targetUser.externalId, access)(FakeRequest("POST", testPath))
+          val testPath = com.keepit.controllers.website.routes.LibraryController.updateLibraryMembership(pubLibId, targetUser.externalId).url
+          val jsonBody = Json.obj("access" -> access)
+          libraryController.updateLibraryMembership(pubLibId, targetUser.externalId)(FakeRequest("POST", testPath).withBody(jsonBody))
         }
 
-        // test invalid library write access
-        status(updateLibraryMembership(user2, user2, lib1, "owner")) must equalTo(FORBIDDEN)
+        // test invalid library write access (error)
+        status(updateLibraryMembership(user2, user2, lib1, "owner")) must equalTo(BAD_REQUEST)
 
-        // test change membership access
-        status(updateLibraryMembership(user1, user2, lib1, "read_write")) must equalTo(NO_CONTENT)
+        // test demote membership access
+        status(updateLibraryMembership(user1, user2, lib1, "follower")) must equalTo(NO_CONTENT)
+
+        // test promote membership access (error)
+        status(updateLibraryMembership(user1, user2, lib1, "collaborator")) must equalTo(BAD_REQUEST)
 
         // test deactivate membership
         status(updateLibraryMembership(user1, user2, lib1, "none")) must equalTo(NO_CONTENT)
 
-        // test membership not found
-        status(updateLibraryMembership(user1, user2, lib1, "read_only")) must equalTo(NOT_FOUND)
+        // test membership not found (error)
+        status(updateLibraryMembership(user1, user2, lib1, "follower")) must equalTo(NOT_FOUND)
       }
     }
 

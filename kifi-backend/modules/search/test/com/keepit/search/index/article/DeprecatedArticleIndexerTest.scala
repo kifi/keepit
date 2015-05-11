@@ -14,7 +14,7 @@ import org.specs2.mutable._
 import org.specs2.specification.Scope
 import scala.collection.JavaConversions._
 import com.keepit.shoebox.{ FakeShoeboxServiceClientImpl, ShoeboxServiceClient }
-import com.keepit.search.index.{ SearcherHit, Analyzer, DefaultAnalyzer, VolatileIndexDirectory }
+import com.keepit.search.index._
 import com.keepit.common.util.PlayAppConfigurationModule
 
 class DeprecatedArticleIndexerTest extends Specification with SearchTestInjector {
@@ -273,7 +273,7 @@ class DeprecatedArticleIndexerTest extends Specification with SearchTestInjector
           store += (uri1.id.get -> mkArticle(uri1.id.get, "title1 titles", "content1 alldocs body soul"))
 
           val doc = indexer.buildIndexable(IndexableUri(uri1)).buildDocument
-          doc.getFields.forall { f => indexer.getFieldDecoder(f.name).apply(f).length > 0 } === true
+          doc.getFields.forall { f => Indexable.getFieldDecoder(ArticleFields.decoders)(f.name).apply(f).length > 0 } === true
         }
       }
     }

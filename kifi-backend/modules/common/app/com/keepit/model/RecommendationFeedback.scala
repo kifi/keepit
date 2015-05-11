@@ -6,6 +6,7 @@ import com.kifi.macros.json
 trait RecommendationFeedback
 
 @json case class UriRecommendationFeedback(
+    viewed: Option[Boolean] = None,
     clicked: Option[Boolean] = None,
     kept: Option[Boolean] = None,
     trashed: Option[Boolean] = None,
@@ -13,7 +14,7 @@ trait RecommendationFeedback
     comment: Option[String] = None,
     source: Option[RecommendationSource] = None,
     subSource: Option[RecommendationSubSource] = None) extends RecommendationFeedback {
-  override def toString = s"UriRecommendationFeedback(clicked=$clicked kept=$kept trashed=$trashed vote=$vote comment=$comment source=$source subSource=$subSource)"
+  override def toString = s"UriRecommendationFeedback(viewed=$viewed clicked=$clicked kept=$kept trashed=$trashed vote=$vote comment=$comment source=$source subSource=$subSource)"
 }
 
 @json case class LibraryRecommendationFeedback(

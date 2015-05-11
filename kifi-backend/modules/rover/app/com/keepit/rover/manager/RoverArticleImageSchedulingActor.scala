@@ -5,7 +5,7 @@ import com.keepit.common.akka.SafeFuture
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.time.Clock
-import com.keepit.rover.commanders.ImageProcessingCommander
+import com.keepit.rover.image.ImageCommander
 import com.keepit.rover.model.{ RoverArticleInfo }
 import scala.concurrent.duration._
 import com.keepit.common.core._
@@ -16,13 +16,13 @@ import scala.util.{ Success, Failure }
 
 object RoverArticleImageSchedulingActor {
   val maxBatchSize = 30 // low to balance producer / consumer behavior *on leader* (SQS send / receive), increase if we don't care about leader as a consumer.
-  val maxQueuedFor = 2 days
+  val maxQueuedFor = 7 days
   val dueAfterRequestedWithin = 1 minute // schedule image processing if it hasn't been already 1 minute after a fetch
   val fastFollowWindow = 1 hour
 }
 
 class RoverArticleImageSchedulingActor @Inject() (
-    imageProcessingCommander: ImageProcessingCommander,
+    imageProcessingCommander: ImageCommander,
     airbrake: AirbrakeNotifier,
     fastFollowQueue: ArticleImageProcessingTaskQueue.FastFollow,
     catchUpQueue: ArticleImageProcessingTaskQueue.CatchUp,
@@ -34,7 +34,7 @@ class RoverArticleImageSchedulingActor @Inject() (
   protected def nextBatch: Future[Seq[RoverArticleInfo]] = {
     SafeFuture {
       log.info(s"Queuing up to $maxBatchSize article image processing tasks...")
-      imageProcessingCommander.getRipeForImageProcessing(maxBatchSize, dueAfterRequestedWithin, maxQueuedFor)
+      imageProcessingCommander.getArticleInfosForImageProcessing(maxBatchSize, dueAfterRequestedWithin, maxQueuedFor)
     }
   }
 

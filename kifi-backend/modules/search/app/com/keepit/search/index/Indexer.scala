@@ -1,13 +1,10 @@
 package com.keepit.search.index
 
 import java.io.IOException
+import com.keepit.search.index.Indexer.CommitData
 import org.apache.lucene.document.Document
 import org.apache.lucene.document.Field
-import org.apache.lucene.index.CorruptIndexException
-import org.apache.lucene.index.DirectoryReader
-import org.apache.lucene.index.IndexWriter
-import org.apache.lucene.index.IndexWriterConfig
-import org.apache.lucene.index.Term
+import org.apache.lucene.index._
 import org.apache.lucene.util.Version
 import com.keepit.common.db.{ SequenceNumber, Id }
 import com.keepit.common.logging.Logging
@@ -29,6 +26,14 @@ object Indexer {
     val committedAt = "COMMITTED_AT"
     val sequenceNumber = "SEQUENCE_NUMBER"
     val catchUpSeqNumForReindex = "CATCH_UP_SEQ_NUM_FOR_REINDEX"
+  }
+
+  case class CommitData[S](data: Map[String, String]) {
+    def sequenceNumber: SequenceNumber[S] = SequenceNumber(data.getOrElse(CommitData.sequenceNumber, "-1").toLong)
+
+    def catchUpSequenceNumber: SequenceNumber[S] = SequenceNumber(data.getOrElse(CommitData.catchUpSeqNumForReindex, "-1").toLong)
+
+    def committedAt: Option[String] = data.get(CommitData.committedAt)
   }
 }
 
@@ -56,7 +61,6 @@ trait IndexingEventHandler[T, S] {
 
 abstract class Indexer[T, S, I <: Indexer[T, S, I]](
   indexDirectory: IndexDirectory,
-  fieldDecoders: Map[String, FieldDecoder] = Map.empty[String, FieldDecoder],
   maxPrefixLength: Int = Int.MaxValue)
     extends IndexManager[S, I] with IndexingEventHandler[T, S] with Logging {
 
@@ -113,8 +117,7 @@ abstract class Indexer[T, S, I <: Indexer[T, S, I]](
 
   protected val updateLock = new AnyRef
 
-  private[this] var _sequenceNumber = SequenceNumber[S](initialSequenceNumberValue)
-  def initialSequenceNumberValue: Long = (commitData.getOrElse(Indexer.CommitData.sequenceNumber, "-1").toLong)
+  private[this] var _sequenceNumber = commitSequenceNumber
 
   def sequenceNumber = _sequenceNumber
 
@@ -124,11 +127,7 @@ abstract class Indexer[T, S, I <: Indexer[T, S, I]](
 
   def catchUpSeqNumber_=(n: SequenceNumber[S]) { _catchUpSeqNumber = n }
 
-  private[this] var _catchUpSeqNumber = {
-    val v1 = commitData.getOrElse(Indexer.CommitData.sequenceNumber, "-1").toLong
-    val v2 = commitData.getOrElse(Indexer.CommitData.catchUpSeqNumForReindex, "-1").toLong
-    SequenceNumber[S](v1 max v2)
-  }
+  private[this] var _catchUpSeqNumber = commitSequenceNumber max commitCatchUpSequenceNumber
 
   def catchUpSeqNumber = _catchUpSeqNumber
 
@@ -309,21 +308,21 @@ abstract class Indexer[T, S, I <: Indexer[T, S, I]](
     if (refresh) refreshSearcher()
   }
 
-  def commitData: Map[String, String] = {
-    // get the latest commit
-    val indexReader = Option(DirectoryReader.openIfChanged(searcher.indexReader.inner)).getOrElse(searcher.indexReader.inner)
-    val indexCommit = indexReader.getIndexCommit()
+  def getCommitData: CommitData[S] = {
+    // Get the latest commit.
+    // Looks like DirectoryReader.openIfChanged does not re-open the directory if only the commit data has been changed (as opposed to documents).
+    // Using DirectoryReader.open (expensive) instead to make sure we return the latest commit data
+    // (especially the latest sequence number, even if no document has been actually modified)
+    val indexCommit = DirectoryReader.open(indexDirectory).getIndexCommit
     val mutableMap = indexCommit.getUserData()
-    Map() ++ mutableMap
+    CommitData(mutableMap.toMap)
   }
 
-  def commitSequenceNumber: SequenceNumber[S] = {
-    SequenceNumber(commitData.get(Indexer.CommitData.sequenceNumber).map(v => v.toLong).getOrElse(-1L))
-  }
+  def commitSequenceNumber: SequenceNumber[S] = getCommitData.sequenceNumber
 
-  def committedAt: Option[String] = {
-    commitData.get(Indexer.CommitData.committedAt)
-  }
+  def commitCatchUpSequenceNumber: SequenceNumber[S] = getCommitData.catchUpSequenceNumber
+
+  def committedAt: Option[String] = getCommitData.committedAt
 
   def numDocs: Int = (indexWriter.numDocs() - 1) // minus the seed doc
 
@@ -334,15 +333,5 @@ abstract class Indexer[T, S, I <: Indexer[T, S, I]](
   }
 
   def refreshWriter(): Unit = reopenWriter()
-
-  def getFieldDecoder(fieldName: String): FieldDecoder = {
-    fieldDecoders.get(fieldName) match {
-      case Some(decoder) => decoder
-      case _ => fieldName match {
-        case Indexer.idValueFieldName => DocUtil.IdValueFieldDecoder
-        case _ => DocUtil.TextFieldDecoder
-      }
-    }
-  }
 }
 

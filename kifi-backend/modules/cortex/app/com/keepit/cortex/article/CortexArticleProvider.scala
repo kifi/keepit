@@ -9,7 +9,7 @@ import com.keepit.search.ArticleStore
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
-@ImplementedBy(classOf[RoverArticleProvider])
+@ImplementedBy(classOf[StoreBasedArticleProvider])
 trait CortexArticleProvider {
   def getArticle(uriId: Id[NormalizedURI]): Option[CortexArticle]
 }
@@ -22,7 +22,7 @@ class StoreBasedArticleProvider @Inject() (articleStore: ArticleStore) extends C
 @Singleton
 class RoverArticleProvider @Inject() (rover: RoverServiceClient) extends CortexArticleProvider {
   def getArticle(uriId: Id[NormalizedURI]): Option[CortexArticle] = {
-    val res = Await.result(rover.getArticlesByUris(Set(uriId)), 5 seconds)
+    val res = Await.result(rover.getBestArticlesByUris(Set(uriId)), 5 seconds)
     res.get(uriId) match {
       case Some(articles) if articles.nonEmpty => Some(BasicCortexArticle.fromRoverArticles(articles))
       case _ => None

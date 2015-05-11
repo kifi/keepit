@@ -87,7 +87,7 @@ trait CuratorTestHelpers { this: CuratorTestInjector =>
       masterScore = masterScore,
       state = UriRecommendationStates.ACTIVE,
       allScores = allScores,
-      delivered = 0, clicked = 0, kept = false,
+      viewed = 0, clicked = 0, kept = false,
       attribution = makeSeedAttribution(userId),
       topic1 = None,
       topic2 = None)
@@ -113,7 +113,7 @@ trait CuratorTestHelpers { this: CuratorTestInjector =>
         multiplier = Some(1.0f),
         discoveryScore = 1.0f,
         libraryInducedScore = Some(0f)),
-      delivered = 0, clicked = 0, kept = false,
+      viewed = 0, clicked = 0, kept = false,
       attribution = makeSeedAttribution(userId),
       topic1 = None,
       topic2 = None)

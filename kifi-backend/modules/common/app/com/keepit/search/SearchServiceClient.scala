@@ -57,7 +57,7 @@ trait SearchServiceClient extends ServiceClient {
   def resetUserConfig(id: Id[User]): Unit
   def getSearchDefaultConfig: Future[SearchConfig]
 
-  def dumpLuceneDocument(uri: Id[NormalizedURI]): Future[Html]
+  def dumpLuceneDocument(uri: Id[NormalizedURI], deprecated: Boolean): Future[Html]
   def getLibraryDocument(library: DetailedLibraryView): Future[Html]
 
   def benchmarks(): Future[BenchmarkResults]
@@ -202,8 +202,8 @@ class SearchServiceClientImpl(
     call(Search.internal.explainUserResult(query, userId, resultUserId, acceptLangs, debug, disablePrefixSearch)).map(r => Html(r.body))
   }
 
-  def dumpLuceneDocument(id: Id[NormalizedURI]): Future[Html] = {
-    call(Search.internal.searchDumpLuceneDocument(id)).map(r => Html(r.body))
+  def dumpLuceneDocument(id: Id[NormalizedURI], deprecated: Boolean): Future[Html] = {
+    call(Search.internal.searchDumpLuceneDocument(id, deprecated)).map(r => Html(r.body))
   }
 
   def getLibraryDocument(library: DetailedLibraryView): Future[Html] = {

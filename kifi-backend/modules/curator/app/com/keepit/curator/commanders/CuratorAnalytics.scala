@@ -39,13 +39,19 @@ class CuratorAnalytics @Inject() (
     }
   }
 
+  private def userDidInteractWithUriReco(recoFromDB: Option[UriRecommendation], feedback: UriRecommendationFeedback) = {
+    feedback.viewed.exists(_ == true) || recoFromDB.exists(r => r.viewed > 0)
+  }
+
   private def addFeedbackToLearningLoop(userId: Id[User], uriId: Id[NormalizedURI], feedback: UriRecommendationFeedback): Unit = {
     val recoItemOpt = db.readOnlyReplica { implicit s => uriRecoRepo.getByUriAndUserId(uriId, userId, None) }
 
-    if (recoItemOpt.exists(r => r.delivered > 0)) {
+    if (userDidInteractWithUriReco(recoItemOpt, feedback)) {
+      // 1. dump event
       val dumpRecordOpt = UriRecoFeedback.fromUserFeedback(userId, uriId, feedback)
       dumpRecordOpt.foreach { r => db.readWrite { implicit s => uriRecoFeedbackRepo.save(r) } }
 
+      // 2. adjust boosting
       recoItemOpt.foreach { item =>
         dumpRecordOpt.map { _.feedback }.foreach { fbValue =>
           fbTrackingCmdr.trackFeedback(item, fbValue)
@@ -89,7 +95,7 @@ class CuratorAnalytics @Inject() (
   private def toRecoUserActionContexts(userId: Id[User], uriId: Id[NormalizedURI], feedback: UriRecommendationFeedback): Seq[RecommendationUserActionContext] = {
     val modelOpt = db.readOnlyReplica { implicit s => uriRecoRepo.getByUriAndUserId(uriId, userId, None) }
 
-    if (modelOpt.exists(r => r.delivered > 0)) {
+    if (userDidInteractWithUriReco(modelOpt, feedback)) {
       val masterScore = modelOpt.get.masterScore.toInt
       val keepers = modelOpt.get.attribution.user.map { _.friends }
       val source = feedback.source.getOrElse(RecommendationSource.Unknown)

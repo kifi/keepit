@@ -10,7 +10,10 @@ import com.keepit.model._
 import com.keepit.model.NormalizedURI
 import com.keepit.model.NormalizedURIStates._
 import com.keepit.model.User
-import com.keepit.search.index.article.DeprecatedArticleIndexer
+import com.keepit.rover.{ FakeRoverServiceClientImpl, RoverServiceClient }
+import com.keepit.rover.article.{ EmbedlyArticle }
+import com.keepit.rover.article.content.{ EmbedlyContent }
+import com.keepit.search.index.article.{ ArticleIndexer, ShardedArticleIndexer }
 import com.keepit.search.engine.{ LibraryQualityEvaluator, SearchFactory }
 import com.keepit.search.index.graph.collection._
 import com.keepit.search.index.graph.keep.{ ShardedKeepIndexer, KeepIndexer }
@@ -21,6 +24,8 @@ import com.keepit.search.index.phrase._
 import com.keepit.search.index.user.UserIndexer
 import com.keepit.search.test.SearchTestInjector
 import com.keepit.shoebox.{ FakeShoeboxServiceClientImpl, FakeShoeboxServiceModule, ShoeboxServiceClient }
+import play.api.libs.json.Json
+import scala.concurrent.{ Await, ExecutionContext }
 import scala.concurrent.duration._
 import com.keepit.search.tracking.ClickHistoryTracker
 import com.keepit.search.tracking.ResultClickTracker
@@ -47,15 +52,23 @@ trait SearchTestHelper { self: SearchTestInjector =>
         normalizedUrl = "http://www.keepit.com/article" + n, state = SCRAPED)
     }.toList
     val fakeShoeboxClient = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
-    (fakeShoeboxClient.saveUsers(users: _*), fakeShoeboxClient.saveURIs(uris: _*))
+    val (savedUsers, savedUris) = (fakeShoeboxClient.saveUsers(users: _*), fakeShoeboxClient.saveURIs(uris: _*))
+
+    val fakeRoverClient = inject[RoverServiceClient].asInstanceOf[FakeRoverServiceClientImpl]
+    savedUris.zipWithIndex.foreach {
+      case (uri, idx) =>
+        val embedlyArticle = mkEmbedlyArticle(uri.url, "title%d".format(idx), "content%d alldocs documents".format(idx))
+        fakeRoverClient.setArticlesForUri(uri.id.get, Set(embedlyArticle))
+    }
+    (savedUsers, savedUris)
   }
 
-  def initIndexes(store: ArticleStore)(implicit activeShards: ActiveShards, injector: Injector) = {
+  def initIndexes()(implicit activeShards: ActiveShards, injector: Injector) = {
     val articleIndexers = activeShards.local.map { shard =>
-      val articleIndexer = new DeprecatedArticleIndexer(new VolatileIndexDirectory, store, inject[AirbrakeNotifier])
+      val articleIndexer = new ArticleIndexer(new VolatileIndexDirectory, shard, inject[AirbrakeNotifier])
       (shard -> articleIndexer)
     }
-    val shardedArticleIndexer = new DeprecatedShardedArticleIndexer(articleIndexers.toMap, store, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
+    val shardedArticleIndexer = new ShardedArticleIndexer(articleIndexers.toMap, inject[ShoeboxServiceClient], inject[RoverServiceClient], inject[AirbrakeNotifier], inject[ExecutionContext])
 
     val keepIndexers = activeShards.local.map { shard =>
       val keepIndexer = new KeepIndexer(new VolatileIndexDirectory, shard, inject[AirbrakeNotifier])
@@ -101,33 +114,19 @@ trait SearchTestHelper { self: SearchTestInjector =>
     (shardedCollectionIndexer, shardedArticleIndexer, userGraphIndexer, userGraphsSearcherFactory, searchFactory, shardedKeepIndexer, libraryIndexer, libraryMembershipIndexer)
   }
 
-  def mkStore(uris: Seq[NormalizedURI]) = {
-    uris.zipWithIndex.foldLeft(new InMemoryArticleStoreImpl()) {
-      case (store, (uri, idx)) =>
-        store += (uri.id.get -> mkArticle(uri.id.get, "title%d".format(idx), "content%d alldocs documents".format(idx)))
-        store
-    }
-  }
-
-  def mkArticle(normalizedUriId: Id[NormalizedURI], title: String, content: String) = {
-    Article(
-      id = normalizedUriId,
-      title = title,
-      description = None,
-      author = None,
-      publishedAt = None,
-      canonicalUrl = None,
-      alternateUrls = Set.empty,
-      keywords = None,
-      media = None,
-      content = content,
-      scrapedAt = currentDateTime,
-      httpContentType = Some("text/html"),
-      httpOriginalContentCharset = Option("UTF-8"),
-      state = SCRAPED,
-      message = None,
-      titleLang = Some(english),
-      contentLang = Some(english))
+  def mkEmbedlyArticle(url: String, title: String, content: String) = {
+    val embedlyJson = Json.obj(
+      "url" -> url,
+      "original_url" -> url,
+      "title" -> title,
+      "content" -> content,
+      "type" -> "html"
+    )
+    EmbedlyArticle(
+      createdAt = currentDateTime,
+      url = url,
+      content = new EmbedlyContent(embedlyJson)
+    )
   }
 
   def setConnections(connections: Map[Id[User], Set[Id[User]]])(implicit injector: Injector) {
@@ -182,5 +181,25 @@ trait SearchTestHelper { self: SearchTestInjector =>
 
   // implicit val system = ActorSystem("test")
   val helperModules = Seq(FakeActorSystemModule(), FakeShoeboxServiceModule(), new AwsModule(), FakeHttpClientModule(), PlayAppConfigurationModule())
+
+  def updateNow(articleIndexer: ShardedArticleIndexer)(implicit activeShards: ActiveShards) = {
+    var total = 0
+    var done = false
+    while (!done) {
+      val result = Await.result(articleIndexer.asyncUpdate(), Duration(60, SECONDS))
+      done = result.isEmpty
+      result.foreach(total += _)
+    }
+    val numShards = activeShards.all.size
+    total / numShards
+  }
+
+  def updateNow(keepIndexer: ShardedKeepIndexer)(implicit activeShards: ActiveShards): Unit = {
+    var total = 0
+    var done = false
+    while (!done) {
+      done = Await.result(keepIndexer.asyncUpdate(), Duration(60, SECONDS))
+    }
+  }
 
 }

@@ -13,7 +13,7 @@
   @uris.map{ uri =>
     <tr>
       <td>@uri.id.get</td>
-      <td><a href = "@{com.keepit.controllers.admin.routes.ScraperAdminController.getScraped(uri.id.get)}">@uri.title.getOrElse("No Title")</a></td>
+      <td><a href = "@{com.keepit.controllers.admin.routes.UrlController.getURIInfo(uri.id.get)}">@uri.title.getOrElse("No Title")</a></td>
     </tr>
   }
 

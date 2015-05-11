@@ -195,7 +195,8 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
              |    "numKeeps" : 0,
              |    "numCollaborators" : 0,
              |    "numFollowers" : 0 },
-             |  "membership" : "owner"
+             |  "membership" : "owner",
+             |"subscribedToUpdates":false
              |}
            """.stripMargin)
 
@@ -366,7 +367,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
       }
     }
 
-    "keep to library" in {
+    "keep to library v1" in {
       withDb(controllerTestModules: _*) { implicit injector =>
         val (user1, lib1) = setupOneUserOneLibrary()
         db.readOnlyMaster { implicit s =>
@@ -378,7 +379,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
 
         // add new keep
         val add1 = Json.obj("title" -> "Bikini Bottom", "url" -> keepUrl, "hashtags" -> Seq("vacation"))
-        val result1 = keepToLibrary(user1, pubId1, add1)
+        val result1 = keepToLibraryV1(user1, pubId1, add1)
         status(result1) must equalTo(OK)
         contentType(result1) must beSome("application/json")
 
@@ -390,7 +391,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
 
         // add same keep with different title & different set of tags
         val add2 = Json.obj("title" -> "Airbnb", "url" -> keepUrl, "hashtags" -> Seq("tagA", "tagB"))
-        val result2 = keepToLibrary(user1, pubId1, add2)
+        val result2 = keepToLibraryV1(user1, pubId1, add2)
         status(result2) must equalTo(OK)
         contentType(result2) must beSome("application/json")
         (contentAsJson(result2) \ "hashtags").as[Seq[Hashtag]].map(_.tag) === Seq("tagA", "tagB")
@@ -399,6 +400,46 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
           val keeps = keepRepo.getByLibrary(lib1.id.get, 0, 10)
           keeps(0).title.get === "Airbnb"
           collectionRepo.getHashtagsByKeepId(keeps(0).id.get).map(_.tag) === Set("tagA", "tagB")
+        }
+      }
+    }
+
+    "keep to library v2" in {
+      withDb(controllerTestModules: _*) { implicit injector =>
+        val (user1, lib1) = setupOneUserOneLibrary()
+        db.readOnlyMaster { implicit s =>
+          keepRepo.getCountByLibrary(lib1.id.get) === 0
+        }
+
+        val pubId1 = Library.publicId(lib1.id.get)(inject[PublicIdConfiguration])
+        val keepUrl = "http://www.airbnb.com/bikinibottom"
+
+        // add new keep
+        val add1 = Json.obj("title" -> "Bikini Bottom", "url" -> keepUrl, "note" -> "I love [#scala]")
+        val result1 = keepToLibraryV2(user1, pubId1, add1)
+        status(result1) must equalTo(OK)
+        contentType(result1) must beSome("application/json")
+
+        db.readOnlyMaster { implicit s =>
+          val keeps = keepRepo.getByLibrary(lib1.id.get, 0, 10)
+          val keep = keeps(0)
+          keep.title.get === "Bikini Bottom"
+          keep.note.get === "I love [#scala]"
+          collectionRepo.getHashtagsByKeepId(keep.id.get).map(_.tag) === Set("scala")
+        }
+
+        // add same keep with different title & note
+        val add2 = Json.obj("title" -> "Airbnb", "url" -> keepUrl, "note" -> "Just kidding, I like nothing")
+        val result2 = keepToLibraryV2(user1, pubId1, add2)
+        status(result2) must equalTo(OK)
+        contentType(result2) must beSome("application/json")
+
+        db.readOnlyMaster { implicit s =>
+          val keeps = keepRepo.getByLibrary(lib1.id.get, 0, 10)
+          val keep = keeps(0)
+          keep.title.get === "Airbnb"
+          keep.note.get === "Just kidding, I like nothing"
+          collectionRepo.getHashtagsByKeepId(keep.id.get).map(_.tag) === Set()
         }
       }
     }
@@ -422,7 +463,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
       }
     }
 
-    "get writeable libraries" in {
+    "get writeable libraries v1" in {
       withDb(controllerTestModules: _*) { implicit injector =>
         val (user1, lib1, lib2, _, _) = setupTwoUsersThreeLibraries()
         val pubLibId1 = Library.publicId(lib1.id.get)(inject[PublicIdConfiguration])
@@ -437,14 +478,14 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
         val url3 = Json.toJson("http://www.google.com")
 
         // no url in body
-        val result1 = getWriteableLibraries(user1, emptyBody)
+        val result1 = getWriteableLibrariesV1(user1, emptyBody)
         status(result1) must equalTo(OK)
         val response1 = contentAsJson(result1)
         (response1 \ "libraries").as[Seq[LibraryInfo]].length === 2
 
         // unparseable url in body
         println("********* Intended ERROR parsing url! *********")
-        val result2 = getWriteableLibraries(user1, Json.obj("url" -> url1))
+        val result2 = getWriteableLibrariesV1(user1, Json.obj("url" -> url1))
         status(result2) must equalTo(OK)
         val response2 = contentAsJson(result2)
         (response2 \ "libraries").as[Seq[LibraryInfo]].length === 2
@@ -452,7 +493,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
         println("********* End intended ERROR! *********")
 
         // parseable url in body (kept in other libraries)
-        val result3 = getWriteableLibraries(user1, Json.obj("url" -> url2))
+        val result3 = getWriteableLibrariesV1(user1, Json.obj("url" -> url2))
         status(result3) must equalTo(OK)
         val response3 = contentAsJson(result3)
         (response3 \ "libraries").as[Seq[LibraryInfo]].length === 2
@@ -475,7 +516,49 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
              ]
            """)
 
-        val result4 = getWriteableLibraries(user1, Json.obj("url" -> url3))
+        val result4 = getWriteableLibrariesV1(user1, Json.obj("url" -> url3))
+        status(result4) must equalTo(OK)
+        val response4 = contentAsJson(result4)
+        (response4 \ "libraries").as[Seq[LibraryInfo]].length === 2
+        (response4 \ "error").asOpt[String] === None
+        (response4 \ "alreadyKept").asOpt[Seq[JsObject]] === None
+      }
+    }
+
+    "get writeable libraries v2" in {
+      withDb(controllerTestModules: _*) { implicit injector =>
+        val (user1, lib1, lib2, _, _) = setupTwoUsersThreeLibraries()
+        val pubLibId1 = Library.publicId(lib1.id.get)(inject[PublicIdConfiguration])
+        val pubLibId2 = Library.publicId(lib2.id.get)(inject[PublicIdConfiguration])
+        val k1 = db.readWrite { implicit s =>
+          setupKeepInLibrary(user1, lib1, "http://www.yelp.com/krustykrab", "krustykrab", Seq("food1", "food2"), Some("[#food1] [#food2]"))
+        }
+
+        val emptyBody = Json.obj()
+        val url1 = Json.toJson("www.yelp.com/krustykrab")
+        val url2 = Json.toJson("http://www.yelp.com/krustykrab")
+        val url3 = Json.toJson("http://www.google.com")
+
+        // parseable url in body (kept in other libraries)
+        val result3 = getWriteableLibrariesV2(user1, Json.obj("url" -> url2))
+        status(result3) must equalTo(OK)
+        val response3 = contentAsJson(result3)
+        (response3 \ "libraries").as[Seq[LibraryInfo]].length === 2
+        (response3 \ "error").asOpt[String] === None
+        val keepData = (response3 \ "alreadyKept")
+        keepData === Json.parse(s"""
+            [
+             {
+                "id":"${k1.externalId}",
+                "title":"krustykrab",
+                "note":"[#food1] [#food2]",
+                "imageUrl":null,
+                "libraryId":"${pubLibId1.id}"
+             }
+            ]
+           """)
+
+        val result4 = getWriteableLibrariesV2(user1, Json.obj("url" -> url3))
         status(result4) must equalTo(OK)
         val response4 = contentAsJson(result4)
         (response4 \ "libraries").as[Seq[LibraryInfo]].length === 2
@@ -491,25 +574,25 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
           val user2 = user().withUsername("quicksilver").saved
           val user3 = user().withUsername("scarletwitch").saved
           val lib1 = library().withUser(user1).saved // user1 owns lib1
-          membership().withLibraryFollower(lib1, user2).saved // user2 follows lib1 (has read_only access)
+          membership().withLibraryCollaborator(lib1, user2).saved // user2 is a collaborator lib1 (has read_write access)
 
           libraryMembershipRepo.getWithLibraryIdAndUserId(lib1.id.get, user1.id.get).get.access === LibraryAccess.OWNER
-          libraryMembershipRepo.getWithLibraryIdAndUserId(lib1.id.get, user2.id.get).get.access === LibraryAccess.READ_ONLY
+          libraryMembershipRepo.getWithLibraryIdAndUserId(lib1.id.get, user2.id.get).get.access === LibraryAccess.READ_WRITE
           (user1, user2, user3, lib1)
         }
         val pubLibId1 = Library.publicId(lib1.id.get)(inject[PublicIdConfiguration])
 
         // test invalid library write access
-        status(updateLibraryMembership(user2, user2, pubLibId1, "owner")) must equalTo(FORBIDDEN)
+        status(updateLibraryMembership(user2, user2, pubLibId1, "owner")) must equalTo(BAD_REQUEST)
 
         // test change membership access
-        status(updateLibraryMembership(user1, user2, pubLibId1, "read_write")) must equalTo(NO_CONTENT)
+        status(updateLibraryMembership(user1, user2, pubLibId1, "follower")) must equalTo(NO_CONTENT)
 
         // test deactivate membership
         status(updateLibraryMembership(user1, user2, pubLibId1, "none")) must equalTo(NO_CONTENT)
 
         // test membership not found
-        status(updateLibraryMembership(user1, user2, pubLibId1, "read_only")) must equalTo(NOT_FOUND)
+        status(updateLibraryMembership(user1, user2, pubLibId1, "follower")) must equalTo(NOT_FOUND)
       }
     }
 
@@ -555,9 +638,14 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
     controller.getLibraryMembers(libId, offset, limit)(request(routes.MobileLibraryController.getLibraryMembers(libId, offset, limit)))
   }
 
-  private def keepToLibrary(user: User, libId: PublicId[Library], body: JsObject)(implicit injector: Injector): Future[Result] = {
+  private def keepToLibraryV1(user: User, libId: PublicId[Library], body: JsObject)(implicit injector: Injector): Future[Result] = {
     inject[FakeUserActionsHelper].setUser(user)
-    controller.keepToLibrary(libId)(request(routes.MobileLibraryController.keepToLibrary(libId)).withBody(body))
+    controller.keepToLibraryV1(libId)(request(routes.MobileLibraryController.keepToLibraryV1(libId)).withBody(body))
+  }
+
+  private def keepToLibraryV2(user: User, libId: PublicId[Library], body: JsObject)(implicit injector: Injector): Future[Result] = {
+    inject[FakeUserActionsHelper].setUser(user)
+    controller.keepToLibraryV2(libId)(request(routes.MobileLibraryController.keepToLibraryV2(libId)).withBody(body))
   }
 
   private def unkeepFromLibrary(user: User, libId: PublicId[Library], keepId: ExternalId[Keep])(implicit injector: Injector): Future[Result] = {
@@ -565,14 +653,19 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
     controller.unkeepFromLibrary(libId, keepId)(request(routes.MobileLibraryController.unkeepFromLibrary(libId, keepId)))
   }
 
-  private def getWriteableLibraries(user: User, body: JsObject)(implicit injector: Injector): Future[Result] = {
+  private def getWriteableLibrariesV1(user: User, body: JsObject)(implicit injector: Injector): Future[Result] = {
     inject[FakeUserActionsHelper].setUser(user)
     controller.getWriteableLibrariesWithUrlV1()(request(routes.MobileLibraryController.getWriteableLibrariesWithUrlV1()).withBody(body))
+  }
+  private def getWriteableLibrariesV2(user: User, body: JsObject)(implicit injector: Injector): Future[Result] = {
+    inject[FakeUserActionsHelper].setUser(user)
+    controller.getWriteableLibrariesWithUrlV2()(request(routes.MobileLibraryController.getWriteableLibrariesWithUrlV2()).withBody(body))
   }
 
   private def updateLibraryMembership(user: User, targetUser: User, libId: PublicId[Library], access: String)(implicit injector: Injector): Future[Result] = {
     inject[FakeUserActionsHelper].setUser(user)
-    controller.updateLibraryMembership(libId, targetUser.externalId, access)(request(routes.MobileLibraryController.updateLibraryMembership(libId, targetUser.externalId, access)))
+    val body = Json.obj("access" -> access)
+    controller.updateLibraryMembership(libId, targetUser.externalId)(request(routes.MobileLibraryController.updateLibraryMembership(libId, targetUser.externalId)).withBody(body))
   }
 
   // User 'Spongebob' has one library called "Krabby Patty" (secret)
