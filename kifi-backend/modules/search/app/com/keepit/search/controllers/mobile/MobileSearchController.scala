@@ -166,33 +166,35 @@ class MobileSearchController @Inject() (
         val librarySearcher = libraryIndexer.getSearcher
         val libraryRecordsAndVisibilityById = getLibraryRecordsAndVisibility(librarySearcher, librarySearchResult.hits.map(_.id).toSet)
         val futureUsers = shoeboxClient.getBasicUsers(libraryRecordsAndVisibilityById.values.map(_._1.ownerId).toSeq.distinct)
-        val futureLibraryStatistics = shoeboxClient.getBasicLibraryStatistics(libraryRecordsAndVisibilityById.keySet)
-        val futureLibraryImages = shoeboxClient.getLibraryImageUrls(libraryRecordsAndVisibilityById.keySet, ProcessedImageSize.Medium.idealSize) // todo(Léo): Ask for square image
+        val futureLibraryDetails = shoeboxClient.getBasicLibraryDetails(libraryRecordsAndVisibilityById.keySet)
+
         for {
           usersById <- futureUsers
-          libraryStatisticsById <- futureLibraryStatistics
-          libraryImagesById <- futureLibraryImages
+          libraryDetails <- futureLibraryDetails
         } yield {
           val hitsArray = JsArray(librarySearchResult.hits.flatMap { hit =>
             libraryRecordsAndVisibilityById.get(hit.id).map {
               case (library, visibility) =>
                 val owner = usersById(library.ownerId)
-                val path = Library.formatLibraryPath(owner.username, library.slug)
-                val statistics = libraryStatisticsById(library.id)
-                val description = library.description.getOrElse("")
-                val imageUrl = libraryImagesById.get(library.id)
+                val details = libraryDetails(library.id)
+
+                val path = Library.formatLibraryPath(owner.username, details.slug)
+                val description = library.description.orElse(details.description).getOrElse("")
+
                 Json.obj(
                   "id" -> Library.publicId(hit.id),
                   "score" -> hit.score,
                   "name" -> library.name,
                   "description" -> description,
                   "color" -> library.color,
-                  "imageUrl" -> imageUrl,
+                  "imageUrl" -> details.imageUrl,
                   "path" -> path,
                   "visibility" -> visibility,
                   "owner" -> owner,
-                  "memberCount" -> statistics.memberCount,
-                  "keepCount" -> statistics.keepCount
+                  "memberCount" -> (details.numFollowers + details.numCollaborators),
+                  "numFollowers" -> details.numFollowers,
+                  "numCollaborators" -> details.numCollaborators,
+                  "keepCount" -> details.keepCount
                 )
             }
           })
