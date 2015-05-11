@@ -43,16 +43,18 @@ class AdminUserControllerTest extends Specification with ShoeboxTestInjector {
     db.readWrite { implicit session =>
 
       val userSuperAdminOpt: User = userRepo.save(User(
-        firstName = "Clark",
-        lastName = "Kent", username = Username("clark"), normalizedUsername = "clark"
+        firstName = "Clark", lastName = "Kent", username = Username("clark"), normalizedUsername = "clark"
       ))
       val userNonAdminOpt = userRepo.save(User(
-        firstName = "Homer",
-        lastName = "Simpson", username = Username("homer"), normalizedUsername = "homer"
+        firstName = "Homer", lastName = "Simpson", username = Username("homer"), normalizedUsername = "homer"
       ))
+
+      val dummySuperAdminOpt = userRepo.save(User(
+        firstName = "Andrew", lastName = "Conner", username = Username("andrew"), normalizedUsername = "andrew"
+      )) // need a dummy user saved, since Andrew is a superAdmin and his userId == 3.
+
       val userAdminOpt = userRepo.save(User(
-        firstName = "Peter",
-        lastName = "Griffin", username = Username("peter"), normalizedUsername = "peter"
+        firstName = "Peter", lastName = "Griffin", username = Username("peter"), normalizedUsername = "peter"
       ))
 
       userExperimentRepo.save(UserExperiment(userId = userSuperAdminOpt.id.get, experimentType = ExperimentType.ADMIN))
