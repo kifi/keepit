@@ -32,8 +32,9 @@ class RoverArticleImageProcessingActor @Inject() (
     instanceInfo: AmazonInstanceInfo,
     implicit val executionContext: ExecutionContext) extends ConcurrentTaskProcessingActor[SQSMessage[ArticleImageProcessingTask]](airbrake) {
 
-  protected val minConcurrentTasks: Int = instanceInfo.instantTypeInfo.cores * 3
-  protected val maxConcurrentTasks: Int = instanceInfo.instantTypeInfo.cores * 3
+  private val concurrencyFactor = 10
+  protected val minConcurrentTasks: Int = instanceInfo.instantTypeInfo.cores * concurrencyFactor
+  protected val maxConcurrentTasks: Int = instanceInfo.instantTypeInfo.cores * concurrencyFactor
 
   protected def pullTasks(limit: Int): Future[Seq[SQSMessage[ArticleImageProcessingTask]]] = {
     taskQueue.nextBatchWithLock(limit, RoverArticleImageProcessingActor.lockTimeOut)
