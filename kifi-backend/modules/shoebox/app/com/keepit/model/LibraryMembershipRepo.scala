@@ -41,6 +41,10 @@ trait LibraryMembershipRepo extends Repo[LibraryMembership] with RepoWithDelete[
   def mostMembersSinceForUser(count: Int, since: DateTime, ownerId: Id[User])(implicit session: RSession): Seq[(Id[Library], Int)]
   def countNonTrivialLibrariesWithUserIdAndAccess(userId: Id[User], access: LibraryAccess, minKeepCount: Int = 1)(implicit session: RSession): Int
   def countsWithUserIdAndAccesses(userId: Id[User], accesses: Set[LibraryAccess])(implicit session: RSession): Map[LibraryAccess, Int]
+
+  //
+  // Profile Library Repo functions
+  //
   def getFollowersForAnonymous(ownerId: Id[User])(implicit session: RSession): Seq[Id[User]]
   def getFollowersForOwner(ownerId: Id[User])(implicit session: RSession): Seq[Id[User]]
   def getFollowersForOtherUser(ownerId: Id[User], viewerId: Id[User])(implicit session: RSession): Seq[Id[User]]
