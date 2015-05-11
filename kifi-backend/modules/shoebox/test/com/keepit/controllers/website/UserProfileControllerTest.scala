@@ -229,17 +229,17 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
           ret3 === Seq(user5lib.id.get.id)
           libraryMembershipRepo.countNonTrivialLibrariesWithUserIdAndAccess(user5.id.get, LibraryAccess.OWNER) === 1
 
-          libraryRepo.countLibrariesForAnonymous(user1.id.get) === 1
-          libraryRepo.countLibrariesForAnonymous(user2.id.get) === 0
-          libraryRepo.countLibrariesForAnonymous(user3.id.get) === 1
-          libraryRepo.countLibrariesForAnonymous(user4.id.get) === 0
-          libraryRepo.countLibrariesForAnonymous(user5.id.get) === 2
-          libraryRepo.countLibrariesForOtherUser(user1.id.get, user5.id.get) === 1
-          libraryRepo.countLibrariesForOtherUser(user1.id.get, user2.id.get) === 2
-          libraryRepo.countLibrariesForOtherUser(user2.id.get, user5.id.get) === 0
-          libraryRepo.countLibrariesForOtherUser(user3.id.get, user5.id.get) === 1
-          libraryRepo.countLibrariesForOtherUser(user4.id.get, user5.id.get) === 0
-          libraryRepo.countLibrariesForOtherUser(user5.id.get, user1.id.get) === 2
+          libraryRepo.countOwnerLibrariesForAnonymous(user1.id.get) === 1
+          libraryRepo.countOwnerLibrariesForAnonymous(user2.id.get) === 0
+          libraryRepo.countOwnerLibrariesForAnonymous(user3.id.get) === 1
+          libraryRepo.countOwnerLibrariesForAnonymous(user4.id.get) === 0
+          libraryRepo.countOwnerLibrariesForAnonymous(user5.id.get) === 2
+          libraryRepo.countOwnerLibrariesForOtherUser(user1.id.get, user5.id.get) === 1
+          libraryRepo.countOwnerLibrariesForOtherUser(user1.id.get, user2.id.get) === 2
+          libraryRepo.countOwnerLibrariesForOtherUser(user2.id.get, user5.id.get) === 0
+          libraryRepo.countOwnerLibrariesForOtherUser(user3.id.get, user5.id.get) === 1
+          libraryRepo.countOwnerLibrariesForOtherUser(user4.id.get, user5.id.get) === 0
+          libraryRepo.countOwnerLibrariesForOtherUser(user5.id.get, user1.id.get) === 2
         }
 
         //non existing username
