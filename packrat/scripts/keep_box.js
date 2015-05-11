@@ -381,6 +381,10 @@ k.keepBox = k.keepBox || (function () {
       saveKeepTitleIfChanged($view);
       saveKeepImageIfChanged($view);
     });
+
+    api.require('scripts/repair_inputs.js', function () {
+      $view.repairInputs();
+    });
   }
 
   function addCreateLibraryBindings($view) {

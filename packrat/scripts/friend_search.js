@@ -1,6 +1,7 @@
 // @require scripts/lib/jquery-tokeninput.js
 // @require scripts/lib/mustache.js
 // @require scripts/render.js
+// @require scripts/repair_inputs.js
 
 var initFriendSearch = (function () {
 
@@ -16,6 +17,7 @@ var initFriendSearch = (function () {
       onSelect: onSelect.bind(null, source),
       onRemove: onRemove
     }, options));
+    $in.prev().find('.kifi-ti-token-for-input').repairInputs();
   };
 
   function search(participantIds, includeSelf, ids, query, withResults) {
