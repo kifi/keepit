@@ -2,7 +2,7 @@ package com.keepit.controllers.mobile
 
 import com.google.inject.Inject
 import com.keepit.abook.ABookServiceClient
-import com.keepit.commanders.{ LibraryCommander, UserCommander }
+import com.keepit.commanders.{ UserProfileCommander, UserCommander }
 import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.ExternalId
@@ -21,7 +21,7 @@ class MobilePeopleRecommendationController @Inject() (
     libraryRepo: LibraryRepo,
     userRepo: UserRepo,
     abookServiceClient: ABookServiceClient,
-    val libCommander: LibraryCommander,
+    val userProfileCommander: UserProfileCommander,
     implicit val config: PublicIdConfiguration) extends UserActions with ShoeboxServiceController with UserLibraryCountSortingHelper {
 
   def getFriendRecommendations(offset: Int, limit: Int) = UserAction.async { request =>

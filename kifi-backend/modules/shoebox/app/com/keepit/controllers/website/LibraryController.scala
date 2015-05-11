@@ -654,9 +654,9 @@ class LibraryController @Inject() (
         val result = access.toLowerCase match {
           case "none" =>
             libraryCommander.updateLibraryMembershipAccess(request.userId, libraryId, targetUser.id.get, None)
-          case "follower" =>
+          case "read_only" =>
             libraryCommander.updateLibraryMembershipAccess(request.userId, libraryId, targetUser.id.get, Some(LibraryAccess.READ_ONLY))
-          case "collaborator" =>
+          case "read_write" =>
             libraryCommander.updateLibraryMembershipAccess(request.userId, libraryId, targetUser.id.get, Some(LibraryAccess.READ_WRITE))
           case _ =>
             Left(LibraryFail(BAD_REQUEST, "invalid_access_request"))

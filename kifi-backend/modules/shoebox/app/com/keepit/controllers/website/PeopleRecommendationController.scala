@@ -1,6 +1,6 @@
 package com.keepit.controllers.website
 
-import com.keepit.commanders.{ LibraryCommander, UserCommander, InviteCommander, UserConnectionsCommander }
+import com.keepit.commanders.{ UserProfileCommander, UserCommander, InviteCommander }
 import com.keepit.common.controller.{ UserActions, UserActionsHelper, ShoeboxServiceController }
 import com.google.inject.Inject
 import com.keepit.abook.ABookServiceClient
@@ -24,7 +24,7 @@ class PeopleRecommendationController @Inject() (
     peopleRecoCommander: UserCommander,
     socialUserRepo: SocialUserInfoRepo,
     inviteCommander: InviteCommander,
-    val libCommander: LibraryCommander) extends UserActions with ShoeboxServiceController with UserLibraryCountSortingHelper {
+    val userProfileCommander: UserProfileCommander) extends UserActions with ShoeboxServiceController with UserLibraryCountSortingHelper {
 
   def getFriendRecommendations(offset: Int, limit: Int) = UserAction.async { request =>
     peopleRecoCommander.getFriendRecommendations(request.userId, offset, limit).map {
@@ -82,10 +82,10 @@ class PeopleRecommendationController @Inject() (
 }
 
 trait UserLibraryCountSortingHelper {
-  val libCommander: LibraryCommander
+  val userProfileCommander: UserProfileCommander
 
   protected def sortUserByLibraryCount(users: Seq[Id[User]]): Seq[Id[User]] = {
-    val libCnts = libCommander.getOwnerLibraryCounts(users.toSet)
+    val libCnts = userProfileCommander.getOwnerLibraryCounts(users.toSet)
     val gpSize = 3
     if (libCnts.values.forall(_ == 0)) {
       users
