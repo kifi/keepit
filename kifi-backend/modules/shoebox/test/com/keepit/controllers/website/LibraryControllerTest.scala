@@ -1333,16 +1333,16 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         status(updateLibraryMembership(user2, user2, lib1, "owner")) must equalTo(BAD_REQUEST)
 
         // test demote membership access
-        status(updateLibraryMembership(user1, user2, lib1, "follower")) must equalTo(NO_CONTENT)
+        status(updateLibraryMembership(user1, user2, lib1, "read_only")) must equalTo(NO_CONTENT)
 
         // test promote membership access (error)
-        status(updateLibraryMembership(user1, user2, lib1, "collaborator")) must equalTo(BAD_REQUEST)
+        status(updateLibraryMembership(user1, user2, lib1, "read_write")) must equalTo(BAD_REQUEST)
 
         // test deactivate membership
         status(updateLibraryMembership(user1, user2, lib1, "none")) must equalTo(NO_CONTENT)
 
         // test membership not found (error)
-        status(updateLibraryMembership(user1, user2, lib1, "follower")) must equalTo(NOT_FOUND)
+        status(updateLibraryMembership(user1, user2, lib1, "read_only")) must equalTo(NOT_FOUND)
       }
     }
 

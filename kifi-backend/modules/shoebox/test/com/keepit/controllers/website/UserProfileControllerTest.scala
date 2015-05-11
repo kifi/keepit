@@ -229,11 +229,11 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
           ret3 === Seq(user5lib.id.get.id)
           libraryMembershipRepo.countNonTrivialLibrariesWithUserIdAndAccess(user5.id.get, LibraryAccess.OWNER) === 1
 
-          libraryRepo.countLibrariesOfUserForAnonymous(user1.id.get) === 1
-          libraryRepo.countLibrariesOfUserForAnonymous(user2.id.get) === 0
-          libraryRepo.countLibrariesOfUserForAnonymous(user3.id.get) === 1
-          libraryRepo.countLibrariesOfUserForAnonymous(user4.id.get) === 0
-          libraryRepo.countLibrariesOfUserForAnonymous(user5.id.get) === 2
+          libraryRepo.countLibrariesForAnonymous(user1.id.get) === 1
+          libraryRepo.countLibrariesForAnonymous(user2.id.get) === 0
+          libraryRepo.countLibrariesForAnonymous(user3.id.get) === 1
+          libraryRepo.countLibrariesForAnonymous(user4.id.get) === 0
+          libraryRepo.countLibrariesForAnonymous(user5.id.get) === 2
           libraryRepo.countLibrariesForOtherUser(user1.id.get, user5.id.get) === 1
           libraryRepo.countLibrariesForOtherUser(user1.id.get, user2.id.get) === 2
           libraryRepo.countLibrariesForOtherUser(user2.id.get, user5.id.get) === 0
