@@ -18,7 +18,6 @@ import com.keepit.search.index.phrase.PhraseIndexerPlugin
 import views.html
 
 class IndexController @Inject() (
-    deprecatedArticleIndexerPlugin: DeprecatedArticleIndexerPlugin,
     articleIndexerPlugin: ArticleIndexerPlugin,
     collectionGraphPlugin: CollectionGraphPlugin,
     userIndexerPlugin: UserIndexerPlugin,
@@ -46,7 +45,6 @@ class IndexController @Inject() (
 
   def listIndexInfo() = Action { implicit request =>
     val infos = (
-      deprecatedArticleIndexerPlugin.indexInfos ++
       articleIndexerPlugin.indexInfos ++
       collectionGraphPlugin.indexInfos ++
       userIndexerPlugin.indexInfos ++

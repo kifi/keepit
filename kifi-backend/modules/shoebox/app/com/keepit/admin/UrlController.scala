@@ -353,12 +353,12 @@ class UrlController @Inject() (
 
   def clearRestriction(uriId: Id[NormalizedURI]) = AdminUserPage { implicit request =>
     db.readWrite { implicit session => uriRepo.updateURIRestriction(uriId, None) }
-    Redirect(routes.ScraperAdminController.getScraped(uriId))
+    Redirect(routes.UrlController.getURIInfo(uriId))
   }
 
   def flagAsAdult(uriId: Id[NormalizedURI]) = AdminUserPage { implicit request =>
     db.readWrite { implicit session => uriRepo.updateURIRestriction(uriId, Some(Restriction.ADULT)) }
-    Redirect(routes.ScraperAdminController.getScraped(uriId))
+    Redirect(routes.UrlController.getURIInfo(uriId))
   }
 
   def getURIInfo(id: Id[NormalizedURI]) = AdminUserPage.async { implicit request =>

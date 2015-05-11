@@ -34,7 +34,7 @@ class RoverArticleImageSchedulingActor @Inject() (
   protected def nextBatch: Future[Seq[RoverArticleInfo]] = {
     SafeFuture {
       log.info(s"Queuing up to $maxBatchSize article image processing tasks...")
-      imageProcessingCommander.getRipeForImageProcessing(maxBatchSize, dueAfterRequestedWithin, maxQueuedFor)
+      imageProcessingCommander.getArticleInfosForImageProcessing(maxBatchSize, dueAfterRequestedWithin, maxQueuedFor)
     }
   }
 

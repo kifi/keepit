@@ -477,7 +477,7 @@ class KeepRepoImpl @Inject() (
   }
 
   def getKeepsFromLibrarySince(since: DateTime, library: Id[Library], max: Int)(implicit session: RSession): Seq[Keep] = {
-    (for (b <- rows if b.libraryId === library && b.state === KeepStates.ACTIVE && b.keptAt > since) yield b).sortBy(_.keptAt asc).take(max).list
+    (for (b <- rows if b.libraryId === library && b.state === KeepStates.ACTIVE && b.keptAt > since) yield b).sortBy(b => (b.keptAt asc, b.id)).take(max).list
   }
 
   def librariesWithMostKeepsSince(count: Int, since: DateTime)(implicit session: RSession): Seq[(Id[Library], Int)] = {
