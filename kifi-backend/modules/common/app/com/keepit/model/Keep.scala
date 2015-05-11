@@ -32,7 +32,7 @@ case class Keep(
     keptAt: DateTime = currentDateTime,
     sourceAttributionId: Option[Id[KeepSourceAttribution]] = None,
     note: Option[String] = None,
-    originalKeeperId: Option[Id[User]]) extends ModelWithExternalId[Keep] with ModelWithState[Keep] with ModelWithSeqNumber[Keep] {
+    originalKeeperId: Option[Id[User]] = None) extends ModelWithExternalId[Keep] with ModelWithState[Keep] with ModelWithSeqNumber[Keep] {
 
   def sanitizeForDelete(): Keep = copy(title = None, state = KeepStates.INACTIVE, kifiInstallation = None)
 
