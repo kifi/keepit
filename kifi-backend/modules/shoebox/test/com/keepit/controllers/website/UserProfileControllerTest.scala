@@ -1,15 +1,20 @@
 package com.keepit.controllers.website
 
+import java.io.File
+
 import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.abook.model.EmailAccountInfo
-import com.keepit.commanders.FriendStatusCommander
+import com.keepit.commanders.{ LibraryImageCommander, FriendStatusCommander }
 import com.keepit.common.controller.{ FakeUserActionsHelper }
+import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.social.FakeSocialGraphModule
+import com.keepit.common.store.ImageSize
 import com.keepit.graph.FakeGraphServiceClientImpl
 import com.keepit.graph.model.{ SociallyRelatedEntities, RelatedEntities }
+import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.KeepFactoryHelper._
 import com.keepit.model.KeepFactory._
 import com.keepit.model.LibraryInviteFactory._
@@ -26,15 +31,18 @@ import com.keepit.model._
 import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.social.BasicUser
 import com.keepit.test.ShoeboxTestInjector
+import org.apache.commons.io.FileUtils
 
 import org.specs2.mutable.Specification
+import play.api.libs.Files.TemporaryFile
 
 import play.api.libs.json._
 import play.api.mvc.{ Call, Result }
 import play.api.test.Helpers._
 import play.api.test._
 
-import scala.concurrent.Future
+import scala.concurrent.duration.Duration
+import scala.concurrent.{ Await, Future }
 import scala.slick.jdbc.StaticQuery
 
 class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
@@ -221,11 +229,11 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
           ret3 === Seq(user5lib.id.get.id)
           libraryMembershipRepo.countNonTrivialLibrariesWithUserIdAndAccess(user5.id.get, LibraryAccess.OWNER) === 1
 
-          libraryRepo.countLibrariesOfUserForAnonymous(user1.id.get) === 1
-          libraryRepo.countLibrariesOfUserForAnonymous(user2.id.get) === 0
-          libraryRepo.countLibrariesOfUserForAnonymous(user3.id.get) === 1
-          libraryRepo.countLibrariesOfUserForAnonymous(user4.id.get) === 0
-          libraryRepo.countLibrariesOfUserForAnonymous(user5.id.get) === 2
+          libraryRepo.countLibrariesForAnonymous(user1.id.get) === 1
+          libraryRepo.countLibrariesForAnonymous(user2.id.get) === 0
+          libraryRepo.countLibrariesForAnonymous(user3.id.get) === 1
+          libraryRepo.countLibrariesForAnonymous(user4.id.get) === 0
+          libraryRepo.countLibrariesForAnonymous(user5.id.get) === 2
           libraryRepo.countLibrariesForOtherUser(user1.id.get, user5.id.get) === 1
           libraryRepo.countLibrariesForOtherUser(user1.id.get, user2.id.get) === 2
           libraryRepo.countLibrariesForOtherUser(user2.id.get, user5.id.get) === 0
@@ -309,6 +317,129 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
       }
     }
 
+    "get profile libraries" in {
+      withDb(controllerTestModules: _*) { implicit injector =>
+        implicit val config = inject[PublicIdConfiguration]
+        val (user1, user2, user3, lib1, lib2, lib3, keep1) = db.readWrite { implicit s =>
+          val user1 = user().withName("first", "user").withUsername("firstuser").saved
+          val user2 = user().withName("second", "user").withUsername("seconduser").withPictureName("alf").saved
+          val user3 = user().withName("third", "user").withUsername("thirduser").withPictureName("asdf").saved
+          val library1 = library().withName("lib1").withUser(user1).published.withSlug("lib1").withMemberCount(11).withColor("blue").withDesc("My first library!").saved.savedFollowerMembership(user2).savedCollaboratorMembership(user3)
+          val library2 = library().withName("lib2").withUser(user2).secret.withSlug("lib2").withMemberCount(22).saved
+          val library3 = library().withName("lib3").withUser(user2).secret.withSlug("lib3").withMemberCount(33).saved.savedFollowerMembership(user1)
+          val k1 = keep().withLibrary(library1).saved
+          (user1, user2, user3, library1, library2, library3, k1)
+        }
+
+        val pubId1 = Library.publicId(lib1.id.get)
+        val pubId2 = Library.publicId(lib2.id.get)
+        val pubId3 = Library.publicId(lib3.id.get)
+
+        val (basicUser1, basicUser2) = db.readOnlyMaster { implicit s =>
+          (basicUserRepo.load(user1.id.get), basicUserRepo.load(user2.id.get))
+        }
+
+        // test viewing my own libraries
+        val result1 = getProfileLibraries(Some(user1), user1.username, 0, 10, "own")
+        status(result1) must equalTo(OK)
+        contentType(result1) must beSome("application/json")
+        val expected = Json.parse(
+          s"""
+          {
+            "own": [
+              {
+                "id": "${pubId1.id}",
+                "name": "lib1",
+                "description": "My first library!",
+                "color": "${LibraryColor.BLUE.hex}",
+                "slug": "lib1",
+                "kind": "user_created",
+                "visibility": "published",
+                "numKeeps": 1,
+                "numFollowers": 1,
+                "followers": [
+                  {
+                    "id": "${user2.externalId.id}",
+                    "firstName": "second",
+                    "lastName": "user",
+                    "pictureName": "alf.jpg",
+                    "username": "seconduser"
+                  }],
+                "numCollaborators":1,
+                "collaborators":[
+                  {
+                    "id": "${user3.externalId.id}",
+                    "firstName": "third",
+                    "lastName": "user",
+                    "pictureName": "asdf.jpg",
+                    "username": "thirduser"
+                  }],
+                "lastKept":${keep1.createdAt.getMillis},
+                "listed": true
+              }
+             ]
+          }
+         """)
+        Json.parse(contentAsString(result1)) must equalTo(expected)
+
+        // test viewing following libraries
+        val result2 = getProfileLibraries(Some(user1), user1.username, 0, 10, "following")
+        status(result2) must equalTo(OK)
+        contentType(result2) must beSome("application/json")
+        Json.parse(contentAsString(result2)) must equalTo(Json.parse(
+          s"""
+          {
+            "following": [
+              {
+                "id":"${pubId3.id}",
+                "name":"lib3",
+                "slug":"lib3",
+                "visibility":"secret",
+                "owner":{
+                  "id":"${basicUser2.externalId.id}",
+                  "firstName":"second",
+                  "lastName":"user",
+                  "pictureName":"alf.jpg",
+                  "username":"seconduser"
+                },
+                "numKeeps":0,
+                "numFollowers":1,
+                "followers":[],
+                "numCollaborators":0,
+                "collaborators":[],
+                "lastKept":${lib3.createdAt.getMillis}
+              }
+            ]
+          }
+        """
+        ))
+
+        // test viewing invited libraries
+        val result3 = getProfileLibraries(Some(user1), user1.username, 0, 10, "invited")
+        status(result3) must equalTo(OK)
+        contentType(result3) must beSome("application/json")
+        Json.parse(contentAsString(result3)) === Json.parse("""{"invited":[]}""")
+
+        // test all libraries
+        val result4 = getProfileLibraries(Some(user1), user1.username, 0, 10, "all")
+        status(result4) must equalTo(OK)
+        contentType(result4) must beSome("application/json")
+        val resultJson4 = contentAsJson(result4)
+        (resultJson4 \ "own").as[Seq[JsObject]].length === 1
+        (resultJson4 \ "following").as[Seq[JsObject]].length === 1
+        (resultJson4 \ "invited").as[Seq[JsObject]].length === 0
+
+        // test viewing other library
+        val result5 = getProfileLibraries(Some(user1), user2.username, 0, 10, "following")
+        status(result5) must equalTo(OK)
+        contentType(result5) must beSome("application/json")
+        val result5Json = (contentAsJson(result5) \ "following").as[Seq[JsObject]]
+        (result5Json.head \ "name").as[String] === "lib1"
+        (result5Json.head \ "numFollowers").as[Int] === 1
+        (result5Json.head \ "following").asOpt[Boolean] === None
+      }
+    }
+
     "get profile connections" in {
       withDb(controllerTestModules: _*) { implicit injector =>
         val (user1, user2, user3, user4, user5) = db.readWrite { implicit session =>
@@ -376,6 +507,7 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
         (resultJson4 \ "invitations" \\ "id") === Seq(user5).map(u => JsString(u.externalId.id))
       }
     }
+
     "get profile followers" in {
       withDb(controllerTestModules: _*) { implicit injector =>
         val (user1, user2, user3, user4, user5) = db.readWrite { implicit session =>
@@ -493,6 +625,11 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
   private def getProfile(viewerOpt: Option[User], username: Username)(implicit injector: Injector): Future[Result] = {
     setViewer(viewerOpt)
     controller.getProfile(username)(request(routes.UserProfileController.getProfile(username)))
+  }
+
+  private def getProfileLibraries(viewerOpt: Option[User], username: Username, page: Int, size: Int, filter: String)(implicit injector: Injector): Future[Result] = {
+    setViewer(viewerOpt)
+    controller.getProfileLibraries(username, page, size, filter)(request(routes.UserProfileController.getProfileLibraries(username, page, size, filter)))
   }
 
   private def getProfileFollowers(viewerOpt: Option[User], username: Username, limit: Int)(implicit injector: Injector): Future[Result] = {

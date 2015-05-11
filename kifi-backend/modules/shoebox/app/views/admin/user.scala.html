@@ -25,7 +25,10 @@
         <th>Name</th><td><img src="@com.keepit.controllers.assets.routes.UserPictureController.get(100, user.externalId)" height=25 width=25><a href="https://www.kifi.com/@{user.username.value}">@user.firstName @user.lastName</a></td>
       </tr>
       <tr>
-        <th>Id</th><td>@user.id</td>
+        <th>User Name</th><td>@user.username.value</td>
+      </tr>
+      <tr>
+        <th>Id</th><td>@user.id, @user.externalId</td>
       </tr>
       <tr>
         <th>Total Bookmarks</th><td>@totalBookmarks</td>
