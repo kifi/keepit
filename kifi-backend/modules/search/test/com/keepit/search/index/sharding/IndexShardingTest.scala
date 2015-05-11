@@ -1,8 +1,8 @@
 package com.keepit.search.index.sharding
 
 import com.keepit.common.crypto.PublicIdConfiguration
-import com.keepit.common.db.Id
-import com.keepit.search.index.article.ArticleRecord
+import com.keepit.common.db.{ Id }
+import com.keepit.search.index.article.{ ShardedArticleIndexer, ArticleRecord }
 import com.keepit.search.index.graph.keep.{ KeepRecord, KeepFields, ShardedKeepIndexer }
 import com.keepit.search.test.SearchTestInjector
 import org.apache.lucene.index.Term
@@ -41,19 +41,18 @@ class IndexShardingTest extends Specification with SearchTestInjector with Searc
             collection
         }
 
-        val store = mkStore(uris)
-        val (_, indexer, _, _, _, keepIndexer, _, _) = initIndexes(store)
+        val (_, articleIndexer, _, _, _, keepIndexer, _, _) = initIndexes()
 
-        indexer.isInstanceOf[DeprecatedShardedArticleIndexer] === true
+        articleIndexer.isInstanceOf[ShardedArticleIndexer] === true
         keepIndexer.isInstanceOf[ShardedKeepIndexer] === true
 
-        indexer.update() === uris.size
+        Await.result(articleIndexer.asyncUpdate(), Duration(60, SECONDS))
         Await.result(keepIndexer.asyncUpdate(), Duration(60, SECONDS))
 
         users.foreach { user =>
           val userId = user.id.get
           activeShards.local.foreach { shard =>
-            val articleSearcher = indexer.getIndexer(shard).getSearcher
+            val articleSearcher = articleIndexer.getIndexer(shard).getSearcher
 
             uris.foreach { uri =>
               articleSearcher.getDecodedDocValue[ArticleRecord]("rec", uri.id.get.id).isDefined === shard.contains(uri.id.get)
@@ -97,10 +96,9 @@ class IndexShardingTest extends Specification with SearchTestInjector with Searc
           collection
         }
 
-        val store = mkStore(uris)
-        val (collectionGraph, indexer, _, _, _, keepIndexer, _, _) = initIndexes(store)
+        val (collectionGraph, articleIndexer, _, _, _, keepIndexer, _, _) = initIndexes()
 
-        indexer.isInstanceOf[DeprecatedShardedArticleIndexer] === true
+        articleIndexer.isInstanceOf[ShardedArticleIndexer] === true
         collectionGraph.isInstanceOf[ShardedCollectionIndexer] === true
 
         Await.result(keepIndexer.asyncUpdate(), Duration(60, SECONDS))
@@ -169,23 +167,18 @@ class IndexShardingTest extends Specification with SearchTestInjector with Searc
           val fakeShoeboxClient = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
           (fakeShoeboxClient.saveURIs(uris: _*), fakeShoeboxClient)
         }
-        val store = mkStore(uris)
-        val (_, indexer, _, _, _, _, _, _) = initIndexes(store)
-        indexer.isInstanceOf[DeprecatedShardedArticleIndexer] === true
-        indexer.update() === 5 // both subindexer's catch up seqNum = 5
+        val (_, articleIndexer, _, _, _, _, _, _) = initIndexes()
+        articleIndexer.isInstanceOf[ShardedArticleIndexer] === true
+        updateNow(articleIndexer) === 5 // both subindexer's catch up seqNum = 5
         shoebox.saveURIs(uris(4).withState(NormalizedURIStates.INACTIVE)) // a4
-        indexer.update() === 1 // one subindexer's catup seqNum = 6
-        indexer.reindex()
+        updateNow(articleIndexer) === 1 // one subindexer's catup seqNum = 6
+        articleIndexer.reindex()
 
         shoebox.saveURIs(uris(2).withState(NormalizedURIStates.ACTIVE),
           NormalizedURI.withHash(title = Some("a5"), normalizedUrl = "http://www.keepit.com/article5", state = SCRAPED))
 
-        indexer.update() === 3 // skipped the active ones. catch up done.
-        indexer.catchUpSeqNumber.value === 5 // min of 5 and 6.
-        indexer.sequenceNumber.value === 5
-
-        indexer.update() === 3 // 3 uris changed after seqNum 5: a2, a4, a5
-        indexer.sequenceNumber.value === 8
+        updateNow(articleIndexer) === 6
+        articleIndexer.sequenceNumber.value === 8
 
       }
     }
@@ -199,12 +192,11 @@ class IndexShardingTest extends Specification with SearchTestInjector with Searc
             normalizedUrl = "http://www.keepit.com/article" + n, state = state)
         }.toList
         val savedUris = shoebox.saveURIs(uris: _*)
-        val store = mkStore(savedUris)
-        val (_, indexer, _, _, _, _, _, _) = initIndexes(store)
-        indexer.isInstanceOf[DeprecatedShardedArticleIndexer] === true
-        indexer.update === 5
-        indexer.catchUpSeqNumber.value === 10
-        indexer.sequenceNumber.value === 10
+        val (_, articleIndexer, _, _, _, _, _, _) = initIndexes()
+        articleIndexer.isInstanceOf[ShardedArticleIndexer] === true
+        updateNow(articleIndexer) === 5
+        articleIndexer.catchUpSeqNumber.value === 10
+        articleIndexer.sequenceNumber.value === 10
       }
     }
 

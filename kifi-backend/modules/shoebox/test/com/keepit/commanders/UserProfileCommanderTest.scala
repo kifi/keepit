@@ -13,6 +13,8 @@ import com.keepit.model.KeepFactory._
 import com.keepit.model.KeepFactoryHelper._
 import com.keepit.model.LibraryFactory._
 import com.keepit.model.LibraryFactoryHelper._
+import com.keepit.model.LibraryMembershipFactory._
+import com.keepit.model.LibraryMembershipFactoryHelper._
 import com.keepit.model.LibraryInviteFactory._
 import com.keepit.model.LibraryInviteFactoryHelper._
 import com.keepit.model.UserConnectionFactory._
@@ -48,106 +50,71 @@ class UserProfileCommanderTest extends Specification with ShoeboxTestInjector {
       }
   }
 
-  "get ownerLibraries for friend" in {
+  "get ownerLibraries (self, anonymous, friend)" in {
     withDb(modules: _*) { implicit injector =>
       implicit val config = inject[PublicIdConfiguration]
       val commander = inject[UserProfileCommander]
-      val (owner, other, friend, allLibs) = db.readWrite { implicit s =>
+      val libraryCommander = inject[LibraryCommander]
+
+      val (owner, other, userCreatedLibs) = db.readWrite { implicit s =>
         val owner = user().saved
         val other = user().saved
-        val friend = user().saved
-        val ownerLibs1 = libraries(2).map(_.published().withUser(owner)).saved
-        library.secret().withUser(owner).saved
-        val ownerPrivLib = library.secret().withUser(owner).saved.savedFollowerMembership(friend)
-        libraries(2).map(_.published().withUser(other)).saved
-        libraries(2).map(_.secret().withUser(other)).saved
-        val ownerLibs2 = libraries(10).map(_.published().withUser(owner)).saved
-        libraries(10).map(_.published().withUser(other)).saved
 
-        libraryRepo.all.map { lib =>
-          keeps(2).map(_.withLibrary(lib)).saved
-        }
-        (owner, other, friend, ownerLibs1 ++ List(ownerPrivLib) ++ ownerLibs2)
-      }
+        val libPublishedLots = library().withUser(owner).withVisibility(LibraryVisibility.PUBLISHED).withKeepCount(3).withMemberCount(50).withSlug("published-lots").saved
+        val libPublishedFew = library().withUser(owner).withVisibility(LibraryVisibility.PUBLISHED).withKeepCount(3).withMemberCount(3).withSlug("published-few").saved
+        val libPublishedFewUpdated = library().withUser(owner).withVisibility(LibraryVisibility.PUBLISHED).withKeepCount(3).withMemberCount(3).withLastKept().withSlug("published-few-updated").saved
+        val libPublishedEmpty = library().withUser(owner).withVisibility(LibraryVisibility.PUBLISHED).withKeepCount(0).withSlug("published-empty").saved
 
-      commander.getOwnLibraries(owner, None, Paginator(0, 1000), ImageSize("100x100")).size === 12
+        val libPublishedCollab = library().withUser(owner).withVisibility(LibraryVisibility.PUBLISHED).withKeepCount(3).withMemberCount(2).withSlug("published-collab").saved
+        membership().withLibraryCollaborator(libPublishedCollab, other).saved
 
-      val libsForOther = commander.getOwnLibraries(owner, Some(other), Paginator(0, 1000), ImageSize("100x100"))
-      libsForOther.size === 12
-
-      val libsForFriend = commander.getOwnLibraries(owner, Some(friend), Paginator(0, 1000), ImageSize("100x100"))
-      libsForFriend.size === 13
-      libsForFriend.map(_.id) === allLibs.reverse.map(_.id.get).map(Library.publicId)
-    }
-  }
-
-  "get ownerLibraries for self" in {
-    withDb(modules: _*) { implicit injector =>
-      implicit val config = inject[PublicIdConfiguration]
-      val commander = inject[UserProfileCommander]
-      val (owner, other, allLibs) = db.readWrite { implicit s =>
-        val owner = user().saved
-        val other = user().saved
-        val ownerLibs1 = libraries(2).map(_.published().withUser(owner)).saved
-        val ownerPrivLib = library.secret().withUser(owner).saved
-        libraries(2).map(_.published().withUser(other)).saved
-        libraries(2).map(_.secret().withUser(other)).saved
-        val ownerLibs2 = libraries(10).map(_.published().withUser(owner)).saved
-        libraries(10).map(_.published().withUser(other)).saved
-
-        libraryRepo.all.take(4).map { lib =>
-          keeps(2).map(_.withLibrary(lib)).saved
+        val libPublishedHidden = library().withUser(owner).withVisibility(LibraryVisibility.PUBLISHED).withKeepCount(3).withSlug("published-hidden").saved
+        libraryMembershipRepo.getWithLibraryIdAndUserId(libPublishedHidden.id.get, owner.id.get).map { mem =>
+          libraryMembershipRepo.save(mem.copy(listed = false))
         }
 
-        (owner, other, ownerLibs1 ++ List(ownerPrivLib) ++ ownerLibs2)
+        val libPrivate = library().withUser(owner).withVisibility(LibraryVisibility.SECRET).withKeepCount(3).withSlug("private").saved
+        val libPrivateFollower = library().withUser(owner).withVisibility(LibraryVisibility.SECRET).withKeepCount(3).withMemberCount(2).withSlug("private-follower").saved
+        membership().withLibraryFollower(libPrivateFollower, other).saved
+        val libPrivateCollab = library().withUser(owner).withVisibility(LibraryVisibility.SECRET).withKeepCount(3).withMemberCount(2).withSlug("private-collab").saved
+        membership().withLibraryCollaborator(libPrivateCollab, other).saved
+
+        val ownerLibs = Seq(
+          libPublishedLots, // published library (lots of followers) - test ordering
+          libPublishedFew, // published library (not many followers) - test ordering
+          libPublishedFewUpdated, // published library (not many followers, recently updated) - test ordering
+          libPublishedCollab, // published collaborative library
+          libPublishedHidden, // published library hidden on profile (owner has hidden membership)
+          libPublishedEmpty, // published library with 0 keeps
+          libPrivate, // private library
+          libPrivateFollower, // private library with follower
+          libPrivateCollab // private collaborative library with collaborator
+        )
+
+        (owner, other, ownerLibs)
       }
 
-      // 4 libs with keeps. First two are private, next two should be seen by anonymous.
-      commander.getOwnLibraries(owner, None, Paginator(0, 1000), ImageSize("100x100")).size === 2
+      val (mainLib, secretLib) = libraryCommander.internSystemGeneratedLibraries(owner.id.get)
+      val allLibs = userCreatedLibs ++ Seq(mainLib, secretLib)
 
-      val libsForOther = commander.getOwnLibraries(owner, Some(other), Paginator(0, 1000), ImageSize("100x100"))
-      libsForOther.size === 2
-
-      val libsForFriend = commander.getOwnLibraries(owner, Some(owner), Paginator(0, 1000), ImageSize("100x100"))
-      libsForFriend.size === 3
-    }
-  }
-
-  "get ownerLibraries for anonymous and paginate" in {
-    withDb(modules: _*) { implicit injector =>
-      implicit val config = inject[PublicIdConfiguration]
-      val commander = inject[UserProfileCommander]
-      val (owner, allLibs) = db.readWrite { implicit s =>
-        val owner = user().saved
-        val other = user().saved
-        val ownerLibs1 = libraries(2).map(_.published().withUser(owner)).saved
-        libraries(2).map(_.secret().withUser(owner)).saved
-        libraries(2).map(_.published().withUser(other)).saved
-        val ownerLibs2 = libraries(10).map(_.published().withUser(owner).withMemberCount(6)).saved
-        libraries(10).map(_.published().withUser(other).withMemberCount(6)).saved
-        val ownerLibs3 = libraries(3).map(_.published().withUser(owner)).saved
-        libraries(3).map(_.published().withUser(other)).saved
-
-        libraryRepo.all.map { lib =>
-          keeps(2).map(_.withLibrary(lib)).saved
-        }
-
-        (owner, ownerLibs1 ++ ownerLibs2 ++ ownerLibs3)
-      }
-
+      val paginator = Paginator(0, 15)
+      val imageSize = ImageSize("100x100")
       val ord = profileLibraryOrdering
 
-      val libsP1 = commander.getOwnLibraries(owner, None, Paginator(0, 5), ImageSize("100x100"))
-      libsP1.size === 5
-      libsP1.map(_.id) === allLibs.sorted(ord).take(5).map(_.id.get).map(Library.publicId)
+      // test self viewer (should see all libraries)
+      val viewSelf = commander.getOwnLibrariesForSelf(owner, paginator, imageSize)
+      viewSelf.map(_.slug.value) === Seq("main", "secret", "published-lots", "published-few-updated", "published-few", "private-collab", "private-follower", "published-collab", "private", "published-hidden", "published-empty")
+      commander.countLibraries(owner.id.get, Some(owner.id.get))._1 === allLibs.length
 
-      val libsP2 = commander.getOwnLibraries(owner, None, Paginator(1, 5), ImageSize("100x100"))
-      libsP2.size === 5
-      libsP2.map(_.id) === allLibs.sorted(ord).drop(5).take(5).map(_.id.get).map(Library.publicId)
+      // test anonymous viewer (see only published libraries, non-hidden, non-empty)
+      val viewAnonymous = commander.getOwnLibraries(owner, None, paginator, imageSize)
+      viewAnonymous.map(_.slug.value) === Seq("published-lots", "published-few-updated", "published-few", "published-collab")
+      commander.countLibraries(owner.id.get, None)._1 === viewAnonymous.length
 
-      val libsP3 = commander.getOwnLibraries(owner, None, Paginator(2, 5), ImageSize("100x100"))
-      libsP3.size === 5
-      libsP3.map(_.id) === allLibs.sorted(ord).drop(10).take(5).map(_.id.get).map(Library.publicId)
+      // test friend viewer (see only published libraries - non-hidden, non-empty & private libraries friend has membership to)
+      val viewFriend = commander.getOwnLibraries(owner, Some(other), paginator, imageSize)
+      viewFriend.map(_.slug.value) === Seq("published-lots", "published-few-updated", "published-few", "private-collab", "private-follower", "published-collab")
+      commander.countLibraries(owner.id.get, Some(other.id.get))._1 === viewFriend.length
     }
   }
 

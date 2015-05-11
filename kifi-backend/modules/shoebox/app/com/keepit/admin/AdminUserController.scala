@@ -500,8 +500,8 @@ class AdminUserController @Inject() (
   }
 
   def isSuperAdmin(userId: Id[User]) = {
-    val superAdminSet: Set[Id[User]] = Set(Id[User](1))
-    superAdminSet contains userId
+    val SUPER_ADMIN_SET: Set[Id[User]] = Set(Id[User](1), Id[User](3))
+    SUPER_ADMIN_SET contains userId
   }
 
   def isAdminExperiment(expType: ExperimentType) = expType == ExperimentType.ADMIN

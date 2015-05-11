@@ -66,7 +66,6 @@ trait IndexModule extends ScalaModule with Logging {
 
   def configure() {
     bind[PhraseIndexerPlugin].to[PhraseIndexerPluginImpl].in[AppScoped]
-    bind[DeprecatedArticleIndexerPlugin].to[DeprecatedArticleIndexerPluginImpl].in[AppScoped]
     bind[ArticleIndexerPlugin].to[ArticleIndexerPluginImpl].in[AppScoped]
     bind[CollectionGraphPlugin].to[CollectionGraphPluginImpl].in[AppScoped]
     bind[MessageIndexerPlugin].to[MessageIndexerPluginImpl].in[AppScoped]
@@ -106,21 +105,6 @@ trait IndexModule extends ScalaModule with Logging {
       throw new Exception("no shard spec found")
     }
     ActiveShards(shards)
-  }
-
-  @Singleton
-  @Provides
-  def deprecatedShardedArticleIndexer(activeShards: ActiveShards, articleStore: ArticleStore, backup: IndexStore, airbrake: AirbrakeNotifier, shoeboxClient: ShoeboxServiceClient, conf: Configuration, serviceDisovery: ServiceDiscovery): DeprecatedShardedArticleIndexer = {
-    val version = IndexerVersionProviders.Article.getVersionByStatus(serviceDisovery)
-    def deprecatedArticleIndexer(shard: Shard[NormalizedURI]) = {
-      val configName = if (serviceDisovery.hasBackupCapability) "search.temporary.directory" else "index.article.directory"
-      val dir = getIndexDirectory(configName, shard, version, backup, conf, IndexerVersionProviders.Article.getVersionsForCleanup())
-      log.info(s"storing ArticleIndex${indexNameSuffix(shard, version)} in $dir")
-      new DeprecatedArticleIndexer(dir, articleStore, airbrake)
-    }
-
-    val indexShards = activeShards.local.map { shard => (shard, deprecatedArticleIndexer(shard)) }
-    new DeprecatedShardedArticleIndexer(indexShards.toMap, articleStore, airbrake, shoeboxClient)
   }
 
   @Singleton
@@ -217,9 +201,8 @@ trait IndexModule extends ScalaModule with Logging {
   @Provides @Singleton
   def shardedArticleIndexer(activeShards: ActiveShards, backup: IndexStore, shoebox: ShoeboxServiceClient, rover: RoverServiceClient, airbrake: AirbrakeNotifier, conf: Configuration, serviceDiscovery: ServiceDiscovery, executionContext: ExecutionContext): ShardedArticleIndexer = {
     val version = IndexerVersionProviders.Article.getVersionByStatus(serviceDiscovery)
-    val configName = if (serviceDiscovery.hasBackupCapability) "index.article.directory" else "search.temporary.directory"
     def articleIndexer(shard: Shard[NormalizedURI]) = {
-      val dir = getIndexDirectory(configName, shard, version, backup, conf, IndexerVersionProviders.Article.getVersionsForCleanup())
+      val dir = getIndexDirectory("index.article.directory", shard, version, backup, conf, IndexerVersionProviders.Article.getVersionsForCleanup())
       log.info(s"storing ArticleIndex ${indexNameSuffix(shard, version)} in $dir")
       new ArticleIndexer(dir, shard, airbrake)
     }
