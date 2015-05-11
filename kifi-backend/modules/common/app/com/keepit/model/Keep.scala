@@ -93,12 +93,12 @@ object Keep {
     seq: SequenceNumber[Keep], libraryId: Option[Id[Library]], visibility: LibraryVisibility, keptAt: DateTime,
     sourceAttributionId: Option[Id[KeepSourceAttribution]], note: Option[String], originalKeeperId: Option[Id[User]]) = {
     Keep(id, createdAt, updatedAt, externalId, title, uriId, isPrimary.exists(b => b), inDisjointLib.exists(b => b), urlId, url,
-      visibility, userId, state, source, kifiInstallation, seq, libraryId, keptAt, sourceAttributionId, note, originalKeeperId)
+      visibility, userId, state, source, kifiInstallation, seq, libraryId, keptAt, sourceAttributionId, note, originalKeeperId.orElse(Some(userId)))
   }
   def unapplyToDbRow(k: Keep) = {
     Some((k.id, k.createdAt, k.updatedAt, k.externalId, k.title, k.uriId, if (k.isPrimary) Some(true) else None,
       if (k.inDisjointLib) Some(true) else None, k.urlId, k.url, Keep.visibilityToIsPrivate(k.visibility),
-      k.userId, k.state, k.source, k.kifiInstallation, k.seq, k.libraryId, k.visibility, k.keptAt, k.sourceAttributionId, k.note, k.originalKeeperId))
+      k.userId, k.state, k.source, k.kifiInstallation, k.seq, k.libraryId, k.visibility, k.keptAt, k.sourceAttributionId, k.note, k.originalKeeperId.orElse(Some(k.userId))))
   }
 
   def _bookmarkFormat = (
