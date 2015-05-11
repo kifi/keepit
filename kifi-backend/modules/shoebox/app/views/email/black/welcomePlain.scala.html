@@ -1,0 +1,20 @@
+@(toUserId: Id[User])
+@import com.keepit.common.mail.template.helpers._
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    </head>
+    <body>
+    Hi @firstName(toUserId), and welcome to Kifi!
+
+    <p>We created Kifi to connect you to the knowledge you want and the people that share it. Our goal is to create a "Hive Mind"
+        where you have easy access to the knowledge you keep, as well as the knowledge kept by everyone else on Kifi.</p>
+
+    <p>We're very excited to have you join our community. Please let me know if you have any questions or comments and I
+        will be sure to listen and respond as best I can.</p>
+
+    <p>Happy Keeping,<br>
+        Eishay Smith, CEO</p>
+    </body>
+</html>
