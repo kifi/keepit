@@ -1631,7 +1631,7 @@ class LibraryCommander @Inject() (
       }
 
       val owner = owners(lib.ownerId)
-      val isFollowing = if (withFollowing && viewer.isDefined && viewer.get.externalId != owner.externalId) {
+      val isFollowing = if (withFollowing && viewer.isDefined) {
         Some(libraryMembershipRepo.getWithLibraryIdAndUserId(lib.id.get, viewer.get.id.get).isDefined)
       } else {
         None
