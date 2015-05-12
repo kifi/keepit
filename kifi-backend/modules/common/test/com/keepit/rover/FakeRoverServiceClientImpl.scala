@@ -6,7 +6,7 @@ import com.keepit.common.net.HttpClient
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.model.NormalizedURI
 import com.keepit.rover.article.Article
-import com.keepit.rover.model.{RoverImages, RoverUriSummary, ShoeboxArticleUpdates, ArticleInfo}
+import com.keepit.rover.model.{ RoverImages, RoverUriSummary, ShoeboxArticleUpdates, ArticleInfo }
 
 import scala.collection.mutable
 import scala.concurrent.Future
