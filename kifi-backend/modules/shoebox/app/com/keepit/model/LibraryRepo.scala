@@ -259,7 +259,7 @@ class LibraryRepoImpl @Inject() (
 
   def countOwnerLibrariesForAnonymous(userId: Id[User])(implicit session: RSession): Int = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    val query = sql"select count(*) from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $userId and lib.state = 'active' and lm.state = 'active' and lm.listed and lib.visibility = 'published' and (lm.access='owner' or lm.access='read_write') and lib.keep_count > 0"
+    val query = sql"select count(*) from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $userId and (lm.access='owner' or lm.access='read_write') and lib.state = 'active' and lm.state = 'active' and lm.listed and lib.visibility = 'published' and lib.keep_count > 0"
     query.as[Int].firstOption.getOrElse(0)
   }
 
@@ -270,11 +270,9 @@ class LibraryRepoImpl @Inject() (
   }
 
   def getOwnerLibrariesForAnonymous(userId: Id[User], page: Paginator)(implicit session: RSession): Seq[Library] = {
-    val q = (for {
-      lib <- rows if lib.visibility === (LibraryVisibility.PUBLISHED: LibraryVisibility) && lib.state === LibraryStates.ACTIVE && lib.lastKept.isDefined
-      lm <- libraryMembershipRepo.get.rows if lm.libraryId === lib.id && lm.userId === userId && (lm.access === (LibraryAccess.OWNER: LibraryAccess) || lm.access === (LibraryAccess.READ_WRITE: LibraryAccess)) && lm.listed && lm.state === LibraryMembershipStates.ACTIVE
-    } yield lib).sortBy(x => (x.memberCount.desc, x.lastKept.desc, x.id.desc)).drop(page.itemsToDrop).take(page.size)
-    q.list
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
+    val query = sql"select lib.* from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $userId and (lm.access='owner' or lm.access='read_write') and lib.state = 'active' and lm.state = 'active' and (lib.keep_count > 0 and lm.listed and lib.visibility = 'published') order by lib.member_count desc, lib.last_kept desc, lib.id desc limit ${page.itemsToDrop}, ${page.size}"
+    query.as[Library].list
   }
 
   def getOwnerLibrariesForOtherUser(userId: Id[User], friendId: Id[User], page: Paginator)(implicit session: RSession): Seq[Library] = {
@@ -285,7 +283,7 @@ class LibraryRepoImpl @Inject() (
 
   def getOwnerLibrariesForSelf(userId: Id[User], page: Paginator)(implicit session: RSession): Seq[Library] = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    val query = sql"select lib.* from library lib inner join library_membership lm on lm.user_id = $userId and lib.id = lm.library_id and lib.state='active' and lm.state='active' and (lm.access='owner' or lm.access='read_write') order by case lib.kind when 'system_main' then 1 when 'system_secret' then 2 else 3 end, lib.member_count desc, lib.last_kept desc, lib.id desc"
+    val query = sql"select lib.* from library lib inner join library_membership lm on lm.user_id = $userId and lib.id = lm.library_id and lib.state='active' and lm.state='active' and (lm.access='owner' or lm.access='read_write') order by case lib.kind when 'system_main' then 1 when 'system_secret' then 2 else 3 end, lib.member_count desc, lib.last_kept desc, lib.id desc limit ${page.itemsToDrop}, ${page.size}"
     query.as[Library].list
   }
 
