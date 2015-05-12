@@ -1,6 +1,6 @@
 $.fn.repairInputs = function () {  // crbug.com/484291
   'use strict';
-  if ($(document.body.firstChild).is('embed[type=application/pdf]')) {
+  if ($(document.body.firstChild).is('embed[type="application/pdf"]')) {
     this.on('keydown', 'input,textarea', function (e) {
       var s, i, j, d;
       switch (e.keyCode) {
