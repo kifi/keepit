@@ -71,30 +71,37 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
 
   "WelcomeEmailSender" should {
     "sends email" in {
+
+      val WELCOME_EMAIL_SUBJECT = "Let's get started with Kifi"
+      def WELCOME_SALUTATION(firstName: String) = "Dear " + firstName + ","
+      val WELCOME_SENDER = "Eishay Smith"
+      val WELCOME_SENDER_EMAIL = SystemEmailAddress.EISHAY_PUBLIC
+
       withDb(modules: _*) { implicit injector =>
         val outbox = inject[FakeOutbox]
         val sender = inject[WelcomeEmailSender]
         val toUser = db.readWrite { implicit rw =>
           inject[UserRepo].save(User(firstName = "Billy", lastName = "Madison", primaryEmail = Some(EmailAddress("billy@gmail.com")), username = Username("test"), normalizedUsername = "test"))
         }
+
         val email = Await.result(sender.sendToUser(toUser.id.get), Duration(5, "seconds"))
         outbox.size === 1
         outbox(0) === email
 
         email.to === Seq(EmailAddress("billy@gmail.com"))
-        email.subject === "Let's get started with Kifi"
+        email.from === WELCOME_SENDER_EMAIL
+        email.subject === WELCOME_EMAIL_SUBJECT
         val html = email.htmlBody.value
-        html must contain("Hey Billy,")
+        html must contain(WELCOME_SALUTATION(toUser.firstName))
 
         val trackingCode = EmailTrackingParam(
-          subAction = Some("findMoreFriendsBtn"),
-          tip = Some(EmailTip.ConnectFacebook)).encode
+          subAction = Some("homeLink")).encode
 
-        html must contain("utm_source=fromKifi&amp;utm_medium=email&amp;utm_campaign=welcome&amp;utm_content=findMoreFriendsBtn&amp;kcid=welcome-email-fromKifi"
+        html must contain("utm_source=fromKifi&amp;utm_medium=email&amp;utm_campaign=welcome&amp;utm_content=homeLink&amp;kcid=welcome-email-fromKifi"
           + s"&amp;${EmailTrackingParam.paramName}=$trackingCode")
 
         val text = email.textBody.get.value
-        text must contain("Hey Billy,")
+        text must contain(WELCOME_SALUTATION(toUser.firstName))
       }
     }
   }

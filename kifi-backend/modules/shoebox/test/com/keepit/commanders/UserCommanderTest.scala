@@ -81,6 +81,12 @@ class UserCommanderTest extends Specification with ShoeboxTestInjector {
   "UserCommander" should {
 
     "welcome a joinee" in {
+
+      val WELCOME_SUBJECT = "Let's get started with Kifi"
+      def WELCOME_SALUTATION(firstName: String) = "Dear " + firstName + ","
+      val WELCOME_SENDER = "Eishay Smith"
+      val WELCOME_SENDER_EMAIL = SystemEmailAddress.EISHAY_PUBLIC
+
       withDb(modules: _*) { implicit injector =>
         val (user1, user2, user3) = setup()
         val userCommander = inject[UserCommander]
@@ -97,11 +103,12 @@ class UserCommanderTest extends Specification with ShoeboxTestInjector {
         outbox.size === 1
 
         outbox(0).to === Seq(userAddress)
-        outbox(0).subject === "Let's get started with Kifi"
+        outbox(0).subject === WELCOME_SUBJECT
+        outbox(0).from === WELCOME_SENDER_EMAIL
 
         val html = outbox(0).htmlBody.value
-        html must contain("Hey " + user1.firstName + ",")
-        html must contain("www.kifi.com/unsubscribe/")
+        html must contain(WELCOME_SALUTATION(user1.firstName))
+        html must contain(WELCOME_SENDER)
       }
     }
 

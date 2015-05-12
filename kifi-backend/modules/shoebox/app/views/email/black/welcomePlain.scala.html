@@ -1,20 +1,26 @@
 @(toUserId: Id[User])
 @import com.keepit.common.mail.template.helpers._
+@homeUrl = @{htmlUrl("www.kifi.com?", "homeLink", false)}
+@howKifiWorksUrl = @{htmlUrl("https://www.kifi.com/how_it_works?", "howKifiWorksLink", false)}
+@eishayKifiUrl = @{htmlUrl("https://www.kifi.com/eishay?", "eishayKifiLink", true)}
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
     <head>
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     </head>
     <body>
-    Hi @firstName(toUserId), and welcome to Kifi!
+    Dear @firstName(toUserId),<br>
 
-    <p>We created Kifi to connect you to the knowledge you want and the people that share it. Our goal is to create a "Hive Mind"
-        where you have easy access to the knowledge you keep, as well as the knowledge kept by everyone else on Kifi.</p>
+    <p>Thank you for signing up for Kifi.</p>
 
-    <p>We're very excited to have you join our community. Please let me know if you have any questions or comments and I
-        will be sure to listen and respond as best I can.</p>
+    <p>I’m Kifi’s co-founder and CEO. I would like to personally welcome you to our vibrant community discovering, organizing,
+    and sharing knowledge. We built Kifi to make keeping and sharing web pages from any device a snap, and to that end we’ve made
+    our platform available on <a href="@homeUrl">web</a>, <a href="@iOsAppStoreUrl">iOS</a> and <a href="@googlePlayStoreUrl">Android</a>.</p>
 
-    <p>Happy Keeping,<br>
-        Eishay Smith, CEO</p>
+    <p>You can learn more by reading our high level overview of <a href="@howKifiWorksUrl">how Kifi works</a>, and if you have any questions or
+    feedback, please don’t hesitate to contact me directly by responding to this message or connecting with me on <a href="@eishayKifiUrl">Kifi</a>. I would love to hear what you think.</p>
+
+    <p>Eishay Smith, CEO<br>
+    <a href="@eishayKifiUrl">http://www.kifi.com/eishay</a></p>
     </body>
 </html>

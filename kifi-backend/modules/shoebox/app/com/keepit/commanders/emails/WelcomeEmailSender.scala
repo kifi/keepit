@@ -19,11 +19,11 @@ class WelcomeEmailSender @Inject() (
 
   def apply(userId: Id[User], toAddress: Option[EmailAddress] = None) = sendToUser(userId)
 
-  def sendToUser(userId: Id[User], toAddress: Option[EmailAddress] = None, isPlainEmail: Boolean = false): Future[ElectronicMail] = {
+  def sendToUser(userId: Id[User], toAddress: Option[EmailAddress] = None, isPlainEmail: Boolean = true): Future[ElectronicMail] = {
     val emailToSend = EmailToSend(
       title = "Kifi — Welcome",
       fromName = Some(Right("Kifi")),
-      from = SystemEmailAddress.NOTIFICATIONS,
+      from = SystemEmailAddress.EISHAY_PUBLIC,
       subject = "Let's get started with Kifi",
       to = toAddress.map(Right.apply).getOrElse(Left(userId)),
       category = NotificationCategory.User.WELCOME,
