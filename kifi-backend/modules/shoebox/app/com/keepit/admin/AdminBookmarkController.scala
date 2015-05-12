@@ -37,7 +37,6 @@ class AdminBookmarksController @Inject() (
   collectionCommander: CollectionCommander,
   collectionRepo: CollectionRepo,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
-  hashtagCommander: HashtagCommander,
   keepDecorator: KeepDecorator,
   clock: Clock)
     extends AdminUserActions {
@@ -331,7 +330,9 @@ class AdminBookmarksController @Inject() (
   def populateKeepNotesWithTag(page: Int = 0, size: Int = 500, grouping: Int = 500) = AdminUserAction {
     log.info(s"[Admin] populating keep notes with its tags page: $page, size: $size, offset: ${page * size}")
     db.readOnlyMaster { implicit s =>
-      keepRepo.page(page, size, Set.empty)
+      val keeps = keepRepo.page(page, size, Set.empty)
+      log.info(s"[Admin] paging through ${keeps.length} keeps...")
+      keeps
     }.grouped(grouping).foreach { keepGroup =>
       val keepIds = keepGroup.map(_.id.get).toSet
       // look for hashtags for every keep
@@ -339,22 +340,25 @@ class AdminBookmarksController @Inject() (
         collectionRepo.getHashtagsByKeepIds(keepIds)
       }
       val keepNotesMap = keepGroup.map { k =>
-        // look for all hashtags for a keep
         val newNote = keepHashtagsMap.get(k.id.get) match {
           case Some(tags) if tags.nonEmpty =>
             val noteStr = k.note getOrElse ""
-            val existingTags = hashtagCommander.findAllHashtagNames(noteStr)
-            val tagsToAppend = tags.map(_.tag) diff existingTags.toSeq
-            Some(hashtagCommander.appendHashtagNamesToString(noteStr, tagsToAppend).trim) filterNot (_.isEmpty)
+            Some(Hashtags.addNewHashtagsToString(noteStr, tags))
           case _ =>
             k.note
         }
-        (k.id.get, newNote)
+        (k.id.get, newNote.map(_.trim).filter(_.nonEmpty))
       }.toMap
-      db.readWriteBatch(keepGroup) { (s, k) =>
-        val newNote = keepNotesMap(k.id.get)
-        if (newNote != k.note) {
-          keepRepo.save(k.copy(note = newNote))(s)
+      log.info(s"[Admin] populating ${keepGroup.length} keeps with hashtags in note field")
+      db.readWrite { implicit s =>
+        keepGroup.map { k =>
+          val newNote = keepNotesMap(k.id.get)
+          log.info(s"[Admin] updating note... new:_${newNote}_ vs. original:_${k.note}_ ${newNote != k.note}")
+          if (newNote != k.note) {
+            log.info(s"[Admin] really updating note... ${k.id.get}")
+            val updatedK = keepRepo.save(k.copy(note = newNote))
+            log.info(s"[Admin] UPDATED! ${updatedK}")
+          }
         }
       }
     }

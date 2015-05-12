@@ -263,7 +263,6 @@ class RelatedPageCommander @Inject() (
     db: Database,
     uriRepo: NormalizedURIRepo,
     uriSummaryCmdr: URISummaryCommander,
-    imageInfoRepo: ImageInfoRepo,
     implicit val executionContext: ExecutionContext,
     cortex: CortexServiceClient) {
 

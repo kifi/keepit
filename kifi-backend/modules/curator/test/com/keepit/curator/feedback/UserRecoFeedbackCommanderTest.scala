@@ -34,7 +34,7 @@ class UserRecoFeedbackCommanderTest extends Specification with CuratorTestInject
             curationScore = None,
             multiplier = Some(0.01f),
             libraryInducedScore = Some(0f)),
-          delivered = 0, clicked = 0, kept = false, attribution = SeedAttribution.EMPTY,
+          viewed = 0, clicked = 0, kept = false, attribution = SeedAttribution.EMPTY,
           topic1 = Some(LDATopic(0)), topic2 = None)
 
         val bucketId = FeedbackBucketMapper.getBucketId(item).get

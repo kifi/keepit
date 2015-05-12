@@ -5,7 +5,7 @@ import com.keepit.common.akka.SafeFuture
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.time.Clock
-import com.keepit.rover.commanders.ImageProcessingCommander
+import com.keepit.rover.image.ImageCommander
 import com.keepit.rover.model.{ RoverArticleInfo }
 import scala.concurrent.duration._
 import com.keepit.common.core._
@@ -15,14 +15,14 @@ import scala.concurrent.{ Future, ExecutionContext }
 import scala.util.{ Success, Failure }
 
 object RoverArticleImageSchedulingActor {
-  val maxBatchSize = 15 // low to balance producer / consumer behavior *on leader* (SQS send / receive), increase if we don't care about leader as a consumer.
-  val maxQueuedFor = 2 days
-  val dueAfterFetchWithin = 1 minute // schedule image processing if it hasn't been already 1 minute after a fetch
+  val maxBatchSize = 30 // low to balance producer / consumer behavior *on leader* (SQS send / receive), increase if we don't care about leader as a consumer.
+  val maxQueuedFor = 7 days
+  val dueAfterRequestedWithin = 1 minute // schedule image processing if it hasn't been already 1 minute after a fetch
   val fastFollowWindow = 1 hour
 }
 
 class RoverArticleImageSchedulingActor @Inject() (
-    imageProcessingCommander: ImageProcessingCommander,
+    imageProcessingCommander: ImageCommander,
     airbrake: AirbrakeNotifier,
     fastFollowQueue: ArticleImageProcessingTaskQueue.FastFollow,
     catchUpQueue: ArticleImageProcessingTaskQueue.CatchUp,
@@ -33,8 +33,8 @@ class RoverArticleImageSchedulingActor @Inject() (
 
   protected def nextBatch: Future[Seq[RoverArticleInfo]] = {
     SafeFuture {
-      log.info(s"Queuing up to $maxBatchSize article fetch tasks...")
-      imageProcessingCommander.getRipeForImageProcessing(maxBatchSize, dueAfterFetchWithin, maxQueuedFor)
+      log.info(s"Queuing up to $maxBatchSize article image processing tasks...")
+      imageProcessingCommander.getArticleInfosForImageProcessing(maxBatchSize, dueAfterRequestedWithin, maxQueuedFor)
     }
   }
 
@@ -49,8 +49,8 @@ class RoverArticleImageSchedulingActor @Inject() (
       val queuedCount = maybeQueued.count(_._2.isSuccess)
       (queuedCount, maybeQueued.size)
     } andThen {
-      case Success((queuedTaskCount, totalTaskCount)) => log.info(s"Added $queuedTaskCount / $totalTaskCount article fetch tasks.")
-      case Failure(error) => log.error(s"Failed to add article fetch tasks.", error)
+      case Success((queuedTaskCount, totalTaskCount)) => log.info(s"Added $queuedTaskCount / $totalTaskCount article image processing tasks.")
+      case Failure(error) => log.error(s"Failed to add article image processing tasks.", error)
     }
   } imap { _ => () }
 

@@ -748,4 +748,5 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
 
   def getUserActivePersonas(userId: Id[User]): Future[UserActivePersonas] = Future.successful(UserActivePersonas(Seq(), Seq()))
 
+  def getImageInfosChanged(seqNum: SequenceNumber[ImageInfo], fetchSize: Int): Future[Seq[ImageInfo]] = Future.successful(Seq.empty)
 }

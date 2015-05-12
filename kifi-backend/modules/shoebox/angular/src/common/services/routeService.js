@@ -60,8 +60,7 @@ angular.module('kifi')
         return route('/collections/search', {query: query, limit: limit});
       },
       suggestTags: function (libraryId, keepId, query) {
-        // TODO: stop using extension endpoint
-        return env.navBase + '/ext/libraries/' + libraryId + '/keeps/' + keepId + '/tags/suggest' + queryStr({q: query});
+        return route('/libraries/' + libraryId + '/keeps/' + keepId + '/tags/suggest', {q: query});
       },
       deleteTag: function (tagId) {
         return route('/collections/' + tagId + '/delete');

@@ -1,34 +1,12 @@
 package com.keepit.shoebox.cron
 
 import com.google.inject.{ Singleton, Inject }
-import com.keepit.commanders.emails.ActivityFeedEmailSender
+import com.keepit.commanders.emails.activity.{ ActivityEmailMessage, ActivityEmailActor }
 import com.keepit.common.actor.ActorInstance
-import com.keepit.common.akka.FortyTwoActor
-import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.{ SchedulerPlugin, SchedulingProperties }
 import com.keepit.common.time._
 import us.theatr.akka.quartz.QuartzActor
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-
-import scala.util.{ Failure, Success }
-
-private[cron] object SendActivityEmail
-
-class ActivityEmailActor @Inject() (
-    airbrake: AirbrakeNotifier,
-    activityEmailSender: ActivityFeedEmailSender) extends FortyTwoActor(airbrake) with Logging {
-
-  def receive() = {
-    case SendActivityEmail =>
-      log.info("ActivityEmailActor sending...")
-      val doneF = activityEmailSender.apply(None)
-      doneF.onComplete {
-        case Success(x) => log.info("ActivityEmailActor success")
-        case Failure(e) => log.error("ActivityEmailActor failed", e)
-      }
-  }
-}
 
 trait ActivityEmailCronPlugin extends SchedulerPlugin
 
@@ -48,7 +26,7 @@ class ActivityEmailCronPluginImpl @Inject() (
     val utcHourFor9amEasternTime = 9 + -offsetHoursToUtc
 
     // <sec> <min> <hr> <day of mo> <mo> <day of wk> <yr>
-    val cronTime = s"0 0 $utcHourFor9amEasternTime ? * 5" // 1pm UTC - send Thursday at 9am ET / 6am PT
-    cronTaskOnLeader(quartz, actor.ref, cronTime, SendActivityEmail)
+    //    val cronTime = s"0 0 $utcHourFor9amEasternTime ? * 5" // 1pm UTC - send Thursday at 9am ET / 6am PT
+    //    cronTaskOnLeader(quartz, actor.ref, cronTime, ActivityEmailMessage.QueueEmails)
   }
 }

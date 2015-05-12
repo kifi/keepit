@@ -138,6 +138,8 @@ class UriSearchImpl(
           hits.insert(hit)
           rank += 1
         } else {
+          // todo(Léo): because of the following short-circuit and the overflowing othersHits queue, this isn't very meaningful and makes othersCounts non-deterministic in case of ties
+          // todo(Léo): it may be possible to check the article discoverability in UriResultCollector or ArticleVisibility (performance?)
           othersTotal -= 1
         }
         hits.size < numHitsToReturn // until we fill up the queue

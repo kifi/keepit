@@ -112,6 +112,8 @@ private[model] abstract class BaseLibraryCardInfo(
   numKeeps: Int,
   numFollowers: Int,
   followers: Seq[BasicUser],
+  numCollaborators: Int,
+  collaborators: Seq[BasicUser],
   lastKept: DateTime,
   following: Option[Boolean]) // is viewer following this library? Set to None if viewing anonymously or viewing own profile
 
@@ -125,13 +127,16 @@ case class OwnLibraryCardInfo( // when viewing own created libraries
   slug: LibrarySlug,
   kind: LibraryKind,
   visibility: LibraryVisibility,
+  owner: BasicUser,
   numKeeps: Int,
   numFollowers: Int,
   followers: Seq[BasicUser],
+  numCollaborators: Int,
+  collaborators: Seq[BasicUser],
   lastKept: DateTime,
   following: Option[Boolean] = None,
   listed: Boolean)
-    extends BaseLibraryCardInfo(id, name, description, color, image, slug, numKeeps, numFollowers, followers, lastKept, following)
+    extends BaseLibraryCardInfo(id, name, description, color, image, slug, numKeeps, numFollowers, followers, numCollaborators, collaborators, lastKept, following)
 
 @json
 case class LibraryCardInfo(
@@ -146,18 +151,25 @@ case class LibraryCardInfo(
   numKeeps: Int,
   numFollowers: Int,
   followers: Seq[BasicUser],
+  numCollaborators: Int,
+  collaborators: Seq[BasicUser],
   lastKept: DateTime,
   following: Option[Boolean],
   caption: Option[String])
-    extends BaseLibraryCardInfo(id, name, description, color, image, slug, numKeeps, numFollowers, followers, lastKept, following)
+    extends BaseLibraryCardInfo(id, name, description, color, image, slug, numKeeps, numFollowers, followers, numCollaborators, collaborators, lastKept, following)
 
 object LibraryCardInfo {
   val writesWithoutOwner = Writes[LibraryCardInfo] { o => // for case when receiving end already knows the owner
-    JsObject((Json.toJson(o).asInstanceOf[JsObject].value - "owner").toSeq)
+    JsObject((Json.toJson(o).as[JsObject].value - "owner").toSeq)
   }
 
-  def showable(followers: Seq[BasicUser]): Seq[BasicUser] = {
-    followers.filter(_.pictureName != "0.jpg").take(3)
+  def makeMembersShowable(members: Seq[BasicUser], filterBadPics: Boolean): Seq[BasicUser] = {
+    if (filterBadPics) {
+      members.filter(_.pictureName != "0.jpg").take(3)
+    } else {
+      val (membersWithPics, membersNoPics) = members.partition(_.pictureName != "0.jpg")
+      membersWithPics ++ membersNoPics
+    }
   }
 }
 
@@ -199,6 +211,7 @@ case class FullLibraryInfo(
   lastKept: Option[DateTime],
   owner: BasicUser,
   followers: Seq[BasicUser],
+  collaborators: Seq[BasicUser],
   keeps: Seq[KeepInfo],
   numKeeps: Int,
   numCollaborators: Int,

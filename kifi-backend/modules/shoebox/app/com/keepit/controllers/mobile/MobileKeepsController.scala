@@ -35,22 +35,29 @@ class MobileKeepsController @Inject() (
   normalizedURIInterner: NormalizedURIInterner,
   libraryCommander: LibraryCommander,
   rawBookmarkFactory: RawBookmarkFactory,
-  hashtagCommander: HashtagCommander,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
   implicit val publicIdConfig: PublicIdConfiguration)
     extends UserActions with ShoeboxServiceController {
 
-  def allKeeps(before: Option[String], after: Option[String], collectionOpt: Option[String], helprankOpt: Option[String], count: Int, withPageInfo: Boolean) = UserAction.async { request =>
-    keepsCommander.allKeeps(before map ExternalId[Keep], after map ExternalId[Keep], collectionOpt map ExternalId[Collection], helprankOpt, count, request.userId) map { res =>
+  def allKeepsV1(before: Option[String], after: Option[String], collectionOpt: Option[String], helprankOpt: Option[String], count: Int, withPageInfo: Boolean) = UserAction.async { request =>
+    getAllKeeps(request.userId, before, after, collectionOpt, helprankOpt, count, withPageInfo, true)
+  }
+
+  def allKeepsV2(before: Option[String], after: Option[String], collectionOpt: Option[String], helprankOpt: Option[String], count: Int, withPageInfo: Boolean) = UserAction.async { request =>
+    getAllKeeps(request.userId, before, after, collectionOpt, helprankOpt, count, withPageInfo, false)
+  }
+
+  private def getAllKeeps(userId: Id[User], before: Option[String], after: Option[String], collectionOpt: Option[String], helprankOpt: Option[String], count: Int, withPageInfo: Boolean, v1: Boolean) = {
+    keepsCommander.allKeeps(before map ExternalId[Keep], after map ExternalId[Keep], collectionOpt map ExternalId[Collection], helprankOpt, count, userId) map { res =>
       val basicCollection = collectionOpt.flatMap { collStrExtId =>
         ExternalId.asOpt[Collection](collStrExtId).flatMap { collExtId =>
-          db.readOnlyMaster(collectionRepo.getByUserAndExternalId(request.userId, collExtId)(_)).map { c =>
+          db.readOnlyMaster(collectionRepo.getByUserAndExternalId(userId, collExtId)(_)).map { c =>
             BasicCollection.fromCollection(c.summary)
           }
         }
       }
       val helprank = helprankOpt map (selector => Json.obj("helprank" -> selector)) getOrElse Json.obj()
-      val sanitizedKeeps = res.map(k => k.copy(url = URISanitizer.sanitize(k.url)))
+      val sanitizedKeeps = res.map(k => k.copy(url = URISanitizer.sanitize(k.url), note = Hashtags.formatMobileNote(k.note, v1)))
       Ok(Json.obj(
         "collection" -> basicCollection,
         "before" -> before,
@@ -164,10 +171,18 @@ class MobileKeepsController @Inject() (
     Ok(Json.obj())
   }
 
-  def getKeepInfo(id: ExternalId[Keep], withFullInfo: Boolean, idealImageWidth: Option[Int], idealImageHeight: Option[Int]) = UserAction.async { request =>
-    val keepOpt = db.readOnlyMaster { implicit s => keepRepo.getOpt(id).filter(_.isActive) }
+  def getKeepInfoV1(id: ExternalId[Keep], withFullInfo: Boolean, idealImageWidth: Option[Int], idealImageHeight: Option[Int]) = UserAction.async { request =>
+    getKeepInfo(request.userIdOpt, id, withFullInfo, idealImageWidth, idealImageHeight, true)
+  }
 
-    keepOpt match {
+  def getKeepInfoV2(id: ExternalId[Keep], withFullInfo: Boolean, idealImageWidth: Option[Int], idealImageHeight: Option[Int]) = UserAction.async { request =>
+    getKeepInfo(request.userIdOpt, id, withFullInfo, idealImageWidth, idealImageHeight, false)
+  }
+
+  private def getKeepInfo(userIdOpt: Option[Id[User]], id: ExternalId[Keep], withFullInfo: Boolean, idealImageWidth: Option[Int], idealImageHeight: Option[Int], v1: Boolean) = {
+    db.readOnlyMaster { implicit s =>
+      keepRepo.getOpt(id).filter(_.isActive)
+    } match {
       case None => Future.successful(NotFound(Json.obj("error" -> "not_found")))
       case Some(keep) if withFullInfo =>
         val idealImageSize = {
@@ -176,22 +191,19 @@ class MobileKeepsController @Inject() (
             h <- idealImageHeight
           } yield ImageSize(w, h)
         } getOrElse ProcessedImageSize.Large.idealSize
-        keepDecorator.decorateKeepsIntoKeepInfos(request.userIdOpt, false, Seq(keep), idealImageSize, withKeepTime = true).imap {
+        keepDecorator.decorateKeepsIntoKeepInfos(userIdOpt, false, Seq(keep), idealImageSize, withKeepTime = true).imap {
           case Seq(keepInfo) =>
-            val editedNote = keepInfo.note.map { note =>
-              // remove hashtags, then turn all '[\#' -> '[#'
-              val noteWithoutHashtags = hashtagCommander.removeAllHashtagsFromString(note)
-              keepDecorator.unescapeMarkupNotes(noteWithoutHashtags).trim
-            } filterNot (_.isEmpty)
-            Ok(Json.toJson(keepInfo.copy(note = editedNote)))
+            Ok(Json.toJson(keepInfo.copy(note = Hashtags.formatMobileNote(keepInfo.note, v1))))
         }
-      case Some(keep) => Future.successful(Ok(Json.toJson(KeepInfo.fromKeep(keep))))
+      case Some(keep) =>
+        Future.successful(Ok(Json.toJson(KeepInfo.fromKeep(keep.copy(note = Hashtags.formatMobileNote(keep.note, v1))))))
     }
   }
 
-  def editKeepInfo(id: ExternalId[Keep]) = UserAction(parse.tolerantJson) { request =>
-    val keepOpt = db.readOnlyMaster { implicit s => keepRepo.getOpt(id).filter(_.isActive) }
-    keepOpt match {
+  def editKeepInfoV1(id: ExternalId[Keep]) = UserAction(parse.tolerantJson) { request =>
+    db.readOnlyMaster { implicit s =>
+      keepRepo.getOpt(id).filter(_.isActive)
+    } match {
       case None =>
         NotFound(Json.obj("error" -> "not_found"))
       case Some(keep) =>
@@ -202,7 +214,7 @@ class MobileKeepsController @Inject() (
 
         val titleToPersist = (titleOpt orElse keep.title) map (_.trim) filterNot (_.isEmpty)
         val noteToPersist = noteOpt map { note =>
-          keepDecorator.escapeMarkupNotes(note).trim
+          KeepDecorator.escapeMarkupNotes(note).trim
         } orElse keep.note filter (_.nonEmpty)
 
         val tagsToPersist = tagsOpt.getOrElse(
@@ -216,6 +228,33 @@ class MobileKeepsController @Inject() (
         db.readWrite { implicit s =>
           keepsCommander.persistHashtagsForKeep(request.userId, updatedKeep, tagsToPersist)(s, context)
         }
+        NoContent
+    }
+  }
+
+  def editKeepInfoV2(id: ExternalId[Keep]) = UserAction(parse.tolerantJson) { request =>
+    db.readOnlyMaster { implicit s =>
+      keepRepo.getOpt(id).filter(_.isActive)
+    } match {
+      case None =>
+        NotFound(Json.obj("error" -> "not_found"))
+      case Some(keep) =>
+        val json = request.body
+        val titleOpt = (json \ "title").asOpt[String]
+        val noteOpt = (json \ "note").asOpt[String]
+
+        val titleToPersist = (titleOpt orElse keep.title) map (_.trim) filterNot (_.isEmpty)
+        val noteToPersist = (noteOpt orElse keep.note) map (_.trim) filterNot (_.isEmpty)
+
+        if (titleToPersist != keep.title || noteToPersist != keep.note) {
+          val updatedKeep = keep.copy(title = titleToPersist, note = noteToPersist)
+          implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
+          val hashtagNamesToPersist = Hashtags.findAllHashtagNames(noteToPersist.getOrElse(""))
+          db.readWrite { implicit s =>
+            keepsCommander.persistHashtagsForKeep(request.userId, updatedKeep, hashtagNamesToPersist.toSeq)(s, context)
+          }
+        }
+
         NoContent
     }
   }

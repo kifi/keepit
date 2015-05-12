@@ -3,6 +3,7 @@ package com.keepit.common.routes
 import com.keepit.common.db.{ Id, ExternalId, State, SurrogateExternalId, SequenceNumber }
 import com.keepit.curator.model.LibraryRecoSelectionParams
 import com.keepit.model._
+import com.keepit.rover.article.{ ArticleKind, Article }
 import com.keepit.rover.model.ArticleInfo
 import com.keepit.shoebox.model.ids.UserSessionExternalId
 import com.keepit.search.SearchConfigExperiment
@@ -163,6 +164,7 @@ object Shoebox extends Service {
     def getLibraryImageUrls() = ServiceRoute(POST, "/internal/shoebox/database/getLibraryImageUrls")
     def getLibrariesWithWriteAccess(userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/getLibrariesWithWriteAccess", Param("userId", userId))
     def getUserActivePersonas(userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/user/activePersonas", Param("userId", userId))
+    def getImageInfosChanged(seqNum: SequenceNumber[ImageInfo], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getImageInfosChanged", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
   }
 }
 
@@ -178,7 +180,7 @@ object Search extends Service {
     def userReindex() = ServiceRoute(POST, "/internal/search/user/reindex")
     def refreshSearcher() = ServiceRoute(POST, "/internal/search/index/refreshSearcher")
     def refreshPhrases() = ServiceRoute(POST, "/internal/search/index/refreshPhrases")
-    def searchDumpLuceneDocument(id: Id[NormalizedURI]) = ServiceRoute(POST, s"/internal/search/index/dumpDoc/${id.id}")
+    def searchDumpLuceneDocument(id: Id[NormalizedURI], deprecated: Boolean) = ServiceRoute(POST, s"/internal/search/index/dumpDoc/${id.id}", Param("deprecated", deprecated))
     def getLibraryDocument() = ServiceRoute(POST, s"/internal/search/index/library/document")
     def searchKeeps(userId: Id[User], query: String) = ServiceRoute(POST, "/internal/search/search/keeps", Param("userId", userId), Param("query", query))
     def searchUsers() = ServiceRoute(POST, "/internal/search/search/users")
@@ -420,6 +422,10 @@ object Rover extends Service {
   object internal {
     def getShoeboxUpdates(seq: SequenceNumber[ArticleInfo], limit: Int) = ServiceRoute(GET, "/internal/rover/getShoeboxUpdates", Param("seq", seq), Param("limit", limit))
     def fetchAsap() = ServiceRoute(POST, "/internal/rover/fetchAsap")
+    def getBestArticlesByUris() = ServiceRoute(POST, "/internal/rover/getBestArticlesByUris")
+    def getArticleInfosByUris() = ServiceRoute(POST, "/internal/rover/getArticleInfosByUris")
+    def getBestArticleSummaryByUris() = ServiceRoute(POST, "/internal/rover/getBestArticleSummaryByUris")
+    def getImagesByUris() = ServiceRoute(POST, "/internal/rover/getImagesByUris")
   }
 }
 

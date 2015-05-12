@@ -10,7 +10,6 @@ import com.keepit.common.images.ImageFetcher
 import com.keepit.scraper.{ URIPreviewFetchResult }
 
 import com.keepit.common.net.URI
-import com.keepit.model.{ ImageStoreFailureWithException }
 import com.keepit.scraper.embedly.EmbedlyClient
 import com.keepit.scraper._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -47,12 +46,8 @@ class ScraperURISummaryCommanderImpl @Inject() (
                 log.info(s"[susc] Done, uploaded ${uploadResults.length} images: ${sizes}")
                 Some(PersistedImageRef(sizes, embedlyImage.caption))
               case Right(failure) =>
-                failure match {
-                  case f: ImageStoreFailureWithException =>
-                    log.error(s"[susc] Failure fetching/persisting image from $url. Reason: ${f.reason}", f.getCause)
-                  case f =>
-                    log.error(s"[susc] Couldn't fetch/persist image from $url. Reason: ${f.reason}")
-                }
+                val message = s"[susc] Couldn't fetch/persist image from $url. Reason: ${failure.reason}"
+                failure.cause.map(log.error(message, _)) getOrElse log.error(message)
                 None
             }
           case None => // embedly didn't have any images

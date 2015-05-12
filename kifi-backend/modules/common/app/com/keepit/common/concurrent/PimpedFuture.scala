@@ -111,6 +111,10 @@ object FutureHelpers {
     foldLeftUntil(items)(false) { case (_, item) => predicate(item).imap(found => (found, found)) }
   }
 
+  def doUntil(body: => Future[Boolean])(implicit ec: ScalaExecutionContext): Future[Unit] = {
+    foldLeftUntil(Stream.continually(()))(()) { case (_, _) => body.imap(done => ((), done)) }
+  }
+
   def whilef(f: => Future[Boolean], p: Promise[Unit] = Promise[Unit]())(body: => Unit)(implicit ec: ScalaExecutionContext): Future[Unit] = {
     f.onComplete {
       case Success(true) => {

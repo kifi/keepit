@@ -1,5 +1,6 @@
 package com.keepit.commanders
 
+import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.UserFactory._
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.abook.FakeABookServiceClientModule
@@ -34,6 +35,8 @@ class KeepsCommanderTest extends Specification with ShoeboxTestInjector {
     FakeABookServiceClientModule() ::
     FakeSocialGraphModule() ::
     Nil
+
+  implicit val context = HeimdalContext.empty
 
   "KeepsCommander" should {
 

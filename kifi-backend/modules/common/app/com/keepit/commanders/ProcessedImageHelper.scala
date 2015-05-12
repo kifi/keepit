@@ -105,7 +105,7 @@ trait ProcessedImageHelper {
 
         resizedImages match {
           case Right(resizedSet) =>
-            val original = bufferedImageToInputStream(image, inputFormatToOutputFormat(sourceImage.format)).map {
+            val original = bufferedImageToInputStream(image, outFormat).map {
               case (is, bytes) =>
                 val key = ImagePath(baseLabel, sourceImage.hash, imageSize, ProcessImageOperation.Original, sourceImage.format)
                 ImageProcessState.ReadyToPersist(key, outFormat, is, image, bytes, ProcessImageOperation.Original)
@@ -135,7 +135,7 @@ trait ProcessedImageHelper {
       process().map { resizedImage =>
         bufferedImageToInputStream(resizedImage, outFormat).map {
           case (is, bytes) =>
-            val key = ImagePath(baseLabel, hash, ImageSize(resizedImage.getWidth, resizedImage.getHeight), processImageSize.operation, outFormat)
+            val key = ImagePath(baseLabel, hash, ImageSize(resizedImage), processImageSize.operation, outFormat)
             ImageProcessState.ReadyToPersist(key, outFormat, is, resizedImage, bytes, processImageSize.operation)
         }
       }.flatten match {
@@ -150,6 +150,16 @@ trait ProcessedImageHelper {
         Left(error.left.get)
       case None =>
         Right(resizedImages.map(_.right.get))
+    }
+  }
+
+  protected def filterProcessImageRequests(expectedImages: Set[ProcessImageRequest], existingImages: Set[ProcessImageRequest]): Set[ProcessImageRequest] = {
+    // hack to eliminate expecting scale versions that have the same scaled bounding box
+    @inline def boundingBox(imageSize: ImageSize): Int = Math.max(imageSize.width, imageSize.height)
+    val existingScaleBoundingBoxes = existingImages.collect { case ProcessImageRequest(ProcessImageOperation.Scale, size) => boundingBox(size) }
+    expectedImages filterNot {
+      case ProcessImageRequest(ProcessImageOperation.Scale, size) => existingScaleBoundingBoxes.contains(boundingBox(size))
+      case otherRequest => existingImages.contains(otherRequest)
     }
   }
 
@@ -387,10 +397,14 @@ object ProcessedImageSize {
   }
 
   def pickBestImage[T <: BaseImage](idealSize: ImageSize, images: Seq[T], strictAspectRatio: Boolean): Option[T] = {
-    images.
-      filter(s => if (strictAspectRatio) isAlmostTheSameAspectRatio(idealSize, ImageSize(s.width, s.height)) else true).
-      map(s => s -> maxDivergence(idealSize, s.imageSize)).
-      sortBy(_._2).headOption.map(_._1)
+    pickByIdealImageSize(idealSize, images, strictAspectRatio)(_.imageSize)
+  }
+
+  def pickByIdealImageSize[I](idealSize: ImageSize, images: Seq[I], strictAspectRatio: Boolean)(getSize: I => ImageSize): Option[I] = {
+    images.collect {
+      case image if !strictAspectRatio || isAlmostTheSameAspectRatio(idealSize, getSize(image)) =>
+        image -> maxDivergence(idealSize, getSize(image))
+    }.sortBy(_._2).headOption.map(_._1)
   }
 
   def imageSizeFromString(sizeStr: String): Option[ImageSize] = {

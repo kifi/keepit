@@ -73,13 +73,13 @@ class UriShardHit(val json: JsObject) extends AnyVal {
 }
 
 object UriShardHit extends Logging {
-  def apply(id: Long, score: Float, visibility: Int, libraryId: Long, keepId: Long, title: String, url: String, externalId: ExternalId[Keep]): UriShardHit = {
+  def apply(id: Long, score: Float, visibility: Int, libraryId: Long, keepId: Long, title: Option[String], url: String, externalId: ExternalId[Keep]): UriShardHit = {
     try {
       var json = JsObject(List(
         "id" -> JsNumber(id),
         "score" -> JsNumber(score.toDouble),
         "visibility" -> JsNumber(visibility),
-        "title" -> JsString(title),
+        "title" -> JsString(title.getOrElse("")),
         "url" -> JsString(url)
       ))
 

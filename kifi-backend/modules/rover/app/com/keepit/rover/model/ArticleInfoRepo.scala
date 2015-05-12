@@ -4,20 +4,20 @@ import com.keepit.common.actor.ActorInstance
 import com.keepit.common.db.slick._
 import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.{ SchedulingProperties, SequencingPlugin, SequencingActor }
-import com.keepit.rover.article.{ Article, ArticleKind }
+import com.keepit.rover.article.policy.FailureRecoveryPolicy
+import com.keepit.rover.article.{ ArticleInfoUriCache, ArticleInfoUriKey, Article, ArticleKind }
 import com.keepit.model._
-import com.keepit.rover.commanders.{ ArticleInfoUriKey, ArticleInfoUriCache }
-import com.keepit.rover.manager.FailureRecoveryPolicy
 import com.keepit.rover.sensitivity.{ UriSensitivityKey, UriSensitivityCache }
 import org.joda.time.DateTime
 import com.keepit.common.time._
 import com.google.inject.{ Singleton, Inject, ImplementedBy }
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
-import com.keepit.common.db.{ DbSequenceAssigner, VersionNumber, State, Id }
+import com.keepit.common.db._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.core._
 
 import scala.concurrent.duration.Duration
+import scala.slick.jdbc.{ PositionedResult, GetResult }
 import scala.util.{ Success, Failure, Try }
 
 @ImplementedBy(classOf[ArticleInfoRepoImpl])
@@ -30,10 +30,12 @@ trait ArticleInfoRepo extends Repo[RoverArticleInfo] with SeqNumberFunction[Rove
   def deactivateByUriAndKinds(uriId: Id[NormalizedURI], kinds: Set[ArticleKind[_ <: Article]])(implicit session: RWSession): Unit
   def getRipeForFetching(limit: Int, fetchingForMoreThan: Duration)(implicit session: RSession): Seq[RoverArticleInfo]
   def markAsFetching(ids: Id[RoverArticleInfo]*)(implicit session: RWSession): Unit
+  def unmarkAsFetching(ids: Id[RoverArticleInfo]*)(implicit session: RWSession): Unit
   def updateAfterFetch[A <: Article](uriId: Id[NormalizedURI], kind: ArticleKind[A], fetched: Try[Option[ArticleVersion]])(implicit session: RWSession): Unit
-  def getRipeForImageProcessing(limit: Int, fetchedForMoreThan: Duration, imageProcessingForMoreThan: Duration)(implicit session: RSession): Seq[RoverArticleInfo]
+  def getRipeForImageProcessing(limit: Int, requestedForMoreThan: Duration, imageProcessingForMoreThan: Duration)(implicit session: RSession): Seq[RoverArticleInfo]
   def markAsImageProcessing(ids: Id[RoverArticleInfo]*)(implicit session: RWSession): Unit
-  def updateAfterImageProcessing[A <: Article](uriId: Id[NormalizedURI], kind: ArticleKind[A], version: ArticleVersion)(implicit session: RWSession): Unit
+  def unmarkAsImageProcessing(ids: Id[RoverArticleInfo]*)(implicit session: RWSession): Unit
+  def updateAfterImageProcessing[A <: Article](uriId: Id[NormalizedURI], kind: ArticleKind[A], version: Option[ArticleVersion])(implicit session: RWSession): Unit
 }
 
 @Singleton
@@ -41,6 +43,7 @@ class ArticleInfoRepoImpl @Inject() (
     val db: DataBaseComponent,
     val clock: Clock,
     articleInfoCache: ArticleInfoUriCache,
+    articleSummaryCache: RoverArticleSummaryCache,
     uriSensitivityCache: UriSensitivityCache,
     airbrake: AirbrakeNotifier,
     implicit val failurePolicy: FailureRecoveryPolicy) extends DbRepo[RoverArticleInfo] with ArticleInfoRepo with SeqNumberDbFunction[RoverArticleInfo] with Logging {
@@ -74,6 +77,7 @@ class ArticleInfoRepoImpl @Inject() (
     def fetchInterval = column[Option[Duration]]("fetch_interval", O.Nullable)
     def failureCount = column[Int]("failure_count", O.NotNull)
     def failureInfo = column[Option[String]]("failure_info", O.Nullable)
+    def imageProcessingRequestedAt = column[Option[DateTime]]("image_processing_requested_at", O.Nullable)
     def lastImageProcessingVersionMajor = column[Option[VersionNumber[Article]]]("last_image_processing_version_major", O.Nullable)
     def lastImageProcessingVersionMinor = column[Option[VersionNumber[Article]]]("last_image_processing_version_minor", O.Nullable)
     def lastImageProcessingAt = column[Option[DateTime]]("last_image_processing_at", O.Nullable)
@@ -83,7 +87,33 @@ class ArticleInfoRepoImpl @Inject() (
     def oldestVersion = (oldestVersionMajor, oldestVersionMinor) <> ((articleVersionFromDb _).tupled, articleVersionToDb _)
     def lastImageProcessingVersion = (lastImageProcessingVersionMajor, lastImageProcessingVersionMinor) <> ((articleVersionFromDb _).tupled, articleVersionToDb _)
 
-    def * = (id.?, createdAt, updatedAt, state, seq, uriId, url, kind, bestVersion, latestVersion, oldestVersion, lastFetchedAt, nextFetchAt, lastFetchingAt, fetchInterval, failureCount, failureInfo, lastImageProcessingVersion, lastImageProcessingAt) <> ((RoverArticleInfo.applyFromDbRow _).tupled, RoverArticleInfo.unapplyToDbRow _)
+    def * = (id.?, createdAt, updatedAt, state, seq, uriId, url, kind, bestVersion, latestVersion, oldestVersion, lastFetchedAt, nextFetchAt, fetchInterval, failureCount, failureInfo, lastFetchingAt, lastImageProcessingVersion, lastImageProcessingAt, imageProcessingRequestedAt) <> ((RoverArticleInfo.applyFromDbRow _).tupled, RoverArticleInfo.unapplyToDbRow _)
+  }
+
+  implicit val getArticleInfoResult = GetResult[RoverArticleInfo] { r: PositionedResult =>
+
+    RoverArticleInfo.applyFromDbRow(
+      id = r.<<[Option[Id[RoverArticleInfo]]],
+      createdAt = r.<<[DateTime],
+      updatedAt = r.<<[DateTime],
+      state = r.<<[State[RoverArticleInfo]],
+      seq = r.<<[SequenceNumber[RoverArticleInfo]],
+      uriId = r.<<[Id[NormalizedURI]],
+      url = r.<<[String],
+      kind = r.<<[String],
+      bestVersion = articleVersionFromDb(r.<<[Option[VersionNumber[Article]]], r.<<[Option[VersionNumber[Article]]]),
+      latestVersion = articleVersionFromDb(r.<<[Option[VersionNumber[Article]]], r.<<[Option[VersionNumber[Article]]]),
+      oldestVersion = articleVersionFromDb(r.<<[Option[VersionNumber[Article]]], r.<<[Option[VersionNumber[Article]]]),
+      lastFetchedAt = r.<<[Option[DateTime]],
+      nextFetchAt = r.<<[Option[DateTime]],
+      fetchInterval = r.<<[Option[Duration]],
+      failureCount = r.<<[Int],
+      failureInfo = r.<<[Option[String]],
+      lastFetchingAt = r.<<[Option[DateTime]],
+      lastImageProcessingVersion = articleVersionFromDb(r.<<[Option[VersionNumber[Article]]], r.<<[Option[VersionNumber[Article]]]),
+      lastImageProcessingAt = r.<<[Option[DateTime]],
+      imageProcessingRequestedAt = r.<<[Option[DateTime]]
+    )
   }
 
   def table(tag: Tag) = new ArticleInfoTable(tag)
@@ -91,6 +121,7 @@ class ArticleInfoRepoImpl @Inject() (
 
   override def deleteCache(model: RoverArticleInfo)(implicit session: RSession): Unit = {
     articleInfoCache.remove(ArticleInfoUriKey(model.uriId))
+    articleSummaryCache.remove(RoverArticleSummaryKey(model.uriId, model.articleKind))
     uriSensitivityCache.remove(UriSensitivityKey(model.uriId))
   }
 
@@ -169,6 +200,7 @@ class ArticleInfoRepoImpl @Inject() (
   }
 
   def markAsFetching(ids: Id[RoverArticleInfo]*)(implicit session: RWSession): Unit = updateLastFetchingAt(ids, Some(clock.now()))
+  def unmarkAsFetching(ids: Id[RoverArticleInfo]*)(implicit session: RWSession): Unit = updateLastFetchingAt(ids, None)
 
   private def updateLastFetchingAt(ids: Seq[Id[RoverArticleInfo]], lastFetchingAt: Option[DateTime])(implicit session: RWSession): Unit = {
     (for (r <- rows if r.id.inSet(ids.toSet)) yield r.lastFetchingAt).update(lastFetchingAt)
@@ -188,39 +220,37 @@ class ArticleInfoRepoImpl @Inject() (
     }
   }
 
-  def getRipeForImageProcessing(limit: Int, lastFetchedForMoreThan: Duration, imageProcessingForMoreThan: Duration)(implicit session: RSession): Seq[RoverArticleInfo] = {
-    val ripeRows = {
-      val now = clock.now()
-      val lastFetchedTooLongAgo = now minusSeconds lastFetchedForMoreThan.toSeconds.toInt
-      val lastImageProcessingTooLongAgo = now minusSeconds imageProcessingForMoreThan.toSeconds.toInt
+  def getRipeForImageProcessing(limit: Int, requestedForMoreThan: Duration, imageProcessingForMoreThan: Duration)(implicit session: RSession): Seq[RoverArticleInfo] = {
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
 
-      for (
-        r <- rows if {
-          r.state === ArticleInfoStates.ACTIVE && {
-            (r.lastImageProcessingAt.isDefined && r.lastImageProcessingAt < lastImageProcessingTooLongAgo) || { // stale
-              // due
-              r.lastImageProcessingAt.isEmpty && r.lastFetchedAt.isDefined && r.lastFetchedAt < lastFetchedTooLongAgo && r.latestVersionMajor.isDefined && r.latestVersionMinor.isDefined && {
-                r.lastImageProcessingVersionMajor.isEmpty || r.lastImageProcessingVersionMinor.isEmpty || (r.lastImageProcessingVersionMajor < r.latestVersionMajor) || ((r.lastImageProcessingVersionMajor === r.latestVersionMajor) && (r.lastImageProcessingVersionMajor < r.latestVersionMinor))
-              }
-            }
-          }
-        }
-      ) yield r
-    }
-    ripeRows.sortBy(_.lastFetchedAt).take(limit).list
+    val now = clock.now()
+    val lastImageProcessingTooLongAgo = now minusSeconds imageProcessingForMoreThan.toSeconds.toInt
+    val imageProcessingRequestedLongEnoughAgo = now minusSeconds requestedForMoreThan.toSeconds.toInt
+
+    val q = sql"""
+          (select * from article_info
+          where state = '#${ArticleInfoStates.ACTIVE}' and last_image_processing_at is not null and last_image_processing_at < $lastImageProcessingTooLongAgo
+          order by last_image_processing_at limit $limit)
+      union
+          (select * from article_info
+          where state = '#${ArticleInfoStates.ACTIVE}' and last_image_processing_at is null and image_processing_requested_at is not null and image_processing_requested_at < $imageProcessingRequestedLongEnoughAgo
+          order by image_processing_requested_at limit $limit)
+       limit $limit
+    """
+
+    q.as[RoverArticleInfo].list
   }
 
   def markAsImageProcessing(ids: Id[RoverArticleInfo]*)(implicit session: RWSession): Unit = updateLastImageProcessingAt(ids, Some(clock.now()))
+  def unmarkAsImageProcessing(ids: Id[RoverArticleInfo]*)(implicit session: RWSession): Unit = updateLastImageProcessingAt(ids, None)
 
   private def updateLastImageProcessingAt(ids: Seq[Id[RoverArticleInfo]], lastImageProcessingAt: Option[DateTime])(implicit session: RWSession): Unit = {
     (for (r <- rows if r.id.inSet(ids.toSet)) yield r.lastImageProcessingAt).update(lastImageProcessingAt)
   }
 
-  def updateAfterImageProcessing[A <: Article](uriId: Id[NormalizedURI], kind: ArticleKind[A], version: ArticleVersion)(implicit session: RWSession): Unit = {
+  def updateAfterImageProcessing[A <: Article](uriId: Id[NormalizedURI], kind: ArticleKind[A], version: Option[ArticleVersion])(implicit session: RWSession): Unit = {
     getByUriAndKind(uriId, kind).foreach { articleInfo =>
-      if (!articleInfo.lastImageProcessingVersion.exists(_ > version)) {
-        saveSilently(articleInfo.withImageProcessingComplete(version))
-      }
+      saveSilently(articleInfo.withImageProcessingComplete(version))
     }
   }
 

@@ -1,5 +1,6 @@
 package com.keepit.shoebox
 
+import com.keepit.commanders.emails.activity.{ ActivityEmailQueueModule, ProdActivityEmailQueueModule, DevActivityEmailQueueModule }
 import com.keepit.common.controller.UserActionsModule
 import com.keepit.common.seo.SiteMapGeneratorModule
 import com.keepit.controllers.internal.DataPipelineExecutorModule
@@ -12,7 +13,7 @@ import com.keepit.common.mail.MailModule
 import com.keepit.common.analytics.AnalyticsModule
 import com.keepit.model.{ ProdSliderHistoryTrackerModule }
 import com.keepit.scraper.{ ScraperHealthMonitorModule, ScrapeSchedulerModule, ScraperServiceClientModule }
-import com.keepit.common.store.ShoeboxDevStoreModule
+import com.keepit.common.store.ShoeboxStoreModule
 import com.keepit.inject.{ CommonServiceModule, ConfigurationModule }
 import com.keepit.integrity.DataIntegrityModule
 import com.keepit.search.{ SearchServiceClientModule }
@@ -42,7 +43,7 @@ trait ShoeboxModule extends ConfigurationModule with CommonServiceModule {
   val mailModule: MailModule
   val reaperModule: ReaperModule
   val siteMapModule: SiteMapGeneratorModule
-  val storeModule: ShoeboxDevStoreModule
+  val storeModule: ShoeboxStoreModule
   val sqsModule: SimpleQueueModule
   val normalizationQueueModule: NormalizationUpdateJobQueueModule
 
@@ -54,6 +55,7 @@ trait ShoeboxModule extends ConfigurationModule with CommonServiceModule {
   val fjMonitorModule: ForkJoinContextMonitorModule
   val twilioCredentialsModule: TwilioCredentialsModule
   val dataPipelineExecutorModule: DataPipelineExecutorModule
+  val activityEmailActorModule: ActivityEmailQueueModule
 
   //these are modules that are provided here (but can be overriden by inheriting modules)
   // Service clients

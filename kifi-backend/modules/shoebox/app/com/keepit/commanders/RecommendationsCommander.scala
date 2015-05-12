@@ -30,6 +30,7 @@ class RecommendationsCommander @Inject() (
     uriSummaryCommander: URISummaryCommander,
     basicUserRepo: BasicUserRepo,
     keepRepo: KeepRepo,
+    keepDecorator: KeepDecorator,
     implicit val defaultContext: ExecutionContext,
     implicit val publicIdConfig: PublicIdConfiguration,
     userExperimentCommander: LocalUserExperimentCommander) {
@@ -131,6 +132,17 @@ class RecommendationsCommander @Inject() (
         recosInfo => FullLibRecoResults(recosInfo, newContext)
       }
     }
+  }
+
+  def updatesFromFollowedLibraries(userId: Id[User]): Future[FullLibUpdatesRecoInfo] = {
+    val keeps = db.readOnlyReplica { implicit session =>
+      keepRepo.getRecentKeepsFromFollowedLibraries(userId, 10)
+    }
+
+    keepDecorator.decorateKeepsIntoKeepInfos(Some(userId), false, keeps, ProcessedImageSize.Large.idealSize, true).map { keepInfos =>
+      FullLibUpdatesRecoInfo(itemInfo = keepInfos)
+    }
+
   }
 
   private def decorateUriRecos(userId: Id[User], recos: Seq[RecoInfo], explain: Boolean): Future[Seq[FullUriRecoInfo]] = {

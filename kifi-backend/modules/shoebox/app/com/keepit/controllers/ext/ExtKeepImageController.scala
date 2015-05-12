@@ -26,7 +26,6 @@ class ExtKeepImageController @Inject() (
     keepImageRequestRepo: KeepImageRequestRepo,
     db: Database,
     systemValueRepo: SystemValueRepo,
-    imageInfoRepo: ImageInfoRepo,
     val userActionsHelper: UserActionsHelper,
     implicit val config: com.keepit.common.crypto.PublicIdConfiguration) extends UserActions with ShoeboxServiceController {
 

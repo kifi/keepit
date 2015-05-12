@@ -23,6 +23,10 @@ object LibraryFactoryHelper {
       followers foreach { follower => membership().withLibraryFollower(library, follower).saved }
       library
     }
+    def savedCollaboratorMembership(collaborators: User*)(implicit injector: Injector, session: RWSession): Library = {
+      collaborators foreach { collab => membership().withLibraryCollaborator(library, collab).saved }
+      library
+    }
   }
 
   implicit class LibraryInvitationPersister(library: Library) {

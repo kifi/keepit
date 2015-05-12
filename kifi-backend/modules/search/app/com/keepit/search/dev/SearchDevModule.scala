@@ -3,6 +3,7 @@ package com.keepit.search.dev
 import com.keepit.common.controller.ProdRemoteUserActionsHelperModule
 import com.keepit.eliza.ProdElizaServiceClientModule
 import com.keepit.heimdal.DevHeimdalServiceClientModule
+import com.keepit.rover.ProdRoverServiceClientModule
 import com.keepit.search._
 import com.keepit.common.cache.HashMapMemoryCacheModule
 import com.keepit.search.common.cache.SearchCacheModule
@@ -30,6 +31,7 @@ case class SearchDevModule() extends SearchModule with CommonDevModule {
   val shoeboxServiceClientModule = ProdShoeboxServiceClientModule()
   val elizaServiceClientModule = ProdElizaServiceClientModule()
   val heimdalServiceClientModule = DevHeimdalServiceClientModule()
+  val roverServiceClientModule = ProdRoverServiceClientModule()
   val configurationModule = PlayAppConfigurationModule()
 }
 

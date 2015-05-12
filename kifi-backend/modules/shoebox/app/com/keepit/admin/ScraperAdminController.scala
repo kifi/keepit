@@ -5,9 +5,9 @@ import com.keepit.common.controller.{ UserActionsHelper, AdminUserActions }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.model._
+
 import com.keepit.search.ArticleStore
 import views.html
-import com.keepit.common.db.slick.Database.Replica
 import play.api.libs.concurrent.Execution.Implicits._
 import com.keepit.scraper.ScrapeScheduler
 import play.api.mvc.Action
@@ -74,12 +74,6 @@ class ScraperAdminController @Inject() (
     Redirect(com.keepit.controllers.admin.routes.ScraperAdminController.searchScraper).flashing(
       "success" -> "%s page(s) matching %s to be rescraped within %s minutes(s). ".format(updateCount, urlRegex, withinMinutes)
     )
-  }
-
-  def getScraped(id: Id[NormalizedURI]) = AdminUserPage { implicit request =>
-    val articleOption = articleStore.syncGet(id)
-    val (uri, scrapeInfoOption) = db.readOnlyReplica { implicit s => (normalizedURIRepo.get(id), scrapeInfoRepo.getByUriId(id)) }
-    Ok(html.admin.article(articleOption, uri, scrapeInfoOption))
   }
 
   def getProxies = AdminUserPage { implicit request =>

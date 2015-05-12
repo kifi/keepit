@@ -1,11 +1,10 @@
 package com.keepit.controllers.internal
 
-import akka.actor.ActorSystem
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.{ Id, SequenceNumber }
 import com.keepit.common.service.RequestConsolidator
 import play.api.libs.json._
-import com.google.inject.{ Singleton, ImplementedBy, Inject }
+import com.google.inject.{ Inject }
 import com.keepit.common.db.slick.Database
 import play.api.mvc.Action
 import com.keepit.model._
@@ -32,6 +31,7 @@ class ShoeboxDataPipeController @Inject() (
     emailAddressRepo: UserEmailAddressRepo,
     libraryRepo: LibraryRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
+    imageInfoRepo: ImageInfoRepo,
     executor: DataPipelineExecutor) extends ShoeboxServiceController with Logging {
 
   implicit val context = executor.context
@@ -238,6 +238,13 @@ class ShoeboxDataPipeController @Inject() (
         _.uriId
       }
       Ok(Json.toJson(ids))
+    }
+  }
+
+  def getImageInfosChanged(seqNum: SequenceNumber[ImageInfo], fetchSize: Int) = Action.async { request =>
+    SafeFuture {
+      val infos = db.readOnlyReplica { implicit s => imageInfoRepo.getBySequenceNumber(seqNum, fetchSize) }
+      Ok(Json.toJson(infos))
     }
   }
 

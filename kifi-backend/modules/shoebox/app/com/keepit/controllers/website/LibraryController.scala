@@ -76,7 +76,7 @@ class LibraryController @Inject() (
     }
   }
 
-  def modifyLibrary(pubId: PublicId[Library]) = (UserAction andThen LibraryWriteAction(pubId))(parse.tolerantJson) { request =>
+  def modifyLibrary(pubId: PublicId[Library]) = (UserAction andThen LibraryOwnerAction(pubId))(parse.tolerantJson) { request =>
     val id = Library.decodePublicId(pubId).get
     val libModifyRequest = request.body.as[LibraryModifyRequest]
 
@@ -95,7 +95,7 @@ class LibraryController @Inject() (
     }
   }
 
-  def removeLibrary(pubId: PublicId[Library]) = (UserAction andThen LibraryWriteAction(pubId)) { request =>
+  def removeLibrary(pubId: PublicId[Library]) = (UserAction andThen LibraryOwnerAction(pubId)) { request =>
     val id = Library.decodePublicId(pubId).get
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
     libraryCommander.removeLibrary(id, request.userId) match {
@@ -112,7 +112,8 @@ class LibraryController @Inject() (
       val accessStr = memOpt.map(_.access.value).getOrElse("none")
       val listed = memOpt.map(_.listed)
       val suggestedSearches = getSuggestedSearchesAsJson(libraryId)
-      Ok(Json.obj("library" -> Json.toJson(libInfo), "membership" -> accessStr, "listed" -> listed, "suggestedSearches" -> suggestedSearches))
+      val subscribedToUpdates = memOpt.map(_.subscribedToUpdates).getOrElse(false)
+      Ok(Json.obj("library" -> Json.toJson(libInfo), "membership" -> accessStr, "listed" -> listed, "suggestedSearches" -> suggestedSearches, "subscribedToUpdates" -> subscribedToUpdates))
     }
   }
 
@@ -120,7 +121,8 @@ class LibraryController @Inject() (
     val id = Library.decodePublicId(pubId).get
     val (libInfo, memOpt) = libraryCommander.getLibrarySummaryAndMembership(request.userIdOpt, id)
     val accessStr = memOpt.map(_.access.value).getOrElse("none")
-    Ok(Json.obj("library" -> Json.toJson(libInfo), "membership" -> accessStr))
+    val subscribedToUpdates = memOpt.map(_.subscribedToUpdates).getOrElse(false)
+    Ok(Json.obj("library" -> Json.toJson(libInfo), "membership" -> accessStr, "subscribedToUpdates" -> subscribedToUpdates))
   }
 
   def getLibraryByPath(userStr: String, slugStr: String, showPublishedLibraries: Boolean, imageSize: Option[String] = None) = MaybeUserAction.async { request =>
@@ -129,13 +131,16 @@ class LibraryController @Inject() (
         LibraryViewAction(Library.publicId(library.id.get)).invokeBlock(request, { _: MaybeUserRequest[_] =>
           val idealSize = imageSize.flatMap { s => Try(ImageSize(s)).toOption }.getOrElse(LibraryController.defaultLibraryImageSize)
           request.userIdOpt foreach { userId => libraryCommander.updateLastView(userId, library.id.get) }
-          val showKeepCreateTime = request.userIdOpt.exists(_ == library.ownerId)
+          val showKeepCreateTime = request.userIdOpt.exists(_ == library.ownerId) || Some(request).collect {
+            case r: UserRequest[_] => r.experiments.contains(ExperimentType.KEEP_NOTES)
+          }.getOrElse(false)
           libraryCommander.createFullLibraryInfo(request.userIdOpt, showPublishedLibraries, library, idealSize, showKeepCreateTime).map { libInfo =>
             val memOpt = libraryCommander.getMaybeMembership(request.userIdOpt, library.id.get)
             val accessStr = memOpt.map(_.access.value).getOrElse("none")
             val listed = memOpt.map(_.listed)
             val suggestedSearches = getSuggestedSearchesAsJson(library.id.get)
-            Ok(Json.obj("library" -> Json.toJson(libInfo), "membership" -> accessStr, "listed" -> listed, "suggestedSearches" -> suggestedSearches))
+            val subscribedToUpdates = memOpt.map(_.subscribedToUpdates).getOrElse(false)
+            Ok(Json.obj("library" -> Json.toJson(libInfo), "membership" -> accessStr, "listed" -> listed, "suggestedSearches" -> suggestedSearches, "subscribedToUpdates" -> subscribedToUpdates))
           }
         })
       case Left(fail) => Future.successful {
@@ -175,7 +180,7 @@ class LibraryController @Inject() (
       libInfosWithMemberships <- libInfosWithMembershipsF
       libInfosWithInvites <- libInfosWithInvitesF
     } yield {
-      val (ownWithMemberships, followingWithMemberships) = libInfosWithMemberships.partition(_._2.access == LibraryAccess.OWNER)
+      val (ownWithMemberships, followingWithMemberships) = libInfosWithMemberships.partition(l => LibraryAccess.collaborativePermissions.contains(l._2.access))
       Ok(Json.obj(
         "libraries" -> ownWithMemberships.map(libInfoToJsonWithLastViewed),
         "following" -> followingWithMemberships.map(libInfoToJsonWithLastViewed),
@@ -524,6 +529,21 @@ class LibraryController @Inject() (
     }
   }
 
+  def editKeepNote(libraryPubId: PublicId[Library], keepExtId: ExternalId[Keep]) = (UserAction andThen LibraryWriteAction(libraryPubId))(parse.tolerantJson) { request =>
+    db.readOnlyMaster { implicit s =>
+      keepRepo.getOpt(keepExtId)
+    } match {
+      case None =>
+        NotFound(Json.obj("error" -> "keep_id_not_found"))
+      case Some(keep) =>
+        val body = request.body.as[JsObject]
+        val newNote = (body \ "note").as[String]
+        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
+        keepsCommander.updateKeepNote(request.userId, keep, newNote)
+        NoContent
+    }
+  }
+
   def tagKeep(libraryPubId: PublicId[Library], keepExtId: ExternalId[Keep], tag: String) = (UserAction andThen LibraryWriteAction(libraryPubId)) { request =>
     val libraryId = Library.decodePublicId(libraryPubId).get;
 
@@ -595,7 +615,9 @@ class LibraryController @Inject() (
               owner = info.owner,
               numKeeps = info.numKeeps,
               numFollowers = info.numFollowers,
-              followers = LibraryCardInfo.showable(info.followers),
+              followers = LibraryCardInfo.makeMembersShowable(info.followers, true),
+              numCollaborators = info.numCollaborators,
+              collaborators = LibraryCardInfo.makeMembersShowable(info.collaborators, false),
               lastKept = info.lastKept.getOrElse(new DateTime(0)),
               following = None,
               caption = None)
@@ -606,85 +628,48 @@ class LibraryController @Inject() (
       }
   }
 
-  def getProfileLibraries(username: Username, page: Int, pageSize: Int, filter: String) = MaybeUserAction.async { request =>
-    userCommander.userFromUsername(username) match {
-      case None =>
-        log.warn(s"unknown username ${username.value} requested")
-        Future.successful(NotFound(username.value))
-      case Some(user) =>
-        val viewer = request.userOpt
-        val paginator = Paginator(page, pageSize)
-        val imageSize = ProcessedImageSize.Medium.idealSize
-        filter match {
-          case "own" =>
-            val libs = if (viewer.exists(_.id == user.id)) {
-              Json.toJson(libraryCommander.getOwnProfileLibrariesForSelf(user, paginator, imageSize).seq)
-            } else {
-              Json.toJson(libraryCommander.getOwnProfileLibraries(user, viewer, paginator, imageSize).map(LibraryCardInfo.writesWithoutOwner.writes).seq)
-            }
-            Future.successful(Ok(Json.obj("own" -> libs)))
-          case "following" =>
-            val libs = libraryCommander.getFollowingLibraries(user, viewer, paginator, imageSize).seq
-            Future.successful(Ok(Json.obj("following" -> libs)))
-          case "invited" =>
-            val libs = libraryCommander.getInvitedLibraries(user, viewer, paginator, imageSize).seq
-            Future.successful(Ok(Json.obj("invited" -> libs)))
-          case "all" if page == 0 =>
-            val ownLibsF = if (viewer.exists(_.id == user.id)) {
-              SafeFuture(Json.toJson(libraryCommander.getOwnProfileLibrariesForSelf(user, paginator, imageSize).seq))
-            } else {
-              SafeFuture(Json.toJson(libraryCommander.getOwnProfileLibraries(user, viewer, paginator, imageSize).map(LibraryCardInfo.writesWithoutOwner.writes).seq))
-            }
-            val followLibsF = SafeFuture(libraryCommander.getFollowingLibraries(user, viewer, paginator, imageSize).seq)
-            val invitedLibsF = SafeFuture(libraryCommander.getInvitedLibraries(user, viewer, paginator, imageSize).seq)
-            for {
-              ownLibs <- ownLibsF
-              followLibs <- followLibsF
-              invitedLibs <- invitedLibsF
-            } yield {
-              Ok(Json.obj(
-                "own" -> ownLibs,
-                "following" -> followLibs,
-                "invited" -> invitedLibs
-              ))
-            }
-          case "all" if page != 0 =>
-            Future.successful(BadRequest(Json.obj("error" -> "cannot_page_all_filters")))
-          case _ =>
-            Future.successful(BadRequest(Json.obj("error" -> "no_such_filter")))
-        }
-    }
-  }
-
-  def getMutualLibraries(id: ExternalId[User], page: Int = 0, size: Int = 12) = UserAction { request =>
-    db.readOnlyMaster { implicit s =>
-      userRepo.getOpt(id)
-    } match {
-      case None =>
-        log.warn(s"unknown external userId ${id} requested")
-        NotFound(Json.obj("id" -> id))
-      case Some(user) =>
-        val viewer = request.userId
-        val userId = user.id.get
-        val (ofUser, ofViewer, mutualFollow, basicUsers) = db.readOnlyReplica { implicit s =>
-          val ofUser = libraryRepo.getOwnerLibrariesOtherFollow(userId, viewer)
-          val ofViewer = libraryRepo.getOwnerLibrariesOtherFollow(viewer, userId)
-          val mutualFollow = libraryRepo.getMutualLibrariesForUser(viewer, userId, page * size, size)
-          val mutualFollowOwners = mutualFollow.map(_.ownerId)
-          val basicUsers = basicUserRepo.loadAll(Set(userId, viewer) ++ mutualFollowOwners)
-          (ofUser, ofViewer, mutualFollow, basicUsers)
-        }
-        Ok(Json.obj(
-          "ofUser" -> Json.toJson(ofUser.map(LibraryInfo.fromLibraryAndOwner(_, None, basicUsers(userId)))),
-          "ofOwner" -> Json.toJson(ofViewer.map(LibraryInfo.fromLibraryAndOwner(_, None, basicUsers(viewer)))),
-          "mutualFollow" -> Json.toJson(mutualFollow.map(lib => LibraryInfo.fromLibraryAndOwner(lib, None, basicUsers(lib.ownerId))))
-        ))
-    }
-  }
-
   def marketingSiteSuggestedLibraries() = Action.async {
     libraryCommander.getMarketingSiteSuggestedLibraries() map { infos => Ok(Json.toJson(infos)) }
   }
+
+  def setSubscribedToUpdates(pubId: PublicId[Library], newSubscripedToUpdate: Boolean) = UserAction { request =>
+    val libraryId = Library.decodePublicId(pubId).get
+    libraryCommander.updatedLibraryUpdateSubscription(request.userId, libraryId, newSubscripedToUpdate) match {
+      case Right(mem) => Ok
+      case Left(fail) => Status(fail.status)(Json.obj("error" -> fail.message))
+    }
+  }
+
+  ///////////////////
+  // Collaborators!
+  ///////////////////
+
+  def updateLibraryMembership(pubId: PublicId[Library], extUserId: ExternalId[User]) = UserAction(parse.tolerantJson) { request =>
+    val libraryId = Library.decodePublicId(pubId).get
+    db.readOnlyMaster { implicit s =>
+      userRepo.getOpt(extUserId)
+    } match {
+      case None =>
+        NotFound(Json.obj("error" -> "user_id_not_found"))
+      case Some(targetUser) =>
+        val access = (request.body \ "access").as[String]
+        val result = access.toLowerCase match {
+          case "none" =>
+            libraryCommander.updateLibraryMembershipAccess(request.userId, libraryId, targetUser.id.get, None)
+          case "read_only" =>
+            libraryCommander.updateLibraryMembershipAccess(request.userId, libraryId, targetUser.id.get, Some(LibraryAccess.READ_ONLY))
+          case "read_write" =>
+            libraryCommander.updateLibraryMembershipAccess(request.userId, libraryId, targetUser.id.get, Some(LibraryAccess.READ_WRITE))
+          case _ =>
+            Left(LibraryFail(BAD_REQUEST, "invalid_access_request"))
+        }
+        result match {
+          case Left(fail) => Status(fail.status)(Json.obj("error" -> fail.message))
+          case Right(_) => NoContent
+        }
+    }
+  }
+
 }
 
 object LibraryController {

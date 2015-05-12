@@ -37,7 +37,7 @@ trait OAuth2ProviderHelper extends OAuth2Support with Logging {
       response.json.as[OAuth2TokenInfo]
     } catch {
       case t: Throwable =>
-        throw new AuthException(s"[buildTokenInfo] failed to retrieve token; response.status=${response.status}; body=${response.body}")
+        throw new AuthException(s"[buildTokenInfo] failed to retrieve token; response.status=${response.status}; body=${response.body}", response)
     }
   }
 

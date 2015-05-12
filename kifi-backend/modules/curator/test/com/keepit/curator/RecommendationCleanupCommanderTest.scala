@@ -53,7 +53,7 @@ class RecommendationCleanupCommanderTest extends Specification with CuratorTestI
         }
 
         val commander = inject[RecommendationCleanupCommander]
-        commander.cleanup(Some(4), Some(currentDateTime))
+        commander.cleanup(Some(4), Some(currentDateTime), false)
 
         db.readOnlyMaster { implicit s =>
           val recos = repo.getByTopMasterScore(Id[User](42), 6)
@@ -80,7 +80,7 @@ class RecommendationCleanupCommanderTest extends Specification with CuratorTestI
         }
 
         val commander = inject[RecommendationCleanupCommander]
-        commander.cleanup(Some(4), Some(currentDateTime))
+        commander.cleanup(Some(4), Some(currentDateTime), false)
 
         db.readOnlyMaster { implicit s =>
           val recos = repo.getByTopMasterScore(Id[User](42), 6)

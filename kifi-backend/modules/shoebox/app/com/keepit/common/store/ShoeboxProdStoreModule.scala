@@ -2,7 +2,7 @@ package com.keepit.common.store
 
 import com.amazonaws.services.s3.AmazonS3
 import com.google.inject.{ Provider, Provides, Singleton }
-import com.keepit.common.logging.AccessLog
+import com.keepit.common.logging.{ Logging, AccessLog }
 import com.keepit.inject.AppScoped
 import com.keepit.scraper.embedly.{ EmbedlyStore, InMemoryEmbedlyStoreImpl, S3EmbedlyStoreImpl }
 import com.keepit.social.{ InMemorySocialUserRawInfoStoreImpl, S3SocialUserRawInfoStoreImpl, SocialUserRawInfoStore }
@@ -11,18 +11,12 @@ import org.apache.commons.io.FileUtils
 
 import play.api.Play.current
 
-case class ShoeboxProdStoreModule() extends ProdStoreModule {
+trait ShoeboxStoreModule extends StoreModule with Logging
+
+case class ShoeboxProdStoreModule() extends ProdStoreModule with ShoeboxStoreModule {
   def configure() {
     bind[ImageDataIntegrityPlugin].to[ImageDataIntegrityPluginImpl].in[AppScoped]
     bind[RoverImageStore].to[S3RoverImageStoreImpl]
-  }
-
-  @Singleton
-  @Provides
-  def s3ImageConfig: S3ImageConfig = {
-    val bucket = current.configuration.getString("cdn.bucket")
-    val base = current.configuration.getString("cdn.base")
-    S3ImageConfig(bucket.get, base.get)
   }
 
   @Provides @Singleton
@@ -61,16 +55,11 @@ case class ShoeboxProdStoreModule() extends ProdStoreModule {
 
 }
 
-case class ShoeboxDevStoreModule() extends DevStoreModule(ShoeboxProdStoreModule()) {
+case class ShoeboxDevStoreModule() extends DevStoreModule(ShoeboxProdStoreModule()) with ShoeboxStoreModule {
   def configure() {
     bind[ImageDataIntegrityPlugin].to[ImageDataIntegrityPluginImpl].in[AppScoped]
     bind[RoverImageStore].to[InMemoryRoverImageStoreImpl]
   }
-
-  @Singleton
-  @Provides
-  def s3ImageConfig: S3ImageConfig =
-    whenConfigured("cdn.bucket")(prodStoreModule.s3ImageConfig).getOrElse(S3ImageConfig("", "http://dev.ezkeep.com:9000", true))
 
   @Singleton
   @Provides

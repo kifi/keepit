@@ -30,7 +30,7 @@ trait FacebookOAuth2ProviderHelper extends OAuth2ProviderHelper {
       )
     } catch {
       case t: Throwable =>
-        throw new AuthException(s"[buildTokenInfo(${providerConfig.name}] Token process failure. status=${response.status}; body=${response.body}", t)
+        throw new AuthException(s"[buildTokenInfo(${providerConfig.name}] Token process failure. status=${response.status}; body=${response.body}", response, t)
     }
   }
 }

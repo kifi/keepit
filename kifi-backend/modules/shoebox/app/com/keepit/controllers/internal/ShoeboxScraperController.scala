@@ -24,7 +24,6 @@ import scala.util.{ Failure, Success, Try }
 class ShoeboxScraperController @Inject() (
   urlPatternRules: UrlPatternRulesCommander,
   db: Database,
-  imageInfoRepo: ImageInfoRepo,
   normUriRepo: NormalizedURIRepo,
   airbrake: AirbrakeNotifier,
   pageInfoRepo: PageInfoRepo,

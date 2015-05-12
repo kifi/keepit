@@ -2,13 +2,14 @@ package com.keepit.search.controllers.search
 
 import com.google.inject.Inject
 import com.keepit.common.controller.SearchServiceController
-import com.keepit.model.{ DetailedLibraryView, Library, LibraryAndMemberships }
+import com.keepit.model.{ DetailedLibraryView }
+import com.keepit.search.index.Indexable
 import com.keepit.search.index.graph.keep.KeepIndexerPlugin
 import com.keepit.search.index.graph.library.membership.{ LibraryMembershipIndexer, LibraryMembershipIndexerPlugin }
-import com.keepit.search.index.graph.library.{ LibraryIndexer, LibraryIndexable, LibraryIndexerPlugin }
+import com.keepit.search.index.graph.library.{ LibraryFields, LibraryIndexer, LibraryIndexable, LibraryIndexerPlugin }
 import play.api.libs.json.Json
 import play.api.mvc.Action
-import com.keepit.search.index.article.ArticleIndexerPlugin
+import com.keepit.search.index.article.{ ArticleIndexerPlugin, DeprecatedArticleIndexerPlugin }
 import com.keepit.search.index.graph.collection.CollectionGraphPlugin
 import com.keepit.search.index.graph.user._
 import com.keepit.search.index.user.UserIndexerPlugin
@@ -62,6 +63,6 @@ class IndexController @Inject() (
     val library = request.body.as[DetailedLibraryView]
     val indexable = new LibraryIndexable(library)
     val doc = indexable.buildDocument
-    Ok(html.admin.luceneDocDump("Library", doc, libraryIndexer))
+    Ok(html.admin.luceneDocDump("Library", doc, Indexable.getFieldDecoder(LibraryFields.decoders)))
   }
 }

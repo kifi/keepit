@@ -11,7 +11,6 @@ import scala.concurrent.duration._
 import com.keepit.common.core._
 
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.reflect.ClassTag
 
 @Singleton
 class RoverArticleStore @Inject() (underlying: RoverUnderlyingArticleStore, private implicit val executionContext: ExecutionContext) {
@@ -20,14 +19,11 @@ class RoverArticleStore @Inject() (underlying: RoverUnderlyingArticleStore, priv
 
   private val consolidate = new RequestConsolidator[ArticleStoreKey, Option[Article]](30 minutes)
 
-  def get[A <: Article](key: ArticleKey[A])(implicit classTag: ClassTag[A]): Future[Option[A]] = {
+  def get[A <: Article](key: ArticleKey[A]): Future[Option[A]] = {
     consolidate(key)(storeKey => SafeFuture {
       underlying.syncGet(storeKey)
     }).imap { articleOpt =>
-      articleOpt.map {
-        case expectedArticle: A => expectedArticle
-        case unexpectedArticle => throw new InconsistentArticleTypeException(key, unexpectedArticle)
-      }
+      articleOpt.map(_.asExpected(key.kind))
     }
   }
 
@@ -41,6 +37,3 @@ class RoverArticleStore @Inject() (underlying: RoverUnderlyingArticleStore, priv
     }
   }
 }
-
-case class InconsistentArticleTypeException[A <: Article](key: ArticleKey[A], article: Article)
-  extends Exception(s"Found inconsistent article for key $key: $article")

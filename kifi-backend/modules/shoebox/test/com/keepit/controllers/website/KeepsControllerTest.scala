@@ -102,6 +102,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
 
           val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user1.id.get, visibility = LibraryVisibility.DISCOVERABLE, slug = LibrarySlug("asdf"), memberCount = 1))
           libraryMembershipRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = user1.id.get, access = LibraryAccess.OWNER))
+          libraryMembershipRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = user2.id.get, access = LibraryAccess.READ_WRITE))
 
           val bookmark1 = keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id.get,
             uriId = uri1.id.get, source = keeper, createdAt = t1.plusMinutes(3), keptAt = t1.plusMinutes(3), state = KeepStates.ACTIVE,
@@ -165,7 +166,10 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
               "isPrivate":false,
               "createdAt":"${bookmark1.createdAt.toStandardTimeString}",
               "others":0,
-              "keeps":[{"id":"${bookmark1.externalId}", "mine":true, "removable":true, "visibility":"${bookmark1.visibility.value}", "libraryId":"${pubLibId1.id}"}],
+              "keeps":[
+                {"id":"${bookmark1.externalId}", "mine":true, "removable":true, "visibility":"${bookmark1.visibility.value}", "libraryId":"${pubLibId1.id}"},
+                {"id":"${bookmark3.externalId}", "mine":false, "removable":true, "visibility":"${bookmark3.visibility.value}", "libraryId":"${pubLibId1.id}"}
+              ],
               "keepers":[],
               "keepersOmitted": 0,
               "keepersTotal": 1,
@@ -323,7 +327,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
                       "tags":[],
                       "hashtags":[],
                       "summary":{},
-                      "siteName":"kifi.com",
+                      "siteName":"Kifi",
                       "libraryId":"l7jlKlnA36Su"
                     },
                     {
@@ -483,7 +487,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
                                       "tags":[],
                                       "hashtags":[],
                                       "summary":{},
-                                      "siteName":"kifi.com",
+                                      "siteName":"Kifi",
                                       "libraryId":"lzmfsKLJyou6"
                                     }
                                   ],

@@ -1,6 +1,7 @@
 package com.keepit.search.index
 
 import com.keepit.common.zookeeper.ServiceDiscovery
+import com.keepit.rover.RoverServiceClient
 import com.keepit.search.index.graph.library.membership.{ LibraryMembershipIndexerPluginImpl, LibraryMembershipIndexerPlugin, LibraryMembershipIndexer }
 import net.codingwell.scalaguice.ScalaModule
 import com.keepit.common.amazon.MyInstanceInfo
@@ -25,6 +26,8 @@ import java.io.File
 import com.keepit.search.index.graph.library.{ LibraryIndexerPluginImpl, LibraryIndexerPlugin, LibraryIndexer }
 import com.keepit.search.index.graph.keep.{ KeepIndexer, KeepIndexerPluginImpl, KeepIndexerPlugin, ShardedKeepIndexer }
 import com.keepit.common.util.Configuration
+
+import scala.concurrent.ExecutionContext
 
 trait IndexModule extends ScalaModule with Logging {
 
@@ -102,20 +105,6 @@ trait IndexModule extends ScalaModule with Logging {
       throw new Exception("no shard spec found")
     }
     ActiveShards(shards)
-  }
-
-  @Singleton
-  @Provides
-  def shardedArticleIndexer(activeShards: ActiveShards, articleStore: ArticleStore, backup: IndexStore, airbrake: AirbrakeNotifier, shoeboxClient: ShoeboxServiceClient, conf: Configuration, serviceDisovery: ServiceDiscovery): ShardedArticleIndexer = {
-    val version = IndexerVersionProviders.Article.getVersionByStatus(serviceDisovery)
-    def articleIndexer(shard: Shard[NormalizedURI]) = {
-      val dir = getIndexDirectory("index.article.directory", shard, version, backup, conf, IndexerVersionProviders.Article.getVersionsForCleanup())
-      log.info(s"storing ArticleIndex${indexNameSuffix(shard, version)} in $dir")
-      new ArticleIndexer(dir, articleStore, airbrake)
-    }
-
-    val indexShards = activeShards.local.map { shard => (shard, articleIndexer(shard)) }
-    new ShardedArticleIndexer(indexShards.toMap, articleStore, airbrake, shoeboxClient)
   }
 
   @Singleton
@@ -207,6 +196,19 @@ trait IndexModule extends ScalaModule with Logging {
 
     val indexShards = activeShards.local.map { shard => (shard, keepIndexer(shard)) }
     new ShardedKeepIndexer(indexShards.toMap, shoeboxClient, airbrake)
+  }
+
+  @Provides @Singleton
+  def shardedArticleIndexer(activeShards: ActiveShards, backup: IndexStore, shoebox: ShoeboxServiceClient, rover: RoverServiceClient, airbrake: AirbrakeNotifier, conf: Configuration, serviceDiscovery: ServiceDiscovery, executionContext: ExecutionContext): ShardedArticleIndexer = {
+    val version = IndexerVersionProviders.Article.getVersionByStatus(serviceDiscovery)
+    def articleIndexer(shard: Shard[NormalizedURI]) = {
+      val dir = getIndexDirectory("index.article.directory", shard, version, backup, conf, IndexerVersionProviders.Article.getVersionsForCleanup())
+      log.info(s"storing ArticleIndex ${indexNameSuffix(shard, version)} in $dir")
+      new ArticleIndexer(dir, shard, airbrake)
+    }
+
+    val indexShards = activeShards.local.map { shard => (shard, articleIndexer(shard)) }
+    new ShardedArticleIndexer(indexShards.toMap, shoebox, rover, airbrake, executionContext)
   }
 }
 

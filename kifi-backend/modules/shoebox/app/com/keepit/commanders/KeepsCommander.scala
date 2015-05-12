@@ -91,7 +91,6 @@ class KeepsCommander @Inject() (
     userExperimentRepo: UserExperimentRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
     hashtagTypeahead: HashtagTypeahead,
-    hashtagCommander: HashtagCommander,
     keepDecorator: KeepDecorator,
     twitterPublishingCommander: TwitterPublishingCommander,
     facebookPublishingCommander: FacebookPublishingCommander,
@@ -432,6 +431,17 @@ class KeepsCommander @Inject() (
     }
   }
 
+  def updateKeepNote(userId: Id[User], oldKeep: Keep, newNote: String)(implicit context: HeimdalContext) = {
+    val noteToPersist = Some(newNote.trim).filter(_.nonEmpty)
+    if (noteToPersist != oldKeep.note) {
+      val updatedKeep = oldKeep.copy(note = noteToPersist)
+      val hashtagNamesToPersist = Hashtags.findAllHashtagNames(noteToPersist.getOrElse(""))
+      db.readWrite { implicit s =>
+        persistHashtagsForKeep(userId, updatedKeep, hashtagNamesToPersist.toSeq)(s, context)
+      }
+    }
+  }
+
   def editKeepTagBulk(collectionId: ExternalId[Collection], selection: BulkKeepSelection, userId: Id[User], isAdd: Boolean)(implicit context: HeimdalContext): Int = {
     db.readOnlyReplica { implicit s =>
       collectionRepo.getByUserAndExternalId(userId, collectionId)
@@ -469,7 +479,7 @@ class KeepsCommander @Inject() (
           tagged.foreach { ktc =>
             val targetKeep = keepsById(ktc.keepId)
             val noteStr = targetKeep.note.getOrElse("")
-            val persistedNote = Some(hashtagCommander.addNewHashtagsToString(noteStr, Seq(collection.name))).filter(_.nonEmpty)
+            val persistedNote = Some(Hashtags.addNewHashtagsToString(noteStr, Seq(collection.name))).filter(_.nonEmpty)
             if (persistedNote != targetKeep.note) {
               val updatedKeep = keepRepo.save(targetKeep.copy(note = persistedNote)) // notify keep index
               libraryAnalytics.taggedPage(updatedCollection, updatedKeep, context, taggingAt)
@@ -502,7 +512,7 @@ class KeepsCommander @Inject() (
       removed.foreach { ktc =>
         val targetKeep = keepsById(ktc.keepId)
         val editedNote = targetKeep.note.map { noteStr =>
-          hashtagCommander.removeHashtagsFromString(noteStr, Set(collection.name))
+          Hashtags.removeHashtagsFromString(noteStr, Set(collection.name))
         }.filterNot(_.isEmpty)
         val updatedKeep = keepRepo.save(targetKeep.copy(note = editedNote)) // notify keep index
         libraryAnalytics.untaggedPage(collection, updatedKeep, context, removedAt)
@@ -637,14 +647,14 @@ class KeepsCommander @Inject() (
 
     // go through note field and find all hashtags
     val keepNote = keep.note.getOrElse("")
-    val hashtagsInNote = hashtagCommander.findAllHashtagNames(keepNote)
+    val hashtagsInNote = Hashtags.findAllHashtagNames(keepNote)
     val hashtagsToPersistSet = selectedTagNames.toSet
 
     // find hashtags to remove & to append
     val hashtagsToRemove = hashtagsInNote.filterNot(hashtagsToPersistSet.contains(_))
     val hashtagsToAppend = selectedTagNames.filterNot(hashtagsInNote.contains(_))
-    val noteWithHashtagsRemoved = hashtagCommander.removeHashtagNamesFromString(keepNote, hashtagsToRemove.toSet)
-    val noteWithHashtagsAppended = hashtagCommander.appendHashtagNamesToString(noteWithHashtagsRemoved, hashtagsToAppend)
+    val noteWithHashtagsRemoved = Hashtags.removeHashtagNamesFromString(keepNote, hashtagsToRemove.toSet)
+    val noteWithHashtagsAppended = Hashtags.appendHashtagNamesToString(noteWithHashtagsRemoved, hashtagsToAppend)
     val finalNote = Some(noteWithHashtagsAppended.trim).filterNot(_.isEmpty)
 
     val updatedKeep = keepRepo.save(keep.copy(note = finalNote))

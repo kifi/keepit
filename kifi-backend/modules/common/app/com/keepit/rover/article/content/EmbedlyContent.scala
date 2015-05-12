@@ -5,8 +5,10 @@ import com.keepit.common.store.ImagePath
 import com.keepit.common.time.DateTimeJsonFormat
 import com.keepit.model._
 import com.keepit.rover.article.EmbedlyArticle
+import com.keepit.rover.model.RoverMedia
 import com.kifi.macros.json
 import org.joda.time.DateTime
+import org.jsoup.Jsoup
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
@@ -15,10 +17,10 @@ class EmbedlyContent(val json: JsValue) extends ArticleContent[EmbedlyArticle] {
   def destinationUrl = parsed.url
   def title = parsed.title
   def description = parsed.description
-  def content = parsed.content // todo(Léo): needs post-processing to eliminate html tags
+  def content = if (contentType.exists(_ == "html")) rawContent.map(Jsoup.parse(_).body().text()) else rawContent
   def keywords = parsed.keywords.map(_.name)
   def authors = parsed.authors
-  def mediaType = parsed.`type`
+  def contentType = parsed.`type`
   def publishedAt = parsed.published
 
   def isSafe = parsed.safe
@@ -28,6 +30,7 @@ class EmbedlyContent(val json: JsValue) extends ArticleContent[EmbedlyArticle] {
   def entities = parsed.entities
   def faviconUrl = parsed.favicon_url
   def media = parsed.media
+  def rawContent = parsed.content
 }
 
 @json case class EmbedlyEntity(name: String, count: Int)
@@ -42,6 +45,16 @@ object EmbedlyMedia {
     (__ \ 'height).read[Int] and
     (__ \ 'url).readNullable[String]
   )(EmbedlyMedia.apply _)
+
+  implicit def toRoverMedia(media: EmbedlyMedia): RoverMedia = {
+    RoverMedia(
+      media.mediaType,
+      media.html,
+      media.width,
+      media.height,
+      media.url
+    )
+  }
 }
 
 case class EmbedlyImage(

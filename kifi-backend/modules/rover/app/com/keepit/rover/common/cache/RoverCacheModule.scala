@@ -6,9 +6,9 @@ import com.keepit.eliza.model.UserThreadStatsForUserIdCache
 import com.keepit.graph.model._
 import com.keepit.model._
 import com.keepit.model.cache.UserSessionViewExternalIdCache
-import com.keepit.rover.commanders.ArticleInfoUriCache
+import com.keepit.rover.article.ArticleInfoUriCache
 import com.keepit.rover.document.{ RecentFetches, RecentFetchesDomainCache }
-import com.keepit.rover.model.RoverHttpProxyAllCache
+import com.keepit.rover.model.{ RoverArticleImagesCache, RoverArticleSummaryCache, RoverHttpProxyAllCache }
 import com.keepit.rover.sensitivity.UriSensitivityCache
 import com.keepit.social.BasicUserUserIdCache
 import com.keepit.search.{ ArticleSearchResultCache, InitialSearchIdCache, ActiveExperimentsCache }
@@ -195,4 +195,12 @@ case class RoverCacheModule(cachePluginModules: CachePluginModule*) extends Cach
   @Provides @Singleton
   def recentFetchesDomainCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
     new RecentFetchesDomainCache(stats, accessLog, (outerRepo, RecentFetches.recencyWindow))
+
+  @Provides @Singleton
+  def roverArticleSummaryCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new RoverArticleSummaryCache(stats, accessLog, (outerRepo, 30 days))
+
+  @Provides @Singleton
+  def roverArticleImagesCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new RoverArticleImagesCache(stats, accessLog, (outerRepo, 30 days))
 }

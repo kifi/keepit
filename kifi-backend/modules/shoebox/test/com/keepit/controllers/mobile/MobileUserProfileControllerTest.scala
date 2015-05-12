@@ -60,14 +60,14 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
             user4 -> user1,
             user2 -> user3).saved
 
-          val user1secretLib = libraries(3).map(_.withUser(user1).secret()).saved.head.savedFollowerMembership(user2)
+          val user1secretLib = libraries(3).map(_.withUser(user1).secret().withKeepCount(3)).saved.head.savedFollowerMembership(user2)
 
           val user1lib = library().withUser(user1).published().saved.savedFollowerMembership(user5, user4)
           user1lib.visibility === LibraryVisibility.PUBLISHED
 
-          val user3lib = library().withUser(user3).published().saved
-          val user5lib = library().withUser(user5).published().saved.savedFollowerMembership(user1)
-          membership().withLibraryFollower(library().withUser(user5).published().saved, user1).unlisted().saved
+          val user3lib = library().withUser(user3).published().withKeepCount(2).saved
+          val user5lib = library().withUser(user5).published().withKeepCount(4).saved.savedFollowerMembership(user1)
+          membership().withLibraryFollower(library().withUser(user5).published().withKeepCount(1).saved, user1).unlisted().saved
 
           keeps(2).map(_.withLibrary(user1secretLib)).saved
           keeps(3).map(_.withLibrary(user1lib)).saved
@@ -93,6 +93,7 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
               "username": "GDubs",
               "numLibraries":1,
               "numFollowedLibraries": 1,
+              "numCollabLibraries": 0,
               "numKeeps": 5,
               "numConnections": 3,
               "numFollowers": 2,
@@ -115,6 +116,7 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
               "isFriend": true,
               "numLibraries":2,
               "numFollowedLibraries": 1,
+              "numCollabLibraries": 1,
               "numKeeps": 5,
               "numConnections": 3,
               "numFollowers": 3,
@@ -136,6 +138,7 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
               "username": "GDubs",
               "numLibraries":4,
               "numFollowedLibraries": 2,
+              "numCollabLibraries": 0,
               "numKeeps": 5,
               "numConnections": 3,
               "numFollowers": 3,
@@ -175,9 +178,18 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
                   "slug":"catching-jellyfish",
                   "kind" : "user_created",
                   "visibility" : "published",
+                  "owner": {
+                    "id":"${user1.externalId.id}",
+                    "firstName":"Spongebob",
+                    "lastName":"Squarepants",
+                    "pictureName":"0.jpg",
+                    "username":"spongebob"
+                  },
                   "numKeeps" : 0,
                   "numFollowers" : 0,
                   "followers": [],
+                  "numCollaborators":0,
+                  "collaborators":[],
                   "lastKept": ${lib2.createdAt.getMillis},
                   "listed": true
                 },
@@ -190,9 +202,18 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
                   "slug":"krabby-patty",
                   "kind" : "user_created",
                   "visibility" : "secret",
+                  "owner": {
+                    "id":"${user1.externalId.id}",
+                    "firstName":"Spongebob",
+                    "lastName":"Squarepants",
+                    "pictureName":"0.jpg",
+                    "username":"spongebob"
+                  },
                   "numKeeps" : 0,
                   "numFollowers" : 0,
                   "followers": [],
+                  "numCollaborators": 0,
+                  "collaborators": [],
                   "lastKept": ${lib1.createdAt.getMillis},
                   "listed": true
                 }

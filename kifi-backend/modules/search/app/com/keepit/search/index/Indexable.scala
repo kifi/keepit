@@ -89,6 +89,16 @@ object Indexable {
       }
     }
   }
+
+  def getFieldDecoder(decoders: Map[String, FieldDecoder])(fieldName: String): FieldDecoder = {
+    decoders.get(fieldName) match {
+      case Some(decoder) => decoder
+      case _ => fieldName match {
+        case Indexer.idValueFieldName => DocUtil.IdValueFieldDecoder
+        case _ => DocUtil.TextFieldDecoder
+      }
+    }
+  }
 }
 
 trait Indexable[T, S] extends Logging {

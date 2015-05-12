@@ -1,9 +1,11 @@
 package com.keepit.shoebox
 
 import com.keepit.abook.ProdABookServiceClientModule
+import com.keepit.commanders.emails.activity.ProdActivityEmailQueueModule
 import com.keepit.common.cache.{ EhCacheCacheModule, MemcachedCacheModule, ShoeboxCacheModule }
 import com.keepit.common.controller.ProdShoeboxUserActionsModule
 import com.keepit.common.seo.{ ProdSiteMapGeneratorModule }
+import com.keepit.common.store.ShoeboxProdStoreModule
 import com.keepit.controllers.internal.ProdDataPipelineExecutorModule
 import com.keepit.cortex.ProdCortexServiceClientModule
 import com.keepit.eliza.ProdElizaServiceClientModule
@@ -14,7 +16,6 @@ import com.keepit.search.ProdSearchServiceClientModule
 import com.keepit.social.ProdShoeboxSecureSocialModule
 import com.keepit.common.analytics.ProdAnalyticsModule
 import com.keepit.common.mail.ProdMailModule
-import com.keepit.common.store.ShoeboxDevStoreModule
 import com.keepit.inject.CommonProdModule
 import com.keepit.common.integration.ProdReaperModule
 import com.keepit.scraper.{ ProdScraperHealthMonitorModule, ProdScrapeSchedulerModule, ProdScraperServiceClientModule }
@@ -30,9 +31,10 @@ case class ShoeboxProdModule() extends ShoeboxModule with CommonProdModule {
   val mailModule = ProdMailModule()
   val reaperModule = ProdReaperModule()
   val siteMapModule = ProdSiteMapGeneratorModule()
-  val storeModule = ShoeboxDevStoreModule()
+  val storeModule = ShoeboxProdStoreModule()
   val sqsModule = ProdSimpleQueueModule()
   val normalizationQueueModule = ProdNormalizationUpdateJobQueueModule()
+  val activityEmailActorModule = ProdActivityEmailQueueModule()
 
   // Shoebox Functional Modules
   val analyticsModule = ProdAnalyticsModule()

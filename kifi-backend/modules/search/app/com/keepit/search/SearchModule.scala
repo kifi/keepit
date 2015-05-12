@@ -2,10 +2,11 @@ package com.keepit.search
 
 import com.keepit.common.cache.CacheModule
 import com.keepit.common.controller.UserActionsModule
-import com.keepit.common.store.StoreModule
 import com.keepit.eliza.ElizaServiceClientModule
 import com.keepit.heimdal.HeimdalServiceClientModule
 import com.keepit.inject.{ CommonServiceModule, ConfigurationModule }
+import com.keepit.rover.RoverServiceClientModule
+import com.keepit.search.common.store.SearchStoreModule
 import com.keepit.search.index.IndexModule
 import com.keepit.search.tracking.TrackingModule
 import com.keepit.shoebox.ShoeboxServiceClientModule
@@ -15,14 +16,14 @@ import com.keepit.common.service.ServiceType
 
 case class SearchServiceTypeModule() extends ServiceTypeModule {
   val serviceType = ServiceType.SEARCH
-  val servicesToListenOn = ServiceType.SHOEBOX :: ServiceType.HEIMDAL :: ServiceType.ELIZA :: Nil
+  val servicesToListenOn = ServiceType.SHOEBOX :: ServiceType.HEIMDAL :: ServiceType.ELIZA :: ServiceType.ROVER :: Nil
 }
 
 trait SearchModule extends ConfigurationModule with CommonServiceModule {
 
   // Common Functional Modules
   val cacheModule: CacheModule
-  val storeModule: StoreModule
+  val storeModule: SearchStoreModule
   val userActionsModule: UserActionsModule
 
   // Search Functional Modules
@@ -36,6 +37,7 @@ trait SearchModule extends ConfigurationModule with CommonServiceModule {
   val shoeboxServiceClientModule: ShoeboxServiceClientModule
   val elizaServiceClientModule: ElizaServiceClientModule
   val heimdalServiceClientModule: HeimdalServiceClientModule
+  val roverServiceClientModule: RoverServiceClientModule
 
   val secureSocialModule = RemoteSecureSocialModule()
   val searchConfigModule = SearchConfigModule()

@@ -56,6 +56,18 @@ class KeepRepoTest extends Specification with ShoeboxTestInjector {
         }
       }
     }
+
+    "most recent from followed libraries" in { //tests only that the query interpolates correctly
+      withDb() { implicit injector =>
+        db.readWrite { implicit s =>
+          val user1 = user().saved
+          inject[LibraryMembershipRepo]
+          inject[KeepRepo].getRecentKeepsFromFollowedLibraries(user1.id.get, 10)
+          1 === 1
+        }
+      }
+    }
+
   }
 
 }

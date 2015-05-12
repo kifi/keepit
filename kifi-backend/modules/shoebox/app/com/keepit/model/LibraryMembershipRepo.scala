@@ -39,8 +39,12 @@ trait LibraryMembershipRepo extends Repo[LibraryMembership] with RepoWithDelete[
   def mostMembersSince(count: Int, since: DateTime)(implicit session: RSession): Seq[(Id[Library], Int)]
   def percentGainSince(since: DateTime, totalMoreThan: Int, recentMoreThan: Int, count: Int)(implicit session: RSession): Seq[(Id[Library], Int, Int, Double)]
   def mostMembersSinceForUser(count: Int, since: DateTime, ownerId: Id[User])(implicit session: RSession): Seq[(Id[Library], Int)]
-  def countWithUserIdAndAccess(userId: Id[User], access: LibraryAccess)(implicit session: RSession): Int
+  def countNonTrivialLibrariesWithUserIdAndAccess(userId: Id[User], access: LibraryAccess, minKeepCount: Int = 1)(implicit session: RSession): Int
   def countsWithUserIdAndAccesses(userId: Id[User], accesses: Set[LibraryAccess])(implicit session: RSession): Map[LibraryAccess, Int]
+
+  //
+  // Profile Library Repo functions
+  //
   def getFollowersForAnonymous(ownerId: Id[User])(implicit session: RSession): Seq[Id[User]]
   def getFollowersForOwner(ownerId: Id[User])(implicit session: RSession): Seq[Id[User]]
   def getFollowersForOtherUser(ownerId: Id[User], viewerId: Id[User])(implicit session: RSession): Seq[Id[User]]
@@ -76,7 +80,8 @@ class LibraryMembershipRepoImpl @Inject() (
     def lastEmailSent = column[Option[DateTime]]("last_email_sent", O.Nullable)
     def listed = column[Boolean]("listed", O.NotNull)
     def lastJoinedAt = column[Option[DateTime]]("last_joined_at", O.Nullable)
-    def * = (id.?, libraryId, userId, access, createdAt, updatedAt, state, seq, showInSearch, listed, lastViewed, lastEmailSent, lastJoinedAt) <> ((LibraryMembership.apply _).tupled, LibraryMembership.unapply)
+    def subscribedToUpdates = column[Boolean]("subscribed_to_updates", O.NotNull)
+    def * = (id.?, libraryId, userId, access, createdAt, updatedAt, state, seq, showInSearch, listed, lastViewed, lastEmailSent, lastJoinedAt, subscribedToUpdates) <> ((LibraryMembership.apply _).tupled, LibraryMembership.unapply)
   }
 
   implicit val getLibraryResult = libraryRepo.getLibraryResult
@@ -234,7 +239,7 @@ class LibraryMembershipRepoImpl @Inject() (
       val existingAccessMap = sql"""select access, count(*) from library_membership where library_id=$libraryId and state='active' group by access""".as[(String, Int)].list
         .map(t => (LibraryAccess(t._1), t._2))
         .toMap
-      val counts: Map[LibraryAccess, Int] = LibraryAccess.getAll.map(access => access -> existingAccessMap.getOrElse(access, 0)).toMap
+      val counts: Map[LibraryAccess, Int] = LibraryAccess.all.map(access => access -> existingAccessMap.getOrElse(access, 0)).toMap
       CountWithLibraryIdByAccess.fromMap(counts)
     }
   }
@@ -310,9 +315,12 @@ class LibraryMembershipRepoImpl @Inject() (
     countWithLibraryIdByAccessCache.remove(CountWithLibraryIdByAccessKey(libMem.libraryId))
   }
 
-  def countWithUserIdAndAccess(userId: Id[User], access: LibraryAccess)(implicit session: RSession): Int = {
+  def countNonTrivialLibrariesWithUserIdAndAccess(userId: Id[User], access: LibraryAccess, minKeepCount: Int = 1)(implicit session: RSession): Int = {
     libraryMembershipCountCache.getOrElse(LibraryMembershipCountKey(userId, access)) {
-      StaticQuery.queryNA[Int](s"select count(*) from library_membership where user_id = $userId and access = '${access.value}' and state = 'active'").firstOption.getOrElse(0)
+      StaticQuery.queryNA[Int](
+        s"select count(*) from library_membership lm, library l where " +
+          s"lm.library_id = l.id and l.kind = 'user_created' and l.last_kept is not null and l.keep_count > $minKeepCount and l.state = 'active' and lm.user_id = $userId and lm.access = '${access.value}' and lm.state = 'active'")
+        .firstOption.getOrElse(0)
     }
   }
 

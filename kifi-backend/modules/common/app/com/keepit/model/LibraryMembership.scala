@@ -25,7 +25,8 @@ case class LibraryMembership(
     listed: Boolean = true, // whether library appears on user's profile
     lastViewed: Option[DateTime] = None,
     lastEmailSent: Option[DateTime] = None,
-    lastJoinedAt: Option[DateTime] = None) extends ModelWithState[LibraryMembership] with ModelWithSeqNumber[LibraryMembership] {
+    lastJoinedAt: Option[DateTime] = None,
+    subscribedToUpdates: Boolean = false) extends ModelWithState[LibraryMembership] with ModelWithSeqNumber[LibraryMembership] {
 
   def withId(id: Id[LibraryMembership]): LibraryMembership = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime): LibraryMembership = this.copy(updatedAt = now)
@@ -36,6 +37,8 @@ case class LibraryMembership(
   def canInsert: Boolean = access == LibraryAccess.OWNER || access == LibraryAccess.READ_WRITE || access == LibraryAccess.READ_INSERT
   def canWrite: Boolean = access == LibraryAccess.OWNER || access == LibraryAccess.READ_WRITE
   def isOwner: Boolean = access == LibraryAccess.OWNER
+  def isCollaborator: Boolean = access == LibraryAccess.READ_WRITE
+  def isFollower: Boolean = access == LibraryAccess.READ_ONLY
 
   def toLibraryMembershipView: LibraryMembershipView =
     LibraryMembershipView(id = id.get, libraryId = libraryId, userId = userId, access = access, createdAt = createdAt, state = state, seq = seq, showInSearch = showInSearch)
@@ -55,13 +58,18 @@ object LibraryMembership {
     (__ \ 'listed).format[Boolean] and
     (__ \ 'lastViewed).formatNullable[DateTime] and
     (__ \ 'lastEmailSent).formatNullable[DateTime] and
-    (__ \ 'lastJoinedAt).formatNullable[DateTime]
+    (__ \ 'lastJoinedAt).formatNullable[DateTime] and
+    (__ \ 'subscribedToUpdates).format[Boolean]
   )(LibraryMembership.apply, unlift(LibraryMembership.unapply))
 }
 
 object LibraryMembershipStates extends States[LibraryMembership]
 
-sealed abstract class LibraryAccess(val value: String, val priority: Int)
+sealed abstract class LibraryAccess(val value: String, val priority: Int) {
+  def isHigherAccess(x: LibraryAccess): Boolean = {
+    this.priority > x.priority
+  }
+}
 
 object LibraryAccess {
   case object READ_ONLY extends LibraryAccess("read_only", 0)
@@ -76,7 +84,7 @@ object LibraryAccess {
     def compare(x: LibraryAccess, y: LibraryAccess): Int = x.priority compare y.priority
   }
 
-  def apply(str: String) = {
+  def apply(str: String): LibraryAccess = {
     str match {
       case READ_ONLY.value => READ_ONLY
       case READ_INSERT.value => READ_INSERT
@@ -85,7 +93,8 @@ object LibraryAccess {
     }
   }
 
-  def getAll() = Seq(OWNER, READ_WRITE, READ_INSERT, READ_ONLY)
+  def all: Seq[LibraryAccess] = Seq(OWNER, READ_WRITE, READ_INSERT, READ_ONLY)
+  def collaborativePermissions: Set[LibraryAccess] = Set(OWNER, READ_WRITE, READ_INSERT)
 }
 
 case class CountWithLibraryIdByAccess(readOnly: Int, readInsert: Int, readWrite: Int, owner: Int)

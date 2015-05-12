@@ -273,6 +273,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
 
         val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user1.id.get, visibility = LibraryVisibility.DISCOVERABLE, slug = LibrarySlug("asdf"), memberCount = 1))
         libraryMembershipRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = user1.id.get, access = LibraryAccess.OWNER))
+        libraryMembershipRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = user2.id.get, access = LibraryAccess.READ_WRITE))
 
         val bookmark1 = keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id.get,
           uriId = uri1.id.get, source = keeper, createdAt = t1.plusMinutes(3), keptAt = t1.plusMinutes(3), state = KeepStates.ACTIVE,
@@ -292,14 +293,14 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
       }
       keeps.size === 2
 
-      val path = com.keepit.controllers.mobile.routes.MobileKeepsController.allKeeps(before = None, after = None, collection = None, helprank = None).url
+      val path = com.keepit.controllers.mobile.routes.MobileKeepsController.allKeepsV1(before = None, after = None, collection = None, helprank = None).url
       path === "/m/1/keeps/all"
       inject[FakeSearchServiceClient] === inject[FakeSearchServiceClient]
       inject[FakeSearchServiceClient].setKeepers((Seq(bookmark1.userId, user2.id.get), 3), (Seq(bookmark2.userId), 1))
 
       inject[FakeUserActionsHelper].setUser(user1)
       val request = FakeRequest("GET", path)
-      val result = inject[MobileKeepsController].allKeeps(
+      val result = inject[MobileKeepsController].allKeepsV1(
         before = None,
         after = None,
         collectionOpt = None,
@@ -342,7 +343,10 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
             "isPrivate":false,
             "createdAt":"${bookmark1.keptAt.toStandardTimeString}",
             "others":0,
-            "keeps":[{"id":"${bookmark1.externalId}", "mine":true, "removable":true, "visibility":"${bookmark1.visibility.value}", "libraryId":"${pubLibId1.id}"}],
+            "keeps":[
+              {"id":"${bookmark1.externalId}", "mine":true, "removable":true, "visibility":"${bookmark1.visibility.value}", "libraryId":"${pubLibId1.id}"},
+              {"id":"${bookmark3.externalId}", "mine":false, "removable":true, "visibility":"${bookmark3.visibility.value}", "libraryId":"${pubLibId1.id}"}
+            ],
             "keepers":[],
             "keepersOmitted": 0,
             "keepersTotal": 1,
@@ -373,14 +377,14 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
       }
       keeps.size === keeps1.size
 
-      val path = com.keepit.controllers.mobile.routes.MobileKeepsController.allKeeps(before = None, after = None, collection = None, helprank = Some("click")).url
+      val path = com.keepit.controllers.mobile.routes.MobileKeepsController.allKeepsV1(before = None, after = None, collection = None, helprank = Some("click")).url
       path === "/m/1/keeps/all?helprank=click"
       inject[FakeSearchServiceClient] === inject[FakeSearchServiceClient]
       inject[FakeSearchServiceClient].setKeepers((Seq(keeps1(1).userId, u2.id.get), 3), (Seq(keeps1(0).userId), 1))
 
       inject[FakeUserActionsHelper].setUser(u1)
       val request = FakeRequest("GET", path)
-      val result = inject[MobileKeepsController].allKeeps(
+      val result = inject[MobileKeepsController].allKeepsV1(
         before = None,
         after = None,
         collectionOpt = None,
@@ -414,7 +418,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
                       "tags":[],
                       "hashtags":[],
                       "summary":{},
-                      "siteName":"kifi.com",
+                      "siteName":"Kifi",
                       "libraryId":"l7jlKlnA36Su"
                     },
                     {
@@ -453,13 +457,13 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
 
       val (u1: User, u2: User, _, keeps1: Seq[Keep], _, _) = helpRankSetup(heimdal, db)
 
-      val path = com.keepit.controllers.mobile.routes.MobileKeepsController.allKeeps(before = Some(keeps1(1).externalId.toString), after = None, collection = None, helprank = Some("click")).url
+      val path = com.keepit.controllers.mobile.routes.MobileKeepsController.allKeepsV1(before = Some(keeps1(1).externalId.toString), after = None, collection = None, helprank = Some("click")).url
       path === s"/m/1/keeps/all?before=${keeps1(1).externalId.toString}&helprank=click"
       inject[FakeSearchServiceClient] === inject[FakeSearchServiceClient]
       inject[FakeSearchServiceClient].setKeepers((Seq(keeps1(1).userId, u2.id.get), 3))
       inject[FakeUserActionsHelper].setUser(u1)
       val request = FakeRequest("GET", path)
-      val result = inject[MobileKeepsController].allKeeps(
+      val result = inject[MobileKeepsController].allKeepsV1(
         before = Some(keeps1(1).externalId.toString),
         after = None,
         collectionOpt = None,
@@ -550,7 +554,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
       inject[FakeSearchServiceClient].setKeepers((Seq(bookmark1.userId), 1), (Seq(bookmark2.userId), 1))
 
       val request = FakeRequest("GET", s"/m/1/keeps/all?after=${bookmark1.externalId.toString}")
-      val result = inject[MobileKeepsController].allKeeps(
+      val result = inject[MobileKeepsController].allKeepsV1(
         before = None,
         after = Some(bookmark1.externalId.toString),
         collectionOpt = None,
@@ -830,7 +834,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
       }
     }
 
-    "edit note" in {
+    "edit note v1" in {
       withDb(controllerTestModules: _*) { implicit injector =>
         val (user, keep1, keepWithTags, keepInactive) = db.readWrite { implicit session =>
           val user = userRepo.save(User(firstName = "Eishay", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
@@ -850,17 +854,17 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
           (user, keep1, keep2, keepInactive)
         }
 
-        def editKeepInfo(user: User, keep: Keep, body: JsObject): Future[Result] = {
+        def editKeepInfoV1(user: User, keep: Keep, body: JsObject): Future[Result] = {
           inject[FakeUserActionsHelper].setUser(user)
-          val path = com.keepit.controllers.mobile.routes.MobileKeepsController.editKeepInfo(keep.externalId).url
+          val path = com.keepit.controllers.mobile.routes.MobileKeepsController.editKeepInfoV1(keep.externalId).url
           val request = FakeRequest("POST", path).withBody(body)
-          inject[MobileKeepsController].editKeepInfo(keep.externalId)(request)
+          inject[MobileKeepsController].editKeepInfoV1(keep.externalId)(request)
         }
 
-        val testInactiveKeep = editKeepInfo(user, keepInactive, Json.obj("title" -> "blahablhablhahbla"))
+        val testInactiveKeep = editKeepInfoV1(user, keepInactive, Json.obj("title" -> "blahablhablhahbla"))
         status(testInactiveKeep) must equalTo(NOT_FOUND)
 
-        val testEditTitle = editKeepInfo(user, keep1, Json.obj("title" -> ""))
+        val testEditTitle = editKeepInfoV1(user, keep1, Json.obj("title" -> ""))
         status(testEditTitle) must equalTo(NO_CONTENT)
         db.readOnlyMaster { implicit s =>
           val currentKeep = keepRepo.get(keep1.externalId)
@@ -868,7 +872,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
           currentKeep.note === None
         }
 
-        val testEditNote = editKeepInfo(user, keep1, Json.obj("note" -> "first comment!"))
+        val testEditNote = editKeepInfoV1(user, keep1, Json.obj("note" -> "first comment!"))
         status(testEditNote) must equalTo(NO_CONTENT)
         db.readOnlyMaster { implicit s =>
           val currentKeep = keepRepo.get(keep1.externalId)
@@ -876,7 +880,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
           currentKeep.note === Some("first comment!")
         }
 
-        val testEditBoth = editKeepInfo(user, keep1, Json.obj("title" -> "a real keep", "note" -> "a real note"))
+        val testEditBoth = editKeepInfoV1(user, keep1, Json.obj("title" -> "a real keep", "note" -> "a real note"))
         status(testEditBoth) must equalTo(NO_CONTENT)
         db.readOnlyMaster { implicit s =>
           val currentKeep = keepRepo.get(keep1.externalId)
@@ -884,7 +888,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
           currentKeep.note === Some("a real note")
         }
 
-        val testEditNothing = editKeepInfo(user, keep1, Json.obj())
+        val testEditNothing = editKeepInfoV1(user, keep1, Json.obj())
         status(testEditNothing) must equalTo(NO_CONTENT)
         db.readOnlyMaster { implicit s =>
           val currentKeep = keepRepo.get(keep1.externalId)
@@ -893,7 +897,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
           keepToCollectionRepo.count === 2
         }
 
-        val testEditTags1 = editKeepInfo(user, keep1, Json.obj("tags" -> Seq("a", "b", "c")))
+        val testEditTags1 = editKeepInfoV1(user, keep1, Json.obj("tags" -> Seq("a", "b", "c")))
         status(testEditTags1) must equalTo(NO_CONTENT)
         db.readOnlyMaster { implicit s =>
           val currentKeep = keepRepo.get(keep1.externalId)
@@ -903,7 +907,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
           collectionRepo.count(user.id.get) === 5
         }
 
-        val testEditTags2 = editKeepInfo(user, keep1, Json.obj("note" -> "a real [#note]", "tags" -> Seq("a", "b", "d", "e")))
+        val testEditTags2 = editKeepInfoV1(user, keep1, Json.obj("note" -> "a real [#note]", "tags" -> Seq("a", "b", "d", "e")))
         status(testEditTags2) must equalTo(NO_CONTENT)
         db.readOnlyMaster { implicit s =>
           val currentKeep = keepRepo.get(keep1.externalId)
@@ -913,7 +917,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
           collectionRepo.count(user.id.get) === 7
         }
 
-        val testEditTags3 = editKeepInfo(user, keep1, Json.obj("note" -> "a real [#note] thing"))
+        val testEditTags3 = editKeepInfoV1(user, keep1, Json.obj("note" -> "a real [#note] thing"))
         status(testEditTags3) must equalTo(NO_CONTENT)
         db.readOnlyMaster { implicit s =>
           val currentKeep = keepRepo.get(keep1.externalId)
@@ -921,7 +925,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
           currentKeep.note === Some("a real [\\#note] thing [#a] [#b] [#d] [#e]")
         }
 
-        val testEditTags4 = editKeepInfo(user, keep1, Json.obj("note" -> "a real [#note] thing", "tags" -> Seq.empty[String]))
+        val testEditTags4 = editKeepInfoV1(user, keep1, Json.obj("note" -> "a real [#note] thing", "tags" -> Seq.empty[String]))
         status(testEditTags4) must equalTo(NO_CONTENT)
         db.readOnlyMaster { implicit s =>
           val currentKeep = keepRepo.get(keep1.externalId)
@@ -930,14 +934,14 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
         }
 
         // test a keep that already has tags persisted
-        val testEditExistingTags1 = editKeepInfo(user, keepWithTags, Json.obj("note" -> "this keep already has [#tags]"))
+        val testEditExistingTags1 = editKeepInfoV1(user, keepWithTags, Json.obj("note" -> "this keep already has [#tags]"))
         status(testEditExistingTags1) must equalTo(NO_CONTENT)
         db.readOnlyMaster { implicit s =>
           val currentKeep = keepRepo.get(keepWithTags.externalId)
           currentKeep.title === Some("default1")
           currentKeep.note === Some("this keep already has [\\#tags] [#tag1] [#tag2]")
         }
-        val testEditExistingTags2 = editKeepInfo(user, keepWithTags, Json.obj("note" -> "this keep already has [#tags]", "tags" -> Seq("tag1")))
+        val testEditExistingTags2 = editKeepInfoV1(user, keepWithTags, Json.obj("note" -> "this keep already has [#tags]", "tags" -> Seq("tag1")))
         status(testEditExistingTags2) must equalTo(NO_CONTENT)
         db.readOnlyMaster { implicit s =>
           val currentKeep = keepRepo.get(keepWithTags.externalId)
@@ -948,6 +952,83 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
       }
     }
 
+    "edit note v2" in {
+      withDb(controllerTestModules: _*) { implicit injector =>
+        val (user, keep1, keepWithTags, keepInactive) = db.readWrite { implicit session =>
+          val user = userRepo.save(User(firstName = "Eishay", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
+          val lib = library().withUser(user).saved
+          val keep1 = KeepFactory.keep().withUser(user).withLibrary(lib).withTitle("default").saved
+          val keep2 = KeepFactory.keep().withUser(user).withLibrary(lib).withTitle("default1").saved
+          val keepInactive = KeepFactory.keep().withUser(user).withLibrary(lib).withState(KeepStates.INACTIVE).saved
+
+          collectionRepo.count(user.id.get) === 0
+          keepToCollectionRepo.count === 0
+
+          (user, keep1, keep2, keepInactive)
+        }
+
+        def editKeepInfoV2(user: User, keep: Keep, body: JsObject): Future[Result] = {
+          inject[FakeUserActionsHelper].setUser(user)
+          val path = com.keepit.controllers.mobile.routes.MobileKeepsController.editKeepInfoV2(keep.externalId).url
+          val request = FakeRequest("POST", path).withBody(body)
+          inject[MobileKeepsController].editKeepInfoV2(keep.externalId)(request)
+        }
+
+        val testInactiveKeep = editKeepInfoV2(user, keepInactive, Json.obj("title" -> "blahablhablhahbla"))
+        status(testInactiveKeep) must equalTo(NOT_FOUND)
+
+        val testEditTitle = editKeepInfoV2(user, keep1, Json.obj("title" -> ""))
+        status(testEditTitle) must equalTo(NO_CONTENT)
+        db.readOnlyMaster { implicit s =>
+          val currentKeep = keepRepo.get(keep1.externalId)
+          currentKeep.title === None
+          currentKeep.note === None
+        }
+
+        val testEditNote = editKeepInfoV2(user, keep1, Json.obj("note" -> "first comment!"))
+        status(testEditNote) must equalTo(NO_CONTENT)
+        db.readOnlyMaster { implicit s =>
+          val currentKeep = keepRepo.get(keep1.externalId)
+          currentKeep.title === None
+          currentKeep.note === Some("first comment!")
+        }
+
+        val testEditBoth = editKeepInfoV2(user, keep1, Json.obj("title" -> "a real keep", "note" -> "a real note"))
+        status(testEditBoth) must equalTo(NO_CONTENT)
+        db.readOnlyMaster { implicit s =>
+          val currentKeep = keepRepo.get(keep1.externalId)
+          currentKeep.title === Some("a real keep")
+          currentKeep.note === Some("a real note")
+        }
+
+        val testEditNothing = editKeepInfoV2(user, keep1, Json.obj())
+        status(testEditNothing) must equalTo(NO_CONTENT)
+        db.readOnlyMaster { implicit s =>
+          val currentKeep = keepRepo.get(keep1.externalId)
+          currentKeep.title === Some("a real keep")
+          currentKeep.note === Some("a real note")
+          keepToCollectionRepo.count === 0
+        }
+
+        val testEditWithHashtags = editKeepInfoV2(user, keep1, Json.obj("note" -> "a real [#note]"))
+        status(testEditWithHashtags) must equalTo(NO_CONTENT)
+        db.readOnlyMaster { implicit s =>
+          val currentKeep = keepRepo.get(keep1.externalId)
+          currentKeep.title === Some("a real keep")
+          currentKeep.note === Some("a real [#note]")
+          collectionRepo.getHashtagsByKeepId(currentKeep.id.get).map(_.tag) === Set("note")
+        }
+
+        val testEditWithHashtags2 = editKeepInfoV2(user, keep1, Json.obj("note" -> "a real [#note]. #Finally! [#woo[hoo\\]]"))
+        status(testEditWithHashtags2) must equalTo(NO_CONTENT)
+        db.readOnlyMaster { implicit s =>
+          val currentKeep = keepRepo.get(keep1.externalId)
+          currentKeep.title === Some("a real keep")
+          currentKeep.note === Some("a real [#note]. #Finally! [#woo[hoo\\]]")
+          collectionRepo.getHashtagsByKeepId(currentKeep.id.get).map(_.tag) === Set("note", "woo[hoo]")
+        }
+      }
+    }
   }
 
 }
