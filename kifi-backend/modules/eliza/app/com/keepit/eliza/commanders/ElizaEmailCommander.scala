@@ -88,7 +88,7 @@ class ElizaEmailCommander @Inject() (
       pageName = pageName,
       pageTitle = thread.pageTitle.orElse(uriSummary.flatMap(_.article.title)).getOrElse(thread.nUrl.get).abbreviate(80),
       isInitialEmail = isInitialEmail,
-      heroImageUrl = uriSummary.flatMap(_.getImage(idealImageSize).map(_.path.getUrl)),
+      heroImageUrl = uriSummary.flatMap(_.images.get(idealImageSize).map(_.path.getUrl)),
       pageDescription = uriSummary.flatMap(_.article.description.map(_.take(190) + "...")),
       participants = participants.toSeq,
       conversationStarter = starterUser.firstName + " " + starterUser.lastName,
@@ -149,8 +149,8 @@ class ElizaEmailCommander @Inject() (
     val ThreadEmailData(thread, _, allUsers, allUserImageUrls, uriSummary) = threadEmailData
     val invitedByUser = invitedByUserId.flatMap(allUsers.get(_))
     val threadInfoSmall = getThreadEmailInfo(thread, uriSummary, smallImageSize, true, allUsers, allUserImageUrls, invitedByUser, unsubUrl, muteUrl)
-    val bigImageUrl = uriSummary.flatMap(_.getImage(bigImageSize).map(_.path.getUrl))
-    val smallImageUrl = uriSummary.flatMap(_.getImage(smallImageSize).map(_.path.getUrl))
+    val bigImageUrl = uriSummary.flatMap(_.images.get(bigImageSize).map(_.path.getUrl))
+    val smallImageUrl = uriSummary.flatMap(_.images.get(smallImageSize).map(_.path.getUrl))
     val threadInfoBig = threadInfoSmall.copy(heroImageUrl = bigImageUrl orElse smallImageUrl)
     val threadInfoSmallDigest = threadInfoSmall.copy(isInitialEmail = false)
     val threadItems = getExtendedThreadItems(thread, allUsers, allUserImageUrls, fromTime, toTime)

@@ -58,13 +58,19 @@ case class RoverImage(
   path: ImagePath,
   size: ImageSize)
 
-case class RoverUriSummary(article: RoverArticleSummary, images: Set[RoverImage]) {
-  def getImage(idealSize: ImageSize, strictAspectRatio: Boolean = false): Option[RoverImage] = {
+case class RoverImages(images: Set[RoverImage]) {
+  def get(idealSize: ImageSize, strictAspectRatio: Boolean = false): Option[RoverImage] = {
     ProcessedImageSize.pickByIdealImageSize(idealSize, images, strictAspectRatio)(_.size)
   }
+}
 
+object RoverImages {
+  val empty = RoverImages(Set.empty)
+}
+
+case class RoverUriSummary(article: RoverArticleSummary, images: RoverImages) {
   def toUriSummary(idealImageSize: ImageSize)(implicit imageConfig: S3ImageConfig): URISummary = {
-    val image = getImage(idealImageSize)
+    val image = images.get(idealImageSize)
     URISummary(
       imageUrl = image.map(_.path.getUrl),
       title = article.title,
