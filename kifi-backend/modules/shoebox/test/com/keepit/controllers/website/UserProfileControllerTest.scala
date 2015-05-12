@@ -355,6 +355,13 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
                 "slug": "lib1",
                 "kind": "user_created",
                 "visibility": "published",
+                "owner":{
+                  "id":"${user1.externalId.id}",
+                  "firstName":"first",
+                  "lastName":"user",
+                  "pictureName":"0.jpg",
+                  "username":"firstuser"
+                },
                 "numKeeps": 1,
                 "numFollowers": 1,
                 "followers": [
