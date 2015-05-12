@@ -131,7 +131,9 @@ class LibraryController @Inject() (
         LibraryViewAction(Library.publicId(library.id.get)).invokeBlock(request, { _: MaybeUserRequest[_] =>
           val idealSize = imageSize.flatMap { s => Try(ImageSize(s)).toOption }.getOrElse(LibraryController.defaultLibraryImageSize)
           request.userIdOpt foreach { userId => libraryCommander.updateLastView(userId, library.id.get) }
-          val showKeepCreateTime = request.userIdOpt.exists(_ == library.ownerId)
+          val showKeepCreateTime = request.userIdOpt.exists(_ == library.ownerId) || Some(request).collect {
+            case r: UserRequest[_] => r.experiments.contains(ExperimentType.KEEP_NOTES)
+          }.getOrElse(false)
           libraryCommander.createFullLibraryInfo(request.userIdOpt, showPublishedLibraries, library, idealSize, showKeepCreateTime).map { libInfo =>
             val memOpt = libraryCommander.getMaybeMembership(request.userIdOpt, library.id.get)
             val accessStr = memOpt.map(_.access.value).getOrElse("none")
@@ -626,82 +628,6 @@ class LibraryController @Inject() (
       }
   }
 
-  def getProfileLibraries(username: Username, page: Int, pageSize: Int, filter: String) = MaybeUserAction.async { request =>
-    userCommander.userFromUsername(username) match {
-      case None =>
-        log.warn(s"unknown username ${username.value} requested")
-        Future.successful(NotFound(username.value))
-      case Some(user) =>
-        val viewer = request.userOpt
-        val paginator = Paginator(page, pageSize)
-        val imageSize = ProcessedImageSize.Medium.idealSize
-        filter match {
-          case "own" =>
-            val libs = if (viewer.exists(_.id == user.id)) {
-              Json.toJson(libraryCommander.getOwnProfileLibrariesForSelf(user, paginator, imageSize).seq)
-            } else {
-              Json.toJson(libraryCommander.getOwnProfileLibraries(user, viewer, paginator, imageSize).map(LibraryCardInfo.writesWithoutOwner.writes).seq)
-            }
-            Future.successful(Ok(Json.obj("own" -> libs)))
-          case "following" =>
-            val libs = libraryCommander.getFollowingLibraries(user, viewer, paginator, imageSize).seq
-            Future.successful(Ok(Json.obj("following" -> libs)))
-          case "invited" =>
-            val libs = libraryCommander.getInvitedLibraries(user, viewer, paginator, imageSize).seq
-            Future.successful(Ok(Json.obj("invited" -> libs)))
-          case "all" if page == 0 =>
-            val ownLibsF = if (viewer.exists(_.id == user.id)) {
-              SafeFuture(Json.toJson(libraryCommander.getOwnProfileLibrariesForSelf(user, paginator, imageSize).seq))
-            } else {
-              SafeFuture(Json.toJson(libraryCommander.getOwnProfileLibraries(user, viewer, paginator, imageSize).map(LibraryCardInfo.writesWithoutOwner.writes).seq))
-            }
-            val followLibsF = SafeFuture(libraryCommander.getFollowingLibraries(user, viewer, paginator, imageSize).seq)
-            val invitedLibsF = SafeFuture(libraryCommander.getInvitedLibraries(user, viewer, paginator, imageSize).seq)
-            for {
-              ownLibs <- ownLibsF
-              followLibs <- followLibsF
-              invitedLibs <- invitedLibsF
-            } yield {
-              Ok(Json.obj(
-                "own" -> ownLibs,
-                "following" -> followLibs,
-                "invited" -> invitedLibs
-              ))
-            }
-          case "all" if page != 0 =>
-            Future.successful(BadRequest(Json.obj("error" -> "cannot_page_all_filters")))
-          case _ =>
-            Future.successful(BadRequest(Json.obj("error" -> "no_such_filter")))
-        }
-    }
-  }
-
-  def getMutualLibraries(id: ExternalId[User], page: Int = 0, size: Int = 12) = UserAction { request =>
-    db.readOnlyMaster { implicit s =>
-      userRepo.getOpt(id)
-    } match {
-      case None =>
-        log.warn(s"unknown external userId ${id} requested")
-        NotFound(Json.obj("id" -> id))
-      case Some(user) =>
-        val viewer = request.userId
-        val userId = user.id.get
-        val (ofUser, ofViewer, mutualFollow, basicUsers) = db.readOnlyReplica { implicit s =>
-          val ofUser = libraryRepo.getOwnerLibrariesOtherFollow(userId, viewer)
-          val ofViewer = libraryRepo.getOwnerLibrariesOtherFollow(viewer, userId)
-          val mutualFollow = libraryRepo.getMutualLibrariesForUser(viewer, userId, page * size, size)
-          val mutualFollowOwners = mutualFollow.map(_.ownerId)
-          val basicUsers = basicUserRepo.loadAll(Set(userId, viewer) ++ mutualFollowOwners)
-          (ofUser, ofViewer, mutualFollow, basicUsers)
-        }
-        Ok(Json.obj(
-          "ofUser" -> Json.toJson(ofUser.map(LibraryInfo.fromLibraryAndOwner(_, None, basicUsers(userId)))),
-          "ofOwner" -> Json.toJson(ofViewer.map(LibraryInfo.fromLibraryAndOwner(_, None, basicUsers(viewer)))),
-          "mutualFollow" -> Json.toJson(mutualFollow.map(lib => LibraryInfo.fromLibraryAndOwner(lib, None, basicUsers(lib.ownerId))))
-        ))
-    }
-  }
-
   def marketingSiteSuggestedLibraries() = Action.async {
     libraryCommander.getMarketingSiteSuggestedLibraries() map { infos => Ok(Json.toJson(infos)) }
   }
@@ -730,9 +656,9 @@ class LibraryController @Inject() (
         val result = access.toLowerCase match {
           case "none" =>
             libraryCommander.updateLibraryMembershipAccess(request.userId, libraryId, targetUser.id.get, None)
-          case "follower" =>
+          case "read_only" =>
             libraryCommander.updateLibraryMembershipAccess(request.userId, libraryId, targetUser.id.get, Some(LibraryAccess.READ_ONLY))
-          case "collaborator" =>
+          case "read_write" =>
             libraryCommander.updateLibraryMembershipAccess(request.userId, libraryId, targetUser.id.get, Some(LibraryAccess.READ_WRITE))
           case _ =>
             Left(LibraryFail(BAD_REQUEST, "invalid_access_request"))

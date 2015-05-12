@@ -43,6 +43,9 @@ class CuratorTasksPlugin @Inject() (
     scheduleTaskOnLeader(system, 5 minutes, 3 minutes, completeDataIngestion) {
       ingestionCommander.ingestAll()
     }
+    scheduleTaskOnLeader(system, 5 minutes, 1 minutes, completeDataIngestion) {
+      ingestionCommander.cleanUpRawSeedItems()
+    }
     scheduleTaskOnAllMachines(system, 5 minutes, 5 minutes, uriRecommendationPrecomputation) {
       uriRecoGenerationCommander.precomputeRecommendations()
     }

@@ -38,7 +38,7 @@ class MobileUserProfileController @Inject() (
     userCommander.profile(Username(username), viewer) match {
       case None => NotFound(s"can't find username $username")
       case Some(profile) =>
-        val (numLibraries, numCollabLibraries, numFollowedLibs, numInvitedLibs) = libraryCommander.countLibraries(profile.userId, viewer.map(_.id.get))
+        val (numLibraries, numCollabLibraries, numFollowedLibs, numInvitedLibs) = userProfileCommander.countLibraries(profile.userId, viewer.map(_.id.get))
         val (numConnections, userBiography) = db.readOnlyMaster { implicit s =>
           val numConnections = userConnectionRepo.getConnectionCount(profile.userId)
           val userBio = userValueRepo.getValueStringOpt(profile.userId, UserValueName.USER_DESCRIPTION)
@@ -52,7 +52,7 @@ class MobileUserProfileController @Inject() (
           numCollabLibraries = numCollabLibraries,
           numKeeps = profile.numKeeps,
           numConnections = numConnections,
-          numFollowers = libraryCommander.countFollowers(profile.userId, viewer.map(_.id.get)),
+          numFollowers = userProfileCommander.countFollowers(profile.userId, viewer.map(_.id.get)),
           numInvitedLibraries = numInvitedLibs,
           biography = userBiography
         )).as[JsObject]
@@ -73,25 +73,25 @@ class MobileUserProfileController @Inject() (
         filter match {
           case "own" =>
             val libs = if (viewer.exists(_.id == user.id)) {
-              Json.toJson(libraryCommander.getOwnProfileLibrariesForSelf(user, paginator, imageSize).seq)
+              Json.toJson(userProfileCommander.getOwnLibrariesForSelf(user, paginator, imageSize).seq)
             } else {
-              Json.toJson(libraryCommander.getOwnProfileLibraries(user, viewer, paginator, imageSize).map(LibraryCardInfo.writesWithoutOwner.writes).seq)
+              Json.toJson(userProfileCommander.getOwnLibraries(user, viewer, paginator, imageSize).map(LibraryCardInfo.writesWithoutOwner.writes).seq)
             }
             Future.successful(Ok(Json.obj("own" -> libs)))
           case "following" =>
-            val libs = libraryCommander.getFollowingLibraries(user, viewer, paginator, imageSize).seq
+            val libs = userProfileCommander.getFollowingLibraries(user, viewer, paginator, imageSize).seq
             Future.successful(Ok(Json.obj("following" -> libs)))
           case "invited" =>
-            val libs = libraryCommander.getInvitedLibraries(user, viewer, paginator, imageSize).seq
+            val libs = userProfileCommander.getInvitedLibraries(user, viewer, paginator, imageSize).seq
             Future.successful(Ok(Json.obj("invited" -> libs)))
           case "all" if page == 0 =>
             val ownLibsF = if (viewer.exists(_.id == user.id)) {
-              SafeFuture(Json.toJson(libraryCommander.getOwnProfileLibrariesForSelf(user, paginator, imageSize).seq))
+              SafeFuture(Json.toJson(userProfileCommander.getOwnLibrariesForSelf(user, paginator, imageSize).seq))
             } else {
-              SafeFuture(Json.toJson(libraryCommander.getOwnProfileLibraries(user, viewer, paginator, imageSize).map(LibraryCardInfo.writesWithoutOwner.writes).seq))
+              SafeFuture(Json.toJson(userProfileCommander.getOwnLibraries(user, viewer, paginator, imageSize).map(LibraryCardInfo.writesWithoutOwner.writes).seq))
             }
-            val followLibsF = SafeFuture(libraryCommander.getFollowingLibraries(user, viewer, paginator, imageSize).seq)
-            val invitedLibsF = SafeFuture(libraryCommander.getInvitedLibraries(user, viewer, paginator, imageSize).seq)
+            val followLibsF = SafeFuture(userProfileCommander.getFollowingLibraries(user, viewer, paginator, imageSize).seq)
+            val invitedLibsF = SafeFuture(userProfileCommander.getInvitedLibraries(user, viewer, paginator, imageSize).seq)
             for {
               ownLibs <- ownLibsF
               followLibs <- followLibsF
@@ -144,15 +144,15 @@ class MobileUserProfileController @Inject() (
   }
 
   private def loadProfileStats(userId: Id[User], viewerIdOpt: Option[Id[User]])(implicit session: RSession): MobileProfileStats = {
-    val libCount = viewerIdOpt.map(viewerId => libraryRepo.countLibrariesForOtherUser(userId, viewerId)).getOrElse(libraryRepo.countLibrariesOfUserForAnonymous(userId)) //not cached
+    val libCount = viewerIdOpt.map(viewerId => libraryRepo.countOwnerLibrariesForOtherUser(userId, viewerId)).getOrElse(libraryRepo.countOwnerLibrariesForAnonymous(userId)) //not cached
     //global
-    val followersCount = libraryCommander.countFollowers(userId, viewerIdOpt)
+    val followersCount = userProfileCommander.countFollowers(userId, viewerIdOpt)
     val connectionCount = userConnectionRepo.getConnectionCount(userId) //cached
     MobileProfileStats(libs = libCount, followers = followersCount, connections = connectionCount)
   }
 
   private def loadProfileMutualStats(userId: Id[User], viewerId: Id[User])(implicit session: RSession): MobileProfileMutualStats = {
-    val followingLibCount = libraryRepo.countLibrariesOfOwnerUserFollow(userId, viewerId) //not cached
+    val followingLibCount = libraryRepo.countOwnerLibrariesUserFollows(userId, viewerId) //not cached
     val mutualConnectionCount = userConnectionRepo.getMutualConnectionCount(userId, viewerId) //cached
     MobileProfileMutualStats(libs = followingLibCount, connections = mutualConnectionCount)
   }
