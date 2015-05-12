@@ -1619,7 +1619,8 @@ class LibraryCommander @Inject() (
         val numFollowers = countMap.readOnly
         val numCollaborators = countMap.readWrite
 
-        val (collaborators, followers) = libraryMembershipRepo.pageWithLibraryIdAndAccess(lib.id.get, 0, 3, Set(LibraryAccess.READ_ONLY, LibraryAccess.READ_WRITE)).partition(mem => mem.canWrite)
+        val collaborators = libraryMembershipRepo.pageWithLibraryIdAndAccess(lib.id.get, 0, 3, Set(LibraryAccess.READ_WRITE, LibraryAccess.READ_INSERT))
+        val followers = libraryMembershipRepo.pageWithLibraryIdAndAccess(lib.id.get, 0, 3, Set(LibraryAccess.READ_ONLY))
         val collabIds = collaborators.map(_.userId).toSet
         val followerIds = followers.map(_.userId).toSet
         val userSample = basicUserRepo.loadAll(followerIds ++ collabIds) //we don't care about the order now anyway
@@ -1631,7 +1632,7 @@ class LibraryCommander @Inject() (
       }
 
       val owner = owners(lib.ownerId)
-      val isFollowing = if (withFollowing && viewer.isDefined && viewer.get.externalId != owner.externalId) {
+      val isFollowing = if (withFollowing && viewer.isDefined) {
         Some(libraryMembershipRepo.getWithLibraryIdAndUserId(lib.id.get, viewer.get.id.get).isDefined)
       } else {
         None

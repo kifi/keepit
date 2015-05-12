@@ -400,11 +400,11 @@ object ProcessedImageSize {
     pickByIdealImageSize(idealSize, images, strictAspectRatio)(_.imageSize)
   }
 
-  def pickByIdealImageSize[I](idealSize: ImageSize, images: Seq[I], strictAspectRatio: Boolean)(getSize: I => ImageSize): Option[I] = {
+  def pickByIdealImageSize[I](idealSize: ImageSize, images: Iterable[I], strictAspectRatio: Boolean)(getSize: I => ImageSize): Option[I] = {
     images.collect {
       case image if !strictAspectRatio || isAlmostTheSameAspectRatio(idealSize, getSize(image)) =>
         image -> maxDivergence(idealSize, getSize(image))
-    }.sortBy(_._2).headOption.map(_._1)
+    }.toSeq.sortBy(_._2).headOption.map(_._1)
   }
 
   def imageSizeFromString(sizeStr: String): Option[ImageSize] = {

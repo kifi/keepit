@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfUserProfileHeader', [
-  '$rootScope', '$state', '$timeout', 'profileService', 'inviteService', 'friendService', '$document', 'modalService', 'util',
-  function ($rootScope, $state, $timeout, profileService, inviteService, friendService, $document, modalService, util) {
+  '$rootScope', '$state', '$timeout', 'profileService', 'inviteService', 'friendService', '$document', 'modalService', 'linkify',
+  function ($rootScope, $state, $timeout, profileService, inviteService, friendService, $document, modalService, linkify) {
     return {
       restrict: 'A',
       scope: {
@@ -184,7 +184,7 @@ angular.module('kifi')
         //
 
         scope.$watch('profile.biography', function (bio) {
-          scope.bioHtml = util.linkify(bio || '');
+          scope.bioHtml = linkify(bio || '');
         });
 
         scope.$on('$destroy', $rootScope.$on('$stateChangeSuccess', function (event, toState, toParams, fromState) {

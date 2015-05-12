@@ -2,6 +2,7 @@ package com.keepit.eliza.commanders
 
 import com.google.inject.Inject
 import com.keepit.rover.RoverServiceClient
+import com.keepit.rover.model.RoverUriSummary
 
 import scala.concurrent.Future
 
@@ -21,7 +22,6 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.mail.{
   ElectronicMail,
   SystemEmailAddress,
-  EmailAddress,
   PostOffice
 }
 import com.keepit.common.time._
@@ -32,8 +32,11 @@ import com.keepit.common.logging.Logging
 import com.keepit.eliza.util.{ MessageFormatter, TextSegment }
 import com.keepit.common.strings.AbbreviateString
 import com.keepit.common.domain.DomainToNameMapper
-import com.keepit.scraper.ScraperServiceClient
-import com.keepit.commanders.{ RemoteUserExperimentCommander, TimeToReadCommander }
+
+object ElizaEmailUriSummaryImageSizes {
+  val bigImageSize = ImageSize(620, 200)
+  val smallImageSize = ImageSize(183, 96)
+}
 
 class ElizaEmailCommander @Inject() (
     shoebox: ShoeboxServiceClient,
@@ -43,79 +46,30 @@ class ElizaEmailCommander @Inject() (
     messageFetchingCommander: MessageFetchingCommander,
     messageRepo: MessageRepo,
     threadRepo: MessageThreadRepo,
-    scraper: ScraperServiceClient,
-    experimentCommander: RemoteUserExperimentCommander,
     rover: RoverServiceClient,
     implicit val imageConfig: S3ImageConfig,
     clock: Clock) extends Logging {
 
+  import ElizaEmailUriSummaryImageSizes._
+
   case class ProtoEmail(digestHtml: Html, initialHtml: Html, addedHtml: Html, starterName: String, pageTitle: String)
 
-  private def shouldUseRover(thread: MessageThread): Future[Boolean] = {
-    val userId = db.readOnlyMaster { implicit session =>
-      userThreadRepo.getThreadStarter(thread.id.get)
-    }
-    experimentCommander.getExperimentsByUser(userId).map(_.contains(ExperimentType.ROVER_CONTENT))
-  }
-
-  def getSummarySmall(thread: MessageThread): Future[URISummary] = {
-    val idealImageSize = ImageSize(183, 96)
-    shouldUseRover(thread).flatMap {
-      case false => {
-        new SafeFuture(
-          shoebox.getUriSummary(URISummaryRequest(
-            uriId = thread.uriId.get,
-            imageType = ImageType.IMAGE,
-            minSize = idealImageSize,
-            withDescription = true,
-            waiting = true,
-            silent = false))
-        ) recover {
-          case t: Throwable => throw new Exception(s"Error fetching small summary for thread: ${thread.id.get}", t)
-        }
-      }
-      case true => {
-        shoebox.getNormalizedURI(thread.uriId.get).flatMap { uri =>
-          rover.getOrElseFetchUriSummary(IndexableUri.apply(uri), idealImageSize).map(_.map(_.toUriSummary()) getOrElse URISummary())
-        }
-      }
-    }
-  }
-
-  def getSummaryBig(thread: MessageThread): Future[URISummary] = {
-    val idealImageSize = ImageSize(620, 200)
-    shouldUseRover(thread).flatMap {
-      case false => {
-        new SafeFuture(
-          shoebox.getUriSummary(URISummaryRequest(
-            uriId = thread.uriId.get,
-            imageType = ImageType.IMAGE,
-            minSize = idealImageSize,
-            withDescription = false,
-            waiting = true,
-            silent = false))
-        ) recover {
-          case t: Throwable => throw new Exception(s"Error fetching big summary for thread: ${thread.id.get}", t)
-        }
-      }
-      case true => {
-        shoebox.getNormalizedURI(thread.uriId.get).flatMap { uri =>
-          rover.getOrElseFetchUriSummary(IndexableUri.apply(uri), idealImageSize).map(_.map(_.toUriSummary()) getOrElse URISummary())
-        }
-      }
-    }
+  def getUriSummary(thread: MessageThread): Future[Option[RoverUriSummary]] = {
+    val uriId = thread.uriId.get
+    val normalizedUrl = thread.nUrl.get // be careful to call Rover with the *normalized* url here
+    rover.getOrElseFetchUriSummary(uriId, normalizedUrl)
   }
 
   def getThreadEmailInfo(
     thread: MessageThread,
-    uriSummary: URISummary,
+    uriSummary: Option[RoverUriSummary],
+    idealImageSize: ImageSize,
     isInitialEmail: Boolean,
     allUsers: Map[Id[User], User],
     allUserImageUrls: Map[Id[User], String],
     invitedByUser: Option[User],
     unsubUrl: Option[String] = None,
-    muteUrl: Option[String] = None,
-    readTimeMinutes: Option[Int] = None): ThreadEmailInfo = {
+    muteUrl: Option[String] = None): ThreadEmailInfo = {
 
     val (nuts, starterUserId) = db.readOnlyMaster { implicit session =>
       (
@@ -132,16 +86,16 @@ class ElizaEmailCommander @Inject() (
     ThreadEmailInfo(
       pageUrl = thread.nUrl.get,
       pageName = pageName,
-      pageTitle = thread.pageTitle.orElse(uriSummary.title).getOrElse(thread.nUrl.get).abbreviate(80),
+      pageTitle = thread.pageTitle.orElse(uriSummary.flatMap(_.article.title)).getOrElse(thread.nUrl.get).abbreviate(80),
       isInitialEmail = isInitialEmail,
-      heroImageUrl = uriSummary.imageUrl,
-      pageDescription = uriSummary.description.map(_.take(190) + "..."),
+      heroImageUrl = uriSummary.flatMap(_.getImage(idealImageSize).map(_.path.getUrl)),
+      pageDescription = uriSummary.flatMap(_.article.description.map(_.take(190) + "...")),
       participants = participants.toSeq,
       conversationStarter = starterUser.firstName + " " + starterUser.lastName,
       invitedByUser = invitedByUser,
       unsubUrl = unsubUrl,
       muteUrl = muteUrl,
-      readTimeMinutes = readTimeMinutes
+      readTimeMinutes = uriSummary.flatMap(_.article.readTime.map(_.toMinutes.toInt))
     )
   }
 
@@ -171,15 +125,6 @@ class ElizaEmailCommander @Inject() (
     }.reverse
   }
 
-  def readTimeMinutesForMessageThread(thread: MessageThread) = {
-    (for {
-      nUrlId <- thread.uriId
-      url <- thread.url
-    } yield {
-      scraper.getURIWordCount(nUrlId, url) map { cnt => TimeToReadCommander.wordCountToReadTimeMinutes(cnt) }
-    }) getOrElse Future.successful(None)
-  }
-
   /**
    * Fetches all information that is common to all emails sent relative to a specific MessageThread.
    * This function should be called as few times as possible
@@ -189,31 +134,30 @@ class ElizaEmailCommander @Inject() (
     val allUserIds: Set[Id[User]] = thread.participants.map(_.allUsers).getOrElse(Set.empty)
     val allUsersFuture: Future[Map[Id[User], User]] = new SafeFuture(shoebox.getUsers(allUserIds.toSeq).map(s => s.map(u => u.id.get -> u).toMap))
     val allUserImageUrlsFuture: Future[Map[Id[User], String]] = new SafeFuture(FutureHelpers.map(allUserIds.map(u => u -> shoebox.getUserImageUrl(u, 73)).toMap))
-    val uriSummaryBigFuture = getSummaryBig(thread)
-    val readTimeMinutesOptFuture = readTimeMinutesForMessageThread(thread)
+    val uriSummaryFuture = getUriSummary(thread)
 
     for {
       allUsers <- allUsersFuture
       allUserImageUrls <- allUserImageUrlsFuture
-      uriSummaryBig <- uriSummaryBigFuture
-      uriSummarySmall <- getSummarySmall(thread) // Intentionally sequential execution
-      readTimeMinutesOpt <- readTimeMinutesOptFuture
+      uriSummary <- uriSummaryFuture
     } yield {
-      ThreadEmailData(thread, allUserIds, allUsers, allUserImageUrls, uriSummaryBig, uriSummarySmall, readTimeMinutesOpt)
+      ThreadEmailData(thread, allUserIds, allUsers, allUserImageUrls, uriSummary)
     }
   }
 
   private def assembleEmail(threadEmailData: ThreadEmailData, fromTime: Option[DateTime], toTime: Option[DateTime], invitedByUserId: Option[Id[User]], unsubUrl: Option[String], muteUrl: Option[String]): ProtoEmail = {
-    val ThreadEmailData(thread, _, allUsers, allUserImageUrls, uriSummaryBig, uriSummarySmall, readTimeMinutesOpt) = threadEmailData
+    val ThreadEmailData(thread, _, allUsers, allUserImageUrls, uriSummary) = threadEmailData
     val invitedByUser = invitedByUserId.flatMap(allUsers.get(_))
-    val threadInfoSmall = getThreadEmailInfo(thread, uriSummarySmall, true, allUsers, allUserImageUrls, invitedByUser, unsubUrl, muteUrl, readTimeMinutesOpt)
-    val threadInfoBig = threadInfoSmall.copy(heroImageUrl = uriSummaryBig.imageUrl.orElse(uriSummarySmall.imageUrl))
+    val threadInfoSmall = getThreadEmailInfo(thread, uriSummary, smallImageSize, true, allUsers, allUserImageUrls, invitedByUser, unsubUrl, muteUrl)
+    val bigImageUrl = uriSummary.flatMap(_.getImage(bigImageSize).map(_.path.getUrl))
+    val smallImageUrl = uriSummary.flatMap(_.getImage(smallImageSize).map(_.path.getUrl))
+    val threadInfoBig = threadInfoSmall.copy(heroImageUrl = bigImageUrl orElse smallImageUrl)
     val threadInfoSmallDigest = threadInfoSmall.copy(isInitialEmail = false)
     val threadItems = getExtendedThreadItems(thread, allUsers, allUserImageUrls, fromTime, toTime)
 
     ProtoEmail(
       views.html.discussionEmail(threadInfoSmallDigest, threadItems, false, false, true),
-      if (uriSummaryBig.imageUrl.isDefined) views.html.discussionEmail(threadInfoBig, threadItems, false, false, false)
+      if (bigImageUrl.isDefined) views.html.discussionEmail(threadInfoBig, threadItems, false, false, false)
       else views.html.discussionEmail(threadInfoSmall, threadItems, false, false, true),
       views.html.discussionEmail(threadInfoSmall, threadItems, false, true, true),
       threadInfoSmall.conversationStarter,

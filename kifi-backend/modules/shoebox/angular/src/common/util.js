@@ -1,61 +1,15 @@
 'use strict';
 
-angular.module('util', ['HTML'])
+angular.module('util', [])
 
-.factory('util', [
-  '$document', '$window', '$location', 'HTML',
-  function ($document, $window, $location, HTML) {
+.constant('util', (function () {
     var youtubeVideoUrlRe = /^(?:https?:\/\/)?(?:youtu\.be|(?:www\.)?youtube(?:-nocookie)?\.com)\/(?:|user\/[^\/?#]+)?(?:|.*?[\/=])([a-zA-Z0-9_-]{11})\b/;
-    var uriDetectRe = /(?:\b|^)((?:(https?|ftp):\/\/[^\s!"#%&'()*,\/:;?@[\\\]_{}\u00A1\u00A7\u00AB\u00B6\u00B7\u00BB\u00BF\u037E\u0387\u055A-\u055F\u0589\u058A\u05BE\u05C0\u05C3\u05C6\u05F3\u05F4\u0609\u060A\u060C\u060D\u061B\u061E\u061F\u066A-\u066D\u06D4\u0700-\u070D\u07F7-\u07F9\u0830-\u083E\u085E\u0964\u0965\u0970\u0AF0\u0DF4\u0E4F\u0E5A\u0E5B\u0F04-\u0F12\u0F14\u0F3A-\u0F3D\u0F85\u0FD0-\u0FD4\u0FD9\u0FDA\u104A-\u104F\u10FB\u1360-\u1368\u1400\u166D\u166E\u169B\u169C\u16EB-\u16ED\u1735\u1736\u17D4-\u17D6\u17D8-\u17DA\u1800-\u180A\u1944\u1945\u1A1E\u1A1F\u1AA0-\u1AA6\u1AA8-\u1AAD\u1B5A-\u1B60\u1BFC-\u1BFF\u1C3B-\u1C3F\u1C7E\u1C7F\u1CC0-\u1CC7\u1CD3\u2010-\u2027\u2030-\u2043\u2045-\u2051\u2053-\u205E\u207D\u207E\u208D\u208E\u2329\u232A\u2768-\u2775\u27C5\u27C6\u27E6-\u27EF\u2983-\u2998\u29D8-\u29DB\u29FC\u29FD\u2CF9-\u2CFC\u2CFE\u2CFF\u2D70\u2E00-\u2E2E\u2E30-\u2E3B\u3001-\u3003\u3008-\u3011\u3014-\u301F\u3030\u303D\u30A0\u30FB\uA4FE\uA4FF\uA60D-\uA60F\uA673\uA67E\uA6F2-\uA6F7\uA874-\uA877\uA8CE\uA8CF\uA8F8-\uA8FA\uA92E\uA92F\uA95F\uA9C1-\uA9CD\uA9DE\uA9DF\uAA5C-\uAA5F\uAADE\uAADF\uAAF0\uAAF1\uABEB\uFD3E\uFD3F\uFE10-\uFE19\uFE30-\uFE52\uFE54-\uFE61\uFE63\uFE68\uFE6A\uFE6B\uFF01-\uFF03\uFF05-\uFF0A\uFF0C-\uFF0F\uFF1A\uFF1B\uFF1F\uFF20\uFF3B-\uFF3D\uFF3F\uFF5B\uFF5D\uFF5F-\uFF65]{4,}|(?:(?:[a-z0-9](?:[-a-z0-9]*[a-z0-9])?\.)+(?:a[c-gil-oq-uwxz]|b[abd-jmnoq-tvwyz]|c[acdf-ik-orsu-z]|d[dejkmoz]|e[ceghr-u]|f[ijkmor]|g[abd-ilmnp-uwy]|h[kmnrtu]|i[del-oq-t]|j[emop]|k[eghimnprwyz]|l[abcikr-vy]|m[acdeghk-z]|n[acefgilopruz]|om|p[ae-hk-nrstwy]|qa|r[eosuw]|s[a-eg-or-vxyz]|t[cdfghj-prtvwz]|u[agksyz]|v[aceginu]|w[fs]|y[etu]|z[amrw]|app|bi[doz]|boo|cab|ceo|com|da[dy]|eat|edu|esq|fly|foo|go[pv]|hiv|how|in[gkt]|kim|mil|mo[ev]|ne[tw]|ngo|on[gl]|ooo|org|pro|pub|re[dn]|rip|tax|tel|soy|top|uno|vet|wed|wtf|xxx|xyz|[a-z]{4,20})))(?::[0-9]{1,5})?(?:\/(?:[^\s()<>]*[^\s`!\[\]{};:.'",<>?«»()“”‘’]|\((?:[^\s()<>]+|(?:\([^\s()<>]+\)))*\))*|\b|$))(?=[\s`!()\[\]{};:.'",<>?«»“”‘’]|$)/;  // jshint ignore:line
-    var emailAddrDetectRe = /(?:\b|^)([a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+)(?:\b|$)/;  // jshint ignore:line
     var emailAddrValidateRe = /^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/; // jshint ignore:line
     var notOneSpaceWhitespaceRe = /(?: \s+|[\t\r\n\f]\s*)/g;
     var hyphensToMakeNonBreakingRe = /( \S{1,10})-(?=\S{1,10} )/g;
     var punctuationRe = /[!-\/:-@[-`{-~]/;
 
     var RESERVED_SLUGS = ['libraries', 'connections', 'followers', 'keeps', 'tags'];
-
-    var queryStringHelper = {$$path: '', $$compose: $location.$$compose};
-
-    function processEmailAddressesThen(process, text) {
-      if (text.indexOf('@', 1)) {
-        var parts = text.split(emailAddrDetectRe);
-        for (var i = 1; i < parts.length; i += 2) {
-          var addr = parts[i];
-          parts[i] = '<a href="mailto:' + HTML.escapeDoubleQuotedAttr(addr) + '">' + HTML.escapeElementContent(addr) + '</a>';
-        }
-        for (var j = 0; j < parts.length; j += 2) {
-          parts[j] = process(parts[j]);
-        }
-        return parts.join('');
-      } else {
-        return process(text);
-      }
-    }
-
-    function processUrlsThen(process, text) {
-      var parts = text.split(uriDetectRe);
-      for (var i = 1; i < parts.length; i += 3) {
-        var uri = parts[i];
-        var scheme = parts[i+1];
-        if (!scheme && uri.indexOf('/') < 0 || parts[i-1].slice(-1) === '@') {
-          var ambiguous = parts[i-1] + uri;
-          var ambiguousProcessed = process(ambiguous);
-          if (ambiguousProcessed.indexOf('</a>', ambiguousProcessed.length - 4) > 0) {
-            parts[i] = ambiguousProcessed;
-            parts[i-1] = parts[i+1] = '';
-            continue;
-          }
-        }
-        parts[i] = '<a target="_blank" rel="nofollow" href="' + (scheme ? '' : 'http://') + HTML.escapeDoubleQuotedAttr(uri) + '">' +
-          HTML.escapeElementContent(uri);
-        parts[i+1] = '</a>';
-      }
-      for (i = 0; i < parts.length; i += 3) {
-        parts[i] = process(parts[i]);
-      }
-      return parts.join('');
-    }
 
     var util = {
       startsWith: function (str, prefix) {
@@ -159,40 +113,14 @@ angular.module('util', ['HTML'])
         }
         return text;
       },
-      /**
-       * Behaves like $location.search({...}). Keys whose values are an empty array will be omitted entirely.
-       * https://docs.angularjs.org/api/ng/service/$location#search
-       */
-      formatQueryString: function (params) {
-        queryStringHelper.$$search = params;
-        queryStringHelper.$$compose();
-        return queryStringHelper.$$url;
-      },
       generateSlug: function (name) {
         var slug = name.toLowerCase().replace(/[^\w\s-]|_/g, '').replace(/(\s|--)+/g, '-').replace(/^-/, '').substr(0, 50).replace(/-$/, '');
         return RESERVED_SLUGS.indexOf(slug) >= 0 ? slug + '-' : slug;
-      },
-      linkify: angular.bind(null, processUrlsThen, angular.bind(null, processEmailAddressesThen, HTML.escapeElementContent)),
-      chooseTreatment: function (salt, treatments) {
-        // To generate the salt for an experiment:
-        // [0,0,0,0,0,0].map(function () { return Math.floor(Math.random() * 32).toString(32) }).join('')
-        try {
-          var id = $window.mixpanel.cookie.props.distinct_id;
-          var sourceDigits = (id.id || id).replace(/[^\da-f]/gi, '');
-          var chosenDigits = salt.split('').map(function (ch) {
-            return sourceDigits[parseInt(ch, 32)];
-          }).join('');
-          var treatmentIndex = parseInt(chosenDigits, 16);
-          return treatments[treatmentIndex % treatments.length];
-        } catch (e) {
-          return null;
-        }
       }
     };
 
     return util;
-  }
-])
+}()))
 
 // Uncomment and add kf-time-ng-repeat to an ng-repeat element to see timing info.
 //
@@ -217,6 +145,132 @@ angular.module('util', ['HTML'])
 //     };
 //   }
 // ])
+
+.constant('HTML', (function () {
+  var ALL_QUOTES = /"/g;
+  var ALL_AMP_AND_LT = /[&<]/g;
+
+  var REPLACEMENTS = {
+    '&': '&amp;',
+    '<': '&lt;'
+  };
+
+  function replace(ch) {
+    return REPLACEMENTS[ch];
+  }
+
+  return {
+    escapeElementContent: function (text) {
+      // www.owasp.org/index.php/XSS_Experimental_Minimal_Encoding_Rules
+      return text == null ? '' : String(text).replace(ALL_AMP_AND_LT, replace);
+    },
+
+    escapeDoubleQuotedAttr: function (text) {
+      // Rule #2 at www.owasp.org/index.php/XSS_(Cross_Site_Scripting)_Prevention_Cheat_Sheet states
+      // "Properly quoted attributes can only be escaped with the corresponding quote."
+      // Caller must ensure text is safe in its specific attribute context (e.g. href, onload).
+      return text == null ? '' : String(text).replace(ALL_QUOTES, '&quot;');
+    }
+  };
+}()))
+
+
+.factory('URI', [
+  '$location',
+  (function () {
+    return _.once(function ($location) {
+      var helper = {$$path: '', $$compose: $location.$$compose};
+      return {
+        // Behaves like $location.search({...}). Keys whose values are an empty array will be omitted entirely.
+        // https://docs.angularjs.org/api/ng/service/$location#search
+        formatQueryString: function (params) {
+          helper.$$search = params;
+          helper.$$compose();
+          return helper.$$url;
+        }
+      };
+    });
+  }())
+])
+
+
+// Takes plain text and returns it formatted as HTML with URLs and email addresses auto-linkified.
+.factory('linkify', [
+  'HTML',
+  (function () {
+    return _.once(function (HTML) {
+      var emailAddrDetectRe = /(?:\b|^)([a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+)(?:\b|$)/;  // jshint ignore:line
+      var uriDetectRe = /(?:\b|^)((?:(https?|ftp):\/\/[^\s!"#%&'()*,\/:;?@[\\\]_{}\u00A1\u00A7\u00AB\u00B6\u00B7\u00BB\u00BF\u037E\u0387\u055A-\u055F\u0589\u058A\u05BE\u05C0\u05C3\u05C6\u05F3\u05F4\u0609\u060A\u060C\u060D\u061B\u061E\u061F\u066A-\u066D\u06D4\u0700-\u070D\u07F7-\u07F9\u0830-\u083E\u085E\u0964\u0965\u0970\u0AF0\u0DF4\u0E4F\u0E5A\u0E5B\u0F04-\u0F12\u0F14\u0F3A-\u0F3D\u0F85\u0FD0-\u0FD4\u0FD9\u0FDA\u104A-\u104F\u10FB\u1360-\u1368\u1400\u166D\u166E\u169B\u169C\u16EB-\u16ED\u1735\u1736\u17D4-\u17D6\u17D8-\u17DA\u1800-\u180A\u1944\u1945\u1A1E\u1A1F\u1AA0-\u1AA6\u1AA8-\u1AAD\u1B5A-\u1B60\u1BFC-\u1BFF\u1C3B-\u1C3F\u1C7E\u1C7F\u1CC0-\u1CC7\u1CD3\u2010-\u2027\u2030-\u2043\u2045-\u2051\u2053-\u205E\u207D\u207E\u208D\u208E\u2329\u232A\u2768-\u2775\u27C5\u27C6\u27E6-\u27EF\u2983-\u2998\u29D8-\u29DB\u29FC\u29FD\u2CF9-\u2CFC\u2CFE\u2CFF\u2D70\u2E00-\u2E2E\u2E30-\u2E3B\u3001-\u3003\u3008-\u3011\u3014-\u301F\u3030\u303D\u30A0\u30FB\uA4FE\uA4FF\uA60D-\uA60F\uA673\uA67E\uA6F2-\uA6F7\uA874-\uA877\uA8CE\uA8CF\uA8F8-\uA8FA\uA92E\uA92F\uA95F\uA9C1-\uA9CD\uA9DE\uA9DF\uAA5C-\uAA5F\uAADE\uAADF\uAAF0\uAAF1\uABEB\uFD3E\uFD3F\uFE10-\uFE19\uFE30-\uFE52\uFE54-\uFE61\uFE63\uFE68\uFE6A\uFE6B\uFF01-\uFF03\uFF05-\uFF0A\uFF0C-\uFF0F\uFF1A\uFF1B\uFF1F\uFF20\uFF3B-\uFF3D\uFF3F\uFF5B\uFF5D\uFF5F-\uFF65]{4,}|(?:(?:[a-z0-9](?:[-a-z0-9]*[a-z0-9])?\.)+(?:a[c-gil-oq-uwxz]|b[abd-jmnoq-tvwyz]|c[acdf-ik-orsu-z]|d[dejkmoz]|e[ceghr-u]|f[ijkmor]|g[abd-ilmnp-uwy]|h[kmnrtu]|i[del-oq-t]|j[emop]|k[eghimnprwyz]|l[abcikr-vy]|m[acdeghk-z]|n[acefgilopruz]|om|p[ae-hk-nrstwy]|qa|r[eosuw]|s[a-eg-or-vxyz]|t[cdfghj-prtvwz]|u[agksyz]|v[aceginu]|w[fs]|y[etu]|z[amrw]|app|bi[doz]|boo|cab|ceo|com|da[dy]|eat|edu|esq|fly|foo|go[pv]|hiv|how|in[gkt]|kim|mil|mo[ev]|ne[tw]|ngo|on[gl]|ooo|org|pro|pub|re[dn]|rip|tax|tel|soy|top|uno|vet|wed|wtf|xxx|xyz|[a-z]{4,20})))(?::[0-9]{1,5})?(?:\/(?:[^\s()<>]*[^\s`!\[\]{};:.'",<>?«»()“”‘’]|\((?:[^\s()<>]+|(?:\([^\s()<>]+\)))*\))*|\b|$))(?=[\s`!()\[\]{};:.'",<>?«»“”‘’]|$)/;  // jshint ignore:line
+
+      function processEmailAddressesThen(process, text) {
+        if (text.indexOf('@', 1)) {
+          var parts = text.split(emailAddrDetectRe);
+          for (var i = 1; i < parts.length; i += 2) {
+            var addr = parts[i];
+            parts[i] = '<a href="mailto:' + HTML.escapeDoubleQuotedAttr(addr) + '">' + HTML.escapeElementContent(addr) + '</a>';
+          }
+          for (var j = 0; j < parts.length; j += 2) {
+            parts[j] = process(parts[j]);
+          }
+          return parts.join('');
+        } else {
+          return process(text);
+        }
+      }
+
+      function processUrlsThen(process, text) {
+        var parts = text.split(uriDetectRe);
+        for (var i = 1; i < parts.length; i += 3) {
+          var uri = parts[i];
+          var scheme = parts[i+1];
+          if (!scheme && uri.indexOf('/') < 0 || parts[i-1].slice(-1) === '@') {
+            var ambiguous = parts[i-1] + uri;
+            var ambiguousProcessed = process(ambiguous);
+            if (ambiguousProcessed.indexOf('</a>', ambiguousProcessed.length - 4) > 0) {
+              parts[i] = ambiguousProcessed;
+              parts[i-1] = parts[i+1] = '';
+              continue;
+            }
+          }
+          parts[i] = '<a target="_blank" rel="nofollow" href="' + (scheme ? '' : 'http://') + HTML.escapeDoubleQuotedAttr(uri) + '">' +
+            HTML.escapeElementContent(uri);
+          parts[i+1] = '</a>';
+        }
+        for (i = 0; i < parts.length; i += 3) {
+          parts[i] = process(parts[i]);
+        }
+        return parts.join('');
+      }
+
+      return angular.bind(null, processUrlsThen, angular.bind(null, processEmailAddressesThen, HTML.escapeElementContent));
+    });
+  }())
+])
+
+.factory('AB', [
+  '$window',
+  (function () {
+    return _.once(function ($window) {
+      return {
+        // To generate the salt for an experiment:
+        // [0,0,0,0,0,0].map(function () { return Math.floor(Math.random() * 32).toString(32) }).join('')
+        chooseTreatment: function (salt, treatments) {
+          try {
+            var id = $window.mixpanel.cookie.props.distinct_id;
+            var sourceDigits = (id.id || id).replace(/[^\da-f]/gi, '');
+            var chosenDigits = salt.split('').map(function (ch) {
+              return sourceDigits[parseInt(ch, 32)];
+            }).join('');
+            var treatmentIndex = parseInt(chosenDigits, 16);
+            return treatments[treatmentIndex % treatments.length];
+          } catch (e) {
+            return null;
+          }
+        }
+      };
+    });
+  }())
+])
 
 .constant('KEY', {
   UP: 38,

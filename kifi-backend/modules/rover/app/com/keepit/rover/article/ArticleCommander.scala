@@ -4,7 +4,7 @@ import com.google.inject.{Inject, Singleton}
 import com.keepit.common.cache._
 import com.keepit.common.core._
 import com.keepit.common.db.slick.Database
-import com.keepit.common.db.{Id, SequenceNumber}
+import com.keepit.common.db.{State, Id, SequenceNumber}
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.{AccessLog, Logging}
 import com.keepit.model.{IndexableUri, NormalizedURI}
@@ -83,8 +83,8 @@ class ArticleCommander @Inject() (
     Future.sequence(futureUriIdWithArticles).imap(_.toMap)
   }
 
-  def getOrElseFetchBestArticle[A <: Article](uri: IndexableUri)(implicit kind: ArticleKind[A]): Future[Option[A]] = {
-    val info = internArticleInfoByUri(uri.id.get, uri.url, Set(kind))(kind)
+  def getOrElseFetchBestArticle[A <: Article](uriId: Id[NormalizedURI], url: String)(implicit kind: ArticleKind[A]): Future[Option[A]] = {
+    val info = internArticleInfoByUri(uriId, url, Set(kind))(kind)
     getOrElseFetchBestArticle(info).imap(_.map(_.asExpected[A]))
   }
 
@@ -145,14 +145,14 @@ class ArticleCommander @Inject() (
     }
   }
 
-  def fetchAsap(uri: IndexableUri): Future[Unit] = {
-    val toBeInternedByPolicy = articlePolicy.toBeInterned(uri.url, uri.state)
-    val interned = internArticleInfoByUri(uri.id.get, uri.url, toBeInternedByPolicy)
+  def fetchAsap(uriId: Id[NormalizedURI], url: String, state: State[NormalizedURI]): Future[Unit] = {
+    val toBeInternedByPolicy = articlePolicy.toBeInterned(url, state)
+    val interned = internArticleInfoByUri(uriId, url, toBeInternedByPolicy)
     val neverFetched = interned.collect { case (kind, info) if info.lastFetchedAt.isEmpty => (info.id.get -> info) }
     fetchWithTopPriority(neverFetched.keySet).imap { results =>
       val failed = results.collect { case (infoId, Failure(error)) => neverFetched(infoId).articleKind -> error }
       if (failed.nonEmpty) {
-        airbrake.notify(s"Failed to schedule top priority fetches for uri ${uri.id.get}: ${uri.url}\n${failed.mkString("\n")}")
+        airbrake.notify(s"Failed to schedule top priority fetches for uri ${uriId}: ${url}\n${failed.mkString("\n")}")
       }
     }
   }
