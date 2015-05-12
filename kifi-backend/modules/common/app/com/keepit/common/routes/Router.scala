@@ -3,6 +3,7 @@ package com.keepit.common.routes
 import com.keepit.common.db.{ Id, ExternalId, State, SurrogateExternalId, SequenceNumber }
 import com.keepit.curator.model.LibraryRecoSelectionParams
 import com.keepit.model._
+import com.keepit.rover.article.{ ArticleKind, Article }
 import com.keepit.rover.model.ArticleInfo
 import com.keepit.shoebox.model.ids.UserSessionExternalId
 import com.keepit.search.SearchConfigExperiment
@@ -423,6 +424,8 @@ object Rover extends Service {
     def fetchAsap() = ServiceRoute(POST, "/internal/rover/fetchAsap")
     def getBestArticlesByUris() = ServiceRoute(POST, "/internal/rover/getBestArticlesByUris")
     def getArticleInfosByUris() = ServiceRoute(POST, "/internal/rover/getArticleInfosByUris")
+    def getBestArticleSummaryByUris() = ServiceRoute(POST, "/internal/rover/getBestArticleSummaryByUris")
+    def getImagesByUris() = ServiceRoute(POST, "/internal/rover/getImagesByUris")
   }
 }
 

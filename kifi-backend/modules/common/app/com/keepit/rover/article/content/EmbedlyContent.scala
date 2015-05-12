@@ -5,6 +5,7 @@ import com.keepit.common.store.ImagePath
 import com.keepit.common.time.DateTimeJsonFormat
 import com.keepit.model._
 import com.keepit.rover.article.EmbedlyArticle
+import com.keepit.rover.model.RoverMedia
 import com.kifi.macros.json
 import org.joda.time.DateTime
 import org.jsoup.Jsoup
@@ -44,6 +45,16 @@ object EmbedlyMedia {
     (__ \ 'height).read[Int] and
     (__ \ 'url).readNullable[String]
   )(EmbedlyMedia.apply _)
+
+  implicit def toRoverMedia(media: EmbedlyMedia): RoverMedia = {
+    RoverMedia(
+      media.mediaType,
+      media.html,
+      media.width,
+      media.height,
+      media.url
+    )
+  }
 }
 
 case class EmbedlyImage(

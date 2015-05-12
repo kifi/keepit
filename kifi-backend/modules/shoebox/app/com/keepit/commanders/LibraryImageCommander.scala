@@ -10,7 +10,7 @@ import com.keepit.heimdal.HeimdalContext
 import com.keepit.common.images.Photoshop
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.WebService
-import com.keepit.common.store.{ RoverImageStore, ImageSize, S3ImageConfig }
+import com.keepit.common.store.{ ImagePath, RoverImageStore, ImageSize, S3ImageConfig }
 import com.keepit.model.ProcessImageOperation.Original
 import com.keepit.model._
 import play.api.libs.Files.TemporaryFile
@@ -47,9 +47,7 @@ class LibraryImageCommanderImpl @Inject() (
     implicit val executionContext: ExecutionContext,
     val webService: WebService) extends LibraryImageCommander with ProcessedImageHelper with Logging {
 
-  def getUrl(libraryImage: LibraryImage): String = {
-    s3ImageConfig.cdnBase + "/" + libraryImage.imagePath.path
-  }
+  def getUrl(libraryImage: LibraryImage): String = libraryImage.imagePath.getUrl(s3ImageConfig)
 
   def getBestImageForLibrary(libraryId: Id[Library], idealSize: ImageSize): Option[LibraryImage] = {
     val targetLibraryImages = db.readOnlyMaster { implicit s =>
