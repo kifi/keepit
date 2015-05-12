@@ -23,7 +23,7 @@ object OAuth2Providers {
     name = LNKD,
     authUrl = new URL("https://www.linkedin.com/uas/oauth2/authorization"),
     accessTokenUrl = new URL("https://www.linkedin.com/uas/oauth2/accessToken"),
-    scope = "r_basicprofile,r_fullprofile,r_emailaddress,r_network,r_contactinfo,w_messages"
+    scope = "r_basicprofile,r_emailaddress"
   )
 
   val googConfigBuilder = OAuth2Configuration.build(

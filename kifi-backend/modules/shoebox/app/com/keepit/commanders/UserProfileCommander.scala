@@ -46,10 +46,11 @@ class UserProfileCommander @Inject() (
   def getOwnLibrariesForSelf(user: User, page: Paginator, idealSize: ImageSize): ParSeq[OwnLibraryCardInfo] = {
     val (libraryInfos, memberships) = db.readOnlyMaster { implicit session =>
       val libs = libraryRepo.getOwnerLibrariesForSelf(user.id.get, page)
+      val libOwnerIds = libs.map(_.ownerId).toSet
+      val owners = basicUserRepo.loadAll(libOwnerIds)
       val libraryIds = libs.map(_.id.get).toSet
-      val owners = Map(user.id.get -> BasicUser.fromUser(user))
       val memberships = libraryMembershipRepo.getWithLibraryIdsAndUserId(libraryIds, user.id.get)
-      val libraryInfos = libraryCommander.createLibraryCardInfos(libs, owners, Some(user), false, idealSize) zip libs
+      val libraryInfos = libraryCommander.createLibraryCardInfos(libs, owners, Some(user), true, idealSize) zip libs
       (libraryInfos, memberships)
     }
     libraryInfos map {
@@ -63,6 +64,7 @@ class UserProfileCommander @Inject() (
           slug = info.slug,
           kind = lib.kind,
           visibility = lib.visibility,
+          owner = info.owner,
           numKeeps = info.numKeeps,
           numFollowers = info.numFollowers,
           followers = info.followers,
@@ -81,8 +83,9 @@ class UserProfileCommander @Inject() (
         case Some(other) =>
           libraryRepo.getOwnerLibrariesForOtherUser(user.id.get, other.id.get, page)
       }
-      val owners = Map(user.id.get -> BasicUser.fromUser(user))
-      libraryCommander.createLibraryCardInfos(libs, owners, viewer, viewer.exists(_.id != user.id), idealSize)
+      val libOwnerIds = libs.map(_.ownerId).toSet
+      val owners = basicUserRepo.loadAll(libOwnerIds)
+      libraryCommander.createLibraryCardInfos(libs, owners, viewer, true, idealSize)
     }
   }
 
@@ -103,7 +106,7 @@ class UserProfileCommander @Inject() (
           } else Seq.empty
       }
       val owners = basicUserRepo.loadAll(libs.map(_.ownerId).toSet)
-      libraryCommander.createLibraryCardInfos(libs, owners, viewer, viewer.exists(_.id != user.id), idealSize)
+      libraryCommander.createLibraryCardInfos(libs, owners, viewer, true, idealSize)
     }
   }
 
@@ -132,6 +135,7 @@ class UserProfileCommander @Inject() (
 
   def getOwnerLibraryCounts(users: Set[Id[User]]): Map[Id[User], Int] = {
     db.readOnlyReplica { implicit s =>
+
       libraryRepo.getOwnerLibraryCounts(users)
     }
   }

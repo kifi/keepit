@@ -193,7 +193,7 @@ class ShoeboxController @Inject() (
     val scrapeWanted = (o \ "scrapeWanted").asOpt[Boolean] getOrElse false
     if (scrapeWanted) SafeFuture {
       db.readWrite { implicit session => scrapeScheduler.scheduleScrape(uri) }
-      rover.fetchAsap(IndexableUri(uri))
+      rover.fetchAsap(uri.id.get, url, uri.state)
     }
     Ok(Json.toJson(uri))
   }
@@ -478,11 +478,20 @@ class ShoeboxController @Inject() (
     Ok(result)
   }
 
+  // Replaced by getBasicLibraryDetails below. Please replace dependencies.
   def getBasicLibraryStatistics() = Action(parse.tolerantJson) { request =>
     val libraryIds = request.body.as[Set[Id[Library]]]
     val basicStatisticsByLibraryId = libraryCommander.getBasicLibraryStatistics(libraryIds)
     implicit val tupleWrites = TupleFormat.tuple2Writes[Id[Library], BasicLibraryStatistics]
     val result = Json.toJson(basicStatisticsByLibraryId.toSeq)
+    Ok(result)
+  }
+
+  def getBasicLibraryDetails() = Action(parse.tolerantJson) { request =>
+    val libraryIds = request.body.as[Set[Id[Library]]]
+    val basicDetailsByLibraryId = libraryCommander.getBasicLibraryDetails(libraryIds)
+    implicit val tupleWrites = TupleFormat.tuple2Writes[Id[Library], BasicLibraryDetails]
+    val result = Json.toJson(basicDetailsByLibraryId.toSeq)
     Ok(result)
   }
 

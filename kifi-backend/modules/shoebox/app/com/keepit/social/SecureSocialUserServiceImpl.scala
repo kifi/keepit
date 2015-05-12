@@ -174,28 +174,28 @@ class SecureSocialUserPluginImpl @Inject() (
     socialId: SocialId, socialNetworkType: SocialNetworkType, socialUser: SocialUser,
     userId: Option[Id[User]], allowSignup: Boolean): SocialUserInfo = timing(s"intern user $socialId") {
 
-    log.debug(s"[internUser] socialId=$socialId snType=$socialNetworkType socialUser=$socialUser userId=$userId")
+    log.info(s"[internUser] socialId=$socialId snType=$socialNetworkType socialUser=$socialUser userId=$userId")
 
     val (suiOpt, existingUserOpt) = db.readOnlyMaster { implicit session =>
-      (
-        socialUserInfoRepo.getOpt(socialId, socialNetworkType),
-        userId orElse {
-          // Automatically connect accounts with existing emails
-          socialUser.email.map(EmailAddress(_)).flatMap { emailAddress =>
-            emailRepo.getVerifiedOwner(emailAddress) tap {
-              _.foreach { existingUserId =>
-                log.info(s"[internUser] Found existing user $existingUserId with email address $emailAddress.")
-              }
+      val suiOpt = socialUserInfoRepo.getOpt(socialId, socialNetworkType)
+      val existingUserOpt = userId orElse {
+        // Automatically connect accounts with existing emails
+        socialUser.email.map(EmailAddress(_)).flatMap { emailAddress =>
+          emailRepo.getVerifiedOwner(emailAddress) tap {
+            _.foreach { existingUserId =>
+              log.info(s"[internUser] Found existing user $existingUserId with email address $emailAddress.")
             }
           }
-        } flatMap { existingUserId =>
-          scala.util.Try(userRepo.get(existingUserId)).toOption.filterNot { existingUser =>
-            val isInactive = (existingUser.state == UserStates.INACTIVE)
-            if (isInactive) { log.warn(s"[internUser] User $existingUserId is inactive!") }
-            isInactive
-          }
         }
-      )
+      } flatMap { existingUserId =>
+        scala.util.Try(userRepo.get(existingUserId)).toOption.filterNot { existingUser =>
+          val isInactive = (existingUser.state == UserStates.INACTIVE)
+          if (isInactive) { log.warn(s"[internUser] User $existingUserId is inactive!") }
+          isInactive
+        }
+      }
+      log.info(s"social user $suiOpt for $socialId, $socialNetworkType leads to existing user $existingUserOpt")
+      (suiOpt, existingUserOpt)
     }
 
     val sui: SocialUserInfo = suiOpt.map(_.withCredentials(socialUser)) match {
@@ -224,15 +224,22 @@ class SecureSocialUserPluginImpl @Inject() (
 
       case Some(socialUserInfo) if socialUserInfo.userId.isEmpty =>
         val userOpt = getOrCreateUser(existingUserOpt, allowSignup, socialUser)
+        log.info(s"existing user $existingUserOpt with allowSignup $allowSignup of socialUser $socialUser leads to userOpt $userOpt")
 
         //social user info with user must be FETCHED_USING_SELF, so setting user should trigger a pull
         //todo(eishay): send a direct fetch request
-        for (
-          user <- userOpt; su <- db.readOnlyMaster { implicit session => socialUserInfoRepo.getByUser(user.id.get) } if su.networkType == socialUserInfo.networkType && su.id.get != socialUserInfo.id.get
-        ) {
-          throw new IllegalStateException(
-            s"Can't connect $socialUserInfo to user ${user.id.get}. " +
-              s"Social user for network ${su.networkType} is already connected to user ${user.id.get}: $su")
+        userOpt.foreach { user =>
+          val socialUsers = db.readOnlyMaster { implicit session =>
+            socialUserInfoRepo.getByUser(user.id.get)
+          }
+          socialUsers foreach { su =>
+            if (su.networkType == socialUserInfo.networkType && su.id.get != socialUserInfo.id.get) {
+              throw new IllegalStateException(
+                s"Can't connect $socialUserInfo to user ${user.id.get}. " +
+                  s"Social user for network ${su.networkType} is already connected to user ${user.id.get}: $su. " +
+                  s"overall found ${socialUsers.map(_.id)} connected to this user")
+            }
+          }
         }
 
         val sui = db.readWrite(attempts = 3) { implicit session =>

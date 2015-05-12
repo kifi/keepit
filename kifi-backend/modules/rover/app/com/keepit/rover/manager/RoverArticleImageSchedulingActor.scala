@@ -16,8 +16,8 @@ import scala.util.{ Success, Failure }
 
 object RoverArticleImageSchedulingActor {
   val maxBatchSize = 30 // low to balance producer / consumer behavior *on leader* (SQS send / receive), increase if we don't care about leader as a consumer.
-  val maxQueuedFor = 7 days
-  val dueAfterRequestedWithin = 1 minute // schedule image processing if it hasn't been already 1 minute after a fetch
+  val maxQueuedFor = 2 days // re-schedule image processing if it hasn't actually been completed after a while (increase if large backlog)
+  val dueAfterRequestedWithin = 1 minute // schedule image processing if it hasn't been already 1 minute after a fetch (don't race with near-line calls, this recovers when they fail)
   val fastFollowWindow = 1 hour
 }
 

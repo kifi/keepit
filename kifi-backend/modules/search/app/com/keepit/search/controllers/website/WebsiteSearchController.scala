@@ -1,6 +1,9 @@
 package com.keepit.search.controllers.website
 
+import com.keepit.commanders.ProcessedImageSize
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
+import com.keepit.common.store.S3ImageConfig
+import com.keepit.rover.RoverServiceClient
 import com.keepit.search.controllers.util.{ SearchControllerUtil }
 import com.keepit.search.engine.SearchFactory
 import com.keepit.search.engine.uri.UriSearchResult
@@ -16,7 +19,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import scala.concurrent.Future
 import play.api.libs.json._
-import com.keepit.search.index.graph.library.{ LibraryIndexable, LibraryIndexer }
+import com.keepit.search.index.graph.library.{ LibraryIndexer }
 import play.api.libs.json.JsArray
 import com.keepit.model._
 import com.keepit.search.util.IdFilterCompressor
@@ -42,6 +45,8 @@ class WebsiteSearchController @Inject() (
     librarySearchCommander: LibrarySearchCommander,
     userSearchCommander: UserSearchCommander,
     searchFactory: SearchFactory,
+    rover: RoverServiceClient,
+    implicit val imageConfig: S3ImageConfig,
     implicit val publicIdConfig: PublicIdConfiguration) extends UserActions with SearchServiceController with SearchControllerUtil with Logging {
 
   def search2(
@@ -63,7 +68,7 @@ class WebsiteSearchController @Inject() (
 
     uriSearchCommander.searchUris(userId, acceptLangs, experiments, query, filterFuture, libraryContextFuture, maxHits, lastUUIDStr, context, None, debugOpt).flatMap { uriSearchResult =>
 
-      getWebsiteUriSearchResults(userId, uriSearchResult).imap {
+      getWebsiteUriSearchResults(userId, uriSearchResult, experiments).imap {
         case (hits, users, libraries) =>
           val librariesJson = libraries.map { library =>
             Json.obj("id" -> library.id, "name" -> library.name, "color" -> library.color, "path" -> library.path, "visibility" -> library.visibility)
@@ -85,13 +90,23 @@ class WebsiteSearchController @Inject() (
     }
   }
 
-  private def getWebsiteUriSearchResults(userId: Id[User], uriSearchResult: UriSearchResult): Future[(Seq[JsValue], Seq[BasicUser], Seq[BasicLibrary])] = {
+  //todo(Léo): Remove experiments
+  private def getWebsiteUriSearchResults(userId: Id[User], uriSearchResult: UriSearchResult, experiments: Set[ExperimentType]): Future[(Seq[JsValue], Seq[BasicUser], Seq[BasicLibrary])] = {
     if (uriSearchResult.hits.isEmpty) {
       Future.successful((Seq.empty[JsObject], Seq.empty[BasicUser], Seq.empty[BasicLibrary]))
     } else {
-
       val uriIds = uriSearchResult.hits.map(hit => Id[NormalizedURI](hit.id))
-      val futureUriSummaries = shoeboxClient.getUriSummaries(uriIds)
+      val futureUriSummaries = {
+        if (experiments.contains(ExperimentType.ROVER_CONTENT)) {
+          rover.getUriSummaryByUris(uriIds.toSet).imap { roverSummariesByUriId =>
+            uriIds.map { uriId =>
+              uriId -> roverSummariesByUriId.get(uriId).map(_.toUriSummary(ProcessedImageSize.Large.idealSize)).getOrElse(URISummary())
+            }.toMap
+          }
+        } else {
+          shoeboxClient.getUriSummaries(uriIds)
+        }
+      }
       val (futureBasicKeeps, futureLibrariesWithWriteAccess) = {
         if (userId == SearchControllerUtil.nonUser) {
           (Future.successful(Map.empty[Id[NormalizedURI], Set[BasicKeep]].withDefaultValue(Set.empty)), Future.successful(Set.empty[Id[Library]]))
@@ -234,7 +249,7 @@ class WebsiteSearchController @Inject() (
 
     val futureUriSearchResultJson = if (maxUris <= 0) Future.successful(JsNull) else {
       uriSearchCommander.searchUris(userId, acceptLangs, experiments, query, userFilterFuture, libraryFilterFuture, maxUris, lastUUIDStr, uriContext, None, debugOpt).flatMap { uriSearchResult =>
-        getWebsiteUriSearchResults(userId, uriSearchResult).imap {
+        getWebsiteUriSearchResults(userId, uriSearchResult, experiments).imap {
           case (hits, users, libraries) =>
             val librariesJson = libraries.map { library =>
               Json.obj("id" -> library.id, "name" -> library.name, "color" -> library.color, "path" -> library.path, "visibility" -> library.visibility)

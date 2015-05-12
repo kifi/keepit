@@ -4,7 +4,7 @@ import com.google.inject.{Inject, Singleton}
 import com.keepit.common.cache._
 import com.keepit.common.core._
 import com.keepit.common.db.slick.Database
-import com.keepit.common.db.{Id, SequenceNumber}
+import com.keepit.common.db.{State, Id, SequenceNumber}
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.{AccessLog, Logging}
 import com.keepit.model.{IndexableUri, NormalizedURI}
@@ -31,11 +31,27 @@ class ArticleCommander @Inject() (
     private implicit val executionContext: ExecutionContext
 ) extends Logging {
 
+  // Get ArticleInfos
+
   def getArticleInfosBySequenceNumber(seq: SequenceNumber[ArticleInfo], limit: Int): Seq[ArticleInfo] = {
     db.readOnlyMaster { implicit session =>
       articleInfoRepo.getBySequenceNumber(seq, limit).map(RoverArticleInfo.toArticleInfo)
     }
   }
+
+  def getArticleInfosByUris(uriIds: Set[Id[NormalizedURI]]): Map[Id[NormalizedURI], Set[ArticleInfo]] = {
+    val keys = uriIds.map(ArticleInfoUriKey.apply)
+    db.readOnlyMaster { implicit session =>
+      articleInfoCache.bulkGetOrElse(keys) { missingKeys =>
+        articleInfoRepo.getByUris(missingKeys.map(_.uriId)).map {
+          case (uriId, infos) =>
+            ArticleInfoUriKey(uriId) -> infos.map(RoverArticleInfo.toArticleInfo)
+        }
+      }
+    }.map { case (key, infos) => key.uriId -> infos }
+  }
+
+  // Get Articles of all kinds
 
   def getBestArticleFuturesByUris(uriIds: Set[Id[NormalizedURI]]): Map[Id[NormalizedURI], Future[Set[Article]]] = {
     getArticleInfosByUris(uriIds).mapValues { infos =>
@@ -51,33 +67,25 @@ class ArticleCommander @Inject() (
     Future.sequence(futureUriIdWithArticles).imap(_.toMap)
   }
 
-  def getArticleInfosByUris(uriIds: Set[Id[NormalizedURI]]): Map[Id[NormalizedURI], Set[ArticleInfo]] = {
-    val keys = uriIds.map(ArticleInfoUriKey.apply)
-    db.readOnlyMaster { implicit session =>
-      articleInfoCache.bulkGetOrElse(keys) { missingKeys =>
-        articleInfoRepo.getByUris(missingKeys.map(_.uriId)).map {
-          case (uriId, infos) =>
-            ArticleInfoUriKey(uriId) -> infos.map(RoverArticleInfo.toArticleInfo)
-        }
-      }
-    }.map { case (key, infos) => key.uriId -> infos }
+  // Get Articles of a specific kind
+
+  private def getBestArticleFutureByUris[A <: Article](uriIds: Set[Id[NormalizedURI]])(implicit kind: ArticleKind[A]): Map[Id[NormalizedURI], Future[Option[A]]] = {
+    getArticleInfosByUris(uriIds).mapValues { infos =>
+      infos.find(_.articleKind == kind).map(getBestArticle(_).imap(_.map(_.asExpected[A]))) getOrElse Future.successful(None)
+    }
+  }
+  
+  def getBestArticleByUris[A <: Article](uriIds: Set[Id[NormalizedURI]])(implicit kind: ArticleKind[A]): Future[Map[Id[NormalizedURI], Option[A]]] = {
+    val futureUriIdWithArticles = getBestArticleFutureByUris[A](uriIds).map {
+      case (uriId, futureArticleOption) =>
+        futureArticleOption.imap(uriId -> _)
+    }
+    Future.sequence(futureUriIdWithArticles).imap(_.toMap)
   }
 
-  def getBestArticle[A <: Article](uriId: Id[NormalizedURI])(implicit kind: ArticleKind[A]): Future[Option[A]] = {
-    getArticleInfoByUriAndKind[A](uriId).map(getBestArticle(_).imap(_.map(_.asExpected[A]))) getOrElse Future.successful(None)
-  }
-
-  def getOrElseFetchBestArticle[A <: Article](uri: IndexableUri)(implicit kind: ArticleKind[A]): Future[Option[A]] = {
-    val info = internArticleInfoByUri(uri.id.get, uri.url, Set(kind))(kind)
+  def getOrElseFetchBestArticle[A <: Article](uriId: Id[NormalizedURI], url: String)(implicit kind: ArticleKind[A]): Future[Option[A]] = {
+    val info = internArticleInfoByUri(uriId, url, Set(kind))(kind)
     getOrElseFetchBestArticle(info).imap(_.map(_.asExpected[A]))
-  }
-
-  def getLatestArticle(info: ArticleInfoHolder): Future[Option[info.A]] = {
-    info.getLatestKey.map(articleStore.get) getOrElse Future.successful(None)
-  }
-
-  private def getBestArticle(info: ArticleInfoHolder): Future[Option[info.A]] = {
-    (info.getBestKey orElse info.getLatestKey).map(articleStore.get) getOrElse Future.successful(None)
   }
 
   private def getOrElseFetchBestArticle(info: RoverArticleInfo): Future[Option[info.A]] = {
@@ -90,17 +98,23 @@ class ArticleCommander @Inject() (
     }
   }
 
-  private def getArticleInfoByUriAndKind[A <: Article](uriId: Id[NormalizedURI])(implicit kind: ArticleKind[A]): Option[RoverArticleInfo] = {
-    db.readWrite { implicit session =>
-      articleInfoRepo.getByUriAndKind(uriId, kind)
-    }
-  }
-
   private def internArticleInfoByUri(uriId: Id[NormalizedURI], url: String, kinds: Set[ArticleKind[_ <: Article]]): Map[ArticleKind[_ <: Article], RoverArticleInfo] = {
     db.readWrite { implicit session =>
       articleInfoRepo.internByUri(uriId, url, kinds)
     }
   }
+
+  // ArticleStore helpers
+
+  def getLatestArticle(info: ArticleInfoHolder): Future[Option[info.A]] = {
+    info.getLatestKey.map(articleStore.get) getOrElse Future.successful(None)
+  }
+
+  private def getBestArticle(info: ArticleInfoHolder): Future[Option[info.A]] = {
+    (info.getBestKey orElse info.getLatestKey).map(articleStore.get) getOrElse Future.successful(None)
+  }
+
+  // Fetch related functions
 
   def getRipeForFetching(limit: Int, queuedForMoreThan: Duration) = {
     db.readOnlyMaster { implicit session =>
@@ -131,14 +145,14 @@ class ArticleCommander @Inject() (
     }
   }
 
-  def fetchAsap(uri: IndexableUri): Future[Unit] = {
-    val toBeInternedByPolicy = articlePolicy.toBeInterned(uri.url, uri.state)
-    val interned = internArticleInfoByUri(uri.id.get, uri.url, toBeInternedByPolicy)
+  def fetchAsap(uriId: Id[NormalizedURI], url: String, state: State[NormalizedURI]): Future[Unit] = {
+    val toBeInternedByPolicy = articlePolicy.toBeInterned(url, state)
+    val interned = internArticleInfoByUri(uriId, url, toBeInternedByPolicy)
     val neverFetched = interned.collect { case (kind, info) if info.lastFetchedAt.isEmpty => (info.id.get -> info) }
     fetchWithTopPriority(neverFetched.keySet).imap { results =>
       val failed = results.collect { case (infoId, Failure(error)) => neverFetched(infoId).articleKind -> error }
       if (failed.nonEmpty) {
-        airbrake.notify(s"Failed to schedule top priority fetches for uri ${uri.id.get}: ${uri.url}\n${failed.mkString("\n")}")
+        airbrake.notify(s"Failed to schedule top priority fetches for uri ${uriId}: ${url}\n${failed.mkString("\n")}")
       }
     }
   }

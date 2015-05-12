@@ -11,16 +11,18 @@ object KeepFactory {
   private[this] val idx = new AtomicLong(System.currentTimeMillis() % 100)
 
   def keep(): PartialKeep = {
+    val userId = Id[User](-1 * idx.incrementAndGet())
     new PartialKeep(Keep(id = Some(Id[Keep](-1 * idx.incrementAndGet())),
       uriId = Id[NormalizedURI](-1 * idx.incrementAndGet()),
       inDisjointLib = true,
       urlId = Id[URL](-1 * idx.incrementAndGet()),
       url = s"http://${random(5, "abcdefghijklmnopqrstuvwxyz")}.com/${random(5, "abcdefghijklmnopqrstuvwxyz")}",
       visibility = LibraryVisibility.PUBLISHED,
-      userId = Id[User](-1 * idx.incrementAndGet()),
+      userId = userId,
       source = KeepSource.keeper,
       libraryId = None,
-      note = None
+      note = None,
+      originalKeeperId = Some(userId)
     ))
   }
 

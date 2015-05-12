@@ -3,6 +3,7 @@ package com.keepit.common.routes
 import com.keepit.common.db.{ Id, ExternalId, State, SurrogateExternalId, SequenceNumber }
 import com.keepit.curator.model.LibraryRecoSelectionParams
 import com.keepit.model._
+import com.keepit.rover.article.{ ArticleKind, Article }
 import com.keepit.rover.model.ArticleInfo
 import com.keepit.shoebox.model.ids.UserSessionExternalId
 import com.keepit.search.SearchConfigExperiment
@@ -159,6 +160,7 @@ object Shoebox extends Service {
     def newKeepsInLibraryForEmail(userId: Id[User], max: Int) = ServiceRoute(GET, "/internal/shoebox/database/newKeepsInLibraryForEmail", Param("userId", userId), Param("max", max))
     def getBasicKeeps(userId: Id[User]) = ServiceRoute(POST, "/internal/shoebox/database/getBasicKeeps", Param("userId", userId))
     def getBasicLibraryStatistics() = ServiceRoute(POST, "/internal/shoebox/database/getBasicLibraryStatistics")
+    def getBasicLibraryDetails() = ServiceRoute(POST, "/internal/shoebox/database/getBasicLibraryDetails")
     def getKeepCounts() = ServiceRoute(POST, "/internal/shoebox/database/getKeepCounts")
     def getLibraryImageUrls() = ServiceRoute(POST, "/internal/shoebox/database/getLibraryImageUrls")
     def getLibrariesWithWriteAccess(userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/getLibrariesWithWriteAccess", Param("userId", userId))
@@ -423,6 +425,9 @@ object Rover extends Service {
     def fetchAsap() = ServiceRoute(POST, "/internal/rover/fetchAsap")
     def getBestArticlesByUris() = ServiceRoute(POST, "/internal/rover/getBestArticlesByUris")
     def getArticleInfosByUris() = ServiceRoute(POST, "/internal/rover/getArticleInfosByUris")
+    def getBestArticleSummaryByUris() = ServiceRoute(POST, "/internal/rover/getBestArticleSummaryByUris")
+    def getImagesByUris() = ServiceRoute(POST, "/internal/rover/getImagesByUris")
+    def getOrElseFetchArticleSummaryAndImages() = ServiceRoute(POST, "/internal/rover/getOrElseFetchArticleSummaryAndImages")
   }
 }
 

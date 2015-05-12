@@ -279,7 +279,8 @@ POST    /m/1/libraries/:id/invite               @com.keepit.controllers.mobile.M
 POST    /m/1/libraries/:id/subscription @com.keepit.controllers.mobile.MobileLibraryController.setSubscribedToUpdates(id: PublicId[Library], subscribed: Boolean)
 
 
-GET     /m/1/libraries/:id/members              @com.keepit.controllers.mobile.MobileLibraryController.getLibraryMembers(id: PublicId[Library], offset: Int ?= 0, limit: Int ?= 20)
+GET     /m/1/libraries/:id/members              @com.keepit.controllers.mobile.MobileLibraryController.getLibraryMembersV1(id: PublicId[Library], offset: Int ?= 0, limit: Int ?= 20)
+GET     /m/2/libraries/:id/members              @com.keepit.controllers.mobile.MobileLibraryController.getLibraryMembersV2(id: PublicId[Library], offset: Int ?= 0, limit: Int ?= 20)
 GET     /m/1/libraries/:id/members/suggest      @com.keepit.controllers.mobile.MobileLibraryController.suggestMembers(id: PublicId[Library], q: Option[String] ?= None, n: Int ?= 5)
 POST    /m/1/libraries/:id/members/:uId/access  @com.keepit.controllers.mobile.MobileLibraryController.updateLibraryMembership(id: PublicId[Library], uId: ExternalId[User])
 
@@ -666,7 +667,7 @@ POST    /admin/user/:id/impersonate @com.keepit.controllers.admin.AdminAuthContr
 POST    /admin/user/:id/deactivate  @com.keepit.controllers.admin.AdminUserController.deactivate(id: Id[User])
 GET     /admin/user/:id/mixpanel/reset    @com.keepit.controllers.admin.AdminUserController.resetMixpanelProfile(id: Id[User])
 POST    /admin/user/:id/uservalue   @com.keepit.controllers.admin.AdminUserController.userValue(id: Id[User])
-POST    /admin/user/:id/username   @com.keepit.controllers.admin.AdminUserController.setUsername(id: Id[User], username: String, overrideValidityCheck: Boolean ?= false, overrideProtection: Boolean ?= false)
+POST    /admin/user/:id/username   @com.keepit.controllers.admin.AdminUserController.setUsername(id: Id[User])
 POST    /admin/unimpersonate        @com.keepit.controllers.admin.AdminAuthController.unimpersonate()
 GET     /admin/users/notify         @com.keepit.controllers.admin.AdminUserController.notification()
 POST    /admin/users/sendNotification @com.keepit.controllers.admin.AdminUserController.sendNotificationToAllUsers()
@@ -936,6 +937,7 @@ POST     /internal/shoebox/image/getUriSummaries     @com.keepit.controllers.int
 GET      /internal/shoebox/image/getUserImageUrl     @com.keepit.controllers.internal.ShoeboxController.getUserImageUrl(id: Id[User], width: Int)
 POST     /internal/shoebox/database/getBasicKeeps   @com.keepit.controllers.internal.ShoeboxController.getBasicKeeps(userId: Id[User])
 POST     /internal/shoebox/database/getBasicLibraryStatistics   @com.keepit.controllers.internal.ShoeboxController.getBasicLibraryStatistics()
+POST     /internal/shoebox/database/getBasicLibraryDetails   @com.keepit.controllers.internal.ShoeboxController.getBasicLibraryDetails()
 POST     /internal/shoebox/database/getKeepCounts   @com.keepit.controllers.internal.ShoeboxController.getKeepCounts()
 POST     /internal/shoebox/database/getLibraryImageUrls   @com.keepit.controllers.internal.ShoeboxController.getLibraryImageUrls()
 GET      /internal/shoebox/database/getLibrariesWithWriteAccess @com.keepit.controllers.internal.ShoeboxController.getLibrariesWithWriteAccess(userId: Id[User])

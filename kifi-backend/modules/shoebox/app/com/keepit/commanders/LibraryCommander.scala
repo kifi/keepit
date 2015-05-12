@@ -131,12 +131,27 @@ class LibraryCommander @Inject() (
     Library.formatLibraryPath(owner.username, library.slug)
   }
 
+  // Replaced by getBasicLibraryDetails, please remove dependencies
   def getBasicLibraryStatistics(libraryIds: Set[Id[Library]]): Map[Id[Library], BasicLibraryStatistics] = {
     db.readOnlyReplica { implicit session =>
       val libs = libraryRepo.getLibraries(libraryIds)
       libraryIds.map { libId =>
         val lib = libs(libId)
         libId -> BasicLibraryStatistics(lib.memberCount, lib.keepCount)
+      }.toMap
+    }
+  }
+
+  def getBasicLibraryDetails(libraryIds: Set[Id[Library]]): Map[Id[Library], BasicLibraryDetails] = {
+    db.readOnlyReplica { implicit session =>
+      val libs = libraryRepo.getLibraries(libraryIds)
+      libraryIds.map { libId =>
+        val lib = libs(libId)
+        val counts = libraryMembershipRepo.countWithLibraryIdByAccess(libId)
+        val numFollowers = counts.readOnly
+        val numCollaborators = counts.readWrite + counts.readInsert
+        val imageOpt = libraryImageCommander.getBestImageForLibrary(libId, ProcessedImageSize.Medium.idealSize).map(libraryImageCommander.getUrl)
+        libId -> BasicLibraryDetails(lib.name, lib.slug, lib.color, imageOpt, lib.description, numFollowers, numCollaborators, lib.keepCount)
       }.toMap
     }
   }
@@ -1398,7 +1413,7 @@ class LibraryCommander @Inject() (
           currentKeepOpt match {
             case None =>
               val newKeep = keepRepo.save(Keep(title = k.title, uriId = k.uriId, url = k.url, urlId = k.urlId, visibility = toLibrary.visibility,
-                userId = userId, note = k.note, source = withSource.getOrElse(k.source), libraryId = Some(toLibraryId), inDisjointLib = toLibrary.isDisjoint))
+                userId = userId, note = k.note, source = withSource.getOrElse(k.source), libraryId = Some(toLibraryId), inDisjointLib = toLibrary.isDisjoint, originalKeeperId = k.originalKeeperId.orElse(Some(userId))))
               combineTags(k.id.get, newKeep.id.get)
               Right(newKeep)
             case Some(existingKeep) if existingKeep.state == KeepStates.INACTIVE =>
@@ -1604,7 +1619,8 @@ class LibraryCommander @Inject() (
         val numFollowers = countMap.readOnly
         val numCollaborators = countMap.readWrite
 
-        val (collaborators, followers) = libraryMembershipRepo.pageWithLibraryIdAndAccess(lib.id.get, 0, 3, Set(LibraryAccess.READ_ONLY, LibraryAccess.READ_WRITE)).partition(mem => mem.canWrite)
+        val collaborators = libraryMembershipRepo.pageWithLibraryIdAndAccess(lib.id.get, 0, 3, Set(LibraryAccess.READ_WRITE, LibraryAccess.READ_INSERT))
+        val followers = libraryMembershipRepo.pageWithLibraryIdAndAccess(lib.id.get, 0, 3, Set(LibraryAccess.READ_ONLY))
         val collabIds = collaborators.map(_.userId).toSet
         val followerIds = followers.map(_.userId).toSet
         val userSample = basicUserRepo.loadAll(followerIds ++ collabIds) //we don't care about the order now anyway
@@ -1616,7 +1632,7 @@ class LibraryCommander @Inject() (
       }
 
       val owner = owners(lib.ownerId)
-      val isFollowing = if (withFollowing && viewer.isDefined && viewer.get.externalId != owner.externalId) {
+      val isFollowing = if (withFollowing && viewer.isDefined) {
         Some(libraryMembershipRepo.getWithLibraryIdAndUserId(lib.id.get, viewer.get.id.get).isDefined)
       } else {
         None

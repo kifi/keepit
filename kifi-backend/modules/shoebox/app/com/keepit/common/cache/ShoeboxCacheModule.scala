@@ -4,6 +4,7 @@ import com.keepit.commanders._
 import com.keepit.common.seo.SiteMapCache
 import com.keepit.controllers.core.StateTokenCache
 import com.keepit.model.cache.UserSessionViewExternalIdCache
+import com.keepit.rover.model.{ RoverArticleImagesCache, RoverArticleSummaryCache }
 import com.keepit.scraper.UrlSignatureCache
 
 import scala.concurrent.duration._
@@ -395,4 +396,13 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   @Provides @Singleton
   def twitterHandleCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new TwitterHandleCache(stats, accessLog, (innerRepo, 5 minutes), (outerRepo, 30 days))
+
+  @Provides @Singleton
+  def roverArticleSummaryCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new RoverArticleSummaryCache(stats, accessLog, (outerRepo, 30 days))
+
+  @Provides @Singleton
+  def roverArticleImagesCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new RoverArticleImagesCache(stats, accessLog, (outerRepo, 30 days))
+
 }

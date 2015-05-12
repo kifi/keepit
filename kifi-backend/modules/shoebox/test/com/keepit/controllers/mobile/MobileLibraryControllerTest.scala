@@ -635,7 +635,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
 
   private def getMembers(user: User, libId: PublicId[Library], offset: Int, limit: Int)(implicit injector: Injector): Future[Result] = {
     inject[FakeUserActionsHelper].setUser(user)
-    controller.getLibraryMembers(libId, offset, limit)(request(routes.MobileLibraryController.getLibraryMembers(libId, offset, limit)))
+    controller.getLibraryMembersV1(libId, offset, limit)(request(routes.MobileLibraryController.getLibraryMembersV1(libId, offset, limit)))
   }
 
   private def keepToLibraryV1(user: User, libId: PublicId[Library], body: JsObject)(implicit injector: Injector): Future[Result] = {

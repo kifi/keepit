@@ -9,6 +9,7 @@ import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration, ModelWithPubl
 import com.keepit.common.db._
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.json
+import com.keepit.common.store.ImagePath
 import com.keepit.common.strings.UTF8
 import com.keepit.common.time._
 import com.keepit.model.view.LibraryMembershipView
@@ -261,7 +262,7 @@ object DetailedLibraryView {
 }
 
 case class BasicLibrary(id: PublicId[Library], name: String, path: String, visibility: LibraryVisibility, color: Option[LibraryColor]) {
-  def isSecret = (visibility == LibraryVisibility.SECRET)
+  def isSecret = visibility == LibraryVisibility.SECRET
 }
 
 object BasicLibrary {
@@ -271,10 +272,23 @@ object BasicLibrary {
   }
 }
 
+// Replaced by BasicLibraryDetails, please remove dependencies on this
 case class BasicLibraryStatistics(memberCount: Int, keepCount: Int)
 object BasicLibraryStatistics {
   implicit val format = Json.format[BasicLibraryStatistics]
 }
+
+// For service-to-Shoebox calls needing library metadata. Specialized for search's needs, ask search before changing.
+@json
+case class BasicLibraryDetails(
+  name: String,
+  slug: LibrarySlug,
+  color: Option[LibraryColor],
+  imageUrl: Option[String],
+  description: Option[String],
+  numFollowers: Int,
+  numCollaborators: Int,
+  keepCount: Int)
 
 sealed abstract class LibraryColor(val hex: String)
 object LibraryColor {

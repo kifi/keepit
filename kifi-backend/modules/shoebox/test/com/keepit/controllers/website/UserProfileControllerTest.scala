@@ -229,17 +229,17 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
           ret3 === Seq(user5lib.id.get.id)
           libraryMembershipRepo.countNonTrivialLibrariesWithUserIdAndAccess(user5.id.get, LibraryAccess.OWNER) === 1
 
-          libraryRepo.countLibrariesForAnonymous(user1.id.get) === 1
-          libraryRepo.countLibrariesForAnonymous(user2.id.get) === 0
-          libraryRepo.countLibrariesForAnonymous(user3.id.get) === 1
-          libraryRepo.countLibrariesForAnonymous(user4.id.get) === 0
-          libraryRepo.countLibrariesForAnonymous(user5.id.get) === 2
-          libraryRepo.countLibrariesForOtherUser(user1.id.get, user5.id.get) === 1
-          libraryRepo.countLibrariesForOtherUser(user1.id.get, user2.id.get) === 2
-          libraryRepo.countLibrariesForOtherUser(user2.id.get, user5.id.get) === 0
-          libraryRepo.countLibrariesForOtherUser(user3.id.get, user5.id.get) === 1
-          libraryRepo.countLibrariesForOtherUser(user4.id.get, user5.id.get) === 0
-          libraryRepo.countLibrariesForOtherUser(user5.id.get, user1.id.get) === 2
+          libraryRepo.countOwnerLibrariesForAnonymous(user1.id.get) === 1
+          libraryRepo.countOwnerLibrariesForAnonymous(user2.id.get) === 0
+          libraryRepo.countOwnerLibrariesForAnonymous(user3.id.get) === 1
+          libraryRepo.countOwnerLibrariesForAnonymous(user4.id.get) === 0
+          libraryRepo.countOwnerLibrariesForAnonymous(user5.id.get) === 2
+          libraryRepo.countOwnerLibrariesForOtherUser(user1.id.get, user5.id.get) === 1
+          libraryRepo.countOwnerLibrariesForOtherUser(user1.id.get, user2.id.get) === 2
+          libraryRepo.countOwnerLibrariesForOtherUser(user2.id.get, user5.id.get) === 0
+          libraryRepo.countOwnerLibrariesForOtherUser(user3.id.get, user5.id.get) === 1
+          libraryRepo.countOwnerLibrariesForOtherUser(user4.id.get, user5.id.get) === 0
+          libraryRepo.countOwnerLibrariesForOtherUser(user5.id.get, user1.id.get) === 2
         }
 
         //non existing username
@@ -355,6 +355,13 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
                 "slug": "lib1",
                 "kind": "user_created",
                 "visibility": "published",
+                "owner":{
+                  "id":"${user1.externalId.id}",
+                  "firstName":"first",
+                  "lastName":"user",
+                  "pictureName":"0.jpg",
+                  "username":"firstuser"
+                },
                 "numKeeps": 1,
                 "numFollowers": 1,
                 "followers": [
@@ -407,7 +414,8 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
                 "followers":[],
                 "numCollaborators":0,
                 "collaborators":[],
-                "lastKept":${lib3.createdAt.getMillis}
+                "lastKept":${lib3.createdAt.getMillis},
+                "following": true
               }
             ]
           }
@@ -436,7 +444,6 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
         val result5Json = (contentAsJson(result5) \ "following").as[Seq[JsObject]]
         (result5Json.head \ "name").as[String] === "lib1"
         (result5Json.head \ "numFollowers").as[Int] === 1
-        (result5Json.head \ "following").asOpt[Boolean] === None
       }
     }
 

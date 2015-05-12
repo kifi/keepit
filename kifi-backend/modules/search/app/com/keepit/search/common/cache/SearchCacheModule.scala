@@ -7,6 +7,7 @@ import com.keepit.common.usersegment.UserSegmentCache
 import com.keepit.eliza.model.UserThreadStatsForUserIdCache
 import com.keepit.model._
 import com.keepit.model.cache.UserSessionViewExternalIdCache
+import com.keepit.rover.model.{ RoverArticleImagesCache, RoverArticleSummaryCache }
 import com.keepit.search._
 import com.keepit.search.tracking.{ ClickHistoryBuilder, ClickHistoryUserIdCache, ProbablisticLRUChunkCache }
 import com.keepit.social.BasicUserUserIdCache
@@ -170,5 +171,13 @@ case class SearchCacheModule(cachePluginModules: CachePluginModule*) extends Cac
   @Provides @Singleton
   def userActivePersonasCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new UserActivePersonasCache(stats, accessLog, (innerRepo, 5 minutes), (outerRepo, 14 days))
+
+  @Provides @Singleton
+  def roverArticleSummaryCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new RoverArticleSummaryCache(stats, accessLog, (outerRepo, 30 days))
+
+  @Provides @Singleton
+  def roverArticleImagesCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new RoverArticleImagesCache(stats, accessLog, (outerRepo, 30 days))
 
 }

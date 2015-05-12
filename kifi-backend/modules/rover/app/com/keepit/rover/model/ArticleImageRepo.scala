@@ -23,7 +23,8 @@ trait ArticleImageRepo extends Repo[ArticleImage] {
 class ArticleImageRepoImpl @Inject() (
     val db: DataBaseComponent,
     val clock: Clock,
-    airbrake: AirbrakeNotifier) extends DbRepo[ArticleImage] with ArticleImageRepo with Logging {
+    airbrake: AirbrakeNotifier,
+    articleImagesCache: RoverArticleImagesCache) extends DbRepo[ArticleImage] with ArticleImageRepo with Logging {
 
   import db.Driver.simple._
 
@@ -43,9 +44,13 @@ class ArticleImageRepoImpl @Inject() (
   def table(tag: Tag) = new ArticleImageTable(tag)
   initTable()
 
-  override def deleteCache(model: ArticleImage)(implicit session: RSession): Unit = {}
+  override def deleteCache(model: ArticleImage)(implicit session: RSession): Unit = {
+    articleImagesCache.remove(RoverArticleImagesKey(model.uriId, model.articleKind))
+  }
 
-  override def invalidateCache(model: ArticleImage)(implicit session: RSession): Unit = {}
+  override def invalidateCache(model: ArticleImage)(implicit session: RSession): Unit = {
+    deleteCache(model)
+  }
 
   def getByUriAndKind[A <: Article](uriId: Id[NormalizedURI], kind: ArticleKind[A], excludeState: Option[State[ArticleImage]] = Some(ArticleImageStates.INACTIVE))(implicit session: RSession): Set[ArticleImage] = {
     (for (r <- rows if r.uriId === uriId && r.kind === kind.typeCode && r.state =!= excludeState.orNull) yield r).list.toSet

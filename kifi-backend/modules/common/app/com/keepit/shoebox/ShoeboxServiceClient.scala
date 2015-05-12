@@ -115,7 +115,9 @@ trait ShoeboxServiceClient extends ServiceClient {
   def canViewLibrary(libraryId: Id[Library], userId: Option[Id[User]], authToken: Option[String], hashedPassPhrase: Option[HashedPassPhrase]): Future[Boolean]
   def newKeepsInLibraryForEmail(userId: Id[User], max: Int): Future[Seq[Keep]]
   def getBasicKeeps(userId: Id[User], uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[BasicKeep]]]
+  // Replaced by getBasicLibraryDetails below. Please replace dependencies.
   def getBasicLibraryStatistics(libraryIds: Set[Id[Library]]): Future[Map[Id[Library], BasicLibraryStatistics]]
+  def getBasicLibraryDetails(libraryIds: Set[Id[Library]]): Future[Map[Id[Library], BasicLibraryDetails]]
   def getKeepCounts(userIds: Set[Id[User]]): Future[Map[Id[User], Int]]
   def getLibraryImageUrls(libraryIds: Set[Id[Library]], idealImageSize: ImageSize): Future[Map[Id[Library], String]]
   def getLibrariesWithWriteAccess(userId: Id[User]): Future[Set[Id[Library]]]
@@ -736,11 +738,21 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
+  // Replaced by getBasicLibraryDetails below. Please replace dependencies.
   def getBasicLibraryStatistics(libraryIds: Set[Id[Library]]): Future[Map[Id[Library], BasicLibraryStatistics]] = {
     if (libraryIds.isEmpty) Future.successful(Map.empty[Id[Library], BasicLibraryStatistics]) else {
       call(Shoebox.internal.getBasicLibraryStatistics, Json.toJson(libraryIds)).map { r =>
         implicit val readsFormat = TupleFormat.tuple2Reads[Id[Library], BasicLibraryStatistics]
         r.json.as[Seq[(Id[Library], BasicLibraryStatistics)]].toMap
+      }
+    }
+  }
+
+  def getBasicLibraryDetails(libraryIds: Set[Id[Library]]): Future[Map[Id[Library], BasicLibraryDetails]] = {
+    if (libraryIds.isEmpty) Future.successful(Map.empty[Id[Library], BasicLibraryDetails]) else {
+      call(Shoebox.internal.getBasicLibraryDetails, Json.toJson(libraryIds)).map { r =>
+        implicit val readsFormat = TupleFormat.tuple2Reads[Id[Library], BasicLibraryDetails]
+        r.json.as[Seq[(Id[Library], BasicLibraryDetails)]].toMap
       }
     }
   }
