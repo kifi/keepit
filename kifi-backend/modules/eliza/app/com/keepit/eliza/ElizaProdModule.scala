@@ -8,7 +8,6 @@ import com.keepit.heimdal.ProdHeimdalServiceClientModule
 import com.keepit.inject.CommonProdModule
 import com.keepit.realtime.ElizaUrbanAirshipModule
 import com.keepit.rover.ProdRoverServiceClientModule
-import com.keepit.scraper.ProdScraperServiceClientModule
 import com.keepit.search.ProdSearchServiceClientModule
 import com.keepit.shoebox.ProdShoeboxServiceClientModule
 
@@ -25,7 +24,6 @@ case class ElizaProdModule() extends ElizaModule with CommonProdModule {
   val elizaServiceClientModule = ProdElizaServiceClientModule()
   val heimdalServiceClientModule = ProdHeimdalServiceClientModule()
   val abookServiceClientModule = ProdABookServiceClientModule()
-  val scraperServiceClientModule = ProdScraperServiceClientModule()
   val roverServiceClientModule = ProdRoverServiceClientModule()
 
   val elizaExternalEmailModule = ProdElizaExternalEmailModule()
