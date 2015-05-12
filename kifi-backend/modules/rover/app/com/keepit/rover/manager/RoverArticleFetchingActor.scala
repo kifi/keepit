@@ -46,7 +46,7 @@ class RoverArticleFetchingActor @Inject() (
   }
 
   private def process(task: SQSMessage[FetchTask], articleInfo: RoverArticleInfo): Future[Unit] = {
-    articleInfo.shouldFetch match {
+    shouldFetch(articleInfo) match {
       case false => Future.successful(())
       case true => articleCommander.fetchAndPersist(articleInfo) imap { fetched =>
         if (fetched.isDefined) {
@@ -56,4 +56,7 @@ class RoverArticleFetchingActor @Inject() (
       }
     }
   } andThen { case _ => task.consume() } // failures are handled and persisted to the database, always consume
+
+  private def shouldFetch(info: RoverArticleInfo) = info.isActive && info.lastFetchingAt.isDefined
+
 }

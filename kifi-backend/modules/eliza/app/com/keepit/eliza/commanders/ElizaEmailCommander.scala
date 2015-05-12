@@ -1,13 +1,12 @@
 package com.keepit.eliza.commanders
 
 import com.google.inject.Inject
+import com.keepit.rover.RoverServiceClient
 
 import scala.concurrent.Future
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.twirl.api.Html
-
-import java.net.URLDecoder
 
 import org.joda.time.DateTime
 
@@ -17,7 +16,7 @@ import com.keepit.social.NonUserKinds
 import com.keepit.model._
 import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.common.store.ImageSize
+import com.keepit.common.store.{ S3ImageConfig, ImageSize }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.mail.{
   ElectronicMail,
@@ -26,7 +25,6 @@ import com.keepit.common.mail.{
   PostOffice
 }
 import com.keepit.common.time._
-import com.keepit.common.net.URI
 import com.keepit.common.akka.SafeFuture
 import play.api.libs.json.JsString
 import com.keepit.common.mail.EmailAddress
@@ -35,7 +33,7 @@ import com.keepit.eliza.util.{ MessageFormatter, TextSegment }
 import com.keepit.common.strings.AbbreviateString
 import com.keepit.common.domain.DomainToNameMapper
 import com.keepit.scraper.ScraperServiceClient
-import com.keepit.commanders.TimeToReadCommander
+import com.keepit.commanders.{ RemoteUserExperimentCommander, TimeToReadCommander }
 
 class ElizaEmailCommander @Inject() (
     shoebox: ShoeboxServiceClient,
@@ -46,33 +44,65 @@ class ElizaEmailCommander @Inject() (
     messageRepo: MessageRepo,
     threadRepo: MessageThreadRepo,
     scraper: ScraperServiceClient,
+    experimentCommander: RemoteUserExperimentCommander,
+    rover: RoverServiceClient,
+    implicit val imageConfig: S3ImageConfig,
     clock: Clock) extends Logging {
 
   case class ProtoEmail(digestHtml: Html, initialHtml: Html, addedHtml: Html, starterName: String, pageTitle: String)
 
-  def getSummarySmall(thread: MessageThread) = {
-    val fut = new SafeFuture(shoebox.getUriSummary(URISummaryRequest(
-      uriId = thread.uriId.get,
-      imageType = ImageType.IMAGE,
-      minSize = ImageSize(183, 96),
-      withDescription = true,
-      waiting = true,
-      silent = false)))
-    fut.recover {
-      case t: Throwable => throw new Exception(s"Error fetching small summary for thread: ${thread.id.get}", t)
+  private def shouldUseRover(thread: MessageThread): Future[Boolean] = {
+    val userId = db.readOnlyMaster { implicit session =>
+      userThreadRepo.getThreadStarter(thread.id.get)
+    }
+    experimentCommander.getExperimentsByUser(userId).map(_.contains(ExperimentType.ROVER_CONTENT))
+  }
+
+  def getSummarySmall(thread: MessageThread): Future[URISummary] = {
+    val idealImageSize = ImageSize(183, 96)
+    shouldUseRover(thread).flatMap {
+      case false => {
+        new SafeFuture(
+          shoebox.getUriSummary(URISummaryRequest(
+            uriId = thread.uriId.get,
+            imageType = ImageType.IMAGE,
+            minSize = idealImageSize,
+            withDescription = true,
+            waiting = true,
+            silent = false))
+        ) recover {
+          case t: Throwable => throw new Exception(s"Error fetching small summary for thread: ${thread.id.get}", t)
+        }
+      }
+      case true => {
+        shoebox.getNormalizedURI(thread.uriId.get).flatMap { uri =>
+          rover.getOrElseFetchUriSummary(IndexableUri.apply(uri), idealImageSize).map(_.map(_.toUriSummary()) getOrElse URISummary())
+        }
+      }
     }
   }
 
-  def getSummaryBig(thread: MessageThread) = {
-    val fut = new SafeFuture(shoebox.getUriSummary(URISummaryRequest(
-      uriId = thread.uriId.get,
-      imageType = ImageType.IMAGE,
-      minSize = ImageSize(620, 200),
-      withDescription = false,
-      waiting = true,
-      silent = false)))
-    fut.recover {
-      case t: Throwable => throw new Exception(s"Error fetching big summary for thread: ${thread.id.get}", t)
+  def getSummaryBig(thread: MessageThread): Future[URISummary] = {
+    val idealImageSize = ImageSize(620, 200)
+    shouldUseRover(thread).flatMap {
+      case false => {
+        new SafeFuture(
+          shoebox.getUriSummary(URISummaryRequest(
+            uriId = thread.uriId.get,
+            imageType = ImageType.IMAGE,
+            minSize = idealImageSize,
+            withDescription = false,
+            waiting = true,
+            silent = false))
+        ) recover {
+          case t: Throwable => throw new Exception(s"Error fetching big summary for thread: ${thread.id.get}", t)
+        }
+      }
+      case true => {
+        shoebox.getNormalizedURI(thread.uriId.get).flatMap { uri =>
+          rover.getOrElseFetchUriSummary(IndexableUri.apply(uri), idealImageSize).map(_.map(_.toUriSummary()) getOrElse URISummary())
+        }
+      }
     }
   }
 

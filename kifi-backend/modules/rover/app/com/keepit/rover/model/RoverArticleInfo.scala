@@ -38,7 +38,6 @@ case class RoverArticleInfo(
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def isActive = (state == ArticleInfoStates.ACTIVE)
 
-  def shouldFetch = isActive && lastFetchingAt.isDefined
   def getFetchRequest: ArticleFetchRequest[A] = ArticleFetchRequest(articleKind, url, lastFetchedAt, getLatestKey)
 
   def clean: RoverArticleInfo = copy(
@@ -100,8 +99,6 @@ case class RoverArticleInfo(
       failureInfo = None
     )
   }
-
-  def shouldProcessLatestArticleImages = isActive && lastImageProcessingAt.isDefined
 
   def withImageProcessingComplete(version: Option[ArticleVersion]) = {
     copy(

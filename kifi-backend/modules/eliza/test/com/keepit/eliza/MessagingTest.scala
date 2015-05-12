@@ -14,6 +14,7 @@ import com.keepit.eliza.model._
 import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext }
 import com.keepit.model.{ Username, User }
 import com.keepit.realtime.{ FakeAppBoyModule, FakeUrbanAirshipModule }
+import com.keepit.rover.FakeRoverServiceClientModule
 import com.keepit.scraper.FakeScraperServiceClientModule
 import com.keepit.shoebox.{ FakeShoeboxServiceClientImpl, FakeShoeboxServiceModule, ShoeboxServiceClient }
 import com.keepit.social.BasicUser
@@ -41,7 +42,8 @@ class MessagingTest extends Specification with ElizaTestInjector {
       FakeAppBoyModule(),
       FakeCryptoModule(),
       FakeScraperServiceClientModule(),
-      FakeElizaStoreModule()
+      FakeElizaStoreModule(),
+      FakeRoverServiceClientModule()
     )
   }
 

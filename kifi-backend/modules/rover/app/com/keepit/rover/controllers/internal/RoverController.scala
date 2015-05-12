@@ -66,4 +66,14 @@ class RoverController @Inject() (roverCommander: RoverCommander, articleCommande
       Ok(json)
     }
   }
+
+  def getOrElseFetchArticleSummaryAndImages = Action.async(parse.json) { request =>
+    val uri = (request.body \ "uri").as[IndexableUri]
+    val kind = (request.body \ "kind").as[ArticleKind[_ <: Article]]
+    roverCommander.getOrElseFetchArticleSummaryAndImages(uri)(kind).map { articleSummaryAndImagesOption =>
+      implicit val writes = TupleFormat.tuple2Writes[RoverArticleSummary, Set[RoverImage]]
+      val json = Json.toJson(articleSummaryAndImagesOption)
+      Ok(json)
+    }
+  }
 }
