@@ -298,7 +298,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
       case (uri, user, optionalTitle) =>
         val library = internLibrary(user.id.get, isPrivate)
         val url = uriToUrl(uri.id.get)
-        Keep(title = optionalTitle orElse uri.title, userId = user.id.get, uriId = uri.id.get, urlId = url.id.get, url = url.url, source = source, visibility = library.visibility, libraryId = Some(library.id.get), inDisjointLib = library.isDisjoint)
+        Keep(title = optionalTitle orElse uri.title, userId = user.id.get, uriId = uri.id.get, urlId = url.id.get, url = url.url, source = source, visibility = library.visibility, libraryId = Some(library.id.get), inDisjointLib = library.isDisjoint, originalKeeperId = Some(user.id.get))
     }
     saveBookmarks(bookmarks: _*)
   }
@@ -737,6 +737,8 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
   }
 
   def getBasicLibraryStatistics(libraryIds: Set[Id[Library]]): Future[Map[Id[Library], BasicLibraryStatistics]] = ???
+
+  def getBasicLibraryDetails(libraryIds: Set[Id[Library]]): Future[Map[Id[Library], BasicLibraryDetails]] = ???
 
   def getKeepCounts(userId: Set[Id[User]]): Future[Map[Id[User], Int]] = ???
 

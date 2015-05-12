@@ -1,6 +1,7 @@
 package com.keepit.common.cache
 
 import com.keepit.model.cache.UserSessionViewExternalIdCache
+import com.keepit.rover.model.{ RoverArticleImagesCache, RoverArticleSummaryCache }
 import com.keepit.scraper.UrlSignatureCache
 
 import scala.concurrent.duration._
@@ -183,5 +184,13 @@ case class ElizaCacheModule(cachePluginModules: CachePluginModule*) extends Cach
   @Provides @Singleton
   def urlSignatureCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new UrlSignatureCache(stats, accessLog, (innerRepo, 5 minutes), (outerRepo, 24 hours))
+
+  @Provides @Singleton
+  def roverArticleSummaryCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new RoverArticleSummaryCache(stats, accessLog, (outerRepo, 30 days))
+
+  @Provides @Singleton
+  def roverArticleImagesCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new RoverArticleImagesCache(stats, accessLog, (outerRepo, 30 days))
 
 }

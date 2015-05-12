@@ -127,6 +127,7 @@ case class OwnLibraryCardInfo( // when viewing own created libraries
   slug: LibrarySlug,
   kind: LibraryKind,
   visibility: LibraryVisibility,
+  owner: BasicUser,
   numKeeps: Int,
   numFollowers: Int,
   followers: Seq[BasicUser],

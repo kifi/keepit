@@ -65,8 +65,12 @@ class UserProfileCommanderTest extends Specification with ShoeboxTestInjector {
         val libPublishedFewUpdated = library().withUser(owner).withVisibility(LibraryVisibility.PUBLISHED).withKeepCount(3).withMemberCount(3).withLastKept().withSlug("published-few-updated").saved
         val libPublishedEmpty = library().withUser(owner).withVisibility(LibraryVisibility.PUBLISHED).withKeepCount(0).withSlug("published-empty").saved
 
-        val libPublishedCollab = library().withUser(owner).withVisibility(LibraryVisibility.PUBLISHED).withKeepCount(3).withMemberCount(2).withSlug("published-collab").saved
-        membership().withLibraryCollaborator(libPublishedCollab, other).saved
+        // a library `owner` has, with another collaborator
+        val libPublishedCollabWithMe = library().withUser(owner).withVisibility(LibraryVisibility.PUBLISHED).withKeepCount(3).withMemberCount(2).withSlug("published-collab-with-me").saved
+        membership().withLibraryCollaborator(libPublishedCollabWithMe, other).saved
+        // a library owned by someone else, but `owner` collaborates with
+        val libPublishedCollabWithOther = library().withUser(other).withVisibility(LibraryVisibility.PUBLISHED).withKeepCount(3).withMemberCount(2).withSlug("published-collab-with-other").saved
+        membership().withLibraryCollaborator(libPublishedCollabWithOther, owner).saved
 
         val libPublishedHidden = library().withUser(owner).withVisibility(LibraryVisibility.PUBLISHED).withKeepCount(3).withSlug("published-hidden").saved
         libraryMembershipRepo.getWithLibraryIdAndUserId(libPublishedHidden.id.get, owner.id.get).map { mem =>
@@ -79,11 +83,14 @@ class UserProfileCommanderTest extends Specification with ShoeboxTestInjector {
         val libPrivateCollab = library().withUser(owner).withVisibility(LibraryVisibility.SECRET).withKeepCount(3).withMemberCount(2).withSlug("private-collab").saved
         membership().withLibraryCollaborator(libPrivateCollab, other).saved
 
+        val wrongLib = library().withUser(other).withVisibility(LibraryVisibility.PUBLISHED).withKeepCount(3).withSlug("wrong-library").saved
+
         val ownerLibs = Seq(
           libPublishedLots, // published library (lots of followers) - test ordering
           libPublishedFew, // published library (not many followers) - test ordering
           libPublishedFewUpdated, // published library (not many followers, recently updated) - test ordering
-          libPublishedCollab, // published collaborative library
+          libPublishedCollabWithMe, // published collaborative library owned by me
+          libPublishedCollabWithOther, // published collaborative library owned by another
           libPublishedHidden, // published library hidden on profile (owner has hidden membership)
           libPublishedEmpty, // published library with 0 keeps
           libPrivate, // private library
@@ -103,18 +110,18 @@ class UserProfileCommanderTest extends Specification with ShoeboxTestInjector {
 
       // test self viewer (should see all libraries)
       val viewSelf = commander.getOwnLibrariesForSelf(owner, paginator, imageSize)
-      viewSelf.map(_.slug.value) === Seq("main", "secret", "published-lots", "published-few-updated", "published-few", "private-collab", "private-follower", "published-collab", "private", "published-hidden", "published-empty")
-      commander.countLibraries(owner.id.get, Some(owner.id.get))._1 === allLibs.length
+      viewSelf.map(_.slug.value) === Seq("main", "secret", "published-lots", "published-few-updated", "published-few", "private-collab", "private-follower", "published-collab-with-other", "published-collab-with-me", "private", "published-hidden", "published-empty")
+      commander.countLibraries(owner.id.get, Some(owner.id.get)) === (11, 1, 0, Some(0))
 
       // test anonymous viewer (see only published libraries, non-hidden, non-empty)
       val viewAnonymous = commander.getOwnLibraries(owner, None, paginator, imageSize)
-      viewAnonymous.map(_.slug.value) === Seq("published-lots", "published-few-updated", "published-few", "published-collab")
-      commander.countLibraries(owner.id.get, None)._1 === viewAnonymous.length
+      viewAnonymous.map(_.slug.value) === Seq("published-lots", "published-few-updated", "published-few", "published-collab-with-other", "published-collab-with-me")
+      commander.countLibraries(owner.id.get, None) === (4, 1, 0, None)
 
       // test friend viewer (see only published libraries - non-hidden, non-empty & private libraries friend has membership to)
       val viewFriend = commander.getOwnLibraries(owner, Some(other), paginator, imageSize)
-      viewFriend.map(_.slug.value) === Seq("published-lots", "published-few-updated", "published-few", "private-collab", "private-follower", "published-collab")
-      commander.countLibraries(owner.id.get, Some(other.id.get))._1 === viewFriend.length
+      viewFriend.map(_.slug.value) === Seq("published-lots", "published-few-updated", "published-few", "private-collab", "private-follower", "published-collab-with-other", "published-collab-with-me")
+      commander.countLibraries(owner.id.get, Some(other.id.get)) === (6, 1, 0, None)
     }
   }
 

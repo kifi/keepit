@@ -2,8 +2,8 @@
 
 angular.module('kifi')
 
-.directive('kfProfileNameInput', ['$document', '$window', 'keyIndices', 'util',
-  function ($document, $window, keyIndices, util) {
+.directive('kfProfileNameInput', ['$document', '$window', 'KEY', 'util',
+  function ($document, $window, KEY, util) {
     return {
       restrict: 'A',
       scope: {
@@ -28,10 +28,10 @@ angular.module('kifi')
         element.find('input')
           .on('keydown', function (event) {
             switch (event.which) {
-              case keyIndices.KEY_ESC:
+              case KEY.ESC:
                 cancel();
                 break;
-              case keyIndices.KEY_ENTER:
+              case KEY.ENTER:
                 scope.save();
                 break;
             }

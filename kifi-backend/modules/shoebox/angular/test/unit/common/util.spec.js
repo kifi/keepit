@@ -4,9 +4,12 @@ describe('util', function () {
 
   beforeEach(module('util'));
 
-  var util;
-  beforeEach(inject(function (_util_) {
+  var util, HTML, URI, linkify;
+  beforeEach(inject(function (_util_, _HTML_, _URI_, _linkify_) {
     util = _util_;
+    HTML = _HTML_;
+    URI = _URI_;
+    linkify = _linkify_;
   }));
 
   describe('util.startsWith', function () {
@@ -37,12 +40,38 @@ describe('util', function () {
     });
   });
 
-  describe('util.formatQueryString', function () {
+  describe('HTML.escapeElementContent', function () {
+    it('escapes ampersand and less-than', function () {
+      expect(HTML.escapeElementContent(null)).toBe('');
+      expect(HTML.escapeElementContent(2)).toBe('2');
+      expect(HTML.escapeElementContent('')).toBe('');
+      expect(HTML.escapeElementContent('hi')).toBe('hi');
+      expect(HTML.escapeElementContent('3 < 4')).toBe('3 &lt; 4');
+      expect(HTML.escapeElementContent('3 & 4')).toBe('3 &amp; 4');
+      expect(HTML.escapeElementContent('<script>post(document.cookie) && alert("gotcha!")</script>')).toBe(
+        '&lt;script>post(document.cookie) &amp;&amp; alert("gotcha!")&lt;/script>');
+    });
+  });
+
+  describe('HTML.escapeDoubleQuotedAttr', function () {
+    it('escapes double-quotes', function () {
+      expect(HTML.escapeDoubleQuotedAttr(null)).toBe('');
+      expect(HTML.escapeDoubleQuotedAttr(2)).toBe('2');
+      expect(HTML.escapeDoubleQuotedAttr('')).toBe('');
+      expect(HTML.escapeDoubleQuotedAttr('hi')).toBe('hi');
+      expect(HTML.escapeDoubleQuotedAttr('3 < 4')).toBe('3 < 4');
+      expect(HTML.escapeDoubleQuotedAttr('3 & 4')).toBe('3 & 4');
+      expect(HTML.escapeDoubleQuotedAttr('<script>post(document.cookie) && alert("gotcha!")</script>')).toBe(
+        '<script>post(document.cookie) && alert(&quot;gotcha!&quot;)</script>');
+    });
+  });
+
+  describe('URI.formatQueryString', function () {
     it('correctly formats and escapes query strings', function () {
-      expect(util.formatQueryString({})).toBe('');
-      expect(util.formatQueryString({a: []})).toBe('');
-      expect(util.formatQueryString({a: true, b: false, c: null, d: undefined, e: 0, f: '', g: []})).toBe('?a&b=false&c=null&d=undefined&e=0&f=');
-      expect(util.formatQueryString({a: true, b: '1/=2'})).toBe('?a&b=1%2F%3D2');
+      expect(URI.formatQueryString({})).toBe('');
+      expect(URI.formatQueryString({a: []})).toBe('');
+      expect(URI.formatQueryString({a: true, b: false, c: null, d: undefined, e: 0, f: '', g: []})).toBe('?a&b=false&c=null&d=undefined&e=0&f=');
+      expect(URI.formatQueryString({a: true, b: '1/=2'})).toBe('?a&b=1%2F%3D2');
     });
   });
 
@@ -110,38 +139,38 @@ describe('util', function () {
     });
   });
 
-  describe('util.linkify', function () {
+  describe('linkify', function () {
     it('correctly identifies and linkifies URLs and email addresses', function () {
-      expect(util.linkify('')).toBe('');
-      expect(util.linkify('Hello!\nBye.')).toBe('Hello!\nBye.');
-      expect(util.linkify('Email me: jo@flo.com')).toBe('Email me: <a href="mailto:jo@flo.com">jo@flo.com</a>');
-      expect(util.linkify('I hang out at https://example.com. You?')).toBe(
+      expect(linkify('')).toBe('');
+      expect(linkify('Hello!\nBye.')).toBe('Hello!\nBye.');
+      expect(linkify('Email me: jo@flo.com')).toBe('Email me: <a href="mailto:jo@flo.com">jo@flo.com</a>');
+      expect(linkify('I hang out at https://example.com. You?')).toBe(
         'I hang out at <a target="_blank" rel="nofollow" href="https://example.com">https://example.com</a>. You?');
-      expect(util.linkify('a+b@c.com & www.google.com/maps/123+Main/@37.4,-122.7/data=!3m1!1s:0xa\tb@c.d\ntwitter.com/example')).toBe(
+      expect(linkify('a+b@c.com & www.google.com/maps/123+Main/@37.4,-122.7/data=!3m1!1s:0xa\tb@c.d\ntwitter.com/example')).toBe(
         '<a href="mailto:a+b@c.com">a+b@c.com</a>' +
         ' &amp; <a target="_blank" rel="nofollow" href="http://www.google.com/maps/123+Main/@37.4,-122.7/data=!3m1!1s:0xa">' +
         'www.google.com/maps/123+Main/@37.4,-122.7/data=!3m1!1s:0xa</a>' +
         '\t<a href="mailto:b@c.d">b@c.d</a>' +
         '\n<a target="_blank" rel="nofollow" href="http://twitter.com/example">twitter.com/example</a>');
-      expect(util.linkify('Writer.\nEmail: sarahp@techcrunch.com\nhttp://about.me/sarahperez\nArticles I’ve shared')).toBe(
+      expect(linkify('Writer.\nEmail: sarahp@techcrunch.com\nhttp://about.me/sarahperez\nArticles I’ve shared')).toBe(
         'Writer.\nEmail: <a href="mailto:sarahp@techcrunch.com">sarahp@techcrunch.com</a>' +
         '\n<a target="_blank" rel="nofollow" href="http://about.me/sarahperez">http://about.me/sarahperez</a>' +
         '\nArticles I’ve shared');
-      expect(util.linkify('about.me/sarahperez')).toBe(
+      expect(linkify('about.me/sarahperez')).toBe(
         '<a target="_blank" rel="nofollow" href="http://about.me/sarahperez">about.me/sarahperez</a>');
-      expect(util.linkify('https://about.me/sarahperez')).toBe(
+      expect(linkify('https://about.me/sarahperez')).toBe(
         '<a target="_blank" rel="nofollow" href="https://about.me/sarahperez">https://about.me/sarahperez</a>');
-      expect(util.linkify('fail.wtf')).toBe(
+      expect(linkify('fail.wtf')).toBe(
         '<a target="_blank" rel="nofollow" href="http://fail.wtf">fail.wtf</a>');
-      expect(util.linkify('http://fail.wtf/')).toBe(
+      expect(linkify('http://fail.wtf/')).toBe(
         '<a target="_blank" rel="nofollow" href="http://fail.wtf/">http://fail.wtf/</a>');
-      expect(util.linkify('lung.cancerresearch/news')).toBe(
+      expect(linkify('lung.cancerresearch/news')).toBe(
         '<a target="_blank" rel="nofollow" href="http://lung.cancerresearch/news">lung.cancerresearch/news</a>');
-      expect(util.linkify('https://lung.cancerresearch/news/')).toBe(
+      expect(linkify('https://lung.cancerresearch/news/')).toBe(
         '<a target="_blank" rel="nofollow" href="https://lung.cancerresearch/news/">https://lung.cancerresearch/news/</a>');
-      expect(util.linkify('王府半島酒店.中國')).toBe(
+      expect(linkify('王府半島酒店.中國')).toBe(
         '王府半島酒店.中國');  // being conservative, not detected
-      expect(util.linkify('http://王府半島酒店.中國')).toBe(
+      expect(linkify('http://王府半島酒店.中國')).toBe(
         '<a target="_blank" rel="nofollow" href="http://王府半島酒店.中國">http://王府半島酒店.中國</a>');
     });
   });

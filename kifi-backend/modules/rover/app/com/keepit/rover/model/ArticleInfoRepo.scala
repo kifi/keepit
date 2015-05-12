@@ -43,6 +43,7 @@ class ArticleInfoRepoImpl @Inject() (
     val db: DataBaseComponent,
     val clock: Clock,
     articleInfoCache: ArticleInfoUriCache,
+    articleSummaryCache: RoverArticleSummaryCache,
     uriSensitivityCache: UriSensitivityCache,
     airbrake: AirbrakeNotifier,
     implicit val failurePolicy: FailureRecoveryPolicy) extends DbRepo[RoverArticleInfo] with ArticleInfoRepo with SeqNumberDbFunction[RoverArticleInfo] with Logging {
@@ -120,6 +121,7 @@ class ArticleInfoRepoImpl @Inject() (
 
   override def deleteCache(model: RoverArticleInfo)(implicit session: RSession): Unit = {
     articleInfoCache.remove(ArticleInfoUriKey(model.uriId))
+    articleSummaryCache.remove(RoverArticleSummaryKey(model.uriId, model.articleKind))
     uriSensitivityCache.remove(UriSensitivityKey(model.uriId))
   }
 

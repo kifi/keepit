@@ -36,7 +36,6 @@ trait SocialUserInfoRepo extends Repo[SocialUserInfo] with RepoWithDelete[Social
 class SocialUserInfoRepoImpl @Inject() (
   val db: DataBaseComponent,
   val clock: Clock,
-  val userCache: SocialUserInfoUserCache,
   val socialUserCache: SocialUserCache,
   val countCache: SocialUserInfoCountCache,
   val networkCache: SocialUserInfoNetworkCache,
@@ -101,7 +100,6 @@ class SocialUserInfoRepoImpl @Inject() (
 
   override def deleteCache(socialUser: SocialUserInfo)(implicit session: RSession): Unit = {
     socialUser.userId map { userId =>
-      userCache.remove(SocialUserInfoUserKey(userId))
       socialUserCache.remove(SocialUserKey(userId))
     }
     networkCache.remove(SocialUserInfoNetworkKey(socialUser.networkType, socialUser.socialId))
@@ -118,10 +116,9 @@ class SocialUserInfoRepoImpl @Inject() (
     }
   }
 
-  def getByUser(userId: Id[User])(implicit session: RSession): Seq[SocialUserInfo] =
-    userCache.getOrElse(SocialUserInfoUserKey(userId)) {
-      (for (f <- rows if f.userId === userId && f.state =!= SocialUserInfoStates.INACTIVE) yield f).list
-    }
+  def getByUser(userId: Id[User])(implicit session: RSession): Seq[SocialUserInfo] = {
+    (for (f <- rows if f.userId === userId && f.state =!= SocialUserInfoStates.INACTIVE) yield f).list
+  }
 
   def getByUsers(ids: Seq[Id[User]])(implicit session: RSession): Seq[SocialUserInfo] = {
     (for (f <- rows if f.userId.inSet(ids)) yield f).list

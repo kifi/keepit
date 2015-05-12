@@ -115,9 +115,10 @@ case class SocialUserInfoCountKey() extends Key[Int] {
 class SocialUserInfoCountCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends PrimitiveCacheImpl[SocialUserInfoCountKey, Int](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
+//todo(eishay): removed references to this cache, if it fixes problem with user reg, drop it all together.
 case class SocialUserInfoUserKey(userId: Id[User]) extends Key[Seq[SocialUserInfo]] {
   val namespace = "social_user_info_by_userid"
-  override val version = 7
+  override val version = 8
   def toKey(): String = userId.id.toString
 }
 

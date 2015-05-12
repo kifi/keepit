@@ -83,7 +83,7 @@ class UserProfileController @Inject() (
             val libs = if (viewer.exists(_.id == user.id)) {
               Json.toJson(userProfileCommander.getOwnLibrariesForSelf(user, paginator, imageSize).seq)
             } else {
-              Json.toJson(userProfileCommander.getOwnLibraries(user, viewer, paginator, imageSize).map(LibraryCardInfo.writesWithoutOwner.writes).seq)
+              Json.toJson(userProfileCommander.getOwnLibraries(user, viewer, paginator, imageSize).seq)
             }
             Future.successful(Ok(Json.obj("own" -> libs)))
           case "following" =>
@@ -96,7 +96,7 @@ class UserProfileController @Inject() (
             val ownLibsF = if (viewer.exists(_.id == user.id)) {
               SafeFuture(Json.toJson(userProfileCommander.getOwnLibrariesForSelf(user, paginator, imageSize).seq))
             } else {
-              SafeFuture(Json.toJson(userProfileCommander.getOwnLibraries(user, viewer, paginator, imageSize).map(LibraryCardInfo.writesWithoutOwner.writes).seq))
+              SafeFuture(Json.toJson(userProfileCommander.getOwnLibraries(user, viewer, paginator, imageSize).seq))
             }
             val followLibsF = SafeFuture(userProfileCommander.getFollowingLibraries(user, viewer, paginator, imageSize).seq)
             val invitedLibsF = SafeFuture(userProfileCommander.getInvitedLibraries(user, viewer, paginator, imageSize).seq)

@@ -131,12 +131,27 @@ class LibraryCommander @Inject() (
     Library.formatLibraryPath(owner.username, library.slug)
   }
 
+  // Replaced by getBasicLibraryDetails, please remove dependencies
   def getBasicLibraryStatistics(libraryIds: Set[Id[Library]]): Map[Id[Library], BasicLibraryStatistics] = {
     db.readOnlyReplica { implicit session =>
       val libs = libraryRepo.getLibraries(libraryIds)
       libraryIds.map { libId =>
         val lib = libs(libId)
         libId -> BasicLibraryStatistics(lib.memberCount, lib.keepCount)
+      }.toMap
+    }
+  }
+
+  def getBasicLibraryDetails(libraryIds: Set[Id[Library]]): Map[Id[Library], BasicLibraryDetails] = {
+    db.readOnlyReplica { implicit session =>
+      val libs = libraryRepo.getLibraries(libraryIds)
+      libraryIds.map { libId =>
+        val lib = libs(libId)
+        val counts = libraryMembershipRepo.countWithLibraryIdByAccess(libId)
+        val numFollowers = counts.readOnly
+        val numCollaborators = counts.readWrite + counts.readInsert
+        val imageOpt = libraryImageCommander.getBestImageForLibrary(libId, ProcessedImageSize.Medium.idealSize).map(libraryImageCommander.getUrl)
+        libId -> BasicLibraryDetails(lib.name, lib.slug, lib.color, imageOpt, lib.description, numFollowers, numCollaborators, lib.keepCount)
       }.toMap
     }
   }
@@ -1398,7 +1413,7 @@ class LibraryCommander @Inject() (
           currentKeepOpt match {
             case None =>
               val newKeep = keepRepo.save(Keep(title = k.title, uriId = k.uriId, url = k.url, urlId = k.urlId, visibility = toLibrary.visibility,
-                userId = userId, note = k.note, source = withSource.getOrElse(k.source), libraryId = Some(toLibraryId), inDisjointLib = toLibrary.isDisjoint))
+                userId = userId, note = k.note, source = withSource.getOrElse(k.source), libraryId = Some(toLibraryId), inDisjointLib = toLibrary.isDisjoint, originalKeeperId = k.originalKeeperId.orElse(Some(userId))))
               combineTags(k.id.get, newKeep.id.get)
               Right(newKeep)
             case Some(existingKeep) if existingKeep.state == KeepStates.INACTIVE =>

@@ -1,12 +1,13 @@
 package com.keepit.rover
 
 import com.keepit.common.db.{ Id, SequenceNumber }
+import com.keepit.common.store.ImageSize
 import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.common.net.HttpClient
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.model.{ NormalizedURI, IndexableUri }
 import com.keepit.rover.article.Article
-import com.keepit.rover.model.{ ShoeboxArticleUpdates, ArticleInfo }
+import com.keepit.rover.model.{ RoverUriSummary, ShoeboxArticleUpdates, ArticleInfo }
 
 import scala.collection.mutable
 import scala.concurrent.Future
@@ -23,4 +24,6 @@ class FakeRoverServiceClientImpl(
   def fetchAsap(uri: IndexableUri): Future[Unit] = Future.successful(())
   def getBestArticlesByUris(uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[Article]]] = Future.successful(uriIds.map(uriId => uriId -> articlesByUri(uriId)).toMap)
   def getArticleInfosByUris(uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[ArticleInfo]]] = Future.successful(uriIds.map(_ -> Set.empty[ArticleInfo]).toMap)
+  def getUriSummaryByUris(uriIds: Set[Id[NormalizedURI]], idealSize: ImageSize, strictAspectRatio: Boolean = false): Future[Map[Id[NormalizedURI], RoverUriSummary]] = Future.successful(Map.empty)
+  def getOrElseFetchUriSummary(uri: IndexableUri, idealSize: ImageSize, strictAspectRatio: Boolean = false): Future[Option[RoverUriSummary]] = Future.successful(None)
 }

@@ -83,43 +83,6 @@ class SocialUserInfoTest extends Specification with ShoeboxTestInjector with Tes
       deserialized === sui
     }
 
-    "use cache properly" in {
-      withDb() { implicit injector =>
-        val user = setup()
-        def isInCache = db.readOnlyMaster { implicit c => inject[SocialUserInfoRepoImpl].userCache.get(SocialUserInfoUserKey(user.id.get)).isDefined }
-
-        val origSocialUser = db.readOnlyMaster { implicit c =>
-          socialUserInfoRepo.getByUser(user.id.get).head
-        }
-        isInCache === true
-
-        db.readWrite { implicit c =>
-          socialUserInfoRepo.save(origSocialUser.copy(fullName = "John Smith"))
-        }
-        isInCache must beFalse
-
-        val newSocialUser = db.readOnlyMaster { implicit c =>
-          socialUserInfoRepo.getByUser(user.id.get).head
-        }
-        isInCache === true
-
-        newSocialUser.fullName === "John Smith"
-
-        val networkCache = inject[SocialUserInfoRepoImpl].networkCache
-        val cacheKey = SocialUserInfoNetworkKey(SocialNetworks.FACEBOOK, SocialId("eishay"))
-        db.readOnlyMaster { implicit s =>
-          networkCache.get(cacheKey) === None
-          val sui = socialUserInfoRepo.get(SocialId("eishay"), SocialNetworks.FACEBOOK)
-          sui.fullName === "John Smith"
-          networkCache.get(cacheKey).isDefined === true
-        }
-        val socialUserOpt = inject[FakeSlickSessionProvider].doWithoutCreatingSessions {
-          db.readOnlyMaster { implicit s => socialUserInfoRepo.getOpt(SocialId("eishay"), SocialNetworks.FACEBOOK) }
-        }
-        socialUserOpt.map(_.fullName) must beSome("John Smith")
-      }
-    }
-
     "get pages" in {
       withDb() { implicit injector =>
         setup()
