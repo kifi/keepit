@@ -317,7 +317,8 @@ class LibraryCommander @Inject() (
           numCollaborators = collaboratorCount,
           numFollowers = followerCount,
           lastKept = lib.lastKept,
-          attr = attr
+          attr = attr,
+          inviteToCollab = lib.inviteToCollab
         )
       }
     }
@@ -473,6 +474,8 @@ class LibraryCommander @Inject() (
       } else if (LibrarySlug.isReservedSlug(libAddReq.slug)) {
         log.info(s"[addLibrary] Attempted reserved slug ${libAddReq.slug} for $ownerId")
         Some("reserved_slug")
+      } else if (libAddReq.inviteToCollab.isDefined && libAddReq.inviteToCollab.get.isLowerAccess(LibraryAccess.READ_WRITE)) {
+        Some("invalid_invite_to_collab_access")
       } else {
         None
       }
@@ -490,12 +493,13 @@ class LibraryCommander @Inject() (
             val newColor = libAddReq.color.orElse(Some(LibraryColor.pickRandomLibraryColor))
             val newListed = libAddReq.listed.getOrElse(true)
             val newKind = libAddReq.kind.getOrElse(LibraryKind.USER_CREATED)
+            val newInviteToCollab = libAddReq.inviteToCollab.orElse(Some(LibraryAccess.READ_WRITE))
             val library = db.readWrite { implicit s =>
               libraryAliasRepo.reclaim(ownerId, validSlug)
               libraryRepo.getOpt(ownerId, validSlug) match {
                 case None =>
                   val lib = libraryRepo.save(Library(ownerId = ownerId, name = libAddReq.name, description = libAddReq.description,
-                    visibility = libAddReq.visibility, slug = validSlug, color = newColor, kind = newKind, memberCount = 1, keepCount = 0))
+                    visibility = libAddReq.visibility, slug = validSlug, color = newColor, kind = newKind, memberCount = 1, keepCount = 0, inviteToCollab = newInviteToCollab))
                   libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = ownerId, access = LibraryAccess.OWNER, listed = newListed, lastJoinedAt = Some(currentDateTime)))
                   lib
                 case Some(lib) =>
@@ -528,7 +532,6 @@ class LibraryCommander @Inject() (
   }
 
   def modifyLibrary(libraryId: Id[Library], userId: Id[User], modifyReq: LibraryModifyRequest)(implicit context: HeimdalContext): Either[LibraryFail, Library] = {
-
     val (targetLib, targetMembershipOpt) = db.readOnlyMaster { implicit s =>
       val lib = libraryRepo.get(libraryId)
       val mem = libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId)
@@ -583,6 +586,7 @@ class LibraryCommander @Inject() (
         val newVisibility = modifyReq.visibility.getOrElse(targetLib.visibility)
         val newColor = modifyReq.color.orElse(targetLib.color)
         val newListed = modifyReq.listed.getOrElse(targetMembership.listed)
+        val newInviteToCollab = modifyReq.inviteToCollab.filter(_.isHigherOrEqualAccess(LibraryAccess.READ_WRITE)).orElse(targetLib.inviteToCollab)
         Future {
           val keeps = db.readOnlyMaster { implicit s =>
             keepRepo.getByLibrary(libraryId, 0, Int.MaxValue, Set.empty)
@@ -603,7 +607,7 @@ class LibraryCommander @Inject() (
           if (targetMembership.listed != newListed) {
             libraryMembershipRepo.save(targetMembership.copy(listed = newListed))
           }
-          libraryRepo.save(targetLib.copy(name = newName, slug = newSlug, visibility = newVisibility, description = newDescription, color = newColor, state = LibraryStates.ACTIVE))
+          libraryRepo.save(targetLib.copy(name = newName, slug = newSlug, visibility = newVisibility, description = newDescription, color = newColor, inviteToCollab = newInviteToCollab, state = LibraryStates.ACTIVE))
         }
 
         val edits = Map(
@@ -612,7 +616,8 @@ class LibraryCommander @Inject() (
           "description" -> (newDescription != targetLib.description),
           "color" -> (newColor != targetLib.color),
           "madePrivate" -> (newVisibility != targetLib.visibility && newVisibility == LibraryVisibility.SECRET),
-          "listed" -> (newListed != targetMembership.listed)
+          "listed" -> (newListed != targetMembership.listed),
+          "inviteToCollab" -> (newInviteToCollab != targetLib.inviteToCollab)
         )
         (lib, edits)
       }
