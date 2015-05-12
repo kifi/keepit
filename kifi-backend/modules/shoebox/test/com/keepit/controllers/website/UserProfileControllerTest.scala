@@ -382,7 +382,8 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
                     "username": "thirduser"
                   }],
                 "lastKept":${keep1.createdAt.getMillis},
-                "listed": true
+                "listed": true,
+                "following":true
               }
              ]
           }

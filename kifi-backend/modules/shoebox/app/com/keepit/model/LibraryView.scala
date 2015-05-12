@@ -134,7 +134,7 @@ case class OwnLibraryCardInfo( // when viewing own created libraries
   numCollaborators: Int,
   collaborators: Seq[BasicUser],
   lastKept: DateTime,
-  following: Option[Boolean] = None,
+  following: Option[Boolean],
   listed: Boolean)
     extends BaseLibraryCardInfo(id, name, description, color, image, slug, numKeeps, numFollowers, followers, numCollaborators, collaborators, lastKept, following)
 
