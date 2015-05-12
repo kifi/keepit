@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfLibraryShareSearch', [
-  '$document', '$timeout', 'friendService', 'keyIndices', 'libraryService', 'socialService', 'profileService', 'util',
-  function ($document, $timeout, friendService, keyIndices, libraryService, socialService, profileService, util) {
+  '$document', '$timeout', 'friendService', 'KEY', 'libraryService', 'socialService', 'profileService', 'util',
+  function ($document, $timeout, friendService, KEY, libraryService, socialService, profileService, util) {
     return {
       restrict: 'A',
       replace: true,
@@ -301,21 +301,21 @@ angular.module('kifi')
           }
 
           switch ($event.keyCode) {
-            case keyIndices.KEY_UP:
+            case KEY.UP:
               $event.preventDefault();  // Otherwise browser will move cursor to start of input.
               clearSelection();
               resultIndex = getNextIndex(resultIndex, -1);
               scope.results[resultIndex].selected = true;
               adjustScroll(resultIndex);
               break;
-            case keyIndices.KEY_DOWN:
+            case KEY.DOWN:
               $event.preventDefault();  // Otherwise browser will move cursor to end of input.
               clearSelection();
               resultIndex = getNextIndex(resultIndex, 1);
               scope.results[resultIndex].selected = true;
               adjustScroll(resultIndex);
               break;
-            case keyIndices.KEY_ENTER:
+            case KEY.ENTER:
               clearSelection();
 
               if (resultIndex !== -1) {
@@ -335,7 +335,7 @@ angular.module('kifi')
               // After sharing, reset index.
               resultIndex = -1;
               break;
-            case keyIndices.KEY_ESC:
+            case KEY.ESC:
               hideMenu();
               break;
           }

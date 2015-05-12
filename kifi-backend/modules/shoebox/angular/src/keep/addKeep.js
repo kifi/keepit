@@ -4,9 +4,9 @@ angular.module('kifi')
 
 .directive('kfAddKeep', [
   '$document', '$rootScope', '$location', '$state', '$timeout',
-  'keyIndices', 'keepDecoratorService', 'keepActionService', 'libraryService', 'modalService', 'util',
+  'KEY', 'keepDecoratorService', 'keepActionService', 'libraryService', 'modalService', 'util',
   function ($document, $rootScope, $location, $state, $timeout,
-    keyIndices, keepDecoratorService, keepActionService, libraryService, modalService, util) {
+    KEY, keepDecoratorService, keepActionService, libraryService, modalService, util) {
     return {
       restrict: 'A',
       require: '^kfModal',
@@ -29,10 +29,10 @@ angular.module('kifi')
         function processKey(e) {
           scope.$apply(function () {
             switch (e.which) {
-              case keyIndices.KEY_ENTER:
+              case KEY.ENTER:
                 scope.keepToLibrary();
                 break;
-              case keyIndices.KEY_TAB:
+              case KEY.TAB:
                 focusState = (focusState + 1) % 3;
                 if (focusState === 0) {
                   e.preventDefault();

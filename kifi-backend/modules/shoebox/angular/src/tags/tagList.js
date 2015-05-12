@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfTagList', [
-  '$document', '$sce', '$log', 'keyIndices', 'hashtagService', '$location', '$state', '$analytics', '$rootScope',
-  function ($document, $sce, $log, keyIndices, hashtagService, $location, $state, $analytics, $rootScope) {
+  '$document', '$sce', '$log', 'KEY', 'hashtagService', '$location', '$state', '$analytics', '$rootScope',
+  function ($document, $sce, $log, KEY, hashtagService, $location, $state, $analytics, $rootScope) {
     var dropdownSuggestionCount = 5;
 
     return {
@@ -261,22 +261,22 @@ angular.module('kifi')
 
         scope.onKeydown = function (e) {
           switch (e.keyCode) {
-          case keyIndices.KEY_UP:
+          case KEY.UP:
             scope.highlightPrev();
             break;
-          case keyIndices.KEY_DOWN:
+          case KEY.DOWN:
             scope.highlightNext();
             break;
-          case keyIndices.KEY_ENTER:
+          case KEY.ENTER:
             scope.selectTag();
             break;
-          case keyIndices.KEY_ESC:
+          case KEY.ESC:
             scope.hideAddTagDropdown();
             break;
-          case keyIndices.KEY_DEL:
+          case KEY.DEL:
             scope.hideAddTagDropdown();
             break;
-          case keyIndices.KEY_F2:
+          case KEY.F2:
             // scope.rename(scope.highlight);
             break;
           }

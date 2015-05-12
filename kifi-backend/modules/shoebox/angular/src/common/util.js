@@ -218,13 +218,13 @@ angular.module('util', ['HTML'])
 //   }
 // ])
 
-.constant('keyIndices', {
-  KEY_UP: 38,
-  KEY_DOWN: 40,
-  KEY_ENTER: 13,
-  KEY_ESC: 27,
-  KEY_TAB: 9,
-  KEY_DEL: 46,
-  KEY_F2: 113,
-  KEY_SPACE: 32
+.constant('KEY', {
+  UP: 38,
+  DOWN: 40,
+  ENTER: 13,
+  ESC: 27,
+  TAB: 9,
+  DEL: 46,
+  F2: 113,
+  SPACE: 32
 });
