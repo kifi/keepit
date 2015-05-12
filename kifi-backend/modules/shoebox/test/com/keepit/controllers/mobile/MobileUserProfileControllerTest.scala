@@ -191,7 +191,8 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
                   "numCollaborators":0,
                   "collaborators":[],
                   "lastKept": ${lib2.createdAt.getMillis},
-                  "listed": true
+                  "listed": true,
+                  "following":true
                 },
                 {
                   "id":"${pubId1.id}",
@@ -215,7 +216,9 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
                   "numCollaborators": 0,
                   "collaborators": [],
                   "lastKept": ${lib1.createdAt.getMillis},
-                  "listed": true
+                  "listed": true,
+                  "following":true,
+                  "following":true
                 }
               ]
             }
