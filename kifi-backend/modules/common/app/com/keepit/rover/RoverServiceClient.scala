@@ -23,6 +23,7 @@ trait RoverServiceClient extends ServiceClient {
   def fetchAsap(uriId: Id[NormalizedURI], url: String, state: State[NormalizedURI]): Future[Unit]
   def getBestArticlesByUris(uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[Article]]]
   def getArticleInfosByUris(uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[ArticleInfo]]]
+  def getImagesByUris(uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], RoverImages]]
   def getUriSummaryByUris(uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], RoverUriSummary]]
   def getOrElseFetchUriSummary(uriId: Id[NormalizedURI], url: String): Future[Option[RoverUriSummary]] // slow, prefer getUriSummaryByUris
 }
@@ -71,17 +72,21 @@ class RoverServiceClientImpl(
     }
   }
 
+  def getImagesByUris(uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], RoverImages]] = {
+    getArticleImagesByUris(uriIds)(RoverUriSummary.defaultProvider).imap(_.mapValues(RoverImages.apply))
+  }
+
   def getUriSummaryByUris(uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], RoverUriSummary]] = {
     val contentSummaryProvider = RoverUriSummary.defaultProvider
     val futureArticleSummaryByUriId = getBestArticleSummaryByUris(uriIds)(contentSummaryProvider)
-    val futureImagesByUriId = getImagesByUris(uriIds)(contentSummaryProvider)
+    val futureImagesByUriId = getArticleImagesByUris(uriIds)(contentSummaryProvider)
     for {
       articleSummaryByUriId <- futureArticleSummaryByUriId
       imagesByUriId <- futureImagesByUriId
     } yield {
       articleSummaryByUriId.collect {
         case (uriId, Some(articleSummary)) =>
-          uriId -> RoverUriSummary(articleSummary, imagesByUriId.getOrElse(uriId, Set.empty))
+          uriId -> RoverUriSummary(articleSummary, RoverImages(imagesByUriId.getOrElse(uriId, Set.empty)))
       }
     }
   }
@@ -108,7 +113,7 @@ class RoverServiceClientImpl(
     }
   }
 
-  private def getImagesByUris[A <: Article](uriIds: Set[Id[NormalizedURI]])(implicit kind: ArticleKind[A]): Future[Map[Id[NormalizedURI], Set[RoverImage]]] = {
+  private def getArticleImagesByUris[A <: Article](uriIds: Set[Id[NormalizedURI]])(implicit kind: ArticleKind[A]): Future[Map[Id[NormalizedURI], Set[RoverImage]]] = {
     if (uriIds.isEmpty) Future.successful(Map.empty)
     else {
       import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
@@ -133,7 +138,7 @@ class RoverServiceClientImpl(
   def getOrElseFetchUriSummary(uriId: Id[NormalizedURI], url: String): Future[Option[RoverUriSummary]] = {
     val contentSummaryProvider = RoverUriSummary.defaultProvider
     getOrElseFetchArticleSummaryAndImages(uriId, url)(contentSummaryProvider).imap(_.map {
-      case (summary, images) => RoverUriSummary(summary, images)
+      case (summary, images) => RoverUriSummary(summary, RoverImages(images))
     })
   }
 
