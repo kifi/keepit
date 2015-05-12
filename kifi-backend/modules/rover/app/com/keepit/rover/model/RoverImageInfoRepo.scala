@@ -15,6 +15,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 @ImplementedBy(classOf[RoverImageInfoRepoImpl])
 trait RoverImageInfoRepo extends Repo[RoverImageInfo] {
   def getByImageHash(hash: ImageHash)(implicit session: RSession): Set[RoverImageInfo]
+  def getByImageHashes(hashes: Set[ImageHash])(implicit session: RSession): Map[ImageHash, Set[RoverImageInfo]]
   def intern(sourceImageHash: ImageHash, imageSource: ImageSource, sourceImageUrl: Option[String], uploadedImage: UploadedImage)(implicit session: RWSession): RoverImageInfo
   def getByImage(sourceImageHash: ImageHash, size: ImageSize, kind: ProcessImageOperation, format: ImageFormat)(implicit session: RSession): Option[RoverImageInfo]
 }
@@ -51,6 +52,11 @@ class RoverImageInfoRepoImpl @Inject() (
   def getByImageHash(hash: ImageHash)(implicit session: RSession): Set[RoverImageInfo] = {
     val q = for (r <- rows if r.state === RoverImageInfoStates.ACTIVE && r.sourceImageHash === hash) yield r
     q.list.toSet
+  }
+
+  def getByImageHashes(hashes: Set[ImageHash])(implicit session: RSession): Map[ImageHash, Set[RoverImageInfo]] = {
+    val q = for (r <- rows if r.state === RoverImageInfoStates.ACTIVE && r.sourceImageHash.inSet(hashes)) yield r
+    q.list.toSet.groupBy(_.sourceImageHash)
   }
 
   def getByImage(sourceImageHash: ImageHash, size: ImageSize, kind: ProcessImageOperation, format: ImageFormat)(implicit session: RSession): Option[RoverImageInfo] = {
