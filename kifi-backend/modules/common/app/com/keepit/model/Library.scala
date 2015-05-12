@@ -42,7 +42,8 @@ case class Library(
     universalLink: String = RandomStringUtils.randomAlphanumeric(40),
     memberCount: Int,
     lastKept: Option[DateTime] = None,
-    keepCount: Int = 0) extends ModelWithPublicId[Library] with ModelWithState[Library] with ModelWithSeqNumber[Library] {
+    keepCount: Int = 0,
+    collabInvite: Option[LibraryAccess] = None) extends ModelWithPublicId[Library] with ModelWithState[Library] with ModelWithSeqNumber[Library] {
 
   def sanitizeForDelete(): Library = copy(
     name = RandomStringUtils.randomAlphanumeric(20),
@@ -86,8 +87,9 @@ object Library extends ModelWithPublicIdCompanion[Library] {
     memberCount: Int,
     universalLink: String,
     lastKept: Option[DateTime],
-    keepCount: Int) = {
-    Library(id, createdAt, updatedAt, getDisplayName(name, kind), ownerId, visibility, description, slug, color, state, seq, kind, universalLink, memberCount, lastKept, keepCount)
+    keepCount: Int,
+    collabInvite: Option[LibraryAccess]) = {
+    Library(id, createdAt, updatedAt, getDisplayName(name, kind), ownerId, visibility, description, slug, color, state, seq, kind, universalLink, memberCount, lastKept, keepCount, collabInvite)
   }
 
   def unapplyToDbRow(lib: Library) = {
@@ -107,7 +109,8 @@ object Library extends ModelWithPublicIdCompanion[Library] {
       lib.memberCount,
       lib.universalLink,
       lib.lastKept,
-      lib.keepCount)
+      lib.keepCount,
+      lib.collabInvite)
   }
 
   protected[this] val publicIdPrefix = "l"
@@ -129,7 +132,8 @@ object Library extends ModelWithPublicIdCompanion[Library] {
     (__ \ 'universalLink).format[String] and
     (__ \ 'memberCount).format[Int] and
     (__ \ 'lastKept).formatNullable[DateTime] and
-    (__ \ 'keepCount).format[Int]
+    (__ \ 'keepCount).format[Int] and
+    (__ \ 'collabInviteAccess).formatNullable[LibraryAccess]
   )(Library.apply, unlift(Library.unapply))
 
   def isValidName(name: String): Boolean = {

@@ -124,7 +124,9 @@ class MobileRecommendationsControllerTest extends TestKitSupport with Specificat
             url = "joe/scala",
             numKeeps = 10,
             numCollaborators = 0,
-            numFollowers = 10)
+            numFollowers = 10,
+            collabInvite = None
+          )
         )
       }
 

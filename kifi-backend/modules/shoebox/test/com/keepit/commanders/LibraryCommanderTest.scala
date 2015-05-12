@@ -204,9 +204,9 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
         val lib2Request = LibraryAddRequest(name = "MURICA", slug = "murica", visibility = LibraryVisibility.PUBLISHED)
 
-        val lib3Request = LibraryAddRequest(name = "Science and Stuff", slug = "science", visibility = LibraryVisibility.DISCOVERABLE)
+        val lib3Request = LibraryAddRequest(name = "Science and Stuff", slug = "science", visibility = LibraryVisibility.PUBLISHED, collabInvite = Some(LibraryAccess.OWNER))
 
-        val lib5Request = LibraryAddRequest(name = "Invalid Param", slug = "", visibility = LibraryVisibility.SECRET)
+        val lib4Request = LibraryAddRequest(name = "Invalid Param", slug = "", visibility = LibraryVisibility.SECRET)
 
         val libraryCommander = inject[LibraryCommander]
         val add1 = libraryCommander.addLibrary(lib1Request, userAgent.id.get)
@@ -218,12 +218,13 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         val add3 = libraryCommander.addLibrary(lib3Request, userIron.id.get)
         add3.isRight === true
         add3.right.get.name === "Science and Stuff"
-        libraryCommander.addLibrary(lib5Request, userIron.id.get).isRight === false
+        libraryCommander.addLibrary(lib4Request, userIron.id.get).isRight === false
 
         db.readOnlyMaster { implicit s =>
           val allLibs = libraryRepo.all
           allLibs.length === 3
           allLibs.map(_.slug.value) === Seq("avengers", "murica", "science")
+          allLibs.map(_.collabInvite).flatten === Seq(LibraryAccess.READ_WRITE, LibraryAccess.READ_WRITE, LibraryAccess.OWNER)
 
           val allMemberships = libraryMembershipRepo.all
           allMemberships.length === 3
@@ -254,9 +255,10 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
         val libraryCommander = inject[LibraryCommander]
         val mod1 = libraryCommander.modifyLibrary(libraryId = libShield.id.get, userId = userAgent.id.get,
-          LibraryModifyRequest(description = Some("Samuel L. Jackson was here")))
+          LibraryModifyRequest(description = Some("Samuel L. Jackson was here"), collabInvite = Some(LibraryAccess.OWNER)))
         mod1.isRight === true
         mod1.right.get.description === Some("Samuel L. Jackson was here")
+        mod1.right.get.collabInvite === Some(LibraryAccess.OWNER)
 
         val mod2 = libraryCommander.modifyLibrary(libraryId = libMurica.id.get, userId = userCaptain.id.get,
           LibraryModifyRequest(name = Some("MURICA #1!!!!!"), slug = Some("murica_#1")))
