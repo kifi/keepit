@@ -83,8 +83,8 @@ class ArticleCommander @Inject() (
     Future.sequence(futureUriIdWithArticles).imap(_.toMap)
   }
 
-  def getOrElseFetchBestArticle[A <: Article](uri: IndexableUri)(implicit kind: ArticleKind[A]): Future[Option[A]] = {
-    val info = internArticleInfoByUri(uri.id.get, uri.url, Set(kind))(kind)
+  def getOrElseFetchBestArticle[A <: Article](uriId: Id[NormalizedURI], url: String)(implicit kind: ArticleKind[A]): Future[Option[A]] = {
+    val info = internArticleInfoByUri(uriId, url, Set(kind))(kind)
     getOrElseFetchBestArticle(info).imap(_.map(_.asExpected[A]))
   }
 

@@ -1,5 +1,6 @@
 package com.keepit.rover.model
 
+import com.keepit.commanders.TimeToReadCommander
 import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
 import com.keepit.common.db.Id
 import com.keepit.common.logging.AccessLog
@@ -9,6 +10,7 @@ import com.keepit.rover.article.content.EmbedlyMedia
 import com.keepit.rover.article.{ EmbedlyArticle, Article, ArticleKind }
 import com.kifi.macros.json
 import org.joda.time.DateTime
+import scala.concurrent.duration._
 
 import scala.concurrent.duration.Duration
 
@@ -17,12 +19,16 @@ case class RoverMedia(mediaType: String, html: String, width: Int, height: Int, 
 
 @json
 case class RoverArticleSummary(
-  title: Option[String],
-  description: Option[String],
-  wordCount: Option[Int],
-  publishedAt: Option[DateTime],
-  authors: Seq[PageAuthor],
-  media: Option[RoverMedia])
+    title: Option[String],
+    description: Option[String],
+    wordCount: Option[Int],
+    publishedAt: Option[DateTime],
+    authors: Seq[PageAuthor],
+    media: Option[RoverMedia]) {
+
+  lazy val readTime: Option[Duration] = wordCount.flatMap(TimeToReadCommander.wordCountToReadTimeMinutes(_).map(_ minutes))
+
+}
 
 object RoverArticleSummary {
   def fromArticle(article: Article): RoverArticleSummary = {
