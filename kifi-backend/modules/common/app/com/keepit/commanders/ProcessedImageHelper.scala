@@ -397,10 +397,14 @@ object ProcessedImageSize {
   }
 
   def pickBestImage[T <: BaseImage](idealSize: ImageSize, images: Seq[T], strictAspectRatio: Boolean): Option[T] = {
-    images.
-      filter(s => if (strictAspectRatio) isAlmostTheSameAspectRatio(idealSize, ImageSize(s.width, s.height)) else true).
-      map(s => s -> maxDivergence(idealSize, s.imageSize)).
-      sortBy(_._2).headOption.map(_._1)
+    pickByIdealImageSize(idealSize, images, strictAspectRatio)(_.imageSize)
+  }
+
+  def pickByIdealImageSize[I](idealSize: ImageSize, images: Seq[I], strictAspectRatio: Boolean)(getSize: I => ImageSize): Option[I] = {
+    images.collect {
+      case image if !strictAspectRatio || isAlmostTheSameAspectRatio(idealSize, getSize(image)) =>
+        image -> maxDivergence(idealSize, getSize(image))
+    }.sortBy(_._2).headOption.map(_._1)
   }
 
   def imageSizeFromString(sizeStr: String): Option[ImageSize] = {

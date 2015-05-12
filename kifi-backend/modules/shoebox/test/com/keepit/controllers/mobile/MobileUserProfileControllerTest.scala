@@ -178,6 +178,13 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
                   "slug":"catching-jellyfish",
                   "kind" : "user_created",
                   "visibility" : "published",
+                  "owner": {
+                    "id":"${user1.externalId.id}",
+                    "firstName":"Spongebob",
+                    "lastName":"Squarepants",
+                    "pictureName":"0.jpg",
+                    "username":"spongebob"
+                  },
                   "numKeeps" : 0,
                   "numFollowers" : 0,
                   "followers": [],
@@ -195,6 +202,13 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
                   "slug":"krabby-patty",
                   "kind" : "user_created",
                   "visibility" : "secret",
+                  "owner": {
+                    "id":"${user1.externalId.id}",
+                    "firstName":"Spongebob",
+                    "lastName":"Squarepants",
+                    "pictureName":"0.jpg",
+                    "username":"spongebob"
+                  },
                   "numKeeps" : 0,
                   "numFollowers" : 0,
                   "followers": [],

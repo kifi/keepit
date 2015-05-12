@@ -6,6 +6,7 @@ import com.keepit.common.core._
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
+import com.keepit.common.store.{ ImagePath, ImageSize, S3ImageConfig }
 import com.keepit.model._
 import com.keepit.rover.article.{ Article, ArticleKind }
 import com.keepit.rover.manager.{ ArticleImageProcessingTask, ArticleImageProcessingTaskQueue }
@@ -28,9 +29,22 @@ class ImageCommander @Inject() (
     db: Database,
     articleInfoRepo: ArticleInfoRepo,
     articleImageRepo: ArticleImageRepo,
+    imageInfoRepo: RoverImageInfoRepo,
     fastFollowQueue: ArticleImageProcessingTaskQueue.FastFollow,
     imageFetcher: RoverImageFetcher,
     private implicit val executionContext: ExecutionContext) extends Logging {
+
+  def getImageInfosByUrisAndArticleKind[A <: Article](uriIds: Set[Id[NormalizedURI]])(implicit kind: ArticleKind[A]): Map[Id[NormalizedURI], Set[RoverImageInfo]] = {
+    db.readOnlyMaster { implicit session =>
+      val imageHashesByUriId = articleImageRepo.getByUris(uriIds).mapValues { articleImages =>
+        articleImages.collect { case articleImage if articleImage.articleKind == kind => articleImage.imageHash }
+      }
+      val imagesByHash = imageInfoRepo.getByImageHashes(imageHashesByUriId.values.flatten.toSet)
+      imageHashesByUriId.mapValues(_.flatMap(imagesByHash.getOrElse(_, Set.empty)))
+    }
+  }
+
+  // Image Fetching Functions
 
   def add(tasks: Seq[ArticleImageProcessingTask], queue: ArticleImageProcessingTaskQueue): Future[Map[ArticleImageProcessingTask, Try[Unit]]] = {
     db.readWrite { implicit session =>
