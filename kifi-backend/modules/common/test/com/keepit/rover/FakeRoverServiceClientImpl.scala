@@ -24,6 +24,6 @@ class FakeRoverServiceClientImpl(
   def fetchAsap(uriId: Id[NormalizedURI], url: String): Future[Unit] = Future.successful(())
   def getBestArticlesByUris(uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[Article]]] = Future.successful(uriIds.map(uriId => uriId -> articlesByUri(uriId)).toMap)
   def getArticleInfosByUris(uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[ArticleInfo]]] = Future.successful(uriIds.map(_ -> Set.empty[ArticleInfo]).toMap)
-  def getUriSummaryByUris(uriIds: Set[Id[NormalizedURI]], idealSize: ImageSize, strictAspectRatio: Boolean = false): Future[Map[Id[NormalizedURI], RoverUriSummary]] = Future.successful(Map.empty)
-  def getOrElseFetchUriSummary(uriId: Id[NormalizedURI], url: String, idealSize: ImageSize, strictAspectRatio: Boolean = false): Future[Option[RoverUriSummary]] = Future.successful(None)
+  def getUriSummaryByUris(uriIds: Set[Id[NormalizedURI]], idealSizes: Set[ImageSize], strictAspectRatio: Boolean = false): Future[Map[Id[NormalizedURI], RoverUriSummary]] = Future.successful(Map.empty)
+  def getOrElseFetchUriSummary(uriId: Id[NormalizedURI], url: String, idealSizes: Set[ImageSize], strictAspectRatio: Boolean = false): Future[Option[RoverUriSummary]] = Future.successful(None)
 }

@@ -155,7 +155,7 @@ class KeepDecorator @Inject() (
   }
 
   private def getKeepSummaries(keeps: Seq[Keep], idealImageSize: ImageSize): Future[Seq[URISummary]] = {
-    val futureSummariesByUriId = rover.getUriSummaryByUris(keeps.map(_.uriId).toSet, idealImageSize)
+    val futureSummariesByUriId = rover.getUriSummaryByUris(keeps.map(_.uriId).toSet, Set(idealImageSize))
     val keepImagesByKeepId = {
       keeps.map { keep =>
         keep.id.get -> keepImageCommander.getBestImageForKeep(keep.id.get, ScaleImageRequest(idealImageSize))

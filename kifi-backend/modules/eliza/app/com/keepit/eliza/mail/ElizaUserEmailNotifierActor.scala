@@ -7,7 +7,8 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.mail.{ EmailAddress, ElectronicMail, SystemEmailAddress }
-import com.keepit.eliza.commanders.ElizaEmailCommander
+import com.keepit.common.store.ImageSize
+import com.keepit.eliza.commanders.{ ElizaEmailUriSummaryImageSizes, ElizaEmailCommander }
 import com.keepit.eliza.model._
 import com.keepit.eliza.model.ExtendedThreadItem
 import com.keepit.eliza.model.UserThread
@@ -56,7 +57,7 @@ class ElizaUserEmailNotifierActor @Inject() (
       shoebox.getUsers(allUserIds).map(s => s.map(u => u.id.get -> u).toMap)
     )
     val allUserImageUrlsFuture: Future[Map[Id[User], String]] = new SafeFuture(FutureHelpers.map(allUserIds.map(u => u -> shoebox.getUserImageUrl(u, 73)).toMap))
-    val uriSummaryFuture = elizaEmailCommander.getSummarySmall(thread)
+    val uriSummaryFuture = elizaEmailCommander.getUriSummary(thread)
     val threadDataFuture = for {
       allUsers <- allUsersFuture
       allUserImageUrls <- allUserImageUrlsFuture
@@ -66,7 +67,7 @@ class ElizaUserEmailNotifierActor @Inject() (
       val (allUsers, allUserImageUrls, uriSummary) = data
       // Futures below will be executed concurrently
       val notificationFutures = userThreads.map { userThread =>
-        emailUnreadMessagesForUserThread(userThread, thread, allUsers, allUserImageUrls, uriSummary).recover {
+        emailUnreadMessagesForUserThread(userThread, thread, allUsers, allUserImageUrls, uriSummary, ElizaEmailUriSummaryImageSizes.smallImageSize).recover {
           case _ => ()
         }
       }
@@ -79,7 +80,8 @@ class ElizaUserEmailNotifierActor @Inject() (
     thread: MessageThread,
     allUsers: Map[Id[User], User],
     allUserImageUrls: Map[Id[User], String],
-    uriSummary: Option[RoverUriSummary]): Future[Unit] = {
+    uriSummary: Option[RoverUriSummary],
+    idealImageSize: ImageSize): Future[Unit] = {
     log.info(s"processing user thread $userThread")
     val now = clock.now
     airbrake.verify(userThread.replyable,
@@ -116,7 +118,7 @@ class ElizaUserEmailNotifierActor @Inject() (
           val futureEmail = shoebox.getUnsubscribeUrlForEmail(destinationEmail).map {
             case unsubUrl =>
               val threadEmailInfo: ThreadEmailInfo =
-                elizaEmailCommander.getThreadEmailInfo(thread, uriSummary, false, allUsers, allUserImageUrls, None,
+                elizaEmailCommander.getThreadEmailInfo(thread, uriSummary, idealImageSize, false, allUsers, allUserImageUrls, None,
                   Some(unsubUrl), None).copy(pageUrl = deepUrl, isDeepLink = true)
               val magicAddress = SystemEmailAddress.discussion(userThread.accessToken.token)
               ElectronicMail(

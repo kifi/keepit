@@ -33,6 +33,11 @@ import com.keepit.eliza.util.{ MessageFormatter, TextSegment }
 import com.keepit.common.strings.AbbreviateString
 import com.keepit.common.domain.DomainToNameMapper
 
+object ElizaEmailUriSummaryImageSizes {
+  val bigImageSize = ImageSize(620, 200)
+  val smallImageSize = ImageSize(183, 96)
+}
+
 class ElizaEmailCommander @Inject() (
     shoebox: ShoeboxServiceClient,
     db: Database,
@@ -45,21 +50,20 @@ class ElizaEmailCommander @Inject() (
     implicit val imageConfig: S3ImageConfig,
     clock: Clock) extends Logging {
 
+  import ElizaEmailUriSummaryImageSizes._
+
   case class ProtoEmail(digestHtml: Html, initialHtml: Html, addedHtml: Html, starterName: String, pageTitle: String)
 
-  def getSummarySmall(thread: MessageThread) = getSummary(thread, ImageSize(183, 96))
-
-  def getSummaryBig(thread: MessageThread) = getSummary(thread, ImageSize(620, 200))
-
-  private def getSummary(thread: MessageThread, idealImageSize: ImageSize): Future[Option[RoverUriSummary]] = {
+  def getUriSummary(thread: MessageThread): Future[Option[RoverUriSummary]] = {
     val uriId = thread.uriId.get
     val normalizedUrl = thread.nUrl.get // be careful to call Rover with the *normalized* url here
-    rover.getOrElseFetchUriSummary(uriId, normalizedUrl, idealImageSize)
+    rover.getOrElseFetchUriSummary(uriId, normalizedUrl, Set(bigImageSize, smallImageSize))
   }
 
   def getThreadEmailInfo(
     thread: MessageThread,
     uriSummary: Option[RoverUriSummary],
+    idealImageSize: ImageSize,
     isInitialEmail: Boolean,
     allUsers: Map[Id[User], User],
     allUserImageUrls: Map[Id[User], String],
@@ -84,7 +88,7 @@ class ElizaEmailCommander @Inject() (
       pageName = pageName,
       pageTitle = thread.pageTitle.orElse(uriSummary.flatMap(_.article.title)).getOrElse(thread.nUrl.get).abbreviate(80),
       isInitialEmail = isInitialEmail,
-      heroImageUrl = uriSummary.flatMap(_.image.map(_.path.getUrl)),
+      heroImageUrl = uriSummary.flatMap(_.imagesByIdealSize.get(idealImageSize).map(_.path.getUrl)),
       pageDescription = uriSummary.flatMap(_.article.description.map(_.take(190) + "...")),
       participants = participants.toSeq,
       conversationStarter = starterUser.firstName + " " + starterUser.lastName,
@@ -130,24 +134,23 @@ class ElizaEmailCommander @Inject() (
     val allUserIds: Set[Id[User]] = thread.participants.map(_.allUsers).getOrElse(Set.empty)
     val allUsersFuture: Future[Map[Id[User], User]] = new SafeFuture(shoebox.getUsers(allUserIds.toSeq).map(s => s.map(u => u.id.get -> u).toMap))
     val allUserImageUrlsFuture: Future[Map[Id[User], String]] = new SafeFuture(FutureHelpers.map(allUserIds.map(u => u -> shoebox.getUserImageUrl(u, 73)).toMap))
-    val uriSummaryBigFuture = getSummaryBig(thread)
+    val uriSummaryFuture = getUriSummary(thread)
 
     for {
       allUsers <- allUsersFuture
       allUserImageUrls <- allUserImageUrlsFuture
-      uriSummaryBig <- uriSummaryBigFuture
-      uriSummarySmall <- getSummarySmall(thread) // Intentionally sequential execution
+      uriSummary <- uriSummaryFuture
     } yield {
-      ThreadEmailData(thread, allUserIds, allUsers, allUserImageUrls, uriSummaryBig, uriSummarySmall)
+      ThreadEmailData(thread, allUserIds, allUsers, allUserImageUrls, uriSummary)
     }
   }
 
   private def assembleEmail(threadEmailData: ThreadEmailData, fromTime: Option[DateTime], toTime: Option[DateTime], invitedByUserId: Option[Id[User]], unsubUrl: Option[String], muteUrl: Option[String]): ProtoEmail = {
-    val ThreadEmailData(thread, _, allUsers, allUserImageUrls, uriSummaryBig, uriSummarySmall) = threadEmailData
-    val bigImageUrl = uriSummaryBig.flatMap(_.image.map(_.path.getUrl))
-    val smallImageUrl = uriSummarySmall.flatMap(_.image.map(_.path.getUrl))
+    val ThreadEmailData(thread, _, allUsers, allUserImageUrls, uriSummary) = threadEmailData
     val invitedByUser = invitedByUserId.flatMap(allUsers.get(_))
-    val threadInfoSmall = getThreadEmailInfo(thread, uriSummarySmall, true, allUsers, allUserImageUrls, invitedByUser, unsubUrl, muteUrl)
+    val threadInfoSmall = getThreadEmailInfo(thread, uriSummary, smallImageSize, true, allUsers, allUserImageUrls, invitedByUser, unsubUrl, muteUrl)
+    val bigImageUrl = uriSummary.flatMap(_.imagesByIdealSize.get(bigImageSize).map(_.path.getUrl))
+    val smallImageUrl = uriSummary.flatMap(_.imagesByIdealSize.get(smallImageSize).map(_.path.getUrl))
     val threadInfoBig = threadInfoSmall.copy(heroImageUrl = bigImageUrl orElse smallImageUrl)
     val threadInfoSmallDigest = threadInfoSmall.copy(isInitialEmail = false)
     val threadItems = getExtendedThreadItems(thread, allUsers, allUserImageUrls, fromTime, toTime)

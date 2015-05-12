@@ -25,8 +25,8 @@ trait RoverServiceClient extends ServiceClient {
   def fetchAsap(uriId: Id[NormalizedURI], url: String): Future[Unit]
   def getBestArticlesByUris(uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[Article]]]
   def getArticleInfosByUris(uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[ArticleInfo]]]
-  def getUriSummaryByUris(uriIds: Set[Id[NormalizedURI]], idealSize: ImageSize, strictAspectRatio: Boolean = false): Future[Map[Id[NormalizedURI], RoverUriSummary]]
-  def getOrElseFetchUriSummary(uriId: Id[NormalizedURI], url: String, idealSize: ImageSize, strictAspectRatio: Boolean = false): Future[Option[RoverUriSummary]] // slow, prefer getUriSummaryByUris
+  def getUriSummaryByUris(uriIds: Set[Id[NormalizedURI]], idealSizes: Set[ImageSize], strictAspectRatio: Boolean = false): Future[Map[Id[NormalizedURI], RoverUriSummary]]
+  def getOrElseFetchUriSummary(uriId: Id[NormalizedURI], url: String, idealSizes: Set[ImageSize], strictAspectRatio: Boolean = false): Future[Option[RoverUriSummary]] // slow, prefer getUriSummaryByUris
 }
 
 class RoverServiceClientImpl(
@@ -72,22 +72,22 @@ class RoverServiceClientImpl(
     }
   }
 
-  def getUriSummaryByUris(uriIds: Set[Id[NormalizedURI]], idealSize: ImageSize, strictAspectRatio: Boolean): Future[Map[Id[NormalizedURI], RoverUriSummary]] = {
+  def getUriSummaryByUris(uriIds: Set[Id[NormalizedURI]], idealSizes: Set[ImageSize], strictAspectRatio: Boolean): Future[Map[Id[NormalizedURI], RoverUriSummary]] = {
     val contentSummaryProvider = RoverUriSummary.defaultProvider
     val futureArticleSummaryByUriId = getBestArticleSummaryByUris(uriIds)(contentSummaryProvider)
-    val futureImageByUriId = getImagesByUris(uriIds)(contentSummaryProvider).imap { imagesByUriId =>
+    val futureImagesByIdealSizeByUriId = getImagesByUris(uriIds)(contentSummaryProvider).imap { imagesByUriId =>
       imagesByUriId.mapValues { images =>
-        ProcessedImageSize.pickByIdealImageSize(idealSize, images.toSeq, strictAspectRatio)(_.size)
-      } collect { case (uriId, Some(image)) => uriId -> image }
+        ProcessedImageSize.pickByIdealImageSizes(idealSizes, images.toSeq, strictAspectRatio)(_.size)
+      }
     }
 
     for {
       articleSummaryByUriId <- futureArticleSummaryByUriId
-      imageByUriId <- futureImageByUriId
+      imagesByIdealSizeByUriId <- futureImagesByIdealSizeByUriId
     } yield {
       articleSummaryByUriId.collect {
         case (uriId, Some(articleSummary)) =>
-          uriId -> RoverUriSummary(articleSummary, imageByUriId.get(uriId))
+          uriId -> RoverUriSummary(articleSummary, imagesByIdealSizeByUriId.getOrElse(uriId, Map.empty))
       }
     }
   }
@@ -136,12 +136,12 @@ class RoverServiceClientImpl(
     }
   }
 
-  def getOrElseFetchUriSummary(uriId: Id[NormalizedURI], url: String, idealSize: ImageSize, strictAspectRatio: Boolean = false): Future[Option[RoverUriSummary]] = {
+  def getOrElseFetchUriSummary(uriId: Id[NormalizedURI], url: String, idealSizes: Set[ImageSize], strictAspectRatio: Boolean = false): Future[Option[RoverUriSummary]] = {
     val contentSummaryProvider = RoverUriSummary.defaultProvider
     getOrElseFetchArticleSummaryAndImages(uriId, url)(contentSummaryProvider).imap(_.map {
       case (summary, images) =>
-        val image = ProcessedImageSize.pickByIdealImageSize(idealSize, images.toSeq, strictAspectRatio)(_.size)
-        RoverUriSummary(summary, image)
+        val imagesByIdealSize = ProcessedImageSize.pickByIdealImageSizes(idealSizes, images.toSeq, strictAspectRatio)(_.size)
+        RoverUriSummary(summary, imagesByIdealSize)
     })
   }
 
