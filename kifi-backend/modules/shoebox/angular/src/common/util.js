@@ -194,27 +194,29 @@ angular.module('util', ['HTML'])
   }
 ])
 
-.directive('postRepeatDirective', [
-  '$timeout', '$window',
-  function ($timeout, $window) {
-    return function (scope) {
-      if (scope.$first) {
-        if ($window.console && $window.console.time) {
-          $window.console.time('postRepeatDirective');
-        }
-      }
-
-      if (scope.$last) {
-        $timeout(function () {
-          if ($window.console && $window.console.time) {
-            $window.console.time('postRepeatDirective');
-            $window.console.timeEnd('postRepeatDirective');
-          }
-        });
-      }
-    };
-  }
-])
+// Uncomment and add kf-time-ng-repeat to an ng-repeat element to see timing info.
+//
+// .directive('kfTimeNgRepeat', [
+//   '$timeout', '$window',
+//   function ($timeout, $window) {
+//     return function (scope) {
+//       if (scope.$first) {
+//         if ($window.console && $window.console.time) {
+//           $window.console.time('kfTimeNgRepeat');
+//         }
+//       }
+//
+//       if (scope.$last) {
+//         $timeout(function () {
+//           if ($window.console && $window.console.time) {
+//             $window.console.time('kfTimeNgRepeat');
+//             $window.console.timeEnd('kfTimeNgRepeat');
+//           }
+//         });
+//       }
+//     };
+//   }
+// ])
 
 .constant('keyIndices', {
   KEY_UP: 38,
