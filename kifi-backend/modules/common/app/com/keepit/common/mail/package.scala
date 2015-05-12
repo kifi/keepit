@@ -54,6 +54,7 @@ package object template {
     val googlePlayStoreUrl = "https://play.google.com/store/apps/details?id=com.kifi&hl=en/å"
     val kifiChromeExtensionUrl =
       "https://chrome.google.com/webstore/detail/kifi/fpjooibalklfinmkiodaamcckfbcjhin"
+    val kifiExtensionInstallUrl = "https://kifi.com/install"
     private val cdnBaseUrl = "https://djty7jcqog9qu.cloudfront.net"
     private val assetBaseUrl = cdnBaseUrl + "/assets/black"
     private val assetV3BaseUrl = cdnBaseUrl + "/assets/email-v3"
