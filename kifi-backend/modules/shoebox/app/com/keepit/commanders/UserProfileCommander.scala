@@ -64,6 +64,7 @@ class UserProfileCommander @Inject() (
           slug = info.slug,
           kind = lib.kind,
           visibility = lib.visibility,
+          owner = info.owner,
           numKeeps = info.numKeeps,
           numFollowers = info.numFollowers,
           followers = info.followers,
