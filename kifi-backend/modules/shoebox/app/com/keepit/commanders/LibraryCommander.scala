@@ -616,7 +616,7 @@ class LibraryCommander @Inject() (
           "color" -> (newColor != targetLib.color),
           "madePrivate" -> (newVisibility != targetLib.visibility && newVisibility == LibraryVisibility.SECRET),
           "listed" -> (newListed != targetMembership.listed),
-          "collabInviteAccess" -> (newInviteToCollab != targetLib.inviteToCollab)
+          "inviteToCollab" -> (newInviteToCollab != targetLib.inviteToCollab)
         )
         (lib, edits)
       }
