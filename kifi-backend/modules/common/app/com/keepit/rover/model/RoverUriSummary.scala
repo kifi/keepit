@@ -1,11 +1,11 @@
 package com.keepit.rover.model
 
-import com.keepit.commanders.TimeToReadCommander
+import com.keepit.commanders.{ ProcessedImageSize, TimeToReadCommander }
 import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
 import com.keepit.common.db.Id
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.store.{ S3ImageConfig, ImageSize, ImagePath }
-import com.keepit.model.{ImageHash, NormalizedURI, URISummary, PageAuthor}
+import com.keepit.model.{ ImageHash, NormalizedURI, URISummary, PageAuthor }
 import com.keepit.rover.article.content.EmbedlyMedia
 import com.keepit.rover.article.{ EmbedlyArticle, Article, ArticleKind }
 import com.kifi.macros.json
@@ -58,9 +58,13 @@ case class RoverImage(
   path: ImagePath,
   size: ImageSize)
 
-case class RoverUriSummary(article: RoverArticleSummary, imagesByIdealSize: Map[ImageSize, RoverImage]) {
-  def toUriSummary()(implicit imageConfig: S3ImageConfig): URISummary = {
-    val image = imagesByIdealSize.values.headOption
+case class RoverUriSummary(article: RoverArticleSummary, images: Set[RoverImage]) {
+  def getImage(idealSize: ImageSize, strictAspectRatio: Boolean = false): Option[RoverImage] = {
+    ProcessedImageSize.pickByIdealImageSize(idealSize, images, strictAspectRatio)(_.size)
+  }
+
+  def toUriSummary(idealImageSize: ImageSize)(implicit imageConfig: S3ImageConfig): URISummary = {
+    val image = getImage(idealImageSize)
     URISummary(
       imageUrl = image.map(_.path.getUrl),
       title = article.title,
