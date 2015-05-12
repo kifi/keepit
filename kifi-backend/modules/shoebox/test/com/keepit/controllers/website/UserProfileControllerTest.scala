@@ -444,7 +444,6 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
         val result5Json = (contentAsJson(result5) \ "following").as[Seq[JsObject]]
         (result5Json.head \ "name").as[String] === "lib1"
         (result5Json.head \ "numFollowers").as[Int] === 1
-        (result5Json.head \ "following").asOpt[Boolean] === None
       }
     }
 
