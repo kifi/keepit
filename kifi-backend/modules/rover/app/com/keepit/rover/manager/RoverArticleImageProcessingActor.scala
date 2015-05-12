@@ -51,40 +51,15 @@ class RoverArticleImageProcessingActor @Inject() (
   }
 
   private def process(task: SQSMessage[ArticleImageProcessingTask], articleInfo: RoverArticleInfo): Future[Unit] = {
-    process(articleInfo) andThen { // relying on SQS for retries
-      case Success(()) => task.consume()
-      case Failure(error) => log.error(s"Failed to process $task", error)
+    shouldProcessLatestArticleImages(articleInfo) match {
+      case false => Future.successful(())
+      case true => imageProcessingCommander.processLatestArticleImages(articleInfo).imap(_ => ())
     }
+  } andThen { // relying on SQS for retries
+    case Success(()) => task.consume()
+    case Failure(error) => log.error(s"Failed to process $task", error)
   }
 
-  private def process(articleInfo: RoverArticleInfo): Future[Unit] = {
-    val futureImageProcessedVersion = articleInfo.shouldProcessLatestArticleImages match {
-      case false => Future.successful(None)
-      case true => articleInfo.getLatestKey match {
-        case None => Future.successful(None)
-        case Some(latestArticleKey) => processArticleImages(latestArticleKey).imap(_ => Some(latestArticleKey.version))
-      }
-    }
+  private def shouldProcessLatestArticleImages(info: RoverArticleInfo) = info.isActive && info.lastImageProcessingAt.isDefined
 
-    futureImageProcessedVersion.imap { imageProcessedVersion =>
-      db.readWrite(attempts = 3) { implicit session =>
-        articleInfoRepo.updateAfterImageProcessing(articleInfo.uriId, articleInfo.articleKind, imageProcessedVersion)
-      }
-    }
-  }
-
-  private def processArticleImages(key: ArticleKey[_ <: Article]): Future[Unit] = {
-    getRemoteImageUrls(key).flatMap { remoteImageUrls =>
-      FutureHelpers.sequentialExec(remoteImageUrls) { remoteImageUrl =>
-        imageProcessingCommander.processRemoteArticleImage(key.uriId, key.kind, key.version, remoteImageUrl)
-      }
-    }
-  }
-
-  private def getRemoteImageUrls(key: ArticleKey[_ <: Article]): Future[Set[String]] = {
-    articleStore.get(key).map {
-      case Some(embedlyArticle: EmbedlyArticle) => embedlyArticle.content.images.map(_.url).headOption.toSet // only take the first image provided by Embedly
-      case _ => Set.empty[String]
-    }
-  }
 }

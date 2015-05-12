@@ -2,15 +2,17 @@ package com.keepit.rover.image
 
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.commanders._
+import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.core._
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.store.{ ImagePath, ImageSize, S3ImageConfig }
 import com.keepit.model._
-import com.keepit.rover.article.{ Article, ArticleKind }
+import com.keepit.rover.article.{ ArticleCommander, EmbedlyArticle, Article, ArticleKind }
 import com.keepit.rover.manager.{ ArticleImageProcessingTask, ArticleImageProcessingTaskQueue }
 import com.keepit.rover.model._
+import com.keepit.rover.store.RoverArticleStore
 
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ ExecutionContext, Future }
@@ -32,7 +34,10 @@ class ImageCommander @Inject() (
     imageInfoRepo: RoverImageInfoRepo,
     fastFollowQueue: ArticleImageProcessingTaskQueue.FastFollow,
     imageFetcher: RoverImageFetcher,
+    articleStore: RoverArticleStore,
     private implicit val executionContext: ExecutionContext) extends Logging {
+
+  // Get ImageInfos
 
   def getImageInfosByUrisAndArticleKind[A <: Article](uriIds: Set[Id[NormalizedURI]])(implicit kind: ArticleKind[A]): Map[Id[NormalizedURI], Set[RoverImageInfo]] = {
     db.readOnlyMaster { implicit session =>
@@ -72,7 +77,36 @@ class ImageCommander @Inject() (
     add(tasks, fastFollowQueue).imap { _.map { case (task, result) => (task.id -> result) } }
   }
 
-  def processRemoteArticleImage(uriId: Id[NormalizedURI], kind: ArticleKind[_ <: Article], version: ArticleVersion, remoteImageUrl: String): Future[Unit] = {
+
+  def processLatestArticleImages(articleInfo: RoverArticleInfo): Future[Unit] = {
+    val futureImageProcessedVersion = articleInfo.getLatestKey match {
+      case None => Future.successful(None)
+      case Some(latestArticleKey) => processArticleImages(latestArticleKey).imap(_ => Some(latestArticleKey.version))
+    }
+
+    futureImageProcessedVersion.imap { imageProcessedVersion =>
+      db.readWrite(attempts = 3) { implicit session =>
+        articleInfoRepo.updateAfterImageProcessing(articleInfo.uriId, articleInfo.articleKind, imageProcessedVersion)
+      }
+    }
+  }
+
+  private def processArticleImages(key: ArticleKey[_ <: Article]): Future[Unit] = {
+    getRemoteImageUrls(key).flatMap { remoteImageUrls =>
+      FutureHelpers.sequentialExec(remoteImageUrls) { remoteImageUrl =>
+        processRemoteArticleImage(key.uriId, key.kind, key.version, remoteImageUrl)
+      }
+    }
+  }
+
+  private def getRemoteImageUrls(key: ArticleKey[_ <: Article]): Future[Set[String]] = {
+    articleStore.get(key).map {
+      case Some(embedlyArticle: EmbedlyArticle) => embedlyArticle.content.images.map(_.url).headOption.toSet // only take the first image provided by Embedly
+      case _ => Set.empty[String]
+    }
+  }
+
+  private def processRemoteArticleImage(uriId: Id[NormalizedURI], kind: ArticleKind[_ <: Article], version: ArticleVersion, remoteImageUrl: String): Future[Unit] = {
     import com.keepit.rover.image.ArticleImageConfiguration._
     val result = imageFetcher.fetchAndStoreRemoteImage(remoteImageUrl, ImageSource.RoverArticle(kind), imagePathPrefix, scaleSizes, cropSizes).map {
       case Right(sourceImageHash) => {

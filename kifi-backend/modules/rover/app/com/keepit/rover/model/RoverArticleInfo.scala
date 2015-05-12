@@ -100,8 +100,6 @@ case class RoverArticleInfo(
     )
   }
 
-  def shouldProcessLatestArticleImages = isActive && lastImageProcessingAt.isDefined
-
   def withImageProcessingComplete(version: Option[ArticleVersion]) = {
     copy(
       imageProcessingRequestedAt = None,
