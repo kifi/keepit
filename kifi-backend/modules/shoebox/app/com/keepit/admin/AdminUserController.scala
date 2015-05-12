@@ -432,6 +432,22 @@ class AdminUserController @Inject() (
     }
   }
 
+  def retrieveFormFromRequest(request: UserRequest[AnyContent]): Map[String, String] = request.request.body.asFormUrlEncoded match {
+    case Some(request) => request.map(entry => (entry._1 -> entry._2.head))
+    case None => throw new Exception("invalid form entry.")
+  }
+
+  def updateUsersUserName(userId: Id[User]) = AdminUserPage { implicit request =>
+    val form = retrieveFormFromRequest(request)
+    // need to apply validation here.
+    val newUserName = form.get("username").get.trim()
+
+    userCommander.setUsername(userId, Username(newUserName)) match {
+      case Right(response) => Ok
+      case Left(exception) => BadRequest(exception)
+    }
+  }
+
   def updateUser(userId: Id[User]) = AdminUserPage { implicit request =>
     val form = request.request.body.asFormUrlEncoded match {
       case Some(req) => req.map(r => (r._1 -> r._2.head))
