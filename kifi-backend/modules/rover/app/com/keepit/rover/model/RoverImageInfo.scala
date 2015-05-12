@@ -63,5 +63,5 @@ object RoverImageInfo {
     )
   }
 
-  implicit def toRoverImage(imageInfo: RoverImageInfo): RoverImage = RoverImage(imageInfo.path, imageInfo.imageSize)
+  implicit def toRoverImage(imageInfo: RoverImageInfo): RoverImage = RoverImage(imageInfo.sourceImageHash, imageInfo.path, imageInfo.imageSize)
 }

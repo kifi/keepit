@@ -5,7 +5,7 @@ import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, CacheStatis
 import com.keepit.common.db.Id
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.store.{ S3ImageConfig, ImageSize, ImagePath }
-import com.keepit.model.{ NormalizedURI, URISummary, PageAuthor }
+import com.keepit.model.{ImageHash, NormalizedURI, URISummary, PageAuthor}
 import com.keepit.rover.article.content.EmbedlyMedia
 import com.keepit.rover.article.{ EmbedlyArticle, Article, ArticleKind }
 import com.kifi.macros.json
@@ -54,6 +54,7 @@ object RoverArticleSummary {
 
 @json
 case class RoverImage(
+  sourceImageHash: ImageHash,
   path: ImagePath,
   size: ImageSize)
 
@@ -85,7 +86,7 @@ class RoverArticleSummaryCache(stats: CacheStatistics, accessLog: AccessLog, inn
   extends JsonCacheImpl[RoverArticleSummaryKey, RoverArticleSummary](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class RoverArticleImagesKey(uriId: Id[NormalizedURI], kind: ArticleKind[_ <: Article]) extends Key[Set[RoverImage]] {
-  override val version = 1
+  override val version = 2
   val namespace = "images_by_uri_id_and_article_kind"
   def toKey(): String = s"${uriId.id}:${kind.typeCode}"
 }
