@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfProfileEmailAddresses', [
-  '$document', 'keyIndices', 'modalService', 'profileService',
-  function ($document, keyIndices, modalService, profileService) {
+  '$document', 'KEY', 'modalService', 'profileService',
+  function ($document, KEY, modalService, profileService) {
     return {
       restrict: 'A',
       scope: {
@@ -67,10 +67,10 @@ angular.module('kifi')
         element.find('input')
           .on('keydown', function (e) {
             switch (e.which) {
-              case keyIndices.KEY_ESC:
+              case KEY.ESC:
                 scope.$apply(scope.cancelAddEmail);
                 break;
-              case keyIndices.KEY_ENTER:
+              case KEY.ENTER:
                 scope.$apply(scope.addEmail);
                 break;
             }
