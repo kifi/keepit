@@ -9,7 +9,7 @@ inviteAccess: LibraryAccess
 )
 @import com.keepit.common.mail.template.helpers._
 @libraryAssetUrl(path: String) = @{assetUrl("library/" + path)}
-@libraryUrl = @{htmlUrl(baseUrl + libraryInfo.url + "?authToken=" + authToken + "&", "followLibraryButton", inviteeId.nonEmpty)}
+@libraryUrl = @{htmlUrl(baseUrl + libraryInfo.url + "?authToken=" + authToken + "&", "followLibraryLink", inviteeId.nonEmpty)}
 @inviteAction = @{if (inviteAccess == LibraryAccess.READ_ONLY) "follow" else "collaborate on" }
 @invitedHeader = {@firstName(inviterId) invited you to @inviteAction a library on Kifi}
 
@@ -19,12 +19,16 @@ inviteAccess: LibraryAccess
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 </head>
 <body>
-Hi @firstName(inviteeId), @invitedHeader
+Hi @firstName(inviteeId),
 
-<p>@firstName(inviterId) says "@inviteMsg"</p>
+<p>Please help me build the @libraryInfo.name Kifi library - @libraryUrl, so we can collaborate together.
+It's a great way to organize the links that we find.</p>
 
-<p>Happy Keeping,<br>
-    Eishay Smith, CEO</p>
+@if(!passPhrase.isEmpty){
+<p>If you're asked for a passphrase, here it is: @passPhrase.get</p>
+}
+
+<p>@firstName(inviterId)</p>
 </body>
 </html>
 *@
