@@ -3,7 +3,19 @@
 @homeUrl = @{htmlUrl("www.kifi.com?", "homeLink", false)}
 @howKifiWorksUrl = @{htmlUrl("https://www.kifi.com/how_it_works?", "howKifiWorksLink", false)}
 @eishayKifiUrl = @{htmlUrl("https://www.kifi.com/eishay?", "eishayKifiLink", true)}
+
+
+@*
 @installExtUrl = @{htmlUrl("https://www.kifi.com/install?", "installExtLink", false)}
+
+TODO Cam: hyperlink to kifi.com/install
+
+The user must be logged in to have access to kifi.com/install. Otherwise, they are redirected to login and their desire to install
+the extension is forgotten/ignored. This is poor UX, so I decided to leave out the kifi.com/install hyperlink.
+
+There are a few workarounds: 1) allow non-logged in users to accesss kifi.com/install, 2) put the kifi extension in the firefox store
+
+*@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
     <head>
@@ -17,7 +29,7 @@
     <p>I’m Kifi’s co-founder and CEO. I would like to personally welcome you to our vibrant community discovering, organizing,
     and sharing knowledge. We built Kifi to make keeping and sharing web pages from any device a snap, and to that end we’ve made
     our platform available on <a href="@homeUrl">web</a>, <a href="@iOsAppStoreUrl">iOS</a> and <a href="@googlePlayStoreUrl">Android</a>.
-    By installing our <a href = "@installExtUrl">Chrome or Firefox extension</a>, Kifi becomes seamlessly integrated with your browser.
+    By installing our Chrome or Firefox extension, Kifi becomes seamlessly integrated with your browser.
     </p>
 
     <p>You can learn more by reading our high level overview of <a href="@howKifiWorksUrl">how Kifi works</a>, and if you have any questions or

@@ -31,7 +31,7 @@ class WelcomeEmailSender @Inject() (
       textTemplate = Some(views.html.email.black.welcomeText(userId)),
       templateOptions = { if (isPlainEmail) { Map("layout" -> CustomLayout) } else { Map.empty } },
       tips = { if (isPlainEmail) { Seq.empty } else { Seq(EmailTip.ConnectFacebook, EmailTip.ConnectLinkedIn) } }
-      // TODO(josh) add EmailTip.InstallExtension when it's complete
+    // TODO(josh) add EmailTip.InstallExtension when it's complete
     )
 
     emailTemplateSender.send(emailToSend)
