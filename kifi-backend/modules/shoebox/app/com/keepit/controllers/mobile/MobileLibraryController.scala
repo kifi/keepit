@@ -53,9 +53,9 @@ class MobileLibraryController @Inject() (
     val description = (jsonBody \ "description").asOpt[String]
     val visibility = (jsonBody \ "visibility").as[LibraryVisibility]
     val color = (jsonBody \ "color").asOpt[LibraryColor]
-    val collabInviteAccess = (jsonBody \ "collabInviteAccess").asOpt[LibraryAccess]
+    val inviteCollab = (jsonBody \ "inviteCollab").asOpt[LibraryAccess]
     val slug = LibrarySlug.generateFromName(name)
-    val addRequest = LibraryAddRequest(name = name, visibility = visibility, description = description, slug = slug, color = color, collabInvite = collabInviteAccess)
+    val addRequest = LibraryAddRequest(name = name, visibility = visibility, description = description, slug = slug, color = color, inviteToCollab = inviteCollab)
 
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
     libraryCommander.addLibrary(addRequest, request.userId) match {
@@ -76,10 +76,10 @@ class MobileLibraryController @Inject() (
     val newSlug = (json \ "newSlug").asOpt[String]
     val newColor = (json \ "newColor").asOpt[LibraryColor]
     val newListed = (json \ "newListed").asOpt[Boolean]
-    val newCollabInviteAccess = (json \ "newCollabInviteAccess").asOpt[LibraryAccess]
+    val newInviteCollab = (json \ "newInviteCollab").asOpt[LibraryAccess]
 
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
-    val modifyRequest = LibraryModifyRequest(newName, newSlug, newVisibility, newDescription, newColor, newListed, newCollabInviteAccess)
+    val modifyRequest = LibraryModifyRequest(newName, newSlug, newVisibility, newDescription, newColor, newListed, newInviteCollab)
     val res = libraryCommander.modifyLibrary(libId, request.userId, modifyRequest)
     res match {
       case Left(fail) => sendFailResponse(fail)

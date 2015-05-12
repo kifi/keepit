@@ -125,7 +125,7 @@ class MobileRecommendationsControllerTest extends TestKitSupport with Specificat
             numKeeps = 10,
             numCollaborators = 0,
             numFollowers = 10,
-            collabInvite = None
+            inviteToCollab = None
           )
         )
       }

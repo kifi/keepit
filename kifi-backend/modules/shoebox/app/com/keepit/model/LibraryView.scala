@@ -41,7 +41,7 @@ case class LibraryAddRequest(
   description: Option[String] = None,
   color: Option[LibraryColor] = None,
   listed: Option[Boolean] = None,
-  collabInvite: Option[LibraryAccess] = None)
+  inviteToCollab: Option[LibraryAccess] = None)
 
 @json
 case class LibraryModifyRequest(
@@ -51,7 +51,7 @@ case class LibraryModifyRequest(
   description: Option[String] = None,
   color: Option[LibraryColor] = None,
   listed: Option[Boolean] = None,
-  collabInvite: Option[LibraryAccess] = None)
+  inviteToCollab: Option[LibraryAccess] = None)
 
 case class LibraryInfo(
   id: PublicId[Library],
@@ -219,7 +219,7 @@ case class FullLibraryInfo(
   numCollaborators: Int,
   numFollowers: Int,
   attr: Option[LibrarySourceAttribution] = None,
-  collabInvite: Option[LibraryAccess])
+  inviteToCollab: Option[LibraryAccess])
 
 object FullLibraryInfo {
   implicit val sourceWrites = LibrarySourceAttribution.writes

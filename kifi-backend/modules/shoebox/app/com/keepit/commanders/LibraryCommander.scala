@@ -318,7 +318,7 @@ class LibraryCommander @Inject() (
           numFollowers = followerCount,
           lastKept = lib.lastKept,
           attr = attr,
-          collabInvite = lib.collabInvite
+          inviteToCollab = lib.inviteToCollab
         )
       }
     }
@@ -491,13 +491,13 @@ class LibraryCommander @Inject() (
             val newColor = libAddReq.color.orElse(Some(LibraryColor.pickRandomLibraryColor))
             val newListed = libAddReq.listed.getOrElse(true)
             val newKind = libAddReq.kind.getOrElse(LibraryKind.USER_CREATED)
-            val newCollabInviteAccess = libAddReq.collabInvite.orElse(Some(LibraryAccess.READ_WRITE))
+            val newInviteToCollab = libAddReq.inviteToCollab.orElse(Some(LibraryAccess.READ_WRITE))
             val library = db.readWrite { implicit s =>
               libraryAliasRepo.reclaim(ownerId, validSlug)
               libraryRepo.getOpt(ownerId, validSlug) match {
                 case None =>
                   val lib = libraryRepo.save(Library(ownerId = ownerId, name = libAddReq.name, description = libAddReq.description,
-                    visibility = libAddReq.visibility, slug = validSlug, color = newColor, kind = newKind, memberCount = 1, keepCount = 0, collabInvite = newCollabInviteAccess))
+                    visibility = libAddReq.visibility, slug = validSlug, color = newColor, kind = newKind, memberCount = 1, keepCount = 0, inviteToCollab = newInviteToCollab))
                   libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = ownerId, access = LibraryAccess.OWNER, listed = newListed, lastJoinedAt = Some(currentDateTime)))
                   lib
                 case Some(lib) =>
@@ -585,7 +585,7 @@ class LibraryCommander @Inject() (
         val newVisibility = modifyReq.visibility.getOrElse(targetLib.visibility)
         val newColor = modifyReq.color.orElse(targetLib.color)
         val newListed = modifyReq.listed.getOrElse(targetMembership.listed)
-        val newCollabInviteAccess = modifyReq.collabInvite.orElse(targetLib.collabInvite)
+        val newInviteToCollab = modifyReq.inviteToCollab.orElse(targetLib.inviteToCollab)
         Future {
           val keeps = db.readOnlyMaster { implicit s =>
             keepRepo.getByLibrary(libraryId, 0, Int.MaxValue, Set.empty)
@@ -606,7 +606,7 @@ class LibraryCommander @Inject() (
           if (targetMembership.listed != newListed) {
             libraryMembershipRepo.save(targetMembership.copy(listed = newListed))
           }
-          libraryRepo.save(targetLib.copy(name = newName, slug = newSlug, visibility = newVisibility, description = newDescription, color = newColor, collabInvite = newCollabInviteAccess, state = LibraryStates.ACTIVE))
+          libraryRepo.save(targetLib.copy(name = newName, slug = newSlug, visibility = newVisibility, description = newDescription, color = newColor, inviteToCollab = newInviteToCollab, state = LibraryStates.ACTIVE))
         }
 
         val edits = Map(
@@ -616,7 +616,7 @@ class LibraryCommander @Inject() (
           "color" -> (newColor != targetLib.color),
           "madePrivate" -> (newVisibility != targetLib.visibility && newVisibility == LibraryVisibility.SECRET),
           "listed" -> (newListed != targetMembership.listed),
-          "collabInviteAccess" -> (newCollabInviteAccess != targetLib.collabInvite)
+          "collabInviteAccess" -> (newInviteToCollab != targetLib.inviteToCollab)
         )
         (lib, edits)
       }
