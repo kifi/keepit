@@ -10,7 +10,6 @@ import com.keepit.common.cache.HashMapMemoryCacheModule
 import com.keepit.common.cache.ElizaCacheModule
 import com.keepit.common.store.ElizaDevStoreModule
 import com.keepit.rover.ProdRoverServiceClientModule
-import com.keepit.scraper.ProdScraperServiceClientModule
 import com.keepit.search.ProdSearchServiceClientModule
 import com.keepit.shoebox.ProdShoeboxServiceClientModule
 
@@ -25,7 +24,6 @@ case class ElizaDevModule() extends ElizaModule with CommonDevModule {
   val elizaServiceClientModule = ProdElizaServiceClientModule()
   val heimdalServiceClientModule = DevHeimdalServiceClientModule()
   val abookServiceClientModule = ProdABookServiceClientModule()
-  val scraperServiceClientModule = ProdScraperServiceClientModule()
   val roverServiceClientModule = ProdRoverServiceClientModule()
 
   val elizaMailSettingsModule = DevElizaExternalEmailModule()
