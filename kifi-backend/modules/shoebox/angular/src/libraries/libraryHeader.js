@@ -5,10 +5,10 @@ angular.module('kifi')
 .directive('kfLibraryHeader', [
   '$http', '$location', '$q', '$rootScope', '$state', '$stateParams', '$timeout', '$window', '$$rAF',
   '$filter', 'env', 'libraryService', 'modalService','profileService', 'platformService', 'signupService',
-  'routeService', 'util',
+  'routeService', 'linkify',
   function ($http, $location, $q, $rootScope, $state, $stateParams, $timeout, $window, $$rAF,
             $filter, env, libraryService, modalService, profileService, platformService, signupService,
-            routeService, util) {
+            routeService, linkify) {
     return {
       restrict: 'A',
       replace: true,
@@ -52,7 +52,7 @@ angular.module('kifi')
 
         function augmentData() {
           var lib = scope.library;
-          lib.descriptionHtml = util.linkify(lib.description || '').replace(/\n+/g, '<br>');
+          lib.descriptionHtml = linkify(lib.description || '').replace(/\n+/g, '<br>');
           lib.absUrl = env.origin + lib.url;
           lib.isSystem = lib.kind.lastIndexOf('system_', 0) === 0;
 

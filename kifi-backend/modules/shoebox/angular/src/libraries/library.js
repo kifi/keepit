@@ -4,11 +4,11 @@ angular.module('kifi')
 
 .controller('LibraryCtrl', [
   '$scope', '$rootScope', '$analytics', '$location', '$state', '$stateParams', '$timeout', '$window',
-  '$FB', '$twitter', 'env', 'util', 'initParams', 'library', 'keepDecoratorService', 'libraryService', 'modalService',
+  '$FB', '$twitter', 'env', 'util', 'URI', 'AB', 'initParams', 'library', 'keepDecoratorService', 'libraryService', 'modalService',
   'platformService', 'profileService', 'originTrackingService', 'installService', 'libraryImageLoaded',
   function (
     $scope, $rootScope, $analytics, $location, $state, $stateParams, $timeout, $window,
-    $FB, $twitter, env, util, initParams, library, keepDecoratorService, libraryService, modalService,
+    $FB, $twitter, env, util, URI, AB, initParams, library, keepDecoratorService, libraryService, modalService,
     platformService, profileService, originTrackingService, installService, libraryImageLoaded) {
 
     //
@@ -184,7 +184,7 @@ angular.module('kifi')
     $scope.shareTwitter = function (event) {
       trackShareEvent('clickedShareTwitter');
       var absUrl = env.origin + library.url;
-      event.target.href = 'https://twitter.com/intent/tweet' + util.formatQueryString({
+      event.target.href = 'https://twitter.com/intent/tweet' + URI.formatQueryString({
         original_referer: absUrl,
         text: 'Discover this amazing @Kifi library about ' + library.name + '!',
         tw_p: 'tweetbutton',
@@ -326,7 +326,7 @@ angular.module('kifi')
           }
         ]
       };
-      library.abTestTreatment = util.chooseTreatment(library.abTest.salt, library.abTest.treatments);
+      library.abTestTreatment = AB.chooseTreatment(library.abTest.salt, library.abTest.treatments);
     }
   }
 ]);

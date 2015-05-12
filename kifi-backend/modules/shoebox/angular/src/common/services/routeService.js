@@ -3,21 +3,19 @@
 angular.module('kifi')
 
 .factory('routeService', [
-  'env', 'util',
-  function (env, util) {
+  'env', 'URI',
+  function (env, URI) {
     function route(path, params) {
-      return env.xhrBase + path + (params ? queryStr(params) : '');
+      return env.xhrBase + path + (params ? URI.formatQueryString(params) : '');
     }
 
     function searchRoute(path, params) {
-      return env.xhrBaseSearch + path + (params ? queryStr(params) : '');
+      return env.xhrBaseSearch + path + (params ? URI.formatQueryString(params) : '');
     }
 
     function navRoute(path, params) {
-      return env.navBase + path + (params ? queryStr(params) : '');
+      return env.navBase + path + (params ? URI.formatQueryString(params) : '');
     }
-
-    var queryStr = util.formatQueryString;
 
     return {
       disconnectNetwork: function (network) {
