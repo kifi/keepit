@@ -474,6 +474,8 @@ class LibraryCommander @Inject() (
       } else if (LibrarySlug.isReservedSlug(libAddReq.slug)) {
         log.info(s"[addLibrary] Attempted reserved slug ${libAddReq.slug} for $ownerId")
         Some("reserved_slug")
+      } else if (libAddReq.inviteToCollab.isDefined && libAddReq.inviteToCollab.get.isLowerAccess(LibraryAccess.READ_WRITE)) {
+        Some("invalid_invite_to_collab_access")
       } else {
         None
       }
@@ -530,7 +532,6 @@ class LibraryCommander @Inject() (
   }
 
   def modifyLibrary(libraryId: Id[Library], userId: Id[User], modifyReq: LibraryModifyRequest)(implicit context: HeimdalContext): Either[LibraryFail, Library] = {
-
     val (targetLib, targetMembershipOpt) = db.readOnlyMaster { implicit s =>
       val lib = libraryRepo.get(libraryId)
       val mem = libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId)
@@ -585,7 +586,7 @@ class LibraryCommander @Inject() (
         val newVisibility = modifyReq.visibility.getOrElse(targetLib.visibility)
         val newColor = modifyReq.color.orElse(targetLib.color)
         val newListed = modifyReq.listed.getOrElse(targetMembership.listed)
-        val newInviteToCollab = modifyReq.inviteToCollab.orElse(targetLib.inviteToCollab)
+        val newInviteToCollab = modifyReq.inviteToCollab.filter(_.isHigherOrEqualAccess(LibraryAccess.READ_WRITE)).orElse(targetLib.inviteToCollab)
         Future {
           val keeps = db.readOnlyMaster { implicit s =>
             keepRepo.getByLibrary(libraryId, 0, Int.MaxValue, Set.empty)
