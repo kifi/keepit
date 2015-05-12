@@ -402,16 +402,30 @@ class MobileLibraryController @Inject() (
     }
   }
 
-  def getLibraryMembers(pubId: PublicId[Library], offset: Int, limit: Int) = (MaybeUserAction andThen LibraryViewAction(pubId)) { request =>
+  def getLibraryMembersV1(pubId: PublicId[Library], offset: Int, limit: Int) = (MaybeUserAction andThen LibraryViewAction(pubId)) { request =>
+    getLibraryMembers(pubId, offset, limit, request.userIdOpt, true)
+  }
+
+  def getLibraryMembersV2(pubId: PublicId[Library], offset: Int, limit: Int) = (MaybeUserAction andThen LibraryViewAction(pubId)) { request =>
+    getLibraryMembers(pubId, offset, limit, request.userIdOpt, false)
+  }
+
+  private def getLibraryMembers(pubId: PublicId[Library], offset: Int, limit: Int, userIdOpt: Option[Id[User]], v1: Boolean) = {
     if (limit > 30) { BadRequest(Json.obj("error" -> "invalid_limit")) }
     else Library.decodePublicId(pubId) match {
       case Failure(ex) => BadRequest(Json.obj("error" -> "invalid_id"))
       case Success(libraryId) =>
         val library = db.readOnlyMaster { implicit s => libraryRepo.get(libraryId) }
-        val showInvites = request.userIdOpt.map(uId => uId == library.ownerId).getOrElse(false)
+        val showInvites = userIdOpt.map(uId => uId == library.ownerId).getOrElse(false)
         val (collaborators, followers, inviteesWithInvites, _) = libraryCommander.getLibraryMembers(libraryId, offset, limit, fillInWithInvites = showInvites)
         val maybeMembers = libraryCommander.buildMaybeLibraryMembers(collaborators, followers, inviteesWithInvites)
-        Ok(Json.obj("members" -> maybeMembers))
+        val membersList = if (v1) {
+          maybeMembers
+        } else {
+          val owner = db.readOnlyMaster { implicit s => basicUserRepo.load(library.ownerId) }
+          MaybeLibraryMember(Left(owner), Some(LibraryAccess.OWNER), None) +: maybeMembers
+        }
+        Ok(Json.obj("members" -> membersList))
     }
   }
 

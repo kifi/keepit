@@ -279,7 +279,8 @@ POST    /m/1/libraries/:id/invite               @com.keepit.controllers.mobile.M
 POST    /m/1/libraries/:id/subscription @com.keepit.controllers.mobile.MobileLibraryController.setSubscribedToUpdates(id: PublicId[Library], subscribed: Boolean)
 
 
-GET     /m/1/libraries/:id/members              @com.keepit.controllers.mobile.MobileLibraryController.getLibraryMembers(id: PublicId[Library], offset: Int ?= 0, limit: Int ?= 20)
+GET     /m/1/libraries/:id/members              @com.keepit.controllers.mobile.MobileLibraryController.getLibraryMembersV1(id: PublicId[Library], offset: Int ?= 0, limit: Int ?= 20)
+GET     /m/2/libraries/:id/members              @com.keepit.controllers.mobile.MobileLibraryController.getLibraryMembersV2(id: PublicId[Library], offset: Int ?= 0, limit: Int ?= 20)
 GET     /m/1/libraries/:id/members/suggest      @com.keepit.controllers.mobile.MobileLibraryController.suggestMembers(id: PublicId[Library], q: Option[String] ?= None, n: Int ?= 5)
 POST    /m/1/libraries/:id/members/:uId/access  @com.keepit.controllers.mobile.MobileLibraryController.updateLibraryMembership(id: PublicId[Library], uId: ExternalId[User])
 
