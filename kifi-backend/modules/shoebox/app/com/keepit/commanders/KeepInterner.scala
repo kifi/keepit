@@ -180,7 +180,7 @@ class KeepInterner @Inject() (
         scraper.scheduleScrape(uri, date)
         if (KeepSource.discrete.contains(source)) {
           session.onTransactionSuccess {
-            roverClient.fetchAsap(uri.id.get, uri.url)
+            roverClient.fetchAsap(uri.id.get, uri.url, uri.state)
           }
         }
       }

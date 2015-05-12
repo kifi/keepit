@@ -3,7 +3,7 @@ package com.keepit.rover.controllers.internal
 import com.google.inject.Inject
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.RoverServiceController
-import com.keepit.common.db.{ Id, SequenceNumber }
+import com.keepit.common.db.{ State, Id, SequenceNumber }
 import com.keepit.common.json.TupleFormat
 import com.keepit.common.logging.Logging
 import com.keepit.model.{ NormalizedURI, IndexableUri }
@@ -26,8 +26,10 @@ class RoverController @Inject() (roverCommander: RoverCommander, articleCommande
   }
 
   def fetchAsap() = Action.async(parse.json) { request =>
-    val uri = request.body.as[IndexableUri]
-    articleCommander.fetchAsap(uri).map(_ => Ok)
+    val uriId = (request.body \ "uriId").asOpt[Id[NormalizedURI]] getOrElse (request.body \ "id").as[Id[NormalizedURI]]
+    val url = (request.body \ "url").as[String]
+    val state = (request.body \ "state").as[State[NormalizedURI]]
+    articleCommander.fetchAsap(uriId, url, state).map(_ => Ok)
   }
 
   def getBestArticlesByUris() = Action.async(parse.json) { request =>
