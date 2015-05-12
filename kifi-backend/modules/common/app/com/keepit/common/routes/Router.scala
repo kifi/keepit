@@ -426,6 +426,7 @@ object Rover extends Service {
     def getArticleInfosByUris() = ServiceRoute(POST, "/internal/rover/getArticleInfosByUris")
     def getBestArticleSummaryByUris() = ServiceRoute(POST, "/internal/rover/getBestArticleSummaryByUris")
     def getImagesByUris() = ServiceRoute(POST, "/internal/rover/getImagesByUris")
+    def getOrElseFetchArticleSummaryAndImages() = ServiceRoute(POST, "/internal/rover/getOrElseFetchArticleSummaryAndImages")
   }
 }
 
