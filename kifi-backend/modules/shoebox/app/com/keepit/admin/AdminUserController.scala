@@ -432,22 +432,6 @@ class AdminUserController @Inject() (
     }
   }
 
-  def retrieveFormFromRequest(request: UserRequest[AnyContent]): Map[String, String] = request.request.body.asFormUrlEncoded match {
-    case Some(request) => request.map(entry => (entry._1 -> entry._2.head))
-    case None => throw new Exception("invalid form entry.")
-  }
-
-  def updateUsersUserName(userId: Id[User]) = AdminUserPage { implicit request =>
-    val form = retrieveFormFromRequest(request)
-    // need to apply validation here.
-    val newUserName = form.get("username").get.trim()
-
-    userCommander.setUsername(userId, Username(newUserName)) match {
-      case Right(response) => Ok
-      case Left(exception) => BadRequest(exception)
-    }
-  }
-
   def updateUser(userId: Id[User]) = AdminUserPage { implicit request =>
     val form = request.request.body.asFormUrlEncoded match {
       case Some(req) => req.map(r => (r._1 -> r._2.head))
@@ -924,10 +908,14 @@ class AdminUserController @Inject() (
     Ok(JsString(inactiveEmail.toString))
   }
 
-  def setUsername(userId: Id[User], username: String, overrideValidityCheck: Boolean = false, overrideProtection: Boolean = false) = AdminUserPage { request =>
-    val res = userCommander.setUsername(userId, Username(username), overrideValidityCheck = overrideValidityCheck, overrideProtection = overrideProtection)
-
-    Ok(res.toString)
+  def setUsername(userId: Id[User]) = AdminUserPage { request =>
+    val username: Option[String] = request.body.asFormUrlEncoded.flatMap(_.get("username").flatMap(_.headOption)).filter(_.length > 0)
+    username.map { newUsername =>
+      userCommander.setUsername(userId, Username(newUsername.trim), overrideValidityCheck = true) match {
+        case Right(_) => Ok
+        case Left(err) => BadRequest(err)
+      }
+    }.getOrElse(BadRequest("No username provided"))
   }
 
   def userLibrariesView(ownerId: Id[User], showSecrets: Boolean = false) = AdminUserPage { implicit request =>

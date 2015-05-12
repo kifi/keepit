@@ -260,7 +260,7 @@
     $(function() {
     
       $('.update-username').on("submit", function() {
-        $.post("@com.keepit.controllers.admin.routes.AdminUserController.updateUsersUserName(user.id.get)", $('.update-username').serialize())
+        $.post("@com.keepit.controllers.admin.routes.AdminUserController.setUsername(user.id.get)", $('.update-username').serialize())
         .done(function(data) {
           alert("Updated Username");
         }).fail(function(data) {
