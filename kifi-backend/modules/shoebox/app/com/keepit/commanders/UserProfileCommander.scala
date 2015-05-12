@@ -50,7 +50,7 @@ class UserProfileCommander @Inject() (
       val owners = basicUserRepo.loadAll(libOwnerIds)
       val libraryIds = libs.map(_.id.get).toSet
       val memberships = libraryMembershipRepo.getWithLibraryIdsAndUserId(libraryIds, user.id.get)
-      val libraryInfos = libraryCommander.createLibraryCardInfos(libs, owners, Some(user), false, idealSize) zip libs
+      val libraryInfos = libraryCommander.createLibraryCardInfos(libs, owners, Some(user), true, idealSize) zip libs
       (libraryInfos, memberships)
     }
     libraryInfos map {
@@ -85,7 +85,7 @@ class UserProfileCommander @Inject() (
       }
       val libOwnerIds = libs.map(_.ownerId).toSet
       val owners = basicUserRepo.loadAll(libOwnerIds)
-      libraryCommander.createLibraryCardInfos(libs, owners, viewer, viewer.exists(_.id != user.id), idealSize)
+      libraryCommander.createLibraryCardInfos(libs, owners, viewer, true, idealSize)
     }
   }
 
@@ -106,7 +106,7 @@ class UserProfileCommander @Inject() (
           } else Seq.empty
       }
       val owners = basicUserRepo.loadAll(libs.map(_.ownerId).toSet)
-      libraryCommander.createLibraryCardInfos(libs, owners, viewer, viewer.exists(_.id != user.id), idealSize)
+      libraryCommander.createLibraryCardInfos(libs, owners, viewer, true, idealSize)
     }
   }
 
