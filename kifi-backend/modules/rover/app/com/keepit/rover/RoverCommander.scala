@@ -4,7 +4,7 @@ import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.core._
 import com.keepit.common.db.{ Id, SequenceNumber }
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.model.{ NormalizedURI }
+import com.keepit.model.{ IndexableUri, NormalizedURI }
 import com.keepit.rover.article.{ ArticleKind, Article, ArticleCommander }
 import com.keepit.rover.article.content.{ HttpInfoHolder, NormalizationInfoHolder }
 import com.keepit.rover.article.policy.ArticleInfoPolicy
@@ -19,7 +19,8 @@ class RoverCommander @Inject() (
     articleCommander: ArticleCommander,
     imageCommander: ImageCommander,
     sensitivityCommander: RoverSensitivityCommander,
-    articlePolicy: ArticleInfoPolicy,
+    articleSummaryCache: RoverArticleSummaryCache,
+    articleImagesCache: RoverArticleImagesCache,
     private implicit val executionContext: ExecutionContext,
     airbrake: AirbrakeNotifier) {
 
@@ -65,6 +66,37 @@ class RoverCommander @Inject() (
   def getImagesByUris[A <: Article](uriIds: Set[Id[NormalizedURI]])(implicit kind: ArticleKind[A]): Map[Id[NormalizedURI], Set[RoverImage]] = {
     imageCommander.getImageInfosByUrisAndArticleKind[A](uriIds).mapValues { imageInfos =>
       imageInfos.map(RoverImageInfo.toRoverImage)
+    }
+  }
+
+  def getOrElseFetchArticleSummaryAndImages[A <: Article](uri: IndexableUri)(implicit kind: ArticleKind[A]): Future[Option[(RoverArticleSummary, Set[RoverImage])]] = {
+    import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
+
+    val uriId = uri.id.get
+
+    val futureArticleSummaryOption = {
+      val key = RoverArticleSummaryKey(uriId, kind)
+      articleSummaryCache.get(key) match {
+        case Some(articleSummary) => Future.successful(Some(articleSummary))
+        case None => articleCommander.getOrElseFetchBestArticle[A](uri).map { articleOption =>
+          val fetchedSummaryOpt = articleOption.map(RoverArticleSummary.fromArticle)
+          fetchedSummaryOpt tap (articleSummaryCache.set(key, _))
+        }
+      }
+    }
+
+    futureArticleSummaryOption.flatMap {
+      case None => Future.successful(None)
+      case Some(articleSummary) => {
+        imageCommander.processLatestArticleImagesIfNecessary[A](uriId).map {
+          case () =>
+            val key = RoverArticleImagesKey(uriId, kind)
+            val images = articleImagesCache.getOrElse(key) {
+              getImagesByUris[A](Set(uriId)).getOrElse(uriId, Set.empty)
+            }
+            Some((articleSummary, images))
+        }
+      }
     }
   }
 }
