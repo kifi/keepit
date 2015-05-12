@@ -53,6 +53,15 @@ class RoverCommander @Inject() (
     )
   }
 
+  def getBestArticleSummaryByUris[A <: Article](uriIds: Set[Id[NormalizedURI]])(implicit kind: ArticleKind[A]): Future[Map[Id[NormalizedURI], RoverArticleSummary]] = {
+    articleCommander.getBestArticleByUris[A](uriIds).imap { articleOptionByUriId =>
+      articleOptionByUriId.collect {
+        case (uriId, Some(article)) =>
+          uriId -> RoverArticleSummary.fromArticle(article)
+      }
+    }
+  }
+
   def getImagesByUris[A <: Article](uriIds: Set[Id[NormalizedURI]])(implicit kind: ArticleKind[A]): Map[Id[NormalizedURI], Set[RoverImage]] = {
     imageCommander.getImageInfosByUrisAndArticleKind[A](uriIds).mapValues { imageInfos =>
       imageInfos.map(RoverImageInfo.toRoverImage)
