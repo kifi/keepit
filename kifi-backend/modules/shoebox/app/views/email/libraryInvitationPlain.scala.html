@@ -1,4 +1,3 @@
-@*
 @(inviteeId: Option[Id[User]],
 inviterId: Id[User],
 inviteMsg: Option[String],
@@ -19,16 +18,13 @@ inviteAccess: LibraryAccess
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 </head>
 <body>
-Hi @firstName(inviteeId),
+Hello@{if(!inviteeId.isEmpty) " "+firstName(inviteeId.get) },
 
 <p>Please help me build the @libraryInfo.name Kifi library - @libraryUrl, so we can collaborate together.
 It's a great way to organize the links that we find.</p>
 
-@if(!passPhrase.isEmpty){
-<p>If you're asked for a passphrase, here it is: @passPhrase.get</p>
-}
+@if(!passPhrase.isEmpty){ <p>If you're asked for a passphrase, here it is: @passPhrase.get</p>}
 
 <p>@firstName(inviterId)</p>
 </body>
 </html>
-*@
