@@ -77,6 +77,15 @@ class ImageCommander @Inject() (
     add(tasks, fastFollowQueue).imap { _.map { case (task, result) => (task.id -> result) } }
   }
 
+  def processLatestArticleImagesIfNecessary[A <: Article](uriId: Id[NormalizedURI])(implicit kind: ArticleKind[A]): Future[Unit] = {
+    val articleInfoOpt = db.readOnlyMaster { implicit session =>
+      articleInfoRepo.getByUriAndKind(uriId, kind)
+    }
+    articleInfoOpt match {
+      case Some(articleInfo) if articleInfo.lastImageProcessingVersion != articleInfo.latestVersion => processLatestArticleImages(articleInfo)
+      case _ => Future.successful(())
+    }
+  }
 
   def processLatestArticleImages(articleInfo: RoverArticleInfo): Future[Unit] = {
     val futureImageProcessedVersion = articleInfo.getLatestKey match {
