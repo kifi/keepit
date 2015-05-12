@@ -18,7 +18,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.controllers.core.{ AuthHelper }
 import com.keepit.heimdal._
 import com.keepit.model._
-import com.keepit.social.{ SocialId, SocialNetworks, SocialNetworkType, UserIdentity }
+import com.keepit.social._
 import play.api.http.Status
 
 import play.api.libs.functional.syntax._
@@ -386,7 +386,7 @@ class AuthCommander @Inject() (
   }
 
   def loginWithTrustedSocialIdentity(identityId: IdentityId)(implicit request: RequestHeader): Result = {
-    log.info(s"[loginWithTrustedSocialIdentity(${identityId})]")
+    log.info(s"[loginWithTrustedSocialIdentity($identityId)]")
     // more fine-grained error handling required
     val resOpt = for {
       identity <- UserService.find(identityId)
