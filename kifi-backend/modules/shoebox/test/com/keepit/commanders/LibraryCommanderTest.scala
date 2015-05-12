@@ -1199,6 +1199,21 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
       }
     }
 
+    "query recent top libraries for an owner" in {
+      withDb(modules: _*) { implicit injector =>
+        db.readWrite { implicit s =>
+          library().withUser(Id[User](1)).withId(1).saved
+          library().withUser(Id[User](1)).withId(2).saved
+          library().withUser(Id[User](2)).withId(3).saved
+          membership().withLibraryFollower(Id[Library](1), Id[User](2)).saved
+          membership().withLibraryFollower(Id[Library](1), Id[User](3)).saved
+          membership().withLibraryFollower(Id[Library](2), Id[User](3)).saved
+          val map = libraryMembershipRepo.userRecentTopFollowedLibrariesAndCounts(Id[User](1), since = DateTime.now().minusDays(1), limit = 2)
+          map === Map(Id[Library](1) -> 2, Id[Library](2) -> 1)
+        }
+      }
+    }
+
     "update membership to a library" in {
       withDb(modules: _*) { implicit injector =>
         val libraryCommander = inject[LibraryCommander]
