@@ -69,16 +69,14 @@ class RoverCommander @Inject() (
     }
   }
 
-  def getOrElseFetchArticleSummaryAndImages[A <: Article](uri: IndexableUri)(implicit kind: ArticleKind[A]): Future[Option[(RoverArticleSummary, Set[RoverImage])]] = {
+  def getOrElseFetchArticleSummaryAndImages[A <: Article](uriId: Id[NormalizedURI], url: String)(implicit kind: ArticleKind[A]): Future[Option[(RoverArticleSummary, Set[RoverImage])]] = {
     import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
-
-    val uriId = uri.id.get
 
     val futureArticleSummaryOption = {
       val key = RoverArticleSummaryKey(uriId, kind)
       articleSummaryCache.get(key) match {
         case Some(articleSummary) => Future.successful(Some(articleSummary))
-        case None => articleCommander.getOrElseFetchBestArticle[A](uri).map { articleOption =>
+        case None => articleCommander.getOrElseFetchBestArticle[A](uriId, url).map { articleOption =>
           val fetchedSummaryOpt = articleOption.map(RoverArticleSummary.fromArticle)
           fetchedSummaryOpt tap (articleSummaryCache.set(key, _))
         }

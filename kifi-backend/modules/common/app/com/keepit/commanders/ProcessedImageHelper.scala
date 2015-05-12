@@ -400,6 +400,12 @@ object ProcessedImageSize {
     pickByIdealImageSize(idealSize, images, strictAspectRatio)(_.imageSize)
   }
 
+  def pickByIdealImageSizes[I](idealSizes: Set[ImageSize], images: Seq[I], strictAspectRatio: Boolean)(getSize: I => ImageSize): Map[ImageSize, I] = {
+    idealSizes.map { idealSize =>
+      idealSize -> ProcessedImageSize.pickByIdealImageSize(idealSize, images.toSeq, strictAspectRatio)(getSize)
+    }.toMap.collect { case (idealSize, Some(image)) => idealSize -> image }
+  }
+
   def pickByIdealImageSize[I](idealSize: ImageSize, images: Seq[I], strictAspectRatio: Boolean)(getSize: I => ImageSize): Option[I] = {
     images.collect {
       case image if !strictAspectRatio || isAlmostTheSameAspectRatio(idealSize, getSize(image)) =>

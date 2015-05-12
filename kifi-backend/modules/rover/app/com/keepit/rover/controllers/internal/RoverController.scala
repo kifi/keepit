@@ -10,7 +10,7 @@ import com.keepit.model.{ NormalizedURI, IndexableUri }
 import com.keepit.rover.RoverCommander
 import com.keepit.rover.article.{ ArticleKind, ArticleCommander, Article }
 import com.keepit.rover.model.{ RoverImage, RoverArticleSummary, ArticleInfo }
-import play.api.libs.json.Json
+import play.api.libs.json._
 import play.api.mvc.Action
 import com.keepit.common.core._
 
@@ -68,9 +68,10 @@ class RoverController @Inject() (roverCommander: RoverCommander, articleCommande
   }
 
   def getOrElseFetchArticleSummaryAndImages = Action.async(parse.json) { request =>
-    val uri = (request.body \ "uri").as[IndexableUri]
+    val uriId = (request.body \ "uriId").asOpt[Id[NormalizedURI]] getOrElse (request.body \ "id").as[Id[NormalizedURI]]
+    val url = (request.body \ "url").as[String]
     val kind = (request.body \ "kind").as[ArticleKind[_ <: Article]]
-    roverCommander.getOrElseFetchArticleSummaryAndImages(uri)(kind).map { articleSummaryAndImagesOption =>
+    roverCommander.getOrElseFetchArticleSummaryAndImages(uriId, url)(kind).map { articleSummaryAndImagesOption =>
       implicit val writes = TupleFormat.tuple2Writes[RoverArticleSummary, Set[RoverImage]]
       val json = Json.toJson(articleSummaryAndImagesOption)
       Ok(json)

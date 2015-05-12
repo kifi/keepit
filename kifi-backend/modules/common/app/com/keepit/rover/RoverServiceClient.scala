@@ -11,7 +11,7 @@ import com.keepit.common.routes.Rover
 import com.keepit.common.service.{ ServiceType, ServiceClient }
 import com.keepit.common.store.ImageSize
 import com.keepit.common.zookeeper.ServiceCluster
-import com.keepit.model.{ NormalizedURI, IndexableUri }
+import com.keepit.model.{ NormalizedURI }
 import com.keepit.rover.article.{ ArticleKind, Article }
 import com.keepit.rover.model._
 import play.api.libs.json.Json
@@ -22,11 +22,11 @@ import scala.concurrent.{ ExecutionContext, Future }
 trait RoverServiceClient extends ServiceClient {
   final val serviceType = ServiceType.ROVER
   def getShoeboxUpdates(seq: SequenceNumber[ArticleInfo], limit: Int): Future[Option[ShoeboxArticleUpdates]]
-  def fetchAsap(uri: IndexableUri): Future[Unit]
+  def fetchAsap(uriId: Id[NormalizedURI], url: String): Future[Unit]
   def getBestArticlesByUris(uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[Article]]]
   def getArticleInfosByUris(uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[ArticleInfo]]]
-  def getUriSummaryByUris(uriIds: Set[Id[NormalizedURI]], idealSize: ImageSize, strictAspectRatio: Boolean = false): Future[Map[Id[NormalizedURI], RoverUriSummary]]
-  def getOrElseFetchUriSummary(uri: IndexableUri, idealSize: ImageSize, strictAspectRatio: Boolean = false): Future[Option[RoverUriSummary]] // slow, prefer getUriSummaryByUris
+  def getUriSummaryByUris(uriIds: Set[Id[NormalizedURI]], idealSizes: Set[ImageSize], strictAspectRatio: Boolean = false): Future[Map[Id[NormalizedURI], RoverUriSummary]]
+  def getOrElseFetchUriSummary(uriId: Id[NormalizedURI], url: String, idealSizes: Set[ImageSize], strictAspectRatio: Boolean = false): Future[Option[RoverUriSummary]] // slow, prefer getUriSummaryByUris
 }
 
 class RoverServiceClientImpl(
@@ -42,8 +42,11 @@ class RoverServiceClientImpl(
     call(Rover.internal.getShoeboxUpdates(seq, limit), callTimeouts = longTimeout).map { r => (r.json).asOpt[ShoeboxArticleUpdates] }
   }
 
-  def fetchAsap(uri: IndexableUri): Future[Unit] = {
-    val payload = Json.toJson(uri)
+  def fetchAsap(uriId: Id[NormalizedURI], url: String): Future[Unit] = {
+    val payload = Json.obj(
+      "uriId" -> uriId,
+      "url" -> url
+    )
     call(Rover.internal.fetchAsap, payload, callTimeouts = longTimeout).map { _ => () }
   }
 
@@ -69,22 +72,22 @@ class RoverServiceClientImpl(
     }
   }
 
-  def getUriSummaryByUris(uriIds: Set[Id[NormalizedURI]], idealSize: ImageSize, strictAspectRatio: Boolean): Future[Map[Id[NormalizedURI], RoverUriSummary]] = {
+  def getUriSummaryByUris(uriIds: Set[Id[NormalizedURI]], idealSizes: Set[ImageSize], strictAspectRatio: Boolean): Future[Map[Id[NormalizedURI], RoverUriSummary]] = {
     val contentSummaryProvider = RoverUriSummary.defaultProvider
     val futureArticleSummaryByUriId = getBestArticleSummaryByUris(uriIds)(contentSummaryProvider)
-    val futureImageByUriId = getImagesByUris(uriIds)(contentSummaryProvider).imap { imagesByUriId =>
+    val futureImagesByIdealSizeByUriId = getImagesByUris(uriIds)(contentSummaryProvider).imap { imagesByUriId =>
       imagesByUriId.mapValues { images =>
-        ProcessedImageSize.pickByIdealImageSize(idealSize, images.toSeq, strictAspectRatio)(_.size)
-      } collect { case (uriId, Some(image)) => uriId -> image }
+        ProcessedImageSize.pickByIdealImageSizes(idealSizes, images.toSeq, strictAspectRatio)(_.size)
+      }
     }
 
     for {
       articleSummaryByUriId <- futureArticleSummaryByUriId
-      imageByUriId <- futureImageByUriId
+      imagesByIdealSizeByUriId <- futureImagesByIdealSizeByUriId
     } yield {
       articleSummaryByUriId.collect {
         case (uriId, Some(articleSummary)) =>
-          uriId -> RoverUriSummary(articleSummary, imageByUriId.get(uriId))
+          uriId -> RoverUriSummary(articleSummary, imagesByIdealSizeByUriId.getOrElse(uriId, Map.empty))
       }
     }
   }
@@ -133,19 +136,20 @@ class RoverServiceClientImpl(
     }
   }
 
-  def getOrElseFetchUriSummary(uri: IndexableUri, idealSize: ImageSize, strictAspectRatio: Boolean = false): Future[Option[RoverUriSummary]] = {
+  def getOrElseFetchUriSummary(uriId: Id[NormalizedURI], url: String, idealSizes: Set[ImageSize], strictAspectRatio: Boolean = false): Future[Option[RoverUriSummary]] = {
     val contentSummaryProvider = RoverUriSummary.defaultProvider
-    getOrElseFetchArticleSummaryAndImages(uri)(contentSummaryProvider).imap(_.map {
+    getOrElseFetchArticleSummaryAndImages(uriId, url)(contentSummaryProvider).imap(_.map {
       case (summary, images) =>
-        val image = ProcessedImageSize.pickByIdealImageSize(idealSize, images.toSeq, strictAspectRatio)(_.size)
-        RoverUriSummary(summary, image)
+        val imagesByIdealSize = ProcessedImageSize.pickByIdealImageSizes(idealSizes, images.toSeq, strictAspectRatio)(_.size)
+        RoverUriSummary(summary, imagesByIdealSize)
     })
   }
 
   // Do not use the cache for this one (Rover takes care of it, needs more information, limits race conditions)
-  private def getOrElseFetchArticleSummaryAndImages[A <: Article](uri: IndexableUri)(implicit kind: ArticleKind[A]): Future[Option[(RoverArticleSummary, Set[RoverImage])]] = {
+  private def getOrElseFetchArticleSummaryAndImages[A <: Article](uriId: Id[NormalizedURI], url: String)(implicit kind: ArticleKind[A]): Future[Option[(RoverArticleSummary, Set[RoverImage])]] = {
     val payload = Json.obj(
-      "uri" -> uri,
+      "uriId" -> uriId,
+      "url" -> url,
       "kind" -> kind
     )
     call(Rover.internal.getOrElseFetchArticleSummaryAndImages, payload, callTimeouts = longTimeout).map { r =>

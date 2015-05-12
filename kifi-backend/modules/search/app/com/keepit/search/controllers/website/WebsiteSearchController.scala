@@ -19,7 +19,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import scala.concurrent.Future
 import play.api.libs.json._
-import com.keepit.search.index.graph.library.{ LibraryIndexable, LibraryIndexer }
+import com.keepit.search.index.graph.library.{ LibraryIndexer }
 import play.api.libs.json.JsArray
 import com.keepit.model._
 import com.keepit.search.util.IdFilterCompressor
@@ -98,7 +98,7 @@ class WebsiteSearchController @Inject() (
       val uriIds = uriSearchResult.hits.map(hit => Id[NormalizedURI](hit.id))
       val futureUriSummaries = {
         if (experiments.contains(ExperimentType.ROVER_CONTENT)) {
-          rover.getUriSummaryByUris(uriIds.toSet, ProcessedImageSize.Large.idealSize).imap { roverSummariesByUriId =>
+          rover.getUriSummaryByUris(uriIds.toSet, Set(ProcessedImageSize.Large.idealSize)).imap { roverSummariesByUriId =>
             uriIds.map { uriId =>
               uriId -> roverSummariesByUriId.get(uriId).map(_.toUriSummary()).getOrElse(URISummary())
             }.toMap

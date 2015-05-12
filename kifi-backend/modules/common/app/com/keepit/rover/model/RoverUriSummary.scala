@@ -1,14 +1,16 @@
 package com.keepit.rover.model
 
+import com.keepit.commanders.TimeToReadCommander
 import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
 import com.keepit.common.db.Id
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.store.{ S3ImageConfig, ImageSize, ImagePath }
-import com.keepit.model.{ NormalizedURI, URISummary, PageAuthor }
+import com.keepit.model.{ImageHash, NormalizedURI, URISummary, PageAuthor}
 import com.keepit.rover.article.content.EmbedlyMedia
 import com.keepit.rover.article.{ EmbedlyArticle, Article, ArticleKind }
 import com.kifi.macros.json
 import org.joda.time.DateTime
+import scala.concurrent.duration._
 
 import scala.concurrent.duration.Duration
 
@@ -17,12 +19,16 @@ case class RoverMedia(mediaType: String, html: String, width: Int, height: Int, 
 
 @json
 case class RoverArticleSummary(
-  title: Option[String],
-  description: Option[String],
-  wordCount: Option[Int],
-  publishedAt: Option[DateTime],
-  authors: Seq[PageAuthor],
-  media: Option[RoverMedia])
+    title: Option[String],
+    description: Option[String],
+    wordCount: Option[Int],
+    publishedAt: Option[DateTime],
+    authors: Seq[PageAuthor],
+    media: Option[RoverMedia]) {
+
+  lazy val readTime: Option[Duration] = wordCount.flatMap(TimeToReadCommander.wordCountToReadTimeMinutes(_).map(_ minutes))
+
+}
 
 object RoverArticleSummary {
   def fromArticle(article: Article): RoverArticleSummary = {
@@ -48,18 +54,22 @@ object RoverArticleSummary {
 
 @json
 case class RoverImage(
+  sourceImageHash: ImageHash,
   path: ImagePath,
   size: ImageSize)
 
-case class RoverUriSummary(article: RoverArticleSummary, image: Option[RoverImage]) {
-  def toUriSummary()(implicit imageConfig: S3ImageConfig): URISummary = URISummary(
-    imageUrl = image.map(_.path.getUrl),
-    title = article.title,
-    description = article.description,
-    imageWidth = image.map(_.size.width),
-    imageHeight = image.map(_.size.height),
-    wordCount = article.wordCount
-  )
+case class RoverUriSummary(article: RoverArticleSummary, imagesByIdealSize: Map[ImageSize, RoverImage]) {
+  def toUriSummary()(implicit imageConfig: S3ImageConfig): URISummary = {
+    val image = imagesByIdealSize.values.headOption
+    URISummary(
+      imageUrl = image.map(_.path.getUrl),
+      title = article.title,
+      description = article.description,
+      imageWidth = image.map(_.size.width),
+      imageHeight = image.map(_.size.height),
+      wordCount = article.wordCount
+    )
+  }
 }
 
 object RoverUriSummary {
@@ -76,7 +86,7 @@ class RoverArticleSummaryCache(stats: CacheStatistics, accessLog: AccessLog, inn
   extends JsonCacheImpl[RoverArticleSummaryKey, RoverArticleSummary](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class RoverArticleImagesKey(uriId: Id[NormalizedURI], kind: ArticleKind[_ <: Article]) extends Key[Set[RoverImage]] {
-  override val version = 1
+  override val version = 2
   val namespace = "images_by_uri_id_and_article_kind"
   def toKey(): String = s"${uriId.id}:${kind.typeCode}"
 }
