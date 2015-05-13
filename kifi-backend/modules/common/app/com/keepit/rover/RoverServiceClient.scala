@@ -1,6 +1,7 @@
 package com.keepit.rover
 
 import com.google.inject.Inject
+import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.{ State, Id, SequenceNumber }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.json.TupleFormat
@@ -47,7 +48,7 @@ class RoverServiceClientImpl(
       "url" -> url,
       "state" -> state
     )
-    call(Rover.internal.fetchAsap, payload, callTimeouts = longTimeout).map { _ => () }
+    new SafeFuture(call(Rover.internal.fetchAsap, payload, callTimeouts = longTimeout).map { _ => () }, Some(s"FetchAsap: [$uriId, $state] -> $url"))
   }
 
   def getBestArticlesByUris(uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[Article]]] = {
