@@ -34,11 +34,11 @@ class HttpRedirectIngestionHelper @Inject() (
   def processRedirects(uriId: Id[NormalizedURI], url: String, redirects: Seq[HttpRedirect], redirectedAt: DateTime): Future[Boolean] = {
     if (redirects.isEmpty) Future.successful(false)
     else {
-      log.info(s"Processing redirects found at uri ${uriId}: ${url}: ${redirects.mkString("\n")}")
+      log.info(s"Processing redirects found at uri ${uriId}: ${url}: ${redirects.mkString(" -> ")}")
       resolve(uriId, url, redirects, redirectedAt).flatMap {
         case Some(validDestinationUrl) => renormalizeWithPermanentRedirect(uriId, validDestinationUrl)
         case None => {
-          log.warn(s"Adding restriction to uri ${uriId}: ${url}: ${redirects.mkString("\n")}")
+          log.warn(s"Adding restriction to uri ${uriId}: ${url}: ${redirects.mkString(" -> ")}")
           getUriWithUpdatedRestriction(uriId, redirects.headOption.map(redirect => Restriction.http(redirect.statusCode)))
           Future.successful(false)
         }
