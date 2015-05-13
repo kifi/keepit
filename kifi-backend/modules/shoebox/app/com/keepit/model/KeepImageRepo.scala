@@ -5,6 +5,7 @@ import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.{ DataBaseComponent, DbRepo, Repo }
 import com.keepit.common.store.ImagePath
 import com.keepit.common.time.Clock
+import com.keepit.shoebox.model.{ KeepImagesKey, KeepImagesCache }
 
 @ImplementedBy(classOf[KeepImageRepoImpl])
 trait KeepImageRepo extends Repo[KeepImage] {
@@ -17,7 +18,8 @@ trait KeepImageRepo extends Repo[KeepImage] {
 @Singleton
 class KeepImageRepoImpl @Inject() (
   val db: DataBaseComponent,
-  val clock: Clock)
+  val clock: Clock,
+  keepImagesCache: KeepImagesCache)
     extends DbRepo[KeepImage] with KeepImageRepo {
 
   import db.Driver.simple._
@@ -45,9 +47,13 @@ class KeepImageRepoImpl @Inject() (
   def table(tag: Tag) = new KeepImageTable(tag)
   initTable()
 
-  override def invalidateCache(model: KeepImage)(implicit session: RSession): Unit = {}
+  override def invalidateCache(model: KeepImage)(implicit session: RSession): Unit = {
+    deleteCache(model)
+  }
 
-  override def deleteCache(model: KeepImage)(implicit session: RSession): Unit = {}
+  override def deleteCache(model: KeepImage)(implicit session: RSession): Unit = {
+    keepImagesCache.remove(KeepImagesKey(model.keepId))
+  }
 
   private val getForKeepIdCompiled = Compiled { keepId: Column[Id[Keep]] =>
     for (r <- rows if r.keepId === keepId && r.state === KeepImageStates.ACTIVE) yield r
