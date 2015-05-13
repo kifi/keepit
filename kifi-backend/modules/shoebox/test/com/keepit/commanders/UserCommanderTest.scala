@@ -80,7 +80,13 @@ class UserCommanderTest extends Specification with ShoeboxTestInjector {
 
   "UserCommander" should {
 
-    "welcome a joinee" in {
+    "welcome a joinee with a html-rich email" in {
+
+      val WELCOME_SUBJECT = "Let's get started with Kifi"
+      def WELCOME_SALUTATION(firstName: String) = "Hey " + firstName + ","
+      val WELCOME_SENDER = "Eishay Smith"
+      val WELCOME_SENDER_EMAIL = SystemEmailAddress.EISHAY_PUBLIC
+
       withDb(modules: _*) { implicit injector =>
         val (user1, user2, user3) = setup()
         val userCommander = inject[UserCommander]
@@ -88,20 +94,51 @@ class UserCommanderTest extends Specification with ShoeboxTestInjector {
         val userAddress = EmailAddress("username@42go.com")
 
         outbox.size === 0
-        Await.ready(userCommander.sendWelcomeEmail(user1), Duration(5, "seconds"))
+        Await.ready(userCommander.sendWelcomeEmail(newUser = user1, isPlainEmail = false), Duration(5, "seconds"))
         outbox.size === 1
         outbox.all.count(email => email.to.length == 1 && email.to.head == userAddress) === 1
 
         //double sending protection
-        Await.ready(userCommander.sendWelcomeEmail(user1), Duration(5, "seconds"))
+        Await.ready(userCommander.sendWelcomeEmail(newUser = user1, isPlainEmail = false), Duration(5, "seconds"))
         outbox.size === 1
 
         outbox(0).to === Seq(userAddress)
-        outbox(0).subject === "Let's get started with Kifi"
+        outbox(0).subject === WELCOME_SUBJECT
+        outbox(0).from === WELCOME_SENDER_EMAIL
 
         val html = outbox(0).htmlBody.value
-        html must contain("Hey " + user1.firstName + ",")
-        html must contain("www.kifi.com/unsubscribe/")
+        html must contain(WELCOME_SALUTATION(user1.firstName))
+      }
+    }
+
+    "welcome a joinee with a html-plain email" in {
+      val WELCOME_SUBJECT = "Let's get started with Kifi"
+      def WELCOME_SALUTATION(firstName: String) = "Dear " + firstName + ","
+      val WELCOME_SENDER = "Eishay Smith"
+      val WELCOME_SENDER_EMAIL = SystemEmailAddress.EISHAY_PUBLIC
+
+      withDb(modules: _*) { implicit injector =>
+        val (user1, user2, user3) = setup()
+        val userCommander = inject[UserCommander]
+        val outbox = inject[FakeOutbox]
+        val userAddress = EmailAddress("username@42go.com")
+
+        outbox.size === 0
+        Await.ready(userCommander.sendWelcomeEmail(newUser = user1, isPlainEmail = true), Duration(5, "seconds"))
+        outbox.size === 1
+        outbox.all.count(email => email.to.length == 1 && email.to.head == userAddress) === 1
+
+        //double sending protection
+        Await.ready(userCommander.sendWelcomeEmail(newUser = user1, isPlainEmail = true), Duration(5, "seconds"))
+        outbox.size === 1
+
+        outbox(0).to === Seq(userAddress)
+        outbox(0).subject === WELCOME_SUBJECT
+        outbox(0).from === WELCOME_SENDER_EMAIL
+
+        val html = outbox(0).htmlBody.value
+        html must contain(WELCOME_SALUTATION(user1.firstName))
+        html must contain(WELCOME_SENDER)
       }
     }
 

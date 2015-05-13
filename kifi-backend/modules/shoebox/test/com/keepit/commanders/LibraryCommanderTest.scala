@@ -1157,7 +1157,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
         Await.result(libraryCommander.processInvites(newInvites), Duration(10, "seconds"))
         eliza.inbox.size === 4
-        println(eliza.inbox)
+
         eliza.inbox.count(t => t._2 == NotificationCategory.User.LIBRARY_FOLLOWED && t._4.endsWith("/0.jpg")) === 0
         eliza.inbox.count(t => t._2 == NotificationCategory.User.LIBRARY_INVITATION && t._4.endsWith("/0.jpg")) === 4
         eliza.inbox.count(t => t._3 == "https://www.kifi.com/captainamerica/murica") === 3
