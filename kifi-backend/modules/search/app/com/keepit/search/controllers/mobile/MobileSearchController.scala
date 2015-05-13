@@ -214,14 +214,16 @@ class MobileSearchController @Inject() (
 
     val futureUserSearchResultJson = if (maxUsers <= 0) Future.successful(JsNull) else {
       userSearchCommander.searchUsers(userId, acceptLangs, experiments, query, filter, userContext, maxUsers, disablePrefixSearch, None, debugOpt, None).flatMap { userSearchResult =>
-        val userIds = userSearchResult.hits.map(_.id).toSet
-        val librarySearcher = libraryIndexer.getSearcher
-        val relevantLibraryRecordsAndVisibility = getLibraryRecordsAndVisibility(librarySearcher, userSearchResult.hits.flatMap(_.library).toSet)
-        val libraryOwnerIds = relevantLibraryRecordsAndVisibility.values.map(_._1.ownerId)
-        val futureUsers = shoeboxClient.getBasicUsers((userIds ++ libraryOwnerIds).toSeq)
         val futureFriends = searchFactory.getFriends(userId)
+        val userIds = userSearchResult.hits.map(_.id).toSet
         val futureMutualFriendsByUser = searchFactory.getMutualFriends(userId, userIds)
         val futureKeepCountsByUser = shoeboxClient.getKeepCounts(userIds)
+        val librarySearcher = libraryIndexer.getSearcher
+        val relevantLibraryRecordsAndVisibility = getLibraryRecordsAndVisibility(librarySearcher, userSearchResult.hits.flatMap(_.library).toSet)
+        val futureUsers = {
+          val libraryOwnerIds = relevantLibraryRecordsAndVisibility.values.map(_._1.ownerId)
+          shoeboxClient.getBasicUsers((userIds ++ libraryOwnerIds).toSeq)
+        }
         val libraryMembershipSearcher = libraryMembershipIndexer.getSearcher
         val publishedLibrariesCountByMember = userSearchResult.hits.map { hit => hit.id -> LibraryMembershipIndexable.countPublishedLibrariesByMember(librarySearcher, libraryMembershipSearcher, hit.id) }.toMap
         val publishedLibrariesCountByOwner = userSearchResult.hits.map { hit => hit.id -> LibraryMembershipIndexable.countPublishedLibrariesByOwner(librarySearcher, libraryMembershipSearcher, hit.id) }.toMap
