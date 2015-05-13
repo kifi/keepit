@@ -4,10 +4,9 @@ import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.core._
 import com.keepit.common.db.{ Id, SequenceNumber }
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.model.{ IndexableUri, NormalizedURI }
+import com.keepit.model.NormalizedURI
 import com.keepit.rover.article.{ ArticleKind, Article, ArticleCommander }
 import com.keepit.rover.article.content.{ HttpInfoHolder, NormalizationInfoHolder }
-import com.keepit.rover.article.policy.ArticleInfoPolicy
 import com.keepit.rover.image.ImageCommander
 import com.keepit.rover.model._
 import com.keepit.rover.sensitivity.RoverSensitivityCommander
@@ -63,13 +62,13 @@ class RoverCommander @Inject() (
     }
   }
 
-  def getImagesByUris[A <: Article](uriIds: Set[Id[NormalizedURI]])(implicit kind: ArticleKind[A]): Map[Id[NormalizedURI], Set[BasicImage]] = {
+  def getImagesByUris[A <: Article](uriIds: Set[Id[NormalizedURI]])(implicit kind: ArticleKind[A]): Map[Id[NormalizedURI], BasicImages] = {
     imageCommander.getImageInfosByUrisAndArticleKind[A](uriIds).mapValues { imageInfos =>
-      imageInfos.map(RoverImageInfo.toRoverImage)
+      BasicImages(imageInfos.map(RoverImageInfo.toRoverImage))
     }
   }
 
-  def getOrElseFetchArticleSummaryAndImages[A <: Article](uriId: Id[NormalizedURI], url: String)(implicit kind: ArticleKind[A]): Future[Option[(RoverArticleSummary, Set[BasicImage])]] = {
+  def getOrElseFetchArticleSummaryAndImages[A <: Article](uriId: Id[NormalizedURI], url: String)(implicit kind: ArticleKind[A]): Future[Option[(RoverArticleSummary, BasicImages)]] = {
     import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 
     val futureArticleSummaryOption = {
@@ -90,7 +89,7 @@ class RoverCommander @Inject() (
           case () =>
             val key = RoverArticleImagesKey(uriId, kind)
             val images = articleImagesCache.getOrElse(key) {
-              getImagesByUris[A](Set(uriId)).getOrElse(uriId, Set.empty)
+              getImagesByUris[A](Set(uriId)).getOrElse(uriId, BasicImages.empty)
             }
             Some((articleSummary, images))
         }

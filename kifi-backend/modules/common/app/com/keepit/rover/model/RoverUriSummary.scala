@@ -10,7 +10,9 @@ import com.keepit.rover.article.content.EmbedlyMedia
 import com.keepit.rover.article.{ EmbedlyArticle, Article, ArticleKind }
 import com.kifi.macros.json
 import org.joda.time.DateTime
+import play.api.libs.json.{ JsValue, Format, Json }
 import scala.concurrent.duration._
+import play.api.libs.functional.syntax._
 
 import scala.concurrent.duration.Duration
 
@@ -66,6 +68,10 @@ case class BasicImages(images: Set[BasicImage]) {
 
 object BasicImages {
   val empty = BasicImages(Set.empty)
+  implicit val format: Format[BasicImages] = new Format[BasicImages] {
+    def reads(json: JsValue) = json.validate[Set[BasicImage]].map(BasicImages(_))
+    def writes(images: BasicImages) = Json.toJson(images.images)
+  }
 }
 
 case class RoverUriSummary(article: RoverArticleSummary, images: BasicImages) {
@@ -95,12 +101,12 @@ case class RoverArticleSummaryKey(uriId: Id[NormalizedURI], kind: ArticleKind[_ 
 class RoverArticleSummaryCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends JsonCacheImpl[RoverArticleSummaryKey, RoverArticleSummary](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
-case class RoverArticleImagesKey(uriId: Id[NormalizedURI], kind: ArticleKind[_ <: Article]) extends Key[Set[BasicImage]] {
+case class RoverArticleImagesKey(uriId: Id[NormalizedURI], kind: ArticleKind[_ <: Article]) extends Key[BasicImages] {
   override val version = 2
   val namespace = "images_by_uri_id_and_article_kind"
   def toKey(): String = s"${uriId.id}:${kind.typeCode}"
 }
 
 class RoverArticleImagesCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[RoverArticleImagesKey, Set[BasicImage]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+  extends JsonCacheImpl[RoverArticleImagesKey, BasicImages](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
