@@ -10,18 +10,11 @@ inviteAccess: LibraryAccess)
 @libraryUrl = {@{baseUrl}@{libraryInfo.url}?@{KifiMobileAppLinkFlag.arg}&authToken=@authToken}
 @inviteAction = @{if (inviteAccess == LibraryAccess.READ_ONLY) "follow" else "collaborate on" }
 
-@fullName(inviterId) invited you to @inviteAction a library on Kifi
-@inviteMsg.map { msg =>
-  "@msg"
-}
-@libraryInfo.name
+Hello@{if (!inviteeId.isEmpty) { " " + firstName(inviteeId.get) } },
 
-@libraryInfo.shortDescription.getOrElse("")
+Please help me build the @libraryInfo.name Kifi library - @libraryUrl, so we can collaborate together.
+It's a great way to organize the links we find.
 
-@libraryUrl
-@{passPhrase map { phrase =>
-s"Passphrase: $phrase"
-}}
+@{if(passPhrase.isEmpty) { "If you're asked for a passphrase, here it is: @passPhrase.get" } }
 
-Cheers!
-The Kifi team
+@firstName(inviterId)

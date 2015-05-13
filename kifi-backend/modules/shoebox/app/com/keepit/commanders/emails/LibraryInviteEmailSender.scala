@@ -55,7 +55,13 @@ class LibraryInviteEmailSender @Inject() (
         subject = s"${fullName(fromUserId)} invited you to $subjectAction ${library.name}!",
         to = toRecipient,
         category = toRecipient.fold(_ => NotificationCategory.User.LIBRARY_INVITATION, _ => NotificationCategory.NonUser.LIBRARY_INVITATION),
-        htmlTemplate = views.html.email.libraryInvitation(toRecipient.left.toOption, fromUserId, trimmedInviteMsg, libraryInfo, passPhrase, authToken, invite.access),
+        htmlTemplate = {
+          if (isPlainEmail) {
+            views.html.email.libraryInvitationPlain(toRecipient.left.toOption, fromUserId, trimmedInviteMsg, libraryInfo, passPhrase, authToken, invite.access)
+          } else {
+            views.html.email.libraryInvitation(toRecipient.left.toOption, fromUserId, trimmedInviteMsg, libraryInfo, passPhrase, authToken, invite.access)
+          }
+        },
         textTemplate = Some(views.html.email.libraryInvitationText(toRecipient.left.toOption, fromUserId, trimmedInviteMsg, libraryInfo, passPhrase, authToken, invite.access)),
         templateOptions = Seq(CustomLayout).toMap,
         extraHeaders = Some(Map(PostOffice.Headers.REPLY_TO -> fromAddress)),
