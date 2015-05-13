@@ -4,7 +4,7 @@ import com.keepit.commanders.ProcessedImageSize
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.store.S3ImageConfig
 import com.keepit.rover.RoverServiceClient
-import com.keepit.rover.model.RoverUriSummary
+import com.keepit.rover.model.{ BasicImages, RoverUriSummary }
 import com.keepit.search.controllers.util.{ SearchControllerUtil }
 import com.keepit.search.engine.SearchFactory
 import com.keepit.search.engine.uri.UriSearchResult
@@ -29,6 +29,7 @@ import com.keepit.common.core._
 import com.keepit.search.controllers.website.WebsiteSearchController._
 import com.keepit.search.augmentation.{ AugmentedItem, AugmentationCommander }
 import com.keepit.social.BasicUser
+import com.keepit.common.json
 
 object WebsiteSearchController {
   private[WebsiteSearchController] val maxKeepersShown = 20
@@ -97,6 +98,10 @@ class WebsiteSearchController @Inject() (
     } else {
       val uriIds = uriSearchResult.hits.map(hit => Id[NormalizedURI](hit.id))
       val futureUriSummaries: Future[Map[Id[NormalizedURI], RoverUriSummary]] = rover.getUriSummaryByUris(uriIds.toSet)
+      val futureKeepImages: Future[Map[Id[Keep], BasicImages]] = {
+        val keepIds = uriSearchResult.hits.flatMap(hit => hit.keepId.map(Id[Keep](_)))
+        shoeboxClient.getKeepImages(keepIds.toSet)
+      }
 
       val (futureBasicKeeps, futureLibrariesWithWriteAccess) = {
         if (userId == SearchControllerUtil.nonUser) {
@@ -112,17 +117,26 @@ class WebsiteSearchController @Inject() (
 
         val futureJsHits = for {
           summaries <- futureUriSummaries
+          keepImages <- futureKeepImages
           allAugmentationFields <- futureAugmentationFields
         } yield {
           (uriSearchResult.hits zip allAugmentationFields).map {
             case (hit, augmentationFields) => {
               val uriId = Id[NormalizedURI](hit.id)
-              val summary = summaries.get(uriId).map(_.toUriSummary(ProcessedImageSize.Medium.idealSize)).getOrElse(URISummary())
+              val summary = summaries.get(uriId)
+              val keepId = hit.keepId.map(Id[Keep](_))
+              val image = (keepId.flatMap(keepImages.get) orElse summary.map(_.images)).flatMap(_.get(ProcessedImageSize.Medium.idealSize))
               val primaryFields = Json.obj(
                 "title" -> hit.title,
                 "url" -> hit.url,
                 "score" -> hit.finalScore,
-                "summary" -> summary
+                "summary" -> json.minify(Json.obj(
+                  "title" -> summary.flatMap(_.article.title),
+                  "description" -> summary.flatMap(_.article.description),
+                  "imageUrl" -> image.map(_.path.getUrl),
+                  "imageWidth" -> image.map(_.size.width),
+                  "imageHeight" -> image.map(_.size.height)
+                ))
               )
               primaryFields ++ augmentationFields
             }
