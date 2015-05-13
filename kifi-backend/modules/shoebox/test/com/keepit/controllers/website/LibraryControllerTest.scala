@@ -610,23 +610,23 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         val inputJson2 = Json.obj(
           "message" -> "Here is another invite!",
           "invites" -> Seq(
-            Json.obj("type" -> "email", "id" -> "squirtle@gmail.com", "access" -> LibraryAccess.READ_INSERT))
+            Json.obj("type" -> "email", "id" -> "squirtle@gmail.com", "access" -> LibraryAccess.READ_ONLY))
         )
         val request2 = FakeRequest("POST", testPath1).withBody(inputJson2)
         val result2 = libraryController.inviteUsersToLibrary(pubId1)(request2)
         status(result2) must equalTo(OK)
         contentType(result2) must beSome("application/json")
-        Json.parse(contentAsString(result2)) must equalTo(Json.parse(s"""[{"email":"squirtle@gmail.com","access":"${LibraryAccess.READ_INSERT.value}"}]"""))
+        Json.parse(contentAsString(result2)) must equalTo(Json.parse(s"""[{"email":"squirtle@gmail.com","access":"${LibraryAccess.READ_ONLY.value}"}]"""))
         db.readOnlyMaster { implicit s =>
           val invitesToSquirtle = libraryInviteRepo.getWithLibraryId(lib1.id.get).filter(i => i.emailAddress.nonEmpty)
           invitesToSquirtle.map(_.message) === Seq(None) // second invite doesn't persist because it was sent too close to previous one
         }
 
         inject[FakeUserActionsHelper].setUser(user2)
-        // permission denied sharing a SECRET library that you don't own
+        // success sharing a SECRET library that you don't own
         val request3 = FakeRequest("POST", testPath1).withBody(inputJson2)
         val result3 = libraryController.inviteUsersToLibrary(pubId1)(request3)
-        status(result3) must equalTo(FORBIDDEN)
+        status(result3) must equalTo(OK)
         // success sharing a PUBLISHED library that you don't own
         val request4 = FakeRequest("POST", testPath2).withBody(inputJson2)
         val result4 = libraryController.inviteUsersToLibrary(pubId2)(request4)
@@ -1335,8 +1335,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         // test demote membership access
         status(updateLibraryMembership(user1, user2, lib1, "read_only")) must equalTo(NO_CONTENT)
 
-        // test promote membership access (error)
-        status(updateLibraryMembership(user1, user2, lib1, "read_write")) must equalTo(BAD_REQUEST)
+        // test promote membership access
+        status(updateLibraryMembership(user1, user2, lib1, "read_write")) must equalTo(NO_CONTENT)
 
         // test deactivate membership
         status(updateLibraryMembership(user1, user2, lib1, "none")) must equalTo(NO_CONTENT)
