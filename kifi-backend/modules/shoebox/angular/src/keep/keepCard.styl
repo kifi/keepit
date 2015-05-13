@@ -91,7 +91,7 @@ keepFooterMarginTop = 16px
     padding: 6px sidePad
     background: none
     border-radius: 4px
-    color: #56b263
+    color: accentGreen
     cursor: pointer
 
     &:first-child
@@ -222,7 +222,7 @@ keepFooterMarginTop = 16px
 
 .kf-keep-source
   white-space: nowrap
-  color: #56b263
+  color: accentGreen
 
 .kf-keep-twitter-attr
   a
@@ -241,12 +241,6 @@ keepFooterMarginTop = 16px
     width: 14px
     height: 12px
 
-.kf-keep-time
-  white-space: nowrap  // hides entire element (including bullet) if it does not fit
-
-  @media (max-width: 479px)
-    display: none
-
 .kf-keep-length
   white-space: nowrap  // hides entire element (including bullet) if it does not fit
 
@@ -263,7 +257,6 @@ keepFooterMarginTop = 16px
       display: none
 
 .kf-keep-twitter-attr::before
-.kf-keep-time::before
 .kf-keep-length::before
   content: '\2022'
   vertical-align: 2px

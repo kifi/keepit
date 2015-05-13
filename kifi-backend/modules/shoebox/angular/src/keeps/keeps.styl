@@ -91,12 +91,6 @@ keepEditToolsWidth = 28px
   padding: 10px 3px
 
   @media (min-width: 480px)
-    padding: 12px 4px
-
-  @media (min-width: 560px)
-    padding: 15px 5px
-
-  @media (min-width: 720px)
     padding: 20px
 
   &.detailed
@@ -141,6 +135,135 @@ keepEditToolsWidth = 28px
   float: left
   margin: 20px 0 20px 5px
 
+.kf-keep-top
+  display: table
+  width: 100%
+  margin-bottom: 16px
+
+.kf-keep-top-menu-container
+  position: absolute
+  top: 12px
+  right: 12px
+
+  .kf-dropdown-menu
+    top: 20px
+    right: 0
+    font-size: 14px
+    transform-origin: 80% top
+    transition: visibility 0s, opacity linear dur, transform dur ease-out
+
+  &:not(.kf-open)>.kf-dropdown-menu
+    dur = .08s
+    visibility: hidden
+    opacity: 0
+    transform: scale(.9)
+    transition-duration: 0s, dur, dur
+    transition-delay: dur, 0s, 0s
+
+  .kf-dropdown-menu-item
+    display: block
+    padding: 0 16px
+    color: #556179
+    white-space: nowrap
+    cursor: pointer
+
+    &:hover
+      background-color: #eee
+
+    &:active
+      background-color: #ccc
+
+.kf-keep-top-menu-btn
+  position: relative
+  width: 18px
+  height: 13px
+  border: 0
+  background: transparent
+
+  &::before
+  &::after
+    content: ''
+    position: absolute;
+    left: 50%
+    width: 3px;
+    top: 4px
+    bottom: 4px
+    border-top-left-radius: 2px
+    border-top-right-radius: 2px
+    background: #c7c7c7
+    font-size: 0
+
+  &::before
+    transform: translate(-4px) rotate(-45deg)
+
+  &::after
+    transform: translate(2px) rotate(45deg)
+
+  &:hover::before
+  &:hover::after
+  &:focus::before
+  &:focus::after
+    background: #aaa
+
+  &:active::before
+  &:active::after
+   background: #888
+
+.kf-keep-keeper-pic
+  display: table-cell
+  height: 48px
+  width: 48px
+  border-radius: 50%
+  background-size: cover
+
+  &:focus
+    outline-color: #ccc
+
+.kf-keep-top-r
+  display: table-cell
+  vertical-align: middle
+  padding-left: 12px
+
+.kf-keep-keeper-name
+  color: accentGreen
+  font-weight: bold
+
+  &:hover
+    text-decoration: underline
+
+.kf-keep-time
+  color: #808080
+  font-size: 14px
+  font-smoothing: antialiased
+
+noteFontSize = 16px
+noteLineHeight = 1.5
+noteMargin = -6px 0 18px
+
+.kf-keep-note
+  font-size: noteFontSize
+  line-height: noteLineHeight
+  white-space: pre-wrap
+  word-wrap: break-word
+
+  .kf-knf+&
+    display: none
+
+  &:not(:empty)
+    margin: noteMargin
+
+.kf-keep-note-hashtag
+  color: accentGreen
+
+  &:hover
+    text-decoration: underline
+
+.kf-knf
+  margin: noteMargin
+
+.kf-knf-editor
+  font-size: noteFontSize
+  line-height: noteLineHeight
 
 .kf-keeps-load-more
   display: block

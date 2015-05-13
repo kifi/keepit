@@ -66,6 +66,17 @@ describe('util', function () {
     });
   });
 
+  describe('HTML.replaceLineBreakTagsWithChars', function () {
+    it('handles all combinations of DIV and BR tags that browsers use', function () {
+      expect(HTML.replaceLineBreakTagsWithChars('')).toBe('');
+      expect(HTML.replaceLineBreakTagsWithChars('1 <> 2')).toBe('1 <> 2');
+      expect(HTML.replaceLineBreakTagsWithChars('a <br type="_moz"/>')).toBe('a \n');
+      expect(HTML.replaceLineBreakTagsWithChars('1<div>2</div>')).toBe('1\n2');
+      expect(HTML.replaceLineBreakTagsWithChars('1<div><br></div><div>3</div>')).toBe('1\n\n3');
+      expect(HTML.replaceLineBreakTagsWithChars('1<div><br></div><div><br></div><div>4</div>')).toBe('1\n\n\n4');
+    });
+  });
+
   describe('URI.formatQueryString', function () {
     it('correctly formats and escapes query strings', function () {
       expect(URI.formatQueryString({})).toBe('');

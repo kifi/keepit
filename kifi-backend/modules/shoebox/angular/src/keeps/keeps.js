@@ -3,8 +3,11 @@
 angular.module('kifi')
 
 .directive('kfKeeps', [
-  '$window', '$timeout', 'keepActionService', 'libraryService', 'modalService', 'KeepSelection', 'undoService', 'profileService',
-  function ($window, $timeout, keepActionService, libraryService, modalService, KeepSelection, undoService, profileService) {
+  '$window', '$timeout', '$injector', 'KeepSelection', 'keepActionService', 'libraryService',
+  'modalService', 'undoService', 'profileService',
+  function (
+    $window, $timeout, $injector, KeepSelection, keepActionService, libraryService,
+    modalService, undoService, profileService) {
 
     return {
       restrict: 'A',
@@ -156,6 +159,39 @@ angular.module('kifi')
           })['catch'](modalService.openGenericErrorModal);
         };
 
+        scope.editKeepNote = function (event, keep) {
+          var keepEl = angular.element(event.target).closest('.kf-keep');
+          var editor = keepEl.find('.kf-knf-editor');
+          if (!editor.length) {
+            var noteEl = keepEl.find('.kf-keep-note');
+            $injector.get('keepNoteForm').init(noteEl, keep.note, keep.libraryId, keep.id, function update(noteText) {
+              keep.note = noteText;
+            });
+          } else {
+            editor.focus();
+          }
+        };
+
+        scope.deleteKeep = function (event, library, keep) {
+          angular.element(event.target).closest('.kf-keep').find('.kf-knf').remove();
+          keepActionService.unkeepFromLibrary(library.id, keep.id).then(function () {
+            keep.unkept = true;
+            keep.keepersTotal--;
+
+            libraryService.addToLibraryCount(library.id, -1);
+            scope.$emit('keepRemoved', {url: keep.url}, library);
+
+            undoService.add('Keep deleted.', function () {  // TODO: rekeepToLibrary endpoint that takes a keep ID
+              keepActionService.keepToLibrary([{url: keep.url}], library.id).then(function () {
+                keep.unkept = false;
+                keep.keepersTotal++;
+
+                libraryService.addToLibraryCount(library.id, 1);
+                scope.$emit('keepAdded', [keep], library);
+              })['catch'](modalService.openGenericErrorModal);
+            });
+          })['catch'](modalService.openGenericErrorModal);
+        };
 
         //
         // Watches and listeners.

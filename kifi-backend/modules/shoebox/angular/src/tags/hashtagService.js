@@ -9,8 +9,8 @@ angular.module('kifi')
       cacheDuration: 20000
     };
 
-    var suggestClutch = new Clutch(function (keep, query) {
-      var promise = $http.get(routeService.suggestTags(keep.libraryId, keep.id, query));
+    var suggestClutch = new Clutch(function (libraryId, keepId, query) {
+      var promise = $http.get(routeService.suggestTags(libraryId, keepId, query));
       var deferred = $q.defer();
       promise.then(function (res) {
         deferred.resolve(res.data);
@@ -19,8 +19,8 @@ angular.module('kifi')
     }, clutchParams);
 
     return {
-      suggestTags: function(keep, query) {
-        return suggestClutch.get(keep, query);
+      suggestTags: function (libraryId, keepId, query) {
+        return suggestClutch.get(libraryId, keepId, query);
       }
     };
   }

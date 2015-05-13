@@ -94,8 +94,8 @@ angular.module('kifi')
                 // If we are on the library page where the keep is being added, add the keep to the top of the list of keeps.
                 if ((result.alreadyKept.length === 0) &&
                     ($state.href($state.current.name) === scope.selectedLibrary.url)) {
-                  return keepActionService.fetchFullKeepInfo(result.keeps[0]).then(function (fullKeep) {
-                    $rootScope.$emit('keepAdded', [fullKeep], scope.selectedLibrary);
+                  return keepActionService.fetchFullKeepInfo(result.keeps[0]).then(function (keep) {
+                    $rootScope.$emit('keepAdded', [keep], scope.selectedLibrary);
                   });
                 }
               }

@@ -15,8 +15,7 @@
           <span class="kf-keep-twitter-logo svg-twitter-blue"></span>@{{::keep.sourceAttribution.twitter.screenName}}
         </a>
       </span>
-      <span class="kf-keep-time" ng-if="::keep.createdAt">kept&nbsp;<time ng-attr-datetime="{{::keep.createdAt}}" am-time-ago="::keep.createdAt"></time></span>
-      <span class="kf-keep-length" ng-if="::keep.summary.wordCount > 0 && !youtubeId"><span class="sprite sprite-clock"></span>{{::keep.summary.wordCount|timeToRead}} read</span>
+      <span class="kf-keep-length" ng-if="::keep.summary.wordCount > 0 && !youtubeId">{{::keep.summary.wordCount|timeToRead}} read</span>
     </div>
     <div class="kf-keep-title">
       <a class="kf-keep-title-link" ng-href="{{::keep.url}}" target="_blank" ng-click="clickCallback({keep: keep, event: $event})" rel="nofollow" click-action="clickedArticleTitle">{{displayTitle}}</a>

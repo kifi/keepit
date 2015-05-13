@@ -140,6 +140,9 @@ angular.module('kifi')
       removeManyKeepsFromLibrary: function (libraryId) {
         return route('/libraries/' + libraryId + '/keeps/delete');
       },
+      saveKeepNote: function (libraryId, keepId) {
+        return route('/libraries/' + libraryId + '/keeps/' + keepId + '/note');
+      },
 
       ////////////////////////////
       // User registration      //

@@ -203,13 +203,16 @@ angular.module('kifi')
             if (idx > -1) {
               $scope.keeps.splice(idx, 1);
             }
-          } else if (library.id === $scope.library.id) {
+          }
+
+          var existingKeep = _.find($scope.keeps, {url: keep.url});
+          if (!existingKeep && library.id === $scope.library.id) {
             $scope.keeps.unshift(keep);
+            existingKeep = keep;
           }
 
           // add the new keep to the keep card's "my keeps" array
-          var existingKeep = _.find($scope.keeps, { url: keep.url });
-          if (existingKeep && !_.find($scope.keeps, { id: keep.id })) {
+          if (existingKeep && !_.find($scope.keeps, {id: keep.id})) {
             existingKeep.keeps.push({
               id: keep.id,
               libraryId: library.id,

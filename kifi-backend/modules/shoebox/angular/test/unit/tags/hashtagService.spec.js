@@ -33,7 +33,7 @@ describe('kifi.hashtagService', function () {
   describe('hashtagService', function () {
     it('suggestsTags returns suggested tags for keeps', function () {
       var keep = createKeep(keepId);
-      var p = hashtagService.suggestTags(keep, 'scala');
+      var p = hashtagService.suggestTags(keep.libraryId, keep.id, 'scala');
       p.then(function (data) {
         expect(data).toEqual([{'tag':'Scala','matches':[[0,5]]},{'tag':'Learn Scala','matches':[[6,5]]}]);
       });
