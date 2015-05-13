@@ -9,7 +9,7 @@ import com.keepit.rover.model.BasicImages
 import scala.concurrent.duration.Duration
 
 case class KeepImagesKey(keepId: Id[Keep]) extends Key[BasicImages] {
-  override val version = 1
+  override val version = 2
   val namespace = "keep_images_by_keep_id"
   def toKey(): String = keepId.id.toString
 }
