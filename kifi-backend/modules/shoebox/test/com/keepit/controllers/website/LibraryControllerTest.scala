@@ -314,7 +314,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
              |"keeps":[],
              |"numKeeps":0,
              |"numCollaborators":0,
-             |"numFollowers":0
+             |"numFollowers":0,
+             |"whoCanInvite":"collaborator"
            |},
            |"membership":"owner",
            |"listed": true,
@@ -359,7 +360,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
              |"keeps":[],
              |"numKeeps":0,
              |"numCollaborators":0,
-             |"numFollowers":0
+             |"numFollowers":0,
+             |"whoCanInvite":"collaborator"
            |},
            |"membership":"none",
            |"listed": null,
@@ -444,7 +446,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                |"keeps":[],
                |"numKeeps":0,
                |"numCollaborators":0,
-               |"numFollowers":0
+               |"numFollowers":0,
+               |"whoCanInvite":"collaborator"
              |},
              |"membership":"owner",
              |"listed": false,

@@ -219,7 +219,7 @@ case class FullLibraryInfo(
   numCollaborators: Int,
   numFollowers: Int,
   attr: Option[LibrarySourceAttribution] = None,
-  inviteToCollab: Option[LibraryAccess])
+  whoCanInvite: String)
 
 object FullLibraryInfo {
   implicit val sourceWrites = LibrarySourceAttribution.writes

@@ -125,7 +125,7 @@ class MobileRecommendationsControllerTest extends TestKitSupport with Specificat
             numKeeps = 10,
             numCollaborators = 0,
             numFollowers = 10,
-            inviteToCollab = None
+            whoCanInvite = "collaborator"
           )
         )
       }
@@ -136,7 +136,7 @@ class MobileRecommendationsControllerTest extends TestKitSupport with Specificat
           | "itemInfo":{"id":"123","name":"Scala","visibility":"published",
           |   "description":"This is a library about scala...","slug":"scala","url":"joe/scala","color":"${LibraryColor.BLUE.hex}","kind":"user_created",
           |   "owner":{"id":"aa25f5a8-8dea-4e56-82c1-a4dcf38f205c","firstName":"Joe","lastName":"Smith","pictureName":"asdf","username":"joe"},
-          |   "followers":[],"collaborators":[],"keeps":[],"numKeeps":10,"numCollaborators":0,"numFollowers":10}}
+          |   "followers":[],"collaborators":[],"keeps":[],"numKeeps":10,"numCollaborators":0,"numFollowers":10,"whoCanInvite": "collaborator"}}
         """.stripMargin
 
       def runCommonTopRecosTests(call: Call, requestFn: Request[AnyContent] => Future[Result])(implicit injector: Injector): Future[Result] = {

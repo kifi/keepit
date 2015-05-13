@@ -294,8 +294,10 @@ class LibraryCommander @Inject() (
         val owner = usersById(lib.ownerId)
         val followers = memberInfosByLibraryId(lib.id.get).shown.map(usersById(_))
         val collaborators = memberInfosByLibraryId(lib.id.get).collaborators.map(usersById(_))
+        val whoCanInvite = if (lib.inviteToCollab == Some(LibraryAccess.OWNER)) "owner" else "collaborator"
 
         val attr = getSourceAttribution(libId)
+
         if (keepInfos.size > keepCount) {
           airbrake.notify(s"keep count $keepCount for library is lower then num of keeps ${keepInfos.size} for $lib")
         }
@@ -318,7 +320,7 @@ class LibraryCommander @Inject() (
           numFollowers = followerCount,
           lastKept = lib.lastKept,
           attr = attr,
-          inviteToCollab = lib.inviteToCollab
+          whoCanInvite = whoCanInvite
         )
       }
     }
@@ -1007,10 +1009,15 @@ class LibraryCommander @Inject() (
   }
 
   def inviteUsersToLibrary(libraryId: Id[Library], inviterId: Id[User], inviteList: Seq[(Either[Id[User], EmailAddress], LibraryAccess, Option[String])])(implicit eventContext: HeimdalContext): Future[Either[LibraryFail, Seq[(Either[BasicUser, RichContact], LibraryAccess)]]] = {
-    val targetLib = db.readOnlyMaster { implicit s =>
-      libraryRepo.get(libraryId)
+    val (lib, inviterMembership) = db.readOnlyMaster { implicit s =>
+      val lib = libraryRepo.get(libraryId)
+      val mem = libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, inviterId)
+      (lib, mem)
     }
-    if (targetLib.kind == LibraryKind.SYSTEM_MAIN || targetLib.kind == LibraryKind.SYSTEM_SECRET)
+    val inviterIsOwner = inviterMembership.map(_.isOwner).getOrElse(false)
+    val inviterIsCollab = inviterMembership.map(_.isCollaborator).getOrElse(false)
+
+    if (lib.kind == LibraryKind.SYSTEM_MAIN || lib.kind == LibraryKind.SYSTEM_SECRET)
       Future.successful(Left(LibraryFail(BAD_REQUEST, "cant_invite_to_system_generated_library")))
     else {
       // get all invitee contacts by email address
@@ -1031,41 +1038,56 @@ class LibraryCommander @Inject() (
 
       futureInviteeContactsByEmailAddress.map { inviteeContactsByEmailAddress => // when email contacts are done fetching... process through inviteList
         val invitesForInvitees = db.readOnlyMaster { implicit s =>
-          val libMembersMap = libraryMembershipRepo.getWithLibraryId(targetLib.id.get).map { mem =>
+          val libMembersMap = libraryMembershipRepo.getWithLibraryId(lib.id.get).map { mem =>
             mem.userId -> mem
           }.toMap
 
           for ((recipient, inviteAccess, msgOpt) <- inviteList) yield {
-            if (targetLib.inviteToCollab == Some(LibraryAccess.OWNER) && inviterId != targetLib.ownerId && inviteAccess == LibraryAccess.READ_WRITE) {
-              log.warn(s"[inviteUsersToLibrary] user $inviterId attempting to invite $recipient for RW access for library (${targetLib.id.get}, ${targetLib.name}, ${targetLib.inviteToCollab})")
-              None // don't persist invite if non-owner is inviting someone to be a collaborator (when no collab invite is set)
-            } else {
-              recipient match {
-                case Left(userId) =>
-                  libMembersMap.get(userId) match {
-                    case Some(mem) if mem.isOwner || mem.isCollaborator => // don't persist invite to an owner or collaborator
-                      log.warn(s"[inviteUsersToLibrary] user $inviterId attempting to invite user $userId when recipient is already owner or collaborator")
-                      None
-                    case Some(mem) if mem.access == inviteAccess => // don't persist invite to a user with same access
-                      log.warn(s"[inviteUsersToLibrary] user $inviterId attempting to invite user $userId for $inviteAccess access when membership has same access level")
-                      None
-                    case _ =>
-                      val newInvite = LibraryInvite(libraryId = libraryId, inviterId = inviterId, userId = Some(userId), access = inviteAccess, message = msgOpt)
-                      val inviteeInfo = (Left(inviteeUserMap(userId)), inviteAccess)
-                      Some(newInvite, inviteeInfo)
-                  }
 
-                case Right(email) =>
-                  val newInvite = LibraryInvite(libraryId = libraryId, inviterId = inviterId, emailAddress = Some(email), access = inviteAccess, message = msgOpt)
-                  val inviteeInfo = (Right(inviteeContactsByEmailAddress(email)), inviteAccess)
-                  Some(newInvite, inviteeInfo)
-              }
+            inviteAccess match {
+              // non-owner/non-collaborator tries to invite to collaborate
+              case LibraryAccess.READ_WRITE if !inviterIsOwner && !inviterIsCollab =>
+                log.warn(s"[inviteUsersToLibrary] error invite to collaborate: user $inviterId attempting to invite $recipient for RW access to library (${lib.id.get}, ${lib.name}, ${lib.visibility}, ${lib.inviteToCollab})")
+                None
+              // collaborator tries to invite to collaborate, but library setting is set to owner_only
+              case LibraryAccess.READ_WRITE if inviterIsCollab && lib.inviteToCollab == Some(LibraryAccess.OWNER) =>
+                log.warn(s"[inviteUsersToLibrary] error invite to collaborate: user $inviterId attempting to invite $recipient for RW access to library (${lib.id.get}, ${lib.name}, ${lib.visibility}, ${lib.inviteToCollab})")
+                None
+              // non-owner/non-collaborator tries to invite to follow (secret libraries only)
+              case LibraryAccess.READ_ONLY if lib.isSecret && !inviterIsOwner && !inviterIsCollab =>
+                log.warn(s"[inviteUsersToLibrary] error invite to follow: user $inviterId attempting to invite $recipient for RO access to library (${lib.id.get}, ${lib.name}, ${lib.visibility}, ${lib.inviteToCollab})")
+                None
+              // collaborator in secret library tries to invite to follow, but library setting is set to owner_only
+              case LibraryAccess.READ_ONLY if lib.isSecret && inviterIsCollab && lib.inviteToCollab == Some(LibraryAccess.OWNER) =>
+                log.warn(s"[inviteUsersToLibrary] error invite to follow: user $inviterId attempting to invite $recipient for RO access to library (${lib.id.get}, ${lib.name}, ${lib.visibility}, ${lib.inviteToCollab})")
+                None
+              case _ =>
+                recipient match {
+                  case Left(userId) =>
+                    libMembersMap.get(userId) match {
+                      case Some(mem) if mem.isOwner || mem.isCollaborator => // don't persist invite to an owner or collaborator
+                        log.warn(s"[inviteUsersToLibrary] not persisting invite: user $inviterId attempting to invite user $userId when recipient is already owner or collaborator")
+                        None
+                      case Some(mem) if mem.access == inviteAccess => // don't persist invite to a user with same access
+                        log.warn(s"[inviteUsersToLibrary] not persisting invite: user $inviterId attempting to invite user $userId for $inviteAccess access when membership has same access level")
+                        None
+                      case _ =>
+                        val newInvite = LibraryInvite(libraryId = libraryId, inviterId = inviterId, userId = Some(userId), access = inviteAccess, message = msgOpt)
+                        val inviteeInfo = (Left(inviteeUserMap(userId)), inviteAccess)
+                        Some(newInvite, inviteeInfo)
+                    }
+
+                  case Right(email) =>
+                    val newInvite = LibraryInvite(libraryId = libraryId, inviterId = inviterId, emailAddress = Some(email), access = inviteAccess, message = msgOpt)
+                    val inviteeInfo = (Right(inviteeContactsByEmailAddress(email)), inviteAccess)
+                    Some(newInvite, inviteeInfo)
+                }
             }
           }
         }
         val (invites, inviteesWithAccess) = invitesForInvitees.flatten.unzip
         processInvites(invites)
-        libraryAnalytics.sendLibraryInvite(inviterId, targetLib, inviteList.map { _._1 }, eventContext)
+        libraryAnalytics.sendLibraryInvite(inviterId, lib, inviteList.map { _._1 }, eventContext)
         Right(inviteesWithAccess)
       }
     }
