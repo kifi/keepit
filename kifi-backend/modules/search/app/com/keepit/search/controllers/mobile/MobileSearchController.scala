@@ -3,6 +3,8 @@ package com.keepit.search.controllers.mobile
 import com.keepit.commanders.ProcessedImageSize
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.Id
+import com.keepit.common.store.S3ImageConfig
+import com.keepit.rover.RoverServiceClient
 import com.keepit.search.augmentation.AugmentationCommander
 import com.keepit.search.engine.SearchFactory
 import com.keepit.search.engine.uri.UriSearchResult
@@ -37,7 +39,9 @@ object MobileSearchController {
 class MobileSearchController @Inject() (
     val userActionsHelper: UserActionsHelper,
     implicit val publicIdConfig: PublicIdConfiguration,
+    implicit val imageConfig: S3ImageConfig,
     val shoeboxClient: ShoeboxServiceClient,
+    rover: RoverServiceClient,
     uriSearchCommander: UriSearchCommander,
     librarySearchCommander: LibrarySearchCommander,
     userSearchCommander: UserSearchCommander,
@@ -277,7 +281,7 @@ class MobileSearchController @Inject() (
     } else {
 
       val uriIds = uriSearchResult.hits.map(hit => Id[NormalizedURI](hit.id))
-      val futureUriSummaries = shoeboxClient.getUriSummaries(uriIds)
+      val futureUriSummaries = rover.getUriSummaryByUris(uriIds.toSet)
 
       getAugmentedItems(augmentationCommander)(userId, uriSearchResult).flatMap { augmentedItems =>
         val limitedAugmentationInfos = augmentedItems.map(_.toLimitedAugmentationInfo(maxKeepersShown, maxLibrariesShown, maxTagsShown))
@@ -295,11 +299,12 @@ class MobileSearchController @Inject() (
           val jsHits = (uriSearchResult.hits zip limitedAugmentationInfos).map {
             case (hit, limitedInfo) => {
               val uriId = Id[NormalizedURI](hit.id)
+              val summary = summaries.get(uriId).map(_.toUriSummary(ProcessedImageSize.Medium.idealSize)).getOrElse(URISummary())
               Json.obj(
                 "title" -> hit.title,
                 "url" -> hit.url,
                 "score" -> hit.finalScore,
-                "summary" -> summaries(uriId),
+                "summary" -> summary,
                 "keepers" -> limitedInfo.keepers.map(users(_).externalId),
                 "keepersOmitted" -> limitedInfo.keepersOmitted,
                 "keepersTotal" -> limitedInfo.keepersTotal

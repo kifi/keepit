@@ -68,7 +68,7 @@ class WebsiteSearchController @Inject() (
 
     uriSearchCommander.searchUris(userId, acceptLangs, experiments, query, filterFuture, libraryContextFuture, maxHits, lastUUIDStr, context, None, debugOpt).flatMap { uriSearchResult =>
 
-      getWebsiteUriSearchResults(userId, uriSearchResult, experiments).imap {
+      getWebsiteUriSearchResults(userId, uriSearchResult).imap {
         case (hits, users, libraries) =>
           val librariesJson = libraries.map { library =>
             Json.obj("id" -> library.id, "name" -> library.name, "color" -> library.color, "path" -> library.path, "visibility" -> library.visibility)
@@ -90,23 +90,13 @@ class WebsiteSearchController @Inject() (
     }
   }
 
-  //todo(Léo): Remove experiments
-  private def getWebsiteUriSearchResults(userId: Id[User], uriSearchResult: UriSearchResult, experiments: Set[ExperimentType]): Future[(Seq[JsValue], Seq[BasicUser], Seq[BasicLibrary])] = {
+  private def getWebsiteUriSearchResults(userId: Id[User], uriSearchResult: UriSearchResult): Future[(Seq[JsValue], Seq[BasicUser], Seq[BasicLibrary])] = {
     if (uriSearchResult.hits.isEmpty) {
       Future.successful((Seq.empty[JsObject], Seq.empty[BasicUser], Seq.empty[BasicLibrary]))
     } else {
       val uriIds = uriSearchResult.hits.map(hit => Id[NormalizedURI](hit.id))
-      val futureUriSummaries = {
-        if (experiments.contains(ExperimentType.ROVER_CONTENT)) {
-          rover.getUriSummaryByUris(uriIds.toSet).imap { roverSummariesByUriId =>
-            uriIds.map { uriId =>
-              uriId -> roverSummariesByUriId.get(uriId).map(_.toUriSummary(ProcessedImageSize.Large.idealSize)).getOrElse(URISummary())
-            }.toMap
-          }
-        } else {
-          shoeboxClient.getUriSummaries(uriIds)
-        }
-      }
+      val futureUriSummaries: Future[Map[Id[NormalizedURI], RoverUriSummary]] = rover.getUriSummaryByUris(uriIds.toSet)
+
       val (futureBasicKeeps, futureLibrariesWithWriteAccess) = {
         if (userId == SearchControllerUtil.nonUser) {
           (Future.successful(Map.empty[Id[NormalizedURI], Set[BasicKeep]].withDefaultValue(Set.empty)), Future.successful(Set.empty[Id[Library]]))
@@ -126,11 +116,12 @@ class WebsiteSearchController @Inject() (
           (uriSearchResult.hits zip allAugmentationFields).map {
             case (hit, augmentationFields) => {
               val uriId = Id[NormalizedURI](hit.id)
+              val summary = summaries.get(uriId).map(_.toUriSummary(ProcessedImageSize.Medium.idealSize)).getOrElse(URISummary())
               val primaryFields = Json.obj(
                 "title" -> hit.title,
                 "url" -> hit.url,
                 "score" -> hit.finalScore,
-                "summary" -> summaries(uriId)
+                "summary" -> summary
               )
               primaryFields ++ augmentationFields
             }
@@ -249,7 +240,7 @@ class WebsiteSearchController @Inject() (
 
     val futureUriSearchResultJson = if (maxUris <= 0) Future.successful(JsNull) else {
       uriSearchCommander.searchUris(userId, acceptLangs, experiments, query, userFilterFuture, libraryFilterFuture, maxUris, lastUUIDStr, uriContext, None, debugOpt).flatMap { uriSearchResult =>
-        getWebsiteUriSearchResults(userId, uriSearchResult, experiments).imap {
+        getWebsiteUriSearchResults(userId, uriSearchResult).imap {
           case (hits, users, libraries) =>
             val librariesJson = libraries.map { library =>
               Json.obj("id" -> library.id, "name" -> library.name, "color" -> library.color, "path" -> library.path, "visibility" -> library.visibility)
