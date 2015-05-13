@@ -97,8 +97,9 @@ class SharedWsMessagingController @Inject() (
         } // todo(Martin, Jared, Léo): return meaningful error about invalid participants
     },
     "get_unread_notifications_count" -> { _ =>
-      val numUnreadUnmuted = messagingCommander.getUnreadUnmutedThreadCount(socket.userId)
-      socket.channel.push(Json.arr("unread_notifications_count", numUnreadUnmuted))
+      val numUnreadUnmutedMessages = messagingCommander.getUnreadUnmutedThreadCount(socket.userId, Some(true))
+      val numUnreadUnmutedNotifications = messagingCommander.getUnreadUnmutedThreadCount(socket.userId, Some(false))
+      socket.channel.push(Json.arr("unread_notifications_count", numUnreadUnmutedMessages + numUnreadUnmutedNotifications, numUnreadUnmutedMessages, numUnreadUnmutedNotifications))
       // note: "unread_notifications_count" is broadcasted elsewhere too
     },
     // inbox notification/thread handlers
@@ -207,8 +208,9 @@ class SharedWsMessagingController @Inject() (
     "set_all_notifications_visited" -> {
       case JsString(notifId) +: _ =>
         val messageId = ExternalId[Message](notifId)
-        val numUnreadUnmuted = messagingCommander.getUnreadUnmutedThreadCount(socket.userId)
-        val lastModified = notificationCommander.setAllNotificationsReadBefore(socket.userId, messageId, numUnreadUnmuted)
+        val numUnreadUnmutedMessages = messagingCommander.getUnreadUnmutedThreadCount(socket.userId, Some(true))
+        val numUnreadUnmutedNotifications = messagingCommander.getUnreadUnmutedThreadCount(socket.userId, Some(false))
+        val lastModified = notificationCommander.setAllNotificationsReadBefore(socket.userId, messageId, numUnreadUnmutedMessages, numUnreadUnmutedNotifications)
         socket.channel.push(Json.arr("all_notifications_visited", notifId, lastModified))
     },
 
