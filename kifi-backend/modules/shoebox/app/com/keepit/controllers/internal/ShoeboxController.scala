@@ -18,6 +18,7 @@ import com.keepit.common.store.ImageSize
 import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.rover.RoverServiceClient
+import com.keepit.rover.model.BasicImages
 import com.keepit.shoebox.model.ids.UserSessionExternalId
 import com.keepit.normalizer._
 import com.keepit.scraper._
@@ -45,6 +46,7 @@ class ShoeboxController @Inject() (
   postOffice: LocalPostOffice,
   airbrake: AirbrakeNotifier,
   keepDecorator: KeepDecorator,
+  keepImageCommander: KeepImageCommander,
   phraseRepo: PhraseRepo,
   collectionRepo: CollectionRepo,
   keepToCollectionRepo: KeepToCollectionRepo,
@@ -512,6 +514,14 @@ class ShoeboxController @Inject() (
     val imageUrlsByLibraryId = imagesByLibraryId.mapValues(libraryImageCommander.getUrl)
     implicit val tupleWrites = TupleFormat.tuple2Writes[Id[Library], String]
     val result = Json.toJson(imageUrlsByLibraryId.toSeq)
+    Ok(result)
+  }
+
+  def getKeepImages() = Action(parse.tolerantJson) { request =>
+    val keepIds = request.body.as[Set[Id[Keep]]]
+    val imagesByKeepId = keepImageCommander.getBasicImagesForKeeps(keepIds)
+    implicit val tupleWrites = TupleFormat.tuple2Writes[Id[Keep], BasicImages]
+    val result = Json.toJson(imagesByKeepId.toSeq)
     Ok(result)
   }
 

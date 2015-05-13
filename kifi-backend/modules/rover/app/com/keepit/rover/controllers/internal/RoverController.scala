@@ -6,10 +6,10 @@ import com.keepit.common.controller.RoverServiceController
 import com.keepit.common.db.{ State, Id, SequenceNumber }
 import com.keepit.common.json.TupleFormat
 import com.keepit.common.logging.Logging
-import com.keepit.model.{ NormalizedURI, IndexableUri }
+import com.keepit.model.{ NormalizedURI }
 import com.keepit.rover.RoverCommander
 import com.keepit.rover.article.{ ArticleKind, ArticleCommander, Article }
-import com.keepit.rover.model.{ RoverImage, RoverArticleSummary, ArticleInfo }
+import com.keepit.rover.model.{ BasicImages, RoverArticleSummary, ArticleInfo }
 import play.api.libs.json._
 import play.api.mvc.Action
 import com.keepit.common.core._
@@ -63,7 +63,7 @@ class RoverController @Inject() (roverCommander: RoverCommander, articleCommande
     val uriIds = (request.body \ "uriIds").as[Set[Id[NormalizedURI]]]
     val kind = (request.body \ "kind").as[ArticleKind[_ <: Article]]
     SafeFuture { roverCommander.getImagesByUris(uriIds)(kind) } imap { imagesByUris =>
-      implicit val writes = TupleFormat.tuple2Writes[Id[NormalizedURI], Set[RoverImage]]
+      implicit val writes = TupleFormat.tuple2Writes[Id[NormalizedURI], BasicImages]
       val json = Json.toJson(imagesByUris.toSeq)
       Ok(json)
     }
@@ -74,7 +74,7 @@ class RoverController @Inject() (roverCommander: RoverCommander, articleCommande
     val url = (request.body \ "url").as[String]
     val kind = (request.body \ "kind").as[ArticleKind[_ <: Article]]
     roverCommander.getOrElseFetchArticleSummaryAndImages(uriId, url)(kind).map { articleSummaryAndImagesOption =>
-      implicit val writes = TupleFormat.tuple2Writes[RoverArticleSummary, Set[RoverImage]]
+      implicit val writes = TupleFormat.tuple2Writes[RoverArticleSummary, BasicImages]
       val json = Json.toJson(articleSummaryAndImagesOption)
       Ok(json)
     }

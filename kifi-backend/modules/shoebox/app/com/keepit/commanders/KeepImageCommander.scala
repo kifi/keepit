@@ -16,6 +16,7 @@ import com.keepit.common.store._
 import com.keepit.model.ImageProcessState.{ ImageLoadedAndHashed, ReadyToPersist }
 import com.keepit.model.ProcessImageOperation.Original
 import com.keepit.model._
+import com.keepit.rover.model.{ BasicImage, BasicImages }
 import play.api.libs.Files.TemporaryFile
 
 import scala.concurrent.{ ExecutionContext, Future }
@@ -35,6 +36,7 @@ trait KeepImageCommander {
   def getBestImagesForKeeps(keepIds: Set[Id[Keep]], imageRequest: ProcessImageRequest): Map[Id[Keep], Option[KeepImage]]
   def getBestImagesForKeepsPatiently(keepIds: Set[Id[Keep]], imageRequest: ProcessImageRequest): Future[Map[Id[Keep], Option[KeepImage]]]
   def getExistingImageUrlForKeepUri(nUriId: Id[NormalizedURI])(implicit session: RSession): Option[String]
+  def getBasicImagesForKeeps(keepIds: Set[Id[Keep]]): Map[Id[Keep], BasicImages]
 
   def autoSetKeepImage(keepId: Id[Keep], localOnly: Boolean = true, overwriteExistingChoice: Boolean = false): Future[ImageProcessDone]
   def setKeepImageFromUrl(imageUrl: String, keepId: Id[Keep], source: ImageSource, requestId: Option[Id[KeepImageRequest]] = None): Future[ImageProcessDone]
@@ -78,17 +80,28 @@ class KeepImageCommanderImpl @Inject() (
   }
 
   def getBestImagesForKeeps(keepIds: Set[Id[Keep]], imageRequest: ProcessImageRequest): Map[Id[Keep], Option[KeepImage]] = {
+    val strictAspectRatio = imageRequest.operation == ProcessImageOperation.Crop
+    val idealImageSize = imageRequest.size
+    getAllImagesForKeeps(keepIds).mapValues(ProcessedImageSize.pickBestImage(idealImageSize, _, strictAspectRatio))
+  }
+
+  def getBasicImagesForKeeps(keepIds: Set[Id[Keep]]): Map[Id[Keep], BasicImages] = {
+    getAllImagesForKeeps(keepIds).mapValues { keepImages =>
+      val images = keepImages.map(BasicImage.fromBaseImage)
+      BasicImages(images.toSet)
+    }
+  }
+
+  private def getAllImagesForKeeps(keepIds: Set[Id[Keep]]): Map[Id[Keep], Seq[KeepImage]] = {
     if (keepIds.isEmpty) {
-      Map.empty[Id[Keep], Option[KeepImage]]
+      Map.empty[Id[Keep], Seq[KeepImage]]
     } else {
       val allImagesByKeepId = db.readOnlyReplica { implicit session => keepImageRepo.getAllForKeepIds(keepIds) }.groupBy(_.keepId)
       (keepIds -- allImagesByKeepId.keys).foreach { missingKeepId =>
         SafeFuture { autoSetKeepImage(missingKeepId, localOnly = false, overwriteExistingChoice = false) }
       }
-      val strictAspectRatio = imageRequest.operation == ProcessImageOperation.Crop
       allImagesByKeepId.mapValues { keepImages =>
-        val validKeepImages = keepImages.filter(_.state == KeepImageStates.ACTIVE)
-        ProcessedImageSize.pickBestImage(imageRequest.size, validKeepImages, strictAspectRatio)
+        keepImages.filter(_.state == KeepImageStates.ACTIVE) // a missing set (keep image not set) is not equivalent to an empty set (keep image set to none)
       }
     }
   }
