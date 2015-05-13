@@ -50,7 +50,8 @@ class KeepDecorator @Inject() (
           val keepersShown = augmentationInfos.flatMap(_.keepers).toSet
           val libraryContributorsShown = augmentationInfos.flatMap(_.libraries.map(_._2)).toSet
           val libraryOwners = idToLibrary.values.map(_.ownerId).toSet
-          db.readOnlyMaster { implicit s => basicUserRepo.loadAll(keepersShown ++ libraryContributorsShown ++ libraryOwners) } //cached
+          val keepers = keeps.map(_.userId).toSet // is this needed? need to double check, it may be redundant
+          db.readOnlyMaster { implicit s => basicUserRepo.loadAll(keepersShown ++ libraryContributorsShown ++ libraryOwners ++ keepers) } //cached
         }
         val idToBasicLibrary = idToLibrary.mapValues(library => BasicLibrary(library, idToBasicUser(library.ownerId)))
 
@@ -86,7 +87,6 @@ class KeepDecorator @Inject() (
 
         val keepsInfo = (keeps zip colls, augmentationInfos, pageInfos zip sourceAttrs).zipped.map {
           case ((keep, collsForKeep), augmentationInfoForKeep, (pageInfoForKeep, sourceAttrOpt)) =>
-            val others = augmentationInfoForKeep.keepersTotal - augmentationInfoForKeep.keepers.size - augmentationInfoForKeep.keepersOmitted
             val keepers = perspectiveUserIdOpt.map { userId => augmentationInfoForKeep.keepers.filterNot(_ == userId) } getOrElse augmentationInfoForKeep.keepers
             val keeps = allMyKeeps.get(keep.uriId) getOrElse Set.empty
             val libraries = {
@@ -110,8 +110,8 @@ class KeepDecorator @Inject() (
               title = keep.title,
               url = keep.url,
               isPrivate = keep.isPrivate,
+              user = Some(idToBasicUser(keep.userId)),
               createdAt = keptAt,
-              others = Some(others),
               keeps = Some(keeps),
               keepers = Some(keepers.map(idToBasicUser)),
               keepersOmitted = Some(augmentationInfoForKeep.keepersOmitted),
