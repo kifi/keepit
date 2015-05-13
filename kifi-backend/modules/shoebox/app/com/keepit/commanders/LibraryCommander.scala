@@ -1721,20 +1721,21 @@ class LibraryCommander @Inject() (
           Left(LibraryFail(BAD_REQUEST, "cannot_change_owner_access"))
 
         case (Some(mem), Some(targetMem), library) =>
+
           if ((mem.isOwner && !targetMem.isOwner) || // owners can edit anyone except themselves
-            (mem.isCollaborator && mem.userId == targetMem.userId) || // a collaborator can only edit herself
+            (mem.isCollaborator && !targetMem.isOwner) || // a collaborator can edit anyone (but the owner). Collaborator cannot invite others to collaborate if the library does not allow collaborators to invite
             (mem.isFollower && mem.userId == targetMem.userId)) { // a follower can only edit herself
             db.readWrite { implicit s =>
               newAccess match {
                 case None =>
                   SafeFuture { convertKeepOwnershipToLibraryOwner(targetMem.userId, library) }
                   Right(libraryMembershipRepo.save(targetMem.copy(state = LibraryMembershipStates.INACTIVE)))
-                case Some(newAccess) if targetMem.access.isHigherAccess(newAccess) => // can only demote membership
+                case Some(newAccess) if mem.isCollaborator && newAccess == LibraryAccess.READ_WRITE && library.inviteToCollab == Some(LibraryAccess.OWNER) =>
+                  log.warn(s"[updateLibraryMembership] invalid permission ${mem} trying to change membership ${targetMem} to ${newAccess} when library has invite policy ${library.inviteToCollab}")
+                  Left(LibraryFail(FORBIDDEN, "invalid_collaborator_permission"))
+                case Some(newAccess) =>
                   SafeFuture { convertKeepOwnershipToLibraryOwner(targetMem.userId, library) }
                   Right(libraryMembershipRepo.save(targetMem.copy(access = newAccess)))
-                case _ =>
-                  log.warn(s"[updateLibraryMembership] attempting to promote membership ${targetMem} access to ${newAccess}")
-                  Left(LibraryFail(BAD_REQUEST, "cannot_promote_access"))
               }
             }
           } else { // invalid permissions
