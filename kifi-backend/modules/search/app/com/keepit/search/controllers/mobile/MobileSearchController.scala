@@ -215,15 +215,16 @@ class MobileSearchController @Inject() (
     val futureUserSearchResultJson = if (maxUsers <= 0) Future.successful(JsNull) else {
       userSearchCommander.searchUsers(userId, acceptLangs, experiments, query, filter, userContext, maxUsers, disablePrefixSearch, None, debugOpt, None).flatMap { userSearchResult =>
         val userIds = userSearchResult.hits.map(_.id).toSet
-        val futureUsers = shoeboxClient.getBasicUsers(userIds.toSeq)
+        val librarySearcher = libraryIndexer.getSearcher
+        val relevantLibraryRecordsAndVisibility = getLibraryRecordsAndVisibility(librarySearcher, userSearchResult.hits.flatMap(_.library).toSet)
+        val libraryOwnerIds = relevantLibraryRecordsAndVisibility.values.map(_._1.ownerId)
+        val futureUsers = shoeboxClient.getBasicUsers((userIds ++ libraryOwnerIds).toSeq)
         val futureFriends = searchFactory.getFriends(userId)
         val futureMutualFriendsByUser = searchFactory.getMutualFriends(userId, userIds)
         val futureKeepCountsByUser = shoeboxClient.getKeepCounts(userIds)
-        val librarySearcher = libraryIndexer.getSearcher
         val libraryMembershipSearcher = libraryMembershipIndexer.getSearcher
         val publishedLibrariesCountByMember = userSearchResult.hits.map { hit => hit.id -> LibraryMembershipIndexable.countPublishedLibrariesByMember(librarySearcher, libraryMembershipSearcher, hit.id) }.toMap
         val publishedLibrariesCountByOwner = userSearchResult.hits.map { hit => hit.id -> LibraryMembershipIndexable.countPublishedLibrariesByOwner(librarySearcher, libraryMembershipSearcher, hit.id) }.toMap
-        val relevantLibraryRecordsAndVisibity = getLibraryRecordsAndVisibility(librarySearcher, userSearchResult.hits.flatMap(_.library).toSet)
         for {
           keepCountsByUser <- futureKeepCountsByUser
           mutualFriendsByUser <- futureMutualFriendsByUser
@@ -235,10 +236,10 @@ class MobileSearchController @Inject() (
             "hits" -> JsArray(userSearchResult.hits.map { hit =>
               val user = users(hit.id)
               val relevantLibrary = hit.library.flatMap { libraryId =>
-                relevantLibraryRecordsAndVisibity.get(libraryId).map {
+                relevantLibraryRecordsAndVisibility.get(libraryId).map {
                   case (record, visibility) =>
-                    require(record.ownerId == hit.id, "Relevant library owner doesn't match returned user.")
-                    val library = makeBasicLibrary(record, visibility, user)
+                    val owner = users(record.ownerId)
+                    val library = makeBasicLibrary(record, visibility, owner)
                     Json.obj("id" -> library.id, "name" -> library.name, "color" -> library.color, "path" -> library.path, "visibility" -> library.visibility)
                 }
               }
