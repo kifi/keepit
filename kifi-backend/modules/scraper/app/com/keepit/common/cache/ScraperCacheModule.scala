@@ -1,6 +1,7 @@
 package com.keepit.common.cache
 
 import com.keepit.model.cache.UserSessionViewExternalIdCache
+import com.keepit.shoebox.model.KeepImagesCache
 
 import scala.concurrent.duration._
 import com.google.inject.{ Provides, Singleton }
@@ -157,4 +158,7 @@ case class ScraperCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   def userActivePersonasCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new UserActivePersonasCache(stats, accessLog, (innerRepo, 5 minutes), (outerRepo, 14 days))
 
+  @Provides @Singleton
+  def keepImagesCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new KeepImagesCache(stats, accessLog, (outerRepo, 30 days))
 }

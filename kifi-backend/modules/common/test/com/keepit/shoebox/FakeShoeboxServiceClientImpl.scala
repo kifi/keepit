@@ -18,6 +18,7 @@ import com.keepit.model._
 import com.keepit.model.view.{ LibraryMembershipView, UserSessionView }
 import com.keepit.rover.document.utils.Signature
 import com.keepit.rover.fetcher.HttpRedirect
+import com.keepit.rover.model.BasicImages
 import com.keepit.scraper.ScrapeRequest
 import com.keepit.search._
 import com.keepit.shoebox.model.ids.UserSessionExternalId
@@ -743,6 +744,8 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
   def getKeepCounts(userId: Set[Id[User]]): Future[Map[Id[User], Int]] = ???
 
   def getLibraryImageUrls(libraryIds: Set[Id[Library]], idealImageSize: ImageSize): Future[Map[Id[Library], String]] = ???
+
+  def getKeepImages(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], BasicImages]] = Future.successful(Map.empty)
 
   def getLibrariesWithWriteAccess(userId: Id[User]): Future[Set[Id[Library]]] = Future.successful {
     allLibraryMemberships.values.collect { case membership if membership.userId == userId && membership.canWrite => membership.libraryId }.toSet

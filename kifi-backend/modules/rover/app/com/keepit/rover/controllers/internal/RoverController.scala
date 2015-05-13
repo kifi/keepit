@@ -6,10 +6,10 @@ import com.keepit.common.controller.RoverServiceController
 import com.keepit.common.db.{ State, Id, SequenceNumber }
 import com.keepit.common.json.TupleFormat
 import com.keepit.common.logging.Logging
-import com.keepit.model.{ NormalizedURI, IndexableUri }
+import com.keepit.model.{ NormalizedURI }
 import com.keepit.rover.RoverCommander
 import com.keepit.rover.article.{ ArticleKind, ArticleCommander, Article }
-import com.keepit.rover.model.{ BasicImages, BasicImage, RoverArticleSummary, ArticleInfo }
+import com.keepit.rover.model.{ BasicImages, RoverArticleSummary, ArticleInfo }
 import play.api.libs.json._
 import play.api.mvc.Action
 import com.keepit.common.core._
