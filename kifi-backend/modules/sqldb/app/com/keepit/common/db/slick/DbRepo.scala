@@ -117,7 +117,9 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with FortyTwoGenericTypeMappers with
     val target = getCompiled(model.id.get)
     val count = target.update(model)
     if (count != 1) {
-      deleteCache(model)
+      session.directCacheAccess {
+        deleteCache(model)
+      }
       throw new IllegalStateException(s"Updating $count models of [${model.toString.abbreviate(200).trimAndRemoveLineBreaks}] instead of exactly one. Maybe there is a cache issue. The actual model (from cache) is no longer in db.")
     }
     model
