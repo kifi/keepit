@@ -4,7 +4,7 @@ import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.core._
 import com.keepit.common.db.{ Id, SequenceNumber }
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.model.NormalizedURI
+import com.keepit.model.{ NormalizedURI }
 import com.keepit.rover.article.{ ArticleKind, Article, ArticleCommander }
 import com.keepit.rover.article.content.{ HttpInfoHolder, NormalizationInfoHolder }
 import com.keepit.rover.image.ImageCommander
@@ -64,7 +64,7 @@ class RoverCommander @Inject() (
 
   def getImagesByUris[A <: Article](uriIds: Set[Id[NormalizedURI]])(implicit kind: ArticleKind[A]): Map[Id[NormalizedURI], BasicImages] = {
     imageCommander.getImageInfosByUrisAndArticleKind[A](uriIds).mapValues { imageInfos =>
-      BasicImages(imageInfos.map(RoverImageInfo.toRoverImage))
+      BasicImages(imageInfos.map(BasicImage.fromBaseImage))
     }
   }
 

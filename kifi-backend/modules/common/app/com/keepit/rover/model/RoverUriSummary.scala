@@ -5,14 +5,13 @@ import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, CacheStatis
 import com.keepit.common.db.Id
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.store.{ S3ImageConfig, ImageSize, ImagePath }
-import com.keepit.model.{ ImageHash, NormalizedURI, URISummary, PageAuthor }
+import com.keepit.model._
 import com.keepit.rover.article.content.EmbedlyMedia
 import com.keepit.rover.article.{ EmbedlyArticle, Article, ArticleKind }
 import com.kifi.macros.json
 import org.joda.time.DateTime
 import play.api.libs.json.{ JsValue, Format, Json }
 import scala.concurrent.duration._
-import play.api.libs.functional.syntax._
 
 import scala.concurrent.duration.Duration
 
@@ -59,6 +58,12 @@ case class BasicImage(
   sourceImageHash: ImageHash,
   path: ImagePath,
   size: ImageSize)
+
+object BasicImage {
+  implicit def fromBaseImage(image: BaseImage): BasicImage = {
+    BasicImage(image.sourceFileHash, image.imagePath, image.imageSize)
+  }
+}
 
 case class BasicImages(images: Set[BasicImage]) {
   def get(idealSize: ImageSize, strictAspectRatio: Boolean = false): Option[BasicImage] = {

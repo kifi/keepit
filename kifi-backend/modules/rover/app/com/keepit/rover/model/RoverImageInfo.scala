@@ -62,6 +62,4 @@ object RoverImageInfo {
       info.sourceImageUrl
     )
   }
-
-  implicit def toRoverImage(imageInfo: RoverImageInfo): BasicImage = BasicImage(imageInfo.sourceImageHash, imageInfo.path, imageInfo.imageSize)
 }

@@ -130,7 +130,7 @@ class RoverServiceClientImpl(
           missingKeys.map { key => key -> missingImagesByUriId.getOrElse(key.uriId, BasicImages.empty) }.toMap
         }
       } imap {
-        _.collect { case (key, images) => key.uriId -> images }
+        _.map { case (key, images) => key.uriId -> images }
       }
     }
   }
