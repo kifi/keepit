@@ -1045,15 +1045,19 @@ class LibraryCommander @Inject() (
           for ((recipient, inviteAccess, msgOpt) <- inviteList) yield {
 
             inviteAccess match {
+              // non-owner/non-collaborator tries to invite to collaborate
               case LibraryAccess.READ_WRITE if !inviterIsOwner && !inviterIsCollab =>
                 log.warn(s"[inviteUsersToLibrary] error invite to collaborate: user $inviterId attempting to invite $recipient for RW access to library (${lib.id.get}, ${lib.name}, ${lib.visibility}, ${lib.inviteToCollab})")
                 None
+              // collaborator tries to invite to collaborate, but library setting is set to owner_only
               case LibraryAccess.READ_WRITE if inviterIsCollab && lib.inviteToCollab == Some(LibraryAccess.OWNER) =>
                 log.warn(s"[inviteUsersToLibrary] error invite to collaborate: user $inviterId attempting to invite $recipient for RW access to library (${lib.id.get}, ${lib.name}, ${lib.visibility}, ${lib.inviteToCollab})")
                 None
+              // non-owner/non-collaborator tries to invite to follow (secret libraries only)
               case LibraryAccess.READ_ONLY if lib.isSecret && !inviterIsOwner && !inviterIsCollab =>
                 log.warn(s"[inviteUsersToLibrary] error invite to follow: user $inviterId attempting to invite $recipient for RO access to library (${lib.id.get}, ${lib.name}, ${lib.visibility}, ${lib.inviteToCollab})")
                 None
+              // collaborator in secret library tries to invite to follow, but library setting is set to owner_only
               case LibraryAccess.READ_ONLY if lib.isSecret && inviterIsCollab && lib.inviteToCollab == Some(LibraryAccess.OWNER) =>
                 log.warn(s"[inviteUsersToLibrary] error invite to follow: user $inviterId attempting to invite $recipient for RO access to library (${lib.id.get}, ${lib.name}, ${lib.visibility}, ${lib.inviteToCollab})")
                 None
