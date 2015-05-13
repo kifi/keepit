@@ -9,7 +9,7 @@ import scala.util.{ Try }
 
 import com.google.inject.Inject
 import com.keepit.abook.ABookServiceClient
-import com.keepit.commanders.{ AuthCommander, UserCommander }
+import com.keepit.commanders.{ AuthCommander, UserCommander, LibraryCommander }
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.{ AdminUserActions, UserActionsHelper, UserRequest }
 import com.keepit.common.db._
@@ -96,7 +96,9 @@ class AdminUserController @Inject() (
     userValueRepo: UserValueRepo,
     collectionRepo: CollectionRepo,
     keepToCollectionRepo: KeepToCollectionRepo,
+    heimdalContextBuilder: HeimdalContextBuilderFactory,
     libraryRepo: LibraryRepo,
+    libraryCommander: LibraryCommander,
     libraryMembershipRepo: LibraryMembershipRepo,
     libraryInviteRepo: LibraryInviteRepo,
     invitationRepo: InvitationRepo,
@@ -407,6 +409,26 @@ class AdminUserController @Inject() (
 
   def fakeUsersView(page: Int = 0) = AdminUserPage.async { implicit request =>
     userStatisticsPage(page, FakeUsersViewType).map { p => Ok(html.admin.users(p, None)) }
+  }
+
+  def createLibrary(userId: Id[User]) = AdminUserPage(parse.tolerantFormUrlEncoded) { implicit request =>
+    val name = request.body.get("name").flatMap(_.headOption)
+    val visibility = request.body.get("visibility").flatMap(_.headOption).map(LibraryVisibility(_))
+    val slug = request.body.get("slug").flatMap(_.headOption)
+
+    (name, visibility, slug) match {
+      case (Some(name), Some(visibility), Some(slug)) => {
+        val libraryAddRequest = LibraryAddRequest(name, visibility, slug)
+
+        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
+        val result: Either[LibraryFail, Library] = libraryCommander.addLibrary(libraryAddRequest, userId)
+        result match {
+          case Left(fail) => BadRequest(fail.message)
+          case Right(_) => Ok
+        }
+      }
+      case _ => BadRequest("All Fields are required.")
+    }
   }
 
   def byExperimentUsersView(page: Int, exp: String) = AdminUserPage.async { implicit request =>
