@@ -382,7 +382,7 @@ class MobileLibraryController @Inject() (
     val (keep, _) = keepsCommander.keepOne(rawKeep, request.userId, libraryId, request.kifiInstallationId, source, SocialShare(jsonBody))
     val hashtagNamesToPersist = Hashtags.findAllHashtagNames(keep.note.getOrElse(""))
     db.readWrite { implicit s =>
-      keepsCommander.persistHashtagsForKeep(request.userId, keep, hashtagNamesToPersist.toSeq)(s, context)
+      keepsCommander.persistHashtagsForKeepAndSaveKeep(request.userId, keep, hashtagNamesToPersist.toSeq)(s, context)
     }
     imageUrlOpt.map { imageUrl =>
       keepImageCommander.setKeepImageFromUrl(imageUrl, keep.id.get, ImageSource.UserPicked)

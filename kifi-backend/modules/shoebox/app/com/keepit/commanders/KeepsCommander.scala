@@ -434,10 +434,10 @@ class KeepsCommander @Inject() (
   def updateKeepNote(userId: Id[User], oldKeep: Keep, newNote: String)(implicit context: HeimdalContext) = {
     val noteToPersist = Some(newNote.trim).filter(_.nonEmpty)
     if (noteToPersist != oldKeep.note) {
-      val updatedKeep = oldKeep.copy(note = noteToPersist)
+      val updatedKeep = oldKeep.copy(userId = userId, note = noteToPersist)
       val hashtagNamesToPersist = Hashtags.findAllHashtagNames(noteToPersist.getOrElse(""))
       db.readWrite { implicit s =>
-        persistHashtagsForKeep(userId, updatedKeep, hashtagNamesToPersist.toSeq)(s, context)
+        persistHashtagsForKeepAndSaveKeep(userId, updatedKeep, hashtagNamesToPersist.toSeq)(s, context)
       }
     }
   }
@@ -609,7 +609,7 @@ class KeepsCommander @Inject() (
       case Failure(e) => Left(e.getMessage)
       case Success((keep, isNewKeep)) =>
         val tags = db.readWrite { implicit s =>
-          persistHashtags(userId, keep, selectedTagNames)(s, context)
+          persistHashtagsAndSaveKeep(userId, keep, selectedTagNames)(s, context)
           keepToCollectionRepo.getCollectionsForKeep(keep.id.get).map { id => collectionRepo.get(id) }
         }
         postSingleKeepReporting(keep, isNewKeep, library, socialShare)
@@ -617,13 +617,13 @@ class KeepsCommander @Inject() (
     }
   }
 
-  def persistHashtagsForKeep(userId: Id[User], keep: Keep, selectedTagNames: Seq[String])(implicit session: RWSession, context: HeimdalContext) = {
-    persistHashtags(userId, keep, selectedTagNames)(session, context)
+  def persistHashtagsForKeepAndSaveKeep(userId: Id[User], keep: Keep, selectedTagNames: Seq[String])(implicit session: RWSession, context: HeimdalContext) = {
+    persistHashtagsAndSaveKeep(userId, keep, selectedTagNames)(session, context)
     searchClient.updateKeepIndex()
   }
 
   // Changes a keep's notes based on the hashtags to persist!
-  private def persistHashtags(userId: Id[User], keep: Keep, selectedTagNames: Seq[String])(implicit session: RWSession, context: HeimdalContext) = {
+  private def persistHashtagsAndSaveKeep(userId: Id[User], keep: Keep, selectedTagNames: Seq[String])(implicit session: RWSession, context: HeimdalContext) = {
     // get all tags from hashtag names list
     val selectedTags = selectedTagNames.map { getOrCreateTag(userId, _) }
     val selectedTagIds = selectedTags.map(_.id.get).toSet
