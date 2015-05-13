@@ -63,13 +63,13 @@ class RoverCommander @Inject() (
     }
   }
 
-  def getImagesByUris[A <: Article](uriIds: Set[Id[NormalizedURI]])(implicit kind: ArticleKind[A]): Map[Id[NormalizedURI], Set[RoverImage]] = {
+  def getImagesByUris[A <: Article](uriIds: Set[Id[NormalizedURI]])(implicit kind: ArticleKind[A]): Map[Id[NormalizedURI], Set[BasicImage]] = {
     imageCommander.getImageInfosByUrisAndArticleKind[A](uriIds).mapValues { imageInfos =>
       imageInfos.map(RoverImageInfo.toRoverImage)
     }
   }
 
-  def getOrElseFetchArticleSummaryAndImages[A <: Article](uriId: Id[NormalizedURI], url: String)(implicit kind: ArticleKind[A]): Future[Option[(RoverArticleSummary, Set[RoverImage])]] = {
+  def getOrElseFetchArticleSummaryAndImages[A <: Article](uriId: Id[NormalizedURI], url: String)(implicit kind: ArticleKind[A]): Future[Option[(RoverArticleSummary, Set[BasicImage])]] = {
     import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 
     val futureArticleSummaryOption = {

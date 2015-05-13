@@ -53,22 +53,22 @@ object RoverArticleSummary {
 }
 
 @json
-case class RoverImage(
+case class BasicImage(
   sourceImageHash: ImageHash,
   path: ImagePath,
   size: ImageSize)
 
-case class RoverImages(images: Set[RoverImage]) {
-  def get(idealSize: ImageSize, strictAspectRatio: Boolean = false): Option[RoverImage] = {
+case class BasicImages(images: Set[BasicImage]) {
+  def get(idealSize: ImageSize, strictAspectRatio: Boolean = false): Option[BasicImage] = {
     ProcessedImageSize.pickByIdealImageSize(idealSize, images, strictAspectRatio)(_.size)
   }
 }
 
-object RoverImages {
-  val empty = RoverImages(Set.empty)
+object BasicImages {
+  val empty = BasicImages(Set.empty)
 }
 
-case class RoverUriSummary(article: RoverArticleSummary, images: RoverImages) {
+case class RoverUriSummary(article: RoverArticleSummary, images: BasicImages) {
   def toUriSummary(idealImageSize: ImageSize)(implicit imageConfig: S3ImageConfig): URISummary = {
     val image = images.get(idealImageSize)
     URISummary(
@@ -95,12 +95,12 @@ case class RoverArticleSummaryKey(uriId: Id[NormalizedURI], kind: ArticleKind[_ 
 class RoverArticleSummaryCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends JsonCacheImpl[RoverArticleSummaryKey, RoverArticleSummary](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
-case class RoverArticleImagesKey(uriId: Id[NormalizedURI], kind: ArticleKind[_ <: Article]) extends Key[Set[RoverImage]] {
+case class RoverArticleImagesKey(uriId: Id[NormalizedURI], kind: ArticleKind[_ <: Article]) extends Key[Set[BasicImage]] {
   override val version = 2
   val namespace = "images_by_uri_id_and_article_kind"
   def toKey(): String = s"${uriId.id}:${kind.typeCode}"
 }
 
 class RoverArticleImagesCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[RoverArticleImagesKey, Set[RoverImage]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+  extends JsonCacheImpl[RoverArticleImagesKey, Set[BasicImage]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
