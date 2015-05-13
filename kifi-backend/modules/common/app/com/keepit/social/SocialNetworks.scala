@@ -7,7 +7,7 @@ import play.api.libs.json.JsString
 
 case class SocialId(id: String) extends Logging {
   override def toString = id
-  if (id.isEmpty) log.error("Social Id Is broken", new Exception("Social Id Is broken"))
+  if (id.trim.isEmpty) log.error("Social Id Is broken", new Exception("Social Id Is broken"))
 }
 
 object SocialId {
