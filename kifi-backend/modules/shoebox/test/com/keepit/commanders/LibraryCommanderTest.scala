@@ -542,7 +542,6 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           (Left(userHulk.id.get), LibraryAccess.READ_ONLY, None),
           (Right(thorEmail), LibraryAccess.READ_ONLY, Some("America > Asgard")))
         val res1 = Await.result(libraryCommander.inviteUsersToLibrary(libMurica.id.get, userCaptain.id.get, inviteList1), Duration(5, "seconds"))
-
         res1.isRight === true
         res1.right.get === Seq((Left(BasicUser.fromUser(userIron)), LibraryAccess.READ_ONLY),
           (Left(BasicUser.fromUser(userAgent)), LibraryAccess.READ_ONLY),
@@ -557,22 +556,51 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           allInvites.count(_.emailAddress.isDefined) === 1
         }
 
-        // Agent Nick Fury accepts invite & joins the Library
-        libraryCommander.joinLibrary(userAgent.id.get, libMurica.id.get)
         // Tests that users can have multiple invitations multiple times
         // but if invites are sent within 5 Minutes of each other, they do not persist!
         Await.result(libraryCommander.inviteUsersToLibrary(libMurica.id.get, userCaptain.id.get, inviteList1), Duration(5, "seconds")).isRight === true
         db.readOnlyMaster { implicit s =>
-          libraryInviteRepo.count === 4 // 8 invites sent, only 4 persisted
+          libraryInviteRepo.count === 4 // 8 invites sent, only 4 persisted from previous call
         }
 
-        val inviteList2_RW = Seq((Left(userIron.id.get), LibraryAccess.READ_WRITE, None))
-        val inviteList2_RO = Seq((Left(userIron.id.get), LibraryAccess.READ_ONLY, None))
-        // Scumbag Ironman tries to invite himself for READ_ONLY access (OK for Published Library)
-        Await.result(libraryCommander.inviteUsersToLibrary(libMurica.id.get, userIron.id.get, inviteList2_RO), Duration(5, "seconds")).isRight === true
+        // Test Collaborators!!!! The Falcon is a collaborator to library 'Murica
+        val userFalcon = db.readWrite { implicit s =>
+          val userFalcon = user().withUsername("thefalcon").withEmailAddress("samwilson@usa.gov").saved
+          membership().withLibraryCollaborator(libMurica.id.get, userFalcon.id.get).saved
+          userFalcon
+        }
 
-        // Scumbag Ironman tries to invite himself for READ_WRITE access (NOT OK for Published Library)
-        Await.result(libraryCommander.inviteUsersToLibrary(libMurica.id.get, userIron.id.get, inviteList2_RW), Duration(5, "seconds")).isRight === true
+        val inviteCollab1 = Seq((Right(EmailAddress("blackwidow@shield.gov")), LibraryAccess.READ_WRITE, None))
+        val inviteCollab2 = Seq((Right(EmailAddress("hawkeye@shield.gov")), LibraryAccess.READ_WRITE, None))
+
+        // Test owner invite to collaborate (invite persists)
+        Await.result(libraryCommander.inviteUsersToLibrary(libMurica.id.get, userCaptain.id.get, inviteCollab1), Duration(5, "seconds")).isRight === true
+        db.readOnlyMaster { implicit s =>
+          libraryInviteRepo.count === 5
+        }
+        // Test collaborator invite to collaborate (invite persists)
+        Await.result(libraryCommander.inviteUsersToLibrary(libMurica.id.get, userFalcon.id.get, inviteCollab1), Duration(5, "seconds")).isRight === true
+        db.readOnlyMaster { implicit s =>
+          libraryInviteRepo.count === 6
+        }
+
+        // Set library to not allow collaborators to invite & test invite to collaborate
+        db.readWrite { implicit s =>
+          libraryRepo.save(libMurica.copy(inviteToCollab = Some(LibraryAccess.OWNER)))
+        }
+
+        // Test owner invite to collaborate (invite persists)
+        Await.result(libraryCommander.inviteUsersToLibrary(libMurica.id.get, userCaptain.id.get, inviteCollab2), Duration(5, "seconds")).isRight === true
+        db.readOnlyMaster { implicit s =>
+          libraryInviteRepo.count === 7
+        }
+
+        // Test collaborator invite to collaborate (invite does NOT persist)
+        Await.result(libraryCommander.inviteUsersToLibrary(libMurica.id.get, userFalcon.id.get, inviteCollab2), Duration(5, "seconds")).isRight === true
+        db.readOnlyMaster { implicit s =>
+          libraryInviteRepo.count === 7
+        }
+
       }
     }
 

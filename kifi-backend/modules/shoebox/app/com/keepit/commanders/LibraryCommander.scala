@@ -758,7 +758,7 @@ class LibraryCommander @Inject() (
           }
           val invitesToPersist = key._2.filter { invite =>
             lastInviteOpt.map { lastInvite =>
-              lastInvite.createdAt.plusMinutes(5).isBefore(invite.createdAt)
+              lastInvite.access != invite.access || lastInvite.createdAt.plusMinutes(5).isBefore(invite.createdAt)
             }.getOrElse(true)
           }
 
@@ -1010,54 +1010,62 @@ class LibraryCommander @Inject() (
     val targetLib = db.readOnlyMaster { implicit s =>
       libraryRepo.get(libraryId)
     }
-    if (!(targetLib.ownerId == inviterId || targetLib.visibility == LibraryVisibility.PUBLISHED))
-      Future.successful(Left(LibraryFail(FORBIDDEN, "permission_denied")))
-    else if (targetLib.kind == LibraryKind.SYSTEM_MAIN || targetLib.kind == LibraryKind.SYSTEM_SECRET)
+    if (targetLib.kind == LibraryKind.SYSTEM_MAIN || targetLib.kind == LibraryKind.SYSTEM_SECRET)
       Future.successful(Left(LibraryFail(BAD_REQUEST, "cant_invite_to_system_generated_library")))
     else {
-      val futureInvitedContactsByEmailAddress = {
+      // get all invitee contacts by email address
+      val futureInviteeContactsByEmailAddress = {
         val invitedEmailAddresses = inviteList.collect { case (Right(emailAddress), _, _) => emailAddress }
         abookClient.internKifiContacts(inviterId, invitedEmailAddresses.map(BasicContact(_)): _*).imap { kifiContacts =>
           (invitedEmailAddresses zip kifiContacts).toMap
         }
       }
 
-      val invitedBasicUsersById = {
+      // get all invitee users (mapped userId -> basicuser)
+      val inviteeUserMap = {
         val invitedUserIds = inviteList.collect { case (Left(userId), _, _) => userId }
-        db.readOnlyMaster { implicit s => basicUserRepo.loadAll(invitedUserIds.toSet) }
+        db.readOnlyMaster { implicit s =>
+          basicUserRepo.loadAll(invitedUserIds.toSet)
+        }
       }
 
-      futureInvitedContactsByEmailAddress.map { invitedContactsByEmailAddress =>
-        val invitesAndInvitees = db.readOnlyMaster { implicit s =>
+      futureInviteeContactsByEmailAddress.map { inviteeContactsByEmailAddress => // when email contacts are done fetching... process through inviteList
+        val invitesForInvitees = db.readOnlyMaster { implicit s =>
+          val libMembersMap = libraryMembershipRepo.getWithLibraryId(targetLib.id.get).map { mem =>
+            mem.userId -> mem
+          }.toMap
+
           for ((recipient, inviteAccess, msgOpt) <- inviteList) yield {
-            val access = if (targetLib.ownerId != inviterId) LibraryAccess.READ_ONLY else inviteAccess
-            recipient match {
-              case Left(userId) =>
-                if (userId == targetLib.ownerId) {
-                  None
-                } else {
-                  libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId) match {
-                    case Some(mem) if mem.access == access =>
+            if (targetLib.inviteToCollab == Some(LibraryAccess.OWNER) && inviterId != targetLib.ownerId && inviteAccess == LibraryAccess.READ_WRITE) {
+              log.warn(s"[inviteUsersToLibrary] user $inviterId attempting to invite $recipient for RW access for library (${targetLib.id.get}, ${targetLib.name}, ${targetLib.inviteToCollab})")
+              None // don't persist invite if non-owner is inviting someone to be a collaborator (when no collab invite is set)
+            } else {
+              recipient match {
+                case Left(userId) =>
+                  libMembersMap.get(userId) match {
+                    case Some(mem) if mem.isOwner || mem.isCollaborator => // don't persist invite to an owner or collaborator
+                      log.warn(s"[inviteUsersToLibrary] user $inviterId attempting to invite user $userId when recipient is already owner or collaborator")
+                      None
+                    case Some(mem) if mem.access == inviteAccess => // don't persist invite to a user with same access
+                      log.warn(s"[inviteUsersToLibrary] user $inviterId attempting to invite user $userId for $inviteAccess access when membership has same access level")
                       None
                     case _ =>
-                      val newInvite = LibraryInvite(libraryId = libraryId, inviterId = inviterId, userId = Some(userId), access = access, message = msgOpt)
-                      val inviteeInfo = (Left(invitedBasicUsersById(userId)), access)
+                      val newInvite = LibraryInvite(libraryId = libraryId, inviterId = inviterId, userId = Some(userId), access = inviteAccess, message = msgOpt)
+                      val inviteeInfo = (Left(inviteeUserMap(userId)), inviteAccess)
                       Some(newInvite, inviteeInfo)
                   }
-                }
-              case Right(email) =>
-                val newInvite = LibraryInvite(libraryId = libraryId, inviterId = inviterId, emailAddress = Some(email), access = access, message = msgOpt)
-                val inviteeInfo = (Right(invitedContactsByEmailAddress(email)), access)
-                Some(newInvite, inviteeInfo)
+
+                case Right(email) =>
+                  val newInvite = LibraryInvite(libraryId = libraryId, inviterId = inviterId, emailAddress = Some(email), access = inviteAccess, message = msgOpt)
+                  val inviteeInfo = (Right(inviteeContactsByEmailAddress(email)), inviteAccess)
+                  Some(newInvite, inviteeInfo)
+              }
             }
           }
         }
-        val (invites, inviteesWithAccess) = invitesAndInvitees.flatten.unzip
+        val (invites, inviteesWithAccess) = invitesForInvitees.flatten.unzip
         processInvites(invites)
-        Future {
-          libraryAnalytics.sendLibraryInvite(inviterId, targetLib, inviteList.map { _._1 }, eventContext)
-        }
-
+        libraryAnalytics.sendLibraryInvite(inviterId, targetLib, inviteList.map { _._1 }, eventContext)
         Right(inviteesWithAccess)
       }
     }
