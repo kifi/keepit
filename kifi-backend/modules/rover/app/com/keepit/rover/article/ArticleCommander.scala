@@ -148,12 +148,15 @@ class ArticleCommander @Inject() (
     val toBeInternedByPolicy = articlePolicy.toBeInterned(url, state)
     val interned = internArticleInfoByUri(uriId, url, toBeInternedByPolicy)
     val neverFetched = interned.collect { case (kind, info) if info.lastFetchedAt.isEmpty => (info.id.get -> info) }
-    fetchWithTopPriority(neverFetched.keySet).imap { results =>
-      val resultsByKind = results.collect { case (infoId, result) => neverFetched(infoId).articleKind -> result }
-      log.info(s"Fetching with top priority for uri ${uriId}: ${url}\n${resultsByKind.mkString("\n")}")
-      val failed = resultsByKind.collect { case (kind, Failure(error)) => kind -> error }
-      if (failed.nonEmpty) {
-        airbrake.notify(s"Failed to schedule top priority fetches for uri ${uriId}: ${url}\n${failed.mkString("\n")}")
+    if (neverFetched.isEmpty) Future.successful(())
+    else {
+      fetchWithTopPriority(neverFetched.keySet).imap { results =>
+        val resultsByKind = results.collect { case (infoId, result) => neverFetched(infoId).articleKind -> result }
+        log.info(s"Fetching with top priority for uri ${uriId}: ${url} -> ${resultsByKind.mkString(" | ")}")
+        val failed = resultsByKind.collect { case (kind, Failure(error)) => kind -> error }
+        if (failed.nonEmpty) {
+          airbrake.notify(s"Failed to schedule top priority fetches for uri ${uriId}: ${url} -> ${failed.mkString(" | ")}")
+        }
       }
     }
   }
