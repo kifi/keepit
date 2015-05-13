@@ -6,7 +6,6 @@ k.keepNote = k.keepNote || (function () {
 
   var TEXT = document.TEXT_NODE;
   var ELEM = document.ELEMENT_NODE;
-  var OK_ELEMS = {DIV: 1, BR: 1};
 
   // control codes, whitespace (including nbsp), punctuation (excluding #)
   var nonTagCharCodes = ('0000-"$-/:-@\\[-^`{-00A1' +
@@ -18,18 +17,18 @@ k.keepNote = k.keepNote || (function () {
     'FF01-FF03FF05-FF0AFF0C-FF0FFF1AFF1BFF1FFF20FF3B-FF3DFF3FFF5BFF5DFF5F-FF65FFE5').replace(/([\dA-F]{4})/g, '\\u$1');
   var hashTagCharsRe = new RegExp('^[^#' + nonTagCharCodes + ']+');
   var hashTagPattern = '#[^#' + nonTagCharCodes + ']*[^_\\d#' + nonTagCharCodes + '][^#' + nonTagCharCodes + ']*';
-  var hashTagStartRe = new RegExp('^' + hashTagPattern + '(?=[' + nonTagCharCodes + ']|$)');
   var hashTagFindRe = new RegExp('(?:^|[#' + nonTagCharCodes + '])(' + hashTagPattern + ')(?=[' + nonTagCharCodes + ']|$)');
   var hashTagMarkdownRe = /\[#((?:\\.|[^\]])*)\]/g;
   var hashTagInHtmlRe = /<span(?: [\w-]+="[^"]*")*? class="[^"]*?kifi-keep-box-tag[^"]*"(?: [\w-]+="[^"]*")*>(.*?)<\/span>/gi;
-  var allBrTagsRe = /<br[^>]*>/gi;  // for Firefox
+  var allLineBreakTagsRe = /<(?:div[^>]*>(?:<br[^>]*><\/div>)?|br[^>]*>|\/div><div[^>]*>)/gi;
+  var allDivEndTagsRe = /<\/div>/gi;
   var multipleBlankLinesRe = /\n(?:\s*\n)+/g;
   var escapedLeftBracketHashOrAtRe = /\[\\([#@])/g;
   var backslashEscapeRe = /[(\]\\)]/g;
   var backslashUnescapeRe = /\\(.)/g;
 
   function noteTextToHtml(text) {
-    var parts = text.split(hashTagMarkdownRe);
+    var parts = text.replace(multipleBlankLinesRe, '\n\n').split(hashTagMarkdownRe);
     for (var i = 1; i < parts.length; i += 2) {
       parts[i] = '<span class="kifi-keep-box-tag">#' + Mustache.escape(parts[i].replace(backslashUnescapeRe, '$1')) + '</span>';
     }
@@ -40,7 +39,11 @@ k.keepNote = k.keepNote || (function () {
   }
 
   function noteHtmlToText(html) {
-    var html2 = html.replace(allBrTagsRe, '\n').replace(multipleBlankLinesRe, '\n\n').replace(hashTagInHtmlRe, function($0, $1) {
+    var html2 = html
+      .replace(allLineBreakTagsRe, '\n')
+      .replace(allDivEndTagsRe, '')
+      .replace(multipleBlankLinesRe, '\n\n')
+      .replace(hashTagInHtmlRe, function($0, $1) {
         return '[' + $1.replace(backslashEscapeRe, '\\$1') + ']';
       });
     return $('<div>').html(html2).text().trim();
@@ -487,6 +490,7 @@ k.keepNote = k.keepNote || (function () {
           acceptSuggestion(e.data);
           return false;
         }
+        break;
       case 13: // enter
         if (e.data.suggestion) {
           acceptSuggestion(e.data);
@@ -550,7 +554,7 @@ k.keepNote = k.keepNote || (function () {
           }
           markUp(node);
         }
-        var pos = setSelection(node, idx + pasteText.length);
+        pos = setSelection(node, idx + pasteText.length);
         updateSuggestions(this, e.data, pos);
       }
     }
@@ -576,12 +580,12 @@ k.keepNote = k.keepNote || (function () {
           idx += replaceParent(node);
           setSelection(node, idx);
         }
-        var pos = inHashTag(node) ?
+        pos = inHashTag(node) ?
           handleHashTagTextNodeInput(node, idx, e.data.lastKeyedCharCode) :
           handleSimpleTextNodeInput(node, idx);
         updateSuggestions(this, e.data, pos);
       } else {
-        log('[input]', node.tagName || node.nodeType, idx);
+        log('[input]', node.tagName || node.nodeType, r.endOffset);
       }
     }
     e.data.lastKeyedCharCode = null;
