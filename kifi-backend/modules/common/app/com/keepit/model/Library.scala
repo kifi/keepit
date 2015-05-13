@@ -58,6 +58,8 @@ case class Library(
     case (LibraryKind.SYSTEM_MAIN | LibraryKind.SYSTEM_SECRET) => true
     case _ => false
   }
+  val isPublished: Boolean = visibility == LibraryVisibility.PUBLISHED
+  val isSecret: Boolean = visibility == LibraryVisibility.SECRET
 }
 
 object Library extends ModelWithPublicIdCompanion[Library] {
