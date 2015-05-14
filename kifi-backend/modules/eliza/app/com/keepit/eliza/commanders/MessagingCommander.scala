@@ -541,7 +541,9 @@ class MessagingCommander @Inject() (
     }
     messagingAnalytics.clearedNotification(userId, message, thread, context)
 
-    notificationCommander.notifyRead(userId, thread.externalId, msgExtId, thread.nUrl.getOrElse(""), message.createdAt, getUnreadUnmutedThreadCount(userId))
+    val unreadMessagesCount = getUnreadUnmutedThreadCount(userId, Some(true))
+    val unreadNotificationsCount = getUnreadUnmutedThreadCount(userId, Some(false))
+    notificationCommander.notifyRead(userId, thread.externalId, msgExtId, thread.nUrl.getOrElse(""), message.createdAt, unreadMessagesCount, unreadNotificationsCount)
   }
 
   def setUnread(userId: Id[User], msgExtId: ExternalId[Message]): Unit = {
@@ -553,7 +555,9 @@ class MessagingCommander @Inject() (
       userThreadRepo.markUnread(userId, thread.id.get)
     }
     if (changed) {
-      notificationCommander.notifyUnread(userId, thread.externalId, msgExtId, thread.nUrl.getOrElse(""), message.createdAt, getUnreadUnmutedThreadCount(userId))
+      val unreadMessagesCount = getUnreadUnmutedThreadCount(userId, Some(true))
+      val unreadNotificationsCount = getUnreadUnmutedThreadCount(userId, Some(false))
+      notificationCommander.notifyUnread(userId, thread.externalId, msgExtId, thread.nUrl.getOrElse(""), message.createdAt, unreadMessagesCount, unreadNotificationsCount)
     }
   }
 
