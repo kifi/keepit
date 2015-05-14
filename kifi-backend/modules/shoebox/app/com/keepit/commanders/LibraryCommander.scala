@@ -1201,13 +1201,15 @@ class LibraryCommander @Inject() (
       val updatedLib = db.readWrite(attempts = 3) { implicit s =>
         libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId, None) match {
           case None =>
-            libraryMembershipRepo.save(LibraryMembership(libraryId = libraryId, userId = userId, access = maxAccess, lastJoinedAt = Some(currentDateTime)))
+            val subscribedToUpdates = if (maxAccess == LibraryAccess.READ_WRITE) true else false
+            libraryMembershipRepo.save(LibraryMembership(libraryId = libraryId, userId = userId, access = maxAccess, lastJoinedAt = Some(currentDateTime), subscribedToUpdates = subscribedToUpdates))
             SafeFuture {
               notifyOwnerOfNewFollower(userId, lib)
             }
           case Some(mem) =>
             val maxWithExisting = (maxAccess :: mem.access :: Nil).sorted.last
-            libraryMembershipRepo.save(mem.copy(access = maxWithExisting, state = LibraryMembershipStates.ACTIVE, lastJoinedAt = Some(currentDateTime)))
+            val subscribedToUpdates = if (maxWithExisting == LibraryAccess.READ_WRITE) true else mem.subscribedToUpdates
+            libraryMembershipRepo.save(mem.copy(access = maxWithExisting, state = LibraryMembershipStates.ACTIVE, lastJoinedAt = Some(currentDateTime), subscribedToUpdates = subscribedToUpdates))
         }
         val updatedLib = libraryRepo.save(lib.copy(memberCount = libraryMembershipRepo.countWithLibraryId(libraryId)))
         inviteList.foreach { inv =>
@@ -1763,7 +1765,8 @@ class LibraryCommander @Inject() (
                   Left(LibraryFail(FORBIDDEN, "invalid_collaborator_permission"))
                 case Some(newAccess) =>
                   SafeFuture { convertKeepOwnershipToLibraryOwner(targetMem.userId, library) }
-                  Right(libraryMembershipRepo.save(targetMem.copy(access = newAccess)))
+                  val newSubscription = if (newAccess == LibraryAccess.READ_WRITE) true else targetMem.subscribedToUpdates // auto subscribe to updates if a collaborator
+                  Right(libraryMembershipRepo.save(targetMem.copy(access = newAccess, subscribedToUpdates = newSubscription)))
               }
             }
           } else { // invalid permissions
