@@ -1,7 +1,7 @@
 package com.keepit.commanders.emails
 
 import com.google.inject.Inject
-import com.keepit.commanders.{ ProcessedImageSize, LibraryImageCommander }
+import com.keepit.commanders.{ LocalUserExperimentCommander, ProcessedImageSize, LibraryImageCommander }
 import com.keepit.model._
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
@@ -24,6 +24,7 @@ class LibraryInviteEmailSender @Inject() (
     userEmailRepo: UserEmailAddressRepo,
     libraryRepo: LibraryRepo,
     libraryImageCommander: LibraryImageCommander,
+    localUserExperimentCommander: LocalUserExperimentCommander,
     implicit val executionContext: ExecutionContext,
     protected val airbrake: AirbrakeNotifier) extends Logging {
 
@@ -41,8 +42,10 @@ class LibraryInviteEmailSender @Inject() (
         val libImage = libraryImageCommander.getBestImageForLibrary(library.id.get, ProcessedImageSize.Large.idealSize)
         val libraryInfo = LibraryInfo.fromLibraryAndOwner(library, libImage, libOwner, Some(inviter))
         (library, libraryInfo)
+
       }
 
+      val usePlainEmail = isPlainEmail || invite.userId.map { id => localUserExperimentCommander.userHasExperiment(id, ExperimentType.PLAIN_EMAIL) }.getOrElse(false)
       val trimmedInviteMsg = invite.message map (_.trim) filter (_.nonEmpty)
       val fromUserId = invite.inviterId
       val fromAddress = db.readOnlyReplica { implicit session => userEmailRepo.getByUser(invite.inviterId).address }
@@ -56,7 +59,7 @@ class LibraryInviteEmailSender @Inject() (
         to = toRecipient,
         category = toRecipient.fold(_ => NotificationCategory.User.LIBRARY_INVITATION, _ => NotificationCategory.NonUser.LIBRARY_INVITATION),
         htmlTemplate = {
-          if (isPlainEmail) {
+          if (usePlainEmail) {
             views.html.email.libraryInvitationPlain(toRecipient.left.toOption, fromUserId, trimmedInviteMsg, libraryInfo, passPhrase, authToken, invite.access)
           } else {
             views.html.email.libraryInvitation(toRecipient.left.toOption, fromUserId, trimmedInviteMsg, libraryInfo, passPhrase, authToken, invite.access)

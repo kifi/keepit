@@ -23,7 +23,7 @@ class WelcomeEmailSender @Inject() (
   def sendToUser(userId: Id[User], toAddress: Option[EmailAddress] = None, isPlainEmail: Boolean = false): Future[ElectronicMail] = {
 
     val usePlainEmail = isPlainEmail || localUserExperimentCommander.userHasExperiment(userId, ExperimentType.PLAIN_EMAIL)
-    println(usePlainEmail)
+
     val emailToSend = EmailToSend(
       title = "Kifi — Welcome",
       fromName = Some(Right("Kifi")),

@@ -11,6 +11,7 @@ inviteAccess: LibraryAccess
 @libraryUrl = @{htmlUrl(baseUrl + libraryInfo.url + "?authToken=" + authToken + "&", "libraryInviteLink", inviteeId.nonEmpty)}
 @inviteAction = @{if (inviteAccess == LibraryAccess.READ_ONLY) "" else "collaborate on" }
 @invitedHeader = {@firstName(inviterId) invited you to @inviteAction a library on Kifi}
+
 @emailMessage = {
 @if(inviteAccess == LibraryAccess.READ_ONLY) {
 <p>I'm using Kifi to share my knowledge. Check out the library I created: @libraryInfo.name.</p>
