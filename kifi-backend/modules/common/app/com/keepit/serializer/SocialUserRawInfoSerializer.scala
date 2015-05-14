@@ -28,10 +28,12 @@ class SocialUserRawInfoSerializer extends Format[SocialUserRawInfo] {
       case array: JsArray => array.value.toStream
       case _ => Stream()
     }
+    val socialId = (json \ "socialId").as[String].trim
+    if (socialId.isEmpty) throw new Exception(s"empty social id for $json")
     SocialUserRawInfo(
       userId = (json \ "userId").asOpt[Long].map(Id(_)),
       socialUserInfoId = Some(Id[SocialUserInfo]((json \ "socialUserInfoId").as[Int])),
-      socialId = SocialId((json \ "socialId").as[String]),
+      socialId = SocialId(socialId),
       networkType = SocialNetworkType((json \ "networkType").as[String]),
       fullName = (json \ "fullName").as[String],
       jsons = jsons

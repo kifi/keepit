@@ -89,12 +89,14 @@ object SocialUserBasicInfo {
   implicit val format = Format[SocialUserBasicInfo](
     __.read[Seq[JsValue]].map {
       case Seq(JsNumber(id), JsNumber(userId), JsString(fullName), JsString(pictureUrl), JsString(socialId), JsString(networkType)) =>
+        val id = socialId.trim
+        if (id.isEmpty) throw new Exception(s"empty social id for id $id userId $userId fullNme $fullName network $networkType")
         SocialUserBasicInfo(
           Id[SocialUserInfo](id.toLong),
           Some(userId).filter(_ != 0).map(id => Id[User](id.toLong)),
           fullName,
           Some(pictureUrl).filterNot(_.isEmpty),
-          SocialId(socialId),
+          SocialId(id),
           SocialNetworkType(networkType))
     },
     new Writes[SocialUserBasicInfo] {
