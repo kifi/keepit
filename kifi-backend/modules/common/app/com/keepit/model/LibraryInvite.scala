@@ -74,6 +74,23 @@ object LibraryInvite extends ModelWithPublicIdCompanion[LibraryInvite] {
   }
 }
 
+sealed abstract class LibraryInvitePermissions(val value: String)
+
+object LibraryInvitePermissions {
+  case object COLLABORATORS_ALLOWED extends LibraryInvitePermissions("collaborators_allowed")
+  case object OWNER_ONLY extends LibraryInvitePermissions("owner_only")
+
+  implicit def format[T]: Format[LibraryInvitePermissions] =
+    Format(__.read[String].map(LibraryInvitePermissions(_)), new Writes[LibraryInvitePermissions] { def writes(o: LibraryInvitePermissions) = JsString(o.value) })
+
+  def apply(str: String): LibraryInvitePermissions = {
+    str match {
+      case COLLABORATORS_ALLOWED.value | "read_write" => COLLABORATORS_ALLOWED
+      case OWNER_ONLY.value | "owner" => OWNER_ONLY
+    }
+  }
+}
+
 case class HashedPassPhrase(value: String)
 object HashedPassPhrase {
   implicit def queryStringBinder(implicit stringBinder: QueryStringBindable[String]) = new QueryStringBindable[HashedPassPhrase] {

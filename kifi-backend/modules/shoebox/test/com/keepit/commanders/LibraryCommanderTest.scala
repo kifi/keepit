@@ -204,7 +204,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
         val lib2Request = LibraryAddRequest(name = "MURICA", slug = "murica", visibility = LibraryVisibility.PUBLISHED)
 
-        val lib3Request = LibraryAddRequest(name = "Science and Stuff", slug = "science", visibility = LibraryVisibility.PUBLISHED, inviteToCollab = Some(LibraryAccess.OWNER))
+        val lib3Request = LibraryAddRequest(name = "Science and Stuff", slug = "science", visibility = LibraryVisibility.PUBLISHED, whoCanInvite = Some(LibraryInvitePermissions.OWNER_ONLY))
 
         val lib4Request = LibraryAddRequest(name = "Invalid Param", slug = "", visibility = LibraryVisibility.SECRET)
 
@@ -224,7 +224,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           val allLibs = libraryRepo.all
           allLibs.length === 3
           allLibs.map(_.slug.value) === Seq("avengers", "murica", "science")
-          allLibs.map(_.inviteToCollab).flatten === Seq(LibraryAccess.READ_WRITE, LibraryAccess.READ_WRITE, LibraryAccess.OWNER)
+          allLibs.map(_.whoCanInvite).flatten === Seq(LibraryInvitePermissions.COLLABORATORS_ALLOWED, LibraryInvitePermissions.COLLABORATORS_ALLOWED, LibraryInvitePermissions.OWNER_ONLY)
 
           val allMemberships = libraryMembershipRepo.all
           allMemberships.length === 3
@@ -255,10 +255,10 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
         val libraryCommander = inject[LibraryCommander]
         val mod1 = libraryCommander.modifyLibrary(libraryId = libShield.id.get, userId = userAgent.id.get,
-          LibraryModifyRequest(description = Some("Samuel L. Jackson was here"), inviteToCollab = Some(LibraryAccess.OWNER)))
+          LibraryModifyRequest(description = Some("Samuel L. Jackson was here"), whoCanInvite = Some(LibraryInvitePermissions.OWNER_ONLY)))
         mod1.isRight === true
         mod1.right.get.description === Some("Samuel L. Jackson was here")
-        mod1.right.get.inviteToCollab === Some(LibraryAccess.OWNER)
+        mod1.right.get.whoCanInvite === Some(LibraryInvitePermissions.OWNER_ONLY)
 
         val mod2 = libraryCommander.modifyLibrary(libraryId = libMurica.id.get, userId = userCaptain.id.get,
           LibraryModifyRequest(name = Some("MURICA #1!!!!!"), slug = Some("murica_#1")))
@@ -586,7 +586,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
         // Set library to not allow collaborators to invite & test invite to collaborate
         db.readWrite { implicit s =>
-          libraryRepo.save(libMurica.copy(inviteToCollab = Some(LibraryAccess.OWNER)))
+          libraryRepo.save(libMurica.copy(whoCanInvite = Some(LibraryInvitePermissions.OWNER_ONLY)))
         }
 
         // Test owner invite to collaborate (invite persists)
@@ -1299,7 +1299,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
         // test collaborator promoting access (but library does not allow collabs to invite)
         db.readWrite { implicit s =>
-          libraryRepo.save(lib1.copy(inviteToCollab = Some(LibraryAccess.OWNER)))
+          libraryRepo.save(lib1.copy(whoCanInvite = Some(LibraryInvitePermissions.OWNER_ONLY)))
         }
         libraryCommander.updateLibraryMembershipAccess(userId2, lib1.id.get, userId3, Some(LibraryAccess.READ_WRITE)).isRight === false
         db.readOnlyMaster { implicit s =>
