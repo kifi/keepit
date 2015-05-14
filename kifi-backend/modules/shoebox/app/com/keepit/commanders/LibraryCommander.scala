@@ -668,40 +668,34 @@ class LibraryCommander @Inject() (
     }
   }
 
-  private def getValidLibInvitesFromAuthTokenAndPassPhrase(libraryId: Id[Library], authToken: Option[String], passPhrase: Option[HashedPassPhrase])(implicit s: RSession): Seq[LibraryInvite] = {
-    if (authToken.nonEmpty && passPhrase.nonEmpty) {
+  private def getValidLibInvitesFromAuthToken(libraryId: Id[Library], authToken: Option[String])(implicit s: RSession): Seq[LibraryInvite] = {
+    if (authToken.nonEmpty) {
       val excludeSet = Set(LibraryInviteStates.INACTIVE, LibraryInviteStates.ACCEPTED, LibraryInviteStates.DECLINED)
       libraryInviteRepo.getByLibraryIdAndAuthToken(libraryId, authToken.get, excludeSet)
-        .filter { i =>
-          HashedPassPhrase.generateHashedPhrase(i.passPhrase) == passPhrase.get
-        }
     } else {
       Seq.empty[LibraryInvite]
     }
   }
 
-  def canViewLibrary(userId: Option[Id[User]], library: Library,
-    authToken: Option[String] = None,
-    passPhrase: Option[HashedPassPhrase] = None): Boolean = {
-
+  def canViewLibrary(userId: Option[Id[User]], library: Library, authToken: Option[String] = None): Boolean = {
     library.visibility == LibraryVisibility.PUBLISHED || // published library
       db.readOnlyMaster { implicit s =>
         userId match {
           case Some(id) =>
             libraryMembershipRepo.getWithLibraryIdAndUserId(library.id.get, id).nonEmpty ||
               libraryInviteRepo.getWithLibraryIdAndUserId(userId = id, libraryId = library.id.get, excludeState = Some(LibraryInviteStates.INACTIVE)).nonEmpty ||
-              getValidLibInvitesFromAuthTokenAndPassPhrase(library.id.get, authToken, passPhrase).nonEmpty
+              getValidLibInvitesFromAuthToken(library.id.get, authToken).nonEmpty
           case None =>
-            getValidLibInvitesFromAuthTokenAndPassPhrase(library.id.get, authToken, passPhrase).nonEmpty
+            getValidLibInvitesFromAuthToken(library.id.get, authToken).nonEmpty
         }
       }
   }
 
-  def canViewLibrary(userId: Option[Id[User]], libraryId: Id[Library], accessToken: Option[String], passCode: Option[HashedPassPhrase]): Boolean = {
+  def canViewLibrary(userId: Option[Id[User]], libraryId: Id[Library], accessToken: Option[String]): Boolean = {
     val library = db.readOnlyReplica { implicit session =>
       libraryRepo.get(libraryId)
     }
-    canViewLibrary(userId, library, accessToken, passCode)
+    canViewLibrary(userId, library, accessToken)
   }
 
   def getLibrariesByUser(userId: Id[User]): (Seq[(LibraryMembership, Library)], Seq[(LibraryInvite, Library)]) = {
@@ -1181,11 +1175,11 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def joinLibrary(userId: Id[User], libraryId: Id[Library], authToken: Option[String] = None, hashedPassPhrase: Option[HashedPassPhrase] = None)(implicit eventContext: HeimdalContext): Either[LibraryFail, Library] = {
+  def joinLibrary(userId: Id[User], libraryId: Id[Library], authToken: Option[String] = None)(implicit eventContext: HeimdalContext): Either[LibraryFail, Library] = {
     val (lib, inviteList) = db.readOnlyMaster { implicit s =>
       val lib = libraryRepo.get(libraryId)
-      val tokenInvites = if (authToken.isDefined && hashedPassPhrase.isDefined) {
-        getValidLibInvitesFromAuthTokenAndPassPhrase(libraryId, authToken, hashedPassPhrase)
+      val tokenInvites = if (authToken.isDefined) {
+        getValidLibInvitesFromAuthToken(libraryId, authToken)
       } else Seq.empty
       val libInvites = libraryInviteRepo.getWithLibraryIdAndUserId(libraryId, userId)
       val allInvites = tokenInvites ++ libInvites
