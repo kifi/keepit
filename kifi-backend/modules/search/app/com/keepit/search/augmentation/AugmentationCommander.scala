@@ -21,8 +21,7 @@ import com.keepit.search.engine.{ LibraryQualityEvaluator, SearchFactory }
 import com.keepit.common.core._
 import com.keepit.search.{ LibraryContext, DistributedSearchServiceClient }
 import com.keepit.search.augmentation.AugmentationCommander.DistributionPlan
-import com.keepit.search.index.graph.library.{ LibraryIndexable, LibraryRecord, LibraryFields, LibraryIndexer }
-import com.keepit.common.strings.Profanity
+import com.keepit.search.index.graph.library.{ LibraryIndexable, LibraryIndexer }
 
 object AugmentationCommander {
   type DistributionPlan = (Set[Shard[NormalizedURI]], Seq[(ServiceInstance, Set[Shard[NormalizedURI]])])
@@ -163,19 +162,23 @@ class AugmentationCommanderImpl @Inject() (
           val userId = userIdDocValues.get(docId)
           val visibility = visibilityDocValues.get(docId)
 
-          if (libraryIdFilter.findIndex(libraryId) >= 0 || (item.keptIn.isDefined && item.keptIn.get.id == libraryId)) { // kept in my libraries or preferred keep
+          if (item.keptIn.isDefined && item.keptIn.get.id == libraryId) { // canonical keep, get note
             val record = getKeepRecord(docId)
             uniqueKeepers += userId
-            keeps += RestrictedKeepInfo(record.externalId, Some(Id(libraryId)), Some(Id(userId)), record.tags) // todo(Léo): Revisit user attribution for collaborative libraries (currently contributor == library owner)
+            keeps += RestrictedKeepInfo(record.externalId, Some(Id(libraryId)), Some(Id(userId)), record.note, record.tags)
+          } else if (libraryIdFilter.findIndex(libraryId) >= 0) { // kept in my libraries
+            val record = getKeepRecord(docId)
+            uniqueKeepers += userId
+            keeps += RestrictedKeepInfo(record.externalId, Some(Id(libraryId)), Some(Id(userId)), None, record.tags) // todo(Léo): Revisit user attribution for collaborative libraries (currently contributor == library owner)
           } else if (userIdFilter.findIndex(userId) >= 0) visibility match { // kept by my friends
             case PUBLISHED =>
               val record = getKeepRecord(docId)
               uniqueKeepers += userId
-              keeps += RestrictedKeepInfo(record.externalId, Some(Id(libraryId)), Some(Id(userId)), record.tags)
+              keeps += RestrictedKeepInfo(record.externalId, Some(Id(libraryId)), Some(Id(userId)), None, record.tags)
             case DISCOVERABLE =>
               val record = getKeepRecord(docId)
               uniqueKeepers += userId
-              keeps += RestrictedKeepInfo(record.externalId, None, Some(Id(userId)), Set.empty)
+              keeps += RestrictedKeepInfo(record.externalId, None, Some(Id(userId)), None, Set.empty)
             case SECRET => // ignore
           }
           else if (restrictedUserIdFilter.findIndex(userId) < 0) visibility match { // kept by others
@@ -183,7 +186,7 @@ class AugmentationCommanderImpl @Inject() (
               uniqueKeepers += userId
               if (showPublishedLibraries && showThisPublishedLibrary(librarySearcher, libraryId)) {
                 val record = getKeepRecord(docId)
-                keeps += RestrictedKeepInfo(record.externalId, Some(Id(libraryId)), Some(Id(userId)), record.tags)
+                keeps += RestrictedKeepInfo(record.externalId, Some(Id(libraryId)), Some(Id(userId)), None, record.tags)
               } else {
                 otherPublishedKeeps += 1
               }
@@ -208,7 +211,7 @@ class AugmentationCommanderImpl @Inject() (
     weightedAugmentationInfos.foreach {
       case (info, weight) =>
         (info.keeps).foreach {
-          case RestrictedKeepInfo(_, libraryIdOpt, userIdOpt, tags) =>
+          case RestrictedKeepInfo(_, libraryIdOpt, userIdOpt, _, tags) =>
             libraryIdOpt.foreach { libraryId => libraryScores(libraryId) = libraryScores(libraryId) + weight }
             userIdOpt.foreach { userId => userScores(userId) = userScores(userId) + weight }
             tags.foreach { tag =>

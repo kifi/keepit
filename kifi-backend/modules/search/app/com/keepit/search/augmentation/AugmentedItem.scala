@@ -21,7 +21,7 @@ class AugmentedItem(userId: Id[User], allFriends: Set[Id[User]], allLibraries: S
 
   // Libraries
 
-  lazy val libraries = keeps.collect { case RestrictedKeepInfo(_, Some(libraryId), Some(keeperId), _) => (libraryId, keeperId) }
+  lazy val libraries = keeps.collect { case RestrictedKeepInfo(_, Some(libraryId), Some(keeperId), _, _) => (libraryId, keeperId) }
 
   def librariesTotal = keeps.length + otherPublishedKeeps + otherDiscoverableKeeps
 
@@ -42,6 +42,8 @@ class AugmentedItem(userId: Id[User], allFriends: Set[Id[User]], allLibraries: S
 
   def toLimitedAugmentationInfo(maxKeepersShown: Int, maxLibrariesShown: Int, maxTagsShown: Int) = {
 
+    val keep = primaryKeep.collect { case RestrictedKeepInfo(_, Some(library), Some(keeper), note, _) => (library, keeper, note) }
+
     val keepersShown = relatedKeepers.take(maxKeepersShown)
     val keepersOmitted = relatedKeepers.size - keepersShown.size
 
@@ -51,7 +53,7 @@ class AugmentedItem(userId: Id[User], allFriends: Set[Id[User]], allLibraries: S
     val tagsShown = tags.take(maxTagsShown)
     val tagsOmitted = tags.size - tagsShown.size
 
-    LimitedAugmentationInfo(keepersShown, keepersOmitted, keepersTotal, librariesShown, librariesOmitted, librariesTotal, tagsShown, tagsOmitted)
+    LimitedAugmentationInfo(keep, keepersShown, keepersOmitted, keepersTotal, librariesShown, librariesOmitted, librariesTotal, tagsShown, tagsOmitted)
   }
 }
 

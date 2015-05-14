@@ -18,7 +18,7 @@ object AugmentableItem {
   }
 }
 
-case class RestrictedKeepInfo(id: ExternalId[Keep], keptIn: Option[Id[Library]], keptBy: Option[Id[User]], tags: Set[Hashtag])
+case class RestrictedKeepInfo(id: ExternalId[Keep], keptIn: Option[Id[Library]], keptBy: Option[Id[User]], note: Option[String], tags: Set[Hashtag])
 
 object RestrictedKeepInfo {
   implicit val format = Json.format[RestrictedKeepInfo]
@@ -83,6 +83,7 @@ object ItemAugmentationResponse {
 }
 
 case class LimitedAugmentationInfo(
+  keep: Option[(Id[Library], Id[User], Option[String])],
   keepers: Seq[Id[User]],
   keepersOmitted: Int,
   keepersTotal: Int,
@@ -94,11 +95,12 @@ case class LimitedAugmentationInfo(
 
 object LimitedAugmentationInfo {
   implicit val format = {
+    implicit val keepFormat = TupleFormat.tuple3Format[Id[Library], Id[User], Option[String]]
     implicit val libraryFormat = TupleFormat.tuple2Format[Id[Library], Id[User]]
     Json.format[LimitedAugmentationInfo]
   }
 
-  val empty = LimitedAugmentationInfo(Seq.empty, 0, 0, Seq.empty, 0, 0, Seq.empty, 0)
+  val empty = LimitedAugmentationInfo(None, Seq.empty, 0, 0, Seq.empty, 0, 0, Seq.empty, 0)
 }
 
 case class SharingUserInfo(

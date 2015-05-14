@@ -92,7 +92,7 @@ class FakeSearchServiceClient() extends SearchServiceClientImpl(null, null, null
   var augmentationInfoData: Option[Seq[LimitedAugmentationInfo]] = None
 
   def setKeepers(keeperInfos: (Seq[Id[User]], Int)*) = {
-    val augmentationInfos = keeperInfos.map { case (keepers, keepersTotal) => LimitedAugmentationInfo(keepers, 0, keepersTotal, Seq.empty, 0, 0, Seq.empty, 0) }
+    val augmentationInfos = keeperInfos.map { case (keepers, keepersTotal) => LimitedAugmentationInfo(None, keepers, 0, keepersTotal, Seq.empty, 0, 0, Seq.empty, 0) }
     augmentationInfoData = Some(augmentationInfos)
   }
   override def augment(userId: Option[Id[User]], showPublishedLibraries: Boolean, maxKeepersShown: Int, maxLibrariesShown: Int, maxTagsShown: Int, items: Seq[AugmentableItem]): Future[Seq[LimitedAugmentationInfo]] = {
