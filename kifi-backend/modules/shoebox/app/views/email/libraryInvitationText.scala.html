@@ -15,6 +15,4 @@ Hello@{if (!inviteeId.isEmpty) { " " + firstName(inviteeId.get) } },
 Please help me build the @libraryInfo.name Kifi library - @libraryUrl, so we can collaborate together.
 It's a great way to organize the links we find.
 
-@{passPhrase.map { pass => "If you're asked for a passphrase, here it is: " + pass }.getOrElse("") }
-
 @firstName(inviterId)
