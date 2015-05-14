@@ -111,13 +111,15 @@ private[model] abstract class BaseLibraryCardInfo(
   color: Option[LibraryColor], // system libraries have no color
   image: Option[LibraryImageInfo],
   slug: LibrarySlug,
+  owner: BasicUser,
   numKeeps: Int,
   numFollowers: Int,
   followers: Seq[BasicUser],
   numCollaborators: Int,
   collaborators: Seq[BasicUser],
   lastKept: DateTime,
-  following: Option[Boolean]) // is viewer following this library? Set to None if viewing anonymously or viewing own profile
+  following: Option[Boolean],
+  modifiedAt: DateTime) // is viewer following this library? Set to None if viewing anonymously or viewing own profile
 
 @json
 case class OwnLibraryCardInfo( // when viewing own created libraries
@@ -137,8 +139,9 @@ case class OwnLibraryCardInfo( // when viewing own created libraries
   collaborators: Seq[BasicUser],
   lastKept: DateTime,
   following: Option[Boolean],
-  listed: Boolean)
-    extends BaseLibraryCardInfo(id, name, description, color, image, slug, numKeeps, numFollowers, followers, numCollaborators, collaborators, lastKept, following)
+  listed: Boolean,
+  modifiedAt: DateTime)
+    extends BaseLibraryCardInfo(id, name, description, color, image, slug, owner, numKeeps, numFollowers, followers, numCollaborators, collaborators, lastKept, following, modifiedAt)
 
 @json
 case class LibraryCardInfo(
@@ -157,8 +160,9 @@ case class LibraryCardInfo(
   collaborators: Seq[BasicUser],
   lastKept: DateTime,
   following: Option[Boolean],
-  caption: Option[String])
-    extends BaseLibraryCardInfo(id, name, description, color, image, slug, numKeeps, numFollowers, followers, numCollaborators, collaborators, lastKept, following)
+  caption: Option[String],
+  modifiedAt: DateTime)
+    extends BaseLibraryCardInfo(id, name, description, color, image, slug, owner, numKeeps, numFollowers, followers, numCollaborators, collaborators, lastKept, following, modifiedAt)
 
 object LibraryCardInfo {
   val writesWithoutOwner = Writes[LibraryCardInfo] { o => // for case when receiving end already knows the owner
@@ -219,7 +223,8 @@ case class FullLibraryInfo(
   numCollaborators: Int,
   numFollowers: Int,
   attr: Option[LibrarySourceAttribution] = None,
-  whoCanInvite: String)
+  whoCanInvite: String,
+  modifiedAt: DateTime)
 
 object FullLibraryInfo {
   implicit val sourceWrites = LibrarySourceAttribution.writes

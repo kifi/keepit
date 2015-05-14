@@ -284,6 +284,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         inject[FakeUserActionsHelper].setUser(user1)
         val request1 = FakeRequest("GET", testPath)
         val result1 = libraryController.getLibraryById(pubId1, false)(request1)
+        val lib1Updated = db.readOnlyMaster { libraryRepo.get(lib1.id.get)(_) }
         status(result1) must equalTo(OK)
         contentType(result1) must beSome("application/json")
 
@@ -315,7 +316,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
              |"numKeeps":0,
              |"numCollaborators":0,
              |"numFollowers":0,
-             |"whoCanInvite":"collaborator"
+             |"whoCanInvite":"collaborator",
+             |"modifiedAt": ${lib1Updated.updatedAt.getMillis}
            |},
            |"membership":"owner",
            |"listed": true,
@@ -332,6 +334,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         inject[FakeUserActionsHelper].setUser(user2)
         val request2 = FakeRequest("GET", testPath)
         val result2 = libraryController.getLibraryById(pubId1, false)(request2)
+        val lib1Updated2 = db.readOnlyMaster { libraryRepo.get(lib1.id.get)(_) }
+
         status(result2) must equalTo(OK)
         contentType(result2) must beSome("application/json")
         Json.parse(contentAsString(result2)) must equalTo(Json.parse(
@@ -361,7 +365,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
              |"numKeeps":0,
              |"numCollaborators":0,
              |"numFollowers":0,
-             |"whoCanInvite":"collaborator"
+             |"whoCanInvite":"collaborator",
+             |"modifiedAt": ${lib1Updated2.updatedAt.getMillis}
            |},
            |"membership":"none",
            |"listed": null,
@@ -414,6 +419,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         val testPath2 = com.keepit.controllers.website.routes.LibraryController.getLibraryByPath(extInput, slugInput).url
         val request2 = FakeRequest("GET", testPath2)
         val result2 = libraryController.getLibraryByPath(extInput, slugInput, false)(request2)
+        val lib1Updated = db.readOnlyMaster { libraryRepo.get(lib1.id.get)(_) }
         status(result2) must equalTo(OK)
         contentType(result2) must beSome("application/json")
 
@@ -447,7 +453,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                |"numKeeps":0,
                |"numCollaborators":0,
                |"numFollowers":0,
-               |"whoCanInvite":"collaborator"
+               |"whoCanInvite":"collaborator",
+               |"modifiedAt": ${lib1Updated.updatedAt.getMillis}
              |},
              |"membership":"owner",
              |"listed": false,

@@ -192,7 +192,8 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
                   "collaborators":[],
                   "lastKept": ${lib2.createdAt.getMillis},
                   "listed": true,
-                  "following":true
+                  "following":true,
+                  "modifiedAt":${lib2.updatedAt.getMillis}
                 },
                 {
                   "id":"${pubId1.id}",
@@ -218,7 +219,7 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
                   "lastKept": ${lib1.createdAt.getMillis},
                   "listed": true,
                   "following":true,
-                  "following":true
+                  "modifiedAt":${lib1.updatedAt.getMillis}
                 }
               ]
             }

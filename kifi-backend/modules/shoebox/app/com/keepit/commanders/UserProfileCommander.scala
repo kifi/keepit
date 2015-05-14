@@ -72,7 +72,8 @@ class UserProfileCommander @Inject() (
           collaborators = info.collaborators,
           lastKept = lib.lastKept.getOrElse(lib.createdAt),
           listed = memberships(lib.id.get).listed,
-          following = Some(true))
+          following = Some(true),
+          modifiedAt = lib.updatedAt)
     }
   }
 

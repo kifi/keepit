@@ -320,7 +320,8 @@ class LibraryCommander @Inject() (
           numFollowers = followerCount,
           lastKept = lib.lastKept,
           attr = attr,
-          whoCanInvite = whoCanInvite
+          whoCanInvite = whoCanInvite,
+          modifiedAt = lib.updatedAt
         )
       }
     }
@@ -1640,7 +1641,8 @@ class LibraryCommander @Inject() (
               collaborators = Seq.empty,
               lastKept = info.lastKept,
               following = None,
-              caption = extraInfo.caption)
+              caption = extraInfo.caption,
+              modifiedAt = lib.updatedAt)
         }).seq.sortBy(_._1).map(_._2)
       }
     } getOrElse Future.successful(Seq.empty)
@@ -1694,7 +1696,8 @@ class LibraryCommander @Inject() (
       collaborators = LibraryCardInfo.makeMembersShowable(collaborators, false),
       lastKept = lib.lastKept.getOrElse(lib.createdAt),
       following = isFollowing,
-      caption = None)
+      caption = None,
+      modifiedAt = lib.updatedAt)
   }
 
   def convertPendingInvites(emailAddress: EmailAddress, userId: Id[User]) = {

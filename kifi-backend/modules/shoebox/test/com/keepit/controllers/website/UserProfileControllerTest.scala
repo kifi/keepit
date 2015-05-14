@@ -32,6 +32,7 @@ import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.social.BasicUser
 import com.keepit.test.ShoeboxTestInjector
 import org.apache.commons.io.FileUtils
+import com.keepit.common.time._
 
 import org.specs2.mutable.Specification
 import play.api.libs.Files.TemporaryFile
@@ -341,6 +342,7 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
 
         // test viewing my own libraries
         val result1 = getProfileLibraries(Some(user1), user1.username, 0, 10, "own")
+        val lib1Updated = db.readOnlyMaster { libraryRepo.get(lib1.id.get)(_) }
         status(result1) must equalTo(OK)
         contentType(result1) must beSome("application/json")
         val expected = Json.parse(
@@ -383,7 +385,8 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
                   }],
                 "lastKept":${keep1.createdAt.getMillis},
                 "listed": true,
-                "following":true
+                "following":true,
+                "modifiedAt":${lib1Updated.updatedAt.getMillis}
               }
              ]
           }
@@ -416,7 +419,8 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
                 "numCollaborators":0,
                 "collaborators":[],
                 "lastKept":${lib3.createdAt.getMillis},
-                "following": true
+                "following": true,
+                "modifiedAt":${lib3.updatedAt.getMillis}
               }
             ]
           }

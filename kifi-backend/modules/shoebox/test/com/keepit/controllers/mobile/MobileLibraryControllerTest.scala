@@ -165,6 +165,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
         }
 
         val result1 = getLibraryById(user1, pubLib1)
+        val lib1Updated = db.readOnlyMaster { libraryRepo.get(lib1.id.get)(_) }
         status(result1) must equalTo(OK)
         contentType(result1) must beSome("application/json")
         Json.parse(contentAsString(result1)) === Json.parse(
@@ -195,7 +196,8 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
              |    "numKeeps" : 0,
              |    "numCollaborators" : 0,
              |    "numFollowers" : 0,
-             |    "whoCanInvite": "collaborator"
+             |    "whoCanInvite": "collaborator",
+             |    "modifiedAt": ${lib1Updated.updatedAt.getMillis}
              |  },
              |  "membership" : "owner",
              |"subscribedToUpdates":false
