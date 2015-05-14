@@ -372,7 +372,7 @@ class FeedDigestEmailSender @Inject() (
     search.augment(Some(userId), false, maxKeepersShown = 20, maxLibrariesShown = 15, maxTagsShown = 0, items = keeps.map(keep => AugmentableItem(keep.uriId, keep.libraryId))) map { infos =>
       (keeps zip infos).map {
         case (keep, info) =>
-          DigestLibraryItemCandidate(keep, Some(seedAttributionHelper.toUserAttribution(info)))
+          DigestLibraryItemCandidate(keep, Some(UserAttribution.fromLimitedAugmentationInfo(info)))
       }
     }
   }
