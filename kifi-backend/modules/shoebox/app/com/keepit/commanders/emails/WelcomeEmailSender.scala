@@ -18,9 +18,9 @@ class WelcomeEmailSender @Inject() (
     localUserExperimentCommander: LocalUserExperimentCommander,
     protected val airbrake: AirbrakeNotifier) extends Logging {
 
-  def apply(userId: Id[User], toAddress: Option[EmailAddress] = None, isPlainEmail: Boolean = false) = sendToUser(userId, toAddress, isPlainEmail)
+  def apply(userId: Id[User], toAddress: Option[EmailAddress] = None, isPlainEmail: Boolean = true) = sendToUser(userId, toAddress, isPlainEmail)
 
-  def sendToUser(userId: Id[User], toAddress: Option[EmailAddress] = None, isPlainEmail: Boolean = false): Future[ElectronicMail] = {
+  def sendToUser(userId: Id[User], toAddress: Option[EmailAddress] = None, isPlainEmail: Boolean = true): Future[ElectronicMail] = {
 
     val usePlainEmail = isPlainEmail || localUserExperimentCommander.userHasExperiment(userId, ExperimentType.PLAIN_EMAIL)
 
