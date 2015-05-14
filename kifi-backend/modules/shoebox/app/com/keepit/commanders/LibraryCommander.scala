@@ -493,7 +493,7 @@ class LibraryCommander @Inject() (
             val newColor = libAddReq.color.orElse(Some(LibraryColor.pickRandomLibraryColor))
             val newListed = libAddReq.listed.getOrElse(true)
             val newKind = libAddReq.kind.getOrElse(LibraryKind.USER_CREATED)
-            val newInviteToCollab = libAddReq.whoCanInvite.orElse(Some(LibraryInvitePermissions.COLLABORATORS_ALLOWED))
+            val newInviteToCollab = libAddReq.whoCanInvite.orElse(Some(LibraryInvitePermissions.COLLABORATORS_ALLOW))
             val library = db.readWrite { implicit s =>
               libraryAliasRepo.reclaim(ownerId, validSlug)
               libraryRepo.getOpt(ownerId, validSlug) match {

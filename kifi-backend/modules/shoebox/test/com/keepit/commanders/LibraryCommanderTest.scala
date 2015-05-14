@@ -224,7 +224,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           val allLibs = libraryRepo.all
           allLibs.length === 3
           allLibs.map(_.slug.value) === Seq("avengers", "murica", "science")
-          allLibs.map(_.whoCanInvite).flatten === Seq(LibraryInvitePermissions.COLLABORATORS_ALLOWED, LibraryInvitePermissions.COLLABORATORS_ALLOWED, LibraryInvitePermissions.OWNER_ONLY)
+          allLibs.map(_.whoCanInvite).flatten === Seq(LibraryInvitePermissions.COLLABORATORS_ALLOW, LibraryInvitePermissions.COLLABORATORS_ALLOW, LibraryInvitePermissions.OWNER_ONLY)
 
           val allMemberships = libraryMembershipRepo.all
           allMemberships.length === 3
