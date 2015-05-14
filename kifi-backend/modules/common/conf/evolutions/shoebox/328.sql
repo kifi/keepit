@@ -1,4 +1,4 @@
-#HEIMDAL
+# HEIMDAL
 
 # --- !Ups
 
@@ -9,11 +9,12 @@ create table library_view(
   owner_id bigint(20) NOT NULL,
   viewer_id bigint(20) NULL,
   library_id bigint(20) NULL,
+  source varchar(32) NULL,
   state varchar(20) NOT NULL,
 
   PRIMARY KEY (id),
   index library_view_i_owner_time (owner_id, created_at)
-)
+);
 
 insert into evolutions (name, description) values('328.sql', 'create library_view table');
 
