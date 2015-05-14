@@ -28,7 +28,7 @@ class LibraryInviteEmailSender @Inject() (
     implicit val executionContext: ExecutionContext,
     protected val airbrake: AirbrakeNotifier) extends Logging {
 
-  def sendInvite(invite: LibraryInvite, isPlainEmail: Boolean = false)(implicit publicIdConfig: PublicIdConfiguration): Future[Option[ElectronicMail]] = {
+  def sendInvite(invite: LibraryInvite, isPlainEmail: Boolean = true)(implicit publicIdConfig: PublicIdConfiguration): Future[Option[ElectronicMail]] = {
     val toRecipientOpt: Option[Either[Id[User], EmailAddress]] =
       if (invite.userId.isDefined) Some(Left(invite.userId.get))
       else if (invite.emailAddress.isDefined) Some(Right(invite.emailAddress.get))
