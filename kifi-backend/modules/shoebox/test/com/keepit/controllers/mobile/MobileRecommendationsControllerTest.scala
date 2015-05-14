@@ -126,7 +126,7 @@ class MobileRecommendationsControllerTest extends TestKitSupport with Specificat
             numKeeps = 10,
             numCollaborators = 0,
             numFollowers = 10,
-            whoCanInvite = "collaborator",
+            whoCanInvite = LibraryInvitePermissions.COLLABORATOR,
             modifiedAt = now
           )
         )

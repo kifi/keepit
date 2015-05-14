@@ -294,7 +294,7 @@ class LibraryCommander @Inject() (
         val owner = usersById(lib.ownerId)
         val followers = memberInfosByLibraryId(lib.id.get).shown.map(usersById(_))
         val collaborators = memberInfosByLibraryId(lib.id.get).collaborators.map(usersById(_))
-        val whoCanInvite = if (lib.whoCanInvite == Some(LibraryInvitePermissions.OWNER_ONLY)) "owner" else "collaborator"
+        val whoCanInvite = lib.whoCanInvite.getOrElse(LibraryInvitePermissions.COLLABORATOR) // todo: remove Option
 
         val attr = getSourceAttribution(libId)
 
@@ -494,7 +494,7 @@ class LibraryCommander @Inject() (
             val newColor = libAddReq.color.orElse(Some(LibraryColor.pickRandomLibraryColor))
             val newListed = libAddReq.listed.getOrElse(true)
             val newKind = libAddReq.kind.getOrElse(LibraryKind.USER_CREATED)
-            val newInviteToCollab = libAddReq.whoCanInvite.orElse(Some(LibraryInvitePermissions.COLLABORATORS_ALLOW))
+            val newInviteToCollab = libAddReq.whoCanInvite.orElse(Some(LibraryInvitePermissions.COLLABORATOR))
             val library = db.readWrite { implicit s =>
               libraryAliasRepo.reclaim(ownerId, validSlug)
               libraryRepo.getOpt(ownerId, validSlug) match {
@@ -1043,7 +1043,7 @@ class LibraryCommander @Inject() (
                 log.warn(s"[inviteUsersToLibrary] error invite to collaborate: user $inviterId attempting to invite $recipient for RW access to library (${lib.id.get}, ${lib.name}, ${lib.visibility}, ${lib.whoCanInvite})")
                 None
               // collaborator tries to invite to collaborate, but library setting is set to owner_only
-              case LibraryAccess.READ_WRITE if inviterIsCollab && lib.whoCanInvite == Some(LibraryInvitePermissions.OWNER_ONLY) =>
+              case LibraryAccess.READ_WRITE if inviterIsCollab && lib.whoCanInvite == Some(LibraryInvitePermissions.OWNER) =>
                 log.warn(s"[inviteUsersToLibrary] error invite to collaborate: user $inviterId attempting to invite $recipient for RW access to library (${lib.id.get}, ${lib.name}, ${lib.visibility}, ${lib.whoCanInvite})")
                 None
               // non-owner/non-collaborator tries to invite to follow (secret libraries only)
@@ -1051,7 +1051,7 @@ class LibraryCommander @Inject() (
                 log.warn(s"[inviteUsersToLibrary] error invite to follow: user $inviterId attempting to invite $recipient for RO access to library (${lib.id.get}, ${lib.name}, ${lib.visibility}, ${lib.whoCanInvite})")
                 None
               // collaborator in secret library tries to invite to follow, but library setting is set to owner_only
-              case LibraryAccess.READ_ONLY if lib.isSecret && inviterIsCollab && lib.whoCanInvite == Some(LibraryInvitePermissions.OWNER_ONLY) =>
+              case LibraryAccess.READ_ONLY if lib.isSecret && inviterIsCollab && lib.whoCanInvite == Some(LibraryInvitePermissions.OWNER) =>
                 log.warn(s"[inviteUsersToLibrary] error invite to follow: user $inviterId attempting to invite $recipient for RO access to library (${lib.id.get}, ${lib.name}, ${lib.visibility}, ${lib.whoCanInvite})")
                 None
               case _ =>
@@ -1757,7 +1757,7 @@ class LibraryCommander @Inject() (
                 case None =>
                   SafeFuture { convertKeepOwnershipToLibraryOwner(targetMem.userId, library) }
                   Right(libraryMembershipRepo.save(targetMem.copy(state = LibraryMembershipStates.INACTIVE)))
-                case Some(newAccess) if mem.isCollaborator && newAccess == LibraryAccess.READ_WRITE && library.whoCanInvite == Some(LibraryInvitePermissions.OWNER_ONLY) =>
+                case Some(newAccess) if mem.isCollaborator && newAccess == LibraryAccess.READ_WRITE && library.whoCanInvite == Some(LibraryInvitePermissions.OWNER) =>
                   log.warn(s"[updateLibraryMembership] invalid permission ${mem} trying to change membership ${targetMem} to ${newAccess} when library has invite policy ${library.whoCanInvite}")
                   Left(LibraryFail(FORBIDDEN, "invalid_collaborator_permission"))
                 case Some(newAccess) =>

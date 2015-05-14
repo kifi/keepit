@@ -223,7 +223,7 @@ case class FullLibraryInfo(
   numCollaborators: Int,
   numFollowers: Int,
   attr: Option[LibrarySourceAttribution] = None,
-  whoCanInvite: String,
+  whoCanInvite: LibraryInvitePermissions,
   modifiedAt: DateTime)
 
 object FullLibraryInfo {
