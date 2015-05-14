@@ -3,8 +3,7 @@ package com.keepit.search.controllers.website
 import com.keepit.commanders.ProcessedImageSize
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.domain.DomainToNameMapper
-import com.keepit.common.net.URI
-import com.keepit.common.store.S3ImageConfig
+import com.keepit.common.store.{ ImageSize, S3ImageConfig }
 import com.keepit.rover.RoverServiceClient
 import com.keepit.rover.model.{ BasicImages, RoverUriSummary }
 import com.keepit.search.controllers.util.{ SearchControllerUtil }
@@ -71,7 +70,7 @@ class WebsiteSearchController @Inject() (
 
     uriSearchCommander.searchUris(userId, acceptLangs, experiments, query, filterFuture, libraryContextFuture, maxHits, lastUUIDStr, context, None, debugOpt).flatMap { uriSearchResult =>
 
-      getWebsiteUriSearchResults(userId, uriSearchResult).imap {
+      getWebsiteUriSearchResults(userId, uriSearchResult, None).imap {
         case (hits, users, libraries) =>
           val librariesJson = libraries.map { library =>
             Json.obj("id" -> library.id, "name" -> library.name, "color" -> library.color, "path" -> library.path, "visibility" -> library.visibility)
@@ -93,7 +92,7 @@ class WebsiteSearchController @Inject() (
     }
   }
 
-  private def getWebsiteUriSearchResults(userId: Id[User], uriSearchResult: UriSearchResult): Future[(Seq[JsValue], Seq[BasicUser], Seq[BasicLibrary])] = {
+  private def getWebsiteUriSearchResults(userId: Id[User], uriSearchResult: UriSearchResult, idealImageSize: Option[ImageSize]): Future[(Seq[JsValue], Seq[BasicUser], Seq[BasicLibrary])] = {
     if (uriSearchResult.hits.isEmpty) {
       Future.successful((Seq.empty[JsObject], Seq.empty[BasicUser], Seq.empty[BasicLibrary]))
     } else {
@@ -129,7 +128,7 @@ class WebsiteSearchController @Inject() (
               val siteName = DomainToNameMapper.getNameFromUrl(url)
               val summary = summaries.get(uriId)
               val keepId = hit.keepId.map(Id[Keep](_))
-              val imageOpt = (keepId.flatMap(keepImages.get) orElse summary.map(_.images)).flatMap(_.get(ProcessedImageSize.Medium.idealSize))
+              val imageOpt = (keepId.flatMap(keepImages.get) orElse summary.map(_.images)).flatMap(_.get(idealImageSize.getOrElse(ProcessedImageSize.Medium.idealSize)))
               val primaryFields = Json.obj(
                 "title" -> title,
                 "description" -> summary.flatMap(_.article.description),
@@ -273,6 +272,7 @@ class WebsiteSearchController @Inject() (
     userContext: Option[String],
     disablePrefixSearch: Boolean,
     libraryAuth: Option[String],
+    idealImageSize: Option[ImageSize],
     debug: Option[String]) = MaybeUserAction.async { request =>
 
     val acceptLangs = getAcceptLangs(request)
@@ -285,7 +285,7 @@ class WebsiteSearchController @Inject() (
 
     val futureUriSearchResultJson = if (maxUris <= 0) Future.successful(JsNull) else {
       uriSearchCommander.searchUris(userId, acceptLangs, experiments, query, userFilterFuture, libraryFilterFuture, maxUris, lastUUIDStr, uriContext, None, debugOpt).flatMap { uriSearchResult =>
-        getWebsiteUriSearchResults(userId, uriSearchResult).imap {
+        getWebsiteUriSearchResults(userId, uriSearchResult, idealImageSize).imap {
           case (hits, users, libraries) =>
             val librariesJson = libraries.map { library =>
               Json.obj("id" -> library.id, "name" -> library.name, "color" -> library.color, "path" -> library.path, "visibility" -> library.visibility)

@@ -4,7 +4,7 @@ import com.keepit.commanders.ProcessedImageSize
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.Id
 import com.keepit.common.json
-import com.keepit.common.store.S3ImageConfig
+import com.keepit.common.store.{ ImageSize, S3ImageConfig }
 import com.keepit.rover.RoverServiceClient
 import com.keepit.rover.model.BasicImages
 import com.keepit.search.augmentation.AugmentationCommander
@@ -138,6 +138,7 @@ class MobileSearchController @Inject() (
     maxUsers: Int,
     userContext: Option[String],
     disablePrefixSearch: Boolean,
+    idealImageSize: Option[ImageSize],
     debug: Option[String]) = UserAction.async { request =>
 
     val acceptLangs = getAcceptLangs(request)
@@ -149,7 +150,7 @@ class MobileSearchController @Inject() (
 
     val futureUriSearchResultJson = if (maxUris <= 0) Future.successful(JsNull) else {
       uriSearchCommander.searchUris(userId, acceptLangs, experiments, query, filterFuture, Future.successful(LibraryContext.None), maxUris, lastUUIDStr, uriContext, None, debugOpt).flatMap { uriSearchResult =>
-        getMobileUriSearchResults(userId, uriSearchResult).imap {
+        getMobileUriSearchResults(userId, uriSearchResult, idealImageSize).imap {
           case (jsHits, users) =>
             Json.obj(
               "uuid" -> uriSearchResult.uuid,
@@ -280,7 +281,7 @@ class MobileSearchController @Inject() (
     }
   }
 
-  private def getMobileUriSearchResults(userId: Id[User], uriSearchResult: UriSearchResult): Future[(Seq[JsValue], Seq[BasicUser])] = {
+  private def getMobileUriSearchResults(userId: Id[User], uriSearchResult: UriSearchResult, idealImageSize: Option[ImageSize]): Future[(Seq[JsValue], Seq[BasicUser])] = {
     if (uriSearchResult.hits.isEmpty) {
       Future.successful((Seq.empty[JsObject], Seq.empty[BasicUser]))
     } else {
@@ -311,7 +312,7 @@ class MobileSearchController @Inject() (
               val uriId = Id[NormalizedURI](hit.id)
               val summary = summaries.get(uriId)
               val keepId = hit.keepId.map(Id[Keep](_))
-              val image = (keepId.flatMap(keepImages.get) orElse summary.map(_.images)).flatMap(_.get(ProcessedImageSize.Medium.idealSize))
+              val image = (keepId.flatMap(keepImages.get) orElse summary.map(_.images)).flatMap(_.get(idealImageSize.getOrElse(ProcessedImageSize.Medium.idealSize)))
               Json.obj(
                 "title" -> hit.title,
                 "url" -> hit.url,
