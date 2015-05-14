@@ -119,6 +119,7 @@ angular.module('kifi')
               }
             });
           }
+          _.remove(keep.keepers, {pictureName: '0.jpg'});
         }(scope.keep));
 
         //

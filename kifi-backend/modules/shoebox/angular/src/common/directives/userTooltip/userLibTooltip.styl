@@ -1,15 +1,15 @@
+borderRadius = 5px
+
 .kf-ult
   position: absolute
   z-index: 1
-  height: 265px
+  height: 264px
   width: 350px
   top: -280px
   left: -101px
   text-align: left
-  border-radius: 5px
+  border-radius: borderRadius
   box-shadow: 0 3px 5px rgba(0,0,0,.2)
-  display: inline-block
-  background-color: white
   line-height: initial
 
   &.ng-enter
@@ -43,7 +43,8 @@
 
 .kf-ult-header
   height: 108px
-  border-radius: 5px 5px 0 0
+  border-radius: borderRadius borderRadius 0 0
+  overflow: hidden
   border-bottom: 3px solid pageHeaderColor  // library color set inline
   background-color: pageHeaderColor  // library color set inline
   background-image: linear-gradient(rgba(0,0,0,.2), rgba(0,0,0,0))
@@ -114,16 +115,17 @@
     display: none
 
 .kf-ult-hdivider
+  position: absolute
   background-color: #e2e7ec
+  left: 5%
   width: 90%
-  margin: auto
   height: 1px
-  display: block
 
 .kf-ult-body
   height: 88px
   padding-left: 30px
   padding-top: 18px
+  background-color: #fff
 
 .kf-ult-stats-container
   margin-top: 12px
@@ -139,16 +141,20 @@
   text-align: center
   color: #4F5864
 
+.kf-ult-footer
+  background-color: #fff
+  border-radius: 0 0 borderRadius borderRadius
+  padding: 10px 0
+  text-align: right
+
 .kf-ult-button
-  color: #7eac4e
-  float: right
-  font-size: 12px
-  padding: 5px 11px
-  margin: 10px 17px
+  margin: 0 17px
+  border: 0
   border-radius: 3px
+  padding: 6px 11px
   background-color: #fbfbfb
-  border: 1px solid #bbb
   color: #535353
+  font-size: 12px
 
 .kf-ult-follow
   background-color: #262626
