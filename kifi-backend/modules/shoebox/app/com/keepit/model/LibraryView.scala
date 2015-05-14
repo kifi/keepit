@@ -41,7 +41,7 @@ case class LibraryAddRequest(
   description: Option[String] = None,
   color: Option[LibraryColor] = None,
   listed: Option[Boolean] = None,
-  inviteToCollab: Option[LibraryAccess] = None)
+  whoCanInvite: Option[LibraryInvitePermissions] = None)
 
 @json
 case class LibraryModifyRequest(
@@ -51,7 +51,7 @@ case class LibraryModifyRequest(
   description: Option[String] = None,
   color: Option[LibraryColor] = None,
   listed: Option[Boolean] = None,
-  inviteToCollab: Option[LibraryAccess] = None)
+  whoCanInvite: Option[LibraryInvitePermissions] = None)
 
 case class LibraryInfo(
   id: PublicId[Library],
