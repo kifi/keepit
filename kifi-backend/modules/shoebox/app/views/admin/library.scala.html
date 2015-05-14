@@ -28,7 +28,7 @@
       <th>Transfer Ownership</th>
       <td>
         <form action="#" method="POST" class="transfer-ownership">
-          <input type="text" name="toUserId" placeholder="User Id of new Owner">
+          <input id="toUserId" type="text" name="toUserId" placeholder="User Id of new Owner">
           <input type="submit" value="Change Owner">
         </form>
       </td>
@@ -125,12 +125,28 @@
     disableEdit(true)
 
     @if(transfer) {
+      var transferring = false;
       $('.transfer-ownership').on("submit", function() {
-        $.post("@com.keepit.controllers.admin.routes.AdminLibraryController.updateLibraryOwner(library.id.get, library.ownerId)", $('.transfer-ownership').serialize())
+        if (transferring) return false;
+        transferring = true;
+        var value = $('#toUserId').val();
+        $.post('@com.keepit.controllers.admin.routes.AdminLibraryController.updateLibraryOwner(library.id.get, library.ownerId, Id[User](-111L))'.replace('-111', value))
         .done(function(data) {
           alert("Library Owner Updated")
+          transferring = false;
         }).fail(function(data) {
-          alert("Bad Request: " + data.responseText);
+          if (data.status == 408) {
+            // timeout
+            alert("Library transferring in progress");
+          } else if(data.status == 500) {
+            // internal server error
+            alert("An Internal Server Error has occurred - check the dev console for more information");
+            console.log(data);
+            transferring = false;
+          } else {
+            alert(data.responseText);
+            transferring = false;
+          }
         });
         return false;
       });

@@ -55,51 +55,46 @@ class AdminLibraryController @Inject() (
     suggestedSearchCommander: LibrarySuggestedSearchCommander,
     implicit val publicIdConfig: PublicIdConfiguration) extends AdminUserActions {
 
-  def updateLibraryOwner(libraryId: Id[Library], fromUserId: Id[User]) = AdminUserPage { implicit request =>
-    request.body.asFormUrlEncoded.flatMap(_.get("toUserId").flatMap(_.headOption)).map(s => Id[User](s.toLong)) match {
-      case None => BadRequest("No User Id given")
-      case Some(toUserId) => {
-        db.readWrite { implicit session =>
-          val lib = libraryRepo.get(libraryId)
-          if (lib.ownerId != fromUserId) throw new Exception(s"orig user $fromUserId is not matching current library owner $lib")
-          libraryAliasRepo.alias(lib.ownerId, lib.slug, lib.id.get)
-          libraryAliasRepo.reclaim(toUserId, lib.slug) // reclaim existing alias to a former library of toUserId with the same slug
-          val newOwnerLib = lib.copy(ownerId = toUserId)
-          libraryRepo.save(newOwnerLib)
-          val currentOwnership = libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, fromUserId).getOrElse(throw new Exception(s"no ownership to lib $lib for user $fromUserId"))
-          libraryMembershipRepo.save(currentOwnership.copy(access = LibraryAccess.READ_ONLY))
-          libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, toUserId) match {
-            case None =>
-              libraryMembershipRepo.save(currentOwnership.copy(id = None, userId = toUserId))
-            case Some(newOwnership) =>
-              libraryMembershipRepo.save(newOwnership.copy(access = LibraryAccess.OWNER, showInSearch = currentOwnership.showInSearch))
-          }
-          var page = 0
-          val pageSize = 100
-          var hasMore = true
-          val keeps = ArrayBuffer[Keep]()
-          while (hasMore) {
-            val from = page * pageSize
-            val chunk: Seq[Keep] = keepRepo.getByLibrary(libraryId, from, from + pageSize, Set.empty) map { keep =>
-              val tags = keepToCollectionRepo.getByKeep(keep.id.get)
-              tags foreach { keepToTag =>
-                val origTag = collectionRepo.get(keepToTag.collectionId)
-                val tag = collectionRepo.getByUserAndName(toUserId, origTag.name, excludeState = None) match {
-                  case None => collectionRepo.save(Collection(userId = toUserId, name = origTag.name))
-                  case Some(existing) if !existing.isActive => collectionRepo.save(existing.copy(state = CollectionStates.ACTIVE, name = origTag.name))
-                  case Some(existing) => existing
-                }
-                keepToCollectionRepo.save(keepToTag.copy(collectionId = tag.id.get))
-              }
-              keepRepo.save(keep.copy(userId = toUserId))
-            }
-            hasMore = chunk.size >= pageSize
-            keeps.appendAll(chunk)
-            page += 1
-          }
-          Ok(s"keep count = ${keeps.size} for library: $newOwnerLib")
-        }
+  def updateLibraryOwner(libraryId: Id[Library], fromUserId: Id[User], toUserId: Id[User]) = AdminUserPage { implicit request =>
+    db.readWrite { implicit session =>
+      val lib = libraryRepo.get(libraryId)
+      if (lib.ownerId != fromUserId) throw new Exception(s"orig user $fromUserId is not matching current library owner $lib")
+      libraryAliasRepo.alias(lib.ownerId, lib.slug, lib.id.get)
+      libraryAliasRepo.reclaim(toUserId, lib.slug) // reclaim existing alias to a former library of toUserId with the same slug
+      val newOwnerLib = lib.copy(ownerId = toUserId)
+      libraryRepo.save(newOwnerLib)
+      val currentOwnership = libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, fromUserId).getOrElse(throw new Exception(s"no ownership to lib $lib for user $fromUserId"))
+      libraryMembershipRepo.save(currentOwnership.copy(access = LibraryAccess.READ_ONLY))
+      libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, toUserId) match {
+        case None =>
+          libraryMembershipRepo.save(currentOwnership.copy(id = None, userId = toUserId))
+        case Some(newOwnership) =>
+          libraryMembershipRepo.save(newOwnership.copy(access = LibraryAccess.OWNER, showInSearch = currentOwnership.showInSearch))
       }
+      var page = 0
+      val pageSize = 100
+      var hasMore = true
+      val keeps: Int = 0
+      while (hasMore) {
+        val from = page * pageSize
+        val chunk: Seq[Keep] = keepRepo.getByLibrary(libraryId, from, from + pageSize, Set.empty) map { keep =>
+          val tags = keepToCollectionRepo.getByKeep(keep.id.get)
+          tags foreach { keepToTag =>
+            val origTag = collectionRepo.get(keepToTag.collectionId)
+            val tag = collectionRepo.getByUserAndName(toUserId, origTag.name, excludeState = None) match {
+              case None => collectionRepo.save(Collection(userId = toUserId, name = origTag.name))
+              case Some(existing) if !existing.isActive => collectionRepo.save(existing.copy(state = CollectionStates.ACTIVE, name = origTag.name))
+              case Some(existing) => existing
+            }
+            keepToCollectionRepo.save(keepToTag.copy(collectionId = tag.id.get))
+          }
+          keepRepo.save(keep.copy(userId = toUserId))
+        }
+        hasMore = chunk.size >= pageSize
+        keeps + chunk.size
+        page += 1
+      }
+      Ok(s"keep count = ${keeps} for library: $newOwnerLib")
     }
   }
 

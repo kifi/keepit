@@ -412,11 +412,11 @@ class AdminUserController @Inject() (
   }
 
   def createLibrary(userId: Id[User]) = AdminUserPage(parse.tolerantFormUrlEncoded) { implicit request =>
-    val name = request.body.get("name").flatMap(_.headOption)
-    val visibility = request.body.get("visibility").flatMap(_.headOption).map(LibraryVisibility(_))
-    val slug = request.body.get("slug").flatMap(_.headOption)
+    val nameOpt = request.body.get("name").flatMap(_.headOption)
+    val visibilityOpt = request.body.get("visibility").flatMap(_.headOption).map(LibraryVisibility(_))
+    val slugOpt = request.body.get("slug").flatMap(_.headOption)
 
-    (name, visibility, slug) match {
+    (nameOpt, visibilityOpt, slugOpt) match {
       case (Some(name), Some(visibility), Some(slug)) => {
         val libraryAddRequest = LibraryAddRequest(name, visibility, slug)
 
