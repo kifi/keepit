@@ -3,7 +3,6 @@ keepFooterMarginTop = 16px
 
 .kf-keep-body
   border-radius: keepRectBorderRadius
-  overflow: hidden
   box-shadow: 0 1px 2px rgba(0,0,0,.05), inset 0 0 0 1px #eee // dfdfdf
 
 .kf-keep-content
@@ -151,10 +150,14 @@ keepFooterMarginTop = 16px
   height: 23px
   border-radius: 50%
   margin-left: 4px
+  position: relative // for user hovercard
 
   @media (max-width: 479px)
     margin-left: 1px
     height: 18px
+
+  &>.kf-utt
+    margin-left: 14px
 
 .kf-keep-who-pic
   position: relative

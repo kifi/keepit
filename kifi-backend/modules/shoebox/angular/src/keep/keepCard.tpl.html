@@ -36,7 +36,7 @@
       </button>
     </div>
     <div class="kf-keep-who" ng-if="keep.keepersTotal || keep.keepers.length">
-      <span class="kf-keep-who-pic-box" ng-repeat="keeper in keep.keepers | limitTo:9" kf-user-tooltip ng-mouseenter="showTooltip()" ng-mouseleave="hideTooltip()" ng-click="hideTooltip()">
+      <span class="kf-keep-who-pic-box" ng-repeat="keeper in keep.keepers | limitTo:9" kf-user-tooltip="::keeper" desc="Your Kifi connection">
         <a class="kf-keep-who-pic" ng-attr-style="background-image:url({{::keeper|pic:100}})" href="{{::keeper|profileUrl}}" kf-track-origin="{{::currentPageOrigin}}/alsoKeptBy"></a>
       </span>
       <span class="kf-keep-who-text" ng-if="keep.keepersTotal > (keep.keepers.length || 0)">

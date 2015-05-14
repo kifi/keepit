@@ -1,6 +1,6 @@
-.kifi-wtt
+.kf-utt
   position: absolute
-  left: -21px
+  left: -40px
   top: -90px
   background-color: #fff
   color: #faf9f9
@@ -11,39 +11,29 @@
   cursor: default
   z-index: 10
 
-  &.showing
-    opacity: 1
+  &.ng-enter
+  &.ng-leave
+    transition: transform 50ms, opacity 50ms
 
-  &.ng-hide-add
-  &.ng-hide-remove
-    transition: opacity linear, padding-top linear
-    transition-duration: 50ms
-    display: block!important
-
-  &.ng-hide-add.ng-hide-add-active
-  &.ng-hide-remove
+  &.ng-enter:not(.ng-enter-active)
+  &.ng-leave-active
+    transform: translate(0, 3px)
     opacity: 0
-    padding-top: 3px
 
-  &.ng-hide-add
-  &.ng-hide-remove.ng-hide-remove-active
-    opacity: 1
-    padding-top: 0
-
-.kifi-wtt-top
+.kf-utt-top
   display: table
   table-layout: fixed
   border-collapse: collapse
   max-width: 320px
 
-.kifi-wtt-pic
+.kf-utt-pic
   display: table-cell
   height: 72px
   width: 72px
   margin: 1px
   border-radius: 2px 0 0 2px
 
-.kifi-wtt-info
+.kf-utt-info
   display: table-cell
   vertical-align: middle
   padding: 0 14px
@@ -51,26 +41,27 @@
   line-height: 13px
   color: #808080
 
-.kifi-wtt-name
+.kf-utt-name
   font-size: 16px
   line-height: 18px
   color: #444
   margin-bottom: 4px
 
-.kifi-wtt-desc
+.kf-utt-desc
+  white-space: nowrap
   color: #929496
 
-.kifi-wtt-tri
+.kf-utt-tri
   position: absolute
   height: 14px
   width: 28px
   bottom: -14px
-  left: 40px
+  left: 36px
   margin-left: -14px
   overflow: hidden
   border-color: inherit
 
-.kifi-wtt-tri::after
+.kf-utt-tri::after
   content: ' '
   position: absolute
   height: 14px

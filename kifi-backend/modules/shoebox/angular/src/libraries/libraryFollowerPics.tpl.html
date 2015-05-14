@@ -1,14 +1,9 @@
 <div class="kf-lfp">
-  <a class="kf-lfp-pic-a" ng-repeat="follower in followersToShow" href="{{follower|profileUrl}}" kf-track-origin="{{currentPageOrigin}}/follower">
-    <img ng-src="{{follower|pic:100}}"
-      class="kf-lfp-pic"
-      kf-user-tooltip
-      keeper="follower"
-      ng-mouseenter="showTooltip()"
-      ng-mouseleave="hideTooltip()"
-      ng-click="hideTooltip()"
-      alt="{{follower|name}}">
-  </a>
+  <span class="kf-lfp-pic-wrap" kf-user-tooltip="::follower" ng-repeat="follower in followersToShow">
+    <a class="kf-lfp-pic-a" href="{{::follower|profileUrl}}" kf-track-origin="{{::currentPageOrigin}}/follower">
+      <img class="kf-lfp-pic" ng-src="{{::follower|pic:100}}" alt="{{::follower|name}}">
+    </a>
+  </span>
   <button class="kf-lfp-more" ng-if="moreCount" ng-click="showFollowers()">
     <span class="kf-lfp-more-text kf-{{moreCountText.length}}">{{moreCountText}}</span>
   </button>

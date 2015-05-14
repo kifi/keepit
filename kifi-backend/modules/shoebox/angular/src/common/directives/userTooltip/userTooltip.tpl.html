@@ -1,10 +1,10 @@
-<div class="kifi-wtt tooltip-show-hide" ng-show="tooltipEnabled">
-  <div class="kifi-wtt-top">
-    <img class="kifi-wtt-pic" ng-src="{{keeper|pic:200}}">
-    <div class="kifi-wtt-info">
-      <div class="kifi-wtt-name">{{keeper|name}}</div>
-      <div class="kifi-wtt-desc" ng-hide="hideWhoInfo">Your Kifi connection</div>
+<div class="kf-utt" ng-if="showing">
+  <div class="kf-utt-top">
+    <img class="kf-utt-pic" ng-src="{{user|pic:200}}">
+    <div class="kf-utt-info">
+      <div class="kf-utt-name">{{user|name}}</div>
+      <div class="kf-utt-desc">{{desc}}</div>
     </div>
   </div>
-  <div class="kifi-wtt-tri"></div>
+  <div class="kf-utt-tri"></div>
 </div>
