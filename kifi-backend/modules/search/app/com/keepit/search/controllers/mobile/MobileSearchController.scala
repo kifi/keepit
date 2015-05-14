@@ -297,7 +297,7 @@ class MobileSearchController @Inject() (
         val allKeepersShown = limitedAugmentationInfos.map(_.keepers)
 
         val futureUsers = {
-          val uniqueKeepersShown = allKeepersShown.flatten.distinct
+          val uniqueKeepersShown = allKeepersShown.flatMap(_.map(_._1)).distinct
           shoeboxClient.getBasicUsers(uniqueKeepersShown)
         }
 
@@ -323,7 +323,7 @@ class MobileSearchController @Inject() (
                   "imageWidth" -> image.map(_.size.width),
                   "imageHeight" -> image.map(_.size.height)
                 )),
-                "keepers" -> limitedInfo.keepers.map(users(_).externalId),
+                "keepers" -> limitedInfo.keepers.map { case (keeperId, _) => users(keeperId).externalId },
                 "keepersOmitted" -> limitedInfo.keepersOmitted,
                 "keepersTotal" -> limitedInfo.keepersTotal
               )

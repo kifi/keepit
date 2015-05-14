@@ -2,6 +2,7 @@ package com.keepit.search.augmentation
 
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.model._
+import org.joda.time.DateTime
 import play.api.libs.json._
 import com.keepit.common.json.TupleFormat
 
@@ -18,7 +19,7 @@ object AugmentableItem {
   }
 }
 
-case class RestrictedKeepInfo(id: ExternalId[Keep], keptIn: Option[Id[Library]], keptBy: Option[Id[User]], note: Option[String], tags: Set[Hashtag])
+case class RestrictedKeepInfo(id: ExternalId[Keep], keptAt: Option[DateTime], keptIn: Option[Id[Library]], keptBy: Option[Id[User]], note: Option[String], tags: Set[Hashtag])
 
 object RestrictedKeepInfo {
   implicit val format = Json.format[RestrictedKeepInfo]
@@ -83,11 +84,11 @@ object ItemAugmentationResponse {
 }
 
 case class LimitedAugmentationInfo(
-  keep: Option[(Id[Library], Id[User], Option[String])],
-  keepers: Seq[Id[User]],
+  keep: Option[RestrictedKeepInfo],
+  keepers: Seq[(Id[User], Option[DateTime])],
   keepersOmitted: Int,
   keepersTotal: Int,
-  libraries: Seq[(Id[Library], Id[User])],
+  libraries: Seq[(Id[Library], Id[User], Option[DateTime])],
   librariesOmitted: Int,
   librariesTotal: Int,
   tags: Seq[Hashtag],
@@ -95,8 +96,12 @@ case class LimitedAugmentationInfo(
 
 object LimitedAugmentationInfo {
   implicit val format = {
-    implicit val keepFormat = TupleFormat.tuple3Format[Id[Library], Id[User], Option[String]]
-    implicit val libraryFormat = TupleFormat.tuple2Format[Id[Library], Id[User]]
+    implicit val keeperFormat: Format[(Id[User], Option[DateTime])] = {
+      Format(TupleFormat.tuple2Reads[Id[User], Option[DateTime]] orElse Id.format[User].map((_, None)), TupleFormat.tuple2Writes[Id[User], Option[DateTime]])
+    }
+    implicit val libraryFormat: Format[(Id[Library], Id[User], Option[DateTime])] = {
+      Format(TupleFormat.tuple3Reads[Id[Library], Id[User], Option[DateTime]] orElse TupleFormat.tuple2Reads[Id[Library], Id[User]].map { case (libId, userId) => (libId, userId, None) }, TupleFormat.tuple3Writes[Id[Library], Id[User], Option[DateTime]])
+    }
     Json.format[LimitedAugmentationInfo]
   }
 

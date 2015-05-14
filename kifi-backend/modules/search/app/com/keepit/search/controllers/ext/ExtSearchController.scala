@@ -126,7 +126,7 @@ class ExtSearchController @Inject() (
     val allKeepersShown = limitedAugmentationInfos.map(_.keepers)
     val allLibrariesShown = limitedAugmentationInfos.map(_.libraries)
 
-    val userIds = ((allKeepersShown.flatten ++ allLibrariesShown.flatMap(_.map(_._2))).toSet - userId).toSeq
+    val userIds = ((allKeepersShown.flatMap(_.map(_._1)) ++ allLibrariesShown.flatMap(_.map(_._2))).toSet - userId).toSeq
     val userIndexById = userIds.zipWithIndex.toMap + (userId -> -1)
 
     val libraryRecordsAndVisibilityById = getLibraryRecordsAndVisibility(librarySearcher, allLibrariesShown.flatMap(_.map(_._1)).toSet)
@@ -152,9 +152,9 @@ class ExtSearchController @Inject() (
     val augmentationFields = (limitedAugmentationInfos zip secrecies).map {
       case (limitedInfo, secret) =>
 
-        val keepersIndices = limitedInfo.keepers.map(userIndexById(_))
+        val keepersIndices = limitedInfo.keepers.map { case (keeperId, _) => userIndexById(keeperId) }
         val librariesIndices = limitedInfo.libraries.collect {
-          case (libraryId, keeperId) if libraryIndexById.contains(libraryId) => Seq(libraryIndexById(libraryId), userIndexById(keeperId))
+          case (libraryId, keeperId, _) if libraryIndexById.contains(libraryId) => Seq(libraryIndexById(libraryId), userIndexById(keeperId))
         }.flatten
 
         Json.obj(
