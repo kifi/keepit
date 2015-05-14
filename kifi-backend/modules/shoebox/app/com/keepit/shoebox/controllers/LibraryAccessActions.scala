@@ -37,8 +37,8 @@ trait LibraryAccessActions {
 
   private def lookupViewAccess[A](libraryPubId: PublicId[Library], input: MaybeUserRequest[A]) = {
     parseRequest(libraryPubId, input) match {
-      case Some((libraryId, userIdOpt, accessToken, hashedPassPhrase)) =>
-        val access = libraryCommander.canViewLibrary(userIdOpt, libraryId, accessToken, hashedPassPhrase)
+      case Some((libraryId, userIdOpt, accessToken)) =>
+        val access = libraryCommander.canViewLibrary(userIdOpt, libraryId, accessToken)
         if (access) {
           None
         } else {
@@ -51,7 +51,7 @@ trait LibraryAccessActions {
 
   private def lookupWriteAccess[A](libraryPubId: PublicId[Library], input: MaybeUserRequest[A]) = {
     parseRequest(libraryPubId, input) match {
-      case Some((libraryId, Some(userId), accessToken, hashedPassPhrase)) =>
+      case Some((libraryId, Some(userId), accessToken)) =>
         libraryCommander.userAccess(userId, libraryId, None) match {
           case Some(LibraryAccess.OWNER) | Some(LibraryAccess.READ_WRITE) =>
             None
@@ -65,7 +65,7 @@ trait LibraryAccessActions {
 
   private def lookupOwnerAccess[A](libraryPubId: PublicId[Library], input: MaybeUserRequest[A]) = {
     parseRequest(libraryPubId, input) match {
-      case Some((libraryId, Some(userId), accessToken, hashedPassPhrase)) =>
+      case Some((libraryId, Some(userId), accessToken)) =>
         libraryCommander.userAccess(userId, libraryId, None) match {
           case Some(LibraryAccess.OWNER) =>
             None
@@ -77,7 +77,7 @@ trait LibraryAccessActions {
     }
   }
 
-  private def parseRequest[A](libraryPubId: PublicId[Library], input: MaybeUserRequest[A]): Option[(Id[Library], Option[Id[User]], Option[String], Option[HashedPassPhrase])] = {
+  private def parseRequest[A](libraryPubId: PublicId[Library], input: MaybeUserRequest[A]): Option[(Id[Library], Option[Id[User]], Option[String])] = {
     val userIdOpt: Option[Id[User]] = input match {
       case userRequest: UserRequest[A] => Some(userRequest.userId)
       case _ => None
@@ -85,23 +85,7 @@ trait LibraryAccessActions {
 
     val libIdOpt = Library.decodePublicId(libraryPubId).toOption
     libIdOpt.map { libId =>
-
-      val (cookieLibraryId, hashedPassPhrase) = input.session.get("library_access").flatMap { libraryAccessCookie =>
-        libraryCommander.getLibraryIdAndPassPhraseFromCookie(libraryAccessCookie).map { r =>
-          (Some(r._1), Some(r._2))
-        }
-      }.getOrElse((None, None))
-
-      if (cookieLibraryId.isEmpty || (cookieLibraryId.isDefined && cookieLibraryId.get != libId)) {
-        (libId, userIdOpt, None, None)
-      } else {
-        input.getQueryString("authToken") match {
-          case Some(accessToken) =>
-            (libId, userIdOpt, Some(accessToken), hashedPassPhrase)
-          case None =>
-            (libId, userIdOpt, None, None)
-        }
-      }
+      (libId, userIdOpt, input.getQueryString("authToken"))
     }
   }
 }

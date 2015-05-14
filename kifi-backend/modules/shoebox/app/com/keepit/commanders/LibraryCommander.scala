@@ -294,8 +294,10 @@ class LibraryCommander @Inject() (
         val owner = usersById(lib.ownerId)
         val followers = memberInfosByLibraryId(lib.id.get).shown.map(usersById(_))
         val collaborators = memberInfosByLibraryId(lib.id.get).collaborators.map(usersById(_))
+        val whoCanInvite = if (lib.whoCanInvite == Some(LibraryInvitePermissions.OWNER_ONLY)) "owner" else "collaborator"
 
         val attr = getSourceAttribution(libId)
+
         if (keepInfos.size > keepCount) {
           airbrake.notify(s"keep count $keepCount for library is lower then num of keeps ${keepInfos.size} for $lib")
         }
@@ -317,7 +319,8 @@ class LibraryCommander @Inject() (
           numCollaborators = collaboratorCount,
           numFollowers = followerCount,
           lastKept = lib.lastKept,
-          attr = attr
+          attr = attr,
+          whoCanInvite = whoCanInvite
         )
       }
     }
@@ -490,12 +493,13 @@ class LibraryCommander @Inject() (
             val newColor = libAddReq.color.orElse(Some(LibraryColor.pickRandomLibraryColor))
             val newListed = libAddReq.listed.getOrElse(true)
             val newKind = libAddReq.kind.getOrElse(LibraryKind.USER_CREATED)
+            val newInviteToCollab = libAddReq.whoCanInvite.orElse(Some(LibraryInvitePermissions.COLLABORATORS_ALLOW))
             val library = db.readWrite { implicit s =>
               libraryAliasRepo.reclaim(ownerId, validSlug)
               libraryRepo.getOpt(ownerId, validSlug) match {
                 case None =>
                   val lib = libraryRepo.save(Library(ownerId = ownerId, name = libAddReq.name, description = libAddReq.description,
-                    visibility = libAddReq.visibility, slug = validSlug, color = newColor, kind = newKind, memberCount = 1, keepCount = 0))
+                    visibility = libAddReq.visibility, slug = validSlug, color = newColor, kind = newKind, memberCount = 1, keepCount = 0, whoCanInvite = newInviteToCollab))
                   libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = ownerId, access = LibraryAccess.OWNER, listed = newListed, lastJoinedAt = Some(currentDateTime)))
                   lib
                 case Some(lib) =>
@@ -528,7 +532,6 @@ class LibraryCommander @Inject() (
   }
 
   def modifyLibrary(libraryId: Id[Library], userId: Id[User], modifyReq: LibraryModifyRequest)(implicit context: HeimdalContext): Either[LibraryFail, Library] = {
-
     val (targetLib, targetMembershipOpt) = db.readOnlyMaster { implicit s =>
       val lib = libraryRepo.get(libraryId)
       val mem = libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId)
@@ -583,6 +586,7 @@ class LibraryCommander @Inject() (
         val newVisibility = modifyReq.visibility.getOrElse(targetLib.visibility)
         val newColor = modifyReq.color.orElse(targetLib.color)
         val newListed = modifyReq.listed.getOrElse(targetMembership.listed)
+        val newInviteToCollab = modifyReq.whoCanInvite.orElse(targetLib.whoCanInvite)
         Future {
           val keeps = db.readOnlyMaster { implicit s =>
             keepRepo.getByLibrary(libraryId, 0, Int.MaxValue, Set.empty)
@@ -603,7 +607,7 @@ class LibraryCommander @Inject() (
           if (targetMembership.listed != newListed) {
             libraryMembershipRepo.save(targetMembership.copy(listed = newListed))
           }
-          libraryRepo.save(targetLib.copy(name = newName, slug = newSlug, visibility = newVisibility, description = newDescription, color = newColor, state = LibraryStates.ACTIVE))
+          libraryRepo.save(targetLib.copy(name = newName, slug = newSlug, visibility = newVisibility, description = newDescription, color = newColor, whoCanInvite = newInviteToCollab, state = LibraryStates.ACTIVE))
         }
 
         val edits = Map(
@@ -612,7 +616,8 @@ class LibraryCommander @Inject() (
           "description" -> (newDescription != targetLib.description),
           "color" -> (newColor != targetLib.color),
           "madePrivate" -> (newVisibility != targetLib.visibility && newVisibility == LibraryVisibility.SECRET),
-          "listed" -> (newListed != targetMembership.listed)
+          "listed" -> (newListed != targetMembership.listed),
+          "inviteToCollab" -> (newInviteToCollab != targetLib.whoCanInvite)
         )
         (lib, edits)
       }
@@ -663,40 +668,34 @@ class LibraryCommander @Inject() (
     }
   }
 
-  private def getValidLibInvitesFromAuthTokenAndPassPhrase(libraryId: Id[Library], authToken: Option[String], passPhrase: Option[HashedPassPhrase])(implicit s: RSession): Seq[LibraryInvite] = {
-    if (authToken.nonEmpty && passPhrase.nonEmpty) {
+  private def getValidLibInvitesFromAuthToken(libraryId: Id[Library], authToken: Option[String])(implicit s: RSession): Seq[LibraryInvite] = {
+    if (authToken.nonEmpty) {
       val excludeSet = Set(LibraryInviteStates.INACTIVE, LibraryInviteStates.ACCEPTED, LibraryInviteStates.DECLINED)
       libraryInviteRepo.getByLibraryIdAndAuthToken(libraryId, authToken.get, excludeSet)
-        .filter { i =>
-          HashedPassPhrase.generateHashedPhrase(i.passPhrase) == passPhrase.get
-        }
     } else {
       Seq.empty[LibraryInvite]
     }
   }
 
-  def canViewLibrary(userId: Option[Id[User]], library: Library,
-    authToken: Option[String] = None,
-    passPhrase: Option[HashedPassPhrase] = None): Boolean = {
-
+  def canViewLibrary(userId: Option[Id[User]], library: Library, authToken: Option[String] = None): Boolean = {
     library.visibility == LibraryVisibility.PUBLISHED || // published library
       db.readOnlyMaster { implicit s =>
         userId match {
           case Some(id) =>
             libraryMembershipRepo.getWithLibraryIdAndUserId(library.id.get, id).nonEmpty ||
               libraryInviteRepo.getWithLibraryIdAndUserId(userId = id, libraryId = library.id.get, excludeState = Some(LibraryInviteStates.INACTIVE)).nonEmpty ||
-              getValidLibInvitesFromAuthTokenAndPassPhrase(library.id.get, authToken, passPhrase).nonEmpty
+              getValidLibInvitesFromAuthToken(library.id.get, authToken).nonEmpty
           case None =>
-            getValidLibInvitesFromAuthTokenAndPassPhrase(library.id.get, authToken, passPhrase).nonEmpty
+            getValidLibInvitesFromAuthToken(library.id.get, authToken).nonEmpty
         }
       }
   }
 
-  def canViewLibrary(userId: Option[Id[User]], libraryId: Id[Library], accessToken: Option[String], passCode: Option[HashedPassPhrase]): Boolean = {
+  def canViewLibrary(userId: Option[Id[User]], libraryId: Id[Library], accessToken: Option[String]): Boolean = {
     val library = db.readOnlyReplica { implicit session =>
       libraryRepo.get(libraryId)
     }
-    canViewLibrary(userId, library, accessToken, passCode)
+    canViewLibrary(userId, library, accessToken)
   }
 
   def getLibrariesByUser(userId: Id[User]): (Seq[(LibraryMembership, Library)], Seq[(LibraryInvite, Library)]) = {
@@ -753,7 +752,7 @@ class LibraryCommander @Inject() (
           }
           val invitesToPersist = key._2.filter { invite =>
             lastInviteOpt.map { lastInvite =>
-              lastInvite.createdAt.plusMinutes(5).isBefore(invite.createdAt)
+              lastInvite.access != invite.access || lastInvite.createdAt.plusMinutes(5).isBefore(invite.createdAt)
             }.getOrElse(true)
           }
 
@@ -1002,57 +1001,85 @@ class LibraryCommander @Inject() (
   }
 
   def inviteUsersToLibrary(libraryId: Id[Library], inviterId: Id[User], inviteList: Seq[(Either[Id[User], EmailAddress], LibraryAccess, Option[String])])(implicit eventContext: HeimdalContext): Future[Either[LibraryFail, Seq[(Either[BasicUser, RichContact], LibraryAccess)]]] = {
-    val targetLib = db.readOnlyMaster { implicit s =>
-      libraryRepo.get(libraryId)
+    val (lib, inviterMembership) = db.readOnlyMaster { implicit s =>
+      val lib = libraryRepo.get(libraryId)
+      val mem = libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, inviterId)
+      (lib, mem)
     }
-    if (!(targetLib.ownerId == inviterId || targetLib.visibility == LibraryVisibility.PUBLISHED))
-      Future.successful(Left(LibraryFail(FORBIDDEN, "permission_denied")))
-    else if (targetLib.kind == LibraryKind.SYSTEM_MAIN || targetLib.kind == LibraryKind.SYSTEM_SECRET)
+    val inviterIsOwner = inviterMembership.map(_.isOwner).getOrElse(false)
+    val inviterIsCollab = inviterMembership.map(_.isCollaborator).getOrElse(false)
+
+    if (lib.kind == LibraryKind.SYSTEM_MAIN || lib.kind == LibraryKind.SYSTEM_SECRET)
       Future.successful(Left(LibraryFail(BAD_REQUEST, "cant_invite_to_system_generated_library")))
     else {
-      val futureInvitedContactsByEmailAddress = {
+      // get all invitee contacts by email address
+      val futureInviteeContactsByEmailAddress = {
         val invitedEmailAddresses = inviteList.collect { case (Right(emailAddress), _, _) => emailAddress }
         abookClient.internKifiContacts(inviterId, invitedEmailAddresses.map(BasicContact(_)): _*).imap { kifiContacts =>
           (invitedEmailAddresses zip kifiContacts).toMap
         }
       }
 
-      val invitedBasicUsersById = {
+      // get all invitee users (mapped userId -> basicuser)
+      val inviteeUserMap = {
         val invitedUserIds = inviteList.collect { case (Left(userId), _, _) => userId }
-        db.readOnlyMaster { implicit s => basicUserRepo.loadAll(invitedUserIds.toSet) }
+        db.readOnlyMaster { implicit s =>
+          basicUserRepo.loadAll(invitedUserIds.toSet)
+        }
       }
 
-      futureInvitedContactsByEmailAddress.map { invitedContactsByEmailAddress =>
-        val invitesAndInvitees = db.readOnlyMaster { implicit s =>
+      futureInviteeContactsByEmailAddress.map { inviteeContactsByEmailAddress => // when email contacts are done fetching... process through inviteList
+        val invitesForInvitees = db.readOnlyMaster { implicit s =>
+          val libMembersMap = libraryMembershipRepo.getWithLibraryId(lib.id.get).map { mem =>
+            mem.userId -> mem
+          }.toMap
+
           for ((recipient, inviteAccess, msgOpt) <- inviteList) yield {
-            val access = if (targetLib.ownerId != inviterId) LibraryAccess.READ_ONLY else inviteAccess
-            recipient match {
-              case Left(userId) =>
-                if (userId == targetLib.ownerId) {
-                  None
-                } else {
-                  libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId) match {
-                    case Some(mem) if mem.access == access =>
-                      None
-                    case _ =>
-                      val newInvite = LibraryInvite(libraryId = libraryId, inviterId = inviterId, userId = Some(userId), access = access, message = msgOpt)
-                      val inviteeInfo = (Left(invitedBasicUsersById(userId)), access)
-                      Some(newInvite, inviteeInfo)
-                  }
+
+            inviteAccess match {
+              // non-owner/non-collaborator tries to invite to collaborate
+              case LibraryAccess.READ_WRITE if !inviterIsOwner && !inviterIsCollab =>
+                log.warn(s"[inviteUsersToLibrary] error invite to collaborate: user $inviterId attempting to invite $recipient for RW access to library (${lib.id.get}, ${lib.name}, ${lib.visibility}, ${lib.whoCanInvite})")
+                None
+              // collaborator tries to invite to collaborate, but library setting is set to owner_only
+              case LibraryAccess.READ_WRITE if inviterIsCollab && lib.whoCanInvite == Some(LibraryInvitePermissions.OWNER_ONLY) =>
+                log.warn(s"[inviteUsersToLibrary] error invite to collaborate: user $inviterId attempting to invite $recipient for RW access to library (${lib.id.get}, ${lib.name}, ${lib.visibility}, ${lib.whoCanInvite})")
+                None
+              // non-owner/non-collaborator tries to invite to follow (secret libraries only)
+              case LibraryAccess.READ_ONLY if lib.isSecret && !inviterIsOwner && !inviterIsCollab =>
+                log.warn(s"[inviteUsersToLibrary] error invite to follow: user $inviterId attempting to invite $recipient for RO access to library (${lib.id.get}, ${lib.name}, ${lib.visibility}, ${lib.whoCanInvite})")
+                None
+              // collaborator in secret library tries to invite to follow, but library setting is set to owner_only
+              case LibraryAccess.READ_ONLY if lib.isSecret && inviterIsCollab && lib.whoCanInvite == Some(LibraryInvitePermissions.OWNER_ONLY) =>
+                log.warn(s"[inviteUsersToLibrary] error invite to follow: user $inviterId attempting to invite $recipient for RO access to library (${lib.id.get}, ${lib.name}, ${lib.visibility}, ${lib.whoCanInvite})")
+                None
+              case _ =>
+                recipient match {
+                  case Left(userId) =>
+                    libMembersMap.get(userId) match {
+                      case Some(mem) if mem.isOwner || mem.isCollaborator => // don't persist invite to an owner or collaborator
+                        log.warn(s"[inviteUsersToLibrary] not persisting invite: user $inviterId attempting to invite user $userId when recipient is already owner or collaborator")
+                        None
+                      case Some(mem) if mem.access == inviteAccess => // don't persist invite to a user with same access
+                        log.warn(s"[inviteUsersToLibrary] not persisting invite: user $inviterId attempting to invite user $userId for $inviteAccess access when membership has same access level")
+                        None
+                      case _ =>
+                        val newInvite = LibraryInvite(libraryId = libraryId, inviterId = inviterId, userId = Some(userId), access = inviteAccess, message = msgOpt)
+                        val inviteeInfo = (Left(inviteeUserMap(userId)), inviteAccess)
+                        Some(newInvite, inviteeInfo)
+                    }
+
+                  case Right(email) =>
+                    val newInvite = LibraryInvite(libraryId = libraryId, inviterId = inviterId, emailAddress = Some(email), access = inviteAccess, message = msgOpt)
+                    val inviteeInfo = (Right(inviteeContactsByEmailAddress(email)), inviteAccess)
+                    Some(newInvite, inviteeInfo)
                 }
-              case Right(email) =>
-                val newInvite = LibraryInvite(libraryId = libraryId, inviterId = inviterId, emailAddress = Some(email), access = access, message = msgOpt)
-                val inviteeInfo = (Right(invitedContactsByEmailAddress(email)), access)
-                Some(newInvite, inviteeInfo)
             }
           }
         }
-        val (invites, inviteesWithAccess) = invitesAndInvitees.flatten.unzip
+        val (invites, inviteesWithAccess) = invitesForInvitees.flatten.unzip
         processInvites(invites)
-        Future {
-          libraryAnalytics.sendLibraryInvite(inviterId, targetLib, inviteList.map { _._1 }, eventContext)
-        }
-
+        libraryAnalytics.sendLibraryInvite(inviterId, lib, inviteList.map { _._1 }, eventContext)
         Right(inviteesWithAccess)
       }
     }
@@ -1148,11 +1175,11 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def joinLibrary(userId: Id[User], libraryId: Id[Library], authToken: Option[String] = None, hashedPassPhrase: Option[HashedPassPhrase] = None)(implicit eventContext: HeimdalContext): Either[LibraryFail, Library] = {
+  def joinLibrary(userId: Id[User], libraryId: Id[Library], authToken: Option[String] = None)(implicit eventContext: HeimdalContext): Either[LibraryFail, Library] = {
     val (lib, inviteList) = db.readOnlyMaster { implicit s =>
       val lib = libraryRepo.get(libraryId)
-      val tokenInvites = if (authToken.isDefined && hashedPassPhrase.isDefined) {
-        getValidLibInvitesFromAuthTokenAndPassPhrase(libraryId, authToken, hashedPassPhrase)
+      val tokenInvites = if (authToken.isDefined) {
+        getValidLibInvitesFromAuthToken(libraryId, authToken)
       } else Seq.empty
       val libInvites = libraryInviteRepo.getWithLibraryIdAndUserId(libraryId, userId)
       val allInvites = tokenInvites ++ libInvites
@@ -1168,13 +1195,15 @@ class LibraryCommander @Inject() (
       val updatedLib = db.readWrite(attempts = 3) { implicit s =>
         libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId, None) match {
           case None =>
-            libraryMembershipRepo.save(LibraryMembership(libraryId = libraryId, userId = userId, access = maxAccess, lastJoinedAt = Some(currentDateTime)))
+            val subscribedToUpdates = if (maxAccess == LibraryAccess.READ_WRITE) true else false
+            libraryMembershipRepo.save(LibraryMembership(libraryId = libraryId, userId = userId, access = maxAccess, lastJoinedAt = Some(currentDateTime), subscribedToUpdates = subscribedToUpdates))
             SafeFuture {
               notifyOwnerOfNewFollower(userId, lib)
             }
           case Some(mem) =>
             val maxWithExisting = (maxAccess :: mem.access :: Nil).sorted.last
-            libraryMembershipRepo.save(mem.copy(access = maxWithExisting, state = LibraryMembershipStates.ACTIVE, lastJoinedAt = Some(currentDateTime)))
+            val subscribedToUpdates = if (maxWithExisting == LibraryAccess.READ_WRITE) true else mem.subscribedToUpdates
+            libraryMembershipRepo.save(mem.copy(access = maxWithExisting, state = LibraryMembershipStates.ACTIVE, lastJoinedAt = Some(currentDateTime), subscribedToUpdates = subscribedToUpdates))
         }
         val updatedLib = libraryRepo.save(lib.copy(memberCount = libraryMembershipRepo.countWithLibraryId(libraryId)))
         inviteList.foreach { inv =>
@@ -1716,20 +1745,22 @@ class LibraryCommander @Inject() (
           Left(LibraryFail(BAD_REQUEST, "cannot_change_owner_access"))
 
         case (Some(mem), Some(targetMem), library) =>
+
           if ((mem.isOwner && !targetMem.isOwner) || // owners can edit anyone except themselves
-            (mem.isCollaborator && mem.userId == targetMem.userId) || // a collaborator can only edit herself
+            (mem.isCollaborator && !targetMem.isOwner) || // a collaborator can edit anyone (but the owner). Collaborator cannot invite others to collaborate if the library does not allow collaborators to invite
             (mem.isFollower && mem.userId == targetMem.userId)) { // a follower can only edit herself
             db.readWrite { implicit s =>
               newAccess match {
                 case None =>
                   SafeFuture { convertKeepOwnershipToLibraryOwner(targetMem.userId, library) }
                   Right(libraryMembershipRepo.save(targetMem.copy(state = LibraryMembershipStates.INACTIVE)))
-                case Some(newAccess) if targetMem.access.isHigherAccess(newAccess) => // can only demote membership
+                case Some(newAccess) if mem.isCollaborator && newAccess == LibraryAccess.READ_WRITE && library.whoCanInvite == Some(LibraryInvitePermissions.OWNER_ONLY) =>
+                  log.warn(s"[updateLibraryMembership] invalid permission ${mem} trying to change membership ${targetMem} to ${newAccess} when library has invite policy ${library.whoCanInvite}")
+                  Left(LibraryFail(FORBIDDEN, "invalid_collaborator_permission"))
+                case Some(newAccess) =>
                   SafeFuture { convertKeepOwnershipToLibraryOwner(targetMem.userId, library) }
-                  Right(libraryMembershipRepo.save(targetMem.copy(access = newAccess)))
-                case _ =>
-                  log.warn(s"[updateLibraryMembership] attempting to promote membership ${targetMem} access to ${newAccess}")
-                  Left(LibraryFail(BAD_REQUEST, "cannot_promote_access"))
+                  val newSubscription = if (newAccess == LibraryAccess.READ_WRITE) true else targetMem.subscribedToUpdates // auto subscribe to updates if a collaborator
+                  Right(libraryMembershipRepo.save(targetMem.copy(access = newAccess, subscribedToUpdates = newSubscription)))
               }
             }
           } else { // invalid permissions

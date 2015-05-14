@@ -3,6 +3,10 @@ package com.keepit.search.controllers.mobile
 import com.keepit.commanders.ProcessedImageSize
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.Id
+import com.keepit.common.json
+import com.keepit.common.store.S3ImageConfig
+import com.keepit.rover.RoverServiceClient
+import com.keepit.rover.model.BasicImages
 import com.keepit.search.augmentation.AugmentationCommander
 import com.keepit.search.engine.SearchFactory
 import com.keepit.search.engine.uri.UriSearchResult
@@ -37,7 +41,9 @@ object MobileSearchController {
 class MobileSearchController @Inject() (
     val userActionsHelper: UserActionsHelper,
     implicit val publicIdConfig: PublicIdConfiguration,
+    implicit val imageConfig: S3ImageConfig,
     val shoeboxClient: ShoeboxServiceClient,
+    rover: RoverServiceClient,
     uriSearchCommander: UriSearchCommander,
     librarySearchCommander: LibrarySearchCommander,
     userSearchCommander: UserSearchCommander,
@@ -210,16 +216,19 @@ class MobileSearchController @Inject() (
 
     val futureUserSearchResultJson = if (maxUsers <= 0) Future.successful(JsNull) else {
       userSearchCommander.searchUsers(userId, acceptLangs, experiments, query, filter, userContext, maxUsers, disablePrefixSearch, None, debugOpt, None).flatMap { userSearchResult =>
-        val userIds = userSearchResult.hits.map(_.id).toSet
-        val futureUsers = shoeboxClient.getBasicUsers(userIds.toSeq)
         val futureFriends = searchFactory.getFriends(userId)
+        val userIds = userSearchResult.hits.map(_.id).toSet
         val futureMutualFriendsByUser = searchFactory.getMutualFriends(userId, userIds)
         val futureKeepCountsByUser = shoeboxClient.getKeepCounts(userIds)
         val librarySearcher = libraryIndexer.getSearcher
+        val relevantLibraryRecordsAndVisibility = getLibraryRecordsAndVisibility(librarySearcher, userSearchResult.hits.flatMap(_.library).toSet)
+        val futureUsers = {
+          val libraryOwnerIds = relevantLibraryRecordsAndVisibility.values.map(_._1.ownerId)
+          shoeboxClient.getBasicUsers((userIds ++ libraryOwnerIds).toSeq)
+        }
         val libraryMembershipSearcher = libraryMembershipIndexer.getSearcher
         val publishedLibrariesCountByMember = userSearchResult.hits.map { hit => hit.id -> LibraryMembershipIndexable.countPublishedLibrariesByMember(librarySearcher, libraryMembershipSearcher, hit.id) }.toMap
         val publishedLibrariesCountByOwner = userSearchResult.hits.map { hit => hit.id -> LibraryMembershipIndexable.countPublishedLibrariesByOwner(librarySearcher, libraryMembershipSearcher, hit.id) }.toMap
-        val relevantLibraryRecordsAndVisibity = getLibraryRecordsAndVisibility(librarySearcher, userSearchResult.hits.flatMap(_.library).toSet)
         for {
           keepCountsByUser <- futureKeepCountsByUser
           mutualFriendsByUser <- futureMutualFriendsByUser
@@ -231,10 +240,10 @@ class MobileSearchController @Inject() (
             "hits" -> JsArray(userSearchResult.hits.map { hit =>
               val user = users(hit.id)
               val relevantLibrary = hit.library.flatMap { libraryId =>
-                relevantLibraryRecordsAndVisibity.get(libraryId).map {
+                relevantLibraryRecordsAndVisibility.get(libraryId).map {
                   case (record, visibility) =>
-                    require(record.ownerId == hit.id, "Relevant library owner doesn't match returned user.")
-                    val library = makeBasicLibrary(record, visibility, user)
+                    val owner = users(record.ownerId)
+                    val library = makeBasicLibrary(record, visibility, owner)
                     Json.obj("id" -> library.id, "name" -> library.name, "color" -> library.color, "path" -> library.path, "visibility" -> library.visibility)
                 }
               }
@@ -277,7 +286,11 @@ class MobileSearchController @Inject() (
     } else {
 
       val uriIds = uriSearchResult.hits.map(hit => Id[NormalizedURI](hit.id))
-      val futureUriSummaries = shoeboxClient.getUriSummaries(uriIds)
+      val futureUriSummaries = rover.getUriSummaryByUris(uriIds.toSet)
+      val futureKeepImages: Future[Map[Id[Keep], BasicImages]] = {
+        val keepIds = uriSearchResult.hits.flatMap(hit => hit.keepId.map(Id[Keep](_)))
+        shoeboxClient.getKeepImages(keepIds.toSet)
+      }
 
       getAugmentedItems(augmentationCommander)(userId, uriSearchResult).flatMap { augmentedItems =>
         val limitedAugmentationInfos = augmentedItems.map(_.toLimitedAugmentationInfo(maxKeepersShown, maxLibrariesShown, maxTagsShown))
@@ -290,16 +303,26 @@ class MobileSearchController @Inject() (
 
         for {
           summaries <- futureUriSummaries
+          keepImages <- futureKeepImages
           users <- futureUsers
         } yield {
           val jsHits = (uriSearchResult.hits zip limitedAugmentationInfos).map {
             case (hit, limitedInfo) => {
               val uriId = Id[NormalizedURI](hit.id)
+              val summary = summaries.get(uriId)
+              val keepId = hit.keepId.map(Id[Keep](_))
+              val image = (keepId.flatMap(keepImages.get) orElse summary.map(_.images)).flatMap(_.get(ProcessedImageSize.Medium.idealSize))
               Json.obj(
                 "title" -> hit.title,
                 "url" -> hit.url,
                 "score" -> hit.finalScore,
-                "summary" -> summaries(uriId),
+                "summary" -> json.minify(Json.obj(
+                  "title" -> summary.flatMap(_.article.title),
+                  "description" -> summary.flatMap(_.article.description),
+                  "imageUrl" -> image.map(_.path.getUrl),
+                  "imageWidth" -> image.map(_.size.width),
+                  "imageHeight" -> image.map(_.size.height)
+                )),
                 "keepers" -> limitedInfo.keepers.map(users(_).externalId),
                 "keepersOmitted" -> limitedInfo.keepersOmitted,
                 "keepersTotal" -> limitedInfo.keepersTotal

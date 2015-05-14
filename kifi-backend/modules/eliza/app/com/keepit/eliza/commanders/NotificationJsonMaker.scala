@@ -1,23 +1,18 @@
 package com.keepit.eliza.commanders
 
 import com.google.inject.{ Inject, Singleton }
-import com.keepit.common.store.ImageSize
+import com.keepit.common.store.{ S3ImageConfig, ImageSize }
 import com.keepit.eliza.model.UserThreadRepo.RawNotification
-import com.keepit.model.{ ImageType, URISummary, URISummaryRequest, NormalizedURI }
+import com.keepit.model.{ NormalizedURI }
+import com.keepit.rover.RoverServiceClient
+import com.keepit.rover.model.RoverUriSummary
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.{ BasicUserLikeEntity, BasicUser }
-import com.keepit.common.cache.CacheStatistics
 import com.keepit.common.db.Id
-import com.keepit.common.logging.AccessLog
-import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, Key }
-import com.keepit.common.concurrent.ReactiveLock
-import com.keepit.common.akka.SafeFuture
-import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 
-import play.api.libs.json.{ JsValue, Json, JsObject }
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import scala.concurrent.Future
-import scala.concurrent.duration.Duration
+import play.api.libs.json._
+import scala.concurrent.{ ExecutionContext, Future }
+import com.keepit.common.core._
 
 case class NotificationJson(obj: JsObject) extends AnyVal
 
@@ -25,33 +20,52 @@ case class NotificationJson(obj: JsObject) extends AnyVal
 @Singleton
 private[commanders] class NotificationJsonMaker @Inject() (
     shoebox: ShoeboxServiceClient,
-    summaryCache: InboxUriSummaryCache) {
+    rover: RoverServiceClient,
+    implicit val imageConfig: S3ImageConfig,
+    implicit val executionContext: ExecutionContext) {
 
-  private val uriSummaryRequestLimiter = new ReactiveLock(2)
+  private val idealImageSize = ImageSize(65, 95)
 
   def makeOne(rawNotification: RawNotification, includeUriSummary: Boolean = false): Future[NotificationJson] = {
-    makeOpt(rawNotification, includeUriSummary).get
+    make(Seq(rawNotification), includeUriSummary).imap(_.head)
   }
 
   def make(rawNotifications: Seq[RawNotification], includeUriSummary: Boolean = false): Future[Seq[NotificationJson]] = {
-    Future.sequence(rawNotifications.map { n => makeOpt(n, includeUriSummary) }.flatten)
+    val futureSummariesByUriId: Future[Map[Id[NormalizedURI], RoverUriSummary]] = {
+      if (includeUriSummary) rover.getUriSummaryByUris(rawNotifications.flatMap(_._3).toSet) // todo(???): if title and description are not used, switch to getImagesByUris
+      else Future.successful(Map.empty)
+    }
+    Future.sequence(rawNotifications.map { n =>
+      val futureUriSummary = n._3.map(uriId => futureSummariesByUriId.map(_.get(uriId))) getOrElse Future.successful(None)
+      makeOpt(n, futureUriSummary)
+    }.flatten)
   }
 
   // including URI summaries is optional because it's currently slow and only used by the canary extension (new design)
-  private def makeOpt(raw: RawNotification, includeUriSummary: Boolean): Option[Future[NotificationJson]] = {
+  private def makeOpt(raw: RawNotification, futureUriSummary: Future[Option[RoverUriSummary]]): Option[Future[NotificationJson]] = {
     raw._1 match {
       case o: JsObject =>
         val authorFut = author(o \ "author")
         val participantsFut = participants(o \ "participants")
-        val uriSum = if (includeUriSummary) uriSummary(o \ "url", raw._3) else None
+        val futureUriSummaryJson = futureUriSummary.imap(_.map { summary =>
+          val image = summary.images.get(idealImageSize)
+          Json.obj(
+            "title" -> summary.article.title,
+            "description" -> summary.article.description,
+            "imageUrl" -> image.map(_.path.getUrl),
+            "imageWidth" -> image.map(_.size.width),
+            "imageHeight" -> image.map(_.size.height)
+          )
+        })
         val jsonFut = for {
           author <- authorFut
           participants <- participantsFut
+          uriSummary <- futureUriSummaryJson
         } yield NotificationJson(
           o ++ unread(o, raw._2)
             ++ Json.obj("author" -> author)
             ++ (if (!participants.isEmpty) Json.obj("participants" -> participants) else Json.obj())
-            ++ (if (includeUriSummary) Json.obj("uriSummary" -> uriSum) else Json.obj())
+            ++ (if (uriSummary.isDefined) Json.obj("uriSummary" -> uriSummary) else Json.obj())
         )
         Some(jsonFut)
       case _ =>
@@ -93,17 +107,6 @@ private[commanders] class NotificationJsonMaker @Inject() (
     }
   }
 
-  private def uriSummary(value: JsValue, uriIdOpt: Option[Id[NormalizedURI]]): Option[URISummary] = {
-    value.asOpt[String].flatMap { url =>
-      uriIdOpt.flatMap { uriId =>
-        val resultFut = summaryCache.getOrElseFuture(InboxUriSummaryCacheKey(uriId)) {
-          new SafeFuture(fetchUriSummary(uriId, url), Some(s"Fetching URI summary ($uriId -> $url) for extension inbox"))
-        }
-        resultFut.value.flatMap(_.toOption)
-      }
-    }
-  }
-
   private def updateBasicUser(basicUser: BasicUser): Future[BasicUser] = {
     shoebox.getUserOpt(basicUser.externalId) map { userOpt =>
       userOpt.map(BasicUser.fromUser).getOrElse(basicUser)
@@ -113,27 +116,4 @@ private[commanders] class NotificationJsonMaker @Inject() (
     }
   }
 
-  private def fetchUriSummary(uriId: Id[NormalizedURI], url: String): Future[URISummary] = uriSummaryRequestLimiter.withLockFuture {
-    shoebox.getUriSummary(
-      URISummaryRequest(
-        uriId = uriId,
-        imageType = ImageType.IMAGE,
-        minSize = ImageSize(65, 95),
-        withDescription = false,
-        waiting = true,
-        silent = false
-      )
-    )
-  }
-
 }
-
-case class InboxUriSummaryCacheKey(uriId: Id[NormalizedURI]) extends Key[URISummary] {
-  override val version = 1
-  val namespace = "inbox_uri_summary"
-  def toKey(): String = uriId.id.toString
-}
-
-class InboxUriSummaryCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[InboxUriSummaryCacheKey, URISummary](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
-

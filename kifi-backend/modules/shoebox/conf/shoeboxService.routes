@@ -667,7 +667,7 @@ POST    /admin/user/:id/impersonate @com.keepit.controllers.admin.AdminAuthContr
 POST    /admin/user/:id/deactivate  @com.keepit.controllers.admin.AdminUserController.deactivate(id: Id[User])
 GET     /admin/user/:id/mixpanel/reset    @com.keepit.controllers.admin.AdminUserController.resetMixpanelProfile(id: Id[User])
 POST    /admin/user/:id/uservalue   @com.keepit.controllers.admin.AdminUserController.userValue(id: Id[User])
-POST    /admin/user/:id/username   @com.keepit.controllers.admin.AdminUserController.setUsername(id: Id[User], username: String, overrideValidityCheck: Boolean ?= false, overrideProtection: Boolean ?= false)
+POST    /admin/user/:id/username   @com.keepit.controllers.admin.AdminUserController.setUsername(id: Id[User])
 POST    /admin/unimpersonate        @com.keepit.controllers.admin.AdminAuthController.unimpersonate()
 GET     /admin/users/notify         @com.keepit.controllers.admin.AdminUserController.notification()
 POST    /admin/users/sendNotification @com.keepit.controllers.admin.AdminUserController.sendNotificationToAllUsers()
@@ -940,6 +940,7 @@ POST     /internal/shoebox/database/getBasicLibraryStatistics   @com.keepit.cont
 POST     /internal/shoebox/database/getBasicLibraryDetails   @com.keepit.controllers.internal.ShoeboxController.getBasicLibraryDetails()
 POST     /internal/shoebox/database/getKeepCounts   @com.keepit.controllers.internal.ShoeboxController.getKeepCounts()
 POST     /internal/shoebox/database/getLibraryImageUrls   @com.keepit.controllers.internal.ShoeboxController.getLibraryImageUrls()
+POST     /internal/shoebox/database/getKeepImages   @com.keepit.controllers.internal.ShoeboxController.getKeepImages()
 GET      /internal/shoebox/database/getLibrariesWithWriteAccess @com.keepit.controllers.internal.ShoeboxController.getLibrariesWithWriteAccess(userId: Id[User])
 POST      /internal/shoebox/database/getCandidateURIs   @com.keepit.controllers.internal.NormalizedURIController.getCandidateURIs()
 

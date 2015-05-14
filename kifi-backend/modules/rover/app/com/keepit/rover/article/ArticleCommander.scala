@@ -1,22 +1,22 @@
 package com.keepit.rover.article
 
-import com.google.inject.{Inject, Singleton}
+import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.cache._
 import com.keepit.common.core._
 import com.keepit.common.db.slick.Database
-import com.keepit.common.db.{State, Id, SequenceNumber}
+import com.keepit.common.db.{ State, Id, SequenceNumber }
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.logging.{AccessLog, Logging}
-import com.keepit.model.{IndexableUri, NormalizedURI}
+import com.keepit.common.logging.{ AccessLog, Logging }
+import com.keepit.model.{ NormalizedURI }
 import com.keepit.rover.article.fetcher.ArticleFetcherProvider
 import com.keepit.rover.article.policy.ArticleInfoPolicy
-import com.keepit.rover.manager.{FetchTask, FetchTaskQueue}
+import com.keepit.rover.manager.{ FetchTask, FetchTaskQueue }
 import com.keepit.rover.model._
 import com.keepit.rover.store.RoverArticleStore
 
 import scala.concurrent.duration.Duration
-import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Try}
+import scala.concurrent.{ ExecutionContext, Future }
+import scala.util.{ Failure, Try }
 
 @Singleton
 class ArticleCommander @Inject() (
@@ -28,8 +28,7 @@ class ArticleCommander @Inject() (
     articleFetcher: ArticleFetcherProvider,
     articlePolicy: ArticleInfoPolicy,
     airbrake: AirbrakeNotifier,
-    private implicit val executionContext: ExecutionContext
-) extends Logging {
+    private implicit val executionContext: ExecutionContext) extends Logging {
 
   // Get ArticleInfos
 
@@ -74,7 +73,7 @@ class ArticleCommander @Inject() (
       infos.find(_.articleKind == kind).map(getBestArticle(_).imap(_.map(_.asExpected[A]))) getOrElse Future.successful(None)
     }
   }
-  
+
   def getBestArticleByUris[A <: Article](uriIds: Set[Id[NormalizedURI]])(implicit kind: ArticleKind[A]): Future[Map[Id[NormalizedURI], Option[A]]] = {
     val futureUriIdWithArticles = getBestArticleFutureByUris[A](uriIds).map {
       case (uriId, futureArticleOption) =>
@@ -94,7 +93,7 @@ class ArticleCommander @Inject() (
         markAsFetching(info.id.get)
         fetchAndPersist(info)
       }
-      case fetchedArticleOpt: Option[info.A] => Future.successful(fetchedArticleOpt)
+      case fetchedArticleOpt => Future.successful(fetchedArticleOpt)
     }
   }
 
@@ -149,10 +148,16 @@ class ArticleCommander @Inject() (
     val toBeInternedByPolicy = articlePolicy.toBeInterned(url, state)
     val interned = internArticleInfoByUri(uriId, url, toBeInternedByPolicy)
     val neverFetched = interned.collect { case (kind, info) if info.lastFetchedAt.isEmpty => (info.id.get -> info) }
-    fetchWithTopPriority(neverFetched.keySet).imap { results =>
-      val failed = results.collect { case (infoId, Failure(error)) => neverFetched(infoId).articleKind -> error }
-      if (failed.nonEmpty) {
-        airbrake.notify(s"Failed to schedule top priority fetches for uri ${uriId}: ${url}\n${failed.mkString("\n")}")
+    if (neverFetched.isEmpty) Future.successful(())
+    else {
+      log.info(s"[fetchAsap] Never fetched before for uri ${uriId}: ${url} -> ${neverFetched.keySet.mkString(" | ")}")
+      fetchWithTopPriority(neverFetched.keySet).imap { results =>
+        val resultsByKind = results.collect { case (infoId, result) => neverFetched(infoId).articleKind -> result }
+        log.info(s"[fetchAsap] Fetching with top priority for uri ${uriId}: ${url} -> ${resultsByKind.mkString(" | ")}")
+        val failed = resultsByKind.collect { case (kind, Failure(error)) => kind -> error }
+        if (failed.nonEmpty) {
+          airbrake.notify(s"[fetchAsap] Failed to schedule top priority fetches for uri ${uriId}: ${url} -> ${failed.mkString(" | ")}")
+        }
       }
     }
   }

@@ -3,6 +3,8 @@ package com.keepit.shoebox
 import com.keepit.common.mail.template.EmailToSend
 import com.keepit.common.store.ImageSize
 import com.keepit.model.cache.{ UserSessionViewExternalIdKey, UserSessionViewExternalIdCache }
+import com.keepit.rover.model.BasicImages
+import com.keepit.shoebox.model.{ KeepImagesKey, KeepImagesCache }
 import com.keepit.shoebox.model.ids.UserSessionExternalId
 import com.keepit.model.view.{ LibraryMembershipView, UserSessionView }
 
@@ -32,6 +34,7 @@ import com.keepit.social.BasicUserUserIdKey
 import play.api.libs.json._
 import com.keepit.common.usersegment.UserSegmentKey
 import com.keepit.common.json.TupleFormat
+import com.keepit.common.core._
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 
 trait ShoeboxServiceClient extends ServiceClient {
@@ -112,7 +115,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getLibrariesChanged(seqNum: SequenceNumber[Library], fetchSize: Int): Future[Seq[LibraryView]]
   def getDetailedLibrariesChanged(seqNum: SequenceNumber[Library], fetchSize: Int): Future[Seq[DetailedLibraryView]]
   def getLibraryMembershipsChanged(seqNum: SequenceNumber[LibraryMembership], fetchSize: Int): Future[Seq[LibraryMembershipView]]
-  def canViewLibrary(libraryId: Id[Library], userId: Option[Id[User]], authToken: Option[String], hashedPassPhrase: Option[HashedPassPhrase]): Future[Boolean]
+  def canViewLibrary(libraryId: Id[Library], userId: Option[Id[User]], authToken: Option[String]): Future[Boolean]
   def newKeepsInLibraryForEmail(userId: Id[User], max: Int): Future[Seq[Keep]]
   def getBasicKeeps(userId: Id[User], uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[BasicKeep]]]
   // Replaced by getBasicLibraryDetails below. Please replace dependencies.
@@ -120,6 +123,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getBasicLibraryDetails(libraryIds: Set[Id[Library]]): Future[Map[Id[Library], BasicLibraryDetails]]
   def getKeepCounts(userIds: Set[Id[User]]): Future[Map[Id[User], Int]]
   def getLibraryImageUrls(libraryIds: Set[Id[Library]], idealImageSize: ImageSize): Future[Map[Id[Library], String]]
+  def getKeepImages(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], BasicImages]]
   def getLibrariesWithWriteAccess(userId: Id[User]): Future[Set[Id[Library]]]
   def getUserActivePersonas(userId: Id[User]): Future[UserActivePersonas]
   def getImageInfosChanged(seqNum: SequenceNumber[ImageInfo], fetchSize: Int): Future[Seq[ImageInfo]]
@@ -147,7 +151,8 @@ case class ShoeboxCacheProvider @Inject() (
   extensionVersionCache: ExtensionVersionInstallationIdCache,
   allFakeUsersCache: AllFakeUsersCache,
   librariesWithWriteAccessCache: LibrariesWithWriteAccessCache,
-  userActivePersonaCache: UserActivePersonasCache)
+  userActivePersonaCache: UserActivePersonasCache,
+  keepImagesCache: KeepImagesCache)
 
 class ShoeboxServiceClientImpl @Inject() (
   override val serviceCluster: ServiceCluster,
@@ -716,12 +721,11 @@ class ShoeboxServiceClientImpl @Inject() (
     call(Shoebox.internal.getLibraryMembershipsChanged(seqNum, fetchSize), callTimeouts = extraLongTimeout, routingStrategy = offlinePriority).map { r => (r.json).as[Seq[LibraryMembershipView]] }
   }
 
-  def canViewLibrary(libraryId: Id[Library], userId: Option[Id[User]], authToken: Option[String], hashedPassPhrase: Option[HashedPassPhrase]): Future[Boolean] = {
+  def canViewLibrary(libraryId: Id[Library], userId: Option[Id[User]], authToken: Option[String]): Future[Boolean] = {
     val body = Json.obj(
       "libraryId" -> libraryId,
       "userId" -> userId,
-      "authToken" -> authToken,
-      "passPhrase" -> Json.toJson(hashedPassPhrase))
+      "authToken" -> authToken)
     call(Shoebox.internal.canViewLibrary, body = body).map(_.json.as[Boolean])
   }
 
@@ -775,6 +779,25 @@ class ShoeboxServiceClientImpl @Inject() (
       call(Shoebox.internal.getLibraryImageUrls, payload).map { r =>
         implicit val readsFormat = TupleFormat.tuple2Reads[Id[Library], String]
         r.json.as[Seq[(Id[Library], String)]].toMap
+      }
+    }
+  }
+
+  def getKeepImages(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], BasicImages]] = {
+    if (keepIds.isEmpty) Future.successful(Map.empty)
+    else {
+      import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
+      val keys = keepIds.map(KeepImagesKey(_))
+      cacheProvider.keepImagesCache.bulkGetOrElseFutureOpt(keys) { missingKeys =>
+        val missingKeepIds = missingKeys.map(_.keepId)
+        val payload = Json.toJson(missingKeepIds)
+        call(Shoebox.internal.getKeepImages, payload).map { r =>
+          implicit val reads = TupleFormat.tuple2Reads[Id[Keep], BasicImages]
+          val missingImagesByKeepId = (r.json).as[Seq[(Id[Keep], BasicImages)]].toMap
+          missingKeys.map { key => key -> missingImagesByKeepId.get(key.keepId) }.toMap
+        }
+      } imap {
+        _.collect { case (key, Some(images)) => key.keepId -> images }
       }
     }
   }

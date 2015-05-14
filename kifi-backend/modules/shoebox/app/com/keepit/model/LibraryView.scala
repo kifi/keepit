@@ -40,7 +40,8 @@ case class LibraryAddRequest(
   kind: Option[LibraryKind] = None,
   description: Option[String] = None,
   color: Option[LibraryColor] = None,
-  listed: Option[Boolean] = None)
+  listed: Option[Boolean] = None,
+  whoCanInvite: Option[LibraryInvitePermissions] = None)
 
 @json
 case class LibraryModifyRequest(
@@ -49,7 +50,8 @@ case class LibraryModifyRequest(
   visibility: Option[LibraryVisibility] = None,
   description: Option[String] = None,
   color: Option[LibraryColor] = None,
-  listed: Option[Boolean] = None)
+  listed: Option[Boolean] = None,
+  whoCanInvite: Option[LibraryInvitePermissions] = None)
 
 case class LibraryInfo(
   id: PublicId[Library],
@@ -134,7 +136,7 @@ case class OwnLibraryCardInfo( // when viewing own created libraries
   numCollaborators: Int,
   collaborators: Seq[BasicUser],
   lastKept: DateTime,
-  following: Option[Boolean] = None,
+  following: Option[Boolean],
   listed: Boolean)
     extends BaseLibraryCardInfo(id, name, description, color, image, slug, numKeeps, numFollowers, followers, numCollaborators, collaborators, lastKept, following)
 
@@ -216,7 +218,8 @@ case class FullLibraryInfo(
   numKeeps: Int,
   numCollaborators: Int,
   numFollowers: Int,
-  attr: Option[LibrarySourceAttribution] = None)
+  attr: Option[LibrarySourceAttribution] = None,
+  whoCanInvite: String)
 
 object FullLibraryInfo {
   implicit val sourceWrites = LibrarySourceAttribution.writes

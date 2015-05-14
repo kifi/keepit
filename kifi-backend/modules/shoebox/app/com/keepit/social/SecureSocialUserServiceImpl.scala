@@ -95,11 +95,16 @@ class SecureSocialUserPluginImpl @Inject() (
   def save(identity: Identity): SocialUser = reportExceptions {
     val (userId, socialUser, allowSignup) = getUserIdAndSocialUser(identity)
     log.info(s"[save] persisting (social|42) user $socialUser")
-    val socialUserInfo = updateState(internUser(
-      SocialId(socialUser.identityId.userId),
+    val socialId = SocialId(socialUser.identityId.userId)
+    if (socialId.id.trim.isEmpty) {
+      airbrake.notify(s"empty social id for social user $socialUser userId $userId and identity $identity")
+    }
+    val toUpdate = internUser(
+      socialId,
       SocialNetworkType(socialUser.identityId.providerId),
       socialUser,
-      userId, allowSignup))
+      userId, allowSignup)
+    val socialUserInfo = updateState(toUpdate)
     require(socialUserInfo.credentials.isDefined, s"social user info's credentials is not defined: $socialUserInfo")
     if (!socialUser.identityId.providerId.equals("userpass"))
       socialGraphPlugin.asyncFetch(socialUserInfo)

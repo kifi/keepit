@@ -1,11 +1,13 @@
 package com.keepit.social
 
+import com.keepit.common.logging.Logging
 import com.keepit.social.SocialNetworks.FORTYTWO
 import play.api.libs.json._
 import play.api.libs.json.JsString
 
-case class SocialId(id: String) {
+case class SocialId(id: String) extends Logging {
   override def toString = id
+  if (id.trim.isEmpty) log.error("Social Id Is broken", new Exception("Social Id Is broken"))
 }
 
 object SocialId {

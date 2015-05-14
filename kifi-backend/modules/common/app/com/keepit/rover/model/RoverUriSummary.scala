@@ -5,11 +5,12 @@ import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, CacheStatis
 import com.keepit.common.db.Id
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.store.{ S3ImageConfig, ImageSize, ImagePath }
-import com.keepit.model.{ ImageHash, NormalizedURI, URISummary, PageAuthor }
+import com.keepit.model._
 import com.keepit.rover.article.content.EmbedlyMedia
 import com.keepit.rover.article.{ EmbedlyArticle, Article, ArticleKind }
 import com.kifi.macros.json
 import org.joda.time.DateTime
+import play.api.libs.json.{ JsValue, Format, Json }
 import scala.concurrent.duration._
 
 import scala.concurrent.duration.Duration
@@ -53,18 +54,34 @@ object RoverArticleSummary {
 }
 
 @json
-case class RoverImage(
+case class BasicImage(
   sourceImageHash: ImageHash,
   path: ImagePath,
   size: ImageSize)
 
-case class RoverUriSummary(article: RoverArticleSummary, images: Set[RoverImage]) {
-  def getImage(idealSize: ImageSize, strictAspectRatio: Boolean = false): Option[RoverImage] = {
+object BasicImage {
+  implicit def fromBaseImage(image: BaseImage): BasicImage = {
+    BasicImage(image.sourceFileHash, image.imagePath, image.imageSize)
+  }
+}
+
+case class BasicImages(images: Set[BasicImage]) {
+  def get(idealSize: ImageSize, strictAspectRatio: Boolean = false): Option[BasicImage] = {
     ProcessedImageSize.pickByIdealImageSize(idealSize, images, strictAspectRatio)(_.size)
   }
+}
 
+object BasicImages {
+  val empty = BasicImages(Set.empty)
+  implicit val format: Format[BasicImages] = new Format[BasicImages] {
+    def reads(json: JsValue) = json.validate[Set[BasicImage]].map(BasicImages(_))
+    def writes(images: BasicImages) = Json.toJson(images.images)
+  }
+}
+
+case class RoverUriSummary(article: RoverArticleSummary, images: BasicImages) {
   def toUriSummary(idealImageSize: ImageSize)(implicit imageConfig: S3ImageConfig): URISummary = {
-    val image = getImage(idealImageSize)
+    val image = images.get(idealImageSize)
     URISummary(
       imageUrl = image.map(_.path.getUrl),
       title = article.title,
@@ -89,12 +106,12 @@ case class RoverArticleSummaryKey(uriId: Id[NormalizedURI], kind: ArticleKind[_ 
 class RoverArticleSummaryCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends JsonCacheImpl[RoverArticleSummaryKey, RoverArticleSummary](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
-case class RoverArticleImagesKey(uriId: Id[NormalizedURI], kind: ArticleKind[_ <: Article]) extends Key[Set[RoverImage]] {
+case class RoverArticleImagesKey(uriId: Id[NormalizedURI], kind: ArticleKind[_ <: Article]) extends Key[BasicImages] {
   override val version = 2
   val namespace = "images_by_uri_id_and_article_kind"
   def toKey(): String = s"${uriId.id}:${kind.typeCode}"
 }
 
 class RoverArticleImagesCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[RoverArticleImagesKey, Set[RoverImage]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+  extends JsonCacheImpl[RoverArticleImagesKey, BasicImages](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 

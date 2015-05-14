@@ -3,6 +3,7 @@ package com.keepit.common.cache
 import com.keepit.model.cache.UserSessionViewExternalIdCache
 import com.keepit.rover.model.{ RoverArticleImagesCache, RoverArticleSummaryCache }
 import com.keepit.scraper.UrlSignatureCache
+import com.keepit.shoebox.model.KeepImagesCache
 
 import scala.concurrent.duration._
 import com.keepit.common.logging.AccessLog
@@ -10,7 +11,6 @@ import com.google.inject.{ Provides, Singleton }
 import com.keepit.model._
 import com.keepit.social.BasicUserUserIdCache
 import com.keepit.eliza.model._
-import com.keepit.eliza.commanders.InboxUriSummaryCache
 import com.keepit.search.{ ArticleSearchResultCache, InitialSearchIdCache, ActiveExperimentsCache }
 import com.keepit.common.usersegment.UserSegmentCache
 
@@ -25,11 +25,6 @@ case class ElizaCacheModule(cachePluginModules: CachePluginModule*) extends Cach
   @Provides
   def messagesForThreadIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new MessagesForThreadIdCache(stats, accessLog, (outerRepo, 30 days))
-
-  @Singleton
-  @Provides
-  def inboxUriSummaryCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new InboxUriSummaryCache(stats, accessLog, (innerRepo, 4 hours), (outerRepo, 30 days))
 
   @Singleton
   @Provides
@@ -193,4 +188,7 @@ case class ElizaCacheModule(cachePluginModules: CachePluginModule*) extends Cach
   def roverArticleImagesCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new RoverArticleImagesCache(stats, accessLog, (outerRepo, 30 days))
 
+  @Provides @Singleton
+  def keepImagesCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new KeepImagesCache(stats, accessLog, (outerRepo, 30 days))
 }

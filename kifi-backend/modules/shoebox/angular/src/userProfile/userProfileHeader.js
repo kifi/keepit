@@ -9,7 +9,8 @@ angular.module('kifi')
       restrict: 'A',
       scope: {
         profile: '=',
-        intent: '='
+        intent: '=',
+        org: '='
       },
       templateUrl: 'userProfile/userProfileHeader.tpl.html',
       link: function (scope, element) {

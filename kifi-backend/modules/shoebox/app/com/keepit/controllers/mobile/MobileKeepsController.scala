@@ -226,7 +226,7 @@ class MobileKeepsController @Inject() (
 
         implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
         db.readWrite { implicit s =>
-          keepsCommander.persistHashtagsForKeep(request.userId, updatedKeep, tagsToPersist)(s, context)
+          keepsCommander.persistHashtagsForKeepAndSaveKeep(request.userId, updatedKeep, tagsToPersist)(s, context)
         }
         NoContent
     }
@@ -251,7 +251,7 @@ class MobileKeepsController @Inject() (
           implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
           val hashtagNamesToPersist = Hashtags.findAllHashtagNames(noteToPersist.getOrElse(""))
           db.readWrite { implicit s =>
-            keepsCommander.persistHashtagsForKeep(request.userId, updatedKeep, hashtagNamesToPersist.toSeq)(s, context)
+            keepsCommander.persistHashtagsForKeepAndSaveKeep(request.userId, updatedKeep, hashtagNamesToPersist.toSeq)(s, context)
           }
         }
 

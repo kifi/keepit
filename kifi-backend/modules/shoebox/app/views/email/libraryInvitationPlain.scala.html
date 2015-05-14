@@ -1,0 +1,54 @@
+@(inviteeId: Option[Id[User]],
+inviterId: Id[User],
+inviteMsg: Option[String],
+libraryInfo: com.keepit.model.LibraryInfo,
+passPhrase: Option[String],
+authToken: String,
+inviteAccess: LibraryAccess
+)
+@import com.keepit.common.mail.template.helpers._
+@libraryAssetUrl(path: String) = @{assetUrl("library/" + path)}
+@libraryUrl = @{htmlUrl(baseUrl + libraryInfo.url + "?authToken=" + authToken + "&", "libraryInviteLink", inviteeId.nonEmpty)}
+@inviteAction = @{if (inviteAccess == LibraryAccess.READ_ONLY) "" else "collaborate on" }
+@invitedHeader = {@firstName(inviterId) invited you to @inviteAction a library on Kifi}
+
+@emailMessage = {
+@if(inviteAccess == LibraryAccess.READ_ONLY) {
+<p>I'm using Kifi to share my knowledge. Check out the library I created: @libraryInfo.name.</p>
+<p>@libraryInfo.shortDescription</p>
+<p><a href="@libraryUrl">www.kifi.com@libraryInfo.url</a></p>
+} else {
+<p>Please help me build the @libraryInfo.name Kifi library - <a href="@libraryUrl">www.kifi.com@libraryInfo.url</a>,
+    so we can collaborate together. It's a great way to organize the links that we find.</p>
+}
+}
+@salutation = {
+@if(inviteeId.isEmpty) {
+Hello,
+} else {
+Hello @firstName(inviteeId.get),
+}
+}
+@passPhraseMsg = {
+@if(!passPhrase.isEmpty) {
+<p>If you're asked for a passphrase, here it is "@passPhrase.get"</p>
+}
+}
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+</head>
+<body>
+@if(inviteMsg.isEmpty) {
+@salutation
+@emailMessage
+@passPhraseMsg
+@firstName(inviterId)
+} else {
+@inviteMsg.get
+<p><a href="@libraryUrl"</a>www.kifi.com@libraryInfo.url</p>
+}
+</body>
+</html>

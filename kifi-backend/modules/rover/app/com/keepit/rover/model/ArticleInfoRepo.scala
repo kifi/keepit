@@ -196,7 +196,7 @@ class ArticleInfoRepoImpl @Inject() (
       val lastFetchingTooLongAgo = now minusSeconds fetchingForMoreThan.toSeconds.toInt
       for (r <- rows if r.state === ArticleInfoStates.ACTIVE && r.nextFetchAt < now && (r.lastFetchingAt.isEmpty || r.lastFetchingAt < lastFetchingTooLongAgo)) yield r
     }
-    ripeRows.sortBy(_.nextFetchAt).take(limit).list
+    ripeRows.sortBy(r => (r.lastFetchedAt, r.nextFetchAt)).take(limit).list // make sure that articles that have never been scraped are queued first
   }
 
   def markAsFetching(ids: Id[RoverArticleInfo]*)(implicit session: RWSession): Unit = updateLastFetchingAt(ids, Some(clock.now()))

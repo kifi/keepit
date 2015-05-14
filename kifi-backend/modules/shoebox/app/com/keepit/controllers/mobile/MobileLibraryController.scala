@@ -53,8 +53,9 @@ class MobileLibraryController @Inject() (
     val description = (jsonBody \ "description").asOpt[String]
     val visibility = (jsonBody \ "visibility").as[LibraryVisibility]
     val color = (jsonBody \ "color").asOpt[LibraryColor]
+    val whoCanInvite = (jsonBody \ "whoCanInvite").asOpt[LibraryInvitePermissions]
     val slug = LibrarySlug.generateFromName(name)
-    val addRequest = LibraryAddRequest(name = name, visibility = visibility, description = description, slug = slug, color = color)
+    val addRequest = LibraryAddRequest(name = name, visibility = visibility, description = description, slug = slug, color = color, whoCanInvite = whoCanInvite)
 
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
     libraryCommander.addLibrary(addRequest, request.userId) match {
@@ -75,9 +76,10 @@ class MobileLibraryController @Inject() (
     val newSlug = (json \ "newSlug").asOpt[String]
     val newColor = (json \ "newColor").asOpt[LibraryColor]
     val newListed = (json \ "newListed").asOpt[Boolean]
+    val newWhoCanInvite = (json \ "newWhoCanInvite").asOpt[LibraryInvitePermissions]
 
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
-    val modifyRequest = LibraryModifyRequest(newName, newSlug, newVisibility, newDescription, newColor, newListed)
+    val modifyRequest = LibraryModifyRequest(newName, newSlug, newVisibility, newDescription, newColor, newListed, newWhoCanInvite)
     val res = libraryCommander.modifyLibrary(libId, request.userId, modifyRequest)
     res match {
       case Left(fail) => sendFailResponse(fail)
@@ -380,7 +382,7 @@ class MobileLibraryController @Inject() (
     val (keep, _) = keepsCommander.keepOne(rawKeep, request.userId, libraryId, request.kifiInstallationId, source, SocialShare(jsonBody))
     val hashtagNamesToPersist = Hashtags.findAllHashtagNames(keep.note.getOrElse(""))
     db.readWrite { implicit s =>
-      keepsCommander.persistHashtagsForKeep(request.userId, keep, hashtagNamesToPersist.toSeq)(s, context)
+      keepsCommander.persistHashtagsForKeepAndSaveKeep(request.userId, keep, hashtagNamesToPersist.toSeq)(s, context)
     }
     imageUrlOpt.map { imageUrl =>
       keepImageCommander.setKeepImageFromUrl(imageUrl, keep.id.get, ImageSource.UserPicked)

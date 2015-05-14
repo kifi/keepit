@@ -204,9 +204,9 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
         val lib2Request = LibraryAddRequest(name = "MURICA", slug = "murica", visibility = LibraryVisibility.PUBLISHED)
 
-        val lib3Request = LibraryAddRequest(name = "Science and Stuff", slug = "science", visibility = LibraryVisibility.DISCOVERABLE)
+        val lib3Request = LibraryAddRequest(name = "Science and Stuff", slug = "science", visibility = LibraryVisibility.PUBLISHED, whoCanInvite = Some(LibraryInvitePermissions.OWNER_ONLY))
 
-        val lib5Request = LibraryAddRequest(name = "Invalid Param", slug = "", visibility = LibraryVisibility.SECRET)
+        val lib4Request = LibraryAddRequest(name = "Invalid Param", slug = "", visibility = LibraryVisibility.SECRET)
 
         val libraryCommander = inject[LibraryCommander]
         val add1 = libraryCommander.addLibrary(lib1Request, userAgent.id.get)
@@ -218,12 +218,13 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         val add3 = libraryCommander.addLibrary(lib3Request, userIron.id.get)
         add3.isRight === true
         add3.right.get.name === "Science and Stuff"
-        libraryCommander.addLibrary(lib5Request, userIron.id.get).isRight === false
+        libraryCommander.addLibrary(lib4Request, userIron.id.get).isRight === false
 
         db.readOnlyMaster { implicit s =>
           val allLibs = libraryRepo.all
           allLibs.length === 3
           allLibs.map(_.slug.value) === Seq("avengers", "murica", "science")
+          allLibs.map(_.whoCanInvite).flatten === Seq(LibraryInvitePermissions.COLLABORATORS_ALLOW, LibraryInvitePermissions.COLLABORATORS_ALLOW, LibraryInvitePermissions.OWNER_ONLY)
 
           val allMemberships = libraryMembershipRepo.all
           allMemberships.length === 3
@@ -254,9 +255,10 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
         val libraryCommander = inject[LibraryCommander]
         val mod1 = libraryCommander.modifyLibrary(libraryId = libShield.id.get, userId = userAgent.id.get,
-          LibraryModifyRequest(description = Some("Samuel L. Jackson was here")))
+          LibraryModifyRequest(description = Some("Samuel L. Jackson was here"), whoCanInvite = Some(LibraryInvitePermissions.OWNER_ONLY)))
         mod1.isRight === true
         mod1.right.get.description === Some("Samuel L. Jackson was here")
+        mod1.right.get.whoCanInvite === Some(LibraryInvitePermissions.OWNER_ONLY)
 
         val mod2 = libraryCommander.modifyLibrary(libraryId = libMurica.id.get, userId = userCaptain.id.get,
           LibraryModifyRequest(name = Some("MURICA #1!!!!!"), slug = Some("murica_#1")))
@@ -435,12 +437,10 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         // test can view if user has invite
         libraryCommander.canViewLibrary(Some(userWidow.id.get), libScience) === true
 
-        // test can view if non-user provides correct authtoken & passphrase
+        // test can view if non-user provides correct/incorrect authtoken
         libraryCommander.canViewLibrary(None, libScience) === false
-        libraryCommander.canViewLibrary(None, libScience, authToken = Some("token"),
-          passPhrase = Some(HashedPassPhrase.generateHashedPhrase("wrong one"))) === false
-        libraryCommander.canViewLibrary(None, libScience, authToken = Some("token"),
-          passPhrase = Some(HashedPassPhrase.generateHashedPhrase("Blarg bobfRed"))) === true
+        libraryCommander.canViewLibrary(None, libScience, Some("token-wrong")) === false
+        libraryCommander.canViewLibrary(None, libScience, Some("token")) === true
       }
     }
 
@@ -540,7 +540,6 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           (Left(userHulk.id.get), LibraryAccess.READ_ONLY, None),
           (Right(thorEmail), LibraryAccess.READ_ONLY, Some("America > Asgard")))
         val res1 = Await.result(libraryCommander.inviteUsersToLibrary(libMurica.id.get, userCaptain.id.get, inviteList1), Duration(5, "seconds"))
-
         res1.isRight === true
         res1.right.get === Seq((Left(BasicUser.fromUser(userIron)), LibraryAccess.READ_ONLY),
           (Left(BasicUser.fromUser(userAgent)), LibraryAccess.READ_ONLY),
@@ -555,22 +554,51 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           allInvites.count(_.emailAddress.isDefined) === 1
         }
 
-        // Agent Nick Fury accepts invite & joins the Library
-        libraryCommander.joinLibrary(userAgent.id.get, libMurica.id.get)
         // Tests that users can have multiple invitations multiple times
         // but if invites are sent within 5 Minutes of each other, they do not persist!
         Await.result(libraryCommander.inviteUsersToLibrary(libMurica.id.get, userCaptain.id.get, inviteList1), Duration(5, "seconds")).isRight === true
         db.readOnlyMaster { implicit s =>
-          libraryInviteRepo.count === 4 // 8 invites sent, only 4 persisted
+          libraryInviteRepo.count === 4 // 8 invites sent, only 4 persisted from previous call
         }
 
-        val inviteList2_RW = Seq((Left(userIron.id.get), LibraryAccess.READ_WRITE, None))
-        val inviteList2_RO = Seq((Left(userIron.id.get), LibraryAccess.READ_ONLY, None))
-        // Scumbag Ironman tries to invite himself for READ_ONLY access (OK for Published Library)
-        Await.result(libraryCommander.inviteUsersToLibrary(libMurica.id.get, userIron.id.get, inviteList2_RO), Duration(5, "seconds")).isRight === true
+        // Test Collaborators!!!! The Falcon is a collaborator to library 'Murica
+        val userFalcon = db.readWrite { implicit s =>
+          val userFalcon = user().withUsername("thefalcon").withEmailAddress("samwilson@usa.gov").saved
+          membership().withLibraryCollaborator(libMurica.id.get, userFalcon.id.get).saved
+          userFalcon
+        }
 
-        // Scumbag Ironman tries to invite himself for READ_WRITE access (NOT OK for Published Library)
-        Await.result(libraryCommander.inviteUsersToLibrary(libMurica.id.get, userIron.id.get, inviteList2_RW), Duration(5, "seconds")).isRight === true
+        val inviteCollab1 = Seq((Right(EmailAddress("blackwidow@shield.gov")), LibraryAccess.READ_WRITE, None))
+        val inviteCollab2 = Seq((Right(EmailAddress("hawkeye@shield.gov")), LibraryAccess.READ_WRITE, None))
+
+        // Test owner invite to collaborate (invite persists)
+        Await.result(libraryCommander.inviteUsersToLibrary(libMurica.id.get, userCaptain.id.get, inviteCollab1), Duration(5, "seconds")).isRight === true
+        db.readOnlyMaster { implicit s =>
+          libraryInviteRepo.count === 5
+        }
+        // Test collaborator invite to collaborate (invite persists)
+        Await.result(libraryCommander.inviteUsersToLibrary(libMurica.id.get, userFalcon.id.get, inviteCollab1), Duration(5, "seconds")).isRight === true
+        db.readOnlyMaster { implicit s =>
+          libraryInviteRepo.count === 6
+        }
+
+        // Set library to not allow collaborators to invite & test invite to collaborate
+        db.readWrite { implicit s =>
+          libraryRepo.save(libMurica.copy(whoCanInvite = Some(LibraryInvitePermissions.OWNER_ONLY)))
+        }
+
+        // Test owner invite to collaborate (invite persists)
+        Await.result(libraryCommander.inviteUsersToLibrary(libMurica.id.get, userCaptain.id.get, inviteCollab2), Duration(5, "seconds")).isRight === true
+        db.readOnlyMaster { implicit s =>
+          libraryInviteRepo.count === 7
+        }
+
+        // Test collaborator invite to collaborate (invite does NOT persist)
+        Await.result(libraryCommander.inviteUsersToLibrary(libMurica.id.get, userFalcon.id.get, inviteCollab2), Duration(5, "seconds")).isRight === true
+        db.readOnlyMaster { implicit s =>
+          libraryInviteRepo.count === 7
+        }
+
       }
     }
 
@@ -637,21 +665,18 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
         // Joining a private library from an email invite (library invite has a null userId field)!
         db.readWrite { implicit s =>
-          libraryInviteRepo.save(LibraryInvite(libraryId = libShield.id.get, inviterId = userAgent.id.get, emailAddress = Some(EmailAddress("incrediblehulk@gmail.com")), access = LibraryAccess.READ_ONLY, authToken = "asdf", passPhrase = "unlock"))
+          libraryInviteRepo.save(LibraryInvite(libraryId = libShield.id.get, inviterId = userAgent.id.get, emailAddress = Some(EmailAddress("incrediblehulk@gmail.com")), access = LibraryAccess.READ_ONLY, authToken = "asdf"))
           libraryInviteRepo.getByLibraryIdAndAuthToken(libShield.id.get, "asdf").exists(i => i.state == LibraryInviteStates.ACCEPTED) === false
         }
 
-        // no authtoken or passphrase (invite by email) - should Fail
-        libraryCommander.joinLibrary(userHulk.id.get, libShield.id.get, None, None).isRight === false
+        // no authtoken - should Fail
+        libraryCommander.joinLibrary(userHulk.id.get, libShield.id.get, None).isRight === false
 
-        // incorrect passphrases (invite by email) - should Fail
-        val hashedPassPhraseFail = HashedPassPhrase.generateHashedPhrase("attempt")
-        libraryCommander.joinLibrary(userHulk.id.get, libShield.id.get, Some("asdf"), Some(hashedPassPhraseFail)).isLeft === true
-        libraryCommander.joinLibrary(userHulk.id.get, libShield.id.get, Some("asdf"), None).isRight === false
+        // incorrect authtoken - should Fail
+        libraryCommander.joinLibrary(userHulk.id.get, libShield.id.get, Some("asdf-wrong")).isRight === false
 
-        // correct authtoken & passphrase (invite by email)
-        val hashedPassPhrase2 = HashedPassPhrase.generateHashedPhrase("unlock")
-        val successJoin = libraryCommander.joinLibrary(userHulk.id.get, libShield.id.get, Some("asdf"), Some(hashedPassPhrase2))
+        // correct authtoken (invite by email)
+        val successJoin = libraryCommander.joinLibrary(userHulk.id.get, libShield.id.get, Some("asdf"))
         successJoin.isRight === true
         db.readOnlyMaster { implicit s =>
           libraryInviteRepo.getByLibraryIdAndAuthToken(libShield.id.get, "asdf").exists(i => i.state == LibraryInviteStates.ACCEPTED) === true
@@ -659,10 +684,10 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
         // Joining a private library from a kifi invite (library invite with a userId)
         db.readWrite { implicit s =>
-          libraryInviteRepo.save(LibraryInvite(libraryId = libShield.id.get, inviterId = userAgent.id.get, userId = userIron.id, access = LibraryAccess.READ_ONLY, authToken = "qwer", passPhrase = "unlock"))
+          libraryInviteRepo.save(LibraryInvite(libraryId = libShield.id.get, inviterId = userAgent.id.get, userId = userIron.id, access = LibraryAccess.READ_ONLY, authToken = "qwer"))
           libraryInviteRepo.getByLibraryIdAndAuthToken(libShield.id.get, "qwer").exists(i => i.state == LibraryInviteStates.ACCEPTED) === false
         }
-        libraryCommander.joinLibrary(userIron.id.get, libShield.id.get, None, None).isRight === true
+        libraryCommander.joinLibrary(userIron.id.get, libShield.id.get, None).isRight === true
         db.readOnlyMaster { implicit s =>
           libraryInviteRepo.getByLibraryIdAndAuthToken(libShield.id.get, "qwer").exists(i => i.state == LibraryInviteStates.ACCEPTED) === true
         }
@@ -1127,7 +1152,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
         Await.result(libraryCommander.processInvites(newInvites), Duration(10, "seconds"))
         eliza.inbox.size === 4
-        println(eliza.inbox)
+
         eliza.inbox.count(t => t._2 == NotificationCategory.User.LIBRARY_FOLLOWED && t._4.endsWith("/0.jpg")) === 0
         eliza.inbox.count(t => t._2 == NotificationCategory.User.LIBRARY_INVITATION && t._4.endsWith("/0.jpg")) === 4
         eliza.inbox.count(t => t._3 == "https://www.kifi.com/captainamerica/murica") === 3
@@ -1219,7 +1244,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           val user1 = user().withUsername("nickfury").saved
           val user2 = user().withUsername("quicksilver").saved
           val user3 = user().withUsername("scarletwitch").saved
-          val user4 = user().withUsername("thevision").saved
+          val user4 = user().withUsername("somerandomshieldagent").saved
           val lib1 = library().withUser(user1).saved // user1 owns lib1
           membership().withLibraryCollaborator(lib1, user2).saved // user2 is a collaborator lib1 (has read_write access)
           membership().withLibraryFollower(lib1, user3).saved // user3 is a follower to lib1 (has read_only access)
@@ -1229,10 +1254,10 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           (user1, user2, user3, user4, lib1)
         }
 
-        val userId1 = user1.id.get
-        val userId2 = user2.id.get
-        val userId3 = user3.id.get
-        val userId4 = user4.id.get
+        val userId1 = user1.id.get // owner
+        val userId2 = user2.id.get // collaborator
+        val userId3 = user3.id.get // follower
+        val userId4 = user4.id.get // just a nobody
 
         // test changing owner access (error)
         libraryCommander.updateLibraryMembershipAccess(userId1, lib1.id.get, userId1, None).isRight === false
@@ -1243,22 +1268,46 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         // test changing access to owner (error)
         libraryCommander.updateLibraryMembershipAccess(userId1, lib1.id.get, userId2, Some(LibraryAccess.OWNER)).isRight === false
 
-        // test invalid permissions to editing a follower's access (error)
-        libraryCommander.updateLibraryMembershipAccess(userId2, lib1.id.get, userId3, None).isRight === false
-
-        // test demoting access
+        // test owner demoting access
         libraryCommander.updateLibraryMembershipAccess(userId1, lib1.id.get, userId2, Some(LibraryAccess.READ_ONLY)).isRight === true
         db.readOnlyMaster { implicit s =>
           libraryMembershipRepo.getWithLibraryIdAndUserId(lib1.id.get, userId2).get.access === LibraryAccess.READ_ONLY
         }
 
-        // test promoting access (error)
-        libraryCommander.updateLibraryMembershipAccess(userId1, lib1.id.get, userId2, Some(LibraryAccess.READ_WRITE)).isRight === false
+        // test owner promoting access
+        libraryCommander.updateLibraryMembershipAccess(userId1, lib1.id.get, userId2, Some(LibraryAccess.READ_WRITE)).isRight === true
         db.readOnlyMaster { implicit s =>
-          libraryMembershipRepo.getWithLibraryIdAndUserId(lib1.id.get, userId2).get.access === LibraryAccess.READ_ONLY
+          libraryMembershipRepo.getWithLibraryIdAndUserId(lib1.id.get, userId2).get.access === LibraryAccess.READ_WRITE
         }
 
-        // test removing access
+        // test collaborator promoting access
+        libraryCommander.updateLibraryMembershipAccess(userId2, lib1.id.get, userId3, Some(LibraryAccess.READ_WRITE)).isRight === true
+        db.readOnlyMaster { implicit s =>
+          libraryMembershipRepo.getWithLibraryIdAndUserId(lib1.id.get, userId3).get.access === LibraryAccess.READ_WRITE
+        }
+
+        // test collaborator demoting access
+        libraryCommander.updateLibraryMembershipAccess(userId2, lib1.id.get, userId3, Some(LibraryAccess.READ_ONLY)).isRight === true
+        db.readOnlyMaster { implicit s =>
+          libraryMembershipRepo.getWithLibraryIdAndUserId(lib1.id.get, userId3).get.access === LibraryAccess.READ_ONLY
+        }
+
+        // test collaborator promoting access (but library does not allow collabs to invite)
+        db.readWrite { implicit s =>
+          libraryRepo.save(lib1.copy(whoCanInvite = Some(LibraryInvitePermissions.OWNER_ONLY)))
+        }
+        libraryCommander.updateLibraryMembershipAccess(userId2, lib1.id.get, userId3, Some(LibraryAccess.READ_WRITE)).isRight === false
+        db.readOnlyMaster { implicit s =>
+          libraryMembershipRepo.getWithLibraryIdAndUserId(lib1.id.get, userId3).get.access === LibraryAccess.READ_ONLY
+        }
+
+        // test collaborator removing access
+        libraryCommander.updateLibraryMembershipAccess(userId2, lib1.id.get, userId3, None).isRight === true
+        db.readOnlyMaster { implicit s =>
+          libraryMembershipRepo.getWithLibraryIdAndUserId(lib1.id.get, userId3) === None
+        }
+
+        // test owner removing access
         libraryCommander.updateLibraryMembershipAccess(userId1, lib1.id.get, userId2, None).isRight === true
         db.readOnlyMaster { implicit s =>
           libraryMembershipRepo.getWithLibraryIdAndUserId(lib1.id.get, userId2) === None
@@ -1266,6 +1315,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
         // test non-active membership (after removing access) (error)
         libraryCommander.updateLibraryMembershipAccess(userId1, lib1.id.get, userId2, None).isRight === false
+
       }
     }
   }

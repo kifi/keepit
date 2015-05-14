@@ -69,6 +69,15 @@ sealed abstract class LibraryAccess(val value: String, val priority: Int) {
   def isHigherAccess(x: LibraryAccess): Boolean = {
     this.priority > x.priority
   }
+  def isHigherOrEqualAccess(x: LibraryAccess): Boolean = {
+    this.priority >= x.priority
+  }
+  def isLowerAccess(x: LibraryAccess): Boolean = {
+    this.priority < x.priority
+  }
+  def isLowerOrEqualAccess(x: LibraryAccess): Boolean = {
+    this.priority <= x.priority
+  }
 }
 
 object LibraryAccess {

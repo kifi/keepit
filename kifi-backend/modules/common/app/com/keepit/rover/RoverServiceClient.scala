@@ -1,6 +1,7 @@
 package com.keepit.rover
 
 import com.google.inject.Inject
+import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.{ State, Id, SequenceNumber }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.json.TupleFormat
@@ -23,6 +24,7 @@ trait RoverServiceClient extends ServiceClient {
   def fetchAsap(uriId: Id[NormalizedURI], url: String, state: State[NormalizedURI]): Future[Unit]
   def getBestArticlesByUris(uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[Article]]]
   def getArticleInfosByUris(uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[ArticleInfo]]]
+  def getImagesByUris(uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], BasicImages]]
   def getUriSummaryByUris(uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], RoverUriSummary]]
   def getOrElseFetchUriSummary(uriId: Id[NormalizedURI], url: String): Future[Option[RoverUriSummary]] // slow, prefer getUriSummaryByUris
 }
@@ -46,7 +48,7 @@ class RoverServiceClientImpl(
       "url" -> url,
       "state" -> state
     )
-    call(Rover.internal.fetchAsap, payload, callTimeouts = longTimeout).map { _ => () }
+    new SafeFuture(call(Rover.internal.fetchAsap, payload, callTimeouts = longTimeout).map { _ => () }, Some(s"FetchAsap: [$uriId, $state] -> $url"))
   }
 
   def getBestArticlesByUris(uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[Article]]] = {
@@ -71,17 +73,21 @@ class RoverServiceClientImpl(
     }
   }
 
+  def getImagesByUris(uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], BasicImages]] = {
+    getArticleImagesByUris(uriIds)(RoverUriSummary.defaultProvider)
+  }
+
   def getUriSummaryByUris(uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], RoverUriSummary]] = {
     val contentSummaryProvider = RoverUriSummary.defaultProvider
     val futureArticleSummaryByUriId = getBestArticleSummaryByUris(uriIds)(contentSummaryProvider)
-    val futureImagesByUriId = getImagesByUris(uriIds)(contentSummaryProvider)
+    val futureImagesByUriId = getArticleImagesByUris(uriIds)(contentSummaryProvider)
     for {
       articleSummaryByUriId <- futureArticleSummaryByUriId
       imagesByUriId <- futureImagesByUriId
     } yield {
       articleSummaryByUriId.collect {
         case (uriId, Some(articleSummary)) =>
-          uriId -> RoverUriSummary(articleSummary, imagesByUriId.getOrElse(uriId, Set.empty))
+          uriId -> RoverUriSummary(articleSummary, imagesByUriId.getOrElse(uriId, BasicImages.empty))
       }
     }
   }
@@ -108,7 +114,7 @@ class RoverServiceClientImpl(
     }
   }
 
-  private def getImagesByUris[A <: Article](uriIds: Set[Id[NormalizedURI]])(implicit kind: ArticleKind[A]): Future[Map[Id[NormalizedURI], Set[RoverImage]]] = {
+  private def getArticleImagesByUris[A <: Article](uriIds: Set[Id[NormalizedURI]])(implicit kind: ArticleKind[A]): Future[Map[Id[NormalizedURI], BasicImages]] = {
     if (uriIds.isEmpty) Future.successful(Map.empty)
     else {
       import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
@@ -120,12 +126,12 @@ class RoverServiceClientImpl(
           "kind" -> kind
         )
         call(Rover.internal.getImagesByUris, payload).map { r =>
-          implicit val reads = TupleFormat.tuple2Reads[Id[NormalizedURI], Set[RoverImage]]
-          val missingImagesByUriId = (r.json).as[Seq[(Id[NormalizedURI], Set[RoverImage])]].toMap
-          missingKeys.map { key => key -> missingImagesByUriId.getOrElse(key.uriId, Set.empty) }.toMap
+          implicit val reads = TupleFormat.tuple2Reads[Id[NormalizedURI], BasicImages]
+          val missingImagesByUriId = (r.json).as[Seq[(Id[NormalizedURI], BasicImages)]].toMap
+          missingKeys.map { key => key -> missingImagesByUriId.getOrElse(key.uriId, BasicImages.empty) }.toMap
         }
       } imap {
-        _.collect { case (key, images) => key.uriId -> images }
+        _.map { case (key, images) => key.uriId -> images }
       }
     }
   }
@@ -138,15 +144,15 @@ class RoverServiceClientImpl(
   }
 
   // Do not use the cache for this one (Rover takes care of it, needs more information, limits race conditions)
-  private def getOrElseFetchArticleSummaryAndImages[A <: Article](uriId: Id[NormalizedURI], url: String)(implicit kind: ArticleKind[A]): Future[Option[(RoverArticleSummary, Set[RoverImage])]] = {
+  private def getOrElseFetchArticleSummaryAndImages[A <: Article](uriId: Id[NormalizedURI], url: String)(implicit kind: ArticleKind[A]): Future[Option[(RoverArticleSummary, BasicImages)]] = {
     val payload = Json.obj(
       "uriId" -> uriId,
       "url" -> url,
       "kind" -> kind
     )
     call(Rover.internal.getOrElseFetchArticleSummaryAndImages, payload, callTimeouts = longTimeout).map { r =>
-      implicit val reads = TupleFormat.tuple2Reads[RoverArticleSummary, Set[RoverImage]]
-      r.json.asOpt[(RoverArticleSummary, Set[RoverImage])]
+      implicit val reads = TupleFormat.tuple2Reads[RoverArticleSummary, BasicImages]
+      r.json.asOpt[(RoverArticleSummary, BasicImages)]
     }
   }
 }
