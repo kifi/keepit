@@ -54,7 +54,11 @@ case class UserProfileInfo(
     handle: Option[UserHandle],
     pictureUrl: Option[java.net.URL],
     profileUrl: Option[java.net.URL]) {
-  lazy val socialId: SocialId = SocialId(userId.id)
+  lazy val socialId: SocialId = {
+    val id = userId.id.trim
+    if (id.isEmpty) throw new Exception(s"empty social id for $toString")
+    SocialId(id)
+  }
   lazy val socialNetwork: SocialNetworkType = SocialNetworks.ALL.collectFirst { case n if n.name == providerId.id => n } get
 }
 
