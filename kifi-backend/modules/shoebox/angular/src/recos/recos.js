@@ -4,9 +4,9 @@ angular.module('kifi')
 
 .controller('RecosCtrl', [
   '$scope', '$rootScope', '$analytics', '$window', 'profileService',
-  'modalService', 'recoActionService', 'recoDecoratorService', 'recoStateService', 'undoService',
+  'modalService', 'recoActionService', 'recoStateService', 'undoService',
   function ($scope, $rootScope, $analytics, $window, profileService,
-    modalService, recoActionService, recoDecoratorService, recoStateService, undoService) {
+    modalService, recoActionService, recoStateService, undoService) {
     $window.document.title = 'Kifi • Your Recommendation List';
 
     $scope.recos = recoStateService.recosList;
@@ -24,7 +24,7 @@ angular.module('kifi')
         if (rawRecos.length > 0) {
           var recos = [];
           rawRecos.forEach(function (rawReco) {
-            recos.push(recoDecoratorService.newUserRecommendation(rawReco));
+            recos.push(newUserRecommendation(rawReco));
           });
           recoStateService.populate(recos);
 
@@ -43,7 +43,7 @@ angular.module('kifi')
         if (rawRecos.length > 0) {
           var recos = [];
           rawRecos.forEach(function (rawReco) {
-            recos.push(recoDecoratorService.newUserRecommendation(rawReco));
+            recos.push(newUserRecommendation(rawReco));
           });
           if (!recoStateService.populate(recos)) {
             $scope.noMoreRecos = true;
@@ -84,7 +84,7 @@ angular.module('kifi')
       recoActionService.getPopular().then(function (rawRecos) {
         var recos = [];
         rawRecos.forEach(function (rawReco) {
-          recos.push(recoDecoratorService.newPopularRecommendation(rawReco));
+          recos.push(newPopularRecommendation(rawReco));
         });
         recoStateService.populate(recos);
 
@@ -117,7 +117,7 @@ angular.module('kifi')
         var recos = [];
         if (rawRecos.length > 0) {
           rawRecos.forEach(function (rawReco) {
-            recos.push(recoDecoratorService.newUserRecommendation(rawReco));
+            recos.push(newUserRecommendation(rawReco));
           });
           recoStateService.populate(recos);
           $scope.recosState = 'hasRecos';
@@ -128,7 +128,7 @@ angular.module('kifi')
           // keeps/libraries as recommendations.
           recoActionService.getPopular().then(function (rawRecos) {
             rawRecos.forEach(function (rawReco) {
-              recos.push(recoDecoratorService.newPopularRecommendation(rawReco));
+              recos.push(newPopularRecommendation(rawReco));
             });
             recoStateService.populate(recos);
             $scope.recosState = 'noRecos';
@@ -152,6 +152,48 @@ angular.module('kifi')
       } else {
         reloadRecos(false, $scope.setRecosDelivered);
         $scope.setRecosDelivered = undefined;
+      }
+    }
+
+    function newUserRecommendation(reco) {
+      return newRecommendation(reco, 'recommended');
+    }
+
+    function newPopularRecommendation(reco) {
+      return newRecommendation(reco, 'popular');
+    }
+
+    // alters reco format for easier consumption
+    function newRecommendation(reco, type) {
+      var meta = {
+        type: type,  // 'recommended' or 'popular'
+        kind: reco.kind  // 'keep' or 'library'
+      };
+
+      var info = reco.itemInfo;
+      if (meta.kind === 'keep') {
+        // TODO: update server to pass 'urlId' instead of 'id'
+        info.urlId = info.id;
+        delete info.id;
+
+        if (info.libraries) {
+          info.libraries = _.map(info.libraries, function (lib) { return [lib, lib.owner]; });
+        }
+
+        return {
+          recoData: meta,
+          recoKeep: info
+        };
+      } else {
+        // All recommended libraries are published user-created libraries.
+        info.kind = 'user_created';
+        info.visibility = 'published';
+        info.access = 'none';
+
+        return {
+          recoData: meta,
+          recoLib: info
+        };
       }
     }
 

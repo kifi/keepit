@@ -1,0 +1,161 @@
+.kf-ult
+  position: absolute
+  z-index: 1
+  height: 265px
+  width: 350px
+  top: -280px
+  left: -101px
+  text-align: left
+  border-radius: 5px
+  box-shadow: 0 3px 5px rgba(0,0,0,.2)
+  display: inline-block
+  background-color: white
+  line-height: initial
+
+  &.ng-enter
+  &.ng-leave
+    transition: transform 150ms, opacity 150ms
+    transform-origin: 10% bottom
+
+  &.ng-enter:not(.ng-enter-active)
+  &.ng-leave-active
+    transform: translate(0, 3px) scale(.95)
+    opacity: 0
+
+  &::before // invisible buffer so tooltip won't disappear when moving mouse pointer to it
+    content: ''
+    position: absolute
+    left: 60px
+    bottom: -14px
+    height: 14px
+    width: 160px
+
+  &::after
+    content: ''
+    position: absolute
+    height: 16px
+    width: 16px
+    bottom: -6px
+    left: 105px
+    background-color: #fff
+    box-shadow: 2px 2px 2px rgba(0,0,0,.1)
+    transform: rotate(45deg)
+
+.kf-ult-curator
+  position: relative
+  top: 56px
+  left: 20px
+  color: white
+  letter-spacing: 0.5px
+  font-size: 16px
+
+  .kf-ult-curator-img
+    height: 36px
+    width: 36px
+    border: 2px solid #fff
+    border-radius: 100%
+    vertical-align: top
+    margin-right: 7px
+
+  .kf-ult-curator-info
+    display: inline-block
+    vertical-align: -18px
+    font-size: 14px
+    text-shadow: 0 0 8px #000
+
+  .kf-ult-curator-heading
+    font-weight: 200
+
+  .kf-ult-curator-name
+    font-weight: 800
+
+.kf-ult-header
+  height: 108px
+  border-radius: 5px 5px 0 0
+  border-bottom: 3px solid pageHeaderColor  // library color set inline
+  background-color: pageHeaderColor
+  background-size: cover
+
+.kf-ult-name
+  margin-left: 5px
+  margin-right: 5px
+  font-size: 15px
+  font-weight: 700
+  color: black
+  cursor: pointer
+  white-space: no-wrap
+  overflow: hidden
+  text-overflow: ellipsis
+
+.kf-ult-stat
+  display: inline-block
+  height: 46px
+  margin: 5px
+  vertical-align: text-bottom
+
+.kf-ult-vdivider
+  background-color: #e2e7ec
+  width: 1px
+  margin: 11px
+  height: 33px
+  display: inline-block
+
+  &:last-child
+    display: none
+
+.kf-ult-hdivider
+  background-color: #e2e7ec
+  width: 90%
+  margin: auto
+  height: 1px
+  display: block
+
+.kf-ult-body
+  height: 88px
+  padding-left: 30px
+  padding-top: 18px
+
+.kf-ult-stats-container
+  margin-top: 12px
+
+.kf-ult-stat-title
+  font-weight: 400
+  font-size: 14px
+  color: #4F5864
+
+.kf-ult-stat-num
+  font-weight: 500
+  font-size: 18px
+  text-align: center
+  color: #4F5864
+
+.kf-ult-button
+  color: #7eac4e
+  float: right
+  font-size: 12px
+  padding: 5px 11px
+  margin: 10px 17px
+  border-radius: 3px
+  background-color: #fbfbfb
+  border: 1px solid #bbb
+  color: #535353
+
+.kf-ult-follow
+  background-color: #262626
+  min-width: 70px
+
+  &:hover
+    background-color: #333
+
+    &:active
+      background-color: #000
+
+  &::before
+    content: 'Follow'
+    color: #fff
+
+  &.kf-following::before
+    content: 'Following'
+
+  &.kf-following:hover::before
+    content: 'Unfollow'

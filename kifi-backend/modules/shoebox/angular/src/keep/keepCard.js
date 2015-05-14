@@ -91,6 +91,34 @@ angular.module('kifi')
           scope.keepSource = keep.siteName || keep.url.replace(/^(?:[a-z]*:\/\/)?(?:www\.)?([^\/]*).*$/, '$1');
           scope.displayTitle = keep.title || keep.summary && keep.summary.title || util.formatTitleFromUrl(keep.url);
           scope.image = scope.youtubeId ? null : calcImageSize(keep.summary, scope.displayTitle);
+
+          if (keep.user) {
+            // don't show the user at the top of the keep card as a keeper
+            _.remove(keep.keepers, {id: keep.user.id});
+          }
+          if (keep.libraryId) {
+            // if on a library page, don't show the library
+            _.remove(keep.libraries, function (pair) {
+              return pair[0].id === keep.libraryId;
+            });
+          }
+          if (keep.libraries) {
+            // associate libraries with connected keepers
+            var libsByUserId = _(keep.libraries).reverse().indexBy(function (pair) { return pair[1].id; }).mapValues(0).value();
+            _.each(keep.keepers, function (keeper) {
+              keeper.library = libsByUserId[keeper.id];
+            });
+            // show additional libraries after connected keepers
+            var keepersById = _.indexBy(keep.keepers, 'id');
+            _.each(keep.libraries, function (pair) {
+              var user = pair[1];
+              if (!keepersById[user.id]) {
+                keepersById[user.id] = user;
+                user.library = pair[0];
+                keep.keepers.push(user);
+              }
+            });
+          }
         }(scope.keep));
 
         //

@@ -1,6 +1,7 @@
 <div class="kf-keep-body" ng-class="::{'kf-side-by-side': image.w}">
   <div class="kf-keep-video" ng-if="::youtubeId" ng-click="clickCallback({keep: keep, event: $event})">
     <div kf-youtube video-id="youtubeId"></div>
+    <div class="kf-youtube-bottom-overlay"></div>
   </div>
   <a class="kf-keep-image" ng-if="::image" ng-class="::{'kf-bottom-clip': image.clipBottom}"
     ng-style="::{'background-image': 'url(\'' + image.url + '\')', width: image.w ? image.w + 'px' : '', height: image.h ? image.h + 'px' : ''}"
@@ -36,11 +37,11 @@
       </button>
     </div>
     <div class="kf-keep-who" ng-if="keep.keepersTotal || keep.keepers.length">
-      <span class="kf-keep-who-pic-box" ng-repeat="keeper in keep.keepers | limitTo:9" kf-user-tooltip="::keeper" desc="Your Kifi connection">
-        <a class="kf-keep-who-pic" ng-attr-style="background-image:url({{::keeper|pic:100}})" href="{{::keeper|profileUrl}}" kf-track-origin="{{::currentPageOrigin}}/alsoKeptBy"></a>
+      <span class="kf-keep-who-pic-box" ng-repeat="keeper in keep.keepers | limitTo:8" kf-user-tooltip="::keeper" library="::keeper.library" desc="Your Kifi connection">
+        <a class="kf-keep-who-pic" ng-attr-style="background-image:url({{::keeper|pic:100}})" ng-href="{{::keeper.library.path || '/' + keeper.username}}" kf-track-origin="{{::currentPageOrigin}}/alsoKeptBy"></a>
       </span>
-      <span class="kf-keep-who-text" ng-if="keep.keepersTotal > (keep.keepers.length || 0)">
-        {{keep.keepersTotal - (keep.keepers.length || 0) | num}} kept
+      <span class="kf-keep-who-num" ng-if="keep.keepersTotal > (keep.keepers.length || 0)">
+        {{keep.keepersTotal - (keep.keepers.length || 0) | num}}
       </span>
     </div>
   </div>

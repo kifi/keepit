@@ -14,9 +14,9 @@ angular.module('kifi')
 
     function videoEmbed(videoId) {
       return [
-        '<iframe width="100%" height="100%" src="//www.youtube.com/embed/', videoId,
+        '<iframe class="kf-youtube-iframe" width="100%" height="100%" src="//www.youtube.com/embed/', videoId,
         '?rel=0&theme=light&showinfo=0&disablekb=1&modestbranding=1&controls=1&hd=1&autoplay=1&autohide=1&color=white&iv_load_policy=3" ',
-        'frameborder="none" allowfullscreen="true" allowscriptaccess="always"/>'
+        'frameborder="0" allowfullscreen="true" allowscriptaccess="always"></iframe>'
       ].join('');
     }
 
