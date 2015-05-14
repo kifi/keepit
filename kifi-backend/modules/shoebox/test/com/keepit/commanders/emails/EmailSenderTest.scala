@@ -100,6 +100,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
 
         val text = email.textBody.get.value
         text must contain("Dear Billy,")
+        text must not contain ("@firstName")
       }
     }
 
@@ -126,13 +127,17 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         val html = email.htmlBody.value
         html must contain(WELCOME_SALUTATION(toUser.firstName))
 
+        // making sure no Scala syntax was left behind
+        val scalaWords = Seq("firstName", "homeUrl", "iOsAppStoreUrl", "googlePlayStoreUrl", "howKifiWorksUrl", "eishayKifiUrl")
+        scalaWords foreach { word => html must not contain word }
+
         val trackingCode = EmailTrackingParam(
           subAction = Some("homeLink")).encode
-
         html must contain("utm_source=fromKifi&amp;utm_medium=email&amp;utm_campaign=welcome&amp;utm_content=homeLink&amp;kcid=welcome-email-fromKifi"
           + s"&amp;${EmailTrackingParam.paramName}=$trackingCode")
 
         val text = email.textBody.get.value
+        text must not contain ("firstName")
         text must contain("Dear Billy,")
       }
     }
@@ -429,6 +434,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         email.to(0) === EmailAddress("aaronrodgers@gmail.com")
         val html = email.htmlBody.value
         testHtml(html)
+        html must not contain "firstName"
         html must not contain invite.passPhrase
       }
     }
@@ -486,6 +492,8 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         params.map(email.htmlBody.contains(_)) === List(true, true, true, true, true)
         email.to(0) === EmailAddress("aaronrodgers@gmail.com")
         val html = email.htmlBody.value
+        val scalaWords = Seq("firstName", "libraryUrl", "salutation", "emailMessage", "passPhraseMsg", "inviteMsg")
+        scalaWords foreach { word => html must not contain word }
         html must not contain invite.passPhrase
       }
     }
@@ -512,6 +520,8 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         params.map(email.htmlBody.contains(_)) === List(true, true, true, true, true)
         email.to(0) === EmailAddress("aaronrodgers@gmail.com")
         val html = email.htmlBody.value
+        val scalaWords = Seq("firstName", "libraryUrl", "salutation", "emailMessage", "passPhraseMsg", "inviteMsg")
+        scalaWords foreach { word => html must not contain word }
         html must not contain invite.passPhrase
       }
     }
@@ -566,6 +576,8 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         params.map(email.htmlBody.contains(_)) === List(true, true, true, true, true)
         email.to(0) === EmailAddress("aaronrodgers@gmail.com")
         val html = email.htmlBody.value
+        val scalaWords = Seq("firstName", "passPhrase")
+        scalaWords foreach { word => html must not contain word }
         html must not contain invite.passPhrase
       }
     }
