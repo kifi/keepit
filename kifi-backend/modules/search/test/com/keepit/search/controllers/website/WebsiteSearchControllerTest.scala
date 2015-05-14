@@ -58,6 +58,7 @@ class WebsiteSearchControllerTest extends SpecificationLike with SearchTestInjec
             "hits":[{
               "title":"Example Site",
               "description":null,
+              "wordCount":null,
               "url":"http://example.com",
               "siteName":"example.com",
               "image":null,
