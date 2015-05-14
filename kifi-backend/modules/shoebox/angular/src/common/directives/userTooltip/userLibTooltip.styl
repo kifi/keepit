@@ -41,6 +41,23 @@
     box-shadow: 2px 2px 2px rgba(0,0,0,.1)
     transform: rotate(45deg)
 
+.kf-ult-header
+  height: 108px
+  border-radius: 5px 5px 0 0
+  border-bottom: 3px solid pageHeaderColor  // library color set inline
+  background-color: pageHeaderColor  // library color set inline
+  background-image: linear-gradient(rgba(0,0,0,.2), rgba(0,0,0,0))
+  position: relative
+
+.kf-ult-image
+  position: absolute
+  top: 0
+  left: 0
+  width: 100%
+  height: 100%
+  background-size: cover
+  background-repeat: no-repeat
+
 .kf-ult-curator
   position: relative
   top: 56px
@@ -61,20 +78,13 @@
     display: inline-block
     vertical-align: -18px
     font-size: 14px
-    text-shadow: 0 0 8px #000
+    text-shadow: 0 0 8px rgba(0,0,0,.5)
 
   .kf-ult-curator-heading
     font-weight: 200
 
   .kf-ult-curator-name
     font-weight: 800
-
-.kf-ult-header
-  height: 108px
-  border-radius: 5px 5px 0 0
-  border-bottom: 3px solid pageHeaderColor  // library color set inline
-  background-color: pageHeaderColor
-  background-size: cover
 
 .kf-ult-name
   margin-left: 5px

@@ -1,5 +1,6 @@
 <div class="kf-ult" ng-controller="UserLibTooltipController" ng-if="tipping">
-  <div class="kf-ult-header" style="border-bottom-color:{{::library.color}};{{::library.image|bgImageAndPos}}">
+  <div class="kf-ult-header" ng-attr-style="border-bottom-color:{{::library.color}};background-color:{{::library.color}}">
+    <div class="kf-ult-image" ng-attr-style="{{library.image|shadedBackgroundImage:.2:.6}}" ng-if="library.image"></div>
     <div class="kf-ult-curator">
       <a href="{{::user|profileUrl}}">
         <img class="kf-ult-curator-img" ng-src="{{::user|pic:100}}">

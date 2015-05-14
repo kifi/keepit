@@ -28,8 +28,7 @@ angular.module('kifi')
         if (imgNaturalW >= 0.6 * cardW) {  // full bleed
           return {
             url: url,
-            clipBottom: aspectRatio < 0.8,  // align tall images to top instead of center
-            maxDescLines: 3
+            clipBottom: aspectRatio < 0.8  // align tall images to top instead of center
           };
         }
         if (imgNaturalW >= 50 && imgNaturalH >= 50) {  // sized
@@ -73,14 +72,15 @@ angular.module('kifi')
     return {
       restrict: 'A',
       scope: {
-        keep: '=',
+        keep: '=kfKeepCard',
+        boxed: '@',
         currentPageOrigin: '@',
         keepCallback: '&',
         clickCallback: '&'
       },
       replace: true,
       templateUrl: 'keep/keepCard.tpl.html',
-      link: function (scope) {
+      link: function (scope, element) {
 
         //
         // Scope data.
@@ -136,8 +136,8 @@ angular.module('kifi')
         //
 
         scope.onWidgetLibraryClicked = function (clickedLibrary) {
-          // Unkeep. TODO: only if unkeep button was clicked
-          if (clickedLibrary && scope.keptToLibraryIds.indexOf(clickedLibrary.id) >= 0) {
+          if (scope.keptToLibraryIds.indexOf(clickedLibrary.id) >= 0) {
+            // Unkeep. TODO: only if unkeep button was clicked
             var keepToUnkeep = _.find(scope.keep.keeps, { libraryId: clickedLibrary.id });
             keepActionService.unkeepFromLibrary(clickedLibrary.id, keepToUnkeep.id).then(function () {
               var removedKeeps;
@@ -166,8 +166,8 @@ angular.module('kifi')
               });
             })['catch'](modalService.openGenericErrorModal);
 
-          // Keep.
           } else {
+            // Keep.
             var fetchKeepInfoCallback = function (fullKeep) {
               libraryService.fetchLibraryInfos(true);
               libraryService.addToLibraryCount(clickedLibrary.id, 1);
@@ -177,24 +177,17 @@ angular.module('kifi')
               scope.$emit('keepAdded', [fullKeep], clickedLibrary);
             };
 
-            var keepToLibrary;
-            if (scope.keep && scope.keep.id) {
-              keepToLibrary = keepActionService.copyToLibrary([scope.keep.id], clickedLibrary.id).then(function (result) {
+            (scope.keep.id ? // Recommended keeps have no keep.id.
+              keepActionService.copyToLibrary([scope.keep.id], clickedLibrary.id).then(function (result) {
                 if (result.successes.length > 0) {
                   return keepActionService.fetchFullKeepInfo(scope.keep).then(fetchKeepInfoCallback);
                 }
-              });
-            } else {
-              // When there is no id on the keep object (e.g., recommendations), use the keep's url instead.
-              var keepInfo = { title: scope.keep.title, url: scope.keep.url };
-              keepToLibrary = keepActionService.keepToLibrary([keepInfo], clickedLibrary.id).then(function (result) {
+              }) :
+              keepActionService.keepToLibrary([{title: scope.keep.title, url: scope.keep.url}], clickedLibrary.id).then(function (result) {
                 if ((!result.failures || !result.failures.length) && result.alreadyKept.length === 0) {
                   return keepActionService.fetchFullKeepInfo(result.keeps[0]).then(fetchKeepInfoCallback);
                 }
-              });
-            }
-
-            keepToLibrary['catch'](modalService.openGenericErrorModal);
+              }))['catch'](modalService.openGenericErrorModal);
           }
         };
 

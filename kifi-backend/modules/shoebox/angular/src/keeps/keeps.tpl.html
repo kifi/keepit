@@ -59,8 +59,7 @@
       </div>
       <div class="kf-keep-note" ng-bind-html="::keep.note|noteHtml" ng-if="::keep.note || library.owner.id === me.id"></div>
 
-      <div kf-keep-card keep="keep" me="me" current-page-origin="{{currentPageOrigin}}"
-        click-callback="keepClickAction(event, keep)"></div>
+      <div kf-keep-card="keep" boxed current-page-origin="{{currentPageOrigin}}" click-callback="keepClickAction(event, keep)"></div>
     </div>
   </ol>
   <img class="kf-keeps-loading" ng-show="keepsLoading" src="/img/load.gif">

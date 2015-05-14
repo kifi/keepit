@@ -2,7 +2,7 @@ keepRectBorderRadius = 4px
 keepFooterMarginTop = 16px
 eeeTransparentBlack = rgba(0,0,0,.065)  // makes #eee over white
 
-.kf-keep-body
+.kf-keep-body.kf-boxed
   border-radius: keepRectBorderRadius
   box-shadow: 0 1px 2px rgba(0,0,0,.05), inset 0 0 0 1px eeeTransparentBlack
 
@@ -20,9 +20,29 @@ eeeTransparentBlack = rgba(0,0,0,.065)  // makes #eee over white
   height: 280px
   background-size: cover
   background-position: center
-  box-shadow: inset 0 0 0 1px eeeTransparentBlack
 
-  :not(.kf-side-by-side)>&
+  :not(.kf-boxed):not(.kf-side-by-side)>&  // faint edge overlay on top and bottom only
+    position: relative
+    &::before
+      content: ''
+      position: absolute
+      top: 0
+      left: 0
+      right: 0
+      border-top: 1px solid eeeTransparentBlack
+    &::after
+      content: ''
+      position: absolute
+      left: 0
+      right: 0
+      bottom: 0
+      border-bottom: 1px solid eeeTransparentBlack
+
+  .kf-boxed>&          // faint edge overlay
+  .kf-side-by-side>&   // on all four sides
+    box-shadow: inset 0 0 0 1px eeeTransparentBlack
+
+  .kf-boxed:not(.kf-side-by-side)>&
     border-radius: keepRectBorderRadius keepRectBorderRadius 0 0
 
   .kf-side-by-side>&
@@ -40,16 +60,20 @@ eeeTransparentBlack = rgba(0,0,0,.065)  // makes #eee over white
     display: block
     padding-top: 56.25% // enforcing 16:9 ratio, ideally 496px x 279px
 
-  &::after  // faint top border with rounded corners overlay to provide shape to white videos
+  &::after  // faint top border overlay to provide shape to white videos
     content: ''
     position: absolute
     top: 0
     left: 0
     right: 0
+    height: 0
+    border: solid eeeTransparentBlack
+    border-width: 1px 0 0
+
+  .kf-boxed>&::after
     height: keepRectBorderRadius
     border-radius: keepRectBorderRadius keepRectBorderRadius 0 0
-    border: 1px solid eeeTransparentBlack
-    border-bottom: 0
+    border-width: 1px 1px 0
 
 .kf-youtube
   position: absolute
@@ -57,26 +81,26 @@ eeeTransparentBlack = rgba(0,0,0,.065)  // makes #eee over white
   left: 0
   right: 0
   bottom: 0
-  border-radius: keepRectBorderRadius keepRectBorderRadius 0 0
-  overflow: hidden
   cursor: pointer
 
-  &::before  // faint left/right border overlays to provide shape to white videos
-  &::after
-    content: ''
-    position: absolute
-    z-index: 1
-    top: keepRectBorderRadius + 1px  // avoiding overlap with top
-    bottom: 1px  // avoiding overlap with bottom
-    width: 0
+  .kf-boxed &
+    border-radius: keepRectBorderRadius keepRectBorderRadius 0 0
+    overflow: hidden
 
-  &::before
-    left: 0
-    border-left: 1px solid eeeTransparentBlack
-
-  &::after
-    right: 0
-    border-right: 1px solid eeeTransparentBlack
+    &::before  // faint left/right border overlays to provide shape to white videos
+    &::after
+      content: ''
+      position: absolute
+      z-index: 1
+      top: keepRectBorderRadius + 1px  // avoiding overlap with top
+      bottom: 1px  // avoiding overlap with bottom
+      width: 0
+    &::before
+      left: 0
+      border-left: 1px solid eeeTransparentBlack
+    &::after
+      right: 0
+      border-right: 1px solid eeeTransparentBlack
 
 .kf-youtube-iframe
   background-color: #000
@@ -189,7 +213,7 @@ eeeTransparentBlack = rgba(0,0,0,.065)  // makes #eee over white
   padding-right: 20px
 
   &::after
-    content: 'kept'
+    content: 'kept this'
     vertical-align: middle
     color: #888
     font-smoothing: antialiased
@@ -199,7 +223,7 @@ eeeTransparentBlack = rgba(0,0,0,.065)  // makes #eee over white
   vertical-align: middle
   height: 23px
   border-radius: 50%
-  margin: 0 2px
+  margin: 0 4px 0 0
   position: relative // for user hovercard
 
   @media (max-width: 479px)
@@ -236,7 +260,7 @@ eeeTransparentBlack = rgba(0,0,0,.065)  // makes #eee over white
   color: #888
   font-smoothing: antialiased
   vertical-align: middle
-  margin-right: 3px
+  margin: 0 4px 0 -2px
 
   @media (max-width: 479px)
     font-smoothing: antialiased

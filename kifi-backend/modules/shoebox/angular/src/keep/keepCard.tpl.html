@@ -1,4 +1,4 @@
-<div class="kf-keep-body" ng-class="::{'kf-side-by-side': image.w}">
+<div class="kf-keep-body" ng-class="::{'kf-boxed': boxed != null, 'kf-side-by-side': image.w}">
   <div class="kf-keep-video" ng-if="::youtubeId" ng-click="clickCallback({keep: keep, event: $event})">
     <div kf-youtube video-id="youtubeId"></div>
     <div class="kf-youtube-bottom-overlay"></div>
@@ -21,7 +21,7 @@
     <div class="kf-keep-title">
       <a class="kf-keep-title-link" ng-href="{{::keep.url}}" target="_blank" ng-click="clickCallback({keep: keep, event: $event})" rel="nofollow" click-action="clickedArticleTitle">{{displayTitle}}</a>
     </div>
-    <div class="kf-keep-description" kf-ellipsis full-text="::keep.summary.description" max-num-lines="::image.maxDescLines || 8"></div>
+    <div class="kf-keep-description" kf-ellipsis full-text="::keep.summary.description" max-num-lines="::image.maxDescLines || 4"></div>
   </div>
 
   <div class="kf-keep-footer">
