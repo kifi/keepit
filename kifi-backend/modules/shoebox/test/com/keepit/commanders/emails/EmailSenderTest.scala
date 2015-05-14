@@ -457,7 +457,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         params.map(email.htmlBody.contains(_)) === List(true, true, true, true)
         val html = email.htmlBody.value
         testHtml(html)
-        html must contain(invite.passPhrase)
+        html must not contain (invite.passPhrase)
 
         db.readWrite { implicit session => libraryRepo.save(lib1.copy(visibility = LibraryVisibility.PUBLISHED)) }
         val emailWithoutPassPhrase = Await.result(inviteSender.sendInvite(inviteNonUser), Duration(5, "seconds")).get
@@ -543,7 +543,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         val params = List("utm_campaign=na", "utm_source=library_invite", "utm_medium=vf_email", "kma=1")
         params.map(email.htmlBody.contains(_)) === List(true, true, true, false)
         val html = email.htmlBody.value
-        html must contain(invite.passPhrase)
+        html must not contain (invite.passPhrase)
 
         db.readWrite { implicit session => libraryRepo.save(lib1.copy(visibility = LibraryVisibility.PUBLISHED)) }
         val emailWithoutPassPhrase = Await.result(inviteSender.sendInvite(invite = inviteNonUser, isPlainEmail = true), Duration(5, "seconds")).get

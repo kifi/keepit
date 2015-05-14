@@ -29,11 +29,6 @@ Hello,
 Hello @firstName(inviteeId.get),
 }
 }
-@passPhraseMsg = {
-@if(!passPhrase.isEmpty) {
-<p>If you're asked for a passphrase, here it is "@passPhrase.get"</p>
-}
-}
 
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
@@ -44,7 +39,6 @@ Hello @firstName(inviteeId.get),
 @if(inviteMsg.isEmpty) {
 @salutation
 @emailMessage
-@passPhraseMsg
 @firstName(inviterId)
 } else {
 @inviteMsg.get

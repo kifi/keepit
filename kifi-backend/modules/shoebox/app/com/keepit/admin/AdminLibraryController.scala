@@ -74,7 +74,7 @@ class AdminLibraryController @Inject() (
       var page = 0
       val pageSize = 100
       var hasMore = true
-      val keeps = ArrayBuffer[Keep]()
+      val keeps: Int = 0
       while (hasMore) {
         val from = page * pageSize
         val chunk: Seq[Keep] = keepRepo.getByLibrary(libraryId, from, from + pageSize, Set.empty) map { keep =>
@@ -91,10 +91,10 @@ class AdminLibraryController @Inject() (
           keepRepo.save(keep.copy(userId = toUserId))
         }
         hasMore = chunk.size >= pageSize
-        keeps.appendAll(chunk)
+        keeps + chunk.size
         page += 1
       }
-      Ok(s"keep count = ${keeps.size} for library: $newOwnerLib")
+      Ok(s"keep count = ${keeps} for library: $newOwnerLib")
     }
   }
 
@@ -147,7 +147,7 @@ class AdminLibraryController @Inject() (
     Ok(html.admin.libraries(info))
   }
 
-  def libraryView(libraryId: Id[Library]) = AdminUserPage.async { implicit request =>
+  def libraryView(libraryId: Id[Library], transfer: Boolean = false) = AdminUserPage.async { implicit request =>
     val simLibsFut = cortex.similarLibraries(libraryId, 5).map { libIds =>
       db.readOnlyReplica { implicit s =>
         libIds.map(libraryRepo.get)
@@ -167,7 +167,7 @@ class AdminLibraryController @Inject() (
 
     simLibsFut.map { relatedLibs =>
       val termsStr = suggestedSearches.terms.map { case (t, w) => t + ":" + w.toString }.mkString(", ")
-      Ok(html.admin.library(library, owner, keepCount, contributors, followers, Library.publicId(libraryId), relatedLibs, termsStr))
+      Ok(html.admin.library(library, owner, keepCount, contributors, followers, Library.publicId(libraryId), relatedLibs, termsStr, transfer))
     }
   }
 

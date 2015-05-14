@@ -224,9 +224,6 @@
                   @libraryInfo.shortDescription.getOrElse("")
                   <br/>
                   <br/>
-                  @{passPhrase map { phrase =>
-                      s"You may need to enter the following passphrase to view library: $phrase"
-                  }.getOrElse("") }
                 </td>
               </tr>
               @email.tags.trSpacer(18)
