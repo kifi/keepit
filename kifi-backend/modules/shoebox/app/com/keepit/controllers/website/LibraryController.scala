@@ -593,7 +593,8 @@ class LibraryController @Inject() (
               collaborators = LibraryCardInfo.makeMembersShowable(info.collaborators, false),
               lastKept = info.lastKept.getOrElse(new DateTime(0)),
               following = None,
-              caption = None)
+              caption = None,
+              modifiedAt = info.modifiedAt)
           }
           val t2 = System.currentTimeMillis()
           statsd.timing("libraryController.relatedLibraries", t2 - t1, 1.0)
