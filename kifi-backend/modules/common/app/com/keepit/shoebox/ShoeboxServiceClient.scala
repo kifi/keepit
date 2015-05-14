@@ -115,7 +115,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getLibrariesChanged(seqNum: SequenceNumber[Library], fetchSize: Int): Future[Seq[LibraryView]]
   def getDetailedLibrariesChanged(seqNum: SequenceNumber[Library], fetchSize: Int): Future[Seq[DetailedLibraryView]]
   def getLibraryMembershipsChanged(seqNum: SequenceNumber[LibraryMembership], fetchSize: Int): Future[Seq[LibraryMembershipView]]
-  def canViewLibrary(libraryId: Id[Library], userId: Option[Id[User]], authToken: Option[String], hashedPassPhrase: Option[HashedPassPhrase]): Future[Boolean]
+  def canViewLibrary(libraryId: Id[Library], userId: Option[Id[User]], authToken: Option[String]): Future[Boolean]
   def newKeepsInLibraryForEmail(userId: Id[User], max: Int): Future[Seq[Keep]]
   def getBasicKeeps(userId: Id[User], uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[BasicKeep]]]
   // Replaced by getBasicLibraryDetails below. Please replace dependencies.
@@ -721,12 +721,11 @@ class ShoeboxServiceClientImpl @Inject() (
     call(Shoebox.internal.getLibraryMembershipsChanged(seqNum, fetchSize), callTimeouts = extraLongTimeout, routingStrategy = offlinePriority).map { r => (r.json).as[Seq[LibraryMembershipView]] }
   }
 
-  def canViewLibrary(libraryId: Id[Library], userId: Option[Id[User]], authToken: Option[String], hashedPassPhrase: Option[HashedPassPhrase]): Future[Boolean] = {
+  def canViewLibrary(libraryId: Id[Library], userId: Option[Id[User]], authToken: Option[String]): Future[Boolean] = {
     val body = Json.obj(
       "libraryId" -> libraryId,
       "userId" -> userId,
-      "authToken" -> authToken,
-      "passPhrase" -> Json.toJson(hashedPassPhrase))
+      "authToken" -> authToken)
     call(Shoebox.internal.canViewLibrary, body = body).map(_.json.as[Boolean])
   }
 

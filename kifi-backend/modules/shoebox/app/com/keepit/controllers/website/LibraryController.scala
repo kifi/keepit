@@ -238,18 +238,12 @@ class LibraryController @Inject() (
       case Failure(ex) =>
         BadRequest(Json.obj("error" -> "invalid_id"))
       case Success(libId) =>
-        val hashedPassPhrase = if (authToken.isDefined) {
-          val existingCookieFields = request.session.get("library_access").flatMap(libraryCommander.getLibraryIdAndPassPhraseFromCookie)
-          existingCookieFields.map(_._2)
-        } else {
-          None
-        }
         implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
         db.readOnlyMaster { implicit s =>
           libraryMembershipRepo.getWithLibraryIdAndUserId(libId, request.userId)
         } match {
           case None =>
-            libraryCommander.joinLibrary(request.userId, libId, authToken, hashedPassPhrase) match {
+            libraryCommander.joinLibrary(request.userId, libId, authToken) match {
               case Left(fail) =>
                 Status(fail.status)(Json.obj("error" -> fail.message))
               case Right(lib) =>
@@ -464,32 +458,11 @@ class LibraryController @Inject() (
       case Right(library) if libraryCommander.canViewLibrary(request.userIdOpt, library) =>
         NoContent // Don't need to check anything, they already have access
       case Right(library) =>
-        val existingCookieFields = request.session.get("library_access").flatMap(libraryCommander.getLibraryIdAndPassPhraseFromCookie)
-        existingCookieFields.flatMap {
-          case (cookieLibraryId, cookiePassPhrase) =>
-            if (cookieLibraryId == library.id.get && authToken.isDefined) {
-              // User has existing cookie auth for this library. Verify it.
-              if (libraryCommander.canViewLibrary(request.userIdOpt, library, authToken, Some(cookiePassPhrase))) {
-                // existing cookie was good
-                Some(NoContent)
-              } else {
-                None // existing cookie wasn't good, but the new form info may be okay
-              }
-            } else {
-              None
-            }
-        }.getOrElse {
-          // Check request
-          val unhashedPassPhraseOpt = (request.body \ "passPhrase").asOpt[String]
-          unhashedPassPhraseOpt.map { unhashedPassPhrase =>
-            val passPhrase = HashedPassPhrase.generateHashedPhrase(unhashedPassPhrase)
-            if (libraryCommander.canViewLibrary(request.userIdOpt, library, authToken, Some(passPhrase))) {
-              val cookie = ("library_access", s"${Library.publicId(library.id.get).id}/${passPhrase.value}")
-              NoContent.addingToSession(cookie)
-            } else {
-              BadRequest(Json.obj("error" -> "invalid_access"))
-            }
-          }.getOrElse(BadRequest(Json.obj("error" -> "no_passphrase_provided")))
+        // Check request
+        if (libraryCommander.canViewLibrary(request.userIdOpt, library, authToken)) {
+          NoContent
+        } else {
+          BadRequest(Json.obj("error" -> "invalid_access"))
         }
       case Left(fail) =>
         if (fail.status == MOVED_PERMANENTLY) Redirect(fail.message, authToken.map("authToken" -> Seq(_)).toMap, MOVED_PERMANENTLY) else Status(fail.status)(Json.obj("error" -> fail.message))

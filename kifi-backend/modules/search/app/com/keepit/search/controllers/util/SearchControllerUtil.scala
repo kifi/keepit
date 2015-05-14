@@ -109,7 +109,7 @@ trait SearchControllerUtil {
             val libraryAccess = requestHeader.session.get("library_access").map { _.split("/") }
             (auth, libraryAccess) match {
               case (Some(_), Some(Array(libPublicIdInCookie, hashedPassPhrase))) if (libPublicIdInCookie == libPublicId) =>
-                shoeboxClient.canViewLibrary(libId, None, auth, Some(HashedPassPhrase(hashedPassPhrase))).map { authorized =>
+                shoeboxClient.canViewLibrary(libId, None, auth).map { authorized =>
                   if (authorized) LibraryContext.Authorized(libId.id) else LibraryContext.NotAuthorized(libId.id)
                 }
               case _ =>

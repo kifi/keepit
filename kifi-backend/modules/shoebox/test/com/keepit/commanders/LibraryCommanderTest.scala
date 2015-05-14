@@ -437,12 +437,10 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         // test can view if user has invite
         libraryCommander.canViewLibrary(Some(userWidow.id.get), libScience) === true
 
-        // test can view if non-user provides correct authtoken & passphrase
+        // test can view if non-user provides correct/incorrect authtoken
         libraryCommander.canViewLibrary(None, libScience) === false
-        libraryCommander.canViewLibrary(None, libScience, authToken = Some("token"),
-          passPhrase = Some(HashedPassPhrase.generateHashedPhrase("wrong one"))) === false
-        libraryCommander.canViewLibrary(None, libScience, authToken = Some("token"),
-          passPhrase = Some(HashedPassPhrase.generateHashedPhrase("Blarg bobfRed"))) === true
+        libraryCommander.canViewLibrary(None, libScience, Some("token-wrong")) === false
+        libraryCommander.canViewLibrary(None, libScience, Some("token")) === true
       }
     }
 
@@ -667,21 +665,18 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
         // Joining a private library from an email invite (library invite has a null userId field)!
         db.readWrite { implicit s =>
-          libraryInviteRepo.save(LibraryInvite(libraryId = libShield.id.get, inviterId = userAgent.id.get, emailAddress = Some(EmailAddress("incrediblehulk@gmail.com")), access = LibraryAccess.READ_ONLY, authToken = "asdf", passPhrase = "unlock"))
+          libraryInviteRepo.save(LibraryInvite(libraryId = libShield.id.get, inviterId = userAgent.id.get, emailAddress = Some(EmailAddress("incrediblehulk@gmail.com")), access = LibraryAccess.READ_ONLY, authToken = "asdf"))
           libraryInviteRepo.getByLibraryIdAndAuthToken(libShield.id.get, "asdf").exists(i => i.state == LibraryInviteStates.ACCEPTED) === false
         }
 
-        // no authtoken or passphrase (invite by email) - should Fail
-        libraryCommander.joinLibrary(userHulk.id.get, libShield.id.get, None, None).isRight === false
+        // no authtoken - should Fail
+        libraryCommander.joinLibrary(userHulk.id.get, libShield.id.get, None).isRight === false
 
-        // incorrect passphrases (invite by email) - should Fail
-        val hashedPassPhraseFail = HashedPassPhrase.generateHashedPhrase("attempt")
-        libraryCommander.joinLibrary(userHulk.id.get, libShield.id.get, Some("asdf"), Some(hashedPassPhraseFail)).isLeft === true
-        libraryCommander.joinLibrary(userHulk.id.get, libShield.id.get, Some("asdf"), None).isRight === false
+        // incorrect authtoken - should Fail
+        libraryCommander.joinLibrary(userHulk.id.get, libShield.id.get, Some("asdf-wrong")).isRight === false
 
-        // correct authtoken & passphrase (invite by email)
-        val hashedPassPhrase2 = HashedPassPhrase.generateHashedPhrase("unlock")
-        val successJoin = libraryCommander.joinLibrary(userHulk.id.get, libShield.id.get, Some("asdf"), Some(hashedPassPhrase2))
+        // correct authtoken (invite by email)
+        val successJoin = libraryCommander.joinLibrary(userHulk.id.get, libShield.id.get, Some("asdf"))
         successJoin.isRight === true
         db.readOnlyMaster { implicit s =>
           libraryInviteRepo.getByLibraryIdAndAuthToken(libShield.id.get, "asdf").exists(i => i.state == LibraryInviteStates.ACCEPTED) === true
@@ -689,10 +684,10 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
         // Joining a private library from a kifi invite (library invite with a userId)
         db.readWrite { implicit s =>
-          libraryInviteRepo.save(LibraryInvite(libraryId = libShield.id.get, inviterId = userAgent.id.get, userId = userIron.id, access = LibraryAccess.READ_ONLY, authToken = "qwer", passPhrase = "unlock"))
+          libraryInviteRepo.save(LibraryInvite(libraryId = libShield.id.get, inviterId = userAgent.id.get, userId = userIron.id, access = LibraryAccess.READ_ONLY, authToken = "qwer"))
           libraryInviteRepo.getByLibraryIdAndAuthToken(libShield.id.get, "qwer").exists(i => i.state == LibraryInviteStates.ACCEPTED) === false
         }
-        libraryCommander.joinLibrary(userIron.id.get, libShield.id.get, None, None).isRight === true
+        libraryCommander.joinLibrary(userIron.id.get, libShield.id.get, None).isRight === true
         db.readOnlyMaster { implicit s =>
           libraryInviteRepo.getByLibraryIdAndAuthToken(libShield.id.get, "qwer").exists(i => i.state == LibraryInviteStates.ACCEPTED) === true
         }
