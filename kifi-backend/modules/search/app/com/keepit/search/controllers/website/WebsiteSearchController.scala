@@ -133,6 +133,7 @@ class WebsiteSearchController @Inject() (
               val primaryFields = Json.obj(
                 "title" -> title,
                 "description" -> summary.flatMap(_.article.description),
+                "wordCount" -> summary.flatMap(_.article.wordCount),
                 "url" -> url,
                 "siteName" -> siteName,
                 "image" -> imageOpt.map { image =>
