@@ -77,7 +77,7 @@ object LibraryInvite extends ModelWithPublicIdCompanion[LibraryInvite] {
 sealed abstract class LibraryInvitePermissions(val value: String)
 
 object LibraryInvitePermissions {
-  case object COLLABORATORS_ALLOWED extends LibraryInvitePermissions("collaborators_allowed")
+  case object COLLABORATORS_ALLOW extends LibraryInvitePermissions("collaborators_allow")
   case object OWNER_ONLY extends LibraryInvitePermissions("owner_only")
 
   implicit def format[T]: Format[LibraryInvitePermissions] =
@@ -85,7 +85,7 @@ object LibraryInvitePermissions {
 
   def apply(str: String): LibraryInvitePermissions = {
     str match {
-      case COLLABORATORS_ALLOWED.value | "read_write" => COLLABORATORS_ALLOWED
+      case COLLABORATORS_ALLOW.value | "read_write" => COLLABORATORS_ALLOW
       case OWNER_ONLY.value | "owner" => OWNER_ONLY
     }
   }
