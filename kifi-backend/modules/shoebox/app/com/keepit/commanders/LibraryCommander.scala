@@ -1048,7 +1048,7 @@ class LibraryCommander @Inject() (
                 log.warn(s"[inviteUsersToLibrary] error invite to collaborate: user $inviterId attempting to invite $recipient for RW access to library (${lib.id.get}, ${lib.name}, ${lib.visibility}, ${lib.whoCanInvite})")
                 None
               // collaborator tries to invite to collaborate, but library setting is set to owner_only
-              case LibraryAccess.READ_WRITE if inviterIsCollab && lib.whoCanInvite == Some(LibraryAccess.OWNER) =>
+              case LibraryAccess.READ_WRITE if inviterIsCollab && lib.whoCanInvite == Some(LibraryInvitePermissions.OWNER_ONLY) =>
                 log.warn(s"[inviteUsersToLibrary] error invite to collaborate: user $inviterId attempting to invite $recipient for RW access to library (${lib.id.get}, ${lib.name}, ${lib.visibility}, ${lib.whoCanInvite})")
                 None
               // non-owner/non-collaborator tries to invite to follow (secret libraries only)
@@ -1056,7 +1056,7 @@ class LibraryCommander @Inject() (
                 log.warn(s"[inviteUsersToLibrary] error invite to follow: user $inviterId attempting to invite $recipient for RO access to library (${lib.id.get}, ${lib.name}, ${lib.visibility}, ${lib.whoCanInvite})")
                 None
               // collaborator in secret library tries to invite to follow, but library setting is set to owner_only
-              case LibraryAccess.READ_ONLY if lib.isSecret && inviterIsCollab && lib.whoCanInvite == Some(LibraryAccess.OWNER) =>
+              case LibraryAccess.READ_ONLY if lib.isSecret && inviterIsCollab && lib.whoCanInvite == Some(LibraryInvitePermissions.OWNER_ONLY) =>
                 log.warn(s"[inviteUsersToLibrary] error invite to follow: user $inviterId attempting to invite $recipient for RO access to library (${lib.id.get}, ${lib.name}, ${lib.visibility}, ${lib.whoCanInvite})")
                 None
               case _ =>
@@ -1758,7 +1758,7 @@ class LibraryCommander @Inject() (
                 case None =>
                   SafeFuture { convertKeepOwnershipToLibraryOwner(targetMem.userId, library) }
                   Right(libraryMembershipRepo.save(targetMem.copy(state = LibraryMembershipStates.INACTIVE)))
-                case Some(newAccess) if mem.isCollaborator && newAccess == LibraryAccess.READ_WRITE && library.whoCanInvite == Some(LibraryAccess.OWNER) =>
+                case Some(newAccess) if mem.isCollaborator && newAccess == LibraryAccess.READ_WRITE && library.whoCanInvite == Some(LibraryInvitePermissions.OWNER_ONLY) =>
                   log.warn(s"[updateLibraryMembership] invalid permission ${mem} trying to change membership ${targetMem} to ${newAccess} when library has invite policy ${library.whoCanInvite}")
                   Left(LibraryFail(FORBIDDEN, "invalid_collaborator_permission"))
                 case Some(newAccess) =>

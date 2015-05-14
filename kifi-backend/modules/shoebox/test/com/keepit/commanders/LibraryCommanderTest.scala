@@ -258,7 +258,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           LibraryModifyRequest(description = Some("Samuel L. Jackson was here"), whoCanInvite = Some(LibraryInvitePermissions.OWNER_ONLY)))
         mod1.isRight === true
         mod1.right.get.description === Some("Samuel L. Jackson was here")
-        mod1.right.get.whoCanInvite === Some(LibraryAccess.OWNER)
+        mod1.right.get.whoCanInvite === Some(LibraryInvitePermissions.OWNER_ONLY)
 
         val mod2 = libraryCommander.modifyLibrary(libraryId = libMurica.id.get, userId = userCaptain.id.get,
           LibraryModifyRequest(name = Some("MURICA #1!!!!!"), slug = Some("murica_#1")))
