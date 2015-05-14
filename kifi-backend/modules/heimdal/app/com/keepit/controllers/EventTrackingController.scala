@@ -20,6 +20,10 @@ trait UserEventHandler {
   def handleUserEvent(event: UserEvent): Unit
 }
 
+trait VisitorEventHandler {
+  def handleVisitorEvent(event: VisitorEvent): Unit
+}
+
 class EventTrackingController @Inject() (
     userEventLoggingRepo: UserEventLoggingRepo,
     systemEventLoggingRepo: SystemEventLoggingRepo,
@@ -35,12 +39,13 @@ class EventTrackingController @Inject() (
   private[controllers] def trackInternalEvent(eventJs: JsValue): Unit = trackInternalEvent(eventJs.as[HeimdalEvent])
 
   private val userEventHandlers: Seq[UserEventHandler] = Seq(eventTrackingCommander, libraryViewTrackingCommander)
+  private val visitorEventHandlers: Seq[VisitorEventHandler] = Seq(libraryViewTrackingCommander)
 
   private def trackInternalEvent(event: HeimdalEvent): Unit = event match {
     case systemEvent: SystemEvent => systemEventLoggingRepo.persist(systemEvent)
     case userEvent: UserEvent => handleUserEvent(userEvent)
     case anonymousEvent: AnonymousEvent => anonymousEventLoggingRepo.persist(anonymousEvent)
-    case visitorEvent: VisitorEvent => visitorEventLoggingRepo.persist(visitorEvent)
+    case visitorEvent: VisitorEvent => handleVisitorEvent(visitorEvent)
     case nonUserEvent: NonUserEvent => nonUserEventLoggingRepo.persist(nonUserEvent)
   }
 
@@ -49,6 +54,13 @@ class EventTrackingController @Inject() (
     SafeFuture { userEventLoggingRepo.persist(userEvent) }
     userEventHandlers.foreach { handler =>
       SafeFuture { handler.handleUserEvent(userEvent) }
+    }
+  }
+
+  private def handleVisitorEvent(event: VisitorEvent) = {
+    visitorEventLoggingRepo.persist(event)
+    visitorEventHandlers.foreach { handler =>
+      SafeFuture { handler.handleVisitorEvent(event) }
     }
   }
 

@@ -66,3 +66,7 @@ object NonUserEventTypes {
   val MESSAGED = EventType("messaged")
   val WAS_NOTIFIED = EventType("was_notified")
 }
+
+object VisitorEventTypes {
+  val VIEWED_LIBRARY = EventType("viewed_library")
+}
