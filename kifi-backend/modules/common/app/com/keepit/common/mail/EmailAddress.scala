@@ -22,7 +22,8 @@ object EmailAddress {
     def writes(email: EmailAddress) = JsString(email.address)
   }
 
-  implicit def queryStringBinder[T](implicit stringBinder: QueryStringBindable[String]) = new QueryStringBindable[EmailAddress] {
+  implicit val queryStringBinder = new QueryStringBindable[EmailAddress] {
+    private val stringBinder = implicitly[QueryStringBindable[String]]
     override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, EmailAddress]] = {
       stringBinder.bind(key, params) map {
         case Right(address) => validate(address).map(Right(_)).recover { case ex: Throwable => Left(ex.getMessage) }.get

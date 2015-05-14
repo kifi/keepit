@@ -3,7 +3,6 @@ package com.keepit.common.mail
 import org.specs2.mutable.Specification
 
 import play.api.libs.json.{ JsString, JsSuccess, JsError }
-import play.api.mvc.QueryStringBindable
 
 class EmailAddressTest extends Specification {
 
@@ -104,5 +103,5 @@ class EmailAddressTest extends Specification {
   }
 
   private def readFromJson(addr: String) = EmailAddress.format.reads(JsString(addr))
-  private def bindFromQueryParameter(addr: String) = EmailAddress.queryStringBinder(QueryStringBindable.bindableString).bind("e", Map("e" -> Seq(addr)))
+  private def bindFromQueryParameter(addr: String) = EmailAddress.queryStringBinder.bind("e", Map("e" -> Seq(addr)))
 }
