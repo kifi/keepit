@@ -2,6 +2,8 @@ package com.keepit.search.controllers.website
 
 import com.keepit.commanders.ProcessedImageSize
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
+import com.keepit.common.domain.DomainToNameMapper
+import com.keepit.common.net.URI
 import com.keepit.common.store.S3ImageConfig
 import com.keepit.rover.RoverServiceClient
 import com.keepit.rover.model.{ BasicImages, RoverUriSummary }
@@ -122,19 +124,31 @@ class WebsiteSearchController @Inject() (
           (uriSearchResult.hits zip allAugmentationFields).map {
             case (hit, augmentationFields) => {
               val uriId = Id[NormalizedURI](hit.id)
+              val title = hit.title
+              val url = hit.url
+              val siteName = DomainToNameMapper.getNameFromUrl(url)
               val summary = summaries.get(uriId)
               val keepId = hit.keepId.map(Id[Keep](_))
-              val image = (keepId.flatMap(keepImages.get) orElse summary.map(_.images)).flatMap(_.get(ProcessedImageSize.Medium.idealSize))
+              val imageOpt = (keepId.flatMap(keepImages.get) orElse summary.map(_.images)).flatMap(_.get(ProcessedImageSize.Medium.idealSize))
               val primaryFields = Json.obj(
-                "title" -> hit.title,
-                "url" -> hit.url,
+                "title" -> title,
+                "description" -> summary.flatMap(_.article.description),
+                "url" -> url,
+                "siteName" -> siteName,
+                "image" -> imageOpt.map { image =>
+                  Json.obj(
+                    "url" -> image.path.getUrl,
+                    "width" -> image.size.width,
+                    "height" -> image.size.height
+                  )
+                },
                 "score" -> hit.finalScore,
-                "summary" -> json.minify(Json.obj(
+                "summary" -> json.minify(Json.obj( // todo(Léo): remove deprecated summary field
                   "title" -> summary.flatMap(_.article.title),
                   "description" -> summary.flatMap(_.article.description),
-                  "imageUrl" -> image.map(_.path.getUrl),
-                  "imageWidth" -> image.map(_.size.width),
-                  "imageHeight" -> image.map(_.size.height)
+                  "imageUrl" -> imageOpt.map(_.path.getUrl),
+                  "imageWidth" -> imageOpt.map(_.size.width),
+                  "imageHeight" -> imageOpt.map(_.size.height)
                 ))
               )
               primaryFields ++ augmentationFields
