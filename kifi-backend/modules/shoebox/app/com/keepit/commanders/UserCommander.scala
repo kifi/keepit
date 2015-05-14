@@ -377,7 +377,7 @@ class UserCommander @Inject() (
     } else Option(Future.successful(Set.empty))
   }
 
-  def sendWelcomeEmail(newUser: User, withVerification: Boolean = false, targetEmailOpt: Option[EmailAddress] = None, isPlainEmail: Boolean = false): Future[Unit] = {
+  def sendWelcomeEmail(newUser: User, withVerification: Boolean = false, targetEmailOpt: Option[EmailAddress] = None, isPlainEmail: Boolean = true): Future[Unit] = {
     if (!db.readOnlyMaster { implicit session => userValueRepo.getValue(newUser.id.get, UserValues.welcomeEmailSent) }) {
       val emailF = emailSender.welcome(newUser.id.get, targetEmailOpt, isPlainEmail)
       emailF.map { email =>
