@@ -136,7 +136,7 @@ class RecommendationsCommander @Inject() (
 
   def updatesFromFollowedLibraries(userId: Id[User]): Future[FullLibUpdatesRecoInfo] = {
     val keeps = db.readOnlyReplica { implicit session =>
-      keepRepo.getRecentKeepsFromFollowedLibraries(userId, 40)
+      keepRepo.getRecentKeepsFromFollowedLibraries(userId, 20)
     }
 
     keepDecorator.decorateKeepsIntoKeepInfos(Some(userId), false, keeps, ProcessedImageSize.Large.idealSize, true).map { keepInfos =>
