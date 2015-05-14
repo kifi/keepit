@@ -22,6 +22,23 @@ package object json {
     implicit def tuple2Format[A, B](implicit aReads: Format[A], bReads: Format[B]): Format[(A, B)] = {
       Format(tuple2Reads[A, B], tuple2Writes[A, B])
     }
+
+    implicit def tuple3Reads[A, B, C](implicit aReads: Reads[A], bReads: Reads[B], cReads: Reads[C]): Reads[(A, B, C)] = Reads[(A, B, C)] {
+      case JsArray(arr) if arr.size == 3 => for {
+        a <- aReads.reads(arr(0))
+        b <- bReads.reads(arr(1))
+        c <- cReads.reads(arr(2))
+      } yield (a, b, c)
+      case _ => JsError(Seq(JsPath() -> Seq(ValidationError("Expected array of three elements"))))
+    }
+
+    implicit def tuple3Writes[A, B, C](implicit aWrites: Writes[A], bWrites: Writes[B], cWrites: Writes[C]): Writes[(A, B, C)] = new Writes[(A, B, C)] {
+      def writes(tuple: (A, B, C)) = JsArray(Seq(aWrites.writes(tuple._1), bWrites.writes(tuple._2), cWrites.writes(tuple._3)))
+    }
+
+    implicit def tuple3Format[A, B, C](implicit aReads: Format[A], bReads: Format[B], cReads: Format[C]): Format[(A, B, C)] = {
+      Format(tuple3Reads[A, B, C], tuple3Writes[A, B, C])
+    }
   }
 
   implicit class PimpedFormat[A](format: Format[A]) {

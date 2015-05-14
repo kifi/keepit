@@ -47,7 +47,7 @@ class KeepDecorator @Inject() (
           db.readOnlyMaster { implicit s => libraryRepo.getLibraries(librariesShown) } //cached
         }
         val idToBasicUser = {
-          val keepersShown = augmentationInfos.flatMap(_.keepers).toSet
+          val keepersShown = augmentationInfos.flatMap(_.keepers.map(_._1)).toSet
           val libraryContributorsShown = augmentationInfos.flatMap(_.libraries.map(_._2)).toSet
           val libraryOwners = idToLibrary.values.map(_.ownerId).toSet
           val keepers = keeps.map(_.userId).toSet // is this needed? need to double check, it may be redundant
@@ -87,7 +87,7 @@ class KeepDecorator @Inject() (
 
         val keepsInfo = (keeps zip colls, augmentationInfos, pageInfos zip sourceAttrs).zipped.map {
           case ((keep, collsForKeep), augmentationInfoForKeep, (pageInfoForKeep, sourceAttrOpt)) =>
-            val keepers = perspectiveUserIdOpt.map { userId => augmentationInfoForKeep.keepers.filterNot(_ == userId) } getOrElse augmentationInfoForKeep.keepers
+            val keepers = perspectiveUserIdOpt.map { userId => augmentationInfoForKeep.keepers.filterNot(_._1 == userId) } getOrElse augmentationInfoForKeep.keepers
             val keeps = allMyKeeps.get(keep.uriId) getOrElse Set.empty
             val libraries = {
               def doShowLibrary(libraryId: Id[Library]): Boolean = {
@@ -95,7 +95,7 @@ class KeepDecorator @Inject() (
                 lazy val publicId = Library.publicId(libraryId)
                 !librariesWithWriteAccess.contains(libraryId) || keeps.exists(_.libraryId == publicId)
               }
-              augmentationInfoForKeep.libraries.collect { case (libraryId, contributorId) if doShowLibrary(libraryId) => (idToBasicLibrary(libraryId), idToBasicUser(contributorId)) }
+              augmentationInfoForKeep.libraries.collect { case (libraryId, contributorId, _) if doShowLibrary(libraryId) => (idToBasicLibrary(libraryId), idToBasicUser(contributorId)) }
             }
 
             val keptAt = if (withKeepTime) {
@@ -113,7 +113,7 @@ class KeepDecorator @Inject() (
               user = Some(idToBasicUser(keep.userId)),
               createdAt = keptAt,
               keeps = Some(keeps),
-              keepers = Some(keepers.map(idToBasicUser)),
+              keepers = Some(keepers.map { case (keeperId, _) => idToBasicUser(keeperId) }),
               keepersOmitted = Some(augmentationInfoForKeep.keepersOmitted),
               keepersTotal = Some(augmentationInfoForKeep.keepersTotal),
               libraries = Some(libraries),
@@ -138,7 +138,7 @@ class KeepDecorator @Inject() (
     val allUsers = (infos flatMap { info =>
       val keepers = info.keepers
       val libs = info.libraries
-      (libs.map(_._2) ++ keepers)
+      (libs.map(_._2) ++ keepers.map(_._1))
     }).toSet
     if (allUsers.isEmpty) infos
     else {
@@ -146,7 +146,7 @@ class KeepDecorator @Inject() (
       if (fakeUsers.isEmpty) infos
       else {
         infos map { info =>
-          val keepers = info.keepers.filterNot(u => fakeUsers.contains(u))
+          val keepers = info.keepers.filterNot(u => fakeUsers.contains(u._1))
           val libs = info.libraries.filterNot(t => fakeUsers.contains(t._2))
           info.copy(keepers = keepers, libraries = libs)
         }

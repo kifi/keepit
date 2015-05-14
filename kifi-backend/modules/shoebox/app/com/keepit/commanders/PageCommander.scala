@@ -19,6 +19,7 @@ import com.keepit.search.SearchServiceClient
 import com.keepit.social.BasicUser
 import com.keepit.common.logging.Logging
 import com.kifi.macros.json
+import org.joda.time.DateTime
 
 import play.api.libs.json._
 import scala.concurrent.{ ExecutionContext, Await, Future }
@@ -153,7 +154,7 @@ class PageCommander @Inject() (
     infoF.flatten
   }
 
-  private def filterLibrariesUserDoesNotOwnOrFollow(libraries: Seq[(Id[Library], Id[User])], userId: Id[User])(implicit session: RSession): Seq[Library] = {
+  private def filterLibrariesUserDoesNotOwnOrFollow(libraries: Seq[(Id[Library], Id[User], Option[DateTime])], userId: Id[User])(implicit session: RSession): Seq[Library] = {
     val otherLibraryIds = libraries.filterNot(_._2 == userId).map(_._1)
     val memberLibraryIds = libraryMembershipRepo.getWithLibraryIdsAndUserId(otherLibraryIds.toSet, userId).keys
     val libraryIds = otherLibraryIds.diff(memberLibraryIds.toSeq)
@@ -192,7 +193,7 @@ class PageCommander @Inject() (
 
     augmentFuture map {
       case Seq(info) =>
-        val userIdSet = info.keepers.toSet
+        val userIdSet = info.keepers.map(_._1).toSet
         val (basicUserMap, libraries) = db.readOnlyMaster { implicit session =>
           val notMyLibs = filterLibrariesUserDoesNotOwnOrFollow(info.libraries, userId)
           val libraries = firstQualityFilterAndSort(notMyLibs)
@@ -208,7 +209,7 @@ class PageCommander @Inject() (
         }
 
         val keeperIdsToExclude = Set(userId) ++ libraries.map(_.ownerId)
-        val keepers = info.keepers.filterNot(id => keeperIdsToExclude.contains(id)).map(basicUserMap) // preserving ordering
+        val keepers = info.keepers.collect { case (keeperId, _) if !keeperIdsToExclude.contains(keeperId) => basicUserMap(keeperId) } // preserving ordering
         val otherKeepersTotal = info.keepersTotal - (if (userIdSet.contains(userId)) 1 else 0)
         val followerCounts = db.readOnlyReplica { implicit session =>
           libraryMembershipRepo.countWithAccessByLibraryId(libraries.map(_.id.get).toSet, LibraryAccess.READ_ONLY)

@@ -10,6 +10,7 @@ import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.FakeShoeboxStoreModule
+import com.keepit.common.time._
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.curator.model._
 import com.keepit.curator.{ FakeCuratorServiceClientModule, FakeCuratorServiceClientImpl, CuratorServiceClient }
@@ -45,10 +46,12 @@ class RecommendationsCommanderTest extends Specification with ShoeboxTestInjecto
   }
 
   val fakeSearch = new FakeSearchServiceClient() {
-    private val info = LimitedAugmentationInfo(keepers = Seq(Id[User](1)),
+    private val info = LimitedAugmentationInfo(
+      None,
+      keepers = Seq(Id[User](1) -> Some(currentDateTime)),
       keepersOmitted = 0,
       keepersTotal = 1,
-      libraries = Seq((Id[Library](1), Id[User](1))),
+      libraries = Seq((Id[Library](1), Id[User](1), Some(currentDateTime))),
       librariesOmitted = 0,
       librariesTotal = 1,
       tags = Seq(),

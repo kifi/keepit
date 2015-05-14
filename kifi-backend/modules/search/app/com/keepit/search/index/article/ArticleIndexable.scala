@@ -50,12 +50,16 @@ case class ArticleIndexable(uri: IndexableUri, articles: Set[Article], shard: Sh
       doc.add(buildKeywordField(ArticleVisibility.deprecatedRestrictedTerm.field(), ArticleVisibility.restrictedTerm.text()))
     }
     val titleLang = articleContent.titleLang.getOrElse(DefaultAnalyzer.defaultLang)
-    val contentLang = articleContent.contentLang.getOrElse(DefaultAnalyzer.defaultLang)
-    doc.add(buildKeywordField(contentLangField, contentLang.lang))
-    doc.add(buildKeywordField(titleLangField, titleLang.lang))
-
     val titleAnalyzer = DefaultAnalyzer.getAnalyzer(titleLang)
     val titleAnalyzerWithStemmer = DefaultAnalyzer.getAnalyzerWithStemmer(titleLang)
+
+    val titleAndUrl = Array(articleContent.title.getOrElse(""), "\n\n", urlToIndexableString(uri.url).getOrElse(""))
+
+    doc.add(buildKeywordField(titleLangField, titleLang.lang))
+    doc.add(buildTextField(titleField, new MultiStringReader(titleAndUrl), titleAnalyzer))
+    doc.add(buildTextField(titleStemmedField, new MultiStringReader(titleAndUrl), titleAnalyzerWithStemmer))
+
+    val contentLang = articleContent.contentLang.getOrElse(DefaultAnalyzer.defaultLang)
     val contentAnalyzer = DefaultAnalyzer.getAnalyzer(contentLang)
     val contentAnalyzerWithStemmer = DefaultAnalyzer.getAnalyzerWithStemmer(contentLang)
 
@@ -64,11 +68,8 @@ case class ArticleIndexable(uri: IndexableUri, articles: Set[Article], shard: Sh
       articleContent.description.getOrElse(""), "\n\n",
       articleContent.validatedKeywords.mkString(" "), "\n\n",
       articleContent.contentType.getOrElse(""))
-    val titleAndUrl = Array(articleContent.title.getOrElse(""), "\n\n", urlToIndexableString(uri.url).getOrElse(""))
 
-    doc.add(buildTextField(titleField, new MultiStringReader(titleAndUrl), titleAnalyzer))
-    doc.add(buildTextField(titleStemmedField, new MultiStringReader(titleAndUrl), titleAnalyzerWithStemmer))
-
+    doc.add(buildKeywordField(contentLangField, contentLang.lang))
     doc.add(buildTextField(contentField, new MultiStringReader(content), contentAnalyzer))
     doc.add(buildTextField(contentStemmedField, new MultiStringReader(content), contentAnalyzerWithStemmer))
 
