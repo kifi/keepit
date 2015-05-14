@@ -55,7 +55,7 @@ class SeedAttributionHelper @Inject() (
             (uriIds zip infos).foreach {
               case (uriId, info) =>
                 val idx = uriId2Idx(uriId)
-                val attr = toUserAttribution(info)
+                val attr = UserAttribution.fromLimitedAugmentationInfo(info)
                 val n = attr.friends.size + attr.friendsLib.map { _.size }.getOrElse(0)
                 if (n > 0) ret(idx) = Some(attr)
             }
@@ -63,11 +63,5 @@ class SeedAttributionHelper @Inject() (
           }
         }
     }
-  }
-
-  def toUserAttribution(info: LimitedAugmentationInfo): UserAttribution = {
-    val others = info.keepersTotal - info.keepers.size - info.keepersOmitted
-    val userToLib = CollectionHelpers.dedupBy(info.libraries)(_._2).map(_.swap).toMap // a user could have kept this page in several libraries, retain the first (most relevant) one.
-    UserAttribution(info.keepers, others, Some(userToLib))
   }
 }
