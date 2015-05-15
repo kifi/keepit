@@ -7,7 +7,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ State, Id, SequenceNumber }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.{ AccessLog, Logging }
-import com.keepit.model.{ NormalizedURI }
+import com.keepit.model.{NormalizedURIStates, NormalizedURI}
 import com.keepit.rover.article.fetcher.ArticleFetcherProvider
 import com.keepit.rover.article.policy.ArticleInfoPolicy
 import com.keepit.rover.manager.{ FetchTask, FetchTaskQueue }
@@ -144,8 +144,8 @@ class ArticleCommander @Inject() (
     }
   }
 
-  def fetchAsap(uriId: Id[NormalizedURI], url: String, state: State[NormalizedURI]): Future[Unit] = {
-    val toBeInternedByPolicy = articlePolicy.toBeInterned(url, state)
+  def fetchAsap(uriId: Id[NormalizedURI], url: String): Future[Unit] = {
+    val toBeInternedByPolicy = articlePolicy.toBeInterned(url, NormalizedURIStates.SCRAPED)
     val interned = internArticleInfoByUri(uriId, url, toBeInternedByPolicy)
     val neverFetched = interned.collect { case (kind, info) if info.lastFetchedAt.isEmpty => (info.id.get -> info) }
     if (neverFetched.isEmpty) Future.successful(())

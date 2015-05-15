@@ -28,8 +28,7 @@ class RoverController @Inject() (roverCommander: RoverCommander, articleCommande
   def fetchAsap() = Action.async(parse.json) { request =>
     val uriId = (request.body \ "uriId").asOpt[Id[NormalizedURI]] getOrElse (request.body \ "id").as[Id[NormalizedURI]]
     val url = (request.body \ "url").as[String]
-    val state = (request.body \ "state").as[State[NormalizedURI]]
-    articleCommander.fetchAsap(uriId, url, state).map(_ => Ok)
+    articleCommander.fetchAsap(uriId, url).map(_ => Ok)
   }
 
   def getBestArticlesByUris() = Action.async(parse.json) { request =>

@@ -21,7 +21,7 @@ import scala.concurrent.{ ExecutionContext, Future }
 trait RoverServiceClient extends ServiceClient {
   final val serviceType = ServiceType.ROVER
   def getShoeboxUpdates(seq: SequenceNumber[ArticleInfo], limit: Int): Future[Option[ShoeboxArticleUpdates]]
-  def fetchAsap(uriId: Id[NormalizedURI], url: String, state: State[NormalizedURI]): Future[Unit]
+  def fetchAsap(uriId: Id[NormalizedURI], url: String): Future[Unit]
   def getBestArticlesByUris(uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[Article]]]
   def getArticleInfosByUris(uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[ArticleInfo]]]
   def getImagesByUris(uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], BasicImages]]
@@ -42,13 +42,12 @@ class RoverServiceClientImpl(
     call(Rover.internal.getShoeboxUpdates(seq, limit), callTimeouts = longTimeout).map { r => (r.json).asOpt[ShoeboxArticleUpdates] }
   }
 
-  def fetchAsap(uriId: Id[NormalizedURI], url: String, state: State[NormalizedURI]): Future[Unit] = {
+  def fetchAsap(uriId: Id[NormalizedURI], url: String): Future[Unit] = {
     val payload = Json.obj(
       "uriId" -> uriId,
-      "url" -> url,
-      "state" -> state
+      "url" -> url
     )
-    new SafeFuture(call(Rover.internal.fetchAsap, payload, callTimeouts = longTimeout).map { _ => () }, Some(s"FetchAsap: [$uriId, $state] -> $url"))
+    new SafeFuture(call(Rover.internal.fetchAsap, payload, callTimeouts = longTimeout).map { _ => () }, Some(s"FetchAsap: $uriId -> $url"))
   }
 
   def getBestArticlesByUris(uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[Article]]] = {
