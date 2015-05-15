@@ -164,6 +164,7 @@ eeeTransparentBlack = rgba(0,0,0,.065)  // makes #eee over white
     &:first-child
       margin-left: -(sidePad)
 
+    &:focus
     &:hover
       box-shadow: inset 0 0 0 1px #f6f6f6
 
@@ -301,23 +302,6 @@ eeeTransparentBlack = rgba(0,0,0,.065)  // makes #eee over white
   white-space: nowrap
   color: accentGreen
 
-.kf-keep-twitter-attr
-  a
-    color: #909aa8
-    outline: none
-
-.kf-keep-twitter-logo
-  display: inline-block
-  width: 16px
-  height: 14px
-  margin-right: 5px
-  background-size: cover
-  vertical-align: text-bottom
-
-  @media (max-width: 479px)
-    width: 14px
-    height: 12px
-
 .kf-keep-length
   white-space: nowrap  // hides entire element (including bullet) if it does not fit
 
@@ -333,16 +317,15 @@ eeeTransparentBlack = rgba(0,0,0,.065)  // makes #eee over white
     .sprite-clock
       display: none
 
-.kf-keep-twitter-attr::before
-.kf-keep-length::before
-  content: '\2022'
-  vertical-align: 2px
-  padding: 0 9px 0 6px
-  font-size: 7px
+  &::before
+    content: '\2022'
+    vertical-align: 2px
+    padding: 0 9px 0 6px
+    font-size: 7px
 
-  @media (max-width: 479px)
-    padding: 0 4px 0 3px
-    font-size: 6px
+    @media (max-width: 479px)
+      padding: 0 4px 0 3px
+      font-size: 6px
 
 .kf-keep-description
   font: 12px/18px Lato,Helvetica,Arial,sans-serif

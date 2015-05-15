@@ -234,13 +234,35 @@ keepSidePad = 20px
   &:hover
     text-decoration: underline
 
+  &:focus
+    outline-color: tint(accentGreen, 50%)
+
 .kf-keep-time
   color: #808080
+  line-height: 18px
   font-size: 14px
   font-smoothing: antialiased
   white-space: nowrap
   overflow: hidden
   text-overflow: ellipsis
+
+twitterBlue = #00aced
+
+.kf-keep-tweet-link
+  margin-left: 10px
+  color: shade(twitterBlue, 10%)
+  font-size: 12px
+
+  &:focus
+    outline-color: tint(twitterBlue, 70%)
+
+.kf-keep-twitter-logo
+  display: inline-block
+  width: 14px
+  height: 12px
+  margin-right: 5px
+  background-size: cover
+  vertical-align: -2px
 
 noteFontSize = 16px
 noteLineHeight = 1.5

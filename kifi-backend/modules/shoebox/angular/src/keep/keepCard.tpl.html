@@ -11,11 +11,6 @@
   <div class="kf-keep-content">
     <div class="kf-keep-meta">
       <span class="kf-keep-source">{{::keepSource}}</span>
-      <span class="kf-keep-twitter-attr" ng-if="::keep.sourceAttribution.twitter.screenName">
-        <a href="https://www.twitter.com/{{::keep.sourceAttribution.twitter.screenName}}/status/{{::keep.sourceAttribution.twitter.idString}}" target="_blank" ng-click="trackTweet()">
-          <span class="kf-keep-twitter-logo svg-twitter-blue"></span>@{{::keep.sourceAttribution.twitter.screenName}}
-        </a>
-      </span>
       <span class="kf-keep-length" ng-if="::keep.summary.wordCount > 0 && !youtubeId">{{::keep.summary.wordCount|timeToRead}} read</span>
     </div>
     <div class="kf-keep-title">
