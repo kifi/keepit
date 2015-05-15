@@ -15,5 +15,5 @@ package object core extends com.keepit.common.Implicits {
   def ?!?[A](implicit tag: ATypeTag[A]): A =
     throw new NotImplementedError(s"unimplemented value of type ${tag.tpe}")
 
-  def SafeOpt[A](value: => A) = Try(Option(value)).toOption.flatten
+  def SafeOpt[A](value: => A): Option[A] = Try(Option(value)).toOption.flatten
 }
