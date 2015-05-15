@@ -53,7 +53,7 @@
           <div class="kf-keep-time">
             <time ng-attr-datetime="{{::keep.createdAt}}" am-time-ago="::keep.createdAt" title="{{::keep.createdAt|localTime}}" ng-if="::keep.createdAt"></time>
             <span ng-if="::!keep.createdAt">kept this</span>
-            <span ng-if="::!library && keep.library">
+            <span ng-if="::!library && keep.library && keep.library.visibility !== 'discoverable' && keep.library.path.slice(-7) !== '/secret'">
               in <a class="kf-keep-lib-name" href="{{::keep.library.path}}">{{::keep.library.name}}</a>
             </span>
           </div>
