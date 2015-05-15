@@ -165,20 +165,20 @@ class AugmentationCommanderImpl @Inject() (
           if (item.keptIn.isDefined && item.keptIn.get.id == libraryId) { // canonical keep, get note
             val record = getKeepRecord(docId)
             uniqueKeepers += userId
-            keeps += RestrictedKeepInfo(record.externalId, Some(record.keptAt), Some(Id(libraryId)), Some(Id(userId)), record.note, record.tags)
+            keeps += RestrictedKeepInfo(record.externalId, record.keptAt, Some(Id(libraryId)), Some(Id(userId)), record.note, record.tags)
           } else if (libraryIdFilter.findIndex(libraryId) >= 0) { // kept in my libraries
             val record = getKeepRecord(docId)
             uniqueKeepers += userId
-            keeps += RestrictedKeepInfo(record.externalId, Some(record.keptAt), Some(Id(libraryId)), Some(Id(userId)), None, record.tags) // todo(Léo): Revisit user attribution for collaborative libraries (currently contributor == library owner)
+            keeps += RestrictedKeepInfo(record.externalId, record.keptAt, Some(Id(libraryId)), Some(Id(userId)), None, record.tags) // todo(Léo): Revisit user attribution for collaborative libraries (currently contributor == library owner)
           } else if (userIdFilter.findIndex(userId) >= 0) visibility match { // kept by my friends
             case PUBLISHED =>
               val record = getKeepRecord(docId)
               uniqueKeepers += userId
-              keeps += RestrictedKeepInfo(record.externalId, Some(record.keptAt), Some(Id(libraryId)), Some(Id(userId)), None, record.tags)
+              keeps += RestrictedKeepInfo(record.externalId, record.keptAt, Some(Id(libraryId)), Some(Id(userId)), None, record.tags)
             case DISCOVERABLE =>
               val record = getKeepRecord(docId)
               uniqueKeepers += userId
-              keeps += RestrictedKeepInfo(record.externalId, Some(record.keptAt), None, Some(Id(userId)), None, Set.empty)
+              keeps += RestrictedKeepInfo(record.externalId, record.keptAt, None, Some(Id(userId)), None, Set.empty)
             case SECRET => // ignore
           }
           else if (restrictedUserIdFilter.findIndex(userId) < 0) visibility match { // kept by others
@@ -186,7 +186,7 @@ class AugmentationCommanderImpl @Inject() (
               uniqueKeepers += userId
               if (showPublishedLibraries && showThisPublishedLibrary(librarySearcher, libraryId)) {
                 val record = getKeepRecord(docId)
-                keeps += RestrictedKeepInfo(record.externalId, Some(record.keptAt), Some(Id(libraryId)), Some(Id(userId)), None, record.tags)
+                keeps += RestrictedKeepInfo(record.externalId, record.keptAt, Some(Id(libraryId)), Some(Id(userId)), None, record.tags)
               } else {
                 otherPublishedKeeps += 1
               }

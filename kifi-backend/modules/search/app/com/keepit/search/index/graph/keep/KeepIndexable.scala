@@ -25,7 +25,6 @@ object KeepFields {
   val contentStemmedField = "cs"
   val siteField = "site"
   val homePageField = "home_page"
-  val createdAtField = "createdAt"
   val keptAtField = "keptAt"
   val tagsField = "h"
   val tagsStemmedField = "hs"
@@ -84,7 +83,6 @@ case class KeepIndexable(keep: Keep, tags: Set[Hashtag], shard: Shard[Normalized
     doc.add(buildLongValueField(visibilityField, LibraryFields.Visibility.toNumericCode(keep.visibility)))
 
     doc.add(buildBinaryDocValuesField(recordField, KeepRecord.fromKeepAndTags(keep, tags)))
-    doc.add(buildLongValueField(createdAtField, keep.createdAt.getMillis))
     doc.add(buildLongValueField(keptAtField, keep.keptAt.getMillis))
 
     doc

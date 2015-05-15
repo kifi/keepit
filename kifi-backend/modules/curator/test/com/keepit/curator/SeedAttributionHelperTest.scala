@@ -27,7 +27,8 @@ class SeedAttributionHelperTest extends Specification with CuratorTestInjector {
       val n = uriId.id.toInt
       if (n > 5) return LimitedAugmentationInfo.empty
 
-      val keepers = (1 to n) map { i => (Id[User](i), Some(currentDateTime)) }
+      val now = currentDateTime
+      val keepers = (1 to n) map { i => (Id[User](i), now) }
       val keepersTotal = 3 * n
       val libraries = keepers.collect { case (userId, keptAt) if userId.id % 2 == 1 => (Id[Library](userId.id), userId, keptAt) } // half of the users have associated lib})
       val librariesTotal = 3 * n

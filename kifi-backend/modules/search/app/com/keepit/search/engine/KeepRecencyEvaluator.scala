@@ -16,7 +16,7 @@ trait KeepRecencyEvaluator { self: DebugOption =>
   private[this] lazy val recencyQuery = {
     val recencyBoostStrength = config.asFloat("recencyBoost")
     val halfDecayMillis = config.asFloat("halfDecayHours") * (60.0f * 60.0f * 1000.0f) // hours to millis
-    new RecencyQuery(new MatchAllDocsQuery(), KeepFields.createdAtField, recencyBoostStrength, halfDecayMillis)
+    new RecencyQuery(new MatchAllDocsQuery(), KeepFields.keptAtField, recencyBoostStrength, halfDecayMillis)
   }
 
   private[this] lazy val recencyWeight: Weight = searcher.createWeight(recencyQuery)
@@ -29,7 +29,7 @@ trait KeepRecencyEvaluator { self: DebugOption =>
   private[this] lazy val slowDecayingRecencyQuery = {
     val recencyBoostStrength = 1.0f
     val halfDecayMillis = (90 * 24).toFloat * (60.0f * 60.0f * 1000.0f) // 90 days
-    new RecencyQuery(new MatchAllDocsQuery(), KeepFields.createdAtField, recencyBoostStrength, halfDecayMillis)
+    new RecencyQuery(new MatchAllDocsQuery(), KeepFields.keptAtField, recencyBoostStrength, halfDecayMillis)
   }
 
   private[this] lazy val slowDecayingRecencyWeight: Weight = searcher.createWeight(slowDecayingRecencyQuery)

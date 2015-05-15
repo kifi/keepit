@@ -154,7 +154,7 @@ class PageCommander @Inject() (
     infoF.flatten
   }
 
-  private def filterLibrariesUserDoesNotOwnOrFollow(libraries: Seq[(Id[Library], Id[User], Option[DateTime])], userId: Id[User])(implicit session: RSession): Seq[Library] = {
+  private def filterLibrariesUserDoesNotOwnOrFollow(libraries: Seq[(Id[Library], Id[User], DateTime)], userId: Id[User])(implicit session: RSession): Seq[Library] = {
     val otherLibraryIds = libraries.filterNot(_._2 == userId).map(_._1)
     val memberLibraryIds = libraryMembershipRepo.getWithLibraryIdsAndUserId(otherLibraryIds.toSet, userId).keys
     val libraryIds = otherLibraryIds.diff(memberLibraryIds.toSeq)

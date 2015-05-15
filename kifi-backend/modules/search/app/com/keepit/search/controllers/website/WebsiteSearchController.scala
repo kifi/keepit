@@ -223,12 +223,12 @@ class WebsiteSearchController @Inject() (
 
           val (libraryIndex, keeperIndex, keptAt, note) = limitedInfo.keep match {
             case Some(RestrictedKeepInfo(_, keptAt, library, Some(keeperId), note, _)) if !library.exists(!doShowLibrary(_)) =>
-              (library.map(libraryIndexById(_)), Some(userIndexById(keeperId)), keptAt, note) // canonical keep
+              (library.map(libraryIndexById(_)), Some(userIndexById(keeperId)), Some(keptAt), note) // canonical keep
             case _ => limitedInfo.libraries.collectFirst {
               case (libraryId, keeperId, keptAt) if doShowLibrary(libraryId) =>
-                (Some(libraryIndexById(libraryId)), Some(userIndexById(keeperId)), keptAt, None) // first accessible keep
+                (Some(libraryIndexById(libraryId)), Some(userIndexById(keeperId)), Some(keptAt), None) // first accessible keep
             } orElse {
-              limitedInfo.keepers.headOption.map { case (keeperId, keptAt) => (None, Some(userIndexById(keeperId)), keptAt, None) } // first discoverable keep
+              limitedInfo.keepers.headOption.map { case (keeperId, keptAt) => (None, Some(userIndexById(keeperId)), Some(keptAt), None) } // first discoverable keep
             } getOrElse (None, None, None, None)
           }
 
