@@ -722,6 +722,7 @@ ownerImageDiam2 = 3.6em
 .kf-lh-follow-btn
 .kf-lh-unfollow-btn
 .kf-lh-buttons .library-share-button
+  background-color: transparent
   background-image: none
   border-radius: 12px
 
@@ -767,8 +768,8 @@ ownerImageDiam2 = 3.6em
     margin-left: 1em
 
   .library-share-button
-    border-color: #56b263
-    color: #56b263
+    border-color: accentGreen
+    color: accentGreen
     padding: 0 1.5em
 
     &>.kf-button-icon
@@ -785,7 +786,7 @@ ownerImageDiam2 = 3.6em
   background-position: left center
   background-size: auto 15px
   background-repeat: no-repeat
-  color: #56b263
+  color: accentGreen
 
   &
   &:hover
@@ -796,17 +797,13 @@ ownerImageDiam2 = 3.6em
     text-decoration: underline
 
 .kf-lh-buttons.kf-my-lib
-  box-sizing: border-box
-  max-width: appMaxWidth
+  max-width: 538px // matching max-width of .kf-keep
   margin: 0 auto
   border: solid transparent
   border-width: 0 appSidePad1
   text-align: right
 
-  @media (min-width: appSidePad2MinWidth)
-    border-width: 0 appSidePad2
-
-  @media (min-width: 720px)
+  @media (min-width: 796px)
     padding-right: 234px  // rightColWidth + colGapWidth
 
   .library-share-button

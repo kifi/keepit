@@ -1,0 +1,79 @@
+.kf-knf
+  position: relative  // for hashtag suggestions
+
+.kf-knf-editor
+  white-space: pre-wrap
+  word-wrap: break-word
+  -webkit-line-break: auto
+
+  &:empty::before
+    content: 'Add a note'
+    color: #ccc
+    font-smoothing: antialiased
+
+.kf-knf-tag-suggestions
+  position: absolute
+  margin: 0
+  border: 1px solid #d2d2d2
+  padding: 2px 0
+  background-color: #fff
+  overflow: hidden
+  cursor: default
+
+.kf-knf-tag-suggestion
+  position: relative
+  margin: 0
+  padding: 3px 6px
+  white-space: nowrap
+  cursor: pointer
+
+  &.kf-selected
+    background-color: #f4f4f4
+
+  &::before
+    content: '#'
+
+.kf-knf-buttons
+  margin-top: 6px
+  border-top: 1px solid accentGreen
+  border-radius: 0 0 4px 4px
+  padding-right: 10px
+  background-color: appBackgroundColor
+  text-align: right
+
+.kf-knf-save
+.kf-knf-cancel
+  margin: 6px 0
+  box-sizing: border-box
+  min-width: 80px
+  border: 0
+  padding: 0 16px
+  border-radius: 4px
+  line-height: 23px
+  font-size: 13px
+
+  &:focus
+    outline: 1px dotted #aaa
+
+.kf-knf-cancel
+  bgColor = #ddd
+  background-color: bgColor
+  color: #666
+
+  &:hover
+    background-color: tint(bgColor, 16%)
+
+    &:active
+      background-color: shade(bgColor, 2%)
+
+.kf-knf-save
+  bgColor = accentGreen
+  background-color: bgColor
+  color: #fff
+  margin-left: 3px
+
+  &:hover
+    background-color: tint(bgColor, 8%)
+
+    &:active
+      background-color: shade(bgColor, 4%)

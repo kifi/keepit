@@ -36,7 +36,7 @@
             <header class="kf-reco-top">
               <span class="kf-reco-icon kf-reco-close-x" ng-click="trash(reco)" ng-if="reco.recoData.type === 'recommended'"></span>
               <div ng-if="reco.recoData.type === 'recommended'" kf-reco-dropdown-menu reco="reco" show-improvement-modal="showImprovementModal()"></div>
-              <span ng-if="reco.recoData.kind === 'keep'" class="kf-reco-top-title">
+              <span ng-if="reco.recoData.kind === 'keep'">
                 {{reco.recoData.type | titlecase}}
               </span>
               <span ng-switch on="reco.recoData.type" ng-if="reco.recoData.kind === 'library'">
@@ -45,12 +45,12 @@
               </span>
             </header>
 
-            <div ng-if="reco.recoData.kind === 'keep'" kf-keep-card keep="reco.recoKeep" keep-callback="trackRecoKeep(keep)"
-            click-callback="trackRecoClick(reco)" current-page-origin="recommendationsPage"></div>
-            <div ng-if="reco.recoData.kind === 'library'" kf-reco-library-card library="reco.recoLib"
+            <div class="kf-reco-keep" ng-if="::reco.recoData.kind === 'keep'">
+              <div kf-keep-card="reco.recoKeep" keep-callback="trackRecoKeep(keep)" click-callback="trackRecoClick(reco)" current-page-origin="recommendationsPage"></div>
+            </div>
+            <div ng-if="::reco.recoData.kind === 'library'" kf-reco-library-card library="reco.recoLib"
             follow-callback="trackLibraryFollow(reco.recoLib)" click-library-callback="trackRecoClick(reco)"></div>
           </div>
-          <div class="kf-keep-description-sizer kf-keep-description"></div>
         </div>
 
         <div ng-if="!loading" class="kf-reco-get-more-container" ng-click="addMore()">
