@@ -195,7 +195,7 @@ class ShoeboxController @Inject() (
     val scrapeWanted = (o \ "scrapeWanted").asOpt[Boolean] getOrElse false
     if (scrapeWanted) SafeFuture {
       db.readWrite { implicit session => scrapeScheduler.scheduleScrape(uri) }
-      rover.fetchAsap(uri.id.get, uri.url, uri.state)
+      rover.fetchAsap(uri.id.get, uri.url)
     }
     Ok(Json.toJson(uri))
   }
