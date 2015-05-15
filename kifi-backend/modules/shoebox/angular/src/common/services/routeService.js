@@ -204,7 +204,7 @@ angular.module('kifi')
         return route('/libraries/' + libraryId + '/delete');
       },
       updateSubscriptionToLibrary: function (libraryId, subscribed) {
-        return route('/libraries/' + libraryId + '/subscription?subscribed=' + subscribed, {});
+        return route('/libraries/' + libraryId + '/subscription', {subscribed: subscribed ? 1 : 0});
       },
       uploadLibraryCoverImage: function (libraryId, x, y, idealSize) {
         return route('/libraries/' + libraryId + '/image/upload', {x: x, y: y, is: idealSize || []});
