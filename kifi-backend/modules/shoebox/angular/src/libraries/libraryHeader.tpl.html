@@ -12,6 +12,8 @@
     </div>
 
     <div class="kf-lh-top">
+      <div class="kf-lh-private svg-card-lock" ng-if="library.visibility === 'secret'"></div>
+
       <button class="kf-lh-manage-btn svg-settings-gear-filled" ng-click="manageLibrary()" ng-if="isMyLibrary() && !library.isSystem"></button>
 
       <div class="kf-lh-cover-menu-parent" kf-hover-menu ng-if="isMyLibrary() && !library.isSystem">
@@ -25,7 +27,10 @@
       </div>
       <input class="kf-lh-cover-file" type="file" accept="image/jpeg,image/png,image/gif" kf-file-change="onCoverImageFileChosen" ng-if="isMyLibrary() && !library.isSystem">
 
-      <div class="kf-lh-private svg-card-lock" ng-if="library.visibility === 'secret'"></div>
+      <button class="kf-lh-subscribed-btn" ng-class="{'for-owner': isMyLibrary()}" ng-click="changeSubscription()" ng-if="library.access !== 'none' && (!amOwner || hasCollaborators)">
+        <div class="kf-lh-subscribed-icon" ng-class="{'svg-notification-on-white': library.subscribed, 'svg-notification-off-white': !library.subscribed}"></div>
+        <span class="kf-lh-notifications-msg" ng-class="{'kf-lh-enabled': library.subscribed, 'kf-lh-disabled': !library.subscribed}"></span>
+      </button>
 
       <div class="kf-lh-followers">
         <a class="kf-lh-followers-a" ng-repeat="follower in followersToShow" href="{{follower|profileUrl}}" kf-track-origin="libraryPage/follower">
@@ -52,18 +57,48 @@
 
       <div class="kf-lh-stats">
         <span class="kf-lh-stat" ng-pluralize count="library.numKeeps" when="{'one': '1 keep', 'other': '{{library.numKeeps|number}} keeps'}" ng-if="library.numKeeps"></span>
-        <button class="kf-lh-stat" ng-pluralize count="library.numFollowers" when="{one:'1 follower',other:'{{library.numFollowers|num}} followers'}" ng-click="showFollowers()" ng-if="library.numFollowers"></button>
       </div>
 
-      <div class="kf-lh-owner" itemprop="creator" itemscope itemtype="http://schema.org/Person">
-        <a class="kf-lh-owner-image-a" href="{{library.owner|profileUrl}}" itemprop="url" kf-track-origin="libraryPage/curator">
-          <img class="kf-lh-owner-image" ng-src="{{library.owner|pic:200}}" itemprop="image" alt="{{library.owner|name}}">
-        </a>
+      <!-- owner only -->
+      <div class="kf-lh-owner" itemprop="creator" itemscope itemtype="http://schema.org/Person" ng-if="!hasCollaborators">
+        <div class="kf-lh-owner-image-wrap">
+          <a class="kf-lh-owner-image-a" href="{{library.owner|profileUrl}}" itemprop="url" kf-track-origin="libraryPage/curator">
+            <img class="kf-lh-owner-image" ng-src="{{library.owner|pic:200}}" itemprop="image" alt="{{library.owner|name}}">
+          </a>
+          <button class="kf-lh-add-collab-button next-to-owner" ng-if="!library.attr.twitter.screenName && library.access === 'owner' && onCollabExperiment">
+            <div class="kf-lh-add-collab-icon svg-collaborator-white"></div>
+            <span class="kf-lh-add-collab-msg">Invite a collaborator</span>
+          </button>
+        </div>
         <div class="kf-lh-owner-name-wrap">
           <a class="kf-lh-owner-name" href="{{library.owner|profileUrl}}" itemprop="name" kf-track-origin="libraryPage/curator">{{library.owner|name}}</a>
           <a class="kf-lh-owner-twitter-a svg-twitter-blue" href="https://www.twitter.com/{{library.attr.twitter.screenName}}" target="_blank" title="@{{library.attr.twitter.screenName}}" ng-if="library.attr.twitter.screenName" ng-click="trackTwitterProfile()"></a>
         </div>
       </div>
+
+      <!--  owner with collaborators -->
+      <div class="kf-lh-collabs" ng-if="hasCollaborators">
+        <div class="kf-lh-collab-image-wrap">
+          <a class="kf-lh-collab-image-a" href="{{library.owner|profileUrl}}" itemprop="url" kf-track-origin="libraryPage/collaborator">
+            <img class="kf-lh-collab-image" ng-src="{{library.owner|pic:200}}" itemprop="image" alt="{{library.owner.firstName}}">
+          </a>
+          <a class="kf-lh-collab-name" href="{{library.owner|profileUrl}}" itemprop="name" kf-track-origin="libraryPage/collaborator">{{library.owner.firstName}}</a>
+        </div>
+        <div class="kf-lh-collab-image-wrap" ng-repeat="collab in library.collaborators">
+          <a class="kf-lh-collab-image-a" href="{{collab|profileUrl}}" itemprop="url" kf-track-origin="libraryPage/collaborator">
+            <img class="kf-lh-collab-image" ng-src="{{collab|pic:200}}" itemprop="image" alt="{{collab|name}}">
+          </a>
+          <a class="kf-lh-collab-name" href="{{collab|profileUrl}}" itemprop="name" kf-track-origin="libraryPage/collaborator">{{collab.firstName}}</a>
+        </div>
+        <button class="kf-lh-more-collab" ng-if="library.numCollaborators - library.collaborators.length > 0">
+          +{{library.numCollaborators - library.collaborators.length}}
+        </button>
+        <button class="kf-lh-add-collab-button" ng-if="(library.access == 'owner' || (library.access == 'read_write' && library.whoCanInvite == 'collaborator')) && onCollabExperiment">
+          <div class="kf-lh-add-collab-icon svg-collaborator-white"></div>
+          <span class="kf-lh-add-collab-msg">Invite a collaborator</span>
+        </button>
+      </div>
+
     </div>
   </div>
 

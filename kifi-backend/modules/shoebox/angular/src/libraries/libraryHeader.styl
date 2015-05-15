@@ -241,9 +241,52 @@ followerPicDiam = 2.2em
   &:hover:active
     opacity: 1
 
+.kf-lh-subscribed-btn
+  vertical-align: bottom
+  padding: 0px
+  outline: none
+  background: none
+  border: none
+  opacity: 0.9
+
+  &.for-owner
+    margin-left: 0.9em
+
+  .kf-lh-subscribed-icon
+    width: 1.7em
+    height: 2.0em
+    background-size: cover
+    background-repeat: no-repeat
+
+  .kf-lh-notifications-msg
+    position: absolute
+    top: 50%
+    transform: translateY(-50%)
+    margin-left: 20px
+    padding: 2px 7px 3px
+    border-radius: 2px
+    background-color: #fff
+    font-size: 13px
+    color: #3E4955
+    opacity: 0
+    visibility: hidden
+    transition: opacity linear 0.1s, visibility linear 0.1s
+
+    &.kf-lh-enabled::before
+      content: 'Notifications enabled'
+    &.kf-lh-disabled::before
+      content: 'Notifications disabled'
+
+  &:hover
+    opacity: 1.0
+
+    & .kf-lh-notifications-msg
+      opacity: 1
+      visibility: visible
+
 .kf-lh-private
   display: inline-block
-  margin-left: 1em
+  margin-right: 1em
   line-height: 2em
   border-radius: 1em
   padding: 0 1em 0 2.3em
@@ -473,6 +516,7 @@ coverDragShadeHeight = 3em
       margin: 0 1em 0 1.5em
 
 .kf-lh-owner
+.kf-lh-collabs
   margin-top: 2em
 
   @media (min-width: 480px)
@@ -482,8 +526,20 @@ coverDragShadeHeight = 3em
     .kf-system-secret &
       display: none
 
+.kf-lh-owner-image-wrap
+  position: relative
+  display: block
+  margin: 0 5px
+
+.kf-lh-collab-image-wrap
+  position: relative
+  display: inline-block
+  margin: 0 5px
+
 ownerImageDiam1 = 8em
 ownerImageDiam2 = 3.6em
+collabImageDiam1 = 4.6em
+collabImageDiam2 = 3.6em
 
 .kf-lh-owner-image-a
   display: block
@@ -497,6 +553,18 @@ ownerImageDiam2 = 3.6em
     width: ownerImageDiam2
     margin-bottom: .4em
 
+.kf-lh-collab-image-a
+  display: block
+  margin: 0 auto 3.2em
+  width: collabImageDiam1
+
+  &:focus
+    outline-color: alpha(#fff,.5)
+
+  @media (min-width: 480px)
+    width: collabImageDiam2
+    margin-bottom: .4em
+
 .kf-lh-owner-image
   width: ownerImageDiam1
   height: ownerImageDiam1
@@ -508,11 +576,27 @@ ownerImageDiam2 = 3.6em
     width: ownerImageDiam2
     height: ownerImageDiam2
 
+.kf-lh-collab-image
+  width: collabImageDiam1
+  height: collabImageDiam1
+  border-radius: 50%
+  background-color: #555
+  box-shadow: 0 1px 5px rgba(0,0,0,.2)
+
+  @media (min-width: 480px)
+    width: collabImageDiam2
+    height: collabImageDiam2
+
 .kf-lh-owner-name-wrap
   display: inline-block
   position: relative
 
+.kf-lh-collab-name-wrap
+  display: block
+  position: relative
+
 .kf-lh-owner-name
+.kf-lh-collab-name
   color: #fff
   text-shadow: 1px 1px 1px rgba(0,0,0,.2)
   font-smoothing: auto
@@ -554,6 +638,70 @@ ownerImageDiam2 = 3.6em
 
     &:hover:not(:active)
       transform: scale(1.1)
+
+.kf-lh-more-collab
+  width: 3.4em
+  height: 3.4em
+  padding: 0px
+  margin-left: 5px
+  background: none
+  border-radius: 50%
+  border: 1px solid white
+  color: white
+  outline: none
+  vertical-align: top
+
+.kf-lh-add-collab-msg
+  position: absolute
+  top: 50%
+  transform: translateY(-50%)
+  width: 115px
+  margin-left: 35px
+  padding: 2px 7px 3px
+  border-radius: 2px
+  background-color: #fff
+  font-size: 13px
+  color: #3E4955
+  opacity: 0
+  visibility: hidden
+  transition: opacity linear 0.1s, visibility linear 0.1s
+
+.kf-lh-add-collab-button
+  position: relative
+  width: 3.4em
+  height: 3.4em
+  padding: 0px
+  margin-left: 5px
+  border: 1px dashed white
+  background: rgba(255, 255, 255, 0.2)
+  outline: none
+  border-radius: 50%
+  vertical-align: top
+  transition: opacity linear 0.1s
+
+  &:hover
+    background: rgba(255, 255, 255, 0.3)
+
+    & .kf-lh-add-collab-msg
+      opacity: 1
+      visibility: visible
+
+  &.next-to-owner
+    position: absolute
+    top: 0px
+    left: calc(50% + 35px)
+    transform: translateX(-10px) scale(0.7)
+    opacity: 0.6
+
+    &:hover
+      opacity: 1.0
+
+.kf-lh-add-collab-icon
+  width: 1.7em
+  height: 1em
+  margin: 0 auto
+  background-repeat: no-repeat
+  background-size: cover
 
 .kf-lh-desc-wrap-2
   position: relative
