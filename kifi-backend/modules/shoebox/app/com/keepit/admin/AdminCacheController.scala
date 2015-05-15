@@ -7,7 +7,8 @@ import com.keepit.common.service.{ FortyTwoServices, ServiceType, ServiceClient 
 import com.keepit.common.net.HttpClient
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json.{ JsBoolean, JsNumber, JsArray, JsObject }
+import play.api.libs.json.{ JsBoolean, JsNumber, JsArray, JsObject, JsString }
+import play.api.libs.json._
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.common.cache.InMemoryCachePlugin
 
@@ -19,6 +20,23 @@ class AdminCacheController @Inject() (
     serviceDiscovery: ServiceDiscovery) extends AdminUserActions {
   def serviceView = AdminUserPage { implicit request =>
     Ok(html.admin.cacheOverview())
+  }
+
+  def getCacheEntry(key: String) = AdminUserAction { implicit request =>
+    localCache.get(key) match {
+      case Some(value) => Ok(Json.obj(key -> value.toString))
+      case _ => NoContent
+    }
+  }
+
+  def deleteCacheEntry(key: String) = AdminUserAction { implicit request =>
+    localCache.remove(key)
+    Ok
+  }
+
+  def setCacheEntry(key: String, value: String) = AdminUserAction { implicit request =>
+    localCache.set(key, value)
+    Ok
   }
 
   def clearLocalCaches(service: String, prefix: String) = AdminUserAction.async { implicit request =>
