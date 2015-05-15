@@ -473,6 +473,9 @@ class AuthController @Inject() (
         case requestNonUser: NonUserRequest[_] =>
           if (requestNonUser.identityOpt.isDefined) {
             val identity = requestNonUser.identityOpt.get
+            if (identity.identityId.userId.trim.isEmpty) {
+              throw new Exception(s"got an identity [$identity] with empty user id for non user from request ${requestNonUser.path} headers ${requestNonUser.headers.toSimpleMap.mkString(",")} body [${requestNonUser.body}]")
+            }
             val loginAndLinkEmail = request.queryString.get("link").map(_.headOption).flatten
             if (loginAndLinkEmail.isDefined || identity.email.exists(e => authCommander.emailAddressMatchesSomeKifiUser(EmailAddress(e)))) {
               // No user exists, but social network identity’s email address matches a Kifi user
