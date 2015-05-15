@@ -13,7 +13,7 @@ import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.time._
 import com.keepit.common.util.Paginator
 import com.keepit.controllers.mobile.ImplicitHelper._
-import com.keepit.heimdal.HeimdalContextBuilderFactory
+import com.keepit.heimdal.{ HeimdalContext, HeimdalContextBuilderFactory }
 import com.keepit.model._
 import com.keepit.normalizer.NormalizedURIInterner
 import com.keepit.shoebox.controllers.LibraryAccessActions
@@ -100,17 +100,19 @@ class MobileLibraryController @Inject() (
   }
 
   def getLibraryByIdV1(pubId: PublicId[Library], imageSize: Option[String] = None) = (MaybeUserAction andThen LibraryViewAction(pubId)).async { request =>
-    getLibraryById(request.userIdOpt, pubId, imageSize, true)
+    implicit val context = heimdalContextBuilder.withRequestInfo(request).build
+    getLibraryById(request.userIdOpt, pubId, imageSize, true, request.userIdOpt)
   }
 
   def getLibraryByIdV2(pubId: PublicId[Library], imageSize: Option[String] = None) = (MaybeUserAction andThen LibraryViewAction(pubId)).async { request =>
-    getLibraryById(request.userIdOpt, pubId, imageSize, false)
+    implicit val context = heimdalContextBuilder.withRequestInfo(request).build
+    getLibraryById(request.userIdOpt, pubId, imageSize, false, request.userIdOpt)
   }
 
-  private def getLibraryById(userIdOpt: Option[Id[User]], pubId: PublicId[Library], imageSize: Option[String] = None, v1: Boolean) = {
+  private def getLibraryById(userIdOpt: Option[Id[User]], pubId: PublicId[Library], imageSize: Option[String] = None, v1: Boolean, viewerId: Option[Id[User]])(implicit context: HeimdalContext) = {
     val libraryId = Library.decodePublicId(pubId).get
     val idealSize = imageSize.flatMap { s => Try(ImageSize(s)).toOption }.getOrElse(MobileLibraryController.defaultLibraryImageSize)
-    libraryCommander.getLibraryById(userIdOpt, false, libraryId, idealSize) map { libInfo =>
+    libraryCommander.getLibraryById(userIdOpt, false, libraryId, idealSize, viewerId) map { libInfo =>
       val memOpt = libraryCommander.getMaybeMembership(userIdOpt, libraryId)
       val accessStr = memOpt.map(_.access.value).getOrElse("none")
       val subscribedToUpdates = memOpt.map(_.subscribedToUpdates).getOrElse(false)
@@ -122,7 +124,8 @@ class MobileLibraryController @Inject() (
   }
 
   def getLibraryByPath(userStr: String, slugStr: String, imageSize: Option[String] = None) = MaybeUserAction.async { request =>
-    libraryCommander.getLibraryWithUsernameAndSlug(userStr, LibrarySlug(slugStr)) match {
+    implicit val context = heimdalContextBuilder.withRequestInfo(request).build
+    libraryCommander.getLibraryWithUsernameAndSlug(userStr, LibrarySlug(slugStr), request.userIdOpt) match {
       case Right(library) =>
         LibraryViewAction(Library.publicId(library.id.get)).invokeBlock(request, { _: MaybeUserRequest[_] =>
           request.userIdOpt.map { userId => libraryCommander.updateLastView(userId, library.id.get) }
