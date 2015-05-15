@@ -460,7 +460,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         html must not contain (invite.passPhrase)
 
         db.readWrite { implicit session => libraryRepo.save(lib1.copy(visibility = LibraryVisibility.PUBLISHED)) }
-        val emailWithoutPassPhrase = Await.result(inviteSender.sendInvite(inviteNonUser), Duration(5, "seconds")).get
+        val emailWithoutPassPhrase = Await.result(inviteSender.sendInvite(invite = inviteNonUser, isPlainEmail = false), Duration(5, "seconds")).get
         emailWithoutPassPhrase.subject === "An invitation to my library: Football"
         emailWithoutPassPhrase.to(0) === EmailAddress("aaronrodgers@gmail.com")
         params.map(emailWithoutPassPhrase.htmlBody.contains(_)) === List(true, true, true, true)

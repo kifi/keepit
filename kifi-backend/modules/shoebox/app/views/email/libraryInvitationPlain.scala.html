@@ -15,7 +15,7 @@ inviteAccess: LibraryAccess
 @emailMessage = {
 @if(inviteAccess == LibraryAccess.READ_ONLY) {
 <p>I'm using Kifi to share my knowledge. Check out the library I created: @libraryInfo.name.</p>
-<p>@libraryInfo.shortDescription</p>
+<p>Here's what it's about: @libraryInfo.shortDescription</p>
 <p><a href="@libraryUrl">www.kifi.com@libraryInfo.url</a></p>
 } else {
 <p>Please help me build the @libraryInfo.name Kifi library - <a href="@libraryUrl">www.kifi.com@libraryInfo.url</a>,
