@@ -45,6 +45,8 @@ angular.module('kifi')
         scope.descScrollable = false;
         scope.imagePreview = null;
         scope.followBtnJustClicked = false;
+        scope.amOwner = false;
+        scope.hasCollaborators = false;
 
         //
         // Internal methods.
@@ -55,6 +57,8 @@ angular.module('kifi')
           lib.descriptionHtml = linkify(lib.description || '').replace(/\n+/g, '<br>');
           lib.absUrl = env.origin + lib.url;
           lib.isSystem = lib.kind.lastIndexOf('system_', 0) === 0;
+          scope.hasCollaborators = lib.numCollaborators > 0;
+          scope.amOwner = lib.access === 'owner';
 
           $timeout(function () {
             var lh = parseFloat(descWrapEl.css('line-height'), 10);
@@ -92,6 +96,12 @@ angular.module('kifi')
             scope.library.invite.actedOn = true;
             libraryService.declineToJoinLibrary(scope.library.id)['catch'](modalService.openGenericErrorModal);
           }
+        };
+
+        scope.changeSubscription = function () {
+          libraryService.updateSubscriptionToLibrary(scope.library.id, !(scope.library.subscribed)).then(function(res) {
+            scope.library.subscribed = !(scope.library.subscribed)
+          })['catch'](modalService.openGenericErrorModal);
         };
 
         scope.onAddCoverImageMouseUp = function (event) {
