@@ -60,13 +60,14 @@
       </div>
 
       <!-- owner only -->
-      <div class="kf-lh-owners" itemprop="creator" itemscope itemtype="http://schema.org/Person" ng-if="library.numCollaborators == 0">
+      <div class="kf-lh-owner" itemprop="creator" itemscope itemtype="http://schema.org/Person" ng-if="!hasCollaborators">
         <div class="kf-lh-owner-image-wrap">
           <a class="kf-lh-owner-image-a" href="{{library.owner|profileUrl}}" itemprop="url" kf-track-origin="libraryPage/curator">
             <img class="kf-lh-owner-image" ng-src="{{library.owner|pic:200}}" itemprop="image" alt="{{library.owner|name}}">
           </a>
-          <button class="kf-lh-add-collab-button next-to-owner" ng-if="!library.attr.twitter.screenName && library.access === 'owner'" title="Invite a collaborator">
+          <button class="kf-lh-add-collab-button next-to-owner" ng-if="!library.attr.twitter.screenName && library.access === 'owner' && onCollabExperiment">
             <div class="kf-lh-add-collab-icon svg-collaborator-white"></div>
+            <span class="kf-lh-add-collab-msg">Invite a collaborator</span>
           </button>
         </div>
         <div class="kf-lh-owner-name-wrap">
@@ -76,24 +77,25 @@
       </div>
 
       <!--  owner with collaborators -->
-      <div class="kf-lh-owners" ng-if="library.numCollaborators > 0">
-        <div class="kf-lh-owner-image-wrap collab">
-          <a class="kf-lh-owner-image-a" href="{{library.owner|profileUrl}}" itemprop="url" kf-track-origin="libraryPage/curator">
-            <img class="kf-lh-owner-image" ng-src="{{library.owner|pic:200}}" itemprop="image" alt="{{library.owner.firstName}}">
+      <div class="kf-lh-collabs" ng-if="hasCollaborators">
+        <div class="kf-lh-collab-image-wrap">
+          <a class="kf-lh-collab-image-a" href="{{library.owner|profileUrl}}" itemprop="url" kf-track-origin="libraryPage/collaborator">
+            <img class="kf-lh-collab-image" ng-src="{{library.owner|pic:200}}" itemprop="image" alt="{{library.owner.firstName}}">
           </a>
-          <a class="kf-lh-owner-name collab" href="{{library.owner|profileUrl}}" itemprop="name" kf-track-origin="libraryPage/curator">{{library.owner.firstName}}</a>
+          <a class="kf-lh-collab-name" href="{{library.owner|profileUrl}}" itemprop="name" kf-track-origin="libraryPage/collaborator">{{library.owner.firstName}}</a>
         </div>
-        <div class="kf-lh-owner-image-wrap collab" ng-repeat="collab in library.collaborators">
-          <a class="kf-lh-owner-image-a" href="{{collab|profileUrl}}" itemprop="url" kf-track-origin="libraryPage/collaborator">
-            <img class="kf-lh-owner-image" ng-src="{{collab|pic:200}}" itemprop="image" alt="{{collab|name}}">
+        <div class="kf-lh-collab-image-wrap" ng-repeat="collab in library.collaborators">
+          <a class="kf-lh-collab-image-a" href="{{collab|profileUrl}}" itemprop="url" kf-track-origin="libraryPage/collaborator">
+            <img class="kf-lh-collab-image" ng-src="{{collab|pic:200}}" itemprop="image" alt="{{collab|name}}">
           </a>
-          <a class="kf-lh-owner-name collab" href="{{collab|profileUrl}}" itemprop="name" kf-track-origin="libraryPage/collaborator">{{collab.firstName}}</a>
+          <a class="kf-lh-collab-name" href="{{collab|profileUrl}}" itemprop="name" kf-track-origin="libraryPage/collaborator">{{collab.firstName}}</a>
         </div>
         <button class="kf-lh-more-collab" ng-if="library.numCollaborators - library.collaborators.length > 0">
           +{{library.numCollaborators - library.collaborators.length}}
         </button>
-        <button class="kf-lh-add-collab-button" ng-if="library.access == 'owner' || (library.access == 'read_write' && library.whoCanInvite == 'collaborator')" title="Invite a collaborator">
+        <button class="kf-lh-add-collab-button" ng-if="library.access == 'owner' || (library.access == 'read_write' && library.whoCanInvite == 'collaborator')">
           <div class="kf-lh-add-collab-icon svg-collaborator-white"></div>
+          <span class="kf-lh-add-collab-msg">Invite a collaborator</span>
         </button>
       </div>
 

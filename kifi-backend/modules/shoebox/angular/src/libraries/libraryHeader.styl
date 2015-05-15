@@ -515,7 +515,8 @@ coverDragShadeHeight = 3em
     @media (min-width: 480px)
       margin: 0 1em 0 1.5em
 
-.kf-lh-owners
+.kf-lh-owner
+.kf-lh-collabs
   margin-top: 2em
 
   @media (min-width: 480px)
@@ -530,13 +531,16 @@ coverDragShadeHeight = 3em
   display: block
   margin: 0 5px
 
-  &.collab
-    display: inline-block
+.kf-lh-collab-image-wrap
+  position: relative
+  display: inline-block
+  margin: 0 5px
 
 ownerImageDiam1 = 8em
 ownerImageDiam2 = 3.6em
 
 .kf-lh-owner-image-a
+.kf-lh-collab-image-a
   display: block
   margin: 0 auto
   width: ownerImageDiam1
@@ -549,6 +553,7 @@ ownerImageDiam2 = 3.6em
     margin-bottom: .4em
 
 .kf-lh-owner-image
+.kf-lh-collab-image
   width: ownerImageDiam1
   height: ownerImageDiam1
   border-radius: 50%
@@ -563,10 +568,12 @@ ownerImageDiam2 = 3.6em
   display: inline-block
   position: relative
 
-  &.collab
-    display: block
+.kf-lh-collab-name-wrap
+  display: block
+  position: relative
 
 .kf-lh-owner-name
+.kf-lh-collab-name
   color: #fff
   text-shadow: 1px 1px 1px rgba(0,0,0,.2)
   font-smoothing: auto
@@ -621,7 +628,23 @@ ownerImageDiam2 = 3.6em
   outline: none
   vertical-align: top
 
+.kf-lh-add-collab-msg
+  position: absolute
+  top: 50%
+  transform: translateY(-50%)
+  width: 115px
+  margin-left: 35px
+  padding: 2px 7px 3px
+  border-radius: 2px
+  background-color: #fff
+  font-size: 13px
+  color: #3E4955
+  opacity: 0
+  visibility: hidden
+  transition: opacity linear 0.1s, visibility linear 0.1s
+
 .kf-lh-add-collab-button
+  position: relative
   width: 3.4em
   height: 3.4em
   padding: 0px
@@ -634,6 +657,10 @@ ownerImageDiam2 = 3.6em
 
   &:hover
     background: rgba(255, 255, 255, 0.3)
+
+    & .kf-lh-add-collab-msg
+      opacity: 1
+      visibility: visible
 
   &.next-to-owner
     position: absolute
