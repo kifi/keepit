@@ -17,7 +17,7 @@ trait LibraryViewTrackingRepo extends DbRepo[LibraryViewTracking] {
 @Singleton
 class LibraryViewTrackingRepoImpl @Inject() (
     val db: DataBaseComponent,
-    val clock: Clock) extends DbRepo[LibraryViewTracking] {
+    val clock: Clock) extends DbRepo[LibraryViewTracking] with LibraryViewTrackingRepo {
 
   import db.Driver.simple._
 
