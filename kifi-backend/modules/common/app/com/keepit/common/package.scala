@@ -2,6 +2,7 @@ package com.keepit.common
 
 import scala.annotation.unchecked.uncheckedVariance
 import scala.reflect.runtime.universe._
+import scala.util.Try
 
 package object core extends com.keepit.common.Implicits {
 
