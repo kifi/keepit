@@ -100,8 +100,8 @@ angular.module('kifi')
         };
 
         scope.changeSubscription = function () {
-          libraryService.updateSubscriptionToLibrary(scope.library.id, !(scope.library.subscribed)).then(function(res) {
-            scope.library.subscribed = !(scope.library.subscribed)
+          libraryService.updateSubscriptionToLibrary(scope.library.id, !(scope.library.subscribed)).then(function() {
+            scope.library.subscribed = !(scope.library.subscribed);
           })['catch'](modalService.openGenericErrorModal);
         };
 

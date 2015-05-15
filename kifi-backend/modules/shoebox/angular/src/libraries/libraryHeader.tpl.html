@@ -29,7 +29,7 @@
 
       <button class="kf-lh-subscribed-btn" ng-class="{'for-owner': isMyLibrary()}" ng-click="changeSubscription()" ng-if="library.access !== 'none' && (!amOwner || hasCollaborators)">
         <div class="kf-lh-subscribed-icon" ng-class="{'svg-notification-on-white': library.subscribed, 'svg-notification-off-white': !library.subscribed}"></div>
-        <span class="kf-lh-notifications-msg" ng-class="{enabled: library.subscribed, disabled: !library.subscribed}"></span>
+        <span class="kf-lh-notifications-msg" ng-class="{'kf-lh-enabled': library.subscribed, 'kf-lh-disabled': !library.subscribed}"></span>
       </button>
 
       <div class="kf-lh-followers">

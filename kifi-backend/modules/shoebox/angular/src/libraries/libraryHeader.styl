@@ -253,8 +253,8 @@ followerPicDiam = 2.2em
     margin-left: 0.9em
 
   .kf-lh-subscribed-icon
-    width: 24px
-    height: 28px
+    width: 1.7em
+    height: 2.0em
     background-size: cover
     background-repeat: no-repeat
 
@@ -272,9 +272,9 @@ followerPicDiam = 2.2em
     visibility: hidden
     transition: opacity linear 0.1s, visibility linear 0.1s
 
-    &.enabled::before
+    &.kf-lh-enabled::before
       content: 'Notifications enabled'
-    &.disabled::before
+    &.kf-lh-disabled::before
       content: 'Notifications disabled'
 
   &:hover
@@ -654,6 +654,7 @@ ownerImageDiam2 = 3.6em
   outline: none
   border-radius: 50%
   vertical-align: top
+  transition: opacity linear 0.1s
 
   &:hover
     background: rgba(255, 255, 255, 0.3)
@@ -666,10 +667,15 @@ ownerImageDiam2 = 3.6em
     position: absolute
     top: 0px
     left: calc(50% + 35px)
+    transform: translateX(-10px) scale(0.7)
+    opacity: 0.6
+
+    &:hover
+      opacity: 1.0
 
 .kf-lh-add-collab-icon
-  width: 25px
-  height: 14px
+  width: 1.7em
+  height: 1em
   margin: 0 auto
   background-repeat: no-repeat
   background-size: cover
