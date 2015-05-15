@@ -1,6 +1,8 @@
 <div class="kf-main-keeps">
   <div class="kf-keep-selection-tools" ng-if="edit.enabled" ng-show="availableKeeps.length > 0">
-    <div class="kf-keep-checkbox-icon sprite" ng-class="{ 'sprite-checkbox-icon': isUnchecked(availableKeeps), 'sprite-checkbox-icon-partial': isMultiChecked(availableKeeps), 'sprite-checkbox-icon-active': selection.isSelectedAll(availableKeeps) }" ng-click="selection.toggleSelectAll(availableKeeps)"></div>
+    <div class="kf-keep-checkbox-wrap">
+      <div class="kf-keep-checkbox-icon sprite" ng-class="{'sprite-checkbox-icon': isUnchecked(availableKeeps), 'sprite-checkbox-icon-partial': isMultiChecked(availableKeeps), 'sprite-checkbox-icon-active': selection.isSelectedAll(availableKeeps)}" ng-click="selection.toggleSelectAll(availableKeeps)"></div>
+    </div>
     <div class="kf-keep-selection-tools-body">
       <div class="kf-keep-selected-count">
         <span class="kf-keep-selected-count-number">{{selection.getSelected(keeps).length}}</span>
@@ -35,7 +37,7 @@
   </div>
   <ol class="kf-my-keeps" smart-scroll scroll-distance="scrollDistance" scroll-disabled="isScrollDisabled()" scroll-next="scrollNext()(keeps.length)">
     <div class="kf-keep" ng-hide="keep.unkept && library" ng-class="{'editing': edit.enabled}" ng-repeat="keep in keeps">
-      <div class="kf-keep-edit-tools">
+      <div class="kf-keep-checkbox-wrap">
         <div class="kf-keep-checkbox-icon sprite sprite-checkbox-icon" ng-if="!selection.isSelected(keep)" ng-click="selection.toggleSelect(keep)"></div>
         <div class="kf-keep-checkbox-icon sprite sprite-checkbox-icon-active" ng-if="selection.isSelected(keep)" ng-click="selection.toggleSelect(keep)"></div>
       </div>
