@@ -84,7 +84,10 @@
           </a>
           <a class="kf-lh-owner-name collab" href="{{collab|profileUrl}}" itemprop="name" kf-track-origin="libraryPage/curator">{{collab.firstName}}</a>
         </div>
-        <button class="kf-lh-add-collab-button" ng-if="library.access == 'read_write' || library.access == 'owner'" title="Invite a collaborator">
+        <button class="kf-lh-more-collab" ng-if="library.numCollaborators - library.collaborators.length > 0">
+          +{{library.numCollaborators - library.collaborators.length}}
+        </button>
+        <button class="kf-lh-add-collab-button" ng-if="library.access == 'owner' || (library.access == 'read_write' && library.whoCanInvite == 'collaborator')" title="Invite a collaborator">
           <div class="kf-lh-add-collab-icon svg-collaborator-white"></div>
         </button>
       </div>
