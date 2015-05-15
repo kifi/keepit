@@ -378,7 +378,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
   "LibraryInviteEmailSender" should {
     implicit val config = PublicIdConfiguration("secret key")
 
-    def setup()(implicit injector: Injector) = {
+    def setup(withDescription: Boolean = true)(implicit injector: Injector) = {
       val keepRepo = inject[KeepRepo]
       val urlRepo = inject[URLRepo]
       val uriRepo = inject[NormalizedURIRepo]
@@ -387,7 +387,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         val user1 = userRepo.save(User(firstName = "Tom", lastName = "Brady", username = Username("tom"), normalizedUsername = "b", primaryEmail = Some(EmailAddress("tombrady@gmail.com"))))
         val user2 = userRepo.save(User(firstName = "Aaron", lastName = "Rodgers", username = Username("aaron"), normalizedUsername = "a", primaryEmail = Some(EmailAddress("aaronrodgers@gmail.com"))))
         val lib1 = libraryRepo.save(Library(name = "Football", ownerId = user1.id.get, slug = LibrarySlug("football"),
-          visibility = LibraryVisibility.SECRET, memberCount = 1, description = Some("Lorem ipsum")))
+          visibility = LibraryVisibility.SECRET, memberCount = 1, description = { if (withDescription) { Some("Lorem ipsum") } else { None } }))
 
         val uri = uriRepo.save(NormalizedURI(url = "http://www.kifi.com", urlHash = UrlHash("abc")))
         // todo(andrew) jared compiler bug if url_ var is named url
@@ -581,6 +581,22 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         html must not contain invite.passPhrase
       }
     }
+
+    "not include a library description when there is none" in {
+      withDb(modules: _*) { implicit injector =>
+        val (user1, user2, lib1, invite) = setup(withDescription = false)
+
+        val inviteUser = invite.copy(userId = user2.id)
+        val outbox = inject[FakeOutbox]
+        val inviteSender = inject[LibraryInviteEmailSender]
+
+        val email = Await.result(inviteSender.sendInvite(invite = inviteUser, isPlainEmail = true), Duration(5, "seconds")).get
+
+        val html = email.htmlBody.value
+        html must not contain "Here's what it's about:"
+      }
+    }
+
   }
 
   "TwitterWaitlistEmailSender" should {
