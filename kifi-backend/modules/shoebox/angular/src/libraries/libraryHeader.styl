@@ -538,9 +538,10 @@ coverDragShadeHeight = 3em
 
 ownerImageDiam1 = 8em
 ownerImageDiam2 = 3.6em
+collabImageDiam1 = 4.6em
+collabImageDiam2 = 3.6em
 
 .kf-lh-owner-image-a
-.kf-lh-collab-image-a
   display: block
   margin: 0 auto
   width: ownerImageDiam1
@@ -552,8 +553,19 @@ ownerImageDiam2 = 3.6em
     width: ownerImageDiam2
     margin-bottom: .4em
 
+.kf-lh-collab-image-a
+  display: block
+  margin: 0 auto 3.2em
+  width: collabImageDiam1
+
+  &:focus
+    outline-color: alpha(#fff,.5)
+
+  @media (min-width: 480px)
+    width: collabImageDiam2
+    margin-bottom: .4em
+
 .kf-lh-owner-image
-.kf-lh-collab-image
   width: ownerImageDiam1
   height: ownerImageDiam1
   border-radius: 50%
@@ -563,6 +575,17 @@ ownerImageDiam2 = 3.6em
   @media (min-width: 480px)
     width: ownerImageDiam2
     height: ownerImageDiam2
+
+.kf-lh-collab-image
+  width: collabImageDiam1
+  height: collabImageDiam1
+  border-radius: 50%
+  background-color: #555
+  box-shadow: 0 1px 5px rgba(0,0,0,.2)
+
+  @media (min-width: 480px)
+    width: collabImageDiam2
+    height: collabImageDiam2
 
 .kf-lh-owner-name-wrap
   display: inline-block
