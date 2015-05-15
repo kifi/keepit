@@ -1,4 +1,4 @@
-<div class="kf-keep-body" ng-class="::{'kf-boxed': boxed != null, 'kf-side-by-side': image.w}">
+<div class="kf-keep-body" ng-class="::{'kf-boxed': boxed != null, 'kf-side-by-side': image.w, 'kf-text-only': !image && !youtubeId}">
   <div class="kf-keep-video" ng-if="::youtubeId" ng-click="clickCallback({keep: keep, event: $event})">
     <div kf-youtube video-id="youtubeId"></div>
     <div class="kf-youtube-bottom-overlay"></div>
@@ -25,7 +25,7 @@
         kf-keep-to-library-widget widget-action-text="Keep" library-click-action="onWidgetLibraryClicked(clickedLibrary)"
         kept-to-library-ids="keptToLibraryIds" lib-select-down-offset="180" lib-select-left-offset="20">
         <span ng-attr-class="{{howKept === 'private' ? 'svg-small-lock' : 'svg-hearts-green'}}"></span>
-        {{howKept === 'private' ? 'Kept Private' : howKept ? 'Kept' : 'Keep'}}
+        {{howKept ? 'Kept' : 'Keep'}}
       </button>
       <button class="kf-keep-share-btn" ng-click="shareAction()">
         <span class="svg-share-arrow-green"></span> Share

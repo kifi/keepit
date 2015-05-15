@@ -1,6 +1,8 @@
 keepBorderWidth = 1px
 keepBorderRadius = 8px
 keepSidePad = 20px
+keepCardMaxWidth = 496px  // chosen to make youtube videos (16:9 aspect ratio) come out to whole pixels, 496x279
+maxWidthForNarrowKeep = keepCardMaxWidth + 2 * (keepSidePad + keepBorderWidth + appSidePad1) - 1 // = 561px
 
 .kf-main-keeps
   position: relative
@@ -20,14 +22,15 @@ keepSidePad = 20px
 .kf-keep
 .kf-keep-selection-tools
   box-sizing: border-box
+  max-width: 2 * (keepBorderWidth + keepSidePad) + keepCardMaxWidth
   margin: 0 auto 10px
+  border: defaultBorder
   background-color: white
-  box-shadow: 0 0 0 .5px defaultBorderColor  // half-pixel border workaround crbug.com/236371
-  max-width: 2 * (keepBorderWidth + keepSidePad) + 496px  // chosen to make youtube videos (16:9 aspect ratio) come out to whole pixels, 496x279
 
-  @media (min-width: 480px)
-    box-shadow: none
-    border: defaultBorder
+  @media (max-width: maxWidthForNarrowKeep)
+    max-width: keepCardMaxWidth
+    border: 0
+    box-shadow: 0 0 0 .5px defaultBorderColor  // half-pixel border workaround crbug.com/236371
 
 .kf-keep-selection-tools
   border-radius: 0 keepBorderRadius keepBorderRadius keepBorderRadius
@@ -88,10 +91,7 @@ keepSidePad = 20px
 .kf-keep
   position: relative
   border-radius: keepBorderRadius
-  padding: 10px 3px
-
-  @media (min-width: 480px)
-    padding: keepSidePad
+  padding: 20px keepSidePad
 
   &.detailed
     background-color: #eff2f7
@@ -115,6 +115,14 @@ keepSidePad = 20px
 
   &.editing
     border-top-left-radius: 0
+
+  @media (max-width: maxWidthForNarrowKeep)
+    padding-top: 12px
+    padding-bottom: 0
+
+    &>.kf-keep-body
+      margin-left: -(keepSidePad)
+      margin-right: -(keepSidePad)
 
 .kf-keep-checkbox-wrap
   position: absolute
@@ -142,6 +150,9 @@ keepSidePad = 20px
   width: 100%
   margin-bottom: 16px
   table-layout: fixed
+
+  @media (max-width: maxWidthForNarrowKeep)
+    margin-bottom: 12px
 
 .kf-keep-top-menu-container
   position: absolute
@@ -219,6 +230,10 @@ keepSidePad = 20px
   border-radius: 50%
   background-size: cover
 
+  @media (max-width: maxWidthForNarrowKeep)
+    height: 36px
+    width: 36px
+
   &:focus
     outline-color: #ccc
 
@@ -230,6 +245,10 @@ keepSidePad = 20px
 .kf-keep-keeper-name
   color: accentGreen
   font-weight: bold
+  font-size: 16px
+
+  @media (max-width: maxWidthForNarrowKeep)
+    font-size: 14px
 
   &:hover
     text-decoration: underline
@@ -245,6 +264,9 @@ keepSidePad = 20px
   white-space: nowrap
   overflow: hidden
   text-overflow: ellipsis
+
+  @media (max-width: maxWidthForNarrowKeep)
+    font-size: 12px
 
 twitterBlue = #00aced
 
@@ -264,13 +286,9 @@ twitterBlue = #00aced
   background-size: cover
   vertical-align: -2px
 
-noteFontSize = 16px
-noteLineHeight = 1.5
 noteMargin = -6px 0 18px
 
 .kf-keep-note
-  font-size: noteFontSize
-  line-height: noteLineHeight
   white-space: pre-wrap
   word-wrap: break-word
 
@@ -279,6 +297,9 @@ noteMargin = -6px 0 18px
 
   &:not(:empty)
     margin: noteMargin
+
+    @media (max-width: maxWidthForNarrowKeep)
+      margin: -4px 0 12px
 
 .kf-keep-note-hashtag
   color: accentGreen
@@ -289,9 +310,17 @@ noteMargin = -6px 0 18px
 .kf-knf
   margin: noteMargin
 
+.kf-keep-note
 .kf-knf-editor
-  font-size: noteFontSize
-  line-height: noteLineHeight
+  font-size: 16px
+  line-height: 1.5
+
+  @media (max-width: maxWidthForNarrowKeep)
+    font-size: 14px
+
+  @media (max-width: 479px)
+    font-size: 13px
+
 
 .kf-keeps-load-more
   display: block
