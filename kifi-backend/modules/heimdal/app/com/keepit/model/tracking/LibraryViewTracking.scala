@@ -1,6 +1,7 @@
 package com.keepit.model.tracking
 
 import com.keepit.common.db._
+import com.keepit.common.logging.Logging
 import com.keepit.common.net.UserAgent
 import com.keepit.common.time._
 import com.keepit.heimdal.HeimdalContext
@@ -25,7 +26,7 @@ object LibraryViewTrackingStates extends States[LibraryViewTracking]
 
 case class LibraryViewSource(value: String)
 
-object LibraryViewSource {
+object LibraryViewSource extends Logging {
   val SITE = LibraryViewSource("site")
   val iOS = LibraryViewSource("ios")
   val ANDROID = LibraryViewSource("android")
@@ -38,7 +39,10 @@ object LibraryViewSource {
       } else if (parsed.isIphone || parsed.isKifiIphoneApp) {
         Some(iOS)
       } else {
-        if (parsed.possiblyBot) None else Some(SITE)
+        if (parsed.possiblyBot) {
+          log.info(s"userAgent = $ua, we thought it might be bot")
+          None
+        } else Some(SITE)
       }
     }
   }
