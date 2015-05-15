@@ -116,7 +116,9 @@ angular.module('kifi')
     };
 
     function renderNextRawKeep(rawKeeps) {
-      $scope.keeps.push(rawKeeps.shift());
+      var keep = rawKeeps.shift();
+      keep.library = $scope.library;
+      $scope.keeps.push(keep);
       if (rawKeeps.length) {
         $timeout(angular.bind(null, renderNextRawKeep, rawKeeps));
       } else {

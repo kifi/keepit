@@ -15,6 +15,9 @@ angular.module('kifi')
     }
 
     function decompressHit(hit, users, libraries, userLoggedIn) {
+      hit.user = hit.user === -1 ? profileService.me : users[hit.user];
+      hit.library = libraries[hit.library];
+
       var decompressedKeepers = [];
       var decompressedLibraries = [];
 
@@ -25,19 +28,11 @@ angular.module('kifi')
         var idxLib = hit.libraries[i];
         var idxUser = hit.libraries[i + 1];
         var lib = libraries[idxLib];
-        var user;
 
         if (idxUser !== -1) {
-          user = users[idxUser];
-          lib.owner = user;
-          decompressedLibraries.push(lib);
-        } else if (userLoggedIn) {
-          user = profileService.me;
-          lib.owner = user;
-
-          if (!libraryService.isLibraryIdMainOrSecret(lib.id)) {
-            decompressedLibraries.push(lib);
-          }
+          decompressedLibraries.push([lib, users[idxUser]]);
+        } else if (userLoggedIn && !libraryService.isLibraryIdMainOrSecret(lib.id)) {
+          decompressedLibraries.push([lib, profileService.me]);
         }
       }
 
@@ -51,6 +46,18 @@ angular.module('kifi')
 
       hit.keepers = decompressedKeepers;
       hit.libraries = decompressedLibraries;
+
+      // reconstructing old .summary format for consistency with library keeps and reco keeps
+      if (!hit.summary) {
+        var img = hit.image;
+        hit.summary = {
+          description: hit.description,
+          imageUrl: img && img.url,
+          imageWidth: img && img.width,
+          imageHeight: img && img.height
+        };
+      }
+      hit.summary.wordCount = hit.wordCount;
     }
 
     function reportSearchAnalytics(endedWith, numResults, numResultsWithLibraries) {
@@ -174,7 +181,7 @@ angular.module('kifi')
             return [elem.id, elem.owner.id];
           }),
           tags: keep.tags,
-          title: keep.summary.title,
+          title: keep.title,
           titleMatches: 0, //This broke with new search api (the information is no longer available). Needs to be investigated if we still need it.
           urlMatches: 0
         };

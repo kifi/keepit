@@ -1,44 +1,43 @@
-// twoColMinWidth = 720px (not yet responsive)
-rightColWidth = 210px
+// Note: The structure of this page is very similar to the library and library search results pages.
+//       When editing values and styles near the top of this file, consider updating library.styl too.
+
+leftColWidth = 538px  // chosen so that inner keep card width (youtube video, specifically) comes out to exactly 496px
+rightColWidth = 210px // chosen to match library card width
 colGapWidth = 24px
+twoColMinWidth = appSidePad1 + leftColWidth + colGapWidth + rightColWidth + appSidePad1
 
 .kf-sr
   margin: 0 auto
   min-height: 100vh  // for auto-scrolling down to search results
-  max-width: appMaxWidth
+  max-width: twoColMinWidth
   padding: 10px appSidePad1 0
 
-  @media (min-width: appSidePad2MinWidth)
-    padding-left: appSidePad2
-    padding-right: appSidePad2
-
-  // @media (min-width: twoColMinWidth)
-  display: table
-  table-layout: fixed
+  @media (min-width: twoColMinWidth)
+    display: table
+    table-layout: fixed
 
   &:last-child
     padding-bottom: 40px
 
 .kf-sr-1
-  // @media (min-width: twoColMinWidth)
-  display: table-cell
-  vertical-align: top
-  width: appMinWidth - rightColWidth
-  max-width: appMinWidth - rightColWidth
-  box-sizing: border-box
-  padding-right: colGapWidth
+  @media (min-width: twoColMinWidth)
+    display: table-cell
+    vertical-align: top
+    width: leftColWidth
+    max-width: leftColWidth
+    padding-right: colGapWidth
 
 .kf-sr-2
   margin-top: 20px
   text-align: center
 
-  // @media (min-width: twoColMinWidth)
-  margin-top: 0
-  display: table-cell
-  vertical-align: top
-  width: rightColWidth
-  padding: 13px 0 0
-  text-align: initial
+  @media (min-width: twoColMinWidth)
+    margin-top: 0
+    display: table-cell
+    vertical-align: top
+    width: rightColWidth
+    padding: 13px 0 0
+    text-align: initial
 
 .kf-sr-no-libs
   color: #999

@@ -172,22 +172,23 @@ angular.module('kifi')
           }
         };
 
-        scope.deleteKeep = function (event, library, keep) {
+        scope.deleteKeep = function (event, keep) {
           angular.element(event.target).closest('.kf-keep').find('.kf-knf').remove();
-          keepActionService.unkeepFromLibrary(library.id, keep.id).then(function () {
+          var libraryId = keep.library.id;
+          keepActionService.unkeepFromLibrary(libraryId, keep.id).then(function () {
             keep.unkept = true;
             keep.keepersTotal--;
 
-            libraryService.addToLibraryCount(library.id, -1);
-            scope.$emit('keepRemoved', {url: keep.url}, library);
+            libraryService.addToLibraryCount(libraryId, -1);
+            scope.$emit('keepRemoved', {url: keep.url}, keep.library);
 
             undoService.add('Keep deleted.', function () {  // TODO: rekeepToLibrary endpoint that takes a keep ID
-              keepActionService.keepToLibrary([{url: keep.url}], library.id).then(function () {
+              keepActionService.keepToLibrary([{url: keep.url}], libraryId).then(function () {
                 keep.unkept = false;
                 keep.keepersTotal++;
 
-                libraryService.addToLibraryCount(library.id, 1);
-                scope.$emit('keepAdded', [keep], library);
+                libraryService.addToLibraryCount(libraryId, 1);
+                scope.$emit('keepAdded', [keep], keep.library);
               })['catch'](modalService.openGenericErrorModal);
             });
           })['catch'](modalService.openGenericErrorModal);

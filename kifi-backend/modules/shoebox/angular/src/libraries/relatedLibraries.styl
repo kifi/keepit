@@ -1,6 +1,8 @@
+twoColMinWidth = 796px  // see library.styl
 cardSideBySidePad = 9px
+
 .kf-related-libraries
-  @media (max-width: 719px)
+  @media (max-width: (twoColMinWidth - 1))
     margin-left: -(cardSideBySidePad)
     margin-right: -(cardSideBySidePad)
 
@@ -15,11 +17,11 @@ cardSideBySidePad = 9px
   margin-left: cardSideBySidePad - appSidePad1
   margin-right: cardSideBySidePad - appSidePad1
 
-  @media (min-width: appSidePad2MinWidth) and (max-width: 719px)
+  @media (min-width: appSidePad2MinWidth) and (max-width: (twoColMinWidth - 1))
     margin-left: cardSideBySidePad - appSidePad2
     margin-right: cardSideBySidePad - appSidePad2
 
-  @media (max-width: 719px)
+  @media (max-width: (twoColMinWidth - 1))
     padding: 10px 0
     background-color: #e8e8e8
 
@@ -27,7 +29,7 @@ cardSideBySidePad = 9px
   display: inline-block
   margin: 23px 0 0
 
-  @media (max-width: 719px)
+  @media (max-width: (twoColMinWidth - 1))
     margin-left: cardSideBySidePad
     margin-right: cardSideBySidePad
 
@@ -53,7 +55,7 @@ cardSideBySidePad = 9px
   padding: 21px 10px
   margin-top: 40px
 
-  @media (max-width: 719px)
+  @media (max-width: (twoColMinWidth - 1))
     display: none
 
 .kf-related-libraries-card-your-own-card-btn

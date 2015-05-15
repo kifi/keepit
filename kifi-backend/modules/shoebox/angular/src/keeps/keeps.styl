@@ -2,6 +2,7 @@ keepBorderWidth = 1px
 keepBorderRadius = 8px
 keepBorderRadiusEditing = 3px
 keepEditToolsWidth = 28px
+keepSidePad = 20px
 
 .kf-main-keeps
   position: relative
@@ -21,9 +22,10 @@ keepEditToolsWidth = 28px
 .kf-keep
 .kf-keep-selection-tools
   box-sizing: border-box
-  margin-bottom: 10px
+  margin: 0 auto 10px
   background-color: white
   box-shadow: 0 0 0 .5px defaultBorderColor  // half-pixel border workaround crbug.com/236371
+  max-width: 2 * (keepBorderWidth + keepSidePad) + 496px  // chosen to make youtube videos (16:9 aspect ratio) come out to whole pixels, 496x279
 
   @media (min-width: 480px)
     box-shadow: none
@@ -82,7 +84,7 @@ keepEditToolsWidth = 28px
     cursor: pointer
 
 .kf-keep-selection-option + .kf-keep-selection-option::before
-  content: "|"
+  content: '|'
   padding: 5px
 
 .kf-keep
@@ -91,7 +93,7 @@ keepEditToolsWidth = 28px
   padding: 10px 3px
 
   @media (min-width: 480px)
-    padding: 20px
+    padding: keepSidePad
 
   &.detailed
     background-color: #eff2f7
@@ -139,6 +141,7 @@ keepEditToolsWidth = 28px
   display: table
   width: 100%
   margin-bottom: 16px
+  table-layout: fixed
 
 .kf-keep-top-menu-container
   position: absolute
@@ -235,6 +238,9 @@ keepEditToolsWidth = 28px
   color: #808080
   font-size: 14px
   font-smoothing: antialiased
+  white-space: nowrap
+  overflow: hidden
+  text-overflow: ellipsis
 
 noteFontSize = 16px
 noteLineHeight = 1.5

@@ -80,7 +80,7 @@ angular.module('kifi')
       },
       replace: true,
       templateUrl: 'keep/keepCard.tpl.html',
-      link: function (scope, element) {
+      link: function (scope) {
 
         //
         // Scope data.
@@ -93,7 +93,7 @@ angular.module('kifi')
           scope.image = scope.youtubeId ? null : calcImageSize(keep.summary, scope.displayTitle);
 
           if (keep.user) {
-            // don't show the user at the top of the keep card as a keeper
+            // don't repeat the user at the top of the keep card in the keeper list
             _.remove(keep.keepers, {id: keep.user.id});
           }
           if (keep.libraryId) {

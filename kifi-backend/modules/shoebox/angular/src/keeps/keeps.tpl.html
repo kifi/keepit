@@ -34,30 +34,32 @@
     </div>
   </div>
   <ol class="kf-my-keeps" smart-scroll scroll-distance="scrollDistance" scroll-disabled="isScrollDisabled()" scroll-next="scrollNext()(keeps.length)">
-    <div class="kf-keep" ng-hide="keep.unkept && keep.libraryId === library.id" ng-class="{'editing': edit.enabled}" ng-repeat="keep in keeps">
+    <div class="kf-keep" ng-hide="keep.unkept && library" ng-class="{'editing': edit.enabled}" ng-repeat="keep in keeps">
       <div class="kf-keep-edit-tools">
         <div class="kf-keep-checkbox-icon sprite sprite-checkbox-icon" ng-if="!selection.isSelected(keep)" ng-click="selection.toggleSelect(keep)"></div>
         <div class="kf-keep-checkbox-icon sprite sprite-checkbox-icon-active" ng-if="selection.isSelected(keep)" ng-click="selection.toggleSelect(keep)"></div>
       </div>
-
+      <div class="kf-keep-top-menu-container" kf-hover-menu ng-if="::keep.user.id === me.id">
+        <button class="kf-keep-top-menu-btn"></button>
+        <menu class="kf-dropdown-menu">
+          <button class="kf-dropdown-menu-item" ng-click="editKeepNote($event, keep)">{{keep.note ? 'Edit note' : 'Add note'}}</button>
+          <button class="kf-dropdown-menu-item" ng-click="deleteKeep($event, keep)">Delete</button>
+        </menu>
+      </div>
       <div class="kf-keep-top">
-        <div class="kf-keep-top-menu-container" kf-hover-menu ng-if="::library.owner.id === me.id">
-          <button class="kf-keep-top-menu-btn"></button>
-          <menu class="kf-dropdown-menu">
-            <button class="kf-dropdown-menu-item" ng-click="editKeepNote($event, keep)">{{keep.note ? 'Edit note' : 'Add note'}}</button>
-            <button class="kf-dropdown-menu-item" ng-click="deleteKeep($event, library, keep)">Delete</button>
-          </menu>
-        </div>
-        <a class="kf-keep-keeper-pic" ng-href="{{::library.owner|profileUrl}}" ng-attr-style="background-image:url({{::library.owner|pic:100}})"></a>
+        <a class="kf-keep-keeper-pic" ng-href="{{::keep.user|profileUrl}}" ng-attr-style="background-image:url({{::keep.user|pic:100}})"></a>
         <div class="kf-keep-top-r">
-          <a class="kf-keep-keeper-name" ng-href="{{::library.owner|profileUrl}}">{{::library.owner|name}}</a>
+          <a class="kf-keep-keeper-name" ng-href="{{::keep.user|profileUrl}}">{{::keep.user|name}}</a>
           <div class="kf-keep-time">
             <time ng-attr-datetime="{{::keep.createdAt}}" am-time-ago="::keep.createdAt" title="{{::keep.createdAt|localTime}}" ng-if="::keep.createdAt"></time>
             <span ng-if="::!keep.createdAt">kept this</span>
+            <span ng-if="::!library && keep.library">
+              in <a class="kf-keep-lib-name" href="{{::keep.library.path}}">{{::keep.library.name}}</a>
+            </span>
           </div>
         </div>
       </div>
-      <div class="kf-keep-note" ng-bind-html="::keep.note|noteHtml" ng-if="::keep.note || library.owner.id === me.id"></div>
+      <div class="kf-keep-note" ng-bind-html="::keep.note|noteHtml" ng-if="::keep.note || keep.user.id === me.id"></div>
 
       <div kf-keep-card="keep" boxed current-page-origin="{{currentPageOrigin}}" click-callback="keepClickAction(event, keep)"></div>
     </div>

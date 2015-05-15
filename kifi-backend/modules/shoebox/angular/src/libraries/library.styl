@@ -1,16 +1,16 @@
-twoColMinWidth = 806px
-rightColWidth = 210px
+// Note: The structure of this page is very similar to the general search results page.
+//       When editing values and styles near the top of this file, consider updating search.styl too.
+
+leftColWidth = 538px  // chosen so that inner keep card width (youtube video, specifically) comes out to exactly 496px
+rightColWidth = 210px // chosen to match related library card width
 colGapWidth = 24px
+twoColMinWidth = appSidePad1 + leftColWidth + colGapWidth + rightColWidth + appSidePad1 // = 796px
 
 .kf-lib-content
   margin: 0 auto
   min-height: 100vh  // for auto-scrolling down to search results
-  max-width: appMaxWidth
+  max-width: twoColMinWidth
   padding: 10px appSidePad1 0
-
-  @media (min-width: appSidePad2MinWidth)
-    padding-left: appSidePad2
-    padding-right: appSidePad2
 
   @media (min-width: twoColMinWidth)
     display: table
@@ -23,9 +23,8 @@ colGapWidth = 24px
   @media (min-width: twoColMinWidth)
     display: table-cell
     vertical-align: top
-    width: appMinWidth - rightColWidth
-    max-width: appMinWidth - rightColWidth
-    box-sizing: border-box
+    width: leftColWidth
+    max-width: leftColWidth
     padding-right: colGapWidth
 
 .kf-lib-content-2
@@ -44,7 +43,7 @@ colGapWidth = 24px
 .kf-lib-fpost
   display: none
 
-  @media (min-width: 720px)
+  @media (min-width: twoColMinWidth)
     display: block
     box-sizing: border-box
     border-radius: 4px
