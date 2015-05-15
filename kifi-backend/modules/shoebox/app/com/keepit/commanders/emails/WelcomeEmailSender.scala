@@ -26,7 +26,7 @@ class WelcomeEmailSender @Inject() (
 
     val emailToSend = EmailToSend(
       title = "Kifi — Welcome",
-      fromName = Some(Right("Kifi")),
+      fromName = Some(Right("Eishay Smith")),
       from = SystemEmailAddress.EISHAY_PUBLIC,
       subject = "Let's get started with Kifi",
       to = toAddress.map(Right.apply).getOrElse(Left(userId)),
