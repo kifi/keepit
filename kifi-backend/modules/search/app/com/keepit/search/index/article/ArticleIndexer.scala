@@ -116,11 +116,4 @@ class ArticleIndexerPluginImpl @Inject() (
     airbrake: AirbrakeNotifier,
     serviceDiscovery: ServiceDiscovery,
     val scheduling: SchedulingProperties) extends IndexerPluginImpl(indexer, actor, serviceDiscovery) with ArticleIndexerPlugin {
-  override def onStart() = {
-    if (serviceDiscovery.hasBackupCapability) {
-      log.info(s"Build the new article index on backup machine. [Version: ${IndexerVersionProviders.Article.getVersionByStatus(serviceDiscovery)}]")
-      super.onStart()
-    }
-  }
-  override def enabled = serviceDiscovery.hasBackupCapability
 }
