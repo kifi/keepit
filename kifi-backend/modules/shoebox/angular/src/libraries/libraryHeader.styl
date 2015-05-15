@@ -472,7 +472,7 @@ coverDragShadeHeight = 3em
     @media (min-width: 480px)
       margin: 0 1em 0 1.5em
 
-.kf-lh-owner
+.kf-lh-owners
   margin-top: 2em
 
   @media (min-width: 480px)
@@ -481,6 +481,14 @@ coverDragShadeHeight = 3em
     .kf-system-main &
     .kf-system-secret &
       display: none
+
+.kf-lh-owner-image-wrap
+  position: relative
+  display: block
+  margin: 0 5px
+
+  &.collab
+    display: inline-block
 
 ownerImageDiam1 = 8em
 ownerImageDiam2 = 3.6em
@@ -511,6 +519,9 @@ ownerImageDiam2 = 3.6em
 .kf-lh-owner-name-wrap
   display: inline-block
   position: relative
+
+  &.collab
+    display: block
 
 .kf-lh-owner-name
   color: #fff
@@ -554,6 +565,32 @@ ownerImageDiam2 = 3.6em
 
     &:hover:not(:active)
       transform: scale(1.1)
+
+.kf-lh-add-collab-button
+  width: 3.4em
+  height: 3.4em
+  padding: 0px
+  border: 1px dashed white
+  background: rgba(255, 255, 255, 0.2)
+  outline: none
+  border-radius: 50%
+  vertical-align: top
+  margin-left: 5px
+
+  &:hover
+    background: rgba(255, 255, 255, 0.3)
+
+  &.next-to-owner
+    position: absolute
+    top: 0px
+    left: calc(50% + 35px)
+
+.kf-lh-add-collab-icon
+  width: 25px
+  height: 14px
+  margin: 0 auto
+  background-repeat: no-repeat
+  background-size: cover
 
 .kf-lh-desc-wrap-2
   position: relative
