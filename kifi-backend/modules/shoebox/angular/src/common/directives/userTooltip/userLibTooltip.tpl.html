@@ -1,0 +1,34 @@
+<div class="kf-ult" ng-controller="UserLibTooltipController" ng-if="tipping">
+  <div class="kf-ult-header" ng-attr-style="border-bottom-color:{{::library.color}};background-color:{{::library.color}}">
+    <div class="kf-ult-image" ng-attr-style="{{library.image|shadedBackgroundImage:.2:.6}}" ng-if="library.image"></div>
+    <div class="kf-ult-curator">
+      <a href="{{::user|profileUrl}}">
+        <img class="kf-ult-curator-img" ng-src="{{::user|pic:100}}">
+      </a>
+      <span class="kf-ult-curator-info">
+        <div class="kf-ult-curator-heading">Library Curator:</div>
+        <div class="kf-ult-curator-name">{{::user|name}}</div>
+      </span>
+    </div>
+  </div>
+  <div class="kf-ult-body">
+    <a class="kf-ult-name" ng-href="{{::library.url}}">{{::library.name}}</a>
+    <div class="kf-ult-stats-container">
+      <span class="kf-ult-stat">
+        <div class="kf-ult-stat-title">Keeps</div>
+        <div class="kf-ult-stat-num">{{::library.numKeeps || 0 | num}}</div>
+      </span>
+      <span class="kf-ult-vdivider"></span>
+      <span class="kf-ult-stat" ng-if="library.numFollowers">
+        <div class="kf-ult-stat-title">Followers<div>
+        <div class="kf-ult-stat-num">{{library.numFollowers | num}}</div>
+      </span>
+    </div>
+  </div>
+  <div class="kf-ult-hdivider"></div>
+  <div class="kf-ult-footer">
+    <button class="kf-ult-button kf-ult-follow" ng-class="{'kf-following': isFollowing}" ng-if="::!isMine" ng-click="toggleFollow()"></button>
+    <a class="kf-ult-button" ng-href="{{::library.url}}" ng-if="::isMine">View my library</a>
+  </div>
+  <div class="kf-ult-tri"></div>
+</div>

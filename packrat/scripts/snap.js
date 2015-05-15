@@ -6,7 +6,7 @@
 k.snap = k.snap || (function () {
   'use strict';
 
-  var LOOK_LINK_TEXT = 'look\u00A0here';
+  var LOOK_LINK_TEXT = 'look\xa0here';
   var MIN_IMG_DIM = 35;
   var RAPID_CLICK_GRACE_PERIOD_MS = 1000;
   var MATCHES = 'mozMatchesSelector' in document.body ? 'mozMatchesSelector' : 'webkitMatchesSelector';
@@ -459,13 +459,13 @@ k.snap = k.snap || (function () {
       var val = sib && sib.nodeType === 3 ? sib.nodeValue : '';
       if (sib && (sib.nodeType !== 3 || !/\s$/.test(val))) {
         $a.before(' ').data('before', '');
-      } else if (val && val[val.length - 1] === '\u00A0') {
+      } else if (val && val[val.length - 1] === '\xa0') {
         sib.nodeValue = val.substr(0, val.length - 1) + ' ';
-        $a.data('before', '\u00A0');
+        $a.data('before', '\xa0');
       }
 
       sib = $a[0].nextSibling;
-      var sp = !sib ? '\u00A0' : (sib.nodeType !== 3 || /^\S/.test(sib.nodeValue) ? ' ' : '');
+      var sp = !sib ? '\xa0' : (sib.nodeType !== 3 || /^\S/.test(sib.nodeValue) ? ' ' : '');
       if (sp) {
         $a.after(sp).data('after', sp);
       }

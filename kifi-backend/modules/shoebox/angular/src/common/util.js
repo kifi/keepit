@@ -147,30 +147,37 @@ angular.module('util', [])
 // ])
 
 .constant('HTML', (function () {
-  var ALL_QUOTES = /"/g;
-  var ALL_AMP_AND_LT = /[&<]/g;
-
-  var REPLACEMENTS = {
+  var allAmpAndLt = /[&<]/g;
+  var entities = {
     '&': '&amp;',
     '<': '&lt;'
   };
+  function entityFor(ch) {
+    return entities[ch];
+  }
+  function escapeElementContent(text) {
+    // www.owasp.org/index.php/XSS_Experimental_Minimal_Encoding_Rules
+    return text == null ? '' : String(text).replace(allAmpAndLt, entityFor);
+  }
 
-  function replace(ch) {
-    return REPLACEMENTS[ch];
+  var allQuotes = /"/g;
+  function escapeDoubleQuotedAttr(text) {
+    // Rule #2 at www.owasp.org/index.php/XSS_(Cross_Site_Scripting)_Prevention_Cheat_Sheet states
+    // "Properly quoted attributes can only be escaped with the corresponding quote."
+    // Caller must ensure text is safe in its specific attribute context (e.g. href, onload).
+    return text == null ? '' : String(text).replace(allQuotes, '&quot;');
+  }
+
+  var allLineBreakTags = /<(?:div[^>]*>(?:<br[^>]*><\/div>)?|br[^>]*>|\/div><div[^>]*>)/gi;
+  var allDivEndTags = /<\/div>/gi;
+  function replaceLineBreakTagsWithChars(html) {
+    return html.replace(allLineBreakTags, '\n').replace(allDivEndTags, '');
   }
 
   return {
-    escapeElementContent: function (text) {
-      // www.owasp.org/index.php/XSS_Experimental_Minimal_Encoding_Rules
-      return text == null ? '' : String(text).replace(ALL_AMP_AND_LT, replace);
-    },
-
-    escapeDoubleQuotedAttr: function (text) {
-      // Rule #2 at www.owasp.org/index.php/XSS_(Cross_Site_Scripting)_Prevention_Cheat_Sheet states
-      // "Properly quoted attributes can only be escaped with the corresponding quote."
-      // Caller must ensure text is safe in its specific attribute context (e.g. href, onload).
-      return text == null ? '' : String(text).replace(ALL_QUOTES, '&quot;');
-    }
+    escapeElementContent: escapeElementContent,
+    escapeDoubleQuotedAttr: escapeDoubleQuotedAttr,
+    replaceLineBreakTagsWithChars: replaceLineBreakTagsWithChars
   };
 }()))
 

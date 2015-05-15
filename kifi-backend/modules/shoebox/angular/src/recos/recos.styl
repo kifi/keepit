@@ -155,9 +155,16 @@ col-gap = 20px
   span
     display: inline-block
 
-  &+.kf-keep
-    border-top-left-radius: 0
-    border-top-right-radius: 0
+.kf-reco-keep
+  background-color: #fff
+  border: defaultBorder
+  border-top: 0
+  border-radius: 0 0 10px 10px
+  padding: 10px 0 0
+
+  &>.kf-side-by-side
+  .kf-keep-content:first-child
+    border-top: 1px solid #eee
 
 // Icons
 .kf-reco-icon
@@ -170,20 +177,11 @@ col-gap = 20px
 .kf-reco-recommended
   .kf-reco-top
     padding-top: 10px
-  .kf-keep
-    margin-bottom: 0
-    border-top: 0
   .kf-reco-icon
     margin-top: 0
   .kf-reco-dropdown-menu-container .kf-dropdown-menu
     top: 18px
     right: 8px
-  .kf-keep-contents
-    padding-top: 10px
-
-.kf-reco-top-title
-  font-size: 14px
-  line-height: 27px
 
 .kf-reco-icon:hover
   cursor: pointer

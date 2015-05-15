@@ -1,4 +1,8 @@
-keepBorderRadius = 10px
+keepBorderWidth = 1px
+keepBorderRadius = 8px
+keepSidePad = 20px
+keepCardMaxWidth = 496px  // chosen to make youtube videos (16:9 aspect ratio) come out to whole pixels, 496x279
+maxWidthForNarrowKeep = keepCardMaxWidth + 2 * (keepSidePad + keepBorderWidth + appSidePad1) - 1 // = 561px
 
 .kf-main-keeps
   position: relative
@@ -14,6 +18,309 @@ keepBorderRadius = 10px
     content: ''
     border-top: 1px none #f9f9f9
     z-index: 1
+
+.kf-keep
+.kf-keep-selection-tools
+  box-sizing: border-box
+  max-width: 2 * (keepBorderWidth + keepSidePad) + keepCardMaxWidth
+  margin: 0 auto 10px
+  border: defaultBorder
+  background-color: white
+
+  @media (max-width: maxWidthForNarrowKeep)
+    max-width: keepCardMaxWidth
+    border: 0
+    box-shadow: 0 0 0 .5px defaultBorderColor  // half-pixel border workaround crbug.com/236371
+
+.kf-keep-selection-tools
+  border-radius: 0 keepBorderRadius keepBorderRadius keepBorderRadius
+  position: relative  // for checkbox
+
+.kf-keep-selection-tools-body
+  padding-bottom: 7px
+
+.kf-keep-selected-count
+  text-align: center
+  font-size: 14px
+  padding: 10px 0 5px
+
+.kf-keep-selected-count-number
+  font-size: 28px
+  font-family: Lato, Arial, sans-serif
+  font-weight: bold
+
+.kf-keep-selection-options
+  position: relative
+  background-color: #eee
+  color: linkColor
+  font-size: 13px
+  font-smoothing: antialiased
+  text-align: center
+  user-select: none
+  padding: 12px 20px
+  margin: 7px 20px
+
+.kf-keep-selection-options-mask
+  position: absolute
+  top: 0
+  left: 0
+  right: 0
+  bottom: 0
+  display: none
+
+.kf-keep-selection-options.disabled
+  background-color: #f5f5f5
+
+  .kf-keep-selection-option
+    color: textLightGrey
+
+  .kf-keep-selection-options-mask
+    display: block
+
+.kf-keep-selection-option
+  display: inline-block
+  color: linkBlueColor
+
+  span
+    cursor: pointer
+
+.kf-keep-selection-option + .kf-keep-selection-option::before
+  content: '|'
+  padding: 5px
+
+.kf-keep
+  position: relative
+  border-radius: keepBorderRadius
+  padding: 20px keepSidePad
+
+  &.detailed
+    background-color: #eff2f7
+
+  &.selected.detailed
+    background-color: #F7F7F5
+
+  &.ng-hide-add
+  &.ng-hide-remove
+    transition: max-height 0.3s
+    display: block !important
+    overflow: hidden
+
+  &.ng-hide-add.ng-hide-add-active
+  &.ng-hide-remove
+    max-height: 0
+
+  &.ng-hide-add
+  &.ng-hide-remove.ng-hide-remove-active
+    max-height: 400px
+
+  &.editing
+    border-top-left-radius: 0
+
+  @media (max-width: maxWidthForNarrowKeep)
+    padding-top: 12px
+    padding-bottom: 0
+
+    &>.kf-keep-body
+      margin-left: -(keepSidePad)
+      margin-right: -(keepSidePad)
+
+.kf-keep-checkbox-wrap
+  position: absolute
+  top: -1px
+  left: -15px
+  width: 15px
+  height: 32px
+  background-color: #fff
+  border: defaultBorder
+  border-right: none
+  border-radius: 5px 0 0 5px
+  box-sizing: border-box
+
+  .kf-keep:not(.editing)>&
+    display: none
+
+.kf-keep-checkbox-icon
+  position: absolute
+  top: 5px
+  left: 5px
+  cursor: pointer
+
+.kf-keep-top
+  display: table
+  width: 100%
+  margin-bottom: 16px
+  table-layout: fixed
+
+  @media (max-width: maxWidthForNarrowKeep)
+    margin-bottom: 12px
+
+.kf-keep-top-menu-container
+  position: absolute
+  top: 12px
+  right: 12px
+
+  .kf-dropdown-menu
+    top: 20px
+    right: 0
+    font-size: 14px
+    transform-origin: 80% top
+    transition: visibility 0s, opacity linear dur, transform dur ease-out
+
+  &:not(.kf-open)>.kf-dropdown-menu
+    dur = .08s
+    visibility: hidden
+    opacity: 0
+    transform: scale(.9)
+    transition-duration: 0s, dur, dur
+    transition-delay: dur, 0s, 0s
+
+  .kf-dropdown-menu-item
+    display: block
+    padding: 0 16px
+    color: #556179
+    white-space: nowrap
+    cursor: pointer
+
+    &:hover
+      background-color: #eee
+
+    &:active
+      background-color: #ccc
+
+.kf-keep-top-menu-btn
+  position: relative
+  width: 18px
+  height: 13px
+  border: 0
+  background: transparent
+
+  &::before
+  &::after
+    content: ''
+    position: absolute;
+    left: 50%
+    width: 3px;
+    top: 4px
+    bottom: 4px
+    border-top-left-radius: 2px
+    border-top-right-radius: 2px
+    background: #c7c7c7
+    font-size: 0
+
+  &::before
+    transform: translate(-4px) rotate(-45deg)
+
+  &::after
+    transform: translate(2px) rotate(45deg)
+
+  &:hover::before
+  &:hover::after
+  &:focus::before
+  &:focus::after
+    background: #aaa
+
+  &:active::before
+  &:active::after
+   background: #888
+
+.kf-keep-keeper-pic
+  display: table-cell
+  height: 48px
+  width: 48px
+  border-radius: 50%
+  background-size: cover
+
+  @media (max-width: maxWidthForNarrowKeep)
+    height: 36px
+    width: 36px
+
+  &:focus
+    outline-color: #ccc
+
+.kf-keep-top-r
+  display: table-cell
+  vertical-align: middle
+  padding-left: 12px
+
+.kf-keep-keeper-name
+  color: accentGreen
+  font-weight: bold
+  font-size: 16px
+
+  @media (max-width: maxWidthForNarrowKeep)
+    font-size: 14px
+
+  &:hover
+    text-decoration: underline
+
+  &:focus
+    outline-color: tint(accentGreen, 50%)
+
+.kf-keep-time
+  color: #808080
+  line-height: 18px
+  font-size: 14px
+  font-smoothing: antialiased
+  white-space: nowrap
+  overflow: hidden
+  text-overflow: ellipsis
+
+  @media (max-width: maxWidthForNarrowKeep)
+    font-size: 12px
+
+twitterBlue = #00aced
+
+.kf-keep-tweet-link
+  margin-left: 10px
+  color: shade(twitterBlue, 10%)
+  font-size: 12px
+
+  &:focus
+    outline-color: tint(twitterBlue, 70%)
+
+.kf-keep-twitter-logo
+  display: inline-block
+  width: 14px
+  height: 12px
+  margin-right: 5px
+  background-size: cover
+  vertical-align: -2px
+
+noteMargin = -6px 0 18px
+
+.kf-keep-note
+  white-space: pre-wrap
+  word-wrap: break-word
+
+  .kf-knf+&
+    display: none
+
+  &:not(:empty)
+    margin: noteMargin
+
+    @media (max-width: maxWidthForNarrowKeep)
+      margin: -4px 0 12px
+
+.kf-keep-note-hashtag
+  color: accentGreen
+
+  &:hover
+    text-decoration: underline
+
+.kf-knf
+  margin: noteMargin
+
+.kf-keep-note
+.kf-knf-editor
+  font-size: 16px
+  line-height: 1.5
+
+  @media (max-width: maxWidthForNarrowKeep)
+    font-size: 14px
+
+  @media (max-width: 479px)
+    font-size: 13px
+
 
 .kf-keeps-load-more
   display: block
@@ -34,92 +341,7 @@ keepBorderRadius = 10px
     outline-color: alpha(linkBlueColor, .5)
 
 .kf-keeps-loading
-.kf-friends-loading
   display: block
   width: 44px
   height: 8px
   margin: 40px auto
-
-//
-// Add keep modal
-//
-.kf-add-keep-modal
-  .dialog-body-wrap
-    margin-bottom: 0
-
-  .dialog-body
-    padding: 0
-
-.kf-add-keep-body
-  width: 500px
-  text-align: left
-  padding: 5px
-
-.kf-add-keep-input
-  width: 440px
-  margin: 10px 15px
-  border: 2px solid #e7eaee
-  border-radius: 6px
-  font-size: 12px
-  padding: 12px
-  box-sizing: border-box
-
-.kf-add-keep-hint
-.kf-add-keep-error
-  color: textLightGrey
-  font-size: 13px
-
-.kf-add-keep-hint
-  color: textLightGrey
-
-.kf-add-keep-error
-  color: redColor
-  padding-left: 18px
-
-.kf-add-keep-private-container
-  display: inline-block
-  margin-left: 15px
-  border: 1px dotted transparent
-  padding: 2px
-
-.kf-add-keep-private-container:focus
-  border-color: #ddd
-
-.kf-add-keep-private-label
-  margin-left: 10px
-
-.kf-add-keep-private-checkbox
-  user-select: none
-
-.kf-ak-button.kf-action-button
-  padding: 10px 0
-  height: 15px
-
-  .kf-ak-button-text::after
-    content: 'Keep it'
-
-  &:not(.in-animation)
-    &.kept-public
-    &.kept-public:hover
-      background: #73c885
-      border-color: #5aaf6c
-      color: #fff
-
-      .kf-ak-button-text::after
-        content: 'Kept'
-
-    &.kept-private
-    &.kept-private:hover
-      background: #f06463
-      border-color: #d74b4a
-      color: #fff
-
-      .kf-ak-button-text::after
-        content: 'Kept Private'
-
-  &.in-animation
-    font-size: 2px
-    transition: font-size 0.3s
-
-    .kf-ak-button-text::after
-      content: ''

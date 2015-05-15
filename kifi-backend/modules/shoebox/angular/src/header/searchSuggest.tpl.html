@@ -6,7 +6,7 @@
     See all matching keeps <span ng-if="inLibrary">in this library</span>
   </a>
   <a class="kf-ssg-a kf-ssg-uri" href="{{uri.url}}" target="_blank" ng-repeat="uri in uris">
-    <div class="kf-ssg-uri-thumb" ng-style="{'background-image': uri.summary.imageUrl ? 'url(' + uri.summary.imageUrl + ')' : ''}"></div>
+    <div class="kf-ssg-uri-thumb" ng-style="{'background-image': uri.image ? 'url(' + uri.image.url + ')' : ''}"></div>
     <div class="kf-ssg-uri-title">{{uri.title}}</div>
     <div class="kf-ssg-uri-domain">{{uri.url|domain}}</div>
   </a>

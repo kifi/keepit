@@ -4,11 +4,11 @@ angular.module('kifi')
 
 .controller('LibraryCtrl', [
   '$scope', '$rootScope', '$analytics', '$location', '$state', '$stateParams', '$timeout', '$window',
-  '$FB', '$twitter', 'env', 'util', 'URI', 'AB', 'initParams', 'library', 'keepDecoratorService', 'libraryService', 'modalService',
+  '$FB', '$twitter', 'env', 'util', 'URI', 'AB', 'initParams', 'library', 'libraryService', 'modalService',
   'platformService', 'profileService', 'originTrackingService', 'installService', 'libraryImageLoaded',
   function (
     $scope, $rootScope, $analytics, $location, $state, $stateParams, $timeout, $window,
-    $FB, $twitter, env, util, URI, AB, initParams, library, keepDecoratorService, libraryService, modalService,
+    $FB, $twitter, env, util, URI, AB, initParams, library, libraryService, modalService,
     platformService, profileService, originTrackingService, installService, libraryImageLoaded) {
 
     //
@@ -90,8 +90,7 @@ angular.module('kifi')
       actions: {
         bulkUnkeep: true,
         copyToLibrary: true,
-        moveToLibrary: true,
-        editTags: true
+        moveToLibrary: true
       }
     };
 
@@ -117,9 +116,8 @@ angular.module('kifi')
     };
 
     function renderNextRawKeep(rawKeeps) {
-      var keep = new keepDecoratorService.Keep(rawKeeps.shift());
-      keep.buildKeep(keep);
-      keep.makeKept();
+      var keep = rawKeeps.shift();
+      keep.library = $scope.library;
       $scope.keeps.push(keep);
       if (rawKeeps.length) {
         $timeout(angular.bind(null, renderNextRawKeep, rawKeeps));
@@ -207,13 +205,16 @@ angular.module('kifi')
             if (idx > -1) {
               $scope.keeps.splice(idx, 1);
             }
-          } else if (library.id === $scope.library.id) {
+          }
+
+          var existingKeep = _.find($scope.keeps, {url: keep.url});
+          if (!existingKeep && library.id === $scope.library.id) {
             $scope.keeps.unshift(keep);
+            existingKeep = keep;
           }
 
           // add the new keep to the keep card's "my keeps" array
-          var existingKeep = _.find($scope.keeps, { url: keep.url });
-          if (existingKeep && !_.find($scope.keeps, { id: keep.id })) {
+          if (existingKeep && !_.find($scope.keeps, {id: keep.id})) {
             existingKeep.keeps.push({
               id: keep.id,
               libraryId: library.id,

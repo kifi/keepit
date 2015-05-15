@@ -4,9 +4,9 @@ angular.module('kifi')
 
 .controller('SearchCtrl', [
   '$scope', '$rootScope', '$location', '$q', '$state', '$stateParams', '$timeout', '$window', '$$rAF', '$http',
-  'keepDecoratorService', 'searchActionService', 'libraryService', 'routeService', 'util', 'library',
+  'searchActionService', 'libraryService', 'routeService', 'util', 'library',
   function ($scope, $rootScope, $location, $q, $state, $stateParams, $timeout, $window, $$rAF, $http,
-            keepDecoratorService, searchActionService, libraryService, routeService, util, library) {
+            searchActionService, libraryService, routeService, util, library) {
     //
     // Internal data.
     //
@@ -173,13 +173,7 @@ angular.module('kifi')
     };
 
     function renderNextKeep(keeps) {
-      var keep = new keepDecoratorService.Keep(keeps.shift());
-      if (keep.id) {
-        keep.buildKeep(keep);
-      }
-      // TODO remove after we get rid of the deprecated code and update new code to use 'tags' instead of 'hashtags'
-      keep.hashtags = keep.tags;
-      $scope.resultKeeps.push(keep);
+      $scope.resultKeeps.push(keeps.shift());
       if (keeps.length) {
         renderTimeout = $timeout(angular.bind(null, renderNextKeep, keeps));
       } else {

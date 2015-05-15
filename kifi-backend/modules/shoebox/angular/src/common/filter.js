@@ -90,6 +90,15 @@ angular.module('kifi')
   };
 })
 
+.filter('timeToRead', function () {
+  var roundedMinutes = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 30, 60];
+  return function (numWords) {
+    var minutes = numWords / 250;
+    minutes = _.find(roundedMinutes, function (n) { return minutes < n; });
+    return minutes ? minutes + ' min' : '1h';
+  };
+})
+
 .filter('preventOrphans', [
   'util',
   function (util) {
@@ -103,4 +112,34 @@ angular.module('kifi')
     var match = re.exec(url);
     return match && match[1];
   };
-});
+})
+
+.filter('localTime', function () {
+  return Date;
+})
+
+.filter('noteHtml', [
+  'HTML', '$filter',
+  function (HTML, $filter) {
+    var multipleBlankLinesRe = /\n(?:\s*\n)+/g;
+    var hashTagMarkdownRe = /\[#((?:\\.|[^\]])*)\]/g;
+    var escapedLeftBracketHashOrAtRe = /\[\\([#@])/g;
+    var backslashUnescapeRe = /\\(.)/g;
+    var tagUrl = $filter('tagUrl');
+    return function noteTextToHtml(text) {  // keep in sync with extension
+      if (!text) {
+        return '';
+      }
+      var parts = text.replace(multipleBlankLinesRe, '\n\n').split(hashTagMarkdownRe);
+      for (var i = 1; i < parts.length; i += 2) {
+        var tag = parts[i].replace(backslashUnescapeRe, '$1');
+        parts[i] = '<a class="kf-keep-note-hashtag" href="' + HTML.escapeDoubleQuotedAttr(tagUrl(tag)) +
+          '">#' + HTML.escapeElementContent(tag) + '</a>';
+      }
+      for (i = 0; i < parts.length; i += 2) {
+        parts[i] = HTML.escapeElementContent(parts[i].replace(escapedLeftBracketHashOrAtRe, '[$1'));
+      }
+      return parts.join('');
+    };
+  }
+]);
