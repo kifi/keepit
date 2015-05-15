@@ -100,7 +100,11 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
 
         val text = email.textBody.get.value
         text must contain("Dear Billy,")
-        text must not contain ("@firstName")
+
+        val scalaWords = Seq("homeUrl", "installExtUrl", "firstName", "iOsAppStoreUrl", "googlePlayStoreUrl", "howKifiWorksUrl", "eishayKifiUrl")
+        scalaWords foreach { word => html must not contain word }
+        scalaWords foreach { word => text must not contain word }
+        1 === 1 // can't compile test without an explicit assertion at the end
       }
     }
 
@@ -127,10 +131,6 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         val html = email.htmlBody.value
         html must contain(WELCOME_SALUTATION(toUser.firstName))
 
-        // making sure no Scala syntax was left behind
-        val scalaWords = Seq("firstName", "homeUrl", "iOsAppStoreUrl", "googlePlayStoreUrl", "howKifiWorksUrl", "eishayKifiUrl")
-        scalaWords foreach { word => html must not contain word }
-
         val trackingCode = EmailTrackingParam(
           subAction = Some("homeLink")).encode
         html must contain("utm_source=fromKifi&amp;utm_medium=email&amp;utm_campaign=welcome&amp;utm_content=homeLink&amp;kcid=welcome-email-fromKifi"
@@ -139,6 +139,12 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         val text = email.textBody.get.value
         text must not contain ("firstName")
         text must contain("Dear Billy,")
+
+        val scalaWords = Seq("homeUrl", "installExtUrl", "firstName", "iOsAppStoreUrl", "googlePlayStoreUrl", "howKifiWorksUrl", "eishayKifiUrl")
+        scalaWords foreach { word => html must not contain word }
+        scalaWords foreach { word => text must not contain word }
+
+        1 === 1 // can't compile test without an explicit assertion at the end
       }
     }
   }
@@ -434,7 +440,6 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         email.to(0) === EmailAddress("aaronrodgers@gmail.com")
         val html = email.htmlBody.value
         testHtml(html)
-        html must not contain "firstName"
         html must not contain invite.passPhrase
       }
     }
@@ -486,8 +491,8 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         email.extraHeaders.get(PostOffice.Headers.REPLY_TO) === "tombrady@gmail.com"
         email.subject === "An invitation to my library: Football"
         email.htmlBody.contains("http://dev.ezkeep.com:9000/tom/football?") === true
-        email.htmlBody.contains("Hello Aaron") === true
-        email.htmlBody.contains("Check out the library I created:") === true
+        email.htmlBody.contains("Hi Aaron") === true
+        email.htmlBody.contains("Check out the \"Football\" library I created") === true
         val params = List("utm_campaign=na", "utm_source=library_invite", "utm_medium=vf_email", "kcid=na-vf_email-library_invite", "kma=1")
         params.map(email.htmlBody.contains(_)) === List(true, true, true, true, true)
         email.to(0) === EmailAddress("aaronrodgers@gmail.com")
@@ -514,15 +519,16 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         email.extraHeaders.get(PostOffice.Headers.REPLY_TO) === "tombrady@gmail.com"
         email.subject === "I want to collaborate with you on Football"
         email.htmlBody.contains("http://dev.ezkeep.com:9000/tom/football?") === true
-        email.htmlBody.contains("Hello Aaron") === true
+        email.htmlBody.contains("Hi Aaron") === true
         email.htmlBody.contains("collaborate") === true
         val params = List("utm_campaign=na", "utm_source=library_invite", "utm_medium=vf_email", "kcid=na-vf_email-library_invite", "kma=1")
         params.map(email.htmlBody.contains(_)) === List(true, true, true, true, true)
         email.to(0) === EmailAddress("aaronrodgers@gmail.com")
         val html = email.htmlBody.value
-        val scalaWords = Seq("firstName", "libraryUrl", "salutation", "emailMessage", "passPhraseMsg", "inviteMsg")
-        scalaWords foreach { word => html must not contain word }
         html must not contain invite.passPhrase
+
+        val text = email.textBody.get.value
+        text must not contain "description"
       }
     }
 
@@ -544,6 +550,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         params.map(email.htmlBody.contains(_)) === List(true, true, true, false)
         val html = email.htmlBody.value
         html must not contain (invite.passPhrase)
+        html must not contain "firstName"
 
         db.readWrite { implicit session => libraryRepo.save(lib1.copy(visibility = LibraryVisibility.PUBLISHED)) }
         val emailWithoutPassPhrase = Await.result(inviteSender.sendInvite(invite = inviteNonUser, isPlainEmail = true), Duration(5, "seconds")).get
@@ -594,6 +601,25 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
 
         val html = email.htmlBody.value
         html must not contain "Here's what it's about:"
+      }
+    }
+
+    "not include any code in the email" in {
+      withDb(modules: _*) { implicit injector =>
+        val (user1, user2, lib1, invite) = setup(withDescription = false)
+
+        val inviteUser = invite.copy(userId = user2.id)
+        val outbox = inject[FakeOutbox]
+        val inviteSender = inject[LibraryInviteEmailSender]
+
+        val email = Await.result(inviteSender.sendInvite(invite = inviteUser, isPlainEmail = true), Duration(5, "seconds")).get
+
+        val html = email.htmlBody.value
+        val text = email.textBody.get.value
+        val scalaWords = Seq("firstName", "libraryUrl", "salutation", "emailMessage", "passPhraseMsg", "inviteMsg")
+        scalaWords foreach { word => html must not contain word }
+        scalaWords foreach { word => text must not contain word }
+        1 === 1
       }
     }
 
