@@ -241,19 +241,16 @@ followerPicDiam = 2.2em
   &:hover:active
     opacity: 1
 
-
 .kf-lh-subscribed-btn
   vertical-align: bottom
+  padding: 0px
   outline: none
   background: none
   border: none
-  opacity: 0.8
+  opacity: 0.9
 
   &.for-owner
-    margin-left: 10px
-
-  &:hover
-    opacity: 0.9
+    margin-left: 0.9em
 
   .kf-lh-subscribed-icon
     width: 24px
@@ -261,9 +258,35 @@ followerPicDiam = 2.2em
     background-size: cover
     background-repeat: no-repeat
 
+  .kf-lh-notifications-msg
+    position: absolute
+    top: 50%
+    transform: translateY(-50%)
+    margin-left: 20px
+    padding: 2px 7px 3px
+    border-radius: 2px
+    background-color: #fff
+    font-size: 13px
+    color: #3E4955
+    opacity: 0
+    visibility: hidden
+    transition: opacity linear 0.1s, visibility linear 0.1s
+
+    &.enabled::before
+      content: 'Notifications enabled'
+    &.disabled::before
+      content: 'Notifications disabled'
+
+  &:hover
+    opacity: 1.0
+
+    & .kf-lh-notifications-msg
+      opacity: 1
+      visibility: visible
+
 .kf-lh-private
   display: inline-block
-  margin-left: 1em
+  margin-right: 1em
   line-height: 2em
   border-radius: 1em
   padding: 0 1em 0 2.3em

@@ -12,6 +12,8 @@
     </div>
 
     <div class="kf-lh-top">
+      <div class="kf-lh-private svg-card-lock" ng-if="library.visibility === 'secret'"></div>
+
       <button class="kf-lh-manage-btn svg-settings-gear-filled" ng-click="manageLibrary()" ng-if="isMyLibrary() && !library.isSystem"></button>
 
       <div class="kf-lh-cover-menu-parent" kf-hover-menu ng-if="isMyLibrary() && !library.isSystem">
@@ -27,8 +29,8 @@
 
       <button class="kf-lh-subscribed-btn" ng-class="{'for-owner': isMyLibrary()}" ng-click="changeSubscription()" ng-if="library.access !== 'none' && (!amOwner || hasCollaborators)">
         <div class="kf-lh-subscribed-icon" ng-class="{'svg-notification-on-white': library.subscribed, 'svg-notification-off-white': !library.subscribed}"></div>
+        <span class="kf-lh-notifications-msg" ng-class="{enabled: library.subscribed, disabled: !library.subscribed}"></span>
       </button>
-      <div class="kf-lh-private svg-card-lock" ng-if="library.visibility === 'secret'"></div>
 
       <div class="kf-lh-followers">
         <a class="kf-lh-followers-a" ng-repeat="follower in followersToShow" href="{{follower|profileUrl}}" kf-track-origin="libraryPage/follower">
