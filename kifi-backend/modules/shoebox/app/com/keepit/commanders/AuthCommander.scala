@@ -202,9 +202,9 @@ class AuthCommander @Inject() (
       require(AuthHelper.validatePwd(sfi.password), "invalid password")
       val currentHasher = Registry.hashers.currentHasher
       val email = if (sfi.email.address.trim.isEmpty) {
-        val random = EmailAddress(s"NoMailUser+${RandomStringUtils.randomAlphabetic(10)}@kifi.com")
-        airbrake.notify(s"generated random email $random for SFI $sfi of social identity $socialIdentity with invite $inviteExtIdOpt")
-        random
+        val alternative = EmailAddress(s"NoMailUser+${socialIdentity.identityId.providerId}_${socialIdentity.identityId.userId}@kifi.com")
+        airbrake.notify(s"generated alternative email $alternative for SFI $sfi of social identity $socialIdentity with invite $inviteExtIdOpt")
+        alternative
       } else sfi.email
       val pInfo = currentHasher.hash(new String(sfi.password)) // SecureSocial takes String only
 
