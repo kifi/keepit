@@ -513,7 +513,7 @@ class AuthController @Inject() (
                 val sfi = SocialFinalizeInfo(
                   firstName = User.sanitizeName(identity.firstName),
                   lastName = User.sanitizeName(identity.lastName),
-                  email = EmailAddress(identity.email.getOrElse("")),
+                  email = EmailAddress(identity.email.getOrElse("")), //todo(andrew): is having an empty string for email is the right thing to do at this point???
                   password = password.toCharArray,
                   picToken = None, picHeight = None, picWidth = None, cropX = None, cropY = None, cropSize = None)
 
