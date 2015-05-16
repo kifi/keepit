@@ -7,8 +7,11 @@ import com.keepit.common.db.{ SequenceNumber, Id }
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.mail.EmailAddress
+import com.keepit.common.store.{ ImagePath, ImageSize }
 import com.keepit.curator.model._
 import com.keepit.model._
+import com.keepit.rover.{ FakeRoverServiceClientImpl, RoverServiceClient }
+import com.keepit.rover.model.{ BasicImages, BasicImage, RoverArticleSummary, RoverUriSummary }
 import com.keepit.shoebox.{ ShoeboxServiceClient, ShoeboxScraperClient, FakeShoeboxServiceClientImpl }
 import org.joda.time.DateTime
 import com.keepit.common.time._
@@ -154,10 +157,10 @@ trait CuratorTestHelpers { this: CuratorTestInjector =>
   def makeKeepAttribution() = KeepAttribution(keeps = Seq.empty)
 
   def makeCompleteUriRecommendation(uriId: Int, userId: Int, masterScore: Float, url: String, wc: Int = 250,
-    summaryImageWidth: Option[Int] = Some(700), summaryImageHeight: Option[Int] = Some(500), allScores: UriScores = defaultAllScores) = {
+    imageSize: Option[ImageSize] = Some(ImageSize(700, 500)), allScores: UriScores = defaultAllScores) = {
     val normalizedUri = makeNormalizedUri(uriId, url)
     val uriRecommendation = makeUriRecommendation(uriId, userId, masterScore, allScores)
-    val uriSummary = URISummary(
+    val article = RoverArticleSummary(
       title = Some("The Personalized Web is Transforming our Relationship with Tech"),
       description = Some("Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc nec augue a erat interdum varius." +
         "Nam faucibus euismod lorem in interdum. Donec ut enim vitae nibh mattis ultrices. Sed fermentum tellus eget odio " +
@@ -165,22 +168,30 @@ trait CuratorTestHelpers { this: CuratorTestInjector =>
         "interdum neque eu vulputate. Nulla fermentum metus felis. In id velit dictum ligula iaculis pulvinar id sit " +
         "amet dolor. Proin eu augue id lectus viverra consectetur at sed orci. Suspendisse potenti."),
       wordCount = Some(wc),
-      imageUrl = Some("https://djty7jcqog9qu.cloudfront.net/screenshot/f5d6aedb-fea9-485f-aead-f2a8d1f31ac5/1000x560.jpg"),
-      imageWidth = summaryImageWidth,
-      imageHeight = summaryImageHeight
+      publishedAt = None,
+      authors = Seq.empty,
+      media = None
     )
 
-    (normalizedUri, uriRecommendation, uriSummary)
+    val image = imageSize.map { size =>
+      BasicImage(
+        sourceImageHash = ImageHash("xxxx"),
+        size = size,
+        path = ImagePath("/screenshot/f5d6aedb-fea9-485f-aead-f2a8d1f31ac5/1000x560.jpg")
+      )
+    }
+
+    (normalizedUri, uriRecommendation, RoverUriSummary(article, BasicImages(image.toSet)))
   }
 
-  def saveUriModels(tuple: (NormalizedURI, UriRecommendation, URISummary),
+  def saveUriModels(tuple: (NormalizedURI, UriRecommendation, RoverUriSummary),
     shoebox: FakeShoeboxServiceClientImpl)(implicit injector: Injector, rw: RWSession) = {
     val uriRecoRepo = inject[UriRecommendationRepo]
-    val (uri, uriReco, uriSumm) = tuple
+    val (uri, uriReco, summary) = tuple
     val savedUri = shoebox.saveURIs(uri).head
     val savedUriReco = uriRecoRepo.save(uriReco)
-    shoebox.saveURISummary(savedUri.id.get, uriSumm)
-    (savedUri, savedUriReco, uriSumm)
+    inject[RoverServiceClient].asInstanceOf[FakeRoverServiceClientImpl].setSummaryforUri(uri.id.get, summary)
+    (savedUri, savedUriReco, summary)
   }
 
   def makeSeedItems(userId: Id[User]): Seq[SeedItem] = {

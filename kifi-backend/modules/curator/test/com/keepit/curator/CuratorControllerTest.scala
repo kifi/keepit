@@ -9,10 +9,12 @@ import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.curator.controllers.internal.CuratorController
 import com.keepit.curator.model.{ LibraryRecommendationRepo, RecommendationSource, RecommendationSubSource }
 import com.keepit.curator.queue.FakeFeedDigestEmailQueueModule
+import com.keepit.curator.store.FakeCuratorStoreModule
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.graph.FakeGraphServiceModule
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.model.{ Library, LibraryRecommendationFeedback, User }
+import com.keepit.rover.FakeRoverServiceClientModule
 import com.keepit.search.FakeSearchServiceClientModule
 import org.specs2.mutable.Specification
 import play.api.libs.json.Json
@@ -31,6 +33,8 @@ class CuratorControllerTest extends Specification with CuratorTestInjector with 
     FakeCortexServiceClientModule(),
     FakeHeimdalServiceClientModule(),
     FakeSearchServiceClientModule(),
+    FakeRoverServiceClientModule(),
+    FakeCuratorStoreModule(),
     FakeHealthcheckModule())
 
   "CuratorController" should {

@@ -6,7 +6,7 @@ import com.keepit.common.net.HttpClient
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.model.NormalizedURI
 import com.keepit.rover.article.Article
-import com.keepit.rover.model.{ BasicImages, RoverUriSummary, ShoeboxArticleUpdates, ArticleInfo }
+import com.keepit.rover.model._
 
 import scala.collection.mutable
 import scala.concurrent.Future
@@ -17,13 +17,17 @@ class FakeRoverServiceClientImpl(
     val airbrakeNotifier: AirbrakeNotifier) extends RoverServiceClient {
 
   private val articlesByUri = mutable.Map[Id[NormalizedURI], Set[Article]]().withDefaultValue(Set.empty)
+  private val articleSummariesByUri = mutable.Map[Id[NormalizedURI], RoverUriSummary]()
   def setArticlesForUri(uriId: Id[NormalizedURI], articles: Set[Article]) = articlesByUri += (uriId -> articles)
+  def setSummaryforUri(uriId: Id[NormalizedURI], summary: RoverUriSummary) = articleSummariesByUri += (uriId -> summary)
 
   def getShoeboxUpdates(seq: SequenceNumber[ArticleInfo], limit: Int): Future[Option[ShoeboxArticleUpdates]] = Future.successful(None)
   def fetchAsap(uriId: Id[NormalizedURI], url: String): Future[Unit] = Future.successful(())
   def getBestArticlesByUris(uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[Article]]] = Future.successful(uriIds.map(uriId => uriId -> articlesByUri(uriId)).toMap)
   def getArticleInfosByUris(uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[ArticleInfo]]] = Future.successful(uriIds.map(_ -> Set.empty[ArticleInfo]).toMap)
   def getImagesByUris(uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], BasicImages]] = Future.successful(Map.empty)
-  def getUriSummaryByUris(uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], RoverUriSummary]] = Future.successful(Map.empty)
-  def getOrElseFetchUriSummary(uriId: Id[NormalizedURI], url: String): Future[Option[RoverUriSummary]] = Future.successful(None)
+  def getUriSummaryByUris(uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], RoverUriSummary]] = Future.successful {
+    uriIds.map(uriId => uriId -> articleSummariesByUri.get(uriId)).toMap.collect { case (uriId, Some(article)) => uriId -> article }
+  }
+  def getOrElseFetchUriSummary(uriId: Id[NormalizedURI], url: String): Future[Option[RoverUriSummary]] = Future.successful(articleSummariesByUri.get(uriId))
 }
