@@ -10,7 +10,7 @@ angular.module('kifi')
     return {
       restrict: 'A',
       require: '^kfModal',
-      templateUrl: 'keep/addKeep.tpl.html',
+      templateUrl: 'keeps/addKeep.tpl.html',
       link: function (scope, element, attrs, kfModalCtrl) {
 
         var focusState = 0; // 0: input field, 1: private toggle, 2: action button
