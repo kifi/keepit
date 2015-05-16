@@ -19,7 +19,7 @@ object AugmentableItem {
   }
 }
 
-case class RestrictedKeepInfo(id: ExternalId[Keep], keptAt: Option[DateTime], keptIn: Option[Id[Library]], keptBy: Option[Id[User]], note: Option[String], tags: Set[Hashtag])
+case class RestrictedKeepInfo(id: ExternalId[Keep], keptAt: DateTime, keptIn: Option[Id[Library]], keptBy: Option[Id[User]], note: Option[String], tags: Set[Hashtag])
 
 object RestrictedKeepInfo {
   implicit val format = Json.format[RestrictedKeepInfo]
@@ -85,10 +85,10 @@ object ItemAugmentationResponse {
 
 case class LimitedAugmentationInfo(
   keep: Option[RestrictedKeepInfo],
-  keepers: Seq[(Id[User], Option[DateTime])],
+  keepers: Seq[(Id[User], DateTime)],
   keepersOmitted: Int,
   keepersTotal: Int,
-  libraries: Seq[(Id[Library], Id[User], Option[DateTime])],
+  libraries: Seq[(Id[Library], Id[User], DateTime)],
   librariesOmitted: Int,
   librariesTotal: Int,
   tags: Seq[Hashtag],
@@ -96,12 +96,8 @@ case class LimitedAugmentationInfo(
 
 object LimitedAugmentationInfo {
   implicit val format = {
-    implicit val keeperFormat: Format[(Id[User], Option[DateTime])] = {
-      Format(TupleFormat.tuple2Reads[Id[User], Option[DateTime]] orElse Id.format[User].map((_, None)), TupleFormat.tuple2Writes[Id[User], Option[DateTime]])
-    }
-    implicit val libraryFormat: Format[(Id[Library], Id[User], Option[DateTime])] = {
-      Format(TupleFormat.tuple3Reads[Id[Library], Id[User], Option[DateTime]] orElse TupleFormat.tuple2Reads[Id[Library], Id[User]].map { case (libId, userId) => (libId, userId, None) }, TupleFormat.tuple3Writes[Id[Library], Id[User], Option[DateTime]])
-    }
+    implicit val keeperFormat: Format[(Id[User], DateTime)] = TupleFormat.tuple2Format[Id[User], DateTime]
+    implicit val libraryFormat: Format[(Id[Library], Id[User], DateTime)] = TupleFormat.tuple3Format[Id[Library], Id[User], DateTime]
     Json.format[LimitedAugmentationInfo]
   }
 

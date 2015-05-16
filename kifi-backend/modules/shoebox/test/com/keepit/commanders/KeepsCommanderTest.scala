@@ -51,13 +51,13 @@ class KeepsCommanderTest extends Specification with ShoeboxTestInjector {
         }
 
         val now = currentDateTime
-        val seq1 = Seq(LimitedAugmentationInfo(None, Seq((real, Some(now))), 0, 0, Seq((Id[Library](1), real, Some(now))), 0, 0, Seq.empty, 0),
-          LimitedAugmentationInfo(None, Seq((real, Some(now))), 0, 0, Seq((Id[Library](2), real, Some(now))), 0, 0, Seq.empty, 0),
+        val seq1 = Seq(LimitedAugmentationInfo(None, Seq((real, now)), 0, 0, Seq((Id[Library](1), real, now)), 0, 0, Seq.empty, 0),
+          LimitedAugmentationInfo(None, Seq((real, now)), 0, 0, Seq((Id[Library](2), real, now)), 0, 0, Seq.empty, 0),
           LimitedAugmentationInfo(None, Seq(), 0, 0, Seq(), 0, 0, Seq.empty, 0))
         inject[KeepDecorator].filterLibraries(seq1) === seq1
-        val seq2 = Seq(LimitedAugmentationInfo(None, Seq((real, Some(now))), 0, 0, Seq((Id[Library](1), real, Some(now))), 0, 0, Seq.empty, 0),
-          LimitedAugmentationInfo(None, Seq((real, Some(now)), (fake, Some(now))), 0, 0, Seq((Id[Library](2), real, Some(now)), (Id[Library](3), fake, Some(now))), 0, 0, Seq.empty, 0),
-          LimitedAugmentationInfo(None, Seq(), 0, 0, Seq((Id[Library](3), fake, Some(now))), 0, 0, Seq.empty, 0))
+        val seq2 = Seq(LimitedAugmentationInfo(None, Seq((real, now)), 0, 0, Seq((Id[Library](1), real, now)), 0, 0, Seq.empty, 0),
+          LimitedAugmentationInfo(None, Seq((real, now), (fake, now)), 0, 0, Seq((Id[Library](2), real, now), (Id[Library](3), fake, now)), 0, 0, Seq.empty, 0),
+          LimitedAugmentationInfo(None, Seq(), 0, 0, Seq((Id[Library](3), fake, now)), 0, 0, Seq.empty, 0))
         inject[KeepDecorator].filterLibraries(seq2) === seq1
       }
     }

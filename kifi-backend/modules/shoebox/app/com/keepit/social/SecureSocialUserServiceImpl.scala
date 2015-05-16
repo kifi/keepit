@@ -97,7 +97,7 @@ class SecureSocialUserPluginImpl @Inject() (
     log.info(s"[save] persisting (social|42) user $socialUser")
     val socialId = SocialId(socialUser.identityId.userId)
     if (socialId.id.trim.isEmpty) {
-      airbrake.notify(s"empty social id for social user $socialUser userId $userId and identity $identity")
+      throw new Exception(s"empty social id for social user $socialUser userId $userId and identity $identity")
     }
     val toUpdate = internUser(
       socialId,

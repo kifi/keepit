@@ -46,12 +46,13 @@ class RecommendationsCommanderTest extends Specification with ShoeboxTestInjecto
   }
 
   val fakeSearch = new FakeSearchServiceClient() {
+    val now = currentDateTime
     private val info = LimitedAugmentationInfo(
       None,
-      keepers = Seq(Id[User](1) -> Some(currentDateTime)),
+      keepers = Seq(Id[User](1) -> now),
       keepersOmitted = 0,
       keepersTotal = 1,
-      libraries = Seq((Id[Library](1), Id[User](1), Some(currentDateTime))),
+      libraries = Seq((Id[Library](1), Id[User](1), now)),
       librariesOmitted = 0,
       librariesTotal = 1,
       tags = Seq(),

@@ -151,6 +151,26 @@ class LibraryAnalytics @Inject() (
       heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.MODIFIED_LIBRARY, when))
     }
   }
+
+  def viewedLibrary(viewerId: Option[Id[User]], library: Library, context: HeimdalContext): Unit = {
+    val when = currentDateTime
+    val builder = new HeimdalContextBuilder
+    builder.data ++= context.data
+    builder += ("action", "viewed")
+    builder += ("ownerId", library.ownerId.toString)
+    builder += ("libraryId", library.id.get.toString)
+
+    SafeFuture {
+      viewerId match {
+        case Some(userId) =>
+          builder += ("viewerId", userId.toString)
+          heimdal.trackEvent(UserEvent(userId, builder.build, UserEventTypes.VIEWED_LIBRARY, when))
+        case None =>
+          heimdal.trackEvent(VisitorEvent(builder.build, VisitorEventTypes.VIEWED_LIBRARY, when))
+      }
+    }
+  }
+
   def updatedCoverImage(userId: Id[User], library: Library, context: HeimdalContext, imageFormat: ImageFormat, imageSize: ImageSize, imageBytes: Int): Unit = {
     val when = currentDateTime
     val numDays = getDaysSinceLibraryCreated(library)
