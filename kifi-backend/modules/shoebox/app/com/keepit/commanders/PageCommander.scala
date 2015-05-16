@@ -11,10 +11,13 @@ import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.net.URI
 import com.keepit.common.social._
+import com.keepit.common.store.S3ImageConfig
 import com.keepit.cortex.CortexServiceClient
 import com.keepit.curator.LibraryQualityHelper
 import com.keepit.model._
 import com.keepit.normalizer.NormalizedURIInterner
+import com.keepit.rover.RoverServiceClient
+import com.keepit.rover.model.{ BasicImages, RoverUriSummary }
 import com.keepit.search.SearchServiceClient
 import com.keepit.social.BasicUser
 import com.keepit.common.logging.Logging
@@ -255,7 +258,7 @@ case class KeeperPagePartialInfo(
   libraries: Seq[JsObject],
   keeps: Seq[KeepData])
 
-case class RelatedPageInfo(title: String, url: String, image: String, width: Option[Int] = None, height: Option[Int] = None)
+case class RelatedPageInfo(title: String, url: String, image: String, width: Int, height: Int)
 object RelatedPageInfo {
   implicit val writes = Json.writes[RelatedPageInfo]
 }
@@ -263,9 +266,10 @@ object RelatedPageInfo {
 class RelatedPageCommander @Inject() (
     db: Database,
     uriRepo: NormalizedURIRepo,
-    uriSummaryCmdr: URISummaryCommander,
     implicit val executionContext: ExecutionContext,
-    cortex: CortexServiceClient) {
+    cortex: CortexServiceClient,
+    rover: RoverServiceClient,
+    implicit val s3ImageConfig: S3ImageConfig) {
 
   private val MAX_LOOKUP_SIZE = 25
   private val MIN_POOL_SIZE = 5
@@ -280,19 +284,24 @@ class RelatedPageCommander @Inject() (
       uniqueUris
     }
 
-    val summariesF: Future[Seq[URISummary]] = urisF.flatMap { uris =>
-      Future.sequence(uris.map { x => uriSummaryCmdr.getDefaultURISummary(x, waiting = false) })
+    val imagesF: Future[Map[Id[NormalizedURI], BasicImages]] = urisF.flatMap { uris =>
+      rover.getImagesByUris(uris.map(_.id.get).toSet)
     }
 
     for {
       uris <- urisF
-      summaries <- summariesF
+      imagesByUriId <- imagesF
     } yield {
-      assume(uris.size == summaries.size)
-      val uriWithImages = (uris zip summaries).filter(_._2.imageUrl.isDefined)
-      if (uriWithImages.size >= MIN_POOL_SIZE) {
-        val pages = uriWithImages.map { case (uri, summary) => RelatedPageInfo(uri.title.get, uri.url, summary.imageUrl.get, summary.imageWidth, summary.imageHeight) }
-        scala.util.Random.shuffle(pages.toSeq).take(RETURN_SIZE)
+      val relatedPages = uris.flatMap { uri =>
+        imagesByUriId.get(uri.id.get).flatMap { images =>
+          images.get(ProcessedImageSize.Medium.idealSize).map { image =>
+            RelatedPageInfo(uri.title.get, uri.url, image.path.getUrl, image.size.width, image.size.height)
+          }
+        }
+      }
+
+      if (relatedPages.size >= MIN_POOL_SIZE) {
+        scala.util.Random.shuffle(relatedPages.toSeq).take(RETURN_SIZE)
       } else {
         // pool size too small. Don't show anything
         Seq()
