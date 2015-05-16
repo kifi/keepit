@@ -247,6 +247,7 @@ angular.module('kifi')
             $rootScope.$emit('libraryInfosChanged');
           }
           $rootScope.$emit('libraryJoined', libraryId);
+          libraryInfoByIdClutch.expire(libraryId);
         });
       },
 
@@ -257,6 +258,7 @@ angular.module('kifi')
             $rootScope.$emit('libraryInfosChanged');
           }
           $rootScope.$emit('libraryLeft', libraryId);
+          libraryInfoByIdClutch.expire(libraryId);
         });
       },
 
