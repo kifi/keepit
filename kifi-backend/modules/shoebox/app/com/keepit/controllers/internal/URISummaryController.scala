@@ -23,26 +23,4 @@ class URISummaryController @Inject() (
     val urlFut = uriSummaryCommander.getURIImage(nUri)
     urlFut map { urlOpt => Ok(Json.toJson(urlOpt)) }
   }
-
-  def getUriSummary() = Action.async(parse.tolerantJson) { request =>
-    val urlFut = uriSummaryCommander.getURISummaryForRequest(Json.fromJson[URISummaryRequest](request.body).get)
-    urlFut map { urlOpt => Ok(Json.toJson(urlOpt)) }
-  }
-
-  def getUriSummaries() = Action.async(parse.tolerantJson) { request =>
-    val uriIdsJson = (request.body \ "uriIds")
-    val withDescription = (request.body \ "withDescription").asOpt[Boolean].getOrElse(true)
-    val waiting = (request.body \ "waiting").asOpt[Boolean].getOrElse(false)
-    val silent = (request.body \ "silent").asOpt[Boolean].getOrElse(false)
-    val uriIds = Json.fromJson[Seq[Id[NormalizedURI]]](uriIdsJson).get
-    val uriSummariesFut = if (withDescription && !silent) {
-      Future.sequence(uriIds map (uriSummaryCommander.getDefaultURISummary(_, waiting)))
-    } else {
-      Future.sequence(uriIds map { uriId =>
-        val uriSummaryRequest = URISummaryRequest(uriId, ImageType.ANY, ImageSize(0, 0), withDescription, waiting, silent)
-        uriSummaryCommander.getURISummaryForRequest(uriSummaryRequest)
-      })
-    }
-    uriSummariesFut map { uriSummaries => Ok(Json.toJson(uriSummaries)) }
-  }
 }
