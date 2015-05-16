@@ -24,7 +24,7 @@ class KeywordSummaryCommander @Inject() (
       val otherKeywords = articles.collect {
         case article if article.kind != EmbedlyArticle => article.content.keywords.collect {
           case keyword if keyword.forall(_.isLetterOrDigit) => keyword.toLowerCase
-          }
+        }
       }.flatten.toSet
       (otherKeywords, embedlyKeywords)
     }

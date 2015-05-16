@@ -24,7 +24,6 @@ class KeepDecorator @Inject() (
     libraryMembershipRepo: LibraryMembershipRepo,
     keepRepo: KeepRepo,
     keepImageCommander: KeepImageCommander,
-    uriSummaryCommander: URISummaryCommander,
     userCommander: Provider[UserCommander],
     searchClient: SearchServiceClient,
     keepSourceAttributionRepo: KeepSourceAttributionRepo,
