@@ -94,7 +94,7 @@ class EmailTemplateProcessorImpl @Inject() (
     templatesF.flatMap[ProcessedEmailResult] { templates =>
       val (htmlBody, textBody) = loadLayout(emailToSend, templates)
 
-      val personalEmailCategories = Seq(NotificationCategory.User.WELCOME, NotificationCategory.User.LIBRARY_INVITATION)
+      val personalEmailCategories = Seq(NotificationCategory.User.WELCOME, NotificationCategory.User.LIBRARY_INVITATION, NotificationCategory.NonUser.LIBRARY_INVITATION)
 
       val viaKifiSuffix = if (personalEmailCategories contains emailToSend.category) "" else " (via Kifi)"
 
