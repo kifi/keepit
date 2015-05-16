@@ -1,10 +1,14 @@
 package com.keepit.search.result
 
+import com.keepit.commanders.ProcessedImageSize
 import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.db.Id
 import com.keepit.common.db.ExternalId
 import com.keepit.common.logging.Logging
+import com.keepit.common.store.S3ImageConfig
 import com.keepit.model._
+import com.keepit.rover.RoverServiceClient
+import com.keepit.rover.model.RoverUriSummary
 import com.keepit.search.{ SearchFilter, ArticleSearchResult, Lang, SearchConfigExperiment }
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -19,7 +23,9 @@ class ResultDecorator(
     lang: Lang,
     searchExperimentId: Option[Id[SearchConfigExperiment]],
     shoeboxClient: ShoeboxServiceClient,
-    monitoredAwait: MonitoredAwait) extends Logging {
+    rover: RoverServiceClient,
+    monitoredAwait: MonitoredAwait,
+    implicit val imageConfig: S3ImageConfig) extends Logging {
 
   private[this] val externalId = ExternalId[ArticleSearchResult]()
   private[this] val analyzer = DefaultAnalyzer.getAnalyzerWithStemmer(lang)
@@ -31,8 +37,8 @@ class ResultDecorator(
     val usersFuture = if (users.isEmpty) Future.successful(Map.empty[Id[User], JsObject]) else {
       shoeboxClient.getBasicUsers(users.toSeq).map { _.map { case (id, bu) => (id -> Json.toJson(bu).asInstanceOf[JsObject]) } }
     }
-    val uriSummariesFuture = if (hits.isEmpty || !withUriSummary) Future.successful(Map.empty[Id[NormalizedURI], URISummary]) else {
-      shoeboxClient.getUriSummaries(hits.map(_.uriId))
+    val uriSummariesFuture = if (hits.isEmpty || !withUriSummary) Future.successful(Map.empty[Id[NormalizedURI], RoverUriSummary]) else {
+      rover.getUriSummaryByUris(hits.map(_.uriId).toSet)
     }
 
     val highlightedHits = highlight(hits)
@@ -46,7 +52,7 @@ class ResultDecorator(
 
     val (basicUserJsonMap, uriSummaryMap) = monitoredAwait.result(usersFuture zip uriSummariesFuture, 5 seconds, s"getting basic users and uri external ids")
     var decoratedHits = addBasicUsers(highlightedHits, result.friendStats, basicUserJsonMap)
-    decoratedHits = addUriSummary(decoratedHits, uriSummaryMap)
+    decoratedHits = addUriSummary(decoratedHits, uriSummaryMap.mapValues(_.toUriSummary(ProcessedImageSize.Medium.idealSize)))
 
     new DecoratedResult(
       externalId,
