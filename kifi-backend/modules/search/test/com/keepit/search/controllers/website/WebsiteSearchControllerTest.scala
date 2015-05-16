@@ -16,7 +16,7 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import play.api.libs.json.Json
 import com.keepit.model.Username
-import com.keepit.shoebox.{ FakeShoeboxServiceModule, FakeShoeboxServiceClientImpl }
+import com.keepit.shoebox.FakeShoeboxServiceModule
 
 class WebsiteSearchControllerTest extends SpecificationLike with SearchTestInjector {
 
