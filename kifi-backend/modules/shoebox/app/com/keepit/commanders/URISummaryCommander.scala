@@ -6,7 +6,6 @@ import com.keepit.common.performance._
 import com.keepit.common.cache.TransactionalCaching
 import com.keepit.common.logging.Logging
 import com.google.inject.{ Singleton, Inject }
-import com.keepit.rover.article.content.EmbedlyKeyword
 import org.apache.commons.lang3.RandomStringUtils
 import scala.concurrent.{ ExecutionContext, Future }
 import com.keepit.model._
@@ -17,10 +16,6 @@ import scala.util.{ Success, Failure }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.time._
 import com.keepit.scraper.{ NormalizedURIRef, ScraperServiceClient }
-import com.keepit.scraper.embedly.EmbedlyStore
-import com.keepit.common.db.Id
-import com.keepit.cortex.CortexServiceClient
-import com.keepit.search.ArticleStore
 import com.keepit.normalizer.NormalizedURIInterner
 import com.keepit.common.service.RequestConsolidator
 import scala.concurrent.duration._
@@ -35,9 +30,6 @@ class URISummaryCommander @Inject() (
     pageInfoRepo: PageInfoRepo,
     db: Database,
     scraper: ScraperServiceClient,
-    cortex: CortexServiceClient,
-    embedlyStore: EmbedlyStore,
-    articleStore: ArticleStore,
     uriSummaryCache: URISummaryCache,
     airbrake: AirbrakeNotifier,
     clock: Clock,
@@ -247,60 +239,6 @@ class URISummaryCommander @Inject() (
     imageConfig.cdnBase + "/" + info.path
   }
 
-  def getStoredEmbedlyKeywords(id: Id[NormalizedURI]): Seq[EmbedlyKeyword] = {
-    embedlyStore.syncGet(id) match {
-      case Some(info) => info.info.keywords.sortBy(-1 * _.score)
-      case None => Seq()
-    }
-  }
-
-  def getArticleKeywords(id: Id[NormalizedURI]): Seq[String] = {
-    val rv = for {
-      article <- articleStore.syncGet(id)
-      keywords <- article.keywords
-    } yield {
-      keywords.toLowerCase.split(" ").filter { x => !x.isEmpty && x.forall(_.isLetterOrDigit) }
-    }
-    rv.getOrElse(Array()).toSeq
-  }
-
-  def getWord2VecKeywords(id: Id[NormalizedURI]): Future[Option[Word2VecKeywords]] = {
-    cortex.word2vecURIKeywords(id)
-  }
-
-  def batchGetWord2VecKeywords(ids: Seq[Id[NormalizedURI]]): Future[Seq[Option[Word2VecKeywords]]] = {
-    cortex.word2vecBatchURIKeywords(ids)
-  }
-
-  // FYI this is very slow. Be careful calling it.
-  def getKeywordsSummary(uri: Id[NormalizedURI]): Future[KeywordsSummary] = {
-    val word2vecKeywordsFut = getWord2VecKeywords(uri)
-    val embedlyKeywords = getStoredEmbedlyKeywords(uri)
-    val embedlyKeywordsStr = embedlyKeywords.map { _.name }.toSet
-    val articleKeywords = getArticleKeywords(uri).toSet
-
-    for {
-      word2vecKeys <- word2vecKeywordsFut
-    } yield {
-
-      val word2vecCount = word2vecKeys.map { _.wordCounts } getOrElse 0
-      val w2vCos = word2vecKeys.map { _.cosine.toSet } getOrElse Set()
-      val w2vFreq = word2vecKeys.map { _.freq.toSet } getOrElse Set()
-
-      val bestGuess = if (!articleKeywords.isEmpty) {
-        articleKeywords intersect (embedlyKeywordsStr union w2vCos union w2vFreq)
-      } else {
-        if (embedlyKeywords.isEmpty) {
-          w2vCos intersect w2vFreq
-        } else {
-          embedlyKeywordsStr intersect (w2vCos union w2vFreq)
-        }
-      }
-
-      KeywordsSummary(articleKeywords.toSeq, embedlyKeywords, w2vCos.toSeq, w2vFreq.toSeq, word2vecCount, bestGuess.toSeq)
-    }
-
-  }
-
   //todo(andrew) method to prune obsolete images from S3 (i.e. remove image if there is a newer image with at least the same size and priority)
 }
+

@@ -1,34 +1,30 @@
 package com.keepit.controllers.admin
 
 import com.keepit.common.db.Id
-import com.keepit.common.db.LargeString._
+import com.keepit.common.store.S3ImageConfig
 import com.keepit.model._
 import com.keepit.common.controller.{ UserActionsHelper, AdminUserActions }
 import com.google.inject.Inject
 import com.keepit.common.db.slick.Database
+import com.keepit.rover.RoverServiceClient
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.Future
-import play.api.libs.json.{ JsValue, JsArray, Json }
 import play.api.data._
 import play.api.data.Forms._
 import views.html
-import scala.util.{ Failure, Success, Try }
-import com.keepit.commanders.URISummaryCommander
-import com.keepit.scraper.ScraperServiceClient
+import com.keepit.commanders.{ ProcessedImageSize }
 import com.keepit.normalizer.NormalizedURIInterner
 
 class AdminScreenshotController @Inject() (
-  val userActionsHelper: UserActionsHelper,
-  uriSummaryCommander: URISummaryCommander,
-  uriImageCommander: URISummaryCommander,
-  scraper: ScraperServiceClient,
-  db: Database,
-  keepRepo: KeepRepo,
-  pageInfoRepo: PageInfoRepo,
-  imageInfoRepo: ImageInfoRepo,
-  normalizedURIInterner: NormalizedURIInterner,
-  uriRepo: NormalizedURIRepo)
-    extends AdminUserActions {
+    val userActionsHelper: UserActionsHelper,
+    db: Database,
+    keepRepo: KeepRepo,
+    pageInfoRepo: PageInfoRepo,
+    imageInfoRepo: ImageInfoRepo,
+    normalizedURIInterner: NormalizedURIInterner,
+    uriRepo: NormalizedURIRepo,
+    rover: RoverServiceClient,
+    implicit val imageConfig: S3ImageConfig) extends AdminUserActions {
 
   def images() = AdminUserPage { implicit request =>
     Ok(html.admin.images())
@@ -52,7 +48,8 @@ class AdminScreenshotController @Inject() (
           val pageInfoOpt = pageInfoRepo.getByUri(uriId)
           (uri, pageInfoOpt)
         }
-        uriSummaryCommander.getURIImage(uri) map { imageUrlOpt =>
+        rover.getImagesByUris(Set(uriId)).map { imagesByUriId =>
+          val imageUrlOpt = imagesByUriId.get(uriId).flatMap(_.get(ProcessedImageSize.Large.idealSize).map(_.path.getUrl))
           (uri, None, imageUrlOpt)
         }
       }
