@@ -97,8 +97,6 @@ trait ShoeboxServiceClient extends ServiceClient {
   def triggerSocialGraphFetch(id: Id[SocialUserInfo]): Future[Unit]
   def getUserConnectionsChanged(seqNum: SequenceNumber[UserConnection], fetchSize: Int): Future[Seq[UserConnection]]
   def getSearchFriendsChanged(seqNum: SequenceNumber[SearchFriend], fetchSize: Int): Future[Seq[SearchFriend]]
-  def getUriSummary(request: URISummaryRequest): Future[URISummary]
-  def getUriSummaries(uriIds: Seq[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], URISummary]]
   def getCandidateURIs(uris: Seq[Id[NormalizedURI]]): Future[Seq[Boolean]]
   def getUserImageUrl(userId: Id[User], width: Int): Future[String]
   def getUnsubscribeUrlForEmail(email: EmailAddress): Future[String]
@@ -614,32 +612,6 @@ class ShoeboxServiceClientImpl @Inject() (
     call(Shoebox.internal.getSearchFriendsChanged(seqNum, fetchSize), callTimeouts = extraLongTimeout, routingStrategy = offlinePriority).map { r =>
       Json.fromJson[Seq[SearchFriend]](r.json).get
     }
-  }
-
-  def getUriSummary(request: URISummaryRequest): Future[URISummary] = {
-    val tracer = new StackTrace()
-    val timeout = if (request.waiting) superExtraLongTimeoutJustForEmbedly else longTimeout
-    val res = call(Shoebox.internal.getUriSummary, Json.toJson(request), callTimeouts = timeout).map { r =>
-      r.json.as[URISummary]
-    }
-    res.onFailure {
-      case t: Throwable => airbrakeNotifier.notify(s"call to getUriSummary failed on request $request", tracer.withCause(t))
-    }
-    res
-  }
-
-  def getUriSummaries(uriIds: Seq[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], URISummary]] = {
-    redundantDBConnectionCheck(uriIds)
-    val keys = uriIds.map(URISummaryKey)
-    cacheProvider.uriSummaryCache.bulkGetOrElseFuture(keys.toSet) { missing =>
-      val missingKeysSeq = missing.toSeq
-      val request = Json.obj("uriIds" -> missingKeysSeq.map(_.id))
-      call(Shoebox.internal.getUriSummaries, request, callTimeouts = superExtraLongTimeoutJustForEmbedly).map { r =>
-        Json.fromJson[Seq[URISummary]](r.json).get
-      } map { uriSummaries =>
-        (missingKeysSeq zip uriSummaries) toMap
-      }
-    }.map(_ map { case (k, v) => (k.id, v) })
   }
 
   def getCandidateURIs(uris: Seq[Id[NormalizedURI]]): Future[Seq[Boolean]] = {

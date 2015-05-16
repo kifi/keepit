@@ -155,7 +155,6 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
   val allUserValues = MutableMap[(Id[User], UserValueName), String]()
   val allUserFriendRequests = MutableMap[Id[User], Seq[Id[User]]]()
   val sentMail = mutable.MutableList[ElectronicMail]()
-  val uriSummaries = MutableMap[Id[NormalizedURI], URISummary]()
   val socialUserInfosByUserId = MutableMap[Id[User], List[SocialUserInfo]]()
   val allLibraries = MutableMap[Id[Library], Library]()
   val allLibraryMemberships = MutableMap[Id[LibraryMembership], LibraryMembership]()
@@ -187,10 +186,6 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
       uriToUrl(id) = updatedUrl
       updatedUri
     }
-  }
-
-  def saveURISummary(uriId: Id[NormalizedURI], uriSummary: URISummary): Unit = synchronized {
-    uriSummaries(uriId) = uriSummary
   }
 
   def saveUserImageUrl(id: Int, url: String) = synchronized {
@@ -637,13 +632,6 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
   def getSearchFriendsChanged(seq: SequenceNumber[SearchFriend], fetchSize: Int): Future[Seq[SearchFriend]] = {
     val changed = allSearchFriends.values.filter(_.seq > seq).toSeq.sortBy(_.seq)
     Future.successful(if (fetchSize < 0) changed else changed.take(fetchSize))
-  }
-
-  def getUriSummary(request: URISummaryRequest): Future[URISummary] = Future.successful(URISummary())
-
-  def getUriSummaries(uriIds: Seq[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], URISummary]] = Future.successful {
-    val uriSet = uriIds.toSet
-    uriSummaries.toMap.filter { pair => uriSet.contains(pair._1) }
   }
 
   def getCandidateURIs(uris: Seq[Id[NormalizedURI]]): Future[Seq[Boolean]] = {

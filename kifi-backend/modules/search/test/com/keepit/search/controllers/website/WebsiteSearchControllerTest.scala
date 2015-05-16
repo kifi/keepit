@@ -16,7 +16,7 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import play.api.libs.json.Json
 import com.keepit.model.Username
-import com.keepit.shoebox.{ FakeShoeboxServiceModule, FakeShoeboxServiceClientImpl }
+import com.keepit.shoebox.FakeShoeboxServiceModule
 
 class WebsiteSearchControllerTest extends SpecificationLike with SearchTestInjector {
 
@@ -38,7 +38,6 @@ class WebsiteSearchControllerTest extends SpecificationLike with SearchTestInjec
         path === "/site/search2?q=test&maxHits=2"
 
         inject[UriSearchCommander].asInstanceOf[FixedResultUriSearchCommander].setPlainResults(ExtSearchControllerTest.plainTestResults)
-        inject[FakeShoeboxServiceClientImpl].saveURISummary(Id(234), URISummary())
         val user = User(Some(Id[User](1)), firstName = "prénom", lastName = "nom", username = Username("test"), normalizedUsername = "test")
         inject[FakeUserActionsHelper].setUser(user)
         val request = FakeRequest("GET", path)

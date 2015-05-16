@@ -1,5 +1,7 @@
 package com.keepit.search
 
+import com.keepit.common.store.S3ImageConfig
+import com.keepit.rover.RoverServiceClient
 import com.keepit.search.engine.uri.{ UriSearch, UriShardResultMerger, UriShardResult, UriSearchResult, UriSearchExplanation }
 import com.keepit.search.engine.{ DebugOption, SearchFactory }
 import scala.concurrent.duration._
@@ -98,7 +100,9 @@ class UriSearchCommanderImpl @Inject() (
     airbrake: AirbrakeNotifier,
     override val searchClient: DistributedSearchServiceClient,
     shoeboxClient: ShoeboxServiceClient,
-    monitoredAwait: MonitoredAwait) extends UriSearchCommander with Sharding with Logging {
+    rover: RoverServiceClient,
+    monitoredAwait: MonitoredAwait,
+    imageConfig: S3ImageConfig) extends UriSearchCommander with Sharding with Logging {
 
   implicit private[this] val defaultExecutionContext = fj
 
@@ -143,7 +147,7 @@ class UriSearchCommanderImpl @Inject() (
 
     val (config, searchExperimentId) = monitoredAwait.result(configFuture, 1 seconds, "getting search config")
 
-    val resultDecorator = new ResultDecorator(userId, query, firstLang, searchExperimentId, shoeboxClient, monitoredAwait)
+    val resultDecorator = new ResultDecorator(userId, query, firstLang, searchExperimentId, shoeboxClient, rover, monitoredAwait, imageConfig)
 
     // do the local part
     if (localShards.nonEmpty) {
