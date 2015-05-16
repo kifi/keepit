@@ -16,8 +16,10 @@ import com.keepit.common.store._
 import com.keepit.model.ImageProcessState.{ ImageLoadedAndHashed, ReadyToPersist }
 import com.keepit.model.ProcessImageOperation.Original
 import com.keepit.model._
+import com.keepit.rover.RoverServiceClient
 import com.keepit.rover.model.{ BasicImage, BasicImages }
 import play.api.libs.Files.TemporaryFile
+import com.keepit.common.core._
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.concurrent.duration.DurationInt
@@ -51,9 +53,9 @@ class KeepImageCommanderImpl @Inject() (
     imageStore: RoverImageStore,
     db: Database,
     keepRepo: KeepRepo,
-    uriSummaryCommander: URISummaryCommander,
+    rover: RoverServiceClient,
     imageInfoRepo: ImageInfoRepo,
-    s3ImageConfig: S3ImageConfig,
+    implicit val s3ImageConfig: S3ImageConfig,
     normalizedUriRepo: NormalizedURIRepo,
     keepImageRequestRepo: KeepImageRequestRepo,
     airbrake: AirbrakeNotifier,
@@ -62,21 +64,10 @@ class KeepImageCommanderImpl @Inject() (
     implicit val defaultContext: ExecutionContext,
     val webService: WebService) extends KeepImageCommander with ProcessedImageHelper with Logging {
 
-  def getUrl(keepImage: KeepImage): String = {
-    s3ImageConfig.cdnBase + "/" + keepImage.imagePath.path
-  }
+  def getUrl(keepImage: KeepImage): String = keepImage.imagePath.getUrl
 
   def getBestImageForKeep(keepId: Id[Keep], imageRequest: ProcessImageRequest): Option[Option[KeepImage]] = {
-    val keepImages = db.readOnlyReplica { implicit session => keepImageRepo.getAllForKeepId(keepId) }
-    if (keepImages.isEmpty) {
-      SafeFuture { autoSetKeepImage(keepId, localOnly = false, overwriteExistingChoice = false) }
-      None
-    } else Some {
-      val size = imageRequest.size
-      val validKeepImages = keepImages.filter(ki => ki.state == KeepImageStates.ACTIVE)
-      val strictAspectRatio = imageRequest.operation == ProcessImageOperation.Crop
-      ProcessedImageSize.pickBestImage(size, validKeepImages, strictAspectRatio)
-    }
+    getBestImagesForKeeps(Set(keepId), imageRequest).get(keepId)
   }
 
   def getBestImagesForKeeps(keepIds: Set[Id[Keep]], imageRequest: ProcessImageRequest): Map[Id[Keep], Option[KeepImage]] = {
@@ -153,8 +144,12 @@ class KeepImageCommanderImpl @Inject() (
         Future.successful(localLookup)
       } else {
         localLookup.map(v => Future.successful(Some(v))).getOrElse {
-          uriSummaryCommander.getDefaultURISummary(keep.uriId, waiting = true).map { summary =>
-            summary.imageUrl
+          rover.getImagesByUris(Set(keep.uriId)).imap(_.get(keep.uriId)).map {
+            case Some(BasicImages(images)) if images.nonEmpty => {
+              val largestImage = images.maxBy(image => image.size.height * image.size.height)
+              Some(largestImage.path.getUrl)
+            }
+            case _ => None
           }
         }
       }

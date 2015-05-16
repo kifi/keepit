@@ -57,13 +57,7 @@ class KeepDecorator @Inject() (
 
         (idToBasicUser, idToBasicLibrary)
       }
-      val pageInfosFuture = {
-        if (perspectiveUserIdOpt.exists(experimentCommander.userHasExperiment(_, ExperimentType.ROVER_CONTENT))) {
-          getKeepSummaries(keeps, idealImageSize)
-        } else Future.sequence(keeps.map { keep =>
-          getKeepSummary(keep, idealImageSize)
-        })
-      }
+      val pageInfosFuture = getKeepSummaries(keeps, idealImageSize)
 
       val colls = db.readOnlyMaster { implicit s =>
         keepToCollectionRepo.getCollectionsForKeeps(keeps) //cached
@@ -156,12 +150,7 @@ class KeepDecorator @Inject() (
 
   private def getKeepSummaries(keeps: Seq[Keep], idealImageSize: ImageSize): Future[Seq[URISummary]] = {
     val futureSummariesByUriId = rover.getUriSummaryByUris(keeps.map(_.uriId).toSet)
-    val keepImagesByKeepId = {
-      keeps.map { keep =>
-        keep.id.get -> keepImageCommander.getBestImageForKeep(keep.id.get, ScaleImageRequest(idealImageSize))
-      }.collect { case (keepId, Some(keepImage)) => keepId -> keepImage }
-    }.toMap
-
+    val keepImagesByKeepId = keepImageCommander.getBestImagesForKeeps(keeps.map(_.id.get).toSet, ScaleImageRequest(idealImageSize))
     futureSummariesByUriId.map { summariesByUriId =>
       keeps.map { keep =>
         val summary = summariesByUriId.get(keep.uriId).map(_.toUriSummary(idealImageSize)) getOrElse URISummary()
@@ -170,18 +159,6 @@ class KeepDecorator @Inject() (
           case Some(keepImage) =>
             summary.copy(imageUrl = keepImage.map(_.imagePath.getUrl), imageWidth = keepImage.map(_.width), imageHeight = keepImage.map(_.height))
         }
-      }
-    }
-  }
-
-  private def getKeepSummary(keep: Keep, idealImageSize: ImageSize): Future[URISummary] = {
-    val futureSummary = uriSummaryCommander.getDefaultURISummary(keep.uriId, false)
-    val keepImageOpt = keepImageCommander.getBestImageForKeep(keep.id.get, ScaleImageRequest(idealImageSize))
-    futureSummary.map { summary =>
-      keepImageOpt match {
-        case None => summary
-        case Some(keepImage) =>
-          summary.copy(imageUrl = keepImage.map(keepImageCommander.getUrl), imageWidth = keepImage.map(_.width), imageHeight = keepImage.map(_.height))
       }
     }
   }
