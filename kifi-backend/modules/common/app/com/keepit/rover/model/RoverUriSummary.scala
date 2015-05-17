@@ -51,6 +51,8 @@ object RoverArticleSummary {
     case embedlyArticle: EmbedlyArticle => embedlyArticle.content.media.map(EmbedlyMedia.toRoverMedia)
     case _ => None
   }
+
+  val empty = RoverArticleSummary(None, None, None, None, Seq.empty, None)
 }
 
 @json
@@ -95,6 +97,7 @@ case class RoverUriSummary(article: RoverArticleSummary, images: BasicImages) {
 
 object RoverUriSummary {
   val defaultProvider = EmbedlyArticle
+  val empty = RoverUriSummary(RoverArticleSummary.empty, BasicImages.empty)
 }
 
 case class RoverArticleSummaryKey(uriId: Id[NormalizedURI], kind: ArticleKind[_ <: Article]) extends Key[RoverArticleSummary] {

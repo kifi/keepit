@@ -1,5 +1,6 @@
 package com.keepit.commanders
 
+import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.controller.FakeUserActionsModule
@@ -11,16 +12,19 @@ import com.keepit.model.LibraryFactory._
 import com.keepit.model.LibraryFactoryHelper._
 import com.keepit.model.KeepFactory._
 import com.keepit.model.KeepFactoryHelper._
-import com.keepit.model.PageInfoFactory._
-import com.keepit.model.PageInfoFactoryHelper._
 import com.keepit.model._
+import com.keepit.rover.{ FakeRoverServiceClientImpl, RoverServiceClient, FakeRoverServiceClientModule }
 import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.{ FakeKeepImportsModule, FakeShoeboxServiceModule }
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.Specification
+import org.specs2.time.NoTimeConversions
 
-class PageMetaTagsCommanderTest extends Specification with ShoeboxTestInjector {
+import scala.concurrent.Await
+import scala.concurrent.duration._
+
+class PageMetaTagsCommanderTest extends Specification with ShoeboxTestInjector with NoTimeConversions {
 
   def modules = FakeKeepImportsModule() ::
     FakeExecutionContextModule() ::
@@ -34,6 +38,7 @@ class PageMetaTagsCommanderTest extends Specification with ShoeboxTestInjector {
     FakeABookServiceClientModule() ::
     FakeSocialGraphModule() ::
     FakeSliderHistoryTrackerModule() ::
+    FakeRoverServiceClientModule() ::
     Nil
 
   "UserProfileTab" should {
@@ -61,35 +66,44 @@ class PageMetaTagsCommanderTest extends Specification with ShoeboxTestInjector {
     }
   }
 
+  private def setDescriptionForKeep(keep: Keep, description: String)(implicit injector: Injector): Unit = {
+    val rover = inject[RoverServiceClient].asInstanceOf[FakeRoverServiceClientImpl]
+    rover.setDescriptionForUri(keep.uriId, description)
+  }
+
   "PageMetaTagsCommander" should {
 
     "selectKeepsDescription with long desc" in {
       withDb(modules: _*) { implicit injector =>
+
+        val longDescription = "this is a very very very very very very very very very very very very very very very very very very very very very very very long description"
+        val shortDescription = "this is a very very very very very very very short one"
+
         val commander = inject[PageMetaTagsCommander]
         val lib = db.readWrite { implicit s =>
           val lib = library().saved
-          keep().withLibrary(lib).saved.pageInfo.withDescription("this is a very very very very very very very short one").saved
-          keep().withLibrary(lib).saved.pageInfo.withDescription("this is a very very very very very very very very very very very very very very very very very very very very very very very long description").saved
+          setDescriptionForKeep(keep().withLibrary(lib).saved, longDescription)
+          setDescriptionForKeep(keep().withLibrary(lib).saved, shortDescription)
           lib
         }
-        db.readOnlyMaster { implicit s =>
-          commander.selectKeepsDescription(lib.id.get).get === "this is a very very very very very very very very very very very very very very very very very very very very very very very long description"
-        }
+        Await.result(commander.selectKeepsDescription(lib.id.get), 5 seconds).get === longDescription
       }
     }
 
     "selectKeepsDescription with short desc" in {
       withDb(modules: _*) { implicit injector =>
+
+        val longDescription = "this is a very very very very very very very long one"
+        val shortDescription = "this is a very short"
+
         val commander = inject[PageMetaTagsCommander]
         val lib = db.readWrite { implicit s =>
           val lib = library().saved
-          keep().withLibrary(lib).saved.pageInfo.withDescription("this is a very very very very very very very long one").saved
-          keep().withLibrary(lib).saved.pageInfo.withDescription("this is a very short").saved
+          setDescriptionForKeep(keep().withLibrary(lib).saved, longDescription)
+          setDescriptionForKeep(keep().withLibrary(lib).saved, shortDescription)
           lib
         }
-        db.readOnlyMaster { implicit s =>
-          commander.selectKeepsDescription(lib.id.get).get === "this is a very very very very very very very long one"
-        }
+        Await.result(commander.selectKeepsDescription(lib.id.get), 5 seconds).get === longDescription
       }
     }
 

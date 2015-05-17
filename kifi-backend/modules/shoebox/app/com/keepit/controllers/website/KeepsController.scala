@@ -32,7 +32,6 @@ class KeepsController @Inject() (
   keepDecorator: KeepDecorator,
   collectionRepo: CollectionRepo,
   uriRepo: NormalizedURIRepo,
-  pageInfoRepo: PageInfoRepo,
   collectionCommander: CollectionCommander,
   keepsCommander: KeepsCommander,
   userValueRepo: UserValueRepo,

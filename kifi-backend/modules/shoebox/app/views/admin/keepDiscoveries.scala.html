@@ -1,4 +1,4 @@
-@(keepInfos:Seq[(com.keepit.model.RichKeepDiscovery, Option[com.keepit.model.PageInfo], Option[com.keepit.model.ImageInfo])], showImage:Boolean, page:Int, keepInfosCount:Int, pageSize:Int)(implicit request: com.keepit.common.controller.UserRequest[_])
+@(keepInfos:Seq[(com.keepit.model.RichKeepDiscovery, Option[String])], showImage:Boolean, page:Int, keepInfosCount:Int, pageSize:Int)(implicit request: com.keepit.common.controller.UserRequest[_])
 
 @otherPagesRoute(page:Int) = {@com.keepit.controllers.admin.routes.AdminAttributionController.keepDiscoveriesView(page, pageSize, showImage)}
 
@@ -26,7 +26,7 @@
                 <td>origin</td>
                 @if(showImage){ <td>image</td> }
             </tr></th>
-            @for((keepDisc, pageOpt, imgOpt) <- keepInfos){
+            @for((keepDisc, keepImageOpt) <- keepInfos){
             <tr>
                 <td>@keepDisc.id</td>
                 <td>@adminHelper.dateDisplay(keepDisc.createdAt)</td>
@@ -37,7 +37,7 @@
                 <td>@keepDisc.uri.id.get</td>
                 <td><a href="@keepDisc.uri.url">@if(keepDisc.uri.title.getOrElse("").trim.nonEmpty){ @keepDisc.uri.title } else { @keepDisc.uri.url }</a></td>
                 <td>@keepDisc.origin.getOrElse("")</td>
-                @if(showImage && imgOpt.isDefined){ <td><img src="@imgOpt.get.url" width="50" height="50" alt="no image" /></td> }
+                @keepImageOpt.map { imageUrl => { <td><img src="@imageUrl" width="50" height="50" alt="no image" /></td> } }
             </tr>
             }
         </table>

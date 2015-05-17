@@ -19,7 +19,6 @@ class AdminScreenshotController @Inject() (
     val userActionsHelper: UserActionsHelper,
     db: Database,
     keepRepo: KeepRepo,
-    pageInfoRepo: PageInfoRepo,
     imageInfoRepo: ImageInfoRepo,
     normalizedURIInterner: NormalizedURIInterner,
     uriRepo: NormalizedURIRepo,
@@ -45,8 +44,7 @@ class AdminScreenshotController @Inject() (
       val tuplesF = uriIds map { uriId =>
         val (uri, pageInfoOpt) = db.readOnlyMaster { implicit ro =>
           val uri = uriRepo.get(uriId)
-          val pageInfoOpt = pageInfoRepo.getByUri(uriId)
-          (uri, pageInfoOpt)
+          (uri, None)
         }
         rover.getImagesByUris(Set(uriId)).map { imagesByUriId =>
           val imageUrlOpt = imagesByUriId.get(uriId).flatMap(_.get(ProcessedImageSize.Large.idealSize).map(_.path.getUrl))
