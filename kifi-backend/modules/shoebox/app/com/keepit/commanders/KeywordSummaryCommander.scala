@@ -3,12 +3,15 @@ package com.keepit.commanders
 import com.google.inject.Inject
 import com.keepit.common.db.Id
 import com.keepit.cortex.CortexServiceClient
-import com.keepit.model.{ KeywordsSummary, Word2VecKeywords, NormalizedURI }
+import com.keepit.cortex.models.word2vec.Word2VecKeywords
+import com.keepit.model.NormalizedURI
 import com.keepit.rover.RoverServiceClient
 import com.keepit.rover.article.EmbedlyArticle
 import com.keepit.rover.article.content.EmbedlyKeyword
 
 import scala.concurrent.{ ExecutionContext, Future }
+
+case class KeywordsSummary(article: Seq[String], embedly: Seq[EmbedlyKeyword], word2vecCosine: Seq[String], word2vecFreq: Seq[String], word2vecWordCount: Int, bestGuess: Seq[String])
 
 class KeywordSummaryCommander @Inject() (
     rover: RoverServiceClient,

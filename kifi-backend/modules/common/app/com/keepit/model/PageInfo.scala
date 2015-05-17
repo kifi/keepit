@@ -119,7 +119,3 @@ object URISummary {
     (__ \ 'wordCount).formatNullable[Int]
   )(URISummary.apply _, unlift(URISummary.unapply))
 }
-
-case class KeywordsSummary(article: Seq[String], embedly: Seq[EmbedlyKeyword], word2vecCosine: Seq[String], word2vecFreq: Seq[String], word2vecWordCount: Int, bestGuess: Seq[String])
-
-@json case class Word2VecKeywords(cosine: Seq[String], freq: Seq[String], wordCounts: Int)
