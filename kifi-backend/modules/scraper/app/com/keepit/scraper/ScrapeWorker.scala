@@ -24,7 +24,7 @@ import com.keepit.common.core._
 
 @ImplementedBy(classOf[ScrapeWorkerImpl])
 trait ScrapeWorker {
-  def safeProcess(uri: NormalizedURI, info: ScrapeInfo, pageInfoOpt: Option[PageInfo], proxyOpt: Option[HttpProxy]): Future[Option[Article]]
+  def safeProcess(uri: NormalizedURI, info: ScrapeInfo, proxyOpt: Option[HttpProxy]): Future[Option[Article]]
 }
 
 class ScrapeWorkerImpl @Inject() (
@@ -47,8 +47,8 @@ class ScrapeWorkerImpl @Inject() (
   implicit val fj = ExecutionContext.fj
   val awaitTTL = (myConfig.syncAwaitTimeout seconds)
 
-  def safeProcess(uri: NormalizedURI, info: ScrapeInfo, pageInfoOpt: Option[PageInfo], proxyOpt: Option[HttpProxy]): Future[Option[Article]] = {
-    process(uri, info, pageInfoOpt, proxyOpt) recoverWith {
+  def safeProcess(uri: NormalizedURI, info: ScrapeInfo, proxyOpt: Option[HttpProxy]): Future[Option[Article]] = {
+    process(uri, info, proxyOpt) recoverWith {
       case t: Throwable =>
         airbrake.notify(t)
         recordScrapeFailure(uri) flatMap { _ =>
@@ -101,7 +101,7 @@ class ScrapeWorkerImpl @Inject() (
     }
   }
 
-  private def handleSuccessfulScraped(latestUri: NormalizedURI, scraped: Scraped, info: ScrapeInfo, pageInfoOpt: Option[PageInfo]): Future[Option[Article]] = {
+  private def handleSuccessfulScraped(latestUri: NormalizedURI, scraped: Scraped, info: ScrapeInfo): Future[Option[Article]] = {
 
     val uriId = latestUri.id.get
 
@@ -187,7 +187,7 @@ class ScrapeWorkerImpl @Inject() (
     embedlyCommander.fetchEmbedlyInfo(uri.id.get, uri.url)
   }
 
-  private def process(uri: NormalizedURI, info: ScrapeInfo, pageInfoOpt: Option[PageInfo], proxyOpt: Option[HttpProxy]): Future[Option[Article]] = {
+  private def process(uri: NormalizedURI, info: ScrapeInfo, proxyOpt: Option[HttpProxy]): Future[Option[Article]] = {
     val resF = safeFetch(uri, info, proxyOpt) flatMap { scraperResult =>
       shoeboxCommander.getNormalizedUri(uri) flatMap { uriOpt =>
         val articleOpt = uriOpt match {
@@ -198,7 +198,7 @@ class ScrapeWorkerImpl @Inject() (
               Future.successful(None)
             else {
               scraperResult match {
-                case scraped: Scraped => handleSuccessfulScraped(latestUri, scraped, info, pageInfoOpt)
+                case scraped: Scraped => handleSuccessfulScraped(latestUri, scraped, info)
                 case notScrapable: NotScrapable => handleNotScrapable(latestUri, notScrapable, info)
                 case NotModified => handleNotModified(latestUri.url, info)
                 case error: Error => handleScrapeError(latestUri, error, info)

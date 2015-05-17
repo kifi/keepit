@@ -45,7 +45,7 @@ class WordCountCommanderTest extends Specification with CommonTestInjector {
       val content = if (url == "http://twoWords.com") "two words" else "na"
       Future.successful(Some(BasicArticle(title = "not important", content = content, signature = Signature("fixedSignature"), destinationUrl = url)))
     }
-    def asyncScrape(uri: NormalizedURI, info: ScrapeInfo, pageInfo: Option[PageInfo], proxyOpt: Option[HttpProxy]): Unit = {}
+    def asyncScrape(uri: NormalizedURI, info: ScrapeInfo, proxyOpt: Option[HttpProxy]): Unit = {}
   }
 
   "WordCountCommander" should {

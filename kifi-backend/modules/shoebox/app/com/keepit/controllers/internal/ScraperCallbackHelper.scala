@@ -57,7 +57,7 @@ class ScraperCallbackHelper @Inject() (
               val savedInfo = scrapeInfoRepo.save(info.withWorkerId(zkId).withState(ScrapeInfoStates.ASSIGNED))
               log.debug(s"[assignTasks($zkId,$max)] #$count assigned (${nuri.id.get},${savedInfo.id.get},${nuri.url}) to worker $zkId")
               count += 1
-              builder += ScrapeRequest(nuri, savedInfo, None, proxy)
+              builder += ScrapeRequest(nuri, savedInfo, proxy)
             }
           } else {
             val saved = scrapeInfoRepo.save(info.withStateAndNextScrape(ScrapeInfoStates.INACTIVE))

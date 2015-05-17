@@ -36,7 +36,7 @@ class ScrapeAgent @Inject() (
       log.info(s"[ScrapeAgent($name).idle] <ScrapeJob> got assigned $job")
       context.become(busy(job))
       context.setReceiveTimeout(60 seconds)
-      worker.safeProcess(job.s.uri, job.s.info, job.s.pageInfo, job.s.proxyOpt).map { res =>
+      worker.safeProcess(job.s.uri, job.s.info, job.s.proxyOpt).map { res =>
         val done = JobDone(self, job, res)
         parent ! done
         self ! done

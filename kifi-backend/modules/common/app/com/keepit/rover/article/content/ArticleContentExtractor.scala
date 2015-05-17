@@ -1,6 +1,5 @@
 package com.keepit.rover.article.content
 
-import com.keepit.model.PageAuthor
 import com.keepit.rover.article.{ DefaultArticle, EmbedlyArticle, ArticleKind, Article }
 import com.keepit.rover.document.tika.KeywordValidator
 import com.keepit.rover.document.utils.URITokenizer

@@ -93,10 +93,6 @@ trait FortyTwoGenericTypeMappers { self: { val db: DataBaseComponent } =>
   implicit val imageSourceMapper = MappedColumnType.base[ImageSource, String](_.name, ImageSource.apply)
   implicit val imageStoreKeyMapper = MappedColumnType.base[ImagePath, String](_.path, ImagePath.apply)
   implicit val processImageOperationMapper = MappedColumnType.base[ProcessImageOperation, String](_.kind, ProcessImageOperation.apply)
-  implicit val seqPageAuthorMapper = MappedColumnType.base[Seq[PageAuthor], String](
-    authors => Json.stringify(Json.toJson(authors)),
-    str => if (str.isEmpty) Seq.empty[PageAuthor] else Json.parse(str).as[Seq[PageAuthor]]
-  )
 
   implicit def experimentTypeProbabilityDensityMapper[T](implicit outcomeFormat: Format[T]) = MappedColumnType.base[ProbabilityDensity[T], String](
     obj => Json.stringify(ProbabilityDensity.format[T].writes(obj)),

@@ -1,6 +1,5 @@
 package com.keepit.rover.article.content
 
-import com.keepit.model.PageAuthor
 import com.keepit.rover.article.Article
 import com.keepit.rover.document.utils.{ Signature, SignatureBuilder }
 import com.keepit.rover.fetcher.HttpRedirect
@@ -54,3 +53,6 @@ case class NormalizationInfo(
   openGraphUrl: Option[String],
   alternateUrls: Set[String],
   shortUrl: Option[String])
+
+@json
+case class PageAuthor(name: String, url: Option[String] = None)

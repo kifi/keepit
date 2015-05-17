@@ -6,7 +6,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.store.{ S3ImageConfig, ImageSize, ImagePath }
 import com.keepit.model._
-import com.keepit.rover.article.content.EmbedlyMedia
+import com.keepit.rover.article.content.{ PageAuthor, EmbedlyMedia }
 import com.keepit.rover.article.{ EmbedlyArticle, Article, ArticleKind }
 import com.kifi.macros.json
 import org.joda.time.DateTime

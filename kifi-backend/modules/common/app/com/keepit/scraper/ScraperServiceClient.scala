@@ -16,6 +16,7 @@ import com.keepit.common.service.{ RequestConsolidator, ServiceClient, ServiceTy
 import com.keepit.common.store.{ ImagePath, ImageSize }
 import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.model._
+import com.keepit.rover.article.content.PageAuthor
 import com.keepit.rover.document.utils.Signature
 import com.keepit.scraper.extractor.ExtractorProviderType
 import com.keepit.search.Article
@@ -36,15 +37,14 @@ object ScrapeTuple {
   )(ScrapeTuple.apply _, unlift(ScrapeTuple.unapply))
 }
 
-case class ScrapeRequest(uri: NormalizedURI, scrapeInfo: ScrapeInfo, pageInfoOpt: Option[PageInfo], proxyOpt: Option[HttpProxy]) {
-  override def toString = s"(${uri.toShortString},${scrapeInfo.toShortString},$pageInfoOpt,$proxyOpt)"
+case class ScrapeRequest(uri: NormalizedURI, scrapeInfo: ScrapeInfo, proxyOpt: Option[HttpProxy]) {
+  override def toString = s"(${uri.toShortString},${scrapeInfo.toShortString}, $proxyOpt)"
 }
 
 object ScrapeRequest {
   implicit val format = (
     (__ \ 'normalizedUri).format[NormalizedURI] and
     (__ \ 'scrapeInfo).format[ScrapeInfo] and
-    (__ \ 'pageInfo).formatNullable[PageInfo] and
     (__ \ 'proxy).formatNullable[HttpProxy]
   )(ScrapeRequest.apply _, unlift(ScrapeRequest.unapply))
 }
