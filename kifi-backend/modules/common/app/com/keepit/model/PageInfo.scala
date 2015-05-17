@@ -12,14 +12,6 @@ import com.keepit.common.time._
 import com.keepit.common.store.ImageSize
 import scala.concurrent.duration.Duration
 
-trait ImageGenericInfo {
-  def url: String
-  def caption: Option[String]
-  def width: Option[Int]
-  def height: Option[Int]
-  def size: Option[Int]
-}
-
 case class ImageType(value: String)
 object ImageType {
   val IMAGE = ImageType("image")
@@ -36,28 +28,6 @@ object ImageType {
       JsString(kind.value)
     }
   }
-}
-
-case class ImageProvider(value: String)
-object ImageProvider {
-  val EMBEDLY = ImageProvider("embedly")
-  val PAGEPEEKER = ImageProvider("pagepeeker")
-  val UNKNOWN = ImageProvider("unknown")
-  def getProviderIndex(providerOpt: Option[ImageProvider]) = providerOpt map { provider =>
-    ImageProvider.providerIndex.get(provider).getOrElse(ImageProvider.providerIndex(ImageProvider.UNKNOWN))
-  } getOrElse (0) // Embedly as default
-  implicit val imageProviderFormat = new Format[ImageProvider] {
-    def reads(json: JsValue): JsResult[ImageProvider] = {
-      json.asOpt[String] match {
-        case Some(str) => JsSuccess(ImageProvider(str))
-        case None => JsError()
-      }
-    }
-    def writes(kind: ImageProvider): JsValue = {
-      JsString(kind.value)
-    }
-  }
-  val providerIndex = Map(EMBEDLY -> 0, PAGEPEEKER -> 1, UNKNOWN -> 100)
 }
 
 case class ImageFormat(value: String)
@@ -77,28 +47,6 @@ object ImageFormat {
       JsString(kind.value)
     }
   }
-}
-
-case class URISummaryRequest(
-    uriId: Id[NormalizedURI],
-    imageType: ImageType,
-    minSize: ImageSize = ImageSize(0, 0),
-    withDescription: Boolean,
-    waiting: Boolean,
-    silent: Boolean) {
-
-  def isCacheable: Boolean = (imageType == ImageType.ANY && minSize == ImageSize(0, 0) && withDescription == true)
-}
-
-object URISummaryRequest {
-  implicit val format = (
-    (__ \ 'uriId).format[Id[NormalizedURI]] and
-    (__ \ 'imageType).format[ImageType] and
-    (__ \ 'width).format[ImageSize] and
-    (__ \ 'withDescription).format[Boolean] and
-    (__ \ 'waiting).format[Boolean] and
-    (__ \ 'silent).format[Boolean]
-  )(URISummaryRequest.apply _, unlift(URISummaryRequest.unapply))
 }
 
 case class URISummary(

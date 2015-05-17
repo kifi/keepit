@@ -1,9 +1,8 @@
 package com.keepit.eliza.model
 
-import com.keepit.common.db.{ SequenceNumber, Id, ExternalId }
-import play.api.libs.json.{ Json, JsValue, JsObject, JsSuccess, JsArray, JsNumber }
-import com.keepit.model.{ ImageFormat, ImageProvider, User, NormalizedURI }
-import org.joda.time.DateTime
+import com.keepit.common.db.{ Id }
+import play.api.libs.json.{ Json, JsSuccess, JsArray, JsNumber }
+import com.keepit.model.{ NormalizedURI }
 import com.keepit.common.db.slick.DataBaseComponent
 
 case class InvalidDatabaseEncodingException(msg: String) extends java.lang.Throwable
