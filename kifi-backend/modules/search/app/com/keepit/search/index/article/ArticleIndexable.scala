@@ -47,7 +47,7 @@ case class ArticleIndexable(uri: IndexableUri, articles: Set[Article], shard: Sh
     val articleContent = ArticleContentExtractor(articles)
 
     uri.restriction.map { reason =>
-      doc.add(buildKeywordField(ArticleVisibility.deprecatedRestrictedTerm.field(), ArticleVisibility.restrictedTerm.text()))
+      doc.add(buildKeywordField(ArticleVisibility.restrictedTerm.field(), ArticleVisibility.restrictedTerm.text()))
     }
     val titleLang = articleContent.titleLang.getOrElse(DefaultAnalyzer.defaultLang)
     val titleAnalyzer = DefaultAnalyzer.getAnalyzer(titleLang)
