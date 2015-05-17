@@ -12,8 +12,6 @@ import com.keepit.common.time._
 import com.keepit.common.store.ImageSize
 import scala.concurrent.duration.Duration
 
-object ImageInfoStates extends States[ImageInfo]
-
 trait ImageGenericInfo {
   def url: String
   def caption: Option[String]

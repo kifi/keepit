@@ -6,11 +6,9 @@ import com.keepit.common.amazon.AmazonInstanceInfo
 import com.keepit.common.db.Id
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.service.ServiceType
-import com.keepit.common.store.ImageSize
 import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.model._
 import com.keepit.rover.document.utils.Signature
-import com.keepit.scraper.embedly.EmbedlyInfo
 import com.keepit.scraper.extractor.ExtractorProviderType
 
 import scala.concurrent.Future
@@ -34,8 +32,6 @@ class FakeScraperServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, sched
   def detectPorn(query: String): Future[Map[String, Float]] = Future.successful(Map.empty)
 
   def whitelist(words: String): Future[String] = Future.successful("")
-
-  def adminOnlyGetEmbedlyImageInfos(uriId: Id[NormalizedURI], url: String): Future[Seq[ImageInfo]] = Future.successful(Seq.empty)
 
   def getURIWordCount(uriId: Id[NormalizedURI], url: String): Future[Int] = Future.successful(0)
 

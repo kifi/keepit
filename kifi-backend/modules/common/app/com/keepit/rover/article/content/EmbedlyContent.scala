@@ -58,18 +58,11 @@ object EmbedlyMedia {
 }
 
 case class EmbedlyImage(
-    url: String,
-    caption: Option[String] = None,
-    width: Option[Int] = None,
-    height: Option[Int] = None,
-    size: Option[Int] = None) extends ImageGenericInfo {
-  def toImageInfoWithPriority(nuriId: Id[NormalizedURI], priority: Option[Int], path: ImagePath, name: String): ImageInfo = {
-    ImageInfo(uriId = nuriId, url = Some(this.url), caption = this.caption, width = this.width, height = this.height,
-      size = this.size, provider = Some(ImageProvider.EMBEDLY), priority = priority, path = path, name = name)
-  }
-
-  def toImageInfo(nuriId: Id[NormalizedURI], path: ImagePath, name: String): ImageInfo = toImageInfoWithPriority(nuriId, None, path = path, name = name)
-}
+  url: String,
+  caption: Option[String] = None,
+  width: Option[Int] = None,
+  height: Option[Int] = None,
+  size: Option[Int] = None)
 
 object EmbedlyImage {
   implicit val format = (
