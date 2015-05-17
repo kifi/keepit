@@ -32,34 +32,10 @@ class SendgridCommander @Inject() (
   import com.keepit.commanders.SendgridEventTypes._
 
   val earliestAcceptableEventTime = new DateTime(2012, 7, 15, 0, 0)
-  val alertEvents: Seq[SendgridEventType] = Seq(SPAM_REPORT)
   val unsubscribeEvents: Seq[SendgridEventType] = Seq(UNSUBSCRIBE, BOUNCE, SPAM_REPORT)
 
   def processNewEvents(events: Seq[SendgridEvent]): Unit = {
     events foreach report
-  }
-
-  private def emailAlert(event: SendgridEvent, emailOpt: Option[ElectronicMail]): Unit = {
-    log.info(s"sendgrid emailAlert eventType(${event.event}}) mailId(${event.mailId}}) ")
-    val htmlBody = emailOpt match {
-      case Some(email) => s"""|Got event:<br/> $event<br/><br/>
-                             |Email data:<br/>
-                             |Category: ${email.category}<br/>
-                             |Subject: ${email.subject}<br/>
-                             |From: ${email.from}<br/>
-                             |To: ${email.to}<br/>
-                             |CC: ${email.cc}<br/>
-                             |Created at: ${email.createdAt}<br/>
-                             |Updated at: ${email.updatedAt}<br/>""".stripMargin
-      case None => s"Got event:<br/> $event"
-    }
-    systemAdminMailSender.sendMail(
-      ElectronicMail(
-        from = SystemEmailAddress.ENG,
-        to = List(SystemEmailAddress.SUPPORT, SystemEmailAddress.SENDGRID),
-        subject = s"Sendgrid event [${event.event}]",
-        htmlBody = htmlBody,
-        category = NotificationCategory.System.ADMIN))
   }
 
   private def sendHeimdalEvent(event: SendgridEvent, emailOpt: Option[ElectronicMail]): Unit = {
@@ -160,7 +136,6 @@ class SendgridCommander @Inject() (
       mail <- db.readOnlyReplica { implicit s => electronicMailRepo.getOpt(mailId) }(captureLocation)
     } yield mail
 
-    eventName.filter(alertEvents contains _).foreach(_ => emailAlert(event, emailOpt))
     eventName.filter(unsubscribeEvents contains _).foreach(_ => handleUnsubscribeEvent(event, emailOpt))
 
     eventName.filter(CLICK == _).foreach { _ =>
