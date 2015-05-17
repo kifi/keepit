@@ -71,6 +71,10 @@ case class BasicImages(images: Set[BasicImage]) {
   def get(idealSize: ImageSize, strictAspectRatio: Boolean = false): Option[BasicImage] = {
     ProcessedImageSize.pickByIdealImageSize(idealSize, images, strictAspectRatio)(_.size)
   }
+  def getLargest: Option[BasicImage] = {
+    if (images.isEmpty) None
+    else Some(images.maxBy(image => image.size.width * image.size.height))
+  }
 }
 
 object BasicImages {

@@ -31,7 +31,6 @@ class ShoeboxDataPipeController @Inject() (
     emailAddressRepo: UserEmailAddressRepo,
     libraryRepo: LibraryRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
-    imageInfoRepo: ImageInfoRepo,
     executor: DataPipelineExecutor) extends ShoeboxServiceController with Logging {
 
   implicit val context = executor.context
@@ -240,12 +239,4 @@ class ShoeboxDataPipeController @Inject() (
       Ok(Json.toJson(ids))
     }
   }
-
-  def getImageInfosChanged(seqNum: SequenceNumber[ImageInfo], fetchSize: Int) = Action.async { request =>
-    SafeFuture {
-      val infos = db.readOnlyReplica { implicit s => imageInfoRepo.getBySequenceNumber(seqNum, fetchSize) }
-      Ok(Json.toJson(infos))
-    }
-  }
-
 }

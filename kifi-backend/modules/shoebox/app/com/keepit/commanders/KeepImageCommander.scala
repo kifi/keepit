@@ -37,7 +37,6 @@ trait KeepImageCommander {
   def getBestImageForKeep(keepId: Id[Keep], imageRequest: ProcessImageRequest): Option[Option[KeepImage]]
   def getBestImagesForKeeps(keepIds: Set[Id[Keep]], imageRequest: ProcessImageRequest): Map[Id[Keep], Option[KeepImage]]
   def getBestImagesForKeepsPatiently(keepIds: Set[Id[Keep]], imageRequest: ProcessImageRequest): Future[Map[Id[Keep], Option[KeepImage]]]
-  def getExistingImageUrlForKeepUri(nUriId: Id[NormalizedURI])(implicit session: RSession): Option[String]
   def getBasicImagesForKeeps(keepIds: Set[Id[Keep]]): Map[Id[Keep], BasicImages]
 
   def autoSetKeepImage(keepId: Id[Keep], localOnly: Boolean = true, overwriteExistingChoice: Boolean = false): Future[ImageProcessDone]
@@ -54,7 +53,6 @@ class KeepImageCommanderImpl @Inject() (
     db: Database,
     keepRepo: KeepRepo,
     rover: RoverServiceClient,
-    imageInfoRepo: ImageInfoRepo,
     implicit val s3ImageConfig: S3ImageConfig,
     normalizedUriRepo: NormalizedURIRepo,
     keepImageRequestRepo: KeepImageRequestRepo,
@@ -124,12 +122,6 @@ class KeepImageCommanderImpl @Inject() (
     }
   }
 
-  def getExistingImageUrlForKeepUri(nUriId: Id[NormalizedURI])(implicit session: RSession): Option[String] = {
-    imageInfoRepo.getLargestByUriWithPriority(nUriId).map { imageInfo =>
-      s3ImageConfig.cdnBase + "/" + imageInfo.path
-    }
-  }
-
   private val autoSetConsolidator = new RequestConsolidator[Id[Keep], ImageProcessDone](1.minute)
   def autoSetKeepImage(keepId: Id[Keep], localOnly: Boolean, overwriteExistingChoice: Boolean): Future[ImageProcessDone] = {
     val keep = db.readOnlyMaster { implicit session =>
@@ -137,21 +129,10 @@ class KeepImageCommanderImpl @Inject() (
     }
     log.info(s"[kic] Autosetting for ${keep.id.get}: ${keep.url}")
     autoSetConsolidator(keepId) { keepId =>
-      val localLookup = db.readOnlyMaster { implicit session =>
-        getExistingImageUrlForKeepUri(keep.uriId)
-      }
-      val remoteImageF = if (localOnly) {
-        Future.successful(localLookup)
-      } else {
-        localLookup.map(v => Future.successful(Some(v))).getOrElse {
-          rover.getImagesByUris(Set(keep.uriId)).imap(_.get(keep.uriId)).map {
-            case Some(BasicImages(images)) if images.nonEmpty => {
-              val largestImage = images.maxBy(image => image.size.height * image.size.height)
-              Some(largestImage.path.getUrl)
-            }
-            case _ => None
-          }
-        }
+      // todo(Léo): consider using rover.getOrElseFetchUriSummary if localOnly = false?
+      val remoteImageF = rover.getImagesByUris(Set(keep.uriId)).imap(_.get(keep.uriId)).map {
+        case Some(images) => images.getLargest.map(_.path.getUrl)
+        case _ => None
       }
 
       remoteImageF.flatMap { remoteImageOpt =>

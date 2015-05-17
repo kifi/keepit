@@ -105,10 +105,6 @@ class ScrapeWorkerImpl @Inject() (
 
     val uriId = latestUri.id.get
 
-    @inline def postProcess(uriId: Id[NormalizedURI], article: Article, signature: Signature): Future[Option[String]] = {
-      shoeboxScraperClient.getUriImage(uriId)
-    }
-
     val Scraped(article, signature, _) = scraped
     // article.title
     // article.destinationUrl
@@ -122,9 +118,8 @@ class ScrapeWorkerImpl @Inject() (
       for {
         _ <- shoeboxCommander.updateNormalizedURIState(uriId, NormalizedURIStates.SCRAPED)
         _ <- shoeboxCommander.saveScrapeInfo(info.withDestinationUrl(article.destinationUrl).withDocumentChanged(signature.toBase64))
-        uriImage <- postProcess(uriId, article, signature)
       } yield {
-        log.info(s"[handleSuccessfulScraped] scrapedURI=${latestUri.toShortString} uriImage=${uriImage}")
+        log.info(s"[handleSuccessfulScraped] scrapedURI=${latestUri.toShortString}")
         Some(article)
       }
     }
