@@ -17,7 +17,8 @@ import com.keepit.model.ImageProcessState.{ ImageLoadedAndHashed, ReadyToPersist
 import com.keepit.model.ProcessImageOperation.Original
 import com.keepit.model._
 import com.keepit.rover.RoverServiceClient
-import com.keepit.rover.model.{ BasicImage, BasicImages }
+import com.keepit.rover.article.EmbedlyArticle
+import com.keepit.rover.model.{ RoverUriSummary, BasicImage, BasicImages }
 import play.api.libs.Files.TemporaryFile
 import com.keepit.common.core._
 
@@ -139,7 +140,11 @@ class KeepImageCommanderImpl @Inject() (
         remoteImageOpt.map { imageUrl =>
           log.info(s"[kic] Using $imageUrl")
           val realUrl = if (imageUrl.startsWith("//")) "http:" + imageUrl else imageUrl
-          fetchAndSet(realUrl, keepId, ImageSource.EmbedlyOrPagePeeker, overwriteExistingImage = overwriteExistingChoice)(None)
+          val imageSource = {
+            if (RoverUriSummary.defaultProvider == EmbedlyArticle) ImageSource.Embedly
+            else ImageSource.RoverArticle(RoverUriSummary.defaultProvider)
+          }
+          fetchAndSet(realUrl, keepId, imageSource, overwriteExistingImage = overwriteExistingChoice)(None)
         }.getOrElse {
           Future.successful(ImageProcessState.UpstreamProviderNoImage)
         }

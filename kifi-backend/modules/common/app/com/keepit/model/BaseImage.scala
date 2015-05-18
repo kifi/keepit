@@ -47,6 +47,7 @@ object ImageSource {
   sealed abstract class UserInitiated(name: String) extends ImageSource(name)
   sealed abstract class SystemInitiated(name: String) extends ImageSource(name)
 
+  case object Embedly extends SystemInitiated("embedly")
   case object UserPicked extends UserInitiated("user_picked")
   case object UserUpload extends UserInitiated("user_upload")
   case object TwitterSync extends UserInitiated("twitter_sync")
