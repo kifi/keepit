@@ -93,7 +93,7 @@ trait HeimdalServiceClient extends ServiceClient with KeepDiscoveryRepoAccess wi
 
   def processKeepAttribution(userId: Id[User], newKeeps: Seq[Keep]): Future[Unit]
 
-  def getOnwerLibraryViewStats(ownerId: Id[User]): Future[(Int, Map[Id[Library], Int])]
+  def getOwnerLibraryViewStats(ownerId: Id[User]): Future[(Int, Map[Id[Library], Int])]
 }
 
 private[heimdal] object HeimdalBatchingConfiguration extends BatchingActorConfiguration[HeimdalClientActor] {
@@ -355,7 +355,7 @@ class HeimdalServiceClientImpl @Inject() (
     }
   }
 
-  def getOnwerLibraryViewStats(ownerId: Id[User]): Future[(Int, Map[Id[Library], Int])] = {
+  def getOwnerLibraryViewStats(ownerId: Id[User]): Future[(Int, Map[Id[Library], Int])] = {
     call(Heimdal.internal.getOwnerLibraryViewStats(ownerId)).map { res =>
       ((res.json \ "cnt").as[Int], (res.json \ "map").as[Map[Id[Library], Int]])
     }
