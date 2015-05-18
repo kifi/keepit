@@ -28,9 +28,7 @@ maxWidthForNarrowKeep = keepCardMaxWidth + 2 * (keepSidePad + keepBorderWidth + 
   background-color: white
 
   @media (max-width: maxWidthForNarrowKeep)
-    max-width: keepCardMaxWidth
-    border: 0
-    box-shadow: 0 0 0 .5px defaultBorderColor  // half-pixel border workaround crbug.com/236371
+    max-width: 2 * keepBorderWidth + keepCardMaxWidth
 
 .kf-keep-selection-tools
   border-radius: 0 keepBorderRadius keepBorderRadius keepBorderRadius
