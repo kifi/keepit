@@ -1,5 +1,7 @@
 package com.keepit.common.db.slick
 
+import com.keepit.common.healthcheck.AirbrakeNotifier
+
 import scala.slick.jdbc.JdbcBackend.{ Database => SlickDatabase }
 import scala.slick.jdbc.JdbcBackend.Session
 import scala.slick.jdbc.ResultSetConcurrency
@@ -57,7 +59,8 @@ class Database @Inject() (
     val db: DataBaseComponent,
     val dbExecutionContext: DbExecutionContext,
     val sessionProvider: SlickSessionProvider,
-    val playMode: Mode) extends Logging {
+    val playMode: Mode,
+    airbrake: AirbrakeNotifier) extends Logging {
 
   import DBSession._
   import Database._
@@ -180,16 +183,23 @@ class Database @Inject() (
             Try(rw.withTransaction { f(rw, item) }) match {
               case s: Success[T] =>
                 successCnt += 1; s
-              case f: Failure[T] => failure = f; f
+              case f: Failure[T] =>
+                failure = f
+                airbrake.notify(s"Batch Chunk Failed (${failure.exception.getClass.getSimpleName}) readWrite transaction, processed item $item out of ${batch.size} items", failure.exception)
+                f
             }
           } else {
             Database.executionSkipped
           }
-          (item -> oneResult)
+          item -> oneResult
         }
       } finally { rw.close() }
     }
-    if (failure != null) log.warn(s"Failed (${failure.exception.getClass.getSimpleName}) readWrite transaction, processed $successCnt out of ${batch.size}")
+    if (failure != null) {
+      //this is very dangerous since we swallow the exception (just report it) and don't let the caller know something bad happened as an exception
+      //the signature of the method should be revisited to enforce check of partial failure of the transaction
+      airbrake.notify(s"Batch partial fail (${failure.exception.getClass.getSimpleName}) readWrite transaction, processed $successCnt out of ${batch.size}", failure.exception)
+    }
     results
   }
 
