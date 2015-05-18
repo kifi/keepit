@@ -1,0 +1,80 @@
+.kf-add-keep-modal
+  .dialog-body-wrap
+    margin-bottom: 0
+
+  .dialog-body
+    padding: 0
+
+.kf-add-keep-body
+  width: 500px
+  text-align: left
+  padding: 5px
+
+.kf-add-keep-input
+  width: 440px
+  margin: 10px 15px
+  border: 2px solid #e7eaee
+  border-radius: 6px
+  font-size: 12px
+  padding: 12px
+  box-sizing: border-box
+
+.kf-add-keep-hint
+.kf-add-keep-error
+  color: textLightGrey
+  font-size: 13px
+
+.kf-add-keep-hint
+  color: textLightGrey
+
+.kf-add-keep-error
+  color: redColor
+  padding-left: 18px
+
+.kf-add-keep-private-container
+  display: inline-block
+  margin-left: 15px
+  border: 1px dotted transparent
+  padding: 2px
+
+.kf-add-keep-private-container:focus
+  border-color: #ddd
+
+.kf-add-keep-private-label
+  margin-left: 10px
+
+.kf-add-keep-private-checkbox
+  user-select: none
+
+.kf-ak-button.kf-action-button
+  padding: 10px 0
+  height: 15px
+
+  .kf-ak-button-text::after
+    content: 'Keep it'
+
+  &:not(.in-animation)
+    &.kept-public
+    &.kept-public:hover
+      background: #73c885
+      border-color: #5aaf6c
+      color: #fff
+
+      .kf-ak-button-text::after
+        content: 'Kept'
+
+    &.kept-private
+    &.kept-private:hover
+      background: #f06463
+      border-color: #d74b4a
+      color: #fff
+
+      .kf-ak-button-text::after
+        content: 'Kept Private'
+
+  &.in-animation
+    font-size: 2px
+    transition: font-size 0.3s
+
+    .kf-ak-button-text::after
+      content: ''

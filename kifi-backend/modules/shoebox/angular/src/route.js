@@ -26,40 +26,7 @@ angular.module('kifi')
     $stateProvider
       .state('home', {  // Home page.
         url: '/',
-        template: '<div ui-view></div>',
-        controller: ['$rootScope', '$location', '$state', 'profileService', function ($rootScope, $location, $state, profileService) {
-          var experiments = profileService.me && profileService.me.experiments || [];
-          var isAdmin = experiments.indexOf('admin') >= 0;
-          function pickCorrectState() {
-            var locationPieces = $location.host().split('.');
-            if (locationPieces.length>2 && locationPieces[0]!=='www' && isAdmin) { //ZZZ admin
-              $state.go('home.organization');
-            } else {
-              $state.go('home.public');
-            }
-          }
-          pickCorrectState();
-          $rootScope.$on('$stateChangeSuccess', function (event, state) {
-            if (state.name==='home') {
-              pickCorrectState();
-            }
-          });
-        }]
-      })
-      .state('home.public', {
-        url:  '',
         templateUrl: 'recos/recosView.tpl.html'
-      })
-      .state('home.organization', {
-        url:  '',
-        controller: 'OrganizationCtrl',
-        templateUrl: 'organization/organization.tpl.html',
-        resolve: {
-          userProfileActionService: 'userProfileActionService',
-          profile: ['userProfileActionService', '$stateParams', '$location', function (userProfileActionService, $stateParams, $location) {
-            return userProfileActionService.getProfile($location.host().split('.')[0]);
-          }]
-        }
       })
       .state('invite', {
         url: '/invite',

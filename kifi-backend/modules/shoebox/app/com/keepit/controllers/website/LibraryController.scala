@@ -107,7 +107,8 @@ class LibraryController @Inject() (
   def getLibraryById(pubId: PublicId[Library], showPublishedLibraries: Boolean, imageSize: Option[String] = None) = (MaybeUserAction andThen LibraryViewAction(pubId)).async { request =>
     val libraryId = Library.decodePublicId(pubId).get
     val idealSize = imageSize.flatMap { s => Try(ImageSize(s)).toOption }.getOrElse(LibraryController.defaultLibraryImageSize)
-    libraryCommander.getLibraryById(request.userIdOpt, showPublishedLibraries, libraryId, idealSize) map { libInfo =>
+    implicit val context = heimdalContextBuilder.withRequestInfo(request).build
+    libraryCommander.getLibraryById(request.userIdOpt, showPublishedLibraries, libraryId, idealSize, request.userIdOpt) map { libInfo =>
       val memOpt = libraryCommander.getMaybeMembership(request.userIdOpt, libraryId)
       val accessStr = memOpt.map(_.access.value).getOrElse("none")
       val listed = memOpt.map(_.listed)
@@ -126,15 +127,13 @@ class LibraryController @Inject() (
   }
 
   def getLibraryByPath(userStr: String, slugStr: String, showPublishedLibraries: Boolean, imageSize: Option[String] = None) = MaybeUserAction.async { request =>
-    libraryCommander.getLibraryWithUsernameAndSlug(userStr, LibrarySlug(slugStr)) match {
+    implicit val context = heimdalContextBuilder.withRequestInfo(request).build
+    libraryCommander.getLibraryWithUsernameAndSlug(userStr, LibrarySlug(slugStr), request.userIdOpt) match {
       case Right(library) =>
         LibraryViewAction(Library.publicId(library.id.get)).invokeBlock(request, { _: MaybeUserRequest[_] =>
           val idealSize = imageSize.flatMap { s => Try(ImageSize(s)).toOption }.getOrElse(LibraryController.defaultLibraryImageSize)
           request.userIdOpt foreach { userId => libraryCommander.updateLastView(userId, library.id.get) }
-          val showKeepCreateTime = request.userIdOpt.exists(_ == library.ownerId) || Some(request).collect {
-            case r: UserRequest[_] => r.experiments.contains(ExperimentType.KEEP_NOTES)
-          }.getOrElse(false)
-          libraryCommander.createFullLibraryInfo(request.userIdOpt, showPublishedLibraries, library, idealSize, showKeepCreateTime).map { libInfo =>
+          libraryCommander.createFullLibraryInfo(request.userIdOpt, showPublishedLibraries, library, idealSize, showKeepCreateTime = true).map { libInfo =>
             val memOpt = libraryCommander.getMaybeMembership(request.userIdOpt, library.id.get)
             val accessStr = memOpt.map(_.access.value).getOrElse("none")
             val listed = memOpt.map(_.listed)
@@ -454,7 +453,8 @@ class LibraryController @Inject() (
   }
 
   def authToLibrary(userStr: String, slug: String, authToken: Option[String]) = MaybeUserAction(parse.tolerantJson) { implicit request =>
-    libraryCommander.getLibraryWithUsernameAndSlug(userStr, LibrarySlug(slug)) match {
+    implicit val context = heimdalContextBuilder.withRequestInfo(request).build
+    libraryCommander.getLibraryWithUsernameAndSlug(userStr, LibrarySlug(slug), request.userIdOpt) match {
       case Right(library) if libraryCommander.canViewLibrary(request.userIdOpt, library) =>
         NoContent // Don't need to check anything, they already have access
       case Right(library) =>

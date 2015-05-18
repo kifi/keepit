@@ -6,6 +6,8 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.cache.TransactionalCaching
 import com.keepit.common.logging.{ LogPrefix, Logging }
+import com.keepit.controllers.UserEventHandler
+import com.keepit.curator.RecommendationUserAction
 import com.keepit.heimdal._
 import com.keepit.model._
 import com.keepit.model.helprank.{ KeepDiscoveryRepo }
@@ -29,9 +31,22 @@ class HelpRankEventTrackingCommander @Inject() (
     airbrake: AirbrakeNotifier,
     kifiHitCache: SearchHitReportCache,
     shoebox: ShoeboxServiceClient,
-    keepDiscoveryRepo: KeepDiscoveryRepo) extends Logging {
+    keepDiscoveryRepo: KeepDiscoveryRepo) extends UserEventHandler with Logging {
 
   import HelpRankEventTrackingCommander._
+
+  def handleUserEvent(userEvent: UserEvent): Unit = {
+    userEvent.eventType match {
+      case UserEventTypes.RECOMMENDATION_USER_ACTION =>
+        for {
+          actionType <- userEvent.context.get[String]("action")
+          if (actionType == RecommendationUserAction.Clicked.value)
+        } yield {
+          userClickedFeedItem(userEvent)
+        }
+      case _ =>
+    }
+  }
 
   def userClickedFeedItem(userEvent: UserEvent): Future[Unit] = {
     val valuesOpt = for {

@@ -23,14 +23,6 @@ angular.module('kifi')
       profileService.savePrefs({site_notify_libraries_in_search: false});
     };
 
-    var experiments = profileService.me && profileService.me.experiments || [];
-    var isAdmin = experiments.indexOf('admin') >= 0;
-    var locationPieces = $location.host().split('.');
-    if (locationPieces.length>2 && locationPieces[0]!=='www' && isAdmin) {
-      $scope.orgName = locationPieces[0];
-    }
-
-
     //
     // Watchers & Listeners
     //
@@ -160,7 +152,7 @@ angular.module('kifi')
     $scope.addKeeps = function () {
       var library = $scope.library;
       modalService.open({
-        template: 'keeps/addKeepsModal.tpl.html',
+        template: 'keeps/addKeepModal.tpl.html',
         modalData: {selectedLibId: library && libraryService.isMyLibrary(library) && library.id}
       });
     };

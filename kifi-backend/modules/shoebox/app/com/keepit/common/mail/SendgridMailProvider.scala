@@ -34,8 +34,8 @@ class SendgridMailProvider @Inject() (
 
   private class SMTPAuthenticator extends Authenticator {
     override def getPasswordAuthentication: PasswordAuthentication = {
-      val username = "fortytwo" //load from conf
-      val password = "keepemailsrunning"
+      val username = "apikey" //load from conf
+      val password = "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"
       new PasswordAuthentication(username, password)
     }
   }

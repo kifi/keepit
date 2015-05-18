@@ -45,6 +45,7 @@ angular.module('kifi')
           res.data.library.access = res.data.membership;
           res.data.library.listed = res.data.listed;
           res.data.library.suggestedSearches = (res.data.suggestedSearches && res.data.suggestedSearches.terms) || [];
+          res.data.library.subscribed = res.data.subscribedToUpdates;
           return augment(res.data.library);
         }
         return null;
@@ -246,6 +247,7 @@ angular.module('kifi')
             $rootScope.$emit('libraryInfosChanged');
           }
           $rootScope.$emit('libraryJoined', libraryId);
+          libraryInfoByIdClutch.expire(libraryId);
         });
       },
 
@@ -256,6 +258,7 @@ angular.module('kifi')
             $rootScope.$emit('libraryInfosChanged');
           }
           $rootScope.$emit('libraryLeft', libraryId);
+          libraryInfoByIdClutch.expire(libraryId);
         });
       },
 
@@ -298,6 +301,12 @@ angular.module('kifi')
 
       getMoreMembers: function (libraryId, pageSize, offset) {
         return $http.get(routeService.getMoreLibraryMembers(libraryId, pageSize, offset)).then(function(resp) {
+          return resp.data;
+        });
+      },
+
+      updateSubscriptionToLibrary: function(libraryId, subscribed) {
+        return $http.post(routeService.updateSubscriptionToLibrary(libraryId, subscribed)).then(function(resp) {
           return resp.data;
         });
       },

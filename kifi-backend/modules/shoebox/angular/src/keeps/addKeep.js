@@ -4,13 +4,13 @@ angular.module('kifi')
 
 .directive('kfAddKeep', [
   '$document', '$rootScope', '$location', '$state', '$timeout',
-  'KEY', 'keepDecoratorService', 'keepActionService', 'libraryService', 'modalService', 'util',
+  'KEY', 'keepActionService', 'libraryService', 'modalService', 'util',
   function ($document, $rootScope, $location, $state, $timeout,
-    KEY, keepDecoratorService, keepActionService, libraryService, modalService, util) {
+            KEY, keepActionService, libraryService, modalService, util) {
     return {
       restrict: 'A',
       require: '^kfModal',
-      templateUrl: 'keep/addKeep.tpl.html',
+      templateUrl: 'keeps/addKeep.tpl.html',
       link: function (scope, element, attrs, kfModalCtrl) {
 
         var focusState = 0; // 0: input field, 1: private toggle, 2: action button
@@ -94,10 +94,7 @@ angular.module('kifi')
                 // If we are on the library page where the keep is being added, add the keep to the top of the list of keeps.
                 if ((result.alreadyKept.length === 0) &&
                     ($state.href($state.current.name) === scope.selectedLibrary.url)) {
-                  return keepActionService.fetchFullKeepInfo(result.keeps[0]).then(function (fullKeep) {
-                    var keep = new keepDecoratorService.Keep(fullKeep);
-                    keep.buildKeep(keep);
-                    keep.makeKept();
+                  return keepActionService.fetchFullKeepInfo(result.keeps[0]).then(function (keep) {
                     $rootScope.$emit('keepAdded', [keep], scope.selectedLibrary);
                   });
                 }

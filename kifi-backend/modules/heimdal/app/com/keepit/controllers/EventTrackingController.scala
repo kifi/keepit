@@ -8,12 +8,21 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.curator.RecommendationUserAction
 import com.keepit.heimdal._
 import com.keepit.model._
+import com.keepit.model.tracking.LibraryViewTrackingCommander
 import com.kifi.franz.SQSQueue
 import play.api.libs.json.{ JsArray, JsValue }
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 import scala.util.{ Failure, Success }
+
+trait UserEventHandler {
+  def handleUserEvent(event: UserEvent): Unit
+}
+
+trait VisitorEventHandler {
+  def handleVisitorEvent(event: VisitorEvent): Unit
+}
 
 class EventTrackingController @Inject() (
     userEventLoggingRepo: UserEventLoggingRepo,
@@ -23,35 +32,35 @@ class EventTrackingController @Inject() (
     nonUserEventLoggingRepo: NonUserEventLoggingRepo,
     heimdalEventQueue: SQSQueue[Seq[HeimdalEvent]],
     eventTrackingCommander: HelpRankEventTrackingCommander,
+    libraryViewTrackingCommander: LibraryViewTrackingCommander,
     airbrake: AirbrakeNotifier,
     implicit val defaultContext: ExecutionContext) extends HeimdalServiceController {
 
   private[controllers] def trackInternalEvent(eventJs: JsValue): Unit = trackInternalEvent(eventJs.as[HeimdalEvent])
 
+  private val userEventHandlers: Seq[UserEventHandler] = Seq(eventTrackingCommander, libraryViewTrackingCommander)
+  private val visitorEventHandlers: Seq[VisitorEventHandler] = Seq(libraryViewTrackingCommander)
+
   private def trackInternalEvent(event: HeimdalEvent): Unit = event match {
     case systemEvent: SystemEvent => systemEventLoggingRepo.persist(systemEvent)
     case userEvent: UserEvent => handleUserEvent(userEvent)
     case anonymousEvent: AnonymousEvent => anonymousEventLoggingRepo.persist(anonymousEvent)
-    case visitorEvent: VisitorEvent => visitorEventLoggingRepo.persist(visitorEvent)
+    case visitorEvent: VisitorEvent => handleVisitorEvent(visitorEvent)
     case nonUserEvent: NonUserEvent => nonUserEventLoggingRepo.persist(nonUserEvent)
   }
 
   private def handleUserEvent(rawUserEvent: UserEvent) = {
     val userEvent = if (rawUserEvent.eventType.name.startsWith("user_")) rawUserEvent.copy(eventType = EventType(rawUserEvent.eventType.name.substring(5))) else rawUserEvent
     SafeFuture { userEventLoggingRepo.persist(userEvent) }
-    userEvent.eventType match {
-      case UserEventTypes.RECOMMENDATION_USER_ACTION =>
-        log.info(s"[handleUserEvent] reco event=$userEvent")
-        for {
-          actionType <- userEvent.context.get[String]("action")
-        } yield {
-          if (actionType == RecommendationUserAction.Clicked.value)
-            eventTrackingCommander.userClickedFeedItem(userEvent)
-          else
-            log.info(s"[handleUserEvent] reco event (action=$actionType) NOT handled: $userEvent")
-        }
-      case _ =>
-        log.info(s"[handleUserEvent] non-reco event NOT handled: $userEvent") // ignore
+    userEventHandlers.foreach { handler =>
+      SafeFuture { handler.handleUserEvent(userEvent) }
+    }
+  }
+
+  private def handleVisitorEvent(event: VisitorEvent) = {
+    visitorEventLoggingRepo.persist(event)
+    visitorEventHandlers.foreach { handler =>
+      SafeFuture { handler.handleVisitorEvent(event) }
     }
   }
 

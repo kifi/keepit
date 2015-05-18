@@ -291,7 +291,7 @@ class AuthHelper @Inject() (
 
     val identity = request.identityOpt.get
     if (identity.identityId.userId.trim.isEmpty) {
-      airbrake.notify(AirbrakeError.incoming(request = request, message = s"empty social id for $identity joining library $libraryPublicId with $sfi"))
+      throw new Exception(s"empty social id for $identity joining library $libraryPublicId with $sfi")
     }
     val inviteExtIdOpt: Option[ExternalId[Invitation]] = request.cookies.get("inv").flatMap(v => ExternalId.asOpt[Invitation](v.value))
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build

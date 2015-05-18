@@ -66,15 +66,6 @@ angular.module('kifi')
       undeleteTag: function (tagId) {
         return route('/collections/' + tagId + '/undelete');
       },
-      tagKeep: function (libraryId, keepId, tag) {
-        return route('/libraries/' + libraryId + '/keeps/' + keepId + '/tags/' + encodeURIComponent(tag));
-      },
-      tagKeeps: function (tag) {
-        return route('/tags/' + encodeURIComponent(tag));
-      },
-      untagKeep: function (libraryId, keepId, tag) {
-        return route('/libraries/' + libraryId + '/keeps/' + keepId + '/tags/' + encodeURIComponent(tag));
-      },
 
       whoToInvite: route('/user/invite/recommended'),
       blockWtiConnection: route('/user/invite/hide'),
@@ -149,6 +140,9 @@ angular.module('kifi')
       removeManyKeepsFromLibrary: function (libraryId) {
         return route('/libraries/' + libraryId + '/keeps/delete');
       },
+      saveKeepNote: function (libraryId, keepId) {
+        return route('/libraries/' + libraryId + '/keeps/' + keepId + '/note');
+      },
 
       ////////////////////////////
       // User registration      //
@@ -202,6 +196,9 @@ angular.module('kifi')
       },
       deleteLibrary: function (libraryId) {
         return route('/libraries/' + libraryId + '/delete');
+      },
+      updateSubscriptionToLibrary: function (libraryId, subscribed) {
+        return route('/libraries/' + libraryId + '/subscription', {subscribed: subscribed ? 1 : 0});
       },
       uploadLibraryCoverImage: function (libraryId, x, y, idealSize) {
         return route('/libraries/' + libraryId + '/image/upload', {x: x, y: y, is: idealSize || []});
