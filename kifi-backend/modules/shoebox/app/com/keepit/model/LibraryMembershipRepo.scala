@@ -51,6 +51,7 @@ trait LibraryMembershipRepo extends Repo[LibraryMembership] with RepoWithDelete[
   def countFollowersForAnonymous(userId: Id[User])(implicit session: RSession): Int
   def countFollowersForOwner(ownerId: Id[User])(implicit session: RSession): Int
   def countFollowersForOtherUser(ownerId: Id[User], viewerId: Id[User])(implicit session: RSession): Int
+  def userRecentFollowerCounts(ownerId: Id[User], since: DateTime)(implicit session: RSession): Int
   def userRecentTopFollowedLibrariesAndCounts(ownerId: Id[User], since: DateTime, limit: Int = 5)(implicit session: RSession): Map[Id[Library], Int]
 }
 
@@ -366,6 +367,12 @@ class LibraryMembershipRepoImpl @Inject() (
   def countFollowersForOtherUser(ownerId: Id[User], viewerId: Id[User])(implicit session: RSession): Int = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     val q = sql"select count(distinct lm.user_id) from library_membership lm, library lib where lm.library_id = lib.id and lib.owner_id = $ownerId and lib.state = 'active' and lm.access != 'owner' and lm.state = 'active' and (lib.visibility = 'published' or (lib.visibility='secret' and lm.user_id = $viewerId))"
+    q.as[Int].firstOption.getOrElse(0)
+  }
+
+  def userRecentFollowerCounts(ownerId: Id[User], since: DateTime)(implicit session: RSession): Int = {
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
+    val q = sql"select count(distinct lm.user_id) from library_membership lm, library lib where lm.library_id = lib.id and lib.owner_id = $ownerId and lib.state = 'active' and lm.access != 'owner' and lm.created_at > $since and lm.state = 'active'"
     q.as[Int].firstOption.getOrElse(0)
   }
 
