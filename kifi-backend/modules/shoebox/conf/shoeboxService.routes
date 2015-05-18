@@ -697,9 +697,10 @@ GET     /admin/wti/triggerPush @com.keepit.controllers.admin.AdminWTIController.
 
 GET     /admin/ec2-instance         @com.keepit.controllers.admin.AmazonInstanceController.instanceInfo()
 GET     /admin/cache                @com.keepit.controllers.admin.AdminCacheController.serviceView
-GET     /admin/cache/entry  @com.keepit.controllers.admin.AdminCacheController.getCacheEntry(key: String)
-DELETE  /admin/cache/entry  @com.keepit.controllers.admin.AdminCacheController.deleteCacheEntry(key: String)
-PUT     /admin/cache/entry  @com.keepit.controllers.admin.AdminCacheController.setCacheEntry(key: String, value: String)
+GET     /admin/cache/modify     @com.keepit.controllers.admin.AdminCacheController.modifyCache
+GET     /admin/cache/modify/entry  @com.keepit.controllers.admin.AdminCacheController.getCacheEntry(key: String)
+DELETE  /admin/cache/modify/entry  @com.keepit.controllers.admin.AdminCacheController.deleteCacheEntry(key: String)
+PUT     /admin/cache/modify/entry  @com.keepit.controllers.admin.AdminCacheController.setCacheEntry(key: String, value: String, duration: Int)
 
 GET     /admin/cache/clearLocalCaches          @com.keepit.controllers.admin.AdminCacheController.clearLocalCaches(service: String ?= "all", prefix: String ?= "")
 GET     /admin/websocket            @com.keepit.controllers.admin.AdminWebSocketController.serviceView

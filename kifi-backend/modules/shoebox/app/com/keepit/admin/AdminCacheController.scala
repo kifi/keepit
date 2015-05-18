@@ -10,32 +10,37 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.{ JsBoolean, JsNumber, JsArray, JsObject, JsString }
 import play.api.libs.json._
 import com.keepit.common.zookeeper.ServiceDiscovery
-import com.keepit.common.cache.InMemoryCachePlugin
+import com.keepit.common.cache.{ MemcachedCache, InMemoryCachePlugin }
 
 @Singleton
 class AdminCacheController @Inject() (
     val userActionsHelper: UserActionsHelper,
     httpClient: HttpClient,
     localCache: InMemoryCachePlugin,
+    memcachedCache: MemcachedCache,
     serviceDiscovery: ServiceDiscovery) extends AdminUserActions {
   def serviceView = AdminUserPage { implicit request =>
     Ok(html.admin.cacheOverview())
   }
 
+  def modifyCache = AdminUserPage { implicit request =>
+    Ok(html.admin.modifyCache())
+  }
+
   def getCacheEntry(key: String) = AdminUserAction { implicit request =>
-    localCache.get(key) match {
+    memcachedCache.get(key) match {
       case Some(value) => Ok(Json.obj(key -> value.toString))
       case _ => NoContent
     }
   }
 
   def deleteCacheEntry(key: String) = AdminUserAction { implicit request =>
-    localCache.remove(key)
+    memcachedCache.remove(key)
     Ok
   }
 
-  def setCacheEntry(key: String, value: String) = AdminUserAction { implicit request =>
-    localCache.set(key, value)
+  def setCacheEntry(key: String, value: String, seconds: Int) = AdminUserAction { implicit request =>
+    memcachedCache.set(key, value, expiration = seconds)
     Ok
   }
 
