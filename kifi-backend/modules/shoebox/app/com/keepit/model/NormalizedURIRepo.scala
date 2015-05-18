@@ -59,7 +59,8 @@ class NormalizedURIRepoImpl @Inject() (
     def normalization = column[Option[Normalization]]("normalization", O.Nullable)
     def redirect = column[Option[Id[NormalizedURI]]]("redirect", O.Nullable)
     def redirectTime = column[Option[DateTime]]("redirect_time", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, externalId, title, url, urlHash, state, seq, restriction, normalization, redirect, redirectTime) <> ((NormalizedURI.apply _).tupled, NormalizedURI.unapply _)
+    def shouldHaveContent = column[Boolean]("should_have_content", O.NotNull)
+    def * = (id.?, createdAt, updatedAt, externalId, title, url, urlHash, state, seq, restriction, normalization, redirect, redirectTime, shouldHaveContent) <> ((NormalizedURI.apply _).tupled, NormalizedURI.unapply _)
   }
 
   def table(tag: Tag) = new NormalizedURITable(tag)

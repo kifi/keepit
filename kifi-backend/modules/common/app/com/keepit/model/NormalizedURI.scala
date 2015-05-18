@@ -30,7 +30,8 @@ case class NormalizedURI(
     restriction: Option[Restriction] = None,
     normalization: Option[Normalization] = None,
     redirect: Option[Id[NormalizedURI]] = None,
-    redirectTime: Option[DateTime] = None) extends ModelWithExternalId[NormalizedURI] with ModelWithState[NormalizedURI] with ModelWithSeqNumber[NormalizedURI] with Logging {
+    redirectTime: Option[DateTime] = None,
+    shouldHaveContent: Boolean = false) extends ModelWithExternalId[NormalizedURI] with ModelWithState[NormalizedURI] with ModelWithSeqNumber[NormalizedURI] with Logging {
 
   def withId(id: Id[NormalizedURI]): NormalizedURI = copy(id = Some(id))
   def withUpdateTime(now: DateTime): NormalizedURI = copy(updatedAt = now)
@@ -42,6 +43,7 @@ case class NormalizedURI(
   def withNormalization(normalization: Normalization) = copy(normalization = Some(normalization))
   def withRedirect(id: Id[NormalizedURI], now: DateTime): NormalizedURI = copy(state = NormalizedURIStates.REDIRECTED, redirect = Some(id), redirectTime = Some(now))
   def toShortString = s"NormalizedUri($id,$seq,${state.toString.toUpperCase},${restriction.getOrElse("N/A")},${normalization},${redirect},${url.take(50)})"
+  def withContentRequest(contentWanted: Boolean) = if (contentWanted) copy(shouldHaveContent = true) else this
 }
 
 object NormalizedURI {
@@ -73,7 +75,8 @@ object NormalizedURI {
     (__ \ 'restriction).formatNullable[Restriction] and
     (__ \ 'normalization).formatNullable[Normalization] and
     (__ \ 'redirect).formatNullable(Id.format[NormalizedURI]) and
-    (__ \ 'redirectTime).formatNullable[DateTime]
+    (__ \ 'redirectTime).formatNullable[DateTime] and
+    (__ \ 'shouldHaveContent).format[Boolean]
   )(NormalizedURI.apply, unlift(NormalizedURI.unapply))
 
   def hashUrl(normalizedUrl: String): UrlHash = {
@@ -96,27 +99,15 @@ case class UrlHash(hash: String) extends AnyVal {
 }
 
 case class NormalizedURIKey(id: Id[NormalizedURI]) extends Key[NormalizedURI] {
-  override val version = 7
+  override val version = 8
   val namespace = "uri_by_id"
   def toKey(): String = id.id.toString
 }
 
 case class NormalizedURIUrlHashKey(urlHash: UrlHash) extends Key[NormalizedURI] {
-  override val version = 6
+  override val version = 7
   val namespace = "uri_by_hash"
   def toKey(): String = urlHash.hash
-}
-
-case class NormalizedURIWordCountKey(id: Id[NormalizedURI]) extends Key[Int] {
-  override val version = 1
-  val namespace = "wc_by_uriId"
-  def toKey(): String = id.id.toString
-}
-
-case class URISummaryKey(val id: Id[NormalizedURI]) extends Key[URISummary] {
-  override val version = 4
-  val namespace = "uri_summary_by_id"
-  def toKey(): String = id.id.toString
 }
 
 class NormalizedURICache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)

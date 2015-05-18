@@ -242,7 +242,7 @@ class UrlController @Inject() (
             }
 
             val reference = NormalizationReference(oldUri, isNew = false, correctedNormalization = correctedNormalization)
-            normalizationService.update(reference, candidate).map {
+            normalizationService.update(reference, Set(candidate)).map {
               case Some(newUriId) => Redirect(routes.UrlController.normalizationView(0)).flashing("result" -> s"${oldUri.id.get}: ${oldUri.url} will be redirected to $newUriId")
               case None => Redirect(routes.UrlController.normalizationView(0)).flashing("result" -> s"${oldUri.id.get}: ${oldUri.url} could not be redirected to $candidateUrl")
             }

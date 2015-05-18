@@ -13,6 +13,6 @@ case class FakeNormalizationServiceModule() extends ScalaModule {
 }
 
 object PrenormalizationService extends NormalizationService {
-  def update(current: NormalizationReference, candidates: NormalizationCandidate*) = Future.successful(None)
+  def update(current: NormalizationReference, candidates: Set[NormalizationCandidate]) = Future.successful(None)
   def prenormalize(uriString: String) = Prenormalizer(uriString)
 }
