@@ -1,4 +1,4 @@
-<div class="kf-recos-view kf-width-bounded" ng-controller="RecosCtrl">
+<div class="kf-recos-view" ng-controller="RecosCtrl">
 
   <div class="kf-recos-persona-overlay" ng-if="autoShowPersona">
     <div class="view-overlay">
@@ -7,7 +7,7 @@
       </div>
     </div>
   </div>
-  <div ng-if="!autoShowPersona">
+  <div class="kf-recos-wrap" ng-if="!autoShowPersona">
     <div kf-delighted-survey hide="hideDelightedSurvey" ng-if="showDelightedSurvey"></div>
 
     <h1 class="kf-recos-title">Recommendations</h1>
