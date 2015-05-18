@@ -69,12 +69,6 @@ class ScrapeWorkerImpl @Inject() (
     }
   }
 
-  private def shouldUpdateScreenshot(uri: NormalizedURI) = {
-    uri.screenshotUpdatedAt exists { update =>
-      Days.daysBetween(currentDateTime.withTimeAtStartOfDay, update.withTimeAtStartOfDay).getDays >= 5
-    }
-  }
-
   private def needReIndex(latestUri: NormalizedURI, article: Article, signature: Signature, info: ScrapeInfo): Boolean = {
     def titleChanged = latestUri.title != Option(article.title)
     def scrapeFailed = latestUri.state == NormalizedURIStates.SCRAPE_FAILED

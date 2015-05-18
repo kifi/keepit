@@ -33,7 +33,6 @@ trait NormalizedURIRepo extends DbRepo[NormalizedURI] with ExternalIdColumnDbFun
   def save(uri: NormalizedURI)(implicit session: RWSession): NormalizedURI
   def toBeRemigrated()(implicit session: RSession): Seq[NormalizedURI]
   def updateURIRestriction(id: Id[NormalizedURI], r: Option[Restriction])(implicit session: RWSession): Unit
-  def updateScreenshotUpdatedAt(id: Id[NormalizedURI], time: DateTime)(implicit session: RWSession): Unit
   def getRestrictedURIs(targetRestriction: Restriction)(implicit session: RSession): Seq[NormalizedURI]
   def checkRecommendable(uriIds: Seq[Id[NormalizedURI]])(implicit session: RSession): Seq[Boolean]
   def getFromId(fromId: Id[NormalizedURI])(implicit session: RSession): Seq[NormalizedURI]
@@ -56,12 +55,11 @@ class NormalizedURIRepoImpl @Inject() (
     def title = column[Option[String]]("title", O.Nullable)
     def url = column[String]("url", O.NotNull)
     def urlHash = column[UrlHash]("url_hash", O.NotNull)
-    def screenshotUpdatedAt = column[Option[DateTime]]("screenshot_updated_at", O.Nullable)
     def restriction = column[Option[Restriction]]("restriction", O.Nullable)
     def normalization = column[Option[Normalization]]("normalization", O.Nullable)
     def redirect = column[Option[Id[NormalizedURI]]]("redirect", O.Nullable)
     def redirectTime = column[Option[DateTime]]("redirect_time", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, externalId, title, url, urlHash, state, seq, screenshotUpdatedAt, restriction, normalization, redirect, redirectTime) <> ((NormalizedURI.apply _).tupled, NormalizedURI.unapply _)
+    def * = (id.?, createdAt, updatedAt, externalId, title, url, urlHash, state, seq, restriction, normalization, redirect, redirectTime) <> ((NormalizedURI.apply _).tupled, NormalizedURI.unapply _)
   }
 
   def table(tag: Tag) = new NormalizedURITable(tag)
@@ -182,12 +180,6 @@ class NormalizedURIRepoImpl @Inject() (
     val newSeq = deferredSeqNum()
     q.update(r, newSeq)
     invalidateCache(get(id).copy(restriction = r, seq = newSeq))
-  }
-
-  def updateScreenshotUpdatedAt(id: Id[NormalizedURI], time: DateTime)(implicit session: RWSession) = {
-    val updateTime = clock.now
-    (for { t <- rows if t.id === id } yield (t.updatedAt, t.screenshotUpdatedAt)).update((updateTime, Some(time)))
-    invalidateCache(get(id).copy(updatedAt = updateTime, screenshotUpdatedAt = Some(time)))
   }
 
   def getRestrictedURIs(targetRestriction: Restriction)(implicit session: RSession): Seq[NormalizedURI] = {

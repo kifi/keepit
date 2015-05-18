@@ -385,8 +385,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
       NormalizedURI(
         id = Some(Id[NormalizedURI](url.hashCode)),
         url = url.toString(),
-        urlHash = UrlHash(url.hashCode.toString),
-        screenshotUpdatedAt = None
+        urlHash = UrlHash(url.hashCode.toString)
       )
     }
     Future.successful(uri)

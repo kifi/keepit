@@ -27,7 +27,6 @@ case class NormalizedURI(
     urlHash: UrlHash,
     state: State[NormalizedURI] = NormalizedURIStates.ACTIVE,
     seq: SequenceNumber[NormalizedURI] = SequenceNumber.ZERO,
-    screenshotUpdatedAt: Option[DateTime] = None,
     restriction: Option[Restriction] = None,
     normalization: Option[Normalization] = None,
     redirect: Option[Id[NormalizedURI]] = None,
@@ -71,7 +70,6 @@ object NormalizedURI {
     (__ \ 'urlHash).format[String].inmap(UrlHash.apply, unlift(UrlHash.unapply)) and
     (__ \ 'state).format(State.format[NormalizedURI]).inmap(handleDeprecatedScrapeWantedState, identity[State[NormalizedURI]]) and
     (__ \ 'seq).format(SequenceNumber.format[NormalizedURI]) and
-    (__ \ 'screenshotUpdatedAt).formatNullable[DateTime] and
     (__ \ 'restriction).formatNullable[Restriction] and
     (__ \ 'normalization).formatNullable[Normalization] and
     (__ \ 'redirect).formatNullable(Id.format[NormalizedURI]) and
@@ -89,7 +87,7 @@ object NormalizedURI {
     state: State[NormalizedURI] = NormalizedURIStates.ACTIVE,
     normalization: Option[Normalization] = None): NormalizedURI = {
     if (normalizedUrl.size > URLFactory.MAX_URL_SIZE) throw new Exception(s"url size is ${normalizedUrl.size} which exceeds ${URLFactory.MAX_URL_SIZE}: $normalizedUrl")
-    NormalizedURI(title = title, url = normalizedUrl, urlHash = hashUrl(normalizedUrl), state = state, screenshotUpdatedAt = None, normalization = normalization)
+    NormalizedURI(title = title, url = normalizedUrl, urlHash = hashUrl(normalizedUrl), state = state, normalization = normalization)
   }
 }
 
