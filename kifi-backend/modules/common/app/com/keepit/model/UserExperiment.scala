@@ -78,7 +78,6 @@ object ExperimentType {
   val RECO_FASTLANE = ExperimentType("reco_fastlane")
   val RECO_SUBSAMPLE = ExperimentType("reco_subsample")
   val APPLY_RECO_FEEDBACK = ExperimentType("apply_reco_feedback")
-  val KEEP_NOTES = ExperimentType("keep_notes")
   val ROVER_CONTENT = ExperimentType("rover_content")
   val COLLABORATIVE = ExperimentType("collaborative")
 
@@ -87,7 +86,7 @@ object ExperimentType {
     MOBILE_REDIRECT :: DELIGHTED_SURVEY_PERMANENT :: SPECIAL_CURATOR :: LIBRARIES :: SEND_DIGEST_EMAIL_ON_REFRESH ::
     GRAPH_BASED_PEOPLE_TO_INVITE :: NEW_KEEP_NOTIFICATIONS :: CORTEX_NEW_MODEL :: CURATOR_DIVERSE_TOPIC_RECOS ::
     NEW_PUBLIC_FEED :: PROFILES_BETA :: TWITTER_BETA :: ACTIVITY_EMAIL :: ALL_KEEPS_VIEW :: EXPLICIT_SOCIAL_POSTING :: RELATED_PAGE_INFO :: NEXT_GEN_RECOS ::
-    RECO_FASTLANE :: RECO_SUBSAMPLE :: APPLY_RECO_FEEDBACK :: KEEP_NOTES :: ROVER_CONTENT :: PLAIN_EMAIL :: COLLABORATIVE :: Nil
+    RECO_FASTLANE :: RECO_SUBSAMPLE :: APPLY_RECO_FEEDBACK :: ROVER_CONTENT :: PLAIN_EMAIL :: COLLABORATIVE :: Nil
 
   private val _ALL_MAP: Map[String, ExperimentType] = _ALL.map(e => e.value -> e).toMap
 
