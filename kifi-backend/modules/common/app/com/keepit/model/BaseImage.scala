@@ -47,6 +47,7 @@ object ImageSource {
   sealed abstract class UserInitiated(name: String) extends ImageSource(name)
   sealed abstract class SystemInitiated(name: String) extends ImageSource(name)
 
+  case object EmbedlyOrPagePeeker extends SystemInitiated("embedly_or_pagepeeker")
   case object Embedly extends SystemInitiated("embedly")
   case object UserPicked extends UserInitiated("user_picked")
   case object UserUpload extends UserInitiated("user_upload")
@@ -54,7 +55,7 @@ object ImageSource {
   case object Unknown extends ImageSource("unknown")
   case class RoverArticle[A <: Article](kind: ArticleKind[A]) extends SystemInitiated(s"${kind.typeCode}_article")
 
-  private val all: Seq[ImageSource] = Seq(Unknown, UserUpload, UserPicked, TwitterSync) ++ ArticleKind.all.map(RoverArticle(_))
+  private val all: Seq[ImageSource] = Seq(Unknown, Embedly, EmbedlyOrPagePeeker, UserUpload, UserPicked, TwitterSync) ++ ArticleKind.all.map(RoverArticle(_))
   def apply(name: String) = all.find(_.name == name).getOrElse(throw new Exception(s"Can't find ImageSource for $name"))
 
   implicit val format = new Format[ImageSource] {
