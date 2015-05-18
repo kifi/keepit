@@ -84,6 +84,18 @@ twoColMinWidth = appSidePad1 + leftColWidth + colGapWidth + rightColWidth + appS
   border: none
   padding: 12px 20px 20px
 
+  &::after
+    content: ''
+    position: absolute
+    left: 50%
+    bottom: -15px
+    height: 0
+    width: 0
+    margin-left: -16px
+    border: solid
+    border-width: 16px 20px 0
+    border-color: #5ab86d transparent transparent
+
 .kf-reco-cta-text
   display: inline-block
   color: white
@@ -99,37 +111,20 @@ twoColMinWidth = appSidePad1 + leftColWidth + colGapWidth + rightColWidth + appS
   padding: 6% 9%
   float: right
 
-.kf-reco-cta::after
-  content: '';
-  position: absolute;
-  left: 50%;
-  bottom: -15px;
-  height: 0;
-  width: 0;
-  border: solid;
-  margin-left: -16px;
-  border-width: 16px 20px 0;
-  border-color: #5ab86d transparent transparent;
-
-.kf-reco-top
-  padding: 20px 20px 0px
-
-  // library recos with invite need additional spacing between the control header and the invite banner
-  .kf-reco-with-invite &
-    padding-bottom: 10px
-
-.kf-reco-top
-  border-left: 1px solid #dadae2
-  border-right: 1px solid #dadae2
-
 .kf-reco-top
   position: relative
-  border-top: 1px solid #dadae2
+  border: defaultBorder
+  border-bottom: 0
   border-radius: 10px 10px 0 0
+  padding: 20px 20px 0
   background-color: #fff
   font-size: 13px
   font-weight: 400
   color: #9d9d9d
+
+  // library recos with invite need additional spacing between the control header and the invite banner
+  .kf-reco-with-invite &
+    padding-bottom: 10px
 
   span
     display: inline-block
