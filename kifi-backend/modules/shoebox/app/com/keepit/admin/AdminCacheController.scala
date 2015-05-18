@@ -7,18 +7,41 @@ import com.keepit.common.service.{ FortyTwoServices, ServiceType, ServiceClient 
 import com.keepit.common.net.HttpClient
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json.{ JsBoolean, JsNumber, JsArray, JsObject }
+import play.api.libs.json.{ JsBoolean, JsNumber, JsArray, JsObject, JsString }
+import play.api.libs.json._
 import com.keepit.common.zookeeper.ServiceDiscovery
-import com.keepit.common.cache.InMemoryCachePlugin
+import com.keepit.common.cache.{ MemcachedCache, InMemoryCachePlugin }
 
 @Singleton
 class AdminCacheController @Inject() (
     val userActionsHelper: UserActionsHelper,
     httpClient: HttpClient,
     localCache: InMemoryCachePlugin,
+    memcachedCache: MemcachedCache,
     serviceDiscovery: ServiceDiscovery) extends AdminUserActions {
   def serviceView = AdminUserPage { implicit request =>
     Ok(html.admin.cacheOverview())
+  }
+
+  def modifyCache = AdminUserPage { implicit request =>
+    Ok(html.admin.modifyCache())
+  }
+
+  def getCacheEntry(key: String) = AdminUserAction { implicit request =>
+    memcachedCache.get(key) match {
+      case Some(value) => Ok(Json.obj(key -> value.toString))
+      case _ => NoContent
+    }
+  }
+
+  def deleteCacheEntry(key: String) = AdminUserAction { implicit request =>
+    memcachedCache.remove(key)
+    Ok
+  }
+
+  def setCacheEntry(key: String, value: String, seconds: Int) = AdminUserAction { implicit request =>
+    memcachedCache.set(key, value, expiration = seconds)
+    Ok
   }
 
   def clearLocalCaches(service: String, prefix: String) = AdminUserAction.async { implicit request =>
