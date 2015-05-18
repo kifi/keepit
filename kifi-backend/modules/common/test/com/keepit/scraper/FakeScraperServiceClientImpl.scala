@@ -32,10 +32,4 @@ class FakeScraperServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, sched
   def detectPorn(query: String): Future[Map[String, Float]] = Future.successful(Map.empty)
 
   def whitelist(words: String): Future[String] = Future.successful("")
-
-  def getURIWordCount(uriId: Id[NormalizedURI], url: String): Future[Int] = Future.successful(0)
-
-  def getURIWordCountOpt(uriId: Id[NormalizedURI], url: String): Option[Int] = None
-
-  def fetchAndPersistURIPreview(url: String): Future[Option[URIPreviewFetchResult]] = Future.successful(None)
 }

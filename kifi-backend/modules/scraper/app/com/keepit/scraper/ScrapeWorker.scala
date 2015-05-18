@@ -19,7 +19,6 @@ import scala.util.Success
 import com.keepit.shoebox.ShoeboxScraperClient
 import scala.concurrent.Future
 import com.keepit.common.db.Id
-import com.keepit.scraper.embedly.EmbedlyCommander
 import com.keepit.common.core._
 
 @ImplementedBy(classOf[ScrapeWorkerImpl])
@@ -37,10 +36,7 @@ class ScrapeWorkerImpl @Inject() (
     uriCommander: URICommander,
     shoeboxCommander: ShoeboxCommander,
     shoeboxScraperClient: ShoeboxScraperClient,
-    urlCommander: URICommander,
-    wordCountCache: NormalizedURIWordCountCache,
-    uriSummaryCache: URISummaryCache,
-    embedlyCommander: EmbedlyCommander) extends ScrapeWorker with Logging {
+    urlCommander: URICommander) extends ScrapeWorker with Logging {
 
   implicit val myConfig = config
   implicit val scheduleConfig = schedulerConfig
@@ -84,23 +80,6 @@ class ScrapeWorkerImpl @Inject() (
     titleChanged || scrapeFailed || activeURI || signatureChanged || differentCanonicalUrl
   }
 
-  private def updateWordCountCache(uriId: Id[NormalizedURI], article: Option[Article]) = {
-    import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
-
-    val count = article match {
-      case Some(a) => a.content.split(" ").count(!_.isEmpty)
-      case None => -1
-    }
-
-    log.info(s"updating wordCount cache for uriId = $uriId, word count = $count")
-    wordCountCache.set(NormalizedURIWordCountKey(uriId), count)
-
-    uriSummaryCache.get(URISummaryKey(uriId)) match {
-      case Some(summary) => uriSummaryCache.set(URISummaryKey(uriId), summary.copy(wordCount = Some(count)))
-      case None =>
-    }
-  }
-
   private def handleSuccessfulScraped(latestUri: NormalizedURI, scraped: Scraped, info: ScrapeInfo): Future[Option[Article]] = {
 
     val uriId = latestUri.id.get
@@ -114,7 +93,6 @@ class ScrapeWorkerImpl @Inject() (
       shoeboxCommander.saveScrapeInfo(info.withDocumentUnchanged()) map { _ => None }
     } else {
       articleStore += (uriId -> article)
-      updateWordCountCache(uriId, Some(article))
       for {
         _ <- shoeboxCommander.updateNormalizedURIState(uriId, NormalizedURIStates.SCRAPED)
         _ <- shoeboxCommander.saveScrapeInfo(info.withDestinationUrl(article.destinationUrl).withDocumentChanged(signature.toBase64))
@@ -140,7 +118,6 @@ class ScrapeWorkerImpl @Inject() (
     }
     unscrapableUriF map { unscrapableURI =>
       log.info(s"[handleNotScrapable] unscrapableURI=${unscrapableURI}")
-      updateWordCountCache(uriId, None)
       None
     }
   }
@@ -177,14 +154,9 @@ class ScrapeWorkerImpl @Inject() (
     shoeboxCommander.saveScrapeInfo(info.withFailure()) flatMap { _ =>
       shoeboxCommander.updateNormalizedURIState(latestUri.id.get, NormalizedURIStates.SCRAPE_FAILED) map { _ =>
         log.warn(s"[processURI] Error($httpStatus, $msg); errorURI=(${latestUri.id}, ${latestUri.state}, ${latestUri.url})")
-        updateWordCountCache(latestUri.id.get, None)
         None
       }
     }
-  }
-
-  private def callEmbedly(uri: NormalizedURI): Unit = {
-    embedlyCommander.fetchEmbedlyInfo(uri.id.get, uri.url)
   }
 
   private def process(uri: NormalizedURI, info: ScrapeInfo, proxyOpt: Option[HttpProxy]): Future[Option[Article]] = {
@@ -193,7 +165,6 @@ class ScrapeWorkerImpl @Inject() (
         val articleOpt = uriOpt match {
           case None => Future.successful(None)
           case Some(latestUri) =>
-            callEmbedly(latestUri)
             if (latestUri.state == NormalizedURIStates.INACTIVE)
               Future.successful(None)
             else {

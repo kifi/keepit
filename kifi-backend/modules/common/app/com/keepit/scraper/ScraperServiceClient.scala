@@ -153,11 +153,6 @@ trait ScraperServiceClient extends ServiceClient {
   def getBasicArticle(url: String, proxy: Option[HttpProxy], extractor: Option[ExtractorProviderType]): Future[Option[BasicArticle]]
   def getSignature(url: String, proxy: Option[HttpProxy], extractor: Option[ExtractorProviderType]): Future[Option[Signature]]
 
-  // URI information (currently primarily from Embedly)
-  def getURIWordCount(uriId: Id[NormalizedURI], url: String): Future[Int]
-  def getURIWordCountOpt(uriId: Id[NormalizedURI], url: String): Option[Int]
-  def fetchAndPersistURIPreview(url: String): Future[Option[URIPreviewFetchResult]]
-
   // Admin only API (if you need one of these outside of admin, talk to Andrew):
   def status(): Seq[Future[(AmazonInstanceInfo, Seq[ScrapeJobStatus])]]
   def getThreadDetails(filterState: Option[String] = None): Seq[Future[ScraperThreadInstanceInfo]]
@@ -166,9 +161,7 @@ trait ScraperServiceClient extends ServiceClient {
   def whitelist(words: String): Future[String]
 }
 
-case class ScraperCacheProvider @Inject() (
-  wordCountCache: NormalizedURIWordCountCache,
-  signatureCache: UrlSignatureCache)
+case class ScraperCacheProvider @Inject() (signatureCache: UrlSignatureCache)
 
 class ScraperServiceClientImpl @Inject() (
     val airbrakeNotifier: AirbrakeNotifier,
@@ -235,43 +228,6 @@ class ScraperServiceClientImpl @Inject() (
     val payload = Json.obj("whitelist" -> words)
     call(Scraper.internal.whitelist(), payload).map { r =>
       Json.fromJson[String](r.json).get
-    }
-  }
-
-  def getURIWordCount(uriId: Id[NormalizedURI], url: String): Future[Int] = {
-    import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
-
-    cacheProvider.wordCountCache.get(NormalizedURIWordCountKey(uriId)) match {
-      case Some(cnt) => Future.successful(cnt)
-      case None => {
-        val payload = Json.obj("uriId" -> uriId, "url" -> url)
-        call(Scraper.internal.getURIWordCount, payload) map { r => r.json.as[Int] }
-      }
-    }
-  }
-
-  def getURIWordCountOpt(uriId: Id[NormalizedURI], url: String): Option[Int] = {
-    import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
-
-    log.info(s"Requesting word count from cache for uri $uriId with url $url")
-    cacheProvider.wordCountCache.get(NormalizedURIWordCountKey(uriId)) match {
-      case Some(cnt) => {
-        log.info(s"Found word count $cnt for uri $uriId with url $url")
-        Some(cnt)
-      }
-      case None => {
-        log.info(s"Requesting word count from scraper for uri $uriId with url $url")
-        val payload = Json.obj("uriId" -> uriId, "url" -> url)
-        call(Scraper.internal.getURIWordCount, payload) // Word count will be added to cache
-        None
-      }
-    }
-  }
-
-  def fetchAndPersistURIPreview(url: String): Future[Option[URIPreviewFetchResult]] = {
-    val payload = Json.obj("url" -> url)
-    call(Scraper.internal.fetchAndPersistURIPreview(), payload, callTimeouts = superExtraLongTimeoutJustForEmbedly).map { r =>
-      r.json.asOpt[URIPreviewFetchResult]
     }
   }
 

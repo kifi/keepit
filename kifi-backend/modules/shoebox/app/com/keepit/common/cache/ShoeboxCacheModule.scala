@@ -271,10 +271,6 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   def verifiedEmailUserIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new VerifiedEmailUserIdCache(stats, accessLog, (outerRepo, 7 days))
 
-  @Provides @Singleton
-  def uriWordCountCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new NormalizedURIWordCountCache(stats, accessLog, (innerRepo, 5 minutes), (outerRepo, 30 days))
-
   @Singleton
   @Provides
   def libraryIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
