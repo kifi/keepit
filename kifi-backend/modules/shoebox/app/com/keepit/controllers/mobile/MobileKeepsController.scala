@@ -23,9 +23,7 @@ import com.keepit.common.core._
 
 class MobileKeepsController @Inject() (
   db: Database,
-  uriSummaryCommander: URISummaryCommander,
   uriRepo: NormalizedURIRepo,
-  pageInfoRepo: PageInfoRepo,
   keepRepo: KeepRepo,
   val userActionsHelper: UserActionsHelper,
   keepDecorator: KeepDecorator,

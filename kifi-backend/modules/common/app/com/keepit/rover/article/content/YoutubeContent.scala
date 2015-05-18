@@ -1,6 +1,5 @@
 package com.keepit.rover.article.content
 
-import com.keepit.model.PageAuthor
 import com.keepit.rover.article._
 import com.keepit.search.Lang
 import com.kifi.macros.json

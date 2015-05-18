@@ -1,4 +1,4 @@
-@(rekeeps:Seq[(com.keepit.model.RichReKeep, Option[com.keepit.model.PageInfo], Option[com.keepit.model.ImageInfo])], showImage:Boolean, page:Int, rekeepsCount:Int, pageSize:Int)(implicit request: com.keepit.common.controller.UserRequest[_])
+@(rekeeps:Seq[(com.keepit.model.RichReKeep, Option[String])], showImage:Boolean, page:Int, rekeepsCount:Int, pageSize:Int)(implicit request: com.keepit.common.controller.UserRequest[_])
 
 @otherPagesRoute(page:Int) = {@com.keepit.controllers.admin.routes.AdminAttributionController.rekeepsView(page, pageSize, showImage)}
 
@@ -25,7 +25,7 @@
                 <td>title</td>
                 @if(showImage){ <td>image</td> }
             </tr></th>
-            @for((rekeep, pageOpt, imgOpt) <- rekeeps){
+            @for((rekeep, keepImageOpt) <- rekeeps){
             <tr>
                 <td>@rekeep.id</td>
                 <td>@adminHelper.dateDisplay(rekeep.createdAt)</td>
@@ -36,7 +36,7 @@
                 <td>@rekeep.attributionFactor</td>
                 <td>@rekeep.uri.id</td>
                 <td><a href="@rekeep.uri.url">@if(rekeep.uri.title.getOrElse("").trim.nonEmpty){ @rekeep.uri.title } else { @rekeep.uri.url }</a></td>
-                @if(showImage && imgOpt.isDefined){ <td><img src="@imgOpt.get.url" width="50" height="50" alt="no image" /></td> }
+                @keepImageOpt.map { imageUrl => { <td><img src="@imageUrl" width="50" height="50" alt="no image" /></td> } }
             </tr>
             }
         </table>

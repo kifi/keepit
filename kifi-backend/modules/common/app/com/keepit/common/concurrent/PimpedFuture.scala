@@ -111,6 +111,10 @@ object FutureHelpers {
     foldLeftUntil(items)(false) { case (_, item) => predicate(item).imap(found => (found, found)) }
   }
 
+  def collectFirst[I, T](items: Iterable[I])(getValue: I => Future[Option[T]])(implicit ec: ScalaExecutionContext): Future[Option[T]] = {
+    foldLeftUntil[I, Option[T]](items)(None) { case (_, item) => getValue(item).imap(valueOpt => (valueOpt, valueOpt.isDefined)) }
+  }
+
   def doUntil(body: => Future[Boolean])(implicit ec: ScalaExecutionContext): Future[Unit] = {
     foldLeftUntil(Stream.continually(()))(()) { case (_, _) => body.imap(done => ((), done)) }
   }

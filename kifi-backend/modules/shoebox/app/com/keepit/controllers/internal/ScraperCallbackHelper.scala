@@ -22,7 +22,6 @@ class ScraperCallbackHelper @Inject() (
     airbrake: AirbrakeNotifier,
     urlPatternRules: UrlPatternRulesCommander,
     normUriRepo: NormalizedURIRepo,
-    pageInfoRepo: PageInfoRepo,
     scrapeInfoRepo: ScrapeInfoRepo,
     implicit val scraperConfig: ScraperSchedulerConfig,
     integrityHelpers: UriIntegrityHelpers) extends Logging {
@@ -54,12 +53,11 @@ class ScraperCallbackHelper @Inject() (
               val saved = scrapeInfoRepo.save(info.withDocumentUnchanged()) // revisit later
               log.warn(s"[assignTasks($zkId,$max)] ${nuri.url} is considered unscrapable; skipped for now. savedInfo=$saved; uri=${nuri.toShortString}")
             } else {
-              val pageInfoOpt = pageInfoRepo.getByUri(nuri.id.get)
               val proxy = urlPatternRules.getProxy(nuri.url)
               val savedInfo = scrapeInfoRepo.save(info.withWorkerId(zkId).withState(ScrapeInfoStates.ASSIGNED))
               log.debug(s"[assignTasks($zkId,$max)] #$count assigned (${nuri.id.get},${savedInfo.id.get},${nuri.url}) to worker $zkId")
               count += 1
-              builder += ScrapeRequest(nuri, savedInfo, pageInfoOpt, proxy)
+              builder += ScrapeRequest(nuri, savedInfo, proxy)
             }
           } else {
             val saved = scrapeInfoRepo.save(info.withStateAndNextScrape(ScrapeInfoStates.INACTIVE))

@@ -125,12 +125,6 @@ class NormalizedURICache(stats: CacheStatistics, accessLog: AccessLog, innermost
 class NormalizedURIUrlHashCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends JsonCacheImpl[NormalizedURIUrlHashKey, NormalizedURI](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
-class NormalizedURIWordCountCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends PrimitiveCacheImpl[NormalizedURIWordCountKey, Int](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
-
-class URISummaryCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[URISummaryKey, URISummary](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
-
 object NormalizedURIStates extends States[NormalizedURI] {
   val SCRAPED = State[NormalizedURI]("scraped")
   val SCRAPE_FAILED = State[NormalizedURI]("scrape_failed")

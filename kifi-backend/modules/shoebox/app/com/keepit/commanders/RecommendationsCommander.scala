@@ -1,8 +1,8 @@
 package com.keepit.commanders
 
-import com.keepit.common.CollectionHelpers
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.store.S3ImageConfig
 import com.keepit.model._
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.curator.CuratorServiceClient
@@ -12,8 +12,9 @@ import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.domain.DomainToNameMapper
 
 import com.google.inject.Inject
+import com.keepit.rover.RoverServiceClient
 import com.keepit.search.SearchServiceClient
-import com.keepit.search.augmentation.{ LimitedAugmentationInfo, AugmentableItem }
+import com.keepit.search.augmentation.{ AugmentableItem }
 import com.keepit.search.util.LongSetIdFilter
 
 import scala.concurrent.{ ExecutionContext, Future }
@@ -27,12 +28,13 @@ class RecommendationsCommander @Inject() (
     libRepo: LibraryRepo,
     userRepo: UserRepo,
     libCommander: LibraryCommander,
-    uriSummaryCommander: URISummaryCommander,
+    rover: RoverServiceClient,
     basicUserRepo: BasicUserRepo,
     keepRepo: KeepRepo,
     keepDecorator: KeepDecorator,
     implicit val defaultContext: ExecutionContext,
     implicit val publicIdConfig: PublicIdConfiguration,
+    implicit val imageConfig: S3ImageConfig,
     userExperimentCommander: LocalUserExperimentCommander) {
 
   def updateUriRecommendationFeedback(userId: Id[User], extId: ExternalId[NormalizedURI], feedback: UriRecommendationFeedback): Future[Boolean] = {
@@ -151,7 +153,9 @@ class RecommendationsCommander @Inject() (
     }
     val uriIds = recosWithUris.map { _._2.id.get }
     val userAttrsF = getUserAttributions(userId, uriIds)
-    val uriSummariesF = Future.sequence(recosWithUris.map { case (reco, nUri) => uriSummaryCommander.getDefaultURISummary(nUri, waiting = false) })
+    val uriSummariesF = rover.getUriSummaryByUris(uriIds.toSet).map { summaries =>
+      uriIds.map { uriId => summaries.get(uriId).map(_.toUriSummary(ProcessedImageSize.Large.idealSize)) getOrElse URISummary() }
+    }
 
     for {
       userAttrs <- userAttrsF

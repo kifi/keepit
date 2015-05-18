@@ -8,6 +8,7 @@ import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db.slick._
 import com.keepit.common.net._
 import com.keepit.common.performance._
+import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.time._
 import com.keepit.heimdal._
 import com.keepit.model.{ KeepStates, _ }
@@ -31,29 +32,29 @@ class AdminBookmarksController @Inject() (
   scrapeRepo: ScrapeInfoRepo,
   socialUserInfoRepo: SocialUserInfoRepo,
   libraryRepo: LibraryRepo,
-  uriSummaryCommander: URISummaryCommander,
+  keepImageCommander: KeepImageCommander,
+  keywordSummaryCommander: KeywordSummaryCommander,
   libraryCommander: LibraryCommander,
   keepCommander: KeepsCommander,
   collectionCommander: CollectionCommander,
   collectionRepo: CollectionRepo,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
   keepDecorator: KeepDecorator,
-  clock: Clock)
+  clock: Clock,
+  implicit val imageConfig: S3ImageConfig)
     extends AdminUserActions {
 
   private def editBookmark(bookmark: Keep)(implicit request: UserRequest[AnyContent]) = {
     db.readOnlyMaster { implicit session =>
       val uri = uriRepo.get(bookmark.uriId)
       val user = userRepo.get(bookmark.userId)
+      val keepId = bookmark.id.get
       val scrapeInfo = scrapeRepo.getByUriId(bookmark.uriId)
-      val keywordsFut = uriSummaryCommander.getKeywordsSummary(uri.id.get)
-      val imageUrlOptFut = uriSummaryCommander.getURIImage(uri)
+      val keywordsFut = keywordSummaryCommander.getKeywordsSummary(bookmark.uriId)
+      val imageUrlOpt = keepImageCommander.getBasicImagesForKeeps(Set(keepId)).get(keepId).flatMap(_.get(ProcessedImageSize.Large.idealSize).map(_.path.getUrl))
       val libraryOpt = bookmark.libraryId.map { opt => libraryRepo.get(opt) }
 
-      for {
-        keywords <- keywordsFut
-        imageUrlOpt <- imageUrlOptFut
-      } yield {
+      keywordsFut.map { keywords =>
         Ok(html.admin.bookmark(user, bookmark, uri, scrapeInfo, imageUrlOpt.getOrElse(""), "", keywords, libraryOpt))
       }
     }
@@ -270,21 +271,24 @@ class AdminBookmarksController @Inject() (
       keepRepo.getLatestKeepsURIByUser(user, 500, includePrivate = false)
     }.sortBy(x => x.id) // sorting helps s3 performance
 
-    val word2vecFut = uriSummaryCommander.batchGetWord2VecKeywords(uris)
+    val word2vecFut = keywordSummaryCommander.batchGetWord2VecKeywords(uris)
 
-    val embedlyKeys = uris.map { uriId => uriSummaryCommander.getStoredEmbedlyKeywords(uriId) }
+    val embedlyKeysFut = Future.sequence(uris.map { uriId =>
+      keywordSummaryCommander.getFetchedKeywords(uriId).map(_._2)
+    })
 
     val keyCounts = MutableMap.empty[String, Int].withDefaultValue(0)
 
-    word2vecFut.map { word2vecKeys =>
-      (embedlyKeys zip word2vecKeys).map {
-        case (emb, w2v) =>
-          val s1 = emb.map { _.name }.toSet
-          val s2 = w2v.map { _.cosine }.getOrElse(Seq()).toSet
-          val s3 = w2v.map { _.freq }.getOrElse(Seq()).toSet
-          (s1.union(s2.intersect(s3))).foreach { word => keyCounts(word) = keyCounts(word) + 1 }
-      }
-      Ok(html.admin.UserKeywords(user, keyCounts.toArray.sortBy(-1 * _._2).take(100)))
+    (embedlyKeysFut zip word2vecFut).map {
+      case (embedlyKeys, word2vecKeys) =>
+        (embedlyKeys zip word2vecKeys).map {
+          case (emb, w2v) =>
+            val s1 = emb.map { _.name }.toSet
+            val s2 = w2v.map { _.cosine }.getOrElse(Seq()).toSet
+            val s3 = w2v.map { _.freq }.getOrElse(Seq()).toSet
+            (s1.union(s2.intersect(s3))).foreach { word => keyCounts(word) = keyCounts(word) + 1 }
+        }
+        Ok(html.admin.UserKeywords(user, keyCounts.toArray.sortBy(-1 * _._2).take(100)))
     }
   }
 
@@ -296,7 +300,7 @@ class AdminBookmarksController @Inject() (
 
     bmsFut.flatMap { bms =>
       val uris = bms.map { _.uriId }
-      val keywordsFut = Future.sequence(uris.map { uri => uriSummaryCommander.getKeywordsSummary(uri) })
+      val keywordsFut = Future.sequence(uris.map { uri => keywordSummaryCommander.getKeywordsSummary(uri) })
 
       for {
         keywords <- keywordsFut

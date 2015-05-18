@@ -8,9 +8,6 @@ POST    /internal/scraper/getSignature                  @com.keepit.scraper.Scra
 GET     /internal/scraper/getPornDetectorModel          @com.keepit.controllers.scraper.PornDetectorController.getModel
 POST    /internal/scraper/pornDetector/detectPorn       @com.keepit.controllers.scraper.PornDetectorController.detect
 POST    /internal/scraper/pornDetector/whitelist        @com.keepit.controllers.scraper.PornDetectorController.whitelist
-POST    /internal/scraper/embedly/embedlyInfo           @com.keepit.controllers.scraper.EmbedlyController.getImbedlyInfo
-POST    /internal/scraper/uriWordCount                  @com.keepit.controllers.scraper.URISummaryController.getURIWordCount
-POST    /internal/scraper/fetchAndPersistURIPreview     @com.keepit.controllers.scraper.URISummaryController.fetchAndPersistURIPreview
 
 ->  / commonService.Routes
 

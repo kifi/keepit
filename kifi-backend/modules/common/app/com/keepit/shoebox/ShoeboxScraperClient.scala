@@ -31,7 +31,6 @@ trait ShoeboxScraperClient extends ThrottledServiceClient {
   def updateNormalizedURI(uriId: => Id[NormalizedURI], createdAt: => DateTime = ?, updatedAt: => DateTime = ?, externalId: => ExternalId[NormalizedURI] = ?, title: => Option[String] = ?, url: => String = ?, urlHash: => UrlHash = UrlHash(?), state: => State[NormalizedURI] = ?, seq: => SequenceNumber[NormalizedURI] = SequenceNumber(-1), screenshotUpdatedAt: => Option[DateTime] = ?, restriction: => Option[Restriction] = ?, normalization: => Option[Normalization] = ?, redirect: => Option[Id[NormalizedURI]] = ?, redirectTime: => Option[DateTime] = ?): Future[Unit]
   def getProxy(url: String): Future[Option[HttpProxy]]
   def getProxyP(url: String): Future[Option[HttpProxy]]
-  def getUriImage(nUriId: Id[NormalizedURI]): Future[Option[String]]
 }
 
 @Singleton
@@ -46,13 +45,6 @@ class ShoeboxScraperClientImpl @Inject() (
   val longTimeout = CallTimeouts(responseTimeout = Some(60000), maxWaitTime = Some(60000), maxJsonParseTime = Some(30000))
   override val limiter = new ReactiveLock(8, Some(32))
   val assignScrapeTasksLimiter = new ReactiveLock(1, Some(5)) //in fact we should have at most one in the queue
-
-  def getUriImage(nUriId: Id[NormalizedURI]): Future[Option[String]] = limiter.withLockFuture {
-    statsd.gauge("getUriImage", 1)
-    call(Shoebox.internal.getUriImage(nUriId), routingStrategy = offlinePriority).map { r =>
-      Json.fromJson[Option[String]](r.json).get
-    }
-  }
 
   def getAllURLPatterns(): Future[UrlPatternRules] = {
     urlPatternRuleAllCache.getOrElseFuture(UrlPatternRulesAllKey()) {

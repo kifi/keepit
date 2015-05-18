@@ -25,6 +25,7 @@ trait RoverServiceClient extends ServiceClient {
   def getBestArticlesByUris(uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[Article]]]
   def getArticleInfosByUris(uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[ArticleInfo]]]
   def getImagesByUris(uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], BasicImages]]
+  def getArticleSummaryByUris(uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], RoverArticleSummary]]
   def getUriSummaryByUris(uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], RoverUriSummary]]
   def getOrElseFetchUriSummary(uriId: Id[NormalizedURI], url: String): Future[Option[RoverUriSummary]] // slow, prefer getUriSummaryByUris
 }
@@ -76,16 +77,23 @@ class RoverServiceClientImpl(
     getArticleImagesByUris(uriIds)(RoverUriSummary.defaultProvider)
   }
 
+  def getArticleSummaryByUris(uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], RoverArticleSummary]] = {
+    getBestArticleSummaryByUris(uriIds)(RoverUriSummary.defaultProvider).imap { articleSummaryByUriId =>
+      articleSummaryByUriId.collect {
+        case (uriId, Some(articleSummary)) => uriId -> articleSummary
+      }
+    }
+  }
+
   def getUriSummaryByUris(uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], RoverUriSummary]] = {
-    val contentSummaryProvider = RoverUriSummary.defaultProvider
-    val futureArticleSummaryByUriId = getBestArticleSummaryByUris(uriIds)(contentSummaryProvider)
-    val futureImagesByUriId = getArticleImagesByUris(uriIds)(contentSummaryProvider)
+    val futureArticleSummaryByUriId = getArticleSummaryByUris(uriIds)
+    val futureImagesByUriId = getImagesByUris(uriIds)
     for {
       articleSummaryByUriId <- futureArticleSummaryByUriId
       imagesByUriId <- futureImagesByUriId
     } yield {
-      articleSummaryByUriId.collect {
-        case (uriId, Some(articleSummary)) =>
+      articleSummaryByUriId.map {
+        case (uriId, articleSummary) =>
           uriId -> RoverUriSummary(articleSummary, imagesByUriId.getOrElse(uriId, BasicImages.empty))
       }
     }

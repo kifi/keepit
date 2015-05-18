@@ -63,11 +63,6 @@ case class ElizaCacheModule(cachePluginModules: CachePluginModule*) extends Cach
 
   @Singleton
   @Provides
-  def uriSummaryCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new URISummaryCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 30 days))
-
-  @Singleton
-  @Provides
   def searchIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new InitialSearchIdCache(stats, accessLog, (outerRepo, 1 hour))
 
@@ -159,10 +154,6 @@ case class ElizaCacheModule(cachePluginModules: CachePluginModule*) extends Cach
   @Provides @Singleton
   def verifiedEmailUserIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new VerifiedEmailUserIdCache(stats, accessLog, (outerRepo, 7 days))
-
-  @Provides @Singleton
-  def uriWordCountCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new NormalizedURIWordCountCache(stats, accessLog, (innerRepo, 5 minutes), (outerRepo, 30 days))
 
   @Provides @Singleton
   def allFakeUsersCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =

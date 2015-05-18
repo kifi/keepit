@@ -2,7 +2,7 @@ package com.keepit.scraper
 
 import com.google.inject.{ Provides, Singleton }
 import com.keepit.inject.AppScoped
-import com.keepit.model.{ HttpProxy, NormalizedURI, PageInfo, ScrapeInfo }
+import com.keepit.model.{ HttpProxy, NormalizedURI, ScrapeInfo }
 import com.keepit.scraper.actor.ScrapeProcessorActorImpl
 import com.keepit.scraper.extractor.{ ExtractorFactory, ExtractorFactoryImpl, ExtractorProviderType }
 
@@ -21,7 +21,7 @@ case class TestScraperProcessorModule() extends ScrapeProcessorModule {
   @Provides
   def scrapeProcessor: ScrapeProcessor = new ScrapeProcessor {
     def fetchBasicArticle(url: String, proxyOpt: Option[HttpProxy], extractorProviderTypeOpt: Option[ExtractorProviderType]): Future[Option[BasicArticle]] = Future.successful(None)
-    def asyncScrape(uri: NormalizedURI, info: ScrapeInfo, pageInfo: Option[PageInfo], proxyOpt: Option[HttpProxy]): Unit = ()
+    def asyncScrape(uri: NormalizedURI, info: ScrapeInfo, proxyOpt: Option[HttpProxy]): Unit = ()
   }
 
 }

@@ -1,4 +1,4 @@
-@(user: User, bookmark: Keep, normalizedUri: NormalizedURI, scrapeInfo: Option[ScrapeInfo], imgUrl:String, screenshotUrl: String, keywords: KeywordsSummary, libraryOpt: Option[Library])(implicit request: com.keepit.common.controller.UserRequest[_])
+@(user: User, bookmark: Keep, normalizedUri: NormalizedURI, scrapeInfo: Option[ScrapeInfo], imgUrl:String, screenshotUrl: String, keywords: com.keepit.commanders.KeywordsSummary, libraryOpt: Option[Library])(implicit request: com.keepit.common.controller.UserRequest[_])
 
 @import com.keepit.controllers.admin.routes
 

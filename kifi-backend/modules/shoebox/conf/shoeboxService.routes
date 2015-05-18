@@ -561,13 +561,6 @@ GET     /admin/bookmarksKeywords/page/:page @com.keepit.controllers.admin.AdminB
 POST    /admin/bookmarks/populateNotes @com.keepit.controllers.admin.AdminBookmarksController.populateKeepNotesWithTag(page: Int ?= 0, size: Int ?= 500, grouping: Int ?= 500)
 DELETE  /admin/users/:id/tags/:name @com.keepit.controllers.admin.AdminBookmarksController.deleteTag(id: Id[User], name: String)
 
-GET     /admin/images                @com.keepit.controllers.admin.AdminScreenshotController.images
-GET     /admin/imageInfos            @com.keepit.controllers.admin.AdminScreenshotController.imageInfos
-POST    /admin/imagesCompare         @com.keepit.controllers.admin.AdminScreenshotController.imagesCompare()
-
-GET     /admin/pageInfo/:id         @com.keepit.controllers.admin.AdminPageInfoController.pageInfo(id:Id[PageInfo])
-GET     /admin/pageInfos            @com.keepit.controllers.admin.AdminPageInfoController.pageInfos(page:Int ?= 0, size:Int ?= 50)
-
 GET     /admin/uri/:uriId           @com.keepit.controllers.admin.UrlController.getURIInfo(uriId: Id[NormalizedURI])
 #GET     /admin/uri/article/        @com.keepit.controllers.admin.UrlController.getArticle(uriId: Id[NormalizedURI], kind: ArticleKind[_ <: Article], version: ArticleVersion)
 GET     /admin/uri/:uriId/article/:kind @com.keepit.controllers.admin.UrlController.getBestArticle(uriId: Id[NormalizedURI], kind: ArticleKind[_ <: Article])
@@ -932,7 +925,6 @@ GET      /internal/shoebox/database/getAllFakeUsers         @com.keepit.controll
 GET      /internal/shoebox/database/getInvitations          @com.keepit.controllers.internal.ShoeboxController.getInvitations(senderId: Id[User])
 GET      /internal/shoebox/database/getSocialConnections    @com.keepit.controllers.internal.ShoeboxController.getSocialConnections(userId: Id[User])
 
-GET      /internal/shoebox/image/getUriImage         @com.keepit.controllers.internal.URISummaryController.getUriImageForUriId(id: Id[NormalizedURI])
 GET      /internal/shoebox/image/getUserImageUrl     @com.keepit.controllers.internal.ShoeboxController.getUserImageUrl(id: Id[User], width: Int)
 POST     /internal/shoebox/database/getBasicKeeps   @com.keepit.controllers.internal.ShoeboxController.getBasicKeeps(userId: Id[User])
 POST     /internal/shoebox/database/getBasicLibraryStatistics   @com.keepit.controllers.internal.ShoeboxController.getBasicLibraryStatistics()
@@ -950,7 +942,6 @@ GET     /internal/shoebox/database/getUsersByExperiment     @com.keepit.controll
 POST    /internal/shoebox/user/addInteractions            @com.keepit.controllers.internal.ShoeboxController.addInteractions(userId: Id[User])
 POST    /internal/shoebox/libraries/canView             @com.keepit.controllers.internal.ShoeboxController.canViewLibrary()
 GET     /internal/shoebox/user/activePersonas           @com.keepit.controllers.internal.ShoeboxController.getUserActivePersonas(userId: Id[User])
-GET     /internal/shoebox/database/getImageInfosChanged   @com.keepit.controllers.internal.ShoeboxDataPipeController.getImageInfosChanged(seqNum: SequenceNumber[ImageInfo], fetchSize: Int)
 
 # Angular assets
 GET     /dist/*file                com.keepit.controllers.website.AngularDistAssets.at(path = "/public/ng/dist", file)
