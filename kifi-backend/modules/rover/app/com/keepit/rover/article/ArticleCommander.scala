@@ -98,7 +98,8 @@ class ArticleCommander @Inject() (
   }
 
   private def internArticleInfoByUri(uriId: Id[NormalizedURI], url: String, kinds: Set[ArticleKind[_ <: Article]]): Map[ArticleKind[_ <: Article], RoverArticleInfo] = {
-    db.readWrite { implicit session =>
+    // natural race condition with the regular ingestion, hence the 3 attempts
+    db.readWrite(attempts = 3) { implicit session =>
       articleInfoRepo.internByUri(uriId, url, kinds)
     }
   }
