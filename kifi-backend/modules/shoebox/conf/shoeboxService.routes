@@ -194,6 +194,7 @@ POST    /m/1/user/notifyPrefs               @com.keepit.controllers.mobile.Mobil
 POST    /m/1/user/pic/upload                @com.keepit.controllers.mobile.MobileUserController.uploadBinaryUserPicture()
 POST    /m/1/tags/:id/addToKeep             @com.keepit.controllers.mobile.MobileKeepsController.addTag(id: ExternalId[Collection])
 POST    /m/1/tags/:id/removeFromKeep        @com.keepit.controllers.mobile.MobileKeepsController.removeTag(id: ExternalId[Collection])
+GET     /m/1/tags/suggest                   @com.keepit.controllers.mobile.MobileKeepsController.suggestTags(keepId: Option[String], query: Option[String] ?= None, limit: Int ?= 5)
 
 POST    /m/1/auth/accessTokenSignup/:provider   @com.keepit.controllers.mobile.MobileAuthController.accessTokenSignup(provider)
 POST    /m/1/auth/accessTokenLogin/:provider    @com.keepit.controllers.mobile.MobileAuthController.accessTokenLogin(provider)
