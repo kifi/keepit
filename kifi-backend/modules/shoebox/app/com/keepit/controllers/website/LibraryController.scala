@@ -133,10 +133,7 @@ class LibraryController @Inject() (
         LibraryViewAction(Library.publicId(library.id.get)).invokeBlock(request, { _: MaybeUserRequest[_] =>
           val idealSize = imageSize.flatMap { s => Try(ImageSize(s)).toOption }.getOrElse(LibraryController.defaultLibraryImageSize)
           request.userIdOpt foreach { userId => libraryCommander.updateLastView(userId, library.id.get) }
-          val showKeepCreateTime = request.userIdOpt.exists(_ == library.ownerId) || Some(request).collect {
-            case r: UserRequest[_] => r.experiments.contains(ExperimentType.KEEP_NOTES)
-          }.getOrElse(false)
-          libraryCommander.createFullLibraryInfo(request.userIdOpt, showPublishedLibraries, library, idealSize, showKeepCreateTime).map { libInfo =>
+          libraryCommander.createFullLibraryInfo(request.userIdOpt, showPublishedLibraries, library, idealSize, withKeepTime = true).map { libInfo =>
             val memOpt = libraryCommander.getMaybeMembership(request.userIdOpt, library.id.get)
             val accessStr = memOpt.map(_.access.value).getOrElse("none")
             val listed = memOpt.map(_.listed)
