@@ -287,6 +287,15 @@ class MobileMessagingController @Inject() (
     Ok(numUnreadUnmuted.toString)
   }
 
+  def getUnreadCounts = UserAction { request =>
+    val numUnreadNotifs = messagingCommander.getUnreadUnmutedThreadCount(request.userId, Some(false))
+    val numUnreadMessages = messagingCommander.getUnreadUnmutedThreadCount(request.userId, Some(true))
+    Ok(Json.obj(
+      "messages" -> numUnreadMessages,
+      "notifications" -> numUnreadNotifs
+    ))
+  }
+
   def markUnreadNotifications(kind: Option[String] = None) = UserAction { request =>
     kind match {
       case Some("system") =>
