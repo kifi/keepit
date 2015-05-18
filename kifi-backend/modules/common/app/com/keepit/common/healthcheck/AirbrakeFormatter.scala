@@ -55,7 +55,13 @@ object ErrorWithStack {
         .take(AirbrakeError.MaxStackTrace))
 }
 
-class AirbrakeFormatter(val apiKey: String, val playMode: Mode, service: FortyTwoServices, serviceDiscovery: ServiceDiscovery) {
+trait AirbrakeFormatter {
+  private[healthcheck] def deploymentMessage: String
+  private[healthcheck] def format(error: AirbrakeError): NodeSeq
+  def noticeError(error: ErrorWithStack, message: Option[String]): NodeSeq
+}
+
+class AirbrakeFormatterImpl(val apiKey: String, val playMode: Mode, service: FortyTwoServices, serviceDiscovery: ServiceDiscovery) extends AirbrakeFormatter {
 
   val deploymentMessage: String = {
     val repo = "https://github.com/kifi/keepit"
@@ -120,7 +126,7 @@ class AirbrakeFormatter(val apiKey: String, val playMode: Mode, service: FortyTw
       { formatHeaders(headers.toMap, id, userId, userName) }
     </request>
 
-  def noticeError(error: ErrorWithStack, message: Option[String]) =
+  def noticeError(error: ErrorWithStack, message: Option[String]): NodeSeq =
     <error>
       <class>{ error.rootCause.error.getClass.getName }</class>
       <message>{
@@ -144,7 +150,7 @@ class AirbrakeFormatter(val apiKey: String, val playMode: Mode, service: FortyTw
     } :: Nil).flatten
 
   //http://airbrake.io/airbrake_2_3.xsd
-  private[healthcheck] def format(error: AirbrakeError) =
+  private[healthcheck] def format(error: AirbrakeError): NodeSeq =
     <notice version="2.3">
       <api-key>{ apiKey }</api-key>
       <notifier>
