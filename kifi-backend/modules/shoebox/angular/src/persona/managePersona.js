@@ -11,6 +11,8 @@ angular.module('kifi')
       },
       templateUrl: 'persona/managePersona.tpl.html',
       link: function (scope, element) {
+        var modalPersonasChanged;
+
         //
         // Scope data.
         //
@@ -27,6 +29,7 @@ angular.module('kifi')
           scope.selectedPersonaIds.push(persona.id);
           if (scope.isModal) {
             userPersonaActionService.addPersona(persona.id);
+            modalPersonasChanged = true;
           }
 
           // to Camel Case Analytics
@@ -42,6 +45,7 @@ angular.module('kifi')
           _.pull(scope.selectedPersonaIds, persona.id);
           if (scope.isModal) {
             userPersonaActionService.removePersona(persona.id);
+            modalPersonasChanged = true;
           }
 
           // to Camel Case Analytics
@@ -71,9 +75,11 @@ angular.module('kifi')
               });
 
             } else if (scope.isModal) {
-              $rootScope.$emit('refreshRecos');
               modalService.close();
-              libraryService.fetchLibraryInfos(true);
+              if (modalPersonasChanged) {
+                $rootScope.$emit('refreshRecos');
+                libraryService.fetchLibraryInfos(true);
+              }
             }
             $analytics.eventTrack('user_clicked_page', {action: 'closed'});
           }
