@@ -599,6 +599,17 @@ angular.module('kifi')
           libraryService.trackEvent('user_clicked_page', scope.library, { action: 'clickedTwitterProfileURL' });
         };
 
+        scope.openInviteModal = function (inviteType) {
+          modalService.open({
+            template: 'libraries/libraryInviteSearchModal.tpl.html',
+            modalData: {
+              library: scope.library,
+              inviteType: inviteType,
+              currentPageOrigin: 'libraryPage'
+            }
+          });
+        };
+
 
         //
         // Watches and listeners.

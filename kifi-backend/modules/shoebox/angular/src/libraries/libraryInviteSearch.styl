@@ -1,0 +1,200 @@
+.library-invite-search
+  & .dialog-header
+    margin-top: 50px
+    border-bottom: none
+    font-size: 14px
+    text-align: center
+
+  & .dialog-body
+    height: 330px
+    padding: 0px 0px 10px 0px
+
+.lis-inviter-wrapper
+  position: absolute
+  top: -70px
+  left: 50%
+  transform: translateX(-50%)
+  width: 140px
+  height: 140px
+  border-radius: 50%
+  background-color: white
+
+  & .lis-inviter-pic
+    width: 120px
+    height: 120px
+    margin-left: 10px
+    margin-top: 10px
+    border-radius: 50%
+    background-color: white
+
+.lis-input
+  box-sizing: border-box
+  font-size: 12px
+  placeholder secondaryTextGray
+
+.lis-message-input
+  position: relative
+  left: 20px
+  width: calc(100% - 40px)
+  height: 60px
+  line-height: 18px
+  padding: 10px 15px
+  margin-bottom: 20px
+  background-color: white
+  outline: none
+  border: 1px solid #f3f5f7
+  border-radius: 5px
+  resize: none
+
+.lis-search-box
+  position: relative
+  width: 100%
+  margin-bottom: 5px
+
+  & .lis-search-input
+    width: 100%
+    line-height: 30px
+    background-color: #F3F5F7
+    padding: 15px 15px 13px 45px
+
+.lis-spinner
+  position: absolute
+  right: 15px
+  top: 12px
+
+.lis-search-icon
+  position: absolute
+  top: 22px
+  left: 20px
+  height: 14px
+  width: 14px
+  background-size: contain
+  background-repeat: no-repeat
+
+.lis-contact-list
+  max-height: 187px
+  overflow-x: hidden
+  overflow-y: auto
+
+.lis-contact
+  box-sizing: border-box
+  border-top: 1px solid borderLightGray
+  padding: 8px 20px
+  width: 100%
+  height: 53px
+  background: #fff
+
+  &:first-child
+    border-top: none
+
+  &.lis-invite-selected
+    background-color: #f8f8f8
+
+  &.lis-invite-actionable
+    &:hover
+      cursor: pointer
+
+.lis-contact-container
+  position: relative
+
+.lis-contact-image
+  display: inline-block
+  margin-right: 15px
+  border-radius: 100%
+  width: 36px
+  height: 36px
+  vertical-align: top
+
+.lis-contact-summary
+  display: inline-block
+  margin-top: 3px
+  width: 210px
+  line-height: 1.4em
+
+.lis-contact-name
+  overflow: hidden
+  font-size: 14px
+  color: #000
+  text-overflow: ellipsis
+  white-space: nowrap
+
+  .lis-new-email &
+    font-weight: bold
+
+.lis-contact-network
+  overflow: hidden
+  font-size: 12px
+  color: secondaryTextGray
+  text-overflow: ellipsis
+  white-space: nowrap
+
+.lis-contact-button
+  float: right
+  vertical-align: top
+  margin-top: 4px
+  padding: 5px 8px
+  border: 1px solid #979797
+  font-size: 13px
+  color: #979797
+  border-radius: 4px
+  background: none
+  outline: none
+
+.lis-invite-icon
+  display: inline-block
+  margin-right: 5px
+  background-size: cover
+  background-repeat: no-repeat
+
+  &.collaborate
+    position: relative
+    top: 1px
+    width: 23px
+    height: 13px
+
+  &.follow
+    width: 12px
+    height: 12px
+
+.lis-invite-sent
+.lis-invite-following
+.lis-invite-collaborating
+  display: inline-block
+  position: absolute
+  top: 8px
+  color: #56b263
+
+.lis-invite-sent
+  right: 10px
+
+.lis-invite-following
+.lis-invite-collaborating
+  right: 0px
+
+.lis-contact-email-icon
+  @extend .lis-contact-image
+  background-image: url(/img/mail.2x.png)
+  background-position: center 9px
+  background-repeat: no-repeat
+  background-size: 62% 48%
+  background-color: #e36766
+
+.lis-contact-new-email-icon
+  @extend .lis-contact-email-icon
+  background-color: #32495e
+
+.lis-contact-gmail-icon
+  @extend .lis-contact-email-icon
+  border: 1px solid borderLightGray
+  background-image: url("data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 45555 33097%22><path fill=%22%23e75a4d%22 d=%22M41608 250c2030,0 3691,1661 3691,3691l0 1070 -5128 3663 -17458 12026 -17458 -12148 0 24295 -1314 0c-2030,0 -3691,-1661 -3691,-3691l0 -25214c0,-2030 1661,-3691 3691,-3691l18772 13918 18894 -13918z%22/><polygon fill=%22%23e7e4d7%22 points=%225255,8552 5255,32847 40172,32847 40172,8674 22713,20700%22/><polygon fill=%22%23b8b7ae%22 points=%225255,32847 22713,20700 22634,20644 5255,32580%22/><polygon fill=%22%23b7b6ad%22 points=%2240172,8674 40182,32847 22713,20700%22/><path fill=%22%23b2392f%22 d=%22M45299 5011l6 24148c-88,2684 -1251,3642 -5123,3687l-10 -24173 5128 -3663z%22/><polygon fill=%22%23f7f5ed%22 points=%223941,250 22713,14168 41608,250%22/></svg>")
+  background-color: #fff
+
+.lis-contact-import-gmail
+  position: relative
+  top: 10px
+  overflow: hidden
+  font-size: 14px
+  color: #000
+  text-overflow: ellipsis
+  white-space: nowrap
+

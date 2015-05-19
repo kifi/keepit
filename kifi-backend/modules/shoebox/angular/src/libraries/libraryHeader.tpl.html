@@ -93,7 +93,7 @@
         <button class="kf-lh-more-collab" ng-if="library.numCollaborators - library.collaborators.length > 0">
           +{{library.numCollaborators - library.collaborators.length}}
         </button>
-        <button class="kf-lh-add-collab-button" ng-if="(library.access == 'owner' || (library.access == 'read_write' && library.whoCanInvite == 'collaborator')) && onCollabExperiment">
+        <button class="kf-lh-add-collab-button" ng-if="(library.access == 'owner' || (library.access == 'read_write' && library.whoCanInvite == 'collaborator')) && onCollabExperiment" ng-click="openInviteModal('collaborate')">
           <div class="kf-lh-add-collab-icon svg-collaborator-white"></div>
           <span class="kf-lh-add-collab-msg">Invite a collaborator</span>
         </button>
