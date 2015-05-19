@@ -35,11 +35,23 @@
 
 .kf-knf-buttons
   margin-top: 6px
-  border-top: 1px solid accentGreen
+  border-top: 1px solid #ddd
   border-radius: 0 0 4px 4px
   padding-right: 10px
+  // height: 35px
   background-color: appBackgroundColor
   text-align: right
+  position: relative  // This transition duration is also in removeForm in keepNoteForm.js.
+  // transition: margin-top .3s, height .3s, opacity linear .15s .15s
+
+  // &.kf-collapsed
+  //   margin-top: -7px
+  //   height: 0
+  //   opacity: 0
+  //   transition-delay: 0s
+
+  // .kf-keep-top+*>&.kf-collapsed
+  //   margin-top: -1px
 
 .kf-knf-save
 .kf-knf-cancel
@@ -77,3 +89,35 @@
 
     &:active
       background-color: shade(bgColor, 4%)
+
+.kf-knf-progress
+  position: absolute
+  left: 0
+  bottom: 100%
+  width: 100%
+  height: 2px
+  background-color: accentGreen
+  transform: scale(0, 1)
+  transform-origin: left
+  transition: transform .2s linear
+
+  &.kf-fail
+    background-color: #a00
+    transition: transform .4s
+
+  &.kf-done
+    transition-timing-function: ease
+
+.kf-knf-checkmark
+  position: absolute
+  bottom: 100%
+  right: 0
+  height: 20px
+  width: 16px
+  background-repeat: no-repeat
+  background-position: center
+  clip: rect(0,0,auto,0)
+  transition: clip .2s .2s
+
+  .kf-done>&
+    clip: rect(0,16px,auto,0)

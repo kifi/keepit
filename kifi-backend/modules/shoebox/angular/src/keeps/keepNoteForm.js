@@ -3,9 +3,12 @@
 angular.module('kifi')
 
 .factory('keepNoteForm', [
-  '$log', '$templateCache', '$filter', '$http', 'KEY', 'HTML', 'hashtagService', 'routeService',
+  '$log', '$templateCache', '$filter', '$http', '$q', '$timeout', 'KEY', 'HTML',
+  'hashtagService', 'routeService', 'modalService',
   (function () {
-    return _.once(function ($log, $templateCache, $filter, $http, KEY, HTML, hashtagService, routeService) {
+    return _.once(function (
+      $log, $templateCache, $filter, $http, $q, $timeout, KEY, HTML,
+      hashtagService, routeService, modalService) {
 
       // NOTE: Code below is quite DOM-heavy and was taken, with slight modifications, from
       // keep_note.js in the browser extension, which doesn't use Angular--hence the deviation
@@ -580,26 +583,67 @@ angular.module('kifi')
       }
 
       function onCancelClick(e) {
-        $(e.delegateTarget).remove();
+        removeForm($(e.delegateTarget));
       }
 
       function onSaveClick(e) {
         var $form = $(e.delegateTarget);
         var $note = $form.find('.kf-knf-editor');
+        var $buttons = $form.find('.kf-knf-save,.kf-knf-cancel').prop('disabled', true);
+        var $progress = $form.find('.kf-knf-progress');
         var data = $note.data();
         var text = noteHtmlToText($note.html());
+        fakeProgress($http.post(routeService.saveKeepNote(data.libraryId, data.keepId), {note: text}))
+        .then(function done() {
+          $progress.addClass('kf-done').css('transform', 'none');
+          data.update(text);
+          $timeout(function () {
+            removeForm($form);
+          }, 800, false); // allowing progress bar transition to complete and register in user's mind
+        }, function fail() {
+          $progress.addClass('kf-fail').css('transform', 'scale(0,1)');
+          $timeout(function () {
+            $progress.removeClass('kf-fail');
+            $buttons.prop('disabled', false);
+            modalService.openGenericErrorModal();
+          }, 400, false); // allowing progress bar transition to complete and register in user's mind
+        }, function progress(fraction) {
+          $progress.css('transform', 'scale(' + fraction + ',1)');
+        });
+      }
 
-        if (text === data.text) {
-          $form.remove();
-        } else {
-          $http.post(routeService.saveKeepNote(data.libraryId, data.keepId), {note: text}).then(function done() {
-            data.text = text;
-            data.update(text);
-            $form.remove();
-          }, function fail() {
+      function fakeProgress(req) {
+        var deferred = $q.defer(), fraction = 0, timeout, tickMs = 100;
+        req.success(function (data) {
+          deferred.resolve(data);
+        }).error(function (data) {
+          deferred.reject(data);
+        }).then(function () {
+          $timeout.cancel(timeout);
+        });
 
-          });
+        function tick() {
+          if (fraction > 0.88) {
+            fraction += Math.min(0.004, (1 - fraction) / 4);
+          } else {
+            fraction += (0.95 - fraction) / 8;
+          }
+          deferred.notify(fraction);
+
+          if (fraction < 0.99) {
+            timeout = $timeout(tick, tickMs, false);
+          }
         }
+        timeout = $timeout(tick, 0, false);
+
+        return deferred.promise;
+      }
+
+      function removeForm($form) {
+        $form.find('.kf-knf-buttons').addClass('kf-collapsed');
+        // $timeout(function () {
+          $form.remove();
+        // }, 300, false); // transition-duration: .3s in stylesheet
       }
 
       return {
@@ -613,13 +657,13 @@ angular.module('kifi')
             .data({
               libraryId: libraryId,
               keepId: keepId,
-              text: noteText,
               update: function (text) {
                 updateModel(text);
                 $noteOriginal.html($filter('noteHtml')(text));
               },
               seq: 0
             });
+          $form.find('.kf-knf-buttons').layout().removeClass('kf-collapsed');
           var data = $note.data();
 
           // Realizations that inform our strategy for efficient (lag-free) hashtag identification and highlighting:
@@ -670,3 +714,9 @@ angular.module('kifi')
     });
   }())
 ]);
+
+jQuery.fn.layout = function () {
+  return this.each(function () { /*jshint expr:true */
+    this.clientHeight;  // forces layout
+  });
+};
