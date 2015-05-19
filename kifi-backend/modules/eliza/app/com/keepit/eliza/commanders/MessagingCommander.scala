@@ -429,7 +429,7 @@ class MessagingCommander @Inject() (
     urlOpt.foreach { url =>
       (nUriOpt match {
         case Some(n) => Promise.successful(n).future
-        case None => shoebox.internNormalizedURI(url, contentWanted = true) //Note, this also needs to include canonical/og when we have detached threads
+        case None => shoebox.internNormalizedURI(url.toString, contentWanted = true) //Note, this also needs to include canonical/og when we have detached threads
       }) foreach { nUri =>
         db.readWrite { implicit session =>
           messageRepo.updateUriId(message, nUri.id.get)
