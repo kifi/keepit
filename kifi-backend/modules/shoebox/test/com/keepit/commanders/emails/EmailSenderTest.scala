@@ -668,8 +668,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
           (user1, user2)
         }
         val email = Await.result(sender.sendToUser(user1.id.get, Some(toEmail)), Duration(5, "seconds"))
-
-        println(email.htmlBody)
+        
         1 === 1
       }
     }
