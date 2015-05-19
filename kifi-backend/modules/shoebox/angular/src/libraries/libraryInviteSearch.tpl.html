@@ -2,7 +2,7 @@
   <a class="dialog-x library-invites-close-x" ng-click="close()"></a>
 
   <div class="dialog-body-wrap">
-    <h1 class="dialog-header">{{modalTitle}}</h1>
+    <h1 class="dialog-header">{{inviteType === 'collaborate' ? 'Who would you like to collaborate with?' : 'Who would you like to invite?'}}</h1>
     <div class="dialog-body">
 
       <!-- Inviter Pic -->
@@ -68,8 +68,8 @@
           <div ng-if="result.custom === 'email'" class="lis-contact-container lis-contact-new-email">
             <div class="lis-contact-new-email-icon"></div>
             <div class="lis-contact-summary">
-              <div class="lis-contact-name">{{email}}</div>
-              <div class="lis-contact-network">{{emailHelp}}</div>
+              <div class="lis-contact-name">{{query || 'Send to any email'}}</div>
+              <div class="lis-contact-network">{{queryIsValidEmail ? 'An email address' : query ? 'Keep typing the email address' : 'Type the email address'}}</div>
             </div>
             <button ng-show="!result.sent && !result.hideButton" ng-click="shareLibraryNewEmail(result)" class="lis-contact-button">
               <div ng-if="inviteType === 'collaborate'">

@@ -30,15 +30,14 @@ angular.module('kifi')
         scope.search = {};
         scope.share = {};
         scope.showSpinner = false;
-        scope.email = 'Send to any email';
-        scope.emailHelp = 'Type the email address';
+        scope.query = '';
+        scope.queryIsValidEmail = true;
         scope.inviter = profileService.me;
 
         function init() {
           if (scope.modalData.inviteType) {
             scope.library = scope.modalData.library;
             scope.inviteType = scope.modalData.inviteType;
-            scope.modalTitle = scope.inviteType === 'collaborate' ? 'Who would you like to collaborate with?' : 'Who would you like to invite?';
             scope.currentPageOrigin = scope.modalData.currentPageOrigin;
             scope.isOwn = scope.library.owner.id === profileService.me.id;
 
@@ -89,11 +88,11 @@ angular.module('kifi')
         function populateDropDown(opt_query) {
           // Update the email address and email help text being displayed.
           if (opt_query) {
-            scope.email = opt_query;
-            scope.emailHelp = 'Keep typing the email address';
+            scope.query = opt_query;
+            scope.queryIsValidEmail = false;
 
             if (util.validateEmail(opt_query)) {
-              scope.emailHelp = 'An email address';
+              scope.queryIsValidEmail = true;
             }
           }
 
