@@ -17,6 +17,8 @@ import akka.actor._
 
 import java.io._
 import java.net._
+import play.api.libs.json._
+
 import scala.xml._
 
 import play.api.mvc._
@@ -53,6 +55,121 @@ object ErrorWithStack {
           e.getFileName != "Future.scala" &&
           e.getFileName != "AbstractDispatcher.scala")
         .take(AirbrakeError.MaxStackTrace))
+}
+
+class JsonAirbrakeFormatter(val apiKey: String, val playMode: Mode, service: FortyTwoServices, serviceDiscovery: ServiceDiscovery) {
+  val deploymentMessage: String = {
+    val repo = "https://github.com/kifi/keepit"
+    val version = service.currentVersion
+    s"api_key=$apiKey&deploy[rails_env]=$modeToRailsNaming&deploy[scm_repository]=$repo&deploy[scm_revision]=$version"
+  }
+
+  case class JsonAirbrakeBacktrace(file: String, function: String, line: Option[Int], column: Option[Int])
+  case class JsonAirbrakeError(`type`: String, message: String, backtrace: Seq[JsonAirbrakeBacktrace])
+  case class JsonAirbrakeNotifier(name: String, version: String, url: String)
+  case class JsonAirbrakeContext(os: Option[String], language: Option[String], environment: Option[String],
+    version: Option[String], url: Option[String], rootDirectory: Option[String],
+    userId: Option[String], userName: Option[String], userEmail: Option[String])
+  case class JsonAirbrakeEnvironment(service: String, mode: String, serviceVersion: String, hostname: String)
+  case class JsonAirbrakeMessage(notifier: JsonAirbrakeNotifier, errors: Seq[JsonAirbrakeError], context: JsonAirbrakeContext,
+    environment: JsonAirbrakeEnvironment, session: Option[Map[String, String]], params: Option[Map[String, String]])
+
+  object JsonAirbrakeBacktrace { implicit val formatter = Json.format[JsonAirbrakeBacktrace] }
+  object JsonAirbrakeError { implicit val formatter = Json.format[JsonAirbrakeError] }
+  object JsonAirbrakeNotifier { implicit val formatter = Json.format[JsonAirbrakeNotifier] }
+  object JsonAirbrakeContext { implicit val formatter = Json.format[JsonAirbrakeContext] }
+  object JsonAirbrakeEnvironment { implicit val formatter = Json.format[JsonAirbrakeEnvironment] }
+  object JsonAirbrakeMessage { implicit val formatter = Json.format[JsonAirbrakeMessage] }
+
+  private val notifier = JsonAirbrakeNotifier("S42", "0.0.2", "https://admin.kifi.com/admin")
+
+  def format(airbrake: AirbrakeError): JsValue = {
+    val errors: Seq[JsonAirbrakeError] = airbrakeErrors(airbrake)
+
+    val message = JsonAirbrakeMessage(notifier, errors, context(airbrake), environment(), session(airbrake), params(airbrake))
+    Json.toJson(message)
+  }
+
+  private def context(error: AirbrakeError) = {
+    JsonAirbrakeContext(os = None, language = None, environment = Some(modeToRailsNaming),
+      version = Some(service.currentVersion.toString), url = error.url, rootDirectory = Some(service.currentService.toString),
+      userId = error.userId.map(_.toString), userName = error.userName, userEmail = None)
+  }
+
+  private def session(error: AirbrakeError) = {
+    val (headers, id, userIdOpt, usernameOpt) = (error.headers, error.id, error.userId, error.userName)
+    val result: Map[String, String] = headers.map { implicit header =>
+      header._1 -> header._2.mkString(" ")
+    }
+    result ++ "Z-InternalErrorId" -> id.id
+    userIdOpt.foreach(userId => { result ++ "Z-UserId" -> s"https://admin.kifi.com/admin/user/${userId.id}" })
+    usernameOpt.foreach(username => { result ++ "Z-UserName" -> username })
+    result.nonEmpty match {
+      case true => Some(result)
+      case false => None
+    }
+  }
+
+  private def params(error: AirbrakeError) = {
+    val result = error.params.map(header => header._1 -> header._2.mkString(" "))
+    result.nonEmpty match {
+      case true => Some(result)
+      case false => None
+    }
+  }
+
+  private def environment() = {
+    val hostname = serviceDiscovery.thisInstance map { instance =>
+      val info = instance.remoteService.amazonInstanceInfo
+      s"https://console.aws.amazon.com/ec2/v2/home?region=us-west-1#Instances:instancesFilter=all-instances;instanceTypeFilter=all-instance-types;search=${info.instanceId}"
+    } getOrElse "NA"
+    JsonAirbrakeEnvironment(service.currentService.toString, modeToRailsNaming, service.currentVersion.toString, hostname)
+  }
+
+  private def getErrorMessage(error: ErrorWithStack, message: Option[String]) = {
+    val instance = serviceDiscovery.thisInstance
+    val leader = serviceDiscovery.isLeader()
+    val errorString = error.rootCause.error match {
+      case _: DefaultAirbrakeException => ""
+      case e: Throwable => e.toString
+    }
+    val cleanMessage = message.map(_.replaceAll("Execution exception in null:null", "")).getOrElse("")
+    s"[${instance.map(_.id.id).getOrElse("NA")}${if (leader) "L" else "_"}]$cleanMessage $errorString".trim
+  }
+
+  private def getAirbrakeStackTrace(error: ErrorWithStack): Seq[JsonAirbrakeBacktrace] = {
+    val backtrace = error.stack map { implicit stack =>
+      JsonAirbrakeBacktrace(stack.getFileName, ignoreAnonfun(stack.getClassName) + "#" + stack.getMethodName, Some(stack.getLineNumber), None)
+    }
+    error.cause map { implicit errorWithStack =>
+      val stack: Seq[StackTraceElement] = errorWithStack.stack
+      val cause = JsonAirbrakeBacktrace("======== Caused By: ", errorWithStack.error.toString + "========", None, None)
+      cause +: getAirbrakeStackTrace(errorWithStack)
+    } match {
+      case Some(next) => backtrace ++ next
+      case None => backtrace
+    }
+  }
+
+  private def airbrakeErrors(airbrake: AirbrakeError): Seq[JsonAirbrakeError] = {
+    val error = ErrorWithStack(airbrake.exception)
+
+    val errorType: String = error.rootCause.error.getClass.getName
+    val message: String = getErrorMessage(error, airbrake.trimmedMessage)
+    val backtrace: Seq[JsonAirbrakeBacktrace] = getAirbrakeStackTrace(error).take(AirbrakeError.MaxStackTrace)
+    Seq[JsonAirbrakeError](JsonAirbrakeError(errorType, message, backtrace))
+  }
+  private def ignoreAnonfun(klazz: String) = klazz.
+    replaceAll("""\$\$anonfun.*""", "[a]").
+    replaceAll("""\$\$anon""", "[a]").
+    replaceAll("""\$[0-9]""", "").
+    replaceAll("""\$class""", "")
+
+  lazy val modeToRailsNaming = playMode match {
+    case Test => "test"
+    case Prod => "production"
+    case Dev => "development"
+  }
 }
 
 class AirbrakeFormatter(val apiKey: String, val playMode: Mode, service: FortyTwoServices, serviceDiscovery: ServiceDiscovery) {
