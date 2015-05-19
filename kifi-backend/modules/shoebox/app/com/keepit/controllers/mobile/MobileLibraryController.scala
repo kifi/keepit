@@ -22,6 +22,7 @@ import com.keepit.shoebox.controllers.LibraryAccessActions
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.{ JsArray, JsObject, JsString, Json }
 import com.keepit.common.core._
+import play.api.mvc.AnyContent
 
 import scala.concurrent.Future
 import scala.util.{ Try, Failure, Success }
@@ -126,7 +127,14 @@ class MobileLibraryController @Inject() (
     }
   }
 
-  def getLibraryByPath(userStr: String, slugStr: String, imageSize: Option[String] = None) = MaybeUserAction.async { request =>
+  def getLibraryByPathV1(userStr: String, slugStr: String, imageSize: Option[String] = None) = MaybeUserAction.async { request =>
+    getLibraryByPath(request, userStr, slugStr, imageSize, true)
+  }
+  def getLibraryByPathV2(userStr: String, slugStr: String, imageSize: Option[String] = None) = MaybeUserAction.async { request =>
+    getLibraryByPath(request, userStr, slugStr, imageSize, false)
+  }
+
+  private def getLibraryByPath(request: MaybeUserRequest[AnyContent], userStr: String, slugStr: String, imageSize: Option[String] = None, v1: Boolean) = {
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build
     libraryCommander.getLibraryWithUsernameAndSlug(userStr, LibrarySlug(slugStr), request.userIdOpt) match {
       case Right(library) =>
@@ -137,7 +145,10 @@ class MobileLibraryController @Inject() (
             val memOpt = libraryCommander.getMaybeMembership(request.userIdOpt, library.id.get)
             val subscribedToUpdates = memOpt.exists(_.subscribedToUpdates)
             val accessStr = memOpt.map(_.access.value).getOrElse("none")
-            Ok(Json.obj("library" -> Json.toJson(libInfo), "membership" -> accessStr, "subscribedToUpdates" -> subscribedToUpdates))
+            val editedLibInfo = libInfo.copy(keeps = libInfo.keeps.map { k =>
+              k.copy(note = Hashtags.formatMobileNote(k.note, v1))
+            })
+            Ok(Json.obj("library" -> Json.toJson(editedLibInfo), "membership" -> accessStr, "subscribedToUpdates" -> subscribedToUpdates))
           }
         })
       case Left(fail) =>
