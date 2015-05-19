@@ -1,13 +1,46 @@
-@(userId: Id[User])
-import com.keepit.common.mail.template.helpers._
-
-<!DOCTYPE html>
-<html>
-<head lang="en">
-    <meta charset="UTF-8">
-    <title></title>
+@(userId: Id[User],
+libViews: Map[Id[Library], Int],
+libFollowers: Map[Id[Library], Int],
+newConnections: Seq[Id[User]]
+)
+@import com.keepit.common.mail.template.helpers._
+@totalViews = @{libViews.values.sum}
+@totalFollowers = @{libFollowers.values.sum}
+@totalConnections = @{newConnections.length}
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 </head>
 <body>
+<p><b>@firstName(userId), look at how well you've done on Kifi this week!</b></p>
+@if(totalViews >= 5) {
+<p><b>You had @totalViews views across all of your libraries:</b></p>
+<ul>
+    @for((libId, viewCount) <- libViews) {
+    <li>@viewCount views on <a href=@libraryUrl(libId, "")>@libraryName(libId)</a></li>
+    }
+</ul>
+}
+
+@if(totalFollowers >= 1) {
+<p><b>You had @totalFollowers across all of your libraries:</b></p>
+<ul>
+    @for((libId, followCount) <- libFollowers) {
+    <li>@followCount new followers on <a href="@libraryUrl(libId, "")">@libraryName(libId)</a></li>
+    }
+</ul>
+}
+
+@if(totalConnections >= 1) {
+<p><b>You made @totalConnections new connections</b></p>
+<ul>
+@for(userId <- newConnections) {
+    <li><a href="@profileUrl(userId, "")">@fullName(userId)</a></li>
+}
+</ul>
+Share a library with them :)
+}
 
 </body>
 </html>

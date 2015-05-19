@@ -653,4 +653,26 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
     }
   }
 
+  "GratificationEmailSender" should {
+    "send an email to a user" in {
+      withDb(modules: _*) { implicit injector =>
+        val outbox = inject[FakeOutbox]
+        val userRepo = inject[UserRepo]
+        val connectionRepo = inject[UserConnectionRepo]
+        val sender = inject[GratificationEmailSender]
+        val toEmail = EmailAddress("superman@dc.com")
+        val (user1, user2) = db.readWrite { implicit s =>
+          val user1 = userRepo.save(User(firstName = "Clark", lastName = "Kent", username = Username("ckent"), normalizedUsername = "ckent", primaryEmail = Some(toEmail)))
+          val user2 = userRepo.save(User(firstName = "Bruce", lastName = "Wayne", username = Username("bwayne"), normalizedUsername = "bwayne"))
+          connectionRepo.addConnections(user1.id.get, Set(user2.id.get))
+          (user1, user2)
+        }
+        val email = Await.result(sender.sendToUser(user1.id.get, Some(toEmail)), Duration(5, "seconds"))
+
+        println(email.htmlBody)
+        1 === 1
+      }
+    }
+  }
+
 }
