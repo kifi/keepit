@@ -131,11 +131,12 @@ case class IndexableUri(
   url: String,
   restriction: Option[Restriction] = None,
   state: State[NormalizedURI] = NormalizedURIStates.ACTIVE,
+  shouldHaveContent: Boolean,
   seq: SequenceNumber[NormalizedURI])
 
 object IndexableUri {
 
-  def apply(uri: NormalizedURI): IndexableUri = IndexableUri(uri.id, uri.title, uri.url, uri.restriction, uri.state, uri.seq)
+  def apply(uri: NormalizedURI): IndexableUri = IndexableUri(uri.id, uri.title, uri.url, uri.restriction, uri.state, uri.shouldHaveContent, uri.seq)
 
   implicit def format = (
     (__ \ 'id).formatNullable(Id.format[NormalizedURI]) and
@@ -143,6 +144,7 @@ object IndexableUri {
     (__ \ 'url).format[String] and
     (__ \ 'restriction).formatNullable[Restriction] and
     (__ \ 'state).format(State.format[NormalizedURI]) and
+    (__ \ 'shouldHaveContent).format[Boolean] and
     (__ \ 'seq).format(SequenceNumber.format[NormalizedURI])
   )(IndexableUri.apply, unlift(IndexableUri.unapply))
 }
