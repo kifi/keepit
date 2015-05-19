@@ -54,7 +54,7 @@ class UriIntegrityActor @Inject() (
 
       // must get the new normalized uri from NormalizedURIRepo (cannot trust URLRepo due to its case sensitivity issue)
       val newUri = urlToUriMap.getOrElse(oldBm.url, {
-        val newUri = normalizedURIInterner.getByUri(oldBm.url).getOrElse(normalizedURIInterner.internByUri(oldBm.url))
+        val newUri = normalizedURIInterner.internByUri(oldBm.url, contentWanted = true)
         urlToUriMap += (oldBm.url -> newUri)
         newUri
       })
