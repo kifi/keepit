@@ -41,7 +41,7 @@ private class CortexDataIngestionPluginImpl @Inject() (
   val name: String = getClass.toString
 
   override def onStart() {
-    //scheduleTaskOnOneMachine(actor.system, 55 seconds, 1 minute, actor.ref, UpdateURI, UpdateURI.getClass.getSimpleName)
+    scheduleTaskOnOneMachine(actor.system, 55 seconds, 1 minute, actor.ref, UpdateURI, UpdateURI.getClass.getSimpleName)
     scheduleTaskOnOneMachine(actor.system, 57 seconds, 1 minute, actor.ref, UpdateKeep, UpdateKeep.getClass.getSimpleName)
     scheduleTaskOnOneMachine(actor.system, 59 seconds, 1 minute, actor.ref, UpdateLibrary, UpdateLibrary.getClass.getSimpleName)
     scheduleTaskOnOneMachine(actor.system, 61 seconds, 1 minute, actor.ref, UpdateLibraryMembership, UpdateLibraryMembership.getClass.getSimpleName)
