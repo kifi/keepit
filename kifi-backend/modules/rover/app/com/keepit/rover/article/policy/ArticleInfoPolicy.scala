@@ -1,9 +1,8 @@
 package com.keepit.rover.article.policy
 
 import com.google.inject.{ Inject, Singleton }
-import com.keepit.common.db.State
 import com.keepit.common.net.{ Host, URI }
-import com.keepit.model.NormalizedURI
+import com.keepit.model.IndexableUri
 import com.keepit.model.NormalizedURIStates._
 import com.keepit.rover.article._
 import com.keepit.rover.article.content.LinkedInProfile
@@ -11,21 +10,22 @@ import com.keepit.rover.article.content.LinkedInProfile
 @Singleton
 class ArticleInfoPolicy @Inject() () {
 
-  def toBeInterned(url: String, uriState: State[NormalizedURI]): Set[ArticleKind[_ <: Article]] = {
-    uriState match {
-      case ACTIVE | INACTIVE | REDIRECTED => Set.empty
-      case UNSCRAPABLE => Set(EmbedlyArticle)
-      case SCRAPED | SCRAPE_FAILED => Set(EmbedlyArticle) ++ toBeScraped(url)
+  def toBeInterned(uri: IndexableUri): Set[ArticleKind[_ <: Article]] = {
+    uri.state match {
+      case INACTIVE | REDIRECTED => Set.empty
+      case _ if uri.shouldHaveContent => toBeInterned(uri.url)
+      case _ => Set.empty
     }
   }
 
-  def toBeDeactivated(uriState: State[NormalizedURI]): Set[ArticleKind[_ <: Article]] = {
-    uriState match {
-      case INACTIVE | REDIRECTED => ArticleKind.all
-      case UNSCRAPABLE => ArticleKind.all - EmbedlyArticle
-      case ACTIVE | SCRAPED | SCRAPE_FAILED => Set.empty
+  def toBeDeactivated(uri: IndexableUri): Set[ArticleKind[_ <: Article]] = {
+    uri.state match {
+      case INACTIVE => ArticleKind.all
+      case _ => Set.empty
     }
   }
+
+  def toBeInterned(url: String): Set[ArticleKind[_ <: Article]] = Set(EmbedlyArticle) ++ toBeScraped(url)
 
   private def toBeScraped(url: String): Option[ArticleKind[_ <: Article]] = URI.parse(url).toOption.map {
     case URI(_, _, Some(Host("com", "youtube", _*)), _, Some(path), Some(query), _) if path.endsWith("/watch") && query.containsParam("v") => YoutubeArticle

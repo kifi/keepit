@@ -52,6 +52,7 @@ case class UrlPatternRules(rules: Seq[UrlPatternRule]) {
   def isUnscrapable(url: String): Boolean = findFirst(url).map(_.isUnscrapable).getOrElse(false)
   def getTrustedDomain(url: String): Option[String] = for { rule <- findFirst(url); trustedDomain <- rule.trustedDomain } yield trustedDomain
   def getPreferredNormalization(url: String): Option[Normalization] = for { rule <- findFirst(url); normalization <- rule.normalization } yield normalization
+  def isSensitive(url: String): Option[Boolean] = for { rule <- findFirst(url); nonSensitive <- rule.nonSensitive } yield !nonSensitive
 }
 
 object UrlPatternRules {
