@@ -184,14 +184,11 @@ trait UriIntegrityChecker extends Logging {
 
     if (isActuallyKept) {
       // Make sure the uri is not inactive
-      currentUri match {
-        case scrapedUri if scrapedUri.state == NormalizedURIStates.SCRAPED || scrapedUri.state == NormalizedURIStates.SCRAPE_FAILED =>
-          false
-        case uriToBeActive if uriToBeActive.state == NormalizedURIStates.INACTIVE || !NormalizedURIStates.DO_NOT_SCRAPE.contains(uriToBeActive.state) =>
-          if (!readOnly) normUriRepo.save(uriToBeActive.withState(NormalizedURIStates.ACTIVE))
-          true
-        case _ => false
-      }
+      val newState = if (currentUri.state == NormalizedURIStates.INACTIVE) NormalizedURIStates.ACTIVE else currentUri.state
+      val updatedUri = currentUri.withState(newState).withContentRequest(true)
+      val isActuallyUpdated = currentUri != updatedUri
+      if (!readOnly && isActuallyUpdated) normUriRepo.save(updatedUri)
+      isActuallyUpdated
     } else {
       // Make the uri active
       currentUri match {

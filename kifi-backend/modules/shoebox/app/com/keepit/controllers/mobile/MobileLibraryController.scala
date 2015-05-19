@@ -7,6 +7,8 @@ import com.keepit.common.controller._
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.slick.Database
+import com.keepit.common.json
+import com.keepit.common.json.TupleFormat
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.net.URI
 import com.keepit.common.social.BasicUserRepo
@@ -19,6 +21,8 @@ import com.keepit.normalizer.NormalizedURIInterner
 import com.keepit.shoebox.controllers.LibraryAccessActions
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.{ JsArray, JsObject, JsString, Json }
+import com.keepit.common.core._
+import play.api.mvc.AnyContent
 
 import scala.concurrent.Future
 import scala.util.{ Try, Failure, Success }
@@ -123,18 +127,28 @@ class MobileLibraryController @Inject() (
     }
   }
 
-  def getLibraryByPath(userStr: String, slugStr: String, imageSize: Option[String] = None) = MaybeUserAction.async { request =>
+  def getLibraryByPathV1(userStr: String, slugStr: String, imageSize: Option[String] = None) = MaybeUserAction.async { request =>
+    getLibraryByPath(request, userStr, slugStr, imageSize, true)
+  }
+  def getLibraryByPathV2(userStr: String, slugStr: String, imageSize: Option[String] = None) = MaybeUserAction.async { request =>
+    getLibraryByPath(request, userStr, slugStr, imageSize, false)
+  }
+
+  private def getLibraryByPath(request: MaybeUserRequest[AnyContent], userStr: String, slugStr: String, imageSize: Option[String] = None, v1: Boolean) = {
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build
     libraryCommander.getLibraryWithUsernameAndSlug(userStr, LibrarySlug(slugStr), request.userIdOpt) match {
       case Right(library) =>
         LibraryViewAction(Library.publicId(library.id.get)).invokeBlock(request, { _: MaybeUserRequest[_] =>
-          request.userIdOpt.map { userId => libraryCommander.updateLastView(userId, library.id.get) }
+          request.userIdOpt.foreach { userId => libraryCommander.updateLastView(userId, library.id.get) }
           val idealSize = imageSize.flatMap { s => Try(ImageSize(s)).toOption }.getOrElse(MobileLibraryController.defaultLibraryImageSize)
           libraryCommander.createFullLibraryInfo(request.userIdOpt, false, library, idealSize).map { libInfo =>
             val memOpt = libraryCommander.getMaybeMembership(request.userIdOpt, library.id.get)
-            val subscribedToUpdates = memOpt.map(_.subscribedToUpdates).getOrElse(false)
+            val subscribedToUpdates = memOpt.exists(_.subscribedToUpdates)
             val accessStr = memOpt.map(_.access.value).getOrElse("none")
-            Ok(Json.obj("library" -> Json.toJson(libInfo), "membership" -> accessStr, "subscribedToUpdates" -> subscribedToUpdates))
+            val editedLibInfo = libInfo.copy(keeps = libInfo.keeps.map { k =>
+              k.copy(note = Hashtags.formatMobileNote(k.note, v1))
+            })
+            Ok(Json.obj("library" -> Json.toJson(editedLibInfo), "membership" -> accessStr, "subscribedToUpdates" -> subscribedToUpdates))
           }
         })
       case Left(fail) =>
@@ -161,20 +175,25 @@ class MobileLibraryController @Inject() (
       case (membership, _) =>
         membership.canWrite
     }
-    val libraryImages = libraryImageCommander.getBestImageForLibraries(writeableLibraries.map(_._2.id.get).toSet, MobileLibraryController.defaultLibraryImageSize)
-    val writeableLibraryInfos = writeableLibraries.map {
-      case (mem, library) =>
-        val owner = db.readOnlyMaster { implicit s =>
-          basicUserRepo.load(library.ownerId)
-        }
-        val libImage = libraryImages.get(library.id.get)
-        val info = LibraryInfo.fromLibraryAndOwner(lib = library, image = libImage, owner = owner)
-        var memInfo = Json.obj("access" -> mem.access)
-        if (mem.lastViewed.nonEmpty) {
-          memInfo = memInfo ++ Json.obj("lastViewed" -> mem.lastViewed)
-        }
-        Json.toJson(info).as[JsObject] ++ memInfo
+    val libOwnerIds = writeableLibraries.map(_._2.ownerId).toSet
+    val (user, libOwners, libraryCards) = db.readOnlyReplica { implicit session =>
+      val user = userRepo.get(userId)
+      val libOwners = basicUserRepo.loadAll(libOwnerIds)
+      val libraryCards = libraryCommander.createLibraryCardInfos(libs = writeableLibraries.map(_._2), owners = libOwners, viewer = Some(user), withFollowing = true, idealSize = MobileLibraryController.defaultLibraryImageSize)
+      (user, libOwners, libraryCards)
     }
+
+    // Kind of weird, but library cards don't have membership information.
+    val wbi = writeableLibraries.map(m => m._1.libraryId -> m._1).toMap
+    val writeableLibraryInfos = libraryCards.map { libraryCard =>
+      val mem = wbi(Library.decodePublicId(libraryCard.id).get)
+
+      var memInfo = Json.obj("access" -> mem.access)
+      if (mem.lastViewed.nonEmpty) {
+        memInfo = memInfo ++ Json.obj("lastViewed" -> mem.lastViewed)
+      }
+      Json.toJson(libraryCard).as[JsObject] ++ memInfo
+    }.toList
 
     val libsResponse = Json.obj("libraries" -> writeableLibraryInfos)
     val keepResponse = parseUrl.collect {

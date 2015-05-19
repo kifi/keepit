@@ -155,7 +155,7 @@ class RawSeedItemRepoImpl @Inject() (
 
   def cleanup()(implicit session: RWSession): Unit = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    sqlu"DELETE FROM raw_seed_item WHERE user_id IS NOT NULL LIMIT 1000".first
+    sqlu"DELETE FROM raw_seed_item WHERE user_id IS NOT NULL LIMIT 20000".first
   }
 }
 

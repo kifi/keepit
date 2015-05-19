@@ -44,7 +44,7 @@
       <div class="kf-keep-top-menu-container" kf-hover-menu ng-if="::keep.user.id === me.id">
         <button class="kf-keep-top-menu-btn"></button>
         <menu class="kf-dropdown-menu">
-          <button class="kf-dropdown-menu-item" ng-click="editKeepNote($event, keep)">{{keep.note ? 'Edit note' : 'Add note'}}</button>
+          <button class="kf-dropdown-menu-item" ng-click="editKeepNote($event, keep)">{{keep.note ? 'Edit note' : 'Add a note'}}</button>
           <button class="kf-dropdown-menu-item" ng-click="deleteKeep($event, keep)">Delete</button>
         </menu>
       </div>
@@ -67,7 +67,9 @@
         </div>
       </div>
       <div class="kf-keep-note" ng-bind-html="::keep.note|noteHtml" ng-if="::keep.note || keep.user.id === me.id"></div>
-
+      <div class="kf-keep-add-note" ng-if="::keep.user.id === me.id"><!-- wrapping button in div to reduce watch count on read-only libraries -->
+        <button class="kf-keep-add-note-btn" ng-click="editKeepNote($event, keep)" ng-if="!keep.note">Add a note</button>
+      </div>
       <div kf-keep-card="keep" boxed current-page-origin="{{currentPageOrigin}}" click-callback="keepClickAction(event, keep)"></div>
     </div>
   </ol>

@@ -29,8 +29,8 @@ object ArticleFields {
 }
 
 object ArticleIndexable {
-  private[this] val toBeDeletedStates = Set[State[NormalizedURI]](ACTIVE, INACTIVE, UNSCRAPABLE, REDIRECTED)
-  def shouldDelete(uri: IndexableUri): Boolean = toBeDeletedStates.contains(uri.state)
+  private[this] val toBeDeletedStates = Set[State[NormalizedURI]](INACTIVE, REDIRECTED)
+  def shouldDelete(uri: IndexableUri): Boolean = toBeDeletedStates.contains(uri.state) || !uri.shouldHaveContent
 }
 
 case class ArticleIndexable(uri: IndexableUri, articles: Set[Article], shard: Shard[NormalizedURI]) extends Indexable[NormalizedURI, NormalizedURI] {

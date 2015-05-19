@@ -24,7 +24,7 @@
       <button ng-attr-class="kf-keep-keep-btn {{howKept ? 'state-kept-' + howKept : 'state-not-kept'}}"
         kf-keep-to-library-widget widget-action-text="Keep" library-click-action="onWidgetLibraryClicked(clickedLibrary)"
         kept-to-library-ids="keptToLibraryIds" lib-select-down-offset="180" lib-select-left-offset="20">
-        <span ng-attr-class="{{howKept === 'private' ? 'svg-small-lock' : 'svg-hearts-green'}}"></span>
+        <span ng-attr-class="{{howKept ? howKept === 'private' ? 'svg-small-lock' : 'svg-hearts-green' : 'svg-hearts-green-empty'}}"></span>
         {{howKept ? 'Kept' : 'Keep'}}
       </button>
       <button class="kf-keep-share-btn" ng-click="shareAction()">

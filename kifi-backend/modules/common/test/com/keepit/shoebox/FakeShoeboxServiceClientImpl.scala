@@ -252,6 +252,9 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
     bookmarks.map { b =>
       val id = b.id.getOrElse(nextBookmarkId())
       val updatedBookmark = b.withId(id).copy(seq = nextBookmarkSeqNum())
+      allNormalizedURIs.get(updatedBookmark.uriId).foreach { uri =>
+        if (!uri.shouldHaveContent) { allNormalizedURIs += (uri.id.get -> uri.withContentRequest(true)) }
+      }
       allBookmarks(id) = updatedBookmark
       allUserBookmarks(b.userId) = allUserBookmarks.getOrElse(b.userId, Set.empty) + id
       updatedBookmark
@@ -376,15 +379,11 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
 
   def getNormalizedUriByUrlOrPrenormalize(url: String): Future[Either[NormalizedURI, String]] = ???
 
-  def internNormalizedURI(url: URI, scrapeWanted: Boolean): Future[NormalizedURI] = {
-    val uri = allNormalizedURIs.values.find(_.url == url).getOrElse {
-      NormalizedURI(
-        id = Some(Id[NormalizedURI](url.hashCode)),
-        url = url.toString(),
-        urlHash = UrlHash(url.hashCode.toString)
-      )
-    }
-    Future.successful(uri)
+  def internNormalizedURI(url: String, contentWanted: Boolean): Future[NormalizedURI] = {
+    val uri = allNormalizedURIs.values.find(_.url == url) getOrElse NormalizedURI.withHash(url).copy(id = Some(Id[NormalizedURI](url.hashCode)))
+    val uriWithContentRequest = uri.withContentRequest(contentWanted)
+    allNormalizedURIs += (uriWithContentRequest.id.get -> uriWithContentRequest)
+    Future.successful(uriWithContentRequest)
   }
 
   def getBookmarks(userId: Id[User]): Future[Seq[Keep]] = {
