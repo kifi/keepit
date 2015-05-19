@@ -29,7 +29,7 @@ class AdminCacheController @Inject() (
 
   def getCacheEntry(key: String) = AdminUserAction { implicit request =>
     memcachedCache.get(key) match {
-      case Some(value) => Ok(Json.obj(key -> value.toString))
+      case Some(value) => Ok(value.toString)
       case _ => NoContent
     }
   }
