@@ -17,6 +17,7 @@ angular.module('kifi')
       var $ = jQuery;
       var TEXT = document.TEXT_NODE;
       var ELEM = document.ELEMENT_NODE;
+      var buttonsTransitionDurationMs = 300; // buttonsTransitionDuration is .3s in stylesheet
 
       // control codes, whitespace (including nbsp), punctuation (excluding #)
       var nonTagCharCodes = ('0000-"$-/:-@\\[-^`{-00A1' +
@@ -99,11 +100,13 @@ angular.module('kifi')
         while (next.firstChild) {
           next = next.firstChild;
         }
-        if (next.nodeType !== TEXT) {
-          next = findNextTextNode(next);
-        }
-        if (next) {
-          return {node: next, idx: 0};
+        if (next.nodeType !== ELEM || !next.classList.contains('kf-knf-editor')) {
+          if (next.nodeType !== TEXT) {
+            next = findNextTextNode(next);
+          }
+          if (next) {
+            return {node: next, idx: 0};
+          }
         }
         if (create) {
           var textNode = createTextNode('');
@@ -179,9 +182,7 @@ angular.module('kifi')
           node = node.nextSibling;
         }
         textNode.data = textNode.wholeText;
-        toRemove.forEach(function (node) {
-          node.remove();
-        });
+        toRemove.forEach(removeNode);
         return lenBefore;
       }
 
@@ -194,7 +195,7 @@ angular.module('kifi')
           var s = match[0];
           hashTextNode.data += s;
           if (s === nextText) {
-            nextTextNode.remove();
+            removeNode(nextTextNode);
           } else {
             nextTextNode.data = nextText.substr(s.length);
           }
@@ -349,6 +350,13 @@ angular.module('kifi')
         var markedUp = markUp(node);
         if (markedUp || fixed) {
           return setSelection(node, idx);
+        }
+      }
+
+      function removeNode(node) {
+        var parent = node.parentNode;
+        if (parent) {
+          parent.removeChild(node);
         }
       }
 
@@ -640,10 +648,11 @@ angular.module('kifi')
       }
 
       function removeForm($form) {
-        $form.find('.kf-knf-buttons').addClass('kf-collapsed');
-        // $timeout(function () {
+        window.getSelection().removeAllRanges();
+        $form.addClass('kf-transition').layout().addClass('kf-small');
+        $timeout(function () {
           $form.remove();
-        // }, 300, false); // transition-duration: .3s in stylesheet
+        }, buttonsTransitionDurationMs, false);
       }
 
       return {
@@ -663,7 +672,23 @@ angular.module('kifi')
               },
               seq: 0
             });
-          $form.find('.kf-knf-buttons').layout().removeClass('kf-collapsed');
+          $form.layout().removeClass('kf-small');
+          $timeout(function () {
+            $form.removeClass('kf-transition');
+            // place text input cursor at end of text
+            var node = $note[0];
+            if (node.lastChild) {
+              while (node.lastChild) {
+                node = node.lastChild;
+              }
+              if (node.nodeType === TEXT) {
+                setSelection(node, node.length);
+              }
+            } else {
+              node.focus();
+            }
+          }, buttonsTransitionDurationMs, false);
+
           var data = $note.data();
 
           // Realizations that inform our strategy for efficient (lag-free) hashtag identification and highlighting:
@@ -697,18 +722,6 @@ angular.module('kifi')
               this.textContent = '';
             }
           });
-
-          var node = $note[0];
-          if (node.lastChild) {
-            while (node.lastChild) {
-              node = node.lastChild;
-            }
-            if (node.nodeType === TEXT) {
-              setSelection(node, node.length);
-            }
-          } else {
-            node.focus();
-          }
         }
       };
     });

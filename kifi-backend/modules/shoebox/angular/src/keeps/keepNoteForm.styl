@@ -1,5 +1,16 @@
+buttonsTransitionDuration = .3s // also in removeForm in keepNoteForm.js
+
 .kf-knf
-  position: relative  // for hashtag suggestions
+  position: relative  // for hashtag suggestions and buttons
+
+  &.kf-transition::after
+    content: ''
+    display: block
+    transition: height .3s
+    height: 42px
+
+  &.kf-small::after
+    height: 0
 
 .kf-knf-editor
   white-space: pre-wrap
@@ -38,20 +49,19 @@
   border-top: 1px solid #ddd
   border-radius: 0 0 4px 4px
   padding-right: 10px
-  // height: 35px
   background-color: appBackgroundColor
   text-align: right
-  position: relative  // This transition duration is also in removeForm in keepNoteForm.js.
-  // transition: margin-top .3s, height .3s, opacity linear .15s .15s
+  position: relative
 
-  // &.kf-collapsed
-  //   margin-top: -7px
-  //   height: 0
-  //   opacity: 0
-  //   transition-delay: 0s
+  .kf-transition>&
+    position: absolute
+    box-sizing: border-box
+    width: 100%
+    transition: opacity linear (buttonsTransitionDuration / 2) (buttonsTransitionDuration / 2)
 
-  // .kf-keep-top+*>&.kf-collapsed
-  //   margin-top: -1px
+  .kf-small>&
+    opacity: 0
+    transition-delay: 0s
 
 .kf-knf-save
 .kf-knf-cancel
