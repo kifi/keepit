@@ -45,7 +45,7 @@ angular.module('kifi')
         scope.descScrollable = false;
         scope.imagePreview = null;
         scope.followBtnJustClicked = false;
-        scope.onCollabExperiment = profileService.me.experiments.indexOf('collaborative') > -1;
+        scope.onCollabExperiment = (profileService.me.experiments || []).indexOf('collaborative') > -1;
         scope.amOwner = false;
         scope.hasCollaborators = false;
 
