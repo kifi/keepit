@@ -131,11 +131,11 @@ class MobileLibraryController @Inject() (
     libraryCommander.getLibraryWithUsernameAndSlug(userStr, LibrarySlug(slugStr), request.userIdOpt) match {
       case Right(library) =>
         LibraryViewAction(Library.publicId(library.id.get)).invokeBlock(request, { _: MaybeUserRequest[_] =>
-          request.userIdOpt.map { userId => libraryCommander.updateLastView(userId, library.id.get) }
+          request.userIdOpt.foreach { userId => libraryCommander.updateLastView(userId, library.id.get) }
           val idealSize = imageSize.flatMap { s => Try(ImageSize(s)).toOption }.getOrElse(MobileLibraryController.defaultLibraryImageSize)
           libraryCommander.createFullLibraryInfo(request.userIdOpt, false, library, idealSize).map { libInfo =>
             val memOpt = libraryCommander.getMaybeMembership(request.userIdOpt, library.id.get)
-            val subscribedToUpdates = memOpt.map(_.subscribedToUpdates).getOrElse(false)
+            val subscribedToUpdates = memOpt.exists(_.subscribedToUpdates)
             val accessStr = memOpt.map(_.access.value).getOrElse("none")
             Ok(Json.obj("library" -> Json.toJson(libInfo), "membership" -> accessStr, "subscribedToUpdates" -> subscribedToUpdates))
           }
@@ -164,20 +164,25 @@ class MobileLibraryController @Inject() (
       case (membership, _) =>
         membership.canWrite
     }
-    val libraryImages = libraryImageCommander.getBestImageForLibraries(writeableLibraries.map(_._2.id.get).toSet, MobileLibraryController.defaultLibraryImageSize)
-    val writeableLibraryInfos = writeableLibraries.map {
-      case (mem, library) =>
-        val owner = db.readOnlyMaster { implicit s =>
-          basicUserRepo.load(library.ownerId)
-        }
-        val libImage = libraryImages.get(library.id.get)
-        val info = LibraryInfo.fromLibraryAndOwner(lib = library, image = libImage, owner = owner)
-        var memInfo = Json.obj("access" -> mem.access)
-        if (mem.lastViewed.nonEmpty) {
-          memInfo = memInfo ++ Json.obj("lastViewed" -> mem.lastViewed)
-        }
-        Json.toJson(info).as[JsObject] ++ memInfo
+    val libOwnerIds = writeableLibraries.map(_._2.ownerId).toSet
+    val (user, libOwners, libraryCards) = db.readOnlyReplica { implicit session =>
+      val user = userRepo.get(userId)
+      val libOwners = basicUserRepo.loadAll(libOwnerIds)
+      val libraryCards = libraryCommander.createLibraryCardInfos(libs = writeableLibraries.map(_._2), owners = libOwners, viewer = Some(user), withFollowing = true, idealSize = MobileLibraryController.defaultLibraryImageSize)
+      (user, libOwners, libraryCards)
     }
+
+    // Kind of weird, but library cards don't have membership information.
+    val wbi = writeableLibraries.map(m => m._1.libraryId -> m._1).toMap
+    val writeableLibraryInfos = libraryCards.map { libraryCard =>
+      val mem = wbi(Library.decodePublicId(libraryCard.id).get)
+
+      var memInfo = Json.obj("access" -> mem.access)
+      if (mem.lastViewed.nonEmpty) {
+        memInfo = memInfo ++ Json.obj("lastViewed" -> mem.lastViewed)
+      }
+      Json.toJson(libraryCard).as[JsObject] ++ memInfo
+    }.toList
 
     val libsResponse = Json.obj("libraries" -> writeableLibraryInfos)
     val keepResponse = parseUrl.collect {
