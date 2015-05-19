@@ -152,6 +152,60 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
       }
     }
 
+    "get library by path" in {
+      withDb(controllerTestModules: _*) { implicit injector =>
+        val (user1, lib1) = setupOneUserOneLibrary()
+        val pubLib1 = Library.publicId(lib1.id.get)(inject[PublicIdConfiguration])
+
+        // upload an image
+        {
+          val savedF = inject[LibraryImageCommander].uploadLibraryImageFromFile(fakeImage1, lib1.id.get, LibraryImagePosition(None, None), ImageSource.UserUpload, user1.id.get)(HeimdalContext.empty)
+          val saved = Await.result(savedF, Duration("10 seconds"))
+          saved === ImageProcessState.StoreSuccess(ImageFormat.PNG, ImageSize(66, 38), 612)
+        }
+
+        val result1 = getLibraryByPath(user1, "spongebob", "krabby-patty")
+        val lib1Updated = db.readOnlyMaster { libraryRepo.get(lib1.id.get)(_) }
+        status(result1) must equalTo(OK)
+        contentType(result1) must beSome("application/json")
+        Json.parse(contentAsString(result1)) === Json.parse(
+          s"""
+            {
+              "library" : {
+              "id" : "${pubLib1.id}",
+              "name" : "Krabby Patty",
+              "visibility" : "secret",
+              "slug" : "krabby-patty",
+              "url" : "/spongebob/krabby-patty",
+              "image":{
+                "path":"library/26dbdc56d54dbc94830f7cfc85031481_66x38_o.png",
+                "x":50,
+                "y":50
+              },
+              "kind" : "user_created",
+              "owner" : {
+                "id" : "${user1.externalId}",
+                "firstName" : "Spongebob",
+                "lastName": "Squarepants",
+                "pictureName":"0.jpg",
+                "username":"spongebob"
+              },
+              "followers" : [],
+              "collaborators":[],
+              "keeps" : [],
+              "numKeeps" : 0,
+              "numCollaborators" : 0,
+              "numFollowers" : 0,
+              "whoCanInvite": "collaborator",
+              "modifiedAt": ${lib1Updated.updatedAt.getMillis}
+              },
+              "membership" : "owner",
+              "subscribedToUpdates":false
+            }
+          """)
+      }
+    }
+
     "get library by id" in {
       withDb(controllerTestModules: _*) { implicit injector =>
         val (user1, lib1) = setupOneUserOneLibrary()
@@ -630,6 +684,11 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
   private def leaveLibrary(user: User, libId: PublicId[Library])(implicit injector: Injector): Future[Result] = {
     inject[FakeUserActionsHelper].setUser(user)
     controller.leaveLibrary(libId)(request(routes.MobileLibraryController.leaveLibrary(libId)))
+  }
+
+  private def getLibraryByPath(user: User, userStr: String, slugStr: String)(implicit injector: Injector): Future[Result] = {
+    inject[FakeUserActionsHelper].setUser(user)
+    controller.getLibraryByPathV1(userStr, slugStr)(request(routes.MobileLibraryController.getLibraryByPathV1(userStr, slugStr)))
   }
 
   private def getLibraryById(user: User, libId: PublicId[Library])(implicit injector: Injector): Future[Result] = {
