@@ -47,7 +47,7 @@ class NormalizationWorker @Inject() (
             }
             val ref = NormalizationReference(nuri, task.isNew)
             log.debug(s"[consume] nuri=$nuri ref=$ref candidates=${task.candidates}")
-            for (nuriOpt <- normalizationService.update(ref, task.candidates: _*)) {
+            for (nuriOpt <- normalizationService.update(ref, task.candidates)) {
               // sends out-of-band requests to scraper
               log.debug(s"[consume] normalizationService.update result: $nuriOpt")
             }
