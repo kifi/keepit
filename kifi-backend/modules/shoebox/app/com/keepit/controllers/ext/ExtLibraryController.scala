@@ -10,9 +10,10 @@ import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.healthcheck.{ AirbrakeNotifier }
 import com.keepit.common.json
 import com.keepit.common.social.BasicUserRepo
-import com.keepit.common.store.ImageSize
+import com.keepit.common.store.{ S3ImageConfig, ImageSize }
 import com.keepit.heimdal.HeimdalContextBuilderFactory
 import com.keepit.model._
+import com.keepit.rover.RoverServiceClient
 import com.keepit.shoebox.controllers.LibraryAccessActions
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -40,6 +41,8 @@ class ExtLibraryController @Inject() (
   airbrake: AirbrakeNotifier,
   keepInterner: KeepInterner,
   rawKeepFactory: RawKeepFactory,
+  rover: RoverServiceClient,
+  implicit val imageConfig: S3ImageConfig,
   implicit val publicIdConfig: PublicIdConfiguration)
     extends UserActions with LibraryAccessActions with ShoeboxServiceController {
 
@@ -141,8 +144,8 @@ class ExtLibraryController @Inject() (
     }
   }
 
-  def addKeep(libraryPubId: PublicId[Library]) = UserAction(parse.tolerantJson) { request =>
-    decode(libraryPubId) { libraryId =>
+  def addKeep(libraryPubId: PublicId[Library]) = UserAction.async(parse.tolerantJson) { request =>
+    decodeAsync(libraryPubId) { libraryId =>
       db.readOnlyMaster { implicit s =>
         libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, request.userId)
       } match {
@@ -159,33 +162,37 @@ class ExtLibraryController @Inject() (
           implicit val context = hcb.build
 
           val (keep, isNewKeep) = keepsCommander.keepOne(body.as[RawBookmarkRepresentation], request.userId, libraryId, request.kifiInstallationId, source, SocialShare(body))
-          val (tags, image) = if (isNewKeep) {
-            val existingImageUri = db.readOnlyReplica { implicit session =>
-              keepImageCommander.getExistingImageUrlForKeepUri(keep.uriId)
+          val futureTagsAndImage = if (isNewKeep) {
+            rover.getImagesByUris(Set(keep.uriId)).imap(_.get(keep.uriId)).map { imagesMaybe =>
+              val existingImageUri = imagesMaybe.flatMap(_.getLargest.map(_.path.getUrl))
+              (Seq.empty, existingImageUri) // optimizing the common case
             }
-            (Seq.empty, existingImageUri) // optimizing the common case
           } else {
             val tags = db.readOnlyReplica { implicit s =>
               collectionRepo.getHashtagsByKeepId(keep.id.get)
             }
             val image = keepImageCommander.getBestImageForKeep(keep.id.get, ScaleImageRequest(ExtLibraryController.defaultImageSize)).flatten.map(keepImageCommander.getUrl)
-            (tags, image)
+            Future.successful((tags, image))
           }
 
-          val keepData = KeepData(
-            keep.externalId,
-            mine = keep.userId == request.userId,
-            removable = mem.canWrite,
-            secret = keep.visibility == LibraryVisibility.SECRET,
-            libraryId = libraryPubId)
-          val moarKeepData = MoarKeepData(
-            title = keep.title,
-            image = image,
-            note = keep.note,
-            tags = tags.map(_.tag).toSeq)
-          Ok(Json.toJson(keepData).as[JsObject] ++ Json.toJson(moarKeepData).as[JsObject])
+          futureTagsAndImage.map {
+            case (tags, image) =>
+              val keepData = KeepData(
+                keep.externalId,
+                mine = keep.userId == request.userId,
+                removable = mem.canWrite,
+                secret = keep.visibility == LibraryVisibility.SECRET,
+                libraryId = libraryPubId)
+              val moarKeepData = MoarKeepData(
+                title = keep.title,
+                image = image,
+                note = keep.note,
+                tags = tags.map(_.tag).toSeq)
+              Ok(Json.toJson(keepData).as[JsObject] ++ Json.toJson(moarKeepData).as[JsObject])
+          }
+
         case _ =>
-          Forbidden(Json.obj("error" -> "invalid_access"))
+          Future.successful(Forbidden(Json.obj("error" -> "invalid_access")))
       }
     }
   }
@@ -295,7 +302,7 @@ class ExtLibraryController @Inject() (
   }
 
   def suggestTags(pubId: PublicId[Library], keepId: ExternalId[Keep], query: Option[String], limit: Int) = (UserAction andThen LibraryWriteAction(pubId)).async { request =>
-    keepsCommander.suggestTags(request.userId, keepId, query, limit).imap { tagsAndMatches =>
+    keepsCommander.suggestTags(request.userId, Some(keepId), query, limit).imap { tagsAndMatches =>
       implicit val matchesWrites = TupleFormat.tuple2Writes[Int, Int]
       val result = JsArray(tagsAndMatches.map { case (tag, matches) => json.minify(Json.obj("tag" -> tag, "matches" -> matches)) })
       Ok(result)
@@ -339,6 +346,13 @@ class ExtLibraryController @Inject() (
   private def decode(publicId: PublicId[Library])(action: Id[Library] => Result): Result = {
     Library.decodePublicId(publicId) match {
       case Failure(_) => BadRequest(Json.obj("error" -> "invalid_library_id"))
+      case Success(id) => action(id)
+    }
+  }
+
+  private def decodeAsync(publicId: PublicId[Library])(action: Id[Library] => Future[Result]): Future[Result] = {
+    Library.decodePublicId(publicId) match {
+      case Failure(_) => Future.successful(BadRequest(Json.obj("error" -> "invalid_library_id")))
       case Success(id) => action(id)
     }
   }

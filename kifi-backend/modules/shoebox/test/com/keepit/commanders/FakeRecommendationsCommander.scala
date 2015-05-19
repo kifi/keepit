@@ -1,5 +1,7 @@
 package com.keepit.commanders
 
+import com.keepit.common.store.S3ImageConfig
+import com.keepit.rover.RoverServiceClient
 import com.keepit.search.SearchServiceClient
 
 import scala.concurrent.ExecutionContext
@@ -18,18 +20,19 @@ import scala.concurrent.Future
 class FakeRecommendationsCommander @Inject() (
   curator: CuratorServiceClient,
   search: SearchServiceClient,
+  rover: RoverServiceClient,
   db: Database,
   nUriRepo: NormalizedURIRepo,
   libRepo: LibraryRepo,
   userRepo: UserRepo,
   libCommander: LibraryCommander,
-  uriSummaryCommander: URISummaryCommander,
   basicUserRepo: BasicUserRepo,
   keepRepo: KeepRepo,
   publicIdConfig: PublicIdConfiguration,
   defaultContext: ExecutionContext,
   keepDecorator: KeepDecorator,
-  userExperimentCommander: LocalUserExperimentCommander)
+  userExperimentCommander: LocalUserExperimentCommander,
+  imageConfig: S3ImageConfig)
     extends RecommendationsCommander(
       curator,
       search,
@@ -38,13 +41,15 @@ class FakeRecommendationsCommander @Inject() (
       libRepo,
       userRepo,
       libCommander,
-      uriSummaryCommander,
+      rover,
       basicUserRepo,
       keepRepo,
       keepDecorator,
       defaultContext,
       publicIdConfig,
-      userExperimentCommander) {
+      imageConfig,
+      userExperimentCommander
+    ) {
 
   var uriRecoInfos: Seq[FullUriRecoInfo] = Seq.empty
   var libRecoInfos: Seq[(Id[Library], FullLibRecoInfo)] = Seq.empty

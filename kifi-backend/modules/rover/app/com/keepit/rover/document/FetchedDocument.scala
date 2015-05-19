@@ -1,6 +1,6 @@
 package com.keepit.rover.document
 
-import com.keepit.model.PageAuthor
+import com.keepit.rover.article.content.PageAuthor
 import com.keepit.rover.article.content.NormalizationInfo
 import com.keepit.rover.document.tika.KeywordValidator
 import com.keepit.rover.document.utils.DateTimeMetadataParser

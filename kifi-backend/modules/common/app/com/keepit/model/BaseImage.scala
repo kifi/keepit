@@ -7,7 +7,7 @@ import com.keepit.common.store.{ ImagePath, ImageSize }
 import com.keepit.rover.article.{ ArticleKind, Article }
 import org.joda.time.DateTime
 import play.api.libs.Files.TemporaryFile
-import play.api.libs.json.{ JsString, JsValue, Json, Format }
+import play.api.libs.json._
 
 abstract class BaseImage {
   val createdAt: DateTime
@@ -22,22 +22,40 @@ abstract class BaseImage {
   val imageSize = ImageSize(width, height)
 }
 
+case class ImageFormat(value: String)
+object ImageFormat {
+  val JPG = ImageFormat("jpg")
+  val PNG = ImageFormat("png")
+  val GIF = ImageFormat("gif")
+  val UNKNOWN = ImageFormat("unknown")
+  implicit val imageFormatFormat = new Format[ImageFormat] {
+    def reads(json: JsValue): JsResult[ImageFormat] = {
+      json.asOpt[String] match {
+        case Some(str) => JsSuccess(ImageFormat(str))
+        case None => JsError()
+      }
+    }
+    def writes(kind: ImageFormat): JsValue = {
+      JsString(kind.value)
+    }
+  }
+}
+
 abstract class ImageSource(val name: String)
 
 object ImageSource {
   sealed abstract class UserInitiated(name: String) extends ImageSource(name)
   sealed abstract class SystemInitiated(name: String) extends ImageSource(name)
 
-  case object Embedly extends SystemInitiated("embedly")
-  case object PagePeeker extends SystemInitiated("pagepeeker")
   case object EmbedlyOrPagePeeker extends SystemInitiated("embedly_or_pagepeeker")
+  case object Embedly extends SystemInitiated("embedly")
   case object UserPicked extends UserInitiated("user_picked")
   case object UserUpload extends UserInitiated("user_upload")
   case object TwitterSync extends UserInitiated("twitter_sync")
   case object Unknown extends ImageSource("unknown")
   case class RoverArticle[A <: Article](kind: ArticleKind[A]) extends SystemInitiated(s"${kind.typeCode}_article")
 
-  private val all: Seq[ImageSource] = Seq(Unknown, Embedly, PagePeeker, EmbedlyOrPagePeeker, UserUpload, UserPicked, TwitterSync) ++ ArticleKind.all.map(RoverArticle(_))
+  private val all: Seq[ImageSource] = Seq(Unknown, Embedly, EmbedlyOrPagePeeker, UserUpload, UserPicked, TwitterSync) ++ ArticleKind.all.map(RoverArticle(_))
   def apply(name: String) = all.find(_.name == name).getOrElse(throw new Exception(s"Can't find ImageSource for $name"))
 
   implicit val format = new Format[ImageSource] {

@@ -116,9 +116,7 @@ angular.module('kifi')
     };
 
     function renderNextRawKeep(rawKeeps) {
-      var keep = rawKeeps.shift();
-      keep.library = $scope.library;
-      $scope.keeps.push(keep);
+      $scope.keeps.push(augmentKeep(rawKeeps.shift()));
       if (rawKeeps.length) {
         $timeout(angular.bind(null, renderNextRawKeep, rawKeeps));
       } else {
@@ -137,6 +135,11 @@ angular.module('kifi')
           $timeout($scope.getNextKeeps.bind(null, numLoaded));
         }
       }
+    }
+
+    function augmentKeep(keep) {
+      keep.library = $scope.library;  // b/c library can vary for each keep card in the general case (e.g. search results)
+      return keep;
     }
 
     $scope.libraryKeepClicked = function (keep, event) {
@@ -209,7 +212,7 @@ angular.module('kifi')
 
           var existingKeep = _.find($scope.keeps, {url: keep.url});
           if (!existingKeep && library.id === $scope.library.id) {
-            $scope.keeps.unshift(keep);
+            $scope.keeps.unshift(augmentKeep(keep));
             existingKeep = keep;
           }
 

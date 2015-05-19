@@ -53,7 +53,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getNormalizedURIs(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[NormalizedURI]]
   def getNormalizedURIByURL(url: String): Future[Option[NormalizedURI]]
   def getNormalizedUriByUrlOrPrenormalize(url: String): Future[Either[NormalizedURI, String]]
-  def internNormalizedURI(url: URI, scrapeWanted: Boolean = false): Future[NormalizedURI]
+  def internNormalizedURI(url: String, contentWanted: Boolean = false): Future[NormalizedURI]
   def sendMail(email: ElectronicMail): Future[Boolean]
   def sendMailToUser(userId: Id[User], email: ElectronicMail): Future[Boolean]
   def persistServerSearchEvent(metaData: JsObject): Unit
@@ -124,13 +124,11 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getKeepImages(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], BasicImages]]
   def getLibrariesWithWriteAccess(userId: Id[User]): Future[Set[Id[Library]]]
   def getUserActivePersonas(userId: Id[User]): Future[UserActivePersonas]
-  def getImageInfosChanged(seqNum: SequenceNumber[ImageInfo], fetchSize: Int): Future[Seq[ImageInfo]]
 }
 
 case class ShoeboxCacheProvider @Inject() (
   userExternalIdCache: UserExternalIdCache,
   uriIdCache: NormalizedURICache,
-  uriSummaryCache: URISummaryCache,
   bookmarkUriUserCache: KeepUriUserCache,
   basicUserCache: BasicUserUserIdCache,
   activeSearchConfigExperimentsCache: ActiveExperimentsCache,
@@ -372,8 +370,8 @@ class ShoeboxServiceClientImpl @Inject() (
       (r.json \ "normalizedURI").asOpt[NormalizedURI].map(Left(_)) getOrElse Right((r.json \ "url").as[String])
     }
 
-  def internNormalizedURI(url: URI, scrapeWanted: Boolean): Future[NormalizedURI] = {
-    val payload = Json.obj("url" -> url.toString(), "scrapeWanted" -> scrapeWanted)
+  def internNormalizedURI(url: String, contentWanted: Boolean): Future[NormalizedURI] = {
+    val payload = Json.obj("url" -> url, "contentWanted" -> contentWanted)
     call(Shoebox.internal.internNormalizedURI, payload).map(r => r.json.as[NormalizedURI])
   }
 
@@ -785,9 +783,5 @@ class ShoeboxServiceClientImpl @Inject() (
     cacheProvider.userActivePersonaCache.getOrElseFuture(UserActivePersonasKey(userId)) {
       call(Shoebox.internal.getUserActivePersonas(userId), callTimeouts = longTimeout).map { _.json.as[UserActivePersonas] }
     }
-  }
-
-  def getImageInfosChanged(seqNum: SequenceNumber[ImageInfo], fetchSize: Int): Future[Seq[ImageInfo]] = {
-    call(Shoebox.internal.getImageInfosChanged(seqNum, fetchSize)).map { _.json.as[Seq[ImageInfo]] }
   }
 }

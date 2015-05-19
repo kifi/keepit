@@ -168,7 +168,7 @@ class KeepInterner @Inject() (
     if (httpPrefix.findPrefixOf(rawBookmark.url.toLowerCase).isDefined) {
       import com.keepit.model.NormalizedURIStates._
       val uri = try {
-        normalizedURIInterner.internByUri(rawBookmark.url, NormalizationCandidate(rawBookmark): _*)
+        normalizedURIInterner.internByUri(rawBookmark.url, contentWanted = true, candidates = NormalizationCandidate.fromRawBookmark(rawBookmark))
       } catch {
         case t: Throwable => throw new Exception(s"error persisting raw bookmark $rawBookmark for user $userId, from $source", t)
       }
@@ -178,10 +178,11 @@ class KeepInterner @Inject() (
           case _ => currentDateTime // todo: useful to de-prioritize bulk imports.
         }
         scraper.scheduleScrape(uri, date)
-        if (KeepSource.discrete.contains(source)) {
-          session.onTransactionSuccess {
-            roverClient.fetchAsap(uri.id.get, uri.url)
-          }
+      }
+
+      if (KeepSource.discrete.contains(source)) {
+        session.onTransactionSuccess {
+          roverClient.fetchAsap(uri.id.get, uri.url)
         }
       }
 

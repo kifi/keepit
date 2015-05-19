@@ -26,7 +26,6 @@ class ShoeboxScraperController @Inject() (
   db: Database,
   normUriRepo: NormalizedURIRepo,
   airbrake: AirbrakeNotifier,
-  pageInfoRepo: PageInfoRepo,
   scrapeInfoRepo: ScrapeInfoRepo,
   scraperHelper: ScraperCallbackHelper)(implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices)

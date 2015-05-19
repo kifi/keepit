@@ -69,7 +69,7 @@ class HttpRedirectIngestionHelper @Inject() (
       case None => Future.successful(false)
       case Some((uri, verifiedCandidate)) =>
         val toBeRedirected = NormalizationReference(uri, correctedNormalization = Some(Normalization.MOVED))
-        normalizationService.update(toBeRedirected, verifiedCandidate).imap(_.isDefined)
+        normalizationService.update(toBeRedirected, Set(verifiedCandidate)).imap(_.isDefined)
     }
   }
 

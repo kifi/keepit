@@ -4,7 +4,7 @@
     <div class="kf-youtube-bottom-overlay"></div>
   </div>
   <a class="kf-keep-image" ng-if="::image" ng-class="::{'kf-bottom-clip': image.clipBottom}"
-    ng-style="::{'background-image': 'url(\'' + image.url + '\')', width: image.w ? image.w + 'px' : '', height: image.h ? image.h + 'px' : ''}"
+    ng-style="::{'background-image': 'url(\'' + image.url + '\')', width: image.w ? image.w + 'px' : '', 'padding-top': image.h ? image.h + 'px' : ''}"
     ng-href="{{::keep.url}}" target="_blank" rel="nofollow" tabindex="-1"
     ng-click="clickCallback({keep: keep, event: $event})" click-action="clickedArticleImage">
   </a>

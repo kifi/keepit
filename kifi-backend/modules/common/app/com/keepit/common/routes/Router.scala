@@ -138,7 +138,6 @@ object Shoebox extends Service {
     def getUserConnectionsChanged(seqNum: SequenceNumber[UserConnection], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getUserConnectionsChanged", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getSearchFriendsChanged(seqNum: SequenceNumber[SearchFriend], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getSearchFriendsChanged", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def allURLPatternRules() = ServiceRoute(GET, "/internal/shoebox/database/urlPatternRules")
-    def getUriImage(id: Id[NormalizedURI]) = ServiceRoute(GET, "/internal/shoebox/image/getUriImage", Param("id", id))
     def getUserImageUrl(id: Id[User], width: Int) = ServiceRoute(GET, "/internal/shoebox/image/getUserImageUrl", Param("id", id), Param("width", width))
     def getCandidateURIs() = ServiceRoute(POST, "/internal/shoebox/database/getCandidateURIs")
     def getUnsubscribeUrlForEmail(email: EmailAddress) = ServiceRoute(GET, "/internal/shoebox/email/getUnsubscribeUrlForEmail", Param("email", email))
@@ -164,7 +163,6 @@ object Shoebox extends Service {
     def getKeepImages() = ServiceRoute(POST, "/internal/shoebox/database/getKeepImages")
     def getLibrariesWithWriteAccess(userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/getLibrariesWithWriteAccess", Param("userId", userId))
     def getUserActivePersonas(userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/user/activePersonas", Param("userId", userId))
-    def getImageInfosChanged(seqNum: SequenceNumber[ImageInfo], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getImageInfosChanged", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
   }
 }
 
@@ -279,6 +277,7 @@ object Heimdal extends Service {
     def updateAllReKeepStats() = ServiceRoute(POST, "/internal/heimdal/helprank/updateAllReKeepStats")
     def processSearchHitAttribution() = ServiceRoute(POST, "/internal/heimdal/helprank/processSearchHitAttribution")
     def processKeepAttribution() = ServiceRoute(POST, "/internal/heimdal/helprank/processKeepAttribution")
+    def getOwnerLibraryViewStats(userId: Id[User]) = ServiceRoute(GET, "/internal/heimdal/data/libraryView", Param("userId", userId))
   }
 }
 
@@ -331,9 +330,6 @@ object Scraper extends Service {
     def getPornDetectorModel() = ServiceRoute(GET, s"/internal/scraper/getPornDetectorModel")
     def detectPorn() = ServiceRoute(POST, s"/internal/scraper/pornDetector/detectPorn")
     def whitelist() = ServiceRoute(POST, s"/internal/scraper/pornDetector/whitelist")
-    def getEmbedlyInfo() = ServiceRoute(POST, s"/internal/scraper/embedly/embedlyInfo")
-    def getURIWordCount() = ServiceRoute(POST, s"/internal/scraper/uriWordCount")
-    def fetchAndPersistURIPreview() = ServiceRoute(POST, "/internal/scraper/fetchAndPersistURIPreview")
   }
 }
 

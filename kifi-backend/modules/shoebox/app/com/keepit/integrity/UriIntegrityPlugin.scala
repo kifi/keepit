@@ -161,11 +161,7 @@ class UriIntegrityActor @Inject() (
       }
     } else {
       db.readWrite(attempts = 3) { implicit s =>
-        normUriRepo.get(newUriId) match {
-          case uri if uri.state == NormalizedURIStates.INACTIVE || uri.state == NormalizedURIStates.REDIRECTED =>
-            normUriRepo.save(uri.copy(state = NormalizedURIStates.ACTIVE, redirect = None, redirectTime = None))
-          case _ =>
-        }
+        updateNewUri(oldUriId, newUriId)
       }
 
       val urls = db.readWrite(attempts = 3) { implicit s =>
@@ -231,8 +227,15 @@ class UriIntegrityActor @Inject() (
 
     val oldUriId = url.normalizedUriId
     urlRepo.save(url.withNormUriId(newUriId).withHistory(URLHistory(clock.now, oldUriId, URLHistoryCause.MIGRATED)))
-    val newUri = normUriRepo.get(newUriId)
-    if (newUri.redirect.isDefined) normUriRepo.save(newUri.copy(redirect = None, redirectTime = None).withState(NormalizedURIStates.ACTIVE))
+    updateNewUri(oldUriId, newUriId)
+  }
+
+  private def updateNewUri(oldUriId: Id[NormalizedURI], newUriId: Id[NormalizedURI])(implicit session: RWSession): Unit = {
+    val uri = normUriRepo.get(newUriId)
+    val updatedState = if (uri.state == NormalizedURIStates.INACTIVE || uri.state == NormalizedURIStates.REDIRECTED) NormalizedURIStates.ACTIVE else uri.state
+    val contentWanted = uri.shouldHaveContent || normUriRepo.get(oldUriId).shouldHaveContent
+    val updatedUri = uri.withState(updatedState).withContentRequest(contentWanted).copy(redirect = None, redirectTime = None)
+    if (uri != updatedUri) normUriRepo.save(updatedUri)
   }
 
   private def batchURIMigration(batchSize: Int): Int = {

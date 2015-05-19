@@ -7,6 +7,8 @@ import com.keepit.common.controller._
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.slick.Database
+import com.keepit.common.json
+import com.keepit.common.json.TupleFormat
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.net.URI
 import com.keepit.common.social.BasicUserRepo
@@ -19,6 +21,7 @@ import com.keepit.normalizer.NormalizedURIInterner
 import com.keepit.shoebox.controllers.LibraryAccessActions
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.{ JsArray, JsObject, JsString, Json }
+import com.keepit.common.core._
 
 import scala.concurrent.Future
 import scala.util.{ Try, Failure, Success }

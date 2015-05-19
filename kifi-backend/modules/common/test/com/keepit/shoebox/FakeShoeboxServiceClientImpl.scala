@@ -16,8 +16,6 @@ import com.keepit.common.usersegment.UserSegment
 import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.model._
 import com.keepit.model.view.{ LibraryMembershipView, UserSessionView }
-import com.keepit.rover.document.utils.Signature
-import com.keepit.rover.fetcher.HttpRedirect
 import com.keepit.rover.model.BasicImages
 import com.keepit.scraper.ScrapeRequest
 import com.keepit.search._
@@ -39,8 +37,6 @@ class FakeShoeboxScraperClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   def assignScrapeTasks(zkId: Long, max: Int): Future[Seq[ScrapeRequest]] = {
     Future.successful(Seq.empty[ScrapeRequest])
   }
-
-  def getUriImage(nUriId: Id[NormalizedURI]): Future[Option[String]] = Future.successful(Some("http://www.adummyurl.com"))
 
   def getAllURLPatterns(): Future[UrlPatternRules] = Future.successful(UrlPatternRules(Seq.empty))
 
@@ -380,15 +376,11 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
 
   def getNormalizedUriByUrlOrPrenormalize(url: String): Future[Either[NormalizedURI, String]] = ???
 
-  def internNormalizedURI(url: URI, scrapeWanted: Boolean): Future[NormalizedURI] = {
-    val uri = allNormalizedURIs.values.find(_.url == url).getOrElse {
-      NormalizedURI(
-        id = Some(Id[NormalizedURI](url.hashCode)),
-        url = url.toString(),
-        urlHash = UrlHash(url.hashCode.toString)
-      )
-    }
-    Future.successful(uri)
+  def internNormalizedURI(url: String, contentWanted: Boolean): Future[NormalizedURI] = {
+    val uri = allNormalizedURIs.values.find(_.url == url) getOrElse NormalizedURI.withHash(url).copy(id = Some(Id[NormalizedURI](url.hashCode)))
+    val uriWithContentRequest = uri.withContentRequest(contentWanted)
+    allNormalizedURIs += (uriWithContentRequest.id.get -> uriWithContentRequest)
+    Future.successful(uriWithContentRequest)
   }
 
   def getBookmarks(userId: Id[User]): Future[Seq[Keep]] = {
@@ -739,6 +731,4 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
   }
 
   def getUserActivePersonas(userId: Id[User]): Future[UserActivePersonas] = Future.successful(UserActivePersonas(Seq(), Seq()))
-
-  def getImageInfosChanged(seqNum: SequenceNumber[ImageInfo], fetchSize: Int): Future[Seq[ImageInfo]] = Future.successful(Seq.empty)
 }

@@ -10,6 +10,8 @@ import com.keepit.common.service.FakeServiceModule
 import com.keepit.common.zookeeper.FakeDiscoveryModule
 import com.keepit.model.User
 
+import scala.xml.NodeSeq
+
 case class FakeAirbrakeModule() extends AirbrakeModule {
 
   def configure(): Unit = {
@@ -21,7 +23,23 @@ case class FakeAirbrakeModule() extends AirbrakeModule {
 
   @Provides
   def formatter(playMode: Mode, service: FortyTwoServices, serviceDiscovery: ServiceDiscovery): AirbrakeFormatter = {
-    new AirbrakeFormatter("fakeApiKey", Mode.Test, service, serviceDiscovery)
+    new AirbrakeFormatterImpl("fakeApiKey", Mode.Test, service, serviceDiscovery)
+  }
+}
+
+case class FakeAirbrakeAndFormatterModule() extends AirbrakeModule {
+
+  def configure(): Unit = {
+    bind[AirbrakeNotifier].to[FakeAirbrakeNotifier]
+  }
+
+  @Provides
+  def formatter(): AirbrakeFormatter = {
+    new AirbrakeFormatter {
+      private[healthcheck] def deploymentMessage: String = ""
+      private[healthcheck] def format(error: AirbrakeError): NodeSeq = null
+      def noticeError(error: ErrorWithStack, message: Option[String]): NodeSeq = null
+    }
   }
 }
 

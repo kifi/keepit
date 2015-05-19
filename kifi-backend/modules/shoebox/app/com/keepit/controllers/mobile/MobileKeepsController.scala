@@ -1,6 +1,8 @@
 package com.keepit.controllers.mobile
 
 import com.keepit.commanders._
+import com.keepit.common.json
+import com.keepit.common.json.TupleFormat
 import com.keepit.common.net.URISanitizer
 import com.keepit.heimdal._
 import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
@@ -17,15 +19,13 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.Future
 import com.keepit.common.store.ImageSize
 import com.keepit.commanders.CollectionSaveFail
-import scala.Some
 import com.keepit.normalizer.NormalizedURIInterner
 import com.keepit.common.core._
+import com.keepit.common.json.TupleFormat
 
 class MobileKeepsController @Inject() (
   db: Database,
-  uriSummaryCommander: URISummaryCommander,
   uriRepo: NormalizedURIRepo,
-  pageInfoRepo: PageInfoRepo,
   keepRepo: KeepRepo,
   val userActionsHelper: UserActionsHelper,
   keepDecorator: KeepDecorator,
@@ -137,6 +137,15 @@ class MobileKeepsController @Inject() (
     collectionCommander.saveCollection(request.userId, request.body.asJson.flatMap(Json.fromJson[BasicCollection](_).asOpt)) match {
       case Left(newColl) => Ok(Json.toJson(newColl))
       case Right(CollectionSaveFail(message)) => BadRequest(Json.obj("error" -> message))
+    }
+  }
+
+  def suggestTags(keepIdOptStringHack: Option[String], query: Option[String], limit: Int) = UserAction.async { request =>
+    val keepIdOpt = keepIdOptStringHack.map(ExternalId.apply[Keep])
+    keepsCommander.suggestTags(request.userId, keepIdOpt, query, limit).imap { tagsAndMatches =>
+      implicit val matchesWrites = TupleFormat.tuple2Writes[Int, Int]
+      val result = JsArray(tagsAndMatches.map { case (tag, matches) => json.minify(Json.obj("tag" -> tag, "matches" -> matches)) })
+      Ok(result)
     }
   }
 

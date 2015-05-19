@@ -29,7 +29,6 @@ object ShoeboxArticleIngestionActor {
 class ShoeboxArticleIngestionActor @Inject() (
     db: Database,
     uriRepo: NormalizedURIRepo,
-    pageInfoRepo: PageInfoRepo,
     httpRedirectHelper: HttpRedirectIngestionHelper,
     normalizationInfoHelper: NormalizationInfoIngestionHelper,
     systemValueRepo: SystemValueRepo,
@@ -143,13 +142,7 @@ class ShoeboxArticleIngestionActor @Inject() (
     // always use Embedly's title otherwise update title if empty
     val preferredTitle = fetchedTitles.get(EmbedlyArticle) orElse uri.title orElse fetchedTitles.values.headOption
 
-    val restriction = if (updates.exists(_.sensitive)) {
-      pageInfoRepo.getByUri(uriId).foreach { pageInfo =>
-        val restrictedPageInfo = pageInfo.copy(safe = Some(false))
-        if (pageInfo != restrictedPageInfo) { pageInfoRepo.save(restrictedPageInfo) }
-      }
-      Some(Restriction.ADULT)
-    } else uri.restriction
+    val restriction = if (updates.exists(_.sensitive)) Some(Restriction.ADULT) else uri.restriction
 
     val state = if (uri.state == NormalizedURIStates.ACTIVE) NormalizedURIStates.SCRAPED else uri.state
 

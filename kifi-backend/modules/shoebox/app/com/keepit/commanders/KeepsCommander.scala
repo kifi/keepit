@@ -674,12 +674,14 @@ class KeepsCommander @Inject() (
     hashtagTypeahead.topN(userId, query, limit).map(_.map(_.info)).map(HashtagHit.highlight(query, _))
   }
 
-  private def searchTagsForKeep(userId: Id[User], keepId: ExternalId[Keep], query: String, limit: Option[Int]): Future[Seq[HashtagHit]] = {
+  private def searchTagsForKeep(userId: Id[User], keepIdOpt: Option[ExternalId[Keep]], query: String, limit: Option[Int]): Future[Seq[HashtagHit]] = {
     val futureHits = searchTags(userId, query, None)
-    val existingTags = db.readOnlyMaster { implicit session =>
-      val keep = keepRepo.get(keepId)
-      collectionRepo.getHashtagsByKeepId(keep.id.get)
-    }
+    val existingTags = keepIdOpt.map { keepId =>
+      db.readOnlyMaster { implicit session =>
+        val keep = keepRepo.get(keepId)
+        collectionRepo.getHashtagsByKeepId(keep.id.get)
+      }
+    }.getOrElse(Set.empty)
     futureHits.imap { hits =>
       val validHits = hits.filterNot(hit => existingTags.contains(hit.tag))
       limit.map(validHits.take(_)) getOrElse validHits
@@ -705,10 +707,11 @@ class KeepsCommander @Inject() (
     }
   }
 
-  def suggestTags(userId: Id[User], keepId: ExternalId[Keep], query: Option[String], limit: Int): Future[Seq[(Hashtag, Seq[(Int, Int)])]] = {
+  def suggestTags(userId: Id[User], keepIdOpt: Option[ExternalId[Keep]], query: Option[String], limit: Int): Future[Seq[(Hashtag, Seq[(Int, Int)])]] = {
     query.map(_.trim).filter(_.nonEmpty) match {
-      case Some(validQuery) => searchTagsForKeep(userId, keepId, validQuery, Some(limit)).map(_.map(hit => (hit.tag, hit.matches)))
-      case None => suggestTagsForKeep(userId, keepId, Some(limit)).map(_.map((_, Seq.empty[(Int, Int)])))
+      case Some(validQuery) => searchTagsForKeep(userId, keepIdOpt, validQuery, Some(limit)).map(_.map(hit => (hit.tag, hit.matches)))
+      case None if keepIdOpt.isDefined => suggestTagsForKeep(userId, keepIdOpt.get, Some(limit)).map(_.map((_, Seq.empty[(Int, Int)])))
+      case None => Future.successful(Seq.empty) // We don't support this case yet
     }
   }
 

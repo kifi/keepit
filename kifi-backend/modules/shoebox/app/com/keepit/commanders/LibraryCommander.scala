@@ -72,7 +72,6 @@ class LibraryCommander @Inject() (
     heimdal: HeimdalServiceClient,
     contextBuilderFactory: HeimdalContextBuilderFactory,
     libraryImageCommander: LibraryImageCommander,
-    uriSummaryCommander: URISummaryCommander,
     experimentCommander: LocalUserExperimentCommander,
     userValueRepo: UserValueRepo,
     systemValueRepo: SystemValueRepo,

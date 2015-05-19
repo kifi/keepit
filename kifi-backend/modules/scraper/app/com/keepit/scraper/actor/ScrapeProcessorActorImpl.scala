@@ -20,7 +20,7 @@ import scala.util.{ Failure, Success }
 object ScraperMessages {
   // Scrape: pure side-effects; Fetch: returns content (see fetchBasicArticle)
   case class Fetch(url: String, proxyOpt: Option[HttpProxy], extractorProviderTypeOpt: Option[ExtractorProviderType])
-  case class Scrape(uri: NormalizedURI, info: ScrapeInfo, pageInfo: Option[PageInfo], proxyOpt: Option[HttpProxy]) {
+  case class Scrape(uri: NormalizedURI, info: ScrapeInfo, proxyOpt: Option[HttpProxy]) {
     override def toString = s"Scrape(uri=${uri.toShortString},info=${info.toShortString})"
   }
   case object QueueSize // informational; pulling
@@ -51,8 +51,8 @@ class ScrapeProcessorActorImpl @Inject() (
     actor.ask(Fetch(url, proxyOpt, extractorProviderTypeOpt))(Timeout(15 minutes)).mapTo[Option[BasicArticle]]
   }
 
-  def asyncScrape(uri: NormalizedURI, info: ScrapeInfo, pageInfo: Option[PageInfo], proxyOpt: Option[HttpProxy]): Unit = {
-    actor ! Scrape(uri, info, pageInfo, proxyOpt)
+  def asyncScrape(uri: NormalizedURI, info: ScrapeInfo, proxyOpt: Option[HttpProxy]): Unit = {
+    actor ! Scrape(uri, info, proxyOpt)
   }
 
   override def status(): Future[Seq[ScrapeJobStatus]] = {
@@ -76,7 +76,7 @@ class ScrapeProcessorActorImpl @Inject() (
               for (sr <- requests) {
                 val uri = sr.uri
                 URI.parse(uri.url) match {
-                  case Success(_) => asyncScrape(uri, sr.scrapeInfo, sr.pageInfoOpt, sr.proxyOpt)
+                  case Success(_) => asyncScrape(uri, sr.scrapeInfo, sr.proxyOpt)
                   case Failure(e) => throw new Exception(s"url can not be parsed for $uri in scrape request $sr", e)
                 }
               }

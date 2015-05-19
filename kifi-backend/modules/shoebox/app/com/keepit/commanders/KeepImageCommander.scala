@@ -16,8 +16,11 @@ import com.keepit.common.store._
 import com.keepit.model.ImageProcessState.{ ImageLoadedAndHashed, ReadyToPersist }
 import com.keepit.model.ProcessImageOperation.Original
 import com.keepit.model._
-import com.keepit.rover.model.{ BasicImage, BasicImages }
+import com.keepit.rover.RoverServiceClient
+import com.keepit.rover.article.EmbedlyArticle
+import com.keepit.rover.model.{ RoverUriSummary, BasicImage, BasicImages }
 import play.api.libs.Files.TemporaryFile
+import com.keepit.common.core._
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.concurrent.duration.DurationInt
@@ -35,7 +38,6 @@ trait KeepImageCommander {
   def getBestImageForKeep(keepId: Id[Keep], imageRequest: ProcessImageRequest): Option[Option[KeepImage]]
   def getBestImagesForKeeps(keepIds: Set[Id[Keep]], imageRequest: ProcessImageRequest): Map[Id[Keep], Option[KeepImage]]
   def getBestImagesForKeepsPatiently(keepIds: Set[Id[Keep]], imageRequest: ProcessImageRequest): Future[Map[Id[Keep], Option[KeepImage]]]
-  def getExistingImageUrlForKeepUri(nUriId: Id[NormalizedURI])(implicit session: RSession): Option[String]
   def getBasicImagesForKeeps(keepIds: Set[Id[Keep]]): Map[Id[Keep], BasicImages]
 
   def autoSetKeepImage(keepId: Id[Keep], localOnly: Boolean = true, overwriteExistingChoice: Boolean = false): Future[ImageProcessDone]
@@ -51,9 +53,8 @@ class KeepImageCommanderImpl @Inject() (
     imageStore: RoverImageStore,
     db: Database,
     keepRepo: KeepRepo,
-    uriSummaryCommander: URISummaryCommander,
-    imageInfoRepo: ImageInfoRepo,
-    s3ImageConfig: S3ImageConfig,
+    rover: RoverServiceClient,
+    implicit val s3ImageConfig: S3ImageConfig,
     normalizedUriRepo: NormalizedURIRepo,
     keepImageRequestRepo: KeepImageRequestRepo,
     airbrake: AirbrakeNotifier,
@@ -62,21 +63,10 @@ class KeepImageCommanderImpl @Inject() (
     implicit val defaultContext: ExecutionContext,
     val webService: WebService) extends KeepImageCommander with ProcessedImageHelper with Logging {
 
-  def getUrl(keepImage: KeepImage): String = {
-    s3ImageConfig.cdnBase + "/" + keepImage.imagePath.path
-  }
+  def getUrl(keepImage: KeepImage): String = keepImage.imagePath.getUrl
 
   def getBestImageForKeep(keepId: Id[Keep], imageRequest: ProcessImageRequest): Option[Option[KeepImage]] = {
-    val keepImages = db.readOnlyReplica { implicit session => keepImageRepo.getAllForKeepId(keepId) }
-    if (keepImages.isEmpty) {
-      SafeFuture { autoSetKeepImage(keepId, localOnly = false, overwriteExistingChoice = false) }
-      None
-    } else Some {
-      val size = imageRequest.size
-      val validKeepImages = keepImages.filter(ki => ki.state == KeepImageStates.ACTIVE)
-      val strictAspectRatio = imageRequest.operation == ProcessImageOperation.Crop
-      ProcessedImageSize.pickBestImage(size, validKeepImages, strictAspectRatio)
-    }
+    getBestImagesForKeeps(Set(keepId), imageRequest).get(keepId)
   }
 
   def getBestImagesForKeeps(keepIds: Set[Id[Keep]], imageRequest: ProcessImageRequest): Map[Id[Keep], Option[KeepImage]] = {
@@ -133,12 +123,6 @@ class KeepImageCommanderImpl @Inject() (
     }
   }
 
-  def getExistingImageUrlForKeepUri(nUriId: Id[NormalizedURI])(implicit session: RSession): Option[String] = {
-    imageInfoRepo.getLargestByUriWithPriority(nUriId).map { imageInfo =>
-      s3ImageConfig.cdnBase + "/" + imageInfo.path
-    }
-  }
-
   private val autoSetConsolidator = new RequestConsolidator[Id[Keep], ImageProcessDone](1.minute)
   def autoSetKeepImage(keepId: Id[Keep], localOnly: Boolean, overwriteExistingChoice: Boolean): Future[ImageProcessDone] = {
     val keep = db.readOnlyMaster { implicit session =>
@@ -146,24 +130,21 @@ class KeepImageCommanderImpl @Inject() (
     }
     log.info(s"[kic] Autosetting for ${keep.id.get}: ${keep.url}")
     autoSetConsolidator(keepId) { keepId =>
-      val localLookup = db.readOnlyMaster { implicit session =>
-        getExistingImageUrlForKeepUri(keep.uriId)
-      }
-      val remoteImageF = if (localOnly) {
-        Future.successful(localLookup)
-      } else {
-        localLookup.map(v => Future.successful(Some(v))).getOrElse {
-          uriSummaryCommander.getDefaultURISummary(keep.uriId, waiting = true).map { summary =>
-            summary.imageUrl
-          }
-        }
+      // todo(Léo): consider using rover.getOrElseFetchUriSummary if localOnly = false?
+      val remoteImageF = rover.getImagesByUris(Set(keep.uriId)).imap(_.get(keep.uriId)).map {
+        case Some(images) => images.getLargest.map(_.path.getUrl)
+        case _ => None
       }
 
       remoteImageF.flatMap { remoteImageOpt =>
         remoteImageOpt.map { imageUrl =>
           log.info(s"[kic] Using $imageUrl")
           val realUrl = if (imageUrl.startsWith("//")) "http:" + imageUrl else imageUrl
-          fetchAndSet(realUrl, keepId, ImageSource.EmbedlyOrPagePeeker, overwriteExistingImage = overwriteExistingChoice)(None)
+          val imageSource = {
+            if (RoverUriSummary.defaultProvider == EmbedlyArticle) ImageSource.Embedly
+            else ImageSource.RoverArticle(RoverUriSummary.defaultProvider)
+          }
+          fetchAndSet(realUrl, keepId, imageSource, overwriteExistingImage = overwriteExistingChoice)(None)
         }.getOrElse {
           Future.successful(ImageProcessState.UpstreamProviderNoImage)
         }
