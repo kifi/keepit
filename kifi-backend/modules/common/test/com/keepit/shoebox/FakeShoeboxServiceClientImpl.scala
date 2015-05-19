@@ -252,6 +252,9 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
     bookmarks.map { b =>
       val id = b.id.getOrElse(nextBookmarkId())
       val updatedBookmark = b.withId(id).copy(seq = nextBookmarkSeqNum())
+      allNormalizedURIs.get(updatedBookmark.uriId).foreach { uri =>
+        if (!uri.shouldHaveContent) { allNormalizedURIs += (uri.id.get -> uri.withContentRequest(true)) }
+      }
       allBookmarks(id) = updatedBookmark
       allUserBookmarks(b.userId) = allUserBookmarks.getOrElse(b.userId, Set.empty) + id
       updatedBookmark
