@@ -14,21 +14,27 @@ abstract class DbSequenceAssigner[M <: ModelWithSeqNumber[M]](
 
   val batchSize: Int = 20 // override this if necessary
   private[this] val errorCount = new AtomicInteger(0)
+  protected val MAX_ITER = 100
 
   override def assignSequenceNumbers(): Unit = {
     var done = false
+    var iter = 0
     errorCount.set(0)
     var currentBatchSize = batchSize
-    while (!done) {
+    while (!done && iter < MAX_ITER) {
+      iter += 1
+      log.info(s"${this.getClass.getSimpleName} going to assignSeqNum, iter = $iter")
       try {
         done = (db.readWrite { implicit session => repo.assignSequenceNumbers(currentBatchSize) } <= 0)
         errorCount.set(0)
         currentBatchSize = batchSize
+        log.info(s"${this.getClass.getSimpleName} succeeded to assignSeqNum, iter = $iter")
       } catch {
         case e: UnsupportedOperationException =>
           reportUnsupported(e)
           throw e
         case e: Throwable =>
+          log.error(s"${this.getClass.getSimpleName} failed to assignSeqNum, iter = $iter")
           if (errorCount.getAndIncrement > 1) {
             throw new Exception(s"Error #${errorCount.get} with batch size $currentBatchSize on ${this.getClass.getSimpleName}", e)
           } else {
