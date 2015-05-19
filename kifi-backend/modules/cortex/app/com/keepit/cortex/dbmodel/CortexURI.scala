@@ -18,7 +18,8 @@ case class CortexURI(
     updatedAt: DateTime = currentDateTime,
     uriId: Id[NormalizedURI],
     state: State[CortexURI],
-    seq: SequenceNumber[CortexURI]) extends ModelWithState[CortexURI] with ModelWithSeqNumber[CortexURI] {
+    seq: SequenceNumber[CortexURI],
+    shouldHaveContent: Boolean = false) extends ModelWithState[CortexURI] with ModelWithSeqNumber[CortexURI] {
   def withId(id: Id[CortexURI]): CortexURI = copy(id = Some(id))
   def withUpdateTime(now: DateTime): CortexURI = copy(updatedAt = now)
 }
@@ -27,14 +28,5 @@ object CortexURI {
   implicit def fromURIState(state: State[NormalizedURI]): State[CortexURI] = State[CortexURI](state.value)
   implicit def fromURISeq(seq: SequenceNumber[NormalizedURI]): SequenceNumber[CortexURI] = SequenceNumber[CortexURI](seq.value)
 
-  implicit def format = (
-    (__ \ 'id).formatNullable(Id.format[CortexURI]) and
-    (__ \ 'createdAt).format(DateTimeJsonFormat) and
-    (__ \ 'updatedAt).format(DateTimeJsonFormat) and
-    (__ \ 'uriId).format(Id.format[NormalizedURI]) and
-    (__ \ 'state).format(State.format[CortexURI]) and
-    (__ \ 'seq).format(SequenceNumber.format[CortexURI])
-  )(CortexURI.apply, unlift(CortexURI.unapply))
-
-  def fromURI(uri: NormalizedURI): CortexURI = CortexURI(uriId = uri.id.get, state = uri.state, seq = uri.seq)
+  def fromURI(uri: NormalizedURI): CortexURI = CortexURI(uriId = uri.id.get, state = uri.state, seq = uri.seq, shouldHaveContent = uri.shouldHaveContent)
 }
