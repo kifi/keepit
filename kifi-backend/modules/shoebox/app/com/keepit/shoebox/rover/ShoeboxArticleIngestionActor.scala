@@ -34,6 +34,7 @@ class ShoeboxArticleIngestionActor @Inject() (
     systemValueRepo: SystemValueRepo,
     rover: RoverServiceClient,
     airbrake: AirbrakeNotifier,
+    urlPatternRulesRepo: UrlPatternRuleRepo,
     private implicit val executionContext: ExecutionContext) extends FortyTwoActor(airbrake) with Logging {
 
   import ShoeboxArticleIngestionActor._
@@ -127,13 +128,16 @@ class ShoeboxArticleIngestionActor @Inject() (
   }
 
   private def updateActiveUris(partiallyProcessedUpdatesByUri: Iterable[(Id[NormalizedURI], Seq[ShoeboxArticleUpdate], Boolean)])(implicit session: RWSession): Unit = {
-    partiallyProcessedUpdatesByUri.foreach {
-      case (uriId, updates, hasBeenRenormalized) =>
-        if (!hasBeenRenormalized) { updateUri(uriId, updates) }
+    if (partiallyProcessedUpdatesByUri.nonEmpty) {
+      val rules = urlPatternRulesRepo.getUrlPatternRules()
+      partiallyProcessedUpdatesByUri.foreach {
+        case (uriId, updates, hasBeenRenormalized) =>
+          if (!hasBeenRenormalized) { updateUri(uriId, updates, rules) }
+      }
     }
   }
 
-  private def updateUri(uriId: Id[NormalizedURI], updates: Seq[ShoeboxArticleUpdate])(implicit session: RWSession): Unit = {
+  private def updateUri(uriId: Id[NormalizedURI], updates: Seq[ShoeboxArticleUpdate], rules: UrlPatternRules)(implicit session: RWSession): Unit = {
     require(updates.forall(_.uriId == uriId), s"Updates do not match expecting uriId ($uriId): $updates")
     val uri = uriRepo.get(uriId)
     val fetchedTitles = updates.map(update => (update.articleKind -> update.title)).collect {
@@ -142,7 +146,18 @@ class ShoeboxArticleIngestionActor @Inject() (
     // always use Embedly's title otherwise update title if empty
     val preferredTitle = fetchedTitles.get(EmbedlyArticle) orElse uri.title orElse fetchedTitles.values.headOption
 
-    val restriction = if (updates.exists(_.sensitive)) Some(Restriction.ADULT) else uri.restriction
+    val restriction = {
+      val isSensitiveByRule = updates.foldLeft[Option[Boolean]](None) {
+        case (Some(true), _) => Some(true)
+        case (isSensitiveByRuleSoFar, update) => rules.isSensitive(update.destinationUrl) orElse isSensitiveByRuleSoFar
+      }
+
+      isSensitiveByRule match {
+        case Some(true) => Some(Restriction.ADULT)
+        case Some(false) => uri.restriction.filterNot(_ == Restriction.ADULT)
+        case None => if (updates.exists(_.sensitive)) Some(Restriction.ADULT) else uri.restriction
+      }
+    }
 
     val state = if (uri.state == NormalizedURIStates.ACTIVE) NormalizedURIStates.SCRAPED else uri.state
 
