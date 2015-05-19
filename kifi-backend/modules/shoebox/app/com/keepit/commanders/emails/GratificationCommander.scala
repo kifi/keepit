@@ -1,6 +1,7 @@
 package com.keepit.commanders.emails
 
 import com.google.inject.Inject
+import com.keepit.commanders.emails.GratificationCommander.LibraryCountData
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.heimdal.HeimdalServiceClient
@@ -10,13 +11,17 @@ import play.api.libs.concurrent.Execution.Implicits._
 
 import scala.concurrent.Future
 
+object GratificationCommander {
+
+  case class LibraryCountData(totalCount: Int, countByLibrary: Map[Id[Library], Int])
+
+}
+
 class GratificationCommander @Inject() (
     db: Database,
     libMemRepo: LibraryMembershipRepo,
     libraryRepo: LibraryRepo,
     heimdal: HeimdalServiceClient) {
-
-  type LibraryCountData = (Int, Map[Library, Int]) // (total_count, sub_counts)
 
   private val NUM_WEEKS_BACK = 1
 
@@ -25,7 +30,7 @@ class GratificationCommander @Inject() (
       val since = currentDateTime.minusWeeks(NUM_WEEKS_BACK)
       val cnt = libMemRepo.userRecentFollowerCounts(userId, since)
       val cntMap = libMemRepo.userRecentTopFollowedLibrariesAndCounts(userId, since)
-      (cnt, cntMap.map { case (id, n) => (libraryRepo.get(id), n) })
+      LibraryCountData(cnt, cntMap)
     }
   }
 
@@ -33,7 +38,7 @@ class GratificationCommander @Inject() (
     heimdal.getOwnerLibraryViewStats(userId).map {
       case (cnt, cntMap) =>
         db.readOnlyReplica { implicit s =>
-          (cnt, cntMap.map { case (id, n) => (libraryRepo.get(id), n) })
+          LibraryCountData(cnt, cntMap)
         }
     }
   }

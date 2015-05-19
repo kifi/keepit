@@ -52,7 +52,7 @@ trait LibraryMembershipRepo extends Repo[LibraryMembership] with RepoWithDelete[
   def countFollowersForOwner(ownerId: Id[User])(implicit session: RSession): Int
   def countFollowersForOtherUser(ownerId: Id[User], viewerId: Id[User])(implicit session: RSession): Int
   def userRecentFollowerCounts(ownerId: Id[User], since: DateTime)(implicit session: RSession): Int
-  def userRecentTopFollowedLibrariesAndCounts(ownerId: Id[User], since: DateTime, limit: Int = 5)(implicit session: RSession): Map[Id[Library], Int]
+  def userRecentTopFollowedLibrariesAndCounts(ownerId: Id[User], since: DateTime, limit: Int = 7)(implicit session: RSession): Map[Id[Library], Int]
 }
 
 @Singleton
@@ -378,7 +378,7 @@ class LibraryMembershipRepoImpl @Inject() (
 
   def userRecentTopFollowedLibrariesAndCounts(ownerId: Id[User], since: DateTime, limit: Int = 5)(implicit session: RSession): Map[Id[Library], Int] = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    val q = sql"select lib.id, count(*) cnt from library as lib inner join library_membership as lm on lib.id = lm.library_id where lib.owner_id = ${ownerId} and lm.access != 'owner' and lm.created_at > ${since} group by lib.id order by cnt desc limit $limit"
+    val q = sql"select lib.id, count(*) cnt from library as lib inner join library_membership as lm on lib.id = lm.library_id where lib.owner_id = ${ownerId} and lm.access != 'owner' and lm.created_at >= ${since} group by lib.id order by cnt desc limit $limit"
     q.as[(Int, Int)].list.map { case (id, cnt) => (Id[Library](id), cnt) }.toMap
   }
 }
