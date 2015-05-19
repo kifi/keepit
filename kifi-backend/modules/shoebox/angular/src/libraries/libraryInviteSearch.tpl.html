@@ -1,0 +1,98 @@
+<div class="library-invite-search dialog-content">
+  <a class="dialog-x library-invites-close-x" ng-click="close()"></a>
+
+  <div class="dialog-body-wrap">
+    <h1 class="dialog-header">{{inviteType === 'collaborate' ? 'Who would you like to collaborate with?' : 'Who would you like to invite?'}}</h1>
+    <div class="dialog-body">
+
+      <!-- Inviter Pic -->
+      <div class="lis-inviter-wrapper">
+        <img ng-src="{{inviter | pic:200}}" class="lis-inviter-pic">
+      </div>
+
+      <!-- Message -->
+      <textarea rows="1" class="lis-input lis-message-input" ng-model="share.message" placeholder="Write a message?"></textarea>
+
+      <!-- Search -->
+      <div class="lis-search-box">
+        <img ng-src="/img/spinner_32.gif" ng-show="showSpinner" class="lis-spinner">
+        <input type="text" ng-model="search.name" class="lis-input lis-search-input" placeholder="Search for people or email" ng-change="onSearchInputChange()" ng-keydown="processKeyEvent($event)" ng-focus="onSearchInputFocus()">
+        <span class="lis-search-icon svg-search-icon-gray"></span>
+      </div>
+
+      <!-- Contact List -->
+      <ul class="lis-contact-list" kf-wheel-allow>
+        <li class="lis-contact" ng-repeat="result in results" ng-mouseenter="onResultHover(result)" ng-mouseleave="onResultUnhover(result)" ng-class="{'lis-invite-selected': result.selected, 'lis-invite-actionable': result.actionable}">
+
+          <!-- Kifi friend -->
+          <div ng-if="result.id" class="lis-contact-container lis-invite-user">
+            <a href="{{result|profileUrl}}" ng-click="close()" kf-track-origin="{{currentPageOrigin}}/invitationDropdown">
+              <img ng-src="{{result | pic:100}}" class="lis-contact-image">
+            </a>
+            <div class="lis-contact-summary">
+              <div class="lis-contact-name" ng-bind-html="result.name"></div>
+              <div class="lis-contact-network">Kifi user</div>
+            </div>
+            <button ng-show="!result.sent && !(result.isFollowing || result.isCollaborating)" ng-click="shareLibraryKifiFriend(result)" class="lis-contact-button">
+              <div ng-if="inviteType === 'collaborate'">
+                <span class="lis-invite-icon collaborate svg-collaborate-gray"></span>Invite
+              </div>
+              <div ng-if="inviteType === 'follow'">
+                <span class="lis-invite-icon follow svg-send-arrow-gray"></span>Send
+              </div>
+            </button>
+            <div ng-show="result.isFollowing" class="lis-invite-following">Following</div>
+            <div ng-show="result.isCollaborating" class="lis-invite-collaborating">Collaborating</div>
+            <div ng-show="result.sent" class="lis-invite-sent">Sent!</div>
+          </div>
+
+          <!-- Existing email contact -->
+          <div ng-if="!result.id && !result.custom" class="lis-contact-container lis-contact-email">
+            <div class="lis-contact-email-icon"></div>
+            <div class="lis-contact-summary">
+              <div class="lis-contact-name" ng-bind-html="result.name || result.emailFormatted"></div>
+              <div class="lis-contact-network" ng-bind-html="result.name ? result.emailFormatted : 'An email contact'"></div>
+            </div>
+            <button ng-show="!result.sent" ng-click="shareLibraryExistingEmail(result)" class="lis-contact-button">
+              <div ng-if="inviteType === 'collaborate'">
+                <span class="lis-invite-icon collaborate svg-collaborate-gray"></span>Invite
+              </div>
+              <div ng-if="inviteType === 'follow'">
+                <span class="lis-invite-icon follow svg-send-arrow-gray"></span>Send
+              </div>
+            </button>
+            <div ng-show="result.sent" class="lis-invite-sent">Sent!</div>
+          </div>
+
+          <!-- Send to any email -->
+          <div ng-if="result.custom === 'email'" class="lis-contact-container lis-contact-new-email">
+            <div class="lis-contact-new-email-icon"></div>
+            <div class="lis-contact-summary">
+              <div class="lis-contact-name">{{query || 'Send to any email'}}</div>
+              <div class="lis-contact-network">{{queryIsValidEmail ? 'An email address' : query ? 'Keep typing the email address' : 'Type the email address'}}</div>
+            </div>
+            <button ng-show="!result.sent && !result.hideButton" ng-click="shareLibraryNewEmail(result)" class="lis-contact-button">
+              <div ng-if="inviteType === 'collaborate'">
+                <span class="lis-invite-icon collaborate svg-collaborate-gray"></span>Invite
+              </div>
+              <div ng-if="inviteType === 'follow'">
+                <span class="lis-invite-icon follow svg-send-arrow-gray"></span>Send
+              </div>
+            </button>
+            <div ng-show="result.sent" class="lis-invite-sent">Sent!</div>
+          </div>
+
+          <!-- Import from Gmail -->
+          <div ng-if="result.custom === 'importGmail'" ng-click="importGmail()" class="lis-contact-container lis-import-gmail">
+            <div class="lis-contact-gmail-icon"></div>
+            <div class="lis-contact-summary">
+              <div class="lis-contact-import-gmail">Import Gmail contacts</div>
+            </div>
+          </div>
+        </li>
+      </ul>
+
+
+    </div>
+  </div>
+</div>
