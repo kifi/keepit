@@ -117,7 +117,7 @@ angular.module('kifi')
                 if (result.id) {
                   result.isInvited = !!result.lastInvitedAt;
                   result.isFollowing = (result.membership === 'read_only') && !result.isInvited;
-                  result.isCollaborating = (result.membership === 'read_write') && !result.isInvited;
+                  result.isCollaborating = (result.membership === 'read_write' || result.membership === 'owner') && !result.isInvited;
                   result.name = (result.firstName || '') + (result.lastName ? ' ' + result.lastName : '');
                 }
 
