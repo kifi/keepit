@@ -100,11 +100,13 @@ angular.module('kifi')
         while (next.firstChild) {
           next = next.firstChild;
         }
-        if (next.nodeType !== TEXT) {
-          next = findNextTextNode(next);
-        }
-        if (next) {
-          return {node: next, idx: 0};
+        if (next.nodeType !== ELEM || !next.classList.contains('kf-knf-editor')) {
+          if (next.nodeType !== TEXT) {
+            next = findNextTextNode(next);
+          }
+          if (next) {
+            return {node: next, idx: 0};
+          }
         }
         if (create) {
           var textNode = createTextNode('');
