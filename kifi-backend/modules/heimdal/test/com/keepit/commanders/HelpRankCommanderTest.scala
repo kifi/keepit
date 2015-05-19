@@ -33,7 +33,7 @@ class HelpRankCommanderTest extends Specification with HeimdalTestInjector with 
     val id = idOpt getOrElse Id[NormalizedURI](uriIdCounter.incrementAndGet)
     val seq = seqOpt getOrElse SequenceNumber[NormalizedURI](uriSeqCounter.incrementAndGet)
     val ts = tsOpt getOrElse currentDateTime
-    NormalizedURI(id = Some(id), createdAt = ts, updatedAt = ts, url = url, urlHash = NormalizedURI.hashUrl(url), seq = seq)
+    NormalizedURI(id = Some(id), createdAt = ts, updatedAt = ts, url = url, urlHash = UrlHash.hashUrl(url), seq = seq)
   }
 
   val FORTYTWO = "42"
