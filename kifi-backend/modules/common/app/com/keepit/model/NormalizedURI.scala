@@ -50,10 +50,6 @@ object NormalizedURI {
   implicit val nIdFormat = Id.format[NormalizedURI]
   implicit val extIdFormat = ExternalId.format[NormalizedURI]
   implicit val stateFormat = State.format[NormalizedURI]
-  implicit val urlHashFormat = Format(
-    __.read[String].map(UrlHash(_)),
-    new Writes[UrlHash] { def writes(o: UrlHash) = JsString(o.hash) }
-  )
 
   val TitleMaxLen = 2040
   val UrlMaxLen = 3000
@@ -85,7 +81,7 @@ object NormalizedURI {
     state: State[NormalizedURI] = NormalizedURIStates.ACTIVE,
     normalization: Option[Normalization] = None): NormalizedURI = {
     if (normalizedUrl.size > URLFactory.MAX_URL_SIZE) throw new Exception(s"url size is ${normalizedUrl.size} which exceeds ${URLFactory.MAX_URL_SIZE}: $normalizedUrl")
-    NormalizedURI(title = title, url = normalizedUrl, urlHash = UrlHash.hash(normalizedUrl), state = state, normalization = normalization)
+    NormalizedURI(title = title, url = normalizedUrl, urlHash = UrlHash.hashUrl(normalizedUrl), state = state, normalization = normalization)
   }
 }
 
@@ -94,7 +90,7 @@ case class UrlHash(hash: String) extends AnyVal {
 }
 
 object UrlHash {
-  def hash(url: String): UrlHash = {
+  def hashUrl(url: String): UrlHash = {
     val binaryHash = MessageDigest.getInstance("MD5").digest(url)
     UrlHash(new String(new Base64().encode(binaryHash), UTF8))
   }

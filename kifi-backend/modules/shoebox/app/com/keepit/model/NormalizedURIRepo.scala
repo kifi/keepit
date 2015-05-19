@@ -95,13 +95,13 @@ class NormalizedURIRepoImpl @Inject() (
       deleteCache(uri)
     } else {
       uri.id map { id => idCache.set(NormalizedURIKey(id), uri) }
-      urlHashCache.set(NormalizedURIUrlHashKey(NormalizedURI.hashUrl(uri.url)), uri)
+      urlHashCache.set(NormalizedURIUrlHashKey(UrlHash.hashUrl(uri.url)), uri)
     }
   }
 
   override def deleteCache(uri: NormalizedURI)(implicit session: RSession): Unit = {
     uri.id map { id => idCache.remove(NormalizedURIKey(id)) }
-    urlHashCache.remove(NormalizedURIUrlHashKey(NormalizedURI.hashUrl(uri.url)))
+    urlHashCache.remove(NormalizedURIUrlHashKey(UrlHash.hashUrl(uri.url)))
   }
 
   override def get(id: Id[NormalizedURI])(implicit session: RSession): NormalizedURI = {
@@ -150,14 +150,14 @@ class NormalizedURIRepoImpl @Inject() (
   }
 
   def getByNormalizedUrl(normalizedUrl: String)(implicit session: RSession): Option[NormalizedURI] = {
-    val hash = NormalizedURI.hashUrl(normalizedUrl)
+    val hash = UrlHash.hashUrl(normalizedUrl)
     urlHashCache.getOrElseOpt(NormalizedURIUrlHashKey(hash)) {
       (for (t <- rows if t.urlHash === hash) yield t).firstOption
     }
   }
 
   def getByNormalizedUrls(normalizedUrls: Seq[String])(implicit session: RSession): Map[String, NormalizedURI] = {
-    val hashes = normalizedUrls.map(NormalizedURI.hashUrl(_)).toSet
+    val hashes = normalizedUrls.map(UrlHash.hashUrl(_)).toSet
     val result = urlHashCache.bulkGetOrElseOpt(hashes map NormalizedURIUrlHashKey) { keys =>
       val urlHashes = keys.map(_.urlHash)
       val fetched = (for (t <- rows if t.urlHash.inSet(urlHashes)) yield t).list.map { u =>
