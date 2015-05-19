@@ -47,7 +47,7 @@
       $.get('@com.keepit.controllers.admin.routes.AdminCacheController.getCacheEntry("__")'.replace("__", getKeyInput.val()))
       .done(function(data, textStatus, xhr) {
         if (xhr.status == 200) {
-          getCacheResult.text(getKeyInput.val() + "->" + data.key);
+          getCacheResult.text(getKeyInput.val() + "->" + data);
           deleteCacheResult.text("");
           setCacheResult.text("");
         } else if (xhr.status == 204) {
