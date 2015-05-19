@@ -62,7 +62,7 @@ angular.module('kifi')
     }
 
     $scope.fieldHasError = function (field) {
-      var hasError = field.$invalid && $scope.registerFinalizeSubmitted;
+      var hasError = field && field.$invalid && $scope.registerFinalizeSubmitted;
       return hasError;
     };
 
