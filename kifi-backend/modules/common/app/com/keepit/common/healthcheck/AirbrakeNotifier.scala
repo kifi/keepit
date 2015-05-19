@@ -11,7 +11,7 @@ import com.keepit.common.mail.{ SystemEmailAddress, ElectronicMail }
 
 import scala.concurrent.ExecutionContext
 
-import play.api.libs.json.Json
+import play.api.libs.json.{ JsValue, JsObject, Json }
 
 import akka.actor._
 
@@ -24,7 +24,7 @@ object AirbrakeDeploymentNotice
 private[healthcheck] class AirbrakeNotifierActor @Inject() (
   airbrakeSender: AirbrakeSender,
   healthcheck: HealthcheckPlugin,
-  formatter: AirbrakeFormatter,
+  formatter: JsonAirbrakeFormatter,
   pagerDutySender: PagerDutySender)
     extends AlertingActor with Logging {
 
@@ -39,8 +39,8 @@ private[healthcheck] class AirbrakeNotifierActor @Inject() (
       try {
         if (error.panic) pagerDutySender.openIncident(error.message.getOrElse(error.exception.toString), error.exception, Some(error.signature.value))
         if (!error.aggregateOnly) {
-          val xml = formatter.format(error)
-          airbrakeSender.sendError(xml)
+          val json: JsValue = formatter.format(error)
+          airbrakeSender.sendError(json)
           val toLog = error.message.getOrElse(error.exception.toString)
           println(s"[airbrake] $toLog")
           log.error(s"[airbrake] $toLog")
@@ -74,6 +74,10 @@ class AirbrakeSender @Inject() (
   systemAdminMailSender: SystemAdminMailSender)
     extends Logging {
 
+  // Where are these injected from?
+  val apiKey = "701215c3c9029a56df52250ce2c5750f"
+  val projectId = "91268"
+
   var firstErrorReported = false
 
   val defaultFailureHandler: Request => PartialFunction[Throwable, Unit] = { url =>
@@ -101,6 +105,35 @@ class AirbrakeSender @Inject() (
       withTimeout(CallTimeouts(responseTimeout = Some(60000))).
       withHeaders("Content-type" -> "application/x-www-form-urlencoded").
       postTextFuture(DirectUrl("http://api.airbrake.io/deploys.txt"), payload, httpClient.ignoreFailure)
+  }
+
+  def sendError(json: JsValue): Unit = {
+    val futureResult = httpClient
+      .withHeaders("Content-Type" -> "application/json")
+      .withTimeout(CallTimeouts(responseTimeout = Some(60000)))
+      .postFuture(DirectUrl(s"https://airbrake.io/api/v3/projects/$projectId/notices?key=$apiKey"), json, defaultFailureHandler)
+    futureResult.onSuccess {
+      case res: ClientResponse =>
+        try {
+          val jsonRes = res.json
+          val id = (jsonRes \ "id").as[String]
+          val url = (jsonRes \ "url").as[String]
+          log.info(s"sent airbrake error $id, more info at $url: $json")
+          println(s"sent airbrake error $id, more info at $url: $json")
+        } catch {
+          case t: Throwable => {
+            pagerDutySender.openIncident("Airbrake Response Deserialization Error!", t, moreInfo = Some(res.body.take(1000)))
+            throw t
+          }
+        }
+    }
+
+    futureResult.onFailure {
+      case exception =>
+        log.info(s"error sending airbrake json: $json", exception)
+        exception.printStackTrace()
+        println(s"error sending airbrake json: $json")
+    }
   }
 
   def sendError(xml: NodeSeq): Unit = {

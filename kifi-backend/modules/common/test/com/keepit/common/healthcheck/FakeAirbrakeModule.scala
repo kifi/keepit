@@ -25,6 +25,11 @@ case class FakeAirbrakeModule() extends AirbrakeModule {
   def formatter(playMode: Mode, service: FortyTwoServices, serviceDiscovery: ServiceDiscovery): AirbrakeFormatter = {
     new AirbrakeFormatterImpl("fakeApiKey", Mode.Test, service, serviceDiscovery)
   }
+
+  @Provides
+  def jsonFormatter(playMode: Mode, service: FortyTwoServices, serviceDiscovery: ServiceDiscovery): JsonAirbrakeFormatter = {
+    new JsonAirbrakeFormatter("fakeApiKey", Mode.Test, service, serviceDiscovery)
+  }
 }
 
 case class FakeAirbrakeAndFormatterModule() extends AirbrakeModule {
@@ -40,6 +45,11 @@ case class FakeAirbrakeAndFormatterModule() extends AirbrakeModule {
       private[healthcheck] def format(error: AirbrakeError): NodeSeq = null
       def noticeError(error: ErrorWithStack, message: Option[String]): NodeSeq = null
     }
+  }
+
+  @Provides
+  def jsonFormatter(playMode: Mode, service: FortyTwoServices, serviceDiscovery: ServiceDiscovery): JsonAirbrakeFormatter = {
+    new JsonAirbrakeFormatter("fakeApiKey", Mode.Test, service, serviceDiscovery)
   }
 }
 
