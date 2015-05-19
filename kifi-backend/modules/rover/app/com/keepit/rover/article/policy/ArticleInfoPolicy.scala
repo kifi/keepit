@@ -12,8 +12,8 @@ class ArticleInfoPolicy @Inject() () {
 
   def toBeInterned(uri: IndexableUri): Set[ArticleKind[_ <: Article]] = {
     uri.state match {
-      case UNSCRAPABLE | SCRAPED | SCRAPE_FAILED => toBeInterned(uri.url)
-      case ACTIVE if uri.shouldHaveContent => toBeInterned(uri.url)
+      case INACTIVE | REDIRECTED => Set.empty
+      case _ if uri.shouldHaveContent => toBeInterned(uri.url)
       case _ => Set.empty
     }
   }
