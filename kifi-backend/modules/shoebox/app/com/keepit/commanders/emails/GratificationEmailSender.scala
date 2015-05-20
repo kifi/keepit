@@ -68,7 +68,7 @@ class GratificationEmailSender @Inject() (
 
     if (EXPERIMENT_DEPLOY) {
       Left(userIds.filter { id =>
-        localUserExperimentCommander.userHasExperiment(id, ExperimentType.PLAIN_EMAIL)
+        localUserExperimentCommander.userHasExperiment(id, ExperimentType.GRATIFICATION)
       })
     } else {
       val result: Seq[Future[Id[User]]] = userIds.map { id =>
