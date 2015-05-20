@@ -39,8 +39,7 @@ angular.module('kifi', [
     origin: origin,
     navBase: navOrigin,
     xhrBase: navOrigin + '/site',
-    xhrBaseEliza: navOrigin.replace('www', 'eliza') + '/eliza/site',
-    xhrBaseSearch: navOrigin.replace('www', 'search'),
+    xhrBaseSearch: navOrigin.replace('www', 'search') + '/site',
     picBase: (local ? '//d1scct5mnc9d9m' : '//djty7jcqog9qu') + '.cloudfront.net'
   };
 }()))

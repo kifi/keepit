@@ -196,15 +196,15 @@ angular.module('kifi')
 ])
 
 .factory('searchSuggestService', [
-  'Clutch', '$http', 'routeService',
-  function (Clutch, $http, routeService) {
+  'Clutch', 'net',
+  function (Clutch, net) {
     function getData(res) {
       return res.data;
     }
 
     var clutch = new Clutch(function (q, libraryId) {
       var params = {q: q, l: libraryId || [], maxUsers: 3, maxLibraries: 3, maxUris: 3, is: '88x72'};
-      return $http.get(routeService.search(params)).then(getData);
+      return net.search.search(params).then(getData);
     }, {cacheDuration: 15000});
 
     return {

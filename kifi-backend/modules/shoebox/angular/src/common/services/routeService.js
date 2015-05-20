@@ -2,15 +2,13 @@
 
 angular.module('kifi')
 
+// DEPRECATED. Use the 'net' service instead.
+
 .factory('routeService', [
   'env', 'URI',
   function (env, URI) {
     function route(path, params) {
       return env.xhrBase + path + (params ? URI.formatQueryString(params) : '');
-    }
-
-    function searchRoute(path, params) {
-      return env.xhrBaseSearch + path + (params ? URI.formatQueryString(params) : '');
     }
 
     function navRoute(path, params) {
@@ -43,9 +41,6 @@ angular.module('kifi')
       userBiography: route('/user/me/biography'),
       formatPicUrl: function (userId, pictureName, size) {
         return env.picBase + '/users/' + userId + '/pics/' + (size || 200) + '/' + pictureName;
-      },
-      getKeep: function (keepId) {
-        return route('/keeps/' + keepId);
       },
 
       ////////////////////////////
@@ -82,12 +77,6 @@ angular.module('kifi')
       hideUserRecommendation: function (id) {
         return route('/user/' + id + '/hide');
       },
-      search: function (params) {
-        return searchRoute('/site/search', params);
-      },
-      searchResultClicked: searchRoute('/site/search/events/resultClicked'),
-      searchedAnalytics: searchRoute('/site/search/events/searched'),
-      searchResultClickedAnalytics: searchRoute('/site/search/events/resultClicked'),
       socialSearch: function (name, limit) {
         return route('/user/connections/all/search', {
           query: name,
@@ -124,21 +113,6 @@ angular.module('kifi')
       },
       basicUserInfo: function (id, friendCount) {
         return route('/user/' + id, {friendCount: friendCount ? 1 : []});
-      },
-      addKeepsToLibrary: function (libraryId) {
-        return route('/libraries/' + libraryId + '/keeps');
-      },
-      copyKeepsToLibrary: function () {
-        return route('/libraries/copy');
-      },
-      moveKeepsToLibrary: function () {
-        return route('/libraries/move');
-      },
-      removeKeepFromLibrary: function (libraryId, keepId) {
-        return route('/libraries/' + libraryId + '/keeps/' + keepId);
-      },
-      removeManyKeepsFromLibrary: function (libraryId) {
-        return route('/libraries/' + libraryId + '/keeps/delete');
       },
       saveKeepNote: function (libraryId, keepId) {
         return route('/libraries/' + libraryId + '/keeps/' + keepId + '/note');

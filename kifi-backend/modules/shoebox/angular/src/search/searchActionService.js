@@ -3,10 +3,10 @@
 angular.module('kifi')
 
 .factory('searchActionService', [
-  '$analytics', '$http', '$location', '$log', '$q',
-  'routeService', 'profileService', 'libraryService',
-  function ($analytics, $http, $location, $log, $q,
-    routeService, profileService, libraryService) {
+  '$analytics', '$location', '$log', '$q',
+  'net', 'profileService', 'libraryService',
+  function ($analytics, $location, $log, $q,
+    net, profileService, libraryService) {
     //
     // Internal helper methods.
     //
@@ -61,13 +61,12 @@ angular.module('kifi')
     }
 
     function reportSearchAnalytics(endedWith, numResults, numResultsWithLibraries) {
-      var url = routeService.searchedAnalytics;
       if (lastSearchContext && lastSearchContext.query) {
         var origin = $location.$$protocol + '://' + $location.$$host;
         if ($location.$$port) {
           origin = origin + ':' + $location.$$port;
         }
-        var data = {
+        net.search.searched({
           origin: origin,
           uuid: lastSearchContext.uuid,
           experimentId: lastSearchContext.experimentId,
@@ -83,8 +82,7 @@ angular.module('kifi')
           refinements: refinements,
           pageSession: lastSearchContext.pageSession,
           endedWith: endedWith
-        };
-        $http.post(url, data)['catch'](function (res) {
+        })['catch'](function (res) {
           $log.log('res: ', res);
         });
       } else {
@@ -113,7 +111,7 @@ angular.module('kifi')
         maxLibraries: context ? [] : 6,
         uriContext: context || []
       };
-      var searchActionPromise = $http.get(routeService.search(params));
+      var searchActionPromise = net.search.search(params);
       var librarySummariesPromise = userLoggedIn ? libraryService.fetchLibraryInfos(false) : null;
 
       // ensuring library summaries have been loaded before the hits are decompressed
@@ -165,7 +163,6 @@ angular.module('kifi')
     }
 
     function reportSearchClickAnalytics(keep, resultPosition, numResults) {
-      var url = routeService.searchResultClicked;
       if (lastSearchContext && lastSearchContext.query) {
         var origin = $location.$$protocol + '://' + $location.$$host;
         if ($location.$$port) {
@@ -185,7 +182,7 @@ angular.module('kifi')
           titleMatches: 0, //This broke with new search api (the information is no longer available). Needs to be investigated if we still need it.
           urlMatches: 0
         };
-        var data = {
+        net.search.resultClicked({
           origin: origin,
           uuid: lastSearchContext.uuid,
           experimentId: lastSearchContext.experimentId,
@@ -202,15 +199,13 @@ angular.module('kifi')
           resultPosition: resultPosition,
           resultUrl: keep.url,
           hit: hitContext
-        };
-        $http.post(url, data)['catch'](function (res) {
+        })['catch'](function (res) {
           $log.log('res: ', res);
         });
       } else {
         $log.log('no search context to log');
       }
     }
-
 
     return {
       find: find,
