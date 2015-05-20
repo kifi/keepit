@@ -502,10 +502,6 @@ angular.module('kifi')
           return t*t*t;
         }
 
-        scope.isMyLibrary = function () {
-          return libraryService.isMyLibrary(scope.library);
-        };
-
         scope.followingLibrary = function () {
           return libraryService.isFollowingLibrary(scope.library);
         };
