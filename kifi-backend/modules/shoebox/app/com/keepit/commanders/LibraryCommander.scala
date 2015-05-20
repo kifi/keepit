@@ -1638,7 +1638,8 @@ class LibraryCommander @Inject() (
               lastKept = info.lastKept,
               following = None,
               caption = extraInfo.caption,
-              modifiedAt = lib.updatedAt)
+              modifiedAt = lib.updatedAt,
+              kind = lib.kind)
         }).seq.sortBy(_._1).map(_._2)
       }
     } getOrElse Future.successful(Seq.empty)
@@ -1693,7 +1694,8 @@ class LibraryCommander @Inject() (
       lastKept = lib.lastKept.getOrElse(lib.createdAt),
       following = isFollowing,
       caption = None,
-      modifiedAt = lib.updatedAt)
+      modifiedAt = lib.updatedAt,
+      kind = lib.kind)
   }
 
   def convertPendingInvites(emailAddress: EmailAddress, userId: Id[User]) = {
