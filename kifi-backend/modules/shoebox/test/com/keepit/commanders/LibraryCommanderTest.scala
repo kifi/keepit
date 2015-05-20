@@ -432,7 +432,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
         db.readWrite { implicit s =>
           libraryInviteRepo.save(LibraryInvite(libraryId = libScience.id.get, inviterId = userIron.id.get, userId = userWidow.id, access = LibraryAccess.READ_ONLY,
-            authToken = "token", passPhrase = "blarg bob fred"))
+            authToken = "token"))
         }
         // test can view if user has invite
         libraryCommander.canViewLibrary(Some(userWidow.id.get), libScience) === true

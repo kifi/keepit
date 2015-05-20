@@ -1189,7 +1189,7 @@ class LibraryCommander @Inject() (
 
     if (lib.kind == LibraryKind.SYSTEM_MAIN || lib.kind == LibraryKind.SYSTEM_SECRET)
       Left(LibraryFail(FORBIDDEN, "cant_join_system_generated_library"))
-    else if (lib.visibility != LibraryVisibility.PUBLISHED && inviteList.isEmpty) // private library & no library invites with matching authtoken/passphrase
+    else if (lib.visibility != LibraryVisibility.PUBLISHED && inviteList.isEmpty) // private library & no library invites with matching authtoken
       Left(LibraryFail(FORBIDDEN, "cant_join_nonpublished_library"))
     else {
       val maxAccess = if (inviteList.isEmpty) LibraryAccess.READ_ONLY else inviteList.sorted.last.access
@@ -1579,18 +1579,6 @@ class LibraryCommander @Inject() (
     db.readOnlyMaster { implicit session =>
       libraryRepo.getBySlugAndUserId(ownerId, slug).map((_, false)) orElse
         libraryAliasRepo.getByOwnerIdAndSlug(ownerId, slug).map(alias => (libraryRepo.get(alias.libraryId), true)).filter(_._1.state == LibraryStates.ACTIVE)
-    }
-  }
-
-  def getLibraryIdAndPassPhraseFromCookie(libraryAccessCookie: String): Option[(Id[Library], HashedPassPhrase)] = { /* cookie is in session, key: library_access */
-    val a = libraryAccessCookie.split('/')
-    (a.headOption, a.tail.headOption) match {
-      case (Some(l), Some(p)) =>
-        Library.decodePublicId(PublicId[Library](l)) match {
-          case Success(lid) => Some((lid, HashedPassPhrase(p)))
-          case _ => None
-        }
-      case _ => None
     }
   }
 
