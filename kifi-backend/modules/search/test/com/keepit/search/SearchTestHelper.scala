@@ -49,7 +49,7 @@ trait SearchTestHelper { self: SearchTestInjector =>
     val users = (0 until numUsers).map { n => User(firstName = "foo" + n, lastName = "", username = Username("test" + n), normalizedUsername = "test" + n) }.toList
     val uris = (0 until numUris).map { n =>
       NormalizedURI.withHash(title = Some("a" + n),
-        normalizedUrl = "http://www.keepit.com/article" + n, state = SCRAPED)
+        normalizedUrl = "http://www.keepit.com/article" + n).withContentRequest(true)
     }.toList
     val fakeShoeboxClient = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
     val (savedUsers, savedUris) = (fakeShoeboxClient.saveUsers(users: _*), fakeShoeboxClient.saveURIs(uris: _*))

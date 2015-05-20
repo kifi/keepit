@@ -188,8 +188,8 @@ class CollectionIndexerTest extends Specification with SearchTestInjector with G
       withInjector(helperModules: _*) { implicit injector =>
         val Seq(user) = saveUsers(User(firstName = "Agrajag", lastName = "", username = Username("test"), normalizedUsername = "test"))
         val uris = saveURIs(
-          NormalizedURI.withHash(title = Some("title"), normalizedUrl = "http://www.keepit.com/article1", state = SCRAPED),
-          NormalizedURI.withHash(title = Some("title"), normalizedUrl = "http://www.keepit.com/article2", state = SCRAPED)
+          NormalizedURI.withHash(title = Some("title"), normalizedUrl = "http://www.keepit.com/article1").withContentRequest(true),
+          NormalizedURI.withHash(title = Some("title"), normalizedUrl = "http://www.keepit.com/article2").withContentRequest(true)
         )
         val bookmarks = saveBookmarksByUser(Seq((user, uris)), uniqueTitle = Some("line1 titles"))
         val collection = saveCollection(user, "CollectionOne")
