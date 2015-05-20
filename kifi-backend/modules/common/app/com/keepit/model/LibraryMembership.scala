@@ -61,6 +61,10 @@ object LibraryMembership {
     (__ \ 'lastJoinedAt).formatNullable[DateTime] and
     (__ \ 'subscribedToUpdates).format[Boolean]
   )(LibraryMembership.apply, unlift(LibraryMembership.unapply))
+
+  def getAccessString(memOpt: Option[LibraryMembership]) = {
+    memOpt.map(_.access.value).getOrElse("none")
+  }
 }
 
 object LibraryMembershipStates extends States[LibraryMembership]

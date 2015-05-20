@@ -1637,6 +1637,7 @@ class LibraryCommander @Inject() (
               collaborators = Seq.empty,
               lastKept = info.lastKept,
               following = None,
+              membership = "none",
               caption = extraInfo.caption,
               modifiedAt = lib.updatedAt)
         }).seq.sortBy(_._1).map(_._2)
@@ -1644,7 +1645,11 @@ class LibraryCommander @Inject() (
     } getOrElse Future.successful(Seq.empty)
   }
 
-  def createLibraryCardInfos(libs: Seq[Library], owners: Map[Id[User], BasicUser], viewer: Option[User], withFollowing: Boolean, idealSize: ImageSize)(implicit session: RSession): ParSeq[LibraryCardInfo] = {
+  def createLibraryCardInfos(libs: Seq[Library], owners: Map[Id[User], BasicUser], viewerOpt: Option[User], withFollowing: Boolean, idealSize: ImageSize)(implicit session: RSession): ParSeq[LibraryCardInfo] = {
+    val libIds = libs.map(_.id.get).toSet
+    val membershipsToLibsMap = viewerOpt.map { viewer =>
+      libraryMembershipRepo.getWithLibraryIdsAndUserId(libIds, viewer.id.get)
+    } getOrElse Map.empty
     libs.par map { lib => // may want to optimize queries below into bulk queries
       val image = ProcessedImageSize.pickBestImage(idealSize, libraryImageRepo.getActiveForLibraryId(lib.id.get), false)
       val (numFollowers, followersSample, numCollaborators, collabsSample) = if (lib.memberCount > 1) {
@@ -1665,17 +1670,18 @@ class LibraryCommander @Inject() (
       }
 
       val owner = owners(lib.ownerId)
-      val isFollowing = if (withFollowing && viewer.isDefined) {
-        Some(libraryMembershipRepo.getWithLibraryIdAndUserId(lib.id.get, viewer.get.id.get).isDefined)
+      val membershipOpt = membershipsToLibsMap.get(lib.id.get).flatten
+      val isFollowing = if (withFollowing && membershipOpt.isDefined) {
+        Some(membershipOpt.isDefined)
       } else {
         None
       }
-      createLibraryCardInfo(lib, image, owner, numFollowers, followersSample, numCollaborators, collabsSample, isFollowing)
+      createLibraryCardInfo(lib, image, owner, numFollowers, followersSample, numCollaborators, collabsSample, isFollowing, membershipOpt)
     }
   }
 
   private def createLibraryCardInfo(lib: Library, image: Option[LibraryImage], owner: BasicUser, numFollowers: Int,
-    followers: Seq[BasicUser], numCollaborators: Int, collaborators: Seq[BasicUser], isFollowing: Option[Boolean]): LibraryCardInfo = {
+    followers: Seq[BasicUser], numCollaborators: Int, collaborators: Seq[BasicUser], isFollowing: Option[Boolean], membershipOpt: Option[LibraryMembership]): LibraryCardInfo = {
     LibraryCardInfo(
       id = Library.publicId(lib.id.get),
       name = lib.name,
@@ -1692,6 +1698,7 @@ class LibraryCommander @Inject() (
       collaborators = LibraryCardInfo.makeMembersShowable(collaborators, false),
       lastKept = lib.lastKept.getOrElse(lib.createdAt),
       following = isFollowing,
+      membership = LibraryMembership.getAccessString(membershipOpt),
       caption = None,
       modifiedAt = lib.updatedAt)
   }
