@@ -73,7 +73,7 @@ class UserProfileCommander @Inject() (
           lastKept = lib.lastKept.getOrElse(lib.createdAt),
           listed = memberships(lib.id.get).map(_.listed).getOrElse(false),
           following = Some(true),
-          membership = LibraryMembership.getAccessString(memberships(lib.id.get)),
+          membership = (memberships(lib.id.get)) map (LibraryMembershipInfo.fromMembership(_)),
           modifiedAt = lib.updatedAt)
     }
   }

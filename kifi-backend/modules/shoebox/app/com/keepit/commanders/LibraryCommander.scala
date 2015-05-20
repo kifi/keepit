@@ -1637,7 +1637,7 @@ class LibraryCommander @Inject() (
               collaborators = Seq.empty,
               lastKept = info.lastKept,
               following = None,
-              membership = "none",
+              membership = None,
               caption = extraInfo.caption,
               modifiedAt = lib.updatedAt,
               kind = lib.kind)
@@ -1699,7 +1699,7 @@ class LibraryCommander @Inject() (
       collaborators = LibraryCardInfo.makeMembersShowable(collaborators, false),
       lastKept = lib.lastKept.getOrElse(lib.createdAt),
       following = isFollowing,
-      membership = LibraryMembership.getAccessString(membershipOpt),
+      membership = membershipOpt.map(LibraryMembershipInfo.fromMembership(_)),
       caption = None,
       modifiedAt = lib.updatedAt,
       kind = lib.kind)
