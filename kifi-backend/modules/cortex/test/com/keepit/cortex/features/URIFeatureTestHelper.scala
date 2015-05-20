@@ -27,7 +27,7 @@ trait URIFeatureTestHelper {
       scrapedAt = currentDateTime,
       httpContentType = Some("text/html"),
       httpOriginalContentCharset = Option("UTF-8"),
-      state = NormalizedURIStates.SCRAPED,
+      state = NormalizedURIStates.ACTIVE,
       message = None,
       titleLang = None,
       contentLang = Some(contentLang))

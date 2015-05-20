@@ -28,9 +28,7 @@ maxWidthForNarrowKeep = keepCardMaxWidth + 2 * (keepSidePad + keepBorderWidth + 
   background-color: white
 
   @media (max-width: maxWidthForNarrowKeep)
-    max-width: keepCardMaxWidth
-    border: 0
-    box-shadow: 0 0 0 .5px defaultBorderColor  // half-pixel border workaround crbug.com/236371
+    max-width: 2 * keepBorderWidth + keepCardMaxWidth
 
 .kf-keep-selection-tools
   border-radius: 0 keepBorderRadius keepBorderRadius keepBorderRadius
@@ -310,8 +308,29 @@ noteMargin = -6px 0 18px
 .kf-knf
   margin: noteMargin
 
+.kf-keep-add-note
+  margin: noteMargin
+
+  .kf-keep-note:not(:empty)+&
+  .kf-knf~&
+    display: none
+
+.kf-keep-add-note-btn
+  border: 0
+  padding: 0
+  color: #ccc //linkColor
+  background-color: transparent
+  font-smoothing: antialiased
+
+  &:hover
+    color: #aaa
+
+    &:active
+      color: #8f8f8f
+
 .kf-keep-note
 .kf-knf-editor
+.kf-keep-add-note-btn
   font-size: 16px
   line-height: 1.5
 
@@ -320,7 +339,6 @@ noteMargin = -6px 0 18px
 
   @media (max-width: 479px)
     font-size: 13px
-
 
 .kf-keeps-load-more
   display: block

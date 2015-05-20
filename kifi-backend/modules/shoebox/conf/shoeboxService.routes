@@ -194,6 +194,7 @@ POST    /m/1/user/notifyPrefs               @com.keepit.controllers.mobile.Mobil
 POST    /m/1/user/pic/upload                @com.keepit.controllers.mobile.MobileUserController.uploadBinaryUserPicture()
 POST    /m/1/tags/:id/addToKeep             @com.keepit.controllers.mobile.MobileKeepsController.addTag(id: ExternalId[Collection])
 POST    /m/1/tags/:id/removeFromKeep        @com.keepit.controllers.mobile.MobileKeepsController.removeTag(id: ExternalId[Collection])
+GET     /m/1/tags/suggest                   @com.keepit.controllers.mobile.MobileKeepsController.suggestTags(keepId: Option[String], query: Option[String] ?= None, limit: Int ?= 5)
 
 POST    /m/1/auth/accessTokenSignup/:provider   @com.keepit.controllers.mobile.MobileAuthController.accessTokenSignup(provider)
 POST    /m/1/auth/accessTokenLogin/:provider    @com.keepit.controllers.mobile.MobileAuthController.accessTokenLogin(provider)
@@ -258,7 +259,8 @@ POST     /m/1/feed                              @com.keepit.controllers.mobile.M
 GET     /m/1/feed/test                          @com.keepit.controllers.mobile.MobileRecommendationsController.feedV1Test()
 
 
-GET     /m/1/users/:userStr/libraries/:slug     @com.keepit.controllers.mobile.MobileLibraryController.getLibraryByPath(userStr:String, slug: String, is: Option[String] ?= None)
+GET     /m/1/users/:userStr/libraries/:slug     @com.keepit.controllers.mobile.MobileLibraryController.getLibraryByPathV1(userStr:String, slug: String, is: Option[String] ?= None)
+GET     /m/2/users/:userStr/libraries/:slug     @com.keepit.controllers.mobile.MobileLibraryController.getLibraryByPathV2(userStr:String, slug: String, is: Option[String] ?= None)
 POST    /m/1/libraries/add                      @com.keepit.controllers.mobile.MobileLibraryController.createLibrary()
 POST    /m/1/libraries/:id/modify               @com.keepit.controllers.mobile.MobileLibraryController.modifyLibrary(id: PublicId[Library])
 POST    /m/1/libraries/:id/delete               @com.keepit.controllers.mobile.MobileLibraryController.deleteLibrary(id: PublicId[Library])
@@ -690,6 +692,11 @@ GET     /admin/wti/triggerPush @com.keepit.controllers.admin.AdminWTIController.
 
 GET     /admin/ec2-instance         @com.keepit.controllers.admin.AmazonInstanceController.instanceInfo()
 GET     /admin/cache                @com.keepit.controllers.admin.AdminCacheController.serviceView
+GET     /admin/cache/modify     @com.keepit.controllers.admin.AdminCacheController.modifyCache
+GET     /admin/cache/modify/entry  @com.keepit.controllers.admin.AdminCacheController.getCacheEntry(key: String)
+DELETE  /admin/cache/modify/entry  @com.keepit.controllers.admin.AdminCacheController.deleteCacheEntry(key: String)
+PUT     /admin/cache/modify/entry  @com.keepit.controllers.admin.AdminCacheController.setCacheEntry(key: String, value: String, duration: Int)
+
 GET     /admin/cache/clearLocalCaches          @com.keepit.controllers.admin.AdminCacheController.clearLocalCaches(service: String ?= "all", prefix: String ?= "")
 GET     /admin/websocket            @com.keepit.controllers.admin.AdminWebSocketController.serviceView
 

@@ -3,9 +3,12 @@
 angular.module('kifi')
 
 .factory('keepNoteForm', [
-  '$log', '$templateCache', '$filter', '$http', 'KEY', 'HTML', 'hashtagService', 'routeService',
+  '$log', '$templateCache', '$filter', '$http', '$q', '$timeout', 'KEY', 'HTML',
+  'hashtagService', 'routeService', 'modalService',
   (function () {
-    return _.once(function ($log, $templateCache, $filter, $http, KEY, HTML, hashtagService, routeService) {
+    return _.once(function (
+      $log, $templateCache, $filter, $http, $q, $timeout, KEY, HTML,
+      hashtagService, routeService, modalService) {
 
       // NOTE: Code below is quite DOM-heavy and was taken, with slight modifications, from
       // keep_note.js in the browser extension, which doesn't use Angular--hence the deviation
@@ -14,6 +17,7 @@ angular.module('kifi')
       var $ = jQuery;
       var TEXT = document.TEXT_NODE;
       var ELEM = document.ELEMENT_NODE;
+      var buttonsTransitionDurationMs = 300; // buttonsTransitionDuration is .3s in stylesheet
 
       // control codes, whitespace (including nbsp), punctuation (excluding #)
       var nonTagCharCodes = ('0000-"$-/:-@\\[-^`{-00A1' +
@@ -96,11 +100,13 @@ angular.module('kifi')
         while (next.firstChild) {
           next = next.firstChild;
         }
-        if (next.nodeType !== TEXT) {
-          next = findNextTextNode(next);
-        }
-        if (next) {
-          return {node: next, idx: 0};
+        if (next.nodeType !== ELEM || !next.classList.contains('kf-knf-editor')) {
+          if (next.nodeType !== TEXT) {
+            next = findNextTextNode(next);
+          }
+          if (next) {
+            return {node: next, idx: 0};
+          }
         }
         if (create) {
           var textNode = createTextNode('');
@@ -176,9 +182,7 @@ angular.module('kifi')
           node = node.nextSibling;
         }
         textNode.data = textNode.wholeText;
-        toRemove.forEach(function (node) {
-          node.remove();
-        });
+        toRemove.forEach(removeNode);
         return lenBefore;
       }
 
@@ -191,7 +195,7 @@ angular.module('kifi')
           var s = match[0];
           hashTextNode.data += s;
           if (s === nextText) {
-            nextTextNode.remove();
+            removeNode(nextTextNode);
           } else {
             nextTextNode.data = nextText.substr(s.length);
           }
@@ -346,6 +350,13 @@ angular.module('kifi')
         var markedUp = markUp(node);
         if (markedUp || fixed) {
           return setSelection(node, idx);
+        }
+      }
+
+      function removeNode(node) {
+        var parent = node.parentNode;
+        if (parent) {
+          parent.removeChild(node);
         }
       }
 
@@ -580,26 +591,68 @@ angular.module('kifi')
       }
 
       function onCancelClick(e) {
-        $(e.delegateTarget).remove();
+        removeForm($(e.delegateTarget));
       }
 
       function onSaveClick(e) {
         var $form = $(e.delegateTarget);
         var $note = $form.find('.kf-knf-editor');
+        var $buttons = $form.find('.kf-knf-save,.kf-knf-cancel').prop('disabled', true);
+        var $progress = $form.find('.kf-knf-progress');
         var data = $note.data();
         var text = noteHtmlToText($note.html());
+        fakeProgress($http.post(routeService.saveKeepNote(data.libraryId, data.keepId), {note: text}))
+        .then(function done() {
+          $progress.addClass('kf-done').css('transform', 'none');
+          data.update(text);
+          $timeout(function () {
+            removeForm($form);
+          }, 800, false); // allowing progress bar transition to complete and register in user's mind
+        }, function fail() {
+          $progress.addClass('kf-fail').css('transform', 'scale(0,1)');
+          $timeout(function () {
+            $progress.removeClass('kf-fail');
+            $buttons.prop('disabled', false);
+            modalService.openGenericErrorModal();
+          }, 400, false); // allowing progress bar transition to complete and register in user's mind
+        }, function progress(fraction) {
+          $progress.css('transform', 'scale(' + fraction + ',1)');
+        });
+      }
 
-        if (text === data.text) {
-          $form.remove();
-        } else {
-          $http.post(routeService.saveKeepNote(data.libraryId, data.keepId), {note: text}).then(function done() {
-            data.text = text;
-            data.update(text);
-            $form.remove();
-          }, function fail() {
+      function fakeProgress(req) {
+        var deferred = $q.defer(), fraction = 0, timeout, tickMs = 100;
+        req.success(function (data) {
+          deferred.resolve(data);
+        }).error(function (data) {
+          deferred.reject(data);
+        }).then(function () {
+          $timeout.cancel(timeout);
+        });
 
-          });
+        function tick() {
+          if (fraction > 0.88) {
+            fraction += Math.min(0.004, (1 - fraction) / 4);
+          } else {
+            fraction += (0.95 - fraction) / 8;
+          }
+          deferred.notify(fraction);
+
+          if (fraction < 0.99) {
+            timeout = $timeout(tick, tickMs, false);
+          }
         }
+        timeout = $timeout(tick, 0, false);
+
+        return deferred.promise;
+      }
+
+      function removeForm($form) {
+        window.getSelection().removeAllRanges();
+        $form.addClass('kf-transition').layout().addClass('kf-small');
+        $timeout(function () {
+          $form.remove();
+        }, buttonsTransitionDurationMs, false);
       }
 
       return {
@@ -613,13 +666,29 @@ angular.module('kifi')
             .data({
               libraryId: libraryId,
               keepId: keepId,
-              text: noteText,
               update: function (text) {
                 updateModel(text);
                 $noteOriginal.html($filter('noteHtml')(text));
               },
               seq: 0
             });
+          $form.layout().removeClass('kf-small');
+          $timeout(function () {
+            $form.removeClass('kf-transition');
+            // place text input cursor at end of text
+            var node = $note[0];
+            if (node.lastChild) {
+              while (node.lastChild) {
+                node = node.lastChild;
+              }
+              if (node.nodeType === TEXT) {
+                setSelection(node, node.length);
+              }
+            } else {
+              node.focus();
+            }
+          }, buttonsTransitionDurationMs, false);
+
           var data = $note.data();
 
           // Realizations that inform our strategy for efficient (lag-free) hashtag identification and highlighting:
@@ -653,20 +722,14 @@ angular.module('kifi')
               this.textContent = '';
             }
           });
-
-          var node = $note[0];
-          if (node.lastChild) {
-            while (node.lastChild) {
-              node = node.lastChild;
-            }
-            if (node.nodeType === TEXT) {
-              setSelection(node, node.length);
-            }
-          } else {
-            node.focus();
-          }
         }
       };
     });
   }())
 ]);
+
+jQuery.fn.layout = function () {
+  return this.each(function () { /*jshint expr:true */
+    this.clientHeight;  // forces layout
+  });
+};

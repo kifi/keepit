@@ -420,7 +420,8 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
                 "collaborators":[],
                 "lastKept":${lib3.createdAt.getMillis},
                 "following": true,
-                "modifiedAt":${lib3.updatedAt.getMillis}
+                "modifiedAt":${lib3.updatedAt.getMillis},
+                "kind":"user_created"
               }
             ]
           }

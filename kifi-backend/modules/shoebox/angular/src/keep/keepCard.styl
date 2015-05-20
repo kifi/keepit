@@ -46,7 +46,7 @@ faintTopAndBottomEdgeOverlaysUsingPseudos() // provides subtle boundary for whit
 
 .kf-keep-image
   display: block
-  height: 280px
+  padding-top: 56.25%  // enforcing 16:9 ratio, like kf-keep-video
   background-size: cover
   background-position: center
 
@@ -206,6 +206,7 @@ faintTopAndBottomEdgeOverlaysUsingPseudos() // provides subtle boundary for whit
         content: ' Private'
 
   &>.svg-hearts-green
+  &>.svg-hearts-green-empty
     display: inline-block
     vertical-align: top
     width: 18px

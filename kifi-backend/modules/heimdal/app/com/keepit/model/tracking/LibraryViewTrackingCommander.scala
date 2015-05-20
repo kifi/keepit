@@ -6,6 +6,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.controllers.{ VisitorEventHandler, UserEventHandler }
 import com.keepit.heimdal._
 import com.keepit.model.{ Library, User }
+import org.joda.time.DateTime
 
 @Singleton
 class LibraryViewTrackingCommander @Inject() (
@@ -42,5 +43,13 @@ class LibraryViewTrackingCommander @Inject() (
 
       case _ =>
     }
+  }
+
+  def getTotalViews(ownerId: Id[User], since: DateTime): Int = {
+    db.readOnlyReplica { implicit s => libViewRepo.getTotalViews(ownerId, since) }
+  }
+
+  def getTopViewedLibrariesAndCounts(ownerId: Id[User], since: DateTime, limit: Int): Map[Id[Library], Int] = {
+    db.readOnlyReplica { implicit s => libViewRepo.getTopViewedLibrariesAndCounts(ownerId, since, limit) }
   }
 }

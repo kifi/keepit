@@ -4,7 +4,7 @@
     <div class="kf-youtube-bottom-overlay"></div>
   </div>
   <a class="kf-keep-image" ng-if="::image" ng-class="::{'kf-bottom-clip': image.clipBottom}"
-    ng-style="::{'background-image': 'url(\'' + image.url + '\')', width: image.w ? image.w + 'px' : '', height: image.h ? image.h + 'px' : ''}"
+    ng-style="::{'background-image': 'url(\'' + image.url + '\')', width: image.w ? image.w + 'px' : '', 'padding-top': image.h ? image.h + 'px' : ''}"
     ng-href="{{::keep.url}}" target="_blank" rel="nofollow" tabindex="-1"
     ng-click="clickCallback({keep: keep, event: $event})" click-action="clickedArticleImage">
   </a>
@@ -24,7 +24,7 @@
       <button ng-attr-class="kf-keep-keep-btn {{howKept ? 'state-kept-' + howKept : 'state-not-kept'}}"
         kf-keep-to-library-widget widget-action-text="Keep" library-click-action="onWidgetLibraryClicked(clickedLibrary)"
         kept-to-library-ids="keptToLibraryIds" lib-select-down-offset="180" lib-select-left-offset="20">
-        <span ng-attr-class="{{howKept === 'private' ? 'svg-small-lock' : 'svg-hearts-green'}}"></span>
+        <span ng-attr-class="{{howKept ? howKept === 'private' ? 'svg-small-lock' : 'svg-hearts-green' : 'svg-hearts-green-empty'}}"></span>
         {{howKept ? 'Kept' : 'Keep'}}
       </button>
       <button class="kf-keep-share-btn" ng-click="shareAction()">

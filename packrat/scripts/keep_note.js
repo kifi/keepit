@@ -108,11 +108,13 @@ k.keepNote = k.keepNote || (function () {
     while (next.firstChild) {
       next = next.firstChild;
     }
-    if (next.nodeType !== TEXT) {
-      next = findNextTextNode(next);
-    }
-    if (next) {
-      return {node: next, idx: 0};
+    if (next.nodeType !== ELEM || !next.classList.contains('kifi-keep-box-keep-note')) {
+      if (next.nodeType !== TEXT) {
+        next = findNextTextNode(next);
+      }
+      if (next) {
+        return {node: next, idx: 0};
+      }
     }
     if (create) {
       var textNode = createTextNode('');

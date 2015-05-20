@@ -46,6 +46,8 @@ POST    /eliza/devices/:deviceType        @com.keepit.eliza.controllers.mobile.M
 GET     /m/2/eliza/thread/:threadId        @com.keepit.eliza.controllers.mobile.MobileMessagingController.getPagedThread(threadId: String, pageSize: Int ?= 1000, fromMessageId: Option[String] ?= None)
 GET     /m/2/eliza/notifications/messages  @com.keepit.eliza.controllers.mobile.MobileMessagingController.getMessageNotifications(n: Int, before: Option[String] ?= None)
 GET     /m/2/eliza/notifications/system    @com.keepit.eliza.controllers.mobile.MobileMessagingController.getSystemNotifications(n: Int, before: Option[String] ?= None)
+GET     /m/2/eliza/unreadCounts           @com.keepit.eliza.controllers.mobile.MobileMessagingController.getUnreadCounts()
+
 
 ##########################################
 # INTERNAL ROUTES/Eliza

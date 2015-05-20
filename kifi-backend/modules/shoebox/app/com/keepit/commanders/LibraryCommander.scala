@@ -207,7 +207,7 @@ class LibraryCommander @Inject() (
 
   def createFullLibraryInfos(viewerUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, maxMembersShown: Int, maxKeepsShown: Int,
     idealKeepImageSize: ImageSize, libraries: Seq[Library], idealLibraryImageSize: ImageSize, withKeepTime: Boolean): Future[Seq[(Id[Library], FullLibraryInfo)]] = {
-    libraries.groupBy(l => l.id.get).toMap.foreach { case (lib, set) => if (set.size > 1) throw new Exception(s"There are ${set.size} identical libraries of $lib") }
+    libraries.groupBy(l => l.id.get).foreach { case (lib, set) => if (set.size > 1) throw new Exception(s"There are ${set.size} identical libraries of $lib") }
     val futureKeepInfosByLibraryId = libraries.map { library =>
       library.id.get -> {
         if (maxKeepsShown > 0) {
@@ -1638,7 +1638,8 @@ class LibraryCommander @Inject() (
               lastKept = info.lastKept,
               following = None,
               caption = extraInfo.caption,
-              modifiedAt = lib.updatedAt)
+              modifiedAt = lib.updatedAt,
+              kind = lib.kind)
         }).seq.sortBy(_._1).map(_._2)
       }
     } getOrElse Future.successful(Seq.empty)
@@ -1693,7 +1694,8 @@ class LibraryCommander @Inject() (
       lastKept = lib.lastKept.getOrElse(lib.createdAt),
       following = isFollowing,
       caption = None,
-      modifiedAt = lib.updatedAt)
+      modifiedAt = lib.updatedAt,
+      kind = lib.kind)
   }
 
   def convertPendingInvites(emailAddress: EmailAddress, userId: Id[User]) = {

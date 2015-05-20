@@ -92,6 +92,8 @@ trait HeimdalServiceClient extends ServiceClient with KeepDiscoveryRepoAccess wi
   def processSearchHitAttribution(hit: SearchHitReport): Future[Unit]
 
   def processKeepAttribution(userId: Id[User], newKeeps: Seq[Keep]): Future[Unit]
+
+  def getOwnerLibraryViewStats(ownerId: Id[User]): Future[(Int, Map[Id[Library], Int])]
 }
 
 private[heimdal] object HeimdalBatchingConfiguration extends BatchingActorConfiguration[HeimdalClientActor] {
@@ -350,6 +352,12 @@ class HeimdalServiceClientImpl @Inject() (
         count += batch.size
         log.info(s"[processKeepAttribution(userId=$userId)] processed $count keeps")
       }
+    }
+  }
+
+  def getOwnerLibraryViewStats(ownerId: Id[User]): Future[(Int, Map[Id[Library], Int])] = {
+    call(Heimdal.internal.getOwnerLibraryViewStats(ownerId)).map { res =>
+      ((res.json \ "cnt").as[Int], (res.json \ "map").as[Map[Id[Library], Int]])
     }
   }
 }

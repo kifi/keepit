@@ -548,7 +548,7 @@ class LibraryController @Inject() (
   }
 
   def suggestTags(pubId: PublicId[Library], keepId: ExternalId[Keep], query: Option[String], limit: Int) = (UserAction andThen LibraryWriteAction(pubId)).async { request =>
-    keepsCommander.suggestTags(request.userId, keepId, query, limit).imap { tagsAndMatches =>
+    keepsCommander.suggestTags(request.userId, Some(keepId), query, limit).imap { tagsAndMatches =>
       implicit val matchesWrites = TupleFormat.tuple2Writes[Int, Int]
       val result = JsArray(tagsAndMatches.map { case (tag, matches) => json.minify(Json.obj("tag" -> tag, "matches" -> matches)) })
       Ok(result)
@@ -594,7 +594,8 @@ class LibraryController @Inject() (
               lastKept = info.lastKept.getOrElse(new DateTime(0)),
               following = None,
               caption = None,
-              modifiedAt = info.modifiedAt)
+              modifiedAt = info.modifiedAt,
+              kind = info.kind)
           }
           val t2 = System.currentTimeMillis()
           statsd.timing("libraryController.relatedLibraries", t2 - t1, 1.0)

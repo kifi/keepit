@@ -19,7 +19,7 @@ case class ProdAirbrakeModule() extends AirbrakeModule {
   @Provides
   def formatter(playMode: Mode, service: FortyTwoServices, serviceDiscovery: ServiceDiscovery): AirbrakeFormatter = {
     val apiKey = Play.current.configuration.getString("airbrake.key").get
-    new AirbrakeFormatter(apiKey, playMode, service, serviceDiscovery)
+    new AirbrakeFormatterImpl(apiKey, playMode, service, serviceDiscovery)
   }
 
   @Provides
@@ -34,7 +34,7 @@ case class DevAirbrakeModule() extends AirbrakeModule {
 
   @Provides
   def formatter(playMode: Mode, service: FortyTwoServices, serviceDiscovery: ServiceDiscovery): AirbrakeFormatter = {
-    new AirbrakeFormatter("fakeApiKey", playMode, service, serviceDiscovery)
+    new AirbrakeFormatterImpl("fakeApiKey", playMode, service, serviceDiscovery)
   }
 
   @Provides

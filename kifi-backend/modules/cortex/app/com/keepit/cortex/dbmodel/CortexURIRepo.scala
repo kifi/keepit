@@ -29,7 +29,8 @@ class CortexURIRepoImpl @Inject() (
 
   class CortexURITable(tag: Tag) extends RepoTable[CortexURI](db, tag, "cortex_uri") with SeqNumberColumn[CortexURI] {
     def uriId = column[Id[NormalizedURI]]("uri_id")
-    def * = (id.?, createdAt, updatedAt, uriId, state, seq) <> ((CortexURI.apply _).tupled, CortexURI.unapply _)
+    def shouldHaveContent = column[Boolean]("should_have_content")
+    def * = (id.?, createdAt, updatedAt, uriId, state, seq, shouldHaveContent) <> ((CortexURI.apply _).tupled, CortexURI.unapply _)
   }
 
   def table(tag: Tag) = new CortexURITable(tag)

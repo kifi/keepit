@@ -20,6 +20,7 @@ case class RoverArticleInfo(
     seq: SequenceNumber[RoverArticleInfo] = SequenceNumber.ZERO,
     uriId: Id[NormalizedURI],
     url: String,
+    urlHash: UrlHash,
     kind: String, // todo(Léo): make this kind: ArticleKind[_ <: Article] with Scala 2.11, (with proper mapper, serialization is unchanged)
     bestVersion: Option[ArticleVersion] = None,
     latestVersion: Option[ArticleVersion] = None,
@@ -128,7 +129,8 @@ object RoverArticleInfo {
   }
 
   def initialize(uriId: Id[NormalizedURI], url: String, kind: ArticleKind[_ <: Article]): RoverArticleInfo = {
-    val newInfo = RoverArticleInfo(uriId = uriId, url = url, kind = kind.typeCode)
+    val urlHash = UrlHash.hashUrl(url)
+    val newInfo = RoverArticleInfo(uriId = uriId, url = url, urlHash = urlHash, kind = kind.typeCode)
     newInfo.initializeSchedulingPolicy
   }
 
@@ -140,6 +142,7 @@ object RoverArticleInfo {
     seq: SequenceNumber[RoverArticleInfo],
     uriId: Id[NormalizedURI],
     url: String,
+    urlHash: UrlHash,
     kind: String,
     bestVersion: Option[ArticleVersion],
     latestVersion: Option[ArticleVersion],
@@ -153,7 +156,7 @@ object RoverArticleInfo {
     lastImageProcessingVersion: Option[ArticleVersion],
     lastImageProcessingAt: Option[DateTime],
     imageProcessingRequestedAt: Option[DateTime]): RoverArticleInfo = {
-    RoverArticleInfo(id, createdAt, updatedAt, state, seq, uriId, url, kind, bestVersion, latestVersion, oldestVersion, lastFetchedAt, nextFetchAt, lastFetchingAt, fetchInterval, failureCount, failureInfo, imageProcessingRequestedAt, lastImageProcessingVersion, lastImageProcessingAt)
+    RoverArticleInfo(id, createdAt, updatedAt, state, seq, uriId, url, urlHash, kind, bestVersion, latestVersion, oldestVersion, lastFetchedAt, nextFetchAt, lastFetchingAt, fetchInterval, failureCount, failureInfo, imageProcessingRequestedAt, lastImageProcessingVersion, lastImageProcessingAt)
   }
 
   def unapplyToDbRow(info: RoverArticleInfo) = {
@@ -165,6 +168,7 @@ object RoverArticleInfo {
       info.seq,
       info.uriId,
       info.url,
+      info.urlHash,
       info.kind,
       info.bestVersion,
       info.latestVersion,

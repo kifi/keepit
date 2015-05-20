@@ -19,7 +19,7 @@ inviteAccess: LibraryAccess
 }
 }
 
-@description = @{libraryInfo.shortDescription.map { description => s"Here's what it's about: " + description }.getOrElse("")}
+@description = @{ libraryInfo.shortDescription.filter( description => description.length < 250 ).map ( des => "Here's what it's about: " + des).getOrElse("") }
 
 @emailMessage = {
 @if(inviteAccess == LibraryAccess.READ_ONLY) {
