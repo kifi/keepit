@@ -147,7 +147,7 @@ class ArticleCommander @Inject() (
 
   def fetchAsap(uriId: Id[NormalizedURI], url: String): Future[Unit] = {
     val toBeInternedByPolicy = articlePolicy.toBeInterned(url)
-    val interned = internArticleInfoByUri(uriId, url, toBeInternedByPolicy)
+    val interned = Map.empty[ArticleKind[_ <: Article], RoverArticleInfo] // internArticleInfoByUri(uriId, url, toBeInternedByPolicy)
     val neverFetched = interned.collect { case (kind, info) if info.lastFetchedAt.isEmpty => (info.id.get -> info) }
     if (neverFetched.isEmpty) Future.successful(())
     else {
