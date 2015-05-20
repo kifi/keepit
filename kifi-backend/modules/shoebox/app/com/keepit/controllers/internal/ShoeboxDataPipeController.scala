@@ -60,7 +60,7 @@ class ShoeboxDataPipeController @Inject() (
     }
   }
 
-  def getIndexablesWithContent(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int) = Action.async { request =>
+  def getIndexableUrisWithContent(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int) = Action.async { request =>
     SafeFuture {
       val uris = db.readOnlyReplica { implicit s =>
         normUriRepo.getIndexablesWithContent(seqNum, limit = fetchSize)
