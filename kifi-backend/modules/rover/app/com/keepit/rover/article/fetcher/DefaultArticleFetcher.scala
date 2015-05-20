@@ -18,8 +18,7 @@ class DefaultArticleFetcher @Inject() (
     clock: Clock) extends ArticleFetcher[DefaultArticle] with Logging {
 
   def fetch(request: ArticleFetchRequest[DefaultArticle])(implicit ec: ExecutionContext): Future[Option[DefaultArticle]] = {
-    val futureFetchedArticle = doFetch(request.url, request.lastFetchedAt)
-    ArticleFetcher.resolveAndCompare(articleStore)(futureFetchedArticle, request.latestArticleKey, ArticleFetcher.defaultSimilarityCheck)
+    ArticleFetcher.fetchAndCompare(request, articleStore)(doFetch)
   }
 
   private def doFetch(url: String, ifModifiedSince: Option[DateTime])(implicit ec: ExecutionContext): Future[FetchResult[DefaultArticle]] = {

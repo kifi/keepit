@@ -18,8 +18,7 @@ class GithubArticleFetcher @Inject() (
     clock: Clock) extends ArticleFetcher[GithubArticle] with Logging {
 
   def fetch(request: ArticleFetchRequest[GithubArticle])(implicit ec: ExecutionContext): Future[Option[GithubArticle]] = {
-    val futureFetchedArticle = doFetch(request.url, request.lastFetchedAt)
-    ArticleFetcher.resolveAndCompare(articleStore)(futureFetchedArticle, request.latestArticleKey, ArticleFetcher.defaultSimilarityCheck)
+    ArticleFetcher.fetchAndCompare(request, articleStore)(doFetch)
   }
 
   private def doFetch(url: String, ifModifiedSince: Option[DateTime])(implicit ec: ExecutionContext): Future[FetchResult[GithubArticle]] = {

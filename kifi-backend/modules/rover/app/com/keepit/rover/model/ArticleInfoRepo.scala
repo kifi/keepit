@@ -23,6 +23,7 @@ import scala.util.{ Success, Failure, Try }
 @ImplementedBy(classOf[ArticleInfoRepoImpl])
 trait ArticleInfoRepo extends Repo[RoverArticleInfo] with SeqNumberFunction[RoverArticleInfo] {
   def getAll(ids: Set[Id[RoverArticleInfo]])(implicit session: RSession): Map[Id[RoverArticleInfo], RoverArticleInfo]
+  def getByUrlAndKind[A <: Article](url: String, kind: ArticleKind[A], excludeState: Option[State[RoverArticleInfo]] = Some(ArticleInfoStates.INACTIVE))(implicit session: RSession): Option[RoverArticleInfo]
   def getByUriAndKind[A <: Article](uriId: Id[NormalizedURI], kind: ArticleKind[A], excludeState: Option[State[RoverArticleInfo]] = Some(ArticleInfoStates.INACTIVE))(implicit session: RSession): Option[RoverArticleInfo]
   def getByUri(uriId: Id[NormalizedURI], excludeState: Option[State[RoverArticleInfo]] = Some(ArticleInfoStates.INACTIVE))(implicit session: RSession): Set[RoverArticleInfo]
   def getByUris(uriIds: Set[Id[NormalizedURI]], excludeState: Option[State[RoverArticleInfo]] = Some(ArticleInfoStates.INACTIVE))(implicit session: RSession): Map[Id[NormalizedURI], Set[RoverArticleInfo]]
@@ -140,6 +141,11 @@ class ArticleInfoRepoImpl @Inject() (
 
   def getAll(ids: Set[Id[RoverArticleInfo]])(implicit session: RSession): Map[Id[RoverArticleInfo], RoverArticleInfo] = {
     (for (r <- rows if r.id.inSet(ids)) yield (r.id, r)).toMap
+  }
+
+  def getByUrlAndKind[A <: Article](url: String, kind: ArticleKind[A], excludeState: Option[State[RoverArticleInfo]] = Some(ArticleInfoStates.INACTIVE))(implicit session: RSession): Option[RoverArticleInfo] = {
+    val urlHash = UrlHash.hashUrl(url)
+    (for (r <- rows if r.urlHash === urlHash && r.url === url && r.kind === kind.typeCode && r.state =!= excludeState.orNull) yield r).firstOption
   }
 
   def getByUriAndKind[A <: Article](uriId: Id[NormalizedURI], kind: ArticleKind[A], excludeState: Option[State[RoverArticleInfo]] = Some(ArticleInfoStates.INACTIVE))(implicit session: RSession): Option[RoverArticleInfo] = {

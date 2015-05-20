@@ -5,12 +5,13 @@ import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.common.net.HttpClient
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.model.NormalizedURI
-import com.keepit.rover.article.Article
+import com.keepit.rover.article.{ ArticleKind, Article }
 import com.keepit.rover.model._
 import com.keepit.common.core._
 
 import scala.collection.mutable
 import scala.concurrent.Future
+import scala.concurrent.duration.Duration
 
 class FakeRoverServiceClientImpl(
     override val serviceCluster: ServiceCluster,
@@ -35,4 +36,5 @@ class FakeRoverServiceClientImpl(
     uriIds.map(uriId => uriId -> articleSummariesByUri.get(uriId)).toMap.collect { case (uriId, Some(article)) => uriId -> article }
   }
   def getOrElseFetchUriSummary(uriId: Id[NormalizedURI], url: String): Future[Option[RoverUriSummary]] = Future.successful(articleSummariesByUri.get(uriId))
+  def getOrElseFetchRecentArticle[A <: Article](url: String, recency: Duration)(implicit kind: ArticleKind[A]): Future[Option[A]] = Future.successful(None)
 }

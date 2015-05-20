@@ -43,8 +43,7 @@ class YoutubeArticleFetcher @Inject() (
   import com.keepit.rover.article.fetcher.YoutubeArticleFetcher._
 
   def fetch(request: ArticleFetchRequest[YoutubeArticle])(implicit ec: ExecutionContext): Future[Option[YoutubeArticle]] = {
-    val futureFetchedArticle = doFetch(request.url, request.lastFetchedAt)
-    ArticleFetcher.resolveAndCompare(articleStore)(futureFetchedArticle, request.latestArticleKey, ArticleFetcher.defaultSimilarityCheck)
+    ArticleFetcher.fetchAndCompare(request, articleStore)(doFetch)
   }
 
   private def doFetch(url: String, ifModifiedSince: Option[DateTime])(implicit ec: ExecutionContext): Future[FetchResult[YoutubeArticle]] = {

@@ -2,7 +2,7 @@ package com.keepit.rover
 
 import com.google.inject.Inject
 import com.keepit.common.akka.SafeFuture
-import com.keepit.common.db.{ State, Id, SequenceNumber }
+import com.keepit.common.db.{ Id, SequenceNumber }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.json.TupleFormat
 import com.keepit.common.logging.Logging
@@ -15,7 +15,9 @@ import com.keepit.rover.article.{ ArticleKind, Article }
 import com.keepit.rover.model._
 import play.api.libs.json.Json
 import com.keepit.common.core._
+import com.keepit.common.time._
 
+import scala.concurrent.duration.Duration
 import scala.concurrent.{ ExecutionContext, Future }
 
 trait RoverServiceClient extends ServiceClient {
@@ -28,6 +30,7 @@ trait RoverServiceClient extends ServiceClient {
   def getArticleSummaryByUris(uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], RoverArticleSummary]]
   def getUriSummaryByUris(uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], RoverUriSummary]]
   def getOrElseFetchUriSummary(uriId: Id[NormalizedURI], url: String): Future[Option[RoverUriSummary]] // slow, prefer getUriSummaryByUris
+  def getOrElseFetchRecentArticle[A <: Article](url: String, recency: Duration)(implicit kind: ArticleKind[A]): Future[Option[A]] // slow
 }
 
 class RoverServiceClientImpl(
@@ -160,6 +163,17 @@ class RoverServiceClientImpl(
     call(Rover.internal.getOrElseFetchArticleSummaryAndImages, payload, callTimeouts = longTimeout).map { r =>
       implicit val reads = TupleFormat.tuple2Reads[RoverArticleSummary, BasicImages]
       r.json.asOpt[(RoverArticleSummary, BasicImages)]
+    }
+  }
+
+  def getOrElseFetchRecentArticle[A <: Article](url: String, recency: Duration)(implicit kind: ArticleKind[A]): Future[Option[A]] = {
+    val payload = Json.obj(
+      "url" -> url,
+      "kind" -> kind,
+      "recency" -> recency
+    )
+    call(Rover.internal.getOrElseFetchRecentArticle, payload, callTimeouts = longTimeout).map { r =>
+      r.json.asOpt(kind.format)
     }
   }
 }
