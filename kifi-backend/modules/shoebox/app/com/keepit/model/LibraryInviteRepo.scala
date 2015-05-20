@@ -132,7 +132,8 @@ class LibraryInviteRepoImpl @Inject() (
     }
 
     val (userIds, emailAddresses) = {
-      val (userInvitees, emailInvitees) = invitees.partition { case (userId, _) => userId.isDefined }
+      val userInvitees = invitees.filter { case (userId, _) => userId.isDefined }
+      val emailInvitees = invitees.filter { case (_, email) => email.isDefined }
       (userInvitees.map(_._1.get), emailInvitees.map(_._2.get))
     }
 
