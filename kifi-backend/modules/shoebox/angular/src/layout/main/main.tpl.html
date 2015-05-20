@@ -1,5 +1,5 @@
 <div ng-controller="MainCtrl">
-  <div kf-library-pass-phrase ng-if="errorStatus === 403 && errorParams.authToken" class="kf-lpp" error-params="errorParams"></div>
+  <div kf-error-bad-token ng-if="errorStatus === 403 && errorParams.authToken"></div>
   <div kf-error-not-found ng-if="(errorStatus === 403 && !errorParams.authToken) || errorStatus === 404"></div>
   <div ng-if="errorStatus !== 403 && errorStatus !== 404">
     <div ui-view></div>
