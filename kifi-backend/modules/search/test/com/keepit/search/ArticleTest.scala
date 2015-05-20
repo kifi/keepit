@@ -94,7 +94,7 @@ class ArticleTest extends Specification {
           "title":"my title",
           "content":"my content",
           "scrapedAt":"${now.toStandardTimeString}",
-          "state":"scraped"
+          "state":"active"
         }"""
       )
       val newArticle = json.as[Article]
