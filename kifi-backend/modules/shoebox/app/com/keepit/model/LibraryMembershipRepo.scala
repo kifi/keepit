@@ -162,7 +162,7 @@ class LibraryMembershipRepoImpl @Inject() (
       case 0 =>
         Map.empty[Id[Library], LibraryMembership]
       case 1 =>
-        getWithLibraryIdAndUserId(libraryIds.head, userId, excludeState).map { lm => lm.libraryId -> lm }.toMap
+        getWithLibraryIdAndUserId(libraryIds.head, userId, excludeState) map { lm => lm.libraryId -> lm } toMap
       case _ =>
         (for (b <- rows if b.libraryId.inSet(libraryIds) && b.userId === userId && b.state =!= excludeState.orNull) yield (b.libraryId, b)).list.toMap
     }
