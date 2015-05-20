@@ -1001,6 +1001,20 @@ class LibraryCommander @Inject() (
     }
   }
 
+  def revokeInvitationToLibrary(libraryId: Id[Library], inviterId: Id[User], invitee: Either[Id[User], EmailAddress]): Either[String, Tuple2[String, String]] = {
+    val libraryInvite: Option[LibraryInvite] = invitee match {
+      case id: Id[User] => libraryInviteRepo.getLastSentByLibraryIdAndInviterIdAndUserId(libraryId, inviterId, id, Set(LibraryInviteStates.ACTIVE))
+      case email: EmailAddress => libraryInviteRepo.getLastSentByLibraryIdAndInviterIdAndEmail(libraryId, inviterId, email, Set(LibraryInviteStates.ACTIVE))
+    }
+    libraryInvite match {
+      case Some(_) => libraryInviteRepo.delete(_) match {
+        case x if x > 0 => Left("successfully deleted library invite")
+        case _ => Right("error" -> "could not delete library invite")
+      }
+      case _ => Right("error" -> "could not find library invite to delete")
+    }
+  }
+
   def inviteUsersToLibrary(libraryId: Id[Library], inviterId: Id[User], inviteList: Seq[(Either[Id[User], EmailAddress], LibraryAccess, Option[String])])(implicit eventContext: HeimdalContext): Future[Either[LibraryFail, Seq[(Either[BasicUser, RichContact], LibraryAccess)]]] = {
     val (lib, inviterMembership) = db.readOnlyMaster { implicit s =>
       val lib = libraryRepo.get(libraryId)
