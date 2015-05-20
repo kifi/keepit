@@ -27,6 +27,8 @@ class RoverArticleStore @Inject() (underlying: RoverUnderlyingArticleStore, priv
     }
   }
 
+  def get[A <: Article](keyOpt: Option[ArticleKey[A]]): Future[Option[A]] = keyOpt.map(get[A]) getOrElse Future.successful(None)
+
   def add[A <: Article](uriId: Id[NormalizedURI], previousVersion: Option[ArticleVersion], article: A)(implicit kind: ArticleKind[A]): Future[ArticleKey[A]] = {
     SafeFuture {
       val key = ArticleKey(uriId, kind, ArticleVersionProvider.next[A](previousVersion))

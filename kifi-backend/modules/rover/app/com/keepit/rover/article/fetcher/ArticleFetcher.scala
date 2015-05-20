@@ -11,14 +11,23 @@ import org.joda.time.DateTime
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success }
 
-case class ArticleFetchRequest[A <: Article](kind: ArticleKind[A], url: String, lastFetchedAt: Option[DateTime], latestArticleKey: Option[ArticleKey[A]])
+case class ArticleFetchRequest[A <: Article](kind: ArticleKind[A], url: String, latestArticleKey: Option[ArticleKey[A]] = None)
 
 trait ArticleFetcher[A <: Article] {
   def fetch(request: ArticleFetchRequest[A])(implicit ec: ExecutionContext): Future[Option[A]]
 }
 
 object ArticleFetcher {
-  def resolveAndCompare[A <: Article](futureFetchedArticle: Future[FetchResult[A]], futureLatestArticle: Future[Option[A]], areSimilar: (A, A) => Boolean)(implicit ec: ExecutionContext): Future[Option[A]] = {
+
+  def fetchAndCompare[A <: Article](request: ArticleFetchRequest[A], articleStore: RoverArticleStore)(doFetch: (String, Option[DateTime]) => Future[FetchResult[A]])(implicit ec: ExecutionContext) = {
+    val futureLatestArticle = articleStore.get(request.latestArticleKey)
+    val futureFetchedArticle = futureLatestArticle.flatMap { latestArticleOpt =>
+      doFetch(request.url, latestArticleOpt.map(_.createdAt))
+    }
+    ArticleFetcher.resolveAndCompare(futureFetchedArticle, futureLatestArticle, ArticleFetcher.defaultSimilarityCheck)
+  }
+
+  private def resolveAndCompare[A <: Article](futureFetchedArticle: Future[FetchResult[A]], futureLatestArticle: Future[Option[A]], areSimilar: (A, A) => Boolean)(implicit ec: ExecutionContext): Future[Option[A]] = {
     futureFetchedArticle.flatMap { result =>
       result.resolve match {
         case Failure(error) => Future.failed(error)
@@ -29,14 +38,6 @@ object ArticleFetcher {
         }
       }
     }
-  }
-
-  def resolveAndCompare[A <: Article](store: RoverArticleStore)(futureFetchedArticle: Future[FetchResult[A]], latestArticleKey: Option[ArticleKey[A]], areSimilar: (A, A) => Boolean)(implicit ec: ExecutionContext): Future[Option[A]] = {
-    val futureLatestArticle = latestArticleKey match {
-      case None => Future.successful(None)
-      case Some(key) => store.get(key)
-    }
-    resolveAndCompare(futureFetchedArticle, futureLatestArticle, areSimilar)
   }
 
   def defaultSimilarityCheck[A <: Article](thisArticle: A, thatArticle: A): Boolean = {

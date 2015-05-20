@@ -18,8 +18,7 @@ class LinkedInProfileArticleFetcher @Inject() (
     clock: Clock) extends ArticleFetcher[LinkedInProfileArticle] with Logging {
 
   def fetch(request: ArticleFetchRequest[LinkedInProfileArticle])(implicit ec: ExecutionContext): Future[Option[LinkedInProfileArticle]] = {
-    val futureFetchedArticle = doFetch(request.url, request.lastFetchedAt)
-    ArticleFetcher.resolveAndCompare(articleStore)(futureFetchedArticle, request.latestArticleKey, ArticleFetcher.defaultSimilarityCheck)
+    ArticleFetcher.fetchAndCompare(request, articleStore)(doFetch)
   }
 
   def doFetch(url: String, ifModifiedSince: Option[DateTime])(implicit ec: ExecutionContext): Future[FetchResult[LinkedInProfileArticle]] = {

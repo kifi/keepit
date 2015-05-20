@@ -106,13 +106,9 @@ class ArticleCommander @Inject() (
 
   // ArticleStore helpers
 
-  def getLatestArticle(info: ArticleInfoHolder): Future[Option[info.A]] = {
-    info.getLatestKey.map(articleStore.get) getOrElse Future.successful(None)
-  }
+  def getLatestArticle(info: ArticleInfoHolder): Future[Option[info.A]] = articleStore.get(info.getLatestKey)
 
-  private def getBestArticle(info: ArticleInfoHolder): Future[Option[info.A]] = {
-    (info.getBestKey orElse info.getLatestKey).map(articleStore.get) getOrElse Future.successful(None)
-  }
+  private def getBestArticle(info: ArticleInfoHolder): Future[Option[info.A]] = articleStore.get(info.getBestKey orElse info.getLatestKey)
 
   // Fetch related functions
 

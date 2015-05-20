@@ -39,7 +39,7 @@ case class RoverArticleInfo(
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def isActive = (state == ArticleInfoStates.ACTIVE)
 
-  def getFetchRequest: ArticleFetchRequest[A] = ArticleFetchRequest(articleKind, url, lastFetchedAt, getLatestKey)
+  def getFetchRequest: ArticleFetchRequest[A] = ArticleFetchRequest(articleKind, url, getLatestKey)
 
   def clean: RoverArticleInfo = copy(
     bestVersion = None,
