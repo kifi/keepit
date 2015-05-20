@@ -243,7 +243,7 @@ followerPicDiam = 2.2em
 
 .kf-lh-subscribed-btn
   vertical-align: bottom
-  padding: 0px
+  padding: 0
   outline: none
   background: none
   border: none
@@ -252,11 +252,14 @@ followerPicDiam = 2.2em
     margin-left: 0.9em
 
   .kf-lh-subscribed-icon
-    width: 1.7em
-    height: 2.0em
-    background-size: cover
+    width: 1.8em
+    height: 2em
+    background-size: contain
     background-repeat: no-repeat
     opacity: .7
+
+    &.svg-notification-off-white
+      background-position: right
 
     :hover>&
       opacity: .85
