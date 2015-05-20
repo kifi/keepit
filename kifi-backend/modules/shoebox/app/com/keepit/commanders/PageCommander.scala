@@ -159,7 +159,7 @@ class PageCommander @Inject() (
 
   private def filterLibrariesUserDoesNotOwnOrFollow(libraries: Seq[(Id[Library], Id[User], DateTime)], userId: Id[User])(implicit session: RSession): Seq[Library] = {
     val otherLibraryIds = libraries.filterNot(_._2 == userId).map(_._1)
-    val memberLibraryIds = libraryMembershipRepo.getWithLibraryIdsAndUserId(otherLibraryIds.toSet, userId).keys
+    val memberLibraryIds = libraryMembershipRepo.getWithLibraryIdsAndUserId(otherLibraryIds.toSet, userId).filter(lm => lm._2.isDefined).keys
     val libraryIds = otherLibraryIds.diff(memberLibraryIds.toSeq)
     val libraryMap = libraryRepo.getLibraries(libraryIds.toSet)
     libraryIds.map(libraryMap)

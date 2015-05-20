@@ -118,7 +118,8 @@ private[model] abstract class BaseLibraryCardInfo(
   numCollaborators: Int,
   collaborators: Seq[BasicUser],
   lastKept: DateTime,
-  following: Option[Boolean], // is viewer following this library? Set to None if viewing anonymously or viewing own profile
+  following: Option[Boolean], // @deprecated use membership object instead! (is viewer following this library? Set to None if viewing anonymously or viewing own profile)
+  membership: Option[LibraryMembershipInfo],
   modifiedAt: DateTime,
   kind: LibraryKind)
 
@@ -139,10 +140,11 @@ case class OwnLibraryCardInfo( // when viewing own created libraries
   numCollaborators: Int,
   collaborators: Seq[BasicUser],
   lastKept: DateTime,
-  following: Option[Boolean],
-  listed: Boolean,
+  following: Option[Boolean], // @deprecated use membership object instead!
+  membership: Option[LibraryMembershipInfo],
+  listed: Boolean, // @deprecated use membership object instead! (should this library show up on owner's profile?)
   modifiedAt: DateTime)
-    extends BaseLibraryCardInfo(id, name, description, color, image, slug, owner, numKeeps, numFollowers, followers, numCollaborators, collaborators, lastKept, following, modifiedAt, kind)
+    extends BaseLibraryCardInfo(id, name, description, color, image, slug, owner, numKeeps, numFollowers, followers, numCollaborators, collaborators, lastKept, following, membership, modifiedAt, kind)
 
 @json
 case class LibraryCardInfo(
@@ -160,11 +162,12 @@ case class LibraryCardInfo(
   numCollaborators: Int,
   collaborators: Seq[BasicUser],
   lastKept: DateTime,
-  following: Option[Boolean],
+  following: Option[Boolean], // @deprecated use membership object instead!
+  membership: Option[LibraryMembershipInfo],
   caption: Option[String],
   modifiedAt: DateTime,
   kind: LibraryKind)
-    extends BaseLibraryCardInfo(id, name, description, color, image, slug, owner, numKeeps, numFollowers, followers, numCollaborators, collaborators, lastKept, following, modifiedAt, kind)
+    extends BaseLibraryCardInfo(id, name, description, color, image, slug, owner, numKeeps, numFollowers, followers, numCollaborators, collaborators, lastKept, following, membership, modifiedAt, kind)
 
 object LibraryCardInfo {
   val writesWithoutOwner = Writes[LibraryCardInfo] { o => // for case when receiving end already knows the owner

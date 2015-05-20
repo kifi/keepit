@@ -593,6 +593,7 @@ class LibraryController @Inject() (
               collaborators = LibraryCardInfo.makeMembersShowable(info.collaborators, false),
               lastKept = info.lastKept.getOrElse(new DateTime(0)),
               following = None,
+              membership = None,
               caption = None,
               modifiedAt = info.modifiedAt,
               kind = info.kind)

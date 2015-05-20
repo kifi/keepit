@@ -179,7 +179,7 @@ class MobileLibraryController @Inject() (
     val libraryCards = db.readOnlyReplica { implicit session =>
       val user = userRepo.get(userId)
       val libOwners = basicUserRepo.loadAll(libOwnerIds)
-      val libraryCards = libraryCommander.createLibraryCardInfos(libs = writeableLibraries.map(_._2), owners = libOwners, viewer = Some(user), withFollowing = true, idealSize = MobileLibraryController.defaultLibraryImageSize)
+      val libraryCards = libraryCommander.createLibraryCardInfos(libs = writeableLibraries.map(_._2), owners = libOwners, viewerOpt = Some(user), withFollowing = true, idealSize = MobileLibraryController.defaultLibraryImageSize)
       libraryCards
     }
 
