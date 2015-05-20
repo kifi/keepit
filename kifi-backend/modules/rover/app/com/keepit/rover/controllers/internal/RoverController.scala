@@ -91,4 +91,15 @@ class RoverController @Inject() (roverCommander: RoverCommander, articleCommande
       Ok(json)
     }
   }
+
+  def getOrElseComputeRecentContentSignature = Action.async(parse.json) { request =>
+    val url = (request.body \ "url").as[String]
+    val kind = (request.body \ "kind").as[ArticleKind[_ <: Article]]
+    val recency = (request.body \ "recency").as[Duration]
+    roverCommander.getOrElseComputeRecentContentSignature(url, recency)(kind).map { signatureOpt =>
+      implicit val format = kind.format
+      val json = Json.toJson(signatureOpt)
+      Ok(json)
+    }
+  }
 }
