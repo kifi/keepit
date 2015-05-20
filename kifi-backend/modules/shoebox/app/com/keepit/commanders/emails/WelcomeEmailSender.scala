@@ -2,14 +2,13 @@ package com.keepit.commanders.emails
 
 import com.google.inject.Inject
 import com.keepit.commanders.LocalUserExperimentCommander
-import com.keepit.common.logging.Logging
-import com.keepit.common.mail.template.EmailLayout.CustomLayout
-import com.keepit.heimdal.{ ContextData, SimpleContextData, HeimdalContext }
-import com.keepit.model.{ ExperimentType, User, NotificationCategory }
 import com.keepit.common.db.Id
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.mail.template.{ EmailLayout, EmailTip, EmailToSend }
-import com.keepit.common.mail.{ EmailAddress, SystemEmailAddress, ElectronicMail }
+import com.keepit.common.logging.Logging
+import com.keepit.common.mail.template.EmailLayout.CustomLayout
+import com.keepit.common.mail.template.{ EmailTip, EmailToSend }
+import com.keepit.common.mail.{ ElectronicMail, EmailAddress, SystemEmailAddress }
+import com.keepit.model.{ ExperimentType, NotificationCategory, User }
 
 import scala.concurrent.Future
 
