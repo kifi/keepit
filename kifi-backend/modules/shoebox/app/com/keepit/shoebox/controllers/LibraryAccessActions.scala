@@ -7,7 +7,7 @@ import com.keepit.commanders.LibraryCommander
 import com.keepit.common.controller.{ MaybeUserRequest, UserActions, UserRequest }
 import com.keepit.common.crypto.PublicId
 import com.keepit.common.db.Id
-import com.keepit.model.{ LibraryAccess, HashedPassPhrase, Library, User }
+import com.keepit.model.{ LibraryAccess, Library, User }
 import play.api.libs.json.Json
 import play.api.mvc.{ ActionFilter, Controller, Result }
 

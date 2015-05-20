@@ -182,7 +182,7 @@ class ScraperServiceClientImpl @Inject() (
   private[this] val consolidateGetSignatureReq = new RequestConsolidator[String, Option[Signature]](5 minutes)
 
   def getSignature(url: String, proxy: Option[HttpProxy], extractorProviderType: Option[ExtractorProviderType]): Future[Option[Signature]] = consolidateGetSignatureReq(url) { url =>
-    val key = UrlSignatureKey(NormalizedURI.hashUrl(url), extractorProviderType)
+    val key = UrlSignatureKey(UrlHash.hashUrl(url), extractorProviderType)
     cacheProvider.signatureCache.getOrElseFuture(key) {
       call(Scraper.internal.getSignature, Json.obj("url" -> url, "proxy" -> Json.toJson(proxy), "extractorProviderType" -> extractorProviderType.map(_.name)), callTimeouts = longTimeout).map { r =>
         r.json.asOpt[String].map(Signature(_))

@@ -58,8 +58,8 @@ class DeprecatedArticleIndexer(
 }
 
 object DeprecatedArticleIndexer extends Logging {
-  private[this] val toBeDeletedStates = Set[State[NormalizedURI]](ACTIVE, INACTIVE, UNSCRAPABLE, REDIRECTED)
-  def shouldDelete(uri: IndexableUri): Boolean = toBeDeletedStates.contains(uri.state)
+  private[this] val toBeDeletedStates = Set[State[NormalizedURI]](INACTIVE, REDIRECTED)
+  def shouldDelete(uri: IndexableUri): Boolean = toBeDeletedStates.contains(uri.state) || !uri.shouldHaveContent
 
   class ArticleIndexable(
       override val id: Id[NormalizedURI],

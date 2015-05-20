@@ -159,7 +159,7 @@ class PageCommander @Inject() (
 
   private def filterLibrariesUserDoesNotOwnOrFollow(libraries: Seq[(Id[Library], Id[User], DateTime)], userId: Id[User])(implicit session: RSession): Seq[Library] = {
     val otherLibraryIds = libraries.filterNot(_._2 == userId).map(_._1)
-    val memberLibraryIds = libraryMembershipRepo.getWithLibraryIdsAndUserId(otherLibraryIds.toSet, userId).keys
+    val memberLibraryIds = libraryMembershipRepo.getWithLibraryIdsAndUserId(otherLibraryIds.toSet, userId).filter(lm => lm._2.isDefined).keys
     val libraryIds = otherLibraryIds.diff(memberLibraryIds.toSeq)
     val libraryMap = libraryRepo.getLibraries(libraryIds.toSet)
     libraryIds.map(libraryMap)
@@ -279,7 +279,7 @@ class RelatedPageCommander @Inject() (
     val urisF = cortex.similarURIs(uriId)(None).map { uriIds =>
       val current = db.readOnlyReplica { implicit s => uriRepo.get(uriId) }
       val uris = db.readOnlyReplica { implicit s => uriIds.take(MAX_LOOKUP_SIZE).map { uriRepo.get(_) } }
-      val filtered = uris.filter { x => x.title.isDefined && x.state == NormalizedURIStates.SCRAPED && x.restriction.isEmpty }
+      val filtered = uris.filter { x => x.title.isDefined && x.shouldHaveContent && x.restriction.isEmpty }
       val uniqueUris = filtered.groupBy(_.title.get.toLowerCase).map { case (title, uriList) => uriList.head }.toArray.filter(_.title.get.toLowerCase != current.title.getOrElse("n/a"))
       uniqueUris
     }

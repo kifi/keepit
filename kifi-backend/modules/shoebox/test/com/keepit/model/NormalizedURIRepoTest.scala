@@ -9,8 +9,6 @@ import com.keepit.test._
 import com.keepit.common.time.DEFAULT_DATE_TIME_ZONE
 
 import org.joda.time.DateTime
-import org.msgpack.ScalaMessagePack
-import com.keepit.model.serialize.{ MsgPackSequenceNumberTemplate, MsgPackIdTemplate, UriIdAndSeq, UriIdAndSeqBatch }
 
 class NormalizedURIRepoTest extends Specification with ShoeboxTestInjector {
 
@@ -20,9 +18,9 @@ class NormalizedURIRepoTest extends Specification with ShoeboxTestInjector {
       userRepo.count === 0 //making sure the db is clean
       val user1 = userRepo.save(User(firstName = "Joe", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
       val user2 = userRepo.save(User(firstName = "Moo", lastName = "Brown", username = Username("moo"), normalizedUsername = "moo"))
-      val uri1 = createUri(title = "short title", url = "http://www.keepit.com/short", state = NormalizedURIStates.SCRAPED)
+      val uri1 = createUri(title = "short title", url = "http://www.keepit.com/short")
       uriRepo.assignSequenceNumbers(1000)
-      val uri2 = createUri(title = "long title", url = "http://www.keepit.com/long", state = NormalizedURIStates.SCRAPED)
+      val uri2 = createUri(title = "long title", url = "http://www.keepit.com/long")
       uriRepo.assignSequenceNumbers(1000)
       val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
       val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
@@ -74,48 +72,17 @@ class NormalizedURIRepoTest extends Specification with ShoeboxTestInjector {
     }
   }
 
-  "getIdAndSeqChanged" should {
-    "serialize simple" in {
-      val uriIdAndSeq = UriIdAndSeq(Id[NormalizedURI](32), SequenceNumber[NormalizedURI](234))
-      val bin = ScalaMessagePack.write(uriIdAndSeq)
-      val deser = ScalaMessagePack.read[UriIdAndSeq](bin)
-      deser === uriIdAndSeq
-    }
-    "get all and serialize" in {
-      withDb() { implicit injector =>
-        setup()
-        db.readWrite { implicit s =>
-          val fullUris = uriRepo.getByState(NormalizedURIStates.SCRAPED)
-          val uris = uriRepo.getIdAndSeqChanged(SequenceNumber[NormalizedURI](-1), 1000)
-          uris.size === 2
-          uris(0).id === fullUris(0).id.get
-          uris(0).seq === fullUris(0).seq
-          uris(1).id === fullUris(1).id.get
-          uris(1).seq === fullUris(1).seq
-          val batch = UriIdAndSeqBatch(uris)
-          batch.batch.size === 2
-          val bin = ScalaMessagePack.write(batch)
-          // println(s"bin size is ${bin.size}") // can be removed?
-          val deserialized = ScalaMessagePack.read[UriIdAndSeqBatch](bin)
-          deserialized.batch.size === 2
-          uris(0) === deserialized.batch(0)
-          uris(1) === deserialized.batch(1)
-        }
-      }
-    }
-  }
-
   "get by state" should {
     "search gets nothing" in {
       withDb() { implicit injector =>
         setup()
         db.readWrite { implicit s =>
-          var uris = uriRepo.getByState(NormalizedURIStates.SCRAPED)
+          val uris = uriRepo.getByState(NormalizedURIStates.ACTIVE)
           uris.size === 2
           uriRepo.save(uris(0).withState(NormalizedURIStates.INACTIVE))
-          uriRepo.getByState(NormalizedURIStates.SCRAPED).size === 1
+          uriRepo.getByState(NormalizedURIStates.ACTIVE).size === 1
           uriRepo.save(uris(1).withState(NormalizedURIStates.INACTIVE))
-          uriRepo.getByState(NormalizedURIStates.SCRAPED).size === 0
+          uriRepo.getByState(NormalizedURIStates.ACTIVE).size === 0
           uriRepo.getByState(NormalizedURIStates.INACTIVE).size === 2
           uriRepo.getByState(NormalizedURIStates.INACTIVE, 1).size === 1
           uriRepo.getByState(NormalizedURIStates.INACTIVE, 0).size === 2
@@ -125,7 +92,8 @@ class NormalizedURIRepoTest extends Specification with ShoeboxTestInjector {
     }
   }
 
-  "get by state" should {
+  "getByUri" should {
+
     "hash works fine" in {
       withDb() { implicit injector =>
         setup()
@@ -168,28 +136,16 @@ class NormalizedURIRepoTest extends Specification with ShoeboxTestInjector {
     }
   }
 
-  "NormalizedURIs get created url" should {
-    "search gets nothing" in {
-      withDb() { implicit injector =>
-        db.readWrite { implicit s =>
-          val user1 = userRepo.save(User(firstName = "Joe", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
-          val user2 = userRepo.save(User(firstName = "Moo", lastName = "Brown", username = Username("moo"), normalizedUsername = "moo"))
-          val uri1 = createUri(title = "short title", url = "http://www.keepit.com/short", state = NormalizedURIStates.INACTIVE)
-          val uri2 = createUri(title = "long title", url = "http://www.keepit.com/long", state = NormalizedURIStates.SCRAPED)
-        }
-        db.readWrite { implicit s =>
-          uriRepo.getByState(NormalizedURIStates.ACTIVE).isEmpty === true
-        }
-      }
-    }
-    "search gets short" in {
+  "getByState" should {
+
+    "search gets something" in {
       withDb() { implicit injector =>
         db.readWrite { implicit s =>
           uriRepo.all.size === 0 //making sure the db is clean, trying to understand some strange failures we got
           val user1 = userRepo.save(User(firstName = "Joe", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
           val user2 = userRepo.save(User(firstName = "Moo", lastName = "Brown", username = Username("moo"), normalizedUsername = "moo"))
           val uri1 = createUri(title = "one title", url = "http://www.keepit.com/one", state = NormalizedURIStates.ACTIVE)
-          val uri2 = createUri(title = "two title", url = "http://www.keepit.com/two", state = NormalizedURIStates.SCRAPED)
+          val uri2 = createUri(title = "two title", url = "http://www.keepit.com/two", state = NormalizedURIStates.INACTIVE)
           val uri3 = createUri(title = "three title", url = "http://www.keepit.com/three", state = NormalizedURIStates.ACTIVE)
         }
         db.readWrite { implicit s =>

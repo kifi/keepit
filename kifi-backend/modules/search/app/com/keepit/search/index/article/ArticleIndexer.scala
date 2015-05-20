@@ -80,7 +80,7 @@ class ShardedArticleIndexer(
       }
     } else {
       log.info(s"ShardedArticleIndexer in catch up mode: skip uris with no content until seq number passes ${catchUpSeqNumber.value}")
-      shoebox.getScrapedUris(sequenceNumber, fetchSize).map(_.filter(_.seq <= catchUpSeqNumber)).map {
+      shoebox.getIndexableUrisWithContent(sequenceNumber, fetchSize).map(_.filter(_.seq <= catchUpSeqNumber)).map {
         case Seq() => Some((Seq(), catchUpSeqNumber))
         case uris => Some((uris, uris.map(_.seq).max))
       }

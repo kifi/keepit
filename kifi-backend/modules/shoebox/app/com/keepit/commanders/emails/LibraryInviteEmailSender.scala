@@ -49,7 +49,6 @@ class LibraryInviteEmailSender @Inject() (
       val trimmedInviteMsg = invite.message map (_.trim) filter (_.nonEmpty)
       val fromUserId = invite.inviterId
       val fromAddress = db.readOnlyReplica { implicit session => userEmailRepo.getByUser(invite.inviterId).address }
-      val passPhrase = if (library.visibility == LibraryVisibility.PUBLISHED || toRecipient.isLeft) None else Some(invite.passPhrase)
       val authToken = invite.authToken
       val subjectAction = if (invite.access == LibraryAccess.READ_ONLY) "follow" else "collaborate on"
       val emailToSend = EmailToSend(
@@ -60,12 +59,12 @@ class LibraryInviteEmailSender @Inject() (
         category = toRecipient.fold(_ => NotificationCategory.User.LIBRARY_INVITATION, _ => NotificationCategory.NonUser.LIBRARY_INVITATION),
         htmlTemplate = {
           if (usePlainEmail) {
-            views.html.email.libraryInvitationPlain(toRecipient.left.toOption, fromUserId, trimmedInviteMsg, libraryInfo, passPhrase, authToken, invite.access)
+            views.html.email.libraryInvitationPlain(toRecipient.left.toOption, fromUserId, trimmedInviteMsg, libraryInfo, authToken, invite.access)
           } else {
-            views.html.email.libraryInvitation(toRecipient.left.toOption, fromUserId, trimmedInviteMsg, libraryInfo, passPhrase, authToken, invite.access)
+            views.html.email.libraryInvitation(toRecipient.left.toOption, fromUserId, trimmedInviteMsg, libraryInfo, authToken, invite.access)
           }
         },
-        textTemplate = Some(views.html.email.libraryInvitationText(toRecipient.left.toOption, fromUserId, trimmedInviteMsg, libraryInfo, passPhrase, authToken, invite.access)),
+        textTemplate = Some(views.html.email.libraryInvitationText(toRecipient.left.toOption, fromUserId, trimmedInviteMsg, libraryInfo, authToken, invite.access)),
         templateOptions = Seq(CustomLayout).toMap,
         extraHeaders = Some(Map(PostOffice.Headers.REPLY_TO -> fromAddress)),
         campaign = Some("na"),

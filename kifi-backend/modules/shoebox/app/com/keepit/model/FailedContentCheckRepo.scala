@@ -42,7 +42,7 @@ class FailedContentCheckRepoImpl @Inject() (
 
   def getByUrls(url1: String, url2: String)(implicit session: RSession): Option[FailedContentCheck] = {
     val (sorted1, sorted2) = sortUrls(url1, url2)
-    val (hash1, hash2) = (NormalizedURI.hashUrl(sorted1), NormalizedURI.hashUrl(sorted2))
+    val (hash1, hash2) = (UrlHash.hashUrl(sorted1), UrlHash.hashUrl(sorted2))
     (for (r <- rows if (r.url1Hash === hash1 && r.url2Hash === hash2)) yield r).firstOption
   }
 
@@ -51,7 +51,7 @@ class FailedContentCheckRepoImpl @Inject() (
       case Some(record) => save(record.withCounts(record.counts + 1))
       case None => {
         val (sorted1, sorted2) = sortUrls(url1, url2)
-        val (hash1, hash2) = (NormalizedURI.hashUrl(sorted1), NormalizedURI.hashUrl(sorted2))
+        val (hash1, hash2) = (UrlHash.hashUrl(sorted1), UrlHash.hashUrl(sorted2))
         save(FailedContentCheck(url1Hash = hash1, url2Hash = hash2, url1 = sorted1, url2 = sorted2, counts = 1, lastContentCheck = currentDateTime))
       }
     }
@@ -61,7 +61,7 @@ class FailedContentCheckRepoImpl @Inject() (
 
   def getRecentCountByURL(url: String, since: DateTime)(implicit session: RSession): Int = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    val hash = NormalizedURI.hashUrl(url).hash
+    val hash = UrlHash.hashUrl(url).hash
     val q = sql"""select count(*) from failed_content_check where url1_hash = ${hash} or url2_hash = ${hash} and updated_at > ${since}"""
     q.as[Int].list.head
   }

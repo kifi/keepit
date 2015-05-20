@@ -162,7 +162,7 @@ class IndexShardingTest extends Specification with SearchTestInjector with Searc
         val (uris, shoebox) = {
           val uris = (0 until numUris).map { n =>
             NormalizedURI.withHash(title = Some("a" + n),
-              normalizedUrl = "http://www.keepit.com/article" + n, state = SCRAPED)
+              normalizedUrl = "http://www.keepit.com/article" + n).withContentRequest(true)
           }.toList
           val fakeShoeboxClient = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
           (fakeShoeboxClient.saveURIs(uris: _*), fakeShoeboxClient)
@@ -175,7 +175,7 @@ class IndexShardingTest extends Specification with SearchTestInjector with Searc
         articleIndexer.reindex()
 
         shoebox.saveURIs(uris(2).withState(NormalizedURIStates.ACTIVE),
-          NormalizedURI.withHash(title = Some("a5"), normalizedUrl = "http://www.keepit.com/article5", state = SCRAPED))
+          NormalizedURI.withHash(title = Some("a5"), normalizedUrl = "http://www.keepit.com/article5").withContentRequest(true))
 
         updateNow(articleIndexer) === 6
         articleIndexer.sequenceNumber.value === 8
@@ -188,8 +188,7 @@ class IndexShardingTest extends Specification with SearchTestInjector with Searc
         val shoebox = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         val numUris = 10
         val uris = (0 until numUris).map { n =>
-          val state = if (n % 2 == 0) SCRAPED else ACTIVE; NormalizedURI.withHash(title = Some("a" + n),
-            normalizedUrl = "http://www.keepit.com/article" + n, state = state)
+          NormalizedURI.withHash(title = Some("a" + n), normalizedUrl = "http://www.keepit.com/article" + n).withContentRequest(n % 2 == 0)
         }.toList
         val savedUris = shoebox.saveURIs(uris: _*)
         val (_, articleIndexer, _, _, _, _, _, _) = initIndexes()

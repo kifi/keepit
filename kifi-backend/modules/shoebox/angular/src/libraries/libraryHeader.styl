@@ -243,46 +243,47 @@ followerPicDiam = 2.2em
 
 .kf-lh-subscribed-btn
   vertical-align: bottom
-  padding: 0px
+  padding: 0
   outline: none
   background: none
   border: none
-  opacity: 0.9
+  opacity: .7
 
   &.for-owner
     margin-left: 0.9em
 
-  .kf-lh-subscribed-icon
-    width: 1.7em
-    height: 2.0em
-    background-size: cover
-    background-repeat: no-repeat
+  &:hover
+    opacity: .85
 
-  .kf-lh-notifications-msg
-    position: absolute
-    top: 50%
-    transform: translateY(-50%)
-    margin-left: 20px
-    padding: 2px 7px 3px
-    border-radius: 2px
-    background-color: #fff
-    font-size: 13px
-    color: #3E4955
+.kf-lh-subscribed-icon
+  width: 1.8em
+  height: 2em
+  background-size: contain
+  background-repeat: no-repeat
+
+  &.svg-notification-off-white
+    background-position: right
+
+.kf-lh-notifications-msg
+  position: absolute
+  top: 50%
+  transform: translateY(-50%)
+  margin-left: 20px
+  padding: 2px 7px 3px
+  border-radius: 2px
+  background-color: #fff
+  font-size: 13px
+  color: #3e4955
+  transition: opacity linear .1s, visibility .1s
+
+  &.kf-lh-enabled::before
+    content: 'Notifications enabled'
+  &.kf-lh-disabled::before
+    content: 'Notifications disabled'
+
+  :not(:hover)+&
     opacity: 0
     visibility: hidden
-    transition: opacity linear 0.1s, visibility linear 0.1s
-
-    &.kf-lh-enabled::before
-      content: 'Notifications enabled'
-    &.kf-lh-disabled::before
-      content: 'Notifications disabled'
-
-  &:hover
-    opacity: 1.0
-
-    & .kf-lh-notifications-msg
-      opacity: 1
-      visibility: visible
 
 .kf-lh-private
   display: inline-block

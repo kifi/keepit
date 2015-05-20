@@ -63,6 +63,14 @@ object LibraryMembership {
   )(LibraryMembership.apply, unlift(LibraryMembership.unapply))
 }
 
+@json case class LibraryMembershipInfo(access: String, listed: Boolean, subscription: Boolean)
+
+object LibraryMembershipInfo {
+  def fromMembership(mem: LibraryMembership): LibraryMembershipInfo = {
+    LibraryMembershipInfo(mem.access.value, mem.listed, mem.subscribedToUpdates)
+  }
+}
+
 object LibraryMembershipStates extends States[LibraryMembership]
 
 sealed abstract class LibraryAccess(val value: String, val priority: Int) {

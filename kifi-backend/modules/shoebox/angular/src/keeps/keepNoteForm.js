@@ -100,11 +100,13 @@ angular.module('kifi')
         while (next.firstChild) {
           next = next.firstChild;
         }
-        if (next.nodeType !== TEXT) {
-          next = findNextTextNode(next);
-        }
-        if (next) {
-          return {node: next, idx: 0};
+        if (next.nodeType !== ELEM || !next.classList.contains('kf-knf-editor')) {
+          if (next.nodeType !== TEXT) {
+            next = findNextTextNode(next);
+          }
+          if (next) {
+            return {node: next, idx: 0};
+          }
         }
         if (create) {
           var textNode = createTextNode('');
@@ -180,9 +182,7 @@ angular.module('kifi')
           node = node.nextSibling;
         }
         textNode.data = textNode.wholeText;
-        toRemove.forEach(function (node) {
-          node.remove();
-        });
+        toRemove.forEach(removeNode);
         return lenBefore;
       }
 
@@ -195,7 +195,7 @@ angular.module('kifi')
           var s = match[0];
           hashTextNode.data += s;
           if (s === nextText) {
-            nextTextNode.remove();
+            removeNode(nextTextNode);
           } else {
             nextTextNode.data = nextText.substr(s.length);
           }
@@ -350,6 +350,13 @@ angular.module('kifi')
         var markedUp = markUp(node);
         if (markedUp || fixed) {
           return setSelection(node, idx);
+        }
+      }
+
+      function removeNode(node) {
+        var parent = node.parentNode;
+        if (parent) {
+          parent.removeChild(node);
         }
       }
 

@@ -328,7 +328,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         // viewed by another user with an invite
         val user2 = db.readWrite { implicit s =>
           val user2 = userRepo.save(User(firstName = "Baron", lastName = "Hsu", createdAt = t1, username = Username("bhsu"), normalizedUsername = "test"))
-          libraryInviteRepo.save(LibraryInvite(libraryId = lib1.id.get, inviterId = user1.id.get, userId = user2.id, access = LibraryAccess.READ_ONLY, authToken = "abc", passPhrase = "def", createdAt = t1.plusMinutes(3)))
+          libraryInviteRepo.save(LibraryInvite(libraryId = lib1.id.get, inviterId = user1.id.get, userId = user2.id, access = LibraryAccess.READ_ONLY, authToken = "abc", createdAt = t1.plusMinutes(3)))
           user2
         }
         inject[FakeUserActionsHelper].setUser(user2)
@@ -985,8 +985,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
           libraryMembershipRepo.save(LibraryMembership(userId = u1.id.get, libraryId = lib.id.get, access = LibraryAccess.OWNER, createdAt = t1))
           libraryMembershipRepo.save(LibraryMembership(userId = u2.id.get, libraryId = lib.id.get, access = LibraryAccess.READ_WRITE, createdAt = t1.plusHours(1)))
           libraryMembershipRepo.save(LibraryMembership(userId = u3.id.get, libraryId = lib.id.get, access = LibraryAccess.READ_ONLY, createdAt = t1.plusHours(2)))
-          libraryInviteRepo.save(LibraryInvite(libraryId = lib.id.get, inviterId = u1.id.get, userId = Some(u4.id.get), access = LibraryAccess.READ_ONLY, authToken = "abc", passPhrase = "def", createdAt = t1.plusHours(3)))
-          libraryInviteRepo.save(LibraryInvite(libraryId = lib.id.get, inviterId = u1.id.get, emailAddress = Some(EmailAddress("sonic@sega.co.jp")), access = LibraryAccess.READ_ONLY, authToken = "abc", passPhrase = "def", createdAt = t1.plusHours(3)))
+          libraryInviteRepo.save(LibraryInvite(libraryId = lib.id.get, inviterId = u1.id.get, userId = Some(u4.id.get), access = LibraryAccess.READ_ONLY, authToken = "abc", createdAt = t1.plusHours(3)))
+          libraryInviteRepo.save(LibraryInvite(libraryId = lib.id.get, inviterId = u1.id.get, emailAddress = Some(EmailAddress("sonic@sega.co.jp")), access = LibraryAccess.READ_ONLY, authToken = "abc", createdAt = t1.plusHours(3)))
           (u1, u2, u3, u4, lib)
         }
 
