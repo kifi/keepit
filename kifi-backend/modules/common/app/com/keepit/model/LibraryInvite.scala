@@ -27,7 +27,7 @@ case class LibraryInvite(
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,
     state: State[LibraryInvite] = LibraryInviteStates.ACTIVE,
-    authToken: String = RandomStringUtils.randomAlphanumeric(32),
+    authToken: String = RandomStringUtils.randomAlphanumeric(7),
     passPhrase: String = LibraryInvite.generatePassPhrase(),
     message: Option[String] = None) extends ModelWithPublicId[LibraryInvite] with ModelWithState[LibraryInvite] {
 
