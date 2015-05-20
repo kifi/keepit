@@ -307,7 +307,12 @@ class MobileLibraryController @Inject() (
               basicUserRepo.load(library.ownerId)
             }
             val libraryPath = Library.formatLibraryPath(owner.username, library.slug)
-            Ok(Json.obj("link" -> libraryPath, "access" -> invite.access, "message" -> invite.message))
+            val link = if (library.isSecret) {
+              libraryPath + "?authToken=" + invite.authToken
+            } else {
+              libraryPath
+            }
+            Ok(Json.obj("link" -> link, "access" -> invite.access, "message" -> invite.message))
         }
     }
   }

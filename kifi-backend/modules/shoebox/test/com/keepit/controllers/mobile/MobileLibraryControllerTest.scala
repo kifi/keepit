@@ -656,28 +656,26 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
 
     "invite anonymous to library" in {
       withDb(controllerTestModules: _*) { implicit injector =>
-        val (user1, user2, user3, lib1) = db.readWrite { implicit s =>
+        val (user1, user2, user3, lib1a, lib1b) = db.readWrite { implicit s =>
           val user1 = user().withUsername("nickfury").saved
           val user2 = user().withUsername("quicksilver").saved
           val user3 = user().withUsername("scarletwitch").saved
-          val lib1 = library().withUser(user1).withSlug("secret-shield-stuff").withVisibility(LibraryVisibility.SECRET).saved // user1 owns secret lib2
-          membership().withLibraryCollaborator(lib1, user2).saved // user2 is a collaborator lib1 (has read_write access)
+          val lib1a = library().withUser(user1).withSlug("secret-shield-stuff").withVisibility(LibraryVisibility.SECRET).saved // user1 owns secret lib1a
+          membership().withLibraryCollaborator(lib1a, user2).saved // user2 is a collaborator lib1 (has read_write access)
+          val lib1b = library().withUser(user1).withSlug("public-shield-stuff").withVisibility(LibraryVisibility.PUBLISHED).saved // user1 owns publish lib1b
 
-          libraryMembershipRepo.getWithLibraryIdAndUserId(lib1.id.get, user1.id.get).get.access === LibraryAccess.OWNER
-          libraryMembershipRepo.getWithLibraryIdAndUserId(lib1.id.get, user2.id.get).get.access === LibraryAccess.READ_WRITE
-          (user1, user2, user3, lib1)
+          libraryMembershipRepo.getWithLibraryIdAndUserId(lib1a.id.get, user1.id.get).get.access === LibraryAccess.OWNER
+          libraryMembershipRepo.getWithLibraryIdAndUserId(lib1a.id.get, user2.id.get).get.access === LibraryAccess.READ_WRITE
+          libraryMembershipRepo.getWithLibraryIdAndUserId(lib1b.id.get, user1.id.get).get.access === LibraryAccess.OWNER
+          (user1, user2, user3, lib1a, lib1b)
         }
-        val pubLibId1 = Library.publicId(lib1.id.get)(inject[PublicIdConfiguration])
+        val pubLibId1a = Library.publicId(lib1a.id.get)(inject[PublicIdConfiguration])
+        val pubLibId1b = Library.publicId(lib1b.id.get)(inject[PublicIdConfiguration])
 
         // test owner inviting to a secret library
-        val res1 = inviteAnonymousToLibrary(user1, pubLibId1, Json.obj("access" -> "read_only", "message" -> "please follow"))
+        val res1 = inviteAnonymousToLibrary(user1, pubLibId1a, Json.obj("access" -> "read_only", "message" -> "please follow"))
         status(res1) must equalTo(OK)
-        contentAsJson(res1) === Json.parse(
-          s"""
-             { "link" : "/nickfury/secret-shield-stuff", "access" : "read_only", "message" : "please follow" }
-           """
-        )
-        db.readOnlyMaster { implicit s =>
+        val invite1 = db.readOnlyMaster { implicit s =>
           libraryInviteRepo.count === 1
           val invite = libraryInviteRepo.all.head
           invite.inviterId === user1.id.get
@@ -685,10 +683,16 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
           invite.access === LibraryAccess.READ_ONLY
           invite.userId === None
           invite.emailAddress === None
+          invite
         }
+        contentAsJson(res1) === Json.parse(
+          s"""
+             { "link" : "/nickfury/secret-shield-stuff?authToken=${invite1.authToken}", "access" : "read_only", "message" : "please follow" }
+           """
+        )
 
         // test collaborator inviting to a secret library (library allows collaborators to invite)
-        val res2 = inviteAnonymousToLibrary(user2, pubLibId1, Json.obj("access" -> "read_write", "message" -> "please collaborate"))
+        val res2 = inviteAnonymousToLibrary(user2, pubLibId1a, Json.obj("access" -> "read_write", "message" -> "please collaborate"))
         status(res2) must equalTo(OK)
         db.readOnlyMaster { implicit s =>
           libraryInviteRepo.count === 2
@@ -701,8 +705,20 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
         }
 
         // test non-owner or non-collaborator inviting to a secret library
-        val res3 = inviteAnonymousToLibrary(user3, pubLibId1, Json.obj("access" -> "read_only", "message" -> "please follow"))
+        val res3 = inviteAnonymousToLibrary(user3, pubLibId1a, Json.obj("access" -> "read_only", "message" -> "please follow"))
         status(res3) must equalTo(BAD_REQUEST)
+
+        // test owner inviting to a published library
+        val res4 = inviteAnonymousToLibrary(user1, pubLibId1b, Json.obj("access" -> "read_only", "message" -> "please follow"))
+        status(res4) must equalTo(OK)
+        contentAsJson(res4) === Json.parse(
+          s"""
+             { "link" : "/nickfury/public-shield-stuff", "access" : "read_only", "message" : "please follow" }
+           """
+        )
+        db.readOnlyMaster { implicit s =>
+          libraryInviteRepo.count === 3
+        }
       }
     }
 
