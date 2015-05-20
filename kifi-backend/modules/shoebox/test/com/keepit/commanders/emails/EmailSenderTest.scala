@@ -440,7 +440,6 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         email.to(0) === EmailAddress("aaronrodgers@gmail.com")
         val html = email.htmlBody.value
         testHtml(html)
-        html must not contain invite.passPhrase
       }
     }
 
@@ -462,7 +461,6 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         params.map(email.htmlBody.contains(_)) === List(true, true, true, true)
         val html = email.htmlBody.value
         testHtml(html)
-        html must not contain (invite.passPhrase)
 
         db.readWrite { implicit session => libraryRepo.save(lib1.copy(visibility = LibraryVisibility.PUBLISHED)) }
         val emailWithoutPassPhrase = Await.result(inviteSender.sendInvite(invite = inviteNonUser, isPlainEmail = false), Duration(5, "seconds")).get
@@ -471,7 +469,6 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         params.map(emailWithoutPassPhrase.htmlBody.contains(_)) === List(true, true, true, true)
         val htmlWithoutPassPhrase = emailWithoutPassPhrase.htmlBody.value
         testHtml(htmlWithoutPassPhrase)
-        htmlWithoutPassPhrase must not contain invite.passPhrase
       }
     }
 
@@ -497,9 +494,9 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         params.map(email.htmlBody.contains(_)) === List(true, true, true, true, true)
         email.to(0) === EmailAddress("aaronrodgers@gmail.com")
         val html = email.htmlBody.value
-        val scalaWords = Seq("firstName", "libraryUrl", "salutation", "emailMessage", "passPhraseMsg", "inviteMsg")
+        val scalaWords = Seq("firstName", "libraryUrl", "salutation", "emailMessage", "inviteMsg")
         scalaWords foreach { word => html must not contain word }
-        html must not contain invite.passPhrase
+        1 === 1
       }
     }
 
@@ -525,7 +522,6 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         params.map(email.htmlBody.contains(_)) === List(true, true, true, true, true)
         email.to(0) === EmailAddress("aaronrodgers@gmail.com")
         val html = email.htmlBody.value
-        html must not contain invite.passPhrase
 
         val text = email.textBody.get.value
         text must not contain "description"
@@ -549,7 +545,6 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         val params = List("utm_campaign=na", "utm_source=library_invite", "utm_medium=vf_email", "kma=1")
         params.map(email.htmlBody.contains(_)) === List(true, true, true, false)
         val html = email.htmlBody.value
-        html must not contain (invite.passPhrase)
         html must not contain "firstName"
 
         db.readWrite { implicit session => libraryRepo.save(lib1.copy(visibility = LibraryVisibility.PUBLISHED)) }
@@ -557,8 +552,6 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         emailWithoutPassPhrase.subject === "An invitation to my library: Football"
         emailWithoutPassPhrase.to(0) === EmailAddress("aaronrodgers@gmail.com")
         params.map(emailWithoutPassPhrase.htmlBody.contains(_)) === List(true, true, true, false)
-        val htmlWithoutPassPhrase = emailWithoutPassPhrase.htmlBody.value
-        htmlWithoutPassPhrase must not contain invite.passPhrase
       }
     }
 
@@ -583,9 +576,9 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         params.map(email.htmlBody.contains(_)) === List(true, true, true, true, true)
         email.to(0) === EmailAddress("aaronrodgers@gmail.com")
         val html = email.htmlBody.value
-        val scalaWords = Seq("firstName", "passPhrase")
+        val scalaWords = Seq("firstName")
         scalaWords foreach { word => html must not contain word }
-        html must not contain invite.passPhrase
+        1 === 1
       }
     }
 
@@ -616,7 +609,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
 
         val html = email.htmlBody.value
         val text = email.textBody.get.value
-        val scalaWords = Seq("firstName", "libraryUrl", "salutation", "emailMessage", "passPhraseMsg", "inviteMsg")
+        val scalaWords = Seq("firstName", "libraryUrl", "salutation", "emailMessage", "inviteMsg")
         scalaWords foreach { word => html must not contain word }
         scalaWords foreach { word => text must not contain word }
         1 === 1
