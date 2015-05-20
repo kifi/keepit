@@ -146,20 +146,33 @@ class KeepInterner @Inject() (
   }
 
   private def internUriAndBookmarkBatch(bms: Seq[RawBookmarkRepresentation], userId: Id[User], library: Library, source: KeepSource, installationId: Option[ExternalId[KifiInstallation]]) = {
-    val (persisted, failed) = db.readWrite { implicit session =>
-      bms.map { bm =>
-        bm -> Try(internUriAndBookmark(bm, userId, library, source, installationId)).flatten
-      }.toMap
-    } partition {
-      case (bm, res) => res.isSuccess
+
+    def persistWithRetries(iter: Int, toProcess: Seq[RawBookmarkRepresentation], successes: Seq[InternedUriAndKeep]): (Seq[InternedUriAndKeep], Seq[RawBookmarkRepresentation]) = {
+      def attemptToPersistBatch(batch: Seq[RawBookmarkRepresentation]) = {
+        db.readWrite { implicit session =>
+          bms.map { bm =>
+            bm -> Try(internUriAndBookmark(bm, userId, library, source, installationId)).flatten
+          }.toMap
+        } partition {
+          case (bm, res) => res.isSuccess
+        }
+      }
+
+      attemptToPersistBatch(toProcess) match {
+        case (success, fail) if iter > 0 =>
+          persistWithRetries(iter - 1, fail.keys.toSeq, success.values.map(_.get).toSeq)
+        case (success, fail) =>
+          if (fail.nonEmpty) {
+            airbrake.notify(AirbrakeError(message = Some(s"failed to persist ${fail.size} of ${bms.size} raw bookmarks: look app.log for urls"), userId = Some(userId)))
+            fail.foreach { f => log.error(s"failed to persist raw bookmarks of user $userId from $source: ${f._1.url}", f._2.failed.get) }
+          }
+          (success.values.map(_.get).toSeq, fail.keys.toSeq)
+      }
     }
 
-    if (failed.nonEmpty) {
-      airbrake.notify(AirbrakeError(message = Some(s"failed to persist ${failed.size} of ${bms.size} raw bookmarks: look app.log for urls"), userId = Some(userId)))
-      failed.foreach { f => log.error(s"failed to persist raw bookmarks of user $userId from $source: ${f._1.url}", f._2.failed.get) }
-    }
-    val failedRaws: Seq[RawBookmarkRepresentation] = failed.keys.toList
-    (persisted.values.map(_.get).toSeq, failedRaws)
+    val (persisted, failedRaws) = persistWithRetries(3, bms, Seq.empty)
+
+    (persisted, failedRaws)
   }
 
   private val httpPrefix = "https?://".r
