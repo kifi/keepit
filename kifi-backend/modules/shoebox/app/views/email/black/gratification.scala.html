@@ -22,7 +22,7 @@ newConnections: Seq[Id[User]]
 }
 
 @if(libFollowers.totalCount >= 1) {
-<p>You had <b>@libFollowers.totalCount new @singularOrPlural("follower", libFollowers.totalCount)</b> across all of your libraries:</p>
+<p>You had <b>@libFollowers.totalCount new @singularOrPlural("follower", libFollowers.totalCount)</b>:</p>
 <ul>
     @for((libId, followCount) <- libFollowers.countByLibrary) {
     <li>@followCount new @singularOrPlural("follower", followCount) on <a href="@libraryUrl(libId, "")">@libraryName(libId)</a></li>
