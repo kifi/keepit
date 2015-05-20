@@ -45,9 +45,9 @@ class DeprecatedArticleIndexerTest extends Specification with SearchTestInjector
 
     val Seq(user1, user2) = fakeShoeboxServiceClient.saveUsers(User(firstName = "Joe", lastName = "Smith", username = Username("test"), normalizedUsername = "test"), User(firstName = "Moo", lastName = "Brown", username = Username("test"), normalizedUsername = "test"))
     var Seq(uri1, uri2, uri3) = fakeShoeboxServiceClient.saveURIs(
-      NormalizedURI.withHash(title = Some("title1 titles"), normalizedUrl = "http://www.keepit.com/article1", state = SCRAPED),
-      NormalizedURI.withHash(title = Some("title2 titles"), normalizedUrl = "http://www.keepit.org/article2", state = SCRAPED),
-      NormalizedURI.withHash(title = Some("title3 titles"), normalizedUrl = "http://www.find-it.com/article3", state = SCRAPED)
+      NormalizedURI.withHash(title = Some("title1 titles"), normalizedUrl = "http://www.keepit.com/article1").withContentRequest(true),
+      NormalizedURI.withHash(title = Some("title2 titles"), normalizedUrl = "http://www.keepit.org/article2").withContentRequest(true),
+      NormalizedURI.withHash(title = Some("title3 titles"), normalizedUrl = "http://www.find-it.com/article3").withContentRequest(true)
     )
     store += (uri1.id.get -> mkArticle(uri1.id.get, uri1.title.get, "content1 alldocs body soul"))
     store += (uri2.id.get -> mkArticle(uri2.id.get, uri2.title.get, "content2 alldocs bodies soul"))
@@ -75,7 +75,7 @@ class DeprecatedArticleIndexerTest extends Specification with SearchTestInjector
         scrapedAt = currentDateTime,
         httpContentType = Some("text/html"),
         httpOriginalContentCharset = Option("UTF-8"),
-        state = SCRAPED,
+        state = ACTIVE,
         message = None,
         titleLang = Some(en),
         contentLang = Some(en))
@@ -98,15 +98,15 @@ class DeprecatedArticleIndexerTest extends Specification with SearchTestInjector
       withInjector(helperModules: _*) { injector =>
         new IndexerScope(injector) {
           uri1 = fakeShoeboxServiceClient.saveURIs(uri1.withState(INACTIVE)).head
-          uri2 = fakeShoeboxServiceClient.saveURIs(uri2.withState(INACTIVE)).head
-          uri3 = fakeShoeboxServiceClient.saveURIs(uri3.withState(INACTIVE)).head
+          uri2 = fakeShoeboxServiceClient.saveURIs(uri2.withState(REDIRECTED)).head
+          uri3 = fakeShoeboxServiceClient.saveURIs(uri3.copy(shouldHaveContent = false)).head
 
           indexer.update()
           indexer.numDocs === 0
 
           var currentSeqNum = indexer.sequenceNumber.value
 
-          uri2 = fakeShoeboxServiceClient.saveURIs(uri2.withState(SCRAPED)).head
+          uri2 = fakeShoeboxServiceClient.saveURIs(uri2.withState(ACTIVE)).head
 
           indexer.sequenceNumber.value === currentSeqNum
           indexer.update()
@@ -114,12 +114,11 @@ class DeprecatedArticleIndexerTest extends Specification with SearchTestInjector
           indexer.sequenceNumber.value === currentSeqNum
           indexer.numDocs === 1
 
-          uri1 = fakeShoeboxServiceClient.saveURIs(uri1.withState(SCRAPED)).head
-          uri2 = fakeShoeboxServiceClient.saveURIs(uri2.withState(SCRAPED)).head
-          uri3 = fakeShoeboxServiceClient.saveURIs(uri3.withState(SCRAPED)).head
+          uri1 = fakeShoeboxServiceClient.saveURIs(uri1.withState(ACTIVE)).head
+          uri3 = fakeShoeboxServiceClient.saveURIs(uri3.withContentRequest(true)).head
 
           indexer.update()
-          currentSeqNum += 3
+          currentSeqNum += 2
           indexer.sequenceNumber.value === currentSeqNum
           indexer.numDocs === 3
           indexer.close()
@@ -278,20 +277,20 @@ class DeprecatedArticleIndexerTest extends Specification with SearchTestInjector
       }
     }
 
-    "delete documents with inactive, active, unscrapable, or scrape_later state" in {
+    "delete documents of uris that are inactive, redirected, or active without content" in {
       withInjector(helperModules: _*) { injector =>
         new IndexerScope(injector) {
           indexer.update()
           indexer.numDocs === 3
 
-          uri1 = fakeShoeboxServiceClient.saveURIs(uri1.withState(ACTIVE)).head
+          uri1 = fakeShoeboxServiceClient.saveURIs(uri1.copy(shouldHaveContent = false)).head
           indexer.update()
           indexer.numDocs === 2
           indexer.search("content1").size === 0
           indexer.search("content2").size === 1
           indexer.search("content3").size === 1
 
-          uri1 = fakeShoeboxServiceClient.saveURIs(uri1.withState(SCRAPED)).head
+          uri1 = fakeShoeboxServiceClient.saveURIs(uri1.withContentRequest(true)).head
           uri2 = fakeShoeboxServiceClient.saveURIs(uri2.withState(INACTIVE)).head
 
           indexer.update()
@@ -300,9 +299,8 @@ class DeprecatedArticleIndexerTest extends Specification with SearchTestInjector
           indexer.search("content2").size === 0
           indexer.search("content3").size === 1
 
-          uri1 = fakeShoeboxServiceClient.saveURIs(uri1.withState(SCRAPED)).head
-          uri2 = fakeShoeboxServiceClient.saveURIs(uri2.withState(SCRAPED)).head
-          uri3 = fakeShoeboxServiceClient.saveURIs(uri3.withState(UNSCRAPABLE)).head
+          uri2 = fakeShoeboxServiceClient.saveURIs(uri2.withState(ACTIVE)).head
+          uri3 = fakeShoeboxServiceClient.saveURIs(uri3.withState(REDIRECTED)).head
 
           indexer.update()
           indexer.numDocs === 2

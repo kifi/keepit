@@ -30,12 +30,12 @@ trait GraphTestHelper extends SearchTestInjector {
       User(firstName = "Hactar", lastName = "", username = Username("test"), normalizedUsername = "test")
     )
     val uris = saveURIs(
-      NormalizedURI.withHash(title = Some("1"), normalizedUrl = "http://www.keepit.com/article1", state = SCRAPED),
-      NormalizedURI.withHash(title = Some("2"), normalizedUrl = "http://www.keepit.com/article2", state = SCRAPED),
-      NormalizedURI.withHash(title = Some("3"), normalizedUrl = "http://www.keepit.org/article3", state = SCRAPED),
-      NormalizedURI.withHash(title = Some("4"), normalizedUrl = "http://www.findit.com/article4", state = SCRAPED),
-      NormalizedURI.withHash(title = Some("5"), normalizedUrl = "http://www.findit.com/article5", state = SCRAPED),
-      NormalizedURI.withHash(title = Some("6"), normalizedUrl = "http://www.findit.org/article6", state = SCRAPED)
+      NormalizedURI.withHash(title = Some("1"), normalizedUrl = "http://www.keepit.com/article1").withContentRequest(true),
+      NormalizedURI.withHash(title = Some("2"), normalizedUrl = "http://www.keepit.com/article2").withContentRequest(true),
+      NormalizedURI.withHash(title = Some("3"), normalizedUrl = "http://www.keepit.org/article3").withContentRequest(true),
+      NormalizedURI.withHash(title = Some("4"), normalizedUrl = "http://www.findit.com/article4").withContentRequest(true),
+      NormalizedURI.withHash(title = Some("5"), normalizedUrl = "http://www.findit.com/article5").withContentRequest(true),
+      NormalizedURI.withHash(title = Some("6"), normalizedUrl = "http://www.findit.org/article6").withContentRequest(true)
     )
     (users, uris)
   }
@@ -48,7 +48,7 @@ trait GraphTestHelper extends SearchTestInjector {
 
     val uris = saveURIs(
       (1 to bigDataSize).map { i =>
-        NormalizedURI.withHash(title = Some(s"${i}"), normalizedUrl = s"http://www.keepit.com/article${i}", state = SCRAPED)
+        NormalizedURI.withHash(title = Some(s"${i}"), normalizedUrl = s"http://www.keepit.com/article${i}").withContentRequest(true)
       }: _*
     )
     (users, uris)
@@ -88,7 +88,7 @@ trait GraphTestHelper extends SearchTestInjector {
       scrapedAt = currentDateTime,
       httpContentType = Some("text/html"),
       httpOriginalContentCharset = Option("UTF-8"),
-      state = SCRAPED,
+      state = ACTIVE,
       message = None,
       titleLang = Some(Lang("en")),
       contentLang = Some(Lang("en")))
