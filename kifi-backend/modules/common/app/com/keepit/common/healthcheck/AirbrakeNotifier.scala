@@ -8,6 +8,7 @@ import com.keepit.common.net._
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.model.{ User, NotificationCategory }
 import com.keepit.common.mail.{ SystemEmailAddress, ElectronicMail }
+import play.api.Play
 
 import scala.concurrent.ExecutionContext
 
@@ -74,9 +75,8 @@ class AirbrakeSender @Inject() (
   systemAdminMailSender: SystemAdminMailSender)
     extends Logging {
 
-  // Where are these injected from?
-  val apiKey = "701215c3c9029a56df52250ce2c5750f"
-  val projectId = "91268"
+  val apiKey = Play.current.configuration.getString("airbrake.key").get
+  val projectId = Play.current.configuration.getString("airbrake.id").get
 
   var firstErrorReported = false
 
