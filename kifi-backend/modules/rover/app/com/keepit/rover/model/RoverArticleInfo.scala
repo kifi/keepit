@@ -142,7 +142,7 @@ object RoverArticleInfo {
     seq: SequenceNumber[RoverArticleInfo],
     uriId: Id[NormalizedURI],
     url: String,
-    urlHash: UrlHash,
+    // urlHash: UrlHash,
     kind: String,
     bestVersion: Option[ArticleVersion],
     latestVersion: Option[ArticleVersion],
@@ -156,7 +156,7 @@ object RoverArticleInfo {
     lastImageProcessingVersion: Option[ArticleVersion],
     lastImageProcessingAt: Option[DateTime],
     imageProcessingRequestedAt: Option[DateTime]): RoverArticleInfo = {
-    RoverArticleInfo(id, createdAt, updatedAt, state, seq, uriId, url, urlHash, kind, bestVersion, latestVersion, oldestVersion, lastFetchedAt, nextFetchAt, lastFetchingAt, fetchInterval, failureCount, failureInfo, imageProcessingRequestedAt, lastImageProcessingVersion, lastImageProcessingAt)
+    RoverArticleInfo(id, createdAt, updatedAt, state, seq, uriId, url, UrlHash(""), kind, bestVersion, latestVersion, oldestVersion, lastFetchedAt, nextFetchAt, lastFetchingAt, fetchInterval, failureCount, failureInfo, imageProcessingRequestedAt, lastImageProcessingVersion, lastImageProcessingAt)
   }
 
   def unapplyToDbRow(info: RoverArticleInfo) = {
@@ -168,7 +168,7 @@ object RoverArticleInfo {
       info.seq,
       info.uriId,
       info.url,
-      info.urlHash,
+      //   info.urlHash,
       info.kind,
       info.bestVersion,
       info.latestVersion,

@@ -64,7 +64,7 @@ class ArticleInfoRepoImpl @Inject() (
 
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)
     def url = column[String]("url", O.NotNull)
-    def urlHash = column[UrlHash]("url_hash", O.NotNull)
+    //  def urlHash = column[UrlHash]("url_hash", O.NotNull)
     def kind = column[String]("kind", O.NotNull)
     def bestVersionMajor = column[Option[VersionNumber[Article]]]("best_version_major", O.Nullable)
     def bestVersionMinor = column[Option[VersionNumber[Article]]]("best_version_minor", O.Nullable)
@@ -88,7 +88,7 @@ class ArticleInfoRepoImpl @Inject() (
     def oldestVersion = (oldestVersionMajor, oldestVersionMinor) <> ((articleVersionFromDb _).tupled, articleVersionToDb _)
     def lastImageProcessingVersion = (lastImageProcessingVersionMajor, lastImageProcessingVersionMinor) <> ((articleVersionFromDb _).tupled, articleVersionToDb _)
 
-    def * = (id.?, createdAt, updatedAt, state, seq, uriId, url, urlHash, kind, bestVersion, latestVersion, oldestVersion, lastFetchedAt, nextFetchAt, fetchInterval, failureCount, failureInfo, lastFetchingAt, lastImageProcessingVersion, lastImageProcessingAt, imageProcessingRequestedAt) <> ((RoverArticleInfo.applyFromDbRow _).tupled, RoverArticleInfo.unapplyToDbRow _)
+    def * = (id.?, createdAt, updatedAt, state, seq, uriId, url, kind, bestVersion, latestVersion, oldestVersion, lastFetchedAt, nextFetchAt, fetchInterval, failureCount, failureInfo, lastFetchingAt, lastImageProcessingVersion, lastImageProcessingAt, imageProcessingRequestedAt) <> ((RoverArticleInfo.applyFromDbRow _).tupled, RoverArticleInfo.unapplyToDbRow _)
   }
 
   implicit val getArticleInfoResult = GetResult[RoverArticleInfo] { r: PositionedResult =>
@@ -101,7 +101,7 @@ class ArticleInfoRepoImpl @Inject() (
       seq = r.<<[SequenceNumber[RoverArticleInfo]],
       uriId = r.<<[Id[NormalizedURI]],
       url = r.<<[String],
-      urlHash = r.<<[UrlHash],
+      //  urlHash = r.<<[UrlHash],
       kind = r.<<[String],
       bestVersion = articleVersionFromDb(r.<<[Option[VersionNumber[Article]]], r.<<[Option[VersionNumber[Article]]]),
       latestVersion = articleVersionFromDb(r.<<[Option[VersionNumber[Article]]], r.<<[Option[VersionNumber[Article]]]),
