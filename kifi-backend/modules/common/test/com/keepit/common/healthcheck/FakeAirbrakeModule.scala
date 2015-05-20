@@ -46,11 +46,6 @@ case class FakeAirbrakeAndFormatterModule() extends AirbrakeModule {
       def noticeError(error: ErrorWithStack, message: Option[String]): NodeSeq = null
     }
   }
-
-  @Provides
-  def jsonFormatter(playMode: Mode, service: FortyTwoServices, serviceDiscovery: ServiceDiscovery): JsonAirbrakeFormatter = {
-    new JsonAirbrakeFormatter("fakeApiKey", Mode.Test, service, serviceDiscovery)
-  }
 }
 
 @Singleton
