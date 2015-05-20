@@ -156,7 +156,8 @@ object RoverArticleInfo {
     lastImageProcessingVersion: Option[ArticleVersion],
     lastImageProcessingAt: Option[DateTime],
     imageProcessingRequestedAt: Option[DateTime]): RoverArticleInfo = {
-    RoverArticleInfo(id, createdAt, updatedAt, state, seq, uriId, url, urlHash, kind, bestVersion, latestVersion, oldestVersion, lastFetchedAt, nextFetchAt, lastFetchingAt, fetchInterval, failureCount, failureInfo, imageProcessingRequestedAt, lastImageProcessingVersion, lastImageProcessingAt)
+    val correctUrlHash = if (urlHash.hash.nonEmpty) urlHash else UrlHash.hashUrl(url)
+    RoverArticleInfo(id, createdAt, updatedAt, state, seq, uriId, url, correctUrlHash, kind, bestVersion, latestVersion, oldestVersion, lastFetchedAt, nextFetchAt, lastFetchingAt, fetchInterval, failureCount, failureInfo, imageProcessingRequestedAt, lastImageProcessingVersion, lastImageProcessingAt)
   }
 
   def unapplyToDbRow(info: RoverArticleInfo) = {
