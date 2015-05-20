@@ -130,7 +130,7 @@ object RoverArticleInfo {
 
   def initialize(uriId: Id[NormalizedURI], url: String, kind: ArticleKind[_ <: Article]): RoverArticleInfo = {
     val urlHash = UrlHash.hashUrl(url)
-    val newInfo = RoverArticleInfo(uriId = uriId, url = url, urlHash = urlHash, kind = kind.typeCode)
+    val newInfo = RoverArticleInfo(uriId = uriId, url = url, urlHash = UrlHash(""), kind = kind.typeCode)
     newInfo.initializeSchedulingPolicy
   }
 
