@@ -190,7 +190,7 @@ class KeepInterner @Inject() (
           case s if KeepSource.discrete.contains(s) => START_OF_TIME
           case _ => currentDateTime // todo: useful to de-prioritize bulk imports.
         }
-        scraper.scheduleScrape(uri, date)
+        Try(scraper.scheduleScrape(uri, date)) // This throws exceptions, such as MySQLIntegrityConstraintViolationException. Why!? Needed?
       }
 
       if (KeepSource.discrete.contains(source)) {
