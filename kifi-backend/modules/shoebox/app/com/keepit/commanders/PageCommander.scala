@@ -279,7 +279,7 @@ class RelatedPageCommander @Inject() (
     val urisF = cortex.similarURIs(uriId)(None).map { uriIds =>
       val current = db.readOnlyReplica { implicit s => uriRepo.get(uriId) }
       val uris = db.readOnlyReplica { implicit s => uriIds.take(MAX_LOOKUP_SIZE).map { uriRepo.get(_) } }
-      val filtered = uris.filter { x => x.title.isDefined && x.state == NormalizedURIStates.SCRAPED && x.restriction.isEmpty }
+      val filtered = uris.filter { x => x.title.isDefined && x.shouldHaveContent && x.restriction.isEmpty }
       val uniqueUris = filtered.groupBy(_.title.get.toLowerCase).map { case (title, uriList) => uriList.head }.toArray.filter(_.title.get.toLowerCase != current.title.getOrElse("n/a"))
       uniqueUris
     }
