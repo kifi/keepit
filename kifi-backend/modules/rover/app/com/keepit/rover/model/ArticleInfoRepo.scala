@@ -134,7 +134,7 @@ class ArticleInfoRepoImpl @Inject() (
   }
 
   // Dangerous: this does *not* increment the sequence number nor invalidate caches
-  private def saveSilently(model: RoverArticleInfo)(implicit session: RWSession): RoverArticleInfo = {
+  def saveSilently(model: RoverArticleInfo)(implicit session: RWSession): RoverArticleInfo = {
     super.save(model)
   }
 

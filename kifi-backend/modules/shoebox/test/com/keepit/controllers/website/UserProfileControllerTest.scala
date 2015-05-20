@@ -422,7 +422,8 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
                 "lastKept":${lib3.createdAt.getMillis},
                 "following": true,
                 "membership": "read_only",
-                "modifiedAt":${lib3.updatedAt.getMillis}
+                "modifiedAt":${lib3.updatedAt.getMillis},
+                "kind":"user_created"
               }
             ]
           }

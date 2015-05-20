@@ -75,6 +75,8 @@ package object template {
 
     def userExternalId(id: Id[User]) = Tag1(tags.userExternalId, id).toHtml
 
+    def profileUrl(id: Id[User]) = Tag1(tags.profileUrl, id).toHtml
+
     def profileUrl(id: Id[User], content: String) = Html(appendTrackingParams(Tag1(tags.profileUrl, id) + "?", content, openInAppIfMobile = true))
 
     def profileUrl(user: BasicUser, content: String) = Html(appendTrackingParams(s"$baseUrl/${user.username.value}?", content, openInAppIfMobile = true))

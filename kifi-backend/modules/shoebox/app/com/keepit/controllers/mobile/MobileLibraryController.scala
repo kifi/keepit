@@ -176,11 +176,11 @@ class MobileLibraryController @Inject() (
         membership.canWrite
     }
     val libOwnerIds = writeableLibraries.map(_._2.ownerId).toSet
-    val (user, libOwners, libraryCards) = db.readOnlyReplica { implicit session =>
+    val libraryCards = db.readOnlyReplica { implicit session =>
       val user = userRepo.get(userId)
       val libOwners = basicUserRepo.loadAll(libOwnerIds)
       val libraryCards = libraryCommander.createLibraryCardInfos(libs = writeableLibraries.map(_._2), owners = libOwners, viewerOpt = Some(user), withFollowing = true, idealSize = MobileLibraryController.defaultLibraryImageSize)
-      (user, libOwners, libraryCards)
+      libraryCards
     }
 
     // Kind of weird, but library cards don't have membership information.
@@ -192,7 +192,9 @@ class MobileLibraryController @Inject() (
       if (mem.lastViewed.nonEmpty) {
         memInfo = memInfo ++ Json.obj("lastViewed" -> mem.lastViewed)
       }
-      Json.toJson(libraryCard).as[JsObject] ++ memInfo
+      // Backwards compatibility for old iOS. Check with Jeremy/Tommy before removing.
+      val shortDesc = Json.obj("shortDescription" -> libraryCard.description.getOrElse("").take(100))
+      Json.toJson(libraryCard).as[JsObject] ++ memInfo ++ shortDesc
     }.toList
 
     val libsResponse = Json.obj("libraries" -> writeableLibraryInfos)

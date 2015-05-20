@@ -595,7 +595,8 @@ class LibraryController @Inject() (
               following = None,
               membership = "none",
               caption = None,
-              modifiedAt = info.modifiedAt)
+              modifiedAt = info.modifiedAt,
+              kind = info.kind)
           }
           val t2 = System.currentTimeMillis()
           statsd.timing("libraryController.relatedLibraries", t2 - t1, 1.0)
