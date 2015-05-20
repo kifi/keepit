@@ -4,15 +4,17 @@ import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.cache._
 import com.keepit.common.core._
 import com.keepit.common.db.slick.Database
-import com.keepit.common.db.{ State, Id, SequenceNumber }
+import com.keepit.common.db.{ Id, SequenceNumber }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.{ AccessLog, Logging }
-import com.keepit.model.{ NormalizedURIStates, NormalizedURI }
-import com.keepit.rover.article.fetcher.ArticleFetcherProvider
+import com.keepit.common.time.Clock
+import com.keepit.model.{ NormalizedURI }
+import com.keepit.rover.article.fetcher.{ ArticleFetchRequest, ArticleFetcherProvider }
 import com.keepit.rover.article.policy.ArticleInfoPolicy
 import com.keepit.rover.manager.{ FetchTask, FetchTaskQueue }
 import com.keepit.rover.model._
 import com.keepit.rover.store.RoverArticleStore
+import com.keepit.common.time._
 
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ ExecutionContext, Future }
@@ -28,6 +30,7 @@ class ArticleCommander @Inject() (
     articleFetcher: ArticleFetcherProvider,
     articlePolicy: ArticleInfoPolicy,
     airbrake: AirbrakeNotifier,
+    clock: Clock,
     private implicit val executionContext: ExecutionContext) extends Logging {
 
   // Get ArticleInfos
@@ -82,6 +85,24 @@ class ArticleCommander @Inject() (
     Future.sequence(futureUriIdWithArticles).imap(_.toMap)
   }
 
+  def getOrElseFetchRecentArticle[A <: Article](url: String, recency: Duration)(implicit kind: ArticleKind[A]): Future[Option[A]] = {
+    getArticleInfoByUrlAndKind(url, kind) match {
+      case Some(info) => getOrElseFetchRecentArticle(info, recency).imap(_.map(_.asExpected[A]))
+      case None => articleFetcher.fetch(ArticleFetchRequest(kind, url)) // do not intern the url into a normalized one to make sure it's fetched as it is
+    }
+  }
+
+  private def getOrElseFetchRecentArticle(info: RoverArticleInfo, recency: Duration): Future[Option[info.A]] = {
+    val fetchedRecencyLimit = clock.now().minusSeconds(recency.toSeconds.toInt)
+    getLatestArticle(info) flatMap {
+      case oldArticleOpt if info.lastFetchedAt.isEmpty || oldArticleOpt.exists(_.createdAt.isBefore(fetchedRecencyLimit)) => { // never fetched, or fetched successfully too long ago
+        markAsFetching(info.id.get)
+        fetchAndPersist(info)
+      }
+      case recentArticleOpt => Future.successful(recentArticleOpt) // past fetch failed or fetched successfully recently enough
+    }
+  }
+
   def getOrElseFetchBestArticle[A <: Article](uriId: Id[NormalizedURI], url: String)(implicit kind: ArticleKind[A]): Future[Option[A]] = {
     val info = internArticleInfoByUri(uriId, url, Set(kind))(kind)
     getOrElseFetchBestArticle(info).imap(_.map(_.asExpected[A]))
@@ -101,6 +122,12 @@ class ArticleCommander @Inject() (
     // natural race condition with the regular ingestion, hence the 3 attempts
     db.readWrite(attempts = 3) { implicit session =>
       articleInfoRepo.internByUri(uriId, url, kinds)
+    }
+  }
+
+  private def getArticleInfoByUrlAndKind[A <: Article](url: String, kind: ArticleKind[A]): Option[RoverArticleInfo] = {
+    db.readOnlyMaster { implicit session =>
+      articleInfoRepo.getByUrlAndKind(url, kind)
     }
   }
 

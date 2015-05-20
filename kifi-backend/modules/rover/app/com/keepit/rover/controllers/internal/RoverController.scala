@@ -13,7 +13,9 @@ import com.keepit.rover.model.{ BasicImages, RoverArticleSummary, ArticleInfo }
 import play.api.libs.json._
 import play.api.mvc.Action
 import com.keepit.common.core._
+import com.keepit.common.time._
 
+import scala.concurrent.duration.Duration
 import scala.concurrent.{ ExecutionContext }
 
 class RoverController @Inject() (roverCommander: RoverCommander, articleCommander: ArticleCommander, implicit val executionContext: ExecutionContext) extends RoverServiceController with Logging {
@@ -75,6 +77,17 @@ class RoverController @Inject() (roverCommander: RoverCommander, articleCommande
     roverCommander.getOrElseFetchArticleSummaryAndImages(uriId, url)(kind).map { articleSummaryAndImagesOption =>
       implicit val writes = TupleFormat.tuple2Writes[RoverArticleSummary, BasicImages]
       val json = Json.toJson(articleSummaryAndImagesOption)
+      Ok(json)
+    }
+  }
+
+  def getOrElseFetchRecentArticle = Action.async(parse.json) { request =>
+    val url = (request.body \ "url").as[String]
+    val kind = (request.body \ "kind").as[ArticleKind[_ <: Article]]
+    val recency = (request.body \ "recency").as[Duration]
+    articleCommander.getOrElseFetchRecentArticle(url, recency)(kind).map { articleOpt =>
+      implicit val format = kind.format
+      val json = Json.toJson(articleOpt)
       Ok(json)
     }
   }

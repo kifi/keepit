@@ -10,3 +10,4 @@ POST    /internal/rover/getArticleInfosByUris       @com.keepit.rover.controller
 POST    /internal/rover/getBestArticleSummaryByUris @com.keepit.rover.controllers.internal.RoverController.getBestArticleSummaryByUris()
 POST    /internal/rover/getImagesByUris             @com.keepit.rover.controllers.internal.RoverController.getImagesByUris()
 POST    /internal/rover/getOrElseFetchArticleSummaryAndImages @com.keepit.rover.controllers.internal.RoverController.getOrElseFetchArticleSummaryAndImages()
+POST    /internal/rover/getOrElseFetchRecentArticle       @com.keepit.rover.controllers.internal.RoverController.getOrElseFetchRecentArticle()
