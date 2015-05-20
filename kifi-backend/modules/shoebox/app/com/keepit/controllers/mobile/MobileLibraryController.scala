@@ -292,6 +292,32 @@ class MobileLibraryController @Inject() (
         }
     }
   }
+  def createAnonymousInviteToLibrary(pubId: PublicId[Library]) = UserAction(parse.tolerantJson) { request =>
+    Library.decodePublicId(pubId) match {
+      case Failure(ex) =>
+        BadRequest(Json.obj("error" -> "invalid_id"))
+      case Success(id) =>
+        val access = (request.body \ "access").as[LibraryAccess]
+        val msgOpt = (request.body \ "message").asOpt[String]
+        val messageOpt = msgOpt.filter(_.nonEmpty)
+
+        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
+        libraryCommander.inviteAnonymousToLibrary(id, request.userId, access, messageOpt) match {
+          case Left(fail) => sendFailResponse(fail)
+          case Right((invite, library)) =>
+            val owner = db.readOnlyMaster { implicit s =>
+              basicUserRepo.load(library.ownerId)
+            }
+            val libraryPath = Library.formatLibraryPath(owner.username, library.slug)
+            val link = if (library.isSecret) {
+              libraryPath + "?authToken=" + invite.authToken
+            } else {
+              libraryPath
+            }
+            Ok(Json.obj("link" -> link, "access" -> invite.access, "message" -> invite.message))
+        }
+    }
+  }
 
   def joinLibrary(pubId: PublicId[Library]) = UserAction { request =>
     val idTry = Library.decodePublicId(pubId)

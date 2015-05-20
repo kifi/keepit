@@ -1009,6 +1009,7 @@ class LibraryCommander @Inject() (
     }
     val inviterIsOwner = inviterMembership.map(_.isOwner).getOrElse(false)
     val inviterIsCollab = inviterMembership.map(_.isCollaborator).getOrElse(false)
+    val collabCannotInvite = lib.whoCanInvite == Some(LibraryInvitePermissions.OWNER)
 
     if (lib.kind == LibraryKind.SYSTEM_MAIN || lib.kind == LibraryKind.SYSTEM_SECRET)
       Future.successful(Left(LibraryFail(BAD_REQUEST, "cant_invite_to_system_generated_library")))
@@ -1036,23 +1037,9 @@ class LibraryCommander @Inject() (
           }.toMap
 
           for ((recipient, inviteAccess, msgOpt) <- inviteList) yield {
-
-            inviteAccess match {
-              // non-owner/non-collaborator tries to invite to collaborate
-              case LibraryAccess.READ_WRITE if !inviterIsOwner && !inviterIsCollab =>
-                log.warn(s"[inviteUsersToLibrary] error invite to collaborate: user $inviterId attempting to invite $recipient for RW access to library (${lib.id.get}, ${lib.name}, ${lib.visibility}, ${lib.whoCanInvite})")
-                None
-              // collaborator tries to invite to collaborate, but library setting is set to owner_only
-              case LibraryAccess.READ_WRITE if inviterIsCollab && lib.whoCanInvite == Some(LibraryInvitePermissions.OWNER) =>
-                log.warn(s"[inviteUsersToLibrary] error invite to collaborate: user $inviterId attempting to invite $recipient for RW access to library (${lib.id.get}, ${lib.name}, ${lib.visibility}, ${lib.whoCanInvite})")
-                None
-              // non-owner/non-collaborator tries to invite to follow (secret libraries only)
-              case LibraryAccess.READ_ONLY if lib.isSecret && !inviterIsOwner && !inviterIsCollab =>
-                log.warn(s"[inviteUsersToLibrary] error invite to follow: user $inviterId attempting to invite $recipient for RO access to library (${lib.id.get}, ${lib.name}, ${lib.visibility}, ${lib.whoCanInvite})")
-                None
-              // collaborator in secret library tries to invite to follow, but library setting is set to owner_only
-              case LibraryAccess.READ_ONLY if lib.isSecret && inviterIsCollab && lib.whoCanInvite == Some(LibraryInvitePermissions.OWNER) =>
-                log.warn(s"[inviteUsersToLibrary] error invite to follow: user $inviterId attempting to invite $recipient for RO access to library (${lib.id.get}, ${lib.name}, ${lib.visibility}, ${lib.whoCanInvite})")
+            improperInvite(lib, inviterMembership, inviteAccess) match {
+              case Some(fail) =>
+                log.warn(s"[inviteUsersToLibrary] error: user $inviterId attempting to invite $recipient for $inviteAccess access to library (${lib.id.get}, ${lib.name}, ${lib.visibility}, ${lib.whoCanInvite})")
                 None
               case _ =>
                 recipient match {
@@ -1083,6 +1070,44 @@ class LibraryCommander @Inject() (
         libraryAnalytics.sendLibraryInvite(inviterId, lib, inviteList.map { _._1 }, eventContext)
         Right(inviteesWithAccess)
       }
+    }
+  }
+
+  def inviteAnonymousToLibrary(libraryId: Id[Library], inviterId: Id[User], access: LibraryAccess, message: Option[String])(implicit context: HeimdalContext): Either[LibraryFail, (LibraryInvite, Library)] = {
+    val (library, inviterMembershipOpt) = db.readOnlyMaster { implicit s =>
+      val library = libraryRepo.get(libraryId)
+      val membership = libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, inviterId)
+      (library, membership)
+    }
+
+    val badInvite = improperInvite(library, inviterMembershipOpt, access)
+    if (library.kind == LibraryKind.SYSTEM_MAIN || library.kind == LibraryKind.SYSTEM_SECRET) {
+      Left(LibraryFail(BAD_REQUEST, "cant_invite_to_system_generated_library"))
+    } else if (badInvite.isDefined) {
+      log.warn(s"[inviteAnonymousToLibrary] error: user $inviterId attempting to generate link invite for $access access to library (${library.id.get}, ${library.name}, ${library.visibility}, ${library.whoCanInvite})")
+      Left(badInvite.get)
+    } else {
+      val libInvite = db.readWrite { implicit s =>
+        libraryInviteRepo.save(LibraryInvite(libraryId = libraryId, inviterId = inviterId, userId = None, emailAddress = None, access = access, message = message))
+      }
+      Right((libInvite, library))
+    }
+  }
+
+  private def improperInvite(library: Library, inviterMembership: Option[LibraryMembership], access: LibraryAccess): Option[LibraryFail] = {
+    val inviterIsOwner = inviterMembership.map(_.isOwner).getOrElse(false)
+    val inviterIsCollab = inviterMembership.map(_.isCollaborator).getOrElse(false)
+    val collabCannotInvite = library.whoCanInvite == Some(LibraryInvitePermissions.OWNER)
+    if (access == LibraryAccess.READ_WRITE && !inviterIsOwner && !inviterIsCollab) { // invite to RW, but inviter is not owner or collaborator
+      Some(LibraryFail(BAD_REQUEST, "cant_invite_rw_nonowner_noncollab"))
+    } else if (access == LibraryAccess.READ_WRITE && inviterIsCollab && collabCannotInvite) { // invite to RW, but inviter is collaborator but library does not allow
+      Some(LibraryFail(BAD_REQUEST, "cant_invite_rw_noncollablib"))
+    } else if (access == LibraryAccess.READ_ONLY && library.isSecret && !inviterIsOwner && !inviterIsCollab) { // invite is RO, but library is secret & inviter is not owner or collaborator
+      Some(LibraryFail(BAD_REQUEST, "cant_invite_ro_secretlib__nonowner_noncollab"))
+    } else if (access == LibraryAccess.READ_ONLY && library.isSecret && inviterIsCollab && collabCannotInvite) { // invite is RO, but library is secret & inviter is collaborator but library does not allow
+      Some(LibraryFail(BAD_REQUEST, "cant_invite_ro_secretlib_noncollablib"))
+    } else {
+      None
     }
   }
 
