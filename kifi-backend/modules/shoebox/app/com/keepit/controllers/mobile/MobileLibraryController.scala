@@ -181,7 +181,9 @@ class MobileLibraryController @Inject() (
       if (mem.lastViewed.nonEmpty) {
         memInfo = memInfo ++ Json.obj("lastViewed" -> mem.lastViewed)
       }
-      Json.toJson(libraryCard).as[JsObject] ++ memInfo
+      // Backwards compatibility for old iOS. Check with Jeremy/Tommy before removing.
+      val shortDesc = Json.obj("shortDescription" -> libraryCard.description.getOrElse("").take(100))
+      Json.toJson(libraryCard).as[JsObject] ++ memInfo ++ shortDesc
     }.toList
 
     val libsResponse = Json.obj("libraries" -> writeableLibraryInfos)
