@@ -105,7 +105,7 @@ object Shoebox extends Service {
     def getCollectionsByUser(userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/getCollectionsByUser", Param("userId", userId))
     def getIndexable(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getIndexable", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getIndexableUris(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getIndexableUris", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
-    def getScrapedUris(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getScrapedUris", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
+    def getIndexableUrisWithContent(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getIndexableUrisWithContent", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getHighestUriSeq() = ServiceRoute(GET, "/internal/shoebox/database/getHighestUriSeq")
     def getUserIndexable(seqNum: SequenceNumber[User], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getUserIndexable", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getActiveExperiments() = ServiceRoute(GET, "/internal/shoebox/database/getActiveExperiments")

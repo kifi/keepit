@@ -871,7 +871,7 @@ GET     /internal/shoebox/database/getUriIdsInCollection @com.keepit.controllers
 GET     /internal/shoebox/database/getCollectionsByUser @com.keepit.controllers.internal.ShoeboxController.getCollectionsByUser(userId: Id[User])
 GET     /internal/shoebox/database/getIndexable       @com.keepit.controllers.internal.ShoeboxDataPipeController.getIndexable(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int)
 GET     /internal/shoebox/database/getIndexableUris   @com.keepit.controllers.internal.ShoeboxDataPipeController.getIndexableUris(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int)
-GET     /internal/shoebox/database/getScrapedUris     @com.keepit.controllers.internal.ShoeboxDataPipeController.getScrapedUris(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int)
+GET     /internal/shoebox/database/getIndexableUrisWithContent     @com.keepit.controllers.internal.ShoeboxDataPipeController.getIndexableUrisWithContent(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int)
 GET     /internal/shoebox/database/getHighestUriSeq   @com.keepit.controllers.internal.ShoeboxDataPipeController.getHighestUriSeq()
 GET     /internal/shoebox/database/getUserIndexable   @com.keepit.controllers.internal.ShoeboxDataPipeController.getUserIndexable(seqNum: SequenceNumber[User], fetchSize: Int)
 GET     /internal/shoebox/database/getUserConnectionsChanged   @com.keepit.controllers.internal.ShoeboxDataPipeController.getUserConnectionsChanged(seqNum: SequenceNumber[UserConnection], fetchSize: Int)

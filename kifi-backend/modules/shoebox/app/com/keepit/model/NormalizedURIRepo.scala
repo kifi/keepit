@@ -24,6 +24,7 @@ trait NormalizedURIRepo extends DbRepo[NormalizedURI] with ExternalIdColumnDbFun
   def allActive()(implicit session: RSession): Seq[NormalizedURI]
   def getByState(state: State[NormalizedURI], limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI]
   def getIndexable(sequenceNumber: SequenceNumber[NormalizedURI], limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI]
+  def getIndexablesWithContent(sequenceNumber: SequenceNumber[NormalizedURI], limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI]
   def getChanged(sequenceNumber: SequenceNumber[NormalizedURI], includeStates: Set[State[NormalizedURI]], limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI]
   def getIdAndSeqChanged(sequenceNumber: SequenceNumber[NormalizedURI], limit: Int = -1)(implicit session: RSession): Seq[UriIdAndSeq]
   def getCurrentSeqNum()(implicit session: RSession): SequenceNumber[NormalizedURI]
@@ -68,6 +69,12 @@ class NormalizedURIRepoImpl @Inject() (
 
   def getIndexable(sequenceNumber: SequenceNumber[NormalizedURI], limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI] = {
     super.getBySequenceNumber(sequenceNumber, limit)
+  }
+
+  def getIndexablesWithContent(sequenceNumber: SequenceNumber[NormalizedURI], limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI] = {
+    val excludeStates = Set(INACTIVE, REDIRECTED) // todo(Léo): Just include ACTIVE once other states are gone
+    val q = (for (f <- rows if f.seq > sequenceNumber && !f.state.inSet(excludeStates) && f.shouldHaveContent) yield f)
+    q.sortBy(_.seq).take(limit).list
   }
 
   def getChanged(sequenceNumber: SequenceNumber[NormalizedURI], states: Set[State[NormalizedURI]], limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI] = {
