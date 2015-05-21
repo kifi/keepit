@@ -10,6 +10,7 @@ import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick._
 import com.keepit.common.time._
 import com.keepit.common.json.TraversableFormat
+import org.joda.time.DateTime
 import scala.slick.jdbc.StaticQuery
 import com.keepit.common.db.slick.StaticQueryFixed.interpolation
 
@@ -28,6 +29,7 @@ trait UserConnectionRepo extends Repo[UserConnection] with SeqNumberFunction[Use
   def deactivateAllConnections(userId: Id[User])(implicit session: RWSession): Unit
   def getUserConnectionChanged(seq: SequenceNumber[UserConnection], fetchSize: Int)(implicit session: RSession): Seq[UserConnection]
   def getBasicUserConnection(id: Id[User])(implicit session: RSession): Seq[BasicUserConnection]
+  def getConnectionsSince(id: Id[User], since: DateTime)(implicit session: RSession): Set[Id[User]]
 }
 
 case class UnfriendedConnectionsKey(userId: Id[User]) extends Key[Set[Id[User]]] {
@@ -147,6 +149,13 @@ class UserConnectionRepoImpl @Inject() (
       ((for (c <- rows if c.user1 === id && c.state === UserConnectionStates.ACTIVE) yield c.user2) union
         (for (c <- rows if c.user2 === id && c.state === UserConnectionStates.ACTIVE) yield c.user1)).list.toSet
     }
+  }
+
+  def getConnectionsSince(id: Id[User], since: DateTime)(implicit session: RSession): Set[Id[User]] = {
+    val query = sql"""select user_1 from user_connection where user_2 = $id and state = 'active' and created_at >= $since union
+      select user_2 from user_connection where user_1 = $id and state = 'active' and created_at >= $since"""
+    val result = query.as[Id[User]].list.toSet
+    result
   }
 
   def getBasicUserConnection(id: Id[User])(implicit session: RSession): Seq[BasicUserConnection] = {

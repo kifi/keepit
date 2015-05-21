@@ -141,7 +141,5 @@ class FakeHeimdalServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   def getReKeepCountsByKeepIds(userId: Id[User], keepIds: Set[Id[Keep]]): Future[Seq[KeepReKeptCount]] = rekeepRepoAccess.getReKeepCountsByKeepIds(userId, keepIds)
   def getReKeepCountsByURIs(uriIds: Set[Id[NormalizedURI]]): Future[Seq[URIReKeepCount]] = rekeepRepoAccess.getReKeepCountsByURIs(uriIds)
   def getReKeepCountsByUserUri(userId: Id[User], uriId: Id[NormalizedURI]): Future[(Int, Int)] = rekeepRepoAccess.getReKeepCountsByUserUri(userId, uriId)
-  def getOwnerLibraryViewStats(ownerId: Id[User]): Future[(Int, Map[Id[Library], Int])] = ???
-
+  def getOwnerLibraryViewStats(ownerId: Id[User]): Future[(Int, Map[Id[Library], Int])] = Future.successful((5, Map(Id[Library](1) -> 5)))
 }
-

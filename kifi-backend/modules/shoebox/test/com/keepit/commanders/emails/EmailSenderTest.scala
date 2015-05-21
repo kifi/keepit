@@ -646,4 +646,37 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
     }
   }
 
+  "GratificationEmailSender" should {
+
+    "send an email to a user" in {
+      withDb(modules: _*) { implicit injector =>
+        val outbox = inject[FakeOutbox]
+        val userRepo = inject[UserRepo]
+        val connectionRepo = inject[UserConnectionRepo]
+        val libMemRepo = inject[LibraryMembershipRepo]
+        val libraryRepo = inject[LibraryRepo]
+        val sender = inject[GratificationEmailSender]
+
+        val toEmail = EmailAddress("superman@dc.com")
+        val (user1, user2) = db.readWrite { implicit s =>
+          val user1 = userRepo.save(User(firstName = "Clark", lastName = "Kent", username = Username("ckent"), normalizedUsername = "ckent", primaryEmail = Some(toEmail)))
+          val user2 = userRepo.save(User(firstName = "Bruce", lastName = "Wayne", username = Username("bwayne"), normalizedUsername = "bwayne"))
+          connectionRepo.addConnections(user1.id.get, Set(user2.id.get))
+          val lib = libraryRepo.save(Library(name = "Favorite Comic Books", ownerId = user1.id.get, visibility = LibraryVisibility.PUBLISHED, slug = LibrarySlug("comics"), memberCount = 1))
+          libMemRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user1.id.get, access = LibraryAccess.READ_ONLY))
+          (user1, user2)
+        }
+        val email = Await.result(sender.sendToUser(user1.id.get, Some(toEmail)), Duration(5, "seconds"))
+
+        val html = email.htmlBody.value
+        html must contain("Hey Clark,")
+        html must contain("Bruce Wayne")
+        html must contain("Favorite Comic Books")
+        html must not contain ("0 views")
+        html must not contain ("0 followers")
+        html must not contain ("0 connections")
+      }
+    }
+  }
+
 }

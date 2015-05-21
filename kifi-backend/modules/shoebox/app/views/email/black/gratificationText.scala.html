@@ -1,0 +1,26 @@
+@(userId: Id[User],
+libViews: com.keepit.commanders.emails.GratificationCommander.LibraryCountData,
+libFollowers: com.keepit.commanders.emails.GratificationCommander.LibraryCountData,
+newConnections: Seq[Id[User]])
+@import com.keepit.common.mail.template.helpers._
+@singularOrPlural(word: String, quantity: Int) = @{ quantity match { case 1 => word; case _ => word + "s" } }
+Hey @firstName(userId), look at how well you've done on Kifi this week!
+@if(libViews.totalCount >= 5) {
+You had @{libViews.totalCount} views across all of your libraries:
+    @for((libId, viewCount) <- libViews.countByLibrary) {
+    @viewCount @singularOrPlural("view", viewCount) on @libraryName(libId)
+    }
+}
+@if(libFollowers.totalCount >= 1) {
+You had @libFollowers.totalCount new @singularOrPlural("follower", libFollowers.totalCount) across all of your libraries:
+    @for((libId, followCount) <- libFollowers.countByLibrary) {
+    @followCount new @singularOrPlural("follower", followCount) on @libraryName(libId)
+    }
+}
+@if(newConnections.length >= 1) {
+You made @newConnections.length new @singularOrPlural("connection", newConnections.length):
+    @for(userId <- newConnections) {
+    @fullName(userId)
+    }
+Share a library with them :)
+}
