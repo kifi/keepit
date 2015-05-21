@@ -28,8 +28,7 @@ class GratificationCommander @Inject() (
     heimdal: HeimdalServiceClient) {
 
   private val NUM_WEEKS_BACK = 1
-  val EXPERIMENT_DEPLOY = true
-  // only send emails to users with the GRATIFICATION_EMAIL experiment
+  val EXPERIMENT_DEPLOY = true // only send emails to users with the GRATIFICATION_EMAIL experiment
   val MIN_FOLLOWERS = 1
   val MIN_VIEWS = 5
   val MIN_CONNECTIONS = 1
