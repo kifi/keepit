@@ -21,8 +21,8 @@ class GithubArticleFetcher @Inject() (
     ArticleFetcher.fetchAndCompare(request, articleStore)(doFetch)
   }
 
-  private def doFetch(url: String, ifModifiedSince: Option[DateTime])(implicit ec: ExecutionContext): Future[FetchResult[GithubArticle]] = {
-    documentFetcher.fetchJsoupDocument(url, ifModifiedSince).map { result =>
+  private def doFetch(url: String, ifModifiedSince: Option[DateTime], shouldThrottle: Boolean)(implicit ec: ExecutionContext): Future[FetchResult[GithubArticle]] = {
+    documentFetcher.fetchJsoupDocument(url, ifModifiedSince, shouldThrottle).map { result =>
       result.map { doc =>
         val content = GithubContent(
           destinationUrl = result.context.request.destinationUrl,
