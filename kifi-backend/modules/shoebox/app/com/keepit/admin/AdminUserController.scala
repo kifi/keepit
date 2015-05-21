@@ -9,7 +9,7 @@ import scala.util.{ Try }
 
 import com.google.inject.Inject
 import com.keepit.abook.ABookServiceClient
-import com.keepit.commanders.{ AuthCommander, UserCommander, LibraryCommander }
+import com.keepit.commanders.{ UsernameOps, AuthCommander, UserCommander, LibraryCommander }
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.{ AdminUserActions, UserActionsHelper, UserRequest }
 import com.keepit.common.db._
@@ -891,7 +891,10 @@ class AdminUserController @Inject() (
           kifiInstallationRepo.all(userId).foreach { installation => kifiInstallationRepo.save(installation.withState(KifiInstallationStates.INACTIVE)) } // Kifi Installations
           userCredRepo.findByUserIdOpt(userId).foreach { userCred => userCredRepo.save(userCred.copy(state = UserCredStates.INACTIVE)) } // User Credentials
           emailRepo.getAllByUser(userId).foreach { email => emailRepo.save(email.withState(UserEmailAddressStates.INACTIVE)) } // Email addresses
-          userRepo.save(userRepo.get(userId).withState(UserStates.INACTIVE).copy(primaryEmail = None)) // User
+
+          val user = userRepo.get(userId)
+          val newUsername = user.externalId.id // setting old username to something random (UUID should work here)
+          userRepo.save(user.withState(UserStates.INACTIVE).copy(primaryEmail = None, username = Username(newUsername), normalizedUsername = UsernameOps.normalize(newUsername))) // User
           usernameAliasRepo.getByUserId(userId).foreach { alias => // Usernames
             usernameAliasRepo.reclaim(alias.username, Some(userId))
           }
