@@ -241,12 +241,10 @@ followerPicDiam = 2.2em
   &:hover:active
     opacity: 1
 
-.kf-lh-subscribed-btn
+.kf-lh-subscribe-btn-wrap
+  display: inline-block
   vertical-align: bottom
-  padding: 0
-  outline: none
-  background: none
-  border: none
+  position: relative // for .kf-lh-subscribed-msg
   opacity: .7
 
   &.for-owner
@@ -255,31 +253,31 @@ followerPicDiam = 2.2em
   &:hover
     opacity: .85
 
-.kf-lh-subscribed-icon
+.kf-lh-subscribe-btn
   width: 1.8em
   height: 2em
+  border: 0
+  padding: 0
+  background-color: transparent
   background-size: contain
   background-repeat: no-repeat
 
   &.svg-notification-off-white
     background-position: right
 
-.kf-lh-notifications-msg
+.kf-lh-subscribe-msg
   position: absolute
+  left: 140%
   top: 50%
   transform: translateY(-50%)
-  margin-left: 20px
   padding: 2px 7px 3px
   border-radius: 2px
   background-color: #fff
   font-size: 13px
+  line-height: 17px
   color: #3e4955
+  white-space: nowrap
   transition: opacity linear .1s, visibility .1s
-
-  &.kf-lh-enabled::before
-    content: 'Notifications enabled'
-  &.kf-lh-disabled::before
-    content: 'Notifications disabled'
 
   :not(:hover)+&
     opacity: 0
@@ -868,12 +866,16 @@ collabImageDiam2 = 3.6em
   padding-top: 1.8em
   text-align: center
 
+bottomBtnsRadius = 12px
+followBtnWidth = 10em
+subsBtnPct = 25%
+
 .kf-lh-follow-btn
 .kf-lh-unfollow-btn
 .kf-lh-buttons .library-share-button
   background-color: transparent
   background-image: none
-  border-radius: 12px
+  border-radius: bottomBtnsRadius
 
   &:hover
     background-color: alpha(#fff, .5)
@@ -888,20 +890,29 @@ collabImageDiam2 = 3.6em
   position: relative // for .kf-lh-fbc
 
 .kf-lh-follow-btn
-.kf-lh-unfollow-btn
-  width: 8em
-
-.kf-lh-follow-btn
-  border-color: #008aee
-  color: #008aee
+  box-sizing: border-box
+  width: followBtnWidth
+  border-color: followBlue
+  color: followBlue
   position: relative  // to stack in front of its hover callout
 
+.kf-lh-unfollow-btn-wrap
+  display: inline-block
+  vertical-align: top
+  width: followBtnWidth
+  font-size: 13px  // same size as .kf-lh-follow-btn (a .kf-button)
+  position: relative // for .kf-lh-subs-msg
+
 .kf-lh-unfollow-btn
+  border-radius: bottomBtnsRadius 0 0 bottomBtnsRadius
   border-color: #20a1f1
   color: #20a1f1
+  box-sizing: border-box
+  width: 100% - subsBtnPct
 
   &::after
     content: 'Following'
+    padding-left: .3em
 
   &:not(.kf-no-unfollow):hover
     border-color: redColor
@@ -909,6 +920,47 @@ collabImageDiam2 = 3.6em
     &::after
       content: 'Unfollow'
       color: redColor
+
+.kf-lh-subs-btn
+  box-sizing: border-box
+  width: subsBtnPct
+  border-radius: 0 bottomBtnsRadius bottomBtnsRadius 0
+  border-color: transparent
+  background-color: followBlue
+  background-position: right 0.64em center
+  background-size: 1.1em 1.01em
+  background-repeat: no-repeat
+  padding: 0
+
+  &.svg-notification-off-white
+    background-position: right 0.62em center
+
+  &:hover
+    background-color: tint(followBlue, 5%)
+
+    &:active
+      background-color: shade(followBlue, 2%)
+
+  :not(.kf-no-unfollow):hover+&
+    background-color: redColor
+
+.kf-lh-subs-msg
+  position: absolute
+  bottom: 120%
+  left: 50%
+  transform: translate(-50%)
+  padding: 2px 7px 3px
+  border-radius: 2px
+  background-color: #fff
+  color: #3e4955
+  font-size: 13px
+  white-space: nowrap
+  box-shadow: 0 1px 3px rgba(0,0,0,.2)
+  transition: opacity linear .1s, visibility .1s
+
+  :not(:hover)+&
+    opacity: 0
+    visibility: hidden
 
 .kf-lh-buttons
   .kf-library-share-search
