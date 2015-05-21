@@ -12,6 +12,7 @@ import com.keepit.common.service.{ ServiceType, ServiceClient }
 import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.model.{ NormalizedURI }
 import com.keepit.rover.article.{ ArticleKind, Article }
+import com.keepit.rover.document.utils.Signature
 import com.keepit.rover.model._
 import play.api.libs.json.Json
 import com.keepit.common.core._
@@ -31,6 +32,7 @@ trait RoverServiceClient extends ServiceClient {
   def getUriSummaryByUris(uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], RoverUriSummary]]
   def getOrElseFetchUriSummary(uriId: Id[NormalizedURI], url: String): Future[Option[RoverUriSummary]] // slow, prefer getUriSummaryByUris
   def getOrElseFetchRecentArticle[A <: Article](url: String, recency: Duration)(implicit kind: ArticleKind[A]): Future[Option[A]] // slow
+  def getOrElseComputeRecentContentSignature[A <: Article](url: String, recency: Duration)(implicit kind: ArticleKind[A]): Future[Option[Signature]] // slow
 }
 
 class RoverServiceClientImpl(
@@ -174,6 +176,17 @@ class RoverServiceClientImpl(
     )
     call(Rover.internal.getOrElseFetchRecentArticle, payload, callTimeouts = longTimeout).map { r =>
       r.json.asOpt(kind.format)
+    }
+  }
+
+  def getOrElseComputeRecentContentSignature[A <: Article](url: String, recency: Duration)(implicit kind: ArticleKind[A]): Future[Option[Signature]] = {
+    val payload = Json.obj(
+      "url" -> url,
+      "kind" -> kind,
+      "recency" -> recency
+    )
+    call(Rover.internal.getOrElseComputeRecentContentSignature, payload, callTimeouts = longTimeout).map { r =>
+      r.json.asOpt[Signature]
     }
   }
 }

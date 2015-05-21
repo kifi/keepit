@@ -8,7 +8,7 @@ import com.keepit.rover.article._
 import com.keepit.rover.article.content.LinkedInProfile
 
 @Singleton
-class ArticleInfoPolicy @Inject() () {
+class ArticleFetchPolicy @Inject() () {
 
   def toBeInterned(uri: IndexableUri): Set[ArticleKind[_ <: Article]] = {
     uri.state match {
@@ -27,7 +27,7 @@ class ArticleInfoPolicy @Inject() () {
 
   def toBeInterned(url: String): Set[ArticleKind[_ <: Article]] = Set(EmbedlyArticle) ++ toBeScraped(url)
 
-  private def toBeScraped(url: String): Option[ArticleKind[_ <: Article]] = URI.parse(url).toOption.map {
+  def toBeScraped(url: String): Option[ArticleKind[_ <: Article]] = URI.parse(url).toOption.map {
     case URI(_, _, Some(Host("com", "youtube", _*)), _, Some(path), Some(query), _) if path.endsWith("/watch") && query.containsParam("v") => YoutubeArticle
     case URI(_, _, Some(Host("com", "github", _*)), _, Some(path), Some(query), _) => GithubArticle
     case URI(_, _, Some(Host("com", "linkedin", _*)), _, Some(path), Some(query), _) if LinkedInProfile.url.findFirstIn(url).isDefined => LinkedInProfileArticle

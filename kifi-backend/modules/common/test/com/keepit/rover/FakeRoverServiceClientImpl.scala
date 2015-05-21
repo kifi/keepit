@@ -6,6 +6,7 @@ import com.keepit.common.net.HttpClient
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.model.NormalizedURI
 import com.keepit.rover.article.{ ArticleKind, Article }
+import com.keepit.rover.document.utils.Signature
 import com.keepit.rover.model._
 import com.keepit.common.core._
 
@@ -37,4 +38,5 @@ class FakeRoverServiceClientImpl(
   }
   def getOrElseFetchUriSummary(uriId: Id[NormalizedURI], url: String): Future[Option[RoverUriSummary]] = Future.successful(articleSummariesByUri.get(uriId))
   def getOrElseFetchRecentArticle[A <: Article](url: String, recency: Duration)(implicit kind: ArticleKind[A]): Future[Option[A]] = Future.successful(None)
+  def getOrElseComputeRecentContentSignature[A <: Article](url: String, recency: Duration)(implicit kind: ArticleKind[A]): Future[Option[Signature]] = Future.successful(None)
 }

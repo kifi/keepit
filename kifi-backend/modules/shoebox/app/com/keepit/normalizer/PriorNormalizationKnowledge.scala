@@ -1,9 +1,10 @@
 package com.keepit.normalizer
 
 import com.keepit.common.net.URI
-import com.keepit.model.{ UrlPatternRulesCommander, UrlPatternRuleRepo }
+import com.keepit.model.{ UrlPatternRulesCommander }
+import com.keepit.rover.RoverServiceClient
+import com.keepit.rover.article.policy.ArticleFetchPolicy
 import com.keepit.rover.document.utils.Signature
-import com.keepit.scraper.ScrapeScheduler
 import com.google.inject.{ Inject, Singleton }
 import scala.util.{ Failure, Try }
 
@@ -12,8 +13,8 @@ case class PrenormalizationException(cause: Throwable) extends Exception(cause)
 @Singleton
 class PriorNormalizationKnowledge @Inject() (
     urlPatternRules: UrlPatternRulesCommander,
-    scraperPlugin: ScrapeScheduler) {
-  implicit val scraper = scraperPlugin
+    implicit val rover: RoverServiceClient,
+    implicit val articlePolicy: ArticleFetchPolicy) {
 
   def prenormalize(uriString: String): Try[String] = {
     URI.parse(uriString).flatMap { parsedUri =>

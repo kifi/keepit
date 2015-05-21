@@ -8,7 +8,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.model.{ Name, IndexableUri, SystemValueRepo, NormalizedURI }
-import com.keepit.rover.article.policy.ArticleInfoPolicy
+import com.keepit.rover.article.policy.ArticleFetchPolicy
 import com.keepit.rover.model.ArticleInfoRepo
 import com.keepit.shoebox.ShoeboxServiceClient
 
@@ -25,7 +25,7 @@ class RoverArticleInfoIngestionActor @Inject() (
     articleInfoRepo: ArticleInfoRepo,
     systemValueRepo: SystemValueRepo,
     shoebox: ShoeboxServiceClient,
-    articlePolicy: ArticleInfoPolicy,
+    articlePolicy: ArticleFetchPolicy,
     fetchSchedulingActor: ActorInstance[RoverFetchSchedulingActor],
     airbrake: AirbrakeNotifier,
     implicit val executionContext: ExecutionContext) extends BatchProcessingActor[IndexableUri](airbrake) with Logging {

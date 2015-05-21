@@ -10,6 +10,7 @@ import com.keepit.rover.article.ArticleInfoUriCache
 import com.keepit.rover.document.{ RecentFetches, RecentFetchesDomainCache }
 import com.keepit.rover.model.{ RoverArticleImagesCache, RoverArticleSummaryCache, RoverHttpProxyAllCache }
 import com.keepit.rover.sensitivity.UriSensitivityCache
+import com.keepit.rover.store.UrlContentSignatureCache
 import com.keepit.shoebox.model.KeepImagesCache
 import com.keepit.social.BasicUserUserIdCache
 import com.keepit.search.{ ArticleSearchResultCache, InitialSearchIdCache, ActiveExperimentsCache }
@@ -203,4 +204,8 @@ case class RoverCacheModule(cachePluginModules: CachePluginModule*) extends Cach
   @Provides @Singleton
   def keepImagesCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new KeepImagesCache(stats, accessLog, (outerRepo, 30 days))
+
+  @Provides @Singleton
+  def urlSignatureCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new UrlContentSignatureCache(stats, accessLog, (innerRepo, 5 minutes), (outerRepo, 30 days))
 }
