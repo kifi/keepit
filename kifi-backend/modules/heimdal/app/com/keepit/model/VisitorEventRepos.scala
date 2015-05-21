@@ -16,7 +16,7 @@ trait VisitorEventLoggingRepo extends EventRepo[VisitorEvent]
 
 class ProdVisitorEventLoggingRepo(val collection: BSONCollection, val mixpanel: MixpanelClient, val descriptors: VisitorEventDescriptorRepo, protected val airbrake: AirbrakeNotifier)
     extends MongoEventRepo[VisitorEvent] with VisitorEventLoggingRepo {
-  val warnBufferSize = 500
+  val warnBufferSize = 2000
   val maxBufferSize = 10000
 
   def toBSON(event: VisitorEvent): BSONDocument = BSONDocument(EventRepo.eventToBSONFields(event))
