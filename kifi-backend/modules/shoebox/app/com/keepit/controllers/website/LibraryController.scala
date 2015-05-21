@@ -197,26 +197,31 @@ class LibraryController @Inject() (
     }
   }
 
-  def getUserByIdOrEmail(json: JsValue): Option[Either[Id[User], EmailAddress]] = {
-    (json \ "type").as[String] match {
-      case "user" if userRepo.getOpt((json \ "invitee").as[ExternalId[User]]).nonEmpty =>
-        Some(Left(userRepo.getOpt((json \ "invitee").as[ExternalId[User]]).get.id.get))
-      case "email" => Some(Right((json \ "invitee").as[EmailAddress]))
-      case _ => None
+  def getUserByIdOrEmail(json: JsValue): Either[Either[Id[User], EmailAddress], String] = {
+    db.readOnlyMaster { implicit s =>
+      (json \ "type").as[String] match {
+        case "user" =>
+          userRepo.getOpt((json \ "invitee").as[ExternalId[User]]) match {
+            case Some(user) => Left(Left(user.id.get))
+            case None => Right("user does not exist with externalId")
+          }
+        case "email" => Left(Right((json \ "invitee").as[EmailAddress]))
+        case _ => Right("invalid invitee type (one of 'user' or 'email' required)")
+      }
     }
   }
 
   def revokeLibraryInvitation(publicLibraryId: PublicId[Library]) = UserAction.async(parse.tolerantJson) { request =>
-    Library.decodePublicId(publicLibraryId) match  {
+    Library.decodePublicId(publicLibraryId) match {
       case Failure(ex) => Future.successful(BadRequest(Json.obj("error" -> "invalid_library_id")))
       case Success(libraryId) =>
         getUserByIdOrEmail(request.body) match {
-          case Some(invitee) =>
+          case Left(invitee) =>
             libraryCommander.revokeInvitationToLibrary(libraryId, request.userId, invitee) match {
-              case Left(ok) => Future.successful(Ok(ok))
+              case Left(ok) => Future.successful(NoContent)
               case Right(error) => Future.successful(BadRequest(Json.obj(error._1 -> error._2)))
             }
-          case None => Future.successful(BadRequest(Json.obj("error" -> "invalid_invitee_type")))
+          case Right(error) => Future.successful(BadRequest(Json.obj("error" -> error)))
         }
     }
   }

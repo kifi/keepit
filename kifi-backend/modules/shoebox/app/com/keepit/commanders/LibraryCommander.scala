@@ -1003,13 +1003,19 @@ class LibraryCommander @Inject() (
 
   def revokeInvitationToLibrary(libraryId: Id[Library], inviterId: Id[User], invitee: Either[Id[User], EmailAddress]): Either[String, Tuple2[String, String]] = {
     val libraryInvite: Option[LibraryInvite] = invitee match {
-      case id: Id[User] => libraryInviteRepo.getLastSentByLibraryIdAndInviterIdAndUserId(libraryId, inviterId, id, Set(LibraryInviteStates.ACTIVE))
-      case email: EmailAddress => libraryInviteRepo.getLastSentByLibraryIdAndInviterIdAndEmail(libraryId, inviterId, email, Set(LibraryInviteStates.ACTIVE))
+      case Left(id) => db.readOnlyMaster { implicit s =>
+        libraryInviteRepo.getLastSentByLibraryIdAndInviterIdAndUserId(libraryId, inviterId, id, Set(LibraryInviteStates.ACTIVE))
+      }
+      case Right(email) => db.readOnlyMaster { implicit s =>
+        libraryInviteRepo.getLastSentByLibraryIdAndInviterIdAndEmail(libraryId, inviterId, email, Set(LibraryInviteStates.ACTIVE))
+      }
     }
     libraryInvite match {
-      case Some(_) => libraryInviteRepo.delete(_) match {
-        case x if x > 0 => Left("successfully deleted library invite")
-        case _ => Right("error" -> "could not delete library invite")
+      case Some(toDelete) => db.readWrite(attempts = 3) { implicit s =>
+        libraryInviteRepo.delete(toDelete) match {
+          case x if x > 0 => Left("successfully deleted library invite")
+          case _ => Right("error" -> "could not delete library invite")
+        }
       }
       case _ => Right("error" -> "could not find library invite to delete")
     }
