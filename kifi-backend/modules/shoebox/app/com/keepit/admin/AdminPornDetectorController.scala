@@ -5,8 +5,7 @@ import com.keepit.rover.RoverServiceClient
 import play.api.libs.iteratee.{ Concurrent, Enumerator }
 import play.api.libs.json.Json
 
-import scala.concurrent.{ ExecutionContext, Await }
-import scala.concurrent.duration.DurationInt
+import scala.concurrent.ExecutionContext
 import com.google.inject.Inject
 import com.keepit.common.controller.{ UserActionsHelper, AdminUserActions }
 import com.keepit.common.db.Id
@@ -34,14 +33,15 @@ class AdminPornDetectorController @Inject() (
     Ok(html.admin.pornDetector())
   }
 
-  def detect() = AdminUserPage { implicit request =>
+  def detect() = AdminUserPage.async { implicit request =>
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val text = body.get("query").get
     val numBlocks = tokenize(text).sliding(10, 10).size
-    val badTexts = Await.result(rover.detectPorn(text), 15 seconds)
-    val badInfo = badTexts.map { x => x._1 + " ---> " + x._2 }.mkString("\n")
-    val msg = if (badTexts.size == 0) "input text is clean" else s"${badTexts.size} out of ${numBlocks} blocks look suspicious:\n" + badInfo
-    Ok(msg.replaceAll("\n", "\n<br>"))
+    rover.detectPorn(text).map { badTexts =>
+      val badInfo = badTexts.map { x => x._1 + " ---> " + x._2 }.mkString("\n")
+      val msg = if (badTexts.size == 0) "input text is clean" else s"${badTexts.size} out of ${numBlocks} blocks look suspicious:\n" + badInfo
+      Ok(msg.replaceAll("\n", "\n<br>"))
+    }
   }
 
   def pornUrisView(page: Int, publicOnly: Boolean) = AdminUserPage { implicit request =>
@@ -85,11 +85,12 @@ class AdminPornDetectorController @Inject() (
     Ok(s"${ids.size} uris' adult restriction removed")
   }
 
-  def whitelist() = AdminUserPage { implicit request =>
+  def whitelist() = AdminUserPage.async { implicit request =>
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val whitelist = body.get("whitelist").get
-    val cleaned = Await.result(rover.whitelist(whitelist), 5 seconds)
-    Ok(s"following words are cleaned: " + cleaned)
+    rover.whitelist(whitelist).map { cleaned =>
+      Ok(s"following words are cleaned: " + cleaned)
+    }
   }
 
   def getPornDetectorModel = AdminUserPage.async { implicit request =>
