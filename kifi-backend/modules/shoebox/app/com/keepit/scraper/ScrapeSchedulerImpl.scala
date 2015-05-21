@@ -24,7 +24,9 @@ class ScrapeSchedulerImpl @Inject() (
   scraperClient: ScraperServiceClient) //only on leader
     extends ScrapeScheduler with Logging {
 
-  def scheduleScrape(uri: NormalizedURI, date: DateTime)(implicit session: RWSession): Unit = scrapeInfoRepo.scheduleScrape(uri, date)
+  def scheduleScrape(uri: NormalizedURI, date: DateTime)(implicit session: RWSession): Unit = {
+    // scrapeInfoRepo.scheduleScrape(uri, date)
+  }
 
   @inline private def sanityCheck(url: String): Boolean = {
     val parseUriTr = Try(java.net.URI.create(url)) // java.net.URI needed for current impl of HttpFetcher
