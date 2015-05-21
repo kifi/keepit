@@ -172,37 +172,41 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
           s"""
             {
               "library" : {
-              "id" : "${pubLib1.id}",
-              "name" : "Krabby Patty",
-              "visibility" : "secret",
-              "slug" : "krabby-patty",
-              "url" : "/spongebob/krabby-patty",
-              "image":{
-                "path":"library/26dbdc56d54dbc94830f7cfc85031481_66x38_o.png",
-                "x":50,
-                "y":50
+                "id" : "${pubLib1.id}",
+                "name" : "Krabby Patty",
+                "visibility" : "secret",
+                "slug" : "krabby-patty",
+                "url" : "/spongebob/krabby-patty",
+                "image":{
+                  "path":"library/26dbdc56d54dbc94830f7cfc85031481_66x38_o.png",
+                  "x":50,
+                  "y":50
+                },
+                "kind" : "user_created",
+                "owner" : {
+                  "id" : "${user1.externalId}",
+                  "firstName" : "Spongebob",
+                  "lastName": "Squarepants",
+                  "pictureName":"0.jpg",
+                  "username":"spongebob"
+                },
+                "followers" : [],
+                "collaborators":[],
+                "keeps" : [],
+                "numKeeps" : 0,
+                "numCollaborators" : 0,
+                "numFollowers" : 0,
+                "whoCanInvite": "collaborator",
+                "modifiedAt": ${lib1Updated.updatedAt.getMillis},
+                "membership":{
+                  "access" : "owner",
+                  "listed" : true,
+                  "subscription" : false
+                },
+                "invite":null
               },
-              "kind" : "user_created",
-              "owner" : {
-                "id" : "${user1.externalId}",
-                "firstName" : "Spongebob",
-                "lastName": "Squarepants",
-                "pictureName":"0.jpg",
-                "username":"spongebob"
-              },
-              "followers" : [],
-              "collaborators":[],
-              "keeps" : [],
-              "numKeeps" : 0,
-              "numCollaborators" : 0,
-              "numFollowers" : 0,
-              "whoCanInvite": "collaborator",
-              "modifiedAt": ${lib1Updated.updatedAt.getMillis}
-              },
-              "membership" : "owner",
-              "subscribedToUpdates":false
-            }
-          """)
+              "membership" : "owner"
+            }""")
       }
     }
 
@@ -224,39 +228,44 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
         contentType(result1) must beSome("application/json")
         Json.parse(contentAsString(result1)) === Json.parse(
           s"""
-             |{
-             |  "library" : {
-             |    "id" : "${pubLib1.id}",
-             |    "name" : "Krabby Patty",
-             |    "visibility" : "secret",
-             |    "slug" : "krabby-patty",
-             |    "url" : "/spongebob/krabby-patty",
-             |    "image":{
-             |        "path":"library/26dbdc56d54dbc94830f7cfc85031481_66x38_o.png",
-             |        "x":50,
-             |        "y":50
-             |      },
-             |    "kind" : "user_created",
-             |    "owner" : {
-             |      "id" : "${user1.externalId}",
-             |      "firstName" : "Spongebob",
-             |      "lastName": "Squarepants",
-             |      "pictureName":"0.jpg",
-             |      "username":"spongebob"
-             |    },
-             |    "followers" : [],
-             |    "collaborators":[],
-             |    "keeps" : [],
-             |    "numKeeps" : 0,
-             |    "numCollaborators" : 0,
-             |    "numFollowers" : 0,
-             |    "whoCanInvite": "collaborator",
-             |    "modifiedAt": ${lib1Updated.updatedAt.getMillis}
-             |  },
-             |  "membership" : "owner",
-             |"subscribedToUpdates":false
-             |}
-           """.stripMargin)
+             {
+               "library" : {
+                 "id" : "${pubLib1.id}",
+                 "name" : "Krabby Patty",
+                 "visibility" : "secret",
+                 "slug" : "krabby-patty",
+                 "url" : "/spongebob/krabby-patty",
+                 "image":{
+                     "path":"library/26dbdc56d54dbc94830f7cfc85031481_66x38_o.png",
+                     "x":50,
+                     "y":50
+                   },
+                 "kind" : "user_created",
+                 "owner" : {
+                   "id" : "${user1.externalId}",
+                   "firstName" : "Spongebob",
+                   "lastName": "Squarepants",
+                   "pictureName":"0.jpg",
+                   "username":"spongebob"
+                 },
+                 "followers" : [],
+                 "collaborators":[],
+                 "keeps" : [],
+                 "numKeeps" : 0,
+                 "numCollaborators" : 0,
+                 "numFollowers" : 0,
+                 "whoCanInvite": "collaborator",
+                 "modifiedAt": ${lib1Updated.updatedAt.getMillis},
+                 "membership":{
+                   "access" : "owner",
+                   "listed" : true,
+                   "subscription" : false
+                 },
+                 "invite" : null
+               },
+               "membership" : "owner"
+             }
+           """)
 
         // test retrieving persona library
         val personaLib = db.readWrite { implicit s =>

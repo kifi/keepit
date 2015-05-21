@@ -9,6 +9,8 @@ import com.keepit.common.logging.AccessLog
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.time._
 import com.keepit.shoebox.Words
+import com.keepit.social.BasicUser
+import com.kifi.macros.json
 import org.apache.commons.lang3.RandomStringUtils
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
@@ -61,6 +63,13 @@ object LibraryInvite extends ModelWithPublicIdCompanion[LibraryInvite] {
 
   implicit def ord: Ordering[LibraryInvite] = new Ordering[LibraryInvite] {
     def compare(x: LibraryInvite, y: LibraryInvite): Int = x.access.priority compare y.access.priority
+  }
+}
+
+@json case class LibraryInviteInfo(inviter: BasicUser, access: LibraryAccess, message: Option[String], lastInvite: DateTime)
+object LibraryInviteInfo {
+  def createInfo(invite: LibraryInvite, inviter: BasicUser): LibraryInviteInfo = {
+    LibraryInviteInfo(inviter, invite.access, invite.message, invite.createdAt)
   }
 }
 

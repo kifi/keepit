@@ -117,13 +117,16 @@ class MobileLibraryController @Inject() (
     val libraryId = Library.decodePublicId(pubId).get
     val idealSize = imageSize.flatMap { s => Try(ImageSize(s)).toOption }.getOrElse(MobileLibraryController.defaultLibraryImageSize)
     libraryCommander.getLibraryById(userIdOpt, false, libraryId, idealSize, viewerId) map { libInfo =>
-      val memOpt = libraryCommander.getMaybeMembership(userIdOpt, libraryId)
-      val accessStr = memOpt.map(_.access.value).getOrElse("none")
-      val subscribedToUpdates = memOpt.map(_.subscribedToUpdates).getOrElse(false)
       val editedLibInfo = libInfo.copy(keeps = libInfo.keeps.map { k =>
         k.copy(note = Hashtags.formatMobileNote(k.note, v1))
       })
-      Ok(Json.obj("library" -> Json.toJson(editedLibInfo), "membership" -> accessStr, "subscribedToUpdates" -> subscribedToUpdates))
+
+      val (membershipOpt, inviteOpt) = libraryCommander.createViewerInfo(userIdOpt, libraryId)
+      val accessStr = membershipOpt.map(_.access).getOrElse("none")
+      val membershipJson = Json.toJson(membershipOpt)
+      val inviteJson = Json.toJson(inviteOpt)
+      val libraryJson = Json.toJson(editedLibInfo).as[JsObject] + ("membership" -> membershipJson) + ("invite" -> inviteJson)
+      Ok(Json.obj("library" -> libraryJson, "membership" -> accessStr)) // todo: remove membership once it's not being used
     }
   }
 
@@ -142,13 +145,15 @@ class MobileLibraryController @Inject() (
           request.userIdOpt.foreach { userId => libraryCommander.updateLastView(userId, library.id.get) }
           val idealSize = imageSize.flatMap { s => Try(ImageSize(s)).toOption }.getOrElse(MobileLibraryController.defaultLibraryImageSize)
           libraryCommander.createFullLibraryInfo(request.userIdOpt, false, library, idealSize).map { libInfo =>
-            val memOpt = libraryCommander.getMaybeMembership(request.userIdOpt, library.id.get)
-            val subscribedToUpdates = memOpt.exists(_.subscribedToUpdates)
-            val accessStr = memOpt.map(_.access.value).getOrElse("none")
             val editedLibInfo = libInfo.copy(keeps = libInfo.keeps.map { k =>
               k.copy(note = Hashtags.formatMobileNote(k.note, v1))
             })
-            Ok(Json.obj("library" -> Json.toJson(editedLibInfo), "membership" -> accessStr, "subscribedToUpdates" -> subscribedToUpdates))
+            val (membershipOpt, inviteOpt) = libraryCommander.createViewerInfo(request.userIdOpt, library.id.get)
+            val accessStr = membershipOpt.map(_.access).getOrElse("none")
+            val membershipJson = Json.toJson(membershipOpt)
+            val inviteJson = Json.toJson(inviteOpt)
+            val libraryJson = Json.toJson(editedLibInfo).as[JsObject] + ("membership" -> membershipJson) + ("invite" -> inviteJson)
+            Ok(Json.obj("library" -> libraryJson, "membership" -> accessStr)) // todo: remove membership once it's not being used
           }
         })
       case Left(fail) =>

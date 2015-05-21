@@ -295,7 +295,6 @@ class LibraryCommander @Inject() (
         val followers = memberInfosByLibraryId(lib.id.get).shown.map(usersById(_))
         val collaborators = memberInfosByLibraryId(lib.id.get).collaborators.map(usersById(_))
         val whoCanInvite = lib.whoCanInvite.getOrElse(LibraryInvitePermissions.COLLABORATOR) // todo: remove Option
-
         val attr = getSourceAttribution(libId)
 
         if (keepInfos.size > keepCount) {
@@ -326,6 +325,34 @@ class LibraryCommander @Inject() (
       }
     }
     Future.sequence(futureFullLibraryInfos)
+  }
+
+  def createViewerInfo(viewerUserIdOpt: Option[Id[User]], libraryId: Id[Library]): (Option[LibraryMembershipInfo], Option[LibraryInviteInfo]) = {
+    val viewerMembershipOpt = viewerUserIdOpt.map { viewerId =>
+      val memOpt = db.readOnlyMaster { implicit s =>
+        libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, viewerId)
+      }
+      memOpt.map { mem =>
+        LibraryMembershipInfo.fromMembership(mem)
+      }
+    }.flatten
+
+    val viewerInviteOpt = viewerUserIdOpt.map { viewerId =>
+      db.readOnlyMaster { implicit s =>
+        val inviteOpt = libraryInviteRepo.getLastSentByLibraryIdAndUserId(libraryId, viewerId, Set(LibraryInviteStates.ACTIVE))
+        val basicUserOpt = inviteOpt.map { invite =>
+          basicUserRepo.load(invite.inviterId)
+        }
+        (inviteOpt, basicUserOpt)
+      } match {
+        case (Some(invite), Some(inviter)) =>
+          Some(LibraryInviteInfo.createInfo(invite, inviter))
+        case (_, _) =>
+          None
+      }
+    }.flatten
+
+    (viewerMembershipOpt, viewerInviteOpt)
   }
 
   private def getSourceAttribution(libId: Id[Library]): Option[LibrarySourceAttribution] = {
