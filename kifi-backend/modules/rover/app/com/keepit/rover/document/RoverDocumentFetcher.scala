@@ -10,26 +10,26 @@ import scala.concurrent.{ ExecutionContext, Future }
 @Singleton
 class RoverDocumentFetcher @Inject() (httpFetcher: HttpFetcher, throttler: DomainFetchThrottler) {
 
-  def fetch[A](url: String, ifModifiedSince: Option[DateTime] = None)(f: FetchResult[HttpInputStream] => A)(implicit ec: ExecutionContext): Future[A] = {
+  def fetch[A](url: String, ifModifiedSince: Option[DateTime] = None, shouldThrottle: Boolean)(f: FetchResult[HttpInputStream] => A)(implicit ec: ExecutionContext): Future[A] = {
     val proxy = None // todo(Léo): Implement proxy repo, proxy rules
     def throttled(fetchResult: FetchResult[HttpInputStream]): A = {
       val destinationUrl = fetchResult.context.request.destinationUrl
-      if (throttler.throttle(destinationUrl)) throw FetchThrottlingException(url, destinationUrl)
+      if (shouldThrottle && throttler.throttle(destinationUrl)) throw FetchThrottlingException(url, destinationUrl)
       else f(fetchResult)
     }
     httpFetcher.fetch(FetchRequest(url, proxy, ifModifiedSince))(throttled)
   }
 
-  def fetchJsoupDocument(url: String, ifModifiedSince: Option[DateTime] = None)(implicit ec: ExecutionContext): Future[FetchResult[JsoupDocument]] = {
-    fetch(url, ifModifiedSince) { result =>
+  def fetchJsoupDocument(url: String, ifModifiedSince: Option[DateTime] = None, shouldThrottle: Boolean)(implicit ec: ExecutionContext): Future[FetchResult[JsoupDocument]] = {
+    fetch(url, ifModifiedSince, shouldThrottle) { result =>
       result.collect(HttpStatus.SC_OK) { input =>
         JsoupDocument.parse(input, result.context.request.destinationUrl).get
       }
     }
   }
 
-  def fetchTikaDocument(url: String, ifModifiedSince: Option[DateTime] = None)(implicit ec: ExecutionContext): Future[FetchResult[TikaDocument]] = {
-    fetch(url, ifModifiedSince) { result =>
+  def fetchTikaDocument(url: String, ifModifiedSince: Option[DateTime] = None, shouldThrottle: Boolean)(implicit ec: ExecutionContext): Future[FetchResult[TikaDocument]] = {
+    fetch(url, ifModifiedSince, shouldThrottle) { result =>
       result.collect(HttpStatus.SC_OK) { input =>
         TikaDocument.parse(input, result.context.request.destinationUrl, result.context.response.contentType)
       }
