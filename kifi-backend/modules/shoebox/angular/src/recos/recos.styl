@@ -1,10 +1,10 @@
 // Note: The responsive two-column structure of this page is similar to the library page and
 //       the general search results page.
 
-leftColWidth = 498px  // chosen so that inner keep card width (youtube video, specifically) comes out to exactly 496px
+leftColWidth = 496px  // ideal keep card width; see keepCardMaxWidth in keeps.styl
 rightColWidth = 256px // chosen to avoid text wrapping
 colGapWidth = 20px
-twoColMinWidth = appSidePad1 + leftColWidth + colGapWidth + rightColWidth + appSidePad1 // = 798px
+twoColMinWidth = appSidePad1 + leftColWidth + colGapWidth + rightColWidth + appSidePad1 // = 796px
 
 .kf-recos-view
   box-sizing: border-box
@@ -232,7 +232,7 @@ twoColMinWidth = appSidePad1 + leftColWidth + colGapWidth + rightColWidth + appS
 
 .kf-reco-get-more-container
   margin-bottom: 20px
-  border: 1px solid #dadae2
+  border: defaultBorder
   border-radius: 10px
   padding: 12px 0
   text-align: center
