@@ -171,5 +171,8 @@ package object time {
     def toStandardDateString: String = STANDARD_DATE_FORMAT.print(date)
   }
 
-  implicit val durationFormat: Format[Duration] = __.format[Long].inmap(_ millis, _.toMillis)
+  implicit val durationFormat: Format[Duration] = new Format[Duration] {
+    def reads(json: JsValue) = json.validate[Long].map(_ millis)
+    def writes(duration: Duration) = JsNumber(duration.toMillis)
+  }
 }
