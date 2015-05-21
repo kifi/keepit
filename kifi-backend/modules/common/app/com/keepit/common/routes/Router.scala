@@ -327,9 +327,6 @@ object Scraper extends Service {
     def status() = ServiceRoute(GET, s"/internal/scraper/status")
     def getBasicArticle() = ServiceRoute(POST, s"/internal/scraper/getBasicArticle")
     def getSignature() = ServiceRoute(POST, s"/internal/scraper/getSignature")
-    def getPornDetectorModel() = ServiceRoute(GET, s"/internal/scraper/getPornDetectorModel")
-    def detectPorn() = ServiceRoute(POST, s"/internal/scraper/pornDetector/detectPorn")
-    def whitelist() = ServiceRoute(POST, s"/internal/scraper/pornDetector/whitelist")
   }
 }
 
@@ -425,6 +422,10 @@ object Rover extends Service {
     def getOrElseFetchArticleSummaryAndImages() = ServiceRoute(POST, "/internal/rover/getOrElseFetchArticleSummaryAndImages")
     def getOrElseFetchRecentArticle() = ServiceRoute(POST, "/internal/rover/getOrElseFetchRecentArticle")
     def getOrElseComputeRecentContentSignature() = ServiceRoute(POST, "/internal/rover/getOrElseComputeRecentContentSignature")
+
+    def getPornDetectorModel() = ServiceRoute(GET, s"/internal/rover/pornDetector/getModel")
+    def detectPorn() = ServiceRoute(POST, s"/internal/rover/pornDetector/detect")
+    def whitelist() = ServiceRoute(POST, s"/internal/rover/pornDetector/whitelist")
   }
 }
 

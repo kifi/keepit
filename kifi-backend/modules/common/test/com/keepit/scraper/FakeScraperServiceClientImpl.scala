@@ -26,10 +26,4 @@ class FakeScraperServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, sched
   def getSignature(url: String, proxy: Option[HttpProxy], extractor: Option[ExtractorProviderType]): Future[Option[Signature]] = Future.successful(None)
 
   def getThreadDetails(filterState: Option[String]): Seq[Future[ScraperThreadInstanceInfo]] = Seq.empty
-
-  def getPornDetectorModel(): Future[Map[String, Float]] = Future.successful(Map.empty)
-
-  def detectPorn(query: String): Future[Map[String, Float]] = Future.successful(Map.empty)
-
-  def whitelist(words: String): Future[String] = Future.successful("")
 }

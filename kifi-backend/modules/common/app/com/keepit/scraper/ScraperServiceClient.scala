@@ -156,9 +156,6 @@ trait ScraperServiceClient extends ServiceClient {
   // Admin only API (if you need one of these outside of admin, talk to Andrew):
   def status(): Seq[Future[(AmazonInstanceInfo, Seq[ScrapeJobStatus])]]
   def getThreadDetails(filterState: Option[String] = None): Seq[Future[ScraperThreadInstanceInfo]]
-  def getPornDetectorModel(): Future[Map[String, Float]]
-  def detectPorn(query: String): Future[Map[String, Float]]
-  def whitelist(words: String): Future[String]
 }
 
 case class ScraperCacheProvider @Inject() (signatureCache: UrlSignatureCache)
@@ -208,26 +205,6 @@ class ScraperServiceClientImpl @Inject() (
         val threadDetails = taskDetails.map(task => ScraperThreadDetails(None, None, Left(task)))
         ScraperThreadInstanceInfo(serviceResponse.uri.serviceInstance.instanceInfo, Left(threadDetails))
       }
-    }
-  }
-
-  def getPornDetectorModel(): Future[Map[String, Float]] = {
-    call(Scraper.internal.getPornDetectorModel()).map { r =>
-      Json.fromJson[Map[String, Float]](r.json).get
-    }
-  }
-
-  def detectPorn(query: String): Future[Map[String, Float]] = {
-    val payload = Json.obj("query" -> query)
-    call(Scraper.internal.detectPorn(), payload).map { r =>
-      Json.fromJson[Map[String, Float]](r.json).get
-    }
-  }
-
-  def whitelist(words: String): Future[String] = {
-    val payload = Json.obj("whitelist" -> words)
-    call(Scraper.internal.whitelist(), payload).map { r =>
-      Json.fromJson[String](r.json).get
     }
   }
 
