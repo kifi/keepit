@@ -12,6 +12,7 @@ import com.keepit.common.controller.FakeUserActionsModule
 import com.keepit.common.crypto.FakeCryptoModule
 import com.keepit.common.db.{ TestDbInfo, FakeSlickModule }
 import com.keepit.common.healthcheck.{ FakeAirbrakeModule, FakeHealthcheckModule, FakeMemoryUsageModule }
+import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.queue.FakeSimpleQueueModule
 import com.keepit.common.time.FakeClockModule
 import com.keepit.common.zookeeper.FakeDiscoveryModule
@@ -62,6 +63,7 @@ trait HeimdalTestInjector extends TestInjector with DbInjectionHelper with Heimd
     AwsModule(),
     FakeCryptoModule(),
     FakeActorSystemModule(),
-    FakeUserActionsModule()
+    FakeUserActionsModule(),
+    FakeHttpClientModule()
   )
 }
