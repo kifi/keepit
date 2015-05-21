@@ -18,7 +18,6 @@ import securesocial.core._
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
-import com.keepit.scraper.{ FakeScraperServiceClientModule, FakeScrapeSchedulerModule }
 import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.search.FakeSearchServiceClientModule
@@ -33,7 +32,6 @@ class AdminAuthControllerTest extends Specification with ShoeboxApplicationInjec
     FakeExecutionContextModule(),
     FakeUserActionsModule(),
     FakeShoeboxServiceModule(),
-    FakeScrapeSchedulerModule(),
     FakeShoeboxStoreModule(),
     FakeActorSystemModule(),
     FakeAirbrakeModule(),
@@ -43,7 +41,6 @@ class AdminAuthControllerTest extends Specification with ShoeboxApplicationInjec
     FakeHeimdalServiceClientModule(),
     FakeShoeboxAppSecureSocialModule(),
     FakeCortexServiceClientModule(),
-    FakeScraperServiceClientModule(),
     FakeCuratorServiceClientModule())
 
   "AdminAuthController" should {

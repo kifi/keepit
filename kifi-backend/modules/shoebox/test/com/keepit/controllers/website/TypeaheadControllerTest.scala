@@ -15,7 +15,6 @@ import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.model._
-import com.keepit.scraper.{ FakeScrapeSchedulerModule, FakeScraperServiceClientModule }
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.social.{ SocialId, SocialNetworks }
@@ -34,14 +33,12 @@ class TypeaheadControllerTest extends Specification with ShoeboxTestInjector {
     FakeHttpClientModule(),
     FakeUserActionsModule(),
     FakeShoeboxServiceModule(),
-    FakeScrapeSchedulerModule(),
     FakeShoeboxStoreModule(),
     FakeActorSystemModule(),
     FakeAirbrakeModule(),
     FakeSearchServiceClientModule(),
     FakeHeimdalServiceClientModule(),
     FakeABookServiceClientModule(),
-    FakeScraperServiceClientModule(),
     FakeCortexServiceClientModule()
   )
 

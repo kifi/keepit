@@ -13,7 +13,6 @@ import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.time._
 import com.keepit.controllers.ext.routes.{ ExtKeepImageController => Routes }
 import com.keepit.model._
-import com.keepit.scraper.{ FakeScrapeSchedulerModule, FakeScraperServiceClientModule }
 import com.keepit.shoebox.{ FakeKeepImportsModule, FakeShoeboxServiceModule }
 import com.keepit.test.{ DbInjectionHelper, ShoeboxTestInjector }
 import org.apache.commons.io.FileUtils
@@ -34,8 +33,6 @@ class ExtKeepImageControllerTest extends Specification with ShoeboxTestInjector 
   val controllerTestModules = Seq(
     FakeCryptoModule(),
     FakeShoeboxServiceModule(),
-    FakeScrapeSchedulerModule(),
-    FakeScraperServiceClientModule(),
     FakeKeepImportsModule(),
     FakeSliderHistoryTrackerModule(),
     FakeABookServiceClientModule(),

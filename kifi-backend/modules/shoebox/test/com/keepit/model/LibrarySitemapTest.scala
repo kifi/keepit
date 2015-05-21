@@ -12,7 +12,6 @@ import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.common.time._
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.curator.FakeCuratorServiceClientModule
-import com.keepit.scraper.{ FakeScraperServiceClientModule, FakeScrapeSchedulerModule }
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.FakeKeepImportsModule
 import com.keepit.test.ShoeboxTestInjector
@@ -30,10 +29,8 @@ class LibrarySitemapTest extends Specification with ShoeboxTestInjector {
     FakeABookServiceClientModule(),
     FakeSocialGraphModule(),
     FakeSearchServiceClientModule(),
-    FakeScrapeSchedulerModule(),
     FakeShoeboxStoreModule(),
     FakeCortexServiceClientModule(),
-    FakeScraperServiceClientModule(),
     FakeKeepImportsModule(),
     FakeCryptoModule(),
     FakeCuratorServiceClientModule()

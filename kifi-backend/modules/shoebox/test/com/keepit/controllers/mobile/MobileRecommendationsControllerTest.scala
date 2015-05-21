@@ -21,7 +21,6 @@ import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.model.UserFactory._
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.model._
-import com.keepit.scraper.{ FakeScrapeSchedulerModule, FakeScraperServiceClientModule }
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.social.BasicUser
@@ -41,14 +40,12 @@ class MobileRecommendationsControllerTest extends TestKitSupport with Specificat
     FakeShoeboxServiceModule(),
     FakeCuratorServiceClientModule(),
     FakeSearchServiceClientModule(),
-    FakeScrapeSchedulerModule(),
     FakeShoeboxStoreModule(),
     FakeHttpClientModule(),
     FakeSocialGraphModule(),
     FakeHeimdalServiceClientModule(),
     FakeMailModule(),
     FakeCortexServiceClientModule(),
-    FakeScraperServiceClientModule(),
     FakeABookServiceClientModule(),
     FakeActorSystemModule(),
     FakeUserActionsModule(),

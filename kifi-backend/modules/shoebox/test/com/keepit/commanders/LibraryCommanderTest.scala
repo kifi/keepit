@@ -25,7 +25,6 @@ import com.keepit.eliza.{ ElizaServiceClient, FakeElizaServiceClientImpl, FakeEl
 import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext }
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.model._
-import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.social.BasicUser
 import com.keepit.test.{ ShoeboxTestFactory, ShoeboxTestInjector }
@@ -39,7 +38,6 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
   implicit val context = HeimdalContext.empty
   def modules = Seq(
     FakeExecutionContextModule(),
-    FakeScrapeSchedulerModule(),
     FakeSearchServiceClientModule(),
     FakeMailModule(),
     FakeShoeboxStoreModule(),

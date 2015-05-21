@@ -68,11 +68,11 @@ class JsonAirbrakeFormatter(val apiKey: String, val playMode: Mode, service: For
   case class JsonAirbrakeError(`type`: String, message: String, backtrace: Seq[JsonAirbrakeBacktrace])
   case class JsonAirbrakeNotifier(name: String, version: String, url: String)
   case class JsonAirbrakeContext(os: Option[String], language: Option[String], environment: Option[String],
-                                 version: Option[String], url: Option[String], rootDirectory: Option[String],
-                                 userId: Option[String], userName: Option[String], userEmail: Option[String])
+    version: Option[String], url: Option[String], rootDirectory: Option[String],
+    userId: Option[String], userName: Option[String], userEmail: Option[String])
   case class JsonAirbrakeEnvironment(service: String, mode: String, serviceVersion: String, hostname: String)
   case class JsonAirbrakeMessage(notifier: JsonAirbrakeNotifier, errors: Seq[JsonAirbrakeError], context: JsonAirbrakeContext,
-                                 environment: JsonAirbrakeEnvironment, session: Option[Map[String, String]], params: Option[Map[String, String]])
+    environment: JsonAirbrakeEnvironment, session: Option[Map[String, String]], params: Option[Map[String, String]])
 
   object JsonAirbrakeBacktrace { implicit val formatter = Json.format[JsonAirbrakeBacktrace] }
   object JsonAirbrakeError { implicit val formatter = Json.format[JsonAirbrakeError] }
@@ -179,7 +179,6 @@ trait AirbrakeFormatter {
 }
 
 class AirbrakeFormatterImpl(val apiKey: String, val playMode: Mode, service: FortyTwoServices, serviceDiscovery: ServiceDiscovery) extends AirbrakeFormatter {
-
 
   val deploymentMessage: String = {
     val repo = "https://github.com/kifi/keepit"

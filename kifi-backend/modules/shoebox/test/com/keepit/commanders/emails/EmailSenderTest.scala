@@ -16,7 +16,6 @@ import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.graph.FakeGraphServiceModule
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.model._
-import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.social.SocialNetworks.FACEBOOK
 import com.keepit.social.{ SocialNetworks, SocialNetworkType }
@@ -32,7 +31,6 @@ import com.keepit.model.UserFactory._
 class EmailSenderTest extends Specification with ShoeboxTestInjector {
   val modules = Seq(
     FakeExecutionContextModule(),
-    FakeScrapeSchedulerModule(),
     FakeHttpClientModule(),
     FakeSocialGraphModule(),
     FakeHealthcheckModule(),

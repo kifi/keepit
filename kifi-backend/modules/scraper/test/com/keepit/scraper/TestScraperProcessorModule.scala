@@ -14,7 +14,6 @@ case class TestScraperProcessorModule() extends ScrapeProcessorModule {
     bind[ExtractorFactory].to[ExtractorFactoryImpl].in[AppScoped]
     bind[PullerPlugin].to[PullerPluginImpl].in[AppScoped]
     install(FakeScraperConfigModule())
-    install(FakeScrapeSchedulerConfigModule())
   }
 
   @Singleton

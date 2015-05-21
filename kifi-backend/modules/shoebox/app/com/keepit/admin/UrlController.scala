@@ -8,8 +8,7 @@ import com.keepit.rover.fetcher.HttpRedirect
 import com.keepit.rover.RoverServiceClient
 import com.keepit.rover.article.{ ArticleKind, Article }
 import com.keepit.rover.article.content.ArticleContentExtractor
-import com.keepit.rover.model.{ ArticleKey, ArticleVersion }
-import com.keepit.scraper.ScrapeScheduler
+import com.keepit.rover.model.{ ArticleVersion }
 import scala.concurrent.duration._
 import views.html
 import com.keepit.common.controller.{ UserActionsHelper, AdminUserActions }
@@ -24,8 +23,6 @@ import com.keepit.common.akka.{ SafeFuture, MonitoredAwait }
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
-
-import scala.util.{ Failure, Success, Random }
 
 class UrlController @Inject() (
     val userActionsHelper: UserActionsHelper,
@@ -49,7 +46,6 @@ class UrlController @Inject() (
     normalizedURIInterner: NormalizedURIInterner,
     airbrake: AirbrakeNotifier,
     uriIntegrityHelpers: UriIntegrityHelpers,
-    scrapeScheduler: ScrapeScheduler,
     roverServiceClient: RoverServiceClient) extends AdminUserActions {
 
   implicit val timeout = BabysitterTimeout(5 minutes, 5 minutes)
@@ -406,10 +402,9 @@ class UrlController @Inject() (
           val uris = uriRepo.page(page, pageSize, excludeStates)
           uris.foreach { uri =>
             if (HttpRedirect.isShortenedUrl(uri.url)) {
-              uriRepo.updateURIRestriction(uri.id.get, None)
-              val updatedUri = uriRepo.get(uri.id.get)
-              scrapeScheduler.scheduleScrape(updatedUri, currentDateTime.plusMinutes((Random.nextInt(10))))
-              log.info(s"[CleaningKeeps] Removed restriction and scheduled scrape for shortened url: $uri")
+              val updatedUri = uri.withContentRequest(true).copy(restriction = None)
+              val savedUri = if (updatedUri != uri) uriRepo.save(updatedUri) else uri
+              log.info(s"[CleaningKeeps] Removed restriction | requested content for shortened url: $savedUri")
             } else {
               uriIntegrityHelpers.improveKeepsSafely(uri)
             }

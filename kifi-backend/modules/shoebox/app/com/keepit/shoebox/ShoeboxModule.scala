@@ -1,6 +1,6 @@
 package com.keepit.shoebox
 
-import com.keepit.commanders.emails.activity.{ ActivityEmailQueueModule, ProdActivityEmailQueueModule, DevActivityEmailQueueModule }
+import com.keepit.commanders.emails.activity.{ ActivityEmailQueueModule }
 import com.keepit.common.controller.UserActionsModule
 import com.keepit.common.seo.SiteMapGeneratorModule
 import com.keepit.controllers.internal.DataPipelineExecutorModule
@@ -12,7 +12,7 @@ import com.keepit.social.SecureSocialModule
 import com.keepit.common.mail.MailModule
 import com.keepit.common.analytics.AnalyticsModule
 import com.keepit.model.{ ProdSliderHistoryTrackerModule }
-import com.keepit.scraper.{ ScraperHealthMonitorModule, ScrapeSchedulerModule, ScraperServiceClientModule }
+import com.keepit.scraper.{ ScraperServiceClientModule }
 import com.keepit.common.store.ShoeboxStoreModule
 import com.keepit.inject.{ CommonServiceModule, ConfigurationModule }
 import com.keepit.integrity.DataIntegrityModule
@@ -50,8 +50,6 @@ trait ShoeboxModule extends ConfigurationModule with CommonServiceModule {
   // Shoebox Functional Modules
   val analyticsModule: AnalyticsModule
   val cacheModule: ShoeboxCacheModule
-  val scrapeSchedulerModule: ScrapeSchedulerModule
-  val scraperHealthMonitorModule: ScraperHealthMonitorModule
   val fjMonitorModule: ForkJoinContextMonitorModule
   val twilioCredentialsModule: TwilioCredentialsModule
   val dataPipelineExecutorModule: DataPipelineExecutorModule

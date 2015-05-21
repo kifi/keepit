@@ -10,7 +10,6 @@ import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.curator.FakeCuratorServiceClientModule
-import com.keepit.scraper.{ FakeScrapeSchedulerModule, FakeScraperServiceClientModule }
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.test.ShoeboxTestInjector
@@ -21,7 +20,6 @@ class OAuth2ControllerTest extends Specification with ShoeboxTestInjector {
   val modules = Seq(FakeShoeboxServiceModule(),
     FakeABookServiceClientModule(),
     FakeSocialGraphModule(),
-    FakeScrapeSchedulerModule(),
     FakeShoeboxStoreModule(),
     FakeActorSystemModule(),
     FakeAirbrakeModule(),
@@ -29,7 +27,6 @@ class OAuth2ControllerTest extends Specification with ShoeboxTestInjector {
     FakeMailModule(),
     FakeSearchServiceClientModule(),
     FakeCortexServiceClientModule(),
-    FakeScraperServiceClientModule(),
     FakeCuratorServiceClientModule())
 
   "OAuth2Controller" should {

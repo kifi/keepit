@@ -548,13 +548,11 @@ GET     /admin/analytics/descriptors  @com.keepit.controllers.admin.AdminAnalyti
 POST    /admin/analytics/descriptors  @com.keepit.controllers.admin.AdminAnalyticsController.updateEventDescriptors()
 GET     /admin/analytics/:repo/events @com.keepit.controllers.admin.AdminAnalyticsController.getEvents(repo:String, events: Option[String] ?= None, limit: Int ?= 25, window: Int ?= 24)
 
-GET     /admin/keeps/rescrape/from  @com.keepit.controllers.admin.AdminBookmarksController.rescrapeFrom(fromId: Id[NormalizedURI])
 GET     /admin/whoKeptMyKeep        @com.keepit.controllers.admin.AdminBookmarksController.whoKeptMyKeeps()
 GET     /admin/bookmarks/page/:page @com.keepit.controllers.admin.AdminBookmarksController.bookmarksView(page: Int)
 GET     /admin/bookmarks/edit       @com.keepit.controllers.admin.AdminBookmarksController.edit(id: Id[Keep])
 GET     /admin/bookmarks/editWithUri @com.keepit.controllers.admin.AdminBookmarksController.editFirstBookmarkForUri(id: Id[NormalizedURI])
 POST    /admin/uri/disable/:id      @com.keepit.controllers.admin.AdminBookmarksController.disableUrl(id: Id[NormalizedURI])
-POST    /admin/bookmarks/rescrape   @com.keepit.controllers.admin.AdminBookmarksController.rescrape
 POST    /admin/bookmarks/update     @com.keepit.controllers.admin.AdminBookmarksController.updateBookmarks
 POST    /admin/bookmarks/delete     @com.keepit.controllers.admin.AdminBookmarksController.delete(id: Id[Keep])
 POST    /admin/bookmarks/inactive   @com.keepit.controllers.admin.AdminBookmarksController.inactive(id: Id[Keep])
@@ -607,17 +605,12 @@ GET     /admin/data/patterns      @com.keepit.controllers.admin.UrlController.ge
 POST    /admin/data/patterns      @com.keepit.controllers.admin.UrlController.savePatterns
 GET     /admin/data/proxies      @com.keepit.controllers.admin.ScraperAdminController.getProxies
 POST    /admin/data/proxies      @com.keepit.controllers.admin.ScraperAdminController.saveProxies
-GET     /admin/data/scraper/status      @com.keepit.controllers.admin.ScraperAdminController.status
-GET     /admin/data/scrape              @com.keepit.controllers.admin.ScraperAdminController.searchScraper
-GET     /admin/data/scrapeArticle       @com.keepit.controllers.admin.ScraperAdminController.scrapeArticle(url:String ?= "")
-GET     /admin/data/scraperRequests     @com.keepit.controllers.admin.ScraperAdminController.scraperRequests(stateFilter: Option[String] ?= None)
-POST    /admin/data/scrape/regex        @com.keepit.controllers.admin.ScraperAdminController.rescrapeByRegex()
 GET     /admin/data/remigrate           @com.keepit.controllers.admin.UrlController.fixRedirectedUriStates(doIt: Boolean ?= false)
 POST    /admin/data/clearRestriction    @com.keepit.controllers.admin.UrlController.clearRestriction(uriId: Id[NormalizedURI])
 POST    /admin/data/flagAsAdult    @com.keepit.controllers.admin.UrlController.flagAsAdult(uriId: Id[NormalizedURI])
 GET     /admin/data/cleanKeepsByUri    @com.keepit.controllers.admin.UrlController.cleanKeepsByUri(firstPage: Int ?= 0, pageSize: Int ?= 100)
 
-GET     /admin/data/depornify        @com.keepit.controllers.admin.ScraperAdminController.massMarkAsAdult()
+GET     /admin/data/depornify        @com.keepit.controllers.admin.AdminPornDetectorController.massMarkAsAdult()
 
 GET     /admin/article/index        @com.keepit.controllers.admin.AdminArticleIndexerController.index
 GET     /admin/article/reindex      @com.keepit.controllers.admin.AdminArticleIndexerController.reindex
@@ -776,7 +769,7 @@ GET     /admin/experiments/overview   @com.keepit.controllers.admin.AdminExperim
 GET     /admin/experiments/users/:exp/page/:page @com.keepit.controllers.admin.AdminUserController.byExperimentUsersView(page: Int, exp: String)
 POST     /admin/experiments/saveGenerator @com.keepit.controllers.admin.AdminExperimentController.saveGenerator
 
-GET     /admin/learning/pornDetect/model    @com.keepit.controllers.admin.ScraperAdminController.getPornDetectorModel
+GET     /admin/learning/pornDetect/model    @com.keepit.controllers.admin.AdminPornDetectorController.getPornDetectorModel
 GET     /admin/learning/pornDetect          @com.keepit.controllers.admin.AdminPornDetectorController.index
 POST    /admin/learning/pornDetect/detect   @com.keepit.controllers.admin.AdminPornDetectorController.detect
 GET     /admin/learning/pornDetect/uris/:page                   @com.keepit.controllers.admin.AdminPornDetectorController.pornUrisView(page: Int, publicOnly: Boolean ?= false)

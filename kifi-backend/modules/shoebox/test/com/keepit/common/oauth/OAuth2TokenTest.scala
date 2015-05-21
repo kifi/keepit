@@ -17,7 +17,6 @@ import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext }
 import com.keepit.model._
-import com.keepit.scraper.{ FakeScrapeSchedulerModule, FakeScraperServiceClientModule }
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.{ FakeShoeboxServiceModule, KeepImportsModule }
 import com.keepit.social.{ SocialId, SocialNetworks }
@@ -56,7 +55,6 @@ class OAuth2TokenTest extends Specification with ShoeboxApplicationInjector {
     FakeExecutionContextModule(),
     FakeShoeboxServiceModule(),
     FakeSearchServiceClientModule(),
-    FakeScrapeSchedulerModule(),
     FakeShoeboxStoreModule(),
     FakeActorSystemModule(),
     FakeAirbrakeModule(),
@@ -68,7 +66,6 @@ class OAuth2TokenTest extends Specification with ShoeboxApplicationInjector {
     FakeShoeboxAppSecureSocialModule(),
     FakeUserActionsModule(),
     FakeCortexServiceClientModule(),
-    FakeScraperServiceClientModule(),
     KeepImportsModule(),
     FakeCuratorServiceClientModule(),
     FakeOAuth1ConfigurationModule(),

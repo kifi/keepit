@@ -11,7 +11,6 @@ import com.keepit.model._
 import com.keepit.heimdal.HeimdalContext
 import org.joda.time.DateTime
 import com.keepit.common.time._
-import com.keepit.scraper.FakeScrapeSchedulerModule
 import play.api.libs.json.Json
 import scala.Some
 import com.keepit.model.KeepToCollection
@@ -24,7 +23,7 @@ class CollectionCommanderTest extends Specification with ShoeboxTestInjector {
 
   implicit val context = HeimdalContext.empty
 
-  def modules = FakeExecutionContextModule() :: FakeScrapeSchedulerModule() :: FakeSearchServiceClientModule() :: Nil
+  def modules = FakeExecutionContextModule() :: FakeSearchServiceClientModule() :: Nil
 
   def prenormalize(url: String)(implicit injector: Injector): String = inject[NormalizationService].prenormalize(url).get
 
