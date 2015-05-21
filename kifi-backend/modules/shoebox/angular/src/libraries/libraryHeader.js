@@ -530,10 +530,6 @@ angular.module('kifi')
           libraryService.leaveLibrary(scope.library.id)['catch'](modalService.openGenericErrorModal);
         };
 
-        scope.onUnfollowBtnMouseLeave = function () {
-          scope.followBtnJustClicked = false;
-        };
-
         scope.manageLibrary = function () {
           $rootScope.$emit('trackLibraryEvent', 'click', { action: 'clickedManageLibrary' });
           modalService.open({
