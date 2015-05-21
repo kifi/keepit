@@ -17,7 +17,7 @@ trait NonUserEventLoggingRepo extends EventRepo[NonUserEvent]
 
 class ProdNonUserEventLoggingRepo(val collection: BSONCollection, val mixpanel: MixpanelClient, val descriptors: NonUserEventDescriptorRepo, protected val airbrake: AirbrakeNotifier)
     extends MongoEventRepo[NonUserEvent] with NonUserEventLoggingRepo {
-  val warnBufferSize = 500
+  val warnBufferSize = 2000
   val maxBufferSize = 10000
 
   private val augmentors = Seq(NonUserIdentifierAugmentor)

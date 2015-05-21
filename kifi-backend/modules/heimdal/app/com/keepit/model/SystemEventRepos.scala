@@ -18,7 +18,7 @@ trait SystemEventLoggingRepo extends EventRepo[SystemEvent]
 
 class ProdSystemEventLoggingRepo(val collection: BSONCollection, val mixpanel: MixpanelClient, val descriptors: SystemEventDescriptorRepo, protected val airbrake: AirbrakeNotifier)
     extends MongoEventRepo[SystemEvent] with SystemEventLoggingRepo {
-  val warnBufferSize = 500
+  val warnBufferSize = 2000
   val maxBufferSize = 10000
 
   def toBSON(event: SystemEvent): BSONDocument = BSONDocument(EventRepo.eventToBSONFields(event))
