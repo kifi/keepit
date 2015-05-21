@@ -109,21 +109,22 @@ class LibraryController @Inject() (
     val idealSize = imageSize.flatMap { s => Try(ImageSize(s)).toOption }.getOrElse(LibraryController.defaultLibraryImageSize)
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build
     libraryCommander.getLibraryById(request.userIdOpt, showPublishedLibraries, libraryId, idealSize, request.userIdOpt) map { libInfo =>
-      val memOpt = libraryCommander.getMaybeMembership(request.userIdOpt, libraryId)
-      val accessStr = memOpt.map(_.access.value).getOrElse("none")
-      val listed = memOpt.map(_.listed)
+      val membershipOpt = libraryCommander.getViewerMembershipInfo(request.userIdOpt, libraryId)
+      val accessStr = membershipOpt.map(_.access) getOrElse "none"
+      val listed = membershipOpt.map(_.listed) getOrElse true
+      val subscribedToUpdates = membershipOpt.map(_.subscribed) getOrElse false
       val suggestedSearches = getSuggestedSearchesAsJson(libraryId)
-      val subscribedToUpdates = memOpt.map(_.subscribedToUpdates).getOrElse(false)
-      Ok(Json.obj("library" -> Json.toJson(libInfo), "membership" -> accessStr, "listed" -> listed, "suggestedSearches" -> suggestedSearches, "subscribedToUpdates" -> subscribedToUpdates))
+      Ok(Json.obj("library" -> Json.toJson(libInfo), "membership" -> accessStr, "listed" -> listed, "suggestedSearches" -> suggestedSearches, "subscribedToUpdates" -> subscribedToUpdates, "membershipObj" -> Json.toJson(membershipOpt)))
     }
   }
 
   def getLibrarySummaryById(pubId: PublicId[Library]) = (MaybeUserAction andThen LibraryViewAction(pubId)) { request =>
     val id = Library.decodePublicId(pubId).get
-    val (libInfo, memOpt) = libraryCommander.getLibrarySummaryAndMembership(request.userIdOpt, id)
-    val accessStr = memOpt.map(_.access.value).getOrElse("none")
-    val subscribedToUpdates = memOpt.map(_.subscribedToUpdates).getOrElse(false)
-    Ok(Json.obj("library" -> Json.toJson(libInfo), "membership" -> accessStr, "subscribedToUpdates" -> subscribedToUpdates))
+
+    val (libInfo, memInfoOpt) = libraryCommander.getLibrarySummaryAndMembership(request.userIdOpt, id)
+    val accessStr = memInfoOpt.map(_.access) getOrElse "none"
+    val subscribedToUpdates = memInfoOpt.map(_.subscribed) getOrElse false
+    Ok(Json.obj("library" -> Json.toJson(libInfo), "membership" -> accessStr, "subscribedToUpdates" -> subscribedToUpdates, "membershipObj" -> Json.toJson(memInfoOpt)))
   }
 
   def getLibraryByPath(userStr: String, slugStr: String, showPublishedLibraries: Boolean, imageSize: Option[String] = None) = MaybeUserAction.async { request =>
@@ -134,12 +135,12 @@ class LibraryController @Inject() (
           val idealSize = imageSize.flatMap { s => Try(ImageSize(s)).toOption }.getOrElse(LibraryController.defaultLibraryImageSize)
           request.userIdOpt foreach { userId => libraryCommander.updateLastView(userId, library.id.get) }
           libraryCommander.createFullLibraryInfo(request.userIdOpt, showPublishedLibraries, library, idealSize, showKeepCreateTime = true).map { libInfo =>
-            val memOpt = libraryCommander.getMaybeMembership(request.userIdOpt, library.id.get)
-            val accessStr = memOpt.map(_.access.value).getOrElse("none")
-            val listed = memOpt.map(_.listed)
+            val membershipOpt = libraryCommander.getViewerMembershipInfo(request.userIdOpt, library.id.get)
+            val accessStr = membershipOpt.map(_.access) getOrElse "none"
+            val listed = membershipOpt.map(_.listed) getOrElse true
+            val subscribedToUpdates = membershipOpt.map(_.subscribed) getOrElse false
             val suggestedSearches = getSuggestedSearchesAsJson(library.id.get)
-            val subscribedToUpdates = memOpt.map(_.subscribedToUpdates).getOrElse(false)
-            Ok(Json.obj("library" -> Json.toJson(libInfo), "membership" -> accessStr, "listed" -> listed, "suggestedSearches" -> suggestedSearches, "subscribedToUpdates" -> subscribedToUpdates))
+            Ok(Json.obj("library" -> Json.toJson(libInfo), "membership" -> accessStr, "listed" -> listed, "subscribedToUpdates" -> subscribedToUpdates, "suggestedSearches" -> suggestedSearches, "membershipObj" -> Json.toJson(membershipOpt)))
           }
         })
       case Left(fail) => Future.successful {

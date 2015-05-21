@@ -90,14 +90,6 @@ class LibraryCommander @Inject() (
     db.readOnlyMasterAsync { implicit s => libraryRepo.get(libraryId).keepCount }
   }
 
-  def getMaybeMembership(userIdOpt: Option[Id[User]], libraryId: Id[Library]): Option[LibraryMembership] = {
-    userIdOpt.map { userId =>
-      db.readOnlyMaster { implicit s =>
-        libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId)
-      }
-    }.flatten
-  }
-
   def updateLastView(userId: Id[User], libraryId: Id[Library]): Unit = {
     Future {
       db.readWrite { implicit s =>
@@ -156,10 +148,10 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def getLibrarySummaryAndMembership(userIdOpt: Option[Id[User]], libraryId: Id[Library]): (LibraryInfo, Option[LibraryMembership]) = {
+  def getLibrarySummaryAndMembership(userIdOpt: Option[Id[User]], libraryId: Id[Library]): (LibraryInfo, Option[LibraryMembershipInfo]) = {
     val Seq(libInfo) = getLibrarySummaries(Seq(libraryId))
     val imageOpt = libraryImageCommander.getBestImageForLibrary(libraryId, ProcessedImageSize.Medium.idealSize).map(LibraryImageInfo.createInfo)
-    val memOpt = getMaybeMembership(userIdOpt, libraryId)
+    val memOpt = getViewerMembershipInfo(userIdOpt, libraryId)
     (libInfo.copy(image = imageOpt), memOpt)
   }
 
@@ -327,32 +319,25 @@ class LibraryCommander @Inject() (
     Future.sequence(futureFullLibraryInfos)
   }
 
-  def createViewerInfo(viewerUserIdOpt: Option[Id[User]], libraryId: Id[Library]): (Option[LibraryMembershipInfo], Option[LibraryInviteInfo]) = {
-    val viewerMembershipOpt = viewerUserIdOpt.map { viewerId =>
-      val memOpt = db.readOnlyMaster { implicit s =>
-        libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, viewerId)
-      }
-      memOpt.map { mem =>
-        LibraryMembershipInfo.fromMembership(mem)
-      }
-    }.flatten
-
-    val viewerInviteOpt = viewerUserIdOpt.map { viewerId =>
+  def getViewerMembershipInfo(userIdOpt: Option[Id[User]], libraryId: Id[Library]): Option[LibraryMembershipInfo] = {
+    userIdOpt.map { userId =>
       db.readOnlyMaster { implicit s =>
-        val inviteOpt = libraryInviteRepo.getLastSentByLibraryIdAndUserId(libraryId, viewerId, Set(LibraryInviteStates.ACTIVE))
-        val basicUserOpt = inviteOpt.map { invite =>
-          basicUserRepo.load(invite.inviterId)
-        }
+        libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId)
+      } map (LibraryMembershipInfo.fromMembership(_))
+    }.flatten
+  }
+
+  def getViewerInviteInfo(userIdOpt: Option[Id[User]], libraryId: Id[Library]): Option[LibraryInviteInfo] = {
+    userIdOpt.map { userId =>
+      db.readOnlyMaster { implicit s =>
+        val inviteOpt = libraryInviteRepo.getLastSentByLibraryIdAndUserId(libraryId, userId, Set(LibraryInviteStates.ACTIVE))
+        val basicUserOpt = inviteOpt map { inv => basicUserRepo.load(inv.inviterId) }
         (inviteOpt, basicUserOpt)
       } match {
-        case (Some(invite), Some(inviter)) =>
-          Some(LibraryInviteInfo.createInfo(invite, inviter))
-        case (_, _) =>
-          None
+        case (Some(invite), Some(inviter)) => Some(LibraryInviteInfo.createInfo(invite, inviter))
+        case (_, _) => None
       }
     }.flatten
-
-    (viewerMembershipOpt, viewerInviteOpt)
   }
 
   private def getSourceAttribution(libId: Id[Library]): Option[LibrarySourceAttribution] = {
