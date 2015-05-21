@@ -9,7 +9,7 @@ import play.api.mvc.PathBindable
 
 sealed trait ArticleKind[A <: Article] {
   final type article = A
-  def self: ArticleKind[article] = this
+  implicit def self: ArticleKind[article] = this
 
   // Serialization helpers
   def typeCode: String

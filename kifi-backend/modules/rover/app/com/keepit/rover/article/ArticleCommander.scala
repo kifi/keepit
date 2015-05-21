@@ -10,7 +10,7 @@ import com.keepit.common.logging.{ AccessLog, Logging }
 import com.keepit.common.time.Clock
 import com.keepit.model.{ NormalizedURI }
 import com.keepit.rover.article.fetcher.{ ArticleFetchRequest, ArticleFetcherProvider }
-import com.keepit.rover.article.policy.ArticleInfoPolicy
+import com.keepit.rover.article.policy.ArticleFetchPolicy
 import com.keepit.rover.manager.{ FetchTask, FetchTaskQueue }
 import com.keepit.rover.model._
 import com.keepit.rover.store.RoverArticleStore
@@ -28,7 +28,7 @@ class ArticleCommander @Inject() (
     articleStore: RoverArticleStore,
     topPriorityQueue: FetchTaskQueue.TopPriority,
     articleFetcher: ArticleFetcherProvider,
-    articlePolicy: ArticleInfoPolicy,
+    articlePolicy: ArticleFetchPolicy,
     airbrake: AirbrakeNotifier,
     clock: Clock,
     private implicit val executionContext: ExecutionContext) extends Logging {
