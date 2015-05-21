@@ -1001,23 +1001,27 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def revokeInvitationToLibrary(libraryId: Id[Library], inviterId: Id[User], invitee: Either[Id[User], EmailAddress]): Either[String, Tuple2[String, String]] = {
-    val libraryInvite: Option[LibraryInvite] = invitee match {
-      case Left(id) => db.readOnlyMaster { implicit s =>
-        libraryInviteRepo.getLastSentByLibraryIdAndInviterIdAndUserId(libraryId, inviterId, id, Set(LibraryInviteStates.ACTIVE))
+  def revokeInvitationToLibrary(libraryId: Id[Library], inviterId: Id[User], invitee: Either[ExternalId[User], EmailAddress]): Either[String, Tuple2[String, String]] = {
+    val libraryInvite: Either[Option[LibraryInvite], String] = invitee match {
+      case Left(externalId) => db.readOnlyMaster { implicit s =>
+        userRepo.getOpt(externalId) match {
+          case Some(userId) => Left(libraryInviteRepo.getLastSentByLibraryIdAndInviterIdAndUserId(libraryId, inviterId, userId.id.get, Set(LibraryInviteStates.ACTIVE)))
+          case None => Right(s"user with external id $externalId does not exist")
+        }
       }
       case Right(email) => db.readOnlyMaster { implicit s =>
-        libraryInviteRepo.getLastSentByLibraryIdAndInviterIdAndEmail(libraryId, inviterId, email, Set(LibraryInviteStates.ACTIVE))
+        Left(libraryInviteRepo.getLastSentByLibraryIdAndInviterIdAndEmail(libraryId, inviterId, email, Set(LibraryInviteStates.ACTIVE)))
       }
     }
     libraryInvite match {
-      case Some(toDelete) => db.readWrite(attempts = 3) { implicit s =>
+      case Left(Some(toDelete)) => db.readWrite(attempts = 3) { implicit s =>
         libraryInviteRepo.delete(toDelete) match {
           case x if x > 0 => Left("successfully deleted library invite")
           case _ => Right("error" -> "could not delete library invite")
         }
       }
-      case _ => Right("error" -> "could not find library invite to delete")
+      case Left(None) => Right("error" -> "could not find library invite to delete")
+      case Right(error) => Right("error" -> error)
     }
   }
 

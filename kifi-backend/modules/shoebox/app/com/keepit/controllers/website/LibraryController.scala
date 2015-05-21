@@ -197,17 +197,11 @@ class LibraryController @Inject() (
     }
   }
 
-  def getUserByIdOrEmail(json: JsValue): Either[Either[Id[User], EmailAddress], String] = {
-    db.readOnlyMaster { implicit s =>
-      (json \ "type").as[String] match {
-        case "user" =>
-          userRepo.getOpt((json \ "invitee").as[ExternalId[User]]) match {
-            case Some(user) => Left(Left(user.id.get))
-            case None => Right("user does not exist with externalId")
-          }
-        case "email" => Left(Right((json \ "invitee").as[EmailAddress]))
-        case _ => Right("invalid invitee type (one of 'user' or 'email' required)")
-      }
+  def getUserByIdOrEmail(json: JsValue): Either[Either[ExternalId[User], EmailAddress], String] = {
+    (json \ "type").as[String] match {
+      case "user" => Left(Left((json \ "invitee").as[ExternalId[User]]))
+      case "email" => Left(Right((json \ "invitee").as[EmailAddress]))
+      case _ => Right("invalid invitee type (one of 'user' or 'email' required)")
     }
   }
 

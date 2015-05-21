@@ -765,7 +765,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
           val result = libraryController.revokeLibraryInvitation(libraryId)(request)
           status(result) must equalTo(BAD_REQUEST)
           contentType(result) must beSome("application/json")
-          contentAsString(result) must equalTo("{\"error\":\"user does not exist with externalId\"}")
+          contentAsString(result) must equalTo("{\"error\":\"user with external id 00000000-0000-0000-0000-000000000000 does not exist\"}")
         }
       }
     }
