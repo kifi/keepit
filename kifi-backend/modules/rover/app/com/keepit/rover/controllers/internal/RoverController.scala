@@ -3,7 +3,7 @@ package com.keepit.rover.controllers.internal
 import com.google.inject.Inject
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.RoverServiceController
-import com.keepit.common.db.{ State, Id, SequenceNumber }
+import com.keepit.common.db.{ Id, SequenceNumber }
 import com.keepit.common.json.TupleFormat
 import com.keepit.common.logging.Logging
 import com.keepit.model.{ NormalizedURI }
@@ -97,7 +97,6 @@ class RoverController @Inject() (roverCommander: RoverCommander, articleCommande
     val kind = (request.body \ "kind").as[ArticleKind[_ <: Article]]
     val recency = (request.body \ "recency").as[Duration]
     roverCommander.getOrElseComputeRecentContentSignature(url, recency)(kind).map { signatureOpt =>
-      implicit val format = kind.format
       val json = Json.toJson(signatureOpt)
       Ok(json)
     }
