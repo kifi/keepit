@@ -75,7 +75,7 @@ class GratificationEmailSender @Inject() (
         val newConnections = getNewConnections(id)
         val followersByLibrary = gratificationCommander.getLibraryFollowerCounts(id)
         val fViewsByLibrary = gratificationCommander.getLibraryViewData(id)
-        fViewsByLibrary.map { viewsByLib => if (newConnections.length >= MIN_CONNECTIONS || followersByLibrary.totalCount >= MIN_FOLLOWERS || viewsByLib.totalCount >= MIN_VIEWS) id else Id[User](-1) }
+        fViewsByLibrary.map { viewsByLib => if (newConnections.length >= MIN_CONNECTIONS || followersByLibrary.totalCount >= MIN_FOLLOWERS || viewsByLib.totalCount >= MIN_VIEWS) id else Id[User](-1) }.flatMap { future => SafeFuture(future) }
       }
       Right(result)
     }
