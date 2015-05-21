@@ -1,7 +1,7 @@
 package com.keepit.shoebox.cron
 
 import com.google.inject.Inject
-import com.keepit.commanders.emails.GratificationEmailSender
+import com.keepit.commanders.emails.{ GratificationCommander, GratificationEmailSender }
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -34,16 +34,14 @@ class GratificationEmailCronPluginImpl @Inject() (
 
 class GratificationEmailActor @Inject() (
     emailSender: GratificationEmailSender,
+    emailCommander: GratificationCommander,
     protected val airbrake: AirbrakeNotifier) extends FortyTwoActor(airbrake) with Logging {
 
-  val testDestinationEmail = EmailAddress("cam@kifi.com")
+  val testDestinationEmail = EmailAddress("cam@kifi.com") // while testing in production, send all scheduled emails to Cam
 
   def receive = {
     case SendEmails =>
-      emailSender.usersToSendEmailTo match {
-        case Left(ids) => ids.foreach { id => emailSender.sendToUser(id, Some(testDestinationEmail)) }
-        case Right(fIds) => fIds.map { _ filter { id => id.id != -1 } map { id => emailSender.sendToUser(id, Some(testDestinationEmail)) } }
-      }
+      emailCommander.usersToSendEmailTo.map { ids => ids.foreach { id => emailSender.sendToUser(id, Some(testDestinationEmail)) } }
   }
 }
 
