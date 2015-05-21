@@ -44,6 +44,7 @@ object UsernameAliasStates extends States[UsernameAlias] {
 @ImplementedBy(classOf[UsernameAliasRepoImpl])
 trait UsernameAliasRepo extends Repo[UsernameAlias] {
   def getByUsername(username: Username, excludeState: Option[State[UsernameAlias]] = Some(UsernameAliasStates.INACTIVE))(implicit session: RSession): Option[UsernameAlias]
+  def getByUserId(userId: Id[User])(implicit session: RSession): List[UsernameAlias]
   def alias(username: Username, userId: Id[User], lock: Boolean = false, overrideProtection: Boolean = false)(implicit session: RWSession): Try[UsernameAlias]
   def unlock(username: Username)(implicit session: RWSession): Boolean
   def reclaim(username: Username, requestingUserId: Option[Id[User]] = None, overrideProtection: Boolean = false)(implicit session: RWSession): Try[Option[Id[User]]]
@@ -79,6 +80,14 @@ class UsernameAliasRepoImpl @Inject() (
 
   private val compiledGetByNormalizedUsernameAndExcludedState = Compiled { (normalizedUsername: Column[Username], excludedState: Column[State[UsernameAlias]]) =>
     for (row <- rows if row.username === normalizedUsername && row.state =!= excludedState) yield row
+  }
+
+  private val compiledGetByUserId = Compiled { (userId: Column[Id[User]]) =>
+    for (row <- rows if row.userId === userId) yield row
+  }
+
+  def getByUserId(userId: Id[User])(implicit session: RSession): List[UsernameAlias] = {
+    compiledGetByUserId(userId).list
   }
 
   private def getByNormalizedUsername(normalizedUsername: Username, excludeState: Option[State[UsernameAlias]])(implicit session: RSession) = {

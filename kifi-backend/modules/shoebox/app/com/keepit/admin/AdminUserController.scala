@@ -107,6 +107,7 @@ class AdminUserController @Inject() (
     userPictureRepo: UserPictureRepo,
     basicUserRepo: BasicUserRepo,
     userCredRepo: UserCredRepo,
+    usernameAliasRepo: UsernameAliasRepo,
     userCommander: UserCommander,
     socialUserTypeahead: SocialUserTypeahead,
     kifiUserTypeahead: KifiUserTypeahead,
@@ -891,6 +892,9 @@ class AdminUserController @Inject() (
           userCredRepo.findByUserIdOpt(userId).foreach { userCred => userCredRepo.save(userCred.copy(state = UserCredStates.INACTIVE)) } // User Credentials
           emailRepo.getAllByUser(userId).foreach { email => emailRepo.save(email.withState(UserEmailAddressStates.INACTIVE)) } // Email addresses
           userRepo.save(userRepo.get(userId).withState(UserStates.INACTIVE).copy(primaryEmail = None)) // User
+          usernameAliasRepo.getByUserId(userId).foreach { alias => // Usernames
+            usernameAliasRepo.reclaim(alias.username, Some(userId))
+          }
         }
 
         val user = userRepo.get(userId)
