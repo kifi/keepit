@@ -197,11 +197,11 @@ class LibraryController @Inject() (
     }
   }
 
-  def getUserByIdOrEmail(json: JsValue): Either[Either[ExternalId[User], EmailAddress], String] = {
+  def getUserByIdOrEmail(json: JsValue) = {
     (json \ "type").as[String] match {
-      case "user" => Left(Left((json \ "invitee").as[ExternalId[User]]))
-      case "email" => Left(Right((json \ "invitee").as[EmailAddress]))
-      case _ => Right("invalid invitee type (one of 'user' or 'email' required)")
+      case "user" => Right(Left((json \ "invitee").as[ExternalId[User]]))
+      case "email" => Right(Right((json \ "invitee").as[EmailAddress]))
+      case _ => Left("invalid_invitee_type")
     }
   }
 
@@ -210,12 +210,12 @@ class LibraryController @Inject() (
       case Failure(ex) => Future.successful(BadRequest(Json.obj("error" -> "invalid_library_id")))
       case Success(libraryId) =>
         getUserByIdOrEmail(request.body) match {
-          case Left(invitee) =>
+          case Right(invitee) =>
             libraryCommander.revokeInvitationToLibrary(libraryId, request.userId, invitee) match {
-              case Left(ok) => Future.successful(NoContent)
-              case Right(error) => Future.successful(BadRequest(Json.obj(error._1 -> error._2)))
+              case Right(ok) => Future.successful(NoContent)
+              case Left(error) => Future.successful(BadRequest(Json.obj(error._1 -> error._2)))
             }
-          case Right(error) => Future.successful(BadRequest(Json.obj("error" -> error)))
+          case Left(error) => Future.successful(BadRequest(Json.obj("error" -> error)))
         }
     }
   }

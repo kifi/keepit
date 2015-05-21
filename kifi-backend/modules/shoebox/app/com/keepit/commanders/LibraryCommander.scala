@@ -1001,27 +1001,27 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def revokeInvitationToLibrary(libraryId: Id[Library], inviterId: Id[User], invitee: Either[ExternalId[User], EmailAddress]): Either[String, Tuple2[String, String]] = {
-    val libraryInvite: Either[Option[LibraryInvite], String] = invitee match {
+  def revokeInvitationToLibrary(libraryId: Id[Library], inviterId: Id[User], invitee: Either[ExternalId[User], EmailAddress]): Either[(String, String), String] = {
+    val libraryInvite = invitee match {
       case Left(externalId) => db.readOnlyMaster { implicit s =>
         userRepo.getOpt(externalId) match {
-          case Some(userId) => Left(libraryInviteRepo.getLastSentByLibraryIdAndInviterIdAndUserId(libraryId, inviterId, userId.id.get, Set(LibraryInviteStates.ACTIVE)))
-          case None => Right(s"user with external id $externalId does not exist")
+          case Some(userId) => Right(libraryInviteRepo.getLastSentByLibraryIdAndInviterIdAndUserId(libraryId, inviterId, userId.id.get, Set(LibraryInviteStates.ACTIVE)))
+          case None => Left(s"external_id_does_not_exist")
         }
       }
       case Right(email) => db.readOnlyMaster { implicit s =>
-        Left(libraryInviteRepo.getLastSentByLibraryIdAndInviterIdAndEmail(libraryId, inviterId, email, Set(LibraryInviteStates.ACTIVE)))
+        Right(libraryInviteRepo.getLastSentByLibraryIdAndInviterIdAndEmail(libraryId, inviterId, email, Set(LibraryInviteStates.ACTIVE)))
       }
     }
     libraryInvite match {
-      case Left(Some(toDelete)) => db.readWrite(attempts = 3) { implicit s =>
-        libraryInviteRepo.delete(toDelete) match {
-          case x if x > 0 => Left("successfully deleted library invite")
-          case _ => Right("error" -> "could not delete library invite")
+      case Right(Some(toDelete)) => db.readWrite(attempts = 3) { implicit s =>
+        libraryInviteRepo.save(toDelete.copy(state = LibraryInviteStates.INACTIVE)) match {
+          case invite if invite.state == LibraryInviteStates.INACTIVE => Right("library_delete_succeeded")
+          case _ => Left("error" -> "library_invite_delete_failed")
         }
       }
-      case Left(None) => Right("error" -> "could not find library invite to delete")
-      case Right(error) => Right("error" -> error)
+      case Right(None) => Left("error" -> "library_invite_not_found")
+      case Left(error) => Left("error" -> error)
     }
   }
 

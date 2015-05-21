@@ -645,7 +645,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
       }
     }
 
-    "uninvite user" should {
+    "uninvite user" in {
 
       def setupUninvite()(implicit injector: Injector): (User, User, Library, LibraryInvite) = {
         val t1 = new DateTime(2014, 7, 21, 6, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
@@ -679,6 +679,9 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
           val result = libraryController.revokeLibraryInvitation(libraryId)(request)
           status(result) must equalTo(NO_CONTENT)
           contentType(result) must beNone
+          db.readOnlyMaster { implicit s =>
+            libraryInviteRepo.getLastSentByLibraryIdAndInviterIdAndUserId(library.id.get, inviter.id.get, invitee.id.get, Set(LibraryInviteStates.INACTIVE)) must beSome
+          }
         }
       }
       "fail when someone else tries to uninvite" in {
@@ -699,7 +702,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
           val result = libraryController.revokeLibraryInvitation(libraryId)(request)
           status(result) must equalTo(BAD_REQUEST)
           contentType(result) must beSome("application/json")
-          contentAsString(result) must equalTo("{\"error\":\"could not find library invite to delete\"}")
+          contentAsString(result) must equalTo("{\"error\":\"library_invite_not_found\"}")
         }
       }
 
@@ -743,7 +746,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
           val result = libraryController.revokeLibraryInvitation(libraryId)(request)
           status(result) must equalTo(BAD_REQUEST)
           contentType(result) must beSome("application/json")
-          contentAsString(result) must equalTo("{\"error\":\"invalid invitee type (one of 'user' or 'email' required)\"}")
+          contentAsString(result) must equalTo("{\"error\":\"invalid_invitee_type\"}")
         }
       }
 
@@ -765,7 +768,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
           val result = libraryController.revokeLibraryInvitation(libraryId)(request)
           status(result) must equalTo(BAD_REQUEST)
           contentType(result) must beSome("application/json")
-          contentAsString(result) must equalTo("{\"error\":\"user with external id 00000000-0000-0000-0000-000000000000 does not exist\"}")
+          contentAsString(result) must equalTo("{\"error\":\"external_id_does_not_exist\"}")
         }
       }
     }
