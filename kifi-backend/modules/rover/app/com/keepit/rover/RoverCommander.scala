@@ -9,6 +9,7 @@ import com.keepit.model.{ NormalizedURI }
 import com.keepit.rover.article.{ ArticleKind, Article, ArticleCommander }
 import com.keepit.rover.article.content.{ HttpInfoHolder, NormalizationInfoHolder }
 import com.keepit.rover.document.utils.Signature
+import com.keepit.rover.fetcher.{ InvalidFetchResponseException, InvalidFetchRequestException }
 import com.keepit.rover.image.ImageCommander
 import com.keepit.rover.model._
 import com.keepit.rover.sensitivity.RoverSensitivityCommander
@@ -109,8 +110,8 @@ class RoverCommander @Inject() (
     signatureCommander.getCachedUrlSignature[A](url) match {
       case Some(urlSignature) if urlSignature.computedAt isAfter signatureRecencyLimit => Future.successful(urlSignature.signature)
       case _ => {
-        articleCommander.getOrElseFetchRecentArticle[A](url, recency)(kind).flatMap { articleOpt =>
-          signatureCommander.computeUrlSignature(url, articleOpt)
+        articleCommander.getOrElseFetchRecentArticle[A](url, recency)(kind).flatMap {
+          articleOpt => signatureCommander.computeUrlSignature(url, articleOpt)
         }
       }
     }

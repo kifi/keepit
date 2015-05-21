@@ -11,6 +11,7 @@ import com.keepit.common.time.Clock
 import com.keepit.model.{ NormalizedURI }
 import com.keepit.rover.article.fetcher.{ ArticleFetchRequest, ArticleFetcherProvider }
 import com.keepit.rover.article.policy.ArticleFetchPolicy
+import com.keepit.rover.fetcher.{ InvalidFetchResponseException, InvalidFetchRequestException }
 import com.keepit.rover.manager.{ FetchTask, FetchTaskQueue }
 import com.keepit.rover.model._
 import com.keepit.rover.store.RoverArticleStore
@@ -88,7 +89,12 @@ class ArticleCommander @Inject() (
   def getOrElseFetchRecentArticle[A <: Article](url: String, recency: Duration)(implicit kind: ArticleKind[A]): Future[Option[A]] = {
     getArticleInfoByUrlAndKind(url, kind) match {
       case Some(info) => getOrElseFetchRecentArticle(info, recency).imap(_.map(_.asExpected[A]))
-      case None => articleFetcher.fetch(ArticleFetchRequest(kind, url)) // do not intern the url into a normalized one to make sure it's fetched as it is
+      case None => { // do not intern the url into a normalized one to make sure it's fetched as it is
+        articleFetcher.fetch(ArticleFetchRequest(kind, url)).recover {
+          case invalidRequest: InvalidFetchRequestException => None
+          case invalidResponse: InvalidFetchResponseException[_] => None
+        }
+      }
     }
   }
 
