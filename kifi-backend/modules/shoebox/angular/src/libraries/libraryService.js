@@ -197,25 +197,28 @@ angular.module('kifi')
 
       // TODO(yiping): All functions that update library infos should refetch automatically instead of
       // having client refetch.
-      createLibrary: function (opts) {
-        var missingFields = _.filter(['name', 'visibility', 'slug'], function (v) {
-          return !opts[v];
-        });
+      createLibrary: function (opts, checkMissingFields) {
+        if (checkMissingFields) {
+          var missingFields = _.filter(['name', 'visibility', 'slug'], function (v) {
+            return !opts[v];
+          });
 
-        if (missingFields.length > 0) {
-          return $q.reject({'error': 'missing fields: ' + missingFields.join(', ')});
+          if (missingFields.length > 0) {
+            return $q.reject({'error': 'missing fields: ' + missingFields.join(', ')});
+          }
         }
         return $http.post(routeService.createLibrary, opts);
       },
 
-      modifyLibrary: function (opts) {
-        var required = ['name', 'visibility', 'slug'];
-        var missingFields = _.filter(required, function (v) {
-          return opts[v] === undefined;
-        });
-
-        if (missingFields.length > 0) {
-          return $q.reject({'error': 'missing fields: ' + missingFields.join(', ')});
+      modifyLibrary: function (opts, checkMissingFields) {
+        if (checkMissingFields) {
+          var required = ['name', 'visibility', 'slug'];
+          var missingFields = _.filter(required, function (v) {
+            return opts[v] === undefined;
+          });
+          if (missingFields.length > 0) {
+            return $q.reject({'error': 'missing fields: ' + missingFields.join(', ')});
+          }
         }
         return $http.post(routeService.modifyLibrary(opts.id), opts);
       },
