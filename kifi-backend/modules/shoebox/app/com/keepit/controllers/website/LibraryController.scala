@@ -197,7 +197,7 @@ class LibraryController @Inject() (
     }
   }
 
-  def getUserByIdOrEmail(json: JsValue) = {
+  def getUserByIdOrEmail(json: JsValue): Either[String, Either[ExternalId[User], EmailAddress]] = {
     (json \ "type").as[String] match {
       case "user" => Right(Left((json \ "invitee").as[ExternalId[User]]))
       case "email" => Right(Right((json \ "invitee").as[EmailAddress]))
