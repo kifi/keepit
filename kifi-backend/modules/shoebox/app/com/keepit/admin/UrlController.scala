@@ -15,9 +15,7 @@ import com.keepit.common.controller.{ UserActionsHelper, AdminUserActions }
 import com.google.inject.Inject
 import com.keepit.integrity._
 import com.keepit.normalizer._
-import com.keepit.model.DuplicateDocument
 import com.keepit.common.healthcheck.{ SystemAdminMailSender, BabysitterTimeout, AirbrakeNotifier }
-import com.keepit.integrity.HandleDuplicatesAction
 import com.keepit.common.zookeeper.CentralConfig
 import com.keepit.common.akka.{ SafeFuture, MonitoredAwait }
 import scala.concurrent.Future
@@ -31,11 +29,8 @@ class UrlController @Inject() (
     uriRepo: NormalizedURIRepo,
     urlRepo: URLRepo,
     changedUriRepo: ChangedURIRepo,
-    duplicateDocumentRepo: DuplicateDocumentRepo,
     urlRenormalizeCommander: URLRenormalizeCommander,
     orphanCleaner: OrphanCleaner,
-    dupeDetect: DuplicateDocumentDetection,
-    duplicatesProcessor: DuplicateDocumentsProcessor,
     uriIntegrityPlugin: UriIntegrityPlugin,
     normalizationService: NormalizationService,
     urlPatternRuleRepo: UrlPatternRuleRepo,
@@ -85,46 +80,6 @@ class UrlController @Inject() (
       }
     }
     Ok
-  }
-
-  def documentIntegrity(page: Int = 0, size: Int = 50) = AdminUserPage { implicit request =>
-    val dupes = db.readOnlyReplica { implicit conn =>
-      duplicateDocumentRepo.getActive(page, size)
-    }
-
-    val groupedDupes = dupes.groupBy { case d => d.uri1Id }.toSeq.sortWith((a, b) => a._1.id < b._1.id)
-
-    val loadedDupes = db.readOnlyReplica { implicit session =>
-      groupedDupes map { d =>
-        val dupeRecords = d._2.map { sd =>
-          DisplayedDuplicate(sd.id.get, sd.uri2Id, uriRepo.get(sd.uri2Id).url, sd.percentMatch)
-        }
-        DisplayedDuplicates(d._1, uriRepo.get(d._1).url, dupeRecords)
-      }
-    }
-
-    Ok(html.admin.documentIntegrity(loadedDupes))
-  }
-
-  def handleDuplicate = AdminUserPage { implicit request =>
-    val body = request.body.asFormUrlEncoded.get
-    val action = body("action").head
-    val id = Id[DuplicateDocument](body("id").head.toLong)
-    duplicatesProcessor.handleDuplicates(Left[Id[DuplicateDocument], Id[NormalizedURI]](id), HandleDuplicatesAction(action))
-    Ok
-  }
-
-  def handleDuplicates = AdminUserPage { implicit request =>
-    val body = request.body.asFormUrlEncoded.get
-    val action = body("action").head
-    val id = Id[NormalizedURI](body("id").head.toLong)
-    duplicatesProcessor.handleDuplicates(Right[Id[DuplicateDocument], Id[NormalizedURI]](id), HandleDuplicatesAction(action))
-    Ok
-  }
-
-  def duplicateDocumentDetection = AdminUserPage { implicit request =>
-    dupeDetect.asyncProcessDocuments()
-    Redirect(routes.UrlController.documentIntegrity())
   }
 
   def normalizationView(page: Int = 0) = AdminUserPage { implicit request =>
@@ -419,6 +374,3 @@ class UrlController @Inject() (
     Ok(s"Starting at page $firstPage of size $pageSize, it's on!")
   }
 }
-
-case class DisplayedDuplicate(id: Id[DuplicateDocument], normUriId: Id[NormalizedURI], url: String, percentMatch: Double)
-case class DisplayedDuplicates(normUriId: Id[NormalizedURI], url: String, dupes: Seq[DisplayedDuplicate])
