@@ -36,9 +36,9 @@ case class NormalizedURI(
   def withId(id: Id[NormalizedURI]): NormalizedURI = copy(id = Some(id))
   def withUpdateTime(now: DateTime): NormalizedURI = copy(updatedAt = now)
   def withState(state: State[NormalizedURI]) = copy(state = state)
-  def withTitle(title: String) = {
-    val cleanTitle = title.trimAndRemoveLineBreaks()
-    if (cleanTitle.isEmpty()) this else copy(title = Some(cleanTitle))
+  def withTitle(title: Option[String]) = {
+    val cleanTitle = title.map(_.trimAndRemoveLineBreaks()).filter(_.nonEmpty)
+    copy(title = cleanTitle)
   }
   def withNormalization(normalization: Normalization) = copy(normalization = Some(normalization))
   def withRedirect(id: Id[NormalizedURI], now: DateTime): NormalizedURI = copy(state = NormalizedURIStates.REDIRECTED, redirect = Some(id), redirectTime = Some(now))
