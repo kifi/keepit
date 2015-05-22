@@ -301,36 +301,5 @@ angular.module('kifi')
         libraryService.joinLibrary($scope.library.id);
       }
     });
-
-    if (!$rootScope.userLoggedIn) {
-      library.abTest = {
-        name: 'exp_follow_popup',
-        salt: 'hgg1dv',
-        treatments: [
-          {
-            name: 'none'
-          },
-          {
-            name: 'popupLibrary',
-            data: {
-              buttonText: 'Follow',
-              mainHtml: 'Join Kifi to follow this library.<br/>Discover other libraries,<br/>and build your own!',
-              quoteHtml: 'From business to personal, Kifi has been<br/>instrumental in my day-to-day life.',
-              quoteAttribution: 'Remy Weinstein, California'
-            }
-          },
-          {
-            name: 'popupCollection',
-            data: {
-              buttonText: 'Save',
-              mainHtml: 'Join Kifi to save this collection.<br/>Discover other collections,<br/>and build your own!',
-              quoteHtml: 'From business to personal, Kifi has been<br/>instrumental in my day-to-day life.',
-              quoteAttribution: 'Remy Weinstein, California'
-            }
-          }
-        ]
-      };
-      library.abTestTreatment = AB.chooseTreatment(library.abTest.salt, library.abTest.treatments);
-    }
   }
 ]);
