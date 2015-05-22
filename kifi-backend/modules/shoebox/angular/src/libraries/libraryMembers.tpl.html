@@ -2,8 +2,9 @@
   <a class="dialog-x" ng-click="close()"></a>
 
   <div class="dialog-body-wrap">
-    <h1 class="dialog-header" ng-if="library.numFollowers > 0 || library.numCollaborators > 0">Manage members for this library</h1>
-    <h1 class="dialog-header" ng-if="library.numFollowers === 0 && library.numCollaborators === 0">{{library.name}}</h1>
+    <h1 class="dialog-header">
+      {{library.numFollowers > 0 || library.numCollaborators > 0 ? 'Manage members for this library' : library.name}}
+    </h1>
     <div class="dialog-body">
 
       <div class="lmm-stats-box" ng-if="library.numFollowers > 0 || library.numCollaborators > 0">
@@ -26,7 +27,7 @@
               </a>
               <div class="lmm-member-info-wrapper">
                 <div class="lmm-member-info-name">{{library.owner|name}}</div>
-                <span class="lmm-member-info-icon svg-collaborator-green"></span>
+                <span class="lmm-member-info-icon svg-collaborators-green"></span>
                 <span class="lmm-member-info-state collab">{{library.numCollaborators > 0 ? 'Collaborator' : 'Owner'}}</span>
               </div>
             </li>
@@ -38,7 +39,7 @@
               </a>
               <div class="lmm-member-info-wrapper">
                 <div class="lmm-member-info-name">{{member|name}}</div>
-                <span class="lmm-member-info-icon svg-collaborator-green" ng-if="member.isCollaborator"></span>
+                <span class="lmm-member-info-icon svg-collaborators-green" ng-if="member.isCollaborator"></span>
                 <span class="lmm-member-info-state" ng-class="{'collab' : member.isCollaborator}">{{member.isCollaborator ? 'Collaborator' : 'Follower'}}</span>
               </div>
               <div class="lmm-member-dropdown-parent" kf-hover-menu ng-if="canManage">

@@ -52,7 +52,7 @@ angular.module('kifi')
               } else {
                 scope.moreMembers = true;
                 scope.offset += 1;
-                members = _.reject(members, function(m) { return m.lastInvitedAt; });
+                _.remove(members, 'lastInvitedAt');
                 scope.memberList.push.apply(scope.memberList, members);
               }
             });
@@ -73,46 +73,43 @@ angular.module('kifi')
         }
 
         function countFollowersAndCollaborators() {
-          var memCounts = _.countBy(scope.memberList, function(mem) {
-            return mem.membership;
-          });
+          var memCounts = _.countBy(scope.memberList, 'membership');
           scope.library.numFollowers = memCounts[followerAccess] || 0;
           scope.library.numCollaborators = memCounts[collabAccess] || 0;
         }
 
         scope.toggleWhoCanInvite = function() {
-          if (scope.collabCanInvite) {
-            libraryService.modifyLibrary({'id': scope.library.id, 'whoCanInvite': ownerOnlyInviteSetting}, false);
-          } else {
-            libraryService.modifyLibrary({'id': scope.library.id, 'whoCanInvite': collabInviteSetting}, false);
-          }
+          libraryService.modifyLibrary({
+            'id': scope.library.id,
+            'whoCanInvite': scope.collabCanInvite ? ownerOnlyInviteSetting : collabInviteSetting
+          }, false);
           scope.collabCanInvite = !scope.collabCanInvite;
         };
 
+        function changeMembership(access) {
+          var m = _.find(scope.memberList, {id: scope.selectedMemberId});
+          m.membership = access;
+          m.isCollaborator = isCollaborator(m);
+          m.isFollower = isFollower(m);
+          countFollowersAndCollaborators();
+        }
+
         scope.changeToFollower = function(member) {
           updateMembership(member, followerAccess).then(function() {
-            var index = _.indexOf(scope.memberList, _.find(scope.memberList, {id: scope.selectedMemberId}));
-            scope.memberList[index].membership = followerAccess;
-            scope.memberList[index].isCollaborator = isCollaborator(scope.memberList[index]);
-            scope.memberList[index].isFollower = isFollower(scope.memberList[index]);
-            countFollowersAndCollaborators();
+            changeMembership(followerAccess);
           });
         };
 
         scope.changeToCollaborator = function(member) {
           updateMembership(member, collabAccess).then(function() {
-            var index = _.indexOf(scope.memberList, _.find(scope.memberList, {id: scope.selectedMemberId}));
-            scope.memberList[index].membership = collabAccess;
-            scope.memberList[index].isCollaborator = isCollaborator(scope.memberList[index]);
-            scope.memberList[index].isFollower = isFollower(scope.memberList[index]);
-            countFollowersAndCollaborators();
+            changeMembership(collabAccess);
           });
         };
 
         scope.removeMember = function(member) {
           updateMembership(member, noAccess).then(function () {
             $timeout(function() {
-              scope.memberList = _.drop(scope.memberList, {id: scope.selectedMemberId});
+              _.remove(scope.memberList, {id: scope.selectedMemberId});
               countFollowersAndCollaborators();
             });
           });
