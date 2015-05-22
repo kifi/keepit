@@ -1,6 +1,5 @@
 package com.keepit.rover.model
 
-import com.google.inject.Injector
 import com.keepit.common.db.Id
 import com.keepit.model.NormalizedURI
 import com.keepit.rover.article.{ YoutubeArticle, DefaultArticle, EmbedlyArticle }
@@ -12,7 +11,7 @@ import scala.concurrent.duration._
 
 class ArticleInfoTest extends Specification with NoTimeConversions with RoverTestInjector {
 
-  val firstUri: Id[NormalizedURI] = Id(1)
+  val firstUri: Id[NormalizedURI] = Id(25)
   val firstUrl = "http://www.mcsweeneys.net/articles/son-its-time-we-talk-about-where-start-ups-come-from"
 
   "ArticleInfoRepo" should {

@@ -125,7 +125,7 @@ class BookmarkImporter @Inject() (
         }
       }
 
-      val importTag = keepsCommander.getOrCreateTag(lf.request.userId, "Imported links")(context)
+      val importTag = keepsCommander.getOrCreateTag(lf.request.userId, "imported-links")(context)
 
       val tags = tagMap.values.toSeq.map { tagStr =>
         tagStr.trim -> timing(s"uploadBookmarkFile(${lf.request.userId}) -- getOrCreateTag(${tagStr.trim})", 50) { keepsCommander.getOrCreateTag(lf.request.userId, tagStr.trim)(context) }
@@ -213,7 +213,7 @@ class BookmarkImporter @Inject() (
     val importId = UUID.randomUUID.toString
     val rawKeeps = bookmarks.map {
       case BookmarkWithHashtags(title, href, hashtags, createdDate, originalJson) =>
-        val titleOpt = if (title.nonEmpty && title.exists(_.nonEmpty)) Some(title.get) else None
+        val titleOpt = if (title.nonEmpty && title.exists(_.nonEmpty) && title.exists(_ != href)) Some(title.get) else None
         val hashtagsArray = if (hashtags.nonEmpty) {
           Some(JsArray(hashtags.map(Json.toJson(_))))
         } else {

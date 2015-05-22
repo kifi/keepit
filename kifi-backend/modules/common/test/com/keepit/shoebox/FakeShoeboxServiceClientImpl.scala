@@ -17,7 +17,6 @@ import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.model._
 import com.keepit.model.view.{ LibraryMembershipView, UserSessionView }
 import com.keepit.rover.model.BasicImages
-import com.keepit.scraper.ScrapeRequest
 import com.keepit.search._
 import com.keepit.shoebox.model.ids.UserSessionExternalId
 import com.keepit.social.{ BasicUser, SocialId, SocialNetworkType }
@@ -34,30 +33,7 @@ class FakeShoeboxScraperClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   protected def httpClient: com.keepit.common.net.HttpClient = ???
 
-  def assignScrapeTasks(zkId: Long, max: Int): Future[Seq[ScrapeRequest]] = {
-    Future.successful(Seq.empty[ScrapeRequest])
-  }
-
   def getAllURLPatterns(): Future[UrlPatternRules] = Future.successful(UrlPatternRules(Seq.empty))
-
-  def saveScrapeInfo(info: ScrapeInfo): Future[Unit] = ???
-
-  def updateNormalizedURIState(uriId: Id[NormalizedURI], state: State[NormalizedURI]): Future[Unit] = ???
-
-  def updateNormalizedURI(uriId: => Id[NormalizedURI],
-    createdAt: => DateTime,
-    updatedAt: => DateTime,
-    externalId: => ExternalId[NormalizedURI],
-    title: => Option[String],
-    url: => String,
-    urlHash: => UrlHash,
-    state: => State[NormalizedURI],
-    seq: => SequenceNumber[NormalizedURI],
-    screenshotUpdatedAt: => Option[DateTime],
-    restriction: => Option[Restriction],
-    normalization: => Option[Normalization],
-    redirect: => Option[Id[NormalizedURI]],
-    redirectTime: => Option[DateTime]): Future[Unit] = Future.successful(Unit)
 
   def getProxy(url: String): Future[Option[HttpProxy]] = ???
 

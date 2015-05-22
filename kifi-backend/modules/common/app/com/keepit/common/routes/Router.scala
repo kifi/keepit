@@ -123,9 +123,6 @@ object Shoebox extends Service {
     def getNormalizedUriUpdates(lowSeq: SequenceNumber[ChangedURI], highSeq: SequenceNumber[ChangedURI]) = ServiceRoute(GET, "/internal/shoebox/database/getNormalizedUriUpdates", Param("lowSeq", lowSeq.value), Param("highSeq", highSeq.value))
     def kifiHit() = ServiceRoute(POST, "/internal/shoebox/database/kifiHit")
     def getHelpRankInfo() = ServiceRoute(POST, "/internal/shoebox/database/getHelpRankInfo")
-    def assignScrapeTasks(zkId: Long, max: Int) = ServiceRoute(GET, "/internal/shoebox/database/assignScrapeTasks", Param("zkId", zkId), Param("max", max))
-    def saveScrapeInfo() = ServiceRoute(POST, "/internal/shoebox/database/saveScrapeInfo")
-    def updateNormalizedURI(uriId: Id[NormalizedURI]) = ServiceRoute(POST, "/internal/shoebox/database/updateNormalizedURI", Param("uriId", uriId))
     def getProxy(url: String) = ServiceRoute(GET, "/internal/shoebox/database/getProxy", Param("url"))
     def getProxyP() = ServiceRoute(POST, "/internal/shoebox/database/getProxyP")
     def getFriendRequestRecipientIdBySender(senderId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/getFriendRequestRecipientIdBySender", Param("senderId", senderId))
@@ -327,9 +324,6 @@ object Scraper extends Service {
     def status() = ServiceRoute(GET, s"/internal/scraper/status")
     def getBasicArticle() = ServiceRoute(POST, s"/internal/scraper/getBasicArticle")
     def getSignature() = ServiceRoute(POST, s"/internal/scraper/getSignature")
-    def getPornDetectorModel() = ServiceRoute(GET, s"/internal/scraper/getPornDetectorModel")
-    def detectPorn() = ServiceRoute(POST, s"/internal/scraper/pornDetector/detectPorn")
-    def whitelist() = ServiceRoute(POST, s"/internal/scraper/pornDetector/whitelist")
   }
 }
 
@@ -425,6 +419,10 @@ object Rover extends Service {
     def getOrElseFetchArticleSummaryAndImages() = ServiceRoute(POST, "/internal/rover/getOrElseFetchArticleSummaryAndImages")
     def getOrElseFetchRecentArticle() = ServiceRoute(POST, "/internal/rover/getOrElseFetchRecentArticle")
     def getOrElseComputeRecentContentSignature() = ServiceRoute(POST, "/internal/rover/getOrElseComputeRecentContentSignature")
+
+    def getPornDetectorModel() = ServiceRoute(GET, s"/internal/rover/pornDetector/getModel")
+    def detectPorn() = ServiceRoute(POST, s"/internal/rover/pornDetector/detect")
+    def whitelist() = ServiceRoute(POST, s"/internal/rover/pornDetector/whitelist")
   }
 }
 

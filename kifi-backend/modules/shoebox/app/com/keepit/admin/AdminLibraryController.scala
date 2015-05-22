@@ -108,7 +108,7 @@ class AdminLibraryController @Inject() (
 
   def index(page: Int = 0) = AdminUserPage { implicit request =>
     val pageSize = 30
-    val topListSize = 15
+    val topListSize = 30
     val (stats, hotTodayWithStats, topDailyFollower, topDailyKeeps, totalPublishedCount) = db.readOnlyReplica { implicit session =>
       val hotToday = if (page == 0) {
         libraryMembershipRepo.percentGainSince(clock.now().minusHours(24), totalMoreThan = 10, recentMoreThan = 10, count = topListSize)

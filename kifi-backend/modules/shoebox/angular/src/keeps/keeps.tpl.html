@@ -49,8 +49,8 @@
         </menu>
       </div>
       <div class="kf-keep-top">
-        <a class="kf-keep-keeper-pic" ng-href="{{::keep.user|profileUrl}}" ng-attr-style="background-image:url({{::keep.user|pic:100}})"></a>
-        <div class="kf-keep-top-r">
+        <a class="kf-keep-keeper-pic" ng-if="::keep.user" ng-href="{{::keep.user|profileUrl}}" ng-attr-style="background-image:url({{::keep.user|pic:100}})"></a>
+        <div class="kf-keep-top-r" ng-if="::keep.user">
           <a class="kf-keep-keeper-name" ng-href="{{::keep.user|profileUrl}}">{{::keep.user|name}}</a>
           <div class="kf-keep-time">
             <time ng-attr-datetime="{{::keep.createdAt}}" am-time-ago="::keep.createdAt" title="{{::keep.createdAt|localTime}}" ng-if="::keep.createdAt"></time>

@@ -16,7 +16,6 @@ import com.keepit.curator.model._
 import com.keepit.curator.{ FakeCuratorServiceClientModule, FakeCuratorServiceClientImpl, CuratorServiceClient }
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.model._
-import com.keepit.scraper.{ FakeScraperServiceClientModule, FakeScrapeSchedulerModule }
 import com.keepit.search.augmentation._
 import com.keepit.search.{ SearchServiceClient, FakeSearchServiceClient, FakeSearchServiceClientModule }
 import com.keepit.shoebox.FakeShoeboxServiceModule
@@ -78,14 +77,12 @@ class RecommendationsCommanderTest extends Specification with ShoeboxTestInjecto
     FakeCuratorServiceClientModule(),
     FakeSearchServiceClientModule(),
     FakeShoeboxServiceModule(),
-    FakeScrapeSchedulerModule(),
     FakeShoeboxStoreModule(),
     FakeHttpClientModule(),
     FakeSocialGraphModule(),
     FakeHeimdalServiceClientModule(),
     FakeMailModule(),
     FakeCortexServiceClientModule(),
-    FakeScraperServiceClientModule(),
     FakeABookServiceClientModule(),
     FakeUserActionsModule(),
     FakeActorSystemModule()

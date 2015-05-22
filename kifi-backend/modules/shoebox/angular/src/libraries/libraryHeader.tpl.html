@@ -121,8 +121,8 @@
 
   <div class="kf-lh-buttons" ng-if="!amOwner">
     <div class="kf-lh-follow-btn-wrap" ng-if="!followingLibrary()">
-      <div kf-library-header-follow-button-cta library="library" ng-if="!isMobile && library.abTest.name === 'exp_follow_popup' && library.abTestTreatment.data"></div>
-      <button class="kf-button kf-lh-follow-btn" ng-click="followLibrary(true)">{{library.abTestTreatment.data.buttonText || 'Follow'}}</button>
+      <div kf-library-header-follow-button-cta library="library" ng-if="!isMobile && !$root.userLoggedIn"></div>
+      <button class="kf-button kf-lh-follow-btn" ng-click="followLibrary(true)">Follow</button>
     </div>
     <div class="kf-lh-unfollow-btn-wrap" ng-if="followingLibrary()">
       <button class="kf-button kf-lh-unfollow-btn" ng-class="{'kf-no-unfollow': followBtnJustClicked}" ng-click="unfollowLibrary()" ng-mouseleave="followBtnJustClicked = false"></button><!--

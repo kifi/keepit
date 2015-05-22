@@ -12,7 +12,6 @@ import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId, FakeCryptoMod
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.model._
-import com.keepit.scraper.{ FakeScraperServiceClientModule, FakeScrapeSchedulerModule }
 import com.keepit.shoebox.{ FakeKeepImportsModule, FakeShoeboxServiceModule }
 import com.keepit.test.{ DbInjectionHelper, ShoeboxTestInjector }
 import org.apache.commons.io.FileUtils
@@ -32,8 +31,6 @@ class LibraryImageControllerTest extends Specification with ShoeboxTestInjector 
   val controllerTestModules = Seq(
     FakeCryptoModule(),
     FakeShoeboxServiceModule(),
-    FakeScrapeSchedulerModule(),
-    FakeScraperServiceClientModule(),
     FakeKeepImportsModule(),
     FakeSliderHistoryTrackerModule(),
     FakeABookServiceClientModule(),

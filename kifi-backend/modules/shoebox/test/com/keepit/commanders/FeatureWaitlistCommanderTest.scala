@@ -2,7 +2,6 @@ package com.keepit.commanders
 
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.social.FakeSocialGraphModule
-import com.keepit.scraper.FakeScrapeSchedulerModule
 import org.specs2.mutable.Specification
 
 import com.keepit.test.{ ShoeboxTestInjector, DbInjectionHelper }
@@ -18,7 +17,6 @@ class FeatureWaitlistCommanderTest extends Specification with ShoeboxTestInjecto
   val modules = Seq(
     FakeMailModule(),
     FakeSocialGraphModule(),
-    FakeScrapeSchedulerModule(),
     FakeABookServiceClientModule())
 
   "FeatureWaitlistCommander" should {

@@ -2,7 +2,7 @@ keepBorderWidth = 1px
 keepBorderRadius = 8px
 keepSidePad = 20px
 keepCardMaxWidth = 496px  // chosen to make youtube videos (16:9 aspect ratio) come out to whole pixels, 496x279
-maxWidthForNarrowKeep = keepCardMaxWidth + 2 * (keepSidePad + keepBorderWidth + appSidePad1) - 1 // = 561px
+maxWidthForNarrowKeep = keepCardMaxWidth + 2 * (keepSidePad + appSidePad1) - 1 // = 559px
 
 .kf-main-keeps
   position: relative
@@ -28,7 +28,7 @@ maxWidthForNarrowKeep = keepCardMaxWidth + 2 * (keepSidePad + keepBorderWidth + 
   background-color: white
 
   @media (max-width: maxWidthForNarrowKeep)
-    max-width: 2 * keepBorderWidth + keepCardMaxWidth
+    max-width: keepCardMaxWidth
 
 .kf-keep-selection-tools
   border-radius: 0 keepBorderRadius keepBorderRadius keepBorderRadius
@@ -89,7 +89,7 @@ maxWidthForNarrowKeep = keepCardMaxWidth + 2 * (keepSidePad + keepBorderWidth + 
 .kf-keep
   position: relative
   border-radius: keepBorderRadius
-  padding: 20px keepSidePad
+  padding: 0 keepSidePad 20px
 
   &.detailed
     background-color: #eff2f7
@@ -115,7 +115,6 @@ maxWidthForNarrowKeep = keepCardMaxWidth + 2 * (keepSidePad + keepBorderWidth + 
     border-top-left-radius: 0
 
   @media (max-width: maxWidthForNarrowKeep)
-    padding-top: 12px
     padding-bottom: 0
 
     &>.kf-keep-body
@@ -145,12 +144,20 @@ maxWidthForNarrowKeep = keepCardMaxWidth + 2 * (keepSidePad + keepBorderWidth + 
 
 .kf-keep-top
   display: table
-  width: 100%
-  margin-bottom: 16px
   table-layout: fixed
+  width: 100%
+  padding-top: 16px
+  margin-bottom: 16px
+
+  &:empty
+    padding-top: 4px
 
   @media (max-width: maxWidthForNarrowKeep)
+    padding-top: 12px
     margin-bottom: 12px
+
+    &:empty
+      display: none
 
 .kf-keep-top-menu-container
   position: absolute
@@ -227,6 +234,7 @@ maxWidthForNarrowKeep = keepCardMaxWidth + 2 * (keepSidePad + keepBorderWidth + 
   width: 48px
   border-radius: 50%
   background-size: cover
+  position: relative // for ::after
 
   @media (max-width: maxWidthForNarrowKeep)
     height: 36px
@@ -234,6 +242,16 @@ maxWidthForNarrowKeep = keepCardMaxWidth + 2 * (keepSidePad + keepBorderWidth + 
 
   &:focus
     outline-color: #ccc
+
+  &::after
+    content: ''
+    position: absolute
+    top: 0
+    left: 0
+    right: 0
+    bottom: 0
+    border-radius: inherit
+    box-shadow: inset 0 0 1px rgba(0,0,0,.2)
 
 .kf-keep-top-r
   display: table-cell

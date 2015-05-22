@@ -18,7 +18,6 @@ import com.keepit.model.LibraryFactoryHelper._
 import com.keepit.model.KeepFactory._
 import com.keepit.model.KeepFactoryHelper._
 import com.keepit.model._
-import com.keepit.scraper.{ FakeScrapeSchedulerModule, FakeScraperServiceClientModule }
 import com.keepit.shoebox.{ FakeKeepImportsModule, FakeShoeboxServiceModule }
 import com.keepit.social.BasicUser
 import com.keepit.test.{ DbInjectionHelper, ShoeboxTestInjector }
@@ -38,8 +37,6 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
   val controllerTestModules = Seq(
     FakeCryptoModule(),
     FakeShoeboxServiceModule(),
-    FakeScrapeSchedulerModule(),
-    FakeScraperServiceClientModule(),
     FakeKeepImportsModule(),
     FakeSliderHistoryTrackerModule(),
     FakeABookServiceClientModule(),

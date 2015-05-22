@@ -9,7 +9,7 @@ import scala.util.{ Try }
 
 import com.google.inject.Inject
 import com.keepit.abook.ABookServiceClient
-import com.keepit.commanders.{ AuthCommander, UserCommander, LibraryCommander }
+import com.keepit.commanders.{ UsernameOps, AuthCommander, UserCommander, LibraryCommander }
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.{ AdminUserActions, UserActionsHelper, UserRequest }
 import com.keepit.common.db._
@@ -107,6 +107,7 @@ class AdminUserController @Inject() (
     userPictureRepo: UserPictureRepo,
     basicUserRepo: BasicUserRepo,
     userCredRepo: UserCredRepo,
+    usernameAliasRepo: UsernameAliasRepo,
     userCommander: UserCommander,
     socialUserTypeahead: SocialUserTypeahead,
     kifiUserTypeahead: KifiUserTypeahead,
@@ -521,19 +522,19 @@ class AdminUserController @Inject() (
     Redirect(routes.AdminUserController.userView(user1))
   }
 
-  def isSuperAdmin(userId: Id[User]) = {
-    val SUPER_ADMIN_SET: Set[Id[User]] = Set(Id[User](1), Id[User](3))
-    SUPER_ADMIN_SET contains userId
-  }
-
-  def isAdminExperiment(expType: ExperimentType) = expType == ExperimentType.ADMIN
-
   def addExperimentAction(userId: Id[User], experiment: String) = AdminUserAction { request =>
     addExperiment(requesterUserId = request.userId, userId, experiment) match {
       case Right(expType) => Ok(Json.obj(experiment -> true))
       case Left(s) => Forbidden
     }
   }
+
+  def isSuperAdmin(userId: Id[User]) = {
+    val SUPER_ADMIN_SET: Set[Id[User]] = Set(Id[User](1), Id[User](3))
+    SUPER_ADMIN_SET contains userId
+  }
+
+  def isAdminExperiment(expType: ExperimentType) = expType == ExperimentType.ADMIN
 
   def addExperiment(requesterUserId: Id[User], userId: Id[User], experiment: String): Either[String, ExperimentType] = {
     val expType = ExperimentType.get(experiment)
@@ -890,7 +891,13 @@ class AdminUserController @Inject() (
           kifiInstallationRepo.all(userId).foreach { installation => kifiInstallationRepo.save(installation.withState(KifiInstallationStates.INACTIVE)) } // Kifi Installations
           userCredRepo.findByUserIdOpt(userId).foreach { userCred => userCredRepo.save(userCred.copy(state = UserCredStates.INACTIVE)) } // User Credentials
           emailRepo.getAllByUser(userId).foreach { email => emailRepo.save(email.withState(UserEmailAddressStates.INACTIVE)) } // Email addresses
-          userRepo.save(userRepo.get(userId).withState(UserStates.INACTIVE).copy(primaryEmail = None)) // User
+
+          val user = userRepo.get(userId)
+          val newUsername = user.externalId.id // setting old username to something random (UUID should work here)
+          userRepo.save(user.withState(UserStates.INACTIVE).copy(primaryEmail = None, username = Username(newUsername), normalizedUsername = UsernameOps.normalize(newUsername))) // User
+          usernameAliasRepo.getByUserId(userId).foreach { alias => // Usernames
+            usernameAliasRepo.reclaim(alias.username, Some(userId))
+          }
         }
 
         val user = userRepo.get(userId)

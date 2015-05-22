@@ -14,7 +14,6 @@ import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.graph.FakeGraphServiceModule
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.model.{ Username, KifiInstallationPlatform, KifiExtVersion, KifiInstallation, KifiInstallationRepo, NotificationCategory, User, UserRepo }
-import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.Specification
@@ -26,7 +25,6 @@ import scala.concurrent.duration.Duration
 class InstallExtensionTipTest extends Specification with ShoeboxTestInjector {
   val modules = Seq(
     FakeExecutionContextModule(),
-    FakeScrapeSchedulerModule(),
     FakeHttpClientModule(),
     FakeSocialGraphModule(),
     FakeHealthcheckModule(),

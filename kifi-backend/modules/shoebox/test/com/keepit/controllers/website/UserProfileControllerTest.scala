@@ -28,7 +28,6 @@ import com.keepit.model.LibraryFactory._
 import com.keepit.model.LibraryMembershipFactory._
 import com.keepit.model.LibraryMembershipFactoryHelper._
 import com.keepit.model._
-import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.social.BasicUser
 import com.keepit.test.ShoeboxTestInjector
 import org.apache.commons.io.FileUtils
@@ -49,7 +48,6 @@ import scala.slick.jdbc.StaticQuery
 class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
 
   val controllerTestModules = Seq(
-    FakeScrapeSchedulerModule(),
     FakeABookServiceClientModule(),
     FakeSocialGraphModule())
 

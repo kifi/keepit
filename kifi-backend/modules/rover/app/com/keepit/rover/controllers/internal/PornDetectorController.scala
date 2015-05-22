@@ -1,15 +1,16 @@
-package com.keepit.controllers.scraper
+package com.keepit.rover.controllers.internal
 
-import com.keepit.common.controller.ScraperServiceController
 import com.google.inject.Inject
+import com.keepit.common.controller.{ RoverServiceController }
 import com.keepit.rover.sensitivity.{ PornDetectorFactory, PornDetectorUtil, PornWordLikelihood, PornWordLikelihoodStore }
-import play.api.mvc.Action
 import play.api.libs.json._
+import play.api.mvc.Action
+
 import scala.collection.mutable
 
 class PornDetectorController @Inject() (
     factory: PornDetectorFactory,
-    store: PornWordLikelihoodStore) extends ScraperServiceController {
+    store: PornWordLikelihoodStore) extends RoverServiceController {
   val FILE_NAME = "ratioMap"
 
   def getModel() = Action { request =>

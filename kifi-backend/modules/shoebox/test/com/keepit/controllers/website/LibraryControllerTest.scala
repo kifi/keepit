@@ -2,6 +2,7 @@ package com.keepit.controllers.website
 
 import java.io.File
 
+import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.commanders._
 import com.keepit.common.concurrent.FakeExecutionContextModule
@@ -24,7 +25,6 @@ import com.keepit.model.LibraryMembershipFactoryHelper._
 import com.keepit.model.UserFactory._
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.model._
-import com.keepit.scraper.{ FakeScrapeSchedulerConfigModule, FakeScrapeSchedulerModule }
 import com.keepit.search.{ FakeSearchServiceClient, FakeSearchServiceClientModule }
 import com.keepit.shoebox.{ FakeKeepImportsModule, FakeShoeboxServiceModule }
 import com.keepit.social.BasicUser
@@ -50,9 +50,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
     FakeMailModule(),
     FakeCortexServiceClientModule(),
     FakeSearchServiceClientModule(),
-    FakeScrapeSchedulerConfigModule(),
     FakeSocialGraphModule(),
-    FakeScrapeSchedulerModule(),
     FakeShoeboxServiceModule()
   )
 
@@ -641,6 +639,134 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         val request4 = FakeRequest("POST", testPath2).withBody(inputJson2)
         val result4 = libraryController.inviteUsersToLibrary(pubId2)(request4)
         status(result4) must equalTo(OK)
+      }
+    }
+
+    "uninvite user" in {
+
+      def setupUninvite()(implicit injector: Injector): (User, User, Library, LibraryInvite) = {
+        val t1 = new DateTime(2014, 7, 21, 6, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
+        db.readWrite { implicit s =>
+          val userA = userRepo.save(User(firstName = "Aaron", lastName = "Hsu", createdAt = t1, username = Username("ahsu"), normalizedUsername = "test", primaryEmail = Some(EmailAddress("email@gmail.com"))))
+          val userB = userRepo.save(User(firstName = "Bulba", lastName = "Saur", createdAt = t1, username = Username("bulbasaur"), normalizedUsername = "test"))
+
+          val libraryB1 = libraryRepo.save(Library(name = "Library1", ownerId = userB.id.get, slug = LibrarySlug("lib1"), visibility = LibraryVisibility.DISCOVERABLE, memberCount = 1))
+          libraryMembershipRepo.save(LibraryMembership(libraryId = libraryB1.id.get, userId = userB.id.get, access = LibraryAccess.OWNER))
+
+          val inv1 = libraryInviteRepo.save(LibraryInvite(libraryId = libraryB1.id.get, inviterId = userB.id.get, userId = Some(userA.id.get), access = LibraryAccess.READ_INSERT))
+          (userA, userB, libraryB1, inv1)
+        }
+      }
+
+      "succeed when inviter tries to uninvite" in {
+        withDb(modules: _*) { implicit injector =>
+          implicit val config = inject[PublicIdConfiguration]
+          val libraryController = inject[LibraryController]
+          val (invitee: User, inviter: User, library: Library, invite: LibraryInvite) = setupUninvite()
+          val libraryId = Library.publicId(library.id.get)
+
+          inject[FakeUserActionsHelper].setUser(inviter)
+          val uninvitePath = com.keepit.controllers.website.routes.LibraryController.revokeLibraryInvitation(libraryId).url
+          val uninviteJson = Json.obj(
+            "type" -> "user",
+            "invitee" -> s"${invitee.externalId}"
+          )
+          val request = FakeRequest("DELETE", uninvitePath).withBody(uninviteJson)
+
+          val result = libraryController.revokeLibraryInvitation(libraryId)(request)
+          status(result) must equalTo(NO_CONTENT)
+          contentType(result) must beNone
+          db.readOnlyMaster { implicit s =>
+            libraryInviteRepo.getLastSentByLibraryIdAndInviterIdAndUserId(library.id.get, inviter.id.get, invitee.id.get, Set(LibraryInviteStates.INACTIVE)) must beSome
+          }
+        }
+      }
+      "fail when someone else tries to uninvite" in {
+        withDb(modules: _*) { implicit injector =>
+          implicit val config = inject[PublicIdConfiguration]
+          val libraryController = inject[LibraryController]
+          val (invitee: User, inviter: User, library: Library, invite: LibraryInvite) = setupUninvite()
+          val libraryId = Library.publicId(library.id.get)
+
+          inject[FakeUserActionsHelper].setUser(invitee)
+          val uninvitePath = com.keepit.controllers.website.routes.LibraryController.revokeLibraryInvitation(libraryId).url
+          val uninviteJson = Json.obj(
+            "type" -> "user",
+            "invitee" -> s"${invitee.externalId}"
+          )
+
+          val request = FakeRequest("DELETE", uninvitePath).withBody(uninviteJson)
+          val result = libraryController.revokeLibraryInvitation(libraryId)(request)
+          status(result) must equalTo(BAD_REQUEST)
+          contentType(result) must beSome("application/json")
+          contentAsString(result) must equalTo("{\"error\":\"library_invite_not_found\"}")
+        }
+      }
+
+      "fail for invalid library id" in {
+        withDb(modules: _*) { implicit injector =>
+          implicit val config = inject[PublicIdConfiguration]
+          val libraryController = inject[LibraryController]
+          val (invitee: User, inviter: User, library: Library, invite: LibraryInvite) = setupUninvite()
+          val libraryId = PublicId[Library]("x")
+
+          inject[FakeUserActionsHelper].setUser(inviter)
+          val uninvitePath = com.keepit.controllers.website.routes.LibraryController.revokeLibraryInvitation(libraryId).url
+          val uninviteJson = Json.obj(
+            "type" -> "user",
+            "invitee" -> s"${invitee.externalId}"
+          )
+          val request = FakeRequest("DELETE", uninvitePath).withBody(uninviteJson)
+
+          val result = libraryController.revokeLibraryInvitation(libraryId)(request)
+          status(result) must equalTo(BAD_REQUEST)
+          contentType(result) must beSome("application/json")
+          contentAsString(result) must equalTo("{\"error\":\"invalid_library_id\"}")
+        }
+      }
+
+      "fail for invalid user type" in {
+        withDb(modules: _*) { implicit injector =>
+          implicit val config = inject[PublicIdConfiguration]
+          val libraryController = inject[LibraryController]
+          val (invitee: User, inviter: User, library: Library, invite: LibraryInvite) = setupUninvite()
+          val libraryId = Library.publicId(library.id.get)
+
+          inject[FakeUserActionsHelper].setUser(inviter)
+          val uninvitePath = com.keepit.controllers.website.routes.LibraryController.revokeLibraryInvitation(libraryId).url
+          val uninviteJson = Json.obj(
+            "type" -> "x",
+            "invitee" -> "email@gmail.com"
+          )
+          val request = FakeRequest("DELETE", uninvitePath).withBody(uninviteJson)
+
+          val result = libraryController.revokeLibraryInvitation(libraryId)(request)
+          status(result) must equalTo(BAD_REQUEST)
+          contentType(result) must beSome("application/json")
+          contentAsString(result) must equalTo("{\"error\":\"invalid_invitee_type\"}")
+        }
+      }
+
+      "fail for invalid user externalId" in {
+        withDb(modules: _*) { implicit injector =>
+          implicit val config = inject[PublicIdConfiguration]
+          val libraryController = inject[LibraryController]
+          val (invitee: User, inviter: User, library: Library, invite: LibraryInvite) = setupUninvite()
+          val libraryId = Library.publicId(library.id.get)
+
+          inject[FakeUserActionsHelper].setUser(inviter)
+          val uninvitePath = com.keepit.controllers.website.routes.LibraryController.revokeLibraryInvitation(libraryId).url
+          val uninviteJson = Json.obj(
+            "type" -> "user",
+            "invitee" -> "00000000-0000-0000-0000-000000000000"
+          )
+          val request = FakeRequest("DELETE", uninvitePath).withBody(uninviteJson)
+
+          val result = libraryController.revokeLibraryInvitation(libraryId)(request)
+          status(result) must equalTo(BAD_REQUEST)
+          contentType(result) must beSome("application/json")
+          contentAsString(result) must equalTo("{\"error\":\"external_id_does_not_exist\"}")
+        }
       }
     }
 

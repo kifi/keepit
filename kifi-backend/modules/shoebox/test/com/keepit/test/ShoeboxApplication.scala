@@ -29,7 +29,6 @@ import com.keepit.inject.{ ApplicationInjector, FakeFortyTwoModule }
 import com.keepit.normalizer.FakeNormalizationServiceModule
 import com.keepit.queue.FakeNormalizationUpdateJobQueueModule
 import com.keepit.rover.FakeRoverServiceClientModule
-import com.keepit.scraper.FakeScraperServiceClientModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox._
 
@@ -83,7 +82,6 @@ trait ShoeboxTestInjector extends TestInjector with DbInjectionHelper with Shoeb
     FakeSlickModule(TestDbInfo.dbInfo),
     ShoeboxCacheModule(HashMapMemoryCacheModule()),
     FakeNormalizationServiceModule(),
-    FakeScraperServiceClientModule(),
     AbuseControlModule(),
     FakeSchedulerModule(),
     FakeSimpleQueueModule(),

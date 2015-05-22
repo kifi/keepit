@@ -28,13 +28,7 @@ import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.controllers.website.UserController
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.curator.FakeCuratorServiceClientModule
-import com.keepit.model.KeepFactory._
-import com.keepit.model.LibraryFactory._
-import com.keepit.model.LibraryMembershipFactory._
-import com.keepit.model.UserConnectionFactory._
-import com.keepit.model.UserFactory._
 import com.keepit.model.{ UserConnection, _ }
-import com.keepit.scraper.{ FakeScrapeSchedulerModule, FakeScraperServiceClientModule }
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.social.SocialNetworks._
@@ -51,14 +45,12 @@ import securesocial.core.providers.utils.{ BCryptPasswordHasher, PasswordHasher 
 import securesocial.core.{ IdentityId, _ }
 
 import scala.concurrent.Future
-import scala.slick.jdbc.StaticQuery
 
 class MobileUserControllerTest extends Specification with ShoeboxApplicationInjector {
 
   val mobileControllerTestModules = Seq(
     FakeShoeboxServiceModule(),
     FakeExecutionContextModule(),
-    FakeScrapeSchedulerModule(),
     FakeMailModule(),
     FakeHttpClientModule(),
     FakeAnalyticsModule(),
@@ -69,7 +61,6 @@ class MobileUserControllerTest extends Specification with ShoeboxApplicationInje
     FakeSocialGraphModule(),
     FakeABookServiceClientModule(),
     FakeCortexServiceClientModule(),
-    FakeScraperServiceClientModule(),
     FakeShoeboxAppSecureSocialModule(),
     FakeCuratorServiceClientModule()
   )
@@ -121,7 +112,6 @@ class FasterMobileUserControllerTest extends Specification with ShoeboxTestInjec
   val modules = Seq(
     FakeShoeboxServiceModule(),
     FakeExecutionContextModule(),
-    FakeScrapeSchedulerModule(),
     FakeMailModule(),
     FakeHttpClientModule(),
     FakeAnalyticsModule(),
@@ -130,7 +120,6 @@ class FasterMobileUserControllerTest extends Specification with ShoeboxTestInjec
     FakeAirbrakeModule(),
     FakeABookServiceClientModule(),
     FakeCortexServiceClientModule(),
-    FakeScraperServiceClientModule(),
     FakeSocialGraphModule(),
     FakeCuratorServiceClientModule()
   )

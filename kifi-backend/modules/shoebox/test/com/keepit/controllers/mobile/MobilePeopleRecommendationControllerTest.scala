@@ -11,7 +11,6 @@ import org.specs2.mutable.Specification
 import play.api.libs.json.Json
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
-import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.model.LibraryFactory._
 import com.keepit.model.LibraryFactoryHelper._
 import com.keepit.model.LibraryMembershipFactory._
@@ -21,7 +20,6 @@ class MobilePeopleRecommendationControllerTest extends Specification with Shoebo
 
   val modules = Seq(
     FakeABookServiceClientModule(),
-    FakeScrapeSchedulerModule(),
     FakeSocialGraphModule()
   )
 
