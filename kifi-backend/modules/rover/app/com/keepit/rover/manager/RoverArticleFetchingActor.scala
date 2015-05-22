@@ -29,8 +29,8 @@ class RoverArticleFetchingActor @Inject() (
     implicit val executionContext: ExecutionContext) extends ConcurrentTaskProcessingActor[SQSMessage[FetchTask]](airbrake) {
 
   private val concurrencyFactor = 50
-  protected val maxConcurrentTasks: Int = instanceInfo.instantTypeInfo.cores * concurrencyFactor
-  protected val minConcurrentTasks: Int = maxConcurrentTasks / 2
+  protected val maxConcurrentTasks: Int = 1 + instanceInfo.instantTypeInfo.cores * concurrencyFactor
+  protected val minConcurrentTasks: Int = 1 + maxConcurrentTasks / 2
 
   protected def pullTasks(limit: Int): Future[Seq[SQSMessage[FetchTask]]] = {
     taskQueue.nextBatchWithLock(limit, RoverArticleFetchingActor.lockTimeOut)
