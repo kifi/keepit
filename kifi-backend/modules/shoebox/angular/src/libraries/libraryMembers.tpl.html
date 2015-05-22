@@ -2,20 +2,18 @@
   <a class="dialog-x" ng-click="close()"></a>
 
   <div class="dialog-body-wrap">
-    <h1 class="dialog-header" ng-if="library.numFollowers > 0 || library.numCollaborators > 0">
-      <ng-pluralize count="library.numCollaborators" when="
-        {'0' : '', 'one': '1 collaborator', 'other': '{} collaborators'}
-        "></ng-pluralize>
-      <span ng-if="library.numCollaborators > 0 && library.numFollowers > 0">&nbsp;and&nbsp;</span>
-      <ng-pluralize count="library.numFollowers" when="
-        {'0' : '', 'one': '1 follower', 'other': '{} followers'}
-        "></ng-pluralize>
-    </h1>
+    <h1 class="dialog-header" ng-if="library.numFollowers > 0 || library.numCollaborators > 0">Manage members for this library</h1>
     <h1 class="dialog-header" ng-if="library.numFollowers === 0 && library.numCollaborators === 0">{{library.name}}</h1>
     <div class="dialog-body">
 
-      <div class="lmm-search-box">
-        <input type="text" class="lmm-input" placeholder="Search for people">
+      <div class="lmm-stats-box" ng-if="library.numFollowers > 0 || library.numCollaborators > 0">
+        <ng-pluralize count="library.numCollaborators" when="
+        {'0' : '', 'one': '1 collaborator', 'other': '{} collaborators'}
+        "></ng-pluralize>
+        <span ng-if="library.numCollaborators > 0 && library.numFollowers > 0">&nbsp;and&nbsp;</span>
+        <ng-pluralize count="library.numFollowers" when="
+        {'0' : '', 'one': '1 follower', 'other': '{} followers'}
+        "></ng-pluralize>
       </div>
 
       <div class="lmm-members-content">
@@ -28,7 +26,8 @@
               </a>
               <div class="lmm-member-info-wrapper">
                 <div class="lmm-member-info-name">{{library.owner|name}}</div>
-                <span class="lmm-member-info-icon svg-collaborator-green"></span><span class="lmm-member-info-stat collab">Contributor</span>
+                <span class="lmm-member-info-icon svg-collaborator-green"></span>
+                <span class="lmm-member-info-state collab">{{library.numCollaborators > 0 ? 'Collaborator' : 'Owner'}}</span>
               </div>
             </li>
 
@@ -40,7 +39,15 @@
               <div class="lmm-member-info-wrapper">
                 <div class="lmm-member-info-name">{{member|name}}</div>
                 <span class="lmm-member-info-icon svg-collaborator-green" ng-if="member.isCollaborator"></span>
-                <span class="lmm-member-info-stat" ng-class="{'collab' : member.isCollaborator}">{{member.isCollaborator ? 'Contributor' : 'Follower'}}</span>
+                <span class="lmm-member-info-state" ng-class="{'collab' : member.isCollaborator}">{{member.isCollaborator ? 'Collaborator' : 'Follower'}}</span>
+              </div>
+              <div class="lmm-member-dropdown-parent" kf-hover-menu>
+                <div class="svg-dropdown-arrow"></div>
+                  <menu class="kf-dropdown-menu">
+                    <button class="kf-dropdown-menu-item" ng-if="member.isFollower" ng-click="changeToCollaborator(member)">Make collaborator</button>
+                    <button class="kf-dropdown-menu-item" ng-if="member.isCollaborator" ng-click="changeToFollower(member)">Make follower</button>
+                    <button class="kf-dropdown-menu-item" ng-click="removeMember(member)">Remove</button>
+                  </menu>
               </div>
             </li>
 
