@@ -162,7 +162,7 @@ class ShoeboxArticleIngestionActor @Inject() (
       }
     }
 
-    val updatedUri = uriRepo.save(uri.withTitle(preferredTitle)copy(restriction = restriction)) // always save to increment sequence numbers for other services
+    val updatedUri = uriRepo.save(uri.withTitle(preferredTitle) copy (restriction = restriction)) // always save to increment sequence numbers for other services
 
     updatedUri tap uriIntegrityHelpers.improveKeepsSafely
   }
