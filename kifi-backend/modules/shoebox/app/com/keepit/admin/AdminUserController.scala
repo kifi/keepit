@@ -521,12 +521,6 @@ class AdminUserController @Inject() (
     Redirect(routes.AdminUserController.userView(user1))
   }
 
-  def isSuperAdmin(userId: Id[User]) = {
-    val SUPER_ADMIN_SET: Set[Id[User]] = Set(Id[User](1), Id[User](3))
-    SUPER_ADMIN_SET contains userId
-  }
-
-  def isAdminExperiment(expType: ExperimentType) = expType == ExperimentType.ADMIN
 
   def addExperimentAction(userId: Id[User], experiment: String) = AdminUserAction { request =>
     addExperiment(requesterUserId = request.userId, userId, experiment) match {
@@ -536,6 +530,14 @@ class AdminUserController @Inject() (
   }
 
   def addExperiment(requesterUserId: Id[User], userId: Id[User], experiment: String): Either[String, ExperimentType] = {
+
+    def isSuperAdmin(userId: Id[User]) = {
+      val SUPER_ADMIN_SET: Set[Id[User]] = Set(Id[User](1), Id[User](3))
+      SUPER_ADMIN_SET contains userId
+    }
+
+    def isAdminExperiment(expType: ExperimentType) = expType == ExperimentType.ADMIN
+
     val expType = ExperimentType.get(experiment)
     if (isAdminExperiment(expType) && !isSuperAdmin(requesterUserId)) {
       Left("Failure")
