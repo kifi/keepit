@@ -6,7 +6,7 @@ import com.keepit.common.cache.FortyTwoCachePlugin
 import com.keepit.common.healthcheck._
 import com.keepit.common.mail.{ MailToKeepPlugin, MailSenderPlugin }
 import com.keepit.common.store.ImageDataIntegrityPlugin
-import com.keepit.shoebox.cron.{GratificationEmailCronPlugin, ActivityPushScheduler, ActivityEmailCronPlugin}
+import com.keepit.shoebox.cron.{ GratificationEmailCronPlugin, ActivityPushScheduler, ActivityEmailCronPlugin }
 import play.api.Mode._
 import play.api._
 import com.keepit.social.SocialGraphPlugin
