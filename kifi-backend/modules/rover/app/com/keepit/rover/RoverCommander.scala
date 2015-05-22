@@ -34,10 +34,11 @@ class RoverCommander @Inject() (
     val updatedInfos = articleCommander.getArticleInfosBySequenceNumber(seq, limit)
     if (updatedInfos.isEmpty) Future.successful(None)
     else {
-      val futureUpdates = updatedInfos.collect { case info if !info.isDeleted =>
-        articleCommander.getLatestArticle(info).imap { latestArticleOption =>
-          latestArticleOption.map(toShoeboxArticleUpdate(info))
-        }
+      val futureUpdates = updatedInfos.collect {
+        case info if !info.isDeleted =>
+          articleCommander.getLatestArticle(info).imap { latestArticleOption =>
+            latestArticleOption.map(toShoeboxArticleUpdate(info))
+          }
       }
       val maxSeq = updatedInfos.map(_.seq).max
       Future.sequence(futureUpdates).imap { updates =>
