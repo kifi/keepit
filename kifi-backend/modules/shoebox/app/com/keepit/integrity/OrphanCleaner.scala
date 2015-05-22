@@ -189,17 +189,6 @@ trait UriIntegrityChecker extends Logging {
       val isActuallyUpdated = currentUri != updatedUri
       if (!readOnly && isActuallyUpdated) normUriRepo.save(updatedUri)
       isActuallyUpdated
-    } else {
-      // Make the uri active
-      currentUri match {
-        case scrapedUri if scrapedUri.state == NormalizedURIStates.SCRAPED || scrapedUri.state == NormalizedURIStates.SCRAPE_FAILED =>
-          if (!readOnly) normUriRepo.save(scrapedUri.withState(NormalizedURIStates.ACTIVE))
-          true
-        case scrapedUri if scrapedUri.state == NormalizedURIStates.ACTIVE => // bump up the seq num to sync ScrapeInfo
-          if (!readOnly) normUriRepo.save(scrapedUri.withState(NormalizedURIStates.ACTIVE))
-          true
-        case _ => false
-      }
-    }
+    } else false
   }
 }

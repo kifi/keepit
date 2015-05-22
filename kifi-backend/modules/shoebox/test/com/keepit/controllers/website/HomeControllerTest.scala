@@ -9,7 +9,6 @@ import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.curator.FakeCuratorServiceClientModule
-import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.Specification
@@ -27,8 +26,7 @@ class HomeControllerTest extends Specification with ShoeboxTestInjector {
     FakeHttpClientModule(),
     FakeHealthcheckModule(),
     FakeABookServiceClientModule(),
-    FakeMailModule(),
-    FakeScrapeSchedulerModule()
+    FakeMailModule()
   )
 
   "HomeController" should {

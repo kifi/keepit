@@ -12,7 +12,6 @@ import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.time._
 import com.keepit.heimdal._
 import com.keepit.model.{ KeepStates, _ }
-import com.keepit.scraper.ScrapeScheduler
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import play.api.mvc.{ Action, AnyContent }
@@ -25,11 +24,9 @@ import scala.concurrent._
 class AdminBookmarksController @Inject() (
   val userActionsHelper: UserActionsHelper,
   db: Database,
-  scraper: ScrapeScheduler,
   keepRepo: KeepRepo,
   uriRepo: NormalizedURIRepo,
   userRepo: UserRepo,
-  scrapeRepo: ScrapeInfoRepo,
   socialUserInfoRepo: SocialUserInfoRepo,
   libraryRepo: LibraryRepo,
   keepImageCommander: KeepImageCommander,
@@ -49,13 +46,12 @@ class AdminBookmarksController @Inject() (
       val uri = uriRepo.get(bookmark.uriId)
       val user = userRepo.get(bookmark.userId)
       val keepId = bookmark.id.get
-      val scrapeInfo = scrapeRepo.getByUriId(bookmark.uriId)
       val keywordsFut = keywordSummaryCommander.getKeywordsSummary(bookmark.uriId)
       val imageUrlOpt = keepImageCommander.getBasicImagesForKeeps(Set(keepId)).get(keepId).flatMap(_.get(ProcessedImageSize.Large.idealSize).map(_.path.getUrl))
       val libraryOpt = bookmark.libraryId.map { opt => libraryRepo.get(opt) }
 
       keywordsFut.map { keywords =>
-        Ok(html.admin.bookmark(user, bookmark, uri, scrapeInfo, imageUrlOpt.getOrElse(""), "", keywords, libraryOpt))
+        Ok(html.admin.bookmark(user, bookmark, uri, imageUrlOpt.getOrElse(""), "", keywords, libraryOpt))
       }
     }
   }
@@ -64,9 +60,6 @@ class AdminBookmarksController @Inject() (
     val url = db.readWrite { implicit s =>
       val uri = uriRepo.get(id)
       uriRepo.save(uri.copy(state = NormalizedURIStates.INACTIVE))
-      scrapeRepo.getByUriId(id) foreach { scrapeInfo =>
-        scrapeRepo.save(scrapeInfo.copy(state = ScrapeInfoStates.INACTIVE))
-      }
       uri.url
     }
     Ok(s"disabling $url")
@@ -109,16 +102,6 @@ class AdminBookmarksController @Inject() (
     bookmarkOpt match {
       case Some(bookmark) => editBookmark(bookmark)
       case None => Future.successful(NotFound(s"No bookmark for id $id"))
-    }
-  }
-
-  def rescrape = AdminUserAction(parse.tolerantJson) { request =>
-    val id = Id[Keep]((request.body \ "id").as[Int])
-    db.readWrite { implicit session =>
-      val bookmark = keepRepo.get(id)
-      val uri = uriRepo.get(bookmark.uriId)
-      scraper.scheduleScrape(uri)
-      Ok(JsObject(Seq("status" -> JsString("ok"))))
     }
   }
 
@@ -176,18 +159,6 @@ class AdminBookmarksController @Inject() (
     }
   }
 
-  def rescrapeFrom(fromId: Id[NormalizedURI]) = AdminUserAction { implicit request =>
-    val uris = db.readOnlyMaster { implicit s =>
-      uriRepo.getFromId(fromId)
-    }
-    db.readWrite { implicit s =>
-      uris.foreach { uri =>
-        scraper.scheduleScrape(uri, clock.now())
-      }
-    }
-    Ok(uris.size.toString)
-  }
-
   def bookmarksView(page: Int = 0) = AdminUserPage.async { implicit request =>
     val PAGE_SIZE = 25
 
@@ -212,19 +183,10 @@ class AdminBookmarksController @Inject() (
           }
         }
 
-        val scrapesFuture = Future {
-          timing("load scrape info") {
-            db.readOnlyReplica { implicit s =>
-              bookmarks map (_.uriId) map scrapeRepo.getByUriId
-            }
-          }
-        }
-
         for {
           users <- usersFuture
           uris <- urisFuture
-          scrapes <- scrapesFuture
-        } yield (users.toList.seq, (bookmarks, uris, scrapes).zipped.toList.seq).zipped.toList.seq
+        } yield (users.toList.seq, (bookmarks, uris).zipped.toList.seq).zipped.toList.seq
       }
     }
 

@@ -39,4 +39,8 @@ class FakeRoverServiceClientImpl(
   def getOrElseFetchUriSummary(uriId: Id[NormalizedURI], url: String): Future[Option[RoverUriSummary]] = Future.successful(articleSummariesByUri.get(uriId))
   def getOrElseFetchRecentArticle[A <: Article](url: String, recency: Duration)(implicit kind: ArticleKind[A]): Future[Option[A]] = Future.successful(None)
   def getOrElseComputeRecentContentSignature[A <: Article](url: String, recency: Duration)(implicit kind: ArticleKind[A]): Future[Option[Signature]] = Future.successful(None)
+
+  def getPornDetectorModel(): Future[Map[String, Float]] = Future.successful(Map.empty)
+  def detectPorn(query: String): Future[Map[String, Float]] = Future.successful(Map.empty)
+  def whitelist(words: String): Future[String] = Future.successful("")
 }

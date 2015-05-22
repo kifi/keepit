@@ -13,7 +13,6 @@ import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.model.{ Username, User, NormalizedURI }
-import com.keepit.scraper.{ FakeScrapeSchedulerModule, FakeScraperServiceClientModule }
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.test.ShoeboxTestInjector
@@ -31,14 +30,12 @@ class RecommendationsControllerTest extends TestKitSupport with SpecificationLik
     FakeShoeboxServiceModule(),
     FakeCuratorServiceClientModule(),
     FakeSearchServiceClientModule(),
-    FakeScrapeSchedulerModule(),
     FakeShoeboxStoreModule(),
     FakeHttpClientModule(),
     FakeSocialGraphModule(),
     FakeHeimdalServiceClientModule(),
     FakeMailModule(),
     FakeCortexServiceClientModule(),
-    FakeScraperServiceClientModule(),
     FakeABookServiceClientModule(),
     FakeUserActionsModule(),
     FakeActorSystemModule()

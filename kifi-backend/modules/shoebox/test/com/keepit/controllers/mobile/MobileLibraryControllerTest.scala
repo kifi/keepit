@@ -27,7 +27,6 @@ import com.keepit.model.LibraryFactoryHelper._
 import com.keepit.model.LibraryMembershipFactory._
 import com.keepit.model.LibraryMembershipFactoryHelper._
 import com.keepit.model._
-import com.keepit.scraper.{ FakeScrapeSchedulerModule, FakeScraperServiceClientModule }
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.social.BasicUser
@@ -49,13 +48,11 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
 
   val controllerTestModules = Seq(
     FakeShoeboxServiceModule(),
-    FakeScrapeSchedulerModule(),
     FakeShoeboxStoreModule(),
     FakeActorSystemModule(),
     FakeAirbrakeModule(),
     FakeSearchServiceClientModule(),
     FakeHeimdalServiceClientModule(),
-    FakeScraperServiceClientModule(),
     FakeCortexServiceClientModule(),
     FakeABookServiceClientModule(),
     FakeSocialGraphModule(),

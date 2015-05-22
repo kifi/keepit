@@ -20,7 +20,6 @@ import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.graph.FakeGraphServiceModule
 import com.keepit.heimdal._
 import com.keepit.model._
-import com.keepit.scraper.{ FakeScrapeSchedulerModule, FakeScraperServiceClientModule }
 import com.keepit.search._
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.test.ShoeboxTestInjector
@@ -37,7 +36,6 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
     FakeHttpClientModule(),
     FakeGraphServiceModule(),
     FakeShoeboxServiceModule(),
-    FakeScrapeSchedulerModule(),
     FakeShoeboxStoreModule(),
     FakeActorSystemModule(),
     FakeAirbrakeModule(),
@@ -45,7 +43,6 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
     FakeHeimdalServiceClientModule(),
     FakeABookServiceClientModule(),
     FakeSocialGraphModule(),
-    FakeScraperServiceClientModule(),
     FakeCortexServiceClientModule(),
     FakeCuratorServiceClientModule()
   )

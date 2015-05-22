@@ -23,7 +23,6 @@ abstract class ScraperModule(
     val cacheModule: CacheModule,
     val storeModule: StoreModule,
     val fjMonitorModule: ForkJoinContextMonitorModule,
-    val scrapeProcessorModule: ScrapeProcessorModule,
     val embedlyModule: EmbedlyModule) extends ConfigurationModule with CommonServiceModule {
   // Service clients
   val serviceTypeModule = ScraperServiceTypeModule()

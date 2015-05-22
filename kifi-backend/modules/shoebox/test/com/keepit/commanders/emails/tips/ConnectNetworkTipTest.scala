@@ -15,7 +15,6 @@ import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.graph.FakeGraphServiceModule
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.model.{ Username, SocialUserInfo, SocialUserInfoRepo, NotificationCategory, User, UserRepo }
-import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.social.SocialId
 import com.keepit.social.SocialNetworks.{ LINKEDIN, FACEBOOK }
@@ -29,7 +28,6 @@ import scala.concurrent.duration.Duration
 class ConnectNetworkTipTest extends Specification with ShoeboxTestInjector {
   val modules = Seq(
     FakeExecutionContextModule(),
-    FakeScrapeSchedulerModule(),
     FakeHttpClientModule(),
     FakeSocialGraphModule(),
     FakeHealthcheckModule(),

@@ -1,4 +1,4 @@
-@(user: User, bookmark: Keep, normalizedUri: NormalizedURI, scrapeInfo: Option[ScrapeInfo], imgUrl:String, screenshotUrl: String, keywords: com.keepit.commanders.KeywordsSummary, libraryOpt: Option[Library])(implicit request: com.keepit.common.controller.UserRequest[_])
+@(user: User, bookmark: Keep, normalizedUri: NormalizedURI, imgUrl:String, screenshotUrl: String, keywords: com.keepit.commanders.KeywordsSummary, libraryOpt: Option[Library])(implicit request: com.keepit.common.controller.UserRequest[_])
 
 @import com.keepit.controllers.admin.routes
 
@@ -32,12 +32,6 @@
         <th>Creation time</th><td>@adminHelper.dateTimeDisplay(bookmark.createdAt)</td>
       </tr>
       <tr>
-        <th>Last scrape</th><td>@scrapeInfo.map(si => adminHelper.dateTimeDisplay(si.lastScrape)).mkString</td>
-      </tr>
-      <tr>
-        <th>Next scrape</th><td>@scrapeInfo.map(si => adminHelper.dateTimeDisplay(si.nextScrape)).mkString</td>
-      </tr>
-      <tr>
         <th>Article Keywords</th><td>@keywords.article.mkString(" ")</td>
       </tr>
       <tr>
@@ -68,24 +62,6 @@
         }
       </tr>
    </table>
-   <p><input type="button" id="rescrape" value="Rescrape"></p>
-   <script>
-     $("#rescrape").click(function () {
-       var button = $(this);
-       var val = button.val();
-       button.val("Scraping...");
-       $.ajax({
-         type: "POST",
-         url: "@com.keepit.controllers.admin.routes.AdminBookmarksController.rescrape",
-         contentType: "application/json; charset=utf-8",
-         data: JSON.stringify({ id: @bookmark.id.get.id }),
-         complete: function (jqXHR, status) {
-           button.val(status == "success" ? val : "Error!");
-           window.location.reload();
-         }
-       });
-     });
-   </script>
    <p>
      @helper.form(action = com.keepit.controllers.admin.routes.AdminBookmarksController.delete(bookmark.id.get)) {
        <input type="submit" value="Delete">

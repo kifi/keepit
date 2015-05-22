@@ -11,7 +11,6 @@ import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.model._
-import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.Specification
 import play.api.test.FakeRequest
@@ -20,7 +19,6 @@ import play.api.test.Helpers._
 class EmailRecosControllerTest extends Specification with ShoeboxTestInjector {
 
   val controllerTestModules = Seq(
-    FakeScrapeSchedulerModule(),
     FakeCuratorServiceClientModule(),
     FakeShoeboxStoreModule(),
     FakeABookServiceClientModule(),

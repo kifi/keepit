@@ -10,7 +10,6 @@ import com.keepit.commanders.UserCommander
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.curator.FakeCuratorServiceClientModule
-import com.keepit.scraper.{ FakeScrapeSchedulerModule, FakeScraperServiceClientModule }
 import com.keepit.search.FakeSearchServiceClientModule
 import org.specs2.mutable._
 import com.keepit.model._
@@ -30,10 +29,8 @@ class SocialUserImportEmailTest extends Specification with ShoeboxTestInjector {
     FakeCortexServiceClientModule(),
     FakeCuratorServiceClientModule(),
     FakeSearchServiceClientModule(),
-    FakeScraperServiceClientModule(),
     FakeSocialGraphModule(),
-    FakeShoeboxStoreModule(),
-    FakeScrapeSchedulerModule()
+    FakeShoeboxStoreModule()
   )
 
   "SocialUserImportEmail" should {

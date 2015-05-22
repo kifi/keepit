@@ -25,7 +25,6 @@ import com.keepit.model.LibraryMembershipFactoryHelper._
 import com.keepit.model.UserFactory._
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.model._
-import com.keepit.scraper.{ FakeScrapeSchedulerConfigModule, FakeScrapeSchedulerModule }
 import com.keepit.search.{ FakeSearchServiceClient, FakeSearchServiceClientModule }
 import com.keepit.shoebox.{ FakeKeepImportsModule, FakeShoeboxServiceModule }
 import com.keepit.social.BasicUser
@@ -51,9 +50,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
     FakeMailModule(),
     FakeCortexServiceClientModule(),
     FakeSearchServiceClientModule(),
-    FakeScrapeSchedulerConfigModule(),
     FakeSocialGraphModule(),
-    FakeScrapeSchedulerModule(),
     FakeShoeboxServiceModule()
   )
 

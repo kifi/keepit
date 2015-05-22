@@ -21,7 +21,6 @@ import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.heimdal._
 import com.keepit.model.{ KeepToCollection, _ }
-import com.keepit.scraper._
 import com.keepit.search.{ FakeSearchServiceClientModule, _ }
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.test.ShoeboxTestInjector
@@ -38,13 +37,11 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
 
   val controllerTestModules = Seq(
     FakeShoeboxServiceModule(),
-    FakeScrapeSchedulerModule(),
     FakeShoeboxStoreModule(),
     FakeActorSystemModule(),
     FakeAirbrakeModule(),
     FakeSearchServiceClientModule(),
     FakeHeimdalServiceClientModule(),
-    FakeScraperServiceClientModule(),
     FakeCortexServiceClientModule(),
     FakeABookServiceClientModule(),
     FakeSocialGraphModule(),

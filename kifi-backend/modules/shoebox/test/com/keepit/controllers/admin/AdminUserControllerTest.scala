@@ -13,7 +13,6 @@ import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
-import com.keepit.scraper.{ FakeScraperServiceClientModule, FakeScrapeSchedulerModule }
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import org.specs2.mutable.Specification
@@ -28,7 +27,6 @@ class AdminUserControllerTest extends Specification with ShoeboxTestInjector {
   def modules = Seq(
     FakeShoeboxServiceModule(),
     FakeSocialGraphModule(),
-    FakeScrapeSchedulerModule(),
     FakeABookServiceClientModule()
   )
 

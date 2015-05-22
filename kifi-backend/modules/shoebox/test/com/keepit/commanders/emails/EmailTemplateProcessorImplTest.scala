@@ -11,7 +11,6 @@ import com.keepit.common.time.DEFAULT_DATE_TIME_ZONE
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.model.{ Library, LibrarySlug, LibraryVisibility, NotificationCategory }
-import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.ProdShoeboxServiceClientModule
 import com.keepit.test.{ ShoeboxTestFactory, ShoeboxTestInjector }
@@ -30,7 +29,6 @@ class EmailTemplateProcessorImplTest extends Specification with ShoeboxTestInjec
     ProdShoeboxServiceClientModule(),
     FakeSearchServiceClientModule(),
     FakeSocialGraphModule(),
-    FakeScrapeSchedulerModule(),
     FakeABookServiceClientModule(),
     FakeCortexServiceClientModule(),
     FakeCuratorServiceClientModule()

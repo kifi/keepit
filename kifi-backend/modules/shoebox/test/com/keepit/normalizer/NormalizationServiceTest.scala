@@ -9,7 +9,7 @@ import com.keepit.inject.FakeFortyTwoModule
 import com.keepit.integrity.UriIntegrityPlugin
 import com.keepit.model._
 import com.keepit.rover.document.utils.Signature
-import com.keepit.scraper.{ FakeScrapeSchedulerModule, FakeSignatureBuilder, BasicArticle }
+import com.keepit.scraper.{ BasicArticle, FakeSignatureBuilder }
 import com.keepit.scraper.extractor.ExtractorProviderType
 import com.keepit.shoebox.FakeKeepImportsModule
 import com.keepit.test.ShoeboxTestInjector
@@ -45,7 +45,6 @@ class NormalizationServiceTest extends TestKitSupport with SpecificationLike wit
   val modules = Seq(
     FakeFortyTwoModule(),
     FakeDiscoveryModule(),
-    FakeScrapeSchedulerModule(Some(fakeArticles)),
     FakeAirbrakeModule(),
     FakeActorSystemModule(),
     FakeElizaServiceClientModule(),

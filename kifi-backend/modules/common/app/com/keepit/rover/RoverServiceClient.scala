@@ -7,7 +7,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.json.TupleFormat
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.{ CallTimeouts, HttpClient }
-import com.keepit.common.routes.Rover
+import com.keepit.common.routes.{ Scraper, Rover }
 import com.keepit.common.service.{ ServiceType, ServiceClient }
 import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.model.{ NormalizedURI }
@@ -25,14 +25,21 @@ trait RoverServiceClient extends ServiceClient {
   final val serviceType = ServiceType.ROVER
   def getShoeboxUpdates(seq: SequenceNumber[ArticleInfo], limit: Int): Future[Option[ShoeboxArticleUpdates]]
   def fetchAsap(uriId: Id[NormalizedURI], url: String): Future[Unit]
+
   def getBestArticlesByUris(uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[Article]]]
   def getArticleInfosByUris(uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[ArticleInfo]]]
   def getImagesByUris(uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], BasicImages]]
   def getArticleSummaryByUris(uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], RoverArticleSummary]]
   def getUriSummaryByUris(uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], RoverUriSummary]]
-  def getOrElseFetchUriSummary(uriId: Id[NormalizedURI], url: String): Future[Option[RoverUriSummary]] // slow, prefer getUriSummaryByUris
-  def getOrElseFetchRecentArticle[A <: Article](url: String, recency: Duration)(implicit kind: ArticleKind[A]): Future[Option[A]] // slow
-  def getOrElseComputeRecentContentSignature[A <: Article](url: String, recency: Duration)(implicit kind: ArticleKind[A]): Future[Option[Signature]] // slow
+
+  // slow, prefer get methods
+  def getOrElseFetchUriSummary(uriId: Id[NormalizedURI], url: String): Future[Option[RoverUriSummary]]
+  def getOrElseFetchRecentArticle[A <: Article](url: String, recency: Duration)(implicit kind: ArticleKind[A]): Future[Option[A]]
+  def getOrElseComputeRecentContentSignature[A <: Article](url: String, recency: Duration)(implicit kind: ArticleKind[A]): Future[Option[Signature]]
+
+  def getPornDetectorModel(): Future[Map[String, Float]]
+  def detectPorn(query: String): Future[Map[String, Float]]
+  def whitelist(words: String): Future[String]
 }
 
 class RoverServiceClientImpl(
@@ -187,6 +194,26 @@ class RoverServiceClientImpl(
     )
     call(Rover.internal.getOrElseComputeRecentContentSignature, payload, callTimeouts = longTimeout).map { r =>
       r.json.asOpt[Signature]
+    }
+  }
+
+  def getPornDetectorModel(): Future[Map[String, Float]] = {
+    call(Rover.internal.getPornDetectorModel()).map { r =>
+      Json.fromJson[Map[String, Float]](r.json).get
+    }
+  }
+
+  def detectPorn(query: String): Future[Map[String, Float]] = {
+    val payload = Json.obj("query" -> query)
+    call(Rover.internal.detectPorn(), payload).map { r =>
+      Json.fromJson[Map[String, Float]](r.json).get
+    }
+  }
+
+  def whitelist(words: String): Future[String] = {
+    val payload = Json.obj("whitelist" -> words)
+    call(Rover.internal.whitelist(), payload).map { r =>
+      Json.fromJson[String](r.json).get
     }
   }
 }
