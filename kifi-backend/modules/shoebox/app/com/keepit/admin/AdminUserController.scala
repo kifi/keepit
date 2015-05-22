@@ -522,19 +522,19 @@ class AdminUserController @Inject() (
     Redirect(routes.AdminUserController.userView(user1))
   }
 
-  def isSuperAdmin(userId: Id[User]) = {
-    val SUPER_ADMIN_SET: Set[Id[User]] = Set(Id[User](1), Id[User](3))
-    SUPER_ADMIN_SET contains userId
-  }
-
-  def isAdminExperiment(expType: ExperimentType) = expType == ExperimentType.ADMIN
-
   def addExperimentAction(userId: Id[User], experiment: String) = AdminUserAction { request =>
     addExperiment(requesterUserId = request.userId, userId, experiment) match {
       case Right(expType) => Ok(Json.obj(experiment -> true))
       case Left(s) => Forbidden
     }
   }
+
+  def isSuperAdmin(userId: Id[User]) = {
+    val SUPER_ADMIN_SET: Set[Id[User]] = Set(Id[User](1), Id[User](3))
+    SUPER_ADMIN_SET contains userId
+  }
+
+  def isAdminExperiment(expType: ExperimentType) = expType == ExperimentType.ADMIN
 
   def addExperiment(requesterUserId: Id[User], userId: Id[User], experiment: String): Either[String, ExperimentType] = {
     val expType = ExperimentType.get(experiment)

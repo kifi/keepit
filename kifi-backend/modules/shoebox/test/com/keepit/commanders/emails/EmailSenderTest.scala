@@ -130,8 +130,8 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         html must contain(WELCOME_SALUTATION(toUser.firstName))
 
         val trackingCode = EmailTrackingParam(
-          subAction = Some("homeLink")).encode
-        html must contain("utm_source=fromKifi&amp;utm_medium=email&amp;utm_campaign=welcome&amp;utm_content=homeLink&amp;kcid=welcome-email-fromKifi"
+          subAction = Some("kifiHome")).encode
+        html must contain("utm_source=fromKifi&amp;utm_medium=email&amp;utm_campaign=welcome&amp;utm_content=kifiHome&amp;kcid=welcome-email-fromKifi"
           + s"&amp;${EmailTrackingParam.paramName}=$trackingCode")
 
         val text = email.textBody.get.value
