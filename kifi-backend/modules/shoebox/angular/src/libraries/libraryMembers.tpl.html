@@ -8,7 +8,7 @@
     <div class="dialog-body">
 
       <div class="lmm-stats-box" ng-if="library.numFollowers > 0 || library.numCollaborators > 0">
-        <ng-pluralize count="library.numCollaborators" when="
+        <ng-pluralize count="displayNumCollabs()" when="
         {'0' : '', 'one': '1 collaborator', 'other': '{} collaborators'}
         "></ng-pluralize>
         <span ng-if="library.numCollaborators > 0 && library.numFollowers > 0">&nbsp;and&nbsp;</span>
@@ -39,14 +39,14 @@
               </a>
               <div class="lmm-member-info-wrapper">
                 <div class="lmm-member-info-name">{{member|name}}</div>
-                <span class="lmm-member-info-icon svg-collaborators-green" ng-if="member.isCollaborator"></span>
-                <span class="lmm-member-info-state" ng-class="{'collab' : member.isCollaborator}">{{member.isCollaborator ? 'Collaborator' : 'Follower'}}</span>
+                <span class="lmm-member-info-icon svg-collaborators-green" ng-if="isCollaborator(member)"></span>
+                <span class="lmm-member-info-state" ng-class="{'collab' : isCollaborator(member)}">{{isCollaborator(member) ? 'Collaborator' : 'Follower'}}</span>
               </div>
               <div class="lmm-member-dropdown-parent" kf-hover-menu ng-if="canManage">
                 <div class="svg-dropdown-arrow"></div>
                   <menu class="kf-dropdown-menu">
-                    <button class="kf-dropdown-menu-item" ng-if="member.isFollower" ng-click="changeToCollaborator(member)">Make collaborator</button>
-                    <button class="kf-dropdown-menu-item" ng-if="member.isCollaborator" ng-click="changeToFollower(member)">Make follower</button>
+                    <button class="kf-dropdown-menu-item" ng-if="isFollower(member)" ng-click="changeToCollaborator(member)">Make collaborator</button>
+                    <button class="kf-dropdown-menu-item" ng-if="isCollaborator(member)" ng-click="changeToFollower(member)">Make follower</button>
                     <button class="kf-dropdown-menu-item" ng-click="removeMember(member)">Remove</button>
                   </menu>
               </div>

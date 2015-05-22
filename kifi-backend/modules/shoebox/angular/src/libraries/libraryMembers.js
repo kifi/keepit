@@ -21,7 +21,7 @@ angular.module('kifi')
         // Smart Scroll
         //
         scope.moreMembers = true;
-        scope.selectedMemberId = null;
+        scope.selectedMember = null;
         scope.memberList = [];
         scope.memberScrollDistance = '100%';
 
@@ -42,10 +42,6 @@ angular.module('kifi')
             loading = true;
             libraryService.getMoreMembers(scope.library.id, pageSize, scope.offset).then(function (resp) {
               var members = resp.members;
-              _.each(members, function(member) {
-                member.isCollaborator = isCollaborator(member);
-                member.isFollower = isFollower(member);
-              });
               loading = false;
               if (members.length === 0) {
                 scope.moreMembers = false;
@@ -59,24 +55,55 @@ angular.module('kifi')
           }
         }
 
-        function isCollaborator(member) {
-          return member.membership === collabAccess;
-        }
-
-        function isFollower(member) {
-          return member.membership === followerAccess;
-        }
-
+        //
+        // Internal functions
+        //
         function updateMembership(member, access) {
-          scope.selectedMemberId = member.id;
+          scope.selectedMember = member;
           return net.updateLibraryMembership(scope.library.id, member.id, {access: access});
         }
 
-        function countFollowersAndCollaborators() {
-          var memCounts = _.countBy(scope.memberList, 'membership');
-          scope.library.numFollowers = memCounts[followerAccess] || 0;
-          scope.library.numCollaborators = memCounts[collabAccess] || 0;
+        function changeMembership(access) {
+          var m = _.find(scope.memberList, {id: scope.selectedMember.id});
+          var oldAccess = m.membership;
+          m.membership = access;
+          updateLibraryObject(oldAccess, access);
         }
+
+        function updateLibraryObject(oldAccess, newAccess) {
+          if (newAccess === oldAccess) {
+            return;
+          }
+
+          // remove/decrement fields in library object based on oldAccess
+          if (oldAccess === collabAccess) {
+            scope.library.numCollaborators -= 1;
+            _.remove(scope.library.collaborators, {id: scope.selectedMember.id});
+          } else if (oldAccess === followerAccess) {
+            scope.library.numFollowers -= 1;
+            _.remove(scope.library.followers, {id: scope.selectedMember.id});
+          }
+
+          // add/increment fields in library object based on newAccess
+          if (newAccess === collabAccess) {
+            scope.library.numCollaborators += 1;
+            scope.library.collaborators.push(scope.selectedMember);
+          } else if (newAccess === followerAccess) {
+            scope.library.numFollowers += 1;
+            scope.library.followers.push(scope.selectedMember);
+          }
+        }
+
+        //
+        // Scope functions
+        //
+        scope.isCollaborator = function(member) {
+          return member.membership === collabAccess;
+        };
+
+        scope.isFollower = function (member) {
+          return member.membership === followerAccess;
+        };
 
         scope.toggleWhoCanInvite = function() {
           libraryService.modifyLibrary({
@@ -85,14 +112,6 @@ angular.module('kifi')
           }, false);
           scope.collabCanInvite = !scope.collabCanInvite;
         };
-
-        function changeMembership(access) {
-          var m = _.find(scope.memberList, {id: scope.selectedMemberId});
-          m.membership = access;
-          m.isCollaborator = isCollaborator(m);
-          m.isFollower = isFollower(m);
-          countFollowersAndCollaborators();
-        }
 
         scope.changeToFollower = function(member) {
           updateMembership(member, followerAccess).then(function() {
@@ -109,14 +128,22 @@ angular.module('kifi')
         scope.removeMember = function(member) {
           updateMembership(member, noAccess).then(function () {
             $timeout(function() {
-              _.remove(scope.memberList, {id: scope.selectedMemberId});
-              countFollowersAndCollaborators();
+              _.remove(scope.memberList, {id: scope.selectedMember.id});
+              updateLibraryObject(scope.selectedMember.membership);
             });
           });
         };
 
+        scope.displayNumCollabs = function() {
+          // if there are collaborators in this library, the UI includes owner as a collaborator
+          // let numCollaborators follow this as well.
+          return scope.library && scope.library.numCollaborators ? scope.library.numCollaborators + 1 : 0;
+        };
+
         scope.close = function () {
-          kfModalCtrl.close();
+          $timeout(function() {
+            kfModalCtrl.close();
+          });
         };
 
         //
