@@ -13,7 +13,6 @@ newConnections: Seq[Id[User]]
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 </head>
-<body>
 <p>Hey @firstName(userId),</p>
 @if(libViews.totalCount >= MIN_VIEWS) {
 <p>You had <b>@{libViews.totalCount} views</b> across all of your libraries:</p>
@@ -44,13 +43,13 @@ Share a library with them :)
 }
 
 @if(libViews.totalCount >= MIN_VIEWS || libFollowers.totalCount >= MIN_FOLLOWERS || newConnections.length >= MIN_CONNECTIONS){
-What other stats would you like to see? Please let me know if you have any questions, suggestions, or comments about Kifi!
+<p>What other stats would you like to see? Please let me know if you have any questions, suggestions, or comments about Kifi!</p>
 } else {
 We at Kifi hope you're having a great week.
 }
 
-Cheers,
-Cam
-<a href="@htmlUrl("www.kifi.com/cam?", "gratCamProf", true)">www.kifi.com/cam</a>
+<p>Cheers,<br>
+Cam<br>
+<a href="@htmlUrl("www.kifi.com/cam?", "gratCamProf", true)">www.kifi.com/cam</a></p>
 </body>
 </html>
