@@ -74,7 +74,7 @@ class YoutubeArticleFetcher @Inject() (
     val description = SafeOpt(doc.doc.select("#watch-description-text .content").text()).getOrElse("")
     val channel = SafeOpt(doc.doc.select("#watch7-user-header .yt-user-name").text()).getOrElse("")
     val tags = SafeOpt(doc.doc.select("#watch-description-extras .content .watch-info-tag-list").map(_.text()).filter(_.nonEmpty)).getOrElse(Seq.empty)
-    val viewCount = SafeOpt(doc.doc.select("#watch7-views-info .watch-view-count").text().replaceAll ("\\D", "").toInt).getOrElse(0)
+    val viewCount = SafeOpt(doc.doc.select("#watch7-views-info .watch-view-count").text().replaceAll("\\D", "").toInt).getOrElse(0)
 
     // todo: Add alerting so we know if youtube breaks these selectors
 
