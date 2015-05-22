@@ -75,7 +75,7 @@ object ServiceType {
   case object ROVER extends ServiceType("ROVER", "RO", loadFactor = 5)
 
   // Possible initialization cycle/deadlock when one of the case objects above is first dereferenced before the ServiceType object
-  lazy val inProduction: List[ServiceType] = SEARCH :: SHOEBOX :: ELIZA :: HEIMDAL :: ABOOK :: SCRAPER :: CORTEX :: GRAPH :: CURATOR :: ROVER :: Nil
+  lazy val inProduction: List[ServiceType] = SEARCH :: SHOEBOX :: ELIZA :: HEIMDAL :: ABOOK :: CORTEX :: GRAPH :: CURATOR :: ROVER :: Nil
   lazy val notInProduction: List[ServiceType] = DEV_MODE :: TEST_MODE :: C_SHOEBOX :: Nil
   lazy val all: List[ServiceType] = inProduction ::: notInProduction
   lazy val fromString: Map[String, ServiceType] = all.map(serviceType => serviceType.name -> serviceType).toMap
