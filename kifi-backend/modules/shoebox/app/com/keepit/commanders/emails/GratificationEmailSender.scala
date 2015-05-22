@@ -19,7 +19,8 @@ import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
 
 object GratificationEmailSender {
-  case class SortedLibraryCountData(totalCount: Int, countByLibrary: List[(Id[Library], Int)])
+
+  case class SortedLibraryCountData(totalCount: Int, countByLibrary: List[(Id[Library], Int)]) // represents the total and per-library view counts for a single user
 }
 
 class GratificationEmailSender @Inject() (
