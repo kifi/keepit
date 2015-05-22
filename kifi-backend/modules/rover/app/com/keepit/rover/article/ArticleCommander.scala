@@ -181,15 +181,17 @@ class ArticleCommander @Inject() (
     }
   }
 
-  def fetchAsap(uriId: Id[NormalizedURI], url: String): Future[Unit] = {
+  def fetchAsap(uriId: Id[NormalizedURI], url: String, refresh: Boolean): Future[Unit] = {
     val toBeInternedByPolicy = articlePolicy.toBeInterned(url)
     val interned = internArticleInfoByUri(uriId, url, toBeInternedByPolicy)
-    val neverFetched = interned.collect { case (kind, info) if info.lastFetchedAt.isEmpty => (info.id.get -> info) }
-    if (neverFetched.isEmpty) Future.successful(())
+
+    val toBeFetched = interned.collect { case (kind, info) if refresh || info.lastFetchedAt.isEmpty => (info.id.get -> info) }
+
+    if (toBeFetched.isEmpty) Future.successful(())
     else {
-      log.info(s"[fetchAsap] Never fetched before for uri ${uriId}: ${url} -> ${neverFetched.keySet.mkString(" | ")}")
-      fetchWithTopPriority(neverFetched.keySet).imap { results =>
-        val resultsByKind = results.collect { case (infoId, result) => neverFetched(infoId).articleKind -> result }
+      log.info(s"[fetchAsap] Never fetched before for uri ${uriId}: ${url} -> ${toBeFetched.keySet.mkString(" | ")}")
+      fetchWithTopPriority(toBeFetched.keySet).imap { results =>
+        val resultsByKind = results.collect { case (infoId, result) => toBeFetched(infoId).articleKind -> result }
         log.info(s"[fetchAsap] Fetching with top priority for uri ${uriId}: ${url} -> ${resultsByKind.mkString(" | ")}")
         val failed = resultsByKind.collect { case (kind, Failure(error)) => kind -> error }
         if (failed.nonEmpty) {
