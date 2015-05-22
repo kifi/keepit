@@ -118,7 +118,7 @@ class ScraperHealthMonitorPluginImpl @Inject() (
 
   val interval: FiniteDuration = 5 seconds
 
-/*  override def onStart() {
+  /*  override def onStart() {
     log.info(s"[onStart] starting ScraperHealthMonitorPlugin with scraperConfig=$scraperConfig}")
     scheduleTaskOnOneMachine(actor.system, 6 minutes, scraperConfig.scrapePendingFrequency seconds, actor.ref, CheckOverdues, CheckOverdues.getClass.getSimpleName)
     scheduleTaskOnOneMachine(actor.system, 7 minutes, scraperConfig.checkOverdueCountFrequency minutes, actor.ref, CheckOverdueCount, CheckOverdueCount.getClass.getSimpleName)

@@ -678,8 +678,9 @@ class KeepsCommander @Inject() (
     val futureHits = searchTags(userId, query, None)
     val existingTags = keepIdOpt.map { keepId =>
       db.readOnlyMaster { implicit session =>
-        val keep = keepRepo.get(keepId)
-        collectionRepo.getHashtagsByKeepId(keep.id.get)
+        keepRepo.getOpt(keepId).map { keep =>
+          collectionRepo.getHashtagsByKeepId(keep.id.get)
+        }.getOrElse(Set.empty)
       }
     }.getOrElse(Set.empty)
     futureHits.imap { hits =>

@@ -24,7 +24,7 @@ class PullerPluginImpl @Inject() (
     val scheduling: SchedulingProperties) extends Logging with PullerPlugin with SchedulerPlugin {
 
   override def enabled: Boolean = false
-/*  override def onStart() {
+  /*  override def onStart() {
     val (initDelay, freq) = if (mode == Mode.Dev) (5 seconds, 5 seconds) else (scraperConfig.pullFrequency seconds, scraperConfig.pullFrequency seconds)
     log.info(s"[onStart] PullerPlugin started with initDelay=$initDelay freq=$freq")
     scheduleTaskOnAllMachines(actor.system, initDelay, freq, actor.ref, Pull)
