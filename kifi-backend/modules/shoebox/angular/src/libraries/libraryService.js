@@ -330,16 +330,12 @@ angular.module('kifi')
         return library.owner && library.owner.id === profileService.me.id;
       },
 
-      isFollowingLibrary: function (library) {
-        return _.some(infos.following, {id: library.id});
-      },
-
       getCommonTrackingAttributes: function (library) {
         var privacySetting = library.visibility === 'secret' ? 'private' : library.visibility;
         var defaultAttributes = {
           type: $rootScope.userLoggedIn ? 'library' : 'libraryLanding',
           followerCount: library.numFollowers,
-          followingLibrary: api.isFollowingLibrary(library),
+          followingLibrary: library.access === 'read_only',
           keepCount: library.numKeeps,
           libraryId: library.id,
           libraryOwnerUserId: library.owner.id,

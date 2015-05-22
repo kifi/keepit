@@ -76,10 +76,6 @@ angular.module('kifi')
           });
         };
 
-        scope.alreadyFollowingLibrary = function () {
-          return libraryService.isFollowingLibrary(scope.library);
-        };
-
         scope.followLibrary = function () {
           scope.followCallback();
           libraryService.trackEvent('user_clicked_page', scope.library, { type: 'recommendations', action: 'clickedFollowButton'});

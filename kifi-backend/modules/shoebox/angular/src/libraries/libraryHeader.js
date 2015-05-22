@@ -507,7 +507,7 @@ angular.module('kifi')
         }
 
         scope.followingLibrary = function () {
-          return libraryService.isFollowingLibrary(scope.library);
+          return scope.library.access === 'read_only';
         };
 
         scope.followLibrary = function (btnJustClicked) {
