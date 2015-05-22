@@ -35,25 +35,6 @@ class FakeShoeboxScraperClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def getAllURLPatterns(): Future[UrlPatternRules] = Future.successful(UrlPatternRules(Seq.empty))
 
-  def saveScrapeInfo(info: ScrapeInfo): Future[Unit] = ???
-
-  def updateNormalizedURIState(uriId: Id[NormalizedURI], state: State[NormalizedURI]): Future[Unit] = ???
-
-  def updateNormalizedURI(uriId: => Id[NormalizedURI],
-    createdAt: => DateTime,
-    updatedAt: => DateTime,
-    externalId: => ExternalId[NormalizedURI],
-    title: => Option[String],
-    url: => String,
-    urlHash: => UrlHash,
-    state: => State[NormalizedURI],
-    seq: => SequenceNumber[NormalizedURI],
-    screenshotUpdatedAt: => Option[DateTime],
-    restriction: => Option[Restriction],
-    normalization: => Option[Normalization],
-    redirect: => Option[Id[NormalizedURI]],
-    redirectTime: => Option[DateTime]): Future[Unit] = Future.successful(Unit)
-
   def getProxy(url: String): Future[Option[HttpProxy]] = ???
 
   def getProxyP(url: String): Future[Option[HttpProxy]] = ???

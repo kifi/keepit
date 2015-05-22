@@ -22,9 +22,6 @@ import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 trait ShoeboxScraperClient extends ThrottledServiceClient {
   private val ? = null
   def getAllURLPatterns(): Future[UrlPatternRules]
-  def saveScrapeInfo(info: ScrapeInfo): Future[Unit]
-  def updateNormalizedURIState(uriId: Id[NormalizedURI], state: State[NormalizedURI]): Future[Unit]
-  def updateNormalizedURI(uriId: => Id[NormalizedURI], createdAt: => DateTime = ?, updatedAt: => DateTime = ?, externalId: => ExternalId[NormalizedURI] = ?, title: => Option[String] = ?, url: => String = ?, urlHash: => UrlHash = UrlHash(?), state: => State[NormalizedURI] = ?, seq: => SequenceNumber[NormalizedURI] = SequenceNumber(-1), screenshotUpdatedAt: => Option[DateTime] = ?, restriction: => Option[Restriction] = ?, normalization: => Option[Normalization] = ?, redirect: => Option[Id[NormalizedURI]] = ?, redirectTime: => Option[DateTime] = ?): Future[Unit]
   def getProxy(url: String): Future[Option[HttpProxy]]
   def getProxyP(url: String): Future[Option[HttpProxy]]
 }
@@ -48,55 +45,6 @@ class ShoeboxScraperClientImpl @Inject() (
         Json.fromJson[UrlPatternRules](r.json).get
       }
     }
-  }
-
-  def saveScrapeInfo(info: ScrapeInfo): Future[Unit] = limiter.withLockFuture {
-    statsd.gauge(s"saveScrapeInfo.${info.state}", 1)
-    call(Shoebox.internal.saveScrapeInfo(), Json.toJson(info), callTimeouts = longTimeout, routingStrategy = offlinePriority).map { r => Unit }
-  }
-
-  def updateNormalizedURIState(uriId: Id[NormalizedURI], state: State[NormalizedURI]): Future[Unit] = limiter.withLockFuture {
-    statsd.gauge("updateNormalizedURIState", 1)
-    val json = Json.obj("state" -> state)
-    call(Shoebox.internal.updateNormalizedURI(uriId), json, callTimeouts = longTimeout, routingStrategy = offlinePriority).imap(_ => {})
-  }
-
-  def updateNormalizedURI(uriId: => Id[NormalizedURI],
-    createdAt: => DateTime,
-    updatedAt: => DateTime,
-    externalId: => ExternalId[NormalizedURI],
-    title: => Option[String],
-    url: => String,
-    urlHash: => UrlHash,
-    state: => State[NormalizedURI],
-    seq: => SequenceNumber[NormalizedURI],
-    screenshotUpdatedAt: => Option[DateTime],
-    restriction: => Option[Restriction],
-    normalization: => Option[Normalization],
-    redirect: => Option[Id[NormalizedURI]],
-    redirectTime: => Option[DateTime]): Future[Unit] = limiter.withLockFuture {
-    import com.keepit.common.strings.OptionWrappedJsObject
-    val safeUrlHash = Option(urlHash).map(p => Option(p.hash)).flatten
-    val safeSeq = Option(seq).map(v => if (v.value == -1L) None else Some(v)).flatten
-
-    val safeJsonParams: Seq[(String, JsValueWrapper)] = Seq(
-      "createdAt" -> Option(createdAt),
-      "updatedAt" -> Option(updatedAt),
-      "externalId" -> Option(externalId),
-      "title" -> Option(title),
-      "url" -> Option(url),
-      "urlHash" -> safeUrlHash,
-      "state" -> Option(state),
-      "seq" -> safeSeq,
-      "screenshotUpdatedAt" -> Option(screenshotUpdatedAt),
-      "restriction" -> Option(restriction),
-      "normalization" -> Option(normalization),
-      "redirect" -> Option(redirect),
-      "redirectTime" -> Option(redirectTime)
-    )
-    val payload = Json.obj(safeJsonParams: _*)
-    val stripped = payload.stripJsNulls()
-    call(Shoebox.internal.updateNormalizedURI(uriId), stripped, callTimeouts = longTimeout, routingStrategy = offlinePriority).imap(_ => {})
   }
 
   def getProxy(url: String): Future[Option[HttpProxy]] = limiter.withLockFuture {

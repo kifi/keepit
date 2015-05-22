@@ -24,7 +24,6 @@ import scala.util.{ Failure, Success, Try }
 class ShoeboxScraperController @Inject() (
   urlPatternRules: UrlPatternRulesCommander,
   db: Database,
-  normUriRepo: NormalizedURIRepo,
   airbrake: AirbrakeNotifier)(implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices)
     extends ShoeboxServiceController with Logging {
@@ -34,10 +33,6 @@ class ShoeboxScraperController @Inject() (
   def getAllURLPatternRules() = Action { request =>
     val patterns = urlPatternRules.rules().rules
     Ok(Json.toJson(patterns))
-  }
-
-  def updateNormalizedURI(uriId: Id[NormalizedURI]) = SafeAsyncAction(parse.tolerantJson) { request =>
-    throw new UnsupportedOperationException
   }
 
   def getProxy(url: String) = SafeAsyncAction { request =>
@@ -54,14 +49,6 @@ class ShoeboxScraperController @Inject() (
       urlPatternRules.getProxy(url)
     }
     Ok(Json.toJson(httpProxyOpt))
-  }
-
-  def assignScrapeTasks(zkId: Id[ScraperWorker], max: Int) = Action.async { request =>
-    throw new UnsupportedOperationException
-  }
-
-  def saveScrapeInfo() = SafeAsyncAction(parse.tolerantJson) { request =>
-    throw new UnsupportedOperationException
   }
 
 }
