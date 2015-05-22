@@ -47,6 +47,8 @@ angular.module('kifi')
         scope.followBtnJustClicked = false;
         scope.onCollabExperiment = (profileService.me.experiments || []).indexOf('collaborative') > -1;
         scope.amOwner = false;
+        scope.amCollab = false;
+        scope.collabsCanEdit = false;
         scope.hasCollaborators = false;
 
         //
@@ -60,6 +62,8 @@ angular.module('kifi')
           lib.isSystem = lib.kind.lastIndexOf('system_', 0) === 0;
           scope.hasCollaborators = lib.numCollaborators > 0;
           scope.amOwner = lib.access === 'owner';
+          scope.amCollab = lib.access === 'read_write';
+          scope.collabsCanEdit = lib.whoCanInvite === 'collaborator';
 
           $timeout(function () {
             var lh = parseFloat(descWrapEl.css('line-height'), 10);
@@ -589,6 +593,18 @@ angular.module('kifi')
 
         scope.trackTwitterProfile = function () {
           libraryService.trackEvent('user_clicked_page', scope.library, { action: 'clickedTwitterProfileURL' });
+        };
+
+        scope.openMembersModal = function () {
+          modalService.open({
+              template: 'libraries/libraryMembersModal.tpl.html',
+              modalData: {
+                library: scope.library,
+                canManageMembers: (scope.amOwner || (scope.amCollab && scope.collabsCanEdit)),
+                amOwner: scope.amOwner,
+                currentPageOrigin: 'libraryPage'
+              }
+            });
         };
 
         scope.openInviteModal = function (inviteType) {

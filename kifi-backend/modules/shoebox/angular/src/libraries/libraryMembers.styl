@@ -1,0 +1,123 @@
+.library-members
+  & .dialog-header
+    padding-left: 30px
+
+  & .dialog-x
+    top: 13px
+    right: 13px
+
+  & .dialog-body
+    padding: 0px 0px 0px 0px
+
+.lmm-stats-box
+  width: 100%
+  height: 50px
+  padding-top: 14px
+  box-sizing: border-box
+  background-color: #f3f5f7
+  text-align: center
+
+.lmm-members-content
+  position: relative
+  height: 290px
+  overflow: hidden
+
+.lmm-members-content-list
+  margin-bottom: 20px
+  height: 100%
+  overflow-y: auto
+  overflow-x: hidden
+
+.lmm-members-content-list
+  padding-left: 30px
+  padding-right: 30px
+
+.lmm-member-item
+  padding: 10px 0px
+  border-bottom: 1px solid #f3f5f7
+
+.lmm-member-link
+  outline: none
+
+.lmm-member-pic
+  display: inline-block
+  border-radius: 100%
+  width: 42px
+  height: 42px
+
+.lmm-member-info-wrapper
+  display: inline-block
+  vertical-align: top
+  margin-left: 10px
+
+.lmm-member-info-name
+  font-size: 14px
+  margin-bottom: 2px
+
+.lmm-member-info-icon
+  display: inline-block
+  margin-right: 5px
+  width: 19px
+  height: 13px
+  background-size: cover
+
+.lmm-member-info-state
+  vertical-align: top
+  background: none
+  font-size: 13px
+  color: #b2b2b2
+
+  &.collab
+    color: #56b263
+
+actionGapBelow = 3px
+
+.lmm-member-dropdown-parent
+  position: relative
+  top: 9px
+  right: 5px
+  float: right
+  padding: 10px
+  cursor: pointer
+
+  .svg-dropdown-arrow
+    width: 16px
+    height: 8px
+    background-size: cover
+
+  .kf-dropdown-menu
+    dur = .1s
+    top: 'calc(100% + %s)' % actionGapBelow
+    right: -10px
+    transform-origin: 80% top
+    transition: visibility 0s, opacity linear dur, transform dur
+
+    .kf-dropdown-menu-item
+      width: 100%
+      font-smoothing: antialiased
+      padding: 0px 20px 0px 16px
+
+  &:not(.kf-open)>.kf-dropdown-menu
+    dur = .16s
+    visibility: hidden
+    opacity: 0
+    transform: scale(.9)
+    transition-duration: 0s, dur, dur
+    transition-delay: dur, 0s, 0s
+
+  &.kf-open::before
+    content: ''
+    position: absolute
+    top: 'calc(100% - %s)' % actionGapBelow
+    left: -10px
+    right: -10px
+    height: 20px
+
+.lmm-set-who-can-invite
+  background-color: #F3F5F7
+  padding-left: 20px
+  line-height: 50px
+
+  & input
+    margin-right: 10px
+
