@@ -146,11 +146,17 @@ class KeepInterner @Inject() (
   }
 
   private def internUriAndBookmarkBatch(bms: Seq[RawBookmarkRepresentation], userId: Id[User], library: Library, source: KeepSource, installationId: Option[ExternalId[KifiInstallation]]) = {
-    val (persisted, failed) = db.readWrite { implicit session =>
-      bms.map { bm =>
-        bm -> Try(internUriAndBookmark(bm, userId, library, source, installationId)).flatten
-      }.toMap
-    } partition {
+    val (persisted, failed) = bms.map { bm =>
+      bm -> Try {
+        db.readWrite(attempts = 3) { implicit session =>
+          internUriAndBookmark(bm, userId, library, source, installationId).get
+          // This is bad, and I'm not sure why we need to do it now. Previously, we could batch keeps into one db session.
+          // It appears that when there's a problem, now, we're fetching from rover with ids that may not exist anymore.
+          // So, forcing the Try evaluation to make the db session fail, and then recatching it.
+          // Expect something more elegant soon. Signed, Andrew (May 22 2015)
+        }
+      }
+    }.toMap partition {
       case (bm, res) => res.isSuccess
     }
 
