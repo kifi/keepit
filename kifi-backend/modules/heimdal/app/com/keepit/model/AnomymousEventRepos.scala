@@ -17,7 +17,7 @@ trait AnonymousEventLoggingRepo extends EventRepo[AnonymousEvent]
 
 class ProdAnonymousEventLoggingRepo(val collection: BSONCollection, val mixpanel: MixpanelClient, val descriptors: AnonymousEventDescriptorRepo, protected val airbrake: AirbrakeNotifier)
     extends MongoEventRepo[AnonymousEvent] with AnonymousEventLoggingRepo {
-  val warnBufferSize = 500
+  val warnBufferSize = 2000
   val maxBufferSize = 10000
 
   def toBSON(event: AnonymousEvent): BSONDocument = BSONDocument(EventRepo.eventToBSONFields(event))

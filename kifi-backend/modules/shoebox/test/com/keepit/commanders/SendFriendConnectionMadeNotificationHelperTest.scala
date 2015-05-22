@@ -6,7 +6,6 @@ import com.keepit.common.mail._
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.model.{ Username, User, UserRepo }
-import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.Specification
 
@@ -38,7 +37,6 @@ class SendFriendConnectionMadeNotificationHelperTest extends Specification with 
     FakeMailModule(),
     FakeShoeboxStoreModule(),
     FakeSocialGraphModule(),
-    FakeScrapeSchedulerModule(),
     FakeABookServiceClientModule()
   )
 

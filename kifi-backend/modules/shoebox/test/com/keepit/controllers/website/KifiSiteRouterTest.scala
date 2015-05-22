@@ -15,7 +15,6 @@ import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
-import com.keepit.scraper.{ FakeScrapeSchedulerModule, FakeScraperServiceClientModule }
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.FakeKeepImportsModule
 import com.keepit.test.{ ShoeboxTestInjector, ShoeboxApplication, ShoeboxApplicationInjector }
@@ -39,10 +38,8 @@ class KifiSiteRouterTest extends Specification with ShoeboxApplicationInjector {
     FakeABookServiceClientModule(),
     FakeSocialGraphModule(),
     FakeSearchServiceClientModule(),
-    FakeScrapeSchedulerModule(),
     FakeShoeboxStoreModule(),
     FakeCortexServiceClientModule(),
-    FakeScraperServiceClientModule(),
     FakeKeepImportsModule(),
     FakeCryptoModule(),
     FakeCuratorServiceClientModule()

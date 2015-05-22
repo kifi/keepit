@@ -44,6 +44,7 @@ private[mail] class MailSenderActor @Inject() (
   db: Database,
   mailRepo: ElectronicMailRepo,
   emailOptOutRepo: EmailOptOutRepo,
+  userRepo: UserRepo,
   userNotifyPreferenceRepo: UserNotifyPreferenceRepo,
   emailAddressRepo: UserEmailAddressRepo,
   airbrake: AirbrakeNotifier,
@@ -69,7 +70,7 @@ private[mail] class MailSenderActor @Inject() (
         log.info(s"mail $mailId is in state ${mail.state}, skip it")
       } else {
         log.info(s"Processing email to send: ${mail.id.get}")
-        val newMail = takeOutOptOuts(mail).clean()
+        val newMail = takeOutOptOutsAndInactiveUsers(mail).clean()
         if (newMail.state != ElectronicMailStates.OPT_OUT) {
           log.info(s"Sending email: ${newMail.id.getOrElse(newMail.externalId)}")
           mailProvider.sendMail(newMail)
@@ -85,20 +86,21 @@ private[mail] class MailSenderActor @Inject() (
     NotificationCategory.User.RESET_PASSWORD,
     NotificationCategory.User.APPROVED
   ).map(c => ElectronicMailCategory(c.category))
-  def takeOutOptOuts(mail: ElectronicMail) = { // say that 3 times fast
+  def takeOutOptOutsAndInactiveUsers(mail: ElectronicMail) = { // say that 3 times fast
+
     mail.category match {
       case sendAnyway if sendAnywayCategories.contains(sendAnyway) =>
         mail
       case _ =>
         val (newTo, newCC) = db.readOnlyReplica { implicit session =>
-          val newTo = mail.to.filterNot(addressHasOptedOut(_, mail.category))
-          val newCC = mail.cc.filterNot(addressHasOptedOut(_, mail.category))
+          val newTo = mail.to.filterNot(addressHasOptedOut(_, mail.category)).filterNot(userIsInactive(_))
+          val newCC = mail.cc.filterNot(addressHasOptedOut(_, mail.category)).filterNot(userIsInactive(_))
           (newTo, newCC)
         }
         if (newTo.toSet != mail.to.toSet || newCC.toSet != mail.cc.toSet) {
           if (newTo.isEmpty) {
             db.readWrite { implicit session =>
-              mailRepo.save(mail.copy(state = ElectronicMailStates.OPT_OUT))
+              mailRepo.save(mail.copy(state = ElectronicMailStates.OPT_OUT)) // TODO: account for .filterNot( userIsInactive ) in EmailStates.OPT_OUT
             }
           } else {
             db.readWrite { implicit session =>
@@ -119,6 +121,17 @@ private[mail] class MailSenderActor @Inject() (
       }
     }
   }
+
+  def userIsInactive(address: EmailAddress)(implicit session: RSession): Boolean = {
+    val userEmailAddressOpt = emailAddressRepo.getByAddressOpt(address, None)
+    userEmailAddressOpt match {
+      case Some(emailAddress) =>
+        val userId = emailAddress.userId
+        db.readOnlyReplica { implicit session => userRepo.get(userId).state == UserStates.INACTIVE }
+      case None => false
+    }
+  }
+
   private val notificationsToBeReported = NotificationCategory.User.reportToAnalytics ++ NotificationCategory.NonUser.reportToAnalytics
   private def reportEmailNotificationSent(email: ElectronicMail): Unit = {
     if (notificationsToBeReported.contains(email.category)) {

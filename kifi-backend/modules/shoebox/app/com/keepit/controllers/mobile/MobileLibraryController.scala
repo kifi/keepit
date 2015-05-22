@@ -20,7 +20,7 @@ import com.keepit.model._
 import com.keepit.normalizer.NormalizedURIInterner
 import com.keepit.shoebox.controllers.LibraryAccessActions
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json.{ JsArray, JsObject, JsString, Json }
+import play.api.libs.json._
 import com.keepit.common.core._
 import play.api.mvc.AnyContent
 
@@ -117,13 +117,16 @@ class MobileLibraryController @Inject() (
     val libraryId = Library.decodePublicId(pubId).get
     val idealSize = imageSize.flatMap { s => Try(ImageSize(s)).toOption }.getOrElse(MobileLibraryController.defaultLibraryImageSize)
     libraryCommander.getLibraryById(userIdOpt, false, libraryId, idealSize, viewerId) map { libInfo =>
-      val memOpt = libraryCommander.getMaybeMembership(userIdOpt, libraryId)
-      val accessStr = memOpt.map(_.access.value).getOrElse("none")
-      val subscribedToUpdates = memOpt.map(_.subscribedToUpdates).getOrElse(false)
       val editedLibInfo = libInfo.copy(keeps = libInfo.keeps.map { k =>
         k.copy(note = Hashtags.formatMobileNote(k.note, v1))
       })
-      Ok(Json.obj("library" -> Json.toJson(editedLibInfo), "membership" -> accessStr, "subscribedToUpdates" -> subscribedToUpdates))
+
+      val (membershipOpt, inviteOpt) = libraryCommander.createViewerInfo(userIdOpt, libraryId)
+      val accessStr = membershipOpt.map(_.access).getOrElse("none")
+      val membershipJson = Json.toJson(membershipOpt)
+      val inviteJson = Json.toJson(inviteOpt)
+      val libraryJson = Json.toJson(editedLibInfo).as[JsObject] + ("membership" -> membershipJson) + ("invite" -> inviteJson)
+      Ok(Json.obj("library" -> libraryJson, "membership" -> accessStr)) // todo: remove membership once it's not being used
     }
   }
 
@@ -142,13 +145,15 @@ class MobileLibraryController @Inject() (
           request.userIdOpt.foreach { userId => libraryCommander.updateLastView(userId, library.id.get) }
           val idealSize = imageSize.flatMap { s => Try(ImageSize(s)).toOption }.getOrElse(MobileLibraryController.defaultLibraryImageSize)
           libraryCommander.createFullLibraryInfo(request.userIdOpt, false, library, idealSize).map { libInfo =>
-            val memOpt = libraryCommander.getMaybeMembership(request.userIdOpt, library.id.get)
-            val subscribedToUpdates = memOpt.exists(_.subscribedToUpdates)
-            val accessStr = memOpt.map(_.access.value).getOrElse("none")
             val editedLibInfo = libInfo.copy(keeps = libInfo.keeps.map { k =>
               k.copy(note = Hashtags.formatMobileNote(k.note, v1))
             })
-            Ok(Json.obj("library" -> Json.toJson(editedLibInfo), "membership" -> accessStr, "subscribedToUpdates" -> subscribedToUpdates))
+            val (membershipOpt, inviteOpt) = libraryCommander.createViewerInfo(request.userIdOpt, library.id.get)
+            val accessStr = membershipOpt.map(_.access).getOrElse("none")
+            val membershipJson = Json.toJson(membershipOpt)
+            val inviteJson = Json.toJson(inviteOpt)
+            val libraryJson = Json.toJson(editedLibInfo).as[JsObject] + ("membership" -> membershipJson) + ("invite" -> inviteJson)
+            Ok(Json.obj("library" -> libraryJson, "membership" -> accessStr)) // todo: remove membership once it's not being used
           }
         })
       case Left(fail) =>
@@ -258,6 +263,29 @@ class MobileLibraryController @Inject() (
       Json.toJson(info).as[JsObject] ++ Json.obj("access" -> invite.access)
     }
     Ok(Json.obj("libraries" -> libsFollowing, "invited" -> libsInvitedTo))
+  }
+
+  def getUserByIdOrEmail(json: JsValue) = {
+    (json \ "type").as[String] match {
+      case "user" => Right(Left((json \ "invitee").as[ExternalId[User]]))
+      case "email" => Right(Right((json \ "invitee").as[EmailAddress]))
+      case _ => Left("invalid_invitee_type")
+    }
+  }
+
+  def revokeLibraryInvitation(publicLibraryId: PublicId[Library]) = UserAction.async(parse.tolerantJson) { request =>
+    Library.decodePublicId(publicLibraryId) match {
+      case Failure(ex) => Future.successful(BadRequest(Json.obj("error" -> "invalid_library_id")))
+      case Success(libraryId) =>
+        getUserByIdOrEmail(request.body) match {
+          case Right(invitee) =>
+            libraryCommander.revokeInvitationToLibrary(libraryId, request.userId, invitee) match {
+              case Right(ok) => Future.successful(NoContent)
+              case Left(error) => Future.successful(BadRequest(Json.obj(error._1 -> error._2)))
+            }
+          case Left(error) => Future.successful(BadRequest(Json.obj("error" -> error)))
+        }
+    }
   }
 
   def inviteUsersToLibrary(pubId: PublicId[Library]) = UserAction.async(parse.tolerantJson) { request =>

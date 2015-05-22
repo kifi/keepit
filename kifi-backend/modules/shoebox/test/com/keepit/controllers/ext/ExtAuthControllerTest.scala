@@ -11,7 +11,6 @@ import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.model.{ SocialUserInfo, User, Username }
-import com.keepit.scraper.{ FakeScraperServiceClientModule, FakeScrapeSchedulerModule }
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.social.{ SocialId, SocialNetworks }
 import com.keepit.test._
@@ -29,7 +28,6 @@ class ExtAuthControllerTest extends Specification with ShoeboxApplicationInjecto
 
   def requiredModules = Seq(
     FakeSearchServiceClientModule(),
-    FakeScrapeSchedulerModule(),
     FakeShoeboxAppSecureSocialModule(),
     FakeShoeboxStoreModule(),
     FakeHttpClientModule(),
@@ -38,7 +36,6 @@ class ExtAuthControllerTest extends Specification with ShoeboxApplicationInjecto
     FakeMailModule(),
     FakeUserActionsModule(),
     FakeCortexServiceClientModule(),
-    FakeScraperServiceClientModule(),
     FakeCuratorServiceClientModule()
   )
 

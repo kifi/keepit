@@ -13,7 +13,6 @@ import com.keepit.curator.LibraryQualityHelper
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.model._
-import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.Specification
@@ -26,7 +25,6 @@ class RelatedLibraryCommanderTest extends Specification with ShoeboxTestInjector
 
   def modules = Seq(
     FakeExecutionContextModule(),
-    FakeScrapeSchedulerModule(),
     FakeSearchServiceClientModule(),
     FakeMailModule(),
     FakeShoeboxStoreModule(),

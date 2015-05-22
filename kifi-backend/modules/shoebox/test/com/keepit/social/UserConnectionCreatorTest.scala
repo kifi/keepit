@@ -13,7 +13,6 @@ import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.common.time._
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.model._
-import com.keepit.scraper.{ FakeScrapeSchedulerModule, FakeScraperServiceClientModule }
 import com.keepit.shoebox.FakeShoeboxServiceClientModule
 import com.keepit.social.{ SocialNetworkType, SocialId, SocialNetworks }
 import com.keepit.test.ShoeboxTestInjector
@@ -36,8 +35,6 @@ class UserConnectionCreatorTest extends Specification with ShoeboxTestInjector {
     FakeElizaServiceClientModule(),
     FakeMailModule(),
     FakeABookServiceClientModule(),
-    FakeScraperServiceClientModule(),
-    FakeScrapeSchedulerModule(),
     FakeSocialGraphModule()
   )
 

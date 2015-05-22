@@ -63,7 +63,6 @@ class ShoeboxController @Inject() (
   kifiInstallationRepo: KifiInstallationRepo,
   socialGraphPlugin: SocialGraphPlugin,
   rawKeepImporterPlugin: RawKeepImporterPlugin,
-  scrapeScheduler: ScrapeScheduler,
   userInteractionCommander: UserInteractionCommander,
   libraryCommander: LibraryCommander,
   libraryImageCommander: LibraryImageCommander,
@@ -189,14 +188,11 @@ class ShoeboxController @Inject() (
     val o = request.body.as[JsObject]
     val url = (o \ "url").as[String]
     if (URI.parse(url).isFailure) throw new Exception(s"when calling internNormalizedURI - can't parse url: $url")
-    val contentWanted = (o \ "contentWanted").asOpt[Boolean] orElse (o \ "scrapeWanted").asOpt[Boolean] getOrElse false
+    val contentWanted = (o \ "contentWanted").asOpt[Boolean] getOrElse false
     val uri = db.readWrite { implicit s => //using cache
       normalizedURIInterner.internByUri(url, contentWanted, NormalizationCandidate.fromJson(o))
     }
-    if (contentWanted) SafeFuture {
-      db.readWrite { implicit session => scrapeScheduler.scheduleScrape(uri) }
-      rover.fetchAsap(uri.id.get, uri.url)
-    }
+    if (contentWanted) { rover.fetchAsap(uri.id.get, uri.url) }
     Ok(Json.toJson(uri))
   }
 

@@ -21,7 +21,6 @@ import com.keepit.common.analytics.DevAnalyticsModule
 import com.keepit.common.store.ShoeboxDevStoreModule
 import com.keepit.inject.CommonDevModule
 import com.keepit.common.integration.DevReaperModule
-import com.keepit.scraper.{ DevScrapeSchedulerModule, ProdScraperServiceClientModule, DevScraperHealthMonitorModule }
 import com.keepit.common.queue.DevSimpleQueueModule
 import com.keepit.queue.DevNormalizationUpdateJobQueueModule
 import com.keepit.common.concurrent.ProdForkJoinContextMonitorModule
@@ -41,8 +40,6 @@ case class ShoeboxDevModule() extends ShoeboxModule with CommonDevModule {
   // Shoebox Functional Modules
   val analyticsModule = DevAnalyticsModule()
   //  topicModelModule = DevTopicModelModule()
-  val scrapeSchedulerModule = DevScrapeSchedulerModule()
-  val scraperHealthMonitorModule = DevScraperHealthMonitorModule()
   val fjMonitorModule = ProdForkJoinContextMonitorModule()
   val twilioCredentialsModule = DevTwilioCredentialsModule()
   val dataPipelineExecutorModule = DevDataPipelineExecutorModule()
@@ -54,7 +51,6 @@ case class ShoeboxDevModule() extends ShoeboxModule with CommonDevModule {
   val elizaServiceClientModule = ProdElizaServiceClientModule()
   val heimdalServiceClientModule = DevHeimdalServiceClientModule()
   val abookServiceClientModule = ProdABookServiceClientModule()
-  val scraperServiceClientModule = ProdScraperServiceClientModule()
   val cortexServiceClientModule = ProdCortexServiceClientModule()
   val graphServiceClientModule = ProdGraphServiceClientModule()
   val curatorServiceClientModule = ProdCuratorServiceClientModule()

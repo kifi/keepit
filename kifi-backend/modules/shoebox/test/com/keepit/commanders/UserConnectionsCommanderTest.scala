@@ -8,7 +8,6 @@ import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.graph.model.{ SociallyRelatedEntities, RelatedEntities }
 import com.keepit.graph.{ GraphServiceClient, FakeGraphServiceModule, FakeGraphServiceClientImpl }
 import com.keepit.model._
-import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.Specification
@@ -27,7 +26,6 @@ class UserConnectionsCommanderTest extends Specification with ShoeboxTestInjecto
   val modules = Seq(
     FakeExecutionContextModule(),
     FakeABookServiceClientModule(),
-    FakeScrapeSchedulerModule(),
     FakeGraphServiceModule(),
     FakeSocialGraphModule(),
     FakeSearchServiceClientModule())

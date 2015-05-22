@@ -21,7 +21,6 @@ import com.keepit.model.LibraryMembershipFactoryHelper._
 import com.keepit.model.UserFactory._
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.model._
-import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.ProdShoeboxServiceClientModule
 import com.keepit.test.ShoeboxTestInjector
@@ -40,7 +39,6 @@ class ActivityFeedEmailSenderTest extends Specification with ShoeboxTestInjector
     ProdShoeboxServiceClientModule(),
     FakeSearchServiceClientModule(),
     FakeSocialGraphModule(),
-    FakeScrapeSchedulerModule(),
     FakeABookServiceClientModule(),
     FakeCortexServiceClientModule(),
     FakeCuratorServiceClientModule(),

@@ -75,7 +75,7 @@ trait BufferedMongoRepo[T] extends MongoRepo[T] with Logging { //Convoluted?
       airbrake.notify(s"Mongo Insert Buffer Full! (${bufferSize.get})")
       throw MongoInsertBufferFullException()
     } else if (bufferSize.get >= warnBufferSize && hasWarned.getAndSet(true) == false) {
-      airbrake.notify(s"Mongo Insert almost Buffer Full. (${bufferSize.get})")
+      airbrake.notify(s"Mongo Insert Buffer almost Full. (${bufferSize.get})")
     } else if (bufferSize.get < warnBufferSize) hasWarned.set(false)
 
     val inflight = bufferSize.incrementAndGet()
