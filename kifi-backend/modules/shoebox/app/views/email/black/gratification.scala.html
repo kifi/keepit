@@ -1,9 +1,12 @@
 @(userId: Id[User],
-libViews: com.keepit.commanders.emails.GratificationCommander.LibraryCountData,
-libFollowers: com.keepit.commanders.emails.GratificationCommander.LibraryCountData,
+libViews: com.keepit.commanders.emails.GratificationEmailSender.SortedLibraryCountData,
+libFollowers: com.keepit.commanders.emails.GratificationEmailSender.SortedLibraryCountData,
 newConnections: Seq[Id[User]]
 )
 @import com.keepit.common.mail.template.helpers._
+@MIN_VIEWS = @{5}
+@MIN_FOLLOWERS = @{1}
+@MIN_CONNECTIONS = @{1}
 @singularOrPlural(word: String, quantity: Int) = @{ quantity match { case 1 => word; case _ => word + "s" } }
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
@@ -12,33 +15,42 @@ newConnections: Seq[Id[User]]
 </head>
 <body>
 <p>Hey @firstName(userId),</p>
-@if(libViews.totalCount >= 5) {
+@if(libViews.totalCount >= MIN_VIEWS) {
 <p>You had <b>@{libViews.totalCount} views</b> across all of your libraries:</p>
 <ul>
     @for((libId, viewCount) <- libViews.countByLibrary) {
-    <li>@{viewCount} @singularOrPlural("view", viewCount) on <a href=@libraryUrl(libId, "")>@libraryName(libId)</a></li>
+    <li>@{viewCount} @singularOrPlural("view", viewCount) on <a href=@libraryUrl(libId, "gratLibUrl")>@libraryName(libId)</a></li>
     }
 </ul>
 }
 
-@if(libFollowers.totalCount >= 1) {
+@if(libFollowers.totalCount >= MIN_FOLLOWERS) {
 <p>You had <b>@libFollowers.totalCount new @singularOrPlural("follower", libFollowers.totalCount)</b>:</p>
 <ul>
     @for((libId, followCount) <- libFollowers.countByLibrary) {
-    <li>@followCount new @singularOrPlural("follower", followCount) on <a href="@libraryUrl(libId, "")">@libraryName(libId)</a></li>
+    <li>@followCount new @singularOrPlural("follower", followCount) on <a href="@libraryUrl(libId, "gratLibUrl")">@libraryName(libId)</a></li>
     }
 </ul>
 }
 
-@if(newConnections.length >= 1) {
+@if(newConnections.length >= MIN_CONNECTIONS) {
 <p>You made <b>@newConnections.length new @singularOrPlural("connection", newConnections.length)</b>:</p>
 <ul>
 @for(userId <- newConnections) {
-    <li><a href="@profileUrl(userId, "")">@fullName(userId)</a></li>
+    <li><a href="@profileUrl(userId, "gratConnectProf")">@fullName(userId)</a></li>
 }
 </ul>
 Share a library with them :)
 }
 
+@if(libViews.totalCount >= MIN_VIEWS || libFollowers.totalCount >= MIN_FOLLOWERS || newConnections.length >= MIN_CONNECTIONS){
+What other stats would you like to see? Please let me know if you have any questions, suggestions, or comments about Kifi!
+} else {
+We at Kifi hope you're having a great week.
+}
+
+Cheers,
+Cam
+<a href="@htmlUrl("www.kifi.com/cam?", "gratCamProf", true)">www.kifi.com/cam</a>
 </body>
 </html>

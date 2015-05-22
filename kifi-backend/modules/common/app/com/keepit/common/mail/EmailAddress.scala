@@ -84,6 +84,7 @@ object SystemEmailAddress {
   val JOSH = EmailAddress("josh@kifi.com")
   val AARON = EmailAddress("aaron@kifi.com")
   val MARK = EmailAddress("mark@kifi.com")
+  val CAM = EmailAddress("cam@kifi.com")
   val CONGRATS = EmailAddress("congrats@kifi.com")
   val NOTIFY = EmailAddress("42.notify@gmail.com")
   val SENDGRID = EmailAddress("sendgrid@42go.com")
@@ -92,7 +93,7 @@ object SystemEmailAddress {
   val FEED_QA = EmailAddress("feed-qa@kifi.com")
   val ASHLEY = EmailAddress("ashley@kifi.com")
 
-  val ENG_EMAILS = Seq(EISHAY, YASUHIRO, JARED, ANDREW, YINGJIE, LÉO, STEPHEN, JOSH)
+  val ENG_EMAILS = Seq(EISHAY, YASUHIRO, JARED, ANDREW, YINGJIE, LÉO, STEPHEN, JOSH, CAM)
   val NON_ENG_EMAILS = Seq(TEAM, INVITATION, SUPPORT, OLD_SUPPORT, NOTIFICATIONS, ENG, CONGRATS, NOTIFY, SENDGRID, ASHLEY, EISHAY_PUBLIC)
 
   val ALL_EMAILS = ENG_EMAILS ++ NON_ENG_EMAILS

@@ -154,8 +154,7 @@ class UserConnectionRepoImpl @Inject() (
   def getConnectionsSince(id: Id[User], since: DateTime)(implicit session: RSession): Set[Id[User]] = {
     val query = sql"""select user_1 from user_connection where user_2 = $id and state = 'active' and created_at >= $since union
       select user_2 from user_connection where user_1 = $id and state = 'active' and created_at >= $since"""
-    val result = query.as[Id[User]].list.toSet
-    result
+    query.as[Id[User]].list.toSet
   }
 
   def getBasicUserConnection(id: Id[User])(implicit session: RSession): Seq[BasicUserConnection] = {

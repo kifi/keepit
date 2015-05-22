@@ -1,8 +1,8 @@
 @(toUserId: Id[User])
 @import com.keepit.common.mail.template.helpers._
-@homeUrl = @{htmlUrl("www.kifi.com", "", false)}
-@howKifiWorksUrl = @{htmlUrl("https://www.kifi.com/how_it_works", "", false)}
-@eishayKifiUrl = @profileUrl(Id[User](1))
+@homeUrl = @{htmlUrl("www.kifi.com?", "kifiHome", false)}
+@howKifiWorksUrl = @{htmlUrl("https://www.kifi.com/how_it_works?", "howKifiWorks", false)}
+@eishayKifiUrl = @{profileUrl(Id[User](1), "eishayProf")}
 
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
