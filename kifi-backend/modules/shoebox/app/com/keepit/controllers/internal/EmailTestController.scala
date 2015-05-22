@@ -50,7 +50,6 @@ class EmailTestController @Inject() (
     def libraryId = Id[Library](request.getQueryString("libraryId").get.toLong)
     def msg = request.getQueryString("msg")
     def tip = request.getQueryString("tip")
-    require(sendTo.toString.split('@')(1) == "kifi.com", "sendTo must equal [address]@kifi.com")
 
     val emailOptF: Option[Future[ElectronicMail]] = Some(name) collect {
       case "gratification" => emailSenderProvider.gratification(userId, Some(sendTo))
