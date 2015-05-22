@@ -90,7 +90,7 @@ trait ServiceClient extends CommonServiceUtilities with Logging {
     }
   }
 
-  protected def call(call: ServiceRoute, body: JsValue = JsNull, attempts: Int = 2, callTimeouts: CallTimeouts = CallTimeouts.NoTimeouts, routingStrategy: RoutingStrategy = roundRobin): Future[ClientResponse] = {
+  protected def call(call: ServiceRoute, body: JsValue = JsNull, attempts: Int = 2, callTimeouts: CallTimeouts = CallTimeouts.UseDefaults, routingStrategy: RoutingStrategy = roundRobin): Future[ClientResponse] = {
     val tracer = new StackTrace()
     val respFuture = RetryFuture(attempts, { case t: ConnectException => serviceCluster.refresh(); true }) {
       callUrl(call, serviceUri(call.url, routingStrategy), body, ignoreFailure = true, callTimeouts = callTimeouts)
@@ -119,7 +119,7 @@ trait ServiceClient extends CommonServiceUtilities with Logging {
     respFuture
   }
 
-  protected def callUrl(call: ServiceRoute, httpUri: HttpUri, body: JsValue, ignoreFailure: Boolean = false, callTimeouts: CallTimeouts = CallTimeouts.NoTimeouts): Future[ClientResponse] = {
+  protected def callUrl(call: ServiceRoute, httpUri: HttpUri, body: JsValue, ignoreFailure: Boolean = false, callTimeouts: CallTimeouts = CallTimeouts.UseDefaults): Future[ClientResponse] = {
     val clientResponseFuture = {
       val url = httpUri.url
       if (url.length > ServiceClient.MaxUrlLength) {
@@ -173,7 +173,7 @@ trait ServiceClient extends CommonServiceUtilities with Logging {
     Future.sequence(futureResponses).map { responses => (instances zip responses).toMap }
   }
 
-  protected def callLeader(call: ServiceRoute, body: JsValue = JsNull, ignoreFailure: Boolean = false, callTimeouts: CallTimeouts = CallTimeouts.NoTimeouts) = {
+  protected def callLeader(call: ServiceRoute, body: JsValue = JsNull, ignoreFailure: Boolean = false, callTimeouts: CallTimeouts = CallTimeouts.UseDefaults) = {
     serviceCluster.leader match {
       case Some(clusterLeader) =>
         callUrl(call, new ServiceUri(clusterLeader, protocol, port, call.url), body, ignoreFailure, callTimeouts)
@@ -204,7 +204,7 @@ trait ThrottledServiceClient extends ServiceClient {
   val maxQueue: Option[Int] = Some(maxParallelism * 42)
   val limiter = new ReactiveLock(maxParallelism, maxQueue)
 
-  override protected def call(call: ServiceRoute, body: JsValue = JsNull, attempts: Int = 2, callTimeouts: CallTimeouts = CallTimeouts.NoTimeouts, routingStrategy: RoutingStrategy = roundRobin): Future[ClientResponse] = limiter.withLockFuture {
+  override protected def call(call: ServiceRoute, body: JsValue = JsNull, attempts: Int = 2, callTimeouts: CallTimeouts = CallTimeouts.UseDefaults, routingStrategy: RoutingStrategy = roundRobin): Future[ClientResponse] = limiter.withLockFuture {
     super.call(call, body, attempts, callTimeouts, routingStrategy)
   }
 }
