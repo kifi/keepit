@@ -41,7 +41,7 @@
                 <span class="lmm-member-info-icon svg-collaborator-green" ng-if="member.isCollaborator"></span>
                 <span class="lmm-member-info-state" ng-class="{'collab' : member.isCollaborator}">{{member.isCollaborator ? 'Collaborator' : 'Follower'}}</span>
               </div>
-              <div class="lmm-member-dropdown-parent" kf-hover-menu>
+              <div class="lmm-member-dropdown-parent" kf-hover-menu ng-if="canManage">
                 <div class="svg-dropdown-arrow"></div>
                   <menu class="kf-dropdown-menu">
                     <button class="kf-dropdown-menu-item" ng-if="member.isFollower" ng-click="changeToCollaborator(member)">Make collaborator</button>
