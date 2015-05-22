@@ -104,7 +104,9 @@ class LibraryMembershipRepoImpl @Inject() (
   }
 
   def pageWithLibraryIdAndAccess(libraryId: Id[Library], offset: Int, limit: Int, accessSet: Set[LibraryAccess], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Seq[LibraryMembership] = {
-    (for (b <- rows if b.libraryId === libraryId && b.access.inSet(accessSet) && b.state =!= excludeState.orNull) yield b).sortBy(r => (r.access, r.createdAt)).drop(offset).take(limit).list
+    val safeOffset = if (offset >= 0) offset else 0
+    // This can be removed once clients stop calling with offset = -1
+    (for (b <- rows if b.libraryId === libraryId && b.access.inSet(accessSet) && b.state =!= excludeState.orNull) yield b).sortBy(r => (r.access, r.createdAt)).drop(safeOffset).take(limit).list
   }
 
   private val getWithLibraryIdCompiled = Compiled { (libraryId: Column[Id[Library]]) =>
