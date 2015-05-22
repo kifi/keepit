@@ -125,7 +125,7 @@ class BookmarkImporter @Inject() (
         }
       }
 
-      val importTag = keepsCommander.getOrCreateTag(lf.request.userId, "Imported links")(context)
+      val importTag = keepsCommander.getOrCreateTag(lf.request.userId, "imported-links")(context)
 
       val tags = tagMap.values.toSeq.map { tagStr =>
         tagStr.trim -> timing(s"uploadBookmarkFile(${lf.request.userId}) -- getOrCreateTag(${tagStr.trim})", 50) { keepsCommander.getOrCreateTag(lf.request.userId, tagStr.trim)(context) }
