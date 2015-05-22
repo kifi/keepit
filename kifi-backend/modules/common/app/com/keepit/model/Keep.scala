@@ -58,7 +58,7 @@ case class Keep(
 
   def withUrl(url: String) = copy(url = url)
 
-  def withTitle(title: Option[String]) = copy(title = title.map(_.trimAndRemoveLineBreaks()))
+  def withTitle(title: Option[String]) = copy(title = title.map(_.trimAndRemoveLineBreaks()).filter(_.nonEmpty))
 
   def isActive: Boolean = state == KeepStates.ACTIVE
 
