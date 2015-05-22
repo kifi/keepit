@@ -5,9 +5,8 @@ angular.module('kifi')
 .factory('libraryService', [
   '$http', '$rootScope', 'profileService', 'routeService', 'Clutch', '$q', '$analytics',
   function ($http, $rootScope, profileService, routeService, Clutch, $q, $analytics) {
-    var infos = {  // Note: the 3 kinds are mutually exclusive
+    var infos = {
       own: [],
-      following: [],
       invited: []
     };
     var recentIds = [];  // in-memory cache, length limited, most recent first
@@ -21,7 +20,6 @@ angular.module('kifi')
     var libraryInfosClutch = new Clutch(function () {
       return $http.get(routeService.getLibraryInfos).then(function (res) {
         infos.own = res.data.libraries.map(augment);
-        infos.following = res.data.following.map(augment);
         infos.invited = res.data.invited.map(augment);
       });
     });
@@ -102,10 +100,6 @@ angular.module('kifi')
         return infos.own.slice();
       },
 
-      getFollowingInfos: function () {
-        return infos.following.slice();
-      },
-
       getInvitedInfos: function () {
         return infos.invited.slice();
       },
@@ -160,14 +154,6 @@ angular.module('kifi')
       },
 
       getLibraryInfoById: function (libraryId) {
-        var crit = {id: libraryId};
-        var infosByAccess = {owner: infos.own, read_only: infos.following, none: infos.invited};
-        _.forOwn(infosByAccess, function (infos, access) {
-          var lib = _.find(infos, crit);
-          if (lib) {
-            return $q.when({library: lib, membership: access});
-          }
-        });
         return libraryInfoByIdClutch.get(libraryId);
       },
 
@@ -242,11 +228,7 @@ angular.module('kifi')
       joinLibrary: function (libraryId, authToken) {
         return $http.post(routeService.joinLibrary(libraryId, authToken)).then(function (response) {
           var wasInvited = _.remove(infos.invited, {id: libraryId}).length > 0;
-          var justJoined = !_.some(infos.following, {id: libraryId});
-          if (justJoined) {
-            infos.following.push(augment(response.data));
-          }
-          if (wasInvited || justJoined) {
+          if (wasInvited) {
             $rootScope.$emit('libraryInfosChanged');
           }
           $rootScope.$emit('libraryJoined', libraryId);
@@ -256,10 +238,6 @@ angular.module('kifi')
 
       leaveLibrary: function (libraryId) {
         return $http.post(routeService.leaveLibrary(libraryId)).then(function () {
-          var wasRemoved = _.remove(infos.following, {id: libraryId}).length > 0;
-          if (wasRemoved) {
-            $rootScope.$emit('libraryInfosChanged');
-          }
           $rootScope.$emit('libraryLeft', libraryId);
           libraryInfoByIdClutch.expire(libraryId);
         });
