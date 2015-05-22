@@ -295,7 +295,6 @@ class LibraryCommander @Inject() (
         val followers = memberInfosByLibraryId(lib.id.get).shown.map(usersById(_))
         val collaborators = memberInfosByLibraryId(lib.id.get).collaborators.map(usersById(_))
         val whoCanInvite = lib.whoCanInvite.getOrElse(LibraryInvitePermissions.COLLABORATOR) // todo: remove Option
-
         val attr = getSourceAttribution(libId)
 
         if (keepInfos.size > keepCount) {
@@ -326,6 +325,34 @@ class LibraryCommander @Inject() (
       }
     }
     Future.sequence(futureFullLibraryInfos)
+  }
+
+  def createViewerInfo(viewerUserIdOpt: Option[Id[User]], libraryId: Id[Library]): (Option[LibraryMembershipInfo], Option[LibraryInviteInfo]) = {
+    val viewerMembershipOpt = viewerUserIdOpt.map { viewerId =>
+      val memOpt = db.readOnlyMaster { implicit s =>
+        libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, viewerId)
+      }
+      memOpt.map { mem =>
+        LibraryMembershipInfo.fromMembership(mem)
+      }
+    }.flatten
+
+    val viewerInviteOpt = viewerUserIdOpt.map { viewerId =>
+      db.readOnlyMaster { implicit s =>
+        val inviteOpt = libraryInviteRepo.getLastSentByLibraryIdAndUserId(libraryId, viewerId, Set(LibraryInviteStates.ACTIVE))
+        val basicUserOpt = inviteOpt.map { invite =>
+          basicUserRepo.load(invite.inviterId)
+        }
+        (inviteOpt, basicUserOpt)
+      } match {
+        case (Some(invite), Some(inviter)) =>
+          Some(LibraryInviteInfo.createInfo(invite, inviter))
+        case (_, _) =>
+          None
+      }
+    }.flatten
+
+    (viewerMembershipOpt, viewerInviteOpt)
   }
 
   private def getSourceAttribution(libId: Id[Library]): Option[LibrarySourceAttribution] = {
@@ -998,6 +1025,30 @@ class LibraryCommander @Inject() (
       val mainLib = sysLibs.find(_._2.kind == LibraryKind.SYSTEM_MAIN).map(_._2).orElse(mainOpt).get
       val secretLib = sysLibs.find(_._2.kind == LibraryKind.SYSTEM_SECRET).map(_._2).orElse(secretOpt).get
       (mainLib, secretLib)
+    }
+  }
+
+  def revokeInvitationToLibrary(libraryId: Id[Library], inviterId: Id[User], invitee: Either[ExternalId[User], EmailAddress]): Either[(String, String), String] = {
+    val libraryInvite = invitee match {
+      case Left(externalId) => db.readOnlyMaster { implicit s =>
+        userRepo.getOpt(externalId) match {
+          case Some(userId) => Right(libraryInviteRepo.getLastSentByLibraryIdAndInviterIdAndUserId(libraryId, inviterId, userId.id.get, Set(LibraryInviteStates.ACTIVE)))
+          case None => Left(s"external_id_does_not_exist")
+        }
+      }
+      case Right(email) => db.readOnlyMaster { implicit s =>
+        Right(libraryInviteRepo.getLastSentByLibraryIdAndInviterIdAndEmail(libraryId, inviterId, email, Set(LibraryInviteStates.ACTIVE)))
+      }
+    }
+    libraryInvite match {
+      case Right(Some(toDelete)) => db.readWrite(attempts = 3) { implicit s =>
+        libraryInviteRepo.save(toDelete.copy(state = LibraryInviteStates.INACTIVE)) match {
+          case invite if invite.state == LibraryInviteStates.INACTIVE => Right("library_delete_succeeded")
+          case _ => Left("error" -> "library_invite_delete_failed")
+        }
+      }
+      case Right(None) => Left("error" -> "library_invite_not_found")
+      case Left(error) => Left("error" -> error)
     }
   }
 

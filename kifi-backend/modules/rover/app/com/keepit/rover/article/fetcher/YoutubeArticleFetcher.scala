@@ -46,8 +46,8 @@ class YoutubeArticleFetcher @Inject() (
     ArticleFetcher.fetchAndCompare(request, articleStore)(doFetch)
   }
 
-  private def doFetch(url: String, ifModifiedSince: Option[DateTime])(implicit ec: ExecutionContext): Future[FetchResult[YoutubeArticle]] = {
-    documentFetcher.fetchJsoupDocument(url, ifModifiedSince).flatMap { result =>
+  private def doFetch(url: String, ifModifiedSince: Option[DateTime], shouldThrottle: Boolean)(implicit ec: ExecutionContext): Future[FetchResult[YoutubeArticle]] = {
+    documentFetcher.fetchJsoupDocument(url, ifModifiedSince, shouldThrottle).flatMap { result =>
       result.flatMap { doc =>
         getVideoContent(doc).imap { videoContent =>
           val content = YoutubeContent(
@@ -126,7 +126,7 @@ class YoutubeArticleFetcher @Inject() (
   }
 
   private def fetchTrackList(ttsParameters: Seq[Param])(implicit ec: ExecutionContext): Future[FetchResult[Seq[YoutubeTrackInfo]]] = {
-    documentFetcher.fetchJsoupDocument(trackListUrl(ttsParameters)).map { result =>
+    documentFetcher.fetchJsoupDocument(trackListUrl(ttsParameters), shouldThrottle = false).map { result =>
       result.map { doc =>
         doc.doc.getElementsByTag("track").map(parseTrackElement)
       }
@@ -144,7 +144,7 @@ class YoutubeArticleFetcher @Inject() (
   )
 
   private def fetchTrack(trackInfo: YoutubeTrackInfo, ttsParameters: Seq[Param])(implicit ec: ExecutionContext): Future[FetchResult[YoutubeTrack]] = {
-    documentFetcher.fetchJsoupDocument(trackUrl(trackInfo, ttsParameters)).map { result =>
+    documentFetcher.fetchJsoupDocument(trackUrl(trackInfo, ttsParameters), shouldThrottle = false).map { result =>
       result.map { doc =>
         val closedCaptions = StringEscapeUtils.unescapeXml(doc.doc.getElementsByTag("text").map(_.text).mkString(" "))
         log.info(s"[fetchTrack] fetched ${(if (trackInfo.isDefault) "default " else "") + (if (trackInfo.isAutomatic) "automatic " else "") + trackInfo.langTranslated} closed captions.")

@@ -197,6 +197,29 @@ class LibraryController @Inject() (
     }
   }
 
+  def getUserByIdOrEmail(json: JsValue): Either[String, Either[ExternalId[User], EmailAddress]] = {
+    (json \ "type").as[String] match {
+      case "user" => Right(Left((json \ "invitee").as[ExternalId[User]]))
+      case "email" => Right(Right((json \ "invitee").as[EmailAddress]))
+      case _ => Left("invalid_invitee_type")
+    }
+  }
+
+  def revokeLibraryInvitation(publicLibraryId: PublicId[Library]) = UserAction.async(parse.tolerantJson) { request =>
+    Library.decodePublicId(publicLibraryId) match {
+      case Failure(ex) => Future.successful(BadRequest(Json.obj("error" -> "invalid_library_id")))
+      case Success(libraryId) =>
+        getUserByIdOrEmail(request.body) match {
+          case Right(invitee) =>
+            libraryCommander.revokeInvitationToLibrary(libraryId, request.userId, invitee) match {
+              case Right(ok) => Future.successful(NoContent)
+              case Left(error) => Future.successful(BadRequest(Json.obj(error._1 -> error._2)))
+            }
+          case Left(error) => Future.successful(BadRequest(Json.obj("error" -> error)))
+        }
+    }
+  }
+
   def inviteUsersToLibrary(pubId: PublicId[Library]) = UserAction.async(parse.tolerantJson) { request =>
     Library.decodePublicId(pubId) match {
       case Failure(ex) =>
@@ -611,7 +634,7 @@ class LibraryController @Inject() (
   def setSubscribedToUpdates(pubId: PublicId[Library], newSubscripedToUpdate: Boolean) = UserAction { request =>
     val libraryId = Library.decodePublicId(pubId).get
     libraryCommander.updatedLibraryUpdateSubscription(request.userId, libraryId, newSubscripedToUpdate) match {
-      case Right(mem) => Ok
+      case Right(mem) => NoContent
       case Left(fail) => Status(fail.status)(Json.obj("error" -> fail.message))
     }
   }

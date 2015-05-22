@@ -13,9 +13,11 @@ import play.api.libs.json._
 class StatsController @Inject() (libViewCmdr: LibraryViewTrackingCommander) extends HeimdalServiceController with Logging {
 
   def getOwnerLibraryViewStats(userId: Id[User]) = Action { request =>
+    val LIBRARY_LIMIT = 7 // max libraries we want to show the user
+
     val since = currentDateTime.minusWeeks(1)
     val cnt = libViewCmdr.getTotalViews(userId, since)
-    val map = libViewCmdr.getTopViewedLibrariesAndCounts(userId, since, 5)
+    val map = libViewCmdr.getTopViewedLibrariesAndCounts(userId, since, LIBRARY_LIMIT)
     Ok(Json.obj("cnt" -> cnt, "map" -> map))
   }
 }

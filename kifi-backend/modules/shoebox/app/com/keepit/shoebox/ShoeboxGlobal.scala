@@ -6,7 +6,7 @@ import com.keepit.common.cache.FortyTwoCachePlugin
 import com.keepit.common.healthcheck._
 import com.keepit.common.mail.{ MailToKeepPlugin, MailSenderPlugin }
 import com.keepit.common.store.ImageDataIntegrityPlugin
-import com.keepit.shoebox.cron.{ ActivityPushScheduler, ActivityEmailCronPlugin }
+import com.keepit.shoebox.cron.{GratificationEmailCronPlugin, ActivityPushScheduler, ActivityEmailCronPlugin}
 import play.api.Mode._
 import play.api._
 import com.keepit.social.SocialGraphPlugin
@@ -49,6 +49,7 @@ trait ShoeboxServices { self: FortyTwoGlobal =>
     require(injector.instance[ShoeboxTasksPlugin] != null) //make sure its not lazy loaded
     require(injector.instance[ActivityEmailCronPlugin] != null) //make sure its not lazy loaded
     require(injector.instance[ActivityPushScheduler] != null) //make sure its not lazy loaded
+    require(injector.instance[GratificationEmailCronPlugin] != null) // make sure its not lazy loaded
 
     // DB sequencing plugins
     require(injector.instance[NormalizedURISequencingPlugin] != null) //make sure its not lazy loaded
