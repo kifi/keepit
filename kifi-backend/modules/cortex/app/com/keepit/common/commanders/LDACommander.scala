@@ -131,7 +131,7 @@ class LDACommanderImpl @Inject() (
     def getUserFeaturesCombo(userId: Id[User], version: ModelVersion[DenseLDA])(implicit session: RSession): UserFeaturesCombo = {
       val userInterestOpt = userTopicRepo.getByUser(userId, version)
       val userInterestStatOpt = userLDAStatRepo.getActiveByUser(userId, version)
-      val libFeats = db.readOnlyReplica { implicit s => libTopicRepo.getUserFollowedLibraryFeatures(userId, version) }
+      val libFeats = db.readOnlyReplica { implicit s => libTopicRepo.getUserFollowedLibraryFeatures(userId, version, limit = 25) }
       (userInterestOpt, userInterestStatOpt, libFeats)
     }
 
