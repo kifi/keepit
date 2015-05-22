@@ -78,7 +78,7 @@ class RoverServiceClientImpl(
     if (uriIds.isEmpty) Future.successful(Map.empty)
     else {
       val payload = Json.toJson(uriIds)
-      call(Rover.internal.getArticleInfosByUris, payload).map { r =>
+      call(Rover.internal.getArticleInfosByUris, payload, callTimeouts = longTimeout).map { r =>
         implicit val reads = TupleFormat.tuple2Reads[Id[NormalizedURI], Set[ArticleInfo]]
         (r.json).as[Seq[(Id[NormalizedURI], Set[ArticleInfo])]].toMap
       }
@@ -122,7 +122,7 @@ class RoverServiceClientImpl(
           "uriIds" -> missingUriIds,
           "kind" -> kind
         )
-        call(Rover.internal.getBestArticleSummaryByUris, payload).map { r =>
+        call(Rover.internal.getBestArticleSummaryByUris, payload, callTimeouts = longTimeout).map { r =>
           implicit val reads = TupleFormat.tuple2Reads[Id[NormalizedURI], RoverArticleSummary]
           val missingSummariesByUriId = (r.json).as[Seq[(Id[NormalizedURI], RoverArticleSummary)]].toMap
           missingKeys.map { key => key -> missingSummariesByUriId.get(key.uriId) }.toMap
@@ -144,7 +144,7 @@ class RoverServiceClientImpl(
           "uriIds" -> missingUriIds,
           "kind" -> kind
         )
-        call(Rover.internal.getImagesByUris, payload).map { r =>
+        call(Rover.internal.getImagesByUris, payload, callTimeouts = longTimeout).map { r =>
           implicit val reads = TupleFormat.tuple2Reads[Id[NormalizedURI], BasicImages]
           val missingImagesByUriId = (r.json).as[Seq[(Id[NormalizedURI], BasicImages)]].toMap
           missingKeys.map { key => key -> missingImagesByUriId.getOrElse(key.uriId, BasicImages.empty) }.toMap
@@ -198,7 +198,7 @@ class RoverServiceClientImpl(
   }
 
   def getPornDetectorModel(): Future[Map[String, Float]] = {
-    call(Rover.internal.getPornDetectorModel()).map { r =>
+    call(Rover.internal.getPornDetectorModel(), callTimeouts = longTimeout).map { r =>
       Json.fromJson[Map[String, Float]](r.json).get
     }
   }
