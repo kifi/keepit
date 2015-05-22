@@ -9,7 +9,6 @@ import com.keepit.model.{ NormalizedURI }
 import com.keepit.rover.article.{ ArticleKind, Article, ArticleCommander }
 import com.keepit.rover.article.content.{ HttpInfoHolder, NormalizationInfoHolder }
 import com.keepit.rover.document.utils.Signature
-import com.keepit.rover.fetcher.{ InvalidFetchResponseException, InvalidFetchRequestException }
 import com.keepit.rover.image.ImageCommander
 import com.keepit.rover.model._
 import com.keepit.rover.sensitivity.RoverSensitivityCommander
@@ -35,7 +34,7 @@ class RoverCommander @Inject() (
     val updatedInfos = articleCommander.getArticleInfosBySequenceNumber(seq, limit)
     if (updatedInfos.isEmpty) Future.successful(None)
     else {
-      val futureUpdates = updatedInfos.map { info =>
+      val futureUpdates = updatedInfos.collect { case info if !info.isDeleted =>
         articleCommander.getLatestArticle(info).imap { latestArticleOption =>
           latestArticleOption.map(toShoeboxArticleUpdate(info))
         }
