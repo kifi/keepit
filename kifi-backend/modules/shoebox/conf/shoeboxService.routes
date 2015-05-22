@@ -905,7 +905,6 @@ POST    /internal/shoebox/logEvent                    @com.keepit.controllers.ex
 
 POST    /internal/geckoboard/refresh                  @com.keepit.reports.GeckoboardReporterController.refreshAll()
 
-GET      /internal/shoebox/database/assignScrapeTasks @com.keepit.controllers.internal.ShoeboxScraperController.assignScrapeTasks(zkId:Id[ScraperWorker], max:Int ?= 1)
 POST     /internal/shoebox/database/saveScrapeInfo    @com.keepit.controllers.internal.ShoeboxScraperController.saveScrapeInfo
 POST     /internal/shoebox/database/updateNormalizedURI @com.keepit.controllers.internal.ShoeboxScraperController.updateNormalizedURI(uriId: Id[NormalizedURI])
 GET      /internal/shoebox/database/getProxy          @com.keepit.controllers.internal.ShoeboxScraperController.getProxy(url:String)

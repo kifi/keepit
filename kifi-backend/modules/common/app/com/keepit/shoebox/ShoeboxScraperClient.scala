@@ -9,9 +9,6 @@ import com.keepit.common.routes.Shoebox
 import com.keepit.common.service.ThrottledServiceClient
 import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.model._
-import com.keepit.rover.document.utils.Signature
-import com.keepit.rover.fetcher.HttpRedirect
-import com.keepit.scraper.ScrapeRequest
 import org.joda.time.DateTime
 import play.api.libs.json.{ JsString, JsArray, Json }
 import play.api.libs.json.Json.JsValueWrapper
@@ -25,7 +22,6 @@ import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 trait ShoeboxScraperClient extends ThrottledServiceClient {
   private val ? = null
   def getAllURLPatterns(): Future[UrlPatternRules]
-  def assignScrapeTasks(zkId: Long, max: Int): Future[Seq[ScrapeRequest]]
   def saveScrapeInfo(info: ScrapeInfo): Future[Unit]
   def updateNormalizedURIState(uriId: Id[NormalizedURI], state: State[NormalizedURI]): Future[Unit]
   def updateNormalizedURI(uriId: => Id[NormalizedURI], createdAt: => DateTime = ?, updatedAt: => DateTime = ?, externalId: => ExternalId[NormalizedURI] = ?, title: => Option[String] = ?, url: => String = ?, urlHash: => UrlHash = UrlHash(?), state: => State[NormalizedURI] = ?, seq: => SequenceNumber[NormalizedURI] = SequenceNumber(-1), screenshotUpdatedAt: => Option[DateTime] = ?, restriction: => Option[Restriction] = ?, normalization: => Option[Normalization] = ?, redirect: => Option[Id[NormalizedURI]] = ?, redirectTime: => Option[DateTime] = ?): Future[Unit]
@@ -51,13 +47,6 @@ class ShoeboxScraperClientImpl @Inject() (
       call(Shoebox.internal.allURLPatternRules(), routingStrategy = offlinePriority).map { r =>
         Json.fromJson[UrlPatternRules](r.json).get
       }
-    }
-  }
-
-  def assignScrapeTasks(zkId: Long, max: Int): Future[Seq[ScrapeRequest]] = assignScrapeTasksLimiter.withLockFuture {
-    statsd.gauge("assignScrapeTasks", 1)
-    call(Shoebox.internal.assignScrapeTasks(zkId, max), callTimeouts = longTimeout, routingStrategy = offlinePriority).map { r =>
-      r.json.as[Seq[ScrapeRequest]]
     }
   }
 

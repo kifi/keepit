@@ -3,9 +3,7 @@ package com.keepit.model
 import com.keepit.common.db._
 import com.keepit.common.time._
 import org.joda.time.DateTime
-import scala.math._
 import com.keepit.common.logging.Logging
-import com.keepit.scraper.ScraperSchedulerConfig
 
 object ScrapeInfoStates extends States[ScrapeInfo] {
   val ASSIGNED = State[ScrapeInfo]("assigned") // pull
@@ -47,33 +45,6 @@ case class ScrapeInfo(
   }
 
   def withDestinationUrl(destinationUrl: Option[String]) = copy(destinationUrl = destinationUrl)
-
-  def withFailure()(implicit config: ScraperSchedulerConfig) = {
-    val backoff = min(config.intervalConfig.maxBackoff, config.intervalConfig.initialBackoff * (1 << failures).toDouble)
-    val newInterval = min(config.intervalConfig.maxInterval, interval + config.intervalConfig.intervalIncrement) max config.intervalConfig.minInterval
-    val now = currentDateTime
-    copy(nextScrape = now.plusSeconds(hoursToSeconds(backoff) + config.randomDelay),
-      interval = newInterval,
-      failures = this.failures + 1)
-  }
-
-  def withDocumentUnchanged()(implicit config: ScraperSchedulerConfig) = {
-    val newInterval = min(config.intervalConfig.maxInterval, interval + config.intervalConfig.intervalIncrement) max config.intervalConfig.minInterval
-    val now = currentDateTime
-    copy(nextScrape = now.plusSeconds(hoursToSeconds(newInterval) + config.randomDelay),
-      interval = newInterval,
-      failures = 0)
-  }
-
-  def withDocumentChanged(newSignature: String)(implicit config: ScraperSchedulerConfig) = {
-    val newInterval = max(config.intervalConfig.minInterval, interval - config.intervalConfig.intervalDecrement)
-    val now = currentDateTime
-    copy(lastScrape = now,
-      nextScrape = now.plusSeconds(hoursToSeconds(newInterval) + config.randomDelay),
-      interval = newInterval,
-      failures = 0,
-      signature = newSignature)
-  }
 
   private[this] def hoursToSeconds(hours: Double) = (hours * 60.0d * 60.0d).toInt
   def withNextScrape(nextScrape: DateTime) = copy(nextScrape = nextScrape)

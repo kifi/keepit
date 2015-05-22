@@ -18,7 +18,6 @@ import com.keepit.common.analytics.ProdAnalyticsModule
 import com.keepit.common.mail.ProdMailModule
 import com.keepit.inject.CommonProdModule
 import com.keepit.common.integration.ProdReaperModule
-import com.keepit.scraper.{ ProdScraperServiceClientModule }
 import com.keepit.common.queue.ProdSimpleQueueModule
 import com.keepit.queue.ProdNormalizationUpdateJobQueueModule
 import com.keepit.common.concurrent.ProdForkJoinContextMonitorModule
@@ -50,7 +49,6 @@ case class ShoeboxProdModule() extends ShoeboxModule with CommonProdModule {
   val elizaServiceClientModule = ProdElizaServiceClientModule()
   val heimdalServiceClientModule = ProdHeimdalServiceClientModule()
   val abookServiceClientModule = ProdABookServiceClientModule()
-  val scraperServiceClientModule = ProdScraperServiceClientModule()
   val cortexServiceClientModule = ProdCortexServiceClientModule()
   val graphServiceClientModule = ProdGraphServiceClientModule()
   val curatorServiceClientModule = ProdCuratorServiceClientModule()

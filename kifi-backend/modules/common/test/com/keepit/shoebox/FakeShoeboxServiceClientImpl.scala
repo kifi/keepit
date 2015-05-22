@@ -17,7 +17,6 @@ import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.model._
 import com.keepit.model.view.{ LibraryMembershipView, UserSessionView }
 import com.keepit.rover.model.BasicImages
-import com.keepit.scraper.ScrapeRequest
 import com.keepit.search._
 import com.keepit.shoebox.model.ids.UserSessionExternalId
 import com.keepit.social.{ BasicUser, SocialId, SocialNetworkType }
@@ -33,10 +32,6 @@ class FakeShoeboxScraperClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(airbrakeNotifier), new FakeScheduler(), () => {})
 
   protected def httpClient: com.keepit.common.net.HttpClient = ???
-
-  def assignScrapeTasks(zkId: Long, max: Int): Future[Seq[ScrapeRequest]] = {
-    Future.successful(Seq.empty[ScrapeRequest])
-  }
 
   def getAllURLPatterns(): Future[UrlPatternRules] = Future.successful(UrlPatternRules(Seq.empty))
 

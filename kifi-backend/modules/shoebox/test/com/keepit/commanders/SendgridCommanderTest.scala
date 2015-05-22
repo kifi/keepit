@@ -14,7 +14,6 @@ import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.heimdal._
 import com.keepit.model._
-import com.keepit.scraper.FakeScraperServiceClientModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.test.ShoeboxTestInjector

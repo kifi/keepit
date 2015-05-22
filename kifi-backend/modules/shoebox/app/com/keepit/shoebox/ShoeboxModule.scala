@@ -12,7 +12,6 @@ import com.keepit.social.SecureSocialModule
 import com.keepit.common.mail.MailModule
 import com.keepit.common.analytics.AnalyticsModule
 import com.keepit.model.{ ProdSliderHistoryTrackerModule }
-import com.keepit.scraper.{ ScraperServiceClientModule }
 import com.keepit.common.store.ShoeboxStoreModule
 import com.keepit.inject.{ CommonServiceModule, ConfigurationModule }
 import com.keepit.integrity.DataIntegrityModule
@@ -33,7 +32,7 @@ import com.keepit.common.service.ServiceType
 
 case class ShoeboxServiceTypeModule() extends ServiceTypeModule {
   val serviceType = ServiceType.SHOEBOX
-  val servicesToListenOn = ServiceType.SEARCH :: ServiceType.ELIZA :: ServiceType.HEIMDAL :: ServiceType.ABOOK :: ServiceType.SCRAPER :: ServiceType.CORTEX :: ServiceType.GRAPH :: ServiceType.CURATOR :: ServiceType.ROVER :: Nil
+  val servicesToListenOn = ServiceType.SEARCH :: ServiceType.ELIZA :: ServiceType.HEIMDAL :: ServiceType.ABOOK :: ServiceType.CORTEX :: ServiceType.GRAPH :: ServiceType.CURATOR :: ServiceType.ROVER :: Nil
 }
 
 trait ShoeboxModule extends ConfigurationModule with CommonServiceModule {
@@ -63,7 +62,6 @@ trait ShoeboxModule extends ConfigurationModule with CommonServiceModule {
   val elizaServiceClientModule: ElizaServiceClientModule
   val heimdalServiceClientModule: HeimdalServiceClientModule
   val abookServiceClientModule: ABookServiceClientModule
-  val scraperServiceClientModule: ScraperServiceClientModule
   val cortexServiceClientModule: CortexServiceClientModule
   val graphServiceClientModule: GraphServiceClientModule
   val curatorServiceClientModule: CuratorServiceClientModule
