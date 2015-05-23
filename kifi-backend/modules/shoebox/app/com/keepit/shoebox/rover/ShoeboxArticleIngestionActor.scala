@@ -162,9 +162,7 @@ class ShoeboxArticleIngestionActor @Inject() (
       }
     }
 
-    val state = if (uri.state == NormalizedURIStates.ACTIVE) NormalizedURIStates.SCRAPED else uri.state
-
-    val updatedUri = uriRepo.save(uri.copy(title = preferredTitle, restriction = restriction, state = state)) // always save to increment sequence numbers for other services
+    val updatedUri = uriRepo.save(uri.withTitle(preferredTitle) copy (restriction = restriction)) // always save to increment sequence numbers for other services
 
     updatedUri tap uriIntegrityHelpers.improveKeepsSafely
   }

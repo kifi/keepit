@@ -23,6 +23,8 @@ angular.module('kifi')
       removeKeepFromLibrary: del(shoebox, '/libraries/:id/keeps/:keepId'),
       removeManyKeepsFromLibrary: post(shoebox, '/libraries/:id/keeps/delete'),
 
+      updateLibraryMembership: post(shoebox, '/libraries/:id/members/:uid/access'),
+
       search: {
         search: get(search, '/search'),
         searched: post(search, '/search/events/searched'),

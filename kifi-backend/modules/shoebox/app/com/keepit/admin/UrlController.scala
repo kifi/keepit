@@ -347,6 +347,13 @@ class UrlController @Inject() (
     }
   }
 
+  def fetchAsap(uriId: Id[NormalizedURI]) = AdminUserPage.async { implicit request =>
+    val uri = db.readOnlyMaster { implicit session => uriRepo.get(uriId) }
+    roverServiceClient.fetchAsap(uriId, uri.url, refresh = true).map { _ =>
+      Ok("We got you =)")
+    }
+  }
+
   def cleanKeepsByUri(firstPage: Int, pageSize: Int) = AdminUserAction { implicit request =>
     SafeFuture {
       var page = firstPage
