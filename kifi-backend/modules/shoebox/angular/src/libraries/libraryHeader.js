@@ -82,11 +82,7 @@ angular.module('kifi')
         }
 
         function updateInvite() {
-          var info = _.find(libraryService.getInvitedInfos(), {id: scope.library.id});
-          scope.library.invite = info && {
-            inviterName: info.inviter.firstName + ' ' + info.inviter.lastName,
-            actedOn: false
-          };
+          scope.inviter = libraryService.getInviter(scope.library.id);
         }
 
         //
@@ -97,9 +93,13 @@ angular.module('kifi')
         };
 
         scope.ignoreInvitation = function () {
-          if (scope.library.invite) {
-            scope.library.invite.actedOn = true;
-            libraryService.declineToJoinLibrary(scope.library.id)['catch'](modalService.openGenericErrorModal);
+          var inviter = scope.inviter;
+          if (inviter) {
+            scope.inviter = null;
+            libraryService.declineToJoinLibrary(scope.library.id)['catch'](function () {
+              modalService.openGenericErrorModal();
+              scope.inviter = inviter;
+            });
           }
         };
 
@@ -626,7 +626,7 @@ angular.module('kifi')
         scope.$watch('library.numFollowers', setFollowersShown);
 
         [
-          $rootScope.$on('libraryInfosChanged', updateInvite),
+          $rootScope.$on('invitedLibrariesChanged', updateInvite),
           $rootScope.$on('libraryKeepCountChanged', function (e, libraryId, keepCount) {
             if (libraryId === scope.library.id) {
               scope.library.numKeeps = keepCount;
@@ -635,7 +635,7 @@ angular.module('kifi')
           $rootScope.$on('libraryJoined', function (e, libraryId) {
             var lib = scope.library;
             if (lib && libraryId === lib.id && lib.access === 'none') {
-              (lib.invite || {}).actedOn = true;
+              scope.inviter = null;
               lib.access = 'read_only';
               lib.numFollowers++;
               var me = profileService.me;

@@ -100,8 +100,9 @@ angular.module('kifi')
         return infos.own.slice();
       },
 
-      getInvitedInfos: function () {
-        return infos.invited.slice();
+      getInviter: function (libraryId) {
+        var info = _.find(infos.invited, {id: libraryId});
+        return info && info.inviter;
       },
 
       getSysMainInfo: function () {
@@ -142,7 +143,7 @@ angular.module('kifi')
           libraryInfosClutch.expire();
         }
         return libraryInfosClutch.get().then(function () {
-          $rootScope.$emit('libraryInfosChanged');
+          $rootScope.$emit('invitedLibrariesChanged');
         });
       },
 
@@ -178,7 +179,6 @@ angular.module('kifi')
         lib.numKeeps += val;
 
         $rootScope.$emit('libraryKeepCountChanged', libraryId, lib.numKeeps);
-        $rootScope.$emit('libraryInfosChanged');
       },
 
       // TODO(yiping): All functions that update library infos should refetch automatically instead of
@@ -229,7 +229,7 @@ angular.module('kifi')
         return $http.post(routeService.joinLibrary(libraryId, authToken)).then(function (response) {
           var wasInvited = _.remove(infos.invited, {id: libraryId}).length > 0;
           if (wasInvited) {
-            $rootScope.$emit('libraryInfosChanged');
+            $rootScope.$emit('invitedLibrariesChanged');
           }
           $rootScope.$emit('libraryJoined', libraryId);
           libraryInfoByIdClutch.expire(libraryId);
@@ -247,17 +247,14 @@ angular.module('kifi')
         return $http.post(routeService.declineToJoinLibrary(libraryId)).then(function () {
           var wasRemoved = _.remove(infos.invited, {id: libraryId}).length > 0;
           if (wasRemoved) {
-            $rootScope.$emit('libraryInfosChanged');
+            $rootScope.$emit('invitedLibrariesChanged');
           }
         });
       },
 
       deleteLibrary: function (libraryId) {
         return $http.post(routeService.deleteLibrary(libraryId)).then(function () {
-          var wasRemoved = _.remove(infos.own, {id: libraryId}).length > 0;
-          if (wasRemoved) {
-            $rootScope.$emit('libraryInfosChanged');
-          }
+          _.remove(infos.own, {id: libraryId});
           $rootScope.$emit('libraryDeleted', libraryId);
         });
       },
