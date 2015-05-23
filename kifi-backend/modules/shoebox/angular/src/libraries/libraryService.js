@@ -226,7 +226,7 @@ angular.module('kifi')
       },
 
       joinLibrary: function (libraryId, authToken) {
-        return $http.post(routeService.joinLibrary(libraryId, authToken)).then(function (response) {
+        return $http.post(routeService.joinLibrary(libraryId, authToken)).then(function () {
           var wasInvited = _.remove(infos.invited, {id: libraryId}).length > 0;
           if (wasInvited) {
             $rootScope.$emit('invitedLibrariesChanged');
