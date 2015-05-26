@@ -69,7 +69,7 @@ class FeedCommander @Inject() (
       <channel>
         <title>{ library.name }</title>
         <link>{ feedUrl }</link>
-        <description>{ library.description }</description>{
+        <description>{ library.description.getOrElse("") }</description>{
           if (libImage != "") {
             <image>
               <url>{ libImage }</url>
