@@ -38,7 +38,7 @@ angular.module('kifi')
           }, 50);
           var ready = scope.library ? libraryService.getLibraryInfoById(scope.library.id).then(function (data) {
             scope.library = data.library;
-            scope.isFollowing = data.membership === 'read_only';
+            scope.isFollowing = data.library.membership.access === 'read_only';
             scope.isMine = libraryService.isMyLibrary(data.library);
           }) : timeout;
         }).on('touchstart touchend', function () {

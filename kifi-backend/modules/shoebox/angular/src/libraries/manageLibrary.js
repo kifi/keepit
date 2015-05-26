@@ -74,13 +74,13 @@ angular.module('kifi')
             description: scope.library.description,
             slug: scope.library.slug,
             visibility: scope.library.visibility,
-            listed: scope.library.listed,
+            listed: scope.library.membership.listed,
             color: colorNames[scope.library.color]
           }, true).then(function (resp) {
             libraryService.fetchLibraryInfos(true);
 
             var newLibrary = resp.data.library;
-            newLibrary.listed = resp.data.listed;
+            newLibrary.listed = resp.data.listed || (resp.data.library.membership && resp.data.library.membership.listed);
 
             scope.$error = {};
             submitting = false;
