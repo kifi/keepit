@@ -153,6 +153,7 @@ class MobileLibraryController @Inject() (
             val membershipJson = Json.toJson(membershipOpt)
             val inviteJson = Json.toJson(inviteOpt)
             val libraryJson = Json.toJson(editedLibInfo).as[JsObject] + ("membership" -> membershipJson) + ("invite" -> inviteJson)
+            libraryCommander.trackLibraryView(request.userIdOpt, library)
             Ok(Json.obj("library" -> libraryJson, "membership" -> accessStr)) // todo: remove membership once it's not being used
           }
         })

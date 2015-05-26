@@ -139,6 +139,7 @@ class LibraryController @Inject() (
             val listed = memOpt.map(_.listed)
             val suggestedSearches = getSuggestedSearchesAsJson(library.id.get)
             val subscribedToUpdates = memOpt.map(_.subscribedToUpdates).getOrElse(false)
+            libraryCommander.trackLibraryView(request.userIdOpt, library)
             Ok(Json.obj("library" -> Json.toJson(libInfo), "membership" -> accessStr, "listed" -> listed, "suggestedSearches" -> suggestedSearches, "subscribedToUpdates" -> subscribedToUpdates))
           }
         })
