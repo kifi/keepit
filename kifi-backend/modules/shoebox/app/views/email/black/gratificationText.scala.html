@@ -1,4 +1,5 @@
 @(userId: Id[User],
+senderInfo: com.keepit.commanders.emails.GratificationEmailSender.SenderInfo,
 libViews: com.keepit.commanders.emails.GratificationEmailSender.SortedLibraryCountData,
 libFollowers: com.keepit.commanders.emails.GratificationEmailSender.SortedLibraryCountData,
 newConnections: Seq[Id[User]])
@@ -27,6 +28,6 @@ Share a library with them :)
 What other stats would you like to see? Please let me know if you have any questions, suggestions, or comments about Kifi!
 
 Cheers,
-Cam
-www.kifi.com/cam
+@senderInfo.firstName, @senderInfo.title at Kifi
+@{baseUrl + senderInfo.path}
 }

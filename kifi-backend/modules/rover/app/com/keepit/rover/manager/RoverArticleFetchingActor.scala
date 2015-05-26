@@ -28,7 +28,7 @@ class RoverArticleFetchingActor @Inject() (
     instanceInfo: AmazonInstanceInfo,
     implicit val executionContext: ExecutionContext) extends ConcurrentTaskProcessingActor[SQSMessage[FetchTask]](airbrake) {
 
-  private val concurrencyFactor = 50
+  private val concurrencyFactor = 25
   protected val maxConcurrentTasks: Int = 1 + instanceInfo.instantTypeInfo.cores * concurrencyFactor
   protected val minConcurrentTasks: Int = 1 + maxConcurrentTasks / 2
 
@@ -49,11 +49,14 @@ class RoverArticleFetchingActor @Inject() (
   private def process(task: SQSMessage[FetchTask], articleInfo: RoverArticleInfo): Future[Unit] = {
     shouldFetch(articleInfo) match {
       case false => Future.successful(())
-      case true => articleCommander.fetchAndPersist(articleInfo) imap { fetched =>
-        if (fetched.isDefined) {
-          SafeFuture { imageProcessingCommander.processArticleImagesAsap(articleInfo.id.toSet) }
+      case true => {
+        val isRefresh = articleInfo.latestVersion.isDefined
+        articleCommander.fetchAndPersist(articleInfo) imap { fetched =>
+          if (fetched.isDefined && !isRefresh) {
+            SafeFuture { imageProcessingCommander.processArticleImagesAsap(articleInfo.id.toSet) }
+          }
+          ()
         }
-        ()
       }
     }
   } andThen { case _ => task.consume() } // failures are handled and persisted to the database, always consume

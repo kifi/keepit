@@ -6,11 +6,11 @@ import org.apache.http.protocol.HttpContext
 import org.apache.http.{ HttpResponseInterceptor, HttpResponse }
 
 object RedirectInterceptor {
-  val scraperDestinationUrlAttribute = "scraper_destination_url"
+  val destinationUrlAttribute = "destination_url"
   val redirectsAttribute = "redirects"
 
   def setRedirectionAttributes(httpContext: HttpContext, destinationUrl: String, redirects: Seq[HttpRedirect]): Unit = {
-    httpContext.setAttribute(scraperDestinationUrlAttribute, destinationUrl)
+    httpContext.setAttribute(destinationUrlAttribute, destinationUrl)
     httpContext.setAttribute(redirectsAttribute, redirects)
   }
 
@@ -19,7 +19,7 @@ object RedirectInterceptor {
   }
 
   def getDestinationUrl(httpContext: HttpContext): Option[String] = {
-    Option(httpContext.getAttribute(scraperDestinationUrlAttribute).asInstanceOf[String])
+    Option(httpContext.getAttribute(destinationUrlAttribute).asInstanceOf[String])
   }
 
   def getFetchRequestContext(httpContext: HttpContext): Option[FetchRequestInfo] = {

@@ -27,11 +27,11 @@ class RoverManagerPluginImpl @Inject() (
   val name: String = getClass.toString
 
   override def onStart(): Unit = {
-    scheduleTaskOnOneMachine(ingestionActor.system, 187 seconds, 1 minute, ingestionActor.ref, IfYouCouldJustGoAhead, "NormalizedURI Ingestion")
-    scheduleTaskOnOneMachine(fetchSchedulingActor.system, 200 seconds, 1 minute, fetchSchedulingActor.ref, IfYouCouldJustGoAhead, "Fetch Scheduling")
-    scheduleTaskOnAllMachines(fetchingActor.system, (30 + Random.nextInt(60)) seconds, 1 minute, fetchingActor.ref, IfYouCouldJustGoAhead)
-    scheduleTaskOnOneMachine(imageSchedulingActor.system, 200 seconds, 1 minute, imageSchedulingActor.ref, IfYouCouldJustGoAhead, "ArticleImage Scheduling")
-    scheduleTaskOnAllMachines(imageProcessingActor.system, (30 + Random.nextInt(60)) seconds, 1 minute, imageProcessingActor.ref, IfYouCouldJustGoAhead)
+    scheduleTaskOnOneMachine(ingestionActor.system, 250 seconds, 2 minute, ingestionActor.ref, IfYouCouldJustGoAhead, "NormalizedURI Ingestion")
+    scheduleTaskOnLeader(fetchSchedulingActor.system, 300 seconds, 8 minute, fetchSchedulingActor.ref, IfYouCouldJustGoAhead)
+    scheduleTaskOnAllMachines(fetchingActor.system, 250 seconds, 5 minute, fetchingActor.ref, IfYouCouldJustGoAhead)
+    scheduleTaskOnLeader(imageSchedulingActor.system, 300 seconds, 8 minute, imageSchedulingActor.ref, IfYouCouldJustGoAhead)
+    scheduleTaskOnAllMachines(imageProcessingActor.system, 300 seconds, 5 minute, imageProcessingActor.ref, IfYouCouldJustGoAhead)
   }
 
   override def onStop(): Unit = {

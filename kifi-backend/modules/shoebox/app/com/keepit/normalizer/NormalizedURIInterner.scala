@@ -141,9 +141,13 @@ class NormalizedURIInterner @Inject() (
   }
 
   private def prenormalize(uriString: String)(implicit timer: Timer): Try[String] = {
-    val prenormalized = normalizationService.prenormalize(uriString)
-    statsd.timing(key = "normalizedURIRepo.prenormalize", timer, ONE_IN_THOUSAND)
-    prenormalized
+    if (uriString.length >= URLFactory.MAX_URL_SIZE) {
+      Failure(new Exception(s"URI too long, refusing to prenormalize: $uriString"))
+    } else {
+      val prenormalized = normalizationService.prenormalize(uriString)
+      statsd.timing(key = "normalizedURIRepo.prenormalize", timer, ONE_IN_THOUSAND)
+      prenormalized
+    }
   }
 
   def getByUri(url: String)(implicit session: RSession): Option[NormalizedURI] = {

@@ -5,8 +5,8 @@
 
     <div class="kf-lh-cover-image" ng-class="{'kf-fade-in': !settingImage}" ng-attr-style="{{library.image|shadedBackgroundImage:.2:.6}}" ng-if="library.image && imageLoaded"></div>
 
-    <div class="kf-lh-invite-banner" ng-if="library.invite && !library.invite.actedOn">
-      <div class="kf-lh-invite-banner-text">{{library.invite.inviterName}} has invited<br>you to follow this library</div>
+    <div class="kf-lh-invite-banner" ng-if="inviter">
+      <div class="kf-lh-invite-banner-text">{{inviter|name}} has invited<br>you to follow this library</div>
       <button class="kf-lh-invite-banner-button kf-ignore" ng-click="ignoreInvitation()">Ignore</button>
       <button class="kf-lh-invite-banner-button kf-accept" ng-click="acceptInvitation()">Accept</button>
     </div>
