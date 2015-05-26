@@ -140,7 +140,7 @@ class LibraryController @Inject() (
             val suggestedSearches = getSuggestedSearchesAsJson(library.id.get)
             val membershipOpt = libraryCommander.getViewerMembershipInfo(request.userIdOpt, library.id.get)
             val inviteOpt = libraryCommander.getViewerInviteInfo(request.userIdOpt, library.id.get)
-
+            libraryCommander.trackLibraryView(request.userIdOpt, library)
             val membershipJson = Json.toJson(membershipOpt)
             val inviteJson = Json.toJson(inviteOpt)
             val libraryJson = Json.toJson(libInfo).as[JsObject] + ("membership" -> membershipJson) + ("invite" -> inviteJson)

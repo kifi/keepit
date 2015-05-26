@@ -17,8 +17,8 @@ class LibraryViewTrackingRepoTest extends Specification with HeimdalTestInjector
         val userId = Id[User](1)
         db.readOnlyMaster { implicit session =>
           val t1 = new DateTime(2013, 2, 14, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
-          libViewRepo.getTotalViews(ownerId = userId, since = t1)
-          libViewRepo.getTopViewedLibrariesAndCounts(ownerId = userId, since = t1, limit = 1)
+          libViewRepo.getTotalViews(ownerId = userId, since = t1) === 0
+          libViewRepo.getTopViewedLibrariesAndCounts(ownerId = userId, since = t1, limit = 1) == Map()
         }
         1 === 1
       }

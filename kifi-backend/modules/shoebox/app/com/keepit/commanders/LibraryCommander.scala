@@ -1630,10 +1630,13 @@ class LibraryCommander @Inject() (
         getLibraryBySlugOrAlias(owner.id.get, slug) match {
           case None => Left(LibraryFail(NOT_FOUND, "no_library_found"))
           case Some((library, isLibraryAlias)) =>
-            libraryAnalytics.viewedLibrary(viewerId, library, context)
             Right(library)
         }
     }
+  }
+
+  def trackLibraryView(viewerId: Option[Id[User]], library: Library)(implicit context: HeimdalContext): Unit = {
+    libraryAnalytics.viewedLibrary(viewerId, library, context)
   }
 
   def getLibraryBySlugOrAlias(ownerId: Id[User], slug: LibrarySlug): Option[(Library, Boolean)] = {
