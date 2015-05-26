@@ -11,12 +11,11 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.http._
 import com.keepit.common.mail.KifiMobileAppLinkFlag
 import com.keepit.common.net.UserAgent
-import com.keepit.common.seo.FeedCommander
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
 import play.api.Play
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.mvc.{ ResponseHeader, ActionFilter, Result }
+import play.api.mvc.{ ActionFilter, Result }
 import securesocial.core.SecureSocial
 
 import scala.concurrent.Future
@@ -28,8 +27,6 @@ class KifiSiteRouter @Inject() (
   userCommander: UserCommander,
   pageMetaTagsCommander: PageMetaTagsCommander,
   libraryCommander: LibraryCommander,
-  experimentCommander: LocalUserExperimentCommander,
-  feedCommander: FeedCommander,
   libraryMetadataCache: LibraryMetadataCache,
   userMetadataCache: UserMetadataCache,
   applicationConfig: FortyTwoConfig,
