@@ -49,11 +49,14 @@ class RoverArticleFetchingActor @Inject() (
   private def process(task: SQSMessage[FetchTask], articleInfo: RoverArticleInfo): Future[Unit] = {
     shouldFetch(articleInfo) match {
       case false => Future.successful(())
-      case true => articleCommander.fetchAndPersist(articleInfo) imap { fetched =>
-        if (fetched.isDefined) {
-          SafeFuture { imageProcessingCommander.processArticleImagesAsap(articleInfo.id.toSet) }
+      case true => {
+        val isRefresh = articleInfo.latestVersion.isDefined
+        articleCommander.fetchAndPersist(articleInfo) imap { fetched =>
+          if (fetched.isDefined && !isRefresh) {
+            SafeFuture { imageProcessingCommander.processArticleImagesAsap(articleInfo.id.toSet) }
+          }
+          ()
         }
-        ()
       }
     }
   } andThen { case _ => task.consume() } // failures are handled and persisted to the database, always consume
