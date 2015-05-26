@@ -18,7 +18,6 @@ import com.keepit.integrity.UriIntegrityHelpers
 import com.keepit.model._
 import com.keepit.normalizer.{ NormalizationCandidate, NormalizedURIInterner }
 import com.keepit.rover.RoverServiceClient
-import com.keepit.scraper.ScrapeScheduler
 import org.joda.time.DateTime
 import play.api.libs.json.Json
 
@@ -31,7 +30,6 @@ case class InternedUriAndKeep(bookmark: Keep, uri: NormalizedURI, isNewKeep: Boo
 class KeepInterner @Inject() (
   db: Database,
   normalizedURIInterner: NormalizedURIInterner,
-  scraper: ScrapeScheduler,
   keepRepo: KeepRepo,
   libraryRepo: LibraryRepo,
   countByLibraryCache: CountByLibraryCache,
@@ -146,11 +144,17 @@ class KeepInterner @Inject() (
   }
 
   private def internUriAndBookmarkBatch(bms: Seq[RawBookmarkRepresentation], userId: Id[User], library: Library, source: KeepSource, installationId: Option[ExternalId[KifiInstallation]]) = {
-    val (persisted, failed) = db.readWrite { implicit session =>
-      bms.map { bm =>
-        bm -> Try(internUriAndBookmark(bm, userId, library, source, installationId)).flatten
-      }.toMap
-    } partition {
+    val (persisted, failed) = bms.map { bm =>
+      bm -> Try {
+        db.readWrite(attempts = 3) { implicit session =>
+          internUriAndBookmark(bm, userId, library, source, installationId).get
+          // This is bad, and I'm not sure why we need to do it now. Previously, we could batch keeps into one db session.
+          // It appears that when there's a problem, now, we're fetching from rover with ids that may not exist anymore.
+          // So, forcing the Try evaluation to make the db session fail, and then recatching it.
+          // Expect something more elegant soon. Signed, Andrew (May 22 2015)
+        }
+      }
+    }.toMap partition {
       case (bm, res) => res.isSuccess
     }
 
@@ -166,18 +170,10 @@ class KeepInterner @Inject() (
 
   private def internUriAndBookmark(rawBookmark: RawBookmarkRepresentation, userId: Id[User], library: Library, source: KeepSource, installationId: Option[ExternalId[KifiInstallation]])(implicit session: RWSession): Try[InternedUriAndKeep] = try {
     if (httpPrefix.findPrefixOf(rawBookmark.url.toLowerCase).isDefined) {
-      import com.keepit.model.NormalizedURIStates._
       val uri = try {
         normalizedURIInterner.internByUri(rawBookmark.url, contentWanted = true, candidates = NormalizationCandidate.fromRawBookmark(rawBookmark))
       } catch {
         case t: Throwable => throw new Exception(s"error persisting raw bookmark $rawBookmark for user $userId, from $source", t)
-      }
-      if (uri.state == ACTIVE || uri.state == INACTIVE) {
-        val date = source match {
-          case s if KeepSource.discrete.contains(s) => START_OF_TIME
-          case _ => currentDateTime // todo: useful to de-prioritize bulk imports.
-        }
-        scraper.scheduleScrape(uri, date)
       }
 
       if (KeepSource.discrete.contains(source)) {

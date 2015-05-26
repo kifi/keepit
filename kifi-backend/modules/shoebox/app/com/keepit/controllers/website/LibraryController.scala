@@ -149,8 +149,12 @@ class LibraryController @Inject() (
     }
   }
 
-  def getLibrarySummariesByUser = (UserAction).async { request =>
-    val (libsWithMemberships, libsWithAllInvites) = libraryCommander.getLibrariesByUser(request.userId)
+  def getLibrarySummariesByUser = UserAction.async { request =>
+    val (tooManyLibsWithMemberships, libsWithAllInvites) = libraryCommander.getLibrariesByUser(request.userId)
+
+    // TODO: filter out followed libraries at database level
+    val libsWithMemberships = tooManyLibsWithMemberships.filter(l => LibraryAccess.collaborativePermissions.contains(l._1.access))
+
     val libsWithInvites = for ((lib, invites) <- libsWithAllInvites.groupBy(_._2).mapValues(_.map(_._1))) yield {
       (invites.sorted.last, lib) // only show one invite per library - the one with highest access
     }
@@ -180,10 +184,8 @@ class LibraryController @Inject() (
       libInfosWithMemberships <- libInfosWithMembershipsF
       libInfosWithInvites <- libInfosWithInvitesF
     } yield {
-      val (ownWithMemberships, followingWithMemberships) = libInfosWithMemberships.partition(l => LibraryAccess.collaborativePermissions.contains(l._2.access))
       Ok(Json.obj(
-        "libraries" -> ownWithMemberships.map(libInfoToJsonWithLastViewed),
-        "following" -> followingWithMemberships.map(libInfoToJsonWithLastViewed),
+        "libraries" -> libInfosWithMemberships.map(libInfoToJsonWithLastViewed),
         "invited" -> libInfosWithInvites.map(pair => Json.toJson(pair._1))
       ))
     }
@@ -195,6 +197,29 @@ class LibraryController @Inject() (
       Json.toJson(pair._1).as[JsObject] ++ Json.obj("lastViewed" -> lastViewed)
     } else {
       Json.toJson(pair._1)
+    }
+  }
+
+  def getUserByIdOrEmail(json: JsValue): Either[String, Either[ExternalId[User], EmailAddress]] = {
+    (json \ "type").as[String] match {
+      case "user" => Right(Left((json \ "invitee").as[ExternalId[User]]))
+      case "email" => Right(Right((json \ "invitee").as[EmailAddress]))
+      case _ => Left("invalid_invitee_type")
+    }
+  }
+
+  def revokeLibraryInvitation(publicLibraryId: PublicId[Library]) = UserAction.async(parse.tolerantJson) { request =>
+    Library.decodePublicId(publicLibraryId) match {
+      case Failure(ex) => Future.successful(BadRequest(Json.obj("error" -> "invalid_library_id")))
+      case Success(libraryId) =>
+        getUserByIdOrEmail(request.body) match {
+          case Right(invitee) =>
+            libraryCommander.revokeInvitationToLibrary(libraryId, request.userId, invitee) match {
+              case Right(ok) => Future.successful(NoContent)
+              case Left(error) => Future.successful(BadRequest(Json.obj(error._1 -> error._2)))
+            }
+          case Left(error) => Future.successful(BadRequest(Json.obj("error" -> error)))
+        }
     }
   }
 
@@ -612,7 +637,7 @@ class LibraryController @Inject() (
   def setSubscribedToUpdates(pubId: PublicId[Library], newSubscripedToUpdate: Boolean) = UserAction { request =>
     val libraryId = Library.decodePublicId(pubId).get
     libraryCommander.updatedLibraryUpdateSubscription(request.userId, libraryId, newSubscripedToUpdate) match {
-      case Right(mem) => Ok
+      case Right(mem) => NoContent
       case Left(fail) => Status(fail.status)(Json.obj("error" -> fail.message))
     }
   }

@@ -22,7 +22,6 @@ import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.search.FakeSearchServiceClientModule
-import com.keepit.scraper.{ FakeScraperServiceClientModule, FakeScrapeSchedulerModule }
 
 import com.keepit.cortex.FakeCortexServiceClientModule
 
@@ -34,7 +33,6 @@ class AdminDashboardControllerTest extends Specification with ShoeboxApplication
     FakeExecutionContextModule(),
     FakeUserActionsModule(),
     FakeSearchServiceClientModule(),
-    FakeScrapeSchedulerModule(),
     ProdShoeboxSecureSocialModule(),
     FakeHttpClientModule(),
     FakeShoeboxStoreModule(),
@@ -43,7 +41,6 @@ class AdminDashboardControllerTest extends Specification with ShoeboxApplication
     FakeHeimdalServiceClientModule(),
     FakeMailModule(),
     FakeCortexServiceClientModule(),
-    FakeScraperServiceClientModule(),
     FakeCuratorServiceClientModule()
   )
 

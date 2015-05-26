@@ -14,7 +14,6 @@ import com.keepit.model.KeepFactory._
 import com.keepit.model.KeepFactoryHelper._
 import com.keepit.model._
 import com.keepit.rover.{ FakeRoverServiceClientImpl, RoverServiceClient, FakeRoverServiceClientModule }
-import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.{ FakeKeepImportsModule, FakeShoeboxServiceModule }
 import com.keepit.test.ShoeboxTestInjector
@@ -31,7 +30,6 @@ class PageMetaTagsCommanderTest extends Specification with ShoeboxTestInjector w
     FakeShoeboxStoreModule() ::
     FakeSearchServiceClientModule() ::
     FakeCortexServiceClientModule() ::
-    FakeScrapeSchedulerModule() ::
     FakeShoeboxServiceModule() ::
     FakeUserActionsModule() ::
     FakeCuratorServiceClientModule() ::

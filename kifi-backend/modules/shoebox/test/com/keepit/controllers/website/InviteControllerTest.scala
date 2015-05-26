@@ -16,7 +16,6 @@ import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.model._
-import com.keepit.scraper.{ FakeScrapeSchedulerConfigModule, FakeScrapeSchedulerModule, FakeScraperServiceClientModule }
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.{ FakeKeepImportsModule, FakeShoeboxServiceModule }
 import com.keepit.social.{ SocialId, SocialNetworks }
@@ -43,10 +42,7 @@ class InviteControllerTest extends Specification with ShoeboxApplicationInjector
     FakeUserActionsModule(),
     FakeABookServiceClientModule(),
     FakeSocialGraphModule(),
-    FakeScrapeSchedulerModule(),
     FakeCortexServiceClientModule(),
-    FakeScraperServiceClientModule(),
-    FakeScrapeSchedulerConfigModule(),
     FakeKeepImportsModule(),
     FakeCryptoModule(),
     FakeCuratorServiceClientModule()

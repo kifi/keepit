@@ -6,12 +6,11 @@ import com.keepit.test.ShoeboxTestInjector
 import com.keepit.model._
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.SequenceNumber
-import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.common.zookeeper.CentralConfig
 
 class UriIntegrityPluginTest extends TestKitSupport with SpecificationLike with ShoeboxTestInjector {
 
-  val modules = Seq(FakeActorSystemModule(), FakeScrapeSchedulerModule())
+  val modules = Seq(FakeActorSystemModule())
 
   "uri integrity plugin" should {
     "work" in {

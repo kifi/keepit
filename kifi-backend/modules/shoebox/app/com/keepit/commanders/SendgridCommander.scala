@@ -7,7 +7,7 @@ import com.keepit.common.healthcheck.{ AirbrakeNotifier, SystemAdminMailSender }
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.template.EmailTip.toContextData
 import com.keepit.common.mail.template.EmailTrackingParam
-import com.keepit.common.mail.{ ElectronicMail, ElectronicMailRepo, EmailAddress, SystemEmailAddress }
+import com.keepit.common.mail.{ ElectronicMail, ElectronicMailRepo, EmailAddress }
 import com.keepit.common.time.{ DEFAULT_DATE_TIME_ZONE, currentDateTime }
 import com.keepit.heimdal.{ HeimdalContext, HeimdalContextBuilder, HeimdalContextBuilderFactory, HeimdalServiceClient, NonUserEvent, NonUserEventTypes, UserEvent, UserEventTypes }
 import com.keepit.model.{ EmailOptOutRepo, ExperimentType, NotificationCategory, User, UserEmailAddressRepo, UserEmailAddressStates }

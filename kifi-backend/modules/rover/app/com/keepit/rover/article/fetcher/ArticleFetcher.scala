@@ -11,7 +11,7 @@ import org.joda.time.DateTime
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success }
 
-case class ArticleFetchRequest[A <: Article](kind: ArticleKind[A], url: String, latestArticleKey: Option[ArticleKey[A]] = None)
+case class ArticleFetchRequest[A <: Article](kind: ArticleKind[A], url: String, latestArticleKey: Option[ArticleKey[A]] = None, shouldThrottle: Boolean = true)
 
 trait ArticleFetcher[A <: Article] {
   def fetch(request: ArticleFetchRequest[A])(implicit ec: ExecutionContext): Future[Option[A]]
@@ -19,10 +19,10 @@ trait ArticleFetcher[A <: Article] {
 
 object ArticleFetcher {
 
-  def fetchAndCompare[A <: Article](request: ArticleFetchRequest[A], articleStore: RoverArticleStore)(doFetch: (String, Option[DateTime]) => Future[FetchResult[A]])(implicit ec: ExecutionContext) = {
+  def fetchAndCompare[A <: Article](request: ArticleFetchRequest[A], articleStore: RoverArticleStore)(doFetch: (String, Option[DateTime], Boolean) => Future[FetchResult[A]])(implicit ec: ExecutionContext) = {
     val futureLatestArticle = articleStore.get(request.latestArticleKey)
     val futureFetchedArticle = futureLatestArticle.flatMap { latestArticleOpt =>
-      doFetch(request.url, latestArticleOpt.map(_.createdAt))
+      doFetch(request.url, latestArticleOpt.map(_.createdAt), request.shouldThrottle)
     }
     ArticleFetcher.resolveAndCompare(futureFetchedArticle, futureLatestArticle, ArticleFetcher.defaultSimilarityCheck)
   }

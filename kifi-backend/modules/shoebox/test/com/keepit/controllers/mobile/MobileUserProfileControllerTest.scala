@@ -10,7 +10,6 @@ import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.time._
 import com.keepit.model.KeepFactory._
 import com.keepit.model._
-import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.test.ShoeboxTestInjector
 import com.keepit.model.UserFactory._
@@ -37,7 +36,6 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
     FakeShoeboxServiceModule(),
     FakeExecutionContextModule(),
     FakeSocialGraphModule(),
-    FakeScrapeSchedulerModule(),
     FakeABookServiceClientModule(),
     FakeCryptoModule()
   )

@@ -1,23 +1,32 @@
 package com.keepit.normalizer
 
 import com.keepit.common.core._
+import com.keepit.rover.RoverServiceClient
+import com.keepit.rover.article.{ Article, LinkedInProfileArticle }
+import com.keepit.rover.article.content.{ ArticleContent, NormalizationInfoHolder }
+import com.keepit.rover.article.policy.ArticleFetchPolicy
 import com.keepit.rover.document.utils.Signature
 
-import scala.concurrent.Future
-import com.keepit.scraper.ScrapeScheduler
+import scala.concurrent.{ ExecutionContext, Future }
 import com.keepit.model.Normalization
-import com.keepit.scraper.extractor.{ ExtractorProviderTypes }
 import com.keepit.common.logging.Logging
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import scala.util.{ Failure, Success, Try }
+import scala.concurrent.duration._
+import scala.util.Try
 
-trait ContentCheck extends PartialFunction[NormalizationCandidate, Future[Boolean]] {
+trait ContentCheck {
   def getFailedAttempts(): Set[(String, String)]
-  def apply(candidate: NormalizationCandidate) = check(candidate)
-  protected def check(candidate: NormalizationCandidate): Future[Boolean]
+  def isDefinedAt(candidate: NormalizationCandidate): Boolean
+  protected def check(candidate: NormalizationCandidate)(implicit executionContext: ExecutionContext): Future[Boolean]
+
+  def apply(candidate: NormalizationCandidate)(implicit executionContext: ExecutionContext) = {
+    if (isDefinedAt(candidate)) check(candidate)
+    else throw new IllegalArgumentException(s"${this.getClass.getSimpleName} is not defined for $candidate")
+  }
 }
 
-case class SignatureCheck(referenceUrl: String, referenceSignature: Option[Signature] = None, trustedDomain: Option[String] = None)(implicit scraperPlugin: ScrapeScheduler) extends ContentCheck with Logging {
+case class SignatureCheck(referenceUrl: String, referenceSignature: Option[Signature] = None, trustedDomain: Option[String] = None)(implicit rover: RoverServiceClient, articlePolicy: ArticleFetchPolicy) extends ContentCheck with Logging {
+
+  private val recency = 7 days
 
   def isDefinedAt(candidate: NormalizationCandidate) = {
     val isTrustedSource = trustedDomain.map(candidate.url.matches) getOrElse candidate.isTrusted
@@ -25,7 +34,12 @@ case class SignatureCheck(referenceUrl: String, referenceSignature: Option[Signa
     isTrustedSource && isJavaUri
   }
 
-  private def signature(url: String): Future[Option[Signature]] = scraperPlugin.getSignature(url, None)
+  private def signature(url: String): Future[Option[Signature]] = {
+    articlePolicy.toBeScraped(url) match {
+      case Some(kind) => rover.getOrElseComputeRecentContentSignature(url, recency)(kind)
+      case None => Future.successful(None)
+    }
+  }
 
   private lazy val referenceContentSignatureFuture = referenceSignature match {
     case None => signature(referenceUrl)
@@ -34,7 +48,7 @@ case class SignatureCheck(referenceUrl: String, referenceSignature: Option[Signa
   private var failedContentChecks = Set.empty[String]
   private var referenceUrlIsBroken = false
 
-  protected def check(candidate: NormalizationCandidate): Future[Boolean] = {
+  protected def check(candidate: NormalizationCandidate)(implicit executionContext: ExecutionContext): Future[Boolean] = {
     if (referenceUrlIsBroken || failedContentChecks.contains(candidate.url)) Future.successful(false)
     else for {
       currentContentSignatureOption <- referenceContentSignatureFuture
@@ -62,36 +76,45 @@ case class SignatureCheck(referenceUrl: String, referenceSignature: Option[Signa
 
 }
 
-case class LinkedInProfileCheck(privateProfileId: Long)(implicit scraperPlugin: ScrapeScheduler) extends ContentCheck with Logging {
+case class LinkedInProfileCheck(privateProfileId: Long)(implicit rover: RoverServiceClient) extends ContentCheck with Logging {
+
+  private val recency = 30 days
 
   def isDefinedAt(candidate: NormalizationCandidate) = candidate.normalization == Normalization.CANONICAL && LinkedInNormalizer.linkedInCanonicalPublicProfile.findFirstIn(candidate.url).isDefined
-  protected def check(publicProfileCandidate: NormalizationCandidate) = {
-    for { idArticleOption <- scraperPlugin.scrapeBasicArticle(publicProfileCandidate.url, Some(ExtractorProviderTypes.LINKEDIN_ID)) } yield {
-      idArticleOption match {
-        case Some(idArticle) => idArticle.content == privateProfileId.toString
-        case None => {
-          log.error(s"Content check of LinkedIn public profile ${publicProfileCandidate.url} for id ${privateProfileId} failed.")
-          false
-        }
+  protected def check(publicProfileCandidate: NormalizationCandidate)(implicit executionContext: ExecutionContext) = {
+    rover.getOrElseFetchRecentArticle[LinkedInProfileArticle](publicProfileCandidate.url, recency).map {
+      case Some(article) if article.content.profile.id.exists(_ == privateProfileId.toString) => true
+      case _ => {
+        log.error(s"Content check of LinkedIn public profile ${publicProfileCandidate.url} for id ${privateProfileId} failed.")
+        false
       }
     }
   }
   def getFailedAttempts() = Set.empty
 }
 
-case class AlternateUrlCheck(referenceUrl: String, prenormalize: String => Try[String])(implicit scraperPlugin: ScrapeScheduler) extends ContentCheck with Logging {
+case class AlternateUrlCheck(referenceUrl: String, prenormalize: String => Try[String])(implicit rover: RoverServiceClient, articlePolicy: ArticleFetchPolicy) extends ContentCheck with Logging {
+
+  private val recency = 30 days
 
   private var failedContentChecks = Set.empty[String]
 
   private lazy val futureAlternateUrls: Future[Set[String]] = {
-    scraperPlugin.scrapeBasicArticle(referenceUrl, None).map {
-      case None => Set.empty[String]
-      case Some(basicArticle) => basicArticle.alternateUrls.map(prenormalize(_).toOption).flatten
+    articlePolicy.toBeScraped(referenceUrl) match {
+      case None => Future.successful(Set.empty)
+      case Some(articleKind) => rover.getOrElseFetchRecentArticle(referenceUrl, recency)(articleKind).imap { articleOpt =>
+        articleOpt.map(_.content).toSet[ArticleContent[_ <: Article]].flatMap {
+          case normalizationContent: NormalizationInfoHolder => {
+            normalizationContent.normalization.alternateUrls.map(prenormalize(_).toOption).flatten
+          }
+          case _ => Set.empty[String]
+        }
+      }
     }
   }
 
   def isDefinedAt(candidate: NormalizationCandidate) = candidate.isInstanceOf[AlternateCandidate]
-  protected def check(alternateCandidate: NormalizationCandidate) = futureAlternateUrls.map { alternateUrls =>
+  protected def check(alternateCandidate: NormalizationCandidate)(implicit executionContext: ExecutionContext) = futureAlternateUrls.map { alternateUrls =>
     alternateUrls.contains(alternateCandidate.url) tap { isSuccessful => if (!isSuccessful) { failedContentChecks += alternateCandidate.url } }
   }
 

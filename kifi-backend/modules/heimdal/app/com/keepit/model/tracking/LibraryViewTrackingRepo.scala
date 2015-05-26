@@ -43,13 +43,13 @@ class LibraryViewTrackingRepoImpl @Inject() (
 
   def getTotalViews(ownerId: Id[User], since: DateTime)(implicit session: RSession): Int = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    val q = sql"select count(*) from library_view where owner_id = ${ownerId} and createdAt > ${since}"
+    val q = sql"select count(*) from library_view where owner_id = ${ownerId} and owner_id != viewer_id and created_at > ${since}"
     q.as[Int].list.headOption.getOrElse(0)
   }
 
   def getTopViewedLibrariesAndCounts(ownerId: Id[User], since: DateTime, limit: Int)(implicit session: RSession): Map[Id[Library], Int] = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    val q = sql"select library_id, count(*) cnt from library_view where owner_id = ${ownerId} and createdAt > ${since} group by library_id order by cnt desc limit ${limit}"
+    val q = sql"select library_id, count(*) cnt from library_view where owner_id = ${ownerId} and owner_id != viewer_id and created_at > ${since} group by library_id order by cnt desc limit ${limit}"
     q.as[(Int, Int)].list.map { case (id, cnt) => (Id[Library](id), cnt) }.toMap
   }
 

@@ -13,7 +13,7 @@ import scala.concurrent.{ Future, ExecutionContext }
 import scala.util.{ Success, Failure }
 
 object RoverFetchSchedulingActor {
-  val maxBatchSize = 15 // low to balance producer / consumer behavior *on leader* (SQS send / receive), increase if we don't care about leader as a consumer.
+  val maxBatchSize = 10000
   val maxQueuedFor = 12 hours
 }
 

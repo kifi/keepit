@@ -277,6 +277,7 @@ GET     /m/2/libraries/:id/keeps                @com.keepit.controllers.mobile.M
 POST    /m/1/libraries/:id/keeps                @com.keepit.controllers.mobile.MobileLibraryController.keepToLibraryV1(id: PublicId[Library])
 POST    /m/2/libraries/:id/keeps                @com.keepit.controllers.mobile.MobileLibraryController.keepToLibraryV2(id: PublicId[Library])
 DELETE  /m/1/libraries/:id/keeps/:kId           @com.keepit.controllers.mobile.MobileLibraryController.unkeepFromLibrary(id: PublicId[Library], kId: ExternalId[Keep])
+DELETE  /m/1/libraries/:id/invite               @com.keepit.controllers.mobile.MobileLibraryController.revokeLibraryInvitation(id: PublicId[Library])
 POST    /m/1/libraries/:id/invite               @com.keepit.controllers.mobile.MobileLibraryController.inviteUsersToLibrary(id: PublicId[Library])
 POST    /m/1/libraries/:id/invite/link          @com.keepit.controllers.mobile.MobileLibraryController.createAnonymousInviteToLibrary(id: PublicId[Library])
 POST    /m/1/libraries/:id/subscription @com.keepit.controllers.mobile.MobileLibraryController.setSubscribedToUpdates(id: PublicId[Library], subscribed: Boolean)
@@ -410,6 +411,7 @@ GET     /site/libraries/:id/summary         @com.keepit.controllers.website.Libr
 POST    /site/libraries/:id/modify  @com.keepit.controllers.website.LibraryController.modifyLibrary(id: PublicId[Library])
 POST    /site/libraries/:id/delete  @com.keepit.controllers.website.LibraryController.removeLibrary(id: PublicId[Library])
 POST    /site/libraries/:id/invite  @com.keepit.controllers.website.LibraryController.inviteUsersToLibrary(id: PublicId[Library])
+DELETE  /site/libraries/:id/invite  @com.keepit.controllers.website.LibraryController.revokeLibraryInvitation(id: PublicId[Library])
 POST    /site/libraries/:id/join    @com.keepit.controllers.website.LibraryController.joinLibrary(id: PublicId[Library], authToken: Option[String] ?= None)
 POST    /site/libraries/:id/decline @com.keepit.controllers.website.LibraryController.declineLibrary(id: PublicId[Library])
 POST    /site/libraries/:id/leave   @com.keepit.controllers.website.LibraryController.leaveLibrary(id: PublicId[Library])
@@ -548,13 +550,11 @@ GET     /admin/analytics/descriptors  @com.keepit.controllers.admin.AdminAnalyti
 POST    /admin/analytics/descriptors  @com.keepit.controllers.admin.AdminAnalyticsController.updateEventDescriptors()
 GET     /admin/analytics/:repo/events @com.keepit.controllers.admin.AdminAnalyticsController.getEvents(repo:String, events: Option[String] ?= None, limit: Int ?= 25, window: Int ?= 24)
 
-GET     /admin/keeps/rescrape/from  @com.keepit.controllers.admin.AdminBookmarksController.rescrapeFrom(fromId: Id[NormalizedURI])
 GET     /admin/whoKeptMyKeep        @com.keepit.controllers.admin.AdminBookmarksController.whoKeptMyKeeps()
 GET     /admin/bookmarks/page/:page @com.keepit.controllers.admin.AdminBookmarksController.bookmarksView(page: Int)
 GET     /admin/bookmarks/edit       @com.keepit.controllers.admin.AdminBookmarksController.edit(id: Id[Keep])
 GET     /admin/bookmarks/editWithUri @com.keepit.controllers.admin.AdminBookmarksController.editFirstBookmarkForUri(id: Id[NormalizedURI])
 POST    /admin/uri/disable/:id      @com.keepit.controllers.admin.AdminBookmarksController.disableUrl(id: Id[NormalizedURI])
-POST    /admin/bookmarks/rescrape   @com.keepit.controllers.admin.AdminBookmarksController.rescrape
 POST    /admin/bookmarks/update     @com.keepit.controllers.admin.AdminBookmarksController.updateBookmarks
 POST    /admin/bookmarks/delete     @com.keepit.controllers.admin.AdminBookmarksController.delete(id: Id[Keep])
 POST    /admin/bookmarks/inactive   @com.keepit.controllers.admin.AdminBookmarksController.inactive(id: Id[Keep])
@@ -567,6 +567,7 @@ DELETE  /admin/users/:id/tags/:name @com.keepit.controllers.admin.AdminBookmarks
 GET     /admin/uri/:uriId           @com.keepit.controllers.admin.UrlController.getURIInfo(uriId: Id[NormalizedURI])
 #GET     /admin/uri/article/        @com.keepit.controllers.admin.UrlController.getArticle(uriId: Id[NormalizedURI], kind: ArticleKind[_ <: Article], version: ArticleVersion)
 GET     /admin/uri/:uriId/article/:kind @com.keepit.controllers.admin.UrlController.getBestArticle(uriId: Id[NormalizedURI], kind: ArticleKind[_ <: Article])
+GET     /admin/uri/:uriId/fetchAsap @com.keepit.controllers.admin.UrlController.fetchAsap(uriId: Id[NormalizedURI])
 
 GET     /admin/keepDiscoveries/page/:page @com.keepit.controllers.admin.AdminAttributionController.keepDiscoveriesView(page:Int, size:Int ?= 50, showImage:Boolean ?= false)
 GET     /admin/keepClicks/page/:page @com.keepit.controllers.admin.AdminAttributionController.keepDiscoveriesView(page:Int, size:Int ?= 50, showImage:Boolean ?= false)
@@ -586,8 +587,6 @@ POST    /admin/reKeepStats/all/update   @com.keepit.controllers.admin.AdminAttri
 GET     /admin/sitemap/library          @com.keepit.controllers.admin.AdminSiteMapController.generateLibrarySitemap()
 GET     /admin/sitemap/user             @com.keepit.controllers.admin.AdminSiteMapController.generateUserSitemap()
 
-GET     /admin/data/integrity       @com.keepit.controllers.admin.UrlController.documentIntegrity(page: Int ?= 0, size: Int ?= 50)
-GET     /admin/data/dupe            @com.keepit.controllers.admin.UrlController.duplicateDocumentDetection
 GET     /admin/data/orphan          @com.keepit.controllers.admin.UrlController.orphanCleanup(readOnly: Boolean ?= true)
 GET     /admin/data/orphanFull      @com.keepit.controllers.admin.UrlController.orphanCleanupFull(readOnly: Boolean ?= true)
 GET     /admin/data/renormalize     @com.keepit.controllers.admin.UrlController.renormalize(readOnly: Boolean ?= true, clearSeq: Boolean ?= false, domainRegex: Option[String] ?= None)
@@ -595,8 +594,6 @@ GET     /admin/data/renormalizeConsole              @com.keepit.controllers.admi
 POST    /admin/data/renormalizeConsole/submit       @com.keepit.controllers.admin.UrlController.urlRenormalizeConsoleSubmit()
 POST    /admin/data/pornDomainFlag                  @com.keepit.controllers.admin.UrlController.pornDomainFlag()
 GET     /admin/data/clearRedirects/:toUriId @com.keepit.controllers.admin.UrlController.clearRedirects(toUriId: Id[NormalizedURI])
-POST    /admin/data/handleDuplicate @com.keepit.controllers.admin.UrlController.handleDuplicate
-POST    /admin/data/handleDuplicates @com.keepit.controllers.admin.UrlController.handleDuplicates
 GET     /admin/data/setFixDuplicateKeepsSeq/:seq  @com.keepit.controllers.admin.UrlController.setFixDuplicateKeepsSeq(seq: Long)
 GET     /admin/data/normalization/:page @com.keepit.controllers.admin.UrlController.normalizationView(page: Int)
 GET     /admin/data/renormalization/:page @com.keepit.controllers.admin.UrlController.renormalizationView(page: Int)
@@ -607,17 +604,12 @@ GET     /admin/data/patterns      @com.keepit.controllers.admin.UrlController.ge
 POST    /admin/data/patterns      @com.keepit.controllers.admin.UrlController.savePatterns
 GET     /admin/data/proxies      @com.keepit.controllers.admin.ScraperAdminController.getProxies
 POST    /admin/data/proxies      @com.keepit.controllers.admin.ScraperAdminController.saveProxies
-GET     /admin/data/scraper/status      @com.keepit.controllers.admin.ScraperAdminController.status
-GET     /admin/data/scrape              @com.keepit.controllers.admin.ScraperAdminController.searchScraper
-GET     /admin/data/scrapeArticle       @com.keepit.controllers.admin.ScraperAdminController.scrapeArticle(url:String ?= "")
-GET     /admin/data/scraperRequests     @com.keepit.controllers.admin.ScraperAdminController.scraperRequests(stateFilter: Option[String] ?= None)
-POST    /admin/data/scrape/regex        @com.keepit.controllers.admin.ScraperAdminController.rescrapeByRegex()
 GET     /admin/data/remigrate           @com.keepit.controllers.admin.UrlController.fixRedirectedUriStates(doIt: Boolean ?= false)
 POST    /admin/data/clearRestriction    @com.keepit.controllers.admin.UrlController.clearRestriction(uriId: Id[NormalizedURI])
 POST    /admin/data/flagAsAdult    @com.keepit.controllers.admin.UrlController.flagAsAdult(uriId: Id[NormalizedURI])
 GET     /admin/data/cleanKeepsByUri    @com.keepit.controllers.admin.UrlController.cleanKeepsByUri(firstPage: Int ?= 0, pageSize: Int ?= 100)
 
-GET     /admin/data/depornify        @com.keepit.controllers.admin.ScraperAdminController.massMarkAsAdult()
+GET     /admin/data/depornify        @com.keepit.controllers.admin.AdminPornDetectorController.massMarkAsAdult()
 
 GET     /admin/article/index        @com.keepit.controllers.admin.AdminArticleIndexerController.index
 GET     /admin/article/reindex      @com.keepit.controllers.admin.AdminArticleIndexerController.reindex
@@ -776,7 +768,7 @@ GET     /admin/experiments/overview   @com.keepit.controllers.admin.AdminExperim
 GET     /admin/experiments/users/:exp/page/:page @com.keepit.controllers.admin.AdminUserController.byExperimentUsersView(page: Int, exp: String)
 POST     /admin/experiments/saveGenerator @com.keepit.controllers.admin.AdminExperimentController.saveGenerator
 
-GET     /admin/learning/pornDetect/model    @com.keepit.controllers.admin.ScraperAdminController.getPornDetectorModel
+GET     /admin/learning/pornDetect/model    @com.keepit.controllers.admin.AdminPornDetectorController.getPornDetectorModel
 GET     /admin/learning/pornDetect          @com.keepit.controllers.admin.AdminPornDetectorController.index
 POST    /admin/learning/pornDetect/detect   @com.keepit.controllers.admin.AdminPornDetectorController.detect
 GET     /admin/learning/pornDetect/uris/:page                   @com.keepit.controllers.admin.AdminPornDetectorController.pornUrisView(page: Int, publicOnly: Boolean ?= false)
@@ -912,9 +904,6 @@ POST    /internal/shoebox/logEvent                    @com.keepit.controllers.ex
 
 POST    /internal/geckoboard/refresh                  @com.keepit.reports.GeckoboardReporterController.refreshAll()
 
-GET      /internal/shoebox/database/assignScrapeTasks @com.keepit.controllers.internal.ShoeboxScraperController.assignScrapeTasks(zkId:Id[ScraperWorker], max:Int ?= 1)
-POST     /internal/shoebox/database/saveScrapeInfo    @com.keepit.controllers.internal.ShoeboxScraperController.saveScrapeInfo
-POST     /internal/shoebox/database/updateNormalizedURI @com.keepit.controllers.internal.ShoeboxScraperController.updateNormalizedURI(uriId: Id[NormalizedURI])
 GET      /internal/shoebox/database/getProxy          @com.keepit.controllers.internal.ShoeboxScraperController.getProxy(url:String)
 POST     /internal/shoebox/database/getProxyP         @com.keepit.controllers.internal.ShoeboxScraperController.getProxyP()
 GET      /internal/shoebox/database/getFriendRequestRecipientIdBySender @com.keepit.controllers.internal.ShoeboxController.getFriendRequestsRecipientIdBySender(senderId: Id[User])
@@ -988,5 +977,6 @@ GET     /:name/followers           @com.keepit.controllers.website.KifiSiteRoute
 GET     /:name/libraries           @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfUserFound(name: Username)
 GET     /:name/libraries/following @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfUserFound(name: Username)
 GET     /:name/libraries/invited   @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfUserIsSelf(name: Username)
+GET     /:name/:library/rss        @com.keepit.controllers.website.LibraryFeedController.libraryRSSFeed(name: Username, library, authToken: Option[String] = None)
 GET     /:name/:slug               @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfLibraryFound(name: Username, slug)
 GET     /:name/:slug/find          @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfLibraryFound(name: Username, slug)

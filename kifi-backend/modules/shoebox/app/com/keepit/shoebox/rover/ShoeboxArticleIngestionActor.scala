@@ -14,7 +14,7 @@ import com.keepit.rover.RoverServiceClient
 import com.keepit.rover.article.{ ArticleKind, EmbedlyArticle }
 import com.keepit.rover.model.{ ShoeboxArticleUpdate, ArticleInfo, ShoeboxArticleUpdates }
 import scala.concurrent.{ Future, ExecutionContext }
-import scala.util.{ Failure, Success }
+import scala.util.{ Try, Failure, Success }
 import com.keepit.common.core._
 
 object ShoeboxArticleIngestionActor {
@@ -65,12 +65,24 @@ class ShoeboxArticleIngestionActor @Inject() (
     } flatMap { seqNum =>
       rover.getShoeboxUpdates(seqNum, fetchSize).flatMap {
         case Some(ShoeboxArticleUpdates(updates, maxSeq)) =>
-          processRedirectsAndNormalizationInfo(updates).map { partiallyProcessedUpdatesByUri =>
+          //checking the normalized uris are valid and in the db
+          val verifiedAtricles = db.readOnlyMaster { implicit s =>
+            updates filter { article =>
+              Try(uriRepo.get(article.uriId)) match {
+                case Success(_) =>
+                  true
+                case Failure(e) =>
+                  airbrake.notify(s"article uri is not in the db: $article", e)
+                  false
+              }
+            }
+          }
+          processRedirectsAndNormalizationInfo(verifiedAtricles).map { partiallyProcessedUpdatesByUri =>
             db.readWrite { implicit session =>
               updateActiveUris(partiallyProcessedUpdatesByUri)
               systemValueRepo.setSequenceNumber(shoeboxArticleInfoSeq, maxSeq)
             }
-            (updates.length, seqNum, maxSeq)
+            (verifiedAtricles.length, seqNum, maxSeq)
           }
         case None => Future.successful((0, seqNum, seqNum))
       }
@@ -141,6 +153,7 @@ class ShoeboxArticleIngestionActor @Inject() (
 
   private def updateUriAndKeeps(uriId: Id[NormalizedURI], updates: Seq[ShoeboxArticleUpdate], rules: UrlPatternRules)(implicit session: RWSession): Unit = {
     require(updates.forall(_.uriId == uriId), s"Updates do not match expecting uriId ($uriId): $updates")
+    log.info(s"Updating NormalizedURI ($uriId) after processing associated ShoeboxArticleUpdates from Rover: $updates")
     val uri = uriRepo.get(uriId)
     val fetchedTitles = updates.map(update => (update.articleKind -> update.title)).collect {
       case (kind, Some(fetchedTitle)) if fetchedTitle.nonEmpty => (kind -> fetchedTitle)
@@ -161,9 +174,7 @@ class ShoeboxArticleIngestionActor @Inject() (
       }
     }
 
-    val state = if (uri.state == NormalizedURIStates.ACTIVE) NormalizedURIStates.SCRAPED else uri.state
-
-    val updatedUri = uriRepo.save(uri.copy(title = preferredTitle, restriction = restriction, state = state)) // always save to increment sequence numbers for other services
+    val updatedUri = uriRepo.save(uri.withTitle(preferredTitle) copy (restriction = restriction)) // always save to increment sequence numbers for other services
 
     updatedUri tap uriIntegrityHelpers.improveKeepsSafely
   }

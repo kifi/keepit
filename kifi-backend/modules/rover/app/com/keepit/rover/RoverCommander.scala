@@ -4,13 +4,18 @@ import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.core._
 import com.keepit.common.db.{ Id, SequenceNumber }
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.time.Clock
 import com.keepit.model.{ NormalizedURI }
 import com.keepit.rover.article.{ ArticleKind, Article, ArticleCommander }
 import com.keepit.rover.article.content.{ HttpInfoHolder, NormalizationInfoHolder }
+import com.keepit.rover.document.utils.Signature
 import com.keepit.rover.image.ImageCommander
 import com.keepit.rover.model._
 import com.keepit.rover.sensitivity.RoverSensitivityCommander
+import com.keepit.rover.store.ContentSignatureCommander
+import com.keepit.common.time._
 
+import scala.concurrent.duration._
 import scala.concurrent.{ ExecutionContext, Future }
 
 @Singleton
@@ -20,17 +25,20 @@ class RoverCommander @Inject() (
     sensitivityCommander: RoverSensitivityCommander,
     articleSummaryCache: RoverArticleSummaryCache,
     articleImagesCache: RoverArticleImagesCache,
+    signatureCommander: ContentSignatureCommander,
     private implicit val executionContext: ExecutionContext,
+    clock: Clock,
     airbrake: AirbrakeNotifier) {
 
   def getShoeboxUpdates(seq: SequenceNumber[ArticleInfo], limit: Int): Future[Option[ShoeboxArticleUpdates]] = {
     val updatedInfos = articleCommander.getArticleInfosBySequenceNumber(seq, limit)
     if (updatedInfos.isEmpty) Future.successful(None)
     else {
-      val futureUpdates = updatedInfos.map { info =>
-        articleCommander.getLatestArticle(info).imap { latestArticleOption =>
-          latestArticleOption.map(toShoeboxArticleUpdate(info))
-        }
+      val futureUpdates = updatedInfos.collect {
+        case info if !info.isDeleted =>
+          articleCommander.getLatestArticle(info).imap { latestArticleOption =>
+            latestArticleOption.map(toShoeboxArticleUpdate(info))
+          }
       }
       val maxSeq = updatedInfos.map(_.seq).max
       Future.sequence(futureUpdates).imap { updates =>
@@ -96,4 +104,17 @@ class RoverCommander @Inject() (
       }
     }
   }
+
+  def getOrElseComputeRecentContentSignature[A <: Article](url: String, recency: Duration)(implicit kind: ArticleKind[A]): Future[Option[Signature]] = {
+    val signatureRecencyLimit = clock.now().minusSeconds(recency.toSeconds.toInt)
+    signatureCommander.getCachedUrlSignature[A](url) match {
+      case Some(urlSignature) if urlSignature.computedAt isAfter signatureRecencyLimit => Future.successful(urlSignature.signature)
+      case _ => {
+        articleCommander.getOrElseFetchRecentArticle[A](url, recency)(kind).flatMap {
+          articleOpt => signatureCommander.computeUrlSignature(url, articleOpt)
+        }
+      }
+    }
+  }
 }
+

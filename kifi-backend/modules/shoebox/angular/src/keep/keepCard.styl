@@ -1,19 +1,25 @@
-keepRectBorderRadius = 4px
+keepBorderRadius = 8px // from keeps.styl
+keepRectBorderRadius = 4px // inner "page" box
 keepFooterMarginTop = 16px
-eeeTransparentBlack = rgba(0,0,0,.065)  // makes #eee over white
-maxWidthForNarrowKeep = 561px // see derivation in keeps.styl
+eeeOverlay = rgba(0,0,0,.065)  // makes #eee over white
+defaultBorderColorOverlay = rgba(0,0,60,.141)  // makes #dadae2 (defaultBorderColor) over white
+defaultBorderColorOverEee = rgba(0,0,100,.08)  // makes #dadae2 (defaultBorderColor) over #eee
+maxWidthForNarrowKeep = 559px // see derivation in keeps.styl
 minWidthForBoxed = maxWidthForNarrowKeep + 1px
 
 .kf-keep-body
   &.kf-side-by-side
   &.kf-text-only
-    border-top: 1px solid eeeTransparentBlack
+    border-top: 1px solid eeeOverlay
+
+    .kf-keep-top:empty+&
+      border-top: 0
 
   @media (min-width: minWidthForBoxed)
     &.kf-boxed
       border-top: 0
       border-radius: keepRectBorderRadius
-      box-shadow: 0 1px 2px rgba(0,0,0,.05), inset 0 0 0 1px eeeTransparentBlack
+      box-shadow: 0 1px 2px rgba(0,0,0,.05), inset 0 0 0 1px eeeOverlay
 
       &:not(.kf-side-by-side) // increasing top border-radius to ensure box-shadow does not bleed through corners of image/video
         border-radius: (keepRectBorderRadius + 2px) (keepRectBorderRadius + 2px) keepRectBorderRadius keepRectBorderRadius
@@ -24,10 +30,7 @@ minWidthForBoxed = maxWidthForNarrowKeep + 1px
   .kf-side-by-side>&
     overflow: hidden
 
-faintEdgeOverlaysUsingBoxShadow() // provides subtle boundary for white image/video
-  box-shadow: inset 0 0 0 1px eeeTransparentBlack
-
-faintTopAndBottomEdgeOverlaysUsingPseudos() // provides subtle boundary for white image/video
+defaultBorderColorOverlayUsingBefore(borderWidth)  // slightly darkens an image's transparent edge overlays
   position: relative
   &::before
     content: ''
@@ -35,43 +38,45 @@ faintTopAndBottomEdgeOverlaysUsingPseudos() // provides subtle boundary for whit
     top: 0
     left: 0
     right: 0
-    border-top: 1px solid eeeTransparentBlack
-  &::after
-    content: ''
-    position: absolute
-    left: 0
-    right: 0
     bottom: 0
-    border-bottom: 1px solid eeeTransparentBlack
+    border: solid defaultBorderColorOverEee
+    border-width: borderWidth
+    border-radius: '%s' % inherit
 
 .kf-keep-image
   display: block
+  margin: 0 -1px // cover container's 1px side borders
   padding-top: 56.25%  // enforcing 16:9 ratio, like kf-keep-video
   background-size: cover
   background-position: center
+  box-shadow: inset 0 0 0 1px eeeOverlay // provides subtle boundary for white image
 
   :not(.kf-boxed):not(.kf-side-by-side)>&
-    faintTopAndBottomEdgeOverlaysUsingPseudos()
+    defaultBorderColorOverlayUsingBefore(0 1px)
 
-  @media (max-width: (minWidthForBoxed - 1px))
-    faintTopAndBottomEdgeOverlaysUsingPseudos()
+  .kf-boxed:not(.kf-side-by-side)>&
+    @media (max-width: (minWidthForBoxed - 1px))
+      .kf-keep-top:not(:empty)+&  // keeper above
+        defaultBorderColorOverlayUsingBefore(0 1px)
 
-  @media (min-width: minWidthForBoxed)
-    .kf-boxed:not(.kf-side-by-side)>&
+      .kf-keep-top:empty+&  // no keeper above
+        defaultBorderColorOverlayUsingBefore(1px 1px 0)
+        border-radius: keepBorderRadius keepBorderRadius 0 0
+        margin-top: -1px // cover container's 1px top border
+
+    @media (min-width: minWidthForBoxed)
       border-radius: keepRectBorderRadius keepRectBorderRadius 0 0
-
-    .kf-boxed>&
-      faintEdgeOverlaysUsingBoxShadow()
+      margin: 0
 
   .kf-side-by-side>&
     float: left
     margin: 16px 0 keepFooterMarginTop 20px
-    faintEdgeOverlaysUsingBoxShadow()
 
   &.kf-bottom-clip
     background-position: center top
 
 .kf-keep-video
+  margin: 0 -1px // cover container's 1px side borders
   position: relative
 
   &::before
@@ -83,17 +88,35 @@ faintTopAndBottomEdgeOverlaysUsingPseudos() // provides subtle boundary for whit
     content: ''
     position: absolute
     top: 0
-    left: 0
-    right: 0
+    left: 1px // avoiding overlap with side overlays
+    right: 1px
     height: 0
-    border: solid eeeTransparentBlack
+    border: solid eeeOverlay
     border-width: 1px 0 0
+    border-radius: '%s' % inherit
 
-  @media (min-width: minWidthForBoxed)
-    .kf-boxed>&::after
-      height: keepRectBorderRadius
+  .kf-boxed>&
+    @media (max-width: (minWidthForBoxed - 1px))
+      .kf-keep-top:empty+&  // no keeper above
+        margin-top: -1px // cover container's 1px top border
+        border-radius: keepBorderRadius keepBorderRadius 0 0
+
+        &::after
+          left: 0
+          right: 0
+          height: keepBorderRadius
+          border-width: 1px 1px 0
+          border-color: defaultBorderColorOverlay
+
+    @media (min-width: minWidthForBoxed)
       border-radius: keepRectBorderRadius keepRectBorderRadius 0 0
-      border-width: 1px 1px 0
+      margin: 0
+
+      &::after
+        left: 0
+        right: 0
+        height: keepRectBorderRadius
+        border-width: 1px 1px 0
 
 .kf-youtube
   position: absolute
@@ -103,25 +126,43 @@ faintTopAndBottomEdgeOverlaysUsingPseudos() // provides subtle boundary for whit
   bottom: 0
   cursor: pointer
 
-  @media (min-width: minWidthForBoxed)
-    .kf-boxed &
+  .kf-boxed &
+    @media (max-width: (minWidthForBoxed - 1px))
+      .kf-keep-top:empty+&  // no keeper above
+        border-radius: keepBorderRadius keepBorderRadius 0 0
+        overflow: hidden
+
+    @media (min-width: minWidthForBoxed)
       border-radius: keepRectBorderRadius keepRectBorderRadius 0 0
       overflow: hidden
 
-      &::before  // faint left/right border overlays to provide shape to white videos
-      &::after
-        content: ''
-        position: absolute
-        z-index: 1
-        top: keepRectBorderRadius + 1px  // avoiding overlap with top
-        bottom: 1px  // avoiding overlap with bottom
-        width: 0
+  &::before  // faint left/right border overlays to provide shape to white videos
+  &::after
+    content: ''
+    position: absolute
+    z-index: 1
+    top: 0
+    bottom: 0
+    width: 0
+  &::before
+    left: 0
+    border-left: 1px solid defaultBorderColorOverlay
+  &::after
+    right: 0
+    border-right: 1px solid defaultBorderColorOverlay
+
+  .kf-boxed &
+    @media (max-width: (minWidthForBoxed - 1px))
+      .kf-keep-top:empty+&  // no keeper above
+        &::before
+        &::after
+          top: keepBorderRadius + 1px  // avoiding overlap with top
+
+    @media (min-width: minWidthForBoxed)
       &::before
-        left: 0
-        border-left: 1px solid eeeTransparentBlack
       &::after
-        right: 0
-        border-right: 1px solid eeeTransparentBlack
+        top: keepRectBorderRadius + 1px  // avoiding overlap with top
+        border-color: eeeOverlay
 
 .kf-youtube-iframe
   background-color: #000
@@ -132,9 +173,9 @@ faintTopAndBottomEdgeOverlaysUsingPseudos() // provides subtle boundary for whit
 .kf-youtube-bottom-overlay
   position: absolute
   bottom: 0
-  left: 0
-  right: 0
-  border-bottom: 1px solid eeeTransparentBlack
+  left: 1px // avoiding overlap with side overlays
+  right: 1px
+  border-bottom: 1px solid eeeOverlay
 
 .kf-youtube-img
   width: 100%

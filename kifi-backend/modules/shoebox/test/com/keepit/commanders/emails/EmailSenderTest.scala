@@ -16,7 +16,6 @@ import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.graph.FakeGraphServiceModule
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.model._
-import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.social.SocialNetworks.FACEBOOK
 import com.keepit.social.{ SocialNetworks, SocialNetworkType }
@@ -32,7 +31,6 @@ import com.keepit.model.UserFactory._
 class EmailSenderTest extends Specification with ShoeboxTestInjector {
   val modules = Seq(
     FakeExecutionContextModule(),
-    FakeScrapeSchedulerModule(),
     FakeHttpClientModule(),
     FakeSocialGraphModule(),
     FakeHealthcheckModule(),
@@ -132,8 +130,8 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         html must contain(WELCOME_SALUTATION(toUser.firstName))
 
         val trackingCode = EmailTrackingParam(
-          subAction = Some("homeLink")).encode
-        html must contain("utm_source=fromKifi&amp;utm_medium=email&amp;utm_campaign=welcome&amp;utm_content=homeLink&amp;kcid=welcome-email-fromKifi"
+          subAction = Some("kifiHome")).encode
+        html must contain("utm_source=fromKifi&amp;utm_medium=email&amp;utm_campaign=welcome&amp;utm_content=kifiHome&amp;kcid=welcome-email-fromKifi"
           + s"&amp;${EmailTrackingParam.paramName}=$trackingCode")
 
         val text = email.textBody.get.value
@@ -642,6 +640,40 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
 
         val text = email.textBody.get.value
         text must contain("Kifi Twitter library is ready")
+      }
+    }
+  }
+
+  "GratificationEmailSender" should {
+
+    "send an email to a user" in {
+      withDb(modules: _*) { implicit injector =>
+        val outbox = inject[FakeOutbox]
+        val userRepo = inject[UserRepo]
+        val connectionRepo = inject[UserConnectionRepo]
+        val libMemRepo = inject[LibraryMembershipRepo]
+        val libraryRepo = inject[LibraryRepo]
+        val sender = inject[GratificationEmailSender]
+
+        val toEmail = EmailAddress("superman@dc.com")
+        val (user1, user2) = db.readWrite { implicit s =>
+          val user1 = userRepo.save(User(firstName = "Clark", lastName = "Kent", username = Username("ckent"), normalizedUsername = "ckent", primaryEmail = Some(toEmail)))
+          val user2 = userRepo.save(User(firstName = "Bruce", lastName = "Wayne", username = Username("bwayne"), normalizedUsername = "bwayne"))
+          connectionRepo.addConnections(user1.id.get, Set(user2.id.get))
+          val lib = libraryRepo.save(Library(name = "Favorite Comic Books", ownerId = user1.id.get, visibility = LibraryVisibility.PUBLISHED, slug = LibrarySlug("comics"), memberCount = 1))
+          libMemRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user1.id.get, access = LibraryAccess.READ_ONLY))
+          (user1, user2)
+        }
+        val email = Await.result(sender.sendToUser(user1.id.get, Some(toEmail)), Duration(5, "seconds"))
+        val senderInfo = GratificationEmailSender.senderInfo
+        val html = email.htmlBody.value
+        html must contain("Hey Clark,")
+        html must contain("Bruce Wayne")
+        html must contain("Favorite Comic Books")
+        html must contain(s"${senderInfo.firstName}, ${senderInfo.title} at Kifi")
+        html must not contain ("0 views")
+        html must not contain ("0 followers")
+        html must not contain ("0 connections")
       }
     }
   }

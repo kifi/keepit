@@ -21,8 +21,8 @@ class DefaultArticleFetcher @Inject() (
     ArticleFetcher.fetchAndCompare(request, articleStore)(doFetch)
   }
 
-  private def doFetch(url: String, ifModifiedSince: Option[DateTime])(implicit ec: ExecutionContext): Future[FetchResult[DefaultArticle]] = {
-    documentFetcher.fetchTikaDocument(url, ifModifiedSince).map { result =>
+  private def doFetch(url: String, ifModifiedSince: Option[DateTime], shouldThrottle: Boolean)(implicit ec: ExecutionContext): Future[FetchResult[DefaultArticle]] = {
+    documentFetcher.fetchTikaDocument(url, ifModifiedSince, shouldThrottle).map { result =>
       result.map { doc =>
         val content = DefaultContent(
           destinationUrl = result.context.request.destinationUrl,

@@ -46,8 +46,8 @@ class YoutubeArticleFetcher @Inject() (
     ArticleFetcher.fetchAndCompare(request, articleStore)(doFetch)
   }
 
-  private def doFetch(url: String, ifModifiedSince: Option[DateTime])(implicit ec: ExecutionContext): Future[FetchResult[YoutubeArticle]] = {
-    documentFetcher.fetchJsoupDocument(url, ifModifiedSince).flatMap { result =>
+  private def doFetch(url: String, ifModifiedSince: Option[DateTime], shouldThrottle: Boolean)(implicit ec: ExecutionContext): Future[FetchResult[YoutubeArticle]] = {
+    documentFetcher.fetchJsoupDocument(url, ifModifiedSince, shouldThrottle).flatMap { result =>
       result.flatMap { doc =>
         getVideoContent(doc).imap { videoContent =>
           val content = YoutubeContent(
@@ -70,11 +70,14 @@ class YoutubeArticleFetcher @Inject() (
 
   private def getVideoContent(doc: JsoupDocument)(implicit ec: ExecutionContext): Future[YoutubeVideo] = {
     val futureTracks = getTracks(doc)
-    val headline = Option(doc.doc.getElementById("watch-headline-title")).map(_.text).filter(_.nonEmpty)
-    val description = doc.doc.select("#watch-description-text .content").text
-    val channel = doc.doc.select("#watch7-user-header .yt-user-name").text()
-    val tags = doc.doc.select("#watch-description-extras .content .watch-info-tag-list").map(_.text()).filter(_.nonEmpty)
-    val viewCount = doc.doc.select("#watch7-views-info .watch-view-count").text().trim.replaceAllLiterally(",", "").toInt
+    val headline = SafeOpt(doc.doc.getElementById("watch-headline-title")).map(_.text).filter(_.nonEmpty)
+    val description = SafeOpt(doc.doc.select("#watch-description-text .content").text()).getOrElse("")
+    val channel = SafeOpt(doc.doc.select("#watch7-user-header .yt-user-name").text()).getOrElse("")
+    val tags = SafeOpt(doc.doc.select("#watch-description-extras .content .watch-info-tag-list").map(_.text()).filter(_.nonEmpty)).getOrElse(Seq.empty)
+    val viewCount = SafeOpt(doc.doc.select("#watch7-views-info .watch-view-count").text().replaceAll("\\D", "").toInt).getOrElse(0)
+
+    // todo: Add alerting so we know if youtube breaks these selectors
+
     futureTracks.imap { tracks =>
       YoutubeVideo(
         headline,
@@ -126,7 +129,7 @@ class YoutubeArticleFetcher @Inject() (
   }
 
   private def fetchTrackList(ttsParameters: Seq[Param])(implicit ec: ExecutionContext): Future[FetchResult[Seq[YoutubeTrackInfo]]] = {
-    documentFetcher.fetchJsoupDocument(trackListUrl(ttsParameters)).map { result =>
+    documentFetcher.fetchJsoupDocument(trackListUrl(ttsParameters), shouldThrottle = false).map { result =>
       result.map { doc =>
         doc.doc.getElementsByTag("track").map(parseTrackElement)
       }
@@ -144,7 +147,7 @@ class YoutubeArticleFetcher @Inject() (
   )
 
   private def fetchTrack(trackInfo: YoutubeTrackInfo, ttsParameters: Seq[Param])(implicit ec: ExecutionContext): Future[FetchResult[YoutubeTrack]] = {
-    documentFetcher.fetchJsoupDocument(trackUrl(trackInfo, ttsParameters)).map { result =>
+    documentFetcher.fetchJsoupDocument(trackUrl(trackInfo, ttsParameters), shouldThrottle = false).map { result =>
       result.map { doc =>
         val closedCaptions = StringEscapeUtils.unescapeXml(doc.doc.getElementsByTag("text").map(_.text).mkString(" "))
         log.info(s"[fetchTrack] fetched ${(if (trackInfo.isDefault) "default " else "") + (if (trackInfo.isAutomatic) "automatic " else "") + trackInfo.langTranslated} closed captions.")

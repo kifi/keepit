@@ -6,7 +6,6 @@ import com.keepit.common.concurrent.{ FakeExecutionContextModule, ExecutionConte
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.social._
-import com.keepit.scraper.{ FakeScrapeSchedulerModule, FakeScraperServiceClientModule }
 import com.keepit.test.ShoeboxTestInjector
 import java.io.File
 import org.specs2.mutable._
@@ -29,8 +28,6 @@ class SocialConnectionTest extends Specification with ShoeboxTestInjector {
     FakeElizaServiceClientModule(),
     FakeMailModule(),
     FakeABookServiceClientModule(),
-    FakeScraperServiceClientModule(),
-    FakeScrapeSchedulerModule(),
     FakeSocialGraphModule()
   )
 

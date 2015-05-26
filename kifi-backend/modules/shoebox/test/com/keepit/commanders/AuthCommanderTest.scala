@@ -15,7 +15,6 @@ import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext }
 import com.keepit.model._
-import com.keepit.scraper.{ FakeScraperServiceClientModule, FakeScrapeSchedulerModule }
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.{ KeepImportsModule, FakeShoeboxServiceModule }
 import com.keepit.social.{ SocialNetworks, SocialId }
@@ -34,7 +33,6 @@ class AuthCommanderTest extends Specification with ShoeboxApplicationInjector {
     FakeExecutionContextModule(),
     FakeShoeboxServiceModule(),
     FakeSearchServiceClientModule(),
-    FakeScrapeSchedulerModule(),
     FakeShoeboxStoreModule(),
     FakeActorSystemModule(),
     FakeAirbrakeModule(),
@@ -46,7 +44,6 @@ class AuthCommanderTest extends Specification with ShoeboxApplicationInjector {
     FakeShoeboxAppSecureSocialModule(),
     MaybeAppFakeUserActionsModule(),
     FakeCortexServiceClientModule(),
-    FakeScraperServiceClientModule(),
     KeepImportsModule(),
     FakeCuratorServiceClientModule()
   )

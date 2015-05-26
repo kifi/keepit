@@ -6,10 +6,10 @@ import com.keepit.common.time._
 import com.keepit.cortex.models.lda.LDATopic
 import com.keepit.heimdal.DelightedAnswerSource
 import com.keepit.model._
-import java.sql.{ Time, Clob, Timestamp }
-import org.joda.time.{ LocalTime, DateTime, LocalDate }
+import java.sql.{ Clob, Timestamp }
+import org.joda.time.{ LocalTime, DateTime }
 import scala.slick.ast.TypedType
-import scala.slick.jdbc.{ PositionedResult, GetResult, PositionedParameters, SetParameter }
+import scala.slick.jdbc.{ GetResult, SetParameter }
 import play.api.libs.json._
 import com.keepit.common.net.UserAgent
 import com.keepit.classify.DomainTagName
@@ -17,7 +17,7 @@ import com.keepit.common.mail._
 import com.keepit.social.SocialNetworkType
 import securesocial.core.SocialUser
 import com.keepit.serializer.SocialUserSerializer
-import com.keepit.search.{ ArticleSearchResult, SearchConfig, Lang }
+import com.keepit.search.{ SearchConfig, Lang }
 import javax.sql.rowset.serial.SerialClob
 import com.keepit.model.UrlHash
 import play.api.libs.json.JsArray
@@ -26,7 +26,6 @@ import play.api.libs.json.JsObject
 import com.keepit.common.mail.EmailAddress
 import com.keepit.social.SocialId
 import com.keepit.model.DeepLocator
-import com.keepit.abook.model.RichSocialConnection
 import com.keepit.search.ArticleSearchResult
 import com.keepit.common.math.ProbabilityDensity
 import scala.concurrent.duration._
@@ -74,7 +73,6 @@ trait FortyTwoGenericTypeMappers { self: { val db: DataBaseComponent } =>
   implicit val electronicMailMessageIdMapper = MappedColumnType.base[ElectronicMailMessageId, String](_.id, ElectronicMailMessageId.apply)
   implicit val mapStringStringMapper = MappedColumnType.base[Map[String, String], String](v => Json.stringify(JsObject(v.mapValues(JsString.apply).toSeq)), Json.parse(_).as[JsObject].fields.toMap.mapValues(_.as[JsString].value))
   implicit val experimentTypeMapper = MappedColumnType.base[ExperimentType, String](_.value, ExperimentType.apply)
-  implicit val scraperWorkerIdTypeMapper = MappedColumnType.base[Id[ScraperWorker], Long](_.id, value => Id[ScraperWorker](value)) // todo(martin): this one shouldn't be necessary
   implicit val hitUUIDTypeMapper = MappedColumnType.base[ExternalId[ArticleSearchResult], String](_.id, ExternalId[ArticleSearchResult])
   implicit val uriImageSourceTypeMapper = MappedColumnType.base[ImageFormat, String](_.value, ImageFormat.apply)
   implicit val delightedAnswerSourceTypeMapper = MappedColumnType.base[DelightedAnswerSource, String](_.value, DelightedAnswerSource.apply)

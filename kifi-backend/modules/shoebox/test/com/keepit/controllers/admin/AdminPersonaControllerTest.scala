@@ -19,7 +19,6 @@ import com.keepit.model.KeepFactoryHelper._
 import com.keepit.model.KeepFactory._
 import com.keepit.common.social.{ FakeShoeboxAppSecureSocialModule }
 import com.keepit.model._
-import com.keepit.scraper.{ FakeScraperServiceClientModule, FakeScrapeSchedulerModule }
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.test.{ ShoeboxApplicationInjector, ShoeboxApplication }
@@ -33,7 +32,6 @@ class AdminPersonaControllerTest extends Specification with ShoeboxApplicationIn
     FakeExecutionContextModule(),
     FakeUserActionsModule(),
     FakeShoeboxServiceModule(),
-    FakeScrapeSchedulerModule(),
     FakeShoeboxStoreModule(),
     FakeActorSystemModule(),
     FakeAirbrakeModule(),
@@ -43,7 +41,6 @@ class AdminPersonaControllerTest extends Specification with ShoeboxApplicationIn
     FakeHeimdalServiceClientModule(),
     FakeShoeboxAppSecureSocialModule(),
     FakeCortexServiceClientModule(),
-    FakeScraperServiceClientModule(),
     FakeCuratorServiceClientModule())
 
   "AdminPersonaController" should {

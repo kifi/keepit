@@ -168,17 +168,17 @@ class ArticleInfoRepoImpl @Inject() (
       val existingByKind: Map[ArticleKind[_ <: Article], RoverArticleInfo] = getByUri(uriId, excludeState = None).map { info => (info.articleKind -> info) }.toMap
       kinds.map { kind =>
         val savedInfo = existingByKind.get(kind) match {
-          case Some(articleInfo) if articleInfo.isActive && articleInfo.url == url => articleInfo
-          case Some(inactiveArticleInfo) if !inactiveArticleInfo.isActive => {
-            val reactivatedInfo = inactiveArticleInfo.clean.copy(url = url, state = ArticleInfoStates.ACTIVE).initializeSchedulingPolicy
+          case Some(articleInfo) if articleInfo.isActive && articleInfo.url == url && articleInfo.urlHash == UrlHash.hashUrl(url) => articleInfo
+          case Some(inactiveArticleInfo) if !inactiveArticleInfo.isActive && inactiveArticleInfo.url == url && inactiveArticleInfo.urlHash == UrlHash.hashUrl(url) => {
+            val reactivatedInfo = inactiveArticleInfo.clean.copy(state = ArticleInfoStates.ACTIVE).initializeSchedulingPolicy
             save(reactivatedInfo)
           }
-          case Some(invalidArticleInfo) if invalidArticleInfo.url != url => {
-            airbrake.notify(s"Fixed ArticleInfo $kind for uri $uriId with inconsistent url: expected $url, had ${invalidArticleInfo.url}")
-            val validArticleInfo = invalidArticleInfo.copy(url = url)
-            save(validArticleInfo)
-          }
-          case None => {
+          case invalidArticleInfoOpt => {
+            invalidArticleInfoOpt.foreach { invalidArticleInfo =>
+              airbrake.notify(s"Found ArticleInfo $kind for uri $uriId with inconsistent url: expected $url, has ${invalidArticleInfo.url} with hash ${invalidArticleInfo.urlHash}")
+              // to be deleted, we got a bad uriId from Shoebox, wipe out the urlHash not to break the table unique constraints
+              save(invalidArticleInfo.copy(uriId = Id(-invalidArticleInfo.uriId.id), urlHash = UrlHash.hashUrl(ExternalId().id), state = ArticleInfoStates.INACTIVE))
+            }
             val newInfo = RoverArticleInfo.initialize(uriId, url, kind)
             save(newInfo)
           }

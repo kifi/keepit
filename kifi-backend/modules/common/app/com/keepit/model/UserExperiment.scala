@@ -66,6 +66,7 @@ object ExperimentType {
   val CURATOR_DIVERSE_TOPIC_RECOS = ExperimentType("curator_diverse_topic_recos")
   val NEW_PUBLIC_FEED = ExperimentType("new_public_feed")
   val PLAIN_EMAIL = ExperimentType("plain_email")
+  val GRATIFICATION_EMAIL = ExperimentType("gratification_email")
 
   val PROFILES_BETA = ExperimentType("profiles_beta")
   val TWITTER_BETA = ExperimentType("twitter_beta")
@@ -79,13 +80,14 @@ object ExperimentType {
   val APPLY_RECO_FEEDBACK = ExperimentType("apply_reco_feedback")
   val ROVER_CONTENT = ExperimentType("rover_content")
   val COLLABORATIVE = ExperimentType("collaborative")
+  val LIBRARY_RSS_FEED = ExperimentType("library_rss_feed")
 
   val _ALL = ADMIN :: AUTO_GEN :: FAKE :: BYPASS_ABUSE_CHECKS :: VISITED :: NO_SEARCH_EXPERIMENTS ::
     DEMO :: EXTENSION_LOGGING :: SHOW_HIT_SCORES :: SHOW_DISCUSSIONS ::
     MOBILE_REDIRECT :: DELIGHTED_SURVEY_PERMANENT :: SPECIAL_CURATOR :: LIBRARIES :: SEND_DIGEST_EMAIL_ON_REFRESH ::
     GRAPH_BASED_PEOPLE_TO_INVITE :: CORTEX_NEW_MODEL :: CURATOR_DIVERSE_TOPIC_RECOS ::
     NEW_PUBLIC_FEED :: PROFILES_BETA :: TWITTER_BETA :: ACTIVITY_EMAIL :: ALL_KEEPS_VIEW :: EXPLICIT_SOCIAL_POSTING :: RELATED_PAGE_INFO :: NEXT_GEN_RECOS ::
-    RECO_FASTLANE :: RECO_SUBSAMPLE :: APPLY_RECO_FEEDBACK :: ROVER_CONTENT :: PLAIN_EMAIL :: COLLABORATIVE :: Nil
+    RECO_FASTLANE :: RECO_SUBSAMPLE :: APPLY_RECO_FEEDBACK :: ROVER_CONTENT :: PLAIN_EMAIL :: COLLABORATIVE :: GRATIFICATION_EMAIL :: LIBRARY_RSS_FEED :: Nil
 
   private val _ALL_MAP: Map[String, ExperimentType] = _ALL.map(e => e.value -> e).toMap
 

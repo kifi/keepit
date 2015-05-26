@@ -22,7 +22,6 @@ import com.keepit.model.UserConnectionFactoryHelper._
 import com.keepit.model.UserFactory._
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.model._
-import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.Specification
 
@@ -33,7 +32,6 @@ class UserProfileCommanderTest extends Specification with ShoeboxTestInjector {
 
   val modules = Seq(
     FakeABookServiceClientModule(),
-    FakeScrapeSchedulerModule(),
     FakeGraphServiceModule(),
     FakeSocialGraphModule()
   )
