@@ -236,8 +236,6 @@ angular.module('kifi')
             'name': '',
             'description': '',
             'slug': '',
-
-            // By default, the create library form selects the 'published' visibility for a new library.
             'visibility': 'published'
           };
           scope.library.membership = {
