@@ -723,7 +723,7 @@ class LibraryCommander @Inject() (
     val library = db.readOnlyReplica { implicit session =>
       libraryRepo.get(libraryId)
     }
-    canViewLibrary(userId, library, accessToken)
+    library.state == LibraryStates.ACTIVE && canViewLibrary(userId, library, accessToken)
   }
 
   def getLibrariesByUser(userId: Id[User]): (Seq[(LibraryMembership, Library)], Seq[(LibraryInvite, Library)]) = {
@@ -742,19 +742,23 @@ class LibraryCommander @Inject() (
 
   def userAccess(userId: Id[User], libraryId: Id[Library], universalLinkOpt: Option[String]): Option[LibraryAccess] = {
     db.readOnlyMaster { implicit s =>
-      libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId) match {
-        case Some(mem) =>
-          Some(mem.access)
-        case None =>
-          val lib = libraryRepo.get(libraryId)
-          if (lib.visibility == LibraryVisibility.PUBLISHED)
-            Some(LibraryAccess.READ_ONLY)
-          else if (libraryInviteRepo.getWithLibraryIdAndUserId(libraryId, userId).nonEmpty)
-            Some(LibraryAccess.READ_ONLY)
-          else if (universalLinkOpt.nonEmpty && lib.universalLink == universalLinkOpt.get)
-            Some(LibraryAccess.READ_ONLY)
-          else
-            None
+      val lib = libraryRepo.get(libraryId)
+      lib.state match {
+        case LibraryStates.ACTIVE =>
+          libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId) match {
+            case Some(mem) =>
+              Some(mem.access)
+            case None =>
+              if (lib.visibility == LibraryVisibility.PUBLISHED)
+                Some(LibraryAccess.READ_ONLY)
+              else if (libraryInviteRepo.getWithLibraryIdAndUserId(libraryId, userId).nonEmpty)
+                Some(LibraryAccess.READ_ONLY)
+              else if (universalLinkOpt.nonEmpty && lib.universalLink == universalLinkOpt.get)
+                Some(LibraryAccess.READ_ONLY)
+              else
+                None
+          }
+        case _ => None
       }
     }
   }
