@@ -34,14 +34,12 @@
     <div class="kf-upl-followers" ng-switch-when="followers">
       <a href="{{user|profileUrl}}" class="kf-upl-follower" ng-repeat="user in lib.followers" kf-track-origin="{{currentPageOrigin}}/follower" ng-click="trackUplCardClick(lib, 'clickedLibraryFollowersFace')"
          ng-attr-style="background-image:url({{user | pic:100}})"></a>
-      <span ng-if="lib.numFollowers === lib.followers.length">
-        <a href="javascript:" ng-click="openFollowersList(lib, currentPageOrigin)" class="kf-upl-followers-number">
-          <ng-pluralize class="kf-upl-all-followers" count="lib.numFollowers" when="{'1':'follows this library','other':'are following'}"></ng-pluralize>
-        </a>
-      </span>
-      <span ng-if="lib.numFollowers > lib.followers.length">
-        <a href="javascript:" ng-click="openFollowersList(lib); trackUplCardClick(lib, 'clickedLibraryFollowersMoreFollowing')" class="kf-upl-followers-number">+ {{lib.numFollowers - lib.followers.length | num}} are following</a>
-      </span>
+      <a class="kf-upl-followers-number" href="javascript:" ng-click="openFollowersList(lib); trackUplCardClick(lib, 'clickedLibraryFollowersMoreFollowing')">
+        <span ng-if="lib.numFollowers === lib.followers.length" class="kf-upl-all-followers">{{lib.numFollowers === 1 ? 'follows this library' : 'are following'}}</span>
+        <span ng-if="lib.numFollowers > lib.followers.length">
+          + {{lib.numFollowers - lib.followers.length | num}}{{lib.numFollowers - lib.followers.length < 1000 ? ' are' : ''}} following
+        </span>
+      </a>
     </div>
     <div class="kf-upl-updated" ng-switch-when="updated">
       Updated&nbsp;<time ng-attr-datetime="{{lib.lastKept}}" am-time-ago="lib.lastKept"></time>
