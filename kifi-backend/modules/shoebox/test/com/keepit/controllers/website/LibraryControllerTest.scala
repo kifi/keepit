@@ -315,17 +315,15 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
              "numCollaborators":0,
              "numFollowers":0,
              "whoCanInvite":"collaborator",
-             "modifiedAt": ${lib1Updated.updatedAt.getMillis}
+             "modifiedAt": ${lib1Updated.updatedAt.getMillis},
+             "membership": {
+              "access" : "owner",
+              "listed":true,
+              "subscribed":false
+             },
+             "invite": null
            },
-           "membership":"owner",
-           "listed":true,
-           "subscribedToUpdates":false,
-           "suggestedSearches": {"terms": [], "weights": []},
-           "membershipObj":{
-              "access":"owner",
-              "listed": true,
-              "subscribed": false
-            }
+           "suggestedSearches": {"terms": [], "weights": []}
           }
         """))
 
@@ -370,13 +368,21 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
              "numCollaborators":0,
              "numFollowers":0,
              "whoCanInvite":"collaborator",
-             "modifiedAt": ${lib1Updated2.updatedAt.getMillis}
+             "modifiedAt": ${lib1Updated2.updatedAt.getMillis},
+             "membership":null,
+             "invite": {
+              "inviter": {
+                "id":"${basicUser1.externalId}",
+                "firstName":"${basicUser1.firstName}",
+                "lastName":"${basicUser1.lastName}",
+                "pictureName":"${basicUser1.pictureName}",
+                "username":"${basicUser1.username.value}"
+              },
+              "access":"read_only",
+              "lastInvite":${t1.plusMinutes(3).getMillis}
+             }
            },
-           "membership":"none",
-           "listed":true,
-           "subscribedToUpdates":false,
-           "suggestedSearches": {"terms": [], "weights": []},
-           "membershipObj":null
+           "suggestedSearches": {"terms": [], "weights": []}
           }
         """))
       }
@@ -460,17 +466,15 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                "numCollaborators":0,
                "numFollowers":0,
                "whoCanInvite":"collaborator",
-               "modifiedAt": ${lib1Updated.updatedAt.getMillis}
+               "modifiedAt": ${lib1Updated.updatedAt.getMillis},
+               "membership":{
+                "access":"owner",
+                "listed":false,
+                "subscribed":false
+               },
+               "invite": null
              },
-             "membership":"owner",
-             "listed": false,
-             "subscribedToUpdates": false,
-             "suggestedSearches": {"terms": [], "weights": []},
-             "membershipObj":{
-               "access":"owner",
-                 "listed": false,
-                 "subscribed": false
-               }
+             "suggestedSearches": {"terms": [], "weights": []}
             }
           """)
         Json.parse(contentAsString(result1)) must equalTo(expected)

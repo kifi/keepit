@@ -109,12 +109,14 @@ class LibraryController @Inject() (
     val idealSize = imageSize.flatMap { s => Try(ImageSize(s)).toOption }.getOrElse(LibraryController.defaultLibraryImageSize)
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build
     libraryCommander.getLibraryById(request.userIdOpt, showPublishedLibraries, libraryId, idealSize, request.userIdOpt) map { libInfo =>
-      val membershipOpt = libraryCommander.getViewerMembershipInfo(request.userIdOpt, libraryId)
-      val accessStr = membershipOpt.map(_.access) getOrElse "none"
-      val listed = membershipOpt.map(_.listed) getOrElse true
-      val subscribedToUpdates = membershipOpt.map(_.subscribed) getOrElse false
       val suggestedSearches = getSuggestedSearchesAsJson(libraryId)
-      Ok(Json.obj("library" -> Json.toJson(libInfo), "membership" -> accessStr, "listed" -> listed, "suggestedSearches" -> suggestedSearches, "subscribedToUpdates" -> subscribedToUpdates, "membershipObj" -> Json.toJson(membershipOpt)))
+      val membershipOpt = libraryCommander.getViewerMembershipInfo(request.userIdOpt, libraryId)
+      val inviteOpt = libraryCommander.getViewerInviteInfo(request.userIdOpt, libraryId)
+
+      val membershipJson = Json.toJson(membershipOpt)
+      val inviteJson = Json.toJson(inviteOpt)
+      val libraryJson = Json.toJson(libInfo).as[JsObject] + ("membership" -> membershipJson) + ("invite" -> inviteJson)
+      Ok(Json.obj("library" -> libraryJson, "suggestedSearches" -> suggestedSearches))
     }
   }
 
@@ -122,9 +124,9 @@ class LibraryController @Inject() (
     val id = Library.decodePublicId(pubId).get
 
     val (libInfo, memInfoOpt) = libraryCommander.getLibrarySummaryAndMembership(request.userIdOpt, id)
-    val accessStr = memInfoOpt.map(_.access) getOrElse "none"
-    val subscribedToUpdates = memInfoOpt.map(_.subscribed) getOrElse false
-    Ok(Json.obj("library" -> Json.toJson(libInfo), "membership" -> accessStr, "subscribedToUpdates" -> subscribedToUpdates, "membershipObj" -> Json.toJson(memInfoOpt)))
+    val membershipJson = Json.toJson(memInfoOpt)
+    val libraryJson = Json.toJson(libInfo).as[JsObject] + ("membership" -> membershipJson)
+    Ok(Json.obj("library" -> libraryJson))
   }
 
   def getLibraryByPath(userStr: String, slugStr: String, showPublishedLibraries: Boolean, imageSize: Option[String] = None) = MaybeUserAction.async { request =>
@@ -135,12 +137,14 @@ class LibraryController @Inject() (
           val idealSize = imageSize.flatMap { s => Try(ImageSize(s)).toOption }.getOrElse(LibraryController.defaultLibraryImageSize)
           request.userIdOpt foreach { userId => libraryCommander.updateLastView(userId, library.id.get) }
           libraryCommander.createFullLibraryInfo(request.userIdOpt, showPublishedLibraries, library, idealSize, showKeepCreateTime = true).map { libInfo =>
-            val membershipOpt = libraryCommander.getViewerMembershipInfo(request.userIdOpt, library.id.get)
-            val accessStr = membershipOpt.map(_.access) getOrElse "none"
-            val listed = membershipOpt.map(_.listed) getOrElse true
-            val subscribedToUpdates = membershipOpt.map(_.subscribed) getOrElse false
             val suggestedSearches = getSuggestedSearchesAsJson(library.id.get)
-            Ok(Json.obj("library" -> Json.toJson(libInfo), "membership" -> accessStr, "listed" -> listed, "subscribedToUpdates" -> subscribedToUpdates, "suggestedSearches" -> suggestedSearches, "membershipObj" -> Json.toJson(membershipOpt)))
+            val membershipOpt = libraryCommander.getViewerMembershipInfo(request.userIdOpt, library.id.get)
+            val inviteOpt = libraryCommander.getViewerInviteInfo(request.userIdOpt, library.id.get)
+
+            val membershipJson = Json.toJson(membershipOpt)
+            val inviteJson = Json.toJson(inviteOpt)
+            val libraryJson = Json.toJson(libInfo).as[JsObject] + ("membership" -> membershipJson) + ("invite" -> inviteJson)
+            Ok(Json.obj("library" -> libraryJson, "suggestedSearches" -> suggestedSearches))
           }
         })
       case Left(fail) => Future.successful {

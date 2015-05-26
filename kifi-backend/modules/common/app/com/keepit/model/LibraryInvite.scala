@@ -66,10 +66,10 @@ object LibraryInvite extends ModelWithPublicIdCompanion[LibraryInvite] {
   }
 }
 
-@json case class LibraryInviteInfo(inviter: BasicUser, access: LibraryAccess, message: Option[String], lastInvite: DateTime)
+@json case class LibraryInviteInfo(inviter: BasicUser, access: LibraryAccess, message: Option[String], lastInvite: Long)
 object LibraryInviteInfo {
   def createInfo(invite: LibraryInvite, inviter: BasicUser): LibraryInviteInfo = {
-    LibraryInviteInfo(inviter, invite.access, invite.message, invite.createdAt)
+    LibraryInviteInfo(inviter, invite.access, invite.message, invite.createdAt.getMillis)
   }
 }
 
