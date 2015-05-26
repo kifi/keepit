@@ -11,12 +11,11 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.http._
 import com.keepit.common.mail.KifiMobileAppLinkFlag
 import com.keepit.common.net.UserAgent
-import com.keepit.common.seo.FeedCommander
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
 import play.api.Play
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.mvc.{ ResponseHeader, ActionFilter, Result }
+import play.api.mvc.{ ActionFilter, Result }
 import securesocial.core.SecureSocial
 
 import scala.concurrent.Future
@@ -28,8 +27,6 @@ class KifiSiteRouter @Inject() (
   userCommander: UserCommander,
   pageMetaTagsCommander: PageMetaTagsCommander,
   libraryCommander: LibraryCommander,
-  experimentCommander: LocalUserExperimentCommander,
-  feedCommander: FeedCommander,
   libraryMetadataCache: LibraryMetadataCache,
   userMetadataCache: UserMetadataCache,
   applicationConfig: FortyTwoConfig,
@@ -99,28 +96,6 @@ class KifiSiteRouter @Inject() (
       case r: NonUserRequest[_] =>
         redirectToLogin(s"/me${dropPathSegment(request.uri)}", r)
     }
-  }
-
-  def serveRSSFeedIfLibraryFound(username: Username, librarySlug: String, authToken: Option[String]) = WebAppPage { implicit request =>
-    lookupUsername(username) flatMap {
-      case (user, userRedirectStatusOpt) =>
-        libraryCommander.getLibraryBySlugOrAlias(user.id.get, LibrarySlug(librarySlug)) map {
-          case (library, isLibraryAlias) =>
-            if (library.slug.value != librarySlug || userRedirectStatusOpt.isDefined) { // library moved
-              val uri = Library.formatLibraryPathUrlEncoded(user.username, library.slug) + dropPathSegment(dropPathSegment(request.uri))
-              val status = if (!isLibraryAlias || userRedirectStatusOpt.contains(303)) 303 else 301
-              Redirect(uri, status)
-            } else if (experimentCommander.userHasExperiment(library.ownerId, ExperimentType.LIBRARY_RSS_FEED) &&
-              libraryCommander.canViewLibrary(request.userOpt.flatMap(_.id), library, authToken)) {
-              Result(
-                header = ResponseHeader(200, Map(CONTENT_TYPE -> "application/rss+xml")),
-                body = feedCommander.wrap(feedCommander.libraryFeed(applicationConfig.applicationBaseUrl + request.uri, library))
-              )
-            } else {
-              notFound(request)
-            }
-        }
-    } getOrElse notFound(request)
   }
 
   def serveWebAppIfLibraryFound(username: Username, slug: String) = WebAppPage { implicit request =>

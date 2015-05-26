@@ -1,16 +1,14 @@
 package com.keepit.common.seo
 
 import com.google.inject.{ Inject, Singleton }
-import com.keepit.commanders._
+import com.keepit.commanders.{ PageMetaTagsCommander, LibraryCommander, PublicPageMetaFullTags }
 import com.keepit.common.CollectionHelpers
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.store.{ ImageSize, S3ImageConfig }
 import com.keepit.common.time._
 import com.keepit.inject.FortyTwoConfig
-import com.keepit.model._
-import org.joda.time.DateTime
+import com.keepit.model.{ Library, LibraryMembershipRepo, LibraryRepo, UserRepo }
 import org.joda.time.format.DateTimeFormat
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.iteratee.{ Enumeratee, Enumerator }
@@ -24,11 +22,9 @@ class FeedCommander @Inject() (
     db: Database,
     clock: Clock,
     fortyTwoConfig: FortyTwoConfig,
-    s3ImageConfig: S3ImageConfig,
     userRepo: UserRepo,
-    keepRepo: KeepRepo,
-    keepImageCommander: KeepImageCommander,
-    libraryImageCommander: LibraryImageCommander,
+    libraryRepo: LibraryRepo,
+    libraryMembershipRepo: LibraryMembershipRepo,
     libraryCommander: PageMetaTagsCommander) extends Logging {
 
   def wrap(elem: Elem): Enumerator[Array[Byte]] = {
@@ -36,66 +32,6 @@ class FeedCommander @Inject() (
     val toBytes = Enumeratee.map[Node] { n => n.toString.getBytes }
     val header = Enumerator("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n".getBytes)
     header.andThen(elems &> toBytes)
-  }
-
-  final case class RssItem(title: String, description: String, link: String, guid: String, pubDate: DateTime, creator: String, icon: String)
-
-  private def rssItems(items: Seq[RssItem]): Seq[Elem] = {
-    items map { item =>
-      <item>
-        <title>{ item.title }</title>
-        <description>{ item.description }</description>
-        <link>{ item.link }</link>
-        <guid>{ item.guid }</guid>
-        <pubDate>{ item.pubDate }</pubDate>
-        <dc:creator>{ item.creator }</dc:creator>
-        <media:thumbnail url={ item.icon } medium="image"/>
-        <media:content url={ item.icon } medium="image">
-          <media:title type="html">{ item.title }</media:title>
-        </media:content>
-      </item>
-    }
-  }
-
-  def libraryFeed(feedUrl: String, library: Library): Elem = {
-    val keepCountToDisplay = 10
-
-    val (libImage, keeps) = db.readOnlyMaster { implicit session =>
-      val image = libraryImageCommander.getBestImageForLibrary(library.id.get, ImageSize(100, 100))
-      val keeps = keepRepo.getByLibrary(libraryId = library.id.get, offset = 0, limit = keepCountToDisplay, excludeSet = Set(KeepStates.INACTIVE))
-      (image.map(_.imagePath.getUrl(s3ImageConfig)).getOrElse(""), keeps)
-    }
-    <rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:media="http://search.yahoo.com/mrss/" xmlns:atom="http://www.w3.org/2005/Atom">
-      <channel>
-        <title>{ library.name }</title>
-        <link>{ feedUrl }</link>
-        <description>{ library.description }</description>{
-          if (libImage != "") {
-            <image>
-              <url>{ libImage }</url>
-              <title>{ library.name }</title>
-              <link>{ feedUrl }</link>
-            </image>
-          }
-        }
-        <copyright>Copyright { currentDateTime.getYear }, FortyTwo Inc.</copyright>
-        <atom:link ref="self" type="application/rss+xml" href={ feedUrl }/>
-        <atom:link ref="hub" href="https://pubsubhubbub.appspot.com/"/>
-        {
-          def convertKeep(keep: Keep): RssItem = {
-            val (keepImage, originalKeeper) = db.readOnlyMaster { implicit s =>
-              val image = keepImageCommander.getBestImageForKeep(keep.id.get, ScaleImageRequest(ImageSize(100, 100)))
-              (image, userRepo.getNoCache(keep.originalKeeperId.getOrElse(keep.userId)))
-            }
-
-            RssItem(title = keep.title.getOrElse(""), description = keep.note.getOrElse(""), link = keep.url,
-              guid = keep.externalId.id, pubDate = keep.keptAt, creator = originalKeeper.fullName,
-              icon = keepImage.map(_.get).map(_.imagePath.getUrl(s3ImageConfig)).getOrElse(""))
-          }
-          rssItems(keeps map convertKeep)
-        }{ /* License asking for attribution */ }
-      </channel>
-    </rss>
   }
 
   def rss(feedTitle: String, feedUrl: String, libs: Seq[Library]): Future[Elem] = {
