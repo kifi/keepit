@@ -54,16 +54,16 @@ class FeedCommanderTest extends Specification with ShoeboxTestInjector {
         }
         val commander = inject[FeedCommander]
         val result = commander.libraryFeed("dev.ezkeep.com:9000/colin-lane/test/rss", library)
-        println(result)
         (result \ "channel" \ "title").text must be equalTo ("test")
-        val google = (result \ "channel" \ "item")(0)
+
+        val amazon = (result \ "channel" \ "item")(0)
+        (amazon \ "title").text must be equalTo ("Amazon")
+        (amazon \ "description").text must be equalTo ("")
+
+        val google = (result \ "channel" \ "item")(1)
         (google \ "title").text must be equalTo ("Google")
         (google \ "description").text must equalTo("Google Note")
         (google \ "link").text must equalTo("http://www.google.com/")
-
-        val amazon = (result \ "channel" \ "item")(1)
-        (amazon \ "title").text must be equalTo ("Amazon")
-        (amazon \ "description").text must be equalTo ("None")
       }
     }
   }

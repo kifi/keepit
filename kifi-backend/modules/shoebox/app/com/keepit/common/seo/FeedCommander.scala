@@ -1,13 +1,12 @@
 package com.keepit.common.seo
 
 import com.google.inject.{ Inject, Singleton }
-import com.keepit.commanders.{ PageMetaTagsCommander, LibraryCommander, PublicPageMetaFullTags }
+import com.keepit.commanders._
 import com.keepit.common.CollectionHelpers
-import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.store.S3ImageConfig
+import com.keepit.common.store.{ ImageSize, S3ImageConfig }
 import com.keepit.common.time._
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
@@ -27,10 +26,9 @@ class FeedCommander @Inject() (
     fortyTwoConfig: FortyTwoConfig,
     s3ImageConfig: S3ImageConfig,
     userRepo: UserRepo,
-    libraryRepo: LibraryRepo,
     keepRepo: KeepRepo,
-    keepImageRepo: KeepImageRepo,
-    libraryImageRepo: LibraryImageRepo,
+    keepImageCommander: KeepImageCommander,
+    libraryImageCommander: LibraryImageCommander,
     libraryCommander: PageMetaTagsCommander) extends Logging {
 
   def wrap(elem: Elem): Enumerator[Array[Byte]] = {
@@ -64,30 +62,33 @@ class FeedCommander @Inject() (
 
     implicit def convert(keep: Keep): RssItem = {
       val (keepImage, originalKeeper) = db.readOnlyMaster { implicit s =>
-        val keepImages: Seq[KeepImage] = keepImageRepo.getForKeepId(keep.id.get)
-        (keepImages.headOption, userRepo.getNoCache(keep.originalKeeperId.getOrElse(keep.userId)))
+        val image = keepImageCommander.getBestImageForKeep(keep.id.get, ScaleImageRequest(ImageSize(100, 100)))
+        (image, userRepo.getNoCache(keep.originalKeeperId.getOrElse(keep.userId)))
       }
 
-      RssItem(title = keep.title.getOrElse(""), description = keep.note.getOrElse("None"), link = keep.url,
+      RssItem(title = keep.title.getOrElse(""), description = keep.note.getOrElse(""), link = keep.url,
         guid = keep.externalId.id, pubDate = keep.keptAt, creator = originalKeeper.fullName,
-        icon = keepImage.map(_.imagePath.getUrl(s3ImageConfig)).getOrElse("No Image"))
+        icon = keepImage.map(_.get).map(_.imagePath.getUrl(s3ImageConfig)).getOrElse(""))
     }
 
     val (libImage, keeps) = db.readOnlyMaster { implicit session =>
-      val image = libraryImageRepo.getActiveForLibraryId(library.id.get)
-      val keeps = keepRepo.getKeepsFromLibrarySince(DateTime.now.withYear(2000), library.id.get, keepCountToDisplay)
-      (image.headOption.map(_.imagePath.getUrl(s3ImageConfig)).getOrElse("No Image"), keeps)
+      val image = libraryImageCommander.getBestImageForLibrary(library.id.get, ImageSize(100, 100))
+      val keeps = keepRepo.getByLibrary(libraryId = library.id.get, offset = 0, limit = keepCountToDisplay, excludeSet = Set(KeepStates.INACTIVE))
+      (image.map(_.imagePath.getUrl(s3ImageConfig)).getOrElse(""), keeps)
     }
     <rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:media="http://search.yahoo.com/mrss/" xmlns:atom="http://www.w3.org/2005/Atom">
       <channel>
         <title>{ library.name }</title>
         <link>{ feedUrl }</link>
-        <description>{ library.description }</description>
-        <image>
-          <url>{ libImage }</url>
-          <title>{ library.name }</title>
-          <link>{ feedUrl }</link>
-        </image>
+        <description>{ library.description }</description>{
+          if (libImage != "") {
+            <image>
+              <url>{ libImage }</url>
+              <title>{ library.name }</title>
+              <link>{ feedUrl }</link>
+            </image>
+          }
+        }
         <copyright>Copyright { currentDateTime.getYear }, FortyTwo Inc.</copyright>
         <atom:link ref="self" type="application/rss+xml" href={ feedUrl }/>
         <atom:link ref="hub" href="https://pubsubhubbub.appspot.com/"/>
