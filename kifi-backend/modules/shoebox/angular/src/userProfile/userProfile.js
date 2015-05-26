@@ -2,11 +2,21 @@
 
 angular.module('kifi')
 
+.constant('userProfilePageNames', {  // for tracking
+  own: 'OwnedLibraries',
+  following: 'FollowedLibraries',
+  invited: 'InvitedLibraries',
+  connections: 'Connections'
+})
+
 .controller('UserProfileCtrl', [
   '$scope', '$analytics', '$location', '$rootScope', '$state', '$window', 'profile',
-  'inviteService', 'originTrackingService', 'profileService', 'installService', 'modalService', 'initParams',
+  'inviteService', 'originTrackingService', 'profileService', 'installService',
+  'modalService', 'initParams', 'userProfilePageNames',
   function ($scope, $analytics, $location, $rootScope, $state, $window, profile,
-            inviteService, originTrackingService, profileService, installService, modalService, initParams) {
+            inviteService, originTrackingService, profileService, installService,
+            modalService, initParams, userProfilePageNames) {
+
     //
     // Internal functions.
     //
@@ -28,7 +38,9 @@ angular.module('kifi')
     }
 
     function setCurrentPageOrigin() {
-      $scope.currentPageOrigin = 'profilePage' + $scope.stateSuffixToTrackingName[$state.current.name.split('.').pop()];
+      var name = userProfilePageNames[$state.current.name.split('.').pop()];
+      $scope.currentPageName = name;
+      $scope.currentPageOrigin = 'profilePage' + name;
     }
 
     function trackPageView() {
@@ -50,19 +62,6 @@ angular.module('kifi')
 
       $analytics.eventTrack($rootScope.userLoggedIn ? 'user_clicked_page' : 'visitor_clicked_page', profileEventTrackAttributes);
     }
-
-
-    //
-    // Scope methods and data.
-    //
-
-    $scope.stateSuffixToTrackingName = {
-      own: 'OwnedLibraries',
-      following: 'FollowedLibraries',
-      invited: 'InvitedLibraries',
-      connections: 'Connections'
-    };
-
 
     //
     // Watches and listeners.
@@ -99,7 +98,7 @@ angular.module('kifi')
     $scope.viewingOwnProfile = profile.id === profileService.me.id;
     $scope.intent = initParams.getAndClear('intent');
 
-    if ($state.current.name.split('.').pop() === 'own' && profile.numLibraries === 0 && profile.numFollowedLibraries > 0) {
+    if ($state.current.name.slice(-4) === '.own' && profile.numLibraries === 0 && profile.numFollowedLibraries > 0) {
       $state.go('^.following', null, {location: 'replace'});
     } else {
       trackPageView();

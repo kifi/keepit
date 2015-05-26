@@ -3,10 +3,10 @@
 angular.module('kifi')
 
 .controller('UserProfileLibrariesCtrl', [
-  '$scope', '$rootScope', '$state', '$stateParams', '$timeout', '$location',
-  'routeService', 'profileService', 'userProfileActionService', 'libraryService', 'modalService', 'platformService', 'signupService',
-  function ($scope, $rootScope, $state, $stateParams, $timeout, $location,
-    routeService, profileService, userProfileActionService, libraryService, modalService, platformService, signupService) {
+  '$scope', '$rootScope', '$state', '$stateParams', '$timeout',
+  'profileService', 'userProfileActionService', 'modalService', 'userProfilePageNames',
+  function ($scope, $rootScope, $state, $stateParams, $timeout,
+            profileService, userProfileActionService, modalService, userProfilePageNames) {
     var username = $stateParams.username;
     var fetchPageSize = 12;
     var fetchPageNumber;
@@ -148,13 +148,30 @@ angular.module('kifi')
       });
     };
 
-    $scope.openModifyLibrary = function (library) {
+    $scope.trackLibraryNav = function (toLibraryType) {
+      $rootScope.$emit('trackUserProfileEvent', 'click', {
+        'action': 'clicked' + userProfilePageNames[toLibraryType]
+      });
+    };
+
+    resetAndFetchLibraries();
+  }
+])
+
+.directive('kfUserProfileLibraryCard', [
+  '$rootScope', '$location', 'libraryService', 'modalService', 'platformService', 'signupService',
+  function ($rootScope, $location, libraryService, modalService, platformService, signupService) {
+    // values that are the same for all cards that coexist at any one time
+    var currentPageName;
+    var currentPageOrigin;
+
+    function openModifyLibrary(library) {
       modalService.open({
         template: 'libraries/manageLibraryModal.tpl.html',
         modalData: {
           pane: 'manage',
           library: library,
-          currentPageOrigin: $scope.currentPageOrigin,
+          currentPageOrigin: currentPageOrigin,
           returnAction: function () {
             libraryService.getLibraryById(library.id, true).then(function (data) {
               _.assign(library, _.pick(data.library, 'name', 'slug', 'description', 'visibility', 'color', 'numFollowers', 'membership'));
@@ -164,9 +181,9 @@ angular.module('kifi')
           }
         }
       });
-    };
+    }
 
-    $scope.openFollowersList = function (lib) {
+    function openFollowersList(lib) {
       if (platformService.isSupportedMobilePlatform()) {
         return;
       }
@@ -175,12 +192,12 @@ angular.module('kifi')
         template: 'libraries/libraryFollowersModal.tpl.html',
         modalData: {
           library: lib,
-          currentPageOrigin: $scope.currentPageOrigin
+          currentPageOrigin: currentPageOrigin
         }
       });
-    };
+    }
 
-    $scope.onFollowButtonClick = function (lib, $event) {
+    function onFollowButtonClick(lib, $event) {
       if (platformService.isSupportedMobilePlatform()) {
         var url = $location.absUrl();
         platformService.goToAppOrStore(url + (url.indexOf('?') > 0 ? '&' : '?') + 'follow=true');
@@ -198,15 +215,10 @@ angular.module('kifi')
       })['finally'](function () {
         $event.target.disabled = false;
       });
-    };
+    }
 
-    $scope.trackLibraryNav = function (toLibraryType) {
-      $rootScope.$emit('trackUserProfileEvent', 'click', {
-        'action': 'clicked' + $scope.stateSuffixToTrackingName[toLibraryType]
-      });
-    };
 
-    $scope.trackUplCardClick = function (lib, subAction) {
+    function trackUplCardClick(lib, subAction) {
       $rootScope.$emit('trackUserProfileEvent', 'click', {
         action: 'clickedLibraryCard',
         subAction: subAction,
@@ -214,10 +226,29 @@ angular.module('kifi')
         libraryOwnerUserName: lib.owner.username,
         libraryId: lib.id,
         libraryOwnerUserId: lib.owner.id,
-        profileTab: $scope.stateSuffixToTrackingName[$scope.libraryType]
+        profileTab: currentPageName
       });
-    };
+    }
 
-    resetAndFetchLibraries();
+    return {
+      restrict: 'A',
+      replace: true,
+      scope: {
+        lib: '=kfUserProfileLibraryCard',
+        currentPageName: '@',
+        currentPageOrigin: '@'
+      },
+      templateUrl: 'userProfile/userProfileLibraryCard.tpl.html',
+      link: function (scope) {
+        // cheaper to stash than to bind functions that need them
+        currentPageName = scope.currentPageName;
+        currentPageOrigin = scope.currentPageOrigin;
+
+        scope.openModifyLibrary = openModifyLibrary;
+        scope.openFollowersList = openFollowersList;
+        scope.onFollowButtonClick = onFollowButtonClick;
+        scope.trackUplCardClick = trackUplCardClick;
+      }
+    };
   }
 ]);
