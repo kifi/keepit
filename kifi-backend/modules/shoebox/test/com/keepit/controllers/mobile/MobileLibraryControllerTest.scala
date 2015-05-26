@@ -199,7 +199,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
                 "membership":{
                   "access" : "owner",
                   "listed" : true,
-                  "subscription" : false
+                  "subscribed" : false
                 },
                 "invite":null
               },
@@ -257,7 +257,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
                  "membership":{
                    "access" : "owner",
                    "listed" : true,
-                   "subscription" : false
+                   "subscribed" : false
                  },
                  "invite" : null
                },

@@ -121,7 +121,8 @@ class MobileLibraryController @Inject() (
         k.copy(note = Hashtags.formatMobileNote(k.note, v1))
       })
 
-      val (membershipOpt, inviteOpt) = libraryCommander.createViewerInfo(userIdOpt, libraryId)
+      val membershipOpt = libraryCommander.getViewerMembershipInfo(userIdOpt, libraryId)
+      val inviteOpt = libraryCommander.getViewerInviteInfo(userIdOpt, libraryId)
       val accessStr = membershipOpt.map(_.access).getOrElse("none")
       val membershipJson = Json.toJson(membershipOpt)
       val inviteJson = Json.toJson(inviteOpt)
@@ -148,7 +149,9 @@ class MobileLibraryController @Inject() (
             val editedLibInfo = libInfo.copy(keeps = libInfo.keeps.map { k =>
               k.copy(note = Hashtags.formatMobileNote(k.note, v1))
             })
-            val (membershipOpt, inviteOpt) = libraryCommander.createViewerInfo(request.userIdOpt, library.id.get)
+
+            val membershipOpt = libraryCommander.getViewerMembershipInfo(request.userIdOpt, library.id.get)
+            val inviteOpt = libraryCommander.getViewerInviteInfo(request.userIdOpt, library.id.get)
             val accessStr = membershipOpt.map(_.access).getOrElse("none")
             val membershipJson = Json.toJson(membershipOpt)
             val inviteJson = Json.toJson(inviteOpt)
