@@ -280,7 +280,7 @@ angular.module('kifi')
 
     $rootScope.$emit('libraryOnPage', library);
 
-    if (!libraryService.isLibraryMainOrSecret(library) && library.access !== 'none') {
+    if (!libraryService.isLibraryMainOrSecret(library) && library.membership) {
       $rootScope.$emit('lastViewedLib', library);
     }
 
@@ -297,7 +297,7 @@ angular.module('kifi')
       if (initParams.getAndClear('install') === '1' && !installService.installedVersion) {
         showInstallModal();
       }
-      if (initParams.getAndClear('intent') === 'follow' && $scope.library.access === 'none') {
+      if (initParams.getAndClear('intent') === 'follow' && !$scope.library.membership) {
         libraryService.joinLibrary($scope.library.id);
       }
     });

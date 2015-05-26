@@ -61,8 +61,8 @@ angular.module('kifi')
           lib.absUrl = env.origin + lib.url;
           lib.isSystem = lib.kind.lastIndexOf('system_', 0) === 0;
           scope.hasCollaborators = lib.numCollaborators > 0;
-          scope.amOwner = lib.access === 'owner';
-          scope.amCollab = lib.access === 'read_write';
+          scope.amOwner = lib.membership && lib.membership.access === 'owner';
+          scope.amCollab = lib.membership && lib.membership.access === 'read_write';
           scope.collabsCanEdit = lib.whoCanInvite === 'collaborator';
 
           $timeout(function () {
@@ -104,8 +104,8 @@ angular.module('kifi')
         };
 
         scope.changeSubscription = function () {
-          libraryService.updateSubscriptionToLibrary(scope.library.id, !(scope.library.subscribed)).then(function() {
-            scope.library.subscribed = !(scope.library.subscribed);
+          libraryService.updateSubscriptionToLibrary(scope.library.id, !(scope.library.membership.subscribed)).then(function() {
+            scope.library.membership.subscribed = !(scope.library.membership.subscribed);
           })['catch'](modalService.openGenericErrorModal);
         };
 
@@ -507,7 +507,7 @@ angular.module('kifi')
         }
 
         scope.followingLibrary = function () {
-          return scope.library.access === 'read_only';
+          return scope.library.membership && scope.library.membership.access === 'read_only';
         };
 
         scope.followLibrary = function (btnJustClicked) {
@@ -634,9 +634,13 @@ angular.module('kifi')
           }),
           $rootScope.$on('libraryJoined', function (e, libraryId) {
             var lib = scope.library;
-            if (lib && libraryId === lib.id && lib.access === 'none') {
+            if (lib && libraryId === lib.id && !lib.membership) {
+              lib.membership = {
+                access: 'read_only',
+                listed: true,
+                subscribed: false
+              };
               scope.inviter = null;
-              lib.access = 'read_only';
               lib.numFollowers++;
               var me = profileService.me;
               if (!_.contains(lib.followers, {id: me.id})) {
@@ -646,8 +650,8 @@ angular.module('kifi')
           }),
           $rootScope.$on('libraryLeft', function (e, libraryId) {
             var lib = scope.library;
-            if (lib && libraryId === lib.id && lib.access !== 'none') {
-              lib.access = 'none';
+            if (lib && libraryId === lib.id && lib.membership) {
+              lib.membership = undefined;
               lib.numFollowers--;
               _.remove(lib.followers, {id: profileService.me.id});
             }

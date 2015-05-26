@@ -74,13 +74,13 @@ angular.module('kifi')
             description: scope.library.description,
             slug: scope.library.slug,
             visibility: scope.library.visibility,
-            listed: scope.library.listed,
+            listed: scope.library.membership.listed,
             color: colorNames[scope.library.color]
           }, true).then(function (resp) {
             libraryService.fetchLibraryInfos(true);
 
             var newLibrary = resp.data.library;
-            newLibrary.listed = resp.data.listed;
+            newLibrary.listed = resp.data.listed || (resp.data.library.membership && resp.data.library.membership.listed);
 
             scope.$error = {};
             submitting = false;
@@ -236,10 +236,12 @@ angular.module('kifi')
             'name': '',
             'description': '',
             'slug': '',
-
-            // By default, the create library form selects the 'published' visibility for a new library.
-            'visibility': 'published',
-            'listed': true
+            'visibility': 'published'
+          };
+          scope.library.membership = {
+            access: 'owner',
+            listed: true,
+            subscribed: false
           };
           scope.modalTitle = 'Create a library';
         }
