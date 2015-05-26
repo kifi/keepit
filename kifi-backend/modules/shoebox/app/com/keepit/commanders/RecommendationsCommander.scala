@@ -154,7 +154,10 @@ class RecommendationsCommander @Inject() (
         FullLibUpdatesRecoInfo(itemInfo = keepInfos)
       }
     }.map { keepInfoFuture =>
-      keepInfoFuture.map(Some(_))
+      keepInfoFuture.map { infos =>
+        if (infos.itemInfo.isEmpty) None
+        else Some(infos)
+      }
     }.getOrElse(Future.successful(None))
 
   }
