@@ -191,7 +191,7 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
                   "lastKept": ${lib2.createdAt.getMillis},
                   "listed": true,
                   "following":true,
-                  "membership":{"access":"owner","listed":true,"subscription":false},
+                  "membership":{"access":"owner","listed":true,"subscribed":false},
                   "modifiedAt":${lib2.updatedAt.getMillis}
                 },
                 {
@@ -218,7 +218,7 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
                   "lastKept": ${lib1.createdAt.getMillis},
                   "listed": true,
                   "following":true,
-                  "membership":{"access":"owner","listed":true,"subscription":false},
+                  "membership":{"access":"owner","listed":true,"subscribed":false},
                   "modifiedAt":${lib1.updatedAt.getMillis}
                 }
               ]

@@ -63,7 +63,7 @@ object LibraryMembership {
   )(LibraryMembership.apply, unlift(LibraryMembership.unapply))
 }
 
-@json case class LibraryMembershipInfo(access: String, listed: Boolean, subscription: Boolean)
+@json case class LibraryMembershipInfo(access: String, listed: Boolean, subscribed: Boolean)
 
 object LibraryMembershipInfo {
   def fromMembership(mem: LibraryMembership): LibraryMembershipInfo = {
