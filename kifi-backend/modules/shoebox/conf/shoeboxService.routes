@@ -977,5 +977,6 @@ GET     /:name/followers           @com.keepit.controllers.website.KifiSiteRoute
 GET     /:name/libraries           @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfUserFound(name: Username)
 GET     /:name/libraries/following @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfUserFound(name: Username)
 GET     /:name/libraries/invited   @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfUserIsSelf(name: Username)
+GET     /:name/:library/rss        @com.keepit.controllers.website.LibraryFeedController.libraryRSSFeed(name: Username, library, authToken: Option[String] = None)
 GET     /:name/:slug               @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfLibraryFound(name: Username, slug)
 GET     /:name/:slug/find          @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfLibraryFound(name: Username, slug)
