@@ -18,7 +18,6 @@ object RoverArticleImageSchedulingActor {
   val maxBatchSize = 30 // low to balance producer / consumer behavior *on leader* (SQS send / receive), increase if we don't care about leader as a consumer.
   val maxQueuedFor = 2 days // re-schedule image processing if it hasn't actually been completed after a while (increase if large backlog)
   val dueAfterRequestedWithin = 1 minute // schedule image processing if it hasn't been already 1 minute after a fetch (don't race with near-line calls, this recovers when they fail)
-  val fastFollowWindow = 1 hour
 }
 
 class RoverArticleImageSchedulingActor @Inject() (
@@ -26,7 +25,6 @@ class RoverArticleImageSchedulingActor @Inject() (
     airbrake: AirbrakeNotifier,
     fastFollowQueue: ArticleImageProcessingTaskQueue.FastFollow,
     catchUpQueue: ArticleImageProcessingTaskQueue.CatchUp,
-    clock: Clock,
     private implicit val executionContext: ExecutionContext) extends BatchProcessingActor[RoverArticleInfo](airbrake) with Logging {
 
   import RoverArticleImageSchedulingActor._
@@ -55,7 +53,7 @@ class RoverArticleImageSchedulingActor @Inject() (
   } imap { _ => () }
 
   private def getRelevantQueue(articleInfo: RoverArticleInfo): ArticleImageProcessingTaskQueue = {
-    val fetchedAfter = clock.now minusSeconds fastFollowWindow.toSeconds.toInt
-    if (articleInfo.lastFetchedAt.exists(_ isAfter fetchedAfter)) fastFollowQueue else catchUpQueue
+    if (articleInfo.lastImageProcessingVersion.isEmpty) fastFollowQueue
+    else catchUpQueue
   }
 }

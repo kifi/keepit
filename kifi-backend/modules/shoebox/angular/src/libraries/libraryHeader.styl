@@ -880,16 +880,20 @@ collabImageDiam2 = 3.6em
   padding-top: 1.8em
   text-align: center
 
-bottomBtnsRadius = 12px
-followBtnWidth = 10em
-subsBtnPct = 25%
+buttonHeight = 32px
+buttonFontSize = 13px
+buttonBorderRadius = 12px
+buttonSidePad = 15px
+followBtnWidth = 7.6em
 
 .kf-lh-follow-btn
 .kf-lh-unfollow-btn
 .kf-lh-buttons .library-share-button
+  height: buttonHeight
+  border-radius: buttonBorderRadius
   background-color: transparent
-  background-image: none
-  border-radius: bottomBtnsRadius
+  padding: 0 buttonSidePad
+  font-size: buttonFontSize
 
   &:hover
     background-color: alpha(#fff, .5)
@@ -904,61 +908,74 @@ subsBtnPct = 25%
   position: relative // for .kf-lh-fbc
 
 .kf-lh-follow-btn
-  box-sizing: border-box
   width: followBtnWidth
-  line-height: 30px  // needed b/c of box-sizing change
-  border-color: followBlue
+  border: 1px solid followBlue
   color: followBlue
   position: relative  // to stack in front of its hover callout
+
+subsWidth = 32px
+subsDur = .4s
 
 .kf-lh-unfollow-btn-wrap
   display: inline-block
   vertical-align: top
-  width: followBtnWidth
+  border-radius: buttonBorderRadius
   font-size: 13px  // same size as .kf-lh-follow-btn (a .kf-button)
-  position: relative // for .kf-lh-subs-msg
+  position: relative // for .kf-lh-subs and .kf-lh-subs-msg
+  transform: translate(0)
+
+  &:not(.kf-overflowing)
+    overflow: hidden
 
 .kf-lh-unfollow-btn
-  border-radius: bottomBtnsRadius 0 0 bottomBtnsRadius
-  border-color: #20a1f1
+  width: followBtnWidth
+  border: 1px solid followBlue
+  background-color: transparent
+  background-image: none
   color: #20a1f1
-  box-sizing: border-box
-  line-height: 30px  // needed b/c of box-sizing change
-  width: 100% - subsBtnPct
+  line-height: 1
 
-  &::after
+  &::before
     content: 'Following'
-    padding-left: .3em
+    transition: transform subsDur
 
-  &:not(.kf-no-unfollow):hover
+  :not(.kf-no-unfollow):hover>&
     border-color: redColor
 
-    &::after
+    &::before
       content: 'Unfollow'
+      display: inline-block
+      transform: translate(subsWidth / -2.5)  // .5 fudge factor compensates for lack of rounded corners on right
       color: redColor
 
 .kf-lh-subs-btn
-  box-sizing: border-box
-  width: subsBtnPct
-  border-radius: 0 bottomBtnsRadius bottomBtnsRadius 0
-  border-color: transparent
+  position: absolute
+  top: 0
+  right: 0
+  bottom: 0
+  width: subsWidth
+  border: 0
+  border-radius: 0 buttonBorderRadius buttonBorderRadius 0
   background-color: followBlue
   background-position: right 0.64em center
   background-size: 1.1em 1.01em
   background-repeat: no-repeat
   padding: 0
+  transition: transform subsDur
+  transform: translate(32px)
+
+  :not(.kf-no-unfollow):hover>&
+    transform: none
+    background-color: redColor
+
+    &:hover
+      background-color: tint(redColor, 5%)
+
+      &:active
+        background-color: shade(redColor, 2%)
 
   &.svg-notification-off-white
     background-position: right 0.62em center
-
-  &:hover
-    background-color: tint(followBlue, 5%)
-
-    &:active
-      background-color: shade(followBlue, 2%)
-
-  :not(.kf-no-unfollow):hover+&
-    background-color: redColor
 
 .kf-lh-subs-msg
   position: absolute

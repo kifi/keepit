@@ -148,8 +148,12 @@ class LibraryController @Inject() (
     }
   }
 
-  def getLibrarySummariesByUser = (UserAction).async { request =>
-    val (libsWithMemberships, libsWithAllInvites) = libraryCommander.getLibrariesByUser(request.userId)
+  def getLibrarySummariesByUser = UserAction.async { request =>
+    val (tooManyLibsWithMemberships, libsWithAllInvites) = libraryCommander.getLibrariesByUser(request.userId)
+
+    // TODO: filter out followed libraries at database level
+    val libsWithMemberships = tooManyLibsWithMemberships.filter(l => LibraryAccess.collaborativePermissions.contains(l._1.access))
+
     val libsWithInvites = for ((lib, invites) <- libsWithAllInvites.groupBy(_._2).mapValues(_.map(_._1))) yield {
       (invites.sorted.last, lib) // only show one invite per library - the one with highest access
     }
@@ -179,10 +183,8 @@ class LibraryController @Inject() (
       libInfosWithMemberships <- libInfosWithMembershipsF
       libInfosWithInvites <- libInfosWithInvitesF
     } yield {
-      val (ownWithMemberships, followingWithMemberships) = libInfosWithMemberships.partition(l => LibraryAccess.collaborativePermissions.contains(l._2.access))
       Ok(Json.obj(
-        "libraries" -> ownWithMemberships.map(libInfoToJsonWithLastViewed),
-        "following" -> followingWithMemberships.map(libInfoToJsonWithLastViewed),
+        "libraries" -> libInfosWithMemberships.map(libInfoToJsonWithLastViewed),
         "invited" -> libInfosWithInvites.map(pair => Json.toJson(pair._1))
       ))
     }
