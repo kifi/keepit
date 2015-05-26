@@ -40,7 +40,7 @@ class FeedCommander @Inject() (
 
   final case class RssItem(title: String, description: String, link: String, guid: String, pubDate: DateTime, creator: String, icon: String)
 
-  private def rssItems[T](items: Seq[T])(implicit type2RssItem: T => RssItem): Seq[Elem] = {
+  private def rssItems(items: Seq[RssItem]): Seq[Elem] = {
     items map { item =>
       <item>
         <title>{ item.title }</title>
@@ -59,17 +59,6 @@ class FeedCommander @Inject() (
 
   def libraryFeed(feedUrl: String, library: Library): Elem = {
     val keepCountToDisplay = 10
-
-    implicit def convert(keep: Keep): RssItem = {
-      val (keepImage, originalKeeper) = db.readOnlyMaster { implicit s =>
-        val image = keepImageCommander.getBestImageForKeep(keep.id.get, ScaleImageRequest(ImageSize(100, 100)))
-        (image, userRepo.getNoCache(keep.originalKeeperId.getOrElse(keep.userId)))
-      }
-
-      RssItem(title = keep.title.getOrElse(""), description = keep.note.getOrElse(""), link = keep.url,
-        guid = keep.externalId.id, pubDate = keep.keptAt, creator = originalKeeper.fullName,
-        icon = keepImage.map(_.get).map(_.imagePath.getUrl(s3ImageConfig)).getOrElse(""))
-    }
 
     val (libImage, keeps) = db.readOnlyMaster { implicit session =>
       val image = libraryImageCommander.getBestImageForLibrary(library.id.get, ImageSize(100, 100))
@@ -92,7 +81,19 @@ class FeedCommander @Inject() (
         <copyright>Copyright { currentDateTime.getYear }, FortyTwo Inc.</copyright>
         <atom:link ref="self" type="application/rss+xml" href={ feedUrl }/>
         <atom:link ref="hub" href="https://pubsubhubbub.appspot.com/"/>
-        { rssItems(keeps) }{ /* License asking for attribution */ }
+        {
+          def convertKeep(keep: Keep): RssItem = {
+            val (keepImage, originalKeeper) = db.readOnlyMaster { implicit s =>
+              val image = keepImageCommander.getBestImageForKeep(keep.id.get, ScaleImageRequest(ImageSize(100, 100)))
+              (image, userRepo.getNoCache(keep.originalKeeperId.getOrElse(keep.userId)))
+            }
+
+            RssItem(title = keep.title.getOrElse(""), description = keep.note.getOrElse(""), link = keep.url,
+              guid = keep.externalId.id, pubDate = keep.keptAt, creator = originalKeeper.fullName,
+              icon = keepImage.map(_.get).map(_.imagePath.getUrl(s3ImageConfig)).getOrElse(""))
+          }
+          rssItems(keeps map convertKeep)
+        }{ /* License asking for attribution */ }
       </channel>
     </rss>
   }
