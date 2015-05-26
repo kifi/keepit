@@ -8,7 +8,6 @@ import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.common.time._
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.model._
-import com.keepit.scraper.{ FakeScrapeSchedulerModule, FakeScrapeSchedulerConfigModule }
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.{ FakeShoeboxServiceModule, FakeKeepImportsModule }
 import com.keepit.test.ShoeboxTestInjector
@@ -25,7 +24,6 @@ class FeedCommanderTest extends Specification with ShoeboxTestInjector {
   val modules = Seq(
     FakeABookServiceClientModule(),
     FakeSocialGraphModule(),
-    FakeScrapeSchedulerModule(),
     FakeShoeboxServiceModule()
   )
 

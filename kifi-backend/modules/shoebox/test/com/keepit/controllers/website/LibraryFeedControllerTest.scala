@@ -8,7 +8,6 @@ import com.keepit.common.mail.EmailAddress
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.time._
 import com.keepit.model._
-import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.test.ShoeboxTestInjector
 import org.joda.time.DateTime
@@ -24,7 +23,6 @@ class LibraryFeedControllerTest extends Specification with ShoeboxTestInjector {
   val modules = Seq(
     FakeABookServiceClientModule(),
     FakeSocialGraphModule(),
-    FakeScrapeSchedulerModule(),
     FakeShoeboxServiceModule()
   )
 

@@ -101,28 +101,6 @@ class KifiSiteRouter @Inject() (
     }
   }
 
-  def serveRSSFeedIfLibraryFound(username: Username, librarySlug: String, authToken: Option[String]) = WebAppPage { implicit request =>
-    lookupUsername(username) flatMap {
-      case (user, userRedirectStatusOpt) =>
-        libraryCommander.getLibraryBySlugOrAlias(user.id.get, LibrarySlug(librarySlug)) map {
-          case (library, isLibraryAlias) =>
-            if (library.slug.value != librarySlug || userRedirectStatusOpt.isDefined) { // library moved
-              val uri = Library.formatLibraryPathUrlEncoded(user.username, library.slug) + dropPathSegment(dropPathSegment(request.uri))
-              val status = if (!isLibraryAlias || userRedirectStatusOpt.contains(303)) 303 else 301
-              Redirect(uri, status)
-            } else if (experimentCommander.userHasExperiment(library.ownerId, ExperimentType.LIBRARY_RSS_FEED) &&
-              libraryCommander.canViewLibrary(request.userOpt.flatMap(_.id), library, authToken)) {
-              Result(
-                header = ResponseHeader(200, Map(CONTENT_TYPE -> "application/rss+xml")),
-                body = feedCommander.wrap(feedCommander.libraryFeed(applicationConfig.applicationBaseUrl + request.uri, library))
-              )
-            } else {
-              notFound(request)
-            }
-        }
-    } getOrElse notFound(request)
-  }
-
   def serveWebAppIfLibraryFound(username: Username, slug: String) = WebAppPage { implicit request =>
     lookupUsername(username) flatMap {
       case (user, userRedirectStatusOpt) =>
