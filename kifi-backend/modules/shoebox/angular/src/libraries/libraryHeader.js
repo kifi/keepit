@@ -635,7 +635,6 @@ angular.module('kifi')
           $rootScope.$on('libraryJoined', function (e, libraryId) {
             var lib = scope.library;
             if (lib && libraryId === lib.id && !lib.membership) {
-              (lib.invite || {}).actedOn = true;
               lib.membership = {
                 access: 'read_only',
                 listed: true,
