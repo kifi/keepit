@@ -50,9 +50,8 @@ class RoverArticleFetchingActor @Inject() (
     shouldFetch(articleInfo) match {
       case false => Future.successful(())
       case true => {
-        val isRefresh = articleInfo.latestVersion.isDefined
         articleCommander.fetchAndPersist(articleInfo) imap { fetched =>
-          if (fetched.isDefined && !isRefresh) {
+          if (fetched.isDefined && articleInfo.lastImageProcessingVersion.isEmpty) {
             SafeFuture { imageProcessingCommander.processArticleImagesAsap(articleInfo.id.toSet) }
           }
           ()
@@ -62,5 +61,4 @@ class RoverArticleFetchingActor @Inject() (
   } andThen { case _ => task.consume() } // failures are handled and persisted to the database, always consume
 
   private def shouldFetch(info: RoverArticleInfo) = info.isActive && info.lastFetchingAt.isDefined
-
 }
