@@ -2,13 +2,11 @@ package com.keepit.rover.manager
 
 import com.google.inject.Inject
 import com.keepit.common.amazon.AmazonInstanceInfo
-import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.rover.article.fetcher.ArticleFetcherProvider
-import com.keepit.rover.article.{ Article, EmbedlyArticle }
 import com.keepit.rover.image.ImageCommander
-import com.keepit.rover.model.{ ArticleKey, RoverArticleInfo, ArticleInfoRepo }
+import com.keepit.rover.model.{ RoverArticleInfo, ArticleInfoRepo }
 import com.keepit.rover.store.RoverArticleStore
 import com.kifi.franz.SQSMessage
 import scala.concurrent.duration._
