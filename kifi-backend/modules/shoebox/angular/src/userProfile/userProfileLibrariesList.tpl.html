@@ -35,7 +35,7 @@
       </a>
     </div>
     <button ng-class="{'kf-upl-card-follow': true, 'kf-following': lib.following}" ng-if="lib.owner.id !== me.id" ng-click="onFollowButtonClick(lib, $event); trackUplCardClick(lib, 'clickedLibraryFollowButton')"></button>
-    <div class="kf-upl-card-foot" ng-switch="profile.id === me.id && lib.visibility === 'published' && lib.owner.id === me.id && !lib.listed ? 'unlisted' : lib.followers.length ? 'followers' : lib.lastKept ? 'updated' : ''">
+    <div class="kf-upl-card-foot" ng-switch="profile.id === me.id && lib.visibility === 'published' && lib.owner.id === me.id && !(lib.membership && lib.membership.listed) ? 'unlisted' : lib.followers.length ? 'followers' : lib.lastKept ? 'updated' : ''">
       <div class="kf-upl-followers" ng-switch-when="followers">
         <a href="{{user|profileUrl}}" class="kf-upl-follower" ng-repeat="user in lib.followers" kf-track-origin="{{currentPageOrigin}}/follower" ng-click="trackUplCardClick(lib, 'clickedLibraryFollowersFace')"
            ng-attr-style="background-image:url({{user | pic:100}})"></a>

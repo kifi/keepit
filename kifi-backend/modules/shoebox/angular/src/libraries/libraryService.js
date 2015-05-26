@@ -16,9 +16,9 @@ angular.module('kifi')
     function standarizeMembershipInfo(resp) {
       if (!_.isObject(resp.library.membership)) {
         resp.library.membership = {
-          listed: resp.library.listed,
-          access: resp.library.access,
-          subscribed : resp.library.subscribed
+          listed: resp.library.listed || resp.listed,
+          access: resp.library.access || resp.membership,
+          subscribed : resp.library.subscribed || resp.subscribedToUpdates
         };
         if (!resp.library.membership.access || resp.library.membership.access === 'none') {
           resp.library.membership = undefined;
@@ -28,6 +28,7 @@ angular.module('kifi')
       resp.access = undefined;
       resp.listed = undefined;
       resp.subscribed = undefined;
+      resp.subscribedToUpdates = undefined;
       resp.membership = undefined;
       return resp;
     }
