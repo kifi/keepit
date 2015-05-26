@@ -30,6 +30,7 @@ class RoverFetchSchedulingActor @Inject() (
   protected def nextBatch: Future[Seq[RoverArticleInfo]] = {
     SafeFuture {
       log.info(s"Queuing up to $maxBatchSize article fetch tasks...")
+      Thread.sleep(2000)
       articleCommander.getRipeForFetching(maxBatchSize, maxQueuedFor)
     }
   }
