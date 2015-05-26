@@ -674,11 +674,12 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
           (user1, user2)
         }
         val email = Await.result(sender.sendToUser(user1.id.get, Some(toEmail)), Duration(5, "seconds"))
-
+        val senderInfo = GratificationEmailSender.senderInfo
         val html = email.htmlBody.value
         html must contain("Hey Clark,")
         html must contain("Bruce Wayne")
         html must contain("Favorite Comic Books")
+        html must contain(s"${senderInfo.firstName}, ${senderInfo.title} at Kifi")
         html must not contain ("0 views")
         html must not contain ("0 followers")
         html must not contain ("0 connections")
