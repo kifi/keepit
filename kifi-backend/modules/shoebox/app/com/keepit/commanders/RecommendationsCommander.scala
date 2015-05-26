@@ -141,7 +141,7 @@ class RecommendationsCommander @Inject() (
   def maybeUpdatesFromFollowedLibraries(userId: Id[User]): Future[Option[FullLibUpdatesRecoInfo]] = {
     val keepsOpt: Option[Seq[Keep]] = db.readWrite { implicit session =>
       val lastSeen = userValueRepo.getValue(userId, UserValues.libraryUpdatesLastSeen)
-      if (lastSeen.isBefore(currentDateTime.minusDays(1))) {
+      if (lastSeen.isBefore(currentDateTime.minusHours(12))) {
         userValueRepo.setValue(userId, UserValueName.UPDATED_LIBRARIES_LAST_SEEN, currentDateTime)
         Some(keepRepo.getRecentKeepsFromFollowedLibraries(userId, 20))
       } else {
