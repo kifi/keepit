@@ -238,8 +238,12 @@ angular.module('kifi')
             'slug': '',
 
             // By default, the create library form selects the 'published' visibility for a new library.
-            'visibility': 'published',
-            'listed': true
+            'visibility': 'published'
+          };
+          scope.library.membership = {
+            access: 'owner',
+            listed: true,
+            subscribed: false
           };
           scope.modalTitle = 'Create a library';
         }
