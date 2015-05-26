@@ -236,7 +236,8 @@ angular.module('kifi')
       scope: {
         lib: '=kfUserProfileLibraryCard',
         currentPageName: '@',
-        currentPageOrigin: '@'
+        currentPageOrigin: '@',
+        libraryType: '@'
       },
       templateUrl: 'userProfile/userProfileLibraryCard.tpl.html',
       link: function (scope) {
