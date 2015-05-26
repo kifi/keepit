@@ -10,6 +10,7 @@ import com.keepit.curator.model._
 import com.keepit.common.db.slick.Database
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.domain.DomainToNameMapper
+import com.keepit.common.time._
 
 import com.google.inject.Inject
 import com.keepit.rover.RoverServiceClient
@@ -32,6 +33,7 @@ class RecommendationsCommander @Inject() (
     basicUserRepo: BasicUserRepo,
     keepRepo: KeepRepo,
     keepDecorator: KeepDecorator,
+    userValueRepo: UserValueRepo,
     implicit val defaultContext: ExecutionContext,
     implicit val publicIdConfig: PublicIdConfiguration,
     implicit val imageConfig: S3ImageConfig,
@@ -136,14 +138,27 @@ class RecommendationsCommander @Inject() (
     }
   }
 
-  def updatesFromFollowedLibraries(userId: Id[User]): Future[FullLibUpdatesRecoInfo] = {
-    val keeps = db.readOnlyReplica { implicit session =>
-      keepRepo.getRecentKeepsFromFollowedLibraries(userId, 20)
+  def maybeUpdatesFromFollowedLibraries(userId: Id[User]): Future[Option[FullLibUpdatesRecoInfo]] = {
+    val keepsOpt: Option[Seq[Keep]] = db.readWrite { implicit session =>
+      val lastSeen = userValueRepo.getValue(userId, UserValues.libraryUpdatesLastSeen)
+      if (lastSeen.isBefore(currentDateTime.minusHours(12))) {
+        userValueRepo.setValue(userId, UserValueName.UPDATED_LIBRARIES_LAST_SEEN, currentDateTime)
+        Some(keepRepo.getRecentKeepsFromFollowedLibraries(userId, 20))
+      } else {
+        None
+      }
     }
 
-    keepDecorator.decorateKeepsIntoKeepInfos(Some(userId), false, keeps, ProcessedImageSize.Large.idealSize, true).map { keepInfos =>
-      FullLibUpdatesRecoInfo(itemInfo = keepInfos)
-    }
+    keepsOpt.map { keeps =>
+      keepDecorator.decorateKeepsIntoKeepInfos(Some(userId), false, keeps, ProcessedImageSize.Large.idealSize, true).map { keepInfos =>
+        FullLibUpdatesRecoInfo(itemInfo = keepInfos)
+      }
+    }.map { keepInfoFuture =>
+      keepInfoFuture.map { infos =>
+        if (infos.itemInfo.isEmpty) None
+        else Some(infos)
+      }
+    }.getOrElse(Future.successful(None))
 
   }
 

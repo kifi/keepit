@@ -114,12 +114,12 @@ class MobileRecommendationsController @Inject() (
 
     val uriRecosF = commander.topRecos(request.userId, getRecommendationSource(request), RecommendationSubSource.RecommendationsFeed, req.uriContext.isDefined, req.recencyWeight, context = req.uriContext)
     val libRecosF = commander.topPublicLibraryRecos(request.userId, libCnt, getRecommendationSource(request), RecommendationSubSource.RecommendationsFeed, context = req.libContext)
-    val libUpdatesF = commander.updatesFromFollowedLibraries(request.userId)
+    val libUpdatesF = commander.maybeUpdatesFromFollowedLibraries(request.userId)
 
-    for (libs <- libRecosF; uris <- uriRecosF; libUpdates <- libUpdatesF) yield {
+    for (libs <- libRecosF; uris <- uriRecosF; libUpdatesOpt <- libUpdatesF) yield {
       val FullUriRecoResults(urisReco, newUrisContext) = uris
       val FullLibRecoResults(libsReco, newLibsContext) = libs
-      val recos = libUpdates +: mix(urisReco, libsReco)
+      val recos = libUpdatesOpt.map { _ +: mix(urisReco, libsReco) }.getOrElse(mix(urisReco, libsReco))
       val (goodUriContext, goodLibContext) = sanitizeContext(newUrisContext, newLibsContext)
 
       Ok(Json.obj("recos" -> recos, "uctx" -> goodUriContext, "lctx" -> goodLibContext))
