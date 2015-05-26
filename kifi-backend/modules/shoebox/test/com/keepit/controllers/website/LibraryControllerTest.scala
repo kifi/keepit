@@ -525,25 +525,6 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                   |"lastViewed":${Json.toJson(t2)(internalTime.DateTimeJsonLongFormat)}
                 |}
               |],
-            |"following":
-              |[
-                |{
-                  |"id":"${pubId3.id}",
-                  |"name":"Library3",
-                  |"visibility":"discoverable",
-                  |"url":"/bhsu/lib3",
-                  |"owner":{
-                  |  "id":"${basicUser2.externalId}",
-                  |  "firstName":"${basicUser2.firstName}",
-                  |  "lastName":"${basicUser2.lastName}",
-                  |  "pictureName":"${basicUser2.pictureName}",
-                  |  "username":"${basicUser2.username.value}"
-                  |  },
-                  |"numKeeps":0,
-                  |"numFollowers":1,
-                  |"kind":"user_created"
-                |}
-              |],
               |"invited":
               | [
                 | {
