@@ -1,4 +1,5 @@
 @(userId: Id[User],
+senderInfo: com.keepit.commanders.emails.GratificationEmailSender.SenderInfo,
 libViews: com.keepit.commanders.emails.GratificationEmailSender.SortedLibraryCountData,
 libFollowers: com.keepit.commanders.emails.GratificationEmailSender.SortedLibraryCountData,
 newConnections: Seq[Id[User]]
@@ -50,7 +51,7 @@ We at Kifi hope you're having a great week.
 }
 
 <p>Cheers,<br>
-Cam<br>
-<a href="@htmlUrl("www.kifi.com/cam?", "gratCamProf", true)">www.kifi.com/cam</a></p>
+@senderInfo.firstName, @senderInfo.title at Kifi<br>
+<a href="@htmlUrl(baseUrl + senderInfo.path + "?", "gratSenderProf", true)">www.kifi.com@senderInfo.path</a></p>
 </body>
 </html>
