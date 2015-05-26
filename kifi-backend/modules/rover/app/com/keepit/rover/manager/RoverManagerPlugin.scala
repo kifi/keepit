@@ -28,7 +28,7 @@ class RoverManagerPluginImpl @Inject() (
 
   override def onStart(): Unit = {
     scheduleTaskOnOneMachine(ingestionActor.system, 250 seconds, 2 minute, ingestionActor.ref, IfYouCouldJustGoAhead, "NormalizedURI Ingestion")
-    scheduleTaskOnOneMachine(fetchSchedulingActor.system, 250 seconds, 8 minute, fetchSchedulingActor.ref, IfYouCouldJustGoAhead, "Fetch Scheduling")
+    scheduleTaskOnLeader(fetchSchedulingActor.system, 300 seconds, 8 minute, fetchSchedulingActor.ref, IfYouCouldJustGoAhead)
     scheduleTaskOnAllMachines(fetchingActor.system, 250 seconds, 5 minute, fetchingActor.ref, IfYouCouldJustGoAhead)
     scheduleTaskOnOneMachine(imageSchedulingActor.system, 250 seconds, 5 minute, imageSchedulingActor.ref, IfYouCouldJustGoAhead, "ArticleImage Scheduling")
     scheduleTaskOnAllMachines(imageProcessingActor.system, 300 seconds, 5 minute, imageProcessingActor.ref, IfYouCouldJustGoAhead)
