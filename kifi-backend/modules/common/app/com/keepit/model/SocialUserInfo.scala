@@ -89,12 +89,14 @@ object SocialUserBasicInfo {
   implicit val format = Format[SocialUserBasicInfo](
     __.read[Seq[JsValue]].map {
       case Seq(JsNumber(id), JsNumber(userId), JsString(fullName), JsString(pictureUrl), JsString(socialId), JsString(networkType)) =>
+        val trimmedSocialId = socialId.trim
+        if (trimmedSocialId.isEmpty) throw new Exception(s"empty social id for id $id userId $userId fullNme $fullName network $networkType")
         SocialUserBasicInfo(
           Id[SocialUserInfo](id.toLong),
           Some(userId).filter(_ != 0).map(id => Id[User](id.toLong)),
           fullName,
           Some(pictureUrl).filterNot(_.isEmpty),
-          SocialId(socialId),
+          SocialId(trimmedSocialId),
           SocialNetworkType(networkType))
     },
     new Writes[SocialUserBasicInfo] {
@@ -115,9 +117,10 @@ case class SocialUserInfoCountKey() extends Key[Int] {
 class SocialUserInfoCountCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends PrimitiveCacheImpl[SocialUserInfoCountKey, Int](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
+//todo(eishay): removed references to this cache, if it fixes problem with user reg, drop it all together.
 case class SocialUserInfoUserKey(userId: Id[User]) extends Key[Seq[SocialUserInfo]] {
   val namespace = "social_user_info_by_userid"
-  override val version = 7
+  override val version = 8
   def toKey(): String = userId.id.toString
 }
 
@@ -166,6 +169,7 @@ object SocialUserInfoStates {
   val FETCHED_USING_FRIEND = State[SocialUserInfo]("fetched_using_friend")
   val FETCHED_USING_SELF = State[SocialUserInfo]("fetched_using_self")
   val FETCH_FAIL = State[SocialUserInfo]("fetch_fail")
+  val USER_NOT_FOUND = State[SocialUserInfo]("user_not_found")
   val APP_NOT_AUTHORIZED = State[SocialUserInfo]("app_not_authorized")
   val INACTIVE = State[SocialUserInfo]("inactive")
 }

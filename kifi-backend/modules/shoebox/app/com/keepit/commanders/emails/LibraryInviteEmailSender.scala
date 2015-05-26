@@ -1,8 +1,8 @@
 package com.keepit.commanders.emails
 
 import com.google.inject.Inject
-import com.keepit.commanders.{ ProcessedImageSize, LibraryImageCommander }
-import com.keepit.model.LibraryInfo
+import com.keepit.commanders.{ LocalUserExperimentCommander, ProcessedImageSize, LibraryImageCommander }
+import com.keepit.model._
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
@@ -13,7 +13,6 @@ import com.keepit.common.mail.template.EmailToSend
 import com.keepit.common.mail.template.TemplateOptions._
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.mail.template.helpers.fullName
-import com.keepit.model.{ UserEmailAddressRepo, NotificationCategory, User, LibraryInvite, LibraryRepo, LibraryVisibility, KeepRepo }
 
 import scala.concurrent.{ ExecutionContext, Future }
 
@@ -25,10 +24,11 @@ class LibraryInviteEmailSender @Inject() (
     userEmailRepo: UserEmailAddressRepo,
     libraryRepo: LibraryRepo,
     libraryImageCommander: LibraryImageCommander,
+    localUserExperimentCommander: LocalUserExperimentCommander,
     implicit val executionContext: ExecutionContext,
     protected val airbrake: AirbrakeNotifier) extends Logging {
 
-  def sendInvite(invite: LibraryInvite)(implicit publicIdConfig: PublicIdConfiguration): Future[Option[ElectronicMail]] = {
+  def sendInvite(invite: LibraryInvite, isPlainEmail: Boolean = true)(implicit publicIdConfig: PublicIdConfiguration): Future[Option[ElectronicMail]] = {
     val toRecipientOpt: Option[Either[Id[User], EmailAddress]] =
       if (invite.userId.isDefined) Some(Left(invite.userId.get))
       else if (invite.emailAddress.isDefined) Some(Right(invite.emailAddress.get))
@@ -42,21 +42,29 @@ class LibraryInviteEmailSender @Inject() (
         val libImage = libraryImageCommander.getBestImageForLibrary(library.id.get, ProcessedImageSize.Large.idealSize)
         val libraryInfo = LibraryInfo.fromLibraryAndOwner(library, libImage, libOwner, Some(inviter))
         (library, libraryInfo)
+
       }
 
+      val usePlainEmail = isPlainEmail || invite.userId.map { id => localUserExperimentCommander.userHasExperiment(id, ExperimentType.PLAIN_EMAIL) }.getOrElse(false)
       val trimmedInviteMsg = invite.message map (_.trim) filter (_.nonEmpty)
       val fromUserId = invite.inviterId
       val fromAddress = db.readOnlyReplica { implicit session => userEmailRepo.getByUser(invite.inviterId).address }
-      val passPhrase = if (library.visibility == LibraryVisibility.PUBLISHED || toRecipient.isLeft) None else Some(invite.passPhrase)
       val authToken = invite.authToken
+      val subjectAction = if (invite.access == LibraryAccess.READ_ONLY) "follow" else "collaborate on"
       val emailToSend = EmailToSend(
         fromName = Some(Left(invite.inviterId)),
         from = SystemEmailAddress.NOTIFICATIONS,
-        subject = s"${fullName(fromUserId)} invited you to follow ${library.name}!",
+        subject = if (invite.access == LibraryAccess.READ_ONLY) s"An invitation to my library: ${libraryInfo.name}" else s"I want to collaborate with you on ${libraryInfo.name}",
         to = toRecipient,
         category = toRecipient.fold(_ => NotificationCategory.User.LIBRARY_INVITATION, _ => NotificationCategory.NonUser.LIBRARY_INVITATION),
-        htmlTemplate = views.html.email.libraryInvitation(toRecipient.left.toOption, fromUserId, trimmedInviteMsg, libraryInfo, passPhrase, authToken),
-        textTemplate = Some(views.html.email.libraryInvitationText(toRecipient.left.toOption, fromUserId, trimmedInviteMsg, libraryInfo, passPhrase, authToken)),
+        htmlTemplate = {
+          if (usePlainEmail) {
+            views.html.email.libraryInvitationPlain(toRecipient.left.toOption, fromUserId, trimmedInviteMsg, libraryInfo, authToken, invite.access)
+          } else {
+            views.html.email.libraryInvitation(toRecipient.left.toOption, fromUserId, trimmedInviteMsg, libraryInfo, authToken, invite.access)
+          }
+        },
+        textTemplate = Some(views.html.email.libraryInvitationText(toRecipient.left.toOption, fromUserId, trimmedInviteMsg, libraryInfo, authToken, invite.access)),
         templateOptions = Seq(CustomLayout).toMap,
         extraHeaders = Some(Map(PostOffice.Headers.REPLY_TO -> fromAddress)),
         campaign = Some("na"),

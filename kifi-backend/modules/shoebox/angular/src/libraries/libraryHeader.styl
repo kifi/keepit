@@ -83,6 +83,7 @@ invite-banner-orange = #ff7c3c
     border-width: 2em appSidePad2 0
 
 .kf-lh-followers
+.kf-lh-members
   position: absolute
   top: 0
   right: 0
@@ -125,6 +126,19 @@ followerPicDiam = 2.2em
 
   @media (min-width: 480px)
     display: block
+
+.kf-lh-view-members
+  padding: 3px 5px
+  border-radius: 5px
+  font-size: 12px
+  color: white
+  line-height: 25px
+  background: rgba(255,255,255,0.0)
+  outline: none
+  border: 1px solid white
+
+  &:hover
+    background: rgba(255,255,255,0.1)
 
 .kf-lh-followers-more
   display: inline-block
@@ -241,9 +255,51 @@ followerPicDiam = 2.2em
   &:hover:active
     opacity: 1
 
+.kf-lh-subscribe-btn-wrap
+  display: inline-block
+  vertical-align: top
+  position: relative // for .kf-lh-subscribed-msg
+  opacity: .7
+
+  &.for-owner
+    margin-left: 0.9em
+
+  &:hover
+    opacity: .85
+
+.kf-lh-subscribe-btn
+  width: 1.8em
+  height: 2em
+  border: 0
+  padding: 0
+  background-color: transparent
+  background-size: contain
+  background-repeat: no-repeat
+
+  &.svg-notification-off-white
+    background-position: right
+
+.kf-lh-subscribe-msg
+  position: absolute
+  left: 140%
+  top: 50%
+  transform: translateY(-50%)
+  padding: 2px 7px 3px
+  border-radius: 2px
+  background-color: #fff
+  font-size: 13px
+  line-height: 17px
+  color: #3e4955
+  white-space: nowrap
+  transition: opacity linear .1s, visibility .1s
+
+  :not(:hover)+&
+    opacity: 0
+    visibility: hidden
+
 .kf-lh-private
   display: inline-block
-  margin-left: 1em
+  margin-right: 1em
   line-height: 2em
   border-radius: 1em
   padding: 0 1em 0 2.3em
@@ -473,6 +529,7 @@ coverDragShadeHeight = 3em
       margin: 0 1em 0 1.5em
 
 .kf-lh-owner
+.kf-lh-collabs
   margin-top: 2em
 
   @media (min-width: 480px)
@@ -482,8 +539,20 @@ coverDragShadeHeight = 3em
     .kf-system-secret &
       display: none
 
+.kf-lh-owner-image-wrap
+  position: relative
+  display: block
+  margin: 0 5px
+
+.kf-lh-collab-image-wrap
+  position: relative
+  display: inline-block
+  margin: 0 5px
+
 ownerImageDiam1 = 8em
 ownerImageDiam2 = 3.6em
+collabImageDiam1 = 4.6em
+collabImageDiam2 = 3.6em
 
 .kf-lh-owner-image-a
   display: block
@@ -497,6 +566,18 @@ ownerImageDiam2 = 3.6em
     width: ownerImageDiam2
     margin-bottom: .4em
 
+.kf-lh-collab-image-a
+  display: block
+  margin: 0 auto 3.2em
+  width: collabImageDiam1
+
+  &:focus
+    outline-color: alpha(#fff,.5)
+
+  @media (min-width: 480px)
+    width: collabImageDiam2
+    margin-bottom: .4em
+
 .kf-lh-owner-image
   width: ownerImageDiam1
   height: ownerImageDiam1
@@ -508,11 +589,27 @@ ownerImageDiam2 = 3.6em
     width: ownerImageDiam2
     height: ownerImageDiam2
 
+.kf-lh-collab-image
+  width: collabImageDiam1
+  height: collabImageDiam1
+  border-radius: 50%
+  background-color: #555
+  box-shadow: 0 1px 5px rgba(0,0,0,.2)
+
+  @media (min-width: 480px)
+    width: collabImageDiam2
+    height: collabImageDiam2
+
 .kf-lh-owner-name-wrap
   display: inline-block
   position: relative
 
+.kf-lh-collab-name-wrap
+  display: block
+  position: relative
+
 .kf-lh-owner-name
+.kf-lh-collab-name
   color: #fff
   text-shadow: 1px 1px 1px rgba(0,0,0,.2)
   font-smoothing: auto
@@ -554,6 +651,70 @@ ownerImageDiam2 = 3.6em
 
     &:hover:not(:active)
       transform: scale(1.1)
+
+.kf-lh-more-collab
+  width: 3.4em
+  height: 3.4em
+  padding: 0px
+  margin-left: 5px
+  background: none
+  border-radius: 50%
+  border: 1px solid white
+  color: white
+  outline: none
+  vertical-align: top
+
+.kf-lh-add-collab-msg
+  position: absolute
+  top: 50%
+  transform: translateY(-50%)
+  width: 115px
+  margin-left: 35px
+  padding: 2px 7px 3px
+  border-radius: 2px
+  background-color: #fff
+  font-size: 13px
+  color: #3E4955
+  opacity: 0
+  visibility: hidden
+  transition: opacity linear 0.1s, visibility linear 0.1s
+
+.kf-lh-add-collab-button
+  position: relative
+  width: 3.4em
+  height: 3.4em
+  padding: 0px
+  margin-left: 5px
+  border: 1px dashed white
+  background: rgba(255, 255, 255, 0.2)
+  outline: none
+  border-radius: 50%
+  vertical-align: top
+  transition: opacity linear 0.1s
+
+  &:hover
+    background: rgba(255, 255, 255, 0.3)
+
+    & .kf-lh-add-collab-msg
+      opacity: 1
+      visibility: visible
+
+  &.next-to-owner
+    position: absolute
+    top: 0px
+    left: calc(50% + 35px)
+    transform: translateX(-10px) scale(0.7)
+    opacity: 0.6
+
+    &:hover
+      opacity: 1.0
+
+.kf-lh-add-collab-icon
+  width: 1.7em
+  height: 1em
+  margin: 0 auto
+  background-repeat: no-repeat
+  background-size: cover
 
 .kf-lh-desc-wrap-2
   position: relative
@@ -719,11 +880,20 @@ ownerImageDiam2 = 3.6em
   padding-top: 1.8em
   text-align: center
 
+buttonHeight = 32px
+buttonFontSize = 13px
+buttonBorderRadius = 12px
+buttonSidePad = 15px
+followBtnWidth = 7.6em
+
 .kf-lh-follow-btn
 .kf-lh-unfollow-btn
 .kf-lh-buttons .library-share-button
-  background-image: none
-  border-radius: 12px
+  height: buttonHeight
+  border-radius: buttonBorderRadius
+  background-color: transparent
+  padding: 0 buttonSidePad
+  font-size: buttonFontSize
 
   &:hover
     background-color: alpha(#fff, .5)
@@ -738,27 +908,92 @@ ownerImageDiam2 = 3.6em
   position: relative // for .kf-lh-fbc
 
 .kf-lh-follow-btn
-.kf-lh-unfollow-btn
-  width: 8em
-
-.kf-lh-follow-btn
-  border-color: #008aee
-  color: #008aee
+  width: followBtnWidth
+  border: 1px solid followBlue
+  color: followBlue
   position: relative  // to stack in front of its hover callout
 
+subsWidth = 32px
+subsDur = .4s
+
+.kf-lh-unfollow-btn-wrap
+  display: inline-block
+  vertical-align: top
+  border-radius: buttonBorderRadius
+  font-size: 13px  // same size as .kf-lh-follow-btn (a .kf-button)
+  position: relative // for .kf-lh-subs and .kf-lh-subs-msg
+  transform: translate(0)
+
+  &:not(.kf-overflowing)
+    overflow: hidden
+
 .kf-lh-unfollow-btn
-  border-color: #20a1f1
+  width: followBtnWidth
+  border: 1px solid followBlue
+  background-color: transparent
+  background-image: none
   color: #20a1f1
+  line-height: 1
 
-  &::after
+  &::before
     content: 'Following'
+    transition: transform subsDur
 
-  &:not(.kf-no-unfollow):hover
+  :not(.kf-no-unfollow):hover>&
     border-color: redColor
 
-    &::after
+    &::before
       content: 'Unfollow'
+      display: inline-block
+      transform: translate(subsWidth / -2.5)  // .5 fudge factor compensates for lack of rounded corners on right
       color: redColor
+
+.kf-lh-subs-btn
+  position: absolute
+  top: 0
+  right: 0
+  bottom: 0
+  width: subsWidth
+  border: 0
+  border-radius: 0 buttonBorderRadius buttonBorderRadius 0
+  background-color: followBlue
+  background-position: right 0.64em center
+  background-size: 1.1em 1.01em
+  background-repeat: no-repeat
+  padding: 0
+  transition: transform subsDur
+  transform: translate(32px)
+
+  :not(.kf-no-unfollow):hover>&
+    transform: none
+    background-color: redColor
+
+    &:hover
+      background-color: tint(redColor, 5%)
+
+      &:active
+        background-color: shade(redColor, 2%)
+
+  &.svg-notification-off-white
+    background-position: right 0.62em center
+
+.kf-lh-subs-msg
+  position: absolute
+  bottom: 120%
+  left: 50%
+  transform: translate(-50%)
+  padding: 2px 7px 3px
+  border-radius: 2px
+  background-color: #fff
+  color: #3e4955
+  font-size: 13px
+  white-space: nowrap
+  box-shadow: 0 1px 3px rgba(0,0,0,.2)
+  transition: opacity linear .1s, visibility .1s
+
+  :not(:hover)+&
+    opacity: 0
+    visibility: hidden
 
 .kf-lh-buttons
   .kf-library-share-search
@@ -767,8 +1002,8 @@ ownerImageDiam2 = 3.6em
     margin-left: 1em
 
   .library-share-button
-    border-color: #56b263
-    color: #56b263
+    border-color: accentGreen
+    color: accentGreen
     padding: 0 1.5em
 
     &>.kf-button-icon
@@ -785,7 +1020,7 @@ ownerImageDiam2 = 3.6em
   background-position: left center
   background-size: auto 15px
   background-repeat: no-repeat
-  color: #56b263
+  color: accentGreen
 
   &
   &:hover
@@ -796,20 +1031,11 @@ ownerImageDiam2 = 3.6em
     text-decoration: underline
 
 .kf-lh-buttons.kf-my-lib
-  box-sizing: border-box
-  max-width: appMaxWidth
+  max-width: 538px // matching max-width of .kf-keep
   margin: 0 auto
   border: solid transparent
   border-width: 0 appSidePad1
   text-align: right
 
-  @media (min-width: appSidePad2MinWidth)
-    border-width: 0 appSidePad2
-
-  @media (min-width: 720px)
+  @media (min-width: 796px)
     padding-right: 234px  // rightColWidth + colGapWidth
-
-  .library-share-button
-    &>.kf-button-icon
-      width: 26px
-      margin-right: 4px

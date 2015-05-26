@@ -3,26 +3,21 @@
 angular.module('kifi')
 
 .directive('kfYoutube', [
-
   function () {
-
-    function videoIdToSrc(videoId) {
-      return '//www.youtube.com/embed/' + videoId +
-        '?rel=0&theme=light&showinfo=0&disablekb=1&modestbranding=1&controls=1&hd=1&autoplay=1&autohide=1&color=white&iv_load_policy=3';
+    function imageEmbed(videoId) {
+      return [
+        '<div class="kf-youtube-img" style="background-image:url(//img.youtube.com/vi/',
+         videoId, '/hqdefault.jpg)" click-action="playedYoutubeVideo"></div>',
+        '<div class="kf-youtube-play" click-action="playedYoutubeVideo"></div>'
+      ].join('');
     }
 
-    function videoEmbed(src) {
-      return '<iframe width="100%" height="100%" src="' + src + '" frameborder="none" allowfullscreen="true" allowscriptaccess="always"/>';
-    }
-
-    function getVideoImage(videoId) {
-      return '//img.youtube.com/vi/' + videoId + '/hqdefault.jpg';
-    }
-
-    function imageEmbed(src) {
-      var videoImg = '<div class="kf-youtube-img" style="background-image:url(' + src + ')" click-action="playedYoutubeVideo"></div>';
-      var playImg = '<div class="kf-youtube-play" click-action="playedYoutubeVideo"></div>';
-      return videoImg + playImg;
+    function videoEmbed(videoId) {
+      return [
+        '<iframe class="kf-youtube-iframe" width="100%" height="100%" src="//www.youtube.com/embed/', videoId,
+        '?rel=0&theme=light&showinfo=0&disablekb=1&modestbranding=1&controls=1&hd=1&autoplay=1&autohide=1&color=white&iv_load_policy=3" ',
+        'frameborder="0" allowfullscreen="true" allowscriptaccess="always"></iframe>'
+      ].join('');
     }
 
     return {
@@ -31,30 +26,17 @@ angular.module('kifi')
       scope: {
         videoId: '='
       },
-      template:
-        '<div class="kf-youtube" ng-click="replaceWithVideo()"></div>',
+      template: '<div class="kf-youtube" ng-click="insertVideo()"></div>',
       link: function (scope, element) {
-
-        var lastId = null;
-
-        function updateSrc(videoId) {
-          if (lastId === videoId) {
-            return;
-          }
-          lastId = videoId;
-
-          if (videoId) {
-            element.html(imageEmbed(getVideoImage(videoId)));
-          }
-        }
-
-        scope.replaceWithVideo = function() {
-          element.html(videoEmbed(videoIdToSrc(lastId)));
+        scope.insertVideo = function() {
+          element.html(videoEmbed(scope.videoId)).addClass('kf-with-video');
         };
 
-        updateSrc(scope.videoId);
-
-        scope.$watch('videoId', updateSrc);
+        scope.$watch('videoId', function (videoId) {
+          if (videoId) {
+            element.html(imageEmbed(videoId)).removeClass('kf-with-video');
+          }
+        });
       }
     };
   }

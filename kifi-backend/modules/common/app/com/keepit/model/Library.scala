@@ -9,6 +9,7 @@ import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration, ModelWithPubl
 import com.keepit.common.db._
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.json
+import com.keepit.common.store.ImagePath
 import com.keepit.common.strings.UTF8
 import com.keepit.common.time._
 import com.keepit.model.view.LibraryMembershipView
@@ -41,7 +42,8 @@ case class Library(
     universalLink: String = RandomStringUtils.randomAlphanumeric(40),
     memberCount: Int,
     lastKept: Option[DateTime] = None,
-    keepCount: Int = 0) extends ModelWithPublicId[Library] with ModelWithState[Library] with ModelWithSeqNumber[Library] {
+    keepCount: Int = 0,
+    whoCanInvite: Option[LibraryInvitePermissions] = None) extends ModelWithPublicId[Library] with ModelWithState[Library] with ModelWithSeqNumber[Library] {
 
   def sanitizeForDelete(): Library = copy(
     name = RandomStringUtils.randomAlphanumeric(20),
@@ -56,6 +58,8 @@ case class Library(
     case (LibraryKind.SYSTEM_MAIN | LibraryKind.SYSTEM_SECRET) => true
     case _ => false
   }
+  val isPublished: Boolean = visibility == LibraryVisibility.PUBLISHED
+  val isSecret: Boolean = visibility == LibraryVisibility.SECRET
 }
 
 object Library extends ModelWithPublicIdCompanion[Library] {
@@ -85,8 +89,9 @@ object Library extends ModelWithPublicIdCompanion[Library] {
     memberCount: Int,
     universalLink: String,
     lastKept: Option[DateTime],
-    keepCount: Int) = {
-    Library(id, createdAt, updatedAt, getDisplayName(name, kind), ownerId, visibility, description, slug, color, state, seq, kind, universalLink, memberCount, lastKept, keepCount)
+    keepCount: Int,
+    whoCanInvite: Option[LibraryInvitePermissions]) = {
+    Library(id, createdAt, updatedAt, getDisplayName(name, kind), ownerId, visibility, description, slug, color, state, seq, kind, universalLink, memberCount, lastKept, keepCount, whoCanInvite)
   }
 
   def unapplyToDbRow(lib: Library) = {
@@ -106,7 +111,8 @@ object Library extends ModelWithPublicIdCompanion[Library] {
       lib.memberCount,
       lib.universalLink,
       lib.lastKept,
-      lib.keepCount)
+      lib.keepCount,
+      lib.whoCanInvite)
   }
 
   protected[this] val publicIdPrefix = "l"
@@ -128,7 +134,8 @@ object Library extends ModelWithPublicIdCompanion[Library] {
     (__ \ 'universalLink).format[String] and
     (__ \ 'memberCount).format[Int] and
     (__ \ 'lastKept).formatNullable[DateTime] and
-    (__ \ 'keepCount).format[Int]
+    (__ \ 'keepCount).format[Int] and
+    (__ \ 'whoCanInvite).formatNullable[LibraryInvitePermissions]
   )(Library.apply, unlift(Library.unapply))
 
   def isValidName(name: String): Boolean = {
@@ -261,7 +268,7 @@ object DetailedLibraryView {
 }
 
 case class BasicLibrary(id: PublicId[Library], name: String, path: String, visibility: LibraryVisibility, color: Option[LibraryColor]) {
-  def isSecret = (visibility == LibraryVisibility.SECRET)
+  def isSecret = visibility == LibraryVisibility.SECRET
 }
 
 object BasicLibrary {
@@ -271,10 +278,23 @@ object BasicLibrary {
   }
 }
 
+// Replaced by BasicLibraryDetails, please remove dependencies on this
 case class BasicLibraryStatistics(memberCount: Int, keepCount: Int)
 object BasicLibraryStatistics {
   implicit val format = Json.format[BasicLibraryStatistics]
 }
+
+// For service-to-Shoebox calls needing library metadata. Specialized for search's needs, ask search before changing.
+@json
+case class BasicLibraryDetails(
+  name: String,
+  slug: LibrarySlug,
+  color: Option[LibraryColor],
+  imageUrl: Option[String],
+  description: Option[String],
+  numFollowers: Int,
+  numCollaborators: Int,
+  keepCount: Int)
 
 sealed abstract class LibraryColor(val hex: String)
 object LibraryColor {

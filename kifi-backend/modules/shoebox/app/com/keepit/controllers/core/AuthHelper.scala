@@ -54,7 +54,7 @@ object AuthHelper {
 class AuthHelper @Inject() (
     db: Database,
     clock: Clock,
-    airbrakeNotifier: AirbrakeNotifier,
+    airbrake: AirbrakeNotifier,
     oauth1ProviderRegistry: OAuth1ProviderRegistry,
     oauth2ProviderRegistry: OAuth2ProviderRegistry,
     authCommander: AuthCommander,
@@ -186,7 +186,7 @@ class AuthHelper @Inject() (
       userValueRepo.save(UserValue(userId = userId, name = UserValueName.KIFI_CAMPAIGN_ID, value = kcid))
     }
   } catch {
-    case t: Throwable => airbrakeNotifier.notify(s"fail to save Kifi Campaign Id for user $userId where kcid = $kcid", t)
+    case t: Throwable => airbrake.notify(s"fail to save Kifi Campaign Id for user $userId where kcid = $kcid", t)
   }
 
   def finishSignup(user: User, emailAddress: EmailAddress, newIdentity: Identity, emailConfirmedAlready: Boolean, libraryPublicId: Option[PublicId[Library]], isFinalizedImmediately: Boolean)(implicit request: MaybeUserRequest[_]): Result = {
@@ -290,6 +290,9 @@ class AuthHelper @Inject() (
     require(request.identityOpt.isDefined, "A social identity should be available in order to finalize social account")
 
     val identity = request.identityOpt.get
+    if (identity.identityId.userId.trim.isEmpty) {
+      throw new Exception(s"empty social id for $identity joining library $libraryPublicId with $sfi")
+    }
     val inviteExtIdOpt: Option[ExternalId[Invitation]] = request.cookies.get("inv").flatMap(v => ExternalId.asOpt[Invitation](v.value))
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build
     val (user, emailPassIdentity) = authCommander.finalizeSocialAccount(sfi, identity, inviteExtIdOpt)
@@ -467,7 +470,7 @@ class AuthHelper @Inject() (
           case Success((token, pictureUrl)) =>
             Ok(Json.obj("token" -> token, "url" -> pictureUrl))
           case Failure(ex) =>
-            airbrakeNotifier.notify("Couldn't upload temporary picture (xhr direct) for $userInfo", ex)
+            airbrake.notify("Couldn't upload temporary picture (xhr direct) for $userInfo", ex)
             BadRequest(JsNumber(0))
         }
       case None => Forbidden(JsNumber(0))
@@ -482,7 +485,7 @@ class AuthHelper @Inject() (
             case Success((token, pictureUrl)) =>
               Ok(Json.obj("token" -> token, "url" -> pictureUrl))
             case Failure(ex) =>
-              airbrakeNotifier.notify(AirbrakeError(ex, Some("Couldn't upload temporary picture (form encoded)")))
+              airbrake.notify(AirbrakeError(ex, Some("Couldn't upload temporary picture (form encoded)")))
               BadRequest(JsNumber(0))
           }
         } getOrElse {
@@ -504,7 +507,7 @@ class AuthHelper @Inject() (
           val filledUser = SecureSocialAdaptor.toSocialUser(profileInfo, AuthenticationMethod.OAuth2)
           val longTermTokenInfoF = provider.exchangeLongTermToken(oauth2InfoOrig) recover {
             case t: Throwable =>
-              airbrakeNotifier.notify(s"[accessTokenSignup($providerName)] Caught Exception($t) during token exchange; token=${oauth2InfoOrig}; Cause:${t.getCause}; StackTrace: ${t.getStackTrace.mkString("", "\n", "\n")}")
+              airbrake.notify(s"[accessTokenSignup($providerName)] Caught Exception($t) during token exchange; token=${oauth2InfoOrig}; Cause:${t.getCause}; StackTrace: ${t.getStackTrace.mkString("", "\n", "\n")}")
               OAuth2TokenInfo.fromOAuth2Info(oauth2InfoOrig)
           }
           longTermTokenInfoF map { oauth2InfoNew =>
@@ -512,7 +515,7 @@ class AuthHelper @Inject() (
           }
         } recover {
           case t: Throwable =>
-            airbrakeNotifier.notify(s"[accessTokenSignup($providerName)] Caught Exception($t) during getUserProfileInfo; token=${oauth2InfoOrig}; Cause:${t.getCause}; StackTrace: ${t.getStackTrace.mkString("", "\n", "\n")}")
+            airbrake.notify(s"[accessTokenSignup($providerName)] Caught Exception($t) during getUserProfileInfo; token=${oauth2InfoOrig}; Cause:${t.getCause}; StackTrace: ${t.getStackTrace.mkString("", "\n", "\n")}")
             BadRequest(Json.obj("error" -> "invalid_token"))
         }
     }
@@ -529,7 +532,7 @@ class AuthHelper @Inject() (
           authCommander.signupWithTrustedSocialUser(providerName, filledUser.copy(oAuth1Info = Some(oauth1Info)), signUpUrl)
         } recover {
           case t: Throwable =>
-            airbrakeNotifier.notify(s"[accessTokenSignup($providerName)] Caught Exception($t) during getUserProfileInfo; token=${oauth1Info}; Cause:${t.getCause}; StackTrace: ${t.getStackTrace.mkString("", "\n", "\n")}")
+            airbrake.notify(s"[accessTokenSignup($providerName)] Caught Exception($t) during getUserProfileInfo; token=${oauth1Info}; Cause:${t.getCause}; StackTrace: ${t.getStackTrace.mkString("", "\n", "\n")}")
             BadRequest(Json.obj("error" -> "invalid_token"))
         }
     }

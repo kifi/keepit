@@ -17,7 +17,7 @@ case class UriRecommendation(
     userId: Id[User],
     masterScore: Float,
     allScores: UriScores,
-    delivered: Int = 0,
+    viewed: Int = 0,
     clicked: Int = 0,
     kept: Boolean = false,
     trashed: Boolean = false,

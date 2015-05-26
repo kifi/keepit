@@ -1,6 +1,8 @@
 package com.keepit.search
 
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.store.S3ImageConfig
+import com.keepit.rover.RoverServiceClient
 import com.keepit.search.engine.LibraryQualityEvaluator
 import com.keepit.search.test.SearchTestInjector
 import org.specs2.mutable._
@@ -24,10 +26,11 @@ class UriSearchCommanderTest extends Specification with SearchTestInjector with 
         val expectedUriToUserEdges = Seq(uris(0) -> Seq(users(0), users(1), users(2)), uris(1) -> Seq(users(1)), uris(2) -> Seq(users(2)), uris(3) -> Seq(users(3)))
         val allKeeps = saveBookmarksByURI(expectedUriToUserEdges)
 
-        val store = mkStore(uris)
-        val (shardedCollectionIndexer, indexer, userGraphIndexer, _, searchFactory, shardedKeepIndexer, libraryIndexer, libraryMembershipIndexer) = initIndexes(store)
-        indexer.update() === uris.size
-        Await.result((shardedKeepIndexer.asyncUpdate() zip libraryIndexer.asyncUpdate() zip libraryMembershipIndexer.asyncUpdate()), Duration(60, SECONDS))
+        val (shardedCollectionIndexer, shardedArticleIndexer, userGraphIndexer, _, searchFactory, shardedKeepIndexer, libraryIndexer, libraryMembershipIndexer) = initIndexes()
+
+        updateNow(shardedArticleIndexer)
+        updateNow(shardedKeepIndexer)
+        Await.result(libraryIndexer.asyncUpdate() zip libraryMembershipIndexer.asyncUpdate(), Duration(60, SECONDS))
 
         setConnections(Map(users(0).id.get -> Set(users(1).id.get)))
         userGraphIndexer.update()
@@ -49,7 +52,9 @@ class UriSearchCommanderTest extends Specification with SearchTestInjector with 
           inject[AirbrakeNotifier],
           inject[DistributedSearchServiceClient],
           inject[ShoeboxServiceClient],
-          inject[MonitoredAwait])
+          inject[RoverServiceClient],
+          inject[MonitoredAwait],
+          inject[S3ImageConfig])
 
         val res = searchCommander.search(
           userId = users(0).id.get,
@@ -65,7 +70,7 @@ class UriSearchCommanderTest extends Specification with SearchTestInjector with 
 
         res.myTotal === 1
         res.friendsTotal === 1
-        res.othersTotal === 2
+        // res.othersTotal === 2 todo(Léo): undefined / undeterministic behavior, see todo in UriSearchImpl line 141
 
         val expected = List( // without score, textScore, scoring
           Json.parse(s"""

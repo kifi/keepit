@@ -5,7 +5,8 @@
   followers: Seq[User],
   publicId: com.keepit.common.crypto.PublicId[Library],
   relatedLibs: Seq[Library],
-  suggestedSearches: String
+  suggestedSearches: String,
+  transfer: Boolean
 )(implicit request: com.keepit.common.controller.UserRequest[_])
 
 @admin(owner.firstName + " " + owner.lastName + "'s " + library.name, stylesheets = List("admin_library")) {
@@ -22,6 +23,17 @@
     <tr>
       <th>Owner</th><td><img src="@com.keepit.controllers.assets.routes.UserPictureController.get(100, owner.externalId)" height=25 width=25>@adminHelper.userDisplay(owner)</td>
     </tr>
+    @if(transfer) {
+    <tr>
+      <th>Transfer Ownership</th>
+      <td>
+        <form action="#" method="POST" class="transfer-ownership">
+          <input id="toUserId" type="text" name="toUserId" placeholder="User Id of new Owner">
+          <input type="submit" value="Change Owner">
+        </form>
+      </td>
+    </tr>
+    }
     <tr>
       <th>Description</th><td>@library.description</td>
     </tr>
@@ -111,6 +123,34 @@
 
     document.getElementById("edit_tc").addEventListener("click", startEdit, true);
     disableEdit(true)
+
+    @if(transfer) {
+      var transferring = false;
+      $('.transfer-ownership').on("submit", function() {
+        if (transferring) return false;
+        transferring = true;
+        var value = $('#toUserId').val();
+        $.post('@com.keepit.controllers.admin.routes.AdminLibraryController.updateLibraryOwner(library.id.get, library.ownerId, Id[User](-111L))'.replace('-111', value))
+        .done(function(data) {
+          alert("Library Owner Updated")
+          transferring = false;
+        }).fail(function(data) {
+          if (data.status == 408) {
+            // timeout
+            alert("Library transferring in progress");
+          } else if(data.status == 500) {
+            // internal server error
+            alert("An Internal Server Error has occurred - check the dev console for more information");
+            console.log(data);
+            transferring = false;
+          } else {
+            alert(data.responseText);
+            transferring = false;
+          }
+        });
+        return false;
+      });
+    }
 
     function disableEdit(disabled){
         if (disabled){

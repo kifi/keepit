@@ -29,7 +29,7 @@ class UriRecommendationRepoTest extends Specification with CuratorTestInjector w
 
           val rec1 = repo.getByUriAndUserId(Id[NormalizedURI](1), Id[User](42), None).get
 
-          rec1.delivered === 0
+          rec1.viewed === 0
           rec1.clicked === 1
           rec1.kept === false
           rec1.trashed === false
@@ -41,7 +41,7 @@ class UriRecommendationRepoTest extends Specification with CuratorTestInjector w
 
           val rec1Update = repo.getByUriAndUserId(Id[NormalizedURI](1), Id[User](42), None).get
 
-          rec1Update.delivered === 0
+          rec1Update.viewed === 0
           rec1Update.clicked === 1
           rec1Update.kept === false
           rec1Update.trashed === true
@@ -53,7 +53,7 @@ class UriRecommendationRepoTest extends Specification with CuratorTestInjector w
 
           val rec1Update2 = repo.getByUriAndUserId(Id[NormalizedURI](1), Id[User](42), None).get
 
-          rec1Update2.delivered === 0
+          rec1Update2.viewed === 0
           rec1Update2.clicked === 1
           rec1Update2.kept === true
           rec1Update2.trashed === true
@@ -65,7 +65,7 @@ class UriRecommendationRepoTest extends Specification with CuratorTestInjector w
 
           val rec1Update3 = repo.getByUriAndUserId(Id[NormalizedURI](1), Id[User](42), None).get
 
-          rec1Update3.delivered === 0
+          rec1Update3.viewed === 0
           rec1Update3.clicked === 1
           rec1Update3.kept === true
           rec1Update3.trashed === false
@@ -102,7 +102,7 @@ class UriRecommendationRepoTest extends Specification with CuratorTestInjector w
         db.readWrite { implicit session =>
           repo.incrementDeliveredCount(reco.id.get)
         }
-        db.readOnlyReplica { implicit session => repo.get(reco.id.get) }.delivered === 1
+        db.readOnlyReplica { implicit session => repo.get(reco.id.get) }.viewed === 1
       }
 
     }

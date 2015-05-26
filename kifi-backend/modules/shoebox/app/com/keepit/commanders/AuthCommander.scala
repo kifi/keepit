@@ -19,6 +19,7 @@ import com.keepit.controllers.core.{ AuthHelper }
 import com.keepit.heimdal._
 import com.keepit.model._
 import com.keepit.social.{ SocialId, SocialNetworks, SocialNetworkType, UserIdentity }
+import org.apache.commons.lang3.RandomStringUtils
 import play.api.http.Status
 
 import play.api.libs.functional.syntax._
@@ -99,7 +100,7 @@ object EmailPassFinalizeInfo {
 class AuthCommander @Inject() (
     db: Database,
     clock: Clock,
-    airbrakeNotifier: AirbrakeNotifier,
+    airbrake: AirbrakeNotifier,
     oauth2Config: OAuth2Configuration,
     oauth2ProviderRegistry: OAuth2ProviderRegistry,
     userRepo: UserRepo,
@@ -127,6 +128,9 @@ class AuthCommander @Inject() (
   def saveUserPasswordIdentity(userIdOpt: Option[Id[User]], identityOpt: Option[Identity],
     email: EmailAddress, passwordInfo: PasswordInfo,
     firstName: String = "", lastName: String = "", isComplete: Boolean): (UserIdentity, Id[User]) = {
+    if (email.address.trim.isEmpty) {
+      throw new Exception(s"email address is empty for user $userIdOpt identity $identityOpt name $firstName, $lastName")
+    }
     log.info(s"[saveUserPassIdentity] userId=$userIdOpt identityOpt=$identityOpt email=$email pInfo=$passwordInfo isComplete=$isComplete")
     val fName = User.sanitizeName(if (isComplete || firstName.nonEmpty) firstName else email.address)
     val lName = User.sanitizeName(lastName)
@@ -144,14 +148,13 @@ class AuthCommander @Inject() (
       ),
       allowSignup = true
     )
-
     val savedIdentity = UserService.save(newIdentity) // Kifi User is created here if it doesn't exist
     if (!isComplete) { // fix-up: with UserIdentity.isComplete gone, UserService.save creates user in ACTIVE state by default
       db.readWrite { implicit rw =>
         val maybeId = userIdOpt orElse socialUserInfoRepo.getOpt(SocialId(email.address), SocialNetworks.FORTYTWO).flatMap(_.userId)
         maybeId match {
           case None =>
-            airbrakeNotifier.notify(s"[saveUserPasswordIdentity] Kifi User for ${email} has not been created. savedIdentity=$savedIdentity")
+            airbrake.notify(s"[saveUserPasswordIdentity] Kifi User for ${email} has not been created. savedIdentity=$savedIdentity")
           case Some(userId) =>
             val user = userRepo.get(userId)
             if (user.state != UserStates.INCOMPLETE_SIGNUP) {
@@ -198,12 +201,15 @@ class AuthCommander @Inject() (
       log.info(s"[finalizeSocialAccount] sfi=$sfi identity=$socialIdentity extId=$inviteExtIdOpt")
       require(AuthHelper.validatePwd(sfi.password), "invalid password")
       val currentHasher = Registry.hashers.currentHasher
-      val pInfo = timing(s"[finalizeSocialAccount] hash") {
-        currentHasher.hash(new String(sfi.password)) // SecureSocial takes String only
-      }
+      val email = if (sfi.email.address.trim.isEmpty) {
+        val alternative = EmailAddress(s"NoMailUser+${socialIdentity.identityId.providerId}_${socialIdentity.identityId.userId}@kifi.com")
+        airbrake.notify(s"generated alternative email $alternative for SFI $sfi of social identity $socialIdentity with invite $inviteExtIdOpt")
+        alternative
+      } else sfi.email
+      val pInfo = currentHasher.hash(new String(sfi.password)) // SecureSocial takes String only
 
       val (emailPassIdentity, userId) = saveUserPasswordIdentity(None, Some(socialIdentity),
-        email = sfi.email, passwordInfo = pInfo, firstName = sfi.firstName, lastName = sfi.lastName, isComplete = true)
+        email = email, passwordInfo = pInfo, firstName = sfi.firstName, lastName = sfi.lastName, isComplete = true)
 
       db.readWrite(attempts = 3) { implicit s =>
         userValueRepo.setValue(userId, UserValueName.HAS_NO_PASSWORD, true)
@@ -414,7 +420,7 @@ class AuthCommander @Inject() (
       implicit val context = HeimdalContext(Map())
       libraryCommander.joinLibrary(userId, libId).fold(
         libFail =>
-          airbrakeNotifier.notify(s"[finishSignup] auto-join failed. $libFail"),
+          airbrake.notify(s"[finishSignup] auto-join failed. $libFail"),
         library =>
           log.info(s"[finishSignup] user(id=$userId) has successfully joined library $library")
       )

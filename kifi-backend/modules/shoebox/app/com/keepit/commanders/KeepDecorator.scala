@@ -1,14 +1,14 @@
 package com.keepit.commanders
 
-import com.keepit.common.time._
-import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
+import com.keepit.common.crypto.{ PublicIdConfiguration }
 import com.google.inject.{ Provider, Inject }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.domain.DomainToNameMapper
 import com.keepit.common.social.BasicUserRepo
-import com.keepit.common.store.ImageSize
+import com.keepit.common.store.{ S3ImageConfig, ImageSize }
 import com.keepit.model._
+import com.keepit.rover.RoverServiceClient
 import com.keepit.search.SearchServiceClient
 import com.keepit.search.augmentation.{ LimitedAugmentationInfo, AugmentableItem }
 
@@ -24,10 +24,12 @@ class KeepDecorator @Inject() (
     libraryMembershipRepo: LibraryMembershipRepo,
     keepRepo: KeepRepo,
     keepImageCommander: KeepImageCommander,
-    uriSummaryCommander: URISummaryCommander,
     userCommander: Provider[UserCommander],
     searchClient: SearchServiceClient,
     keepSourceAttributionRepo: KeepSourceAttributionRepo,
+    experimentCommander: LocalUserExperimentCommander,
+    rover: RoverServiceClient,
+    implicit val imageConfig: S3ImageConfig,
     implicit val executionContext: ExecutionContext,
     implicit val publicIdConfig: PublicIdConfiguration) {
 
@@ -44,18 +46,17 @@ class KeepDecorator @Inject() (
           db.readOnlyMaster { implicit s => libraryRepo.getLibraries(librariesShown) } //cached
         }
         val idToBasicUser = {
-          val keepersShown = augmentationInfos.flatMap(_.keepers).toSet
+          val keepersShown = augmentationInfos.flatMap(_.keepers.map(_._1)).toSet
           val libraryContributorsShown = augmentationInfos.flatMap(_.libraries.map(_._2)).toSet
           val libraryOwners = idToLibrary.values.map(_.ownerId).toSet
-          db.readOnlyMaster { implicit s => basicUserRepo.loadAll(keepersShown ++ libraryContributorsShown ++ libraryOwners) } //cached
+          val keepers = keeps.map(_.userId).toSet // is this needed? need to double check, it may be redundant
+          db.readOnlyMaster { implicit s => basicUserRepo.loadAll(keepersShown ++ libraryContributorsShown ++ libraryOwners ++ keepers) } //cached
         }
         val idToBasicLibrary = idToLibrary.mapValues(library => BasicLibrary(library, idToBasicUser(library.ownerId)))
 
         (idToBasicUser, idToBasicLibrary)
       }
-      val pageInfosFuture = Future.sequence(keeps.map { keep =>
-        getKeepSummary(keep, idealImageSize)
-      })
+      val pageInfosFuture = getKeepSummaries(keeps, idealImageSize)
 
       val colls = db.readOnlyMaster { implicit s =>
         keepToCollectionRepo.getCollectionsForKeeps(keeps) //cached
@@ -79,15 +80,15 @@ class KeepDecorator @Inject() (
 
         val keepsInfo = (keeps zip colls, augmentationInfos, pageInfos zip sourceAttrs).zipped.map {
           case ((keep, collsForKeep), augmentationInfoForKeep, (pageInfoForKeep, sourceAttrOpt)) =>
-            val others = augmentationInfoForKeep.keepersTotal - augmentationInfoForKeep.keepers.size - augmentationInfoForKeep.keepersOmitted
-            val keepers = perspectiveUserIdOpt.map { userId => augmentationInfoForKeep.keepers.filterNot(_ == userId) } getOrElse augmentationInfoForKeep.keepers
+            val keepers = perspectiveUserIdOpt.map { userId => augmentationInfoForKeep.keepers.filterNot(_._1 == userId) } getOrElse augmentationInfoForKeep.keepers
             val keeps = allMyKeeps.get(keep.uriId) getOrElse Set.empty
             val libraries = {
-              def doShowLibrary(libraryId: Id[Library]): Boolean = { // ensuring consistency of libraries returned by search with the user's latest database data (race condition)
+              def doShowLibrary(libraryId: Id[Library]): Boolean = {
+                // ensuring consistency of libraries returned by search with the user's latest database data (race condition)
                 lazy val publicId = Library.publicId(libraryId)
                 !librariesWithWriteAccess.contains(libraryId) || keeps.exists(_.libraryId == publicId)
               }
-              augmentationInfoForKeep.libraries.collect { case (libraryId, contributorId) if doShowLibrary(libraryId) => (idToBasicLibrary(libraryId), idToBasicUser(contributorId)) }
+              augmentationInfoForKeep.libraries.collect { case (libraryId, contributorId, _) if doShowLibrary(libraryId) => (idToBasicLibrary(libraryId), idToBasicUser(contributorId)) }
             }
 
             val keptAt = if (withKeepTime) {
@@ -102,10 +103,10 @@ class KeepDecorator @Inject() (
               title = keep.title,
               url = keep.url,
               isPrivate = keep.isPrivate,
+              user = Some(idToBasicUser(keep.userId)),
               createdAt = keptAt,
-              others = Some(others),
               keeps = Some(keeps),
-              keepers = Some(keepers.map(idToBasicUser)),
+              keepers = Some(keepers.map { case (keeperId, _) => idToBasicUser(keeperId) }),
               keepersOmitted = Some(augmentationInfoForKeep.keepersOmitted),
               keepersTotal = Some(augmentationInfoForKeep.keepersTotal),
               libraries = Some(libraries),
@@ -130,7 +131,7 @@ class KeepDecorator @Inject() (
     val allUsers = (infos flatMap { info =>
       val keepers = info.keepers
       val libs = info.libraries
-      (libs.map(_._2) ++ keepers)
+      (libs.map(_._2) ++ keepers.map(_._1))
     }).toSet
     if (allUsers.isEmpty) infos
     else {
@@ -138,7 +139,7 @@ class KeepDecorator @Inject() (
       if (fakeUsers.isEmpty) infos
       else {
         infos map { info =>
-          val keepers = info.keepers.filterNot(u => fakeUsers.contains(u))
+          val keepers = info.keepers.filterNot(u => fakeUsers.contains(u._1))
           val libs = info.libraries.filterNot(t => fakeUsers.contains(t._2))
           info.copy(keepers = keepers, libraries = libs)
         }
@@ -146,14 +147,17 @@ class KeepDecorator @Inject() (
     }
   }
 
-  private def getKeepSummary(keep: Keep, idealImageSize: ImageSize, waiting: Boolean = false): Future[URISummary] = {
-    val futureSummary = uriSummaryCommander.getDefaultURISummary(keep.uriId, waiting)
-    val keepImageOpt = keepImageCommander.getBestImageForKeep(keep.id.get, ScaleImageRequest(idealImageSize))
-    futureSummary.map { summary =>
-      keepImageOpt match {
-        case None => summary
-        case Some(keepImage) =>
-          summary.copy(imageUrl = keepImage.map(keepImageCommander.getUrl), imageWidth = keepImage.map(_.width), imageHeight = keepImage.map(_.height))
+  private def getKeepSummaries(keeps: Seq[Keep], idealImageSize: ImageSize): Future[Seq[URISummary]] = {
+    val futureSummariesByUriId = rover.getUriSummaryByUris(keeps.map(_.uriId).toSet)
+    val keepImagesByKeepId = keepImageCommander.getBestImagesForKeeps(keeps.map(_.id.get).toSet, ScaleImageRequest(idealImageSize))
+    futureSummariesByUriId.map { summariesByUriId =>
+      keeps.map { keep =>
+        val summary = summariesByUriId.get(keep.uriId).map(_.toUriSummary(idealImageSize)) getOrElse URISummary()
+        keepImagesByKeepId.get(keep.id.get) match {
+          case None => summary
+          case Some(keepImage) =>
+            summary.copy(imageUrl = keepImage.map(_.imagePath.getUrl), imageWidth = keepImage.map(_.width), imageHeight = keepImage.map(_.height))
+        }
       }
     }
   }
@@ -187,6 +191,9 @@ class KeepDecorator @Inject() (
     }.toMap
   }
 
+}
+
+object KeepDecorator {
   // turns '[#...]' to '[\#...]'. Similar for '[@...]'
   val escapeMarkupsRe = """\[([#@])""".r
   def escapeMarkupNotes(str: String): String = {
@@ -198,5 +205,4 @@ class KeepDecorator @Inject() (
   def unescapeMarkupNotes(str: String): String = {
     unescapeMarkupsRe.replaceAllIn(str, """[$1""")
   }
-
 }

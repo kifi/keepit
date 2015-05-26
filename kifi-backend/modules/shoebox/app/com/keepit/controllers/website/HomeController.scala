@@ -42,7 +42,6 @@ class HomeController @Inject() (
   socialConnectionRepo: SocialConnectionRepo,
   socialGraphPlugin: SocialGraphPlugin,
   fortyTwoServices: FortyTwoServices,
-  userCache: SocialUserInfoUserCache,
   userCommander: UserCommander,
   userConnectionsCommander: UserConnectionsCommander,
   inviteCommander: InviteCommander,

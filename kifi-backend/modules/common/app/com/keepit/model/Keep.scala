@@ -22,7 +22,6 @@ case class Keep(
     inDisjointLib: Boolean,
     urlId: Id[URL],
     url: String, // denormalized for efficiency
-    bookmarkPath: Option[String] = None,
     visibility: LibraryVisibility, // denormalized from this keep’s library
     userId: Id[User],
     state: State[Keep] = KeepStates.ACTIVE,
@@ -32,9 +31,10 @@ case class Keep(
     libraryId: Option[Id[Library]],
     keptAt: DateTime = currentDateTime,
     sourceAttributionId: Option[Id[KeepSourceAttribution]] = None,
-    note: Option[String] = None) extends ModelWithExternalId[Keep] with ModelWithState[Keep] with ModelWithSeqNumber[Keep] {
+    note: Option[String] = None,
+    originalKeeperId: Option[Id[User]] = None) extends ModelWithExternalId[Keep] with ModelWithState[Keep] with ModelWithSeqNumber[Keep] {
 
-  def sanitizeForDelete(): Keep = copy(title = None, bookmarkPath = None, state = KeepStates.INACTIVE, kifiInstallation = None)
+  def sanitizeForDelete(): Keep = copy(title = None, state = KeepStates.INACTIVE, kifiInstallation = None)
 
   def clean(): Keep = copy(title = title.map(_.trimAndRemoveLineBreaks()))
 
@@ -58,7 +58,7 @@ case class Keep(
 
   def withUrl(url: String) = copy(url = url)
 
-  def withTitle(title: Option[String]) = copy(title = title.map(_.trimAndRemoveLineBreaks()))
+  def withTitle(title: Option[String]) = copy(title = title.map(_.trimAndRemoveLineBreaks()).filter(_.nonEmpty))
 
   def isActive: Boolean = state == KeepStates.ACTIVE
 
@@ -88,17 +88,17 @@ object Keep {
   // is_primary: trueOrNull in db
   def applyFromDbRow(id: Option[Id[Keep]], createdAt: DateTime, updatedAt: DateTime, externalId: ExternalId[Keep],
     title: Option[String], uriId: Id[NormalizedURI], isPrimary: Option[Boolean], inDisjointLib: Option[Boolean],
-    urlId: Id[URL], url: String, bookmarkPath: Option[String], isPrivate: Boolean, userId: Id[User],
+    urlId: Id[URL], url: String, isPrivate: Boolean, userId: Id[User],
     state: State[Keep], source: KeepSource, kifiInstallation: Option[ExternalId[KifiInstallation]],
     seq: SequenceNumber[Keep], libraryId: Option[Id[Library]], visibility: LibraryVisibility, keptAt: DateTime,
-    sourceAttributionId: Option[Id[KeepSourceAttribution]], note: Option[String]) = {
+    sourceAttributionId: Option[Id[KeepSourceAttribution]], note: Option[String], originalKeeperId: Option[Id[User]]) = {
     Keep(id, createdAt, updatedAt, externalId, title, uriId, isPrimary.exists(b => b), inDisjointLib.exists(b => b), urlId, url,
-      bookmarkPath, visibility, userId, state, source, kifiInstallation, seq, libraryId, keptAt, sourceAttributionId, note)
+      visibility, userId, state, source, kifiInstallation, seq, libraryId, keptAt, sourceAttributionId, note, originalKeeperId.orElse(Some(userId)))
   }
   def unapplyToDbRow(k: Keep) = {
-    Some(k.id, k.createdAt, k.updatedAt, k.externalId, k.title, k.uriId, if (k.isPrimary) Some(true) else None,
-      if (k.inDisjointLib) Some(true) else None, k.urlId, k.url, k.bookmarkPath, Keep.visibilityToIsPrivate(k.visibility),
-      k.userId, k.state, k.source, k.kifiInstallation, k.seq, k.libraryId, k.visibility, k.keptAt, k.sourceAttributionId, k.note)
+    Some((k.id, k.createdAt, k.updatedAt, k.externalId, k.title, k.uriId, if (k.isPrimary) Some(true) else None,
+      if (k.inDisjointLib) Some(true) else None, k.urlId, k.url, Keep.visibilityToIsPrivate(k.visibility),
+      k.userId, k.state, k.source, k.kifiInstallation, k.seq, k.libraryId, k.visibility, k.keptAt, k.sourceAttributionId, k.note, k.originalKeeperId.orElse(Some(k.userId))))
   }
 
   def _bookmarkFormat = (
@@ -112,7 +112,6 @@ object Keep {
     (__ \ 'inDisjointLib).format[Boolean] and
     (__ \ 'urlId).format(Id.format[URL]) and
     (__ \ 'url).format[String] and
-    (__ \ 'bookmarkPath).formatNullable[String] and
     (__ \ 'visibility).format[LibraryVisibility] and
     (__ \ 'userId).format(Id.format[User]) and
     (__ \ 'state).format(State.format[Keep]) and
@@ -122,7 +121,8 @@ object Keep {
     (__ \ 'libraryId).formatNullable(Id.format[Library]) and
     (__ \ 'keptAt).format(DateTimeJsonFormat) and
     (__ \ 'sourceAttributionId).formatNullable(Id.format[KeepSourceAttribution]) and
-    (__ \ 'note).formatNullable[String]
+    (__ \ 'note).formatNullable[String] and
+    (__ \ 'originalKeeperId).formatNullable[Id[User]]
   )(Keep.apply, unlift(Keep.unapply))
 
   // Remove when all services use the new Keep object
@@ -142,7 +142,7 @@ object Keep {
         "inDisjointLib" -> k.inDisjointLib,
         "urlId" -> k.urlId,
         "url" -> k.url,
-        "bookmarkPath" -> k.bookmarkPath,
+        "bookmarkPath" -> (None: Option[String]),
         "visibility" -> k.visibility,
         "isPrivate" -> Keep.visibilityToIsPrivate(k.visibility),
         "userId" -> k.userId,
@@ -153,7 +153,8 @@ object Keep {
         "libraryId" -> k.libraryId,
         "keptAt" -> k.keptAt,
         "sourceAttributionId" -> k.sourceAttributionId,
-        "note" -> k.note
+        "note" -> k.note,
+        "originalKeeperId" -> k.originalKeeperId.orElse(Some(k.userId))
       )
     }
   }
@@ -189,7 +190,7 @@ class GlobalKeepCountCache(stats: CacheStatistics, accessLog: AccessLog, innermo
   extends PrimitiveCacheImpl[GlobalKeepCountKey, Int](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class KeepUriUserKey(uriId: Id[NormalizedURI], userId: Id[User]) extends Key[Keep] {
-  override val version = 10
+  override val version = 11
   val namespace = "bookmark_uri_user"
   def toKey(): String = uriId.id + "#" + userId.id
 }

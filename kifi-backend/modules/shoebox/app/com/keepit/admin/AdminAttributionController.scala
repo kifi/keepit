@@ -1,14 +1,14 @@
 package com.keepit.controllers.admin
 
 import com.google.inject.Inject
+import com.keepit.commanders.{ ProcessedImageSize, ScaleImageRequest, KeepImageCommander }
 import com.keepit.common.controller.{ UserActionsHelper, AdminUserActions }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.service.RequestConsolidator
-import com.keepit.common.time._
 import com.keepit.heimdal.HeimdalServiceClient
 import com.keepit.model._
-import org.joda.time.DateTime
+import com.keepit.rover.RoverServiceClient
 import play.api.libs.json.Json
 import play.api.libs.concurrent.Execution.Implicits._
 import views.html
@@ -23,8 +23,8 @@ class AdminAttributionController @Inject() (
     userRepo: UserRepo,
     keepRepo: KeepRepo,
     uriRepo: NormalizedURIRepo,
-    pageInfoRepo: PageInfoRepo,
-    imageInfoRepo: ImageInfoRepo) extends AdminUserActions {
+    keepImageCommander: KeepImageCommander,
+    rover: RoverServiceClient) extends AdminUserActions {
 
   def keepDiscoveriesView(page: Int, size: Int, showImage: Boolean) = AdminUserPage.async { implicit request =>
     val countF = heimdalClient.getDiscoveryCount()
@@ -36,14 +36,9 @@ class AdminAttributionController @Inject() (
       val t = db.readOnlyMaster { implicit session =>
         paged map { c =>
           val rc = RichKeepDiscovery(c.id, c.createdAt, c.updatedAt, c.state, c.hitUUID, c.numKeepers, userRepo.get(c.keeperId), keepRepo.get(c.keepId), uriRepo.get(c.uriId), c.origin)
-          val pageInfoOpt = pageInfoRepo.getByUri(c.uriId)
           val imgOpt = if (!showImage) None
-          else
-            for {
-              pageInfo <- pageInfoOpt
-              imgId <- pageInfo.imageInfoId
-            } yield imageInfoRepo.get(imgId)
-          (rc, pageInfoOpt, imgOpt)
+          else keepImageCommander.getBestImageForKeep(c.keepId, ScaleImageRequest(ProcessedImageSize.Small.idealSize)).flatten.map(keepImageCommander.getUrl)
+          (rc, imgOpt)
         }
       }
       (t, count)
@@ -64,14 +59,9 @@ class AdminAttributionController @Inject() (
       val t = db.readOnlyMaster { implicit session =>
         paged map { k =>
           val rk = RichReKeep(k.id, k.createdAt, k.updatedAt, k.state, userRepo.get(k.keeperId), keepRepo.get(k.keepId), uriRepo.get(k.uriId), userRepo.get(k.srcUserId), keepRepo.get(k.srcKeepId), k.attributionFactor)
-          val pageInfoOpt = pageInfoRepo.getByUri(k.uriId)
           val imgOpt = if (!showImage) None
-          else
-            for {
-              pageInfo <- pageInfoOpt
-              imgId <- pageInfo.imageInfoId
-            } yield imageInfoRepo.get(imgId)
-          (rk, pageInfoOpt, imgOpt)
+          else keepImageCommander.getBestImageForKeep(k.keepId, ScaleImageRequest(ProcessedImageSize.Small.idealSize)).flatten.map(keepImageCommander.getUrl)
+          (rk, imgOpt)
         }
       }
       (t, count)

@@ -16,7 +16,6 @@ import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.graph.FakeGraphServiceModule
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.model._
-import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.social.SocialNetworks.FACEBOOK
 import com.keepit.social.{ SocialNetworks, SocialNetworkType }
@@ -32,7 +31,6 @@ import com.keepit.model.UserFactory._
 class EmailSenderTest extends Specification with ShoeboxTestInjector {
   val modules = Seq(
     FakeExecutionContextModule(),
-    FakeScrapeSchedulerModule(),
     FakeHttpClientModule(),
     FakeSocialGraphModule(),
     FakeHealthcheckModule(),
@@ -70,31 +68,81 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
   }
 
   "WelcomeEmailSender" should {
-    "sends email" in {
+    "sends html-rich email" in {
+      val WELCOME_EMAIL_SUBJECT = "Let's get started with Kifi"
+      def WELCOME_SALUTATION(firstName: String) = "Hey " + firstName + ","
+      val WELCOME_SENDER = "Eishay Smith"
+      val WELCOME_SENDER_EMAIL = SystemEmailAddress.EISHAY_PUBLIC
+
       withDb(modules: _*) { implicit injector =>
         val outbox = inject[FakeOutbox]
         val sender = inject[WelcomeEmailSender]
         val toUser = db.readWrite { implicit rw =>
           inject[UserRepo].save(User(firstName = "Billy", lastName = "Madison", primaryEmail = Some(EmailAddress("billy@gmail.com")), username = Username("test"), normalizedUsername = "test"))
         }
-        val email = Await.result(sender.sendToUser(toUser.id.get), Duration(5, "seconds"))
+
+        val email = Await.result(sender.sendToUser(userId = toUser.id.get, isPlainEmail = false), Duration(5, "seconds"))
         outbox.size === 1
         outbox(0) === email
 
         email.to === Seq(EmailAddress("billy@gmail.com"))
-        email.subject === "Let's get started with Kifi"
+        email.from === WELCOME_SENDER_EMAIL
+        email.subject === WELCOME_EMAIL_SUBJECT
         val html = email.htmlBody.value
-        html must contain("Hey Billy,")
+        html must contain(WELCOME_SALUTATION(toUser.firstName))
 
         val trackingCode = EmailTrackingParam(
-          subAction = Some("findMoreFriendsBtn"),
-          tip = Some(EmailTip.ConnectFacebook)).encode
+          subAction = Some("findMoreFriendsBtn")).encode
 
-        html must contain("utm_source=fromKifi&amp;utm_medium=email&amp;utm_campaign=welcome&amp;utm_content=findMoreFriendsBtn&amp;kcid=welcome-email-fromKifi"
+        html must contain("utm_source=fromKifi&amp;utm_medium=email&amp;utm_campaign=welcome&amp;utm_content=findMoreFriendsBtn&amp;kcid=welcome-email-fromKifi")
+
+        val text = email.textBody.get.value
+        text must contain("Dear Billy,")
+
+        val scalaWords = Seq("homeUrl", "installExtUrl", "firstName", "iOsAppStoreUrl", "googlePlayStoreUrl", "howKifiWorksUrl", "eishayKifiUrl")
+        scalaWords foreach { word => html must not contain word }
+        scalaWords foreach { word => text must not contain word }
+        1 === 1 // can't compile test without an explicit assertion at the end
+      }
+    }
+
+    "sends html-plain email" in {
+      val WELCOME_EMAIL_SUBJECT = "Let's get started with Kifi"
+      def WELCOME_SALUTATION(firstName: String) = "Dear " + firstName + ","
+      val WELCOME_SENDER = "Eishay Smith"
+      val WELCOME_SENDER_EMAIL = SystemEmailAddress.EISHAY_PUBLIC
+
+      withDb(modules: _*) { implicit injector =>
+        val outbox = inject[FakeOutbox]
+        val sender = inject[WelcomeEmailSender]
+        val toUser = db.readWrite { implicit rw =>
+          inject[UserRepo].save(User(firstName = "Billy", lastName = "Madison", primaryEmail = Some(EmailAddress("billy@gmail.com")), username = Username("test"), normalizedUsername = "test"))
+        }
+
+        val email = Await.result(sender.sendToUser(userId = toUser.id.get, isPlainEmail = true), Duration(5, "seconds"))
+        outbox.size === 1
+        outbox(0) === email
+
+        email.to === Seq(EmailAddress("billy@gmail.com"))
+        email.from === WELCOME_SENDER_EMAIL
+        email.subject === WELCOME_EMAIL_SUBJECT
+        val html = email.htmlBody.value
+        html must contain(WELCOME_SALUTATION(toUser.firstName))
+
+        val trackingCode = EmailTrackingParam(
+          subAction = Some("kifiHome")).encode
+        html must contain("utm_source=fromKifi&amp;utm_medium=email&amp;utm_campaign=welcome&amp;utm_content=kifiHome&amp;kcid=welcome-email-fromKifi"
           + s"&amp;${EmailTrackingParam.paramName}=$trackingCode")
 
         val text = email.textBody.get.value
-        text must contain("Hey Billy,")
+        text must not contain ("firstName")
+        text must contain("Dear Billy,")
+
+        val scalaWords = Seq("homeUrl", "installExtUrl", "firstName", "iOsAppStoreUrl", "googlePlayStoreUrl", "howKifiWorksUrl", "eishayKifiUrl")
+        scalaWords foreach { word => html must not contain word }
+        scalaWords foreach { word => text must not contain word }
+
+        1 === 1 // can't compile test without an explicit assertion at the end
       }
     }
   }
@@ -334,7 +382,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
   "LibraryInviteEmailSender" should {
     implicit val config = PublicIdConfiguration("secret key")
 
-    def setup()(implicit injector: Injector) = {
+    def setup(withDescription: Boolean = true)(implicit injector: Injector) = {
       val keepRepo = inject[KeepRepo]
       val urlRepo = inject[URLRepo]
       val uriRepo = inject[NormalizedURIRepo]
@@ -343,7 +391,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         val user1 = userRepo.save(User(firstName = "Tom", lastName = "Brady", username = Username("tom"), normalizedUsername = "b", primaryEmail = Some(EmailAddress("tombrady@gmail.com"))))
         val user2 = userRepo.save(User(firstName = "Aaron", lastName = "Rodgers", username = Username("aaron"), normalizedUsername = "a", primaryEmail = Some(EmailAddress("aaronrodgers@gmail.com"))))
         val lib1 = libraryRepo.save(Library(name = "Football", ownerId = user1.id.get, slug = LibrarySlug("football"),
-          visibility = LibraryVisibility.SECRET, memberCount = 1, description = Some("Lorem ipsum")))
+          visibility = LibraryVisibility.SECRET, memberCount = 1, description = { if (withDescription) { Some("Lorem ipsum") } else { None } }))
 
         val uri = uriRepo.save(NormalizedURI(url = "http://www.kifi.com", urlHash = UrlHash("abc")))
         // todo(andrew) jared compiler bug if url_ var is named url
@@ -352,7 +400,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
 
         libraryMembershipRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = user1.id.get, access = LibraryAccess.OWNER))
 
-        val invite = LibraryInvite(libraryId = lib1.id.get, inviterId = user1.id.get, access = LibraryAccess.READ_ONLY, message = Some("check this out!"), authToken = "abcdefg")
+        val invite = LibraryInvite(libraryId = lib1.id.get, inviterId = user1.id.get, access = LibraryAccess.READ_ONLY, message = None, authToken = "abcdefg")
 
         (user1, user2, lib1, invite)
       }
@@ -368,20 +416,21 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
       html must contain("authToken=abcdefg")
     }
 
-    "sends invite to user (userId)" in {
+    "sends 'html-rich' follow invite to user (userId)" in {
       withDb(modules: _*) { implicit injector =>
         val (user1, user2, lib1, invite) = setup()
-        val inviteUser = invite.copy(userId = user2.id)
+        val inviteUser = invite.copy(userId = user2.id, message = Some("check this out!"))
         val outbox = inject[FakeOutbox]
         val inviteSender = inject[LibraryInviteEmailSender]
-        val email = Await.result(inviteSender.sendInvite(inviteUser), Duration(5, "seconds")).get
+
+        val email = Await.result(inviteSender.sendInvite(invite = inviteUser, isPlainEmail = false), Duration(5, "seconds")).get
 
         outbox.size === 1
         outbox(0) === email
 
         email.category === NotificationCategory.toElectronicMailCategory(NotificationCategory.User.LIBRARY_INVITATION)
         email.extraHeaders.get(PostOffice.Headers.REPLY_TO) === "tombrady@gmail.com"
-        email.subject === "Tom Brady invited you to follow Football!"
+        email.subject === "An invitation to my library: Football"
         email.htmlBody.contains("http://dev.ezkeep.com:9000/tom/football?") === true
         email.htmlBody.contains("<span style=\"color:#999999\">Tom Brady</span>") === true
         val params = List("utm_campaign=na", "utm_source=library_invite", "utm_medium=vf_email", "kcid=na-vf_email-library_invite", "kma=1")
@@ -389,40 +438,182 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         email.to(0) === EmailAddress("aaronrodgers@gmail.com")
         val html = email.htmlBody.value
         testHtml(html)
-        html must not contain invite.passPhrase
       }
     }
 
-    "send invite to non-user (email)" in {
+    "send 'html-rich' follow invite to non-user (email)" in {
       withDb(modules: _*) { implicit injector =>
         val (user1, user2, lib1, invite) = setup()
-        val inviteNonUser = invite.copy(emailAddress = Some(EmailAddress("aaronrodgers@gmail.com")))
+        val inviteNonUser = invite.copy(emailAddress = Some(EmailAddress("aaronrodgers@gmail.com")), message = Some("check this out!"))
         val outbox = inject[FakeOutbox]
         val inviteSender = inject[LibraryInviteEmailSender]
-        val email = Await.result(inviteSender.sendInvite(inviteNonUser), Duration(5, "seconds")).get
+        val email = Await.result(inviteSender.sendInvite(invite = inviteNonUser, isPlainEmail = false), Duration(5, "seconds")).get
 
         outbox.size === 1
         outbox(0) === email
 
         email.category === NotificationCategory.toElectronicMailCategory(NotificationCategory.NonUser.LIBRARY_INVITATION)
-        email.subject === "Tom Brady invited you to follow Football!"
+        email.subject === "An invitation to my library: Football"
         email.to(0) === EmailAddress("aaronrodgers@gmail.com")
         val params = List("utm_campaign=na", "utm_source=library_invite", "utm_medium=vf_email", "kma=1")
         params.map(email.htmlBody.contains(_)) === List(true, true, true, true)
         val html = email.htmlBody.value
         testHtml(html)
-        html must contain(invite.passPhrase)
 
         db.readWrite { implicit session => libraryRepo.save(lib1.copy(visibility = LibraryVisibility.PUBLISHED)) }
-        val emailWithoutPassPhrase = Await.result(inviteSender.sendInvite(inviteNonUser), Duration(5, "seconds")).get
-        emailWithoutPassPhrase.subject === "Tom Brady invited you to follow Football!"
+        val emailWithoutPassPhrase = Await.result(inviteSender.sendInvite(invite = inviteNonUser, isPlainEmail = false), Duration(5, "seconds")).get
+        emailWithoutPassPhrase.subject === "An invitation to my library: Football"
         emailWithoutPassPhrase.to(0) === EmailAddress("aaronrodgers@gmail.com")
         params.map(emailWithoutPassPhrase.htmlBody.contains(_)) === List(true, true, true, true)
         val htmlWithoutPassPhrase = emailWithoutPassPhrase.htmlBody.value
         testHtml(htmlWithoutPassPhrase)
-        htmlWithoutPassPhrase must not contain invite.passPhrase
       }
     }
+
+    "send 'html-plain' follow invite to user (userId)" in {
+      withDb(modules: _*) { implicit injector =>
+        val (user1, user2, lib1, invite) = setup()
+        val inviteUser = invite.copy(userId = user2.id)
+        val outbox = inject[FakeOutbox]
+        val inviteSender = inject[LibraryInviteEmailSender]
+
+        val email = Await.result(inviteSender.sendInvite(invite = inviteUser, isPlainEmail = true), Duration(5, "seconds")).get
+
+        outbox.size === 1
+        outbox(0) === email
+
+        email.category === NotificationCategory.toElectronicMailCategory(NotificationCategory.User.LIBRARY_INVITATION)
+        email.extraHeaders.get(PostOffice.Headers.REPLY_TO) === "tombrady@gmail.com"
+        email.subject === "An invitation to my library: Football"
+        email.htmlBody.contains("http://dev.ezkeep.com:9000/tom/football?") === true
+        email.htmlBody.contains("Hi Aaron") === true
+        email.htmlBody.contains("Check out the \"Football\" library I created") === true
+        val params = List("utm_campaign=na", "utm_source=library_invite", "utm_medium=vf_email", "kcid=na-vf_email-library_invite", "kma=1")
+        params.map(email.htmlBody.contains(_)) === List(true, true, true, true, true)
+        email.to(0) === EmailAddress("aaronrodgers@gmail.com")
+        val html = email.htmlBody.value
+        val scalaWords = Seq("firstName", "libraryUrl", "salutation", "emailMessage", "inviteMsg")
+        scalaWords foreach { word => html must not contain word }
+        1 === 1
+      }
+    }
+
+    "send 'html-plain' collab invite to user (userId)" in {
+      withDb(modules: _*) { implicit injector =>
+        val (user1, user2, lib1, invite) = setup()
+        val inviteUser = invite.copy(userId = user2.id, access = LibraryAccess.READ_WRITE)
+        val outbox = inject[FakeOutbox]
+        val inviteSender = inject[LibraryInviteEmailSender]
+
+        val email = Await.result(inviteSender.sendInvite(invite = inviteUser, isPlainEmail = true), Duration(5, "seconds")).get
+
+        outbox.size === 1
+        outbox(0) === email
+
+        email.category === NotificationCategory.toElectronicMailCategory(NotificationCategory.User.LIBRARY_INVITATION)
+        email.extraHeaders.get(PostOffice.Headers.REPLY_TO) === "tombrady@gmail.com"
+        email.subject === "I want to collaborate with you on Football"
+        email.htmlBody.contains("http://dev.ezkeep.com:9000/tom/football?") === true
+        email.htmlBody.contains("Hi Aaron") === true
+        email.htmlBody.contains("collaborate") === true
+        val params = List("utm_campaign=na", "utm_source=library_invite", "utm_medium=vf_email", "kcid=na-vf_email-library_invite", "kma=1")
+        params.map(email.htmlBody.contains(_)) === List(true, true, true, true, true)
+        email.to(0) === EmailAddress("aaronrodgers@gmail.com")
+        val html = email.htmlBody.value
+
+        val text = email.textBody.get.value
+        text must not contain "description"
+      }
+    }
+
+    "send 'html-plain' follow invite to non-user (email)" in {
+      withDb(modules: _*) { implicit injector =>
+        val (user1, user2, lib1, invite) = setup()
+        val inviteNonUser = invite.copy(emailAddress = Some(EmailAddress("aaronrodgers@gmail.com")))
+        val outbox = inject[FakeOutbox]
+        val inviteSender = inject[LibraryInviteEmailSender]
+        val email = Await.result(inviteSender.sendInvite(invite = inviteNonUser, isPlainEmail = true), Duration(5, "seconds")).get
+
+        outbox.size === 1
+        outbox(0) === email
+
+        email.category === NotificationCategory.toElectronicMailCategory(NotificationCategory.NonUser.LIBRARY_INVITATION)
+        email.subject === "An invitation to my library: Football"
+        email.to(0) === EmailAddress("aaronrodgers@gmail.com")
+        val params = List("utm_campaign=na", "utm_source=library_invite", "utm_medium=vf_email", "kma=1")
+        params.map(email.htmlBody.contains(_)) === List(true, true, true, false)
+        val html = email.htmlBody.value
+        html must not contain "firstName"
+
+        db.readWrite { implicit session => libraryRepo.save(lib1.copy(visibility = LibraryVisibility.PUBLISHED)) }
+        val emailWithoutPassPhrase = Await.result(inviteSender.sendInvite(invite = inviteNonUser, isPlainEmail = true), Duration(5, "seconds")).get
+        emailWithoutPassPhrase.subject === "An invitation to my library: Football"
+        emailWithoutPassPhrase.to(0) === EmailAddress("aaronrodgers@gmail.com")
+        params.map(emailWithoutPassPhrase.htmlBody.contains(_)) === List(true, true, true, false)
+      }
+    }
+
+    "send a stripped html-plain email when an invite message is included" in {
+      withDb(modules: _*) { implicit injector =>
+        val (user1, user2, lib1, invite) = setup()
+        val inviteUser = invite.copy(userId = user2.id, message = Some("check this out!"))
+        val outbox = inject[FakeOutbox]
+        val inviteSender = inject[LibraryInviteEmailSender]
+
+        val email = Await.result(inviteSender.sendInvite(invite = inviteUser, isPlainEmail = true), Duration(5, "seconds")).get
+
+        outbox.size === 1
+        outbox(0) === email
+
+        email.category === NotificationCategory.toElectronicMailCategory(NotificationCategory.User.LIBRARY_INVITATION)
+        email.extraHeaders.get(PostOffice.Headers.REPLY_TO) === "tombrady@gmail.com"
+        email.subject === "An invitation to my library: Football"
+        email.htmlBody.contains("http://dev.ezkeep.com:9000/tom/football?") === true
+        email.htmlBody.contains("check this out!") === true
+        val params = List("utm_campaign=na", "utm_source=library_invite", "utm_medium=vf_email", "kcid=na-vf_email-library_invite", "kma=1")
+        params.map(email.htmlBody.contains(_)) === List(true, true, true, true, true)
+        email.to(0) === EmailAddress("aaronrodgers@gmail.com")
+        val html = email.htmlBody.value
+        val scalaWords = Seq("firstName")
+        scalaWords foreach { word => html must not contain word }
+        1 === 1
+      }
+    }
+
+    "not include a library description when there is none" in {
+      withDb(modules: _*) { implicit injector =>
+        val (user1, user2, lib1, invite) = setup(withDescription = false)
+
+        val inviteUser = invite.copy(userId = user2.id)
+        val outbox = inject[FakeOutbox]
+        val inviteSender = inject[LibraryInviteEmailSender]
+
+        val email = Await.result(inviteSender.sendInvite(invite = inviteUser, isPlainEmail = true), Duration(5, "seconds")).get
+
+        val html = email.htmlBody.value
+        html must not contain "Here's what it's about:"
+      }
+    }
+
+    "not include any code in the email" in {
+      withDb(modules: _*) { implicit injector =>
+        val (user1, user2, lib1, invite) = setup(withDescription = false)
+
+        val inviteUser = invite.copy(userId = user2.id)
+        val outbox = inject[FakeOutbox]
+        val inviteSender = inject[LibraryInviteEmailSender]
+
+        val email = Await.result(inviteSender.sendInvite(invite = inviteUser, isPlainEmail = true), Duration(5, "seconds")).get
+
+        val html = email.htmlBody.value
+        val text = email.textBody.get.value
+        val scalaWords = Seq("firstName", "libraryUrl", "salutation", "emailMessage", "inviteMsg")
+        scalaWords foreach { word => html must not contain word }
+        scalaWords foreach { word => text must not contain word }
+        1 === 1
+      }
+    }
+
   }
 
   "TwitterWaitlistEmailSender" should {
@@ -449,6 +640,40 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
 
         val text = email.textBody.get.value
         text must contain("Kifi Twitter library is ready")
+      }
+    }
+  }
+
+  "GratificationEmailSender" should {
+
+    "send an email to a user" in {
+      withDb(modules: _*) { implicit injector =>
+        val outbox = inject[FakeOutbox]
+        val userRepo = inject[UserRepo]
+        val connectionRepo = inject[UserConnectionRepo]
+        val libMemRepo = inject[LibraryMembershipRepo]
+        val libraryRepo = inject[LibraryRepo]
+        val sender = inject[GratificationEmailSender]
+
+        val toEmail = EmailAddress("superman@dc.com")
+        val (user1, user2) = db.readWrite { implicit s =>
+          val user1 = userRepo.save(User(firstName = "Clark", lastName = "Kent", username = Username("ckent"), normalizedUsername = "ckent", primaryEmail = Some(toEmail)))
+          val user2 = userRepo.save(User(firstName = "Bruce", lastName = "Wayne", username = Username("bwayne"), normalizedUsername = "bwayne"))
+          connectionRepo.addConnections(user1.id.get, Set(user2.id.get))
+          val lib = libraryRepo.save(Library(name = "Favorite Comic Books", ownerId = user1.id.get, visibility = LibraryVisibility.PUBLISHED, slug = LibrarySlug("comics"), memberCount = 1))
+          libMemRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user1.id.get, access = LibraryAccess.READ_ONLY))
+          (user1, user2)
+        }
+        val email = Await.result(sender.sendToUser(user1.id.get, Some(toEmail)), Duration(5, "seconds"))
+        val senderInfo = GratificationEmailSender.senderInfo
+        val html = email.htmlBody.value
+        html must contain("Hey Clark,")
+        html must contain("Bruce Wayne")
+        html must contain("Favorite Comic Books")
+        html must contain(s"${senderInfo.firstName}, ${senderInfo.title} at Kifi")
+        html must not contain ("0 views")
+        html must not contain ("0 followers")
+        html must not contain ("0 connections")
       }
     }
   }

@@ -31,7 +31,6 @@ class ShoeboxDataPipeController @Inject() (
     emailAddressRepo: UserEmailAddressRepo,
     libraryRepo: LibraryRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
-    imageInfoRepo: ImageInfoRepo,
     executor: DataPipelineExecutor) extends ShoeboxServiceController with Logging {
 
   implicit val context = executor.context
@@ -61,11 +60,10 @@ class ShoeboxDataPipeController @Inject() (
     }
   }
 
-  def getScrapedUris(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int) = Action.async { request =>
+  def getIndexableUrisWithContent(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int) = Action.async { request =>
     SafeFuture {
-      val scrapedStates = Set(NormalizedURIStates.SCRAPED, NormalizedURIStates.SCRAPE_FAILED, NormalizedURIStates.UNSCRAPABLE)
       val uris = db.readOnlyReplica { implicit s =>
-        normUriRepo.getChanged(seqNum, includeStates = scrapedStates, limit = fetchSize)
+        normUriRepo.getIndexablesWithContent(seqNum, limit = fetchSize)
       }
       val indexables = uris map { u => IndexableUri(u) }
       Ok(Json.toJson(indexables))
@@ -240,12 +238,4 @@ class ShoeboxDataPipeController @Inject() (
       Ok(Json.toJson(ids))
     }
   }
-
-  def getImageInfosChanged(seqNum: SequenceNumber[ImageInfo], fetchSize: Int) = Action.async { request =>
-    SafeFuture {
-      val infos = db.readOnlyReplica { implicit s => imageInfoRepo.getBySequenceNumber(seqNum, fetchSize) }
-      Ok(Json.toJson(infos))
-    }
-  }
-
 }

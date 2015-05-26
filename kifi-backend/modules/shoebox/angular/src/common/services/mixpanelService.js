@@ -17,17 +17,16 @@
       $analyticsProvider.settings.pageTracking.autoTrackVirtualPages = false;
     }
   ])
-  .run(['$window', '$log', 'profileService', '$http', 'env',
-    function (_$window_, _$log_, _profileService_, _$http_, _env_) {
+  .run(['$window', '$log', 'profileService', 'net',
+    function (_$window_, _$log_, _profileService_, _net_) {
       $window = _$window_;
       $log = _$log_;
       profileService = _profileService_;
-      $http = _$http_;
-      env = _env_;
+      net = _net_;
     }
   ]);
 
-  var $window, $log, profileService, $http, env;  // injected before any code below runs
+  var $window, $log, profileService, net;  // injected before any code below runs
   var identifiedViewEventQueue = [];
   var userId;
 
@@ -39,7 +38,7 @@
   };
 
   function trackEventThroughProxy(event, properties)  {
-    return $http.post(env.xhrBase + '/events', [{
+    return net.event([{
       'event': event,
       'properties': properties
     }]);

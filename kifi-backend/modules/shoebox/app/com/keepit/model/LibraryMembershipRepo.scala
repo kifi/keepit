@@ -25,7 +25,7 @@ trait LibraryMembershipRepo extends Repo[LibraryMembership] with RepoWithDelete[
   def getLibrariesWithWriteAccess(userId: Id[User])(implicit session: RSession): Set[Id[Library]]
   def getLatestUpdatedLibraryUserFollow(userId: Id[User])(implicit session: RSession): Option[Library]
   def getWithLibraryIdAndUserId(libraryId: Id[Library], userId: Id[User], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Option[LibraryMembership]
-  def getWithLibraryIdsAndUserId(libraryIds: Set[Id[Library]], userId: Id[User], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Map[Id[Library], LibraryMembership]
+  def getWithLibraryIdsAndUserId(libraryIds: Set[Id[Library]], userId: Id[User], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Map[Id[Library], Option[LibraryMembership]]
   def getWithLibraryIdAndUserIds(libraryId: Id[Library], userIds: Set[Id[User]], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Map[Id[User], LibraryMembership]
   def pageWithLibraryIdAndAccess(libraryId: Id[Library], offset: Int, limit: Int, accessSet: Set[LibraryAccess],
     excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Seq[LibraryMembership]
@@ -39,14 +39,20 @@ trait LibraryMembershipRepo extends Repo[LibraryMembership] with RepoWithDelete[
   def mostMembersSince(count: Int, since: DateTime)(implicit session: RSession): Seq[(Id[Library], Int)]
   def percentGainSince(since: DateTime, totalMoreThan: Int, recentMoreThan: Int, count: Int)(implicit session: RSession): Seq[(Id[Library], Int, Int, Double)]
   def mostMembersSinceForUser(count: Int, since: DateTime, ownerId: Id[User])(implicit session: RSession): Seq[(Id[Library], Int)]
-  def countWithUserIdAndAccess(userId: Id[User], access: LibraryAccess)(implicit session: RSession): Int
+  def countNonTrivialLibrariesWithUserIdAndAccess(userId: Id[User], access: LibraryAccess, minKeepCount: Int = 1)(implicit session: RSession): Int
   def countsWithUserIdAndAccesses(userId: Id[User], accesses: Set[LibraryAccess])(implicit session: RSession): Map[LibraryAccess, Int]
+
+  //
+  // Profile Library Repo functions
+  //
   def getFollowersForAnonymous(ownerId: Id[User])(implicit session: RSession): Seq[Id[User]]
   def getFollowersForOwner(ownerId: Id[User])(implicit session: RSession): Seq[Id[User]]
   def getFollowersForOtherUser(ownerId: Id[User], viewerId: Id[User])(implicit session: RSession): Seq[Id[User]]
   def countFollowersForAnonymous(userId: Id[User])(implicit session: RSession): Int
   def countFollowersForOwner(ownerId: Id[User])(implicit session: RSession): Int
   def countFollowersForOtherUser(ownerId: Id[User], viewerId: Id[User])(implicit session: RSession): Int
+  def userRecentFollowerCounts(ownerId: Id[User], since: DateTime)(implicit session: RSession): Int
+  def userRecentTopFollowedLibrariesAndCounts(ownerId: Id[User], since: DateTime, limit: Int = 7)(implicit session: RSession): Map[Id[Library], Int]
 }
 
 @Singleton
@@ -76,7 +82,8 @@ class LibraryMembershipRepoImpl @Inject() (
     def lastEmailSent = column[Option[DateTime]]("last_email_sent", O.Nullable)
     def listed = column[Boolean]("listed", O.NotNull)
     def lastJoinedAt = column[Option[DateTime]]("last_joined_at", O.Nullable)
-    def * = (id.?, libraryId, userId, access, createdAt, updatedAt, state, seq, showInSearch, listed, lastViewed, lastEmailSent, lastJoinedAt) <> ((LibraryMembership.apply _).tupled, LibraryMembership.unapply)
+    def subscribedToUpdates = column[Boolean]("subscribed_to_updates", O.NotNull)
+    def * = (id.?, libraryId, userId, access, createdAt, updatedAt, state, seq, showInSearch, listed, lastViewed, lastEmailSent, lastJoinedAt, subscribedToUpdates) <> ((LibraryMembership.apply _).tupled, LibraryMembership.unapply)
   }
 
   implicit val getLibraryResult = libraryRepo.getLibraryResult
@@ -97,7 +104,9 @@ class LibraryMembershipRepoImpl @Inject() (
   }
 
   def pageWithLibraryIdAndAccess(libraryId: Id[Library], offset: Int, limit: Int, accessSet: Set[LibraryAccess], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Seq[LibraryMembership] = {
-    (for (b <- rows if b.libraryId === libraryId && b.access.inSet(accessSet) && b.state =!= excludeState.orNull) yield b).sortBy(r => (r.access, r.createdAt)).drop(offset).take(limit).list
+    val safeOffset = if (offset >= 0) offset else 0
+    // This can be removed once clients stop calling with offset = -1
+    (for (b <- rows if b.libraryId === libraryId && b.access.inSet(accessSet) && b.state =!= excludeState.orNull) yield b).sortBy(r => (r.access, r.createdAt)).drop(safeOffset).take(limit).list
   }
 
   private val getWithLibraryIdCompiled = Compiled { (libraryId: Column[Id[Library]]) =>
@@ -150,15 +159,19 @@ class LibraryMembershipRepoImpl @Inject() (
     }
   }
 
-  def getWithLibraryIdsAndUserId(libraryIds: Set[Id[Library]], userId: Id[User], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Map[Id[Library], LibraryMembership] = {
-    libraryIds.size match {
+  def getWithLibraryIdsAndUserId(libraryIds: Set[Id[Library]], userId: Id[User], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Map[Id[Library], Option[LibraryMembership]] = {
+    val foundMembershipsMap = libraryIds.size match {
       case 0 =>
-        Map.empty
+        Map.empty[Id[Library], LibraryMembership]
       case 1 =>
         getWithLibraryIdAndUserId(libraryIds.head, userId, excludeState) map { lm => (lm.libraryId -> lm) } toMap
       case _ =>
         (for (b <- rows if b.libraryId.inSet(libraryIds) && b.userId === userId && b.state =!= excludeState.orNull) yield (b.libraryId, b)).list.toMap
     }
+
+    libraryIds.map { libraryId =>
+      (libraryId -> foundMembershipsMap.get(libraryId))
+    }.toMap
   }
 
   def getWithLibraryIdAndUserIds(libraryId: Id[Library], userIds: Set[Id[User]], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Map[Id[User], LibraryMembership] = {
@@ -234,7 +247,7 @@ class LibraryMembershipRepoImpl @Inject() (
       val existingAccessMap = sql"""select access, count(*) from library_membership where library_id=$libraryId and state='active' group by access""".as[(String, Int)].list
         .map(t => (LibraryAccess(t._1), t._2))
         .toMap
-      val counts: Map[LibraryAccess, Int] = LibraryAccess.getAll.map(access => access -> existingAccessMap.getOrElse(access, 0)).toMap
+      val counts: Map[LibraryAccess, Int] = LibraryAccess.all.map(access => access -> existingAccessMap.getOrElse(access, 0)).toMap
       CountWithLibraryIdByAccess.fromMap(counts)
     }
   }
@@ -310,9 +323,12 @@ class LibraryMembershipRepoImpl @Inject() (
     countWithLibraryIdByAccessCache.remove(CountWithLibraryIdByAccessKey(libMem.libraryId))
   }
 
-  def countWithUserIdAndAccess(userId: Id[User], access: LibraryAccess)(implicit session: RSession): Int = {
+  def countNonTrivialLibrariesWithUserIdAndAccess(userId: Id[User], access: LibraryAccess, minKeepCount: Int = 1)(implicit session: RSession): Int = {
     libraryMembershipCountCache.getOrElse(LibraryMembershipCountKey(userId, access)) {
-      StaticQuery.queryNA[Int](s"select count(*) from library_membership where user_id = $userId and access = '${access.value}' and state = 'active'").firstOption.getOrElse(0)
+      StaticQuery.queryNA[Int](
+        s"select count(*) from library_membership lm, library l where " +
+          s"lm.library_id = l.id and l.kind = 'user_created' and l.last_kept is not null and l.keep_count > $minKeepCount and l.state = 'active' and lm.user_id = $userId and lm.access = '${access.value}' and lm.state = 'active'")
+        .firstOption.getOrElse(0)
     }
   }
 
@@ -358,6 +374,18 @@ class LibraryMembershipRepoImpl @Inject() (
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     val q = sql"select count(distinct lm.user_id) from library_membership lm, library lib where lm.library_id = lib.id and lib.owner_id = $ownerId and lib.state = 'active' and lm.access != 'owner' and lm.state = 'active' and (lib.visibility = 'published' or (lib.visibility='secret' and lm.user_id = $viewerId))"
     q.as[Int].firstOption.getOrElse(0)
+  }
+
+  def userRecentFollowerCounts(ownerId: Id[User], since: DateTime)(implicit session: RSession): Int = {
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
+    val q = sql"select count(distinct lm.user_id) from library_membership lm, library lib where lm.library_id = lib.id and lib.owner_id = $ownerId and lib.state = 'active' and lm.access != 'owner' and lm.created_at > $since and lm.state = 'active'"
+    q.as[Int].firstOption.getOrElse(0)
+  }
+
+  def userRecentTopFollowedLibrariesAndCounts(ownerId: Id[User], since: DateTime, limit: Int = 5)(implicit session: RSession): Map[Id[Library], Int] = {
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
+    val q = sql"select lib.id, count(*) cnt from library as lib inner join library_membership as lm on lib.id = lm.library_id where lib.owner_id = ${ownerId} and lm.access != 'owner' and lm.created_at >= ${since} group by lib.id order by cnt desc limit $limit"
+    q.as[(Int, Int)].list.map { case (id, cnt) => (Id[Library](id), cnt) }.toMap
   }
 }
 

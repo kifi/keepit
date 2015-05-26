@@ -1,0 +1,96 @@
+@()(implicit request: com.keepit.common.controller.UserRequest[_])
+
+@admin("Cache") {
+<div>
+    <div class="row-fluid span10">
+    <span class="span8">
+      <form class="form-horizontal get-cache-form" action="#">
+          <input id="get-cache-key-input" type="text" placeholder="cache key" class="form-control span8">
+          <input type="submit" value="Get cache value" class="btn btn-default span4">
+      </form>
+    </span>
+        <p class="span4" id="get-cache-result"></p>
+    </div>
+
+    <div class="row-fluid span10">
+    <span class="span8">
+      <form class="form-horizontal delete-cache-form" action="#">
+          <input class="form-control span8" id="delete-cache-key-input" type="text" placeholder="cache key">
+          <input class = "btn btn-default span4" type="submit" value="Delete key from cache">
+      </form>
+    </span>
+        <p class="span4" id="delete-cache-result"></p>
+    </div>
+
+    <div class="row-fluid span10">
+    <span class="span8">
+      <form class="form-horizontal set-cache-form" action="#">
+          <input class="form-control span3" id="set-cache-key-input" type="text" placeholder="cache key">
+          <input class="form-control span3" id="set-cache-value-input" type="text" placeholder="cache value">
+          <input class="form-control span3" id="set-cache-expiration-input" type="number" placeholder="expiration (s)">
+          <input class="btn btn-default span3" type="submit" value="Set cache key-value pair">
+      </form>
+    </span>
+        <p class="span4" id="set-cache-result"></p>
+    </div>
+</div>
+
+<script>
+      (function() {
+    var getCacheResult = $('#get-cache-result');
+    var deleteCacheResult = $('#delete-cache-result');
+    var setCacheResult = $('#set-cache-result');
+
+    var getKeyInput = $('#get-cache-key-input');
+    $('.get-cache-form').on("submit", function() {
+      getCacheResult.text("Processing Request");
+      $.get('@com.keepit.controllers.admin.routes.AdminCacheController.getCacheEntry("__")'.replace("__", getKeyInput.val()))
+      .done(function(data, textStatus, xhr) {
+        if (xhr.status == 200) {
+          getCacheResult.text(getKeyInput.val() + "->" + data);
+          deleteCacheResult.text("");
+          setCacheResult.text("");
+        } else if (xhr.status == 204) {
+          // No Content (Cache entry does not exist)
+          getCacheResult.text("Cache key "+ getKeyInput.val() +" does not exist.");
+          deleteCacheResult.text("");
+          setCacheResult.text("");
+        }
+      });
+      return false;
+    });
+
+    var deleteKeyInput = $('#delete-cache-key-input');
+    $('.delete-cache-form').on('submit', function() {
+      $.ajax({
+        url: '@com.keepit.controllers.admin.routes.AdminCacheController.deleteCacheEntry("__")'.replace('__', deleteKeyInput.val()),
+        type: 'delete'
+      })
+      .done(function(data) {
+        getCacheResult.text("");
+        deleteCacheResult.text("Deleted: " + deleteKeyInput.val());
+        setCacheResult.text("");
+      })
+      return false;
+    });
+    var setCacheKey = $('#set-cache-key-input');
+    var setCacheValue = $('#set-cache-value-input');
+    var setCacheExpiration = $('#set-cache-expiration-input');
+    $('.set-cache-form').on('submit', function() {
+      $.ajax({
+        url: '@com.keepit.controllers.admin.routes.AdminCacheController.setCacheEntry("__", "___", 11)'
+                .replace('__', setCacheKey.val())
+                .replace('___', setCacheValue.val())
+                .replace('11', setCacheExpiration.val()),
+        type: 'put'
+      })
+      .done(function(data) {
+        getCacheResult.text("");
+        deleteCacheResult.text("");
+        setCacheResult.text("Set Cache Entry: " +setCacheKey.val() + "->" + setCacheValue.val());
+      });
+      return false;
+    });
+  })();
+</script>
+}

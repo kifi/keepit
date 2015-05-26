@@ -1,5 +1,6 @@
 package com.keepit.cortex.models.lda
 
+import com.keepit.cortex.article.StoreBasedArticleProvider
 import com.keepit.cortex.nlp.Stopwords
 import org.specs2.mutable.Specification
 import com.keepit.cortex.features.URIFeatureTestHelper
@@ -119,7 +120,7 @@ class LDADbUpdaterTest extends Specification with CortexTestInjector with LDADbT
         val commitRepo = inject[FeatureCommitInfoRepo]
         val topicRepo = inject[URILDATopicRepo]
         db.readWrite { implicit s =>
-          uris.map { CortexURI.fromURI(_).copy(state = State[CortexURI]("active")) }.foreach { uriRepo.save(_) }
+          uris.map { CortexURI.fromURI(_).copy(state = State[CortexURI]("active"), shouldHaveContent = false) }.foreach { uriRepo.save(_) }
         }
 
         val updater = new LDADbUpdaterImpl(uriReps, db, uriRepo, topicRepo, commitRepo)
@@ -151,11 +152,11 @@ trait LDADbTestHelper extends URIFeatureTestHelper {
     override val minValidTerms = 1
   }
   val articleStore = new InMemoryArticleStoreImpl()
-  val uriRep = LDAURIRepresenter(docRep, articleStore)
+  val uriRep = LDAURIRepresenter(docRep, new StoreBasedArticleProvider(articleStore))
   val uriReps = MultiVersionedLDAURIRepresenter(uriRep)
 
-  def makeURI(idx: Int, seq: Option[SequenceNumber[NormalizedURI]] = None, state: State[NormalizedURI] = NormalizedURIStates.SCRAPED) = {
-    NormalizedURI(id = Some(Id[NormalizedURI](idx)), url = s"http://page${idx}.com", urlHash = UrlHash(s"page${idx}"), seq = seq.getOrElse(SequenceNumber[NormalizedURI](idx)), state = state)
+  def makeURI(idx: Int, seq: Option[SequenceNumber[NormalizedURI]] = None, state: State[NormalizedURI] = NormalizedURIStates.ACTIVE) = {
+    NormalizedURI(id = Some(Id[NormalizedURI](idx)), url = s"http://page${idx}.com", urlHash = UrlHash(s"page${idx}"), seq = seq.getOrElse(SequenceNumber[NormalizedURI](idx)), state = state, shouldHaveContent = true)
   }
 
   // 5 * word_i + 4* word_(i+1) + ... + 1 * word_(i+5)

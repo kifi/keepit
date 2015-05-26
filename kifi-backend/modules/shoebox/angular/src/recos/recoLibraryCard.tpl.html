@@ -45,8 +45,8 @@
       <div class="kf-rcl-buttons clearfix">
         <div style="float:right">
           <div kf-library-share-search library="library" current-page-origin="recommendationsPage"></div>
-          <button class="kf-button kf-rcl-unfollow-btn" ng-if="alreadyFollowingLibrary()" ng-click="unfollowLibrary()"></button>
-          <button class="kf-button kf-rcl-follow-btn" ng-if="!alreadyFollowingLibrary()" ng-click="followLibrary()">Follow Library</button>
+          <button class="kf-button kf-rcl-unfollow-btn" ng-if="library.access === 'read_only'" ng-click="unfollowLibrary()"></button>
+          <button class="kf-button kf-rcl-follow-btn" ng-if="library.access === 'none'" ng-click="followLibrary()">Follow Library</button>
         </div>
         <a class="kf-button kf-button-text-optional" ng-focus="preloadTwitter()" ng-mouseenter="preloadTwitter()" ng-click="shareTwitter($event)" href="https://twitter.com/intent/tweet" target="_blank">
           <span class="kf-button-icon svg-twitter"></span> Tweet

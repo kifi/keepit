@@ -1,12 +1,14 @@
 <div class="kf-main-keeps">
   <div class="kf-keep-selection-tools" ng-if="edit.enabled" ng-show="availableKeeps.length > 0">
-    <div class="kf-keep-checkbox-icon sprite" ng-class="{ 'sprite-checkbox-icon': isUnchecked(availableKeeps), 'sprite-checkbox-icon-partial': isMultiChecked(availableKeeps), 'sprite-checkbox-icon-active': selection.isSelectedAll(availableKeeps) }" ng-click="selection.toggleSelectAll(availableKeeps)"></div>
+    <div class="kf-keep-checkbox-wrap">
+      <div class="kf-keep-checkbox-icon sprite" ng-class="{'sprite-checkbox-icon': isUnchecked(availableKeeps), 'sprite-checkbox-icon-partial': isMultiChecked(availableKeeps), 'sprite-checkbox-icon-active': selection.isSelectedAll(availableKeeps)}" ng-click="selection.toggleSelectAll(availableKeeps)"></div>
+    </div>
     <div class="kf-keep-selection-tools-body">
       <div class="kf-keep-selected-count">
         <span class="kf-keep-selected-count-number">{{selection.getSelected(keeps).length}}</span>
         <span class="kf-keep-selected-count-text" ng-pluralize count="selection.getSelected(keeps).length" when="{'1': 'keep selected', 'other': 'keeps selected'}"></span>
       </div>
-      <div class="kf-keep-selection-options" ng-class="{disabled: editingTags || selection.getSelected(keeps).length === 0}">
+      <div class="kf-keep-selection-options" ng-class="{disabled: selection.getSelected(keeps).length === 0}">
         <div ng-if="edit.actions.copyToLibrary" class="kf-keep-selection-option copy-to-library">
           <span kf-keep-to-library-widget widget-action-text="Copy"
             library-click-action="onWidgetCopyLibraryClicked(clickedLibrary)"
@@ -29,21 +31,48 @@
           </span>
         </div>
         <div ng-if="edit.actions.moveToLibrary" class="kf-keep-selection-option"><span ng-click="unkeep(keeps)">Unkeep</span></div>
-        <div ng-if="edit.actions.editTags" class="kf-keep-selection-option" ng-click="enableEditTags()"><span>Edit Tags</span></div>
         <div class="kf-keep-selection-options-mask"></div>
-      </div>
-      <div class="kf-keep-selection-tags" ng-if="editingTags">
-        <div class="kf-keep-selection-tags-done" ng-click="disableEditTags()">Done tagging</div>
-        <div kf-tag-list class="kf-keep-selection-tags-list" adding-tag="addingTag" get-selected-keeps="selection.getSelected(keeps)"></div>
       </div>
     </div>
   </div>
   <ol class="kf-my-keeps" smart-scroll scroll-distance="scrollDistance" scroll-disabled="isScrollDisabled()" scroll-next="scrollNext()(keeps.length)">
-    <div ng-repeat="keep in keeps" kf-keep-card keep="keep" library="library" me="me" current-page-origin="{{currentPageOrigin}}"
-      selectable="edit.enabled" is-selected="!!selection.isSelected(keep)" toggle-select="selection.toggleSelect(keep)"
-      click-callback="keepClickAction(event, keep)"></div>
+    <div class="kf-keep" ng-hide="keep.unkept && library" ng-class="{'editing': edit.enabled}" ng-repeat="keep in keeps">
+      <div class="kf-keep-checkbox-wrap">
+        <div class="kf-keep-checkbox-icon sprite sprite-checkbox-icon" ng-if="!selection.isSelected(keep)" ng-click="selection.toggleSelect(keep)"></div>
+        <div class="kf-keep-checkbox-icon sprite sprite-checkbox-icon-active" ng-if="selection.isSelected(keep)" ng-click="selection.toggleSelect(keep)"></div>
+      </div>
+      <div class="kf-keep-top-menu-container" kf-hover-menu ng-if="::keep.user.id === me.id">
+        <button class="kf-keep-top-menu-btn"></button>
+        <menu class="kf-dropdown-menu">
+          <button class="kf-dropdown-menu-item" ng-click="editKeepNote($event, keep)">{{keep.note ? 'Edit note' : 'Add a note'}}</button>
+          <button class="kf-dropdown-menu-item" ng-click="deleteKeep($event, keep)">Delete</button>
+        </menu>
+      </div>
+      <div class="kf-keep-top">
+        <a class="kf-keep-keeper-pic" ng-if="::keep.user" ng-href="{{::keep.user|profileUrl}}" ng-attr-style="background-image:url({{::keep.user|pic:100}})"></a>
+        <div class="kf-keep-top-r" ng-if="::keep.user">
+          <a class="kf-keep-keeper-name" ng-href="{{::keep.user|profileUrl}}">{{::keep.user|name}}</a>
+          <div class="kf-keep-time">
+            <time ng-attr-datetime="{{::keep.createdAt}}" am-time-ago="::keep.createdAt" title="{{::keep.createdAt|localTime}}" ng-if="::keep.createdAt"></time>
+            <span ng-if="::!keep.createdAt">kept this</span>
+            <span ng-if="::!library && keep.library && keep.library.visibility !== 'discoverable' && keep.library.path.slice(-7) !== '/secret'">
+              in <a class="kf-keep-lib-name" href="{{::keep.library.path}}">{{::keep.library.name}}</a>
+            </span>
+            <span ng-if="::keep.sourceAttribution.twitter.screenName">
+              <a class="kf-keep-tweet-link" href="https://www.twitter.com/{{::keep.sourceAttribution.twitter.screenName}}/status/{{::keep.sourceAttribution.twitter.idString}}" target="_blank" ng-click="trackTweet()">
+                <span class="kf-keep-twitter-logo svg-twitter-blue"></span>View the tweet
+              </a>
+            </span>
+          </div>
+        </div>
+      </div>
+      <div class="kf-keep-note" ng-bind-html="::keep.note|noteHtml" ng-if="::keep.note || keep.user.id === me.id"></div>
+      <div class="kf-keep-add-note" ng-if="::keep.user.id === me.id"><!-- wrapping button in div to reduce watch count on read-only libraries -->
+        <button class="kf-keep-add-note-btn" ng-click="editKeepNote($event, keep)" ng-if="!keep.note">Add a note</button>
+      </div>
+      <div kf-keep-card="keep" boxed current-page-origin="{{currentPageOrigin}}" click-callback="keepClickAction(event, keep)"></div>
+    </div>
   </ol>
   <img class="kf-keeps-loading" ng-show="keepsLoading" src="/img/load.gif">
   <a class="kf-keeps-load-more" ng-show="isShowMore()" href="javascript:" ng-click="scrollNext()(keeps.length)">Show more</a>
-  <div class="kf-keep-description-sizer kf-keep-description"></div>
 </div>

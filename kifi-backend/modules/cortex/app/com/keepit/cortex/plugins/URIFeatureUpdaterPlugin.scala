@@ -1,20 +1,15 @@
 package com.keepit.cortex.plugins
 
-import scala.concurrent.Await
-import scala.concurrent.duration.DurationInt
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.db.Id
 import com.keepit.common.db.SequenceNumber
 import com.keepit.cortex.core._
 import com.keepit.cortex.store._
 import com.keepit.model.NormalizedURI
-import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.model.serialize.UriIdAndSeq
 import com.keepit.model.UrlHash
 import com.keepit.common.db.slick.Database
 import com.keepit.cortex.dbmodel.CortexURIRepo
 import com.keepit.cortex.dbmodel.CortexURI
-import com.keepit.model.NormalizedURIStates
 
 @ImplementedBy(classOf[URIPullerImpl])
 trait URIPuller extends DataPuller[NormalizedURI]
@@ -29,10 +24,9 @@ class URIPullerImpl @Inject() (
     NormalizedURI(id = Some(uri.uriId), seq = SequenceNumber[NormalizedURI](uri.seq.value), url = "", urlHash = UrlHash(""))
   }
 
-  // scraped uris only
   def getSince(lowSeq: SequenceNumber[NormalizedURI], limit: Int): Seq[NormalizedURI] = {
     db.readOnlyReplica { implicit s =>
-      uriRepo.getSince(lowSeq, limit).filter(_.state.value == NormalizedURIStates.SCRAPED.value).map { convertToNormalizedURI(_) }
+      uriRepo.getSince(lowSeq, limit).map { convertToNormalizedURI(_) }
     }
   }
 }

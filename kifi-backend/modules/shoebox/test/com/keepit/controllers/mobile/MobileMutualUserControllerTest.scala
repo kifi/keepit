@@ -4,7 +4,6 @@ import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.controller.FakeUserActionsHelper
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.model.{ LibrarySlug, Username, User, UserConnectionRepo }
-import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.Specification
 import com.keepit.model.UserFactory._
@@ -24,7 +23,6 @@ import scala.concurrent.Future
 class MobileMutualUserControllerTest extends Specification with ShoeboxTestInjector {
   val modules = Seq(
     FakeABookServiceClientModule(),
-    FakeScrapeSchedulerModule(),
     FakeSocialGraphModule()
   )
 

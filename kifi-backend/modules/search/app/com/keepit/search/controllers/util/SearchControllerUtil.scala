@@ -20,7 +20,7 @@ import scala.concurrent.Future
 import com.keepit.search._
 import com.keepit.common.akka.SafeFuture
 import com.keepit.search.result.DecoratedResult
-import play.api.libs.json.{ Json, JsObject }
+import play.api.libs.json.JsObject
 import com.keepit.search.index.graph.library.{ LibraryRecord, LibraryIndexable }
 
 import scala.util.{ Failure, Success }
@@ -38,19 +38,6 @@ trait SearchControllerUtil {
   implicit val publicIdConfig: PublicIdConfiguration
 
   @inline def safelyFlatten[E](eventuallyEnum: Future[Enumerator[E]]): Enumerator[E] = Enumerator.flatten(new SafeFuture(eventuallyEnum))
-
-  def uriSummaryInfoFuture(plainResultFuture: Future[UriSearchResult]): Future[String] = {
-    plainResultFuture.flatMap { r =>
-      val uriIds = r.hits.map(h => Id[NormalizedURI](h.id))
-      if (uriIds.nonEmpty) {
-        shoeboxClient.getUriSummaries(uriIds).map { uriSummaries =>
-          KifiSearchResult.uriSummaryInfoV2(uriIds.map { uriId => uriSummaries.get(uriId) }).toString
-        }
-      } else {
-        Future.successful(KifiSearchResult.uriSummaryInfoV2(Seq()).toString)
-      }
-    }
-  }
 
   def toKifiSearchResultV2(kifiPlainResult: UriSearchResult): JsObject = {
     KifiSearchResult.v2(
@@ -122,7 +109,7 @@ trait SearchControllerUtil {
             val libraryAccess = requestHeader.session.get("library_access").map { _.split("/") }
             (auth, libraryAccess) match {
               case (Some(_), Some(Array(libPublicIdInCookie, hashedPassPhrase))) if (libPublicIdInCookie == libPublicId) =>
-                shoeboxClient.canViewLibrary(libId, None, auth, Some(HashedPassPhrase(hashedPassPhrase))).map { authorized =>
+                shoeboxClient.canViewLibrary(libId, None, auth).map { authorized =>
                   if (authorized) LibraryContext.Authorized(libId.id) else LibraryContext.NotAuthorized(libId.id)
                 }
               case _ =>

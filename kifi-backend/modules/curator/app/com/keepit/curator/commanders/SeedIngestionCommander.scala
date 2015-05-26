@@ -247,4 +247,15 @@ class SeedIngestionCommander @Inject() (
     Future.successful(())
   }
 
+  //temporary nasty to get the table size down. Removable after May 20th 2015.
+  val cleanupLock = new ReactiveLock(1, Some(1000))
+  def cleanUpRawSeedItems(): Future[Unit] = cleanupLock.withLock {
+    (1 to 50).foreach { _ =>
+      db.readWrite(attempts = 2) { implicit session =>
+        rawSeedsRepo.cleanup()
+      }
+      Thread.sleep(100)
+    }
+  }
+
 }

@@ -16,9 +16,7 @@ import com.keepit.common.usersegment.UserSegment
 import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.model._
 import com.keepit.model.view.{ LibraryMembershipView, UserSessionView }
-import com.keepit.rover.document.utils.Signature
-import com.keepit.rover.fetcher.HttpRedirect
-import com.keepit.scraper.ScrapeRequest
+import com.keepit.rover.model.BasicImages
 import com.keepit.search._
 import com.keepit.shoebox.model.ids.UserSessionExternalId
 import com.keepit.social.{ BasicUser, SocialId, SocialNetworkType }
@@ -35,32 +33,7 @@ class FakeShoeboxScraperClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   protected def httpClient: com.keepit.common.net.HttpClient = ???
 
-  def assignScrapeTasks(zkId: Long, max: Int): Future[Seq[ScrapeRequest]] = {
-    Future.successful(Seq.empty[ScrapeRequest])
-  }
-
-  def getUriImage(nUriId: Id[NormalizedURI]): Future[Option[String]] = Future.successful(Some("http://www.adummyurl.com"))
-
   def getAllURLPatterns(): Future[UrlPatternRules] = Future.successful(UrlPatternRules(Seq.empty))
-
-  def saveScrapeInfo(info: ScrapeInfo): Future[Unit] = ???
-
-  def updateNormalizedURIState(uriId: Id[NormalizedURI], state: State[NormalizedURI]): Future[Unit] = ???
-
-  def updateNormalizedURI(uriId: => Id[NormalizedURI],
-    createdAt: => DateTime,
-    updatedAt: => DateTime,
-    externalId: => ExternalId[NormalizedURI],
-    title: => Option[String],
-    url: => String,
-    urlHash: => UrlHash,
-    state: => State[NormalizedURI],
-    seq: => SequenceNumber[NormalizedURI],
-    screenshotUpdatedAt: => Option[DateTime],
-    restriction: => Option[Restriction],
-    normalization: => Option[Normalization],
-    redirect: => Option[Id[NormalizedURI]],
-    redirectTime: => Option[DateTime]): Future[Unit] = Future.successful(Unit)
 
   def getProxy(url: String): Future[Option[HttpProxy]] = ???
 
@@ -154,7 +127,6 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
   val allUserValues = MutableMap[(Id[User], UserValueName), String]()
   val allUserFriendRequests = MutableMap[Id[User], Seq[Id[User]]]()
   val sentMail = mutable.MutableList[ElectronicMail]()
-  val uriSummaries = MutableMap[Id[NormalizedURI], URISummary]()
   val socialUserInfosByUserId = MutableMap[Id[User], List[SocialUserInfo]]()
   val allLibraries = MutableMap[Id[Library], Library]()
   val allLibraryMemberships = MutableMap[Id[LibraryMembership], LibraryMembership]()
@@ -186,10 +158,6 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
       uriToUrl(id) = updatedUrl
       updatedUri
     }
-  }
-
-  def saveURISummary(uriId: Id[NormalizedURI], uriSummary: URISummary): Unit = synchronized {
-    uriSummaries(uriId) = uriSummary
   }
 
   def saveUserImageUrl(id: Int, url: String) = synchronized {
@@ -260,6 +228,9 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
     bookmarks.map { b =>
       val id = b.id.getOrElse(nextBookmarkId())
       val updatedBookmark = b.withId(id).copy(seq = nextBookmarkSeqNum())
+      allNormalizedURIs.get(updatedBookmark.uriId).foreach { uri =>
+        if (!uri.shouldHaveContent) { allNormalizedURIs += (uri.id.get -> uri.withContentRequest(true)) }
+      }
       allBookmarks(id) = updatedBookmark
       allUserBookmarks(b.userId) = allUserBookmarks.getOrElse(b.userId, Set.empty) + id
       updatedBookmark
@@ -298,7 +269,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
       case (uri, user, optionalTitle) =>
         val library = internLibrary(user.id.get, isPrivate)
         val url = uriToUrl(uri.id.get)
-        Keep(title = optionalTitle orElse uri.title, userId = user.id.get, uriId = uri.id.get, urlId = url.id.get, url = url.url, source = source, visibility = library.visibility, libraryId = Some(library.id.get), inDisjointLib = library.isDisjoint)
+        Keep(title = optionalTitle orElse uri.title, userId = user.id.get, uriId = uri.id.get, urlId = url.id.get, url = url.url, source = source, visibility = library.visibility, libraryId = Some(library.id.get), inDisjointLib = library.isDisjoint, originalKeeperId = Some(user.id.get))
     }
     saveBookmarks(bookmarks: _*)
   }
@@ -384,16 +355,11 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
 
   def getNormalizedUriByUrlOrPrenormalize(url: String): Future[Either[NormalizedURI, String]] = ???
 
-  def internNormalizedURI(url: URI, scrapeWanted: Boolean): Future[NormalizedURI] = {
-    val uri = allNormalizedURIs.values.find(_.url == url).getOrElse {
-      NormalizedURI(
-        id = Some(Id[NormalizedURI](url.hashCode)),
-        url = url.toString(),
-        urlHash = UrlHash(url.hashCode.toString),
-        screenshotUpdatedAt = None
-      )
-    }
-    Future.successful(uri)
+  def internNormalizedURI(url: String, contentWanted: Boolean): Future[NormalizedURI] = {
+    val uri = allNormalizedURIs.values.find(_.url == url) getOrElse NormalizedURI.withHash(url).copy(id = Some(Id[NormalizedURI](url.hashCode)))
+    val uriWithContentRequest = uri.withContentRequest(contentWanted)
+    allNormalizedURIs += (uriWithContentRequest.id.get -> uriWithContentRequest)
+    Future.successful(uriWithContentRequest)
   }
 
   def getBookmarks(userId: Id[User]): Future[Seq[Keep]] = {
@@ -510,9 +476,8 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
     Future.successful(fewerUris map { u => IndexableUri(u) })
   }
 
-  def getScrapedUris(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int = -1): Future[Seq[IndexableUri]] = {
-    val scrapedStates = Set(NormalizedURIStates.SCRAPED, NormalizedURIStates.SCRAPE_FAILED, NormalizedURIStates.UNSCRAPABLE)
-    val uris = allNormalizedURIs.values.filter(x => x.seq > seqNum && scrapedStates.contains(x.state)).toSeq.sortBy(_.seq)
+  def getIndexableUrisWithContent(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int = -1): Future[Seq[IndexableUri]] = {
+    val uris = allNormalizedURIs.values.filter(x => x.seq > seqNum && x.state == NormalizedURIStates.ACTIVE && x.shouldHaveContent).toSeq.sortBy(_.seq)
     val fewerUris = (if (fetchSize >= 0) uris.take(fetchSize) else uris)
     Future.successful(fewerUris map { u => IndexableUri(u) })
   }
@@ -638,13 +603,6 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
     Future.successful(if (fetchSize < 0) changed else changed.take(fetchSize))
   }
 
-  def getUriSummary(request: URISummaryRequest): Future[URISummary] = Future.successful(URISummary())
-
-  def getUriSummaries(uriIds: Seq[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], URISummary]] = Future.successful {
-    val uriSet = uriIds.toSet
-    uriSummaries.toMap.filter { pair => uriSet.contains(pair._1) }
-  }
-
   def getCandidateURIs(uris: Seq[Id[NormalizedURI]]): Future[Seq[Boolean]] = {
     callsGetToCandidateURIs += uris
     Future.successful(Seq.fill(uris.size)(true))
@@ -717,7 +675,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
     Future.successful(changed)
   }
 
-  def canViewLibrary(libraryId: Id[Library], userId: Option[Id[User]], authToken: Option[String], hashedCode: Option[HashedPassPhrase]): Future[Boolean] = {
+  def canViewLibrary(libraryId: Id[Library], userId: Option[Id[User]], authToken: Option[String]): Future[Boolean] = {
     Future.successful(true)
   }
 
@@ -738,15 +696,17 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
 
   def getBasicLibraryStatistics(libraryIds: Set[Id[Library]]): Future[Map[Id[Library], BasicLibraryStatistics]] = ???
 
+  def getBasicLibraryDetails(libraryIds: Set[Id[Library]]): Future[Map[Id[Library], BasicLibraryDetails]] = ???
+
   def getKeepCounts(userId: Set[Id[User]]): Future[Map[Id[User], Int]] = ???
 
   def getLibraryImageUrls(libraryIds: Set[Id[Library]], idealImageSize: ImageSize): Future[Map[Id[Library], String]] = ???
+
+  def getKeepImages(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], BasicImages]] = Future.successful(Map.empty)
 
   def getLibrariesWithWriteAccess(userId: Id[User]): Future[Set[Id[Library]]] = Future.successful {
     allLibraryMemberships.values.collect { case membership if membership.userId == userId && membership.canWrite => membership.libraryId }.toSet
   }
 
   def getUserActivePersonas(userId: Id[User]): Future[UserActivePersonas] = Future.successful(UserActivePersonas(Seq(), Seq()))
-
-  def getImageInfosChanged(seqNum: SequenceNumber[ImageInfo], fetchSize: Int): Future[Seq[ImageInfo]] = Future.successful(Seq.empty)
 }

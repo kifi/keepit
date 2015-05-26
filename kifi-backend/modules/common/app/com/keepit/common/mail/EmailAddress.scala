@@ -22,7 +22,8 @@ object EmailAddress {
     def writes(email: EmailAddress) = JsString(email.address)
   }
 
-  implicit def queryStringBinder[T](implicit stringBinder: QueryStringBindable[String]) = new QueryStringBindable[EmailAddress] {
+  implicit val queryStringBinder = new QueryStringBindable[EmailAddress] {
+    private val stringBinder = implicitly[QueryStringBindable[String]]
     override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, EmailAddress]] = {
       stringBinder.bind(key, params) map {
         case Right(address) => validate(address).map(Right(_)).recover { case ex: Throwable => Left(ex.getMessage) }.get
@@ -72,6 +73,7 @@ object SystemEmailAddress {
   val NOTIFICATIONS = EmailAddress("notifications@kifi.com")
   val ENG = EmailAddress("eng@42go.com")
   val EISHAY = EmailAddress("eishay@42go.com")
+  val EISHAY_PUBLIC = EmailAddress("eishay.smith@kifi.com")
   val INVITATION = EmailAddress("invitation@kifi.com")
   val YASUHIRO = EmailAddress("yasuhiro@42go.com")
   val ANDREW = EmailAddress("andrew@42go.com")
@@ -82,6 +84,7 @@ object SystemEmailAddress {
   val JOSH = EmailAddress("josh@kifi.com")
   val AARON = EmailAddress("aaron@kifi.com")
   val MARK = EmailAddress("mark@kifi.com")
+  val CAM = EmailAddress("cam@kifi.com")
   val CONGRATS = EmailAddress("congrats@kifi.com")
   val NOTIFY = EmailAddress("42.notify@gmail.com")
   val SENDGRID = EmailAddress("sendgrid@42go.com")
@@ -90,8 +93,8 @@ object SystemEmailAddress {
   val FEED_QA = EmailAddress("feed-qa@kifi.com")
   val ASHLEY = EmailAddress("ashley@kifi.com")
 
-  val ENG_EMAILS = Seq(EISHAY, YASUHIRO, JARED, ANDREW, YINGJIE, LÉO, STEPHEN, JOSH)
-  val NON_ENG_EMAILS = Seq(TEAM, INVITATION, SUPPORT, OLD_SUPPORT, NOTIFICATIONS, ENG, CONGRATS, NOTIFY, SENDGRID, ASHLEY)
+  val ENG_EMAILS = Seq(EISHAY, YASUHIRO, JARED, ANDREW, YINGJIE, LÉO, STEPHEN, JOSH, CAM)
+  val NON_ENG_EMAILS = Seq(TEAM, INVITATION, SUPPORT, OLD_SUPPORT, NOTIFICATIONS, ENG, CONGRATS, NOTIFY, SENDGRID, ASHLEY, EISHAY_PUBLIC)
 
   val ALL_EMAILS = ENG_EMAILS ++ NON_ENG_EMAILS
 

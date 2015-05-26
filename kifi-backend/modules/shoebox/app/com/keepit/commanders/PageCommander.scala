@@ -11,14 +11,18 @@ import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.net.URI
 import com.keepit.common.social._
+import com.keepit.common.store.S3ImageConfig
 import com.keepit.cortex.CortexServiceClient
 import com.keepit.curator.LibraryQualityHelper
 import com.keepit.model._
 import com.keepit.normalizer.NormalizedURIInterner
+import com.keepit.rover.RoverServiceClient
+import com.keepit.rover.model.{ BasicImages, RoverUriSummary }
 import com.keepit.search.SearchServiceClient
 import com.keepit.social.BasicUser
 import com.keepit.common.logging.Logging
 import com.kifi.macros.json
+import org.joda.time.DateTime
 
 import play.api.libs.json._
 import scala.concurrent.{ ExecutionContext, Await, Future }
@@ -153,9 +157,9 @@ class PageCommander @Inject() (
     infoF.flatten
   }
 
-  private def filterLibrariesUserDoesNotOwnOrFollow(libraries: Seq[(Id[Library], Id[User])], userId: Id[User])(implicit session: RSession): Seq[Library] = {
+  private def filterLibrariesUserDoesNotOwnOrFollow(libraries: Seq[(Id[Library], Id[User], DateTime)], userId: Id[User])(implicit session: RSession): Seq[Library] = {
     val otherLibraryIds = libraries.filterNot(_._2 == userId).map(_._1)
-    val memberLibraryIds = libraryMembershipRepo.getWithLibraryIdsAndUserId(otherLibraryIds.toSet, userId).keys
+    val memberLibraryIds = libraryMembershipRepo.getWithLibraryIdsAndUserId(otherLibraryIds.toSet, userId).filter(lm => lm._2.isDefined).keys
     val libraryIds = otherLibraryIds.diff(memberLibraryIds.toSeq)
     val libraryMap = libraryRepo.getLibraries(libraryIds.toSet)
     libraryIds.map(libraryMap)
@@ -192,7 +196,7 @@ class PageCommander @Inject() (
 
     augmentFuture map {
       case Seq(info) =>
-        val userIdSet = info.keepers.toSet
+        val userIdSet = info.keepers.map(_._1).toSet
         val (basicUserMap, libraries) = db.readOnlyMaster { implicit session =>
           val notMyLibs = filterLibrariesUserDoesNotOwnOrFollow(info.libraries, userId)
           val libraries = firstQualityFilterAndSort(notMyLibs)
@@ -208,7 +212,7 @@ class PageCommander @Inject() (
         }
 
         val keeperIdsToExclude = Set(userId) ++ libraries.map(_.ownerId)
-        val keepers = info.keepers.filterNot(id => keeperIdsToExclude.contains(id)).map(basicUserMap) // preserving ordering
+        val keepers = info.keepers.collect { case (keeperId, _) if !keeperIdsToExclude.contains(keeperId) => basicUserMap(keeperId) } // preserving ordering
         val otherKeepersTotal = info.keepersTotal - (if (userIdSet.contains(userId)) 1 else 0)
         val followerCounts = db.readOnlyReplica { implicit session =>
           libraryMembershipRepo.countWithAccessByLibraryId(libraries.map(_.id.get).toSet, LibraryAccess.READ_ONLY)
@@ -254,7 +258,7 @@ case class KeeperPagePartialInfo(
   libraries: Seq[JsObject],
   keeps: Seq[KeepData])
 
-case class RelatedPageInfo(title: String, url: String, image: String, width: Option[Int] = None, height: Option[Int] = None)
+case class RelatedPageInfo(title: String, url: String, image: String, width: Int, height: Int)
 object RelatedPageInfo {
   implicit val writes = Json.writes[RelatedPageInfo]
 }
@@ -262,9 +266,10 @@ object RelatedPageInfo {
 class RelatedPageCommander @Inject() (
     db: Database,
     uriRepo: NormalizedURIRepo,
-    uriSummaryCmdr: URISummaryCommander,
     implicit val executionContext: ExecutionContext,
-    cortex: CortexServiceClient) {
+    cortex: CortexServiceClient,
+    rover: RoverServiceClient,
+    implicit val s3ImageConfig: S3ImageConfig) {
 
   private val MAX_LOOKUP_SIZE = 25
   private val MIN_POOL_SIZE = 5
@@ -274,24 +279,29 @@ class RelatedPageCommander @Inject() (
     val urisF = cortex.similarURIs(uriId)(None).map { uriIds =>
       val current = db.readOnlyReplica { implicit s => uriRepo.get(uriId) }
       val uris = db.readOnlyReplica { implicit s => uriIds.take(MAX_LOOKUP_SIZE).map { uriRepo.get(_) } }
-      val filtered = uris.filter { x => x.title.isDefined && x.state == NormalizedURIStates.SCRAPED && x.restriction.isEmpty }
+      val filtered = uris.filter { x => x.title.isDefined && x.shouldHaveContent && x.restriction.isEmpty }
       val uniqueUris = filtered.groupBy(_.title.get.toLowerCase).map { case (title, uriList) => uriList.head }.toArray.filter(_.title.get.toLowerCase != current.title.getOrElse("n/a"))
       uniqueUris
     }
 
-    val summariesF: Future[Seq[URISummary]] = urisF.flatMap { uris =>
-      Future.sequence(uris.map { x => uriSummaryCmdr.getDefaultURISummary(x, waiting = false) })
+    val imagesF: Future[Map[Id[NormalizedURI], BasicImages]] = urisF.flatMap { uris =>
+      rover.getImagesByUris(uris.map(_.id.get).toSet)
     }
 
     for {
       uris <- urisF
-      summaries <- summariesF
+      imagesByUriId <- imagesF
     } yield {
-      assume(uris.size == summaries.size)
-      val uriWithImages = (uris zip summaries).filter(_._2.imageUrl.isDefined)
-      if (uriWithImages.size >= MIN_POOL_SIZE) {
-        val pages = uriWithImages.map { case (uri, summary) => RelatedPageInfo(uri.title.get, uri.url, summary.imageUrl.get, summary.imageWidth, summary.imageHeight) }
-        scala.util.Random.shuffle(pages.toSeq).take(RETURN_SIZE)
+      val relatedPages = uris.flatMap { uri =>
+        imagesByUriId.get(uri.id.get).flatMap { images =>
+          images.get(ProcessedImageSize.Medium.idealSize).map { image =>
+            RelatedPageInfo(uri.title.get, uri.url, image.path.getUrl, image.size.width, image.size.height)
+          }
+        }
+      }
+
+      if (relatedPages.size >= MIN_POOL_SIZE) {
+        scala.util.Random.shuffle(relatedPages.toSeq).take(RETURN_SIZE)
       } else {
         // pool size too small. Don't show anything
         Seq()

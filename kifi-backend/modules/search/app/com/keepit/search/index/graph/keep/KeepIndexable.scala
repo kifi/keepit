@@ -3,7 +3,7 @@ package com.keepit.search.index.graph.keep
 import com.keepit.common.strings._
 import com.keepit.model.{ Hashtag, LibraryVisibility, NormalizedURI, Keep }
 import com.keepit.search.index.{ FieldDecoder, DefaultAnalyzer, Indexable }
-import com.keepit.search.LangDetector
+import com.keepit.search.{ LangDetector }
 import com.keepit.search.index.sharding.Shard
 import com.keepit.search.index.graph.library.LibraryFields
 import com.keepit.search.util.MultiStringReader
@@ -21,15 +21,17 @@ object KeepFields {
   val visibilityField = "v"
   val titleField = "t"
   val titleStemmedField = "ts"
+  val contentField = "c"
+  val contentStemmedField = "cs"
   val siteField = "site"
   val homePageField = "home_page"
-  val createdAtField = "createdAt"
+  val keptAtField = "keptAt"
   val tagsField = "h"
   val tagsStemmedField = "hs"
   val tagsKeywordField = "tag"
   val recordField = "rec"
 
-  val textSearchFields = Set(titleField, titleStemmedField, siteField, homePageField, tagsField, tagsStemmedField, tagsKeywordField)
+  val textSearchFields = Set(titleField, titleStemmedField, contentField, contentStemmedField, siteField, homePageField, tagsField, tagsStemmedField, tagsKeywordField)
 
   val decoders: Map[String, FieldDecoder] = Map.empty
 }
@@ -48,17 +50,28 @@ case class KeepIndexable(keep: Keep, tags: Set[Hashtag], shard: Shard[Normalized
     doc.add(buildKeywordField(userField, keep.userId.toString))
     if (keep.visibility != LibraryVisibility.SECRET) doc.add(buildKeywordField(userDiscoverableField, keep.userId.toString))
 
-    keep.title match {
-      case Some(title) =>
-        val titleLang = LangDetector.detect(title)
-        val titleAndUrl = Array(title, "\n\n", urlToIndexableString(keep.url).getOrElse("")) // piggybacking uri text on title
-        doc.add(buildTextField(titleField, new MultiStringReader(titleAndUrl), DefaultAnalyzer.getAnalyzer(titleLang)))
-        doc.add(buildTextField(titleStemmedField, new MultiStringReader(titleAndUrl), DefaultAnalyzer.getAnalyzerWithStemmer(titleLang)))
-        doc.add(buildDataPayloadField(new Term(libraryField, keep.libraryId.get.toString), titleLang.lang.getBytes(UTF8)))
-      case None =>
-        doc.add(buildTextField(titleField, keep.url, DefaultAnalyzer.getAnalyzer(DefaultAnalyzer.defaultLang)))
-        doc.add(buildTextField(titleStemmedField, keep.url, DefaultAnalyzer.getAnalyzerWithStemmer(DefaultAnalyzer.defaultLang)))
-        doc.add(buildDataPayloadField(new Term(libraryField, keep.libraryId.get.toString), DefaultAnalyzer.defaultLang.lang.getBytes(UTF8)))
+    val titleLang = keep.title.collect { case title if title.nonEmpty => LangDetector.detect(title) } getOrElse DefaultAnalyzer.defaultLang
+    val titleAndUrl = Array(keep.title.getOrElse(""), "\n\n", urlToIndexableString(keep.url).getOrElse("")) // piggybacking uri text on title
+    val titleAnalyzer = DefaultAnalyzer.getAnalyzer(titleLang)
+    val titleAnalyzerWithStemmer = DefaultAnalyzer.getAnalyzerWithStemmer(titleLang)
+
+    doc.add(buildTextField(titleField, new MultiStringReader(titleAndUrl), titleAnalyzer))
+    doc.add(buildTextField(titleStemmedField, new MultiStringReader(titleAndUrl), titleAnalyzerWithStemmer))
+    doc.add(buildDataPayloadField(new Term(libraryField, keep.libraryId.get.toString), titleLang.lang.getBytes(UTF8)))
+
+    val contentLang = keep.note.collect { case note if note.nonEmpty => LangDetector.detect(note) } getOrElse DefaultAnalyzer.defaultLang
+    val contentAnalyzer = DefaultAnalyzer.getAnalyzer(contentLang)
+    val contentAnalyzerWithStemmer = DefaultAnalyzer.getAnalyzerWithStemmer(contentLang)
+
+    val content = keep.note.getOrElse("")
+    doc.add(buildTextField(contentField, content, contentAnalyzer))
+    doc.add(buildTextField(contentStemmedField, content, contentAnalyzerWithStemmer))
+
+    tags.foreach { tag =>
+      val tagLang = LangDetector.detect(tag.tag)
+      doc.add(buildTextField(tagsField, tag.tag, DefaultAnalyzer.getAnalyzer(tagLang)))
+      doc.add(buildTextField(tagsStemmedField, tag.tag, DefaultAnalyzer.getAnalyzerWithStemmer(tagLang)))
+      doc.add(buildKeywordField(tagsKeywordField, tag.tag.toLowerCase))
     }
 
     buildDomainFields(keep.url, siteField, homePageField).foreach(doc.add)
@@ -70,14 +83,7 @@ case class KeepIndexable(keep: Keep, tags: Set[Hashtag], shard: Shard[Normalized
     doc.add(buildLongValueField(visibilityField, LibraryFields.Visibility.toNumericCode(keep.visibility)))
 
     doc.add(buildBinaryDocValuesField(recordField, KeepRecord.fromKeepAndTags(keep, tags)))
-    doc.add(buildLongValueField(createdAtField, keep.createdAt.getMillis))
-
-    tags.foreach { tag =>
-      val tagLang = LangDetector.detect(tag.tag)
-      doc.add(buildTextField(tagsField, tag.tag, DefaultAnalyzer.getAnalyzer(tagLang)))
-      doc.add(buildTextField(tagsStemmedField, tag.tag, DefaultAnalyzer.getAnalyzerWithStemmer(tagLang)))
-      doc.add(buildKeywordField(tagsKeywordField, tag.tag.toLowerCase))
-    }
+    doc.add(buildLongValueField(keptAtField, keep.keptAt.getMillis))
 
     doc
   }

@@ -15,6 +15,7 @@ import com.keepit.common.core._
 import com.keepit.common.time._
 
 import com.google.inject.{ Provider, Inject, Singleton }
+import com.keepit.rover.RoverServiceClient
 import scala.concurrent.ExecutionContext
 import scala.util.{ Failure, Success, Try }
 import com.keepit.heimdal.HeimdalContext
@@ -32,7 +33,6 @@ import com.keepit.search.SearchServiceClient
 private case object ProcessKeeps
 
 private object RawKeepImporterActor {
-  val throttleContentFetch = new ReactiveLock(1)
   val sourcesToEnsureContentFetch = Set(KeepSource.twitterSync)
 }
 
@@ -51,7 +51,7 @@ private class RawKeepImporterActor @Inject() (
     kifiInstallationRepo: KifiInstallationRepo,
     bookmarksCommanderProvider: Provider[KeepsCommander],
     libraryCommanderProvider: Provider[LibraryCommander],
-    uriSummaryCommander: URISummaryCommander,
+    rover: RoverServiceClient,
     searchClient: SearchServiceClient,
     clock: Clock,
     implicit val executionContext: ExecutionContext) extends FortyTwoActor(airbrake) with Logging {
@@ -190,11 +190,10 @@ private class RawKeepImporterActor @Inject() (
 
           //the bookmarks list may be very large!
           searchClient.updateKeepIndex()
-          if (RawKeepImporterActor.sourcesToEnsureContentFetch.contains(source)) {
-            successes.foreach { keep =>
-              RawKeepImporterActor.throttleContentFetch.withLockFuture {
-                uriSummaryCommander.getDefaultURISummary(keep.uriId, waiting = false)
-              }
+          if (RawKeepImporterActor.sourcesToEnsureContentFetch.contains(source)) { // todo(Léo): Revisit with NormalizedURI.shouldHaveContent
+            successes.map(_.uriId).distinct.foreach { uriId =>
+              val normalizedUrl = db.readOnlyMaster { implicit session => uriRepo.get(uriId).url }
+              rover.fetchAsap(uriId, normalizedUrl)
             }
           }
 

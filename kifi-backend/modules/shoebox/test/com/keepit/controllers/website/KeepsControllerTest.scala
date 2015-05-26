@@ -20,7 +20,6 @@ import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.graph.FakeGraphServiceModule
 import com.keepit.heimdal._
 import com.keepit.model._
-import com.keepit.scraper.{ FakeScrapeSchedulerModule, FakeScraperServiceClientModule }
 import com.keepit.search._
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.test.ShoeboxTestInjector
@@ -37,7 +36,6 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
     FakeHttpClientModule(),
     FakeGraphServiceModule(),
     FakeShoeboxServiceModule(),
-    FakeScrapeSchedulerModule(),
     FakeShoeboxStoreModule(),
     FakeActorSystemModule(),
     FakeAirbrakeModule(),
@@ -45,7 +43,6 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
     FakeHeimdalServiceClientModule(),
     FakeABookServiceClientModule(),
     FakeSocialGraphModule(),
-    FakeScraperServiceClientModule(),
     FakeCortexServiceClientModule(),
     FakeCuratorServiceClientModule()
   )
@@ -144,8 +141,8 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
               "title":"A1",
               "url":"http://www.amazon.com/",
               "isPrivate":false,
+              "user":{"id":"${user1.externalId}","firstName":"Andrew","lastName":"C","pictureName":"0.jpg","username":"test"},
               "createdAt":"${bookmark2.createdAt.toStandardTimeString}",
-              "others":1,
               "keeps":[{"id":"${bookmark2.externalId}", "mine":true, "removable":true, "visibility":"${bookmark2.visibility.value}", "libraryId":"${pubLibId1.id}"}],
               "keepers":[{"id":"${user2.externalId.toString}","firstName":"Eishay","lastName":"S","pictureName":"0.jpg", "username":"test"}],
               "keepersOmitted": 0,
@@ -164,8 +161,8 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
               "title":"G1",
               "url":"http://www.google.com/",
               "isPrivate":false,
+              "user":{"id":"${user1.externalId}","firstName":"Andrew","lastName":"C","pictureName":"0.jpg","username":"test"},
               "createdAt":"${bookmark1.createdAt.toStandardTimeString}",
-              "others":0,
               "keeps":[
                 {"id":"${bookmark1.externalId}", "mine":true, "removable":true, "visibility":"${bookmark1.visibility.value}", "libraryId":"${pubLibId1.id}"},
                 {"id":"${bookmark3.externalId}", "mine":false, "removable":true, "visibility":"${bookmark3.visibility.value}", "libraryId":"${pubLibId1.id}"}
@@ -255,8 +252,8 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
                 "title":"A1",
                 "url":"http://www.amazon.com/",
                 "isPrivate":false,
+                "user":{"id":"${user1.externalId}","firstName":"Andrew","lastName":"C","pictureName":"0.jpg","username":"test"},
                 "createdAt":"2013-02-16T23:59:00.000Z",
-                "others":0,
                 "keeps":[{"id":"${bookmark2.externalId}", "mine":true, "removable":true, "visibility":"${bookmark2.visibility.value}", "libraryId":"${pubLibId1.id}"}],
                 "keepers":[],
                 "keepersOmitted": 0,
@@ -314,8 +311,8 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
                       "id":"${keeps1(1).externalId.toString}",
                       "url":"${keeps1(1).url}",
                       "isPrivate":${keeps1(1).isPrivate},
+                      "user":{"id":"${u1.externalId}","firstName":"Shanee","lastName":"Smith","pictureName":"0.jpg","username":"test"},
                       "createdAt":"${keeps1(1).keptAt.toStandardTimeString}",
-                      "others":1,
                       "keeps":[{"id":"${keeps1(1).externalId}", "mine":true, "removable":true, "visibility":"${keeps1(1).visibility.value}", "libraryId":"l7jlKlnA36Su"}],
                       "keepers":[{"id":"${u2.externalId.toString}","firstName":"${u2.firstName}","lastName":"${u2.lastName}","pictureName":"0.jpg","username":"test"}],
                       "keepersOmitted": 0,
@@ -327,15 +324,15 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
                       "tags":[],
                       "hashtags":[],
                       "summary":{},
-                      "siteName":"kifi.com",
+                      "siteName":"Kifi",
                       "libraryId":"l7jlKlnA36Su"
                     },
                     {
                       "id":"${keeps1(0).externalId.toString}",
                       "url":"${keeps1(0).url}",
                       "isPrivate":${keeps1(0).isPrivate},
+                      "user":{"id":"${u1.externalId}","firstName":"Shanee","lastName":"Smith","pictureName":"0.jpg","username":"test"},
                       "createdAt":"${keeps1(0).keptAt.toStandardTimeString}",
-                      "others":0,
                       "keeps":[{"id":"${keeps1(0).externalId}", "mine":true, "removable":true, "visibility":"${keeps1(0).visibility.value}", "libraryId":"l7jlKlnA36Su"}],
                       "keepers":[],
                       "keepersOmitted": 0,
@@ -395,8 +392,8 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
                       "id":"${keeps1(0).externalId.toString}",
                       "url":"${keeps1(0).url}",
                       "isPrivate":${keeps1(0).isPrivate},
+                      "user":{"id":"${u1.externalId}","firstName":"Shanee","lastName":"Smith","pictureName":"0.jpg","username":"test"},
                       "createdAt":"${keeps1(0).keptAt.toStandardTimeString}",
-                      "others":1,
                       "keeps":[{"id":"${keeps1(0).externalId}", "mine":true, "removable":true, "visibility":"${keeps1(0).visibility.value}", "libraryId":"l7jlKlnA36Su"}],
                       "keepers":[{"id":"${u2.externalId.toString}","firstName":"${u2.firstName}","lastName":"${u2.lastName}","pictureName":"0.jpg","username":"test"}],
                       "keepersOmitted": 0,
@@ -454,8 +451,8 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
                                       "id":"${keeps3(2).externalId.toString}",
                                       "url":"${keeps3(2).url}",
                                       "isPrivate":${keeps3(2).isPrivate},
+                                      "user":{"id":"${u3.externalId}","firstName":"Discoveryer","lastName":"DiscoveryetyDiscoveryyDiscovery","pictureName":"0.jpg","username":"test"},
                                       "createdAt":"${keeps3(2).keptAt.toStandardTimeString}",
-                                      "others":0,
                                       "keeps":[{"id":"${keeps3(2).externalId}", "mine":true, "removable":true, "visibility":"${keeps3(2).visibility.value}", "libraryId":"lzmfsKLJyou6"}],
                                       "keepers":[],
                                       "keepersOmitted": 0,
@@ -474,8 +471,8 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
                                       "id":"${keeps3(0).externalId.toString}",
                                       "url":"${keeps3(0).url}",
                                       "isPrivate":${keeps3(0).isPrivate},
+                                      "user":{"id":"${u3.externalId}","firstName":"Discoveryer","lastName":"DiscoveryetyDiscoveryyDiscovery","pictureName":"0.jpg","username":"test"},
                                       "createdAt":"${keeps3(0).keptAt.toStandardTimeString}",
-                                      "others":0,
                                       "keeps":[{"id":"${keeps3(0).externalId}", "mine":true, "removable":true, "visibility":"${keeps3(0).visibility.value}", "libraryId":"lzmfsKLJyou6"}],
                                       "keepers":[],
                                       "keepersOmitted": 0,
@@ -487,7 +484,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
                                       "tags":[],
                                       "hashtags":[],
                                       "summary":{},
-                                      "siteName":"kifi.com",
+                                      "siteName":"Kifi",
                                       "libraryId":"lzmfsKLJyou6"
                                     }
                                   ],

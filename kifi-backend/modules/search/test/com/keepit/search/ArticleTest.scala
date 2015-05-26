@@ -24,7 +24,7 @@ class ArticleTest extends Specification {
         scrapedAt = currentDateTime,
         httpContentType = Some("text/html"),
         httpOriginalContentCharset = Option("UTF-8"),
-        state = SCRAPED,
+        state = ACTIVE,
         message = Some("everything is good"),
         titleLang = Some(Lang("en")),
         contentLang = Some(Lang("en"))
@@ -55,7 +55,7 @@ class ArticleTest extends Specification {
         scrapedAt = currentDateTime,
         httpContentType = None,
         httpOriginalContentCharset = None,
-        state = SCRAPED,
+        state = ACTIVE,
         message = None,
         titleLang = None,
         contentLang = None
@@ -82,7 +82,7 @@ class ArticleTest extends Specification {
         scrapedAt = now,
         httpContentType = None,
         httpOriginalContentCharset = None,
-        state = SCRAPED,
+        state = ACTIVE,
         message = None,
         titleLang = None,
         contentLang = None
@@ -94,7 +94,7 @@ class ArticleTest extends Specification {
           "title":"my title",
           "content":"my content",
           "scrapedAt":"${now.toStandardTimeString}",
-          "state":"scraped"
+          "state":"active"
         }"""
       )
       val newArticle = json.as[Article]

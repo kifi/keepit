@@ -761,7 +761,7 @@ api.port.on({
     var d = pageData[tab.nUri];
     if (d) {
       var keep = d.keeps.find(idIs(keepId));
-      // TODO: wait if details (title, image, tags) are not yet loaded
+      // TODO: wait if details (title, image, note) are not yet loaded
       respond(keep);
     }
   },
@@ -785,39 +785,18 @@ api.port.on({
       }, respond.bind(null, false));
     }
   },
-  suggest_tags: function (data, respond) {
-    ajax('GET', '/ext/libraries/' + data.libraryId + '/keeps/' + data.keepId + '/tags/suggest', {q: data.q, n: data.n}, respond, respond.bind(null, []));
-  },
-  tag: function (data, respond, tab) {
+  save_keep_note: function (data, respond, tab) {
     var d = pageData[tab.nUri];
     if (d) {
       var keep = d.keeps.find(libraryIdIs(data.libraryId));
-      ajax('POST', '/ext/libraries/' + keep.libraryId + '/keeps/' + keep.id + '/tags/' + encodeURIComponent(data.tag), function (resp) {
-        if (keep.tags) {
-          keep.tags.push(resp.tag);
-        } else {
-          keep.tags = [resp.tag];
-        }
-        respond(resp.tag);
-        storeRecentTag(resp.tag);
-      }, respond.bind(null, false));
-    }
-    tracker.track('user_clicked_pane', {type: 'keepDetails', action: 'addedTag'});
-  },
-  untag: function (data, respond, tab) {
-    var d = pageData[tab.nUri];
-    if (d) {
-      var keep = d.keeps.find(libraryIdIs(data.libraryId));
-      ajax('DELETE', '/ext/libraries/' + keep.libraryId + '/keeps/' + keep.id + '/tags/' + encodeURIComponent(data.tag), function (resp) {
-        var tags = keep.tags || [];
-        for (var i; (i = tags.indexOf(data.tag)) >= 0;) {
-          tags.splice(i, 1);
-        }
+      ajax('POST', '/ext/libraries/' + keep.libraryId + '/keeps/' + keep.id + '/note', {note: data.note}, function () {
+        keep.note = data.note;
         respond(true);
       }, respond.bind(null, false));
     }
-    storeRecentTagRemoved(data.tag);
-    tracker.track('user_clicked_pane', {type: 'keepDetails', action: 'removedTag'});
+  },
+  suggest_tags: function (data, respond) {
+    ajax('GET', '/ext/libraries/' + data.libraryId + '/keeps/' + data.keepId + '/tags/suggest', {q: data.q, n: data.n}, respond, respond.bind(null, []));
   },
   suppress_on_site: function(data, _, tab) {
     ajax('POST', '/ext/pref/keeperHidden', {url: tab.url, suppress: data});
@@ -2434,80 +2413,6 @@ function storeRecentLib(id) {
   store('recent_libraries', JSON.stringify(ids));
 }
 
-function loadRecentTags() {
-  if (stored('user_id') === me.id) {
-    try {
-      return JSON.parse(stored('recent_tags'));
-    } catch (e) {
-    }
-  }
-  return [];
-}
-
-function loadRecentTagTimes() {
-  if (stored('user_id') === me.id) {
-    try {
-      return JSON.parse(stored('recent_tag_times'));
-    } catch (e) {
-    }
-  }
-  return [];
-}
-
-function storeRecentTag(tag) {
-  var time = Math.floor(Date.now() / 60000);  // minutes
-  var tags = loadRecentTags();
-  var times = loadRecentTagTimes();
-  var i = tags.indexOf(tag);
-  if (i >= 0) {
-    var tagTimes;
-    if (i === 0) {
-      tagTimes = times[0];
-    } else {
-      tags.splice(i, 1);
-      tags.unshift(tag);
-      tagTimes = times.splice(i, 1)[0];
-      times.unshift(tagTimes);
-    }
-    tagTimes.unshift(time);
-    if (tagTimes.length > 3) {
-      tagTimes.length = 3;
-    }
-  } else {
-    tags.unshift(tag);
-    times.unshift([time]);
-  }
-  for (var j = 0; j < times.length; j++) {
-    if (time - times[j][0] > 43200) { // over 30 days ago
-      tags.splice(j, 1);
-      times.splice(j--, 1);
-    }
-  }
-  if (tags.length > 24) {
-    tags.length = 24;
-    times.length = 24;
-  }
-  store('recent_tags', JSON.stringify(tags));
-  store('recent_tag_times', JSON.stringify(times));
-}
-
-function storeRecentTagRemoved(tag) {
-  var tags = loadRecentTags();
-  var i = tags.indexOf(tag);
-  if (i >= 0) {
-    var times = loadRecentTagTimes();
-    var tagTimes = times[i];
-    if (tagTimes && tagTimes.length > 1) {
-      tagTimes.length--;
-    } else {
-      tags.splice(i, 1);
-      times.splice(i, 1);
-      store('recent_tags', JSON.stringify(tags));
-    }
-    store('recent_tag_times', JSON.stringify(times));
-  }
-}
-
 function scheduleAutoEngage(tab, type) {
   // Note: Caller should verify that tab.url is not kept and that the tab is still at tab.url.
   var secName = type + 'Sec', timerName = type + 'Timer';
@@ -2785,7 +2690,7 @@ function clearSession() {
     storeDrafts({});
     storeLibraries([]);
     unstore('recent_libraries');
-    unstore('recent_tags');
+    unstore('recent_tags');  // TODO: remove after a few weeks
     unstore('recent_tag_times');
     unstore('user_id');
     api.tabs.each(function (tab) {
@@ -2833,7 +2738,7 @@ api.errors.wrap(authenticate.bind(null, function() {
     if (tab) {
       api.tabs.select(tab.id);
     } else {
-      api.tabs.open(baseUri);
+      api.tabs.open(baseUri + '/signup');
     }
   }
 }, 3000))();

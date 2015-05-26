@@ -60,23 +60,15 @@ angular.module('kifi')
       var isDev = env.dev; // jshint ignore:line
 
       /* jshint ignore:start */
-      // https://github.com/BranchMetrics/Web-SDK#quick-install
-      var config = {
-        app_id: '58363010934112339',
-        debug: env.dev,
-        init_callback: function () {
+      // https://github.com/BranchMetrics/Web-SDK#quick-install-web-sdk
+      (function(b,r,a,n,c,h,_,s,d,k){if(!b[n]||!b[n]._q){for(;s<_.length;)c(h,_[s++]);d=r.createElement(a);d.async=1;d.src="https://cdn.branch.io/branch-v1.5.4.min.js";k=r.getElementsByTagName(a)[0];k.parentNode.insertBefore(d,k);b[n]=h}})(window,document,"script","branch",function(b,r){b[r]=function(){b._q.push([r,arguments])}},{_q:[],_v:1},"init data setIdentity logout track link sendSMS referrals credits redeem banner closeBanner".split(" "),0); // jshint ignore:line
+      window.branch.setDebug(isDev);
+      window.branch.init('58363010934112339', function(err, data) {
+        if (data) {
           Branch = window.branch;
           deferred.resolve(window.branch);
         }
-      };
-      var Branch_Init=function(a){self=this,self.app_id=a.app_id,self.debug=a.debug,self.init_callback=a.init_callback,self
-      .queued=[],this.init=function(){for(var a=["close","logout","track","identify","createLink","showReferrals","showCredits",
-      "redeemCredits","appBanner"],b=0;b<a.length;b++)self[a[b]]=function(a){return function(){self.queued.push([a].concat(Array
-      .prototype.slice.call(arguments,0)))}}(a[b])},self.init();var b=document.createElement("script");b.type="text/javascript",
-      b.async=!0,b.src="https://bnc.lt/_r",document.getElementsByTagName("head")[0].appendChild(b),self._r=function(){if(
-      void 0!==window.browser_fingerprint_id){var a=document.createElement("script");a.type="text/javascript",a.async=!0,a
-      .src="https://s3-us-west-1.amazonaws.com/branch-sdk/branch.min.js",document.getElementsByTagName("head")[0].appendChild(a)
-      }else window.setTimeout("self._r()",100)},self._r()};window.branch=new Branch_Init(config);
+      });
       /* jshint ignore:end */
 
       return deferred.promise;
@@ -85,7 +77,7 @@ angular.module('kifi')
     var createBranchLink = function (data) {
       var deferred = $q.defer();
       branchInit().then(function (branch) {
-        branch.createLink({
+        branch.link({
           data: data
         }, function (url){
           deferred.resolve(url);

@@ -1,8 +1,8 @@
 package com.keepit.commanders
 
-import com.keepit.common.CollectionHelpers
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.store.S3ImageConfig
 import com.keepit.model._
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.curator.CuratorServiceClient
@@ -13,8 +13,9 @@ import com.keepit.common.domain.DomainToNameMapper
 import com.keepit.common.time._
 
 import com.google.inject.Inject
+import com.keepit.rover.RoverServiceClient
 import com.keepit.search.SearchServiceClient
-import com.keepit.search.augmentation.{ LimitedAugmentationInfo, AugmentableItem }
+import com.keepit.search.augmentation.{ AugmentableItem }
 import com.keepit.search.util.LongSetIdFilter
 
 import scala.concurrent.{ ExecutionContext, Future }
@@ -28,13 +29,14 @@ class RecommendationsCommander @Inject() (
     libRepo: LibraryRepo,
     userRepo: UserRepo,
     libCommander: LibraryCommander,
-    uriSummaryCommander: URISummaryCommander,
+    rover: RoverServiceClient,
     basicUserRepo: BasicUserRepo,
     keepRepo: KeepRepo,
     keepDecorator: KeepDecorator,
     userValueRepo: UserValueRepo,
     implicit val defaultContext: ExecutionContext,
     implicit val publicIdConfig: PublicIdConfiguration,
+    implicit val imageConfig: S3ImageConfig,
     userExperimentCommander: LocalUserExperimentCommander) {
 
   def updateUriRecommendationFeedback(userId: Id[User], extId: ExternalId[NormalizedURI], feedback: UriRecommendationFeedback): Future[Boolean] = {
@@ -141,7 +143,7 @@ class RecommendationsCommander @Inject() (
       val lastSeen = userValueRepo.getValue(userId, UserValues.libraryUpdatesLastSeen)
       if (lastSeen.isBefore(currentDateTime.minusDays(1))) {
         userValueRepo.setValue(userId, UserValueName.UPDATED_LIBRARIES_LAST_SEEN, currentDateTime)
-        Some(keepRepo.getRecentKeepsFromFollowedLibraries(userId, 10))
+        Some(keepRepo.getRecentKeepsFromFollowedLibraries(userId, 20))
       } else {
         None
       }
@@ -163,7 +165,9 @@ class RecommendationsCommander @Inject() (
     }
     val uriIds = recosWithUris.map { _._2.id.get }
     val userAttrsF = getUserAttributions(userId, uriIds)
-    val uriSummariesF = Future.sequence(recosWithUris.map { case (reco, nUri) => uriSummaryCommander.getDefaultURISummary(nUri, waiting = false) })
+    val uriSummariesF = rover.getUriSummaryByUris(uriIds.toSet).map { summaries =>
+      uriIds.map { uriId => summaries.get(uriId).map(_.toUriSummary(ProcessedImageSize.Large.idealSize)) getOrElse URISummary() }
+    }
 
     for {
       userAttrs <- userAttrsF
@@ -178,12 +182,6 @@ class RecommendationsCommander @Inject() (
   }
 
   private def getUserAttributions(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[Option[UserAttribution]]] = {
-
-    def toUserAttribution(info: LimitedAugmentationInfo): UserAttribution = {
-      val others = info.keepersTotal - info.keepers.size - info.keepersOmitted
-      val userToLib = CollectionHelpers.dedupBy(info.libraries)(_._2).map(_.swap).toMap // a user could have kept this page in several libraries, retain the first (most relevant) one.
-      UserAttribution(info.keepers, others, Some(userToLib))
-    }
     val uriId2Idx = uriIds.zipWithIndex.toMap
     val ret: Array[Option[UserAttribution]] = Array.fill(uriIds.size)(None)
 
@@ -191,7 +189,7 @@ class RecommendationsCommander @Inject() (
       (uriIds zip infos).foreach {
         case (uriId, info) =>
           val idx = uriId2Idx(uriId)
-          val attr = toUserAttribution(info)
+          val attr = UserAttribution.fromLimitedAugmentationInfo(info)
           val n = attr.friends.size + attr.friendsLib.map { _.size }.getOrElse(0)
           if (n > 0) ret(idx) = Some(attr)
       }

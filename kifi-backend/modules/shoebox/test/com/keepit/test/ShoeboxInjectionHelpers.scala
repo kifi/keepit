@@ -1,6 +1,5 @@
 package com.keepit.test
 
-import com.keepit.inject._
 import com.keepit.common.db.slick.SlickSessionProvider
 import com.keepit.model._
 import com.keepit.common.social.BasicUserRepo
@@ -34,14 +33,12 @@ trait ShoeboxInjectionHelpers { self: TestInjectorProvider =>
   def invitationRepo(implicit injector: Injector) = inject[InvitationRepo]
   def urlPatternRuleRepo(implicit injector: Injector): UrlPatternRuleRepo = inject[UrlPatternRuleRepoImpl]
   def httpProxyRepo(implicit injector: Injector) = inject[HttpProxyRepo]
-  def scrapeInfoRepo(implicit injector: Injector) = inject[ScrapeInfoRepo]
   def phraseRepo(implicit injector: Injector) = inject[PhraseRepo]
   def collectionRepo(implicit injector: Injector) = inject[CollectionRepo]
   def keepToCollectionRepo(implicit injector: Injector) = inject[KeepToCollectionRepo]
   def electronicMailRepo(implicit injector: Injector) = inject[ElectronicMailRepo]
   def failedContentCheckRepo(implicit injector: Injector) = inject[FailedContentCheckRepo]
   def changedURIRepo(implicit injector: Injector) = inject[ChangedURIRepo]
-  def imageInfo(implicit injector: Injector) = inject[ImageInfoRepo]
   def sessionProvider(implicit injector: Injector) = inject[SlickSessionProvider].asInstanceOf[FakeSlickSessionProvider]
   def libraryRepo(implicit injector: Injector) = inject[LibraryRepo]
   def libraryMembershipRepo(implicit injector: Injector) = inject[LibraryMembershipRepo]

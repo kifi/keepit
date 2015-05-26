@@ -5,23 +5,22 @@ import com.keepit.common.db.slick._
 import com.keepit.model._
 import com.keepit.common.time._
 import com.keepit.rover.fetcher.HttpRedirect
-import com.keepit.scraper.ScrapeScheduler
+import com.keepit.rover.RoverServiceClient
+import com.keepit.rover.article.{ ArticleKind, Article }
+import com.keepit.rover.article.content.ArticleContentExtractor
+import com.keepit.rover.model.{ ArticleVersion }
 import scala.concurrent.duration._
 import views.html
 import com.keepit.common.controller.{ UserActionsHelper, AdminUserActions }
 import com.google.inject.Inject
 import com.keepit.integrity._
 import com.keepit.normalizer._
-import com.keepit.model.DuplicateDocument
 import com.keepit.common.healthcheck.{ SystemAdminMailSender, BabysitterTimeout, AirbrakeNotifier }
-import com.keepit.integrity.HandleDuplicatesAction
 import com.keepit.common.zookeeper.CentralConfig
 import com.keepit.common.akka.{ SafeFuture, MonitoredAwait }
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
-
-import scala.util.Random
 
 class UrlController @Inject() (
     val userActionsHelper: UserActionsHelper,
@@ -30,11 +29,8 @@ class UrlController @Inject() (
     uriRepo: NormalizedURIRepo,
     urlRepo: URLRepo,
     changedUriRepo: ChangedURIRepo,
-    duplicateDocumentRepo: DuplicateDocumentRepo,
     urlRenormalizeCommander: URLRenormalizeCommander,
     orphanCleaner: OrphanCleaner,
-    dupeDetect: DuplicateDocumentDetection,
-    duplicatesProcessor: DuplicateDocumentsProcessor,
     uriIntegrityPlugin: UriIntegrityPlugin,
     normalizationService: NormalizationService,
     urlPatternRuleRepo: UrlPatternRuleRepo,
@@ -45,7 +41,7 @@ class UrlController @Inject() (
     normalizedURIInterner: NormalizedURIInterner,
     airbrake: AirbrakeNotifier,
     uriIntegrityHelpers: UriIntegrityHelpers,
-    scrapeScheduler: ScrapeScheduler) extends AdminUserActions {
+    roverServiceClient: RoverServiceClient) extends AdminUserActions {
 
   implicit val timeout = BabysitterTimeout(5 minutes, 5 minutes)
 
@@ -84,46 +80,6 @@ class UrlController @Inject() (
       }
     }
     Ok
-  }
-
-  def documentIntegrity(page: Int = 0, size: Int = 50) = AdminUserPage { implicit request =>
-    val dupes = db.readOnlyReplica { implicit conn =>
-      duplicateDocumentRepo.getActive(page, size)
-    }
-
-    val groupedDupes = dupes.groupBy { case d => d.uri1Id }.toSeq.sortWith((a, b) => a._1.id < b._1.id)
-
-    val loadedDupes = db.readOnlyReplica { implicit session =>
-      groupedDupes map { d =>
-        val dupeRecords = d._2.map { sd =>
-          DisplayedDuplicate(sd.id.get, sd.uri2Id, uriRepo.get(sd.uri2Id).url, sd.percentMatch)
-        }
-        DisplayedDuplicates(d._1, uriRepo.get(d._1).url, dupeRecords)
-      }
-    }
-
-    Ok(html.admin.documentIntegrity(loadedDupes))
-  }
-
-  def handleDuplicate = AdminUserPage { implicit request =>
-    val body = request.body.asFormUrlEncoded.get
-    val action = body("action").head
-    val id = Id[DuplicateDocument](body("id").head.toLong)
-    duplicatesProcessor.handleDuplicates(Left[Id[DuplicateDocument], Id[NormalizedURI]](id), HandleDuplicatesAction(action))
-    Ok
-  }
-
-  def handleDuplicates = AdminUserPage { implicit request =>
-    val body = request.body.asFormUrlEncoded.get
-    val action = body("action").head
-    val id = Id[NormalizedURI](body("id").head.toLong)
-    duplicatesProcessor.handleDuplicates(Right[Id[DuplicateDocument], Id[NormalizedURI]](id), HandleDuplicatesAction(action))
-    Ok
-  }
-
-  def duplicateDocumentDetection = AdminUserPage { implicit request =>
-    dupeDetect.asyncProcessDocuments()
-    Redirect(routes.UrlController.documentIntegrity())
   }
 
   def normalizationView(page: Int = 0) = AdminUserPage { implicit request =>
@@ -237,7 +193,7 @@ class UrlController @Inject() (
             }
 
             val reference = NormalizationReference(oldUri, isNew = false, correctedNormalization = correctedNormalization)
-            normalizationService.update(reference, candidate).map {
+            normalizationService.update(reference, Set(candidate)).map {
               case Some(newUriId) => Redirect(routes.UrlController.normalizationView(0)).flashing("result" -> s"${oldUri.id.get}: ${oldUri.url} will be redirected to $newUriId")
               case None => Redirect(routes.UrlController.normalizationView(0)).flashing("result" -> s"${oldUri.id.get}: ${oldUri.url} could not be redirected to $candidateUrl")
             }
@@ -348,12 +304,54 @@ class UrlController @Inject() (
 
   def clearRestriction(uriId: Id[NormalizedURI]) = AdminUserPage { implicit request =>
     db.readWrite { implicit session => uriRepo.updateURIRestriction(uriId, None) }
-    Redirect(routes.ScraperAdminController.getScraped(uriId))
+    Redirect(routes.UrlController.getURIInfo(uriId))
   }
 
   def flagAsAdult(uriId: Id[NormalizedURI]) = AdminUserPage { implicit request =>
     db.readWrite { implicit session => uriRepo.updateURIRestriction(uriId, Some(Restriction.ADULT)) }
-    Redirect(routes.ScraperAdminController.getScraped(uriId))
+    Redirect(routes.UrlController.getURIInfo(uriId))
+  }
+
+  def getURIInfo(id: Id[NormalizedURI]) = AdminUserPage.async { implicit request =>
+    val fArticleInfoWithUri = roverServiceClient.getArticleInfosByUris(Set(id))
+    val fBestArticlesWithUri = roverServiceClient.getBestArticlesByUris(Set(id))
+    val uri: NormalizedURI = db.readOnlyReplica { implicit s => uriRepo.get(id) }
+
+    fArticleInfoWithUri.flatMap { articleInfoWithUri =>
+      fBestArticlesWithUri.map { bestArticlesWithUri =>
+        val bestArticles = bestArticlesWithUri.getOrElse(id, Set.empty)
+        val aggregateContent: ArticleContentExtractor = ArticleContentExtractor(bestArticles)
+        Ok(html.admin.uri(uri, articleInfoWithUri.getOrElse(id, Set.empty), aggregateContent))
+      }
+    }
+  }
+
+  def getArticle(uriId: Id[NormalizedURI], kind: ArticleKind[_ <: Article], version: ArticleVersion) = AdminUserPage.async { implicit request =>
+    // TODO: Cam: expand functionality for any version, currently returns just the best
+
+    val fBestArticleWithId = roverServiceClient.getBestArticlesByUris((Set(uriId)))
+    fBestArticleWithId.map { bestArticleWithId: Map[Id[NormalizedURI], Set[Article]] =>
+      val bestArticles = bestArticleWithId.getOrElse(uriId, Set.empty)
+      val targetArticle = bestArticles.filter(article => article.kind == kind).head
+      Ok(Json.toJson(targetArticle))
+    }
+  }
+
+  def getBestArticle(uriId: Id[NormalizedURI], kind: ArticleKind[_ <: Article]) = AdminUserPage.async { implicit request =>
+
+    val fBestArticleWithId = roverServiceClient.getBestArticlesByUris((Set(uriId)))
+    fBestArticleWithId.map { bestArticleWithId: Map[Id[NormalizedURI], Set[Article]] =>
+      val bestArticles = bestArticleWithId.getOrElse(uriId, Set.empty)
+      val targetArticle = bestArticles.filter(article => article.kind == kind).head
+      Ok(Json.toJson(targetArticle))
+    }
+  }
+
+  def fetchAsap(uriId: Id[NormalizedURI]) = AdminUserPage.async { implicit request =>
+    val uri = db.readOnlyMaster { implicit session => uriRepo.get(uriId) }
+    roverServiceClient.fetchAsap(uriId, uri.url, refresh = true).map { _ =>
+      Ok("We got you =)")
+    }
   }
 
   def cleanKeepsByUri(firstPage: Int, pageSize: Int) = AdminUserAction { implicit request =>
@@ -366,10 +364,9 @@ class UrlController @Inject() (
           val uris = uriRepo.page(page, pageSize, excludeStates)
           uris.foreach { uri =>
             if (HttpRedirect.isShortenedUrl(uri.url)) {
-              uriRepo.updateURIRestriction(uri.id.get, None)
-              val updatedUri = uriRepo.get(uri.id.get)
-              scrapeScheduler.scheduleScrape(updatedUri, currentDateTime.plusMinutes((Random.nextInt(10))))
-              log.info(s"[CleaningKeeps] Removed restriction and scheduled scrape for shortened url: $uri")
+              val updatedUri = uri.withContentRequest(true).copy(restriction = None)
+              val savedUri = if (updatedUri != uri) uriRepo.save(updatedUri) else uri
+              log.info(s"[CleaningKeeps] Removed restriction | requested content for shortened url: $savedUri")
             } else {
               uriIntegrityHelpers.improveKeepsSafely(uri)
             }
@@ -384,6 +381,3 @@ class UrlController @Inject() (
     Ok(s"Starting at page $firstPage of size $pageSize, it's on!")
   }
 }
-
-case class DisplayedDuplicate(id: Id[DuplicateDocument], normUriId: Id[NormalizedURI], url: String, percentMatch: Double)
-case class DisplayedDuplicates(normUriId: Id[NormalizedURI], url: String, dupes: Seq[DisplayedDuplicate])

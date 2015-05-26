@@ -3,8 +3,9 @@ package com.keepit.rover.model
 import com.keepit.common.db._
 import com.keepit.common.time._
 import com.keepit.model._
-import com.keepit.rover.article.{ ArticleKind, ArticleFetchRequest, Article }
-import com.keepit.rover.manager.{ FailureRecoveryPolicy, FetchSchedulingPolicy }
+import com.keepit.rover.article.fetcher.ArticleFetchRequest
+import com.keepit.rover.article.policy.{ FailureRecoveryPolicy, FetchSchedulingPolicy }
+import com.keepit.rover.article.{ ArticleKind, Article }
 import org.joda.time.DateTime
 import scala.concurrent.duration.Duration
 
@@ -19,6 +20,7 @@ case class RoverArticleInfo(
     seq: SequenceNumber[RoverArticleInfo] = SequenceNumber.ZERO,
     uriId: Id[NormalizedURI],
     url: String,
+    urlHash: UrlHash,
     kind: String, // todo(Léo): make this kind: ArticleKind[_ <: Article] with Scala 2.11, (with proper mapper, serialization is unchanged)
     bestVersion: Option[ArticleVersion] = None,
     latestVersion: Option[ArticleVersion] = None,
@@ -29,6 +31,7 @@ case class RoverArticleInfo(
     fetchInterval: Option[Duration] = None,
     failureCount: Int = 0,
     failureInfo: Option[String] = None,
+    imageProcessingRequestedAt: Option[DateTime] = None,
     lastImageProcessingVersion: Option[ArticleVersion] = None,
     lastImageProcessingAt: Option[DateTime] = None) extends ModelWithState[RoverArticleInfo] with ModelWithSeqNumber[RoverArticleInfo] with ArticleInfoHolder with ArticleKindHolder {
 
@@ -36,8 +39,7 @@ case class RoverArticleInfo(
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def isActive = (state == ArticleInfoStates.ACTIVE)
 
-  def shouldFetch = isActive && lastFetchingAt.isDefined
-  def getFetchRequest: ArticleFetchRequest[A] = ArticleFetchRequest(articleKind, url, lastFetchedAt, getLatestKey)
+  def getFetchRequest(shouldThrottle: Boolean): ArticleFetchRequest[A] = ArticleFetchRequest(articleKind, url, getLatestKey, shouldThrottle)
 
   def clean: RoverArticleInfo = copy(
     bestVersion = None,
@@ -49,6 +51,7 @@ case class RoverArticleInfo(
     fetchInterval = None,
     failureCount = 0,
     failureInfo = None,
+    imageProcessingRequestedAt = None,
     lastImageProcessingVersion = None,
     lastImageProcessingAt = None
   )
@@ -83,7 +86,8 @@ case class RoverArticleInfo(
       latestVersion = Some(version),
       oldestVersion = oldestVersion orElse Some(version),
       failureCount = 0,
-      failureInfo = None
+      failureInfo = None,
+      imageProcessingRequestedAt = Some(currentDateTime)
     )
   }
 
@@ -97,11 +101,10 @@ case class RoverArticleInfo(
     )
   }
 
-  def shouldProcessLatestArticleImages = isActive && lastImageProcessingAt.isDefined
-
-  def withImageProcessingComplete(version: ArticleVersion) = {
+  def withImageProcessingComplete(version: Option[ArticleVersion]) = {
     copy(
-      lastImageProcessingVersion = Some(version),
+      imageProcessingRequestedAt = None,
+      lastImageProcessingVersion = version orElse lastImageProcessingVersion,
       lastImageProcessingAt = None
     )
   }
@@ -126,7 +129,8 @@ object RoverArticleInfo {
   }
 
   def initialize(uriId: Id[NormalizedURI], url: String, kind: ArticleKind[_ <: Article]): RoverArticleInfo = {
-    val newInfo = RoverArticleInfo(uriId = uriId, url = url, kind = kind.typeCode)
+    val urlHash = UrlHash.hashUrl(url)
+    val newInfo = RoverArticleInfo(uriId = uriId, url = url, urlHash = urlHash, kind = kind.typeCode)
     newInfo.initializeSchedulingPolicy
   }
 
@@ -138,19 +142,21 @@ object RoverArticleInfo {
     seq: SequenceNumber[RoverArticleInfo],
     uriId: Id[NormalizedURI],
     url: String,
+    urlHash: UrlHash,
     kind: String,
     bestVersion: Option[ArticleVersion],
     latestVersion: Option[ArticleVersion],
     oldestVersion: Option[ArticleVersion],
     lastFetchedAt: Option[DateTime],
     nextFetchAt: Option[DateTime],
-    lastFetchingAt: Option[DateTime],
     fetchInterval: Option[Duration],
     failureCount: Int,
     failureInfo: Option[String],
+    lastFetchingAt: Option[DateTime],
     lastImageProcessingVersion: Option[ArticleVersion],
-    lastImageProcessingAt: Option[DateTime]): RoverArticleInfo = {
-    RoverArticleInfo(id, createdAt, updatedAt, state, seq, uriId, url, kind, bestVersion, latestVersion, oldestVersion, lastFetchedAt, nextFetchAt, lastFetchingAt, fetchInterval, failureCount, failureInfo, lastImageProcessingVersion, lastImageProcessingAt)
+    lastImageProcessingAt: Option[DateTime],
+    imageProcessingRequestedAt: Option[DateTime]): RoverArticleInfo = {
+    RoverArticleInfo(id, createdAt, updatedAt, state, seq, uriId, url, urlHash, kind, bestVersion, latestVersion, oldestVersion, lastFetchedAt, nextFetchAt, lastFetchingAt, fetchInterval, failureCount, failureInfo, imageProcessingRequestedAt, lastImageProcessingVersion, lastImageProcessingAt)
   }
 
   def unapplyToDbRow(info: RoverArticleInfo) = {
@@ -162,18 +168,20 @@ object RoverArticleInfo {
       info.seq,
       info.uriId,
       info.url,
+      info.urlHash,
       info.kind,
       info.bestVersion,
       info.latestVersion,
       info.oldestVersion,
       info.lastFetchedAt,
       info.nextFetchAt,
-      info.lastFetchingAt,
       info.fetchInterval,
       info.failureCount,
       info.failureInfo,
+      info.lastFetchingAt,
       info.lastImageProcessingVersion,
-      info.lastImageProcessingAt
+      info.lastImageProcessingAt,
+      info.imageProcessingRequestedAt
     ))
   }
 }

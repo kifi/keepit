@@ -4,3 +4,15 @@
 
 GET     /internal/rover/getShoeboxUpdates       @com.keepit.rover.controllers.internal.RoverController.getShoeboxUpdates(seq: SequenceNumber[ArticleInfo], limit: Int)
 POST    /internal/rover/fetchAsap               @com.keepit.rover.controllers.internal.RoverController.fetchAsap()
+POST    /internal/rover/getArticlesByUris       @com.keepit.rover.controllers.internal.RoverController.getBestArticlesByUris()
+POST    /internal/rover/getBestArticlesByUris       @com.keepit.rover.controllers.internal.RoverController.getBestArticlesByUris()
+POST    /internal/rover/getArticleInfosByUris       @com.keepit.rover.controllers.internal.RoverController.getArticleInfosByUris()
+POST    /internal/rover/getBestArticleSummaryByUris @com.keepit.rover.controllers.internal.RoverController.getBestArticleSummaryByUris()
+POST    /internal/rover/getImagesByUris             @com.keepit.rover.controllers.internal.RoverController.getImagesByUris()
+POST    /internal/rover/getOrElseFetchArticleSummaryAndImages @com.keepit.rover.controllers.internal.RoverController.getOrElseFetchArticleSummaryAndImages()
+POST    /internal/rover/getOrElseFetchRecentArticle       @com.keepit.rover.controllers.internal.RoverController.getOrElseFetchRecentArticle()
+POST    /internal/rover/getOrElseComputeRecentContentSignature       @com.keepit.rover.controllers.internal.RoverController.getOrElseComputeRecentContentSignature()
+
+GET     /internal/rover/pornDetector/getModel          @com.keepit.rover.controllers.internal.PornDetectorController.getModel
+POST    /internal/rover/pornDetector/detect       @com.keepit.rover.controllers.internal.PornDetectorController.detect
+POST    /internal/rover/pornDetector/whitelist        @com.keepit.rover.controllers.internal.PornDetectorController.whitelist

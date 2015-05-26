@@ -45,9 +45,11 @@ case class TwitterUserInfo(
 
 object TwitterUserInfo {
   def toSocialUserInfo(tui: TwitterUserInfo, state: State[SocialUserInfo] = SocialUserInfoStates.FETCHED_USING_FRIEND): SocialUserInfo = {
+    val id = tui.id.toString.trim
+    if (id.isEmpty) throw new Exception(s"empty social id for $tui")
     SocialUserInfo(
       fullName = tui.name,
-      socialId = SocialId(tui.id.toString),
+      socialId = SocialId(id),
       networkType = SocialNetworks.TWITTER,
       state = state,
       pictureUrl = tui.pictureUrl.map(_.toString),

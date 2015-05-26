@@ -21,7 +21,6 @@ import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.model.UserFactory._
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.model._
-import com.keepit.scraper.{ FakeScrapeSchedulerModule, FakeScraperServiceClientModule }
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.social.BasicUser
@@ -41,14 +40,12 @@ class MobileRecommendationsControllerTest extends TestKitSupport with Specificat
     FakeShoeboxServiceModule(),
     FakeCuratorServiceClientModule(),
     FakeSearchServiceClientModule(),
-    FakeScrapeSchedulerModule(),
     FakeShoeboxStoreModule(),
     FakeHttpClientModule(),
     FakeSocialGraphModule(),
     FakeHeimdalServiceClientModule(),
     FakeMailModule(),
     FakeCortexServiceClientModule(),
-    FakeScraperServiceClientModule(),
     FakeABookServiceClientModule(),
     FakeActorSystemModule(),
     FakeUserActionsModule(),
@@ -104,6 +101,7 @@ class MobileRecommendationsControllerTest extends TestKitSupport with Specificat
              "summary":{"title":"Yo!"}},
              "explain":"because :-)"}""".stripMargin
 
+      val now = new DateTime(2013, 5, 31, 4, 3, 2, 1, DEFAULT_DATE_TIME_ZONE)
       val libRecoInfos = Seq.tabulate(1) { i: Int =>
         Id[Library](i) -> FullLibRecoInfo(
           metaData = None,
@@ -119,11 +117,15 @@ class MobileRecommendationsControllerTest extends TestKitSupport with Specificat
             owner = basicUser1,
             keeps = Seq(),
             followers = Seq(),
+            collaborators = Seq(),
             lastKept = None,
             url = "joe/scala",
             numKeeps = 10,
             numCollaborators = 0,
-            numFollowers = 10)
+            numFollowers = 10,
+            whoCanInvite = LibraryInvitePermissions.COLLABORATOR,
+            modifiedAt = now
+          )
         )
       }
 
@@ -133,7 +135,7 @@ class MobileRecommendationsControllerTest extends TestKitSupport with Specificat
           | "itemInfo":{"id":"123","name":"Scala","visibility":"published",
           |   "description":"This is a library about scala...","slug":"scala","url":"joe/scala","color":"${LibraryColor.BLUE.hex}","kind":"user_created",
           |   "owner":{"id":"aa25f5a8-8dea-4e56-82c1-a4dcf38f205c","firstName":"Joe","lastName":"Smith","pictureName":"asdf","username":"joe"},
-          |   "followers":[],"keeps":[],"numKeeps":10,"numCollaborators":0,"numFollowers":10}}
+          |   "followers":[],"collaborators":[],"keeps":[],"numKeeps":10,"numCollaborators":0,"numFollowers":10,"whoCanInvite": "collaborator","modifiedAt":${now.getMillis}}}
         """.stripMargin
 
       def runCommonTopRecosTests(call: Call, requestFn: Request[AnyContent] => Future[Result])(implicit injector: Injector): Future[Result] = {

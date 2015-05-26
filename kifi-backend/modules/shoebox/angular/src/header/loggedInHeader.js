@@ -4,10 +4,10 @@ angular.module('kifi')
 
 .controller('LoggedInHeaderCtrl', [
   '$scope', '$rootElement', '$rootScope', '$document', 'profileService', 'libraryService',
-  '$location', 'util', 'keyIndices', 'modalService', '$timeout', '$state',
+  '$location', 'util', 'KEY', 'modalService', '$timeout', '$state',
   function (
     $scope, $rootElement, $rootScope, $document, profileService, libraryService,
-    $location, util, keyIndices, modalService, $timeout, $state) {
+    $location, util, KEY, modalService, $timeout, $state) {
 
     $scope.search = {text: $state.params.q || '', focused: false, suggesting: false, libraryChip: false};
     $scope.me = profileService.me;
@@ -152,7 +152,7 @@ angular.module('kifi')
     $scope.addKeeps = function () {
       var library = $scope.library;
       modalService.open({
-        template: 'keeps/addKeepsModal.tpl.html',
+        template: 'keeps/addKeepModal.tpl.html',
         modalData: {selectedLibId: library && libraryService.isMyLibrary(library) && library.id}
       });
     };
@@ -160,7 +160,7 @@ angular.module('kifi')
     function onDocKeyDown(e) {
       if (!e.isDefaultPrevented()) {
         switch (e.which) {
-          case keyIndices.KEY_ENTER:
+          case KEY.ENTER:
             if (e.metaKey && !e.shiftKey && !e.altKey && !e.ctrlKey) {
               e.preventDefault();
               $scope.$apply(function () {

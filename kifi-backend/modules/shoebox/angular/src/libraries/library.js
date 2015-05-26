@@ -4,11 +4,11 @@ angular.module('kifi')
 
 .controller('LibraryCtrl', [
   '$scope', '$rootScope', '$analytics', '$location', '$state', '$stateParams', '$timeout', '$window',
-  '$FB', '$twitter', 'env', 'util', 'initParams', 'library', 'keepDecoratorService', 'libraryService', 'modalService',
+  '$FB', '$twitter', 'env', 'util', 'URI', 'AB', 'initParams', 'library', 'libraryService', 'modalService',
   'platformService', 'profileService', 'originTrackingService', 'installService', 'libraryImageLoaded',
   function (
     $scope, $rootScope, $analytics, $location, $state, $stateParams, $timeout, $window,
-    $FB, $twitter, env, util, initParams, library, keepDecoratorService, libraryService, modalService,
+    $FB, $twitter, env, util, URI, AB, initParams, library, libraryService, modalService,
     platformService, profileService, originTrackingService, installService, libraryImageLoaded) {
 
     //
@@ -90,8 +90,7 @@ angular.module('kifi')
       actions: {
         bulkUnkeep: true,
         copyToLibrary: true,
-        moveToLibrary: true,
-        editTags: true
+        moveToLibrary: true
       }
     };
 
@@ -117,10 +116,7 @@ angular.module('kifi')
     };
 
     function renderNextRawKeep(rawKeeps) {
-      var keep = new keepDecoratorService.Keep(rawKeeps.shift());
-      keep.buildKeep(keep);
-      keep.makeKept();
-      $scope.keeps.push(keep);
+      $scope.keeps.push(augmentKeep(rawKeeps.shift()));
       if (rawKeeps.length) {
         $timeout(angular.bind(null, renderNextRawKeep, rawKeeps));
       } else {
@@ -139,6 +135,11 @@ angular.module('kifi')
           $timeout($scope.getNextKeeps.bind(null, numLoaded));
         }
       }
+    }
+
+    function augmentKeep(keep) {
+      keep.library = $scope.library;  // b/c library can vary for each keep card in the general case (e.g. search results)
+      return keep;
     }
 
     $scope.libraryKeepClicked = function (keep, event) {
@@ -184,7 +185,7 @@ angular.module('kifi')
     $scope.shareTwitter = function (event) {
       trackShareEvent('clickedShareTwitter');
       var absUrl = env.origin + library.url;
-      event.target.href = 'https://twitter.com/intent/tweet' + util.formatQueryString({
+      event.target.href = 'https://twitter.com/intent/tweet' + URI.formatQueryString({
         original_referer: absUrl,
         text: 'Discover this amazing @Kifi library about ' + library.name + '!',
         tw_p: 'tweetbutton',
@@ -207,13 +208,16 @@ angular.module('kifi')
             if (idx > -1) {
               $scope.keeps.splice(idx, 1);
             }
-          } else if (library.id === $scope.library.id) {
-            $scope.keeps.unshift(keep);
+          }
+
+          var existingKeep = _.find($scope.keeps, {url: keep.url});
+          if (!existingKeep && library.id === $scope.library.id) {
+            $scope.keeps.unshift(augmentKeep(keep));
+            existingKeep = keep;
           }
 
           // add the new keep to the keep card's "my keeps" array
-          var existingKeep = _.find($scope.keeps, { url: keep.url });
-          if (existingKeep && !_.find($scope.keeps, { id: keep.id })) {
+          if (existingKeep && !_.find($scope.keeps, {id: keep.id})) {
             existingKeep.keeps.push({
               id: keep.id,
               libraryId: library.id,
@@ -297,36 +301,5 @@ angular.module('kifi')
         libraryService.joinLibrary($scope.library.id);
       }
     });
-
-    if (!$rootScope.userLoggedIn) {
-      library.abTest = {
-        name: 'exp_follow_popup',
-        salt: 'hgg1dv',
-        treatments: [
-          {
-            name: 'none'
-          },
-          {
-            name: 'popupLibrary',
-            data: {
-              buttonText: 'Follow',
-              mainHtml: 'Join Kifi to follow this library.<br/>Discover other libraries,<br/>and build your own!',
-              quoteHtml: 'From business to personal, Kifi has been<br/>instrumental in my day-to-day life.',
-              quoteAttribution: 'Remy Weinstein, California'
-            }
-          },
-          {
-            name: 'popupCollection',
-            data: {
-              buttonText: 'Save',
-              mainHtml: 'Join Kifi to save this collection.<br/>Discover other collections,<br/>and build your own!',
-              quoteHtml: 'From business to personal, Kifi has been<br/>instrumental in my day-to-day life.',
-              quoteAttribution: 'Remy Weinstein, California'
-            }
-          }
-        ]
-      };
-      library.abTestTreatment = util.chooseTreatment(library.abTest.salt, library.abTest.treatments);
-    }
   }
 ]);

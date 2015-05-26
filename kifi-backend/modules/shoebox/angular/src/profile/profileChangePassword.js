@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfProfileChangePassword', [
-  'profileService', 'keyIndices',
-  function (profileService, keyIndices) {
+  'profileService', 'KEY',
+  function (profileService, KEY) {
     return {
       restrict: 'A',
       scope: {},
@@ -26,10 +26,10 @@ angular.module('kifi')
 
         element.find('input').on('keydown', function (e) {
           switch (e.which) {
-            case keyIndices.KEY_ESC:
+            case KEY.ESC:
               this.blur();
               break;
-            case keyIndices.KEY_ENTER:
+            case KEY.ENTER:
               scope.$apply(scope.updatePassword);
               break;
           }

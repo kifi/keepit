@@ -10,7 +10,6 @@ import com.keepit.common.time._
 import com.keepit.controllers.website.FeedController
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.model._
-import com.keepit.scraper.{ FakeScrapeSchedulerModule, FakeScrapeSchedulerConfigModule }
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.{ FakeShoeboxServiceModule, FakeKeepImportsModule }
 import com.keepit.test.ShoeboxTestInjector
@@ -30,9 +29,7 @@ class FeedControllerTest extends Specification with ShoeboxTestInjector {
     FakeMailModule(),
     FakeCortexServiceClientModule(),
     FakeSearchServiceClientModule(),
-    FakeScrapeSchedulerConfigModule(),
     FakeSocialGraphModule(),
-    FakeScrapeSchedulerModule(),
     FakeShoeboxServiceModule()
   )
 

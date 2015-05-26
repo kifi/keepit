@@ -17,6 +17,7 @@ import scala.concurrent.{ ExecutionContext, Future }
 
 case class ImagePath(path: String) extends AnyVal {
   override def toString() = path
+  def getUrl(implicit imageConfig: S3ImageConfig): String = imageConfig.cdnBase + "/" + path
 }
 
 object ImagePath {

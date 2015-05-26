@@ -2,22 +2,18 @@
 
 angular.module('kifi')
 
-.factory('routeService', [
-  'env', 'util',
-  function (env, util) {
-    function route(path, params) {
-      return env.xhrBase + path + (params ? queryStr(params) : '');
-    }
+// DEPRECATED. Use the 'net' service instead.
 
-    function searchRoute(path, params) {
-      return env.xhrBaseSearch + path + (params ? queryStr(params) : '');
+.factory('routeService', [
+  'env', 'URI',
+  function (env, URI) {
+    function route(path, params) {
+      return env.xhrBase + path + (params ? URI.formatQueryString(params) : '');
     }
 
     function navRoute(path, params) {
-      return env.navBase + path + (params ? queryStr(params) : '');
+      return env.navBase + path + (params ? URI.formatQueryString(params) : '');
     }
-
-    var queryStr = util.formatQueryString;
 
     return {
       disconnectNetwork: function (network) {
@@ -46,9 +42,6 @@ angular.module('kifi')
       formatPicUrl: function (userId, pictureName, size) {
         return env.picBase + '/users/' + userId + '/pics/' + (size || 200) + '/' + pictureName;
       },
-      getKeep: function (keepId) {
-        return route('/keeps/' + keepId);
-      },
 
       ////////////////////////////
       // Tags                   //
@@ -60,23 +53,13 @@ angular.module('kifi')
         return route('/collections/search', {query: query, limit: limit});
       },
       suggestTags: function (libraryId, keepId, query) {
-        // TODO: stop using extension endpoint
-        return env.navBase + '/ext/libraries/' + libraryId + '/keeps/' + keepId + '/tags/suggest' + queryStr({q: query});
+        return route('/libraries/' + libraryId + '/keeps/' + keepId + '/tags/suggest', {q: query});
       },
       deleteTag: function (tagId) {
         return route('/collections/' + tagId + '/delete');
       },
       undeleteTag: function (tagId) {
         return route('/collections/' + tagId + '/undelete');
-      },
-      tagKeep: function (libraryId, keepId, tag) {
-        return route('/libraries/' + libraryId + '/keeps/' + keepId + '/tags/' + encodeURIComponent(tag));
-      },
-      tagKeeps: function (tag) {
-        return route('/tags/' + encodeURIComponent(tag));
-      },
-      untagKeep: function (libraryId, keepId, tag) {
-        return route('/libraries/' + libraryId + '/keeps/' + keepId + '/tags/' + encodeURIComponent(tag));
       },
 
       whoToInvite: route('/user/invite/recommended'),
@@ -94,12 +77,6 @@ angular.module('kifi')
       hideUserRecommendation: function (id) {
         return route('/user/' + id + '/hide');
       },
-      search: function (params) {
-        return searchRoute('/site/search', params);
-      },
-      searchResultClicked: searchRoute('/site/search/events/resultClicked'),
-      searchedAnalytics: searchRoute('/site/search/events/searched'),
-      searchResultClickedAnalytics: searchRoute('/site/search/events/resultClicked'),
       socialSearch: function (name, limit) {
         return route('/user/connections/all/search', {
           query: name,
@@ -137,20 +114,8 @@ angular.module('kifi')
       basicUserInfo: function (id, friendCount) {
         return route('/user/' + id, {friendCount: friendCount ? 1 : []});
       },
-      addKeepsToLibrary: function (libraryId) {
-        return route('/libraries/' + libraryId + '/keeps');
-      },
-      copyKeepsToLibrary: function () {
-        return route('/libraries/copy');
-      },
-      moveKeepsToLibrary: function () {
-        return route('/libraries/move');
-      },
-      removeKeepFromLibrary: function (libraryId, keepId) {
-        return route('/libraries/' + libraryId + '/keeps/' + keepId);
-      },
-      removeManyKeepsFromLibrary: function (libraryId) {
-        return route('/libraries/' + libraryId + '/keeps/delete');
+      saveKeepNote: function (libraryId, keepId) {
+        return route('/libraries/' + libraryId + '/keeps/' + keepId + '/note');
       },
 
       ////////////////////////////
@@ -205,6 +170,9 @@ angular.module('kifi')
       },
       deleteLibrary: function (libraryId) {
         return route('/libraries/' + libraryId + '/delete');
+      },
+      updateSubscriptionToLibrary: function (libraryId, subscribed) {
+        return route('/libraries/' + libraryId + '/subscription', {subscribed: subscribed ? 1 : 0});
       },
       uploadLibraryCoverImage: function (libraryId, x, y, idealSize) {
         return route('/libraries/' + libraryId + '/image/upload', {x: x, y: y, is: idealSize || []});

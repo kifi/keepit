@@ -57,7 +57,7 @@ class SearchBackwardCompatibilitySupport @Inject() (
           BasicSearchHit(Some(hit.title), hit.url)
         }
 
-        val friends = augmentedItem.relatedKeepers.filter(_ != userId)
+        val friends = augmentedItem.relatedKeepers.map(_._1).filter(_ != userId)
         friends.foreach(friendId => friendStats.add(friendId.id, hit.score))
 
         val isPrivate = augmentedItem.isSecret(libraryIndexer.getSearcher) getOrElse false

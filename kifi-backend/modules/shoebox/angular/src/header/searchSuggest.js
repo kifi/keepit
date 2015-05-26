@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfSearchSuggest', [
-  '$state', '$document', '$location', '$timeout', 'searchSuggestService', 'libraryService', 'profileService', 'keyIndices',
-  function ($state, $document, $location, $timeout, searchSuggestService, libraryService, profileService, keyIndices) {
+  '$state', '$document', '$location', '$timeout', 'searchSuggestService', 'libraryService', 'profileService', 'KEY',
+  function ($state, $document, $location, $timeout, searchSuggestService, libraryService, profileService, KEY) {
     return {
       restrict: 'A',
       scope: {
@@ -79,17 +79,17 @@ angular.module('kifi')
           if (!e.isDefaultPrevented()) {
             var itemEl;
             switch (e.which) {
-              case keyIndices.KEY_ENTER:
+              case KEY.ENTER:
                 itemEl = element.find('.kf-ssg-a.kf-selected');
                 if (itemEl.length) {
                   e.preventDefault();
                   onSuggestionTaken(itemEl);
                 }
                 break;
-              case keyIndices.KEY_UP:
-              case keyIndices.KEY_DOWN:
+              case KEY.UP:
+              case KEY.DOWN:
                 e.preventDefault();
-                var up = e.which === keyIndices.KEY_UP;
+                var up = e.which === KEY.UP;
                 itemEl = element.find('.kf-ssg-a.kf-selected').removeClass('kf-selected');
                 itemEl = itemEl[up ? 'prevAll' : 'nextAll']('.kf-ssg-a').first();
                 (itemEl.length ? itemEl : element.find('.kf-ssg-a')[up ? 'last' : 'first']()).addClass('kf-selected');
@@ -196,15 +196,15 @@ angular.module('kifi')
 ])
 
 .factory('searchSuggestService', [
-  'Clutch', '$http', 'routeService',
-  function (Clutch, $http, routeService) {
+  'Clutch', 'net',
+  function (Clutch, net) {
     function getData(res) {
       return res.data;
     }
 
     var clutch = new Clutch(function (q, libraryId) {
-      var params = {q: q, l: libraryId || [], maxUsers: 3, maxLibraries: 3, maxUris: 3};
-      return $http.get(routeService.search(params)).then(getData);
+      var params = {q: q, l: libraryId || [], maxUsers: 3, maxLibraries: 3, maxUris: 3, is: '88x72'};
+      return net.search.search(params).then(getData);
     }, {cacheDuration: 15000});
 
     return {

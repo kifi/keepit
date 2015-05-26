@@ -80,5 +80,30 @@ class HashtagsTest extends Specification {
       Hashtags.removeHashtagNamesFromString("[#asdf] a [#qwer]", Set("asdf", "qwer")) === "a"
       Hashtags.removeHashtagNamesFromString("a [#asdf] b [#qwer] c", Set("asdf", "qwer")) === "a  b  c"
     }
+
+    "remove all hashtags or unescape them for v1 mobile notes" in {
+      // text only
+      Hashtags.formatMobileNoteV1(None) === None
+      Hashtags.formatMobileNoteV1(Some("")) === None
+      Hashtags.formatMobileNoteV1(Some("hi there")) === Some("hi there")
+      Hashtags.formatMobileNoteV1(Some("[\\#asdf]")) === Some("[#asdf]")
+
+      // tags only
+      Hashtags.formatMobileNoteV1(Some("[#\\asd\\]f]")) === None
+      Hashtags.formatMobileNoteV1(Some("[#asdf\\]]")) === None
+      Hashtags.formatMobileNoteV1(Some("[#asd[f\\]]")) === None
+      Hashtags.formatMobileNoteV1(Some("[##asdf]")) === None
+      Hashtags.formatMobileNoteV1(Some("[#asdf]")) === None
+      Hashtags.formatMobileNoteV1(Some("[#asdf] [#hjkl]")) === None
+      Hashtags.formatMobileNoteV1(Some(" [#asdf] [#hjkl] ")) === None
+
+      // text + tags
+      Hashtags.formatMobileNoteV1(Some("this is really useful [#tag1] [#tag2]")) === Some("this is really useful")
+      Hashtags.formatMobileNoteV1(Some("this is really [\\#useful] [#tag1] [#tag2]")) === Some("this is really [#useful]")
+      //Hashtags.formatMobileNoteV1(Some("i love [#scala]")) === Some("i love #scala")
+      //Hashtags.formatMobileNoteV1(Some("""i love [#\\asdf\]]""")) === Some("""i love #\asdf]""")
+      //Hashtags.formatMobileNoteV1(Some("[[#asdf]]")) === Some("[#asdf]")
+      //Hashtags.formatMobileNoteV1(Some("[#asdf]]")) === Some("#asdf]")
+    }
   }
 }

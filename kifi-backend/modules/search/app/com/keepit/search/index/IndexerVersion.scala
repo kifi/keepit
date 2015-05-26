@@ -19,7 +19,7 @@ sealed abstract class IndexerVersionProvider(activeVersion: IndexerVersion, back
 }
 
 object IndexerVersionProviders {
-  case object Article extends IndexerVersionProvider(3, 4)
+  case object Article extends IndexerVersionProvider(6, 6)
   case object URIGraph extends IndexerVersionProvider(0, 0)
   case object Collection extends IndexerVersionProvider(0, 0)
   case object User extends IndexerVersionProvider(4, 4)
@@ -29,5 +29,5 @@ object IndexerVersionProviders {
   case object Phrase extends IndexerVersionProvider(0, 0)
   case object Library extends IndexerVersionProvider(9, 9)
   case object LibraryMembership extends IndexerVersionProvider(1, 1)
-  case object Keep extends IndexerVersionProvider(2, 2)
+  case object Keep extends IndexerVersionProvider(3, 3)
 }

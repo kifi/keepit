@@ -6,10 +6,10 @@ import com.keepit.common.time._
 import com.keepit.cortex.models.lda.LDATopic
 import com.keepit.heimdal.DelightedAnswerSource
 import com.keepit.model._
-import java.sql.{ Time, Clob, Timestamp }
-import org.joda.time.{ LocalTime, DateTime, LocalDate }
+import java.sql.{ Clob, Timestamp }
+import org.joda.time.{ LocalTime, DateTime }
 import scala.slick.ast.TypedType
-import scala.slick.jdbc.{ PositionedResult, GetResult, PositionedParameters, SetParameter }
+import scala.slick.jdbc.{ GetResult, SetParameter }
 import play.api.libs.json._
 import com.keepit.common.net.UserAgent
 import com.keepit.classify.DomainTagName
@@ -17,7 +17,7 @@ import com.keepit.common.mail._
 import com.keepit.social.SocialNetworkType
 import securesocial.core.SocialUser
 import com.keepit.serializer.SocialUserSerializer
-import com.keepit.search.{ ArticleSearchResult, SearchConfig, Lang }
+import com.keepit.search.{ SearchConfig, Lang }
 import javax.sql.rowset.serial.SerialClob
 import com.keepit.model.UrlHash
 import play.api.libs.json.JsArray
@@ -26,7 +26,6 @@ import play.api.libs.json.JsObject
 import com.keepit.common.mail.EmailAddress
 import com.keepit.social.SocialId
 import com.keepit.model.DeepLocator
-import com.keepit.abook.model.RichSocialConnection
 import com.keepit.search.ArticleSearchResult
 import com.keepit.common.math.ProbabilityDensity
 import scala.concurrent.duration._
@@ -74,14 +73,13 @@ trait FortyTwoGenericTypeMappers { self: { val db: DataBaseComponent } =>
   implicit val electronicMailMessageIdMapper = MappedColumnType.base[ElectronicMailMessageId, String](_.id, ElectronicMailMessageId.apply)
   implicit val mapStringStringMapper = MappedColumnType.base[Map[String, String], String](v => Json.stringify(JsObject(v.mapValues(JsString.apply).toSeq)), Json.parse(_).as[JsObject].fields.toMap.mapValues(_.as[JsString].value))
   implicit val experimentTypeMapper = MappedColumnType.base[ExperimentType, String](_.value, ExperimentType.apply)
-  implicit val scraperWorkerIdTypeMapper = MappedColumnType.base[Id[ScraperWorker], Long](_.id, value => Id[ScraperWorker](value)) // todo(martin): this one shouldn't be necessary
   implicit val hitUUIDTypeMapper = MappedColumnType.base[ExternalId[ArticleSearchResult], String](_.id, ExternalId[ArticleSearchResult])
-  implicit val uriImageFormatTypeMapper = MappedColumnType.base[ImageProvider, String](_.value, ImageProvider.apply)
   implicit val uriImageSourceTypeMapper = MappedColumnType.base[ImageFormat, String](_.value, ImageFormat.apply)
   implicit val delightedAnswerSourceTypeMapper = MappedColumnType.base[DelightedAnswerSource, String](_.value, DelightedAnswerSource.apply)
   implicit val libraryVisibilityTypeMapper = MappedColumnType.base[LibraryVisibility, String](_.value, LibraryVisibility.apply)
   implicit val librarySlugTypeMapper = MappedColumnType.base[LibrarySlug, String](_.value, LibrarySlug.apply)
   implicit val libraryAccessTypeMapper = MappedColumnType.base[LibraryAccess, String](_.value, LibraryAccess.apply)
+  implicit val libraryInvitePermissionTypeMapper = MappedColumnType.base[LibraryInvitePermissions, String](_.value, LibraryInvitePermissions.apply)
   implicit val usernameTypeMapper = MappedColumnType.base[Username, String](_.value, Username.apply)
   implicit val libraryKindTypeMapper = MappedColumnType.base[LibraryKind, String](_.value, LibraryKind.apply)
   implicit val userValueNameTypeMapper = MappedColumnType.base[UserValueName, String](_.name, UserValueName.apply)
@@ -92,10 +90,6 @@ trait FortyTwoGenericTypeMappers { self: { val db: DataBaseComponent } =>
   implicit val imageSourceMapper = MappedColumnType.base[ImageSource, String](_.name, ImageSource.apply)
   implicit val imageStoreKeyMapper = MappedColumnType.base[ImagePath, String](_.path, ImagePath.apply)
   implicit val processImageOperationMapper = MappedColumnType.base[ProcessImageOperation, String](_.kind, ProcessImageOperation.apply)
-  implicit val seqPageAuthorMapper = MappedColumnType.base[Seq[PageAuthor], String](
-    authors => Json.stringify(Json.toJson(authors)),
-    str => if (str.isEmpty) Seq.empty[PageAuthor] else Json.parse(str).as[Seq[PageAuthor]]
-  )
 
   implicit def experimentTypeProbabilityDensityMapper[T](implicit outcomeFormat: Format[T]) = MappedColumnType.base[ProbabilityDensity[T], String](
     obj => Json.stringify(ProbabilityDensity.format[T].writes(obj)),
@@ -235,4 +229,7 @@ trait FortyTwoGenericTypeMappers { self: { val db: DataBaseComponent } =>
   implicit val getLibraryVisiblityResult = getResultFromMapper[LibraryVisibility]
   implicit val getOptLibraryVisiblityResult = getResultOptionFromMapper[LibraryVisibility]
   implicit val getHashtagResult = getResultFromMapper[Hashtag]
+  implicit def getOptVersionNumberResult[T] = getResultOptionFromMapper[VersionNumber[T]]
+  implicit val getOptDurationResult = getResultOptionFromMapper[Duration]
+  implicit val getUrlHashResult = getResultFromMapper[UrlHash]
 }

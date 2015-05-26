@@ -12,7 +12,6 @@ import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.model._
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.model.UserFactory._
-import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.test.ShoeboxTestInjector
 
 import org.joda.time.DateTime
@@ -29,7 +28,6 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
 
   val controllerTestModules = Seq(
     FakeExecutionContextModule(),
-    FakeScrapeSchedulerModule(),
     FakeABookServiceClientModule(),
     FakeSocialGraphModule()
   )

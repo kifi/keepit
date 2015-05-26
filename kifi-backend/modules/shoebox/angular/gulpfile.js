@@ -98,7 +98,7 @@ var libJsFiles = [
   'lib/angular-moment/angular-moment.js',
   ['managed-lib/jquery-ui-1.10.4.custom/js/jquery-ui-1.10.4.custom.js', 'managed-lib/jquery-ui-1.10.4.custom/js/jquery-ui-1.10.4.custom.min.js'],
   'managed-lib/ui-slider/slider.js',
-  'managed-lib/libs.js',
+  'managed-lib/selectionchange.js',
   'managed-lib/angular-smart-scroll/src/angular-smart-scroll.js',
   'lib/angulartics/dist/angulartics.min.js',
   ['lib/fuse.js/src/fuse.js', 'lib/fuse.js/src/fuse.min.js']

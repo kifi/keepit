@@ -18,6 +18,7 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def getByExtIds(extIds: Set[ExternalId[Keep]])(implicit session: RSession): Map[ExternalId[Keep], Option[Keep]]
   def getByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[Keep] //todo: replace option with seq
   def getByUserAndUriIds(userId: Id[User], uriIds: Set[Id[NormalizedURI]])(implicit session: RSession): Seq[Keep]
+  def getByUserIdAndLibraryId(userId: Id[User], libraryId: Id[Library], excludeSet: Set[State[Keep]] = Set(KeepStates.INACTIVE, KeepStates.DUPLICATE))(implicit session: RSession): Seq[Keep]
   def getByLibraryIdsAndUriIds(libraryIds: Set[Id[Library]], uriIds: Set[Id[NormalizedURI]])(implicit session: RSession): Seq[Keep]
   def getByExtIdAndUser(extId: ExternalId[Keep], userId: Id[User])(implicit session: RSession): Option[Keep]
   def getPrimaryByUriAndLibrary(uriId: Id[NormalizedURI], libId: Id[Library])(implicit session: RSession): Option[Keep]
@@ -74,25 +75,25 @@ class KeepRepoImpl @Inject() (
 
   type RepoImpl = KeepTable
   class KeepTable(tag: Tag) extends RepoTable[Keep](db, tag, "bookmark") with ExternalIdColumn[Keep] with NamedColumns with SeqNumberColumn[Keep] {
-    def title = column[String]("title", O.Nullable) //indexd
+    def title = column[Option[String]]("title", O.Nullable) //indexd
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull) //indexd
     def urlId = column[Id[URL]]("url_id", O.NotNull)
-    def isPrimary = column[Boolean]("is_primary", O.Nullable) // trueOrNull
-    def inDisjointLib = column[Boolean]("in_disjoint_lib", O.Nullable) // trueOrNull
+    def isPrimary = column[Option[Boolean]]("is_primary", O.Nullable) // trueOrNull
+    def inDisjointLib = column[Option[Boolean]]("in_disjoint_lib", O.Nullable) // trueOrNull
     def url = column[String]("url", O.NotNull) //indexd
-    def bookmarkPath = column[String]("bookmark_path", O.Nullable)
     def userId = column[Id[User]]("user_id", O.Nullable) //indexd
     def isPrivate = column[Boolean]("is_private", O.NotNull) //indexd
     def source = column[KeepSource]("source", O.NotNull)
-    def kifiInstallation = column[ExternalId[KifiInstallation]]("kifi_installation", O.Nullable)
+    def kifiInstallation = column[Option[ExternalId[KifiInstallation]]]("kifi_installation", O.Nullable)
     def libraryId = column[Option[Id[Library]]]("library_id", O.Nullable)
     def visibility = column[LibraryVisibility]("visibility", O.NotNull)
     def keptAt = column[DateTime]("kept_at", O.NotNull)
-    def sourceAttributionId = column[Id[KeepSourceAttribution]]("source_attribution_id", O.Nullable)
-    def note = column[String]("note", O.Nullable)
+    def sourceAttributionId = column[Option[Id[KeepSourceAttribution]]]("source_attribution_id", O.Nullable)
+    def note = column[Option[String]]("note", O.Nullable)
+    def originalKeeperId = column[Option[Id[User]]]("original_keeper_id", O.Nullable)
 
-    def * = (id.?, createdAt, updatedAt, externalId, title.?, uriId, isPrimary.?, inDisjointLib.?, urlId, url, bookmarkPath.?, isPrivate,
-      userId, state, source, kifiInstallation.?, seq, libraryId, visibility, keptAt, sourceAttributionId.?, note.?) <> ((Keep.applyFromDbRow _).tupled, Keep.unapplyToDbRow _)
+    def * = (id.?, createdAt, updatedAt, externalId, title, uriId, isPrimary, inDisjointLib, urlId, url, isPrivate,
+      userId, state, source, kifiInstallation, seq, libraryId, visibility, keptAt, sourceAttributionId, note, originalKeeperId) <> ((Keep.applyFromDbRow _).tupled, Keep.unapplyToDbRow _)
   }
 
   def table(tag: Tag) = new KeepTable(tag)
@@ -115,8 +116,7 @@ class KeepRepoImpl @Inject() (
       inDisjointLib = r.<<[Option[Boolean]],
       urlId = r.<<[Id[URL]],
       url = r.<<[String],
-      bookmarkPath = r.<<[Option[String]],
-      isPrivate = { privateFlag = r.<<[Boolean]; privateFlag }, // todo(andrew): wowza, clean up when done with libraries
+      isPrivate = r.<<[Boolean],
       userId = r.<<[Id[User]],
       state = r.<<[State[Keep]],
       source = r.<<[KeepSource],
@@ -126,7 +126,8 @@ class KeepRepoImpl @Inject() (
       visibility = r.<<[LibraryVisibility],
       keptAt = r.<<[DateTime],
       sourceAttributionId = r.<<[Option[Id[KeepSourceAttribution]]],
-      note = r.<<[Option[String]]
+      note = r.<<[Option[String]],
+      originalKeeperId = r.<<[Option[Id[User]]]
     )
   }
   private val bookmarkColumnOrder: String = _taggedTable.columnStrings("bm")
@@ -203,6 +204,10 @@ class KeepRepoImpl @Inject() (
 
   def getByLibraryIdsAndUriIds(libraryIds: Set[Id[Library]], uriIds: Set[Id[NormalizedURI]])(implicit session: RSession): Seq[Keep] = {
     (for (b <- rows if b.uriId.inSet(uriIds) && b.libraryId.inSet(libraryIds) && b.state === KeepStates.ACTIVE) yield b).list
+  }
+
+  def getByUserIdAndLibraryId(userId: Id[User], libraryId: Id[Library], excludeSet: Set[State[Keep]] = Set(KeepStates.INACTIVE, KeepStates.DUPLICATE))(implicit session: RSession): Seq[Keep] = {
+    (for (b <- rows if b.libraryId === libraryId && b.userId === userId && !b.state.inSet(excludeSet)) yield b).list
   }
 
   def getByExtIdAndUser(extId: ExternalId[Keep], userId: Id[User])(implicit session: RSession): Option[Keep] = {
@@ -472,7 +477,7 @@ class KeepRepoImpl @Inject() (
   }
 
   def getKeepsFromLibrarySince(since: DateTime, library: Id[Library], max: Int)(implicit session: RSession): Seq[Keep] = {
-    (for (b <- rows if b.libraryId === library && b.state === KeepStates.ACTIVE && b.keptAt > since) yield b).sortBy(_.keptAt asc).take(max).list
+    (for (b <- rows if b.libraryId === library && b.state === KeepStates.ACTIVE && b.keptAt > since) yield b).sortBy(b => (b.keptAt asc, b.id)).take(max).list
   }
 
   def librariesWithMostKeepsSince(count: Int, since: DateTime)(implicit session: RSession): Seq[(Id[Library], Int)] = {

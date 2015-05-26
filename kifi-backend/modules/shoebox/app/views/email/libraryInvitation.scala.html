@@ -2,12 +2,14 @@
   inviterId: Id[User],
   inviteMsg: Option[String],
   libraryInfo: com.keepit.model.LibraryInfo,
-  passPhrase: Option[String],
-  authToken: String)
+  authToken: String,
+  inviteAccess: LibraryAccess
+)
 @import com.keepit.common.mail.template.helpers._
 @libraryAssetUrl(path: String) = @{assetUrl("library/" + path)}
 @libraryUrl = @{htmlUrl(baseUrl + libraryInfo.url + "?authToken=" + authToken + "&", "followLibraryButton", inviteeId.nonEmpty)}
-@invitedHeader = {@firstName(inviterId) invited you to follow a library on Kifi}
+@inviteAction = @{if (inviteAccess == LibraryAccess.READ_ONLY) "follow" else "collaborate on" }
+@invitedHeader = {@firstName(inviterId) invited you to @inviteAction a library on Kifi}
 
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
@@ -221,9 +223,6 @@
                   @libraryInfo.shortDescription.getOrElse("")
                   <br/>
                   <br/>
-                  @{passPhrase map { phrase =>
-                      s"You may need to enter the following passphrase to view library: $phrase"
-                  }}
                 </td>
               </tr>
               @email.tags.trSpacer(18)

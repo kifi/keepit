@@ -13,6 +13,19 @@
       </tr>
     </table>
 
+    <div>
+        <p>Create a Library</p>
+        <form action="#" method="POST" class="create-library">
+            <input type="text" name="name" placeholder="Library Name">
+            <input type="text" name="slug" placeholder="slug">
+            <select name="visibility">
+                <option value="published">Published</option>
+                <option value="secret">Secret</option>
+            </select>
+            <input type="submit" value="Create Library">
+        </form>
+    </div>
+
   <h2>Showing @libraryList.size Libraries</h2>
   <form class="navbar-form" action="@com.keepit.controllers.admin.routes.AdminLibraryController.updateLibraries()"
   method="POST">
@@ -56,5 +69,16 @@
   </form>
 
   <script type="text/javascript">
+      $(function() {
+        $('.create-library').on("submit", function() {
+          $.post("@com.keepit.controllers.admin.routes.AdminUserController.createLibrary(user.id.get)", $('.create-library').serialize())
+          .done(function(data) {
+              alert("Library created");
+          }).fail(function(data) {
+              alert(data.responseText);
+          });
+          return false;
+        });
+      });
   </script>
 }

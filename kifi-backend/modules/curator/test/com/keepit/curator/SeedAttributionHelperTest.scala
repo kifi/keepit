@@ -1,13 +1,11 @@
 package com.keepit.curator
 
-import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.db.{ Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.cortex.FakeCortexServiceClientImpl
 import com.keepit.cortex.models.lda.LDATopic
 import com.keepit.curator.commanders.SeedAttributionHelper
 import com.keepit.curator.model._
-import com.keepit.graph.FakeGraphServiceClientImpl
-import com.keepit.graph.model.GraphFeedExplanation
 import com.keepit.model.{ Library, Keep, NormalizedURI, User }
 import com.keepit.search._
 import org.specs2.mutable.Specification
@@ -17,9 +15,9 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 import com.keepit.search.augmentation._
 import com.keepit.curator.model.ScoredSeedItem
-import scala.Some
 import com.keepit.curator.model.CuratorKeepInfo
 import com.keepit.curator.model.UriScores
+import com.keepit.common.time._
 
 class SeedAttributionHelperTest extends Specification with CuratorTestInjector {
 
@@ -29,11 +27,12 @@ class SeedAttributionHelperTest extends Specification with CuratorTestInjector {
       val n = uriId.id.toInt
       if (n > 5) return LimitedAugmentationInfo.empty
 
-      val keepers = (1 to n) map { i => Id[User](i) }
+      val now = currentDateTime
+      val keepers = (1 to n) map { i => (Id[User](i), now) }
       val keepersTotal = 3 * n
-      val libraries = keepers.collect { case userId if userId.id % 2 == 1 => (Id[Library](userId.id), userId) } // half of the users have associated lib})
+      val libraries = keepers.collect { case (userId, keptAt) if userId.id % 2 == 1 => (Id[Library](userId.id), userId, keptAt) } // half of the users have associated lib})
       val librariesTotal = 3 * n
-      LimitedAugmentationInfo(keepers, 0, keepersTotal, libraries, 0, librariesTotal, Seq.empty, 0)
+      LimitedAugmentationInfo(None, keepers, 0, keepersTotal, libraries, 0, librariesTotal, Seq.empty, 0)
     }
 
     override def augment(userId: Option[Id[User]], showPublishedLibraries: Boolean, maxKeepersShown: Int, maxLibrariesShown: Int, maxTagsShown: Int, items: Seq[AugmentableItem]): Future[Seq[LimitedAugmentationInfo]] = {

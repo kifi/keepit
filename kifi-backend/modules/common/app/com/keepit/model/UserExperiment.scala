@@ -62,10 +62,11 @@ object ExperimentType {
   val LIBRARIES = ExperimentType("libraries")
   val SEND_DIGEST_EMAIL_ON_REFRESH = ExperimentType("send_digest_email_on_refresh")
   val GRAPH_BASED_PEOPLE_TO_INVITE = ExperimentType("graph_based_people_to_invite")
-  val NEW_KEEP_NOTIFICATIONS = ExperimentType("new_keep_notifications")
   val CORTEX_NEW_MODEL = ExperimentType("cortex_new_model")
   val CURATOR_DIVERSE_TOPIC_RECOS = ExperimentType("curator_diverse_topic_recos")
   val NEW_PUBLIC_FEED = ExperimentType("new_public_feed")
+  val PLAIN_EMAIL = ExperimentType("plain_email")
+  val GRATIFICATION_EMAIL = ExperimentType("gratification_email")
 
   val PROFILES_BETA = ExperimentType("profiles_beta")
   val TWITTER_BETA = ExperimentType("twitter_beta")
@@ -77,13 +78,15 @@ object ExperimentType {
   val RECO_FASTLANE = ExperimentType("reco_fastlane")
   val RECO_SUBSAMPLE = ExperimentType("reco_subsample")
   val APPLY_RECO_FEEDBACK = ExperimentType("apply_reco_feedback")
+  val ROVER_CONTENT = ExperimentType("rover_content")
+  val COLLABORATIVE = ExperimentType("collaborative")
 
   val _ALL = ADMIN :: AUTO_GEN :: FAKE :: BYPASS_ABUSE_CHECKS :: VISITED :: NO_SEARCH_EXPERIMENTS ::
     DEMO :: EXTENSION_LOGGING :: SHOW_HIT_SCORES :: SHOW_DISCUSSIONS ::
     MOBILE_REDIRECT :: DELIGHTED_SURVEY_PERMANENT :: SPECIAL_CURATOR :: LIBRARIES :: SEND_DIGEST_EMAIL_ON_REFRESH ::
-    GRAPH_BASED_PEOPLE_TO_INVITE :: NEW_KEEP_NOTIFICATIONS :: CORTEX_NEW_MODEL :: CURATOR_DIVERSE_TOPIC_RECOS ::
+    GRAPH_BASED_PEOPLE_TO_INVITE :: CORTEX_NEW_MODEL :: CURATOR_DIVERSE_TOPIC_RECOS ::
     NEW_PUBLIC_FEED :: PROFILES_BETA :: TWITTER_BETA :: ACTIVITY_EMAIL :: ALL_KEEPS_VIEW :: EXPLICIT_SOCIAL_POSTING :: RELATED_PAGE_INFO :: NEXT_GEN_RECOS ::
-    RECO_FASTLANE :: RECO_SUBSAMPLE :: APPLY_RECO_FEEDBACK :: Nil
+    RECO_FASTLANE :: RECO_SUBSAMPLE :: APPLY_RECO_FEEDBACK :: ROVER_CONTENT :: PLAIN_EMAIL :: COLLABORATIVE :: GRATIFICATION_EMAIL :: Nil
 
   private val _ALL_MAP: Map[String, ExperimentType] = _ALL.map(e => e.value -> e).toMap
 

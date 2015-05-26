@@ -6,7 +6,7 @@ import com.keepit.common.healthcheck._
 import com.keepit.search.index.graph.keep.KeepIndexerPlugin
 import com.keepit.search.index.graph.library.membership.LibraryMembershipIndexerPlugin
 import com.keepit.search.index.message.MessageIndexerPlugin
-import com.keepit.search.index.article.ArticleIndexerPlugin
+import com.keepit.search.index.article.{ ArticleIndexerPlugin, DeprecatedArticleIndexerPlugin }
 import play.api.Mode._
 import play.api._
 import com.keepit.search.index.user.UserIndexerPlugin

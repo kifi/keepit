@@ -1,52 +1,21 @@
-col-1-min-width = 590px
-col-1-max-width = 690px
-col-2-width = 256px
-col-gap = 20px
+// Note: The responsive two-column structure of this page is similar to the library page and
+//       the general search results page.
 
-// min-width: 866 = col-1-min-width + col-gap + col-2-width
-// max-width: 966 = col-1-max-width + col-gap + col-2-width
+leftColWidth = 496px  // ideal keep card width; see keepCardMaxWidth in keeps.styl
+rightColWidth = 256px // chosen to avoid text wrapping
+colGapWidth = 20px
+twoColMinWidth = appSidePad1 + leftColWidth + colGapWidth + rightColWidth + appSidePad1 // = 796px
 
-.kf-recos-persona-overlay
-  position: absolute
-  left: 0px
-  top: 0px
-  width: 100%
-  height: 100%
-  z-index: 501
+.kf-recos-view
+  box-sizing: border-box
+  max-width: twoColMinWidth
+  margin: 0 auto
+  padding: 0 appSidePad1
 
-  & .view-overlay
-    position: absolute
-    top: appHeaderHeight2
-    width: 100%
-    height: 100%
-    background-color: white
-
-  & .persona-wrapper
-    width: 650px
-    height: 470px
-    margin: 50px auto 0 auto
-    border: 1px solid #8197ac
-    border-radius: 10px
-    overflow: hidden
-
-.kf-recos-update-personas-icon
-  position: relative
-  top: -2px
-  margin-right: 5px
-
-.kf-recos-update-personas
-  position: absolute
-  top: -38px
-  right: 0
-  padding: 0
-  color: libraryGreen
-  font-size: 15px
-  cursor: pointer
-  border: none
-  background: transparent
-
-  &:hover
-    color: #81cd91
+.kf-recos-wrap
+  @media (max-width: (twoColMinWidth - 1px))
+    max-width: leftColWidth
+    margin: 0 auto;
 
 .kf-recos-title
   font-size: 25px
@@ -55,20 +24,30 @@ col-gap = 20px
   padding: 16px 0
 
 .kf-reco-cols
-  display: table
-  width: 100%
-  table-layout: fixed
+  @media (min-width: twoColMinWidth)
+    display: table
+    width: 100%
+    table-layout: fixed
 
 .kf-reco-col-1
-  position: relative
-  display: table-cell
-  vertical-align: top
+  position: relative // for .kf-recos-update-personas
+
+  @media (min-width: twoColMinWidth)
+    display: table-cell
+    vertical-align: top
+    width: leftColWidth
+    max-width: leftColWidth
 
 .kf-reco-col-2
-  display: table-cell
-  vertical-align: top
-  width: col-2-width
-  padding-left: col-gap
+  margin: 0 auto 50px
+  max-width: rightColWidth + 20px
+
+  @media (min-width: twoColMinWidth)
+    display: table-cell
+    vertical-align: top
+    margin: 0
+    width: rightColWidth
+    padding-left: colGapWidth
 
 .kf-reco
   margin-bottom: 20px
@@ -105,6 +84,18 @@ col-gap = 20px
   border: none
   padding: 12px 20px 20px
 
+  &::after
+    content: ''
+    position: absolute
+    left: 50%
+    bottom: -15px
+    height: 0
+    width: 0
+    margin-left: -16px
+    border: solid
+    border-width: 16px 20px 0
+    border-color: #5ab86d transparent transparent
+
 .kf-reco-cta-text
   display: inline-block
   color: white
@@ -115,49 +106,34 @@ col-gap = 20px
   padding: 25px 0px 25px 25px
 
 .kf-reco-cta-image
-  display: inline-block
   width: 28%
   padding: 6% 9%
   float: right
 
-.kf-reco-cta::after
-  content: '';
-  position: absolute;
-  left: 50%;
-  bottom: -15px;
-  height: 0;
-  width: 0;
-  border: solid;
-  margin-left: -16px;
-  border-width: 16px 20px 0;
-  border-color: #5ab86d transparent transparent;
-
-.kf-reco-top
-  padding: 20px 20px 0px
-
-  // library recos with invite need additional spacing between the control header and the invite banner
-  .kf-reco-with-invite &
-    padding-bottom: 10px
-
-.kf-reco-top
-  border-left: 1px solid #dadae2
-  border-right: 1px solid #dadae2
-
 .kf-reco-top
   position: relative
-  border-top: 1px solid #dadae2
+  border: defaultBorder
+  border-bottom: 0
   border-radius: 10px 10px 0 0
+  padding: 20px 20px 0
   background-color: #fff
   font-size: 13px
   font-weight: 400
   color: #9d9d9d
 
+  // library recos with invite need additional spacing between the control header and the invite banner
+  .kf-reco-with-invite &
+    padding-bottom: 10px
+
   span
     display: inline-block
 
-  &+.kf-keep
-    border-top-left-radius: 0
-    border-top-right-radius: 0
+.kf-reco-keep
+  background-color: #fff
+  border: defaultBorder
+  border-top: 0
+  border-radius: 0 0 10px 10px
+  padding: 10px 0 0
 
 // Icons
 .kf-reco-icon
@@ -170,20 +146,11 @@ col-gap = 20px
 .kf-reco-recommended
   .kf-reco-top
     padding-top: 10px
-  .kf-keep
-    margin-bottom: 0
-    border-top: 0
   .kf-reco-icon
     margin-top: 0
   .kf-reco-dropdown-menu-container .kf-dropdown-menu
     top: 18px
     right: 8px
-  .kf-keep-contents
-    padding-top: 10px
-
-.kf-reco-top-title
-  font-size: 14px
-  line-height: 27px
 
 .kf-reco-icon:hover
   cursor: pointer
@@ -264,13 +231,16 @@ col-gap = 20px
     margin-left: 5px
 
 .kf-reco-get-more-container
-  margin-bottom: 70px
-  border: 1px solid #dadae2
+  margin-bottom: 20px
+  border: defaultBorder
   border-radius: 10px
   padding: 12px 0
   text-align: center
   background: #fff
   cursor: pointer
+
+  @media (min-width: twoColMinWidth)
+    margin-bottom: 70px
 
 .kf-reco-get-more
 .kf-reco-get-more-loading
@@ -291,3 +261,50 @@ col-gap = 20px
   margin: 60px auto 0
   opacity: 0.5
   animation: jump-spin 2s linear infinite
+
+personasPopupWidth = 650px
+
+.kf-recos-update-personas
+  position: absolute
+  top: -38px
+  right: 0
+  padding: 0
+  color: libraryGreen
+  font-size: 15px
+  cursor: pointer
+  border: none
+  background: transparent
+
+  &:hover
+    color: #81cd91
+
+  @media (max-width: (personasPopupWidth - 1px))
+    display: none
+
+.kf-recos-update-personas-icon
+  position: relative
+  top: -2px
+  margin-right: 5px
+
+.kf-recos-persona-overlay
+  position: absolute
+  left: 0
+  top: 0
+  width: 100%
+  height: 100%
+  z-index: 501
+
+  & .view-overlay
+    position: absolute
+    top: appHeaderHeight2
+    width: 100%
+    height: 100%
+    background-color: white
+
+  & .persona-wrapper
+    width: personasPopupWidth
+    height: 470px
+    margin: 50px auto 0
+    border: 1px solid #8197ac
+    border-radius: 10px
+    overflow: hidden

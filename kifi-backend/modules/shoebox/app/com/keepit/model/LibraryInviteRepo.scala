@@ -24,6 +24,7 @@ trait LibraryInviteRepo extends Repo[LibraryInvite] with RepoWithDelete[LibraryI
   def getByLibraryIdAndAuthToken(libraryId: Id[Library], authToken: String, excludeSet: Set[State[LibraryInvite]] = Set(LibraryInviteStates.INACTIVE))(implicit session: RSession): Seq[LibraryInvite]
   def pageInviteesByLibraryId(libraryId: Id[Library], offset: Int, limit: Int, includeStates: Set[State[LibraryInvite]])(implicit session: RSession): Seq[(Either[Id[User], EmailAddress], Set[LibraryInvite])]
   def getByLibraryIdAndInviterId(libraryId: Id[Library], inviterId: Id[User], includeStates: Set[State[LibraryInvite]])(implicit session: RSession): Seq[LibraryInvite]
+  def getLastSentByLibraryIdAndUserId(libraryId: Id[Library], userId: Id[User], includeStates: Set[State[LibraryInvite]])(implicit session: RSession): Option[LibraryInvite]
   def getLastSentByLibraryIdAndInviterIdAndUserId(libraryId: Id[Library], inviterId: Id[User], userId: Id[User], includeStates: Set[State[LibraryInvite]])(implicit session: RSession): Option[LibraryInvite]
   def getLastSentByLibraryIdAndInviterIdAndEmail(libraryId: Id[Library], inviterId: Id[User], email: EmailAddress, includeStates: Set[State[LibraryInvite]])(implicit session: RSession): Option[LibraryInvite]
 }
@@ -48,9 +49,8 @@ class LibraryInviteRepoImpl @Inject() (
     def access = column[LibraryAccess]("access", O.NotNull)
     def emailAddress = column[Option[EmailAddress]]("email_address", O.Nullable)
     def authToken = column[String]("auth_token", O.NotNull)
-    def passPhrase = column[String]("pass_phrase", O.NotNull)
     def message = column[Option[String]]("message", O.Nullable)
-    def * = (id.?, libraryId, inviterId, userId, emailAddress, access, createdAt, updatedAt, state, authToken, passPhrase, message) <> ((LibraryInvite.apply _).tupled, LibraryInvite.unapply)
+    def * = (id.?, libraryId, inviterId, userId, emailAddress, access, createdAt, updatedAt, state, authToken, message) <> ((LibraryInvite.apply _).tupled, LibraryInvite.unapply)
   }
 
   def table(tag: Tag) = new LibraryInviteTable(tag)
@@ -132,7 +132,8 @@ class LibraryInviteRepoImpl @Inject() (
     }
 
     val (userIds, emailAddresses) = {
-      val (userInvitees, emailInvitees) = invitees.partition { case (userId, _) => userId.isDefined }
+      val userInvitees = invitees.filter { case (userId, _) => userId.isDefined }
+      val emailInvitees = invitees.filter { case (_, email) => email.isDefined }
       (userInvitees.map(_._1.get), emailInvitees.map(_._2.get))
     }
 
@@ -167,5 +168,12 @@ class LibraryInviteRepoImpl @Inject() (
   }
   def getLastSentByLibraryIdAndInviterIdAndEmail(libraryId: Id[Library], inviterId: Id[User], email: EmailAddress, includeStates: Set[State[LibraryInvite]])(implicit session: RSession): Option[LibraryInvite] = {
     getByLibraryIdAndInviterIdAndEmailCompiled(libraryId, inviterId, email, includeStates).firstOption
+  }
+
+  private def getLastSentByLibraryIdAndUserIdCompiled(libraryId: Column[Id[Library]], userId: Column[Id[User]], includeStates: Set[State[LibraryInvite]]) = Compiled {
+    (for (b <- rows if b.libraryId === libraryId && b.userId === userId && b.state.inSet(includeStates)) yield b).sortBy(_.createdAt.desc)
+  }
+  def getLastSentByLibraryIdAndUserId(libraryId: Id[Library], userId: Id[User], includeStates: Set[State[LibraryInvite]])(implicit session: RSession): Option[LibraryInvite] = {
+    getLastSentByLibraryIdAndUserIdCompiled(libraryId, userId, includeStates).firstOption
   }
 }

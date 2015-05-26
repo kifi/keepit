@@ -24,15 +24,19 @@ class NormalizationInfoIngestionHelper @Inject() (
     implicit val executionContext: ExecutionContext) extends Logging {
 
   def processNormalizationInfo(uriId: Id[NormalizedURI], articleKind: ArticleKind[_], destinationUrl: String, info: NormalizationInfo): Future[Boolean] = {
-    val scrapedCandidates = getUriNormalizationsCandidates(articleKind, destinationUrl, info)
-    val currentReference = db.readOnlyMaster { implicit session => NormalizationReference(uriRepo.get(uriId)) }
-    normalizationService.update(currentReference, scrapedCandidates: _*).map { newReferenceUriIdOption =>
-      processAlternateUrls(newReferenceUriIdOption getOrElse uriId, destinationUrl, info)
-      newReferenceUriIdOption.isDefined
+    try {
+      val scrapedCandidates = getUriNormalizationsCandidates(articleKind, destinationUrl, info)
+      val currentReference = db.readOnlyMaster { implicit session => NormalizationReference(uriRepo.get(uriId)) }
+      normalizationService.update(currentReference, scrapedCandidates).map { newReferenceUriIdOption =>
+        processAlternateUrls(newReferenceUriIdOption getOrElse uriId, destinationUrl, info)
+        newReferenceUriIdOption.isDefined
+      }
+    } catch {
+      case e: Exception => throw new Exception(s"failed processing normalization info for uri $uriId, of kind $articleKind $info : $destinationUrl", e)
     }
   } tap { _.imap { hasBeenRenormalized => if (hasBeenRenormalized) log.info(s"Uri $uriId has been renormalized after processing $info found at $destinationUrl") } }
 
-  private def getUriNormalizationsCandidates(articleKind: ArticleKind[_], destinationUrl: String, info: NormalizationInfo): Seq[ScrapedCandidate] = {
+  private def getUriNormalizationsCandidates(articleKind: ArticleKind[_], destinationUrl: String, info: NormalizationInfo): Set[ScrapedCandidate] = {
     val scrapedCandidates = articleKind match {
       case GithubArticle => Seq.empty[ScrapedCandidate] // we don't trust Github's canonical urls
       case _ => Map(
@@ -42,7 +46,7 @@ class NormalizationInfoIngestionHelper @Inject() (
           case (normalization, Some(candidateUrl)) => ScrapedCandidate(candidateUrl, normalization)
         }.toSeq
     }
-    CollectionHelpers.dedupBy(scrapedCandidates.sortBy(_.normalization).reverse)(_.url)
+    CollectionHelpers.dedupBy(scrapedCandidates.sortBy(_.normalization).reverse)(_.url).toSet
   }
 
   private def processAlternateUrls(bestReferenceUriId: Id[NormalizedURI], destinationUrl: String, info: NormalizationInfo): Unit = {
@@ -59,7 +63,7 @@ class NormalizationInfoIngestionHelper @Inject() (
               case Some(existingUri) if existingUri.id.get == bestReference.id.get => // ignore
               case _ => {
                 try {
-                  uriInterner.internByUri(alternateUrl, bestCandidate)
+                  uriInterner.internByUri(alternateUrl, candidates = Set(bestCandidate))
                 } catch {
                   case ex: Throwable => log.error(s"Failed to intern alternate url $alternateUrl for $bestCandidate")
                 }

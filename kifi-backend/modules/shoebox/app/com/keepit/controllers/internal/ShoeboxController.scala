@@ -18,6 +18,7 @@ import com.keepit.common.store.ImageSize
 import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.rover.RoverServiceClient
+import com.keepit.rover.model.BasicImages
 import com.keepit.shoebox.model.ids.UserSessionExternalId
 import com.keepit.normalizer._
 import com.keepit.scraper._
@@ -45,6 +46,7 @@ class ShoeboxController @Inject() (
   postOffice: LocalPostOffice,
   airbrake: AirbrakeNotifier,
   keepDecorator: KeepDecorator,
+  keepImageCommander: KeepImageCommander,
   phraseRepo: PhraseRepo,
   collectionRepo: CollectionRepo,
   keepToCollectionRepo: KeepToCollectionRepo,
@@ -61,7 +63,6 @@ class ShoeboxController @Inject() (
   kifiInstallationRepo: KifiInstallationRepo,
   socialGraphPlugin: SocialGraphPlugin,
   rawKeepImporterPlugin: RawKeepImporterPlugin,
-  scrapeScheduler: ScrapeScheduler,
   userInteractionCommander: UserInteractionCommander,
   libraryCommander: LibraryCommander,
   libraryImageCommander: LibraryImageCommander,
@@ -187,14 +188,11 @@ class ShoeboxController @Inject() (
     val o = request.body.as[JsObject]
     val url = (o \ "url").as[String]
     if (URI.parse(url).isFailure) throw new Exception(s"when calling internNormalizedURI - can't parse url: $url")
+    val contentWanted = (o \ "contentWanted").asOpt[Boolean] getOrElse false
     val uri = db.readWrite { implicit s => //using cache
-      normalizedURIInterner.internByUri(url, NormalizationCandidate(o): _*)
+      normalizedURIInterner.internByUri(url, contentWanted, NormalizationCandidate.fromJson(o))
     }
-    val scrapeWanted = (o \ "scrapeWanted").asOpt[Boolean] getOrElse false
-    if (scrapeWanted) SafeFuture {
-      db.readWrite { implicit session => scrapeScheduler.scheduleScrape(uri) }
-      rover.fetchAsap(IndexableUri(uri))
-    }
+    if (contentWanted) { rover.fetchAsap(uri.id.get, uri.url) }
     Ok(Json.toJson(uri))
   }
 
@@ -459,9 +457,8 @@ class ShoeboxController @Inject() (
     val libraryId = (json \ "libraryId").as[Id[Library]]
     val userIdOpt = (json \ "userId").asOpt[Id[User]]
     val authToken = (json \ "authToken").asOpt[String]
-    val passPhrase = (json \ "passPhrase").asOpt[HashedPassPhrase]
     val lib = db.readOnlyReplica { implicit session => libraryRepo.get(libraryId) }
-    Ok(Json.obj("canView" -> libraryCommander.canViewLibrary(userIdOpt, lib, authToken, passPhrase)))
+    Ok(Json.obj("canView" -> libraryCommander.canViewLibrary(userIdOpt, lib, authToken)))
   }
 
   def newKeepsInLibraryForEmail(userId: Id[User], max: Int) = Action { request =>
@@ -478,11 +475,20 @@ class ShoeboxController @Inject() (
     Ok(result)
   }
 
+  // Replaced by getBasicLibraryDetails below. Please replace dependencies.
   def getBasicLibraryStatistics() = Action(parse.tolerantJson) { request =>
     val libraryIds = request.body.as[Set[Id[Library]]]
     val basicStatisticsByLibraryId = libraryCommander.getBasicLibraryStatistics(libraryIds)
     implicit val tupleWrites = TupleFormat.tuple2Writes[Id[Library], BasicLibraryStatistics]
     val result = Json.toJson(basicStatisticsByLibraryId.toSeq)
+    Ok(result)
+  }
+
+  def getBasicLibraryDetails() = Action(parse.tolerantJson) { request =>
+    val libraryIds = request.body.as[Set[Id[Library]]]
+    val basicDetailsByLibraryId = libraryCommander.getBasicLibraryDetails(libraryIds)
+    implicit val tupleWrites = TupleFormat.tuple2Writes[Id[Library], BasicLibraryDetails]
+    val result = Json.toJson(basicDetailsByLibraryId.toSeq)
     Ok(result)
   }
 
@@ -503,6 +509,14 @@ class ShoeboxController @Inject() (
     val imageUrlsByLibraryId = imagesByLibraryId.mapValues(libraryImageCommander.getUrl)
     implicit val tupleWrites = TupleFormat.tuple2Writes[Id[Library], String]
     val result = Json.toJson(imageUrlsByLibraryId.toSeq)
+    Ok(result)
+  }
+
+  def getKeepImages() = Action(parse.tolerantJson) { request =>
+    val keepIds = request.body.as[Set[Id[Keep]]]
+    val imagesByKeepId = keepImageCommander.getBasicImagesForKeeps(keepIds)
+    implicit val tupleWrites = TupleFormat.tuple2Writes[Id[Keep], BasicImages]
+    val result = Json.toJson(imagesByKeepId.toSeq)
     Ok(result)
   }
 

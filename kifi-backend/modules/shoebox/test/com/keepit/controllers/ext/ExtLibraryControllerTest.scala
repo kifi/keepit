@@ -18,7 +18,6 @@ import com.keepit.model.LibraryFactoryHelper._
 import com.keepit.model.KeepFactory._
 import com.keepit.model.KeepFactoryHelper._
 import com.keepit.model._
-import com.keepit.scraper.{ FakeScrapeSchedulerModule, FakeScraperServiceClientModule }
 import com.keepit.shoebox.{ FakeKeepImportsModule, FakeShoeboxServiceModule }
 import com.keepit.social.BasicUser
 import com.keepit.test.{ DbInjectionHelper, ShoeboxTestInjector }
@@ -38,8 +37,6 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
   val controllerTestModules = Seq(
     FakeCryptoModule(),
     FakeShoeboxServiceModule(),
-    FakeScrapeSchedulerModule(),
-    FakeScraperServiceClientModule(),
     FakeKeepImportsModule(),
     FakeSliderHistoryTrackerModule(),
     FakeABookServiceClientModule(),
@@ -59,7 +56,7 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
           // Give READ_INSERT access to Freeman
           val lib2 = libraryRepo.save(Library(name = "Dark Knight", ownerId = user2.id.get, visibility = LibraryVisibility.PUBLISHED, slug = LibrarySlug("darkknight"), color = Some(LibraryColor.BLUE), memberCount = 1))
           libraryMembershipRepo.save(LibraryMembership(libraryId = lib2.id.get, userId = user2.id.get, access = LibraryAccess.OWNER))
-          libraryMembershipRepo.save(LibraryMembership(libraryId = lib2.id.get, userId = user1.id.get, access = LibraryAccess.READ_INSERT))
+          libraryMembershipRepo.save(LibraryMembership(libraryId = lib2.id.get, userId = user1.id.get, access = LibraryAccess.READ_WRITE))
 
           // Give READ_ONLY access to Freeman
           val lib3 = libraryRepo.save(Library(name = "Now You See Me", ownerId = user2.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("magic"), color = Some(LibraryColor.GREEN), memberCount = 1))
@@ -83,13 +80,17 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
               "name" -> "Million Dollar Baby",
               "color" -> LibraryColor.RED,
               "visibility" -> "published",
-              "path" -> "/morgan/baby"),
+              "path" -> "/morgan/baby",
+              "hasCollaborators" -> false,
+              "subscribedToUpdates" -> false),
             Json.obj(
               "id" -> pubId2,
               "name" -> "Dark Knight",
               "color" -> LibraryColor.BLUE,
               "visibility" -> "published",
-              "path" -> "/michael/darkknight")))
+              "path" -> "/michael/darkknight",
+              "hasCollaborators" -> true,
+              "subscribedToUpdates" -> false)))
       }
     }
 
@@ -144,7 +145,8 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
           "owner" -> BasicUser.fromUser(user1),
           "keeps" -> 0,
           "followers" -> 0,
-          "following" -> JsNull)
+          "following" -> JsNull,
+          "subscribedToUpdates" -> false)
 
         status(getLibrary(user2, lib2PubId)) === OK
 
@@ -174,7 +176,8 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
           "owner" -> BasicUser.fromUser(user1),
           "keeps" -> 0,
           "followers" -> 1,
-          "following" -> true)
+          "following" -> true,
+          "subscribedToUpdates" -> false)
       }
     }
 

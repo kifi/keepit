@@ -14,11 +14,9 @@ import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.heimdal._
 import com.keepit.model._
-import com.keepit.scraper.FakeScraperServiceClientModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.test.ShoeboxTestInjector
-import com.keepit.scraper.FakeScrapeSchedulerModule
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
 import com.keepit.common.concurrent.WatchableExecutionContext
@@ -64,11 +62,9 @@ class SendgridCommanderTest extends Specification with ShoeboxTestInjector {
     FakeCuratorServiceClientModule(),
     FakeSearchServiceClientModule(),
     FakeCortexServiceClientModule(),
-    FakeScraperServiceClientModule(),
     FakeShoeboxStoreModule(),
     FakeABookServiceClientModule(),
-    FakeSocialGraphModule(),
-    FakeScrapeSchedulerModule()
+    FakeSocialGraphModule()
   )
 
   "SendgridCommander" should {

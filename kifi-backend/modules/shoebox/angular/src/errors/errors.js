@@ -6,9 +6,16 @@ angular.module('kifi')
   function () {
     return {
       restrict: 'A',
-      replace: true,
-      templateUrl: 'errors/notFound.tpl.html',
-      link: function () {}
+      templateUrl: 'errors/notFound.tpl.html'
+    };
+  }
+])
+
+.directive('kfErrorBadToken', [
+  function () {
+    return {
+      restrict: 'A',
+      templateUrl: 'errors/badToken.tpl.html'
     };
   }
 ]);

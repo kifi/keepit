@@ -1,0 +1,417 @@
+keepBorderRadius = 8px // from keeps.styl
+keepRectBorderRadius = 4px // inner "page" box
+keepFooterMarginTop = 16px
+eeeOverlay = rgba(0,0,0,.065)  // makes #eee over white
+defaultBorderColorOverlay = rgba(0,0,60,.141)  // makes #dadae2 (defaultBorderColor) over white
+defaultBorderColorOverEee = rgba(0,0,100,.08)  // makes #dadae2 (defaultBorderColor) over #eee
+maxWidthForNarrowKeep = 559px // see derivation in keeps.styl
+minWidthForBoxed = maxWidthForNarrowKeep + 1px
+
+.kf-keep-body
+  &.kf-side-by-side
+  &.kf-text-only
+    border-top: 1px solid eeeOverlay
+
+    .kf-keep-top:empty+&
+      border-top: 0
+
+  @media (min-width: minWidthForBoxed)
+    &.kf-boxed
+      border-top: 0
+      border-radius: keepRectBorderRadius
+      box-shadow: 0 1px 2px rgba(0,0,0,.05), inset 0 0 0 1px eeeOverlay
+
+      &:not(.kf-side-by-side) // increasing top border-radius to ensure box-shadow does not bleed through corners of image/video
+        border-radius: (keepRectBorderRadius + 2px) (keepRectBorderRadius + 2px) keepRectBorderRadius keepRectBorderRadius
+
+.kf-keep-content
+  padding: 0 20px
+
+  .kf-side-by-side>&
+    overflow: hidden
+
+defaultBorderColorOverlayUsingBefore(borderWidth)  // slightly darkens an image's transparent edge overlays
+  position: relative
+  &::before
+    content: ''
+    position: absolute
+    top: 0
+    left: 0
+    right: 0
+    bottom: 0
+    border: solid defaultBorderColorOverEee
+    border-width: borderWidth
+    border-radius: '%s' % inherit
+
+.kf-keep-image
+  display: block
+  margin: 0 -1px // cover container's 1px side borders
+  padding-top: 56.25%  // enforcing 16:9 ratio, like kf-keep-video
+  background-size: cover
+  background-position: center
+  box-shadow: inset 0 0 0 1px eeeOverlay // provides subtle boundary for white image
+
+  :not(.kf-boxed):not(.kf-side-by-side)>&
+    defaultBorderColorOverlayUsingBefore(0 1px)
+
+  .kf-boxed:not(.kf-side-by-side)>&
+    @media (max-width: (minWidthForBoxed - 1px))
+      .kf-keep-top:not(:empty)+&  // keeper above
+        defaultBorderColorOverlayUsingBefore(0 1px)
+
+      .kf-keep-top:empty+&  // no keeper above
+        defaultBorderColorOverlayUsingBefore(1px 1px 0)
+        border-radius: keepBorderRadius keepBorderRadius 0 0
+        margin-top: -1px // cover container's 1px top border
+
+    @media (min-width: minWidthForBoxed)
+      border-radius: keepRectBorderRadius keepRectBorderRadius 0 0
+      margin: 0
+
+  .kf-side-by-side>&
+    float: left
+    margin: 16px 0 keepFooterMarginTop 20px
+
+  &.kf-bottom-clip
+    background-position: center top
+
+.kf-keep-video
+  margin: 0 -1px // cover container's 1px side borders
+  position: relative
+
+  &::before
+    content: ''
+    display: block
+    padding-top: 56.25% // enforcing 16:9 ratio, ideally 496px x 279px
+
+  &::after  // faint top border overlay to provide shape to white videos
+    content: ''
+    position: absolute
+    top: 0
+    left: 1px // avoiding overlap with side overlays
+    right: 1px
+    height: 0
+    border: solid eeeOverlay
+    border-width: 1px 0 0
+    border-radius: '%s' % inherit
+
+  .kf-boxed>&
+    @media (max-width: (minWidthForBoxed - 1px))
+      .kf-keep-top:empty+&  // no keeper above
+        margin-top: -1px // cover container's 1px top border
+        border-radius: keepBorderRadius keepBorderRadius 0 0
+
+        &::after
+          left: 0
+          right: 0
+          height: keepBorderRadius
+          border-width: 1px 1px 0
+          border-color: defaultBorderColorOverlay
+
+    @media (min-width: minWidthForBoxed)
+      border-radius: keepRectBorderRadius keepRectBorderRadius 0 0
+      margin: 0
+
+      &::after
+        left: 0
+        right: 0
+        height: keepRectBorderRadius
+        border-width: 1px 1px 0
+
+.kf-youtube
+  position: absolute
+  top: 0
+  left: 0
+  right: 0
+  bottom: 0
+  cursor: pointer
+
+  .kf-boxed &
+    @media (max-width: (minWidthForBoxed - 1px))
+      .kf-keep-top:empty+&  // no keeper above
+        border-radius: keepBorderRadius keepBorderRadius 0 0
+        overflow: hidden
+
+    @media (min-width: minWidthForBoxed)
+      border-radius: keepRectBorderRadius keepRectBorderRadius 0 0
+      overflow: hidden
+
+  &::before  // faint left/right border overlays to provide shape to white videos
+  &::after
+    content: ''
+    position: absolute
+    z-index: 1
+    top: 0
+    bottom: 0
+    width: 0
+  &::before
+    left: 0
+    border-left: 1px solid defaultBorderColorOverlay
+  &::after
+    right: 0
+    border-right: 1px solid defaultBorderColorOverlay
+
+  .kf-boxed &
+    @media (max-width: (minWidthForBoxed - 1px))
+      .kf-keep-top:empty+&  // no keeper above
+        &::before
+        &::after
+          top: keepBorderRadius + 1px  // avoiding overlap with top
+
+    @media (min-width: minWidthForBoxed)
+      &::before
+      &::after
+        top: keepRectBorderRadius + 1px  // avoiding overlap with top
+        border-color: eeeOverlay
+
+.kf-youtube-iframe
+  background-color: #000
+  // prevents black background from bleeding through rounded top corners in Firefox,
+  // but causes iframe to overflow in Chrome, hence -moz- prefix
+  -moz-transform: translate3d(0,0,0)
+
+.kf-youtube-bottom-overlay
+  position: absolute
+  bottom: 0
+  left: 1px // avoiding overlap with side overlays
+  right: 1px
+  border-bottom: 1px solid eeeOverlay
+
+.kf-youtube-img
+  width: 100%
+  height: 100%
+  background-position: center
+  background-size: cover
+
+.kf-youtube-play
+  width = 70px
+  height = 50px
+  position: absolute
+  top: 'calc(50% - %s)' % (height / 2)
+  left: 'calc(50% - %s)' % (width / 2)
+  width: width
+  height: height
+  background: url(/img/youtube-play-red.png)
+  background-size: 70px 50px
+  background-repeat: no-repeat
+  opacity: 0.8
+
+  &:hover
+    opacity: 1.0
+
+.kf-keep-footer
+  display: table
+  width: 100%
+  margin-top: keepFooterMarginTop
+  border-top: 1px solid #eee // dfdfdf
+  line-height: 16px
+  font-size: 14px
+  min-height: 42px
+
+  @media (max-width: maxWidthForNarrowKeep)
+    line-height: 14px
+    font-size: 12px
+    min-height: 36px
+
+.kf-keep-actions
+  display: table-cell
+  vertical-align: middle
+  text-align: left
+  padding-left: 20px
+
+  &>button
+    sidePad = 8px
+    border: 0
+    padding: 6px sidePad
+    background: none
+    border-radius: 4px
+    color: accentGreen
+    cursor: pointer
+
+    &:first-child
+      margin-left: -(sidePad)
+
+    &:focus
+    &:hover
+      box-shadow: inset 0 0 0 1px #f6f6f6
+
+      &:active
+        background-color: #fcfcfc
+
+.kf-keep-keep-btn
+  &.state-kept-private
+    color: libraryRed
+
+    @media (min-width: 480px)
+      &::after
+        content: ' Private'
+
+  &>.svg-hearts-green
+  &>.svg-hearts-green-empty
+    display: inline-block
+    vertical-align: top
+    width: 18px
+    height: 18px
+    background-repeat: no-repeat
+    background-position: center
+    background-size: contain
+    margin-right: 3px
+    transform: translate(0, 1px)
+
+    @media (max-width: 479px)
+      width: 15px
+      height: 15px
+
+  &>.svg-small-lock
+    display: inline-block
+    vertical-align: top
+    width: 10px
+    height: 13px
+    background-repeat: no-repeat
+    background-position: center
+    background-size: contain
+    margin: 2px 3px 0 0
+
+    @media (max-width: 479px)
+      width: 9px
+      height: 11px
+
+.kf-keep-share-btn
+  &>.svg-share-arrow-green
+    display: inline-block
+    vertical-align: top
+    width: 18px
+    height: 18px
+    background-repeat: no-repeat
+    background-position: center
+    background-size: contain
+    margin-right: 1px
+
+    @media (max-width: 479px)
+      width: 15px
+      height: 15px
+
+.kf-keep-who
+  display: table-cell
+  vertical-align: middle
+  text-align: right
+  padding-right: 20px
+
+  &::after
+    content: 'kept this'
+    vertical-align: middle
+    color: #888
+    font-smoothing: antialiased
+
+.kf-keep-who-pic-box
+  display: inline-block
+  vertical-align: middle
+  height: 23px
+  border-radius: 50%
+  margin: 0 4px 0 0
+  position: relative // for user hovercard
+
+  @media (max-width: 479px)
+    margin-left: 1px
+    height: 18px
+
+  &>.kf-utt
+    margin-left: 14px
+
+.kf-keep-who-pic
+  position: relative
+  display: inline-block
+  vertical-align: top
+  border-radius: 50%
+  background-size: 100%
+  width: 23px
+  height: 23px
+
+  @media (max-width: 479px)
+    width: 18px
+    height: 18px
+
+  &::after
+    content: ''
+    position: absolute
+    top: 0
+    left: 0
+    right: 0
+    bottom: 0
+    border-radius: 50%
+    box-shadow: inset 0 0 1px rgba(0,0,0,.15)
+
+.kf-keep-who-num
+  color: #888
+  font-smoothing: antialiased
+  vertical-align: middle
+  margin: 0 4px 0 -2px
+
+  @media (max-width: 479px)
+    font-smoothing: antialiased
+
+  &:not(:first-child)::before
+    content: '+ '
+
+.kf-keep-title
+  margin: 12px 0
+  font: bold 20px/24px Lato,sans-serif
+  font-smoothing: antialiased
+  word-break: break-word
+
+  @media (max-width: 479px)
+    line-height: 22px
+    font-size: 18px
+
+.kf-keep-title-link[href]
+  color: textBlackColor
+  outline-color: #ddd
+
+.kf-keep-meta
+  padding-top: 16px
+  height: 1.2em
+  line-height: 1.2em
+  font-size: 12px
+  font-smoothing: antialiased
+  color: #909aa8
+  overflow: hidden
+
+  @media (min-width: 480px)
+    font-size: 14px
+
+    .kf-side-by-side &
+      font-size: 12px
+
+.kf-keep-source
+  white-space: nowrap
+  color: accentGreen
+
+.kf-keep-length
+  white-space: nowrap  // hides entire element (including bullet) if it does not fit
+
+  @media (max-width: 479px)
+    font-size: 11px
+
+  &::before
+    content: '\2022'
+    vertical-align: 2px
+    padding: 0 9px 0 6px
+    font-size: 7px
+
+    @media (max-width: 479px)
+      padding: 0 4px 0 3px
+      font-size: 6px
+
+.kf-keep-description
+  font: 12px/18px Lato,Helvetica,Arial,sans-serif
+  font-smoothing: antialiased
+  color: textBlackColor
+  word-break: break-word
+
+  @media (min-width: 480px)
+    line-height: 19px
+    font-size: 13px
+
+  @media (min-width: minWidthForBoxed)
+    line-height: 20px
+    font-size: 14px

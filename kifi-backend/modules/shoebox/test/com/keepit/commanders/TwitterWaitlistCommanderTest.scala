@@ -14,7 +14,6 @@ import com.keepit.heimdal.{ FakeHeimdalServiceClientModule }
 import com.keepit.model.{ TwitterWaitlistEntry, TwitterWaitlistEntryStates, TwitterWaitlistRepo }
 import com.keepit.model.UserFactory._
 import com.keepit.model.UserFactoryHelper._
-import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.test.ShoeboxTestInjector
 import org.joda.time.DateTime
@@ -24,7 +23,6 @@ import scala.concurrent.duration.Duration
 class TwitterWaitlistCommanderTest extends TestKitSupport with ShoeboxTestInjector {
   def modules = Seq(
     FakeExecutionContextModule(),
-    FakeScrapeSchedulerModule(),
     FakeSearchServiceClientModule(),
     FakeMailModule(),
     FakeShoeboxStoreModule(),

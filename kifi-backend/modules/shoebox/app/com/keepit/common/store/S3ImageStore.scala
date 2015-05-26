@@ -101,7 +101,11 @@ class S3ImageStoreImpl @Inject() (
           val sui = db.readOnlyMaster { implicit s =>
             val suis = suiRepo.getByUser(user.id.get)
             // If user has no picture, this is the preference order for social networks:
-            suis.find(_.networkType == SocialNetworks.FACEBOOK).orElse(suis.find(_.networkType == SocialNetworks.LINKEDIN)).getOrElse(suis.head)
+            val suiOpt = suis.find(_.networkType == SocialNetworks.FACEBOOK).find(_.networkType == SocialNetworks.TWITTER).orElse(suis.find(_.networkType == SocialNetworks.LINKEDIN))
+            suiOpt.getOrElse {
+              if (suis.isEmpty) throw new Exception(s"user has no social users attached: $user")
+              suis.head
+            }
           }
           if (sui.networkType != SocialNetworks.FORTYTWO) {
             uploadPictureFromSocialNetwork(sui, user.externalId, setDefault = true).map {

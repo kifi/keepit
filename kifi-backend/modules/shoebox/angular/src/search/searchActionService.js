@@ -3,10 +3,10 @@
 angular.module('kifi')
 
 .factory('searchActionService', [
-  '$analytics', '$http', '$location', '$log', '$q',
-  'routeService', 'profileService', 'libraryService',
-  function ($analytics, $http, $location, $log, $q,
-    routeService, profileService, libraryService) {
+  '$analytics', '$location', '$log', '$q',
+  'net', 'profileService', 'libraryService',
+  function ($analytics, $location, $log, $q,
+    net, profileService, libraryService) {
     //
     // Internal helper methods.
     //
@@ -14,24 +14,13 @@ angular.module('kifi')
       return Math.random().toString(16).slice(2);
     }
 
-    function processHit(hit) {
-      _.extend(hit, hit.bookmark); //still need this??
-
-      hit.isPrivate = hit.secret || false;
-      hit.isProtected = !hit.isMyBookmark; // will not be hidden if user keeps then unkeeps
-    }
-
-    function copy(obj) {
-      return JSON.parse(JSON.stringify(obj));
-    }
-
     function decompressHit(hit, users, libraries, userLoggedIn) {
+      hit.user = hit.user === -1 ? profileService.me : users[hit.user];
+      hit.library = libraries[hit.library];
+
       var decompressedKeepers = [];
       var decompressedLibraries = [];
-      var myLibraries = [];  // myLibraries doesn't seem to be used anywhere.
-      var libUsers = {};
 
-      hit.isMyBookmark = false;
       hit.keepers = hit.keepers || [];
       hit.libraries = hit.libraries || [];
 
@@ -39,56 +28,45 @@ angular.module('kifi')
         var idxLib = hit.libraries[i];
         var idxUser = hit.libraries[i + 1];
         var lib = libraries[idxLib];
-        var user;
 
         if (idxUser !== -1) {
-          user = users[idxUser];
-          lib.keeperName = user.firstName + ' ' + user.lastName;
-          lib.owner = user;
-          decompressedLibraries.push(lib);
-          libUsers[idxUser] = true;
-        } else if (userLoggedIn) {
-          user = profileService.me;
-          lib.keeperName = user.firstName + ' ' + user.lastName;
-          lib.owner = user;
-
-          if (!libraryService.isLibraryIdMainOrSecret(lib.id)) {
-            decompressedLibraries.push(lib);
-          }
-
-          myLibraries.push(lib);
+          decompressedLibraries.push([lib, users[idxUser]]);
+        } else if (userLoggedIn && !libraryService.isLibraryIdMainOrSecret(lib.id)) {
+          decompressedLibraries.push([lib, profileService.me]);
         }
       }
 
       if (userLoggedIn) {
         hit.keepers.forEach(function (keeperIdx) {
-          if (keeperIdx === -1) {
-            hit.isMyBookmark = true;
-          } else {
-            if (!libUsers[keeperIdx]){
-              decompressedKeepers.push(users[keeperIdx]);
-            } else {
-              var user = copy(users[keeperIdx]);
-              user.hidden = true;
-              decompressedKeepers.push(user);
-            }
+          if (keeperIdx >= 0) {
+            decompressedKeepers.push(users[keeperIdx]);
           }
         });
       }
 
       hit.keepers = decompressedKeepers;
       hit.libraries = decompressedLibraries;
-      hit.myLibraries = myLibraries;
+
+      // reconstructing old .summary format for consistency with library keeps and reco keeps
+      if (!hit.summary) {
+        var img = hit.image;
+        hit.summary = {
+          description: hit.description,
+          imageUrl: img && img.url,
+          imageWidth: img && img.width,
+          imageHeight: img && img.height
+        };
+      }
+      hit.summary.wordCount = hit.wordCount;
     }
 
     function reportSearchAnalytics(endedWith, numResults, numResultsWithLibraries) {
-      var url = routeService.searchedAnalytics;
       if (lastSearchContext && lastSearchContext.query) {
         var origin = $location.$$protocol + '://' + $location.$$host;
         if ($location.$$port) {
           origin = origin + ':' + $location.$$port;
         }
-        var data = {
+        net.search.searched({
           origin: origin,
           uuid: lastSearchContext.uuid,
           experimentId: lastSearchContext.experimentId,
@@ -104,8 +82,7 @@ angular.module('kifi')
           refinements: refinements,
           pageSession: lastSearchContext.pageSession,
           endedWith: endedWith
-        };
-        $http.post(url, data)['catch'](function (res) {
+        })['catch'](function (res) {
           $log.log('res: ', res);
         });
       } else {
@@ -134,7 +111,7 @@ angular.module('kifi')
         maxLibraries: context ? [] : 6,
         uriContext: context || []
       };
-      var searchActionPromise = $http.get(routeService.search(params));
+      var searchActionPromise = net.search.search(params);
       var librarySummariesPromise = userLoggedIn ? libraryService.fetchLibraryInfos(false) : null;
 
       // ensuring library summaries have been loaded before the hits are decompressed
@@ -145,8 +122,6 @@ angular.module('kifi')
         _.forEach(hits, function (hit) {
           decompressHit(hit, uris.keepers, uris.libraries, userLoggedIn);
         });
-
-        _.forEach(hits, processHit);
 
         $analytics.eventTrack('user_clicked_page', {
           'action': 'searchKifi',
@@ -188,28 +163,26 @@ angular.module('kifi')
     }
 
     function reportSearchClickAnalytics(keep, resultPosition, numResults) {
-      var url = routeService.searchResultClicked;
       if (lastSearchContext && lastSearchContext.query) {
         var origin = $location.$$protocol + '://' + $location.$$host;
         if ($location.$$port) {
           origin = origin + ':' + $location.$$port;
         }
+        var isMyBookmark = _.any(keep.keeps, _.identity);
         var hitContext = {
-          isMyBookmark: keep.isMyBookmark,
-          isPrivate: keep.isPrivate,
+          isMyBookmark: isMyBookmark,
+          isPrivate: isMyBookmark && _.all(keep.keeps, {visibility: 'secret'}),
           count: numResults,
-          keepers: keep.keepers.map(function (elem) {
-            return elem.id;
-          }),
+          keepers: _.map(keep.keepers, 'id'),
           libraries: keep.libraries.map(function (elem) {
             return [elem.id, elem.owner.id];
           }),
           tags: keep.tags,
-          title: keep.summary.title,
+          title: keep.title,
           titleMatches: 0, //This broke with new search api (the information is no longer available). Needs to be investigated if we still need it.
           urlMatches: 0
         };
-        var data = {
+        net.search.resultClicked({
           origin: origin,
           uuid: lastSearchContext.uuid,
           experimentId: lastSearchContext.experimentId,
@@ -226,8 +199,7 @@ angular.module('kifi')
           resultPosition: resultPosition,
           resultUrl: keep.url,
           hit: hitContext
-        };
-        $http.post(url, data)['catch'](function (res) {
+        })['catch'](function (res) {
           $log.log('res: ', res);
         });
       } else {
@@ -235,15 +207,12 @@ angular.module('kifi')
       }
     }
 
-
-    var api = {
+    return {
       find: find,
       reset: reset,
       reportSearchAnalyticsOnUnload: reportSearchAnalyticsOnUnload,
       reportSearchAnalyticsOnRefine: reportSearchAnalyticsOnRefine,
       reportSearchClickAnalytics: reportSearchClickAnalytics
     };
-
-    return api;
   }
 ]);

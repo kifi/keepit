@@ -1,5 +1,6 @@
 package com.keepit.cortex.features
 
+import com.keepit.cortex.article.{ StoreBasedArticleProvider, CortexArticle }
 import org.specs2.mutable.Specification
 
 import com.keepit.common.db.Id
@@ -28,9 +29,9 @@ class URIFeatureTest extends Specification with WordFeatureTestHelper with URIFe
       articleStore.+=(uri2.id.get, a2)
       articleStore.+=(uri3.id.get, a3)
 
-      val uriRep = new BaseURIFeatureRepresenter[FakeWordModel](fakeDocRep, articleStore) {
-        protected def isDefinedAt(article: Article): Boolean = article.contentLang.isDefined && article.contentLang.get == Lang("en")
-        protected def toDocument(article: Article): Document = Document(article.content.split(" "))
+      val uriRep = new BaseURIFeatureRepresenter[FakeWordModel](fakeDocRep, new StoreBasedArticleProvider(articleStore)) {
+        protected def isDefinedAt(article: CortexArticle): Boolean = article.contentLang.isDefined && article.contentLang.get == Lang("en")
+        protected def toDocument(article: CortexArticle): Document = Document(article.content.split(" "))
       }
 
       uriRep(uri1).get.vectorize === Array(1f, 0f)

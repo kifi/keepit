@@ -49,6 +49,7 @@ object UserEventTypes {
   // Libraries
   val MODIFIED_LIBRARY = EventType("modified_library")
   val FOLLOWED_LIBRARY = EventType("followed_library")
+  val VIEWED_LIBRARY = EventType("viewed_library")
 }
 
 object SystemEventTypes {
@@ -64,4 +65,8 @@ object AnonymousEventTypes {
 object NonUserEventTypes {
   val MESSAGED = EventType("messaged")
   val WAS_NOTIFIED = EventType("was_notified")
+}
+
+object VisitorEventTypes {
+  val VIEWED_LIBRARY = EventType("viewed_library")
 }

@@ -31,7 +31,6 @@ abstract class UriSearch(articleSearcher: Searcher, keepSearcher: Searcher, time
   }
 
   def getArticleRecord(uriId: Long): Option[ArticleRecord] = {
-    import com.keepit.search.index.article.ArticleRecordSerializer._
     articleSearcher.getDecodedDocValue[ArticleRecord]("rec", uriId)
   }
 
@@ -39,7 +38,7 @@ abstract class UriSearch(articleSearcher: Searcher, keepSearcher: Searcher, time
     if ((h.visibility & Visibility.HAS_SECONDARY_ID) != 0) {
       // has a keep id
       val r = getKeepRecord(h.secondaryId).getOrElse(throw new Exception(s"missing keep record: keep id = ${h.secondaryId}"))
-      UriShardHit(h.id, h.score, h.visibility, r.libraryId, h.secondaryId, r.title.getOrElse(""), r.url, r.externalId)
+      UriShardHit(h.id, h.score, h.visibility, r.libraryId.id, h.secondaryId, r.title, r.url, r.externalId)
     } else {
       // has a primary id (uri id) only
       val r = getArticleRecord(h.id).getOrElse(throw new Exception(s"missing article record: uri id = ${h.id}"))

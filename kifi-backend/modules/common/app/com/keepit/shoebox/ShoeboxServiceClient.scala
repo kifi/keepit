@@ -3,6 +3,8 @@ package com.keepit.shoebox
 import com.keepit.common.mail.template.EmailToSend
 import com.keepit.common.store.ImageSize
 import com.keepit.model.cache.{ UserSessionViewExternalIdKey, UserSessionViewExternalIdCache }
+import com.keepit.rover.model.BasicImages
+import com.keepit.shoebox.model.{ KeepImagesKey, KeepImagesCache }
 import com.keepit.shoebox.model.ids.UserSessionExternalId
 import com.keepit.model.view.{ LibraryMembershipView, UserSessionView }
 
@@ -32,6 +34,7 @@ import com.keepit.social.BasicUserUserIdKey
 import play.api.libs.json._
 import com.keepit.common.usersegment.UserSegmentKey
 import com.keepit.common.json.TupleFormat
+import com.keepit.common.core._
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 
 trait ShoeboxServiceClient extends ServiceClient {
@@ -50,7 +53,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getNormalizedURIs(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[NormalizedURI]]
   def getNormalizedURIByURL(url: String): Future[Option[NormalizedURI]]
   def getNormalizedUriByUrlOrPrenormalize(url: String): Future[Either[NormalizedURI, String]]
-  def internNormalizedURI(url: URI, scrapeWanted: Boolean = false): Future[NormalizedURI]
+  def internNormalizedURI(url: String, contentWanted: Boolean = false): Future[NormalizedURI]
   def sendMail(email: ElectronicMail): Future[Boolean]
   def sendMailToUser(userId: Id[User], email: ElectronicMail): Future[Boolean]
   def persistServerSearchEvent(metaData: JsObject): Unit
@@ -61,7 +64,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getCollectionIdsByExternalIds(collIds: Seq[ExternalId[Collection]]): Future[Seq[Id[Collection]]]
   def getIndexable(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int): Future[Seq[NormalizedURI]]
   def getIndexableUris(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int): Future[Seq[IndexableUri]]
-  def getScrapedUris(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int): Future[Seq[IndexableUri]]
+  def getIndexableUrisWithContent(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int): Future[Seq[IndexableUri]]
   def getHighestUriSeq(): Future[SequenceNumber[NormalizedURI]]
   def getUserIndexable(seqNum: SequenceNumber[User], fetchSize: Int): Future[Seq[User]]
   def getBookmarks(userId: Id[User]): Future[Seq[Keep]]
@@ -94,8 +97,6 @@ trait ShoeboxServiceClient extends ServiceClient {
   def triggerSocialGraphFetch(id: Id[SocialUserInfo]): Future[Unit]
   def getUserConnectionsChanged(seqNum: SequenceNumber[UserConnection], fetchSize: Int): Future[Seq[UserConnection]]
   def getSearchFriendsChanged(seqNum: SequenceNumber[SearchFriend], fetchSize: Int): Future[Seq[SearchFriend]]
-  def getUriSummary(request: URISummaryRequest): Future[URISummary]
-  def getUriSummaries(uriIds: Seq[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], URISummary]]
   def getCandidateURIs(uris: Seq[Id[NormalizedURI]]): Future[Seq[Boolean]]
   def getUserImageUrl(userId: Id[User], width: Int): Future[String]
   def getUnsubscribeUrlForEmail(email: EmailAddress): Future[String]
@@ -112,21 +113,22 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getLibrariesChanged(seqNum: SequenceNumber[Library], fetchSize: Int): Future[Seq[LibraryView]]
   def getDetailedLibrariesChanged(seqNum: SequenceNumber[Library], fetchSize: Int): Future[Seq[DetailedLibraryView]]
   def getLibraryMembershipsChanged(seqNum: SequenceNumber[LibraryMembership], fetchSize: Int): Future[Seq[LibraryMembershipView]]
-  def canViewLibrary(libraryId: Id[Library], userId: Option[Id[User]], authToken: Option[String], hashedPassPhrase: Option[HashedPassPhrase]): Future[Boolean]
+  def canViewLibrary(libraryId: Id[Library], userId: Option[Id[User]], authToken: Option[String]): Future[Boolean]
   def newKeepsInLibraryForEmail(userId: Id[User], max: Int): Future[Seq[Keep]]
   def getBasicKeeps(userId: Id[User], uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[BasicKeep]]]
+  // Replaced by getBasicLibraryDetails below. Please replace dependencies.
   def getBasicLibraryStatistics(libraryIds: Set[Id[Library]]): Future[Map[Id[Library], BasicLibraryStatistics]]
+  def getBasicLibraryDetails(libraryIds: Set[Id[Library]]): Future[Map[Id[Library], BasicLibraryDetails]]
   def getKeepCounts(userIds: Set[Id[User]]): Future[Map[Id[User], Int]]
   def getLibraryImageUrls(libraryIds: Set[Id[Library]], idealImageSize: ImageSize): Future[Map[Id[Library], String]]
+  def getKeepImages(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], BasicImages]]
   def getLibrariesWithWriteAccess(userId: Id[User]): Future[Set[Id[Library]]]
   def getUserActivePersonas(userId: Id[User]): Future[UserActivePersonas]
-  def getImageInfosChanged(seqNum: SequenceNumber[ImageInfo], fetchSize: Int): Future[Seq[ImageInfo]]
 }
 
 case class ShoeboxCacheProvider @Inject() (
   userExternalIdCache: UserExternalIdCache,
   uriIdCache: NormalizedURICache,
-  uriSummaryCache: URISummaryCache,
   bookmarkUriUserCache: KeepUriUserCache,
   basicUserCache: BasicUserUserIdCache,
   activeSearchConfigExperimentsCache: ActiveExperimentsCache,
@@ -145,7 +147,8 @@ case class ShoeboxCacheProvider @Inject() (
   extensionVersionCache: ExtensionVersionInstallationIdCache,
   allFakeUsersCache: AllFakeUsersCache,
   librariesWithWriteAccessCache: LibrariesWithWriteAccessCache,
-  userActivePersonaCache: UserActivePersonasCache)
+  userActivePersonaCache: UserActivePersonasCache,
+  keepImagesCache: KeepImagesCache)
 
 class ShoeboxServiceClientImpl @Inject() (
   override val serviceCluster: ServiceCluster,
@@ -367,8 +370,8 @@ class ShoeboxServiceClientImpl @Inject() (
       (r.json \ "normalizedURI").asOpt[NormalizedURI].map(Left(_)) getOrElse Right((r.json \ "url").as[String])
     }
 
-  def internNormalizedURI(url: URI, scrapeWanted: Boolean): Future[NormalizedURI] = {
-    val payload = Json.obj("url" -> url.toString(), "scrapeWanted" -> scrapeWanted)
+  def internNormalizedURI(url: String, contentWanted: Boolean): Future[NormalizedURI] = {
+    val payload = Json.obj("url" -> url, "contentWanted" -> contentWanted)
     call(Shoebox.internal.internNormalizedURI, payload).map(r => r.json.as[NormalizedURI])
   }
 
@@ -471,8 +474,8 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def getScrapedUris(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int): Future[Seq[IndexableUri]] = {
-    call(Shoebox.internal.getScrapedUris(seqNum, fetchSize), callTimeouts = extraLongTimeout, routingStrategy = offlinePriority).map { r =>
+  def getIndexableUrisWithContent(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int): Future[Seq[IndexableUri]] = {
+    call(Shoebox.internal.getIndexableUrisWithContent(seqNum, fetchSize), callTimeouts = extraLongTimeout, routingStrategy = offlinePriority).map { r =>
       r.json.as[Seq[IndexableUri]]
     }
   }
@@ -609,32 +612,6 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def getUriSummary(request: URISummaryRequest): Future[URISummary] = {
-    val tracer = new StackTrace()
-    val timeout = if (request.waiting) superExtraLongTimeoutJustForEmbedly else longTimeout
-    val res = call(Shoebox.internal.getUriSummary, Json.toJson(request), callTimeouts = timeout).map { r =>
-      r.json.as[URISummary]
-    }
-    res.onFailure {
-      case t: Throwable => airbrakeNotifier.notify(s"call to getUriSummary failed on request $request", tracer.withCause(t))
-    }
-    res
-  }
-
-  def getUriSummaries(uriIds: Seq[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], URISummary]] = {
-    redundantDBConnectionCheck(uriIds)
-    val keys = uriIds.map(URISummaryKey)
-    cacheProvider.uriSummaryCache.bulkGetOrElseFuture(keys.toSet) { missing =>
-      val missingKeysSeq = missing.toSeq
-      val request = Json.obj("uriIds" -> missingKeysSeq.map(_.id))
-      call(Shoebox.internal.getUriSummaries, request, callTimeouts = superExtraLongTimeoutJustForEmbedly).map { r =>
-        Json.fromJson[Seq[URISummary]](r.json).get
-      } map { uriSummaries =>
-        (missingKeysSeq zip uriSummaries) toMap
-      }
-    }.map(_ map { case (k, v) => (k.id, v) })
-  }
-
   def getCandidateURIs(uris: Seq[Id[NormalizedURI]]): Future[Seq[Boolean]] = {
     call(Shoebox.internal.getCandidateURIs(), body = Json.toJson(uris), callTimeouts = extraLongTimeout, routingStrategy = offlinePriority).map { r =>
       r.json.as[Seq[Boolean]]
@@ -714,12 +691,11 @@ class ShoeboxServiceClientImpl @Inject() (
     call(Shoebox.internal.getLibraryMembershipsChanged(seqNum, fetchSize), callTimeouts = extraLongTimeout, routingStrategy = offlinePriority).map { r => (r.json).as[Seq[LibraryMembershipView]] }
   }
 
-  def canViewLibrary(libraryId: Id[Library], userId: Option[Id[User]], authToken: Option[String], hashedPassPhrase: Option[HashedPassPhrase]): Future[Boolean] = {
+  def canViewLibrary(libraryId: Id[Library], userId: Option[Id[User]], authToken: Option[String]): Future[Boolean] = {
     val body = Json.obj(
       "libraryId" -> libraryId,
       "userId" -> userId,
-      "authToken" -> authToken,
-      "passPhrase" -> Json.toJson(hashedPassPhrase))
+      "authToken" -> authToken)
     call(Shoebox.internal.canViewLibrary, body = body).map(_.json.as[Boolean])
   }
 
@@ -736,11 +712,21 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
+  // Replaced by getBasicLibraryDetails below. Please replace dependencies.
   def getBasicLibraryStatistics(libraryIds: Set[Id[Library]]): Future[Map[Id[Library], BasicLibraryStatistics]] = {
     if (libraryIds.isEmpty) Future.successful(Map.empty[Id[Library], BasicLibraryStatistics]) else {
       call(Shoebox.internal.getBasicLibraryStatistics, Json.toJson(libraryIds)).map { r =>
         implicit val readsFormat = TupleFormat.tuple2Reads[Id[Library], BasicLibraryStatistics]
         r.json.as[Seq[(Id[Library], BasicLibraryStatistics)]].toMap
+      }
+    }
+  }
+
+  def getBasicLibraryDetails(libraryIds: Set[Id[Library]]): Future[Map[Id[Library], BasicLibraryDetails]] = {
+    if (libraryIds.isEmpty) Future.successful(Map.empty[Id[Library], BasicLibraryDetails]) else {
+      call(Shoebox.internal.getBasicLibraryDetails, Json.toJson(libraryIds)).map { r =>
+        implicit val readsFormat = TupleFormat.tuple2Reads[Id[Library], BasicLibraryDetails]
+        r.json.as[Seq[(Id[Library], BasicLibraryDetails)]].toMap
       }
     }
   }
@@ -767,6 +753,25 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
+  def getKeepImages(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], BasicImages]] = {
+    if (keepIds.isEmpty) Future.successful(Map.empty)
+    else {
+      import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
+      val keys = keepIds.map(KeepImagesKey(_))
+      cacheProvider.keepImagesCache.bulkGetOrElseFutureOpt(keys) { missingKeys =>
+        val missingKeepIds = missingKeys.map(_.keepId)
+        val payload = Json.toJson(missingKeepIds)
+        call(Shoebox.internal.getKeepImages, payload).map { r =>
+          implicit val reads = TupleFormat.tuple2Reads[Id[Keep], BasicImages]
+          val missingImagesByKeepId = (r.json).as[Seq[(Id[Keep], BasicImages)]].toMap
+          missingKeys.map { key => key -> missingImagesByKeepId.get(key.keepId) }.toMap
+        }
+      } imap {
+        _.collect { case (key, Some(images)) => key.keepId -> images }
+      }
+    }
+  }
+
   def getLibrariesWithWriteAccess(userId: Id[User]): Future[Set[Id[Library]]] = {
     cacheProvider.librariesWithWriteAccessCache.get(LibrariesWithWriteAccessUserKey(userId)) match {
       case Some(cachedLibraryIds) => Future.successful(cachedLibraryIds)
@@ -778,9 +783,5 @@ class ShoeboxServiceClientImpl @Inject() (
     cacheProvider.userActivePersonaCache.getOrElseFuture(UserActivePersonasKey(userId)) {
       call(Shoebox.internal.getUserActivePersonas(userId), callTimeouts = longTimeout).map { _.json.as[UserActivePersonas] }
     }
-  }
-
-  def getImageInfosChanged(seqNum: SequenceNumber[ImageInfo], fetchSize: Int): Future[Seq[ImageInfo]] = {
-    call(Shoebox.internal.getImageInfosChanged(seqNum, fetchSize)).map { _.json.as[Seq[ImageInfo]] }
   }
 }

@@ -19,7 +19,7 @@ import com.keepit.eliza.model._
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.model.{ NormalizedURI, User }
 import com.keepit.realtime.{ FakeAppBoyModule, FakeUrbanAirshipModule }
-import com.keepit.scraper.FakeScraperServiceClientModule
+import com.keepit.rover.FakeRoverServiceClientModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.test.{ DbInjectionHelper, ElizaTestInjector }
@@ -47,10 +47,10 @@ class MessagingControllerTest extends TestKitSupport with SpecificationLike with
     FakeAppBoyModule(),
     FakeUserActionsModule(),
     FakeCryptoModule(),
-    FakeScraperServiceClientModule(),
     FakeElizaStoreModule(),
     FakeHttpClientModule(),
-    FakeActorSystemModule()
+    FakeActorSystemModule(),
+    FakeRoverServiceClientModule()
   )
 
   val initialDateTime = new DateTime(2015, 1, 22, 0, 0)

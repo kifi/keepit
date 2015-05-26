@@ -43,10 +43,13 @@ class CuratorTasksPlugin @Inject() (
     scheduleTaskOnLeader(system, 5 minutes, 3 minutes, completeDataIngestion) {
       ingestionCommander.ingestAll()
     }
+    // scheduleTaskOnLeader(system, 5 minutes, 1 minutes, completeDataIngestion) {
+    //   ingestionCommander.cleanUpRawSeedItems()
+    // }
     scheduleTaskOnAllMachines(system, 5 minutes, 5 minutes, uriRecommendationPrecomputation) {
       uriRecoGenerationCommander.precomputeRecommendations()
     }
-    scheduleTaskOnOneMachine(system, 2 minutes, 5 minutes, uriRecommendationReaper) {
+    scheduleTaskOnOneMachine(system, 2 minutes, CuratorTasksPlugin.CLEAN_FREQ minutes, uriRecommendationReaper) {
       uriRecoCleanupCommander.cleanup()
     }
 
@@ -82,4 +85,8 @@ class CuratorTasksPlugin @Inject() (
     cronTaskOnLeader(quartz, emailActor.ref, cronTime, FeedDigestMessage.Queue)
     //cronTaskOnLeader(quartz, emailActor.ref, cronTimeWeekend, FeedDigestMessage.Queue)
   }
+}
+
+object CuratorTasksPlugin {
+  val CLEAN_FREQ = 2 // minutes
 }

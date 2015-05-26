@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .factory('keepActionService', [
-  '$analytics', '$http', '$location', 'libraryService', 'routeService',
-  function ($analytics, $http, $location, libraryService, routeService) {
+  '$analytics', '$location', 'net', 'libraryService',
+  function ($analytics, $location, net, libraryService) {
 
     function sanitizeUrl(url) {
       var regex = /^[a-zA-Z]+:\/\//;
@@ -31,8 +31,7 @@ angular.module('kifi')
         })
       };
 
-      var url = routeService.addKeepsToLibrary(libraryId);
-      return $http.post(url, data, {}).then(function (res) {
+      return net.addKeepsToLibrary(libraryId, data).then(function (res) {
         libraryService.rememberRecentId(libraryId);
 
         _.uniq(res.data.keeps, function (keep) {
@@ -56,8 +55,7 @@ angular.module('kifi')
         keeps: keepIds
       };
 
-      var url = routeService.copyKeepsToLibrary();
-      return $http.post(url, data, {}).then(function (res) {
+      return net.copyKeepsToLibrary(data).then(function (res) {
         libraryService.rememberRecentId(libraryId);
 
         _.uniq(res.data.keeps, function (keep) {
@@ -81,8 +79,7 @@ angular.module('kifi')
         keeps: keepIds
       };
 
-      var url = routeService.moveKeepsToLibrary();
-      return $http.post(url, data, {}).then(function (res) {
+      return net.moveKeepsToLibrary(data).then(function (res) {
         libraryService.rememberRecentId(libraryId);
 
         _.uniq(res.data.keeps, function (keep) {
@@ -97,29 +94,22 @@ angular.module('kifi')
     // keep information we need to display it. This function fetches that
     // information.
     function fetchFullKeepInfo(keep) {
-      var url = routeService.getKeep(keep.id);
-      var config = {
-        params: { withFullInfo: true }
-      };
-
-      return $http.get(url, config).then(function (result) {
+      return net.getKeep(keep.id, {withFullInfo: true}).then(function (result) {
         return _.assign(keep, result.data);
       });
     }
 
     function unkeepFromLibrary(libraryId, keepId) {
       libraryService.expireKeepsInLibraries();
-      var url = routeService.removeKeepFromLibrary(libraryId, keepId);
-      return $http.delete(url);  // jshint ignore:line
+      return net.removeKeepFromLibrary(libraryId, keepId);
     }
 
     function unkeepManyFromLibrary(libraryId, keeps) {
       libraryService.expireKeepsInLibraries();
-      var url = routeService.removeManyKeepsFromLibrary(libraryId);
       var data = {
         'ids': _.pluck(keeps, 'id')
       };
-      return $http.post(url, data);
+      return net.removeManyKeepsFromLibrary(libraryId, data);
     }
 
     var api = {

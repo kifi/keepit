@@ -1,6 +1,5 @@
 package com.keepit.rover.article.content
 
-import com.keepit.model.PageAuthor
 import com.keepit.rover.article._
 import com.kifi.macros.json
 import org.joda.time.DateTime
@@ -17,5 +16,5 @@ case class DefaultContent(
     publishedAt: Option[DateTime],
     http: HttpInfo,
     normalization: NormalizationInfo) extends ArticleContent[DefaultArticle] with HttpInfoHolder with NormalizationInfoHolder {
-  def mediaType = openGraphType
+  def contentType = openGraphType
 }

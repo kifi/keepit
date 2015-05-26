@@ -12,7 +12,6 @@ import com.keepit.common.db.Id
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.model._
-import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.search.augmentation.LimitedAugmentationInfo
 import com.keepit.test.ShoeboxTestInjector
@@ -28,7 +27,6 @@ class KeepsCommanderTest extends Specification with ShoeboxTestInjector {
     FakeShoeboxStoreModule() ::
     FakeSearchServiceClientModule() ::
     FakeCortexServiceClientModule() ::
-    FakeScrapeSchedulerModule() ::
     FakeShoeboxServiceModule() ::
     FakeUserActionsModule() ::
     FakeCuratorServiceClientModule() ::
@@ -49,13 +47,15 @@ class KeepsCommanderTest extends Specification with ShoeboxTestInjector {
           userExperimentRepo.save(UserExperiment(experimentType = ExperimentType.FAKE, userId = user2.id.get))
           (user1.id.get, user2.id.get)
         }
-        val seq1 = Seq(LimitedAugmentationInfo(Seq(real), 0, 0, Seq(Id[Library](1) -> real), 0, 0, Seq.empty, 0),
-          LimitedAugmentationInfo(Seq(real), 0, 0, Seq(Id[Library](2) -> real), 0, 0, Seq.empty, 0),
-          LimitedAugmentationInfo(Seq(), 0, 0, Seq(), 0, 0, Seq.empty, 0))
+
+        val now = currentDateTime
+        val seq1 = Seq(LimitedAugmentationInfo(None, Seq((real, now)), 0, 0, Seq((Id[Library](1), real, now)), 0, 0, Seq.empty, 0),
+          LimitedAugmentationInfo(None, Seq((real, now)), 0, 0, Seq((Id[Library](2), real, now)), 0, 0, Seq.empty, 0),
+          LimitedAugmentationInfo(None, Seq(), 0, 0, Seq(), 0, 0, Seq.empty, 0))
         inject[KeepDecorator].filterLibraries(seq1) === seq1
-        val seq2 = Seq(LimitedAugmentationInfo(Seq(real), 0, 0, Seq(Id[Library](1) -> real), 0, 0, Seq.empty, 0),
-          LimitedAugmentationInfo(Seq(real, fake), 0, 0, Seq(Id[Library](2) -> real, Id[Library](3) -> fake), 0, 0, Seq.empty, 0),
-          LimitedAugmentationInfo(Seq(), 0, 0, Seq(Id[Library](3) -> fake), 0, 0, Seq.empty, 0))
+        val seq2 = Seq(LimitedAugmentationInfo(None, Seq((real, now)), 0, 0, Seq((Id[Library](1), real, now)), 0, 0, Seq.empty, 0),
+          LimitedAugmentationInfo(None, Seq((real, now), (fake, now)), 0, 0, Seq((Id[Library](2), real, now), (Id[Library](3), fake, now)), 0, 0, Seq.empty, 0),
+          LimitedAugmentationInfo(None, Seq(), 0, 0, Seq((Id[Library](3), fake, now)), 0, 0, Seq.empty, 0))
         inject[KeepDecorator].filterLibraries(seq2) === seq1
       }
     }

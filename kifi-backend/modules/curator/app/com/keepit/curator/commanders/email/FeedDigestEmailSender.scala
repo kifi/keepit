@@ -10,14 +10,17 @@ import com.keepit.common.domain.DomainToNameMapper
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.SystemEmailAddress
-import com.keepit.common.mail.template.helpers.{ libraryName, toHttpsUrl, trackingParam }
+import com.keepit.common.mail.template.helpers.{ toHttpsUrl, trackingParam }
 import com.keepit.common.mail.template.{ EmailToSend, EmailTrackingParam }
+import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.curator.commanders.{ CuratorAnalytics, RecommendationGenerationCommander, SeedAttributionHelper, SeedIngestionCommander }
-import com.keepit.curator.model.{ RecommendationSubSource, RecommendationSource, UriRecommendation, UriRecommendationRepo, UserAttribution }
+import com.keepit.curator.model.{ RecommendationSource, UriRecommendation, UriRecommendationRepo, UserAttribution }
 import com.keepit.curator.queue.SendFeedDigestToUserMessage
 import com.keepit.inject.FortyTwoConfig
-import com.keepit.model.{ ExperimentType, SocialUserInfo, NotificationCategory, User, Library, URISummary, Keep, NormalizedURI }
+import com.keepit.model.{ ExperimentType, SocialUserInfo, NotificationCategory, User, Library, Keep, NormalizedURI }
+import com.keepit.rover.RoverServiceClient
+import com.keepit.rover.model.{ BasicImage, RoverUriSummary }
 import com.keepit.search.SearchServiceClient
 import com.keepit.search.augmentation.{ AugmentableItem }
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -26,6 +29,7 @@ import com.kifi.franz.SQSQueue
 import com.keepit.common.time._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.twirl.api.Html
+import com.keepit.common.core._
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -44,6 +48,7 @@ object DigestEmail {
   // exclude recommendations with an image less than this
   val MIN_IMAGE_WIDTH_PX = 535
   val MAX_IMAGE_HEIGHT_PX = 900
+  def isGoodImage(image: BasicImage): Boolean = image.size.width >= MIN_IMAGE_WIDTH_PX && image.size.height <= MAX_IMAGE_HEIGHT_PX
 
   // max # of friend thumbnails to show for each recommendation
   val MAX_FRIENDS_TO_SHOW = 10
@@ -101,17 +106,20 @@ case class DigestLibraryItemCandidate(keep: Keep, userAttribution: Option[UserAt
 }
 
 trait DigestItem {
-  val uri: NormalizedURI
-  val uriSummary: URISummary
-  val keepers: DigestItemKeepers
+  protected val uri: NormalizedURI
+  protected val summary: RoverUriSummary
   protected val config: FortyTwoConfig
+  implicit protected val imageConfig: S3ImageConfig
   protected val isForQa: Boolean
-  val title: String = uriSummary.title.getOrElse(uri.title.getOrElse(""))
-  val description = uriSummary.description.getOrElse("")
-  val imageUrl = uriSummary.imageUrl.map(toHttpsUrl)
+  val keepers: DigestItemKeepers
+  val title: String = summary.article.title.filter(_.nonEmpty) orElse uri.title getOrElse ""
+  val description = summary.article.description.getOrElse("")
+  val imageUrl = summary.images.images.find(DigestEmail.isGoodImage).map(image => toHttpsUrl(image.path.getUrl))
+  val uriId = uri.id.get
+  val uriExternalId = uri.externalId
   val url = uri.url
   val domain = DomainToNameMapper.getNameFromUrl(url)
-  val readTime = uriSummary.wordCount.filter(_ >= 0).map { wc =>
+  val readTime = summary.article.wordCount.filter(_ >= 0).map { wc =>
     val minutesEstimate = wc / 250
     DigestEmail.READ_TIMES.find(minutesEstimate < _).map(_ + " min").getOrElse("> 1 h")
   }
@@ -128,15 +136,15 @@ trait DigestItem {
   private def urlWithTracking(url: String, content: String) = Html(s"$url&${EmailTrackingParam.paramName}=${trackingParam(content)}")
 }
 
-case class DigestRecommendationItem(uriRecommendation: UriRecommendation, uri: NormalizedURI, uriSummary: URISummary,
-    keepers: DigestItemKeepers, protected val config: FortyTwoConfig, protected val isForQa: Boolean = false) extends DigestItem {
+case class DigestRecommendationItem(uriRecommendation: UriRecommendation, protected val uri: NormalizedURI, protected val summary: RoverUriSummary,
+    keepers: DigestItemKeepers, protected val config: FortyTwoConfig, protected val imageConfig: S3ImageConfig, protected val isForQa: Boolean = false) extends DigestItem {
   val reasonHeader = uriRecommendation.attribution.topic.map { t =>
     Html(s"Recommended because it’s about a topic you are interested in: ${t.topicName}")
   }
 }
 
-case class DigestLibraryItem(libraryId: Id[Library], uri: NormalizedURI, uriSummary: URISummary,
-    keepers: DigestItemKeepers, protected val config: FortyTwoConfig, protected val isForQa: Boolean = false) extends DigestItem {
+case class DigestLibraryItem(libraryId: Id[Library], protected val uri: NormalizedURI, protected val summary: RoverUriSummary,
+    keepers: DigestItemKeepers, protected val config: FortyTwoConfig, protected val imageConfig: S3ImageConfig, protected val isForQa: Boolean = false) extends DigestItem {
   val reasonHeader = Some(views.html.email.partials.digestLibraryHeader(libraryId))
 }
 
@@ -161,6 +169,7 @@ class FeedDigestEmailSender @Inject() (
     uriRecommendationRepo: UriRecommendationRepo,
     seedCommander: SeedIngestionCommander,
     shoebox: ShoeboxServiceClient,
+    rover: RoverServiceClient,
     db: Database,
     search: SearchServiceClient,
     serviceDiscovery: ServiceDiscovery,
@@ -169,6 +178,7 @@ class FeedDigestEmailSender @Inject() (
     curatorAnalytics: CuratorAnalytics,
     userExperimentCommander: RemoteUserExperimentCommander,
     protected val config: FortyTwoConfig,
+    protected val imageConfig: S3ImageConfig,
     protected val airbrake: AirbrakeNotifier) extends Logging {
 
   import com.keepit.curator.commanders.email.DigestEmail._
@@ -231,7 +241,7 @@ class FeedDigestEmailSender @Inject() (
     val digestRecoMailF = for {
       recos <- recosF
       socialInfos <- socialInfosF
-      keepsFromLibrary <- getKeepsForLibrary(userId = userId, max = MAX_KEEPS_TO_DELIVER - recos.size, exclude = recos.map(_.uri.id.get).toSet)
+      keepsFromLibrary <- getKeepsForLibrary(userId = userId, max = MAX_KEEPS_TO_DELIVER - recos.size, exclude = recos.map(_.uriId).toSet)
     } yield {
       val totalItems = recos.size + keepsFromLibrary.size
       if (totalItems >= MIN_KEEPS_TO_DELIVER) composeAndSendEmail(userId, recos, keepsFromLibrary, socialInfos)
@@ -273,8 +283,8 @@ class FeedDigestEmailSender @Inject() (
         }
         if (Random.nextFloat() > 0.99) sendAnonymoizedEmailToQa(emailToSend, emailData)
       } else {
-        val recoIds = digestRecos.map(_.uri.id.get).mkString(",")
-        val libKeepIds = newLibraryItems.map(_.uri.id.get).mkString(",")
+        val recoIds = digestRecos.map(_.uriId).mkString(",")
+        val libKeepIds = newLibraryItems.map(_.uriId).mkString(",")
         log.warn(s"sendToUser failed to send digest email to userId=$userId htmlBodySize=${htmlBody.body.size} recos=$recoIds libraryKeeps=$libKeepIds")
       }
       DigestMail(userId = userId, mailSent = sent, recommendations = digestRecos, newKeeps = newLibraryItems)
@@ -333,36 +343,26 @@ class FeedDigestEmailSender @Inject() (
     } map (_.flatten)
   }
 
-  private def isEmailWorthy(recoOpt: Option[DigestItem]) = {
-    recoOpt match {
-      case Some(reco) =>
-        val summary = reco.uriSummary
-        val uri = reco.uri
-        summary.imageWidth.isDefined && summary.imageUrl.isDefined && summary.imageWidth.get >= MIN_IMAGE_WIDTH_PX &&
-          summary.imageHeight.isDefined && summary.imageHeight.get <= MAX_IMAGE_HEIGHT_PX &&
-          (summary.title.exists(_.size > 0) || uri.title.exists(_.size > 0)) &&
-          summary.description.exists(_.size > 20) &&
-          !uri.url.endsWith(".pdf")
-      case None => false
-    }
+  private def isEmailWorthy(recoOpt: Option[DigestItem]) = recoOpt.exists { reco =>
+    reco.imageUrl.isDefined &&
+      reco.title.nonEmpty &&
+      reco.description.length > 20 &&
+      !reco.url.endsWith(".pdf")
   }
 
-  private case class DigestItemDetails(uri: NormalizedURI, summary: URISummary, keepers: DigestItemKeepers)
+  private case class DigestItemDetails(uri: NormalizedURI, summary: RoverUriSummary, keepers: DigestItemKeepers)
 
   private def getDigestReco[S <: DigestItemCandidate, T <: DigestItem](candidate: S)(transform: DigestItemDetails => Option[T]): Future[Option[T]] = {
     val uriId = candidate.uriId
-    val uriF = shoebox.getNormalizedURI(uriId)
-    val summariesF = shoebox.getUriSummaries(Seq(uriId))
-
-    uriF flatMap (uri => summariesF map { summaries =>
-      summaries.get(uriId) flatMap { uriSummary =>
-        val keepers = getRecoKeepers(candidate)
-        transform(DigestItemDetails(uri, uriSummary, keepers))
-      } orElse {
-        airbrake.notify(s"failed to load URISummary for uriId=$uriId")
-        None
+    rover.getUriSummaryByUris(Set(uriId)).imap(_.get(uriId)).flatMap {
+      case None => Future.successful(None)
+      case Some(summary) => {
+        shoebox.getNormalizedURI(uriId).map { uri =>
+          val keepers = getRecoKeepers(candidate)
+          transform(DigestItemDetails(uri, summary, keepers))
+        }
       }
-    })
+    }
   }
 
   /**
@@ -372,7 +372,7 @@ class FeedDigestEmailSender @Inject() (
     search.augment(Some(userId), false, maxKeepersShown = 20, maxLibrariesShown = 15, maxTagsShown = 0, items = keeps.map(keep => AugmentableItem(keep.uriId, keep.libraryId))) map { infos =>
       (keeps zip infos).map {
         case (keep, info) =>
-          DigestLibraryItemCandidate(keep, Some(seedAttributionHelper.toUserAttribution(info)))
+          DigestLibraryItemCandidate(keep, Some(UserAttribution.fromLimitedAugmentationInfo(info)))
       }
     }
   }
@@ -403,13 +403,13 @@ class FeedDigestEmailSender @Inject() (
   private def transformRecoCandidate(candidate: DigestRecoCandidate): Future[Option[DigestRecommendationItem]] =
     getDigestReco(candidate) { info =>
       Some(DigestRecommendationItem(uriRecommendation = candidate.sourceReco, uri = info.uri,
-        uriSummary = info.summary, keepers = info.keepers, config = config))
+        summary = info.summary, keepers = info.keepers, config = config, imageConfig = imageConfig))
     }
 
   private def transformLibraryCandidate(candidate: DigestLibraryItemCandidate): Future[Option[DigestLibraryItem]] =
     getDigestReco(candidate) { info =>
       candidate.keep.libraryId map { libId =>
-        DigestLibraryItem(libraryId = libId, uri = info.uri, uriSummary = info.summary, keepers = info.keepers, config = config)
+        DigestLibraryItem(libraryId = libId, uri = info.uri, summary = info.summary, keepers = info.keepers, config = config, imageConfig = imageConfig)
       }
     }
 

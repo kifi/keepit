@@ -16,7 +16,7 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import play.api.libs.json.Json
 import com.keepit.model.Username
-import com.keepit.shoebox.{ FakeShoeboxServiceModule, FakeShoeboxServiceClientImpl }
+import com.keepit.shoebox.FakeShoeboxServiceModule
 
 class WebsiteSearchControllerTest extends SpecificationLike with SearchTestInjector {
 
@@ -38,7 +38,6 @@ class WebsiteSearchControllerTest extends SpecificationLike with SearchTestInjec
         path === "/site/search2?q=test&maxHits=2"
 
         inject[UriSearchCommander].asInstanceOf[FixedResultUriSearchCommander].setPlainResults(ExtSearchControllerTest.plainTestResults)
-        inject[FakeShoeboxServiceClientImpl].saveURISummary(Id(234), URISummary())
         val user = User(Some(Id[User](1)), firstName = "prénom", lastName = "nom", username = Username("test"), normalizedUsername = "test")
         inject[FakeUserActionsHelper].setUser(user)
         val request = FakeRequest("GET", path)
@@ -57,9 +56,19 @@ class WebsiteSearchControllerTest extends SpecificationLike with SearchTestInjec
             "othersTotal":210,
             "hits":[{
               "title":"Example Site",
+              "description":null,
+              "wordCount":null,
               "url":"http://example.com",
-              "score":-1.0, "summary":{},
-              "keeps":[], "keepers":[],
+              "siteName":"example.com",
+              "image":null,
+              "score":-1.0,
+              "summary":{},
+              "user":null,
+              "library":null,
+              "createdAt":null,
+              "note":null,
+              "keeps":[],
+              "keepers":[],
               "keepersOmitted":0,
               "keepersTotal":0,
               "libraries":[],
@@ -94,7 +103,7 @@ object ExtSearchControllerTest {
             visibility = 0,
             libraryId = 678,
             keepId = 456,
-            title = "Example Site",
+            title = Some("Example Site"),
             url = "http://example.com",
             externalId = ExternalId[Keep]("604754fb-182d-4c39-a314-2d1994b24159"))),
         myTotal = 12,

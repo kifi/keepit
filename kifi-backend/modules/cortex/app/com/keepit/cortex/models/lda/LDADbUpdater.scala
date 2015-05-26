@@ -48,7 +48,6 @@ class LDADbUpdaterImpl @Inject() (
     topicRepo: URILDATopicRepo,
     commitRepo: FeatureCommitInfoRepo) extends LDADbUpdater with Logging {
   import com.keepit.cortex.models.lda.UpdateAction._
-  import com.keepit.model.NormalizedURIStates.SCRAPED
 
   private val fetchSize = 3000
   private val sparsity = 10
@@ -131,18 +130,19 @@ class LDADbUpdaterImpl @Inject() (
   }
 
   private def updateAction(uri: CortexURI)(implicit version: ModelVersion[DenseLDA]): UpdateAction = {
-    def isTwoWeeksOld(time: DateTime) = time.plusWeeks(2).getMillis < currentDateTime.getMillis
+    import com.keepit.model.NormalizedURIStates._
+
     def isOneDayOld(time: DateTime) = time.plusDays(1).getMillis < currentDateTime.getMillis
+    def couldHaveActiveLDAFeature(uri: CortexURI) = uri.shouldHaveContent && (uri.state.value != INACTIVE.value && uri.state.value != REDIRECTED.value)
 
     val infoOpt = db.readOnlyReplica { implicit s => topicRepo.getUpdateTimeAndState(uri.uriId, version) }
 
-    (uri.state.value, infoOpt) match {
-      case (SCRAPED.value, None) => CreateNewFeature
-      case (SCRAPED.value, Some((updatedAt, URILDATopicStates.NOT_APPLICABLE))) if (isTwoWeeksOld(updatedAt)) => UpdateExistingFeature
-      case (SCRAPED.value, Some((updatedAt, URILDATopicStates.INACTIVE))) => UpdateExistingFeature
-      case (SCRAPED.value, Some((updatedAt, URILDATopicStates.ACTIVE))) if (isOneDayOld(updatedAt)) => UpdateExistingFeature
-      case (state, None) if (state != SCRAPED.value) => Ignore
-      case (state, Some((_, URILDATopicStates.ACTIVE))) if (state != SCRAPED.value) => DeactivateExistingFeature
+    (couldHaveActiveLDAFeature(uri), infoOpt) match {
+      case (true, None) => CreateNewFeature
+      case (true, Some((updatedAt, URILDATopicStates.NOT_APPLICABLE))) => UpdateExistingFeature
+      case (true, Some((updatedAt, URILDATopicStates.INACTIVE))) => UpdateExistingFeature
+      case (true, Some((updatedAt, URILDATopicStates.ACTIVE))) if (isOneDayOld(updatedAt)) => UpdateExistingFeature
+      case (false, Some((_, URILDATopicStates.ACTIVE))) => DeactivateExistingFeature
       case _ => Ignore
     }
   }

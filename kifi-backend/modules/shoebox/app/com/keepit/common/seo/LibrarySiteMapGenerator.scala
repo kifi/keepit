@@ -60,20 +60,21 @@ class LibrarySiteMapGenerator @Inject() (
   def generate(): Future[String] = {
     db.readOnlyReplicaAsync { implicit ro =>
       val libIds = libraryRepo.getAllPublishedNonEmptyLibraries(MinKeepCount).take(50000)
-      if (libIds.size > 40000) airbrake.notify(s"there are ${libIds.size} libraries for sitemap, need to paginate the list!")
       libIds
     } map { ids =>
+      val libs = ids.map { id =>
+        db.readOnlyMaster { implicit s =>
+          val lib = libraryRepo.get(id)
+          if (lib.lastKept.isDefined && lib.keepCount >= MinKeepCount && !fakeUsers.contains(lib.ownerId)) Some(lib -> userRepo.load(lib.ownerId))
+          else None
+        }
+      }.flatten
+      val libsSize = libs.size
+      if (libsSize > 45000) airbrake.notify(s"there are $libsSize libraries for sitemap (MinKeepCount=$MinKeepCount), need to paginate the list!")
       val urlset =
         <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
           {
-            ids.map { id =>
-              db.readOnlyMaster { implicit s =>
-                val lib = libraryRepo.get(id)
-                val owner = userRepo.load(lib.ownerId)
-                if (lib.lastKept.isDefined && lib.keepCount >= 3) Some(lib -> owner)
-                else None
-              }
-            }.flatten.map {
+            libs.map {
               case libInfo =>
                 <url>
                   <loc>
@@ -84,7 +85,7 @@ class LibrarySiteMapGenerator @Inject() (
             }
           }
         </urlset>
-      log.info(s"[generate] done with sitemap generation. #libraries=${ids.size}")
+      log.info(s"[generate] done with sitemap generation. #libraries=$libsSize")
       s"""
          |<?xml-stylesheet type='text/xsl' href='sitemap.xsl'?>
          |${urlset.toString}

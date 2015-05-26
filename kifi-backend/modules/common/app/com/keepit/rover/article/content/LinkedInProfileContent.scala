@@ -1,6 +1,5 @@
 package com.keepit.rover.article.content
 
-import com.keepit.model.PageAuthor
 import com.keepit.rover.article._
 import com.kifi.macros.json
 import org.joda.time.DateTime
@@ -31,5 +30,5 @@ case class LinkedInProfileContent(
     http: HttpInfo,
     normalization: NormalizationInfo) extends ArticleContent[LinkedInProfileArticle] with HttpInfoHolder with NormalizationInfoHolder {
   def content = Some(profile.content).filter(_.nonEmpty)
-  def mediaType = openGraphType
+  def contentType = openGraphType
 }

@@ -33,7 +33,7 @@ class HelpRankCommanderTest extends Specification with HeimdalTestInjector with 
     val id = idOpt getOrElse Id[NormalizedURI](uriIdCounter.incrementAndGet)
     val seq = seqOpt getOrElse SequenceNumber[NormalizedURI](uriSeqCounter.incrementAndGet)
     val ts = tsOpt getOrElse currentDateTime
-    NormalizedURI(id = Some(id), createdAt = ts, updatedAt = ts, url = url, urlHash = NormalizedURI.hashUrl(url), seq = seq)
+    NormalizedURI(id = Some(id), createdAt = ts, updatedAt = ts, url = url, urlHash = UrlHash.hashUrl(url), seq = seq)
   }
 
   val FORTYTWO = "42"
@@ -404,8 +404,9 @@ class HelpRankCommanderTest extends Specification with HeimdalTestInjector with 
         }
 
         db.readWrite { implicit rw =>
-          (keeps1 ++ keeps2 ++ keeps3 ++ keeps4).foreach { keep =>
-            userBookmarkClicksRepo.save(UserBookmarkClicks(userId = keep.userId, uriId = keep.uriId, selfClicks = 0, otherClicks = 0))
+          (keeps1 ++ keeps2 ++ keeps3 ++ keeps4).groupBy(k => (k.userId, k.uriId)).keySet.foreach {
+            case (userId, uriId) =>
+              userBookmarkClicksRepo.save(UserBookmarkClicks(userId = userId, uriId = uriId, selfClicks = 0, otherClicks = 0))
           }
         }
         val attrCmdr = inject[AttributionCommander]

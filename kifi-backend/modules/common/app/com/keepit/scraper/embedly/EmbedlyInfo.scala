@@ -1,7 +1,6 @@
 package com.keepit.scraper.embedly
 
-import com.keepit.common.store.ImagePath
-import com.keepit.rover.article.content.{ EmbedlyImage, EmbedlyKeyword, EmbedlyEntity }
+import com.keepit.rover.article.content.{ PageAuthor, EmbedlyImage, EmbedlyKeyword, EmbedlyEntity }
 import play.api.libs.functional.syntax._
 import com.keepit.model._
 import com.keepit.common.db.Id
@@ -10,32 +9,19 @@ import com.keepit.common.time.DateTimeJsonFormat
 import org.joda.time.DateTime
 
 case class EmbedlyInfo(
-    originalUrl: String,
-    url: Option[String],
-    title: Option[String],
-    description: Option[String],
-    authors: Seq[PageAuthor],
-    published: Option[DateTime],
-    content: Option[String],
-    safe: Option[Boolean],
-    lang: Option[String],
-    faviconUrl: Option[String],
-    images: Seq[EmbedlyImage],
-    entities: Seq[EmbedlyEntity],
-    keywords: Seq[EmbedlyKeyword]) {
-  implicit def toPageInfo(nuriId: Id[NormalizedURI]): PageInfo =
-    PageInfo(
-      id = None,
-      uriId = nuriId,
-      title = this.title,
-      description = this.description.orElse(Some("")),
-      authors = authors,
-      publishedAt = published,
-      safe = this.safe,
-      lang = this.lang,
-      faviconUrl = (this.faviconUrl.collect { case f: String if f.startsWith("http") => f }) // embedly bug
-    )
-}
+  originalUrl: String,
+  url: Option[String],
+  title: Option[String],
+  description: Option[String],
+  authors: Seq[PageAuthor],
+  published: Option[DateTime],
+  content: Option[String],
+  safe: Option[Boolean],
+  lang: Option[String],
+  faviconUrl: Option[String],
+  images: Seq[EmbedlyImage],
+  entities: Seq[EmbedlyEntity],
+  keywords: Seq[EmbedlyKeyword])
 
 object EmbedlyInfo {
   val EMPTY = EmbedlyInfo("", None, None, None, Seq.empty, None, None, None, None, None, Seq(), Seq(), Seq())

@@ -250,7 +250,7 @@ class MessagingCommander @Inject() (
         case Failure(e) => throw new Exception(s"can't send message for bad URL: [$url] from $from with title $titleOpt and source $source")
       }
     }
-    val nUriOpt = uri.map { u => Await.result(shoebox.internNormalizedURI(u, scrapeWanted = true), 10 seconds) } // todo: Remove Await
+    val nUriOpt = uri.map { u => Await.result(shoebox.internNormalizedURI(u.toString(), contentWanted = true), 10 seconds) } // todo: Remove Await
     statsd.timing(s"messaging.internNormalizedURI", currentDateTime.getMillis - tStart.getMillis, ONE_IN_THOUSAND)
     val uriIdOpt = nUriOpt.flatMap(_.id)
     val (thread, isNew) = db.readWrite { implicit session =>
@@ -429,7 +429,7 @@ class MessagingCommander @Inject() (
     urlOpt.foreach { url =>
       (nUriOpt match {
         case Some(n) => Promise.successful(n).future
-        case None => shoebox.internNormalizedURI(url, scrapeWanted = true) //Note, this also needs to include canonical/og when we have detached threads
+        case None => shoebox.internNormalizedURI(url.toString, contentWanted = true) //Note, this also needs to include canonical/og when we have detached threads
       }) foreach { nUri =>
         db.readWrite { implicit session =>
           messageRepo.updateUriId(message, nUri.id.get)
@@ -541,7 +541,9 @@ class MessagingCommander @Inject() (
     }
     messagingAnalytics.clearedNotification(userId, message, thread, context)
 
-    notificationCommander.notifyRead(userId, thread.externalId, msgExtId, thread.nUrl.getOrElse(""), message.createdAt, getUnreadUnmutedThreadCount(userId))
+    val unreadMessagesCount = getUnreadUnmutedThreadCount(userId, Some(true))
+    val unreadNotificationsCount = getUnreadUnmutedThreadCount(userId, Some(false))
+    notificationCommander.notifyRead(userId, thread.externalId, msgExtId, thread.nUrl.getOrElse(""), message.createdAt, unreadMessagesCount, unreadNotificationsCount)
   }
 
   def setUnread(userId: Id[User], msgExtId: ExternalId[Message]): Unit = {
@@ -553,7 +555,9 @@ class MessagingCommander @Inject() (
       userThreadRepo.markUnread(userId, thread.id.get)
     }
     if (changed) {
-      notificationCommander.notifyUnread(userId, thread.externalId, msgExtId, thread.nUrl.getOrElse(""), message.createdAt, getUnreadUnmutedThreadCount(userId))
+      val unreadMessagesCount = getUnreadUnmutedThreadCount(userId, Some(true))
+      val unreadNotificationsCount = getUnreadUnmutedThreadCount(userId, Some(false))
+      notificationCommander.notifyUnread(userId, thread.externalId, msgExtId, thread.nUrl.getOrElse(""), message.createdAt, unreadMessagesCount, unreadNotificationsCount)
     }
   }
 

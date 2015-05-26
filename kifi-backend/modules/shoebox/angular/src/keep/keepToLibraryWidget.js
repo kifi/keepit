@@ -4,9 +4,9 @@ angular.module('kifi')
 
 .directive('kfKeepToLibraryWidget', [
   '$rootElement', '$compile', '$document', '$filter', '$rootScope', '$templateCache', '$timeout', '$window',
-  'keyIndices', 'libraryService', 'util',
+  'KEY', 'libraryService', 'util',
   function ($rootElement, $compile, $document, $filter, $rootScope, $templateCache, $timeout, $window,
-    keyIndices, libraryService, util) {
+    KEY, libraryService, util) {
     return {
       restrict: 'A',
       /*
@@ -332,7 +332,7 @@ angular.module('kifi')
           }
 
           switch ($event.keyCode) {
-            case keyIndices.KEY_UP:
+            case KEY.UP:
               // Otherwise browser will move cursor to start of input.
               $event.preventDefault();
 
@@ -343,7 +343,7 @@ angular.module('kifi')
               adjustScroll(selectedIndex);
 
               break;
-            case keyIndices.KEY_DOWN:
+            case KEY.DOWN:
               // Otherwise browser will move cursor to end of input.
               $event.preventDefault();
 
@@ -354,7 +354,7 @@ angular.module('kifi')
               adjustScroll(selectedIndex);
 
               break;
-            case keyIndices.KEY_ENTER:
+            case KEY.ENTER:
               // Prevent any open modals from processing this.
               $event.stopPropagation();
 
@@ -371,7 +371,7 @@ angular.module('kifi')
                 scope.showCreatePanel();
               }
               break;
-            case keyIndices.KEY_ESC:
+            case KEY.ESC:
               // Prevent any open modals from processing this.
               $event.stopPropagation();
 
@@ -422,7 +422,7 @@ angular.module('kifi')
           library.slug = util.generateSlug(library.name);
           library.visibility = library.visibility || 'published';
 
-          libraryService.createLibrary(library).then(function (res) {
+          libraryService.createLibrary(library, true).then(function (res) {
             libraryService.fetchLibraryInfos(true).then(function () {
               scope.$evalAsync(function () {
                 invokeWidgetCallbacks(_.find(libraryService.getOwnInfos(), {id: res.data.library.id}));

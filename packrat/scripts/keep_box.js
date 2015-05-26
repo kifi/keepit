@@ -80,7 +80,7 @@ k.keepBox = k.keepBox || (function () {
     }))
     .on('mousedown', function (e) {
       var $target = $(e.target);
-      if (e.which === 1 && !$target.is('input[type=text]')) {
+      if (e.which === 1 && !$target.is('input[type=text],div[contenteditable],div[contenteditable] *')) {
         e.preventDefault();  // prevent keeper drag
         $target.focus();
       }
@@ -187,7 +187,7 @@ k.keepBox = k.keepBox || (function () {
         $cart.removeClass('kifi-roll kifi-animated kifi-back kifi-forward')
           .off('transitionend', end);
         $vp.css('height', '');
-        $new.find('input[type=text]:visible').last().focus().select();
+        $new.find('input[type=text],div[contenteditable]').last().focus().select();
         $new.triggerHandler('kifi-show');
       }
     });
@@ -320,9 +320,10 @@ k.keepBox = k.keepBox || (function () {
     });
   }
 
-  function addKeepBindings($view, autoClose) {
+  function addKeepBindings($view, libraryId, keepId, note, autoClose) {
     var debouncedSaveKeepTitleIfChanged = _.debounce(saveKeepTitleIfChanged, 1500);
     var debouncedSaveKeepImageIfChanged = _.debounce(saveKeepImageIfChanged, 2400);
+    var debouncedSaveKeepNoteIfChanged = _.debounce(saveKeepNoteIfChanged, 2400);
     $view
     .on('input', '.kifi-keep-box-keep-title', $.proxy(debouncedSaveKeepTitleIfChanged, null, $view))
     .on('blur', '.kifi-keep-box-keep-title', function () {
@@ -340,6 +341,7 @@ k.keepBox = k.keepBox || (function () {
         api.port.emit('track_pane_click', {type: 'keepDetails', action: 'slidImage', subaction: prev ? 'left' : 'right'});
       }
     })
+    .on('input', '.kifi-keep-box-keep-note', $.proxy(debouncedSaveKeepNoteIfChanged, null, $view))
     .on('click', '.kifi-keep-box-done', function (e) {
       if (e.which === 1) {
         hide(e, 'button');
@@ -349,12 +351,14 @@ k.keepBox = k.keepBox || (function () {
       if ((e.keyCode === 13 || e.keyCode === 108) && !e.isDefaultPrevented()) { // enter, numpad enter
         hide(e, 'enter');
         e.preventDefault();
-      } else if (e.keyCode === 8 && !e.isDefaultPrevented() && (e.target.type !== 'text' || !e.target.selectionStart && !e.target.selectionEnd)) {
+      } else if (e.keyCode === 8 && !e.isDefaultPrevented() && !e.target.contentEditable &&
+        (e.target.type !== 'text' || !e.target.selectionStart && !e.target.selectionEnd)) {
         navBack('key', e.originalEvent.guided);
         e.preventDefault();
       }
     })
     .on('kifi-show', function () {
+      k.keepNote.moveCursorToEnd($note);
       if (autoClose) {
         var $timer = $view.find('.kifi-keep-box-timer').addClass('kifi-going');
         var $text = $timer.find('.kifi-keep-box-timer-text');
@@ -380,6 +384,15 @@ k.keepBox = k.keepBox || (function () {
     .on('kifi-hide', function () {
       saveKeepTitleIfChanged($view);
       saveKeepImageIfChanged($view);
+      saveKeepNoteIfChanged($view);
+      k.keepNote.done($note);
+    });
+
+    var $note = $view.find('.kifi-keep-box-keep-note');
+    k.keepNote.init($note, $view, libraryId, keepId, note);
+
+    api.require('scripts/repair_inputs.js', function () {
+      $view.repairInputs();
     });
   }
 
@@ -558,8 +571,13 @@ k.keepBox = k.keepBox || (function () {
       images.push(img);
     }
 
+    var requireDeferred = Q.defer();
+    api.require('scripts/keep_note.js', function () {
+      requireDeferred.resolve();
+    });
+
     var data = $box.data();
-    data.imagePromise.done(proceed, proceed);
+    Q.allSettled([data.imagePromise, requireDeferred.promise]).done(proceed, proceed);
     function proceed() {
       images.push.apply(images, data.images);
       showKeep2(library, subsource, trigger, guided, justKept, justKept && !data.tip, images);
@@ -594,20 +612,6 @@ k.keepBox = k.keepBox || (function () {
       $view.find('.kifi-keep-box-keep-image-picker').addClass('kifi-empty');
     }
 
-    var $tags = $view.find('.kifi-keep-box-tags')
-    .data('pre', (keep.tags || []).map(tagNameToTokenItem))
-    .tokenInput(suggestTags.bind(null, library.id, keep.id), {
-      classPrefix: 'kifi-keep-box-tags-',
-      placeholder: 'Add a tag',
-      tokenValue: 'tag',
-      preventDuplicates: true,
-      allowFreeTagging: true,
-      formatToken: formatTagToken,
-      formatResult: formatTagResult,
-      showResults: $.proxy(showTagSuggestions, null, $view),
-      onAdd: $.proxy(onAddTag, null, $view, library.id),
-      onDelete: $.proxy(onDeleteTag, null, $view, library.id)
-    });
     var imageIdx = showImage ? 0 : -1;
     $view.data({
       library: library,
@@ -616,7 +620,8 @@ k.keepBox = k.keepBox || (function () {
       canvases: canvases,
       saved: {
         title: keep.title,
-        imageIdx: keep.image ? imageIdx : -1
+        imageIdx: keep.image ? imageIdx : -1,
+        note: keep.note
       },
       saving: {}
     });
@@ -624,7 +629,7 @@ k.keepBox = k.keepBox || (function () {
       saveKeepImageIfChanged($view);
     }
 
-    addKeepBindings($view, autoClose);
+    addKeepBindings($view, library.id, keep.id, keep.note || '', autoClose);
 
     api.port.emit('track_pane_view', {
       type: 'keepDetails',
@@ -935,6 +940,29 @@ k.keepBox = k.keepBox || (function () {
     }
   }
 
+  function saveKeepNoteIfChanged($view) {
+    if (!$box) return;  // already removed, no data
+    var noteEl = this || $view.find('.kifi-keep-box-keep-note')[0];
+    var data = $view.data();
+    var val = k.keepNote.toText(noteEl);
+    if (val !== data['note' in data.saving ? 'saving' : 'saved'].note) {
+      var deferred = Q.defer();
+      data.saving.note = val;
+      api.port.emit('save_keep_note', {libraryId: data.library.id, note: val}, function (success) {
+        if (data.saving.note === val) {
+          delete data.saving.note;
+        }
+        if (success) {
+          data.saved.note = val;
+          deferred.resolve();
+        } else {
+          deferred.reject();
+        }
+      });
+      showSaveKeepProgress($view, deferred.promise);
+    }
+  }
+
   function showSaveKeepProgress($view, promise) {
     var $pp = $view.find('.kifi-keep-box-progress-parent').empty();
     progress($pp, promise).fin(function () {
@@ -979,45 +1007,6 @@ k.keepBox = k.keepBox || (function () {
       }
     });
     return deferred.promise;
-  }
-
-  function suggestTags(libraryId, keepId, tags, query, withResults) {
-    if (query) {
-      api.port.emit('suggest_tags', {q: query, n: 4, libraryId: libraryId, keepId: keepId, tags: tags}, withResults);
-    } else {
-      withResults([]);
-    }
-  }
-
-  function showTagSuggestions($view, $dropdown, els, done) {
-    $dropdown
-      .empty().append(els)
-      .position({my: 'left-6 bottom', at: 'left top', of: $dropdown.prev().find('input'), collision: 'fit none', within: $view})
-    done();
-  }
-
-  function onAddTag($view, libraryId, tag) {
-    var deferred = Q.defer();
-    var $tags = $(this);
-    api.port.emit('tag', {libraryId: libraryId, tag: tag.tag}, function (name) {
-      if (name) {
-        if (name !== tag.tag) {
-          $tags.tokenInput('replace', tag, {tag: name});
-        }
-        deferred.resolve();
-      } else {
-        deferred.reject();
-      }
-    });
-    showSaveKeepProgress($view, deferred.promise);
-  }
-
-  function onDeleteTag($view, libraryId, tag) {
-    var deferred = Q.defer();
-    api.port.emit('untag', {libraryId: libraryId, tag: tag.tag}, function (success) {
-      deferred[success ? 'resolve' : 'reject']();
-    });
-    showSaveKeepProgress($view, deferred.promise);
   }
 
   function createLibrary($view, $btn, trigger, guided) {
@@ -1091,35 +1080,6 @@ k.keepBox = k.keepBox || (function () {
     return html;
   }
 
-  function formatTagToken(item) {
-    return '<li>' + Mustache.escape(item.tag) + '</li>';
-  }
-
-  function formatTagResult(item) {
-    var html = ['<li class="kifi-keep-box-tags-dropdown-item-token">'];
-    if (item.matches || item.freeTag) {
-      pushWithBoldedMatches(html, item.tag, item.matches || [[0, item.tag.length]]);
-    } else {
-      html.push(Mustache.escape(item.tag));
-    }
-    html.push('</li>');
-    return html.join('');
-  }
-
-  function pushWithBoldedMatches(html, text, matches) {
-    var i = 0;
-    for (var j = 0; j < matches.length; j++) {
-      var match = matches[j];
-      var pos = match[0];
-      var len = match[1];
-      if (pos >= i) {
-        html.push(Mustache.escape(text.substring(i, pos)), '<b>', Mustache.escape(text.substr(pos, len)), '</b>');
-        i = pos + len;
-      }
-    }
-    html.push(Mustache.escape(text.substr(i)));
-  }
-
   function idIs(id) {
     return function (o) {return o.id === id};
   }
@@ -1130,10 +1090,6 @@ k.keepBox = k.keepBox || (function () {
 
   function libraryIdIs(id) {
     return function (o) {return o.libraryId === id};
-  }
-
-  function tagNameToTokenItem(name) {
-    return {tag: name};
   }
 
   function removeThis() {

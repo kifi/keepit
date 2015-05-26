@@ -135,6 +135,7 @@ object ElectronicMail {
 object ElectronicMailStates {
   val PREPARING = State[ElectronicMail]("preparing")
   val OPT_OUT = State[ElectronicMail]("opt_out")
+  val USER_INACTIVE = State[ElectronicMail]("user_inactive")
   val READY_TO_SEND = State[ElectronicMail]("ready_to_send")
   val SENT = State[ElectronicMail]("sent")
   val ERROR_SENDING = State[ElectronicMail]("error_sending")

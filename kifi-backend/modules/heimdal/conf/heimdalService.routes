@@ -46,6 +46,8 @@ POST /internal/heimdal/data/reKeep/getReKeepCountsByKeepIds         @com.keepit.
 
 GET  /internal/heimdal/data/userKeepInfo/getReKeepCountsByUserUri @com.keepit.controllers.UserKeepInfoController.getReKeepCountsByUserUri(userId: Id[User], uriId: Id[NormalizedURI])
 
+GET  /internal/heimdal/data/libraryView                             @com.keepit.controllers.StatsController.getOwnerLibraryViewStats(userId: Id[User])
+
 POST /internal/heimdal/helprank/updateUserReKeepStats   @com.keepit.controllers.HelpRankController.updateUserReKeepStats()
 POST /internal/heimdal/helprank/updateUsersReKeepStats  @com.keepit.controllers.HelpRankController.updateUsersReKeepStats()
 POST /internal/heimdal/helprank/updateAllReKeepStats    @com.keepit.controllers.HelpRankController.updateAllReKeepStats()

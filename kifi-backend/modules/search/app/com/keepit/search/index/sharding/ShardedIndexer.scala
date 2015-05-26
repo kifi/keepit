@@ -12,7 +12,7 @@ trait ShardedIndexer[K, S, I <: Indexer[_, S, I]] extends IndexManager[S, I] wit
   protected val updateLock = new AnyRef
   @volatile protected var closing = false
 
-  def commitSequenceNumber: SequenceNumber[S] = SequenceNumber(indexShards.valuesIterator.map(indexer => indexer.commitSequenceNumber.value).min)
+  def commitSequenceNumber: SequenceNumber[S] = indexShards.valuesIterator.map(indexer => indexer.commitSequenceNumber).min
 
   def committedAt: Option[String] = {
     indexShards.valuesIterator.reduce { (a, b) =>

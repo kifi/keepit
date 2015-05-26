@@ -185,36 +185,7 @@ class TwitterSocialGraphImpl @Inject() (
       val mutualFollows = followerIds.toSet.intersect(friendIds.toSet)
       log.info(s"[fetchSocialUserInfo(${socialUserInfo.socialId})] friendIds(len=${friendIds.length}):${friendIds.take(10)} followerIds(len=${followerIds.length}):${followerIds.take(10)} mutual(len=${mutualFollows.size}):${mutualFollows.take(10)}")
 
-      SafeFuture {
-        log.info(s"[fetchSocialUserInfo(${socialUserInfo.socialId})] fetching twitter_syncs for ${friendIds.length} friends...")
-        friendIds.grouped(100) foreach { userIds =>
-          val socialUserInfos = db.readOnlyReplica { implicit s =>
-            socialUserInfoRepo.getBySocialIds(userIds.map(id => SocialId(id.toString)))
-          }
-          val twitterHandles = socialUserInfos.flatMap(_.username).toSet
-          db.readOnlyMaster { implicit s =>
-            twitterSyncStateRepo.getTwitterSyncsByFriendIds(twitterHandles)
-          } map { twitterSyncState =>
-            db.readWrite { implicit s =>
-              val libraryId = twitterSyncState.libraryId
-              val user = userRepo.get(userId)
-              val library = libraryRepo.get(libraryId)
-              val libOwner = basicUserRepo.load(library.ownerId)
-              if (library.visibility == LibraryVisibility.PUBLISHED && library.state == LibraryStates.ACTIVE && user.state == UserStates.ACTIVE && libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId, None).isEmpty) {
-                val ownerImage = s3ImageStore.avatarUrlByUser(libOwner)
-                val libLink = s"""https://www.kifi.com${Library.formatLibraryPath(libOwner.username, library.slug)}"""
-                val libImageOpt = libraryImageCommander.getBestImageForLibrary(library.id.get, ProcessedImageSize.Medium.idealSize)
-                log.info(s"[fetchSocialUserInfo(${socialUserInfo.socialId})] auto-joining user ${userId} twitter_sync library ${libraryId}")
-                libraryMembershipRepo.save(LibraryMembership(libraryId = libraryId, userId = userId, access = LibraryAccess.READ_ONLY))
-                //notifyUserOnLibraryFollow(user, twitterSyncState, library, libOwner, ownerImage, libLink, libImageOpt)
-                //notifyOwnerOnLibraryFollow(user, library, libOwner, ownerImage, libLink, libImageOpt)
-              }
-            }
-          }
-        }
-        log.info(s"[fetchSocialUserInfo(${socialUserInfo.socialId})] finished auto-joining all twitter_sync libraries")
-      }
-
+      fetchTwitterSyncs(userId, socialUserInfo, friendIds)
       mutualFollows
     }
 
@@ -234,6 +205,38 @@ class TwitterSocialGraphImpl @Inject() (
         Stream(rawInfos)
       )
     )
+  }
+
+  private def fetchTwitterSyncs(userId: Id[User], socialUserInfo: SocialUserInfo, friendIds: Seq[TwitterId]) = {
+    SafeFuture {
+      log.info(s"[fetchSocialUserInfo(${socialUserInfo.socialId})] fetching twitter_syncs for ${friendIds.length} friends...")
+      friendIds.grouped(100) foreach { userIds =>
+        val socialUserInfos = db.readOnlyReplica { implicit s =>
+          socialUserInfoRepo.getBySocialIds(userIds.map(id => SocialId(id.toString)))
+        }
+        val twitterHandles = socialUserInfos.flatMap(_.username).toSet
+        db.readOnlyMaster { implicit s =>
+          twitterSyncStateRepo.getTwitterSyncsByFriendIds(twitterHandles)
+        } map { twitterSyncState =>
+          db.readWrite { implicit s =>
+            val libraryId = twitterSyncState.libraryId
+            val user = userRepo.get(userId)
+            val library = libraryRepo.get(libraryId)
+            val libOwner = basicUserRepo.load(library.ownerId)
+            if (library.visibility == LibraryVisibility.PUBLISHED && library.state == LibraryStates.ACTIVE && user.state == UserStates.ACTIVE && libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId, None).isEmpty) {
+              val ownerImage = s3ImageStore.avatarUrlByUser(libOwner)
+              val libLink = s"""https://www.kifi.com${Library.formatLibraryPath(libOwner.username, library.slug)}"""
+              val libImageOpt = libraryImageCommander.getBestImageForLibrary(library.id.get, ProcessedImageSize.Medium.idealSize)
+              log.info(s"[fetchSocialUserInfo(${socialUserInfo.socialId})] auto-joining user ${userId} twitter_sync library ${libraryId}")
+              libraryMembershipRepo.save(LibraryMembership(libraryId = libraryId, userId = userId, access = LibraryAccess.READ_ONLY))
+              //notifyUserOnLibraryFollow(user, twitterSyncState, library, libOwner, ownerImage, libLink, libImageOpt)
+              //notifyOwnerOnLibraryFollow(user, library, libOwner, ownerImage, libLink, libImageOpt)
+            }
+          }
+        }
+      }
+      log.info(s"[fetchSocialUserInfo(${socialUserInfo.socialId})] finished auto-joining all twitter_sync libraries")
+    }
   }
 
   private def notifyUserOnLibraryFollow(user: User, twitterSyncState: TwitterSyncState, library: Library, libOwner: BasicUser, ownerImage: String, libLink: String, libImageOpt: Option[LibraryImage]): Future[Any] = {
@@ -443,8 +446,18 @@ class TwitterSocialGraphImpl @Inject() (
               }
             }
             Seq.empty
-          } else if (response.status == 404) { // {"errors":[{"code":34,"message":"Sorry, that page does not exist."}]} ->
-            //something in twitter is bad or our api is broken, happen a lots recentrly, in check
+          } else if (response.status == 404) {
+            val errorCodes = (response.json \\ "code").map(_.as[Int])
+            if (errorCodes.contains(34)) { // "Sorry, that page does not exist"
+              log.warn(s"Failed to fetch page $handle because it does not exist. Inactivating Twitter Sync State... resp: ${response.json}")
+              socialUserInfoOpt.flatMap(_.userId).map { userId =>
+                db.readWrite { implicit s =>
+                  twitterSyncStateRepo.getByHandleAndUserIdUsed(handle, userId).map { twitterSync =>
+                    twitterSyncStateRepo.save(twitterSync.copy(state = TwitterSyncStateStates.INACTIVE))
+                  }
+                }
+              }
+            }
             log.warn(s"Failed to get users $handle timeline, status ${response.status}, msg: ${response.json.toString}, social user info $socialUserInfoOpt , signature $sig", stackTrace)
             Seq.empty
           } else {

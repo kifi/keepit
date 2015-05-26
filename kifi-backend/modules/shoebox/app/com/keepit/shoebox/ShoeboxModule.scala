@@ -1,17 +1,17 @@
 package com.keepit.shoebox
 
+import com.keepit.commanders.emails.activity.{ ActivityEmailQueueModule }
 import com.keepit.common.controller.UserActionsModule
 import com.keepit.common.seo.SiteMapGeneratorModule
 import com.keepit.controllers.internal.DataPipelineExecutorModule
 import com.keepit.reports._
 import com.keepit.common.cache.ShoeboxCacheModule
 import com.keepit.rover.RoverServiceClientModule
-import com.keepit.shoebox.cron.{ ActivityPushCronModule, ActivityEmailCronModule }
+import com.keepit.shoebox.cron.{ GratificationEmailCronModule, ActivityPushCronModule, ActivityEmailCronModule }
 import com.keepit.social.SecureSocialModule
 import com.keepit.common.mail.MailModule
 import com.keepit.common.analytics.AnalyticsModule
 import com.keepit.model.{ ProdSliderHistoryTrackerModule }
-import com.keepit.scraper.{ ScraperHealthMonitorModule, ScrapeSchedulerModule, ScraperServiceClientModule }
 import com.keepit.common.store.ShoeboxStoreModule
 import com.keepit.inject.{ CommonServiceModule, ConfigurationModule }
 import com.keepit.integrity.DataIntegrityModule
@@ -32,7 +32,7 @@ import com.keepit.common.service.ServiceType
 
 case class ShoeboxServiceTypeModule() extends ServiceTypeModule {
   val serviceType = ServiceType.SHOEBOX
-  val servicesToListenOn = ServiceType.SEARCH :: ServiceType.ELIZA :: ServiceType.HEIMDAL :: ServiceType.ABOOK :: ServiceType.SCRAPER :: ServiceType.CORTEX :: ServiceType.GRAPH :: ServiceType.CURATOR :: ServiceType.ROVER :: Nil
+  val servicesToListenOn = ServiceType.SEARCH :: ServiceType.ELIZA :: ServiceType.HEIMDAL :: ServiceType.ABOOK :: ServiceType.CORTEX :: ServiceType.GRAPH :: ServiceType.CURATOR :: ServiceType.ROVER :: Nil
 }
 
 trait ShoeboxModule extends ConfigurationModule with CommonServiceModule {
@@ -49,11 +49,10 @@ trait ShoeboxModule extends ConfigurationModule with CommonServiceModule {
   // Shoebox Functional Modules
   val analyticsModule: AnalyticsModule
   val cacheModule: ShoeboxCacheModule
-  val scrapeSchedulerModule: ScrapeSchedulerModule
-  val scraperHealthMonitorModule: ScraperHealthMonitorModule
   val fjMonitorModule: ForkJoinContextMonitorModule
   val twilioCredentialsModule: TwilioCredentialsModule
   val dataPipelineExecutorModule: DataPipelineExecutorModule
+  val activityEmailActorModule: ActivityEmailQueueModule
 
   //these are modules that are provided here (but can be overriden by inheriting modules)
   // Service clients
@@ -63,7 +62,6 @@ trait ShoeboxModule extends ConfigurationModule with CommonServiceModule {
   val elizaServiceClientModule: ElizaServiceClientModule
   val heimdalServiceClientModule: HeimdalServiceClientModule
   val abookServiceClientModule: ABookServiceClientModule
-  val scraperServiceClientModule: ScraperServiceClientModule
   val cortexServiceClientModule: CortexServiceClientModule
   val graphServiceClientModule: GraphServiceClientModule
   val curatorServiceClientModule: CuratorServiceClientModule
@@ -85,6 +83,8 @@ trait ShoeboxModule extends ConfigurationModule with CommonServiceModule {
 
   val activityEmailCronModule = ActivityEmailCronModule()
   val activityPushCronModule = ActivityPushCronModule()
+
+  val gratificationEmailCronModule = GratificationEmailCronModule()
 
   val shoeboxTasksModule: ShoeboxTasksPluginModule = ShoeboxTasksPluginModule()
 }

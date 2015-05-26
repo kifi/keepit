@@ -1,9 +1,9 @@
 package com.keepit.commanders
 
 import com.google.inject.Inject
+import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
-import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.social.BasicUserRepo
@@ -11,9 +11,9 @@ import com.keepit.common.store.S3UserPictureConfig
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model.LibraryVisibility.PUBLISHED
 import com.keepit.model._
+import com.keepit.rover.RoverServiceClient
 import com.keepit.social.SocialNetworks
-import org.im4java.utils.NoiseFilter.Threshold
-import views.html.admin.library
+import com.keepit.common.core._
 
 import scala.concurrent.{ ExecutionContext, Future }
 
@@ -43,11 +43,11 @@ class PageMetaTagsCommander @Inject() (
     relatedLibraryCommander: RelatedLibraryCommander,
     basicUserRepo: BasicUserRepo,
     keepRepo: KeepRepo,
-    pageInfoRepo: PageInfoRepo,
     applicationConfig: FortyTwoConfig,
     socialUserInfoRepo: SocialUserInfoRepo,
     libraryRepo: LibraryRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
+    rover: RoverServiceClient,
     implicit val executionContext: ExecutionContext,
     implicit val publicIdConfig: PublicIdConfiguration) extends Logging {
 
@@ -88,15 +88,27 @@ class PageMetaTagsCommander @Inject() (
     }
   }
 
-  def selectKeepsDescription(libraryId: Id[Library], threshold: Int = 100)(implicit s: RSession): Option[String] = {
-    val keeps = keepRepo.getByLibrary(libraryId, 0, 50)
-    val pages = keeps.iterator.map(k => pageInfoRepo.getByUri(k.uriId))
-    val page = pages.find(p => p.exists(_.description.exists(_.size > threshold))).flatten
-    val desc = page.flatMap(_.description).orElse {
-      if (threshold <= 50) None
-      else selectKeepsDescription(libraryId, 50)
+  def selectKeepsDescription(libraryId: Id[Library]): Future[Option[String]] = {
+    val futureKeeps = db.readOnlyMasterAsync { implicit session =>
+      keepRepo.getByLibrary(libraryId, 0, 50)
     }
-    desc
+    futureKeeps.flatMap { keeps =>
+
+      val descriptionFutures: Stream[Future[Option[String]]] = keeps.toStream.map { keep =>
+        rover.getArticleSummaryByUris(Set(keep.uriId)).imap(_.get(keep.uriId).flatMap(_.description))
+      }
+
+      def collectFirstLongerThanThreshold(threshold: Int): Future[Option[String]] = {
+        FutureHelpers.collectFirst(descriptionFutures) { descriptionFuture =>
+          descriptionFuture.imap(_.filter(_.length > threshold))
+        }
+      }
+
+      collectFirstLongerThanThreshold(100).flatMap {
+        case Some(longEnoughDescription) => Future.successful(Some(longEnoughDescription))
+        case None => collectFirstLongerThanThreshold(50)
+      }
+    }
   }
 
   def libraryMetaTags(library: Library): Future[PublicPageMetaTags] = {
@@ -108,9 +120,7 @@ class PageMetaTagsCommander @Inject() (
     val altDescF: Future[Option[String]] = if (library.description.exists(_.size > 10)) {
       Future.successful(None)
     } else {
-      db.readOnlyMasterAsync { implicit s =>
-        selectKeepsDescription(library.id.get)
-      }
+      selectKeepsDescription(library.id.get)
     }
     if (library.visibility != PUBLISHED) {
       Future.successful(PublicPageMetaPrivateTags(urlPathOnly))
@@ -176,7 +186,7 @@ class PageMetaTagsCommander @Inject() (
       (imageUrl, facebookId)
     }
     val countLibrariesF = db.readOnlyMasterAsync { implicit s =>
-      libraryMembershipRepo.countWithUserIdAndAccess(user.id.get, LibraryAccess.OWNER) + libraryMembershipRepo.countWithUserIdAndAccess(user.id.get, LibraryAccess.READ_ONLY)
+      libraryMembershipRepo.countNonTrivialLibrariesWithUserIdAndAccess(user.id.get, LibraryAccess.OWNER) + libraryMembershipRepo.countNonTrivialLibrariesWithUserIdAndAccess(user.id.get, LibraryAccess.READ_ONLY)
     }
     for {
       (imageUrl, facebookId) <- metaInfoF
@@ -195,7 +205,7 @@ class PageMetaTagsCommander @Inject() (
         unsafeFirstName = user.firstName,
         unsafeLastName = user.lastName,
         profileUrl = url,
-        noIndex = countLibraries <= 2, //means at least one library they follow or own, ignoring the main and private libs
+        noIndex = countLibraries == 0, //no public libraries - no index
         related = Seq.empty)
     }
   }

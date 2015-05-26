@@ -22,6 +22,7 @@ class LibraryChecker @Inject() (
 
   private[this] val lock = new AnyRef
   private[this] var keptDateErrors = 0
+  private val timeSlicer = new TimeSlicer(clock)
 
   def check(): Unit = lock.synchronized {
     checkSystemLibraries()
@@ -135,11 +136,7 @@ class LibraryChecker @Inject() (
   }
 
   private def getIndex(): (Int, Int) = {
-    val minute = clock.now().minuteOfDay().get()
-    val freq = DataIntegrityPlugin.EVERY_N_MINUTE
-    val index = minute / freq
-    val numIntervals = 24 * 60 / freq
-    (index, numIntervals)
+    timeSlicer.getSliceAndSize(TimeToSliceInDays.ONE_WEEK, OneSliceInMinutes(DataIntegrityPlugin.EVERY_N_MINUTE))
   }
 
 }

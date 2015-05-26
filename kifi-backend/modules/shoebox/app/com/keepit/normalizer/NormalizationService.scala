@@ -17,7 +17,7 @@ import com.keepit.common.time._
 
 @ImplementedBy(classOf[NormalizationServiceImpl])
 trait NormalizationService {
-  def update(currentReference: NormalizationReference, candidates: NormalizationCandidate*): Future[Option[Id[NormalizedURI]]]
+  def update(currentReference: NormalizationReference, candidates: Set[NormalizationCandidate]): Future[Option[Id[NormalizedURI]]]
   def prenormalize(uriString: String): Try[String]
 }
 
@@ -35,7 +35,7 @@ class NormalizationServiceImpl @Inject() (
 
   def prenormalize(uriString: String): Try[String] = priorKnowledge.prenormalize(uriString)
 
-  def update(currentReference: NormalizationReference, candidates: NormalizationCandidate*): Future[Option[Id[NormalizedURI]]] = timing(s"NormalizationService.update.${currentReference.url}") {
+  def update(currentReference: NormalizationReference, candidates: Set[NormalizationCandidate]): Future[Option[Id[NormalizedURI]]] = timing(s"NormalizationService.update.${currentReference.url}") {
 
     val iter = tmpDisable.findAllMatchIn(currentReference.url)
     if (iter.hasNext) {
@@ -44,7 +44,7 @@ class NormalizationServiceImpl @Inject() (
       val relevantCandidates = getRelevantCandidates(currentReference, candidates)
       log.info(s"[update($currentReference,${candidates.mkString(",")})] relevantCandidates=${relevantCandidates.mkString(",")}")
       val futureResult = for {
-        betterReferenceOption <- processUpdate(currentReference, relevantCandidates: _*)
+        betterReferenceOption <- processUpdate(currentReference, relevantCandidates)
         betterReferenceOptionAfterAdditionalUpdates <- processAdditionalUpdates(currentReference, betterReferenceOption)
       } yield betterReferenceOptionAfterAdditionalUpdates.map(_.uriId)
       futureResult tap (_.onFailure {
@@ -53,10 +53,15 @@ class NormalizationServiceImpl @Inject() (
     }
   }
 
-  private def processUpdate(currentReference: NormalizationReference, candidates: NormalizationCandidate*): Future[Option[NormalizationReference]] = timing(s"NormalizationService.processUpdate.${currentReference.url}") {
+  private def processUpdate(currentReference: NormalizationReference, candidates: Set[NormalizationCandidate]): Future[Option[NormalizationReference]] = timing(s"NormalizationService.processUpdate.${currentReference.url}") {
     val now = currentDateTime
     val recentFailedChecks = db.readOnlyReplica { implicit s => failedContentCheckRepo.getRecentCountByURL(currentReference.url, now.minusMinutes(5)) }
-    if (recentFailedChecks > 10) {
+    val somethingBadIsHappening = {
+      // Léo: Please improve/fix this properly
+      currentReference.url.length >= URLFactory.MAX_URL_SIZE || candidates.exists(_.url.length >= URLFactory.MAX_URL_SIZE)
+    }
+    if (recentFailedChecks > 10 || somethingBadIsHappening) {
+      log.warn(s"[NormalizationService] Stopping normalization for ${currentReference.uriId}. ${currentReference.url}. Candidates: ${candidates.map(_.url).mkString("  ")}")
       Future.successful(None)
     } else {
       log.debug(s"[processUpdate($currentReference,${candidates.mkString(",")})")
@@ -80,8 +85,8 @@ class NormalizationServiceImpl @Inject() (
     }
   }
 
-  private def getRelevantCandidates(currentReference: NormalizationReference, candidates: Seq[NormalizationCandidate]): Seq[NormalizationCandidate] = timing(s"NormalizationService.getRelevantCandidates.${currentReference.url}") {
-    val prenormalizedCandidates = candidates.map {
+  private def getRelevantCandidates(currentReference: NormalizationReference, candidates: Set[NormalizationCandidate]): Set[NormalizationCandidate] = timing(s"NormalizationService.getRelevantCandidates.${currentReference.url}") {
+    val prenormalizedCandidates: Set[NormalizationCandidate] = candidates.map {
       case verifiedCandidate: VerifiedCandidate => Success(verifiedCandidate)
       case ScrapedCandidate(url, normalization) => prenormalize(url).map(ScrapedCandidate(_, normalization))
       case AlternateCandidate(url, normalization) => prenormalize(url).map(AlternateCandidate(_, normalization))
@@ -111,8 +116,10 @@ class NormalizationServiceImpl @Inject() (
 
   private case class FindStrongerCandidate(currentReference: NormalizationReference, action: NormalizationCandidate => Action) {
 
-    def apply(candidates: Seq[NormalizationCandidate]): Future[(Option[NormalizationCandidate], Seq[NormalizationCandidate])] =
-      findCandidate(candidates.sortBy(_.normalization).reverse)
+    def apply(candidates: Set[NormalizationCandidate]): Future[(Option[NormalizationCandidate], Seq[NormalizationCandidate])] = {
+      val sortedCandidates = candidates.toSeq.sortBy(_.normalization).reverse
+      findCandidate(sortedCandidates)
+    }
 
     def findCandidate(orderedCandidates: Seq[NormalizationCandidate]): Future[(Option[NormalizationCandidate], Seq[NormalizationCandidate])] = {
       orderedCandidates match {
@@ -190,7 +197,7 @@ class NormalizationServiceImpl @Inject() (
     val additionalUpdatesOption = newReferenceOption.map { newReference =>
       val newReferenceCandidate = VerifiedCandidate(newReference.url, newReference.normalization.get)
       getURIsToBeFurtherUpdated(currentReference, newReference).map { uri =>
-        processUpdate(NormalizationReference(uri), newReferenceCandidate)
+        processUpdate(NormalizationReference(uri), Set(newReferenceCandidate))
       }
     }
 

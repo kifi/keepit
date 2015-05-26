@@ -1,20 +1,13 @@
 package com.keepit.model
 
-import com.google.inject.{ ImplementedBy, Provider, Inject, Singleton }
+import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.db.slick._
-import com.keepit.common.net.URIParser
 import com.keepit.common.time._
-import com.keepit.common.db.{ ExternalId, State, SequenceNumber, Id }
+import com.keepit.common.db.{ State, SequenceNumber, Id }
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.logging.Logging
 import org.joda.time.DateTime
-import com.keepit.normalizer._
-import org.feijoas.mango.common.cache._
-import NormalizedURIStates._
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.queue._
-import scala.slick.jdbc.StaticQuery
-import com.keepit.model.serialize.UriIdAndSeq
 import com.keepit.common.strings._
 
 class UriInternException(msg: String, cause: Throwable) extends Exception(msg, cause)
@@ -24,8 +17,8 @@ trait NormalizedURIRepo extends DbRepo[NormalizedURI] with ExternalIdColumnDbFun
   def allActive()(implicit session: RSession): Seq[NormalizedURI]
   def getByState(state: State[NormalizedURI], limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI]
   def getIndexable(sequenceNumber: SequenceNumber[NormalizedURI], limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI]
+  def getIndexablesWithContent(sequenceNumber: SequenceNumber[NormalizedURI], limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI]
   def getChanged(sequenceNumber: SequenceNumber[NormalizedURI], includeStates: Set[State[NormalizedURI]], limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI]
-  def getIdAndSeqChanged(sequenceNumber: SequenceNumber[NormalizedURI], limit: Int = -1)(implicit session: RSession): Seq[UriIdAndSeq]
   def getCurrentSeqNum()(implicit session: RSession): SequenceNumber[NormalizedURI]
   def getByNormalizedUrl(normalizedUrl: String)(implicit session: RSession): Option[NormalizedURI]
   def getByNormalizedUrls(normalizedUrls: Seq[String])(implicit session: RSession): Map[String, NormalizedURI]
@@ -33,7 +26,6 @@ trait NormalizedURIRepo extends DbRepo[NormalizedURI] with ExternalIdColumnDbFun
   def save(uri: NormalizedURI)(implicit session: RWSession): NormalizedURI
   def toBeRemigrated()(implicit session: RSession): Seq[NormalizedURI]
   def updateURIRestriction(id: Id[NormalizedURI], r: Option[Restriction])(implicit session: RWSession): Unit
-  def updateScreenshotUpdatedAt(id: Id[NormalizedURI], time: DateTime)(implicit session: RWSession): Unit
   def getRestrictedURIs(targetRestriction: Restriction)(implicit session: RSession): Seq[NormalizedURI]
   def checkRecommendable(uriIds: Seq[Id[NormalizedURI]])(implicit session: RSession): Seq[Boolean]
   def getFromId(fromId: Id[NormalizedURI])(implicit session: RSession): Seq[NormalizedURI]
@@ -56,12 +48,12 @@ class NormalizedURIRepoImpl @Inject() (
     def title = column[Option[String]]("title", O.Nullable)
     def url = column[String]("url", O.NotNull)
     def urlHash = column[UrlHash]("url_hash", O.NotNull)
-    def screenshotUpdatedAt = column[Option[DateTime]]("screenshot_updated_at", O.Nullable)
     def restriction = column[Option[Restriction]]("restriction", O.Nullable)
     def normalization = column[Option[Normalization]]("normalization", O.Nullable)
     def redirect = column[Option[Id[NormalizedURI]]]("redirect", O.Nullable)
     def redirectTime = column[Option[DateTime]]("redirect_time", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, externalId, title, url, urlHash, state, seq, screenshotUpdatedAt, restriction, normalization, redirect, redirectTime) <> ((NormalizedURI.apply _).tupled, NormalizedURI.unapply _)
+    def shouldHaveContent = column[Boolean]("should_have_content", O.NotNull)
+    def * = (id.?, createdAt, updatedAt, externalId, title, url, urlHash, state, seq, restriction, normalization, redirect, redirectTime, shouldHaveContent) <> ((NormalizedURI.apply _).tupled, NormalizedURI.unapply _)
   }
 
   def table(tag: Tag) = new NormalizedURITable(tag)
@@ -71,20 +63,15 @@ class NormalizedURIRepoImpl @Inject() (
     super.getBySequenceNumber(sequenceNumber, limit)
   }
 
+  def getIndexablesWithContent(sequenceNumber: SequenceNumber[NormalizedURI], limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI] = {
+    val excludeStates = Set(NormalizedURIStates.INACTIVE, NormalizedURIStates.REDIRECTED) // todo(Léo): Just include ACTIVE once other states are gone
+    val q = (for (f <- rows if f.seq > sequenceNumber && !f.state.inSet(excludeStates) && f.shouldHaveContent) yield f)
+    q.sortBy(_.seq).take(limit).list
+  }
+
   def getChanged(sequenceNumber: SequenceNumber[NormalizedURI], states: Set[State[NormalizedURI]], limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI] = {
     val q = (for (f <- rows if f.seq > sequenceNumber && f.state.inSet(states)) yield f).sortBy(_.seq)
     (if (limit >= 0) q.take(limit) else q).list
-  }
-
-  def getIdAndSeqChanged(sequenceNumber: SequenceNumber[NormalizedURI], limit: Int = -1)(implicit session: RSession): Seq[UriIdAndSeq] = {
-    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    sql"""
-      select id, seq from normalized_uri
-      where seq > ${sequenceNumber.value}
-            and state in ('#${NormalizedURIStates.SCRAPED.value}', '#${NormalizedURIStates.SCRAPE_FAILED.value}', '#${NormalizedURIStates.UNSCRAPABLE.value}')
-      limit $limit""".as[(Long, Long)].list.map {
-      case (id, seq) => UriIdAndSeq(Id[NormalizedURI](id), SequenceNumber[NormalizedURI](seq))
-    }.sortBy(_.seq)
   }
 
   override def getCurrentSeqNum()(implicit session: RSession): SequenceNumber[NormalizedURI] = {
@@ -96,13 +83,13 @@ class NormalizedURIRepoImpl @Inject() (
       deleteCache(uri)
     } else {
       uri.id map { id => idCache.set(NormalizedURIKey(id), uri) }
-      urlHashCache.set(NormalizedURIUrlHashKey(NormalizedURI.hashUrl(uri.url)), uri)
+      urlHashCache.set(NormalizedURIUrlHashKey(UrlHash.hashUrl(uri.url)), uri)
     }
   }
 
   override def deleteCache(uri: NormalizedURI)(implicit session: RSession): Unit = {
     uri.id map { id => idCache.remove(NormalizedURIKey(id)) }
-    urlHashCache.remove(NormalizedURIUrlHashKey(NormalizedURI.hashUrl(uri.url)))
+    urlHashCache.remove(NormalizedURIUrlHashKey(UrlHash.hashUrl(uri.url)))
   }
 
   override def get(id: Id[NormalizedURI])(implicit session: RSession): NormalizedURI = {
@@ -151,14 +138,14 @@ class NormalizedURIRepoImpl @Inject() (
   }
 
   def getByNormalizedUrl(normalizedUrl: String)(implicit session: RSession): Option[NormalizedURI] = {
-    val hash = NormalizedURI.hashUrl(normalizedUrl)
+    val hash = UrlHash.hashUrl(normalizedUrl)
     urlHashCache.getOrElseOpt(NormalizedURIUrlHashKey(hash)) {
       (for (t <- rows if t.urlHash === hash) yield t).firstOption
     }
   }
 
   def getByNormalizedUrls(normalizedUrls: Seq[String])(implicit session: RSession): Map[String, NormalizedURI] = {
-    val hashes = normalizedUrls.map(NormalizedURI.hashUrl(_)).toSet
+    val hashes = normalizedUrls.map(UrlHash.hashUrl(_)).toSet
     val result = urlHashCache.bulkGetOrElseOpt(hashes map NormalizedURIUrlHashKey) { keys =>
       val urlHashes = keys.map(_.urlHash)
       val fetched = (for (t <- rows if t.urlHash.inSet(urlHashes)) yield t).list.map { u =>
@@ -182,12 +169,6 @@ class NormalizedURIRepoImpl @Inject() (
     val newSeq = deferredSeqNum()
     q.update(r, newSeq)
     invalidateCache(get(id).copy(restriction = r, seq = newSeq))
-  }
-
-  def updateScreenshotUpdatedAt(id: Id[NormalizedURI], time: DateTime)(implicit session: RWSession) = {
-    val updateTime = clock.now
-    (for { t <- rows if t.id === id } yield (t.updatedAt, t.screenshotUpdatedAt)).update((updateTime, Some(time)))
-    invalidateCache(get(id).copy(updatedAt = updateTime, screenshotUpdatedAt = Some(time)))
   }
 
   def getRestrictedURIs(targetRestriction: Restriction)(implicit session: RSession): Seq[NormalizedURI] = {

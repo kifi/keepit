@@ -6,7 +6,7 @@ import com.keepit.common.time.currentDateTime
 import com.keepit.curator.model.{ PublicFeedRepo, UriRecommendationRepo }
 import org.joda.time.DateTime
 import com.keepit.common.time._
-import scala.util.{ Failure, Random }
+import scala.util.{ Failure }
 import com.keepit.common.logging.{ NamedStatsdTimer, Logging }
 
 class RecommendationCleanupCommander @Inject() (
@@ -17,13 +17,15 @@ class RecommendationCleanupCommander @Inject() (
 
   private val recosTTL = 30 // days (by updateAt)
   private val defaultLimitNumRecosForUser = 300
+  private val timeSlicer = new TimeSlicer(clock)
+
   def cleanup(overrideLimit: Option[Int] = None, overrideTimeCutoff: Option[DateTime] = None, useSubset: Boolean = true): Unit = {
     val usersWithReco = db.readOnlyReplica { implicit session => uriRecoRepo.getUsersWithRecommendations() }.toSeq
-    val (idx, ringSize) = getIndexAndTotalSize
+    val (idx, ringSize) = timeSlicer.getSliceAndSize(TimeToSliceInDays.ONE_WEEK, OneSliceInMinutes(CuratorTasksPlugin.CLEAN_FREQ))
     val userToClean = if (useSubset) usersWithReco.filter(_.id % ringSize == idx) else usersWithReco
 
     val timer = new NamedStatsdTimer("RecommendationCleanupCommander.cleanup")
-    log.info(s"Running Uri Reco Cleanup for ${userToClean.size} users. slice $idx out of $ringSize")
+    log.info(s"Running Uri Reco Cleanup for ${userToClean.size} users. slice $idx out of $ringSize. Users are ${userToClean.take(5).mkString(", ")} ...")
 
     db.readWriteBatch(userToClean) { (session, userId) =>
       uriRecoRepo.cleanupOldRecos(userId, currentDateTime.minusDays(recosTTL))(session)
@@ -36,15 +38,5 @@ class RecommendationCleanupCommander @Inject() (
         }
     }
     timer.stopAndReport(appLog = true)
-  }
-
-  // approximately goes through everyone in 4 weeks. 4 * 7 * slicesPerDay buckets. about 8K buckets with current setting.
-  private def getIndexAndTotalSize: (Int, Int) = {
-    val t = clock.now()
-    val callFreq = 5 // scheduler calls this every 5 minutes.
-    val slicesPerDay = 60 * 24 / callFreq
-    val (wi, di, mi) = (t.weekOfWeekyear.get % 4, t.dayOfWeek.get % 7, (t.minuteOfDay.get / callFreq) % slicesPerDay)
-    val idx = wi * (7 * slicesPerDay) + di * slicesPerDay + mi
-    (idx, 4 * 7 * slicesPerDay)
   }
 }

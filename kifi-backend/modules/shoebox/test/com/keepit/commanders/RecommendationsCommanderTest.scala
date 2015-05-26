@@ -10,12 +10,12 @@ import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.FakeShoeboxStoreModule
+import com.keepit.common.time._
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.curator.model._
 import com.keepit.curator.{ FakeCuratorServiceClientModule, FakeCuratorServiceClientImpl, CuratorServiceClient }
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.model._
-import com.keepit.scraper.{ FakeScraperServiceClientModule, FakeScrapeSchedulerModule }
 import com.keepit.search.augmentation._
 import com.keepit.search.{ SearchServiceClient, FakeSearchServiceClient, FakeSearchServiceClientModule }
 import com.keepit.shoebox.FakeShoeboxServiceModule
@@ -45,10 +45,13 @@ class RecommendationsCommanderTest extends Specification with ShoeboxTestInjecto
   }
 
   val fakeSearch = new FakeSearchServiceClient() {
-    private val info = LimitedAugmentationInfo(keepers = Seq(Id[User](1)),
+    val now = currentDateTime
+    private val info = LimitedAugmentationInfo(
+      None,
+      keepers = Seq(Id[User](1) -> now),
       keepersOmitted = 0,
       keepersTotal = 1,
-      libraries = Seq((Id[Library](1), Id[User](1))),
+      libraries = Seq((Id[Library](1), Id[User](1), now)),
       librariesOmitted = 0,
       librariesTotal = 1,
       tags = Seq(),
@@ -74,14 +77,12 @@ class RecommendationsCommanderTest extends Specification with ShoeboxTestInjecto
     FakeCuratorServiceClientModule(),
     FakeSearchServiceClientModule(),
     FakeShoeboxServiceModule(),
-    FakeScrapeSchedulerModule(),
     FakeShoeboxStoreModule(),
     FakeHttpClientModule(),
     FakeSocialGraphModule(),
     FakeHeimdalServiceClientModule(),
     FakeMailModule(),
     FakeCortexServiceClientModule(),
-    FakeScraperServiceClientModule(),
     FakeABookServiceClientModule(),
     FakeUserActionsModule(),
     FakeActorSystemModule()

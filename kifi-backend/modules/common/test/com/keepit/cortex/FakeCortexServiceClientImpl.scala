@@ -1,6 +1,7 @@
 package com.keepit.cortex
 
 import com.keepit.cortex.dbmodel.LDAInfo
+import com.keepit.cortex.models.word2vec.Word2VecKeywords
 
 import scala.concurrent.Future
 import com.keepit.common.db.Id

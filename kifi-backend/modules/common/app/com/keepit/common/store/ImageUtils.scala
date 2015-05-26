@@ -2,6 +2,8 @@ package com.keepit.common.store
 
 import java.awt.image.BufferedImage
 import com.google.inject.Inject
+import com.keepit.common.db.Id
+import play.api.mvc.{ PathBindable, QueryStringBindable }
 
 import scala.util.Try
 import java.io.{ ByteArrayInputStream, ByteArrayOutputStream }
@@ -19,6 +21,7 @@ object ImageSize {
   )(ImageSize.apply _, unlift(ImageSize.unapply))
 
   private val xRe = """(\d{1,5})x(\d{1,5})""".r
+  private def toX(size: ImageSize): String = s"${size.width}x${size.height}"
 
   def apply(size: String): ImageSize = {
     val xRe(w, h) = size
@@ -26,6 +29,29 @@ object ImageSize {
   }
 
   def apply(bufferedImage: BufferedImage): ImageSize = ImageSize(bufferedImage.getWidth, bufferedImage.getHeight)
+
+  implicit val queryStringBinder = new QueryStringBindable[ImageSize] {
+    private val stringBinder = implicitly[QueryStringBindable[String]]
+    override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, ImageSize]] = {
+      stringBinder.bind(key, params) map {
+        case Right(xRe(w, h)) => Right(ImageSize(w.toInt, h.toInt))
+        case _ => Left("Unable to bind an image size")
+      }
+    }
+    override def unbind(key: String, size: ImageSize): String = {
+      stringBinder.unbind(key, toX(size))
+    }
+  }
+
+  implicit val pathBinder = new PathBindable[ImageSize] {
+    private val stringBinder = implicitly[PathBindable[String]]
+    override def bind(key: String, value: String): Either[String, ImageSize] =
+      stringBinder.bind(key, value) match {
+        case Right(xRe(w, h)) => Right(ImageSize(w.toInt, h.toInt))
+        case _ => Left("Unable to bind an image size")
+      }
+    override def unbind(key: String, size: ImageSize): String = toX(size)
+  }
 }
 
 //                        w

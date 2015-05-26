@@ -2,8 +2,8 @@
 
 angular.module('kifi')
 
-.factory('Clutch', ['$q', '$timeout', 'util',
-  function ($q, $timeout, util) {
+.factory('Clutch', ['$q', '$timeout', 'util', '$window',
+  function ($q, $timeout, util, $window) {
 
     var defaultConfig = {
       remoteError: 'ignore',
@@ -88,7 +88,7 @@ angular.module('kifi')
 
     function stringize(args) {
       // todo check if already array
-      return JSON.stringify(Array.prototype.slice.call(args));
+      return $window.JSON.stringify(Array.prototype.slice.call(args));
     }
 
     function isExpired(hitTime, duration) {

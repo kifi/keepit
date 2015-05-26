@@ -7,7 +7,6 @@ import com.keepit.common.healthcheck._
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
-import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.shoebox.FakeKeepImportsModule
 import com.keepit.test._
 import net.codingwell.scalaguice.ScalaModule
@@ -20,7 +19,6 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
 
   def modules: Seq[ScalaModule] = Seq(
     FakeKeepImportsModule(),
-    FakeScrapeSchedulerModule(),
     FakeABookServiceClientModule(),
     FakeSocialGraphModule()
   )
@@ -164,13 +162,12 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
         raw === deduped
 
         val (bookmarks, _) = bookmarkInterner.internRawBookmarks(raw, user.id.get, library, KeepSource.email)
-        fakeAirbrake.errorCount() === 0
-        bookmarks.size === 3
+        fakeAirbrake.errorCount() === 2
+        bookmarks.size === 2
         db.readWrite { implicit session =>
-          keepRepo.all.size === 3
+          keepRepo.all.size === 2
           keepRepo.all.map(_.url).toSet === Set[String](
             "http://42go.com",
-            ("http://kifi.com/" + List.fill(300)("this_is_a_very_long_url/").mkString).take(URLFactory.MAX_URL_SIZE),
             "http://kifi.com")
         }
       }

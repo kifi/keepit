@@ -30,6 +30,7 @@ trait RawSeedItemRepo extends DbRepo[RawSeedItem] with SeqNumberFunction[RawSeed
   def getFirstByUriId(uriId: Id[NormalizedURI])(implicit session: RSession): Option[RawSeedItem]
   def getByTopPriorScore(userId: Id[User], maxBatchSize: Int)(implicit session: RSession): Seq[RawSeedItem]
   def cleanupBatch(userId: Id[User])(implicit session: RWSession): Unit
+  def cleanup()(implicit session: RWSession): Unit
 }
 
 @Singleton
@@ -150,6 +151,11 @@ class RawSeedItemRepoImpl @Inject() (
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     val cutoff = currentDateTime.minus(org.joda.time.Duration.standardDays(10))
     sqlu"DELETE FROM raw_seed_item WHERE user_id=$userId AND updated_at<=$cutoff LIMIT 250".first
+  }
+
+  def cleanup()(implicit session: RWSession): Unit = {
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
+    sqlu"DELETE FROM raw_seed_item WHERE user_id IS NOT NULL LIMIT 20000".first
   }
 }
 

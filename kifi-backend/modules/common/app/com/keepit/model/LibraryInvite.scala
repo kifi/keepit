@@ -9,6 +9,8 @@ import com.keepit.common.logging.AccessLog
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.time._
 import com.keepit.shoebox.Words
+import com.keepit.social.BasicUser
+import com.kifi.macros.json
 import org.apache.commons.lang3.RandomStringUtils
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
@@ -27,13 +29,15 @@ case class LibraryInvite(
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,
     state: State[LibraryInvite] = LibraryInviteStates.ACTIVE,
-    authToken: String = RandomStringUtils.randomAlphanumeric(32),
-    passPhrase: String = LibraryInvite.generatePassPhrase(),
+    authToken: String = RandomStringUtils.randomAlphanumeric(7),
     message: Option[String] = None) extends ModelWithPublicId[LibraryInvite] with ModelWithState[LibraryInvite] {
 
   def withId(id: Id[LibraryInvite]): LibraryInvite = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime): LibraryInvite = this.copy(updatedAt = now)
   def withState(newState: State[LibraryInvite]): LibraryInvite = this.copy(state = newState)
+
+  def isCollaborator = (access == LibraryAccess.READ_WRITE) || (access == LibraryAccess.READ_INSERT)
+  def isFollower = (access == LibraryAccess.READ_ONLY)
 
   override def toString: String = s"LibraryInvite[id=$id,libraryId=$libraryId,ownerId=$inviterId,userId=$userId,email=$emailAddress,access=$access,state=$state]"
 }
@@ -54,44 +58,35 @@ object LibraryInvite extends ModelWithPublicIdCompanion[LibraryInvite] {
     (__ \ 'updatedAt).format(DateTimeJsonFormat) and
     (__ \ 'state).format(State.format[LibraryInvite]) and
     (__ \ 'authToken).format[String] and
-    (__ \ 'passPhrase).format[String] and
     (__ \ 'message).format[Option[String]]
   )(LibraryInvite.apply, unlift(LibraryInvite.unapply))
 
   implicit def ord: Ordering[LibraryInvite] = new Ordering[LibraryInvite] {
     def compare(x: LibraryInvite, y: LibraryInvite): Int = x.access.priority compare y.access.priority
   }
+}
 
-  def generatePassPhrase(): String = {
-    // each word has length 4-8
-    val randomNoun = Words.nouns(Random.nextInt(Words.nouns.length))
-    val randomAdverb = Words.adverbs(Random.nextInt(Words.adverbs.length))
-    val randomAdjective = Words.adjectives(Random.nextInt(Words.adjectives.length))
-    randomAdverb + " " + randomAdjective + " " + randomNoun
+@json case class LibraryInviteInfo(inviter: BasicUser, access: LibraryAccess, message: Option[String], lastInvite: DateTime)
+object LibraryInviteInfo {
+  def createInfo(invite: LibraryInvite, inviter: BasicUser): LibraryInviteInfo = {
+    LibraryInviteInfo(inviter, invite.access, invite.message, invite.createdAt)
   }
 }
 
-case class HashedPassPhrase(value: String)
-object HashedPassPhrase {
-  implicit def queryStringBinder(implicit stringBinder: QueryStringBindable[String]) = new QueryStringBindable[HashedPassPhrase] {
-    override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, HashedPassPhrase]] = {
-      stringBinder.bind(key, params) map {
-        case Right(phrase) => Right(HashedPassPhrase(phrase))
-        case _ => Left("Not a valid pass phrase")
-      }
-    }
-    override def unbind(key: String, hash: HashedPassPhrase): String = {
-      stringBinder.unbind(key, hash.value)
-    }
-  }
+sealed abstract class LibraryInvitePermissions(val value: String)
 
-  implicit def format: Format[HashedPassPhrase] =
-    Format(__.read[String].map(HashedPassPhrase(_)),
-      new Writes[HashedPassPhrase] { def writes(o: HashedPassPhrase) = JsString(o.value) })
+object LibraryInvitePermissions {
+  case object COLLABORATOR extends LibraryInvitePermissions("collaborator")
+  case object OWNER extends LibraryInvitePermissions("owner")
 
-  def generateHashedPhrase(value: String): HashedPassPhrase = {
-    val cleaned = value.toLowerCase.replaceAll("[^a-z]", "")
-    HashedPassPhrase(CryptoSupport.generateHexSha256(cleaned))
+  implicit def format[T]: Format[LibraryInvitePermissions] =
+    Format(__.read[String].map(LibraryInvitePermissions(_)), new Writes[LibraryInvitePermissions] { def writes(o: LibraryInvitePermissions) = JsString(o.value) })
+
+  def apply(str: String): LibraryInvitePermissions = {
+    str match {
+      case COLLABORATOR.value | "collaborators_allow" | "read_write" => COLLABORATOR
+      case OWNER.value | "owner_only" => OWNER
+    }
   }
 }
 

@@ -9,6 +9,7 @@ import com.keepit.search.user.DeprecatedUserSearchResult
 import com.keepit.typeahead.TypeaheadHit
 import com.keepit.social.{ TypeaheadUserHit, BasicUser }
 import com.keepit.common.healthcheck.BenchmarkResults
+import com.keepit.common.time._
 
 class FakeSearchServiceClient() extends SearchServiceClientImpl(null, null, null) {
 
@@ -60,7 +61,7 @@ class FakeSearchServiceClient() extends SearchServiceClientImpl(null, null, null
 
   override def explainUserResult(query: String, userId: Id[User], resultUserId: Id[User], acceptLangs: Seq[String], debug: Option[String], disablePrefixSearch: Boolean): Future[Html] = ???
 
-  override def dumpLuceneDocument(id: Id[NormalizedURI]): Future[Html] = ???
+  override def dumpLuceneDocument(id: Id[NormalizedURI], deprecated: Boolean): Future[Html] = ???
 
   override def getLibraryDocument(library: DetailedLibraryView): Future[Html] = ???
 
@@ -92,7 +93,8 @@ class FakeSearchServiceClient() extends SearchServiceClientImpl(null, null, null
   var augmentationInfoData: Option[Seq[LimitedAugmentationInfo]] = None
 
   def setKeepers(keeperInfos: (Seq[Id[User]], Int)*) = {
-    val augmentationInfos = keeperInfos.map { case (keepers, keepersTotal) => LimitedAugmentationInfo(keepers, 0, keepersTotal, Seq.empty, 0, 0, Seq.empty, 0) }
+    val now = currentDateTime
+    val augmentationInfos = keeperInfos.map { case (keepers, keepersTotal) => LimitedAugmentationInfo(None, keepers.map((_, now)), 0, keepersTotal, Seq.empty, 0, 0, Seq.empty, 0) }
     augmentationInfoData = Some(augmentationInfos)
   }
   override def augment(userId: Option[Id[User]], showPublishedLibraries: Boolean, maxKeepersShown: Int, maxLibrariesShown: Int, maxTagsShown: Int, items: Seq[AugmentableItem]): Future[Seq[LimitedAugmentationInfo]] = {

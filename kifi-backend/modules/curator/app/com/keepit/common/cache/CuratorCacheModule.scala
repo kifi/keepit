@@ -4,6 +4,8 @@ import com.keepit.curator.model.UserRecoFeedbackCounterUserCache
 import com.keepit.eliza.model.UserThreadStatsForUserIdCache
 import com.keepit.graph.model._
 import com.keepit.model.cache.UserSessionViewExternalIdCache
+import com.keepit.rover.model.{ RoverArticleImagesCache, RoverArticleSummaryCache }
+import com.keepit.shoebox.model.KeepImagesCache
 
 import scala.concurrent.duration._
 import com.google.inject.{ Provides, Singleton }
@@ -44,11 +46,6 @@ case class CuratorCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   @Provides
   def normalizedURICache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
     new NormalizedURICache(stats, accessLog, (outerRepo, 7 days))
-
-  @Singleton
-  @Provides
-  def uriSummaryCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new URISummaryCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 30 days))
 
   @Singleton
   @Provides
@@ -179,5 +176,17 @@ case class CuratorCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   @Provides @Singleton
   def userRecoFeedbackCounterUserCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new UserRecoFeedbackCounterUserCache(stats, accessLog, (innerRepo, 5 minutes), (outerRepo, 30 days))
+
+  @Provides @Singleton
+  def roverArticleSummaryCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new RoverArticleSummaryCache(stats, accessLog, (outerRepo, 30 days))
+
+  @Provides @Singleton
+  def roverArticleImagesCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new RoverArticleImagesCache(stats, accessLog, (outerRepo, 30 days))
+
+  @Provides @Singleton
+  def keepImagesCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new KeepImagesCache(stats, accessLog, (outerRepo, 30 days))
 
 }

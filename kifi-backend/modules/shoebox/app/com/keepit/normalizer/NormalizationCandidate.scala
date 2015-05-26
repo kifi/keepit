@@ -38,7 +38,10 @@ case class UntrustedCandidate(url: String, normalization: Normalization) extends
 
 object NormalizationCandidate {
 
-  val acceptedSubmissions = Seq(Normalization.CANONICAL, Normalization.OPENGRAPH)
+  // Because Scala Sets are invariant.
+  implicit def toSuperTypeSet[C <: NormalizationCandidate](candidates: Set[C]): Set[NormalizationCandidate] = candidates.toSet
+
+  val acceptedSubmissions = Set(Normalization.CANONICAL, Normalization.OPENGRAPH)
 
   // todo(ray/leo): avoid overloading apply()
 
@@ -53,24 +56,18 @@ object NormalizationCandidate {
 
   def unapply(nc: NormalizationCandidate) = Some((nc.candidateType, nc.url, nc.normalization, nc.isTrusted))
 
-  def apply(json: JsObject): Seq[UntrustedCandidate] = {
+  def fromJson(json: JsObject): Set[UntrustedCandidate] = {
     for {
       normalization <- acceptedSubmissions
       url <- (json \ normalization.scheme).asOpt[String]
     } yield UntrustedCandidate(url, normalization)
   }
 
-  def apply(rawBookmark: RawBookmarkRepresentation): Seq[UntrustedCandidate] = {
-    (rawBookmark.canonical.map(UntrustedCandidate(_, Normalization.CANONICAL)) :: rawBookmark.openGraph.map(UntrustedCandidate(_, Normalization.OPENGRAPH)) :: Nil).flatten
+  def fromRawBookmark(rawBookmark: RawBookmarkRepresentation): Set[UntrustedCandidate] = {
+    (rawBookmark.canonical.map(UntrustedCandidate(_, Normalization.CANONICAL)) :: rawBookmark.openGraph.map(UntrustedCandidate(_, Normalization.OPENGRAPH)) :: Nil).flatten.toSet
   }
 
-  def apply(rawKeep: RawKeep): Seq[UntrustedCandidate] = {
-    rawKeep.originalJson.map { json =>
-      val canonical = (json \ Normalization.CANONICAL.scheme).asOpt[String]
-      val openGraph = (json \ Normalization.OPENGRAPH.scheme).asOpt[String]
-      (canonical.map(UntrustedCandidate(_, Normalization.CANONICAL)) :: openGraph.map(UntrustedCandidate(_, Normalization.OPENGRAPH)) :: Nil).flatten
-    }.getOrElse(Nil)
-  }
+  def fromRawKeep(rawKeep: RawKeep): Set[UntrustedCandidate] = rawKeep.originalJson.flatMap(_.asOpt[JsObject]).map(fromJson) getOrElse Set.empty
 
   implicit val format = (
     (__ \ 'candidateType).format[String] and

@@ -6,6 +6,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.net.HttpClient
 import com.keepit.common.routes.Cortex
 import com.keepit.cortex.dbmodel.LDAInfo
+import com.keepit.cortex.models.word2vec.Word2VecKeywords
 import scala.concurrent.Future
 import play.api.libs.json._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext

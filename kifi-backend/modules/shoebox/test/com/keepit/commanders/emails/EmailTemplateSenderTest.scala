@@ -12,7 +12,6 @@ import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.heimdal.{ UserEventTypes, UserEvent, FakeHeimdalServiceClientImpl, HeimdalServiceClient }
 import com.keepit.model.{ UserValueName, UserValueRepo, User, NotificationCategory }
-import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.ProdShoeboxServiceClientModule
 import com.keepit.test.{ ShoeboxTestFactory, ShoeboxTestInjector }
@@ -32,7 +31,6 @@ class EmailTemplateSenderTest extends Specification with ShoeboxTestInjector {
     ProdShoeboxServiceClientModule(),
     FakeSearchServiceClientModule(),
     FakeSocialGraphModule(),
-    FakeScrapeSchedulerModule(),
     FakeABookServiceClientModule(),
     FakeCortexServiceClientModule(),
     FakeCuratorServiceClientModule()

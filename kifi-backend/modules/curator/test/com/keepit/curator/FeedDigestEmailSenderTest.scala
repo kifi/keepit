@@ -1,5 +1,7 @@
 package com.keepit.curator
 
+import com.keepit.common.store.{ ImageSize, FakeStoreModule }
+import com.keepit.curator.store.FakeCuratorStoreModule
 import com.keepit.model.UserFactory._
 import com.google.inject.Injector
 import com.keepit.abook.{ ABookServiceClient, FakeABookServiceClientImpl, FakeABookServiceClientModule }
@@ -19,6 +21,7 @@ import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.graph.FakeGraphServiceModule
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.model._
+import com.keepit.rover.FakeRoverServiceClientModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.social.{ SocialId, SocialNetworks }
@@ -44,7 +47,9 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
     FakeElizaServiceClientModule(),
     FakeABookServiceClientModule(),
     FakeFeedDigestEmailQueueModule(),
-    FakeActorSystemModule())
+    FakeActorSystemModule(),
+    FakeCuratorStoreModule(),
+    FakeRoverServiceClientModule())
 
   implicit def userToIdInt(user: User): Int = user.id.get.id.toInt
 
@@ -123,7 +128,7 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
           makeCompleteUriRecommendation(3, 43, 11f, "http://www.42go.com"),
           makeCompleteUriRecommendation(4, 43, 8.5f, "http://www.yahoo.com"),
           // this isn't in the recommendation list because image width is too small
-          makeCompleteUriRecommendation(5, 43, 9f, "http://www.lycos.com", 250, Some(200)), {
+          makeCompleteUriRecommendation(5, 43, 9f, "http://www.lycos.com", 250, Some(ImageSize(200, 500))), {
             // this isn't in recommendation list b/c it has already been sent
             val tuple = makeCompleteUriRecommendation(6, 42, 9f, "http://www.excite.com")
             tuple.copy(_2 = tuple._2.withLastPushedAt(currentDateTime))
@@ -131,7 +136,7 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
           // shouldn't be in reco list b/c it's below threshold (8)
           makeCompleteUriRecommendation(7, 43, 7.99f, "https://www.bing.com"),
           // shouldn't be in reco list b/c image is too tall
-          makeCompleteUriRecommendation(uriId = 8, userId = 43, masterScore = 9, url = "https://www.youtube.com/watch?v=BROWqjuTM0g", summaryImageHeight = Some(901)), {
+          makeCompleteUriRecommendation(uriId = 8, userId = 43, masterScore = 9, url = "https://www.youtube.com/watch?v=BROWqjuTM0g", imageSize = Some(ImageSize(900, 901))), {
             // shouldn't be in reco list b/c trashed
             val tup = makeCompleteUriRecommendation(9, 42, 10f, "http://www.myspace.com")
             tup.copy(_2 = tup._2.copy(trashed = true))
@@ -175,7 +180,7 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
         val mail42body = mail42.htmlBody.value
         val mail42text = mail42.textBody.get.value
         // checking the domain-to-name mapper
-        mail42body must contain(">www.kifi&#8203;.com<")
+        mail42body must contain(">Kifi<")
         mail42body must contain(">Google<")
 
         // check that uri's for the recos are in the emails
@@ -227,10 +232,10 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
             val freshReco = inject[UriRecommendationRepo].get(reco.id.get)
             if (sentRecoIds.contains(uri.id.get.id)) {
               freshReco.lastPushedAt must beSome
-              freshReco.delivered === 1
+              freshReco.viewed === 1
             } else {
               freshReco.lastPushedAt must (if (reco.id.get.id == 6L) beSome else beNone)
-              freshReco.delivered === 0
+              freshReco.viewed === 0
             }
           }
         }

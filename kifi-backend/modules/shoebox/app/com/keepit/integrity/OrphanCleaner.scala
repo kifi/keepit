@@ -17,7 +17,8 @@ class OrphanCleaner @Inject() (
     val normUriRepo: NormalizedURIRepo,
     libraryRepo: LibraryRepo,
     centralConfig: CentralConfig,
-    val airbrake: AirbrakeNotifier) extends UriIntegrityChecker {
+    val airbrake: AirbrakeNotifier,
+    uriIntegrityHelpers: UriIntegrityHelpers) extends UriIntegrityChecker {
 
   case class OrphanCleanerSequenceNumberKey[T](seqKey: String) extends SequenceNumberCentralConfigKey[T] {
     val longKey = new LongCentralConfigKey {
@@ -115,20 +116,27 @@ class OrphanCleaner @Inject() (
       }
 
       db.readWriteSeq(bookmarks, collector) { (s, bookmark) =>
-        bookmark.libraryId match {
-          case Some(libId) =>
-            val library = libraryRepo.get(libId)(s)
-            if (library.visibility != bookmark.visibility) {
-              log.error(s"Bookmark ${bookmark.id.get} has inconsistent visibility with library ${library.id.get}. Expected: ${bookmark.visibility} Actual: ${library.visibility}")
-              keepRepo.save(bookmark.copy(visibility = library.visibility))(s)
-            }
-          case _ =>
+        implicit val session = s
+        val hasUpdatedUri = bookmark.state match {
+          case KeepStates.ACTIVE => checkIntegrity(bookmark.uriId, readOnly, hasKnownKeep = true)
+          case KeepStates.INACTIVE => checkIntegrity(bookmark.uriId, readOnly)
+          case KeepStates.DUPLICATE => checkIntegrity(bookmark.uriId, readOnly)
         }
-        bookmark.state match {
-          case KeepStates.ACTIVE => checkIntegrity(bookmark.uriId, readOnly, hasKnownKeep = true)(s)
-          case KeepStates.INACTIVE => checkIntegrity(bookmark.uriId, readOnly)(s)
-          case KeepStates.DUPLICATE => checkIntegrity(bookmark.uriId, readOnly)(s)
+
+        val improvedBookmark = {
+          val uri = normUriRepo.get(bookmark.uriId)
+          uriIntegrityHelpers.improveKeepSafely(uri, bookmark)
         }
+
+        val correctVisibility = bookmark.libraryId.map(libraryRepo.get(_).visibility) getOrElse bookmark.visibility
+        if (correctVisibility != bookmark.visibility) {
+          log.error(s"Keep ${bookmark.id.get} has inconsistent visibility with its library ${bookmark.libraryId}. Expected: ${bookmark.visibility} Actual: ${correctVisibility}")
+        }
+
+        val updatedBookmark = improvedBookmark.copy(visibility = correctVisibility)
+        if (bookmark != updatedBookmark) { keepRepo.save(updatedBookmark) }
+
+        hasUpdatedUri
       }
       if (!done && !readOnly) centralConfig.update(bookmarkSeqKey, seq) // update high watermark
     }
@@ -184,25 +192,11 @@ trait UriIntegrityChecker extends Logging {
 
     if (isActuallyKept) {
       // Make sure the uri is not inactive
-      currentUri match {
-        case scrapedUri if scrapedUri.state == NormalizedURIStates.SCRAPED || scrapedUri.state == NormalizedURIStates.SCRAPE_FAILED =>
-          false
-        case uriToBeActive if uriToBeActive.state == NormalizedURIStates.INACTIVE || !NormalizedURIStates.DO_NOT_SCRAPE.contains(uriToBeActive.state) =>
-          if (!readOnly) normUriRepo.save(uriToBeActive.withState(NormalizedURIStates.ACTIVE))
-          true
-        case _ => false
-      }
-    } else {
-      // Make the uri active
-      currentUri match {
-        case scrapedUri if scrapedUri.state == NormalizedURIStates.SCRAPED || scrapedUri.state == NormalizedURIStates.SCRAPE_FAILED =>
-          if (!readOnly) normUriRepo.save(scrapedUri.withState(NormalizedURIStates.ACTIVE))
-          true
-        case scrapedUri if scrapedUri.state == NormalizedURIStates.ACTIVE => // bump up the seq num to sync ScrapeInfo
-          if (!readOnly) normUriRepo.save(scrapedUri.withState(NormalizedURIStates.ACTIVE))
-          true
-        case _ => false
-      }
-    }
+      val newState = if (currentUri.state == NormalizedURIStates.INACTIVE) NormalizedURIStates.ACTIVE else currentUri.state
+      val updatedUri = currentUri.withState(newState).withContentRequest(true)
+      val isActuallyUpdated = currentUri != updatedUri
+      if (!readOnly && isActuallyUpdated) normUriRepo.save(updatedUri)
+      isActuallyUpdated
+    } else false
   }
 }

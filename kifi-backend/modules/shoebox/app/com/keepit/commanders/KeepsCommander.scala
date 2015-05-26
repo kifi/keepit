@@ -434,10 +434,10 @@ class KeepsCommander @Inject() (
   def updateKeepNote(userId: Id[User], oldKeep: Keep, newNote: String)(implicit context: HeimdalContext) = {
     val noteToPersist = Some(newNote.trim).filter(_.nonEmpty)
     if (noteToPersist != oldKeep.note) {
-      val updatedKeep = oldKeep.copy(note = noteToPersist)
+      val updatedKeep = oldKeep.copy(userId = userId, note = noteToPersist)
       val hashtagNamesToPersist = Hashtags.findAllHashtagNames(noteToPersist.getOrElse(""))
       db.readWrite { implicit s =>
-        persistHashtagsForKeep(userId, updatedKeep, hashtagNamesToPersist.toSeq)(s, context)
+        persistHashtagsForKeepAndSaveKeep(userId, updatedKeep, hashtagNamesToPersist.toSeq)(s, context)
       }
     }
   }
@@ -609,7 +609,7 @@ class KeepsCommander @Inject() (
       case Failure(e) => Left(e.getMessage)
       case Success((keep, isNewKeep)) =>
         val tags = db.readWrite { implicit s =>
-          persistHashtags(userId, keep, selectedTagNames)(s, context)
+          persistHashtagsAndSaveKeep(userId, keep, selectedTagNames)(s, context)
           keepToCollectionRepo.getCollectionsForKeep(keep.id.get).map { id => collectionRepo.get(id) }
         }
         postSingleKeepReporting(keep, isNewKeep, library, socialShare)
@@ -617,13 +617,13 @@ class KeepsCommander @Inject() (
     }
   }
 
-  def persistHashtagsForKeep(userId: Id[User], keep: Keep, selectedTagNames: Seq[String])(implicit session: RWSession, context: HeimdalContext) = {
-    persistHashtags(userId, keep, selectedTagNames)(session, context)
+  def persistHashtagsForKeepAndSaveKeep(userId: Id[User], keep: Keep, selectedTagNames: Seq[String])(implicit session: RWSession, context: HeimdalContext) = {
+    persistHashtagsAndSaveKeep(userId, keep, selectedTagNames)(session, context)
     searchClient.updateKeepIndex()
   }
 
   // Changes a keep's notes based on the hashtags to persist!
-  private def persistHashtags(userId: Id[User], keep: Keep, selectedTagNames: Seq[String])(implicit session: RWSession, context: HeimdalContext) = {
+  private def persistHashtagsAndSaveKeep(userId: Id[User], keep: Keep, selectedTagNames: Seq[String])(implicit session: RWSession, context: HeimdalContext) = {
     // get all tags from hashtag names list
     val selectedTags = selectedTagNames.map { getOrCreateTag(userId, _) }
     val selectedTagIds = selectedTags.map(_.id.get).toSet
@@ -674,12 +674,15 @@ class KeepsCommander @Inject() (
     hashtagTypeahead.topN(userId, query, limit).map(_.map(_.info)).map(HashtagHit.highlight(query, _))
   }
 
-  private def searchTagsForKeep(userId: Id[User], keepId: ExternalId[Keep], query: String, limit: Option[Int]): Future[Seq[HashtagHit]] = {
+  private def searchTagsForKeep(userId: Id[User], keepIdOpt: Option[ExternalId[Keep]], query: String, limit: Option[Int]): Future[Seq[HashtagHit]] = {
     val futureHits = searchTags(userId, query, None)
-    val existingTags = db.readOnlyMaster { implicit session =>
-      val keep = keepRepo.get(keepId)
-      collectionRepo.getHashtagsByKeepId(keep.id.get)
-    }
+    val existingTags = keepIdOpt.map { keepId =>
+      db.readOnlyMaster { implicit session =>
+        keepRepo.getOpt(keepId).map { keep =>
+          collectionRepo.getHashtagsByKeepId(keep.id.get)
+        }.getOrElse(Set.empty)
+      }
+    }.getOrElse(Set.empty)
     futureHits.imap { hits =>
       val validHits = hits.filterNot(hit => existingTags.contains(hit.tag))
       limit.map(validHits.take(_)) getOrElse validHits
@@ -705,10 +708,11 @@ class KeepsCommander @Inject() (
     }
   }
 
-  def suggestTags(userId: Id[User], keepId: ExternalId[Keep], query: Option[String], limit: Int): Future[Seq[(Hashtag, Seq[(Int, Int)])]] = {
+  def suggestTags(userId: Id[User], keepIdOpt: Option[ExternalId[Keep]], query: Option[String], limit: Int): Future[Seq[(Hashtag, Seq[(Int, Int)])]] = {
     query.map(_.trim).filter(_.nonEmpty) match {
-      case Some(validQuery) => searchTagsForKeep(userId, keepId, validQuery, Some(limit)).map(_.map(hit => (hit.tag, hit.matches)))
-      case None => suggestTagsForKeep(userId, keepId, Some(limit)).map(_.map((_, Seq.empty[(Int, Int)])))
+      case Some(validQuery) => searchTagsForKeep(userId, keepIdOpt, validQuery, Some(limit)).map(_.map(hit => (hit.tag, hit.matches)))
+      case None if keepIdOpt.isDefined => suggestTagsForKeep(userId, keepIdOpt.get, Some(limit)).map(_.map((_, Seq.empty[(Int, Int)])))
+      case None => Future.successful(Seq.empty) // We don't support this case yet
     }
   }
 

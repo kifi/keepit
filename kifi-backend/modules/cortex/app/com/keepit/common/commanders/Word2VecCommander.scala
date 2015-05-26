@@ -7,7 +7,6 @@ import com.keepit.cortex.utils.TextUtils.TextTokenizer
 import com.keepit.common.db.Id
 import com.keepit.model.NormalizedURI
 import com.keepit.cortex.utils.TextUtils
-import com.keepit.model.Word2VecKeywords
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
 

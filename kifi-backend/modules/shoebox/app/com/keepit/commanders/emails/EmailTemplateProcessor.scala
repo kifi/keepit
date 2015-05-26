@@ -14,7 +14,7 @@ import com.keepit.inject.FortyTwoConfig
 import com.keepit.common.mail.template.{ helpers, EmailLayout, EmailTrackingParam, EmailToSend, TagWrapper, tags, EmailTip }
 import com.keepit.common.mail.template.EmailLayout._
 import com.keepit.common.mail.template.helpers.{ toHttpsUrl, fullName, baseUrl }
-import com.keepit.model.{ Library, LibraryRepo, UserEmailAddressRepo, UserRepo, User }
+import com.keepit.model._
 import com.keepit.social.BasicUser
 import org.jsoup.Jsoup
 import play.api.libs.json.{ Json, JsValue }
@@ -94,8 +94,12 @@ class EmailTemplateProcessorImpl @Inject() (
     templatesF.flatMap[ProcessedEmailResult] { templates =>
       val (htmlBody, textBody) = loadLayout(emailToSend, templates)
 
+      val personalEmailCategories = Seq(NotificationCategory.User.WELCOME, NotificationCategory.User.LIBRARY_INVITATION, NotificationCategory.NonUser.LIBRARY_INVITATION)
+
+      val viaKifiSuffix = if (personalEmailCategories contains emailToSend.category) "" else " (via Kifi)"
+
       val fromName = emailToSend.fromName.collect {
-        case Left(userId) => s"${fullName(userId)} (via Kifi)"
+        case Left(userId) => s"${fullName(userId)}" + viaKifiSuffix
         case Right(fromNameStr) => fromNameStr
       }
 

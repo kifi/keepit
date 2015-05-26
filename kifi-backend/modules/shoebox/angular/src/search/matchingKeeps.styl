@@ -1,17 +1,21 @@
 .kf-smk-head
   position: relative
-  padding: 10px 25px 0 30px
-  box-sizing: border-box
+  padding-top: 10px
+  max-width: 496px  // ideal keep card width
+  margin: 0 auto
 
 .kf-smk-filters
   padding-bottom: 10px
 
 .kf-smk-filter
-  display: inline
   color: #ccc
   text-decoration: none
-  title-text()
-  font-size: 17px
+  font-smoothing: antialiased
+  color: textDarkColor
+  font-size: 14px
+
+  @media (min-width: 480px)
+    font-size: 17px
 
   &.enabled
     color: linkColor

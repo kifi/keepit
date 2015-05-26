@@ -4,7 +4,8 @@ import com.keepit.commanders._
 import com.keepit.common.seo.SiteMapCache
 import com.keepit.controllers.core.StateTokenCache
 import com.keepit.model.cache.UserSessionViewExternalIdCache
-import com.keepit.scraper.UrlSignatureCache
+import com.keepit.rover.model.{ RoverArticleImagesCache, RoverArticleSummaryCache }
+import com.keepit.shoebox.model.KeepImagesCache
 
 import scala.concurrent.duration._
 import com.google.inject.{ Provides, Singleton }
@@ -89,11 +90,6 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   @Provides
   def normalizedURICache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
     new NormalizedURICache(stats, accessLog, (outerRepo, 30 days))
-
-  @Singleton
-  @Provides
-  def uriSummaryCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new URISummaryCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 30 days))
 
   @Singleton
   @Provides
@@ -276,15 +272,6 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
 
   @Singleton
   @Provides
-  def pageInfoUri(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new PageInfoUriCache(stats, accessLog, (outerRepo, 10 days))
-
-  @Provides @Singleton
-  def uriWordCountCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new NormalizedURIWordCountCache(stats, accessLog, (innerRepo, 5 minutes), (outerRepo, 30 days))
-
-  @Singleton
-  @Provides
   def libraryIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new LibraryIdCache(stats, accessLog, (innerRepo, 5 minutes), (outerRepo, 30 days))
 
@@ -389,10 +376,18 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
     new TopFollowedLibrariesCache(stats, accessLog, (innerRepo, 5 minutes), (outerRepo, 12 hours))
 
   @Provides @Singleton
-  def urlSignatureCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new UrlSignatureCache(stats, accessLog, (innerRepo, 5 minutes), (outerRepo, 24 hours))
-
-  @Provides @Singleton
   def twitterHandleCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new TwitterHandleCache(stats, accessLog, (innerRepo, 5 minutes), (outerRepo, 30 days))
+
+  @Provides @Singleton
+  def roverArticleSummaryCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new RoverArticleSummaryCache(stats, accessLog, (outerRepo, 30 days))
+
+  @Provides @Singleton
+  def roverArticleImagesCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new RoverArticleImagesCache(stats, accessLog, (outerRepo, 30 days))
+
+  @Provides @Singleton
+  def keepImagesCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new KeepImagesCache(stats, accessLog, (outerRepo, 30 days))
 }

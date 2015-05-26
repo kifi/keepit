@@ -9,7 +9,7 @@ import scala.util.{ Try }
 
 import com.google.inject.Inject
 import com.keepit.abook.ABookServiceClient
-import com.keepit.commanders.{ AuthCommander, UserCommander }
+import com.keepit.commanders.{ UsernameOps, AuthCommander, UserCommander, LibraryCommander }
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.{ AdminUserActions, UserActionsHelper, UserRequest }
 import com.keepit.common.db._
@@ -96,7 +96,9 @@ class AdminUserController @Inject() (
     userValueRepo: UserValueRepo,
     collectionRepo: CollectionRepo,
     keepToCollectionRepo: KeepToCollectionRepo,
+    heimdalContextBuilder: HeimdalContextBuilderFactory,
     libraryRepo: LibraryRepo,
+    libraryCommander: LibraryCommander,
     libraryMembershipRepo: LibraryMembershipRepo,
     libraryInviteRepo: LibraryInviteRepo,
     invitationRepo: InvitationRepo,
@@ -105,6 +107,7 @@ class AdminUserController @Inject() (
     userPictureRepo: UserPictureRepo,
     basicUserRepo: BasicUserRepo,
     userCredRepo: UserCredRepo,
+    usernameAliasRepo: UsernameAliasRepo,
     userCommander: UserCommander,
     socialUserTypeahead: SocialUserTypeahead,
     kifiUserTypeahead: KifiUserTypeahead,
@@ -409,6 +412,26 @@ class AdminUserController @Inject() (
     userStatisticsPage(page, FakeUsersViewType).map { p => Ok(html.admin.users(p, None)) }
   }
 
+  def createLibrary(userId: Id[User]) = AdminUserPage(parse.tolerantFormUrlEncoded) { implicit request =>
+    val nameOpt = request.body.get("name").flatMap(_.headOption)
+    val visibilityOpt = request.body.get("visibility").flatMap(_.headOption).map(LibraryVisibility(_))
+    val slugOpt = request.body.get("slug").flatMap(_.headOption)
+
+    (nameOpt, visibilityOpt, slugOpt) match {
+      case (Some(name), Some(visibility), Some(slug)) => {
+        val libraryAddRequest = LibraryAddRequest(name, visibility, slug)
+
+        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
+        val result: Either[LibraryFail, Library] = libraryCommander.addLibrary(libraryAddRequest, userId)
+        result match {
+          case Left(fail) => BadRequest(fail.message)
+          case Right(_) => Ok
+        }
+      }
+      case _ => BadRequest("All Fields are required.")
+    }
+  }
+
   def byExperimentUsersView(page: Int, exp: String) = AdminUserPage.async { implicit request =>
     userStatisticsPage(page, ByExperimentUsersViewType(ExperimentType(exp))).map { p => Ok(html.admin.users(p, None)) }
   }
@@ -499,21 +522,65 @@ class AdminUserController @Inject() (
     Redirect(routes.AdminUserController.userView(user1))
   }
 
-  def addExperiment(userId: Id[User], experiment: String) = AdminUserAction { request =>
-    val expType = ExperimentType.get(experiment)
-    db.readWrite { implicit session =>
-      (userExperimentRepo.get(userId, expType, excludeState = None) match {
-        case Some(ue) if ue.isActive => None
-        case Some(ue) => Some(userExperimentRepo.save(ue.withState(UserExperimentStates.ACTIVE)))
-        case None => Some(userExperimentRepo.save(UserExperiment(userId = userId, experimentType = expType)))
-      }) foreach { _ =>
-        val experiments = userExperimentRepo.getUserExperiments(userId)
-        eliza.sendToUser(userId, Json.arr("experiments", experiments.map(_.value)))
-        heimdal.setUserProperties(userId, "experiments" -> ContextList(experiments.map(exp => ContextStringData(exp.value)).toSeq))
-      }
-      userRepo.save(userRepo.getNoCache(userId)) // update user index sequence number
+  def addExperimentAction(userId: Id[User], experiment: String) = AdminUserAction { request =>
+    addExperiment(requesterUserId = request.userId, userId, experiment) match {
+      case Right(expType) => Ok(Json.obj(experiment -> true))
+      case Left(s) => Forbidden
     }
-    Ok(Json.obj(experiment -> true))
+  }
+
+  def isSuperAdmin(userId: Id[User]) = {
+    val SUPER_ADMIN_SET: Set[Id[User]] = Set(Id[User](1), Id[User](3))
+    SUPER_ADMIN_SET contains userId
+  }
+
+  def isAdminExperiment(expType: ExperimentType) = expType == ExperimentType.ADMIN
+
+  def addExperiment(requesterUserId: Id[User], userId: Id[User], experiment: String): Either[String, ExperimentType] = {
+    val expType = ExperimentType.get(experiment)
+    if (isAdminExperiment(expType) && !isSuperAdmin(requesterUserId)) {
+      Left("Failure")
+    } else {
+      db.readWrite { implicit session =>
+        (userExperimentRepo.get(userId, expType, excludeState = None) match {
+          case Some(ue) if ue.isActive => None
+          case Some(ue) => Some(userExperimentRepo.save(ue.withState(UserExperimentStates.ACTIVE)))
+          case None => Some(userExperimentRepo.save(UserExperiment(userId = userId, experimentType = expType)))
+        }) foreach { _ =>
+          val experiments = userExperimentRepo.getUserExperiments(userId)
+          eliza.sendToUser(userId, Json.arr("experiments", experiments.map(_.value)))
+          heimdal.setUserProperties(userId, "experiments" -> ContextList(experiments.map(exp => ContextStringData(exp.value)).toSeq))
+        }
+        userRepo.save(userRepo.getNoCache(userId)) // update user index sequence number
+      }
+      Right(expType)
+    }
+  }
+
+  def removeExperimentAction(userId: Id[User], experiment: String) = AdminUserAction { request =>
+    removeExperiment(requesterUserId = request.userId, userId, experiment) match {
+      case Right(expType) => Ok(Json.obj(experiment -> false))
+      case Left(s) => Forbidden
+    }
+  }
+
+  def removeExperiment(requesterUserId: Id[User], userId: Id[User], experiment: String): Either[String, ExperimentType] = {
+    val expType = ExperimentType(experiment)
+    if (isAdminExperiment(expType) && !isSuperAdmin(requesterUserId)) {
+      Left("Failure")
+    } else {
+      db.readWrite { implicit session =>
+        val ue: Option[UserExperiment] = userExperimentRepo.get(userId, ExperimentType(experiment))
+        ue foreach { ue =>
+          userExperimentRepo.save(ue.withState(UserExperimentStates.INACTIVE))
+          val experiments = userExperimentRepo.getUserExperiments(userId)
+          eliza.sendToUser(userId, Json.arr("experiments", experiments.map(_.value)))
+          heimdal.setUserProperties(userId, "experiments" -> ContextList(experiments.map(exp => ContextStringData(exp.value)).toSeq))
+          userRepo.save(userRepo.getNoCache(userId)) // update user index sequence number
+        }
+      }
+      Right(expType)
+    }
   }
 
   def changeUsersName(userId: Id[User]) = AdminUserPage { request =>
@@ -580,20 +647,6 @@ class AdminUserController @Inject() (
 
     db.readWrite(implicit s => userRepo.save(userRepo.get(userId).withState(userState)))
     Ok
-  }
-
-  def removeExperiment(userId: Id[User], experiment: String) = AdminUserAction { request =>
-    db.readWrite { implicit session =>
-      val ue: Option[UserExperiment] = userExperimentRepo.get(userId, ExperimentType(experiment))
-      ue foreach { ue =>
-        userExperimentRepo.save(ue.withState(UserExperimentStates.INACTIVE))
-        val experiments = userExperimentRepo.getUserExperiments(userId)
-        eliza.sendToUser(userId, Json.arr("experiments", experiments.map(_.value)))
-        heimdal.setUserProperties(userId, "experiments" -> ContextList(experiments.map(exp => ContextStringData(exp.value)).toSeq))
-        userRepo.save(userRepo.getNoCache(userId)) // update user index sequence number
-      }
-    }
-    Ok(Json.obj(experiment -> false))
   }
 
   def refreshAllSocialInfo(userId: Id[User]) = AdminUserPage { implicit request =>
@@ -838,7 +891,13 @@ class AdminUserController @Inject() (
           kifiInstallationRepo.all(userId).foreach { installation => kifiInstallationRepo.save(installation.withState(KifiInstallationStates.INACTIVE)) } // Kifi Installations
           userCredRepo.findByUserIdOpt(userId).foreach { userCred => userCredRepo.save(userCred.copy(state = UserCredStates.INACTIVE)) } // User Credentials
           emailRepo.getAllByUser(userId).foreach { email => emailRepo.save(email.withState(UserEmailAddressStates.INACTIVE)) } // Email addresses
-          userRepo.save(userRepo.get(userId).withState(UserStates.INACTIVE).copy(primaryEmail = None)) // User
+
+          val user = userRepo.get(userId)
+          val newUsername = user.externalId.id // setting old username to something random (UUID should work here)
+          userRepo.save(user.withState(UserStates.INACTIVE).copy(primaryEmail = None, username = Username(newUsername), normalizedUsername = UsernameOps.normalize(newUsername))) // User
+          usernameAliasRepo.getByUserId(userId).foreach { alias => // Usernames
+            usernameAliasRepo.reclaim(alias.username, Some(userId))
+          }
         }
 
         val user = userRepo.get(userId)
@@ -878,10 +937,14 @@ class AdminUserController @Inject() (
     Ok(JsString(inactiveEmail.toString))
   }
 
-  def setUsername(userId: Id[User], username: String, overrideValidityCheck: Boolean = false, overrideProtection: Boolean = false) = AdminUserPage { request =>
-    val res = userCommander.setUsername(userId, Username(username), overrideValidityCheck = overrideValidityCheck, overrideProtection = overrideProtection)
-
-    Ok(res.toString)
+  def setUsername(userId: Id[User]) = AdminUserPage { request =>
+    val username: Option[String] = request.body.asFormUrlEncoded.flatMap(_.get("username").flatMap(_.headOption)).filter(_.length > 0)
+    username.map { newUsername =>
+      userCommander.setUsername(userId, Username(newUsername.trim), overrideValidityCheck = true) match {
+        case Right(_) => Ok
+        case Left(err) => BadRequest(err)
+      }
+    }.getOrElse(BadRequest("No username provided"))
   }
 
   def userLibrariesView(ownerId: Id[User], showSecrets: Boolean = false) = AdminUserPage { implicit request =>

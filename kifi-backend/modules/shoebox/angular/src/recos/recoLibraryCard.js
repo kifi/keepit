@@ -4,9 +4,9 @@ angular.module('kifi')
 
 .directive('kfRecoLibraryCard', [
   '$FB', '$q', '$rootScope', '$timeout', '$twitter', 'env', 'libraryService',
-  'modalService','profileService', 'util',
+  'modalService','profileService', 'URI', 'linkify',
   function ($FB, $q, $rootScope, $timeout, $twitter, env, libraryService,
-    modalService, profileService, util) {
+    modalService, profileService, URI, linkify) {
     return {
       restrict: 'A',
       replace: true,
@@ -29,10 +29,10 @@ angular.module('kifi')
           if (description.length > maxLength) {
             // Try to chop off at a word boundary, using a simple space as the delimiter. Grab the space too.
             var clipLastIndex = description.lastIndexOf(' ', clipLength) + 1 || clipLength;
-            scope.library.shortDescription = util.linkify(description.substr(0, clipLastIndex));
+            scope.library.shortDescription = linkify(description.substr(0, clipLastIndex));
             scope.clippedDescription = true;
           }
-          scope.library.formattedDescription = '<p>' + util.linkify(description).replace(/\n+/g, '<p>');
+          scope.library.formattedDescription = '<p>' + linkify(description).replace(/\n+/g, '<p>');
 
           scope.library.absUrl = env.origin + scope.library.url;
         }
@@ -66,7 +66,7 @@ angular.module('kifi')
 
         scope.shareTwitter = function (event) {
           libraryService.trackEvent('user_clicked_page', scope.library, { type: 'recommendations', action: 'clickedShareTwitter'});
-          event.target.href = 'https://twitter.com/intent/tweet' + util.formatQueryString({
+          event.target.href = 'https://twitter.com/intent/tweet' + URI.formatQueryString({
             original_referer: scope.library.absUrl,
             text: 'Discover this amazing @Kifi library about ' + scope.library.name + '!',
             tw_p: 'tweetbutton',
@@ -74,10 +74,6 @@ angular.module('kifi')
               '?utm_medium=vf_twitter&utm_source=library_share&utm_content=lid_' + scope.library.id +
               '&kcid=na-vf_twitter-library_share-lid_' + scope.library.id
           });
-        };
-
-        scope.alreadyFollowingLibrary = function () {
-          return libraryService.isFollowingLibrary(scope.library);
         };
 
         scope.followLibrary = function () {

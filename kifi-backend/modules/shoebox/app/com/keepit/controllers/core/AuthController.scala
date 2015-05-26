@@ -473,6 +473,9 @@ class AuthController @Inject() (
         case requestNonUser: NonUserRequest[_] =>
           if (requestNonUser.identityOpt.isDefined) {
             val identity = requestNonUser.identityOpt.get
+            if (identity.identityId.userId.trim.isEmpty) {
+              throw new Exception(s"got an identity [$identity] with empty user id for non user from request ${requestNonUser.path} headers ${requestNonUser.headers.toSimpleMap.mkString(",")} body [${requestNonUser.body}]")
+            }
             val loginAndLinkEmail = request.queryString.get("link").map(_.headOption).flatten
             if (loginAndLinkEmail.isDefined || identity.email.exists(e => authCommander.emailAddressMatchesSomeKifiUser(EmailAddress(e)))) {
               // No user exists, but social network identity’s email address matches a Kifi user
@@ -510,7 +513,7 @@ class AuthController @Inject() (
                 val sfi = SocialFinalizeInfo(
                   firstName = User.sanitizeName(identity.firstName),
                   lastName = User.sanitizeName(identity.lastName),
-                  email = EmailAddress(identity.email.getOrElse("")),
+                  email = EmailAddress(identity.email.getOrElse("")), //todo(andrew): is having an empty string for email is the right thing to do at this point???
                   password = password.toCharArray,
                   picToken = None, picHeight = None, picWidth = None, cropX = None, cropY = None, cropSize = None)
 

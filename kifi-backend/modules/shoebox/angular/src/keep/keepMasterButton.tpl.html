@@ -1,8 +1,0 @@
-<button class="kf-button kf-keep-master-btn"
-  ng-class="{'state-kept-private': isKeptPrivate, 'state-kept-public': isKeptPublic, 'state-not-kept': isNotKept}"
-  kf-keep-to-library-widget widget-action-text="Keep" library-click-action="onWidgetLibraryClicked(clickedLibrary)" kept-to-library-ids="keptToLibraryIds"
-  lib-select-down-offset="100" lib-select-max-up-offset="500" lib-select-left-offset="190">
-  <span class="kf-button-icon svg-button-keep-heart-gray" ng-if="isNotKept"></span> <span ng-if="isNotKept">Keep</span>
-  <span class="kf-button-icon svg-button-keep-heart-green" ng-if="isKeptPublic"></span> <span ng-if="isKeptPublic">Kept</span>
-  <span class="kf-button-icon svg-small-lock" ng-if="isKeptPrivate"></span> <span ng-if="isKeptPrivate">Kept Private</span>
-</button>

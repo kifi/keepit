@@ -8,10 +8,10 @@ import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db.slick._
 import com.keepit.common.net._
 import com.keepit.common.performance._
+import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.time._
 import com.keepit.heimdal._
 import com.keepit.model.{ KeepStates, _ }
-import com.keepit.scraper.ScrapeScheduler
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import play.api.mvc.{ Action, AnyContent }
@@ -24,37 +24,34 @@ import scala.concurrent._
 class AdminBookmarksController @Inject() (
   val userActionsHelper: UserActionsHelper,
   db: Database,
-  scraper: ScrapeScheduler,
   keepRepo: KeepRepo,
   uriRepo: NormalizedURIRepo,
   userRepo: UserRepo,
-  scrapeRepo: ScrapeInfoRepo,
   socialUserInfoRepo: SocialUserInfoRepo,
   libraryRepo: LibraryRepo,
-  uriSummaryCommander: URISummaryCommander,
+  keepImageCommander: KeepImageCommander,
+  keywordSummaryCommander: KeywordSummaryCommander,
   libraryCommander: LibraryCommander,
   keepCommander: KeepsCommander,
   collectionCommander: CollectionCommander,
   collectionRepo: CollectionRepo,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
   keepDecorator: KeepDecorator,
-  clock: Clock)
+  clock: Clock,
+  implicit val imageConfig: S3ImageConfig)
     extends AdminUserActions {
 
   private def editBookmark(bookmark: Keep)(implicit request: UserRequest[AnyContent]) = {
     db.readOnlyMaster { implicit session =>
       val uri = uriRepo.get(bookmark.uriId)
       val user = userRepo.get(bookmark.userId)
-      val scrapeInfo = scrapeRepo.getByUriId(bookmark.uriId)
-      val keywordsFut = uriSummaryCommander.getKeywordsSummary(uri.id.get)
-      val imageUrlOptFut = uriSummaryCommander.getURIImage(uri)
+      val keepId = bookmark.id.get
+      val keywordsFut = keywordSummaryCommander.getKeywordsSummary(bookmark.uriId)
+      val imageUrlOpt = keepImageCommander.getBasicImagesForKeeps(Set(keepId)).get(keepId).flatMap(_.get(ProcessedImageSize.Large.idealSize).map(_.path.getUrl))
       val libraryOpt = bookmark.libraryId.map { opt => libraryRepo.get(opt) }
 
-      for {
-        keywords <- keywordsFut
-        imageUrlOpt <- imageUrlOptFut
-      } yield {
-        Ok(html.admin.bookmark(user, bookmark, uri, scrapeInfo, imageUrlOpt.getOrElse(""), "", keywords, libraryOpt))
+      keywordsFut.map { keywords =>
+        Ok(html.admin.bookmark(user, bookmark, uri, imageUrlOpt.getOrElse(""), "", keywords, libraryOpt))
       }
     }
   }
@@ -63,9 +60,6 @@ class AdminBookmarksController @Inject() (
     val url = db.readWrite { implicit s =>
       val uri = uriRepo.get(id)
       uriRepo.save(uri.copy(state = NormalizedURIStates.INACTIVE))
-      scrapeRepo.getByUriId(id) foreach { scrapeInfo =>
-        scrapeRepo.save(scrapeInfo.copy(state = ScrapeInfoStates.INACTIVE))
-      }
       uri.url
     }
     Ok(s"disabling $url")
@@ -108,16 +102,6 @@ class AdminBookmarksController @Inject() (
     bookmarkOpt match {
       case Some(bookmark) => editBookmark(bookmark)
       case None => Future.successful(NotFound(s"No bookmark for id $id"))
-    }
-  }
-
-  def rescrape = AdminUserAction(parse.tolerantJson) { request =>
-    val id = Id[Keep]((request.body \ "id").as[Int])
-    db.readWrite { implicit session =>
-      val bookmark = keepRepo.get(id)
-      val uri = uriRepo.get(bookmark.uriId)
-      scraper.scheduleScrape(uri)
-      Ok(JsObject(Seq("status" -> JsString("ok"))))
     }
   }
 
@@ -175,18 +159,6 @@ class AdminBookmarksController @Inject() (
     }
   }
 
-  def rescrapeFrom(fromId: Id[NormalizedURI]) = AdminUserAction { implicit request =>
-    val uris = db.readOnlyMaster { implicit s =>
-      uriRepo.getFromId(fromId)
-    }
-    db.readWrite { implicit s =>
-      uris.foreach { uri =>
-        scraper.scheduleScrape(uri, clock.now())
-      }
-    }
-    Ok(uris.size.toString)
-  }
-
   def bookmarksView(page: Int = 0) = AdminUserPage.async { implicit request =>
     val PAGE_SIZE = 25
 
@@ -211,19 +183,10 @@ class AdminBookmarksController @Inject() (
           }
         }
 
-        val scrapesFuture = Future {
-          timing("load scrape info") {
-            db.readOnlyReplica { implicit s =>
-              bookmarks map (_.uriId) map scrapeRepo.getByUriId
-            }
-          }
-        }
-
         for {
           users <- usersFuture
           uris <- urisFuture
-          scrapes <- scrapesFuture
-        } yield (users.toList.seq, (bookmarks, uris, scrapes).zipped.toList.seq).zipped.toList.seq
+        } yield (users.toList.seq, (bookmarks, uris).zipped.toList.seq).zipped.toList.seq
       }
     }
 
@@ -270,21 +233,24 @@ class AdminBookmarksController @Inject() (
       keepRepo.getLatestKeepsURIByUser(user, 500, includePrivate = false)
     }.sortBy(x => x.id) // sorting helps s3 performance
 
-    val word2vecFut = uriSummaryCommander.batchGetWord2VecKeywords(uris)
+    val word2vecFut = keywordSummaryCommander.batchGetWord2VecKeywords(uris)
 
-    val embedlyKeys = uris.map { uriId => uriSummaryCommander.getStoredEmbedlyKeywords(uriId) }
+    val embedlyKeysFut = Future.sequence(uris.map { uriId =>
+      keywordSummaryCommander.getFetchedKeywords(uriId).map(_._2)
+    })
 
     val keyCounts = MutableMap.empty[String, Int].withDefaultValue(0)
 
-    word2vecFut.map { word2vecKeys =>
-      (embedlyKeys zip word2vecKeys).map {
-        case (emb, w2v) =>
-          val s1 = emb.map { _.name }.toSet
-          val s2 = w2v.map { _.cosine }.getOrElse(Seq()).toSet
-          val s3 = w2v.map { _.freq }.getOrElse(Seq()).toSet
-          (s1.union(s2.intersect(s3))).foreach { word => keyCounts(word) = keyCounts(word) + 1 }
-      }
-      Ok(html.admin.UserKeywords(user, keyCounts.toArray.sortBy(-1 * _._2).take(100)))
+    (embedlyKeysFut zip word2vecFut).map {
+      case (embedlyKeys, word2vecKeys) =>
+        (embedlyKeys zip word2vecKeys).map {
+          case (emb, w2v) =>
+            val s1 = emb.map { _.name }.toSet
+            val s2 = w2v.map { _.cosine }.getOrElse(Seq()).toSet
+            val s3 = w2v.map { _.freq }.getOrElse(Seq()).toSet
+            (s1.union(s2.intersect(s3))).foreach { word => keyCounts(word) = keyCounts(word) + 1 }
+        }
+        Ok(html.admin.UserKeywords(user, keyCounts.toArray.sortBy(-1 * _._2).take(100)))
     }
   }
 
@@ -296,7 +262,7 @@ class AdminBookmarksController @Inject() (
 
     bmsFut.flatMap { bms =>
       val uris = bms.map { _.uriId }
-      val keywordsFut = Future.sequence(uris.map { uri => uriSummaryCommander.getKeywordsSummary(uri) })
+      val keywordsFut = Future.sequence(uris.map { uri => keywordSummaryCommander.getKeywordsSummary(uri) })
 
       for {
         keywords <- keywordsFut

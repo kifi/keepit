@@ -100,6 +100,24 @@ case class UriScores(
     reducePrecision(topic1Multiplier),
     topic1
   )
+
+  def prettyJson(): JsValue = {
+    val QUOTE = "\""
+    def writeField(name: String, valueOpt: Option[Float]): Option[String] = {
+      valueOpt.map { value => QUOTE + name + QUOTE + ":" + value.toString }
+    }
+
+    def writeIntField(name: String, valueOpt: Option[Int]): Option[String] = {
+      valueOpt.map { value => QUOTE + name + QUOTE + ":" + value.toString }
+    }
+
+    val reduced = this.withReducedPrecision()
+    val lst = List(writeField("s", Some(reduced.socialScore)), writeField("p", Some(reduced.popularityScore)), writeField("oI", Some(reduced.overallInterestScore)), writeField("rI", Some(reduced.recentInterestScore)),
+      writeField("r", Some(reduced.recencyScore)), writeField("g", Some(reduced.priorScore)), writeField("rk", Some(reduced.rekeepScore)), writeField("d", Some(reduced.discoveryScore)),
+      writeField("c", reduced.curationScore), writeField("m", reduced.multiplier), writeField("lb", reduced.libraryInducedScore), writeField("t1m", reduced.topic1Multiplier), writeIntField("t1", reduced.topic1))
+
+    Json.parse(lst.flatten.mkString("{", ",", "}"))
+  }
 }
 
 object UriScores {
@@ -127,7 +145,7 @@ object UriScores {
     }
 
     def writes(obj: UriScores): JsValue = {
-      newFormat.writes(obj.withReducedPrecision)
+      obj.prettyJson()
     }
   }
 }

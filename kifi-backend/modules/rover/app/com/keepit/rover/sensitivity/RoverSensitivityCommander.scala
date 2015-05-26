@@ -5,8 +5,7 @@ import com.keepit.common.cache._
 import com.keepit.common.db.Id
 import com.keepit.common.logging.AccessLog
 import com.keepit.model.NormalizedURI
-import com.keepit.rover.article.{ EmbedlyArticle, Article }
-import com.keepit.rover.commanders.ArticleCommander
+import com.keepit.rover.article.{ ArticleCommander, EmbedlyArticle, Article }
 import com.keepit.search.{ LangDetector, Lang }
 
 import scala.concurrent.{ ExecutionContext, Future }
@@ -20,7 +19,7 @@ class RoverSensitivityCommander @Inject() (
     articleCommander: ArticleCommander,
     private implicit val executionContext: ExecutionContext) {
 
-  def areSensitive(uriIds: Set[Id[NormalizedURI]], getContent: Set[Id[NormalizedURI]] => Map[Id[NormalizedURI], Future[Set[Article]]] = articleCommander.getArticlesByUris): Future[Map[Id[NormalizedURI], Option[Boolean]]] = {
+  def areSensitive(uriIds: Set[Id[NormalizedURI]], getContent: Set[Id[NormalizedURI]] => Map[Id[NormalizedURI], Future[Set[Article]]] = articleCommander.getBestArticleFuturesByUris): Future[Map[Id[NormalizedURI], Option[Boolean]]] = {
     val keys = uriIds.map(UriSensitivityKey.apply)
     import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
     uriSensitivityCache.bulkGetOrElseFutureOpt(keys) { missingKeys =>

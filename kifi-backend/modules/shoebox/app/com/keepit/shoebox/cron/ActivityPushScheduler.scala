@@ -278,8 +278,9 @@ class ActivityPusher @Inject() (
   private def getMessage(userId: Id[User]): (PushNotificationMessage, PushNotificationExperiment) = {
     val canSendLibPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(userId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
     val experiment = if (Random.nextBoolean()) PushNotificationExperiment.Experiment1 else PushNotificationExperiment.Experiment2
-    val libMessage = if (canSendLibPush) getLibraryActivityMessage(experiment, userId) else None
-    val message = libMessage orElse getPersonaActivityMessage(experiment, userId) getOrElse getGeneralMessage(experiment, userId)
+    //val libMessage = if (canSendLibPush) getLibraryActivityMessage(experiment, userId) else None
+    // Removed for now because users can opt in to library update pushes, and this is confusing otherwise. More thought needed?
+    val message = getPersonaActivityMessage(experiment, userId) getOrElse getGeneralMessage(experiment, userId)
     message -> experiment
   }
 

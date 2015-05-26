@@ -2,6 +2,7 @@ package com.keepit.search.augmentation
 
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.model._
+import org.joda.time.DateTime
 import play.api.libs.json._
 import com.keepit.common.json.TupleFormat
 
@@ -18,7 +19,7 @@ object AugmentableItem {
   }
 }
 
-case class RestrictedKeepInfo(id: ExternalId[Keep], keptIn: Option[Id[Library]], keptBy: Option[Id[User]], tags: Set[Hashtag])
+case class RestrictedKeepInfo(id: ExternalId[Keep], keptAt: DateTime, keptIn: Option[Id[Library]], keptBy: Option[Id[User]], note: Option[String], tags: Set[Hashtag])
 
 object RestrictedKeepInfo {
   implicit val format = Json.format[RestrictedKeepInfo]
@@ -83,10 +84,11 @@ object ItemAugmentationResponse {
 }
 
 case class LimitedAugmentationInfo(
-  keepers: Seq[Id[User]],
+  keep: Option[RestrictedKeepInfo],
+  keepers: Seq[(Id[User], DateTime)],
   keepersOmitted: Int,
   keepersTotal: Int,
-  libraries: Seq[(Id[Library], Id[User])],
+  libraries: Seq[(Id[Library], Id[User], DateTime)],
   librariesOmitted: Int,
   librariesTotal: Int,
   tags: Seq[Hashtag],
@@ -94,11 +96,12 @@ case class LimitedAugmentationInfo(
 
 object LimitedAugmentationInfo {
   implicit val format = {
-    implicit val libraryFormat = TupleFormat.tuple2Format[Id[Library], Id[User]]
+    implicit val keeperFormat: Format[(Id[User], DateTime)] = TupleFormat.tuple2Format[Id[User], DateTime]
+    implicit val libraryFormat: Format[(Id[Library], Id[User], DateTime)] = TupleFormat.tuple3Format[Id[Library], Id[User], DateTime]
     Json.format[LimitedAugmentationInfo]
   }
 
-  val empty = LimitedAugmentationInfo(Seq.empty, 0, 0, Seq.empty, 0, 0, Seq.empty, 0)
+  val empty = LimitedAugmentationInfo(None, Seq.empty, 0, 0, Seq.empty, 0, 0, Seq.empty, 0)
 }
 
 case class SharingUserInfo(

@@ -2,24 +2,35 @@
 inviterId: Id[User],
 inviteMsg: Option[String],
 libraryInfo: com.keepit.model.LibraryInfo,
-passPhrase: Option[String],
-authToken: String)
+authToken: String,
+inviteAccess: LibraryAccess)
 @import com.keepit.common.mail.template.helpers._
-@libraryAssetUrl(path: String) = @{assetUrl("library/" + path)}
 @libraryUrl = {@{baseUrl}@{libraryInfo.url}?@{KifiMobileAppLinkFlag.arg}&authToken=@authToken}
 
-@fullName(inviterId) invited you to follow a library on Kifi
-@inviteMsg.map { msg =>
-  "@msg"
+@* setting up message components that depend on conditionals *@
+@salutation = {
+@if(inviteeId.isEmpty) {
+Hello,
+} else {
+Hi @firstName(inviteeId.get),
 }
-@libraryInfo.name
+}
+@emailMessage = {
+@if(inviteAccess == LibraryAccess.READ_ONLY) {
+I'm using Kifi to publish useful links I've collected. Check out the @libraryInfo.name library I created at www.kifi.com@libraryInfo.url
+@libraryInfo.shortDescription.map { description => s"Here's what it's about: $@description" }.getOrElse("")
+} else {
+Please help me build the @libraryInfo.name Kifi library at www.kifi.com@libraryInfo.url, so we can collaborate together. It's a great way to organize the links that we find.
+@libraryInfo.shortDescription.map { description => s"Here's what it's about: $@description" }.getOrElse("")
+}
+}
 
-@libraryInfo.shortDescription.getOrElse("")
-
-@libraryUrl
-@{passPhrase map { phrase =>
-s"Passphrase: $phrase"
-}}
-
-Cheers!
-The Kifi team
+@if(inviteMsg.isEmpty) {
+@salutation
+@emailMessage
+@firstName(inviterId)
+} else {
+@inviteMsg.get
+www.kifi.com@libraryInfo.url
+@firstName(inviterId)
+}

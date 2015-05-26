@@ -3,6 +3,10 @@ package com.keepit.search.controllers.mobile
 import com.keepit.commanders.ProcessedImageSize
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.Id
+import com.keepit.common.json
+import com.keepit.common.store.{ ImageSize, S3ImageConfig }
+import com.keepit.rover.RoverServiceClient
+import com.keepit.rover.model.BasicImages
 import com.keepit.search.augmentation.AugmentationCommander
 import com.keepit.search.engine.SearchFactory
 import com.keepit.search.engine.uri.UriSearchResult
@@ -37,7 +41,9 @@ object MobileSearchController {
 class MobileSearchController @Inject() (
     val userActionsHelper: UserActionsHelper,
     implicit val publicIdConfig: PublicIdConfiguration,
+    implicit val imageConfig: S3ImageConfig,
     val shoeboxClient: ShoeboxServiceClient,
+    rover: RoverServiceClient,
     uriSearchCommander: UriSearchCommander,
     librarySearchCommander: LibrarySearchCommander,
     userSearchCommander: UserSearchCommander,
@@ -132,6 +138,7 @@ class MobileSearchController @Inject() (
     maxUsers: Int,
     userContext: Option[String],
     disablePrefixSearch: Boolean,
+    idealImageSize: Option[ImageSize],
     debug: Option[String]) = UserAction.async { request =>
 
     val acceptLangs = getAcceptLangs(request)
@@ -143,7 +150,7 @@ class MobileSearchController @Inject() (
 
     val futureUriSearchResultJson = if (maxUris <= 0) Future.successful(JsNull) else {
       uriSearchCommander.searchUris(userId, acceptLangs, experiments, query, filterFuture, Future.successful(LibraryContext.None), maxUris, lastUUIDStr, uriContext, None, debugOpt).flatMap { uriSearchResult =>
-        getMobileUriSearchResults(userId, uriSearchResult).imap {
+        getMobileUriSearchResults(userId, uriSearchResult, idealImageSize).imap {
           case (jsHits, users) =>
             Json.obj(
               "uuid" -> uriSearchResult.uuid,
@@ -166,33 +173,35 @@ class MobileSearchController @Inject() (
         val librarySearcher = libraryIndexer.getSearcher
         val libraryRecordsAndVisibilityById = getLibraryRecordsAndVisibility(librarySearcher, librarySearchResult.hits.map(_.id).toSet)
         val futureUsers = shoeboxClient.getBasicUsers(libraryRecordsAndVisibilityById.values.map(_._1.ownerId).toSeq.distinct)
-        val futureLibraryStatistics = shoeboxClient.getBasicLibraryStatistics(libraryRecordsAndVisibilityById.keySet)
-        val futureLibraryImages = shoeboxClient.getLibraryImageUrls(libraryRecordsAndVisibilityById.keySet, ProcessedImageSize.Medium.idealSize) // todo(Léo): Ask for square image
+        val futureLibraryDetails = shoeboxClient.getBasicLibraryDetails(libraryRecordsAndVisibilityById.keySet)
+
         for {
           usersById <- futureUsers
-          libraryStatisticsById <- futureLibraryStatistics
-          libraryImagesById <- futureLibraryImages
+          libraryDetails <- futureLibraryDetails
         } yield {
           val hitsArray = JsArray(librarySearchResult.hits.flatMap { hit =>
             libraryRecordsAndVisibilityById.get(hit.id).map {
               case (library, visibility) =>
                 val owner = usersById(library.ownerId)
-                val path = Library.formatLibraryPath(owner.username, library.slug)
-                val statistics = libraryStatisticsById(library.id)
-                val description = library.description.getOrElse("")
-                val imageUrl = libraryImagesById.get(library.id)
+                val details = libraryDetails(library.id)
+
+                val path = Library.formatLibraryPath(owner.username, details.slug)
+                val description = library.description.orElse(details.description).getOrElse("")
+
                 Json.obj(
                   "id" -> Library.publicId(hit.id),
                   "score" -> hit.score,
                   "name" -> library.name,
                   "description" -> description,
                   "color" -> library.color,
-                  "imageUrl" -> imageUrl,
+                  "imageUrl" -> details.imageUrl,
                   "path" -> path,
                   "visibility" -> visibility,
                   "owner" -> owner,
-                  "memberCount" -> statistics.memberCount,
-                  "keepCount" -> statistics.keepCount
+                  "memberCount" -> (details.numFollowers + details.numCollaborators),
+                  "numFollowers" -> details.numFollowers,
+                  "numCollaborators" -> details.numCollaborators,
+                  "keepCount" -> details.keepCount
                 )
             }
           })
@@ -208,16 +217,19 @@ class MobileSearchController @Inject() (
 
     val futureUserSearchResultJson = if (maxUsers <= 0) Future.successful(JsNull) else {
       userSearchCommander.searchUsers(userId, acceptLangs, experiments, query, filter, userContext, maxUsers, disablePrefixSearch, None, debugOpt, None).flatMap { userSearchResult =>
-        val userIds = userSearchResult.hits.map(_.id).toSet
-        val futureUsers = shoeboxClient.getBasicUsers(userIds.toSeq)
         val futureFriends = searchFactory.getFriends(userId)
+        val userIds = userSearchResult.hits.map(_.id).toSet
         val futureMutualFriendsByUser = searchFactory.getMutualFriends(userId, userIds)
         val futureKeepCountsByUser = shoeboxClient.getKeepCounts(userIds)
         val librarySearcher = libraryIndexer.getSearcher
+        val relevantLibraryRecordsAndVisibility = getLibraryRecordsAndVisibility(librarySearcher, userSearchResult.hits.flatMap(_.library).toSet)
+        val futureUsers = {
+          val libraryOwnerIds = relevantLibraryRecordsAndVisibility.values.map(_._1.ownerId)
+          shoeboxClient.getBasicUsers((userIds ++ libraryOwnerIds).toSeq)
+        }
         val libraryMembershipSearcher = libraryMembershipIndexer.getSearcher
         val publishedLibrariesCountByMember = userSearchResult.hits.map { hit => hit.id -> LibraryMembershipIndexable.countPublishedLibrariesByMember(librarySearcher, libraryMembershipSearcher, hit.id) }.toMap
         val publishedLibrariesCountByOwner = userSearchResult.hits.map { hit => hit.id -> LibraryMembershipIndexable.countPublishedLibrariesByOwner(librarySearcher, libraryMembershipSearcher, hit.id) }.toMap
-        val relevantLibraryRecordsAndVisibity = getLibraryRecordsAndVisibility(librarySearcher, userSearchResult.hits.flatMap(_.library).toSet)
         for {
           keepCountsByUser <- futureKeepCountsByUser
           mutualFriendsByUser <- futureMutualFriendsByUser
@@ -229,10 +241,10 @@ class MobileSearchController @Inject() (
             "hits" -> JsArray(userSearchResult.hits.map { hit =>
               val user = users(hit.id)
               val relevantLibrary = hit.library.flatMap { libraryId =>
-                relevantLibraryRecordsAndVisibity.get(libraryId).map {
+                relevantLibraryRecordsAndVisibility.get(libraryId).map {
                   case (record, visibility) =>
-                    require(record.ownerId == hit.id, "Relevant library owner doesn't match returned user.")
-                    val library = makeBasicLibrary(record, visibility, user)
+                    val owner = users(record.ownerId)
+                    val library = makeBasicLibrary(record, visibility, owner)
                     Json.obj("id" -> library.id, "name" -> library.name, "color" -> library.color, "path" -> library.path, "visibility" -> library.visibility)
                 }
               }
@@ -269,36 +281,50 @@ class MobileSearchController @Inject() (
     }
   }
 
-  private def getMobileUriSearchResults(userId: Id[User], uriSearchResult: UriSearchResult): Future[(Seq[JsValue], Seq[BasicUser])] = {
+  private def getMobileUriSearchResults(userId: Id[User], uriSearchResult: UriSearchResult, idealImageSize: Option[ImageSize]): Future[(Seq[JsValue], Seq[BasicUser])] = {
     if (uriSearchResult.hits.isEmpty) {
       Future.successful((Seq.empty[JsObject], Seq.empty[BasicUser]))
     } else {
 
       val uriIds = uriSearchResult.hits.map(hit => Id[NormalizedURI](hit.id))
-      val futureUriSummaries = shoeboxClient.getUriSummaries(uriIds)
+      val futureUriSummaries = rover.getUriSummaryByUris(uriIds.toSet)
+      val futureKeepImages: Future[Map[Id[Keep], BasicImages]] = {
+        val keepIds = uriSearchResult.hits.flatMap(hit => hit.keepId.map(Id[Keep](_)))
+        shoeboxClient.getKeepImages(keepIds.toSet)
+      }
 
       getAugmentedItems(augmentationCommander)(userId, uriSearchResult).flatMap { augmentedItems =>
         val limitedAugmentationInfos = augmentedItems.map(_.toLimitedAugmentationInfo(maxKeepersShown, maxLibrariesShown, maxTagsShown))
         val allKeepersShown = limitedAugmentationInfos.map(_.keepers)
 
         val futureUsers = {
-          val uniqueKeepersShown = allKeepersShown.flatten.distinct
+          val uniqueKeepersShown = allKeepersShown.flatMap(_.map(_._1)).distinct
           shoeboxClient.getBasicUsers(uniqueKeepersShown)
         }
 
         for {
           summaries <- futureUriSummaries
+          keepImages <- futureKeepImages
           users <- futureUsers
         } yield {
           val jsHits = (uriSearchResult.hits zip limitedAugmentationInfos).map {
             case (hit, limitedInfo) => {
               val uriId = Id[NormalizedURI](hit.id)
+              val summary = summaries.get(uriId)
+              val keepId = hit.keepId.map(Id[Keep](_))
+              val image = (keepId.flatMap(keepImages.get) orElse summary.map(_.images)).flatMap(_.get(idealImageSize.getOrElse(ProcessedImageSize.Medium.idealSize)))
               Json.obj(
                 "title" -> hit.title,
                 "url" -> hit.url,
                 "score" -> hit.finalScore,
-                "summary" -> summaries(uriId),
-                "keepers" -> limitedInfo.keepers.map(users(_).externalId),
+                "summary" -> json.minify(Json.obj(
+                  "title" -> summary.flatMap(_.article.title),
+                  "description" -> summary.flatMap(_.article.description),
+                  "imageUrl" -> image.map(_.path.getUrl),
+                  "imageWidth" -> image.map(_.size.width),
+                  "imageHeight" -> image.map(_.size.height)
+                )),
+                "keepers" -> limitedInfo.keepers.map { case (keeperId, _) => users(keeperId).externalId },
                 "keepersOmitted" -> limitedInfo.keepersOmitted,
                 "keepersTotal" -> limitedInfo.keepersTotal
               )

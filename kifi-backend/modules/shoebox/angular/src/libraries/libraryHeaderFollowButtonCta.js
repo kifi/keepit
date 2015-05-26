@@ -161,8 +161,6 @@ angular.module('kifi')
         var scrollInfo = {top: $window.pageYOffset};
         var winHeight = $window.innerHeight;
 
-        _.extend(scope, _.pick(scope.library.abTestTreatment.data, 'mainHtml', 'quoteHtml', 'quoteAttribution'));
-
         if (!$window.document.hidden) {
           attemptAutoShowAfter(5000);
         }
