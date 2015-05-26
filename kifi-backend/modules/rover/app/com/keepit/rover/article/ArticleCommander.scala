@@ -1,5 +1,7 @@
 package com.keepit.rover.article
 
+import java.net.SocketTimeoutException
+
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.cache._
 import com.keepit.common.core._
@@ -94,13 +96,14 @@ class ArticleCommander @Inject() (
         articleFetcher.fetch(ArticleFetchRequest(kind, url, shouldThrottle = false)).recover {
           case invalidRequest: InvalidFetchRequestException => None
           case invalidResponse: InvalidFetchResponseException[_] => None
+          case socketTimeout: SocketTimeoutException => None
         }
       }
     }
   }
 
   private def isInvalidFetch(failureInfo: String): Boolean = {
-    failureInfo.contains("InvalidFetchResponseException") || failureInfo.contains("InvalidFetchRequestException")
+    failureInfo.contains("InvalidFetchResponseException") || failureInfo.contains("InvalidFetchRequestException") || failureInfo.contains("SocketTimeoutException")
   }
 
   private def getOrElseFetchRecentArticle(info: RoverArticleInfo, recency: Duration, shouldThrottle: Boolean): Future[Option[info.A]] = {
@@ -111,7 +114,7 @@ class ArticleCommander @Inject() (
       }
       case oldArticleOpt => { // never fetched or fetched successfully too long ago
         markAsFetching(info.id.get)
-        fetchAndPersist(info, shouldThrottle)
+        fetchAndPersist(info, shouldThrottle).imap { fetchedArticleOpt => fetchedArticleOpt orElse oldArticleOpt }
       }
     }
   }
