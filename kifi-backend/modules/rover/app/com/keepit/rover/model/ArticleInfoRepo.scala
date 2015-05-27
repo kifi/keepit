@@ -199,12 +199,16 @@ class ArticleInfoRepoImpl @Inject() (
   }
 
   def getRipeForFetching(limit: Int, fetchingForMoreThan: Duration)(implicit session: RSession): Seq[RoverArticleInfo] = {
-    val ripeRows = {
-      val now = clock.now()
-      val lastFetchingTooLongAgo = now minusSeconds fetchingForMoreThan.toSeconds.toInt
-      for (r <- rows if r.state === ArticleInfoStates.ACTIVE && r.nextFetchAt < now && (r.lastFetchingAt.isEmpty || r.lastFetchingAt < lastFetchingTooLongAgo)) yield r
-    }
-    ripeRows.sortBy(r => (r.lastFetchedAt, r.nextFetchAt)).take(limit).list // make sure that articles that have never been scraped are queued first
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
+    val now = clock.now()
+    val lastFetchingTooLongAgo = now minusSeconds fetchingForMoreThan.toSeconds.toInt
+
+    val q = sql"""
+      SELECT *
+      FROM `article_info`
+      WHERE `state` = 'active' AND `next_fetch_at` < $now AND (`last_fetching_at` IS NULL OR `last_fetching_at` < $lastFetchingTooLongAgo) ORDER BY `last_fetched_at`, `next_fetch_at` LIMIT $limit;
+    """
+    q.as[RoverArticleInfo].list
   }
 
   def markAsFetching(ids: Id[RoverArticleInfo]*)(implicit session: RWSession): Unit = updateLastFetchingAt(ids, Some(clock.now()))
