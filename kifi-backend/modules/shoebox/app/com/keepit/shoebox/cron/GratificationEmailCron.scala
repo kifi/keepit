@@ -9,7 +9,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.plugin.{ SchedulingProperties, SchedulerPlugin }
 import com.keepit.common.time._
-import com.keepit.shoebox.cron.GratificationEmailMessage.SendEmails
+import com.keepit.shoebox.cron.GratificationEmailMessage.{ SendEvenEmails, SendOddEmails, SendEmails }
 import us.theatr.akka.quartz.QuartzActor
 import play.api.libs.concurrent.Execution.Implicits._
 
@@ -28,8 +28,14 @@ class GratificationEmailCronPluginImpl @Inject() (
     val utcHourForNoonEasternTime = 12 + -offsetHoursToUtc
     val utcHourFor8pmEasternTime = 8 + -offsetHoursToUtc
 
-    val cronTime = s"0 0 $utcHourForNoonEasternTime-$utcHourFor8pmEasternTime ? * *" // send every hour from 9 am - 5 pm PST (for QA :)
-    cronTaskOnLeader(quartz, actor.ref, cronTime, GratificationEmailMessage.SendEmails)
+    val cronTimeEveryday = s"0 0 $utcHourForNoonEasternTime ? * *" // scheduled to send to QA
+    cronTaskOnLeader(quartz, actor.ref, cronTimeEveryday, GratificationEmailMessage.SendEmails)
+
+    val cronTimeFriday = s"0 0 $utcHourForNoonEasternTime ? * 6"
+    cronTaskOnLeader(quartz, actor.ref, cronTimeEveryday, GratificationEmailMessage.SendOddEmails)
+
+    val cronTimeMonday = s"0 0 $utcHourForNoonEasternTime ? * 2"
+    cronTaskOnLeader(quartz, actor.ref, cronTimeEveryday, GratificationEmailMessage.SendEvenEmails)
   }
 }
 
@@ -43,9 +49,16 @@ class GratificationEmailActor @Inject() (
   def receive = {
     case SendEmails =>
       emailCommander.usersToSendEmailTo.map { ids => ids.foreach { id => emailSender.sendToUser(id, Some(testDestinationEmail)) } } // remove Some(...) upon deployment
+    case SendOddEmails =>
+      emailCommander.usersToSendEmailTo.map { ids => ids.filter { id => id.id % 2 == 1 }.foreach { id => emailSender.sendToUser(id, None) } }
+    case SendEvenEmails =>
+      emailCommander.usersToSendEmailTo.map { ids => ids.filter { id => id.id % 2 == 0 }.foreach { id => emailSender.sendToUser(id, None) } }
   }
 }
 
 object GratificationEmailMessage {
   object SendEmails
+
+  object SendOddEmails // sends emails to odd-id users, for testing
+  object SendEvenEmails // sends emails to even-id users, for testing
 }
