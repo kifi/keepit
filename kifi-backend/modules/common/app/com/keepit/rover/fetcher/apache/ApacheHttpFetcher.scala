@@ -1,5 +1,6 @@
 package com.keepit.rover.fetcher.apache
 
+import java.net.SocketTimeoutException
 import java.util.zip.ZipException
 
 import com.keepit.rover.fetcher._
@@ -63,11 +64,12 @@ class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, conne
     }
   }
 
-  private def execute(request: FetchRequest, disableGzip: Boolean = false): Try[(ApacheFetchRequest, ApacheFetchResponse)] = {
+  private def execute(request: FetchRequest, disableGzip: Boolean = false, retryOnTimeout: Boolean = true): Try[(ApacheFetchRequest, ApacheFetchResponse)] = {
     buildApacheFetchRequest(request, disableGzip).flatMap { apacheRequest =>
       apacheRequest.execute().map((apacheRequest, _))
     } recoverWith {
-      case e: ZipException if (!disableGzip) => execute(request, disableGzip = true) // Retry with gzip compression disabled
+      case z: ZipException if (!disableGzip) => execute(request, disableGzip = true) // Retry with gzip compression disabled
+      case s: SocketTimeoutException if retryOnTimeout => execute(request, disableGzip, retryOnTimeout = false)
       case t: Throwable => Failure(InvalidFetchRequestException(request, t))
     }
   }
