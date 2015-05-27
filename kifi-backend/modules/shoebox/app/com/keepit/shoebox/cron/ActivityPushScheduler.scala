@@ -31,7 +31,6 @@ import scala.concurrent.duration._
 import scala.util.Random
 
 trait PushNotificationMessage
-case class GeneralUpdatePushNotificationMessage(message: String) extends PushNotificationMessage
 case class PersonaActivityPushNotificationMessage(message: String) extends PushNotificationMessage
 case class LibraryPushNotificationMessage(message: String, lib: Library, owner: BasicUser, newKeep: Keep, libraryUrl: String, libImageOpt: Option[LibraryImage]) extends PushNotificationMessage
 
@@ -181,9 +180,6 @@ class ActivityPusher @Inject() (
       case personaMessage: PersonaActivityPushNotificationMessage =>
         log.info(s"pushing general persona activity update to ${activity.userId} [$experimant]: $message")
         elizaServiceClient.sendGeneralPushNotification(activity.userId, personaMessage.message, experimant, SimplePushNotificationCategory.PersonaUpdate, activity.state == ActivityPushTaskStates.NO_DEVICES)
-      case updateMessage: GeneralUpdatePushNotificationMessage =>
-        log.info(s"pushing HailMerry update activity update to ${activity.userId} [$experimant]: $message")
-        elizaServiceClient.sendGeneralPushNotification(activity.userId, updateMessage.message, experimant, SimplePushNotificationCategory.HailMerryUpdate, activity.state == ActivityPushTaskStates.NO_DEVICES)
     }
     res map { deviceCount =>
       log.info(s"push successful to $deviceCount devices")
@@ -217,8 +213,13 @@ class ActivityPusher @Inject() (
   }
 
   private def pushActivity(activity: ActivityPushTask): Unit = {
-    val (message, experimant) = getMessage(activity.userId)
-    pushMessage(activity, message, experimant)
+    getMessage(activity.userId) match {
+      case Some((message, experiment)) =>
+        pushMessage(activity, message, experiment)
+      case None =>
+      // If there's no activity message, we're not sending anything for now.
+    }
+
   }
 
   private def getLibraryActivityMessage(experiment: PushNotificationExperiment, userId: Id[User]): Option[LibraryPushNotificationMessage] = {
@@ -265,23 +266,13 @@ class ActivityPusher @Inject() (
     }
   }
 
-  private def getGeneralMessage(experiment: PushNotificationExperiment, userId: Id[User]): GeneralUpdatePushNotificationMessage = {
-    db.readOnlyReplica { implicit s =>
-      val msg = {
-        if (experiment == PushNotificationExperiment.Experiment1) s"""Your Kifi feed has updates. Check out what's new."""
-        else s"""Kifi has been redesigned! Check it out."""
-      }
-      GeneralUpdatePushNotificationMessage(msg)
-    }
-  }
-
-  private def getMessage(userId: Id[User]): (PushNotificationMessage, PushNotificationExperiment) = {
+  private def getMessage(userId: Id[User]): Option[(PushNotificationMessage, PushNotificationExperiment)] = {
     val canSendLibPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(userId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
     val experiment = if (Random.nextBoolean()) PushNotificationExperiment.Experiment1 else PushNotificationExperiment.Experiment2
     //val libMessage = if (canSendLibPush) getLibraryActivityMessage(experiment, userId) else None
     // Removed for now because users can opt in to library update pushes, and this is confusing otherwise. More thought needed?
-    val message = getPersonaActivityMessage(experiment, userId) getOrElse getGeneralMessage(experiment, userId)
-    message -> experiment
+    val message = getPersonaActivityMessage(experiment, userId)
+    message.map(m => m -> experiment)
   }
 
   def createPushActivityEntities(batchSize: Int): Seq[Id[ActivityPushTask]] = {
