@@ -6,7 +6,6 @@ import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, Use
 import com.keepit.common.seo.FeedCommander
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
-import play.api.libs.concurrent.Execution.Implicits._
 import play.api.mvc.{ ResponseHeader, Result }
 
 import scala.concurrent.Future
@@ -34,7 +33,7 @@ class LibraryFeedController @Inject() (val userCommander: UserCommander,
 
   private def dropPathSegment(uri: String): String = uri.drop(1).dropWhile(!"/?".contains(_))
 
-  def libraryRSSFeed(username: Username, librarySlug: String, authToken: Option[String] = None, count: Int = 20, offset: Int = 0) = MaybeUserAction.async { implicit request =>
+  def libraryRSSFeed(username: Username, librarySlug: String, authToken: Option[String] = None) = MaybeUserAction { implicit request =>
     lookupUsername(username) flatMap {
       case (user, userRedirectStatusOpt) =>
         libraryCommander.getLibraryBySlugOrAlias(user.id.get, LibrarySlug(librarySlug)) map {
@@ -42,19 +41,17 @@ class LibraryFeedController @Inject() (val userCommander: UserCommander,
             if (library.slug.value != librarySlug || userRedirectStatusOpt.isDefined) { // library moved
               val uri = Library.formatLibraryPathUrlEncoded(user.username, library.slug) + dropPathSegment(dropPathSegment(request.uri))
               val status = if (!isLibraryAlias || userRedirectStatusOpt.contains(303)) 303 else 301
-              Future.successful(Redirect(uri, status))
+              Redirect(uri, status)
             } else if (experimentCommander.userHasExperiment(library.ownerId, ExperimentType.LIBRARY_RSS_FEED) &&
               libraryCommander.canViewLibrary(request.userOpt.flatMap(_.id), library, authToken)) {
-              feedCommander.libraryFeed(library, count, offset) map { rss =>
-                Result(
-                  header = ResponseHeader(200, Map(CONTENT_TYPE -> "application/rss+xml")),
-                  body = feedCommander.wrap(rss)
-                )
-              }
+              Result(
+                header = ResponseHeader(200, Map(CONTENT_TYPE -> "application/rss+xml")),
+                body = feedCommander.wrap(feedCommander.libraryFeed(fortyTwoConfig.applicationBaseUrl + request.uri, library))
+              )
             } else {
-              Future.successful(NotFound(views.html.error.notFound(request.path)))
+              NotFound(views.html.error.notFound(request.path))
             }
         }
-    } getOrElse Future.successful(NotFound(views.html.error.notFound(request.path)))
+    } getOrElse NotFound(views.html.error.notFound(request.path))
   }
 }
