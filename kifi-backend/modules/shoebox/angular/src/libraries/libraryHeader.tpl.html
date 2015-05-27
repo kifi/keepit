@@ -21,7 +21,7 @@
       </div>
       <input class="kf-lh-cover-file" type="file" accept="image/jpeg,image/png,image/gif" kf-file-change="onCoverImageFileChosen" ng-if="isOwner() && !library.isSystem">
 
-      <div class="kf-lh-subscribe-btn-wrap" ng-if="isFollower() || isCollaborator() || (isOwner() && library.numCollaborators > 0)" ng-class="{'for-owner' : isOwner()}">
+      <div class="kf-lh-subscribe-btn-wrap" ng-if="isFollowing() || isCollaborator() || (isOwner() && library.numCollaborators > 0)" ng-class="{'for-owner' : isOwner()}">
         <button ng-attr-class="kf-lh-subscribe-btn {{library.membership.subscribed ? 'svg-notification-on-white' : 'svg-notification-off-white'}}" ng-click="changeSubscription()"></button>
         <div class="kf-lh-subscribe-msg">Notifications {{library.membership.subscribed ? 'enabled' : 'disabled'}}</div>
       </div>

@@ -656,8 +656,6 @@ angular.module('kifi')
                   if (!_.contains(scope.library.collaborators, {id: me.id})) {
                     scope.library.collaborators.push(_.pick(me, 'id', 'firstName', 'lastName', 'pictureName', 'username'));
                   }
-                  console.log(scope.library.numCollaborators);
-                  console.log(scope.library.collaborators);
                 });
               }
 
