@@ -46,7 +46,7 @@ class LibraryFeedController @Inject() (val userCommander: UserCommander,
               libraryCommander.canViewLibrary(request.userOpt.flatMap(_.id), library, authToken)) {
               Result(
                 header = ResponseHeader(200, Map(CONTENT_TYPE -> "application/rss+xml")),
-                body = feedCommander.wrap(feedCommander.libraryFeed(fortyTwoConfig.applicationBaseUrl + request.uri, library))
+                body = feedCommander.wrap(feedCommander.libraryFeed(library))
               )
             } else {
               NotFound(views.html.error.notFound(request.path))
