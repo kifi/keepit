@@ -822,7 +822,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
         }
         contentAsJson(res1) === Json.parse(
           s"""
-             { "link" : "/nickfury/secret-shield-stuff?authToken=${invite1.authToken}", "access" : "read_only", "message" : "please follow" }
+             { "link" : "http://dev.ezkeep.com:9000/nickfury/secret-shield-stuff?authToken=${invite1.authToken}", "access" : "read_only", "message" : "please follow" }
            """
         )
 
@@ -848,7 +848,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
         status(res4) must equalTo(OK)
         contentAsJson(res4) === Json.parse(
           s"""
-             { "link" : "/nickfury/public-shield-stuff", "access" : "read_only", "message" : "please follow" }
+             { "link" : "http://dev.ezkeep.com:9000/nickfury/public-shield-stuff", "access" : "read_only", "message" : "please follow" }
            """
         )
         db.readOnlyMaster { implicit s =>
