@@ -52,7 +52,7 @@ class FeedCommanderTest extends Specification with ShoeboxTestInjector {
         val resultTry = Await.ready(commander.libraryFeed(library), Duration.Inf).value.get
         resultTry.isSuccess must equalTo(true)
         val result = resultTry.get
-        (result \ "channel" \ "title").text must contain("test by colin-lane")
+        (result \ "channel" \ "title").text must contain("test by Colin-Lane")
 
         val amazon = (result \ "channel" \ "item")(0)
         (amazon \ "title").text must be equalTo ("Amazon")
@@ -60,7 +60,7 @@ class FeedCommanderTest extends Specification with ShoeboxTestInjector {
 
         val google = (result \ "channel" \ "item")(1)
         (google \ "title").text must be equalTo ("Google")
-        (google \ "description").text must equalTo("Google Note")
+        (google \ "description").text must equalTo("") // we get our descriptions from rover not from the note.
         (google \ "link").text must equalTo("http://www.google.com/")
       }
     }
