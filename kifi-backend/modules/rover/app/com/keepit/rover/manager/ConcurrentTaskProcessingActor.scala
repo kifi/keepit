@@ -6,7 +6,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.concurrent.ExecutionContext
 
 import scala.concurrent.{ Future }
-import scala.util.{ Failure, Success }
+import scala.util.{ Try, Failure, Success }
 import com.keepit.common.core._
 
 object ConcurrentTaskProcessingActor {
@@ -27,9 +27,8 @@ abstract class ConcurrentTaskProcessingActor[T](airbrake: AirbrakeNotifier) exte
 
   import ConcurrentTaskProcessingActor._
 
-  private[this] case class Pulled(tasks: Seq[T], limit: Int) extends TaskProcessingActorMessage
-  private[this] case class Processed(task: T) extends TaskProcessingActorMessage
-  private[this] case class CancelPulling(limit: Int) extends TaskProcessingActorMessage
+  private[this] case class Pulled(result: Try[Seq[T]], limit: Int) extends TaskProcessingActorMessage
+  private[this] case class Processed(task: T, result: Try[Unit]) extends TaskProcessingActorMessage
 
   private[this] var closing = false
   private[this] var pulling = 0
@@ -41,12 +40,8 @@ abstract class ConcurrentTaskProcessingActor[T](airbrake: AirbrakeNotifier) exte
     case taskProcessingMessage: TaskProcessingActorMessage => {
       taskProcessingMessage match {
         case IfYouCouldJustGoAhead => startPulling()
-        case CancelPulling(limit) => endPulling(limit)
-        case Pulled(tasks, limit) => {
-          endPulling(limit)
-          startProcessing(tasks)
-        }
-        case Processed(task) => endProcessing(task)
+        case Pulled(result, limit) => endPulling(result, limit)
+        case Processed(task, result) => endProcessing(task)
         case Close => close()
       }
     }
@@ -62,46 +57,43 @@ abstract class ConcurrentTaskProcessingActor[T](airbrake: AirbrakeNotifier) exte
       val pulledTasks = try {
         pullTasks(limit)
       } catch {
-        case error: Exception =>
-          Future.failed(error)
+        case error: Exception => Future.failed(error)
       }
 
-      pulledTasks.onComplete {
-        case Success(tasks) => {
-          log.info(s"Pulled ${tasks.length}/$limit tasks.")
-          self ! Pulled(tasks, limit)
-        }
-
-        case Failure(error) => {
-          log.error("Failed to pull tasks.", error)
-          self ! CancelPulling(limit)
-        }
+      pulledTasks.onComplete { result =>
+        self ! Pulled(result, limit)
       }(ExecutionContext.immediate)
     }
   }
 
-  private def endPulling(limit: Int): Unit = {
+  private def endPulling(pulled: Try[Seq[T]], limit: Int): Unit = {
     pulling -= limit
+    pulled match {
+      case Success(tasks) => {
+        log.info(s"Pulled ${tasks.length} tasks.")
+        startProcessing(tasks)
+      }
+      case Failure(error) => {
+        log.error("Failed to pull tasks.", error)
+      }
+    }
   }
 
   private def startProcessing(tasks: Seq[T]): Unit = {
     if (!closing && tasks.nonEmpty) {
       log.info(s"Processing ${tasks.length} tasks...")
       processing ++= tasks
+
       val processedTasks = try {
         processTasks(tasks)
       } catch {
-        case error: Exception =>
-          Map.empty[T, Future[Unit]] withDefaultValue Future.failed(error)
+        case error: Exception => Map.empty[T, Future[Unit]] withDefaultValue Future.failed(error)
       }
+
       tasks.foreach { task =>
         val processedTask = processedTasks.getOrElse(task, Future.failed(UnknownTaskStatusException(task)))
         processedTask.onComplete { result =>
-          result match {
-            case Failure(error) => log.error(s"Failed processing $task", error)
-            case Success(()) => log.info(s"Processed $task")
-          }
-          self ! Processed(task)
+          self ! Processed(task, result)
         }(ExecutionContext.immediate)
       }
     }
