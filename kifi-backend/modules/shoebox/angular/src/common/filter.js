@@ -48,7 +48,7 @@ angular.module('kifi')
   }
 ])
 
-.filter('libPath', function (env) {
+.filter('libPath', function () {
   return function (lib) {
     return '/' + lib.owner.username + '/' + lib.slug;
   };
