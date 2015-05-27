@@ -10,7 +10,6 @@ import com.keepit.common.store.{ ImageSize, S3ImageConfig }
 import com.keepit.common.time._
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
-import com.keepit.rover.RoverServiceClient
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -30,8 +29,7 @@ class FeedCommander @Inject() (
     keepRepo: KeepRepo,
     keepImageCommander: KeepImageCommander,
     libraryImageCommander: LibraryImageCommander,
-    libraryCommander: PageMetaTagsCommander,
-    rover: RoverServiceClient) extends Logging {
+    libraryCommander: PageMetaTagsCommander) extends Logging {
 
   def wrap(elem: Elem): Enumerator[Array[Byte]] = {
     val elems = Enumerator.enumerate(elem)
@@ -59,50 +57,45 @@ class FeedCommander @Inject() (
     }
   }
 
-  def libraryFeed(library: Library, keepCountToDisplay: Int = 20, offset: Int = 0): Future[Elem] = {
-    val (libImage, keeps, libraryCreator) = db.readOnlyMaster { implicit session =>
-      val image = libraryImageCommander.getBestImageForLibrary(library.id.get, ImageSize(600, 600))
-      val keeps = keepRepo.getByLibrary(libraryId = library.id.get, offset = offset, limit = keepCountToDisplay, excludeSet = Set(KeepStates.INACTIVE))
-      val libraryCreator = userRepo.get(library.ownerId)
-      (image.map(_.imagePath.getUrl(s3ImageConfig)).getOrElse(""), keeps, libraryCreator)
-    }
-    val feedUrl = s"${fortyTwoConfig.applicationBaseUrl}${Library.formatLibraryPathUrlEncoded(libraryCreator.username, library.slug)}"
+  def libraryFeed(feedUrl: String, library: Library): Elem = {
+    val keepCountToDisplay = 10
 
-    val descriptionsFuture = db.readOnlyMaster { implicit s => rover.getUriSummaryByUris(keeps.map(_.uriId).toSet) }
-    descriptionsFuture map { descriptions =>
-      <rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:media="http://search.yahoo.com/mrss/" xmlns:atom="http://www.w3.org/2005/Atom">
-        <channel>
-          <title>{ library.name } by { libraryCreator.username.value } * Kifi</title>
-          <link>{ feedUrl }</link>
-          <description>{ library.description.getOrElse("") }</description>
-          {
-            if (libImage != "") {
-              <image>
-                <url>{ s"https:$libImage" }</url>
-                <title>{ library.name }</title>
-                <link>{ feedUrl }</link>
-              </image>
-            }
+    val (libImage, keeps) = db.readOnlyMaster { implicit session =>
+      val image = libraryImageCommander.getBestImageForLibrary(library.id.get, ImageSize(100, 100))
+      val keeps = keepRepo.getByLibrary(libraryId = library.id.get, offset = 0, limit = keepCountToDisplay, excludeSet = Set(KeepStates.INACTIVE))
+      (image.map(_.imagePath.getUrl(s3ImageConfig)).getOrElse(""), keeps)
+    }
+    <rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:media="http://search.yahoo.com/mrss/" xmlns:atom="http://www.w3.org/2005/Atom">
+      <channel>
+        <title>{ library.name }</title>
+        <link>{ feedUrl }</link>
+        <description>{ library.description }</description>{
+          if (libImage != "") {
+            <image>
+              <url>{ libImage }</url>
+              <title>{ library.name }</title>
+              <link>{ feedUrl }</link>
+            </image>
           }
-          <copyright>Copyright { currentDateTime.getYear }, FortyTwo Inc.</copyright>
-          <atom:link ref="self" type="application/rss+xml" href={ feedUrl }/>
-          <atom:link ref="hub" href="https://pubsubhubbub.appspot.com/"/>
-          {
-            def convertKeep(keep: Keep): RssItem = {
-              val (keepImage, originalKeeper) = db.readOnlyMaster { implicit s =>
-                val image = keepImageCommander.getBestImageForKeep(keep.id.get, ScaleImageRequest(ImageSize(100, 100)))
-                (image, userRepo.getNoCache(keep.originalKeeperId.getOrElse(keep.userId)))
-              }
-
-              RssItem(title = keep.title.getOrElse(""), description = descriptions.get(keep.uriId).flatMap(_.article.description).getOrElse(""), link = keep.url,
-                guid = keep.externalId.id, pubDate = keep.keptAt, creator = originalKeeper.fullName,
-                icon = keepImage.map(_.get).map(_.imagePath.getUrl(s3ImageConfig)).map(url => s"https:$url").getOrElse(""))
+        }
+        <copyright>Copyright { currentDateTime.getYear }, FortyTwo Inc.</copyright>
+        <atom:link ref="self" type="application/rss+xml" href={ feedUrl }/>
+        <atom:link ref="hub" href="https://pubsubhubbub.appspot.com/"/>
+        {
+          def convertKeep(keep: Keep): RssItem = {
+            val (keepImage, originalKeeper) = db.readOnlyMaster { implicit s =>
+              val image = keepImageCommander.getBestImageForKeep(keep.id.get, ScaleImageRequest(ImageSize(100, 100)))
+              (image, userRepo.getNoCache(keep.originalKeeperId.getOrElse(keep.userId)))
             }
-            rssItems(keeps map convertKeep)
-          }{ /* License asking for attribution */ }
-        </channel>
-      </rss>
-    }
+
+            RssItem(title = keep.title.getOrElse(""), description = keep.note.getOrElse(""), link = keep.url,
+              guid = keep.externalId.id, pubDate = keep.keptAt, creator = originalKeeper.fullName,
+              icon = keepImage.map(_.get).map(_.imagePath.getUrl(s3ImageConfig)).getOrElse(""))
+          }
+          rssItems(keeps map convertKeep)
+        }{ /* License asking for attribution */ }
+      </channel>
+    </rss>
   }
 
   def rss(feedTitle: String, feedUrl: String, libs: Seq[Library]): Future[Elem] = {
