@@ -129,7 +129,7 @@ class LibraryController @Inject() (
     Ok(Json.obj("library" -> libraryJson))
   }
 
-  def getLibraryByPath(userStr: String, slugStr: String, showPublishedLibraries: Boolean, imageSize: Option[String] = None) = MaybeUserAction.async { request =>
+  def getLibraryByPath(userStr: String, slugStr: String, showPublishedLibraries: Boolean, imageSize: Option[String] = None, authTokenOpt: Option[String] = None) = MaybeUserAction.async { request =>
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build
     libraryCommander.getLibraryWithUsernameAndSlug(userStr, LibrarySlug(slugStr), request.userIdOpt) match {
       case Right(library) =>
@@ -139,7 +139,21 @@ class LibraryController @Inject() (
           libraryCommander.createFullLibraryInfo(request.userIdOpt, showPublishedLibraries, library, idealSize, showKeepCreateTime = true).map { libInfo =>
             val suggestedSearches = getSuggestedSearchesAsJson(library.id.get)
             val membershipOpt = libraryCommander.getViewerMembershipInfo(request.userIdOpt, library.id.get)
-            val inviteOpt = libraryCommander.getViewerInviteInfo(request.userIdOpt, library.id.get)
+            // if viewer, get invite for that viewer. Otherwise, if viewer unknown, use authToken to find invite info
+            val inviteOpt = libraryCommander.getViewerInviteInfo(request.userIdOpt, library.id.get) orElse {
+              authTokenOpt.map { authToken =>
+                db.readOnlyMaster { implicit s =>
+                  libraryInviteRepo.getByLibraryIdAndAuthToken(library.id.get, authToken).headOption.map { invite =>
+                    val inviter = basicUserRepo.load(invite.inviterId)
+                    (invite, inviter)
+                  }
+                }.map {
+                  case (invite, inviter) =>
+                    LibraryInviteInfo.createInfo(invite, inviter)
+                }
+              }.flatten
+            }
+
             libraryCommander.trackLibraryView(request.userIdOpt, library)
             val membershipJson = Json.toJson(membershipOpt)
             val inviteJson = Json.toJson(inviteOpt)
