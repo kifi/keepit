@@ -52,7 +52,7 @@ class FeedCommanderTest extends Specification with ShoeboxTestInjector {
         }
         val commander = inject[FeedCommander]
         val result = commander.libraryFeed(library)
-        (result \ "channel" \ "title").text must be equalTo ("test")
+        (result \ "channel" \ "title").text must contain("test by colin-lane")
 
         val amazon = (result \ "channel" \ "item")(0)
         (amazon \ "title").text must be equalTo ("Amazon")

@@ -57,10 +57,7 @@ class FeedCommander @Inject() (
     }
   }
 
-  def libraryFeed(library: Library): Elem = {
-    // TODO: offset + count
-    val keepCountToDisplay = 10
-
+  def libraryFeed(library: Library, keepCountToDisplay: Int = 20, offset: Int = 0): Elem = {
     val (libImage, keeps, libraryCreator) = db.readOnlyMaster { implicit session =>
       val image = libraryImageCommander.getBestImageForLibrary(library.id.get, ImageSize(600, 600))
       val keeps = keepRepo.getByLibrary(libraryId = library.id.get, offset = 0, limit = keepCountToDisplay, excludeSet = Set(KeepStates.INACTIVE))
@@ -70,7 +67,7 @@ class FeedCommander @Inject() (
     val feedUrl = s"${fortyTwoConfig.applicationBaseUrl}${Library.formatLibraryPathUrlEncoded(libraryCreator.username, library.slug)}"
     <rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:media="http://search.yahoo.com/mrss/" xmlns:atom="http://www.w3.org/2005/Atom">
       <channel>
-        <title>{ library.name } by { libraryCreator } • Kifi</title>
+        <title>{ library.name } by { libraryCreator.normalizedUsername } • Kifi</title>
         <link>{ feedUrl }</link>
         <description>{ library.description.getOrElse("") }</description>
         {

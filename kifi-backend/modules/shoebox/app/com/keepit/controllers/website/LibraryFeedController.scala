@@ -33,7 +33,7 @@ class LibraryFeedController @Inject() (val userCommander: UserCommander,
 
   private def dropPathSegment(uri: String): String = uri.drop(1).dropWhile(!"/?".contains(_))
 
-  def libraryRSSFeed(username: Username, librarySlug: String, authToken: Option[String] = None) = MaybeUserAction { implicit request =>
+  def libraryRSSFeed(username: Username, librarySlug: String, authToken: Option[String] = None, count: Int = 20, offset: Int = 0) = MaybeUserAction { implicit request =>
     lookupUsername(username) flatMap {
       case (user, userRedirectStatusOpt) =>
         libraryCommander.getLibraryBySlugOrAlias(user.id.get, LibrarySlug(librarySlug)) map {
@@ -46,7 +46,7 @@ class LibraryFeedController @Inject() (val userCommander: UserCommander,
               libraryCommander.canViewLibrary(request.userOpt.flatMap(_.id), library, authToken)) {
               Result(
                 header = ResponseHeader(200, Map(CONTENT_TYPE -> "application/rss+xml")),
-                body = feedCommander.wrap(feedCommander.libraryFeed(library))
+                body = feedCommander.wrap(feedCommander.libraryFeed(library, count, offset))
               )
             } else {
               NotFound(views.html.error.notFound(request.path))
