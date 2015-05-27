@@ -64,6 +64,8 @@
 
       <div class="kf-lh-stats">
         <span class="kf-lh-stat" ng-pluralize count="library.numKeeps" when="{'one': '1 keep', 'other': '{{library.numKeeps|number}} keeps'}" ng-if="library.numKeeps"></span>
+        <button class="kf-lh-stat" ng-pluralize count="library.numFollowers + library.numCollaborators" when="{'one': '1 member', 'other': '{{(library.numFollowers + library.numCollaborators)|num}} members'}" ng-if="(library.numFollowers + library.numCollaborators) && onCollabExperiment" ng-click="openMembersModal()"></button>
+        <button class="kf-lh-stat" ng-pluralize count="library.numFollowers" when="{one:'1 follower',other:'{{library.numFollowers|num}} followers'}" ng-click="showFollowers()" ng-if="library.numFollowers && !onCollabExperiment"></button>
       </div>
 
       <!-- owner only -->
