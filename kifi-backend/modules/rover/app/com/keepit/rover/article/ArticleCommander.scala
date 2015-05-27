@@ -93,13 +93,13 @@ class ArticleCommander @Inject() (
     getArticleInfoByUrlAndKind(url, kind) match {
       case Some(info) => getOrElseFetchRecentArticle(info, recency, shouldThrottle = false).imap(_.map(_.asExpected[A]))
       case None => { // do not intern the url into a normalized one to make sure it's fetched as it is
-        articleFetcher.fetch(ArticleFetchRequest(kind, url, shouldThrottle = false)).recover {
-          case invalidRequest: InvalidFetchRequestException => None
-          case invalidResponse: InvalidFetchResponseException[_] => None
-          case socketTimeout: SocketTimeoutException => None
-        }
+        articleFetcher.fetch(ArticleFetchRequest(kind, url, shouldThrottle = false))
       }
     }
+  } recover {
+    case invalidRequest: InvalidFetchRequestException => None
+    case invalidResponse: InvalidFetchResponseException[_] => None
+    case socketTimeout: SocketTimeoutException => None
   }
 
   private def isInvalidFetch(failureInfo: String): Boolean = {
