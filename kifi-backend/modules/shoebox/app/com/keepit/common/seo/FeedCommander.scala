@@ -72,7 +72,7 @@ class FeedCommander @Inject() (
     descriptionsFuture map { descriptions =>
       <rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:media="http://search.yahoo.com/mrss/" xmlns:atom="http://www.w3.org/2005/Atom">
         <channel>
-          <title>{ library.name } by { libraryCreator.normalizedUsername } • Kifi</title>
+          <title>{ library.name } by { libraryCreator.username.value } * Kifi</title>
           <link>{ feedUrl }</link>
           <description>{ library.description.getOrElse("") }</description>
           {
