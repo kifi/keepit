@@ -640,25 +640,42 @@ angular.module('kifi')
           $rootScope.$on('libraryJoined', function (e, libraryId) {
             var lib = scope.library;
             if (lib && libraryId === lib.id && !lib.membership) {
-              lib.membership = {
-                access: 'read_only',
+              scope.library.membership = {
+                access: scope.invite ? scope.invite.access : 'read_only',
                 listed: true,
                 subscribed: false
               };
               scope.invite = null;
-              lib.numFollowers++;
               var me = profileService.me;
-              if (!_.contains(lib.followers, {id: me.id})) {
-                lib.followers.push(_.pick(me, 'id', 'firstName', 'lastName', 'pictureName', 'username'));
+              if (scope.library.membership.access === 'read_only') {
+                scope.library.numFollowers++;
+                if (!_.contains(scope.library.followers, {id: me.id})) {
+                  scope.library.followers.push(_.pick(me, 'id', 'firstName', 'lastName', 'pictureName', 'username'));
+                }
+              } else if (scope.library.membership.access === 'read_write') {
+                $timeout(function() {
+                  scope.library.numCollaborators++;
+                  if (!_.contains(scope.library.collaborators, {id: me.id})) {
+                    scope.library.collaborators.push(_.pick(me, 'id', 'firstName', 'lastName', 'pictureName', 'username'));
+                  }
+                  console.log(scope.library.numCollaborators);
+                  console.log(scope.library.collaborators);
+                });
               }
+
             }
           }),
           $rootScope.$on('libraryLeft', function (e, libraryId) {
             var lib = scope.library;
             if (lib && libraryId === lib.id && lib.membership) {
+              if (lib.membership.access === 'read_only') {
+                lib.numFollowers--;
+                _.remove(lib.followers, {id: profileService.me.id});
+              } else if (lib.membership.access === 'read_write') {
+                lib.numCollaborators--;
+                _.remove(lib.collaborators, {id: profileService.me.id});
+              }
               lib.membership = undefined;
-              lib.numFollowers--;
-              _.remove(lib.followers, {id: profileService.me.id});
             }
           })
         ].forEach(function (deregister) {
