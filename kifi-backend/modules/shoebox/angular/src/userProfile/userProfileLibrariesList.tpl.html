@@ -4,7 +4,7 @@
     <div class="kf-upl-create-card-text">CREATE A LIBRARY</div>
   </button>
   <div kf-user-profile-library-card="library" ng-repeat="library in libraries"
-    current-page-name="{{::currentPageName}}" current-page-origin="{{::currentPageOrigin}}" library-type="{{::libraryType}}" me="::me">
+    current-page-name="{{::currentPageName}}" current-page-origin="{{::currentPageOrigin}}" library-type="{{::libraryType}}" profile-id="{{::profile.id}}">
   </div>
   <div class="kf-upl-empty" ng-if="libraries.length === 0">
     <span ng-if="libraryType === 'own'">{{viewingOwnProfile ? 'You have' : profile.firstName + ' has'}} not created any publicly viewable libraries.</span>

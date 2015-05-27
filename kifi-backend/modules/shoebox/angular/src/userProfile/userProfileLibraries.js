@@ -16,25 +16,14 @@ angular.module('kifi')
 
     $scope.libraries = null;
     $scope.libraryType = $state.current.name.split('.').pop();
-    $scope.me = profileService.me;
 
     function resetAndFetchLibraries() {
       fetchPageNumber = 0;
       hasMoreLibraries = true;
       loading = false;
-      newLibraryIds = [];
+      newLibraryIds = {};
       $scope.libraries = null;
       $scope.fetchLibraries();
-    }
-
-    function augmentLibrary(owner, following, lib) {
-      owner = lib.owner || owner;
-      lib.path = '/' + owner.username + '/' + lib.slug;
-      lib.owner = owner;
-      if (lib.following == null && following != null) {
-        lib.following = following;
-      }
-      return lib;
     }
 
     [
@@ -49,8 +38,12 @@ angular.module('kifi')
       }),
       $rootScope.$on('libraryJoined', function (event, libraryId) {
         var lib = _.find($scope.libraries, {id: libraryId});
-        if (lib && !lib.following) {
-          lib.following = true;
+        if (lib && !lib.membership) {
+          lib.membership = {
+            access: 'read_only',
+            listed: true,
+            subscribed: false
+          };
           lib.numFollowers++;
           if (lib.followers.length < 3 && profileService.me.pictureName !== '0.jpg') {
             var me = _.pick(profileService.me, 'id', 'firstName', 'lastName', 'pictureName', 'username');
@@ -60,8 +53,8 @@ angular.module('kifi')
       }),
       $rootScope.$on('libraryLeft', function (event, libraryId) {
         var lib = _.find($scope.libraries, {id: libraryId});
-        if (lib && lib.following) {
-          lib.following = false;
+        if (lib && lib.membership) {
+          lib.membership = null;
           lib.numFollowers--;
           _.remove(lib.followers, {id: profileService.me.id});
         }
@@ -82,20 +75,16 @@ angular.module('kifi')
       var filter = $scope.libraryType;
       userProfileActionService.getLibraries(username, filter, fetchPageNumber, fetchPageSize).then(function (data) {
         if ($scope.libraryType === filter) {
-          hasMoreLibraries = data[filter].length === fetchPageSize;
+          var libs = data[filter];
+          hasMoreLibraries = libs.length === fetchPageSize;  // important to do before filtering below
 
-          var isMyProfile = $scope.profile.id === $scope.me.id;
-          var owner = filter === 'own' ? _.extend({username: username}, $scope.profile) : null;
-          var following = isMyProfile ? (filter === 'following' ? true : (filter === 'invited' ? false : null)) : null;
-
-          var filteredLibs = data[filter];
-          if (filter === 'own' && isMyProfile && newLibraryIds.length) {
-            _.remove(filteredLibs, function (lib) {
-              return _.contains(newLibraryIds, lib.id);
+          if ($scope.profile.id === profileService.me.id && filter === 'own' && !_.isEmpty(newLibraryIds)) {
+            _.remove(libs, function (lib) {
+              return lib.id in newLibraryIds;
             });
           }
 
-          $scope.libraries = ($scope.libraries || []).concat(filteredLibs.map(augmentLibrary.bind(null, owner, following)));
+          $scope.libraries = ($scope.libraries || []).concat(libs);
 
           fetchPageNumber++;
           loading = false;
@@ -136,10 +125,8 @@ angular.module('kifi')
         template: 'libraries/manageLibraryModal.tpl.html',
         modalData: {
           returnAction: function (newLibrary) {
-            augmentLibrary(null, null, newLibrary);
-
             addNewLibAnimationClass(newLibrary);
-            newLibraryIds.push(newLibrary.id);
+            newLibraryIds[newLibrary.id] = true;
 
             // Add new library to right behind the two system libraries.
             ($scope.libraries || []).splice(2, 0, newLibrary);
@@ -159,8 +146,8 @@ angular.module('kifi')
 ])
 
 .directive('kfUserProfileLibraryCard', [
-  '$rootScope', '$location', 'libraryService', 'modalService', 'platformService', 'signupService',
-  function ($rootScope, $location, libraryService, modalService, platformService, signupService) {
+  '$rootScope', '$location', 'profileService', 'libraryService', 'modalService', 'platformService', 'signupService',
+  function ($rootScope, $location, profileService, libraryService, modalService, platformService, signupService) {
     // values that are the same for all cards that coexist at any one time
     var currentPageName;
     var currentPageOrigin;
@@ -206,7 +193,7 @@ angular.module('kifi')
         return signupService.register({libraryId: lib.id, intent: 'follow', redirectPath: lib.path});
       }
       $event.target.disabled = true;
-      libraryService[lib.following ? 'leaveLibrary' : 'joinLibrary'](lib.id)['catch'](function (resp) {
+      libraryService[lib.membership ? 'leaveLibrary' : 'joinLibrary'](lib.id)['catch'](function (resp) {
         modalService.openGenericErrorModal({
           modalData: resp.status === 403 && resp.data.error === 'cant_join_nonpublished_library' ? {
             genericErrorMessage: 'Sorry, the owner of this library has made it private. You’ll need an invitation to follow it.'
@@ -217,6 +204,11 @@ angular.module('kifi')
       });
     }
 
+    function toggleSubscribed(lib) {
+      libraryService.updateSubscriptionToLibrary(lib.id, !lib.membership.subscribed).then(function() {
+        lib.membership.subscribed = !lib.membership.subscribed;
+      })['catch'](modalService.openGenericErrorModal);
+    }
 
     function trackUplCardClick(lib, subAction) {
       $rootScope.$emit('trackUserProfileEvent', 'click', {
@@ -235,10 +227,10 @@ angular.module('kifi')
       replace: true,
       scope: {
         lib: '=kfUserProfileLibraryCard',
-        currentPageName: '@',
-        currentPageOrigin: '@',
+        profileId: '@',
         libraryType: '@',
-        me: '='
+        currentPageName: '@',
+        currentPageOrigin: '@'
       },
       templateUrl: 'userProfile/userProfileLibraryCard.tpl.html',
       link: function (scope) {
@@ -246,9 +238,12 @@ angular.module('kifi')
         currentPageName = scope.currentPageName;
         currentPageOrigin = scope.currentPageOrigin;
 
+        scope.myProfile = profileService.me.id === scope.profileId;
+        scope.myLibrary = profileService.me.id === scope.lib.owner.id;
         scope.openModifyLibrary = openModifyLibrary;
         scope.openFollowersList = openFollowersList;
         scope.onFollowButtonClick = onFollowButtonClick;
+        scope.toggleSubscribed = toggleSubscribed;
         scope.trackUplCardClick = trackUplCardClick;
       }
     };
