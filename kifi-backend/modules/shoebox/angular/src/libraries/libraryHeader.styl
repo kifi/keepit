@@ -25,19 +25,20 @@ colorBarHeight = .4em
     &.kf-system-secret
       height: 16em
 
-invite-banner-orange = #ff7c3c
-
 .kf-lh-invite-banner
   position: absolute
-  z-index: 1
   left: 50%
-  top: 0
-  transform: translate(-50%)
-  border-radius: 0 0 8px 8px
-  padding: .6em 1.25em .9em
-  background-color: invite-banner-orange
-  text-align: center
+  transform: translateX(-50%)
+  margin-top: -14px
+  width: 776px
+  height: 60px
+  box-sizing: border-box
+  border-radius: 10px
+  z-index: 2
   font-size: .8em
+  text-align: initial
+  overflow: hidden
+  opacity: 1.0
 
   &.ng-leave
     transition: transform .25s, opacity .25s
@@ -46,25 +47,39 @@ invite-banner-orange = #ff7c3c
     transform: translate(-50%, -100%)
     opacity: 0
 
+.kf-lh-invite-pic
+  display: inline-block
+  width: 36px
+  height: 36px
+  margin-left: 25px
+  margin-right: 15px
+  border-radius: 50%
+
 .kf-lh-invite-banner-text
-  margin-bottom: .6em
+  display: inline-block
+  line-height: 60px
   color: #fff
+  font-size: 1.1em
 
 .kf-lh-invite-banner-button
+  position: relative
+  top: 50%
+  transform: translateY(-50%)
+  float: right
   margin-left: .8em
   border: 1px solid #fff
   border-radius: 4px
-  padding: .44em 1.2em
-  font-size: .85em
+  padding: .44em 1.3em
+  font-size: 1em
 
   &.kf-accept
     background: alpha(#fff, .9)
-    color: invite-banner-orange
 
     &:hover:not(:active)
       background-color: #fff
 
   &.kf-ignore
+    margin-right: 2em
     background: transparent
     color: #fff
 

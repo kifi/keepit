@@ -82,7 +82,7 @@ angular.module('kifi')
         }
 
         function updateInvite() {
-          scope.inviter = libraryService.getInviter(scope.library.id);
+          scope.invite = scope.library.invite;
         }
 
         //
@@ -93,12 +93,9 @@ angular.module('kifi')
         };
 
         scope.ignoreInvitation = function () {
-          var inviter = scope.inviter;
-          if (inviter) {
-            scope.inviter = null;
-            libraryService.declineToJoinLibrary(scope.library.id)['catch'](function () {
-              modalService.openGenericErrorModal();
-              scope.inviter = inviter;
+          if (scope.invite) {
+            libraryService.declineToJoinLibrary(scope.library.id).then(function() {
+              scope.invite = null;
             });
           }
         };
@@ -640,7 +637,7 @@ angular.module('kifi')
                 listed: true,
                 subscribed: false
               };
-              scope.inviter = null;
+              scope.invite = null;
               lib.numFollowers++;
               var me = profileService.me;
               if (!_.contains(lib.followers, {id: me.id})) {
