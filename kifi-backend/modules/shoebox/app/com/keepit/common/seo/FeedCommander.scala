@@ -60,14 +60,15 @@ class FeedCommander @Inject() (
   def libraryFeed(feedUrl: String, library: Library): Elem = {
     val keepCountToDisplay = 10
 
-    val (libImage, keeps) = db.readOnlyMaster { implicit session =>
+    val (libImage, keeps, libraryCreator) = db.readOnlyMaster { implicit session =>
       val image = libraryImageCommander.getBestImageForLibrary(library.id.get, ImageSize(100, 100))
       val keeps = keepRepo.getByLibrary(libraryId = library.id.get, offset = 0, limit = keepCountToDisplay, excludeSet = Set(KeepStates.INACTIVE))
-      (image.map(_.imagePath.getUrl(s3ImageConfig)).getOrElse(""), keeps)
+      val libraryCreator = userRepo.get(library.ownerId)
+      (image.map(_.imagePath.getUrl(s3ImageConfig)).getOrElse(""), keeps, libraryCreator)
     }
     <rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:media="http://search.yahoo.com/mrss/" xmlns:atom="http://www.w3.org/2005/Atom">
       <channel>
-        <title>{ library.name }</title>
+        <title>{ library.name } by { libraryCreator } • Kifi</title>
         <link>{ feedUrl }</link>
         <description>{ library.description.getOrElse("") }</description>{
           if (libImage != "") {
