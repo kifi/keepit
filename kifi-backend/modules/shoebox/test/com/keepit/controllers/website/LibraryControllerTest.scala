@@ -289,39 +289,43 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         val basicUser1 = db.readOnlyMaster { implicit s => basicUserRepo.load(user1.id.get) }
         Json.parse(contentAsString(result1)) must equalTo(Json.parse(
           s"""{
-           |"library":{
-             |"id":"${pubId1.id}",
-             |"name":"Library1",
-             |"visibility":"secret",
-             |"slug":"lib1",
-             |"url":"/ahsu/lib1",
-             |"image":{
-             |     "path":"library/26dbdc56d54dbc94830f7cfc85031481_66x38_o.png",
-             |     "x":50,
-             |     "y":50
-             |   },
-             |"kind":"user_created",
-             |"owner":{
-             |  "id":"${basicUser1.externalId}",
-             |  "firstName":"${basicUser1.firstName}",
-             |  "lastName":"${basicUser1.lastName}",
-             |  "pictureName":"${basicUser1.pictureName}",
-             |  "username":"${basicUser1.username.value}"
-             |  },
-             |"followers":[],
-             |"collaborators":[],
-             |"keeps":[],
-             |"numKeeps":0,
-             |"numCollaborators":0,
-             |"numFollowers":0,
-             |"whoCanInvite":"collaborator",
-             |"modifiedAt": ${lib1Updated.updatedAt.getMillis}
-           |},
-           |"membership":"owner",
-           |"listed": true,
-           |"suggestedSearches": {"terms": [], "weights": []},
-           |"subscribedToUpdates": false
-          }""".stripMargin))
+           "library":{
+             "id":"${pubId1.id}",
+             "name":"Library1",
+             "visibility":"secret",
+             "slug":"lib1",
+             "url":"/ahsu/lib1",
+             "image":{
+                  "path":"library/26dbdc56d54dbc94830f7cfc85031481_66x38_o.png",
+                  "x":50,
+                  "y":50
+                },
+             "kind":"user_created",
+             "owner":{
+               "id":"${basicUser1.externalId}",
+               "firstName":"${basicUser1.firstName}",
+               "lastName":"${basicUser1.lastName}",
+               "pictureName":"${basicUser1.pictureName}",
+               "username":"${basicUser1.username.value}"
+               },
+             "followers":[],
+             "collaborators":[],
+             "keeps":[],
+             "numKeeps":0,
+             "numCollaborators":0,
+             "numFollowers":0,
+             "whoCanInvite":"collaborator",
+             "modifiedAt": ${lib1Updated.updatedAt.getMillis},
+             "membership": {
+              "access" : "owner",
+              "listed":true,
+              "subscribed":false
+             },
+             "invite": null
+           },
+           "suggestedSearches": {"terms": [], "weights": []}
+          }
+        """))
 
         // viewed by another user with an invite
         val user2 = db.readWrite { implicit s =>
@@ -338,39 +342,49 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         contentType(result2) must beSome("application/json")
         Json.parse(contentAsString(result2)) must equalTo(Json.parse(
           s"""{
-           |"library":{
-             |"id":"${pubId1.id}",
-             |"name":"Library1",
-             |"visibility":"secret",
-             |"slug":"lib1",
-             |"url":"/ahsu/lib1",
-             |"image":{
-             |     "path":"library/26dbdc56d54dbc94830f7cfc85031481_66x38_o.png",
-             |     "x":50,
-             |     "y":50
-             |   },
-             |"kind":"user_created",
-             |"owner":{
-             |  "id":"${basicUser1.externalId}",
-             |  "firstName":"${basicUser1.firstName}",
-             |  "lastName":"${basicUser1.lastName}",
-             |  "pictureName":"${basicUser1.pictureName}",
-             |  "username":"${basicUser1.username.value}"
-             |},
-             |"followers":[],
-             |"collaborators":[],
-             |"keeps":[],
-             |"numKeeps":0,
-             |"numCollaborators":0,
-             |"numFollowers":0,
-             |"whoCanInvite":"collaborator",
-             |"modifiedAt": ${lib1Updated2.updatedAt.getMillis}
-           |},
-           |"membership":"none",
-           |"listed": null,
-           |"suggestedSearches": {"terms": [], "weights": []},
-           |"subscribedToUpdates": false
-          }""".stripMargin))
+           "library":{
+             "id":"${pubId1.id}",
+             "name":"Library1",
+             "visibility":"secret",
+             "slug":"lib1",
+             "url":"/ahsu/lib1",
+             "image":{
+                  "path":"library/26dbdc56d54dbc94830f7cfc85031481_66x38_o.png",
+                  "x":50,
+                  "y":50
+                },
+             "kind":"user_created",
+             "owner":{
+               "id":"${basicUser1.externalId}",
+               "firstName":"${basicUser1.firstName}",
+               "lastName":"${basicUser1.lastName}",
+               "pictureName":"${basicUser1.pictureName}",
+               "username":"${basicUser1.username.value}"
+             },
+             "followers":[],
+             "collaborators":[],
+             "keeps":[],
+             "numKeeps":0,
+             "numCollaborators":0,
+             "numFollowers":0,
+             "whoCanInvite":"collaborator",
+             "modifiedAt": ${lib1Updated2.updatedAt.getMillis},
+             "membership":null,
+             "invite": {
+              "inviter": {
+                "id":"${basicUser1.externalId}",
+                "firstName":"${basicUser1.firstName}",
+                "lastName":"${basicUser1.lastName}",
+                "pictureName":"${basicUser1.pictureName}",
+                "username":"${basicUser1.username.value}"
+              },
+              "access":"read_only",
+              "lastInvite":${t1.plusMinutes(3).getMillis}
+             }
+           },
+           "suggestedSearches": {"terms": [], "weights": []}
+          }
+        """))
       }
     }
 
@@ -431,34 +445,38 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         val basicUser1 = db.readOnlyMaster { implicit s => basicUserRepo.load(user1.id.get) }
         val expected = Json.parse(
           s"""{
-             |"library":{
-               |"id":"${Library.publicId(lib1.id.get).id}",
-               |"name":"Library1",
-               |"visibility":"secret",
-               |"slug":"lib1",
-               |"url":"/ahsu/lib1",
-               |"kind":"user_created",
-               |"owner":{
-               |  "id":"${basicUser1.externalId}",
-               |  "firstName":"${basicUser1.firstName}",
-               |  "lastName":"${basicUser1.lastName}",
-               |  "pictureName":"${basicUser1.pictureName}",
-               |  "username":"${basicUser1.username.value}"
-               |  },
-               |"followers":[],
-               |"collaborators":[],
-               |"keeps":[],
-               |"numKeeps":0,
-               |"numCollaborators":0,
-               |"numFollowers":0,
-               |"whoCanInvite":"collaborator",
-               |"modifiedAt": ${lib1Updated.updatedAt.getMillis}
-             |},
-             |"membership":"owner",
-             |"listed": false,
-             |"suggestedSearches": {"terms": [], "weights": []},
-             |"subscribedToUpdates": false
-            |}""".stripMargin)
+             "library":{
+               "id":"${Library.publicId(lib1.id.get).id}",
+               "name":"Library1",
+               "visibility":"secret",
+               "slug":"lib1",
+               "url":"/ahsu/lib1",
+               "kind":"user_created",
+               "owner":{
+                 "id":"${basicUser1.externalId}",
+                 "firstName":"${basicUser1.firstName}",
+                 "lastName":"${basicUser1.lastName}",
+                 "pictureName":"${basicUser1.pictureName}",
+                 "username":"${basicUser1.username.value}"
+                 },
+               "followers":[],
+               "collaborators":[],
+               "keeps":[],
+               "numKeeps":0,
+               "numCollaborators":0,
+               "numFollowers":0,
+               "whoCanInvite":"collaborator",
+               "modifiedAt": ${lib1Updated.updatedAt.getMillis},
+               "membership":{
+                "access":"owner",
+                "listed":false,
+                "subscribed":false
+               },
+               "invite": null
+             },
+             "suggestedSearches": {"terms": [], "weights": []}
+            }
+          """)
         Json.parse(contentAsString(result1)) must equalTo(expected)
         Json.parse(contentAsString(result2)) must equalTo(expected)
       }

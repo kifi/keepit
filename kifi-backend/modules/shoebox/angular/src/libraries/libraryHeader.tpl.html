@@ -64,6 +64,8 @@
 
       <div class="kf-lh-stats">
         <span class="kf-lh-stat" ng-pluralize count="library.numKeeps" when="{'one': '1 keep', 'other': '{{library.numKeeps|number}} keeps'}" ng-if="library.numKeeps"></span>
+        <button class="kf-lh-stat" ng-pluralize count="library.numFollowers + library.numCollaborators" when="{'one': '1 member', 'other': '{{(library.numFollowers + library.numCollaborators)|num}} members'}" ng-if="(library.numFollowers + library.numCollaborators) && onCollabExperiment" ng-click="openMembersModal()"></button>
+        <button class="kf-lh-stat" ng-pluralize count="library.numFollowers" when="{one:'1 follower',other:'{{library.numFollowers|num}} followers'}" ng-click="showFollowers()" ng-if="library.numFollowers && !onCollabExperiment"></button>
       </div>
 
       <!-- owner only -->
@@ -134,6 +136,5 @@
   <div class="kf-lh-buttons kf-my-lib clearfix" ng-if="amOwner">
     <button class="kf-lh-edit-keeps svg-bullet-list-green" ng-click="toggleEditKeeps()" ng-if="library.numKeeps > 0 && !librarySearch">{{editMode ? 'Done editing' : 'Edit keeps'}}</button>
     <div kf-library-share-search library="library" current-page-origin="libraryPage" btn-icon-class="svg-share-arrow-green" ng-if="!library.isSystem"></div>
-    <div kf-library-share-search library="library" current-page-origin="libraryPage" ng-if="!library.isSystem"></div>
   </div>
 </div>

@@ -41,6 +41,10 @@ class TikaDocument(
   def getLinks(rel: String): Set[String] = links.collect { case link if link.getRel == rel => link.getUri }.toSet
 
   def getTitle: Option[String] = getMetadata("title").filter(_.nonEmpty)
+
+  def getMetaRefresh: Option[(Int, String)] = getMetadata("refresh").collect {
+    case TikaDocument.metaRefreshPattern(delay, url) => (delay.toInt, url.trim)
+  }
 }
 
 object TikaDocument extends Logging {
@@ -99,4 +103,6 @@ object TikaDocument extends Logging {
       htmlMapper.foreach(mapper => context.set(classOf[HtmlMapper], mapper))
     }
   }
+
+  val metaRefreshPattern = """([0-9])+;\s*(?i:url)=(.+)""".r
 }

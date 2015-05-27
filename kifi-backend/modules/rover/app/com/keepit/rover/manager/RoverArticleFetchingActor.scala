@@ -1,7 +1,7 @@
 package com.keepit.rover.manager
 
 import com.google.inject.Inject
-import com.keepit.common.akka.SafeFuture
+import com.keepit.common.akka.{ FortyTwoActor, SafeFuture }
 import com.keepit.common.amazon.AmazonInstanceInfo
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -26,7 +26,7 @@ class RoverArticleFetchingActor @Inject() (
     airbrake: AirbrakeNotifier,
     imageProcessingCommander: ImageCommander,
     instanceInfo: AmazonInstanceInfo,
-    implicit val executionContext: ExecutionContext) extends ConcurrentTaskProcessingActor[SQSMessage[FetchTask]](airbrake) {
+    implicit val executionContext: ExecutionContext) extends FortyTwoActor(airbrake) with ConcurrentTaskProcessingActor[SQSMessage[FetchTask]] {
 
   private val concurrencyFactor = 25
   protected val maxConcurrentTasks: Int = 1 + instanceInfo.instantTypeInfo.cores * concurrencyFactor
