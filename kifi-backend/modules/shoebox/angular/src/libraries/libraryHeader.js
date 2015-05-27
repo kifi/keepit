@@ -46,10 +46,7 @@ angular.module('kifi')
         scope.imagePreview = null;
         scope.followBtnJustClicked = false;
         scope.onCollabExperiment = (profileService.me.experiments || []).indexOf('collaborative') > -1;
-        scope.amOwner = false;
-        scope.amCollab = false;
         scope.collabsCanInvite = false;
-        scope.hasCollaborators = false;
 
         //
         // Internal methods.
@@ -60,9 +57,6 @@ angular.module('kifi')
           lib.descriptionHtml = linkify(lib.description || '').replace(/\n+/g, '<br>');
           lib.absUrl = env.origin + lib.url;
           lib.isSystem = lib.kind.lastIndexOf('system_', 0) === 0;
-          scope.hasCollaborators = lib.numCollaborators > 0;
-          scope.amOwner = lib.membership && lib.membership.access === 'owner';
-          scope.amCollab = lib.membership && lib.membership.access === 'read_write';
           scope.collabsCanInvite = lib.whoCanInvite === 'collaborator';
 
           $timeout(function () {
@@ -507,12 +501,16 @@ angular.module('kifi')
           return scope.library.membership && scope.library.membership.access === 'read_only';
         };
 
-        scope.isCollaborating = function () {
+        scope.isCollaborator = function () {
           return scope.library.membership && scope.library.membership.access === 'read_write';
         };
 
         scope.isMember = function () {
           return Boolean(scope.library.membership);
+        };
+
+        scope.isOwner = function () {
+          return scope.library.membership && scope.library.membership.access === 'owner';
         };
 
         scope.followLibrary = function (btnJustClicked) {
@@ -605,8 +603,8 @@ angular.module('kifi')
               template: 'libraries/libraryMembersModal.tpl.html',
               modalData: {
                 library: scope.library,
-                canManageMembers: (scope.amOwner || (scope.amCollab && scope.collabsCanInvite)),
-                amOwner: scope.amOwner,
+                canManageMembers: (scope.isOwner() || (scope.isCollaborator() && scope.collabsCanInvite)),
+                amOwner: scope.isOwner(),
                 currentPageOrigin: 'libraryPage'
               }
             });
