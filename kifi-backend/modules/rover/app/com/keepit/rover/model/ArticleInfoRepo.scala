@@ -205,8 +205,8 @@ class ArticleInfoRepoImpl @Inject() (
 
     val q = sql"""
       SELECT *
-      FROM `article_info_copy`
-      WHERE `state` = 'active' AND `next_fetch_at` < $now AND (`last_fetching_at` IS NULL OR `last_fetching_at` < $lastFetchingTooLongAgo) ORDER BY `last_fetched_at`, `next_fetch_at` LIMIT 10000;
+      FROM `article_info`
+      WHERE `state` = 'active' AND `next_fetch_at` < $now AND (`last_fetching_at` IS NULL OR `last_fetching_at` < $lastFetchingTooLongAgo) ORDER BY `last_fetched_at`, `next_fetch_at` LIMIT $limit;
     """
     q.as[RoverArticleInfo].list
   }
