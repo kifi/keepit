@@ -1,20 +1,18 @@
 package com.keepit.common.seo
 
+import akka.util.Timeout
 import com.keepit.abook.FakeABookServiceClientModule
-import com.keepit.common.crypto.FakeCryptoModule
-import com.keepit.common.mail.{ EmailAddress, FakeMailModule }
+import com.keepit.common.mail.EmailAddress
 import com.keepit.common.social.FakeSocialGraphModule
-import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.common.time._
-import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.model._
-import com.keepit.search.FakeSearchServiceClientModule
-import com.keepit.shoebox.{ FakeShoeboxServiceModule, FakeKeepImportsModule }
+import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.test.ShoeboxTestInjector
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
 
-import scala.xml.Elem
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
 
 /**
  * Created by colinlane on 5/22/15.
@@ -51,8 +49,10 @@ class FeedCommanderTest extends Specification with ShoeboxTestInjector {
           (library)
         }
         val commander = inject[FeedCommander]
-        val result = commander.libraryFeed("dev.ezkeep.com:9000/colin-lane/test/rss", library)
-        (result \ "channel" \ "title").text must be equalTo ("test")
+        val resultTry = Await.ready(commander.libraryFeed(library), Duration.Inf).value.get
+        resultTry.isSuccess must equalTo(true)
+        val result = resultTry.get
+        (result \ "channel" \ "title").text must contain("test by Colin-Lane")
 
         val amazon = (result \ "channel" \ "item")(0)
         (amazon \ "title").text must be equalTo ("Amazon")
@@ -60,7 +60,7 @@ class FeedCommanderTest extends Specification with ShoeboxTestInjector {
 
         val google = (result \ "channel" \ "item")(1)
         (google \ "title").text must be equalTo ("Google")
-        (google \ "description").text must equalTo("Google Note")
+        (google \ "description").text must equalTo("") // we get our descriptions from rover not from the note.
         (google \ "link").text must equalTo("http://www.google.com/")
       }
     }
