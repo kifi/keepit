@@ -144,7 +144,7 @@ k.snapshot = k.snapshot || (function () {
         var cs = window.getComputedStyle(node);
         var display = cs.display;
         if (display !== 'none' && cs.visibility !== 'hidden') {
-          var inline = display.lastIndexOf('inline', 0) === 0;
+          var inline = display.lastIndexOf('inline', 0) === 0 && node.tagName !== 'BR';
           if (!inline) {
             makeLastSeparatorVertical();
           }
