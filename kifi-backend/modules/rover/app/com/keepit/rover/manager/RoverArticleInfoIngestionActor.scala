@@ -2,7 +2,7 @@ package com.keepit.rover.manager
 
 import com.google.inject.{ Inject }
 import com.keepit.common.actor.ActorInstance
-import com.keepit.common.akka.SafeFuture
+import com.keepit.common.akka.{ FortyTwoActor, SafeFuture }
 import com.keepit.common.db.{ SequenceNumber }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -28,7 +28,7 @@ class RoverArticleInfoIngestionActor @Inject() (
     articlePolicy: ArticleFetchPolicy,
     fetchSchedulingActor: ActorInstance[RoverFetchSchedulingActor],
     airbrake: AirbrakeNotifier,
-    implicit val executionContext: ExecutionContext) extends BatchProcessingActor[IndexableUri](airbrake) with Logging {
+    implicit val executionContext: ExecutionContext) extends FortyTwoActor(airbrake) with BatchProcessingActor[IndexableUri] {
 
   import RoverArticleInfoIngestionActor._
 

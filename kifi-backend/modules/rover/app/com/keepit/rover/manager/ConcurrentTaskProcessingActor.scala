@@ -1,8 +1,7 @@
 package com.keepit.rover.manager
 
-import com.keepit.common.akka.{ UnsupportedActorMessage, FortyTwoActor }
-import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.logging.Logging
+import akka.actor.Actor
+import com.keepit.common.akka.{ UnsupportedActorMessage }
 import com.keepit.common.concurrent.ExecutionContext
 
 import scala.concurrent.{ Future }
@@ -17,7 +16,9 @@ object ConcurrentTaskProcessingActor {
   case class UnknownTaskStatusException[T](task: T) extends Exception(s"Unknown task status: $task")
 }
 
-abstract class ConcurrentTaskProcessingActor[T](airbrake: AirbrakeNotifier) extends FortyTwoActor(airbrake) with Logging {
+trait ConcurrentTaskProcessingActor[T] { _: Actor =>
+
+  protected val log: play.api.LoggerLike
 
   protected val minConcurrentTasks: Int
   protected val maxConcurrentTasks: Int
@@ -36,7 +37,7 @@ abstract class ConcurrentTaskProcessingActor[T](airbrake: AirbrakeNotifier) exte
 
   private def concurrentFetchTasks = pulling + processing.size
 
-  def receive = {
+  def receive: akka.actor.Actor.Receive = {
     case taskProcessingMessage: TaskProcessingActorMessage => {
       taskProcessingMessage match {
         case IfYouCouldJustGoAhead => startPulling()
@@ -101,6 +102,7 @@ abstract class ConcurrentTaskProcessingActor[T](airbrake: AirbrakeNotifier) exte
 
   private def endProcessing(task: T): Unit = {
     processing -= task
+    log.info(s"Processed $task.")
     if (concurrentFetchTasks < minConcurrentTasks) {
       startPulling()
     }
@@ -112,7 +114,7 @@ abstract class ConcurrentTaskProcessingActor[T](airbrake: AirbrakeNotifier) exte
   }
 }
 
-abstract class BatchProcessingActor[T](airbrake: AirbrakeNotifier) extends ConcurrentTaskProcessingActor[Seq[T]](airbrake) {
+trait BatchProcessingActor[T] extends ConcurrentTaskProcessingActor[Seq[T]] { _: Actor =>
   final protected val minConcurrentTasks: Int = 1
   final protected val maxConcurrentTasks: Int = 1
 

@@ -1,7 +1,7 @@
 package com.keepit.rover.manager
 
 import com.google.inject.{ Inject }
-import com.keepit.common.akka.SafeFuture
+import com.keepit.common.akka.{ FortyTwoActor, SafeFuture }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.time.Clock
@@ -25,7 +25,7 @@ class RoverArticleImageSchedulingActor @Inject() (
     airbrake: AirbrakeNotifier,
     fastFollowQueue: ArticleImageProcessingTaskQueue.FastFollow,
     catchUpQueue: ArticleImageProcessingTaskQueue.CatchUp,
-    private implicit val executionContext: ExecutionContext) extends BatchProcessingActor[RoverArticleInfo](airbrake) with Logging {
+    private implicit val executionContext: ExecutionContext) extends FortyTwoActor(airbrake) with BatchProcessingActor[RoverArticleInfo] {
 
   import RoverArticleImageSchedulingActor._
 
