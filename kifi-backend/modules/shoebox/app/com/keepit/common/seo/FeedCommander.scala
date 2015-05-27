@@ -70,10 +70,11 @@ class FeedCommander @Inject() (
       <channel>
         <title>{ library.name } by { libraryCreator } • Kifi</title>
         <link>{ feedUrl }</link>
-        <description>{ library.description.getOrElse("") }</description>{
+        <description>{ library.description.getOrElse("") }</description>
+        {
           if (libImage != "") {
             <image>
-              <url>{ libImage }</url>
+              <url>{ s"https:$libImage" }</url>
               <title>{ library.name }</title>
               <link>{ feedUrl }</link>
             </image>
@@ -91,7 +92,7 @@ class FeedCommander @Inject() (
 
             RssItem(title = keep.title.getOrElse(""), description = keep.note.getOrElse(""), link = keep.url,
               guid = keep.externalId.id, pubDate = keep.keptAt, creator = originalKeeper.fullName,
-              icon = keepImage.map(_.get).map(_.imagePath.getUrl(s3ImageConfig)).getOrElse(""))
+              icon = keepImage.map(_.get).map(_.imagePath.getUrl(s3ImageConfig)).map(url => s"https:$url").getOrElse(""))
           }
           rssItems(keeps map convertKeep)
         }{ /* License asking for attribution */ }
