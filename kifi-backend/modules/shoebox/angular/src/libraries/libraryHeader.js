@@ -48,7 +48,7 @@ angular.module('kifi')
         scope.onCollabExperiment = (profileService.me.experiments || []).indexOf('collaborative') > -1;
         scope.amOwner = false;
         scope.amCollab = false;
-        scope.collabsCanEdit = false;
+        scope.collabsCanInvite = false;
         scope.hasCollaborators = false;
 
         //
@@ -63,7 +63,7 @@ angular.module('kifi')
           scope.hasCollaborators = lib.numCollaborators > 0;
           scope.amOwner = lib.membership && lib.membership.access === 'owner';
           scope.amCollab = lib.membership && lib.membership.access === 'read_write';
-          scope.collabsCanEdit = lib.whoCanInvite === 'collaborator';
+          scope.collabsCanInvite = lib.whoCanInvite === 'collaborator';
 
           $timeout(function () {
             var lh = parseFloat(descWrapEl.css('line-height'), 10);
@@ -503,8 +503,16 @@ angular.module('kifi')
           return t*t*t;
         }
 
-        scope.followingLibrary = function () {
+        scope.isFollowing = function () {
           return scope.library.membership && scope.library.membership.access === 'read_only';
+        };
+
+        scope.isCollaborating = function () {
+          return scope.library.membership && scope.library.membership.access === 'read_write';
+        };
+
+        scope.isMember = function () {
+          return Boolean(scope.library.membership);
         };
 
         scope.followLibrary = function (btnJustClicked) {
@@ -597,7 +605,7 @@ angular.module('kifi')
               template: 'libraries/libraryMembersModal.tpl.html',
               modalData: {
                 library: scope.library,
-                canManageMembers: (scope.amOwner || (scope.amCollab && scope.collabsCanEdit)),
+                canManageMembers: (scope.amOwner || (scope.amCollab && scope.collabsCanInvite)),
                 amOwner: scope.amOwner,
                 currentPageOrigin: 'libraryPage'
               }

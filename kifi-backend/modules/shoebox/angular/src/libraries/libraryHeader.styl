@@ -25,13 +25,20 @@ colorBarHeight = .4em
     &.kf-system-secret
       height: 16em
 
+
+inviteSidePad = 20px
+inviteMaxWidth = 496px  // chosen to make youtube videos (16:9 aspect ratio) come out to whole pixels, 496x279
+maxWindowWidthForNarrowKeeps = inviteMaxWidth + 2 * (inviteSidePad + appSidePad1) - 1 // = 559px
+
 .kf-lh-invite-banner
   position: absolute
   left: 50%
   transform: translateX(-50%)
-  margin-top: -14px
-  width: 776px
+  max-width: 776px
+  width: 100%
   height: 60px
+  margin-top: -14px
+  padding-left: 25px
   box-sizing: border-box
   border-radius: 10px
   z-index: 2
@@ -47,19 +54,49 @@ colorBarHeight = .4em
     transform: translate(-50%, -100%)
     opacity: 0
 
+  @media (max-width: 796px)
+    max-width: 2 * (1 + inviteSidePad) + inviteMaxWidth
+    font-size: 0.76em
+
+  @media (max-width: maxWindowWidthForNarrowKeeps)
+    max-width: inviteMaxWidth
+    font-size: 0.8em
+
+  @media (max-width: 536px)
+    width: calc(100% - 24px)
+
+  @media (max-width: 479px)
+    font-size: 0.92em
+
 .kf-lh-invite-pic
+  position: relative
+  top: -1px
   display: inline-block
   width: 36px
   height: 36px
-  margin-left: 25px
-  margin-right: 15px
   border-radius: 50%
+
+  @media (max-width: 479px)
+    display: none
 
 .kf-lh-invite-banner-text
   display: inline-block
+  margin-left: 15px
   line-height: 60px
   color: #fff
-  font-size: 1.1em
+
+  @media (max-width: 536px)
+    position: relative
+    top: 12px
+    line-height: 18px
+
+  @media (max-width: 479px)
+    margin-left: 0px
+
+  & span
+    @media (max-width: 536px)
+      display: block
+
 
 .kf-lh-invite-banner-button
   position: relative
@@ -70,7 +107,6 @@ colorBarHeight = .4em
   border: 1px solid #fff
   border-radius: 4px
   padding: .44em 1.3em
-  font-size: 1em
 
   &.kf-accept
     background: alpha(#fff, .9)
