@@ -1,20 +1,18 @@
 package com.keepit.common.seo
 
+import akka.util.Timeout
 import com.keepit.abook.FakeABookServiceClientModule
-import com.keepit.common.crypto.FakeCryptoModule
-import com.keepit.common.mail.{ EmailAddress, FakeMailModule }
+import com.keepit.common.mail.EmailAddress
 import com.keepit.common.social.FakeSocialGraphModule
-import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.common.time._
-import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.model._
-import com.keepit.search.FakeSearchServiceClientModule
-import com.keepit.shoebox.{ FakeShoeboxServiceModule, FakeKeepImportsModule }
+import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.test.ShoeboxTestInjector
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
 
-import scala.xml.Elem
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
 
 /**
  * Created by colinlane on 5/22/15.
@@ -51,7 +49,9 @@ class FeedCommanderTest extends Specification with ShoeboxTestInjector {
           (library)
         }
         val commander = inject[FeedCommander]
-        val result = commander.libraryFeed(library)
+        val resultTry = Await.ready(commander.libraryFeed(library), Duration.Inf).value.get
+        resultTry.isSuccess must equalTo(true)
+        val result = resultTry.get
         (result \ "channel" \ "title").text must contain("test by colin-lane")
 
         val amazon = (result \ "channel" \ "item")(0)
