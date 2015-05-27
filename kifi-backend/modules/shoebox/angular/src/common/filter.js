@@ -48,6 +48,12 @@ angular.module('kifi')
   }
 ])
 
+.filter('libPath', function (env) {
+  return function (lib) {
+    return '/' + lib.owner.username + '/' + lib.slug;
+  };
+})
+
 .filter('libImageUrl', [
   'env',
   function (env) {

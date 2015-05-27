@@ -270,48 +270,120 @@ owner-pic-diam = 32px
   font-size: 14px
   cursor: default
 
-.kf-upl-card-follow
+followHeight = 30px
+subsWidth = 32px
+subsDur = .3s
+
+.kf-upl-follow-wrap
   position: absolute
   top: 192px
   left: 50%
   transform: translate(-50%)
   box-sizing: border-box
+  height: followHeight
   width: 91px
-  height = 28px
   padding: 0
-  background-color: rgba(220,220,220,.4)
-  border: 1px solid rgba(255,255,255,.5)
-  border-radius: (height / 2)
+  border-radius: (followHeight / 2)
+  transition: width (subsDur * .8)
+
+  &.kf-following
+    width: 100px
+
+    &.kf-no-unfollow
+      transition-duration: .1s
+
+    &:not(.kf-no-unfollow):hover
+        width: 100px + subsWidth
+
+  &:not(.kf-overflowing)
+    overflow: hidden
+
+.kf-upl-follow-btn
+  position: absolute
+  top: 0
+  left: 0
+  width: 100%
+  height: followHeight
+  border: 0
+  border-radius: '%s' % inherit
+  padding: 0
+  background-color: inherit
   color: #fff
   font-weight: 500
   font-size: 11px
-  line-height: height
+  line-height: followHeight
   text-transform: uppercase
-  text-shadow: 0 0 2px rgba(0,0,0,.4)
+  text-shadow: 0 0 1px rgba(0,0,0,.4)
   letter-spacing: .4px
   text-align: center
   box-shadow: 0 0 8px rgba(0,0,0,.2)
 
   &:hover
-    background-color: rgba(235,235,235,.4)
+    background-color: alpha(#fff, .1)
 
-  &:hover:active
-    background-color: rgba(215,215,215,.4)
-
-  &:focus
-    border-style: dotted
+    &:active
+      background-color: alpha(#000, .02)
 
   &::before
     content: 'Follow'
 
-  &.kf-following
-    width: 100px
-
-  &.kf-following::before
+  .kf-following>&::before
     content: 'Following'
+    transition: transform subsDur
 
-  &.kf-following:hover::before
+  .kf-following:not(.kf-no-unfollow):hover>&::before
     content: 'Unfollow'
+    display: inline-block
+    transform: translate(subsWidth / -2.5)  // .5 fudge factor compensates for lack of rounded corners on right
+
+.kf-upl-subs-btn
+  position: absolute
+  top: 0
+  right: 0
+  bottom: 0
+  width: subsWidth
+  border: 0
+  border-radius: 0 (followHeight / 2) (followHeight / 2) 0
+  background-color: inherit
+  background-position: right 0.64em center
+  background-size: 1.1em 1.01em
+  background-repeat: no-repeat
+  padding: 0
+  font-size: 13px // same as .kf-button
+  transition: transform subsDur, opacity linear subsDur
+  transform: translate(subsWidth)
+  opacity: 0
+
+  .kf-following:not(.kf-no-unfollow):hover>&
+    transform: none
+    opacity: 1
+
+    &:hover
+      background-color: alpha(#fff, .1)
+
+      &:active
+        background-color: alpha(#000, .02)
+
+  &.svg-notification-off-white
+    background-position: right 0.62em center
+
+.kf-upl-subs-msg
+  position: absolute
+  bottom: 120%
+  left: 50%
+  transform: translate(-50%)
+  padding: 2px 7px 3px
+  border-radius: 2px
+  background-color: #fff
+  color: #3e4955
+  font-size: 13px
+  white-space: nowrap
+  box-shadow: 0 1px 3px rgba(0,0,0,.2)
+  transition: opacity linear .1s, visibility .1s
+
+  :not(:hover)+&
+    opacity: 0
+    visibility: hidden
 
 .kf-upl-card-cover
   position: absolute
