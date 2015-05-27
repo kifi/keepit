@@ -3,7 +3,6 @@ package com.keepit.rover.manager
 import com.google.inject.{ Inject }
 import com.keepit.common.akka.{ FortyTwoActor, SafeFuture }
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.logging.Logging
 import com.keepit.rover.article.ArticleCommander
 import com.keepit.rover.model.{ RoverArticleInfo }
 import scala.concurrent.duration._
@@ -13,8 +12,8 @@ import scala.concurrent.{ Future, ExecutionContext }
 import scala.util.{ Success, Failure }
 
 object RoverFetchSchedulingActor {
-  val maxBatchSize = 10000
-  val maxQueuedFor = 12 hours
+  val maxBatchSize = 1000
+  val maxQueuedFor = 5 days
 }
 
 class RoverFetchSchedulingActor @Inject() (
