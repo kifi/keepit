@@ -411,6 +411,7 @@ k.compose = k.compose || (function() {
         if ($to.length) {
           $to.tokenInput('destroy');
         }
+        editor.$el.handleLookClicks(false);
         if (!$forms.length) {
           k.snap.disable();
         }

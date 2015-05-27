@@ -5,12 +5,19 @@
 
 $.fn.handleLookClicks = $.fn.handleLookClicks || (function () {
   'use strict';
+  var hide;
   return function (containerName) {
-    return this
-      .on('mousedown', 'a[href^="x-kifi-sel:"]', $.proxy(lookMouseDown, null, containerName))
-      .on('click', 'a[href^="x-kifi-sel:"]', function (e) {
-        e.preventDefault();
-      });
+    if (containerName) {
+      this
+        .on('mousedown', 'a[href^="x-kifi-sel:"]', $.proxy(lookMouseDown, null, containerName))
+        .on('click', 'a[href^="x-kifi-sel:"]', function (e) {
+          e.preventDefault();
+        });
+    } else if (hide) {
+      hide();
+      hide = null;
+    }
+    return this;
   };
 
   function lookMouseDown(containerName, e) {
@@ -148,7 +155,7 @@ $.fn.handleLookClicks = $.fn.handleLookClicks || (function () {
     })[0];
     var self = this;
     api.require('scripts/look_link_broken.js', function () {
-      showBrokenLookLinkDialog.call(self, a, authorName, eventOrSelector);
+      hide = showBrokenLookLinkDialog.call(self, a, authorName, eventOrSelector);
     });
   }
 }());
