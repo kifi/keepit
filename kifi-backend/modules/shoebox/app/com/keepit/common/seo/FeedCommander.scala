@@ -60,7 +60,7 @@ class FeedCommander @Inject() (
   def libraryFeed(library: Library, keepCountToDisplay: Int = 20, offset: Int = 0): Elem = {
     val (libImage, keeps, libraryCreator) = db.readOnlyMaster { implicit session =>
       val image = libraryImageCommander.getBestImageForLibrary(library.id.get, ImageSize(600, 600))
-      val keeps = keepRepo.getByLibrary(libraryId = library.id.get, offset = 0, limit = keepCountToDisplay, excludeSet = Set(KeepStates.INACTIVE))
+      val keeps = keepRepo.getByLibrary(libraryId = library.id.get, offset = offset, limit = keepCountToDisplay, excludeSet = Set(KeepStates.INACTIVE))
       val libraryCreator = userRepo.get(library.ownerId)
       (image.map(_.imagePath.getUrl(s3ImageConfig)).getOrElse(""), keeps, libraryCreator)
     }
