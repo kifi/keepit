@@ -822,18 +822,29 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
         }
         contentAsJson(res1) === Json.parse(
           s"""
-             { "link" : "http://dev.ezkeep.com:9000/nickfury/secret-shield-stuff?authToken=${invite1.authToken}", "access" : "read_only", "message" : "please follow" }
+             {
+              "link": "http://dev.ezkeep.com:9000/nickfury/secret-shield-stuff?authToken=${invite1.authToken}",
+              "access": "read_only",
+              "sms": "Check out this interesting Kifi library: http://dev.ezkeep.com:9000/nickfury/secret-shield-stuff?authToken=${invite1.authToken}",
+              "email": {
+                "subject": "Check out this Kifi library: ${lib1a.name}",
+                "body": "I think you will find this Kifi library interesting: http://dev.ezkeep.com:9000/nickfury/secret-shield-stuff?authToken=${invite1.authToken}"
+              },
+              "facebook": "Check out this interesting Kifi library: http://dev.ezkeep.com:9000/nickfury/secret-shield-stuff?authToken=${invite1.authToken}",
+              "twitter": "Check out this interesting Kifi library: http://dev.ezkeep.com:9000/nickfury/secret-shield-stuff?authToken=${invite1.authToken}",
+              "message": ""
+            }
            """
         )
 
         // test collaborator inviting to a secret library (library allows collaborators to invite)
-        val res2 = inviteAnonymousToLibrary(user2, pubLibId1a, Json.obj("access" -> "read_write", "message" -> "please collaborate"))
+        val res2 = inviteAnonymousToLibrary(user2, pubLibId1a, Json.obj("access" -> "read_write"))
         status(res2) must equalTo(OK)
         db.readOnlyMaster { implicit s =>
           libraryInviteRepo.count === 2
           val invite = libraryInviteRepo.all.last
           invite.inviterId === user2.id.get
-          invite.message === Some("please collaborate")
+          invite.message === None
           invite.access === LibraryAccess.READ_WRITE
           invite.userId === None
           invite.emailAddress === None
@@ -844,11 +855,26 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
         status(res3) must equalTo(BAD_REQUEST)
 
         // test owner inviting to a published library
-        val res4 = inviteAnonymousToLibrary(user1, pubLibId1b, Json.obj("access" -> "read_only", "message" -> "please follow"))
+        val res4 = inviteAnonymousToLibrary(user1, pubLibId1b, Json.obj("access" -> "read_only"))
         status(res4) must equalTo(OK)
+        val invite2 = db.readOnlyMaster { implicit s =>
+          libraryInviteRepo.all.last
+        }
+
         contentAsJson(res4) === Json.parse(
           s"""
-             { "link" : "http://dev.ezkeep.com:9000/nickfury/public-shield-stuff", "access" : "read_only", "message" : "please follow" }
+             {
+              "link": "http://dev.ezkeep.com:9000/nickfury/public-shield-stuff?authToken=${invite2.authToken}",
+              "access": "read_only",
+              "sms": "Check out this interesting Kifi library: http://dev.ezkeep.com:9000/nickfury/public-shield-stuff?authToken=${invite2.authToken}",
+              "email": {
+                "subject": "Check out this Kifi library: ${lib1b.name}",
+                "body": "I think you will find this Kifi library interesting: http://dev.ezkeep.com:9000/nickfury/public-shield-stuff?authToken=${invite2.authToken}"
+              },
+              "facebook": "Check out this interesting Kifi library: http://dev.ezkeep.com:9000/nickfury/public-shield-stuff?authToken=${invite2.authToken}",
+              "twitter": "Check out this interesting Kifi library: http://dev.ezkeep.com:9000/nickfury/public-shield-stuff?authToken=${invite2.authToken}",
+              "message": ""
+            }
            """
         )
         db.readOnlyMaster { implicit s =>

@@ -343,12 +343,19 @@ class MobileLibraryController @Inject() (
               basicUserRepo.load(library.ownerId)
             }
             val libraryPath = s"${fortyTwoConfig.applicationBaseUrl}${Library.formatLibraryPath(owner.username, library.slug)}"
-            val link = if (library.isSecret) {
-              libraryPath + "?authToken=" + invite.authToken
-            } else {
-              libraryPath
-            }
-            Ok(Json.obj("link" -> link, "access" -> invite.access, "message" -> invite.message))
+            val link = libraryPath + "?authToken=" + invite.authToken
+            Ok(Json.obj(
+              "link" -> link,
+              "access" -> invite.access.value,
+              "sms" -> s"Check out this interesting Kifi library: $link",
+              "email" -> Json.obj(
+                "subject" -> s"Check out this Kifi library: ${library.name}",
+                "body" -> s"I think you will find this Kifi library interesting: $link"
+              ),
+              "facebook" -> s"Check out this interesting Kifi library: $link",
+              "twitter" -> s"Check out this interesting Kifi library: $link",
+              "message" -> "" // Ignore!
+            ))
         }
     }
   }
