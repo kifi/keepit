@@ -168,44 +168,23 @@ class LibraryController @Inject() (
   }
 
   def getLibrarySummariesByUser = UserAction.async { request =>
-    val (tooManyLibsWithMemberships, libsWithAllInvites) = libraryCommander.getLibrariesByUser(request.userId)
+    val (tooManyLibsWithMemberships, _) = libraryCommander.getLibrariesByUser(request.userId) // TODO: stop loading invited libraries
 
     // TODO: filter out followed libraries at database level
     val libsWithMemberships = tooManyLibsWithMemberships.filter(l => LibraryAccess.collaborativePermissions.contains(l._1.access))
 
-    val libsWithInvites = for ((lib, invites) <- libsWithAllInvites.groupBy(_._2).mapValues(_.map(_._1))) yield {
-      (invites.sorted.last, lib) // only show one invite per library - the one with highest access
-    }
-
     val basicUsers = db.readOnlyReplica { implicit session =>
-      basicUserRepo.loadAll((libsWithMemberships.map(_._2.ownerId) ++ libsWithInvites.map(_._2.ownerId) ++ libsWithInvites.map(_._1.inviterId)).toSet)
+      basicUserRepo.loadAll(libsWithMemberships.map(_._2.ownerId).toSet)
     }
-    val libInfosWithMembershipsF = SafeFuture {
+    SafeFuture {
       db.readOnlyReplica { implicit session =>
         for ((mem, library) <- libsWithMemberships) yield {
           val owner = basicUsers(library.ownerId)
           (LibraryInfo.fromLibraryAndOwner(library, None, owner), mem) // should have library image, but this endpoint doesn't use it and is already slow & heavy.
         }
       }
-    }
-    val libInfosWithInvitesF = SafeFuture {
-      db.readOnlyReplica { implicit session =>
-        for ((invite, lib) <- libsWithInvites) yield {
-          val owner = basicUsers(lib.ownerId)
-          val inviter = basicUsers(invite.inviterId)
-          (LibraryInfo.fromLibraryAndOwner(lib, None, owner, Some(inviter)), invite) // should have library image, but this endpoint doesn't use it and is already slow & heavy.
-        }
-      }
-    }
-
-    for {
-      libInfosWithMemberships <- libInfosWithMembershipsF
-      libInfosWithInvites <- libInfosWithInvitesF
-    } yield {
-      Ok(Json.obj(
-        "libraries" -> libInfosWithMemberships.map(libInfoToJsonWithLastViewed),
-        "invited" -> libInfosWithInvites.map(pair => Json.toJson(pair._1))
-      ))
+    } map { libInfosWithMemberships =>
+      Ok(Json.obj("libraries" -> libInfosWithMemberships.map(libInfoToJsonWithLastViewed)))
     }
   }
 

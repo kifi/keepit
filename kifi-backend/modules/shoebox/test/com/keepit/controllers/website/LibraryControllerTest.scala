@@ -489,29 +489,17 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         val t2 = new DateTime(2014, 10, 1, 6, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
         val libraryController = inject[LibraryController]
 
-        val (user1, user2, lib1, lib2, lib3) = db.readWrite { implicit s =>
+        val (user1, user2, lib1, lib2) = db.readWrite { implicit s =>
           val user1 = userRepo.save(User(firstName = "Aaron", lastName = "A", createdAt = t1, username = Username("ahsu"), normalizedUsername = "test"))
           val user2 = userRepo.save(User(firstName = "Baron", lastName = "B", createdAt = t1, username = Username("bhsu"), normalizedUsername = "test"))
           val library1 = libraryRepo.save(Library(name = "Library1", ownerId = user1.id.get, slug = LibrarySlug("lib1"), memberCount = 1, visibility = LibraryVisibility.SECRET))
           val library2 = libraryRepo.save(Library(name = "Library2", ownerId = user2.id.get, slug = LibrarySlug("lib2"), memberCount = 1, visibility = LibraryVisibility.PUBLISHED))
           libraryMembershipRepo.save(LibraryMembership(libraryId = library1.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, lastViewed = Some(t2)))
           libraryMembershipRepo.save(LibraryMembership(libraryId = library2.id.get, userId = user2.id.get, access = LibraryAccess.OWNER))
-
-          val library3 = libraryRepo.save(Library(name = "Library3", ownerId = user2.id.get, slug = LibrarySlug("lib3"), memberCount = 2, visibility = LibraryVisibility.DISCOVERABLE))
-          libraryMembershipRepo.save(LibraryMembership(libraryId = library3.id.get, userId = user2.id.get, access = LibraryAccess.OWNER))
-          libraryInviteRepo.save(LibraryInvite(libraryId = library3.id.get, inviterId = user2.id.get, userId = user1.id, access = LibraryAccess.READ_ONLY, state = LibraryInviteStates.ACCEPTED))
-          libraryMembershipRepo.save(LibraryMembership(libraryId = library3.id.get, userId = user1.id.get, access = LibraryAccess.READ_ONLY))
-
-          // send invites to same library with different access levels (only want highest access level)
-          libraryInviteRepo.save(LibraryInvite(libraryId = library2.id.get, inviterId = user2.id.get, userId = user1.id, access = LibraryAccess.READ_ONLY))
-          libraryInviteRepo.save(LibraryInvite(libraryId = library2.id.get, inviterId = user2.id.get, userId = user1.id, access = LibraryAccess.READ_INSERT))
-          libraryInviteRepo.save(LibraryInvite(libraryId = library2.id.get, inviterId = user2.id.get, userId = user1.id, access = LibraryAccess.READ_WRITE, state = LibraryInviteStates.DECLINED))
-          (user1, user2, library1, library2, library3)
+          (user1, user2, library1, library2)
         }
 
         val pubId1 = Library.publicId(lib1.id.get)
-        val pubId2 = Library.publicId(lib2.id.get)
-        val pubId3 = Library.publicId(lib3.id.get)
         val testPath = com.keepit.controllers.website.routes.LibraryController.getLibrarySummariesByUser.url
         inject[FakeUserActionsHelper].setUser(user1)
         val request1 = FakeRequest("GET", testPath)
@@ -542,27 +530,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                   |"kind":"user_created",
                   |"lastViewed":${Json.toJson(t2)(internalTime.DateTimeJsonLongFormat)}
                 |}
-              |],
-              |"invited":
-              | [
-                | {
-                    |"id":"${pubId2.id}",
-                    |"name":"Library2",
-                    |"visibility":"published",
-                    |"url":"/bhsu/lib2",
-                    |"owner":{
-                    |  "id":"${basicUser2.externalId}",
-                    |  "firstName":"${basicUser2.firstName}",
-                    |  "lastName":"${basicUser2.lastName}",
-                    |  "pictureName":"${basicUser2.pictureName}",
-                    |  "username":"${basicUser2.username.value}"
-                    |  },
-                    |"numKeeps":0,
-                    |"numFollowers":0,
-                    |"kind":"user_created",
-                    |"inviter":{"id":"${user2.externalId}","firstName":"Baron","lastName":"B","pictureName":"0.jpg","username":"bhsu"}
-                  |}
-              | ]
+              |]
             |}
            """.stripMargin)
         Json.parse(contentAsString(result1)) must equalTo(expected)
