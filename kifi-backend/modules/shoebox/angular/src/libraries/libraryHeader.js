@@ -633,7 +633,9 @@ angular.module('kifi')
         });
 
         scope.$watch('library.numCollaborators', function() {
-          // keep at most 5 circles at all times (1 circle is owner, 1 circle is for adding collab, 1 circle is for additional collabs), but if there are 1 owner + 4 collaborators, then show those 5
+          // keep at most 5 circles at all times
+          // (1 circle is owner, 1 circle is for adding collab, 1 circle is for additional collabs),
+          // but if there are 1 owner + 4 collaborators, then show those 5
           var addCollabButton = scope.isOwner() || (scope.isCollaborating() && scope.collabsCanInvite);
           var numCollabsToFit = addCollabButton && scope.library.numCollaborators > 2 ? 2 : !addCollabButton && scope.library.numCollaborators === 4 ? 4 : 3;
           var res = setMembersToShow(scope.library.collaborators, scope.library.numCollaborators, numCollabsToFit);
