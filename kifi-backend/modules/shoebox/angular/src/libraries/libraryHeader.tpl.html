@@ -35,9 +35,17 @@
         </button>
       </div>
 
-      <div class="kf-lh-members" ng-if="onCollabExperiment && (library.numCollaborators > 0 || library.numFollowers > 0)">
+      <div class="kf-lh-members-wrapper" ng-if="onCollabExperiment && (library.numCollaborators > 0 || library.numFollowers > 0)">
+        <div class="kf-lh-followers collab">
+          <a class="kf-lh-followers-a" ng-repeat="follower in followersToShow" href="{{follower|profileUrl}}" kf-track-origin="libraryPage/follower">
+            <img class="kf-lh-followers-pic" ng-src="{{follower|pic:100}}" alt="{{follower|name}}">
+            <span class="kf-lh-followers-name">{{follower.firstName}}</span>
+          </a>
+        </div>
         <button class="kf-lh-view-members" ng-click="openMembersModal()">
-          {{(isOwner() || (isCollaborating() && collabsCanInvite)) ? 'Manage members' : 'View members'}}
+          {{(isOwner() || (isCollaborating() && collabsCanInvite)) ? 'Manage ' : 'View '}}
+          {{(library.numFollowers + library.numCollaborators)|num}}
+          <ng-pluralize count="library.numFollowers + library.numCollaborators" when="{'one': ' member', 'other': ' members'}"></ng-pluralize>
         </button>
       </div>
 
@@ -57,7 +65,7 @@
 
       <div class="kf-lh-stats">
         <span class="kf-lh-stat" ng-pluralize count="library.numKeeps" when="{'one': '1 keep', 'other': '{{library.numKeeps|number}} keeps'}" ng-if="library.numKeeps"></span>
-        <button class="kf-lh-stat" ng-pluralize count="library.numFollowers + library.numCollaborators" when="{'one': '1 member', 'other': '{{(library.numFollowers + library.numCollaborators)|num}} members'}" ng-if="(library.numFollowers + library.numCollaborators) && onCollabExperiment" ng-click="openMembersModal()"></button>
+        <button class="kf-lh-stat" ng-pluralize count="library.numFollowers" when="{'one': '1 follower', 'other': '{{library.numFollowers|num}} followers'}" ng-if="library.numFollowers && onCollabExperiment" ng-click="openMembersModal()"></button>
         <button class="kf-lh-stat" ng-pluralize count="library.numFollowers" when="{one:'1 follower',other:'{{library.numFollowers|num}} followers'}" ng-click="showFollowers()" ng-if="library.numFollowers && !onCollabExperiment"></button>
       </div>
 
@@ -67,7 +75,7 @@
           <a class="kf-lh-owner-image-a" href="{{library.owner|profileUrl}}" itemprop="url" kf-track-origin="libraryPage/curator">
             <img class="kf-lh-owner-image" ng-src="{{library.owner|pic:200}}" itemprop="image" alt="{{library.owner|name}}">
           </a>
-          <button class="kf-lh-add-collab-button next-to-owner" ng-if="!library.attr.twitter.screenName && isOwner() && onCollabExperiment" ng-click="openInviteModal('collaborate')">
+          <button class="kf-lh-add-collab-button next-to-owner" ng-if="!library.attr.twitter.screenName && isOwner() && onCollabExperiment" ng-click="openInviteModal('collaborate')" ng-style="{'background-color': library.color}">
             <div class="kf-lh-add-collab-icon svg-collaborate-white"></div>
             <span class="kf-lh-add-collab-msg">Invite a collaborator</span>
           </button>
@@ -86,16 +94,17 @@
           </a>
           <a class="kf-lh-collab-name" href="{{library.owner|profileUrl}}" itemprop="name" kf-track-origin="libraryPage/collaborator">{{library.owner.firstName}}</a>
         </div>
-        <div class="kf-lh-collab-image-wrap" itemprop="contributor" itemscope itemtype="http://schema.org/Person" ng-repeat="collab in library.collaborators">
+
+        <div class="kf-lh-collab-image-wrap" itemprop="contributor" itemscope itemtype="http://schema.org/Person" ng-repeat="collab in library.collaboratorsToShow">
           <a class="kf-lh-collab-image-a" href="{{collab|profileUrl}}" itemprop="url" kf-track-origin="libraryPage/collaborator">
             <img class="kf-lh-collab-image" ng-src="{{collab|pic:200}}" itemprop="image" alt="{{collab|name}}">
           </a>
           <a class="kf-lh-collab-name" href="{{collab|profileUrl}}" itemprop="name" kf-track-origin="libraryPage/collaborator">{{collab.firstName}}</a>
         </div>
-        <button class="kf-lh-more-collab" ng-if="library.numCollaborators - library.collaborators.length > 0">
-          +{{library.numCollaborators - library.collaborators.length}}
+        <button class="kf-lh-more-collab" ng-click="openMembersModal()" ng-if="numMoreCollaboratorsText" ng-style="{'background-color': library.color}">
+          + {{numMoreCollaboratorsText}}
         </button>
-        <button class="kf-lh-add-collab-button" ng-if="(isOwner() || (isCollaborating() && library.whoCanInvite == 'collaborator')) && onCollabExperiment" ng-click="openInviteModal('collaborate')">
+        <button class="kf-lh-add-collab-button" ng-if="(isOwner() || (isCollaborating() && library.whoCanInvite == 'collaborator')) && onCollabExperiment" ng-click="openInviteModal('collaborate')" ng-style="{'background-color': library.color}">
           <div class="kf-lh-add-collab-icon svg-collaborate-white"></div>
           <span class="kf-lh-add-collab-msg">Invite a collaborator</span>
         </button>
@@ -118,7 +127,7 @@
 
     <div class="kf-lh-invite-banner" ng-style="{'background-color': library.color}" ng-if="library.invite">
       <img class="kf-lh-invite-pic" ng-src="{{library.invite.inviter|pic:100}}" alt="{{library.invite.inviter|name}}">
-      <div class="kf-lh-invite-banner-text">{{library.invite.inviter|name}} {{library.invite.access === 'read_only' ? ' has invited you' : 'would like to collaborate'}}<span></span> {{ library.invite.access === 'read_only' ? ' to follow' : ' with you on'}} this library</div>
+      <div class="kf-lh-invite-banner-text">{{library.invite.inviter|name}} {{library.invite.access === 'read_only' ? ' has invited you' : 'would like to'}}<span></span> {{ library.invite.access === 'read_only' ? ' to follow' : ' collaborate with you on'}} this library</div>
       <button class="kf-lh-invite-banner-button kf-ignore" ng-click="ignoreInvitation()">Ignore</button>
       <button class="kf-lh-invite-banner-button kf-accept" ng-click="acceptInvitation()" ng-style="{'color': library.color}">Accept</button>
     </div>

@@ -3,7 +3,7 @@
 
   <div class="dialog-body-wrap">
     <h1 class="dialog-header">
-      {{library.numFollowers > 0 || library.numCollaborators > 0 ? 'Manage members for this library' : library.name}}
+      {{library.numFollowers > 0 || library.numCollaborators > 0 ? canManage ? 'Manage members in this library' : 'View members in this library' : library.name}}
     </h1>
     <div class="dialog-body">
 
