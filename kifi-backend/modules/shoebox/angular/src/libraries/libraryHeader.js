@@ -497,7 +497,7 @@ angular.module('kifi')
           return scope.library.membership && scope.library.membership.access === 'read_only';
         };
 
-        scope.isCollaborator = function () {
+        scope.isCollaborating = function () {
           return scope.library.membership && scope.library.membership.access === 'read_write';
         };
 
@@ -599,7 +599,7 @@ angular.module('kifi')
               template: 'libraries/libraryMembersModal.tpl.html',
               modalData: {
                 library: scope.library,
-                canManageMembers: (scope.isOwner() || (scope.isCollaborator() && scope.collabsCanInvite)),
+                canManageMembers: (scope.isOwner() || (scope.isCollaborating() && scope.collabsCanInvite)),
                 amOwner: scope.isOwner(),
                 currentPageOrigin: 'libraryPage'
               }
