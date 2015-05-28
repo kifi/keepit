@@ -984,7 +984,6 @@ subsDur = .4s
   background-color: transparent
   background-image: none
   color: #20a1f1
-  line-height: 1
 
   &::before
     content: 'Following'
@@ -1013,7 +1012,7 @@ subsDur = .4s
   background-repeat: no-repeat
   padding: 0
   transition: transform subsDur
-  transform: translate(32px)
+  transform: translate(subsWidth)
 
   :not(.kf-no-unfollow):hover>&
     transform: none
@@ -1093,19 +1092,20 @@ subsDur = .4s
 
 
 .kf-lh-invite-search-button
-  height: 32px
-  padding: 2px 1.5em 0px
+  height: buttonHeight
+  padding: 0 buttonSidePad
   margin-left: 1em
   outline: none
   background: none
   border: 1px solid #56b263
-  border-radius: 12px
+  border-radius: buttonBorderRadius
   color: #56b263
   font-size: 13px
   vertical-align: top
 
   & .svg-share-arrow-green
     display: inline-block
+    vertical-align: top
     width: 15px
     height: 16px
     background-size: cover
