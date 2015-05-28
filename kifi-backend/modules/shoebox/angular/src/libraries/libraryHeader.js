@@ -91,9 +91,14 @@ angular.module('kifi')
         };
 
         scope.changeSubscription = function () {
-          libraryService.updateSubscriptionToLibrary(scope.library.id, !(scope.library.membership.subscribed)).then(function() {
-            scope.library.membership.subscribed = !(scope.library.membership.subscribed);
-          })['catch'](modalService.openGenericErrorModal);
+          var mem = scope.library.membership;
+          if (mem) {
+            libraryService.updateSubscriptionToLibrary(scope.library.id, !mem.subscribed).then(function() {
+              mem.subscribed = !mem.subscribed;
+            })['catch'](modalService.openGenericErrorModal);
+          } else {
+            scope.followLibrary({subscribed: true});
+          }
         };
 
         scope.onAddCoverImageMouseUp = function (event) {
@@ -509,7 +514,7 @@ angular.module('kifi')
           return scope.library.membership && scope.library.membership.access === 'owner';
         };
 
-        scope.followLibrary = function (btnJustClicked) {
+        scope.followLibrary = function (opts) {
           scope.followCallback();
           $rootScope.$emit('trackLibraryEvent', 'click', { action: 'clickedFollowButton' });
 
@@ -521,8 +526,8 @@ angular.module('kifi')
             return signupService.register({libraryId: scope.library.id, intent: 'follow'});
           }
 
-          scope.followBtnJustClicked = !!btnJustClicked;
-          libraryService.joinLibrary(scope.library.id, authToken)['catch'](modalService.openGenericErrorModal);
+          scope.followBtnJustClicked = (opts && opts.via) === 'followBtn';
+          libraryService.joinLibrary(scope.library.id, authToken, opts && opts.subscribed)['catch'](modalService.openGenericErrorModal);
         };
 
         scope.unfollowLibrary = function () {
@@ -630,21 +635,17 @@ angular.module('kifi')
               scope.library.numKeeps = keepCount;
             }
           }),
-          $rootScope.$on('libraryJoined', function (e, libraryId) {
-            if (scope.library && libraryId === scope.library.id && !scope.library.membership) {
-              scope.library.membership = {
-                access: scope.library.invite ? scope.library.invite.access : 'read_only',
-                listed: true,
-                subscribed: false
-              };
+          $rootScope.$on('libraryJoined', function (e, libraryId, membership) {
+            if (libraryId === scope.library.id) {
+              scope.library.membership = membership;
               scope.library.invite = null;
               var me = profileService.me;
-              if (scope.library.membership.access === 'read_only') {
+              if (membership.access === 'read_only') {
                 scope.library.numFollowers++;
                 if (!_.contains(scope.library.followers, {id: me.id})) {
                   scope.library.followers.push(_.pick(me, 'id', 'firstName', 'lastName', 'pictureName', 'username'));
                 }
-              } else if (scope.library.membership.access === 'read_write') {
+              } else if (membership.access === 'read_write') {
                 scope.library.numCollaborators++;
                 if (!_.contains(scope.library.collaborators, {id: me.id})) {
                   scope.library.collaborators.push(_.pick(me, 'id', 'firstName', 'lastName', 'pictureName', 'username'));

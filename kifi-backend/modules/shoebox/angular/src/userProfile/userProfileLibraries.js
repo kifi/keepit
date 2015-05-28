@@ -36,15 +36,11 @@ angular.module('kifi')
       $rootScope.$on('libraryDeleted', function (event, libraryId) {
         _.remove($scope.libraries, {id: libraryId});
       }),
-      $rootScope.$on('libraryJoined', function (event, libraryId) {
+      $rootScope.$on('libraryJoined', function (event, libraryId, membership) {
         var lib = _.find($scope.libraries, {id: libraryId});
         if (lib && !lib.membership) {
-          lib.membership = {
-            access: 'read_only',
-            listed: true,
-            subscribed: false
-          };
-          lib.numFollowers++;
+          lib.membership = membership;
+          lib.numFollowers++;  // TODO: handle join as collaborator properly
           if (lib.followers.length < 3 && profileService.me.pictureName !== '0.jpg') {
             var me = _.pick(profileService.me, 'id', 'firstName', 'lastName', 'pictureName', 'username');
             lib.followers.push(me);
