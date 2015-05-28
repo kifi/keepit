@@ -75,10 +75,6 @@ angular.module('kifi')
           scope.numMoreFollowersText = showPlusFollowers ? $filter('num')(numFollowers - numFollowersToShow) : '';
         }
 
-        function updateInvite() {
-          scope.invite = scope.library.invite;
-        }
-
         //
         // Scope methods.
         //
@@ -87,9 +83,9 @@ angular.module('kifi')
         };
 
         scope.ignoreInvitation = function () {
-          if (scope.invite) {
+          if (scope.library && scope.library.invite) {
             libraryService.declineToJoinLibrary(scope.library.id).then(function() {
-              scope.invite = null;
+              scope.library.invite = null;
             });
           }
         };
@@ -629,21 +625,19 @@ angular.module('kifi')
         scope.$watch('library.numFollowers', setFollowersShown);
 
         [
-          $rootScope.$on('invitedLibrariesChanged', updateInvite),
           $rootScope.$on('libraryKeepCountChanged', function (e, libraryId, keepCount) {
             if (libraryId === scope.library.id) {
               scope.library.numKeeps = keepCount;
             }
           }),
           $rootScope.$on('libraryJoined', function (e, libraryId) {
-            var lib = scope.library;
-            if (lib && libraryId === lib.id && !lib.membership) {
+            if (scope.library && libraryId === scope.library.id && !scope.library.membership) {
               scope.library.membership = {
-                access: scope.invite ? scope.invite.access : 'read_only',
+                access: scope.library.invite ? scope.library.invite.access : 'read_only',
                 listed: true,
                 subscribed: false
               };
-              scope.invite = null;
+              scope.library.invite = null;
               var me = profileService.me;
               if (scope.library.membership.access === 'read_only') {
                 scope.library.numFollowers++;
@@ -651,16 +645,14 @@ angular.module('kifi')
                   scope.library.followers.push(_.pick(me, 'id', 'firstName', 'lastName', 'pictureName', 'username'));
                 }
               } else if (scope.library.membership.access === 'read_write') {
-                $timeout(function() {
-                  scope.library.numCollaborators++;
-                  if (!_.contains(scope.library.collaborators, {id: me.id})) {
-                    scope.library.collaborators.push(_.pick(me, 'id', 'firstName', 'lastName', 'pictureName', 'username'));
-                  }
-                });
+                scope.library.numCollaborators++;
+                if (!_.contains(scope.library.collaborators, {id: me.id})) {
+                  scope.library.collaborators.push(_.pick(me, 'id', 'firstName', 'lastName', 'pictureName', 'username'));
+                }
               }
-
             }
           }),
+
           $rootScope.$on('libraryLeft', function (e, libraryId) {
             var lib = scope.library;
             if (lib && libraryId === lib.id && lib.membership) {
@@ -684,8 +676,6 @@ angular.module('kifi')
         //
 
         augmentData();
-
-        updateInvite();
       }
     };
   }

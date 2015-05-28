@@ -117,9 +117,9 @@
 
   <div class="kf-lh-buttons" ng-if="!isOwner()">
 
-    <div class="kf-lh-invite-banner" ng-style="{'background-color': library.color}" ng-if="invite">
-      <img class="kf-lh-invite-pic" ng-src="{{invite.inviter|pic:100}}" alt="{{invite.inviter|name}}">
-      <div class="kf-lh-invite-banner-text">{{invite.inviter|name}} {{invite.access === 'read_only' ? ' has invited you' : 'would like to collaborate'}}<span></span> {{ invite.access === 'read_only' ? ' to follow' : ' with you on'}} this library</div>
+    <div class="kf-lh-invite-banner" ng-style="{'background-color': library.color}" ng-if="library.invite">
+      <img class="kf-lh-invite-pic" ng-src="{{library.invite.inviter|pic:100}}" alt="{{library.invite.inviter|name}}">
+      <div class="kf-lh-invite-banner-text">{{library.invite.inviter|name}} {{library.invite.access === 'read_only' ? ' has invited you' : 'would like to collaborate'}}<span></span> {{ library.invite.access === 'read_only' ? ' to follow' : ' with you on'}} this library</div>
       <button class="kf-lh-invite-banner-button kf-ignore" ng-click="ignoreInvitation()">Ignore</button>
       <button class="kf-lh-invite-banner-button kf-accept" ng-click="acceptInvitation()" ng-style="{'color': library.color}">Accept</button>
     </div>
