@@ -135,7 +135,7 @@
     </div>
 
     <div kf-library-share-search library="library" current-page-origin="libraryPage" btn-icon-class="svg-share-arrow-green" ng-if="$root.userLoggedIn && library.visibility === 'published' && !onCollabExperiment"></div>
-    <button class="kf-lh-invite-search-button" ng-click="openInviteModal('follow')" ng-if="$root.userLoggedIn && (library.visibility === 'published' || (library.visibility === 'secret' && amCollaborator() && collabsCanInvite)) && onCollabExperiment">
+    <button class="kf-lh-invite-search-button" ng-click="openInviteModal('follow')" ng-if="$root.userLoggedIn && (library.visibility === 'published' || (library.visibility === 'secret' && isCollaborating() && collabsCanInvite)) && onCollabExperiment">
       <div class="svg-share-arrow-green"></div>
       Share
     </button>
