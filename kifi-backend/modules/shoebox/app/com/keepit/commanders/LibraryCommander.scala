@@ -683,8 +683,7 @@ class LibraryCommander @Inject() (
 
   private def getValidLibInvitesFromAuthToken(libraryId: Id[Library], authToken: Option[String])(implicit s: RSession): Seq[LibraryInvite] = {
     if (authToken.nonEmpty) {
-      val excludeSet = Set(LibraryInviteStates.INACTIVE, LibraryInviteStates.ACCEPTED, LibraryInviteStates.DECLINED)
-      libraryInviteRepo.getByLibraryIdAndAuthToken(libraryId, authToken.get, excludeSet)
+      libraryInviteRepo.getByLibraryIdAndAuthToken(libraryId, authToken.get)
     } else {
       Seq.empty[LibraryInvite]
     }

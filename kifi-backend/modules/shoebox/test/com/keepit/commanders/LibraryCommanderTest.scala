@@ -676,18 +676,19 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         // correct authtoken (invite by email)
         val successJoin = libraryCommander.joinLibrary(userHulk.id.get, libShield.id.get, Some("asdf"))
         successJoin.isRight === true
+        val includeInviteSet = Set(LibraryInviteStates.ACCEPTED, LibraryInviteStates.DECLINED, LibraryInviteStates.ACTIVE)
         db.readOnlyMaster { implicit s =>
-          libraryInviteRepo.getByLibraryIdAndAuthToken(libShield.id.get, "asdf").exists(i => i.state == LibraryInviteStates.ACCEPTED) === true
+          libraryInviteRepo.getByLibraryIdAndAuthToken(libShield.id.get, "asdf", includeInviteSet).exists(i => i.state == LibraryInviteStates.ACCEPTED) === true
         }
 
         // Joining a private library from a kifi invite (library invite with a userId)
         db.readWrite { implicit s =>
           libraryInviteRepo.save(LibraryInvite(libraryId = libShield.id.get, inviterId = userAgent.id.get, userId = userIron.id, access = LibraryAccess.READ_ONLY, authToken = "qwer"))
-          libraryInviteRepo.getByLibraryIdAndAuthToken(libShield.id.get, "qwer").exists(i => i.state == LibraryInviteStates.ACCEPTED) === false
+          libraryInviteRepo.getByLibraryIdAndAuthToken(libShield.id.get, "qwer", includeInviteSet).exists(i => i.state == LibraryInviteStates.ACCEPTED) === false
         }
         libraryCommander.joinLibrary(userIron.id.get, libShield.id.get, None).isRight === true
         db.readOnlyMaster { implicit s =>
-          libraryInviteRepo.getByLibraryIdAndAuthToken(libShield.id.get, "qwer").exists(i => i.state == LibraryInviteStates.ACCEPTED) === true
+          libraryInviteRepo.getByLibraryIdAndAuthToken(libShield.id.get, "qwer", includeInviteSet).exists(i => i.state == LibraryInviteStates.ACCEPTED) === true
         }
 
       }
