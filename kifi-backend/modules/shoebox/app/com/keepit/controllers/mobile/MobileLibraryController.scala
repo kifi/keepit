@@ -346,9 +346,10 @@ class MobileLibraryController @Inject() (
             val link = libraryPath + "?authToken=" + invite.authToken
             Ok(Json.obj(
               "link" -> link,
+              "access" -> invite.access.value,
               "sms" -> s"Check out this interesting Kifi library: $link",
               "email" -> Json.obj(
-                "subject" -> s"Check out this Kifi library: $title",
+                "subject" -> s"Check out this Kifi library: ${library.name}",
                 "body" -> s"I think you will find this Kifi library interesting: $link"
               ),
               "facebook" -> s"Check out this interesting Kifi library: $link",
