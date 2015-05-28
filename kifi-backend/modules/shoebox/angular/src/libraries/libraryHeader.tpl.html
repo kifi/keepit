@@ -36,17 +36,17 @@
         </button>
       </div>
 
-      <div class="kf-lh-followers collab" ng-if="onCollabExperiment">
-        <a class="kf-lh-followers-a" ng-repeat="follower in followersToShow" href="{{follower|profileUrl}}" kf-track-origin="libraryPage/follower">
-          <img class="kf-lh-followers-pic" ng-src="{{follower|pic:100}}" alt="{{follower|name}}">
-          <span class="kf-lh-followers-name">{{follower.firstName}}</span>
-        </a>
-      </div>
       <div class="kf-lh-members-wrapper" ng-if="onCollabExperiment && (library.numCollaborators > 0 || library.numFollowers > 0)">
+        <div class="kf-lh-followers collab">
+          <a class="kf-lh-followers-a" ng-repeat="follower in followersToShow" href="{{follower|profileUrl}}" kf-track-origin="libraryPage/follower">
+            <img class="kf-lh-followers-pic" ng-src="{{follower|pic:100}}" alt="{{follower|name}}">
+            <span class="kf-lh-followers-name">{{follower.firstName}}</span>
+          </a>
+        </div>
         <button class="kf-lh-view-members" ng-click="openMembersModal()">
           {{(isOwner() || (isCollaborating() && collabsCanInvite)) ? 'Manage ' : 'View '}}
-          <ng-pluralize count="library.numFollowers + library.numCollaborators" when="{'one': '1 member', 'other': '{} members'}">
-          </ng-pluralize>
+          {{(library.numFollowers + library.numCollaborators)|num}}
+          <ng-pluralize count="library.numFollowers + library.numCollaborators" when="{'one': ' member', 'other': ' members'}"></ng-pluralize>
         </button>
       </div>
 

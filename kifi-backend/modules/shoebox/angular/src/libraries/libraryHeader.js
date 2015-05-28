@@ -65,25 +65,12 @@ angular.module('kifi')
           });
         }
 
-        function setFollowersShown() {
-          var lib = scope.library;
-          var numFollowers = Math.max(lib.numFollowers, lib.followers.length);  // tolerating incorrect numFollowers
-          var numFollowersFit = scope.onCollabExperiment ? 3 : 5;
-          var showPlusFollowers = Math.min(lib.followers.length, numFollowersFit) < numFollowers;
-          var numFollowersToShow = Math.min(lib.followers.length, numFollowersFit - (numFollowersFit && showPlusFollowers ? 1 : 0));
-          scope.followersToShow = lib.followers.slice(0, numFollowersToShow);
-          scope.numMoreFollowersText = showPlusFollowers ? $filter('num')(numFollowers - numFollowersToShow) : '';
-        }
-
-        function setCollaboratorsShown() {
-          var lib = scope.library;
-          var numCollabs = Math.max(lib.numCollaborators, lib.collaborators.length);  // tolerating incorrect numCollaborators
-          // keep 5 circles at all times (1 circle is for adding collab, 1 circle is for additional collabs), but if there are 5 collaborators, then show all 5
-          var numCollabsFit = scope.isOwner() || (scope.isCollaborating() && scope.collabsCanInvite) ? 3 : numCollabs === 5 ? 5 : 4;
-          var showPlusCollabs = Math.min(lib.collaborators.length, numCollabsFit) < numCollabs;
-          var numCollabsToShow = Math.min(lib.collaborators.length, numCollabsFit - (numCollabsFit && showPlusCollabs ? 1 : 0));
-          scope.collaboratorsToShow = lib.collaborators.slice(0, numCollabsToShow);
-          scope.numMoreCollaboratorsText = showPlusCollabs ? $filter('num')(numCollabs - numCollabsToShow) : '';
+        function setMembersToShow(members, numMembers, numMembersFit) {
+          var showPlusMembers = Math.min(members.length, numMembersFit) < numMembers;
+          var numMembersToShow = Math.min(members.length, numMembersFit);
+          var membersToShow = members.slice(0, numMembersToShow);
+          var numMoreMembersText = showPlusMembers ? $filter('num')(numMembers - numMembersToShow) : '';
+          return [membersToShow, numMoreMembersText];
         }
 
         //
@@ -633,8 +620,21 @@ angular.module('kifi')
         // Watches and listeners.
         //
 
-        scope.$watch('library.numFollowers', setFollowersShown);
-        scope.$watch('library.numCollaborators', setCollaboratorsShown);
+        scope.$watch('library.numFollowers', function() {
+          var numFollowersToFit = scope.onCollabExperiment ? 3 : 5;
+          var res = setMembersToShow(scope.library.followers, scope.library.numFollowers, numFollowersToFit);
+          scope.followersToShow = res[0];
+          scope.numMoreFollowersText = res[1];
+        });
+
+        scope.$watch('library.numCollaborators', function() {
+          // keep at most 5 circles at all times (1 circle is owner, 1 circle is for adding collab, 1 circle is for additional collabs), but if there are 1 owner + 4 collaborators, then show those 5
+          var addCollabButton = scope.isOwner() || (scope.isCollaborating() && scope.collabsCanInvite);
+          var numCollabsToFit = addCollabButton && scope.library.numCollaborators > 2 ? 2 : !addCollabButton && scope.library.numCollaborators === 4 ? 4 : 3;
+          var res = setMembersToShow(scope.library.collaborators, scope.library.numCollaborators, numCollabsToFit);
+          scope.collaboratorsToShow = res[0];
+          scope.numMoreCollaboratorsText = res[1];
+        });
 
         [
           $rootScope.$on('libraryKeepCountChanged', function (e, libraryId, keepCount) {
