@@ -10,28 +10,6 @@ angular.module('kifi')
     };
     var recentIds = [];  // in-memory cache, length limited, most recent first
 
-
-    // make the membership info INSIDE the library object
-    function standarizeMembershipInfo(resp) {
-      if (!_.isObject(resp.library.membership)) {
-        resp.library.membership = {
-          listed: resp.library.listed || resp.listed,
-          access: resp.library.access || resp.membership,
-          subscribed : resp.library.subscribed || resp.subscribedToUpdates
-        };
-        if (!resp.library.membership.access || resp.library.membership.access === 'none') {
-          resp.library.membership = undefined;
-        }
-      }
-      resp.library.access = undefined;
-      resp.access = undefined;
-      resp.listed = undefined;
-      resp.subscribed = undefined;
-      resp.subscribedToUpdates = undefined;
-      resp.membership = undefined;
-      return resp;
-    }
-
     // TODO: flush any non-public cached data when a user logs out.
 
     //
@@ -46,13 +24,13 @@ angular.module('kifi')
 
     var libraryInfoByIdClutch = new Clutch(function (libraryId) {
       return $http.get(routeService.getLibraryInfoById(libraryId)).then(function (res) {
-        return standarizeMembershipInfo(augment(res.data));
+        return augment(res.data);
       });
     });
 
     var libraryByIdClutch = new Clutch(function (libraryId) {
       return $http.get(routeService.getLibraryById(libraryId)).then(function (res) {
-        return standarizeMembershipInfo(res.data);
+        return res.data;
       });
     });
 
@@ -60,11 +38,7 @@ angular.module('kifi')
       return $http.get(routeService.getLibraryByUserSlug(username, slug, authToken)).then(function (res) {
         if (res.data && res.data.library) {
           // do we really need to be moving these into the library object?
-          res.data.library.access = res.data.membership;
-          res.data.library.listed = res.data.listed;
           res.data.library.suggestedSearches = (res.data.suggestedSearches && res.data.suggestedSearches.terms) || [];
-          res.data.library.subscribed = res.data.subscribedToUpdates;
-          res.data = standarizeMembershipInfo(res.data);
           return augment(res.data.library);
         }
         return null;
