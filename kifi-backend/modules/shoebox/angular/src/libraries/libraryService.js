@@ -248,13 +248,13 @@ angular.module('kifi')
         return $http.post(routeService.shareLibrary(libraryId), opts);
       },
 
-      joinLibrary: function (libraryId, authToken) {
-        return $http.post(routeService.joinLibrary(libraryId, authToken)).then(function () {
+      joinLibrary: function (libraryId, authToken, subscribed) {
+        return $http.post(routeService.joinLibrary(libraryId, authToken, subscribed)).then(function (res) {
           var wasInvited = _.remove(infos.invited, {id: libraryId}).length > 0;
           if (wasInvited) {
             $rootScope.$emit('invitedLibrariesChanged');
           }
-          $rootScope.$emit('libraryJoined', libraryId);
+          $rootScope.$emit('libraryJoined', libraryId, res.data.membership);
           libraryInfoByIdClutch.expire(libraryId);
         });
       },
