@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfLibraryMembers', [
-  'libraryService', '$timeout', 'net',
-  function (libraryService, $timeout, net) {
+  'libraryService', 'profileService', '$timeout', 'net',
+  function (libraryService, profileService, $timeout, net) {
     return {
       restrict: 'A',
       require: '^kfModal',
@@ -24,6 +24,7 @@ angular.module('kifi')
         scope.selectedMember = null;
         scope.memberList = [];
         scope.memberScrollDistance = '100%';
+        scope.me = profileService.me;
 
         scope.isMemberScrollDisabled = function () {
           return !(scope.moreMembers);
@@ -73,6 +74,15 @@ angular.module('kifi')
         function updateLibraryObject(oldAccess, newAccess) {
           if (newAccess === oldAccess) {
             return;
+          }
+
+          // update own membership in library object (change access or remove membership)
+          if (scope.selectedMember.id === scope.me.id) {
+            if (newAccess) {
+              scope.library.membership.access = newAccess;
+            } else {
+              scope.library.membership = null;
+            }
           }
 
           // remove/decrement fields in library object based on oldAccess

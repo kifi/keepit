@@ -25,46 +25,97 @@ colorBarHeight = .4em
     &.kf-system-secret
       height: 16em
 
-invite-banner-orange = #ff7c3c
+
+inviteSidePad = 20px
+inviteMaxWidth = 496px  // chosen to make youtube videos (16:9 aspect ratio) come out to whole pixels, 496x279
+maxWindowWidthForNarrowKeeps = inviteMaxWidth + 2 * (inviteSidePad + appSidePad1) - 1 // = 559px
 
 .kf-lh-invite-banner
   position: absolute
-  z-index: 1
   left: 50%
-  top: 0
-  transform: translate(-50%)
-  border-radius: 0 0 8px 8px
-  padding: .6em 1.25em .9em
-  background-color: invite-banner-orange
-  text-align: center
+  transform: translateX(-50%)
+  max-width: 776px
+  width: 100%
+  height: 60px
+  margin-top: -14px
+  padding-left: 25px
+  box-sizing: border-box
+  border-radius: 10px
+  z-index: 2
   font-size: .8em
+  text-align: initial
+  overflow: hidden
+  opacity: 1.0
 
   &.ng-leave
     transition: transform .25s, opacity .25s
 
   &.ng-leave-active
-    transform: translate(-50%, -100%)
+    transform: translate(-50%, -125%)
     opacity: 0
 
+  @media (max-width: 796px)
+    max-width: 2 * (1 + inviteSidePad) + inviteMaxWidth
+    font-size: 0.76em
+
+  @media (max-width: maxWindowWidthForNarrowKeeps)
+    max-width: inviteMaxWidth
+    font-size: 0.8em
+
+  @media (max-width: 536px)
+    width: calc(100% - 24px)
+
+  @media (max-width: 479px)
+    font-size: 0.9em
+
+.kf-lh-invite-pic
+  position: relative
+  top: -1px
+  display: inline-block
+  width: 36px
+  height: 36px
+  border-radius: 50%
+
+  @media (max-width: 479px)
+    display: none
+
 .kf-lh-invite-banner-text
-  margin-bottom: .6em
+  display: inline-block
+  margin-left: 15px
+  line-height: 60px
   color: #fff
 
+  @media (max-width: 536px)
+    position: relative
+    top: 12px
+    line-height: 18px
+
+  @media (max-width: 479px)
+    margin-left: 0px
+
+  & span
+    @media (max-width: 536px)
+      display: block
+
+
 .kf-lh-invite-banner-button
+  position: relative
+  top: 50%
+  transform: translateY(-50%)
+  float: right
   margin-left: .8em
   border: 1px solid #fff
   border-radius: 4px
-  padding: .44em 1.2em
-  font-size: .85em
+  padding: .44em 1.3em
 
   &.kf-accept
     background: alpha(#fff, .9)
-    color: invite-banner-orange
 
     &:hover:not(:active)
       background-color: #fff
 
   &.kf-ignore
+    margin-right: 2em
     background: transparent
     color: #fff
 
