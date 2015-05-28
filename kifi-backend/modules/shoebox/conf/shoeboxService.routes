@@ -413,7 +413,7 @@ POST    /site/libraries/:id/modify  @com.keepit.controllers.website.LibraryContr
 POST    /site/libraries/:id/delete  @com.keepit.controllers.website.LibraryController.removeLibrary(id: PublicId[Library])
 POST    /site/libraries/:id/invite  @com.keepit.controllers.website.LibraryController.inviteUsersToLibrary(id: PublicId[Library])
 DELETE  /site/libraries/:id/invite  @com.keepit.controllers.website.LibraryController.revokeLibraryInvitation(id: PublicId[Library])
-POST    /site/libraries/:id/join    @com.keepit.controllers.website.LibraryController.joinLibrary(id: PublicId[Library], authToken: Option[String] ?= None)
+POST    /site/libraries/:id/join    @com.keepit.controllers.website.LibraryController.joinLibrary(id: PublicId[Library], authToken: Option[String] ?= None, subscribed: Boolean ?= false)
 POST    /site/libraries/:id/decline @com.keepit.controllers.website.LibraryController.declineLibrary(id: PublicId[Library])
 POST    /site/libraries/:id/leave   @com.keepit.controllers.website.LibraryController.leaveLibrary(id: PublicId[Library])
 POST    /site/libraries/:id/subscription @com.keepit.controllers.website.LibraryController.setSubscribedToUpdates(id: PublicId[Library], subscribed: Boolean)

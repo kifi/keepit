@@ -275,9 +275,8 @@ class LibraryController @Inject() (
     }
   }
 
-  def joinLibrary(pubId: PublicId[Library], authToken: Option[String] = None) = UserAction { request =>
-    val idTry = Library.decodePublicId(pubId)
-    idTry match {
+  def joinLibrary(pubId: PublicId[Library], authToken: Option[String] = None, subscribed: Boolean = false) = UserAction { request =>
+    Library.decodePublicId(pubId) match {
       case Failure(ex) =>
         BadRequest(Json.obj("error" -> "invalid_id"))
       case Success(libId) =>
@@ -286,21 +285,24 @@ class LibraryController @Inject() (
           libraryMembershipRepo.getWithLibraryIdAndUserId(libId, request.userId)
         } match {
           case None =>
-            libraryCommander.joinLibrary(request.userId, libId, authToken) match {
+            libraryCommander.joinLibrary(request.userId, libId, authToken, Some(subscribed)) match {
               case Left(fail) =>
                 Status(fail.status)(Json.obj("error" -> fail.message))
-              case Right(lib) =>
-                val owner = db.readOnlyMaster { implicit s => basicUserRepo.load(lib.ownerId) }
-                Ok(Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, None, owner)))
+              case Right((_, mem)) =>
+                Ok(Json.obj("membership" -> LibraryMembershipInfo.fromMembership(mem)))
             }
-          case Some(membership) =>
+          case Some(mem) =>
             log.info(s"user ${request.userId} is already following library $libId, possible race condition")
-            val (lib, owner) = db.readOnlyMaster { implicit s =>
-              val lib = libraryRepo.get(libId)
-              (lib, basicUserRepo.load(lib.ownerId))
+            if (mem.subscribedToUpdates != subscribed) {
+              libraryCommander.updateSubscribedToLibrary(request.userId, libId, subscribed) match {
+                case Left(fail) =>
+                  Status(fail.status)(Json.obj("error" -> fail.message))
+                case Right(mem) =>
+                  Ok(Json.obj("membership" -> LibraryMembershipInfo.fromMembership(mem)))
+              }
+            } else {
+              Ok(Json.obj("membership" -> LibraryMembershipInfo.fromMembership(mem)))
             }
-            val res = Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, None, owner))
-            Ok(res.as[JsObject] + ("alreadyJoined" -> JsBoolean(true)))
         }
     }
   }
@@ -654,7 +656,7 @@ class LibraryController @Inject() (
 
   def setSubscribedToUpdates(pubId: PublicId[Library], newSubscripedToUpdate: Boolean) = UserAction { request =>
     val libraryId = Library.decodePublicId(pubId).get
-    libraryCommander.updatedLibraryUpdateSubscription(request.userId, libraryId, newSubscripedToUpdate) match {
+    libraryCommander.updateSubscribedToLibrary(request.userId, libraryId, newSubscripedToUpdate) match {
       case Right(mem) => NoContent
       case Left(fail) => Status(fail.status)(Json.obj("error" -> fail.message))
     }
