@@ -66,7 +66,7 @@ maxWindowWidthForNarrowKeeps = inviteMaxWidth + 2 * (inviteSidePad + appSidePad1
     width: calc(100% - 24px)
 
   @media (max-width: 479px)
-    font-size: 0.9em
+    font-size: 0.87em
 
 .kf-lh-invite-pic
   position: relative
@@ -85,16 +85,16 @@ maxWindowWidthForNarrowKeeps = inviteMaxWidth + 2 * (inviteSidePad + appSidePad1
   line-height: 60px
   color: #fff
 
-  @media (max-width: 536px)
+  @media (max-width: 479px)
+    margin-left: 0px
+
+  @media (max-width: 795px)
     position: relative
     top: 12px
     line-height: 18px
 
-  @media (max-width: 479px)
-    margin-left: 0px
-
   & span
-    @media (max-width: 536px)
+    @media (max-width: 795px)
       display: block
 
 
@@ -107,6 +107,9 @@ maxWindowWidthForNarrowKeeps = inviteMaxWidth + 2 * (inviteSidePad + appSidePad1
   border: 1px solid #fff
   border-radius: 4px
   padding: .44em 1.3em
+
+  @media (max-width: 479px)
+    padding: .44em 1.1em
 
   &.kf-accept
     background: alpha(#fff, .9)

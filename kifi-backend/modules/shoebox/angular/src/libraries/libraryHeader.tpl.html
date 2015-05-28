@@ -101,7 +101,7 @@
           </a>
           <a class="kf-lh-collab-name" href="{{collab|profileUrl}}" itemprop="name" kf-track-origin="libraryPage/collaborator">{{collab.firstName}}</a>
         </div>
-        <button class="kf-lh-more-collab" ng-click="openMembersModal()" ng-if="numMoreCollaboratorsText">
+        <button class="kf-lh-more-collab" ng-click="openMembersModal()" ng-if="numMoreCollaboratorsText" ng-style="{'background-color': library.color}">
           + {{numMoreCollaboratorsText}}
         </button>
         <button class="kf-lh-add-collab-button" ng-if="(isOwner() || (isCollaborating() && library.whoCanInvite == 'collaborator')) && onCollabExperiment" ng-click="openInviteModal('collaborate')" ng-style="{'background-color': library.color}">
@@ -127,7 +127,7 @@
 
     <div class="kf-lh-invite-banner" ng-style="{'background-color': library.color}" ng-if="library.invite">
       <img class="kf-lh-invite-pic" ng-src="{{library.invite.inviter|pic:100}}" alt="{{library.invite.inviter|name}}">
-      <div class="kf-lh-invite-banner-text">{{library.invite.inviter|name}} {{library.invite.access === 'read_only' ? ' has invited you' : 'would like to collaborate'}}<span></span> {{ library.invite.access === 'read_only' ? ' to follow' : ' with you on'}} this library</div>
+      <div class="kf-lh-invite-banner-text">{{library.invite.inviter|name}} {{library.invite.access === 'read_only' ? ' has invited you' : 'would like to'}}<span></span> {{ library.invite.access === 'read_only' ? ' to follow' : ' collaborate with you on'}} this library</div>
       <button class="kf-lh-invite-banner-button kf-ignore" ng-click="ignoreInvitation()">Ignore</button>
       <button class="kf-lh-invite-banner-button kf-accept" ng-click="acceptInvitation()" ng-style="{'color': library.color}">Accept</button>
     </div>

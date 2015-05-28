@@ -78,7 +78,8 @@ angular.module('kifi')
         function setCollaboratorsShown() {
           var lib = scope.library;
           var numCollabs = Math.max(lib.numCollaborators, lib.collaborators.length);  // tolerating incorrect numCollaborators
-          var numCollabsFit = 3;
+          // keep 5 circles at all times (1 circle is for adding collab, 1 circle is for additional collabs), but if there are 5 collaborators, then show all 5
+          var numCollabsFit = scope.isOwner() || (scope.isCollaborating() && scope.collabsCanInvite) ? 3 : numCollabs === 5 ? 5 : 4;
           var showPlusCollabs = Math.min(lib.collaborators.length, numCollabsFit) < numCollabs;
           var numCollabsToShow = Math.min(lib.collaborators.length, numCollabsFit - (numCollabsFit && showPlusCollabs ? 1 : 0));
           scope.collaboratorsToShow = lib.collaborators.slice(0, numCollabsToShow);
