@@ -2,12 +2,16 @@ package com.keepit.controllers.mobile
 
 import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
+import com.keepit.abook.model.EmailAccountInfo
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.controller.FakeUserActionsHelper
 import com.keepit.common.crypto.{ FakeCryptoModule, PublicIdConfiguration }
 import com.keepit.common.db.ExternalId
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.time._
+import com.keepit.controllers.website.routes
+import com.keepit.graph.FakeGraphServiceClientImpl
+import com.keepit.graph.model.{ RelatedEntities, SociallyRelatedEntities }
 import com.keepit.model.KeepFactory._
 import com.keepit.model._
 import com.keepit.shoebox.FakeShoeboxServiceModule
@@ -24,7 +28,7 @@ import com.keepit.model.KeepFactory._
 import com.keepit.model.KeepFactoryHelper._
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
-import play.api.libs.json.{ JsObject, Json }
+import play.api.libs.json._
 import play.api.mvc.{ Result, Call }
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
@@ -233,6 +237,74 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
       }
     }
 
+    "get profile connections" in {
+      withDb(modules: _*) { implicit injector =>
+        val (user1, user2, user3, user4, user5) = db.readWrite { implicit session =>
+          val user1 = user().withName("George", "Washington").withUsername("GDubs").withPictureName("pic1").saved
+          val user2 = user().withName("Abe", "Lincoln").withUsername("abe").saved
+          val user3 = user().withName("Thomas", "Jefferson").withUsername("TJ").saved
+          val user4 = user().withName("John", "Adams").withUsername("jayjayadams").saved
+          val user5 = user().withName("Ben", "Franklin").withUsername("Benji").saved
+
+          connect(user1 -> user3).saved
+          connect(user1 -> user4).saved
+          connect(user2 -> user4).saved
+          (user1, user2, user3, user4, user5)
+        }
+
+        val relationship = SociallyRelatedEntities(
+          RelatedEntities[User, User](user1.id.get, Seq(user4.id.get -> .1, user5.id.get -> .4, user2.id.get -> .2, user3.id.get -> .3)),
+          RelatedEntities[User, SocialUserInfo](user1.id.get, Seq.empty),
+          RelatedEntities[User, SocialUserInfo](user1.id.get, Seq.empty),
+          RelatedEntities[User, EmailAccountInfo](user1.id.get, Seq.empty)
+        )
+        inject[FakeGraphServiceClientImpl].setSociallyRelatedEntities(user1.id.get, relationship)
+        // view as owner
+        val result1 = getProfileConnections(Some(user1), Username("GDubs"), 10)
+        status(result1) must equalTo(OK)
+        contentType(result1) must beSome("application/json")
+        val resultJson1 = contentAsJson(result1)
+        (resultJson1 \ "count") === JsNumber(2)
+        (resultJson1 \\ "id") === Seq(user3, user4).map(u => JsString(u.externalId.id))
+        (resultJson1 \ "ids") === JsArray()
+
+        // view as anybody
+        val result2 = getProfileConnections(Some(user4), Username("GDubs"), 10)
+        status(result2) must equalTo(OK)
+        contentType(result2) must beSome("application/json")
+        val resultJson2 = contentAsJson(result2)
+        (resultJson2 \ "count") === JsNumber(2)
+        (resultJson2 \\ "id") === Seq(user4, user3).map(u => JsString(u.externalId.id))
+        (resultJson2 \ "ids") === JsArray()
+
+        (resultJson2 \ "invitations").isInstanceOf[JsUndefined] === true
+
+        db.readWrite { implicit s =>
+          friendRequestRepo.save(FriendRequest(senderId = user5.id.get, recipientId = user1.id.get, messageHandle = None))
+        }
+
+        val result3 = getProfileConnections(Some(user4), Username("GDubs"), 10)
+        status(result3) must equalTo(OK)
+        contentType(result3) must beSome("application/json")
+        val resultJson3 = contentAsJson(result3)
+        (resultJson3 \ "count") === JsNumber(2)
+        (resultJson3 \\ "id") === Seq(user4, user3).map(u => JsString(u.externalId.id))
+        (resultJson3 \ "ids") === JsArray()
+
+        (resultJson3 \ "invitations").isInstanceOf[JsUndefined] === true
+
+        val result4 = getProfileConnections(Some(user1), Username("GDubs"), 10)
+        status(result4) must equalTo(OK)
+        contentType(result4) must beSome("application/json")
+        val resultJson4 = contentAsJson(result4)
+        (resultJson4 \ "count") === JsNumber(2)
+        (resultJson4 \ "users" \\ "id") === Seq(user3, user4).map(u => JsString(u.externalId.id))
+        (resultJson4 \ "ids") === JsArray()
+
+        (resultJson4 \ "invitations" \\ "id") === Seq(user5).map(u => JsString(u.externalId.id))
+      }
+    }
+
     "get followers" in {
       withDb(modules: _*) { implicit injector =>
         val profileUsername = Username("cfalc")
@@ -281,6 +353,14 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
     url === s"/m/1/user/${username.value}/profile"
     val request = FakeRequest("GET", url)
     controller.profile(username.value)(request)
+  }
+
+  private def getProfileConnections(viewerOpt: Option[User], username: Username, limit: Int)(implicit injector: Injector): Future[Result] = {
+    viewerOpt match {
+      case Some(user) => inject[FakeUserActionsHelper].setUser(user)
+      case _ => inject[FakeUserActionsHelper].unsetUser()
+    }
+    controller.getProfileConnections(username, limit)(request(routes.MobileUserProfileController.getProfileConnections(username, limit)))
   }
 
   private def getProfileLibraries(user: User, page: Int, size: Int, filter: String)(implicit injector: Injector): Future[Result] = {

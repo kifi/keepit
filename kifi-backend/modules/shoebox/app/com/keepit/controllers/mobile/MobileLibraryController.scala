@@ -16,6 +16,7 @@ import com.keepit.common.time._
 import com.keepit.common.util.Paginator
 import com.keepit.controllers.mobile.ImplicitHelper._
 import com.keepit.heimdal.{ HeimdalContext, HeimdalContextBuilderFactory }
+import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
 import com.keepit.normalizer.NormalizedURIInterner
 import com.keepit.shoebox.controllers.LibraryAccessActions
@@ -30,6 +31,7 @@ import com.keepit.common.store.ImageSize
 
 class MobileLibraryController @Inject() (
   db: Database,
+  fortyTwoConfig: FortyTwoConfig,
   libraryRepo: LibraryRepo,
   keepRepo: KeepRepo,
   keepToCollectionRepo: KeepToCollectionRepo,
@@ -340,7 +342,7 @@ class MobileLibraryController @Inject() (
             val owner = db.readOnlyMaster { implicit s =>
               basicUserRepo.load(library.ownerId)
             }
-            val libraryPath = Library.formatLibraryPath(owner.username, library.slug)
+            val libraryPath = s"${fortyTwoConfig.applicationBaseUrl}${Library.formatLibraryPath(owner.username, library.slug)}"
             val link = if (library.isSecret) {
               libraryPath + "?authToken=" + invite.authToken
             } else {

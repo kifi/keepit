@@ -23,6 +23,7 @@ class MobileUserProfileController @Inject() (
   userRepo: UserRepo,
   basicUserRepo: BasicUserRepo,
   userConnectionRepo: UserConnectionRepo,
+  friendRequestRepo: FriendRequestRepo,
   libraryRepo: LibraryRepo,
   userValueRepo: UserValueRepo,
   userCommander: UserCommander,
@@ -139,6 +140,57 @@ class MobileUserProfileController @Inject() (
           }
           val extIds = followersPage.flatMap(u => userMap.get(u.userId)).map(_.externalId)
           Ok(Json.obj("users" -> followerJsons, "ids" -> extIds, "count" -> followers.size))
+        }
+    }
+  }
+
+  def getProfileConnections(username: Username, limit: Int) = MaybeUserAction.async { request =>
+    userCommander.userFromUsername(username) match {
+      case None =>
+        log.warn(s"can't find username ${username.value}")
+        Future.successful(NotFound(s"username ${username.value}"))
+      case Some(user) =>
+        val viewerIdOpt = request.userIdOpt
+        val invitations: Seq[JsValue] = if (viewerIdOpt.exists(_ == user.id.get)) {
+          val viewerId = viewerIdOpt.get
+          db.readOnlyMaster { implicit s =>
+            val friendRequests = friendRequestRepo.getByRecipient(user.id.get).map(_.senderId) //not cached
+            val userMap = basicUserRepo.loadAll(friendRequests.toSet)
+            val augmentedFriends = {
+              friendStatusCommander.augmentUsers(viewerId, userMap, Set.empty)
+            }
+            val friendsWithStatus = {
+              friendRequests.map(fr => fr -> augmentedFriends(fr))
+            }
+            friendsWithStatus map {
+              case (userId, userWFS) =>
+                loadProfileUser(userId, userWFS, viewerIdOpt, user.id)
+            }
+          }
+        } else Seq.empty
+        userProfileCommander.getConnectionsSortedByRelationship(viewerIdOpt.orElse(user.id).get, user.id.get) map { connections =>
+          val head = connections.take(limit)
+          val (headUserJsonObjs, userMap) = db.readOnlyMaster { implicit s =>
+            val userMap = basicUserRepo.loadAll(connections.take(200).map(_.userId).toSet)
+            val headUserMap = Map(head.map(c => c.userId -> userMap(c.userId)): _*)
+            val headUserWithStatus = viewerIdOpt.map { viewerId =>
+              val headFriendIdSet = head.filter(_.connected).map(_.userId).toSet
+              friendStatusCommander.augmentUsers(viewerId, headUserMap, headFriendIdSet)
+            } getOrElse headUserMap.mapValues(BasicUserWithFriendStatus.fromWithoutFriendStatus)
+            val sortedHeadUserWithStatus = {
+              head.map(id => id.userId -> headUserWithStatus(id.userId))
+            }
+            val headUserJsonObjs = sortedHeadUserWithStatus map {
+              case (userId, userWFS) =>
+                loadProfileUser(userId, userWFS, viewerIdOpt, user.id)
+            }
+            (headUserJsonObjs, userMap)
+          }
+          val extIds = connections.drop(limit).flatMap(u => userMap.get(u.userId)).map(_.externalId)
+          val res = Json.obj("users" -> headUserJsonObjs, "ids" -> extIds, "count" -> connections.size)
+          if (invitations.nonEmpty) {
+            Ok(res.as[JsObject] ++ Json.obj("invitations" -> invitations))
+          } else Ok(res)
         }
     }
   }

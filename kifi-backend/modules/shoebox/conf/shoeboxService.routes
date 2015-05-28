@@ -224,6 +224,7 @@ POST    /m/1/invite                             @com.keepit.controllers.mobile.M
 
 # Profile Page
 GET     /m/1/user/:username/profile             @com.keepit.controllers.mobile.MobileUserProfileController.profile(username)
+GET     /m/1/user/:username/connections             @com.keepit.controllers.mobile.MobileUserProfileController.getProfileConnections(username: Username, limit: Int)
 GET     /m/1/user/:username/libraries           @com.keepit.controllers.mobile.MobileUserProfileController.getProfileLibraries(username: Username, page: Int ?= 0, size: Int ?= 12, filter: String ?= "own")
 GET     /m/1/user/:username/followers           @com.keepit.controllers.mobile.MobileUserProfileController.getProfileFollowers(username: Username, page: Int ?= 0, size: Int ?= 12)
 
@@ -977,6 +978,6 @@ GET     /:name/followers           @com.keepit.controllers.website.KifiSiteRoute
 GET     /:name/libraries           @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfUserFound(name: Username)
 GET     /:name/libraries/following @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfUserFound(name: Username)
 GET     /:name/libraries/invited   @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfUserIsSelf(name: Username)
-GET     /:name/:library/rss        @com.keepit.controllers.website.LibraryFeedController.libraryRSSFeed(name: Username, library, authToken: Option[String] = None, count: Int = 20, offset: Int = 0)
+GET     /:name/:library/rss        @com.keepit.controllers.website.LibraryFeedController.libraryRSSFeed(name: Username, library, authToken: Option[String] = None, count: Int ?= 20, offset: Int ?= 0)
 GET     /:name/:slug               @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfLibraryFound(name: Username, slug)
 GET     /:name/:slug/find          @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfLibraryFound(name: Username, slug)
