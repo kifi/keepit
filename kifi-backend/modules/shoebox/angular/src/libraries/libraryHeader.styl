@@ -139,6 +139,9 @@ maxWindowWidthForNarrowKeeps = inviteMaxWidth + 2 * (inviteSidePad + appSidePad1
   top: 0
   right: 0
 
+  &.collab
+    right: 140px
+
   @media (max-width: 479px)
     font-size: 1.5em
 
@@ -179,17 +182,29 @@ followerPicDiam = 2.2em
     display: block
 
 .kf-lh-view-members
-  padding: 3px 5px
-  border-radius: 5px
+  position: relative
+  padding: 3px 20px
+  border-radius: 20px
   font-size: 12px
   color: white
-  line-height: 25px
+  line-height: 28px
   background: rgba(255,255,255,0.0)
   outline: none
   border: 1px solid white
 
   &:hover
     background: rgba(255,255,255,0.1)
+
+    .kf-lh-more-members-text
+      text-decoration: underline
+
+.kf-lh-more-members-text
+  width: 100%
+  font-size: 0.8em
+  position: absolute
+  right: 50%
+  transform: translateX(50%)
+  bottom: -23px
 
 .kf-lh-followers-more
   display: inline-block
@@ -714,6 +729,17 @@ collabImageDiam2 = 3.6em
   color: white
   outline: none
   vertical-align: top
+  box-shadow: 0 1px 5px rgba(0,0,0,.2)
+
+  @media (max-width: 480px)
+    width: 4.4em
+    height: 4.4em
+    border: none
+    background-color: #b2b2b2
+    margin-bottom: .4em
+
+    &:hover
+      background-color: #b8b8b8
 
 .kf-lh-add-collab-msg
   position: absolute
@@ -742,6 +768,7 @@ collabImageDiam2 = 3.6em
   border-radius: 50%
   vertical-align: top
   transition: opacity linear 0.1s
+  box-shadow: 0 1px 5px rgba(0,0,0,.2)
 
   &:hover
     background: rgba(255, 255, 255, 0.3)
@@ -759,6 +786,17 @@ collabImageDiam2 = 3.6em
 
     &:hover
       opacity: 1.0
+
+  @media (max-width: 480px)
+    width: 4.4em
+    height: 4.4em
+    background-color: #b2b2b2
+    opacity: 1
+    border: none
+    margin-bottom: .4em
+
+    &:hover
+      background-color: #b8b8b8
 
 .kf-lh-add-collab-icon
   width: 1.7em

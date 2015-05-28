@@ -36,9 +36,16 @@
         </button>
       </div>
 
+      <div class="kf-lh-followers collab" ng-if="onCollabExperiment">
+        <a class="kf-lh-followers-a" ng-repeat="follower in followersToShow" href="{{follower|profileUrl}}" kf-track-origin="libraryPage/follower">
+          <img class="kf-lh-followers-pic" ng-src="{{follower|pic:100}}" alt="{{follower|name}}">
+          <span class="kf-lh-followers-name">{{follower.firstName}}</span>
+        </a>
+      </div>
       <div class="kf-lh-members" ng-if="onCollabExperiment && (library.numCollaborators > 0 || library.numFollowers > 0)">
         <button class="kf-lh-view-members" ng-click="openMembersModal()">
           {{(isOwner() || (isCollaborating() && collabsCanInvite)) ? 'Manage members' : 'View members'}}
+          <span class="kf-lh-more-members-text" ng-if="numMoreFollowersText">+{{numMoreFollowersText}} more members</span>
         </button>
       </div>
 
@@ -87,14 +94,14 @@
           </a>
           <a class="kf-lh-collab-name" href="{{library.owner|profileUrl}}" itemprop="name" kf-track-origin="libraryPage/collaborator">{{library.owner.firstName}}</a>
         </div>
-        <div class="kf-lh-collab-image-wrap" ng-repeat="collab in library.collaborators">
+        <div class="kf-lh-collab-image-wrap" ng-repeat="collab in collaboratorsToShow">
           <a class="kf-lh-collab-image-a" href="{{collab|profileUrl}}" itemprop="url" kf-track-origin="libraryPage/collaborator">
             <img class="kf-lh-collab-image" ng-src="{{collab|pic:200}}" itemprop="image" alt="{{collab|name}}">
           </a>
           <a class="kf-lh-collab-name" href="{{collab|profileUrl}}" itemprop="name" kf-track-origin="libraryPage/collaborator">{{collab.firstName}}</a>
         </div>
-        <button class="kf-lh-more-collab" ng-if="library.numCollaborators - library.collaborators.length > 0">
-          +{{library.numCollaborators - library.collaborators.length}}
+        <button class="kf-lh-more-collab" ng-click="openMembersModal()" ng-if="numMoreCollaboratorsText">
+          + {{numMoreCollaboratorsText}}
         </button>
         <button class="kf-lh-add-collab-button" ng-if="(isOwner() || (isCollaborating() && library.whoCanInvite == 'collaborator')) && onCollabExperiment" ng-click="openInviteModal('collaborate')">
           <div class="kf-lh-add-collab-icon svg-collaborate-white"></div>

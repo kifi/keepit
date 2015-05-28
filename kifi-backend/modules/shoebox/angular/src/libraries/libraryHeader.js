@@ -68,11 +68,21 @@ angular.module('kifi')
         function setFollowersShown() {
           var lib = scope.library;
           var numFollowers = Math.max(lib.numFollowers, lib.followers.length);  // tolerating incorrect numFollowers
-          var numFollowersFit = 5;
+          var numFollowersFit = scope.onCollabExperiment ? 3 : 5;
           var showPlusFollowers = Math.min(lib.followers.length, numFollowersFit) < numFollowers;
           var numFollowersToShow = Math.min(lib.followers.length, numFollowersFit - (numFollowersFit && showPlusFollowers ? 1 : 0));
           scope.followersToShow = lib.followers.slice(0, numFollowersToShow);
           scope.numMoreFollowersText = showPlusFollowers ? $filter('num')(numFollowers - numFollowersToShow) : '';
+        }
+
+        function setCollaboratorsShown() {
+          var lib = scope.library;
+          var numCollabs = Math.max(lib.numCollaborators, lib.collaborators.length);  // tolerating incorrect numCollaborators
+          var numCollabsFit = 3;
+          var showPlusCollabs = Math.min(lib.collaborators.length, numCollabsFit) < numCollabs;
+          var numCollabsToShow = Math.min(lib.collaborators.length, numCollabsFit - (numCollabsFit && showPlusCollabs ? 1 : 0));
+          scope.collaboratorsToShow = lib.collaborators.slice(0, numCollabsToShow);
+          scope.numMoreCollaboratorsText = showPlusCollabs ? $filter('num')(numCollabs - numCollabsToShow) : '';
         }
 
         //
@@ -623,6 +633,7 @@ angular.module('kifi')
         //
 
         scope.$watch('library.numFollowers', setFollowersShown);
+        scope.$watch('library.numCollaborators', setCollaboratorsShown);
 
         [
           $rootScope.$on('libraryKeepCountChanged', function (e, libraryId, keepCount) {
