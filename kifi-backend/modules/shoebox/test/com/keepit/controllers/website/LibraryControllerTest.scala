@@ -805,51 +805,14 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
         val basicUser2 = db.readOnlyMaster { implicit s => basicUserRepo.load(user2.id.get) }
 
-        val expected = Json.parse(
-          s"""
-             |{
-             |"id":"${Library.publicId(lib1.id.get).id}",
-             |"name":"Library1",
-             |"visibility":"discoverable",
-             |"url":"/bulbasaur/lib1",
-             |"owner":{
-             |  "id":"${basicUser2.externalId}",
-             |  "firstName":"${basicUser2.firstName}",
-             |  "lastName":"${basicUser2.lastName}",
-             |  "pictureName":"${basicUser2.pictureName}",
-             |  "username":"${basicUser2.username.value}"
-             |  },
-             |"numKeeps":0,
-             |"numFollowers":1,
-             |"kind":"user_created"
-             |}
-           """.stripMargin)
-        Json.parse(contentAsString(result1)) must equalTo(expected)
+        val expected1 = Json.parse("""{"membership": {"access": "read_insert", "listed": true, "subscribed": false}}""")
+        Json.parse(contentAsString(result1)) must equalTo(expected1)
 
-        val result11 = libraryController.joinLibrary(pubLibId1)(request1)
+        val result11 = libraryController.joinLibrary(pubLibId1, None, true)(request1)
         status(result11) must equalTo(OK)
         contentType(result11) must beSome("application/json")
 
-        val expected11 = Json.parse(
-          s"""
-             |{
-             |"id":"${Library.publicId(lib1.id.get).id}",
-             |"name":"Library1",
-             |"visibility":"discoverable",
-             |"url":"/bulbasaur/lib1",
-             |"owner":{
-             |  "id":"${basicUser2.externalId}",
-             |  "firstName":"${basicUser2.firstName}",
-             |  "lastName":"${basicUser2.lastName}",
-             |  "pictureName":"${basicUser2.pictureName}",
-             |  "username":"${basicUser2.username.value}"
-             |  },
-             |"numKeeps":0,
-             |"numFollowers":1,
-             |"kind":"user_created",
-             |"alreadyJoined":true
-             |}
-           """.stripMargin)
+        val expected11 = Json.parse("""{"membership": {"access": "read_insert", "listed": true, "subscribed": true}}""")
         Json.parse(contentAsString(result11)) must equalTo(expected11)
 
         val request2 = FakeRequest("POST", testPathDecline)
