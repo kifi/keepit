@@ -134,13 +134,29 @@ maxWindowWidthForNarrowKeeps = inviteMaxWidth + 2 * (inviteSidePad + appSidePad1
     border-width: 2em appSidePad2 0
 
 .kf-lh-followers
-.kf-lh-members
   position: absolute
   top: 0
   right: 0
 
   &.collab
     right: 140px
+
+    @media (max-width: 719px)
+      right: 125px
+
+    @media (max-width: 559px)
+      right: 115px
+
+    @media (max-width: 479px)
+      display: none
+
+  @media (max-width: 479px)
+    font-size: 1.5em
+
+.kf-lh-members-wrapper
+  position: absolute
+  top: 0
+  right: 0
 
   @media (max-width: 479px)
     font-size: 1.5em
@@ -183,7 +199,7 @@ followerPicDiam = 2.2em
 
 .kf-lh-view-members
   position: relative
-  padding: 3px 20px
+  padding: 3px 15px
   border-radius: 20px
   font-size: 12px
   color: white
@@ -198,13 +214,15 @@ followerPicDiam = 2.2em
     .kf-lh-more-members-text
       text-decoration: underline
 
-.kf-lh-more-members-text
-  width: 100%
-  font-size: 0.8em
-  position: absolute
-  right: 50%
-  transform: translateX(50%)
-  bottom: -23px
+  @media (max-width: 719px)
+    line-height: 24px
+    padding: 3px 12px
+    font-size: 11px
+
+  @media (max-width: 559px)
+    line-height: 22px
+    padding: 3px 10px
+    font-size: 10px
 
 .kf-lh-followers-more
   display: inline-block
@@ -734,12 +752,7 @@ collabImageDiam2 = 3.6em
   @media (max-width: 480px)
     width: 4.4em
     height: 4.4em
-    border: none
-    background-color: #b2b2b2
     margin-bottom: .4em
-
-    &:hover
-      background-color: #b8b8b8
 
 .kf-lh-add-collab-msg
   position: absolute
@@ -763,19 +776,15 @@ collabImageDiam2 = 3.6em
   padding: 0px
   margin-left: 5px
   border: 1px dashed white
-  background: rgba(255, 255, 255, 0.2)
   outline: none
   border-radius: 50%
   vertical-align: top
   transition: opacity linear 0.1s
   box-shadow: 0 1px 5px rgba(0,0,0,.2)
 
-  &:hover
-    background: rgba(255, 255, 255, 0.3)
-
-    & .kf-lh-add-collab-msg
-      opacity: 1
-      visibility: visible
+  &:hover .kf-lh-add-collab-msg
+    opacity: 1
+    visibility: visible
 
   &.next-to-owner
     position: absolute
@@ -787,19 +796,17 @@ collabImageDiam2 = 3.6em
     &:hover
       opacity: 1.0
 
+  @media (min-width: 480px)
+    background: none
+
   @media (max-width: 480px)
     width: 4.4em
     height: 4.4em
-    background-color: #b2b2b2
     opacity: 1
-    border: none
     margin-bottom: .4em
 
-    &:hover
-      background-color: #b8b8b8
-
 .kf-lh-add-collab-icon
-  width: 1.7em
+  width: 1.73em
   height: 1em
   margin: 0 auto
   background-repeat: no-repeat

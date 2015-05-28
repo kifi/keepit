@@ -42,10 +42,11 @@
           <span class="kf-lh-followers-name">{{follower.firstName}}</span>
         </a>
       </div>
-      <div class="kf-lh-members" ng-if="onCollabExperiment && (library.numCollaborators > 0 || library.numFollowers > 0)">
+      <div class="kf-lh-members-wrapper" ng-if="onCollabExperiment && (library.numCollaborators > 0 || library.numFollowers > 0)">
         <button class="kf-lh-view-members" ng-click="openMembersModal()">
-          {{(isOwner() || (isCollaborating() && collabsCanInvite)) ? 'Manage members' : 'View members'}}
-          <span class="kf-lh-more-members-text" ng-if="numMoreFollowersText">+{{numMoreFollowersText}} more members</span>
+          {{(isOwner() || (isCollaborating() && collabsCanInvite)) ? 'Manage ' : 'View '}}
+          <ng-pluralize count="library.numFollowers + library.numCollaborators" when="{'one': '1 member', 'other': '{} members'}">
+          </ng-pluralize>
         </button>
       </div>
 
@@ -65,7 +66,7 @@
 
       <div class="kf-lh-stats">
         <span class="kf-lh-stat" ng-pluralize count="library.numKeeps" when="{'one': '1 keep', 'other': '{{library.numKeeps|number}} keeps'}" ng-if="library.numKeeps"></span>
-        <button class="kf-lh-stat" ng-pluralize count="library.numFollowers + library.numCollaborators" when="{'one': '1 member', 'other': '{{(library.numFollowers + library.numCollaborators)|num}} members'}" ng-if="(library.numFollowers + library.numCollaborators) && onCollabExperiment" ng-click="openMembersModal()"></button>
+        <button class="kf-lh-stat" ng-pluralize count="library.numFollowers" when="{'one': '1 follower', 'other': '{{library.numFollowers|num}} followers'}" ng-if="library.numFollowers && onCollabExperiment" ng-click="openMembersModal()"></button>
         <button class="kf-lh-stat" ng-pluralize count="library.numFollowers" when="{one:'1 follower',other:'{{library.numFollowers|num}} followers'}" ng-click="showFollowers()" ng-if="library.numFollowers && !onCollabExperiment"></button>
       </div>
 
@@ -75,7 +76,7 @@
           <a class="kf-lh-owner-image-a" href="{{library.owner|profileUrl}}" itemprop="url" kf-track-origin="libraryPage/curator">
             <img class="kf-lh-owner-image" ng-src="{{library.owner|pic:200}}" itemprop="image" alt="{{library.owner|name}}">
           </a>
-          <button class="kf-lh-add-collab-button next-to-owner" ng-if="!library.attr.twitter.screenName && isOwner() && onCollabExperiment" ng-click="openInviteModal('collaborate')">
+          <button class="kf-lh-add-collab-button next-to-owner" ng-if="!library.attr.twitter.screenName && isOwner() && onCollabExperiment" ng-click="openInviteModal('collaborate')" ng-style="{'background-color': library.color}">
             <div class="kf-lh-add-collab-icon svg-collaborate-white"></div>
             <span class="kf-lh-add-collab-msg">Invite a collaborator</span>
           </button>
@@ -103,7 +104,7 @@
         <button class="kf-lh-more-collab" ng-click="openMembersModal()" ng-if="numMoreCollaboratorsText">
           + {{numMoreCollaboratorsText}}
         </button>
-        <button class="kf-lh-add-collab-button" ng-if="(isOwner() || (isCollaborating() && library.whoCanInvite == 'collaborator')) && onCollabExperiment" ng-click="openInviteModal('collaborate')">
+        <button class="kf-lh-add-collab-button" ng-if="(isOwner() || (isCollaborating() && library.whoCanInvite == 'collaborator')) && onCollabExperiment" ng-click="openInviteModal('collaborate')" ng-style="{'background-color': library.color}">
           <div class="kf-lh-add-collab-icon svg-collaborate-white"></div>
           <span class="kf-lh-add-collab-msg">Invite a collaborator</span>
         </button>
