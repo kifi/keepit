@@ -70,7 +70,7 @@ class LibraryInviteRepoImpl @Inject() (
     getWithLibraryIdCompiled(libraryId, excludeState).list
   }
 
-  def getWithLibraryIdAndUserId(libraryId: Id[Library], userId: Id[User], includeSet: Set[State[LibraryInvite]] = Set(LibraryInviteStates.INACTIVE))(implicit session: RSession): Seq[LibraryInvite] = {
+  def getWithLibraryIdAndUserId(libraryId: Id[Library], userId: Id[User], includeSet: Set[State[LibraryInvite]] = Set(LibraryInviteStates.ACTIVE))(implicit session: RSession): Seq[LibraryInvite] = {
     (for (b <- rows if b.libraryId === libraryId && b.userId === userId && b.state.inSet(includeSet)) yield b).sortBy(_.createdAt).list
   }
 
