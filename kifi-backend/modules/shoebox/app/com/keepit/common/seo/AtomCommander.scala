@@ -86,7 +86,7 @@ class AtomCommander @Inject() (
     val descriptionsFuture = db.readOnlyMaster { implicit s => rover.getUriSummaryByUris(keeps.map(_.uriId).toSet) }
     descriptionsFuture map { descriptions =>
       val entries = keeps.map { keep =>
-        val (keepImage, keeper) = db.readOnlyMaster { implicit s =>
+        val (keepImageOpt, keeper) = db.readOnlyMaster { implicit s =>
           val image = keepImageCommander.getBestImageForKeep(keep.id.get, ScaleImageRequest(ImageSize(100, 100)))
           (image, userRepo.getNoCache(keep.userId))
         }
@@ -96,7 +96,8 @@ class AtomCommander @Inject() (
         val id = keep.externalId.id
         val updatedAt = keep.updatedAt
         val link = AtomLink(keep.url)
-        AtomEntry(title, author, Some(content), id, updatedAt, link)
+        val keepImage = keepImageOpt.map(_.get).map(_.imagePath.getUrl(s3ImageConfig)).map(url => s"https:$url")
+        AtomEntry(title, author, Some(content), id, updatedAt, link, icon = keepImage)
       }
       val links = Seq(AtomLink(feedUrl + "/atom", rel = Some("self")), AtomLink(feedUrl))
       AtomFeed(s"${library.name} by ${libraryCreator.username.value} * Kifi", libraryCreator.username.value,
