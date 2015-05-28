@@ -20,8 +20,7 @@
         </menu>
       </div>
       <input class="kf-lh-cover-file" type="file" accept="image/jpeg,image/png,image/gif" kf-file-change="onCoverImageFileChosen" ng-if="isOwner() && !library.isSystem">
-
-      <div class="kf-lh-subscribe-btn-wrap" ng-if="isFollowing() || isCollaborating() || (isOwner() && library.numCollaborators > 0)" ng-class="{'for-owner' : isOwner()}">
+      <div class="kf-lh-subscribe-btn-wrap" ng-if="!isOwner() || library.numCollaborators > 0" ng-class="{'for-owner': isOwner()}">
         <button ng-attr-class="kf-lh-subscribe-btn {{library.membership.subscribed ? 'svg-notification-on-white' : 'svg-notification-off-white'}}" ng-click="changeSubscription()"></button>
         <div class="kf-lh-subscribe-msg">Notifications {{library.membership.subscribed ? 'enabled' : 'disabled'}}</div>
       </div>
@@ -89,13 +88,14 @@
 
       <!--  owner with collaborators -->
       <div class="kf-lh-collabs" ng-if="library.numCollaborators > 0">
-        <div class="kf-lh-collab-image-wrap">
+        <div class="kf-lh-collab-image-wrap" itemprop="creator" itemscope itemtype="http://schema.org/Person">
           <a class="kf-lh-collab-image-a" href="{{library.owner|profileUrl}}" itemprop="url" kf-track-origin="libraryPage/collaborator">
             <img class="kf-lh-collab-image" ng-src="{{library.owner|pic:200}}" itemprop="image" alt="{{library.owner.firstName}}">
           </a>
           <a class="kf-lh-collab-name" href="{{library.owner|profileUrl}}" itemprop="name" kf-track-origin="libraryPage/collaborator">{{library.owner.firstName}}</a>
         </div>
-        <div class="kf-lh-collab-image-wrap" ng-repeat="collab in collaboratorsToShow">
+
+        <div class="kf-lh-collab-image-wrap" itemprop="contributor" itemscope itemtype="http://schema.org/Person" ng-repeat="collab in library.collaboratorsToShow">
           <a class="kf-lh-collab-image-a" href="{{collab|profileUrl}}" itemprop="url" kf-track-origin="libraryPage/collaborator">
             <img class="kf-lh-collab-image" ng-src="{{collab|pic:200}}" itemprop="image" alt="{{collab|name}}">
           </a>
@@ -134,7 +134,7 @@
 
     <div class="kf-lh-follow-btn-wrap" ng-if="!isMember()">
       <div kf-library-header-follow-button-cta library="library" ng-if="!isMobile && !$root.userLoggedIn"></div>
-      <button class="kf-lh-follow-btn" ng-click="followLibrary(true)">Follow</button>
+      <button class="kf-lh-follow-btn" ng-click="followLibrary({via: 'followBtn'})">Follow</button>
     </div>
     <div class="kf-lh-unfollow-btn-wrap" ng-class="{'kf-no-unfollow': followBtnJustClicked, 'kf-overflowing': overSubsBtn}" ng-if="isFollowing()">
       <button class="kf-lh-unfollow-btn" ng-click="unfollowLibrary()" ng-mouseleave="followBtnJustClicked = false"></button>
