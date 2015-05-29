@@ -568,7 +568,9 @@ angular.module('kifi')
         scope.showFollowers = function () {
           $rootScope.$emit('trackLibraryEvent', 'click', { action: 'clickedViewFollowers' });
 
-          if (scope.library.owner.id === profileService.me.id) {
+          if (scope.onCollabExperiment) {
+            scope.openMembersModal('followers_only');
+          } else if (scope.library.owner.id === profileService.me.id) {
             $rootScope.$emit('trackLibraryEvent', 'click', { action: 'clickedManageLibrary' });
             modalService.open({
               template: 'libraries/manageLibraryModal.tpl.html',
@@ -597,13 +599,14 @@ angular.module('kifi')
           libraryService.trackEvent('user_clicked_page', scope.library, { action: 'clickedTwitterProfileURL' });
         };
 
-        scope.openMembersModal = function () {
+        scope.openMembersModal = function (filterType) {
           modalService.open({
               template: 'libraries/libraryMembersModal.tpl.html',
               modalData: {
                 library: scope.library,
                 canManageMembers: (scope.isOwner() || (scope.isCollaborating() && scope.collabsCanInvite)),
                 amOwner: scope.isOwner(),
+                filterType: filterType,
                 currentPageOrigin: 'libraryPage'
               }
             });
