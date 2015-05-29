@@ -26,7 +26,7 @@ case class OrganizationMembership(
   def withUpdateTime(now: DateTime): OrganizationMembership = this.copy(updatedAt = now)
   def withState(newState: State[OrganizationMembership]): OrganizationMembership = this.copy(state = newState)
 
-  override def toString: String = s"OrganizationMembership[id=$id,libraryId=$organizationId,userId=$userId,access=$access,state=$state]"
+  override def toString: String = s"OrganizationMembership[id=$id,organizationId=$organizationId,userId=$userId,access=$access,state=$state]"
 
   def canInsert: Boolean = access == OrganizationAccess.OWNER || access == OrganizationAccess.READ_WRITE || access == OrganizationAccess.READ_INSERT
   def canWrite: Boolean = access == OrganizationAccess.OWNER || access == OrganizationAccess.READ_WRITE
@@ -38,7 +38,7 @@ case class OrganizationMembership(
 object OrganizationMembership {
   implicit val format = (
     (__ \ 'id).formatNullable(Id.format[OrganizationMembership]) and
-      (__ \ 'libraryId).format[Id[Organization]] and
+      (__ \ 'organizationId).format[Id[Organization]] and
       (__ \ 'userId).format[Id[User]] and
       (__ \ 'access).format[OrganizationAccess] and
       (__ \ 'createdAt).format(DateTimeJsonFormat) and
