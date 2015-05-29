@@ -343,12 +343,19 @@ class MobileLibraryController @Inject() (
               basicUserRepo.load(library.ownerId)
             }
             val libraryPath = s"${fortyTwoConfig.applicationBaseUrl}${Library.formatLibraryPath(owner.username, library.slug)}"
-            val link = if (library.isSecret) {
-              libraryPath + "?authToken=" + invite.authToken
-            } else {
-              libraryPath
-            }
-            Ok(Json.obj("link" -> link, "access" -> invite.access, "message" -> invite.message))
+            val link = libraryPath + "?authToken=" + invite.authToken
+            Ok(Json.obj(
+              "link" -> link,
+              "access" -> invite.access.value,
+              "sms" -> s"Check out this interesting Kifi library: $link",
+              "email" -> Json.obj(
+                "subject" -> s"Check out this Kifi library: ${library.name}",
+                "body" -> s"I think you will find this Kifi library interesting: $link"
+              ),
+              "facebook" -> s"Check out this interesting Kifi library: $link",
+              "twitter" -> s"Check out this interesting Kifi library: $link",
+              "message" -> "" // Ignore!
+            ))
         }
     }
   }
@@ -363,7 +370,7 @@ class MobileLibraryController @Inject() (
         val res = libraryCommander.joinLibrary(request.userId, libId)
         res match {
           case Left(fail) => sendFailResponse(fail)
-          case Right(lib) =>
+          case Right((lib, _)) =>
             val owner = db.readOnlyMaster { implicit s => basicUserRepo.load(lib.ownerId) }
             Ok(Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, None, owner)))
         }
@@ -532,7 +539,7 @@ class MobileLibraryController @Inject() (
 
   def setSubscribedToUpdates(pubId: PublicId[Library], newSubscripedToUpdate: Boolean) = UserAction { request =>
     val libraryId = Library.decodePublicId(pubId).get
-    libraryCommander.updatedLibraryUpdateSubscription(request.userId, libraryId, newSubscripedToUpdate) match {
+    libraryCommander.updateSubscribedToLibrary(request.userId, libraryId, newSubscripedToUpdate) match {
       case Right(mem) => NoContent
       case Left(fail) => Status(fail.status)(Json.obj("error" -> fail.message))
     }

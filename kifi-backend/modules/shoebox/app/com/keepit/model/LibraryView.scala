@@ -170,17 +170,12 @@ case class LibraryCardInfo(
     extends BaseLibraryCardInfo(id, name, description, color, image, slug, owner, numKeeps, numFollowers, followers, numCollaborators, collaborators, lastKept, following, membership, modifiedAt, kind)
 
 object LibraryCardInfo {
-  val writesWithoutOwner = Writes[LibraryCardInfo] { o => // for case when receiving end already knows the owner
-    JsObject((Json.toJson(o).as[JsObject].value - "owner").toSeq)
+  def chooseCollaborators(collaborators: Seq[BasicUser]): Seq[BasicUser] = {
+    collaborators.sortBy(_.pictureName == "0.jpg").take(3) // owner + 2 collaborators shown, 1 extra in case viewer is one and leaves
   }
 
-  def makeMembersShowable(members: Seq[BasicUser], filterBadPics: Boolean): Seq[BasicUser] = {
-    if (filterBadPics) {
-      members.filter(_.pictureName != "0.jpg").take(3)
-    } else {
-      val (membersWithPics, membersNoPics) = members.partition(_.pictureName != "0.jpg")
-      membersWithPics ++ membersNoPics
-    }
+  def chooseFollowers(followers: Seq[BasicUser]): Seq[BasicUser] = {
+    followers.filter(_.pictureName != "0.jpg").take(4) // 3 shown, 1 extra in case viewer is one and leaves
   }
 }
 

@@ -290,6 +290,22 @@ angular.module('kifi')
           socialService.importGmail();
         };
 
+        scope.toggleSelector = function () {
+          if (scope.inviteType === 'collaborate') {
+            scope.inviteType = 'follow';
+          } else {
+            scope.inviteType = 'collaborate';
+          }
+        };
+
+        scope.isCollabInvite = function () {
+          return scope.inviteType === 'collaborate';
+        };
+
+        scope.isFollowInvite = function () {
+          return scope.inviteType === 'follow';
+        };
+
 
         //
         // On link.

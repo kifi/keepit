@@ -25,46 +25,101 @@ colorBarHeight = .4em
     &.kf-system-secret
       height: 16em
 
-invite-banner-orange = #ff7c3c
+
+inviteSidePad = 20px
+inviteMaxWidth = 496px  // chosen to make youtube videos (16:9 aspect ratio) come out to whole pixels, 496x279
+maxWindowWidthForNarrowKeeps = inviteMaxWidth + 2 * (inviteSidePad + appSidePad1) - 1 // = 559px
 
 .kf-lh-invite-banner
   position: absolute
-  z-index: 1
   left: 50%
-  top: 0
-  transform: translate(-50%)
-  border-radius: 0 0 8px 8px
-  padding: .6em 1.25em .9em
-  background-color: invite-banner-orange
-  text-align: center
+  transform: translateX(-50%)
+  max-width: 776px
+  width: 100%
+  height: 60px
+  margin-top: -14px
+  padding-left: 25px
+  box-sizing: border-box
+  border-radius: 10px
+  z-index: 2
   font-size: .8em
+  text-align: initial
+  overflow: hidden
+  opacity: 1.0
 
   &.ng-leave
     transition: transform .25s, opacity .25s
 
   &.ng-leave-active
-    transform: translate(-50%, -100%)
+    transform: translate(-50%, -125%)
     opacity: 0
 
+  @media (max-width: 796px)
+    max-width: 2 * (1 + inviteSidePad) + inviteMaxWidth
+    font-size: 0.76em
+
+  @media (max-width: maxWindowWidthForNarrowKeeps)
+    max-width: inviteMaxWidth
+    font-size: 0.8em
+
+  @media (max-width: 536px)
+    width: calc(100% - 24px)
+
+  @media (max-width: 479px)
+    font-size: 0.87em
+
+.kf-lh-invite-pic
+  position: relative
+  top: -1px
+  display: inline-block
+  width: 36px
+  height: 36px
+  border-radius: 50%
+
+  @media (max-width: 479px)
+    display: none
+
 .kf-lh-invite-banner-text
-  margin-bottom: .6em
+  display: inline-block
+  margin-left: 15px
+  line-height: 60px
   color: #fff
 
+  @media (max-width: 479px)
+    margin-left: 0px
+
+  @media (max-width: 795px)
+    position: relative
+    top: 12px
+    line-height: 18px
+
+  & span
+    @media (max-width: 795px)
+      display: block
+
+
 .kf-lh-invite-banner-button
+  position: relative
+  top: 50%
+  transform: translateY(-50%)
+  float: right
   margin-left: .8em
   border: 1px solid #fff
   border-radius: 4px
-  padding: .44em 1.2em
-  font-size: .85em
+  padding: .44em 1.3em
+
+  @media (max-width: 479px)
+    padding: .44em 1.1em
 
   &.kf-accept
     background: alpha(#fff, .9)
-    color: invite-banner-orange
 
     &:hover:not(:active)
       background-color: #fff
 
   &.kf-ignore
+  &.kf-continue
+    margin-right: 2em
     background: transparent
     color: #fff
 
@@ -83,7 +138,6 @@ invite-banner-orange = #ff7c3c
     border-width: 2em appSidePad2 0
 
 .kf-lh-followers
-.kf-lh-members
   position: absolute
   top: 0
   right: 0
@@ -128,17 +182,36 @@ followerPicDiam = 2.2em
     display: block
 
 .kf-lh-view-members
-  padding: 3px 5px
-  border-radius: 5px
+  position: relative
+  padding: 3px 15px
+  border-radius: 20px
   font-size: 12px
   color: white
-  line-height: 25px
+  line-height: 28px
   background: rgba(255,255,255,0.0)
   outline: none
   border: 1px solid white
 
   &:hover
     background: rgba(255,255,255,0.1)
+
+    .kf-lh-more-members-text
+      text-decoration: underline
+
+  @media (max-width: 719px)
+    line-height: 24px
+    padding: 3px 12px
+    font-size: 11px
+
+  @media (max-width: 559px)
+    line-height: 22px
+    padding: 2px 10px
+    font-size: 10px
+
+  @media (max-width: 479px)
+    line-height: 20px
+    padding: 1px 10px
+    font-size: 10px
 
 .kf-lh-followers-more
   display: inline-block
@@ -657,12 +730,20 @@ collabImageDiam2 = 3.6em
   height: 3.4em
   padding: 0px
   margin-left: 5px
-  background: none
   border-radius: 50%
   border: 1px solid white
   color: white
   outline: none
   vertical-align: top
+  box-shadow: 0 1px 5px rgba(0,0,0,.2)
+
+  @media (min-width: 480px)
+    background: none !important
+
+  @media (max-width: 479px)
+    width: 4.4em
+    height: 4.4em
+    margin-bottom: .4em
 
 .kf-lh-add-collab-msg
   position: absolute
@@ -686,18 +767,15 @@ collabImageDiam2 = 3.6em
   padding: 0px
   margin-left: 5px
   border: 1px dashed white
-  background: rgba(255, 255, 255, 0.2)
   outline: none
   border-radius: 50%
   vertical-align: top
   transition: opacity linear 0.1s
+  box-shadow: 0 1px 5px rgba(0,0,0,.2)
 
-  &:hover
-    background: rgba(255, 255, 255, 0.3)
-
-    & .kf-lh-add-collab-msg
-      opacity: 1
-      visibility: visible
+  &:hover .kf-lh-add-collab-msg
+    opacity: 1
+    visibility: visible
 
   &.next-to-owner
     position: absolute
@@ -709,8 +787,17 @@ collabImageDiam2 = 3.6em
     &:hover
       opacity: 1.0
 
+  @media (min-width: 480px)
+    background: none !important
+
+  @media (max-width: 479px)
+    width: 4.4em
+    height: 4.4em
+    opacity: 1
+    margin-bottom: .4em
+
 .kf-lh-add-collab-icon
-  width: 1.7em
+  width: 1.73em
   height: 1em
   margin: 0 auto
   background-repeat: no-repeat
@@ -933,7 +1020,6 @@ subsDur = .4s
   background-color: transparent
   background-image: none
   color: #20a1f1
-  line-height: 1
 
   &::before
     content: 'Following'
@@ -962,7 +1048,7 @@ subsDur = .4s
   background-repeat: no-repeat
   padding: 0
   transition: transform subsDur
-  transform: translate(32px)
+  transform: translate(subsWidth)
 
   :not(.kf-no-unfollow):hover>&
     transform: none
@@ -1039,3 +1125,24 @@ subsDur = .4s
 
   @media (min-width: 796px)
     padding-right: 234px  // rightColWidth + colGapWidth
+
+
+.kf-lh-invite-search-button
+  height: buttonHeight
+  padding: 0 buttonSidePad
+  margin-left: 1em
+  outline: none
+  background: none
+  border: 1px solid #56b263
+  border-radius: buttonBorderRadius
+  color: #56b263
+  font-size: 13px
+  vertical-align: top
+
+  & .svg-share-arrow-green
+    display: inline-block
+    vertical-align: top
+    width: 15px
+    height: 16px
+    background-size: cover
+    margin-right: 5px
