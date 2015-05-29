@@ -33,7 +33,7 @@ class LibraryWebhookCommander @Inject() (
   def sendNewKeepWebhook(bookmark: RawBookmarkRepresentation, userId: Id[User], library: Library) = SafeFuture {
     val webhooks = db.readOnlyReplica { implicit session =>
       library.id.map { id => libraryWebhookRepo.getByLibraryIdAndTrigger(id, WebhookTrigger.NEW_KEEP) }
-    }.getOrElse(throw NoSuchFieldException) // not sure what to do in case library.id == None
+    }.getOrElse(throw new NoSuchFieldException) // not sure what to do in case library.id == None
 
     val keeperName = db.readOnlyReplica { implicit session => userRepo.get(userId).fullName }
 
@@ -46,7 +46,7 @@ class LibraryWebhookCommander @Inject() (
           val body = BasicSlackMessage(text)
           client.postFuture(DirectUrl(webhook.action.\("url").toString), body.toJson)
         case _ =>
-          Future.failed(NoSuchFieldError)
+          Future.failed(new NoSuchFieldException)
       }
     }
   }
