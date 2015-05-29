@@ -362,7 +362,7 @@ class WebsiteSearchController @Inject() (
         }
         val libraryMembershipSearcher = libraryMembershipIndexer.getSearcher
         val publishedLibrariesCountByMember = userSearchResult.hits.map { hit => hit.id -> LibraryMembershipIndexable.countPublishedLibrariesByMember(librarySearcher, libraryMembershipSearcher, hit.id) }.toMap
-        val publishedLibrariesCountByOwner = userSearchResult.hits.map { hit => hit.id -> LibraryMembershipIndexable.countPublishedLibrariesByOwner(librarySearcher, libraryMembershipSearcher, hit.id) }.toMap
+        val publishedLibrariesCountByCollaborator = userSearchResult.hits.map { hit => hit.id -> LibraryMembershipIndexable.countPublishedLibrariesByCollaborator(librarySearcher, libraryMembershipSearcher, hit.id) }.toMap
         for {
           keepCountsByUser <- futureKeepCountsByUser
           mutualFriendsByUser <- futureMutualFriendsByUser
@@ -388,7 +388,7 @@ class WebsiteSearchController @Inject() (
                 "pictureName" -> user.pictureName,
                 "isFriend" -> friends.contains(hit.id.id),
                 "mutualFriendCount" -> mutualFriendsByUser(hit.id).size,
-                "libraryCount" -> publishedLibrariesCountByOwner(hit.id),
+                "libraryCount" -> publishedLibrariesCountByCollaborator(hit.id),
                 "libraryMembershipCount" -> publishedLibrariesCountByMember(hit.id),
                 "keepCount" -> keepCountsByUser(hit.id),
                 "relevantLibrary" -> relevantLibrary
