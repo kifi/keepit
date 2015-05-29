@@ -15,9 +15,6 @@ import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 import scala.xml.NodeSeq
 
-/**
- * Created by colinlane on 5/28/15.
- */
 class AtomCommanderTest extends Specification with ShoeboxTestInjector {
 
   val modules = Seq(

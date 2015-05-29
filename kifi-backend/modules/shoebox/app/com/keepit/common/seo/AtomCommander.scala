@@ -10,14 +10,10 @@ import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
 import com.keepit.rover.RoverServiceClient
 import org.joda.time.DateTime
-import scala.concurrent.ExecutionContext.Implicits.global
 
-import scala.concurrent.Future
+import scala.concurrent.{ ExecutionContext, Future }
 import scala.xml.{ Elem, Text }
 
-/**
- * Created by colinlane on 5/28/15.
- */
 class AtomCommander @Inject() (
     db: Database,
     fortyTwoConfig: FortyTwoConfig,
@@ -74,7 +70,7 @@ class AtomCommander @Inject() (
     }
   }
 
-  def libraryFeed(library: Library, keepCountToDisplay: Int = 20, offset: Int = 0): Future[Elem] = {
+  def libraryFeed(library: Library, keepCountToDisplay: Int = 20, offset: Int = 0)(implicit ec: ExecutionContext): Future[Elem] = {
     val (libImage, keeps, libraryCreator) = db.readOnlyMaster { implicit session =>
       val image = libraryImageCommander.getBestImageForLibrary(library.id.get, ImageSize(64, 64))
       val keeps = keepRepo.getByLibrary(libraryId = library.id.get, offset = offset, limit = keepCountToDisplay, excludeSet = Set(KeepStates.INACTIVE))
