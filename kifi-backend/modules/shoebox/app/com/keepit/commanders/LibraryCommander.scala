@@ -328,7 +328,7 @@ class LibraryCommander @Inject() (
   }
 
   def getViewerInviteInfo(userIdOpt: Option[Id[User]], libraryId: Id[Library]): Option[LibraryInviteInfo] = {
-    userIdOpt.map { userId =>
+    userIdOpt.flatMap { userId =>
       db.readOnlyMaster { implicit s =>
         val inviteOpt = libraryInviteRepo.getLastSentByLibraryIdAndUserId(libraryId, userId, Set(LibraryInviteStates.ACTIVE))
         val basicUserOpt = inviteOpt map { inv => basicUserRepo.load(inv.inviterId) }
@@ -337,7 +337,7 @@ class LibraryCommander @Inject() (
         case (Some(invite), Some(inviter)) => Some(LibraryInviteInfo.createInfo(invite, inviter))
         case (_, _) => None
       }
-    }.flatten
+    }
   }
 
   private def getSourceAttribution(libId: Id[Library]): Option[LibrarySourceAttribution] = {
