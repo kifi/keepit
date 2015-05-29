@@ -97,6 +97,10 @@ angular.module('kifi')
           }
         };
 
+        scope.signupFromInvitation = function () {
+          signupService.register({libraryId: scope.library.id, intent: 'follow'});
+        };
+
         scope.changeSubscription = function () {
           var mem = scope.library.membership;
           if (mem) {
