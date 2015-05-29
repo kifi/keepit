@@ -34,6 +34,8 @@ angular.module('kifi')
         var URL = $window.URL || $window.webkitURL;
         var descWrapEl = element.find('.kf-lh-desc-wrap');
         var descEl = descWrapEl.find('.kf-lh-desc');
+        var smallWindowLimit = 479;
+        var smallWindow = $window.innerWidth <= smallWindowLimit;
 
         //
         // Scope data.
@@ -71,6 +73,13 @@ angular.module('kifi')
           var membersToShow = members.slice(0, numMembersToShow);
           var numMoreMembersText = showPlusMembers ? $filter('num')(numMembers - numMembersToShow) : '';
           return [membersToShow, numMoreMembersText];
+        }
+
+        function setFollowers(hideAll) {
+          var numFollowersToFit = hideAll ? 0 : (scope.onCollabExperiment ? 3 : 5);
+          var res = setMembersToShow(scope.library.followers, scope.library.numFollowers, numFollowersToFit);
+          scope.followersToShow = res[0];
+          scope.numMoreFollowersText = res[1];
         }
 
         //
@@ -623,16 +632,25 @@ angular.module('kifi')
           });
         };
 
+        function onWinResize() {
+          if ($window.innerWidth <= smallWindowLimit && !smallWindow) {
+            smallWindow = true;
+          } else if ($window.innerWidth > smallWindowLimit && smallWindow) {
+            smallWindow = false;
+          }
+          scope.$apply(function() {
+            setFollowers(smallWindow);
+          });
+        }
 
         //
         // Watches and listeners.
         //
 
+        $window.addEventListener('resize', onWinResize);
+
         scope.$watch('library.numFollowers', function() {
-          var numFollowersToFit = scope.onCollabExperiment ? 3 : 5;
-          var res = setMembersToShow(scope.library.followers, scope.library.numFollowers, numFollowersToFit);
-          scope.followersToShow = res[0];
-          scope.numMoreFollowersText = res[1];
+          setFollowers(smallWindow);
         });
 
         scope.$watch('library.numCollaborators', function() {
