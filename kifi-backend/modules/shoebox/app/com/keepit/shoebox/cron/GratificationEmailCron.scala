@@ -13,6 +13,8 @@ import com.keepit.shoebox.cron.GratificationEmailMessage.{ SendEvenEmails, SendO
 import us.theatr.akka.quartz.QuartzActor
 import play.api.libs.concurrent.Execution.Implicits._
 
+import scala.util.{ Failure, Success }
+
 trait GratificationEmailCronPlugin extends SchedulerPlugin
 
 class GratificationEmailCronPluginImpl @Inject() (
@@ -48,11 +50,20 @@ class GratificationEmailActor @Inject() (
 
   def receive = {
     case SendEmails =>
-      emailCommander.usersToSendEmailTo.map { ids => ids.foreach { id => emailSender.sendToUser(id, Some(testDestinationEmail)) } } // remove Some(...) upon deployment
+      emailCommander.usersToSendEmailTo onComplete {
+        case Success(ids) => ids.foreach { id => emailSender.sendToUser(id, None) }
+        case Failure(t) => log.error("Grat SendEmails not sent, future failed")
+      }
     case SendOddEmails =>
-      emailCommander.usersToSendEmailTo.map { ids => ids.filter { id => id.id % 2 == 1 }.foreach { id => emailSender.sendToUser(id, None) } }
+      emailCommander.usersToSendEmailTo onComplete {
+        case Success(ids) => ids.filter { id => id.id % 2 == 1 }.foreach { id => emailSender.sendToUser(id, None) }
+        case Failure(t) => log.error("Grat SendOddEmails not sent, future failed")
+      }
     case SendEvenEmails =>
-      emailCommander.usersToSendEmailTo.map { ids => ids.filter { id => id.id % 2 == 0 }.foreach { id => emailSender.sendToUser(id, None) } }
+      emailCommander.usersToSendEmailTo onComplete {
+        case Success(ids) => ids.filter { id => id.id % 2 == 0 }.foreach { id => emailSender.sendToUser(id, None) }
+        case Failure(t) => log.error("Grat SendEvenEmails not sent, future failed")
+      }
   }
 }
 
