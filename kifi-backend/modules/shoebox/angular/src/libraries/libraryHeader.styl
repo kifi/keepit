@@ -162,13 +162,11 @@ followerPicDiam = 2.2em
   &:active:hover
     box-shadow: none
 
-  &:hover .kf-lh-follower-x
+  &:hover .kf-lh-member-x
     visibility: visible
 
-.kf-lh-follower-x
+.kf-lh-member-x
   position: absolute
-  top: -4px
-  right: -3px
   outline: none
   border: none
   padding: 0px
@@ -179,10 +177,21 @@ followerPicDiam = 2.2em
   border-radius: 50%
   background-color: pageHeaderColor
   visibility: hidden
-  transform: scale(0.6)
 
-  &:hover
+  &.follow
+    top: -4px
+    right: -3px
+    transform: scale(0.6)
+  &.follow:hover
     transform: scale(0.8)
+
+  &.collab
+    top: 0px
+    right: -1px
+    transform: scale(0.8)
+  &.collab:hover
+    transform: scale(1.0)
+
 
 .kf-lh-followers-pic
   height: followerPicDiam
@@ -635,25 +644,6 @@ coverDragShadeHeight = 3em
     .kf-system-secret &
       display: none
 
-.kf-lh-collab-x
-  position: absolute
-  top: 0px
-  right: -1px
-  outline: none
-  border: none
-  padding: 0px
-  width: 15px
-  height: 15px
-  font-size: 12px
-  color: white
-  border-radius: 50%
-  background-color: pageHeaderColor
-  visibility: hidden
-  transform: scale(0.8)
-
-  &:hover
-    transform: scale(1.0)
-
 .kf-lh-owner-image-wrap
   position: relative
   display: block
@@ -664,7 +654,7 @@ coverDragShadeHeight = 3em
   display: inline-block
   margin: 0 5px
 
-  &:hover .kf-lh-collab-x
+  &:hover .kf-lh-member-x
     visibility: visible
 
 ownerImageDiam1 = 8em
