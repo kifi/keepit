@@ -49,7 +49,7 @@ angular.module('kifi')
               } else {
                 scope.moreMembers = true;
                 scope.offset += 1;
-                _.remove(members, 'lastInvitedAt');
+                members = filterMembers(members, scope.filterType);
                 scope.memberList.push.apply(scope.memberList, members);
               }
             });
@@ -59,6 +59,15 @@ angular.module('kifi')
         //
         // Internal functions
         //
+        function filterMembers(members, filterType) {
+          if (filterType === 'followers_only') {
+            members = _.filter(members, {membership : 'read_only'});
+          } else if (filterType === 'collaborators_only') {
+            members = _.filter(members, {membership : 'read_write'});
+          }
+          return members;
+        }
+
         function updateMembership(member, access) {
           scope.selectedMember = member;
           return net.updateLibraryMembership(scope.library.id, member.id, {access: access});
@@ -166,6 +175,7 @@ angular.module('kifi')
           scope.canManage = scope.modalData.canManageMembers;
           scope.currentPageOrigin = scope.modalData.currentPageOrigin;
           scope.amOwner = scope.modalData.amOwner;
+          scope.filterType = scope.modalData.filterType;
         }
       }
     };

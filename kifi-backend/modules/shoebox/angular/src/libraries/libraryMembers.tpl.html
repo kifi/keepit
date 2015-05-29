@@ -10,11 +10,11 @@
       <div class="lmm-stats-box" ng-if="library.numFollowers > 0 || library.numCollaborators > 0">
         <ng-pluralize count="displayNumCollabs()" when="
         {'0' : '', 'one': '1 collaborator', 'other': '{} collaborators'}
-        "></ng-pluralize>
-        <span ng-if="library.numCollaborators > 0 && library.numFollowers > 0">&nbsp;and&nbsp;</span>
+        " ng-hide="filterType === 'followers_only'"></ng-pluralize>
+        <span ng-if="(library.numCollaborators > 0 && library.numFollowers > 0) && !filterType">&nbsp;and&nbsp;</span>
         <ng-pluralize count="library.numFollowers" when="
         {'0' : '', 'one': '1 follower', 'other': '{} followers'}
-        "></ng-pluralize>
+        " ng-hide="filterType === 'collaborators_only'"></ng-pluralize>
       </div>
 
       <div class="lmm-members-content">
@@ -35,14 +35,15 @@
             <!-- Members -->
             <li class="lmm-member-item" ng-repeat="member in memberList">
               <a href="{{member|profileUrl}}" class="lmm-member-link" kf-track-origin="{{currentPageOrigin}}/member" ng-click="close()">
-                <img ng-src="{{member | pic:100}}" alt="{{member|name}}" class="lmm-member-pic">
+                <img ng-src="{{member | pic:100}}" alt="{{member|name}}" class="lmm-member-pic" ng-if="member.id">
+                <div class="lmm-member-email svg-envelope" ng-if="!member.id"></div>
               </a>
               <div class="lmm-member-info-wrapper">
-                <div class="lmm-member-info-name">{{member|name}}</div>
-                <span class="lmm-member-info-icon svg-collaborators-green" ng-if="isCollaborator(member)"></span>
-                <span class="lmm-member-info-state" ng-class="{'collab' : isCollaborator(member)}">{{isCollaborator(member) ? 'Collaborator' : 'Follower'}}</span>
+                <div class="lmm-member-info-name">{{member.firstName ? member.firstName + ' ' + member.lastName : member.email}}</div>
+                <span class="lmm-member-info-icon svg-collaborators-green" ng-if="isCollaborator(member) && !member.lastInvitedAt"></span>
+                <span class="lmm-member-info-state" ng-class="{'collab' : isCollaborator(member) && !member.lastInvitedAt}">{{isCollaborator(member) && !member.lastInvitedAt ? 'Collaborator' : isFollower(member) && !member.lastInvitedAt ? 'Follower' : isCollaborator(member) ? 'Invite to collaborate pending' : 'Invite to follow pending'}}</span>
               </div>
-              <div class="lmm-member-dropdown-parent" kf-hover-menu ng-if="canManage">
+              <div class="lmm-member-dropdown-parent" kf-hover-menu ng-if="canManage && !member.lastInvitedAt">
                 <div class="svg-dropdown-arrow"></div>
                   <menu class="kf-dropdown-menu">
                     <button class="kf-dropdown-menu-item" ng-if="isFollower(member)" ng-click="changeToCollaborator(member)">Make collaborator</button>
