@@ -123,17 +123,6 @@ class LibraryCommander @Inject() (
     Library.formatLibraryPath(owner.username, library.slug)
   }
 
-  // Replaced by getBasicLibraryDetails, please remove dependencies
-  def getBasicLibraryStatistics(libraryIds: Set[Id[Library]]): Map[Id[Library], BasicLibraryStatistics] = {
-    db.readOnlyReplica { implicit session =>
-      val libs = libraryRepo.getLibraries(libraryIds)
-      libraryIds.map { libId =>
-        val lib = libs(libId)
-        libId -> BasicLibraryStatistics(lib.memberCount, lib.keepCount)
-      }.toMap
-    }
-  }
-
   def getBasicLibraryDetails(libraryIds: Set[Id[Library]]): Map[Id[Library], BasicLibraryDetails] = {
     db.readOnlyReplica { implicit session =>
       val libs = libraryRepo.getLibraries(libraryIds)

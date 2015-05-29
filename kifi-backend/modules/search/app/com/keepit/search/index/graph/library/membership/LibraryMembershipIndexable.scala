@@ -95,7 +95,7 @@ class LibraryMembershipIndexable(membership: LibraryMembershipView) extends Inde
     if (Access.collaborator.contains(membership.access)) {
       doc.add(buildKeywordField(collaboratorField, membership.userId.id.toString))
     }
-      
+
     doc.add(buildKeywordField(libraryField, membership.libraryId.id.toString))
     doc.add(buildIdValueField(libraryIdField, membership.libraryId))
 

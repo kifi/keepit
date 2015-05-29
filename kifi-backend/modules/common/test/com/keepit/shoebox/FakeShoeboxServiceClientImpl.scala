@@ -694,8 +694,6 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
     })
   }
 
-  def getBasicLibraryStatistics(libraryIds: Set[Id[Library]]): Future[Map[Id[Library], BasicLibraryStatistics]] = ???
-
   def getBasicLibraryDetails(libraryIds: Set[Id[Library]]): Future[Map[Id[Library], BasicLibraryDetails]] = ???
 
   def getKeepCounts(userId: Set[Id[User]]): Future[Map[Id[User], Int]] = ???

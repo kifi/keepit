@@ -117,8 +117,6 @@ trait ShoeboxServiceClient extends ServiceClient {
   def newKeepsInLibraryForEmail(userId: Id[User], max: Int): Future[Seq[Keep]]
   def getBasicKeeps(userId: Id[User], uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[BasicKeep]]]
   // Replaced by getBasicLibraryDetails below. Please replace dependencies.
-  def getBasicLibraryStatistics(libraryIds: Set[Id[Library]]): Future[Map[Id[Library], BasicLibraryStatistics]]
-  def getBasicLibraryDetails(libraryIds: Set[Id[Library]]): Future[Map[Id[Library], BasicLibraryDetails]]
   def getKeepCounts(userIds: Set[Id[User]]): Future[Map[Id[User], Int]]
   def getKeepImages(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], BasicImages]]
   def getLibrariesWithWriteAccess(userId: Id[User]): Future[Set[Id[Library]]]
@@ -707,16 +705,6 @@ class ShoeboxServiceClientImpl @Inject() (
       call(Shoebox.internal.getBasicKeeps(userId), Json.toJson(uriIds), callTimeouts = extraLongTimeout, routingStrategy = offlinePriority).map { r =>
         implicit val readsFormat = TupleFormat.tuple2Reads[Id[NormalizedURI], Set[BasicKeep]]
         r.json.as[Seq[(Id[NormalizedURI], Set[BasicKeep])]].toMap
-      }
-    }
-  }
-
-  // Replaced by getBasicLibraryDetails below. Please replace dependencies.
-  def getBasicLibraryStatistics(libraryIds: Set[Id[Library]]): Future[Map[Id[Library], BasicLibraryStatistics]] = {
-    if (libraryIds.isEmpty) Future.successful(Map.empty[Id[Library], BasicLibraryStatistics]) else {
-      call(Shoebox.internal.getBasicLibraryStatistics, Json.toJson(libraryIds)).map { r =>
-        implicit val readsFormat = TupleFormat.tuple2Reads[Id[Library], BasicLibraryStatistics]
-        r.json.as[Seq[(Id[Library], BasicLibraryStatistics)]].toMap
       }
     }
   }

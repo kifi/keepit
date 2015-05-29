@@ -21,7 +21,7 @@ import com.keepit.search.util.IdFilterCompressor
 import com.keepit.search.{ UserSearchCommander, LibraryContext, LibrarySearchCommander, UriSearchCommander }
 import com.keepit.model.ExperimentType._
 import play.api.libs.json.JsArray
-import com.keepit.search.index.graph.library.{ LibraryIndexer, LibraryIndexable }
+import com.keepit.search.index.graph.library.{ LibraryIndexer }
 import com.keepit.search.controllers.util.SearchControllerUtil
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -90,17 +90,17 @@ class MobileSearchController @Inject() (
       val librarySearcher = libraryIndexer.getSearcher
       val libraryRecordsAndVisibilityById = getLibraryRecordsAndVisibility(librarySearcher, librarySearchResult.hits.map(_.id).toSet)
       val futureUsers = shoeboxClient.getBasicUsers(libraryRecordsAndVisibilityById.values.map(_._1.ownerId).toSeq.distinct)
-      val futureLibraryStatistics = shoeboxClient.getBasicLibraryStatistics(libraryRecordsAndVisibilityById.keySet)
+      val futureLibraryDetails = shoeboxClient.getBasicLibraryDetails(libraryRecordsAndVisibilityById.keySet)
       for {
         usersById <- futureUsers
-        libraryStatisticsById <- futureLibraryStatistics
+        libraryDetailsById <- futureLibraryDetails
       } yield {
         val hitsArray = JsArray(librarySearchResult.hits.flatMap { hit =>
           libraryRecordsAndVisibilityById.get(hit.id).map {
             case (library, visibility) =>
               val owner = usersById(library.ownerId)
               val path = Library.formatLibraryPath(owner.username, library.slug)
-              val statistics = libraryStatisticsById(library.id)
+              val details = libraryDetailsById(library.id)
               val description = library.description.getOrElse("")
               Json.obj(
                 "id" -> Library.publicId(hit.id),
@@ -111,8 +111,8 @@ class MobileSearchController @Inject() (
                 "path" -> path,
                 "visibility" -> visibility,
                 "owner" -> owner,
-                "memberCount" -> statistics.memberCount,
-                "keepCount" -> statistics.keepCount
+                "memberCount" -> (details.numFollowers + details.numCollaborators),
+                "keepCount" -> details.keepCount
               )
           }
         })
