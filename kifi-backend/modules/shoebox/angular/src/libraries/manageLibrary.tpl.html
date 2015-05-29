@@ -9,7 +9,7 @@
       {{modalTitle}}
     </h1>
     <div class="dialog-body">
-      <div ng-if="modifyingExistingLibrary" class="manage-lib-followers-info">
+      <div ng-if="modifyingExistingLibrary && !onCollabExperiment" class="manage-lib-followers-info">
         <p class="manage-lib-followers-stats">
           <span ng-pluralize count="library.numFollowers"
                 when="{'0': '0 people are ', 'one': '1 person is ', 'other': '{} people are '}"></span>
