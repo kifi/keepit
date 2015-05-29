@@ -5,10 +5,10 @@ angular.module('kifi')
 .directive('kfLibraryHeader', [
   '$http', '$location', '$q', '$rootScope', '$state', '$stateParams', '$timeout', '$window', '$$rAF',
   '$filter', 'env', 'libraryService', 'modalService','profileService', 'platformService', 'signupService',
-  'routeService', 'linkify',
+  'routeService', 'linkify', 'net',
   function ($http, $location, $q, $rootScope, $state, $stateParams, $timeout, $window, $$rAF,
             $filter, env, libraryService, modalService, profileService, platformService, signupService,
-            routeService, linkify) {
+            routeService, linkify, net) {
     return {
       restrict: 'A',
       replace: true,
@@ -633,6 +633,30 @@ angular.module('kifi')
               inviteType: inviteType,
               currentPageOrigin: 'libraryPage'
             }
+          });
+        };
+
+        scope.removeMember = function () {
+          var member = scope.selectedMemberToRemove;
+          if (scope.memberTypeToRemove === 'collab') {
+            _.remove(scope.library.collaborators, {id : member.id});
+            scope.library.numCollaborators--;
+          } else if (scope.memberTypeToRemove === 'follow') {
+            _.remove(scope.library.followers, {id : member.id});
+            scope.library.numFollowers--;
+          }
+          net.updateLibraryMembership(scope.library.id, member.id, {access: 'none'});
+          scope.memberTypeToRemove = null;
+          scope.selectedMemberToRemove = null;
+        };
+
+        scope.openRemoveMemberModal = function (member, type) {
+          event.preventDefault();
+          scope.selectedMemberToRemove = member;
+          scope.memberTypeToRemove = type;
+          modalService.open({
+            template: 'libraries/removeMemberConfirmModal.tpl.html',
+            scope: scope
           });
         };
 
