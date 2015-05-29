@@ -36,7 +36,7 @@ object OrganizationLogo {
     (__ \ 'updatedAt).format(DateTimeJsonFormat) and
     (__ \ 'state).format(State.format[OrganizationLogo]) and
     (__ \ 'organizationId).format(Id.format[Organization]) and
-    (__ \ "position").formatNullable[ImagePosition] and
+    (__ \ 'position).formatNullable[ImagePosition] and
     (__ \ 'width).format[Int] and
     (__ \ 'height).format[Int] and
     (__ \ 'format).format[ImageFormat] and
@@ -52,8 +52,8 @@ case class ImagePosition(x: Int, y: Int)
 
 object ImagePosition {
   implicit val format: Format[ImagePosition] = (
-    (__ \ "x").format[Int] and
-    (__ \ "y").format[Int]
+    (__ \ 'x).format[Int] and
+    (__ \ 'y).format[Int]
   )(ImagePosition.apply, unlift(ImagePosition.unapply))
 }
 
