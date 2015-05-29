@@ -12,7 +12,7 @@ case class LibraryWebhook(
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,
     state: State[LibraryWebhook] = State("active"),
-    trigger: WebhookTrigger = WebhookTrigger.NEW_KEEP,
+    trigger: WebhookTrigger,
     libraryid: Id[Library],
     action: JsValue) extends ModelWithState[LibraryWebhook] {
   def withId(id: Id[LibraryWebhook]) = this.copy(id = Some(id))

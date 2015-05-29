@@ -10,7 +10,7 @@ import com.keepit.common.net.{ DirectUrl, CallTimeouts, HttpClient }
 import com.keepit.model._
 import play.api.libs.json.{ Json, JsValue }
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ Future, ExecutionContext }
 
 //val KIFI_LOGO_URL = "https://djty7jcqog9qu.cloudfront.net/assets/black/logo.png"
 
@@ -31,23 +31,22 @@ class LibraryWebhookCommander @Inject() (
     airbrake: AirbrakeNotifier) extends Logging {
 
   def sendNewKeepWebhook(bookmark: RawBookmarkRepresentation, userId: Id[User], library: Library) = SafeFuture {
-    // 'bookmark' is legacy-speak for 'keep'
-    val webhooksOpt: Option[Seq[LibraryWebhook]] = db.readOnlyReplica { implicit session =>
+    val webhooks = db.readOnlyReplica { implicit session =>
       library.id.map { id => libraryWebhookRepo.getByLibraryIdAndTrigger(id, WebhookTrigger.NEW_KEEP) }
-    }
-    val keeperName = db.readOnlyReplica { implicit session =>
-      userRepo.get(userId).fullName
-    }
+    }.getOrElse(throw NoSuchFieldException) // not sure what to do in case library.id == None
+
+    val keeperName = db.readOnlyReplica { implicit session => userRepo.get(userId).fullName }
 
     val client = httpClient.withTimeout(CallTimeouts(responseTimeout = Some(2 * 60 * 1000), maxJsonParseTime = Some(20000))) // copied from FacebookPublishingCommander, can tweak
-    webhooksOpt.map { webhooks =>
-      webhooks.map { webhook =>
-        webhook.action.\("medium").toString match {
-          case "slack" =>
-            val text = keeperName + " just added a <$bookmark.url|keep> to the <$library.url|" + library.name + "> library." // slack hypertext uses the < url | text > format
-            val body = BasicSlackMessage(text)
-            client.postFuture(DirectUrl(webhook.action.\("url").toString), body.toJson)
-        }
+
+    webhooks.map { webhook =>
+      webhook.action.\("sendThrough").toString match { // the "sendThrough" field could be "slack", "email", "eliza", etc... perhaps there's a better name
+        case "slack" =>
+          val text = keeperName + " just added a <$bookmark.url|keep> to the <$library.url|" + library.name + "> library." // slack hypertext uses the < url | text > format
+          val body = BasicSlackMessage(text)
+          client.postFuture(DirectUrl(webhook.action.\("url").toString), body.toJson)
+        case _ =>
+          Future.failed(NoSuchFieldError)
       }
     }
   }
