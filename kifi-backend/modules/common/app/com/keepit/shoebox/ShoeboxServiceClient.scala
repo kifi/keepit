@@ -120,7 +120,6 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getBasicLibraryStatistics(libraryIds: Set[Id[Library]]): Future[Map[Id[Library], BasicLibraryStatistics]]
   def getBasicLibraryDetails(libraryIds: Set[Id[Library]]): Future[Map[Id[Library], BasicLibraryDetails]]
   def getKeepCounts(userIds: Set[Id[User]]): Future[Map[Id[User], Int]]
-  def getLibraryImageUrls(libraryIds: Set[Id[Library]], idealImageSize: ImageSize): Future[Map[Id[Library], String]]
   def getKeepImages(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], BasicImages]]
   def getLibrariesWithWriteAccess(userId: Id[User]): Future[Set[Id[Library]]]
   def getUserActivePersonas(userId: Id[User]): Future[UserActivePersonas]
@@ -736,19 +735,6 @@ class ShoeboxServiceClientImpl @Inject() (
       call(Shoebox.internal.getKeepCounts, Json.toJson(userIds)).map { r =>
         implicit val readsFormat = TupleFormat.tuple2Reads[Id[User], Int]
         r.json.as[Seq[(Id[User], Int)]].toMap.withDefaultValue(0)
-      }
-    }
-  }
-
-  def getLibraryImageUrls(libraryIds: Set[Id[Library]], idealImageSize: ImageSize): Future[Map[Id[Library], String]] = {
-    if (libraryIds.isEmpty) Future.successful(Map.empty[Id[Library], String]) else {
-      val payload = Json.obj(
-        "libraryIds" -> libraryIds,
-        "idealImageSize" -> idealImageSize
-      )
-      call(Shoebox.internal.getLibraryImageUrls, payload).map { r =>
-        implicit val readsFormat = TupleFormat.tuple2Reads[Id[Library], String]
-        r.json.as[Seq[(Id[Library], String)]].toMap
       }
     }
   }

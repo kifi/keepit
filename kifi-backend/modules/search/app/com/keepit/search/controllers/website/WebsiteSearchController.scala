@@ -312,17 +312,17 @@ class WebsiteSearchController @Inject() (
         val librarySearcher = libraryIndexer.getSearcher
         val libraryRecordsAndVisibilityById = getLibraryRecordsAndVisibility(librarySearcher, librarySearchResult.hits.map(_.id).toSet)
         val futureUsers = shoeboxClient.getBasicUsers(libraryRecordsAndVisibilityById.values.map(_._1.ownerId).toSeq.distinct)
-        val futureLibraryStatistics = shoeboxClient.getBasicLibraryStatistics(libraryRecordsAndVisibilityById.keySet)
+        val futureLibraryDetails = shoeboxClient.getBasicLibraryDetails(libraryRecordsAndVisibilityById.keySet)
         for {
           usersById <- futureUsers
-          libraryStatisticsById <- futureLibraryStatistics
+          libraryDetailsById <- futureLibraryDetails
         } yield {
           val hitsArray = JsArray(librarySearchResult.hits.flatMap { hit =>
             libraryRecordsAndVisibilityById.get(hit.id).map {
               case (library, visibility) =>
                 val owner = usersById(library.ownerId)
                 val path = Library.formatLibraryPath(owner.username, library.slug)
-                val statistics = libraryStatisticsById(library.id)
+                val details = libraryDetailsById(library.id)
                 val description = library.description.getOrElse("")
                 Json.obj(
                   "id" -> Library.publicId(hit.id),
@@ -333,8 +333,11 @@ class WebsiteSearchController @Inject() (
                   "path" -> path,
                   "visibility" -> visibility,
                   "owner" -> owner,
-                  "memberCount" -> statistics.memberCount,
-                  "keepCount" -> statistics.keepCount
+                  "numFollowers" -> details.numFollowers,
+                  "numCollaborators" -> details.numCollaborators,
+                  "memberCount" -> (details.numFollowers + details.numCollaborators), // deprecated
+                  "numKeeps" -> details.keepCount,
+                  "keepCount" -> details.keepCount // deprecated
                 )
             }
           })

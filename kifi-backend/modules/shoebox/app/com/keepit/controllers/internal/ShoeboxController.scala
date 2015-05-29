@@ -502,16 +502,6 @@ class ShoeboxController @Inject() (
     Ok(result)
   }
 
-  def getLibraryImageUrls() = Action(parse.tolerantJson) { request =>
-    val libraryIds = (request.body \ "libraryIds").as[Set[Id[Library]]]
-    val idealImageSize = (request.body \ "idealImageSize").as[ImageSize]
-    val imagesByLibraryId = libraryImageCommander.getBestImageForLibraries(libraryIds, idealImageSize)
-    val imageUrlsByLibraryId = imagesByLibraryId.mapValues(libraryImageCommander.getUrl)
-    implicit val tupleWrites = TupleFormat.tuple2Writes[Id[Library], String]
-    val result = Json.toJson(imageUrlsByLibraryId.toSeq)
-    Ok(result)
-  }
-
   def getKeepImages() = Action(parse.tolerantJson) { request =>
     val keepIds = request.body.as[Set[Id[Keep]]]
     val imagesByKeepId = keepImageCommander.getBasicImagesForKeeps(keepIds)
