@@ -476,8 +476,8 @@ class ShoeboxController @Inject() (
   }
 
   def getBasicLibraryDetails() = Action(parse.tolerantJson) { request =>
-    val libraryIds = (request.body \ "libraryIds").asOpt[Set[Id[Library]]] getOrElse request.body.as[Set[Id[Library]]]
-    val idealImageSize = (request.body \ "idealImageSize").asOpt[ImageSize] getOrElse ProcessedImageSize.Medium.idealSize
+    val libraryIds = (request.body \ "libraryIds").as[Set[Id[Library]]]
+    val idealImageSize = (request.body \ "idealImageSize").as[ImageSize]
     val viewerId = (request.body \ "viewerId").asOpt[Id[User]]
 
     val basicDetailsByLibraryId = libraryCommander.getBasicLibraryDetails(libraryIds, idealImageSize, viewerId)

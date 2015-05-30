@@ -371,6 +371,7 @@ class WebsiteSearchController @Inject() (
                 val path = Library.formatLibraryPath(owner.username, library.slug)
                 val details = libraryDetailsById(library.id)
                 val description = library.description.getOrElse("")
+                val membershipInfo = details.membership.map(LibraryMembershipInfo.fromMembership)
 
                 // todo(Léo): in a perfect world, this converges towards LibraryCardInfo
                 Json.obj(
@@ -388,8 +389,9 @@ class WebsiteSearchController @Inject() (
                   "numFollowers" -> details.numFollowers,
                   "numCollaborators" -> details.numCollaborators,
                   "numKeeps" -> details.keepCount,
+                  "membership" -> membershipInfo,
                   "memberCount" -> (details.numFollowers + details.numCollaborators), // deprecated
-                  "keepCount" -> details.keepCount // deprecated
+                  "keepCount" -> details.keepCount // deprecated,
                 )
             }
           })
