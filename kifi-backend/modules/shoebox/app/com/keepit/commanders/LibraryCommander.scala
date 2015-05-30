@@ -138,7 +138,7 @@ class LibraryCommander @Inject() (
         val numFollowers = counts.readOnly
         val numCollaborators = counts.readWrite + counts.readInsert
         val imageOpt = libraryImageCommander.getBestImageForLibrary(libId, idealImageSize).map(libraryImageCommander.getUrl)
-        val membership = membershipsByLibraryId(libId)
+        val membership = membershipsByLibraryId.get(libId).flatten
         libId -> BasicLibraryDetails(lib.name, lib.slug, lib.color, imageOpt, lib.description, numFollowers, numCollaborators, lib.keepCount, membership)
       }.toMap
     }
