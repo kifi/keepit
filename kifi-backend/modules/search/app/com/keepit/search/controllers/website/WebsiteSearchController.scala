@@ -326,8 +326,11 @@ class WebsiteSearchController @Inject() (
             libraryId -> LibraryMembershipIndexable.getMembersByLibrary(libraryMembershipSearcher, libraryId)
           }.toMap
 
-          futureFriendIds.map { friendIds =>
-            def orderWithFriendsFirst(userIds: Set[Long]): Seq[Long] = userIds.toSeq.sortBy(!friendIds.contains(_))
+          futureFriendIds.map { allFriendIds =>
+            def orderWithFriendsFirst(userIds: Set[Long]): Seq[Long] = {
+              val (friends, others) = userIds.toSeq.partition(allFriendIds.contains)
+              friends ++ others
+            }
             membersByLibraryId.map {
               case (libraryId, (owners, collaborators, followers)) =>
                 if (owners.size != 1) {
