@@ -333,8 +333,8 @@ class WebsiteSearchController @Inject() (
             }
             membersByLibraryId.map {
               case (libraryId, (owners, collaborators, followers)) =>
-                if (owners.size != 1) {
-                  airbrake.notify(new IllegalStateException(s"Library $libraryId does not have a single owner: $owners"))
+                if (owners.size > 1) {
+                  airbrake.notify(new IllegalStateException(s"Library $libraryId has more then one owner: $owners"))
                 }
                 val collaboratorsShown = orderWithFriendsFirst(collaborators).take(maxCollaboratorsShown).map(Id[User](_))
                 val followersShown = orderWithFriendsFirst(followers).take(maxFollowersShown).map(Id[User](_))
