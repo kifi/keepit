@@ -319,10 +319,8 @@ class WebsiteSearchController @Inject() (
         val libraryIds = libraryRecordsAndVisibilityById.keySet
         val futureLibraryDetails = shoeboxClient.getBasicLibraryDetails(libraryIds, idealImageSize.getOrElse(ProcessedImageSize.Medium.idealSize), Some(userId))
 
-        val futureFriendIds = searchFactory.getFriends(userId)
-        val ownerIdByLibraryId = libraryRecordsAndVisibilityById.mapValues(_._1.ownerId)
-
         val futureMembersShownByLibraryId = {
+          val futureFriendIds = searchFactory.getFriends(userId)
           val libraryMembershipSearcher = libraryMembershipIndexer.getSearcher
           val membersByLibraryId = libraryIds.map { libraryId =>
             libraryId -> LibraryMembershipIndexable.getMembersByLibrary(libraryMembershipSearcher, libraryId)
@@ -332,11 +330,10 @@ class WebsiteSearchController @Inject() (
             def orderWithFriendsFirst(userIds: Set[Long]): Seq[Long] = userIds.toSeq.sortBy(!friendIds.contains(_))
             membersByLibraryId.map {
               case (libraryId, (owners, collaborators, followers)) =>
-                val ownerId = ownerIdByLibraryId(libraryId)
-                if (owners != Set(ownerId)) {
-                  airbrake.notify(new IllegalStateException(s"Library $libraryId has several owners: $owners"))
+                if (owners.size != 1) {
+                  airbrake.notify(new IllegalStateException(s"Library $libraryId does not have a single owner: $owners"))
                 }
-                val collaboratorsShown = (Seq(ownerId.id) ++ orderWithFriendsFirst(collaborators)).take(maxCollaboratorsShown).map(Id[User](_))
+                val collaboratorsShown = orderWithFriendsFirst(collaborators).take(maxCollaboratorsShown).map(Id[User](_))
                 val followersShown = orderWithFriendsFirst(followers).take(maxFollowersShown).map(Id[User](_))
 
                 libraryId -> (collaboratorsShown, followersShown)
@@ -345,7 +342,7 @@ class WebsiteSearchController @Inject() (
         }
 
         val futureUsers = futureMembersShownByLibraryId.flatMap { membersShownByLibraryId =>
-          val userIds = ownerIdByLibraryId.values.toSet ++ membersShownByLibraryId.values.flatMap {
+          val userIds = libraryRecordsAndVisibilityById.values.map(_._1.ownerId).toSet ++ membersShownByLibraryId.values.flatMap {
             case (collaboratorsShown, followersShown) =>
               collaboratorsShown ++ followersShown
           }
