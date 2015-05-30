@@ -3,7 +3,6 @@ package com.keepit.commanders.emails
 import com.google.inject.Inject
 import com.keepit.commanders.LocalUserExperimentCommander
 import com.keepit.commanders.emails.GratificationCommander.LibraryCountData
-import com.keepit.common.concurrent.ReactiveLock
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.heimdal.HeimdalServiceClient
@@ -73,12 +72,10 @@ class GratificationCommander @Inject() (
     }
   }
 
-  val heimdalReactiveLock = new ReactiveLock()
-
   def filterUsersWithoutData(userIds: Seq[Id[User]]): Future[Seq[Id[User]]] = {
 
     val idAndViewByLib: Seq[Future[(Id[User], LibraryCountData)]] = userIds.map { id =>
-      val fViewsByLibrary: Future[LibraryCountData] = heimdalReactiveLock.withLockFuture(getLibraryViewData(id))
+      val fViewsByLibrary: Future[LibraryCountData] = getLibraryViewData(id)
       fViewsByLibrary.map { x =>
         Tuple2(id, x)
       }
