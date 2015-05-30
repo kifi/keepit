@@ -893,7 +893,8 @@ class LibraryCommander @Inject() (
       category = NotificationCategory.User.LIBRARY_INVITATION,
       extra = Some(Json.obj(
         "inviter" -> inviter,
-        "library" -> Json.toJson(LibraryNotificationInfo.fromLibraryAndOwner(lib, libImageOpt, libOwner))
+        "library" -> Json.toJson(LibraryNotificationInfo.fromLibraryAndOwner(lib, libImageOpt, libOwner)),
+        "access" -> LibraryAccess.READ_WRITE
       ))
     )
 
@@ -908,7 +909,8 @@ class LibraryCommander @Inject() (
       category = NotificationCategory.User.LIBRARY_INVITATION,
       extra = Some(Json.obj(
         "inviter" -> inviter,
-        "library" -> Json.toJson(LibraryNotificationInfo.fromLibraryAndOwner(lib, libImageOpt, libOwner))
+        "library" -> Json.toJson(LibraryNotificationInfo.fromLibraryAndOwner(lib, libImageOpt, libOwner)),
+        "access" -> LibraryAccess.READ_ONLY
       ))
     )
 
