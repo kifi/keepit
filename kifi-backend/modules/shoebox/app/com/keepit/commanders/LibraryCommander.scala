@@ -134,16 +134,23 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def getBasicLibraryDetails(libraryIds: Set[Id[Library]]): Map[Id[Library], BasicLibraryDetails] = {
+  def getBasicLibraryDetails(libraryIds: Set[Id[Library]], idealImageSize: ImageSize, viewerId: Option[Id[User]]): Map[Id[Library], BasicLibraryDetails] = {
     db.readOnlyReplica { implicit session =>
+
+      val membershipsByLibraryId = viewerId.map { id =>
+        libraryMembershipRepo.getWithLibraryIdsAndUserId(libraryIds, id)
+      } getOrElse Map.empty
+
       val libs = libraryRepo.getLibraries(libraryIds)
+
       libraryIds.map { libId =>
         val lib = libs(libId)
         val counts = libraryMembershipRepo.countWithLibraryIdByAccess(libId)
         val numFollowers = counts.readOnly
         val numCollaborators = counts.readWrite + counts.readInsert
-        val imageOpt = libraryImageCommander.getBestImageForLibrary(libId, ProcessedImageSize.Medium.idealSize).map(libraryImageCommander.getUrl)
-        libId -> BasicLibraryDetails(lib.name, lib.slug, lib.color, imageOpt, lib.description, numFollowers, numCollaborators, lib.keepCount)
+        val imageOpt = libraryImageCommander.getBestImageForLibrary(libId, idealImageSize).map(libraryImageCommander.getUrl)
+        val membership = membershipsByLibraryId(libId)
+        libId -> BasicLibraryDetails(lib.name, lib.slug, lib.color, imageOpt, lib.description, numFollowers, numCollaborators, lib.keepCount, membership)
       }.toMap
     }
   }

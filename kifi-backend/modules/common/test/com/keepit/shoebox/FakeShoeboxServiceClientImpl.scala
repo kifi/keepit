@@ -694,13 +694,9 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
     })
   }
 
-  def getBasicLibraryStatistics(libraryIds: Set[Id[Library]]): Future[Map[Id[Library], BasicLibraryStatistics]] = ???
-
-  def getBasicLibraryDetails(libraryIds: Set[Id[Library]]): Future[Map[Id[Library], BasicLibraryDetails]] = ???
+  def getBasicLibraryDetails(libraryIds: Set[Id[Library]], idealImageSize: ImageSize, viewerId: Option[Id[User]]): Future[Map[Id[Library], BasicLibraryDetails]] = ???
 
   def getKeepCounts(userId: Set[Id[User]]): Future[Map[Id[User], Int]] = ???
-
-  def getLibraryImageUrls(libraryIds: Set[Id[Library]], idealImageSize: ImageSize): Future[Map[Id[Library], String]] = ???
 
   def getKeepImages(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], BasicImages]] = Future.successful(Map.empty)
 
