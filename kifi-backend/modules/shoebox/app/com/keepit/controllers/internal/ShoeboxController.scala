@@ -476,8 +476,11 @@ class ShoeboxController @Inject() (
   }
 
   def getBasicLibraryDetails() = Action(parse.tolerantJson) { request =>
-    val libraryIds = request.body.as[Set[Id[Library]]]
-    val basicDetailsByLibraryId = libraryCommander.getBasicLibraryDetails(libraryIds)
+    val libraryIds = (request.body \ "libraryIds").asOpt[Set[Id[Library]]] getOrElse request.body.as[Set[Id[Library]]]
+    val idealImageSize = (request.body \ "idealImageSize").asOpt[ImageSize] getOrElse ProcessedImageSize.Medium.idealSize
+    val viewerId = (request.body \ "viewerId").asOpt[Id[User]]
+
+    val basicDetailsByLibraryId = libraryCommander.getBasicLibraryDetails(libraryIds, idealImageSize, viewerId)
     implicit val tupleWrites = TupleFormat.tuple2Writes[Id[Library], BasicLibraryDetails]
     val result = Json.toJson(basicDetailsByLibraryId.toSeq)
     Ok(result)
