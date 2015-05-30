@@ -129,7 +129,7 @@ class ExtSearchController @Inject() (
     val userIds = ((allKeepersShown.flatMap(_.map(_._1)) ++ allLibrariesShown.flatMap(_.map(_._2))).toSet - userId).toSeq
     val userIndexById = userIds.zipWithIndex.toMap + (userId -> -1)
 
-    val libraryRecordsAndVisibilityById = getLibraryRecordsAndVisibility(librarySearcher, allLibrariesShown.flatMap(_.map(_._1)).toSet)
+    val libraryRecordsAndVisibilityById = getLibraryRecordsAndVisibilityAndKind(librarySearcher, allLibrariesShown.flatMap(_.map(_._1)).toSet)
 
     val libraryIds = libraryRecordsAndVisibilityById.keys.toSeq // libraries that are missing from the index are implicitly dropped here (race condition)
     val libraryIndexById = libraryIds.zipWithIndex.toMap
@@ -139,7 +139,7 @@ class ExtSearchController @Inject() (
       shoeboxClient.getBasicUsers(userIds ++ libraryOwnerIds).map { usersById =>
         val users = userIds.map(usersById(_))
         val libraries = libraryIds.map { libId =>
-          val (library, visibility) = libraryRecordsAndVisibilityById(libId)
+          val (library, visibility, _) = libraryRecordsAndVisibilityById(libId)
           val owner = usersById(library.ownerId)
           makeBasicLibrary(library, visibility, owner)
         }

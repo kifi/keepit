@@ -88,7 +88,7 @@ class MobileSearchController @Inject() (
 
     librarySearchCommander.searchLibraries(userId, acceptLangs, experiments, query, filterFuture, context, maxHits, true, None, debugOpt, None).flatMap { librarySearchResult =>
       val librarySearcher = libraryIndexer.getSearcher
-      val libraryRecordsAndVisibilityById = getLibraryRecordsAndVisibility(librarySearcher, librarySearchResult.hits.map(_.id).toSet)
+      val libraryRecordsAndVisibilityById = getLibraryRecordsAndVisibilityAndKind(librarySearcher, librarySearchResult.hits.map(_.id).toSet)
       val futureUsers = shoeboxClient.getBasicUsers(libraryRecordsAndVisibilityById.values.map(_._1.ownerId).toSeq.distinct)
       val futureLibraryDetails = shoeboxClient.getBasicLibraryDetails(libraryRecordsAndVisibilityById.keySet, ProcessedImageSize.Medium.idealSize, Some(userId))
       for {
@@ -97,7 +97,7 @@ class MobileSearchController @Inject() (
       } yield {
         val hitsArray = JsArray(librarySearchResult.hits.flatMap { hit =>
           libraryRecordsAndVisibilityById.get(hit.id).map {
-            case (library, visibility) =>
+            case (library, visibility, _) =>
               val owner = usersById(library.ownerId)
               val path = Library.formatLibraryPath(owner.username, library.slug)
               val details = libraryDetailsById(library.id)
@@ -171,7 +171,7 @@ class MobileSearchController @Inject() (
     val futureLibrarySearchResultJson = if (maxLibraries <= 0) Future.successful(JsNull) else {
       librarySearchCommander.searchLibraries(userId, acceptLangs, experiments, query, filterFuture, libraryContext, maxLibraries, disablePrefixSearch, None, debugOpt, None).flatMap { librarySearchResult =>
         val librarySearcher = libraryIndexer.getSearcher
-        val libraryRecordsAndVisibilityById = getLibraryRecordsAndVisibility(librarySearcher, librarySearchResult.hits.map(_.id).toSet)
+        val libraryRecordsAndVisibilityById = getLibraryRecordsAndVisibilityAndKind(librarySearcher, librarySearchResult.hits.map(_.id).toSet)
         val futureUsers = shoeboxClient.getBasicUsers(libraryRecordsAndVisibilityById.values.map(_._1.ownerId).toSeq.distinct)
         val futureLibraryDetails = shoeboxClient.getBasicLibraryDetails(libraryRecordsAndVisibilityById.keySet, idealImageSize getOrElse ProcessedImageSize.Medium.idealSize, Some(userId))
 
@@ -181,7 +181,7 @@ class MobileSearchController @Inject() (
         } yield {
           val hitsArray = JsArray(librarySearchResult.hits.flatMap { hit =>
             libraryRecordsAndVisibilityById.get(hit.id).map {
-              case (library, visibility) =>
+              case (library, visibility, _) =>
                 val owner = usersById(library.ownerId)
                 val details = libraryDetails(library.id)
 
@@ -222,7 +222,7 @@ class MobileSearchController @Inject() (
         val futureMutualFriendsByUser = searchFactory.getMutualFriends(userId, userIds)
         val futureKeepCountsByUser = shoeboxClient.getKeepCounts(userIds)
         val librarySearcher = libraryIndexer.getSearcher
-        val relevantLibraryRecordsAndVisibility = getLibraryRecordsAndVisibility(librarySearcher, userSearchResult.hits.flatMap(_.library).toSet)
+        val relevantLibraryRecordsAndVisibility = getLibraryRecordsAndVisibilityAndKind(librarySearcher, userSearchResult.hits.flatMap(_.library).toSet)
         val futureUsers = {
           val libraryOwnerIds = relevantLibraryRecordsAndVisibility.values.map(_._1.ownerId)
           shoeboxClient.getBasicUsers((userIds ++ libraryOwnerIds).toSeq)
@@ -242,7 +242,7 @@ class MobileSearchController @Inject() (
               val user = users(hit.id)
               val relevantLibrary = hit.library.flatMap { libraryId =>
                 relevantLibraryRecordsAndVisibility.get(libraryId).map {
-                  case (record, visibility) =>
+                  case (record, visibility, _) =>
                     val owner = users(record.ownerId)
                     val library = makeBasicLibrary(record, visibility, owner)
                     Json.obj("id" -> library.id, "name" -> library.name, "color" -> library.color, "path" -> library.path, "visibility" -> library.visibility)
