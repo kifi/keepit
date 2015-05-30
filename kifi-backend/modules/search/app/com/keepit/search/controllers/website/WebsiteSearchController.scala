@@ -37,8 +37,8 @@ object WebsiteSearchController {
   private[WebsiteSearchController] val maxLibrariesShown = 10
   private[WebsiteSearchController] val maxTagsShown = 15
 
-  private[WebsiteSearchController] val maxCollaboratorsShown = 3
-  private[WebsiteSearchController] val maxFollowersShown = 3
+  private[WebsiteSearchController] val maxCollaboratorsShown = 5
+  private[WebsiteSearchController] val maxFollowersShown = 5
 }
 
 class WebsiteSearchController @Inject() (
