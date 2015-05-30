@@ -6,8 +6,8 @@ import org.specs2.mutable.Specification
 
 class OrganizationMembershipRepoTest extends Specification with ShoeboxTestInjector {
 
-  "Organization Repo" should {
-    "save organizations and get them by id" in {
+  "Organization Member Repo" should {
+    "save members and get them by id" in {
       withDb() { implicit injector =>
         val orgMemberRepo = inject[OrganizationMembershipRepo]
         val org = db.readWrite { implicit s =>
