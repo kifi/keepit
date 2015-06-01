@@ -123,27 +123,23 @@ class LibraryCommander @Inject() (
     Library.formatLibraryPath(owner.username, library.slug)
   }
 
-  // Replaced by getBasicLibraryDetails, please remove dependencies
-  def getBasicLibraryStatistics(libraryIds: Set[Id[Library]]): Map[Id[Library], BasicLibraryStatistics] = {
+  def getBasicLibraryDetails(libraryIds: Set[Id[Library]], idealImageSize: ImageSize, viewerId: Option[Id[User]]): Map[Id[Library], BasicLibraryDetails] = {
     db.readOnlyReplica { implicit session =>
-      val libs = libraryRepo.getLibraries(libraryIds)
-      libraryIds.map { libId =>
-        val lib = libs(libId)
-        libId -> BasicLibraryStatistics(lib.memberCount, lib.keepCount)
-      }.toMap
-    }
-  }
 
-  def getBasicLibraryDetails(libraryIds: Set[Id[Library]]): Map[Id[Library], BasicLibraryDetails] = {
-    db.readOnlyReplica { implicit session =>
+      val membershipsByLibraryId = viewerId.map { id =>
+        libraryMembershipRepo.getWithLibraryIdsAndUserId(libraryIds, id)
+      } getOrElse Map.empty
+
       val libs = libraryRepo.getLibraries(libraryIds)
+
       libraryIds.map { libId =>
         val lib = libs(libId)
         val counts = libraryMembershipRepo.countWithLibraryIdByAccess(libId)
         val numFollowers = counts.readOnly
         val numCollaborators = counts.readWrite + counts.readInsert
-        val imageOpt = libraryImageCommander.getBestImageForLibrary(libId, ProcessedImageSize.Medium.idealSize).map(libraryImageCommander.getUrl)
-        libId -> BasicLibraryDetails(lib.name, lib.slug, lib.color, imageOpt, lib.description, numFollowers, numCollaborators, lib.keepCount)
+        val imageOpt = libraryImageCommander.getBestImageForLibrary(libId, idealImageSize).map(libraryImageCommander.getUrl)
+        val membership = membershipsByLibraryId.get(libId).flatten
+        libId -> BasicLibraryDetails(lib.name, lib.slug, lib.color, imageOpt, lib.description, numFollowers, numCollaborators, lib.keepCount, membership)
       }.toMap
     }
   }
@@ -328,7 +324,7 @@ class LibraryCommander @Inject() (
   }
 
   def getViewerInviteInfo(userIdOpt: Option[Id[User]], libraryId: Id[Library]): Option[LibraryInviteInfo] = {
-    userIdOpt.map { userId =>
+    userIdOpt.flatMap { userId =>
       db.readOnlyMaster { implicit s =>
         val inviteOpt = libraryInviteRepo.getLastSentByLibraryIdAndUserId(libraryId, userId, Set(LibraryInviteStates.ACTIVE))
         val basicUserOpt = inviteOpt map { inv => basicUserRepo.load(inv.inviterId) }
@@ -337,7 +333,7 @@ class LibraryCommander @Inject() (
         case (Some(invite), Some(inviter)) => Some(LibraryInviteInfo.createInfo(invite, inviter))
         case (_, _) => None
       }
-    }.flatten
+    }
   }
 
   private def getSourceAttribution(libId: Id[Library]): Option[LibrarySourceAttribution] = {
@@ -893,7 +889,8 @@ class LibraryCommander @Inject() (
       category = NotificationCategory.User.LIBRARY_INVITATION,
       extra = Some(Json.obj(
         "inviter" -> inviter,
-        "library" -> Json.toJson(LibraryNotificationInfo.fromLibraryAndOwner(lib, libImageOpt, libOwner))
+        "library" -> Json.toJson(LibraryNotificationInfo.fromLibraryAndOwner(lib, libImageOpt, libOwner)),
+        "access" -> LibraryAccess.READ_WRITE
       ))
     )
 
@@ -908,7 +905,8 @@ class LibraryCommander @Inject() (
       category = NotificationCategory.User.LIBRARY_INVITATION,
       extra = Some(Json.obj(
         "inviter" -> inviter,
-        "library" -> Json.toJson(LibraryNotificationInfo.fromLibraryAndOwner(lib, libImageOpt, libOwner))
+        "library" -> Json.toJson(LibraryNotificationInfo.fromLibraryAndOwner(lib, libImageOpt, libOwner)),
+        "access" -> LibraryAccess.READ_ONLY
       ))
     )
 

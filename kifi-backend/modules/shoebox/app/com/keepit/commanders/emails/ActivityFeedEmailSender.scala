@@ -478,13 +478,8 @@ class ActivityFeedEmailSenderImpl @Inject() (
           predicate(library)
       }
 
-      val libraryIds = onceFilteredLibraries.map(_.id.get).toSet
-      val libraryStats = libraryCommander.getBasicLibraryStatistics(libraryIds)
-
       // filter out libraries with 0 keeps
-      onceFilteredLibraries.
-        filter { lib => libraryStats.get(lib.id.get).map(_.keepCount).getOrElse(0) > 0 }.
-        sortBy(-_.createdAt.getMillis)
+      onceFilteredLibraries.filter(_.keepCount > 0).sortBy(-_.createdAt.getMillis)
     }
   }
 }

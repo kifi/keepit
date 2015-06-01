@@ -21,7 +21,7 @@ import com.keepit.search.util.IdFilterCompressor
 import com.keepit.search.{ UserSearchCommander, LibraryContext, LibrarySearchCommander, UriSearchCommander }
 import com.keepit.model.ExperimentType._
 import play.api.libs.json.JsArray
-import com.keepit.search.index.graph.library.{ LibraryIndexer, LibraryIndexable }
+import com.keepit.search.index.graph.library.{ LibraryIndexer }
 import com.keepit.search.controllers.util.SearchControllerUtil
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -88,19 +88,19 @@ class MobileSearchController @Inject() (
 
     librarySearchCommander.searchLibraries(userId, acceptLangs, experiments, query, filterFuture, context, maxHits, true, None, debugOpt, None).flatMap { librarySearchResult =>
       val librarySearcher = libraryIndexer.getSearcher
-      val libraryRecordsAndVisibilityById = getLibraryRecordsAndVisibility(librarySearcher, librarySearchResult.hits.map(_.id).toSet)
+      val libraryRecordsAndVisibilityById = getLibraryRecordsAndVisibilityAndKind(librarySearcher, librarySearchResult.hits.map(_.id).toSet)
       val futureUsers = shoeboxClient.getBasicUsers(libraryRecordsAndVisibilityById.values.map(_._1.ownerId).toSeq.distinct)
-      val futureLibraryStatistics = shoeboxClient.getBasicLibraryStatistics(libraryRecordsAndVisibilityById.keySet)
+      val futureLibraryDetails = shoeboxClient.getBasicLibraryDetails(libraryRecordsAndVisibilityById.keySet, ProcessedImageSize.Medium.idealSize, Some(userId))
       for {
         usersById <- futureUsers
-        libraryStatisticsById <- futureLibraryStatistics
+        libraryDetailsById <- futureLibraryDetails
       } yield {
         val hitsArray = JsArray(librarySearchResult.hits.flatMap { hit =>
           libraryRecordsAndVisibilityById.get(hit.id).map {
-            case (library, visibility) =>
+            case (library, visibility, _) =>
               val owner = usersById(library.ownerId)
               val path = Library.formatLibraryPath(owner.username, library.slug)
-              val statistics = libraryStatisticsById(library.id)
+              val details = libraryDetailsById(library.id)
               val description = library.description.getOrElse("")
               Json.obj(
                 "id" -> Library.publicId(hit.id),
@@ -111,8 +111,8 @@ class MobileSearchController @Inject() (
                 "path" -> path,
                 "visibility" -> visibility,
                 "owner" -> owner,
-                "memberCount" -> statistics.memberCount,
-                "keepCount" -> statistics.keepCount
+                "memberCount" -> (details.numFollowers + details.numCollaborators),
+                "keepCount" -> details.keepCount
               )
           }
         })
@@ -171,9 +171,9 @@ class MobileSearchController @Inject() (
     val futureLibrarySearchResultJson = if (maxLibraries <= 0) Future.successful(JsNull) else {
       librarySearchCommander.searchLibraries(userId, acceptLangs, experiments, query, filterFuture, libraryContext, maxLibraries, disablePrefixSearch, None, debugOpt, None).flatMap { librarySearchResult =>
         val librarySearcher = libraryIndexer.getSearcher
-        val libraryRecordsAndVisibilityById = getLibraryRecordsAndVisibility(librarySearcher, librarySearchResult.hits.map(_.id).toSet)
+        val libraryRecordsAndVisibilityById = getLibraryRecordsAndVisibilityAndKind(librarySearcher, librarySearchResult.hits.map(_.id).toSet)
         val futureUsers = shoeboxClient.getBasicUsers(libraryRecordsAndVisibilityById.values.map(_._1.ownerId).toSeq.distinct)
-        val futureLibraryDetails = shoeboxClient.getBasicLibraryDetails(libraryRecordsAndVisibilityById.keySet)
+        val futureLibraryDetails = shoeboxClient.getBasicLibraryDetails(libraryRecordsAndVisibilityById.keySet, idealImageSize getOrElse ProcessedImageSize.Medium.idealSize, Some(userId))
 
         for {
           usersById <- futureUsers
@@ -181,7 +181,7 @@ class MobileSearchController @Inject() (
         } yield {
           val hitsArray = JsArray(librarySearchResult.hits.flatMap { hit =>
             libraryRecordsAndVisibilityById.get(hit.id).map {
-              case (library, visibility) =>
+              case (library, visibility, _) =>
                 val owner = usersById(library.ownerId)
                 val details = libraryDetails(library.id)
 
@@ -222,14 +222,14 @@ class MobileSearchController @Inject() (
         val futureMutualFriendsByUser = searchFactory.getMutualFriends(userId, userIds)
         val futureKeepCountsByUser = shoeboxClient.getKeepCounts(userIds)
         val librarySearcher = libraryIndexer.getSearcher
-        val relevantLibraryRecordsAndVisibility = getLibraryRecordsAndVisibility(librarySearcher, userSearchResult.hits.flatMap(_.library).toSet)
+        val relevantLibraryRecordsAndVisibility = getLibraryRecordsAndVisibilityAndKind(librarySearcher, userSearchResult.hits.flatMap(_.library).toSet)
         val futureUsers = {
           val libraryOwnerIds = relevantLibraryRecordsAndVisibility.values.map(_._1.ownerId)
           shoeboxClient.getBasicUsers((userIds ++ libraryOwnerIds).toSeq)
         }
         val libraryMembershipSearcher = libraryMembershipIndexer.getSearcher
         val publishedLibrariesCountByMember = userSearchResult.hits.map { hit => hit.id -> LibraryMembershipIndexable.countPublishedLibrariesByMember(librarySearcher, libraryMembershipSearcher, hit.id) }.toMap
-        val publishedLibrariesCountByOwner = userSearchResult.hits.map { hit => hit.id -> LibraryMembershipIndexable.countPublishedLibrariesByOwner(librarySearcher, libraryMembershipSearcher, hit.id) }.toMap
+        val publishedLibrariesCountByCollaborator = userSearchResult.hits.map { hit => hit.id -> LibraryMembershipIndexable.countPublishedLibrariesByCollaborator(librarySearcher, libraryMembershipSearcher, hit.id) }.toMap
         for {
           keepCountsByUser <- futureKeepCountsByUser
           mutualFriendsByUser <- futureMutualFriendsByUser
@@ -242,7 +242,7 @@ class MobileSearchController @Inject() (
               val user = users(hit.id)
               val relevantLibrary = hit.library.flatMap { libraryId =>
                 relevantLibraryRecordsAndVisibility.get(libraryId).map {
-                  case (record, visibility) =>
+                  case (record, visibility, _) =>
                     val owner = users(record.ownerId)
                     val library = makeBasicLibrary(record, visibility, owner)
                     Json.obj("id" -> library.id, "name" -> library.name, "color" -> library.color, "path" -> library.path, "visibility" -> library.visibility)
@@ -255,7 +255,7 @@ class MobileSearchController @Inject() (
                 "pictureName" -> user.pictureName,
                 "isFriend" -> friends.contains(hit.id.id),
                 "mutualFriendCount" -> mutualFriendsByUser(hit.id).size,
-                "libraryCount" -> publishedLibrariesCountByOwner(hit.id),
+                "libraryCount" -> publishedLibrariesCountByCollaborator(hit.id),
                 "libraryMembershipCount" -> publishedLibrariesCountByMember(hit.id),
                 "keepCount" -> keepCountsByUser(hit.id),
                 "relevantLibrary" -> relevantLibrary

@@ -223,7 +223,7 @@ angular.module('kifi')
     };
 
     $scope.onClickSearchFilter = function (newSearchFilter) {
-      $location.search({f: newSearchFilter});
+      $location.search('f', newSearchFilter);
     };
 
 
