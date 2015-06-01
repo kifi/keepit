@@ -57,7 +57,6 @@ class LibraryFeedControllerTest extends Specification with ShoeboxTestInjector {
         }
 
         inject[FakeUserActionsHelper].setUser(user)
-        inject[LocalUserExperimentCommander].addExperimentForUser(user.id.get, ExperimentType.LIBRARY_RSS_FEED)
         val rssPath = com.keepit.controllers.website.routes.LibraryFeedController.libraryRSSFeed(user.username, library.slug.value, count = 1, offset = 1).url
         val request = FakeRequest("GET", rssPath)
         val libraryFeedController = inject[LibraryFeedController]
@@ -74,7 +73,6 @@ class LibraryFeedControllerTest extends Specification with ShoeboxTestInjector {
           withDb(modules: _*) { implicit injector =>
             val (user, library, privateLibrary) = setup
             inject[FakeUserActionsHelper].setUser(user)
-            inject[LocalUserExperimentCommander].addExperimentForUser(user.id.get, ExperimentType.LIBRARY_RSS_FEED)
 
             val rssPath = com.keepit.controllers.website.routes.LibraryFeedController.libraryRSSFeed(user.username, privateLibrary.slug.value).url
             val request = FakeRequest("GET", rssPath)
@@ -88,7 +86,6 @@ class LibraryFeedControllerTest extends Specification with ShoeboxTestInjector {
           withDb(modules: _*) { implicit injector =>
             val (user, library, privateLibrary) = setup
             inject[FakeUserActionsHelper].unsetUser()
-            inject[LocalUserExperimentCommander].addExperimentForUser(user.id.get, ExperimentType.LIBRARY_RSS_FEED)
 
             val rssPath = com.keepit.controllers.website.routes.LibraryFeedController.libraryRSSFeed(user.username, library.slug.value).url
             val request = FakeRequest("GET", rssPath)
