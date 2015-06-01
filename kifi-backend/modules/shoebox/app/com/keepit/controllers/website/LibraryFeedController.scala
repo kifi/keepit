@@ -44,8 +44,7 @@ class LibraryFeedController @Inject() (val userCommander: UserCommander,
               val uri = Library.formatLibraryPathUrlEncoded(user.username, library.slug) + dropPathSegment(dropPathSegment(request.uri))
               val status = if (!isLibraryAlias || userRedirectStatusOpt.contains(303)) 303 else 301
               Future.successful(Redirect(uri, status))
-            } else if (experimentCommander.userHasExperiment(library.ownerId, ExperimentType.LIBRARY_RSS_FEED) &&
-              libraryCommander.canViewLibrary(request.userOpt.flatMap(_.id), library, authToken)) {
+            } else if (libraryCommander.canViewLibrary(request.userOpt.flatMap(_.id), library, authToken)) {
               feedCommander.libraryFeed(library, count, offset) map { rss =>
                 Result(
                   header = ResponseHeader(200, Map(CONTENT_TYPE -> "application/rss+xml")),
@@ -68,8 +67,7 @@ class LibraryFeedController @Inject() (val userCommander: UserCommander,
               val uri = Library.formatLibraryPathUrlEncoded(user.username, library.slug) + dropPathSegment(dropPathSegment(request.uri))
               val status = if (!isLibraryAlias || userRedirectStatusOpt.contains(303)) 303 else 301
               Future.successful(Redirect(uri, status))
-            } else if (experimentCommander.userHasExperiment(library.ownerId, ExperimentType.LIBRARY_RSS_FEED) &&
-              libraryCommander.canViewLibrary(request.userOpt.flatMap(_.id), library, authToken)) {
+            } else if (libraryCommander.canViewLibrary(request.userOpt.flatMap(_.id), library, authToken)) {
               atomCommander.libraryFeed(library, count, offset) map { atom =>
                 Result(
                   header = ResponseHeader(200, Map(CONTENT_TYPE -> "application/atom+xml")),

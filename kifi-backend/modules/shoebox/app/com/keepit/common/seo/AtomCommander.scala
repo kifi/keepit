@@ -96,7 +96,7 @@ class AtomCommander @Inject() (
         AtomEntry(title, author, Some(content), id, updatedAt, link, icon = keepImage)
       }
       val links = Seq(AtomLink(feedUrl + "/atom", rel = Some("self")), AtomLink(feedUrl))
-      AtomFeed(s"${library.name} by ${libraryCreator.username.value} * Kifi", libraryCreator.username.value,
+      AtomFeed(s"${library.name} by ${libraryCreator.fullName} * Kifi", libraryCreator.fullName,
         library.universalLink, library.updatedAt, links, entries, icon = libImage, logo = None, rights = Some(s"Copyright ${currentDateTime.getYear}, FortyTwo Inc.")).xml
     }
   }

@@ -152,6 +152,7 @@ class PageMetaTagsCommander @Inject() (
           unsafeTitle = s"${library.name}",
           url = url,
           urlPathOnly = urlPathOnly,
+          includeFeedUrl = true,
           unsafeDescription = PublicPageMetaTags.generateLibraryMetaTagDescription(library.description, owner.fullName, library.name, altDesc),
           images = imageUrls,
           facebookId = facebookId,

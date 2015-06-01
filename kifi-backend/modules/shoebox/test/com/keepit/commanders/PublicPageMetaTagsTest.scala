@@ -1,5 +1,6 @@
 package com.keepit.commanders
 
+import org.joda.time.DateTime
 import org.specs2.mutable.Specification
 
 class PublicPageMetaTagsTest extends Specification {
@@ -30,6 +31,19 @@ class PublicPageMetaTagsTest extends Specification {
           |"John Jacob Jingleheimer Schmidt!"
           |Da da da da da da da da
         """.stripMargin.trim
+    }
+
+    "add rss and atom feeds when includeFeedUrl is true" in {
+      val tags = PublicPageMetaFullTags(unsafeTitle = "Unsafe Title", url = "https://www.kifi.com/colin", urlPathOnly = "/colin", unsafeDescription = "Unsafe Description",
+        images = Seq(), facebookId = None, includeFeedUrl = true, createdAt = DateTime.now(), updatedAt = DateTime.now(),
+        unsafeFirstName = "Colin", unsafeLastName = "Lane", profileUrl = "profile", noIndex = false, related = Seq())
+      val metaTags = tags.formatOpenGraphForLibrary.lines.toList
+      metaTags.exists { line =>
+        line.contains("""type="application/rss+xml"""") && line.contains("""href="https://www.kifi.com/colin/rss"""")
+      } === true
+      metaTags.exists { line =>
+        line.contains("""type="application/atom+xml"""") && line.contains("""href="https://www.kifi.com/colin/atom"""")
+      } === true
     }
   }
 }
