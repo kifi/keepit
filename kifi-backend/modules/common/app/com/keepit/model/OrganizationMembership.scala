@@ -40,30 +40,6 @@ object OrganizationMembership {
     (__ \ 'userId).format[Id[User]] and
     (__ \ 'access).format[OrganizationAccess]
   )(OrganizationMembership.apply, unlift(OrganizationMembership.unapply))
-
-  def applyFromDbRow(
-    id: Option[Id[OrganizationMembership]],
-    createdAt: DateTime,
-    updatedAt: DateTime,
-    state: State[OrganizationMembership],
-    seq: SequenceNumber[OrganizationMembership],
-    organizationId: Id[Organization],
-    userId: Id[User],
-    access: OrganizationAccess) = {
-    OrganizationMembership(id, createdAt, updatedAt, state, seq, organizationId, userId, access)
-  }
-
-  def unapplyToDbRow(member: OrganizationMembership) = {
-    Some(
-      member.id,
-      member.createdAt,
-      member.updatedAt,
-      member.state,
-      member.seq,
-      member.organizationId,
-      member.userId,
-      member.access)
-  }
 }
 
 object OrganizationMembershipStates extends States[OrganizationMembership]

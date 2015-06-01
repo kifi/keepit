@@ -1,11 +1,12 @@
 package com.keepit.model
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ SequenceNumber, State, Id }
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick._
 import com.keepit.common.logging.Logging
 import com.keepit.common.time.Clock
+import org.joda.time.DateTime
 
 @ImplementedBy(classOf[OrganizationMembershipRepoImpl])
 trait OrganizationMembershipRepo extends Repo[OrganizationMembership] with SeqNumberFunction[OrganizationMembership] {
@@ -25,7 +26,31 @@ class OrganizationMembershipRepoImpl @Inject() (val db: DataBaseComponent, val c
     implicit val organizationAccessMapper = MappedColumnType.base[OrganizationAccess, String](_.value, OrganizationAccess(_))
     def access = column[OrganizationAccess]("access", O.NotNull)
 
-    def * = (id.?, createdAt, updatedAt, state, seq, organizationId, userId, access) <> ((OrganizationMembership.applyFromDbRow _).tupled, OrganizationMembership.unapplyToDbRow _)
+    def applyFromDbRow(
+      id: Option[Id[OrganizationMembership]],
+      createdAt: DateTime,
+      updatedAt: DateTime,
+      state: State[OrganizationMembership],
+      seq: SequenceNumber[OrganizationMembership],
+      organizationId: Id[Organization],
+      userId: Id[User],
+      access: OrganizationAccess) = {
+      OrganizationMembership(id, createdAt, updatedAt, state, seq, organizationId, userId, access)
+    }
+
+    def unapplyToDbRow(member: OrganizationMembership) = {
+      Some(
+        member.id,
+        member.createdAt,
+        member.updatedAt,
+        member.state,
+        member.seq,
+        member.organizationId,
+        member.userId,
+        member.access)
+    }
+
+    def * = (id.?, createdAt, updatedAt, state, seq, organizationId, userId, access) <> ((applyFromDbRow _).tupled, unapplyToDbRow _)
   }
 
   def table(tag: Tag) = new OrganizationMembershipTable(tag)
