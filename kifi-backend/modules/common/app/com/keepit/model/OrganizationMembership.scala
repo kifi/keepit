@@ -22,11 +22,8 @@ case class OrganizationMembership(
 
   override def toString: String = s"OrganizationMembership[id=$id,organizationId=$organizationId,userId=$userId,access=$access,state=$state]"
 
-  def canInsert: Boolean = access == OrganizationAccess.OWNER || access == OrganizationAccess.READ_WRITE || access == OrganizationAccess.READ_INSERT
   def canWrite: Boolean = access == OrganizationAccess.OWNER || access == OrganizationAccess.READ_WRITE
   def isOwner: Boolean = access == OrganizationAccess.OWNER
-  def isCollaborator: Boolean = access == OrganizationAccess.READ_WRITE
-  def isFollower: Boolean = access == OrganizationAccess.READ_ONLY
 }
 
 object OrganizationMembership {
@@ -63,8 +60,6 @@ sealed abstract class OrganizationAccess(val value: String, val priority: Int) {
 }
 
 object OrganizationAccess {
-  case object READ_ONLY extends OrganizationAccess("read_only", 0)
-  case object READ_INSERT extends OrganizationAccess("read_insert", 1)
   case object READ_WRITE extends OrganizationAccess("read_write", 2)
   case object OWNER extends OrganizationAccess("owner", 3)
 
@@ -79,14 +74,10 @@ object OrganizationAccess {
 
   def apply(str: String): OrganizationAccess = {
     str match {
-      case READ_ONLY.value => READ_ONLY
-      case READ_INSERT.value => READ_INSERT
       case READ_WRITE.value => READ_WRITE
       case OWNER.value => OWNER
     }
   }
 
-  def all: Seq[OrganizationAccess] = Seq(OWNER, READ_WRITE, READ_INSERT, READ_ONLY)
-
-  def collaborativePermissions: Set[OrganizationAccess] = Set(OWNER, READ_WRITE, READ_INSERT)
+  def all: Seq[OrganizationAccess] = Seq(OWNER, READ_WRITE)
 }

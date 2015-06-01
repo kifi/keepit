@@ -27,9 +27,6 @@ case class OrganizationInvite(
   def withUpdateTime(now: DateTime): OrganizationInvite = this.copy(updatedAt = now)
   def withState(newState: State[OrganizationInvite]): OrganizationInvite = this.copy(state = newState)
 
-  def isCollaborator = (access == OrganizationAccess.READ_WRITE) || (access == OrganizationAccess.READ_INSERT)
-  def isFollower = (access == OrganizationAccess.READ_ONLY)
-
   override def toString: String = s"OrganizationInvite[id=$id,organizationId=$organizationId,ownerId=$inviterId,userId=$userId,email=$emailAddress,access=$access,state=$state]"
 
 }

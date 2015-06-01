@@ -21,13 +21,14 @@ class OrganizationInviteRepoImpl @Inject() (val db: DataBaseComponent, val clock
 
   type RepoImpl = OrganizationInviteTable
   class OrganizationInviteTable(tag: Tag) extends RepoTable[OrganizationInvite](db, tag, "organization_invite") {
+    implicit val organizationAccessMapper = MappedColumnType.base[OrganizationAccess, String](_.value, OrganizationAccess(_))
+
     def organizationId = column[Id[Organization]]("organization_id", O.NotNull)
     def inviterId = column[Id[User]]("inviter_id", O.NotNull)
     def userId = column[Option[Id[User]]]("user_id", O.Nullable)
     def emailAddress = column[Option[EmailAddress]]("email_address", O.Nullable)
     def access = column[OrganizationAccess]("access", O.NotNull)
     def message = column[Option[String]]("message", O.Nullable)
-    implicit val organizationAccessMapper = MappedColumnType.base[OrganizationAccess, String](_.value, OrganizationAccess(_))
 
     def applyFromDbRow(
       id: Option[Id[OrganizationInvite]],

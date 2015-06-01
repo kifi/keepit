@@ -20,10 +20,11 @@ class OrganizationRepoImpl @Inject() (val db: DataBaseComponent, val clock: Cloc
 
   type RepoImpl = OrganizationTable
   class OrganizationTable(tag: Tag) extends RepoTable[Organization](db, tag, "organization") with SeqNumberColumn[Organization] {
+    implicit val organizationSlugMapper = MappedColumnType.base[OrganizationSlug, String](_.value, OrganizationSlug(_))
+
     def name = column[String]("name", O.NotNull)
     def description = column[Option[String]]("description", O.Nullable)
     def ownerId = column[Id[User]]("owner_id", O.NotNull)
-    implicit val organizationSlugMapper = MappedColumnType.base[OrganizationSlug, String](_.value, OrganizationSlug(_))
     def slug = column[OrganizationSlug]("slug", O.NotNull)
 
     def * = (id.?, createdAt, updatedAt, state, seq, name, description, ownerId, slug) <> ((Organization.applyFromDbRow _).tupled, Organization.unapplyToDbRow _)

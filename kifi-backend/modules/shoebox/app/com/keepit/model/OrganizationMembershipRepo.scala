@@ -21,9 +21,10 @@ class OrganizationMembershipRepoImpl @Inject() (val db: DataBaseComponent, val c
 
   type RepoImpl = OrganizationMembershipTable
   class OrganizationMembershipTable(tag: Tag) extends RepoTable[OrganizationMembership](db, tag, "organization_membership") with SeqNumberColumn[OrganizationMembership] {
+    implicit val organizationAccessMapper = MappedColumnType.base[OrganizationAccess, String](_.value, OrganizationAccess(_))
+
     def organizationId = column[Id[Organization]]("organization_id", O.NotNull)
     def userId = column[Id[User]]("user_id", O.NotNull)
-    implicit val organizationAccessMapper = MappedColumnType.base[OrganizationAccess, String](_.value, OrganizationAccess(_))
     def access = column[OrganizationAccess]("access", O.NotNull)
 
     def applyFromDbRow(
