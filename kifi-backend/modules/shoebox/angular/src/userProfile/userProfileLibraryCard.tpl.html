@@ -12,13 +12,24 @@
       </div>
     </div>
   </a>
-  <div>
-    <a class="kf-upl-card-owner" href="{{lib.owner|profileUrl}}" kf-track-origin="{{currentPageOrigin}}/curator"
-      ng-click="trackUplCardClick(lib, 'clickedLibraryCurator')">
-      <img class="kf-upl-card-owner-pic" ng-src="{{lib.owner | pic:100}}" alt="{{lib.owner|name}}" ng-if="libraryType !== 'own'">
-      <span class="kf-upl-card-by">by</span>
-      <span class="kf-upl-card-by-name">{{lib.owner|name}}</span>
+  <!-- owner only -->
+  <a class="kf-upl-card-owner" ng-if="::lib.numCollaborators === 0" href="{{::lib.owner|profileUrl}}" kf-track-origin="{{::currentPageOrigin}}/curator" ng-click="trackUplCardClick(lib, 'clickedLibraryCurator')">
+    <img class="kf-upl-card-owner-pic" ng-src="{{::lib.owner|pic:100}}" alt="{{::lib.owner|name}}" ng-if="::libraryType !== 'own'">
+    <span class="kf-upl-card-by">by</span>
+    <span class="kf-upl-card-by-name">{{::lib.owner|name}}</span>
+  </a>
+  <!-- owner with collaborators -->
+  <div class="kf-upl-collabs" ng-if="::lib.numCollaborators > 0">
+    <span class="kf-upl-card-by">by</span>
+    <a class="kf-upl-collab-pic-a" href="{{::lib.owner|profileUrl}}" kf-track-origin="{{::currentPageOrigin}}/collaborator">
+      <img class="kf-upl-collab-pic" ng-src="{{::lib.owner|pic:100}}" alt="{{::lib.owner|name}}">
     </a>
+    <a class="kf-upl-collab-pic-a" href="{{::collab|profileUrl}}" kf-track-origin="{{::currentPageOrigin}}/collaborator" ng-repeat="collab in lib.collaborators | limitTo:maxNumCollaboratorsToShow">
+      <img class="kf-upl-collab-pic" ng-src="{{::collab|pic:100}}" alt="{{::collab|name}}">
+    </a>
+    <button class="kf-upl-more-collab" ng-if="lib.numCollaborators > maxNumCollaboratorsToShow" ng-click="openCollaboratorsList(lib)">
+      {{lib.numCollaborators - maxNumCollaboratorsToShow|num}}
+    </button>
   </div>
   <div ng-class="{'kf-upl-counts': true, 'kf-mine': myLibrary}">
     <a href="{{lib|libPath}}" class="kf-upl-count" ng-click="trackUplCardClick(lib, 'clickedLibraryKeepsTotal')">
