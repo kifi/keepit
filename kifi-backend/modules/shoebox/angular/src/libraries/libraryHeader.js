@@ -67,19 +67,14 @@ angular.module('kifi')
           });
         }
 
-        function setMembersToShow(members, numMembers, numMembersFit) {
-          var showPlusMembers = Math.min(members.length, numMembersFit) < numMembers;
-          var numMembersToShow = Math.min(members.length, numMembersFit);
-          var membersToShow = members.slice(0, numMembersToShow);
-          var numMoreMembersText = showPlusMembers ? $filter('num')(numMembers - numMembersToShow) : '';
-          return [membersToShow, numMoreMembersText];
-        }
-
-        function setFollowers(hideAll) {
-          var numFollowersToFit = hideAll ? 0 : (scope.onCollabExperiment ? 3 : 5);
-          var res = setMembersToShow(scope.library.followers, scope.library.numFollowers, numFollowersToFit);
-          scope.followersToShow = res[0];
-          scope.numMoreFollowersText = res[1];
+        function updateFollowers() {
+          var lib = scope.library;
+          var numFollowers = Math.max(lib.numFollowers, lib.followers.length);  // tolerating incorrect numFollowers
+          var numFit = smallWindow ? 0 : (scope.onCollabExperiment ? 3 : 5);
+          var showPlus = numFit > 0 && Math.min(lib.followers.length, numFit) < numFollowers;
+          var numToShow = Math.min(lib.followers.length, numFit - (showPlus ? 1 : 0));
+          scope.followersToShow = lib.followers.slice(0, numToShow);
+          scope.numMoreFollowersText = showPlus ? $filter('num')(numFollowers - numToShow) : '';
         }
 
         //
@@ -661,14 +656,13 @@ angular.module('kifi')
         };
 
         function onWinResize() {
-          if ($window.innerWidth <= smallWindowLimit && !smallWindow) {
-            smallWindow = true;
-          } else if ($window.innerWidth > smallWindowLimit && smallWindow) {
-            smallWindow = false;
+          var small = $window.innerWidth <= smallWindowLimit;
+          if (smallWindow !== small) {
+            scope.$apply(function() {
+              smallWindow = small;
+              updateFollowers();
+            });
           }
-          scope.$apply(function() {
-            setFollowers(smallWindow);
-          });
         }
 
         //
@@ -677,19 +671,14 @@ angular.module('kifi')
 
         $window.addEventListener('resize', onWinResize);
 
-        scope.$watch('library.numFollowers', function() {
-          setFollowers(smallWindow);
-        });
+        scope.$watch('library.numFollowers', updateFollowers);
 
-        scope.$watch('library.numCollaborators', function() {
-          // keep at most 5 circles at all times
-          // (1 circle is owner, 1 circle is for adding collab, 1 circle is for additional collabs),
-          // but if there are 1 owner + 4 collaborators, then show those 5
-          var addCollabButton = scope.isOwner() || (scope.isCollaborating() && scope.collabsCanInvite);
-          var numCollabsToFit = addCollabButton && scope.library.numCollaborators > 2 ? 2 : !addCollabButton && scope.library.numCollaborators === 4 ? 4 : 3;
-          var res = setMembersToShow(scope.library.collaborators, scope.library.numCollaborators, numCollabsToFit);
-          scope.collaboratorsToShow = res[0];
-          scope.numMoreCollaboratorsText = res[1];
+        scope.$watch('library.numCollaborators', function (numCollaborators) {
+          var n = 4; // at most 5 circles, one spot reserved for owner
+          if (scope.isOwner() || (scope.isCollaborating() && scope.collabsCanInvite)) {
+            n--; // one spot reserved for add collaborator button
+          }
+          scope.maxNumCollaboratorsToShow = numCollaborators > n ? n - 1 : n;  // one spot may be reserved for +N button
         });
 
         [
