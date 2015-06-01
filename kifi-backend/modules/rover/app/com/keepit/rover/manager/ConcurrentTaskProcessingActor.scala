@@ -1,12 +1,9 @@
 package com.keepit.rover.manager
 
 import akka.actor.Actor
-import com.keepit.common.akka.{ UnsupportedActorMessage }
-import com.keepit.common.concurrent.ExecutionContext
 
 import scala.concurrent.{ Future }
 import scala.util.{ Try, Failure, Success }
-import com.keepit.common.core._
 
 object ConcurrentTaskProcessingActor {
   trait TaskProcessingActorMessage
@@ -14,6 +11,8 @@ object ConcurrentTaskProcessingActor {
   case object IfYouCouldJustGoAhead extends TaskProcessingActorMessage
 
   case class UnknownTaskStatusException[T](task: T) extends Exception(s"Unknown task status: $task")
+  case class UnsupportedActorMessage(any: Any) extends IllegalStateException(if (any != null) any.toString else "Message is NULL")
+
 }
 
 trait ConcurrentTaskProcessingActor[T] { _: Actor =>
@@ -25,6 +24,18 @@ trait ConcurrentTaskProcessingActor[T] { _: Actor =>
 
   protected def pullTasks(limit: Int): Future[Seq[T]]
   protected def processTasks(tasks: Seq[T]): Map[T, Future[Unit]]
+
+  protected val immediately = new scala.concurrent.ExecutionContext {
+    def execute(runnable: Runnable): Unit = {
+      try {
+        runnable.run()
+      } catch {
+        case t: Throwable => reportFailure(t)
+      }
+    }
+    def reportFailure(t: Throwable): Unit = { log.error("retry failure", t) }
+    override def prepare(): scala.concurrent.ExecutionContext = this
+  }
 
   import ConcurrentTaskProcessingActor._
 
@@ -63,7 +74,7 @@ trait ConcurrentTaskProcessingActor[T] { _: Actor =>
 
       pulledTasks.onComplete { result =>
         self ! Pulled(result, limit)
-      }(ExecutionContext.immediate)
+      }(immediately)
     }
   }
 
@@ -95,7 +106,7 @@ trait ConcurrentTaskProcessingActor[T] { _: Actor =>
         val processedTask = processedTasks.getOrElse(task, Future.failed(UnknownTaskStatusException(task)))
         processedTask.onComplete { result =>
           self ! Processed(task, result)
-        }(ExecutionContext.immediate)
+        }(immediately)
       }
     }
   }
@@ -119,7 +130,7 @@ trait BatchProcessingActor[T] extends ConcurrentTaskProcessingActor[Seq[T]] { _:
   final protected val maxConcurrentTasks: Int = 1
 
   final protected def pullTasks(limit: Int): Future[Seq[Seq[T]]] = {
-    if (limit == 1) nextBatch.imap(Seq(_).filter(_.nonEmpty)) else Future.successful(Seq.empty)
+    if (limit == 1) nextBatch.map(Seq(_).filter(_.nonEmpty))(immediately) else Future.successful(Seq.empty)
   }
   final protected def processTasks(tasks: Seq[Seq[T]]): Map[Seq[T], Future[Unit]] = {
     tasks.map { batch => batch -> processBatch(batch) }.toMap
