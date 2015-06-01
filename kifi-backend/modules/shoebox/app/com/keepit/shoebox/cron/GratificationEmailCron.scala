@@ -33,7 +33,7 @@ class GratificationEmailCronPluginImpl @Inject() (
     val utcHourForNoonEasternTime = 12 + -offsetHoursToUtc
     val utcHourFor8pmEasternTime = 8 + -offsetHoursToUtc
 
-    val cronTimeEveryday = s"0 0 ${utcHourForNoonEasternTime - 3}-$utcHourForNoonEasternTime ? * *" // scheduled to send to QA
+    val cronTimeEveryday = s"0 0 ${utcHourForNoonEasternTime} ? * *" // scheduled to send to QA
     cronTaskOnLeader(quartz, actor.ref, cronTimeEveryday, GratificationEmailMessage.SendEmails)
 
     val cronTimeFriday = s"0 0 $utcHourForNoonEasternTime ? * FRI"
@@ -59,7 +59,7 @@ class GratificationEmailActor @Inject() (
 
   def receive = {
     case SendEmails =>
-      emailCommander.usersToSendEmailTo.map { ids => ids.foreach { id => emailSender.sendToUser(id, None) } }
+      emailCommander.usersToSendEmailTo.map { ids => ids.foreach { id => emailSender.sendToUser(id, Some(testDestinationEmail)) } }
     case SendOddEmails =>
       emailCommander.usersToSendEmailTo.map { ids => ids.filter { id => id.id % 2 == 0 }.foreach { id => emailSender.sendToUser(id, None) } }
     case SendEvenEmails =>
