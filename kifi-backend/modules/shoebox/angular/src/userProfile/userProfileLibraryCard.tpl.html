@@ -21,10 +21,10 @@
   <!-- owner with collaborators -->
   <div class="kf-upl-collabs" ng-if="::lib.numCollaborators > 0">
     <span class="kf-upl-card-by">by</span>
-    <a class="kf-upl-collab-pic-a" href="{{::lib.owner|profileUrl}}" kf-track-origin="{{::currentPageOrigin}}/collaborator">
+    <a class="kf-upl-collab-pic-a" href="{{::lib.owner|profileUrl}}" kf-track-origin="{{::currentPageOrigin}}/collaborator" kf-user-tooltip="::lib.owner" desc="Owner">
       <img class="kf-upl-collab-pic" ng-src="{{::lib.owner|pic:100}}" alt="{{::lib.owner|name}}">
     </a>
-    <a class="kf-upl-collab-pic-a" href="{{::collab|profileUrl}}" kf-track-origin="{{::currentPageOrigin}}/collaborator" ng-repeat="collab in lib.collaborators | limitTo:maxNumCollaboratorsToShow">
+    <a class="kf-upl-collab-pic-a" href="{{::collab|profileUrl}}" kf-track-origin="{{::currentPageOrigin}}/collaborator" kf-user-tooltip="::collab" desc="Collaborator" ng-repeat="collab in lib.collaborators | limitTo:maxNumCollaboratorsToShow">
       <img class="kf-upl-collab-pic" ng-src="{{::collab|pic:100}}" alt="{{::collab|name}}">
     </a>
     <button class="kf-upl-more-collab" ng-if="lib.numCollaborators > maxNumCollaboratorsToShow" ng-click="openCollaboratorsList(lib)">
