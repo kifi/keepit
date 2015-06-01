@@ -2,6 +2,7 @@ package com.keepit.commanders.emails
 
 import com.google.inject.Injector
 import com.keepit.abook.{ FakeABookServiceClientImpl, ABookServiceClient, FakeABookServiceClientModule }
+import com.keepit.commanders.emails.GratificationEmailSender.SenderInfo
 import com.keepit.common.cache.FakeCacheModule
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.crypto.PublicIdConfiguration
@@ -665,12 +666,12 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
           (user1, user2)
         }
         val email = Await.result(sender.sendToUser(user1.id.get, Some(toEmail)), Duration(5, "seconds"))
-        val senderInfo = GratificationEmailSender.senderInfo
+        val senderInfo = GratificationEmailSender.SenderInfo
         val html = email.htmlBody.value
         html must contain("Hey Clark,")
         html must contain("Bruce Wayne")
         html must contain("Favorite Comic Books")
-        html must contain(s"${senderInfo.firstName}, ${senderInfo.role} at Kifi")
+        html must contain(s"${senderInfo.FIRSTNAME}, ${senderInfo.ROLE} at Kifi")
         html must not contain ("0 views")
         html must not contain ("0 followers")
         html must not contain ("0 connections")
