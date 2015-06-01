@@ -98,6 +98,40 @@ class LibraryFeedControllerTest extends Specification with ShoeboxTestInjector {
             status(result) should equalTo(OK)
           }
         }
+        "with access to private library owned by user without experiment" in {
+          withDb(modules: _*) { implicit injector =>
+            val (user, library, privateLibrary) = setup
+            val otherUser = db.readWrite { implicit s =>
+              val user1 = userRepo.save(User(createdAt = DateTime.now, firstName = "Colin", lastName = "Lane", username = Username("colin"),
+                primaryEmail = Some(EmailAddress("colin@kifi.com")), normalizedUsername = "colin"))
+              libraryMembershipRepo.save(LibraryMembership(libraryId = privateLibrary.id.get, userId = user1.id.get, access = LibraryAccess.READ_ONLY))
+              user1
+            }
+            inject[FakeUserActionsHelper].setUser(otherUser)
+
+            val rssPath = com.keepit.controllers.website.routes.LibraryFeedController.libraryRSSFeed(user.username, privateLibrary.slug.value).url
+            val request = FakeRequest("GET", rssPath)
+            val libraryFeedController = inject[LibraryFeedController]
+
+            val result = libraryFeedController.libraryRSSFeed(user.username, privateLibrary.slug.value)(request)
+            status(result) should equalTo(OK)
+          }
+        }
+      }
+
+      "logged out user" in {
+        "accessing public library owned by user without experiment" in {
+          withDb(modules: _*) { implicit injector =>
+            val (user, library, privateLibrary) = setup
+            inject[FakeUserActionsHelper].unsetUser()
+
+            val rssPath = com.keepit.controllers.website.routes.LibraryFeedController.libraryRSSFeed(user.username, library.slug.value).url
+            val request = FakeRequest("GET", rssPath)
+            val libraryFeedController = inject[LibraryFeedController]
+            val result = libraryFeedController.libraryRSSFeed(user.username, library.slug.value)(request)
+            status(result) should equalTo(OK)
+          }
+        }
       }
     }
 
@@ -115,18 +149,6 @@ class LibraryFeedControllerTest extends Specification with ShoeboxTestInjector {
             status(result) should equalTo(NOT_FOUND)
           }
         }
-        "accessing public library owned by user without experiment" in {
-          withDb(modules: _*) { implicit injector =>
-            val (user, library, privateLibrary) = setup
-            inject[FakeUserActionsHelper].unsetUser()
-
-            val rssPath = com.keepit.controllers.website.routes.LibraryFeedController.libraryRSSFeed(user.username, library.slug.value).url
-            val request = FakeRequest("GET", rssPath)
-            val libraryFeedController = inject[LibraryFeedController]
-            val result = libraryFeedController.libraryRSSFeed(user.username, library.slug.value)(request)
-            status(result) should equalTo(NOT_FOUND)
-          }
-        }
       }
       "logged in user" in {
         "without access to private library" in {
@@ -135,24 +157,6 @@ class LibraryFeedControllerTest extends Specification with ShoeboxTestInjector {
             val otherUser = db.readWrite { implicit s =>
               userRepo.save(User(createdAt = DateTime.now, firstName = "Colin", lastName = "Lane", username = Username("Colin-Lane"),
                 primaryEmail = Some(EmailAddress("colin@kifi.com")), normalizedUsername = "colin-lane"))
-            }
-            inject[FakeUserActionsHelper].setUser(otherUser)
-
-            val rssPath = com.keepit.controllers.website.routes.LibraryFeedController.libraryRSSFeed(user.username, privateLibrary.slug.value).url
-            val request = FakeRequest("GET", rssPath)
-            val libraryFeedController = inject[LibraryFeedController]
-            val result = libraryFeedController.libraryRSSFeed(user.username, privateLibrary.slug.value)(request)
-            status(result) should equalTo(NOT_FOUND)
-          }
-        }
-        "with access to private library owned by user without experiment" in {
-          withDb(modules: _*) { implicit injector =>
-            val (user, library, privateLibrary) = setup
-            val otherUser = db.readWrite { implicit s =>
-              val user1 = userRepo.save(User(createdAt = DateTime.now, firstName = "Colin", lastName = "Lane", username = Username("Colin-Lane"),
-                primaryEmail = Some(EmailAddress("colin@kifi.com")), normalizedUsername = "colin-lane"))
-              libraryMembershipRepo.save(LibraryMembership(libraryId = library.id.get, userId = user1.id.get, access = LibraryAccess.READ_ONLY))
-              user1
             }
             inject[FakeUserActionsHelper].setUser(otherUser)
 
