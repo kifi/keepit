@@ -20,7 +20,7 @@ object GratificationEmailSender {
   case class SenderInfo(
     firstName: String = "Cam",
     lastName: String = "Hashemi",
-    addr: String = "cam@kifi.com",
+    addr: String = SystemEmailAddress.CAM,
     path: String = "/cam",
     role: String = "engineer")
 
