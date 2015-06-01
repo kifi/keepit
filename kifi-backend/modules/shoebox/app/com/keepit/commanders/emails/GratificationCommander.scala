@@ -15,7 +15,9 @@ import scala.concurrent.Future
 
 object GratificationCommander {
 
-  case class LibraryCountData(totalCount: Int, countByLibrary: Map[Id[Library], Int])
+  case class LibraryCountData(totalCount: Int, countByLibrary: Map[Id[Library], Int]) {
+    val sortedCountByLibrary = countByLibrary.toList.sortWith { _._2 > _._2 }
+  }
 
 }
 
@@ -82,7 +84,7 @@ class GratificationCommander @Inject() (
       val fViewsByLibrary: Future[LibraryCountData] = getLibraryViewData(id)
       fViewsByLibrary.map { x =>
         (id, x)
-      }
+      } recover { case t => (id, LibraryCountData(-1, Map.empty)) } // will filter out as long as MIN_VIEWS >= 0
     }
 
     val fIdAndViewByLib: Future[Seq[(Id[User], LibraryCountData)]] = Future.sequence(idAndViewByLib)

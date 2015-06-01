@@ -670,7 +670,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         html must contain("Hey Clark,")
         html must contain("Bruce Wayne")
         html must contain("Favorite Comic Books")
-        html must contain(s"${senderInfo.firstName}, ${senderInfo.title} at Kifi")
+        html must contain(s"${senderInfo.firstName}, ${senderInfo.role} at Kifi")
         html must not contain ("0 views")
         html must not contain ("0 followers")
         html must not contain ("0 connections")
