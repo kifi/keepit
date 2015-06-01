@@ -15,7 +15,9 @@ import scala.concurrent.Future
 
 object GratificationCommander {
 
-  case class LibraryCountData(totalCount: Int, countByLibrary: Map[Id[Library], Int])
+  case class LibraryCountData(totalCount: Int, countByLibrary: Map[Id[Library], Int]) {
+    val sortedCountByLibrary = countByLibrary.toList.sortWith { _._2 > _._2 }
+  }
 
 }
 
@@ -30,7 +32,7 @@ class GratificationCommander @Inject() (
     heimdal: HeimdalServiceClient) {
 
   private val NUM_WEEKS_BACK = 1
-  val EXPERIMENT_DEPLOY = true // only send emails to users with the GRATIFICATION_EMAIL experiment
+  val EXPERIMENT_DEPLOY = false // only send emails to users with the GRATIFICATION_EMAIL experiment
   val MIN_FOLLOWERS = 1
   val MIN_VIEWS = 5
   val MIN_CONNECTIONS = 1
@@ -82,7 +84,7 @@ class GratificationCommander @Inject() (
       val fViewsByLibrary: Future[LibraryCountData] = getLibraryViewData(id)
       fViewsByLibrary.map { x =>
         (id, x)
-      }
+      } recover { case t => (id, LibraryCountData(-1, Map.empty)) } // will filter out as long as MIN_VIEWS >= 0
     }
 
     val fIdAndViewByLib: Future[Seq[(Id[User], LibraryCountData)]] = Future.sequence(idAndViewByLib)
