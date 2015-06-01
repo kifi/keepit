@@ -20,7 +20,7 @@ object GratificationEmailSender {
   case class SenderInfo(
     firstName: String = "Cam",
     lastName: String = "Hashemi",
-    addr: String = SystemEmailAddress.CAM,
+    addr: EmailAddress = SystemEmailAddress.CAM,
     path: String = "/cam",
     role: String = "engineer")
 
@@ -48,7 +48,7 @@ class GratificationEmailSender @Inject() (
 
     fViewsByLibrary.flatMap { viewsByLibrary: LibraryCountData =>
       val emailToSend = EmailToSend(
-        from = EmailAddress(senderInfo.addr),
+        from = senderInfo.addr,
         fromName = Some(Right(senderInfo.firstName + " " + senderInfo.lastName)),
         to = toAddress.map(Right.apply).getOrElse(Left(userId)),
         subject = "You've been busy this week on Kifi!",
