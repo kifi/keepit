@@ -203,6 +203,7 @@ name-line-height = 22px
 owner-pic-diam = 32px
 
 .kf-upl-card-owner
+.kf-upl-collabs
   position: absolute
   top: 98px
   left: 0
@@ -216,17 +217,39 @@ owner-pic-diam = 32px
   color: #fff
 
 .kf-upl-card-owner-pic
+.kf-upl-collab-pic
   width: owner-pic-diam
   height: owner-pic-diam
   border-radius: 50%
   box-shadow: 0 0 3px rgba(0,0,0,.3) inset
-  vertical-align: middle
+
+.kf-upl-card-owner-pic
   margin-right: 6px
+  vertical-align: middle
+
+.kf-upl-collab-pic-a
+  display: inline-block
+  vertical-align: middle
+  width: owner-pic-diam
+  height: owner-pic-diam
+  border-radius: 50%
+
+
+.kf-upl-collab-pic-a
+.kf-upl-more-collab
+  margin: 0 3px
+
+  &>:last-child
+    margin-right: 0
+
+.kf-upl-collab-pic
+  vertical-align: top
 
 .kf-upl-card-by
   vertical-align: middle
   font-size: 11px
   font-style: italic
+  font-smoothing: antialiased
   margin-right: 5px
 
 .kf-upl-card-by-name
@@ -243,6 +266,21 @@ owner-pic-diam = 32px
 
   [href]:hover>&
     text-decoration: underline
+
+.kf-upl-more-collab
+  height: 30px
+  width: 30px
+  vertical-align: middle
+  border: 1px solid alpha(#fff, .3)
+  border-radius: 50%
+  padding: 0
+  background-color: transparent
+  font-size: 11px
+  color: alpha(#fff, .7)
+
+  &::before
+    content: '+'
+    padding-right: 1px
 
 .kf-upl-counts
   position: absolute
