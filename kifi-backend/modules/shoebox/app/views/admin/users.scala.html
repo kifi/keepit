@@ -20,7 +20,7 @@
     }
 }
 
-@kifiInstallations(kifiInstallations: Seq[KifiInstallation]) = {
+@formatKifiInstallations(kifiInstallations: Seq[KifiInstallation]) = {
   <ul>
     @for(installation <- kifiInstallations) {
       <li>@{installation.version}; @{installation.userAgent.name} @{installation.userAgent.version}; @{installation.userAgent.operatingSystemName}</li>
@@ -122,7 +122,7 @@
           <td>@userStatistics.publicKeeps</td>
           <td>@adminHelper.dateTimeDisplay(userStatistics.user.createdAt)</td>
           <td>@userStatistics.experiments.mkString(", ")</td>
-          <td>@kifiInstallations(userStatistics.kifiInstallations)</td>
+          <td>@formatKifiInstallations(userStatistics.kifiInstallations)</td>
         </tr>
       }
       </table>
