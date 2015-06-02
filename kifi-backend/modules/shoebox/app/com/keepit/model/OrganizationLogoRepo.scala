@@ -57,8 +57,7 @@ class OrganizationLogoRepoImpl @Inject() (val db: DataBaseComponent, val clock: 
     }
 
     def unapplyToDbRow(logo: OrganizationLogo) = {
-      Some(
-        logo.id,
+      Some((logo.id,
         logo.createdAt,
         logo.updatedAt,
         logo.state,
@@ -72,7 +71,7 @@ class OrganizationLogoRepoImpl @Inject() (val db: DataBaseComponent, val clock: 
         logo.imagePath,
         logo.source,
         logo.sourceFileHash,
-        logo.sourceImageURL)
+        logo.sourceImageURL))
     }
 
     def * = (id.?, createdAt, updatedAt, state, organizationId, xPosition, yPosition, width, height, format, kind, imagePath, source, sourceFileHash, sourceImageURL) <> ((applyFromDbRow _).tupled, unapplyToDbRow _)

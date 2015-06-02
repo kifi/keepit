@@ -47,8 +47,7 @@ class OrganizationInviteRepoImpl @Inject() (val db: DataBaseComponent, val clock
     }
 
     def unapplyToDbRow(invite: OrganizationInvite) = {
-      Some(
-        invite.id,
+      Some((invite.id,
         invite.createdAt,
         invite.updatedAt,
         invite.state,
@@ -57,7 +56,7 @@ class OrganizationInviteRepoImpl @Inject() (val db: DataBaseComponent, val clock
         invite.userId,
         invite.emailAddress,
         invite.access,
-        invite.message)
+        invite.message))
     }
 
     def * = (id.?, createdAt, updatedAt, state, organizationId, inviterId, userId, emailAddress, access, message) <> ((applyFromDbRow _).tupled, unapplyToDbRow _)
