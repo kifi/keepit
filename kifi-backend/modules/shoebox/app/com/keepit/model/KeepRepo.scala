@@ -60,6 +60,8 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def latestKeptAtByLibraryIds(libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Option[DateTime]]
   def getKeepsByTimeWindow(uriId: Id[NormalizedURI], url: String, keptAfter: DateTime, keptBefore: DateTime)(implicit session: RSession): Set[Keep]
   def getRecentKeepsFromFollowedLibraries(userId: Id[User], num: Int)(implicit session: RSession): Seq[Keep]
+  def getMaxKeepSeqNumForLibraries(libIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], SequenceNumber[Keep]]
+  def recentKeepNotes(libId: Id[Library], limit: Int)(implicit session: RSession): Seq[String]
 }
 
 @Singleton
@@ -508,6 +510,24 @@ class KeepRepoImpl @Inject() (
   def getRecentKeepsFromFollowedLibraries(userId: Id[User], num: Int)(implicit session: RSession): Seq[Keep] = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     sql"""SELECT #$bookmarkColumnOrder FROM bookmark bm WHERE library_id IN (SELECT library_id FROM library_membership WHERE user_id=$userId AND state='active') AND state='active' AND user_id!=$userId ORDER BY kept_at DESC LIMIT $num;""".as[Keep].list
+  }
+
+  def getMaxKeepSeqNumForLibraries(libIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], SequenceNumber[Keep]] = {
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
+    if (libIds.isEmpty) {
+      Map()
+    } else {
+      val idset = libIds.map { _.id }.mkString("(", ",", ")")
+      val q = sql"""select library_id, max(seq) from bookmark where library_id in #${idset} group by library_id"""
+
+      q.as[(Long, Long)].list.map { case (libId, seq) => Id[Library](libId) -> SequenceNumber[Keep](seq) }.toMap
+    }
+  }
+
+  def recentKeepNotes(libId: Id[Library], limit: Int)(implicit session: RSession): Seq[String] = {
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
+    val q = sql"""select note from bookmark where library_id = $libId and note is not null order by updated_at desc limit $limit"""
+    q.as[String].list
   }
 
 }

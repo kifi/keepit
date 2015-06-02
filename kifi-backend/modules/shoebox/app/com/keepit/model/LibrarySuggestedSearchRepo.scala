@@ -5,12 +5,13 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.{ DataBaseComponent, DbRepo }
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.queue.messages.SuggestedSearchTerms
 import com.keepit.common.time.Clock
 
 @ImplementedBy(classOf[LibrarySuggestedSearchRepoImpl])
 trait LibrarySuggestedSearchRepo extends DbRepo[LibrarySuggestedSearch] {
-  def getSuggestedTermsByLibrary(libId: Id[Library], limit: Int)(implicit session: RSession): SuggestedSearchTerms
-  def getByLibraryId(libId: Id[Library])(implicit session: RSession): Seq[LibrarySuggestedSearch]
+  def getSuggestedTermsByLibrary(libId: Id[Library], limit: Int, kind: SuggestedSearchTermKind)(implicit session: RSession): SuggestedSearchTerms
+  def getByLibraryId(libId: Id[Library], kind: SuggestedSearchTermKind)(implicit session: RSession): Seq[LibrarySuggestedSearch]
 }
 
 @Singleton
@@ -24,11 +25,14 @@ class LibrarySuggestedSearchRepoImpl @Inject() (
 
   type RepoImpl = LibrarySuggestedSearchTable
 
+  implicit val termKindMapper = MappedColumnType.base[SuggestedSearchTermKind, String](_.value, SuggestedSearchTermKind.apply)
+
   class LibrarySuggestedSearchTable(tag: Tag) extends RepoTable[LibrarySuggestedSearch](db, tag, "library_suggested_search") {
     def libraryId = column[Id[Library]]("library_id", O.NotNull)
     def term = column[String]("term", O.NotNull)
     def weight = column[Float]("weight", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, libraryId, term, weight, state) <> ((LibrarySuggestedSearch.apply _).tupled, LibrarySuggestedSearch.unapply _)
+    def kind = column[SuggestedSearchTermKind]("kind", O.NotNull)
+    def * = (id.?, createdAt, updatedAt, libraryId, term, weight, state, kind) <> ((LibrarySuggestedSearch.apply _).tupled, LibrarySuggestedSearch.unapply _)
   }
 
   def table(tag: Tag) = new LibrarySuggestedSearchTable(tag)
@@ -43,10 +47,10 @@ class LibrarySuggestedSearchRepoImpl @Inject() (
     termsCache.remove(LibrarySuggestedSearchKey(model.libraryId))
   }
 
-  def getSuggestedTermsByLibrary(libId: Id[Library], limit: Int)(implicit session: RSession): SuggestedSearchTerms = {
+  def getSuggestedTermsByLibrary(libId: Id[Library], limit: Int, kind: SuggestedSearchTermKind)(implicit session: RSession): SuggestedSearchTerms = {
     // first, ignore the parameter limit.
     val maxCached = termsCache.getOrElse(LibrarySuggestedSearchKey(libId)) {
-      val q = { for { r <- rows if r.libraryId === libId && r.state === LibrarySuggestedSearchStates.ACTIVE } yield r }.sortBy(_.weight.desc).take(SuggestedSearchTerms.MAX_CACHE_LIMIT).list
+      val q = { for { r <- rows if r.libraryId === libId && r.state === LibrarySuggestedSearchStates.ACTIVE && r.kind === kind } yield r }.sortBy(_.weight.desc).take(SuggestedSearchTerms.MAX_CACHE_LIMIT).list
       val terms = q.map { m => (m.term, m.weight) }.toMap
       SuggestedSearchTerms(terms)
     }
@@ -54,7 +58,7 @@ class LibrarySuggestedSearchRepoImpl @Inject() (
     maxCached.takeTopK(limit)
   }
 
-  def getByLibraryId(libId: Id[Library])(implicit session: RSession): Seq[LibrarySuggestedSearch] = {
-    { for { r <- rows if r.libraryId === libId } yield r }.list
+  def getByLibraryId(libId: Id[Library], kind: SuggestedSearchTermKind)(implicit session: RSession): Seq[LibrarySuggestedSearch] = {
+    { for { r <- rows if r.libraryId === libId && r.kind === kind } yield r }.list
   }
 }

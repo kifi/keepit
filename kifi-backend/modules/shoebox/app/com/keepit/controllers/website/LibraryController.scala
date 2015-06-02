@@ -54,7 +54,7 @@ class LibraryController @Inject() (
     extends UserActions with LibraryAccessActions with ShoeboxServiceController with Logging {
 
   private def getSuggestedSearchesAsJson(libId: Id[Library]): JsValue = {
-    val top = suggestedSearchCommander.getSuggestedTermsForLibrary(libId, limit = 10)
+    val top = suggestedSearchCommander.getSuggestedTermsForLibrary(libId, limit = 10, kind = SuggestedSearchTermKind.AUTO)
     val (terms, weights) = top.terms.toArray.sortBy(-_._2).unzip
     Json.obj("terms" -> terms, "weights" -> weights)
   }

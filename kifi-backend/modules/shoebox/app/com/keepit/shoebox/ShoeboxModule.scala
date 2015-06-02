@@ -23,7 +23,7 @@ import com.keepit.heimdal.{ HeimdalServiceClientModule }
 import com.keepit.abook.{ ABookServiceClientModule }
 import com.keepit.common.integration.ReaperModule
 import com.keepit.common.queue.SimpleQueueModule
-import com.keepit.queue.{ NormalizationUpdateJobQueueModule }
+import com.keepit.queue.{ LibrarySuggestedSearchQueueModule, NormalizationUpdateJobQueueModule }
 import com.keepit.common.concurrent.ForkJoinContextMonitorModule
 import com.keepit.cortex.{ CortexServiceClientModule }
 import com.keepit.graph.{ GraphServiceClientModule }
@@ -53,6 +53,7 @@ trait ShoeboxModule extends ConfigurationModule with CommonServiceModule {
   val twilioCredentialsModule: TwilioCredentialsModule
   val dataPipelineExecutorModule: DataPipelineExecutorModule
   val activityEmailActorModule: ActivityEmailQueueModule
+  val suggestedSearchTermsModule: LibrarySuggestedSearchQueueModule
 
   //these are modules that are provided here (but can be overriden by inheriting modules)
   // Service clients
