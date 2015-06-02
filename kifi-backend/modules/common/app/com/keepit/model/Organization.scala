@@ -7,12 +7,9 @@ import com.keepit.common.crypto.ModelWithPublicId
 import com.keepit.common.db._
 import com.keepit.common.strings._
 import com.keepit.common.time._
-import org.apache.commons.lang3.RandomStringUtils
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
-
-import scala.util.Random
 
 case class Organization(
     id: Option[Id[Organization]] = None,
@@ -42,32 +39,6 @@ object Organization {
     (__ \ 'ownerId).format(Id.format[User]) and
     (__ \ 'slug).format[OrganizationSlug]
   )(Organization.apply, unlift(Organization.unapply))
-
-  def applyFromDbRow(
-    id: Option[Id[Organization]],
-    createdAt: DateTime,
-    updatedAt: DateTime,
-    state: State[Organization],
-    seq: SequenceNumber[Organization],
-    name: String,
-    description: Option[String],
-    ownerId: Id[User],
-    slug: OrganizationSlug) = {
-    Organization(id, createdAt, updatedAt, state, seq, name, description, ownerId, slug)
-  }
-
-  def unapplyToDbRow(org: Organization) = {
-    Some(
-      org.id,
-      org.createdAt,
-      org.updatedAt,
-      org.state,
-      org.seq,
-      org.name,
-      org.description,
-      org.ownerId,
-      org.slug)
-  }
 }
 
 case class OrganizationSlug(value: String) {

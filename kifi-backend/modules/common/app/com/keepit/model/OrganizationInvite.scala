@@ -2,11 +2,10 @@ package com.keepit.model
 
 import javax.crypto.spec.IvParameterSpec
 
-import com.keepit.common.crypto.{ ModelWithPublicIdCompanion, ModelWithPublicId }
-import com.keepit.common.db.{ States, ModelWithState, State, Id }
+import com.keepit.common.crypto.{ ModelWithPublicId, ModelWithPublicIdCompanion }
+import com.keepit.common.db.{ Id, ModelWithState, State, States }
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.time._
-import org.apache.commons.lang3.RandomStringUtils
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
