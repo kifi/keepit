@@ -29,7 +29,7 @@ case class LibraryInvite(
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,
     state: State[LibraryInvite] = LibraryInviteStates.ACTIVE,
-    authToken: String = RandomStringUtils.randomAlphanumeric(7),
+    authToken: String = RandomStringUtils.randomAlphanumeric(9),
     message: Option[String] = None) extends ModelWithPublicId[LibraryInvite] with ModelWithState[LibraryInvite] {
 
   def withId(id: Id[LibraryInvite]): LibraryInvite = this.copy(id = Some(id))

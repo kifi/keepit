@@ -17,7 +17,7 @@ POST    /oauth2/callback/:provider  @com.keepit.controllers.core.OAuth2Controlle
 
 GET     /signup                     @com.keepit.controllers.core.AuthController.signupPage()
 
-# New signup pages
+# New signup pages -- remove me please!
 
 GET     /new/signup                 @com.keepit.controllers.core.AuthController.signupPageMinimal()
 GET     /new/signupEmail            @com.keepit.controllers.core.AuthController.signupPageGetEmailMinimal()
