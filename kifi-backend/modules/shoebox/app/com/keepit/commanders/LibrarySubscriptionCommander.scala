@@ -24,7 +24,7 @@ case class BasicSlackMessage(
 class LibrarySubscriptionCommander @Inject() (
     db: Database,
     httpClient: HttpClient,
-    libraryWebhookRepo: LibrarySubscriptionRepo,
+    librarySubscriptionRepo: LibrarySubscriptionRepo,
     userRepo: UserRepo,
     implicit val executionContext: ExecutionContext,
     airbrake: AirbrakeNotifier) extends Logging {
@@ -32,7 +32,7 @@ class LibrarySubscriptionCommander @Inject() (
   val httpLock = new ReactiveLock(1)
 
   def sendNewKeepMessage(bookmark: RawBookmarkRepresentation, userId: Id[User], library: Library) = Future {
-    val subscriptions = db.readOnlyReplica { implicit session => libraryWebhookRepo.getByLibraryIdAndTrigger(library.id.get, SubscriptionTrigger.NEW_KEEP) }
+    val subscriptions = db.readOnlyReplica { implicit session => librarySubscriptionRepo.getByLibraryIdAndTrigger(library.id.get, SubscriptionTrigger.NEW_KEEP) }
 
     val keeperName = db.readOnlyReplica { implicit session => userRepo.get(userId).fullName }
 
