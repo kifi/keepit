@@ -43,15 +43,14 @@ class OrganizationMembershipRepoImpl @Inject() (val db: DataBaseComponent, val c
     }
 
     def unapplyToDbRow(member: OrganizationMembership) = {
-      Some(
-        member.id,
+      Some((member.id,
         member.createdAt,
         member.updatedAt,
         member.state,
         member.seq,
         member.organizationId,
         member.userId,
-        member.access)
+        member.access))
     }
 
     def * = (id.?, createdAt, updatedAt, state, seq, organizationId, userId, access) <> ((applyFromDbRow _).tupled, unapplyToDbRow _)

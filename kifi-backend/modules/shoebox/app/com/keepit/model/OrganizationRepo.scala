@@ -45,8 +45,7 @@ class OrganizationRepoImpl @Inject() (val db: DataBaseComponent, val clock: Cloc
     }
 
     def unapplyToDbRow(org: Organization) = {
-      Some(
-        org.id,
+      Some((org.id,
         org.createdAt,
         org.updatedAt,
         org.state,
@@ -54,7 +53,7 @@ class OrganizationRepoImpl @Inject() (val db: DataBaseComponent, val clock: Cloc
         org.name,
         org.description,
         org.ownerId,
-        org.slug)
+        org.slug))
     }
 
     def * = (id.?, createdAt, updatedAt, state, seq, name, description, ownerId, slug) <> ((applyFromDbRow _).tupled, unapplyToDbRow _)
