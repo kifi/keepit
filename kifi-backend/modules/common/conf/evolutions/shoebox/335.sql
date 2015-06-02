@@ -19,7 +19,7 @@ CREATE TABLE organization (
 );
 
 CREATE TABLE organization_membership (
-	id bigint(20) NOT NULL,
+	id bigint(20) NOT NULL AUTO_INCREMENT,
 	created_at datetime NOT NULL,
 	updated_at datetime NOT NULL,
 	state varchar(20) NOT NULL,
@@ -34,7 +34,7 @@ CREATE TABLE organization_membership (
 );
 
 CREATE TABLE organization_invite (
-	id bigint(20) NOT NULL,
+	id bigint(20) NOT NULL AUTO_INCREMENT,
 	created_at datetime NOT NULL,
 	updated_at datetime NOT NULL,
 	state varchar(20) NOT NULL,
@@ -52,7 +52,7 @@ CREATE TABLE organization_invite (
 );
 
 CREATE TABLE organization_logo (
-	id bigint(20) NOT NULL,
+	id bigint(20) NOT NULL AUTO_INCREMENT,
 	created_at datetime NOT NULL,
 	updated_at datetime NOT NULL,
 	state varchar(20) NOT NULL,
