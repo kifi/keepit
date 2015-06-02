@@ -92,7 +92,7 @@ class AtomCommander @Inject() (
         val id = keep.externalId.id
         val updatedAt = keep.updatedAt
         val link = AtomLink(keep.url)
-        val keepImage = keepImageOpt.map(_.get).map(_.imagePath.getUrl(s3ImageConfig)).map(url => s"https:$url")
+        val keepImage = keepImageOpt.map(_.map(_.imagePath.getUrl(s3ImageConfig))).map(url => s"https:$url")
         AtomEntry(title, author, Some(content), id, updatedAt, link, icon = keepImage)
       }
       val links = Seq(AtomLink(feedUrl + "/atom", rel = Some("self")), AtomLink(feedUrl))
