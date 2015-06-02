@@ -1,7 +1,7 @@
 package com.keepit.commanders
 
 import com.google.inject.Injector
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ SequenceNumber, Id }
 import com.keepit.model._
 import com.keepit.model.KeepFactoryHelper._
 import com.keepit.model.LibraryFactoryHelper._
@@ -41,6 +41,12 @@ class SuggestedSearchTermUpdaterTest extends Specification with ShoeboxTestInjec
         val termCommander = inject[LibrarySuggestedSearchCommander]
         val terms = termCommander.getSuggestedTermsForLibrary(Id[Library](1), 10, SuggestedSearchTermKind.HASHTAG)
         terms.terms.toArray.sortBy(-_._2).toList === (1 to 10).map { i => (s"h${i}", (11 - i) * 1f) }.toList
+
+        val valueRepo = inject[SystemValueRepo]
+        db.readOnlyReplica { implicit s =>
+          val seq = valueRepo.getSequenceNumber(Name[SequenceNumber[Keep]]("suggested_search_snyc_keep"))
+          seq.map(_.value) === Some(10)
+        }
 
       }
     }

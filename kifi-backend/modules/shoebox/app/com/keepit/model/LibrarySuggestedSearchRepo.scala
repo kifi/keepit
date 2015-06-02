@@ -44,12 +44,13 @@ class LibrarySuggestedSearchRepoImpl @Inject() (
   }
 
   def deleteCache(model: LibrarySuggestedSearch)(implicit session: RSession): Unit = {
-    termsCache.remove(LibrarySuggestedSearchKey(model.libraryId))
+    termsCache.remove(LibrarySuggestedSearchKey(model.libraryId, SuggestedSearchTermKind.AUTO))
+    termsCache.remove(LibrarySuggestedSearchKey(model.libraryId, SuggestedSearchTermKind.HASHTAG))
   }
 
   def getSuggestedTermsByLibrary(libId: Id[Library], limit: Int, kind: SuggestedSearchTermKind)(implicit session: RSession): SuggestedSearchTerms = {
     // first, ignore the parameter limit.
-    val maxCached = termsCache.getOrElse(LibrarySuggestedSearchKey(libId)) {
+    val maxCached = termsCache.getOrElse(LibrarySuggestedSearchKey(libId, kind)) {
       val q = { for { r <- rows if r.libraryId === libId && r.state === LibrarySuggestedSearchStates.ACTIVE && r.kind === kind } yield r }.sortBy(_.weight.desc).take(SuggestedSearchTerms.MAX_CACHE_LIMIT).list
       val terms = q.map { m => (m.term, m.weight) }.toMap
       SuggestedSearchTerms(terms)

@@ -34,10 +34,10 @@ object SuggestedSearchTermKind {
   val HASHTAG = SuggestedSearchTermKind("hashtag")
 }
 
-case class LibrarySuggestedSearchKey(id: Id[Library]) extends Key[SuggestedSearchTerms] {
-  override val version = 1
+case class LibrarySuggestedSearchKey(id: Id[Library], kind: SuggestedSearchTermKind) extends Key[SuggestedSearchTerms] {
+  override val version = 2
   val namespace = "suggested_search_by_libId"
-  def toKey(): String = id.id.toString
+  def toKey(): String = id.id.toString + "#" + kind.value
 }
 
 class LibrarySuggestedSearchCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
