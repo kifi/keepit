@@ -54,7 +54,7 @@ class LibraryInviteEmailSender @Inject() (
       val emailToSend = EmailToSend(
         fromName = Some(Left(invite.inviterId)),
         from = SystemEmailAddress.NOTIFICATIONS,
-        subject = if (invite.access == LibraryAccess.READ_ONLY) s"An invitation to my library: ${libraryInfo.name}" else s"I want to collaborate with you on ${libraryInfo.name}",
+        subject = if (invite.access == LibraryAccess.READ_ONLY) s"An invitation to a Kifi library: ${libraryInfo.name}" else s"I want to collaborate with you on ${libraryInfo.name}",
         to = toRecipient,
         category = toRecipient.fold(_ => NotificationCategory.User.LIBRARY_INVITATION, _ => NotificationCategory.NonUser.LIBRARY_INVITATION),
         htmlTemplate = {

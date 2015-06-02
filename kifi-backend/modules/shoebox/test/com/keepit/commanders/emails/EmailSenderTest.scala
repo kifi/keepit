@@ -2,6 +2,7 @@ package com.keepit.commanders.emails
 
 import com.google.inject.Injector
 import com.keepit.abook.{ FakeABookServiceClientImpl, ABookServiceClient, FakeABookServiceClientModule }
+import com.keepit.commanders.emails.GratificationEmailSender.SenderInfo
 import com.keepit.common.cache.FakeCacheModule
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.crypto.PublicIdConfiguration
@@ -430,7 +431,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
 
         email.category === NotificationCategory.toElectronicMailCategory(NotificationCategory.User.LIBRARY_INVITATION)
         email.extraHeaders.get(PostOffice.Headers.REPLY_TO) === "tombrady@gmail.com"
-        email.subject === "An invitation to my library: Football"
+        email.subject === "An invitation to a Kifi library: Football"
         email.htmlBody.contains("http://dev.ezkeep.com:9000/tom/football?") === true
         email.htmlBody.contains("<span style=\"color:#999999\">Tom Brady</span>") === true
         val params = List("utm_campaign=na", "utm_source=library_invite", "utm_medium=vf_email", "kcid=na-vf_email-library_invite", "kma=1")
@@ -453,7 +454,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         outbox(0) === email
 
         email.category === NotificationCategory.toElectronicMailCategory(NotificationCategory.NonUser.LIBRARY_INVITATION)
-        email.subject === "An invitation to my library: Football"
+        email.subject === "An invitation to a Kifi library: Football"
         email.to(0) === EmailAddress("aaronrodgers@gmail.com")
         val params = List("utm_campaign=na", "utm_source=library_invite", "utm_medium=vf_email", "kma=1")
         params.map(email.htmlBody.contains(_)) === List(true, true, true, true)
@@ -462,7 +463,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
 
         db.readWrite { implicit session => libraryRepo.save(lib1.copy(visibility = LibraryVisibility.PUBLISHED)) }
         val emailWithoutPassPhrase = Await.result(inviteSender.sendInvite(invite = inviteNonUser, isPlainEmail = false), Duration(5, "seconds")).get
-        emailWithoutPassPhrase.subject === "An invitation to my library: Football"
+        emailWithoutPassPhrase.subject === "An invitation to a Kifi library: Football"
         emailWithoutPassPhrase.to(0) === EmailAddress("aaronrodgers@gmail.com")
         params.map(emailWithoutPassPhrase.htmlBody.contains(_)) === List(true, true, true, true)
         val htmlWithoutPassPhrase = emailWithoutPassPhrase.htmlBody.value
@@ -484,7 +485,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
 
         email.category === NotificationCategory.toElectronicMailCategory(NotificationCategory.User.LIBRARY_INVITATION)
         email.extraHeaders.get(PostOffice.Headers.REPLY_TO) === "tombrady@gmail.com"
-        email.subject === "An invitation to my library: Football"
+        email.subject === "An invitation to a Kifi library: Football"
         email.htmlBody.contains("http://dev.ezkeep.com:9000/tom/football?") === true
         email.htmlBody.contains("Hi Aaron") === true
         email.htmlBody.contains("Check out the \"Football\" library I created") === true
@@ -538,7 +539,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         outbox(0) === email
 
         email.category === NotificationCategory.toElectronicMailCategory(NotificationCategory.NonUser.LIBRARY_INVITATION)
-        email.subject === "An invitation to my library: Football"
+        email.subject === "An invitation to a Kifi library: Football"
         email.to(0) === EmailAddress("aaronrodgers@gmail.com")
         val params = List("utm_campaign=na", "utm_source=library_invite", "utm_medium=vf_email", "kma=1")
         params.map(email.htmlBody.contains(_)) === List(true, true, true, false)
@@ -547,7 +548,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
 
         db.readWrite { implicit session => libraryRepo.save(lib1.copy(visibility = LibraryVisibility.PUBLISHED)) }
         val emailWithoutPassPhrase = Await.result(inviteSender.sendInvite(invite = inviteNonUser, isPlainEmail = true), Duration(5, "seconds")).get
-        emailWithoutPassPhrase.subject === "An invitation to my library: Football"
+        emailWithoutPassPhrase.subject === "An invitation to a Kifi library: Football"
         emailWithoutPassPhrase.to(0) === EmailAddress("aaronrodgers@gmail.com")
         params.map(emailWithoutPassPhrase.htmlBody.contains(_)) === List(true, true, true, false)
       }
@@ -567,7 +568,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
 
         email.category === NotificationCategory.toElectronicMailCategory(NotificationCategory.User.LIBRARY_INVITATION)
         email.extraHeaders.get(PostOffice.Headers.REPLY_TO) === "tombrady@gmail.com"
-        email.subject === "An invitation to my library: Football"
+        email.subject === "An invitation to a Kifi library: Football"
         email.htmlBody.contains("http://dev.ezkeep.com:9000/tom/football?") === true
         email.htmlBody.contains("check this out!") === true
         val params = List("utm_campaign=na", "utm_source=library_invite", "utm_medium=vf_email", "kcid=na-vf_email-library_invite", "kma=1")
@@ -665,12 +666,12 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
           (user1, user2)
         }
         val email = Await.result(sender.sendToUser(user1.id.get, Some(toEmail)), Duration(5, "seconds"))
-        val senderInfo = GratificationEmailSender.senderInfo
+        val senderInfo = GratificationEmailSender.SenderInfo
         val html = email.htmlBody.value
         html must contain("Hey Clark,")
         html must contain("Bruce Wayne")
         html must contain("Favorite Comic Books")
-        html must contain(s"${senderInfo.firstName}, ${senderInfo.title} at Kifi")
+        html must contain(s"${senderInfo.FIRSTNAME}, ${senderInfo.ROLE} at Kifi")
         html must not contain ("0 views")
         html must not contain ("0 followers")
         html must not contain ("0 connections")

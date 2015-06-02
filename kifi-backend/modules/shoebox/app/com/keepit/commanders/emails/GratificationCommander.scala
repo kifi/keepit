@@ -1,8 +1,9 @@
 package com.keepit.commanders.emails
 
-import com.google.inject.Inject
+import com.google.inject.{ Singleton, Inject }
 import com.keepit.commanders.LocalUserExperimentCommander
 import com.keepit.commanders.emails.GratificationCommander.LibraryCountData
+import com.keepit.common.concurrent.ReactiveLock
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.heimdal.HeimdalServiceClient
@@ -14,10 +15,13 @@ import scala.concurrent.Future
 
 object GratificationCommander {
 
-  case class LibraryCountData(totalCount: Int, countByLibrary: Map[Id[Library], Int])
+  case class LibraryCountData(totalCount: Int, countByLibrary: Map[Id[Library], Int]) {
+    val sortedCountByLibrary = countByLibrary.toList.sortWith { _._2 > _._2 }
+  }
 
 }
 
+@Singleton
 class GratificationCommander @Inject() (
     db: Database,
     libMemRepo: LibraryMembershipRepo,
@@ -33,6 +37,8 @@ class GratificationCommander @Inject() (
   val MIN_VIEWS = 5
   val MIN_CONNECTIONS = 1
 
+  private val remoteCallQueue = new ReactiveLock(numConcurrent = 5)
+
   def getLibraryFollowerCounts(userId: Id[User]): LibraryCountData = {
     db.readOnlyReplica { implicit s =>
       val since = currentDateTime.minusWeeks(NUM_WEEKS_BACK)
@@ -43,11 +49,11 @@ class GratificationCommander @Inject() (
   }
 
   def getLibraryViewData(userId: Id[User]): Future[LibraryCountData] = {
-    heimdal.getOwnerLibraryViewStats(userId).map {
-      case (cnt, cntMap) =>
-        db.readOnlyReplica { implicit s =>
+    remoteCallQueue.withLockFuture {
+      heimdal.getOwnerLibraryViewStats(userId).map {
+        case (cnt, cntMap) =>
           LibraryCountData(cnt, cntMap)
-        }
+      }
     }
   }
 
@@ -77,8 +83,8 @@ class GratificationCommander @Inject() (
     val idAndViewByLib: Seq[Future[(Id[User], LibraryCountData)]] = userIds.map { id =>
       val fViewsByLibrary: Future[LibraryCountData] = getLibraryViewData(id)
       fViewsByLibrary.map { x =>
-        Tuple2(id, x)
-      }
+        (id, x)
+      } recover { case t => (id, LibraryCountData(-1, Map.empty)) } // will filter out as long as MIN_VIEWS >= 0
     }
 
     val fIdAndViewByLib: Future[Seq[(Id[User], LibraryCountData)]] = Future.sequence(idAndViewByLib)

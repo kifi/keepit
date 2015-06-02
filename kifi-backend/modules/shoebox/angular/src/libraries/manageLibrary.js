@@ -37,6 +37,7 @@ angular.module('kifi')
         scope.showFollowers = false;
         scope.colors = ['#447ab7','#5ab7e7','#4fc49e','#f99457','#dd5c60','#c16c9e','#9166ac'];
         scope.currentPageOrigin = '';
+        scope.onCollabExperiment = (profileService.me.experiments || []).indexOf('collaborative') > -1;
 
         //
         // Scope methods.

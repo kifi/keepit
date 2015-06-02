@@ -1,10 +1,10 @@
 @(userId: Id[User],
-senderInfo: com.keepit.commanders.emails.GratificationEmailSender.SenderInfo,
-libViews: com.keepit.commanders.emails.GratificationEmailSender.SortedLibraryCountData,
-libFollowers: com.keepit.commanders.emails.GratificationEmailSender.SortedLibraryCountData,
+libViews: com.keepit.commanders.emails.GratificationCommander.LibraryCountData,
+libFollowers: com.keepit.commanders.emails.GratificationCommander.LibraryCountData,
 newConnections: Seq[Id[User]]
 )
 @import com.keepit.common.mail.template.helpers._
+@import com.keepit.commanders.emails.GratificationEmailSender._
 @MIN_VIEWS = @{5}
 @MIN_FOLLOWERS = @{1}
 @MIN_CONNECTIONS = @{1}
@@ -19,7 +19,7 @@ newConnections: Seq[Id[User]]
 @if(libViews.totalCount >= MIN_VIEWS) {
 <p>You had <b>@{libViews.totalCount} views</b> across all of your libraries:</p>
 <ul>
-    @for((libId, viewCount) <- libViews.countByLibrary) {
+    @for((libId, viewCount) <- libViews.sortedCountByLibrary) {
     <li>@{viewCount} @singularOrPlural("view", viewCount) on <a href=@libraryUrl(libId, "gratLibUrl")>@libraryName(libId)</a></li>
     }
 </ul>
@@ -28,7 +28,7 @@ newConnections: Seq[Id[User]]
 @if(libFollowers.totalCount >= MIN_FOLLOWERS) {
 <p>You had <b>@libFollowers.totalCount new @singularOrPlural("follower", libFollowers.totalCount)</b>:</p>
 <ul>
-    @for((libId, followCount) <- libFollowers.countByLibrary) {
+    @for((libId, followCount) <- libFollowers.sortedCountByLibrary) {
     <li>@followCount new @singularOrPlural("follower", followCount) on <a href="@libraryUrl(libId, "gratLibUrl")">@libraryName(libId)</a></li>
     }
 </ul>
@@ -51,7 +51,7 @@ We at Kifi hope you're having a great week.
 }
 
 <p>Cheers,<br>
-@senderInfo.firstName, @senderInfo.title at Kifi<br>
-<a href="@htmlUrl(baseUrl + senderInfo.path + "?", "gratSenderProf", true)">www.kifi.com@senderInfo.path</a></p>
+@SenderInfo.FIRSTNAME, @SenderInfo.ROLE at Kifi<br>
+<a href="@htmlUrl(baseUrl + SenderInfo.PATH + "?", "gratSenderProf", true)">www.kifi.com@SenderInfo.PATH</a></p>
 </body>
 </html>

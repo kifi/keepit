@@ -179,7 +179,7 @@ class SearchFactory @Inject() (
     val future = libraryIdsReqConsolidator(userId) { userId =>
       SafeFuture {
         val libraryMembershipSearcher = libraryMembershipIndexer.getSearcher
-        val myOwnLibIds = LibraryMembershipIndexable.getLibrariesByOwner(libraryMembershipSearcher, userId)
+        val myOwnLibIds = LibraryMembershipIndexable.getLibrariesByCollaborator(libraryMembershipSearcher, userId)
         val memberLibIds = LibraryMembershipIndexable.getLibrariesByMember(libraryMembershipSearcher, userId)
 
         (myOwnLibIds, memberLibIds) // myOwnLibIds is a subset of memberLibIds

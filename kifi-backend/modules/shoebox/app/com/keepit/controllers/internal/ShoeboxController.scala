@@ -475,18 +475,12 @@ class ShoeboxController @Inject() (
     Ok(result)
   }
 
-  // Replaced by getBasicLibraryDetails below. Please replace dependencies.
-  def getBasicLibraryStatistics() = Action(parse.tolerantJson) { request =>
-    val libraryIds = request.body.as[Set[Id[Library]]]
-    val basicStatisticsByLibraryId = libraryCommander.getBasicLibraryStatistics(libraryIds)
-    implicit val tupleWrites = TupleFormat.tuple2Writes[Id[Library], BasicLibraryStatistics]
-    val result = Json.toJson(basicStatisticsByLibraryId.toSeq)
-    Ok(result)
-  }
-
   def getBasicLibraryDetails() = Action(parse.tolerantJson) { request =>
-    val libraryIds = request.body.as[Set[Id[Library]]]
-    val basicDetailsByLibraryId = libraryCommander.getBasicLibraryDetails(libraryIds)
+    val libraryIds = (request.body \ "libraryIds").as[Set[Id[Library]]]
+    val idealImageSize = (request.body \ "idealImageSize").as[ImageSize]
+    val viewerId = (request.body \ "viewerId").asOpt[Id[User]]
+
+    val basicDetailsByLibraryId = libraryCommander.getBasicLibraryDetails(libraryIds, idealImageSize, viewerId)
     implicit val tupleWrites = TupleFormat.tuple2Writes[Id[Library], BasicLibraryDetails]
     val result = Json.toJson(basicDetailsByLibraryId.toSeq)
     Ok(result)
@@ -499,16 +493,6 @@ class ShoeboxController @Inject() (
     }
     implicit val tupleWrites = TupleFormat.tuple2Writes[Id[User], Int]
     val result = Json.toJson(keepCountsByUserId.toSeq)
-    Ok(result)
-  }
-
-  def getLibraryImageUrls() = Action(parse.tolerantJson) { request =>
-    val libraryIds = (request.body \ "libraryIds").as[Set[Id[Library]]]
-    val idealImageSize = (request.body \ "idealImageSize").as[ImageSize]
-    val imagesByLibraryId = libraryImageCommander.getBestImageForLibraries(libraryIds, idealImageSize)
-    val imageUrlsByLibraryId = imagesByLibraryId.mapValues(libraryImageCommander.getUrl)
-    implicit val tupleWrites = TupleFormat.tuple2Writes[Id[Library], String]
-    val result = Json.toJson(imageUrlsByLibraryId.toSeq)
     Ok(result)
   }
 

@@ -10,6 +10,7 @@ import play.api.test.Helpers._
 import com.keepit.common.time._
 
 class RoverRepoTest extends Specification with RoverApplicationInjector {
+  // This test uses an Application so that actual evolutions are applied and tested.
   "Rover" should {
     "save and retrieve models" in {
       running(new RoverApplication()) {

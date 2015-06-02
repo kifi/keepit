@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfLibraryMembers', [
-  'libraryService', '$timeout', 'net',
-  function (libraryService, $timeout, net) {
+  'libraryService', 'profileService', '$timeout', 'net',
+  function (libraryService, profileService, $timeout, net) {
     return {
       restrict: 'A',
       require: '^kfModal',
@@ -24,6 +24,7 @@ angular.module('kifi')
         scope.selectedMember = null;
         scope.memberList = [];
         scope.memberScrollDistance = '100%';
+        scope.me = profileService.me;
 
         scope.isMemberScrollDisabled = function () {
           return !(scope.moreMembers);
@@ -48,7 +49,7 @@ angular.module('kifi')
               } else {
                 scope.moreMembers = true;
                 scope.offset += 1;
-                _.remove(members, 'lastInvitedAt');
+                members = filterMembers(members, scope.filterType);
                 scope.memberList.push.apply(scope.memberList, members);
               }
             });
@@ -58,6 +59,15 @@ angular.module('kifi')
         //
         // Internal functions
         //
+        function filterMembers(members, filterType) {
+          if (filterType === 'followers_only') {
+            members = _.filter(members, {membership : 'read_only'});
+          } else if (filterType === 'collaborators_only') {
+            members = _.filter(members, {membership : 'read_write'});
+          }
+          return members;
+        }
+
         function updateMembership(member, access) {
           scope.selectedMember = member;
           return net.updateLibraryMembership(scope.library.id, member.id, {access: access});
@@ -73,6 +83,15 @@ angular.module('kifi')
         function updateLibraryObject(oldAccess, newAccess) {
           if (newAccess === oldAccess) {
             return;
+          }
+
+          // update own membership in library object (change access or remove membership)
+          if (scope.selectedMember.id === scope.me.id) {
+            if (newAccess) {
+              scope.library.membership.access = newAccess;
+            } else {
+              scope.library.membership = null;
+            }
           }
 
           // remove/decrement fields in library object based on oldAccess
@@ -156,6 +175,7 @@ angular.module('kifi')
           scope.canManage = scope.modalData.canManageMembers;
           scope.currentPageOrigin = scope.modalData.currentPageOrigin;
           scope.amOwner = scope.modalData.amOwner;
+          scope.filterType = scope.modalData.filterType;
         }
       }
     };

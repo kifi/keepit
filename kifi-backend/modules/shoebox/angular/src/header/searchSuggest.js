@@ -18,7 +18,8 @@ angular.module('kifi')
 
         scope.me = profileService.me;
         scope.working = false;
-        scope.inLibrary = false;
+        scope.searchInLibrary = false;
+        scope.resultsInLibrary = false;
         scope.uris = null;
         scope.libraries = null;
         scope.users = null;
@@ -118,9 +119,10 @@ angular.module('kifi')
               scope.libraries = null;
             }
             scope.working = true;
+            scope.searchInLibrary = !!libraryId;
             searchSuggestService.suggest(q, libraryId).then(function (data) {
               if (scope.search.text.trimLeft() === q && (scope.search.libraryChip ? scope.libraryId : null) === libraryId) {
-                scope.inLibrary = !!libraryId;
+                scope.resultsInLibrary = !!libraryId;
                 scope.users = data.users && data.users.hits;
                 scope.libraries = data.libraries && data.libraries.hits;
                 scope.uris = data.uris && data.uris.hits;
@@ -138,7 +140,8 @@ angular.module('kifi')
           } else {
             inEmptyQueryState = true;
             scope.working = false;
-            scope.inLibrary = false;
+            scope.searchInLibrary = false;
+            scope.resultsInLibrary = false;
             scope.uris = null;
             scope.libraries = libraryService.getOwnInfos().filter(notAtLibInfo.bind(null, $location.url())).sort(compareLibInfos).slice(0, 7).map(adaptLibInfo);
             scope.users = null;

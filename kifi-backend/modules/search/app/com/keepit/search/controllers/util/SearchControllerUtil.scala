@@ -77,13 +77,14 @@ trait SearchControllerUtil {
     augmentationCommander.getAugmentedItems(augmentationRequest).imap { augmentedItems => items.map(augmentedItems(_)) }
   }
 
-  def getLibraryRecordsAndVisibility(librarySearcher: Searcher, libraryIds: Set[Id[Library]]): Map[Id[Library], (LibraryRecord, LibraryVisibility)] = {
+  def getLibraryRecordsAndVisibilityAndKind(librarySearcher: Searcher, libraryIds: Set[Id[Library]]): Map[Id[Library], (LibraryRecord, LibraryVisibility, LibraryKind)] = {
     for {
       libId <- libraryIds
       record <- LibraryIndexable.getRecord(librarySearcher, libId)
       visibility <- LibraryIndexable.getVisibility(librarySearcher, libId.id)
+      kind <- LibraryIndexable.getKind(librarySearcher, libId.id)
     } yield {
-      libId -> (record, visibility)
+      libId -> (record, visibility, kind)
     }
   }.toMap
 

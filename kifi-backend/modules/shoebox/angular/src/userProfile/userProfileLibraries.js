@@ -36,15 +36,11 @@ angular.module('kifi')
       $rootScope.$on('libraryDeleted', function (event, libraryId) {
         _.remove($scope.libraries, {id: libraryId});
       }),
-      $rootScope.$on('libraryJoined', function (event, libraryId) {
+      $rootScope.$on('libraryJoined', function (event, libraryId, membership) {
         var lib = _.find($scope.libraries, {id: libraryId});
         if (lib && !lib.membership) {
-          lib.membership = {
-            access: 'read_only',
-            listed: true,
-            subscribed: false
-          };
-          lib.numFollowers++;
+          lib.membership = membership;
+          lib.numFollowers++;  // TODO: handle join as collaborator properly
           if (lib.followers.length < 3 && profileService.me.pictureName !== '0.jpg') {
             var me = _.pick(profileService.me, 'id', 'firstName', 'lastName', 'pictureName', 'username');
             lib.followers.push(me);
@@ -152,6 +148,19 @@ angular.module('kifi')
     var currentPageName;
     var currentPageOrigin;
 
+    function canModifyCollaborators(lib) {
+      var mem = lib.membership;
+      return mem && (mem.access === 'owner' || mem.access === 'read_write' && lib.whoCanInvite === 'collaborator');
+    }
+
+    function updateCollaborators(numCollaborators, ignored, scope) {
+      var n = 3; // at most 4 circles, one spot reserved for owner
+      if (canModifyCollaborators(scope.lib)) {
+        n--; // one spot reserved for add collaborator button
+      }
+      scope.maxNumCollaboratorsToShow = numCollaborators > n ? n - 1 : n;  // one spot may be reserved for +N button
+    }
+
     function openModifyLibrary(library) {
       modalService.open({
         template: 'libraries/manageLibraryModal.tpl.html',
@@ -222,6 +231,19 @@ angular.module('kifi')
       });
     }
 
+    function openCollaboratorsList(lib) {
+      modalService.open({
+          template: 'libraries/libraryMembersModal.tpl.html',
+          modalData: {
+            library: lib,
+            canManageMembers: canModifyCollaborators(lib),
+            amOwner: (lib.membership || {}).access === 'owner',
+            filterType: 'collaborators_only',
+            currentPageOrigin: currentPageOrigin
+          }
+        });
+    }
+
     return {
       restrict: 'A',
       replace: true,
@@ -238,10 +260,19 @@ angular.module('kifi')
         currentPageName = scope.currentPageName;
         currentPageOrigin = scope.currentPageOrigin;
 
+        if (canModifyCollaborators(scope.lib)) {
+          scope.$watch('lib.numCollaborators', updateCollaborators);
+        } else {
+          updateCollaborators(scope.lib.numCollaborators, null, scope);
+        }
+
         scope.myProfile = profileService.me.id === scope.profileId;
         scope.myLibrary = profileService.me.id === scope.lib.owner.id;
+
+        // not copying all of these functions for each card, to avoid the memory hit
         scope.openModifyLibrary = openModifyLibrary;
         scope.openFollowersList = openFollowersList;
+        scope.openCollaboratorsList = openCollaboratorsList;
         scope.onFollowButtonClick = onFollowButtonClick;
         scope.toggleSubscribed = toggleSubscribed;
         scope.trackUplCardClick = trackUplCardClick;
