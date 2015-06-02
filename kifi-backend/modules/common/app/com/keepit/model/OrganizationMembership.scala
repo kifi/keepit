@@ -1,5 +1,6 @@
 package com.keepit.model
 
+import com.keepit.common.crypto.ModelWithPublicId
 import com.keepit.common.db._
 import com.keepit.common.time._
 import org.joda.time.DateTime
