@@ -10,12 +10,8 @@ import org.joda.time.DateTime
 
 @ImplementedBy(classOf[OrganizationInviteRepoImpl])
 trait OrganizationInviteRepo extends Repo[OrganizationInvite] {
-  def inviteUsers(orgId: Id[Organization], inviterId: Id[Organization],
-    inviteUsers: Seq[Either[Id[User], EmailAddress]], message: Option[String]): Seq[OrganizationInvite] = ???
-  def inviteUser(orgId: Id[Organization], inviterId: Id[Organization], userId: Either[Id[User], EmailAddress],
-    message: Option[String]): OrganizationInvite = ???
-  def acceptInvitation(organizationId: Id[Organization], userId: Id[User]): OrganizationMembership = ???
-  def declineInvitation(organizationId: Id[Organization], userId: Id[User]): Unit = ???
+  def getByOrganization(organizationId: Id[Organization]): Seq[OrganizationInvite] = ???
+  def getByInviter(inviterId: Id[User]): Seq[OrganizationInvite] = ???
 }
 
 @Singleton

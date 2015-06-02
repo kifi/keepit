@@ -10,9 +10,9 @@ import org.joda.time.DateTime
 
 @ImplementedBy(classOf[OrganizationMembershipRepoImpl])
 trait OrganizationMembershipRepo extends Repo[OrganizationMembership] with SeqNumberFunction[OrganizationMembership] {
-  def organizationsByUser(userId: Id[User]): Seq[Organization] = ???
-  def listMembers(orgId: Id[Organization]): Seq[Id[User]] = ???
-  def revokeAccess(orgId: Id[Organization], userId: Id[User]) = ???
+  def getByUserId(userId: Id[User], excludeStates: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Seq[OrganizationMembership] = ???
+  def getbyOrgId(orgId: Id[Organization], excludeStates: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Seq[OrganizationMembership] = ???
+  def deactivate(orgId: Id[Organization], userId: Id[User], excludeStates: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession) = ???
 }
 
 @Singleton

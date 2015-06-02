@@ -10,9 +10,7 @@ import org.joda.time.DateTime
 
 @ImplementedBy(classOf[OrganizationLogoRepoImpl])
 trait OrganizationLogoRepo extends Repo[OrganizationLogo] {
-  def uploadLogo(organizationId: Id[Organization], position: Option[ImagePosition], width: Int, height: Int,
-    format: ImageFormat, kind: ProcessImageOperation, imagePath: ImagePath, source: ImageSource,
-    sourceFileHash: ImageHash, sourceImageURL: Option[String]) = ???
+  def getByOrganization(organizationId: Id[Organization]): Seq[OrganizationLogo] = ???
 }
 
 @Singleton

@@ -32,8 +32,8 @@ case class OrganizationInvite(
 
 object OrganizationInvite extends ModelWithPublicIdCompanion[OrganizationInvite] {
 
-  protected[this] val publicIdPrefix = "l"
-  protected[this] val publicIdIvSpec = new IvParameterSpec(Array(-20, -76, -59, 85, 85, -2, 72, 61, 58, 38, 60, -2, -128, 79, 9, -87))
+  protected[this] val publicIdPrefix = "o"
+  protected[this] val publicIdIvSpec = new IvParameterSpec(Array(-66, -82, -35, -48, -88, 55, -82, 53, -38, 123, 92, 62, -14, -35, 95, -93))
 
   implicit def format = (
     (__ \ 'id).formatNullable(Id.format[OrganizationInvite]) and

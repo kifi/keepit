@@ -21,8 +21,6 @@ case class OrganizationMembership(
   def withUpdateTime(now: DateTime): OrganizationMembership = this.copy(updatedAt = now)
   def withState(newState: State[OrganizationMembership]): OrganizationMembership = this.copy(state = newState)
 
-  override def toString: String = s"OrganizationMembership[id=$id,organizationId=$organizationId,userId=$userId,access=$access,state=$state]"
-
   def canWrite: Boolean = access == OrganizationAccess.OWNER || access == OrganizationAccess.READ_WRITE
   def isOwner: Boolean = access == OrganizationAccess.OWNER
 }
@@ -42,27 +40,11 @@ object OrganizationMembership {
 
 object OrganizationMembershipStates extends States[OrganizationMembership]
 
-sealed abstract class OrganizationAccess(val value: String, val priority: Int) {
-  def isHigherAccess(x: OrganizationAccess): Boolean = {
-    this.priority > x.priority
-  }
-
-  def isHigherOrEqualAccess(x: OrganizationAccess): Boolean = {
-    this.priority >= x.priority
-  }
-
-  def isLowerAccess(x: OrganizationAccess): Boolean = {
-    this.priority < x.priority
-  }
-
-  def isLowerOrEqualAccess(x: OrganizationAccess): Boolean = {
-    this.priority <= x.priority
-  }
-}
+sealed abstract class OrganizationAccess(val value: String, val priority: Int)
 
 object OrganizationAccess {
-  case object READ_WRITE extends OrganizationAccess("read_write", 2)
-  case object OWNER extends OrganizationAccess("owner", 3)
+  case object READ_WRITE extends OrganizationAccess("read_write", 0)
+  case object OWNER extends OrganizationAccess("owner", 1)
 
   implicit def format[T]: Format[OrganizationAccess] =
     Format(__.read[String].map(OrganizationAccess(_)), new Writes[OrganizationAccess] {

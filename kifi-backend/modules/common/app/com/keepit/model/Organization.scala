@@ -1,7 +1,6 @@
 package com.keepit.model
 
 import java.net.URLEncoder
-import java.util.regex.Pattern
 
 import com.keepit.common.crypto.ModelWithPublicId
 import com.keepit.common.db._
@@ -50,30 +49,6 @@ object OrganizationSlug {
     Format(__.read[String].map(OrganizationSlug(_)), new Writes[OrganizationSlug] {
       def writes(o: OrganizationSlug) = JsString(o.value)
     })
-
-  private val MaxLength = 50
-  private val ReservedSlugs = Set("libraries", "connections", "followers", "keeps", "tags")
-  private val BeforeTruncate = Seq("[^\\w\\s-]|_" -> "", "(\\s|--)+" -> "-", "^-" -> "") map compile
-  private val AfterTruncate = Seq("-$" -> "") map compile
-
-  def isValidSlug(slug: String): Boolean = {
-    slug.nonEmpty && !slug.contains(' ') && slug.length <= MaxLength
-  }
-
-  def isReservedSlug(slug: String): Boolean = {
-    ReservedSlugs.contains(slug)
-  }
-
-  def generateFromName(name: String): String = {
-    // taken from generateSlug() in angular/src/common/util.js
-    val s1 = BeforeTruncate.foldLeft(name.toLowerCase())(replaceAll)
-    val s2 = AfterTruncate.foldLeft(s1.take(MaxLength))(replaceAll)
-    if (isReservedSlug(s2)) s2 + '-' else s2
-  }
-
-  private def compile(pair: (String, String)): (Pattern, String) = Pattern.compile(pair._1) -> pair._2
-
-  private def replaceAll(s: String, op: (Pattern, String)): String = op._1.matcher(s).replaceAll(op._2)
 }
 
 object OrganizationStates extends States[Organization]

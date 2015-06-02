@@ -11,17 +11,8 @@ import org.joda.time.DateTime
 
 @ImplementedBy(classOf[OrganizationRepoImpl])
 trait OrganizationRepo extends Repo[Organization] with SeqNumberFunction[Organization] {
-  /*** Accessing Organizations ***/
-  def listLibraries(organizationId: Id[Organization]) = ???
-
-  /*** Modifying Organizations ***/
-  def createOrganization(ownerId: Id[User], teamName: String, description: Option[String], slug: OrganizationSlug) = ???
-  def addLibraries(organizationId: Id[Organization], libraries: Seq[Id[Library]]): Seq[Library] = ???
-  def addLibrary(organizationId: Id[Organization], libraryId: Id[Library]): Library = ???
-  def removeLibrary(libraryId: Id[Library]): Library = ???
-  def changeName(organizationId: Id[Organization], name: String): Organization = ???
-  def changeDescription(organizationId: Id[Organization], description: String): Organization = ???
-  def destroyOrganization(organizationId: Id[Organization]) = ???
+  def updateName(organizationId: Id[Organization], name: String): Organization = ???
+  def updateDescription(organizationId: Id[Organization], description: String): Organization = ???
 }
 
 @Singleton
