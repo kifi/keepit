@@ -72,10 +72,10 @@ case class PublicPageMetaPrivateTags(urlPathOnly: String) extends PublicPageMeta
     """.stripMargin
 }
 
-case class PublicPageMetaFullTags(unsafeTitle: String, url: String, urlPathOnly: String, unsafeDescription: String,
-    images: Seq[String], facebookId: Option[String], createdAt: DateTime, updatedAt: DateTime,
-    unsafeFirstName: String, unsafeLastName: String, profileUrl: String, noIndex: Boolean,
-    related: Seq[String]) extends PublicPageMetaTags {
+case class PublicPageMetaFullTags(unsafeTitle: String, url: String, urlPathOnly: String,
+    feedName: Option[String], unsafeDescription: String, images: Seq[String], facebookId: Option[String],
+    createdAt: DateTime, updatedAt: DateTime, unsafeFirstName: String, unsafeLastName: String, profileUrl: String,
+    noIndex: Boolean, related: Seq[String]) extends PublicPageMetaTags {
 
   def clean(unsafeString: String) = scala.xml.Utility.escape(unsafeString)
 
@@ -84,6 +84,13 @@ case class PublicPageMetaFullTags(unsafeTitle: String, url: String, urlPathOnly:
   val firstName = clean(unsafeFirstName)
   val lastName = clean(unsafeLastName)
   val fullName = s"$firstName $lastName"
+
+  private def includeFeedTags: String = feedName.map { name =>
+    s"""
+         |<link rel="alternate" type="application/rss+xml" title="$name feed on Kifi" href="$url/rss" />
+         |<link rel="alternate" type="application/atom+xml" title="$name feed on Kifi" href="$url/atom" />
+       """.stripMargin
+  }.getOrElse("")
 
   private def ogSeeAlso: String = related.take(6) map { link =>
     s"""
@@ -118,6 +125,7 @@ case class PublicPageMetaFullTags(unsafeTitle: String, url: String, urlPathOnly:
     formatOpenGraph(s"${PublicPageMetaTags.facebookNameSpace}:library") +
       s"""
       |<meta name="author" content="$firstName $lastName">
+      |$includeFeedTags
       |<meta property="${PublicPageMetaTags.facebookNameSpace}:owner" content="$profileUrl">
       |<meta property="og:updated_time" content="${ISO_8601_DAY_FORMAT.print(updatedAt)}">
       |$ogSeeAlso

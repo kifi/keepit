@@ -61,7 +61,7 @@ class FeedCommander @Inject() (
 
   def libraryFeed(library: Library, keepCountToDisplay: Int = 20, offset: Int = 0): Future[Elem] = {
     val (libImage, keeps, libraryCreator) = db.readOnlyMaster { implicit session =>
-      val image = libraryImageCommander.getBestImageForLibrary(library.id.get, ImageSize(600, 600))
+      val image = libraryImageCommander.getBestImageForLibrary(library.id.get, ImageSize(100, 100))
       val keeps = keepRepo.getByLibrary(libraryId = library.id.get, offset = offset, limit = keepCountToDisplay, excludeSet = Set(KeepStates.INACTIVE))
       val libraryCreator = userRepo.get(library.ownerId)
       (image.map(_.imagePath.getUrl(s3ImageConfig)).getOrElse(""), keeps, libraryCreator)
@@ -72,7 +72,7 @@ class FeedCommander @Inject() (
     descriptionsFuture map { descriptions =>
       <rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:media="http://search.yahoo.com/mrss/" xmlns:atom="http://www.w3.org/2005/Atom">
         <channel>
-          <title>{ library.name } by { libraryCreator.username.value } * Kifi</title>
+          <title>{ library.name } by { libraryCreator.fullName } * Kifi</title>
           <link>{ feedUrl }</link>
           <description>{ library.description.getOrElse("") }</description>
           {
@@ -91,12 +91,12 @@ class FeedCommander @Inject() (
             def convertKeep(keep: Keep): RssItem = {
               val (keepImage, originalKeeper) = db.readOnlyMaster { implicit s =>
                 val image = keepImageCommander.getBestImageForKeep(keep.id.get, ScaleImageRequest(ImageSize(100, 100)))
-                (image, userRepo.getNoCache(keep.originalKeeperId.getOrElse(keep.userId)))
+                (image, userRepo.getNoCache(keep.userId))
               }
 
               RssItem(title = keep.title.getOrElse(""), description = descriptions.get(keep.uriId).flatMap(_.article.description).getOrElse(""), link = keep.url,
                 guid = keep.externalId.id, pubDate = keep.keptAt, creator = originalKeeper.fullName,
-                icon = keepImage.map(_.get).map(_.imagePath.getUrl(s3ImageConfig)).map(url => s"https:$url").getOrElse(""))
+                icon = keepImage.map(_.map(_.imagePath.getUrl(s3ImageConfig))).map(url => s"https:$url").getOrElse(""))
             }
             rssItems(keeps map convertKeep)
           }{ /* License asking for attribution */ }

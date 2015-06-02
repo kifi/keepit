@@ -52,7 +52,7 @@ class FeedCommanderTest extends Specification with ShoeboxTestInjector {
         val resultTry = Await.ready(commander.libraryFeed(library), Duration.Inf).value.get
         resultTry.isSuccess must equalTo(true)
         val result = resultTry.get
-        (result \ "channel" \ "title").text must contain("test by Colin-Lane")
+        (result \ "channel" \ "title").text must contain("test by Colin Lane")
 
         val amazon = (result \ "channel" \ "item")(0)
         (amazon \ "title").text must be equalTo ("Amazon")
@@ -92,7 +92,7 @@ class FeedCommanderTest extends Specification with ShoeboxTestInjector {
           val resultTry = Await.ready(commander.libraryFeed(library, keepCountToDisplay = 1, offset = 0), Duration.Inf).value.get
           resultTry.isSuccess must equalTo(true)
           val result = resultTry.get
-          (result \ "channel" \ "title").text must contain("test by Colin-Lane")
+          (result \ "channel" \ "title").text must contain("test by Colin Lane")
 
           val items = (result \ "channel" \ "item")
           items.size must equalTo(1)
@@ -129,7 +129,7 @@ class FeedCommanderTest extends Specification with ShoeboxTestInjector {
           val resultTry = Await.ready(commander.libraryFeed(library, keepCountToDisplay = 1, offset = 1), Duration.Inf).value.get
           resultTry.isSuccess must equalTo(true)
           val result = resultTry.get
-          (result \ "channel" \ "title").text must contain("test by Colin-Lane")
+          (result \ "channel" \ "title").text must contain("test by Colin Lane")
 
           val items = (result \ "channel" \ "item")
           items.size must equalTo(1)

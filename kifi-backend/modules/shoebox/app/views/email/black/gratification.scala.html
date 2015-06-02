@@ -1,11 +1,10 @@
 @(userId: Id[User],
-senderInfo: com.keepit.commanders.emails.GratificationEmailSender.SenderInfo,
 libViews: com.keepit.commanders.emails.GratificationCommander.LibraryCountData,
 libFollowers: com.keepit.commanders.emails.GratificationCommander.LibraryCountData,
 newConnections: Seq[Id[User]]
 )
 @import com.keepit.common.mail.template.helpers._
-@import com.keepit.commanders.emails.GratificationEmailSender
+@import com.keepit.commanders.emails.GratificationEmailSender._
 @MIN_VIEWS = @{5}
 @MIN_FOLLOWERS = @{1}
 @MIN_CONNECTIONS = @{1}
@@ -52,7 +51,7 @@ We at Kifi hope you're having a great week.
 }
 
 <p>Cheers,<br>
-@senderInfo.firstName, @senderInfo.role at Kifi<br>
-<a href="@htmlUrl(baseUrl + senderInfo.path + "?", "gratSenderProf", true)">www.kifi.com@senderInfo.path</a></p>
+@SenderInfo.FIRSTNAME, @SenderInfo.ROLE at Kifi<br>
+<a href="@htmlUrl(baseUrl + SenderInfo.PATH + "?", "gratSenderProf", true)">www.kifi.com@SenderInfo.PATH</a></p>
 </body>
 </html>
