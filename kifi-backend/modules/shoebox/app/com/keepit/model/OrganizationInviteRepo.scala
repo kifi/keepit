@@ -10,6 +10,12 @@ import org.joda.time.DateTime
 
 @ImplementedBy(classOf[OrganizationInviteRepoImpl])
 trait OrganizationInviteRepo extends Repo[OrganizationInvite] {
+  def inviteUsers(orgId: Id[Organization], inviterId: Id[Organization],
+    inviteUsers: Seq[Either[Id[User], EmailAddress]], message: Option[String]): Seq[OrganizationInvite] = ???
+  def inviteUser(orgId: Id[Organization], inviterId: Id[Organization], userId: Either[Id[User], EmailAddress],
+    message: Option[String]): OrganizationInvite = ???
+  def acceptInvitation(organizationId: Id[Organization], userId: Id[User]): OrganizationMembership = ???
+  def declineInvitation(organizationId: Id[Organization], userId: Id[User]): Unit = ???
 }
 
 @Singleton
@@ -21,13 +27,14 @@ class OrganizationInviteRepoImpl @Inject() (val db: DataBaseComponent, val clock
 
   type RepoImpl = OrganizationInviteTable
   class OrganizationInviteTable(tag: Tag) extends RepoTable[OrganizationInvite](db, tag, "organization_invite") {
+    implicit val organizationAccessMapper = MappedColumnType.base[OrganizationAccess, String](_.value, OrganizationAccess(_))
+
     def organizationId = column[Id[Organization]]("organization_id", O.NotNull)
     def inviterId = column[Id[User]]("inviter_id", O.NotNull)
     def userId = column[Option[Id[User]]]("user_id", O.Nullable)
     def emailAddress = column[Option[EmailAddress]]("email_address", O.Nullable)
     def access = column[OrganizationAccess]("access", O.NotNull)
     def message = column[Option[String]]("message", O.Nullable)
-    implicit val organizationAccessMapper = MappedColumnType.base[OrganizationAccess, String](_.value, OrganizationAccess(_))
 
     def applyFromDbRow(
       id: Option[Id[OrganizationInvite]],

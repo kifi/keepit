@@ -2,11 +2,10 @@ package com.keepit.model
 
 import javax.crypto.spec.IvParameterSpec
 
-import com.keepit.common.crypto.{ ModelWithPublicIdCompanion, ModelWithPublicId }
-import com.keepit.common.db.{ States, ModelWithState, State, Id }
+import com.keepit.common.crypto.{ ModelWithPublicId, ModelWithPublicIdCompanion }
+import com.keepit.common.db.{ Id, ModelWithState, State, States }
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.time._
-import org.apache.commons.lang3.RandomStringUtils
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -26,9 +25,6 @@ case class OrganizationInvite(
   def withId(id: Id[OrganizationInvite]): OrganizationInvite = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime): OrganizationInvite = this.copy(updatedAt = now)
   def withState(newState: State[OrganizationInvite]): OrganizationInvite = this.copy(state = newState)
-
-  def isCollaborator = (access == OrganizationAccess.READ_WRITE) || (access == OrganizationAccess.READ_INSERT)
-  def isFollower = (access == OrganizationAccess.READ_ONLY)
 
   override def toString: String = s"OrganizationInvite[id=$id,organizationId=$organizationId,ownerId=$inviterId,userId=$userId,email=$emailAddress,access=$access,state=$state]"
 
