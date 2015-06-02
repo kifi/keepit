@@ -37,10 +37,10 @@ class GratificationEmailCronPluginImpl @Inject() (
     cronTaskOnLeader(quartz, actor.ref, cronTimeEveryday, GratificationEmailMessage.SendEmails)
 
     val cronTimeFriday = s"0 0 $utcHourForNoonEasternTime ? * FRI"
-    cronTaskOnLeader(quartz, actor.ref, cronTimeEveryday, GratificationEmailMessage.SendOddEmails)
+    cronTaskOnLeader(quartz, actor.ref, cronTimeFriday, GratificationEmailMessage.SendOddEmails)
 
-    //val cronTimeMonday = s"0 0 $utcHourForNoonEasternTime ? * MON"
-    //cronTaskOnLeader(quartz, actor.ref, cronTimeEveryday, GratificationEmailMessage.SendEvenEmails)
+    val cronTimeMonday = s"0 0 $utcHourForNoonEasternTime ? * MON"
+    cronTaskOnLeader(quartz, actor.ref, cronTimeMonday, GratificationEmailMessage.SendEvenEmails)
   }
 }
 
