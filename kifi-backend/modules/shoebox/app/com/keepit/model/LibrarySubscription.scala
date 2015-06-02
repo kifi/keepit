@@ -58,6 +58,7 @@ object SubscriptionInfo {
     def writes(subscription: SubscriptionInfo): JsValue = {
       subscription match {
         case s: SlackInfo => Json.toJson(s)
+        case _ => throw new Exception("[LibrarySubscription] Subscription type not supported")
       }
     }
   }
