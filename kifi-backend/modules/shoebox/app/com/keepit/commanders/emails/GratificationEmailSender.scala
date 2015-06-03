@@ -3,6 +3,7 @@ package com.keepit.commanders.emails
 import com.google.inject.Inject
 import com.keepit.commanders.LocalUserExperimentCommander
 import com.keepit.commanders.emails.GratificationCommander.LibraryCountData
+import com.keepit.commanders.emails.GratificationEmailSender.SenderInfo
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -17,14 +18,13 @@ import play.api.libs.concurrent.Execution.Implicits._
 
 object GratificationEmailSender {
 
-  case class SenderInfo(
-    firstName: String = "Cam",
-    lastName: String = "Hashemi",
-    addr: EmailAddress = SystemEmailAddress.CAM,
-    path: String = "/cam",
-    role: String = "engineer")
-
-  val senderInfo = new SenderInfo
+  object SenderInfo {
+    val FIRSTNAME = "Cam"
+    val LASTNAME = "Hashemi"
+    val ADDR = SystemEmailAddress.CAM
+    val PATH = "/cam"
+    val ROLE = "engineer"
+  }
 }
 
 class GratificationEmailSender @Inject() (
@@ -44,17 +44,15 @@ class GratificationEmailSender @Inject() (
     val followersByLibrary: LibraryCountData = gratificationCommander.getLibraryFollowerCounts(userId)
     val newConnections: Seq[Id[User]] = gratificationCommander.getNewConnections(userId)
 
-    val senderInfo = GratificationEmailSender.senderInfo
-
     fViewsByLibrary.flatMap { viewsByLibrary: LibraryCountData =>
       val emailToSend = EmailToSend(
-        from = senderInfo.addr,
-        fromName = Some(Right(senderInfo.firstName + " " + senderInfo.lastName)),
+        from = SenderInfo.ADDR,
+        fromName = Some(Right(SenderInfo.FIRSTNAME + " " + SenderInfo.LASTNAME)),
         to = toAddress.map(Right.apply).getOrElse(Left(userId)),
         subject = "You've been busy this week on Kifi!",
         category = NotificationCategory.User.GRATIFICATION_EMAIL,
-        htmlTemplate = views.html.email.black.gratification(userId, senderInfo, viewsByLibrary, followersByLibrary, newConnections),
-        textTemplate = Some(views.html.email.black.gratificationText(userId, senderInfo, viewsByLibrary, followersByLibrary, newConnections)),
+        htmlTemplate = views.html.email.black.gratification(userId, viewsByLibrary, followersByLibrary, newConnections),
+        textTemplate = Some(views.html.email.black.gratificationText(userId, viewsByLibrary, followersByLibrary, newConnections)),
         templateOptions = Map("layout" -> CustomLayout),
         tips = Seq.empty
       )

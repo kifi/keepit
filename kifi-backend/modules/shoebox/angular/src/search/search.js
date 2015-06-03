@@ -186,17 +186,23 @@ angular.module('kifi')
     }
 
     function unpackLibrary(library) {
+      var followers = library.followers || [];
       return {
         id: library.id,
         owner: library.owner,
-        numFollowers: library.memberCount - 1,
-        numKeeps: library.keepCount,
+        collaborators: library.collaborators,
+        numCollaborators: library.numCollaborators,
+        followers: followers,
+        numFollowers: library.numFollowers,
+        numKeeps: library.numKeeps,
         name: library.name,
         description: library.description,
         color: library.color,
         image: library.image,
         path: library.path,
-        reason: 'topic'
+        membership: library.membership,
+        modifiedAt: library.modifiedAt,
+        reason: followers.length || library.modifiedAt ? '' : 'topic'
       };
     }
 

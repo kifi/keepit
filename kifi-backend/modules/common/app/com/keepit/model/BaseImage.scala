@@ -110,4 +110,5 @@ object ProcessImageOperation {
     all.find(_.kind == kind) getOrElse Original
   }
 
+  implicit val format: Format[ProcessImageOperation] = Format(__.read[String].map(ProcessImageOperation(_)), Writes(op => JsString(op.kind)))
 }

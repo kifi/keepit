@@ -60,7 +60,7 @@ class AtomCommanderTest extends Specification with ShoeboxTestInjector {
     }
   }
 
-  "Feed Commander" should {
+  "Atom Feed Commander" should {
     "create feed for library" in {
       withDb(modules: _*) { implicit injector =>
         val library = setup()
@@ -68,8 +68,8 @@ class AtomCommanderTest extends Specification with ShoeboxTestInjector {
         val resultTry = Await.ready(commander.libraryFeed(library), Duration.Inf).value.get
         resultTry.isSuccess must equalTo(true)
         val result = resultTry.get
-        (result \ "title") === "test by Colin-Lane * Kifi"
-        (result \ "author" \ "name") === "Colin-Lane"
+        (result \ "title") === "test by Colin Lane * Kifi"
+        (result \ "author" \ "name") === "Colin Lane"
         (result \ "id") contains "urn:kifi:"
         // Library was just created, should be accurate
         new DateTime((result \ "updated").text).getMillis() - DateTime.now().getMillis < 100000

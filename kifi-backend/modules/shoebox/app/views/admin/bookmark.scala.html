@@ -32,6 +32,9 @@
         <th>Creation time</th><td>@adminHelper.dateTimeDisplay(bookmark.createdAt)</td>
       </tr>
       <tr>
+        <th>Note</th><td>@{bookmark.note.getOrElse("No note")}</td>
+      </tr>
+      <tr>
         <th>Article Keywords</th><td>@keywords.article.mkString(" ")</td>
       </tr>
       <tr>

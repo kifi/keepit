@@ -1,6 +1,7 @@
 uphSmallMaxDim = 736px // for @media max-height and max-width
 cardWidth = 210px
 cardSideSpace = 18px
+cardBorderRadius = 16px
 
 .kf-upl-nav-container
   padding: 14px 0
@@ -75,10 +76,9 @@ cardSideSpace = 18px
   margin: 23px (cardSideSpace / 2) 0
   background: libraryGray
   background-size: cover
-  border-radius: 16px
+  border-radius: cardBorderRadius
   vertical-align: top
   position: relative
-  overflow: hidden
   text-align: center
 
 .kf-upl-create-card
@@ -203,6 +203,7 @@ name-line-height = 22px
 owner-pic-diam = 32px
 
 .kf-upl-card-owner
+.kf-upl-collabs
   position: absolute
   top: 98px
   left: 0
@@ -216,17 +217,42 @@ owner-pic-diam = 32px
   color: #fff
 
 .kf-upl-card-owner-pic
+.kf-upl-collab-pic
   width: owner-pic-diam
   height: owner-pic-diam
   border-radius: 50%
   box-shadow: 0 0 3px rgba(0,0,0,.3) inset
-  vertical-align: middle
+
+.kf-upl-card-owner-pic
   margin-right: 6px
+  vertical-align: middle
+
+.kf-upl-collab-pic-a
+  display: inline-block
+  vertical-align: middle
+  width: owner-pic-diam
+  height: owner-pic-diam
+  border-radius: 50%
+  position: relative // for .kf-utt
+
+  &>.kf-utt
+    margin-left: (owner-pic-diam / 2) + 2px
+
+.kf-upl-collab-pic-a
+.kf-upl-more-collab
+  margin: 0 3px
+
+  &>:last-child
+    margin-right: 0
+
+.kf-upl-collab-pic
+  vertical-align: top
 
 .kf-upl-card-by
   vertical-align: middle
   font-size: 11px
   font-style: italic
+  font-smoothing: antialiased
   margin-right: 5px
 
 .kf-upl-card-by-name
@@ -243,6 +269,30 @@ owner-pic-diam = 32px
 
   [href]:hover>&
     text-decoration: underline
+
+.kf-upl-more-collab
+  box-sizing: border-box
+  height: owner-pic-diam
+  width: owner-pic-diam
+  vertical-align: middle
+  borderWidth = 1px
+  border: borderWidth solid alpha(#fff, .3)
+  border-radius: 50%
+  padding: 0
+  background-color: transparent
+  font-size: 11px
+  line-height: owner-pic-diam - 2 * (borderWidth)
+  color: alpha(#fff, .7)
+
+  &:hover
+    background-color: alpha(#fff, .04)
+
+    &:active
+      background-color: alpha(#000, .01)
+
+  &::before
+    content: '+'
+    padding-right: 1px
 
 .kf-upl-counts
   position: absolute
@@ -391,6 +441,7 @@ subsDur = .3s
   right: 0
   bottom: 0
   height: 50%
+  border-radius: 0 0 cardBorderRadius cardBorderRadius
   overflow: hidden
 
   &::after
