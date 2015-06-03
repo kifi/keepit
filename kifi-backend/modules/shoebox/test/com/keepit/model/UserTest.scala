@@ -1,6 +1,6 @@
 package com.keepit.model
 
-import com.keepit.commanders.UsernameOps
+import com.keepit.commanders.HandleOps
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.healthcheck.FakeAirbrakeNotifier
 
@@ -20,11 +20,11 @@ class UserTest extends Specification with ShoeboxTestInjector {
 
   "UsernameOps" should {
     "valid" in {
-      UsernameOps.isValid("eishay-kifi") === false
-      UsernameOps.isValid("nada-boutros") === false
+      HandleOps.isValid("eishay-kifi") === false
+      HandleOps.isValid("nada-boutros") === false
       //the following line takes more then a minute to run!
       //UsernameOps.isValid("eishaytestwithaveryveryveryveryveryveryveryverylongmailgocom-") === false
-      UsernameOps.isValid("eishaytestwitha-") === false
+      HandleOps.isValid("eishaytestwitha-") === false
     }
   }
 

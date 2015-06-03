@@ -395,7 +395,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         val libraryController = inject[LibraryController]
 
         val (user1, lib1) = db.readWrite { implicit s =>
-          val user = userRepo.save(User(firstName = "Aaron", lastName = "Hsu", createdAt = t1, username = Username("ahsu"), normalizedUsername = UsernameOps.normalize("ahsu")))
+          val user = userRepo.save(User(firstName = "Aaron", lastName = "Hsu", createdAt = t1, username = Username("ahsu"), normalizedUsername = HandleOps.normalize("ahsu")))
           val library = libraryRepo.save(Library(name = "Library1", ownerId = user.id.get, slug = LibrarySlug("lib1"), memberCount = 1, visibility = LibraryVisibility.SECRET))
           libraryMembershipRepo.save(LibraryMembership(userId = user.id.get, libraryId = library.id.get, access = LibraryAccess.OWNER, listed = false))
           (user, library)
