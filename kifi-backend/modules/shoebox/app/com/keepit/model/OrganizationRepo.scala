@@ -30,6 +30,7 @@ class OrganizationRepoImpl @Inject() (val db: DataBaseComponent, val clock: Cloc
     def description = column[Option[String]]("description", O.Nullable)
     def ownerId = column[Id[User]]("owner_id", O.NotNull)
     def slug = column[OrganizationSlug]("slug", O.NotNull)
+    def normalizedSlug = column[String]("normalized_slug", O.NotNull)
 
     def applyFromDbRow(
       id: Option[Id[Organization]],
@@ -40,8 +41,9 @@ class OrganizationRepoImpl @Inject() (val db: DataBaseComponent, val clock: Cloc
       name: String,
       description: Option[String],
       ownerId: Id[User],
-      slug: OrganizationSlug) = {
-      Organization(id, createdAt, updatedAt, state, seq, name, description, ownerId, slug)
+      slug: OrganizationSlug,
+      normalizedSlug: String) = {
+      Organization(id, createdAt, updatedAt, state, seq, name, description, ownerId, slug, normalizedSlug)
     }
 
     def unapplyToDbRow(org: Organization) = {
@@ -53,10 +55,11 @@ class OrganizationRepoImpl @Inject() (val db: DataBaseComponent, val clock: Cloc
         org.name,
         org.description,
         org.ownerId,
-        org.slug))
+        org.slug,
+        org.normalizedSlug))
     }
 
-    def * = (id.?, createdAt, updatedAt, state, seq, name, description, ownerId, slug) <> ((applyFromDbRow _).tupled, unapplyToDbRow _)
+    def * = (id.?, createdAt, updatedAt, state, seq, name, description, ownerId, slug, normalizedSlug) <> ((applyFromDbRow _).tupled, unapplyToDbRow _)
   }
 
   def table(tag: Tag) = new OrganizationTable(tag)

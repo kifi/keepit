@@ -11,6 +11,7 @@ CREATE TABLE organization (
 	description text DEFAULT '',
 	owner_id bigint(20) NOT NULL,
 	slug varchar(50) NOT NULL,
+	normalized_slug varchar(50) NOT NULL,
 
 	PRIMARY KEY(id),
 	CONSTRAINT `organization_f_user` FOREIGN KEY (`owner_id`) REFERENCES user(`id`),
@@ -78,6 +79,6 @@ ALTER TABLE `library`
 ALTER TABLE `library`
 	ADD CONSTRAINT `library_f_organization` FOREIGN KEY (`organization_id`) REFERENCES organization(`id`);
 
-insert into evolutions(name, description) values('335.sql', 'team models, org_id added to library');
+insert into evolutions(name, description) values('335.sql', 'create organization, organization membership, organization_invite, and organization_logo tables, adds org_id added to library');
 
 # --- !Downs
