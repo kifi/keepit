@@ -24,12 +24,12 @@ class OrganizationRepoImpl @Inject() (val db: DataBaseComponent, val clock: Cloc
 
   type RepoImpl = OrganizationTable
   class OrganizationTable(tag: Tag) extends RepoTable[Organization](db, tag, "organization") with SeqNumberColumn[Organization] {
-    implicit val organizationSlugMapper = MappedColumnType.base[OrganizationSlug, String](_.value, OrganizationSlug(_))
 
     def name = column[String]("name", O.NotNull)
     def description = column[Option[String]]("description", O.Nullable)
     def ownerId = column[Id[User]]("owner_id", O.NotNull)
-    def slug = column[OrganizationSlug]("slug", O.NotNull)
+    def organizationHandle = column[Option[OrganizationHandle]]("organization_handle", O.Nullable)
+    def normalizedOrganizationHandle = column[Option[OrganizationHandle]]("normalized_organization_handle", O.Nullable)
 
     def applyFromDbRow(
       id: Option[Id[Organization]],
@@ -40,8 +40,13 @@ class OrganizationRepoImpl @Inject() (val db: DataBaseComponent, val clock: Cloc
       name: String,
       description: Option[String],
       ownerId: Id[User],
-      slug: OrganizationSlug) = {
-      Organization(id, createdAt, updatedAt, state, seq, name, description, ownerId, slug)
+      organizationHandleOpt: Option[OrganizationHandle],
+      normalizedOrganizationHandleOpt: Option[OrganizationHandle]) = {
+      val primaryOrganizationHandle = for {
+        organizationHandle <- organizationHandleOpt
+        normalizedOrganizationHandle <- normalizedOrganizationHandleOpt
+      } yield PrimaryOrganizationHandle(organizationHandle, normalizedOrganizationHandle)
+      Organization(id, createdAt, updatedAt, state, seq, name, description, ownerId, primaryOrganizationHandle)
     }
 
     def unapplyToDbRow(org: Organization) = {
@@ -53,10 +58,11 @@ class OrganizationRepoImpl @Inject() (val db: DataBaseComponent, val clock: Cloc
         org.name,
         org.description,
         org.ownerId,
-        org.slug))
+        org.handle.map(_.original)),
+        org.handle.map(_.normalized))
     }
 
-    def * = (id.?, createdAt, updatedAt, state, seq, name, description, ownerId, slug) <> ((applyFromDbRow _).tupled, unapplyToDbRow _)
+    def * = (id.?, createdAt, updatedAt, state, seq, name, description, ownerId, organizationHandle, normalizedOrganizationHandle) <> ((applyFromDbRow _).tupled, unapplyToDbRow _)
   }
 
   def table(tag: Tag) = new OrganizationTable(tag)

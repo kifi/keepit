@@ -6,6 +6,7 @@ import com.keepit.common.crypto.ModelWithPublicId
 import com.keepit.common.db._
 import com.keepit.common.strings._
 import com.keepit.common.time._
+import com.kifi.macros.json
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -19,7 +20,7 @@ case class Organization(
     name: String,
     description: Option[String] = None,
     ownerId: Id[User],
-    slug: OrganizationSlug) extends ModelWithPublicId[Organization] with ModelWithState[Organization] with ModelWithSeqNumber[Organization] {
+    handle: Option[PrimaryOrganizationHandle]) extends ModelWithPublicId[Organization] with ModelWithState[Organization] with ModelWithSeqNumber[Organization] {
 
   override def withId(id: Id[Organization]): Organization = this.copy(id = Some(id))
 
@@ -27,6 +28,8 @@ case class Organization(
 }
 
 object Organization {
+  implicit val primaryHandleFormat = PrimaryOrganizationHandle.jsonAnnotationFormat
+
   implicit val format: Format[Organization] = (
     (__ \ 'id).formatNullable[Id[Organization]] and
     (__ \ 'createdAt).format[DateTime] and
@@ -36,19 +39,16 @@ object Organization {
     (__ \ 'name).format[String] and
     (__ \ 'description).formatNullable[String] and
     (__ \ 'ownerId).format(Id.format[User]) and
-    (__ \ 'slug).format[OrganizationSlug]
+    (__ \ 'handle).formatNullable[PrimaryOrganizationHandle]
   )(Organization.apply, unlift(Organization.unapply))
 }
 
-case class OrganizationSlug(value: String) {
+object OrganizationStates extends States[Organization]
+
+@json
+case class OrganizationHandle(value: String) extends AnyVal {
   def urlEncoded: String = URLEncoder.encode(value, UTF8)
 }
 
-object OrganizationSlug {
-  implicit def format: Format[OrganizationSlug] =
-    Format(__.read[String].map(OrganizationSlug(_)), new Writes[OrganizationSlug] {
-      def writes(o: OrganizationSlug) = JsString(o.value)
-    })
-}
-
-object OrganizationStates extends States[Organization]
+@json
+case class PrimaryOrganizationHandle(original: OrganizationHandle, normalized: OrganizationHandle)

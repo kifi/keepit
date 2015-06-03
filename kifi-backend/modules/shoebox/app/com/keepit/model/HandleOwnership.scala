@@ -12,17 +12,20 @@ import scala.concurrent.duration._
 
 import scala.util.{ Failure, Success, Try }
 
-case class Handle(value: String)
+case class Handle(value: String) {
+  override def toString() = value
+}
+
 object Handle {
-  implicit def fromHandle(username: Username): Handle = Handle(username.value)
-  implicit def fromOrgHandle(orgHandle: OrganizationSlug): Handle = Handle(orgHandle.value)
+  implicit def fromUsername(username: Username) = Handle(username.value)
+  implicit def fromOrganizationHandle(organizationHandle: OrganizationHandle) = Handle(organizationHandle.value)
 }
 
 case class LockedHandleException(ownership: HandleOwnership)
-  extends Exception(s"${ownership.handle} is locked, owned by ${ownership.prettyOwner}.")
+  extends Exception(s"Handle ${ownership.handle} is locked, owned by ${ownership.prettyOwner}.")
 
 case class ProtectedHandleException(ownership: HandleOwnership)
-  extends Exception(s"${ownership.handle} is protected, owned by ${ownership.prettyOwner}.")
+  extends Exception(s"Handle ${ownership.handle} is protected, owned by ${ownership.prettyOwner}.")
 
 case class HandleOwnership(
     id: Option[Id[HandleOwnership]] = None,
