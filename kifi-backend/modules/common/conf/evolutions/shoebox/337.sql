@@ -15,18 +15,12 @@ CREATE TABLE handle_ownership (
 
 	PRIMARY KEY(id),
 	UNIQUE INDEX handle_ownership_u_handle (handle),
-	CONSTRAINT `handle_ownership_f_user` FOREIGN KEY (`user_id`) REFERENCES user(`id`)
 );
 
-ALTER TABLE user (
-	ALTER COLUMN username varchar(64) DEFAULT NULL,
-	ALTER COLUMN normalized_username varchar(64) DEFAULT NULL,
-	ADD CONSTRAINT user_f_handle_ownership FOREIGN KEY (normalized_username, id) REFERENCES handle_ownership(handle, user_id)
-);
-
-ALTER TABLE organization (
-	ADD CONSTRAINT organization_f_handle_ownership FOREIGN KEY (normalized_organization_handle, id) REFERENCES handle_ownership(handle, organization_id)
-);
+ALTER TABLE user
+	ALTER COLUMN username varchar(64) DEFAULT NULL;
+ALTER TABLE user
+	ALTER COLUMN normalized_username varchar(64) DEFAULT NULL;
 
 insert into evolutions(name, description) values('337.sql', 'add handle_ownership table, make user.username and user.normalized_username optional');
 

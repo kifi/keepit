@@ -9,7 +9,7 @@ CREATE TABLE organization (
 	state varchar(20) NOT NULL,
 	seq bigint(20) NOT NULL,
 	name varchar(256) NOT NULL,
-	description text DEFAULT '',
+	description text DEFAULT NULL,
 	owner_id bigint(20) NOT NULL,
 	organization_handle varchar(64) DEFAULT NULL,
 	normalized_organization_handle varchar(64) DEFAULT NULL,
@@ -17,7 +17,7 @@ CREATE TABLE organization (
 	PRIMARY KEY(id),
 	UNIQUE KEY `organization_u_organization_handle` (`organization_handle`),
 	UNIQUE KEY `organization_u_normalized_organization_handle` (`normalized_organization_handle`),
-	INDEX KEY `organization_i_seq` (`seq`),
+	INDEX `organization_i_seq` (`seq`),
 	CONSTRAINT `organization_f_user` FOREIGN KEY (`owner_id`) REFERENCES user(`id`)
 );
 
@@ -81,7 +81,7 @@ ALTER TABLE `library`
 ALTER TABLE `library`
 	ADD CONSTRAINT `library_f_organization` FOREIGN KEY (`organization_id`) REFERENCES organization(`id`);
 
-insert into evolutions(name, description) values('336.sql', 'create organization, organization membership, organization_invite, and organization_logo tables, adds org_id added to library');
+insert into evolutions(name, description) values('335.sql', 'create organization, organization membership, organization_invite, and organization_logo tables, adds org_id added to library');
 
 # --- !Downs
 
