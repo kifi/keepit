@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .factory('net', [
-  'env', '$http', 'ExpiringCache',
-  function (env, $http, ExpiringCache) {
+  'env', '$http', 'createExpiringCache',
+  function (env, $http, createExpiringCache) {
     var shoebox = env.xhrBase;
     var search = env.xhrBaseSearch;
     var pathParamRe = /(:\w+)/;
@@ -40,7 +40,7 @@ angular.module('kifi')
 
     function get(base, pathSpec, cacheSec) {
       var pathParts = pathSpec.split(pathParamRe);
-      var cache = cacheSec && ExpiringCache(pathSpec, cacheSec);
+      var cache = cacheSec && createExpiringCache(pathSpec, cacheSec);
       function doGet() {  // caller should pass any path params and then, optionally, a query params object
         return $http({
           method: 'GET',
