@@ -46,7 +46,7 @@ describe('net', function () {
         method: 'GET',
         url: env.xhrBaseSearch + '/search',
         params: params,
-        data: undefined
+        cache: undefined
       });
     });
   });
