@@ -1,7 +1,7 @@
 package com.keepit.model
 
 import com.google.inject.{ Provider, Inject, Singleton, ImplementedBy }
-import com.keepit.commanders.{ UserProfileTab, UserMetadataKey, UserMetadataCache, UsernameOps }
+import com.keepit.commanders.{ UserProfileTab, UserMetadataKey, UserMetadataCache, HandleOps }
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick._
@@ -264,7 +264,7 @@ class UserRepoImpl @Inject() (
   }
 
   def getByUsername(username: Username)(implicit session: RSession): Option[User] = {
-    val normalizedUsername = UsernameOps.normalize(username.value)
+    val normalizedUsername = HandleOps.normalize(username.value)
     usernameCache.getOrElseOpt(UsernameKey(username)) {
       getByNormalizedUsernameCompiled(normalizedUsername).firstOption
     }
