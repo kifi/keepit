@@ -42,7 +42,9 @@ angular.module('kifi')
       var pathParts = pathSpec.split(pathParamRe);
       var cache = cacheSec && ExpiringCache(pathSpec, cacheSec);
       function doGet() {  // caller should pass any path params and then, optionally, a query params object
-        return $http.get(base + constructPath(pathParts, arguments), {
+        return $http({
+          method: 'GET',
+          url: base + constructPath(pathParts, arguments),
           params: arguments[(pathParts.length - 1) / 2],
           cache: cache
         });
