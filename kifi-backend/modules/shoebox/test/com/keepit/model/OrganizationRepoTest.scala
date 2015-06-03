@@ -11,7 +11,7 @@ class OrganizationRepoTest extends Specification with ShoeboxTestInjector {
       withDb() { implicit injector =>
         val orgRepo = inject[OrganizationRepo]
         val org = db.readWrite { implicit s =>
-          orgRepo.save(Organization(name = "Bob", ownerId = Id[User](1), slug = OrganizationSlug("slug")))
+          orgRepo.save(Organization(name = "Bob", ownerId = Id[User](1), slug = OrganizationSlug("slug"), normalizedSlug = "Slug"))
         }
 
         db.readOnlyMaster { implicit s =>

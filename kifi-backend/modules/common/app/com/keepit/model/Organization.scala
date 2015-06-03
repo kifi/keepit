@@ -19,7 +19,8 @@ case class Organization(
     name: String,
     description: Option[String] = None,
     ownerId: Id[User],
-    slug: OrganizationSlug) extends ModelWithPublicId[Organization] with ModelWithState[Organization] with ModelWithSeqNumber[Organization] {
+    slug: OrganizationSlug,
+    normalizedSlug: String) extends ModelWithPublicId[Organization] with ModelWithState[Organization] with ModelWithSeqNumber[Organization] {
 
   override def withId(id: Id[Organization]): Organization = this.copy(id = Some(id))
 
@@ -36,7 +37,8 @@ object Organization {
     (__ \ 'name).format[String] and
     (__ \ 'description).formatNullable[String] and
     (__ \ 'ownerId).format(Id.format[User]) and
-    (__ \ 'slug).format[OrganizationSlug]
+    (__ \ 'slug).format[OrganizationSlug] and
+    (__ \ "normalizedSlug").format[String]
   )(Organization.apply, unlift(Organization.unapply))
 }
 
