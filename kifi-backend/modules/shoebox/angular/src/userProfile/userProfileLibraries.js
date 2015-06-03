@@ -267,7 +267,8 @@ angular.module('kifi')
         }
 
         scope.myProfile = profileService.me.id === scope.profileId;
-        scope.myLibrary = profileService.me.id === scope.lib.owner.id;
+        scope.isOwner = (scope.lib.membership || {}).access === 'owner';
+        scope.canWrite = scope.isOwner || (scope.lib.membership || {}).access === 'read_write';
 
         // not copying all of these functions for each card, to avoid the memory hit
         scope.openModifyLibrary = openModifyLibrary;
