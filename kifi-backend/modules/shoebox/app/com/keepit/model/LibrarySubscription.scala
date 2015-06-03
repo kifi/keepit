@@ -1,27 +1,24 @@
 package com.keepit.model
 
-import com.keepit.common.db._
-import com.keepit.common.time._
-import com.kifi.macros.json
-import org.apache.poi.ss.formula.functions.T
+import com.keepit.common.db.{ Id, State, ModelWithState, States }
+import com.keepit.common.net.URIParser
+import com.keepit.common.time.{ currentDateTime, DEFAULT_DATE_TIME_ZONE }
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
-import scala.slick.collection.heterogenous.Zero.+
-import scala.slick.lifted.MappedTo
 
 case class LibrarySubscription(
     id: Option[Id[LibrarySubscription]] = None,
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,
-    state: State[LibrarySubscription] = State("active"),
+    state: State[LibrarySubscription] = LibrarySubscriptionStates.ACTIVE,
+    libraryId: Id[Library],
+    name: String,
     trigger: SubscriptionTrigger,
-    libraryid: Id[Library],
     info: SubscriptionInfo) extends ModelWithState[LibrarySubscription] {
   def withId(id: Id[LibrarySubscription]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withState(state: State[LibrarySubscription]) = this.copy(state = state)
-  def isActive = this.state.value == "active"
 }
 
 object LibrarySubscription {
@@ -30,19 +27,40 @@ object LibrarySubscription {
     (__ \ 'createdAt).format[DateTime] and
     (__ \ 'updatedAt).format[DateTime] and
     (__ \ 'state).format[State[LibrarySubscription]] and
-    (__ \ 'trigger).format[SubscriptionTrigger] and
     (__ \ 'libraryId).format[Id[Library]] and
+    (__ \ 'name).format[String] and
+    (__ \ 'trigger).format[SubscriptionTrigger] and
     (__ \ 'info).format[SubscriptionInfo])(LibrarySubscription.apply _, unlift(LibrarySubscription.unapply)) // json de/serialization
 }
 
-trait SubscriptionInfo
+object LibrarySubscriptionStates extends States[LibrarySubscription] {
+  val PAUSED = State[LibrarySubscription]("paused")
+}
 
-case class SlackInfo(kind: String = "slack", url: String) extends SubscriptionInfo
+trait SubscriptionInfo {
+  def hasSameEndpoint(other: SubscriptionInfo): Boolean
+}
 
-object SlackInfo extends SubscriptionInfo {
-  implicit def format: Format[SlackInfo] = (
-    (__ \ "kind").format[String] and
-    (__ \ "url").format[String])(SlackInfo.apply, unlift(SlackInfo.unapply))
+case class SlackInfo(url: String) extends SubscriptionInfo {
+  def hasSameEndpoint(other: SubscriptionInfo) = {
+    other match {
+      case SlackInfo(otherUrl) => url == otherUrl
+      case _ => false
+    }
+  }
+}
+
+object SlackInfo {
+  implicit val format: Format[SlackInfo] = new Format[SlackInfo] {
+    def reads(json: JsValue): JsResult[SlackInfo] = {
+      (json \ "url").asOpt[String].filter(url => URIParser.parseAll(URIParser.uri, url).successful) match {
+        case Some(url) => JsSuccess[SlackInfo](SlackInfo(url))
+        case _ => JsError("[LibrarySubscription] No url field found, can't read Json into SlackInfo")
+      }
+    }
+    def writes(o: SlackInfo): JsValue = Json.obj("kind" -> "slack", "url" -> o.url)
+  }
+
 }
 
 object SubscriptionInfo {
@@ -57,7 +75,7 @@ object SubscriptionInfo {
     }
     def writes(subscription: SubscriptionInfo): JsValue = {
       subscription match {
-        case s: SlackInfo => Json.toJson(s)
+        case s: SlackInfo => SlackInfo.format.writes(s)
         case _ => throw new Exception("[LibrarySubscription] Subscription type not supported")
       }
     }
@@ -68,6 +86,7 @@ case class SubscriptionTrigger(value: String)
 
 object SubscriptionTrigger {
   val NEW_KEEP = SubscriptionTrigger("new_keep")
+  val NEW_MEMBER = SubscriptionTrigger("new_member")
 
   implicit def format: Format[SubscriptionTrigger] = Format(
     __.read[String].map(SubscriptionTrigger(_)),

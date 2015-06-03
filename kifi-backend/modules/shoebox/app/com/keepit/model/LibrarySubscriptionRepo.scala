@@ -13,11 +13,10 @@ import scala.slick.lifted.Tag
 
 @ImplementedBy(classOf[LibrarySubscriptionRepoImpl])
 trait LibrarySubscriptionRepo extends Repo[LibrarySubscription] {
-  def getByLibraryId(id: Id[Library])(implicit session: RSession): Seq[LibrarySubscription]
-  def getByLibraryIdAndTrigger(id: Id[Library], trigger: SubscriptionTrigger)(implicit session: RSession): Seq[LibrarySubscription]
+  def getByLibraryId(libraryId: Id[Library], excludeStates: Set[State[LibrarySubscription]] = Set(LibrarySubscriptionStates.INACTIVE))(implicit session: RSession): Seq[LibrarySubscription]
+  def getByLibraryIdAndName(libraryId: Id[Library], name: String, excludeStates: Set[State[LibrarySubscription]] = Set(LibrarySubscriptionStates.INACTIVE))(implicit session: RSession): Option[LibrarySubscription]
+  def getByLibraryIdAndTrigger(libraryId: Id[Library], trigger: SubscriptionTrigger, excludeStates: Set[State[LibrarySubscription]] = Set(LibrarySubscriptionStates.INACTIVE))(implicit session: RSession): Seq[LibrarySubscription]
 }
-
-object LibrarySubscriptionStates extends States[LibrarySubscription]
 
 @Singleton
 class LibrarySubscriptionRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) extends DbRepo[LibrarySubscription] with LibrarySubscriptionRepo with Logging {
@@ -34,16 +33,18 @@ class LibrarySubscriptionRepoImpl @Inject() (val db: DataBaseComponent, val cloc
         case success: JsSuccess[SubscriptionInfo] => success.value
         case failure: JsError => throw new JsResultException(failure.errors)
       }
-    })
+    }
+  )
 
   type RepoImpl = LibrarySubscriptionTable
 
-  class LibrarySubscriptionTable(tag: Tag) extends RepoTable[LibrarySubscription](db, tag, "library_webhook") {
-    def trigger = column[SubscriptionTrigger]("trigger", O.NotNull)
+  class LibrarySubscriptionTable(tag: Tag) extends RepoTable[LibrarySubscription](db, tag, "library_subscription") {
     def libraryId = column[Id[Library]]("library_id", O.NotNull)
+    def name = column[String]("name", O.NotNull)
+    def trigger = column[SubscriptionTrigger]("trigger", O.NotNull)
     def info = column[SubscriptionInfo]("info", O.NotNull) // this will be changed to SubscriptionInfo once I figure out serialization
 
-    def * = (id.?, createdAt, updatedAt, state, trigger, libraryId, info) <> ((LibrarySubscription.apply _).tupled, LibrarySubscription.unapply _)
+    def * = (id.?, createdAt, updatedAt, state, libraryId, name, trigger, info) <> ((LibrarySubscription.apply _).tupled, LibrarySubscription.unapply _)
   }
 
   def table(tag: Tag) = new LibrarySubscriptionTable(tag)
@@ -52,11 +53,15 @@ class LibrarySubscriptionRepoImpl @Inject() (val db: DataBaseComponent, val cloc
   def deleteCache(model: LibrarySubscription)(implicit session: RSession): Unit = {}
   def invalidateCache(model: LibrarySubscription)(implicit session: RSession): Unit = {}
 
-  def getByLibraryId(id: Id[Library])(implicit session: RSession): Seq[LibrarySubscription] = {
-    (for (c <- rows if c.libraryId === id) yield c).list
+  def getByLibraryId(libraryId: Id[Library], excludeStates: Set[State[LibrarySubscription]] = Set(LibrarySubscriptionStates.INACTIVE))(implicit session: RSession): Seq[LibrarySubscription] = {
+    (for (c <- rows if c.libraryId === libraryId && !c.state.inSet(excludeStates)) yield c).list
   }
 
-  def getByLibraryIdAndTrigger(id: Id[Library], trigger: SubscriptionTrigger)(implicit session: RSession): Seq[LibrarySubscription] = {
-    (for (c <- rows if c.libraryId === id && c.trigger === trigger) yield c).list
+  def getByLibraryIdAndName(libraryId: Id[Library], name: String, excludeStates: Set[State[LibrarySubscription]] = Set(LibrarySubscriptionStates.INACTIVE))(implicit session: RSession): Option[LibrarySubscription] = {
+    (for (c <- rows if c.libraryId === libraryId && c.name.trim.toLowerCase === name.trim.toLowerCase && !c.state.inSet(excludeStates)) yield c).firstOption
+  }
+
+  def getByLibraryIdAndTrigger(libraryId: Id[Library], trigger: SubscriptionTrigger, excludeStates: Set[State[LibrarySubscription]] = Set(LibrarySubscriptionStates.INACTIVE))(implicit session: RSession): Seq[LibrarySubscription] = {
+    (for (c <- rows if c.libraryId === libraryId && c.trigger === trigger && !c.state.inSet(excludeStates)) yield c).list
   }
 }
