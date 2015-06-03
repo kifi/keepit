@@ -3,10 +3,10 @@
 angular.module('kifi')
 
 // Like Clutch, but built on $cacheFactory, so less code and interoperable with $http.
-.factory('ExpiringCache', [
+.factory('createExpiringCache', [
   '$cacheFactory',
   function ($cacheFactory) {
-    function ExpiringCache(name, seconds) {
+    function createExpiringCache(name, seconds) {
       var cache = $cacheFactory(name);
       cache.put = angular.bind(cache, expiringPut, cache.put);
       cache.get = angular.bind(cache, expiringGet, cache.get, seconds * 1000);
@@ -28,6 +28,6 @@ angular.module('kifi')
       }
     }
 
-    return ExpiringCache;
+    return createExpiringCache;
   }
 ]);
