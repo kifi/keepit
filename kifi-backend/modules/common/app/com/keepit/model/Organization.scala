@@ -41,6 +41,37 @@ object Organization {
     (__ \ 'ownerId).format(Id.format[User]) and
     (__ \ 'handle).formatNullable[PrimaryOrganizationHandle]
   )(Organization.apply, unlift(Organization.unapply))
+
+  def applyFromDbRow(
+    id: Option[Id[Organization]],
+    createdAt: DateTime,
+    updatedAt: DateTime,
+    state: State[Organization],
+    seq: SequenceNumber[Organization],
+    name: String,
+    description: Option[String],
+    ownerId: Id[User],
+    organizationHandleOpt: Option[OrganizationHandle],
+    normalizedOrganizationHandleOpt: Option[OrganizationHandle]) = {
+    val primaryOrganizationHandle = for {
+      organizationHandle <- organizationHandleOpt
+      normalizedOrganizationHandle <- normalizedOrganizationHandleOpt
+    } yield PrimaryOrganizationHandle(organizationHandle, normalizedOrganizationHandle)
+    Organization(id, createdAt, updatedAt, state, seq, name, description, ownerId, primaryOrganizationHandle)
+  }
+
+  def unapplyToDbRow(org: Organization) = {
+    Some((org.id,
+      org.createdAt,
+      org.updatedAt,
+      org.state,
+      org.seq,
+      org.name,
+      org.description,
+      org.ownerId,
+      org.handle.map(_.original),
+      org.handle.map(_.normalized)))
+  }
 }
 
 object OrganizationStates extends States[Organization]
