@@ -29,7 +29,7 @@
         <a class="kf-lh-followers-a" ng-repeat="follower in followersToShow" href="{{::follower|profileUrl}}" kf-track-origin="libraryPage/follower">
           <img class="kf-lh-followers-pic" ng-src="{{::follower|pic:100}}" alt="{{::follower|name}}">
           <span class="kf-lh-followers-name">{{::follower.firstName}}</span>
-          <button class="kf-lh-member-x follow" title="Remove follower..." ng-if="onCollabExperiment && (isOwner() || (collabsCanInvite && isCollaborating()))" ng-click="openRemoveMemberModal(follower, 'follow')">&times;</button>
+          <button class="kf-lh-member-x follow" title="Remove follower..." ng-if="onCollabExperiment && (isOwner() || (collabsCanInvite && isCollaborating()))" ng-click="$event.preventDefault();confirmRemoveMember(follower, 'follow')">&times;</button>
         </a>
         <button class="kf-lh-followers-more" ng-if="numMoreFollowersText" ng-click="showFollowers()">
           <span class="kf-lh-followers-more-text kf-{{numMoreFollowersText.length}}">{{numMoreFollowersText}}</span>
@@ -86,7 +86,7 @@
             <img class="kf-lh-collab-image" ng-src="{{::collab|pic:200}}" itemprop="image" alt="{{::collab|name}}">
           </a>
           <a class="kf-lh-collab-name" href="{{::collab|profileUrl}}" itemprop="name" kf-track-origin="libraryPage/collaborator">{{::collab.firstName}}</a>
-          <button class="kf-lh-member-x collab" title="Remove collaborator..." ng-if="onCollabExperiment && (isOwner() || (collabsCanInvite && isCollaborating()))" ng-click="openRemoveMemberModal(collab, 'collab')">&times;</button>
+          <button class="kf-lh-member-x collab" title="Remove collaborator..." ng-if="isOwner() || isSelf(collab) || collabsCanInvite && isCollaborating()" ng-click="confirmRemoveMember(collab, 'collab')">&times;</button>
         </div>
         <button class="kf-lh-more-collab" ng-if="library.numCollaborators > maxNumCollaboratorsToShow" ng-click="openMembersModal('collaborators_only')" ng-style="{'background-color': library.color}">
           + {{library.numCollaborators - maxNumCollaboratorsToShow|num}}

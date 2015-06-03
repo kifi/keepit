@@ -8,6 +8,7 @@ import com.keepit.common.db.{ State, Id }
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.net.RichRequestHeader
+import com.keepit.common.queue.messages.SuggestedSearchTerms
 import com.keepit.common.util.Paginator
 import com.keepit.cortex.CortexServiceClient
 import com.keepit.model._
@@ -16,9 +17,6 @@ import play.api.mvc.{ Action, AnyContent }
 import views.html
 import com.keepit.common.time._
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.json._
-
-import scala.collection.mutable.ArrayBuffer
 
 case class LibraryStatistic(
   library: Library,
@@ -161,7 +159,7 @@ class AdminLibraryController @Inject() (
 
       val contributors = members.filter(x => (x.access == LibraryAccess.READ_WRITE || x.access == LibraryAccess.READ_INSERT)).map { m => userRepo.get(m.userId) }
       val followers = members.filter(x => x.access == LibraryAccess.READ_ONLY).map { m => userRepo.get(m.userId) }
-      val terms = suggestedSearchCommander.getSuggestedTermsForLibrary(libraryId, limit = 25)
+      val terms = suggestedSearchCommander.getSuggestedTermsForLibrary(libraryId, limit = 25, SuggestedSearchTermKind.AUTO)
       (lib, owner, keepCount, contributors, followers, terms)
     }
 
@@ -282,7 +280,7 @@ class AdminLibraryController @Inject() (
     val libId = body.get("libId").get.toLong
     val tc = body.get("tc").get
     val terms = tc.trim.split(", ").map { token => val Array(term, weight) = token.split(":"); (term.trim, weight.trim.toFloat) }.toMap
-    suggestedSearchCommander.saveSuggestedSearchTermsForLibrary(Id[Library](libId), SuggestedSearchTerms(terms))
+    suggestedSearchCommander.saveSuggestedSearchTermsForLibrary(Id[Library](libId), SuggestedSearchTerms(terms), SuggestedSearchTermKind.AUTO)
     Ok
   }
 

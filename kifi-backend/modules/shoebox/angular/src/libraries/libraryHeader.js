@@ -504,6 +504,10 @@ angular.module('kifi')
           return t*t*t;
         }
 
+        scope.isSelf = function (user) {
+          return profileService.me.id === user.id;
+        };
+
         scope.isFollowing = function () {
           return scope.library.membership && scope.library.membership.access === 'read_only';
         };
@@ -631,28 +635,37 @@ angular.module('kifi')
           });
         };
 
-        scope.removeMember = function () {
-          var member = scope.selectedMemberToRemove;
-          if (scope.memberTypeToRemove === 'collab') {
-            _.remove(scope.library.collaborators, {id : member.id});
-            scope.library.numCollaborators--;
-          } else if (scope.memberTypeToRemove === 'follow') {
-            _.remove(scope.library.followers, {id : member.id});
-            scope.library.numFollowers--;
-          }
-          net.updateLibraryMembership(scope.library.id, member.id, {access: 'none'});
-          scope.memberTypeToRemove = null;
-          scope.selectedMemberToRemove = null;
-        };
-
-        scope.openRemoveMemberModal = function (member, type) {
-          event.preventDefault();
-          scope.selectedMemberToRemove = member;
-          scope.memberTypeToRemove = type;
+        scope.confirmRemoveMember = function (member, type) {
+          var isSelf = scope.isSelf(member);
+          var isPrivate = scope.library.visibility === 'secret';
           modalService.open({
             template: 'libraries/removeMemberConfirmModal.tpl.html',
-            scope: scope
+            modalData: {
+              type: type,
+              member: member,
+              isSelf: isSelf,
+              'private': isPrivate,
+              remove: remove
+            }
           });
+
+          function remove() {
+            if (type === 'collab') {
+              _.remove(scope.library.collaborators, {id: member.id});
+              scope.library.numCollaborators--;
+            } else if (type === 'follow') {
+              _.remove(scope.library.followers, {id: member.id});
+              scope.library.numFollowers--;
+            }
+            net.updateLibraryMembership(scope.library.id, member.id, {access: 'none'}).then(function () {
+              if (isSelf) {
+                scope.library.membership = null;
+                if (isPrivate) {
+                  $state.go('userProfile.libraries.own', {username: member.username});
+                }
+              }
+            })['catch'](modalService.openGenericErrorModal);
+          }
         };
 
         function onWinResize() {

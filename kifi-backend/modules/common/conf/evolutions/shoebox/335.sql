@@ -1,6 +1,7 @@
-# Shoebox
+# SHOEBOX
 
 # --- !Ups
+
 CREATE TABLE organization (
 	id bigint(20) NOT NULL AUTO_INCREMENT,
 	created_at datetime NOT NULL,
@@ -83,3 +84,4 @@ ALTER TABLE `library`
 insert into evolutions(name, description) values('336.sql', 'create organization, organization membership, organization_invite, and organization_logo tables, adds org_id added to library');
 
 # --- !Downs
+

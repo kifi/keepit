@@ -88,6 +88,7 @@ dialog-header-height = (dialog-header-vpad * 2) + dialog-header-line-height + di
   height: 20px
   background-color: #c8ced7
   cursor: pointer
+  transform: rotate(45deg)
 
   &:hover
   &:focus
@@ -98,24 +99,25 @@ dialog-header-height = (dialog-header-vpad * 2) + dialog-header-line-height + di
 
   &::before
   &::after
-    content: ' '
-    position: absolute;
-    left: 50%
-    top: 4px
-    bottom: 4px
-    border-radius: 2px
-    width: 2px;
+    content: ''
+    position: absolute
     background: #fff
     font-size: 0
 
   &::before
-    transform: translate(-1px) rotate(45deg)
+    top: 9px
+    left: 4px
+    right: 4px
+    height: 2px
 
   &::after
-    transform: translate(-1px) rotate(-45deg)
+    left: 9px
+    top: 4px
+    bottom: 4px
+    width: 2px
 
 .dialog-buttons
-  margin: 0px auto
+  margin: 0 auto
   padding: 13px 0
   background-color: #f3f5f7
   text-align: center

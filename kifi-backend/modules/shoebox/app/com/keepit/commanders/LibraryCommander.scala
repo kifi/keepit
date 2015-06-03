@@ -1254,7 +1254,7 @@ class LibraryCommander @Inject() (
     else if (lib.visibility != LibraryVisibility.PUBLISHED && inviteList.isEmpty) // private library & no library invites with matching authtoken
       Left(LibraryFail(FORBIDDEN, "cant_join_nonpublished_library"))
     else {
-      val maxAccess = if (inviteList.isEmpty) LibraryAccess.READ_ONLY else inviteList.sorted.last.access
+      val maxAccess = if (inviteList.isEmpty) LibraryAccess.READ_ONLY else inviteList.max.access
       val (updatedLib, updatedMem) = db.readWrite(attempts = 3) { implicit s =>
         val updatedMem = libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId, None) match {
           case None =>
@@ -1265,7 +1265,7 @@ class LibraryCommander @Inject() (
             }
             mem
           case Some(mem) =>
-            val maxWithExisting = (maxAccess :: mem.access :: Nil).sorted.last
+            val maxWithExisting = if (mem.state == LibraryMembershipStates.ACTIVE) Seq(maxAccess, mem.access).max else maxAccess
             val subscribedToUpdates = subscribed.getOrElse(maxWithExisting == LibraryAccess.READ_WRITE || mem.subscribedToUpdates)
             libraryMembershipRepo.save(mem.copy(access = maxWithExisting, state = LibraryMembershipStates.ACTIVE, lastJoinedAt = Some(currentDateTime), subscribedToUpdates = subscribedToUpdates))
         }
