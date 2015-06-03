@@ -67,9 +67,6 @@ angular.module('kifi')
       friendRequest: function (id) {
         return env.xhrBase + '/user/' + id + '/friend';
       },
-      libraryShareSuggest: function (libId, opt_query) {
-        return route('/libraries/' + libId + '/members/suggest', {n: 30, q: opt_query || []});
-      },
       invite: route('/user/invite'),
       peopleYouMayKnow: function (offset, limit) {
         return route('/user/friends/recommended', {offset: offset, limit: limit});
@@ -139,19 +136,6 @@ angular.module('kifi')
       ////////////////////////////
       // Libraries              //
       ////////////////////////////
-      getLibraryInfos: route('/libraries'),
-      getLibraryByUserSlug: function (username, slug, authToken) {
-        return route('/users/' + username + '/libraries/' + slug, {showPublishedLibraries: 1, authToken: authToken || []});
-      },
-      getLibraryById: function (libraryId) {
-        return route('/libraries/' + libraryId);
-      },
-      getLibraryInfoById: function (libraryId) {
-        return route('/libraries/' + libraryId + '/summary');
-      },
-      getKeepsInLibrary: function (libraryId, count, offset, authToken) {
-        return route('/libraries/' + libraryId + '/keeps', {count: count, offset: offset, authToken: authToken || []});
-      },
       createLibrary: route('/libraries/add'),
       modifyLibrary: function (libraryId) {
         return route('/libraries/' + libraryId + '/modify');
