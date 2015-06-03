@@ -48,6 +48,7 @@ class MobileLibraryController @Inject() (
   heimdalContextBuilder: HeimdalContextBuilderFactory,
   clock: Clock,
   val libraryCommander: LibraryCommander,
+  val libraryInviteCommander: LibraryInviteCommander,
   val userActionsHelper: UserActionsHelper,
   val publicIdConfig: PublicIdConfiguration,
   implicit val config: PublicIdConfiguration)
@@ -124,7 +125,7 @@ class MobileLibraryController @Inject() (
       })
 
       val membershipOpt = libraryCommander.getViewerMembershipInfo(userIdOpt, libraryId)
-      val inviteOpt = libraryCommander.getViewerInviteInfo(userIdOpt, libraryId)
+      val inviteOpt = libraryInviteCommander.getViewerInviteInfo(userIdOpt, libraryId)
       val accessStr = membershipOpt.map(_.access).getOrElse("none")
       val membershipJson = Json.toJson(membershipOpt)
       val inviteJson = Json.toJson(inviteOpt)
@@ -153,7 +154,7 @@ class MobileLibraryController @Inject() (
             })
 
             val membershipOpt = libraryCommander.getViewerMembershipInfo(request.userIdOpt, library.id.get)
-            val inviteOpt = libraryCommander.getViewerInviteInfo(request.userIdOpt, library.id.get)
+            val inviteOpt = libraryInviteCommander.getViewerInviteInfo(request.userIdOpt, library.id.get)
             val accessStr = membershipOpt.map(_.access).getOrElse("none")
             val membershipJson = Json.toJson(membershipOpt)
             val inviteJson = Json.toJson(inviteOpt)
@@ -285,7 +286,7 @@ class MobileLibraryController @Inject() (
       case Success(libraryId) =>
         getUserByIdOrEmail(request.body) match {
           case Right(invitee) =>
-            libraryCommander.revokeInvitationToLibrary(libraryId, request.userId, invitee) match {
+            libraryInviteCommander.revokeInvitationToLibrary(libraryId, request.userId, invitee) match {
               case Right(ok) => Future.successful(NoContent)
               case Left(error) => Future.successful(BadRequest(Json.obj(error._1 -> error._2)))
             }
@@ -315,7 +316,7 @@ class MobileLibraryController @Inject() (
           }
         }
         implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
-        libraryCommander.inviteUsersToLibrary(id, request.userId, validInviteList).map {
+        libraryInviteCommander.inviteUsersToLibrary(id, request.userId, validInviteList).map {
           case Left(fail) => sendFailResponse(fail)
           case Right(inviteesWithAccess) =>
             val result = inviteesWithAccess.map {
@@ -336,7 +337,7 @@ class MobileLibraryController @Inject() (
         val messageOpt = msgOpt.filter(_.nonEmpty)
 
         implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
-        libraryCommander.inviteAnonymousToLibrary(id, request.userId, access, messageOpt) match {
+        libraryInviteCommander.inviteAnonymousToLibrary(id, request.userId, access, messageOpt) match {
           case Left(fail) => sendFailResponse(fail)
           case Right((invite, library)) =>
             val owner = db.readOnlyMaster { implicit s =>
@@ -383,7 +384,7 @@ class MobileLibraryController @Inject() (
       case Failure(ex) =>
         BadRequest(Json.obj("error" -> "invalid_id"))
       case Success(libId) =>
-        libraryCommander.declineLibrary(request.userId, libId)
+        libraryInviteCommander.declineLibrary(request.userId, libId)
         Ok(JsString("success"))
     }
   }

@@ -48,6 +48,7 @@ class LibraryController @Inject() (
   relatedLibraryCommander: RelatedLibraryCommander,
   suggestedSearchCommander: LibrarySuggestedSearchCommander,
   val libraryCommander: LibraryCommander,
+  val libraryInviteCommander: LibraryInviteCommander,
   val userActionsHelper: UserActionsHelper,
   val publicIdConfig: PublicIdConfiguration,
   implicit val config: PublicIdConfiguration)
@@ -111,7 +112,7 @@ class LibraryController @Inject() (
     libraryCommander.getLibraryById(request.userIdOpt, showPublishedLibraries, libraryId, idealSize, request.userIdOpt) map { libInfo =>
       val suggestedSearches = getSuggestedSearchesAsJson(libraryId)
       val membershipOpt = libraryCommander.getViewerMembershipInfo(request.userIdOpt, libraryId)
-      val inviteOpt = libraryCommander.getViewerInviteInfo(request.userIdOpt, libraryId)
+      val inviteOpt = libraryInviteCommander.getViewerInviteInfo(request.userIdOpt, libraryId)
 
       val membershipJson = Json.toJson(membershipOpt)
       val inviteJson = Json.toJson(inviteOpt)
@@ -140,7 +141,7 @@ class LibraryController @Inject() (
             val suggestedSearches = getSuggestedSearchesAsJson(library.id.get)
             val membershipOpt = libraryCommander.getViewerMembershipInfo(request.userIdOpt, library.id.get)
             // if viewer, get invite for that viewer. Otherwise, if viewer unknown, use authToken to find invite info
-            val inviteOpt = libraryCommander.getViewerInviteInfo(request.userIdOpt, library.id.get) orElse {
+            val inviteOpt = libraryInviteCommander.getViewerInviteInfo(request.userIdOpt, library.id.get) orElse {
               authTokenOpt.map { authToken =>
                 db.readOnlyMaster { implicit s =>
                   libraryInviteRepo.getByLibraryIdAndAuthToken(library.id.get, authToken).headOption.map { invite =>
@@ -211,7 +212,7 @@ class LibraryController @Inject() (
       case Success(libraryId) =>
         getUserByIdOrEmail(request.body) match {
           case Right(invitee) =>
-            libraryCommander.revokeInvitationToLibrary(libraryId, request.userId, invitee) match {
+            libraryInviteCommander.revokeInvitationToLibrary(libraryId, request.userId, invitee) match {
               case Right(ok) => Future.successful(NoContent)
               case Left(error) => Future.successful(BadRequest(Json.obj(error._1 -> error._2)))
             }
@@ -241,7 +242,7 @@ class LibraryController @Inject() (
           }
         }
         implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
-        libraryCommander.inviteUsersToLibrary(id, request.userId, validInviteList).map {
+        libraryInviteCommander.inviteUsersToLibrary(id, request.userId, validInviteList).map {
           case Left(fail) =>
             Status(fail.status)(Json.obj("error" -> fail.message))
           case Right(inviteesWithAccess) =>
@@ -292,7 +293,7 @@ class LibraryController @Inject() (
       case Failure(ex) =>
         BadRequest(Json.obj("error" -> "invalid_id"))
       case Success(libId) =>
-        libraryCommander.declineLibrary(request.userId, libId)
+        libraryInviteCommander.declineLibrary(request.userId, libId)
         Ok(JsString("success"))
     }
   }
