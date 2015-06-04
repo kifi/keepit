@@ -91,8 +91,9 @@ class LibraryRepoImpl @Inject() (
     def lastKept = column[Option[DateTime]]("last_kept", O.Nullable)
     def keepCount = column[Int]("keep_count", O.NotNull)
     def whoCanInvite = column[Option[LibraryInvitePermissions]]("invite_collab", O.Nullable)
+    def orgId = column[Option[Id[Organization]]]("organization_id", O.Nullable)
 
-    def * = (id.?, createdAt, updatedAt, state, name, ownerId, description, visibility, slug, color.?, seq, kind, memberCount, universalLink, lastKept, keepCount, whoCanInvite) <> ((Library.applyFromDbRow _).tupled, Library.unapplyToDbRow _)
+    def * = (id.?, createdAt, updatedAt, state, name, ownerId, description, visibility, slug, color.?, seq, kind, memberCount, universalLink, lastKept, keepCount, whoCanInvite, orgId) <> ((Library.applyFromDbRow _).tupled, Library.unapplyToDbRow _)
   }
 
   implicit val getLibraryResult: GetResult[com.keepit.model.Library] = GetResult { r: PositionedResult =>
@@ -113,7 +114,8 @@ class LibraryRepoImpl @Inject() (
       universalLink = r.<<[String],
       lastKept = r.<<[Option[DateTime]],
       keepCount = r.<<[Int],
-      whoCanInvite = r.<<[Option[String]].map(LibraryInvitePermissions(_))
+      whoCanInvite = r.<<[Option[String]].map(LibraryInvitePermissions(_)),
+      organizationId = r.<<[Option[Id[Organization]]]
     )
   }
 

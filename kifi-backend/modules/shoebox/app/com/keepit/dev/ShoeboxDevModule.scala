@@ -22,7 +22,7 @@ import com.keepit.common.store.ShoeboxDevStoreModule
 import com.keepit.inject.CommonDevModule
 import com.keepit.common.integration.DevReaperModule
 import com.keepit.common.queue.DevSimpleQueueModule
-import com.keepit.queue.DevNormalizationUpdateJobQueueModule
+import com.keepit.queue.{ DevLibrarySuggestedSearchQueueModule, DevNormalizationUpdateJobQueueModule }
 import com.keepit.common.concurrent.ProdForkJoinContextMonitorModule
 import com.keepit.curator.ProdCuratorServiceClientModule
 
@@ -36,6 +36,7 @@ case class ShoeboxDevModule() extends ShoeboxModule with CommonDevModule {
   val sqsModule = DevSimpleQueueModule()
   val normalizationQueueModule = DevNormalizationUpdateJobQueueModule()
   val activityEmailActorModule = DevActivityEmailQueueModule()
+  val suggestedSearchTermsModule = DevLibrarySuggestedSearchQueueModule()
 
   // Shoebox Functional Modules
   val analyticsModule = DevAnalyticsModule()

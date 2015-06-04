@@ -1,5 +1,6 @@
 package com.keepit.shoebox
 
+import com.keepit.commanders.SuggestedSearchTermUpdatePlugin
 import com.keepit.reports._
 import com.keepit.FortyTwoGlobal
 import com.keepit.common.cache.FortyTwoCachePlugin
@@ -50,6 +51,7 @@ trait ShoeboxServices { self: FortyTwoGlobal =>
     require(injector.instance[ActivityEmailCronPlugin] != null) //make sure its not lazy loaded
     require(injector.instance[ActivityPushScheduler] != null) //make sure its not lazy loaded
     require(injector.instance[GratificationEmailCronPlugin] != null) // make sure its not lazy loaded
+    require(injector.instance[SuggestedSearchTermUpdatePlugin] != null) // make sure its not lazy loaded
 
     // DB sequencing plugins
     require(injector.instance[NormalizedURISequencingPlugin] != null) //make sure its not lazy loaded
