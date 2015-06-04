@@ -26,10 +26,10 @@ newConnections: Seq[Id[User]]
 }
 
 @if(libFollowers.totalCount >= MIN_FOLLOWERS) {
-<p>You had <b>@libFollowers.totalCount new @singularOrPlural("follower", libFollowers.totalCount)</b>:</p>
+<p>You had <b>@libFollowers.totalCount new @singularOrPlural("follow", libFollowers.totalCount)</b>:</p>
 <ul>
     @for((libId, followCount) <- libFollowers.sortedCountByLibrary) {
-    <li>@followCount new @singularOrPlural("follower", followCount) on <a href="@libraryUrl(libId, "gratLibUrl")">@libraryName(libId)</a></li>
+    <li>@followCount new @singularOrPlural("follow", followCount) on <a href="@libraryUrl(libId, "gratLibUrl")">@libraryName(libId)</a></li>
     }
 </ul>
 }
@@ -53,5 +53,7 @@ We at Kifi hope you're having a great week.
 <p>Cheers,<br>
 @SenderInfo.FIRSTNAME, @SenderInfo.ROLE at Kifi<br>
 <a href="@htmlUrl(baseUrl + SenderInfo.PATH + "?", "gratSenderProf", true)">www.kifi.com@SenderInfo.PATH</a></p>
+
+<p>P.S. We send these emails to inform you of new library views, followers, and connections. If you don't want to receive these weekly emails, <a href="@unsubscribeUrl">click here</a>.</p>
 </body>
 </html>

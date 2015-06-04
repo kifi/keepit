@@ -5,6 +5,7 @@ import com.keepit.common.store.ImagePath
 import com.keepit.test.{ ShoeboxApplication, ShoeboxApplicationInjector }
 import org.specs2.mutable.Specification
 import play.api.test.Helpers._
+import com.keepit.model.UserFactoryHelper._
 
 class ShoeboxRepoTest extends Specification with ShoeboxApplicationInjector {
 
@@ -12,9 +13,8 @@ class ShoeboxRepoTest extends Specification with ShoeboxApplicationInjector {
     "save and retrieve models" in {
       running(new ShoeboxApplication()) {
         // User Repo
-        val userRepo = inject[UserRepo]
         val user = db.readWrite { implicit session =>
-          userRepo.save(User(firstName = "Colin", lastName = "Lane", username = Username("Colin Lane"), normalizedUsername = "Colin Lane"))
+          UserFactory.user().withName("Colin", "Lane").withUsername("colin-lane").saved
         }
         user.id must beSome
 
@@ -28,22 +28,25 @@ class ShoeboxRepoTest extends Specification with ShoeboxApplicationInjector {
         // OrganizationRepo
         val organizationRepo = inject[OrganizationRepo]
         val org = db.readWrite { implicit session =>
-          organizationRepo.save(Organization(name = "OrgName", ownerId = user.id.get, slug = OrganizationSlug("slug")))
+          organizationRepo.save(Organization(name = "OrgName", ownerId = user.id.get, handle = Some(PrimaryOrganizationHandle(OrganizationHandle("handle"), OrganizationHandle("handle")))))
         }
         org.id must beSome
 
+        // OrganizationMembershipRepo
         val organizationMembershipRepo = inject[OrganizationMembershipRepo]
         val orgMember = db.readWrite { implicit session =>
           organizationMembershipRepo.save(OrganizationMembership(organizationId = org.id.get, userId = user.id.get, access = OrganizationAccess.OWNER))
         }
         orgMember.id must beSome
 
+        // OrganizationInviteRepo
         val organizationInviteRepo = inject[OrganizationInviteRepo]
         val invite = db.readWrite { implicit session =>
           organizationInviteRepo.save(OrganizationInvite(organizationId = org.id.get, inviterId = user.id.get, userId = user.id, access = OrganizationAccess.OWNER))
         }
         invite.id must beSome
 
+        // OrganizationLogoRepo
         val organizationLogoRepo = inject[OrganizationLogoRepo]
         val logo = db.readWrite { implicit session =>
           val orgLogo = OrganizationLogo(organizationId = org.id.get, position = Some(ImagePosition(0, 0)),
@@ -53,6 +56,13 @@ class ShoeboxRepoTest extends Specification with ShoeboxApplicationInjector {
           organizationLogoRepo.save(orgLogo)
         }
         logo.id must beSome
+
+        // HandleOwnershipRepo
+        val handleOwnershipRepo = inject[HandleOwnershipRepo]
+        db.readWrite { implicit session =>
+          val saved = handleOwnershipRepo.save(HandleOwnership(handle = Handle("leo"), ownerId = Some(Right(Id(134)))))
+          handleOwnershipRepo.get(saved.id.get).handle.value === "leo"
+        }
       }
     }
   }

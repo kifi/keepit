@@ -1,16 +1,15 @@
 package com.keepit.model
 
 import com.google.inject.Injector
-import com.keepit.FortyTwoGlobal
 import com.keepit.common.cache.{ HashMapMemoryCacheModule, ShoeboxCacheModule }
 import com.keepit.common.db.{ FakeSlickModule, TestDbInfo, Id, SequenceNumber }
 import com.keepit.common.time._
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
-import com.keepit.test.{ ShoeboxInjectionHelpers, CommonTestInjector, DbInjectionHelper, ShoeboxApplication }
+import com.keepit.test.{ ShoeboxInjectionHelpers, CommonTestInjector, DbInjectionHelper }
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
-import play.api.test.Helpers._
+import com.keepit.model.UserFactoryHelper._
 
 class CollectionTest extends Specification with CommonTestInjector with DbInjectionHelper with ShoeboxInjectionHelpers {
 
@@ -22,8 +21,8 @@ class CollectionTest extends Specification with CommonTestInjector with DbInject
     val t2 = new DateTime(2013, 3, 22, 14, 30, 0, 0, DEFAULT_DATE_TIME_ZONE)
 
     db.readWrite { implicit s =>
-      val user1 = userRepo.save(User(firstName = "Andrew", lastName = "Conner", createdAt = t1, username = Username("test"), normalizedUsername = "test"))
-      val user2 = userRepo.save(User(firstName = "Eishay", lastName = "Smith", createdAt = t2, username = Username("test2"), normalizedUsername = "test2"))
+      val user1 = UserFactory.user().withCreatedAt(t1).withName("Andrew", "Conner").withUsername("test").saved
+      val user2 = UserFactory.user().withCreatedAt(t2).withName("Eishay", "Smith").withUsername("test2").saved
 
       uriRepo.count === 0
       val uri1 = uriRepo.save(NormalizedURI.withHash("http://www.google.com/", Some("Google")))

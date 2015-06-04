@@ -27,6 +27,8 @@ import play.api.libs.json.Json
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import securesocial.core.{ IdentityId, SocialUser, AuthenticationMethod, OAuth1Info }
+import com.keepit.model.UserFactoryHelper._
+import com.keepit.model.UserFactory
 
 import scala.concurrent.Future
 
@@ -40,7 +42,7 @@ class OAuth1TokenTest extends Specification with ShoeboxApplicationInjector {
     db.readWrite { implicit s =>
       val identityId = IdentityId("2906435114", "twitter")
       val socialUser = SocialUser(identityId, "woof", "", "woof", None, Some("http://www.woof.com"), AuthenticationMethod.OAuth1, Some(oauth1Info))
-      val user = userRepo.save(User(firstName = "", lastName = "", username = Username("woof"), normalizedUsername = "woof"))
+      val user = UserFactory.user().withName("", "").withUsername("woof").saved
       val sui = socialUserInfoRepo.save(SocialUserInfo(userId = user.id, fullName = "Woof", state = SocialUserInfoStates.CREATED, socialId = SocialId(identityId.userId), networkType = SocialNetworks.TWITTER, credentials = Some(socialUser)))
       (socialUser, user, sui)
     }

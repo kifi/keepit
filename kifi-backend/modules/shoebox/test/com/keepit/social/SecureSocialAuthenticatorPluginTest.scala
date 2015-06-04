@@ -12,6 +12,8 @@ import play.api.Play.current
 import play.api.test.Helpers._
 import securesocial.core.{ Authenticator, IdentityId }
 import com.keepit.common.time.FakeClock
+import com.keepit.model.UserFactoryHelper._
+import com.keepit.model.UserFactory
 
 class SecureSocialAuthenticatorPluginTest extends Specification with ShoeboxApplicationInjector {
   def airbrake = inject[AirbrakeNotifier]
@@ -73,7 +75,7 @@ class SecureSocialAuthenticatorPluginTest extends Specification with ShoeboxAppl
         val socialId = SocialId("gm")
         val provider = SocialNetworks.FACEBOOK
         val user = db.readWrite { implicit s =>
-          val user = userRepo.save(User(firstName = "Greg", lastName = "Methvin", username = Username("test"), normalizedUsername = "test"))
+          val user = UserFactory.user().withName("Greg", "Methvin").withUsername("test").saved
           socialUserInfoRepo.save(SocialUserInfo(
             userId = user.id, socialId = socialId, fullName = "Greg Methvin", networkType = provider))
           user

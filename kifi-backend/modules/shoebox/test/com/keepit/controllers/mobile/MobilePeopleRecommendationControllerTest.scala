@@ -3,9 +3,8 @@ package com.keepit.controllers.mobile
 import com.keepit.abook.{ ABookServiceClient, FakeABookServiceClientImpl, FakeABookServiceClientModule }
 import com.keepit.common.controller.FakeUserActionsHelper
 import com.keepit.common.crypto.PublicIdConfiguration
-import com.keepit.common.db.Id
 import com.keepit.common.social.FakeSocialGraphModule
-import com.keepit.model.{ Library, LibraryAccess, Username, User }
+import com.keepit.model._
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.Specification
 import play.api.libs.json.Json
@@ -51,7 +50,7 @@ class MobilePeopleRecommendationControllerTest extends Specification with Shoebo
         val pubLibId = Library.publicId(lib.id.get)(inject[PublicIdConfiguration])
         abook.addFriendRecommendationsExpectations(user1.id.get, Seq(user2.id.get, user3.id.get, user4.id.get))
 
-        inject[FakeUserActionsHelper].setUser(User(id = Some(Id[User](1L)), firstName = "Foo", lastName = "Bar", username = Username("test"), normalizedUsername = "test"))
+        inject[FakeUserActionsHelper].setUser(UserFactory.user().withId(1).withName("Foo", "Bar").withUsername("test").get)
         val controller = inject[MobilePeopleRecommendationController]
         val resultF = controller.getFriendRecommendations(1, 10)(FakeRequest())
 

@@ -17,6 +17,7 @@ import com.keepit.shoebox.FakeKeepImportsModule
 import com.keepit.test.ShoeboxTestInjector
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
+import com.keepit.model.UserFactoryHelper._
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
@@ -38,12 +39,10 @@ class LibrarySitemapTest extends Specification with ShoeboxTestInjector {
 
   def setup()(implicit injector: Injector) = {
     val t1 = new DateTime(2014, 7, 4, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
-    val u1 = User(firstName = "Aaron", lastName = "H", createdAt = t1, username = Username("test"), normalizedUsername = "test")
-    val u2 = User(firstName = "Jackie", lastName = "Chan", createdAt = t1.plusHours(2), username = Username("test"), normalizedUsername = "test")
 
     db.readWrite { implicit s =>
-      val user1 = userRepo.save(u1)
-      val user2 = userRepo.save(u2)
+      val user1 = UserFactory.user().withCreatedAt(t1).withName("Aaron", "H").withUsername("test").saved
+      val user2 = UserFactory.user().withCreatedAt(t1.plusHours(2)).withName("Jackie", "Chan").withUsername("test2").saved
 
       val lib1 = libraryRepo.save(Library(name = "lib1A", ownerId = user1.id.get, visibility = LibraryVisibility.PUBLISHED,
         createdAt = t1.plusMinutes(1), slug = LibrarySlug("A"), memberCount = 1, lastKept = Some(new DateTime(2015, 3, 16, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)), keepCount = 4))

@@ -304,12 +304,16 @@ class UserCommander @Inject() (
   def createUser(firstName: String, lastName: String, addrOpt: Option[EmailAddress], state: State[User]) = {
     val usernameCandidates = createUsernameCandidates(firstName, lastName)
     val newUser = db.readWrite(attempts = 3) { implicit session =>
+
       val username: Username = usernameCandidates.find { candidate => userRepo.getByUsername(candidate).isEmpty && usernameRepo.reclaim(candidate).isSuccess } getOrElse {
         throw new Exception(s"COULD NOT CREATE USER [$firstName $lastName] $addrOpt SINCE WE DIDN'T FIND A USERNAME!!!")
       }
+
+      val primaryUsername = PrimaryUsername(original = username, normalized = Username(HandleOps.normalize(username.value)))
+
       userRepo.save(
-        User(firstName = firstName, lastName = lastName, primaryEmail = addrOpt, state = state,
-          username = username, normalizedUsername = UsernameOps.normalize(username.value)))
+        User(firstName = firstName, lastName = lastName, primaryEmail = addrOpt, state = state, primaryUsername = Some(primaryUsername))
+      )
     }
     SafeFuture {
       db.readWrite(attempts = 3) { implicit session =>
@@ -610,7 +614,7 @@ class UserCommander @Inject() (
   }
 
   def setUsername(userId: Id[User], username: Username, overrideValidityCheck: Boolean = false, overrideProtection: Boolean = false, readOnly: Boolean = false): Either[String, Username] = {
-    if (overrideValidityCheck || UsernameOps.isValid(username.value)) {
+    if (overrideValidityCheck || HandleOps.isValid(username.value)) {
       db.readWrite(attempts = 3) { implicit session =>
         val existingUser = userRepo.getByUsername(username)
         if (existingUser.isDefined && existingUser.get.id.get != userId) {
@@ -623,14 +627,19 @@ class UserCommander @Inject() (
           case _ => {
             if (!readOnly) {
               val user = userRepo.get(userId)
-              val normalizedUsername = UsernameOps.normalize(username.value)
-              if (user.normalizedUsername != normalizedUsername) {
-                usernameRepo.alias(user.username, userId, overrideProtection) // create an alias for the old username
-                usernameRepo.reclaim(username, Some(userId), overrideProtection).get // reclaim any existing alias for the new username
+              val oldUsernameOpt = user.primaryUsername
+              val normalizedUsername = Username(HandleOps.normalize(username.value))
+
+              oldUsernameOpt.foreach { oldUsername =>
+                if (oldUsername.normalized != normalizedUsername) {
+                  usernameRepo.alias(oldUsername.original, userId, overrideProtection) // create an alias for the old username
+                  usernameRepo.reclaim(username, Some(userId), overrideProtection).get // reclaim any existing alias for the new username
+                }
               }
-              userRepo.save(user.copy(username = username, normalizedUsername = normalizedUsername))
+              val primaryUsername = PrimaryUsername(username, normalizedUsername)
+              userRepo.save(user.copy(primaryUsername = Some(primaryUsername)))
               //we have to do cache invalidation now, the repo does not have the old username for that
-              usernameCache.remove(UsernameKey(user.username))
+              oldUsernameOpt.foreach(oldUsername => usernameCache.remove(UsernameKey(oldUsername.original)))
             } else {
               log.info(s"[dry run] user $userId set with username $username")
             }
@@ -645,8 +654,8 @@ class UserCommander @Inject() (
   }
 
   private def createUsernameCandidates(rawFirstName: String, rawLastName: String): Seq[Username] = {
-    val firstName = UsernameOps.lettersOnly(rawFirstName.trim).take(15).toLowerCase
-    val lastName = UsernameOps.lettersOnly(rawLastName.trim).take(15).toLowerCase
+    val firstName = HandleOps.lettersOnly(rawFirstName.trim).take(15).toLowerCase
+    val lastName = HandleOps.lettersOnly(rawLastName.trim).take(15).toLowerCase
     val name = if (firstName.isEmpty || lastName.isEmpty) {
       if (firstName.isEmpty) lastName else firstName
     } else {
@@ -657,17 +666,17 @@ class UserCommander @Inject() (
       s"$name-$filler"
     } else name
     def randomNumber = scala.util.Random.nextInt(999)
-    val censorList = UsernameOps.censorList.mkString("|")
+    val censorList = HandleOps.censorList.mkString("|")
     val preCandidates = ArrayBuffer[String]()
     preCandidates += seed
     preCandidates ++= (1 to 30).map(n => s"$seed-$randomNumber").toList
     preCandidates ++= (10 to 20).map(n => RandomStringUtils.randomAlphanumeric(n)).toList
     val candidates = preCandidates.map { name =>
       log.info(s"validating username $name for user $firstName $lastName")
-      val valid = if (UsernameOps.isValid(name)) name else name.replaceAll(censorList, s"C${randomNumber}C")
+      val valid = if (HandleOps.isValid(name)) name else name.replaceAll(censorList, s"C${randomNumber}C")
       log.info(s"username $name is valid")
       valid
-    }.filter(UsernameOps.isValid)
+    }.filter(HandleOps.isValid)
     if (candidates.isEmpty) throw new Exception(s"Could not create candidates for user $firstName $lastName")
     candidates map { c => Username(c) }
   }
@@ -770,15 +779,16 @@ class UserCommander @Inject() (
     }
     while (batch.nonEmpty && counter < max) {
       batch.map { user =>
-        val orig = user.normalizedUsername
-        val candidate = UsernameOps.normalize(user.username.value)
-        if (orig != candidate) {
-          log.info(s"[readOnly = $readOnly] [#$counter/P$page] setting user ${user.id.get} ${user.fullName} with username $candidate")
-          db.readWrite { implicit s => userRepo.save(user.copy(normalizedUsername = candidate)) }
-          counter += 1
-          if (counter >= max) return counter
-        } else {
-          log.info(s"username normalization did not change: $orig")
+        user.primaryUsername.foreach { primaryUsername =>
+          val renormalizedUsermame = Username(HandleOps.normalize(primaryUsername.original.value))
+          if (primaryUsername.normalized != renormalizedUsermame) {
+            log.info(s"[readOnly = $readOnly] [#$counter/P$page] setting user ${user.id.get} ${user.fullName} with username $renormalizedUsermame")
+            db.readWrite { implicit s => userRepo.save(user.copy(primaryUsername = Some(primaryUsername.copy(normalized = renormalizedUsermame)))) }
+            counter += 1
+            if (counter >= max) return counter
+          } else {
+            log.info(s"username normalization did not change: ${primaryUsername.normalized}")
+          }
         }
       }
       batch = db.readOnlyMaster { implicit s =>

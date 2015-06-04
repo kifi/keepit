@@ -5,7 +5,8 @@ import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.mail._
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.FakeShoeboxStoreModule
-import com.keepit.model.{ Username, User, UserRepo }
+import com.keepit.model.{ UserFactory }
+import com.keepit.model.UserFactoryHelper._
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.Specification
 
@@ -15,19 +16,11 @@ import scala.concurrent.Await
 class SendFriendConnectionMadeNotificationHelperTest extends Specification with ShoeboxTestInjector {
 
   def setup()(implicit injector: Injector) = {
-    val userRepo = inject[UserRepo]
 
     db.readWrite { implicit session =>
-      val user1 = userRepo.save(User(
-        firstName = "Homer",
-        lastName = "Simpson",
-        primaryEmail = Some(EmailAddress("homer@gmail.com")), username = Username("test"), normalizedUsername = "test"
-      ))
-      val user2 = userRepo.save(User(
-        firstName = "Peter",
-        lastName = "Griffin",
-        primaryEmail = Some(EmailAddress("peter@gmail.com")), username = Username("test"), normalizedUsername = "test"
-      ))
+
+      val user1 = UserFactory.user().withName("Homer", "Simpson").withUsername("homer").withEmailAddress("homer@gmail.com").saved
+      val user2 = UserFactory.user().withName("Peter", "Griffin").withUsername("peter").withEmailAddress("peter@gmail.com").saved
 
       (user1, user2)
     }

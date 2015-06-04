@@ -244,9 +244,8 @@ class AppBoyTest extends Specification with TestInjector with ElizaTestInjector 
   private def appBoyClient()(implicit injector: Injector) = inject[FakeAppBoyClient]
 
   private def setupData()(implicit injector: Injector) = {
-    val userPika = User(firstName = "Pika", lastName = "Chu", username = Username("pikachu"), normalizedUsername = "pikachu")
-    val users = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveUsers(userPika)
-    val user1 = users.head
+    val fakeShoebox = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
+    val Seq(user1) = fakeShoebox.saveUsers(UserFactory.user().withId(1).withName("Pika", "Chu").withUsername("pikachu").get)
 
     val (deviceApple, deviceAndroid) = db.readWrite { implicit s =>
       val deviceApple = deviceRepo.save(Device(userId = user1.id.get, token = None, deviceType = DeviceType.IOS, signature = Some("appboy_iphone6")))

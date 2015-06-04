@@ -46,11 +46,9 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
   protected def httpClient: com.keepit.common.net.HttpClient = ???
 
   // Fake ID counters
+  private def nextUserId() = { UserFactory.user().get.id.get }
 
-  private val userIdCounter = new AtomicInteger(0)
-  private def nextUserId() = { Id[User](userIdCounter.incrementAndGet()) }
-
-  private val bookmarkIdCounter = new AtomicInteger(0)
+  private val bookmarkIdCounter = new AtomicInteger(0) // todo: use factory
   private def nextBookmarkId() = { Id[Keep](bookmarkIdCounter.incrementAndGet()) }
 
   private val uriIdCounter = new AtomicInteger(0)
@@ -68,16 +66,16 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
   private val userExpIdCounter = new AtomicInteger(0)
   private def nextUserExperimentId() = { Id[UserExperiment](userExpIdCounter.incrementAndGet()) }
 
-  private val userConnIdCounter = new AtomicInteger(0)
+  private val userConnIdCounter = new AtomicInteger(0) // todo: use factory
   private def nextUserConnId = Id[UserConnection](userConnIdCounter.incrementAndGet())
 
   private val searchFriendIdCounter = new AtomicInteger(0)
   private def nextSearchFriendId = Id[SearchFriend](searchFriendIdCounter.incrementAndGet())
 
-  private val libraryIdCounter = new AtomicInteger(0)
+  private val libraryIdCounter = new AtomicInteger(0) // todo: use factory
   private def nextLibraryId = Id[Library](libraryIdCounter.incrementAndGet())
 
-  private val libraryMembershipIdCounter = new AtomicInteger(0)
+  private val libraryMembershipIdCounter = new AtomicInteger(0) // todo: use factory
   private def nextLibraryMembershipId = Id[LibraryMembership](libraryMembershipIdCounter.incrementAndGet())
 
   // Fake sequence counters
@@ -396,8 +394,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
         id = Some(id),
         firstName = "Douglas",
         lastName = "Adams-clone-" + id.toString,
-        username = Username("adams"),
-        normalizedUsername = "adams"
+        primaryUsername = Some(PrimaryUsername(Username("adams"), Username("adams")))
       )
       val user = allUsers.getOrElse(id, dummyUser)
       id -> BasicUser.fromUser(user)
@@ -411,8 +408,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
         id = Some(id),
         firstName = "Douglas",
         lastName = "Adams-clone-" + id.toString,
-        username = Username("adams"),
-        normalizedUsername = "adams"
+        primaryUsername = Some(PrimaryUsername(Username("adams"), Username("adams")))
       )
       val user = allUsers.getOrElse(id, dummyUser)
       id -> BasicUser.fromUser(user)

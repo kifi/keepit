@@ -43,7 +43,10 @@ class DeprecatedArticleIndexerTest extends Specification with SearchTestInjector
     val uriIdArray = new Array[Long](3)
     var indexer = new DeprecatedStandaloneArticleIndexer(ramDir, store, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
 
-    val Seq(user1, user2) = fakeShoeboxServiceClient.saveUsers(User(firstName = "Joe", lastName = "Smith", username = Username("test"), normalizedUsername = "test"), User(firstName = "Moo", lastName = "Brown", username = Username("test"), normalizedUsername = "test"))
+    val Seq(user1, user2) = fakeShoeboxServiceClient.saveUsers(
+      UserFactory.user().withName("Joe", "Smith").withUsername("test").get,
+      UserFactory.user().withName("Moo", "Brown").withUsername("test").get
+    )
     var Seq(uri1, uri2, uri3) = fakeShoeboxServiceClient.saveURIs(
       NormalizedURI.withHash(title = Some("title1 titles"), normalizedUrl = "http://www.keepit.com/article1").withContentRequest(true),
       NormalizedURI.withHash(title = Some("title2 titles"), normalizedUrl = "http://www.keepit.org/article2").withContentRequest(true),

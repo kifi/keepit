@@ -1,12 +1,12 @@
 package com.keepit.model
 
-import com.keepit.commanders.UsernameOps
+import com.keepit.commanders.HandleOps
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.healthcheck.FakeAirbrakeNotifier
 
 import scala.util.Try
 
-import play.api.libs.json.{ Json, JsValue }
+import play.api.libs.json.{ Json }
 
 import org.specs2.mutable._
 
@@ -15,38 +15,27 @@ import org.joda.time.DateTime
 import com.keepit.common.time._
 import com.keepit.common.db._
 import com.keepit.test._
+import com.keepit.model.UserFactoryHelper._
 
 class UserTest extends Specification with ShoeboxTestInjector {
 
   "UsernameOps" should {
     "valid" in {
-      UsernameOps.isValid("eishay-kifi") === false
-      UsernameOps.isValid("nada-boutros") === false
+      HandleOps.isValid("eishay-kifi") === false
+      HandleOps.isValid("nada-boutros") === false
       //the following line takes more then a minute to run!
       //UsernameOps.isValid("eishaytestwithaveryveryveryveryveryveryveryverylongmailgocom-") === false
-      UsernameOps.isValid("eishaytestwitha-") === false
+      HandleOps.isValid("eishaytestwitha-") === false
     }
   }
 
   "UserRepo" should {
-    "Update username" in {
-      withDb(FakeExecutionContextModule()) { implicit injector =>
-        val user = db.readWrite { implicit session =>
-          userRepo.save(User(firstName = "Andrew", lastName = "Conner", username = Username("test"), normalizedUsername = "test"))
-        }
-        inject[FakeAirbrakeNotifier].errorCount() === 0
-        db.readWrite { implicit session =>
-          userRepo.save(user.copy(username = Username("foobar")))
-        }
-        inject[FakeAirbrakeNotifier].errorCount() === 0
-      }
-    }
     "Use the cache" in {
       withDb(FakeExecutionContextModule()) { implicit injector =>
         val userRepoImpl = userRepo.asInstanceOf[UserRepoImpl]
         val user = db.readWrite { implicit session =>
           userRepoImpl.idCache.get(UserIdKey(Id[User](1))).isDefined === false
-          userRepo.save(User(firstName = "Andrew", lastName = "Conner", username = Username("test"), normalizedUsername = "test"))
+          UserFactory.user().withName("Andrew", "Conner").withUsername("test").saved
         }
         val updatedUser = db.readWrite { implicit session =>
           userRepoImpl.idCache.get(UserIdKey(Id[User](1))).get === user
@@ -70,7 +59,7 @@ class UserTest extends Specification with ShoeboxTestInjector {
         val userRepoImpl = userRepo.asInstanceOf[UserRepoImpl]
 
         val user = db.readWrite { implicit session =>
-          userRepo.save(User(firstName = "Martin", lastName = "Raison", username = Username("test"), normalizedUsername = "test"))
+          UserFactory.user().withName("Martin", "Raison").withUsername("test").saved
         }
 
         db.readOnlyMaster { implicit session =>
@@ -97,12 +86,14 @@ class UserTest extends Specification with ShoeboxTestInjector {
 
   "User" should {
     "serialize" in {
-      val user = User(
-        id = Some(Id[User](22)),
-        externalId = ExternalId[User]("11ac839c-509e-400e-9111-3760433488ea"),
-        updatedAt = new DateTime(2013, 3, 14, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE),
-        createdAt = new DateTime(2013, 2, 14, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE),
-        firstName = "Andrew", lastName = "Conner", username = Username("test"), normalizedUsername = "test")
+      val user = UserFactory.user()
+        .withId(22)
+        .withCreatedAt(new DateTime(2013, 2, 14, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE))
+        .withUpdatedAt(new DateTime(2013, 3, 14, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE))
+        .withId("11ac839c-509e-400e-9111-3760433488ea")
+        .withName("Andrew", "Conner")
+        .withUsername("test")
+        .get
       val json = Json.toJson(user)
       json.as[User] === user
       json === Json.parse("""

@@ -8,7 +8,6 @@ import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.model.NormalizedURI
-import com.keepit.model.NormalizedURIStates._
 import com.keepit.model.User
 import com.keepit.rover.{ FakeRoverServiceClientImpl, RoverServiceClient }
 import com.keepit.rover.article.{ EmbedlyArticle }
@@ -46,7 +45,7 @@ trait SearchTestHelper { self: SearchTestInjector =>
   implicit val english = Lang("en")
 
   def initData(numUsers: Int, numUris: Int)(implicit injector: Injector) = {
-    val users = (0 until numUsers).map { n => User(firstName = "foo" + n, lastName = "", username = Username("test" + n), normalizedUsername = "test" + n) }.toList
+    val users = (0 until numUsers).map { n => UserFactory.user().withId(n + 1).withName("foo" + n, "").withUsername("test" + n).get } toList
     val uris = (0 until numUris).map { n =>
       NormalizedURI.withHash(title = Some("a" + n),
         normalizedUrl = "http://www.keepit.com/article" + n).withContentRequest(true)

@@ -69,6 +69,7 @@ class AuthHelper @Inject() (
     postOffice: LocalPostOffice,
     inviteCommander: InviteCommander,
     libraryCommander: LibraryCommander,
+    libraryInviteCommander: LibraryInviteCommander,
     userCommander: UserCommander,
     twitterWaitlistCommander: TwitterWaitlistCommander,
     heimdalContextBuilder: HeimdalContextBuilderFactory,
@@ -218,7 +219,7 @@ class AuthHelper @Inject() (
       } getOrElse "/" // In case the user signs up on a browser that doesn't support the extension
     }
 
-    libraryCommander.convertPendingInvites(emailAddress, user.id.get)
+    libraryInviteCommander.convertPendingInvites(emailAddress, user.id.get)
     libraryPublicId.foreach(authCommander.autoJoinLib(user.id.get, _))
 
     request.session.get("kcid").map(saveKifiCampaignId(user.id.get, _))

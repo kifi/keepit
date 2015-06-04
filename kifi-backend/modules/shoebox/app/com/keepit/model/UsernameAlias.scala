@@ -7,7 +7,7 @@ import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.db.slick._
 import com.keepit.common.logging.Logging
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
-import com.keepit.commanders.UsernameOps
+import com.keepit.commanders.HandleOps
 import com.amazonaws.services.redshift.model.UnauthorizedOperationException
 import scala.concurrent.duration._
 import scala.util.{ Failure, Success, Try }
@@ -99,7 +99,7 @@ class UsernameAliasRepoImpl @Inject() (
   }
 
   private def normalize(username: Username): Username = {
-    Username(UsernameOps.normalize(username.value))
+    Username(HandleOps.normalize(username.value))
   }
 
   def getByUsername(username: Username, excludeState: Option[State[UsernameAlias]] = Some(INACTIVE))(implicit session: RSession): Option[UsernameAlias] = {

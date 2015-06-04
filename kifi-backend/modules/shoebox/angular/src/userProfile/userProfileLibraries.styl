@@ -129,6 +129,7 @@ cardBorderRadius = 16px
 
 .kf-upl-card-icon
   position: absolute
+  top: 25px
   left: 50%
   width: 20px
   height: 21px
@@ -137,22 +138,6 @@ cardBorderRadius = 16px
   background-position: center
   background-size: auto 21px
   background-repeat: no-repeat
-
-  &.kf-sys
-    top: 25px
-
-  &.kf-user
-    radius = 14px
-    z-index: 1
-    top: 150px
-    width: 2 * radius
-    height: 2 * radius
-    margin-left: -(radius)
-    opacity: 1
-    border-radius: 50%
-    background-position: center 5px
-    background-size: auto 16px
-    background-color: libraryRed
 
 .kf-upl-card-setting
   position: absolute
@@ -182,7 +167,7 @@ name-line-height = 22px
   width: 100%
   height: 3 * name-line-height
 
-  .kf-sys~&
+  .kf-upl-card-icon~&
     height: name-line-height
     top: 52px
 
@@ -210,7 +195,7 @@ owner-pic-diam = 32px
   right: 0
   height = 42px
   height: height
-  background-color: rgba(255,255,255,.1)
+  background-color: alpha(#fff, .1)
   white-space: nowrap
   font-size: 0
   line-height: height
@@ -221,7 +206,7 @@ owner-pic-diam = 32px
   width: owner-pic-diam
   height: owner-pic-diam
   border-radius: 50%
-  box-shadow: 0 0 3px rgba(0,0,0,.3) inset
+  box-shadow: 0 0 3px alpha(#000, .3) inset
 
 .kf-upl-card-owner-pic
   margin-right: 6px
@@ -294,31 +279,56 @@ owner-pic-diam = 32px
     content: '+'
     padding-right: 1px
 
-.kf-upl-counts
+lockRadius = 14px
+
+.kf-upl-count-line
   position: absolute
-  top: 158px
+  top: 154px
   left: 50%
   transform: translate(-50%)
+  line-height: 2 * lockRadius
   font-size: 0
   color: #fff
   white-space: nowrap
-  text-shadow: 0 0 3px rgba(0,0,0,.6)
+  text-shadow: 0 0 3px alpha(#000, .6)
 
-  &.kf-mine
-    top: 184px
+  &.kf-can-write
+    top: 179px
+
+.kf-upl-card-collab
+  display: inline-block
+  vertical-align: middle
+  height: 12px
+  width: 24px
+  background-size: auto 12px
+  background-repeat: no-repeat
+  background-position: center
+
+.kf-upl-card-private
+  display: inline-block
+  vertical-align: middle
+  width: 2 * lockRadius
+  height: 2 * lockRadius
+  border-radius: lockRadius
+  background-color: libraryRed
+  background-position: center 6px
+  background-size: auto 14px
+  background-repeat: no-repeat
+
+  &:not(:first-child)
+    margin-left: 8px
 
 .kf-upl-count
+  vertical-align: middle
   font-size: 13px
   font-weight: bold
   color: inherit
 
-  &[href]:hover
-    text-decoration: underline
+  &:not(:first-child)
+    margin-left: 8px
 
-.kf-upl-count-dot
-  padding: 0 5px
-  font-size: 14px
-  cursor: default
+  &:hover
+    text-decoration: underline
 
 followHeight = 30px
 subsWidth = 32px
@@ -363,10 +373,10 @@ subsDur = .3s
   font-size: 11px
   line-height: followHeight
   text-transform: uppercase
-  text-shadow: 0 0 1px rgba(0,0,0,.4)
+  text-shadow: 0 0 1px alpha(#000, .4)
   letter-spacing: .4px
   text-align: center
-  box-shadow: 0 0 8px rgba(0,0,0,.2)
+  box-shadow: 0 0 8px alpha(#000, .2)
 
   &:hover
     background-color: alpha(#fff, .1)
@@ -428,7 +438,7 @@ subsDur = .3s
   color: #3e4955
   font-size: 13px
   white-space: nowrap
-  box-shadow: 0 1px 3px rgba(0,0,0,.2)
+  box-shadow: 0 1px 3px alpha(#000, .2)
   transition: opacity linear .1s, visibility .1s
 
   :not(:hover)+&
@@ -450,7 +460,7 @@ subsDur = .3s
     left: 0
     right: 0
     bottom: 0
-    background-color: rgba(0,0,0,.2)
+    background-color: alpha(#000, .2)
     content: ''
 
 .kf-upl-card-cover-image
@@ -468,7 +478,7 @@ subsDur = .3s
   right: 0
   bottom: 0
   height: 35px
-  border-top: 1px solid rgba(255,255,255,.3)
+  border-top: 1px solid alpha(#fff, .3)
   font-smoothing: antialiased
   cursor: default
 
@@ -480,14 +490,17 @@ follower-pic-diameter = 23px
   line-height: follower-pic-diameter
   font-size: 11px
   vertical-align: middle
-  color: rgba(255,255,255,.8)
-  text-shadow: 0 0 6px rgba(0,0,0,.3)
+  color: alpha(#fff,.8)
+  text-shadow: 0 0 6px alpha(#000, .3)
 
 .kf-upl-followers-number
   color: inherit
 
   &[href]:hover
     text-decoration: underline
+
+.kf-upl-followers-n
+  color: alpha(#fff,.9)
 
 .kf-upl-follower
   display: inline-block
@@ -509,5 +522,5 @@ follower-pic-diameter = 23px
 .kf-upl-unlisted
   line-height: 33px
   font-size: 12px
-  color: rgba(255,255,255,.6)
-  text-shadow: 0 0 6px rgba(0,0,0,.2)
+  color: alpha(#fff, .6)
+  text-shadow: 0 0 6px alpha(#000, .2)
