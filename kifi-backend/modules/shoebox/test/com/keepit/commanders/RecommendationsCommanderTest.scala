@@ -110,27 +110,26 @@ class RecommendationsCommanderTest extends Specification with ShoeboxTestInjecto
     db.readOnlyMaster { implicit s =>
       userRepo.count === 2
     }
-    val (libMurica, libScience) = db.readWrite { implicit s =>
+    val (libMurica, libScience, libIron) = db.readWrite { implicit s =>
       val libMurica = library().withUser(userCaptain).withName("MURICA").withSlug("murica").published().saved
       val libScience = library().withUser(userCaptain).withName("Science & Stuff").withSlug("science").published().saved
-      (libMurica, libScience)
+      val libIron = library().withUser(userIron).withName("Iron Working").withSlug("iron").published().saved
+      (libMurica, libScience, libIron)
     }
     db.readOnlyMaster { implicit s =>
       val allLibs = libraryRepo.all
-      allLibs.length === 2
-      allLibs.map(_.name) === Seq("MURICA", "Science & Stuff")
-      allLibs.map(_.slug.value) === Seq("murica", "science")
-      allLibs.map(_.description) === Seq(None, None)
-      allLibs.map(_.visibility) === Seq(LibraryVisibility.PUBLISHED, LibraryVisibility.PUBLISHED)
-      libraryMembershipRepo.count === 2
+      allLibs.length === 3
+      allLibs.map(_.name) === Seq("MURICA", "Science & Stuff", "Iron Working")
+      allLibs.map(_.slug.value) === Seq("murica", "science", "iron")
+      allLibs.map(_.description) === Seq(None, None, None)
+      allLibs.map(_.visibility) === Seq(LibraryVisibility.PUBLISHED, LibraryVisibility.PUBLISHED, LibraryVisibility.PUBLISHED)
+      libraryMembershipRepo.count === 3
     }
 
     val t0 = DateTime.now().minusDays(10)
     db.readWrite { implicit s =>
       libraryInviteRepo.save(LibraryInvite(libraryId = libMurica.id.get, inviterId = userCaptain.id.get, userId = Some(userIron.id.get), access = LibraryAccess.READ_ONLY, createdAt = t0))
       libraryInviteRepo.save(LibraryInvite(libraryId = libScience.id.get, inviterId = userCaptain.id.get, userId = Some(userIron.id.get), access = LibraryAccess.READ_ONLY, createdAt = t0))
-
-      (userIron, userCaptain, libMurica, libScience)
     }
     db.readOnlyMaster { implicit s =>
       libraryInviteRepo.count === 2
@@ -149,15 +148,16 @@ class RecommendationsCommanderTest extends Specification with ShoeboxTestInjecto
       libraryRepo.save(libScience.copy(memberCount = libraryMembershipRepo.countWithLibraryId(libScience.id.get)))
     }
     db.readOnlyMaster { implicit s =>
-      libraryMembershipRepo.count === 4
+      libraryMembershipRepo.count === 5
       libraryRepo.get(libMurica.id.get).memberCount === 2
       libraryRepo.get(libScience.id.get).memberCount === 2
+      libraryRepo.get(libIron.id.get).memberCount === 1
     }
 
     val t1 = DateTime.now().minusHours(6)
     val muricaSites = Seq("http://www.reddit.com/r/murica", "http://www.reddit.com/r/pics", "http://www.reddit.com/r/aww", "http://www.reddit.com/r/funny", "http://www.reddit.com/r/jokes", "http://www.reddit.com/r/news")
-
     val scienceSites = Seq("http://www.reddit.com/r/science")
+    val ironSites = Seq("http://www.reddit.com/r/metalworking")
 
     db.readWrite { implicit s =>
       val muricaUris = for (site <- muricaSites) yield uriRepo.save(NormalizedURI.withHash(site, Some("Reddit")))
@@ -176,12 +176,20 @@ class RecommendationsCommanderTest extends Specification with ShoeboxTestInjecto
           uriId = scienceUris(i).id.get, source = KeepSource.keeper, createdAt = t1, keptAt = t1.plusMinutes(muricaSites.length + i),
           visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(libScience.id.get), inDisjointLib = libScience.isDisjoint))
       }
+
+      val ironUris = for (site <- ironSites) yield uriRepo.save(NormalizedURI.withHash(site, Some("Reddit")))
+      val ironUrls = for (uri <- ironUris) yield urlRepo.save(URLFactory(url = uri.url, normalizedUriId = uri.id.get))
+      val ironKeeps = for (i <- 0 to ironSites.length - 1) yield {
+        keepRepo.save(Keep(title = Some("Reddit"), userId = userIron.id.get, url = ironUrls(i).url, urlId = ironUrls(i).id.get,
+          uriId = ironUris(i).id.get, source = KeepSource.keeper, createdAt = t1, keptAt = t1.plusMinutes(i),
+          visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(libIron.id.get), inDisjointLib = libIron.isDisjoint))
+      }
     }
 
     db.readOnlyMaster { implicit s =>
-      keepRepo.count === muricaSites.length + scienceSites.length
+      keepRepo.count === muricaSites.length + scienceSites.length + ironSites.length
     }
-    (userIron, userCaptain, libMurica, libScience)
+    (userIron, userCaptain, libMurica, libScience, libIron)
   }
 
   "RecommendationsCommanderTest" should {
@@ -240,7 +248,7 @@ class RecommendationsCommanderTest extends Specification with ShoeboxTestInjecto
           val t1 = DateTime.now()
           implicit val config = inject[PublicIdConfiguration]
           val recoCommander = inject[RecommendationsCommander]
-          val (userIron, userCaptain, libMurica, libScience) = setupUsersAndLibrariesAndKeeps()
+          val (userIron, userCaptain, libMurica, libScience, libIron) = setupUsersAndLibrariesAndKeeps()
 
           db.readOnlyMaster { implicit s =>
             val resF = recoCommander.maybeUpdatesFromFollowedLibraries(userIron.id.get, 20, maxUpdatesPerLibrary = 5)
@@ -248,11 +256,11 @@ class RecommendationsCommanderTest extends Specification with ShoeboxTestInjecto
             recos.itemInfo.length === 6
             recos.itemInfo.map(_.url) ===
               Seq("http://www.reddit.com/r/science",
-                  "http://www.reddit.com/r/news",
-                  "http://www.reddit.com/r/jokes",
-                  "http://www.reddit.com/r/funny",
-                  "http://www.reddit.com/r/aww",
-                  "http://www.reddit.com/r/pics")
+                "http://www.reddit.com/r/news",
+                "http://www.reddit.com/r/jokes",
+                "http://www.reddit.com/r/funny",
+                "http://www.reddit.com/r/aww",
+                "http://www.reddit.com/r/pics")
           }
         }
       }
