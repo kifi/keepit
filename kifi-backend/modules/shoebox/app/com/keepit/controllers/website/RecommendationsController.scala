@@ -73,15 +73,9 @@ trait RecommendationControllerHelper extends Logging {
   // hack, make sure Danny is happy.
   private val specialBoostSet = Set(46862, 36680, 49078, 24103, 47498, 51798, 47889, 47191, 47494, 48661, 49090, 50874, 49135, 26460, 27238, 25168, 50812, 47488, 42651, 27760, 25368, 44475, 24203, 50862, 47284, 25000, 27545, 51496, 27049, 26465).map { Id[Library](_) }
 
-  /**
-   * Takes in a list of URI recommendations and a list of Library recommendations
-   * "Mixes" them together (i.e. a random shuffle), with one slight complexity.
-   *
-   * Partitions the libraries based on whether or not they're in the specialBoostSet
-   * Those that are ARE in the specialBoostSet are placed at the front of the list
-   * The rest of the libraries are mixed together with the URIs and placed at the end
-   */
   def mix(uris: Seq[FullUriRecoInfo], libs: Seq[(Id[Library], FullLibRecoInfo)]): Seq[FullRecoInfo] = {
+    // Shuffles together URI and Library recommendations. Libraries in the specialBoostSet are
+    // guaranteed to be at the beginning of the list
     val (lucky, rest) = libs.partition { case (id, _) => specialBoostSet.contains(id) }
     util.Random.shuffle(lucky.map { _._2 }) ++ util.Random.shuffle(uris ++ rest.map(_._2))
   }
@@ -101,7 +95,6 @@ trait RecommendationControllerHelper extends Logging {
       ratio min 1f
     }
     val timeBased = ((1 - alpha) * 10 + alpha * 2).toInt
-    // 10 - 8*min(1, days/14)
 
     val beta = {
       val cnts = db.readOnlyMaster { implicit s => libMemRepo.countsWithUserIdAndAccesses(userId, Set(LibraryAccess.OWNER, LibraryAccess.READ_ONLY)) }
@@ -110,7 +103,6 @@ trait RecommendationControllerHelper extends Logging {
       ratio min 1f
     }
     val libBased = ((1 - beta) * 10 + beta * 2).toInt
-    // 10 - 8*min(1, libs/50)
 
     log.info(s"smart lib reco number: timeBased = $timeBased, libBased = $libBased")
 
