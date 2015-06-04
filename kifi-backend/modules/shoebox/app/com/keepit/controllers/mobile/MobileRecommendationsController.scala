@@ -126,6 +126,11 @@ class MobileRecommendationsController @Inject() (
     }
   }
 
+  def keepUpdates(count: Int, beforeTime: String) = UserAction.async { request =>
+    commander.updatesFromFollowedLibraries(request.userId, count, beforeTime)
+      .map(updatedKeeps => Ok(Json.obj("updatedKeeps" -> updatedKeeps)))
+  }
+
   private def getRecommendationSource(request: UserRequest[_]): RecommendationSource = {
     val agent = UserAgent(request)
     if (agent.isKifiAndroidApp) RecommendationSource.Android

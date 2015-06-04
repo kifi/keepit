@@ -147,7 +147,7 @@ class RecommendationsCommander @Inject() (
       if (lastSeen.isBefore(currentDateTime.minusHours(12))) {
         userValueRepo.setValue(userId, UserValueName.UPDATED_LIBRARIES_LAST_SEEN, currentDateTime)
 
-        val recentlyUpdatedKeeps = keepRepo.getRecentKeepsFromFollowedLibraries(userId, 5*maxUpdates)
+        val recentlyUpdatedKeeps = keepRepo.getRecentKeepsFromFollowedLibraries(userId, 5 * maxUpdates)
         val keepsByLibrary = recentlyUpdatedKeeps.groupBy(_.libraryId).values.toSeq
         val fairlySampledKeeps = sampleFairly(keepsByLibrary, maxUpdatesPerLibrary)
         val result = fairlySampledKeeps.sortBy(_.keptAt).reverse.take(maxUpdates)
@@ -168,7 +168,16 @@ class RecommendationsCommander @Inject() (
         else Some(infos)
       }
     }.getOrElse(Future.successful(None))
+  }
 
+  def updatesFromFollowedLibraries(userId: Id[User], count: Int, beforeTime: String): Future[Seq[KeepInfo]] = {
+    val keeps: Seq[Keep] = db.readWrite { implicit session =>
+      keepRepo.getRecentKeepsFromFollowedLibraries(userId, count, beforeTime)
+    }
+
+    keepDecorator.decorateKeepsIntoKeepInfos(Some(userId), false, keeps, ProcessedImageSize.Large.idealSize, true).map { keepInfos =>
+      FullLibUpdatesRecoInfo(itemInfo = keepInfos).itemInfo
+    }
   }
 
   private def decorateUriRecos(userId: Id[User], recos: Seq[RecoInfo], explain: Boolean): Future[Seq[FullUriRecoInfo]] = {
