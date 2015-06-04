@@ -298,6 +298,7 @@ angular.module('kifi')
         showInstallModal();
       }
       if (initParams.getAndClear('intent') === 'follow' && !$scope.library.membership) {
+        // todo wtf why is this here and possible? no good.
         libraryService.joinLibrary($scope.library.id);
       }
     });

@@ -17,17 +17,6 @@ POST    /oauth2/callback/:provider  @com.keepit.controllers.core.OAuth2Controlle
 
 GET     /signup                     @com.keepit.controllers.core.AuthController.signupPage()
 
-# New signup pages -- remove me please!
-
-GET     /new/signup                 @com.keepit.controllers.core.AuthController.signupPageMinimal()
-GET     /new/signupEmail            @com.keepit.controllers.core.AuthController.signupPageGetEmailMinimal()
-GET     /new/signupName             @com.keepit.controllers.core.AuthController.signupPageGetName()
-GET     /new/login                  @com.keepit.controllers.core.AuthController.loginPageMinimal()
-GET     /new/loginNoTwitter         @com.keepit.controllers.core.AuthController.loginPageNoTwitterMinimal()
-GET     /new/linkSocial             @com.keepit.controllers.core.AuthController.linkSocialAccountMinimal()
-GET     /new/install                @com.keepit.controllers.core.AuthController.install()
-GET     /new/accountNotFound        @com.keepit.controllers.core.AuthController.accountNotFound()
-GET     /new/resetPassword/:code    @com.keepit.controllers.core.AuthController.resetPassword(code: String, error: Option[String] ?= None)
 
 # End new signup pages
 
@@ -61,7 +50,7 @@ GET     /connect/:provider          @com.keepit.controllers.core.AuthController.
 GET     /connect/:provider/done     @com.keepit.controllers.core.AuthController.popupAfterLinkSocial(provider)
 GET     /link/:provider             @com.keepit.controllers.core.AuthController.link(provider: String, redirect: Option[String] ?= None)
 
-GET     /signup/:provider           @com.keepit.controllers.core.AuthController.signup(provider: String, publicLibraryId: Option[String] ?= None, intent: Option[String] ?= None)
+GET     /signup/:provider           @com.keepit.controllers.core.AuthController.signup(provider: String, publicLibraryId: Option[String] ?= None, intent: Option[String] ?= None, libAuthToken: Option[String] ?= None)
 
 # do we still use this endpoint?
 POST    /mobileauth/:provider       @com.keepit.controllers.mobile.MobileAuthController.accessTokenLogin(provider)
@@ -257,7 +246,6 @@ POST    /m/1/recos/trash                        @com.keepit.controllers.mobile.M
 POST    /m/1/recos/feedback                     @com.keepit.controllers.website.RecommendationsController.updateUriRecommendationFeedback(id: ExternalId[NormalizedURI])
 
 POST     /m/1/feed                              @com.keepit.controllers.mobile.MobileRecommendationsController.feedV1Post()
-GET     /m/1/feed/test                          @com.keepit.controllers.mobile.MobileRecommendationsController.feedV1Test()
 
 
 GET     /m/1/users/:userStr/libraries/:slug     @com.keepit.controllers.mobile.MobileLibraryController.getLibraryByPathV1(userStr:String, slug: String, is: Option[String] ?= None)

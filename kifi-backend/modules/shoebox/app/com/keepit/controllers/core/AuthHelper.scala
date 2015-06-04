@@ -193,7 +193,8 @@ class AuthHelper @Inject() (
 
     val cookieTargetLibId = request.cookies.get("publicLibraryId")
     val cookieIntent = request.cookies.get("intent")
-    val discardedCookies = Seq(cookieTargetLibId, cookieIntent).flatten.map(c => DiscardingCookie(c.name)) :+ DiscardingCookie("inv")
+    val cookieLibAuthToken = request.cookies.get("libAuthToken")
+    val discardedCookies = Seq(cookieTargetLibId, cookieIntent, cookieLibAuthToken).flatten.map(c => DiscardingCookie(c.name)) :+ DiscardingCookie("inv")
     val fromTwitterWaitlist = cookieIntent.exists(_.value == "waitlist")
 
     if (!fromTwitterWaitlist) {
@@ -211,6 +212,7 @@ class AuthHelper @Inject() (
       }
     }
 
+    // todo go to lib page if they're just following now
     val uri = request.session.get(SecureSocial.OriginalUrlKey) getOrElse {
       request.headers.get(USER_AGENT).flatMap { agentString =>
         val agent = UserAgent(agentString)
@@ -219,7 +221,7 @@ class AuthHelper @Inject() (
     }
 
     libraryCommander.convertPendingInvites(emailAddress, user.id.get)
-    libraryPublicId.foreach(authCommander.autoJoinLib(user.id.get, _))
+    libraryPublicId.foreach(lid => authCommander.autoJoinLib(user.id.get, lid, cookieLibAuthToken.map(_.value)))
 
     request.session.get("kcid").map(saveKifiCampaignId(user.id.get, _))
 

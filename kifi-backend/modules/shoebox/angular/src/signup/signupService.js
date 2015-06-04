@@ -176,30 +176,14 @@ angular.module('kifi')
       if (!form.$valid) {
         $scope.requestActive = false;
         return false;
-      } else if ($scope.userData.method === 'social') {
-        fields = {
-          email: $scope.userData.email,
-          password: $scope.userData.password,
-          firstName: $scope.userData.firstName,
-          lastName: $scope.userData.lastName,
-          libraryPublicId: $scope.userData.libraryId
-        };
-
-        registrationService.socialFinalize(fields).then(function () {
-          // todo: do we need to handle the return resp?
-          modalService.close();
-          $window.location.href = '/install';
-        })['catch'](function () {
-          // Would love to get logs of this.
-          $scope.onError({'code': 'social_finalize_fail', redirect: 'https://www.kifi.com/signup'});
-        });
       } else { // email signup
         fields = {
           email: $scope.userData.email,
           password: $scope.userData.password,
           firstName: $scope.userData.firstName,
           lastName: $scope.userData.lastName,
-          libraryPublicId: $scope.userData.libraryId
+          libraryPublicId: $scope.userData.libraryId, // todo remove me
+          hook: $scope.userData.hook // todo implement
         };
 
         registrationService.emailFinalize(fields).then(function () {

@@ -415,16 +415,21 @@ class AuthCommander @Inject() (
     }
   }
 
-  def autoJoinLib(userId: Id[User], libPubId: PublicId[Library]): Unit = {
-    Library.decodePublicId(libPubId) map { libId =>
+  def autoJoinLib(userId: Id[User], libPubId: PublicId[Library], authToken: Option[String]): Boolean = { // true for success, false for failure
+    // Abstracting away errors and manually reporting. If someone needs the specific error, feel free to change the signature.
+    Library.decodePublicId(libPubId).map { libId =>
       implicit val context = HeimdalContext(Map())
-      libraryCommander.joinLibrary(userId, libId).fold(
-        libFail =>
-          airbrake.notify(s"[finishSignup] auto-join failed. $libFail"),
-        library =>
+      libraryCommander.joinLibrary(userId, libId, authToken).fold(
+        { libFail =>
+          airbrake.notify(s"[finishSignup] auto-join failed. $libFail")
+          false
+        },
+        { library =>
           log.info(s"[finishSignup] user(id=$userId) has successfully joined library $library")
+          true
+        }
       )
-    }
+    }.getOrElse(false)
   }
 
 }
