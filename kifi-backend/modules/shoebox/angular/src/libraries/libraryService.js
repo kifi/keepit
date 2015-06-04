@@ -184,6 +184,7 @@ angular.module('kifi')
         return $http.post(routeService.joinLibrary(libraryId, authToken, subscribed)).then(function (res) {
           $rootScope.$emit('libraryJoined', libraryId, res.data.membership);
           net.getLibraryInfoById.clearCache();
+          return res.data.membership;
         });
       },
 
