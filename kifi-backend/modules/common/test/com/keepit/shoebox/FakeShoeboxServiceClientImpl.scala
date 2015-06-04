@@ -701,4 +701,6 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
   }
 
   def getUserActivePersonas(userId: Id[User]): Future[UserActivePersonas] = Future.successful(UserActivePersonas(Seq(), Seq()))
+
+  def getLibraryURIs(libId: Id[Library]): Future[Seq[Id[NormalizedURI]]] = Future.successful(Seq())
 }
