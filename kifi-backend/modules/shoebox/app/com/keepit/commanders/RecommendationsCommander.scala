@@ -141,17 +141,19 @@ class RecommendationsCommander @Inject() (
   def sampleFairly[T](seqOfSeqs: Seq[Seq[T]], maxPerSeq: Int): Seq[T] = {
     seqOfSeqs.flatMap(_.take(maxPerSeq))
   }
-  def maybeUpdatesFromFollowedLibraries(userId: Id[User]): Future[Option[FullLibUpdatesRecoInfo]] = {
-    val maxUpdates = 20
-    val maxPerLibrary = 5
+  def maybeUpdatesFromFollowedLibraries(userId: Id[User],
+    maxUpdates: Int = 20,
+    maxUpdatesPerLibrary: Int = 5): Future[Option[FullLibUpdatesRecoInfo]] = {
     val keepsOpt: Option[Seq[Keep]] = db.readWrite { implicit session =>
       val lastSeen = userValueRepo.getValue(userId, UserValues.libraryUpdatesLastSeen)
       if (lastSeen.isBefore(currentDateTime.minusHours(12))) {
         userValueRepo.setValue(userId, UserValueName.UPDATED_LIBRARIES_LAST_SEEN, currentDateTime)
+
         val recentlyUpdatedKeeps = keepRepo.getRecentKeepsFromFollowedLibraries(userId)
         val keepsByLibrary = recentlyUpdatedKeeps.groupBy(_.libraryId).values.toSeq
-        val fairlySampledKeeps = sampleFairly(keepsByLibrary, maxPerLibrary)
+        val fairlySampledKeeps = sampleFairly(keepsByLibrary, maxUpdatesPerLibrary)
         val result = fairlySampledKeeps.sortBy(_.keptAt).reverse.take(maxUpdates)
+
         Some(result)
       } else {
         None
