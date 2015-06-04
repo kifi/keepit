@@ -104,34 +104,14 @@ object LibraryInfo {
   }
 }
 
-private[model] abstract class BaseLibraryCardInfo(
+@json
+case class LibraryCardInfo(
   id: PublicId[Library],
   name: String,
   description: Option[String],
   color: Option[LibraryColor], // system libraries have no color
   image: Option[LibraryImageInfo],
   slug: LibrarySlug,
-  owner: BasicUser,
-  numKeeps: Int,
-  numFollowers: Int,
-  followers: Seq[BasicUser],
-  numCollaborators: Int,
-  collaborators: Seq[BasicUser],
-  lastKept: DateTime,
-  following: Option[Boolean], // @deprecated use membership object instead! (is viewer following this library? Set to None if viewing anonymously or viewing own profile)
-  membership: Option[LibraryMembershipInfo],
-  modifiedAt: DateTime,
-  kind: LibraryKind)
-
-@json
-case class OwnLibraryCardInfo( // when viewing own created libraries
-  id: PublicId[Library],
-  name: String,
-  description: Option[String],
-  color: Option[LibraryColor],
-  image: Option[LibraryImageInfo],
-  slug: LibrarySlug,
-  kind: LibraryKind,
   visibility: LibraryVisibility,
   owner: BasicUser,
   numKeeps: Int,
@@ -141,34 +121,12 @@ case class OwnLibraryCardInfo( // when viewing own created libraries
   collaborators: Seq[BasicUser],
   lastKept: DateTime,
   following: Option[Boolean], // @deprecated use membership object instead!
+  listed: Option[Boolean] = None, // @deprecated use membership object instead! (should this library show up on owner's profile?)
   membership: Option[LibraryMembershipInfo],
-  listed: Boolean, // @deprecated use membership object instead! (should this library show up on owner's profile?)
-  modifiedAt: DateTime)
-    extends BaseLibraryCardInfo(id, name, description, color, image, slug, owner, numKeeps, numFollowers, followers, numCollaborators, collaborators, lastKept, following, membership, modifiedAt, kind)
-
-@json
-case class LibraryCardInfo(
-  id: PublicId[Library],
-  name: String,
-  description: Option[String],
-  color: Option[LibraryColor],
-  image: Option[LibraryImageInfo],
-  slug: LibrarySlug,
-  visibility: LibraryVisibility,
-  owner: BasicUser,
-  numKeeps: Int,
-  numFollowers: Int,
-  followers: Seq[BasicUser],
-  numCollaborators: Int,
-  collaborators: Seq[BasicUser],
-  lastKept: DateTime,
-  following: Option[Boolean], // @deprecated use membership object instead!
-  membership: Option[LibraryMembershipInfo],
-  caption: Option[String],
+  caption: Option[String] = None, // currently only for marketing page
   modifiedAt: DateTime,
   kind: LibraryKind,
-  invite: Option[LibraryInviteInfo] = None)
-    extends BaseLibraryCardInfo(id, name, description, color, image, slug, owner, numKeeps, numFollowers, followers, numCollaborators, collaborators, lastKept, following, membership, modifiedAt, kind)
+  invite: Option[LibraryInviteInfo] = None) // currently only for Invited tab on viewer's own user profile
 
 object LibraryCardInfo {
   def chooseCollaborators(collaborators: Seq[BasicUser]): Seq[BasicUser] = {
