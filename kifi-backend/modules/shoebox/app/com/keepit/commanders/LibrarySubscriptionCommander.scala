@@ -46,7 +46,7 @@ class LibrarySubscriptionCommander @Inject() (
           val body = BasicSlackMessage(text)
           httpLock.withLockFuture(client.postFuture(DirectUrl(info.url), Json.toJson(body)))
         case _ =>
-          Future.failed(new NoSuchFieldException("unsupported_subscription_info"))
+          Future.failed(new NoSuchFieldException("[LibrarySubscriptionCommander] sendNewKeepMessage: SubscriptionInfo not supported"))
       }
     }
   }
