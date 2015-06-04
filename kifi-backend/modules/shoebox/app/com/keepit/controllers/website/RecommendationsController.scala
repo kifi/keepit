@@ -74,10 +74,19 @@ trait RecommendationControllerHelper extends Logging {
   private val specialBoostSet = Set(46862, 36680, 49078, 24103, 47498, 51798, 47889, 47191, 47494, 48661, 49090, 50874, 49135, 26460, 27238, 25168, 50812, 47488, 42651, 27760, 25368, 44475, 24203, 50862, 47284, 25000, 27545, 51496, 27049, 26465).map { Id[Library](_) }
 
   def mix(uris: Seq[FullUriRecoInfo], libs: Seq[(Id[Library], FullLibRecoInfo)]): Seq[FullRecoInfo] = {
+    // Shuffles together URI and Library recommendations. Libraries in the specialBoostSet are
+    // guaranteed to be at the beginning of the list
     val (lucky, rest) = libs.partition { case (id, _) => specialBoostSet.contains(id) }
     util.Random.shuffle(lucky.map { _._2 }) ++ util.Random.shuffle(uris ++ rest.map(_._2))
   }
 
+  /**
+   * Takes in a user and figures out how many libraries we should be recommending to them.
+   *
+   * Accounts for the amount of time the user has been around, and how many libraries they
+   * have started/followed. If the user is "experienced", we recommend fewer libraries. If
+   * the user is "new", we recommend a lot of libraries.
+   */
   def libraryRecoCount(userId: Id[User]): Int = {
     val alpha = {
       val user = db.readOnlyMaster { implicit s => userRepo.get(userId) }
@@ -89,7 +98,7 @@ trait RecommendationControllerHelper extends Logging {
 
     val beta = {
       val cnts = db.readOnlyMaster { implicit s => libMemRepo.countsWithUserIdAndAccesses(userId, Set(LibraryAccess.OWNER, LibraryAccess.READ_ONLY)) }
-      val cntsSum = cnts.values.foldLeft(0)(_ + _)
+      val cntsSum = cnts.values.sum
       val ratio = cntsSum * 1f / 50
       ratio min 1f
     }

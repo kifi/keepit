@@ -119,6 +119,9 @@ class MobileRecommendationsController @Inject() (
     for (libs <- libRecosF; uris <- uriRecosF; libUpdatesOpt <- libUpdatesF) yield {
       val FullUriRecoResults(urisReco, newUrisContext) = uris
       val FullLibRecoResults(libsReco, newLibsContext) = libs
+      // Randomly shuffle together the URI recommendations, Library recommendations, and any
+      // updates from this user's followed libraries. If there are no updates to this
+      // user's followed libraries, just ignore them.
       val recos = libUpdatesOpt.map { _ +: mix(urisReco, libsReco) }.getOrElse(mix(urisReco, libsReco))
       val (goodUriContext, goodLibContext) = sanitizeContext(newUrisContext, newLibsContext)
 
