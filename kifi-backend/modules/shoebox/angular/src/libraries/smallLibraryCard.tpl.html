@@ -11,7 +11,7 @@
     <div class="kf-slc-count-line">
       <span class="kf-slc-card-collab svg-collaborators-white" title="A collaborative library" ng-if="::library.numCollaborators"></span>
       <span class="kf-slc-card-private svg-card-lock" ng-class="::{'kf-collab': library.numCollaborators}" title="A private library" ng-if="::library.kind !== 'system_secret' && library.visibility === 'secret'"></span>
-      <span class="kf-slc-count" ng-click="trackUplCardClick(library, 'clickedLibraryKeepsTotal')" ng-pluralize count="::library.numKeeps" when="{'1':'{} keep','other':'{{library.numKeeps|num}} keeps'}" ng-if="::library.numKeeps"></span>
+      <span class="kf-slc-count" ng-pluralize count="::library.numKeeps" when="{'1':'{} keep','other':'{{library.numKeeps|num}} keeps'}" ng-if="::library.numKeeps"></span>
     </div>
     <div class="kf-slc-card-foot" ng-switch="::library.reason || (library.followers.length ? '' : 'updated')">
       <span ng-switch-when="owner">More from this curator</span>
@@ -43,7 +43,7 @@
   </div>
   <div class="kf-slc-card-foot" ng-if="::!library.reason && library.followers.length">
     <div class="kf-slc-followers">
-      <a href="{{::user|profileUrl}}" class="kf-slc-follower" ng-repeat="user in library.followers | limitTo:maxNumFollowersToShow" kf-track-origin="{{currentPageOrigin}}/follower" ng-click="trackUplCardClick(library, 'clickedLibraryFollowersFace')"
+      <a href="{{::user|profileUrl}}" class="kf-slc-follower" ng-repeat="user in library.followers | limitTo:maxNumFollowersToShow" kf-track-origin="{{currentPageOrigin}}/follower"
          ng-attr-style="background-image:url({{::user|pic:100}})"></a>
       <a class="kf-slc-followers-number" href="javascript:" ng-click="openFollowersList(library); trackUplCardClick(library, 'clickedLibraryFollowersMoreFollowing')">
         <span ng-if="library.numFollowers <= maxNumFollowersToShow" class="kf-slc-all-followers">{{library.numFollowers === 1 ? 'follows this library' : 'are following'}}</span>
