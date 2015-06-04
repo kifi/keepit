@@ -13,6 +13,6 @@ create table library_subscription(
   info varchar(2048) NOT NULL
 )
 
-insert into evolutions (name, description) values('335.sql', 'adding library subscription')
+insert into evolutions (name, description) values('338.sql', 'adding library subscription')
 
 # --- !Downs
