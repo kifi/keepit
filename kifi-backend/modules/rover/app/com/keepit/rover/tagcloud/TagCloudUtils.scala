@@ -34,8 +34,8 @@ object TagCloudGenerator {
     val (keywords, entities, contents) = corpus.articles.values.map { articles =>
       val extractor = ArticleContentExtractor(articles)
       val embedlyArticle: Option[EmbedlyContent] = extractor.getByKind(EmbedlyArticle).asInstanceOf[Option[EmbedlyContent]]
-      val keywords = embedlyArticle.map { _.keywords }.get
-      val entities = embedlyArticle.map { _.entities }.get.map { _.name.toLowerCase }
+      val keywords = embedlyArticle.map { _.keywords }.getOrElse(Seq())
+      val entities = embedlyArticle.map { _.entities }.getOrElse(Seq()).map { _.name.toLowerCase }
       val content = extractor.content.getOrElse("").toLowerCase
       (keywords, entities, content)
     }.unzip3
