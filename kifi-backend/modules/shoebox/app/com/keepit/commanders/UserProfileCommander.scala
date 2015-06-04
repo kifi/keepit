@@ -43,7 +43,7 @@ class UserProfileCommander @Inject() (
     implicit val defaultContext: ExecutionContext,
     implicit val config: PublicIdConfiguration) {
 
-  def getOwnLibrariesForSelf(user: User, page: Paginator, idealSize: ImageSize): ParSeq[LibraryCardInfo] = {
+  def getOwnLibrariesForSelf(user: User, page: Paginator, idealSize: ImageSize): ParSeq[OwnLibraryCardInfo] = {
     val (libraryInfos, memberships) = db.readOnlyMaster { implicit session =>
       val libs = libraryRepo.getOwnerLibrariesForSelf(user.id.get, page)
       val libOwnerIds = libs.map(_.ownerId).toSet
@@ -55,7 +55,7 @@ class UserProfileCommander @Inject() (
     }
     libraryInfos map {
       case (info, lib) =>
-        LibraryCardInfo(
+        OwnLibraryCardInfo(
           id = info.id,
           name = info.name,
           description = info.description,
@@ -71,7 +71,7 @@ class UserProfileCommander @Inject() (
           numCollaborators = info.numCollaborators,
           collaborators = info.collaborators,
           lastKept = lib.lastKept.getOrElse(lib.createdAt),
-          listed = memberships(lib.id.get).map(_.listed).orElse(Some(false)),
+          listed = memberships(lib.id.get).map(_.listed).getOrElse(false),
           following = Some(true),
           membership = (memberships(lib.id.get)) map (LibraryMembershipInfo.fromMembership(_)),
           modifiedAt = lib.updatedAt)
@@ -116,12 +116,9 @@ class UserProfileCommander @Inject() (
   def getInvitedLibraries(user: User, viewer: Option[User], page: Paginator, idealSize: ImageSize): ParSeq[LibraryCardInfo] = {
     if (viewer.exists(_.id == user.id)) {
       db.readOnlyMaster { implicit session =>
-        val (libs, invites) = libraryRepo.getInvitedLibrariesForSelf(user.id.get, page).unzip
-        val ownersAndInviters = basicUserRepo.loadAll((libs.map(_.ownerId) ++ invites.map(_.inviterId)).toSet)
-        libraryCommander.createLibraryCardInfos(libs, ownersAndInviters, viewer, false, idealSize) zip invites map {
-          case (card, invite) =>
-            card.copy(invite = Some(LibraryInviteInfo.createInfo(invite, ownersAndInviters(invite.inviterId))))
-        }
+        val libs = libraryRepo.getInvitedLibrariesForSelf(user.id.get, page)
+        val owners = basicUserRepo.loadAll(libs.map(_.ownerId).toSet)
+        libraryCommander.createLibraryCardInfos(libs, owners, viewer, false, idealSize)
       }
     } else {
       ParSeq.empty
