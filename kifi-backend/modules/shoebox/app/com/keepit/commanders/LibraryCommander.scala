@@ -1754,6 +1754,7 @@ class LibraryCommander @Inject() (
       lastKept = lib.lastKept.getOrElse(lib.createdAt),
       following = isFollowing,
       membership = membershipOpt.map(LibraryMembershipInfo.fromMembership(_)),
+      caption = None,
       modifiedAt = lib.updatedAt,
       kind = lib.kind)
   }
