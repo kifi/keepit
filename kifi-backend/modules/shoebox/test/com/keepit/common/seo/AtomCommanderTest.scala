@@ -2,10 +2,10 @@ package com.keepit.common.seo
 
 import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
-import com.keepit.common.mail.EmailAddress
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.time._
 import com.keepit.model._
+import com.keepit.model.UserFactoryHelper._
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.test.ShoeboxTestInjector
 import org.joda.time.DateTime
@@ -26,8 +26,7 @@ class AtomCommanderTest extends Specification with ShoeboxTestInjector {
   def setup()(implicit injector: Injector) = {
     db.readWrite { implicit s =>
       val t1 = new DateTime(2014, 7, 4, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
-      val user = userRepo.save(User(createdAt = DateTime.now, firstName = "Colin", lastName = "Lane", username = Username("Colin-Lane"),
-        primaryEmail = Some(EmailAddress("colin@kifi.com")), normalizedUsername = "colin-lane"))
+      val user = UserFactory.user().withName("Colin", "Lane").withUsername("colin-lane").withEmailAddress("colin@kifi.com").saved
       val library = libraryRepo.save(Library(name = "test", ownerId = user.id.get, visibility = LibraryVisibility.PUBLISHED, slug = LibrarySlug("test"), memberCount = 1))
 
       val uri0 = uriRepo.save(NormalizedURI.withHash("http://www.kiiifffiii.com/", Some("Kifi")))
@@ -73,7 +72,7 @@ class AtomCommanderTest extends Specification with ShoeboxTestInjector {
         (result \ "id") contains "urn:kifi:"
         // Library was just created, should be accurate
         new DateTime((result \ "updated").text).getMillis() - DateTime.now().getMillis < 100000
-        ((result \ "link")(0) \ "@href") === "http://dev.ezkeep.com:9000/Colin-Lane/test/atom"
+        ((result \ "link")(0) \ "@href") === "http://dev.ezkeep.com:9000/colin-lane/test/atom"
         ((result \ "link")(0) \ "@rel") === "self"
 
         val kifi = (result \ "entry")(0)

@@ -1,11 +1,11 @@
 package com.keepit.common.seo
 
-import akka.util.Timeout
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.time._
 import com.keepit.model._
+import com.keepit.model.UserFactoryHelper._
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.test.ShoeboxTestInjector
 import org.joda.time.DateTime
@@ -14,9 +14,6 @@ import org.specs2.mutable.Specification
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 
-/**
- * Created by colinlane on 5/22/15.
- */
 class FeedCommanderTest extends Specification with ShoeboxTestInjector {
 
   val modules = Seq(
@@ -30,8 +27,7 @@ class FeedCommanderTest extends Specification with ShoeboxTestInjector {
       withDb(modules: _*) { implicit injector =>
         val (library) = db.readWrite { implicit s =>
           val t1 = new DateTime(2014, 7, 4, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
-          val user = userRepo.save(User(createdAt = DateTime.now, firstName = "Colin", lastName = "Lane", username = Username("Colin-Lane"),
-            primaryEmail = Some(EmailAddress("colin@kifi.com")), normalizedUsername = "colin-lane"))
+          val user = UserFactory.user().withName("Colin", "Lane").withUsername("colin-lane").withEmailAddress("colin@kifi.com").saved
           val library = libraryRepo.save(Library(name = "test", ownerId = user.id.get, visibility = LibraryVisibility.PUBLISHED, slug = LibrarySlug("test"), memberCount = 1))
 
           val uri1 = uriRepo.save(NormalizedURI.withHash("http://www.google.com/", Some("Google")))
@@ -70,8 +66,7 @@ class FeedCommanderTest extends Specification with ShoeboxTestInjector {
         withDb(modules: _*) { implicit injector =>
           val (library) = db.readWrite { implicit s =>
             val t1 = new DateTime(2014, 7, 4, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
-            val user = userRepo.save(User(createdAt = DateTime.now, firstName = "Colin", lastName = "Lane", username = Username("Colin-Lane"),
-              primaryEmail = Some(EmailAddress("colin@kifi.com")), normalizedUsername = "colin-lane"))
+            val user = UserFactory.user().withName("Colin", "Lane").withUsername("colin-lane").withEmailAddress("colin@kifi.com").saved
             val library = libraryRepo.save(Library(name = "test", ownerId = user.id.get, visibility = LibraryVisibility.PUBLISHED, slug = LibrarySlug("test"), memberCount = 1))
 
             val uri1 = uriRepo.save(NormalizedURI.withHash("http://www.google.com/", Some("Google")))
@@ -107,8 +102,7 @@ class FeedCommanderTest extends Specification with ShoeboxTestInjector {
         withDb(modules: _*) { implicit injector =>
           val (library) = db.readWrite { implicit s =>
             val t1 = new DateTime(2014, 7, 4, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
-            val user = userRepo.save(User(createdAt = DateTime.now, firstName = "Colin", lastName = "Lane", username = Username("Colin-Lane"),
-              primaryEmail = Some(EmailAddress("colin@kifi.com")), normalizedUsername = "colin-lane"))
+            val user = UserFactory.user().withName("Colin", "Lane").withUsername("colin-lane").withEmailAddress("colin@kifi.com").saved
             val library = libraryRepo.save(Library(name = "test", ownerId = user.id.get, visibility = LibraryVisibility.PUBLISHED, slug = LibrarySlug("test"), memberCount = 1))
 
             val uri1 = uriRepo.save(NormalizedURI.withHash("http://www.google.com/", Some("Google")))

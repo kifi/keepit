@@ -10,7 +10,8 @@ import com.keepit.common.time._
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
-import com.keepit.model.{ SocialUserInfo, User, Username }
+import com.keepit.model.{ UserFactory, SocialUserInfo }
+import com.keepit.model.UserFactoryHelper._
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.social.{ SocialId, SocialNetworks }
 import com.keepit.test._
@@ -51,7 +52,7 @@ class ExtAuthControllerTest extends Specification with ShoeboxApplicationInjecto
         val su = SocialUser(IdentityId("111", "facebook"), "A", "1", "A 1", Some("a1@gmail.com"),
           Some("http://www.fb.com/me"), AuthenticationMethod.OAuth2, None, Some(oAuth2Info), None)
         val user = db.readWrite { implicit s =>
-          val user = userRepo.save(User(createdAt = now.minusDays(3), firstName = "A", lastName = "1", username = Username("test"), normalizedUsername = "test"))
+          val user = UserFactory.user().withCreatedAt(now.minusDays(3)).withName("A", "1").withUsername("test").saved
           val sui = socialUserInfoRepo.save(SocialUserInfo(
             userId = user.id, fullName = "A 1", socialId = SocialId("111"), networkType = SocialNetworks.FACEBOOK,
             credentials = Some(su)))

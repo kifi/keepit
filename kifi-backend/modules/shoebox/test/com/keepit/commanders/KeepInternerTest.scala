@@ -12,6 +12,8 @@ import com.keepit.test._
 import net.codingwell.scalaguice.ScalaModule
 import org.specs2.mutable.Specification
 import play.api.libs.json.Json
+import com.keepit.model.UserFactoryHelper._
+import com.keepit.model.UserFactory
 
 class KeepInternerTest extends Specification with ShoeboxTestInjector {
 
@@ -35,7 +37,7 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
     "persist bookmark" in {
       withDb(modules: _*) { implicit injector =>
         val user = db.readWrite { implicit session =>
-          userRepo.save(User(firstName = "Shanee", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
+          UserFactory.user().withName("Shanee", "Smith").withUsername("test").saved
         }
         val (main, secret) = inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
         val bookmarkInterner = inject[KeepInterner]
@@ -55,7 +57,7 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
     "persist to RawKeepRepo" in {
       withDb(modules: _*) { implicit injector =>
         val user = db.readWrite { implicit session =>
-          userRepo.save(User(firstName = "Shanee", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
+          UserFactory.user().withName("Shanee", "Smith").withUsername("test").saved
         }
         inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
         val bookmarkInterner = inject[KeepInterner]
@@ -73,7 +75,7 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
     "persist to RawKeepRepo (with libraryId)" in {
       withDb(modules: _*) { implicit injector =>
         val (user, lib) = db.readWrite { implicit session =>
-          val user = userRepo.save(User(firstName = "Shanee", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
+          val user = UserFactory.user().withName("Shanee", "Smith").withUsername("test").saved
           val lib = library().saved
           libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user.id.get, access = LibraryAccess.OWNER))
           (user, lib)
@@ -97,7 +99,7 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
     "persist bookmarks" in {
       withDb(modules: _*) { implicit injector =>
         val user = db.readWrite { implicit session =>
-          userRepo.save(User(firstName = "Shanee", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
+          UserFactory.user().withName("Shanee", "Smith").withUsername("test").saved
         }
         val (library, _) = inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
         val bookmarkInterner = inject[KeepInterner]
@@ -142,7 +144,7 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
     "persist bookmarks with one bad url" in {
       withDb(modules: _*) { implicit injector =>
         val user = db.readWrite { implicit session =>
-          userRepo.save(User(firstName = "Shanee", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
+          UserFactory.user().withName("Shanee", "Smith").withUsername("test").saved
         }
         val (library, _) = inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
         val fakeAirbrake = inject[FakeAirbrakeNotifier]
@@ -175,7 +177,7 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
     "reactivate inactive bookmarks for the same url" in {
       withDb(modules: _*) { implicit injector =>
         val user = db.readWrite { implicit s =>
-          userRepo.save(User(firstName = "Greg", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
+          UserFactory.user().withName("Greg", "Smith").withUsername("test").saved
         }
         val (library, _) = inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
         val bookmarkInterner = inject[KeepInterner]

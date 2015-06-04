@@ -1,6 +1,5 @@
 package com.keepit.commanders
 
-import com.keepit.abook.model.EmailAccountInfo
 import com.keepit.abook.{ FakeABookServiceClientModule, FakeABookServiceClientImpl, ABookServiceClient }
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.db.Id
@@ -13,10 +12,6 @@ import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.Specification
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.model.UserFactory._
-import com.keepit.model.UserConnectionFactoryHelper._
-import com.keepit.model.UserConnectionFactory._
-import com.keepit.model.UserConnectionFactoryHelper._
-import com.keepit.model.UserConnectionFactory._
 
 import concurrent.Await
 import concurrent.duration.Duration
@@ -72,8 +67,8 @@ class UserConnectionsCommanderTest extends Specification with ShoeboxTestInjecto
       withDb(modules: _*) { implicit injector =>
         val (user1: User, user2: User) = db.readWrite { implicit rw =>
           val saveUser = inject[UserRepo].save _
-          (saveUser(User(firstName = s"first1", lastName = s"last1", username = Username("test"), normalizedUsername = "test")),
-            saveUser(User(firstName = s"first1", lastName = s"last2", username = Username("test"), normalizedUsername = "test")))
+          (UserFactory.user().withName("first1", "last1").withUsername("test1").saved,
+            UserFactory.user().withName("first3", "last2").withUsername("test2").saved)
         }
 
         val actual = inject[UserConnectionsCommander].getMutualFriends(user1.id.get, user2.id.get)
@@ -85,7 +80,7 @@ class UserConnectionsCommanderTest extends Specification with ShoeboxTestInjecto
       withDb(modules: _*) { implicit injector =>
         val (user1: Id[User], user2: Id[User], commonUserIds) = db.readWrite { implicit rw =>
           val saveUser = inject[UserRepo].save _
-          val users = for (i <- 0 to 9) yield saveUser(User(firstName = s"first$i", lastName = s"last$i", username = Username("test"), normalizedUsername = "test"))
+          val users = for (i <- 0 to 9) yield UserFactory.user().withName(s"first$i", s"last$i").withUsername(s"test$i").saved
 
           val thisUserId = users(0).id.get
           val thatUserId = users(1).id.get

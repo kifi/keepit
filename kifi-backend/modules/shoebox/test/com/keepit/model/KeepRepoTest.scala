@@ -1,9 +1,6 @@
 package com.keepit.model
 
-import com.keepit.common.db._
 import com.keepit.common.time._
-import com.keepit.model.LibraryFactory._
-import com.keepit.model.LibraryFactoryHelper._
 import com.keepit.model.KeepFactory._
 import com.keepit.model.KeepFactoryHelper._
 import com.keepit.model.UserFactoryHelper._

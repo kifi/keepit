@@ -3,7 +3,7 @@ package com.keepit.commanders.emails.tips
 import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.cache.FakeCacheModule
-import com.keepit.common.concurrent.{ FakeExecutionContextModule, ExecutionContextModule }
+import com.keepit.common.concurrent.{ FakeExecutionContextModule }
 import com.keepit.common.healthcheck.FakeHealthcheckModule
 import com.keepit.common.mail.SystemEmailAddress
 import com.keepit.common.mail.template.EmailToSend
@@ -13,11 +13,12 @@ import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.graph.FakeGraphServiceModule
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
-import com.keepit.model.{ Username, KifiInstallationPlatform, KifiExtVersion, KifiInstallation, KifiInstallationRepo, NotificationCategory, User, UserRepo }
+import com.keepit.model._
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.Specification
 import play.twirl.api.Html
+import com.keepit.model.UserFactoryHelper._
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
@@ -38,7 +39,7 @@ class InstallExtensionTipTest extends Specification with ShoeboxTestInjector {
 
   "InstallExtensionTip" should {
     def setup()(implicit injector: Injector) = db.readWrite { implicit rw =>
-      val user = inject[UserRepo].save(User(firstName = "Danny", lastName = "Tanner", username = Username("test"), normalizedUsername = "test"))
+      val user = UserFactory.user().withName("Danny", "Tanner").withUsername("test").saved
       val emailToSend = EmailToSend(
         title = "Testing",
         to = Left(user.id.get),

@@ -6,6 +6,7 @@ import com.keepit.test.ShoeboxTestInjector
 import com.keepit.common.db.Id
 import play.api.libs.json.Json
 import com.keepit.common.math.{ Probability, ProbabilityDensity }
+import com.keepit.model.UserFactoryHelper._
 
 class UserExperimentTest extends Specification with ShoeboxTestInjector {
 
@@ -17,8 +18,8 @@ class UserExperimentTest extends Specification with ShoeboxTestInjector {
         val expRepo = inject[UserExperimentRepo]
 
         val (shanee, santa) = inject[Database].readWrite { implicit session =>
-          (userRepo.save(User(firstName = "Shanee", lastName = "Smith", username = Username("test"), normalizedUsername = "test")),
-            userRepo.save(User(firstName = "Santa", lastName = "Claus", username = Username("test2"), normalizedUsername = "test2")))
+          (UserFactory.user().withName("Shanee", "Smith").withUsername("test").saved,
+            UserFactory.user().withName("Santa", "Claus").withUsername("test2").saved)
         }
 
         inject[Database].readWrite { implicit session =>
@@ -40,9 +41,9 @@ class UserExperimentTest extends Specification with ShoeboxTestInjector {
         val expRepo = inject[UserExperimentRepo]
 
         val (shanee, shachaf, santa) = inject[Database].readWrite { implicit session =>
-          (userRepo.save(User(firstName = "Shanee", lastName = "Smith", username = Username("test"), normalizedUsername = "test")),
-            userRepo.save(User(firstName = "Shachaf", lastName = "Smith", username = Username("test3"), normalizedUsername = "test3")),
-            userRepo.save(User(firstName = "Santa", lastName = "Claus", username = Username("test2"), normalizedUsername = "test2")))
+          (UserFactory.user().withName("Shanee", "Smith").withUsername("test").saved,
+            UserFactory.user().withName("Shachaf", "Smith").withUsername("test3").saved,
+            UserFactory.user().withName("Santa", "Claus").withUsername("test2").saved)
         }
 
         inject[Database].readWrite { implicit session =>

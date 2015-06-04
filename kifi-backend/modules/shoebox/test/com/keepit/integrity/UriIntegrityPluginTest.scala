@@ -7,6 +7,8 @@ import com.keepit.model._
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.SequenceNumber
 import com.keepit.common.zookeeper.CentralConfig
+import com.keepit.model.UserFactoryHelper._
+import com.keepit.model.UserFactory
 
 class UriIntegrityPluginTest extends TestKitSupport with SpecificationLike with ShoeboxTestInjector {
 
@@ -34,8 +36,8 @@ class UriIntegrityPluginTest extends TestKitSupport with SpecificationLike with 
             val url1 = urlRepo.save(URLFactory("http://www.bing.com/", nuri2.id.get))
             val url2 = urlRepo.save(URLFactory("http://www.fakebing.com/", nuri2.id.get)) // to be splitted, to be pointing to
 
-            val user = userRepo.save(User(firstName = "foo", lastName = "bar", username = Username("test"), normalizedUsername = "test"))
-            val user2 = userRepo.save(User(firstName = "abc", lastName = "xyz", username = Username("test"), normalizedUsername = "test"))
+            val user = UserFactory.user().withName("foo", "bar").withUsername("test").saved
+            val user2 = UserFactory.user().withName("abc", "xyz").withUsername("test").saved
 
             val main = libraryRepo.save(Library(name = "Lib", ownerId = user.id.get, visibility = LibraryVisibility.DISCOVERABLE, kind = LibraryKind.SYSTEM_MAIN, slug = LibrarySlug("asdf"), memberCount = 1))
 
@@ -137,7 +139,7 @@ class UriIntegrityPluginTest extends TestKitSupport with SpecificationLike with 
              *
              * */
 
-            val user = userRepo.save(User(firstName = "foo", lastName = "bar", username = Username("test"), normalizedUsername = "test"))
+            val user = UserFactory.user().withName("foo", "bar").withUsername("test").saved
 
             val uri0 = uriRepo.save(NormalizedURI.withHash("http://www.google.com", Some("Google")))
             val uri0better = uriRepo.save(NormalizedURI.withHash("http://google.com", Some("Google")))

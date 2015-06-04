@@ -20,6 +20,9 @@ import org.specs2.mutable.Specification
 import play.api.test.Helpers._
 import play.api.test._
 
+import com.keepit.model.UserFactoryHelper._
+import com.keepit.model.UserFactory
+
 class AndroidAppStoreParamsControllerTest extends Specification with ShoeboxTestInjector with HelpRankTestHelper {
 
   val controllerTestModules = Seq(
@@ -40,8 +43,8 @@ class AndroidAppStoreParamsControllerTest extends Specification with ShoeboxTest
   "processAppStoreParams" in {
     withDb(controllerTestModules: _*) { implicit injector =>
       val (user1, user2) = db.readWrite { implicit s =>
-        val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", username = Username("test1"), normalizedUsername = "test1"))
-        val user2 = userRepo.save(User(firstName = "Eishay", lastName = "S", username = Username("test"), normalizedUsername = "test"))
+        val user1 = UserFactory.user().withName("Andrew", "C").withUsername("test1").saved
+        val user2 = UserFactory.user().withName("Eishay", "S").withUsername("test").saved
         inject[UserValueRepo].getValueStringOpt(user1.id.get, UserValueName.KIFI_CAMPAIGN_ID).isDefined === false
         (user1, user2)
       }

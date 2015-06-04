@@ -27,6 +27,8 @@ import play.api.test.Helpers._
 import play.api.test._
 import securesocial.core.{ AuthenticationMethod, IdentityId, OAuth2Info, SocialUser }
 import KifiSession._
+import com.keepit.model.UserFactoryHelper._
+import com.keepit.model.UserFactory
 
 import scala.concurrent.Future
 
@@ -44,7 +46,7 @@ class OAuth2TokenTest extends Specification with ShoeboxApplicationInjector {
         Some(email), Some("http://www.foo.com/bar"), AuthenticationMethod.OAuth2, None,
         Some(oauth2Info), None)
 
-      val user = userRepo.save(User(firstName = "Foo", lastName = "Bar", username = Username("foo-bar"), normalizedUsername = "foobar"))
+      val user = UserFactory.user().withName("Foo", "Bar").withUsername("foo-bar").saved
       val userEmail = userEmailAddressRepo.save(UserEmailAddress(userId = user.id.get, state = UserEmailAddressStates.VERIFIED, address = EmailAddress(email)))
       val sui = socialUserInfoRepo.save(SocialUserInfo(userId = user.id, fullName = "Foo Bar", state = SocialUserInfoStates.CREATED, socialId = SocialId(identityId.userId), networkType = SocialNetworks.FACEBOOK, credentials = Some(socialUser)))
       (socialUser, user, sui)

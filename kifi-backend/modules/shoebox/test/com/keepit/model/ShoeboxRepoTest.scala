@@ -5,6 +5,7 @@ import com.keepit.common.store.ImagePath
 import com.keepit.test.{ ShoeboxApplication, ShoeboxApplicationInjector }
 import org.specs2.mutable.Specification
 import play.api.test.Helpers._
+import com.keepit.model.UserFactoryHelper._
 
 class ShoeboxRepoTest extends Specification with ShoeboxApplicationInjector {
 
@@ -12,9 +13,8 @@ class ShoeboxRepoTest extends Specification with ShoeboxApplicationInjector {
     "save and retrieve models" in {
       running(new ShoeboxApplication()) {
         // User Repo
-        val userRepo = inject[UserRepo]
         val user = db.readWrite { implicit session =>
-          userRepo.save(User(firstName = "Colin", lastName = "Lane", username = Username("Colin Lane"), normalizedUsername = "Colin Lane"))
+          UserFactory.user().withName("Colin", "Lane").withUsername("colin-lane").saved
         }
         user.id must beSome
 
