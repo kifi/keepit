@@ -6,10 +6,11 @@ import com.keepit.common.controller.RoverServiceController
 import com.keepit.common.db.{ Id, SequenceNumber }
 import com.keepit.common.json.TupleFormat
 import com.keepit.common.logging.Logging
-import com.keepit.model.{ NormalizedURI }
+import com.keepit.model.{ Library, NormalizedURI }
 import com.keepit.rover.RoverCommander
 import com.keepit.rover.article.{ ArticleKind, ArticleCommander, Article }
 import com.keepit.rover.model.{ BasicImages, RoverArticleSummary, ArticleInfo }
+import com.keepit.rover.tagcloud.TagCloudCommander
 import play.api.libs.json._
 import play.api.mvc.Action
 import com.keepit.common.core._
@@ -18,7 +19,11 @@ import com.keepit.common.time._
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ ExecutionContext }
 
-class RoverController @Inject() (roverCommander: RoverCommander, articleCommander: ArticleCommander, implicit val executionContext: ExecutionContext) extends RoverServiceController with Logging {
+class RoverController @Inject() (
+    roverCommander: RoverCommander,
+    articleCommander: ArticleCommander,
+    tagCloudCommander: TagCloudCommander,
+    implicit val executionContext: ExecutionContext) extends RoverServiceController with Logging {
 
   def getShoeboxUpdates(seq: SequenceNumber[ArticleInfo], limit: Int) = Action.async { request =>
     roverCommander.getShoeboxUpdates(seq, limit).map { updates =>
@@ -101,5 +106,9 @@ class RoverController @Inject() (roverCommander: RoverCommander, articleCommande
       val json = Json.toJson(signatureOpt)
       Ok(json)
     }
+  }
+
+  def dumpTagCloud(libId: Id[Library]) = Action.async { request =>
+    tagCloudCommander.generateTagCloud(libId).map { res => Ok(Json.toJson(res)) }
   }
 }

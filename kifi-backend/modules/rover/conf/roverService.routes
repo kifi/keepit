@@ -12,6 +12,7 @@ POST    /internal/rover/getImagesByUris             @com.keepit.rover.controller
 POST    /internal/rover/getOrElseFetchArticleSummaryAndImages @com.keepit.rover.controllers.internal.RoverController.getOrElseFetchArticleSummaryAndImages()
 POST    /internal/rover/getOrElseFetchRecentArticle       @com.keepit.rover.controllers.internal.RoverController.getOrElseFetchRecentArticle()
 POST    /internal/rover/getOrElseComputeRecentContentSignature       @com.keepit.rover.controllers.internal.RoverController.getOrElseComputeRecentContentSignature()
+GET     /internal/rover/dumpTagCloud                                 @com.keepit.rover.controllers.internal.RoverController.dumpTagCloud(libId: Id[Library])
 
 GET     /internal/rover/pornDetector/getModel          @com.keepit.rover.controllers.internal.PornDetectorController.getModel
 POST    /internal/rover/pornDetector/detect       @com.keepit.rover.controllers.internal.PornDetectorController.detect
