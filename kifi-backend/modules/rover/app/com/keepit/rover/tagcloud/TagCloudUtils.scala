@@ -123,7 +123,7 @@ object NGramHelper {
     twoGrams.keys.foreach { twoGram =>
       val parts = twoGram.split(" ")
       assert(parts.size >= 2)
-      val candidates = index(parts(0)).intersect(index(parts(1))).filter { x => x.contains(twoGram) }
+      val candidates = index.getOrElse(parts(0), Set()).intersect(index.getOrElse(parts(1), Set())).filter { x => x.contains(twoGram) }
       candidates.map { cand => cand -> threeGrams(cand) }
         .filter {
           case (cand, m) =>

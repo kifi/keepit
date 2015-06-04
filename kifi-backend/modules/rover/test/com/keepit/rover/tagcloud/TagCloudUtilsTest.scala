@@ -51,9 +51,9 @@ class TagCloudUtilsTest extends Specification {
     }
 
     "combine grams correctly" in {
-      val twoGrams = Map("partial differential" -> 10, "partial derivative" -> 20)
+      val twoGrams = Map("partial differential" -> 10, "partial derivative" -> 20, "implicit derivative" -> 10)
       val threeGrams = Map("partial differential equation" -> 8, "partial derivative exists" -> 5)
-      NGramHelper.combineGrams(twoGrams, threeGrams) === Map("partial differential equation" -> 8, "partial derivative" -> 20)
+      NGramHelper.combineGrams(twoGrams, threeGrams) === Map("partial differential equation" -> 8, "partial derivative" -> 20, "implicit derivative" -> 10)
     }
   }
 
