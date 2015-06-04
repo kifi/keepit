@@ -2,21 +2,17 @@ package com.keepit.curator
 
 import java.util.concurrent.atomic.AtomicInteger
 
-import com.google.inject.{ Module, Injector }
+import com.google.inject.{  Injector }
 import com.keepit.common.db.{ SequenceNumber, Id }
 import com.keepit.common.db.slick.DBSession.RWSession
-import com.keepit.common.db.slick.Database
-import com.keepit.common.mail.EmailAddress
 import com.keepit.common.store.{ ImagePath, ImageSize }
 import com.keepit.curator.model._
 import com.keepit.model._
 import com.keepit.rover.{ FakeRoverServiceClientImpl, RoverServiceClient }
 import com.keepit.rover.model.{ BasicImages, BasicImage, RoverArticleSummary, RoverUriSummary }
-import com.keepit.shoebox.{ ShoeboxServiceClient, ShoeboxScraperClient, FakeShoeboxServiceClientImpl }
+import com.keepit.shoebox.{ ShoeboxServiceClient, FakeShoeboxServiceClientImpl }
 import org.joda.time.DateTime
 import com.keepit.common.time._
-
-import scala.collection.mutable.ListBuffer
 
 trait CuratorTestHelpers {
   this: CuratorTestInjector =>
