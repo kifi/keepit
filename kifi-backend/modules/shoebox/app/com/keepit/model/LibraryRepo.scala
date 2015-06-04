@@ -123,14 +123,14 @@ class LibraryRepoImpl @Inject() (
   implicit val getLibraryAndLibraryInviteResult: GetResult[(Library, LibraryInvite)] = GetResult { r: PositionedResult =>
     (getLibraryResult(r), LibraryInvite.applyFromDbRow(
       id = r.<<[Option[Id[LibraryInvite]]],
-      libraryId = r.<<[Id[Library]],
-      inviterId = r.<<[Id[User]],
-      userId = r.<<[Option[Id[User]]],
-      emailAddress = r.<<[Option[String]].map(EmailAddress(_)),
-      access = LibraryAccess(r.<<[String]),
       createdAt = r.<<[DateTime],
       updatedAt = r.<<[DateTime],
       state = r.<<[State[LibraryInvite]],
+      libraryId = r.<<[Id[Library]],
+      inviterId = r.<<[Id[User]],
+      userId = r.<<[Option[Id[User]]],
+      access = LibraryAccess(r.<<[String]),
+      emailAddress = r.<<[Option[String]].map(EmailAddress(_)),
       authToken = r.<<[String],
       message = r.<<[Option[String]]
     ))
