@@ -42,7 +42,7 @@ class LibrarySubscriptionRepoImpl @Inject() (val db: DataBaseComponent, val cloc
     def libraryId = column[Id[Library]]("library_id", O.NotNull)
     def name = column[String]("name", O.NotNull)
     def trigger = column[SubscriptionTrigger]("trigger", O.NotNull)
-    def info = column[SubscriptionInfo]("info", O.NotNull) // this will be changed to SubscriptionInfo once I figure out serialization
+    def info = column[SubscriptionInfo]("info", O.NotNull)
 
     def * = (id.?, createdAt, updatedAt, state, libraryId, name, trigger, info) <> ((LibrarySubscription.apply _).tupled, LibrarySubscription.unapply _)
   }

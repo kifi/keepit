@@ -30,7 +30,7 @@ object LibrarySubscription {
     (__ \ 'libraryId).format[Id[Library]] and
     (__ \ 'name).format[String] and
     (__ \ 'trigger).format[SubscriptionTrigger] and
-    (__ \ 'info).format[SubscriptionInfo])(LibrarySubscription.apply _, unlift(LibrarySubscription.unapply)) // json de/serialization
+    (__ \ 'info).format[SubscriptionInfo])(LibrarySubscription.apply _, unlift(LibrarySubscription.unapply))
 }
 
 object LibrarySubscriptionStates extends States[LibrarySubscription] {
@@ -55,7 +55,7 @@ object SlackInfo {
     def reads(json: JsValue): JsResult[SlackInfo] = {
       (json \ "url").asOpt[String].filter(url => URIParser.parseAll(URIParser.uri, url).successful) match {
         case Some(url) => JsSuccess[SlackInfo](SlackInfo(url))
-        case _ => JsError("[LibrarySubscription] No url field found, can't read Json into SlackInfo")
+        case _ => JsError("[SlackInfo] format.reads: url not found")
       }
     }
     def writes(o: SlackInfo): JsValue = Json.obj("kind" -> "slack", "url" -> o.url)
@@ -69,14 +69,14 @@ object SubscriptionInfo {
       val kind = (json \ "kind").asOpt[String]
       kind match {
         case Some("slack") => Json.fromJson[SlackInfo](json)
-        case s: Some[String] => JsError("[LibrarySubscription] tried to read into SubscriptionInfo with invalid kind field")
-        case _ => JsError("[LibrarySubscription] No kind field found, can't read into SubscriptionInfo")
+        case Some(unknownKind) => JsError(s"[SubscriptionInfo] format.reads: unsupported_kind: $unknownKind")
+        case _ => JsError("[SubscriptionInfo] format.reads: kind not found")
       }
     }
     def writes(subscription: SubscriptionInfo): JsValue = {
       subscription match {
         case s: SlackInfo => SlackInfo.format.writes(s)
-        case _ => throw new Exception("[LibrarySubscription] Subscription type not supported")
+        case _ => throw new Exception("[SubscriptionInfo] format.writes: unsupported SubscriptionInfo")
       }
     }
   }

@@ -16,7 +16,7 @@ import scala.concurrent.{ Future, ExecutionContext }
 
 @json case class BasicSlackMessage(
     text: String,
-    destChannel: String = "",
+    destChannel: Option[String] = None,
     displayedUserName: String = "kifi",
     iconUrl: String = "https://djty7jcqog9qu.cloudfront.net/assets/black/logo.png") {
 }
@@ -46,22 +46,22 @@ class LibrarySubscriptionCommander @Inject() (
           val body = BasicSlackMessage(text)
           httpLock.withLockFuture(client.postFuture(DirectUrl(info.url), Json.toJson(body)))
         case _ =>
-          Future.failed(new NoSuchFieldException(s"[LibrarySubscriptionCommander] SubscriptionInfo not supported for LibrarySubscription  w/ id=${subscription.id.get}"))
+          Future.failed(new NoSuchFieldException("unsupported_subscription_info"))
       }
     }
   }
 
-  def addSubscription(newSub: LibrarySubscription): Either[String, LibrarySubscription] = { // to be called by a controller, perhaps LibraryController
+  def addSubscription(newSub: LibrarySubscription): Either[String, LibrarySubscription] = {
 
     val (sameNameSubOpt, sameTriggerSubs): (Option[LibrarySubscription], Seq[LibrarySubscription]) = db.readOnlyReplica { implicit session =>
-      val sameNameSubOpt = librarySubscriptionRepo.getByLibraryIdAndName(libraryId = newSub.libraryId, name = newSub.name) // assumming we allow for "inactive" subscriptions that can be reactivated
+      val sameNameSubOpt = librarySubscriptionRepo.getByLibraryIdAndName(libraryId = newSub.libraryId, name = newSub.name)
       val sameTriggerSubs = librarySubscriptionRepo.getByLibraryIdAndTrigger(libraryId = newSub.libraryId, trigger = newSub.trigger)
       (sameNameSubOpt, sameTriggerSubs)
     }
 
     (sameNameSubOpt, sameTriggerSubs) match {
-      case (Some(sameName), _) => Left("There already exists a subscription to this library with that name.")
-      case (_, sameTriggers) if sameTriggers.exists(sub => sub.info.hasSameEndpoint(newSub.info)) => Left("There already exists a subscription to this library with that trigger and endpoint.")
+      case (Some(sameName), _) => Left("name_taken")
+      case (_, sameTriggers) if sameTriggers.exists(sub => sub.info.hasSameEndpoint(newSub.info)) => Left("equivalent_subscription_exists")
       case _ => Right(saveSubscription(newSub))
     }
   }
