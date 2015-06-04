@@ -414,7 +414,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         val libraryCommander = inject[LibraryCommander]
 
         val userWidow = db.readWrite { implicit s =>
-          val user = userRepo.save(User(firstName = "Natalia", lastName = "Romanova", username = Username("blackwidow"), normalizedUsername = "bar", primaryEmail = Some(EmailAddress("blackwidow@shield.com"))))
+          val user = UserFactory.user().withName("Natalia", "Romanova").withUsername("blackwidow").withEmailAddress("blackwidow@shield.com").saved
           libraryMembershipRepo.save(LibraryMembership(libraryId = libShield.id.get, userId = user.id.get, access = LibraryAccess.READ_ONLY))
           user
         }

@@ -304,12 +304,16 @@ class UserCommander @Inject() (
   def createUser(firstName: String, lastName: String, addrOpt: Option[EmailAddress], state: State[User]) = {
     val usernameCandidates = createUsernameCandidates(firstName, lastName)
     val newUser = db.readWrite(attempts = 3) { implicit session =>
+
       val username: Username = usernameCandidates.find { candidate => userRepo.getByUsername(candidate).isEmpty && usernameRepo.reclaim(candidate).isSuccess } getOrElse {
         throw new Exception(s"COULD NOT CREATE USER [$firstName $lastName] $addrOpt SINCE WE DIDN'T FIND A USERNAME!!!")
       }
+
+      val primaryUsername = PrimaryUsername(original = username, normalized = Username(HandleOps.normalize(username.value)))
+
       userRepo.save(
-        User(firstName = firstName, lastName = lastName, primaryEmail = addrOpt, state = state,
-          username = username, normalizedUsername = HandleOps.normalize(username.value)))
+        User(firstName = firstName, lastName = lastName, primaryEmail = addrOpt, state = state, primaryUsername = Some(primaryUsername))
+      )
     }
     SafeFuture {
       db.readWrite(attempts = 3) { implicit session =>
@@ -623,14 +627,19 @@ class UserCommander @Inject() (
           case _ => {
             if (!readOnly) {
               val user = userRepo.get(userId)
-              val normalizedUsername = HandleOps.normalize(username.value)
-              if (user.normalizedUsername != normalizedUsername) {
-                usernameRepo.alias(user.username, userId, overrideProtection) // create an alias for the old username
-                usernameRepo.reclaim(username, Some(userId), overrideProtection).get // reclaim any existing alias for the new username
+              val oldUsernameOpt = user.primaryUsername
+              val normalizedUsername = Username(HandleOps.normalize(username.value))
+
+              oldUsernameOpt.foreach { oldUsername =>
+                if (oldUsername.normalized != normalizedUsername) {
+                  usernameRepo.alias(oldUsername.original, userId, overrideProtection) // create an alias for the old username
+                  usernameRepo.reclaim(username, Some(userId), overrideProtection).get // reclaim any existing alias for the new username
+                }
               }
-              userRepo.save(user.copy(username = username, normalizedUsername = normalizedUsername))
+              val primaryUsername = PrimaryUsername(username, normalizedUsername)
+              userRepo.save(user.copy(primaryUsername = Some(primaryUsername)))
               //we have to do cache invalidation now, the repo does not have the old username for that
-              usernameCache.remove(UsernameKey(user.username))
+              oldUsernameOpt.foreach(oldUsername => usernameCache.remove(UsernameKey(oldUsername.original)))
             } else {
               log.info(s"[dry run] user $userId set with username $username")
             }
@@ -770,15 +779,16 @@ class UserCommander @Inject() (
     }
     while (batch.nonEmpty && counter < max) {
       batch.map { user =>
-        val orig = user.normalizedUsername
-        val candidate = HandleOps.normalize(user.username.value)
-        if (orig != candidate) {
-          log.info(s"[readOnly = $readOnly] [#$counter/P$page] setting user ${user.id.get} ${user.fullName} with username $candidate")
-          db.readWrite { implicit s => userRepo.save(user.copy(normalizedUsername = candidate)) }
-          counter += 1
-          if (counter >= max) return counter
-        } else {
-          log.info(s"username normalization did not change: $orig")
+        user.primaryUsername.foreach { primaryUsername =>
+          val renormalizedUsermame = Username(HandleOps.normalize(primaryUsername.original.value))
+          if (primaryUsername.normalized != renormalizedUsermame) {
+            log.info(s"[readOnly = $readOnly] [#$counter/P$page] setting user ${user.id.get} ${user.fullName} with username $renormalizedUsermame")
+            db.readWrite { implicit s => userRepo.save(user.copy(primaryUsername = Some(primaryUsername.copy(normalized = renormalizedUsermame)))) }
+            counter += 1
+            if (counter >= max) return counter
+          } else {
+            log.info(s"username normalization did not change: ${primaryUsername.normalized}")
+          }
         }
       }
       batch = db.readOnlyMaster { implicit s =>

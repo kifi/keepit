@@ -12,7 +12,7 @@ import com.keepit.eliza.commanders.{ MessageFetchingCommander, MessagingCommande
 import com.keepit.eliza.controllers.WebSocketRouter
 import com.keepit.eliza.model._
 import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext }
-import com.keepit.model.{ Username, User }
+import com.keepit.model.{ UserFactory, User }
 import com.keepit.realtime.{ FakeAppBoyModule, FakeUrbanAirshipModule }
 import com.keepit.rover.FakeRoverServiceClientModule
 import com.keepit.shoebox.{ FakeShoeboxServiceClientImpl, FakeShoeboxServiceModule, ShoeboxServiceClient }
@@ -52,21 +52,11 @@ class MessagingTest extends Specification with ElizaTestInjector {
     val user2n3Seq = Seq[Id[User]](user2, user3)
 
     val shoebox = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
-    shoebox.saveUsers(User(
-      id = Some(user1),
-      firstName = "Some",
-      lastName = "User42", username = Username("test"), normalizedUsername = "test"
-    ))
-    shoebox.saveUsers(User(
-      id = Some(user2),
-      firstName = "Some",
-      lastName = "User43", username = Username("test"), normalizedUsername = "test"
-    ))
-    shoebox.saveUsers(User(
-      id = Some(user3),
-      firstName = "Some",
-      lastName = "User44", username = Username("test"), normalizedUsername = "test"
-    ))
+    shoebox.saveUsers(
+      UserFactory.user().withId(user1).withName("Some", "User42").withUsername("test").get,
+      UserFactory.user().withId(user2).withName("Some", "User43").withUsername("test").get,
+      UserFactory.user().withId(user3).withName("Some", "User44").withUsername("test").get
+    )
 
     (user1, user2, user3, user2n3Seq, shoebox)
   }
@@ -78,7 +68,7 @@ class MessagingTest extends Specification with ElizaTestInjector {
 
         val (user1, user2, user3, user2n3Seq, shoebox) = setup()
         val messagingCommander = inject[MessagingCommander]
-        var messageFetchingCommanger = inject[MessageFetchingCommander]
+        val messageFetchingCommanger = inject[MessageFetchingCommander]
         val notificationCommander = inject[NotificationCommander]
         val (thread1, msg1) = messagingCommander.sendNewMessage(user1, user2n3Seq, Nil, Json.obj("url" -> "http://thenextgoogle.com"), Some("title"), "World!", None)
 

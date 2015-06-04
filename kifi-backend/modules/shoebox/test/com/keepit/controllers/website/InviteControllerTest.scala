@@ -27,6 +27,8 @@ import play.api.test.Helpers._
 import play.api.test._
 import securesocial.core._
 import com.keepit.commanders.{ FullSocialId, InviteCommander }
+import com.keepit.model.UserFactoryHelper._
+import com.keepit.model.UserFactory
 
 class InviteControllerTest extends Specification with ShoeboxApplicationInjector {
 
@@ -53,7 +55,7 @@ class InviteControllerTest extends Specification with ShoeboxApplicationInjector
 
   def setUp()(implicit injector: Injector) = {
     db.readWrite { implicit session =>
-      val user1 = userRepo.save(User(firstName = "Foo", lastName = "Foo", username = Username("test"), normalizedUsername = "test"))
+      val user1 = UserFactory.user().withName("Foo", "Foo").withUsername("test").saved
       val email1 = emailAddressRepo.save(UserEmailAddress(userId = user1.id.get, address = senderEmail))
       val pwdInfo = PasswordInfo("bcrypt", BCrypt.hashpw("random_pwd", BCrypt.gensalt()))
       val uc1 = userCredRepo.save(UserCred(userId = user1.id.get, loginName = email1.address.address, provider = "bcrypt", salt = pwdInfo.salt.getOrElse(""), credentials = pwdInfo.password))

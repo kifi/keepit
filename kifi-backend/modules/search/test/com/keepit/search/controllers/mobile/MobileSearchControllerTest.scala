@@ -36,7 +36,7 @@ class MobileSearchControllerTest extends SpecificationLike with SearchTestInject
         path === "/m/1/search?q=test&maxHits=7"
 
         inject[UriSearchCommander].asInstanceOf[FixedResultUriSearchCommander].setDecoratedResults(MobileSearchControllerTest.decoratedTestResults)
-        val user = User(Some(Id[User](1)), firstName = "prénom", lastName = "nom", username = Username("test"), normalizedUsername = "test")
+        val user = UserFactory.user().withId(1).withName("prénom", "nom").withUsername("test").get
         inject[FakeUserActionsHelper].setUser(user)
         val request = FakeRequest("GET", path)
         val result = mobileSearchController.searchV1("test", None, 7, None, None)(request)

@@ -19,8 +19,8 @@ import scala.concurrent.duration._
 class UserIndexerTest extends Specification with CommonTestInjector {
   private def setup(implicit client: FakeShoeboxServiceClientImpl) = {
     val users = (0 until 4).map { i =>
-      User(firstName = s"firstName${i}", lastName = s"lastName${i}", pictureName = Some(s"picName${i}"), username = Username("test"), normalizedUsername = "test")
-    } :+ User(firstName = "Woody", lastName = "Allen", pictureName = Some("face"), username = Username("test"), normalizedUsername = "test")
+      UserFactory.user().withId(i + 1).withName(s"firstName${i}", s"lastName${i}").withPictureName(s"picName${i}").withUsername("test").get
+    } :+ UserFactory.user().withId(5).withName("Woody", "Allen").withPictureName("face").withUsername("test").get
 
     val usersWithId = client.saveUsers(users: _*)
 
@@ -55,7 +55,7 @@ class UserIndexerTest extends Specification with CommonTestInjector {
         val updates = Await.result(indexer.asyncUpdate(), Duration(5, SECONDS))
         indexer.sequenceNumber.value === 5
 
-        val newUsers = client.saveUsers(User(firstName = "abc", lastName = "xyz", username = Username("test"), normalizedUsername = "test"))
+        val newUsers = client.saveUsers(UserFactory.user().withName("abc", "xyz").withUsername("test").get)
         client.addEmails(newUsers(0).id.get -> EmailAddress("abc@xyz.com"))
         Await.result(indexer.asyncUpdate(), Duration(5, SECONDS))
         indexer.sequenceNumber.value === 6
@@ -209,10 +209,10 @@ class UserIndexerTest extends Specification with CommonTestInjector {
       withInjector(FakeShoeboxServiceModule()) { implicit injector =>
         val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         client.saveUsers(
-          User(firstName = s"abc", lastName = s"def", username = Username("test"), normalizedUsername = "test"),
-          User(firstName = s"def", lastName = s"abc", username = Username("test"), normalizedUsername = "test"),
-          User(firstName = s"uvw", lastName = s"xyzzzzzzzz", username = Username("test"), normalizedUsername = "test"),
-          User(firstName = s"xyzzzzzzzzzzzzz", lastName = s"uvw", username = Username("test"), normalizedUsername = "test")
+          UserFactory.user().withName("abc", "def").withUsername("test").get,
+          UserFactory.user().withName("def", "abc").withUsername("test").get,
+          UserFactory.user().withName("uvw", "xyzzzzzzzz").withUsername("test").get,
+          UserFactory.user().withName("xyzzzzzzzzzzzzz", "uvw").withUsername("test").get
         )
 
         val indexer = mkUserIndexer(airbrake = inject[AirbrakeNotifier], shoebox = client)
@@ -257,8 +257,8 @@ class UserIndexerTest extends Specification with CommonTestInjector {
       withInjector(FakeShoeboxServiceModule()) { implicit injector =>
         val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         client.saveUsers(
-          User(firstName = s"abc", lastName = s"def ghi", username = Username("test"), normalizedUsername = "test"),
-          User(firstName = s"abc", lastName = s"xyz", username = Username("test"), normalizedUsername = "test")
+          UserFactory.user().withName("abc", "def ghi").withUsername("test").get,
+          UserFactory.user().withName("abc", "xyz").withUsername("test").get
         )
 
         val indexer = mkUserIndexer(airbrake = inject[AirbrakeNotifier], shoebox = client)

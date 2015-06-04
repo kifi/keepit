@@ -9,10 +9,8 @@ import com.keepit.common.crypto.{ FakeCryptoModule, PublicIdConfiguration }
 import com.keepit.common.db.ExternalId
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.time._
-import com.keepit.controllers.website.routes
 import com.keepit.graph.FakeGraphServiceClientImpl
 import com.keepit.graph.model.{ RelatedEntities, SociallyRelatedEntities }
-import com.keepit.model.KeepFactory._
 import com.keepit.model._
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.test.ShoeboxTestInjector
@@ -155,7 +153,7 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
       withDb(modules: _*) { implicit injector =>
         val (user1, lib1, lib2) = db.readWrite { implicit s =>
           val t1 = new DateTime(2014, 12, 1, 12, 0, 0, 0, DEFAULT_DATE_TIME_ZONE)
-          val user1 = userRepo.save(User(firstName = "Spongebob", lastName = "Squarepants", username = Username("spongebob"), normalizedUsername = "spongebob", createdAt = t1))
+          val user1 = UserFactory.user().withName("Spongebob", "Squarepants").withUsername("spongebob").withCreatedAt(t1).saved
           val library1 = libraryRepo.save(Library(name = "Krabby Patty", ownerId = user1.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("krabby-patty"), memberCount = 1, createdAt = t1.plusMinutes(1)))
           libraryMembershipRepo.save(LibraryMembership(userId = user1.id.get, libraryId = library1.id.get, access = LibraryAccess.OWNER))
           val library2 = libraryRepo.save(Library(name = "Catching Jellyfish", ownerId = user1.id.get, visibility = LibraryVisibility.PUBLISHED, slug = LibrarySlug("catching-jellyfish"), memberCount = 1, createdAt = t1.plusMinutes(1)))
@@ -309,7 +307,7 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
       withDb(modules: _*) { implicit injector =>
         val profileUsername = Username("cfalc")
         val (user1, user2, user3, user4) = db.readWrite { implicit s =>
-          val user1 = user().withName("Captain", "Falcon").withUsername(profileUsername).saved
+          val user1 = user().withName("Captain", "Falcon").withUsername(profileUsername.value).saved
           val library1 = library().withUser(user1).saved
 
           val otherUsers = users(3).saved

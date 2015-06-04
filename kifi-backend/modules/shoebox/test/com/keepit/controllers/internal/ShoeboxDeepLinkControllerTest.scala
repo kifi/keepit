@@ -12,6 +12,9 @@ import com.keepit.model._
 import com.keepit.common.db.slick.Database
 import com.keepit.normalizer.NormalizationService
 
+import com.keepit.model.UserFactoryHelper._
+import com.keepit.model.UserFactory
+
 class ShoeboxDeepLinkControllerTest extends Specification with ShoeboxTestInjector with DbInjectionHelper {
 
   "ShoeboxDeepLinkController" should {
@@ -27,8 +30,8 @@ class ShoeboxDeepLinkControllerTest extends Specification with ShoeboxTestInject
         val (heinlein, niven, uri) = db.readWrite { implicit s =>
           deepLinkRepo.count === 0
           (
-            userRepo.save(User(firstName = "Robert", lastName = "Heinlein", username = Username("test"), normalizedUsername = "test")),
-            userRepo.save(User(firstName = "Larry", lastName = "Niven", username = Username("test2"), normalizedUsername = "test2")),
+            UserFactory.user().withName("Robert", "Heinlein").withUsername("test").saved,
+            UserFactory.user().withName("Larry", "Niven").withUsername("test2").saved,
             uriRepo.save(NormalizedURI.withHash(normalizationService.prenormalize("http://www.google.com/").get, Some("Google")))
           )
         }

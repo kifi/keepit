@@ -51,12 +51,12 @@ object Organization {
     name: String,
     description: Option[String],
     ownerId: Id[User],
-    organizationHandleOpt: Option[OrganizationHandle],
-    normalizedOrganizationHandleOpt: Option[OrganizationHandle]) = {
+    organizationHandle: Option[OrganizationHandle],
+    normalizedOrganizationHandle: Option[OrganizationHandle]) = {
     val primaryOrganizationHandle = for {
-      organizationHandle <- organizationHandleOpt
-      normalizedOrganizationHandle <- normalizedOrganizationHandleOpt
-    } yield PrimaryOrganizationHandle(organizationHandle, normalizedOrganizationHandle)
+      original <- organizationHandle
+      normalized <- normalizedOrganizationHandle
+    } yield PrimaryOrganizationHandle(original, normalized)
     Organization(id, createdAt, updatedAt, state, seq, name, description, ownerId, primaryOrganizationHandle)
   }
 

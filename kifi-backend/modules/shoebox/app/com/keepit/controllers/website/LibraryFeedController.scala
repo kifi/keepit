@@ -11,9 +11,6 @@ import play.api.mvc.{ ResponseHeader, Result }
 
 import scala.concurrent.Future
 
-/**
- * Created by colinlane on 5/22/15.
- */
 class LibraryFeedController @Inject() (val userCommander: UserCommander,
     val libraryCommander: LibraryCommander,
     val experimentCommander: LocalUserExperimentCommander,

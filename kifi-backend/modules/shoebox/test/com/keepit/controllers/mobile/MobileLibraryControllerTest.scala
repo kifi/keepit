@@ -66,7 +66,8 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
       withDb(controllerTestModules: _*) { implicit injector =>
         val t1 = new DateTime(2013, 2, 14, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
         val user = db.readWrite { implicit s =>
-          val user = userRepo.save(User(firstName = "R2", lastName = "D2", createdAt = t1, username = Username("r2d2"), normalizedUsername = "r2d2"))
+
+          val user = UserFactory.user().withName("R2", "D2").withCreatedAt(t1).withUsername("r2d2").saved
           libraryRepo.getAllByOwner(user.id.get).length === 0
           user
         }
@@ -282,8 +283,8 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
       def setupUninvite()(implicit injector: Injector): (User, User, Library, LibraryInvite) = {
         val t1 = new DateTime(2014, 7, 21, 6, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
         db.readWrite { implicit s =>
-          val userA = userRepo.save(User(firstName = "Aaron", lastName = "Hsu", createdAt = t1, username = Username("ahsu"), normalizedUsername = "test", primaryEmail = Some(EmailAddress("email@gmail.com"))))
-          val userB = userRepo.save(User(firstName = "Bulba", lastName = "Saur", createdAt = t1, username = Username("bulbasaur"), normalizedUsername = "test"))
+          val userA = UserFactory.user().withName("Aaron", "Hsu").withCreatedAt(t1).withUsername("ahsu").withEmailAddress("email@gmail.com").saved
+          val userB = UserFactory.user().withName("Bulba", "Saur").withCreatedAt(t1).withUsername("bulbasaur").saved
 
           val libraryB1 = libraryRepo.save(Library(name = "Library1", ownerId = userB.id.get, slug = LibrarySlug("lib1"), visibility = LibraryVisibility.DISCOVERABLE, memberCount = 1))
           libraryMembershipRepo.save(LibraryMembership(libraryId = libraryB1.id.get, userId = userB.id.get, access = LibraryAccess.OWNER))
@@ -492,10 +493,10 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
       withDb(controllerTestModules: _*) { implicit injector =>
         val t1 = new DateTime(2013, 2, 14, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
         val (userA, userB, userC, userD, lib1) = db.readWrite { implicit s =>
-          val userA = userRepo.save(User(firstName = "Aaron", lastName = "H", createdAt = t1, username = Username("test"), normalizedUsername = "test"))
-          val userB = userRepo.save(User(firstName = "Baron", lastName = "H", createdAt = t1, username = Username("test"), normalizedUsername = "test"))
-          val userC = userRepo.save(User(firstName = "Caron", lastName = "H", createdAt = t1, username = Username("test"), normalizedUsername = "test"))
-          val userD = userRepo.save(User(firstName = "Daron", lastName = "H", createdAt = t1, username = Username("test"), normalizedUsername = "test"))
+          val userA = UserFactory.user().withName("Aaron", "H").withCreatedAt(t1).withUsername("aaron").saved
+          val userB = UserFactory.user().withName("Baron", "H").withCreatedAt(t1).withUsername("baron").saved
+          val userC = UserFactory.user().withName("Caron", "H").withCreatedAt(t1).withUsername("caron").saved
+          val userD = UserFactory.user().withName("Daron", "H").withCreatedAt(t1).withUsername("daron").saved
 
           val lib1 = libraryRepo.save(Library(ownerId = userA.id.get, name = "Lib1", slug = LibrarySlug("lib1"), visibility = LibraryVisibility.PUBLISHED, memberCount = 1))
           libraryMembershipRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = userA.id.get, access = LibraryAccess.OWNER))
@@ -520,14 +521,14 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
                    |"id":"${userB.externalId}",
                    |"firstName":"Baron",
                    |"lastName":"H",
-                   |"pictureName":"0.jpg","username":"test",
+                   |"pictureName":"0.jpg","username":"baron",
                    |"membership":"read_only"
                  |},
                |{
                  |"id":"${userC.externalId}",
                  |"firstName":"Caron",
                  |"lastName":"H",
-                 |"pictureName":"0.jpg","username":"test",
+                 |"pictureName":"0.jpg","username":"caron",
                  |"membership":"read_only"
                |}
                |]
@@ -545,7 +546,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
                  |"id":"${userD.externalId}",
                  |"firstName":"Daron",
                  |"lastName":"H",
-                 |"pictureName":"0.jpg","username":"test",
+                 |"pictureName":"0.jpg","username":"daron",
                  |"membership":"read_only",
                  |"lastInvitedAt":${Json.toJson(t1.plusMinutes(4))(internalTime.DateTimeJsonLongFormat)}
                 |},
@@ -969,7 +970,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
   private def setupOneUserOneLibrary()(implicit injector: Injector) = {
     val t1 = new DateTime(2014, 12, 1, 12, 0, 0, 0, DEFAULT_DATE_TIME_ZONE)
     db.readWrite { implicit s =>
-      val user = userRepo.save(User(firstName = "Spongebob", lastName = "Squarepants", username = Username("spongebob"), normalizedUsername = "spongebob", createdAt = t1))
+      val user = UserFactory.user().withName("Spongebob", "Squarepants").withUsername("spongebob").withCreatedAt(t1).saved
       val library = libraryRepo.save(Library(name = "Krabby Patty", ownerId = user.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("krabby-patty"), memberCount = 1, createdAt = t1.plusMinutes(1)))
       libraryMembershipRepo.save(LibraryMembership(userId = user.id.get, libraryId = library.id.get, access = LibraryAccess.OWNER))
       (user, library)
@@ -985,7 +986,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
       val library1b = libraryRepo.save(Library(name = "Catching Jellyfish", ownerId = user1.id.get, visibility = LibraryVisibility.PUBLISHED, slug = LibrarySlug("catching-jellyfish"), memberCount = 1, createdAt = t1.plusMinutes(1)))
       libraryMembershipRepo.save(LibraryMembership(userId = user1.id.get, libraryId = library1b.id.get, access = LibraryAccess.OWNER))
 
-      val user2 = userRepo.save(User(firstName = "C", lastName = "3PO", username = Username("c3po"), normalizedUsername = "c3po", createdAt = t1))
+      val user2 = UserFactory.user().withName("C", "3PO").withUsername("c3po").withCreatedAt(t1).saved
       val library2a = libraryRepo.save(Library(name = "Nothing", ownerId = user2.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("nothing"), memberCount = 1, createdAt = t1.plusMinutes(1)))
       libraryMembershipRepo.save(LibraryMembership(userId = user2.id.get, libraryId = library2a.id.get, access = LibraryAccess.OWNER))
       (library1b, user2, library2a)

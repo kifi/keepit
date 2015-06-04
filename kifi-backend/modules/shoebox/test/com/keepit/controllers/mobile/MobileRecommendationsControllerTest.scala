@@ -216,7 +216,7 @@ class MobileRecommendationsControllerTest extends TestKitSupport with Specificat
     "topPublicRecos" in {
       withDb(modules: _*) { implicit injector =>
         val user = db.readWrite { implicit s =>
-          userRepo.save(User(firstName = "Andrew", lastName = "C", username = Username("test"), normalizedUsername = "test"))
+          UserFactory.user().withName("Andrew", "C").withUsername("test").saved
         }
 
         inject[UserActionsHelper].asInstanceOf[FakeUserActionsHelper].setUser(user, Set())

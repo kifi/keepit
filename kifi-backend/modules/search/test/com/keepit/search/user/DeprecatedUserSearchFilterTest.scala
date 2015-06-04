@@ -1,6 +1,6 @@
 package com.keepit.search.user
 
-import com.keepit.model.{ User, Username }
+import com.keepit.model.{ UserFactory }
 import com.keepit.search.util.IdFilterCompressor
 import com.keepit.shoebox.{ FakeShoeboxServiceClientImpl, FakeShoeboxServiceModule, ShoeboxServiceClient }
 import com.keepit.test.CommonTestInjector
@@ -11,10 +11,10 @@ class DeprecatedUserSearchFilterTest extends Specification with CommonTestInject
   private def setup(implicit client: FakeShoeboxServiceClientImpl) = {
 
     val users = client.saveUsers(
-      User(firstName = "abc", lastName = "xyz", username = Username("test"), normalizedUsername = "test"),
-      User(firstName = "alpha", lastName = "one", username = Username("test"), normalizedUsername = "test"),
-      User(firstName = "alpha", lastName = "two", username = Username("test"), normalizedUsername = "test"),
-      User(firstName = "alpha", lastName = "three", username = Username("test"), normalizedUsername = "test")
+      UserFactory.user().withId(1).withName("abc", "xyz").withUsername("test").get,
+      UserFactory.user().withId(2).withName("alpha", "one").withUsername("test").get,
+      UserFactory.user().withId(3).withName("alpha", "two").withUsername("test").get,
+      UserFactory.user().withId(4).withName("alpha", "three").withUsername("test").get
     )
     val ids = users.map { _.id.get }
     val conn = Map(ids(0) -> Set(ids(1), ids(3)))
@@ -69,7 +69,7 @@ class DeprecatedUserSearchFilterTest extends Specification with CommonTestInject
         val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         val factory = inject[DeprecatedUserSearchFilterFactory]
         val users = setup(client)
-        var filter = factory.nonFriendsOnly(users(0).id.get, context = None)
+        val filter = factory.nonFriendsOnly(users(0).id.get, context = None)
         filter.accept(users(0).id.get.id) === false
         filter.accept(users(1).id.get.id) === false
         filter.accept(users(2).id.get.id) === true

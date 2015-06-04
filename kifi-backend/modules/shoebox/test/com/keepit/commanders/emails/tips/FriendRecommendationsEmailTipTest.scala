@@ -13,7 +13,8 @@ import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.graph.FakeGraphServiceModule
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
-import com.keepit.model.{ Username, NotificationCategory, User, UserRepo }
+import com.keepit.model._
+import com.keepit.model.UserFactoryHelper._
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.test.{ ShoeboxTestFactory, ShoeboxTestInjector }
 import org.specs2.mutable.Specification
@@ -41,16 +42,15 @@ class FriendRecommendationsEmailTipTest extends Specification with ShoeboxTestIn
     "returns email HTML for people you may know" in {
       withDb(modules: _*) { implicit injector =>
         val tip = inject[FriendRecommendationsEmailTip]
-        val userRepo = inject[UserRepo]
         val factory = inject[ShoeboxTestFactory]
         val (user1, user2, user3, user4) = db.readWrite { implicit rw => factory.createUsers() }
 
         val friends = db.readWrite { implicit rw =>
           Seq(
-            userRepo.save(User(firstName = "Bob", lastName = "Marley", pictureName = Some("0"), username = Username("test1"), normalizedUsername = "test1")),
-            userRepo.save(User(firstName = "Joe", lastName = "Mustache", pictureName = Some("mustache"), username = Username("test2"), normalizedUsername = "test2")),
-            userRepo.save(User(firstName = "Mr", lastName = "T", pictureName = Some("mrt"), username = Username("test3"), normalizedUsername = "test3")),
-            userRepo.save(User(firstName = "Dolly", lastName = "Parton", pictureName = Some("dolly"), username = Username("test4"), normalizedUsername = "test4"))
+            UserFactory.user().withName("Bob", "Marley").withUsername("test1").withPictureName("0").saved,
+            UserFactory.user().withName("Joe", "Mustache").withUsername("test2").withPictureName("mustache").saved,
+            UserFactory.user().withName("Mr", "T").withUsername("test3").withPictureName("mrt").saved,
+            UserFactory.user().withName("Dolly", "Parton").withUsername("test4").withPictureName("dolly").saved
           )
         }
         val friendIds = friends.map(_.id.get)
