@@ -112,6 +112,7 @@ class LibrarySubscriptionTest extends Specification with ShoeboxTestInjector {
         db.readWrite { implicit session =>
           librarySubscriptionRepo.save(LibrarySubscription(libraryId = library.id.get, name = "my library sub", trigger = SubscriptionTrigger.NEW_KEEP, info = SlackInfo("http://www.samewebhook.com/")))
         }
+
         val errorMsgOrNewSub = db.readWrite { implicit session =>
           libSubCommander.addSubscription(LibrarySubscription(libraryId = library.id.get, name = "different name", trigger = SubscriptionTrigger.NEW_KEEP, info = SlackInfo("http://www.samewebhook.com/")))
         }
@@ -119,7 +120,7 @@ class LibrarySubscriptionTest extends Specification with ShoeboxTestInjector {
         errorMsgOrNewSub.isLeft === true
 
         val errorMsg = errorMsgOrNewSub.left.get
-        errorMsg.equals("There already exists a subscription to this library with that trigger and endpoint.")
+        errorMsg must equalTo("equivalent_subscription_exists")
       }
     }
 
@@ -138,7 +139,7 @@ class LibrarySubscriptionTest extends Specification with ShoeboxTestInjector {
         errorMsgOrNewSub.isLeft === true
 
         val errorMsg = errorMsgOrNewSub.left.get
-        errorMsg.equals("There already exists a subscription to this library with that name.")
+        errorMsg must equalTo("name_taken")
       }
     }
   }
