@@ -619,7 +619,6 @@ class LibraryController @Inject() (
               lastKept = info.lastKept.getOrElse(new DateTime(0)),
               following = None,
               membership = None,
-              caption = None,
               modifiedAt = info.modifiedAt,
               kind = info.kind)
           }
