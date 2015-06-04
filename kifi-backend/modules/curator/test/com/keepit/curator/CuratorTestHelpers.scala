@@ -18,7 +18,8 @@ import com.keepit.common.time._
 
 import scala.collection.mutable.ListBuffer
 
-trait CuratorTestHelpers { this: CuratorTestInjector =>
+trait CuratorTestHelpers {
+  this: CuratorTestInjector =>
 
   val userKeepAttributions = collection.mutable.Map[Id[User], (Seq[User], Int)]()
 
@@ -56,12 +57,11 @@ trait CuratorTestHelpers { this: CuratorTestInjector =>
     }
   }
 
-  def makeUser(num: Int, shoebox: FakeShoeboxServiceClientImpl) =
-    shoebox.saveUsers(User(
-      id = Some(Id[User](num)),
-      firstName = "Some",
-      lastName = "User" + num, username = Username("test"), normalizedUsername = "test",
-      primaryEmail = Some(EmailAddress(s"user$num@kifi.com"))))(0)
+  def makeUser(num: Int, shoebox: FakeShoeboxServiceClientImpl) = {
+    shoebox.saveUsers(
+      UserFactory.user().withId(num).withName("Some", "User" + num).withUsername("test").withEmailAddress(s"user$num@kifi.com").get
+    )(0)
+  }
 
   def makeNormalizedUri(id: Int, url: String) =
     NormalizedURI(
