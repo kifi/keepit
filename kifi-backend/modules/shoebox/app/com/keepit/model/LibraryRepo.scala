@@ -8,6 +8,7 @@ import com.keepit.common.db.slick._
 import com.keepit.common.db._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
+import com.keepit.common.mail.EmailAddress
 import com.keepit.common.plugin.{ SchedulingProperties, SequencingActor, SequencingPlugin }
 import com.keepit.common.time._
 import com.keepit.common.util.Paginator
@@ -40,7 +41,7 @@ trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
   def getOwnerLibrariesForAnonymous(ownerId: Id[User], page: Paginator)(implicit session: RSession): Seq[Library]
   def getOwnerLibrariesForOtherUser(userId: Id[User], friendId: Id[User], page: Paginator)(implicit session: RSession): Seq[Library]
   def getOwnerLibrariesForSelf(userId: Id[User], page: Paginator)(implicit session: RSession): Seq[Library]
-  def getInvitedLibrariesForSelf(userId: Id[User], page: Paginator)(implicit session: RSession): Seq[Library]
+  def getInvitedLibrariesForSelf(userId: Id[User], page: Paginator)(implicit session: RSession): Seq[(Library, LibraryInvite)]
 
   def getFollowingLibrariesForAnonymous(userId: Id[User], page: Paginator)(implicit session: RSession): Seq[Library]
   def getFollowingLibrariesForOtherUser(userId: Id[User], friendId: Id[User], page: Paginator)(implicit session: RSession): Seq[Library]
@@ -68,6 +69,7 @@ trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
 class LibraryRepoImpl @Inject() (
   val db: DataBaseComponent,
   val clock: Clock,
+  val libraryInviteRepo: Provider[LibraryInviteRepoImpl],
   val libraryMembershipRepo: Provider[LibraryMembershipRepoImpl],
   val libraryMetadataCache: LibraryMetadataCache,
   val topLibsCache: TopFollowedLibrariesCache,
@@ -96,7 +98,7 @@ class LibraryRepoImpl @Inject() (
     def * = (id.?, createdAt, updatedAt, state, name, ownerId, description, visibility, slug, color.?, seq, kind, memberCount, universalLink, lastKept, keepCount, whoCanInvite, orgId) <> ((Library.applyFromDbRow _).tupled, Library.unapplyToDbRow _)
   }
 
-  implicit val getLibraryResult: GetResult[com.keepit.model.Library] = GetResult { r: PositionedResult =>
+  implicit val getLibraryResult: GetResult[Library] = GetResult { r: PositionedResult =>
     Library.applyFromDbRow(
       id = r.<<[Option[Id[Library]]],
       createdAt = r.<<[DateTime],
@@ -117,6 +119,10 @@ class LibraryRepoImpl @Inject() (
       whoCanInvite = r.<<[Option[String]].map(LibraryInvitePermissions(_)),
       organizationId = r.<<[Option[Id[Organization]]]
     )
+  }
+
+  implicit val getLibraryAndLibraryInviteResult: GetResult[(Library, LibraryInvite)] = GetResult { r: PositionedResult =>
+    (getLibraryResult(r), libraryInviteRepo.get.getLibraryInviteResult(r))
   }
 
   def table(tag: Tag) = new LibraryTable(tag)
@@ -291,10 +297,20 @@ class LibraryRepoImpl @Inject() (
     query.as[Library].list
   }
 
-  def getInvitedLibrariesForSelf(userId: Id[User], page: Paginator)(implicit session: RSession): Seq[Library] = {
+  def getInvitedLibrariesForSelf(userId: Id[User], page: Paginator)(implicit session: RSession): Seq[(Library, LibraryInvite)] = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    val query = sql"select distinct lib.* from library lib, library_invite li where li.user_id=$userId and li.state='active' and lib.id = li.library_id and lib.state='active' order by lib.member_count desc, lib.last_kept desc, lib.id desc limit ${page.itemsToDrop}, ${page.size}"
-    query.as[Library].list
+    // The technique we use below to ensure we get the desired invite for each library (maximum access level) is from:
+    // http://stackoverflow.com/questions/12102200/get-records-with-max-value-for-each-group-of-grouped-sql-results#answer-28090544
+    // It works right now because 'read_write' > 'read_only'. We'll need to modify the query (e.g. use a case expression) if we start
+    // to allow sending invitations with additional access levels where lexicographical ordering does not match ordinal ordering.
+    sql"""
+      select lib.*, li.id, li.library_id, li.inviter_id, li.user_id, li.email_address, li.access, li.created_at, li.updated_at, li.state, li.auth_token, li.message
+      from library lib,
+        (select v1.* from library_invite v1 left join library_invite v2 on v2.user_id = v1.user_id and v2.library_id = v1.library_id and v2.state = v1.state and (v1.access < v2.access or (v1.access = v2.access and v1.id < v2.id)) where v1.user_id=$userId and v1.state='active' and v2.id is null) li
+      where lib.id = li.library_id and lib.state='active'
+      order by lib.member_count desc, lib.last_kept desc, lib.id desc
+      limit ${page.itemsToDrop}, ${page.size}
+    """.as[(Library, LibraryInvite)].list
   }
 
   def getFollowingLibrariesForAnonymous(userId: Id[User], page: Paginator)(implicit session: RSession): Seq[Library] = {
