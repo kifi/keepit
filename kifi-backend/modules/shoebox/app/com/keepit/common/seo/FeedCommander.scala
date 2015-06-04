@@ -85,8 +85,8 @@ class FeedCommander @Inject() (
             }
           }
           <copyright>Copyright { currentDateTime.getYear }, FortyTwo Inc.</copyright>
-          <atom:link ref="self" type="application/rss+xml" href={ feedUrl }/>
-          <atom:link ref="hub" href="https://pubsubhubbub.appspot.com/"/>
+          <atom:link rel="self" type="application/rss+xml" href={ feedUrl }/>
+          <atom:link rel="hub" href="https://pubsubhubbub.appspot.com/"/>
           {
             def convertKeep(keep: Keep): RssItem = {
               val (keepImage, originalKeeper) = db.readOnlyMaster { implicit s =>
