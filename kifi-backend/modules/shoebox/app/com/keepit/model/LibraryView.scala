@@ -166,8 +166,7 @@ case class LibraryCardInfo(
   membership: Option[LibraryMembershipInfo],
   caption: Option[String],
   modifiedAt: DateTime,
-  kind: LibraryKind,
-  invite: Option[LibraryInviteInfo] = None)
+  kind: LibraryKind)
     extends BaseLibraryCardInfo(id, name, description, color, image, slug, owner, numKeeps, numFollowers, followers, numCollaborators, collaborators, lastKept, following, membership, modifiedAt, kind)
 
 object LibraryCardInfo {

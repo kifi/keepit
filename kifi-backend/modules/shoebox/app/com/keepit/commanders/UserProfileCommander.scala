@@ -116,12 +116,9 @@ class UserProfileCommander @Inject() (
   def getInvitedLibraries(user: User, viewer: Option[User], page: Paginator, idealSize: ImageSize): ParSeq[LibraryCardInfo] = {
     if (viewer.exists(_.id == user.id)) {
       db.readOnlyMaster { implicit session =>
-        val (libs, invites) = libraryRepo.getInvitedLibrariesForSelf(user.id.get, page).unzip
-        val ownersAndInviters = basicUserRepo.loadAll((libs.map(_.ownerId) ++ invites.map(_.inviterId)).toSet)
-        libraryCommander.createLibraryCardInfos(libs, ownersAndInviters, viewer, false, idealSize) zip invites map {
-          case (card, invite) =>
-            card.copy(invite = Some(LibraryInviteInfo.createInfo(invite, ownersAndInviters(invite.inviterId))))
-        }
+        val libs = libraryRepo.getInvitedLibrariesForSelf(user.id.get, page)
+        val owners = basicUserRepo.loadAll(libs.map(_.ownerId).toSet)
+        libraryCommander.createLibraryCardInfos(libs, owners, viewer, false, idealSize)
       }
     } else {
       ParSeq.empty

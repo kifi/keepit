@@ -10,7 +10,7 @@ import com.keepit.common.time.Clock
 import com.keepit.common.util.Paginator
 import org.joda.time.DateTime
 
-import scala.slick.jdbc.{ PositionedResult, GetResult, StaticQuery }
+import scala.slick.jdbc.StaticQuery
 
 @ImplementedBy(classOf[LibraryInviteRepoImpl])
 trait LibraryInviteRepo extends Repo[LibraryInvite] with RepoWithDelete[LibraryInvite] {
@@ -173,5 +173,4 @@ class LibraryInviteRepoImpl @Inject() (
   def getLastSentByLibraryIdAndUserId(libraryId: Id[Library], userId: Id[User], includeStates: Set[State[LibraryInvite]])(implicit session: RSession): Option[LibraryInvite] = {
     getLastSentByLibraryIdAndUserIdCompiled(libraryId, userId, includeStates).firstOption
   }
-
 }
