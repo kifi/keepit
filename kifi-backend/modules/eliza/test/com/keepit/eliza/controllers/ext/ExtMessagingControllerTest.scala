@@ -1,19 +1,19 @@
 package com.keepit.eliza.controllers.ext
 
+import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.actor.{ FakeActorSystemModule, TestKitSupport }
 import com.keepit.common.cache.ElizaCacheModule
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.controller.{ FakeUserActionsHelper, FakeUserActionsModule }
 import com.keepit.common.crypto.FakeCryptoModule
-import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.store.FakeElizaStoreModule
 import com.keepit.common.time._
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.eliza.model._
 import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext }
-import com.keepit.model.{ Username, User }
+import com.keepit.model.{ UserFactory, User }
 import com.keepit.realtime.{ FakeAppBoyModule, FakeUrbanAirshipModule }
 import com.keepit.rover.FakeRoverServiceClientModule
 import com.keepit.search.FakeSearchServiceClientModule
@@ -27,6 +27,13 @@ import play.api.test.Helpers._
 class ExtMessagingControllerTest extends TestKitSupport with SpecificationLike with ElizaTestInjector with DbInjectionHelper {
 
   implicit val context = HeimdalContext.empty
+
+  def initUsers()(implicit injector: Injector): Seq[User] = {
+    val shanee = UserFactory.user().withId(42).withId("a9f67559-30fa-4bcd-910f-4c2fc8bbde85").withName("Shanee", "Smith").withUsername("test").get
+    val shachaf = UserFactory.user().withId(43).withId("2be9e0e7-212e-4081-a2b0-bfcaf3e61484").withName("Shachaf", "Smith").withUsername("test").get
+    val eishay = UserFactory.user().withId(44).withId("2be9e0e7-212e-4081-a2b0-bfcaf3e61483").withName("Eishay", "Smith").withUsername("test").get
+    inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveUsers(shanee, shachaf, eishay)
+  }
 
   def modules = Seq(
     FakeExecutionContextModule(),
@@ -51,10 +58,7 @@ class ExtMessagingControllerTest extends TestKitSupport with SpecificationLike w
     "send correctly" in {
       withDb(modules: _*) { implicit injector =>
         val extMessagingController = inject[ExtMessagingController]
-        val shanee = User(id = Some(Id[User](42)), firstName = "Shanee", lastName = "Smith", externalId = ExternalId[User]("a9f67559-30fa-4bcd-910f-4c2fc8bbde85"), username = Username("test"), normalizedUsername = "test")
-        val shachaf = User(id = Some(Id[User](43)), firstName = "Shachaf", lastName = "Smith", externalId = ExternalId[User]("2be9e0e7-212e-4081-a2b0-bfcaf3e61484"), username = Username("test"), normalizedUsername = "test")
-        inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveUsers(shanee)
-        inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveUsers(shachaf)
+        val Seq(shanee, shachaf, _) = initUsers()
         val path = com.keepit.eliza.controllers.ext.routes.ExtMessagingController.sendMessageAction().toString
         path === "/eliza/messages"
 
@@ -157,10 +161,7 @@ class ExtMessagingControllerTest extends TestKitSupport with SpecificationLike w
     "sendMessageReplyAction" in {
       withDb(modules: _*) { implicit injector =>
         val extMessagingController = inject[ExtMessagingController]
-        val shanee = User(id = Some(Id[User](42)), firstName = "Shanee", lastName = "Smith", externalId = ExternalId[User]("a9f67559-30fa-4bcd-910f-4c2fc8bbde85"), username = Username("test"), normalizedUsername = "test")
-        val shachaf = User(id = Some(Id[User](43)), firstName = "Shachaf", lastName = "Smith", externalId = ExternalId[User]("2be9e0e7-212e-4081-a2b0-bfcaf3e61484"), username = Username("test"), normalizedUsername = "test")
-        inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveUsers(shanee)
-        inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveUsers(shachaf)
+        val Seq(shanee, shachaf, _) = initUsers()
 
         val controller = inject[ExtMessagingController]
         inject[FakeUserActionsHelper].setUser(shanee)

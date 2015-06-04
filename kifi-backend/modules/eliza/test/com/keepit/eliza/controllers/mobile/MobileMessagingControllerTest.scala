@@ -1,5 +1,6 @@
 package com.keepit.eliza.controllers.mobile
 
+import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.cache.ElizaCacheModule
@@ -7,14 +8,13 @@ import com.keepit.common.concurrent.{ FakeExecutionContextModule, WatchableExecu
 import com.keepit.common.controller.{ FakeSecureSocialClientIdModule, FakeUserActionsHelper, FakeUserActionsModule }
 import com.keepit.common.crypto.FakeCryptoModule
 import com.keepit.common.db.slick._
-import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.store.FakeElizaStoreModule
 import com.keepit.common.time._
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.eliza.model._
 import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext }
-import com.keepit.model.{ Username, User }
+import com.keepit.model.{ UserFactory, User }
 import com.keepit.realtime.{ FakeAppBoyModule, FakeUrbanAirshipModule }
 import com.keepit.rover.FakeRoverServiceClientModule
 import com.keepit.search.FakeSearchServiceClientModule
@@ -28,6 +28,13 @@ import play.api.test.Helpers._
 class MobileMessagingControllerTest extends Specification with ElizaTestInjector {
 
   implicit val context = HeimdalContext.empty
+
+  def initUsers()(implicit injector: Injector): Seq[User] = {
+    val shanee = UserFactory.user().withId(42).withId("a9f67559-30fa-4bcd-910f-4c2fc8bbde85").withName("Shanee", "Smith").withUsername("test").get
+    val shachaf = UserFactory.user().withId(43).withId("2be9e0e7-212e-4081-a2b0-bfcaf3e61484").withName("Shachaf", "Smith").withUsername("test").get
+    val eishay = UserFactory.user().withId(44).withId("2be9e0e7-212e-4081-a2b0-bfcaf3e61483").withName("Eishay", "Smith").withUsername("test").get
+    inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveUsers(shanee, shachaf, eishay)
+  }
 
   def modules = {
     Seq(
@@ -58,10 +65,8 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
           inject[UserThreadRepo].all.isEmpty === true
           inject[NonUserThreadRepo].all.isEmpty === true
         }
-        val shanee = User(id = Some(Id[User](42)), firstName = "Shanee", lastName = "Smith", externalId = ExternalId[User]("a9f67559-30fa-4bcd-910f-4c2fc8bbde85"), username = Username("test"), normalizedUsername = "test")
-        val shachaf = User(id = Some(Id[User](43)), firstName = "Shachaf", lastName = "Smith", externalId = ExternalId[User]("2be9e0e7-212e-4081-a2b0-bfcaf3e61484"), username = Username("test"), normalizedUsername = "test")
-        inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveUsers(shanee)
-        inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveUsers(shachaf)
+
+        val Seq(shanee, shachaf, _) = initUsers()
 
         inject[FakeUserActionsHelper].setUser(shanee)
         val path = com.keepit.eliza.controllers.mobile.routes.MobileMessagingController.getUnreadNotificationsCount().toString
@@ -81,12 +86,7 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
           inject[UserThreadRepo].all.isEmpty === true
           inject[NonUserThreadRepo].all.isEmpty === true
         }
-        val shanee = User(id = Some(Id[User](42)), firstName = "Shanee", lastName = "Smith", externalId = ExternalId[User]("a9f67559-30fa-4bcd-910f-4c2fc8bbde85"), username = Username("test"), normalizedUsername = "test")
-        val shachaf = User(id = Some(Id[User](43)), firstName = "Shachaf", lastName = "Smith", externalId = ExternalId[User]("2be9e0e7-212e-4081-a2b0-bfcaf3e61484"), username = Username("test2"), normalizedUsername = "test2")
-        val eishay = User(id = Some(Id[User](44)), firstName = "Eishay", lastName = "Smith", externalId = ExternalId[User]("2be9e0e7-212e-4081-a2b0-bfcaf3e61483"), username = Username("test3"), normalizedUsername = "test3")
-        inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveUsers(shanee)
-        inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveUsers(shachaf)
-        inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveUsers(eishay)
+        val Seq(shanee, shachaf, eishay) = initUsers()
 
         inject[FakeUserActionsHelper].setUser(shanee)
         val controller = inject[MobileMessagingController]
@@ -129,12 +129,7 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
           inject[UserThreadRepo].all.isEmpty === true
           inject[NonUserThreadRepo].all.isEmpty === true
         }
-        val shanee = User(id = Some(Id[User](42)), firstName = "Shanee", lastName = "Smith", externalId = ExternalId[User]("a9f67559-30fa-4bcd-910f-4c2fc8bbde85"), username = Username("test"), normalizedUsername = "test")
-        val shachaf = User(id = Some(Id[User](43)), firstName = "Shachaf", lastName = "Smith", externalId = ExternalId[User]("2be9e0e7-212e-4081-a2b0-bfcaf3e61484"), username = Username("test2"), normalizedUsername = "test2")
-        val eishay = User(id = Some(Id[User](44)), firstName = "Eishay", lastName = "Smith", externalId = ExternalId[User]("2be9e0e7-212e-4081-a2b0-bfcaf3e61483"), username = Username("test3"), normalizedUsername = "test3")
-        inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveUsers(shanee)
-        inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveUsers(shachaf)
-        inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveUsers(eishay)
+        val Seq(shanee, shachaf, eishay) = initUsers()
 
         inject[FakeUserActionsHelper].setUser(shanee)
         val controller = inject[MobileMessagingController]
@@ -175,10 +170,7 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
       withDb(modules: _*) { implicit injector =>
         inject[Database].readOnlyMaster { implicit s => inject[UserThreadRepo].count } === 0
         inject[Database].readOnlyMaster { implicit s => inject[MessageRepo].count } === 0
-        val shanee = User(id = Some(Id[User](42)), firstName = "Shanee", lastName = "Smith", externalId = ExternalId[User]("a9f67559-30fa-4bcd-910f-4c2fc8bbde85"), username = Username("test"), normalizedUsername = "test")
-        val shachaf = User(id = Some(Id[User](43)), firstName = "Shachaf", lastName = "Smith", externalId = ExternalId[User]("2be9e0e7-212e-4081-a2b0-bfcaf3e61484"), username = Username("test"), normalizedUsername = "test")
-        inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveUsers(shanee)
-        inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveUsers(shachaf)
+        val Seq(shanee, shachaf, _) = initUsers()
         val path = com.keepit.eliza.controllers.mobile.routes.MobileMessagingController.sendMessageAction().toString
         path === "/m/1/eliza/messages"
 
@@ -264,11 +256,7 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
       withDb(modules: _*) { implicit injector =>
         inject[Database].readOnlyMaster { implicit s => inject[UserThreadRepo].count } === 0
         inject[Database].readOnlyMaster { implicit s => inject[MessageRepo].count } === 0
-        val shanee = User(id = Some(Id[User](42)), firstName = "Shanee", lastName = "Smith", externalId = ExternalId[User]("a9f67559-30fa-4bcd-910f-4c2fc8bbde85"), username = Username("test"), normalizedUsername = "test")
-        val shachaf = User(id = Some(Id[User](43)), firstName = "Shachaf", lastName = "Smith", externalId = ExternalId[User]("2be9e0e7-212e-4081-a2b0-bfcaf3e61484"), username = Username("test"), normalizedUsername = "test")
-        val fakeClient = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
-        fakeClient.saveUsers(shanee)
-        fakeClient.saveUsers(shachaf)
+        val Seq(shanee, shachaf, _) = initUsers()
 
         inject[FakeUserActionsHelper].setUser(shanee)
         val controller = inject[MobileMessagingController]
@@ -353,11 +341,7 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
         val controller = inject[MobileMessagingController]
         inject[Database].readOnlyMaster { implicit s => inject[UserThreadRepo].count } === 0
         inject[Database].readOnlyMaster { implicit s => inject[MessageRepo].count } === 0
-        val shanee = User(id = Some(Id[User](42)), firstName = "Shanee", lastName = "Smith", externalId = ExternalId[User]("a9f67559-30fa-4bcd-910f-4c2fc8bbde85"), username = Username("test"), normalizedUsername = "test")
-        val shachaf = User(id = Some(Id[User](43)), firstName = "Shachaf", lastName = "Smith", externalId = ExternalId[User]("2be9e0e7-212e-4081-a2b0-bfcaf3e61484"), username = Username("test"), normalizedUsername = "test")
-        val fakeClient = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
-        fakeClient.saveUsers(shanee)
-        fakeClient.saveUsers(shachaf)
+        val Seq(shanee, shachaf, _) = initUsers()
 
         inject[FakeUserActionsHelper].setUser(shanee)
         val path = com.keepit.eliza.controllers.mobile.routes.MobileMessagingController.sendMessageAction().toString()
@@ -520,12 +504,7 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
 
     "sendMessageReplyAction" in {
       withDb(modules: _*) { implicit injector =>
-        inject[Database].readOnlyMaster { implicit s => inject[UserThreadRepo].count } === 0
-        inject[Database].readOnlyMaster { implicit s => inject[MessageRepo].count } === 0
-        val shanee = User(id = Some(Id[User](42)), firstName = "Shanee", lastName = "Smith", externalId = ExternalId[User]("a9f67559-30fa-4bcd-910f-4c2fc8bbde85"), username = Username("test"), normalizedUsername = "test")
-        val shachaf = User(id = Some(Id[User](43)), firstName = "Shachaf", lastName = "Smith", externalId = ExternalId[User]("2be9e0e7-212e-4081-a2b0-bfcaf3e61484"), username = Username("test"), normalizedUsername = "test")
-        inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveUsers(shanee)
-        inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveUsers(shachaf)
+        val Seq(shanee, shachaf, _) = initUsers()
 
         inject[FakeUserActionsHelper].setUser(shanee)
         val createThreadJson = Json.parse(s"""
