@@ -893,8 +893,8 @@ class AdminUserController @Inject() (
           emailRepo.getAllByUser(userId).foreach { email => emailRepo.save(email.withState(UserEmailAddressStates.INACTIVE)) } // Email addresses
 
           val user = userRepo.get(userId)
-          val newUsername = user.externalId.id // setting old username to something random (UUID should work here)
-          userRepo.save(user.withState(UserStates.INACTIVE).copy(primaryEmail = None, username = Username(newUsername), normalizedUsername = HandleOps.normalize(newUsername))) // User
+
+          userRepo.save(user.withState(UserStates.INACTIVE).copy(primaryEmail = None, primaryUsername = None)) // User
           usernameAliasRepo.getByUserId(userId).foreach { alias => // Usernames
             usernameAliasRepo.reclaim(alias.username, Some(userId))
           }
