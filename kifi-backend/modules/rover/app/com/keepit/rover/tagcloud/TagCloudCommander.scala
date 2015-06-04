@@ -24,14 +24,9 @@ class TagCloudCommander @Inject() (
     } yield LibraryCorpus(articles)
 
     corpusFuture.map { corpus =>
-      val terms = genTagCloudFromCorpus(corpus)
+      val terms = TagCloudGenerator.generate(corpus)
       SuggestedSearchTermsWithLibraryId(libId, terms)
     }
 
   }
-
-  private def genTagCloudFromCorpus(corpus: LibraryCorpus): SuggestedSearchTerms = {
-    ???
-  }
-
 }

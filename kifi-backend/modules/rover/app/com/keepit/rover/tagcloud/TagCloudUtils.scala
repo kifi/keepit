@@ -7,16 +7,29 @@ import scala.collection.mutable
 
 object TagCloudGenerator {
 
-  type WordCounts = Map[String, Int]
+  import WordCountHelper.{ wordCount, topKcounts }
+  import NGramHelper._
+
+  val TOP_K = 50
 
   def generate(corpus: LibraryCorpus): SuggestedSearchTerms = {
-    val (keywordCnts, entityCnts, docs) = extractKeywordsAndContents(corpus)
-    val (twoGrams, threeGrams) = (NGramExtractor.generateNGramsForCorpus(docs, 2), NGramExtractor.generateNGramsForCorpus(docs, 3))
+    val (keywordCnts, entityCnts, docs) = extractFromCorpus(corpus)
+    val (twoGrams, threeGrams) = (NGramHelper.generateNGramsForCorpus(docs, 2), NGramHelper.generateNGramsForCorpus(docs, 3))
+    val multiGrams = combineGrams(twoGrams, threeGrams)
+    val multiGramsIndex = buildMultiGramIndex(multiGrams.keySet)
 
-    null
+    val oneGramEntities: WordCounts = (keywordCnts.keySet.intersect(entityCnts.keySet)).map { k => k -> (keywordCnts(k) max entityCnts(k)) }.toMap
+
+    val keyGrams: WordCounts = topKcounts(keywordCnts, TOP_K).keys.map { key =>
+      multiGramsIndex.getOrElse(key, Set()).map { gram => (gram, multiGrams(gram)) }.take(3) // find superString that contain the one-gram keyword, and return freq with them
+    }.flatten.toMap
+
+    val result = topKcounts(oneGramEntities ++ keyGrams, TOP_K)
+    SuggestedSearchTerms(result.map { case (w, c) => (w, c * 1f) })
   }
 
-  def extractKeywordsAndContents(corpus: LibraryCorpus): (WordCounts, WordCounts, Seq[String]) = {
+  // return: EmbedlyKeywords, EmbedlyEnitites, ArticleContents
+  def extractFromCorpus(corpus: LibraryCorpus): (WordCounts, WordCounts, Seq[String]) = {
     val (keywords, entities, contents) = corpus.articles.values.map { articles =>
       val extractor = ArticleContentExtractor(articles)
       val embedlyArticle: Option[EmbedlyContent] = extractor.getByKind(EmbedlyArticle).asInstanceOf[Option[EmbedlyContent]]
@@ -30,7 +43,12 @@ object TagCloudGenerator {
     (wordCount(keywords.flatten), wordCount(entities.flatten), contents.toSeq)
   }
 
-  private def wordCount(tokenStream: Iterable[String]): WordCounts = {
+}
+
+object WordCountHelper {
+  type WordCounts = Map[String, Int]
+
+  def wordCount(tokenStream: Iterable[String]): WordCounts = {
     val wc = mutable.Map[String, Int]().withDefaultValue(0)
     tokenStream.foreach { word =>
       val key = word.toLowerCase
@@ -39,9 +57,12 @@ object TagCloudGenerator {
     wc.toMap
   }
 
+  def topKcounts(wordCounts: WordCounts, topK: Int): WordCounts = {
+    wordCounts.toArray.sortBy(-_._2).take(topK).toMap
+  }
 }
 
-object NGramExtractor {
+object NGramHelper {
   val punct = """[\\p{Punct}]"""
   val space = """\\s"""
   val stopwords: Set[String] = Set()
@@ -79,7 +100,39 @@ object NGramExtractor {
     wc.filter(_._2 >= NGRAM_MIN_FREQ).toMap
   }
 
-  private def getChunks(txt: String): Seq[String] = {
+  def getChunks(txt: String): Seq[String] = {
     txt.split(punct).filter { _.trim != "" }
+  }
+
+  def buildMultiGramIndex(multigrams: Set[String]): Map[String, Set[String]] = {
+    val index = mutable.Map[String, Set[String]]().withDefaultValue(Set())
+    multigrams.foreach { gram =>
+      gram.split(" ").foreach { token =>
+        index(token) = index(token) + gram
+      }
+    }
+    index.toMap
+  }
+
+  // if any two gram is 'likely' to be substring of a three gram, drop the 2-gram, pick the 3-gram
+  def combineGrams(twoGrams: WordCounts, threeGrams: WordCounts): WordCounts = {
+    val index = buildMultiGramIndex(threeGrams.keySet)
+    val toAdd = mutable.Map[String, Int]()
+    val toDrop = mutable.Set[String]()
+    twoGrams.keys.foreach { twoGram =>
+      val parts = twoGram.split(" ")
+      assert(parts.size >= 2)
+      val candidates = index(parts(0)).intersect(index(parts(1))).filter { x => x.contains(twoGram) }
+      candidates.map { cand => cand -> threeGrams(cand) }
+        .filter {
+          case (cand, m) =>
+            val n = twoGrams(twoGram)
+            // heursitc: if there are enought sample to suggest that the two gram appears to occur with the 3 gram, 2 gram is not complete. need to be replaced
+            m >= 5 && (m * 1.0 / n >= 0.6)
+        }.toArray.sortBy(-_._2)
+        .headOption.foreach { case (threeGram, cnt) => toAdd(threeGram) = cnt; toDrop.add(twoGram) }
+    }
+
+    twoGrams.filter { case (word, cnt) => !toDrop.contains(word) } ++ toAdd
   }
 }
