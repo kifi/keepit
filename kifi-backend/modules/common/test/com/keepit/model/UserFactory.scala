@@ -2,7 +2,7 @@ package com.keepit.model
 
 import java.util.concurrent.atomic.AtomicLong
 
-import com.keepit.common.db.{ ExternalId, Id, State }
+import com.keepit.common.db.{ SequenceNumber, ExternalId, Id, State }
 import com.keepit.common.mail.{ EmailAddress }
 import org.apache.commons.lang3.RandomStringUtils.random
 import org.joda.time.DateTime
@@ -30,6 +30,7 @@ object UserFactory {
     def withEmailAddress(address: EmailAddress) = new PartialUser(user.copy(primaryEmail = Some(address)))
     def withEmailAddress(address: String): PartialUser = this.withEmailAddress(EmailAddress(address))
     def withExperiments(experiments: ExperimentType*) = new PartialUser(user, experiments ++ _experiments)
+    def withSeq(seq: Int) = new PartialUser(user.copy(seq = SequenceNumber[User](seq)))
     def get: User = user
     def experiments: Seq[ExperimentType] = _experiments
   }

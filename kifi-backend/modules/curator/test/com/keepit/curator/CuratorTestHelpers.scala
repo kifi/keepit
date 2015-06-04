@@ -2,7 +2,7 @@ package com.keepit.curator
 
 import java.util.concurrent.atomic.AtomicInteger
 
-import com.google.inject.{  Injector }
+import com.google.inject.{ Injector }
 import com.keepit.common.db.{ SequenceNumber, Id }
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.store.{ ImagePath, ImageSize }
