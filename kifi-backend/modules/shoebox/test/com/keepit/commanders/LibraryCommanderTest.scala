@@ -442,6 +442,30 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
       }
     }
 
+    "user can view libraries in organization he is a member of which are Organization Visibility" in {
+      withDb(modules: _*) { implicit injector =>
+        val libraryCommander = inject[LibraryCommander]
+        val orgRepo = inject[OrganizationRepo]
+        val orgMemberRepo = inject[OrganizationMembershipRepo]
+        val (barry, starLabsOrg, starLabsLib) = db.readWrite { implicit s =>
+          val harrison = UserFactory.user().withName("Harrison", "Wells").withUsername("Harrison Wells").saved
+
+          val barry = UserFactory.user().withName("Barry", "Allen").withUsername("The Flash").saved
+          val starLabsOrg = orgRepo.save(Organization(name = "Star Labs", ownerId = harrison.id.get, handle = None))
+          val starLabsLib = library().withUser(harrison).withVisibility(LibraryVisibility.ORGANIZATION).withOrganization(starLabsOrg.id).saved
+
+          val membership = orgMemberRepo.save(OrganizationMembership(organizationId = starLabsOrg.id.get, userId = barry.id.get, access = OrganizationAccess.READ_WRITE))
+
+          starLabsLib.organizationId must equalTo(starLabsOrg.id)
+          membership.state must equalTo(OrganizationMembershipStates.ACTIVE)
+          membership.organizationId must equalTo(starLabsOrg.id.get)
+          membership.userId must equalTo(barry.id.get)
+          (barry, starLabsOrg, starLabsLib)
+        }
+        libraryCommander.canViewLibrary(barry.id, starLabsLib) must equalTo(true)
+      }
+    }
+
     "intern user system libraries" in {
       withDb(modules: _*) { implicit injector =>
         implicit val config = inject[PublicIdConfiguration]
