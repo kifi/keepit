@@ -123,11 +123,14 @@ class LibraryController @Inject() (
 
   def getLibrarySummaryById(pubId: PublicId[Library]) = (MaybeUserAction andThen LibraryViewAction(pubId)) { request =>
     val id = Library.decodePublicId(pubId).get
-
-    val (libInfo, memInfoOpt) = libraryCommander.getLibrarySummaryAndMembership(request.userIdOpt, id)
-    val membershipJson = Json.toJson(memInfoOpt)
-    val libraryJson = Json.toJson(libInfo).as[JsObject] + ("membership" -> membershipJson)
-    Ok(Json.obj("library" -> libraryJson))
+    val viewerOpt = request.userOpt
+    val info = db.readOnlyReplica { implicit session =>
+      val lib = libraryRepo.get(id)
+      val owners = Map(lib.ownerId -> basicUserRepo.load(lib.ownerId))
+      libraryCommander.createLibraryCardInfos(Seq(lib), owners, viewerOpt, withFollowing = false, idealSize = ProcessedImageSize.Medium.idealSize).seq.head
+    }
+    val path = Library.formatLibraryPathUrlEncoded(info.owner.username, info.slug)
+    Ok(Json.obj("library" -> (Json.toJson(info).as[JsObject] + ("url" -> JsString(path))))) // TODO: stop adding "url" once web app stops using it
   }
 
   def getLibraryByPath(userStr: String, slugStr: String, showPublishedLibraries: Boolean, imageSize: Option[String] = None, authTokenOpt: Option[String] = None) = MaybeUserAction.async { request =>
