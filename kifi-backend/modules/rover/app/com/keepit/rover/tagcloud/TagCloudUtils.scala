@@ -16,6 +16,10 @@ object TagCloudGenerator extends Logging {
   def generate(corpus: LibraryCorpus): SuggestedSearchTerms = {
     val (keywordCnts, entityCnts, docs) = extractFromCorpus(corpus)
     val (twoGrams, threeGrams) = (NGramHelper.generateNGramsForCorpus(docs, 2), NGramHelper.generateNGramsForCorpus(docs, 3))
+
+    val top2grams = topKcounts(twoGrams, 50).toArray.sortBy(-_._2)
+    log.info(s"${docs.count(_.size > 100)} good docs retrieved. ${twoGrams.size} two grams generated. top ones: ${top2grams.mkString(", ")}")
+
     val multiGrams = combineGrams(twoGrams, threeGrams)
     val multiGramsIndex = buildMultiGramIndex(multiGrams.keySet)
     val topKeywords = topKcounts(keywordCnts, TOP_K, smartCutoff = true)
@@ -76,7 +80,7 @@ object WordCountHelper {
   }
 }
 
-object NGramHelper {
+object NGramHelper extends Logging {
   val punct = """[!"#$%&()*\+\,\.\/:;<=>?@\[\]^_`\{\|\}~]""" // ' and - not included
   val space = """\s"""
   // 744 common stopwords (partly from MySQL)
@@ -147,6 +151,9 @@ object NGramHelper {
         }.toArray.sortBy(-_._2)
         .headOption.foreach { case (threeGram, cnt) => toAdd(threeGram) = cnt; toDrop.add(twoGram) }
     }
+
+    log.info(s"to drop: ${toDrop}")
+    log.info(s"to add: ${toAdd}")
 
     twoGrams.filter { case (word, cnt) => !toDrop.contains(word) } ++ toAdd
   }
