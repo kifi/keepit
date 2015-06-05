@@ -696,22 +696,19 @@ class LibraryCommander @Inject() (
     library.state == LibraryStates.ACTIVE && canViewLibrary(userId, library, accessToken)
   }
 
-  private def getLibraryById(id: Id[Library]): Library = db.readOnlyReplica { implicit s => libraryRepo.get(id) }
-
   def canMoveLibrary(userId: Id[User], libId: Id[Library], from: Option[Id[Organization]], to: Option[Id[Organization]]): Boolean = {
     // lib.ownerId = userId && userId is in `from` and `to`
-    val library = getLibraryById(libId)
-    val ownsLibrary = library.ownerId == userId
-    ownsLibrary && db.readOnlyMaster { implicit s =>
-      (from match {
-        case Some(fromOrg) => // No Need to check access for MVP, if they are part of an Organization they can move libraries from it.
-          organizationMembershipRepo.getByOrgIdAndUserId(fromOrg, userId).nonEmpty
-        case None => true // Can move libraries from Personal space to Organization Space.
-      }) && (to match {
-        case Some(toOrg) => // No Need to check access for MVP, if they are part of an Organization they can move libraries to it.
-          organizationMembershipRepo.getByOrgIdAndUserId(toOrg, userId).nonEmpty
-        case None => true // Can move from Organization Space to Personal space.
-      })
+    db.readOnlyMaster { implicit s =>
+      (libraryRepo.get(libId).ownerId == userId) &&
+        (from match {
+          case Some(fromOrg) => // No Need to check access for MVP, if they are part of an Organization they can move libraries from it.
+            organizationMembershipRepo.getByOrgIdAndUserId(fromOrg, userId).nonEmpty
+          case None => true // Can move libraries from Personal space to Organization Space.
+        }) && (to match {
+          case Some(toOrg) => // No Need to check access for MVP, if they are part of an Organization they can move libraries to it.
+            organizationMembershipRepo.getByOrgIdAndUserId(toOrg, userId).nonEmpty
+          case None => true // Can move from Organization Space to Personal space.
+        })
     }
   }
 
