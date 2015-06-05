@@ -24,15 +24,15 @@ trait SuggestedSearchTermUpdatePlugin
 class SuggestedSearchTermUpdatePluginImpl @Inject() (
     actor: ActorInstance[SuggestedSearchTermUpdateActor],
     val scheduling: SchedulingProperties) extends SchedulerPlugin with SuggestedSearchTermUpdatePlugin {
-  import SuggestedSearchTermUpdateActor.SuggestedSearchTermUpdateActorMessages
+  import SuggestedSearchTermUpdateActor.SuggestedSearchTermUpdateActorMessages._
 
   override def enabled: Boolean = true
 
   val name: String = getClass.toString
 
   override def onStart() {
-    scheduleTaskOnOneMachine(actor.system, 2 minutes, 5 minutes, actor.ref, SuggestedSearchTermUpdateActorMessages.Update, this.getClass.getSimpleName + "update")
-    scheduleTaskOnOneMachine(actor.system, 5 minutes, 1 minutes, actor.ref, SuggestedSearchTermUpdateActorMessages.CollectResult, this.getClass.getSimpleName + "collectResult")
+    scheduleTaskOnOneMachine(actor.system, 2 minutes, 5 minutes, actor.ref, Update, this.getClass.getSimpleName + Update.getClass.toString)
+    scheduleTaskOnOneMachine(actor.system, 5 minutes, 1 minutes, actor.ref, CollectResult, this.getClass.getSimpleName + CollectResult.getClass.toString)
   }
 
 }
@@ -96,7 +96,7 @@ class SuggestedSearchTermUpdater @Inject() (
       log.info(s"${keeps.size} keeps retrieved")
 
       val libs = librariesNeedUpdate(keeps)
-      log.info(s"${libs.size} libraries need tag computations, ${libs.mkString(", ")}")
+      log.info(s"${libs.size} libraries need tag computations, ${libs.take(10).mkString(", ")}")
 
       libs.foreach { lib => computeAndSaveHashtags(lib) }
       libs.foreach { lib => sendAutotagRequests(lib) }
