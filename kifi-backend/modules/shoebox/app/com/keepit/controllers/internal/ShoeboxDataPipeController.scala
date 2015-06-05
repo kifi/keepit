@@ -232,9 +232,7 @@ class ShoeboxDataPipeController @Inject() (
   def dumpLibraryURIIds(libId: Id[Library]) = Action.async { implicit request =>
     SafeFuture {
       val keeps = db.readOnlyReplica { implicit s => keepRepo.getByLibrary(libId, offset = 0, limit = Integer.MAX_VALUE) }
-      val ids = keeps.map {
-        _.uriId
-      }
+      val ids = keeps.filter(_.state == KeepStates.ACTIVE).sortBy(-_.keptAt.getMillis).take(5000).map { _.uriId }
       Ok(Json.toJson(ids))
     }
   }

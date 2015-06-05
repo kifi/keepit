@@ -55,7 +55,7 @@ class LibrarySuggestedSearchCommanderImpl @Inject() (
       keepRepo.recentKeepNotes(libId, limit = maxKeeps)
     }
     val mapped: Seq[(String, Int)] = notes.map { note => Hashtags.findAllHashtagNames(note).map { tag => (tag.toLowerCase, 1) } }.flatten.filter(!_._1.startsWith("imported from"))
-    val reduced = mapped.groupBy(_._1).map { case (tag, cnts) => tag -> 1f * cnts.size }.toArray.sortBy(-_._2).take(maxTerms).toMap
+    val reduced = mapped.groupBy(_._1).map { case (tag, cnts) => ("#" + tag) -> 1f * cnts.size }.filter(_._2 > 1f).toArray.sortBy(-_._2).take(maxTerms).toMap
     SuggestedSearchTerms(reduced)
   }
 }
