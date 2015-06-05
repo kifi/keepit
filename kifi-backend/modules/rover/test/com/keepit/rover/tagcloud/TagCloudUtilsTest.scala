@@ -17,7 +17,7 @@ class TagCloudUtilsTest extends Specification {
 
   "NGramHelper" should {
     "chucks correctly" in {
-      val txt = "$all work and, no play makes-jack!a dull? boy"
+      val txt = "$all work and, no play makes/jack!a dull? boy"
       NGramHelper.getChunks(txt).toList === List("all work and", "no play makes", "jack", "a dull", "boy")
     }
 
