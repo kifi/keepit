@@ -44,7 +44,7 @@ class TagCloudActor @Inject() (
   def receive = {
     case Pull => lock.withLockFuture {
       updater.update().map { n =>
-        if (n > 0) context.system.scheduler.scheduleOnce(5 seconds, self, Pull)
+        if (n > 0) context.system.scheduler.scheduleOnce(2 seconds, self, Pull)
       }
     }
   }
