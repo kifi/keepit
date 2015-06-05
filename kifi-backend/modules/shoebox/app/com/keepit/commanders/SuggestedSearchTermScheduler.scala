@@ -49,7 +49,7 @@ class SuggestedSearchTermUpdateActor @Inject() (
       if (cnt == updater.KEEPS_BATCH_SIZE) context.system.scheduler.scheduleOnce(10 seconds, self, Update)
     case CollectResult =>
       updater.collectResult().onComplete {
-        case Success(cnt) => if (cnt > 0) context.system.scheduler.scheduleOnce(1 seconds, self, CollectResult)
+        case Success(cnt) => if (cnt > 0) context.system.scheduler.scheduleOnce(5 seconds, self, CollectResult)
         case Failure(_) => context.system.scheduler.scheduleOnce(10 seconds, self, CollectResult)
       }
   }
