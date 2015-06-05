@@ -3,6 +3,7 @@ package com.keepit.commanders
 import com.google.inject.{ ImplementedBy, Singleton, Inject }
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.akka.FortyTwoActor
+import com.keepit.common.concurrent.ReactiveLock
 import com.keepit.common.db.{ SequenceNumber, Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -43,14 +44,15 @@ class SuggestedSearchTermUpdateActor @Inject() (
 
   import SuggestedSearchTermUpdateActor.SuggestedSearchTermUpdateActorMessages._
 
+  val collectLock = new ReactiveLock(1)
+
   def receive = {
     case Update =>
       val cnt = updater.update()
       if (cnt == updater.KEEPS_BATCH_SIZE) context.system.scheduler.scheduleOnce(10 seconds, self, Update)
     case CollectResult =>
-      updater.collectResult().onComplete {
-        case Success(cnt) => if (cnt > 0) context.system.scheduler.scheduleOnce(5 seconds, self, CollectResult)
-        case Failure(_) => context.system.scheduler.scheduleOnce(10 seconds, self, CollectResult)
+      collectLock.withLockFuture {
+        updater.collectResult().map { cnt => if (cnt > 0) context.system.scheduler.scheduleOnce(2 seconds, self, CollectResult) }
       }
   }
 }
