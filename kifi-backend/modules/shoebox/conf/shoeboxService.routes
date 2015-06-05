@@ -251,12 +251,13 @@ POST    /m/1/disconnect/:provider               @com.keepit.controllers.mobile.M
 
 GET     /m/2/recos/top                          @com.keepit.controllers.mobile.MobileRecommendationsController.topRecosV2(recency: Float, more: Boolean ?= false)
 GET     /m/3/recos/top                          @com.keepit.controllers.mobile.MobileRecommendationsController.topRecosV3(recency: Float, uriContext: Option[String] ?= None, libContext: Option[String] ?= None, uctx: Option[String] ?= None, lctx: Option[String] ?= None)
-POST     /m/3/recos/top                          @com.keepit.controllers.mobile.MobileRecommendationsController.topRecosV3Post()
+POST    /m/3/recos/top                          @com.keepit.controllers.mobile.MobileRecommendationsController.topRecosV3Post()
 GET     /m/1/recos/public                       @com.keepit.controllers.mobile.MobileRecommendationsController.topPublicRecos()
 POST    /m/1/recos/trash                        @com.keepit.controllers.mobile.MobileRecommendationsController.trash(id: ExternalId[NormalizedURI])
 POST    /m/1/recos/feedback                     @com.keepit.controllers.website.RecommendationsController.updateUriRecommendationFeedback(id: ExternalId[NormalizedURI])
+GET     /m/1/recos/keepUpdates                  @com.keepit.controllers.mobile.MobileRecommendationsController.keepUpdates(count: Int, beforeTime: String)
 
-POST     /m/1/feed                              @com.keepit.controllers.mobile.MobileRecommendationsController.feedV1Post()
+POST    /m/1/feed                               @com.keepit.controllers.mobile.MobileRecommendationsController.feedV1Post()
 GET     /m/1/feed/test                          @com.keepit.controllers.mobile.MobileRecommendationsController.feedV1Test()
 
 
