@@ -31,8 +31,8 @@ class SuggestedSearchTermUpdatePluginImpl @Inject() (
   val name: String = getClass.toString
 
   override def onStart() {
-    scheduleTaskOnOneMachine(actor.system, 2 minutes, 5 minutes, actor.ref, SuggestedSearchTermUpdateActorMessages.Update, this.getClass.getSimpleName + SuggestedSearchTermUpdateActorMessages.Update.getClass.getSimpleName)
-    scheduleTaskOnOneMachine(actor.system, 5 minutes, 1 minutes, actor.ref, SuggestedSearchTermUpdateActorMessages.CollectResult, this.getClass.getSimpleName + SuggestedSearchTermUpdateActorMessages.CollectResult.getClass.getSimpleName)
+    scheduleTaskOnOneMachine(actor.system, 2 minutes, 5 minutes, actor.ref, SuggestedSearchTermUpdateActorMessages.Update, this.getClass.getSimpleName + "update")
+    scheduleTaskOnOneMachine(actor.system, 5 minutes, 1 minutes, actor.ref, SuggestedSearchTermUpdateActorMessages.CollectResult, this.getClass.getSimpleName + "collectResult")
   }
 
 }
