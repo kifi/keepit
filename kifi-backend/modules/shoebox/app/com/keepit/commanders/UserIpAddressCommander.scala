@@ -15,12 +15,18 @@ class UserIpAddressCommander @Inject() (
 
   def simplifyUserAgent(userAgent: UserAgent): String = {
     // TODO: Do we want to know more than this?
-    userAgent.operatingSystemFamily
+    val agentType = userAgent.typeName.toUpperCase()
+    if (!agentType.isEmpty) agentType else "NONE"
   }
-  def logUser(userId: Id[User], ip: IpAddress, userAgent: UserAgent) {
+  def logUser(userId: Id[User], ip: IpAddress, userAgent: UserAgent): Unit = {
     val now = DateTime.now()
     val agentType = simplifyUserAgent(userAgent)
     val model = UserIpAddress(None, now, now, UserIpAddressStates.ACTIVE, userId, ip, agentType)
+    println("[RPB] logUser: " + model)
     db.readWrite { implicit session => userIpAddressRepo.save(model) }
+  }
+
+  def totalNumberOfLogs(): Int = {
+    db.readOnlyReplica { implicit session => userIpAddressRepo.count }
   }
 }

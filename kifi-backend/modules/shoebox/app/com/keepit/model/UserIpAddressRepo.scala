@@ -23,7 +23,7 @@ class UserIpAddressRepoImpl @Inject() (
   implicit val IpAddressTypeMapper = MappedColumnType.base[IpAddress, String](_.toString, IpAddress(_))
 
   type RepoImpl = UserIpAddressTable
-  class UserIpAddressTable(tag: Tag) extends RepoTable[UserIpAddress](db, tag, "user_ip_address") {
+  class UserIpAddressTable(tag: Tag) extends RepoTable[UserIpAddress](db, tag, "user_ip_addresses") {
     def userId = column[Id[User]]("user_id", O.Nullable)
     def ipAddress = column[IpAddress]("ip_address", O.Nullable)
     def agentType = column[String]("agent_type", O.Nullable)

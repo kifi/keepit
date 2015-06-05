@@ -29,6 +29,7 @@ object UserAgent extends Logging {
   val UnknownUserAgent = UserAgent("", "", "", "", true, "", "")
 
   val KifiIphoneAppTypeName = "kifi iphone app"
+  val KifiAndroidAppTypeName = "kifi android app"
 
   private val MobileOses = Set("Android", "iOS", "Bada", "DangerOS", "Firefox OS", "Mac OS", "Palm OS", "BlackBerry OS", "Symbian OS", "webOS")
   private val TabletIndicators = Set("iPad", "Tablet")
@@ -57,7 +58,7 @@ object UserAgent extends Logging {
       case iosAppDeviceRe(appName) =>
         UserAgent(trimmed, appName, "iOS", "iOS", false, KifiIphoneAppTypeName, "unknown")
       case androidAppRe(appName, os, osVersion, device) =>
-        UserAgent(trimmed, appName, os, os, false, typeName = "Android", version = "unknown")
+        UserAgent(trimmed, appName, os, os, false, KifiAndroidAppTypeName, version = "unknown")
       case _ =>
         val agent: SFUserAgent = parser.parse(trimmed)
         val os = agent.getOperatingSystem
