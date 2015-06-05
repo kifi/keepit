@@ -11,8 +11,8 @@ CREATE TABLE organization (
 	name varchar(256) NOT NULL,
 	description text DEFAULT NULL,
 	owner_id bigint(20) NOT NULL,
-	organization_handle varchar(64) DEFAULT NULL,
-	normalized_organization_handle varchar(64) DEFAULT NULL,
+	handle varchar(64) DEFAULT NULL,
+	normalized_handle varchar(64) DEFAULT NULL,
 
 	PRIMARY KEY(id),
 	UNIQUE KEY `organization_u_organization_handle` (`organization_handle`),
