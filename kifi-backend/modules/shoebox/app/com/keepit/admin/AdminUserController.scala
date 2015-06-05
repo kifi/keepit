@@ -9,7 +9,7 @@ import scala.util.{ Try }
 
 import com.google.inject.Inject
 import com.keepit.abook.ABookServiceClient
-import com.keepit.commanders.{ HandleOps, AuthCommander, UserCommander, LibraryCommander }
+import com.keepit.commanders._
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.{ AdminUserActions, UserActionsHelper, UserRequest }
 import com.keepit.common.db._
@@ -108,6 +108,8 @@ class AdminUserController @Inject() (
     basicUserRepo: BasicUserRepo,
     userCredRepo: UserCredRepo,
     usernameAliasRepo: UsernameAliasRepo,
+    handleRepo: HandleOwnershipRepo,
+    handleCommander: HandleCommander,
     userCommander: UserCommander,
     socialUserTypeahead: SocialUserTypeahead,
     kifiUserTypeahead: KifiUserTypeahead,
@@ -898,6 +900,7 @@ class AdminUserController @Inject() (
           usernameAliasRepo.getByUserId(userId).foreach { alias => // Usernames
             usernameAliasRepo.reclaim(alias.username, Some(userId))
           }
+          handleCommander.reclaimAll(Right(userId), overrideProtection = true, overrideLock = true)
         }
 
         val user = userRepo.get(userId)
@@ -909,9 +912,11 @@ class AdminUserController @Inject() (
         val socialUsers = socialUserInfoRepo.getByUser(userId)
         val socialConnections = socialConnectionRepo.getSocialConnectionInfosByUser(userId)
         val userConnections = userConnectionRepo.getConnectedUsers(userId)
+        val handles = handleRepo.getByOwnerId(Some(Right(userId))).map(_.handle)
         implicit val userIdFormat = Id.format[User]
         Json.obj(
           "user" -> user,
+          "usernames" -> handles,
           "emails" -> emails.map(_.address),
           "credentials" -> credentials.map(_.credentials),
           "installations" -> JsObject(installations.map(installation => installation.userAgent.name -> JsString(installation.version.toString))),
