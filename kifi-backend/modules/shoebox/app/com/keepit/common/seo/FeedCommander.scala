@@ -1,5 +1,7 @@
 package com.keepit.common.seo
 
+import java.util.Locale
+
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.commanders._
 import com.keepit.common.CollectionHelpers
@@ -33,6 +35,8 @@ class FeedCommander @Inject() (
     libraryCommander: PageMetaTagsCommander,
     rover: RoverServiceClient) extends Logging {
 
+  val dateTimeFormatter = DateTimeFormat.forPattern("E, dd MMM yyyy HH:mm:ss Z").withLocale(Locale.US)
+
   def wrap(elem: Elem): Enumerator[Array[Byte]] = {
     val elems = Enumerator.enumerate(elem)
     val toBytes = Enumeratee.map[Node] { n => n.toString.getBytes }
@@ -48,10 +52,10 @@ class FeedCommander @Inject() (
         <title>{ item.title }</title>
         <description>{ item.description }</description>
         <link>{ item.link }</link>
-        <guid>{ item.guid }</guid>
-        <pubDate>{ item.pubDate }</pubDate>
+        <guid isPermaLink="false">{ item.guid }</guid>
+        <pubDate>{ dateTimeFormatter.print(item.pubDate) }</pubDate>
         <dc:creator>{ item.creator }</dc:creator>
-        <media:thumbnail url={ item.icon } medium="image"/>
+        <media:thumbnail url={ item.icon }/>
         <media:content url={ item.icon } medium="image">
           <media:title type="html">{ item.title }</media:title>
         </media:content>
@@ -64,7 +68,7 @@ class FeedCommander @Inject() (
       val image = libraryImageCommander.getBestImageForLibrary(library.id.get, ImageSize(100, 100))
       val keeps = keepRepo.getByLibrary(libraryId = library.id.get, offset = offset, limit = keepCountToDisplay, excludeSet = Set(KeepStates.INACTIVE))
       val libraryCreator = userRepo.get(library.ownerId)
-      (image.map(_.imagePath.getUrl(s3ImageConfig)).getOrElse(""), keeps, libraryCreator)
+      (image.map(_.imagePath.getUrl(s3ImageConfig)), keeps, libraryCreator)
     }
     val feedUrl = s"${fortyTwoConfig.applicationBaseUrl}${Library.formatLibraryPathUrlEncoded(libraryCreator.username, library.slug)}"
 
@@ -76,10 +80,10 @@ class FeedCommander @Inject() (
           <link>{ feedUrl }</link>
           <description>{ library.description.getOrElse("") }</description>
           {
-            if (libImage != "") {
+            if (libImage.nonEmpty) {
               <image>
-                <url>{ s"https:$libImage" }</url>
-                <title>{ library.name }</title>
+                <url>{ s"https:${libImage.get}" }</url>
+                <title>{ library.name } by { libraryCreator.fullName } * Kifi</title>
                 <link>{ feedUrl }</link>
               </image>
             }
