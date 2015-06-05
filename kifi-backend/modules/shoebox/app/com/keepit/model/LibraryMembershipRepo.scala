@@ -41,6 +41,7 @@ trait LibraryMembershipRepo extends Repo[LibraryMembership] with RepoWithDelete[
   def mostMembersSinceForUser(count: Int, since: DateTime, ownerId: Id[User])(implicit session: RSession): Seq[(Id[Library], Int)]
   def countNonTrivialLibrariesWithUserIdAndAccess(userId: Id[User], access: LibraryAccess, minKeepCount: Int = 1)(implicit session: RSession): Int
   def countsWithUserIdAndAccesses(userId: Id[User], accesses: Set[LibraryAccess])(implicit session: RSession): Map[LibraryAccess, Int]
+  def getUsersWithWriteAccessForLibraries(libIds: Set[Id[Library]], excludeUser: Id[User])(implicit session: RSession): Map[Id[Library], Seq[Id[User]]]
 
   //
   // Profile Library Repo functions
@@ -386,6 +387,13 @@ class LibraryMembershipRepoImpl @Inject() (
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     val q = sql"select lib.id, count(*) cnt from library as lib inner join library_membership as lm on lib.id = lm.library_id where lib.owner_id = ${ownerId} and lm.access != 'owner' and lm.created_at >= ${since} group by lib.id order by cnt desc limit $limit"
     q.as[(Int, Int)].list.map { case (id, cnt) => (Id[Library](id), cnt) }.toMap
+  }
+
+  def getUsersWithWriteAccessForLibraries(libIds: Set[Id[Library]], excludeUser: Id[User])(implicit session: RSession): Map[Id[Library], Seq[Id[User]]] = {
+    val access: LibraryAccess = LibraryAccess.READ_WRITE
+    (for { row <- rows if row.libraryId.inSet(libIds) && row.state === LibraryMembershipStates.ACTIVE && row.userId =!= excludeUser && row.access === access } yield (row.userId, row.libraryId)).list.groupBy(_._2).mapValues { seq =>
+      seq.map(_._1).toSeq
+    }
   }
 }
 
