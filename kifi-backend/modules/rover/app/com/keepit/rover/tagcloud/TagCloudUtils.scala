@@ -162,6 +162,6 @@ object NGramHelper extends Logging {
   def normalizeToAscii(x: String): Option[String] = {
     val y = Normalizer.normalize(x, Normalizer.Form.NFD)
     val z = y.replaceAll("[^\\p{ASCII}]", "");
-    if (x.size == z.size) Some(z) else None
+    if (x.size == z.size) Some(z.trim) else None
   }
 }
