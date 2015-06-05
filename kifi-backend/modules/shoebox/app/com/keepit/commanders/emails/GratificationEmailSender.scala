@@ -41,7 +41,7 @@ class GratificationEmailSender @Inject() (
   def sendToUser(userId: Id[User], toAddress: Option[EmailAddress]): Future[ElectronicMail] = {
 
     val fViewsByLibrary: Future[LibraryCountData] = gratificationCommander.getLibraryViewData(userId)
-    val followersByLibrary: LibraryCountData = gratificationCommander.getLibraryFollowerCounts(userId)
+    val followersByLibrary: LibraryCountData = gratificationCommander.getLibraryFollowCounts(userId)
     val newConnections: Seq[Id[User]] = gratificationCommander.getNewConnections(userId)
 
     fViewsByLibrary.flatMap { viewsByLibrary: LibraryCountData =>

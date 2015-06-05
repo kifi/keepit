@@ -1,26 +1,14 @@
 package com.keepit.controllers.admin
 
 import com.keepit.abook.FakeABookServiceClientModule
-import com.keepit.common.actor.FakeActorSystemModule
-import com.keepit.common.concurrent.FakeExecutionContextModule
-import com.keepit.common.controller.FakeUserActionsModule
-import com.keepit.common.crypto.FakeCryptoModule
 import com.keepit.common.db.Id
-import com.keepit.common.healthcheck.FakeAirbrakeModule
-import com.keepit.common.mail.FakeMailModule
-import com.keepit.common.social.{ FakeSocialGraphModule, FakeShoeboxAppSecureSocialModule }
-import com.keepit.common.store.FakeShoeboxStoreModule
-import com.keepit.cortex.FakeCortexServiceClientModule
-import com.keepit.curator.FakeCuratorServiceClientModule
-import com.keepit.heimdal.FakeHeimdalServiceClientModule
-import com.keepit.search.FakeSearchServiceClientModule
+import com.keepit.common.social.{ FakeSocialGraphModule }
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import org.specs2.mutable.Specification
 import com.keepit.test._
 import com.keepit.model._
 import com.google.inject.Injector
-import com.keepit.common.net.FakeHttpClientModule
-import play.libs.F.Tuple
+import com.keepit.model.UserFactoryHelper._
 
 class AdminUserControllerTest extends Specification with ShoeboxTestInjector {
 
@@ -36,24 +24,13 @@ class AdminUserControllerTest extends Specification with ShoeboxTestInjector {
     val ADMIN_ID = Id[User](35713) // cam's id
     val SUPERADMIN_ID = Id[User](1) // eishay's id
 
-    val userRepo = inject[UserRepo]
     val userExperimentRepo = inject[UserExperimentRepo]
     db.readWrite { implicit session =>
 
-      val userSuperAdminOpt: User = userRepo.save(User(
-        firstName = "Clark", lastName = "Kent", username = Username("clark"), normalizedUsername = "clark"
-      ))
-      val userNonAdminOpt = userRepo.save(User(
-        firstName = "Homer", lastName = "Simpson", username = Username("homer"), normalizedUsername = "homer"
-      ))
-
-      val dummySuperAdminOpt = userRepo.save(User(
-        firstName = "Andrew", lastName = "Conner", username = Username("andrew"), normalizedUsername = "andrew"
-      )) // need a dummy user saved, since Andrew is a superAdmin and his userId == 3.
-
-      val userAdminOpt = userRepo.save(User(
-        firstName = "Peter", lastName = "Griffin", username = Username("peter"), normalizedUsername = "peter"
-      ))
+      val userSuperAdminOpt: User = UserFactory.user().withName("Clark", "Kent").withUsername("clark").saved
+      val userNonAdminOpt: User = UserFactory.user().withName("Homer", "Simpson").withUsername("homer").saved
+      val dummySuperAdminOpt: User = UserFactory.user().withName("Andrew", "Conner").withUsername("andrew").saved // need a dummy user saved, since Andrew is a superAdmin and his userId == 3.
+      val userAdminOpt: User = UserFactory.user().withName("Peter", "Griffin").withUsername("peter").saved
 
       userExperimentRepo.save(UserExperiment(userId = userSuperAdminOpt.id.get, experimentType = ExperimentType.ADMIN))
       userExperimentRepo.save(UserExperiment(userId = userAdminOpt.id.get, experimentType = ExperimentType.ADMIN))
@@ -69,7 +46,6 @@ class AdminUserControllerTest extends Specification with ShoeboxTestInjector {
         val (userNonAdminOpt, userAdminOpt, userSuperAdminOpt) = setup()
         val adminUserController = inject[AdminUserController]
         val userExperimentRepo = inject[UserExperimentRepo]
-        val userRepo = inject[UserRepo]
 
         db.readWrite { implicit session =>
           // nonadmins cannot add/remove admins

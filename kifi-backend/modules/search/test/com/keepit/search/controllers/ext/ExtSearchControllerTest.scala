@@ -38,7 +38,7 @@ class ExtSearchControllerTest extends Specification with SearchTestInjector {
         path === "/search?q=test&maxHits=7"
 
         inject[UriSearchCommander].asInstanceOf[FixedResultUriSearchCommander].setDecoratedResults(ExtSearchControllerTest.decoratedTestResults)
-        val user = User(Some(Id[User](1)), firstName = "prénom", lastName = "nom", username = Username("test"), normalizedUsername = "test")
+        val user = UserFactory.user().withId(1).withName("prénom", "nom").withUsername("test").get
         inject[FakeUserActionsHelper].setUser(user)
         val request = FakeRequest("GET", path)
         val result = inject[ExtSearchController].search("test", None, 7, None, None, None, None, None, None, None, None)(request)
@@ -104,7 +104,7 @@ class ExtSearchControllerTest extends Specification with SearchTestInjector {
         path === "/ext/search?q=test&n=2"
 
         inject[UriSearchCommander].asInstanceOf[FixedResultUriSearchCommander].setPlainResults(ExtSearchControllerTest.plainTestResults)
-        val user = User(Some(Id[User](1)), firstName = "prénom", lastName = "nom", username = Username("test"), normalizedUsername = "test")
+        val user = UserFactory.user().withId(1).withName("prénom", "nom").withUsername("test").get
         inject[FakeUserActionsHelper].setUser(user)
         val request = FakeRequest("GET", path)
         val result = inject[ExtSearchController].search2("test", 2, None, None, None, None, None)(request)
@@ -143,7 +143,7 @@ class ExtSearchControllerTest extends Specification with SearchTestInjector {
         path === "/ext/search?q=test&n=2"
 
         inject[UriSearchCommander].asInstanceOf[FixedResultUriSearchCommander].setPlainResults(ExtSearchControllerTest.plainTestResults)
-        val user = User(Some(Id[User](1)), firstName = "prénom", lastName = "nom", username = Username("test"), normalizedUsername = "test")
+        val user = UserFactory.user().withId(1).withName("prénom", "nom").withUsername("test").get
         inject[FakeUserActionsHelper].setUser(user)
         val request = FakeRequest("GET", path).withHeaders("Accept" -> "text/plain")
         val result = inject[ExtSearchController].search2("test", 2, None, None, None, None, None)(request)

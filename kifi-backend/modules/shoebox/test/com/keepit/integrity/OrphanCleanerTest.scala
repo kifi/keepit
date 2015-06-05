@@ -9,6 +9,8 @@ import com.keepit.shoebox.FakeKeepImportsModule
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.Specification
 import com.keepit.common.core._
+import com.keepit.model.UserFactoryHelper._
+import com.keepit.model.UserFactory
 
 class OrphanCleanerTest extends Specification with ShoeboxTestInjector {
 
@@ -37,7 +39,7 @@ class OrphanCleanerTest extends Specification with ShoeboxTestInjector {
         val cleaner = inject[OrphanCleaner]
 
         val (user, lib1) = db.readWrite { implicit session =>
-          val user = userRepo.save(User(firstName = "foo", lastName = "bar", username = Username("test"), normalizedUsername = "test"))
+          val user = UserFactory.user().withName("foo", "bar").withUsername("test").saved
           val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user.id.get, visibility = LibraryVisibility.DISCOVERABLE, slug = LibrarySlug("asdf"), memberCount = 1))
 
           (user, lib1)
@@ -130,8 +132,8 @@ class OrphanCleanerTest extends Specification with ShoeboxTestInjector {
         }
 
         val (user, other, lib1) = db.readWrite { implicit session =>
-          val user = userRepo.save(User(firstName = "foo", lastName = "bar", username = Username("test"), normalizedUsername = "test"))
-          val other = userRepo.save(User(firstName = "foo", lastName = "bar", username = Username("test"), normalizedUsername = "test"))
+          val user = UserFactory.user().withName("foo", "bar").withUsername("test").saved
+          val other = UserFactory.user().withName("foo", "bar").withUsername("test").saved
           val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user.id.get, visibility = LibraryVisibility.DISCOVERABLE, slug = LibrarySlug("asdf"), memberCount = 1))
 
           (user, other, lib1)
@@ -309,7 +311,7 @@ class OrphanCleanerTest extends Specification with ShoeboxTestInjector {
         val cleaner = inject[OrphanCleaner]
 
         val (user, lib1) = db.readWrite { implicit session =>
-          val user = userRepo.save(User(firstName = "foo", lastName = "bar", username = Username("test"), normalizedUsername = "test"))
+          val user = UserFactory.user().withName("foo", "bar").withUsername("test").saved
           val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("asdf"), memberCount = 1))
 
           (user, lib1)

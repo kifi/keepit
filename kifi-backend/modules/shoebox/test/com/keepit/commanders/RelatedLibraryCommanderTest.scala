@@ -13,6 +13,7 @@ import com.keepit.curator.LibraryQualityHelper
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.model._
+import com.keepit.model.UserFactoryHelper._
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.Specification
@@ -51,7 +52,7 @@ class RelatedLibraryCommanderTest extends Specification with ShoeboxTestInjector
       val libMemRepo = inject[LibraryMembershipRepo]
 
       db.readWrite { implicit s =>
-        (1 to 10).foreach { i => userRepo.save(User(firstName = "test" + i, lastName = "foo", username = Username("whatever"), normalizedUsername = "whatever")) }
+        (1 to 10).foreach { i => UserFactory.user().withName("test" + i, "foo").withUsername("whatever" + i).saved }
 
         (1 to 10).foreach { i =>
           val lib = Library(name = s"Library ${i}", ownerId = Id[User](i), visibility = LibraryVisibility.PUBLISHED, slug = LibrarySlug("slug"), memberCount = i)

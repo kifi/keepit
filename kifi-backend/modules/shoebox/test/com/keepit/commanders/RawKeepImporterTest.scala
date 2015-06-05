@@ -24,6 +24,8 @@ import com.keepit.shoebox.{ AbuseControlModule, FakeShoeboxServiceClientModule, 
 import com.keepit.test._
 import org.specs2.mutable.SpecificationLike
 import play.api.libs.json.Json
+import com.keepit.model.UserFactoryHelper._
+import com.keepit.model.UserFactory
 
 class RawKeepImporterTest extends TestKitSupport with SpecificationLike with ShoeboxTestInjector {
   // This is a good example of how to test actor side effects.
@@ -56,7 +58,7 @@ class RawKeepImporterTest extends TestKitSupport with SpecificationLike with Sho
     "properly handle imports" in {
       withDb(modules: _*) { implicit injector =>
         val user = db.readWrite { implicit session =>
-          userRepo.save(User(firstName = "Shanee", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
+          UserFactory.user().withName("Shanee", "Smith").withUsername("test").saved
         }
         inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
         val bookmarkInterner = inject[KeepInterner]
@@ -82,7 +84,7 @@ class RawKeepImporterTest extends TestKitSupport with SpecificationLike with Sho
     "handle imports to library" in {
       withDb(modules: _*) { implicit injector =>
         val (user, lib) = db.readWrite { implicit session =>
-          val user = userRepo.save(User(firstName = "Shanee", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
+          val user = UserFactory.user().withName("Shanee", "Smith").withUsername("test").saved
           val lib = libraryRepo.save(Library(name = "Lib1", ownerId = user.id.get, slug = LibrarySlug("lib1"), visibility = LibraryVisibility.PUBLISHED, memberCount = 1))
           libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user.id.get, access = LibraryAccess.OWNER))
           (user, lib)

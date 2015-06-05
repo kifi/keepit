@@ -69,6 +69,7 @@ class AuthHelper @Inject() (
     postOffice: LocalPostOffice,
     inviteCommander: InviteCommander,
     libraryCommander: LibraryCommander,
+    libraryInviteCommander: LibraryInviteCommander,
     userCommander: UserCommander,
     twitterWaitlistCommander: TwitterWaitlistCommander,
     heimdalContextBuilder: HeimdalContextBuilderFactory,
@@ -193,8 +194,7 @@ class AuthHelper @Inject() (
 
     val cookieTargetLibId = request.cookies.get("publicLibraryId")
     val cookieIntent = request.cookies.get("intent")
-    val cookieLibAuthToken = request.cookies.get("libAuthToken")
-    val discardedCookies = Seq(cookieTargetLibId, cookieIntent, cookieLibAuthToken).flatten.map(c => DiscardingCookie(c.name)) :+ DiscardingCookie("inv")
+    val discardedCookies = Seq(cookieTargetLibId, cookieIntent).flatten.map(c => DiscardingCookie(c.name)) :+ DiscardingCookie("inv")
     val fromTwitterWaitlist = cookieIntent.exists(_.value == "waitlist")
 
     if (!fromTwitterWaitlist) {
@@ -220,7 +220,7 @@ class AuthHelper @Inject() (
       } getOrElse "/" // In case the user signs up on a browser that doesn't support the extension
     }
 
-    libraryCommander.convertPendingInvites(emailAddress, user.id.get)
+    libraryInviteCommander.convertPendingInvites(emailAddress, user.id.get)
     libraryPublicId.foreach(lid => authCommander.autoJoinLib(user.id.get, lid, cookieLibAuthToken.map(_.value)))
 
     request.session.get("kcid").map(saveKifiCampaignId(user.id.get, _))

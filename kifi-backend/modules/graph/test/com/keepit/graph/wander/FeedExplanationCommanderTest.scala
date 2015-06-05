@@ -46,7 +46,7 @@ trait FeedHelper {
     SparseLDAGraphUpdate(ModelVersion[DenseLDA](1), UriSparseLDAFeatures(uriId = Id[NormalizedURI](uriId), uriSeq = SequenceNumber[NormalizedURI](uriId), feat))
   }
 
-  val userUpdate = UserGraphUpdate(User(id = Some(Id[User](1)), firstName = "Dummy", lastName = "Yummy", seq = SequenceNumber(1), username = Username("test"), normalizedUsername = "test"))
+  val userUpdate = UserGraphUpdate(UserFactory.user().withId(1).withName("Dummy", "Yummy").withUsername("test").withSeq(1).get)
   val keepUpdate1 = KeepGraphUpdate(Keep(id = Some(Id[Keep](1)), uriId = Id[NormalizedURI](1), urlId = Id[URL](1), url = "url1",
     userId = Id[User](1), source = KeepSource("site"), seq = SequenceNumber(1), visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(Id[Library](1)), inDisjointLib = true))
   val keepUpdate2 = KeepGraphUpdate(Keep(id = Some(Id[Keep](2)), uriId = Id[NormalizedURI](2), urlId = Id[URL](2), url = "url2",

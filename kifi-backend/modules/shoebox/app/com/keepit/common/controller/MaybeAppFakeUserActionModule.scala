@@ -51,7 +51,7 @@ class MaybeAppFakeUserActionsHelper(
   }
   def isAdmin(userId: Id[User])(implicit request: Request[_]): Future[Boolean] = Future.successful(fixedExperiments.contains(ExperimentType.ADMIN))
   def getUserOpt(userId: Id[User])(implicit request: Request[_]): Future[Option[User]] = Future.successful {
-    fixedUser orElse Play.maybeApplication map { _ => User(id = Some(userId), firstName = "foo", lastName = "bar", username = Username("foo-bar"), normalizedUsername = "foo-bar") }
+    fixedUser orElse Play.maybeApplication map { _ => User(id = Some(userId), firstName = "foo", lastName = "bar", primaryUsername = Some(PrimaryUsername(Username("foo-bar"), Username("foo-bar")))) }
   }
   def getUserByExtIdOpt(extId: ExternalId[User]): Future[Option[User]] = Future.successful(fixedUser)
   def getUserExperiments(userId: Id[User])(implicit request: Request[_]): Future[Set[ExperimentType]] = Future.successful(fixedExperiments)

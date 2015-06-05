@@ -14,7 +14,7 @@ CREATE TABLE handle_ownership (
 	user_id bigint(20) DEFAULT NULL,
 
 	PRIMARY KEY(id),
-	UNIQUE INDEX handle_ownership_u_handle (handle),
+	UNIQUE INDEX handle_ownership_u_handle (handle)
 );
 
 ALTER TABLE user

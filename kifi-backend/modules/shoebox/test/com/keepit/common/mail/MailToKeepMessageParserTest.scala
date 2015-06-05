@@ -12,6 +12,8 @@ import javax.mail.Session
 import javax.mail.internet.{ MimeMultipart, MimeBodyPart, InternetAddress, MimeMessage }
 import com.keepit.test.ShoeboxTestInjector
 import com.keepit.model.UserEmailAddress
+import com.keepit.model.UserFactoryHelper._
+import com.keepit.model.UserFactory
 
 class MailToKeepMessageParserTest extends Specification with ShoeboxTestInjector {
   "MailToKeepMessageParser" should {
@@ -64,8 +66,8 @@ class MailToKeepMessageParserTest extends Specification with ShoeboxTestInjector
         val emailAddressRepo = inject[UserEmailAddressRepo]
         val userRepo = inject[UserRepo]
         val (eishay, greg) = db.readWrite { implicit s =>
-          (userRepo.save(User(firstName = "Eishay", lastName = "Smith", username = Username("test"), normalizedUsername = "test")),
-            userRepo.save(User(firstName = "Greg", lastName = "Methvin", username = Username("test"), normalizedUsername = "test")))
+          (UserFactory.user().withName("Eishay", "Smith").withUsername("test").saved,
+            UserFactory.user().withName("Greg", "Methvin").withUsername("test").saved)
         }
         db.readWrite { implicit s =>
           emailAddressRepo.save(UserEmailAddress(address = EmailAddress("eishay@42go.com"), userId = eishay.id.get, state = UserEmailAddressStates.VERIFIED))

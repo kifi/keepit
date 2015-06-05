@@ -5,7 +5,7 @@ import java.io.File
 import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.strings.UTF8
-import com.keepit.common.concurrent.{ FakeExecutionContextModule, ExecutionContextModule }
+import com.keepit.common.concurrent.{ FakeExecutionContextModule }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.mail.{ EmailAddress, FakeMailModule, FakeOutbox }
 import com.keepit.common.net.FakeHttpClientModule
@@ -20,6 +20,8 @@ import org.joda.time.DateTime
 import org.specs2.matcher.MatchResult
 import org.specs2.mutable._
 import play.api.libs.json.Json
+import com.keepit.model.UserFactoryHelper._
+import com.keepit.model.UserFactory
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
@@ -50,7 +52,7 @@ class UserConnectionCreatorTest extends Specification with ShoeboxTestInjector {
     def setup(db: Database, network: SocialNetworkType)(implicit injector: Injector) = {
       val emailAddressRepo: UserEmailAddressRepo = inject[UserEmailAddressRepo]
       val (myUser, mySocialUser) = db.readWrite { implicit s =>
-        val u = inject[UserRepo].save(User(firstName = "Andrew", lastName = "Conner", username = Username("test"), normalizedUsername = "test"))
+        val u = UserFactory.user().withName("Andrew", "Conner").withUsername("test").saved
 
         emailAddressRepo.save(UserEmailAddress(userId = u.id.get, address = EmailAddress("andrew@gmail.com")))
 
@@ -67,7 +69,7 @@ class UserConnectionCreatorTest extends Specification with ShoeboxTestInjector {
       inject[SocialUserImportFriends].importFriends(mySocialUser, extractedFriends)
 
       val (user, socialUserInfo) = db.readWrite { implicit c =>
-        val user = inject[UserRepo].save(User(firstName = "Greg", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
+        val user = UserFactory.user().withName("Greg", "Smith").withUsername("test").saved
         val socialUserInfo = inject[SocialUserInfoRepo].save(SocialUserInfo(
           fullName = "Greg Smith",
           socialId = SocialId("gsmith"),
@@ -154,13 +156,13 @@ class UserConnectionCreatorTest extends Specification with ShoeboxTestInjector {
         val json1 = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/data/facebook_graph_eishay_min.json"), UTF8).mkString)
 
         val sui1 = inject[Database].readWrite { implicit s =>
-          val u1 = inject[UserRepo].save(User(firstName = "Andrew", lastName = "Conner", username = Username("test"), normalizedUsername = "test"))
+          val u1 = UserFactory.user().withName("Andrew", "Conner").withUsername("test").saved
           val su1 = inject[SocialUserInfoRepo].save(SocialUserInfo(
             fullName = "Andrew Conner",
             socialId = SocialId("71105121"),
             networkType = SocialNetworks.FACEBOOK
           ).withUser(u1))
-          val u2 = inject[UserRepo].save(User(firstName = "Igor", lastName = "Perisic", username = Username("test"), normalizedUsername = "test"))
+          val u2 = UserFactory.user().withName("Igor", "Perisic").withUsername("test").saved
           inject[SocialUserInfoRepo].save(SocialUserInfo(
             fullName = "Igor Perisic",
             socialId = SocialId("28779"),
@@ -177,7 +179,7 @@ class UserConnectionCreatorTest extends Specification with ShoeboxTestInjector {
         inject[SocialUserImportFriends].importFriends(sui1, extractedFriends)
 
         val (user, socialUserInfo) = inject[Database].readWrite { implicit c =>
-          val user = inject[UserRepo].save(User(firstName = "fn1", lastName = "ln1", username = Username("test"), normalizedUsername = "test"))
+          val user = UserFactory.user().withName("fn1", "ln1").withUsername("test").saved
           val socialUserInfo = inject[SocialUserInfoRepo].save(SocialUserInfo(
             fullName = "Bob Smith",
             socialId = SocialId("bsmith"),
@@ -220,11 +222,8 @@ class UserConnectionCreatorTest extends Specification with ShoeboxTestInjector {
 
           def generateUserAndSocialUser(uFirstName: String, uLastName: String) =
             db.readWrite { implicit rw =>
-              val u1 = inject[UserRepo].save(User(
-                firstName = uFirstName,
-                lastName = uLastName,
-                primaryEmail = Some(EmailAddress(uFirstName + uLastName + "@kifi.com")), username = Username("test"), normalizedUsername = "test"
-              ))
+
+              val u1 = UserFactory.user().withName(uFirstName, uLastName).withUsername("test").withEmailAddress(s"$uFirstName$uLastName@kifi.com").saved
 
               val su1 = inject[SocialUserInfoRepo].save(SocialUserInfo(
                 fullName = uFirstName,

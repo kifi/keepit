@@ -26,10 +26,10 @@ newConnections: Seq[Id[User]]
 }
 
 @if(libFollowers.totalCount >= MIN_FOLLOWERS) {
-<p>You had <b>@libFollowers.totalCount new @singularOrPlural("follower", libFollowers.totalCount)</b>:</p>
+<p>You had <b>@libFollowers.totalCount new @singularOrPlural("follow", libFollowers.totalCount)</b>:</p>
 <ul>
     @for((libId, followCount) <- libFollowers.sortedCountByLibrary) {
-    <li>@followCount new @singularOrPlural("follower", followCount) on <a href="@libraryUrl(libId, "gratLibUrl")">@libraryName(libId)</a></li>
+    <li>@followCount new @singularOrPlural("follow", followCount) on <a href="@libraryUrl(libId, "gratLibUrl")">@libraryName(libId)</a></li>
     }
 </ul>
 }

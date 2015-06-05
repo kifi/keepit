@@ -21,6 +21,8 @@ import play.api.libs.json.{ Json, JsObject }
 import play.api.mvc.{ Call, Result }
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
+import com.keepit.model.UserFactoryHelper._
+import com.keepit.model.UserFactory
 
 import scala.concurrent.Future
 
@@ -40,14 +42,14 @@ class LibraryImageControllerTest extends Specification with ShoeboxTestInjector 
 
   def setup()(implicit injector: Injector) = {
     db.readWrite { implicit session =>
-      val user1 = userRepo.save(User(firstName = "Noraa", lastName = "Ush", username = Username("test"), normalizedUsername = "test"))
+      val user1 = UserFactory.user().withName("Noraa", "Ush").withUsername("test").saved
       val lib1 = libraryRepo.save(Library(name = "L", ownerId = user1.id.get, visibility = LibraryVisibility.PUBLISHED, slug = LibrarySlug("l"), memberCount = 1))
       membership().withLibraryOwner(lib1).saved
       val lib2 = libraryRepo.save(Library(name = "L2", ownerId = user1.id.get, visibility = LibraryVisibility.PUBLISHED, slug = LibrarySlug("l2"), memberCount = 1))
       membership().withLibraryOwner(lib2).saved
 
       // user2 has READ_ONLY membership to user1's library
-      val user2 = userRepo.save(User(firstName = "Noraa", lastName = "Ush", username = Username("test2"), normalizedUsername = "test2"))
+      val user2 = UserFactory.user().withName("Noraa", "Ush").withUsername("test2").saved
       membership().withLibraryFollower(lib1, user2).saved
       (user1, lib1, lib2, user2)
     }
