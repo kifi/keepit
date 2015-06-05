@@ -53,6 +53,7 @@ class LibraryCommander @Inject() (
     libraryInvitesAbuseMonitor: LibraryInvitesAbuseMonitor,
     libraryInviteCommander: LibraryInviteCommander,
     libraryImageRepo: LibraryImageRepo,
+    organizationMembershipRepo: OrganizationMembershipRepo,
     userRepo: UserRepo,
     userCommander: Provider[UserCommander],
     basicUserRepo: BasicUserRepo,
@@ -679,6 +680,7 @@ class LibraryCommander @Inject() (
         userId match {
           case Some(id) =>
             libraryMembershipRepo.getWithLibraryIdAndUserId(library.id.get, id).nonEmpty ||
+              library.organizationId.flatMap(orgId => organizationMembershipRepo.getByOrgIdAndUserId(orgId, id)).nonEmpty ||
               libraryInviteRepo.getWithLibraryIdAndUserId(userId = id, libraryId = library.id.get).nonEmpty ||
               getValidLibInvitesFromAuthToken(library.id.get, authToken).nonEmpty
           case None =>
