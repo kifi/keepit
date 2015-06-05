@@ -31,7 +31,7 @@ object TagCloudGenerator extends Logging {
     val oneGramEntities: WordCounts = (topKeywords.keySet.intersect(topEntities.keySet)).map { k => k -> (topKeywords(k) max topEntities(k)) }.toMap
 
     val keyGrams: WordCounts = topKeywords.keys.map { key =>
-      multiGramsIndex.getOrElse(key, Set()).map { gram => (gram, multiGrams(gram)) }.take(3) // find superString that contain the one-gram keyword, and return freq with them
+      multiGramsIndex.getOrElse(key, Set()).map { gram => (gram, multiGrams(gram)) }.toArray.sortBy(-_._2).take(3) // find superString that contain the one-gram keyword, and return freq with them
     }.flatten.toMap
 
     log.info("oneGramEntities: " + oneGramEntities)
