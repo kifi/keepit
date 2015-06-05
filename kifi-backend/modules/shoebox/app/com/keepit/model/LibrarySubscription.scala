@@ -19,6 +19,7 @@ case class LibrarySubscription(
   def withId(id: Id[LibrarySubscription]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withState(state: State[LibrarySubscription]) = this.copy(state = state)
+  def equivalent(that: LibrarySubscription) = this.name == that.name || (this.trigger == that.trigger && this.info.hasSameEndpoint(that.info))
 }
 
 object LibrarySubscription {

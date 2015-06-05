@@ -94,52 +94,11 @@ class LibrarySubscriptionTest extends Specification with ShoeboxTestInjector {
       withDb() { implicit injector =>
         val (user, library) = setup()
         val libSubCommander = inject[LibrarySubscriptionCommander]
-        val errorMsgOrNewSub = db.readWrite { implicit session =>
-          libSubCommander.addSubscription(LibrarySubscription(libraryId = library.id.get, name = "my library sub", trigger = SubscriptionTrigger.NEW_KEEP, info = SlackInfo("http://www.fakewebhook.com/")))
+        val newSub = db.readWrite { implicit session =>
+          libSubCommander.saveSubscription(LibrarySubscription(libraryId = library.id.get, name = "my library sub", trigger = SubscriptionTrigger.NEW_KEEP, info = SlackInfo("http://www.fakewebhook.com/")))
         }
 
-        errorMsgOrNewSub.isRight === true
-
-        val newSub = errorMsgOrNewSub.right.get
         db.readOnlyMaster { implicit s => librarySubscriptionRepo.get(newSub.id.get) }.equals(newSub) === true
-      }
-    }
-
-    "not add a new subscription when a subscription with identical library id, trigger, and endpoint exists" in {
-      withDb() { implicit injector =>
-        val (user, library) = setup()
-        val libSubCommander = inject[LibrarySubscriptionCommander]
-        db.readWrite { implicit session =>
-          librarySubscriptionRepo.save(LibrarySubscription(libraryId = library.id.get, name = "my library sub", trigger = SubscriptionTrigger.NEW_KEEP, info = SlackInfo("http://www.samewebhook.com/")))
-        }
-
-        val errorMsgOrNewSub = db.readWrite { implicit session =>
-          libSubCommander.addSubscription(LibrarySubscription(libraryId = library.id.get, name = "different name", trigger = SubscriptionTrigger.NEW_KEEP, info = SlackInfo("http://www.samewebhook.com/")))
-        }
-
-        errorMsgOrNewSub.isLeft === true
-
-        val errorMsg = errorMsgOrNewSub.left.get
-        errorMsg must equalTo("equivalent_subscription_exists")
-      }
-    }
-
-    "not add a new subscription when a subscription of the same name exists" in {
-      withDb() { implicit injector =>
-        val (user, library) = setup()
-        val libSubCommander = inject[LibrarySubscriptionCommander]
-        db.readWrite { implicit session =>
-          librarySubscriptionRepo.save(LibrarySubscription(libraryId = library.id.get, name = "my library sub", trigger = SubscriptionTrigger.NEW_MEMBER, info = SlackInfo("http://www.fakewebhook.com/")))
-        }
-
-        val errorMsgOrNewSub = db.readWrite { implicit session =>
-          libSubCommander.addSubscription(LibrarySubscription(libraryId = library.id.get, name = "my library sub", trigger = SubscriptionTrigger.NEW_KEEP, info = SlackInfo("http://www.diffwebhook.com/")))
-        }
-
-        errorMsgOrNewSub.isLeft === true
-
-        val errorMsg = errorMsgOrNewSub.left.get
-        errorMsg must equalTo("name_taken")
       }
     }
   }

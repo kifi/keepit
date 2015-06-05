@@ -51,7 +51,8 @@ case class LibraryModifyRequest(
   description: Option[String] = None,
   color: Option[LibraryColor] = None,
   listed: Option[Boolean] = None,
-  whoCanInvite: Option[LibraryInvitePermissions] = None)
+  whoCanInvite: Option[LibraryInvitePermissions] = None,
+  subscriptions: Option[Seq[LibrarySubscription]] = None)
 
 case class LibraryInfo(
   id: PublicId[Library],

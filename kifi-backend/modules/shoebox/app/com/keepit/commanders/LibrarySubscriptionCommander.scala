@@ -7,8 +7,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.{ ClientResponse, DirectUrl, CallTimeouts, HttpClient }
 import com.keepit.common.concurrent.ReactiveLock
-import com.keepit.model
-import com.keepit.model._
+import com.keepit.model.{ LibrarySubscriptionRepo, UserRepo, Keep, Library, LibrarySubscription, SlackInfo, SubscriptionTrigger }
 import com.kifi.macros.json
 import play.api.libs.json.{ Json, JsValue }
 
@@ -51,22 +50,7 @@ class LibrarySubscriptionCommander @Inject() (
     }
   }
 
-  def addSubscription(newSub: LibrarySubscription): Either[String, LibrarySubscription] = {
-
-    val (sameNameSubOpt, sameTriggerSubs): (Option[LibrarySubscription], Seq[LibrarySubscription]) = db.readOnlyReplica { implicit session =>
-      val sameNameSubOpt = librarySubscriptionRepo.getByLibraryIdAndName(libraryId = newSub.libraryId, name = newSub.name)
-      val sameTriggerSubs = librarySubscriptionRepo.getByLibraryIdAndTrigger(libraryId = newSub.libraryId, trigger = newSub.trigger)
-      (sameNameSubOpt, sameTriggerSubs)
-    }
-
-    (sameNameSubOpt, sameTriggerSubs) match {
-      case (Some(sameName), _) => Left("name_taken")
-      case (_, sameTriggers) if sameTriggers.exists(sub => sub.info.hasSameEndpoint(newSub.info)) => Left("equivalent_subscription_exists")
-      case _ => Right(saveSubscription(newSub))
-    }
-  }
-
-  private def saveSubscription(librarySubscription: LibrarySubscription): LibrarySubscription = {
+  def saveSubscription(librarySubscription: LibrarySubscription): LibrarySubscription = {
     db.readWrite { implicit s => librarySubscriptionRepo.save(librarySubscription) }
   }
 
