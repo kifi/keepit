@@ -48,6 +48,7 @@ class KeepInterner @Inject() (
   heimdalClient: HeimdalServiceClient,
   roverClient: RoverServiceClient,
   libraryCommander: LibraryCommander,
+  subscriptionCommander: LibrarySubscriptionCommander,
   integrityHelpers: UriIntegrityHelpers,
   sourceAttrRepo: KeepSourceAttributionRepo,
   implicit private val clock: Clock,
@@ -135,6 +136,7 @@ class KeepInterner @Inject() (
       val bookmark = persistedBookmarksWithUri.bookmark
       if (persistedBookmarksWithUri.isNewKeep) {
         if (library.kind == LibraryKind.USER_CREATED) SafeFuture { libraryCommander.notifyFollowersOfNewKeeps(library, bookmark) }
+        subscriptionCommander.sendNewKeepMessage(keep = bookmark, library = library)
         libraryAnalytics.keptPages(userId, Seq(bookmark), library, context)
         heimdalClient.processKeepAttribution(userId, Seq(bookmark))
       }
