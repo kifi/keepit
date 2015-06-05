@@ -33,7 +33,7 @@ case class HandleOwnership(
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def isActive = (state == HandleOwnershipStates.ACTIVE)
   def isLocked = isActive && locked
-  def isProtected = (isActive && !isLocked && (currentDateTime isBefore (lastClaimedAt plusSeconds HandleOwnership.gracePeriod.toSeconds.toInt)))
+  def isProtected = isActive && !isLocked && (currentDateTime isBefore (lastClaimedAt plusSeconds HandleOwnership.gracePeriod.toSeconds.toInt))
   def belongsToOrg(orgId: Id[Organization]) = belongsTo(Some(Left(orgId)))
   def belongsToUser(userId: Id[User]) = belongsTo(Some(Right(userId)))
   def belongsToSystem = belongsTo(None)
