@@ -55,6 +55,10 @@ class TagCloudUtilsTest extends Specification {
       val threeGrams = Map("partial differential equation" -> 8, "partial derivative exists" -> 5)
       NGramHelper.combineGrams(twoGrams, threeGrams) === Map("partial differential equation" -> 8, "partial derivative" -> 20, "implicit derivative" -> 10)
     }
+
+    "normalizes text to ascii" in {
+      NGramHelper.normalizeToAscii("åé") === Some("ae")
+    }
   }
 
 }

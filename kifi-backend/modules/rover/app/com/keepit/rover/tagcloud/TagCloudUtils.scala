@@ -2,9 +2,10 @@ package com.keepit.rover.tagcloud
 
 import com.keepit.common.logging.Logging
 import com.keepit.common.queue.messages.SuggestedSearchTerms
-import com.keepit.rover.article.{ Article, EmbedlyArticle }
+import com.keepit.rover.article.EmbedlyArticle
 import com.keepit.rover.article.content.{ EmbedlyContent, ArticleContentExtractor }
 import scala.collection.mutable
+import java.text.Normalizer
 
 object TagCloudGenerator extends Logging {
 
@@ -37,7 +38,7 @@ object TagCloudGenerator extends Logging {
     log.info("oneGramEntities: " + oneGramEntities)
     log.info("keyGrams: " + keyGrams)
 
-    val result = topKcounts(oneGramEntities ++ keyGrams, TOP_K)
+    val result = topKcounts(oneGramEntities ++ keyGrams, TOP_K).flatMap { case (w, c) => normalizeToAscii(w).map { x => (x, c) } } // may lose some tokens
     SuggestedSearchTerms(result.map { case (w, c) => (w, c * 1f) })
   }
 
@@ -156,5 +157,11 @@ object NGramHelper extends Logging {
     log.info(s"to add: ${toAdd}")
 
     twoGrams.filter { case (word, cnt) => !toDrop.contains(word) } ++ toAdd
+  }
+
+  def normalizeToAscii(x: String): Option[String] = {
+    val y = Normalizer.normalize(x, Normalizer.Form.NFD)
+    val z = y.replaceAll("[^\\p{ASCII}]", "");
+    if (x.size == z.size) Some(z) else None
   }
 }
