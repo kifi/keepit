@@ -7,7 +7,7 @@ import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.curator.FakeCuratorServiceClientModule
-import org.specs2.mutable.{ SpecificationLike, Specification }
+import org.specs2.mutable.{ SpecificationLike }
 
 import org.joda.time.DateTime
 import com.keepit.common.time._
@@ -16,9 +16,9 @@ import com.keepit.search._
 import com.keepit.common.controller._
 import com.keepit.common.db._
 import com.keepit.model._
-import com.keepit.test.{ ShoeboxTestInjector, DbInjectionHelper, ShoeboxApplication }
+import com.keepit.test.{ ShoeboxTestInjector, DbInjectionHelper }
 
-import play.api.libs.json.{ JsObject, Json }
+import play.api.libs.json.{ Json }
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import com.keepit.shoebox.FakeShoeboxServiceModule
@@ -28,6 +28,7 @@ import com.keepit.common.analytics.FakeAnalyticsModule
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
+import com.keepit.model.UserFactoryHelper._
 
 class MobilePageControllerTest extends TestKit(ActorSystem()) with SpecificationLike with ShoeboxTestInjector with DbInjectionHelper {
 
@@ -58,8 +59,8 @@ class MobilePageControllerTest extends TestKit(ActorSystem()) with Specification
         val t2 = new DateTime(2013, 3, 22, 14, 30, 0, 0, DEFAULT_DATE_TIME_ZONE)
         val googleUrl = "http://www.google.com"
         val (user1, uri) = db.readWrite { implicit s =>
-          val user1 = userRepo.save(User(firstName = "Shanee", lastName = "Smith", externalId = ExternalId("aaaaaaaa-51ad-4c7d-a88e-d4e6e3c9a672"), username = Username("test1"), normalizedUsername = "test1"))
-          val user2 = userRepo.save(User(firstName = "Shachaf", lastName = "Smith", externalId = ExternalId("bbbbbbbb-51ad-4c7d-a88e-d4e6e3c9a673"), username = Username("test"), normalizedUsername = "test"))
+          val user1 = UserFactory.user().withName("Shanee", "Smith").withId("aaaaaaaa-51ad-4c7d-a88e-d4e6e3c9a672").withUsername("test1").saved
+          val user2 = UserFactory.user().withName("Shachaf", "Smith").withId("bbbbbbbb-51ad-4c7d-a88e-d4e6e3c9a673").withUsername("test").saved
 
           val uri = uriRepo.save(NormalizedURI.withHash(googleUrl, Some("Google")))
 
@@ -126,8 +127,8 @@ class MobilePageControllerTest extends TestKit(ActorSystem()) with Specification
         val t2 = new DateTime(2013, 3, 22, 14, 30, 0, 0, DEFAULT_DATE_TIME_ZONE)
         val googleUrl = "http://www.google.com"
         val (user1, uri) = db.readWrite { implicit s =>
-          val user1 = userRepo.save(User(firstName = "Shanee", lastName = "Smith", externalId = ExternalId("aaaaaaaa-51ad-4c7d-a88e-d4e6e3c9a672"), username = Username("test1"), normalizedUsername = "test1"))
-          val user2 = userRepo.save(User(firstName = "Shachaf", lastName = "Smith", externalId = ExternalId("bbbbbbbb-51ad-4c7d-a88e-d4e6e3c9a673"), username = Username("test"), normalizedUsername = "test"))
+          val user1 = UserFactory.user().withName("Shanee", "Smith").withId("aaaaaaaa-51ad-4c7d-a88e-d4e6e3c9a672").withUsername("test1").saved
+          val user2 = UserFactory.user().withName("Shachaf", "Smith").withId("bbbbbbbb-51ad-4c7d-a88e-d4e6e3c9a673").withUsername("test").saved
 
           val uri = uriRepo.save(NormalizedURI.withHash(googleUrl, Some("Google")))
 
@@ -153,8 +154,8 @@ class MobilePageControllerTest extends TestKit(ActorSystem()) with Specification
           keepToCollectionRepo.save(KeepToCollection(keepId = keep1.id.get, collectionId = coll2.id.get))
           keepToCollectionRepo.save(KeepToCollection(keepId = keep2.id.get, collectionId = coll2.id.get))
 
-          val user1933 = userRepo.save(User(firstName = "Paul", lastName = "Dirac", externalId = ExternalId("e58be33f-51ad-4c7d-a88e-d4e6e3c9a673"), username = Username("test"), normalizedUsername = "test"))
-          val user1935 = userRepo.save(User(firstName = "James", lastName = "Chadwick", externalId = ExternalId("e58be33f-51ad-4c7d-a88e-d4e6e3c9a674"), username = Username("test1"), normalizedUsername = "test1"))
+          val user1933 = UserFactory.user().withName("Paul", "Dirac").withId("e58be33f-51ad-4c7d-a88e-d4e6e3c9a673").withUsername("test").saved
+          val user1935 = UserFactory.user().withName("James", "Chadwick").withId("e58be33f-51ad-4c7d-a88e-d4e6e3c9a674").withUsername("test1").saved
           val friends = List(user1933, user1935)
 
           val now = new DateTime(2013, 5, 31, 4, 3, 2, 1, DEFAULT_DATE_TIME_ZONE)

@@ -1,6 +1,6 @@
 package com.keepit.controllers.admin
 
-import com.keepit.common.concurrent.{ FakeExecutionContextModule, ExecutionContextModule }
+import com.keepit.common.concurrent.{ FakeExecutionContextModule }
 import com.keepit.common.controller.{ FakeUserActionsHelper, FakeUserActionsModule }
 import com.keepit.curator.FakeCuratorServiceClientModule
 import org.specs2.mutable.Specification
@@ -23,6 +23,9 @@ import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.common.mail.{ FakeOutbox, FakeMailModule }
+
+import com.keepit.model.UserFactoryHelper._
+import com.keepit.model.UserFactory
 
 import com.keepit.cortex.FakeCortexServiceClientModule
 
@@ -52,10 +55,10 @@ class AdminAuthControllerTest extends Specification with ShoeboxApplicationInjec
         val su2 = SocialUser(IdentityId("222", "facebook"), "B", "1", "B 1", Some("b1@gmail.com"),
           Some("http://www.fb.com/him"), AuthenticationMethod.OAuth2, None, Some(OAuth2Info(accessToken = "B")), None)
         val (admin, impersonate) = db.readWrite { implicit s =>
-          val admin = userRepo.save(User(firstName = "A", lastName = "1", username = Username("test"), normalizedUsername = "test"))
+          val admin = UserFactory.user().withName("A", "1").withUsername("test").saved
           socialUserInfoRepo.save(SocialUserInfo(userId = admin.id, fullName = "A 1", socialId = SocialId("111"),
             networkType = FACEBOOK, credentials = Some(su1)))
-          val impersonate = userRepo.save(User(firstName = "B", lastName = "1", username = Username("test2"), normalizedUsername = "test2"))
+          val impersonate = UserFactory.user().withName("B", "1").withUsername("test2").saved
           socialUserInfoRepo.save(SocialUserInfo(userId = impersonate.id, fullName = "B 1",
             socialId = SocialId("222"), networkType = FACEBOOK, credentials = Some(su2)))
           (admin, impersonate)

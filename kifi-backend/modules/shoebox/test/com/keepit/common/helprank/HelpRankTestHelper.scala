@@ -10,6 +10,8 @@ import com.keepit.model._
 import com.keepit.search.ArticleSearchResult
 import com.keepit.test.{ FakeIdCounter, TestInjector }
 import play.api.libs.json.Json
+import com.keepit.model.UserFactoryHelper._
+import com.keepit.model.UserFactory
 
 trait HelpRankTestHelper { self: TestInjector =>
 
@@ -29,10 +31,10 @@ trait HelpRankTestHelper { self: TestInjector =>
     val keepFB = Json.obj("url" -> "http://facebook.com", "isPrivate" -> false)
 
     val (u1, u2, u3, u4) = db.readWrite { implicit session =>
-      val u1 = userRepo.save(User(firstName = "Shanee", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
-      val u2 = userRepo.save(User(firstName = "Foo", lastName = "Bar", username = Username("test"), normalizedUsername = "test"))
-      val u3 = userRepo.save(User(firstName = "Discoveryer", lastName = "DiscoveryetyDiscoveryyDiscovery", username = Username("test"), normalizedUsername = "test"))
-      val u4 = userRepo.save(User(firstName = "Ro", lastName = "Bot", username = Username("test"), normalizedUsername = "test"))
+      val u1 = UserFactory.user().withName("Shanee", "Smith").withUsername("test").saved
+      val u2 = UserFactory.user().withName("Foo", "Bar").withUsername("test").saved
+      val u3 = UserFactory.user().withName("Discoveryer", "DiscoveryetyDiscoveryyDiscovery").withUsername("test").saved
+      val u4 = UserFactory.user().withName("Ro", "Bot").withUsername("test").saved
       (u1, u2, u3, u4)
     }
 

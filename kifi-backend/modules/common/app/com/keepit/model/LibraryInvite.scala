@@ -47,6 +47,21 @@ object LibraryInvite extends ModelWithPublicIdCompanion[LibraryInvite] {
   protected[this] val publicIdPrefix = "l"
   protected[this] val publicIdIvSpec = new IvParameterSpec(Array(-20, -76, -59, 85, 85, -2, 72, 61, 58, 38, 60, -2, -128, 79, 9, -87))
 
+  def applyFromDbRow(
+    id: Option[Id[LibraryInvite]],
+    libraryId: Id[Library],
+    inviterId: Id[User],
+    userId: Option[Id[User]],
+    emailAddress: Option[EmailAddress],
+    access: LibraryAccess,
+    createdAt: DateTime,
+    updatedAt: DateTime,
+    state: State[LibraryInvite],
+    authToken: String,
+    message: Option[String]) = {
+    LibraryInvite(id, libraryId, inviterId, userId, emailAddress, access, createdAt, updatedAt, state, authToken, message)
+  }
+
   implicit def format = (
     (__ \ 'id).formatNullable(Id.format[LibraryInvite]) and
     (__ \ 'libraryId).format[Id[Library]] and

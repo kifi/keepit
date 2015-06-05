@@ -1,5 +1,17 @@
-<div kf-modal class="kf-remove-member-confirm-modal">
-  <div kf-basic-modal-content with-cancel="true" title="Remove {{selectedMemberToRemove.firstName}}?" with-warning action-text="Remove" action="removeMember()">
-    <p>{{memberTypeToRemove === 'collab' ? 'Removing collaborators will prevent them from being able to add, edit or remove keeps in this library' : 'Removing followers will prevent them from being able to view keeps in this library'}}</p>
+<div kf-modal class="kf-remove-member-confirm-modal" ng-switch="::modalData.type + (modalData.isSelf ? '_self' : '')">
+  <div ng-switch-when="collab_self">
+    <div kf-basic-modal-content with-cancel="true" title="Leave this library?" with-warning action-text="Leave" action="modalData.remove()">
+      <p>You will no longer be able to {{modalData.private ? 'access' : 'contribute to'}} this library.</p>
+    </div>
+  </div>
+  <div ng-switch-when="collab">
+    <div kf-basic-modal-content with-cancel="true" title="Remove {{modalData.member.firstName}}?" with-warning action-text="Remove" action="modalData.remove()">
+      <p>{{modalData.member.firstName}} will no longer be able to {{modalData.private ? 'access' : 'contribute to'}} this library.</p>
+    </div>
+  </div>
+  <div ng-switch-when="follow">
+    <div kf-basic-modal-content with-cancel="true" title="Remove {{modalData.member.firstName}}?" with-warning action-text="Remove" action="modalData.remove()">
+      <p>{{modalData.member.firstName}} will no longer be able to {{modalData.private ? 'view' : 'receive updates about'}} this library.</p>
+    </div>
   </div>
 </div>

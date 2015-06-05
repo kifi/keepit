@@ -110,8 +110,9 @@ def log(msg):
   message_slack(amsg)
 
 def getAllInstances():
-  ec2 = boto.ec2.connect_to_region("us-west-1")
-  return [ServiceInstance(instance) for instance in ec2.get_only_instances()]
+  conn = boto.ec2.connect_to_region("us-west-1")
+  live_instances = [x for x in conn.get_only_instances() if x.state != 'terminated']
+  return [ServiceInstance(instance) for instance in live_instances]
 
 if __name__=="__main__":
   try:

@@ -38,7 +38,7 @@ class WebsiteSearchControllerTest extends SpecificationLike with SearchTestInjec
         path === "/site/search2?q=test&maxHits=2"
 
         inject[UriSearchCommander].asInstanceOf[FixedResultUriSearchCommander].setPlainResults(ExtSearchControllerTest.plainTestResults)
-        val user = User(Some(Id[User](1)), firstName = "prénom", lastName = "nom", username = Username("test"), normalizedUsername = "test")
+        val user = UserFactory.user().withId(1).withName("prénom", "nom").withUsername("test").get
         inject[FakeUserActionsHelper].setUser(user)
         val request = FakeRequest("GET", path)
         val result = inject[WebsiteSearchController].search2("test", None, None, 2, None, None, None, None)(request)

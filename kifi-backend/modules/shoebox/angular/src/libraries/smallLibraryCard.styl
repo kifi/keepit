@@ -64,7 +64,7 @@ owner-pic-diam = 32px
   width: owner-pic-diam
   height: owner-pic-diam
   border-radius: 50%
-  box-shadow: 0 0 3px rgba(0,0,0,.3) inset
+  box-shadow: 0 0 3px alpha(#000, .3) inset
 
 .kf-slc-card-owner-pic
   margin-right: 6px
@@ -137,28 +137,53 @@ owner-pic-diam = 32px
     content: '+'
     padding-right: 1px
 
-.kf-slc-counts
+lockRadius = 14px
+
+.kf-slc-count-line
   position: absolute
-  top: 184px
+  top: 179px
   left: 50%
   transform: translate(-50%)
+  line-height: 2 * lockRadius
   font-size: 0
   color: #fff
   white-space: nowrap
-  text-shadow: 0 0 3px rgba(0,0,0,.6)
+  text-shadow: 0 0 3px alpha(#000, .6)
+
+.kf-slc-card-collab
+  display: inline-block
+  vertical-align: middle
+  height: 12px
+  width: 24px
+  background-size: auto 12px
+  background-repeat: no-repeat
+  background-position: center
+
+.kf-slc-card-private
+  display: inline-block
+  vertical-align: middle
+  width: 2 * lockRadius
+  height: 2 * lockRadius
+  border-radius: lockRadius
+  background-color: libraryRed
+  background-position: center 6px
+  background-size: auto 14px
+  background-repeat: no-repeat
+
+  &:not(:first-child)
+    margin-left: 8px
 
 .kf-slc-count
+  vertical-align: middle
   font-size: 13px
   font-weight: bold
   color: inherit
-  &[href]:hover
-    color: #fff
-    text-decoration: underline
 
-.kf-slc-count-dot
-  padding: 0 5px
-  font-size: 14px
-  cursor: default
+  &:not(:first-child)
+    margin-left: 8px
+
+  &:hover
+    text-decoration: underline
 
 .kf-slc-card-cover
   position: absolute
@@ -175,7 +200,7 @@ owner-pic-diam = 32px
     left: 0
     right: 0
     bottom: 0
-    background-color: rgba(0,0,0,.2)
+    background-color: alpha(#000, .2)
     content: ''
 
 .kf-slc-card-cover-image
@@ -193,20 +218,20 @@ owner-pic-diam = 32px
   right: 0
   bottom: 0
   height: 35px
-  border-top: 1px solid rgba(255,255,255,.3)
+  border-top: 1px solid alpha(#fff, .3)
   text-align: center
   line-height: 35px
   font-size: 13px
   font-smoothing: antialiased
-  color: rgba(255,255,255,.8)
-  text-shadow: 0 0 6px rgba(0,0,0,.3)
+  color: alpha(#fff, .8)
+  text-shadow: 0 0 6px alpha(#000, .3)
   cursor: default
 
   .kf-slc-card-link>&
     line-height: 33px
     font-size: 12px
-    color: rgba(255,255,255,.6)
-    text-shadow: 0 0 6px rgba(0,0,0,.2)
+    color: alpha(#fff, .6)
+    text-shadow: 0 0 6px alpha(#000, .2)
 
 follower-pic-diameter = 23px
 
@@ -216,14 +241,17 @@ follower-pic-diameter = 23px
   line-height: follower-pic-diameter
   font-size: 11px
   vertical-align: middle
-  color: rgba(255,255,255,.8)
-  text-shadow: 0 0 6px rgba(0,0,0,.3)
+  color: alpha(#fff, .8)
+  text-shadow: 0 0 6px alpha(#000, .3)
 
 .kf-slc-followers-number
   color: inherit
 
   &[href]:hover
     text-decoration: underline
+
+.kf-slc-followers-n
+  color: alpha(#fff,.9)
 
 .kf-slc-follower
   display: inline-block

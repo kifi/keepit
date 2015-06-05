@@ -1,7 +1,5 @@
 package com.keepit.controllers.email
 
-import java.util.NoSuchElementException
-
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.commanders.LibraryCommander
 import com.keepit.common.controller.FakeUserActionsHelper
@@ -15,6 +13,9 @@ import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.Specification
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
+
+import com.keepit.model.UserFactoryHelper._
+import com.keepit.model.UserFactory
 
 class EmailRecosControllerTest extends Specification with ShoeboxTestInjector {
 
@@ -35,7 +36,7 @@ class EmailRecosControllerTest extends Specification with ShoeboxTestInjector {
           val helper = inject[FakeUserActionsHelper]
 
           val (userOpt, uri1) = db.readWrite { implicit s =>
-            val userOpt = if (isAuthenticated) Some(userRepo.save(User(firstName = "Jo", lastName = "Bennett", username = Username("test"), normalizedUsername = "test"))) else None
+            val userOpt = if (isAuthenticated) Some(UserFactory.user().withName("Jo", "Bennett").withUsername("test").saved) else None
             uriRepo.count === 0
             val uri1 = uriRepo.save(NormalizedURI.withHash("http://www.website.com/article1", Some("Article1")))
             (userOpt, uri1)
@@ -69,7 +70,7 @@ class EmailRecosControllerTest extends Specification with ShoeboxTestInjector {
             uriRepo.count === 0
             uriRepo.save(NormalizedURI.withHash("http://www.website.com/article1", Some("Article1")))
           }
-          inject[FakeUserActionsHelper].setUser(User(Some(Id[User](1L)), firstName = "Foo", lastName = "Bar", username = Username("test"), normalizedUsername = "test"))
+          inject[FakeUserActionsHelper].setUser(UserFactory.user().withId(1).withName("Foo", "Bar").withUsername("test").get)
           val call = com.keepit.controllers.email.routes.EmailRecosController.sendReco(uri1.externalId)
           call.toString === s"/r/e/1/recos/send?id=${uri1.externalId}"
           val result = controller.sendReco(uri1.externalId)(FakeRequest())
@@ -88,7 +89,7 @@ class EmailRecosControllerTest extends Specification with ShoeboxTestInjector {
           val controller = inject[EmailRecosController]
 
           val (user1, uri1) = db.readWrite { implicit rw =>
-            val user1 = userRepo.save(User(firstName = "Foo", lastName = "Bar", username = Username("test"), normalizedUsername = "test"))
+            val user1 = UserFactory.user().withName("Foo", "Bar").withUsername("test").saved
             val uri1 = uriRepo.save(NormalizedURI.withHash("http://www.scala-lang.org/documentation", Some("Scala")))
             keepRepo.getByUser(user1.id.get).size === 0
             (user1, uri1)
@@ -117,7 +118,7 @@ class EmailRecosControllerTest extends Specification with ShoeboxTestInjector {
       "returns not found for bad URI" in {
         withDb(controllerTestModules: _*) { implicit injector =>
           val extId = ExternalId[NormalizedURI](java.util.UUID.randomUUID.toString) // another UUID bites the dust
-          inject[FakeUserActionsHelper].setUser(User(Some(Id[User](1L)), firstName = "Foo", lastName = "Bar", username = Username("test"), normalizedUsername = "test"))
+          inject[FakeUserActionsHelper].setUser(UserFactory.user().withId(1).withName("Foo", "Bar").withUsername("test").get)
           val controller = inject[EmailRecosController]
           val call = controller.keepReco(extId)(FakeRequest())
           status(call) === BAD_REQUEST

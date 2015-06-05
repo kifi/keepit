@@ -1,7 +1,7 @@
 package com.keepit.model
 
 import com.google.inject.{ Provider, Inject, Singleton, ImplementedBy }
-import com.keepit.commanders.{ UserProfileTab, UserMetadataKey, UserMetadataCache, UsernameOps }
+import com.keepit.commanders.{ UserProfileTab, UserMetadataKey, UserMetadataCache, HandleOps }
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick._
@@ -67,12 +67,12 @@ class UserRepoImpl @Inject() (
   class UserTable(tag: Tag) extends RepoTable[User](db, tag, "user") with ExternalIdColumn[User] with SeqNumberColumn[User] {
     def firstName = column[String]("first_name", O.NotNull)
     def lastName = column[String]("last_name", O.NotNull)
-    def pictureName = column[String]("picture_name", O.Nullable)
-    def userPictureId = column[Id[UserPicture]]("user_picture_id", O.Nullable)
-    def primaryEmail = column[EmailAddress]("primary_email", O.Nullable)
-    def username = column[Username]("username", O.NotNull)
-    def normalizedUsername = column[String]("normalized_username", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, externalId, firstName, lastName, state, pictureName.?, userPictureId.?, seq, primaryEmail.?, username, normalizedUsername) <> ((User.apply _).tupled, User.unapply)
+    def pictureName = column[Option[String]]("picture_name", O.Nullable)
+    def userPictureId = column[Option[Id[UserPicture]]]("user_picture_id", O.Nullable)
+    def primaryEmail = column[Option[EmailAddress]]("primary_email", O.Nullable)
+    def username = column[Option[Username]]("username", O.Nullable)
+    def normalizedUsername = column[Option[Username]]("normalized_username", O.Nullable)
+    def * = (id.?, createdAt, updatedAt, externalId, firstName, lastName, state, pictureName, userPictureId, seq, primaryEmail, username, normalizedUsername) <> ((User.applyFromDbRow _).tupled, User.unapplyToDbRow)
   }
 
   def table(tag: Tag) = new UserTable(tag)
@@ -84,12 +84,6 @@ class UserRepoImpl @Inject() (
 
   override def save(user: User)(implicit session: RWSession): User = {
     val toSave = user.copy(seq = deferredSeqNum())
-    user.id foreach { id =>
-      val currentUser = get(id)
-      if (currentUser.username != user.username && currentUser.createdAt.isBefore(clock.now.minusHours(1))) {
-        airbrake.notify(s"username changes for user ${user.id.get}. $currentUser -> $user")
-      }
-    }
     super.save(toSave)
   }
 
@@ -146,24 +140,27 @@ class UserRepoImpl @Inject() (
   }
 
   override def deleteCache(user: User)(implicit session: RSession): Unit = {
-    user.id map { id =>
+    user.id foreach { id =>
       idCache.remove(UserIdKey(id))
-      basicUserCache.remove(BasicUserUserIdKey(id))
       UserProfileTab.all.foreach(v => userMetadataCache.remove(UserMetadataKey(id, v)))
-      usernameCache.remove(UsernameKey(user.username))
       externalIdCache.remove(UserExternalIdKey(user.externalId))
+      user.primaryUsername.foreach { username =>
+        usernameCache.remove(UsernameKey(username.original))
+        basicUserCache.remove(BasicUserUserIdKey(id))
+      }
     }
     invalidateMixpanel(user.withState(UserStates.INACTIVE))
   }
 
   override def invalidateCache(user: User)(implicit session: RSession) = {
     if (user.state == UserStates.ACTIVE) {
-      val basicUser = BasicUser.fromUser(user)
       for (id <- user.id) {
         idCache.set(UserIdKey(id), user)
-        basicUserCache.set(BasicUserUserIdKey(id), basicUser)
-        usernameCache.set(UsernameKey(user.username), user)
         UserProfileTab.all.foreach(v => userMetadataCache.remove(UserMetadataKey(id, v)))
+        user.primaryUsername.foreach { username =>
+          usernameCache.set(UsernameKey(username.original), user)
+          basicUserCache.set(BasicUserUserIdKey(id), BasicUser.fromUser(user))
+        }
       }
       externalIdCache.set(UserExternalIdKey(user.externalId), user)
       session.onTransactionSuccess {
@@ -264,13 +261,13 @@ class UserRepoImpl @Inject() (
   }
 
   def getByUsername(username: Username)(implicit session: RSession): Option[User] = {
-    val normalizedUsername = UsernameOps.normalize(username.value)
+    val normalizedUsername = Username(HandleOps.normalize(username.value))
     usernameCache.getOrElseOpt(UsernameKey(username)) {
       getByNormalizedUsernameCompiled(normalizedUsername).firstOption
     }
   }
 
-  private val getByNormalizedUsernameCompiled = Compiled { normalizedUsername: Column[String] =>
+  private val getByNormalizedUsernameCompiled = Compiled { normalizedUsername: Column[Username] =>
     for (f <- rows if f.normalizedUsername === normalizedUsername) yield f
   }
 

@@ -12,6 +12,14 @@
   invitedBy: Seq[User]
 )(implicit request: com.keepit.common.controller.UserRequest[_])
 
+@formatKifiInstallations(kifiInstallations: Seq[KifiInstallation]) = {
+<ul>
+    @for(installation <- kifiInstallations) {
+    <li>@{installation.version}; @{installation.userAgent.name} @{installation.userAgent.version}; @{installation.userAgent.operatingSystemName}</li>
+    }
+</ul>
+}
+
 @admin("User: " + user.firstName + " " + user.lastName, stylesheets = List("admin_user")) {
     <button class="btn" id="library_push" onclick="libraryPush()">Lib Push</button>
     <button class="btn" id="reset_mixpanel" onclick="resetMixpanelProfile()">Reset Mixpanel Profile</button>
@@ -55,6 +63,9 @@
       </tr>
       <tr>
         <th>Last Update</th><td>@adminHelper.dateTimeDisplay(user.updatedAt)</td>
+      </tr>
+      <tr>
+        <th>Versions</th><td>@{formatKifiInstallations(kifiInstallations)}</td>
       </tr>
       <tr>
         <th>Email</th>

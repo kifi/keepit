@@ -39,11 +39,12 @@ class GratificationCommander @Inject() (
 
   private val remoteCallQueue = new ReactiveLock(numConcurrent = 5)
 
-  def getLibraryFollowerCounts(userId: Id[User]): LibraryCountData = {
+  def getLibraryFollowCounts(userId: Id[User]): LibraryCountData = {
     db.readOnlyReplica { implicit s =>
       val since = currentDateTime.minusWeeks(NUM_WEEKS_BACK)
-      val cnt = libMemRepo.userRecentFollowerCounts(userId, since)
+      // val cnt = libMemRepo.userRecentUniqueFollowerCounts(userId, since) // deprecated, since it gets unique followers. we currently use the total "follows" across libraries.
       val cntMap = libMemRepo.userRecentTopFollowedLibrariesAndCounts(userId, since)
+      val cnt = cntMap.foldLeft[Int](0)((acc, kv) => acc + kv._2) // get total "follows" over all libraries
       LibraryCountData(cnt, cntMap)
     }
   }
@@ -92,7 +93,7 @@ class GratificationCommander @Inject() (
     val result = fIdAndViewByLib.map { seq: Seq[(Id[User], LibraryCountData)] =>
       seq.filter {
         case (id: Id[User], viewsByLib: LibraryCountData) =>
-          val totalLibFollows = getLibraryFollowerCounts(id).totalCount
+          val totalLibFollows = getLibraryFollowCounts(id).totalCount
           val totalNewConnections = getNewConnections(id).length
           val totalLibViews = viewsByLib.totalCount
           totalLibFollows >= MIN_FOLLOWERS || totalNewConnections >= MIN_CONNECTIONS || totalLibViews >= MIN_VIEWS

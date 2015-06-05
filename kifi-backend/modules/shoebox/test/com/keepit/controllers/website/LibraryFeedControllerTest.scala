@@ -2,23 +2,18 @@ package com.keepit.controllers.website
 
 import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
-import com.keepit.commanders.LocalUserExperimentCommander
 import com.keepit.common.controller.FakeUserActionsHelper
-import com.keepit.common.mail.EmailAddress
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.time._
 import com.keepit.model._
+import com.keepit.model.UserFactoryHelper._
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.test.ShoeboxTestInjector
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
-import play.api.libs.json.Json
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 
-/**
- * Created by colinlane on 5/22/15.
- */
 class LibraryFeedControllerTest extends Specification with ShoeboxTestInjector {
   val modules = Seq(
     FakeABookServiceClientModule(),
@@ -28,8 +23,7 @@ class LibraryFeedControllerTest extends Specification with ShoeboxTestInjector {
 
   "Library Feed Controller" should {
     def setup()(implicit injector: Injector) = db.readWrite { implicit s =>
-      val user = userRepo.save(User(createdAt = DateTime.now, firstName = "Colin", lastName = "Lane", username = Username("Colin-Lane"),
-        primaryEmail = Some(EmailAddress("colin@kifi.com")), normalizedUsername = "colin-lane"))
+      val user = UserFactory.user().withName("Colin", "Lane").withUsername("colin-lane").withEmailAddress("colin@kifi.com").saved
       val library = libraryRepo.save(Library(name = "test", ownerId = user.id.get, visibility = LibraryVisibility.PUBLISHED, slug = LibrarySlug("test"), memberCount = 1))
       val privateLibrary = libraryRepo.save(Library(name = "secret", ownerId = user.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("secret"), memberCount = 1))
       libraryMembershipRepo.save(LibraryMembership(libraryId = library.id.get, userId = user.id.get, access = LibraryAccess.OWNER))
@@ -99,8 +93,7 @@ class LibraryFeedControllerTest extends Specification with ShoeboxTestInjector {
           withDb(modules: _*) { implicit injector =>
             val (user, library, privateLibrary) = setup
             val otherUser = db.readWrite { implicit s =>
-              val user1 = userRepo.save(User(createdAt = DateTime.now, firstName = "Colin", lastName = "Lane", username = Username("colin"),
-                primaryEmail = Some(EmailAddress("colin@kifi.com")), normalizedUsername = "colin"))
+              val user1 = UserFactory.user().withName("Colin", "Lane").withUsername("colin").withEmailAddress("colin@kifi.com").saved
               libraryMembershipRepo.save(LibraryMembership(libraryId = privateLibrary.id.get, userId = user1.id.get, access = LibraryAccess.READ_ONLY))
               user1
             }
@@ -152,8 +145,7 @@ class LibraryFeedControllerTest extends Specification with ShoeboxTestInjector {
           withDb(modules: _*) { implicit injector =>
             val (user, library, privateLibrary) = setup
             val otherUser = db.readWrite { implicit s =>
-              userRepo.save(User(createdAt = DateTime.now, firstName = "Colin", lastName = "Lane", username = Username("Colin-Lane"),
-                primaryEmail = Some(EmailAddress("colin@kifi.com")), normalizedUsername = "colin-lane"))
+              UserFactory.user().withName("Colin", "Lane").withUsername("colin-lane").withEmailAddress("colin@kifi.com").saved
             }
             inject[FakeUserActionsHelper].setUser(otherUser)
 

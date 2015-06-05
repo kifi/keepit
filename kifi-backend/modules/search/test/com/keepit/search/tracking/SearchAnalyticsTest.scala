@@ -1,7 +1,7 @@
 package com.keepit.search.tracking
 
 import com.keepit.common.db.{ ExternalId, Id }
-import com.keepit.model.{ Collection, User, Username }
+import com.keepit.model._
 import com.keepit.search.result.{ BasicSearchHit, KifiSearchHit }
 import com.keepit.social.BasicUser
 import org.specs2.mutable.Specification
@@ -10,7 +10,10 @@ import play.api.libs.json._
 class SearchAnalyticsTest extends Specification {
 
   val tags = Seq(ExternalId[Collection](), ExternalId[Collection](), ExternalId[Collection]())
-  val users = Seq(User(Some(Id(1)), firstName = "", lastName = "", username = Username("test"), normalizedUsername = "test"), User(Some(Id(1)), firstName = "", lastName = "", username = Username("test"), normalizedUsername = "test"))
+  val users = Seq(
+    UserFactory.user().withId(1).withName("", "").withUsername("test").get,
+    UserFactory.user().withId(2).withName("", "").withUsername("test").get
+  )
 
   "KifiHitContext" should {
     "be deserialized from a KifiSearchHit" in { // old extensions, to be deprecated

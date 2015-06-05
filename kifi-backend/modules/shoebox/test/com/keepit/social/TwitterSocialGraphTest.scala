@@ -16,6 +16,8 @@ import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.Specification
 import play.api.libs.json.{ JsArray, Json, JsNull, JsValue }
 import securesocial.core.{ IdentityId, AuthenticationMethod, SocialUser, OAuth1Info }
+import com.keepit.model.UserFactoryHelper._
+import com.keepit.model.UserFactory
 
 import scala.concurrent.{ ExecutionContext, Future }
 
