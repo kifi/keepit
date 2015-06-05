@@ -43,10 +43,14 @@ class HandleCommander @Inject() (
 
   def setUsername(username: Username, user: User, lock: Boolean = false, overrideProtection: Boolean = false, overrideValidityCheck: Boolean = false)(implicit session: RWSession): Try[User] = {
     claimUsername(username, user.id.get, lock, overrideProtection, overrideValidityCheck).map { normalizedUsername =>
-      val primaryUsername = PrimaryUsername(original = username, normalized = normalizedUsername)
-      val updatedUser = userRepo.save(user.copy(primaryUsername = Some(primaryUsername)))
-      //we have to do cache invalidation now, the repo does not have the old username for that
-      user.primaryUsername.foreach(oldUsername => usernameCache.remove(UsernameKey(oldUsername.original)))
+      val newUsername = PrimaryUsername(original = username, normalized = normalizedUsername)
+      val updatedUser = userRepo.save(user.copy(primaryUsername = Some(newUsername)))
+      user.primaryUsername.foreach { oldUsername =>
+        usernameCache.remove(UsernameKey(oldUsername.original)) //we have to do cache invalidation now, the repo does not have the old username for that
+        if (oldUsername.original != newUsername.original && user.createdAt.isBefore(clock.now.minusHours(1))) {
+          airbrake.notify(s"Username change for user ${user.id.get}. ${oldUsername.original} -> ${newUsername.original}")
+        }
+      }
       updatedUser
     }
   }
