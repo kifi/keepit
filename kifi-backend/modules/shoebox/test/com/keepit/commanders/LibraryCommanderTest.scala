@@ -443,7 +443,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
       }
     }
 
-    "can move library" in {
+    "can move a library to and from organization space" in {
       withDb(modules: _*) { implicit injector =>
         val orgRepo = inject[OrganizationRepo]
         val orgMemberRepo = inject[OrganizationMembershipRepo]
@@ -459,28 +459,28 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         }
 
         // User does not own the library
-        libraryCommander.canMoveLibrary(Id[User](0), newLibrary.id.get, None, organization.id) must equalTo(false)
+        libraryCommander.canMoveToFromOrg(Id[User](0), newLibrary.id.get, None, organization.id) must equalTo(false)
 
         // User owns the library
         // Can move libraries to organizations you are part of.
-        libraryCommander.canMoveLibrary(user.id.get, newLibrary.id.get, None, organization.id) must equalTo(true)
+        libraryCommander.canMoveToFromOrg(user.id.get, newLibrary.id.get, None, organization.id) must equalTo(true)
         // Cannot inject libraries to random organizations.
-        libraryCommander.canMoveLibrary(user.id.get, newLibrary.id.get, None, otherOrg.id) must equalTo(false)
+        libraryCommander.canMoveToFromOrg(user.id.get, newLibrary.id.get, None, otherOrg.id) must equalTo(false)
         // Can move libraries out of organizations you are part of.
-        libraryCommander.canMoveLibrary(user.id.get, newLibrary.id.get, organization.id, None) must equalTo(true)
+        libraryCommander.canMoveToFromOrg(user.id.get, newLibrary.id.get, organization.id, None) must equalTo(true)
         // Cannot inject libraries from an organization you are part of to a random organization.
-        libraryCommander.canMoveLibrary(user.id.get, newLibrary.id.get, organization.id, otherOrg.id) must equalTo(false)
+        libraryCommander.canMoveToFromOrg(user.id.get, newLibrary.id.get, organization.id, otherOrg.id) must equalTo(false)
         // Cannot remove libraries from other organizations you are not part of.
-        libraryCommander.canMoveLibrary(user.id.get, newLibrary.id.get, otherOrg.id, None) must equalTo(false)
+        libraryCommander.canMoveToFromOrg(user.id.get, newLibrary.id.get, otherOrg.id, None) must equalTo(false)
         // Prevent Company Espionage and library stealing!!
-        libraryCommander.canMoveLibrary(user.id.get, newLibrary.id.get, otherOrg.id, organization.id) must equalTo(false)
+        libraryCommander.canMoveToFromOrg(user.id.get, newLibrary.id.get, otherOrg.id, organization.id) must equalTo(false)
         // What about if your library is in an organization and you leave
         db.readWrite { implicit s =>
           val membership = orgMemberRepo.getByOrgIdAndUserId(organization.id.get, user.id.get)
           orgMemberRepo.save(membership.get.copy(state = OrganizationMembershipStates.INACTIVE))
         }
         // You're out of luck.
-        libraryCommander.canMoveLibrary(user.id.get, newLibrary.id.get, organization.id, None) must equalTo(false)
+        libraryCommander.canMoveToFromOrg(user.id.get, newLibrary.id.get, organization.id, None) must equalTo(false)
       }
     }
 
