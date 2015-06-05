@@ -169,32 +169,21 @@ class LibraryController @Inject() (
   }
 
   def getLibrarySummariesByUser = UserAction.async { request =>
-    val (tooManyLibsWithMemberships, _) = libraryCommander.getLibrariesByUser(request.userId) // TODO: stop loading invited libraries
-
-    // TODO: filter out followed libraries at database level
-    val libsWithMemberships = tooManyLibsWithMemberships.filter(l => LibraryAccess.collaborativePermissions.contains(l._1.access))
-
-    val basicUsers = db.readOnlyReplica { implicit session =>
-      basicUserRepo.loadAll(libsWithMemberships.map(_._2.ownerId).toSet)
+    val objs = db.readOnlyMaster { implicit session =>
+      val libs = libraryRepo.getOwnerLibrariesForSelf(request.userId, Paginator.fromStart(200)) // might want to paginate and/or stop preloading all of these
+      libraryCommander.createLiteLibraryCardInfos(libs, request.userId)
+    } map {
+      case (info: LibraryCardInfo, mem: MiniLibraryMembership) =>
+        val path = Library.formatLibraryPathUrlEncoded(info.owner.username, info.slug)
+        val obj = Json.toJson(info).as[JsObject] + ("url" -> JsString(path)) // TODO: stop adding "url" when web app uses "slug" instead
+        if (mem.lastViewed.nonEmpty) {
+          obj ++ Json.obj("lastViewed" -> mem.lastViewed)
+        } else {
+          obj
+        }
     }
     SafeFuture {
-      db.readOnlyReplica { implicit session =>
-        for ((mem, library) <- libsWithMemberships) yield {
-          val owner = basicUsers(library.ownerId)
-          (LibraryInfo.fromLibraryAndOwner(library, None, owner), mem) // should have library image, but this endpoint doesn't use it and is already slow & heavy.
-        }
-      }
-    } map { libInfosWithMemberships =>
-      Ok(Json.obj("libraries" -> libInfosWithMemberships.map(libInfoToJsonWithLastViewed)))
-    }
-  }
-
-  @inline private def libInfoToJsonWithLastViewed(pair: (LibraryInfo, LibraryMembership)): JsValue = {
-    val lastViewed = pair._2.lastViewed
-    if (lastViewed.nonEmpty) {
-      Json.toJson(pair._1).as[JsObject] ++ Json.obj("lastViewed" -> lastViewed)
-    } else {
-      Json.toJson(pair._1)
+      Ok(Json.obj("libraries" -> objs.seq))
     }
   }
 
