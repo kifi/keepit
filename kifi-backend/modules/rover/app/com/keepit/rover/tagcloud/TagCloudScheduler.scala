@@ -29,7 +29,7 @@ class TagCloudPluginImpl @Inject() (
   val name: String = getClass.toString
 
   override def onStart() {
-    scheduleTaskOnOneMachine(actor.system, 5 minutes, 2 minutes, actor.ref, Pull, this.getClass.getSimpleName + Pull.getClass.getSimpleName)
+    scheduleTaskOnOneMachine(actor.system, 5 minutes, 2 minutes, actor.ref, Pull, this.getClass.getSimpleName + Pull.getClass.toString)
   }
 }
 
