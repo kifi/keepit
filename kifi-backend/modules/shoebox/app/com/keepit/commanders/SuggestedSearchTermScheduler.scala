@@ -96,7 +96,7 @@ class SuggestedSearchTermUpdater @Inject() (
       log.info(s"${keeps.size} keeps retrieved")
 
       val libs = librariesNeedUpdate(keeps)
-      log.info(s"${libs.size} libraries need tag computations, ${libs.mkString(", ")}")
+      log.info(s"${libs.size} libraries need tag computations, ${libs.take(10).mkString(", ")}")
 
       libs.foreach { lib => computeAndSaveHashtags(lib) }
       libs.foreach { lib => sendAutotagRequests(lib) }
