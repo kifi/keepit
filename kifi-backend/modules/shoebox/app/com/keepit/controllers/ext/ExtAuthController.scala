@@ -68,9 +68,8 @@ class ExtAuthController @Inject() (
         })
     log.info(s"start details: $userAgent, $version, $installationIdOpt")
 
-    val ip = request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress)
     val (libraries, installation, urlPatterns, isInstall, isUpdate) = db.readWrite { implicit s =>
-      userIpAddressCommander.logUser(userId, IpAddress(ip), userAgent)
+      userIpAddressCommander.logUserByRequest(request)
       val libraries = libraryCommander.getMainAndSecretLibrariesForUser(userId)
       val (installation, isInstall, isUpdate): (KifiInstallation, Boolean, Boolean) = installationIdOpt flatMap { id =>
         installationRepo.getOpt(userId, id)
@@ -112,6 +111,7 @@ class ExtAuthController @Inject() (
       }
     }
 
+    val ip = request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress)
     val encryptedIp: String = crypt.crypt(ipkey, ip)
 
     Ok(Json.obj(
