@@ -1735,6 +1735,49 @@ class LibraryCommander @Inject() (
     }
   }
 
+  def createLiteLibraryCardInfos(libs: Seq[Library], viewerId: Id[User])(implicit session: RSession): ParSeq[(LibraryCardInfo, MiniLibraryMembership)] = {
+    val memberships = libraryMembershipRepo.getMinisByLibraryIdsAndAccess(
+      libs.map(_.id.get).toSet, Set(LibraryAccess.OWNER, LibraryAccess.READ_WRITE, LibraryAccess.READ_INSERT))
+    val allBasicUsers = basicUserRepo.loadAll(memberships.values.map(_.map(_.userId)).flatten.toSet)
+
+    libs.par map { lib =>
+      val libMems = memberships(lib.id.get)
+      val viewerMem = libMems.find(_.userId == viewerId).get
+      val (numFollowers, numCollaborators, collabsSample) = if (libMems.length > 1) {
+        val numFollowers = libraryMembershipRepo.countWithLibraryIdAndAccess(lib.id.get, LibraryAccess.READ_ONLY)
+        val numCollaborators = libMems.length - 1
+        val collabsSample = libMems.filter(_.access != LibraryAccess.OWNER)
+          .sortBy(m => (m.userId != viewerId, m.access == LibraryAccess.READ_INSERT))
+          .take(4).map(m => allBasicUsers(m.userId))
+        (numFollowers, numCollaborators, collabsSample)
+      } else {
+        (0, 0, Seq.empty)
+      }
+
+      val info = LibraryCardInfo(
+        id = Library.publicId(lib.id.get),
+        name = lib.name,
+        description = None, // not needed
+        color = lib.color,
+        image = None, // not needed
+        slug = lib.slug,
+        kind = lib.kind,
+        visibility = lib.visibility,
+        owner = allBasicUsers(lib.ownerId),
+        numKeeps = lib.keepCount,
+        numFollowers = numFollowers,
+        followers = Seq.empty, // not needed
+        numCollaborators = numCollaborators,
+        collaborators = collabsSample,
+        lastKept = lib.lastKept.getOrElse(lib.createdAt),
+        listed = None, // not needed
+        following = None, // not needed
+        membership = None, // not needed
+        modifiedAt = lib.updatedAt)
+      (info, viewerMem)
+    }
+  }
+
   private def createLibraryCardInfo(lib: Library, image: Option[LibraryImage], owner: BasicUser, numFollowers: Int,
     followers: Seq[BasicUser], numCollaborators: Int, collaborators: Seq[BasicUser], isFollowing: Option[Boolean], membershipOpt: Option[LibraryMembership]): LibraryCardInfo = {
     LibraryCardInfo(

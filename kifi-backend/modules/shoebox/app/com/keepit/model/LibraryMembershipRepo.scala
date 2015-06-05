@@ -18,6 +18,9 @@ import scala.slick.jdbc.StaticQuery
 import scala.collection.immutable.Seq
 import scala.concurrent.duration.FiniteDuration
 
+// a tuple with named fields, for when many rows need to be read and only a few fields are needed
+case class MiniLibraryMembership(userId: Id[User], access: LibraryAccess, lastViewed: Option[DateTime])
+
 @ImplementedBy(classOf[LibraryMembershipRepoImpl])
 trait LibraryMembershipRepo extends Repo[LibraryMembership] with RepoWithDelete[LibraryMembership] with SeqNumberFunction[LibraryMembership] {
   def getWithLibraryId(libraryId: Id[Library], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Seq[LibraryMembership]
@@ -29,6 +32,7 @@ trait LibraryMembershipRepo extends Repo[LibraryMembership] with RepoWithDelete[
   def getWithLibraryIdAndUserIds(libraryId: Id[Library], userIds: Set[Id[User]], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Map[Id[User], LibraryMembership]
   def pageWithLibraryIdAndAccess(libraryId: Id[Library], offset: Int, limit: Int, accessSet: Set[LibraryAccess],
     excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Seq[LibraryMembership]
+  def getMinisByLibraryIdsAndAccess(libraryIds: Set[Id[Library]], accessSet: Set[LibraryAccess])(implicit session: RSession): Map[Id[Library], Seq[MiniLibraryMembership]]
   def countWithLibraryIdAndAccess(libraryId: Id[Library], access: LibraryAccess)(implicit session: RSession): Int
   def countWithLibraryIdByAccess(libraryId: Id[Library])(implicit session: RSession): CountWithLibraryIdByAccess
   def countWithLibraryId(libraryId: Id[Library], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Int
@@ -176,6 +180,14 @@ class LibraryMembershipRepoImpl @Inject() (
 
   def getWithLibraryIdAndUserIds(libraryId: Id[Library], userIds: Set[Id[User]], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Map[Id[User], LibraryMembership] = {
     (for (b <- rows if b.libraryId === libraryId && b.userId.inSet(userIds) && b.state =!= excludeState.orNull) yield (b.userId, b)).list.toMap
+  }
+
+  def getMinisByLibraryIdsAndAccess(libraryIds: Set[Id[Library]], accessSet: Set[LibraryAccess])(implicit session: RSession): Map[Id[Library], Seq[MiniLibraryMembership]] = {
+    (for (b <- rows if b.libraryId.inSet(libraryIds) && b.access.inSet(accessSet) && b.state === LibraryMembershipStates.ACTIVE) yield (b.libraryId, b.userId, b.access, b.lastViewed, b.createdAt))
+      .sortBy(r => (r._1, r._3.desc, r._5)) // libraryId, access desc (owner first), createdAt
+      .list
+      .groupBy(_._1)
+      .mapValues(_.map(t => MiniLibraryMembership(t._2, t._3, t._4)))
   }
 
   def countMembersForLibrarySince(libraryId: Id[Library], since: DateTime)(implicit session: RSession): Int = {
