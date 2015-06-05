@@ -73,7 +73,7 @@ object WordCountHelper {
   def topKcounts(wordCounts: WordCounts, topK: Int, smartCutoff: Boolean = false): WordCounts = {
 
     val cutoff = if (smartCutoff) {
-      val M = wordCounts.values.max
+      val M = if (wordCounts.size == 0) 0 else wordCounts.values.max
       Math.min(5, Math.max(0.05 * M, 2))
     } else 0.0
 
