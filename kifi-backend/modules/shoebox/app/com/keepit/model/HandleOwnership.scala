@@ -7,9 +7,11 @@ import com.keepit.common.db.slick.{ DbRepo, DataBaseComponent, Repo }
 import com.keepit.common.db._
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
+import com.kifi.macros.json
 import org.joda.time.DateTime
 import scala.concurrent.duration._
 
+@json
 case class Handle(value: String) extends AnyVal {
   override def toString() = value
 }
@@ -82,7 +84,8 @@ object HandleOwnershipStates extends States[HandleOwnership]
 trait HandleOwnershipRepo extends Repo[HandleOwnership] {
   def getByHandle(handle: Handle, excludeState: Option[State[HandleOwnership]] = Some(HandleOwnershipStates.INACTIVE))(implicit session: RSession): Option[HandleOwnership]
   def getByNormalizedHandle(normalizedHandle: Handle, excludeState: Option[State[HandleOwnership]])(implicit session: RSession): Option[HandleOwnership]
-  def getByOwnerId(ownerId: Either[Id[Organization], Id[User]])(implicit session: RSession): Seq[HandleOwnership]
+  def getByOwnerId(ownerId: Option[Either[Id[Organization], Id[User]]], excludeState: Option[State[HandleOwnership]] = Some(HandleOwnershipStates.INACTIVE))(implicit session: RSession): Seq[HandleOwnership]
+  def lock(handle: Handle)(implicit session: RWSession): Boolean
   def unlock(handle: Handle)(implicit session: RWSession): Boolean
 }
 
@@ -137,23 +140,41 @@ class HandleOwnershipRepoImpl @Inject() (
     for (row <- rows if row.userId === userId) yield row
   }
 
+  private val compiledGetByUserIdAndExcludedState = Compiled { (userId: Column[Id[User]], excludedState: Column[State[HandleOwnership]]) =>
+    for (row <- rows if row.userId === userId && row.state =!= excludedState) yield row
+  }
+
   private val compiledGetByOrganizationId = Compiled { (organizationId: Column[Id[Organization]]) =>
     for (row <- rows if row.organizationId === organizationId) yield row
   }
 
-  def getByOwnerId(ownerId: Either[Id[Organization], Id[User]])(implicit session: RSession): Seq[HandleOwnership] = {
+  private val compiledGetByOrganizationIdAndExcludedState = Compiled { (organizationId: Column[Id[Organization]], excludedState: Column[State[HandleOwnership]]) =>
+    for (row <- rows if row.organizationId === organizationId && row.state =!= excludedState) yield row
+  }
+
+  private val compiledGetAllOwnedBySystem = Compiled { for (row <- rows if row.organizationId.isEmpty && row.userId.isEmpty) yield row }
+  private val compiledGetAllOwnedBySystemAndExcludeState = Compiled { (excludedState: Column[State[HandleOwnership]]) =>
+    for (row <- rows if row.organizationId.isEmpty && row.userId.isEmpty && row.state =!= excludedState) yield row
+  }
+
+  def getByOwnerId(ownerId: Option[Either[Id[Organization], Id[User]]], excludeState: Option[State[HandleOwnership]])(implicit session: RSession): Seq[HandleOwnership] = {
     val q = ownerId match {
-      case Left(orgId) => compiledGetByOrganizationId(orgId)
-      case Right(userId) => compiledGetByUserId(userId)
+      case Some(Left(orgId)) => excludeState.map(compiledGetByOrganizationIdAndExcludedState(orgId, _)) getOrElse compiledGetByOrganizationId(orgId)
+      case Some(Right(userId)) => excludeState.map(compiledGetByUserIdAndExcludedState(userId, _)) getOrElse compiledGetByUserId(userId)
+      case None => excludeState.map(compiledGetAllOwnedBySystemAndExcludeState(_)) getOrElse compiledGetAllOwnedBySystem
     }
     q.list
   }
 
-  def unlock(handle: Handle)(implicit session: RWSession): Boolean = {
+  def lock(handle: Handle)(implicit session: RWSession): Boolean = setLock(handle, true)
+
+  def unlock(handle: Handle)(implicit session: RWSession): Boolean = setLock(handle, false)
+
+  private def setLock(handle: Handle, locked: Boolean)(implicit session: RWSession): Boolean = {
     getByHandle(handle).exists { ownership =>
-      val wasLocked = ownership.isLocked
-      if (wasLocked) { save(ownership.copy(locked = false)) }
-      wasLocked
+      val mustBeChanged = (ownership.locked != locked)
+      if (mustBeChanged) { save(ownership.copy(locked = locked)) }
+      mustBeChanged
     }
   }
 }
