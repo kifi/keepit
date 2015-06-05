@@ -29,7 +29,7 @@ class TagCloudPluginImpl @Inject() (
   val name: String = getClass.toString
 
   override def onStart() {
-    scheduleTaskOnOneMachine(actor.system, 5 minutes, 2 minutes, actor.ref, Pull, this.getClass.getSimpleName + Pull.getClass.toString)
+    scheduleTaskOnOneMachine(actor.system, 2 minutes, 5 minutes, actor.ref, Pull, this.getClass.getSimpleName + Pull.getClass.toString)
   }
 }
 
@@ -44,7 +44,7 @@ class TagCloudActor @Inject() (
   def receive = {
     case Pull => lock.withLockFuture {
       updater.update().map { n =>
-        if (n > 0) context.system.scheduler.scheduleOnce(1 seconds, self, Pull)
+        if (n > 0) context.system.scheduler.scheduleOnce(5 seconds, self, Pull)
       }
     }
   }
