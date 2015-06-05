@@ -1,10 +1,12 @@
 package com.keepit.controllers.ext
 
+import com.keepit.common.service.IpAddress
+
 import scala.util.Failure
 
 import com.google.inject.Inject
 import com.keepit.common.akka.SafeFuture
-import com.keepit.commanders.{ AuthCommander, LibraryCommander, LocalUserExperimentCommander }
+import com.keepit.commanders.{ UserIpAddressCommander, AuthCommander, LibraryCommander, LocalUserExperimentCommander }
 import com.keepit.common.controller.FortyTwoCookies.KifiInstallationCookie
 import com.keepit.common.controller._
 import com.keepit.common.crypto.{ PublicIdConfiguration, RatherInsecureDESCrypt }
@@ -14,8 +16,7 @@ import com.keepit.common.healthcheck.{ AirbrakeNotifier, AirbrakeError }
 import com.keepit.common.net.UserAgent
 import com.keepit.common.social.{ TwitterSocialGraph, TwitterSocialGraphImpl, FacebookSocialGraph, LinkedInSocialGraph }
 import com.keepit.heimdal.{ ContextDoubleData, ContextStringData, HeimdalContextBuilderFactory, HeimdalServiceClient, UserEvent, UserEventTypes }
-import com.keepit.model.{ KifiExtVersion, KifiInstallation, KifiInstallationPlatform, KifiInstallationRepo, KifiInstallationStates }
-import com.keepit.model.{ ExperimentType, Library, URLPatternRepo, UserStates }
+import com.keepit.model._
 import com.keepit.social.BasicUser
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -32,6 +33,7 @@ class ExtAuthController @Inject() (
   libraryCommander: LibraryCommander,
   installationRepo: KifiInstallationRepo,
   urlPatternRepo: URLPatternRepo,
+  userIpAddressCommander: UserIpAddressCommander,
   experimentCommander: LocalUserExperimentCommander,
   kifiInstallationCookie: KifiInstallationCookie,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
@@ -66,7 +68,9 @@ class ExtAuthController @Inject() (
         })
     log.info(s"start details: $userAgent, $version, $installationIdOpt")
 
+    val ip = request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress)
     val (libraries, installation, urlPatterns, isInstall, isUpdate) = db.readWrite { implicit s =>
+      userIpAddressCommander.logUser(userId, IpAddress(ip), userAgent)
       val libraries = libraryCommander.getMainAndSecretLibrariesForUser(userId)
       val (installation, isInstall, isUpdate): (KifiInstallation, Boolean, Boolean) = installationIdOpt flatMap { id =>
         installationRepo.getOpt(userId, id)
@@ -108,7 +112,6 @@ class ExtAuthController @Inject() (
       }
     }
 
-    val ip = request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress)
     val encryptedIp: String = crypt.crypt(ipkey, ip)
 
     Ok(Json.obj(
