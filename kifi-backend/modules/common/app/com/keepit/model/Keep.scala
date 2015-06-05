@@ -78,11 +78,10 @@ object Keep {
     }
   }
 
-  // TODO(colin): Where does LibraryVisibility.ORGANIZATION fit into this??
   private def visibilityToIsPrivate(visibility: LibraryVisibility) = {
     visibility match {
       case LibraryVisibility.PUBLISHED | LibraryVisibility.DISCOVERABLE => false
-      case LibraryVisibility.SECRET => true
+      case LibraryVisibility.ORGANIZATION | LibraryVisibility.SECRET => true
     }
   }
 
