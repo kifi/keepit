@@ -13,7 +13,7 @@
       <span class="kf-slc-card-private svg-card-lock" ng-class="::{'kf-collab': library.numCollaborators}" title="A private library" ng-if="::library.kind !== 'system_secret' && library.visibility === 'secret'"></span>
       <span class="kf-slc-count" ng-pluralize count="::library.numKeeps" when="{'1':'{} keep','other':'{{library.numKeeps|num}} keeps'}" ng-if="::library.numKeeps"></span>
     </div>
-    <div class="kf-slc-card-foot" ng-switch="::library.reason || (library.followers.length ? '' : 'updated')">
+    <div class="kf-slc-card-foot" ng-switch="::library.reason || 'updated'" ng-if="::library.reason || !library.followers.length">
       <span ng-switch-when="owner">More from this curator</span>
       <span ng-switch-when="popular">From Community</span>
       <span ng-switch-when="topic">Related</span>
