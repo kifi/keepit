@@ -79,6 +79,7 @@ class SuggestedSearchTermUpdater @Inject() (
       msgOpt match {
         case Some(msg) =>
           val SuggestedSearchTermsWithLibraryId(libId, terms) = msg.body
+          log.info(s"collect one result from resultQueue, libraryId = ${libId}, terms = ${terms.takeTopK(5).terms.mkString(", ")} ...")
           suggestedSearchCmdr.saveSuggestedSearchTermsForLibrary(libId, terms, SuggestedSearchTermKind.AUTO)
           msg.consume()
           1
