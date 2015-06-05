@@ -26,8 +26,8 @@ class OrganizationRepoImpl @Inject() (val db: DataBaseComponent, val clock: Cloc
     def name = column[String]("name", O.NotNull)
     def description = column[Option[String]]("description", O.Nullable)
     def ownerId = column[Id[User]]("owner_id", O.NotNull)
-    def organizationHandle = column[Option[OrganizationHandle]]("organization_handle", O.Nullable)
-    def normalizedOrganizationHandle = column[Option[OrganizationHandle]]("normalized_organization_handle", O.Nullable)
+    def organizationHandle = column[Option[OrganizationHandle]]("handle", O.Nullable)
+    def normalizedOrganizationHandle = column[Option[OrganizationHandle]]("normalized_handle", O.Nullable)
 
     def * = (id.?, createdAt, updatedAt, state, seq, name, description, ownerId, organizationHandle, normalizedOrganizationHandle) <> ((Organization.applyFromDbRow _).tupled, Organization.unapplyToDbRow _)
   }

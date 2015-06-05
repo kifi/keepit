@@ -84,12 +84,6 @@ class UserRepoImpl @Inject() (
 
   override def save(user: User)(implicit session: RWSession): User = {
     val toSave = user.copy(seq = deferredSeqNum())
-    user.id foreach { id =>
-      val currentUser = get(id)
-      if (currentUser.username != user.username && currentUser.createdAt.isBefore(clock.now.minusHours(1))) {
-        airbrake.notify(s"username changes for user ${user.id.get}. $currentUser -> $user")
-      }
-    }
     super.save(toSave)
   }
 
@@ -146,24 +140,27 @@ class UserRepoImpl @Inject() (
   }
 
   override def deleteCache(user: User)(implicit session: RSession): Unit = {
-    user.id map { id =>
+    user.id foreach { id =>
       idCache.remove(UserIdKey(id))
-      basicUserCache.remove(BasicUserUserIdKey(id))
       UserProfileTab.all.foreach(v => userMetadataCache.remove(UserMetadataKey(id, v)))
-      usernameCache.remove(UsernameKey(user.username))
       externalIdCache.remove(UserExternalIdKey(user.externalId))
+      user.primaryUsername.foreach { username =>
+        usernameCache.remove(UsernameKey(username.original))
+        basicUserCache.remove(BasicUserUserIdKey(id))
+      }
     }
     invalidateMixpanel(user.withState(UserStates.INACTIVE))
   }
 
   override def invalidateCache(user: User)(implicit session: RSession) = {
     if (user.state == UserStates.ACTIVE) {
-      val basicUser = BasicUser.fromUser(user)
       for (id <- user.id) {
         idCache.set(UserIdKey(id), user)
-        basicUserCache.set(BasicUserUserIdKey(id), basicUser)
-        usernameCache.set(UsernameKey(user.username), user)
         UserProfileTab.all.foreach(v => userMetadataCache.remove(UserMetadataKey(id, v)))
+        user.primaryUsername.foreach { username =>
+          usernameCache.set(UsernameKey(username.original), user)
+          basicUserCache.set(BasicUserUserIdKey(id), BasicUser.fromUser(user))
+        }
       }
       externalIdCache.set(UserExternalIdKey(user.externalId), user)
       session.onTransactionSuccess {

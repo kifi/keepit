@@ -31,7 +31,7 @@ import securesocial.core.{ Identity, Registry, UserService }
 
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.{ Left, Right, Try }
+import scala.util.{ Success, Left, Right, Try }
 
 case class BasicSocialUser(network: String, profileUrl: Option[String], pictureUrl: Option[String])
 object BasicSocialUser {
@@ -90,6 +90,7 @@ class UserCommander @Inject() (
     db: Database,
     userRepo: UserRepo,
     usernameRepo: UsernameAliasRepo,
+    handleCommander: HandleCommander,
     userCredRepo: UserCredRepo,
     emailRepo: UserEmailAddressRepo,
     userValueRepo: UserValueRepo,
@@ -304,16 +305,14 @@ class UserCommander @Inject() (
   def createUser(firstName: String, lastName: String, addrOpt: Option[EmailAddress], state: State[User]) = {
     val usernameCandidates = createUsernameCandidates(firstName, lastName)
     val newUser = db.readWrite(attempts = 3) { implicit session =>
-
-      val username: Username = usernameCandidates.find { candidate => userRepo.getByUsername(candidate).isEmpty && usernameRepo.reclaim(candidate).isSuccess } getOrElse {
+      val user = userRepo.save(
+        User(firstName = firstName, lastName = lastName, primaryEmail = addrOpt, state = state)
+      )
+      usernameCandidates.toStream.map(handleCommander.setUsername(_, user)).collectFirst {
+        case Success(userWithUsername) => userWithUsername
+      } getOrElse {
         throw new Exception(s"COULD NOT CREATE USER [$firstName $lastName] $addrOpt SINCE WE DIDN'T FIND A USERNAME!!!")
       }
-
-      val primaryUsername = PrimaryUsername(original = username, normalized = Username(HandleOps.normalize(username.value)))
-
-      userRepo.save(
-        User(firstName = firstName, lastName = lastName, primaryEmail = addrOpt, state = state, primaryUsername = Some(primaryUsername))
-      )
     }
     SafeFuture {
       db.readWrite(attempts = 3) { implicit session =>
@@ -636,10 +635,8 @@ class UserCommander @Inject() (
                   usernameRepo.reclaim(username, Some(userId), overrideProtection).get // reclaim any existing alias for the new username
                 }
               }
-              val primaryUsername = PrimaryUsername(username, normalizedUsername)
-              userRepo.save(user.copy(primaryUsername = Some(primaryUsername)))
-              //we have to do cache invalidation now, the repo does not have the old username for that
-              oldUsernameOpt.foreach(oldUsername => usernameCache.remove(UsernameKey(oldUsername.original)))
+
+              handleCommander.setUsername(username, user, lock = false, overrideProtection = overrideProtection, overrideValidityCheck = overrideValidityCheck).get
             } else {
               log.info(s"[dry run] user $userId set with username $username")
             }
