@@ -1019,7 +1019,7 @@ class AdminUserController @Inject() (
       db.readWrite { implicit session =>
         usernameAliasRepo.all().foreach { alias =>
           if (alias.state != UsernameAliasStates.INACTIVE) {
-            handleCommander.claimUsername(alias.username, alias.userId, lock = alias.isLocked).get
+            handleCommander.claimUsername(alias.username, alias.userId, lock = alias.isLocked, overrideValidityCheck = true).get
           }
         }
       }
