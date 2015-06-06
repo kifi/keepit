@@ -612,11 +612,16 @@ class LibraryCommander @Inject() (
           }
 
           def saveSubscriptionChanges(newSubs: Seq[LibrarySubscription]) {
-            newSubs.foreach { newSub =>
-              targetSubs.find { _ equivalent newSub } match { // is newSub brand new or an update?
+            newSubs.foreach { newSub => // find new subs to be updated or added
+              targetSubs.find { _ equivalent newSub } match {
                 case None => subscriptionCommander.saveSubscription(newSub)
-
                 case Some(targetSub) => subscriptionCommander.saveSubscription(targetSub.copy(name = newSub.name, info = newSub.info))
+              }
+            }
+            targetSubs.foreach { targetSub =>
+              newSubs.find { _ equivalent targetSub } match { // find target subs that are to be removed
+                case None => subscriptionCommander.saveSubscription(targetSub.copy(state = LibrarySubscriptionStates.INACTIVE))
+                case Some(newSub) =>
               }
             }
           }
