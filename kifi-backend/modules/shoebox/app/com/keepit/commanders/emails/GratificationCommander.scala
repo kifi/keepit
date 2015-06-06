@@ -43,7 +43,7 @@ class GratificationCommander @Inject() (
     db.readOnlyReplica { implicit s =>
       val since = currentDateTime.minusWeeks(NUM_WEEKS_BACK)
       // val cnt = libMemRepo.userRecentUniqueFollowerCounts(userId, since) // deprecated, since it gets unique followers. we currently use the total "follows" across libraries.
-      val cntMap = libMemRepo.userRecentTopFollowedLibrariesAndCounts(userId, since)
+      val cntMap = libMemRepo.userRecentTopFollowedLibrariesAndCounts(userId, since).filter { case (id, _) => libraryRepo.get(id).state == LibraryStates.ACTIVE }
       val cnt = cntMap.foldLeft[Int](0)((acc, kv) => acc + kv._2) // get total "follows" over all libraries
       LibraryCountData(cnt, cntMap)
     }
@@ -51,23 +51,25 @@ class GratificationCommander @Inject() (
 
   def getLibraryViewData(userId: Id[User]): Future[LibraryCountData] = {
     remoteCallQueue.withLockFuture {
-      heimdal.getOwnerLibraryViewStats(userId).map {
+      val libCountData = heimdal.getOwnerLibraryViewStats(userId).map {
         case (cnt, cntMap) =>
           LibraryCountData(cnt, cntMap)
       }
+      libCountData.map { libCountData => libCountData.countByLibrary.filter { case (id, _) => libraryRepo.get(id).state == LibraryStates.ACTIVE } }
+      libCountData
     }
   }
 
   def getNewConnections(userId: Id[User]): Seq[Id[User]] = {
     val since = currentDateTime.minusWeeks(NUM_WEEKS_BACK)
     val newConnections = db.readOnlyReplica { implicit s =>
-      userConnectionRepo.getConnectionsSince(userId, since)
+      userConnectionRepo.getConnectionsSince(userId, since).filter { connectionUserId => userRepo.get(connectionUserId).state == UserStates.ACTIVE }
     }
     newConnections.toSeq
   }
 
   def usersToSendEmailTo(): Future[Seq[Id[User]]] = {
-    val userIds: Seq[Id[User]] = db.readOnlyReplica { implicit session => userRepo.getAllIds() }.toSeq
+    val userIds: Seq[Id[User]] = db.readOnlyReplica { implicit session => userRepo.getAllIds() }.toSeq // TODO: have heimdal return us the list of eligible users (in terms of library views)
 
     if (EXPERIMENT_DEPLOY) {
       // only send to those with the experiment (testing in production)
