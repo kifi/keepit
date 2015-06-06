@@ -1004,32 +1004,27 @@ class AdminUserController @Inject() (
     Ok(userCommander.reNormalizedUsername(readOnly, max).toString)
   }
 
-  def migrateUserHandles() = Action.async { implicit request =>
+  def migrateUserHandles() = Action { implicit request =>
     SafeFuture {
-      try {
-        val userIds = db.readOnlyMaster { implicit session =>
-          userRepo.getAllActiveIds()
-        }
-        userIds.foreach { userId =>
-          db.readWrite { implicit session =>
-            val user = userRepo.get(userId)
-            handleCommander.claimUsername(user.username, userId).get
-          }
-        }
-
+      val userIds = db.readOnlyMaster { implicit session =>
+        userRepo.getAllActiveIds()
+      }
+      userIds.foreach { userId =>
         db.readWrite { implicit session =>
-          usernameAliasRepo.all().foreach { alias =>
-            if (alias.state != UsernameAliasStates.INACTIVE) {
-              handleCommander.claimUsername(alias.username, alias.userId, lock = alias.isLocked).get
-            }
+          val user = userRepo.get(userId)
+          handleCommander.claimUsername(user.username, userId).get
+        }
+      }
+
+      db.readWrite { implicit session =>
+        usernameAliasRepo.all().foreach { alias =>
+          if (alias.state != UsernameAliasStates.INACTIVE) {
+            handleCommander.claimUsername(alias.username, alias.userId, lock = alias.isLocked).get
           }
         }
-        Ok
-      } catch {
-        case e: Throwable =>
-          InternalServerError(e.toString)
       }
     }
+    Ok("We're on it.")
   }
 
 }
