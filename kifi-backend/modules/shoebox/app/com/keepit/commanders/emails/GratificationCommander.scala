@@ -53,9 +53,8 @@ class GratificationCommander @Inject() (
     remoteCallQueue.withLockFuture {
       val libCountData = heimdal.getOwnerLibraryViewStats(userId).map {
         case (cnt, cntMap) =>
-          LibraryCountData(cnt, cntMap)
+          db.readOnlyReplica { implicit s => LibraryCountData(cnt, cntMap.filter { case (id, count) => libraryRepo.get(id).state == LibraryStates.ACTIVE }) }
       }
-      libCountData.map { libCountData => libCountData.countByLibrary.filter { case (id, _) => libraryRepo.get(id).state == LibraryStates.ACTIVE } }
       libCountData
     }
   }
