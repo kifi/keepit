@@ -442,6 +442,30 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
       }
     }
 
+    "user can view libraries in organization he is a member of which are Organization Visibility" in {
+      withDb(modules: _*) { implicit injector =>
+        val libraryCommander = inject[LibraryCommander]
+        val orgRepo = inject[OrganizationRepo]
+        val orgMemberRepo = inject[OrganizationMembershipRepo]
+        val (barry, starLabsOrg, starLabsLib) = db.readWrite { implicit s =>
+          val harrison = UserFactory.user().withName("Harrison", "Wells").withUsername("Harrison Wells").saved
+
+          val barry = UserFactory.user().withName("Barry", "Allen").withUsername("The Flash").saved
+          val starLabsOrg = orgRepo.save(Organization(name = "Star Labs", ownerId = harrison.id.get, handle = None))
+          val starLabsLib = library().withUser(harrison).withVisibility(LibraryVisibility.ORGANIZATION).withOrganization(starLabsOrg.id).saved
+
+          val membership = orgMemberRepo.save(OrganizationMembership(organizationId = starLabsOrg.id.get, userId = barry.id.get, access = OrganizationAccess.READ_WRITE))
+
+          starLabsLib.organizationId must equalTo(starLabsOrg.id)
+          membership.state must equalTo(OrganizationMembershipStates.ACTIVE)
+          membership.organizationId must equalTo(starLabsOrg.id.get)
+          membership.userId must equalTo(barry.id.get)
+          (barry, starLabsOrg, starLabsLib)
+        }
+        libraryCommander.canViewLibrary(barry.id, starLabsLib) must equalTo(true)
+      }
+    }
+
     "intern user system libraries" in {
       withDb(modules: _*) { implicit injector =>
         implicit val config = inject[PublicIdConfiguration]
@@ -524,6 +548,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
         val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupLibraries
         val libraryCommander = inject[LibraryCommander]
+        val libraryInviteCommander = inject[LibraryInviteCommander]
 
         db.readOnlyMaster { implicit s =>
           libraryInviteRepo.count === 0
@@ -537,7 +562,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           (Left(userAgent.id.get), LibraryAccess.READ_ONLY, None),
           (Left(userHulk.id.get), LibraryAccess.READ_ONLY, None),
           (Right(thorEmail), LibraryAccess.READ_ONLY, Some("America > Asgard")))
-        val res1 = Await.result(libraryCommander.inviteUsersToLibrary(libMurica.id.get, userCaptain.id.get, inviteList1), Duration(5, "seconds"))
+        val res1 = Await.result(libraryInviteCommander.inviteUsersToLibrary(libMurica.id.get, userCaptain.id.get, inviteList1), Duration(5, "seconds"))
         res1.isRight === true
         res1.right.get === Seq((Left(BasicUser.fromUser(userIron)), LibraryAccess.READ_ONLY),
           (Left(BasicUser.fromUser(userAgent)), LibraryAccess.READ_ONLY),
@@ -554,7 +579,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
         // Tests that users can have multiple invitations multiple times
         // but if invites are sent within 5 Minutes of each other, they do not persist!
-        Await.result(libraryCommander.inviteUsersToLibrary(libMurica.id.get, userCaptain.id.get, inviteList1), Duration(5, "seconds")).isRight === true
+        Await.result(libraryInviteCommander.inviteUsersToLibrary(libMurica.id.get, userCaptain.id.get, inviteList1), Duration(5, "seconds")).isRight === true
         db.readOnlyMaster { implicit s =>
           libraryInviteRepo.count === 4 // 8 invites sent, only 4 persisted from previous call
         }
@@ -570,12 +595,12 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         val inviteCollab2 = Seq((Right(EmailAddress("hawkeye@shield.gov")), LibraryAccess.READ_WRITE, None))
 
         // Test owner invite to collaborate (invite persists)
-        Await.result(libraryCommander.inviteUsersToLibrary(libMurica.id.get, userCaptain.id.get, inviteCollab1), Duration(5, "seconds")).isRight === true
+        Await.result(libraryInviteCommander.inviteUsersToLibrary(libMurica.id.get, userCaptain.id.get, inviteCollab1), Duration(5, "seconds")).isRight === true
         db.readOnlyMaster { implicit s =>
           libraryInviteRepo.count === 5
         }
         // Test collaborator invite to collaborate (invite persists)
-        Await.result(libraryCommander.inviteUsersToLibrary(libMurica.id.get, userFalcon.id.get, inviteCollab1), Duration(5, "seconds")).isRight === true
+        Await.result(libraryInviteCommander.inviteUsersToLibrary(libMurica.id.get, userFalcon.id.get, inviteCollab1), Duration(5, "seconds")).isRight === true
         db.readOnlyMaster { implicit s =>
           libraryInviteRepo.count === 6
         }
@@ -586,13 +611,13 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         }
 
         // Test owner invite to collaborate (invite persists)
-        Await.result(libraryCommander.inviteUsersToLibrary(libMurica.id.get, userCaptain.id.get, inviteCollab2), Duration(5, "seconds")).isRight === true
+        Await.result(libraryInviteCommander.inviteUsersToLibrary(libMurica.id.get, userCaptain.id.get, inviteCollab2), Duration(5, "seconds")).isRight === true
         db.readOnlyMaster { implicit s =>
           libraryInviteRepo.count === 7
         }
 
         // Test collaborator invite to collaborate (invite does NOT persist)
-        Await.result(libraryCommander.inviteUsersToLibrary(libMurica.id.get, userFalcon.id.get, inviteCollab2), Duration(5, "seconds")).isRight === true
+        Await.result(libraryInviteCommander.inviteUsersToLibrary(libMurica.id.get, userFalcon.id.get, inviteCollab2), Duration(5, "seconds")).isRight === true
         db.readOnlyMaster { implicit s =>
           libraryInviteRepo.count === 7
         }
@@ -606,6 +631,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
         val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupInvites
         val libraryCommander = inject[LibraryCommander]
+        val libraryInviteCommander = inject[LibraryInviteCommander]
 
         val t1 = new DateTime(2014, 8, 1, 3, 0, 0, 0, DEFAULT_DATE_TIME_ZONE)
         db.readWrite { implicit s =>
@@ -627,7 +653,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         // eliza.inbox(0) === (userCaptain.id.get, NotificationCategory.User.LIBRARY_FOLLOWED, "https://www.kifi.com/ironman", s"http://localhost/users/${userIron.externalId}/pics/200/0.jpg")
 
         libraryCommander.joinLibrary(userAgent.id.get, libMurica.id.get).right.get._1.name === libMurica.name // Agent accepts invite to 'Murica'
-        libraryCommander.declineLibrary(userHulk.id.get, libMurica.id.get) // Hulk declines invite to 'Murica'
+        libraryInviteCommander.declineLibrary(userHulk.id.get, libMurica.id.get) // Hulk declines invite to 'Murica'
         libraryCommander.joinLibrary(userHulk.id.get, libScience.id.get).right.get._1.name === libScience.name // Hulk accepts invite to 'Science' (READ_INSERT) but gets READ_WRITE access
 
         db.readOnlyMaster { implicit s =>
@@ -1137,6 +1163,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
       withDb(modules: _*) { implicit injector =>
         val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupInvites
         val libraryCommander = inject[LibraryCommander]
+        val libraryInviteCommander = inject[LibraryInviteCommander]
         val emailRepo = inject[ElectronicMailRepo]
         val eliza = inject[ElizaServiceClient].asInstanceOf[FakeElizaServiceClientImpl]
         eliza.inbox.size === 0
@@ -1149,7 +1176,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           LibraryInvite(libraryId = libScience.id.get, inviterId = userIron.id.get, userId = Some(userHulk.id.get), access = LibraryAccess.READ_INSERT, createdAt = t1)
         )
 
-        Await.result(libraryCommander.processInvites(newInvites), Duration(10, "seconds"))
+        Await.result(libraryInviteCommander.processInvites(newInvites), Duration(10, "seconds"))
         eliza.inbox.size === 4
 
         eliza.inbox.count(t => t._2 == NotificationCategory.User.LIBRARY_FOLLOWED && t._4.endsWith("/0.jpg")) === 0
@@ -1164,7 +1191,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           LibraryInvite(libraryId = libMurica.id.get, inviterId = userCaptain.id.get, userId = Some(userHulk.id.get), access = LibraryAccess.READ_ONLY, createdAt = t2),
           LibraryInvite(libraryId = libScience.id.get, inviterId = userIron.id.get, userId = Some(userHulk.id.get), access = LibraryAccess.READ_INSERT, createdAt = t2)
         )
-        Await.result(libraryCommander.processInvites(newInvitesAgain), Duration(10, "seconds"))
+        Await.result(libraryInviteCommander.processInvites(newInvitesAgain), Duration(10, "seconds"))
         eliza.inbox.size === 4
         db.readOnlyMaster { implicit s => emailRepo.count === 4 }
       }

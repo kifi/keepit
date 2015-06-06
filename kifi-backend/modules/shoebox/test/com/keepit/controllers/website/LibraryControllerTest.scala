@@ -484,8 +484,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
     "get libraries of user" in {
       withDb(modules: _*) { implicit injector =>
         implicit val config = inject[PublicIdConfiguration]
-        val t1 = new DateTime(2014, 7, 21, 6, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
-        val t2 = new DateTime(2014, 10, 1, 6, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
+        val t1 = new DateTime(2015, 1, 1, 0, 0, 0, 1, DEFAULT_DATE_TIME_ZONE)
+        val t2 = new DateTime(2015, 1, 1, 0, 0, 0, 2, DEFAULT_DATE_TIME_ZONE)
         val libraryController = inject[LibraryController]
 
         val (user1, user2, lib1, lib2) = db.readWrite { implicit s =>
@@ -515,6 +515,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                 |{
                   |"id":"${pubId1.id}",
                   |"name":"Library1",
+                  |"slug":"lib1",
                   |"visibility":"secret",
                   |"url":"/ahsu/lib1",
                   |"owner":{
@@ -526,6 +527,11 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                   |  },
                   |"numKeeps":0,
                   |"numFollowers":0,
+                  |"followers":[],
+                  |"numCollaborators":0,
+                  |"collaborators":[],
+                  |"lastKept":${Json.toJson(lib1.createdAt)(internalTime.DateTimeJsonLongFormat)},
+                  |"modifiedAt":${Json.toJson(lib1.updatedAt)(internalTime.DateTimeJsonLongFormat)},
                   |"kind":"user_created",
                   |"lastViewed":${Json.toJson(t2)(internalTime.DateTimeJsonLongFormat)}
                 |}

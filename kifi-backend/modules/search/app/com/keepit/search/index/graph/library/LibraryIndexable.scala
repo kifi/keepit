@@ -30,17 +30,20 @@ object LibraryFields {
     val SECRET = 0
     val DISCOVERABLE = 1
     val PUBLISHED = 2
+    val ORGANIZATION = 3
 
     @inline def toNumericCode(visibility: LibraryVisibility) = visibility match {
       case LibraryVisibility.SECRET => SECRET
       case LibraryVisibility.DISCOVERABLE => DISCOVERABLE
       case LibraryVisibility.PUBLISHED => PUBLISHED
+      case LibraryVisibility.ORGANIZATION => ORGANIZATION
     }
 
-    @inline def fromNumericCode(visibility: Long) = {
-      if (visibility == SECRET) LibraryVisibility.SECRET
-      else if (visibility == DISCOVERABLE) LibraryVisibility.DISCOVERABLE
-      else LibraryVisibility.PUBLISHED
+    @inline def fromNumericCode(visibility: Long) = visibility match {
+      case SECRET => LibraryVisibility.SECRET
+      case DISCOVERABLE => LibraryVisibility.DISCOVERABLE
+      case ORGANIZATION => LibraryVisibility.ORGANIZATION
+      case _ => LibraryVisibility.PUBLISHED
     }
   }
 

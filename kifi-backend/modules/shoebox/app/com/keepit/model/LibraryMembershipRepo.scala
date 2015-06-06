@@ -18,6 +18,9 @@ import scala.slick.jdbc.StaticQuery
 import scala.collection.immutable.Seq
 import scala.concurrent.duration.FiniteDuration
 
+// a tuple with named fields, for when many rows need to be read and only a few fields are needed
+case class MiniLibraryMembership(userId: Id[User], access: LibraryAccess, lastViewed: Option[DateTime])
+
 @ImplementedBy(classOf[LibraryMembershipRepoImpl])
 trait LibraryMembershipRepo extends Repo[LibraryMembership] with RepoWithDelete[LibraryMembership] with SeqNumberFunction[LibraryMembership] {
   def getWithLibraryId(libraryId: Id[Library], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Seq[LibraryMembership]
@@ -29,6 +32,7 @@ trait LibraryMembershipRepo extends Repo[LibraryMembership] with RepoWithDelete[
   def getWithLibraryIdAndUserIds(libraryId: Id[Library], userIds: Set[Id[User]], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Map[Id[User], LibraryMembership]
   def pageWithLibraryIdAndAccess(libraryId: Id[Library], offset: Int, limit: Int, accessSet: Set[LibraryAccess],
     excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Seq[LibraryMembership]
+  def getMinisByLibraryIdsAndAccess(libraryIds: Set[Id[Library]], accessSet: Set[LibraryAccess])(implicit session: RSession): Map[Id[Library], Seq[MiniLibraryMembership]]
   def countWithLibraryIdAndAccess(libraryId: Id[Library], access: LibraryAccess)(implicit session: RSession): Int
   def countWithLibraryIdByAccess(libraryId: Id[Library])(implicit session: RSession): CountWithLibraryIdByAccess
   def countWithLibraryId(libraryId: Id[Library], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Int
@@ -41,6 +45,7 @@ trait LibraryMembershipRepo extends Repo[LibraryMembership] with RepoWithDelete[
   def mostMembersSinceForUser(count: Int, since: DateTime, ownerId: Id[User])(implicit session: RSession): Seq[(Id[Library], Int)]
   def countNonTrivialLibrariesWithUserIdAndAccess(userId: Id[User], access: LibraryAccess, minKeepCount: Int = 1)(implicit session: RSession): Int
   def countsWithUserIdAndAccesses(userId: Id[User], accesses: Set[LibraryAccess])(implicit session: RSession): Map[LibraryAccess, Int]
+  def getUsersWithWriteAccessForLibraries(libIds: Set[Id[Library]], excludeUser: Id[User])(implicit session: RSession): Map[Id[Library], Seq[Id[User]]]
 
   //
   // Profile Library Repo functions
@@ -176,6 +181,14 @@ class LibraryMembershipRepoImpl @Inject() (
 
   def getWithLibraryIdAndUserIds(libraryId: Id[Library], userIds: Set[Id[User]], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Map[Id[User], LibraryMembership] = {
     (for (b <- rows if b.libraryId === libraryId && b.userId.inSet(userIds) && b.state =!= excludeState.orNull) yield (b.userId, b)).list.toMap
+  }
+
+  def getMinisByLibraryIdsAndAccess(libraryIds: Set[Id[Library]], accessSet: Set[LibraryAccess])(implicit session: RSession): Map[Id[Library], Seq[MiniLibraryMembership]] = {
+    (for (b <- rows if b.libraryId.inSet(libraryIds) && b.access.inSet(accessSet) && b.state === LibraryMembershipStates.ACTIVE) yield (b.libraryId, b.userId, b.access, b.lastViewed, b.createdAt))
+      .sortBy(r => (r._1, r._3.desc, r._5)) // libraryId, access desc (owner first), createdAt
+      .list
+      .groupBy(_._1)
+      .mapValues(_.map(t => MiniLibraryMembership(t._2, t._3, t._4)))
   }
 
   def countMembersForLibrarySince(libraryId: Id[Library], since: DateTime)(implicit session: RSession): Int = {
@@ -386,6 +399,13 @@ class LibraryMembershipRepoImpl @Inject() (
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     val q = sql"select lib.id, count(*) cnt from library as lib inner join library_membership as lm on lib.id = lm.library_id where lib.owner_id = ${ownerId} and lm.access != 'owner' and lm.created_at >= ${since} group by lib.id order by cnt desc limit $limit"
     q.as[(Int, Int)].list.map { case (id, cnt) => (Id[Library](id), cnt) }.toMap
+  }
+
+  def getUsersWithWriteAccessForLibraries(libIds: Set[Id[Library]], excludeUser: Id[User])(implicit session: RSession): Map[Id[Library], Seq[Id[User]]] = {
+    val access: LibraryAccess = LibraryAccess.READ_WRITE
+    (for { row <- rows if row.libraryId.inSet(libIds) && row.state === LibraryMembershipStates.ACTIVE && row.userId =!= excludeUser && row.access === access } yield (row.userId, row.libraryId)).list.groupBy(_._2).mapValues { seq =>
+      seq.map(_._1).toSeq
+    }
   }
 }
 
