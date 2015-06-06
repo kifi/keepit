@@ -1012,7 +1012,7 @@ class AdminUserController @Inject() (
       userIds.foreach { userId =>
         db.readWrite { implicit session =>
           val user = userRepo.get(userId)
-          handleCommander.claimUsername(user.username, userId).get
+          handleCommander.claimUsername(user.username, userId, overrideValidityCheck = true).get
         }
       }
 
