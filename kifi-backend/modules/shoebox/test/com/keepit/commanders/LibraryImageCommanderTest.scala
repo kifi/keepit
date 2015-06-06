@@ -12,6 +12,7 @@ import com.keepit.test.ShoeboxTestInjector
 import org.apache.commons.io.FileUtils
 import org.specs2.mutable.Specification
 import play.api.libs.Files.TemporaryFile
+import com.keepit.model.UserFactoryHelper._
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
@@ -36,7 +37,7 @@ class LibraryImageCommanderTest extends Specification with ShoeboxTestInjector w
   }
   def setup()(implicit injector: Injector) = {
     db.readWrite { implicit session =>
-      val user = userRepo.save(User(firstName = "Noraa", lastName = "Ush", username = Username("test"), normalizedUsername = "test"))
+      val user = UserFactory.user().withName("Noraa", "Ush").withUsername("test").saved
       val lib = library().saved
       libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user.id.get, access = LibraryAccess.OWNER))
 

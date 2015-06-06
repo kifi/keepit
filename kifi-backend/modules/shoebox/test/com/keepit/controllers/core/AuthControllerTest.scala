@@ -12,7 +12,7 @@ import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.curator.FakeCuratorServiceClientModule
-import com.keepit.model.{ Username, UserEmailAddress, UserEmailAddressRepo, User, UserRepo }
+import com.keepit.model.{ UserEmailAddress, UserEmailAddressRepo }
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.test.ShoeboxTestInjector
@@ -20,6 +20,9 @@ import org.specs2.mutable.Specification
 import play.api.libs.json.{ JsArray, Json }
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
+
+import com.keepit.model.UserFactoryHelper._
+import com.keepit.model.UserFactory
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
@@ -50,7 +53,7 @@ class AuthControllerTest extends Specification with ShoeboxTestInjector {
     "reset password with valid email" in {
       withDb(modules: _*) { implicit injector =>
         val user = db.readWrite { implicit rw =>
-          val user = inject[UserRepo].save(User(firstName = "Elaine", lastName = "Benes", username = Username("test"), normalizedUsername = "test"))
+          val user = UserFactory.user().withName("Elaine", "Benes").withUsername("test").saved
           inject[UserEmailAddressRepo].save(UserEmailAddress(userId = user.id.get,
             address = EmailAddress("elaine@gmail.com")))
           inject[UserEmailAddressRepo].save(UserEmailAddress(userId = user.id.get,

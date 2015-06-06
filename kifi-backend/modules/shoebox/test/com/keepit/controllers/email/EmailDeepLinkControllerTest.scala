@@ -4,13 +4,15 @@ import org.specs2.mutable.Specification
 
 import play.api.test.Helpers._
 import play.api.test._
-import play.api.libs.json.Json
 
 import com.keepit.test.{ DbInjectionHelper, ShoeboxTestInjector }
 import com.keepit.common.controller.{ FakeUserActionsModule, FakeUserActionsHelper }
 import com.keepit.model._
 import com.keepit.common.db.slick.Database
 import com.keepit.normalizer.NormalizationService
+
+import com.keepit.model.UserFactoryHelper._
+import com.keepit.model.UserFactory
 
 class EmailDeepLinkControllerTest extends Specification with ShoeboxTestInjector with DbInjectionHelper {
 
@@ -26,8 +28,8 @@ class EmailDeepLinkControllerTest extends Specification with ShoeboxTestInjector
 
         val (heinlein, niven, uri, deepLink) = db.readWrite { implicit s =>
           deepLinkRepo.count === 0
-          val heinlein = userRepo.save(User(firstName = "Robert", lastName = "Heinlein", username = Username("test"), normalizedUsername = "test"))
-          val niven = userRepo.save(User(firstName = "Larry", lastName = "Niven", username = Username("test2"), normalizedUsername = "test2"))
+          val heinlein = UserFactory.user().withName("Robert", "Heinlein").withUsername("test").saved
+          val niven = UserFactory.user().withName("Larry", "Niven").withUsername("test2").saved
           val uri = uriRepo.save(NormalizedURI.withHash(normalizationService.prenormalize("http://www.google.com/").get, Some("Google")))
           val deepLink = deepLinkRepo.save(DeepLink(
             initiatorUserId = heinlein.id,

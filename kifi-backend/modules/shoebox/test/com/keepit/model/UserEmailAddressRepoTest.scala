@@ -4,6 +4,7 @@ import com.keepit.common.mail.EmailAddress
 import com.keepit.common.time._
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.Specification
+import com.keepit.model.UserFactoryHelper._
 
 class UserEmailAddressRepoTest extends Specification with ShoeboxTestInjector {
 
@@ -13,7 +14,7 @@ class UserEmailAddressRepoTest extends Specification with ShoeboxTestInjector {
         val clock = inject[FakeClock]
         val now = clock.now
         val (user, address) = db.readWrite { implicit s =>
-          val user = userRepo.save(User(firstName = "Shanee", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
+          val user = UserFactory.user().withName("Shanee", "Smith").withUsername("test").saved
           userEmailAddressRepo.save(UserEmailAddress(userId = user.id.get, address = EmailAddress("shachaf@gmail.com"), createdAt = now.minusDays(3)))
           val address = userEmailAddressRepo.save(UserEmailAddress(userId = user.id.get, address = EmailAddress("shanee@gmail.com"), createdAt = now.minusDays(1).minusHours(6)))
           userEmailAddressRepo.save(UserEmailAddress(userId = user.id.get, address = EmailAddress("dafna@gmail.com"), createdAt = now.minusHours(3)))

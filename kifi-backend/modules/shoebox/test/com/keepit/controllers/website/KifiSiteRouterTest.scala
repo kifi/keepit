@@ -18,6 +18,8 @@ import com.keepit.model._
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.FakeKeepImportsModule
 import com.keepit.test.{ ShoeboxTestInjector, ShoeboxApplication, ShoeboxApplicationInjector }
+import com.keepit.model.UserFactoryHelper._
+import com.keepit.model.UserFactory
 
 import org.specs2.mutable.Specification
 import org.specs2.matcher.{ Matcher, Expectable }
@@ -52,8 +54,8 @@ class KifiSiteRouterTest extends Specification with ShoeboxApplicationInjector {
       running(new ShoeboxApplication(modules: _*)) {
         // Database population
         val (user1, user2) = db.readWrite { implicit session =>
-          val u1 = userRepo.save(User(firstName = "Abe", lastName = "Lincoln", username = Username("abez"), normalizedUsername = "abez"))
-          val u2 = userRepo.save(User(firstName = "Léo", lastName = "HasAnAccentInHisName", username = Username("léo1221"), normalizedUsername = "leo"))
+          val u1 = UserFactory.user().withName("Abe", "Lincoln").withUsername("abez").saved
+          val u2 = UserFactory.user().withName("Léo", "HasAnAccentInHisName").withUsername("léo1221").saved
           (u1, u2)
         }
 

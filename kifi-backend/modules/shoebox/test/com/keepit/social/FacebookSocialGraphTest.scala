@@ -25,6 +25,9 @@ import scala.util.Success
 
 import securesocial.core.{ AuthenticationMethod, IdentityId, OAuth2Info, OAuth2Settings, SocialUser }
 
+import com.keepit.model.UserFactoryHelper._
+import com.keepit.model.UserFactory
+
 class FacebookSocialGraphTest extends Specification with ShoeboxTestInjector {
 
   "FacebookSocialGraph" should {
@@ -57,7 +60,7 @@ class FacebookSocialGraphTest extends Specification with ShoeboxTestInjector {
           Some("http://www.fb.com/me"), AuthenticationMethod.OAuth2, None, Some(oAuth2Info), None)
 
         val user = inject[Database].readWrite { implicit s =>
-          userRepo.save(User(firstName = "Eishay", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
+          UserFactory.user().withName("Eishay", "Smith").withUsername("test").saved
         }
         val unsaved = SocialUserInfo(userId = user.id, fullName = "Eishay Smith", socialId = SocialId("646386018"), networkType = SocialNetworks.FACEBOOK, credentials = Some(socialUser))
         val socialUserInfo = inject[Database].readWrite { implicit s =>

@@ -11,9 +11,6 @@ import play.api.mvc.{ ResponseHeader, Result }
 
 import scala.concurrent.Future
 
-/**
- * Created by colinlane on 5/22/15.
- */
 class LibraryFeedController @Inject() (val userCommander: UserCommander,
     val libraryCommander: LibraryCommander,
     val experimentCommander: LocalUserExperimentCommander,
@@ -47,7 +44,7 @@ class LibraryFeedController @Inject() (val userCommander: UserCommander,
             } else if (libraryCommander.canViewLibrary(request.userOpt.flatMap(_.id), library, authToken)) {
               feedCommander.libraryFeed(library, count, offset) map { rss =>
                 Result(
-                  header = ResponseHeader(200, Map(CONTENT_TYPE -> "application/rss+xml")),
+                  header = ResponseHeader(200, Map(CONTENT_TYPE -> "application/rss+xml; charset=utf-8")),
                   body = feedCommander.wrap(rss)
                 )
               }
@@ -70,7 +67,7 @@ class LibraryFeedController @Inject() (val userCommander: UserCommander,
             } else if (libraryCommander.canViewLibrary(request.userOpt.flatMap(_.id), library, authToken)) {
               atomCommander.libraryFeed(library, count, offset) map { atom =>
                 Result(
-                  header = ResponseHeader(200, Map(CONTENT_TYPE -> "application/atom+xml")),
+                  header = ResponseHeader(200, Map(CONTENT_TYPE -> "application/atom+xml; charset=utf-8")),
                   body = feedCommander.wrap(atom)
                 )
               }

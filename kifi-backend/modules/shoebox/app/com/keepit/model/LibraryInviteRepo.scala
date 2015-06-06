@@ -10,7 +10,7 @@ import com.keepit.common.time.Clock
 import com.keepit.common.util.Paginator
 import org.joda.time.DateTime
 
-import scala.slick.jdbc.StaticQuery
+import scala.slick.jdbc.{ GetResult, PositionedResult, StaticQuery }
 
 @ImplementedBy(classOf[LibraryInviteRepoImpl])
 trait LibraryInviteRepo extends Repo[LibraryInvite] with RepoWithDelete[LibraryInvite] {
@@ -51,6 +51,22 @@ class LibraryInviteRepoImpl @Inject() (
     def authToken = column[String]("auth_token", O.NotNull)
     def message = column[Option[String]]("message", O.Nullable)
     def * = (id.?, libraryId, inviterId, userId, emailAddress, access, createdAt, updatedAt, state, authToken, message) <> ((LibraryInvite.apply _).tupled, LibraryInvite.unapply)
+  }
+
+  implicit val getLibraryInviteResult: GetResult[LibraryInvite] = GetResult { r: PositionedResult =>
+    LibraryInvite.applyFromDbRow(
+      id = r.<<[Option[Id[LibraryInvite]]],
+      libraryId = r.<<[Id[Library]],
+      inviterId = r.<<[Id[User]],
+      userId = r.<<[Option[Id[User]]],
+      emailAddress = r.<<[Option[String]].map(EmailAddress(_)),
+      access = LibraryAccess(r.<<[String]),
+      createdAt = r.<<[DateTime],
+      updatedAt = r.<<[DateTime],
+      state = r.<<[State[LibraryInvite]],
+      authToken = r.<<[String],
+      message = r.<<[Option[String]]
+    )
   }
 
   def table(tag: Tag) = new LibraryInviteTable(tag)

@@ -16,13 +16,15 @@ import play.api.test._
 import play.api.test.Helpers._
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
-import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.shoebox.{ FakeKeepImportsModule, FakeShoeboxServiceModule }
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social.FakeSocialGraphModule
+
+import com.keepit.model.UserFactoryHelper._
+import com.keepit.model.UserFactory
 
 import com.keepit.cortex.FakeCortexServiceClientModule
 
@@ -53,7 +55,7 @@ class MobileAuthControllerTest extends Specification with ShoeboxTestInjector wi
       val mobileAuthController = inject[MobileAuthController]
 
       val user = db.readWrite { implicit s =>
-        userRepo.save(User(firstName = "Andrew", lastName = "C", username = Username("test"), normalizedUsername = "test"))
+        UserFactory.user().withName("Andrew", "C").withUsername("test").saved
       }
 
       val path = com.keepit.controllers.mobile.routes.MobileAuthController.registerIPhoneVersion().toString
@@ -143,7 +145,7 @@ class MobileAuthControllerTest extends Specification with ShoeboxTestInjector wi
       val mobileAuthController = inject[MobileAuthController]
 
       val user = db.readWrite { implicit s =>
-        userRepo.save(User(firstName = "Andrew", lastName = "C", username = Username("test"), normalizedUsername = "test"))
+        UserFactory.user().withName("Andrew", "C").withUsername("test").saved
       }
 
       val path = com.keepit.controllers.mobile.routes.MobileAuthController.registerAndroidVersion().toString

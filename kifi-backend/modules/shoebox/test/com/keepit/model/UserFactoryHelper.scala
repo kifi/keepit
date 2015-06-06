@@ -1,7 +1,6 @@
 package com.keepit.model
 
 import com.keepit.model.UserConnectionFactoryHelper._
-import com.keepit.model.UserConnectionFactory._
 import com.google.inject.Injector
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.model.UserFactory.PartialUser

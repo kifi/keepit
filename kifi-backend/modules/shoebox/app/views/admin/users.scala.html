@@ -20,7 +20,7 @@
     }
 }
 
-@kifiInstallations(kifiInstallations: Seq[KifiInstallation]) = {
+@formatKifiInstallations(kifiInstallations: Seq[KifiInstallation]) = {
   <ul>
     @for(installation <- kifiInstallations) {
       <li>@{installation.version}; @{installation.userAgent.name} @{installation.userAgent.version}; @{installation.userAgent.operatingSystemName}</li>
@@ -101,6 +101,7 @@
           <th>Messages all/active/started</th>
           <th>Lib create/follow</th>
           <th>Network</th>
+          <th>Email Address</th>
           <th>Private Keeps</th>
           <th>Public Keeps</th>
           <th>Date Joined</th>
@@ -118,11 +119,12 @@
           <td>@{userData.getUserThreadStats(userStatistics.user).all}/@{userData.getUserThreadStats(userStatistics.user).active}/@{userData.getUserThreadStats(userStatistics.user).started}</td>
           <td>@{userStatistics.librariesCreated}/@{userStatistics.librariesFollowed}</td>
           <td>@for(u <- userStatistics.socialUsers){ @networkLogoLink(u) }</td>
+          <td>@userStatistics.user.primaryEmail.map(_.toString).getOrElse("n/a")</td>
           <td>@userStatistics.privateKeeps</td>
           <td>@userStatistics.publicKeeps</td>
           <td>@adminHelper.dateTimeDisplay(userStatistics.user.createdAt)</td>
           <td>@userStatistics.experiments.mkString(", ")</td>
-          <td>@kifiInstallations(userStatistics.kifiInstallations)</td>
+          <td>@formatKifiInstallations(userStatistics.kifiInstallations)</td>
         </tr>
       }
       </table>

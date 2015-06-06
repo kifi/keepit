@@ -14,6 +14,8 @@ import com.keepit.search.FakeSearchServiceClientModule
 import org.specs2.mutable._
 import com.keepit.model._
 import com.keepit.test._
+import com.keepit.model.UserFactoryHelper._
+import com.keepit.model.UserFactory
 
 import play.api.libs.json.Json
 import com.google.inject.Injector
@@ -46,7 +48,7 @@ class SocialUserImportEmailTest extends Specification with ShoeboxTestInjector {
 
   def testSocialUserImportEmail(jsonFilename: String, emailAddress: EmailAddress)(implicit injector: Injector) = {
     val user = db.readWrite { implicit s =>
-      userRepo.save(User(firstName = "Eishay", lastName = "Smith", username = Username("test"), normalizedUsername = "test"))
+      UserFactory.user().withName("Eishay", "Smith").withUsername("test").saved
     }
     val json = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/data/%s".format(jsonFilename)), UTF8).mkString)
     val email = inject[FacebookSocialGraph].extractEmails(json)
