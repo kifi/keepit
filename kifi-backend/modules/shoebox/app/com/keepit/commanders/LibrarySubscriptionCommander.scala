@@ -41,7 +41,7 @@ class LibrarySubscriptionCommander @Inject() (
     subscriptions.map { subscription =>
       subscription.info match {
         case info: SlackInfo =>
-          val text = s"${keeper.fullName} just added a <${keep.url}|keep> to the <http://www.kifi.com/${keeper.username}/${library.slug}|" + library.name + "> library." // slack hypertext uses the < url | text > format
+          val text = s"<http://www.kifi.com/${keeper.username.value}|${keeper.fullName}> just added a <${keep.url}|keep> to the <http://www.kifi.com/${keeper.username.value}/${library.slug.value}|" + library.name + "> library." // slack hypertext uses the < url | text > format
           val body = BasicSlackMessage(text)
           httpLock.withLockFuture(client.postFuture(DirectUrl(info.url), Json.toJson(body)))
         case _ =>
