@@ -25,7 +25,7 @@ class KifiSiteRouter @Inject() (
   db: Database,
   userRepo: UserRepo,
   userCommander: UserCommander,
-  userIpAddressCommander: UserIpAddressCommander,
+  val userIpAddressCommander: UserIpAddressCommander,
   pageMetaTagsCommander: PageMetaTagsCommander,
   libraryCommander: LibraryCommander,
   libraryMetadataCache: LibraryMetadataCache,
