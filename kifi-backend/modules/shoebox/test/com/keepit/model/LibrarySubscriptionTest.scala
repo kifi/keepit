@@ -10,7 +10,7 @@ import org.specs2.matcher.MatchResult
 class LibrarySubscriptionTest extends Specification with ShoeboxTestInjector {
   def setup(numLibSubs: Int = 1)(implicit injector: Injector): (User, Library) = {
     db.readWrite { implicit session =>
-      val user = userRepo.save(User(firstName = "Link", lastName = "ToThePast", username = Username("link"), normalizedUsername = "link"))
+      val user = userRepo.save(User(firstName = "Link", lastName = "ToThePast", primaryUsername = Some(PrimaryUsername(Username("link"), Username("link")))))
       val library = libraryRepo.save(Library(name = "Hyrule Temple", ownerId = user.id.get, visibility = LibraryVisibility.PUBLISHED, slug = LibrarySlug("hyrule-temple"), memberCount = 0))
       (user, library)
     }
