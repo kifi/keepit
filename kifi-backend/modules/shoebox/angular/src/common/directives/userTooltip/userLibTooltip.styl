@@ -1,15 +1,13 @@
-borderRadius = 5px
+cardBorderRadius = 16px  // from smallLibraryCard.styl
 
 .kf-ult
   position: absolute
   z-index: 1
-  height: 264px
-  width: 350px
-  top: -280px
-  left: -101px
+  top: -296px
+  left: -95px
   text-align: left
-  border-radius: borderRadius
-  box-shadow: 0 3px 5px rgba(0,0,0,.2)
+  border-radius: cardBorderRadius
+  box-shadow: 0 10px 9px rgba(0,0,0,.3)
   line-height: initial
 
   &.ng-enter
@@ -25,151 +23,7 @@ borderRadius = 5px
   &::before // invisible buffer so tooltip won't disappear when moving mouse pointer to it
     content: ''
     position: absolute
-    left: 60px
-    bottom: -14px
-    height: 14px
-    width: 160px
-
-  &::after
-    content: ''
-    position: absolute
+    left: 40px
+    bottom: -16px
     height: 16px
-    width: 16px
-    bottom: -6px
-    left: 105px
-    background-color: #fff
-    box-shadow: 2px 2px 2px rgba(0,0,0,.1)
-    transform: rotate(45deg)
-
-.kf-ult-header
-  height: 108px
-  border-radius: borderRadius borderRadius 0 0
-  overflow: hidden
-  border-bottom: 3px solid pageHeaderColor  // library color set inline
-  background-color: pageHeaderColor  // library color set inline
-  background-image: linear-gradient(rgba(0,0,0,.2), rgba(0,0,0,0))
-  position: relative
-
-.kf-ult-image
-  position: absolute
-  top: 0
-  left: 0
-  width: 100%
-  height: 100%
-  background-size: cover
-  background-repeat: no-repeat
-
-.kf-ult-curator
-  position: relative
-  top: 56px
-  left: 20px
-  color: white
-  letter-spacing: 0.5px
-  font-size: 16px
-
-  .kf-ult-curator-img
-    height: 36px
-    width: 36px
-    border: 2px solid #fff
-    border-radius: 100%
-    vertical-align: top
-    margin-right: 7px
-
-  .kf-ult-curator-info
-    display: inline-block
-    vertical-align: -18px
-    font-size: 14px
-    text-shadow: 0 0 8px rgba(0,0,0,.5)
-
-  .kf-ult-curator-heading
-    font-weight: 200
-
-  .kf-ult-curator-name
-    font-weight: 800
-
-.kf-ult-name
-  display: block
-  font-size: 15px
-  font-weight: 700
-  color: black
-  cursor: pointer
-  white-space: no-wrap
-  overflow: hidden
-  text-overflow: ellipsis
-
-.kf-ult-stat
-  display: inline-block
-  height: 46px
-  margin: 5px
-  vertical-align: text-bottom
-
-.kf-ult-vdivider
-  background-color: #e2e7ec
-  width: 1px
-  margin: 11px
-  height: 33px
-  display: inline-block
-
-  &:last-child
-    display: none
-
-.kf-ult-hdivider
-  position: absolute
-  background-color: #e2e7ec
-  left: 5%
-  width: 90%
-  height: 1px
-
-.kf-ult-body
-  height: 88px
-  padding: 18px 18px 0 24px
-  background-color: #fff
-
-.kf-ult-stats-container
-  margin-top: 12px
-
-.kf-ult-stat-title
-  font-weight: 400
-  font-size: 14px
-  color: #4F5864
-
-.kf-ult-stat-num
-  font-weight: 500
-  font-size: 18px
-  text-align: center
-  color: #4F5864
-
-.kf-ult-footer
-  background-color: #fff
-  border-radius: 0 0 borderRadius borderRadius
-  padding: 10px 0
-  text-align: right
-
-.kf-ult-button
-  margin: 0 17px
-  border: 0
-  border-radius: 3px
-  padding: 6px 11px
-  background-color: #fbfbfb
-  color: #535353
-  font-size: 12px
-
-.kf-ult-follow
-  background-color: #262626
-  min-width: 70px
-
-  &:hover
-    background-color: #333
-
-    &:active
-      background-color: #000
-
-  &::before
-    content: 'Follow'
-    color: #fff
-
-  &.kf-following::before
-    content: 'Following'
-
-  &.kf-following:hover::before
-    content: 'Unfollow'
+    width: 128px
