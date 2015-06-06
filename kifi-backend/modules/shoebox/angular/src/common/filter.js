@@ -50,7 +50,7 @@ angular.module('kifi')
 
 .filter('libPath', function () {
   return function (lib) {
-    return '/' + encodeURIComponent(lib.owner.username) + '/' + encodeURIComponent(lib.slug);
+    return '/' + lib.owner.username + '/' + lib.slug;
   };
 })
 

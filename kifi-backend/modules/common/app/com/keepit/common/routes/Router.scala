@@ -158,7 +158,6 @@ object Shoebox extends Service {
     def getKeepImages() = ServiceRoute(POST, "/internal/shoebox/database/getKeepImages")
     def getLibrariesWithWriteAccess(userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/getLibrariesWithWriteAccess", Param("userId", userId))
     def getUserActivePersonas(userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/user/activePersonas", Param("userId", userId))
-    def getLibraryURIS(libId: Id[Library]) = ServiceRoute(GET, "/internal/shoebox/database/dumpLibraryURIIds", Param("libId", libId))
   }
 }
 

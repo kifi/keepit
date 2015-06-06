@@ -208,7 +208,6 @@ sealed abstract class LibraryVisibility(val value: String)
 object LibraryVisibility {
   case object PUBLISHED extends LibraryVisibility("published") // published library, is discoverable
   case object DISCOVERABLE extends LibraryVisibility("discoverable") // "help my friends", is discoverable
-  case object ORGANIZATION extends LibraryVisibility("organization") // private to everyone but members of organization
   case object SECRET extends LibraryVisibility("secret") // secret, not discoverable
 
   implicit def format[T]: Format[LibraryVisibility] =
@@ -218,7 +217,6 @@ object LibraryVisibility {
     str match {
       case PUBLISHED.value => PUBLISHED
       case DISCOVERABLE.value => DISCOVERABLE
-      case ORGANIZATION.value => ORGANIZATION
       case SECRET.value => SECRET
     }
   }

@@ -16,24 +16,15 @@
       <span class="kf-upl-card-private svg-card-lock" ng-class="{'kf-collab': lib.numCollaborators}" title="A private library" ng-if="lib.kind !== 'system_secret' && lib.visibility === 'secret'"></span>
       <span class="kf-upl-count" ng-click="trackUplCardClick(lib, 'clickedLibraryKeepsTotal')" ng-pluralize count="lib.numKeeps" when="{'1':'{} keep','other':'{{lib.numKeeps|num}} keeps'}" ng-if="lib.numKeeps"></span>
     </div>
-    <div class="kf-upl-card-foot" ng-switch="footerKind" ng-if="footerKind !== 'followers'">
-      <span ng-switch-when="unlisted">Hidden on public profile</span>
-      <span ng-switch-when="updated">
-        Updated&nbsp;<time ng-attr-datetime="{{lib.lastKept}}" am-time-ago="lib.lastKept"></time>
-      </span>
-      <span ng-switch-when="invited">
-        Invited&nbsp;<time ng-attr-datetime="{{::lib.invite.lastInvite}}" am-time-ago="lib.invite.lastInvite"></time>
-      </span>
-    </div>
   </a>
   <!-- owner only -->
-  <a class="kf-upl-card-owner" ng-if="!lib.numCollaborators" href="{{::lib.owner|profileUrl}}" kf-track-origin="{{::currentPageOrigin}}/curator" ng-click="trackUplCardClick(lib, 'clickedLibraryCurator')">
+  <a class="kf-upl-card-owner" ng-if="::!lib.numCollaborators" href="{{::lib.owner|profileUrl}}" kf-track-origin="{{::currentPageOrigin}}/curator" ng-click="trackUplCardClick(lib, 'clickedLibraryCurator')">
     <img class="kf-upl-card-owner-pic" ng-src="{{::lib.owner|pic:100}}" alt="{{::lib.owner|name}}" ng-if="::libraryType !== 'own'">
     <span class="kf-upl-card-by">by</span>
     <span class="kf-upl-card-by-name">{{::lib.owner|name}}</span>
   </a>
   <!-- owner with collaborators -->
-  <div class="kf-upl-collabs" ng-if="lib.numCollaborators > 0">
+  <div class="kf-upl-collabs" ng-if="::lib.numCollaborators > 0">
     <span class="kf-upl-card-by">by</span>
     <a class="kf-upl-collab-pic-a" href="{{::lib.owner|profileUrl}}" kf-track-origin="{{::currentPageOrigin}}/collaborator" kf-user-tooltip="::lib.owner" desc="Owner">
       <img class="kf-upl-collab-pic" ng-src="{{::lib.owner|pic:100}}" alt="{{::lib.owner|name}}">
@@ -45,17 +36,16 @@
       {{lib.numCollaborators - maxNumCollaboratorsToShow|num}}
     </button>
   </div>
-  <div class="kf-upl-follow-wrap" ng-class="{'kf-following': lib.membership.access === 'read_only', 'kf-no-unfollow': followBtnJustClicked, 'kf-overflowing': overSubsBtn}" ng-attr-style="background-color:{{lib.color}}" ng-if="!canWrite && lib.invite.access !== 'read_write'">
+  <div class="kf-upl-follow-wrap" ng-class="{'kf-following': lib.membership.access === 'read_only', 'kf-no-unfollow': followBtnJustClicked, 'kf-overflowing': overSubsBtn}" ng-attr-style="background-color:{{lib.color}}" ng-if="!canWrite">
     <button class="kf-upl-follow-btn"
-      ng-click="followBtnJustClicked = !lib.membership || followBtnJustClicked; onFollowButtonClick($parent, lib, $event); trackUplCardClick(lib, 'clickedLibraryFollowButton')"
+      ng-click="followBtnJustClicked = !lib.membership || followBtnJustClicked; onFollowButtonClick(lib, $event); trackUplCardClick(lib, 'clickedLibraryFollowButton')"
       ng-mouseleave="followBtnJustClicked = false"></button>
     <button ng-attr-class="kf-upl-subs-btn {{lib.membership.subscribed ? 'svg-notification-on-white' : 'svg-notification-off-white'}}"
       ng-click="toggleSubscribed(lib)" ng-mouseenter="overSubsBtn = true" ng-mouseleave="overSubsBtn = false"></button>
     <div class="kf-upl-subs-msg">Notifications {{lib.membership.subscribed ? 'enabled' : 'disabled'}}</div>
   </div>
-  <button class="kf-upl-collab-btn" ng-attr-style="background-color:{{lib.color}}" ng-if="lib.invite.access === 'read_write'" ng-click="onCollabButtonClick($parent, lib, $event)">Collaborate</button>
-  <div class="kf-upl-card-foot" ng-if="footerKind === 'followers'">
-    <div class="kf-upl-followers">
+  <div class="kf-upl-card-foot" ng-switch="myProfile && canWrite && lib.visibility === 'published' && !lib.membership.listed ? 'unlisted' : lib.followers.length ? 'followers' : lib.lastKept ? 'updated' : ''">
+    <div class="kf-upl-followers" ng-switch-when="followers">
       <a href="{{user|profileUrl}}" class="kf-upl-follower" ng-repeat="user in lib.followers" kf-track-origin="{{currentPageOrigin}}/follower" ng-click="trackUplCardClick(lib, 'clickedLibraryFollowersFace')"
          ng-attr-style="background-image:url({{user | pic:100}})"></a>
       <a class="kf-upl-followers-number" href="javascript:" ng-click="openFollowersList(lib); trackUplCardClick(lib, 'clickedLibraryFollowersMoreFollowing')">
@@ -64,6 +54,12 @@
           + <b class="kf-upl-followers-n">{{lib.numFollowers - lib.followers.length | num}}</b>{{lib.numFollowers - lib.followers.length < 1000 ? ' are' : ''}} following
         </span>
       </a>
+    </div>
+    <div class="kf-upl-updated" ng-switch-when="updated">
+      Updated&nbsp;<time ng-attr-datetime="{{lib.lastKept}}" am-time-ago="lib.lastKept"></time>
+    </div>
+    <div class="kf-upl-unlisted" ng-switch-when="unlisted">
+      Hidden on public profile
     </div>
   </div>
 </div>

@@ -24,8 +24,6 @@ case class ArticleContentExtractor(articles: Set[Article]) {
     } yield value
   } headOption
 
-  def getByKind(kind: ArticleKind[_]): Option[ArticleContent[_]] = contentByKind.get(kind)
-
   lazy val title: Option[String] = collectFirst(defaultPreference: _*)(_.title.filter(_.nonEmpty))
   lazy val description: Option[String] = collectFirst(defaultPreference: _*)(_.description.filter(_.nonEmpty))
   lazy val keywords: Set[String] = articles.map(_.content.keywords).flatten

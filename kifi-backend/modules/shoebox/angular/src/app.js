@@ -63,11 +63,10 @@ angular.module('kifi', [
   '$location',
   function ($location) {
     var names = ['m', 'o', 'install', 'intent'];
-    var scrub = ['kcid', 'utm_campaign', 'utm_content', 'utm_medium', 'utm_source', 'utm_term'];
     var search = $location.search();
     var params = _.pick(search, names);
-    if (!_.isEmpty(params) || !_.isEmpty(_.pick(search, scrub))) {
-      $location.search(_.omit(search, names, scrub)).replace();
+    if (!_.isEmpty(params)) {
+      $location.search(_.omit(search, names)).replace();
     }
     return {
       getAndClear: function (name) {

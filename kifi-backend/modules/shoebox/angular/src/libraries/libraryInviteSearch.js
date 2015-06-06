@@ -18,13 +18,14 @@ angular.module('kifi')
         var searchInput = element.find('.lis-search-input');
         var contactList = element.find('.lis-contact-list');
         var inviteAccess = {
-          collaborate: 'read_write',
-          follow: 'read_only'
+          'collaborate' : 'read_write',
+          'follow' : 'read_only'
         };
 
         //
         // Scope data.
         //
+        scope.isOwn = false;
         scope.results = [];
         scope.search = {};
         scope.share = {};
@@ -32,14 +33,22 @@ angular.module('kifi')
         scope.query = '';
         scope.queryIsValidEmail = true;
         scope.inviter = profileService.me;
-        scope.library = scope.modalData.library;
-        scope.inviteType = scope.modalData.inviteType;
-        scope.currentPageOrigin = scope.modalData.currentPageOrigin;
-        scope.canInviteCollabs = (function (access) {
-          return access === 'owner' || access === 'read_write' && scope.library.whoCanInvite === 'collaborator';
-        }((scope.library.membership || {}).access));
 
-        function shareLibrary(opts) {
+        function init() {
+          if (scope.modalData.inviteType) {
+            scope.library = scope.modalData.library;
+            scope.inviteType = scope.modalData.inviteType;
+            scope.currentPageOrigin = scope.modalData.currentPageOrigin;
+            scope.isOwn = scope.library.owner.id === profileService.me.id;
+
+            $timeout(function () {
+              searchInput.focus();
+              populateDropDown();
+            }, 0);
+          }
+        }
+
+       function shareLibrary(opts) {
           if (scope.share.message) {
             opts.message = scope.share.message;
           }
@@ -297,14 +306,11 @@ angular.module('kifi')
           return scope.inviteType === 'follow';
         };
 
-        //
-        // Initialize.
-        //
 
-        $timeout(function () {
-          searchInput.focus();
-          populateDropDown();
-        }, 0);
+        //
+        // On link.
+        //
+        init();
       }
     };
   }

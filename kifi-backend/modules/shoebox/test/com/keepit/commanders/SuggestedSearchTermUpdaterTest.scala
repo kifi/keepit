@@ -40,7 +40,7 @@ class SuggestedSearchTermUpdaterTest extends Specification with ShoeboxTestInjec
 
         val termCommander = inject[LibrarySuggestedSearchCommander]
         val terms = termCommander.getSuggestedTermsForLibrary(Id[Library](1), 10, SuggestedSearchTermKind.HASHTAG)
-        terms.terms.toArray.sortBy(-_._2).toList === (1 to 9).map { i => (s"#h${i}", (11 - i) * 1f) }.toList
+        terms.terms.toArray.sortBy(-_._2).toList === (1 to 10).map { i => (s"h${i}", (11 - i) * 1f) }.toList
 
         val valueRepo = inject[SystemValueRepo]
         db.readOnlyReplica { implicit s =>

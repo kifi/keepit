@@ -87,8 +87,8 @@ case class PublicPageMetaFullTags(unsafeTitle: String, url: String, urlPathOnly:
 
   private def includeFeedTags: String = feedName.map { name =>
     s"""
-         |<link rel="alternate" type="application/rss+xml" title="$name feed by $unsafeFirstName $unsafeLastName on Kifi" href="$url/rss" />
-         |<link rel="alternate" type="application/atom+xml" title="$name feed by $unsafeFirstName $unsafeLastName on Kifi" href="$url/atom" />
+         |<link rel="alternate" type="application/rss+xml" title="$name feed on Kifi" href="$url/rss" />
+         |<link rel="alternate" type="application/atom+xml" title="$name feed on Kifi" href="$url/atom" />
        """.stripMargin
   }.getOrElse("")
 

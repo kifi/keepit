@@ -303,7 +303,6 @@ lockRadius = 14px
   background-size: auto 12px
   background-repeat: no-repeat
   background-position: center
-  opacity: .8
 
 .kf-upl-card-private
   display: inline-block
@@ -364,7 +363,20 @@ subsDur = .3s
   top: 0
   left: 0
   width: 100%
+  height: followHeight
+  border: 0
+  border-radius: '%s' % inherit
+  padding: 0
   background-color: inherit
+  color: #fff
+  font-weight: 500
+  font-size: 11px
+  line-height: followHeight
+  text-transform: uppercase
+  text-shadow: 0 0 1px alpha(#000, .4)
+  letter-spacing: .4px
+  text-align: center
+  box-shadow: 0 0 8px alpha(#000, .2)
 
   &:hover
     background-color: alpha(#fff, .1)
@@ -383,22 +395,6 @@ subsDur = .3s
     content: 'Unfollow'
     display: inline-block
     transform: translate(subsWidth / -2.5)  // .5 fudge factor compensates for lack of rounded corners on right
-
-.kf-upl-follow-btn
-.kf-upl-collab-btn
-  height: followHeight
-  border: 0
-  border-radius: (followHeight / 2)
-  padding: 0
-  color: #fff
-  font-weight: 500
-  font-size: 11px
-  line-height: followHeight
-  text-transform: uppercase
-  text-shadow: 0 0 1px alpha(#000, .4)
-  letter-spacing: .4px
-  text-align: center
-  box-shadow: 0 0 8px alpha(#000, .2)
 
 .kf-upl-subs-btn
   position: absolute
@@ -449,27 +445,6 @@ subsDur = .3s
     opacity: 0
     visibility: hidden
 
-.kf-upl-collab-btn
-  position: absolute
-  top: 192px
-  left: 50%
-  transform: translate(-50%)
-  padding: 0 16px
-
-  &:hover::before
-    content: ''
-    position: absolute
-    top: 0
-    left: 0
-    right: 0
-    bottom: 0
-    border-radius: '%s' % inherit
-    background-color: alpha(#fff, .1)
-
-  &:hover:active::before
-    background-color: alpha(#000, .02)
-
-
 .kf-upl-card-cover
   position: absolute
   left: 0
@@ -504,11 +479,8 @@ subsDur = .3s
   bottom: 0
   height: 35px
   border-top: 1px solid alpha(#fff, .3)
-  line-height: 33px
-  font-size: 12px
   font-smoothing: antialiased
-  color: alpha(#fff, .6)
-  text-shadow: 0 0 6px alpha(#000, .2)
+  cursor: default
 
 follower-pic-diameter = 23px
 
@@ -545,3 +517,10 @@ follower-pic-diameter = 23px
 
 .kf-upl-all-followers
   margin-left: 1px
+
+.kf-upl-updated
+.kf-upl-unlisted
+  line-height: 33px
+  font-size: 12px
+  color: alpha(#fff, .6)
+  text-shadow: 0 0 6px alpha(#000, .2)

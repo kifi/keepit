@@ -48,7 +48,6 @@ class LibraryController @Inject() (
   relatedLibraryCommander: RelatedLibraryCommander,
   suggestedSearchCommander: LibrarySuggestedSearchCommander,
   val libraryCommander: LibraryCommander,
-  val libraryInviteCommander: LibraryInviteCommander,
   val userActionsHelper: UserActionsHelper,
   val publicIdConfig: PublicIdConfiguration,
   implicit val config: PublicIdConfiguration)
@@ -112,7 +111,7 @@ class LibraryController @Inject() (
     libraryCommander.getLibraryById(request.userIdOpt, showPublishedLibraries, libraryId, idealSize, request.userIdOpt) map { libInfo =>
       val suggestedSearches = getSuggestedSearchesAsJson(libraryId)
       val membershipOpt = libraryCommander.getViewerMembershipInfo(request.userIdOpt, libraryId)
-      val inviteOpt = libraryInviteCommander.getViewerInviteInfo(request.userIdOpt, libraryId)
+      val inviteOpt = libraryCommander.getViewerInviteInfo(request.userIdOpt, libraryId)
 
       val membershipJson = Json.toJson(membershipOpt)
       val inviteJson = Json.toJson(inviteOpt)
@@ -123,14 +122,11 @@ class LibraryController @Inject() (
 
   def getLibrarySummaryById(pubId: PublicId[Library]) = (MaybeUserAction andThen LibraryViewAction(pubId)) { request =>
     val id = Library.decodePublicId(pubId).get
-    val viewerOpt = request.userOpt
-    val info = db.readOnlyReplica { implicit session =>
-      val lib = libraryRepo.get(id)
-      val owners = Map(lib.ownerId -> basicUserRepo.load(lib.ownerId))
-      libraryCommander.createLibraryCardInfos(Seq(lib), owners, viewerOpt, withFollowing = false, idealSize = ProcessedImageSize.Medium.idealSize).seq.head
-    }
-    val path = Library.formatLibraryPathUrlEncoded(info.owner.username, info.slug)
-    Ok(Json.obj("library" -> (Json.toJson(info).as[JsObject] + ("url" -> JsString(path))))) // TODO: stop adding "url" once web app stops using it
+
+    val (libInfo, memInfoOpt) = libraryCommander.getLibrarySummaryAndMembership(request.userIdOpt, id)
+    val membershipJson = Json.toJson(memInfoOpt)
+    val libraryJson = Json.toJson(libInfo).as[JsObject] + ("membership" -> membershipJson)
+    Ok(Json.obj("library" -> libraryJson))
   }
 
   def getLibraryByPath(userStr: String, slugStr: String, showPublishedLibraries: Boolean, imageSize: Option[String] = None, authTokenOpt: Option[String] = None) = MaybeUserAction.async { request =>
@@ -144,7 +140,7 @@ class LibraryController @Inject() (
             val suggestedSearches = getSuggestedSearchesAsJson(library.id.get)
             val membershipOpt = libraryCommander.getViewerMembershipInfo(request.userIdOpt, library.id.get)
             // if viewer, get invite for that viewer. Otherwise, if viewer unknown, use authToken to find invite info
-            val inviteOpt = libraryInviteCommander.getViewerInviteInfo(request.userIdOpt, library.id.get) orElse {
+            val inviteOpt = libraryCommander.getViewerInviteInfo(request.userIdOpt, library.id.get) orElse {
               authTokenOpt.map { authToken =>
                 db.readOnlyMaster { implicit s =>
                   libraryInviteRepo.getByLibraryIdAndAuthToken(library.id.get, authToken).headOption.map { invite =>
@@ -172,21 +168,32 @@ class LibraryController @Inject() (
   }
 
   def getLibrarySummariesByUser = UserAction.async { request =>
-    val objs = db.readOnlyMaster { implicit session =>
-      val libs = libraryRepo.getOwnerLibrariesForSelf(request.userId, Paginator.fromStart(200)) // might want to paginate and/or stop preloading all of these
-      libraryCommander.createLiteLibraryCardInfos(libs, request.userId)
-    } map {
-      case (info: LibraryCardInfo, mem: MiniLibraryMembership) =>
-        val path = Library.formatLibraryPathUrlEncoded(info.owner.username, info.slug)
-        val obj = Json.toJson(info).as[JsObject] + ("url" -> JsString(path)) // TODO: stop adding "url" when web app uses "slug" instead
-        if (mem.lastViewed.nonEmpty) {
-          obj ++ Json.obj("lastViewed" -> mem.lastViewed)
-        } else {
-          obj
-        }
+    val (tooManyLibsWithMemberships, _) = libraryCommander.getLibrariesByUser(request.userId) // TODO: stop loading invited libraries
+
+    // TODO: filter out followed libraries at database level
+    val libsWithMemberships = tooManyLibsWithMemberships.filter(l => LibraryAccess.collaborativePermissions.contains(l._1.access))
+
+    val basicUsers = db.readOnlyReplica { implicit session =>
+      basicUserRepo.loadAll(libsWithMemberships.map(_._2.ownerId).toSet)
     }
     SafeFuture {
-      Ok(Json.obj("libraries" -> objs.seq))
+      db.readOnlyReplica { implicit session =>
+        for ((mem, library) <- libsWithMemberships) yield {
+          val owner = basicUsers(library.ownerId)
+          (LibraryInfo.fromLibraryAndOwner(library, None, owner), mem) // should have library image, but this endpoint doesn't use it and is already slow & heavy.
+        }
+      }
+    } map { libInfosWithMemberships =>
+      Ok(Json.obj("libraries" -> libInfosWithMemberships.map(libInfoToJsonWithLastViewed)))
+    }
+  }
+
+  @inline private def libInfoToJsonWithLastViewed(pair: (LibraryInfo, LibraryMembership)): JsValue = {
+    val lastViewed = pair._2.lastViewed
+    if (lastViewed.nonEmpty) {
+      Json.toJson(pair._1).as[JsObject] ++ Json.obj("lastViewed" -> lastViewed)
+    } else {
+      Json.toJson(pair._1)
     }
   }
 
@@ -204,7 +211,7 @@ class LibraryController @Inject() (
       case Success(libraryId) =>
         getUserByIdOrEmail(request.body) match {
           case Right(invitee) =>
-            libraryInviteCommander.revokeInvitationToLibrary(libraryId, request.userId, invitee) match {
+            libraryCommander.revokeInvitationToLibrary(libraryId, request.userId, invitee) match {
               case Right(ok) => Future.successful(NoContent)
               case Left(error) => Future.successful(BadRequest(Json.obj(error._1 -> error._2)))
             }
@@ -234,7 +241,7 @@ class LibraryController @Inject() (
           }
         }
         implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
-        libraryInviteCommander.inviteUsersToLibrary(id, request.userId, validInviteList).map {
+        libraryCommander.inviteUsersToLibrary(id, request.userId, validInviteList).map {
           case Left(fail) =>
             Status(fail.status)(Json.obj("error" -> fail.message))
           case Right(inviteesWithAccess) =>
@@ -285,7 +292,7 @@ class LibraryController @Inject() (
       case Failure(ex) =>
         BadRequest(Json.obj("error" -> "invalid_id"))
       case Success(libId) =>
-        libraryInviteCommander.declineLibrary(request.userId, libId)
+        libraryCommander.declineLibrary(request.userId, libId)
         Ok(JsString("success"))
     }
   }
@@ -612,6 +619,7 @@ class LibraryController @Inject() (
               lastKept = info.lastKept.getOrElse(new DateTime(0)),
               following = None,
               membership = None,
+              caption = None,
               modifiedAt = info.modifiedAt,
               kind = info.kind)
           }

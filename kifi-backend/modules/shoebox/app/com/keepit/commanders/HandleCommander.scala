@@ -65,7 +65,7 @@ class HandleCommander @Inject() (
     if (overrideValidityCheck || HandleOps.isValid(handle.value)) setHandleOwnership(handle, ownerId, lock, overrideProtection)
     else Failure(InvalidHandleException(handle))
   } tap {
-    case Failure(error) => log.info(s"Failed to claim handle $handle for ${HandleOwnership.prettyOwner(ownerId)}", error)
+    case Failure(error) => log.error(s"Failed to claim handle $handle for ${HandleOwnership.prettyOwner(ownerId)}", error)
     case Success(updatedOwnership) => log.info(s"Handle $handle (${updatedOwnership.handle}) is now owned by ${updatedOwnership.prettyOwner}: $updatedOwnership")
   }
 
@@ -91,5 +91,20 @@ class HandleCommander @Inject() (
       case Left(organizationId) => organizationRepo.get(organizationId).handle.exists(_.normalized.value == ownership.handle.value)
       case Right(userId) => userRepo.get(userId).primaryUsername.exists(_.normalized.value == ownership.handle.value)
     }
+  }
+
+  def reclaim(handle: Handle, overrideProtection: Boolean = false, overrideLock: Boolean = false)(implicit session: RWSession): Try[Handle] = {
+    setHandleOwnership(handle, ownerId = None, overrideProtection = overrideProtection) recoverWith {
+      case LockedHandleException(_) if overrideLock =>
+        handleRepo.unlock(handle)
+        setHandleOwnership(handle, ownerId = None, lock = true, overrideProtection = overrideProtection) tap { _ =>
+          handleRepo.lock(handle) // Whether the handle was successfully reclaimed or not, make sure the lock is preserved
+        }
+    } map (_.handle)
+  }
+
+  def reclaimAll(ownerId: Either[Id[Organization], Id[User]], overrideProtection: Boolean = false, overrideLock: Boolean = false)(implicit session: RWSession): Seq[Try[Handle]] = {
+    val handles = handleRepo.getByOwnerId(Some(ownerId)).map(_.handle)
+    handles.map(reclaim(_, overrideProtection, overrideLock))
   }
 }

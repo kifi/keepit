@@ -8,7 +8,7 @@ import com.keepit.common.crypto.{ FakeCryptoModule, PublicId, PublicIdConfigurat
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.net.FakeHttpClientModule
-import com.keepit.common.social.{ FakeSocialGraphModule, BasicUserRepo }
+import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.ImagePath
 import com.keepit.common.time._
 import com.keepit.model.UserFactory._
@@ -69,33 +69,28 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
         val pubId1 = Library.publicId(lib1.id.get).id
         val pubId2 = Library.publicId(lib2.id.get).id
 
-        val basicUserRepo = inject[BasicUserRepo]
         val result = getLibraries(user1)
         status(result) must equalTo(OK)
         contentType(result) must beSome("application/json")
 
-        db.readOnlyMaster { implicit session =>
-          Json.parse(contentAsString(result)) === Json.obj(
-            "libraries" -> Seq(
-              Json.obj(
-                "id" -> pubId1,
-                "name" -> "Million Dollar Baby",
-                "color" -> LibraryColor.RED,
-                "visibility" -> "published",
-                "path" -> "/morgan/baby",
-                "hasCollaborators" -> false,
-                "subscribedToUpdates" -> false,
-                "collaborators" -> Seq.empty[BasicUser]),
-              Json.obj(
-                "id" -> pubId2,
-                "name" -> "Dark Knight",
-                "color" -> LibraryColor.BLUE,
-                "visibility" -> "published",
-                "path" -> "/michael/darkknight",
-                "hasCollaborators" -> true,
-                "subscribedToUpdates" -> false,
-                "collaborators" -> Seq(basicUserRepo.load(user2.id.get)))))
-        }
+        Json.parse(contentAsString(result)) === Json.obj(
+          "libraries" -> Seq(
+            Json.obj(
+              "id" -> pubId1,
+              "name" -> "Million Dollar Baby",
+              "color" -> LibraryColor.RED,
+              "visibility" -> "published",
+              "path" -> "/morgan/baby",
+              "hasCollaborators" -> false,
+              "subscribedToUpdates" -> false),
+            Json.obj(
+              "id" -> pubId2,
+              "name" -> "Dark Knight",
+              "color" -> LibraryColor.BLUE,
+              "visibility" -> "published",
+              "path" -> "/michael/darkknight",
+              "hasCollaborators" -> true,
+              "subscribedToUpdates" -> false)))
       }
     }
 

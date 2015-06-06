@@ -48,7 +48,7 @@ class ExtLibraryController @Inject() (
 
   def getLibraries() = UserAction { request =>
     val datas = libraryCommander.getLibrariesUserCanKeepTo(request.userId) map {
-      case (lib, membership, collabs) =>
+      case (lib, hasCollaborators, subscribedToUpdates) =>
         val owner = db.readOnlyMaster { implicit s => basicUserRepo.load(lib.ownerId) }
         LibraryData(
           id = Library.publicId(lib.id.get),
@@ -56,9 +56,8 @@ class ExtLibraryController @Inject() (
           color = lib.color,
           visibility = lib.visibility,
           path = Library.formatLibraryPath(owner.username, lib.slug),
-          hasCollaborators = !collabs.isEmpty,
-          subscribedToUpdates = membership.subscribedToUpdates,
-          collaborators = collabs
+          hasCollaborators = hasCollaborators,
+          subscribedToUpdates = subscribedToUpdates
         )
     }
     Ok(Json.obj("libraries" -> datas))
@@ -81,8 +80,7 @@ class ExtLibraryController @Inject() (
           visibility = lib.visibility,
           path = Library.formatLibraryPath(request.user.username, lib.slug),
           hasCollaborators = false,
-          subscribedToUpdates = false,
-          collaborators = Seq.empty)))
+          subscribedToUpdates = false)))
     }
   }
 

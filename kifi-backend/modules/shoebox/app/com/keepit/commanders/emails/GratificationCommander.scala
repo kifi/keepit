@@ -53,7 +53,7 @@ class GratificationCommander @Inject() (
     remoteCallQueue.withLockFuture {
       heimdal.getOwnerLibraryViewStats(userId).map {
         case (cnt, cntMap) =>
-          db.readOnlyReplica { implicit s => LibraryCountData(cnt, cntMap.filter { case (id, count) => libraryRepo.get(id).state == LibraryStates.ACTIVE }) }
+          LibraryCountData(cnt, cntMap)
       }
     }
   }

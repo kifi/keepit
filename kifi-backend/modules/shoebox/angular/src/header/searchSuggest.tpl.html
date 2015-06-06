@@ -5,33 +5,27 @@
     <div class="kf-ssg-query-icon svg-search-icon-gray"></div>
     See all matching keeps <span ng-if="searchInLibrary">in this library</span>
   </a>
-  <a class="kf-ssg-a kf-ssg-uri" href="{{::uri.url}}" target="_blank" ng-repeat="uri in uris">
-    <div class="kf-ssg-uri-thumb" ng-style="::{'background-image': uri.image ? 'url(' + uri.image.url + ')' : ''}"></div>
-    <div class="kf-ssg-uri-title">{{::uri.title}}</div>
-    <div class="kf-ssg-uri-domain">{{::uri.url|domain}}</div>
+  <a class="kf-ssg-a kf-ssg-uri" href="{{uri.url}}" target="_blank" ng-repeat="uri in uris">
+    <div class="kf-ssg-uri-thumb" ng-style="{'background-image': uri.image ? 'url(' + uri.image.url + ')' : ''}"></div>
+    <div class="kf-ssg-uri-title">{{uri.title}}</div>
+    <div class="kf-ssg-uri-domain">{{uri.url|domain}}</div>
   </a>
   <div class="kf-ssg-no-results" ng-if="search.text && uris.length === 0">
     No matching keeps <span ng-if="resultsInLibrary">in this library</span>
   </div>
   <div class="kf-ssg-group-title" ng-if="libraries.length"><span ng-if="!search.text">Your</span> Libraries</div>
-  <a class="kf-ssg-a kf-ssg-lib" ng-class="::{'kf-with-counts': library.keepCount || library.followerCount}" href="{{::library.path}}" ng-repeat="library in libraries">
+  <a class="kf-ssg-a kf-ssg-lib" ng-class="{'kf-with-counts': library.keepCount || library.followerCount}" href="{{library.path}}" ng-repeat="library in libraries">
     <div class="kf-ssg-lib-card" ng-attr-style="background-color:{{library.color}}"></div>
-    <div class="kf-ssg-lib-icon" ng-class="::{'svg-card-lock': library.visibility === 'secret', 'svg-card-star': library.visibility === 'discoverable'}" ng-if="::library.visibility !== 'published'"></div>
+    <div class="kf-ssg-lib-icon" ng-class="{'svg-card-lock': library.visibility === 'secret', 'svg-card-star': library.visibility === 'discoverable'}" ng-if="library.visibility !== 'published'"></div>
     <div class="kf-ssg-lib-owner-pic-wrap"><img class="kf-ssg-lib-owner-pic" ng-src="{{library.owner|pic:100}}"></div>
-    <div class="kf-ssg-lib-name">{{::library.name}}</div>
-    <div class="kf-ssg-lib-owner-name" ng-if="::!library.numCollaborators">{{::library.owner|name}}</div>
-    <div class="kf-ssg-lib-collaborators" ng-if="::library.numCollaborators">
-      <svg class="kf-ssg-lib-collaborators-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 19.3 12.3">
-        <path ng-attr-fill="{{::library.color}}" d="M13.1,7c-0.3,0-0.5,0-0.9,0.1c1,0.7,1.7,1.7,1.7,2.9v2.1h5.2V10C19.1,8,15.1,7,13.1,7z M6.2,7c-2,0-6,1-6,3v2.1h12.1V10C12.2,8,8.2,7,6.2,7z M6.2,5.3c1.5,0,2.6-1.1,2.6-2.6c0-1.5-1.1-2.6-2.6-2.6S3.6,1.2,3.6,2.7C3.6,4.2,4.7,5.3,6.2,5.3z M13.1,5.3c1.5,0,2.6-1.1,2.6-2.6c0-1.5-1.1-2.6-2.6-2.6c-1.5,0-2.6,1.1-2.6,2.6C10.5,4.2,11.6,5.3,13.1,5.3z"/>
-      </svg>
-      <span class="kf-ssg-lib-collaborator" ng-repeat="collab in ::[library.owner].concat(library.collaborators)">{{::collab.id === me.id ? 'Me' : collab.firstName}}</span>
-    </div>
+    <div class="kf-ssg-lib-name">{{library.name}}</div>
+    <div class="kf-ssg-lib-owner-name">{{library.owner|name}}</div>
     <div class="kf-ssg-lib-counts">
-      <span ng-pluralize count="::library.keepCount" when="{'one': '1 keep', 'other': '{{::library.keepCount|number}} keeps'}" ng-if="::library.keepCount"></span>
-      <span ng-pluralize count="::library.followerCount" when="{'one': '1 follower', 'other': '{{::library.followerCount|number}} followers'}" ng-if="::library.followerCount"></span>
+      <span ng-pluralize count="library.keepCount" when="{'one': '1 keep', 'other': '{{library.keepCount|number}} keeps'}" ng-if="library.keepCount"></span>
+      <span ng-pluralize count="library.followerCount" when="{'one': '1 follower', 'other': '{{library.followerCount|number}} followers'}" ng-if="library.followerCount"></span>
     </div>
   </a>
-  <a class="kf-ssg-a kf-ssg-my-libs kf-selected" href="{{::me|profileUrl:'libraries'}}" ng-if="!search.text && libraries">
+  <a class="kf-ssg-a kf-ssg-my-libs kf-selected" href="{{me|profileUrl:'libraries'}}" ng-if="!search.text && libraries">
     See all of your libraries
   </a>
   <div class="kf-ssg-group-title" ng-if="users.length">People</div>
@@ -39,8 +33,8 @@
     <div class="kf-ssg-user-pic-wrap"><img class="kf-ssg-user-pic" ng-src="{{user|pic:100}}"></div>
     <div class="kf-ssg-user-name">{{user.name}}</div>
     <div class="kf-ssg-user-counts">
-      <span ng-pluralize count="::user.libraryCount" when="{'one': '1 library', 'other': '{{::user.libraryCount|number}} libraries'}" ng-if="::user.libraryCount"></span>
-      <span ng-pluralize count="::user.keepCount" when="{'one': '1 keep', 'other': '{{::user.keepCount|number}} keeps'}" ng-if="::user.keepCount"></span>
+      <span ng-pluralize count="user.libraryCount" when="{'one': '1 library', 'other': '{{user.libraryCount|number}} libraries'}" ng-if="user.libraryCount"></span>
+      <span ng-pluralize count="user.keepCount" when="{'one': '1 keep', 'other': '{{user.keepCount|number}} keeps'}" ng-if="user.keepCount"></span>
     </div>
   </a>
 </menu>
