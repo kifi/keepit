@@ -16,6 +16,6 @@
 --ALTER TABLE organization
 --   ADD CONSTRAINT organization_f_handle_ownership FOREIGN KEY (normalized_handle, id) REFERENCES handle_ownership(handle, organization_id);
 
-insert into evolutions(name, description) values('338.sql', 'add handle integrity constraints');
+insert into evolutions(name, description) values('339.sql', 'add handle integrity constraints');
 
 # --- !Downs
