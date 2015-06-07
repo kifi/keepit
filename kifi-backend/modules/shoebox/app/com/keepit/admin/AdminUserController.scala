@@ -902,7 +902,7 @@ class AdminUserController @Inject() (
 
   private def deleteAllUserData(userId: Id[User])(implicit session: RWSession): Unit = {
     val toBeCleanedUp = userRepo.get(userId)
-    if (toBeCleanedUp.state != UserStates.INACTIVE) throw IllegalArgumentException(s"Failed to delete user data - Watch out, this user is not inactive!!! - $toBeCleanedUp")
+    if (toBeCleanedUp.state != UserStates.INACTIVE) throw new IllegalArgumentException(s"Failed to delete user data - Watch out, this user is not inactive!!! - $toBeCleanedUp")
 
     // Social Graph
     userConnectionRepo.deactivateAllConnections(userId) // User Connections
