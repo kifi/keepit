@@ -1015,6 +1015,10 @@ class AdminUserController @Inject() (
           if (user.state != UserStates.INACTIVE && user.state != UserStates.ACTIVE) {
             handleCommander.claimUsername(user.username, userId, overrideValidityCheck = true).get
           }
+
+          if (user.state == UserStates.INACTIVE) {
+            session.onTransactionSuccess { deactivate(userId) }
+          }
         }
       }
 
