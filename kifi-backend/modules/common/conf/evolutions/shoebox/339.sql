@@ -6,6 +6,8 @@
 
 --ALTER TABLE handle_ownership
 --	ADD CONSTRAINT `handle_ownership_f_user` FOREIGN KEY (`user_id`) REFERENCES user(`id`);
+--  ADD UNIQUE INDEX `handle_ownership_u_handle_user_id` (`handle`, `user_id`);
+--  ADD UNIQUE INDEX `handle_ownership_u_handle_organization_id` (`handle`, `organization_id`);
 
 --ALTER TABLE user
 --   ADD CONSTRAINT user_f_handle_ownership FOREIGN KEY (normalized_username, id) REFERENCES handle_ownership(handle, user_id);

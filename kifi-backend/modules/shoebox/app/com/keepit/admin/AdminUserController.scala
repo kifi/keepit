@@ -1007,12 +1007,14 @@ class AdminUserController @Inject() (
   def migrateUserHandles() = Action { implicit request =>
     SafeFuture {
       val userIds = db.readOnlyMaster { implicit session =>
-        userRepo.getAllActiveIds()
+        userRepo.getAllIds()
       }
       userIds.foreach { userId =>
         db.readWrite { implicit session =>
           val user = userRepo.get(userId)
-          handleCommander.claimUsername(user.username, userId, overrideValidityCheck = true).get
+          if (user.state != UserStates.INACTIVE && user.state != UserStates.ACTIVE) {
+            handleCommander.claimUsername(user.username, userId, overrideValidityCheck = true).get
+          }
         }
       }
 
