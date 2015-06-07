@@ -869,38 +869,7 @@ class AdminUserController @Inject() (
       val doIt = request.body.asFormUrlEncoded.get.get("doIt").exists(_.head == "true")
       val json = db.readWrite { implicit session =>
         if (doIt) {
-
-          // Social Graph
-          userConnectionRepo.deactivateAllConnections(userId) // User Connections
-          socialUserInfoRepo.getByUser(userId).foreach { sui =>
-            socialConnectionRepo.deactivateAllConnections(sui.id.get) // Social Connections
-            invitationRepo.getByRecipientSocialUserId(sui.id.get).foreach(invitation => invitationRepo.save(invitation.withState(InvitationStates.INACTIVE)))
-            socialUserInfoRepo.save(sui.withState(SocialUserInfoStates.INACTIVE).copy(userId = None, credentials = None, socialId = SocialId(ExternalId[Nothing]().id))) // Social User Infos
-            socialUserInfoRepo.deleteCache(sui)
-          }
-
-          // URI Graph
-          keepRepo.getByUser(userId).foreach { bookmark => keepRepo.save(bookmark.withActive(false)) }
-          collectionRepo.getUnfortunatelyIncompleteTagsByUser(userId).foreach { collection => collectionRepo.save(collection.copy(state = CollectionStates.INACTIVE)) }
-
-          // Libraries Data
-          libraryInviteRepo.getByUser(userId, Set(LibraryInviteStates.INACTIVE)).foreach { case (invite, _) => libraryInviteRepo.save(invite.withState(LibraryInviteStates.INACTIVE)) } // Library Invites
-          libraryMembershipRepo.getWithUserId(userId).foreach { membership => libraryMembershipRepo.save(membership.withState(LibraryMembershipStates.INACTIVE)) } // Library Memberships
-          libraryRepo.getAllByOwner(userId).foreach { library => libraryRepo.save(library.withState(LibraryStates.INACTIVE)) } // Libraries
-
-          // Personal Info
-          userSessionRepo.invalidateByUser(userId) // User Session
-          kifiInstallationRepo.all(userId).foreach { installation => kifiInstallationRepo.save(installation.withState(KifiInstallationStates.INACTIVE)) } // Kifi Installations
-          userCredRepo.findByUserIdOpt(userId).foreach { userCred => userCredRepo.save(userCred.copy(state = UserCredStates.INACTIVE)) } // User Credentials
-          emailRepo.getAllByUser(userId).foreach { email => emailRepo.save(email.withState(UserEmailAddressStates.INACTIVE)) } // Email addresses
-
-          val user = userRepo.get(userId)
-
-          userRepo.save(user.withState(UserStates.INACTIVE).copy(primaryEmail = None, primaryUsername = None)) // User
-          usernameAliasRepo.getByUserId(userId).foreach { alias => // Usernames
-            usernameAliasRepo.reclaim(alias.username, Some(userId))
-          }
-          handleCommander.reclaimAll(Right(userId), overrideProtection = true, overrideLock = true)
+          deleteAllUserData(userId)
         }
 
         val user = userRepo.get(userId)
@@ -929,6 +898,43 @@ class AdminUserController @Inject() (
       }
       Ok(json)
     }
+  }
+
+  private def deleteAllUserData(userId: Id[User])(implicit session: RWSession): Unit = {
+    val toBeCleanedUp = userRepo.get(userId)
+    if (toBeCleanedUp.state != UserStates.INACTIVE) throw IllegalArgumentException(s"Failed to delete user data - Watch out, this user is not inactive!!! - $toBeCleanedUp")
+
+    // Social Graph
+    userConnectionRepo.deactivateAllConnections(userId) // User Connections
+    socialUserInfoRepo.getByUser(userId).foreach { sui =>
+      socialConnectionRepo.deactivateAllConnections(sui.id.get) // Social Connections
+      invitationRepo.getByRecipientSocialUserId(sui.id.get).foreach(invitation => invitationRepo.save(invitation.withState(InvitationStates.INACTIVE)))
+      socialUserInfoRepo.save(sui.withState(SocialUserInfoStates.INACTIVE).copy(userId = None, credentials = None, socialId = SocialId(ExternalId[Nothing]().id))) // Social User Infos
+      socialUserInfoRepo.deleteCache(sui)
+    }
+
+    // URI Graph
+    keepRepo.getByUser(userId).foreach { bookmark => keepRepo.save(bookmark.withActive(false)) }
+    collectionRepo.getUnfortunatelyIncompleteTagsByUser(userId).foreach { collection => collectionRepo.save(collection.copy(state = CollectionStates.INACTIVE)) }
+
+    // Libraries Data
+    libraryInviteRepo.getByUser(userId, Set(LibraryInviteStates.INACTIVE)).foreach { case (invite, _) => libraryInviteRepo.save(invite.withState(LibraryInviteStates.INACTIVE)) } // Library Invites
+    libraryMembershipRepo.getWithUserId(userId).foreach { membership => libraryMembershipRepo.save(membership.withState(LibraryMembershipStates.INACTIVE)) } // Library Memberships
+    libraryRepo.getAllByOwner(userId).foreach { library => libraryRepo.save(library.withState(LibraryStates.INACTIVE)) } // Libraries
+
+    // Personal Info
+    userSessionRepo.invalidateByUser(userId) // User Session
+    kifiInstallationRepo.all(userId).foreach { installation => kifiInstallationRepo.save(installation.withState(KifiInstallationStates.INACTIVE)) } // Kifi Installations
+    userCredRepo.findByUserIdOpt(userId).foreach { userCred => userCredRepo.save(userCred.copy(state = UserCredStates.INACTIVE)) } // User Credentials
+    emailRepo.getAllByUser(userId).foreach { email => emailRepo.save(email.withState(UserEmailAddressStates.INACTIVE)) } // Email addresses
+
+    val user = userRepo.get(userId)
+
+    userRepo.save(user.withState(UserStates.INACTIVE).copy(primaryEmail = None, primaryUsername = None)) // User
+    usernameAliasRepo.getByUserId(userId).foreach { alias => // Usernames
+      usernameAliasRepo.reclaim(alias.username, Some(userId))
+    }
+    handleCommander.reclaimAll(Right(userId), overrideProtection = true, overrideLock = true)
   }
 
   def deactivateUserEmailAddress(id: Id[UserEmailAddress]) = AdminUserAction { request =>
@@ -1017,7 +1023,7 @@ class AdminUserController @Inject() (
           }
 
           if (user.state == UserStates.INACTIVE) {
-            session.onTransactionSuccess { deactivate(userId) }
+            deleteAllUserData(userId)
           }
         }
       }
