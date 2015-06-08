@@ -340,17 +340,21 @@ class AuthController @Inject() (
     Ok(s"<!doctype html><script>if(window.opener)opener.postMessage('$message',location.origin);window.close()</script>").as(HTML)
   }
 
-  def signup(provider: String, publicLibraryId: Option[String] = None, intent: Option[String] = None) = Action.async(parse.anyContent) { implicit request =>
+  def signup(provider: String, publicLibraryId: Option[String], intent: Option[String], libAuthToken: Option[String]) = Action.async(parse.anyContent) { implicit request =>
     val authRes = ProviderController.authenticate(provider)
     authRes(request).map { result =>
       authHelper.transformResult(result) { (_, sess: Session) =>
         // TODO: set FORTYTWO_USER_ID instead of clearing it and then setting it on the next request?
         val res = result.withSession((sess + (SecureSocial.OriginalUrlKey -> routes.AuthController.signupPage().url)).deleteUserId)
 
-        // todo(aaron): targetLibId is a String because Play has trouble with Option[PublicId[T]]. And it will be converted into a string for the cookie anyway
+        // todo implement POST hook
+        // This could be a POST, url encoded body. If so, there may be a registration hook for us to add to their session.
+        // ie, auto follow library, auto friend, etc
+
         val cookies = Seq(
           publicLibraryId.map(libId => Cookie("publicLibraryId", libId)),
-          intent.map(action => Cookie("intent", action))
+          intent.map(action => Cookie("intent", action)),
+          libAuthToken.map(at => Cookie("libraryAuthToken", at))
         ).flatten
         res.withCookies(cookies: _*)
       }
@@ -431,9 +435,10 @@ class AuthController @Inject() (
       Redirect(com.keepit.controllers.website.routes.HomeController.unsupported())
     } else {
       val cookiePublicLibraryId = request.cookies.get("publicLibraryId")
-      val cookieIntent = request.cookies.get("intent")
+      val cookieIntent = request.cookies.get("intent") // make sure everywhere handles this right
+      val libAuthToken = request.cookies.get("libAuthToken") // is this set?
       val pubLibIdOpt = cookiePublicLibraryId.map(cookie => PublicId[Library](cookie.value))
-      val discardedCookies = Seq(cookiePublicLibraryId, cookieIntent).flatten.map(c => DiscardingCookie(c.name))
+      val discardedCookies = Seq(cookiePublicLibraryId, cookieIntent, libAuthToken).flatten.map(c => DiscardingCookie(c.name))
 
       request match {
         case ur: UserRequest[_] =>
@@ -446,7 +451,8 @@ class AuthController @Inject() (
             if (cookieIntent.isDefined) {
               cookieIntent.get.value match {
                 case "follow" if pubLibIdOpt.isDefined =>
-                  authCommander.autoJoinLib(ur.userId, pubLibIdOpt.get)
+                  val joinedSuccessfully = authCommander.autoJoinLib(ur.userId, pubLibIdOpt.get, libAuthToken.map(_.value))
+                  // todo redirect to library if `joinedSuccessfully`
                   Redirect(homeUrl).discardingCookies(discardedCookies: _*)
                 case "waitlist" =>
                   Redirect("/twitter/thanks").discardingCookies(discardedCookies: _*)
@@ -608,54 +614,4 @@ class AuthController @Inject() (
     Ok("1").withNewSession.discardingCookies(
       DiscardingCookie(Authenticator.cookieName, Authenticator.cookiePath, Authenticator.cookieDomain, Authenticator.cookieSecure))
   }
-
-  // New signup pages
-
-  // todo, this is signup
-  def signupPageMinimal() = Action { implicit request =>
-    Ok(views.html.authMinimal.signup())
-  }
-
-  // todo, this is signup2Social
-  def signupPageGetEmailMinimal() = MaybeUserAction { implicit request =>
-    val identity = request.identityOpt.get
-    Ok(views.html.authMinimal.signupGetEmail(
-      firstName = User.sanitizeName(identity.firstName.trim),
-      lastName = User.sanitizeName(identity.lastName.trim),
-      picture = identityPicture(identity))
-    )
-  }
-
-  // todo, this is signup2Email
-  def signupPageGetName() = Action { implicit request =>
-    Ok(views.html.authMinimal.signupGetName())
-  }
-
-  // todo
-  def loginPageMinimal() = Action { implicit request =>
-    Ok(views.html.authMinimal.loginToKifi())
-  }
-
-  // Skipping until Twitter waitlist
-  def loginPageNoTwitterMinimal() = Action { implicit request =>
-    Ok(views.html.authMinimal.loginToKifiNoTwitter())
-  }
-
-  def linkSocialAccountMinimal() = Action { implicit request =>
-    Ok(views.html.authMinimal.linkSocial("facebook", "someemail1230@gmail.com"))
-  }
-
-  // Done
-  def install() = Action { implicit request =>
-    Ok(views.html.authMinimal.install())
-  }
-
-  def accountNotFound() = Action { implicit request =>
-    Ok(views.html.authMinimal.accountNotFound("facebook"))
-  }
-
-  def resetPassword(code: String, error: Option[String] = None) = Action { implicit request =>
-    Ok(views.html.authMinimal.resetPassword(code, error.getOrElse("")))
-  }
-
 }

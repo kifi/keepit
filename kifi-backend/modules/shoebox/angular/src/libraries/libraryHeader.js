@@ -93,7 +93,7 @@ angular.module('kifi')
         };
 
         scope.signupFromInvitation = function () {
-          signupService.register({libraryId: scope.library.id, intent: 'follow'});
+          signupService.register({libraryId: scope.library.id, intent: 'follow', libAuthToken: authToken});
         };
 
         scope.changeSubscription = function () {
@@ -533,7 +533,7 @@ angular.module('kifi')
             platformService.goToAppOrStore(url + (url.indexOf('?') > 0 ? '&' : '?') + 'follow=true');
             return;
           } else if (!$rootScope.userLoggedIn) {
-            return signupService.register({libraryId: scope.library.id, intent: 'follow'});
+            return signupService.register({libraryId: scope.library.id, intent: 'follow', libAuthToken: authToken});
           }
 
           scope.followBtnJustClicked = (opts && opts.via) === 'followBtn';
