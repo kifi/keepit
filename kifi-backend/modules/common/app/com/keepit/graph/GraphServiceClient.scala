@@ -4,16 +4,16 @@ import com.google.inject.Inject
 import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
 import com.keepit.common.service.{ RequestConsolidator, ServiceClient, ServiceType }
-import com.keepit.common.zookeeper.{ ServiceInstance, ServiceCluster }
-import com.keepit.common.net.{ CallTimeouts, ClientResponse, HttpClient }
+import com.keepit.common.zookeeper.{ ServiceCluster }
+import com.keepit.common.net.{ CallTimeouts, HttpClient }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.graph.model._
-import com.keepit.model.{ SocialUserInfo, NormalizedURI, User }
+import com.keepit.model.{ NormalizedURI, User }
 import scala.concurrent.Future
 import com.keepit.common.time._
 import com.keepit.common.routes.Graph
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import com.keepit.common.amazon.{ AmazonInstanceInfo, AmazonInstanceId }
+import com.keepit.common.amazon.{ AmazonInstanceInfo }
 import com.keepit.graph.manager.{ PrettyGraphState, PrettyGraphStatistics }
 import play.api.Mode
 import play.api.Mode.Mode
@@ -21,9 +21,9 @@ import com.keepit.graph.wander.{ Wanderlust, Collisions }
 import play.api.libs.json.Json
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 import com.keepit.graph.model.GraphKinds
-import com.keepit.abook.model.EmailAccountInfo
 import scala.concurrent.duration._
 import scala.util.Success
+import com.keepit.common.core._
 
 trait GraphServiceClient extends ServiceClient {
   final val serviceType = ServiceType.GRAPH
@@ -36,6 +36,7 @@ trait GraphServiceClient extends ServiceClient {
   def getConnectedUriScores(userId: Id[User], avoidFirstDegreeConnections: Boolean): Future[Seq[ConnectedUriScore]]
   def getConnectedUserScores(userId: Id[User], avoidFirstDegreeConnections: Boolean): Future[Seq[ConnectedUserScore]]
   def getSociallyRelatedEntities(userId: Id[User]): Future[Option[SociallyRelatedEntities]]
+  def refreshSociallyRelatedEntities(userId: Id[User]): Future[Unit]
   def explainFeed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[GraphFeedExplanation]]
 }
 
@@ -110,6 +111,11 @@ class GraphServiceClientImpl(
           r.json.asOpt[SociallyRelatedEntities]
         }
       }
+  }
+
+  def refreshSociallyRelatedEntities(userId: Id[User]): Future[Unit] = {
+    cacheProvider.relatedEntitiesCache.remove(SociallyRelatedEntitiesCacheKey(userId))
+    getSociallyRelatedEntities(userId).imap(_ => ())
   }
 
   def explainFeed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[GraphFeedExplanation]] = {

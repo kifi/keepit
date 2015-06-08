@@ -865,7 +865,6 @@ class AdminUserController @Inject() (
 
   def deactivate(userId: Id[User]) = AdminUserPage.async { request =>
     SafeFuture {
-      // todo(Léo): this procedure is incomplete (e.g. does not deal with ABook or Eliza), and should probably be moved to UserCommander and unified with AutoGen Reaper
       val doIt = request.body.asFormUrlEncoded.get.get("doIt").exists(_.head == "true")
       val json = db.readWrite { implicit session =>
         if (doIt) {
@@ -903,6 +902,8 @@ class AdminUserController @Inject() (
   private def deleteAllUserData(userId: Id[User])(implicit session: RWSession): Unit = {
     val toBeCleanedUp = userRepo.get(userId)
     if (toBeCleanedUp.state != UserStates.INACTIVE) throw new IllegalArgumentException(s"Failed to delete user data - Watch out, this user is not inactive!!! - $toBeCleanedUp")
+
+    // todo(Léo): this procedure is incomplete (e.g. does not deal with ABook or Eliza), and should probably be moved to UserCommander and unified with AutoGen Reaper
 
     // Social Graph
     userConnectionRepo.deactivateAllConnections(userId) // User Connections

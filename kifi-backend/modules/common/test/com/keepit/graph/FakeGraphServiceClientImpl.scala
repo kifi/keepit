@@ -56,5 +56,8 @@ class FakeGraphServiceClientImpl(
     val rels = sociallyRelatedEntitiesMap.get(userId)
     Future.successful(rels)
   }
+
+  def refreshSociallyRelatedEntities(userId: Id[User]): Future[Unit] = Future.successful(())
+
   def explainFeed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[GraphFeedExplanation]] = Future.successful(Seq.fill(uriIds.size)(GraphFeedExplanation(Map(), Map())))
 }

@@ -31,7 +31,7 @@ import securesocial.core.{ Identity, Registry, UserService }
 
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.{ Success, Left, Right, Try }
+import scala.util._
 
 case class BasicSocialUser(network: String, profileUrl: Option[String], pictureUrl: Option[String])
 object BasicSocialUser {
@@ -730,29 +730,43 @@ class UserCommander @Inject() (
     futureRecommendedUsers.flatMap {
       case None => Future.successful(None)
       case Some(recommendedUsers) =>
-        futureRelatedUsers.map { sociallyRelatedEntitiesOpt =>
 
-          val friends = db.readOnlyMaster { implicit session =>
-            userConnectionRepo.getConnectedUsersForUsers(recommendedUsers.toSet + userId) //cached
+        val friends = db.readOnlyMaster { implicit session =>
+          userConnectionRepo.getConnectedUsersForUsers(recommendedUsers.toSet + userId) //cached
+        }
+
+        val mutualFriends = recommendedUsers.map { recommendedUserId =>
+          recommendedUserId -> (friends.getOrElse(userId, Set.empty) intersect friends.getOrElse(recommendedUserId, Set.empty))
+        }.toMap
+
+        val mutualLibrariesCounts = db.readOnlyMaster { implicit session =>
+          libraryRepo.countMutualLibrariesForUsers(userId, recommendedUsers.toSet)
+        }
+
+        val allUserIds = mutualFriends.values.flatten.toSet ++ recommendedUsers
+
+        Try(loadBasicUsersAndConnectionCounts(allUserIds, allUserIds)) match {
+          case Failure(Username.UndefinedUsernameException(invalidUser)) if invalidUser.state == UserStates.INACTIVE => {
+            airbrake.notify(s"Ran into inactive user ${invalidUser.id.get}, clearing cached related entities from Graph for user $userId.")
+            futureRelatedUsers.onComplete { _ => graphServiceClient.refreshSociallyRelatedEntities(userId) }
+            Future.successful(None)
           }
 
-          val friendshipStrength = {
-            val relatedUsers = sociallyRelatedEntitiesOpt.map(_.users.related) getOrElse Seq.empty
-            relatedUsers.filter { case (userId, _) => friends.contains(userId) }
-          }.toMap[Id[User], Double].withDefaultValue(0d)
+          case Failure(error) => Future.failed(error)
 
-          val mutualFriends = recommendedUsers.map { recommendedUserId =>
-            recommendedUserId -> (friends.getOrElse(userId, Set.empty) intersect friends.getOrElse(recommendedUserId, Set.empty)).toSeq.sortBy(-friendshipStrength(_))
-          }.toMap
+          case Success((basicUsers, userConnectionCounts)) =>
 
-          val mutualLibrariesCounts = db.readOnlyMaster { implicit session =>
-            libraryRepo.countMutualLibrariesForUsers(userId, recommendedUsers.toSet)
-          }
+            futureRelatedUsers.map { sociallyRelatedEntitiesOpt =>
 
-          val uniqueMutualFriends = mutualFriends.values.flatten.toSet
-          val (basicUsers, userConnectionCounts) = loadBasicUsersAndConnectionCounts(uniqueMutualFriends ++ recommendedUsers, uniqueMutualFriends ++ recommendedUsers)
+              val friendshipStrength = {
+                val relatedUsers = sociallyRelatedEntitiesOpt.map(_.users.related) getOrElse Seq.empty
+                relatedUsers.filter { case (userId, _) => friends.contains(userId) }
+              }.toMap[Id[User], Double].withDefaultValue(0d)
 
-          Some(FriendRecommendations(basicUsers, userConnectionCounts, recommendedUsers, mutualFriends, mutualLibrariesCounts))
+              val sortedMutualFriends = mutualFriends.mapValues(_.toSeq.sortBy(-friendshipStrength(_)))
+
+              Some(FriendRecommendations(basicUsers, userConnectionCounts, recommendedUsers, sortedMutualFriends, mutualLibrariesCounts))
+            }
         }
     }
   }
