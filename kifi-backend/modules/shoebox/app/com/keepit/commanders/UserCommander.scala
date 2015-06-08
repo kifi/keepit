@@ -303,14 +303,11 @@ class UserCommander @Inject() (
   }
 
   def createUser(firstName: String, lastName: String, addrOpt: Option[EmailAddress], state: State[User]) = {
-    val usernameCandidates = createUsernameCandidates(firstName, lastName)
     val newUser = db.readWrite(attempts = 3) { implicit session =>
       val user = userRepo.save(
         User(firstName = firstName, lastName = lastName, primaryEmail = addrOpt, state = state)
       )
-      usernameCandidates.toStream.map(handleCommander.setUsername(_, user)).collectFirst {
-        case Success(userWithUsername) => userWithUsername
-      } getOrElse {
+      handleCommander.autoSetUsername(user) getOrElse {
         throw new Exception(s"COULD NOT CREATE USER [$firstName $lastName] $addrOpt SINCE WE DIDN'T FIND A USERNAME!!!")
       }
     }
@@ -648,57 +645,6 @@ class UserCommander @Inject() (
       log.warn(s"[dry run] for user $userId invalid username: $username")
       Left("invalid_username")
     }
-  }
-
-  private def createUsernameCandidates(rawFirstName: String, rawLastName: String): Seq[Username] = {
-    val firstName = HandleOps.lettersOnly(rawFirstName.trim).take(15).toLowerCase
-    val lastName = HandleOps.lettersOnly(rawLastName.trim).take(15).toLowerCase
-    val name = if (firstName.isEmpty || lastName.isEmpty) {
-      if (firstName.isEmpty) lastName else firstName
-    } else {
-      s"$firstName-$lastName"
-    }
-    val seed = if (name.length < 4) {
-      val filler = Seq.fill(4 - name.length)(0)
-      s"$name-$filler"
-    } else name
-    def randomNumber = scala.util.Random.nextInt(999)
-    val censorList = HandleOps.censorList.mkString("|")
-    val preCandidates = ArrayBuffer[String]()
-    preCandidates += seed
-    preCandidates ++= (1 to 30).map(n => s"$seed-$randomNumber").toList
-    preCandidates ++= (10 to 20).map(n => RandomStringUtils.randomAlphanumeric(n)).toList
-    val candidates = preCandidates.map { name =>
-      log.info(s"validating username $name for user $firstName $lastName")
-      val valid = if (HandleOps.isValid(name)) name else name.replaceAll(censorList, s"C${randomNumber}C")
-      log.info(s"username $name is valid")
-      valid
-    }.filter(HandleOps.isValid)
-    if (candidates.isEmpty) throw new Exception(s"Could not create candidates for user $firstName $lastName")
-    candidates map { c => Username(c) }
-  }
-
-  def autoSetUsername(user: User, readOnly: Boolean): Option[Username] = {
-    val candidates = createUsernameCandidates(user.firstName, user.lastName)
-    var keepTrying = true
-    var selectedUsername: Option[Username] = None
-    var i = 0
-    log.info(s"trying to set user $user with ${candidates.size} candidate usernames: $candidates")
-    while (keepTrying && i < candidates.size) {
-      val candidate = candidates(i)
-      setUsername(user.id.get, candidate, readOnly = readOnly) match {
-        case Right(username) =>
-          keepTrying = false
-          selectedUsername = Some(username)
-        case Left(_) =>
-          i += 1
-          log.warn(s"[trial $i] could not set username $candidate for user $user")
-      }
-    }
-    if (keepTrying) {
-      log.warn(s"could not find a decent username for user $user, tried the following candidates: $candidates")
-    }
-    selectedUsername
   }
 
   def importSocialEmail(userId: Id[User], emailAddress: EmailAddress): UserEmailAddress = {
