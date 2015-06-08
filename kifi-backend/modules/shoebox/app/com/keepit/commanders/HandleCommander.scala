@@ -103,8 +103,26 @@ class HandleCommander @Inject() (
 
   private def isPrimary(ownership: HandleOwnership)(implicit session: RSession): Boolean = {
     ownership.ownerId.exists {
-      case Left(organizationId) => organizationRepo.get(organizationId).handle.exists(_.normalized.value == ownership.handle.value)
-      case Right(userId) => userRepo.get(userId).primaryUsername.exists(_.normalized.value == ownership.handle.value)
+      case Left(organizationId) => isPrimaryOwner(ownership, organizationRepo.get(organizationId))
+      case Right(userId) => isPrimaryOwner(ownership, userRepo.get(userId))
+    }
+  }
+
+  private def isPrimaryOwner(ownership: HandleOwnership, organization: Organization): Boolean = organization.handle.exists(_.normalized.value == ownership.handle.value)
+  private def isPrimaryOwner(ownership: HandleOwnership, user: User): Boolean = user.primaryUsername.exists(_.normalized.value == ownership.handle.value)
+
+  def getByHandle(handle: Handle)(implicit session: RSession): Option[(Either[Organization, User], Boolean)] = {
+    handleRepo.getByHandle(handle).flatMap { ownership =>
+      ownership.ownerId.map {
+        case Left(organizationId) => {
+          val organization = organizationRepo.get(organizationId)
+          (Left(organization), isPrimaryOwner(ownership, organization))
+        }
+        case Right(userId) => {
+          val user = userRepo.get(userId)
+          (Right(user), isPrimaryOwner(ownership, user))
+        }
+      }
     }
   }
 

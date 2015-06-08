@@ -732,10 +732,12 @@ class UserCommander @Inject() (
     counter
   }
 
-  def getUserByUsernameOrAlias(username: Username): Option[(User, Boolean)] = {
+  def getUserByUsername(username: Username): Option[(User, Boolean)] = {
     db.readOnlyMaster { implicit session =>
-      userRepo.getByUsername(username).filter(_.state == UserStates.ACTIVE).map((_, false)) orElse
-        usernameRepo.getByUsername(username).map(alias => (userRepo.get(alias.userId), true))
+      handleCommander.getByHandle(username).collect {
+        case (Right(user), isPrimary) if user.state == UserStates.ACTIVE =>
+          (user, isPrimary)
+      }
     }
   }
 

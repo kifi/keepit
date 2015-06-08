@@ -23,7 +23,10 @@ class LibraryFeedControllerTest extends Specification with ShoeboxTestInjector {
 
   "Library Feed Controller" should {
     def setup()(implicit injector: Injector) = db.readWrite { implicit s =>
-      val user = UserFactory.user().withName("Colin", "Lane").withUsername("colin-lane").withEmailAddress("colin@kifi.com").saved
+      val user = {
+        val saved = UserFactory.user().withName("Colin", "Lane").withEmailAddress("colin@kifi.com").saved
+        handleCommander.setUsername(saved, Username("colin-lane")).get
+      }
       val library = libraryRepo.save(Library(name = "test", ownerId = user.id.get, visibility = LibraryVisibility.PUBLISHED, slug = LibrarySlug("test"), memberCount = 1))
       val privateLibrary = libraryRepo.save(Library(name = "secret", ownerId = user.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("secret"), memberCount = 1))
       libraryMembershipRepo.save(LibraryMembership(libraryId = library.id.get, userId = user.id.get, access = LibraryAccess.OWNER))

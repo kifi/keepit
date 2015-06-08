@@ -32,8 +32,6 @@ class HandleTest extends Specification with ShoeboxTestInjector {
     }
   }
 
-  def handleCommander(implicit injector: Injector) = inject[HandleCommander]
-
   "HandleCommander" should {
 
     "allocate a normalized username to a unique user" in {

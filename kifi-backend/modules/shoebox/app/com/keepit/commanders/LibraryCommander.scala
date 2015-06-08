@@ -1271,11 +1271,11 @@ class LibraryCommander @Inject() (
     val ownerIdentifier = ExternalId.asOpt[User](username).map(Left(_)) getOrElse Right(Username(username))
     val ownerOpt = ownerIdentifier match {
       case Left(externalId) => db.readOnlyMaster { implicit s => userRepo.getOpt(externalId).map((_, false)) }
-      case Right(username) => userCommander.get.getUserByUsernameOrAlias(username)
+      case Right(username) => userCommander.get.getUserByUsername(username)
     }
     ownerOpt match {
       case None => Left(LibraryFail(BAD_REQUEST, "invalid_username"))
-      case Some((owner, isUserAlias)) =>
+      case Some((owner, _)) =>
         getLibraryBySlugOrAlias(owner.id.get, slug) match {
           case None => Left(LibraryFail(NOT_FOUND, "no_library_found"))
           case Some((library, isLibraryAlias)) =>
