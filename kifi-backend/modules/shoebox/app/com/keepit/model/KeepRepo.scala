@@ -6,7 +6,6 @@ import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db._
 import com.keepit.common.time._
 import org.joda.time.DateTime
-import scala.concurrent.duration.Duration
 import scala.slick.jdbc.{ PositionedResult, GetResult, StaticQuery }
 import com.keepit.common.logging.Logging
 import com.keepit.commanders.{ LibraryMetadataKey, LibraryMetadataCache, WhoKeptMyKeeps }
@@ -94,9 +93,11 @@ class KeepRepoImpl @Inject() (
     def sourceAttributionId = column[Option[Id[KeepSourceAttribution]]]("source_attribution_id", O.Nullable)
     def note = column[Option[String]]("note", O.Nullable)
     def originalKeeperId = column[Option[Id[User]]]("original_keeper_id", O.Nullable)
+    def organizationId = column[Option[Id[Organization]]]("organization_id", O.Nullable)
 
-    def * = (id.?, createdAt, updatedAt, externalId, title, uriId, isPrimary, inDisjointLib, urlId, url, isPrivate,
-      userId, state, source, kifiInstallation, seq, libraryId, visibility, keptAt, sourceAttributionId, note, originalKeeperId) <> ((Keep.applyFromDbRow _).tupled, Keep.unapplyToDbRow _)
+    def * = ((id.?, createdAt, updatedAt, externalId, title, uriId, isPrimary, inDisjointLib, urlId, url),
+      (isPrivate, userId, state, source, kifiInstallation, seq, libraryId, visibility, keptAt, sourceAttributionId,
+        note, originalKeeperId, organizationId)).shaped <> ({ case (first10, rest) => Keep.applyFromDbRowTuples(first10, rest) }, { Keep.unapplyToDbRow _ })
   }
 
   def table(tag: Tag) = new KeepTable(tag)
@@ -108,7 +109,7 @@ class KeepRepoImpl @Inject() (
   private implicit val getBookmarkResult: GetResult[com.keepit.model.Keep] = GetResult { r: PositionedResult => // bonus points for anyone who can do this generically in Slick 2.0
     var privateFlag: Boolean = false
 
-    Keep.applyFromDbRow(
+    Keep._applyFromDbRow(
       id = r.<<[Option[Id[Keep]]],
       createdAt = r.<<[DateTime],
       updatedAt = r.<<[DateTime],
@@ -130,7 +131,8 @@ class KeepRepoImpl @Inject() (
       keptAt = r.<<[DateTime],
       sourceAttributionId = r.<<[Option[Id[KeepSourceAttribution]]],
       note = r.<<[Option[String]],
-      originalKeeperId = r.<<[Option[Id[User]]]
+      originalKeeperId = r.<<[Option[Id[User]]],
+      organizationId = r.<<[Option[Id[Organization]]]
     )
   }
   private val bookmarkColumnOrder: String = _taggedTable.columnStrings("bm")

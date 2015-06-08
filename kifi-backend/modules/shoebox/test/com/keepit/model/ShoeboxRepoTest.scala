@@ -6,6 +6,7 @@ import com.keepit.test.{ ShoeboxApplication, ShoeboxApplicationInjector }
 import org.specs2.mutable.Specification
 import play.api.test.Helpers._
 import com.keepit.model.UserFactoryHelper._
+import com.keepit.model.KeepFactoryHelper.KeepPersister
 
 class ShoeboxRepoTest extends Specification with ShoeboxApplicationInjector {
 
@@ -31,6 +32,13 @@ class ShoeboxRepoTest extends Specification with ShoeboxApplicationInjector {
           organizationRepo.save(Organization(name = "OrgName", ownerId = user.id.get, handle = Some(PrimaryOrganizationHandle(OrganizationHandle("handle"), OrganizationHandle("handle")))))
         }
         org.id must beSome
+
+        // KeepRepo
+        val keep: Keep = db.readWrite { implicit session =>
+          KeepFactory.keep().withLibrary(lib).withUser(user).withOrganizationId(org.id).saved
+        }
+        keep.id must beSome
+        keep.organizationId === org.id
 
         // OrganizationMembershipRepo
         val organizationMembershipRepo = inject[OrganizationMembershipRepo]
