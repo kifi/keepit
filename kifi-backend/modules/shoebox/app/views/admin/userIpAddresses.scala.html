@@ -1,0 +1,23 @@
+@(user: User,
+ipAddresses: Seq[UserIpAddress]
+)(implicit request: com.keepit.common.controller.UserRequest[_])
+
+@admin("User: " + user.firstName + " " + user.lastName, stylesheets = List("admin_user")) {
+    <h2> Showing @ipAddresses.length</h2>
+    <table class="table table-bordered">
+        <tr>
+            <th>#</th>
+            <th>Date and Time</th>
+            <th>Ip Address</th>
+            <th>Agent Type</th>
+        </tr>
+        @for((ipAddress, i) <- ipAddresses.zipWithIndex) {
+        <tr>
+            <td>@{i+1}</td>
+            <td>@ipAddress.createdAt</td>
+            <td>@ipAddress.ipAddress</td>
+            <td>@ipAddress.agentType</td>
+        </tr>
+        }
+    </table>
+}

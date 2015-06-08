@@ -42,4 +42,8 @@ class UserIpAddressCommander @Inject() (
   def totalNumberOfLogs(): Int = {
     db.readOnlyReplica { implicit session => userIpAddressRepo.count }
   }
+
+  def getByUser(userId: Id[User]): Seq[UserIpAddress] = {
+    db.readOnlyReplica { implicit session => userIpAddressRepo.getByUser(userId) }
+  }
 }

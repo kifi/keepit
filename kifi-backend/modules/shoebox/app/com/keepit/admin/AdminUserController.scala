@@ -121,6 +121,7 @@ class AdminUserController @Inject() (
     activityEmailSender: ActivityFeedEmailSender,
     activityPushSchedualer: ActivityPushScheduler,
     activityPusher: ActivityPusher,
+    userIpAddressCommander: UserIpAddressCommander,
     authCommander: AuthCommander) extends AdminUserActions {
 
   def createPushActivityEntities = AdminUserPage { implicit request =>
@@ -970,6 +971,15 @@ class AdminUserController @Inject() (
       (owner, accessToLibs)
     }
     Ok(html.admin.userLibraries(owner, accessToLibs))
+  }
+
+  def userIpAddressesView(ownerId: Id[User]) = AdminUserPage { implicit request =>
+    val (owner, ipAddresses) = db.readOnlyReplica { implicit session =>
+      val owner = userRepo.get(ownerId)
+      val ipAddresses: Seq[UserIpAddress] = userIpAddressCommander.getByUser(ownerId)
+      (owner, ipAddresses)
+    }
+    Ok(html.admin.userIpAddresses(owner, ipAddresses))
   }
 
   def sendActivityEmailToAll() = AdminUserPage(parse.tolerantJson) { implicit request =>

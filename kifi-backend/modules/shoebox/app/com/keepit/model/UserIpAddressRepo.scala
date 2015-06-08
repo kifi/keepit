@@ -10,7 +10,8 @@ import com.keepit.common.time.Clock
 
 @ImplementedBy(classOf[UserIpAddressRepoImpl])
 trait UserIpAddressRepo extends Repo[UserIpAddress] {
-  // All methods inherited
+  def getByUser(userId: Id[User])(implicit session: RSession): Seq[UserIpAddress]
+  def getMostCommonIpAndCountForUser(userId: Id[User])(implicit session: RSession): (IpAddress, Int)
 }
 
 @Singleton
@@ -36,4 +37,7 @@ class UserIpAddressRepoImpl @Inject() (
 
   def invalidateCache(model: UserIpAddress)(implicit session: RSession): Unit = {}
   def deleteCache(model: UserIpAddress)(implicit session: RSession): Unit = {}
+
+  def getByUser(userId: Id[User])(implicit session: RSession): Seq[UserIpAddress] =
+    (for (b <- rows if b.userId == userId) yield b).list
 }

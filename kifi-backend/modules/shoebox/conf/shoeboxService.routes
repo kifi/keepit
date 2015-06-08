@@ -637,6 +637,7 @@ POST    /admin/users/search         @com.keepit.controllers.admin.AdminUserContr
 GET     /admin/user/:id             @com.keepit.controllers.admin.AdminUserController.userViewByEitherId(id: String, showPrivates: Boolean ?= false)
 GET     /admin/user/:id/keeps       @com.keepit.controllers.admin.AdminUserController.userKeepsView(id: Id[User], showPrivates: Boolean ?= false)
 GET     /admin/user/:id/libraries   @com.keepit.controllers.admin.AdminUserController.userLibrariesView(id: Id[User], showSecrets: Boolean ?= false)
+GET     /admin/user/:id/ips         @com.keepit.controllers.admin.AdminUserController.userIpAddressesView(id: Id[User])
 POST    /admin/user/:id             @com.keepit.controllers.admin.AdminUserController.userView(id: Id[User], showPrivates: Boolean ?= false)
 GET     /admin/user/:id/more-info   @com.keepit.controllers.admin.AdminUserController.moreUserInfoView(id: Id[User], showPrivates: Boolean ?= false)
 GET     /admin/user/:id/prefixSearch @com.keepit.controllers.admin.AdminUserController.prefixSearch(id:Id[User], query:String ?= "")
