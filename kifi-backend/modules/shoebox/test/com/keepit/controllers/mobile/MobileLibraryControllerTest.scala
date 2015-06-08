@@ -970,7 +970,10 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
   private def setupOneUserOneLibrary()(implicit injector: Injector) = {
     val t1 = new DateTime(2014, 12, 1, 12, 0, 0, 0, DEFAULT_DATE_TIME_ZONE)
     db.readWrite { implicit s =>
-      val user = UserFactory.user().withName("Spongebob", "Squarepants").withUsername("spongebob").withCreatedAt(t1).saved
+      val user = {
+        val saved = UserFactory.user().withName("Spongebob", "Squarepants").withCreatedAt(t1).saved
+        handleCommander.setUsername(saved, Username("spongebob")).get
+      }
       val library = libraryRepo.save(Library(name = "Krabby Patty", ownerId = user.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("krabby-patty"), memberCount = 1, createdAt = t1.plusMinutes(1)))
       libraryMembershipRepo.save(LibraryMembership(userId = user.id.get, libraryId = library.id.get, access = LibraryAccess.OWNER))
       (user, library)

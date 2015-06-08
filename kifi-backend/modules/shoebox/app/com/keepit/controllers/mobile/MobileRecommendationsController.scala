@@ -105,10 +105,6 @@ class MobileRecommendationsController @Inject() (
     }
   }
 
-  def feedV1Test() = UserAction.async { request =>
-    feedV1(RecosRequest(0.75f, None, None))(request)
-  }
-
   def feedV1(req: RecosRequest) = UserAction.async { request =>
     val libCnt = libraryRecoCount(request.userId)
 

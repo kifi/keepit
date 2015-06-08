@@ -1,5 +1,6 @@
 package com.keepit.test
 
+import com.keepit.commanders.HandleCommander
 import com.keepit.common.db.slick.SlickSessionProvider
 import com.keepit.model._
 import com.keepit.common.social.BasicUserRepo
@@ -48,9 +49,9 @@ trait ShoeboxInjectionHelpers { self: TestInjectorProvider =>
   def libraryImageRequestRepo(implicit injector: Injector) = inject[LibraryImageRequestRepo]
   def keepImageRepo(implicit injector: Injector) = inject[KeepImageRepo]
   def keepImageRequestRepo(implicit injector: Injector) = inject[KeepImageRequestRepo]
-  def usernameAliasRepo(implicit injector: Injector) = inject[UsernameAliasRepo]
   def handleRepo(implicit injector: Injector) = inject[HandleOwnershipRepo]
   def libraryAliasRepo(implicit injector: Injector) = inject[LibraryAliasRepo]
   def personaRepo(implicit injector: Injector) = inject[PersonaRepo]
   def userPersonaRepo(implicit injector: Injector) = inject[UserPersonaRepo]
+  def handleCommander(implicit injector: Injector) = inject[HandleCommander]
 }

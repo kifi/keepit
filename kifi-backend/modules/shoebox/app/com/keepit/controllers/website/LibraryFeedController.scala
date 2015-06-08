@@ -20,10 +20,10 @@ class LibraryFeedController @Inject() (val userCommander: UserCommander,
     val userActionsHelper: UserActionsHelper) extends UserActions with ShoeboxServiceController {
 
   private def lookupUsername(username: Username): Option[(User, Option[Int])] = {
-    userCommander.getUserByUsernameOrAlias(username) map {
-      case (user, isAlias) =>
+    userCommander.getUserByUsername(username) map {
+      case (user, isPrimary) =>
         if (user.username != username) { // user moved or username normalization
-          (user, Some(if (isAlias) 301 else 303))
+          (user, Some(if (!isPrimary) 301 else 303))
         } else {
           (user, None)
         }
