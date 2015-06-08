@@ -25,6 +25,7 @@ class KifiSiteRouter @Inject() (
   db: Database,
   userRepo: UserRepo,
   userCommander: UserCommander,
+  val userIpAddressCommander: UserIpAddressCommander,
   pageMetaTagsCommander: PageMetaTagsCommander,
   libraryCommander: LibraryCommander,
   libraryMetadataCache: LibraryMetadataCache,
@@ -43,7 +44,10 @@ class KifiSiteRouter @Inject() (
 
   def redirectUserToOwnProfile(subpath: String) = WebAppPage(implicit request => redirUserToOwnProfile(subpath, request))
   private def redirUserToOwnProfile(subpath: String, request: MaybeUserRequest[_]): Result = request match {
-    case r: UserRequest[_] => Redirect(s"/${r.user.username.urlEncoded}$subpath")
+    case r: UserRequest[_] => {
+      userIpAddressCommander.logUserByRequest(r)
+      Redirect(s"/${r.user.username.urlEncoded}$subpath")
+    }
     case r: NonUserRequest[_] => redirectToLogin(s"/me$subpath", r)
   }
 
