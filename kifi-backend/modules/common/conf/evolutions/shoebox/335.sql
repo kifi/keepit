@@ -11,12 +11,12 @@ CREATE TABLE organization (
 	name varchar(256) NOT NULL,
 	description text DEFAULT NULL,
 	owner_id bigint(20) NOT NULL,
-	organization_handle varchar(64) DEFAULT NULL,
-	normalized_organization_handle varchar(64) DEFAULT NULL,
+	handle varchar(64) DEFAULT NULL,
+	normalized_handle varchar(64) DEFAULT NULL,
 
 	PRIMARY KEY(id),
-	UNIQUE KEY `organization_u_organization_handle` (`organization_handle`),
-	UNIQUE KEY `organization_u_normalized_organization_handle` (`normalized_organization_handle`),
+	UNIQUE KEY `organization_u_handle` (`handle`),
+	UNIQUE KEY `organization_u_normalized_handle` (`normalized_handle`),
 	INDEX `organization_i_seq` (`seq`),
 	CONSTRAINT `organization_f_user` FOREIGN KEY (`owner_id`) REFERENCES user(`id`)
 );

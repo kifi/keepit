@@ -51,7 +51,8 @@ case class LibraryModifyRequest(
   description: Option[String] = None,
   color: Option[LibraryColor] = None,
   listed: Option[Boolean] = None,
-  whoCanInvite: Option[LibraryInvitePermissions] = None)
+  whoCanInvite: Option[LibraryInvitePermissions] = None,
+  subscriptions: Option[Seq[LibrarySubscription]] = None)
 
 case class LibraryInfo(
   id: PublicId[Library],
@@ -130,7 +131,7 @@ case class LibraryCardInfo(
 
 object LibraryCardInfo {
   def chooseCollaborators(collaborators: Seq[BasicUser]): Seq[BasicUser] = {
-    collaborators.sortBy(_.pictureName == "0.jpg").take(3) // owner + 2 collaborators shown, 1 extra in case viewer is one and leaves
+    collaborators.sortBy(_.pictureName == "0.jpg").take(3) // owner + up to 3 collaborators shown
   }
 
   def chooseFollowers(followers: Seq[BasicUser]): Seq[BasicUser] = {

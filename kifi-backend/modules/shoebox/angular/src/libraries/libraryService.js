@@ -5,10 +5,8 @@ angular.module('kifi')
 .factory('libraryService', [
   '$http', '$rootScope', 'profileService', 'routeService', '$q', '$analytics', 'net',
   function ($http, $rootScope, profileService, routeService, $q, $analytics, net) {
-    var infos = {
-      own: []
-    };
-    var recentIds = [];  // in-memory cache, length limited, most recent first
+    var infos;
+    var libraryIdsRecentlyKeptTo = [];  // in-memory cache, length limited, most recent first
 
     // TODO: flush any non-public cached data when a user logs out.
 
@@ -45,15 +43,15 @@ angular.module('kifi')
     //
     var api = {
       getOwnInfos: function () {
-        return infos.own.slice();
+        return infos.slice();
       },
 
       getSysMainInfo: function () {
-        return _.find(infos.own, {kind: 'system_main'});
+        return _.find(infos, {kind: 'system_main'});
       },
 
       getSysSecretInfo: function () {
-        return _.find(infos.own, {kind: 'system_secret'});
+        return _.find(infos, {kind: 'system_secret'});
       },
 
       isLibraryMainOrSecret: function (library) {
@@ -61,7 +59,7 @@ angular.module('kifi')
       },
 
       isLibraryIdMainOrSecret: function (libraryId) {
-        var info = _.find(infos.own, {id: libraryId});
+        var info = _.find(infos, {id: libraryId});
         return info && api.isLibraryMainOrSecret(info);
       },
 
@@ -74,7 +72,7 @@ angular.module('kifi')
           return 'Please try a shorter name';
         } else if (/['"\/\\]/.test(name)) {
           return 'Please no slashes or quotes in your library name';
-        } else if (oldName && name !== oldName && _.some(infos.own, {name: name})) {
+        } else if (oldName && name !== oldName && _.some(infos, {name: name})) {
           return 'You already have a library with this name';
         } else {
           return null;
@@ -86,7 +84,7 @@ angular.module('kifi')
           net.getLibraryInfos.clearCache();
         }
         return net.getLibraryInfos().then(function (res) {
-          infos.own = res.data.libraries.map(augment);
+          infos = res.data.libraries.map(augment);
         });
       },
 
@@ -127,7 +125,7 @@ angular.module('kifi')
       },
 
       addToLibraryCount: function (libraryId, val) {
-        var lib = _.find(infos.own, {id: libraryId});
+        var lib = _.find(infos, {id: libraryId});
         lib.numKeeps += val;
 
         $rootScope.$emit('libraryKeepCountChanged', libraryId, lib.numKeeps);
@@ -201,7 +199,7 @@ angular.module('kifi')
 
       deleteLibrary: function (libraryId) {
         return $http.post(routeService.deleteLibrary(libraryId)).then(function () {
-          _.remove(infos.own, {id: libraryId});
+          _.remove(infos, {id: libraryId});
           $rootScope.$emit('libraryDeleted', libraryId);
         });
       },
@@ -236,16 +234,21 @@ angular.module('kifi')
         });
       },
 
-      rememberRecentId: function (libraryId) {
-        _.remove(recentIds, libraryId);
-        recentIds.unshift(libraryId);
-        if (recentIds.length > 3) {
-          recentIds.pop();
+      noteLibraryViewed: function (libraryId) {
+        (_.find(infos, {id: libraryId}) || {}).lastViewed = Date.now();
+      },
+
+      noteLibraryKeptTo: function (libraryId) {
+        _.remove(libraryIdsRecentlyKeptTo, libraryId);
+        libraryIdsRecentlyKeptTo.unshift(libraryId);
+        if (libraryIdsRecentlyKeptTo.length > 3) {
+          libraryIdsRecentlyKeptTo.length = 3;
         }
+        (_.find(infos, {id: libraryId}) || {}).lastKept = Date.now();
       },
 
       getRecentIds: function () {
-        return recentIds.slice();
+        return libraryIdsRecentlyKeptTo.slice();
       },
 
       isMyLibrary: function (library) {

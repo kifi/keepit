@@ -31,7 +31,7 @@ import securesocial.core.{ Identity, Registry, UserService }
 
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.{ Left, Right, Try }
+import scala.util._
 
 case class BasicSocialUser(network: String, profileUrl: Option[String], pictureUrl: Option[String])
 object BasicSocialUser {
@@ -90,6 +90,7 @@ class UserCommander @Inject() (
     db: Database,
     userRepo: UserRepo,
     usernameRepo: UsernameAliasRepo,
+    handleCommander: HandleCommander,
     userCredRepo: UserCredRepo,
     emailRepo: UserEmailAddressRepo,
     userValueRepo: UserValueRepo,
@@ -304,16 +305,14 @@ class UserCommander @Inject() (
   def createUser(firstName: String, lastName: String, addrOpt: Option[EmailAddress], state: State[User]) = {
     val usernameCandidates = createUsernameCandidates(firstName, lastName)
     val newUser = db.readWrite(attempts = 3) { implicit session =>
-
-      val username: Username = usernameCandidates.find { candidate => userRepo.getByUsername(candidate).isEmpty && usernameRepo.reclaim(candidate).isSuccess } getOrElse {
+      val user = userRepo.save(
+        User(firstName = firstName, lastName = lastName, primaryEmail = addrOpt, state = state)
+      )
+      usernameCandidates.toStream.map(handleCommander.setUsername(_, user)).collectFirst {
+        case Success(userWithUsername) => userWithUsername
+      } getOrElse {
         throw new Exception(s"COULD NOT CREATE USER [$firstName $lastName] $addrOpt SINCE WE DIDN'T FIND A USERNAME!!!")
       }
-
-      val primaryUsername = PrimaryUsername(original = username, normalized = Username(HandleOps.normalize(username.value)))
-
-      userRepo.save(
-        User(firstName = firstName, lastName = lastName, primaryEmail = addrOpt, state = state, primaryUsername = Some(primaryUsername))
-      )
     }
     SafeFuture {
       db.readWrite(attempts = 3) { implicit session =>
@@ -636,10 +635,8 @@ class UserCommander @Inject() (
                   usernameRepo.reclaim(username, Some(userId), overrideProtection).get // reclaim any existing alias for the new username
                 }
               }
-              val primaryUsername = PrimaryUsername(username, normalizedUsername)
-              userRepo.save(user.copy(primaryUsername = Some(primaryUsername)))
-              //we have to do cache invalidation now, the repo does not have the old username for that
-              oldUsernameOpt.foreach(oldUsername => usernameCache.remove(UsernameKey(oldUsername.original)))
+
+              handleCommander.setUsername(username, user, lock = false, overrideProtection = overrideProtection, overrideValidityCheck = overrideValidityCheck).get
             } else {
               log.info(s"[dry run] user $userId set with username $username")
             }
@@ -733,29 +730,43 @@ class UserCommander @Inject() (
     futureRecommendedUsers.flatMap {
       case None => Future.successful(None)
       case Some(recommendedUsers) =>
-        futureRelatedUsers.map { sociallyRelatedEntitiesOpt =>
 
-          val friends = db.readOnlyMaster { implicit session =>
-            userConnectionRepo.getConnectedUsersForUsers(recommendedUsers.toSet + userId) //cached
+        val friends = db.readOnlyMaster { implicit session =>
+          userConnectionRepo.getConnectedUsersForUsers(recommendedUsers.toSet + userId) //cached
+        }
+
+        val mutualFriends = recommendedUsers.map { recommendedUserId =>
+          recommendedUserId -> (friends.getOrElse(userId, Set.empty) intersect friends.getOrElse(recommendedUserId, Set.empty))
+        }.toMap
+
+        val mutualLibrariesCounts = db.readOnlyMaster { implicit session =>
+          libraryRepo.countMutualLibrariesForUsers(userId, recommendedUsers.toSet)
+        }
+
+        val allUserIds = mutualFriends.values.flatten.toSet ++ recommendedUsers
+
+        Try(loadBasicUsersAndConnectionCounts(allUserIds, allUserIds)) match {
+          case Failure(Username.UndefinedUsernameException(invalidUser)) if invalidUser.state == UserStates.INACTIVE => {
+            airbrake.notify(s"Ran into inactive user ${invalidUser.id.get}, clearing cached related entities from Graph for user $userId.")
+            futureRelatedUsers.onComplete { _ => graphServiceClient.refreshSociallyRelatedEntities(userId) }
+            Future.successful(None)
           }
 
-          val friendshipStrength = {
-            val relatedUsers = sociallyRelatedEntitiesOpt.map(_.users.related) getOrElse Seq.empty
-            relatedUsers.filter { case (userId, _) => friends.contains(userId) }
-          }.toMap[Id[User], Double].withDefaultValue(0d)
+          case Failure(error) => Future.failed(error)
 
-          val mutualFriends = recommendedUsers.map { recommendedUserId =>
-            recommendedUserId -> (friends.getOrElse(userId, Set.empty) intersect friends.getOrElse(recommendedUserId, Set.empty)).toSeq.sortBy(-friendshipStrength(_))
-          }.toMap
+          case Success((basicUsers, userConnectionCounts)) =>
 
-          val mutualLibrariesCounts = db.readOnlyMaster { implicit session =>
-            libraryRepo.countMutualLibrariesForUsers(userId, recommendedUsers.toSet)
-          }
+            futureRelatedUsers.map { sociallyRelatedEntitiesOpt =>
 
-          val uniqueMutualFriends = mutualFriends.values.flatten.toSet
-          val (basicUsers, userConnectionCounts) = loadBasicUsersAndConnectionCounts(uniqueMutualFriends ++ recommendedUsers, uniqueMutualFriends ++ recommendedUsers)
+              val friendshipStrength = {
+                val relatedUsers = sociallyRelatedEntitiesOpt.map(_.users.related) getOrElse Seq.empty
+                relatedUsers.filter { case (userId, _) => friends.contains(userId) }
+              }.toMap[Id[User], Double].withDefaultValue(0d)
 
-          Some(FriendRecommendations(basicUsers, userConnectionCounts, recommendedUsers, mutualFriends, mutualLibrariesCounts))
+              val sortedMutualFriends = mutualFriends.mapValues(_.toSeq.sortBy(-friendshipStrength(_)))
+
+              Some(FriendRecommendations(basicUsers, userConnectionCounts, recommendedUsers, sortedMutualFriends, mutualLibrariesCounts))
+            }
         }
     }
   }

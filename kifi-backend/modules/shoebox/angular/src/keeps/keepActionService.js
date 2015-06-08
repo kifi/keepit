@@ -32,7 +32,7 @@ angular.module('kifi')
       };
 
       return net.addKeepsToLibrary(libraryId, data).then(function (res) {
-        libraryService.rememberRecentId(libraryId);
+        libraryService.noteLibraryKeptTo(libraryId);
 
         _.uniq(res.data.keeps, function (keep) {
           return keep.url;
@@ -56,7 +56,7 @@ angular.module('kifi')
       };
 
       return net.copyKeepsToLibrary(data).then(function (res) {
-        libraryService.rememberRecentId(libraryId);
+        libraryService.noteLibraryKeptTo(libraryId);
 
         _.uniq(res.data.keeps, function (keep) {
           return keep.url;
@@ -80,7 +80,7 @@ angular.module('kifi')
       };
 
       return net.moveKeepsToLibrary(data).then(function (res) {
-        libraryService.rememberRecentId(libraryId);
+        libraryService.noteLibraryKeptTo(libraryId);
 
         _.uniq(res.data.keeps, function (keep) {
           return keep.url;

@@ -53,6 +53,9 @@ class LibraryCommander @Inject() (
     libraryInvitesAbuseMonitor: LibraryInvitesAbuseMonitor,
     libraryInviteCommander: LibraryInviteCommander,
     libraryImageRepo: LibraryImageRepo,
+    librarySubscriptionRepo: LibrarySubscriptionRepo,
+    subscriptionCommander: LibrarySubscriptionCommander,
+    organizationMembershipRepo: OrganizationMembershipRepo,
     userRepo: UserRepo,
     userCommander: Provider[UserCommander],
     basicUserRepo: BasicUserRepo,
@@ -529,10 +532,11 @@ class LibraryCommander @Inject() (
   }
 
   def modifyLibrary(libraryId: Id[Library], userId: Id[User], modifyReq: LibraryModifyRequest)(implicit context: HeimdalContext): Either[LibraryFail, Library] = {
-    val (targetLib, targetMembershipOpt) = db.readOnlyMaster { implicit s =>
+    val (targetLib, targetMembershipOpt, targetSubs) = db.readOnlyMaster { implicit s =>
       val lib = libraryRepo.get(libraryId)
       val mem = libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId)
-      (lib, mem)
+      val subs = librarySubscriptionRepo.getByLibraryId(libraryId)
+      (lib, mem, subs)
     }
     if (targetMembershipOpt.isEmpty || !targetMembershipOpt.get.canWrite) {
       Left(LibraryFail(FORBIDDEN, "permission_denied"))
@@ -575,6 +579,8 @@ class LibraryCommander @Inject() (
         }
       }
 
+      val newSubsOpt = modifyReq.subscriptions
+
       val result = for {
         newName <- validName(modifyReq.name).right
         newSlug <- validSlug(modifyReq.slug).right
@@ -604,6 +610,27 @@ class LibraryCommander @Inject() (
           if (targetMembership.listed != newListed) {
             libraryMembershipRepo.save(targetMembership.copy(listed = newListed))
           }
+
+          def saveSubscriptionChanges(newSubs: Seq[LibrarySubscription]) {
+            newSubs.foreach { newSub => // find new subs to be updated or added
+              targetSubs.find { _ equivalent newSub } match {
+                case None => subscriptionCommander.saveSubscription(newSub)
+                case Some(targetSub) => subscriptionCommander.saveSubscription(targetSub.copy(name = newSub.name, info = newSub.info))
+              }
+            }
+            targetSubs.foreach { targetSub =>
+              newSubs.find { _ equivalent targetSub } match { // find target subs that are to be removed
+                case None => subscriptionCommander.saveSubscription(targetSub.copy(state = LibrarySubscriptionStates.INACTIVE))
+                case Some(newSub) =>
+              }
+            }
+          }
+
+          newSubsOpt match {
+            case Some(newSubs) => saveSubscriptionChanges(newSubs)
+            case None => // nothing to save
+          }
+
           libraryRepo.save(targetLib.copy(name = newName, slug = newSlug, visibility = newVisibility, description = newDescription, color = newColor, whoCanInvite = newInviteToCollab, state = LibraryStates.ACTIVE))
         }
 
@@ -614,7 +641,8 @@ class LibraryCommander @Inject() (
           "color" -> (newColor != targetLib.color),
           "madePrivate" -> (newVisibility != targetLib.visibility && newVisibility == LibraryVisibility.SECRET),
           "listed" -> (newListed != targetMembership.listed),
-          "inviteToCollab" -> (newInviteToCollab != targetLib.whoCanInvite)
+          "inviteToCollab" -> (newInviteToCollab != targetLib.whoCanInvite),
+          "subscriptions" -> targetSubs.intersect(newSubsOpt.getOrElse(Seq.empty)).nonEmpty
         )
         (lib, edits)
       }
@@ -679,6 +707,7 @@ class LibraryCommander @Inject() (
         userId match {
           case Some(id) =>
             libraryMembershipRepo.getWithLibraryIdAndUserId(library.id.get, id).nonEmpty ||
+              library.organizationId.flatMap(orgId => organizationMembershipRepo.getByOrgIdAndUserId(orgId, id)).nonEmpty ||
               libraryInviteRepo.getWithLibraryIdAndUserId(userId = id, libraryId = library.id.get).nonEmpty ||
               getValidLibInvitesFromAuthToken(library.id.get, authToken).nonEmpty
           case None =>
@@ -702,9 +731,17 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def getLibrariesUserCanKeepTo(userId: Id[User]): Seq[(Library, Boolean, Boolean)] = {
+  def getLibrariesUserCanKeepTo(userId: Id[User]): Seq[(Library, LibraryMembership, Seq[BasicUser])] = { //ZZZ
     db.readOnlyMaster { implicit s =>
-      libraryRepo.getByUserWithCollab(userId, excludeAccess = Some(LibraryAccess.READ_ONLY)).map(r => (r._2, r._3, r._1.subscribedToUpdates))
+      val libsWithMembership: Seq[(Library, LibraryMembership)] = libraryRepo.getLibrariesWithWriteAccess(userId)
+      val libIds: Set[Id[Library]] = libsWithMembership.map(_._1.id.get).toSet
+      val contributors: Map[Id[Library], Seq[Id[User]]] = libraryMembershipRepo.getUsersWithWriteAccessForLibraries(libIds, userId)
+      libsWithMembership.map {
+        case (lib, membership) =>
+          val collabs: Seq[Id[User]] = if (lib.ownerId == userId) contributors.getOrElse(lib.id.get, Seq.empty) else lib.ownerId +: contributors.getOrElse(lib.id.get, Seq.empty)
+          val bus = basicUserRepo.loadAll(collabs.toSet)
+          (lib, membership, collabs.map(bus(_)))
+      }
     }
   }
 
@@ -1347,6 +1384,49 @@ class LibraryCommander @Inject() (
         None
       }
       createLibraryCardInfo(lib, image, owner, numFollowers, followersSample, numCollaborators, collabsSample, isFollowing, membershipOpt)
+    }
+  }
+
+  def createLiteLibraryCardInfos(libs: Seq[Library], viewerId: Id[User])(implicit session: RSession): ParSeq[(LibraryCardInfo, MiniLibraryMembership)] = {
+    val memberships = libraryMembershipRepo.getMinisByLibraryIdsAndAccess(
+      libs.map(_.id.get).toSet, Set(LibraryAccess.OWNER, LibraryAccess.READ_WRITE, LibraryAccess.READ_INSERT))
+    val allBasicUsers = basicUserRepo.loadAll(memberships.values.map(_.map(_.userId)).flatten.toSet)
+
+    libs.par map { lib =>
+      val libMems = memberships(lib.id.get)
+      val viewerMem = libMems.find(_.userId == viewerId).get
+      val (numFollowers, numCollaborators, collabsSample) = if (libMems.length > 1) {
+        val numFollowers = libraryMembershipRepo.countWithLibraryIdAndAccess(lib.id.get, LibraryAccess.READ_ONLY)
+        val numCollaborators = libMems.length - 1
+        val collabsSample = libMems.filter(_.access != LibraryAccess.OWNER)
+          .sortBy(m => (m.userId != viewerId, m.access == LibraryAccess.READ_INSERT))
+          .take(4).map(m => allBasicUsers(m.userId))
+        (numFollowers, numCollaborators, collabsSample)
+      } else {
+        (0, 0, Seq.empty)
+      }
+
+      val info = LibraryCardInfo(
+        id = Library.publicId(lib.id.get),
+        name = lib.name,
+        description = None, // not needed
+        color = lib.color,
+        image = None, // not needed
+        slug = lib.slug,
+        kind = lib.kind,
+        visibility = lib.visibility,
+        owner = allBasicUsers(lib.ownerId),
+        numKeeps = lib.keepCount,
+        numFollowers = numFollowers,
+        followers = Seq.empty, // not needed
+        numCollaborators = numCollaborators,
+        collaborators = collabsSample,
+        lastKept = lib.lastKept.getOrElse(lib.createdAt),
+        listed = None, // not needed
+        following = None, // not needed
+        membership = None, // not needed
+        modifiedAt = lib.updatedAt)
+      (info, viewerMem)
     }
   }
 

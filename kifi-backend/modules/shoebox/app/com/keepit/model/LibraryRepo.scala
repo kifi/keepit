@@ -20,7 +20,7 @@ import scala.slick.jdbc.{ PositionedResult, GetResult, StaticQuery }
 trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
   def getByNameAndUserId(userId: Id[User], name: String, excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Option[Library]
   def getByUser(userId: Id[User], excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE), excludeAccess: Option[LibraryAccess] = None)(implicit session: RSession): Seq[(LibraryMembership, Library)]
-  def getByUserWithCollab(userId: Id[User], excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE), excludeAccess: Option[LibraryAccess] = None)(implicit session: RSession): Seq[(LibraryMembership, Library, Boolean)]
+  def getLibrariesWithWriteAccess(userId: Id[User], excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Seq[(Library, LibraryMembership)]
   def getAllByOwner(ownerId: Id[User], excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): List[Library]
   def getAllByOwners(ownerIds: Set[Id[User]], excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): List[Library]
   def getBySlugAndUserId(userId: Id[User], slug: LibrarySlug, excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Option[Library]
@@ -207,15 +207,14 @@ class LibraryRepoImpl @Inject() (
     q.list
   }
 
-  // Bad naming, but includes whether the library is a collaborative library
-  def getByUserWithCollab(userId: Id[User], excludeState: Option[State[Library]], excludeAccess: Option[LibraryAccess])(implicit session: RSession): Seq[(LibraryMembership, Library, Boolean)] = {
+  def getLibrariesWithWriteAccess(userId: Id[User], excludeState: Option[State[Library]])(implicit session: RSession): Seq[(Library, LibraryMembership)] = {
     val libMemRows = libraryMembershipRepo.get.rows
     val readOnly: LibraryAccess = LibraryAccess.READ_ONLY
     val owner: LibraryAccess = LibraryAccess.OWNER
     val q = for {
       lib <- rows if lib.state =!= excludeState.orNull
-      lm <- libMemRows if lm.libraryId === lib.id && lm.userId === userId && lm.access =!= excludeAccess.orNull && lm.state === LibraryMembershipStates.ACTIVE
-    } yield (lm, lib, libMemRows.filter(r => r.libraryId === lib.id && r.access =!= readOnly && r.access =!= owner && r.userId === userId && r.state === LibraryMembershipStates.ACTIVE).exists)
+      lm <- libMemRows if lm.libraryId === lib.id && lm.userId === userId && lm.access =!= readOnly && lm.state === LibraryMembershipStates.ACTIVE
+    } yield (lib, lm)
     q.list
   }
 

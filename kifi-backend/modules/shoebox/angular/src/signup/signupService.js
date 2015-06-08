@@ -112,7 +112,8 @@ angular.module('kifi')
 
       var params = $scope.userData ? {
         libraryId : $scope.userData.libraryId,
-        intent : $scope.userData.intent
+        intent : $scope.userData.intent,
+        libAuthToken: $scope.userData.libAuthToken
       } : {};
       $scope.facebookSignupPath = routeService.socialSignup('facebook', params);
       $scope.twitterSignupPath = routeService.socialSignup('twitter', params);

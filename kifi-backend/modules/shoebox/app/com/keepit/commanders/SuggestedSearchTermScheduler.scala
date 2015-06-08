@@ -3,6 +3,7 @@ package com.keepit.commanders
 import com.google.inject.{ ImplementedBy, Singleton, Inject }
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.akka.FortyTwoActor
+import com.keepit.common.concurrent.ReactiveLock
 import com.keepit.common.db.{ SequenceNumber, Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -24,15 +25,15 @@ trait SuggestedSearchTermUpdatePlugin
 class SuggestedSearchTermUpdatePluginImpl @Inject() (
     actor: ActorInstance[SuggestedSearchTermUpdateActor],
     val scheduling: SchedulingProperties) extends SchedulerPlugin with SuggestedSearchTermUpdatePlugin {
-  import SuggestedSearchTermUpdateActor.SuggestedSearchTermUpdateActorMessages
+  import SuggestedSearchTermUpdateActor.SuggestedSearchTermUpdateActorMessages._
 
   override def enabled: Boolean = true
 
   val name: String = getClass.toString
 
   override def onStart() {
-    //scheduleTaskOnOneMachine(actor.system, 5 minutes, 5 minutes, actor.ref, SuggestedSearchTermUpdateActorMessages.Update, this.getClass.getSimpleName + SuggestedSearchTermUpdateActorMessages.Update.getClass.getSimpleName)
-    //scheduleTaskOnOneMachine(actor.system, 6 minutes, 1 minutes, actor.ref, SuggestedSearchTermUpdateActorMessages.CollectResult, this.getClass.getSimpleName + SuggestedSearchTermUpdateActorMessages.CollectResult.getClass.getSimpleName)
+    scheduleTaskOnOneMachine(actor.system, 2 minutes, 5 minutes, actor.ref, Update, this.getClass.getSimpleName + Update.getClass.toString)
+    scheduleTaskOnOneMachine(actor.system, 5 minutes, 1 minutes, actor.ref, CollectResult, this.getClass.getSimpleName + CollectResult.getClass.toString)
   }
 
 }
@@ -43,14 +44,15 @@ class SuggestedSearchTermUpdateActor @Inject() (
 
   import SuggestedSearchTermUpdateActor.SuggestedSearchTermUpdateActorMessages._
 
+  val collectLock = new ReactiveLock(1)
+
   def receive = {
     case Update =>
       val cnt = updater.update()
       if (cnt == updater.KEEPS_BATCH_SIZE) context.system.scheduler.scheduleOnce(10 seconds, self, Update)
     case CollectResult =>
-      updater.collectResult().onComplete {
-        case Success(cnt) => if (cnt > 0) context.system.scheduler.scheduleOnce(1 seconds, self, CollectResult)
-        case Failure(_) => context.system.scheduler.scheduleOnce(10 seconds, self, CollectResult)
+      collectLock.withLockFuture {
+        updater.collectResult().map { cnt => if (cnt > 0) context.system.scheduler.scheduleOnce(2 seconds, self, CollectResult) }
       }
   }
 }
@@ -96,7 +98,7 @@ class SuggestedSearchTermUpdater @Inject() (
       log.info(s"${keeps.size} keeps retrieved")
 
       val libs = librariesNeedUpdate(keeps)
-      log.info(s"${libs.size} libraries need tag computations, ${libs.mkString(", ")}")
+      log.info(s"${libs.size} libraries need tag computations, ${libs.take(10).mkString(", ")}")
 
       libs.foreach { lib => computeAndSaveHashtags(lib) }
       libs.foreach { lib => sendAutotagRequests(lib) }

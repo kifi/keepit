@@ -2,9 +2,10 @@ package com.keepit.rover.tagcloud
 
 import com.keepit.common.logging.Logging
 import com.keepit.common.queue.messages.SuggestedSearchTerms
-import com.keepit.rover.article.{ Article, EmbedlyArticle }
+import com.keepit.rover.article.EmbedlyArticle
 import com.keepit.rover.article.content.{ EmbedlyContent, ArticleContentExtractor }
 import scala.collection.mutable
+import java.text.Normalizer
 
 object TagCloudGenerator extends Logging {
 
@@ -16,6 +17,10 @@ object TagCloudGenerator extends Logging {
   def generate(corpus: LibraryCorpus): SuggestedSearchTerms = {
     val (keywordCnts, entityCnts, docs) = extractFromCorpus(corpus)
     val (twoGrams, threeGrams) = (NGramHelper.generateNGramsForCorpus(docs, 2), NGramHelper.generateNGramsForCorpus(docs, 3))
+
+    val top2grams = topKcounts(twoGrams, 50).toArray.sortBy(-_._2)
+    log.info(s"${docs.count(_.size > 100)} good docs retrieved. ${twoGrams.size} two grams generated. top ones: ${top2grams.mkString(", ")}")
+
     val multiGrams = combineGrams(twoGrams, threeGrams)
     val multiGramsIndex = buildMultiGramIndex(multiGrams.keySet)
     val topKeywords = topKcounts(keywordCnts, TOP_K, smartCutoff = true)
@@ -27,13 +32,13 @@ object TagCloudGenerator extends Logging {
     val oneGramEntities: WordCounts = (topKeywords.keySet.intersect(topEntities.keySet)).map { k => k -> (topKeywords(k) max topEntities(k)) }.toMap
 
     val keyGrams: WordCounts = topKeywords.keys.map { key =>
-      multiGramsIndex.getOrElse(key, Set()).map { gram => (gram, multiGrams(gram)) }.take(3) // find superString that contain the one-gram keyword, and return freq with them
+      multiGramsIndex.getOrElse(key, Set()).map { gram => (gram, multiGrams(gram)) }.toArray.sortBy(-_._2).take(3) // find superString that contain the one-gram keyword, and return freq with them
     }.flatten.toMap
 
     log.info("oneGramEntities: " + oneGramEntities)
     log.info("keyGrams: " + keyGrams)
 
-    val result = topKcounts(oneGramEntities ++ keyGrams, TOP_K)
+    val result = topKcounts(oneGramEntities ++ keyGrams, TOP_K).flatMap { case (w, c) => normalizeToAscii(w).map { x => (x, c) } } // may lose some tokens
     SuggestedSearchTerms(result.map { case (w, c) => (w, c * 1f) })
   }
 
@@ -68,7 +73,7 @@ object WordCountHelper {
   def topKcounts(wordCounts: WordCounts, topK: Int, smartCutoff: Boolean = false): WordCounts = {
 
     val cutoff = if (smartCutoff) {
-      val M = wordCounts.values.max
+      val M = if (wordCounts.size == 0) 0 else wordCounts.values.max
       Math.min(5, Math.max(0.05 * M, 2))
     } else 0.0
 
@@ -76,7 +81,7 @@ object WordCountHelper {
   }
 }
 
-object NGramHelper {
+object NGramHelper extends Logging {
   val punct = """[!"#$%&()*\+\,\.\/:;<=>?@\[\]^_`\{\|\}~]""" // ' and - not included
   val space = """\s"""
   // 744 common stopwords (partly from MySQL)
@@ -148,6 +153,15 @@ object NGramHelper {
         .headOption.foreach { case (threeGram, cnt) => toAdd(threeGram) = cnt; toDrop.add(twoGram) }
     }
 
+    log.info(s"to drop: ${toDrop}")
+    log.info(s"to add: ${toAdd}")
+
     twoGrams.filter { case (word, cnt) => !toDrop.contains(word) } ++ toAdd
+  }
+
+  def normalizeToAscii(x: String): Option[String] = {
+    val y = Normalizer.normalize(x, Normalizer.Form.NFD)
+    val z = y.replaceAll("[^\\p{ASCII}]", "");
+    if (x.size == z.size) Some(z.trim) else None
   }
 }

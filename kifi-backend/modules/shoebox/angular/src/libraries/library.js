@@ -280,10 +280,6 @@ angular.module('kifi')
 
     $rootScope.$emit('libraryOnPage', library);
 
-    if (!libraryService.isLibraryMainOrSecret(library) && library.membership) {
-      $rootScope.$emit('lastViewedLib', library);
-    }
-
     if (library.keeps.length) {
       // dealing with keeps asynchronously, one by one, to allow header to be drawn
       $timeout(angular.bind(null, renderNextRawKeep, library.keeps.slice()));
@@ -302,5 +298,7 @@ angular.module('kifi')
         libraryService.joinLibrary($scope.library.id);
       }
     });
+
+    libraryService.noteLibraryViewed(library.id);
   }
 ]);
