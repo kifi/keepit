@@ -67,9 +67,9 @@ class ExtAuthController @Inject() (
           kiId
         })
     log.info(s"start details: $userAgent, $version, $installationIdOpt")
+    userIpAddressCommander.logUserByRequest(request)
 
     val (libraries, installation, urlPatterns, isInstall, isUpdate) = db.readWrite { implicit s =>
-      userIpAddressCommander.logUserByRequest(request)
       val libraries = libraryCommander.getMainAndSecretLibrariesForUser(userId)
       val (installation, isInstall, isUpdate): (KifiInstallation, Boolean, Boolean) = installationIdOpt flatMap { id =>
         installationRepo.getOpt(userId, id)

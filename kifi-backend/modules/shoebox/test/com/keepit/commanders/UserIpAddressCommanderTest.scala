@@ -5,7 +5,6 @@ import com.keepit.common.net.UserAgent
 import com.keepit.common.service.IpAddress
 import com.keepit.model._
 import com.keepit.test.ShoeboxTestInjector
-import net.codingwell.scalaguice.ScalaModule
 import org.specs2.mutable.Specification
 
 class UserIpAddressCommanderTest extends Specification with ShoeboxTestInjector {
