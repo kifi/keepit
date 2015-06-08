@@ -46,7 +46,6 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getUsers(userIds: Seq[Id[User]]): Future[Seq[User]]
   def getUserIdsByExternalIds(userIds: Seq[ExternalId[User]]): Future[Seq[Id[User]]]
   def getBasicUsers(users: Seq[Id[User]]): Future[Map[Id[User], BasicUser]]
-  def getBasicUsersNoCache(users: Seq[Id[User]]): Future[Map[Id[User], BasicUser]]
   def getEmailAddressesForUsers(userIds: Seq[Id[User]]): Future[Map[Id[User], Seq[EmailAddress]]]
   def getPrimaryEmailAddressForUsers(userIds: Seq[Id[User]]): Future[Map[Id[User], Option[EmailAddress]]]
   def getNormalizedURI(uriId: Id[NormalizedURI]): Future[NormalizedURI]
@@ -290,12 +289,6 @@ class ShoeboxServiceClientImpl @Inject() (
         }
       }
     }.map { m => m.map { case (k, v) => (k.userId, v) } }
-  }
-
-  def getBasicUsersNoCache(userIds: Seq[Id[User]]): Future[Map[Id[User], BasicUser]] = {
-    call(Shoebox.internal.getBasicUsersNoCache(), JsArray(userIds.map(x => JsNumber(x.id)))).map { res =>
-      res.json.as[Map[String, BasicUser]].map { u => Id[User](u._1.toLong) -> u._2 }
-    }
   }
 
   def getEmailAddressesForUsers(userIds: Seq[Id[User]]): Future[Map[Id[User], Seq[EmailAddress]]] = {
