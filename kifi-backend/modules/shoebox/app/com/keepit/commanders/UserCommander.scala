@@ -3,6 +3,7 @@ package com.keepit.commanders
 import akka.actor.Scheduler
 import com.google.inject.Inject
 import com.keepit.abook.ABookServiceClient
+import com.keepit.commanders.HandleCommander.{ UnavailableHandleException, InvalidHandleException }
 import com.keepit.commanders.emails.EmailSenderProvider
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.cache.TransactionalCaching
@@ -609,41 +610,15 @@ class UserCommander @Inject() (
     heimdalClient.cancelDelightedSurvey(DelightedUserRegistrationInfo(userId, user.externalId, user.primaryEmail, user.fullName))
   }
 
-  def setUsername(userId: Id[User], username: Username, overrideValidityCheck: Boolean = false, overrideProtection: Boolean = false, readOnly: Boolean = false): Either[String, Username] = {
-    if (overrideValidityCheck || HandleOps.isValid(username.value)) {
-      db.readWrite(attempts = 3) { implicit session =>
-        val existingUser = userRepo.getByUsername(username)
-        if (existingUser.isDefined && existingUser.get.id.get != userId) {
-          log.warn(s"[dry run] for user $userId another user ${existingUser.get} has an existing username: $username")
-          Left("username_exists")
-        } else usernameRepo.getByUsername(username) match {
-          case Some(alias) if (!alias.belongsTo(userId) && (alias.isLocked || (alias.isProtected && !overrideProtection))) =>
-            log.warn(s"[dry run] for user $userId username: $username is locked or protected as an alias by user ${alias.userId}")
-            Left("username_exists")
-          case _ => {
-            if (!readOnly) {
-              val user = userRepo.get(userId)
-              val oldUsernameOpt = user.primaryUsername
-              val normalizedUsername = Username(HandleOps.normalize(username.value))
-
-              oldUsernameOpt.foreach { oldUsername =>
-                if (oldUsername.normalized != normalizedUsername) {
-                  usernameRepo.alias(oldUsername.original, userId, overrideProtection) // create an alias for the old username
-                  usernameRepo.reclaim(username, Some(userId), overrideProtection).get // reclaim any existing alias for the new username
-                }
-              }
-
-              handleCommander.setUsername(username, user, lock = false, overrideProtection = overrideProtection, overrideValidityCheck = overrideValidityCheck).get
-            } else {
-              log.info(s"[dry run] user $userId set with username $username")
-            }
-            Right(username)
-          }
-        }
+  def setUsername(userId: Id[User], username: Username, overrideValidityCheck: Boolean = false, overrideProtection: Boolean = false): Either[String, Username] = {
+    db.readWrite(attempts = 3) { implicit session =>
+      val user = userRepo.get(userId)
+      handleCommander.setUsername(user, username, overrideProtection = overrideProtection, overrideValidityCheck = overrideValidityCheck) match {
+        case Success(updatedUser) => Right(updatedUser.username)
+        case Failure(InvalidHandleException(handle)) => Left("invalid_username")
+        case Failure(_: UnavailableHandleException) => Left("username_exists")
+        case Failure(error) => throw error
       }
-    } else {
-      log.warn(s"[dry run] for user $userId invalid username: $username")
-      Left("invalid_username")
     }
   }
 

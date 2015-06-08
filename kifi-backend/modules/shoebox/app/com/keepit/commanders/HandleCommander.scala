@@ -12,7 +12,7 @@ import com.keepit.model._
 import com.keepit.common.core._
 import com.keepit.common.time._
 import org.apache.commons.lang3.RandomStringUtils
-import scala.util.{ Failure, Success, Try }
+import scala.util.{ Either, Failure, Success, Try }
 
 object HandleCommander {
 
@@ -43,7 +43,7 @@ class HandleCommander @Inject() (
 
   def autoSetUsername(user: User)(implicit session: RWSession): Option[User] = {
     val candidates = generateHandleCandidates(Right((user.firstName, user.lastName))).map { case Handle(handle) => Username(handle) }
-    candidates.toStream.map(setUsername(_, user)).collectFirst {
+    candidates.toStream.map(setUsername(user, _)).collectFirst {
       case Success(userWithUsername) => userWithUsername
     } tap { userWithUsernameOpt =>
       if (userWithUsernameOpt.isEmpty) {
@@ -54,7 +54,7 @@ class HandleCommander @Inject() (
     }
   }
 
-  def setUsername(username: Username, user: User, lock: Boolean = false, overrideProtection: Boolean = false, overrideValidityCheck: Boolean = false)(implicit session: RWSession): Try[User] = {
+  def setUsername(user: User, username: Username, lock: Boolean = false, overrideProtection: Boolean = false, overrideValidityCheck: Boolean = false)(implicit session: RWSession): Try[User] = {
     val userId = user.id.get
     claimUsername(username, userId, lock, overrideProtection, overrideValidityCheck).map { normalizedUsername =>
       val newUsername = PrimaryUsername(original = username, normalized = normalizedUsername)
