@@ -15,6 +15,6 @@ CREATE TABLE user_ip_addresses (
 	CONSTRAINT ip_address_f_user FOREIGN KEY (user_id) REFERENCES user(id)
 );
 
-insert into evolutions(name, description) values('339.sql', 'add user ip address table');
+insert into evolutions(name, description) values('340.sql', 'add user ip address table');
 
 # --- !Downs
