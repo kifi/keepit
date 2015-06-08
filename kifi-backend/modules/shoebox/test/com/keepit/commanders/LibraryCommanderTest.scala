@@ -1,5 +1,6 @@
 package com.keepit.commanders
 
+import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.util.Paginator
 import com.keepit.model.UserFactory._
 import com.keepit.model.LibraryFactoryHelper._
@@ -439,6 +440,47 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         libraryCommander.canViewLibrary(None, libScience) === false
         libraryCommander.canViewLibrary(None, libScience, Some("token-wrong")) === false
         libraryCommander.canViewLibrary(None, libScience, Some("token")) === true
+      }
+    }
+
+    "can move a library to and from organization space" in {
+      withDb(modules: _*) { implicit injector =>
+        val orgRepo = inject[OrganizationRepo]
+        val orgMemberRepo = inject[OrganizationMembershipRepo]
+        val libraryCommander = inject[LibraryCommander]
+        val (user, newLibrary, organization, otherOrg) = db.readWrite { implicit s =>
+          val orgOwner = UserFactory.user().withName("Bruce", "Lee").saved
+          val user: User = UserFactory.user().withName("Jackie", "Chan").saved
+          val newLibrary = library().withUser(user).withVisibility(LibraryVisibility.ORGANIZATION).saved
+          val organization = orgRepo.save(Organization(name = "Kung Fu Academy", ownerId = orgOwner.id.get, handle = None))
+          val otherOrg = orgRepo.save(Organization(name = "Martial Arts", ownerId = orgOwner.id.get, handle = None))
+          orgMemberRepo.save(OrganizationMembership(organizationId = organization.id.get, userId = user.id.get, access = OrganizationAccess.READ_WRITE))
+          (user, newLibrary, organization, otherOrg)
+        }
+
+        // User does not own the library
+        libraryCommander.canMoveToFromOrg(Id[User](0), newLibrary.id.get, None, organization.id) must equalTo(false)
+
+        // User owns the library
+        // Can move libraries to organizations you are part of.
+        libraryCommander.canMoveToFromOrg(user.id.get, newLibrary.id.get, None, organization.id) must equalTo(true)
+        // Cannot inject libraries to random organizations.
+        libraryCommander.canMoveToFromOrg(user.id.get, newLibrary.id.get, None, otherOrg.id) must equalTo(false)
+        // Can move libraries out of organizations you are part of.
+        libraryCommander.canMoveToFromOrg(user.id.get, newLibrary.id.get, organization.id, None) must equalTo(true)
+        // Cannot inject libraries from an organization you are part of to a random organization.
+        libraryCommander.canMoveToFromOrg(user.id.get, newLibrary.id.get, organization.id, otherOrg.id) must equalTo(false)
+        // Cannot remove libraries from other organizations you are not part of.
+        libraryCommander.canMoveToFromOrg(user.id.get, newLibrary.id.get, otherOrg.id, None) must equalTo(false)
+        // Prevent Company Espionage and library stealing!!
+        libraryCommander.canMoveToFromOrg(user.id.get, newLibrary.id.get, otherOrg.id, organization.id) must equalTo(false)
+        // What about if your library is in an organization and you leave
+        db.readWrite { implicit s =>
+          val membership = orgMemberRepo.getByOrgIdAndUserId(organization.id.get, user.id.get)
+          orgMemberRepo.save(membership.get.copy(state = OrganizationMembershipStates.INACTIVE))
+        }
+        // You're out of luck.
+        libraryCommander.canMoveToFromOrg(user.id.get, newLibrary.id.get, organization.id, None) must equalTo(false)
       }
     }
 
