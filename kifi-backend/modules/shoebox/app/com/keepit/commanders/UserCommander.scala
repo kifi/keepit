@@ -26,11 +26,9 @@ import com.keepit.search.SearchServiceClient
 import com.keepit.social.{ BasicUser, SocialNetworks, UserIdentity }
 import com.keepit.typeahead.{ KifiUserTypeahead, SocialUserTypeahead, TypeaheadHit }
 import com.kifi.macros.json
-import org.apache.commons.lang3.RandomStringUtils
 import play.api.libs.json.{ JsObject, JsString, JsSuccess, _ }
 import securesocial.core.{ Identity, Registry, UserService }
 
-import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util._
 
@@ -90,7 +88,6 @@ case class UserNotFoundException(username: Username) extends Exception(username.
 class UserCommander @Inject() (
     db: Database,
     userRepo: UserRepo,
-    usernameRepo: UsernameAliasRepo,
     handleCommander: HandleCommander,
     userCredRepo: UserCredRepo,
     emailRepo: UserEmailAddressRepo,

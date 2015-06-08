@@ -49,7 +49,6 @@ trait ShoeboxInjectionHelpers { self: TestInjectorProvider =>
   def libraryImageRequestRepo(implicit injector: Injector) = inject[LibraryImageRequestRepo]
   def keepImageRepo(implicit injector: Injector) = inject[KeepImageRepo]
   def keepImageRequestRepo(implicit injector: Injector) = inject[KeepImageRequestRepo]
-  def usernameAliasRepo(implicit injector: Injector) = inject[UsernameAliasRepo]
   def handleRepo(implicit injector: Injector) = inject[HandleOwnershipRepo]
   def libraryAliasRepo(implicit injector: Injector) = inject[LibraryAliasRepo]
   def personaRepo(implicit injector: Injector) = inject[PersonaRepo]
