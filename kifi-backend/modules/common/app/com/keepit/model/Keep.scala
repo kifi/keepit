@@ -32,7 +32,8 @@ case class Keep(
     keptAt: DateTime = currentDateTime,
     sourceAttributionId: Option[Id[KeepSourceAttribution]] = None,
     note: Option[String] = None,
-    originalKeeperId: Option[Id[User]] = None) extends ModelWithExternalId[Keep] with ModelWithState[Keep] with ModelWithSeqNumber[Keep] {
+    originalKeeperId: Option[Id[User]] = None,
+    organizationId: Option[Id[Organization]] = None) extends ModelWithExternalId[Keep] with ModelWithState[Keep] with ModelWithSeqNumber[Keep] {
 
   def sanitizeForDelete(): Keep = copy(title = None, state = KeepStates.INACTIVE, kifiInstallation = None)
 
@@ -114,7 +115,7 @@ object Keep {
       (__ \ 'inDisjointLib).read[Boolean] and
       (__ \ 'urlId).read(Id.format[URL]) and
       (__ \ 'url).read[String]).tupled
-    type Rest = (LibraryVisibility, Id[User], State[Keep], KeepSource, Option[ExternalId[KifiInstallation]], SequenceNumber[Keep], Option[Id[Library]], DateTime, Option[Id[KeepSourceAttribution]], Option[String], Option[Id[User]])
+    type Rest = (LibraryVisibility, Id[User], State[Keep], KeepSource, Option[ExternalId[KifiInstallation]], SequenceNumber[Keep], Option[Id[Library]], DateTime, Option[Id[KeepSourceAttribution]], Option[String], Option[Id[User]], Option[Id[Organization]])
     val fields10Up: Reads[Rest] = (
       (__ \ 'visibility).read[LibraryVisibility] and
       (__ \ 'userId).read(Id.format[User]) and
@@ -126,16 +127,18 @@ object Keep {
       (__ \ 'keptAt).read(DateTimeJsonFormat) and
       (__ \ 'sourceAttributionId).readNullable(Id.format[KeepSourceAttribution]) and
       (__ \ 'note).readNullable[String] and
-      (__ \ 'originalKeeperId).readNullable[Id[User]]).tupled
+      (__ \ 'originalKeeperId).readNullable[Id[User]] and
+      (__ \ 'organizationId).readNullable[Id[Organization]]).tupled
 
     val convertToKeep: (First10, Rest) => Keep = (first10, rest) => (first10, rest) match {
       case ((id, createdAt, updatedAt, externalId, title, uriId, isPrimary, inDisjointLib, urlId, url),
-        (visibility, userId, state, source, kifiInstallation, seq, libraryId, keptAt, sourceAttributionId, note, originalKeeperId)) =>
+        (visibility, userId, state, source, kifiInstallation, seq, libraryId, keptAt, sourceAttributionId, note, originalKeeperId, organizationId)) =>
         Keep(id, createdAt, updatedAt, externalId, title,
           uriId = uriId, isPrimary = isPrimary, inDisjointLib = inDisjointLib, urlId = urlId, url = url,
           visibility = visibility, userId = userId, state = state, source = source,
           kifiInstallation = kifiInstallation, seq = seq, libraryId = libraryId, keptAt = keptAt,
-          sourceAttributionId = sourceAttributionId, note = note, originalKeeperId = originalKeeperId)
+          sourceAttributionId = sourceAttributionId, note = note, originalKeeperId = originalKeeperId,
+          organizationId = organizationId)
     }
     (fields1To10 and fields10Up).apply(convertToKeep)
   }
@@ -169,7 +172,8 @@ object Keep {
         "keptAt" -> k.keptAt,
         "sourceAttributionId" -> k.sourceAttributionId,
         "note" -> k.note,
-        "originalKeeperId" -> k.originalKeeperId.orElse(Some(k.userId))
+        "originalKeeperId" -> k.originalKeeperId.orElse(Some(k.userId)),
+        "organizationId" -> k.organizationId
       )
     }
   }
