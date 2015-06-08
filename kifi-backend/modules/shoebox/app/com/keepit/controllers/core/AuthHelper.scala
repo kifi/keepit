@@ -194,6 +194,7 @@ class AuthHelper @Inject() (
 
     val cookieTargetLibId = request.cookies.get("publicLibraryId")
     val cookieIntent = request.cookies.get("intent")
+    val cookieLibAuthToken = request.cookies.get("libraryAuthToken")
     val discardedCookies = Seq(cookieTargetLibId, cookieIntent).flatten.map(c => DiscardingCookie(c.name)) :+ DiscardingCookie("inv")
     val fromTwitterWaitlist = cookieIntent.exists(_.value == "waitlist")
 
