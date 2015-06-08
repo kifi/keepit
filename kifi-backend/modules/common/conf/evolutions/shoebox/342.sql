@@ -7,6 +7,6 @@ ALTER TABLE bookmark
 ALTER TABLE bookmark
     ADD CONSTRAINT `bookmark_f_organization_id` FOREIGN KEY (`organization_id`) REFERENCES organization(`id`);
 
-insert into evolutions(name, description) values('341.sql', 'denormalize organization id onto bookmark to help search know when to show bookmarks');
+insert into evolutions(name, description) values('342.sql', 'denormalize organization id onto bookmark to help search know when to show bookmarks');
 
 # --- !Downs
