@@ -1,6 +1,7 @@
 package com.keepit.controllers.admin
 
 import com.keepit.commanders.emails.ActivityFeedEmailSender
+import com.keepit.common.service.IpAddress
 import com.keepit.curator.CuratorServiceClient
 import com.keepit.shoebox.cron.{ ActivityPusher, ActivityPushScheduler }
 import scala.concurrent.{ Await, Future, Promise }
@@ -974,12 +975,13 @@ class AdminUserController @Inject() (
   }
 
   def userIpAddressesView(ownerId: Id[User]) = AdminUserPage { implicit request =>
-    val (owner, ipAddresses) = db.readOnlyReplica { implicit session =>
+    val (owner, logs, sharedIpAddresses) = db.readOnlyReplica { implicit session =>
       val owner = userRepo.get(ownerId)
-      val ipAddresses: Seq[UserIpAddress] = userIpAddressCommander.getByUser(ownerId)
-      (owner, ipAddresses)
+      val logs: Seq[UserIpAddress] = userIpAddressCommander.getByUser(ownerId)
+      val sharedIpAddresses: Seq[(IpAddress, Int)] = userIpAddressCommander.getSharedIpsByUser(ownerId)
+      (owner, logs, sharedIpAddresses)
     }
-    Ok(html.admin.userIpAddresses(owner, ipAddresses))
+    Ok(html.admin.userIpAddresses(owner, logs, sharedIpAddresses))
   }
 
   def sendActivityEmailToAll() = AdminUserPage(parse.tolerantJson) { implicit request =>

@@ -46,4 +46,7 @@ class UserIpAddressCommander @Inject() (
   def getByUser(userId: Id[User]): Seq[UserIpAddress] = {
     db.readOnlyReplica { implicit session => userIpAddressRepo.getByUser(userId) }
   }
+  def getSharedIpsByUser(userId: Id[User]): Seq[(IpAddress, Int)] = {
+    db.readOnlyReplica { implicit session => userIpAddressRepo.getSharedIpsByUser(userId) }
+  }
 }

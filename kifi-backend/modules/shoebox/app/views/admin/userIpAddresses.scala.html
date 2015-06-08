@@ -1,9 +1,24 @@
+@import com.keepit.common.service.IpAddress
 @(user: User,
-ipAddresses: Seq[UserIpAddress]
+logs: Seq[UserIpAddress],
+sharedIpAddresses: Seq[(IpAddress,Int)]
 )(implicit request: com.keepit.common.controller.UserRequest[_])
 
 @admin("User: " + user.firstName + " " + user.lastName, stylesheets = List("admin_user")) {
-    <h2> Showing @ipAddresses.length</h2>
+    <table class="table table-bordered">
+        <tr>
+            <th>Ip Address</th>
+            <th>Kifi Users Sharing that IP</th>
+        </tr>
+        @for((ipAddress, count) <- sharedIpAddresses) {
+        <tr>
+            <td>@ipAddress</td>
+            <td>@count</td>
+        </tr>
+        }
+    </table>
+
+    <h2> Showing @logs.length</h2>
     <table class="table table-bordered">
         <tr>
             <th>#</th>
@@ -11,12 +26,12 @@ ipAddresses: Seq[UserIpAddress]
             <th>Ip Address</th>
             <th>Agent Type</th>
         </tr>
-        @for((ipAddress, i) <- ipAddresses.zipWithIndex) {
+        @for((log, i) <- logs.zipWithIndex) {
         <tr>
             <td>@{i+1}</td>
-            <td>@ipAddress.createdAt</td>
-            <td>@ipAddress.ipAddress</td>
-            <td>@ipAddress.agentType</td>
+            <td>@log.createdAt</td>
+            <td>@log.ipAddress</td>
+            <td>@log.agentType</td>
         </tr>
         }
     </table>

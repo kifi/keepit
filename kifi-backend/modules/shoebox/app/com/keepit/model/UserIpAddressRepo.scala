@@ -8,10 +8,13 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.service.IpAddress
 import com.keepit.common.time.Clock
 
+import scala.slick.jdbc.GetResult
+
 @ImplementedBy(classOf[UserIpAddressRepoImpl])
 trait UserIpAddressRepo extends Repo[UserIpAddress] {
   def getByUser(userId: Id[User])(implicit session: RSession): Seq[UserIpAddress]
-  def getMostCommonIpAndCountForUser(userId: Id[User])(implicit session: RSession): (IpAddress, Int)
+  def countByUser(ownerId: Id[User])(implicit session: RSession): Int
+  def getSharedIpsByUser(userId: Id[User])(implicit session: RSession): Seq[(IpAddress, Int)]
 }
 
 @Singleton
@@ -25,9 +28,9 @@ class UserIpAddressRepoImpl @Inject() (
 
   type RepoImpl = UserIpAddressTable
   class UserIpAddressTable(tag: Tag) extends RepoTable[UserIpAddress](db, tag, "user_ip_addresses") {
-    def userId = column[Id[User]]("user_id", O.Nullable)
-    def ipAddress = column[IpAddress]("ip_address", O.Nullable)
-    def agentType = column[String]("agent_type", O.Nullable)
+    def userId = column[Id[User]]("user_id", O.NotNull)
+    def ipAddress = column[IpAddress]("ip_address", O.NotNull)
+    def agentType = column[String]("agent_type", O.NotNull)
 
     def * = (id.?, createdAt, updatedAt, state, userId, ipAddress, agentType) <> ((UserIpAddress.apply _).tupled, UserIpAddress.unapply)
   }
@@ -38,6 +41,18 @@ class UserIpAddressRepoImpl @Inject() (
   def invalidateCache(model: UserIpAddress)(implicit session: RSession): Unit = {}
   def deleteCache(model: UserIpAddress)(implicit session: RSession): Unit = {}
 
-  def getByUser(userId: Id[User])(implicit session: RSession): Seq[UserIpAddress] =
-    (for (b <- rows if b.userId == userId) yield b).list
+  def getByUser(ownerId: Id[User])(implicit session: RSession): Seq[UserIpAddress] = {
+    (for { row <- rows if row.userId === ownerId } yield row).sortBy(_.createdAt.desc).list
+  }
+
+  def countByUser(userId: Id[User])(implicit session: RSession): Int = {
+    Query((for (r <- rows if r.userId === userId) yield r).length).first
+  }
+
+  implicit val getIpIntResult = GetResult(r => (IpAddress(r.<<), r.<< : Int))
+  def getSharedIpsByUser(userId: Id[User])(implicit session: RSession): Seq[(IpAddress, Int)] = {
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
+    val result = sql"""select distinct a.ip_address, (select count(distinct b.user_id) from user_ip_addresses b where b.ip_address = a.ip_address) as n from user_ip_addresses a where a.user_id = $userId order by n desc;"""
+    result.as[(IpAddress, Int)].list
+  }
 }
