@@ -47,12 +47,13 @@ class LibrarySubscriptionCommander @Inject() (
           val text = s"<http://www.kifi.com/${keeper.username.value}|${keeper.fullName}> just added <${keep.url}|${keep.title.getOrElse("a keep")}> to the <http://www.kifi.com/${keeper.username.value}/${library.slug.value}|${library.name}> library." // slack hypertext uses the < url | text > format
           val body = BasicSlackMessage(text)
           val response = httpLock.withLockFuture(client.postFuture(DirectUrl(info.url), Json.toJson(body)))
+          log.info(s"sendNewKeepMessage: Slack message request sent to subscription.id=${subscription.id}")
           response onFailure {
-            case t => log.error("[LibrarySubscriptionCommander] Slack message failed to send: " + t.getMessage); Future.failed(t)
+            case t => log.error("sendNewKeepMessage: Slack message failed to send: " + t.getMessage); Future.failed(t)
           }
           response
         case _ =>
-          Future.failed(new NoSuchFieldException("[LibrarySubscriptionCommander] sendNewKeepMessage: SubscriptionInfo not supported"))
+          Future.failed(new NoSuchFieldException("sendNewKeepMessage: SubscriptionInfo not supported"))
       }
     }
   }

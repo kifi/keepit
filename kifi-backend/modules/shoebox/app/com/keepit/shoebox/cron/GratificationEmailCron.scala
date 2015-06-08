@@ -61,7 +61,7 @@ class GratificationEmailActor @Inject() (
     case SendEmails =>
       emailCommander.usersToSendEmailTo.map { ids => ids.foreach { id => emailSender.sendToUser(id, Some(testDestinationEmail)) } }
     case SendOddEmails =>
-      emailCommander.usersToSendEmailTo.map { ids => ids.filter { id => id.id % 2 == 0 }.foreach { id => emailSender.sendToUser(id, None) } }
+      emailCommander.usersToSendEmailTo.map { ids => ids.filter { id => id.id % 2 == 1 }.foreach { id => emailSender.sendToUser(id, None) } }
     case SendEvenEmails =>
       emailCommander.usersToSendEmailTo.map { ids => ids.filter { id => id.id % 2 == 0 }.foreach { id => emailSender.sendToUser(id, None) } }
   }
