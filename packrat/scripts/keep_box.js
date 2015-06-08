@@ -1098,7 +1098,7 @@ k.keepBox = k.keepBox || (function () {
 
   function setExtraInfo(lib) {
     function smartlyListCollaboratorNames(collabs) {
-      var names = 'Me'; //max 18 characters
+      var names = 'Me'; //max 15 characters
       while (names.length < 15 && collabs.length > 0) {
         var collab = collabs.shift();
         names = names + ', ' + collab.firstName;
