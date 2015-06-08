@@ -55,7 +55,7 @@ class OAuth2Test extends Specification with ShoeboxApplicationInjector {
     path === s"/signup/${providerConfig.name}"
 
     val request = FakeRequest("GET", path)
-    val result = authController.signup(providerConfig.name)(request)
+    val result = authController.signup(providerConfig.name, None, None, None)(request)
 
     status(result) === SEE_OTHER // 303
     val sess = session(result)
