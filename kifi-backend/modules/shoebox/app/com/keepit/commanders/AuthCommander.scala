@@ -117,6 +117,7 @@ class AuthCommander @Inject() (
     implicit val executionContext: ExecutionContext,
     userExperimentCommander: LocalUserExperimentCommander,
     userCommander: UserCommander,
+    handleCommander: HandleCommander,
     heimdalServiceClient: HeimdalServiceClient) extends Logging {
 
   def emailAddressMatchesSomeKifiUser(addr: EmailAddress): Boolean = {
@@ -215,13 +216,9 @@ class AuthCommander @Inject() (
         userValueRepo.setValue(userId, UserValueName.HAS_NO_PASSWORD, true)
       }
 
-      val userPreUsername = db.readOnlyMaster { implicit session =>
-        userRepo.get(userId)
-      }
-
-      userCommander.autoSetUsername(userPreUsername, readOnly = false)
-      val user = db.readOnlyMaster { implicit session =>
-        userRepo.get(userId)
+      val user = db.readWrite { implicit session =>
+        val userPreUsername = userRepo.get(userId)
+        handleCommander.autoSetUsername(userPreUsername) getOrElse userPreUsername
       }
 
       reportUserRegistration(user, inviteExtIdOpt)
@@ -247,13 +244,10 @@ class AuthCommander @Inject() (
       val passwordInfo = identity.passwordInfo.get
       val email = EmailAddress.validate(identity.email.get).get
       val (newIdentity, _) = saveUserPasswordIdentity(Some(userId), identityOpt, email = email, passwordInfo = passwordInfo, firstName = efi.firstName, lastName = efi.lastName, isComplete = true)
-      val userPreUsername = db.readOnlyMaster { implicit session =>
-        userRepo.get(userId)
-      }
 
-      userCommander.autoSetUsername(userPreUsername, readOnly = false)
-      val user = db.readOnlyMaster { implicit session =>
-        userRepo.get(userId)
+      val user = db.readWrite { implicit session =>
+        val userPreUsername = userRepo.get(userId)
+        handleCommander.autoSetUsername(userPreUsername) getOrElse userPreUsername
       }
 
       reportUserRegistration(user, inviteExtIdOpt)

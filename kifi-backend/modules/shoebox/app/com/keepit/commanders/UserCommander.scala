@@ -3,6 +3,7 @@ package com.keepit.commanders
 import akka.actor.Scheduler
 import com.google.inject.Inject
 import com.keepit.abook.ABookServiceClient
+import com.keepit.commanders.HandleCommander.{ UnavailableHandleException, InvalidHandleException }
 import com.keepit.commanders.emails.EmailSenderProvider
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.cache.TransactionalCaching
@@ -25,11 +26,9 @@ import com.keepit.search.SearchServiceClient
 import com.keepit.social.{ BasicUser, SocialNetworks, UserIdentity }
 import com.keepit.typeahead.{ KifiUserTypeahead, SocialUserTypeahead, TypeaheadHit }
 import com.kifi.macros.json
-import org.apache.commons.lang3.RandomStringUtils
 import play.api.libs.json.{ JsObject, JsString, JsSuccess, _ }
 import securesocial.core.{ Identity, Registry, UserService }
 
-import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util._
 
@@ -89,7 +88,6 @@ case class UserNotFoundException(username: Username) extends Exception(username.
 class UserCommander @Inject() (
     db: Database,
     userRepo: UserRepo,
-    usernameRepo: UsernameAliasRepo,
     handleCommander: HandleCommander,
     userCredRepo: UserCredRepo,
     emailRepo: UserEmailAddressRepo,
@@ -303,14 +301,11 @@ class UserCommander @Inject() (
   }
 
   def createUser(firstName: String, lastName: String, addrOpt: Option[EmailAddress], state: State[User]) = {
-    val usernameCandidates = createUsernameCandidates(firstName, lastName)
     val newUser = db.readWrite(attempts = 3) { implicit session =>
       val user = userRepo.save(
         User(firstName = firstName, lastName = lastName, primaryEmail = addrOpt, state = state)
       )
-      usernameCandidates.toStream.map(handleCommander.setUsername(_, user)).collectFirst {
-        case Success(userWithUsername) => userWithUsername
-      } getOrElse {
+      handleCommander.autoSetUsername(user) getOrElse {
         throw new Exception(s"COULD NOT CREATE USER [$firstName $lastName] $addrOpt SINCE WE DIDN'T FIND A USERNAME!!!")
       }
     }
@@ -612,93 +607,16 @@ class UserCommander @Inject() (
     heimdalClient.cancelDelightedSurvey(DelightedUserRegistrationInfo(userId, user.externalId, user.primaryEmail, user.fullName))
   }
 
-  def setUsername(userId: Id[User], username: Username, overrideValidityCheck: Boolean = false, overrideProtection: Boolean = false, readOnly: Boolean = false): Either[String, Username] = {
-    if (overrideValidityCheck || HandleOps.isValid(username.value)) {
-      db.readWrite(attempts = 3) { implicit session =>
-        val existingUser = userRepo.getByUsername(username)
-        if (existingUser.isDefined && existingUser.get.id.get != userId) {
-          log.warn(s"[dry run] for user $userId another user ${existingUser.get} has an existing username: $username")
-          Left("username_exists")
-        } else usernameRepo.getByUsername(username) match {
-          case Some(alias) if (!alias.belongsTo(userId) && (alias.isLocked || (alias.isProtected && !overrideProtection))) =>
-            log.warn(s"[dry run] for user $userId username: $username is locked or protected as an alias by user ${alias.userId}")
-            Left("username_exists")
-          case _ => {
-            if (!readOnly) {
-              val user = userRepo.get(userId)
-              val oldUsernameOpt = user.primaryUsername
-              val normalizedUsername = Username(HandleOps.normalize(username.value))
-
-              oldUsernameOpt.foreach { oldUsername =>
-                if (oldUsername.normalized != normalizedUsername) {
-                  usernameRepo.alias(oldUsername.original, userId, overrideProtection) // create an alias for the old username
-                  usernameRepo.reclaim(username, Some(userId), overrideProtection).get // reclaim any existing alias for the new username
-                }
-              }
-
-              handleCommander.setUsername(username, user, lock = false, overrideProtection = overrideProtection, overrideValidityCheck = overrideValidityCheck).get
-            } else {
-              log.info(s"[dry run] user $userId set with username $username")
-            }
-            Right(username)
-          }
-        }
-      }
-    } else {
-      log.warn(s"[dry run] for user $userId invalid username: $username")
-      Left("invalid_username")
-    }
-  }
-
-  private def createUsernameCandidates(rawFirstName: String, rawLastName: String): Seq[Username] = {
-    val firstName = HandleOps.lettersOnly(rawFirstName.trim).take(15).toLowerCase
-    val lastName = HandleOps.lettersOnly(rawLastName.trim).take(15).toLowerCase
-    val name = if (firstName.isEmpty || lastName.isEmpty) {
-      if (firstName.isEmpty) lastName else firstName
-    } else {
-      s"$firstName-$lastName"
-    }
-    val seed = if (name.length < 4) {
-      val filler = Seq.fill(4 - name.length)(0)
-      s"$name-$filler"
-    } else name
-    def randomNumber = scala.util.Random.nextInt(999)
-    val censorList = HandleOps.censorList.mkString("|")
-    val preCandidates = ArrayBuffer[String]()
-    preCandidates += seed
-    preCandidates ++= (1 to 30).map(n => s"$seed-$randomNumber").toList
-    preCandidates ++= (10 to 20).map(n => RandomStringUtils.randomAlphanumeric(n)).toList
-    val candidates = preCandidates.map { name =>
-      log.info(s"validating username $name for user $firstName $lastName")
-      val valid = if (HandleOps.isValid(name)) name else name.replaceAll(censorList, s"C${randomNumber}C")
-      log.info(s"username $name is valid")
-      valid
-    }.filter(HandleOps.isValid)
-    if (candidates.isEmpty) throw new Exception(s"Could not create candidates for user $firstName $lastName")
-    candidates map { c => Username(c) }
-  }
-
-  def autoSetUsername(user: User, readOnly: Boolean): Option[Username] = {
-    val candidates = createUsernameCandidates(user.firstName, user.lastName)
-    var keepTrying = true
-    var selectedUsername: Option[Username] = None
-    var i = 0
-    log.info(s"trying to set user $user with ${candidates.size} candidate usernames: $candidates")
-    while (keepTrying && i < candidates.size) {
-      val candidate = candidates(i)
-      setUsername(user.id.get, candidate, readOnly = readOnly) match {
-        case Right(username) =>
-          keepTrying = false
-          selectedUsername = Some(username)
-        case Left(_) =>
-          i += 1
-          log.warn(s"[trial $i] could not set username $candidate for user $user")
+  def setUsername(userId: Id[User], username: Username, overrideValidityCheck: Boolean = false, overrideProtection: Boolean = false): Either[String, Username] = {
+    db.readWrite(attempts = 3) { implicit session =>
+      val user = userRepo.get(userId)
+      handleCommander.setUsername(user, username, overrideProtection = overrideProtection, overrideValidityCheck = overrideValidityCheck) match {
+        case Success(updatedUser) => Right(updatedUser.username)
+        case Failure(InvalidHandleException(handle)) => Left("invalid_username")
+        case Failure(_: UnavailableHandleException) => Left("username_exists")
+        case Failure(error) => throw error
       }
     }
-    if (keepTrying) {
-      log.warn(s"could not find a decent username for user $user, tried the following candidates: $candidates")
-    }
-    selectedUsername
   }
 
   def importSocialEmail(userId: Id[User], emailAddress: EmailAddress): UserEmailAddress = {
@@ -811,10 +729,12 @@ class UserCommander @Inject() (
     counter
   }
 
-  def getUserByUsernameOrAlias(username: Username): Option[(User, Boolean)] = {
+  def getUserByUsername(username: Username): Option[(User, Boolean)] = {
     db.readOnlyMaster { implicit session =>
-      userRepo.getByUsername(username).filter(_.state == UserStates.ACTIVE).map((_, false)) orElse
-        usernameRepo.getByUsername(username).map(alias => (userRepo.get(alias.userId), true))
+      handleCommander.getByHandle(username).collect {
+        case (Right(user), isPrimary) if user.state == UserStates.ACTIVE =>
+          (user, isPrimary)
+      }
     }
   }
 

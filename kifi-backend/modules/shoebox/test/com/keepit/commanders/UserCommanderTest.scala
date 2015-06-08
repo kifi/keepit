@@ -176,15 +176,6 @@ class UserCommanderTest extends Specification with ShoeboxTestInjector {
       }
     }
 
-    "normalize usernames" in {
-      HandleOps.normalize("léo") === "leo"
-      HandleOps.normalize("andrew.conner2") === "andrewconner2"
-      HandleOps.normalize("康弘康弘") === "康弘康弘"
-      HandleOps.normalize("ân_dréw-c.ön.nér") === "andrewconner"
-      HandleOps.normalize("bob1234") === "bob1234"
-      HandleOps.normalize("123bob1234") === "123bob1234"
-    }
-
     "allow change of username" in {
       withDb(modules: _*) { implicit injector =>
         val userCommander = inject[UserCommander]
