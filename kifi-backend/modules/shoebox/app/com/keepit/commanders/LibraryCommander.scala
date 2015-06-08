@@ -732,10 +732,10 @@ class LibraryCommander @Inject() (
             organizationMembershipRepo.getByOrgIdAndUserId(fromOrg, userId).nonEmpty
           case None => true // Can move libraries from Personal space to Organization Space.
         }) && (to match {
-        case Some(toOrg) => // No Need to check access for MVP, if they are part of an Organization they can move libraries to it.
-          organizationMembershipRepo.getByOrgIdAndUserId(toOrg, userId).nonEmpty
-        case None => true // Can move from Organization Space to Personal space.
-      })
+          case Some(toOrg) => // No Need to check access for MVP, if they are part of an Organization they can move libraries to it.
+            organizationMembershipRepo.getByOrgIdAndUserId(toOrg, userId).nonEmpty
+          case None => true // Can move from Organization Space to Personal space.
+        })
     }
   }
 
