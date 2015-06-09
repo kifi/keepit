@@ -76,7 +76,8 @@ angular.module('kifi')
             slug: scope.library.slug,
             visibility: scope.library.visibility,
             listed: scope.library.membership.listed,
-            color: colorNames[scope.library.color]
+            color: colorNames[scope.library.color],
+            subscriptions: scope.library.subscriptions
           }, true).then(function (resp) {
             libraryService.fetchLibraryInfos(true);
 
@@ -232,6 +233,9 @@ angular.module('kifi')
           scope.modifyingExistingLibrary = true;
           scope.emptySlug = false;
           scope.modalTitle = scope.library.name;
+          if (!scope.library.subscriptions) {
+            scope.library.subscriptions = []
+          }
         } else {
           scope.library = {
             'name': '',
