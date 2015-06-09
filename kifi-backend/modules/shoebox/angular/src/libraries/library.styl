@@ -41,6 +41,7 @@ twoColMinWidth = appSidePad1 + leftColWidth + colGapWidth + rightColWidth + appS
 
 .kf-lib-tweet
 .kf-lib-fpost
+.kf-lib-rss
   display: none
 
   @media (min-width: twoColMinWidth)
@@ -68,15 +69,28 @@ twoColMinWidth = appSidePad1 + leftColWidth + colGapWidth + rightColWidth + appS
   border: 0
   padding: 0
   background-color: #3a57a1
-  margin-bottom: 2.5em
+  margin-bottom: .75em
 
   &::after
     content: 'Post'
     vertical-align: middle
     margin-left: .6em
 
+.kf-lib-rss
+  width: 100%
+  border: 0
+  padding: 0
+  background-color: #ff8000
+  margin-bottom: 2.5em
+
+  &::after
+    content: 'Subscribe'
+    vertical-align: middle
+    margin-left: .6em
+
 .kf-lib-tweet-icon
 .kf-lib-fpost-icon
+.kf-lib-rss-icon
   display: inline-block
   vertical-align: middle
   width: 1.2em
