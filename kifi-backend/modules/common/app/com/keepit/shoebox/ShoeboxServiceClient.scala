@@ -279,16 +279,23 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getBasicUsers(userIds: Seq[Id[User]]): Future[Map[Id[User], BasicUser]] = {
-    cacheProvider.basicUserCache.bulkGetOrElseFuture(userIds.map { BasicUserUserIdKey(_) }.toSet) { keys =>
-      redundantDBConnectionCheck(keys)
-      val payload = JsArray(keys.toSeq.map(x => JsNumber(x.userId.id)))
-      call(Shoebox.internal.getBasicUsers(), payload).map { res =>
-        res.json.as[Map[String, BasicUser]].map { u =>
-          val id = Id[User](u._1.toLong)
-          (BasicUserUserIdKey(id), u._2)
+    val uniqueUserIds = userIds.toSet
+    Future {
+      cacheProvider.basicUserCache.bulkGet(uniqueUserIds.map(BasicUserUserIdKey(_))).collect {
+        case (BasicUserUserIdKey(userId), Some(basicUser)) => userId -> basicUser
+      }
+    } flatMap { cached =>
+      val missingUserIds = uniqueUserIds -- cached.keySet
+      if (missingUserIds.isEmpty) Future.successful(cached)
+      else {
+        val payload = Json.toJson(missingUserIds)
+        call(Shoebox.internal.getBasicUsers(), payload).map { res =>
+          implicit val tupleReads = TupleFormat.tuple2Reads[Id[User], BasicUser]
+          val missing = res.json.as[Seq[(Id[User], BasicUser)]].toMap
+          cached ++ missing
         }
       }
-    }.map { m => m.map { case (k, v) => (k.userId, v) } }
+    }
   }
 
   def getEmailAddressesForUsers(userIds: Seq[Id[User]]): Future[Map[Id[User], Seq[EmailAddress]]] = {

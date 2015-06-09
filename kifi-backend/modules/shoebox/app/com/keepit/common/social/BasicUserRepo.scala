@@ -1,19 +1,19 @@
 package com.keepit.common.social
 
-import com.keepit.common.db.{ ExternalId, Id }
-import com.keepit.model.{ UserRepo, User }
+import com.keepit.common.db.{ Id }
+import com.keepit.common.healthcheck.{ AirbrakeNotifier }
+import com.keepit.model._
 import com.google.inject.Inject
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.social._
 
 class BasicUserRepo @Inject() (
     userRepo: UserRepo,
-    basicUserCache: BasicUserUserIdCache) {
+    basicUserCache: BasicUserUserIdCache,
+    airbrake: AirbrakeNotifier) {
 
   def load(userId: Id[User])(implicit session: RSession): BasicUser = {
-    basicUserCache.getOrElse(BasicUserUserIdKey(userId)) {
-      BasicUser.fromUser(userRepo.get(userId))
-    }
+    loadActive(userId) getOrElse loadInactive(userId)
   }
 
   def loadAll(userIds: Set[Id[User]])(implicit session: RSession): Map[Id[User], BasicUser] = {
@@ -23,11 +23,34 @@ class BasicUserRepo @Inject() (
       val userId = userIds.head
       Map(userId -> load(userId))
     } else {
-      basicUserCache.bulkGetOrElse(userIds map BasicUserUserIdKey) { keys =>
-        userRepo.getAllUsers(keys.map(_.userId).toSeq).map {
-          case (userId, user) => BasicUserUserIdKey(userId) -> BasicUser.fromUser(user)
-        }.toMap
-      }.map { case (k, v) => k.userId -> v }
+      val activeBasicUsers = loadAllActive(userIds)
+      userIds.map { userId =>
+        userId -> activeBasicUsers.getOrElse(userId, loadInactive(userId))
+      }.toMap
     }
+  }
+
+  def loadActive(userId: Id[User])(implicit session: RSession): Option[BasicUser] = {
+    basicUserCache.getOrElseOpt(BasicUserUserIdKey(userId)) {
+      Some(userRepo.get(userId)).filter(_.state == UserStates.ACTIVE).map(BasicUser.fromUser)
+    }
+  }
+
+  def loadAllActive(userIds: Set[Id[User]])(implicit session: RSession): Map[Id[User], BasicUser] = {
+    basicUserCache.bulkGetOrElseOpt(userIds map BasicUserUserIdKey) { keys =>
+      userRepo.getAllUsers(keys.map(_.userId).toSeq).collect {
+        case (userId, user) => BasicUserUserIdKey(userId) -> (if (user.state == UserStates.ACTIVE) Some(BasicUser.fromUser(user)) else None)
+      }.toMap
+    }.collect { case (k, Some(v)) => k.userId -> v }
+  }
+
+  private def loadInactive(userId: Id[User])(implicit session: RSession): BasicUser = {
+    val user = userRepo.get(userId)
+    airbrake.notify(s"Loading BasicUser for inactive user: $user")
+    toBasicUserSafely(user)
+  }
+
+  private def toBasicUserSafely(user: User): BasicUser = {
+    BasicUser.fromUser(user.copy(primaryUsername = user.primaryUsername orElse Some(PrimaryUsername(Username(""), Username("")))))
   }
 }
