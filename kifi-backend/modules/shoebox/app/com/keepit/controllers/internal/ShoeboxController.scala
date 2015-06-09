@@ -225,11 +225,13 @@ class ShoeboxController @Inject() (
   }
 
   def getBasicUsers() = Action(parse.tolerantJson) { request =>
-    val userIds = request.body.as[JsArray].value.map { x => Id[User](x.as[Long]) }
-    val users = db.readOnlyMaster { implicit s => //using cache
-      basicUserRepo.loadAll(userIds.toSet).map { case (id, bu) => id.id.toString -> Json.toJson(bu) }.toMap
+    val userIds = request.body.as[Set[Id[User]]]
+    val basicUsers = db.readOnlyMaster { implicit s => //using cache
+      basicUserRepo.loadAll(userIds)
     }
-    Ok(Json.toJson(users))
+    implicit val tupleWrites = TupleFormat.tuple2Writes[Id[User], BasicUser]
+    val result = Json.toJson(basicUsers.toSeq)
+    Ok(result)
   }
 
   def getEmailAddressesForUsers() = Action(parse.tolerantJson) { request =>
