@@ -113,7 +113,7 @@ angular.module('kifi')
             if (isMobile) {
               platformService.goToAppOrStore();
             } else {
-              signupService.register(userData);
+              signupService.register(userData);  // todo follow intent, include authToken
             }
           }
         });

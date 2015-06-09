@@ -46,7 +46,6 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getUsers(userIds: Seq[Id[User]]): Future[Seq[User]]
   def getUserIdsByExternalIds(userIds: Seq[ExternalId[User]]): Future[Seq[Id[User]]]
   def getBasicUsers(users: Seq[Id[User]]): Future[Map[Id[User], BasicUser]]
-  def getBasicUsersNoCache(users: Seq[Id[User]]): Future[Map[Id[User], BasicUser]]
   def getEmailAddressesForUsers(userIds: Seq[Id[User]]): Future[Map[Id[User], Seq[EmailAddress]]]
   def getPrimaryEmailAddressForUsers(userIds: Seq[Id[User]]): Future[Map[Id[User], Option[EmailAddress]]]
   def getNormalizedURI(uriId: Id[NormalizedURI]): Future[NormalizedURI]
@@ -280,21 +279,22 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getBasicUsers(userIds: Seq[Id[User]]): Future[Map[Id[User], BasicUser]] = {
-    cacheProvider.basicUserCache.bulkGetOrElseFuture(userIds.map { BasicUserUserIdKey(_) }.toSet) { keys =>
-      redundantDBConnectionCheck(keys)
-      val payload = JsArray(keys.toSeq.map(x => JsNumber(x.userId.id)))
-      call(Shoebox.internal.getBasicUsers(), payload).map { res =>
-        res.json.as[Map[String, BasicUser]].map { u =>
-          val id = Id[User](u._1.toLong)
-          (BasicUserUserIdKey(id), u._2)
+    val uniqueUserIds = userIds.toSet
+    Future {
+      cacheProvider.basicUserCache.bulkGet(uniqueUserIds.map(BasicUserUserIdKey(_))).collect {
+        case (BasicUserUserIdKey(userId), Some(basicUser)) => userId -> basicUser
+      }
+    } flatMap { cached =>
+      val missingUserIds = uniqueUserIds -- cached.keySet
+      if (missingUserIds.isEmpty) Future.successful(cached)
+      else {
+        val payload = Json.toJson(missingUserIds)
+        call(Shoebox.internal.getBasicUsers(), payload).map { res =>
+          implicit val tupleReads = TupleFormat.tuple2Reads[Id[User], BasicUser]
+          val missing = res.json.as[Seq[(Id[User], BasicUser)]].toMap
+          cached ++ missing
         }
       }
-    }.map { m => m.map { case (k, v) => (k.userId, v) } }
-  }
-
-  def getBasicUsersNoCache(userIds: Seq[Id[User]]): Future[Map[Id[User], BasicUser]] = {
-    call(Shoebox.internal.getBasicUsersNoCache(), JsArray(userIds.map(x => JsNumber(x.id)))).map { res =>
-      res.json.as[Map[String, BasicUser]].map { u => Id[User](u._1.toLong) -> u._2 }
     }
   }
 

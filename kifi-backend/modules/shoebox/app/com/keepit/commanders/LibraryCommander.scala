@@ -723,6 +723,22 @@ class LibraryCommander @Inject() (
     library.state == LibraryStates.ACTIVE && canViewLibrary(userId, library, accessToken)
   }
 
+  def canMoveToFromOrg(userId: Id[User], libId: Id[Library], from: Option[Id[Organization]], to: Option[Id[Organization]]): Boolean = {
+    // lib.ownerId = userId && userId is in `from` and `to`
+    db.readOnlyMaster { implicit s =>
+      (libraryRepo.get(libId).ownerId == userId) &&
+        (from match {
+          case Some(fromOrg) => // No Need to check access for MVP, if they are part of an Organization they can move libraries from it.
+            organizationMembershipRepo.getByOrgIdAndUserId(fromOrg, userId).nonEmpty
+          case None => true // Can move libraries from Personal space to Organization Space.
+        }) && (to match {
+          case Some(toOrg) => // No Need to check access for MVP, if they are part of an Organization they can move libraries to it.
+            organizationMembershipRepo.getByOrgIdAndUserId(toOrg, userId).nonEmpty
+          case None => true // Can move from Organization Space to Personal space.
+        })
+    }
+  }
+
   def getLibrariesByUser(userId: Id[User]): (Seq[(LibraryMembership, Library)], Seq[(LibraryInvite, Library)]) = {
     db.readOnlyMaster { implicit s =>
       val myLibraries = libraryRepo.getByUser(userId)
@@ -1276,11 +1292,11 @@ class LibraryCommander @Inject() (
     val ownerIdentifier = ExternalId.asOpt[User](username).map(Left(_)) getOrElse Right(Username(username))
     val ownerOpt = ownerIdentifier match {
       case Left(externalId) => db.readOnlyMaster { implicit s => userRepo.getOpt(externalId).map((_, false)) }
-      case Right(username) => userCommander.get.getUserByUsernameOrAlias(username)
+      case Right(username) => userCommander.get.getUserByUsername(username)
     }
     ownerOpt match {
       case None => Left(LibraryFail(BAD_REQUEST, "invalid_username"))
-      case Some((owner, isUserAlias)) =>
+      case Some((owner, _)) =>
         getLibraryBySlugOrAlias(owner.id.get, slug) match {
           case None => Left(LibraryFail(NOT_FOUND, "no_library_found"))
           case Some((library, isLibraryAlias)) =>

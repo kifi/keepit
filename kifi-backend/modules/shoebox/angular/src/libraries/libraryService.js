@@ -43,7 +43,7 @@ angular.module('kifi')
     //
     var api = {
       getOwnInfos: function () {
-        return infos.slice();
+        return (infos || []).slice();
       },
 
       getSysMainInfo: function () {

@@ -58,7 +58,10 @@ class LibraryController @Inject() (
 
   private def getSuggestedSearchesAsJson(libId: Id[Library]): JsValue = {
     val top = suggestedSearchCommander.getSuggestedTermsForLibrary(libId, limit = 10, kind = SuggestedSearchTermKind.AUTO)
-    val (terms, weights) = top.terms.toArray.sortBy(-_._2).unzip
+    val (terms, weights): (Array[String], Array[Float]) = if (top.terms.size < 10) (Array[String](), Array[Float]()) else {
+      val (tms, ws) = top.terms.toArray.sortBy(-_._2).unzip
+      (tms.toArray, ws.toArray)
+    }
     Json.obj("terms" -> terms, "weights" -> weights)
   }
 
