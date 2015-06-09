@@ -663,28 +663,18 @@ class UserCommander @Inject() (
 
         val allUserIds = mutualFriends.values.flatten.toSet ++ recommendedUsers
 
-        Try(loadBasicUsersAndConnectionCounts(allUserIds, allUserIds)) match {
-          case Failure(Username.UndefinedUsernameException(invalidUser)) if invalidUser.state == UserStates.INACTIVE => {
-            airbrake.notify(s"Ran into inactive user ${invalidUser.id.get}, clearing cached related entities from Graph for user $userId.")
-            futureRelatedUsers.onComplete { _ => graphServiceClient.refreshSociallyRelatedEntities(userId) }
-            Future.successful(None)
-          }
+        val (basicUsers, userConnectionCounts) = loadBasicUsersAndConnectionCounts(allUserIds, allUserIds)
 
-          case Failure(error) => Future.failed(error)
+        futureRelatedUsers.map { sociallyRelatedEntitiesOpt =>
 
-          case Success((basicUsers, userConnectionCounts)) =>
+          val friendshipStrength = {
+            val relatedUsers = sociallyRelatedEntitiesOpt.map(_.users.related) getOrElse Seq.empty
+            relatedUsers.filter { case (userId, _) => friends.contains(userId) }
+          }.toMap[Id[User], Double].withDefaultValue(0d)
 
-            futureRelatedUsers.map { sociallyRelatedEntitiesOpt =>
+          val sortedMutualFriends = mutualFriends.mapValues(_.toSeq.sortBy(-friendshipStrength(_)))
 
-              val friendshipStrength = {
-                val relatedUsers = sociallyRelatedEntitiesOpt.map(_.users.related) getOrElse Seq.empty
-                relatedUsers.filter { case (userId, _) => friends.contains(userId) }
-              }.toMap[Id[User], Double].withDefaultValue(0d)
-
-              val sortedMutualFriends = mutualFriends.mapValues(_.toSeq.sortBy(-friendshipStrength(_)))
-
-              Some(FriendRecommendations(basicUsers, userConnectionCounts, recommendedUsers, sortedMutualFriends, mutualLibrariesCounts))
-            }
+          Some(FriendRecommendations(basicUsers, userConnectionCounts, recommendedUsers, sortedMutualFriends, mutualLibrariesCounts))
         }
     }
   }

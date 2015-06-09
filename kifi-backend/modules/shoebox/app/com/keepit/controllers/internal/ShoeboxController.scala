@@ -232,17 +232,6 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(users))
   }
 
-  def getBasicUsersNoCache() = Action(parse.tolerantJson) { request =>
-    val userIds = request.body.as[JsArray].value.map { x => Id[User](x.as[Long]) }
-    val users = db.readOnlyMaster { implicit s => //using cache
-      userIds.map { userId =>
-        val user = userRepo.getNoCache(userId)
-        userId.id.toString -> Json.toJson(BasicUser.fromUser(user))
-      }.toMap
-    }
-    Ok(Json.toJson(users))
-  }
-
   def getEmailAddressesForUsers() = Action(parse.tolerantJson) { request =>
     val userIds = request.body.as[JsArray].value.map { x => Id[User](x.as[Long]) }
     val emails = db.readOnlyReplica(2) { implicit s =>
