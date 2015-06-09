@@ -1,8 +1,18 @@
 @import com.keepit.common.service.IpAddress
 @(user: User,
 logs: Seq[UserIpAddress],
-sharedIpAddresses: Seq[(IpAddress,Int)]
+sharedIpAddresses: Map[IpAddress,Seq[Id[User]]]
 )(implicit request: com.keepit.common.controller.UserRequest[_])
+
+@formatListOfUsers(userIds: Seq[Id[User]]) = {
+    <ul>
+    @for(uid <- userIds) {
+        <li>
+        <a href=com.keepit.controllers.admin.routes.AdminUserController.userView(uid)">uid</a>
+        </li>
+    }
+    </ul>
+}
 
 @admin("User: " + user.firstName + " " + user.lastName, stylesheets = List("admin_user")) {
     <table class="table table-bordered">
@@ -10,10 +20,10 @@ sharedIpAddresses: Seq[(IpAddress,Int)]
             <th>Ip Address</th>
             <th>Kifi Users Sharing that IP</th>
         </tr>
-        @for((ipAddress, count) <- sharedIpAddresses) {
+        @for((ipAddress, otherIds) <- sharedIpAddresses) {
         <tr>
             <td>@ipAddress</td>
-            <td>@count</td>
+            <td>@formatListOfUsers(otherIds)</td>
         </tr>
         }
     </table>

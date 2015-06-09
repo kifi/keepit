@@ -12,9 +12,9 @@ import scala.slick.jdbc.GetResult
 
 @ImplementedBy(classOf[UserIpAddressRepoImpl])
 trait UserIpAddressRepo extends Repo[UserIpAddress] {
-  def getByUser(userId: Id[User])(implicit session: RSession): Seq[UserIpAddress]
-  def countByUser(ownerId: Id[User])(implicit session: RSession): Int
-  def getSharedIpsByUser(userId: Id[User])(implicit session: RSession): Seq[(IpAddress, Int)]
+  def countByUser(userId: Id[User])(implicit session: RSession): Int
+  def getByUser(userId: Id[User], limit: Int)(implicit session: RSession): Seq[UserIpAddress]
+  def getSharedIpsByUser(userId: Id[User], limit: Int)(implicit session: RSession): Seq[(IpAddress, Id[User])]
 }
 
 @Singleton
@@ -41,18 +41,21 @@ class UserIpAddressRepoImpl @Inject() (
   def invalidateCache(model: UserIpAddress)(implicit session: RSession): Unit = {}
   def deleteCache(model: UserIpAddress)(implicit session: RSession): Unit = {}
 
-  def getByUser(ownerId: Id[User])(implicit session: RSession): Seq[UserIpAddress] = {
-    (for { row <- rows if row.userId === ownerId } yield row).sortBy(_.createdAt.desc).list
+  def getByUser(ownerId: Id[User], limit: Int)(implicit session: RSession): Seq[UserIpAddress] = {
+    (for { row <- rows if row.userId === ownerId } yield row).sortBy(_.createdAt.desc).take(limit).list
   }
 
   def countByUser(userId: Id[User])(implicit session: RSession): Int = {
     Query((for (r <- rows if r.userId === userId) yield r).length).first
   }
 
-  implicit val getIpIntResult = GetResult(r => (IpAddress(r.<<), r.<< : Int))
-  def getSharedIpsByUser(userId: Id[User])(implicit session: RSession): Seq[(IpAddress, Int)] = {
+  implicit val getSharedIpResult = GetResult(r => (IpAddress(r.<<), r.<< : Id[User]))
+  def getSharedIpsByUser(userId: Id[User], limit: Int)(implicit session: RSession): Seq[(IpAddress, Id[User])] = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    val result = sql"""select distinct a.ip_address, (select count(distinct b.user_id) from user_ip_addresses b where b.ip_address = a.ip_address) as n from user_ip_addresses a where a.user_id = $userId order by n desc;"""
-    result.as[(IpAddress, Int)].list
+    val result = sql"""select distinct a.ip_address, b.user_id
+                       from user_ip_addresses a, user_ip_addresses b
+                       where a.user_id = $userId and b.ip_address = a.ip_address and b.user_id != a.user_id
+                       limit $limit"""
+    result.as[(IpAddress, Id[User])].list
   }
 }
