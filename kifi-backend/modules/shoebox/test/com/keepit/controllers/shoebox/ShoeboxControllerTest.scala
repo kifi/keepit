@@ -1,6 +1,8 @@
 package com.keepit.controllers.internal
 
+import com.keepit.common.json.TupleFormat
 import com.keepit.curator.FakeCuratorServiceClientModule
+import com.keepit.social.BasicUser
 import org.specs2.mutable.Specification
 
 import com.keepit.common.db.slick._
@@ -104,14 +106,16 @@ class ShoeboxControllerTest extends Specification with ShoeboxTestInjector {
         val users = user1965 :: friends
         val basicUserRepo = inject[BasicUserRepo]
         val basicUsersJson = inject[Database].readOnlyMaster { implicit s =>
-          users.map { u => (u.id.get.id.toString -> Json.toJson(basicUserRepo.load(u.id.get))) }.toMap
+          val basicUsers = basicUserRepo.loadAll(users.map(_.id.get).toSet)
+          implicit val tuplewrites = TupleFormat.tuple2Writes[Id[User], BasicUser]
+          Json.toJson(basicUsers.toSeq)
         }
 
         val payload = JsArray(users.map(_.id.get).map(x => JsNumber(x.id)))
         val result = inject[ShoeboxController].getBasicUsers()(FakeRequest().withBody(payload))
         status(result) must equalTo(OK);
         contentType(result) must beSome("application/json");
-        contentAsString(result) must equalTo(Json.toJson(basicUsersJson).toString())
+        contentAsString(result) must equalTo(basicUsersJson.toString)
       }
     }
 
