@@ -2,6 +2,7 @@ package com.keepit.controllers.admin
 
 import com.keepit.commanders.HandleCommander.{ UnavailableHandleException, InvalidHandleException }
 import com.keepit.commanders.emails.ActivityFeedEmailSender
+import com.keepit.common.service.IpAddress
 import com.keepit.curator.CuratorServiceClient
 import com.keepit.shoebox.cron.{ ActivityPusher, ActivityPushScheduler }
 import scala.concurrent.{ Await, Future, Promise }
@@ -121,6 +122,7 @@ class AdminUserController @Inject() (
     activityEmailSender: ActivityFeedEmailSender,
     activityPushSchedualer: ActivityPushScheduler,
     activityPusher: ActivityPusher,
+    userIpAddressCommander: UserIpAddressCommander,
     authCommander: AuthCommander) extends AdminUserActions {
 
   def createPushActivityEntities = AdminUserPage { implicit request =>
@@ -967,6 +969,16 @@ class AdminUserController @Inject() (
       (owner, accessToLibs)
     }
     Ok(html.admin.userLibraries(owner, accessToLibs))
+  }
+
+  def userIpAddressesView(ownerId: Id[User]) = AdminUserPage { implicit request =>
+    val (owner, logs, sharedIpAddresses) = db.readOnlyReplica { implicit session =>
+      val owner = userRepo.get(ownerId)
+      val logs: Seq[UserIpAddress] = userIpAddressCommander.getByUser(ownerId, 1000)
+      val sharedIpAddresses: Map[IpAddress, Seq[Id[User]]] = userIpAddressCommander.getSharedIpsByUser(ownerId, 100)
+      (owner, logs, sharedIpAddresses)
+    }
+    Ok(html.admin.userIpAddresses(owner, logs, sharedIpAddresses))
   }
 
   def sendActivityEmailToAll() = AdminUserPage(parse.tolerantJson) { implicit request =>

@@ -1,0 +1,48 @@
+@import com.keepit.common.service.IpAddress
+@(user: User,
+logs: Seq[UserIpAddress],
+sharedIpAddresses: Map[IpAddress,Seq[Id[User]]]
+)(implicit request: com.keepit.common.controller.UserRequest[_])
+
+@formatListOfUsers(userIds: Seq[Id[User]]) = {
+    <ul>
+    @for(uid <- userIds) {
+        <li>
+        <a href=com.keepit.controllers.admin.routes.AdminUserController.userView(uid)">uid</a>
+        </li>
+    }
+    </ul>
+}
+
+@admin("User: " + user.firstName + " " + user.lastName, stylesheets = List("admin_user")) {
+    <table class="table table-bordered">
+        <tr>
+            <th>Ip Address</th>
+            <th>Kifi Users Sharing that IP</th>
+        </tr>
+        @for((ipAddress, otherIds) <- sharedIpAddresses) {
+        <tr>
+            <td>@ipAddress</td>
+            <td>@formatListOfUsers(otherIds)</td>
+        </tr>
+        }
+    </table>
+
+    <h2> Showing @logs.length</h2>
+    <table class="table table-bordered">
+        <tr>
+            <th>#</th>
+            <th>Date and Time</th>
+            <th>Ip Address</th>
+            <th>Agent Type</th>
+        </tr>
+        @for((log, i) <- logs.zipWithIndex) {
+        <tr>
+            <td>@{i+1}</td>
+            <td>@log.createdAt</td>
+            <td>@log.ipAddress</td>
+            <td>@log.agentType</td>
+        </tr>
+        }
+    </table>
+}

@@ -10,7 +10,8 @@ import com.keepit.common.net.UserAgent
 import com.keepit.common.service.IpAddress
 import com.keepit.model.{ User, UserIpAddress, UserIpAddressRepo, UserIpAddressStates }
 import org.joda.time.DateTime
-import scala.concurrent.{ ExecutionContext, Future }
+
+import scala.concurrent.ExecutionContext
 
 class UserIpAddressCommander @Inject() (
     db: Database,
@@ -28,6 +29,9 @@ class UserIpAddressCommander @Inject() (
     }
     val now = DateTime.now()
     val agentType = simplifyUserAgent(userAgent)
+    if (agentType == "NONE") {
+      log.info("[RPB] Could not parse an agent type out of: " + userAgent)
+    }
     val model = UserIpAddress(None, now, now, UserIpAddressStates.ACTIVE, userId, ip, agentType)
     db.readWrite { implicit session => userIpAddressRepo.save(model) }
   }
@@ -35,11 +39,29 @@ class UserIpAddressCommander @Inject() (
   def logUserByRequest[T](request: UserRequest[T]): Unit = {
     val userId = request.userId
     val userAgent = UserAgent(request.headers.get("user-agent").getOrElse(""))
-    val ip = request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress)
-    logUser(userId, IpAddress(ip), userAgent)
+    val raw_ip_string = request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress)
+    val ip = IpAddress(raw_ip_string.split(",").head)
+    logUser(userId, ip, userAgent)
   }
 
   def totalNumberOfLogs(): Int = {
     db.readOnlyReplica { implicit session => userIpAddressRepo.count }
+  }
+
+  def countByUser(userId: Id[User]): Int = {
+    db.readOnlyReplica { implicit session => userIpAddressRepo.countByUser(userId) }
+  }
+  def getByUser(userId: Id[User], limit: Int): Seq[UserIpAddress] = {
+    db.readOnlyReplica { implicit session => userIpAddressRepo.getByUser(userId, limit) }
+  }
+
+  def kvPairsToMap[A, B](kvs: Seq[(A, B)]): Map[A, Seq[B]] = {
+    kvs.groupBy(_._1).mapValues(_.map(_._2))
+  }
+  def getSharedIpsByUser(userId: Id[User], limit: Int): Map[IpAddress, Seq[Id[User]]] = {
+    val sharedIps = db.readOnlyReplica { implicit session =>
+      userIpAddressRepo.getSharedIpsByUser(userId, limit)
+    }
+    kvPairsToMap(sharedIps)
   }
 }
