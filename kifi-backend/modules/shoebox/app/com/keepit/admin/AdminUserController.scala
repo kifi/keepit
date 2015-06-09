@@ -972,13 +972,10 @@ class AdminUserController @Inject() (
   }
 
   def userIpAddressesView(ownerId: Id[User]) = AdminUserPage { implicit request =>
-    val (owner, logs, sharedIpAddresses) = db.readOnlyReplica { implicit session =>
-      val owner = userRepo.get(ownerId)
-      val logs: Seq[UserIpAddress] = userIpAddressCommander.getByUser(ownerId, 1000)
-      val sharedIpAddresses: Map[IpAddress, Seq[Id[User]]] = userIpAddressCommander.getSharedIpsByUser(ownerId, 100)
-      (owner, logs, sharedIpAddresses)
-    }
-    Ok(html.admin.userIpAddresses(owner, logs, sharedIpAddresses))
+    val owner = db.readOnlyReplica { implicit session => userRepo.get(ownerId) }
+    val logs: Seq[UserIpAddress] = userIpAddressCommander.getByUser(ownerId, 1000)
+    val sharedIpAddresses: Map[IpAddress, Seq[Id[User]]] = userIpAddressCommander.getSharedIpsByUser(ownerId, 100)
+    Ok(html.admin.userIpAddresses(owner, logs, sharedIpAddresses)
   }
 
   def sendActivityEmailToAll() = AdminUserPage(parse.tolerantJson) { implicit request =>
