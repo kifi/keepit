@@ -723,10 +723,12 @@ class LibraryCommander @Inject() (
     library.state == LibraryStates.ACTIVE && canViewLibrary(userId, library, accessToken)
   }
 
-  def canMoveToFromOrg(userId: Id[User], libId: Id[Library], from: Option[Id[Organization]], to: Option[Id[Organization]]): Boolean = {
+  def canMoveToFromOrg(userId: Id[User], libId: Id[Library], to: Option[Id[Organization]]): Boolean = {
     // lib.ownerId = userId && userId is in `from` and `to`
     db.readOnlyMaster { implicit s =>
-      (libraryRepo.get(libId).ownerId == userId) &&
+      val library = libraryRepo.get(libId)
+      val from: Option[Id[Organization]] = library.organizationId
+      (library.ownerId == userId) &&
         (from match {
           case Some(fromOrg) => // No Need to check access for MVP, if they are part of an Organization they can move libraries from it.
             organizationMembershipRepo.getByOrgIdAndUserId(fromOrg, userId).nonEmpty
