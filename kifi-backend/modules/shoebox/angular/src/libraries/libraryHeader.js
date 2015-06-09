@@ -25,6 +25,10 @@ angular.module('kifi')
       templateUrl: 'libraries/libraryHeader.tpl.html',
       link: function (scope, element) {
 
+        if (scope.library && scope.library.invite && scope.library.invite.access==='read_write') {
+          signupService.register({libraryId: scope.library.id, intent: 'follow', invite: scope.library.invite});
+        }
+
         //
         // Internal data.
         //
@@ -93,7 +97,7 @@ angular.module('kifi')
         };
 
         scope.signupFromInvitation = function () {
-          signupService.register({libraryId: scope.library.id, intent: 'follow', libAuthToken: authToken});
+          signupService.register({libraryId: scope.library.id, intent: 'follow', libAuthToken: authToken, invite: scope.library.invite});
         };
 
         scope.changeSubscription = function () {
