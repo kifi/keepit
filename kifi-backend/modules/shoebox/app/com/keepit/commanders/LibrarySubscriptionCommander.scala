@@ -62,4 +62,8 @@ class LibrarySubscriptionCommander @Inject() (
     db.readWrite { implicit s => librarySubscriptionRepo.save(librarySubscription) }
   }
 
+  def getSubsByLibraryId(id: Id[Library]): Seq[LibrarySubscription] = {
+    db.readOnlyMaster { implicit s => librarySubscriptionRepo.getByLibraryId(id) }
+  }
+
 }

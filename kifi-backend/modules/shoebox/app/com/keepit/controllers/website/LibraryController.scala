@@ -38,6 +38,8 @@ class LibraryController @Inject() (
   userRepo: UserRepo,
   keepRepo: KeepRepo,
   basicUserRepo: BasicUserRepo,
+  librarySubscriptionRepo: LibrarySubscriptionRepo,
+  librarySubscriptionCommander: LibrarySubscriptionCommander,
   keepsCommander: KeepsCommander,
   keepDecorator: KeepDecorator,
   userCommander: UserCommander,
@@ -113,10 +115,12 @@ class LibraryController @Inject() (
       val suggestedSearches = getSuggestedSearchesAsJson(libraryId)
       val membershipOpt = libraryCommander.getViewerMembershipInfo(request.userIdOpt, libraryId)
       val inviteOpt = libraryInviteCommander.getViewerInviteInfo(request.userIdOpt, libraryId)
+      val subscriptions = librarySubscriptionCommander.getSubsByLibraryId(libraryId)
 
       val membershipJson = Json.toJson(membershipOpt)
       val inviteJson = Json.toJson(inviteOpt)
-      val libraryJson = Json.toJson(libInfo).as[JsObject] + ("membership" -> membershipJson) + ("invite" -> inviteJson)
+      val subscriptionJson = Json.toJson(subscriptions)
+      val libraryJson = Json.toJson(libInfo).as[JsObject] + ("membership" -> membershipJson) + ("invite" -> inviteJson) + ("subscriptions" -> subscriptionJson)
       Ok(Json.obj("library" -> libraryJson, "suggestedSearches" -> suggestedSearches))
     }
   }
@@ -625,9 +629,9 @@ class LibraryController @Inject() (
     libraryCommander.getMarketingSiteSuggestedLibraries() map { infos => Ok(Json.toJson(infos)) }
   }
 
-  def setSubscribedToUpdates(pubId: PublicId[Library], newSubscripedToUpdate: Boolean) = UserAction { request =>
+  def setSubscribedToUpdates(pubId: PublicId[Library], newSubscribedToUpdate: Boolean) = UserAction { request =>
     val libraryId = Library.decodePublicId(pubId).get
-    libraryCommander.updateSubscribedToLibrary(request.userId, libraryId, newSubscripedToUpdate) match {
+    libraryCommander.updateSubscribedToLibrary(request.userId, libraryId, newSubscribedToUpdate) match {
       case Right(mem) => NoContent
       case Left(fail) => Status(fail.status)(Json.obj("error" -> fail.message))
     }
