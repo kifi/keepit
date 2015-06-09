@@ -117,6 +117,7 @@ class AuthCommander @Inject() (
     implicit val executionContext: ExecutionContext,
     userExperimentCommander: LocalUserExperimentCommander,
     userCommander: UserCommander,
+    handleCommander: HandleCommander,
     heimdalServiceClient: HeimdalServiceClient) extends Logging {
 
   def emailAddressMatchesSomeKifiUser(addr: EmailAddress): Boolean = {
@@ -215,13 +216,9 @@ class AuthCommander @Inject() (
         userValueRepo.setValue(userId, UserValueName.HAS_NO_PASSWORD, true)
       }
 
-      val userPreUsername = db.readOnlyMaster { implicit session =>
-        userRepo.get(userId)
-      }
-
-      userCommander.autoSetUsername(userPreUsername, readOnly = false)
-      val user = db.readOnlyMaster { implicit session =>
-        userRepo.get(userId)
+      val user = db.readWrite { implicit session =>
+        val userPreUsername = userRepo.get(userId)
+        handleCommander.autoSetUsername(userPreUsername) getOrElse userPreUsername
       }
 
       reportUserRegistration(user, inviteExtIdOpt)
@@ -247,13 +244,10 @@ class AuthCommander @Inject() (
       val passwordInfo = identity.passwordInfo.get
       val email = EmailAddress.validate(identity.email.get).get
       val (newIdentity, _) = saveUserPasswordIdentity(Some(userId), identityOpt, email = email, passwordInfo = passwordInfo, firstName = efi.firstName, lastName = efi.lastName, isComplete = true)
-      val userPreUsername = db.readOnlyMaster { implicit session =>
-        userRepo.get(userId)
-      }
 
-      userCommander.autoSetUsername(userPreUsername, readOnly = false)
-      val user = db.readOnlyMaster { implicit session =>
-        userRepo.get(userId)
+      val user = db.readWrite { implicit session =>
+        val userPreUsername = userRepo.get(userId)
+        handleCommander.autoSetUsername(userPreUsername) getOrElse userPreUsername
       }
 
       reportUserRegistration(user, inviteExtIdOpt)
@@ -415,16 +409,21 @@ class AuthCommander @Inject() (
     }
   }
 
-  def autoJoinLib(userId: Id[User], libPubId: PublicId[Library]): Unit = {
-    Library.decodePublicId(libPubId) map { libId =>
+  def autoJoinLib(userId: Id[User], libPubId: PublicId[Library], authToken: Option[String]): Boolean = { // true for success, false for failure
+    // Abstracting away errors and manually reporting. If someone needs the specific error, feel free to change the signature.
+    Library.decodePublicId(libPubId).map { libId =>
       implicit val context = HeimdalContext(Map())
-      libraryCommander.joinLibrary(userId, libId).fold(
-        libFail =>
-          airbrake.notify(s"[finishSignup] auto-join failed. $libFail"),
-        library =>
+      libraryCommander.joinLibrary(userId, libId, authToken).fold(
+        { libFail =>
+          airbrake.notify(s"[finishSignup] auto-join failed. $libFail")
+          false
+        },
+        { library =>
           log.info(s"[finishSignup] user(id=$userId) has successfully joined library $library")
+          true
+        }
       )
-    }
+    }.getOrElse(false)
   }
 
 }

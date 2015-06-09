@@ -44,7 +44,7 @@ class FeedCommander @Inject() (
     header.andThen(elems &> toBytes)
   }
 
-  final case class RssItem(title: String, description: String, link: String, guid: String, pubDate: DateTime, creator: String, icon: String)
+  final case class RssItem(title: String, description: String, link: String, guid: String, pubDate: DateTime, creator: String, icon: Option[String])
 
   private def rssItems(items: Seq[RssItem]): Seq[Elem] = {
     items map { item =>
@@ -55,10 +55,16 @@ class FeedCommander @Inject() (
         <guid isPermaLink="false">{ item.guid }</guid>
         <pubDate>{ dateTimeFormatter.print(item.pubDate) }</pubDate>
         <dc:creator>{ item.creator }</dc:creator>
-        <media:thumbnail url={ item.icon }/>
-        <media:content url={ item.icon } medium="image">
-          <media:title type="html">{ item.title }</media:title>
-        </media:content>
+        {
+          if (item.icon.nonEmpty) {
+            <media:thumbnail url={ item.icon.get }/>
+            <media:content url={ item.icon.get } medium="image">
+              <media:title type="html">
+                { item.title }
+              </media:title>
+            </media:content>
+          }
+        }
       </item>
     }
   }
@@ -100,7 +106,7 @@ class FeedCommander @Inject() (
 
               RssItem(title = keep.title.getOrElse(""), description = descriptions.get(keep.uriId).flatMap(_.article.description).getOrElse(""), link = keep.url,
                 guid = keep.externalId.id, pubDate = keep.keptAt, creator = originalKeeper.fullName,
-                icon = keepImage.map(_.map(_.imagePath.getUrl(s3ImageConfig))).map(url => s"https:$url").getOrElse(""))
+                icon = keepImage.map(_.map(_.imagePath.getUrl(s3ImageConfig))).map(url => s"https:$url"))
             }
             rssItems(keeps map convertKeep)
           }{ /* License asking for attribution */ }

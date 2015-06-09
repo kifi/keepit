@@ -22,7 +22,7 @@ angular.module('kifi')
           if (platformService.isSupportedMobilePlatform()) {
             platformService.goToAppOrStore();
           } else {
-            signupService.register({libraryId: scope.libraryId});
+            signupService.register({libraryId: scope.libraryId}); // todo follow intent
           }
         };
 

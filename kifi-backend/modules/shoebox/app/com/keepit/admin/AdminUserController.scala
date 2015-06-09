@@ -1,12 +1,13 @@
 package com.keepit.controllers.admin
 
+import com.keepit.commanders.HandleCommander.{ UnavailableHandleException, InvalidHandleException }
 import com.keepit.commanders.emails.ActivityFeedEmailSender
 import com.keepit.common.service.IpAddress
 import com.keepit.curator.CuratorServiceClient
 import com.keepit.shoebox.cron.{ ActivityPusher, ActivityPushScheduler }
 import scala.concurrent.{ Await, Future, Promise }
 import scala.concurrent.duration.{ Duration, DurationInt }
-import scala.util.{ Try }
+import scala.util.{ Failure, Success, Try }
 
 import com.google.inject.Inject
 import com.keepit.abook.ABookServiceClient
@@ -108,7 +109,6 @@ class AdminUserController @Inject() (
     userPictureRepo: UserPictureRepo,
     basicUserRepo: BasicUserRepo,
     userCredRepo: UserCredRepo,
-    usernameAliasRepo: UsernameAliasRepo,
     handleRepo: HandleOwnershipRepo,
     handleCommander: HandleCommander,
     userCommander: UserCommander,
@@ -934,9 +934,6 @@ class AdminUserController @Inject() (
     val user = userRepo.get(userId)
 
     userRepo.save(user.withState(UserStates.INACTIVE).copy(primaryEmail = None, primaryUsername = None)) // User
-    usernameAliasRepo.getByUserId(userId).foreach { alias => // Usernames
-      usernameAliasRepo.reclaim(alias.username, Some(userId))
-    }
     handleCommander.reclaimAll(Right(userId), overrideProtection = true, overrideLock = true)
   }
 
@@ -1021,35 +1018,6 @@ class AdminUserController @Inject() (
 
   def reNormalizedUsername(readOnly: Boolean, max: Int) = Action { implicit request =>
     Ok(userCommander.reNormalizedUsername(readOnly, max).toString)
-  }
-
-  def migrateUserHandles() = Action { implicit request =>
-    SafeFuture {
-      val userIds = db.readOnlyMaster { implicit session =>
-        userRepo.getAllIds()
-      }
-      userIds.foreach { userId =>
-        db.readWrite { implicit session =>
-          val user = userRepo.get(userId)
-          if (user.state != UserStates.INACTIVE && user.state != UserStates.ACTIVE) {
-            handleCommander.claimUsername(user.username, userId, overrideValidityCheck = true).get
-          }
-
-          if (user.state == UserStates.INACTIVE) {
-            deleteAllUserData(userId)
-          }
-        }
-      }
-
-      db.readWrite { implicit session =>
-        usernameAliasRepo.all().foreach { alias =>
-          if (alias.state != UsernameAliasStates.INACTIVE) {
-            handleCommander.claimUsername(alias.username, alias.userId, lock = alias.isLocked, overrideValidityCheck = true).get
-          }
-        }
-      }
-    }
-    Ok("We're on it.")
   }
 
 }

@@ -94,6 +94,7 @@ class KeepsCommander @Inject() (
     keepDecorator: KeepDecorator,
     twitterPublishingCommander: TwitterPublishingCommander,
     facebookPublishingCommander: FacebookPublishingCommander,
+    librarySubscriptionCommander: LibrarySubscriptionCommander,
     implicit val defaultContext: ExecutionContext,
     implicit val publicIdConfig: PublicIdConfiguration) extends Logging {
 
@@ -665,6 +666,7 @@ class KeepsCommander @Inject() (
     log.info(s"postSingleKeepReporting for user ${keep.userId} with $socialShare keep ${keep.title}")
     if (socialShare.twitter) twitterPublishingCommander.publishKeep(keep.userId, keep, library)
     if (socialShare.facebook) facebookPublishingCommander.publishKeep(keep.userId, keep, library)
+    librarySubscriptionCommander.sendNewKeepMessage(keep, library)
     searchClient.updateKeepIndex()
     curator.updateUriRecommendationFeedback(keep.userId, keep.uriId, UriRecommendationFeedback(kept = Some(true)))
   }
