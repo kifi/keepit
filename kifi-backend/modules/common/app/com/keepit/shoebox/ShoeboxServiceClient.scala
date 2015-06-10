@@ -291,7 +291,7 @@ class ShoeboxServiceClientImpl @Inject() (
         val payload = Json.toJson(missingUserIds)
         call(Shoebox.internal.getBasicUsers(), payload).map { res =>
           implicit val tupleReads = TupleFormat.tuple2Reads[Id[User], BasicUser]
-          val missing = res.json.as[Seq[(Id[User], BasicUser)]].map(_.toMap)
+          val missing = res.json.as[Seq[(Id[User], BasicUser)]].toMap
           cached ++ missing
         }
       }
