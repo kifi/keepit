@@ -227,10 +227,6 @@ class AuthHelper @Inject() (
       }
     }.getOrElse(NoIntent)
 
-    println("xxxxxx\n\n\n" + intent + "\n\nxxxxxxxx\n")
-
-    val discardedCookies = Seq("publicLibraryId", "intent", "libraryAuthToken", "inv").map(n => DiscardingCookie(n))
-
     // Sorry, refactoring this is exceeding my mental stack, so keeping some original behavior:
 
     intent match {
@@ -275,6 +271,7 @@ class AuthHelper @Inject() (
     }
 
     request.session.get("kcid").foreach(saveKifiCampaignId(user.id.get, _))
+    val discardedCookies = Seq("publicLibraryId", "intent", "libraryAuthToken", "inv").map(n => DiscardingCookie(n))
 
     Authenticator.create(newIdentity).fold(
       error => Status(INTERNAL_SERVER_ERROR)("0"),
