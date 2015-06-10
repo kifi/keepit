@@ -52,7 +52,6 @@ angular.module('kifi')
         scope.descScrollable = false;
         scope.imagePreview = null;
         scope.followBtnJustClicked = false;
-        scope.onCollabExperiment = (profileService.me.experiments || []).indexOf('collaborative') > -1;
         scope.collabsCanInvite = false;
 
         //
@@ -75,7 +74,7 @@ angular.module('kifi')
         function updateFollowers() {
           var lib = scope.library;
           var numFollowers = Math.max(lib.numFollowers, lib.followers.length);  // tolerating incorrect numFollowers
-          var numFit = smallWindow ? 0 : (scope.onCollabExperiment ? 3 : 5);
+          var numFit = smallWindow ? 0 : 3;
           var showPlus = numFit > 0 && Math.min(lib.followers.length, numFit) < numFollowers;
           var numToShow = Math.min(lib.followers.length, numFit);
 
@@ -587,9 +586,7 @@ angular.module('kifi')
         scope.showFollowers = function () {
           $rootScope.$emit('trackLibraryEvent', 'click', { action: 'clickedViewFollowers' });
 
-          if (scope.onCollabExperiment) {
-            scope.openMembersModal();
-          } else if (scope.library.owner.id === profileService.me.id) {
+          if (scope.library.owner.id === profileService.me.id) {
             $rootScope.$emit('trackLibraryEvent', 'click', { action: 'clickedManageLibrary' });
             modalService.open({
               template: 'libraries/manageLibraryModal.tpl.html',
@@ -601,7 +598,7 @@ angular.module('kifi')
             });
           } else {
             if (scope.isMobile) {
-              return;
+              return; // todo: What is the use case here?
             }
 
             modalService.open({
