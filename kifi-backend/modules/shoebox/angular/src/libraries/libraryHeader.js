@@ -38,7 +38,7 @@ angular.module('kifi')
         var smallWindow = $window.innerWidth <= smallWindowLimit;
 
 
-        if (scope.library && scope.library.invite && scope.library.invite.access==='read_write') {
+        if (scope.library && scope.library.invite && scope.library.invite.access==='read_write' && !profileService.userLoggedIn()) {
           signupService.register({libraryId: scope.library.id, intent: 'follow', libAuthToken: authToken, invite: scope.library.invite});
         }
 
