@@ -16,6 +16,9 @@
     <button class="kf-lib-fpost" ng-focus="preloadFB()" ng-mouseenter="preloadFB()" ng-click="shareFB()" ng-if="library.visibility === 'published'">
       <span class="kf-lib-fpost-icon svg-facebook-white"></span>
     </button>
+    <button class="kf-lib-rss" ng-click="showFeedModal()">
+      <span class="kf-lib-rss-icon svg-rss-feed"></span>
+    </button>
     <div kf-suggested-searches library="library" ng-if="library.suggestedSearches.length"></div>
     <div kf-related-libraries related-libraries="::relatedLibraries" library-id="{{::library.id}}" ng-if="::relatedLibraries"></div>
   </section>
