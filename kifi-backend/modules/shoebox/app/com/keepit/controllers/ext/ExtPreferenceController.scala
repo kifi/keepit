@@ -2,7 +2,7 @@ package com.keepit.controllers.ext
 
 import com.google.inject.Inject
 import com.keepit.classify.{ DomainRepo, Domain, DomainStates }
-import com.keepit.commanders.UserCommander
+import com.keepit.commanders.{ UserIpAddressCommander, UserCommander }
 import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.crypto.RatherInsecureDESCrypt
 import com.keepit.common.db.Id
@@ -28,6 +28,7 @@ class ExtPreferenceController @Inject() (
   notifyPreferenceRepo: UserNotifyPreferenceRepo,
   domainRepo: DomainRepo,
   userToDomainRepo: UserToDomainRepo,
+  userIpAddressCommander: UserIpAddressCommander,
   userCommander: UserCommander)
     extends UserActions with ShoeboxServiceController {
 
@@ -89,6 +90,7 @@ class ExtPreferenceController @Inject() (
   }
 
   def getPrefs(version: Int) = UserAction.async { request =>
+    userIpAddressCommander.logUserByRequest(request)
     val ip = request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress)
     val encryptedIp: String = scala.util.Try(crypt.crypt(ipkey, ip)).getOrElse("")
     val userId = request.user.id.get
