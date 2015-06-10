@@ -253,8 +253,8 @@ class AuthHelper @Inject() (
         val url = Library.decodePublicId(libId).map { libraryId =>
           db.readOnlyMaster { implicit session =>
             val library = libraryRepo.get(libraryId)
-            //todo how do I redirect to libraries now that orgs are a thing? lééééééoooooooo
-            "/magicurl"
+            val owner = userRepo.get(library.ownerId)
+            Library.formatLibraryPath(owner.username, library.slug)
           }
         }.getOrElse("/")
         url
