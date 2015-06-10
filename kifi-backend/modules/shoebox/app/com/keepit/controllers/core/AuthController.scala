@@ -56,11 +56,11 @@ object AuthController {
   cropX: Option[Int],
   cropY: Option[Int],
   cropSize: Option[Int],
-  libraryPublicId: Option[PublicId[Library]] // for auto-follow
-  )
+  libraryPublicId: Option[PublicId[Library]], // for auto-follow
+  libAuthToken: Option[String])
 
 object UserPassFinalizeInfo {
-  implicit def toEmailPassFinalizeInfo(info: UserPassFinalizeInfo): EmailPassFinalizeInfo =
+  def toEmailPassFinalizeInfo(info: UserPassFinalizeInfo): EmailPassFinalizeInfo =
     EmailPassFinalizeInfo(
       info.firstName,
       info.lastName,
@@ -87,7 +87,7 @@ object UserPassFinalizeInfo {
   libraryPublicId: Option[PublicId[Library]])
 
 object TokenFinalizeInfo {
-  implicit def toSocialFinalizeInfo(info: TokenFinalizeInfo): SocialFinalizeInfo = {
+  def toSocialFinalizeInfo(info: TokenFinalizeInfo): SocialFinalizeInfo = {
     SocialFinalizeInfo(
       info.email,
       info.firstName,
@@ -285,14 +285,14 @@ class AuthController @Inject() (
                     )
                 )
               } else {
-                authHelper.handleEmailPassFinalizeInfo(info, info.libraryPublicId)(UserRequest(request, user.id.get, None, userActionsHelper))
+                authHelper.handleEmailPassFinalizeInfo(UserPassFinalizeInfo.toEmailPassFinalizeInfo(info), info.libraryPublicId, info.libAuthToken)(UserRequest(request, user.id.get, None, userActionsHelper))
               }
             }
         } getOrElse {
           val pInfo = hasher.hash(new String(info.password))
           val (newIdentity, userId) = authCommander.saveUserPasswordIdentity(None, getSecureSocialUserFromRequest, info.email, pInfo, isComplete = false) // todo(ray): remove getSecureSocialUserFromRequest
           val user = db.readOnlyMaster { implicit s => userRepo.get(userId) }
-          authHelper.handleEmailPassFinalizeInfo(info, info.libraryPublicId)(UserRequest(request, user.id.get, None, userActionsHelper))
+          authHelper.handleEmailPassFinalizeInfo(UserPassFinalizeInfo.toEmailPassFinalizeInfo(info), info.libraryPublicId, info.libAuthToken)(UserRequest(request, user.id.get, None, userActionsHelper))
         }
     }
   }
@@ -517,14 +517,14 @@ class AuthController @Inject() (
                   case _ => Random.alphanumeric.take(10).mkString
                 }
                 val sfi = SocialFinalizeInfo(
+                  email = EmailAddress(identity.email.getOrElse("")),
                   firstName = User.sanitizeName(identity.firstName),
-                  lastName = User.sanitizeName(identity.lastName),
-                  email = EmailAddress(identity.email.getOrElse("")), //todo(andrew): is having an empty string for email is the right thing to do at this point???
+                  lastName = User.sanitizeName(identity.lastName), //todo(andrew): is having an empty string for email is the right thing to do at this point???
                   password = password.toCharArray,
                   picToken = None, picHeight = None, picWidth = None, cropX = None, cropY = None, cropSize = None)
 
                 val targetPubLibId = if (cookieIntent.isDefined && cookieIntent.get.value == "follow") pubLibIdOpt else None
-                authHelper.handleSocialFinalizeInfo(sfi, targetPubLibId, true)(request)
+                authHelper.handleSocialFinalizeInfo(sfi, targetPubLibId, None, true)(request)
               }
 
             }
