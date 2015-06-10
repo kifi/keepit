@@ -162,36 +162,6 @@ followerPicDiam = 2.2em
   &:active:hover
     box-shadow: none
 
-  &:hover .kf-lh-member-x
-    visibility: visible
-
-.kf-lh-member-x
-  position: absolute
-  outline: none
-  border: none
-  padding: 0px
-  width: 15px
-  height: 15px
-  font-size: 12px
-  color: white
-  border-radius: 50%
-  background-color: pageHeaderColor
-  visibility: hidden
-
-  &.follow
-    top: -4px
-    right: -3px
-    transform: scale(0.6)
-  &.follow:hover
-    transform: scale(0.8)
-
-  &.collab
-    top: 0px
-    right: -1px
-    transform: scale(0.8)
-  &.collab:hover
-    transform: scale(1.0)
-
 
 .kf-lh-followers-pic
   height: followerPicDiam
@@ -273,6 +243,9 @@ followerPicDiam = 2.2em
   text-shadow: 0 1px 1px rgba(0,0,0,.6)
   vertical-align: top
 
+  &.kf-0
+    padding: 0 .7em
+
   &.kf-3
     font-size: .7em
 
@@ -282,10 +255,6 @@ followerPicDiam = 2.2em
   &.kf-5
   &.kf-6
     font-size: .6em
-
-  &::before
-    content: '+'
-    vertical-align: top
 
 .kf-lh-manage-btn
   vertical-align: top
@@ -653,9 +622,6 @@ coverDragShadeHeight = 3em
   position: relative
   display: inline-block
   margin: 0 4px
-
-  &:hover .kf-lh-member-x
-    visibility: visible
 
 ownerImageDiam1 = 8em
 ownerImageDiam2 = 3.6em
