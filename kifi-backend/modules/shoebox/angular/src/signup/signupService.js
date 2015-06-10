@@ -184,14 +184,14 @@ angular.module('kifi')
           firstName: $scope.userData.firstName,
           lastName: $scope.userData.lastName,
           libraryPublicId: $scope.userData.libraryId, // todo remove me
+          libAuthToken: $scope.userData.libAuthToken,
           hook: $scope.userData.hook // todo implement
         };
 
-        registrationService.emailFinalize(fields).then(function () {
-          // todo: do we need to handle the return resp?
+        registrationService.emailFinalize(fields).then(function (resp) {
           modalService.close();
           trackEvent('visitor_clicked_page', 'signup2', 'signup');
-          $window.location.href = '/install';
+          $window.location.href = resp.uri || '/install';
         })['catch'](function (resp) {
           if (resp.data && resp.data.error === 'user_exists_failed_auth') {
             $scope.requestActive = false;

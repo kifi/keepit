@@ -37,6 +37,11 @@ angular.module('kifi')
         var smallWindowLimit = 479;
         var smallWindow = $window.innerWidth <= smallWindowLimit;
 
+
+        if (scope.library && scope.library.invite && scope.library.invite.access==='read_write') {
+          signupService.register({libraryId: scope.library.id, intent: 'follow', libAuthToken: authToken, invite: scope.library.invite});
+        }
+
         //
         // Scope data.
         //
@@ -93,7 +98,7 @@ angular.module('kifi')
         };
 
         scope.signupFromInvitation = function () {
-          signupService.register({libraryId: scope.library.id, intent: 'follow', libAuthToken: authToken});
+          signupService.register({libraryId: scope.library.id, intent: 'follow', libAuthToken: authToken, invite: scope.library.invite});
         };
 
         scope.changeSubscription = function () {
