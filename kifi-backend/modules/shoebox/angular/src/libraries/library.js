@@ -195,6 +195,13 @@ angular.module('kifi')
       });
     };
 
+    $scope.showFeedModal = function () {
+      modalService.open({
+        template: 'libraries/libraryFeedModal.tpl.html',
+        scope: $scope
+      });
+    };
+
     //
     // Watches and listeners.
     //

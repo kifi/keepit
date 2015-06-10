@@ -8,7 +8,7 @@ angular.module('kifi')
   'routeService', 'linkify', 'net',
   function ($http, $location, $q, $rootScope, $state, $stateParams, $timeout, $window, $$rAF,
             $filter, env, libraryService, modalService, profileService, platformService, signupService,
-            routeService, linkify, net) {
+            routeService, linkify) {
     return {
       restrict: 'A',
       replace: true,
@@ -37,6 +37,11 @@ angular.module('kifi')
         var smallWindowLimit = 479;
         var smallWindow = $window.innerWidth <= smallWindowLimit;
 
+
+        if (scope.library && scope.library.invite && scope.library.invite.access==='read_write' && !profileService.userLoggedIn()) {
+          signupService.register({libraryId: scope.library.id, intent: 'follow', libAuthToken: authToken, invite: scope.library.invite});
+        }
+
         //
         // Scope data.
         //
@@ -47,7 +52,6 @@ angular.module('kifi')
         scope.descScrollable = false;
         scope.imagePreview = null;
         scope.followBtnJustClicked = false;
-        scope.onCollabExperiment = (profileService.me.experiments || []).indexOf('collaborative') > -1;
         scope.collabsCanInvite = false;
 
         //
@@ -70,11 +74,13 @@ angular.module('kifi')
         function updateFollowers() {
           var lib = scope.library;
           var numFollowers = Math.max(lib.numFollowers, lib.followers.length);  // tolerating incorrect numFollowers
-          var numFit = smallWindow ? 0 : (scope.onCollabExperiment ? 3 : 5);
+          var numFit = smallWindow ? 0 : 3;
           var showPlus = numFit > 0 && Math.min(lib.followers.length, numFit) < numFollowers;
-          var numToShow = Math.min(lib.followers.length, numFit - (showPlus ? 1 : 0));
+          var numToShow = Math.min(lib.followers.length, numFit);
+
           scope.followersToShow = lib.followers.slice(0, numToShow);
-          scope.numMoreFollowersText = showPlus ? $filter('num')(numFollowers - numToShow) : '';
+          scope.numMoreFollowersText = showPlus ? '+' + $filter('num')(numFollowers - numToShow) : 'See all';
+          scope.numMoreFollowers = showPlus ? $filter('num')(numFollowers - numToShow) : 0;
         }
 
         //
@@ -93,7 +99,7 @@ angular.module('kifi')
         };
 
         scope.signupFromInvitation = function () {
-          signupService.register({libraryId: scope.library.id, intent: 'follow', libAuthToken: authToken});
+          signupService.register({libraryId: scope.library.id, intent: 'follow', libAuthToken: authToken, invite: scope.library.invite});
         };
 
         scope.changeSubscription = function () {
@@ -580,31 +586,7 @@ angular.module('kifi')
         scope.showFollowers = function () {
           $rootScope.$emit('trackLibraryEvent', 'click', { action: 'clickedViewFollowers' });
 
-          if (scope.onCollabExperiment) {
-            scope.openMembersModal('followers_only');
-          } else if (scope.library.owner.id === profileService.me.id) {
-            $rootScope.$emit('trackLibraryEvent', 'click', { action: 'clickedManageLibrary' });
-            modalService.open({
-              template: 'libraries/manageLibraryModal.tpl.html',
-              modalData: {
-                pane: 'members',
-                library: scope.library,
-                currentPageOrigin: 'libraryPage'
-              }
-            });
-          } else {
-            if (scope.isMobile) {
-              return;
-            }
-
-            modalService.open({
-              template: 'libraries/libraryFollowersModal.tpl.html',
-              modalData: {
-                library: scope.library,
-                currentPageOrigin: 'libraryPage'
-              }
-            });
-          }
+          scope.openMembersModal();
         };
 
         scope.trackTwitterProfile = function () {
@@ -635,38 +617,6 @@ angular.module('kifi')
           });
         };
 
-        scope.confirmRemoveMember = function (member, type) {
-          var isSelf = scope.isSelf(member);
-          var isPrivate = scope.library.visibility === 'secret';
-          modalService.open({
-            template: 'libraries/removeMemberConfirmModal.tpl.html',
-            modalData: {
-              type: type,
-              member: member,
-              isSelf: isSelf,
-              'private': isPrivate,
-              remove: remove
-            }
-          });
-
-          function remove() {
-            if (type === 'collab') {
-              _.remove(scope.library.collaborators, {id: member.id});
-              scope.library.numCollaborators--;
-            } else if (type === 'follow') {
-              _.remove(scope.library.followers, {id: member.id});
-              scope.library.numFollowers--;
-            }
-            net.updateLibraryMembership(scope.library.id, member.id, {access: 'none'}).then(function () {
-              if (isSelf) {
-                scope.library.membership = null;
-                if (isPrivate) {
-                  $state.go('userProfile.libraries.own', {username: member.username});
-                }
-              }
-            })['catch'](modalService.openGenericErrorModal);
-          }
-        };
 
         function onWinResize() {
           var small = $window.innerWidth <= smallWindowLimit;
