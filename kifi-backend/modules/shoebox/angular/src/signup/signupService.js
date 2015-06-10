@@ -184,6 +184,7 @@ angular.module('kifi')
           firstName: $scope.userData.firstName,
           lastName: $scope.userData.lastName,
           libraryPublicId: $scope.userData.libraryId, // todo remove me
+          libAuthToken: $scope.userData.libAuthToken,
           hook: $scope.userData.hook // todo implement
         };
 

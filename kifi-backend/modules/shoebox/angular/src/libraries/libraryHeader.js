@@ -25,10 +25,6 @@ angular.module('kifi')
       templateUrl: 'libraries/libraryHeader.tpl.html',
       link: function (scope, element) {
 
-        if (scope.library && scope.library.invite && scope.library.invite.access==='read_write') {
-          signupService.register({libraryId: scope.library.id, intent: 'follow', invite: scope.library.invite});
-        }
-
         //
         // Internal data.
         //
@@ -40,6 +36,11 @@ angular.module('kifi')
         var descEl = descWrapEl.find('.kf-lh-desc');
         var smallWindowLimit = 479;
         var smallWindow = $window.innerWidth <= smallWindowLimit;
+
+
+        if (scope.library && scope.library.invite && scope.library.invite.access==='read_write') {
+          signupService.register({libraryId: scope.library.id, intent: 'follow', libAuthToken: authToken, invite: scope.library.invite});
+        }
 
         //
         // Scope data.
