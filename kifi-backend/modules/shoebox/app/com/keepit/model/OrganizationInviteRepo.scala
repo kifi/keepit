@@ -3,14 +3,14 @@ package com.keepit.model
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.{ DataBaseComponent, DbRepo, Repo }
-import com.keepit.common.db.{ Id, State }
+import com.keepit.common.db.{ States, Id, State }
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.time.Clock
 import org.joda.time.DateTime
 
 @ImplementedBy(classOf[OrganizationInviteRepoImpl])
 trait OrganizationInviteRepo extends Repo[OrganizationInvite] {
-  def getByOrganization(organizationId: Id[Organization]): Seq[OrganizationInvite] = ???
+  def getByOrganization(organizationId: Id[Organization], count: Count, offset: Offset, state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit s: RSession): Seq[OrganizationInvite]
   def getByInviter(inviterId: Id[User]): Seq[OrganizationInvite] = ???
 }
 
@@ -64,4 +64,12 @@ class OrganizationInviteRepoImpl @Inject() (val db: DataBaseComponent, val clock
 
   def table(tag: Tag) = new OrganizationInviteTable(tag)
   initTable()
+
+  def getByOrganizationCompiled = Compiled { (orgId: Column[Id[Organization]], count: ConstColumn[Long], offset: ConstColumn[Long], state: Column[State[OrganizationInvite]]) =>
+    (for { row <- rows if row.organizationId === orgId && row.state === state } yield row).drop(offset).take(count)
+  }
+
+  def getByOrganization(organizationId: Id[Organization], count: Count, offset: Offset, state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit s: RSession): Seq[OrganizationInvite] = {
+    getByOrganizationCompiled(organizationId, count.value, offset.value, state).list
+  }
 }
