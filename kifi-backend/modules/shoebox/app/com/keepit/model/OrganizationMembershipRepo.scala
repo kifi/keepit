@@ -13,6 +13,7 @@ trait OrganizationMembershipRepo extends Repo[OrganizationMembership] with SeqNu
   def getByUserId(userId: Id[User], excludeStates: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Seq[OrganizationMembership] = ???
   def getbyOrgId(orgId: Id[Organization], count: Count, offset: Offset, excludeState: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Seq[OrganizationMembership]
   def getByOrgIdAndUserId(orgId: Id[Organization], userId: Id[User], excludeState: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Option[OrganizationMembership]
+  def getByOrgIdAndUserIds(orgId: Id[Organization], userIds: Set[Id[User]], excludeState: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Map[Id[User], OrganizationMembership] = ???
   def deactivate(orgId: Id[Organization], userId: Id[User], excludeStates: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession) = ???
 }
 
