@@ -586,29 +586,7 @@ angular.module('kifi')
         scope.showFollowers = function () {
           $rootScope.$emit('trackLibraryEvent', 'click', { action: 'clickedViewFollowers' });
 
-          if (scope.library.owner.id === profileService.me.id) {
-            $rootScope.$emit('trackLibraryEvent', 'click', { action: 'clickedManageLibrary' });
-            modalService.open({
-              template: 'libraries/manageLibraryModal.tpl.html',
-              modalData: {
-                pane: 'members',
-                library: scope.library,
-                currentPageOrigin: 'libraryPage'
-              }
-            });
-          } else {
-            if (scope.isMobile) {
-              return; // todo: What is the use case here?
-            }
-
-            modalService.open({
-              template: 'libraries/libraryFollowersModal.tpl.html',
-              modalData: {
-                library: scope.library,
-                currentPageOrigin: 'libraryPage'
-              }
-            });
-          }
+          scope.openMembersModal();
         };
 
         scope.trackTwitterProfile = function () {
