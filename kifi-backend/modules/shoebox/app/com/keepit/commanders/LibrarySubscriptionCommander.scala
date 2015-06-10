@@ -1,6 +1,7 @@
 package com.keepit.commanders
 
 import com.google.inject.{ Singleton, Inject }
+import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging

@@ -320,7 +320,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
               "listed":true,
               "subscribed":false
              },
-             "invite": null
+             "invite": null,
+             "subscriptions": []
            },
            "suggestedSearches": {"terms": [], "weights": []}
           }
@@ -379,7 +380,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
               },
               "access":"read_only",
               "lastInvite":${t1.plusMinutes(3).getMillis}
-             }
+             },
+             "subscriptions": []
            },
            "suggestedSearches": {"terms": [], "weights": []}
           }

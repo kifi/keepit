@@ -234,7 +234,7 @@ angular.module('kifi')
           scope.emptySlug = false;
           scope.modalTitle = scope.library.name;
           if (!scope.library.subscriptions) {
-            scope.library.subscriptions = []
+            scope.library.subscriptions = [];
           }
         } else {
           scope.library = {
