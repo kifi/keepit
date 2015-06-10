@@ -77,7 +77,7 @@ angular.module('kifi')
           var numFollowers = Math.max(lib.numFollowers, lib.followers.length);  // tolerating incorrect numFollowers
           var numFit = smallWindow ? 0 : (scope.onCollabExperiment ? 3 : 5);
           var showPlus = numFit > 0 && Math.min(lib.followers.length, numFit) < numFollowers;
-          var numToShow = Math.min(lib.followers.length, numFit - (showPlus ? 0 : 1));
+          var numToShow = Math.min(lib.followers.length, numFit);
 
           scope.followersToShow = lib.followers.slice(0, numToShow);
           scope.numMoreFollowersText = showPlus ? '+' + $filter('num')(numFollowers - numToShow) : 'See all';
