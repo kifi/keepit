@@ -7,6 +7,7 @@ import com.keepit.common.db.slick.{ DbRepo, DataBaseComponent, Repo }
 import com.keepit.common.db._
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
+import com.keepit.model.HandleOwner.{ UserOwner, OrganizationOwner }
 import com.kifi.macros.json
 import org.joda.time.DateTime
 import scala.concurrent.duration._
@@ -22,6 +23,22 @@ object Handle {
   def normalize(handle: Handle): Handle = Handle(HandleOps.normalize(handle.value))
 }
 
+sealed trait HandleOwner
+
+object HandleOwner {
+  case class UserOwner(id: Id[User]) extends HandleOwner
+  case class OrganizationOwner(id: Id[Organization]) extends HandleOwner
+
+  implicit def fromUserId(userId: Id[User]) = UserOwner(userId)
+  implicit def fromOrganizationId(organizationId: Id[Organization]) = OrganizationOwner(organizationId)
+
+  def prettyPrint(ownerId: Option[HandleOwner]): String = ownerId match {
+    case Some(OrganizationOwner(orgId)) => s"organization $orgId"
+    case Some(UserOwner(userId)) => s"user $userId"
+    case None => "system"
+  }
+}
+
 case class HandleOwnership(
     id: Option[Id[HandleOwnership]] = None,
     createdAt: DateTime = currentDateTime,
@@ -30,27 +47,21 @@ case class HandleOwnership(
     state: State[HandleOwnership] = HandleOwnershipStates.ACTIVE,
     locked: Boolean = false, // while a handle can be claimed after the grace period (best effort), a 'locked' handle must be explicitly unlocked first
     handle: Handle, // normalized
-    ownerId: Option[Either[Id[Organization], Id[User]]]) extends ModelWithState[HandleOwnership] {
+    ownerId: Option[HandleOwner]) extends ModelWithState[HandleOwnership] {
   def withId(id: Id[HandleOwnership]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def isActive = (state == HandleOwnershipStates.ACTIVE)
   def isLocked = isActive && locked
   def isProtected = isActive && !isLocked && (currentDateTime isBefore (lastClaimedAt plusSeconds HandleOwnership.gracePeriod.toSeconds.toInt))
-  def belongsToOrg(orgId: Id[Organization]) = belongsTo(Some(Left(orgId)))
-  def belongsToUser(userId: Id[User]) = belongsTo(Some(Right(userId)))
+  def belongsToOrg(orgId: Id[Organization]) = belongsTo(Some(orgId))
+  def belongsToUser(userId: Id[User]) = belongsTo(Some(userId))
   def belongsToSystem = belongsTo(None)
-  def belongsTo(thatOwnerId: Option[Either[Id[Organization], Id[User]]]) = isActive && (ownerId == thatOwnerId)
-  def prettyOwner = HandleOwnership.prettyOwner(ownerId)
+  def belongsTo(thatOwnerId: Option[HandleOwner]) = isActive && (ownerId == thatOwnerId)
+  def prettyOwner = HandleOwner.prettyPrint(ownerId)
 }
 
 object HandleOwnership {
   private[HandleOwnership] val gracePeriod = 7 days // an active handle should be protected for this period of time after it was last claimed
-
-  def prettyOwner(ownerId: Option[Either[Id[Organization], Id[User]]]): String = ownerId match {
-    case Some(Left(orgId)) => s"organization $orgId"
-    case Some(Right(userId)) => s"user $userId"
-    case None => "system"
-  }
 
   def applyFromDbRow(id: Option[Id[HandleOwnership]],
     createdAt: DateTime,
@@ -61,7 +72,7 @@ object HandleOwnership {
     handle: Handle,
     organizationId: Option[Id[Organization]],
     userId: Option[Id[User]]) = {
-    val ownerId = organizationId.map(Left(_)) orElse userId.map(Right(_))
+    val ownerId = organizationId.map(OrganizationOwner(_)) orElse userId.map(UserOwner(_))
     HandleOwnership(id, createdAt, updatedAt, lastClaimedAt, state, locked, handle, ownerId)
   }
 
@@ -73,8 +84,9 @@ object HandleOwnership {
       ownership.state,
       ownership.locked,
       ownership.handle,
-      ownership.ownerId.flatMap(_.left.toOption),
-      ownership.ownerId.flatMap(_.right.toOption)))
+      ownership.ownerId.collect { case OrganizationOwner(organizationId) => organizationId },
+      ownership.ownerId.collect { case UserOwner(userId) => userId }
+    ))
   }
 }
 
@@ -84,7 +96,7 @@ object HandleOwnershipStates extends States[HandleOwnership]
 trait HandleOwnershipRepo extends Repo[HandleOwnership] {
   def getByHandle(handle: Handle, excludeState: Option[State[HandleOwnership]] = Some(HandleOwnershipStates.INACTIVE))(implicit session: RSession): Option[HandleOwnership]
   def getByNormalizedHandle(normalizedHandle: Handle, excludeState: Option[State[HandleOwnership]])(implicit session: RSession): Option[HandleOwnership]
-  def getByOwnerId(ownerId: Option[Either[Id[Organization], Id[User]]], excludeState: Option[State[HandleOwnership]] = Some(HandleOwnershipStates.INACTIVE))(implicit session: RSession): Seq[HandleOwnership]
+  def getByOwnerId(ownerId: Option[HandleOwner], excludeState: Option[State[HandleOwnership]] = Some(HandleOwnershipStates.INACTIVE))(implicit session: RSession): Seq[HandleOwnership]
   def lock(handle: Handle)(implicit session: RWSession): Boolean
   def unlock(handle: Handle)(implicit session: RWSession): Boolean
 }
@@ -157,10 +169,10 @@ class HandleOwnershipRepoImpl @Inject() (
     for (row <- rows if row.organizationId.isEmpty && row.userId.isEmpty && row.state =!= excludedState) yield row
   }
 
-  def getByOwnerId(ownerId: Option[Either[Id[Organization], Id[User]]], excludeState: Option[State[HandleOwnership]])(implicit session: RSession): Seq[HandleOwnership] = {
+  def getByOwnerId(ownerId: Option[HandleOwner], excludeState: Option[State[HandleOwnership]])(implicit session: RSession): Seq[HandleOwnership] = {
     val q = ownerId match {
-      case Some(Left(orgId)) => excludeState.map(compiledGetByOrganizationIdAndExcludedState(orgId, _)) getOrElse compiledGetByOrganizationId(orgId)
-      case Some(Right(userId)) => excludeState.map(compiledGetByUserIdAndExcludedState(userId, _)) getOrElse compiledGetByUserId(userId)
+      case Some(OrganizationOwner(orgId)) => excludeState.map(compiledGetByOrganizationIdAndExcludedState(orgId, _)) getOrElse compiledGetByOrganizationId(orgId)
+      case Some(UserOwner(userId)) => excludeState.map(compiledGetByUserIdAndExcludedState(userId, _)) getOrElse compiledGetByUserId(userId)
       case None => excludeState.map(compiledGetAllOwnedBySystemAndExcludeState(_)) getOrElse compiledGetAllOwnedBySystem
     }
     q.list

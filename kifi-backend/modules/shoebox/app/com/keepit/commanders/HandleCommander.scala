@@ -71,20 +71,20 @@ class HandleCommander @Inject() (
   }
 
   def claimUsername(username: Username, userId: Id[User], lock: Boolean = false, overrideProtection: Boolean = false, overrideValidityCheck: Boolean = false)(implicit session: RWSession): Try[Username] = {
-    claimHandle(username, Some(Right(userId)), lock, overrideProtection, overrideValidityCheck).map { ownership =>
+    claimHandle(username, Some(userId), lock, overrideProtection, overrideValidityCheck).map { ownership =>
       Username(ownership.handle.value)
     }
   }
 
-  private[commanders] def claimHandle(handle: Handle, ownerId: Option[Either[Id[Organization], Id[User]]], lock: Boolean = false, overrideProtection: Boolean = false, overrideValidityCheck: Boolean = false)(implicit session: RWSession): Try[HandleOwnership] = {
+  private[commanders] def claimHandle(handle: Handle, ownerId: Option[HandleOwner], lock: Boolean = false, overrideProtection: Boolean = false, overrideValidityCheck: Boolean = false)(implicit session: RWSession): Try[HandleOwnership] = {
     if (overrideValidityCheck || HandleOps.isValid(handle.value)) setHandleOwnership(handle, ownerId, lock, overrideProtection)
     else Failure(InvalidHandleException(handle))
   } tap {
-    case Failure(error) => log.error(s"Failed to claim handle $handle for ${HandleOwnership.prettyOwner(ownerId)}", error)
+    case Failure(error) => log.error(s"Failed to claim handle $handle for ${HandleOwner.prettyPrint(ownerId)}", error)
     case Success(updatedOwnership) => log.info(s"Handle $handle (${updatedOwnership.handle}) is now owned by ${updatedOwnership.prettyOwner}: $updatedOwnership")
   }
 
-  private def setHandleOwnership(handle: Handle, ownerId: Option[Either[Id[Organization], Id[User]]], lock: Boolean = false, overrideProtection: Boolean = false)(implicit session: RWSession): Try[HandleOwnership] = {
+  private def setHandleOwnership(handle: Handle, ownerId: Option[HandleOwner], lock: Boolean = false, overrideProtection: Boolean = false)(implicit session: RWSession): Try[HandleOwnership] = {
     val ownershipMaybe = {
       val normalizedHandle = Handle.normalize(handle)
       handleRepo.getByNormalizedHandle(normalizedHandle, excludeState = None) match {
@@ -103,8 +103,8 @@ class HandleCommander @Inject() (
 
   private def isPrimary(ownership: HandleOwnership)(implicit session: RSession): Boolean = {
     ownership.ownerId.exists {
-      case Left(organizationId) => isPrimaryOwner(ownership, organizationRepo.get(organizationId))
-      case Right(userId) => isPrimaryOwner(ownership, userRepo.get(userId))
+      case HandleOwner.OrganizationOwner(organizationId) => isPrimaryOwner(ownership, organizationRepo.get(organizationId))
+      case HandleOwner.UserOwner(userId) => isPrimaryOwner(ownership, userRepo.get(userId))
     }
   }
 
@@ -114,11 +114,11 @@ class HandleCommander @Inject() (
   def getByHandle(handle: Handle)(implicit session: RSession): Option[(Either[Organization, User], Boolean)] = {
     handleRepo.getByHandle(handle).flatMap { ownership =>
       ownership.ownerId.map {
-        case Left(organizationId) => {
+        case HandleOwner.OrganizationOwner(organizationId) => {
           val organization = organizationRepo.get(organizationId)
           (Left(organization), isPrimaryOwner(ownership, organization))
         }
-        case Right(userId) => {
+        case HandleOwner.UserOwner(userId) => {
           val user = userRepo.get(userId)
           (Right(user), isPrimaryOwner(ownership, user))
         }
@@ -136,7 +136,7 @@ class HandleCommander @Inject() (
     } map (_.handle)
   }
 
-  def reclaimAll(ownerId: Either[Id[Organization], Id[User]], overrideProtection: Boolean = false, overrideLock: Boolean = false)(implicit session: RWSession): Seq[Try[Handle]] = {
+  def reclaimAll(ownerId: HandleOwner, overrideProtection: Boolean = false, overrideLock: Boolean = false)(implicit session: RWSession): Seq[Try[Handle]] = {
     val handles = handleRepo.getByOwnerId(Some(ownerId)).map(_.handle)
     handles.map(reclaim(_, overrideProtection, overrideLock))
   }
