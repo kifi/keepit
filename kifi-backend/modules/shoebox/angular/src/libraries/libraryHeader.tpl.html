@@ -121,7 +121,7 @@
       <div kf-library-header-follow-button-cta library="library" ng-if="!isMobile && !$root.userLoggedIn && !library.invite"></div>
       <button class="kf-lh-follow-btn" ng-click="followLibrary({via: 'followBtn'})">Follow</button>
     </div>
-    <div class="kf-lh-unfollow-btn-wrap" ng-class="{'kf-no-unfollow': followBtnJustClicked, 'kf-overflowing': overSubsBtn}" ng-if="isFollowing()">
+    <div class="kf-lh-unfollow-btn-wrap" ng-class="{'kf-no-unfollow': followBtnJustClicked, 'kf-overflowing': overSubsBtn}" ng-if="isFollowing() || isCollaborating()">
       <button class="kf-lh-unfollow-btn" ng-click="unfollowLibrary()" ng-mouseleave="followBtnJustClicked = false"></button>
       <button ng-attr-class="kf-lh-subs-btn {{library.membership.subscribed ? 'svg-notification-on-white' : 'svg-notification-off-white'}}" ng-click="changeSubscription()" ng-mouseenter="overSubsBtn = true" ng-mouseleave="overSubsBtn = false"></button>
       <div class="kf-lh-subs-msg">Notifications {{library.membership.subscribed ? 'enabled' : 'disabled'}}</div>
