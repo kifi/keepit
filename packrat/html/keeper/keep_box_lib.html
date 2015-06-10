@@ -3,17 +3,24 @@
 {{/keep.removable}}
   <a class="kifi-keep-box-lib kifi-keep-box-with-lib-icon kifi-{{visibility}}{{#system}} kifi-system{{/system}}{{#highlighted}} kifi-highlighted{{/highlighted}}" href="javascript:" tabindex="-1" data-id="{{id}}">
     <span class="kifi-keep-box-lib-icon"{{#color}} style="background-color:{{color}}"{{/color}}></span>
-    {{#shortcut}}
+    {{#extraInfo}}
       <span class="kifi-keep-box-lib-1">
         {{#nameHtml}}{{{nameHtml}}}{{/nameHtml}}
         {{^nameHtml}}{{name}}{{/nameHtml}}
       </span>
-      <span class="kifi-keep-box-lib-2">{{shortcut}}</span>
-    {{/shortcut}}
-    {{^shortcut}}
+      <span class="kifi-keep-box-lib-2">
+        {{#hasCollaborators}}
+          <svg class="kifi-keep-box-collab-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 19.3 12.3">
+            <path style="fill: {{color}};" d="M13.1,7c-0.3,0-0.5,0-0.9,0.1c1,0.7,1.7,1.7,1.7,2.9v2.1h5.2V10C19.1,8,15.1,7,13.1,7z M6.2,7c-2,0-6,1-6,3v2.1h12.1V10C12.2,8,8.2,7,6.2,7z M6.2,5.3c1.5,0,2.6-1.1,2.6-2.6c0-1.5-1.1-2.6-2.6-2.6S3.6,1.2,3.6,2.7C3.6,4.2,4.7,5.3,6.2,5.3z M13.1,5.3c1.5,0,2.6-1.1,2.6-2.6c0-1.5-1.1-2.6-2.6-2.6c-1.5,0-2.6,1.1-2.6,2.6C10.5,4.2,11.6,5.3,13.1,5.3z"/>
+          </svg>
+        {{/hasCollaborators}}
+        {{extraInfo}}
+      </span>
+    {{/extraInfo}}
+    {{^extraInfo}}
       {{#nameHtml}}{{{nameHtml}}}{{/nameHtml}}
       {{^nameHtml}}{{name}}{{/nameHtml}}
-    {{/shortcut}}
+    {{/extraInfo}}
   </a>
 {{#keep.removable}}
   <a class="kifi-keep-box-lib-unkeep kifi-keep-box-button" href="javascript:">Unkeep</a>
