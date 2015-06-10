@@ -130,6 +130,7 @@ angular.module('kifi')
             'whoCanInvite': scope.collabCanInvite ? ownerOnlyInviteSetting : collabInviteSetting
           }, false);
           scope.collabCanInvite = !scope.collabCanInvite;
+          scope.library.whoCanInvite = scope.collabCanInvite ? collabInviteSetting : ownerOnlyInviteSetting;
         };
 
         scope.changeToFollower = function(member) {
