@@ -12,7 +12,7 @@ import scala.util.{ Try, Success, Failure }
 
 class HandleTest extends Specification with ShoeboxTestInjector {
 
-  implicit def fromUserIdtoOwnerId(userId: Id[User]): Option[Either[Id[Organization], Id[User]]] = Some(Right(userId))
+  implicit def fromUserIdtoOwnerId(userId: Id[User]): Option[HandleOwner] = Some(userId)
 
   private def checkOwnership(expectedOwnership: HandleOwnership, ownership: HandleOwnership) = {
     ownership.id.get === expectedOwnership.id.get
