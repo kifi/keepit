@@ -6,12 +6,6 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.mail.BasicContact
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.model._
-import com.keepit.social.BasicUser
-import org.joda.time.DateTime
-import play.api.http.Status._
-
-final case class MaybeOrganizationMember(member: Either[BasicUser, BasicContact], access: Option[OrganizationAccess], lastInvitedAt: Option[DateTime])
-final case class OrganizationFail(status: Int, message: String)
 
 class OrganizationMembershipCommander @Inject() (db: Database,
     organizationRepo: OrganizationRepo,

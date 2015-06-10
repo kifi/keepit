@@ -20,7 +20,7 @@ case class Organization(
     seq: SequenceNumber[Organization] = SequenceNumber.ZERO,
     name: String,
     description: Option[String] = None,
-    ownerId: Id[User],
+    val ownerId: Id[User],
     handle: Option[PrimaryOrganizationHandle]) extends ModelWithPublicId[Organization] with ModelWithState[Organization] with ModelWithSeqNumber[Organization] {
 
   override def withId(id: Id[Organization]): Organization = this.copy(id = Some(id))
