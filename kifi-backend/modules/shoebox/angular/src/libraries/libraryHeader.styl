@@ -237,9 +237,6 @@ followerPicDiam = 2.2em
   &:focus
     outline: thin dotted alpha(#fff,.5)
 
-  @media (max-width: 479px)
-    display: none
-
 .kf-lh-followers-more-text
   padding: 0 .2em
   font-size: .75em
@@ -799,6 +796,7 @@ collabImageDiam2 = 3.6em
     height: 4.4em
     opacity: 1
     margin-bottom: .4em
+    display: none // todo: remove when we support mobile modals!
 
 .kf-lh-add-collab-icon
   width: 1.73em
