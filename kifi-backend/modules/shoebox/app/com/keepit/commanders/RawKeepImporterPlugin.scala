@@ -98,6 +98,8 @@ private class RawKeepImporterActor @Inject() (
 
         val context = importIdOpt.map(importId => getHeimdalContext(userId, importId)).flatten.getOrElse(HeimdalContext.empty)
 
+        // ------------------- helpers ---------------------
+
         def parseRawBookmarksFromJson(rawKeepGroup: Seq[RawKeep]) = {
           rawKeepGroup.map { rk =>
             val canonical = rk.originalJson.flatMap(json => (json \ Normalization.CANONICAL.scheme).asOpt[String])
@@ -120,71 +122,73 @@ private class RawKeepImporterActor @Inject() (
           val failuresRawKeep = failures.map(s => rawKeepByUrl.get(s.url)).flatten.toSet
           val successesRawKeep = rawKeepGroup.filterNot(v => failuresRawKeep.contains(v))
           log.info(s"[RawKeepImporterActor] Interned ${successes.length + failures.length} keeps. ${successes.length} successes, ${failures.length} failures.")
-          (successes, rawKeepByUrl, failuresRawKeep, successesRawKeep)
+
+          if (failuresRawKeep.nonEmpty) {
+            db.readWriteBatch(failuresRawKeep.toSeq) {
+              case (session, rk) =>
+                rawKeepRepo.setState(rk.id.get, RawKeepStates.FAILED)(session)
+            }
+          }
+
+          (successes, successesRawKeep)
         }
 
-        val rawBookmarks = parseRawBookmarksFromJson(rawKeepGroup)
-        //val (successes, rawKeepByUrl, failuresRawKeep, successesRawKeep) = internKeeps(userId, rawBookmarks, isPrivate)
+        def setUserValue(): Unit = {
+          val (doneOpt, totalOpt) = db.readOnlyMaster { implicit session =>
+            (userValueRepo.getValueStringOpt(userId, UserValueName.BOOKMARK_IMPORT_DONE).map(_.toInt),
+              userValueRepo.getValueStringOpt(userId, UserValueName.BOOKMARK_IMPORT_TOTAL).map(_.toInt))
+          }
 
-        val library = db.readWrite { implicit s =>
-          if (libraryId.isEmpty)
-            getLibFromPrivacy(isPrivate, userId)(s)
-          else
-            libraryRepo.get(libraryId.get)
-        }
-
-        val (successes, failures) = bookmarkInternerProvider.get.internRawBookmarks(rawBookmarks, userId, library, source)(context)
-        val rawKeepByUrl = rawKeepGroup.map(rk => rk.url -> rk).toMap
-
-        val failuresRawKeep = failures.map(s => rawKeepByUrl.get(s.url)).flatten.toSet
-        val successesRawKeep = rawKeepGroup.filterNot(v => failuresRawKeep.contains(v))
-
-        if (failuresRawKeep.nonEmpty) {
-          db.readWriteBatch(failuresRawKeep.toSeq) {
-            case (session, rk) =>
-              rawKeepRepo.setState(rk.id.get, RawKeepStates.FAILED)(session)
+          db.readWrite { implicit session =>
+            (doneOpt, totalOpt) match {
+              case (Some(done), Some(total)) =>
+                if (done + rawKeepGroup.length >= total) {
+                  // Import is done
+                  userValueRepo.clearValue(userId, UserValueName.BOOKMARK_IMPORT_DONE)
+                  userValueRepo.clearValue(userId, UserValueName.BOOKMARK_IMPORT_TOTAL)
+                  importIdOpt.map { importId =>
+                    userValueRepo.clearValue(userId, UserValueName.bookmarkImportContextName(importId))
+                  }
+                } else {
+                  userValueRepo.setValue(userId, UserValueName.BOOKMARK_IMPORT_DONE, done + rawKeepGroup.length)
+                }
+              case _ =>
+            }
           }
         }
 
-        if (successes.nonEmpty) {
-          val keepImportContext = RawKeepGroupImportContext(userId, source, installationId, rawKeepGroup, successes, context)
-          tagHelper.process(keepImportContext)
-
+        def notifyRemoteServices(successes: Seq[Keep]): Unit = {
           //the bookmarks list may be very large!
           searchClient.updateKeepIndex()
-          if (RawKeepImporterActor.sourcesToEnsureContentFetch.contains(source)) { // todo(Léo): Revisit with NormalizedURI.shouldHaveContent
+          if (RawKeepImporterActor.sourcesToEnsureContentFetch.contains(source)) {
+            // todo(Léo): Revisit with NormalizedURI.shouldHaveContent
             successes.map(_.uriId).distinct.foreach { uriId =>
               val normalizedUrl = db.readOnlyMaster { implicit session => uriRepo.get(uriId).url }
               rover.fetchAsap(uriId, normalizedUrl)
             }
           }
+        }
 
+        //------------------------ main method ----------------------
+
+        val rawBookmarks = parseRawBookmarksFromJson(rawKeepGroup)
+        val (successes, successesRawKeep) = internKeeps(userId, rawBookmarks, isPrivate)
+
+        if (successes.nonEmpty) {
+          //process tags: create collections, put keeps into collections.
+          tagHelper.process(RawKeepGroupImportContext(userId, source, installationId, rawKeepGroup, successes, context))
+
+          // notify rover to scrape, search to index
+          notifyRemoteServices(successes)
+
+          // mark done
           db.readWriteBatch(successesRawKeep) {
             case (session, rk) =>
               rawKeepRepo.setState(rk.id.get, RawKeepStates.IMPORTED)(session)
           }
         }
 
-        val (doneOpt, totalOpt) = db.readOnlyMaster { implicit session =>
-          (userValueRepo.getValueStringOpt(userId, UserValueName.BOOKMARK_IMPORT_DONE).map(_.toInt),
-            userValueRepo.getValueStringOpt(userId, UserValueName.BOOKMARK_IMPORT_TOTAL).map(_.toInt))
-        }
-
-        db.readWrite { implicit session =>
-          (doneOpt, totalOpt) match {
-            case (Some(done), Some(total)) =>
-              if (done + rawKeepGroup.length >= total) { // Import is done
-                userValueRepo.clearValue(userId, UserValueName.BOOKMARK_IMPORT_DONE)
-                userValueRepo.clearValue(userId, UserValueName.BOOKMARK_IMPORT_TOTAL)
-                importIdOpt.map { importId =>
-                  userValueRepo.clearValue(userId, UserValueName.bookmarkImportContextName(importId))
-                }
-              } else {
-                userValueRepo.setValue(userId, UserValueName.BOOKMARK_IMPORT_DONE, done + rawKeepGroup.length)
-              }
-            case _ =>
-          }
-        }
+        setUserValue()
 
     }
   }
