@@ -29,6 +29,7 @@ import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.libs.json.Json
 import com.keepit.search.SearchServiceClient
+import scala.collection.mutable
 
 private case object ProcessKeeps
 
@@ -54,6 +55,7 @@ private class RawKeepImporterActor @Inject() (
     rover: RoverServiceClient,
     searchClient: SearchServiceClient,
     clock: Clock,
+    tagHelper: KeepTagImportHelper,
     implicit val executionContext: ExecutionContext) extends FortyTwoActor(airbrake) with Logging {
 
   private val batchSize = 500
@@ -93,29 +95,36 @@ private class RawKeepImporterActor @Inject() (
 
     rawKeeps.groupBy(rk => (rk.userId, rk.importId, rk.source, rk.installationId, rk.isPrivate, rk.libraryId)).map {
       case ((userId, importIdOpt, source, installationId, isPrivate, libraryId), rawKeepGroup) =>
+
         val context = importIdOpt.map(importId => getHeimdalContext(userId, importId)).flatten.getOrElse(HeimdalContext.empty)
 
-        // create a set of all tags
-        val keepTagNamesMap = scala.collection.mutable.Map.empty[String, String]
-        rawKeepGroup.foreach { rk =>
-          rk.keepTags.map { tagNames =>
-            tagNames.as[Seq[String]].foreach { tagName =>
-              keepTagNamesMap += (tagName.toLowerCase -> tagName)
-            }
-          }
+        def parseRawBookmarksFromJson(rawKeepGroup: Seq[RawKeep]) = {
+          rawKeepGroup.map { rk =>
+            val canonical = rk.originalJson.flatMap(json => (json \ Normalization.CANONICAL.scheme).asOpt[String])
+            val openGraph = rk.originalJson.flatMap(json => (json \ Normalization.OPENGRAPH.scheme).asOpt[String])
+            val attribution = RawKeep.extractKeepSourceAttribtuion(rk)
+            RawBookmarkRepresentation(title = rk.title, url = rk.url, canonical = canonical, openGraph = openGraph, isPrivate = None, keptAt = rk.createdDate, sourceAttribution = attribution)
+          }.distinctBy(_.url)
         }
-        // map tagNames to keepTags
-        val keepTagMap = keepTagNamesMap.values.toSet.map { tagName: String =>
-          val keepTag = bookmarksCommanderProvider.get.getOrCreateTag(userId, tagName)(context)
-          (tagName.toLowerCase, keepTag)
-        }.toMap
 
-        val rawBookmarks = rawKeepGroup.map { rk =>
-          val canonical = rk.originalJson.flatMap(json => (json \ Normalization.CANONICAL.scheme).asOpt[String])
-          val openGraph = rk.originalJson.flatMap(json => (json \ Normalization.OPENGRAPH.scheme).asOpt[String])
-          val attribution = RawKeep.extractKeepSourceAttribtuion(rk)
-          RawBookmarkRepresentation(title = rk.title, url = rk.url, canonical = canonical, openGraph = openGraph, isPrivate = None, keptAt = rk.createdDate, sourceAttribution = attribution)
-        }.distinctBy(_.url)
+        def internKeeps(userId: Id[User], rawBookmarks: Seq[RawBookmarkRepresentation], isPrivate: Boolean) = {
+          val library = db.readWrite { implicit s =>
+            if (libraryId.isEmpty)
+              getLibFromPrivacy(isPrivate, userId)(s)
+            else
+              libraryRepo.get(libraryId.get)
+          }
+          val (successes, failures) = bookmarkInternerProvider.get.internRawBookmarks(rawBookmarks, userId, library, source)(context)
+          val rawKeepByUrl = rawKeepGroup.map(rk => rk.url -> rk).toMap
+
+          val failuresRawKeep = failures.map(s => rawKeepByUrl.get(s.url)).flatten.toSet
+          val successesRawKeep = rawKeepGroup.filterNot(v => failuresRawKeep.contains(v))
+          log.info(s"[RawKeepImporterActor] Interned ${successes.length + failures.length} keeps. ${successes.length} successes, ${failures.length} failures.")
+          (successes, rawKeepByUrl, failuresRawKeep, successesRawKeep)
+        }
+
+        val rawBookmarks = parseRawBookmarksFromJson(rawKeepGroup)
+        //val (successes, rawKeepByUrl, failuresRawKeep, successesRawKeep) = internKeeps(userId, rawBookmarks, isPrivate)
 
         val library = db.readWrite { implicit s =>
           if (libraryId.isEmpty)
@@ -123,6 +132,7 @@ private class RawKeepImporterActor @Inject() (
           else
             libraryRepo.get(libraryId.get)
         }
+
         val (successes, failures) = bookmarkInternerProvider.get.internRawBookmarks(rawBookmarks, userId, library, source)(context)
         val rawKeepByUrl = rawKeepGroup.map(rk => rk.url -> rk).toMap
 
@@ -137,56 +147,8 @@ private class RawKeepImporterActor @Inject() (
         }
 
         if (successes.nonEmpty) {
-          if (source == KeepSource.bookmarkImport && installationId.isDefined) {
-            // User selected to import Léo
-            val tagName = db.readOnlyReplica { implicit session =>
-              "Imported" + kifiInstallationRepo.getOpt(installationId.get).map(v => s" from ${v.userAgent.name}").getOrElse("")
-            }
-            val tag = bookmarksCommanderProvider.get.getOrCreateTag(userId, tagName)(context)
-            bookmarksCommanderProvider.get.addToCollection(tag.id.get, successes, updateIndex = false)(context)
-          }
-
-          /* The strategy here is to go through all the keeps, grabbing their tags, and generating a list
-         * of keeps per tag. That way applying the tag to the keeps is much more efficient, since
-         * bookmarksCommander.addToCollection is super expensive.
-         */
-          val tagIdToKeeps = scala.collection.mutable.Map.empty[Id[Collection], scala.collection.mutable.Buffer[Keep]]
-
-          successes.foreach { keep =>
-            val allTagIdsForThisKeep = rawKeepByUrl.get(keep.url).flatMap { rk =>
-              val tagIdsFromTags = rk.tagIds.map { tags =>
-                tags.split(",").toSeq.filter(_.length > 0).map { c => Try(c.toLong).map(Id[Collection]).toOption }.flatten
-              }
-
-              val tagIdsFromKeepTags = rk.keepTags.map { tagArray =>
-                tagArray.as[Seq[String]].map { tagName =>
-                  keepTagMap.get(tagName.toLowerCase).map(_.id.get)
-                }.flatten
-              }
-
-              (tagIdsFromTags, tagIdsFromKeepTags) match {
-                case (Some(tagIds), Some(keepTagIds)) => Some(tagIds ++ keepTagIds)
-                case _ => tagIdsFromTags.orElse(tagIdsFromKeepTags)
-              }
-
-            }.getOrElse(Seq.empty)
-
-            allTagIdsForThisKeep.map { tagId =>
-              val keepsList = tagIdToKeeps.get(tagId).getOrElse(scala.collection.mutable.Buffer.empty)
-              keepsList.append(keep)
-              tagIdToKeeps.put(tagId, keepsList)
-            }
-          }
-
-          tagIdToKeeps.foreach {
-            case (tagId, keeps) =>
-              // Make sure tag actually exists still
-              Try(bookmarksCommanderProvider.get.addToCollection(tagId, keeps, false)(context)) match {
-                case Success(r) => // yay!
-                case Failure(e) =>
-                  log.warn(s"[RawKeepImporterActor] Had problems applying tagId $tagId to ${keeps.length} keeps. Moving along.", e)
-              }
-          }
+          val keepImportContext = RawKeepGroupImportContext(userId, source, installationId, rawKeepGroup, successes, context)
+          tagHelper.process(keepImportContext)
 
           //the bookmarks list may be very large!
           searchClient.updateKeepIndex()
@@ -202,7 +164,6 @@ private class RawKeepImporterActor @Inject() (
               rawKeepRepo.setState(rk.id.get, RawKeepStates.IMPORTED)(session)
           }
         }
-        log.info(s"[RawKeepImporterActor] Interned ${successes.length + failures.length} keeps. ${successes.length} successes, ${failures.length} failures.")
 
         val (doneOpt, totalOpt) = db.readOnlyMaster { implicit session =>
           (userValueRepo.getValueStringOpt(userId, UserValueName.BOOKMARK_IMPORT_DONE).map(_.toInt),
@@ -279,3 +240,100 @@ class RawKeepImporterPluginImpl @Inject() (
   }
 }
 
+case class RawKeepGroupImportContext(userId: Id[User], source: KeepSource, installationIdOpt: Option[ExternalId[KifiInstallation]], rawKeepGroup: Seq[RawKeep], successImports: Seq[Keep], context: HeimdalContext)
+
+@Singleton
+class KeepTagImportHelper @Inject() (
+    db: Database,
+    keepsCommanderProvider: Provider[KeepsCommander],
+    kifiInstallationRepo: KifiInstallationRepo) extends Logging {
+
+  def process(rawKeepGroupImportContext: RawKeepGroupImportContext): Unit = {
+    val (userId, source, installationIdOpt, rawKeepGroup, successImports, context) = RawKeepGroupImportContext.unapply(rawKeepGroupImportContext).get
+
+    if (source == KeepSource.bookmarkImport && installationIdOpt.isDefined) {
+      markKeepsAsImported(userId, successImports, installationIdOpt.get)(context)
+    }
+
+    val tagIdToKeeps = {
+      val keepTagMap: Map[String, Collection] = genLowerCaseTagNameToCollectionMap(userId, rawKeepGroup)(context)
+      val rawKeepByUrl = rawKeepGroup.map(rk => rk.url -> rk).toMap
+      genCollectionIdToKeeps(keepTagMap, successImports, rawKeepByUrl)
+    }
+
+    saveKeepsToTags(tagIdToKeeps)(context)
+
+  }
+
+  private def genLowerCaseTagNameToCollectionMap(userId: Id[User], rawKeepGroup: Seq[RawKeep])(context: HeimdalContext): Map[String, Collection] = {
+    // create a set of all tags
+    val keepTagNamesMap = scala.collection.mutable.Map.empty[String, String]
+    rawKeepGroup.foreach { rk =>
+      rk.keepTags.map { tagNames =>
+        tagNames.as[Seq[String]].foreach { tagName =>
+          keepTagNamesMap += (tagName.toLowerCase -> tagName)
+        }
+      }
+    }
+    // map tagNames to keepTags
+    val keepTagMap = keepTagNamesMap.values.toSet.map { tagName: String =>
+      val keepTag = keepsCommanderProvider.get.getOrCreateTag(userId, tagName)(context)
+      (tagName.toLowerCase, keepTag)
+    }.toMap
+
+    keepTagMap
+  }
+
+  private def genCollectionIdToKeeps(keepTagMap: Map[String, Collection], successes: Seq[Keep], rawKeepByUrl: Map[String, RawKeep]): Map[Id[Collection], mutable.Buffer[Keep]] = {
+    val tagIdToKeeps = scala.collection.mutable.Map.empty[Id[Collection], scala.collection.mutable.Buffer[Keep]]
+
+    successes.foreach { keep =>
+      val allTagIdsForThisKeep = rawKeepByUrl.get(keep.url).flatMap { rk =>
+        val tagIdsFromTags = rk.tagIds.map { tags =>
+          tags.split(",").toSeq.filter(_.length > 0).map { c => Try(c.toLong).map(Id[Collection]).toOption }.flatten
+        }
+
+        val tagIdsFromKeepTags = rk.keepTags.map { tagArray =>
+          tagArray.as[Seq[String]].map { tagName =>
+            keepTagMap.get(tagName.toLowerCase).map(_.id.get)
+          }.flatten
+        }
+
+        (tagIdsFromTags, tagIdsFromKeepTags) match {
+          case (Some(tagIds), Some(keepTagIds)) => Some(tagIds ++ keepTagIds)
+          case _ => tagIdsFromTags.orElse(tagIdsFromKeepTags)
+        }
+
+      }.getOrElse(Seq.empty)
+
+      allTagIdsForThisKeep.map { tagId =>
+        val keepsList = tagIdToKeeps.get(tagId).getOrElse(scala.collection.mutable.Buffer.empty)
+        keepsList.append(keep)
+        tagIdToKeeps.put(tagId, keepsList)
+      }
+    }
+
+    tagIdToKeeps.toMap
+  }
+
+  private def markKeepsAsImported(userId: Id[User], keeps: Seq[Keep], installationId: ExternalId[KifiInstallation])(context: HeimdalContext): Unit = {
+    val tagName = db.readOnlyReplica { implicit session =>
+      "Imported" + kifiInstallationRepo.getOpt(installationId).map(v => s" from ${v.userAgent.name}").getOrElse("")
+    }
+    val tag = keepsCommanderProvider.get.getOrCreateTag(userId, tagName)(context)
+    keepsCommanderProvider.get.addToCollection(tag.id.get, keeps, updateIndex = false)(context)
+  }
+
+  private def saveKeepsToTags(tagIdToKeeps: Map[Id[Collection], Seq[Keep]])(context: HeimdalContext) = {
+    tagIdToKeeps.foreach {
+      case (tagId, keeps) =>
+        // Make sure tag actually exists still
+        Try(keepsCommanderProvider.get.addToCollection(tagId, keeps, false)(context)) match {
+          case Success(r) => // yay!
+          case Failure(e) =>
+            log.warn(s"[RawKeepImporterActor] Had problems applying tagId $tagId to ${keeps.length} keeps. Moving along.", e)
+        }
+    }
+  }
+
+}
