@@ -974,7 +974,7 @@ class AdminUserController @Inject() (
   def userIpAddressesView(ownerId: Id[User]) = AdminUserPage { implicit request =>
     val owner = db.readOnlyReplica { implicit session => userRepo.get(ownerId) }
     val logs: Seq[UserIpAddress] = userIpAddressCommander.getByUser(ownerId, 1000)
-    val sharedIpAddresses: Map[IpAddress, Seq[Id[User]]] = userIpAddressCommander.getSharedIpsByUser(ownerId, 100)
+    val sharedIpAddresses: Map[IpAddress, Seq[Id[User]]] = userIpAddressCommander.findSharedIpsByUser(ownerId, 100)
     Ok(html.admin.userIpAddresses(owner, logs, sharedIpAddresses))
   }
 
