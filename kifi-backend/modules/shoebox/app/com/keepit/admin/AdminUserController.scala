@@ -882,7 +882,7 @@ class AdminUserController @Inject() (
         val socialUsers = socialUserInfoRepo.getByUser(userId)
         val socialConnections = socialConnectionRepo.getSocialConnectionInfosByUser(userId)
         val userConnections = userConnectionRepo.getConnectedUsers(userId)
-        val handles = handleRepo.getByOwnerId(Some(Right(userId))).map(_.handle)
+        val handles = handleRepo.getByOwnerId(Some(userId)).map(_.handle)
         implicit val userIdFormat = Id.format[User]
         Json.obj(
           "user" -> user,
@@ -934,7 +934,7 @@ class AdminUserController @Inject() (
     val user = userRepo.get(userId)
 
     userRepo.save(user.withState(UserStates.INACTIVE).copy(primaryEmail = None, primaryUsername = None)) // User
-    handleCommander.reclaimAll(Right(userId), overrideProtection = true, overrideLock = true)
+    handleCommander.reclaimAll(userId, overrideProtection = true, overrideLock = true)
   }
 
   def deactivateUserEmailAddress(id: Id[UserEmailAddress]) = AdminUserAction { request =>

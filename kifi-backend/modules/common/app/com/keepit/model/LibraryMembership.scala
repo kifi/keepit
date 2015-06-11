@@ -73,20 +73,7 @@ object LibraryMembershipInfo {
 
 object LibraryMembershipStates extends States[LibraryMembership]
 
-sealed abstract class LibraryAccess(val value: String, val priority: Int) {
-  def isHigherAccess(x: LibraryAccess): Boolean = {
-    this.priority > x.priority
-  }
-  def isHigherOrEqualAccess(x: LibraryAccess): Boolean = {
-    this.priority >= x.priority
-  }
-  def isLowerAccess(x: LibraryAccess): Boolean = {
-    this.priority < x.priority
-  }
-  def isLowerOrEqualAccess(x: LibraryAccess): Boolean = {
-    this.priority <= x.priority
-  }
-}
+sealed abstract class LibraryAccess(val value: String, val priority: Int)
 
 object LibraryAccess {
   case object READ_ONLY extends LibraryAccess("read_only", 0)
