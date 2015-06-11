@@ -10,14 +10,14 @@ import com.keepit.social.BasicUser
 import org.joda.time.DateTime
 import play.api.http.Status._
 
+final case class MaybeOrganizationMember(member: Either[BasicUser, BasicContact], access: Option[OrganizationAccess], lastInvitedAt: Option[DateTime])
+final case class OrganizationFail(status: Int, message: String)
+
 class OrganizationMembershipCommander @Inject() (db: Database,
     organizationRepo: OrganizationRepo,
     organizationMembershipRepo: OrganizationMembershipRepo,
     organizationInviteRepo: OrganizationInviteRepo,
     basicUserRepo: BasicUserRepo) {
-
-  final case class MaybeOrganizationMember(member: Either[BasicUser, BasicContact], access: Option[OrganizationAccess], lastInvitedAt: Option[DateTime])
-  final case class OrganizationFail(status: Int, message: String)
 
   // Offset and Count to prevent accidental reversal of arguments with same type (Long).
   def getMembersAndInvitees(orgId: Id[Organization], count: Count, offset: Offset, includeInvitees: Boolean): Seq[MaybeOrganizationMember] = {
