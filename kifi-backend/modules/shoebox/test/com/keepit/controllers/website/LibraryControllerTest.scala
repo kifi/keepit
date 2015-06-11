@@ -785,6 +785,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         Json.parse(contentAsString(result1)) must equalTo(expected1)
 
         val result11 = libraryController.joinLibrary(pubLibId1, None, true)(request1)
+        println("xxxxxxx" + contentAsString(result11))
         status(result11) must equalTo(OK)
         contentType(result11) must beSome("application/json")
 

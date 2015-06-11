@@ -256,28 +256,15 @@ class LibraryController @Inject() (
         BadRequest(Json.obj("error" -> "invalid_id"))
       case Success(libId) =>
         implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
-        db.readOnlyMaster { implicit s =>
+        val existingMembership = db.readOnlyMaster { implicit s =>
           libraryMembershipRepo.getWithLibraryIdAndUserId(libId, request.userId)
-        } match {
-          case None =>
-            libraryCommander.joinLibrary(request.userId, libId, authToken, Some(subscribed)) match {
-              case Left(fail) =>
-                Status(fail.status)(Json.obj("error" -> fail.message))
-              case Right((_, mem)) =>
-                Ok(Json.obj("membership" -> LibraryMembershipInfo.fromMembership(mem)))
-            }
-          case Some(mem) =>
-            log.info(s"user ${request.userId} is already following library $libId, possible race condition")
-            if (mem.subscribedToUpdates != subscribed) {
-              libraryCommander.updateSubscribedToLibrary(request.userId, libId, subscribed) match {
-                case Left(fail) =>
-                  Status(fail.status)(Json.obj("error" -> fail.message))
-                case Right(mem) =>
-                  Ok(Json.obj("membership" -> LibraryMembershipInfo.fromMembership(mem)))
-              }
-            } else {
-              Ok(Json.obj("membership" -> LibraryMembershipInfo.fromMembership(mem)))
-            }
+        }
+
+        libraryCommander.joinLibrary(request.userId, libId, authToken, Some(subscribed)) match {
+          case Left(fail) =>
+            Status(fail.status)(Json.obj("error" -> fail.message))
+          case Right((_, mem)) =>
+            Ok(Json.obj("membership" -> LibraryMembershipInfo.fromMembership(mem)))
         }
     }
   }
