@@ -60,7 +60,7 @@ class ShoeboxRepoTest extends Specification with ShoeboxApplicationInjector {
         // HandleOwnershipRepo
         val handleOwnershipRepo = inject[HandleOwnershipRepo]
         db.readWrite { implicit session =>
-          val saved = handleOwnershipRepo.save(HandleOwnership(handle = Handle("leo"), ownerId = Some(Right(Id(134)))))
+          val saved = handleOwnershipRepo.save(HandleOwnership(handle = Handle("leo"), ownerId = Some(Id[User](134))))
           handleOwnershipRepo.get(saved.id.get).handle.value === "leo"
         }
       }
