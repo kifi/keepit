@@ -1380,7 +1380,7 @@ class LibraryCommander @Inject() (
     } getOrElse Map.empty
     libs.par map { lib => // may want to optimize queries below into bulk queries
       val image = ProcessedImageSize.pickBestImage(idealSize, libraryImageRepo.getActiveForLibraryId(lib.id.get), false)
-      val (numFollowers, followersSample, numCollaborators, collabsSample) = if (lib.memberCount > 1) {
+      val (numFollowers, followersSample, numCollaborators, collabsSample) = {
         val countMap = libraryMembershipRepo.countWithLibraryIdByAccess(lib.id.get)
         val numFollowers = countMap.readOnly
         val numCollaborators = countMap.readWrite
@@ -1393,8 +1393,6 @@ class LibraryCommander @Inject() (
         val followersSample = followerIds.map(id => userSample(id)).toSeq
         val collabsSample = collabIds.map(id => userSample(id)).toSeq
         (numFollowers, followersSample, numCollaborators, collabsSample)
-      } else {
-        (0, Seq.empty, 0, Seq.empty)
       }
 
       val owner = owners(lib.ownerId)
