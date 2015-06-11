@@ -1,8 +1,9 @@
 package com.keepit.model
 
 import java.net.URLEncoder
+import javax.crypto.spec.IvParameterSpec
 
-import com.keepit.common.crypto.ModelWithPublicId
+import com.keepit.common.crypto.{ ModelWithPublicIdCompanion, ModelWithPublicId }
 import com.keepit.common.db._
 import com.keepit.common.strings._
 import com.keepit.common.time._
@@ -27,8 +28,11 @@ case class Organization(
   override def withUpdateTime(now: DateTime): Organization = this.copy(updatedAt = now)
 }
 
-object Organization {
+object Organization extends ModelWithPublicIdCompanion[Organization] {
   implicit val primaryHandleFormat = PrimaryOrganizationHandle.jsonAnnotationFormat
+
+  protected val publicIdPrefix = "o"
+  protected val publicIdIvSpec = new IvParameterSpec(Array(62, 91, 74, 34, 82, -77, 19, -35, -118, 3, 112, -59, -70, 94, 101, -115))
 
   implicit val format: Format[Organization] = (
     (__ \ 'id).formatNullable[Id[Organization]] and
