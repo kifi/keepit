@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfLibraryInviteSearch', [
-  'libraryService', 'profileService', 'socialService', '$timeout', 'util', 'KEY',
-  function (libraryService, profileService, socialService, $timeout, util, KEY) {
+  'libraryService', 'profileService', 'socialService', '$timeout', 'util', 'KEY', 'net',
+  function (libraryService, profileService, socialService, $timeout, util, KEY, net) {
     return {
       restrict: 'A',
       require: '^kfModal',
@@ -231,7 +231,7 @@ angular.module('kifi')
           kfModalCtrl.close();
         };
 
-        scope.shareLibraryKifiFriend = function (result) {
+        function  shareLibraryKifiFriend(result) {
           trackShareEvent('user_clicked_page', { action: 'clickedContact', subAction: 'kifiFriend' });
 
           return shareLibrary({
@@ -243,6 +243,20 @@ angular.module('kifi')
           }).then(function () {
             result.sent = true;
           });
+        }
+
+        function promoteToCollaborator(result) {
+          return net.updateLibraryMembership(scope.library.id, result.id, {access: 'read_write'}).then(function () {
+            result.isCollaborating = true;
+          });
+        }
+
+        scope.inviteOrPromote = function (result) {
+          if (result.isFollowing) {
+            return promoteToCollaborator(result);
+          } else {
+            return shareLibraryKifiFriend(result);
+          }
         };
 
         scope.shareLibraryExistingEmail = function (result) {
