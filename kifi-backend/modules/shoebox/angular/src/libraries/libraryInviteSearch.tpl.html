@@ -42,12 +42,12 @@
               <div class="lis-contact-name" ng-bind-html="result.name"></div>
               <div class="lis-contact-network">Kifi user</div>
             </div>
-            <button ng-show="!result.sent && !(result.isFollowing || result.isCollaborating)" ng-click="shareLibraryKifiFriend(result)" class="lis-contact-button">
+            <button ng-show="!result.sent && !((isFollowInvite() && result.isFollowing) || result.isCollaborating)" ng-click="inviteOrPromote(result)" class="lis-contact-button">
               <span class="lis-invite-icon collaborate svg-collaborate-gray" ng-if="isCollabInvite()"></span>
               <span class="lis-invite-icon follow svg-share-arrow-gray" ng-if="isFollowInvite()"></span>
               {{::canInviteCollabs ? 'Invite' : 'Send'}}
             </button>
-            <div ng-show="result.isFollowing" class="lis-invite-following">Following</div>
+            <div ng-show="result.isFollowing && isFollowInvite()" class="lis-invite-following">Following</div>
             <div ng-show="result.isCollaborating" class="lis-invite-collaborating">Collaborating</div>
             <div ng-show="result.sent" class="lis-invite-sent">Sent!</div>
           </div>
