@@ -164,11 +164,13 @@ class LibraryController @Inject() (
                 }
               }.flatten
             }
+            val subscriptions = librarySubscriptionCommander.getSubKeysByLibraryId(library.id.get)
 
             libraryCommander.trackLibraryView(request.userIdOpt, library)
             val membershipJson = Json.toJson(membershipOpt)
             val inviteJson = Json.toJson(inviteOpt)
-            val libraryJson = Json.toJson(libInfo).as[JsObject] + ("membership" -> membershipJson) + ("invite" -> inviteJson)
+            val subscriptionJson = Json.toJson(subscriptions)
+            val libraryJson = Json.toJson(libInfo).as[JsObject] + ("membership" -> membershipJson) + ("invite" -> inviteJson) + ("subscriptions" -> subscriptionJson)
             Ok(Json.obj("library" -> libraryJson, "suggestedSearches" -> suggestedSearches))
           }
         })

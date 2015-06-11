@@ -38,6 +38,8 @@ angular.module('kifi')
         scope.colors = ['#447ab7','#5ab7e7','#4fc49e','#f99457','#dd5c60','#c16c9e','#9166ac'];
         scope.currentPageOrigin = '';
         scope.onCollabExperiment = (profileService.me.experiments || []).indexOf('collaborative') > -1;
+        scope.onSubscriptionExperiment = (profileService.me.experiments || []).indexOf('subscription') > -1;
+        scope.newSub = { 'name': '', 'info': { 'kind': 'slack', 'url':'' } };
 
         //
         // Scope methods.
@@ -49,6 +51,32 @@ angular.module('kifi')
         scope.editSlug = function () {
           scope.emptySlug = !scope.library.slug;
           scope.userHasEditedSlug = true;
+        };
+
+        scope.addSubscription = function() {
+
+          function validateSubscription(newSub, subscriptions) {
+
+            function containsEquivalentSub(subs, newSub) { // don't allow two subs w/ same name or endpoint
+              return _.some(subs, function(sub) { return sub.name === newSub.name; }) ||
+               _.some(subs, function(sub) { return sub.info.url === newSub.info.url; }); // TODO: only works for url-based SubInfos (e.g. SlackInfo)
+            }
+
+            return (newSub.name.length > 0 && newSub.info.url.match(/https:\/\/hooks.slack.com\/services\/.*\/.*/i)) && !containsEquivalentSub(subscriptions, newSub);
+          }
+
+          if (validateSubscription(scope.newSub, scope.library.subscriptions)) { // TODO: change this guard to be more accurate
+            scope.showError = false;
+            scope.library.subscriptions.push ( scope.newSub );
+            scope.newSub = { 'name': '', 'info': { 'kind': 'slack', 'url':'' } };
+          } else {
+            scope.showError = true;
+
+          }
+        };
+
+        scope.removeSubscription = function (index) {
+          scope.library.subscriptions.splice(index,1);
         };
 
         scope.saveLibrary = function () {
@@ -248,6 +276,7 @@ angular.module('kifi')
             listed: true,
             subscribed: false
           };
+          scope.library.subscriptions = [];
           scope.modalTitle = 'Create a library';
         }
         returnAction = scope.modalData && scope.modalData.returnAction;
