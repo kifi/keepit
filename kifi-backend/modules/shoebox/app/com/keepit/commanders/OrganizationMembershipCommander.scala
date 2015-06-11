@@ -65,7 +65,6 @@ class OrganizationMembershipCommander @Inject() (db: Database,
     membersNotIncludingOwner ++ invitedByUserId ++ invitedByEmailAddress
   }
 
-  def inviteMembers(orgId: Id[Organization], requestorId: Id[User], invitations: Seq[(Id[User], OrganizationAccess)]): Either[OrganizationFail, Seq[OrganizationInvite]] = ???
   def modifyMemberships(orgId: Id[Organization], requestorId: Id[User], modifications: Seq[(Id[User], OrganizationAccess)]): Either[OrganizationFail, Seq[OrganizationMembership]] = ???
 
   case class MemberRemovals(failedToRemove: Seq[Id[User]], removed: Seq[Id[User]])
