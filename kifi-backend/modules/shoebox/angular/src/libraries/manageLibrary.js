@@ -180,53 +180,6 @@ angular.module('kifi')
           scope.showFollowers = false;
         };
 
-        //
-        // Smart Scroll
-        //
-        scope.moreMembers = true;
-        scope.memberList = [];
-        scope.memberScrollDistance = '100%';
-
-        scope.isMemberScrollDisabled = function () {
-          return !(scope.moreMembers);
-        };
-        scope.memberScrollNext = function () {
-          pageMembers();
-        };
-
-        var pageSize = 10;
-        scope.offset = 0;
-        var loading = false;
-        function pageMembers() {
-          if (loading) { return; }
-          if (scope.library.id) {
-            loading = true;
-            libraryService.getMoreMembers(scope.library.id, pageSize, scope.offset).then(function (resp) {
-              var members = resp.members;
-              loading = false;
-              if (members.length === 0) {
-                scope.moreMembers = false;
-              } else {
-                scope.moreMembers = true;
-                scope.offset += 1;
-                members.forEach(function (member) {
-                  member.status = setMemberStatus(member);
-                });
-                scope.memberList.push.apply(scope.memberList, members);
-              }
-            });
-          }
-        }
-
-        function setMemberStatus(member) {
-          if (member.lastInvitedAt) {
-            return 'Invitation Pending';
-          } else if (member.membership === 'read_only') {
-            return 'Following';
-          } else {
-            return 'Collaborating';
-          }
-        }
 
         //
         // Watches and listeners.
@@ -251,10 +204,6 @@ angular.module('kifi')
         //
         if (scope.modalData && scope.modalData.library) {
           scope.library = _.cloneDeep(scope.modalData.library);
-          if (scope.modalData.pane === 'members') {
-            scope.viewFollowersFirst = true;
-            scope.showFollowers = true;
-          }
           scope.library.followers.forEach(function (follower) {
             follower.status = 'Following';
           });

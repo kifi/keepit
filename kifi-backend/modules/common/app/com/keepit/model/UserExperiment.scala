@@ -81,17 +81,18 @@ object ExperimentType {
   val ROVER_CONTENT = ExperimentType("rover_content")
   val COLLABORATIVE = ExperimentType("collaborative")
   val SUBSCRIPTION = ExperimentType("subscription")
+  val ORGANIZATION = ExperimentType("organization")
 
   val _ALL = ADMIN :: AUTO_GEN :: FAKE :: BYPASS_ABUSE_CHECKS :: VISITED :: NO_SEARCH_EXPERIMENTS ::
     DEMO :: EXTENSION_LOGGING :: SHOW_HIT_SCORES :: SHOW_DISCUSSIONS ::
     MOBILE_REDIRECT :: DELIGHTED_SURVEY_PERMANENT :: SPECIAL_CURATOR :: LIBRARIES :: SEND_DIGEST_EMAIL_ON_REFRESH ::
     GRAPH_BASED_PEOPLE_TO_INVITE :: CORTEX_NEW_MODEL :: CURATOR_DIVERSE_TOPIC_RECOS ::
     NEW_PUBLIC_FEED :: PROFILES_BETA :: TWITTER_BETA :: ACTIVITY_EMAIL :: ALL_KEEPS_VIEW :: EXPLICIT_SOCIAL_POSTING :: RELATED_PAGE_INFO :: NEXT_GEN_RECOS ::
-    RECO_FASTLANE :: RECO_SUBSAMPLE :: APPLY_RECO_FEEDBACK :: ROVER_CONTENT :: PLAIN_EMAIL :: COLLABORATIVE :: GRATIFICATION_EMAIL :: SUBSCRIPTION :: Nil
+    RECO_FASTLANE :: RECO_SUBSAMPLE :: APPLY_RECO_FEEDBACK :: PLAIN_EMAIL :: GRATIFICATION_EMAIL :: ORGANIZATION :: SUBSCRIPTION :: Nil
 
   private val _ALL_MAP: Map[String, ExperimentType] = _ALL.map(e => e.value -> e).toMap
 
-  def get(str: String): ExperimentType = _ALL_MAP(str.toLowerCase.trim)
+  def get(str: String): ExperimentType = ExperimentType(str.toLowerCase.trim)
 
   def getUserStatus(experiments: Set[ExperimentType]): String = {
     if (experiments.contains(FAKE)) FAKE.value
