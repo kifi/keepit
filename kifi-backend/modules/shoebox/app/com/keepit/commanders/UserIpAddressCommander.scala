@@ -58,10 +58,15 @@ class UserIpAddressCommander @Inject() (
   def kvPairsToMap[A, B](kvs: Seq[(A, B)]): Map[A, Seq[B]] = {
     kvs.groupBy(_._1).mapValues(_.map(_._2))
   }
-  def getSharedIpsByUser(userId: Id[User], limit: Int): Map[IpAddress, Seq[Id[User]]] = {
+  def findSharedIpsByUser(userId: Id[User], limit: Int): Map[IpAddress, Seq[Id[User]]] = {
     val sharedIps = db.readOnlyReplica { implicit session =>
-      userIpAddressRepo.getSharedIpsByUser(userId, limit)
+      userIpAddressRepo.findSharedIpsByUser(userId, limit)
     }
     kvPairsToMap(sharedIps)
+  }
+  def findIpClustersSince(time: DateTime, limit: Int): Seq[(IpAddress, Int, Id[User])] = {
+    db.readOnlyReplica { implicit session =>
+      userIpAddressRepo.findIpClustersSince(time, limit)
+    }
   }
 }
