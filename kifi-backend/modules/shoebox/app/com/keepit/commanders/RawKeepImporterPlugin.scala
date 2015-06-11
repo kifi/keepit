@@ -259,13 +259,13 @@ class KeepTagImportHelper @Inject() (
       markKeepsAsImported(userId, successImports, installationIdOpt.get)(context)
     }
 
-    val tagIdToKeeps = {
+    val collectionIdToKeeps: Map[Id[Collection], mutable.Buffer[Keep]] = {
       val keepTagMap: Map[String, Collection] = genLowerCaseTagNameToCollectionMap(userId, rawKeepGroup)(context)
       val rawKeepByUrl = rawKeepGroup.map(rk => rk.url -> rk).toMap
       genCollectionIdToKeeps(keepTagMap, successImports, rawKeepByUrl)
     }
 
-    saveKeepsToTags(tagIdToKeeps)(context)
+    saveKeepsToCollections(collectionIdToKeeps)(context)
 
   }
 
@@ -289,7 +289,7 @@ class KeepTagImportHelper @Inject() (
   }
 
   private def genCollectionIdToKeeps(keepTagMap: Map[String, Collection], successes: Seq[Keep], rawKeepByUrl: Map[String, RawKeep]): Map[Id[Collection], mutable.Buffer[Keep]] = {
-    val tagIdToKeeps = scala.collection.mutable.Map.empty[Id[Collection], scala.collection.mutable.Buffer[Keep]]
+    val tagIdToKeeps = mutable.Map.empty[Id[Collection], mutable.Buffer[Keep]]
 
     successes.foreach { keep =>
       val allTagIdsForThisKeep = rawKeepByUrl.get(keep.url).flatMap { rk =>
@@ -311,7 +311,7 @@ class KeepTagImportHelper @Inject() (
       }.getOrElse(Seq.empty)
 
       allTagIdsForThisKeep.map { tagId =>
-        val keepsList = tagIdToKeeps.get(tagId).getOrElse(scala.collection.mutable.Buffer.empty)
+        val keepsList = tagIdToKeeps.getOrElse(tagId, mutable.Buffer.empty)
         keepsList.append(keep)
         tagIdToKeeps.put(tagId, keepsList)
       }
@@ -328,8 +328,8 @@ class KeepTagImportHelper @Inject() (
     keepsCommanderProvider.get.addToCollection(tag.id.get, keeps, updateIndex = false)(context)
   }
 
-  private def saveKeepsToTags(tagIdToKeeps: Map[Id[Collection], Seq[Keep]])(context: HeimdalContext) = {
-    tagIdToKeeps.foreach {
+  private def saveKeepsToCollections(collectionIdToKeeps: Map[Id[Collection], Seq[Keep]])(context: HeimdalContext) = {
+    collectionIdToKeeps.foreach {
       case (tagId, keeps) =>
         // Make sure tag actually exists still
         Try(keepsCommanderProvider.get.addToCollection(tagId, keeps, false)(context)) match {
