@@ -949,21 +949,23 @@ class LibraryCommander @Inject() (
   }
 
   def joinLibrary(userId: Id[User], libraryId: Id[Library], authToken: Option[String] = None, subscribed: Option[Boolean] = None)(implicit eventContext: HeimdalContext): Either[LibraryFail, (Library, LibraryMembership)] = {
-    val (lib, inviteList) = db.readOnlyMaster { implicit s =>
+    val (lib, inviteList, existingActiveMembership) = db.readOnlyMaster { implicit s =>
       val lib = libraryRepo.get(libraryId)
       val tokenInvites = if (authToken.isDefined) {
         getValidLibInvitesFromAuthToken(libraryId, authToken)
       } else Seq.empty
       val libInvites = libraryInviteRepo.getWithLibraryIdAndUserId(libraryId, userId)
       val allInvites = tokenInvites ++ libInvites
-      (lib, allInvites)
+      val existingActiveMembership = libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId)
+      (lib, allInvites, existingActiveMembership)
     }
 
-    if (lib.kind == LibraryKind.SYSTEM_MAIN || lib.kind == LibraryKind.SYSTEM_SECRET)
+    if (lib.kind == LibraryKind.SYSTEM_MAIN || lib.kind == LibraryKind.SYSTEM_SECRET) {
       Left(LibraryFail(FORBIDDEN, "cant_join_system_generated_library"))
-    else if (lib.visibility != LibraryVisibility.PUBLISHED && inviteList.isEmpty) // private library & no library invites with matching authtoken
+    } else if (lib.visibility != LibraryVisibility.PUBLISHED && inviteList.isEmpty && existingActiveMembership.isEmpty) {
+      // private library & no library invites with matching authtoken
       Left(LibraryFail(FORBIDDEN, "cant_join_nonpublished_library"))
-    else {
+    } else {
       val maxAccess = if (inviteList.isEmpty) LibraryAccess.READ_ONLY else inviteList.max.access
       val (updatedLib, updatedMem) = db.readWrite(attempts = 3) { implicit s =>
         val updatedMem = libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId, None) match {
@@ -976,7 +978,7 @@ class LibraryCommander @Inject() (
           case Some(mem) =>
             val maxWithExisting = if (mem.state == LibraryMembershipStates.ACTIVE) Seq(maxAccess, mem.access).max else maxAccess
             val subscribedToUpdates = subscribed.getOrElse(maxWithExisting == LibraryAccess.READ_WRITE || mem.subscribedToUpdates)
-            log.info(s"[joinLibrary] Modifying membership for ${mem.userId} / ${userId}. Old access: ${mem.access}, new: ${maxWithExisting}. $maxAccess, $inviteList")
+            log.info(s"[joinLibrary] Modifying membership for ${mem.userId} / ${userId}. Old access: ${mem.access} (${mem.state}), new: ${maxWithExisting}. $maxAccess, $inviteList")
             libraryMembershipRepo.save(mem.copy(access = maxWithExisting, state = LibraryMembershipStates.ACTIVE, lastJoinedAt = Some(clock.now), subscribedToUpdates = subscribedToUpdates))
         }
         val updatedLib = libraryRepo.save(lib.copy(memberCount = libraryMembershipRepo.countWithLibraryId(libraryId)))
