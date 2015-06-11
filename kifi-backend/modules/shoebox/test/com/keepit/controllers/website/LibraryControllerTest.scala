@@ -476,7 +476,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                 "listed":false,
                 "subscribed":false
                },
-               "invite": null
+               "invite": null,
+               "subscriptions": []
              },
              "suggestedSearches": {"terms": [], "weights": []}
             }
