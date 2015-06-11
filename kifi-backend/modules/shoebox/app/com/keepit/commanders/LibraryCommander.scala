@@ -723,7 +723,7 @@ class LibraryCommander @Inject() (
     library.state == LibraryStates.ACTIVE && canViewLibrary(userId, library, accessToken)
   }
 
-  def canMoveToFromOrg(userId: Id[User], libId: Id[Library], to: Option[Id[Organization]]): Boolean = {
+  def canMoveToOrg(userId: Id[User], libId: Id[Library], to: Option[Id[Organization]]): Boolean = {
     // lib.ownerId = userId && userId is in `from` and `to`
     db.readOnlyMaster { implicit s =>
       val library = libraryRepo.get(libId)
