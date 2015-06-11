@@ -14,6 +14,7 @@ trait OrganizationMembershipRepo extends Repo[OrganizationMembership] with SeqNu
   def getbyOrgId(orgId: Id[Organization], count: Count, offset: Offset, excludeState: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Seq[OrganizationMembership]
   def getByOrgIdAndUserId(orgId: Id[Organization], userId: Id[User], excludeState: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Option[OrganizationMembership]
   def getByOrgIdAndUserIds(orgId: Id[Organization], userIds: Set[Id[User]], excludeState: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Seq[OrganizationMembership] = ???
+  def countByOrgId(orgId: Id[Organization], excludeState: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Int
   def deactivate(orgId: Id[Organization], userId: Id[User], excludeStates: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession) = ???
 }
 
@@ -92,5 +93,21 @@ class OrganizationMembershipRepoImpl @Inject() (val db: DataBaseComponent, val c
       case None => getByOrgIdCompiled(orgId, count.value, offset.value).list
       case Some(exclude) => getByOrgIdWithExcludeCompiled(orgId, exclude, count.value, offset.value).list
     }
+  }
+
+  def countByOrgIdCompiled = Compiled { (orgId: Column[Id[Organization]]) =>
+    (for { row <- rows if row.organizationId === orgId } yield row).length
+  }
+
+  def countByOrgIdWithExcludeCompiled = Compiled { (orgId: Column[Id[Organization]], excludeState: Column[State[OrganizationMembership]]) =>
+    (for { row <- rows if row.organizationId === orgId && row.state =!= excludeState } yield row).length
+  }
+
+  def countByOrgId(orgId: Id[Organization], excludeState: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Int = {
+    excludeState match {
+      case None => countByOrgIdCompiled(orgId).run
+      case Some(exclude) => countByOrgIdWithExcludeCompiled(orgId, exclude).run
+    }
+
   }
 }
