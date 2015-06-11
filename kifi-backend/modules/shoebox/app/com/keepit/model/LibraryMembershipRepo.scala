@@ -36,6 +36,7 @@ trait LibraryMembershipRepo extends Repo[LibraryMembership] with RepoWithDelete[
   def countWithLibraryIdAndAccess(libraryId: Id[Library], access: LibraryAccess)(implicit session: RSession): Int
   def countWithLibraryIdByAccess(libraryId: Id[Library])(implicit session: RSession): CountWithLibraryIdByAccess
   def countWithLibraryId(libraryId: Id[Library], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Int
+  def countByLibraryId(libraryIds: Set[Id[Library]], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Map[Id[Library], Int]
   def countWithAccessByLibraryId(libraryIds: Set[Id[Library]], access: LibraryAccess)(implicit session: RSession): Map[Id[Library], Int]
   def updateLastViewed(membershipId: Id[LibraryMembership])(implicit session: RWSession): Unit
   def updateLastEmailSent(membershipId: Id[LibraryMembership])(implicit session: RWSession): Unit
@@ -243,6 +244,10 @@ class LibraryMembershipRepoImpl @Inject() (
       case None => countMembershipsCompiled(libraryId).run
       case Some(exclude) => countMembershipsWithExcludeCompiled(libraryId, exclude).run
     }
+  }
+
+  def countByLibraryId(libraryIds: Set[Id[Library]], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Map[Id[Library], Int] = {
+    (for (row <- rows if row.libraryId.inSet(libraryIds) && row.state =!= excludeState.orNull) yield row).groupBy(_.libraryId).map { case (libraryId, results) => libraryId -> results.length }.toMap
   }
 
   private val countWithLibraryIdAndAccessCompiled = Compiled { (libraryId: Column[Id[Library]], access: Column[LibraryAccess]) =>
