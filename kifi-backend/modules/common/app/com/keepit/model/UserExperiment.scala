@@ -89,7 +89,7 @@ object ExperimentType {
 
   private val _ALL_MAP: Map[String, ExperimentType] = _ALL.map(e => e.value -> e).toMap
 
-  def get(str: String): ExperimentType = _ALL_MAP(str.toLowerCase.trim)
+  def get(str: String): ExperimentType = ExperimentType(str.toLowerCase.trim)
 
   def getUserStatus(experiments: Set[ExperimentType]): String = {
     if (experiments.contains(FAKE)) FAKE.value
