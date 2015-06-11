@@ -695,7 +695,7 @@ class LibraryCommander @Inject() (
 
   private def getValidLibInvitesFromAuthToken(libraryId: Id[Library], authToken: Option[String])(implicit s: RSession): Seq[LibraryInvite] = {
     if (authToken.nonEmpty) {
-      libraryInviteRepo.getByLibraryIdAndAuthToken(libraryId, authToken.get)
+      libraryInviteRepo.getByLibraryIdAndAuthToken(libraryId, authToken.get) // todo: only accept 'general invites' for x days
     } else {
       Seq.empty[LibraryInvite]
     }
@@ -967,25 +967,28 @@ class LibraryCommander @Inject() (
         val updatedMem = libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId, None) match {
           case None =>
             val subscribedToUpdates = subscribed.getOrElse(maxAccess == LibraryAccess.READ_WRITE)
-            val mem = libraryMembershipRepo.save(LibraryMembership(libraryId = libraryId, userId = userId, access = maxAccess, lastJoinedAt = Some(currentDateTime), subscribedToUpdates = subscribedToUpdates))
-            SafeFuture {
-              notifyOwnerOfNewFollower(userId, lib)
-            }
+            log.info(s"[joinLibrary] New membership for ${userId}. New access: $maxAccess. $inviteList")
+            val mem = libraryMembershipRepo.save(LibraryMembership(libraryId = libraryId, userId = userId, access = maxAccess, lastJoinedAt = Some(clock.now), subscribedToUpdates = subscribedToUpdates))
+            notifyOwnerOfNewFollower(userId, lib) // todo, bad, this is in a db transaction and side effects
             mem
           case Some(mem) =>
             val maxWithExisting = if (mem.state == LibraryMembershipStates.ACTIVE) Seq(maxAccess, mem.access).max else maxAccess
             val subscribedToUpdates = subscribed.getOrElse(maxWithExisting == LibraryAccess.READ_WRITE || mem.subscribedToUpdates)
-            libraryMembershipRepo.save(mem.copy(access = maxWithExisting, state = LibraryMembershipStates.ACTIVE, lastJoinedAt = Some(currentDateTime), subscribedToUpdates = subscribedToUpdates))
+            log.info(s"[joinLibrary] Modifying membership for ${mem.userId} / ${userId}. Old access: ${mem.access}, new: ${maxWithExisting}. $maxAccess, $inviteList")
+            libraryMembershipRepo.save(mem.copy(access = maxWithExisting, state = LibraryMembershipStates.ACTIVE, lastJoinedAt = Some(clock.now), subscribedToUpdates = subscribedToUpdates))
         }
         val updatedLib = libraryRepo.save(lib.copy(memberCount = libraryMembershipRepo.countWithLibraryId(libraryId)))
         inviteList.foreach { inv =>
-          libraryInviteRepo.save(inv.copy(state = LibraryInviteStates.ACCEPTED))
+          // Only update invitiations to a specific user. If it's to a specific recipient. Otherwise, leave it open for others.
+          if (inv.userId.isDefined || inv.emailAddress.isDefined) {
+            libraryInviteRepo.save(inv.copy(state = LibraryInviteStates.ACCEPTED))
+          }
         }
         val invitesToAlert = inviteList.filterNot(_.inviterId == lib.ownerId)
         if (invitesToAlert.nonEmpty) {
           val invaitee = userRepo.get(userId)
           val owner = basicUserRepo.load(lib.ownerId)
-          libraryInviteCommander.notifyInviterOnLibraryInvitationAcceptance(invitesToAlert, invaitee, lib, owner)
+          libraryInviteCommander.notifyInviterOnLibraryInvitationAcceptance(invitesToAlert, invaitee, lib, owner) // todo, bad, this is in a db transaction and side effects
         }
         (updatedLib, updatedMem)
       }
