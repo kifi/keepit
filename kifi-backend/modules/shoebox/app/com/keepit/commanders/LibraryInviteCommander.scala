@@ -60,11 +60,16 @@ class LibraryInviteCommander @Inject() (
     val invaiteeImage = s3ImageStore.avatarUrlByUser(invitee)
     val libImageOpt = libraryImageCommander.getBestImageForLibrary(lib.id.get, ProcessedImageSize.Medium.idealSize)
     invitesToAlert foreach { invite =>
+      val title = if (invite.access == LibraryAccess.READ_WRITE) {
+        s"${invitee.firstName} is now collaborating on ${lib.name}"
+      } else {
+        s"${invitee.firstName} is now following ${lib.name}"
+      }
       val inviterId = invite.inviterId
       elizaClient.sendGlobalNotification( //push sent
         userIds = Set(inviterId),
-        title = s"${invitee.firstName} is now following ${lib.name}",
-        body = s"You invited ${invitee.fullName} to follow ${lib.name}.",
+        title = title,
+        body = s"You invited ${invitee.fullName} to join ${lib.name}.",
         linkText = s"See ${invitee.firstName}’s profile",
         linkUrl = s"https://www.kifi.com/${invitee.username.value}",
         imageUrl = invaiteeImage,
@@ -75,12 +80,11 @@ class LibraryInviteCommander @Inject() (
           "library" -> Json.toJson(LibraryNotificationInfo.fromLibraryAndOwner(lib, libImageOpt, owner))
         ))
       ) map { _ =>
-          val message = s"${invitee.firstName} is now following ${lib.name}"
           val canSendPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(inviterId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
           if (canSendPush) {
             elizaClient.sendUserPushNotification(
               userId = inviterId,
-              message = message,
+              message = title,
               recipient = invitee,
               pushNotificationExperiment = PushNotificationExperiment.Experiment1,
               category = UserPushNotificationCategory.NewLibraryFollower)
