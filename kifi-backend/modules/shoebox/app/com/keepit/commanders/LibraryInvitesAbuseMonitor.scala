@@ -16,10 +16,10 @@ class LibraryInvitesAbuseMonitor(
 
   if (absoluteWarn >= absoluteError) throw new IllegalStateException(s"absolute warn $absoluteWarn is larger then error $absoluteError")
 
-  def inspect(ownerId: Id[User], userId: Option[Id[User]], email: Option[EmailAddress], libraryId: Id[Library], numNewInvites: Int) {
+  def inspect(inviterId: Id[User], inviteeUserId: Option[Id[User]], email: Option[EmailAddress], libraryId: Id[Library], numNewInvites: Int) {
     val excludeSet = Set(LibraryInviteStates.INACTIVE, LibraryInviteStates.ACCEPTED, LibraryInviteStates.DECLINED)
     val numExistingInvites = db.readOnlyReplica { implicit s =>
-      (userId, email) match {
+      (inviteeUserId, email) match {
         case (Some(id), _) =>
           libraryInviteRepo.countWithLibraryIdAndUserId(libraryId, id, excludeSet)
         case (None, Some(email)) =>
@@ -30,10 +30,11 @@ class LibraryInvitesAbuseMonitor(
     }
     val afterAdding = numNewInvites + numExistingInvites
     if (afterAdding > absoluteError) {
-      throw new AbuseMonitorException(s"user $ownerId tried to invite $userId $numNewInvites times while having $numExistingInvites. max allowed is $absoluteError")
+      // Aw, the thread calling this is totally not expecting an exception.
+      throw new AbuseMonitorException(s"user $inviterId tried to invite $inviteeUserId $numNewInvites times while having $numExistingInvites. max allowed is $absoluteError")
     }
     if (afterAdding > absoluteWarn) {
-      airbrake.notify(AirbrakeError(message = Some(s"user $ownerId tried to invite $userId $numNewInvites times while having $numExistingInvites. warning threshold is $absoluteWarn"), userId = Some(ownerId)))
+      airbrake.notify(AirbrakeError(message = Some(s"user $inviterId tried to invite $inviteeUserId $numNewInvites times while having $numExistingInvites. warning threshold is $absoluteWarn"), userId = Some(inviterId)))
     }
   }
 }

@@ -856,14 +856,18 @@ class LibraryCommander @Inject() (
     }
   }
 
-  private def notifyOwnerOfNewFollower(newFollowerId: Id[User], lib: Library): Unit = SafeFuture {
+  private def notifyOwnerOfNewFollowerOrCollaborator(newFollowerId: Id[User], lib: Library, access: LibraryAccess): Unit = SafeFuture {
     val (follower, owner, lotsOfFollowers) = db.readOnlyReplica { implicit session =>
       val follower = userRepo.get(newFollowerId)
       val owner = basicUserRepo.load(lib.ownerId)
       val lotsOfFollowers = libraryMembershipRepo.countMembersForLibrarySince(lib.id.get, DateTime.now().minusDays(1)) > 2
       (follower, owner, lotsOfFollowers)
     }
-    val message = s"${follower.firstName} ${follower.lastName} is now following your Library ${lib.name}"
+    val (category, message) = if (access == LibraryAccess.READ_WRITE) {
+      (NotificationCategory.User.LIBRARY_COLLABORATED, s"${follower.firstName} ${follower.lastName} is now collaborating on your Library ${lib.name}")
+    } else {
+      (NotificationCategory.User.LIBRARY_FOLLOWED, s"${follower.firstName} ${follower.lastName} is now following your Library ${lib.name}")
+    }
     val libImageOpt = libraryImageCommander.getBestImageForLibrary(lib.id.get, ProcessedImageSize.Medium.idealSize)
     elizaClient.sendGlobalNotification( //push sent
       userIds = Set(lib.ownerId),
@@ -873,7 +877,7 @@ class LibraryCommander @Inject() (
       linkUrl = s"https://www.kifi.com/${follower.username.value}",
       imageUrl = s3ImageStore.avatarUrlByUser(follower),
       sticky = false,
-      category = NotificationCategory.User.LIBRARY_FOLLOWED,
+      category = category,
       unread = !lotsOfFollowers, // if not a lot of recent followers, notification is marked unread
       extra = Some(Json.obj(
         "follower" -> BasicUser.fromUser(follower),
@@ -883,12 +887,16 @@ class LibraryCommander @Inject() (
         if (!lotsOfFollowers) {
           val canSendPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(lib.ownerId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
           if (canSendPush) {
+            val pushCat = category match {
+              case NotificationCategory.User.LIBRARY_COLLABORATED => UserPushNotificationCategory.NewLibraryCollaborator
+              case _ => UserPushNotificationCategory.NewLibraryFollower
+            }
             elizaClient.sendUserPushNotification(
               userId = lib.ownerId,
               message = message,
               recipient = follower,
               pushNotificationExperiment = PushNotificationExperiment.Experiment1,
-              category = UserPushNotificationCategory.NewLibraryFollower)
+              category = pushCat)
           }
         }
       }
@@ -969,29 +977,32 @@ class LibraryCommander @Inject() (
         val updatedMem = libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId, None) match {
           case None =>
             val subscribedToUpdates = subscribed.getOrElse(maxAccess == LibraryAccess.READ_WRITE)
-            log.info(s"[joinLibrary] New membership for ${userId}. New access: $maxAccess. $inviteList")
+            log.info(s"[joinLibrary] New membership for $userId. New access: $maxAccess. $inviteList")
             val mem = libraryMembershipRepo.save(LibraryMembership(libraryId = libraryId, userId = userId, access = maxAccess, lastJoinedAt = Some(clock.now), subscribedToUpdates = subscribedToUpdates))
-            notifyOwnerOfNewFollower(userId, lib) // todo, bad, this is in a db transaction and side effects
+            notifyOwnerOfNewFollowerOrCollaborator(userId, lib, maxAccess) // todo, bad, this is in a db transaction and side effects
             mem
           case Some(mem) =>
             val maxWithExisting = if (mem.state == LibraryMembershipStates.ACTIVE) Seq(maxAccess, mem.access).max else maxAccess
             val subscribedToUpdates = subscribed.getOrElse(maxWithExisting == LibraryAccess.READ_WRITE || mem.subscribedToUpdates)
-            log.info(s"[joinLibrary] Modifying membership for ${mem.userId} / ${userId}. Old access: ${mem.access} (${mem.state}), new: ${maxWithExisting}. $maxAccess, $inviteList")
+            log.info(s"[joinLibrary] Modifying membership for ${mem.userId} / $userId. Old access: ${mem.access} (${mem.state}), new: $maxWithExisting. $maxAccess, $inviteList")
             libraryMembershipRepo.save(mem.copy(access = maxWithExisting, state = LibraryMembershipStates.ACTIVE, lastJoinedAt = Some(clock.now), subscribedToUpdates = subscribedToUpdates))
         }
-        val updatedLib = libraryRepo.save(lib.copy(memberCount = libraryMembershipRepo.countWithLibraryId(libraryId)))
+
         inviteList.foreach { inv =>
-          // Only update invitiations to a specific user. If it's to a specific recipient. Otherwise, leave it open for others.
+          // Only update invitations to a specific user. If it's to a specific recipient. Otherwise, leave it open for others.
           if (inv.userId.isDefined || inv.emailAddress.isDefined) {
             libraryInviteRepo.save(inv.copy(state = LibraryInviteStates.ACCEPTED))
           }
         }
+
         val invitesToAlert = inviteList.filterNot(_.inviterId == lib.ownerId)
         if (invitesToAlert.nonEmpty) {
-          val invaitee = userRepo.get(userId)
+          val invitee = userRepo.get(userId)
           val owner = basicUserRepo.load(lib.ownerId)
-          libraryInviteCommander.notifyInviterOnLibraryInvitationAcceptance(invitesToAlert, invaitee, lib, owner) // todo, bad, this is in a db transaction and side effects
+          libraryInviteCommander.notifyInviterOnLibraryInvitationAcceptance(invitesToAlert, invitee, lib, owner) // todo, bad, this is in a db transaction and side effects
         }
+
+        val updatedLib = libraryRepo.save(lib.copy(memberCount = libraryMembershipRepo.countWithLibraryId(libraryId)))
         (updatedLib, updatedMem)
       }
       updateLibraryJoin(userId, lib, eventContext)
