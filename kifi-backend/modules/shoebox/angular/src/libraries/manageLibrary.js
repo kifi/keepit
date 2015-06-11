@@ -62,7 +62,8 @@ angular.module('kifi')
                _.some(subs, function(sub) { return sub.info.url === newSub.info.url; }); // TODO: only works for url-based SubInfos (e.g. SlackInfo)
             }
 
-            return (newSub.name.length > 0 && newSub.info.url.match(/https:\/\/hooks.slack.com\/services\/.*\/.*/i)) && !containsEquivalentSub(subscriptions, newSub);
+            return (newSub.name.length > 0 && newSub.info.url.match(/https:\/\/hooks.slack.com\/services\/.*\/.*/i)) &&
+              !containsEquivalentSub(subscriptions, newSub);
           }
 
           if (validateSubscription(scope.newSub, scope.library.subscriptions)) { // TODO: change this guard to be more accurate

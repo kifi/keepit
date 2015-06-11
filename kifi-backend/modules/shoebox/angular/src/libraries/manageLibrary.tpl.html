@@ -10,7 +10,7 @@
     </h1>
     <div class="dialog-body">
 
-      <div class="manage-lib-content">
+      <div ng-class="{'manage-lib-content': !onSubscriptionExperiment, 'manage-lib-content-subs': onSubscriptionExperiment}">
         <div ng-hide="showFollowers" ng-if="!viewFollowersFirst" class="dialog-text manage-lib-default-content">
           <div class="manage-lib-input-wrapper">
             <span class="manage-lib-heading">Name</span>
