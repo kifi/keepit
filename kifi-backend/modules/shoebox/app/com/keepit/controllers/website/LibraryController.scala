@@ -118,7 +118,7 @@ class LibraryController @Inject() (
       val suggestedSearches = getSuggestedSearchesAsJson(libraryId)
       val membershipOpt = libraryCommander.getViewerMembershipInfo(request.userIdOpt, libraryId)
       val inviteOpt = libraryInviteCommander.getViewerInviteInfo(request.userIdOpt, libraryId)
-      val subscriptions = librarySubscriptionCommander.getSubsByLibraryId(libraryId)
+      val subscriptions = librarySubscriptionCommander.getSubsByLibraryId(libraryId).map { sub => LibrarySubscriptionKey(sub.name, sub.info) }
 
       val membershipJson = Json.toJson(membershipOpt)
       val inviteJson = Json.toJson(inviteOpt)

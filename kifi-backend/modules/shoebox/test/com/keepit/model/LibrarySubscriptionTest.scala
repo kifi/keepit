@@ -3,6 +3,7 @@ package com.keepit.model
 import com.google.inject.Injector
 import com.keepit.commanders.LibrarySubscriptionCommander
 import com.keepit.common.concurrent.FakeExecutionContextModule
+import com.keepit.common.db.Id
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.Specification
 import org.specs2.matcher.MatchResult
@@ -90,7 +91,7 @@ class LibrarySubscriptionTest extends Specification with ShoeboxTestInjector {
   }
 
   "LibrarySubscriptionCommander" should {
-    "add a new subscription" in {
+    "save new subscription" in {
       withDb() { implicit injector =>
         val (user, library) = setup()
         val libSubCommander = inject[LibrarySubscriptionCommander]
@@ -101,5 +102,50 @@ class LibrarySubscriptionTest extends Specification with ShoeboxTestInjector {
         db.readOnlyMaster { implicit s => librarySubscriptionRepo.get(newSub.id.get) }.equals(newSub) === true
       }
     }
+
+    "save subscription given a subscription key" in {
+      withDb() { implicit injector =>
+        val (user, library) = setup()
+        val libSubCommander = inject[LibrarySubscriptionCommander]
+        val subKey = LibrarySubscriptionKey("competitors", SlackInfo("http://www.fakewebhook.com"))
+
+        val newSub = db.readWrite { implicit session =>
+          libSubCommander.saveSubByLibIdAndKey(library.id.get, subKey)
+        }
+
+        newSub.name === "competitors"
+        newSub.id.get.id === 1
+      }
+    }
+
+    "update subscriptions" in {
+      withDb() { implicit injector =>
+        val (user, library) = setup()
+        val libSubCommander = inject[LibrarySubscriptionCommander]
+        val newSub = db.readWrite { implicit session =>
+          libSubCommander.saveSubscription(LibrarySubscription(libraryId = library.id.get, name = "competitors", trigger = SubscriptionTrigger.NEW_KEEP, info = SlackInfo("http://www.fakewebhook.com/")))
+          libSubCommander.saveSubscription(LibrarySubscription(libraryId = library.id.get, name = "competitors2", trigger = SubscriptionTrigger.NEW_KEEP, info = SlackInfo("http://www.fakewebhook2.com/")))
+        }
+        val subKeys = Seq(LibrarySubscriptionKey("competitors1", SlackInfo("http://www.fakewebhook.com")),
+          LibrarySubscriptionKey("competitors3", SlackInfo("http://www.fakewebhook3.com")))
+
+        val (didSubsChange, newSubs) = db.readWrite { implicit s =>
+          val didSubsChange = libSubCommander.updateSubsByLibIdAndKey(library.id.get, subKeys)
+          val newSubs = libSubCommander.getSubsByLibraryId(library.id.get)
+          (didSubsChange, newSubs)
+        }
+
+        didSubsChange === true
+
+        newSubs.exists { _.name == "competitors" } === false
+        newSubs.exists { _.name == "competitors1" } === true
+        newSubs.exists { _.name == "competitors2" } === false
+        newSubs.exists { _.info == SlackInfo("http://www.fakewebhook.com") } === true
+        newSubs.exists { _.info == SlackInfo("http://www.fakewebhook2.com") } === false
+        newSubs.exists { _.info == SlackInfo("http://www.fakewebhook3.com") } === true
+
+      }
+    }
+
   }
 }

@@ -54,6 +54,7 @@ class LibraryCommander @Inject() (
     libraryInviteCommander: LibraryInviteCommander,
     libraryImageRepo: LibraryImageRepo,
     librarySubscriptionRepo: LibrarySubscriptionRepo,
+    librarySubscriptionCommander: LibrarySubscriptionCommander,
     subscriptionCommander: LibrarySubscriptionCommander,
     organizationMembershipRepo: OrganizationMembershipRepo,
     userRepo: UserRepo,
@@ -501,12 +502,20 @@ class LibraryCommander @Inject() (
                   val lib = libraryRepo.save(Library(ownerId = ownerId, name = libAddReq.name, description = libAddReq.description,
                     visibility = libAddReq.visibility, slug = validSlug, color = newColor, kind = newKind, memberCount = 1, keepCount = 0, whoCanInvite = newInviteToCollab))
                   libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = ownerId, access = LibraryAccess.OWNER, listed = newListed, lastJoinedAt = Some(currentDateTime)))
+                  libAddReq.subscriptions match {
+                    case Some(subKeys) => librarySubscriptionCommander.saveSubsByLibIdAndKey(lib.id.get, subKeys)
+                    case None =>
+                  }
                   lib
                 case Some(lib) =>
                   val newLib = libraryRepo.save(lib.copy(state = LibraryStates.ACTIVE))
                   libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId = lib.id.get, userId = ownerId, None) match {
                     case None => libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = ownerId, access = LibraryAccess.OWNER))
                     case Some(mem) => libraryMembershipRepo.save(mem.copy(state = LibraryMembershipStates.ACTIVE, listed = newListed))
+                  }
+                  libAddReq.subscriptions match {
+                    case Some(subKeys) => librarySubscriptionCommander.updateSubsByLibIdAndKey(lib.id.get, subKeys)
+                    case None =>
                   }
                   newLib
               }
@@ -532,11 +541,10 @@ class LibraryCommander @Inject() (
   }
 
   def modifyLibrary(libraryId: Id[Library], userId: Id[User], modifyReq: LibraryModifyRequest)(implicit context: HeimdalContext): Either[LibraryFail, Library] = {
-    val (targetLib, targetMembershipOpt, targetSubs) = db.readOnlyMaster { implicit s =>
+    val (targetLib, targetMembershipOpt) = db.readOnlyMaster { implicit s =>
       val lib = libraryRepo.get(libraryId)
       val mem = libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId)
-      val subs = librarySubscriptionRepo.getByLibraryId(libraryId)
-      (lib, mem, subs)
+      (lib, mem)
     }
     if (targetMembershipOpt.isEmpty || !targetMembershipOpt.get.canWrite) {
       Left(LibraryFail(FORBIDDEN, "permission_denied"))
@@ -579,7 +587,7 @@ class LibraryCommander @Inject() (
         }
       }
 
-      val newSubsOpt = modifyReq.subscriptions
+      val newSubKeysOpt = modifyReq.subscriptions
 
       val result = for {
         newName <- validName(modifyReq.name).right
@@ -601,6 +609,12 @@ class LibraryCommander @Inject() (
             searchClient.updateKeepIndex()
           }
         }
+
+        val wereSubsChanged = newSubKeysOpt match {
+          case Some(newSubKeys) => librarySubscriptionCommander.updateSubsByLibIdAndKey(targetLib.id.get, newSubKeys)
+          case None => false
+        }
+
         val lib = db.readWrite { implicit s =>
           if (targetLib.slug != newSlug) {
             val ownerId = targetLib.ownerId
@@ -609,26 +623,6 @@ class LibraryCommander @Inject() (
           }
           if (targetMembership.listed != newListed) {
             libraryMembershipRepo.save(targetMembership.copy(listed = newListed))
-          }
-
-          def saveSubscriptionChanges(newSubs: Seq[LibrarySubscription]) {
-            newSubs.foreach { newSub => // find new subs to be updated or added
-              targetSubs.find { _ equivalent newSub } match {
-                case None => subscriptionCommander.saveSubscription(newSub)
-                case Some(targetSub) => subscriptionCommander.saveSubscription(targetSub.copy(name = newSub.name, info = newSub.info))
-              }
-            }
-            targetSubs.foreach { targetSub =>
-              newSubs.find { _ equivalent targetSub } match { // find target subs that are to be removed
-                case None => subscriptionCommander.saveSubscription(targetSub.copy(state = LibrarySubscriptionStates.INACTIVE))
-                case Some(newSub) =>
-              }
-            }
-          }
-
-          newSubsOpt match {
-            case Some(newSubs) => saveSubscriptionChanges(newSubs)
-            case None => // nothing to save
           }
 
           libraryRepo.save(targetLib.copy(name = newName, slug = newSlug, visibility = newVisibility, description = newDescription, color = newColor, whoCanInvite = newInviteToCollab, state = LibraryStates.ACTIVE))
@@ -642,7 +636,7 @@ class LibraryCommander @Inject() (
           "madePrivate" -> (newVisibility != targetLib.visibility && newVisibility == LibraryVisibility.SECRET),
           "listed" -> (newListed != targetMembership.listed),
           "inviteToCollab" -> (newInviteToCollab != targetLib.whoCanInvite),
-          "subscriptions" -> targetSubs.intersect(newSubsOpt.getOrElse(Seq.empty)).nonEmpty
+          "subscriptions" -> wereSubsChanged
         )
         (lib, edits)
       }

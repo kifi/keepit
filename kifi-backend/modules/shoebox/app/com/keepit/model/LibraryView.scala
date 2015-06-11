@@ -33,6 +33,11 @@ object LibraryError {
 case class LibraryFail(status: Int, message: String)
 
 @json
+case class LibrarySubscriptionKey( // subscription data to be passed to and from the client
+  name: String,
+  info: SubscriptionInfo)
+
+@json
 case class LibraryAddRequest(
   name: String,
   visibility: LibraryVisibility,
@@ -41,7 +46,8 @@ case class LibraryAddRequest(
   description: Option[String] = None,
   color: Option[LibraryColor] = None,
   listed: Option[Boolean] = None,
-  whoCanInvite: Option[LibraryInvitePermissions] = None)
+  whoCanInvite: Option[LibraryInvitePermissions] = None,
+  subscriptions: Option[Seq[LibrarySubscriptionKey]] = None)
 
 @json
 case class LibraryModifyRequest(
@@ -52,7 +58,7 @@ case class LibraryModifyRequest(
   color: Option[LibraryColor] = None,
   listed: Option[Boolean] = None,
   whoCanInvite: Option[LibraryInvitePermissions] = None,
-  subscriptions: Option[Seq[LibrarySubscription]] = None)
+  subscriptions: Option[Seq[LibrarySubscriptionKey]] = None)
 
 case class LibraryInfo(
   id: PublicId[Library],
