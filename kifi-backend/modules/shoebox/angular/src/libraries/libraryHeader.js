@@ -38,8 +38,14 @@ angular.module('kifi')
         var smallWindow = $window.innerWidth <= smallWindowLimit;
 
 
-        if (scope.library && scope.library.invite && scope.library.invite.access==='read_write' && !profileService.userLoggedIn()) {
-          signupService.register({libraryId: scope.library.id, intent: 'follow', libAuthToken: authToken, invite: scope.library.invite});
+        if (profileService.userLoggedIn()) {
+          if (platformService.isSupportedMobilePlatform()) {
+            modalService.open({template: 'signup/getTheAppModal.tpl.html'});
+          }
+        } else {
+          if (scope.library && scope.library.invite && scope.library.invite.access==='read_write') {
+            signupService.register({libraryId: scope.library.id, intent: 'follow', libAuthToken: authToken, invite: scope.library.invite});
+          }
         }
 
         //

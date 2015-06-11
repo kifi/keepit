@@ -92,6 +92,8 @@ angular.module('kifi')
 
     var api = {
       isSupportedMobilePlatform: isSupportedMobilePlatform,
+      isIPhone: isIPhone,
+      isAndroid: isAndroid,
       goToAppOrStore: goToAppOrStore,
       isBot: isBot
     };
