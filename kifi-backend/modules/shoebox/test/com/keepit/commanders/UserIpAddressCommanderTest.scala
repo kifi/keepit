@@ -1,5 +1,6 @@
 package com.keepit.commanders
 
+import com.keepit.common.concurrent.WatchableExecutionContext
 import com.keepit.common.db.Id
 import com.keepit.common.net.UserAgent
 import com.keepit.common.service.IpAddress
@@ -34,10 +35,8 @@ class UserIpAddressCommanderTest extends Specification with ShoeboxTestInjector 
       withDb() { implicit injector =>
         val commander = inject[UserIpAddressCommander]
 
-        db.readWrite { implicit s =>
-          commander.logUser(Id[User](1), IpAddress("127.0.0.1"), UserAgent("iKeefee/1.0.12823 (Device-Type: iPhone, OS: iOS 7.0.6)"))
-        }
-
+        commander.logUser(Id[User](1), IpAddress("127.0.0.1"), UserAgent("iKeefee/1.0.12823 (Device-Type: iPhone, OS: iOS 7.0.6)"))
+        inject[WatchableExecutionContext].drain()
         commander.totalNumberOfLogs() === 1
       }
     }
