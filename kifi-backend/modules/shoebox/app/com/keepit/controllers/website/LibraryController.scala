@@ -237,7 +237,7 @@ class LibraryController @Inject() (
           }
         }
         implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
-        libraryInviteCommander.inviteUsersToLibrary(id, request.userId, validInviteList).map {
+        libraryInviteCommander.inviteToLibrary(id, request.userId, validInviteList).map {
           case Left(fail) =>
             Status(fail.status)(Json.obj("error" -> fail.message))
           case Right(inviteesWithAccess) =>
@@ -256,7 +256,7 @@ class LibraryController @Inject() (
         BadRequest(Json.obj("error" -> "invalid_id"))
       case Success(libId) =>
         implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
-        val existingMembership = db.readOnlyMaster { implicit s =>
+        db.readOnlyMaster { implicit s =>
           libraryMembershipRepo.getWithLibraryIdAndUserId(libId, request.userId)
         }
 

@@ -11,7 +11,7 @@ import com.keepit.common.service.IpAddress
 import com.keepit.model.{ User, UserIpAddress, UserIpAddressRepo, UserIpAddressStates }
 import org.joda.time.DateTime
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ Future, ExecutionContext }
 
 class UserIpAddressCommander @Inject() (
     db: Database,
@@ -23,8 +23,8 @@ class UserIpAddressCommander @Inject() (
     if (agentType.isEmpty) "NONE" else agentType
   }
 
-  def logUser(userId: Id[User], ip: IpAddress, userAgent: UserAgent): Unit = SafeFuture {
-    if (ip.toString.startsWith("10.")) {
+  def logUser(userId: Id[User], ip: IpAddress, userAgent: UserAgent): Future[Unit] = SafeFuture {
+    if (ip.ip.toString.startsWith("10.")) {
       throw new IllegalArgumentException("IP Addresses of the form 10.x.x.x are internal ec2 addresses and should not be logged")
     }
     val now = DateTime.now()

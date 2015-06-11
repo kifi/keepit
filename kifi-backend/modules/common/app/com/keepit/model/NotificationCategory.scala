@@ -40,6 +40,7 @@ object NotificationCategory {
     val LIBRARY_FOLLOWING = NotificationCategory("user_library_following")
     val LIBRARY_INVITATION = NotificationCategory("user_library_invitation")
     val LIBRARY_FOLLOWED = NotificationCategory("library_followed")
+    val LIBRARY_COLLABORATED = NotificationCategory("library_collaborated")
     val NEW_KEEP = NotificationCategory("new_keep")
 
     val DIGEST = NotificationCategory("digest")

@@ -1,11 +1,15 @@
 package com.keepit.commanders
 
+import com.keepit.common.concurrent.WatchableExecutionContext
 import com.keepit.common.db.Id
 import com.keepit.common.net.UserAgent
 import com.keepit.common.service.IpAddress
 import com.keepit.model._
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.Specification
+
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
 
 class UserIpAddressCommanderTest extends Specification with ShoeboxTestInjector {
   "UserIpAddressCommander" should {
@@ -34,10 +38,8 @@ class UserIpAddressCommanderTest extends Specification with ShoeboxTestInjector 
       withDb() { implicit injector =>
         val commander = inject[UserIpAddressCommander]
 
-        db.readWrite { implicit s =>
-          commander.logUser(Id[User](1), IpAddress("127.0.0.1"), UserAgent("iKeefee/1.0.12823 (Device-Type: iPhone, OS: iOS 7.0.6)"))
-        }
-
+        val res = commander.logUser(Id[User](1), IpAddress("127.0.0.1"), UserAgent("iKeefee/1.0.12823 (Device-Type: iPhone, OS: iOS 7.0.6)"))
+        Await.result(res, Duration.Inf)
         commander.totalNumberOfLogs() === 1
       }
     }
