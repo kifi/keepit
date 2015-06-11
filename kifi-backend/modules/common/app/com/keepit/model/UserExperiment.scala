@@ -78,8 +78,6 @@ object ExperimentType {
   val RECO_FASTLANE = ExperimentType("reco_fastlane")
   val RECO_SUBSAMPLE = ExperimentType("reco_subsample")
   val APPLY_RECO_FEEDBACK = ExperimentType("apply_reco_feedback")
-  val ROVER_CONTENT = ExperimentType("rover_content")
-  val COLLABORATIVE = ExperimentType("collaborative")
   val SUBSCRIPTION = ExperimentType("subscription")
   val ORGANIZATION = ExperimentType("organization")
 
