@@ -89,7 +89,7 @@ angular.module('kifi')
         followLibrary();
       } else {
         $scope.tipping = false;
-        signupService.register({libraryId: $scope.library.id, intent: 'follow'});  // todo include authToken
+        signupService.register({libraryId: $scope.library.id, intent: 'follow'});
       }
     };
 
