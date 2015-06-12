@@ -260,7 +260,7 @@ class LibraryController @Inject() (
     }
   }
 
-  def joinLibrary(pubId: PublicId[Library], authToken: Option[String] = None, subscribed: Boolean = false) = UserAction { request =>
+  def joinLibrary(pubId: PublicId[Library], authToken: Option[String] = None, subscribedOpt: Option[Boolean]) = UserAction { request =>
     Library.decodePublicId(pubId) match {
       case Failure(ex) =>
         BadRequest(Json.obj("error" -> "invalid_id"))
@@ -270,7 +270,7 @@ class LibraryController @Inject() (
           libraryMembershipRepo.getWithLibraryIdAndUserId(libId, request.userId)
         }
 
-        libraryCommander.joinLibrary(request.userId, libId, authToken, Some(subscribed)) match {
+        libraryCommander.joinLibrary(request.userId, libId, authToken, subscribedOpt) match {
           case Left(fail) =>
             Status(fail.status)(Json.obj("error" -> fail.message))
           case Right((_, mem)) =>
