@@ -322,6 +322,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
              },
              "invite": null
            },
+           "subscriptions": [],
            "suggestedSearches": {"terms": [], "weights": []}
           }
         """))
@@ -381,6 +382,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
               "lastInvite":${t1.plusMinutes(3).getMillis}
              }
            },
+           "subscriptions": [],
            "suggestedSearches": {"terms": [], "weights": []}
           }
         """))
@@ -476,6 +478,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                },
                "invite": null
              },
+             "subscriptions": [],
              "suggestedSearches": {"terms": [], "weights": []}
             }
           """)

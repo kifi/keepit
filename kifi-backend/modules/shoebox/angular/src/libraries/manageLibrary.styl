@@ -233,6 +233,9 @@ textarea.manage-lib-input
     background-repeat: no-repeat
     background-position: center
 
+.manage-lib-sub-url-input
+  left: 100px
+
 .manage-lib-create-button
   display: block
   margin: 0 auto
@@ -369,7 +372,12 @@ button.manage-lib-delete-button
 
 .manage-lib-content
   position: relative
-  height: 398px
+  height: 400px
+  overflow: hidden
+
+.manage-lib-content-subs
+  position: relative
+  height: 600px
   overflow: hidden
 
 .manage-lib-default-content
@@ -389,6 +397,26 @@ button.manage-lib-delete-button
   height: 'calc(100% - %s)' % margin-top
   overflow-y: auto
   overflow-x: hidden
+
+.manage-lib-subs-table
+  width: 120%
+  margin-left: 30px
+  table-layout: fixed
+  border-collapse: separate
+  border-spacing: 10px
+
+.manage-lib-sub-url
+  overflow-x: hidden
+  overflow-y: hidden
+
+.manage-lib-sub-name
+  overflow-x: hidden
+  overflow-y: hidden
+
+.manage-lib-subs-error
+  color: red
+  width: 60%
+
 
 //
 // Delete library confirm modal

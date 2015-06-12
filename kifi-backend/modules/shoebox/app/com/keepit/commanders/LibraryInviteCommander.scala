@@ -249,10 +249,6 @@ class LibraryInviteCommander @Inject() (
   }
 
   private def notifyInvitees(groupedInvites: Seq[LibraryInvite], inviter: User, lib: Library, libOwner: BasicUser) = {
-    val userImage = s3ImageStore.avatarUrlByUser(inviter)
-    val libLink = s"""https://www.kifi.com${Library.formatLibraryPath(libOwner.username, lib.slug)}"""
-    val libImageOpt = libraryImageCommander.getBestImageForLibrary(lib.id.get, ProcessedImageSize.Medium.idealSize)
-
     val userInviteesMap = groupedInvites.collect {
       case invite if invite.userId.isDefined =>
         invite.userId.get -> invite
@@ -260,11 +256,9 @@ class LibraryInviteCommander @Inject() (
 
     // send notifications to kifi users only
     if (userInviteesMap.nonEmpty) {
-      notifyInviteeAboutInvitationToJoinLibrary(inviter, lib, libOwner, userImage, libLink, libImageOpt, userInviteesMap)
-      if (inviter.id.get != lib.ownerId) {
-        notifyLibOwnerAboutInvitationToTheirLibrary(inviter, lib, libOwner, userImage, libImageOpt, userInviteesMap)
-      }
+      notifyInviteeAboutInvitationToJoinLibrary(inviter, lib, libOwner, userInviteesMap)
     }
+
     // send emails to both users & non-users
     groupedInvites.map { invite =>
       Try(invite.userId match {
@@ -278,7 +272,17 @@ class LibraryInviteCommander @Inject() (
     }
   }
 
-  def notifyInviteeAboutInvitationToJoinLibrary(inviter: User, lib: Library, libOwner: BasicUser, userImage: String, libLink: String, libImageOpt: Option[LibraryImage], inviteeMap: Map[Id[User], LibraryInvite]): Unit = {
+  type LibraryInviteeUser = { def isCollaborator: Boolean }
+
+  def notifyInviteeAboutInvitationToJoinLibrary(inviter: User, lib: Library, libOwner: BasicUser, inviteeMap: Map[Id[User], LibraryInviteeUser]): Unit = {
+    val userImage = s3ImageStore.avatarUrlByUser(inviter)
+    val libLink = s"""https://www.kifi.com${Library.formatLibraryPath(libOwner.username, lib.slug)}"""
+    val libImageOpt = libraryImageCommander.getBestImageForLibrary(lib.id.get, ProcessedImageSize.Medium.idealSize)
+
+    if (inviter.id.get != lib.ownerId) {
+      notifyLibOwnerAboutInvitationToTheirLibrary(inviter, lib, libOwner, userImage, libImageOpt, inviteeMap)
+    }
+
     val (collabInvitees, followInvitees) = inviteeMap.partition { case (userId, invite) => invite.isCollaborator }
     val collabInviteeSet = collabInvitees.keySet
     val followInviteeSet = followInvitees.keySet
@@ -347,7 +351,7 @@ class LibraryInviteCommander @Inject() (
     }
   }
 
-  def notifyLibOwnerAboutInvitationToTheirLibrary(inviter: User, lib: Library, libOwner: BasicUser, userImage: String, libImageOpt: Option[LibraryImage], inviteeMap: Map[Id[User], LibraryInvite]): Unit = {
+  def notifyLibOwnerAboutInvitationToTheirLibrary(inviter: User, lib: Library, libOwner: BasicUser, userImage: String, libImageOpt: Option[LibraryImage], inviteeMap: Map[Id[User], LibraryInviteeUser]): Unit = {
     val (collabInvitees, followInvitees) = inviteeMap.partition { case (userId, invite) => invite.isCollaborator }
     val collabInviteeSet = collabInvitees.keySet
     val followInviteeSet = followInvitees.keySet
