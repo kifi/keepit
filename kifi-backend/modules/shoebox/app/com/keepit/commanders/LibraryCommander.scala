@@ -1596,9 +1596,10 @@ class LibraryCommanderImpl @Inject() (
                   val newSubscription = if (newAccess == LibraryAccess.READ_WRITE) true else targetMem.subscribedToUpdates // auto subscribe to updates if a collaborator
                   val inviter = userRepo.get(requestUserId)
                   val libOwner = basicUserRepo.load(library.ownerId)
-                  libraryInviteCommander.notifyInviteeAboutInvitationToJoinLibrary(inviter, library, libOwner, Map(targetUserId -> targetMem))
+                  val updatedTargetMembership = libraryMembershipRepo.save(targetMem.copy(access = newAccess, subscribedToUpdates = newSubscription, state = LibraryMembershipStates.ACTIVE))
+                  libraryInviteCommander.notifyInviteeAboutInvitationToJoinLibrary(inviter, library, libOwner, Map(targetUserId -> updatedTargetMembership))
 
-                  Right(libraryMembershipRepo.save(targetMem.copy(access = newAccess, subscribedToUpdates = newSubscription, state = LibraryMembershipStates.ACTIVE)))
+                  Right(updatedTargetMembership)
               }
             }
           } else { // invalid permissions
