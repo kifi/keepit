@@ -29,14 +29,14 @@ class UserIpAddressCommander @Inject() (
     if (agentType.isEmpty) "NONE" else agentType
   }
 
-  def logUser(userId: Id[User], ip: IpAddress, userAgent: UserAgent): Future[Unit] = SafeFuture {
+  def logUser(userId: Id[User], ip: IpAddress, userAgent: UserAgent, reportNewClusters: Boolean = true): Future[Unit] = SafeFuture {
     if (ip.ip.toString.startsWith("10.")) {
       throw new IllegalArgumentException("IP Addresses of the form 10.x.x.x are internal ec2 addresses and should not be logged")
     }
     val now = DateTime.now()
     val agentType = simplifyUserAgent(userAgent)
     if (agentType == "NONE") {
-      log.info("[RPB] Could not parse an agent type out of: " + userAgent)
+      log.info("[IPTRACK AGENT] Could not parse an agent type out of: " + userAgent)
     }
     val model = UserIpAddress(None, now, now, UserIpAddressStates.ACTIVE, userId, ip, agentType)
 
@@ -46,7 +46,7 @@ class UserIpAddressCommander @Inject() (
       currentCluster
     }
 
-    if (!oldCluster.isEmpty && !oldCluster.contains(userId)) {
+    if (reportNewClusters && !oldCluster.isEmpty && !oldCluster.contains(userId)) {
       notifySlackChannelAboutCluster(ip)
     }
   }

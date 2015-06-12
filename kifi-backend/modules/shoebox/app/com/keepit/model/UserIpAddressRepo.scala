@@ -89,15 +89,15 @@ class UserIpAddressRepoImpl @Inject() (
     result.as[(IpAddress, Id[User])].list
   }
 
-  implicit val getIpClusterResult = GetResult(r => (IpAddress(r.<<), r.<< : Int))
+  implicit val getIpAddressResult = GetResult(r => (IpAddress(r.<<)))
   def findIpClustersSince(time: DateTime, limit: Int)(implicit session: RSession): Seq[IpAddress] = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    val result = sql"""select ip_address, count(distinct user_id) as cnt
+    val result = sql"""select ip_address
                        from user_ip_addresses
                        where created_at > $time
                        group by ip_address
-                       order by cnt desc
+                       order by count(distinct user_id) desc
                        limit $limit;"""
-    result.as[(IpAddress, Int)].list.map(_._1)
+    result.as[IpAddress].list
   }
 }
