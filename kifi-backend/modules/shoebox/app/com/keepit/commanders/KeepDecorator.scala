@@ -64,7 +64,7 @@ class KeepDecorator @Inject() (
         keepToCollectionRepo.getCollectionsForKeeps(keeps) //cached
       }.map(collectionCommander.getBasicCollections)
 
-      val sourceAttrs = db.readOnlyMaster { implicit s =>
+      val sourceAttrs = db.readOnlyReplica { implicit s =>
         keeps.map { keep =>
           try {
             keep.sourceAttributionId.map { id => keepSourceAttributionRepo.get(id) }
