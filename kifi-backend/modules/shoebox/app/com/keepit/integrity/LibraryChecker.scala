@@ -82,8 +82,11 @@ class LibraryChecker @Inject() (
   }
 
   def max(xs: Seq[Long]): Option[Long] = {
-    if (xs.isEmpty) None
-    Some(xs.reduceLeft((x, y) => if (x > y) x else y))
+    if (xs.isEmpty) {
+      None
+    } else {
+      Some(xs.reduceLeft((x, y) => if (x > y) x else y))
+    }
   }
 
   def syncLibraryLastKeptAndKeepCount() {
