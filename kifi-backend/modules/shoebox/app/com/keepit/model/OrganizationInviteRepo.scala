@@ -10,7 +10,7 @@ import org.joda.time.DateTime
 
 @ImplementedBy(classOf[OrganizationInviteRepoImpl])
 trait OrganizationInviteRepo extends Repo[OrganizationInvite] {
-  def getByOrganization(organizationId: Id[Organization], count: Count, offset: Offset, state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit s: RSession): Seq[OrganizationInvite]
+  def getByOrganization(organizationId: Id[Organization], limit: Limit, offset: Offset, state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit s: RSession): Seq[OrganizationInvite]
   def getByInviter(inviterId: Id[User]): Seq[OrganizationInvite] = ???
 }
 
@@ -65,11 +65,11 @@ class OrganizationInviteRepoImpl @Inject() (val db: DataBaseComponent, val clock
   def table(tag: Tag) = new OrganizationInviteTable(tag)
   initTable()
 
-  def getByOrganizationCompiled = Compiled { (orgId: Column[Id[Organization]], count: ConstColumn[Long], offset: ConstColumn[Long], state: Column[State[OrganizationInvite]]) =>
-    (for { row <- rows if row.organizationId === orgId && row.state === state } yield row).drop(offset).take(count)
+  def getByOrganizationCompiled = Compiled { (orgId: Column[Id[Organization]], limit: ConstColumn[Long], offset: ConstColumn[Long], state: Column[State[OrganizationInvite]]) =>
+    (for { row <- rows if row.organizationId === orgId && row.state === state } yield row).drop(offset).take(limit)
   }
 
-  def getByOrganization(organizationId: Id[Organization], count: Count, offset: Offset, state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit s: RSession): Seq[OrganizationInvite] = {
-    getByOrganizationCompiled(organizationId, count.value, offset.value, state).list
+  def getByOrganization(organizationId: Id[Organization], limit: Limit, offset: Offset, state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit s: RSession): Seq[OrganizationInvite] = {
+    getByOrganizationCompiled(organizationId, limit.value, offset.value, state).list
   }
 }
