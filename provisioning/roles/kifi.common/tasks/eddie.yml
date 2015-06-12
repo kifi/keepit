@@ -1,0 +1,20 @@
+---
+- name: Copy eddie deploy script
+  copy:
+    src: eddie
+    dest: "{{ app_home }}"
+    owner: fortytwo
+    group: fortytwo
+- name: set eddie cron
+  cron:
+    name: eddie-self-deploy
+    special_time: reboot
+    user: fortytwo
+    job: /usr/bin/python /home/fortytwo/eddie/eddie-self-deploy.py
+- name: check if {{ shoebox }} has been deployed before
+  stat: path={{ app_home }}/run/{{ service }}
+  register: service_home
+- name: run eddie-self-deploy
+  command: /bin/true
+  when: not service_home.stat.exists
+  notify: eddie-self-deploy

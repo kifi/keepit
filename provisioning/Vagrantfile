@@ -1,0 +1,21 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+# See online documentation at https://docs.vagrantup.com.
+Vagrant.configure(2) do |config|
+  config.vm.box = "ubuntu/trusty64"
+
+  config.vm.provision "ansible" do |ansible|
+    ansible.playbook = "vagrant-playbook.yml"
+    ansible.verbose = 'vv'
+    ansible.groups = {
+      "shoebox" => ["shoebox1"]
+    }
+    ansible.extra_vars = {
+      "hostname_prefix" => "vagrant-"
+    }
+  end
+
+  config.vm.define "shoebox1" do |shoebox|
+  end
+end

@@ -1,0 +1,30 @@
+aws_access_key_id: "{{ lookup('env', 'AWS_ACCESS_KEY_ID') }}"
+aws_secret_access_key: "{{ lookup('env', 'AWS_SECRET_ACCESS_KEY') }}"
+ec2:
+  defaults:
+    region: us-west-1
+    security_group: default
+    ami: ami-0da85c49 # ubuntu14.04-play-30-ansible
+    key_name: andrew
+    volumes:
+      - device_name: /dev/sda1
+        volume_size: 32
+        device_type: gp2
+        delete_on_termination: true
+  instances:
+    - tags:
+        Name: tmp-ansible-shoebox-demand6
+        Service: shoebox
+        Mode: primary
+        ELB: shoebox-b-1
+        Ansible: v1
+      zone: us-west-1b
+      instance_type: m3.xlarge
+    - tags:
+        Name: tmp-ansible-shoebox-demand7
+        Service: shoebox
+        Mode: primary
+        ELB: shoebox-b-1
+        Ansible: v1
+      zone: us-west-1a
+      instance_type: m3.xlarge

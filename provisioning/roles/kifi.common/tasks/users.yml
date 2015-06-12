@@ -1,0 +1,48 @@
+---
+- name: install zsh
+  apt: name=zsh
+- name: add users
+  user: name={{ item }} shell=/bin/zsh
+  with_items:
+    - eng
+    - fortytwo
+- name: add eng to sudo group
+  user: name=eng append=yes groups=sudo
+- name: create users .ssh directory
+  file:
+    path: /home/{{ item }}/.ssh
+    state: directory
+    owner: "{{ item }}"
+    group: "{{ item }}"
+    mode: 0770
+  with_items:
+    - eng
+    - fortytwo
+- name: set users .ssh/authorized_keys
+  copy:
+    src: ssh_authorized_keys
+    dest: /home/{{ item }}/.ssh/authorized_keys
+    owner: "{{ item }}"
+    group: "{{ item }}"
+    mode: 0640
+  with_items:
+    - eng
+    - fortytwo
+- name: copy .zshrc
+  copy:
+    src: zshrc
+    dest: /home/{{ item }}/.zshrc
+    mode: 0664
+    owner: "{{ item }}"
+    group: "{{ item }}"
+  with_items:
+    - eng
+    - fortytwo
+- name: update sudoers, allow nopasswd for "sudo" group
+  lineinfile:
+    dest: /etc/sudoers
+    state: present
+    regexp: '^%sudo\s+ALL\='
+    line: '%sudo ALL=(ALL) NOPASSWD:ALL'
+    # Validate the sudoers file before saving
+    validate: 'visudo -cf %s'

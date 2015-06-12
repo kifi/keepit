@@ -1,0 +1,24 @@
+---
+- name: "setup app directories"
+  file:
+    path: "{{ app_home }}/{{ item }}"
+    state: directory
+    owner: fortytwo
+    group: fortytwo
+  with_items:
+    - repo
+    - run
+- name: "copy {{ service }} init.d script"
+  copy:
+    src: etc/init.d/{{ service }}
+    dest: /etc/init.d/{{ service }}
+    mode: 0754
+    owner: fortytwo
+    group: fortytwo
+- stat: path=/etc/rc5.d/S20{{ service }}
+  register: st
+- name: "update-rc.d {{ service }}"
+  command: update-rc.d {{ service }} defaults
+  when: not st.stat.exists
+- name: "enable {{ service }} service"
+  service: name={{ service }} enabled=yes state=started

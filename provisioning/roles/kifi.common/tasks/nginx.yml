@@ -1,0 +1,31 @@
+---
+- name: install nginx package
+  apt: name=nginx
+- name: copy nginx.conf
+  copy:
+    src: etc/nginx/nginx.conf
+    dest: /etc/nginx/nginx.conf
+    mode: 0660
+    owner: fortytwo
+    group: fortytwo
+  register: nginx_conf
+- name: copy nginx common.conf
+  copy:
+    src: etc/nginx/conf.d/common.conf
+    dest: /etc/nginx/conf.d/common.conf
+    mode: 0660
+    owner: fortytwo
+    group: fortytwo
+  register: nginx_common_conf
+- name: copy nginx {{ service }}.conf
+  copy:
+    src: etc/nginx/conf.d/{{ service }}.conf
+    dest: /etc/nginx/conf.d/{{ service }}.conf
+    mode: 0660
+    owner: fortytwo
+    group: fortytwo
+  register: nginx_service_conf
+- name: verify correct nginx syntax
+  command: nginx -t
+- service: name=nginx state=reloaded enabled=yes
+  when: nginx_conf.changed or nginx_common_conf.changed or nginx_service_conf.changed

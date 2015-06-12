@@ -1,0 +1,4 @@
+---
+dependencies:
+  - { role: williamyeh.oracle-java }
+  - { role: ricbra.logentries }

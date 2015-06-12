@@ -1,0 +1,60 @@
+---
+- hosts: localhost
+  gather_facts: no
+  vars_files:
+    - vars/ec2.yml
+  tasks:
+    - name: possibly launch new ec2 instances
+      with_items: ec2.instances
+      ec2:
+        key_name: "{{ ec2.defaults.key_name }}"
+        instance_type: "{{ item.instance_type }}"
+        id: "{{ item.tags.Name }}"
+        instance_tags: "{{ item.tags }}"
+        count: 1
+        count_tag:
+          Name: "{{ item.tags.Name }}"
+        image: "{{ ec2.defaults.ami }}"
+        volumes: "{{ ec2.defaults.volumes }}"
+        wait: yes
+        group: "{{ ec2.defaults.security_group }}"
+        region: "{{ ec2.defaults.region }}"
+        zone: "{{ item.zone }}"
+        state: present
+      register: ec2_task
+    - name: add ec2 instances to our hosts lists
+      add_host:
+        name: "{{ item.1.public_dns_name }}"
+        groups: ec2,tag_Service_{{ item.0.item.tags.Service }}
+      with_subelements:
+       - ec2_task.results
+       - instances
+    - name: Wait for SSH to come up
+      wait_for: host={{ item.1.public_dns_name }} port=22 delay=1 timeout=320 state=started
+      with_subelements:
+       - ec2_task.results
+       - instances
+
+- hosts: ec2
+  sudo: yes
+  vars_files:
+    - vars/ec2.yml
+  pre_tasks:
+    - name: create etc/init.d/kifi-register-host
+      template:
+        src: templates/etc/init.d/kifi-register-host.j2
+        dest: /etc/init.d/kifi-register-host
+        owner: root
+        group: root
+        mode: 0774
+    - name: enable kifi-register-host service
+      command: "update-rc.d kifi-register-host start 90 3 4 5 ."
+    - command: /etc/init.d/kifi-register-host
+      register: kifi_hostname
+    - set_fact:
+        ansible_fqdn: "{{ kifi_hostname.stdout_lines.0 }}"
+
+- hosts: tag_Service_shoebox
+  sudo: yes
+  roles:
+    - { role: kifi.shoebox }

@@ -1,0 +1,8 @@
+---
+java_version: 7
+logentries_account_key: ab262b73-aff4-4fd9-b83c-8ff7b510f7f9
+logentries_logs:
+  - name: "{{ service }}.out"
+    path: /home/fortytwo/run/{{ service }}/log/{{ service }}.out
+  - name: app.log
+    path: /home/fortytwo/run/{{ service }}/log/app.log
