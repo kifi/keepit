@@ -390,4 +390,8 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   @Provides @Singleton
   def keepImagesCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new KeepImagesCache(stats, accessLog, (outerRepo, 30 days))
+
+  @Provides @Singleton
+  def userIpAddressCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new UserIpAddressCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 1 days))
 }
