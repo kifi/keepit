@@ -1531,27 +1531,30 @@ class LibraryCommander @Inject() (
         case (Some(mem), Some(targetMem), _) if targetMem.access == LibraryAccess.OWNER =>
           Left(LibraryFail(BAD_REQUEST, "cannot_change_owner_access"))
 
-        case (Some(mem), Some(targetMem), library) =>
+        case (Some(requesterMem), Some(targetMem), library) =>
 
-          if ((mem.isOwner && !targetMem.isOwner) || // owners can edit anyone except themselves
-            (mem.isCollaborator && !targetMem.isOwner) || // a collaborator can edit anyone (but the owner). Collaborator cannot invite others to collaborate if the library does not allow collaborators to invite
-            (mem.isFollower && mem.userId == targetMem.userId)) { // a follower can only edit herself
+          if ((requesterMem.isOwner && !targetMem.isOwner) || // owners can edit anyone except themselves
+            (requesterMem.isCollaborator && !targetMem.isOwner) || // a collaborator can edit anyone (but the owner). Collaborator cannot invite others to collaborate if the library does not allow collaborators to invite
+            (requesterMem.isFollower && requesterMem.userId == targetMem.userId)) { // a follower can only edit herself
             db.readWrite { implicit s =>
               newAccess match {
                 case None =>
                   SafeFuture { convertKeepOwnershipToLibraryOwner(targetMem.userId, library) }
                   Right(libraryMembershipRepo.save(targetMem.copy(state = LibraryMembershipStates.INACTIVE)))
-                case Some(newAccess) if mem.isCollaborator && newAccess == LibraryAccess.READ_WRITE && library.whoCanInvite == Some(LibraryInvitePermissions.OWNER) =>
-                  log.warn(s"[updateLibraryMembership] invalid permission ${mem} trying to change membership ${targetMem} to ${newAccess} when library has invite policy ${library.whoCanInvite}")
+                case Some(newAccess) if requesterMem.isCollaborator && newAccess == LibraryAccess.READ_WRITE && library.whoCanInvite == Some(LibraryInvitePermissions.OWNER) =>
+                  log.warn(s"[updateLibraryMembership] invalid permission ${requesterMem} trying to change membership ${targetMem} to ${newAccess} when library has invite policy ${library.whoCanInvite}")
                   Left(LibraryFail(FORBIDDEN, "invalid_collaborator_permission"))
                 case Some(newAccess) =>
-                  SafeFuture { convertKeepOwnershipToLibraryOwner(targetMem.userId, library) }
                   val newSubscription = if (newAccess == LibraryAccess.READ_WRITE) true else targetMem.subscribedToUpdates // auto subscribe to updates if a collaborator
-                  Right(libraryMembershipRepo.save(targetMem.copy(access = newAccess, subscribedToUpdates = newSubscription)))
+                  val inviter = userRepo.get(requestUserId)
+                  val libOwner = basicUserRepo.load(library.ownerId)
+                  libraryInviteCommander.notifyInviteeAboutInvitationToJoinLibrary(inviter, library, libOwner, Map(targetUserId -> targetMem))
+
+                  Right(libraryMembershipRepo.save(targetMem.copy(access = newAccess, subscribedToUpdates = newSubscription, state = LibraryMembershipStates.ACTIVE)))
               }
             }
           } else { // invalid permissions
-            log.warn(s"[updateLibraryMembership] invalid permission ${mem} trying to change membership ${targetMem} to ${newAccess}")
+            log.warn(s"[updateLibraryMembership] invalid permission ${requesterMem} trying to change membership ${targetMem} to ${newAccess}")
             Left(LibraryFail(FORBIDDEN, "invalid_permissions"))
           }
       }
