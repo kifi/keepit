@@ -70,6 +70,7 @@ trait LibraryCommander {
   def removeLibrary(libraryId: Id[Library], userId: Id[User])(implicit context: HeimdalContext): Option[LibraryFail]
   def canViewLibrary(userId: Option[Id[User]], library: Library, authToken: Option[String] = None): Boolean
   def canViewLibrary(userId: Option[Id[User]], libraryId: Id[Library], accessToken: Option[String]): Boolean
+  def canMoveToOrg(userId: Id[User], libId: Id[Library], to: Option[Id[Organization]]): Boolean
   def getLibrariesByUser(userId: Id[User]): (Seq[(LibraryMembership, Library)], Seq[(LibraryInvite, Library)])
   def getLibrariesUserCanKeepTo(userId: Id[User]): Seq[(Library, LibraryMembership, Seq[BasicUser])]
   def userAccess(userId: Id[User], libraryId: Id[Library], universalLinkOpt: Option[String]): Option[LibraryAccess]
