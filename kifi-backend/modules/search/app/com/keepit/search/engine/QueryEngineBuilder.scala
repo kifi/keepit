@@ -19,7 +19,7 @@ class QueryEngineBuilder(userQuery: Query) {
 
   private[this] val _tieBreakerMultiplier = tieBreakerMultiplier
   private[this] val _expr = buildExpr(userQuery) // (expr, query, size)
-  private[this] var _filters: List[(Query, Float)] = Nil
+  private[this] var _filters: List[Query] = Nil
   private[this] var _boosters: List[(Query, Float)] = Nil
   private[this] lazy val _core = buildCore() // (expr, query, size)
   private[this] lazy val _final = buildFinal()
@@ -34,7 +34,7 @@ class QueryEngineBuilder(userQuery: Query) {
 
   def addFilterQuery(filter: Query): QueryEngineBuilder = {
     if (built) throw new IllegalStateException("cannot modify the engine builder once an engine is built")
-    _filters = (new FilterQuery(filter), 1.0f) :: _filters
+    _filters = filter :: _filters
     this
   }
 
@@ -63,8 +63,10 @@ class QueryEngineBuilder(userQuery: Query) {
   private[this] def buildCore(): (ScoreExpr, Query, Int) = {
     built = true
     val (expr, query, totalSize) = _filters.foldLeft(_expr) {
-      case ((expr, query, size), (booster, boostStrength)) =>
+      case ((expr, query, size), filterQuery) =>
         val boosterExpr = MaxExpr(size)
+        val boostStrength = 1.0f
+        val booster = new FilterQuery(filterQuery)
         (BoostExpr(expr, boosterExpr, boostStrength), new KBoostQuery(query, booster, boostStrength), size + 1)
     }
     (expr, query, totalSize)
@@ -154,7 +156,7 @@ class QueryEngineBuilder(userQuery: Query) {
       }
     }
 
-    _filters.foreach { case (q, _) => labels += toLabel(q) }
+    _filters.foreach { filter => labels += toLabel(filter) }
     _boosters.foreach { case (q, _) => labels += toLabel(q) }
 
     labels.toArray
