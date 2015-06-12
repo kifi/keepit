@@ -42,14 +42,14 @@ class UserIpAddressClusterCronPluginImpl @Inject() (
 
   override def enabled: Boolean = true
   override def onStart() {
-    val every5Minutes = "0 5 0 * * ?"
-    cronTaskOnLeader(quartz, actor.ref, every5Minutes, SearchForClusters(Period.minutes(5), 1))
+    val every5Minutes = "0 5 * * * ?"
+    cronTaskOnLeader(quartz, actor.ref, every5Minutes, SearchForClusters(Period.minutes(5), numClusters = 1))
 
     val everyDay = "0 0 0 * * ?"
-    cronTaskOnLeader(quartz, actor.ref, everyDay, SearchForClusters(Period.days(1), 10))
+    cronTaskOnLeader(quartz, actor.ref, everyDay, SearchForClusters(Period.days(1), numClusters = 10))
 
     val everyWeek = "0 0 0 * * SUN"
-    cronTaskOnLeader(quartz, actor.ref, everyWeek, SearchForClusters(Period.weeks(1), 100))
+    cronTaskOnLeader(quartz, actor.ref, everyWeek, SearchForClusters(Period.weeks(1), numClusters = 100))
   }
 }
 
@@ -69,12 +69,9 @@ class UserIpAddressClusterActor @Inject() (
 
   def receive = {
     case SearchForClusters(timePeriod, numClusters) =>
-      val clusters = userIpAddressCommander.findIpClustersSince(time = currentDateTime.minus(timePeriod), limit = 10)
-      val body = BasicSlackMessage(formatClusters(clusters))
-      val request = httpClient.postFuture(DirectUrl(ipClusterSlackChannelUrl), Json.toJson(body))
-      request onComplete {
-        case Success(response) => log.info("[IP CRON] Success: " + response)
-        case Failure(ex) => log.info("[IP CRON] Failure: " + ex)
-      }
+      log.info("[IP CRON]: Searching over the past " + timePeriod + " for the largest " + numClusters + " clusters")
+      val clusters = userIpAddressCommander.findIpClustersSince(time = currentDateTime.minus(timePeriod), limit = numClusters)
+      val msg = BasicSlackMessage(formatClusters(clusters))
+      httpClient.post(DirectUrl(ipClusterSlackChannelUrl), Json.toJson(msg))
   }
 }
