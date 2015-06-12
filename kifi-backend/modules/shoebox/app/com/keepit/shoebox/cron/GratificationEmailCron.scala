@@ -59,10 +59,10 @@ class GratificationEmailActor @Inject() (
 
   def receive = {
     case SendEmails =>
-      emailCommander.usersToSendEmailTo.map { ids => ids.foreach { id => emailSender.sendToUser(id, Some(testDestinationEmail)) } }
+      emailCommander.getEligibleGratData.map { gratDatas => emailSender.sendToUsersWithData(gratDatas, Some(testDestinationEmail)) }
     case SendOddEmails =>
-      emailCommander.usersToSendEmailTo.map { ids => ids.filter { id => id.id % 2 == 1 }.foreach { id => emailSender.sendToUser(id, None) } }
+      emailCommander.getEligibleGratData.map { gratDatas => emailSender.sendToUsersWithData(gratDatas.filter { _.userId.id % 2 == 1 }, Some(testDestinationEmail)) }
     case SendEvenEmails =>
-      emailCommander.usersToSendEmailTo.map { ids => ids.filter { id => id.id % 2 == 0 }.foreach { id => emailSender.sendToUser(id, None) } }
+      emailCommander.getEligibleGratData.map { gratDatas => emailSender.sendToUsersWithData(gratDatas.filter { _.userId.id % 2 == 0 }, Some(testDestinationEmail)) }
   }
 }

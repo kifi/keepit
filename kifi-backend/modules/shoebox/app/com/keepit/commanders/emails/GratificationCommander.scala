@@ -2,7 +2,6 @@ package com.keepit.commanders.emails
 
 import com.google.inject.{ Singleton, Inject }
 import com.keepit.commanders.LocalUserExperimentCommander
-import com.keepit.commanders.emails.GratificationCommander.LibraryCountData
 import com.keepit.common.concurrent.ReactiveLock
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
@@ -12,14 +11,6 @@ import com.keepit.common.time._
 import play.api.libs.concurrent.Execution.Implicits._
 
 import scala.concurrent.Future
-
-object GratificationCommander {
-
-  case class LibraryCountData(totalCount: Int, countByLibrary: Map[Id[Library], Int]) {
-    val sortedCountByLibrary = countByLibrary.toList.sortWith { _._2 > _._2 }
-  }
-
-}
 
 @Singleton
 class GratificationCommander @Inject() (
@@ -49,15 +40,6 @@ class GratificationCommander @Inject() (
     }
   }
 
-  def getLibraryViewData(userId: Id[User]): Future[LibraryCountData] = {
-    remoteCallQueue.withLockFuture {
-      heimdal.getOwnerLibraryViewStats(userId).map {
-        case (cnt, cntMap) =>
-          db.readOnlyReplica { implicit s => LibraryCountData(cnt, cntMap.filter { case (id, count) => libraryRepo.get(id).state == LibraryStates.ACTIVE }) }
-      }
-    }
-  }
-
   def getNewConnections(userId: Id[User]): Seq[Id[User]] = {
     val since = currentDateTime.minusWeeks(NUM_WEEKS_BACK)
     val newConnections = db.readOnlyReplica { implicit s =>
@@ -66,42 +48,26 @@ class GratificationCommander @Inject() (
     newConnections.toSeq
   }
 
-  def usersToSendEmailTo(): Future[Seq[Id[User]]] = {
+  def getGratData(userId: Id[User]): Future[GratificationData] = heimdal.getGratData(userId)
+
+  def getEligibleGratData: Future[Seq[GratificationData]] = {
+
+    def batchGetGratData(userIds: Seq[Id[User]]): Future[Seq[GratificationData]] = {
+      val BATCH_SIZE = 1000
+      val batches = {
+        for (batch <- userIds.grouped(BATCH_SIZE)) yield {
+          if (EXPERIMENT_DEPLOY) {
+            heimdal.getGratDatas(batch.filter { id => localUserExperimentCommander.userHasExperiment(id, ExperimentType.GRATIFICATION_EMAIL) })
+          } else {
+            heimdal.getEligibleGratData(batch)
+          }
+        }
+      }.toSeq
+      Future.sequence(batches).map { _.flatten }
+    }
+
     val userIds: Seq[Id[User]] = db.readOnlyReplica { implicit session => userRepo.getAllIds() }.toSeq
 
-    if (EXPERIMENT_DEPLOY) {
-      // only send to those with the experiment (testing in production)
-      Future.successful(userIds.filter { id =>
-        localUserExperimentCommander.userHasExperiment(id, ExperimentType.GRATIFICATION_EMAIL)
-      })
-    } else {
-      filterUsersWithoutData(userIds)
-    }
-  }
-
-  def filterUsersWithoutData(userIds: Seq[Id[User]]): Future[Seq[Id[User]]] = {
-
-    val idAndViewByLib: Seq[Future[(Id[User], LibraryCountData)]] = userIds.map { id =>
-      val fViewsByLibrary: Future[LibraryCountData] = getLibraryViewData(id)
-      fViewsByLibrary.map { x =>
-        (id, x)
-      } recover { case t => (id, LibraryCountData(-1, Map.empty)) } // will filter out as long as MIN_VIEWS >= 0
-    }
-
-    val fIdAndViewByLib: Future[Seq[(Id[User], LibraryCountData)]] = Future.sequence(idAndViewByLib)
-
-    val result = fIdAndViewByLib.map { seq: Seq[(Id[User], LibraryCountData)] =>
-      seq.filter {
-        case (id: Id[User], viewsByLib: LibraryCountData) =>
-          val totalLibFollows = getLibraryFollowCounts(id).totalCount
-          val totalNewConnections = getNewConnections(id).length
-          val totalLibViews = viewsByLib.totalCount
-          totalLibFollows >= MIN_FOLLOWERS || totalNewConnections >= MIN_CONNECTIONS || totalLibViews >= MIN_VIEWS
-      }.map {
-        case (id: Id[User], _: LibraryCountData) =>
-          id
-      }
-    }
-    result
+    batchGetGratData(userIds)
   }
 }

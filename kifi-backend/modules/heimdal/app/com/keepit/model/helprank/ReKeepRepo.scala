@@ -21,7 +21,7 @@ trait ReKeepRepo extends Repo[ReKeep] {
   def getReKeepsByReKeeper(userId: Id[User], since: DateTime = currentDateTime.minusMonths(1))(implicit r: RSession): Seq[ReKeep]
   def getAllReKeepsByReKeeper(userId: Id[User])(implicit r: RSession): Seq[ReKeep]
   def getReKeepCountByKeeper(userId: Id[User])(implicit r: RSession): Int
-  def getReKeepCountsByKeeper(userId: Id[User])(implicit r: RSession): Map[Id[Keep], Int]
+  def getReKeepCountsByKeeper(userId: Id[User], since: DateTime = currentDateTime.minusYears(3))(implicit r: RSession): Map[Id[Keep], Int]
   def getReKeepCountsByKeepIds(userId: Id[User], keepIds: Set[Id[Keep]])(implicit r: RSession): Map[Id[Keep], Int]
   def getReKeepCountByURI(uriId: Id[NormalizedURI])(implicit r: RSession): Int
   def getReKeepCountsByURIs(uriIds: Set[Id[NormalizedURI]])(implicit r: RSession): Map[Id[NormalizedURI], Int]
@@ -85,8 +85,8 @@ class ReKeepRepoImpl @Inject() (
     (for (r <- rows if (r.keeperId === userId && r.state === ReKeepStates.ACTIVE)) yield r).length.run
   }
 
-  def getReKeepCountsByKeeper(userId: Id[User])(implicit r: RSession): Map[Id[Keep], Int] = {
-    val q = (for (r <- rows if (r.keeperId === userId && r.state === ReKeepStates.ACTIVE)) yield r)
+  def getReKeepCountsByKeeper(userId: Id[User], since: DateTime)(implicit r: RSession): Map[Id[Keep], Int] = {
+    val q = (for (r <- rows if (r.keeperId === userId && r.state === ReKeepStates.ACTIVE && r.createdAt > since)) yield r)
       .groupBy(_.keepId)
       .map { case (kId, rk) => (kId, rk.length) }
     q.toMap

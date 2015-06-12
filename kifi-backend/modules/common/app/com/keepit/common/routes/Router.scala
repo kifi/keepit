@@ -272,7 +272,9 @@ object Heimdal extends Service {
     def updateAllReKeepStats() = ServiceRoute(POST, "/internal/heimdal/helprank/updateAllReKeepStats")
     def processSearchHitAttribution() = ServiceRoute(POST, "/internal/heimdal/helprank/processSearchHitAttribution")
     def processKeepAttribution() = ServiceRoute(POST, "/internal/heimdal/helprank/processKeepAttribution")
-    def getOwnerLibraryViewStats(userId: Id[User]) = ServiceRoute(GET, "/internal/heimdal/data/libraryView", Param("userId", userId))
+    def getEligibleGratData() = ServiceRoute(POST, "/internal/heimdal/data/getEligibleGratData")
+    def getGratData(userId: Id[User]) = ServiceRoute(GET, "/internal/heimdal/data/getGratData", Param("userId", userId))
+    def getGratDatas() = ServiceRoute(POST, "/internal/heimdal/data/getGratDatas")
   }
 }
 
