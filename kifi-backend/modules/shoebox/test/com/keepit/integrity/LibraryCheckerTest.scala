@@ -65,7 +65,7 @@ class LibraryCheckerTest extends TestKitSupport with SpecificationLike with Shoe
         libraryChecker.syncLibraryLastKeptAndKeepCount()
         val updatedLibrary = db.readOnlyMaster { implicit session => libRepo.get(library.id.get) }
         library.lastKept === tenYearsAgo
-        updatedLibrary.lastKept must beSome(keeps.last.createdAt)
+        updatedLibrary.lastKept must beSome(keeps.last.keptAt)
       }
     }
 
@@ -91,8 +91,7 @@ class LibraryCheckerTest extends TestKitSupport with SpecificationLike with Shoe
         val systemValueRepo = inject[SystemValueRepo]
         val (seqNum, memberSeqNum) = db.readOnlyMaster { implicit session =>
           val seqNum = systemValueRepo.getSequenceNumber(libraryChecker.MEMBER_COUNT_NAME).get
-          val previousSeqNum = SequenceNumber[LibraryMembership](seqNum.value - 1)
-          val memberSeqNum = libraryMembershipRepo.getBySequenceNumber(previousSeqNum, 1).last.seq
+          val memberSeqNum = libraryMembershipRepo.all.map(_.seq).max
           (seqNum, memberSeqNum)
         }
         // The last membership seq num is equal to the seqnum we set into libraryChecker.MEMBER_COUNT_NAME systemValueRepo sequence number.

@@ -72,7 +72,7 @@ class LibraryChecker @Inject() (val airbrake: AirbrakeNotifier,
       val lastSeq = getLastSeqNum(LAST_KEPT_AND_KEEP_COUNT_NAME)
 
       val keeps = keepRepo.getBySequenceNumber(lastSeq, KEEP_FETCH_SIZE)
-      val nextSeqNum = keeps.lastOption.map(_.seq)
+      val nextSeqNum = if (keeps.isEmpty) None else Some(keeps.map(_.seq).max)
       val libraryIds = keeps.map(_.libraryId.get).toSet
 
       val newLibraryKeepCount = keepRepo.getCountsByLibrary(libraryIds)
@@ -86,7 +86,7 @@ class LibraryChecker @Inject() (val airbrake: AirbrakeNotifier,
         library.lastKept match {
           case None =>
             updateLibrary(libraryId, _.copy(lastKept = Some(keepKeptAt)))
-          case Some(libLastKept) if keepKeptAt.getMillis - libLastKept.getMillis > 30000 => {
+          case Some(libLastKept) if math.abs(keepKeptAt.getMillis - libLastKept.getMillis) > 30000 => {
             updateLibrary(libraryId, _.copy(lastKept = Some(keepKeptAt)))
           }
           case Some(_) => // all good here
@@ -118,7 +118,7 @@ class LibraryChecker @Inject() (val airbrake: AirbrakeNotifier,
     val (nextSeqNum, libraries, libraryMemberCounts) = db.readOnlyMaster { implicit session =>
       val lastSeq = getLastSeqNum(MEMBER_COUNT_NAME)
       val members = libraryMembershipRepo.getBySequenceNumber(lastSeq, MEMBER_FETCH_SIZE)
-      val nextSeqNum = members.lastOption.map(_.seq)
+      val nextSeqNum = if (members.isEmpty) None else Some(members.map(_.seq).max)
       val libraryIds = members.map(_.libraryId).toSet
 
       val libraries = libraryRepo.getLibraries(libraryIds)
