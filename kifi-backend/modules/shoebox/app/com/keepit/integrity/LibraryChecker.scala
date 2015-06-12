@@ -1,31 +1,28 @@
 package com.keepit.integrity
 
 import com.google.inject.Inject
-import com.keepit.commanders.{ LibraryCommander }
-import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
-import com.keepit.common.db.{ SequenceNumber, Id }
+import com.keepit.commanders.LibraryCommander
+import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
+import com.keepit.common.db.{ Id, SequenceNumber }
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.logging.{ NamedStatsdTimer, Logging }
-import com.keepit.common.time.Clock
+import com.keepit.common.logging.{ Logging, NamedStatsdTimer }
+import com.keepit.common.time.{ Clock, _ }
 import com.keepit.model._
-import com.keepit.common.time._
-import org.joda.time.DateTime
 
 import scala.annotation.tailrec
-import scala.util.{ Failure, Success, Try }
 import scala.util.control.NonFatal
+import scala.util.{ Failure, Success, Try }
 
-class LibraryChecker @Inject() (
-    db: Database,
-    userRepo: UserRepo,
-    libraryRepo: LibraryRepo,
-    libraryMembershipRepo: LibraryMembershipRepo,
-    keepRepo: KeepRepo,
-    libraryCommander: LibraryCommander,
-    airbrake: AirbrakeNotifier,
-    systemValueRepo: SystemValueRepo,
-    clock: Clock) extends Logging {
+class LibraryChecker @Inject() (val airbrake: AirbrakeNotifier,
+    val clock: Clock,
+    val db: Database,
+    val keepRepo: KeepRepo,
+    val libraryCommander: LibraryCommander,
+    val libraryMembershipRepo: LibraryMembershipRepo,
+    val libraryRepo: LibraryRepo,
+    val userRepo: UserRepo,
+    val systemValueRepo: SystemValueRepo) extends Logging {
 
   private[this] val lock = new AnyRef
   private[this] var keptDateErrors = 0
@@ -33,8 +30,8 @@ class LibraryChecker @Inject() (
 
   private val LAST_KEPT_AND_KEEP_COUNT_NAME = Name[SequenceNumber[Keep]]("integrity_plugin_library_sync")
   private val MEMBER_COUNT_NAME = Name[SequenceNumber[LibraryMembership]]("integrity_plugin_library_member_count")
-  private val MEMBER_FETCH_SIZE = Count(500)
-  private val KEEP_FETCH_SIZE = Count(500)
+  private val MEMBER_FETCH_SIZE = 500
+  private val KEEP_FETCH_SIZE = 500
 
   def check(): Unit = lock.synchronized {
     checkSystemLibraries()
@@ -75,9 +72,11 @@ class LibraryChecker @Inject() (
     }
   }
 
-  private def updateLibrary(library: Library) = retry(3) {
+  private def updateLibrary(id: Id[Library], mutator: Library => Library) = retry(3) {
     db.readWrite { implicit session =>
-      libraryRepo.save(library)
+      /* Since we can be processing hundreds of libraries, the library can be out of date by the time we get to actually updating it with our plugin.
+      Do not overwrite new data with old; Instead just refetch the library and update it. */
+      libraryRepo.save(mutator(libraryRepo.get(id)))
     }
   }
 
@@ -94,7 +93,7 @@ class LibraryChecker @Inject() (
     val (nextSeqNum, librariesNeedingUpdate, newLibraryKeepCount, latestKeptAtMap) = db.readOnlyMaster { implicit session =>
       val lastSeq = getLastSeqNum(LAST_KEPT_AND_KEEP_COUNT_NAME)
 
-      val keeps = keepRepo.getBySequenceNumber(lastSeq, KEEP_FETCH_SIZE.value.toInt)
+      val keeps = keepRepo.getBySequenceNumber(lastSeq, KEEP_FETCH_SIZE)
       val nextSeqNum = max(keeps.map(_.seq.value)).map(SequenceNumber[Keep](_))
       val libraryIds = keeps.map(_.libraryId.get).toSet
 
@@ -108,21 +107,36 @@ class LibraryChecker @Inject() (
       case (libraryId, library) =>
         latestKeptAtMap(libraryId) match {
           case Some(keepKeptAt) => library.lastKept match {
-            case None => updateLibrary(library.copy(lastKept = Some(keepKeptAt)))
+            case None =>
+              updateLibrary(libraryId, _.copy(lastKept = Some(keepKeptAt))) match {
+                case Success(success) => // success
+                case Failure(e) =>
+                  log.warn(s"a library $libraryId failed to update its lastKept to $keepKeptAt", e)
+              }
             case Some(libLastKept) if keepKeptAt.getMillis - libLastKept.getMillis > 30000 => {
-              updateLibrary(library.copy(lastKept = Some(keepKeptAt)))
+              updateLibrary(libraryId, _.copy(lastKept = Some(keepKeptAt))) match {
+                case Success(success) => // success!
+                case Failure(e) =>
+                  log.warn(s"a library $libraryId failed to update its lastKept to $keepKeptAt", e)
+              }
             }
             case Some(_) => // all good here
           }
-          case None => log.warn(s"a library $libraryId that has keeps since last sequence number has no keeps??")
+          case None =>
+            log.warn(s"a library $libraryId that has keeps since last sequence number has no keeps??")
         }
     }
 
-    // sync library keepCount with sum keeps.active
+    // snapshot of library state from above.
     librariesNeedingUpdate.foreach {
+      // sync library keepCount with sum keeps.active
       case (libraryId, library) =>
         newLibraryKeepCount.get(libraryId) match {
-          case Some(count) => updateLibrary(library.copy(keepCount = count))
+          case Some(count) if library.keepCount != count => updateLibrary(libraryId, _.copy(keepCount = count)) match {
+            case Success(_) => // all good here
+            case Failure(e) => log.warn(s"a library $libraryId failed to update it's keepCount to $count", e)
+          }
+          case Some(_) => // all good here.
           case None => log.warn(s"a library $libraryId that has keeps since last sequence number has no keeps??")
         }
     }
@@ -139,7 +153,7 @@ class LibraryChecker @Inject() (
     val timer = new NamedStatsdTimer("LibraryChecker.syncLibraryMemberCounts")
     val (nextSeqNum, libraries, libraryMemberCounts) = db.readOnlyMaster { implicit session =>
       val lastSeq = getLastSeqNum(MEMBER_COUNT_NAME)
-      val members = libraryMembershipRepo.getBySequenceNumber(lastSeq, KEEP_FETCH_SIZE.value.toInt)
+      val members = libraryMembershipRepo.getBySequenceNumber(lastSeq, MEMBER_FETCH_SIZE)
       val nextSeqNum = max(members.map(_.seq.value)).map(SequenceNumber[LibraryMembership](_))
       val libraryIds = members.map(_.libraryId).toSet
 
@@ -152,7 +166,10 @@ class LibraryChecker @Inject() (
       case (libraryId, library) =>
         libraryMemberCounts.get(libraryId) match {
           case None => log.warn(s"a library $libraryId that has members since last sequence number has no members??")
-          case Some(count) if count != library.memberCount => updateLibrary(library.copy(memberCount = count))
+          case Some(count) if count != library.memberCount => updateLibrary(libraryId, _.copy(memberCount = count)) match {
+            case Success(_) => // success
+            case Failure(e) => log.warn(s"a library $libraryId failed to update its memberCount to $count", e)
+          }
           case Some(_) => // here be dragons counting your libraries correctly
         }
     }
