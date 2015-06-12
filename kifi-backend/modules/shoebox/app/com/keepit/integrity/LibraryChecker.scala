@@ -27,13 +27,12 @@ class LibraryChecker @Inject() (val airbrake: AirbrakeNotifier,
   private[this] val lock = new AnyRef
   private val timeSlicer = new TimeSlicer(clock)
 
-  private val LAST_KEPT_AND_KEEP_COUNT_NAME = Name[SequenceNumber[Keep]]("integrity_plugin_library_sync")
-  private val MEMBER_COUNT_NAME = Name[SequenceNumber[LibraryMembership]]("integrity_plugin_library_member_count")
+  private[integrity] val LAST_KEPT_AND_KEEP_COUNT_NAME = Name[SequenceNumber[Keep]]("integrity_plugin_library_sync")
+  private[integrity] val MEMBER_COUNT_NAME = Name[SequenceNumber[LibraryMembership]]("integrity_plugin_library_member_count")
   private val MEMBER_FETCH_SIZE = 500
   private val KEEP_FETCH_SIZE = 500
 
   def check(): Unit = lock.synchronized {
-    checkSystemLibraries()
     syncLibraryLastKeptAndKeepCount()
     syncLibraryMemberCounts()
   }
@@ -82,38 +81,35 @@ class LibraryChecker @Inject() (val airbrake: AirbrakeNotifier,
       (nextSeqNum, librariesNeedingUpdate, newLibraryKeepCount, latestKeptAtMap)
     }
     // sync library lastKept with most recent keep.lastKept
-    librariesNeedingUpdate.foreach {
-      case (libraryId, library) =>
-        latestKeptAtMap(libraryId) match {
-          case Some(keepKeptAt) => library.lastKept match {
-            case None =>
-              updateLibrary(libraryId, _.copy(lastKept = Some(keepKeptAt)))
-            case Some(libLastKept) if keepKeptAt.getMillis - libLastKept.getMillis > 30000 => {
-              updateLibrary(libraryId, _.copy(lastKept = Some(keepKeptAt)))
-            }
-            case Some(_) => // all good here
-          }
+    def updateLibraryLastKeptAt(libraryId: Id[Library], library: Library) {
+      latestKeptAtMap(libraryId).foreach { keepKeptAt =>
+        library.lastKept match {
           case None =>
-            log.warn(s"a library $libraryId that has keeps since last sequence number has no keeps??")
+            updateLibrary(libraryId, _.copy(lastKept = Some(keepKeptAt)))
+          case Some(libLastKept) if keepKeptAt.getMillis - libLastKept.getMillis > 30000 => {
+            updateLibrary(libraryId, _.copy(lastKept = Some(keepKeptAt)))
+          }
+          case Some(_) => // all good here
         }
+      }
     }
 
-    // snapshot of library state from above.
-    librariesNeedingUpdate.foreach {
-      // sync library keepCount with sum keeps.active
-      case (libraryId, library) =>
-        newLibraryKeepCount.get(libraryId) match {
-          case Some(count) if library.keepCount != count => updateLibrary(libraryId, _.copy(keepCount = count))
-          case Some(_) => // all good here.
-          case None => log.warn(s"a library $libraryId that has keeps since last sequence number has no keeps??")
-        }
-    }
-    nextSeqNum match {
-      case Some(seqNum) => db.readWrite { implicit session =>
-        systemValueRepo.setSequenceNumber(LAST_KEPT_AND_KEEP_COUNT_NAME, seqNum)
+    def updateLibraryKeepCount(libraryId: Id[Library], library: Library) {
+      newLibraryKeepCount.get(libraryId) match {
+        case Some(count) if library.keepCount != count => updateLibrary(libraryId, _.copy(keepCount = count))
+        case _ => // all good here.
       }
-      case None =>
     }
+
+    librariesNeedingUpdate.foreach {
+      case (libraryId, library) =>
+        updateLibraryLastKeptAt(libraryId, library)
+        updateLibraryKeepCount(libraryId, library)
+    }
+
+    nextSeqNum.foreach(seqNum => db.readWrite { implicit session =>
+      systemValueRepo.setSequenceNumber(LAST_KEPT_AND_KEEP_COUNT_NAME, seqNum)
+    })
     timer.stopAndReport(appLog = true)
   }
 
@@ -138,12 +134,9 @@ class LibraryChecker @Inject() (val airbrake: AirbrakeNotifier,
           case Some(_) => // here be dragons counting your libraries correctly
         }
     }
-    nextSeqNum match {
-      case Some(seqNum) => db.readWrite { implicit session =>
-        systemValueRepo.setSequenceNumber(MEMBER_COUNT_NAME, seqNum)
-      }
-      case None =>
-    }
+    nextSeqNum.foreach(seqNum => db.readWrite { implicit session =>
+      systemValueRepo.setSequenceNumber(MEMBER_COUNT_NAME, seqNum)
+    })
 
     timer.stopAndReport(appLog = true)
   }

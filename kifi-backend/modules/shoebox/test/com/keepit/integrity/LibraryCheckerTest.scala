@@ -4,7 +4,7 @@ import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.actor.TestKitSupport
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.crypto.FakeCryptoModule
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ SequenceNumber, Id }
 import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.FakeShoeboxStoreModule
@@ -59,13 +59,13 @@ class LibraryCheckerTest extends TestKitSupport with SpecificationLike with Shoe
         val (library, keeps) = db.readWrite { implicit session =>
           val library = LibraryFactory.library().withId(Id[Library](1)).saved
           val keeps = KeepFactory.keeps(20).map(_.withLibrary(library)).saved
-          // Uh oh, looks like the count is wrong!
+          // Uh oh, looks like the lastKept time is wrong!
           (libRepo.save(library.copy(lastKept = tenYearsAgo)), keeps)
         }
         libraryChecker.syncLibraryLastKeptAndKeepCount()
         val updatedLibrary = db.readOnlyMaster { implicit session => libRepo.get(library.id.get) }
         library.lastKept === tenYearsAgo
-        updatedLibrary.lastKept must beSome(keeps(19).createdAt)
+        updatedLibrary.lastKept must beSome(keeps.last.createdAt)
       }
     }
 
@@ -87,6 +87,16 @@ class LibraryCheckerTest extends TestKitSupport with SpecificationLike with Shoe
         libraryChecker.syncLibraryMemberCounts()
         val updatedLibrary = db.readOnlyMaster { implicit session => libRepo.get(library.id.get) }
         updatedLibrary.memberCount === 20
+
+        val systemValueRepo = inject[SystemValueRepo]
+        val (seqNum, memberSeqNum) = db.readOnlyMaster { implicit session =>
+          val seqNum = systemValueRepo.getSequenceNumber(libraryChecker.MEMBER_COUNT_NAME).get
+          val previousSeqNum = SequenceNumber[LibraryMembership](seqNum.value - 1)
+          val memberSeqNum = libraryMembershipRepo.getBySequenceNumber(previousSeqNum, 1).last.seq
+          (seqNum, memberSeqNum)
+        }
+        // The last membership seq num is equal to the seqnum we set into libraryChecker.MEMBER_COUNT_NAME systemValueRepo sequence number.
+        seqNum === memberSeqNum
       }
     }
   }

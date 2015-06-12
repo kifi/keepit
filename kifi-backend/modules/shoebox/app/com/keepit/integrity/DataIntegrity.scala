@@ -21,6 +21,7 @@ class DataIntegrityPluginImpl @Inject() (
   override def enabled: Boolean = true
   override def onStart() {
     scheduleTaskOnOneMachine(actor.system, 7 minutes, EVERY_N_MINUTE minutes, actor.ref, Cron, getClass.getSimpleName)
+    scheduleTaskOnOneMachine(actor.system, 7 minutes, EVERY_N_MINUTE minutes, actor.ref, SystemLibraryCheck, getClass.getSimpleName)
     scheduleTaskOnOneMachine(actor.system, 1 minutes, 1 minutes, actor.ref, LibrariesCheck, getClass.getSimpleName)
   }
 }
@@ -29,6 +30,7 @@ private[integrity] case object CleanOrphans
 private[integrity] case object Cron
 private[integrity] case object SequenceNumberCheck
 private[integrity] case object LibrariesCheck
+private[integrity] case object SystemLibraryCheck
 
 private[integrity] class DataIntegrityActor @Inject() (
   airbrake: AirbrakeNotifier,
@@ -44,6 +46,8 @@ private[integrity] class DataIntegrityActor @Inject() (
       elizaSequenceNumberChecker.check()
     case LibrariesCheck =>
       libraryChecker.check()
+    case SystemLibraryCheck =>
+      libraryChecker.checkSystemLibraries()
     case Cron =>
       self ! CleanOrphans
       self ! SequenceNumberCheck
