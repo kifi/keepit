@@ -912,16 +912,16 @@ class LibraryCommanderImpl @Inject() (
       val lotsOfFollowers = libraryMembershipRepo.countMembersForLibrarySince(lib.id.get, DateTime.now().minusDays(1)) > 2
       (follower, owner, lotsOfFollowers)
     }
-    val (category, message) = if (access == LibraryAccess.READ_WRITE) {
+    val (title, category, message) = if (access == LibraryAccess.READ_WRITE) {
       // This should be changed to library_collaborated but right now iOS skips categories it doesn't know.
-      (NotificationCategory.User.LIBRARY_FOLLOWED, s"${follower.firstName} ${follower.lastName} is now collaborating on your Library ${lib.name}")
+      ("New Library Collaborator", NotificationCategory.User.LIBRARY_FOLLOWED, s"${follower.firstName} ${follower.lastName} is now collaborating on your Library ${lib.name}")
     } else {
-      (NotificationCategory.User.LIBRARY_FOLLOWED, s"${follower.firstName} ${follower.lastName} is now following your Library ${lib.name}")
+      ("New Library Follower", NotificationCategory.User.LIBRARY_FOLLOWED, s"${follower.firstName} ${follower.lastName} is now following your Library ${lib.name}")
     }
     val libImageOpt = libraryImageCommander.getBestImageForLibrary(lib.id.get, ProcessedImageSize.Medium.idealSize)
     elizaClient.sendGlobalNotification( //push sent
       userIds = Set(lib.ownerId),
-      title = "New Library Follower",
+      title = title,
       body = message,
       linkText = s"See ${follower.firstName}’s profile",
       linkUrl = s"https://www.kifi.com/${follower.username.value}",
