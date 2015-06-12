@@ -152,6 +152,7 @@ angular.module('kifi')
           returnAction: function () {
             libraryService.getLibraryById(library.id, true).then(function (data) {
               _.assign(library, _.pick(data.library, 'name', 'slug', 'description', 'visibility', 'color', 'numFollowers', 'membership'));
+              library.subscriptions = data.subscriptions;
               library.path = data.library.url;
               library.followers = _.take(data.library.followers, 3);
             })['catch'](modalService.openGenericErrorModal);

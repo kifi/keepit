@@ -38,6 +38,8 @@ class LibraryController @Inject() (
   userRepo: UserRepo,
   keepRepo: KeepRepo,
   basicUserRepo: BasicUserRepo,
+  librarySubscriptionRepo: LibrarySubscriptionRepo,
+  librarySubscriptionCommander: LibrarySubscriptionCommander,
   keepsCommander: KeepsCommander,
   keepDecorator: KeepDecorator,
   userCommander: UserCommander,
@@ -66,6 +68,8 @@ class LibraryController @Inject() (
   def addLibrary() = UserAction.async(parse.tolerantJson) { request =>
     val addRequest = request.body.as[LibraryAddRequest]
 
+    log.info("Add request received, subscriptions =" + addRequest.subscriptions)
+
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
     libraryCommander.addLibrary(addRequest, request.userId) match {
       case Left(fail) =>
@@ -83,6 +87,8 @@ class LibraryController @Inject() (
   def modifyLibrary(pubId: PublicId[Library]) = (UserAction andThen LibraryOwnerAction(pubId))(parse.tolerantJson) { request =>
     val id = Library.decodePublicId(pubId).get
     val libModifyRequest = request.body.as[LibraryModifyRequest]
+
+    log.info("Modify req received, subs = " + libModifyRequest.subscriptions)
 
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
     libraryCommander.modifyLibrary(id, request.userId, libModifyRequest) match {
@@ -116,11 +122,13 @@ class LibraryController @Inject() (
       val suggestedSearches = getSuggestedSearchesAsJson(libraryId)
       val membershipOpt = libraryCommander.getViewerMembershipInfo(request.userIdOpt, libraryId)
       val inviteOpt = libraryInviteCommander.getViewerInviteInfo(request.userIdOpt, libraryId)
+      val subKeys: Seq[LibrarySubscriptionKey] = db.readOnlyReplica { implicit s => librarySubscriptionRepo.getByLibraryId(libraryId).map { sub => LibrarySubscription.toSubKey(sub) } }
 
       val membershipJson = Json.toJson(membershipOpt)
       val inviteJson = Json.toJson(inviteOpt)
+      val subscriptionJson = Json.toJson(subKeys)
       val libraryJson = Json.toJson(libInfo).as[JsObject] + ("membership" -> membershipJson) + ("invite" -> inviteJson)
-      Ok(Json.obj("library" -> libraryJson, "suggestedSearches" -> suggestedSearches))
+      Ok(Json.obj("library" -> libraryJson, "subscriptions" -> subscriptionJson, "suggestedSearches" -> suggestedSearches))
     }
   }
 
@@ -160,12 +168,14 @@ class LibraryController @Inject() (
                 }
               }.flatten
             }
+            val subKeys: Seq[LibrarySubscriptionKey] = db.readOnlyReplica { implicit s => librarySubscriptionRepo.getByLibraryId(library.id.get).map { sub => LibrarySubscription.toSubKey(sub) } }
 
             libraryCommander.trackLibraryView(request.userIdOpt, library)
             val membershipJson = Json.toJson(membershipOpt)
             val inviteJson = Json.toJson(inviteOpt)
+            val subscriptionJson = Json.toJson(subKeys)
             val libraryJson = Json.toJson(libInfo).as[JsObject] + ("membership" -> membershipJson) + ("invite" -> inviteJson)
-            Ok(Json.obj("library" -> libraryJson, "suggestedSearches" -> suggestedSearches))
+            Ok(Json.obj("library" -> libraryJson, "subscriptions" -> subscriptionJson, "suggestedSearches" -> suggestedSearches))
           }
         })
       case Left(fail) => Future.successful {
@@ -250,7 +260,7 @@ class LibraryController @Inject() (
     }
   }
 
-  def joinLibrary(pubId: PublicId[Library], authToken: Option[String] = None, subscribed: Boolean = false) = UserAction { request =>
+  def joinLibrary(pubId: PublicId[Library], authToken: Option[String] = None, subscribedOpt: Option[Boolean]) = UserAction { request =>
     Library.decodePublicId(pubId) match {
       case Failure(ex) =>
         BadRequest(Json.obj("error" -> "invalid_id"))
@@ -260,7 +270,7 @@ class LibraryController @Inject() (
           libraryMembershipRepo.getWithLibraryIdAndUserId(libId, request.userId)
         }
 
-        libraryCommander.joinLibrary(request.userId, libId, authToken, Some(subscribed)) match {
+        libraryCommander.joinLibrary(request.userId, libId, authToken, subscribedOpt) match {
           case Left(fail) =>
             Status(fail.status)(Json.obj("error" -> fail.message))
           case Right((_, mem)) =>
@@ -615,9 +625,9 @@ class LibraryController @Inject() (
     libraryCommander.getMarketingSiteSuggestedLibraries() map { infos => Ok(Json.toJson(infos)) }
   }
 
-  def setSubscribedToUpdates(pubId: PublicId[Library], newSubscripedToUpdate: Boolean) = UserAction { request =>
+  def setSubscribedToUpdates(pubId: PublicId[Library], newSubscribedToUpdate: Boolean) = UserAction { request =>
     val libraryId = Library.decodePublicId(pubId).get
-    libraryCommander.updateSubscribedToLibrary(request.userId, libraryId, newSubscripedToUpdate) match {
+    libraryCommander.updateSubscribedToLibrary(request.userId, libraryId, newSubscribedToUpdate) match {
       case Right(mem) => NoContent
       case Left(fail) => Status(fail.status)(Json.obj("error" -> fail.message))
     }

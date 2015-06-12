@@ -3,6 +3,7 @@ package com.keepit.model
 import com.google.inject.Injector
 import com.keepit.commanders.LibrarySubscriptionCommander
 import com.keepit.common.concurrent.FakeExecutionContextModule
+import com.keepit.common.db.Id
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.Specification
 import org.specs2.matcher.MatchResult
@@ -20,11 +21,10 @@ class LibrarySubscriptionTest extends Specification with ShoeboxTestInjector {
     "save and get properly" in {
       withDb() { implicit injector =>
         val (user, library) = setup()
-        val libSubExpected = db.readWrite { implicit session =>
-          librarySubscriptionRepo.save(LibrarySubscription(name = "fake lib sub", trigger = SubscriptionTrigger.NEW_KEEP, libraryId = library.id.get, info = SlackInfo("http://www.fakewebhook.com/")))
-        }
-        val libSubActual: LibrarySubscription = db.readOnlyReplica { implicit session =>
-          librarySubscriptionRepo.getByLibraryId(library.id.get).head
+        val (libSubExpected, libSubActual) = db.readWrite { implicit session =>
+          val libSubExpected = librarySubscriptionRepo.save(LibrarySubscription(name = "fake lib sub", trigger = SubscriptionTrigger.NEW_KEEP, libraryId = library.id.get, info = SlackInfo("http://www.fakewebhook.com/")))
+          val libSubActual = librarySubscriptionRepo.getByLibraryId(library.id.get).head
+          (libSubExpected, libSubActual)
         }
         libSubExpected === libSubActual
       }
@@ -33,12 +33,11 @@ class LibrarySubscriptionTest extends Specification with ShoeboxTestInjector {
     "get all subscriptions with a specified trigger for a library" in {
       withDb() { implicit injector =>
         val (user, library) = setup()
-        val libSubExpected = db.readWrite { implicit session =>
-          librarySubscriptionRepo.save(LibrarySubscription(name = "fake lib sub", trigger = SubscriptionTrigger.NEW_KEEP, libraryId = library.id.get, info = SlackInfo("http://www.fakewebhook.com/")))
+        val (libSubExpected, libSubActual) = db.readWrite { implicit session =>
+          val libSubExpected = librarySubscriptionRepo.save(LibrarySubscription(name = "fake lib sub", trigger = SubscriptionTrigger.NEW_KEEP, libraryId = library.id.get, info = SlackInfo("http://www.fakewebhook.com/")))
+          val libSubActual = librarySubscriptionRepo.getByLibraryIdAndTrigger(library.id.get, SubscriptionTrigger.NEW_KEEP).head
+          (libSubExpected, libSubActual)
         }
-        val libSubActual = db.readOnlyMaster { implicit session =>
-          librarySubscriptionRepo.getByLibraryIdAndTrigger(library.id.get, SubscriptionTrigger.NEW_KEEP)
-        }.head
         libSubExpected === libSubActual
       }
     }
@@ -46,12 +45,11 @@ class LibrarySubscriptionTest extends Specification with ShoeboxTestInjector {
     "get only active subscriptions by default" in {
       withDb() { implicit injector =>
         val (user, library) = setup()
-        val libSubExpected: LibrarySubscription = db.readWrite { implicit session =>
+        val (libSubExpected, activeLibSubs) = db.readWrite { implicit session =>
           librarySubscriptionRepo.save(LibrarySubscription(state = LibrarySubscriptionStates.INACTIVE, name = "fake inactive lib sub", trigger = SubscriptionTrigger.NEW_KEEP, libraryId = library.id.get, info = SlackInfo("http://www.fakewebhook.com/")))
-          librarySubscriptionRepo.save(LibrarySubscription(name = "fake lib sub", trigger = SubscriptionTrigger.NEW_KEEP, libraryId = library.id.get, info = SlackInfo("http://www.fakewebhook.com/")))
-        }
-        val activeLibSubs = db.readOnlyMaster { implicit session =>
-          librarySubscriptionRepo.getByLibraryId(library.id.get)
+          val libSubExpected = librarySubscriptionRepo.save(LibrarySubscription(name = "fake lib sub", trigger = SubscriptionTrigger.NEW_KEEP, libraryId = library.id.get, info = SlackInfo("http://www.fakewebhook.com/")))
+          val activeLibSubs = librarySubscriptionRepo.getByLibraryId(library.id.get)
+          (libSubExpected, activeLibSubs)
         }
         activeLibSubs.length === 1
         libSubExpected === activeLibSubs.head
@@ -61,13 +59,11 @@ class LibrarySubscriptionTest extends Specification with ShoeboxTestInjector {
     "get inactive subscriptions when specified" in {
       withDb() { implicit injector =>
         val (user, library) = setup()
-        val (libSubExpected1, libSubExpected2) = db.readWrite { implicit session =>
+        val (libSubExpected1, libSubExpected2, libSubsActual) = db.readWrite { implicit session =>
           val libSub1 = librarySubscriptionRepo.save(LibrarySubscription(state = LibrarySubscriptionStates.INACTIVE, name = "fake lib sub", trigger = SubscriptionTrigger.NEW_KEEP, libraryId = library.id.get, info = SlackInfo("http://www.fakewebhook.com/")))
           val libSub2 = librarySubscriptionRepo.save(LibrarySubscription(name = "fake inactive lib sub", trigger = SubscriptionTrigger.NEW_KEEP, libraryId = library.id.get, info = SlackInfo("http://www.fakewebhook.com/")))
-          (libSub1, libSub2)
-        }
-        val libSubsActual: Seq[LibrarySubscription] = db.readOnlyMaster { implicit session =>
-          librarySubscriptionRepo.getByLibraryId(library.id.get, excludeStates = Set.empty)
+          val libSubsActual = librarySubscriptionRepo.getByLibraryId(library.id.get, excludeStates = Set.empty)
+          (libSub1, libSub2, libSubsActual)
         }
         libSubsActual.length === 2
         libSubsActual must contain(libSubExpected1)
@@ -78,27 +74,12 @@ class LibrarySubscriptionTest extends Specification with ShoeboxTestInjector {
     "get subscriptions by name" in {
       withDb() { implicit injector =>
         val (user, library) = setup()
-        val libSubExpected = db.readWrite { implicit session =>
-          librarySubscriptionRepo.save(LibrarySubscription(libraryId = library.id.get, name = "my library sub", trigger = SubscriptionTrigger.NEW_KEEP, info = SlackInfo("http://www.fakewebhook.com/")))
-        }
-        val libSubActual = db.readOnlyMaster { implicit session =>
-          librarySubscriptionRepo.getByLibraryIdAndName(libraryId = library.id.get, name = "My Library Sub").get
+        val (libSubExpected, libSubActual) = db.readWrite { implicit session =>
+          val libSubExpected = librarySubscriptionRepo.save(LibrarySubscription(libraryId = library.id.get, name = "my library sub", trigger = SubscriptionTrigger.NEW_KEEP, info = SlackInfo("http://www.fakewebhook.com/")))
+          val libSubActual = librarySubscriptionRepo.getByLibraryIdAndName(libraryId = library.id.get, name = "My Library Sub").get
+          (libSubExpected, libSubActual)
         }
         libSubExpected === libSubActual
-      }
-    }
-  }
-
-  "LibrarySubscriptionCommander" should {
-    "add a new subscription" in {
-      withDb() { implicit injector =>
-        val (user, library) = setup()
-        val libSubCommander = inject[LibrarySubscriptionCommander]
-        val newSub = db.readWrite { implicit session =>
-          libSubCommander.saveSubscription(LibrarySubscription(libraryId = library.id.get, name = "my library sub", trigger = SubscriptionTrigger.NEW_KEEP, info = SlackInfo("http://www.fakewebhook.com/")))
-        }
-
-        db.readOnlyMaster { implicit s => librarySubscriptionRepo.get(newSub.id.get) }.equals(newSub) === true
       }
     }
   }

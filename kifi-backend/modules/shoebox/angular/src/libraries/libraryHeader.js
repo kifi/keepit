@@ -572,6 +572,7 @@ angular.module('kifi')
                 libraryService.getLibraryById(scope.library.id, true).then(function (data) {
                   return libraryService.getLibraryByUserSlug(scope.username, data.library.slug, authToken, true).then(function (library) {
                     _.assign(scope.library, library);
+                    scope.library.subscriptions = data.subscriptions;
                     augmentData();
 
                     if (data.library.slug !== scope.librarySlug) {

@@ -1,6 +1,6 @@
 package com.keepit.commanders
 
-import com.google.inject.{ Inject, Provider }
+import com.google.inject.{ ImplementedBy, Inject, Provider }
 import com.keepit.abook.ABookServiceClient
 import com.keepit.abook.model.RichContact
 import com.keepit.commanders.emails.{ EmailOptOutCommander, LibraryInviteEmailSender }
@@ -44,7 +44,60 @@ object MarketingSuggestedLibrarySystemValue {
   def systemValueName = Name[SystemValue]("marketing_site_libraries")
 }
 
-class LibraryCommander @Inject() (
+@ImplementedBy(classOf[LibraryCommanderImpl])
+trait LibraryCommander {
+  // todo: For each method here, remove if no one's calling it externally, and set as private in the implementation
+  def getKeeps(libraryId: Id[Library], offset: Int, limit: Int): Future[Seq[Keep]]
+  def getKeepsCount(libraryId: Id[Library]): Future[Int]
+  def updateLastView(userId: Id[User], libraryId: Id[Library]): Unit
+  def getLibraryById(userIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, id: Id[Library], imageSize: ImageSize, viewerId: Option[Id[User]])(implicit context: HeimdalContext): Future[FullLibraryInfo]
+  def getLibrarySummaries(libraryIds: Seq[Id[Library]]): Seq[LibraryInfo]
+  def getLibraryPath(library: Library): String
+  def getBasicLibraryDetails(libraryIds: Set[Id[Library]], idealImageSize: ImageSize, viewerId: Option[Id[User]]): Map[Id[Library], BasicLibraryDetails]
+  def getLibrarySummaryAndMembership(userIdOpt: Option[Id[User]], libraryId: Id[Library]): (LibraryInfo, Option[LibraryMembershipInfo])
+  def getLibraryWithOwnerAndCounts(libraryId: Id[Library], viewerUserId: Id[User]): Either[LibraryFail, (Library, BasicUser, Int, Option[Boolean], Boolean)]
+  def getViewerMembershipInfo(userIdOpt: Option[Id[User]], libraryId: Id[Library]): Option[LibraryMembershipInfo]
+  def sortUsersByImage(users: Seq[BasicUser]): Seq[BasicUser]
+  def createFullLibraryInfos(viewerUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, maxMembersShown: Int, maxKeepsShown: Int, idealKeepImageSize: ImageSize, libraries: Seq[Library], idealLibraryImageSize: ImageSize, withKeepTime: Boolean): Future[Seq[(Id[Library], FullLibraryInfo)]]
+  def createFullLibraryInfo(viewerUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, library: Library, libImageSize: ImageSize, showKeepCreateTime: Boolean = true): Future[FullLibraryInfo]
+  def getLibraryMembers(libraryId: Id[Library], offset: Int, limit: Int, fillInWithInvites: Boolean): (Seq[LibraryMembership], Seq[LibraryMembership], Seq[(Either[Id[User], EmailAddress], Set[LibraryInvite])], CountWithLibraryIdByAccess)
+  def buildMaybeLibraryMembers(collaborators: Seq[LibraryMembership], followers: Seq[LibraryMembership], inviteesWithInvites: Seq[(Either[Id[User], EmailAddress], Set[LibraryInvite])]): Seq[MaybeLibraryMember]
+  def suggestMembers(userId: Id[User], libraryId: Id[Library], query: Option[String], limit: Option[Int]): Future[Seq[MaybeLibraryMember]]
+  def addLibrary(libAddReq: LibraryAddRequest, ownerId: Id[User])(implicit context: HeimdalContext): Either[LibraryFail, Library]
+  def canModifyLibrary(libraryId: Id[Library], userId: Id[User]): Boolean
+  def getLibrariesWithWriteAccess(userId: Id[User]): Set[Id[Library]]
+  def modifyLibrary(libraryId: Id[Library], userId: Id[User], modifyReq: LibraryModifyRequest)(implicit context: HeimdalContext): Either[LibraryFail, Library]
+  def removeLibrary(libraryId: Id[Library], userId: Id[User])(implicit context: HeimdalContext): Option[LibraryFail]
+  def canViewLibrary(userId: Option[Id[User]], library: Library, authToken: Option[String] = None): Boolean
+  def canViewLibrary(userId: Option[Id[User]], libraryId: Id[Library], accessToken: Option[String]): Boolean
+  def canMoveToOrg(userId: Id[User], libId: Id[Library], to: Option[Id[Organization]]): Boolean
+  def getLibrariesByUser(userId: Id[User]): (Seq[(LibraryMembership, Library)], Seq[(LibraryInvite, Library)])
+  def getLibrariesUserCanKeepTo(userId: Id[User]): Seq[(Library, LibraryMembership, Seq[BasicUser])]
+  def userAccess(userId: Id[User], libraryId: Id[Library], universalLinkOpt: Option[String]): Option[LibraryAccess]
+  def internSystemGeneratedLibraries(userId: Id[User], generateNew: Boolean = true): (Library, Library)
+  def notifyFollowersOfNewKeeps(library: Library, newKeeps: Keep*): Unit
+  def joinLibrary(userId: Id[User], libraryId: Id[Library], authToken: Option[String] = None, subscribed: Option[Boolean] = None)(implicit eventContext: HeimdalContext): Either[LibraryFail, (Library, LibraryMembership)]
+  def leaveLibrary(libraryId: Id[Library], userId: Id[User])(implicit eventContext: HeimdalContext): Either[LibraryFail, Unit]
+  def sortAndSelectLibrariesWithTopGrowthSince(libraryIds: Set[Id[Library]], since: DateTime, totalMemberCount: Id[Library] => Int): Seq[(Id[Library], Seq[LibraryMembership])]
+  def sortAndSelectLibrariesWithTopGrowthSince(libraryMemberCountsSince: Map[Id[Library], Int], since: DateTime, totalMemberCount: Id[Library] => Int): Seq[(Id[Library], Seq[LibraryMembership])]
+  def fixLibraryKeepCount(libIds: Seq[Id[Library]]): Unit
+  def copyKeepsFromCollectionToLibrary(userId: Id[User], libraryId: Id[Library], tagName: Hashtag)(implicit context: HeimdalContext): Either[LibraryFail, (Seq[Keep], Seq[(Keep, LibraryError)])]
+  def moveKeepsFromCollectionToLibrary(userId: Id[User], libraryId: Id[Library], tagName: Hashtag)(implicit context: HeimdalContext): Either[LibraryFail, (Seq[Keep], Seq[(Keep, LibraryError)])]
+  def copyKeeps(userId: Id[User], toLibraryId: Id[Library], keeps: Seq[Keep], withSource: Option[KeepSource])(implicit context: HeimdalContext): (Seq[Keep], Seq[(Keep, LibraryError)])
+  def moveKeeps(userId: Id[User], toLibraryId: Id[Library], keeps: Seq[Keep])(implicit context: HeimdalContext): (Seq[Keep], Seq[(Keep, LibraryError)])
+  def getMainAndSecretLibrariesForUser(userId: Id[User])(implicit session: RWSession): (Library, Library)
+  def getLibraryWithUsernameAndSlug(username: String, slug: LibrarySlug, viewerId: Option[Id[User]])(implicit context: HeimdalContext): Either[LibraryFail, Library]
+  def trackLibraryView(viewerId: Option[Id[User]], library: Library)(implicit context: HeimdalContext): Unit
+  def getLibraryBySlugOrAlias(ownerId: Id[User], slug: LibrarySlug): Option[(Library, Boolean)]
+  def getMarketingSiteSuggestedLibraries(): Future[Seq[LibraryCardInfo]]
+  def createLibraryCardInfos(libs: Seq[Library], owners: Map[Id[User], BasicUser], viewerOpt: Option[User], withFollowing: Boolean, idealSize: ImageSize)(implicit session: RSession): ParSeq[LibraryCardInfo]
+  def createLiteLibraryCardInfos(libs: Seq[Library], viewerId: Id[User])(implicit session: RSession): ParSeq[(LibraryCardInfo, MiniLibraryMembership)]
+  def updateLastEmailSent(userId: Id[User], keeps: Seq[Keep]): Unit
+  def updateSubscribedToLibrary(userId: Id[User], libraryId: Id[Library], subscribedToUpdatesNew: Boolean): Either[LibraryFail, LibraryMembership]
+  def updateLibraryMembershipAccess(requestUserId: Id[User], libraryId: Id[Library], targetUserId: Id[User], newAccess: Option[LibraryAccess]): Either[LibraryFail, LibraryMembership]
+}
+
+class LibraryCommanderImpl @Inject() (
     db: Database,
     libraryRepo: LibraryRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
@@ -54,6 +107,7 @@ class LibraryCommander @Inject() (
     libraryInviteCommander: LibraryInviteCommander,
     libraryImageRepo: LibraryImageRepo,
     librarySubscriptionRepo: LibrarySubscriptionRepo,
+    librarySubscriptionCommander: LibrarySubscriptionCommander,
     subscriptionCommander: LibrarySubscriptionCommander,
     organizationMembershipRepo: OrganizationMembershipRepo,
     userRepo: UserRepo,
@@ -83,7 +137,7 @@ class LibraryCommander @Inject() (
     kifiInstallationCommander: KifiInstallationCommander,
     implicit val defaultContext: ExecutionContext,
     implicit val publicIdConfig: PublicIdConfiguration,
-    clock: Clock) extends Logging {
+    clock: Clock) extends LibraryCommander with Logging {
 
   def getKeeps(libraryId: Id[Library], offset: Int, limit: Int): Future[Seq[Keep]] = {
     if (limit > 0) db.readOnlyReplicaAsync { implicit s => keepRepo.getByLibrary(libraryId, offset, limit) }
@@ -501,12 +555,20 @@ class LibraryCommander @Inject() (
                   val lib = libraryRepo.save(Library(ownerId = ownerId, name = libAddReq.name, description = libAddReq.description,
                     visibility = libAddReq.visibility, slug = validSlug, color = newColor, kind = newKind, memberCount = 1, keepCount = 0, whoCanInvite = newInviteToCollab))
                   libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = ownerId, access = LibraryAccess.OWNER, listed = newListed, lastJoinedAt = Some(currentDateTime)))
+                  libAddReq.subscriptions match {
+                    case Some(subKeys) => librarySubscriptionCommander.updateSubsByLibIdAndKey(lib.id.get, subKeys)
+                    case None =>
+                  }
                   lib
                 case Some(lib) =>
                   val newLib = libraryRepo.save(lib.copy(state = LibraryStates.ACTIVE))
                   libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId = lib.id.get, userId = ownerId, None) match {
                     case None => libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = ownerId, access = LibraryAccess.OWNER))
                     case Some(mem) => libraryMembershipRepo.save(mem.copy(state = LibraryMembershipStates.ACTIVE, listed = newListed))
+                  }
+                  libAddReq.subscriptions match {
+                    case Some(subKeys) => librarySubscriptionCommander.updateSubsByLibIdAndKey(lib.id.get, subKeys)
+                    case None =>
                   }
                   newLib
               }
@@ -532,11 +594,10 @@ class LibraryCommander @Inject() (
   }
 
   def modifyLibrary(libraryId: Id[Library], userId: Id[User], modifyReq: LibraryModifyRequest)(implicit context: HeimdalContext): Either[LibraryFail, Library] = {
-    val (targetLib, targetMembershipOpt, targetSubs) = db.readOnlyMaster { implicit s =>
+    val (targetLib, targetMembershipOpt) = db.readOnlyMaster { implicit s =>
       val lib = libraryRepo.get(libraryId)
       val mem = libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId)
-      val subs = librarySubscriptionRepo.getByLibraryId(libraryId)
-      (lib, mem, subs)
+      (lib, mem)
     }
     if (targetMembershipOpt.isEmpty || !targetMembershipOpt.get.canWrite) {
       Left(LibraryFail(FORBIDDEN, "permission_denied"))
@@ -579,7 +640,7 @@ class LibraryCommander @Inject() (
         }
       }
 
-      val newSubsOpt = modifyReq.subscriptions
+      val newSubKeysOpt = modifyReq.subscriptions
 
       val result = for {
         newName <- validName(modifyReq.name).right
@@ -601,6 +662,12 @@ class LibraryCommander @Inject() (
             searchClient.updateKeepIndex()
           }
         }
+
+        val wereSubsChanged = newSubKeysOpt match {
+          case Some(newSubKeys) => db.readWrite { implicit s => librarySubscriptionCommander.updateSubsByLibIdAndKey(targetLib.id.get, newSubKeys) }
+          case None => false
+        }
+
         val lib = db.readWrite { implicit s =>
           if (targetLib.slug != newSlug) {
             val ownerId = targetLib.ownerId
@@ -609,26 +676,6 @@ class LibraryCommander @Inject() (
           }
           if (targetMembership.listed != newListed) {
             libraryMembershipRepo.save(targetMembership.copy(listed = newListed))
-          }
-
-          def saveSubscriptionChanges(newSubs: Seq[LibrarySubscription]) {
-            newSubs.foreach { newSub => // find new subs to be updated or added
-              targetSubs.find { _ equivalent newSub } match {
-                case None => subscriptionCommander.saveSubscription(newSub)
-                case Some(targetSub) => subscriptionCommander.saveSubscription(targetSub.copy(name = newSub.name, info = newSub.info))
-              }
-            }
-            targetSubs.foreach { targetSub =>
-              newSubs.find { _ equivalent targetSub } match { // find target subs that are to be removed
-                case None => subscriptionCommander.saveSubscription(targetSub.copy(state = LibrarySubscriptionStates.INACTIVE))
-                case Some(newSub) =>
-              }
-            }
-          }
-
-          newSubsOpt match {
-            case Some(newSubs) => saveSubscriptionChanges(newSubs)
-            case None => // nothing to save
           }
 
           libraryRepo.save(targetLib.copy(name = newName, slug = newSlug, visibility = newVisibility, description = newDescription, color = newColor, whoCanInvite = newInviteToCollab, state = LibraryStates.ACTIVE))
@@ -642,7 +689,7 @@ class LibraryCommander @Inject() (
           "madePrivate" -> (newVisibility != targetLib.visibility && newVisibility == LibraryVisibility.SECRET),
           "listed" -> (newListed != targetMembership.listed),
           "inviteToCollab" -> (newInviteToCollab != targetLib.whoCanInvite),
-          "subscriptions" -> targetSubs.intersect(newSubsOpt.getOrElse(Seq.empty)).nonEmpty
+          "subscriptions" -> wereSubsChanged
         )
         (lib, edits)
       }
@@ -865,15 +912,16 @@ class LibraryCommander @Inject() (
       val lotsOfFollowers = libraryMembershipRepo.countMembersForLibrarySince(lib.id.get, DateTime.now().minusDays(1)) > 2
       (follower, owner, lotsOfFollowers)
     }
-    val (category, message) = if (access == LibraryAccess.READ_WRITE) {
-      (NotificationCategory.User.LIBRARY_COLLABORATED, s"${follower.firstName} ${follower.lastName} is now collaborating on your Library ${lib.name}")
+    val (title, category, message) = if (access == LibraryAccess.READ_WRITE) {
+      // This should be changed to library_collaborated but right now iOS skips categories it doesn't know.
+      ("New Library Collaborator", NotificationCategory.User.LIBRARY_FOLLOWED, s"${follower.firstName} ${follower.lastName} is now collaborating on your Library ${lib.name}")
     } else {
-      (NotificationCategory.User.LIBRARY_FOLLOWED, s"${follower.firstName} ${follower.lastName} is now following your Library ${lib.name}")
+      ("New Library Follower", NotificationCategory.User.LIBRARY_FOLLOWED, s"${follower.firstName} ${follower.lastName} is now following your Library ${lib.name}")
     }
     val libImageOpt = libraryImageCommander.getBestImageForLibrary(lib.id.get, ProcessedImageSize.Medium.idealSize)
     elizaClient.sendGlobalNotification( //push sent
       userIds = Set(lib.ownerId),
-      title = "New Library Follower",
+      title = title,
       body = message,
       linkText = s"See ${follower.firstName}’s profile",
       linkUrl = s"https://www.kifi.com/${follower.username.value}",
@@ -1531,27 +1579,30 @@ class LibraryCommander @Inject() (
         case (Some(mem), Some(targetMem), _) if targetMem.access == LibraryAccess.OWNER =>
           Left(LibraryFail(BAD_REQUEST, "cannot_change_owner_access"))
 
-        case (Some(mem), Some(targetMem), library) =>
+        case (Some(requesterMem), Some(targetMem), library) =>
 
-          if ((mem.isOwner && !targetMem.isOwner) || // owners can edit anyone except themselves
-            (mem.isCollaborator && !targetMem.isOwner) || // a collaborator can edit anyone (but the owner). Collaborator cannot invite others to collaborate if the library does not allow collaborators to invite
-            (mem.isFollower && mem.userId == targetMem.userId)) { // a follower can only edit herself
+          if ((requesterMem.isOwner && !targetMem.isOwner) || // owners can edit anyone except themselves
+            (requesterMem.isCollaborator && !targetMem.isOwner) || // a collaborator can edit anyone (but the owner). Collaborator cannot invite others to collaborate if the library does not allow collaborators to invite
+            (requesterMem.isFollower && requesterMem.userId == targetMem.userId)) { // a follower can only edit herself
             db.readWrite { implicit s =>
               newAccess match {
                 case None =>
                   SafeFuture { convertKeepOwnershipToLibraryOwner(targetMem.userId, library) }
                   Right(libraryMembershipRepo.save(targetMem.copy(state = LibraryMembershipStates.INACTIVE)))
-                case Some(newAccess) if mem.isCollaborator && newAccess == LibraryAccess.READ_WRITE && library.whoCanInvite == Some(LibraryInvitePermissions.OWNER) =>
-                  log.warn(s"[updateLibraryMembership] invalid permission ${mem} trying to change membership ${targetMem} to ${newAccess} when library has invite policy ${library.whoCanInvite}")
+                case Some(newAccess) if requesterMem.isCollaborator && newAccess == LibraryAccess.READ_WRITE && library.whoCanInvite == Some(LibraryInvitePermissions.OWNER) =>
+                  log.warn(s"[updateLibraryMembership] invalid permission ${requesterMem} trying to change membership ${targetMem} to ${newAccess} when library has invite policy ${library.whoCanInvite}")
                   Left(LibraryFail(FORBIDDEN, "invalid_collaborator_permission"))
                 case Some(newAccess) =>
-                  SafeFuture { convertKeepOwnershipToLibraryOwner(targetMem.userId, library) }
                   val newSubscription = if (newAccess == LibraryAccess.READ_WRITE) true else targetMem.subscribedToUpdates // auto subscribe to updates if a collaborator
-                  Right(libraryMembershipRepo.save(targetMem.copy(access = newAccess, subscribedToUpdates = newSubscription)))
+                  val inviter = userRepo.get(requestUserId)
+                  val libOwner = basicUserRepo.load(library.ownerId)
+                  libraryInviteCommander.notifyInviteeAboutInvitationToJoinLibrary(inviter, library, libOwner, Map(targetUserId -> targetMem))
+
+                  Right(libraryMembershipRepo.save(targetMem.copy(access = newAccess, subscribedToUpdates = newSubscription, state = LibraryMembershipStates.ACTIVE)))
               }
             }
           } else { // invalid permissions
-            log.warn(s"[updateLibraryMembership] invalid permission ${mem} trying to change membership ${targetMem} to ${newAccess}")
+            log.warn(s"[updateLibraryMembership] invalid permission ${requesterMem} trying to change membership ${targetMem} to ${newAccess}")
             Left(LibraryFail(FORBIDDEN, "invalid_permissions"))
           }
       }

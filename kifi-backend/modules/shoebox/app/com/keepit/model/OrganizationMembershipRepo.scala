@@ -11,7 +11,7 @@ import org.joda.time.DateTime
 @ImplementedBy(classOf[OrganizationMembershipRepoImpl])
 trait OrganizationMembershipRepo extends Repo[OrganizationMembership] with SeqNumberFunction[OrganizationMembership] {
   def getByUserId(userId: Id[User], excludeStates: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Seq[OrganizationMembership] = ???
-  def getbyOrgId(orgId: Id[Organization], count: Count, offset: Offset, excludeState: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Seq[OrganizationMembership]
+  def getbyOrgId(orgId: Id[Organization], limit: Limit, offset: Offset, excludeState: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Seq[OrganizationMembership]
   def getByOrgIdAndUserId(orgId: Id[Organization], userId: Id[User], excludeState: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Option[OrganizationMembership]
   def getByOrgIdAndUserIds(orgId: Id[Organization], userIds: Set[Id[User]], excludeState: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Seq[OrganizationMembership] = ???
   def countByOrgId(orgId: Id[Organization], excludeState: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Int
@@ -19,7 +19,7 @@ trait OrganizationMembershipRepo extends Repo[OrganizationMembership] with SeqNu
 }
 
 case class Offset(value: Long) extends AnyVal
-case class Count(value: Long) extends AnyVal
+case class Limit(value: Long) extends AnyVal
 
 @Singleton
 class OrganizationMembershipRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) extends OrganizationMembershipRepo with DbRepo[OrganizationMembership] with SeqNumberDbFunction[OrganizationMembership] with Logging {
@@ -84,14 +84,14 @@ class OrganizationMembershipRepoImpl @Inject() (val db: DataBaseComponent, val c
     (for { row <- rows if row.organizationId === orgId } yield row).drop(offset).take(count)
   }
 
-  private val getByOrgIdWithExcludeCompiled = Compiled { (orgId: Column[Id[Organization]], excludeState: Column[State[OrganizationMembership]], count: ConstColumn[Long], offset: ConstColumn[Long]) =>
-    (for { row <- rows if row.organizationId === orgId && row.state =!= excludeState } yield row).drop(offset).take(count)
+  private val getByOrgIdWithExcludeCompiled = Compiled { (orgId: Column[Id[Organization]], excludeState: Column[State[OrganizationMembership]], limit: ConstColumn[Long], offset: ConstColumn[Long]) =>
+    (for { row <- rows if row.organizationId === orgId && row.state =!= excludeState } yield row).drop(offset).take(limit)
   }
 
-  def getbyOrgId(orgId: Id[Organization], count: Count, offset: Offset, excludeState: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Seq[OrganizationMembership] = {
+  def getbyOrgId(orgId: Id[Organization], limit: Limit, offset: Offset, excludeState: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Seq[OrganizationMembership] = {
     excludeState match {
-      case None => getByOrgIdCompiled(orgId, count.value, offset.value).list
-      case Some(exclude) => getByOrgIdWithExcludeCompiled(orgId, exclude, count.value, offset.value).list
+      case None => getByOrgIdCompiled(orgId, limit.value, offset.value).list
+      case Some(exclude) => getByOrgIdWithExcludeCompiled(orgId, exclude, limit.value, offset.value).list
     }
   }
 
