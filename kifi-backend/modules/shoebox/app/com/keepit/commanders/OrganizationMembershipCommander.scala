@@ -20,12 +20,12 @@ class OrganizationMembershipCommander @Inject() (db: Database,
     basicUserRepo: BasicUserRepo) {
 
   // Offset and Count to prevent accidental reversal of arguments with same type (Long).
-  def getMembersAndInvitees(orgId: Id[Organization], count: Count, offset: Offset, includeInvitees: Boolean): Seq[MaybeOrganizationMember] = {
+  def getMembersAndInvitees(orgId: Id[Organization], limit: Limit, offset: Offset, includeInvitees: Boolean): Seq[MaybeOrganizationMember] = {
     db.readOnlyMaster { implicit session =>
-      val members = organizationMembershipRepo.getbyOrgId(orgId, count, offset)
+      val members = organizationMembershipRepo.getbyOrgId(orgId, limit, offset)
       val invitees = includeInvitees match {
         case true =>
-          val leftOverCount = Count(Math.max(count.value - members.length, 0))
+          val leftOverCount = Limit(Math.max(limit.value - members.length, 0))
           val leftOverOffset = if (members.isEmpty) {
             val totalCountForOrg = organizationMembershipRepo.countByOrgId(orgId)
             Offset(offset.value - totalCountForOrg)
