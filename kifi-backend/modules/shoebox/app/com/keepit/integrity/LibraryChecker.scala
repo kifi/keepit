@@ -25,7 +25,6 @@ class LibraryChecker @Inject() (val airbrake: AirbrakeNotifier,
     val systemValueRepo: SystemValueRepo) extends Logging {
 
   private[this] val lock = new AnyRef
-  private[this] var keptDateErrors = 0
   private val timeSlicer = new TimeSlicer(clock)
 
   private val LAST_KEPT_AND_KEEP_COUNT_NAME = Name[SequenceNumber[Keep]]("integrity_plugin_library_sync")
@@ -35,8 +34,8 @@ class LibraryChecker @Inject() (val airbrake: AirbrakeNotifier,
 
   def check(): Unit = lock.synchronized {
     checkSystemLibraries()
-    checkLibraryKeeps()
-    checkLibraryMembers()
+    syncLibraryLastKeptAndKeepCount()
+    syncLibraryMemberCounts()
   }
 
   private[integrity] def checkSystemLibraries(): Unit = {
@@ -80,11 +79,10 @@ class LibraryChecker @Inject() (val airbrake: AirbrakeNotifier,
     }
   }
 
-  def max(xs: Seq[Long]): Option[Long] = {
-    if (xs.isEmpty) {
-      None
-    } else {
-      Some(xs.reduceLeft((x, y) => if (x > y) x else y))
+  def max(seq: Seq[Long]): Option[Long] = {
+    seq.isEmpty match {
+      case true => None
+      case false => Some(seq.reduceLeft((x, y) => if (x > y) x else y))
     }
   }
 
@@ -183,91 +181,7 @@ class LibraryChecker @Inject() (val airbrake: AirbrakeNotifier,
     timer.stopAndReport(appLog = true)
   }
 
-  private[integrity] def checkLibraryKeeps(): Unit = {
-    log.info("start processing library's last kept date. A library's last_kept field should match the last kept keep")
-    val timer = new NamedStatsdTimer("LibraryChecker.checkLibraryKeeps")
-    val (index, numIntervals) = getIndex()
-
-    val (libraryMap, latestKeptAtMap, numKeepsByLibraryMap) = db.readOnlyReplica { implicit s =>
-      val pageSize = libraryRepo.countWithState(LibraryStates.ACTIVE) / numIntervals
-      val libraries = libraryRepo.page(index, pageSize, Set(LibraryStates.INACTIVE))
-      val libraryMap = libraries.map(lib => lib.id.get -> lib).toMap
-      val allLibraryIds = libraryMap.keySet
-      val latestKeptAtMap = keepRepo.latestKeptAtByLibraryIds(allLibraryIds)
-      val numKeepsByLibraryMap = allLibraryIds.grouped(100).map { keepRepo.getCountsByLibrary(_) }.foldLeft(Map.empty[Id[Library], Int]) { case (m1, m2) => m1 ++ m2 } // grouped to be more friendly with cache bulkget
-      (libraryMap, latestKeptAtMap, numKeepsByLibraryMap)
-    }
-
-    libraryMap.map {
-      case (libId, lib) =>
-        // check last_kept
-        val timeFromKeepRepo = latestKeptAtMap.get(libId).flatten
-        val timeFromLibrary = lib.lastKept
-
-        (timeFromLibrary, timeFromKeepRepo) match {
-          case (None, None) =>
-          case (Some(t1), Some(t2)) =>
-            val secondsDiff = math.abs(t1.getMillis - t2.getMillis) * 1.0 / 1000
-            if (secondsDiff > 30) {
-              keptDateErrors += 1
-              if (keptDateErrors == 1 || keptDateErrors % 50 == 0) {
-                log.warn(s"Library ${libId} has inconsistent last_kept state. Library is last kept at $t1 but keep is ${t2}... update library's last_kept. Total Errors so far: $keptDateErrors")
-              }
-              db.readWrite { implicit s => libraryRepo.save(lib.copy(lastKept = Some(t2))) }
-            }
-          case (Some(t1), None) =>
-          case (None, Some(t2)) =>
-            keptDateErrors += 1
-            if (keptDateErrors == 1 || keptDateErrors % 50 == 0) {
-              log.warn(s"Library ${libId} has no last_kept but has active keeps... update library's last_kept! Total Errors so far: $keptDateErrors")
-            }
-            db.readWrite { implicit s => libraryRepo.save(lib.copy(lastKept = Some(t2))) }
-        }
-
-        // check keep count
-        numKeepsByLibraryMap.get(libId).map { numKeeps =>
-          if (lib.keepCount != numKeeps) {
-            log.warn(s"Library ${libId} has inconsistent keep count. Library's keep count is ${lib.keepCount} but there are ${numKeeps} active keeps... update library's keep_count")
-            db.readWrite { implicit s =>
-              libraryRepo.save(lib.copy(keepCount = numKeeps))
-            }
-          }
-        }
-
-    }
-    timer.stopAndReport(appLog = true)
-  }
-
-  private[integrity] def checkLibraryMembers(): Unit = {
-    log.info("start processing library's last kept date. A library's last_kept field should match the last kept keep")
-    val timer = new NamedStatsdTimer("LibraryChecker.checkLibraryMembers")
-    val (index, numIntervals) = getIndex()
-
-    val (libraryMap, numMembersMap) = db.readOnlyReplica { implicit s =>
-      val pageSize = libraryRepo.countWithState(LibraryStates.ACTIVE) / numIntervals
-      val libraries = libraryRepo.page(index, pageSize, Set(LibraryStates.INACTIVE))
-      val libraryMap = libraries.map(lib => lib.id.get -> lib).toMap
-      val allLibraryIds = libraryMap.keySet
-      val numMembersMap = libraryMembershipRepo.countByLibraryId(allLibraryIds)
-      (libraryMap, numMembersMap)
-    }
-
-    libraryMap.map {
-      case (libId, lib) =>
-        numMembersMap.get(libId).map { numMembers =>
-          if (lib.memberCount != numMembers) {
-            log.warn(s"Library ${libId} has inconsistent member count. Library's member count is ${lib.memberCount} but there are ${numMembers} active memberships... update library's member_count")
-            db.readWrite { implicit s =>
-              libraryRepo.save(lib.copy(memberCount = numMembers))
-            }
-          }
-        }
-    }
-    timer.stopAndReport(appLog = true)
-  }
-
   private def getIndex(): (Int, Int) = {
     timeSlicer.getSliceAndSize(TimeToSliceInDays.ONE_WEEK, OneSliceInMinutes(DataIntegrityPlugin.EVERY_N_MINUTE))
   }
-
 }

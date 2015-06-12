@@ -21,6 +21,7 @@ class DataIntegrityPluginImpl @Inject() (
   override def enabled: Boolean = true
   override def onStart() {
     scheduleTaskOnOneMachine(actor.system, 7 minutes, EVERY_N_MINUTE minutes, actor.ref, Cron, getClass.getSimpleName)
+    scheduleTaskOnOneMachine(actor.system, 1 minutes, 1 minutes, actor.ref, LibrariesCheck, getClass.getSimpleName)
   }
 }
 
@@ -46,7 +47,6 @@ private[integrity] class DataIntegrityActor @Inject() (
     case Cron =>
       self ! CleanOrphans
       self ! SequenceNumberCheck
-      self ! LibrariesCheck
     case m => throw new UnsupportedActorMessage(m)
   }
 }
