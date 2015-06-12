@@ -6,17 +6,23 @@ import com.keepit.common.controller.UserRequest
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
-import com.keepit.common.net.UserAgent
+import com.keepit.common.net.{ DirectUrl, HttpClient, UserAgent }
 import com.keepit.common.service.IpAddress
-import com.keepit.model.{ User, UserIpAddress, UserIpAddressRepo, UserIpAddressStates }
-import org.joda.time.DateTime
+import com.keepit.model._
+import org.joda.time.{ DateTime, Period }
+import play.api.libs.json.Json
 
-import scala.concurrent.{ Future, ExecutionContext }
+import scala.concurrent.{ ExecutionContext, Future }
 
 class UserIpAddressCommander @Inject() (
     db: Database,
     implicit val defaultContext: ExecutionContext,
-    userIpAddressRepo: UserIpAddressRepo) extends Logging {
+    httpClient: HttpClient,
+    userIpAddressRepo: UserIpAddressRepo,
+    userRepo: UserRepo) extends Logging {
+
+  private val ipClusterSlackChannelUrl = "https://hooks.slack.com/services/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"
+  private val clusterMemoryTime = Period.weeks(10) // How long back do we look and still consider a user to be part of a cluster
 
   def simplifyUserAgent(userAgent: UserAgent): String = {
     val agentType = userAgent.typeName.toUpperCase()
@@ -33,7 +39,16 @@ class UserIpAddressCommander @Inject() (
       log.info("[RPB] Could not parse an agent type out of: " + userAgent)
     }
     val model = UserIpAddress(None, now, now, UserIpAddressStates.ACTIVE, userId, ip, agentType)
-    db.readWrite { implicit session => userIpAddressRepo.save(model) }
+
+    val oldCluster = db.readWrite { implicit session =>
+      val currentCluster = userIpAddressRepo.getUsersFromIpAddressSince(ip, now.minus(clusterMemoryTime))
+      userIpAddressRepo.saveIfNew(model)
+      currentCluster
+    }
+
+    if (!oldCluster.isEmpty && !oldCluster.contains(userId)) {
+      notifySlackChannelAboutCluster(ip)
+    }
   }
 
   def logUserByRequest[T](request: UserRequest[T]): Unit = {
@@ -42,6 +57,20 @@ class UserIpAddressCommander @Inject() (
     val raw_ip_string = request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress)
     val ip = IpAddress(raw_ip_string.split(",").head)
     logUser(userId, ip, userAgent)
+  }
+
+  def formatCluster(ip: IpAddress, users: Seq[User]): BasicSlackMessage = {
+    val userDeclarations = (for { u <- users } yield s"<http://admin.kifi.com/admin/user/${u.id.get}|${u.fullName}>").toList
+    BasicSlackMessage((s"Found a cluster of ${users.length} at $ip" :: userDeclarations).mkString("\n"))
+  }
+
+  def notifySlackChannelAboutCluster(clusterIp: IpAddress): Unit = {
+    val usersFromCluster = db.readOnlyReplica { implicit session =>
+      val userIds = userIpAddressRepo.getUsersFromIpAddressSince(clusterIp, DateTime.now.minus(clusterMemoryTime))
+      userRepo.getUsers(userIds).values.toSeq
+    }
+    val msg = formatCluster(clusterIp, usersFromCluster)
+    httpClient.post(DirectUrl(ipClusterSlackChannelUrl), Json.toJson(msg))
   }
 
   def totalNumberOfLogs(): Int = {
@@ -55,6 +84,10 @@ class UserIpAddressCommander @Inject() (
     db.readOnlyReplica { implicit session => userIpAddressRepo.getByUser(userId, limit) }
   }
 
+  def getUsersByIpAddressSince(ip: IpAddress, time: DateTime): Seq[Id[User]] = {
+    db.readOnlyReplica { implicit session => userIpAddressRepo.getUsersFromIpAddressSince(ip, time) }
+  }
+
   def kvPairsToMap[A, B](kvs: Seq[(A, B)]): Map[A, Seq[B]] = {
     kvs.groupBy(_._1).mapValues(_.map(_._2))
   }
@@ -64,7 +97,7 @@ class UserIpAddressCommander @Inject() (
     }
     kvPairsToMap(sharedIps)
   }
-  def findIpClustersSince(time: DateTime, limit: Int): Seq[(IpAddress, Int, Id[User])] = {
+  def findIpClustersSince(time: DateTime, limit: Int): Seq[IpAddress] = {
     db.readOnlyReplica { implicit session =>
       userIpAddressRepo.findIpClustersSince(time, limit)
     }
