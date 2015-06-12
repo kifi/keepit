@@ -73,10 +73,7 @@ class LibraryChecker @Inject() (val airbrake: AirbrakeNotifier,
       val lastSeq = getLastSeqNum(LAST_KEPT_AND_KEEP_COUNT_NAME)
 
       val keeps = keepRepo.getBySequenceNumber(lastSeq, KEEP_FETCH_SIZE)
-      val nextSeqNum = keeps.length match {
-        case length if length > 0 => Some(keeps.map(_.seq).max)
-        case _ => None
-      }
+      val nextSeqNum = keeps.lastOption.map(_.seq)
       val libraryIds = keeps.map(_.libraryId.get).toSet
 
       val newLibraryKeepCount = keepRepo.getCountsByLibrary(libraryIds)
@@ -125,10 +122,7 @@ class LibraryChecker @Inject() (val airbrake: AirbrakeNotifier,
     val (nextSeqNum, libraries, libraryMemberCounts) = db.readOnlyMaster { implicit session =>
       val lastSeq = getLastSeqNum(MEMBER_COUNT_NAME)
       val members = libraryMembershipRepo.getBySequenceNumber(lastSeq, MEMBER_FETCH_SIZE)
-      val nextSeqNum = members.length match {
-        case length if length > 0 => Some(members.map(_.seq).max)
-        case _ => None
-      }
+      val nextSeqNum = members.lastOption.map(_.seq)
       val libraryIds = members.map(_.libraryId).toSet
 
       val libraries = libraryRepo.getLibraries(libraryIds)
