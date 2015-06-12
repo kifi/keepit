@@ -65,6 +65,7 @@ class SearchFactory @Inject() (
     lang2: Option[Lang],
     numHitsToReturn: Int,
     filter: SearchFilter,
+    orderBy: SearchRanking,
     config: SearchConfig): Seq[UriSearch] = {
 
     val currentTime = System.currentTimeMillis()
@@ -89,6 +90,10 @@ class SearchFactory @Inject() (
     parser.parse(queryString) match {
       case Some(engBuilder) =>
         val parseDoneAt = System.currentTimeMillis()
+
+        // set ranking method (default: relevancy)
+
+        engBuilder.setRanking(orderBy)
 
         // if this is a library restricted search, add a library filter query
         filter.libraryContext match {
@@ -196,6 +201,7 @@ class SearchFactory @Inject() (
     lang2: Option[Lang],
     numHitsToReturn: Int,
     filter: SearchFilter,
+    orderBy: SearchRanking,
     config: SearchConfig): Seq[UriSearchNonUserImpl] = {
 
     val currentTime = System.currentTimeMillis()
@@ -227,6 +233,10 @@ class SearchFactory @Inject() (
         val parseDoneAt = System.currentTimeMillis()
 
         val librarySearcher = libraryIndexer.getSearcher
+
+        // set ranking method (default: relevancy)
+
+        engBuilder.setRanking(orderBy)
 
         // this is a non-user, library restricted search, add a library filter query
         addLibraryFilterToUriSearch(engBuilder, filter.libraryContext.get)

@@ -11,7 +11,7 @@ import com.keepit.model._
 import com.keepit.model.ExperimentType.ADMIN
 import com.keepit.search.index.Searcher
 import com.keepit.search.index.graph.library.LibraryIndexer
-import com.keepit.search.{ UriSearchCommander }
+import com.keepit.search.{ SearchRanking, UriSearchCommander }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.BasicUser
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -77,9 +77,11 @@ class ExtSearchController @Inject() (
     val (userId, experiments) = getUserAndExperiments(request)
     val filterFuture = getUserFilterFuture(filter)
 
+    val orderBy = SearchRanking.default
+
     val debugOpt = if (debug.isDefined && experiments.contains(ADMIN)) debug else None // debug is only for admin
 
-    val plainResultFuture = searchCommander.searchUris(userId, acceptLangs, experiments, query, filterFuture, libraryContextFuture, maxHits, lastUUIDStr, context, None, debugOpt)
+    val plainResultFuture = searchCommander.searchUris(userId, acceptLangs, experiments, query, filterFuture, libraryContextFuture, orderBy, maxHits, lastUUIDStr, context, None, debugOpt)
     val plainResultEnumerator = safelyFlatten(plainResultFuture.map(r => Enumerator(toKifiSearchResultV2(r).toString))(immediate))
 
     val augmentationFuture = plainResultFuture.flatMap { kifiPlainResult =>
