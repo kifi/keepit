@@ -73,6 +73,7 @@ class SearchController @Inject() (
     val lang1 = (searchRequest \ "lang1").as[String]
     val lang2 = (searchRequest \ "lang2").asOpt[String]
     val query = (searchRequest \ "query").as[String]
+    val orderBy = (searchRequest \ "orderBy").asOpt[SearchRanking] getOrElse SearchRanking.default
     val filter = {
       implicit val format = EitherFormat[Id[User], String]
       (searchRequest \ "filter").asOpt[Either[Id[User], String]]
@@ -98,6 +99,7 @@ class SearchController @Inject() (
       query,
       filter,
       libraryContext,
+      orderBy,
       maxHits,
       context,
       None,
