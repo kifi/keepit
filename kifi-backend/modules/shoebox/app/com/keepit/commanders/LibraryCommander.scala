@@ -913,7 +913,8 @@ class LibraryCommanderImpl @Inject() (
       (follower, owner, lotsOfFollowers)
     }
     val (category, message) = if (access == LibraryAccess.READ_WRITE) {
-      (NotificationCategory.User.LIBRARY_COLLABORATED, s"${follower.firstName} ${follower.lastName} is now collaborating on your Library ${lib.name}")
+      // This should be changed to library_collaborated but right now iOS skips categories it doesn't know.
+      (NotificationCategory.User.LIBRARY_FOLLOWED, s"${follower.firstName} ${follower.lastName} is now collaborating on your Library ${lib.name}")
     } else {
       (NotificationCategory.User.LIBRARY_FOLLOWED, s"${follower.firstName} ${follower.lastName} is now following your Library ${lib.name}")
     }
