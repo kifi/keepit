@@ -5,6 +5,7 @@ import com.google.inject.{ Provider, Inject }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.domain.DomainToNameMapper
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.{ S3ImageConfig, ImageSize }
 import com.keepit.model._
@@ -29,6 +30,7 @@ class KeepDecorator @Inject() (
     keepSourceAttributionRepo: KeepSourceAttributionRepo,
     experimentCommander: LocalUserExperimentCommander,
     rover: RoverServiceClient,
+    airbrake: AirbrakeNotifier,
     implicit val imageConfig: S3ImageConfig,
     implicit val executionContext: ExecutionContext,
     implicit val publicIdConfig: PublicIdConfiguration) {
@@ -63,7 +65,16 @@ class KeepDecorator @Inject() (
       }.map(collectionCommander.getBasicCollections)
 
       val sourceAttrs = db.readOnlyMaster { implicit s =>
-        keeps.map { keep => keep.sourceAttributionId.map { id => keepSourceAttributionRepo.get(id) } }
+        keeps.map { keep =>
+          try {
+            keep.sourceAttributionId.map { id => keepSourceAttributionRepo.get(id) }
+          } catch {
+            case ex: Exception => {
+              airbrake.notify(s"error during keep decoration: keep has KeepSourceAttributionId: ${keep.sourceAttributionId}, not found in keepSourceAttributionRepo", ex)
+              None
+            }
+          }
+        }
       }
 
       val allMyKeeps = perspectiveUserIdOpt.map { userId => getBasicKeeps(userId, keeps.map(_.uriId).toSet) } getOrElse Map.empty[Id[NormalizedURI], Set[BasicKeep]]
