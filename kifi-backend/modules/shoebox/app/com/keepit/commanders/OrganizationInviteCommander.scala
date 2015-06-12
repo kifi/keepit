@@ -18,5 +18,5 @@ class OrganizationInviteCommander @Inject() () {
   def declineInvitation(orgId: Id[Organization], userId: Id[User]) = ???
 
   // Creates a Universal Invite Link for an organization and inviter. Anyone with the link can join the Organization
-  def universalInviteLink(orgId: Id[Organization], inviterId: Id[User], access: OrganizationAccess = OrganizationAccess.READ_WRITE) = ???
+  def universalInviteLink(orgId: Id[Organization], inviterId: Id[User], access: OrganizationAccess = OrganizationAccess.READ_WRITE, authToken: Option[String] = None) = ???
 }
