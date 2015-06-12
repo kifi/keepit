@@ -33,9 +33,7 @@ object LibraryError {
 case class LibraryFail(status: Int, message: String)
 
 @json
-case class LibrarySubscriptionKey( // subscription data to be passed to and from the client
-  name: String,
-  info: SubscriptionInfo)
+case class LibrarySubscriptionKey(name: String, info: SubscriptionInfo)
 
 @json
 case class LibraryAddRequest(

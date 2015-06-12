@@ -2,6 +2,7 @@ package com.keepit.commanders
 
 import com.google.inject.{ Singleton, Inject }
 import com.keepit.common.db.Id
+import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
@@ -11,6 +12,7 @@ import com.keepit.model._
 import play.api.libs.json._
 
 import scala.concurrent.{ Future, ExecutionContext }
+import scala.util.{ Failure, Success }
 
 case class BasicSlackMessage(
   text: String,
@@ -38,11 +40,13 @@ class LibrarySubscriptionCommander @Inject() (
   val client = httpClient.withTimeout(CallTimeouts(responseTimeout = Some(2 * 60 * 1000), maxJsonParseTime = Some(20000)))
 
   def sendNewKeepMessage(keep: Keep, library: Library): Seq[Future[ClientResponse]] = {
-    val subscriptions: Seq[LibrarySubscription] = db.readOnlyReplica { implicit session => librarySubscriptionRepo.getByLibraryIdAndTrigger(library.id.get, SubscriptionTrigger.NEW_KEEP) }
 
-    val keeper = db.readOnlyMaster { implicit session => userRepo.get(keep.userId) }
-
-    val owner = db.readOnlyMaster { implicit session => userRepo.get(library.ownerId) }
+    val (subscriptions, keeper, owner) = db.readOnlyReplica { implicit session =>
+      val subscriptions = librarySubscriptionRepo.getByLibraryIdAndTrigger(library.id.get, SubscriptionTrigger.NEW_KEEP)
+      val keeper = userRepo.get(keep.userId)
+      val owner = userRepo.get(library.ownerId)
+      (subscriptions, keeper, owner)
+    }
 
     subscriptions.map { subscription =>
       subscription.info match {
@@ -51,8 +55,12 @@ class LibrarySubscriptionCommander @Inject() (
           val body = BasicSlackMessage(text)
           val response = httpLock.withLockFuture(client.postFuture(DirectUrl(info.url), Json.toJson(body)))
           log.info(s"sendNewKeepMessage: Slack message request sent to subscription.id=${subscription.id}")
-          response onFailure {
-            case t => log.error("sendNewKeepMessage: Slack message failed to send: " + t.getMessage); Future.failed(t)
+          response.onComplete {
+            case Success(res) if res.status != 200 =>
+              log.error("sendNewKeepMessage: Slack message failed to send: status=" + res.status);
+            case Failure(t) =>
+              log.error("sendNewKeepMessage: Future failed: " + t.getMessage);
+            case _ => log.info("sendNewKeepMessage: Slack message succeeded.")
           }
           response
         case _ =>
@@ -61,66 +69,55 @@ class LibrarySubscriptionCommander @Inject() (
     }
   }
 
-  def saveSubscription(librarySubscription: LibrarySubscription): LibrarySubscription = {
-    db.readWrite { implicit s => librarySubscriptionRepo.save(librarySubscription) }
+  def saveSubByLibIdAndKey(libId: Id[Library], subKey: LibrarySubscriptionKey)(implicit session: RWSession): LibrarySubscription = {
+    librarySubscriptionRepo.save(LibrarySubscription(libraryId = libId, name = subKey.name, trigger = SubscriptionTrigger.NEW_KEEP, info = subKey.info)) // TODO: extend this to other triggers
   }
 
-  def saveSubByLibIdAndKey(libId: Id[Library], subKey: LibrarySubscriptionKey): LibrarySubscription = {
-    saveSubscription(LibrarySubscription(libraryId = libId, name = subKey.name, trigger = SubscriptionTrigger.NEW_KEEP, info = subKey.info))
+  def saveSubsByLibIdAndKey(libId: Id[Library], subKeys: Seq[LibrarySubscriptionKey])(implicit session: RWSession): Seq[LibrarySubscription] = {
+    subKeys.map { key => saveSubByLibIdAndKey(libId, key) }
   }
 
-  def saveSubsByLibIdAndKey(libId: Id[Library], subKeys: Seq[LibrarySubscriptionKey]): Seq[LibrarySubscription] = {
-    db.readWrite { implicit s =>
-      subKeys.map { key => saveSubByLibIdAndKey(libId, key) }
-    }
-  }
-
-  def updateSubsByLibIdAndKey(libId: Id[Library], subKeys: Seq[LibrarySubscriptionKey]): Boolean = {
+  def updateSubsByLibIdAndKey(libId: Id[Library], subKeys: Seq[LibrarySubscriptionKey])(implicit session: RWSession): Boolean = {
 
     def hasSameNameOrEndpoint(key: LibrarySubscriptionKey, sub: LibrarySubscription) = sub.name == key.name || sub.info.hasSameEndpoint(key.info)
-    def saveUpdates(currSubs: Seq[LibrarySubscription], subKeys: Seq[LibrarySubscriptionKey]) {
+    def saveUpdates(currSubs: Seq[LibrarySubscription], subKeys: Seq[LibrarySubscriptionKey])(implicit session: RWSession): Unit = {
       subKeys.foreach { key =>
         currSubs.find {
           hasSameNameOrEndpoint(key, _)
         } match {
           case None => saveSubByLibIdAndKey(libId, key) // key represents a new sub, save it
-          case Some(equivalentSub) => saveSubscription(equivalentSub.copy(name = key.name, info = key.info)) // key represents an old sub, update it
+          case Some(equivalentSub) => librarySubscriptionRepo.save(equivalentSub.copy(name = key.name, info = key.info)) // key represents an old sub, update it
         }
       }
     }
-    // TODO: refactor these \/ two ^ into one function
-    def removeDifferences(currSubs: Seq[LibrarySubscription], subKeys: Seq[LibrarySubscriptionKey]) {
+    // TODO: refactor these \/two^ into one function
+    def removeDifferences(currSubs: Seq[LibrarySubscription], subKeys: Seq[LibrarySubscriptionKey])(implicit session: RWSession): Unit = {
       currSubs.foreach { currSub =>
         subKeys.find {
           hasSameNameOrEndpoint(_, currSub)
         } match {
-          case None => saveSubscription(currSub.copy(state = LibrarySubscriptionStates.INACTIVE)) // currSub not found in subKeys, inactivate it
+          case None => librarySubscriptionRepo.save(currSub.copy(state = LibrarySubscriptionStates.INACTIVE)) // currSub not found in subKeys, inactivate it
           case Some(key) => // currSub has already been updated above, do nothing
         }
       }
     }
 
-    val currSubs = getSubsByLibraryId(libId)
-    val newSubs = db.readWrite { implicit s =>
-      if (currSubs.isEmpty) {
-        saveSubsByLibIdAndKey(libId, subKeys)
-      } else {
-        saveUpdates(currSubs, subKeys) // save new subs and changes to existing subs
-        removeDifferences(currSubs, subKeys) // remove existing subs that are not in subKeys
-      }
-      getSubsByLibraryId(libId)
+    val currSubs = librarySubscriptionRepo.getByLibraryId(libId)
+
+    println(currSubs)
+
+    if (currSubs.isEmpty) {
+      saveSubsByLibIdAndKey(libId, subKeys)
+    } else {
+      saveUpdates(currSubs, subKeys) // save new subs and changes to existing subs
+      removeDifferences(currSubs, subKeys) // inactivate existing subs that are not in subKeys
     }
 
+    val newSubs = librarySubscriptionRepo.getByLibraryId(libId)
+
+    println(newSubs)
+
     currSubs != newSubs
-
-  }
-
-  def getSubsByLibraryId(id: Id[Library]): Seq[LibrarySubscription] = {
-    db.readOnlyMaster { implicit s => librarySubscriptionRepo.getByLibraryId(id) }
-  }
-
-  def getSubKeysByLibraryId(id: Id[Library]): Seq[LibrarySubscriptionKey] = {
-    getSubsByLibraryId(id).map { sub => LibrarySubscriptionKey(sub.name, sub.info) }
   }
 
 }

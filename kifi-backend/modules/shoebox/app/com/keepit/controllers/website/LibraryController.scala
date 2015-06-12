@@ -68,6 +68,8 @@ class LibraryController @Inject() (
   def addLibrary() = UserAction.async(parse.tolerantJson) { request =>
     val addRequest = request.body.as[LibraryAddRequest]
 
+    log.info("Add request received, subscriptions =" + addRequest.subscriptions)
+
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
     libraryCommander.addLibrary(addRequest, request.userId) match {
       case Left(fail) =>
@@ -85,6 +87,8 @@ class LibraryController @Inject() (
   def modifyLibrary(pubId: PublicId[Library]) = (UserAction andThen LibraryOwnerAction(pubId))(parse.tolerantJson) { request =>
     val id = Library.decodePublicId(pubId).get
     val libModifyRequest = request.body.as[LibraryModifyRequest]
+
+    log.info("Modify req received, subs = " + libModifyRequest.subscriptions)
 
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
     libraryCommander.modifyLibrary(id, request.userId, libModifyRequest) match {
@@ -118,13 +122,13 @@ class LibraryController @Inject() (
       val suggestedSearches = getSuggestedSearchesAsJson(libraryId)
       val membershipOpt = libraryCommander.getViewerMembershipInfo(request.userIdOpt, libraryId)
       val inviteOpt = libraryInviteCommander.getViewerInviteInfo(request.userIdOpt, libraryId)
-      val subscriptions = librarySubscriptionCommander.getSubsByLibraryId(libraryId).map { sub => LibrarySubscriptionKey(sub.name, sub.info) }
+      val subKeys: Seq[LibrarySubscriptionKey] = db.readOnlyReplica { implicit s => librarySubscriptionRepo.getByLibraryId(libraryId).map { sub => LibrarySubscription.toSubKey(sub) } }
 
       val membershipJson = Json.toJson(membershipOpt)
       val inviteJson = Json.toJson(inviteOpt)
-      val subscriptionJson = Json.toJson(subscriptions)
-      val libraryJson = Json.toJson(libInfo).as[JsObject] + ("membership" -> membershipJson) + ("invite" -> inviteJson) + ("subscriptions" -> subscriptionJson)
-      Ok(Json.obj("library" -> libraryJson, "suggestedSearches" -> suggestedSearches))
+      val subscriptionJson = Json.toJson(subKeys)
+      val libraryJson = Json.toJson(libInfo).as[JsObject] + ("membership" -> membershipJson) + ("invite" -> inviteJson)
+      Ok(Json.obj("library" -> libraryJson, "subscriptions" -> subscriptionJson, "suggestedSearches" -> suggestedSearches))
     }
   }
 
@@ -164,14 +168,14 @@ class LibraryController @Inject() (
                 }
               }.flatten
             }
-            val subscriptions = librarySubscriptionCommander.getSubKeysByLibraryId(library.id.get)
+            val subKeys: Seq[LibrarySubscriptionKey] = db.readOnlyReplica { implicit s => librarySubscriptionRepo.getByLibraryId(library.id.get).map { sub => LibrarySubscription.toSubKey(sub) } }
 
             libraryCommander.trackLibraryView(request.userIdOpt, library)
             val membershipJson = Json.toJson(membershipOpt)
             val inviteJson = Json.toJson(inviteOpt)
-            val subscriptionJson = Json.toJson(subscriptions)
-            val libraryJson = Json.toJson(libInfo).as[JsObject] + ("membership" -> membershipJson) + ("invite" -> inviteJson) + ("subscriptions" -> subscriptionJson)
-            Ok(Json.obj("library" -> libraryJson, "suggestedSearches" -> suggestedSearches))
+            val subscriptionJson = Json.toJson(subKeys)
+            val libraryJson = Json.toJson(libInfo).as[JsObject] + ("membership" -> membershipJson) + ("invite" -> inviteJson)
+            Ok(Json.obj("library" -> libraryJson, "subscriptions" -> subscriptionJson, "suggestedSearches" -> suggestedSearches))
           }
         })
       case Left(fail) => Future.successful {

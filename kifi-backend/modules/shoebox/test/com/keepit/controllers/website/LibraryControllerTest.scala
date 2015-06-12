@@ -320,9 +320,9 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
               "listed":true,
               "subscribed":false
              },
-             "invite": null,
-             "subscriptions": []
+             "invite": null
            },
+           "subscriptions": [],
            "suggestedSearches": {"terms": [], "weights": []}
           }
         """))
@@ -380,9 +380,9 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
               },
               "access":"read_only",
               "lastInvite":${t1.plusMinutes(3).getMillis}
-             },
-             "subscriptions": []
+             }
            },
+           "subscriptions": [],
            "suggestedSearches": {"terms": [], "weights": []}
           }
         """))
@@ -476,9 +476,9 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                 "listed":false,
                 "subscribed":false
                },
-               "invite": null,
-               "subscriptions": []
+               "invite": null
              },
+             "subscriptions": [],
              "suggestedSearches": {"terms": [], "weights": []}
             }
           """)

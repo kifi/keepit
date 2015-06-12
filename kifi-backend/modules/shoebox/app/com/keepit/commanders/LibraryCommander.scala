@@ -503,7 +503,7 @@ class LibraryCommander @Inject() (
                     visibility = libAddReq.visibility, slug = validSlug, color = newColor, kind = newKind, memberCount = 1, keepCount = 0, whoCanInvite = newInviteToCollab))
                   libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = ownerId, access = LibraryAccess.OWNER, listed = newListed, lastJoinedAt = Some(currentDateTime)))
                   libAddReq.subscriptions match {
-                    case Some(subKeys) => librarySubscriptionCommander.saveSubsByLibIdAndKey(lib.id.get, subKeys)
+                    case Some(subKeys) => librarySubscriptionCommander.updateSubsByLibIdAndKey(lib.id.get, subKeys)
                     case None =>
                   }
                   lib
@@ -611,7 +611,7 @@ class LibraryCommander @Inject() (
         }
 
         val wereSubsChanged = newSubKeysOpt match {
-          case Some(newSubKeys) => librarySubscriptionCommander.updateSubsByLibIdAndKey(targetLib.id.get, newSubKeys)
+          case Some(newSubKeys) => db.readWrite { implicit s => librarySubscriptionCommander.updateSubsByLibIdAndKey(targetLib.id.get, newSubKeys) }
           case None => false
         }
 

@@ -61,17 +61,27 @@ angular.module('kifi')
                _.some(subs, function(sub) { return sub.info.url === newSub.info.url; }); // TODO: only works for url-based SubInfos (e.g. SlackInfo)
             }
 
-            return (newSub.name.length > 0 && newSub.info.url.match(/https:\/\/hooks.slack.com\/services\/.*\/.*/i)) &&
-              !containsEquivalentSub(subscriptions, newSub);
+            return !containsEquivalentSub(subscriptions, newSub);
           }
 
-          if (validateSubscription(scope.newSub, scope.library.subscriptions)) { // TODO: change this guard to be more accurate
+          scope.validateName = function (name) {
+            return name.length > 0;
+          };
+
+          scope.validateUrl = function (url) {
+            return url.match(/https:\/\/hooks.slack.com\/services\/.*\/.*\/?/i) != null;
+          };
+
+          var isNameValid = scope.validateName(scope.newSub.name);
+          var isUrlValid = scope.validateUrl(scope.newSub.info.url);
+          scope.isSubValid = validateSubscription(scope.newSub, scope.library.subscriptions);
+
+          if (isNameValid && isUrlValid && scope.isSubValid) {
             scope.showError = false;
             scope.library.subscriptions.push ( scope.newSub );
             scope.newSub = { 'name': '', 'info': { 'kind': 'slack', 'url':'' } };
           } else {
             scope.showError = true;
-
           }
         };
 
@@ -210,9 +220,7 @@ angular.module('kifi')
           scope.modifyingExistingLibrary = true;
           scope.emptySlug = false;
           scope.modalTitle = scope.library.name;
-          if (!scope.library.subscriptions) {
-            scope.library.subscriptions = [];
-          }
+          scope.library.subscriptions = scope.library.subscriptions || [];
         } else {
           scope.library = {
             'name': '',
