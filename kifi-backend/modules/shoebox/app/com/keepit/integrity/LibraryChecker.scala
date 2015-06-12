@@ -90,17 +90,9 @@ class LibraryChecker @Inject() (val airbrake: AirbrakeNotifier,
         latestKeptAtMap(libraryId) match {
           case Some(keepKeptAt) => library.lastKept match {
             case None =>
-              updateLibrary(libraryId, _.copy(lastKept = Some(keepKeptAt))) match {
-                case Success(success) => // success
-                case Failure(e) =>
-                  log.warn(s"a library $libraryId failed to update its lastKept to $keepKeptAt", e)
-              }
+              updateLibrary(libraryId, _.copy(lastKept = Some(keepKeptAt)))
             case Some(libLastKept) if keepKeptAt.getMillis - libLastKept.getMillis > 30000 => {
-              updateLibrary(libraryId, _.copy(lastKept = Some(keepKeptAt))) match {
-                case Success(success) => // success!
-                case Failure(e) =>
-                  log.warn(s"a library $libraryId failed to update its lastKept to $keepKeptAt", e)
-              }
+              updateLibrary(libraryId, _.copy(lastKept = Some(keepKeptAt)))
             }
             case Some(_) => // all good here
           }
@@ -114,10 +106,7 @@ class LibraryChecker @Inject() (val airbrake: AirbrakeNotifier,
       // sync library keepCount with sum keeps.active
       case (libraryId, library) =>
         newLibraryKeepCount.get(libraryId) match {
-          case Some(count) if library.keepCount != count => updateLibrary(libraryId, _.copy(keepCount = count)) match {
-            case Success(_) => // all good here
-            case Failure(e) => log.warn(s"a library $libraryId failed to update it's keepCount to $count", e)
-          }
+          case Some(count) if library.keepCount != count => updateLibrary(libraryId, _.copy(keepCount = count))
           case Some(_) => // all good here.
           case None => log.warn(s"a library $libraryId that has keeps since last sequence number has no keeps??")
         }
@@ -151,10 +140,7 @@ class LibraryChecker @Inject() (val airbrake: AirbrakeNotifier,
       case (libraryId, library) =>
         libraryMemberCounts.get(libraryId) match {
           case None => log.warn(s"a library $libraryId that has members since last sequence number has no members??")
-          case Some(count) if count != library.memberCount => updateLibrary(libraryId, _.copy(memberCount = count)) match {
-            case Success(_) => // success
-            case Failure(e) => log.warn(s"a library $libraryId failed to update its memberCount to $count", e)
-          }
+          case Some(count) if count != library.memberCount => updateLibrary(libraryId, _.copy(memberCount = count))
           case Some(_) => // here be dragons counting your libraries correctly
         }
     }
