@@ -61,29 +61,10 @@ class LibraryChecker @Inject() (val airbrake: AirbrakeNotifier,
     systemValueRepo.getSequenceNumber(key).getOrElse(SequenceNumber[T](0))
   }
 
-  @tailrec
-  private final def retry[T](retries: Int)(block: => T): Try[T] = {
-    Try(block) match {
-      case success: Success[T] => success
-      case Failure(e) if !NonFatal(e) => throw e
-      case _ if retries > 1 => retry(retries - 1)(block)
-      case failure => failure
-    }
-  }
-
-  private def updateLibrary(id: Id[Library], mutator: Library => Library) = retry(3) {
-    db.readWrite { implicit session =>
-      /* Since we can be processing hundreds of libraries, the library can be out of date by the time we get to actually updating it with our plugin.
-      Do not overwrite new data with old; Instead just refetch the library and update it. */
-      libraryRepo.save(mutator(libraryRepo.get(id)))
-    }
-  }
-
-  def max(seq: Seq[Long]): Option[Long] = {
-    seq.isEmpty match {
-      case true => None
-      case false => Some(seq.reduceLeft((x, y) => if (x > y) x else y))
-    }
+  private def updateLibrary(id: Id[Library], mutator: Library => Library) = db.readWrite { implicit session =>
+    /* Since we can be processing hundreds of libraries, the library can be out of date by the time we get to actually updating it with our plugin.
+    Do not overwrite new data with old; Instead just refetch the library and update it. */
+    libraryRepo.save(mutator(libraryRepo.get(id)))
   }
 
   def syncLibraryLastKeptAndKeepCount() {
@@ -92,7 +73,10 @@ class LibraryChecker @Inject() (val airbrake: AirbrakeNotifier,
       val lastSeq = getLastSeqNum(LAST_KEPT_AND_KEEP_COUNT_NAME)
 
       val keeps = keepRepo.getBySequenceNumber(lastSeq, KEEP_FETCH_SIZE)
-      val nextSeqNum = max(keeps.map(_.seq.value)).map(SequenceNumber[Keep](_))
+      val nextSeqNum = keeps.length match {
+        case length if length > 0 => Some(keeps.map(_.seq).max)
+        case _ => None
+      }
       val libraryIds = keeps.map(_.libraryId.get).toSet
 
       val newLibraryKeepCount = keepRepo.getCountsByLibrary(libraryIds)
@@ -152,7 +136,10 @@ class LibraryChecker @Inject() (val airbrake: AirbrakeNotifier,
     val (nextSeqNum, libraries, libraryMemberCounts) = db.readOnlyMaster { implicit session =>
       val lastSeq = getLastSeqNum(MEMBER_COUNT_NAME)
       val members = libraryMembershipRepo.getBySequenceNumber(lastSeq, MEMBER_FETCH_SIZE)
-      val nextSeqNum = max(members.map(_.seq.value)).map(SequenceNumber[LibraryMembership](_))
+      val nextSeqNum = members.length match {
+        case length if length > 0 => Some(members.map(_.seq).max)
+        case _ => None
+      }
       val libraryIds = members.map(_.libraryId).toSet
 
       val libraries = libraryRepo.getLibraries(libraryIds)
