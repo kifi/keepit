@@ -13,7 +13,7 @@ class OrganizationInviteCommander @Inject() () {
 
   def inviteUsersToOrganization(orgId: Id[Organization], inviterId: Id[User], invitees: Seq[(Either[Id[User], EmailAddress], LibraryAccess, Option[String])]): Future[Either[LibraryFail, Seq[(Either[BasicUser, RichContact], LibraryAccess)]]] = ???
 
-  def acceptInvitation(orgId: Id[Organization], userId: Id[User], authToken: Option[String] = None, subscribed: Option[Boolean] = None): Either[OrganizationFail, (Organization, OrganizationMembership)] = ???
+  def acceptInvitation(orgId: Id[Organization], userId: Id[User], authToken: Option[String] = None): Either[OrganizationFail, (Organization, OrganizationMembership)] = ???
 
   def declineInvitation(orgId: Id[Organization], userId: Id[User]) = ???
 
