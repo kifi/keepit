@@ -1,0 +1,187 @@
+
+
+##########################################
+# Web API
+##########################################
+
+GET     /assets/sitemap.xml                     @com.keepit.controllers.website.SiteMapController.librariesSitemapLegacy()
+GET     /assets/sitemap-libraries-0.xml         @com.keepit.controllers.website.SiteMapController.librariesSitemap()
+GET     /assets/sitemap-users-0.xml             @com.keepit.controllers.website.SiteMapController.usersSitemap()
+
+GET     /site/keeps/all             @com.keepit.controllers.website.KeepsController.allKeeps(before: Option[String], after: Option[String], collection: Option[String], helprank: Option[String], count: Int ?= Integer.MAX_VALUE, withPageInfo: Boolean ?= false)
+GET     /site/keeps/count           @com.keepit.controllers.website.KeepsController.numKeeps()
+GET     /site/keeps/export          @com.keepit.controllers.website.KeepsController.exportKeeps()
+GET     /site/keeps/:id             @com.keepit.controllers.website.KeepsController.getKeepInfo(id: ExternalId[Keep], withFullInfo: Boolean ?= false)
+#### Deprecated: Used by Android now, should be dropped by Nov 1, 2014
+POST    /site/keeps/screenshot      @com.keepit.controllers.website.KeepsController.getScreenshotUrl()
+#### Deprecated: Used by Android and iOS now, should be dropped by Nov 1, 2014 when both will use the new /m/1/eliza/notifications endpoint
+
+POST    /site/keeps/tag             @com.keepit.controllers.website.KeepsController.tagKeepBulk()
+POST    /site/keeps/untag           @com.keepit.controllers.website.KeepsController.untagKeepBulk()
+
+POST    /site/tags/:tag             @com.keepit.controllers.website.KeepsController.tagKeeps(tag: String)
+
+GET     /site/collections/all       @com.keepit.controllers.website.KeepsController.allCollections(sort: String ?= "last_kept")
+GET     /site/collections/page      @com.keepit.controllers.website.KeepsController.page(sort: String ?= "used", offset : Int ?= 0, pageSize: Int ?= 0)
+POST    /site/collections/ordering  @com.keepit.controllers.website.KeepsController.updateCollectionOrdering()
+POST    /site/collections/reorderTag  @com.keepit.controllers.website.KeepsController.updateCollectionIndexOrdering()
+POST    /site/collections/create    @com.keepit.controllers.website.KeepsController.saveCollection()
+POST    /site/collections/:id/delete @com.keepit.controllers.website.KeepsController.deleteCollection(id: ExternalId[Collection])
+POST    /site/collections/:id/undelete @com.keepit.controllers.website.KeepsController.undeleteCollection(id: ExternalId[Collection])
+POST    /site/collections/:id/removeKeeps @com.keepit.controllers.website.KeepsController.removeKeepsFromCollection(id: ExternalId[Collection])
+POST    /site/collections/:id/addKeeps @com.keepit.controllers.website.KeepsController.keepToCollection(id: ExternalId[Collection])
+GET     /site/collections/search    @com.keepit.controllers.website.KeepsController.searchUserTags(query: String, limit: Option[Int] = None)
+
+GET     /site/users/:userStr/libraries/:slug    @com.keepit.controllers.website.LibraryController.getLibraryByPath(userStr:String, slug: String, showPublishedLibraries: Boolean ?= false, is: Option[String] ?= None, authToken: Option[String] ?= None)
+POST    /site/users/:userStr/libraries/:slug/auth    @com.keepit.controllers.website.LibraryController.authToLibrary(userStr: String, slug: String, authToken: Option[String])
+
+# Profile pages
+GET     /site/user/:name/profile    @com.keepit.controllers.website.UserProfileController.getProfile(name: Username)
+GET     /site/user/:name/libraries  @com.keepit.controllers.website.UserProfileController.getProfileLibraries(name: Username, page: Int ?= 0, size: Int ?= 12, filter: String ?= "own")
+GET     /site/users/:name/connections @com.keepit.controllers.website.UserProfileController.getProfileConnections(name: Username, n: Int ?= 12)
+GET     /site/users/:name/followers  @com.keepit.controllers.website.UserProfileController.getProfileFollowers(name: Username, n: Int ?= 12)
+GET     /site/users/:ids            @com.keepit.controllers.website.UserProfileController.getProfileUsers(ids)
+GET     /site/users/:id/connections/mutual @com.keepit.controllers.website.UserProfileController.getMutualConnections(id: ExternalId[User])
+GET     /site/users/:id/libraries/mutual  @com.keepit.controllers.website.UserProfileController.getMutualLibraries(id: ExternalId[User], page: Int ?= 0, size: Int ?= 12)
+
+GET     /site/libraries             @com.keepit.controllers.website.LibraryController.getLibrarySummariesByUser()
+POST    /site/libraries/add         @com.keepit.controllers.website.LibraryController.addLibrary()
+POST    /site/libraries/copy        @com.keepit.controllers.website.LibraryController.copyKeeps()
+POST    /site/libraries/move        @com.keepit.controllers.website.LibraryController.moveKeeps()
+
+GET     /site/libraries/marketing-suggestions   @com.keepit.controllers.website.LibraryController.marketingSiteSuggestedLibraries()
+
+GET     /site/libraries/:id         @com.keepit.controllers.website.LibraryController.getLibraryById(id: PublicId[Library], showPublishedLibraries: Boolean ?= false, is: Option[String] ?= None)
+GET     /site/libraries/:id/summary         @com.keepit.controllers.website.LibraryController.getLibrarySummaryById(id: PublicId[Library])
+POST    /site/libraries/:id/modify  @com.keepit.controllers.website.LibraryController.modifyLibrary(id: PublicId[Library])
+POST    /site/libraries/:id/delete  @com.keepit.controllers.website.LibraryController.removeLibrary(id: PublicId[Library])
+POST    /site/libraries/:id/invite  @com.keepit.controllers.website.LibraryController.inviteUsersToLibrary(id: PublicId[Library])
+DELETE  /site/libraries/:id/invite  @com.keepit.controllers.website.LibraryController.revokeLibraryInvitation(id: PublicId[Library])
+POST    /site/libraries/:id/join    @com.keepit.controllers.website.LibraryController.joinLibrary(id: PublicId[Library], authToken: Option[String] ?= None, subscribed: Option[Boolean] ?= None)
+POST    /site/libraries/:id/decline @com.keepit.controllers.website.LibraryController.declineLibrary(id: PublicId[Library])
+POST    /site/libraries/:id/leave   @com.keepit.controllers.website.LibraryController.leaveLibrary(id: PublicId[Library])
+POST    /site/libraries/:id/subscription @com.keepit.controllers.website.LibraryController.setSubscribedToUpdates(id: PublicId[Library], subscribed: Boolean)
+
+GET     /site/libraries/:id/keeps   @com.keepit.controllers.website.LibraryController.getKeeps(id: PublicId[Library], offset: Int ?= 0, limit: Int ?= 10, showPublishedLibraries: Boolean ?= false)
+POST    /site/libraries/:id/keeps   @com.keepit.controllers.website.LibraryController.addKeeps(id: PublicId[Library])
+POST    /site/libraries/:id/keeps/delete   @com.keepit.controllers.website.LibraryController.removeKeeps(id: PublicId[Library])
+DELETE  /site/libraries/:id/keeps/:k   @com.keepit.controllers.website.LibraryController.removeKeep(id: PublicId[Library], k: ExternalId[Keep])
+GET     /site/libraries/:id/keeps/:k/tags/suggest  @com.keepit.controllers.website.LibraryController.suggestTags(id: PublicId[Library], k: ExternalId[Keep], q: Option[String] ?= None, n: Int ?= 5)
+POST    /site/libraries/:id/keeps/:k/update       @com.keepit.controllers.website.LibraryController.updateKeep(id:PublicId[Library], k: ExternalId[Keep])
+POST    /site/libraries/:id/keeps/:k/tags/:tag    @com.keepit.controllers.website.LibraryController.tagKeep(id: PublicId[Library], k: ExternalId[Keep], tag: String)
+DELETE  /site/libraries/:id/keeps/:k/tags/:tag    @com.keepit.controllers.website.LibraryController.untagKeep(id: PublicId[Library], k: ExternalId[Keep], tag: String)
+POST    /site/libraries/:id/keeps/:k/note         @com.keepit.controllers.website.LibraryController.editKeepNote(id: PublicId[Library], k: ExternalId[Keep])
+
+GET     /site/libraries/:id/related                @com.keepit.controllers.website.LibraryController.relatedLibraries(id: PublicId[Library])
+
+GET     /site/libraries/:id/members               @com.keepit.controllers.website.LibraryController.getLibraryMembers(id: PublicId[Library], offset: Int ?= 0, limit: Int ?= 10)
+GET     /site/libraries/:id/members/suggest       @com.keepit.controllers.website.LibraryController.suggestMembers(id: PublicId[Library], q: Option[String] ?= None, n: Int ?= 5)
+POST    /site/libraries/:id/members/:uId/access   @com.keepit.controllers.website.LibraryController.updateLibraryMembership(id: PublicId[Library], uId: ExternalId[User])
+
+POST    /site/libraries/:id/importTag   @com.keepit.controllers.website.LibraryController.copyKeepsFromCollectionToLibrary(id: PublicId[Library], tag: String)
+POST    /site/libraries/:id/moveTag     @com.keepit.controllers.website.LibraryController.moveKeepsFromCollectionToLibrary(id: PublicId[Library], tag: String)
+POST    /site/libraries/:id/import-file  @com.keepit.controllers.website.BookmarkImporter.importFileToLibrary(id: PublicId[Library])
+
+POST    /site/libraries/:id/image/upload    @com.keepit.controllers.website.LibraryImageController.uploadLibraryImage(id: PublicId[Library], is: Option[String] ?= None, x: Option[Int] ?= None, y: Option[Int] ?= None)
+POST    /site/libraries/:id/image/position  @com.keepit.controllers.website.LibraryImageController.positionLibraryImage(id: PublicId[Library])
+DELETE  /site/libraries/:id/image           @com.keepit.controllers.website.LibraryImageController.removeLibraryImage(id: PublicId[Library])
+GET     /site/libraries/:ids/images         @com.keepit.controllers.website.LibraryImageController.getLibraryImages(ids: String, is: Option[String] ?= None)
+
+
+
+GET     /site/user/me               @com.keepit.controllers.website.UserController.currentUser()
+POST    /site/user/me               @com.keepit.controllers.website.UserController.updateCurrentUser()
+POST    /site/user/me/username      @com.keepit.controllers.website.UserController.updateUsername()
+POST    /site/user/me/name          @com.keepit.controllers.website.UserController.updateName()
+POST    /site/user/me/biography     @com.keepit.controllers.website.UserController.updateBiography()
+POST    /site/user/me/email        @com.keepit.controllers.website.UserController.addEmail()
+PUT     /site/user/me/email        @com.keepit.controllers.website.UserController.changePrimaryEmail()
+DELETE  /site/user/me/email        @com.keepit.controllers.website.UserController.removeEmail()
+GET     /site/user/email            @com.keepit.controllers.website.UserController.getEmailInfo(email: EmailAddress)
+POST    /site/user/password         @com.keepit.controllers.website.UserController.changePassword()
+GET     /site/user/inviteCounts     @com.keepit.controllers.website.UserController.getInviteCounts()
+POST    /site/user/needMoreInvites  @com.keepit.controllers.website.UserController.needMoreInvites()
+GET     /site/user/import-status    @com.keepit.controllers.website.UserController.importStatus()
+GET     /site/user/import-check/:network  @com.keepit.controllers.website.UserController.checkIfImporting(network: String, callback: String)
+GET     /site/user/networks         @com.keepit.controllers.website.UserController.socialNetworkInfo()
+GET     /site/user/abooks           @com.keepit.controllers.website.UserController.abookInfo()
+GET     /site/user/settings         @com.keepit.controllers.website.UserController.getSettings()
+POST    /site/user/settings         @com.keepit.controllers.website.UserController.setSettings()
+
+GET     /site/user/personas             @com.keepit.controllers.website.UserPersonaController.getAllPersonas()
+POST    /site/user/personas              @com.keepit.controllers.website.UserPersonaController.selectPersonas()
+POST    /site/user/personas/:name        @com.keepit.controllers.website.UserPersonaController.addPersona(name: String)
+DELETE  /site/user/personas/:name        @com.keepit.controllers.website.UserPersonaController.removePersona(name: String)
+
+# regex below prevents route from usurping requests intended for other routes, like /site/user/friends
+GET     /site/user/$id<[0-9a-f-]{36}> @com.keepit.controllers.website.UserController.basicUserInfo(id: ExternalId[User], friendCount: Boolean ?= false)
+GET     /site/user/:id/networks     @com.keepit.controllers.website.UserController.friendNetworkInfo(id: ExternalId[User])
+POST    /site/user/:id/unfriend     @com.keepit.controllers.website.UserController.unfriend(id: ExternalId[User])
+POST    /site/user/:id/friend       @com.keepit.controllers.website.UserController.friend(id: ExternalId[User])
+POST    /site/user/:id/ignoreRequest @com.keepit.controllers.website.UserController.ignoreFriendRequest(id: ExternalId[User])
+POST    /site/user/:id/cancelRequest @com.keepit.controllers.website.UserController.cancelFriendRequest(id: ExternalId[User])
+POST    /site/user/:id/exclude      @com.keepit.controllers.website.UserController.excludeFriend(id: ExternalId[User])
+POST    /site/user/:id/include      @com.keepit.controllers.website.UserController.includeFriend(id: ExternalId[User])
+GET     /site/user/outgoingFriendRequests @com.keepit.controllers.website.UserController.outgoingFriendRequests
+GET     /site/user/incomingFriendRequests @com.keepit.controllers.website.UserController.incomingFriendRequests
+
+GET     /site/user/friends          @com.keepit.controllers.website.UserController.friends(page: Int ?= 0, pageSize: Int ?= 1000)
+GET     /site/user/friends/recommended   @com.keepit.controllers.website.PeopleRecommendationController.getFriendRecommendations(offset: Int ?= 0, limit: Int ?= 5)
+GET     /site/user/friends/recommended/cards @com.keepit.controllers.website.UserProfileController.getFriendRecommendations(n: Int ?= 12, ids: Int ?= 12)
+GET     /site/user/invite/recommended    @com.keepit.controllers.website.PeopleRecommendationController.getInviteRecommendations(offset: Int ?= 0, limit: Int ?= 5)
+POST    /site/user/invite/hide           @com.keepit.controllers.website.PeopleRecommendationController.hideInviteRecommendation()
+POST    /site/user/:id/hide              @com.keepit.controllers.website.PeopleRecommendationController.hideFriendRecommendation(id: ExternalId[User])
+
+POST    /site/user/delighted/answer @com.keepit.controllers.website.UserController.postDelightedAnswer()
+POST    /site/user/delighted/cancel @com.keepit.controllers.website.UserController.cancelDelightedSurvey()
+POST    /site/user/close            @com.keepit.controllers.website.UserController.closeAccount()
+
+GET     /site/user/connections/all/search    @com.keepit.controllers.website.TypeaheadController.searchWithInviteStatus(query:Option[String], limit:Option[Int], pictureUrl:Boolean ?= true, dedupEmail:Boolean ?= true)
+GET     /site/user/contacts/search  @com.keepit.controllers.website.TypeaheadController.searchForContacts(query:Option[String], limit:Option[Int])
+
+GET     /site/user/abookUploadStatus @com.keepit.controllers.website.UserController.getABookUploadStatus(id:Id[ABookInfo], callbackOpt:Option[String])
+GET     /site/user/prefs            @com.keepit.controllers.website.UserController.getPrefs()
+POST    /site/user/prefs            @com.keepit.controllers.website.UserController.savePrefs()
+POST    /site/user/pic/upload       @com.keepit.controllers.website.UserController.uploadBinaryUserPicture()
+POST    /site/user/pic              @com.keepit.controllers.website.UserController.setUserPicture()
+POST    /site/user/resend-verification @com.keepit.controllers.website.UserController.resendVerificationEmail(email: EmailAddress)
+
+# Angular assets
+GET     /dist/*file                com.keepit.controllers.website.AngularDistAssets.at(path = "/public/ng/dist", file)
+GET     /img/*file                 com.keepit.controllers.website.AngularImgAssets.at(path = "/public/ng/img", file)
+
+##########################################
+# Web App
+##########################################
+
+# Let's keep these routes alphabetized.
+
+GET     /connections               @com.keepit.controllers.website.KifiSiteRouter.redirectUserToOwnProfile(subpath = "/connections")
+GET     /find                      @com.keepit.controllers.website.KifiSiteRouter.serveWebAppToUser
+GET     /friends                   @com.keepit.controllers.website.KifiSiteRouter.redirectFromFriends(friend: Option[String])
+GET     /friends/invite            @com.keepit.controllers.website.KifiSiteRouter.redirectUserTo(path = "/invite")
+GET     /friends/requests          @com.keepit.controllers.website.KifiSiteRouter.redirectUserToOwnProfile(subpath = "/connections")
+GET     /friends/requests/email    @com.keepit.controllers.website.KifiSiteRouter.redirectUserToOwnProfile(subpath = "/connections")
+GET     /friends/requests/linkedin @com.keepit.controllers.website.KifiSiteRouter.redirectUserToOwnProfile(subpath = "/connections")
+GET     /friends/requests/facebook @com.keepit.controllers.website.KifiSiteRouter.redirectUserToOwnProfile(subpath = "/connections")
+GET     /friends/requests/refresh  @com.keepit.controllers.website.KifiSiteRouter.redirectUserToOwnProfile(subpath = "/connections")
+GET     /invite                    @com.keepit.controllers.website.KifiSiteRouter.handleInvitePage(friend: Option[String])
+GET     /me                        @com.keepit.controllers.website.KifiSiteRouter.redirectUserToOwnProfile(subpath = "")
+GET     /me/connections            @com.keepit.controllers.website.KifiSiteRouter.redirectUserToOwnProfile(subpath = "/connections")
+GET     /me/followers              @com.keepit.controllers.website.KifiSiteRouter.redirectUserToOwnProfile(subpath = "/followers")
+GET     /me/libraries              @com.keepit.controllers.website.KifiSiteRouter.redirectUserToOwnProfile(subpath = "/libraries")
+GET     /me/libraries/following    @com.keepit.controllers.website.KifiSiteRouter.redirectUserToOwnProfile(subpath = "/libraries/following")
+GET     /me/libraries/invited      @com.keepit.controllers.website.KifiSiteRouter.redirectUserToOwnProfile(subpath = "/libraries/invited")
+GET     /profile                   @com.keepit.controllers.website.KifiSiteRouter.serveWebAppToUser
+GET     /recommendations           @com.keepit.controllers.website.KifiSiteRouter.redirectUserTo(path = "/")
+GET     /tags/manage               @com.keepit.controllers.website.KifiSiteRouter.serveWebAppToUser
+GET     /:name                     @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfUserFound(name: Username)
+GET     /:name/connections         @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfUserFound(name: Username)
+GET     /:name/followers           @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfUserFound(name: Username)
+GET     /:name/libraries           @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfUserFound(name: Username)
+GET     /:name/libraries/following @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfUserFound(name: Username)
+GET     /:name/libraries/invited   @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfUserIsSelf(name: Username)
+GET     /:name/:library/rss        @com.keepit.controllers.website.LibraryFeedController.libraryRSSFeed(name: Username, library, authToken: Option[String] ?= None, count: Int ?= 20, offset: Int ?= 0)
+GET     /:name/:library/atom       @com.keepit.controllers.website.LibraryFeedController.libraryAtomFeed(name: Username, library, authToken: Option[String] ?= None, count: Int ?= 20, offset: Int ?= 0)
+GET     /:name/:slug               @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfLibraryFound(name: Username, slug)
+GET     /:name/:slug/find          @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfLibraryFound(name: Username, slug)
