@@ -47,7 +47,26 @@ trait ModelWithPublicId[T <: ModelWithPublicId[T]] {
   val id: Option[Id[T]]
 }
 
+object PublicIdRegistry {
+  abstract class PubIdAccessor {
+    def toPubId(idPL: Long)(implicit config: PublicIdConfiguration): String
+    def toId(pubIdStr: String)(implicit config: PublicIdConfiguration): Long
+  }
+  private val _registry = scala.collection.concurrent.TrieMap.empty[String, PubIdAccessor]
+  def register[T <: ModelWithPublicId[T]](c: ModelWithPublicIdCompanion[T]) = {
+    val accessor = new PubIdAccessor {
+      def toPubId(idL: Long)(implicit config: PublicIdConfiguration) = c.publicId(Id[T](idL)).id
+      def toId(pubIdStr: String)(implicit config: PublicIdConfiguration) = c.decodePublicId(PublicId[T](pubIdStr)).get.id
+    }
+    _registry.putIfAbsent(c.getClass.getName.dropRight(1), accessor)
+  }
+
+  def registry: List[(String, PubIdAccessor)] = _registry.toList
+}
+
 trait ModelWithPublicIdCompanion[T <: ModelWithPublicId[T]] {
+
+  PublicIdRegistry.register(this)
 
   protected[this] val publicIdPrefix: String
   /* Can be generated with:
