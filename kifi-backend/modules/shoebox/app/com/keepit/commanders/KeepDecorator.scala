@@ -70,7 +70,7 @@ class KeepDecorator @Inject() (
             keep.sourceAttributionId.map { id => keepSourceAttributionRepo.get(id) }
           } catch {
             case ex: Exception => {
-              airbrake.notify(s"error during keep decoration: keep has KeepSourceAttributionId: ${keep.sourceAttributionId}, not found in keepSourceAttributionRepo", ex)
+              airbrake.notify(s"error during keep decoration: keepId = ${keep.id}, keep source attribution id = ${keep.sourceAttributionId}", ex)
               None
             }
           }
