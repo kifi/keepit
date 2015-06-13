@@ -531,6 +531,10 @@ GET     /admin/graphs/users.json    @com.keepit.controllers.admin.AdminDashboard
 GET     /admin/engineering/overview @com.keepit.controllers.admin.AdminEngineeringDashboardController.overview
 GET     /admin/engineering/seyren   @com.keepit.controllers.admin.AdminEngineeringDashboardController.seyren
 
+GET     /admin/ids/all              @com.keepit.controllers.admin.AdminIDController.listAll
+GET     /admin/ids/byPublicId       @com.keepit.controllers.admin.AdminIDController.byPublicId(name: String, id: String)
+GET     /admin/ids/byId             @com.keepit.controllers.admin.AdminIDController.byId(name: String, id: Long)
+
 GET     /admin/abooks               @com.keepit.controllers.admin.ABookAdminController.allABooksView
 GET     /admin/abooks/page/:page    @com.keepit.controllers.admin.ABookAdminController.abooksView(page:Int)
 
