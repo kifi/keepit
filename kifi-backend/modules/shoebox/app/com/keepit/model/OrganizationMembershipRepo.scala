@@ -30,11 +30,13 @@ class OrganizationMembershipRepoImpl @Inject() (val db: DataBaseComponent, val c
 
   type RepoImpl = OrganizationMembershipTable
   class OrganizationMembershipTable(tag: Tag) extends RepoTable[OrganizationMembership](db, tag, "organization_membership") with SeqNumberColumn[OrganizationMembership] {
-    implicit val organizationAccessMapper = MappedColumnType.base[OrganizationAccess, String](_.value, OrganizationAccess(_))
+    implicit val organizationRoleMapper = MappedColumnType.base[OrganizationRole, String](_.value, OrganizationRole(_))
+    implicit val organizationPermissionsMapper = MappedColumnType.base[Seq[OrganizationPermission], String](OrganizationPermission.serialize, OrganizationPermission.deserialize)
 
     def organizationId = column[Id[Organization]]("organization_id", O.NotNull)
     def userId = column[Id[User]]("user_id", O.NotNull)
-    def access = column[OrganizationAccess]("access", O.NotNull)
+    def role = column[OrganizationRole]("role", O.NotNull)
+    def permissions = column[Seq[OrganizationPermission]]("permissions", O.NotNull)
 
     def applyFromDbRow(
       id: Option[Id[OrganizationMembership]],
@@ -44,8 +46,9 @@ class OrganizationMembershipRepoImpl @Inject() (val db: DataBaseComponent, val c
       seq: SequenceNumber[OrganizationMembership],
       organizationId: Id[Organization],
       userId: Id[User],
-      access: OrganizationAccess) = {
-      OrganizationMembership(id, createdAt, updatedAt, state, seq, organizationId, userId, access)
+      role: OrganizationRole,
+      permissions: Seq[OrganizationPermission]) = {
+      OrganizationMembership(id, createdAt, updatedAt, state, seq, organizationId, userId, role, permissions)
     }
 
     def unapplyToDbRow(member: OrganizationMembership) = {
@@ -56,10 +59,11 @@ class OrganizationMembershipRepoImpl @Inject() (val db: DataBaseComponent, val c
         member.seq,
         member.organizationId,
         member.userId,
-        member.access))
+        member.role,
+        member.permissions))
     }
 
-    def * = (id.?, createdAt, updatedAt, state, seq, organizationId, userId, access) <> ((applyFromDbRow _).tupled, unapplyToDbRow _)
+    def * = (id.?, createdAt, updatedAt, state, seq, organizationId, userId, role, permissions) <> ((applyFromDbRow _).tupled, unapplyToDbRow _)
   }
 
   def table(tag: Tag) = new OrganizationMembershipTable(tag)
