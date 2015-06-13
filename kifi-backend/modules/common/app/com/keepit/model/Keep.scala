@@ -32,7 +32,8 @@ case class Keep(
     keptAt: DateTime = currentDateTime,
     sourceAttributionId: Option[Id[KeepSourceAttribution]] = None,
     note: Option[String] = None,
-    originalKeeperId: Option[Id[User]] = None) extends ModelWithExternalId[Keep] with ModelWithState[Keep] with ModelWithSeqNumber[Keep] {
+    originalKeeperId: Option[Id[User]] = None,
+    organizationId: Option[Id[Organization]] = None) extends ModelWithExternalId[Keep] with ModelWithState[Keep] with ModelWithSeqNumber[Keep] {
 
   def sanitizeForDelete(): Keep = copy(title = None, state = KeepStates.INACTIVE, kifiInstallation = None)
 
@@ -85,45 +86,69 @@ object Keep {
     }
   }
 
+  def applyFromDbRowTuples(firstArguments: KeepFirstArguments, restArguments: KeepRestArguments): Keep = (firstArguments, restArguments) match {
+    case ((id, createdAt, updatedAt, externalId, title, uriId, isPrimary, inDisjointLib, urlId, url),
+      (isPrivate, userId, state, source, kifiInstallation, seq, libraryId, visibility, keptAt, sourceAttributionId, note, originalKeeperId, organizationId)) =>
+      _applyFromDbRow(id, createdAt, updatedAt, externalId, title,
+        uriId = uriId, isPrivate = isPrivate, isPrimary = isPrimary, inDisjointLib = inDisjointLib, urlId = urlId, url = url,
+        userId = userId, state = state, source = source, kifiInstallation = kifiInstallation,
+        seq = seq, libraryId = libraryId, visibility = visibility, keptAt = keptAt,
+        sourceAttributionId = sourceAttributionId, note = note, originalKeeperId = originalKeeperId,
+        organizationId = organizationId)
+  }
+
   // is_primary: trueOrNull in db
-  def applyFromDbRow(id: Option[Id[Keep]], createdAt: DateTime, updatedAt: DateTime, externalId: ExternalId[Keep],
+  def _applyFromDbRow(id: Option[Id[Keep]], createdAt: DateTime, updatedAt: DateTime, externalId: ExternalId[Keep],
     title: Option[String], uriId: Id[NormalizedURI], isPrimary: Option[Boolean], inDisjointLib: Option[Boolean],
     urlId: Id[URL], url: String, isPrivate: Boolean, userId: Id[User],
     state: State[Keep], source: KeepSource, kifiInstallation: Option[ExternalId[KifiInstallation]],
     seq: SequenceNumber[Keep], libraryId: Option[Id[Library]], visibility: LibraryVisibility, keptAt: DateTime,
-    sourceAttributionId: Option[Id[KeepSourceAttribution]], note: Option[String], originalKeeperId: Option[Id[User]]) = {
+    sourceAttributionId: Option[Id[KeepSourceAttribution]], note: Option[String], originalKeeperId: Option[Id[User]], organizationId: Option[Id[Organization]]): Keep = {
     Keep(id, createdAt, updatedAt, externalId, title, uriId, isPrimary.exists(b => b), inDisjointLib.exists(b => b), urlId, url,
-      visibility, userId, state, source, kifiInstallation, seq, libraryId, keptAt, sourceAttributionId, note, originalKeeperId.orElse(Some(userId)))
-  }
-  def unapplyToDbRow(k: Keep) = {
-    Some((k.id, k.createdAt, k.updatedAt, k.externalId, k.title, k.uriId, if (k.isPrimary) Some(true) else None,
-      if (k.inDisjointLib) Some(true) else None, k.urlId, k.url, Keep.visibilityToIsPrivate(k.visibility),
-      k.userId, k.state, k.source, k.kifiInstallation, k.seq, k.libraryId, k.visibility, k.keptAt, k.sourceAttributionId, k.note, k.originalKeeperId.orElse(Some(k.userId))))
+      visibility, userId, state, source, kifiInstallation, seq, libraryId, keptAt, sourceAttributionId, note, originalKeeperId.orElse(Some(userId)), organizationId)
   }
 
-  def _bookmarkFormat = (
-    (__ \ 'id).formatNullable(Id.format[Keep]) and
-    (__ \ 'createdAt).format(DateTimeJsonFormat) and
-    (__ \ 'updatedAt).format(DateTimeJsonFormat) and
-    (__ \ 'externalId).format(ExternalId.format[Keep]) and
-    (__ \ 'title).formatNullable[String] and
-    (__ \ 'uriId).format(Id.format[NormalizedURI]) and
-    (__ \ 'isPrimary).format[Boolean] and
-    (__ \ 'inDisjointLib).format[Boolean] and
-    (__ \ 'urlId).format(Id.format[URL]) and
-    (__ \ 'url).format[String] and
-    (__ \ 'visibility).format[LibraryVisibility] and
-    (__ \ 'userId).format(Id.format[User]) and
-    (__ \ 'state).format(State.format[Keep]) and
-    (__ \ 'source).format[String].inmap(KeepSource.apply, unlift(KeepSource.unapply)) and
-    (__ \ 'kifiInstallation).formatNullable(ExternalId.format[KifiInstallation]) and
-    (__ \ 'seq).format(SequenceNumber.format[Keep]) and
-    (__ \ 'libraryId).formatNullable(Id.format[Library]) and
-    (__ \ 'keptAt).format(DateTimeJsonFormat) and
-    (__ \ 'sourceAttributionId).formatNullable(Id.format[KeepSourceAttribution]) and
-    (__ \ 'note).formatNullable[String] and
-    (__ \ 'originalKeeperId).formatNullable[Id[User]]
-  )(Keep.apply, unlift(Keep.unapply))
+  def unapplyToDbRow(k: Keep) = {
+    Some(
+      (k.id, k.createdAt, k.updatedAt, k.externalId, k.title,
+        k.uriId, if (k.isPrimary) Some(true) else None, if (k.inDisjointLib) Some(true) else None, k.urlId, k.url),
+      (Keep.visibilityToIsPrivate(k.visibility), k.userId, k.state, k.source, k.kifiInstallation,
+        k.seq, k.libraryId, k.visibility, k.keptAt, k.sourceAttributionId,
+        k.note, k.originalKeeperId.orElse(Some(k.userId)), k.organizationId)
+    )
+  }
+
+  private type KeepFirstArguments = (Option[Id[Keep]], DateTime, DateTime, ExternalId[Keep], Option[String], Id[NormalizedURI], Option[Boolean], Option[Boolean], Id[URL], String)
+  private type KeepRestArguments = (Boolean, Id[User], State[Keep], KeepSource, Option[ExternalId[KifiInstallation]], SequenceNumber[Keep], Option[Id[Library]], LibraryVisibility, DateTime, Option[Id[KeepSourceAttribution]], Option[String], Option[Id[User]], Option[Id[Organization]])
+  def _bookmarkFormat = {
+    val fields1To10: Reads[KeepFirstArguments] = (
+      (__ \ 'id).readNullable(Id.format[Keep]) and
+      (__ \ 'createdAt).read(DateTimeJsonFormat) and
+      (__ \ 'updatedAt).read(DateTimeJsonFormat) and
+      (__ \ 'externalId).read(ExternalId.format[Keep]) and
+      (__ \ 'title).readNullable[String] and
+      (__ \ 'uriId).read(Id.format[NormalizedURI]) and
+      (__ \ 'isPrimary).readNullable[Boolean] and
+      (__ \ 'inDisjointLib).readNullable[Boolean] and
+      (__ \ 'urlId).read(Id.format[URL]) and
+      (__ \ 'url).read[String]).tupled
+    val fields10Up: Reads[KeepRestArguments] = (
+      (__ \ 'isPrivate).readNullable[Boolean].map(_.getOrElse(false)) and
+      (__ \ 'userId).read(Id.format[User]) and
+      (__ \ 'state).read(State.format[Keep]) and
+      (__ \ 'source).read[String].map(KeepSource(_)) and
+      (__ \ 'kifiInstallation).readNullable(ExternalId.format[KifiInstallation]) and
+      (__ \ 'seq).read(SequenceNumber.format[Keep]) and
+      (__ \ 'libraryId).readNullable(Id.format[Library]) and
+      (__ \ 'visibility).read[LibraryVisibility] and
+      (__ \ 'keptAt).read(DateTimeJsonFormat) and
+      (__ \ 'sourceAttributionId).readNullable(Id.format[KeepSourceAttribution]) and
+      (__ \ 'note).readNullable[String] and
+      (__ \ 'originalKeeperId).readNullable[Id[User]] and
+      (__ \ 'organizationId).readNullable[Id[Organization]]).tupled
+
+    (fields1To10 and fields10Up).apply(applyFromDbRowTuples _)
+  }
 
   // Remove when all services use the new Keep object
   implicit def bookmarkFormat = new Format[Keep] {
@@ -154,7 +179,8 @@ object Keep {
         "keptAt" -> k.keptAt,
         "sourceAttributionId" -> k.sourceAttributionId,
         "note" -> k.note,
-        "originalKeeperId" -> k.originalKeeperId.orElse(Some(k.userId))
+        "originalKeeperId" -> k.originalKeeperId.orElse(Some(k.userId)),
+        "organizationId" -> k.organizationId
       )
     }
   }
