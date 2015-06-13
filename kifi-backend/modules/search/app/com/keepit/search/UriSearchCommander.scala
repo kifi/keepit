@@ -389,7 +389,7 @@ class UriSearchCommanderImpl @Inject() (
       }
     } else {
       // logged in user
-      searchFactory.getUriSearches(localShards, userId, query, firstLang, secondLang, maxHits, searchFilter, orderBy, config)
+      searchFactory.getUriSearches(localShards, userId, query, firstLang, secondLang, maxHits, searchFilter, orderBy, config, experiments)
     }
 
     Future.traverse(searches) { search =>
@@ -426,7 +426,7 @@ class UriSearchCommanderImpl @Inject() (
                 None
             }
           } else {
-            searchFactory.getUriSearches(Set(shard), userId, query, firstLang, secondLang, 0, SearchFilter.default(), SearchRanking.default, config).headOption
+            searchFactory.getUriSearches(Set(shard), userId, query, firstLang, secondLang, 0, SearchFilter.default(), SearchRanking.default, config, experiments).headOption
           }
           searchOpt.map { search =>
             debug.map(search.debug(_))
