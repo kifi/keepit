@@ -1,0 +1,304 @@
+
+##########################################
+# Admin
+##########################################
+
+GET     /admin                      @com.keepit.controllers.admin.AdminDashboardController.index
+GET     /admin/graphs/users.json    @com.keepit.controllers.admin.AdminDashboardController.usersByDate
+GET     /admin/engineering/overview @com.keepit.controllers.admin.AdminEngineeringDashboardController.overview
+GET     /admin/engineering/seyren   @com.keepit.controllers.admin.AdminEngineeringDashboardController.seyren
+
+GET     /admin/ids/all              @com.keepit.controllers.admin.AdminIDController.listAll
+GET     /admin/ids/byPublicId       @com.keepit.controllers.admin.AdminIDController.byPublicId(name: String, id: String)
+GET     /admin/ids/byId             @com.keepit.controllers.admin.AdminIDController.byId(name: String, id: Long)
+
+GET     /admin/abooks               @com.keepit.controllers.admin.ABookAdminController.allABooksView
+GET     /admin/abooks/page/:page    @com.keepit.controllers.admin.ABookAdminController.abooksView(page:Int)
+
+GET     /admin/analytics            @com.keepit.controllers.admin.AdminAnalyticsController.index()
+GET     /admin/analytics/descriptors  @com.keepit.controllers.admin.AdminAnalyticsController.getEventDescriptors()
+POST    /admin/analytics/descriptors  @com.keepit.controllers.admin.AdminAnalyticsController.updateEventDescriptors()
+GET     /admin/analytics/:repo/events @com.keepit.controllers.admin.AdminAnalyticsController.getEvents(repo:String, events: Option[String] ?= None, limit: Int ?= 25, window: Int ?= 24)
+
+GET     /admin/whoKeptMyKeep        @com.keepit.controllers.admin.AdminBookmarksController.whoKeptMyKeeps()
+GET     /admin/bookmarks/page/:page @com.keepit.controllers.admin.AdminBookmarksController.bookmarksView(page: Int)
+GET     /admin/bookmarks/edit       @com.keepit.controllers.admin.AdminBookmarksController.edit(id: Id[Keep])
+GET     /admin/bookmarks/editWithUri @com.keepit.controllers.admin.AdminBookmarksController.editFirstBookmarkForUri(id: Id[NormalizedURI])
+POST    /admin/uri/disable/:id      @com.keepit.controllers.admin.AdminBookmarksController.disableUrl(id: Id[NormalizedURI])
+POST    /admin/bookmarks/update     @com.keepit.controllers.admin.AdminBookmarksController.updateBookmarks
+POST    /admin/bookmarks/delete     @com.keepit.controllers.admin.AdminBookmarksController.delete(id: Id[Keep])
+POST    /admin/bookmarks/inactive   @com.keepit.controllers.admin.AdminBookmarksController.inactive(id: Id[Keep])
+POST    /admin/bookmarks/special    @com.keepit.controllers.admin.AdminBookmarksController.www$youtube$com$watch$v$otCpCn0l4Wo(id: Id[Keep])
+GET     /admin/bookmarks/userKeywords @com.keepit.controllers.admin.AdminBookmarksController.userBookmarkKeywords
+GET     /admin/bookmarksKeywords/page/:page @com.keepit.controllers.admin.AdminBookmarksController.bookmarksKeywordsPageView(page: Int)
+POST    /admin/bookmarks/populateNotes @com.keepit.controllers.admin.AdminBookmarksController.populateKeepNotesWithTag(page: Int ?= 0, size: Int ?= 500, grouping: Int ?= 500)
+DELETE  /admin/users/:id/tags/:name @com.keepit.controllers.admin.AdminBookmarksController.deleteTag(id: Id[User], name: String)
+
+GET     /admin/uri/:uriId           @com.keepit.controllers.admin.UrlController.getURIInfo(uriId: Id[NormalizedURI])
+#GET     /admin/uri/article/        @com.keepit.controllers.admin.UrlController.getArticle(uriId: Id[NormalizedURI], kind: ArticleKind[_ <: Article], version: ArticleVersion)
+GET     /admin/uri/:uriId/article/:kind @com.keepit.controllers.admin.UrlController.getBestArticle(uriId: Id[NormalizedURI], kind: ArticleKind[_ <: Article])
+GET     /admin/uri/:uriId/fetchAsap @com.keepit.controllers.admin.UrlController.fetchAsap(uriId: Id[NormalizedURI])
+
+GET     /admin/keepDiscoveries/page/:page @com.keepit.controllers.admin.AdminAttributionController.keepDiscoveriesView(page:Int, size:Int ?= 50, showImage:Boolean ?= false)
+GET     /admin/keepClicks/page/:page @com.keepit.controllers.admin.AdminAttributionController.keepDiscoveriesView(page:Int, size:Int ?= 50, showImage:Boolean ?= false)
+GET     /admin/rekeeps/page/:page    @com.keepit.controllers.admin.AdminAttributionController.rekeepsView(page:Int, size:Int ?= 50, showImage:Boolean ?= false)
+GET     /admin/myKeepInfos           @com.keepit.controllers.admin.AdminAttributionController.myKeepInfos()
+GET     /admin/myReKeeps             @com.keepit.controllers.admin.AdminAttributionController.myReKeeps()
+GET     /admin/keepInfos/:id         @com.keepit.controllers.admin.AdminAttributionController.keepInfos(id:Id[User])
+GET     /admin/reKeeps/:id           @com.keepit.controllers.admin.AdminAttributionController.reKeepInfos(id:Id[User])
+GET     /admin/topReKeeps            @com.keepit.controllers.admin.AdminAttributionController.topReKeeps(degree:Int ?= 3)
+GET     /admin/keepAttribution       @com.keepit.controllers.admin.AdminAttributionController.topReKeeps(degree:Int ?= 3)
+
+POST    /admin/reKeepStats/update       @com.keepit.controllers.admin.AdminAttributionController.updateReKeepStats
+POST    /admin/reKeepStats/user/update  @com.keepit.controllers.admin.AdminAttributionController.updateUserReKeepStats
+POST    /admin/reKeepStats/users/update @com.keepit.controllers.admin.AdminAttributionController.updateUsersReKeepStats
+POST    /admin/reKeepStats/all/update   @com.keepit.controllers.admin.AdminAttributionController.updateAllReKeepStats
+
+GET     /admin/sitemap/library          @com.keepit.controllers.admin.AdminSiteMapController.generateLibrarySitemap()
+GET     /admin/sitemap/user             @com.keepit.controllers.admin.AdminSiteMapController.generateUserSitemap()
+
+GET     /admin/data/orphan          @com.keepit.controllers.admin.UrlController.orphanCleanup(readOnly: Boolean ?= true)
+GET     /admin/data/orphanFull      @com.keepit.controllers.admin.UrlController.orphanCleanupFull(readOnly: Boolean ?= true)
+GET     /admin/data/renormalize     @com.keepit.controllers.admin.UrlController.renormalize(readOnly: Boolean ?= true, clearSeq: Boolean ?= false, domainRegex: Option[String] ?= None)
+GET     /admin/data/renormalizeConsole              @com.keepit.controllers.admin.UrlController.urlRenormalizeConsole()
+POST    /admin/data/renormalizeConsole/submit       @com.keepit.controllers.admin.UrlController.urlRenormalizeConsoleSubmit()
+POST    /admin/data/pornDomainFlag                  @com.keepit.controllers.admin.UrlController.pornDomainFlag()
+GET     /admin/data/clearRedirects/:toUriId @com.keepit.controllers.admin.UrlController.clearRedirects(toUriId: Id[NormalizedURI])
+GET     /admin/data/setFixDuplicateKeepsSeq/:seq  @com.keepit.controllers.admin.UrlController.setFixDuplicateKeepsSeq(seq: Long)
+GET     /admin/data/normalization/:page @com.keepit.controllers.admin.UrlController.normalizationView(page: Int)
+GET     /admin/data/renormalization/:page @com.keepit.controllers.admin.UrlController.renormalizationView(page: Int)
+GET     /admin/data/batchURIMigration          @com.keepit.controllers.admin.UrlController.batchURIMigration
+GET     /admin/data/batchURLMigration   @com.keepit.controllers.admin.UrlController.batchURLMigration
+POST    /admin/data/normalization/submit       @com.keepit.controllers.admin.UrlController.submitNormalization
+GET     /admin/data/patterns      @com.keepit.controllers.admin.UrlController.getPatterns
+POST    /admin/data/patterns      @com.keepit.controllers.admin.UrlController.savePatterns
+GET     /admin/data/proxies      @com.keepit.controllers.admin.ScraperAdminController.getProxies
+POST    /admin/data/proxies      @com.keepit.controllers.admin.ScraperAdminController.saveProxies
+GET     /admin/data/remigrate           @com.keepit.controllers.admin.UrlController.fixRedirectedUriStates(doIt: Boolean ?= false)
+POST    /admin/data/clearRestriction    @com.keepit.controllers.admin.UrlController.clearRestriction(uriId: Id[NormalizedURI])
+POST    /admin/data/flagAsAdult    @com.keepit.controllers.admin.UrlController.flagAsAdult(uriId: Id[NormalizedURI])
+GET     /admin/data/cleanKeepsByUri    @com.keepit.controllers.admin.UrlController.cleanKeepsByUri(firstPage: Int ?= 0, pageSize: Int ?= 100)
+
+GET     /admin/data/depornify        @com.keepit.controllers.admin.AdminPornDetectorController.massMarkAsAdult()
+
+GET     /admin/article/index        @com.keepit.controllers.admin.AdminArticleIndexerController.index
+GET     /admin/article/reindex      @com.keepit.controllers.admin.AdminArticleIndexerController.reindex
+GET     /admin/article/sequenceNumber @com.keepit.controllers.admin.AdminArticleIndexerController.getSequenceNumber
+GET     /admin/article/refreshSearcher @com.keepit.controllers.admin.AdminArticleIndexerController.refreshSearcher
+GET     /admin/article/dumpDoc/:uriId  @com.keepit.controllers.admin.AdminArticleIndexerController.dumpLuceneDocument(uriId: Id[NormalizedURI], deprecated: Boolean ?= false)
+
+GET     /admin/indexInfo/all        @com.keepit.controllers.admin.AdminIndexInfoController.all
+GET     /admin/indexInfo/growth     @com.keepit.controllers.admin.AdminIndexInfoController.viewIndexGrowth
+
+GET     /admin/search/performance/viewPerformance @com.keepit.controllers.admin.AdminSearchPerformanceController.viewSearchPerformance
+
+GET     /admin/users/reindex        @com.keepit.controllers.admin.AdminUserIndexController.reindex()
+GET     /admin/users                @com.keepit.controllers.admin.AdminUserController.allUsersView
+POST    /admin/users/reNormalizedUsername        @com.keepit.controllers.admin.AdminUserController.reNormalizedUsername(readOnly: Boolean ?= true, max: Int ?= 10)
+GET     /admin/realUsers            @com.keepit.controllers.admin.AdminUserController.allRegisteredUsersView
+GET     /admin/fakeUsers            @com.keepit.controllers.admin.AdminUserController.allFakeUsersView
+POST    /admin/users/merge          @com.keepit.controllers.admin.AdminUserController.merge
+GET     /admin/users/page/:page     @com.keepit.controllers.admin.AdminUserController.usersView(page: Int)
+GET     /admin/realUsers/page/:page @com.keepit.controllers.admin.AdminUserController.registeredUsersView(page: Int)
+GET     /admin/fakeUsers/page/:page @com.keepit.controllers.admin.AdminUserController.fakeUsersView(page: Int)
+POST    /admin/users/search         @com.keepit.controllers.admin.AdminUserController.searchUsers()
+GET     /admin/user/:id             @com.keepit.controllers.admin.AdminUserController.userViewByEitherId(id: String, showPrivates: Boolean ?= false)
+GET     /admin/user/:id/keeps       @com.keepit.controllers.admin.AdminUserController.userKeepsView(id: Id[User], showPrivates: Boolean ?= false)
+GET     /admin/user/:id/libraries   @com.keepit.controllers.admin.AdminUserController.userLibrariesView(id: Id[User], showSecrets: Boolean ?= false)
+GET     /admin/user/:id/ips         @com.keepit.controllers.admin.AdminUserController.userIpAddressesView(id: Id[User])
+POST    /admin/user/:id             @com.keepit.controllers.admin.AdminUserController.userView(id: Id[User], showPrivates: Boolean ?= false)
+GET     /admin/user/:id/more-info   @com.keepit.controllers.admin.AdminUserController.moreUserInfoView(id: Id[User], showPrivates: Boolean ?= false)
+GET     /admin/user/:id/prefixSearch @com.keepit.controllers.admin.AdminUserController.prefixSearch(id:Id[User], query:String ?= "")
+GET     /admin/user/:id/prefixSocialSearch  @com.keepit.controllers.admin.AdminUserController.prefixSocialSearch(id:Id[User], query:String ?= "")
+GET     /admin/user/:id/prefixContactSearch @com.keepit.controllers.admin.AdminUserController.prefixContactSearch(id:Id[User], query:String ?= "")
+POST    /admin/user/:user1/connect  @com.keepit.controllers.admin.AdminUserController.connectUsers(user1: Id[User])
+POST    /admin/user/:id/createLibrary  @com.keepit.controllers.admin.AdminUserController.createLibrary(id: Id[User])
+POST    /admin/user/:id/experiment/:exp  @com.keepit.controllers.admin.AdminUserController.addExperimentAction(id: Id[User], exp: String)
+POST    /admin/user/bookmarks/:id/collections @com.keepit.controllers.admin.AdminUserController.updateCollectionsForBookmark(id: Id[Keep])
+DELETE  /admin/user/:id/experiment/:exp  @com.keepit.controllers.admin.AdminUserController.removeExperimentAction(id: Id[User], exp: String)
+POST    /admin/user/:id/name        @com.keepit.controllers.admin.AdminUserController.changeUsersName(id: Id[User])
+POST    /admin/user/:id/pic         @com.keepit.controllers.admin.AdminUserController.setUserPicture(id: Id[User], pictureId: Id[UserPicture])
+POST    /admin/user/:id/picUpdate   @com.keepit.controllers.admin.AdminUserController.updateUserPicture(id: Id[User])
+POST    /admin/user/:id/state/:state  @com.keepit.controllers.admin.AdminUserController.changeState(id: Id[User], state: String)
+POST    /admin/user/:id/update      @com.keepit.controllers.admin.AdminUserController.updateUser(id: Id[User])
+POST    /admin/user/:id/setInvitesCount      @com.keepit.controllers.admin.AdminUserController.setInvitesCount(id: Id[User])
+GET     /admin/user/:id/social_users/refresh @com.keepit.controllers.admin.AdminUserController.refreshAllSocialInfo(id: Id[User])
+POST    /admin/user/:id/impersonate @com.keepit.controllers.admin.AdminAuthController.impersonate(id: Id[User])
+POST    /admin/user/:id/deactivate  @com.keepit.controllers.admin.AdminUserController.deactivate(id: Id[User])
+GET     /admin/user/:id/mixpanel/reset    @com.keepit.controllers.admin.AdminUserController.resetMixpanelProfile(id: Id[User])
+POST    /admin/user/:id/uservalue   @com.keepit.controllers.admin.AdminUserController.userValue(id: Id[User])
+POST    /admin/user/:id/username   @com.keepit.controllers.admin.AdminUserController.setUsername(id: Id[User])
+POST    /admin/unimpersonate        @com.keepit.controllers.admin.AdminAuthController.unimpersonate()
+GET     /admin/users/notify         @com.keepit.controllers.admin.AdminUserController.notification()
+POST    /admin/users/sendNotification @com.keepit.controllers.admin.AdminUserController.sendNotificationToAllUsers()
+GET    /admin/users/bumpSeq          @com.keepit.controllers.admin.AdminUserController.bumpUserSeq()
+GET     /admin/users/bumpConnSeq     @com.keepit.controllers.admin.AdminUserController.bumpUpSeqNumForConnections()
+GET    /admin/users/mixpanel/reset          @com.keepit.controllers.admin.AdminUserController.resetAllMixpanelProfiles()
+GET    /admin/users/mixpanel/delete          @com.keepit.controllers.admin.AdminUserController.deleteAllMixpanelProfiles()
+POST    /admin/user/:id/emails/:code/send    @com.keepit.controllers.admin.AdminUserController.sendEmail(id: Id[User], code: String)
+POST    /admin/user/:id/refreshRecos    @com.keepit.controllers.admin.AdminUserController.refreshRecos(id: Id[User])
+
+# TEMPORARY ROUTE - remove when activity email is live
+POST    /admin/sendActivityEmailToAll    @com.keepit.controllers.admin.AdminUserController.sendActivityEmailToAll()
+
+GET     /admin/users/fixFortyTwoConnections    @com.keepit.controllers.admin.AdminUserController.fixMissingFortyTwoSocialConnections(readOnly: Boolean ?= true)
+GET     /admin/deactivateEmailAddress/:id     @com.keepit.controllers.admin.AdminUserController.deactivateUserEmailAddress(id: Id[UserEmailAddress])
+
+POST    /admin/social_users/migrateHashColumn               @com.keepit.controllers.admin.AdminSocialUserController.migrateHashColumn(page: Int, iters: Int)
+POST    /admin/social_users/smoothLastGraphRefreshTimes     @com.keepit.controllers.admin.AdminSocialUserController.smoothLastGraphRefreshTimes(minutesFromNow: Int)
+GET     /admin/social_users/:page   @com.keepit.controllers.admin.AdminSocialUserController.socialUsersView(page: Int)
+GET     /admin/social_user/:id      @com.keepit.controllers.admin.AdminSocialUserController.socialUserView(id: Id[SocialUserInfo])
+POST     /admin/social_user/:id/disconnect      @com.keepit.controllers.admin.AdminSocialUserController.disconnectSocialUser(id: Id[SocialUserInfo], revoke: Boolean ?= false)
+GET     /admin/social_user/:id/refresh @com.keepit.controllers.admin.AdminSocialUserController.refreshSocialInfo(id: Id[SocialUserInfo])
+GET     /admin/social_user/:id/reset @com.keepit.controllers.admin.AdminSocialUserController.resetSocialUser(id: Id[SocialUserInfo])
+GET     /admin/ripest_fruit @com.keepit.controllers.admin.AdminSocialUserController.ripestFruitView(uid: Long ?= 0, n: Int ?= 0)
+GET     /admin/wti/triggerPush @com.keepit.controllers.admin.AdminWTIController.triggerPush()
+
+GET     /admin/ec2-instance         @com.keepit.controllers.admin.AmazonInstanceController.instanceInfo()
+GET     /admin/cache                @com.keepit.controllers.admin.AdminCacheController.serviceView
+GET     /admin/cache/modify     @com.keepit.controllers.admin.AdminCacheController.modifyCache
+GET     /admin/cache/modify/entry  @com.keepit.controllers.admin.AdminCacheController.getCacheEntry(key: String)
+DELETE  /admin/cache/modify/entry  @com.keepit.controllers.admin.AdminCacheController.deleteCacheEntry(key: String)
+PUT     /admin/cache/modify/entry  @com.keepit.controllers.admin.AdminCacheController.setCacheEntry(key: String, value: String, duration: Int)
+
+GET     /admin/cache/clearLocalCaches          @com.keepit.controllers.admin.AdminCacheController.clearLocalCaches(service: String ?= "all", prefix: String ?= "")
+GET     /admin/websocket            @com.keepit.controllers.admin.AdminWebSocketController.serviceView
+
+GET     /admin/searchConfig/:id     @com.keepit.controllers.admin.AdminSearchConfigController.showUserConfig(id: Id[User])
+POST    /admin/searchConfig/:id/set   @com.keepit.controllers.admin.AdminSearchConfigController.setUserConfig(id: Id[User])
+GET     /admin/searchConfig/:id/reset @com.keepit.controllers.admin.AdminSearchConfigController.resetUserConfig(id: Id[User])
+
+GET     /admin/searchExperiments    @com.keepit.controllers.admin.AdminSearchConfigController.getExperiments
+POST    /admin/searchExperiments    @com.keepit.controllers.admin.AdminSearchConfigController.addNewExperiment
+POST    /admin/searchExperiments/delete    @com.keepit.controllers.admin.AdminSearchConfigController.deleteExperiment
+POST    /admin/searchExperiments/update    @com.keepit.controllers.admin.AdminSearchConfigController.updateExperiment
+
+GET     /admin/explainUriResult        @com.keepit.controllers.admin.AdminSearchController.explainUriResult(query: String, uriId: Id[NormalizedURI], lang: String, debug: Option[String])
+GET     /admin/explainLibraryResult        @com.keepit.controllers.admin.AdminSearchController.explainLibraryResult(query: String, libraryId: PublicId[Library], debug: Option[String], disablePrefixSearch: Boolean ?= false)
+GET     /admin/explainUserResult        @com.keepit.controllers.admin.AdminSearchController.explainUserResult(query: String, userId: Id[User], debug: Option[String], disablePrefixSearch: Boolean ?= false)
+
+GET     /admin/search/results/:id   @com.keepit.controllers.admin.AdminSearchController.articleSearchResult(id: ExternalId[ArticleSearchResult])
+
+POST    /admin/users/createPushActivityEntities     @com.keepit.controllers.admin.AdminUserController.createPushActivityEntities
+POST    /admin/users/:id/pushLibraryActivity        @com.keepit.controllers.admin.AdminUserController.pushLibraryActivity(id: Id[User])
+POST    /admin/users/:id/pushPersonaActivity        @com.keepit.controllers.admin.AdminUserController.pushPersonaActivity(id: Id[User])
+
+GET     /admin/slider/patterns      @com.keepit.controllers.admin.SliderAdminController.getPatterns
+POST    /admin/slider/patterns      @com.keepit.controllers.admin.SliderAdminController.savePatterns
+GET     /admin/slider/domainTags    @com.keepit.controllers.admin.SliderAdminController.getDomainTags
+POST    /admin/slider/domainTags    @com.keepit.controllers.admin.SliderAdminController.saveDomainTags
+GET     /admin/slider/domains       @com.keepit.controllers.admin.SliderAdminController.getDomainOverrides
+POST    /admin/slider/domains       @com.keepit.controllers.admin.SliderAdminController.saveDomainOverrides
+GET     /admin/slider/version       @com.keepit.controllers.admin.SliderAdminController.getVersionForm
+POST    /admin/slider/version       @com.keepit.controllers.admin.SliderAdminController.broadcastLatestVersion(ver: String)
+POST    /admin/slider/killVersion   @com.keepit.controllers.admin.SliderAdminController.killVersion(ver: String)
+POST    /admin/slider/unkillVersion   @com.keepit.controllers.admin.SliderAdminController.unkillVersion(ver: String)
+POST    /admin/slider/goldenVersion   @com.keepit.controllers.admin.SliderAdminController.goldenVersion(ver: String)
+
+GET     /admin/libraries                 @com.keepit.controllers.admin.AdminLibraryController.index(page: Int ?= 0)
+GET     /admin/libraries/:id             @com.keepit.controllers.admin.AdminLibraryController.libraryView(id: Id[Library], transfer: Boolean ?= false)
+GET     /admin/libraries/:id/indexed        @com.keepit.controllers.admin.AdminLibraryController.getLuceneDocument(id: Id[Library])
+GET     /admin/libraries/:id/keeps       @com.keepit.controllers.admin.AdminLibraryController.libraryKeepsView(id: Id[Library], page: Int ?= 0, showPrivates: Boolean ?= false, showInactives: Boolean ?= false)
+POST    /admin/libraries/internForUser   @com.keepit.controllers.admin.AdminLibraryController.internUserSystemLibraries(userId: Id[User])
+POST    /admin/libraries/internForAllUsers  @com.keepit.controllers.admin.AdminLibraryController.internAllUserSystemLibraries(startingUserId: Id[User], endingUserId: Id[User])
+POST    /admin/libraries/:id/state/:state   @com.keepit.controllers.admin.AdminLibraryController.changeState(id: Id[Library], state: String)
+POST    /admin/libraries/update             @com.keepit.controllers.admin.AdminLibraryController.updateLibraries
+POST    /admin/libraries/updateLibraryOwner @com.keepit.controllers.admin.AdminLibraryController.updateLibraryOwner(libraryId: Id[Library], fromUserId: Id[User], toUserId: Id[User])
+POST    /admin/libraries/saveSuggestedSearches    @com.keepit.controllers.admin.AdminLibraryController.saveSuggestedSearches
+
+GET     /admin/personas             @com.keepit.controllers.admin.AdminPersonaController.getAllPersonas()
+POST    /admin/personas/add         @com.keepit.controllers.admin.AdminPersonaController.createPersona()
+POST    /admin/personas/:id         @com.keepit.controllers.admin.AdminPersonaController.editPersona(id: Id[Persona])
+
+GET     /admin/typeahead                    @com.keepit.controllers.admin.TypeaheadAdminController.index
+GET     /admin/typeahead/userSearch         @com.keepit.controllers.admin.TypeaheadAdminController.userSearch(userId:Id[User], query:String ?= "")
+GET     /admin/typeahead/socialSearch       @com.keepit.controllers.admin.TypeaheadAdminController.socialSearch(userId:Id[User], query:String ?= "")
+GET     /admin/typeahead/contactSearch      @com.keepit.controllers.admin.TypeaheadAdminController.contactSearch(userId:Id[User], query:String ?= "")
+GET     /admin/typeahead/search             @com.keepit.controllers.admin.TypeaheadAdminController.search(userId:Id[User], query:String ?= "", limit:Int ?= 5, pictureUrl:Boolean ?= true, dedupEmail:Boolean ?= true)
+
+POST    /admin/typeahead/:filterType/refreshPrefixFilter        @com.keepit.controllers.admin.TypeaheadAdminController.refreshPrefixFilter(filterType:String)
+POST    /admin/typeahead/:filterType/refreshPrefixFiltersByIds  @com.keepit.controllers.admin.TypeaheadAdminController.refreshPrefixFiltersByIds(filterType:String)
+POST    /admin/typeahead/:filterType/refreshAll                 @com.keepit.controllers.admin.TypeaheadAdminController.refreshAll(filterType:String)
+
+POST    /admin/typeahead/refreshAllPrefixFilters                @com.keepit.controllers.admin.TypeaheadAdminController.refreshAllPrefixFilters()
+
+GET     /admin/phrases              @com.keepit.controllers.admin.PhraseController.displayPhrases(page: Int ?= 0)
+POST    /admin/phrases/add          @com.keepit.controllers.admin.PhraseController.addPhrase
+POST    /admin/phrases/refresh      @com.keepit.controllers.admin.PhraseController.refreshPhrases
+POST    /admin/phrases/save         @com.keepit.controllers.admin.PhraseController.savePhrases
+
+GET     /admin/invites              @com.keepit.controllers.admin.AdminInvitationController.displayInvitations(page: Int ?= 0, show: String ?= "all")
+POST    /admin/invites/accept       @com.keepit.controllers.admin.AdminInvitationController.acceptUser(id: Id[SocialUserInfo])
+POST    /admin/invites/reject       @com.keepit.controllers.admin.AdminInvitationController.rejectUser(id: Id[SocialUserInfo])
+
+GET     /admin/clusters/overview        @com.keepit.controllers.admin.AdminClusterController.clustersView
+GET     /admin/clusters/zooKeeperInspector        @com.keepit.controllers.admin.AdminClusterController.zooKeeperInspector
+
+GET     /admin/experiments/overview   @com.keepit.controllers.admin.AdminExperimentController.overview
+GET     /admin/experiments/users/:exp/page/:page @com.keepit.controllers.admin.AdminUserController.byExperimentUsersView(page: Int, exp: String)
+POST     /admin/experiments/saveGenerator @com.keepit.controllers.admin.AdminExperimentController.saveGenerator
+
+GET     /admin/learning/pornDetect/model    @com.keepit.controllers.admin.AdminPornDetectorController.getPornDetectorModel
+GET     /admin/learning/pornDetect          @com.keepit.controllers.admin.AdminPornDetectorController.index
+POST    /admin/learning/pornDetect/detect   @com.keepit.controllers.admin.AdminPornDetectorController.detect
+GET     /admin/learning/pornDetect/uris/:page                   @com.keepit.controllers.admin.AdminPornDetectorController.pornUrisView(page: Int, publicOnly: Boolean ?= false)
+GET     /admin/learning/pornDetect/bms/:page                    @com.keepit.controllers.admin.AdminPornDetectorController.pornUrisView(page: Int, publicOnly: Boolean ?= true)
+POST    /admin/learning/pornDetect/removeRestrictions      @com.keepit.controllers.admin.AdminPornDetectorController.removeRestrictions
+POST    /admin/learning/pornDetect/whitelist               @com.keepit.controllers.admin.AdminPornDetectorController.whitelist
+
+GET     /admin/curator/librecos                            @com.keepit.controllers.admin.AdminLibraryRecommendationsController.index
+GET     /admin/curator/librecos/view                       @com.keepit.controllers.admin.AdminLibraryRecommendationsController.view
+GET     /admin/curator/generalRecos                        @com.keepit.controllers.admin.AdminGeneralRecommendationsController.view
+GET     /admin/curator/feedback                            @com.keepit.controllers.admin.AdminCuratorController.view
+POST    /admin/curator/feedback/counter                    @com.keepit.controllers.admin.AdminCuratorController.examineUserFeedbackCounter
+
+GET     /adimin/cortex/word2vec                            @com.keepit.controllers.admin.AdminWord2VecController.index
+POST    /admin/cortex/word2vec/wordSimilarity              @com.keepit.controllers.admin.AdminWord2VecController.wordSimilarity
+POST    /admin/cortex/word2vec/uriSimilarity               @com.keepit.controllers.admin.AdminWord2VecController.uriSimilarity
+POST    /admin/cortex/word2vec/keywords                    @com.keepit.controllers.admin.AdminWord2VecController.keywords
+POST    /admin/cortex/word2vec/userSimilarity              @com.keepit.controllers.admin.AdminWord2VecController.userSimilarity
+POST    /admin/cortex/word2vec/queryUriSimilarity          @com.keepit.controllers.admin.AdminWord2VecController.queryUriSimilarity
+POST    /admin/cortex/word2vec/userUriSimilarity           @com.keepit.controllers.admin.AdminWord2VecController.userUriSimilarity
+
+GET     /adimin/cortex/lda                                 @com.keepit.controllers.admin.AdminLDAController.index
+GET     /adimin/cortex/lda/version                         @com.keepit.controllers.admin.AdminLDAController.versionPage(version: ModelVersion[DenseLDA])
+POST    /admin/cortex/lda/showTopics                       @com.keepit.controllers.admin.AdminLDAController.showTopics
+POST    /admin/cortex/lda/wordTopic                        @com.keepit.controllers.admin.AdminLDAController.wordTopic
+POST    /admin/cortex/lda/docTopic                         @com.keepit.controllers.admin.AdminLDAController.docTopic
+POST    /admin/cortex/lda/saveEdits                        @com.keepit.controllers.admin.AdminLDAController.saveEdits
+POST    /admin/cortex/lda/userUriInterest                  @com.keepit.controllers.admin.AdminLDAController.userUriInterest
+POST    /admin/cortex/lda/userTopicMean                    @com.keepit.controllers.admin.AdminLDAController.userTopicMean
+GET     /admin/cortex/lda/topicDetail                      @com.keepit.controllers.admin.AdminLDAController.topicDetail(topicId: Int, version: Int)
+GET     /admin/cortex/lda/peopleLikeYou                    @com.keepit.controllers.admin.AdminLDAController.peopleLikeYou(topK: Int ?= 20)
+GET     /admin/cortex/lda/unamedTopics                     @com.keepit.controllers.admin.AdminLDAController.unamedTopics(limit: Int ?= 5, version: Option[Int] ?= None)
+POST    /admin/cortex/lda/libraryTopic                     @com.keepit.controllers.admin.AdminLDAController.libraryTopic
+POST    /admin/cortex/lda/userLibraryScore                 @com.keepit.controllers.admin.AdminLDAController.userLibraryScore
+GET     /admin/cortex/lda/similarURIs                      @com.keepit.controllers.admin.AdminLDAController.similarURIs(uriId: Id[NormalizedURI])
+GET     /adimin/cortex/lda/persona                         @com.keepit.controllers.admin.AdminLDAController.persona
+GET     /adimin/cortex/lda/persona/version                 @com.keepit.controllers.admin.AdminLDAController.personaVersioned(version: ModelVersion[DenseLDA])
+POST    /admin/cortex/lda/persona/generate                 @com.keepit.controllers.admin.AdminLDAController.generateLDAPersonaFeature
+POST    /admin/cortex/lda/persona/evaluate                 @com.keepit.controllers.admin.AdminLDAController.evaluatePersona
+POST    /admin/cortex/lda/persona/train                    @com.keepit.controllers.admin.AdminLDAController.personaFeatureTraining
+
+GET     /admin/graph/statistics                            @com.keepit.controllers.admin.GraphAdminController.statistics
+GET     /admin/graph/wander                                @com.keepit.controllers.admin.WanderingAdminController.wander()
+POST    /admin/graph/wander                                @com.keepit.controllers.admin.WanderingAdminController.wander()
+GET     /admin/graph/discover                              @com.keepit.controllers.admin.WanderingAdminController.fromParisWithLove()
+GET     /admin/graph/uriWandering                          @com.keepit.controllers.admin.WanderingAdminController.uriWandering(steps: Int ?= 20000)
+
+GET     /admin/twitter                                     @com.keepit.controllers.admin.AdminTwitterWaitlistController.getWaitlist()
+GET     /admin/twitter/accept                              @com.keepit.controllers.admin.AdminTwitterWaitlistController.acceptUser(userId: Id[User], handle: String)
+GET     /admin/twitter/email                               @com.keepit.controllers.admin.AdminTwitterWaitlistController.sendAcceptEmail(syncStateId: Id[TwitterSyncState], userId: Id[User], safe: Boolean ?= true)
+
+##########################################
+# Common Healthcheck / service routes
+##########################################
+# Using a get so we can invoke from browser and have it take care of the auth part
+GET     /admin/server               @com.keepit.controllers.admin.AdminHealthController.serviceView()
+GET     /admin/benchmark            @com.keepit.controllers.admin.AdminBenchmarkController.benchmarks()
+GET     /admin/healthcheck/error    @com.keepit.controllers.admin.AdminHealthController.causeError()
+GET     /admin/healthcheck/reportDeployment    @com.keepit.controllers.admin.AdminHealthController.reportDeployment()
+GET     /admin/healthcheck/causeAirbrakeError @com.keepit.controllers.admin.AdminHealthController.causeAirbrakeError(message: String ?= "[No Worry] Fake Airbrake Exception triggered from admin")
+GET     /admin/healthcheck/emailErrors         @com.keepit.controllers.admin.AdminHealthController.reportErrors()
+GET     /admin/healthcheck/errors              @com.keepit.controllers.admin.AdminHealthController.getErrors()
+GET     /admin/healthcheck/resetErrorCount     @com.keepit.controllers.admin.AdminHealthController.resetErrorCount()

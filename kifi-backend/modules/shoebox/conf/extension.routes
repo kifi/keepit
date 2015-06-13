@@ -1,0 +1,50 @@
+
+##########################################
+# Extension API
+##########################################
+
+POST    /ext/start                  @com.keepit.controllers.ext.ExtAuthController.start
+POST    /ext/auth/:provider         @com.keepit.controllers.ext.ExtAuthController.jsTokenLogin(provider: String)
+GET     /ext/auth                   @com.keepit.controllers.ext.ExtAuthController.getLoggedIn()
+DELETE  /ext/auth                   @com.keepit.controllers.ext.ExtAuthController.logOut
+
+POST    /ext/page                   @com.keepit.controllers.ext.ExtPageController.getPageInfo()
+
+GET     /ext/pref/rules             @com.keepit.controllers.ext.ExtPreferenceController.getRules()
+GET     /ext/prefs                  @com.keepit.controllers.ext.ExtPreferenceController.getPrefs(version: Int ?= 1)
+POST    /ext/pref/keeperPosition    @com.keepit.controllers.ext.ExtPreferenceController.setKeeperPositionOnSite()
+POST    /ext/pref/keeperHidden      @com.keepit.controllers.ext.ExtPreferenceController.setKeeperHiddenOnSite()
+POST    /ext/pref/lookHereMode      @com.keepit.controllers.ext.ExtPreferenceController.setLookHereMode(on: Boolean)
+POST    /ext/pref/enterToSend       @com.keepit.controllers.ext.ExtPreferenceController.setEnterToSend(enterToSend: Boolean)
+POST    /ext/pref/maxResults        @com.keepit.controllers.ext.ExtPreferenceController.setMaxResults(n: Int)
+POST    /ext/pref/showExtMsgIntro   @com.keepit.controllers.ext.ExtPreferenceController.setShowExtMsgIntro(show: Boolean)
+POST    /ext/pref/showLibraryIntro  @com.keepit.controllers.ext.ExtPreferenceController.setShowLibraryIntro(show: Boolean)
+POST    /ext/pref/email/:kind/:send @com.keepit.controllers.ext.ExtPreferenceController.setEmailNotifyPreference(kind: com.keepit.common.mail.ElectronicMailCategory, send: Boolean)
+
+GET     /ext/contacts/search        @com.keepit.controllers.ext.ExtUserController.searchForContacts(query:Option[String], limit:Option[Int])
+POST    /ext/contacts/hide          @com.keepit.controllers.ext.ExtNonUserSearchController.hideEmailFromUser()
+
+GET     /ext/libraries              @com.keepit.controllers.ext.ExtLibraryController.getLibraries()
+POST    /ext/libraries              @com.keepit.controllers.ext.ExtLibraryController.createLibrary()
+GET     /ext/libraries/:id          @com.keepit.controllers.ext.ExtLibraryController.getLibrary(id: PublicId[Library])
+DELETE  /ext/libraries/:id          @com.keepit.controllers.ext.ExtLibraryController.deleteLibrary(id: PublicId[Library])
+POST    /ext/libraries/:id/join     @com.keepit.controllers.ext.ExtLibraryController.joinLibrary(id: PublicId[Library])
+POST    /ext/libraries/:id/leave    @com.keepit.controllers.ext.ExtLibraryController.leaveLibrary(id: PublicId[Library])
+POST    /ext/libraries/:id/bookmarks @com.keepit.controllers.ext.ExtLibraryController.importBrowserBookmarks(id: PublicId[Library])
+POST    /ext/libraries/:id/keeps    @com.keepit.controllers.ext.ExtLibraryController.addKeep(id: PublicId[Library])
+GET     /ext/libraries/:id/keeps/:k @com.keepit.controllers.ext.ExtLibraryController.getKeep(id: PublicId[Library], k: ExternalId[Keep], is: Option[String] = None)
+POST    /ext/libraries/:id/keeps/:k @com.keepit.controllers.ext.ExtLibraryController.updateKeep(id: PublicId[Library], k: ExternalId[Keep])
+DELETE  /ext/libraries/:id/keeps/:k @com.keepit.controllers.ext.ExtLibraryController.removeKeep(id: PublicId[Library], k: ExternalId[Keep])
+POST    /ext/libraries/:id/keeps/:k/note  @com.keepit.controllers.ext.ExtLibraryController.editKeepNote(id: PublicId[Library], k: ExternalId[Keep])
+POST    /ext/libraries/:id/subscription @com.keepit.controllers.ext.ExtLibraryController.setSubscribedToUpdates(id: PublicId[Library], subscribed: Boolean)
+
+
+POST    /ext/libraries/:id/keeps/:k/tags/:tag    @com.keepit.controllers.ext.ExtLibraryController.tagKeep(id: PublicId[Library], k: ExternalId[Keep], tag: String)
+DELETE  /ext/libraries/:id/keeps/:k/tags/:tag    @com.keepit.controllers.ext.ExtLibraryController.untagKeep(id: PublicId[Library], k: ExternalId[Keep], tag: String)
+GET     /ext/libraries/:id/keeps/:k/tags/suggest  @com.keepit.controllers.ext.ExtLibraryController.suggestTags(id: PublicId[Library], k: ExternalId[Keep],  q: Option[String] ?= None, n: Int ?= 5)
+POST    /ext/libraries/:id/keeps/:k/image/upload @com.keepit.controllers.ext.ExtKeepImageController.uploadKeepImage(id: PublicId[Library], k: ExternalId[Keep])
+GET     /ext/libraries/:id/keeps/:k/image/:token @com.keepit.controllers.ext.ExtKeepImageController.checkImageStatus(id: PublicId[Library], k: ExternalId[Keep], token: String)
+POST    /ext/libraries/:id/keeps/:k/image @com.keepit.controllers.ext.ExtKeepImageController.changeKeepImage(id: PublicId[Library], k: ExternalId[Keep], is: Option[String] = None)
+GET     /ext/libraries/:id/tags/search           @com.keepit.controllers.ext.ExtLibraryController.deprecatedSearchTags(id: PublicId[Library], q: String, n: Option[Int] ?= None)
+
+GET     /ext/guide                  @com.keepit.controllers.ext.ExtUserController.getGuideInfo()
