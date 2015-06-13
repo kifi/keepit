@@ -66,7 +66,8 @@ class SearchFactory @Inject() (
     numHitsToReturn: Int,
     filter: SearchFilter,
     orderBy: SearchRanking,
-    config: SearchConfig): Seq[UriSearch] = {
+    config: SearchConfig,
+    experiments: Set[ExperimentType]): Seq[UriSearch] = {
 
     val currentTime = System.currentTimeMillis()
 
@@ -83,6 +84,7 @@ class SearchFactory @Inject() (
       lang2.map(DefaultAnalyzer.getAnalyzer),
       lang2.map(DefaultAnalyzer.getAnalyzerWithStemmer),
       false,
+      experiments.contains(ExperimentType.SEARCH_LAB),
       config,
       phraseDetector,
       phraseDetectionReqConsolidator)
@@ -224,6 +226,7 @@ class SearchFactory @Inject() (
       lang2.map(DefaultAnalyzer.getAnalyzer),
       lang2.map(DefaultAnalyzer.getAnalyzerWithStemmer),
       false,
+      false,
       config,
       phraseDetector,
       phraseDetectionReqConsolidator)
@@ -281,6 +284,7 @@ class SearchFactory @Inject() (
     disablePrefixSearch: Boolean,
     filter: SearchFilter,
     config: SearchConfig,
+    experiments: Set[ExperimentType],
     explain: Option[Id[Library]]): Seq[LibrarySearch] = {
 
     val currentTime = System.currentTimeMillis()
@@ -295,6 +299,7 @@ class SearchFactory @Inject() (
       lang2.map(DefaultAnalyzer.getAnalyzer),
       lang2.map(DefaultAnalyzer.getAnalyzerWithStemmer),
       disablePrefixSearch,
+      experiments.contains(ExperimentType.SEARCH_LAB),
       config,
       phraseDetector,
       phraseDetectionReqConsolidator
@@ -354,6 +359,7 @@ class SearchFactory @Inject() (
     disablePrefixSearch: Boolean,
     filter: SearchFilter,
     config: SearchConfig,
+    experiments: Set[ExperimentType],
     explain: Option[Id[User]]): Seq[UserSearch] = {
 
     val currentTime = System.currentTimeMillis()
@@ -368,6 +374,7 @@ class SearchFactory @Inject() (
       lang2.map(DefaultAnalyzer.getAnalyzer),
       lang2.map(DefaultAnalyzer.getAnalyzerWithStemmer),
       disablePrefixSearch,
+      experiments.contains(ExperimentType.SEARCH_LAB),
       config,
       phraseDetector,
       phraseDetectionReqConsolidator
