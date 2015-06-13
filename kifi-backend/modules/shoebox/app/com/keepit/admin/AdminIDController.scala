@@ -13,6 +13,7 @@ class AdminIDController @Inject() (
     implicit val publicIdConfig: PublicIdConfiguration) extends AdminUserActions {
 
   val warmUp = {
+    // This just forces registration. Probably not necessary if they're actually being used, but hey.
     Library.publicId(Id(1))
     Organization.publicId(Id(1))
   }
@@ -40,11 +41,9 @@ class AdminIDController @Inject() (
   private def registry: Seq[(String, String, Long)] = {
     PublicIdRegistry.registry.map {
       case (companion, accessor) =>
-
         val a = accessor.toPubId(1)
         val b = accessor.toId(a)
 
-        println(companion + " " + a + " " + b)
         (companion, a, b)
     }
   }

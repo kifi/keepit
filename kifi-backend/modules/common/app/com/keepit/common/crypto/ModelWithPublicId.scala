@@ -48,7 +48,7 @@ trait ModelWithPublicId[T <: ModelWithPublicId[T]] {
 }
 
 object PublicIdRegistry {
-  abstract class PubIdAccessor {
+  trait PubIdAccessor {
     def toPubId(idPL: Long)(implicit config: PublicIdConfiguration): String
     def toId(pubIdStr: String)(implicit config: PublicIdConfiguration): Long
   }
