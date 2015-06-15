@@ -10,7 +10,7 @@ import org.joda.time.DateTime
 
 @ImplementedBy(classOf[OrganizationAvatarRepoImpl])
 trait OrganizationAvatarRepo extends Repo[OrganizationAvatar] {
-  def getByOrganization(organizationId: Id[Organization]): Seq[OrganizationAvatar] = ???
+  def getByOrganization(organizationId: Id[Organization])(implicit session: RSession): Seq[OrganizationAvatar]
 }
 
 @Singleton
@@ -79,4 +79,12 @@ class OrganizationAvatarRepoImpl @Inject() (val db: DataBaseComponent, val clock
 
   def table(tag: Tag) = new OrganizationAvatarTable(tag)
   initTable()
+
+  def getByOrganizationCompiled = Compiled { (organizationId: Column[Id[Organization]]) =>
+    (for (row <- rows if row.organizationId === organizationId) yield row)
+  }
+
+  def getByOrganization(organizationId: Id[Organization])(implicit session: RSession): Seq[OrganizationAvatar] = {
+    getByOrganizationCompiled(organizationId).list
+  }
 }
