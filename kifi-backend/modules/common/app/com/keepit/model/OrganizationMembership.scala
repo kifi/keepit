@@ -20,6 +20,7 @@ case class OrganizationMembership(
   def withId(id: Id[OrganizationMembership]): OrganizationMembership = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime): OrganizationMembership = this.copy(updatedAt = now)
   def withState(newState: State[OrganizationMembership]): OrganizationMembership = this.copy(state = newState)
+  def withPermissions(newPermissions: Set[OrganizationPermission]): OrganizationMembership = this.copy(permissions = newPermissions)
 
   def hasPermission(p: OrganizationPermission): Boolean = permissions.contains(p)
 
@@ -50,6 +51,8 @@ object OrganizationMembership {
     (__ \ 'role).format[OrganizationRole] and
     (__ \ 'permissions).format[Set[OrganizationPermission]]
   )(OrganizationMembership.apply, unlift(OrganizationMembership.unapply))
+  def apply(organizationId: Id[Organization], userId: Id[User], role: OrganizationRole): OrganizationMembership =
+    new OrganizationMembership(organizationId = organizationId, userId = userId, role = role, permissions = role.defaultPermissions)
 }
 object OrganizationMembershipStates extends States[OrganizationMembership]
 
@@ -77,12 +80,12 @@ object OrganizationPermission {
 }
 
 sealed abstract class OrganizationRole(val value: String, val priority: Int) {
-  def defaultPermission: Set[OrganizationPermission]
+  def defaultPermissions: Set[OrganizationPermission]
 }
 
 object OrganizationRole {
   case object OWNER extends OrganizationRole("owner", 0) {
-    def defaultPermission = Set(
+    def defaultPermissions = Set(
       OrganizationPermission.EDIT_ORGANIZATION,
       OrganizationPermission.INVITE_MEMBERS,
       OrganizationPermission.ADD_LIBRARIES,
@@ -90,7 +93,7 @@ object OrganizationRole {
     )
   }
   case object MEMBER extends OrganizationRole("member", 1) {
-    def defaultPermission = Set(
+    def defaultPermissions = Set(
       OrganizationPermission.ADD_LIBRARIES
     )
   }
