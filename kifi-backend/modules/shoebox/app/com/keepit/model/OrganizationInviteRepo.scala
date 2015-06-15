@@ -11,7 +11,7 @@ import org.joda.time.DateTime
 @ImplementedBy(classOf[OrganizationInviteRepoImpl])
 trait OrganizationInviteRepo extends Repo[OrganizationInvite] {
   def getByOrganization(organizationId: Id[Organization], limit: Limit, offset: Offset, state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit s: RSession): Seq[OrganizationInvite]
-  def getByInviter(inviterId: Id[User]): Seq[OrganizationInvite] = ???
+  def getByInviter(inviterId: Id[User], state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit s: RSession): Seq[OrganizationInvite]
 }
 
 @Singleton
@@ -71,5 +71,11 @@ class OrganizationInviteRepoImpl @Inject() (val db: DataBaseComponent, val clock
 
   def getByOrganization(organizationId: Id[Organization], limit: Limit, offset: Offset, state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit s: RSession): Seq[OrganizationInvite] = {
     getByOrganizationCompiled(organizationId, limit.value, offset.value, state).list
+  }
+
+  def getByInviterIdCompiled = Compiled { (inviterId: Column[Id[User]], state: Column[State[OrganizationInvite]]) => (for { row <- rows if row.inviterId === inviterId && row.state === state } yield row) }
+
+  def getByInviter(inviterId: Id[User], state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit session: RSession): Seq[OrganizationInvite] = {
+    getByInviterIdCompiled(inviterId, state).list
   }
 }
