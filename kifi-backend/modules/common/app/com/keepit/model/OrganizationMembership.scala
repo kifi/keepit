@@ -15,7 +15,7 @@ case class OrganizationMembership(
     organizationId: Id[Organization],
     userId: Id[User],
     role: OrganizationRole,
-    permissions: Seq[OrganizationPermission]) extends ModelWithState[OrganizationMembership] with ModelWithSeqNumber[OrganizationMembership] {
+    permissions: Set[OrganizationPermission]) extends ModelWithState[OrganizationMembership] with ModelWithSeqNumber[OrganizationMembership] {
 
   def withId(id: Id[OrganizationMembership]): OrganizationMembership = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime): OrganizationMembership = this.copy(updatedAt = now)
@@ -25,6 +25,17 @@ case class OrganizationMembership(
 
   def isOwner: Boolean = role == OrganizationRole.OWNER
   def hasRole(r: OrganizationRole): Boolean = r == role
+
+  implicit def format[T]: Format[Set[OrganizationPermission]] = new Format[Set[OrganizationPermission]] {
+    def reads(json: JsValue): JsResult[Set[OrganizationPermission]] = json match {
+      case JsArray(ps) =>
+        JsSuccess(ps.map(OrganizationPermission.format.reads(_).get).toSet)
+      case _ => JsError()
+    }
+    def writes(obj: Set[OrganizationPermission]): JsValue = {
+      Json.toJson(obj.toSeq)
+    }
+  }
 }
 
 object OrganizationMembership {
@@ -37,7 +48,7 @@ object OrganizationMembership {
     (__ \ 'organizationId).format[Id[Organization]] and
     (__ \ 'userId).format[Id[User]] and
     (__ \ 'role).format[OrganizationRole] and
-    (__ \ 'permissions).format[Seq[OrganizationPermission]]
+    (__ \ 'permissions).format[Set[OrganizationPermission]]
   )(OrganizationMembership.apply, unlift(OrganizationMembership.unapply))
 }
 object OrganizationMembershipStates extends States[OrganizationMembership]
@@ -62,13 +73,6 @@ object OrganizationPermission {
       case ADD_LIBRARIES.value => ADD_LIBRARIES
       case REMOVE_LIBRARIES.value => REMOVE_LIBRARIES
     }
-  }
-
-  def serialize(ps: Seq[OrganizationPermission]): String = {
-    ps.map(_.value).sorted.mkString(",")
-  }
-  def deserialize(str: String): Seq[OrganizationPermission] = {
-    str.split(",").map(OrganizationPermission(_))
   }
 }
 

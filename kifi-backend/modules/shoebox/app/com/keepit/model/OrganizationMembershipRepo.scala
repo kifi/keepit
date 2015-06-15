@@ -7,6 +7,7 @@ import com.keepit.common.db.slick._
 import com.keepit.common.logging.Logging
 import com.keepit.common.time.Clock
 import org.joda.time.DateTime
+import play.api.libs.json._
 
 @ImplementedBy(classOf[OrganizationMembershipRepoImpl])
 trait OrganizationMembershipRepo extends Repo[OrganizationMembership] with SeqNumberFunction[OrganizationMembership] {
@@ -31,12 +32,20 @@ class OrganizationMembershipRepoImpl @Inject() (val db: DataBaseComponent, val c
   type RepoImpl = OrganizationMembershipTable
   class OrganizationMembershipTable(tag: Tag) extends RepoTable[OrganizationMembership](db, tag, "organization_membership") with SeqNumberColumn[OrganizationMembership] {
     implicit val organizationRoleMapper = MappedColumnType.base[OrganizationRole, String](_.value, OrganizationRole(_))
-    implicit val organizationPermissionsMapper = MappedColumnType.base[Seq[OrganizationPermission], String](OrganizationPermission.serialize, OrganizationPermission.deserialize)
+    implicit val organizationPermissionsMapper = MappedColumnType.base[Set[OrganizationPermission], JsValue](
+      { permissions => Json.toJson(permissions.toSeq) },
+      { json =>
+        Json.fromJson[Seq[OrganizationPermission]](json) match {
+          case success: JsSuccess[Seq[OrganizationPermission]] => success.value.toSet
+          case failure: JsError => throw new JsResultException(failure.errors)
+        }
+      }
+    )
 
     def organizationId = column[Id[Organization]]("organization_id", O.NotNull)
     def userId = column[Id[User]]("user_id", O.NotNull)
     def role = column[OrganizationRole]("role", O.NotNull)
-    def permissions = column[Seq[OrganizationPermission]]("permissions", O.NotNull)
+    def permissions = column[Set[OrganizationPermission]]("permissions", O.NotNull)
 
     def applyFromDbRow(
       id: Option[Id[OrganizationMembership]],
@@ -47,7 +56,7 @@ class OrganizationMembershipRepoImpl @Inject() (val db: DataBaseComponent, val c
       organizationId: Id[Organization],
       userId: Id[User],
       role: OrganizationRole,
-      permissions: Seq[OrganizationPermission]) = {
+      permissions: Set[OrganizationPermission]) = {
       OrganizationMembership(id, createdAt, updatedAt, state, seq, organizationId, userId, role, permissions)
     }
 
