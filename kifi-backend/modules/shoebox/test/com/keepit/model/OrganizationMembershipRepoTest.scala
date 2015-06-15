@@ -49,9 +49,9 @@ class OrganizationMembershipRepoTest extends Specification with ShoeboxTestInjec
         val userId = Id[User](1)
         val orgIds: IndexedSeq[Id[Organization]] = 5 to 15 map (Id[Organization](_))
         db.readWrite { implicit session =>
-          orgMemberRepo.save(OrganizationMembership(organizationId = Id(1), access = OrganizationAccess.READ_WRITE, userId = Id[User](2)))
+          orgMemberRepo.save(OrganizationMembership(organizationId = Id(1), role = OrganizationRole.MEMBER, userId = Id[User](2)))
           for { orgId <- orgIds } {
-            orgMemberRepo.save(OrganizationMembership(organizationId = orgId, access = OrganizationAccess.READ_WRITE, userId = userId))
+            orgMemberRepo.save(OrganizationMembership(organizationId = orgId, role = OrganizationRole.MEMBER, userId = userId))
           }
         }
 
@@ -69,8 +69,8 @@ class OrganizationMembershipRepoTest extends Specification with ShoeboxTestInjec
         val userIds: IndexedSeq[Id[User]] = 5 to 10 map (Id[User](_))
         db.readWrite { implicit session =>
           for (userId <- userIds) {
-            orgMemberRepo.save(OrganizationMembership(organizationId = otherOrgId, access = OrganizationAccess.READ_WRITE, userId = userId))
-            orgMemberRepo.save(OrganizationMembership(organizationId = orgId, access = OrganizationAccess.READ_WRITE, userId = userId))
+            orgMemberRepo.save(OrganizationMembership(organizationId = otherOrgId, role = OrganizationRole.MEMBER, userId = userId))
+            orgMemberRepo.save(OrganizationMembership(organizationId = orgId, role = OrganizationRole.MEMBER, userId = userId))
           }
         }
 
@@ -87,7 +87,7 @@ class OrganizationMembershipRepoTest extends Specification with ShoeboxTestInjec
         val orgId = Id[Organization](1)
         val userId = Id[User](1)
         val membership = db.readWrite { implicit session =>
-          orgMemberRepo.save(OrganizationMembership(organizationId = orgId, access = OrganizationAccess.READ_WRITE, userId = userId))
+          orgMemberRepo.save(OrganizationMembership(organizationId = orgId, role = OrganizationRole.MEMBER, userId = userId))
         }
 
         val deactivate = db.readWrite { implicit session => orgMemberRepo.deactivate(membership.id.get) }
