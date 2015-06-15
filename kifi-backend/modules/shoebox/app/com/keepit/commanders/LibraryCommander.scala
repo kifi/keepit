@@ -1467,7 +1467,7 @@ class LibraryCommanderImpl @Inject() (
     }
   }
 
-  def createLiteLibraryCardInfos(libs: Seq[Library], viewerId: Id[User])(implicit session: RSession): ParSeq[(LibraryCardInfo, MiniLibraryMembership, Seq[LibrarySubscriptionKey])] = {
+  def createLiteLibraryCardInfos(libs: Seq[Library], viewerId: Id[User])(implicit session: RSession): ParSeq[(LibraryCardInfo, MiniLibraryMembership)] = {
     val memberships = libraryMembershipRepo.getMinisByLibraryIdsAndAccess(
       libs.map(_.id.get).toSet, Set(LibraryAccess.OWNER, LibraryAccess.READ_WRITE, LibraryAccess.READ_INSERT))
     val allBasicUsers = basicUserRepo.loadAll(memberships.values.map(_.map(_.userId)).flatten.toSet)
@@ -1475,7 +1475,6 @@ class LibraryCommanderImpl @Inject() (
     libs.par map { lib =>
       val libMems = memberships(lib.id.get)
       val viewerMem = libMems.find(_.userId == viewerId).get
-      val subscriptions = librarySubscriptionRepo.getByLibraryId(lib.id.get).map { sub => LibrarySubscription.toSubKey(sub) }
       val (numFollowers, numCollaborators, collabsSample) = if (libMems.length > 1) {
         val numFollowers = libraryMembershipRepo.countWithLibraryIdAndAccess(lib.id.get, LibraryAccess.READ_ONLY)
         val numCollaborators = libMems.length - 1
@@ -1507,7 +1506,7 @@ class LibraryCommanderImpl @Inject() (
         following = None, // not needed
         membership = None, // not needed
         modifiedAt = lib.updatedAt)
-      (info, viewerMem, subscriptions)
+      (info, viewerMem)
     }
   }
 
