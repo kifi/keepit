@@ -2,7 +2,7 @@ package com.keepit.model
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.db.{ SequenceNumber, State, Id }
-import com.keepit.common.db.slick.DBSession.RSession
+import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick._
 import com.keepit.common.logging.Logging
 import com.keepit.common.time.Clock
@@ -11,12 +11,12 @@ import play.api.libs.json._
 
 @ImplementedBy(classOf[OrganizationMembershipRepoImpl])
 trait OrganizationMembershipRepo extends Repo[OrganizationMembership] with SeqNumberFunction[OrganizationMembership] {
-  def getByUserId(userId: Id[User], excludeStates: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Seq[OrganizationMembership] = ???
+  def getByUserId(userId: Id[User], excludeState: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Seq[OrganizationMembership]
   def getbyOrgId(orgId: Id[Organization], limit: Limit, offset: Offset, excludeState: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Seq[OrganizationMembership]
   def getByOrgIdAndUserId(orgId: Id[Organization], userId: Id[User], excludeState: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Option[OrganizationMembership]
-  def getByOrgIdAndUserIds(orgId: Id[Organization], userIds: Set[Id[User]], excludeState: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Seq[OrganizationMembership] = ???
+  def getByOrgIdAndUserIds(orgId: Id[Organization], userIds: Set[Id[User]], excludeState: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Seq[OrganizationMembership]
   def countByOrgId(orgId: Id[Organization], excludeState: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Int
-  def deactivate(orgId: Id[Organization], userId: Id[User], excludeStates: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession) = ???
+  def deactivate(membership: Id[OrganizationMembership])(implicit session: RWSession): OrganizationMembership
 }
 
 case class Offset(value: Long) extends AnyVal
@@ -116,6 +116,31 @@ class OrganizationMembershipRepoImpl @Inject() (val db: DataBaseComponent, val c
       case None => countByOrgIdCompiled(orgId).run
       case Some(exclude) => countByOrgIdWithExcludeCompiled(orgId, exclude).run
     }
+  }
 
+  def getByUserIdCompiled = Compiled { (userId: Column[Id[User]]) =>
+    (for { row <- rows if row.userId === userId } yield row)
+  }
+
+  def getByUserIdWithExcludeCompiled = Compiled { (userId: Column[Id[User]], excludeState: Column[State[OrganizationMembership]]) =>
+    (for { row <- rows if row.userId === userId && row.state =!= excludeState } yield row)
+  }
+
+  def getByUserId(userId: Id[User], excludeState: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Seq[OrganizationMembership] = {
+    excludeState match {
+      case None => getByUserIdCompiled(userId).list
+      case Some(exclude) => getByUserIdWithExcludeCompiled(userId, exclude).list
+    }
+  }
+
+  def getByOrgIdAndUserIds(orgId: Id[Organization], userIds: Set[Id[User]], excludeState: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Seq[OrganizationMembership] = {
+    excludeState match {
+      case None => (for { row <- rows if row.organizationId === orgId && row.userId.inSet(userIds) } yield row).list
+      case Some(exclude) => (for { row <- rows if row.organizationId === orgId && row.userId.inSet(userIds) && row.state =!= excludeState } yield row).list
+    }
+  }
+
+  def deactivate(membership: Id[OrganizationMembership])(implicit session: RWSession): OrganizationMembership = {
+    save(get(membership).copy(state = OrganizationMembershipStates.INACTIVE))
   }
 }
