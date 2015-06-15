@@ -29,7 +29,8 @@ CREATE TABLE organization_membership (
 	seq bigint(20) NOT NULL,
 	organization_id bigint(20) NOT NULL,
 	user_id bigint(20) NOT NULL,
-	access varchar(20) NOT NULL,
+	role varchar(20) NOT NULL,
+	permissions varchar(120) NOT NULL,
 
 	PRIMARY KEY(id),
 	CONSTRAINT `organization_membership_f_organization` FOREIGN KEY (`organization_id`) REFERENCES organization(`id`),
@@ -45,7 +46,7 @@ CREATE TABLE organization_invite (
 	inviter_id bigint(20) NOT NULL,
 	user_id bigint(20) DEFAULT NULL,
 	email_address varchar(512) DEFAULT NULL,
-	access varchar(20) NOT NULL,
+	role varchar(20) NOT NULL,
 	message text DEFAULT NULL,
 
 	PRIMARY KEY(id),

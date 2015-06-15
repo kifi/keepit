@@ -13,7 +13,7 @@ class OrganizationInviteRepoTest extends Specification with ShoeboxTestInjector 
       withDb() { implicit injector =>
         val orgInviteRepo = inject[OrganizationInviteRepo]
         val org = db.readWrite { implicit s =>
-          orgInviteRepo.save(OrganizationInvite(organizationId = Id[Organization](1), inviterId = Id[User](1), userId = Some(Id[User](10)), access = OrganizationAccess.READ_WRITE))
+          orgInviteRepo.save(OrganizationInvite(organizationId = Id[Organization](1), inviterId = Id[User](1), userId = Some(Id[User](10)), role = OrganizationRole.OWNER))
         }
 
         db.readOnlyMaster { implicit s =>

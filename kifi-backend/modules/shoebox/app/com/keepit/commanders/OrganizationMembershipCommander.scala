@@ -10,7 +10,7 @@ import com.keepit.social.BasicUser
 import org.joda.time.DateTime
 import play.api.http.Status._
 
-final case class MaybeOrganizationMember(member: Either[BasicUser, BasicContact], access: Option[OrganizationAccess], lastInvitedAt: Option[DateTime])
+final case class MaybeOrganizationMember(member: Either[BasicUser, BasicContact], role: Option[OrganizationRole], lastInvitedAt: Option[DateTime])
 final case class OrganizationFail(status: Int, message: String)
 
 class OrganizationMembershipCommander @Inject() (db: Database,
@@ -47,25 +47,25 @@ class OrganizationMembershipCommander @Inject() (db: Database,
 
     val membersNotIncludingOwner = members.filterNot(_.isOwner).flatMap { member =>
       usersMap.get(member.userId) map { basicUser =>
-        MaybeOrganizationMember(member = Left(basicUser), access = Some(member.access), lastInvitedAt = Some(member.updatedAt))
+        MaybeOrganizationMember(member = Left(basicUser), role = Some(member.role), lastInvitedAt = Some(member.updatedAt))
       }
     }
 
     val invitedByUserId = invitedUserIds flatMap { invitedById =>
       usersMap.get(invitedById.userId.get) map { basicUser =>
-        MaybeOrganizationMember(member = Left(basicUser), access = Some(invitedById.access), lastInvitedAt = Some(invitedById.updatedAt))
+        MaybeOrganizationMember(member = Left(basicUser), role = Some(invitedById.role), lastInvitedAt = Some(invitedById.updatedAt))
       }
     }
 
     val invitedByEmailAddress = invitedEmailAddresses map { invitedByAddress =>
       val contact = BasicContact(invitedByAddress.emailAddress.get)
-      MaybeOrganizationMember(member = Right(contact), access = Some(invitedByAddress.access), lastInvitedAt = Some(invitedByAddress.updatedAt))
+      MaybeOrganizationMember(member = Right(contact), role = Some(invitedByAddress.role), lastInvitedAt = Some(invitedByAddress.updatedAt))
     }
 
     membersNotIncludingOwner ++ invitedByUserId ++ invitedByEmailAddress
   }
 
-  def modifyMemberships(orgId: Id[Organization], requestorId: Id[User], modifications: Seq[(Id[User], OrganizationAccess)]): Either[OrganizationFail, Seq[OrganizationMembership]] = ???
+  def modifyMemberships(orgId: Id[Organization], requestorId: Id[User], modifications: Seq[(Id[User], OrganizationRole)]): Either[OrganizationFail, Seq[OrganizationMembership]] = ???
 
   case class MemberRemovals(failedToRemove: Seq[Id[User]], removed: Seq[Id[User]])
   def removeMembers(orgId: Id[Organization], requestorId: Id[User], removals: Seq[Id[User]]): MemberRemovals = ???

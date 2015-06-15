@@ -21,7 +21,7 @@ class UserIpAddressCommander @Inject() (
     userIpAddressRepo: UserIpAddressRepo,
     userRepo: UserRepo) extends Logging {
 
-  private val ipClusterSlackChannelUrl = "https://hooks.slack.com/services/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"
+  private val ipClusterSlackChannelUrl = "https://hooks.slack.com/services/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"
   private val clusterMemoryTime = Period.weeks(10) // How long back do we look and still consider a user to be part of a cluster
 
   def simplifyUserAgent(userAgent: UserAgent): String = {
@@ -65,6 +65,7 @@ class UserIpAddressCommander @Inject() (
   }
 
   def notifySlackChannelAboutCluster(clusterIp: IpAddress): Unit = {
+    log.info("[IPTRACK NOTIFY] Notifying slack channel about " + clusterIp)
     val usersFromCluster = db.readOnlyReplica { implicit session =>
       val userIds = userIpAddressRepo.getUsersFromIpAddressSince(clusterIp, DateTime.now.minus(clusterMemoryTime))
       userRepo.getUsers(userIds).values.toSeq

@@ -18,7 +18,7 @@ class OrganizationMembershipCommanderTest extends TestKitSupport with Specificat
         db.readWrite { implicit session =>
           for { i <- 1 to 20 } yield {
             val userId = UserFactory.user().withId(Id[User](i)).saved.id.get
-            orgMemberRepo.save(OrganizationMembership(organizationId = orgId, userId = userId, access = OrganizationAccess.READ_WRITE))
+            orgMemberRepo.save(OrganizationMembership(organizationId = orgId, userId = userId, role = OrganizationRole.MEMBER))
           }
         }
 
@@ -35,8 +35,8 @@ class OrganizationMembershipCommanderTest extends TestKitSupport with Specificat
         db.readWrite { implicit session =>
           for { i <- 1 to 20 } yield {
             val userId = UserFactory.user().withId(Id[User](i)).saved.id.get
-            orgMemberRepo.save(OrganizationMembership(organizationId = orgId, userId = userId, access = OrganizationAccess.READ_WRITE))
-            orgInviteRepo.save(OrganizationInvite(organizationId = orgId, inviterId = Id[User](1), access = OrganizationAccess.READ_WRITE, emailAddress = Some(EmailAddress("colin@kifi.com"))))
+            orgMemberRepo.save(OrganizationMembership(organizationId = orgId, userId = userId, role = OrganizationRole.MEMBER))
+            orgInviteRepo.save(OrganizationInvite(organizationId = orgId, inviterId = Id[User](1), role = OrganizationRole.MEMBER, emailAddress = Some(EmailAddress("colin@kifi.com"))))
           }
         }
 

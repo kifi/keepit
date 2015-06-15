@@ -23,13 +23,13 @@ class OrganizationInviteRepoImpl @Inject() (val db: DataBaseComponent, val clock
 
   type RepoImpl = OrganizationInviteTable
   class OrganizationInviteTable(tag: Tag) extends RepoTable[OrganizationInvite](db, tag, "organization_invite") {
-    implicit val organizationAccessMapper = MappedColumnType.base[OrganizationAccess, String](_.value, OrganizationAccess(_))
+    implicit val organizationRoleMapper = MappedColumnType.base[OrganizationRole, String](_.value, OrganizationRole(_))
 
     def organizationId = column[Id[Organization]]("organization_id", O.NotNull)
     def inviterId = column[Id[User]]("inviter_id", O.NotNull)
     def userId = column[Option[Id[User]]]("user_id", O.Nullable)
     def emailAddress = column[Option[EmailAddress]]("email_address", O.Nullable)
-    def access = column[OrganizationAccess]("access", O.NotNull)
+    def role = column[OrganizationRole]("role", O.NotNull)
     def message = column[Option[String]]("message", O.Nullable)
 
     def applyFromDbRow(
@@ -41,9 +41,9 @@ class OrganizationInviteRepoImpl @Inject() (val db: DataBaseComponent, val clock
       inviterId: Id[User],
       userId: Option[Id[User]],
       emailAddress: Option[EmailAddress],
-      access: OrganizationAccess,
+      role: OrganizationRole,
       message: Option[String]) = {
-      OrganizationInvite(id, createdAt, updatedAt, state, organizationId, inviterId, userId, emailAddress, access, message)
+      OrganizationInvite(id, createdAt, updatedAt, state, organizationId, inviterId, userId, emailAddress, role, message)
     }
 
     def unapplyToDbRow(invite: OrganizationInvite) = {
@@ -55,11 +55,11 @@ class OrganizationInviteRepoImpl @Inject() (val db: DataBaseComponent, val clock
         invite.inviterId,
         invite.userId,
         invite.emailAddress,
-        invite.access,
+        invite.role,
         invite.message))
     }
 
-    def * = (id.?, createdAt, updatedAt, state, organizationId, inviterId, userId, emailAddress, access, message) <> ((applyFromDbRow _).tupled, unapplyToDbRow _)
+    def * = (id.?, createdAt, updatedAt, state, organizationId, inviterId, userId, emailAddress, role, message) <> ((applyFromDbRow _).tupled, unapplyToDbRow _)
   }
 
   def table(tag: Tag) = new OrganizationInviteTable(tag)
