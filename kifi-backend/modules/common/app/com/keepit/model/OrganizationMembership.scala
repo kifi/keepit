@@ -26,17 +26,6 @@ case class OrganizationMembership(
 
   def isOwner: Boolean = role == OrganizationRole.OWNER
   def hasRole(r: OrganizationRole): Boolean = r == role
-
-  implicit def format[T]: Format[Set[OrganizationPermission]] = new Format[Set[OrganizationPermission]] {
-    def reads(json: JsValue): JsResult[Set[OrganizationPermission]] = json match {
-      case JsArray(ps) =>
-        JsSuccess(ps.map(OrganizationPermission.format.reads(_).get).toSet)
-      case _ => JsError()
-    }
-    def writes(obj: Set[OrganizationPermission]): JsValue = {
-      Json.toJson(obj.toSeq)
-    }
-  }
 }
 
 object OrganizationMembership {
@@ -52,7 +41,7 @@ object OrganizationMembership {
     (__ \ 'permissions).format[Set[OrganizationPermission]]
   )(OrganizationMembership.apply, unlift(OrganizationMembership.unapply))
   def apply(organizationId: Id[Organization], userId: Id[User], role: OrganizationRole): OrganizationMembership =
-    new OrganizationMembership(organizationId = organizationId, userId = userId, role = role, permissions = role.defaultPermissions)
+    new OrganizationMembership(organizationId = organizationId, userId = userId, role = role, permissions = OrganizationPermission.defaultPermissions(role))
 }
 object OrganizationMembershipStates extends States[OrganizationMembership]
 
@@ -64,7 +53,7 @@ object OrganizationPermission {
   case object ADD_LIBRARIES extends OrganizationPermission("add_libraries")
   case object REMOVE_LIBRARIES extends OrganizationPermission("remove_libraries")
 
-  implicit def format[T]: Format[OrganizationPermission] =
+  implicit val format: Format[OrganizationPermission] =
     Format(__.read[String].map(OrganizationPermission(_)), new Writes[OrganizationPermission] {
       def writes(o: OrganizationPermission) = JsString(o.value)
     })
@@ -77,28 +66,27 @@ object OrganizationPermission {
       case REMOVE_LIBRARIES.value => REMOVE_LIBRARIES
     }
   }
-}
 
-sealed abstract class OrganizationRole(val value: String, val priority: Int) {
-  def defaultPermissions: Set[OrganizationPermission]
-}
-
-object OrganizationRole {
-  case object OWNER extends OrganizationRole("owner", 0) {
-    def defaultPermissions = Set(
+  def defaultPermissions(role: OrganizationRole): Set[OrganizationPermission] = role match {
+    case OrganizationRole.OWNER => Set(
       OrganizationPermission.EDIT_ORGANIZATION,
       OrganizationPermission.INVITE_MEMBERS,
       OrganizationPermission.ADD_LIBRARIES,
       OrganizationPermission.REMOVE_LIBRARIES
     )
-  }
-  case object MEMBER extends OrganizationRole("member", 1) {
-    def defaultPermissions = Set(
+    case OrganizationRole.MEMBER => Set(
       OrganizationPermission.ADD_LIBRARIES
     )
   }
+}
 
-  implicit def format[T]: Format[OrganizationRole] =
+sealed abstract class OrganizationRole(val value: String, val priority: Int)
+
+object OrganizationRole {
+  case object OWNER extends OrganizationRole("owner", 0)
+  case object MEMBER extends OrganizationRole("member", 1)
+
+  implicit val format: Format[OrganizationRole] =
     Format(__.read[String].map(OrganizationRole(_)), new Writes[OrganizationRole] {
       def writes(o: OrganizationRole) = JsString(o.value)
     })
