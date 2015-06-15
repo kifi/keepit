@@ -1,23 +1,32 @@
 package com.keepit.commanders
 
-import com.google.inject.Inject
+import com.google.inject.{ImplementedBy, Inject, Singleton}
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
+import com.keepit.common.logging.Logging
 import com.keepit.common.mail.BasicContact
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.model._
 import com.keepit.social.BasicUser
 import org.joda.time.DateTime
-import play.api.http.Status._
 
 final case class MaybeOrganizationMember(member: Either[BasicUser, BasicContact], role: Option[OrganizationRole], lastInvitedAt: Option[DateTime])
+final case class MemberRemovals(failedToRemove: Seq[Id[User]], removed: Seq[Id[User]])
 final case class OrganizationFail(status: Int, message: String)
 
-class OrganizationMembershipCommander @Inject() (db: Database,
-    organizationRepo: OrganizationRepo,
+@ImplementedBy(classOf[OrganizationMembershipCommanderImpl])
+trait OrganizationMembershipCommander {
+  def getMembersAndInvitees(orgId: Id[Organization], limit: Limit, offset: Offset, includeInvitees: Boolean): Seq[MaybeOrganizationMember]
+  def modifyMemberships(orgId: Id[Organization], requestorId: Id[User], modifications: Seq[(Id[User], OrganizationRole)]): Either[OrganizationFail, Seq[OrganizationMembership]]
+  def removeMembers(orgId: Id[Organization], requestorId: Id[User], removals: Seq[Id[User]]): MemberRemovals
+}
+
+@Singleton
+class OrganizationMembershipCommanderImpl @Inject() (
+    db: Database,
     organizationMembershipRepo: OrganizationMembershipRepo,
     organizationInviteRepo: OrganizationInviteRepo,
-    basicUserRepo: BasicUserRepo) {
+    basicUserRepo: BasicUserRepo) extends OrganizationMembershipCommander with Logging {
 
   // Offset and Count to prevent accidental reversal of arguments with same type (Long).
   def getMembersAndInvitees(orgId: Id[Organization], limit: Limit, offset: Offset, includeInvitees: Boolean): Seq[MaybeOrganizationMember] = {
@@ -67,6 +76,5 @@ class OrganizationMembershipCommander @Inject() (db: Database,
 
   def modifyMemberships(orgId: Id[Organization], requestorId: Id[User], modifications: Seq[(Id[User], OrganizationRole)]): Either[OrganizationFail, Seq[OrganizationMembership]] = ???
 
-  case class MemberRemovals(failedToRemove: Seq[Id[User]], removed: Seq[Id[User]])
   def removeMembers(orgId: Id[Organization], requestorId: Id[User], removals: Seq[Id[User]]): MemberRemovals = ???
 }
