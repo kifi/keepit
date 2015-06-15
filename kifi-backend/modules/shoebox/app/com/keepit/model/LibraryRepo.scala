@@ -30,6 +30,7 @@ trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
   def getLibraries(libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Library]
   def hasKindsByOwner(ownerId: Id[User], kinds: Set[LibraryKind], excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Boolean
   def countWithState(state: State[Library])(implicit session: RSession): Int
+  def searchWritableByUser(userId: Id[User], term: String)(implicit session: RSession): Seq[Library]
 
   //
   // Profile Library Repo functions
@@ -257,6 +258,15 @@ class LibraryRepoImpl @Inject() (
         (for (r <- rows if r.id.inSet(libraryIds)) yield r).list.map(library => LibraryIdKey(library.id.get) -> library).toMap
       }.map { case (libraryKey, library) => libraryKey.id -> library }
     }
+  }
+
+  def searchWritableByUser(userId: Id[User], term: String)(implicit session: RSession): Seq[Library] = {
+    val readOnly: LibraryAccess = LibraryAccess.READ_ONLY
+    val q = for {
+      lib <- rows if lib.state =!= LibraryStates.INACTIVE && lib.name.like(s"$term%")
+      lm <- libraryMembershipRepo.get.rows if lm.libraryId === lib.id && lm.userId === userId && lm.access =!= readOnly && lm.state === LibraryMembershipStates.ACTIVE
+    } yield lib
+    q.list
   }
 
   //
