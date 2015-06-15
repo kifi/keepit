@@ -11,7 +11,7 @@ class OrganizationMembershipRepoTest extends Specification with ShoeboxTestInjec
       withDb() { implicit injector =>
         val orgMemberRepo = inject[OrganizationMembershipRepo]
         val org = db.readWrite { implicit s =>
-          orgMemberRepo.save(OrganizationMembership(organizationId = Id[Organization](1), userId = Id[User](1), access = OrganizationAccess.OWNER))
+          orgMemberRepo.save(OrganizationMembership(organizationId = Id[Organization](1), userId = Id[User](1), role = OrganizationRole.OWNER))
         }
 
         db.readOnlyMaster { implicit s =>
@@ -28,8 +28,8 @@ class OrganizationMembershipRepoTest extends Specification with ShoeboxTestInjec
 
         val orgMemberRepo = inject[OrganizationMembershipRepo]
         val (activeMember, inactiveMember) = db.readWrite { implicit s =>
-          val active = orgMemberRepo.save(OrganizationMembership(organizationId = organizationId, userId = userId, access = OrganizationAccess.OWNER))
-          val inactive = orgMemberRepo.save(OrganizationMembership(organizationId = organizationId, userId = userId, access = OrganizationAccess.OWNER, state = OrganizationMembershipStates.INACTIVE))
+          val active = orgMemberRepo.save(OrganizationMembership(organizationId = organizationId, userId = userId, role = OrganizationRole.OWNER))
+          val inactive = orgMemberRepo.save(OrganizationMembership(organizationId = organizationId, userId = userId, role = OrganizationRole.OWNER).withState(OrganizationMembershipStates.INACTIVE))
           (active, inactive)
         }
 
