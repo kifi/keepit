@@ -32,14 +32,9 @@ class OrganizationMembershipRepoImpl @Inject() (val db: DataBaseComponent, val c
   type RepoImpl = OrganizationMembershipTable
   class OrganizationMembershipTable(tag: Tag) extends RepoTable[OrganizationMembership](db, tag, "organization_membership") with SeqNumberColumn[OrganizationMembership] {
     implicit val organizationRoleMapper = MappedColumnType.base[OrganizationRole, String](_.value, OrganizationRole(_))
-    implicit val organizationPermissionsMapper = MappedColumnType.base[Set[OrganizationPermission], JsValue](
-      { Json.toJson(_) },
-      { json =>
-        Json.fromJson[Set[OrganizationPermission]](json) match {
-          case success: JsSuccess[Set[OrganizationPermission]] => success.value
-          case failure: JsError => throw new JsResultException(failure.errors)
-        }
-      }
+    implicit val organizationPermissionsMapper = MappedColumnType.base[Set[OrganizationPermission], String](
+      { permissions => Json.stringify(Json.toJson(permissions)) },
+      { str => Json.parse(str).as[Set[OrganizationPermission]] }
     )
 
     def organizationId = column[Id[Organization]]("organization_id", O.NotNull)
