@@ -30,7 +30,7 @@ class OrganizationInviteRepoTest extends Specification with ShoeboxTestInjector 
         db.readWrite { implicit s =>
           for (inviteeId <- userIds) {
             orgInviteRepo.save(OrganizationInvite(organizationId = Id[Organization](1), inviterId = inviterId,
-              userId = inviteeId, access = OrganizationAccess.READ_WRITE))
+              userId = inviteeId, role = OrganizationRole.MEMBER))
           }
         }
 
