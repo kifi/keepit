@@ -173,7 +173,10 @@ class RecommendationsCommander @Inject() (
   def updatesFromFollowedLibraries(userId: Id[User], count: Int, beforeTime: String): Future[Seq[KeepInfo]] = {
     val keeps: Seq[Keep] = db.readWrite { implicit session =>
       keepRepo.getRecentKeepsFromFollowedLibraries(userId, count, beforeTime)
-    }
+    }.foldRight((List[Keep](), Set[Id[NormalizedURI]]())) {
+      case (keep, (keeps, seenUriIds)) =>
+        if (seenUriIds(keep.uriId)) (keeps, seenUriIds) else (keep :: keeps, seenUriIds + keep.uriId)
+    }._1
 
     keepDecorator.decorateKeepsIntoKeepInfos(Some(userId), false, keeps, ProcessedImageSize.Large.idealSize, true).map { keepInfos =>
       FullLibUpdatesRecoInfo(itemInfo = keepInfos).itemInfo
