@@ -18,7 +18,6 @@ class KQueryParser(
     altAnalyzer: Option[Analyzer],
     altStemmingAnalyzer: Option[Analyzer],
     disablePrefixSearch: Boolean,
-    lab: Boolean,
     config: SearchConfig,
     phraseDetector: PhraseDetector,
     phraseDetectionConsolidator: RequestConsolidator[(CharSequence, Lang), Set[(Int, Int)]]) { qp =>
@@ -42,7 +41,7 @@ class KQueryParser(
   def parse(queryText: CharSequence): Option[QueryEngineBuilder] = {
 
     val builderOpt = parser.parse(queryText).map { query =>
-      val engBuilder = new QueryEngineBuilder(query, lab)
+      val engBuilder = new QueryEngineBuilder(query)
       val numTextQueries = parser.textQueries.size
 
       if (0 < numTextQueries && numTextQueries <= ProximityQuery.maxLength) { // no terms or too many terms, skip proximity/home page boost

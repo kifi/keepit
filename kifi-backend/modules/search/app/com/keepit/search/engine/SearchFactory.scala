@@ -84,7 +84,6 @@ class SearchFactory @Inject() (
       lang2.map(DefaultAnalyzer.getAnalyzer),
       lang2.map(DefaultAnalyzer.getAnalyzerWithStemmer),
       false,
-      experiments.contains(ExperimentType.SEARCH_LAB),
       config,
       phraseDetector,
       phraseDetectionReqConsolidator)
@@ -226,7 +225,6 @@ class SearchFactory @Inject() (
       lang2.map(DefaultAnalyzer.getAnalyzer),
       lang2.map(DefaultAnalyzer.getAnalyzerWithStemmer),
       false,
-      false,
       config,
       phraseDetector,
       phraseDetectionReqConsolidator)
@@ -299,7 +297,6 @@ class SearchFactory @Inject() (
       lang2.map(DefaultAnalyzer.getAnalyzer),
       lang2.map(DefaultAnalyzer.getAnalyzerWithStemmer),
       disablePrefixSearch,
-      experiments.contains(ExperimentType.SEARCH_LAB),
       config,
       phraseDetector,
       phraseDetectionReqConsolidator
@@ -374,7 +371,6 @@ class SearchFactory @Inject() (
       lang2.map(DefaultAnalyzer.getAnalyzer),
       lang2.map(DefaultAnalyzer.getAnalyzerWithStemmer),
       disablePrefixSearch,
-      experiments.contains(ExperimentType.SEARCH_LAB),
       config,
       phraseDetector,
       phraseDetectionReqConsolidator

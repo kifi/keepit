@@ -3,7 +3,7 @@ package com.keepit.search.engine
 import com.keepit.search.SearchRanking
 import com.keepit.search.engine.query.core._
 import com.keepit.search.engine.query.{ FixedScoreQuery, HomePageQuery }
-import org.apache.lucene.search.{ BooleanClause, Query }
+import org.apache.lucene.search.{ Query }
 import org.apache.lucene.search.BooleanClause.Occur._
 import scala.collection.JavaConversions._
 import scala.collection.mutable.ArrayBuffer
@@ -14,12 +14,12 @@ object QueryEngineBuilder {
   class FilterQuery(subQuery: Query) extends FixedScoreQuery(subQuery)
 }
 
-class QueryEngineBuilder(userQuery: Query, lab: Boolean = false) {
+class QueryEngineBuilder(userQuery: Query) {
   import QueryEngineBuilder._
 
   private[this] val _tieBreakerMultiplier = tieBreakerMultiplier
   private[this] val _expr = buildExpr(userQuery) // (expr, query, size)
-  private[this] var _filters: List[Query] = Nil
+  private[this] var _filters: List[FilterQuery] = Nil
   private[this] var _boosters: List[(Query, Float)] = Nil
   private[this] lazy val _core = buildCore() // (expr, query, size)
   private[this] lazy val _final = buildFinal()
@@ -34,7 +34,7 @@ class QueryEngineBuilder(userQuery: Query, lab: Boolean = false) {
 
   def addFilterQuery(filter: Query): QueryEngineBuilder = {
     if (built) throw new IllegalStateException("cannot modify the engine builder once an engine is built")
-    _filters = filter :: _filters
+    _filters = new FilterQuery(filter) :: _filters
     this
   }
 
@@ -62,26 +62,12 @@ class QueryEngineBuilder(userQuery: Query, lab: Boolean = false) {
 
   private[this] def buildCore(): (ScoreExpr, Query, Int) = {
     built = true
-    if (lab) {
-      val filterQueries = _filters.map { filter =>
-        new KFilterQuery {
-          def label: String = s"filter(${subQuery.toString})"
-          override val subQuery = filter
-          override def toString(s: String) = s"filter(${subQuery.toString})"
-        }
-      }
-      val clauses = (userQuery :: filterQueries).map { q => new BooleanClause(q, MUST) }
-      val query = new KBooleanQuery()
-      clauses.foreach { clause => query.add(clause) }
-      buildExpr(query)
-    } else {
-      _filters.foldLeft(_expr) {
-        case ((expr, query, size), filterQuery) =>
-          val boosterExpr = MaxExpr(size)
-          val boostStrength = 1.0f
-          val booster = new FilterQuery(filterQuery)
-          (BoostExpr(expr, boosterExpr, boostStrength), new KBoostQuery(query, booster, boostStrength), size + 1)
-      }
+    _filters.foldLeft(_expr) {
+      case ((expr, query, size), filterQuery) =>
+        val boosterExpr = MaxExpr(size)
+        val boostStrength = 1.0f
+        val booster = filterQuery
+        (BoostExpr(expr, boosterExpr, boostStrength), new KBoostQuery(query, booster, boostStrength), size + 1)
     }
   }
 
