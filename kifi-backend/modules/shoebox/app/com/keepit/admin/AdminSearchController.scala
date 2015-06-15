@@ -22,8 +22,9 @@ class AdminSearchController @Inject() (
     searchClient: SearchServiceClient,
     implicit val publicIdConfig: PublicIdConfiguration) extends AdminUserActions with Logging {
 
-  def explainUriResult(query: String, uriId: Id[NormalizedURI], lang: String, debug: Option[String]) = AdminUserPage.async { request =>
-    searchClient.explainUriResult(query, request.userId, uriId, lang, debug).map(Ok(_))
+  def explainUriResult(query: String, uriId: Id[NormalizedURI], libraryId: Option[Long], lang: String, debug: Option[String]) = AdminUserPage.async { request =>
+    val libId = libraryId.map(Id[Library](_))
+    searchClient.explainUriResult(query, request.userId, uriId, libId, lang, debug).map(Ok(_))
   }
 
   def explainLibraryResult(query: String, libraryId: PublicId[Library], debug: Option[String], disablePrefixSearch: Boolean) = AdminUserPage.async { request =>
