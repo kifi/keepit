@@ -55,7 +55,7 @@ CREATE TABLE organization_invite (
 	CONSTRAINT `organization_invite_f_invited_user` FOREIGN KEY (`user_id`) REFERENCES user(`id`)
 );
 
-CREATE TABLE organization_logo (
+CREATE TABLE organization_avatar (
 	id bigint(20) NOT NULL AUTO_INCREMENT,
 	created_at datetime NOT NULL,
 	updated_at datetime NOT NULL,
