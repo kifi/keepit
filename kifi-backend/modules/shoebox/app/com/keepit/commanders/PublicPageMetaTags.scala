@@ -87,8 +87,8 @@ case class PublicPageMetaFullTags(unsafeTitle: String, url: String, urlPathOnly:
 
   private def includeFeedTags: String = feedName.map { name =>
     s"""
-         |<link rel="alternate" type="application/rss+xml" title="$name feed by $unsafeFirstName $unsafeLastName on Kifi" href="$url/rss" />
-         |<link rel="alternate" type="application/atom+xml" title="$name feed by $unsafeFirstName $unsafeLastName on Kifi" href="$url/atom" />
+         |<link rel="alternate" type="application/rss+xml" title="$name feed by $fullName on Kifi" href="$url/rss" />
+         |<link rel="alternate" type="application/atom+xml" title="$name feed by $fullName on Kifi" href="$url/atom" />
        """.stripMargin
   }.getOrElse("")
 
@@ -122,7 +122,7 @@ case class PublicPageMetaFullTags(unsafeTitle: String, url: String, urlPathOnly:
   } else ""
 
   def formatOpenGraphForLibrary: String = {
-    formatOpenGraph(s"${PublicPageMetaTags.facebookNameSpace}:library") +
+    titleAndMetaTags(s"${PublicPageMetaTags.facebookNameSpace}:library") +
       s"""
       |<meta name="author" content="$firstName $lastName">
       |$includeFeedTags
@@ -133,7 +133,7 @@ case class PublicPageMetaFullTags(unsafeTitle: String, url: String, urlPathOnly:
   }
 
   def formatOpenGraphForUser: String = {
-    formatOpenGraph("profile") +
+    titleAndMetaTags("profile") +
       s"""
       |<meta property="profile:first_name" content="$firstName">
       |<meta property="profile:last_name" content="$lastName">
@@ -142,7 +142,7 @@ case class PublicPageMetaFullTags(unsafeTitle: String, url: String, urlPathOnly:
   }
 
   //  verify with https://developers.facebook.com/tools/debug/og/object/
-  private def formatOpenGraph(ogType: String): String = {
+  private def titleAndMetaTags(ogType: String): String = {
 
     s"""
       |<title>$title</title>
