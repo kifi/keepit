@@ -14,7 +14,7 @@ object QueryEngineBuilder {
   class FilterQuery(subQuery: Query) extends FixedScoreQuery(subQuery)
 }
 
-class QueryEngineBuilder(userQuery: Query, lab: Boolean = false) {
+class QueryEngineBuilder(userQuery: Query) {
   import QueryEngineBuilder._
 
   private[this] val _tieBreakerMultiplier = tieBreakerMultiplier
