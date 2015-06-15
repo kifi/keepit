@@ -49,7 +49,7 @@ trait SearchServiceClient extends ServiceClient {
   def searchUsers(userId: Option[Id[User]], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[DeprecatedUserSearchResult]
   def userTypeahead(userId: Id[User], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[Seq[TypeaheadHit[BasicUser]]]
   def userTypeaheadWithUserId(userId: Id[User], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[Seq[TypeaheadHit[TypeaheadUserHit]]]
-  def explainUriResult(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: String, debug: Option[String]): Future[Html]
+  def explainUriResult(query: String, userId: Id[User], uriId: Id[NormalizedURI], libraryId: Option[Id[Library]], lang: String, debug: Option[String]): Future[Html]
   def explainLibraryResult(query: String, userId: Id[User], libraryId: Id[Library], acceptLangs: Seq[String], debug: Option[String], disablePrefixSearch: Boolean): Future[Html]
   def explainUserResult(query: String, userId: Id[User], resultUserId: Id[User], acceptLangs: Seq[String], debug: Option[String], disablePrefixSearch: Boolean): Future[Html]
   def showUserConfig(id: Id[User]): Future[SearchConfig]
@@ -190,8 +190,8 @@ class SearchServiceClientImpl(
     }
   }
 
-  def explainUriResult(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: String, debug: Option[String]): Future[Html] = {
-    call(Search.internal.explainUriResult(query, userId, uriId, Some(lang), debug)).map(r => Html(r.body))
+  def explainUriResult(query: String, userId: Id[User], uriId: Id[NormalizedURI], libraryId: Option[Id[Library]], lang: String, debug: Option[String]): Future[Html] = {
+    call(Search.internal.explainUriResult(query, userId, uriId, libraryId, Some(lang), debug)).map(r => Html(r.body))
   }
 
   def explainLibraryResult(query: String, userId: Id[User], libraryId: Id[Library], acceptLangs: Seq[String], debug: Option[String], disablePrefixSearch: Boolean): Future[Html] = {

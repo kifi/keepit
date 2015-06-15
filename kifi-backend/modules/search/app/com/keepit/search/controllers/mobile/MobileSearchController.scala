@@ -18,7 +18,7 @@ import com.keepit.common.controller.{ SearchServiceController, UserActions, User
 import com.keepit.common.logging.Logging
 import com.keepit.model._
 import com.keepit.search.util.IdFilterCompressor
-import com.keepit.search.{ UserSearchCommander, LibraryContext, LibrarySearchCommander, UriSearchCommander }
+import com.keepit.search._
 import com.keepit.model.ExperimentType._
 import play.api.libs.json.JsArray
 import com.keepit.search.index.graph.library.{ LibraryIndexer }
@@ -138,6 +138,7 @@ class MobileSearchController @Inject() (
     maxUsers: Int,
     userContext: Option[String],
     disablePrefixSearch: Boolean,
+    orderBy: Option[String],
     idealImageSize: Option[ImageSize],
     debug: Option[String]) = UserAction.async { request =>
 
@@ -146,10 +147,14 @@ class MobileSearchController @Inject() (
     val debugOpt = if (debug.isDefined && experiments.contains(ADMIN)) debug else None // debug is only for admin
     val filterFuture = getUserFilterFuture(filter)
 
+    val parsedOrderBy = orderBy.flatMap(SearchRanking.parse) getOrElse {
+      if (query.contains("tag:")) SearchRanking.recency else SearchRanking.default
+    }
+
     // Uri Search
 
     val futureUriSearchResultJson = if (maxUris <= 0) Future.successful(JsNull) else {
-      uriSearchCommander.searchUris(userId, acceptLangs, experiments, query, filterFuture, Future.successful(LibraryContext.None), maxUris, lastUUIDStr, uriContext, None, debugOpt).flatMap { uriSearchResult =>
+      uriSearchCommander.searchUris(userId, acceptLangs, experiments, query, filterFuture, Future.successful(LibraryContext.None), parsedOrderBy, maxUris, lastUUIDStr, uriContext, None, debugOpt).flatMap { uriSearchResult =>
         getMobileUriSearchResults(userId, uriSearchResult, idealImageSize).imap {
           case (jsHits, users) =>
             Json.obj(

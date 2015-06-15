@@ -65,7 +65,9 @@ class SearchFactory @Inject() (
     lang2: Option[Lang],
     numHitsToReturn: Int,
     filter: SearchFilter,
-    config: SearchConfig): Seq[UriSearch] = {
+    orderBy: SearchRanking,
+    config: SearchConfig,
+    experiments: Set[ExperimentType]): Seq[UriSearch] = {
 
     val currentTime = System.currentTimeMillis()
 
@@ -82,6 +84,7 @@ class SearchFactory @Inject() (
       lang2.map(DefaultAnalyzer.getAnalyzer),
       lang2.map(DefaultAnalyzer.getAnalyzerWithStemmer),
       false,
+      experiments.contains(ExperimentType.SEARCH_LAB),
       config,
       phraseDetector,
       phraseDetectionReqConsolidator)
@@ -89,6 +92,10 @@ class SearchFactory @Inject() (
     parser.parse(queryString) match {
       case Some(engBuilder) =>
         val parseDoneAt = System.currentTimeMillis()
+
+        // set ranking method (default: relevancy)
+
+        engBuilder.setRanking(orderBy)
 
         // if this is a library restricted search, add a library filter query
         filter.libraryContext match {
@@ -196,6 +203,7 @@ class SearchFactory @Inject() (
     lang2: Option[Lang],
     numHitsToReturn: Int,
     filter: SearchFilter,
+    orderBy: SearchRanking,
     config: SearchConfig): Seq[UriSearchNonUserImpl] = {
 
     val currentTime = System.currentTimeMillis()
@@ -218,6 +226,7 @@ class SearchFactory @Inject() (
       lang2.map(DefaultAnalyzer.getAnalyzer),
       lang2.map(DefaultAnalyzer.getAnalyzerWithStemmer),
       false,
+      false,
       config,
       phraseDetector,
       phraseDetectionReqConsolidator)
@@ -227,6 +236,10 @@ class SearchFactory @Inject() (
         val parseDoneAt = System.currentTimeMillis()
 
         val librarySearcher = libraryIndexer.getSearcher
+
+        // set ranking method (default: relevancy)
+
+        engBuilder.setRanking(orderBy)
 
         // this is a non-user, library restricted search, add a library filter query
         addLibraryFilterToUriSearch(engBuilder, filter.libraryContext.get)
@@ -271,6 +284,7 @@ class SearchFactory @Inject() (
     disablePrefixSearch: Boolean,
     filter: SearchFilter,
     config: SearchConfig,
+    experiments: Set[ExperimentType],
     explain: Option[Id[Library]]): Seq[LibrarySearch] = {
 
     val currentTime = System.currentTimeMillis()
@@ -285,6 +299,7 @@ class SearchFactory @Inject() (
       lang2.map(DefaultAnalyzer.getAnalyzer),
       lang2.map(DefaultAnalyzer.getAnalyzerWithStemmer),
       disablePrefixSearch,
+      experiments.contains(ExperimentType.SEARCH_LAB),
       config,
       phraseDetector,
       phraseDetectionReqConsolidator
@@ -344,6 +359,7 @@ class SearchFactory @Inject() (
     disablePrefixSearch: Boolean,
     filter: SearchFilter,
     config: SearchConfig,
+    experiments: Set[ExperimentType],
     explain: Option[Id[User]]): Seq[UserSearch] = {
 
     val currentTime = System.currentTimeMillis()
@@ -358,6 +374,7 @@ class SearchFactory @Inject() (
       lang2.map(DefaultAnalyzer.getAnalyzer),
       lang2.map(DefaultAnalyzer.getAnalyzerWithStemmer),
       disablePrefixSearch,
+      experiments.contains(ExperimentType.SEARCH_LAB),
       config,
       phraseDetector,
       phraseDetectionReqConsolidator

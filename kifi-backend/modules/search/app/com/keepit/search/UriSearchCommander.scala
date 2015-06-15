@@ -57,6 +57,7 @@ trait UriSearchCommander {
     query: String,
     filterFuture: Future[Option[Either[Id[User], String]]],
     libraryContextFuture: Future[LibraryContext],
+    orderBy: SearchRanking,
     maxHits: Int,
     lastUUIDStr: Option[String],
     context: Option[String],
@@ -72,6 +73,7 @@ trait UriSearchCommander {
     query: String,
     filter: Option[Either[Id[User], String]],
     libraryContext: LibraryContext,
+    orderBy: SearchRanking,
     maxHits: Int,
     context: Option[String],
     predefinedConfig: Option[SearchConfig],
@@ -80,6 +82,7 @@ trait UriSearchCommander {
   def explain(
     userId: Id[User],
     uriId: Id[NormalizedURI],
+    libraryId: Option[Id[Library]],
     lang: Option[String],
     experiments: Set[ExperimentType],
     query: String,
@@ -232,6 +235,7 @@ class UriSearchCommanderImpl @Inject() (
       query,
       filter.map(Right(_)),
       LibraryContext.None,
+      SearchRanking.default,
       maxHits,
       context,
       predefinedConfig,
@@ -251,6 +255,7 @@ class UriSearchCommanderImpl @Inject() (
     query: String,
     filterFuture: Future[Option[Either[Id[User], String]]],
     libraryContextFuture: Future[LibraryContext],
+    orderBy: SearchRanking,
     maxHits: Int,
     lastUUID: Option[String],
     context: Option[String],
@@ -291,14 +296,14 @@ class UriSearchCommanderImpl @Inject() (
 
     if (dispatchPlan.nonEmpty) {
       // dispatch query
-      searchClient.distSearchUris(dispatchPlan, userId, firstLang, secondLang, query, filter, libraryContext, maxHits, context, debug).foreach { f =>
+      searchClient.distSearchUris(dispatchPlan, userId, firstLang, secondLang, query, filter, libraryContext, orderBy, maxHits, context, debug).foreach { f =>
         resultFutures += f.map(json => new UriShardResult(json))(immediate)
       }
     }
 
     // do the local part
     if (localShards.nonEmpty) {
-      resultFutures += distSearchUris(localShards, userId, firstLang, secondLang, experiments, query, filter, libraryContext, maxHits, context, predefinedConfig, debug)
+      resultFutures += distSearchUris(localShards, userId, firstLang, secondLang, experiments, query, filter, libraryContext, orderBy, maxHits, context, predefinedConfig, debug)
     }
     val searchFilter = SearchFilter(filter, libraryContext, context)
 
@@ -359,6 +364,7 @@ class UriSearchCommanderImpl @Inject() (
     query: String,
     filter: Option[Either[Id[User], String]],
     libraryContext: LibraryContext,
+    orderBy: SearchRanking,
     maxHits: Int,
     context: Option[String],
     predefinedConfig: Option[SearchConfig] = None,
@@ -376,7 +382,7 @@ class UriSearchCommanderImpl @Inject() (
 
     val searches = if (userId.id < 0 || (debugOption.debugFlags & DebugOption.AsNonUser.flag) != 0) {
       try {
-        searchFactory.getNonUserUriSearches(localShards, query, firstLang, secondLang, maxHits, searchFilter, config)
+        searchFactory.getNonUserUriSearches(localShards, query, firstLang, secondLang, maxHits, searchFilter, orderBy, config)
       } catch {
         case e: Exception =>
           log.error("unable to create KifiNonUserSearch", e)
@@ -384,7 +390,7 @@ class UriSearchCommanderImpl @Inject() (
       }
     } else {
       // logged in user
-      searchFactory.getUriSearches(localShards, userId, query, firstLang, secondLang, maxHits, searchFilter, config)
+      searchFactory.getUriSearches(localShards, userId, query, firstLang, secondLang, maxHits, searchFilter, orderBy, config, experiments)
     }
 
     Future.traverse(searches) { search =>
@@ -401,7 +407,7 @@ class UriSearchCommanderImpl @Inject() (
 
   def findShard(uriId: Id[NormalizedURI]): Option[Shard[NormalizedURI]] = shards.find(uriId)
 
-  def explain(userId: Id[User], uriId: Id[NormalizedURI], lang: Option[String], experiments: Set[ExperimentType], query: String, debug: Option[String]): Future[Option[UriSearchExplanation]] = {
+  def explain(userId: Id[User], uriId: Id[NormalizedURI], libraryId: Option[Id[Library]], lang: Option[String], experiments: Set[ExperimentType], query: String, debug: Option[String]): Future[Option[UriSearchExplanation]] = {
     val langs = lang match {
       case Some(str) => str.split(",").toSeq.map(Lang(_))
       case None => Seq(DefaultAnalyzer.defaultLang)
@@ -409,19 +415,21 @@ class UriSearchCommanderImpl @Inject() (
     val firstLang = langs(0)
     val secondLang = langs.lift(1)
 
+    val searchFilter = SearchFilter.default(library = libraryId.map(libId => LibraryContext.Authorized(libId.id)) getOrElse LibraryContext.None)
+
     searchFactory.getConfigFuture(userId, experiments).map {
       case (config, _) =>
         findShard(uriId).flatMap { shard =>
           val searchOpt = if (userId.id < 0) {
             try {
-              searchFactory.getNonUserUriSearches(Set(shard), query, firstLang, secondLang, 0, SearchFilter.default(), config).headOption
+              searchFactory.getNonUserUriSearches(Set(shard), query, firstLang, secondLang, 0, searchFilter, SearchRanking.default, config).headOption
             } catch {
               case e: Exception =>
                 log.error("unable to create KifiNonUserSearch", e)
                 None
             }
           } else {
-            searchFactory.getUriSearches(Set(shard), userId, query, firstLang, secondLang, 0, SearchFilter.default(), config).headOption
+            searchFactory.getUriSearches(Set(shard), userId, query, firstLang, secondLang, 0, searchFilter, SearchRanking.default, config, experiments).headOption
           }
           searchOpt.map { search =>
             debug.map(search.debug(_))

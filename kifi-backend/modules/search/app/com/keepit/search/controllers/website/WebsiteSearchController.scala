@@ -71,9 +71,11 @@ class WebsiteSearchController @Inject() (
     val (userId, experiments) = getUserAndExperiments(request)
     val filterFuture = getUserFilterFuture(userFilter)
 
+    val orderBy = SearchRanking.default
+
     val debugOpt = if (debug.isDefined && experiments.contains(ADMIN)) debug else None // debug is only for admin
 
-    uriSearchCommander.searchUris(userId, acceptLangs, experiments, query, filterFuture, libraryContextFuture, maxHits, lastUUIDStr, context, None, debugOpt).flatMap { uriSearchResult =>
+    uriSearchCommander.searchUris(userId, acceptLangs, experiments, query, filterFuture, libraryContextFuture, orderBy, maxHits, lastUUIDStr, context, None, debugOpt).flatMap { uriSearchResult =>
 
       getWebsiteUriSearchResults(userId, uriSearchResult, None).imap {
         case (hits, users, libraries) =>
@@ -276,6 +278,7 @@ class WebsiteSearchController @Inject() (
     maxUsers: Int,
     userContext: Option[String],
     disablePrefixSearch: Boolean,
+    orderBy: Option[String],
     libraryAuth: Option[String],
     idealImageSize: Option[ImageSize],
     debug: Option[String]) = MaybeUserAction.async { request =>
@@ -286,10 +289,14 @@ class WebsiteSearchController @Inject() (
     val userFilterFuture = getUserFilterFuture(userFilter)
     val libraryFilterFuture = getLibraryFilterFuture(libraryFilter.map(PublicId[Library](_)), libraryAuth, request)
 
+    val parsedOrderBy = orderBy.flatMap(SearchRanking.parse) getOrElse {
+      if (query.contains("tag:")) SearchRanking.recency else SearchRanking.default
+    }
+
     // Uri Search
 
     val futureUriSearchResultJson = if (maxUris <= 0) Future.successful(JsNull) else {
-      uriSearchCommander.searchUris(userId, acceptLangs, experiments, query, userFilterFuture, libraryFilterFuture, maxUris, lastUUIDStr, uriContext, None, debugOpt).flatMap { uriSearchResult =>
+      uriSearchCommander.searchUris(userId, acceptLangs, experiments, query, userFilterFuture, libraryFilterFuture, parsedOrderBy, maxUris, lastUUIDStr, uriContext, None, debugOpt).flatMap { uriSearchResult =>
         getWebsiteUriSearchResults(userId, uriSearchResult, idealImageSize).imap {
           case (hits, users, libraries) =>
             val librariesJson = libraries.map { library =>

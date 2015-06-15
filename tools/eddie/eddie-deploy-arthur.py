@@ -162,10 +162,10 @@ if __name__=="__main__":
       userName = args.iam
     else:
       userName = getpass.getuser()
-      if userName=="fortytwo":
+      if userName=="eng":
         print "Yo, dude, set your name! ('--iam' option)"
 
-    lock = FileLock("/home/fortytwo/" + args.serviceType + ".lock")
+    lock = FileLock("/home/eng/" + args.serviceType + ".lock")
 
     instances = getAllInstances()
 
@@ -209,7 +209,7 @@ if __name__=="__main__":
         if inpt=="Y":
           remoteProcs = []
           for instance in instances:
-            shell = spur.SshShell(hostname=instance.ip,username="fortytwo", missing_host_key=spur.ssh.MissingHostKey.warn, private_key_file="/home/fortytwo/.ssh/id_rsa")
+            shell = spur.SshShell(hostname=instance.ip,username="fortytwo", missing_host_key=spur.ssh.MissingHostKey.warn, private_key_file="/home/eng/.ssh/id_rsa")
             remoteProcs.append(shell.spawn(command, store_pid=True, stdout=sys.stdout))
           log("Deploy Triggered on all instances. Waiting for them to finish.")
           try:
@@ -231,7 +231,7 @@ if __name__=="__main__":
         log("Manual Abort.")
     else:
       for instance in instances:
-        shell = spur.SshShell(hostname=instance.ip, username="fortytwo", missing_host_key=spur.ssh.MissingHostKey.warn, private_key_file="/home/fortytwo/.ssh/id_rsa")
+        shell = spur.SshShell(hostname=instance.ip, username="fortytwo", missing_host_key=spur.ssh.MissingHostKey.warn, private_key_file="/home/eng/.ssh/id_rsa")
         remoteProc = shell.spawn(command, store_pid=True, stdout=sys.stdout)
         log("Deploy triggered on " + instance.name + ". Waiting for the machine to finish.")
         try:

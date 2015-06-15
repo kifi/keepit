@@ -539,8 +539,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                   |"lastKept":${Json.toJson(lib1.createdAt)(internalTime.DateTimeJsonLongFormat)},
                   |"modifiedAt":${Json.toJson(lib1.updatedAt)(internalTime.DateTimeJsonLongFormat)},
                   |"kind":"user_created",
-                  |"lastViewed":${Json.toJson(t2)(internalTime.DateTimeJsonLongFormat)},
-                  |"subscriptions": []
+                  |"lastViewed":${Json.toJson(t2)(internalTime.DateTimeJsonLongFormat)}
                 |}
               |]
             |}
@@ -779,7 +778,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         inject[FakeUserActionsHelper].setUser(user1)
 
         val request1 = FakeRequest("POST", testPathJoin)
-        val result1 = libraryController.joinLibrary(pubLibId1)(request1)
+        val result1 = libraryController.joinLibrary(pubLibId1, None, None)(request1)
         status(result1) must equalTo(OK)
         contentType(result1) must beSome("application/json")
 
@@ -788,7 +787,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         val expected1 = Json.parse("""{"membership": {"access": "read_insert", "listed": true, "subscribed": false}}""")
         Json.parse(contentAsString(result1)) must equalTo(expected1)
 
-        val result11 = libraryController.joinLibrary(pubLibId1, None, true)(request1)
+        val result11 = libraryController.joinLibrary(pubLibId1, None, Some(true))(request1)
         status(result11) must equalTo(OK)
         contentType(result11) must beSome("application/json")
 
