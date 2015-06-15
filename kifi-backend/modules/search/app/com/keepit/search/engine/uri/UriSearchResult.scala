@@ -9,7 +9,7 @@ object UriSearchResult {
   }
 }
 
-class UriSearchResult(val uuid: ExternalId[ArticleSearchResult], val query: String, searchFilter: SearchFilter, val firstLang: Lang, val result: UriShardResult, val idFilter: Set[Long], val searchExperimentId: Option[Id[SearchConfigExperiment]]) {
+class UriSearchResult(val uuid: ExternalId[ArticleSearchResult], val query: String, val searchFilter: SearchFilter, val firstLang: Lang, val result: UriShardResult, val idFilter: Set[Long], val searchExperimentId: Option[Id[SearchConfigExperiment]]) {
   def hits: Seq[UriShardHit] = result.hits
   def myTotal: Int = result.myTotal
   def friendsTotal: Int = result.friendsTotal
