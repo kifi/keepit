@@ -85,7 +85,7 @@ trait LibraryAccessActions {
 
     val libIdOpt = Library.decodePublicId(libraryPubId).toOption
     libIdOpt.map { libId =>
-      (libId, userIdOpt, input.getQueryString("authToken").orElse(input.getQueryString("ac")))
+      (libId, userIdOpt, input.getQueryString("authToken"))
     }
   }
 }
