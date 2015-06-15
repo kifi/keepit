@@ -94,7 +94,7 @@ class FixedResultUriSearchCommander extends UriSearchCommander {
     predefinedConfig: Option[SearchConfig],
     debug: Option[String]): Future[UriShardResult] = ???
 
-  def explain(userId: Id[User], uriId: Id[NormalizedURI], lang: Option[String], experiments: Set[ExperimentType], query: String, debug: Option[String]): Future[Option[UriSearchExplanation]] = ???
+  def explain(userId: Id[User], uriId: Id[NormalizedURI], libraryId: Option[Id[Library]], lang: Option[String], experiments: Set[ExperimentType], query: String, debug: Option[String]): Future[Option[UriSearchExplanation]] = ???
   def warmUp(userId: Id[User]): Unit = {}
   def findShard(uriId: Id[NormalizedURI]): Option[Shard[NormalizedURI]] = ???
 }

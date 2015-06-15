@@ -82,6 +82,7 @@ trait UriSearchCommander {
   def explain(
     userId: Id[User],
     uriId: Id[NormalizedURI],
+    libraryId: Option[Id[Library]],
     lang: Option[String],
     experiments: Set[ExperimentType],
     query: String,
@@ -406,7 +407,7 @@ class UriSearchCommanderImpl @Inject() (
 
   def findShard(uriId: Id[NormalizedURI]): Option[Shard[NormalizedURI]] = shards.find(uriId)
 
-  def explain(userId: Id[User], uriId: Id[NormalizedURI], lang: Option[String], experiments: Set[ExperimentType], query: String, debug: Option[String]): Future[Option[UriSearchExplanation]] = {
+  def explain(userId: Id[User], uriId: Id[NormalizedURI], libraryId: Option[Id[Library]], lang: Option[String], experiments: Set[ExperimentType], query: String, debug: Option[String]): Future[Option[UriSearchExplanation]] = {
     val langs = lang match {
       case Some(str) => str.split(",").toSeq.map(Lang(_))
       case None => Seq(DefaultAnalyzer.defaultLang)
@@ -414,19 +415,21 @@ class UriSearchCommanderImpl @Inject() (
     val firstLang = langs(0)
     val secondLang = langs.lift(1)
 
+    val searchFilter = SearchFilter.default(library = libraryId.map(libId => LibraryContext.Authorized(libId.id)) getOrElse LibraryContext.None)
+
     searchFactory.getConfigFuture(userId, experiments).map {
       case (config, _) =>
         findShard(uriId).flatMap { shard =>
           val searchOpt = if (userId.id < 0) {
             try {
-              searchFactory.getNonUserUriSearches(Set(shard), query, firstLang, secondLang, 0, SearchFilter.default(), SearchRanking.default, config).headOption
+              searchFactory.getNonUserUriSearches(Set(shard), query, firstLang, secondLang, 0, searchFilter, SearchRanking.default, config).headOption
             } catch {
               case e: Exception =>
                 log.error("unable to create KifiNonUserSearch", e)
                 None
             }
           } else {
-            searchFactory.getUriSearches(Set(shard), userId, query, firstLang, secondLang, 0, SearchFilter.default(), SearchRanking.default, config, experiments).headOption
+            searchFactory.getUriSearches(Set(shard), userId, query, firstLang, secondLang, 0, searchFilter, SearchRanking.default, config, experiments).headOption
           }
           searchOpt.map { search =>
             debug.map(search.debug(_))

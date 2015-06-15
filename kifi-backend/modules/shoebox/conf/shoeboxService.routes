@@ -692,7 +692,7 @@ POST    /admin/searchExperiments    @com.keepit.controllers.admin.AdminSearchCon
 POST    /admin/searchExperiments/delete    @com.keepit.controllers.admin.AdminSearchConfigController.deleteExperiment
 POST    /admin/searchExperiments/update    @com.keepit.controllers.admin.AdminSearchConfigController.updateExperiment
 
-GET     /admin/explainUriResult        @com.keepit.controllers.admin.AdminSearchController.explainUriResult(query: String, uriId: Id[NormalizedURI], lang: String, debug: Option[String])
+GET     /admin/explainUriResult        @com.keepit.controllers.admin.AdminSearchController.explainUriResult(query: String, uriId: Id[NormalizedURI], libraryId: Option[Long], lang: String, debug: Option[String])
 GET     /admin/explainLibraryResult        @com.keepit.controllers.admin.AdminSearchController.explainLibraryResult(query: String, libraryId: PublicId[Library], debug: Option[String], disablePrefixSearch: Boolean ?= false)
 GET     /admin/explainUserResult        @com.keepit.controllers.admin.AdminSearchController.explainUserResult(query: String, userId: Id[User], debug: Option[String], disablePrefixSearch: Boolean ?= false)
 
