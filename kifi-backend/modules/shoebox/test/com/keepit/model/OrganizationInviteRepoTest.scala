@@ -28,7 +28,7 @@ class OrganizationInviteRepoTest extends Specification with ShoeboxTestInjector 
         val inviterId = Id[User](1)
         val userIds: IndexedSeq[Some[Id[User]]] = 10 to 20 map (i => Some(Id[User](i)))
         db.readWrite { implicit s =>
-          for { inviteeId <- userIds } yield {
+          for (inviteeId <- userIds) {
             orgInviteRepo.save(OrganizationInvite(organizationId = Id[Organization](1), inviterId = inviterId,
               userId = inviteeId, access = OrganizationAccess.READ_WRITE))
           }
