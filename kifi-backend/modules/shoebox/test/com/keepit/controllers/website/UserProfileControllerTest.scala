@@ -385,8 +385,7 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
                 "listed": true,
                 "following":true,
                 "membership":{"access":"owner","listed":true,"subscribed":false},
-                "modifiedAt":${lib1Updated.updatedAt.getMillis},
-                "subscriptions": []
+                "modifiedAt":${lib1Updated.updatedAt.getMillis}
               }
              ]
           }
