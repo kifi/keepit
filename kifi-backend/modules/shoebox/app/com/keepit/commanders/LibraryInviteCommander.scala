@@ -383,7 +383,7 @@ class LibraryInviteCommanderImpl @Inject() (
         linkUrl = s"https://www.kifi.com/${inviter.username.value}",
         imageUrl = userImage,
         sticky = false,
-        category = NotificationCategory.User.LIBRARY_FOLLOWED,
+        category = NotificationCategory.User.LIBRARY_COLLABORATED,
         extra = Some(Json.obj(
           "inviter" -> inviter,
           "library" -> Json.toJson(LibraryNotificationInfo.fromLibraryAndOwner(lib, libImageOpt, libOwner))
