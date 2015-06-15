@@ -189,9 +189,9 @@ class LibraryController @Inject() (
       val libs = libraryRepo.getOwnerLibrariesForSelf(request.userId, Paginator.fromStart(200)) // might want to paginate and/or stop preloading all of these
       libraryCommander.createLiteLibraryCardInfos(libs, request.userId)
     } map {
-      case (info: LibraryCardInfo, mem: MiniLibraryMembership, subs: Seq[LibrarySubscriptionKey]) =>
+      case (info: LibraryCardInfo, mem: MiniLibraryMembership) =>
         val path = Library.formatLibraryPathUrlEncoded(info.owner.username, info.slug)
-        val obj = Json.toJson(info).as[JsObject] + ("url" -> JsString(path)) + ("subscriptions" -> Json.toJson(subs)) // TODO: stop adding "url" when web app uses "slug" instead
+        val obj = Json.toJson(info).as[JsObject] + ("url" -> JsString(path)) // TODO: stop adding "url" when web app uses "slug" instead
         if (mem.lastViewed.nonEmpty) {
           obj ++ Json.obj("lastViewed" -> mem.lastViewed)
         } else {

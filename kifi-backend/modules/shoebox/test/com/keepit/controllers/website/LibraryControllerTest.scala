@@ -539,8 +539,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                   |"lastKept":${Json.toJson(lib1.createdAt)(internalTime.DateTimeJsonLongFormat)},
                   |"modifiedAt":${Json.toJson(lib1.updatedAt)(internalTime.DateTimeJsonLongFormat)},
                   |"kind":"user_created",
-                  |"lastViewed":${Json.toJson(t2)(internalTime.DateTimeJsonLongFormat)},
-                  |"subscriptions": []
+                  |"lastViewed":${Json.toJson(t2)(internalTime.DateTimeJsonLongFormat)}
                 |}
               |]
             |}
