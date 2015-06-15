@@ -16,6 +16,7 @@ import com.keepit.social.BasicUser
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 
+import scala.collection.parallel.ParSeq
 import scala.concurrent.Future
 import scala.util.{ Failure, Success, Try }
 
@@ -30,6 +31,7 @@ class UserProfileController @Inject() (
     userCommander: UserCommander,
     friendRequestRepo: FriendRequestRepo,
     userConnectionRepo: UserConnectionRepo,
+    librarySubscriptionRepo: LibrarySubscriptionRepo,
     abookServiceClient: ABookServiceClient,
     userConnectionsCommander: UserConnectionsCommander,
     userProfileCommander: UserProfileCommander,
@@ -69,6 +71,14 @@ class UserProfileController @Inject() (
     }
   }
 
+  def zipSubscriptionsInfoLibInfos(libCardInfos: ParSeq[LibraryCardInfo]): Seq[JsObject] = {
+    libCardInfos.map { lib =>
+      val libId = Library.decodePublicId(lib.id)
+      val subscriptions = db.readOnlyReplica { implicit s => librarySubscriptionRepo.getByLibraryId(libId.get).map { LibrarySubscription.toSubKey } }
+      Json.toJson(lib).as[JsObject] + ("subscriptions" -> Json.toJson(subscriptions))
+    }.seq
+  }
+
   def getProfileLibraries(username: Username, page: Int, pageSize: Int, filter: String) = MaybeUserAction.async { request =>
     userCommander.userFromUsername(username) match {
       case None =>
@@ -80,12 +90,13 @@ class UserProfileController @Inject() (
         val imageSize = ProcessedImageSize.Medium.idealSize
         filter match {
           case "own" =>
-            val libs = if (viewer.exists(_.id == user.id)) {
-              Json.toJson(userProfileCommander.getOwnLibrariesForSelf(user, paginator, imageSize).seq)
+            val libCardInfos = if (viewer.exists(_.id == user.id)) {
+              userProfileCommander.getOwnLibrariesForSelf(user, paginator, imageSize)
             } else {
-              Json.toJson(userProfileCommander.getOwnLibraries(user, viewer, paginator, imageSize).seq)
+              userProfileCommander.getOwnLibraries(user, viewer, paginator, imageSize)
             }
-            Future.successful(Ok(Json.obj("own" -> libs)))
+            val libInfosAndSubscriptions: Seq[JsObject] = zipSubscriptionsInfoLibInfos(libCardInfos)
+            Future.successful(Ok(Json.obj("own" -> libInfosAndSubscriptions)))
           case "following" =>
             val libs = userProfileCommander.getFollowingLibraries(user, viewer, paginator, imageSize).seq
             Future.successful(Ok(Json.obj("following" -> libs)))
@@ -93,11 +104,13 @@ class UserProfileController @Inject() (
             val libs = userProfileCommander.getInvitedLibraries(user, viewer, paginator, imageSize).seq
             Future.successful(Ok(Json.obj("invited" -> libs)))
           case "all" if page == 0 =>
-            val ownLibsF = if (viewer.exists(_.id == user.id)) {
-              SafeFuture(Json.toJson(userProfileCommander.getOwnLibrariesForSelf(user, paginator, imageSize).seq))
+            val libCardInfos = if (viewer.exists(_.id == user.id)) {
+              userProfileCommander.getOwnLibrariesForSelf(user, paginator, imageSize)
             } else {
-              SafeFuture(Json.toJson(userProfileCommander.getOwnLibraries(user, viewer, paginator, imageSize).seq))
+              userProfileCommander.getOwnLibraries(user, viewer, paginator, imageSize)
             }
+            val libInfosAndSubscriptions: Seq[JsObject] = zipSubscriptionsInfoLibInfos(libCardInfos)
+            val ownLibsF = SafeFuture(libInfosAndSubscriptions)
             val followLibsF = SafeFuture(userProfileCommander.getFollowingLibraries(user, viewer, paginator, imageSize).seq)
             val invitedLibsF = SafeFuture(userProfileCommander.getInvitedLibraries(user, viewer, paginator, imageSize).seq)
             for {
