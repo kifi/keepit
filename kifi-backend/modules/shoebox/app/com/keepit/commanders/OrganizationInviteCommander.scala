@@ -40,10 +40,6 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     membership.hasPermission(OrganizationPermission.INVITE_MEMBERS)
   }
 
-  private def canInviteByRole(inviterMembershipOpt: Option[OrganizationMembership], role: OrganizationRole): Boolean = {
-    inviterMembershipOpt.map(membership => membership.role >= role).getOrElse(false)
-  }
-
   def inviteUsersToOrganization(orgId: Id[Organization], inviterId: Id[User], invitees: Seq[(Either[Id[User], EmailAddress], OrganizationRole, Option[String])]): Future[Either[OrganizationFail, Seq[(Either[BasicUser, RichContact], OrganizationRole)]]] = {
     val (org, inviterMembershipOpt) = db.readOnlyMaster { implicit session =>
       val org = organizationRepo.get(orgId)
@@ -74,9 +70,9 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
               }.toMap
             }
             val invitesForInvitees = for ((recipient, inviteRole, msgOpt) <- invitees) yield {
-              recipient match {
-                case Left(inviteeId) => {
-                  if (inviterMembership.role >= inviteRole) {
+              if (inviterMembership.role >= inviteRole) {
+                recipient match {
+                  case Left(inviteeId) => {
                     organizationMembersMap.get(inviteeId) match {
                       case Some(inviteeMember) if (inviteeMember.role < inviteRole && inviteRole != OrganizationRole.OWNER) => // member needs upgrade
                         db.readWrite { implicit session =>
@@ -92,16 +88,16 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
                         val inviteeInfo = (Left(contactsByUserId(inviteeId)), inviteRole)
                         Some((orgInvite, inviteeInfo))
                     }
-                  } else {
-                    log.warn(s"not persisting user $inviteeId, inviter attempting to grant role inviter does not have.")
-                    None
+                  }
+                  case Right(email) => {
+                    val orgInvite = OrganizationInvite(organizationId = orgId, inviterId = inviterId, emailAddress = Some(email), role = inviteRole, message = msgOpt)
+                    val inviteeInfo = (Right(contactsByEmail(email)), inviteRole)
+                    Some((orgInvite, inviteeInfo))
                   }
                 }
-                case Right(email) => {
-                  val orgInvite = OrganizationInvite(organizationId = orgId, inviterId = inviterId, emailAddress = Some(email), role = inviteRole, message = msgOpt)
-                  val inviteeInfo = (Right(contactsByEmail(email)), inviteRole)
-                  Some((orgInvite, inviteeInfo))
-                }
+              } else {
+                log.warn(s"not performing invite, inviter attempting to grant role inviter does not have.")
+                None
               }
             }
 
