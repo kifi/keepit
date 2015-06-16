@@ -60,7 +60,8 @@
           </div>
 
           <div class="manage-lib-input-wrapper-subs" ng-if="onSubscriptionExperiment">
-            <div class="manage-lib-heading">Subscriptions</div><button ng-click="toggleInstructions()">how does this work?</button>
+            <div class="manage-lib-heading">Subscriptions</div>
+            <button class="manage-lib-subs-instruct-button" ng-click="toggleInstructions()">?</button>
             <div class="manage-lib-subs-instruct" ng-if="showSubInstructions">
               To subscribe a Slack channel to this library:
                 <li>Log into Slack, then <a href="https://slack.com/services/new/incoming-webhook">go to this page</a>.</li>
