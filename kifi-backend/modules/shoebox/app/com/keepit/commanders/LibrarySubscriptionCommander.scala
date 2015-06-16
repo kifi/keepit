@@ -14,11 +14,12 @@ import play.api.libs.json._
 import scala.concurrent.{ Future, ExecutionContext }
 import scala.util.{ Failure, Success }
 
-case class BasicSlackMessage(
+case class BasicSlackMessage( // https://api.slack.com/incoming-webhooks
   text: String,
   channel: Option[String] = None,
   username: String = "kifi-bot",
-  iconUrl: String = "https://djty7jcqog9qu.cloudfront.net/assets/black/logo.png")
+  iconUrl: String = "https://djty7jcqog9qu.cloudfront.net/assets/black/logo.png",
+  attachments: Option[JsArray] = None)
 
 object BasicSlackMessage {
   implicit val writes = new Writes[BasicSlackMessage] {
@@ -51,8 +52,9 @@ class LibrarySubscriptionCommander @Inject() (
     subscriptions.map { subscription =>
       subscription.info match {
         case info: SlackInfo =>
-          val text = s"<http://www.kifi.com/${keeper.username.value}|${keeper.fullName}> just added <${keep.url}|${keep.title.getOrElse("a keep")}> to the <http://www.kifi.com/${owner.username.value}/${library.slug.value}|${library.name}> library." // slack hypertext uses the < url | text > format
-          val body = BasicSlackMessage(text)
+          val text = s"<http://www.kifi.com/${keeper.username.value}|${keeper.fullName}> just added <${keep.url}|${keep.title.getOrElse("a keep")}> to the <http://www.kifi.com/${owner.username.value}/${library.slug.value}|${library.name}> library."
+          val attachments = keep.note.map { note => Json.arr(Json.obj("text" -> JsString(s"$note -${keeper.firstName}"))) }
+          val body = BasicSlackMessage(text = text, attachments = attachments)
           val response = httpLock.withLockFuture(client.postFuture(DirectUrl(info.url), Json.toJson(body)))
           log.info(s"sendNewKeepMessage: Slack message request sent to subscription.id=${subscription.id}")
           response.onComplete {
