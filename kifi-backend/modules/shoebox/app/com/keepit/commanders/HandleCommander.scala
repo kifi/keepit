@@ -1,6 +1,6 @@
 package com.keepit.commanders
 
-import com.google.inject.{ Inject, Singleton }
+import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick.Database
@@ -29,6 +29,7 @@ object HandleCommander {
 
 }
 
+@ImplementedBy(classOf[HandleCommanderImpl])
 trait HandleCommander {
   def getByHandle(handle: Handle)(implicit session: RSession): Option[(Either[Organization, User], Boolean)]
   def canBeClaimed(handle: Handle, ownerId: Option[HandleOwner], overrideProtection: Boolean = false, overrideValidityCheck: Boolean = false)(implicit session: RSession): Boolean
