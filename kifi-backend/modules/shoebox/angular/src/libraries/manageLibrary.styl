@@ -61,7 +61,7 @@
 
   .dialog-body
     padding: 0
-    overflow: auto
+    overflow: hidden
 
   .dialog-text
     padding: 0 35px
@@ -374,9 +374,7 @@ button.manage-lib-delete-button
 
 .manage-lib-content-subs
   position: relative
-  min-height: 520px
   padding-bottom: 20px
-  overflow-y: scroll
 
 .manage-lib-default-content
   position: relative
@@ -398,19 +396,22 @@ button.manage-lib-delete-button
 
 
 .manage-lib-sub-url
+  padding-left: 5px
   width: 48%
-  overflow-x: hidden
-  overflow-y: hidden
+  overflow: hidden
 
 .manage-lib-sub-name
+  padding-left: 5px
   width: 20%
-  overflow-x: hidden
+  overflow: hidden
 
 .manage-lib-sub-name-input
   width: 20%
+  overflow: hidden
 
 .manage-lib-sub-url-input
   width: 48%
+  overflow: hidden
 
 .manage-lib-subs-error
   color: red
@@ -420,6 +421,14 @@ button.manage-lib-delete-button
 .manage-lib-subs-instruct
   margin-left: 35px
   color: gray
+
+.manage-lib-subs-instruct-button
+  border-radius: 20px
+  border-color: gray
+  color: gray
+  background-color: white
+  border-width: 1px
+
 
 input.manage-lib-sub-input
 textarea.manage-lib-sub-input
