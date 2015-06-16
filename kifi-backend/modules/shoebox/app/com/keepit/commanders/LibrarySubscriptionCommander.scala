@@ -9,20 +9,25 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.net.{ ClientResponse, DirectUrl, CallTimeouts, HttpClient }
 import com.keepit.common.concurrent.ReactiveLock
 import com.keepit.model._
+import com.kifi.macros.json
 import play.api.libs.json._
 
 import scala.concurrent.{ Future, ExecutionContext }
 import scala.util.{ Failure, Success }
 
-case class BasicSlackMessage(
+@json
+case class SlackAttachment(fallback: String, text: String)
+
+case class BasicSlackMessage( // https://api.slack.com/incoming-webhooks
   text: String,
   channel: Option[String] = None,
-  username: String = "kifi-bot",
-  iconUrl: String = "https://djty7jcqog9qu.cloudfront.net/assets/black/logo.png")
+  username: String = "Kifi",
+  iconUrl: String = "https://djty7jcqog9qu.cloudfront.net/assets/black/logo.png",
+  attachments: Seq[SlackAttachment] = Seq.empty)
 
 object BasicSlackMessage {
   implicit val writes = new Writes[BasicSlackMessage] {
-    def writes(o: BasicSlackMessage): JsValue = Json.obj("text" -> o.text, "channel" -> o.channel, "username" -> o.username, "icon_url" -> o.iconUrl)
+    def writes(o: BasicSlackMessage): JsValue = Json.obj("text" -> o.text, "channel" -> o.channel, "username" -> o.username, "icon_url" -> o.iconUrl, "attachments" -> o.attachments)
   }
 }
 
@@ -51,8 +56,9 @@ class LibrarySubscriptionCommander @Inject() (
     subscriptions.map { subscription =>
       subscription.info match {
         case info: SlackInfo =>
-          val text = s"<http://www.kifi.com/${keeper.username.value}|${keeper.fullName}> just added <${keep.url}|${keep.title.getOrElse("a keep")}> to the <http://www.kifi.com/${owner.username.value}/${library.slug.value}|${library.name}> library." // slack hypertext uses the < url | text > format
-          val body = BasicSlackMessage(text)
+          val text = s"<http://www.kifi.com/${keeper.username.value}|${keeper.fullName}> just added <${keep.url}|${keep.title.getOrElse("a keep")}> to the <http://www.kifi.com/${owner.username.value}/${library.slug.value}|${library.name}> library."
+          val attachments: Seq[SlackAttachment] = keep.note.map { note => Seq(SlackAttachment(fallback = "", text = "\"" + note + "\" - " + keeper.firstName)) }.getOrElse(Seq.empty)
+          val body = BasicSlackMessage(text = text, attachments = attachments)
           val response = httpLock.withLockFuture(client.postFuture(DirectUrl(info.url), Json.toJson(body)))
           log.info(s"sendNewKeepMessage: Slack message request sent to subscription.id=${subscription.id}")
           response.onComplete {

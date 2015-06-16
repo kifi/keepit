@@ -28,7 +28,7 @@ trait OrganizationInviteCommander {
   def acceptInvitation(orgId: Id[Organization], userId: Id[User], authToken: Option[String] = None): Either[OrganizationFail, (Organization, OrganizationMembership)]
   def declineInvitation(orgId: Id[Organization], userId: Id[User])
   // Creates a Universal Invite Link for an organization and inviter. Anyone with the link can join the Organization
-  def universalInviteLink(orgId: Id[Organization], inviterId: Id[User], access: OrganizationRole = OrganizationRole.MEMBER, authToken: Option[String] = None)
+  def universalInviteLink(orgId: Id[Organization], inviterId: Id[User], role: OrganizationRole = OrganizationRole.MEMBER, authToken: Option[String] = None): Either[OrganizationFail, (OrganizationInvite, Organization)]
 }
 
 @Singleton
@@ -234,7 +234,7 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     ???
   }
 
-  def universalInviteLink(orgId: Id[Organization], inviterId: Id[User], access: OrganizationRole = OrganizationRole.MEMBER, authToken: Option[String] = None) = {
+  def universalInviteLink(orgId: Id[Organization], inviterId: Id[User], role: OrganizationRole = OrganizationRole.MEMBER, authToken: Option[String] = None): Either[OrganizationFail, (OrganizationInvite, Organization)] = {
     ???
   }
 }

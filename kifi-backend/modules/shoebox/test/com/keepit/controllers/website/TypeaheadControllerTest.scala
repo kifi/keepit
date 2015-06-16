@@ -286,6 +286,7 @@ class TypeaheadControllerTest extends Specification with ShoeboxTestInjector {
 
         val interactions = Seq(
           (UserRecipient(u2.id.get), UserInteraction.INVITE_LIBRARY),
+          (UserRecipient(u2.id.get), UserInteraction.MESSAGE_USER),
           (UserRecipient(u3.id.get), UserInteraction.INVITE_LIBRARY),
           (EmailRecipient(u4), UserInteraction.INVITE_LIBRARY),
           (EmailRecipient(u5), UserInteraction.INVITE_LIBRARY))
@@ -301,10 +302,9 @@ class TypeaheadControllerTest extends Specification with ShoeboxTestInjector {
           val path = com.keepit.controllers.website.routes.TypeaheadController.searchForContacts(Some(query), Some(limit)).url
           val res = inject[TypeaheadController].searchForContacts(Some(query), Some(limit))(FakeRequest("GET", path))
           val js = Json.parse(contentAsString(res)).as[Seq[JsValue]].map { j =>
-            (j \ "id").asOpt[ExternalId[User]] match {
-              case Some(id) => j.as[UserContactResult]
-              case None => j.as[EmailContactResult]
-            }
+            // Order matters here, since AliasContactResult is a superset of UserContactResult for backwards compatibility reasons
+            val parsed: ContactSearchResult = j.asOpt[AliasContactResult] orElse j.asOpt[UserContactResult] getOrElse j.as[EmailContactResult]
+            parsed
           }
           js
         }
@@ -313,6 +313,7 @@ class TypeaheadControllerTest extends Specification with ShoeboxTestInjector {
           contacts.collect {
             case u: UserContactResult => u.name
             case e: EmailContactResult => e.name.get
+            case a: AliasContactResult => a.name
           }
         }
 
@@ -320,11 +321,19 @@ class TypeaheadControllerTest extends Specification with ShoeboxTestInjector {
         res0.length === 4
 
         val res1 = search("s") // "one letter" -- abook skipped
-        res1.length === 2
-        parseRes(res1) === Seq("Squidward Tentacles", "Patrick Star")
+        parseRes(res1) === Seq("Patrick Star", "Squidward Tentacles")
+
+        // Make Squidward be suggested first, because of recent interactions
+        val interactions2 = Seq(
+          (UserRecipient(u3.id.get), UserInteraction.INVITE_LIBRARY),
+          (UserRecipient(u3.id.get), UserInteraction.MESSAGE_USER),
+          (UserRecipient(u3.id.get), UserInteraction.INVITE_LIBRARY))
+        userInteractionCommander.addInteractions(u1.id.get, interactions2)
+
+        val res1redux = search("s") // "one letter" -- abook skipped
+        parseRes(res1redux) === Seq("Squidward Tentacles", "Patrick Star")
 
         val res2 = search("sq")
-        res2.length === 2
         parseRes(res2) === Seq("Squidward Tentacles", "SandySquirrel")
 
         val res3 = search("squid")
@@ -387,6 +396,7 @@ class TypeaheadControllerTest extends Specification with ShoeboxTestInjector {
           contacts.collect {
             case u: UserContactResult => u.name
             case e: EmailContactResult => e.email.address
+            case a: AliasContactResult => a.name
           }
         }
 

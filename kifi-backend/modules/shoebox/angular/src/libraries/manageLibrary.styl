@@ -61,7 +61,7 @@
 
   .dialog-body
     padding: 0
-    overflow: auto
+    overflow: hidden
 
   .dialog-text
     padding: 0 35px
@@ -374,9 +374,7 @@ button.manage-lib-delete-button
 
 .manage-lib-content-subs
   position: relative
-  min-height: 520px
   padding-bottom: 20px
-  overflow-y: scroll
 
 .manage-lib-default-content
   position: relative
@@ -395,19 +393,71 @@ button.manage-lib-delete-button
   border-collapse: separate
   border-spacing: 10px
 
+
+
 .manage-lib-sub-url
+  padding-left: 5px
   width: 48%
-  overflow-x: auto
-  overflow-y: hidden
+  overflow: hidden
 
 .manage-lib-sub-name
+  padding-left: 5px
   width: 20%
-  overflow-x: hidden
+  overflow: hidden
+
+.manage-lib-sub-name-input
+  width: 20%
+  overflow: hidden
+
+.manage-lib-sub-url-input
+  width: 48%
+  overflow: hidden
+
+.manage-lib-sub-add-button
+  border-radius: 20px
+  border-color: gray
+  border-width: 1px
+  border-style: solid
+
+.manage-lib-sub-remove-button
+  border-radius: 20px
+  border-color: gray
+  border-width: 1px
+  border-style: solid
 
 .manage-lib-subs-error
   color: red
   width: 60%
   overflow: hidden
+
+.manage-lib-subs-instruct
+  margin-left: 35px
+  color: gray
+
+.manage-lib-subs-instruct-button
+  border-radius: 20px
+  border-color: gray
+  border-style: solid
+  color: gray
+  border-width: 1px
+
+
+input.manage-lib-sub-input
+textarea.manage-lib-sub-input
+  resize: none
+  display: inline-block
+  box-sizing: border-box
+  border: 1px solid #c7c7c7
+  border-radius: 5px
+  padding: 10px 15px
+  height: 40px
+  width: 100%
+  color: textBlackColor
+  vertical-align: top
+  placeholder secondaryTextGray
+
+  &:focus
+    border: 1px solid blueColor
 
 
 //

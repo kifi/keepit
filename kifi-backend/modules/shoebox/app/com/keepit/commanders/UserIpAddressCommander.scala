@@ -47,6 +47,7 @@ class UserIpAddressCommander @Inject() (
     }
 
     if (reportNewClusters && !oldCluster.isEmpty && !oldCluster.contains(userId)) {
+      log.info("[IPTRACK NOTIFY] Cluster " + oldCluster + " has new member " + userId)
       notifySlackChannelAboutCluster(ip)
     }
   }
@@ -66,12 +67,16 @@ class UserIpAddressCommander @Inject() (
 
   def notifySlackChannelAboutCluster(clusterIp: IpAddress): Unit = {
     log.info("[IPTRACK NOTIFY] Notifying slack channel about " + clusterIp)
-    val usersFromCluster = db.readOnlyReplica { implicit session =>
+    val usersFromCluster = db.readOnlyMaster { implicit session =>
       val userIds = userIpAddressRepo.getUsersFromIpAddressSince(clusterIp, DateTime.now.minus(clusterMemoryTime))
       userRepo.getUsers(userIds).values.toSeq
     }
-    val msg = formatCluster(clusterIp, usersFromCluster)
-    httpClient.post(DirectUrl(ipClusterSlackChannelUrl), Json.toJson(msg))
+    if (usersFromCluster.length > 1) {
+      val msg = formatCluster(clusterIp, usersFromCluster)
+      httpClient.post(DirectUrl(ipClusterSlackChannelUrl), Json.toJson(msg))
+    } else {
+      log.info("[IPTRACK NONOTIFY] Opted not to notify channel about " + clusterIp + " with " + usersFromCluster.length + " users")
+    }
   }
 
   def totalNumberOfLogs(): Int = {

@@ -6,6 +6,7 @@ import com.keepit.common.crypto.{ ModelWithPublicId, ModelWithPublicIdCompanion 
 import com.keepit.common.db.{ Id, ModelWithState, State, States }
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.time._
+import org.apache.commons.lang3.RandomStringUtils
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -20,7 +21,8 @@ case class OrganizationInvite(
     userId: Option[Id[User]] = None,
     emailAddress: Option[EmailAddress] = None,
     role: OrganizationRole,
-    message: Option[String] = None) extends ModelWithPublicId[OrganizationInvite] with ModelWithState[OrganizationInvite] {
+    message: Option[String] = None,
+    authToken: String = RandomStringUtils.randomAlphanumeric(9)) extends ModelWithPublicId[OrganizationInvite] with ModelWithState[OrganizationInvite] {
 
   def withId(id: Id[OrganizationInvite]): OrganizationInvite = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime): OrganizationInvite = this.copy(updatedAt = now)
@@ -45,7 +47,8 @@ object OrganizationInvite extends ModelWithPublicIdCompanion[OrganizationInvite]
     (__ \ 'userId).format[Option[Id[User]]] and
     (__ \ 'emailAddress).format[Option[EmailAddress]] and
     (__ \ 'role).format[OrganizationRole] and
-    (__ \ 'message).format[Option[String]]
+    (__ \ 'message).format[Option[String]] and
+    (__ \ 'authToken).format[String]
   )(OrganizationInvite.apply, unlift(OrganizationInvite.unapply))
 
   implicit def ord: Ordering[OrganizationInvite] = new Ordering[OrganizationInvite] {
