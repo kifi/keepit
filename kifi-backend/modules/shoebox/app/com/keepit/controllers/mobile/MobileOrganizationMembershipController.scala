@@ -1,8 +1,8 @@
 package com.keepit.controllers.mobile
 
 import com.google.inject.{ Inject, Singleton }
-import com.keepit.commanders.{ OrganizationFail, OrganizationMembershipCommander, UserCommander }
-import com.keepit.common.controller.{ UserActionsHelper, ShoeboxServiceController, UserActions }
+import com.keepit.commanders.OrganizationMembershipCommander
+import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.Id
 import com.keepit.heimdal.HeimdalContextBuilderFactory

@@ -22,9 +22,6 @@ object MaybeOrganizationMember {
   }
 }
 
-final case class MemberRemovals(failedToRemove: Set[Id[User]], removed: Set[Id[User]])
-final case class OrganizationFail(status: Int, message: String)
-
 @ImplementedBy(classOf[OrganizationMembershipCommanderImpl])
 trait OrganizationMembershipCommander {
   def getMemberPermissions(orgId: Id[Organization], userId: Id[User]): Option[Set[OrganizationPermission]]
