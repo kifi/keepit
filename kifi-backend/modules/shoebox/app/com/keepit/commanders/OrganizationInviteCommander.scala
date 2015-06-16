@@ -24,7 +24,7 @@ import scala.concurrent.{ ExecutionContext, Future }
 trait OrganizationInviteCommander {
   def inviteUsersToOrganization(orgId: Id[Organization], inviterId: Id[User], invitees: Seq[(Either[Id[User], EmailAddress], OrganizationRole, Option[String])]): Future[Either[OrganizationFail, Seq[(Either[BasicUser, RichContact], OrganizationRole)]]]
   def acceptInvitation(orgId: Id[Organization], userId: Id[User], authToken: Option[String] = None): Either[OrganizationFail, (Organization, OrganizationMembership)]
-  def declineInvitation(orgId: Id[Organization], userId: Id[User])
+  def declineInvitation(orgId: Id[Organization], userId: Id[User]): Unit
   // Creates a Universal Invite Link for an organization and inviter. Anyone with the link can join the Organization
   def universalInviteLink(orgId: Id[Organization], inviterId: Id[User], role: OrganizationRole = OrganizationRole.MEMBER, authToken: Option[String] = None): Either[OrganizationFail, (OrganizationInvite, Organization)]
 }
@@ -79,7 +79,7 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
             val invitesForInvitees = for ((recipient, inviteRole, msgOpt) <- invitees) yield {
               if (inviterMembership.role >= inviteRole) {
                 recipient match {
-                  case Left(inviteeId) => {
+                  case Left(inviteeId) =>
                     organizationMembersMap.get(inviteeId) match {
                       case Some(inviteeMember) if (inviteeMember.role < inviteRole && inviteRole != OrganizationRole.OWNER) => // member needs upgrade
                         db.readWrite { implicit session =>
@@ -95,12 +95,10 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
                         val inviteeInfo = (Left(contactsByUserId(inviteeId)), inviteRole)
                         Some((orgInvite, inviteeInfo))
                     }
-                  }
-                  case Right(email) => {
+                  case Right(email) =>
                     val orgInvite = OrganizationInvite(organizationId = orgId, inviterId = inviterId, emailAddress = Some(email), role = inviteRole, message = msgOpt)
                     val inviteeInfo = (Right(contactsByEmail(email)), inviteRole)
                     Some((orgInvite, inviteeInfo))
-                  }
                 }
               } else {
                 log.warn(s"Inviter $inviterId attempting to grant role inviter does not have.")
@@ -108,7 +106,7 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
               }
             }
 
-            val (invites, inviteesWithRole): (Seq[OrganizationInvite], Seq[(Either[BasicUser, RichContact], OrganizationRole)]) = invitesForInvitees.flatten.unzip
+            val (invites, inviteesWithRole) = invitesForInvitees.flatten.unzip
 
             val (org, owner, inviter) = db.readOnlyMaster { implicit session =>
               val org = organizationRepo.get(orgId)
@@ -160,7 +158,7 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     }
   }
 
-  def sendInvitationEmails(persistedInvites: Seq[OrganizationInvite], org: Organization, owner: BasicUser, inviter: User) {
+  def sendInvitationEmails(persistedInvites: Seq[OrganizationInvite], org: Organization, owner: BasicUser, inviter: User): Unit = {
     val (inviteesById, _) = persistedInvites.partition(_.userId.nonEmpty)
 
     // send notifications to kifi users only
@@ -206,7 +204,7 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     }
   }
 
-  def notifyInviteeAboutInvitationToJoinLibrary(org: Organization, orgOwner: BasicUser, inviter: User, invitees: Set[Id[User]]): Unit = {
+  def notifyInviteeAboutInvitationToJoinLibrary(org: Organization, orgOwner: BasicUser, inviter: User, invitees: Set[Id[User]]) {
     val userImage = s3ImageStore.avatarUrlByUser(inviter)
     val orgLink = s"""https://www.kifi.com/${org.name}"""
 
@@ -228,7 +226,7 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     ???
   }
 
-  def declineInvitation(orgId: Id[Organization], userId: Id[User]) = {
+  def declineInvitation(orgId: Id[Organization], userId: Id[User]) {
     ???
   }
 
