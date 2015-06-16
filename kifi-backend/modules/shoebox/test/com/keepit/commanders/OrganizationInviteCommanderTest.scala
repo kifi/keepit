@@ -6,10 +6,17 @@ import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.abook.model.RichContact
 import com.keepit.common.actor.TestKitSupport
+import com.keepit.common.concurrent.FakeExecutionContextModule
+import com.keepit.common.crypto.FakeCryptoModule
 import com.keepit.common.db.Id
-import com.keepit.common.mail.EmailAddress
+import com.keepit.common.mail.{ FakeMailModule, EmailAddress }
+import com.keepit.common.social.FakeSocialGraphModule
+import com.keepit.common.store.FakeShoeboxStoreModule
+import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.model._
+import com.keepit.search.FakeSearchServiceClientModule
+import com.keepit.shoebox.{ FakeShoeboxServiceModule, FakeKeepImportsModule }
 import com.keepit.social.BasicUser
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.SpecificationLike
@@ -26,7 +33,8 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
   def setup(implicit injector: Injector) = {
     db.readWrite { implicit session =>
       db.readWrite { implicit session =>
-        val owner = UserFactory.user().withName("Kiwi", "Kiwi").saved
+        val owner = UserFactory.user().withName("Kiwi", "Kiwi").withEmailAddress("kiwi-test@kifi.com").saved
+        userEmailAddressRepo.save(UserEmailAddress(userId = owner.id.get, address = owner.primaryEmail.get))
         val org = organizationRepo.save(Organization(name = "Kifi", ownerId = owner.id.get, handle = None))
         val membership = organizationMembershipRepo.save(OrganizationMembership(organizationId = org.id.get, userId = owner.id.get, role = OrganizationRole.OWNER))
         (org, owner, membership)
@@ -35,8 +43,17 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
   }
 
   val modules = Seq(
-    FakeABookServiceClientModule()
+    FakeExecutionContextModule(),
+    FakeShoeboxStoreModule(),
+    FakeABookServiceClientModule(),
+    FakeKeepImportsModule(),
+    FakeMailModule(),
+    FakeCortexServiceClientModule(),
+    FakeSearchServiceClientModule(),
+    FakeSocialGraphModule(),
+    FakeShoeboxServiceModule()
   )
+
   "organization invite commander" should {
     "invite members" in {
       withDb(modules: _*) { implicit injector =>
