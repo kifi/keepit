@@ -107,7 +107,7 @@
     <button class="kf-lh-desc-add" ng-click="manageLibrary()" ng-if="!library.description && isOwner() && !library.isSystem">Add a description</button>
   </div>
 
-  <div class="kf-lh-buttons" ng-if="!isOwner()">
+  <div class="kf-lh-buttons" ng-if="!isOwnerOrCollaborator()">
 
     <div class="kf-lh-invite-banner" ng-style="{'background-color': library.color}" ng-if="library.invite">
       <img class="kf-lh-invite-pic" ng-src="{{library.invite.inviter|pic:100}}" alt="{{library.invite.inviter|name}}">
@@ -133,11 +133,23 @@
     </button>
 
   </div>
-  <div class="kf-lh-buttons kf-my-lib clearfix" ng-if="isOwner()">
+  <div class="kf-lh-buttons kf-my-lib clearfix" ng-if="isOwnerOrCollaborator()">
     <button class="kf-lh-edit-keeps svg-bullet-list-green" ng-click="toggleEditKeeps()" ng-if="library.numKeeps > 0 && !librarySearch">{{editMode ? 'Done editing' : 'Edit keeps'}}</button>
     <button class="kf-lh-invite-search-button" ng-click="openInviteModal('follow')" ng-if="!library.isSystem">
       <div class="svg-share-arrow-green"></div>
       Invite followers
     </button>
+    <div class="kf-quick-add-keep">
+      <div class="kf-quick-add-keep-explain">Add a Link to this library:</div>
+      <div>
+        <input class="kf-quick-add-keep-input" placeholder="http://..." ng-model="quickKeep.url" ng-change="checkQuickKeepUrl()"></input> <button class="kf-quick-add-keep-button" ng-click="doQuickKeep()"><span class="svg-hearts-white"></span>Keep It</button>
+      </div>
+      <div class="kf-quick-add-keep-error" ng-show="quickKeep.invalidUrl">Please use a valid URL</div>
+      <div class="kf-quick-add-keep-get-extension" ng-if="canInstallExtension">
+        Tip: To add links faster and find them in Google, <a href="#" ng-click="triggerExtensionInstall()">get the Kifi browser button</a>.
+      </div>
+    </div>
   </div>
+
+
 </div>
