@@ -81,7 +81,8 @@ object OrganizationPermission {
 }
 
 sealed abstract class OrganizationRole(val value: String, val priority: Int) extends Ordered[OrganizationRole] {
-  override def compare(that: OrganizationRole): Int = priority compare that.priority
+  // need to reverse this if 0 is going to be the highest priority.
+  override def compare(that: OrganizationRole): Int = that.priority compare priority
 }
 
 object OrganizationRole {
@@ -94,7 +95,7 @@ object OrganizationRole {
     })
 
   implicit def ord: Ordering[OrganizationRole] = new Ordering[OrganizationRole] {
-    def compare(x: OrganizationRole, y: OrganizationRole): Int = x.priority compare y.priority
+    def compare(x: OrganizationRole, y: OrganizationRole): Int = y.priority compare x.priority
   }
 
   def apply(str: String): OrganizationRole = {

@@ -78,17 +78,19 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
                 case Left(inviteeId) => {
                   if (inviterMembership.role >= inviteRole) {
                     organizationMembersMap.get(inviteeId) match {
-                      case Some(inviteeMember) if (inviteeMember.role < inviteRole) => // member needs upgrade
+                      case Some(inviteeMember) if (inviteeMember.role < inviteRole && inviteRole != OrganizationRole.OWNER) => // member needs upgrade
                         db.readWrite { implicit session =>
                           organizationMembershipRepo.save(inviteeMember.copy(role = inviteRole))
                         }
                         val orgInvite = OrganizationInvite(organizationId = orgId, inviterId = inviterId, userId = Some(inviteeId), role = inviteRole, message = msgOpt)
                         val inviteeInfo = (Left(contactsByUserId(inviteeId)), inviteRole)
                         Some((orgInvite, inviteeInfo))
-                      case Some(inviteeMember) => // don't demote members
+                      case Some(inviteeMember) => // don't demote members through an invitation.
                         None
-                      case _ => // new member
-                        None
+                      case _ => // user not a member of org yet
+                        val orgInvite = OrganizationInvite(organizationId = orgId, inviterId = inviterId, userId = Some(inviteeId), role = inviteRole, message = msgOpt)
+                        val inviteeInfo = (Left(contactsByUserId(inviteeId)), inviteRole)
+                        Some((orgInvite, inviteeInfo))
                     }
                   } else {
                     log.warn(s"not persisting user $inviteeId, inviter attempting to grant role inviter does not have.")
