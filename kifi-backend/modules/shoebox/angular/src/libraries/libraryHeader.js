@@ -632,6 +632,7 @@ angular.module('kifi')
         scope.doQuickKeep = function () {
           var url = (scope.quickKeep.url) || '';
           scope.quickKeep.quickCheck = true;
+          libraryService.trackEvent('user_clicked_page', scope.library, { action: 'clickedQuickKeep' });
           if (url && util.validateUrl(url)) {
             keepActionService.keepToLibrary([{ url: url }], scope.library.id).then(function (result) {
               scope.quickKeep.quickCheck = false;
