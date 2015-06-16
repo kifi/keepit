@@ -31,6 +31,7 @@ class OrganizationInviteRepoImpl @Inject() (val db: DataBaseComponent, val clock
     def emailAddress = column[Option[EmailAddress]]("email_address", O.Nullable)
     def role = column[OrganizationRole]("role", O.NotNull)
     def message = column[Option[String]]("message", O.Nullable)
+    def authToken = column[String]("auth_token", O.NotNull)
 
     def applyFromDbRow(
       id: Option[Id[OrganizationInvite]],
@@ -42,8 +43,9 @@ class OrganizationInviteRepoImpl @Inject() (val db: DataBaseComponent, val clock
       userId: Option[Id[User]],
       emailAddress: Option[EmailAddress],
       role: OrganizationRole,
-      message: Option[String]) = {
-      OrganizationInvite(id, createdAt, updatedAt, state, organizationId, inviterId, userId, emailAddress, role, message)
+      message: Option[String],
+      authToken: String) = {
+      OrganizationInvite(id, createdAt, updatedAt, state, organizationId, inviterId, userId, emailAddress, role, message, authToken)
     }
 
     def unapplyToDbRow(invite: OrganizationInvite) = {
@@ -56,10 +58,11 @@ class OrganizationInviteRepoImpl @Inject() (val db: DataBaseComponent, val clock
         invite.userId,
         invite.emailAddress,
         invite.role,
-        invite.message))
+        invite.message,
+        invite.authToken))
     }
 
-    def * = (id.?, createdAt, updatedAt, state, organizationId, inviterId, userId, emailAddress, role, message) <> ((applyFromDbRow _).tupled, unapplyToDbRow _)
+    def * = (id.?, createdAt, updatedAt, state, organizationId, inviterId, userId, emailAddress, role, message, authToken) <> ((applyFromDbRow _).tupled, unapplyToDbRow _)
   }
 
   def table(tag: Tag) = new OrganizationInviteTable(tag)

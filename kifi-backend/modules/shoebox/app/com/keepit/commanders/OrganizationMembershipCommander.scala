@@ -9,13 +9,25 @@ import com.keepit.common.social.BasicUserRepo
 import com.keepit.model._
 import com.keepit.social.BasicUser
 import org.joda.time.DateTime
+import com.keepit.common.json
+import play.api.libs.json._
 
 final case class MaybeOrganizationMember(member: Either[BasicUser, BasicContact], role: Option[OrganizationRole], lastInvitedAt: Option[DateTime])
-final case class MemberRemovals(failedToRemove: Seq[Id[User]], removed: Seq[Id[User]])
+
+object MaybeOrganizationMember {
+  implicit val writes = Writes[MaybeOrganizationMember] { member =>
+    val identityFields = member.member.fold(user => Json.toJson(user), contact => Json.toJson(contact)).as[JsObject]
+    val relatedFields = Json.obj("role" -> member.role, "lastInvitedAt" -> member.lastInvitedAt)
+    json.minify(identityFields ++ relatedFields)
+  }
+}
+
+final case class MemberRemovals(failedToRemove: Set[Id[User]], removed: Set[Id[User]])
 final case class OrganizationFail(status: Int, message: String)
 
 @ImplementedBy(classOf[OrganizationMembershipCommanderImpl])
 trait OrganizationMembershipCommander {
+  def getMemberPermissions(orgId: Id[Organization], userId: Id[User]): Option[Set[OrganizationPermission]]
   def getMembersAndInvitees(orgId: Id[Organization], limit: Limit, offset: Offset, includeInvitees: Boolean): Seq[MaybeOrganizationMember]
   def modifyMemberships(orgId: Id[Organization], requestorId: Id[User], modifications: Seq[(Id[User], OrganizationRole)]): Either[OrganizationFail, Seq[OrganizationMembership]]
   def removeMembers(orgId: Id[Organization], requestorId: Id[User], removals: Seq[Id[User]]): MemberRemovals
@@ -27,6 +39,13 @@ class OrganizationMembershipCommanderImpl @Inject() (
     organizationMembershipRepo: OrganizationMembershipRepo,
     organizationInviteRepo: OrganizationInviteRepo,
     basicUserRepo: BasicUserRepo) extends OrganizationMembershipCommander with Logging {
+
+  def getMemberPermissions(orgId: Id[Organization], userId: Id[User]): Option[Set[OrganizationPermission]] = {
+    val membershipOpt = db.readOnlyReplica { implicit session =>
+      organizationMembershipRepo.getByOrgIdAndUserId(orgId, userId)
+    }
+    membershipOpt.map { _.permissions }
+  }
 
   // Offset and Count to prevent accidental reversal of arguments with same type (Long).
   def getMembersAndInvitees(orgId: Id[Organization], limit: Limit, offset: Offset, includeInvitees: Boolean): Seq[MaybeOrganizationMember] = {

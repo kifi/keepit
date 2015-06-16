@@ -19,9 +19,6 @@ trait OrganizationMembershipRepo extends Repo[OrganizationMembership] with SeqNu
   def deactivate(membership: Id[OrganizationMembership])(implicit session: RWSession): OrganizationMembership
 }
 
-case class Offset(value: Long) extends AnyVal
-case class Limit(value: Long) extends AnyVal
-
 @Singleton
 class OrganizationMembershipRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) extends OrganizationMembershipRepo with DbRepo[OrganizationMembership] with SeqNumberDbFunction[OrganizationMembership] with Logging {
   override def deleteCache(orgMember: OrganizationMembership)(implicit session: RSession) {}
