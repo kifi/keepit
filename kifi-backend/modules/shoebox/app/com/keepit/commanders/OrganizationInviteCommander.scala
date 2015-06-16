@@ -110,7 +110,6 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
 
             val (invites, inviteesWithRole): (Seq[OrganizationInvite], Seq[(Either[BasicUser, RichContact], OrganizationRole)]) = invitesForInvitees.flatten.unzip
 
-            // TODO: still need to write code for persisting invitations / sending invitation email / tracking sent invitation
             val (org, owner, inviter) = db.readOnlyMaster { implicit session =>
               val org = organizationRepo.get(orgId)
               val owner = basicUserRepo.load(org.ownerId)
@@ -122,6 +121,7 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
             }
 
             sendInvitationEmails(persistedInvites, org, owner, inviter)
+            // TODO: still need to write code for tracking sent invitation
             def trackSentInvitation = ???
 
             Right(inviteesWithRole)
