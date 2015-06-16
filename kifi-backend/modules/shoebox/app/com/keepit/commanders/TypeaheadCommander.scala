@@ -5,6 +5,7 @@ import com.keepit.abook.ABookServiceClient
 import com.keepit.abook.model.RichContact
 import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.core._
+import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.{ AirbrakeNotifier, SystemAdminMailSender }
@@ -43,7 +44,10 @@ class TypeaheadCommander @Inject() (
     kifiUserTypeahead: KifiUserTypeahead,
     searchClient: SearchServiceClient,
     interactionCommander: UserInteractionCommander,
-    systemAdminMailSender: SystemAdminMailSender) extends Logging {
+    systemAdminMailSender: SystemAdminMailSender,
+    libraryMembershipRepo: LibraryMembershipRepo,
+    libraryRepo: LibraryRepo,
+    implicit val config: PublicIdConfiguration) extends Logging {
 
   type NetworkTypeAndHit = (SocialNetworkType, TypeaheadHit[_])
 
@@ -376,6 +380,8 @@ class TypeaheadCommander @Inject() (
     (users, contacts)
   }
 
+  def searchWritableLibraries(userId: Id[User], query: String): Seq[AliasContactResult] = Seq.empty // todo: Make this work :)
+
   def searchFriendsAndContacts(userId: Id[User], query: String, limit: Option[Int]): Future[(Seq[(Id[User], BasicUser)], Seq[BasicContact])] = {
     aggregate(userId, query, limit, true, Set(ContactType.KIFI_FRIEND, ContactType.EMAIL)).map { hits =>
       val (users, contacts) = hits.map(_._2.info).foldLeft((Seq.empty[User], Seq.empty[RichContact])) {
@@ -390,16 +396,41 @@ class TypeaheadCommander @Inject() (
   }
 
   def searchForContacts(userId: Id[User], query: String, limit: Option[Int]): Future[Seq[ContactSearchResult]] = {
-    val futureFriendsAndContacts = query.trim match {
-      case q if q.isEmpty => Future.successful(suggestFriendsAndContacts(userId, limit))
-      case q => searchFriendsAndContacts(userId, q, limit)
+    val (friendsAndContactsF, aliasF) = query.trim match {
+      case q if q.isEmpty =>
+        (Future.successful(suggestFriendsAndContacts(userId, limit)), Future.successful(Seq.empty))
+      case q =>
+        // Start futures
+        val friends = searchFriendsAndContacts(userId, q, limit)
+        val aliases = Future.successful(searchWritableLibraries(userId, query))
+
+        val startTime = System.currentTimeMillis()
+
+        val (userOrder, contactOrder) = suggestFriendsAndContacts(userId, None) |> {
+          case (users, contacts) =>
+            val userOrder = users.zipWithIndex.map(u => u._1._1 -> u._2).toMap
+            val contactOrder = contacts.zipWithIndex.toMap
+            (userOrder.withDefaultValue(limit.getOrElse(100)), contactOrder.withDefaultValue(limit.getOrElse(100)))
+        }
+
+        log.info(s"[searchForContacts] Ordering results for $userId took ${System.currentTimeMillis() - startTime}ms")
+
+        val rankedFriends = friends.imap {
+          case (users, contacts) =>
+            val sortedUsers = users.sortBy(u => userOrder(u._1))
+            val sortedContacts = contacts.sortBy(c => contactOrder(c))
+            (sortedUsers, sortedContacts)
+        }
+        (rankedFriends, aliases)
     }
 
-    futureFriendsAndContacts.map {
-      case (users, contacts) =>
-        val userResults = users.map { case (userId, basicUser) => UserContactResult(name = basicUser.fullName, id = basicUser.externalId, pictureName = Some(basicUser.pictureName)) }
-        val emailResults = contacts.map { contact => EmailContactResult(name = contact.name, email = contact.email) }
-        userResults ++ emailResults
+    for {
+      alias <- aliasF
+      (users, contacts) <- friendsAndContactsF
+    } yield {
+      val userResults = users.map { case (_, basicUser) => UserContactResult(name = basicUser.fullName, id = basicUser.externalId, pictureName = Some(basicUser.pictureName)) }
+      val emailResults = contacts.map { contact => EmailContactResult(name = contact.name, email = contact.email) }
+      userResults ++ emailResults ++ alias
     }
   }
 
@@ -411,9 +442,10 @@ class TypeaheadCommander @Inject() (
 
 @json case class ConnectionWithInviteStatus(label: String, score: Int, networkType: String, image: Option[String], value: String, status: String, email: Option[String] = None, inviteLastSentAt: Option[DateTime] = None)
 
-sealed trait ContactSearchResult {}
+sealed trait ContactSearchResult
 @json case class UserContactResult(name: String, id: ExternalId[User], pictureName: Option[String]) extends ContactSearchResult
 @json case class EmailContactResult(name: Option[String], email: EmailAddress) extends ContactSearchResult
+@json case class AliasContactResult(name: String, id: String, kind: String) extends ContactSearchResult
 
 sealed abstract class ContactType(val value: String)
 object ContactType {
