@@ -15,5 +15,6 @@ trait OrganizationCommander {
 class OrganizationCommanderImpl @Inject() (
     db: Database,
     orgRepo: OrganizationRepo) extends OrganizationCommander with Logging {
-  def get(orgId: Id[Organization]): Organization = ???
+
+  def get(orgId: Id[Organization]): Organization = db.readOnlyReplica { implicit session => orgRepo.get(orgId) }
 }

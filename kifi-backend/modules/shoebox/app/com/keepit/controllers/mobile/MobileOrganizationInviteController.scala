@@ -14,15 +14,6 @@ import play.api.libs.json._
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success }
 
-@ImplementedBy(classOf[MobileOrganizationInviteControllerImpl])
-trait MobileOrganizationInviteController {
-  def inviteUsers(pubId: PublicId[Organization])
-  def createAnonymousInviteToOrganization(pubId: PublicId[Organization])
-
-  def acceptInvitation(pubId: PublicId[Organization])
-  def declineInvitation(pubId: PublicId[Organization])
-}
-
 @Singleton
 class MobileOrganizationInviteControllerImpl @Inject() (
     userCommander: UserCommander,
@@ -33,7 +24,7 @@ class MobileOrganizationInviteControllerImpl @Inject() (
     heimdalContextBuilder: HeimdalContextBuilderFactory,
     val userActionsHelper: UserActionsHelper,
     implicit val config: PublicIdConfiguration,
-    implicit val executionContext: ExecutionContext) extends MobileOrganizationInviteController with UserActions with ShoeboxServiceController {
+    implicit val executionContext: ExecutionContext) extends UserActions with ShoeboxServiceController {
 
   private def sendFailResponse(fail: OrganizationFail) = Status(fail.status)(Json.obj("error" -> fail.message))
 
@@ -89,7 +80,7 @@ class MobileOrganizationInviteControllerImpl @Inject() (
           case Left(fail) => sendFailResponse(fail)
           case Right((invite, org)) =>
             // TODO: should we be using the organization handle here?
-            val organizationPath = s"${fortyTwoConfig.applicationBaseUrl}/${org.name}"
+            val organizationPath = s"${fortyTwoConfig.applicationBaseUrl}/${org.handle.get.original}"
             val link = organizationPath + "?authToken=" + invite.authToken
             val shortMsg = s"You've been invited to an organization on Kifi: $link"
             Ok(Json.obj(

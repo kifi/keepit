@@ -48,6 +48,7 @@ CREATE TABLE organization_invite (
 	email_address varchar(512) DEFAULT NULL,
 	role varchar(20) NOT NULL,
 	message text DEFAULT NULL,
+	auth_token varchar(40) NOT NULL,
 
 	PRIMARY KEY(id),
 	CONSTRAINT `organization_invite_f_organization` FOREIGN KEY (`organization_id`) REFERENCES organization(`id`),
