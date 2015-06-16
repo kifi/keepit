@@ -451,7 +451,7 @@ class KeepRepoImpl @Inject() (
   // Make compiled in Slick 2.1
 
   def getByLibrary(libraryId: Id[Library], offset: Int, limit: Int, excludeSet: Set[State[Keep]])(implicit session: RSession): Seq[Keep] = {
-    (for (b <- rows if b.libraryId === libraryId && !b.state.inSet(excludeSet)) yield b).sortBy(_.keptAt desc).drop(offset).take(limit).list
+    (for (b <- rows if b.libraryId === libraryId && !b.state.inSet(excludeSet)) yield b).sortBy(r => (r.keptAt desc, r.id desc)).drop(offset).take(limit).list
   }
 
   def getCountByLibrary(libraryId: Id[Library])(implicit session: RSession): Int = {

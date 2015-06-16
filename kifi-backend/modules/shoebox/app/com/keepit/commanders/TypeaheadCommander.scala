@@ -410,7 +410,7 @@ class TypeaheadCommander @Inject() (
           case (users, contacts) =>
             val userOrder = users.zipWithIndex.map(u => u._1._1 -> u._2).toMap
             val contactOrder = contacts.zipWithIndex.toMap
-            (userOrder.withDefaultValue(limit.getOrElse(100)), contactOrder.withDefaultValue(limit.getOrElse(100)))
+            (userOrder.withDefaultValue(limit.getOrElse(500)), contactOrder.withDefaultValue(limit.getOrElse(500)))
         }
 
         log.info(s"[searchForContacts] Ordering results for $userId took ${System.currentTimeMillis() - startTime}ms")
