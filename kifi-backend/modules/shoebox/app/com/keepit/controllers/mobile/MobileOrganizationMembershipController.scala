@@ -1,6 +1,6 @@
 package com.keepit.controllers.mobile
 
-import com.google.inject.Inject
+import com.google.inject.{ Inject, Singleton }
 import com.keepit.commanders.{ OrganizationFail, OrganizationMembershipCommander, UserCommander }
 import com.keepit.common.controller.{ UserActionsHelper, ShoeboxServiceController, UserActions }
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
@@ -11,6 +11,7 @@ import play.api.libs.json._
 
 import scala.util.{ Failure, Success }
 
+@Singleton
 class MobileOrganizationMembershipController @Inject() (
     orgMemberCommander: OrganizationMembershipCommander,
     heimdalContextBuilder: HeimdalContextBuilderFactory,
@@ -19,17 +20,18 @@ class MobileOrganizationMembershipController @Inject() (
 
   private def sendFailResponse(fail: OrganizationFail) = Status(fail.status)(Json.obj("error" -> fail.message))
 
-  // If userIdOpt is provided AND the user is the organization owner, return invited users as well as members
-  def getMembers(pubId: PublicId[Organization], offset: Int, count: Int, userIdOpt: Option[Id[User]]) = {
-    if (count > 30) {
-      BadRequest(Json.obj("error" -> "invalid_count"))
+  // If userIdOpt is provided AND the user can invite members, return invited users as well as members
+  def getMembers(pubId: PublicId[Organization], offset: Int, limit: Int, userIdOpt: Option[Id[User]]) = {
+    if (limit > 30) {
+      BadRequest(Json.obj("error" -> "invalid_limit"))
     } else Organization.decodePublicId(pubId) match {
       case Failure(ex) => BadRequest(Json.obj("error" -> "invalid_organization_id"))
       case Success(orgId) =>
-        val showInvitees: Boolean = true // TODO: uncomment one of the lines below to get this working properly
-        //val showInvitees: Boolean = userIdOpt.contains(orgCommander.getOwnerId(orgId))
-        //val showInvitees: Boolean = userIdOpt.contains(orgCommander.get(orgId).ownerId)
-        val membersAndMaybeInvitees = orgMemberCommander.getMembersAndInvitees(orgId, Limit(count), Offset(offset), includeInvitees = showInvitees)
+        val showInvitees: Boolean = userIdOpt match {
+          case None => false
+          case Some(userId) => orgMemberCommander.getMemberPermissions(orgId, userId).contains(OrganizationPermission.INVITE_MEMBERS)
+        }
+        val membersAndMaybeInvitees = orgMemberCommander.getMembersAndInvitees(orgId, Limit(limit), Offset(offset), includeInvitees = showInvitees)
         Ok(Json.obj("members" -> membersAndMaybeInvitees))
     }
   }
