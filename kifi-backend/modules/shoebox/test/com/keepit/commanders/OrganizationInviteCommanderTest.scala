@@ -44,14 +44,8 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
 
   val modules = Seq(
     FakeExecutionContextModule(),
-    FakeShoeboxStoreModule(),
     FakeABookServiceClientModule(),
-    FakeKeepImportsModule(),
-    FakeMailModule(),
-    FakeCortexServiceClientModule(),
-    FakeSearchServiceClientModule(),
-    FakeSocialGraphModule(),
-    FakeShoeboxServiceModule()
+    FakeSocialGraphModule()
   )
 
   "organization invite commander" should {
