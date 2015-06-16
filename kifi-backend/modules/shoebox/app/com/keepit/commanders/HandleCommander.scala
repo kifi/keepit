@@ -76,28 +76,35 @@ class HandleCommander @Inject() (
     }
   }
 
+  def canBeClaimed(handle: Handle, ownerId: Option[HandleOwner], overrideProtection: Boolean = false, overrideValidityCheck: Boolean = false)(implicit session: RSession): Boolean = {
+    getValidOwnership(handle, ownerId, overrideProtection = overrideProtection, overrideValidityCheck = overrideValidityCheck).isSuccess
+  }
+
   private[commanders] def claimHandle(handle: Handle, ownerId: Option[HandleOwner], lock: Boolean = false, overrideProtection: Boolean = false, overrideValidityCheck: Boolean = false)(implicit session: RWSession): Try[HandleOwnership] = {
-    if (overrideValidityCheck || HandleOps.isValid(handle.value)) setHandleOwnership(handle, ownerId, lock, overrideProtection)
-    else Failure(InvalidHandleException(handle))
+    getValidOwnership(handle, ownerId, overrideProtection = overrideProtection, overrideValidityCheck = overrideValidityCheck).map(claimOwnership(_, lock))
   } tap {
     case Failure(error) => log.error(s"Failed to claim handle $handle for ${HandleOwner.prettyPrint(ownerId)}", error)
     case Success(updatedOwnership) => log.info(s"Handle $handle (${updatedOwnership.handle}) is now owned by ${updatedOwnership.prettyOwner}: $updatedOwnership")
   }
 
-  private def setHandleOwnership(handle: Handle, ownerId: Option[HandleOwner], lock: Boolean = false, overrideProtection: Boolean = false)(implicit session: RWSession): Try[HandleOwnership] = {
-    val ownershipMaybe = {
-      val normalizedHandle = Handle.normalize(handle)
-      handleRepo.getByNormalizedHandle(normalizedHandle, excludeState = None) match {
-        case Some(ownership) if ownership.belongsTo(ownerId) => Success(ownership)
-        case Some(ownership) if ownership.isLocked => Failure(LockedHandleException(ownership))
-        case Some(ownership) if ownership.isProtected && !overrideProtection => Failure(ProtectedHandleException(ownership))
-        case Some(ownership) if isPrimary(ownership) => Failure(PrimaryHandleException(ownership))
-        case Some(availableOwnership) => Success(availableOwnership.copy(state = ACTIVE, locked = false, ownerId = ownerId))
-        case None => Success(HandleOwnership(handle = normalizedHandle, ownerId = ownerId))
-      }
-    }
-    ownershipMaybe.map { ownership =>
-      handleRepo.save(ownership.copy(lastClaimedAt = clock.now, locked = ownership.locked || lock))
+  private def claimOwnership(ownership: HandleOwnership, lock: Boolean = false)(implicit session: RWSession): HandleOwnership = {
+    handleRepo.save(ownership.copy(lastClaimedAt = clock.now, locked = ownership.locked || lock))
+  }
+
+  private def getValidOwnership(handle: Handle, ownerId: Option[HandleOwner], overrideProtection: Boolean = false, overrideValidityCheck: Boolean = false)(implicit session: RSession): Try[HandleOwnership] = {
+    if (overrideValidityCheck || HandleOps.isValid(handle.value)) getAvailableOwnership(handle, ownerId, overrideProtection)
+    else Failure(InvalidHandleException(handle))  
+  }
+
+  private def getAvailableOwnership(handle: Handle, ownerId: Option[HandleOwner], overrideProtection: Boolean = false)(implicit session: RSession): Try[HandleOwnership] = {
+    val normalizedHandle = Handle.normalize(handle)
+    handleRepo.getByNormalizedHandle(normalizedHandle, excludeState = None) match {
+      case Some(ownership) if ownership.belongsTo(ownerId) => Success(ownership)
+      case Some(ownership) if ownership.isLocked => Failure(LockedHandleException(ownership))
+      case Some(ownership) if ownership.isProtected && !overrideProtection => Failure(ProtectedHandleException(ownership))
+      case Some(ownership) if isPrimary(ownership) => Failure(PrimaryHandleException(ownership))
+      case Some(availableOwnership) => Success(availableOwnership.copy(state = ACTIVE, locked = false, ownerId = ownerId))
+      case None => Success(HandleOwnership(handle = normalizedHandle, ownerId = ownerId))
     }
   }
 
@@ -126,19 +133,20 @@ class HandleCommander @Inject() (
     }
   }
 
-  def reclaim(handle: Handle, overrideProtection: Boolean = false, overrideLock: Boolean = false)(implicit session: RWSession): Try[Handle] = {
-    setHandleOwnership(handle, ownerId = None, overrideProtection = overrideProtection) recoverWith {
-      case LockedHandleException(_) if overrideLock =>
+  private def reclaim(handle: Handle, overrideProtection: Boolean = false, overrideLock: Boolean = false)(implicit session: RWSession): Try[Handle] = {
+    getAvailableOwnership(handle, ownerId = None, overrideProtection = overrideProtection).map(claimOwnership(_).handle) recoverWith {
+      case LockedHandleException(_) if overrideLock => {
         handleRepo.unlock(handle)
-        setHandleOwnership(handle, ownerId = None, lock = true, overrideProtection = overrideProtection) tap { _ =>
+        reclaim(handle, overrideProtection, overrideLock = false) tap { _ =>
           handleRepo.lock(handle) // Whether the handle was successfully reclaimed or not, make sure the lock is preserved
         }
-    } map (_.handle)
+      }
+    }
   }
 
   def reclaimAll(ownerId: HandleOwner, overrideProtection: Boolean = false, overrideLock: Boolean = false)(implicit session: RWSession): Seq[Try[Handle]] = {
     val handles = handleRepo.getByOwnerId(Some(ownerId)).map(_.handle)
-    handles.map(reclaim(_, overrideProtection, overrideLock))
+    handles.map(reclaim(_, overrideProtection = overrideProtection, overrideLock = overrideLock))
   }
 
   private def generateHandleCandidates(rawName: Either[String, (String, String)]): Stream[Handle] = {
