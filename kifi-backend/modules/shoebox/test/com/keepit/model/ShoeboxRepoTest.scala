@@ -35,21 +35,21 @@ class ShoeboxRepoTest extends Specification with ShoeboxApplicationInjector {
         // OrganizationMembershipRepo
         val organizationMembershipRepo = inject[OrganizationMembershipRepo]
         val orgMember = db.readWrite { implicit session =>
-          organizationMembershipRepo.save(OrganizationMembership(organizationId = org.id.get, userId = user.id.get, access = OrganizationAccess.OWNER))
+          organizationMembershipRepo.save(OrganizationMembership(organizationId = org.id.get, userId = user.id.get, role = OrganizationRole.OWNER))
         }
         orgMember.id must beSome
 
         // OrganizationInviteRepo
         val organizationInviteRepo = inject[OrganizationInviteRepo]
         val invite = db.readWrite { implicit session =>
-          organizationInviteRepo.save(OrganizationInvite(organizationId = org.id.get, inviterId = user.id.get, userId = user.id, access = OrganizationAccess.OWNER))
+          organizationInviteRepo.save(OrganizationInvite(organizationId = org.id.get, inviterId = user.id.get, userId = user.id, role = OrganizationRole.OWNER))
         }
         invite.id must beSome
 
         // OrganizationLogoRepo
-        val organizationLogoRepo = inject[OrganizationLogoRepo]
+        val organizationLogoRepo = inject[OrganizationAvatarRepo]
         val logo = db.readWrite { implicit session =>
-          val orgLogo = OrganizationLogo(organizationId = org.id.get, position = Some(ImagePosition(0, 0)),
+          val orgLogo = OrganizationAvatar(organizationId = org.id.get, position = Some(ImagePosition(0, 0)),
             width = 100, height = 100, format = ImageFormat.JPG, kind = ProcessImageOperation.Scale,
             imagePath = ImagePath(""), source = ImageSource.UserUpload, sourceFileHash = ImageHash("X"),
             sourceImageURL = Some("NONE"))

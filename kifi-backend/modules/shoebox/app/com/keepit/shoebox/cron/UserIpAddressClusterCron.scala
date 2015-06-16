@@ -4,20 +4,15 @@ import com.google.inject.{ Inject, Singleton }
 import com.keepit.commanders.UserIpAddressCommander
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.akka.FortyTwoActor
-import com.keepit.common.db.Id
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.net.{ DirectUrl, HttpClient }
 import com.keepit.common.plugin.{ SchedulerPlugin, SchedulingProperties }
-import com.keepit.common.service.IpAddress
 import com.keepit.common.time._
-import com.keepit.model.User
 import org.joda.time.Period
 import play.api.libs.json.{ JsValue, Json, Writes }
 import us.theatr.akka.quartz.QuartzActor
 
 import scala.concurrent.ExecutionContext
-import scala.util.{ Failure, Success }
 
 case class SearchForClusters(timePeriod: Period, numClusters: Int)
 case class BasicSlackMessage(
@@ -42,36 +37,25 @@ class UserIpAddressClusterCronPluginImpl @Inject() (
 
   override def enabled: Boolean = true
   override def onStart() {
-    val every5Minutes = "0 5 * * * ?"
-    cronTaskOnLeader(quartz, actor.ref, every5Minutes, SearchForClusters(Period.minutes(5), numClusters = 1))
-
     val everyDay = "0 0 0 * * ?"
     cronTaskOnLeader(quartz, actor.ref, everyDay, SearchForClusters(Period.days(1), numClusters = 10))
 
     val everyWeek = "0 0 0 * * SUN"
-    cronTaskOnLeader(quartz, actor.ref, everyWeek, SearchForClusters(Period.weeks(1), numClusters = 100))
+    cronTaskOnLeader(quartz, actor.ref, everyWeek, SearchForClusters(Period.weeks(1), numClusters = 50))
   }
 }
 
 class UserIpAddressClusterActor @Inject() (
     userIpAddressCommander: UserIpAddressCommander,
-    httpClient: HttpClient,
     implicit val defaultContext: ExecutionContext,
     airbrake: AirbrakeNotifier) extends FortyTwoActor(airbrake) with Logging {
-  private val ipClusterSlackChannelUrl = "https://hooks.slack.com/services/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"
-
-  def formatClusters(clusters: Seq[(IpAddress, Int, Id[User])]): String = {
-    val lines = for ((ip, count, userId) <- clusters) yield {
-      "Cluster of " + count + " at " + ip + " with user " + userId
-    }
-    lines.mkString("\n")
-  }
 
   def receive = {
     case SearchForClusters(timePeriod, numClusters) =>
       log.info("[IP CRON]: Searching over the past " + timePeriod + " for the largest " + numClusters + " clusters")
-      val clusters = userIpAddressCommander.findIpClustersSince(time = currentDateTime.minus(timePeriod), limit = numClusters)
-      val msg = BasicSlackMessage(formatClusters(clusters))
-      httpClient.post(DirectUrl(ipClusterSlackChannelUrl), Json.toJson(msg))
+      val clusterIps = userIpAddressCommander.findIpClustersSince(time = currentDateTime.minus(timePeriod), limit = numClusters)
+      clusterIps foreach {
+        userIpAddressCommander.notifySlackChannelAboutCluster(_)
+      }
   }
 }

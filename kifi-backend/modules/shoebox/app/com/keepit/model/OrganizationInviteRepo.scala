@@ -10,8 +10,8 @@ import org.joda.time.DateTime
 
 @ImplementedBy(classOf[OrganizationInviteRepoImpl])
 trait OrganizationInviteRepo extends Repo[OrganizationInvite] {
-  def getByOrganization(organizationId: Id[Organization], count: Count, offset: Offset, state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit s: RSession): Seq[OrganizationInvite]
-  def getByInviter(inviterId: Id[User]): Seq[OrganizationInvite] = ???
+  def getByOrganization(organizationId: Id[Organization], limit: Limit, offset: Offset, state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit s: RSession): Seq[OrganizationInvite]
+  def getByInviter(inviterId: Id[User], state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit s: RSession): Seq[OrganizationInvite]
 }
 
 @Singleton
@@ -23,14 +23,15 @@ class OrganizationInviteRepoImpl @Inject() (val db: DataBaseComponent, val clock
 
   type RepoImpl = OrganizationInviteTable
   class OrganizationInviteTable(tag: Tag) extends RepoTable[OrganizationInvite](db, tag, "organization_invite") {
-    implicit val organizationAccessMapper = MappedColumnType.base[OrganizationAccess, String](_.value, OrganizationAccess(_))
+    implicit val organizationRoleMapper = MappedColumnType.base[OrganizationRole, String](_.value, OrganizationRole(_))
 
     def organizationId = column[Id[Organization]]("organization_id", O.NotNull)
     def inviterId = column[Id[User]]("inviter_id", O.NotNull)
     def userId = column[Option[Id[User]]]("user_id", O.Nullable)
     def emailAddress = column[Option[EmailAddress]]("email_address", O.Nullable)
-    def access = column[OrganizationAccess]("access", O.NotNull)
+    def role = column[OrganizationRole]("role", O.NotNull)
     def message = column[Option[String]]("message", O.Nullable)
+    def authToken = column[String]("auth_token", O.NotNull)
 
     def applyFromDbRow(
       id: Option[Id[OrganizationInvite]],
@@ -41,9 +42,10 @@ class OrganizationInviteRepoImpl @Inject() (val db: DataBaseComponent, val clock
       inviterId: Id[User],
       userId: Option[Id[User]],
       emailAddress: Option[EmailAddress],
-      access: OrganizationAccess,
-      message: Option[String]) = {
-      OrganizationInvite(id, createdAt, updatedAt, state, organizationId, inviterId, userId, emailAddress, access, message)
+      role: OrganizationRole,
+      message: Option[String],
+      authToken: String) = {
+      OrganizationInvite(id, createdAt, updatedAt, state, organizationId, inviterId, userId, emailAddress, role, message, authToken)
     }
 
     def unapplyToDbRow(invite: OrganizationInvite) = {
@@ -55,21 +57,28 @@ class OrganizationInviteRepoImpl @Inject() (val db: DataBaseComponent, val clock
         invite.inviterId,
         invite.userId,
         invite.emailAddress,
-        invite.access,
-        invite.message))
+        invite.role,
+        invite.message,
+        invite.authToken))
     }
 
-    def * = (id.?, createdAt, updatedAt, state, organizationId, inviterId, userId, emailAddress, access, message) <> ((applyFromDbRow _).tupled, unapplyToDbRow _)
+    def * = (id.?, createdAt, updatedAt, state, organizationId, inviterId, userId, emailAddress, role, message, authToken) <> ((applyFromDbRow _).tupled, unapplyToDbRow _)
   }
 
   def table(tag: Tag) = new OrganizationInviteTable(tag)
   initTable()
 
-  def getByOrganizationCompiled = Compiled { (orgId: Column[Id[Organization]], count: ConstColumn[Long], offset: ConstColumn[Long], state: Column[State[OrganizationInvite]]) =>
-    (for { row <- rows if row.organizationId === orgId && row.state === state } yield row).drop(offset).take(count)
+  def getByOrganizationCompiled = Compiled { (orgId: Column[Id[Organization]], limit: ConstColumn[Long], offset: ConstColumn[Long], state: Column[State[OrganizationInvite]]) =>
+    (for { row <- rows if row.organizationId === orgId && row.state === state } yield row).drop(offset).take(limit)
   }
 
-  def getByOrganization(organizationId: Id[Organization], count: Count, offset: Offset, state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit s: RSession): Seq[OrganizationInvite] = {
-    getByOrganizationCompiled(organizationId, count.value, offset.value, state).list
+  def getByOrganization(organizationId: Id[Organization], limit: Limit, offset: Offset, state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit s: RSession): Seq[OrganizationInvite] = {
+    getByOrganizationCompiled(organizationId, limit.value, offset.value, state).list
+  }
+
+  def getByInviterIdCompiled = Compiled { (inviterId: Column[Id[User]], state: Column[State[OrganizationInvite]]) => (for { row <- rows if row.inviterId === inviterId && row.state === state } yield row) }
+
+  def getByInviter(inviterId: Id[User], state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit session: RSession): Seq[OrganizationInvite] = {
+    getByInviterIdCompiled(inviterId, state).list
   }
 }

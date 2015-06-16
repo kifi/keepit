@@ -25,11 +25,11 @@ class AtomCommander @Inject() (
     libraryImageCommander: LibraryImageCommander,
     rover: RoverServiceClient) extends Logging {
 
-  final case class AtomLink(href: String, rel: Option[String] = None, linkType: Option[String] = None) {
+  case class AtomLink(href: String, rel: Option[String] = None, linkType: Option[String] = None) {
     def xml: Elem = <link href={ href } rel={ rel.map(Text(_)) } type={ linkType.map(Text(_)) }></link>
   }
 
-  final case class AtomEntry(title: String, author: String, content: Option[String],
+  case class AtomEntry(title: String, author: String, content: Option[String],
       id: String, updatedAt: DateTime, link: AtomLink, icon: Option[String] = None,
       logo: Option[String] = None, rights: Option[String] = None) {
     def xml: Elem = {
@@ -49,7 +49,7 @@ class AtomCommander @Inject() (
     }
   }
 
-  final case class AtomFeed(title: String, author: String, id: String, updatedAt: DateTime,
+  case class AtomFeed(title: String, author: String, id: String, updatedAt: DateTime,
       links: Seq[AtomLink], entries: Seq[AtomEntry], subtitle: Option[String] = None,
       icon: Option[String] = None, logo: Option[String] = None, rights: Option[String] = None) {
     def xml: Elem = {

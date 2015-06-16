@@ -38,6 +38,7 @@ angular.module('kifi')
         scope.colors = ['#447ab7','#5ab7e7','#4fc49e','#f99457','#dd5c60','#c16c9e','#9166ac'];
         scope.currentPageOrigin = '';
         scope.onSubscriptionExperiment = (profileService.me.experiments || []).indexOf('subscription') > -1;
+        scope.showSubInstructions = false;
         scope.newSub = { 'name': '', 'info': { 'kind': 'slack', 'url':'' } };
 
         //
@@ -50,6 +51,10 @@ angular.module('kifi')
         scope.editSlug = function () {
           scope.emptySlug = !scope.library.slug;
           scope.userHasEditedSlug = true;
+        };
+
+        scope.toggleInstructions = function() {
+          scope.showSubInstructions = !scope.showSubInstructions;
         };
 
         scope.addSubscription = function() {

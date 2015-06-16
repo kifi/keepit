@@ -7,11 +7,11 @@ import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
-case class OrganizationLogo(
-    id: Option[Id[OrganizationLogo]] = None,
+case class OrganizationAvatar(
+    id: Option[Id[OrganizationAvatar]] = None,
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,
-    state: State[OrganizationLogo] = OrganizationImageStates.ACTIVE,
+    state: State[OrganizationAvatar] = OrganizationImageStates.ACTIVE,
     organizationId: Id[Organization],
     position: Option[ImagePosition],
     width: Int,
@@ -21,20 +21,20 @@ case class OrganizationLogo(
     imagePath: ImagePath,
     source: ImageSource,
     sourceFileHash: ImageHash,
-    sourceImageURL: Option[String]) extends BaseImage with Model[OrganizationLogo] {
+    sourceImageURL: Option[String]) extends BaseImage with Model[OrganizationAvatar] {
   def isOriginal = true
 
   def dimensions = ImageSize(width, height)
-  def withId(id: Id[OrganizationLogo]) = this.copy(id = Some(id))
+  def withId(id: Id[OrganizationAvatar]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
 }
 
-object OrganizationLogo {
+object OrganizationAvatar {
   implicit val format = (
-    (__ \ 'id).formatNullable(Id.format[OrganizationLogo]) and
+    (__ \ 'id).formatNullable(Id.format[OrganizationAvatar]) and
     (__ \ 'createdAt).format(DateTimeJsonFormat) and
     (__ \ 'updatedAt).format(DateTimeJsonFormat) and
-    (__ \ 'state).format(State.format[OrganizationLogo]) and
+    (__ \ 'state).format(State.format[OrganizationAvatar]) and
     (__ \ 'organizationId).format(Id.format[Organization]) and
     (__ \ 'position).formatNullable[ImagePosition] and
     (__ \ 'width).format[Int] and
@@ -45,7 +45,7 @@ object OrganizationLogo {
     (__ \ 'source).format[ImageSource] and
     (__ \ 'sourceFileHash).format[ImageHash] and
     (__ \ 'sourceImageURL).formatNullable[String]
-  )(OrganizationLogo.apply, unlift(OrganizationLogo.unapply))
+  )(OrganizationAvatar.apply, unlift(OrganizationAvatar.unapply))
 }
 
 case class ImagePosition(x: Int, y: Int)
@@ -57,4 +57,4 @@ object ImagePosition {
   )(ImagePosition.apply, unlift(ImagePosition.unapply))
 }
 
-object OrganizationImageStates extends States[OrganizationLogo]
+object OrganizationImageStates extends States[OrganizationAvatar]

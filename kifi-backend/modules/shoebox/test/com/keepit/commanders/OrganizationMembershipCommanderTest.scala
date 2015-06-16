@@ -18,13 +18,13 @@ class OrganizationMembershipCommanderTest extends TestKitSupport with Specificat
         db.readWrite { implicit session =>
           for { i <- 1 to 20 } yield {
             val userId = UserFactory.user().withId(Id[User](i)).saved.id.get
-            orgMemberRepo.save(OrganizationMembership(organizationId = orgId, userId = userId, access = OrganizationAccess.READ_WRITE))
+            orgMemberRepo.save(OrganizationMembership(organizationId = orgId, userId = userId, role = OrganizationRole.MEMBER))
           }
         }
 
         val orgMemberCommander = inject[OrganizationMembershipCommander]
-        orgMemberCommander.getMembersAndInvitees(Id[Organization](0), Count(10), Offset(0), true).length === 0
-        orgMemberCommander.getMembersAndInvitees(orgId, Count(50), Offset(0), true).length === 20
+        orgMemberCommander.getMembersAndInvitees(Id[Organization](0), Limit(10), Offset(0), true).length === 0
+        orgMemberCommander.getMembersAndInvitees(orgId, Limit(50), Offset(0), true).length === 20
       }
     }
     "and page results" in {
@@ -35,18 +35,18 @@ class OrganizationMembershipCommanderTest extends TestKitSupport with Specificat
         db.readWrite { implicit session =>
           for { i <- 1 to 20 } yield {
             val userId = UserFactory.user().withId(Id[User](i)).saved.id.get
-            orgMemberRepo.save(OrganizationMembership(organizationId = orgId, userId = userId, access = OrganizationAccess.READ_WRITE))
-            orgInviteRepo.save(OrganizationInvite(organizationId = orgId, inviterId = Id[User](1), access = OrganizationAccess.READ_WRITE, emailAddress = Some(EmailAddress("colin@kifi.com"))))
+            orgMemberRepo.save(OrganizationMembership(organizationId = orgId, userId = userId, role = OrganizationRole.MEMBER))
+            orgInviteRepo.save(OrganizationInvite(organizationId = orgId, inviterId = Id[User](1), role = OrganizationRole.MEMBER, emailAddress = Some(EmailAddress("colin@kifi.com"))))
           }
         }
 
         val orgMemberCommander = inject[OrganizationMembershipCommander]
         // limit by count
-        val membersLimitedByCount = orgMemberCommander.getMembersAndInvitees(orgId, Count(10), Offset(0), true)
+        val membersLimitedByCount = orgMemberCommander.getMembersAndInvitees(orgId, Limit(10), Offset(0), true)
         membersLimitedByCount.length === 10
 
         // limit with offset
-        val membersLimitedByOffset = orgMemberCommander.getMembersAndInvitees(orgId, Count(10), Offset(17), true)
+        val membersLimitedByOffset = orgMemberCommander.getMembersAndInvitees(orgId, Limit(10), Offset(17), true)
         membersLimitedByOffset.take(3).foreach(_.member.isLeft === true)
         membersLimitedByOffset.drop(3).take(7).foreach(_.member.isRight === true)
         membersLimitedByOffset.length === 10

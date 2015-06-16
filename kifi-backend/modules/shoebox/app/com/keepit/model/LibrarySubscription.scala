@@ -33,7 +33,7 @@ object LibrarySubscription {
     (__ \ 'trigger).format[SubscriptionTrigger] and
     (__ \ 'info).format[SubscriptionInfo])(LibrarySubscription.apply _, unlift(LibrarySubscription.unapply))
 
-  implicit def toSubKey(sub: LibrarySubscription): LibrarySubscriptionKey = {
+  def toSubKey(sub: LibrarySubscription): LibrarySubscriptionKey = {
     LibrarySubscriptionKey(name = sub.name, info = sub.info)
   }
 }

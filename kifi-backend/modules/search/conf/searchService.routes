@@ -38,13 +38,13 @@ GET         /m/1/search/library        @com.keepit.search.controllers.mobile.Mob
 # Mobile V2
 ##########################################
 
-GET         /m/2/search       @com.keepit.search.controllers.mobile.MobileSearchController.searchV2(q: String, f: Option[String] ?= None, maxUris: Int ?= 0, uriContext: Option[String] ?= None, lastUUIDStr: Option[String] ?= None, maxLibraries: Int ?= 0, libraryContext: Option[String] ?= None, maxUsers: Int ?= 0, userContext: Option[String] ?= None, disablePrefixSearch: Boolean ?= false, is: Option[ImageSize] ?= None, debug: Option[String] ?= None)
+GET         /m/2/search       @com.keepit.search.controllers.mobile.MobileSearchController.searchV2(q: String, f: Option[String] ?= None, maxUris: Int ?= 0, uriContext: Option[String] ?= None, lastUUIDStr: Option[String] ?= None, maxLibraries: Int ?= 0, libraryContext: Option[String] ?= None, maxUsers: Int ?= 0, userContext: Option[String] ?= None, disablePrefixSearch: Boolean ?= false, orderBy: Option[String] ?= None, is: Option[ImageSize] ?= None, debug: Option[String] ?= None)
 
 ##########################################
 # Search Website API
 ##########################################
 GET         /site/search2                       @com.keepit.search.controllers.website.WebsiteSearchController.search2(q: String, f: Option[String], l: Option[String], maxHits: Int, lastUUID: Option[String], context: Option[String], auth: Option[String], debug: Option[String])
-GET         /site/search                        @com.keepit.search.controllers.website.WebsiteSearchController.search(q: String, f: Option[String] ?= None, l: Option[String] ?= None, maxUris: Int ?= 0, uriContext: Option[String] ?= None, lastUUIDStr: Option[String] ?= None, maxLibraries: Int ?= 0, libraryContext: Option[String] ?= None, maxUsers: Int ?= 0, userContext: Option[String] ?= None, disablePrefixSearch: Boolean ?= false, auth: Option[String], is: Option[ImageSize] ?= None, debug: Option[String] ?= None)
+GET         /site/search                        @com.keepit.search.controllers.website.WebsiteSearchController.search(q: String, f: Option[String] ?= None, l: Option[String] ?= None, maxUris: Int ?= 0, uriContext: Option[String] ?= None, lastUUIDStr: Option[String] ?= None, maxLibraries: Int ?= 0, libraryContext: Option[String] ?= None, maxUsers: Int ?= 0, userContext: Option[String] ?= None, disablePrefixSearch: Boolean ?= false, orderBy: Option[String] ?= None, auth: Option[String], is: Option[ImageSize] ?= None, debug: Option[String] ?= None)
 GET         /site/search/warmUp                 @com.keepit.search.controllers.website.WebsiteSearchController.warmUp()
 POST        /site/search/events/resultClicked   @com.keepit.search.controllers.website.WebsiteSearchEventController.clickedKifiResult()
 POST        /site/search/events/searched        @com.keepit.search.controllers.website.WebsiteSearchEventController.searched()
@@ -61,7 +61,7 @@ POST        /internal/search/dist/search/uri         @com.keepit.search.controll
 POST        /internal/search/dist/search/library   @com.keepit.search.controllers.search.SearchController.distSearchLibraries()
 POST        /internal/search/dist/search/user   @com.keepit.search.controllers.search.SearchController.distSearchUsers()
 
-GET         /internal/search/search/uri/explain        @com.keepit.search.controllers.search.SearchController.explainUriResult(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: Option[String], debug: Option[String])
+GET         /internal/search/search/uri/explain        @com.keepit.search.controllers.search.SearchController.explainUriResult(query: String, userId: Id[User], uriId: Id[NormalizedURI], libraryId: Option[Long], lang: Option[String], debug: Option[String])
 GET         /internal/search/search/library/explain        @com.keepit.search.controllers.search.SearchController.explainLibraryResult(query: String, userId: Id[User], libraryId: Id[Library], acceptLangs: String, debug: Option[String], disablePrefixSearch: Boolean ?= false)
 GET         /internal/search/search/user/explain        @com.keepit.search.controllers.search.SearchController.explainUserResult(query: String, userId: Id[User], resultUserId: Id[User], acceptLangs: String, debug: Option[String], disablePrefixSearch: Boolean ?= false)
 

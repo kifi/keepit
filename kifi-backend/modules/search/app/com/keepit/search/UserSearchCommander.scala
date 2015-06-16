@@ -155,7 +155,7 @@ class UserSearchCommanderImpl @Inject() (
         if (debug.isDefined) debugOption.debug(debug.get)
 
         val searchFilter = SearchFilter(request.filter.map(Right(_)), LibraryContext.None, request.context)
-        val searches = searchFactory.getUserSearches(shards, request.userId, request.queryString, request.lang1, request.lang2, request.maxHits, request.disablePrefixSearch, searchFilter, searchConfig, request.explain)
+        val searches = searchFactory.getUserSearches(shards, request.userId, request.queryString, request.lang1, request.lang2, request.maxHits, request.disablePrefixSearch, searchFilter, searchConfig, request.experiments, request.explain)
         val futureResults: Seq[Future[UserShardResult]] = searches.map { userSearch =>
           if (debug.isDefined) userSearch.debug(debugOption)
           SafeFuture { userSearch.execute() }
