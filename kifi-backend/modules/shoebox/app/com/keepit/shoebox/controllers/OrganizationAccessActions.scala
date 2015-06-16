@@ -2,7 +2,7 @@ package com.keepit.shoebox.controllers
 
 import com.keepit.commanders.{ OrganizationMembershipCommander, OrganizationCommander }
 import com.keepit.common.controller.{ MaybeUserRequest, UserActions, UserRequest }
-import com.keepit.common.crypto.PublicId
+import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.db.Id
 import com.keepit.model.{ OrganizationPermission, Organization, User }
 import play.api.libs.json.Json
@@ -13,7 +13,7 @@ import scala.concurrent.Future
 trait OrganizationAccessActions {
   self: UserActions with Controller =>
 
-  val publicIdConfig: com.keepit.common.crypto.PublicIdConfiguration
+  val publicIdConfig: PublicIdConfiguration
   implicit private val implicitPublicId = publicIdConfig
   val orgCommander: OrganizationCommander
   val orgMembershipCommander: OrganizationMembershipCommander
@@ -39,8 +39,8 @@ trait OrganizationAccessActions {
 
   private def lookupViewable[A](orgPubId: PublicId[Organization], input: MaybeUserRequest[A]) = {
     parseRequest(orgPubId, input) match {
-      case Some((orgId, userIdOpt, _)) =>
-        val access = orgCommander.canViewOrganization(userIdOpt, orgId)
+      case Some((orgId, userIdOpt, authToken)) =>
+        val access = orgCommander.canViewOrganization(userIdOpt, orgId, authToken)
         if (access) {
           None
         } else {

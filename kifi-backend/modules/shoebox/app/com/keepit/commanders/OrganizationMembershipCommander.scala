@@ -24,10 +24,12 @@ object MaybeOrganizationMember {
 
 @ImplementedBy(classOf[OrganizationMembershipCommanderImpl])
 trait OrganizationMembershipCommander {
-  def getMemberPermissions(orgId: Id[Organization], userId: Id[User]): Option[Set[OrganizationPermission]]
   def getMembersAndInvitees(orgId: Id[Organization], limit: Limit, offset: Offset, includeInvitees: Boolean): Seq[MaybeOrganizationMember]
-  def modifyMemberships(orgId: Id[Organization], requestorId: Id[User], modifications: Seq[(Id[User], OrganizationRole)]): Either[OrganizationFail, Seq[OrganizationMembership]]
-  def removeMembers(orgId: Id[Organization], requestorId: Id[User], removals: Seq[Id[User]]): MemberRemovals
+
+  def getMemberPermissions(orgId: Id[Organization], userId: Id[User]): Option[Set[OrganizationPermission]]
+  def addMembership(request: OrganizationMembershipModifyRequest): Either[OrganizationFail, OrganizationMembershipAddResponse]
+  def modifyMembership(request: OrganizationMembershipModifyRequest): Either[OrganizationFail, OrganizationMembershipModifyResponse]
+  def removeMembership(request: OrganizationMembershipModifyRequest): Either[OrganizationFail, OrganizationMembershipRemoveResponse]
 }
 
 @Singleton
@@ -44,7 +46,6 @@ class OrganizationMembershipCommanderImpl @Inject() (
     membershipOpt.map { _.permissions }
   }
 
-  // Offset and Count to prevent accidental reversal of arguments with same type (Long).
   def getMembersAndInvitees(orgId: Id[Organization], limit: Limit, offset: Offset, includeInvitees: Boolean): Seq[MaybeOrganizationMember] = {
     db.readOnlyMaster { implicit session =>
       val members = organizationMembershipRepo.getbyOrgId(orgId, limit, offset)
@@ -90,7 +91,42 @@ class OrganizationMembershipCommanderImpl @Inject() (
     membersNotIncludingOwner ++ invitedByUserId ++ invitedByEmailAddress
   }
 
-  def modifyMemberships(orgId: Id[Organization], requestorId: Id[User], modifications: Seq[(Id[User], OrganizationRole)]): Either[OrganizationFail, Seq[OrganizationMembership]] = ???
+  private def validRequest(request: OrganizationMembershipModifyRequest): Boolean = {
+    // TODO: fix
+    true
+  }
 
-  def removeMembers(orgId: Id[Organization], requestorId: Id[User], removals: Seq[Id[User]]): MemberRemovals = ???
+  def addMembership(request: OrganizationMembershipModifyRequest): Either[OrganizationFail, OrganizationMembershipAddResponse] = {
+    db.readWrite { implicit session =>
+      if (validRequest(request)) {
+        organizationMembershipRepo.save(OrganizationMembership(organizationId = request.orgId, userId = request.targetId, role = request.newRole))
+        Right(OrganizationMembershipAddResponse(request))
+      } else {
+        Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+      }
+    }
+  }
+
+  def modifyMembership(request: OrganizationMembershipModifyRequest): Either[OrganizationFail, OrganizationMembershipModifyResponse] = {
+    db.readWrite { implicit session =>
+      if (validRequest(request)) {
+        val oldMembership = organizationMembershipRepo.getByOrgIdAndUserId(request.orgId, request.targetId).get
+        organizationMembershipRepo.save(oldMembership.withRole(request.newRole))
+        Right(OrganizationMembershipModifyResponse(request))
+      } else {
+        Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+      }
+    }
+  }
+  def removeMembership(request: OrganizationMembershipModifyRequest): Either[OrganizationFail, OrganizationMembershipRemoveResponse] = {
+    db.readWrite { implicit session =>
+      if (validRequest(request)) {
+        val oldMembership = organizationMembershipRepo.getByOrgIdAndUserId(request.orgId, request.targetId).get
+        organizationMembershipRepo.deactivate(oldMembership.id.get)
+        Right(OrganizationMembershipRemoveResponse(request))
+      } else {
+        Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+      }
+    }
+  }
 }

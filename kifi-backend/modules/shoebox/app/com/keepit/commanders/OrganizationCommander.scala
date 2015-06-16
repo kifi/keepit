@@ -9,7 +9,7 @@ import com.keepit.model._
 @ImplementedBy(classOf[OrganizationCommanderImpl])
 trait OrganizationCommander {
   def get(orgId: Id[Organization]): Organization
-  def canViewOrganization(userIdOpt: Option[Id[User]], orgId: Id[Organization]): Boolean
+  def canViewOrganization(userIdOpt: Option[Id[User]], orgId: Id[Organization], authToken: Option[String]): Boolean
 }
 
 @Singleton
@@ -20,5 +20,5 @@ class OrganizationCommanderImpl @Inject() (
   def get(orgId: Id[Organization]): Organization = db.readOnlyReplica { implicit session => orgRepo.get(orgId) }
 
   // Right now, Organization's are 100% public
-  def canViewOrganization(userIdOpt: Option[Id[User]], orgId: Id[Organization]): Boolean = true
+  def canViewOrganization(userIdOpt: Option[Id[User]], orgId: Id[Organization], authToken: Option[String]): Boolean = true
 }
