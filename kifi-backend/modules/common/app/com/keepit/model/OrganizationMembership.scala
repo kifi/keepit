@@ -80,7 +80,9 @@ object OrganizationPermission {
   }
 }
 
-sealed abstract class OrganizationRole(val value: String, val priority: Int)
+sealed abstract class OrganizationRole(val value: String, val priority: Int) extends Ordered[OrganizationRole] {
+  override def compare(that: OrganizationRole): Int = priority compare that.priority
+}
 
 object OrganizationRole {
   case object OWNER extends OrganizationRole("owner", 0)
