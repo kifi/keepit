@@ -96,7 +96,7 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
                   }
                 }
               } else {
-                log.warn(s"not performing invite, inviter attempting to grant role inviter does not have.")
+                log.warn(s"Inviter $inviterId attempting to grant role inviter does not have.")
                 None
               }
             }
