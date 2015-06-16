@@ -2,6 +2,7 @@ package com.keepit.commanders
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.db.Id
+import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.BasicContact
@@ -27,9 +28,10 @@ trait OrganizationMembershipCommander {
   def getMembersAndInvitees(orgId: Id[Organization], limit: Limit, offset: Offset, includeInvitees: Boolean): Seq[MaybeOrganizationMember]
 
   def getMemberPermissions(orgId: Id[Organization], userId: Id[User]): Option[Set[OrganizationPermission]]
-  def addMembership(request: OrganizationMembershipModifyRequest): Either[OrganizationFail, OrganizationMembershipAddResponse]
+
+  def addMembership(request: OrganizationMembershipAddRequest): Either[OrganizationFail, OrganizationMembershipAddResponse]
   def modifyMembership(request: OrganizationMembershipModifyRequest): Either[OrganizationFail, OrganizationMembershipModifyResponse]
-  def removeMembership(request: OrganizationMembershipModifyRequest): Either[OrganizationFail, OrganizationMembershipRemoveResponse]
+  def removeMembership(request: OrganizationMembershipRemoveRequest): Either[OrganizationFail, OrganizationMembershipRemoveResponse]
 }
 
 @Singleton
@@ -91,12 +93,11 @@ class OrganizationMembershipCommanderImpl @Inject() (
     membersNotIncludingOwner ++ invitedByUserId ++ invitedByEmailAddress
   }
 
-  private def validRequest(request: OrganizationMembershipModifyRequest): Boolean = {
-    // TODO: fix
+  private def validRequest(request: OrganizationMembershipRequest)(implicit session: RSession): Boolean = {
     true
   }
 
-  def addMembership(request: OrganizationMembershipModifyRequest): Either[OrganizationFail, OrganizationMembershipAddResponse] = {
+  def addMembership(request: OrganizationMembershipAddRequest): Either[OrganizationFail, OrganizationMembershipAddResponse] = {
     db.readWrite { implicit session =>
       if (validRequest(request)) {
         organizationMembershipRepo.save(OrganizationMembership(organizationId = request.orgId, userId = request.targetId, role = request.newRole))
@@ -118,7 +119,7 @@ class OrganizationMembershipCommanderImpl @Inject() (
       }
     }
   }
-  def removeMembership(request: OrganizationMembershipModifyRequest): Either[OrganizationFail, OrganizationMembershipRemoveResponse] = {
+  def removeMembership(request: OrganizationMembershipRemoveRequest): Either[OrganizationFail, OrganizationMembershipRemoveResponse] = {
     db.readWrite { implicit session =>
       if (validRequest(request)) {
         val oldMembership = organizationMembershipRepo.getByOrgIdAndUserId(request.orgId, request.targetId).get
