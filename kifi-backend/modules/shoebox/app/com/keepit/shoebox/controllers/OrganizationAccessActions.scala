@@ -18,7 +18,7 @@ trait OrganizationAccessActions {
   val orgCommander: OrganizationCommander
   val orgMembershipCommander: OrganizationMembershipCommander
 
-  def OrganzationViewAction(id: PublicId[Organization]) = new ActionFilter[MaybeUserRequest] {
+  def OrganizationViewAction(id: PublicId[Organization]) = new ActionFilter[MaybeUserRequest] {
     def filter[A](input: MaybeUserRequest[A]): Future[Option[Result]] = Future.successful(lookupViewable(id, input))
   }
 
