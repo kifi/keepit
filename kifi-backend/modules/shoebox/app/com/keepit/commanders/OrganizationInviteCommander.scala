@@ -41,10 +41,8 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
   }
 
   def inviteUsersToOrganization(orgId: Id[Organization], inviterId: Id[User], invitees: Seq[(Either[Id[User], EmailAddress], OrganizationRole, Option[String])]): Future[Either[OrganizationFail, Seq[(Either[BasicUser, RichContact], OrganizationRole)]]] = {
-    val (org, inviterMembershipOpt) = db.readOnlyMaster { implicit session =>
-      val org = organizationRepo.get(orgId)
-      val membership = organizationMembershipRepo.getByOrgIdAndUserId(orgId, inviterId)
-      (org, membership)
+    val inviterMembershipOpt = db.readOnlyMaster { implicit session =>
+      organizationMembershipRepo.getByOrgIdAndUserId(orgId, inviterId)
     }
     inviterMembershipOpt match {
       case Some(inviterMembership) =>
@@ -104,8 +102,17 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
             val (invites, inviteesWithRole): (Seq[OrganizationInvite], Seq[(Either[BasicUser, RichContact], OrganizationRole)]) = invitesForInvitees.flatten.unzip
 
             // TODO: still need to write code for persisting invitations / sending invitation email / tracking sent invitation
-            def persistInvitations = ???
-            def sendInvitationEmail = ???
+            val (org, owner, inviter) = db.readOnlyMaster { implicit session =>
+              val org = organizationRepo.get(orgId)
+              val owner = basicUserRepo.load(org.ownerId)
+              val inviter = userRepo.get(inviterId)
+              (org, owner, inviter)
+            }
+            val persistedInvites = invites.flatMap { invite =>
+              persistInvitation(invite)
+            }
+
+            sendInvitationEmail(persistedInvites, org, owner, inviter)
             def trackSentInvitation = ???
 
             Right(inviteesWithRole)
@@ -116,6 +123,36 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
       case None =>
         Future.successful(Left(OrganizationFail(401, "inviter_not_a_member")))
     }
+  }
+
+  // return whether the invitation was persisted or not.
+  def persistInvitation(invite: OrganizationInvite): Option[OrganizationInvite] = {
+    val inviterId = invite.inviterId
+    val orgId = invite.organizationId
+    val recipientId = invite.userId
+    val recipientEmail = invite.emailAddress
+    val shouldInsert = db.readOnlyMaster { implicit s =>
+      (recipientId, recipientEmail) match {
+        case (Some(userId), _) =>
+          organizationInviteRepo.getLastSentByOrgIdAndInviterIdAndUserId(orgId, inviterId, userId, Set(OrganizationInviteStates.ACTIVE))
+        case (_, Some(email)) =>
+          organizationInviteRepo.getLastSentByOrgIdAndInviterIdAndEmailAddress(orgId, inviterId, email, Set(OrganizationInviteStates.ACTIVE))
+        case _ => None
+      }
+    }.map { lastInvite =>
+      // determine whether to resend invitation.
+      lastInvite.role != invite.role || lastInvite.createdAt.plusMinutes(5).isBefore(invite.createdAt)
+    }.getOrElse(true)
+    shouldInsert match {
+      case true => db.readWrite { implicit s =>
+        Some(organizationInviteRepo.save(invite))
+      }
+      case false => None
+    }
+  }
+
+  def sendInvitationEmail(persistedInvites: Seq[OrganizationInvite], org: Organization, owner: BasicUser, inviter: User): Unit = {
+
   }
 
   def acceptInvitation(orgId: Id[Organization], userId: Id[User], authToken: Option[String] = None): Either[OrganizationFail, (Organization, OrganizationMembership)] = {
