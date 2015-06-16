@@ -23,7 +23,7 @@ import com.keepit.search.result.DecoratedResult
 import play.api.libs.json.JsObject
 import com.keepit.search.index.graph.library.{ LibraryRecord, LibraryIndexable }
 
-import scala.util.{ Failure, Success }
+import scala.util.{ Try, Failure, Success }
 import com.keepit.search.augmentation._
 import com.keepit.social.BasicUser
 
@@ -70,7 +70,13 @@ trait SearchControllerUtil {
   }
 
   def getAugmentedItems(augmentationCommander: AugmentationCommander)(userId: Id[User], kifiPlainResult: UriSearchResult): Future[Seq[AugmentedItem]] = {
-    val items = kifiPlainResult.hits.map { hit => AugmentableItem(Id(hit.id), hit.libraryId.map(Id(_))) }
+    val items = kifiPlainResult.hits.map { hit =>
+      // todo(Léo): this is a hack to make sure keeps from a library are always shown canonically when searching that library.
+      // todo(Léo): Would need a similar hack to search user profiles.
+      // todo(Léo): Ideally we filter the search space within ScoreVectorSources and the final results (e.g. porn) within ResultCollectors (possibly with a special record flag).
+      val libraryId = (Try(kifiPlainResult.searchFilter.libraryContext.get).toOption orElse hit.libraryId).map(Id[Library](_))
+      AugmentableItem(Id(hit.id), libraryId)
+    }
     val previousItems = (kifiPlainResult.idFilter.map(Id[NormalizedURI](_)) -- items.map(_.uri)).map(AugmentableItem(_, None)).toSet
     val context = AugmentationContext.uniform(userId, previousItems ++ items)
     val augmentationRequest = ItemAugmentationRequest(items.toSet, context)

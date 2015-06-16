@@ -49,7 +49,7 @@ class GratificationEmailSender @Inject() (
         from = SenderInfo.ADDR,
         fromName = Some(Right(SenderInfo.FIRSTNAME + " " + SenderInfo.LASTNAME)),
         to = toAddress.map(Right.apply).getOrElse(Left(userId)),
-        subject = "You've been busy this week on Kifi!",
+        subject = "People have been viewing your content on Kifi!",
         category = NotificationCategory.User.GRATIFICATION_EMAIL,
         htmlTemplate = views.html.email.black.gratification(userId, viewsByLibrary, followersByLibrary, newConnections),
         textTemplate = Some(views.html.email.black.gratificationText(userId, viewsByLibrary, followersByLibrary, newConnections)),

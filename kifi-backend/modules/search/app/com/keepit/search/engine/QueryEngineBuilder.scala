@@ -1,8 +1,9 @@
 package com.keepit.search.engine
 
+import com.keepit.search.SearchRanking
 import com.keepit.search.engine.query.core._
 import com.keepit.search.engine.query.{ FixedScoreQuery, HomePageQuery }
-import org.apache.lucene.search.Query
+import org.apache.lucene.search.{ Query }
 import org.apache.lucene.search.BooleanClause.Occur._
 import scala.collection.JavaConversions._
 import scala.collection.mutable.ArrayBuffer
@@ -17,11 +18,12 @@ class QueryEngineBuilder(userQuery: Query) {
   import QueryEngineBuilder._
 
   private[this] val _tieBreakerMultiplier = tieBreakerMultiplier
-  private[this] val _expr = buildExpr(userQuery) // (expr, query, size, recencyOnly)
-  private[this] var _filters: List[(Query, Float)] = Nil
+  private[this] val _expr = buildExpr(userQuery) // (expr, query, size)
+  private[this] var _filters: List[FilterQuery] = Nil
   private[this] var _boosters: List[(Query, Float)] = Nil
   private[this] lazy val _core = buildCore() // (expr, query, size)
   private[this] lazy val _final = buildFinal()
+  private[this] var recencyOnly = false
   private[this] var built = false
 
   def addBoosterQuery(boosterQuery: Query, boostStrength: Float): QueryEngineBuilder = {
@@ -32,12 +34,18 @@ class QueryEngineBuilder(userQuery: Query) {
 
   def addFilterQuery(filter: Query): QueryEngineBuilder = {
     if (built) throw new IllegalStateException("cannot modify the engine builder once an engine is built")
-    _filters = (new FilterQuery(filter), 1.0f) :: _filters
+    _filters = new FilterQuery(filter) :: _filters
+    this
+  }
+
+  def setRanking(ranking: SearchRanking): QueryEngineBuilder = {
+    if (built) throw new IllegalStateException("cannot modify the engine builder once an engine is built")
+    if (ranking == SearchRanking.recency) { recencyOnly = true }
     this
   }
 
   def build(): QueryEngine = {
-    new QueryEngine(_final._1, _final._2, _final._3, _core._3, _expr._4)
+    new QueryEngine(_final._1, _final._2, _final._3, _core._3, recencyOnly)
   }
 
   def getQueryLabels(): Array[String] = buildLabels()
@@ -54,15 +62,16 @@ class QueryEngineBuilder(userQuery: Query) {
 
   private[this] def buildCore(): (ScoreExpr, Query, Int) = {
     built = true
-    val (expr, query, totalSize, noClickBoostNoSharingBoost) = _filters.foldLeft(_expr) {
-      case ((expr, query, size, recencyOnly), (booster, boostStrength)) =>
+    _filters.foldLeft(_expr) {
+      case ((expr, query, size), filterQuery) =>
         val boosterExpr = MaxExpr(size)
-        (BoostExpr(expr, boosterExpr, boostStrength), new KBoostQuery(query, booster, boostStrength), size + 1, recencyOnly)
+        val boostStrength = 1.0f
+        val booster = filterQuery
+        (BoostExpr(expr, boosterExpr, boostStrength), new KBoostQuery(query, booster, boostStrength), size + 1)
     }
-    (expr, query, totalSize)
   }
 
-  private[this] def buildExpr(query: Query): (ScoreExpr, Query, Int, Boolean) = {
+  private[this] def buildExpr(query: Query): (ScoreExpr, Query, Int) = {
     query match {
       case booleanQuery: KBooleanQuery =>
         val clauses = booleanQuery.clauses
@@ -95,19 +104,16 @@ class QueryEngineBuilder(userQuery: Query) {
           filter = ExistsExpr(filterOut)
         )
 
-        (expr, booleanQuery, exprIndex, false)
+        (expr, booleanQuery, exprIndex)
 
       case textQuery: KTextQuery =>
-        (MaxWithTieBreakerExpr(0, _tieBreakerMultiplier), textQuery, 1, false)
+        (MaxWithTieBreakerExpr(0, _tieBreakerMultiplier), textQuery, 1)
 
       case filterQuery: KFilterQuery =>
-        // this is a filter only query, use FixedScoreQuery and MaxExpr, and disable click boost and sharing boost
-        // so that the recency boosting takes over ranking
-        // this is a special requirement for "tag:" only query on kifi.com
-        (MaxExpr(0), new KWrapperQuery(new FixedScoreQuery(filterQuery.subQuery)), 1, true)
+        (MaxExpr(0), new KWrapperQuery(new FixedScoreQuery(filterQuery.subQuery)), 1)
 
       case q =>
-        (MaxWithTieBreakerExpr(0, _tieBreakerMultiplier), new KWrapperQuery(q), 1, false)
+        (MaxWithTieBreakerExpr(0, _tieBreakerMultiplier), new KWrapperQuery(q), 1)
     }
   }
 
@@ -149,7 +155,7 @@ class QueryEngineBuilder(userQuery: Query) {
       }
     }
 
-    _filters.foreach { case (q, _) => labels += toLabel(q) }
+    _filters.foreach { filter => labels += toLabel(filter) }
     _boosters.foreach { case (q, _) => labels += toLabel(q) }
 
     labels.toArray

@@ -79,7 +79,6 @@ object Shoebox extends Service {
     def getUsers(ids: String) = ServiceRoute(GET, "/internal/shoebox/database/getUsers", Param("ids", ids))
     def getUserIdsByExternalIds(ids: String) = ServiceRoute(GET, "/internal/shoebox/database/userIdsByExternalIds", Param("ids", ids))
     def getBasicUsers() = ServiceRoute(POST, "/internal/shoebox/database/getBasicUsers")
-    def getBasicUsersNoCache() = ServiceRoute(POST, "/internal/shoebox/database/getBasicUsersNoCache")
     def getEmailAddressesForUsers() = ServiceRoute(POST, "/internal/shoebox/database/getEmailAddressesForUsers")
     def getPrimaryEmailAddressForUsers() = ServiceRoute(POST, "/internal/shoebox/database/getPrimaryEmailAddressForUsers")
     def getCollectionIdsByExternalIds(ids: String) = ServiceRoute(GET, "/internal/shoebox/database/collectionIdsByExternalIds", Param("ids", ids))
@@ -179,8 +178,8 @@ object Search extends Service {
     def searchKeeps(userId: Id[User], query: String) = ServiceRoute(POST, "/internal/search/search/keeps", Param("userId", userId), Param("query", query))
     def searchUsers() = ServiceRoute(POST, "/internal/search/search/users")
     def userTypeahead() = ServiceRoute(POST, "/internal/search/search/userTypeahead")
-    def explainUriResult(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: Option[String], debug: Option[String]) =
-      ServiceRoute(GET, "/internal/search/search/uri/explain", Param("query", query), Param("userId", userId), Param("uriId", uriId), Param("lang", lang), Param("debug", debug))
+    def explainUriResult(query: String, userId: Id[User], uriId: Id[NormalizedURI], libraryId: Option[Id[Library]], lang: Option[String], debug: Option[String]) =
+      ServiceRoute(GET, "/internal/search/search/uri/explain", Param("query", query), Param("userId", userId), Param("uriId", uriId), Param("libraryId", libraryId), Param("lang", lang), Param("debug", debug))
     def explainLibraryResult(query: String, userId: Id[User], libraryId: Id[Library], acceptLangs: Seq[String], debug: Option[String], disablePrefixSearch: Boolean) =
       ServiceRoute(GET, "/internal/search/search/library/explain", Param("query", query), Param("userId", userId), Param("libraryId", libraryId), Param("acceptLangs", acceptLangs.mkString(",")), Param("debug", debug), Param("disablePrefixSearch", disablePrefixSearch))
     def explainUserResult(query: String, userId: Id[User], resultUserId: Id[User], acceptLangs: Seq[String], debug: Option[String], disablePrefixSearch: Boolean) =

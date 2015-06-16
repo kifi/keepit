@@ -46,6 +46,7 @@ trait DistributedSearchServiceClient extends ServiceClient {
     query: String,
     filter: Option[Either[Id[User], String]],
     libraryId: LibraryContext,
+    orderBy: SearchRanking,
     maxHits: Int,
     context: Option[String],
     debug: Option[String]): Seq[Future[JsValue]]
@@ -93,7 +94,7 @@ class DistributedSearchServiceClientImpl @Inject() (
     context: Option[String],
     debug: Option[String]): Seq[Future[JsValue]] = {
 
-    distSearch(Search.internal.distSearch, plan, userId, firstLang, secondLang, query, filter.map(Right(_)), LibraryContext.None, maxHits, context, debug)
+    distSearch(Search.internal.distSearch, plan, userId, firstLang, secondLang, query, filter.map(Right(_)), LibraryContext.None, SearchRanking.default, maxHits, context, debug)
   }
 
   def distSearchUris(
@@ -104,11 +105,12 @@ class DistributedSearchServiceClientImpl @Inject() (
     query: String,
     filter: Option[Either[Id[User], String]],
     library: LibraryContext,
+    orderBy: SearchRanking,
     maxHits: Int,
     context: Option[String],
     debug: Option[String]): Seq[Future[JsValue]] = {
 
-    distSearch(Search.internal.distSearchUris, plan, userId, firstLang, secondLang, query, filter, library, maxHits, context, debug)
+    distSearch(Search.internal.distSearchUris, plan, userId, firstLang, secondLang, query, filter, library, orderBy, maxHits, context, debug)
   }
 
   private def distSearch(
@@ -120,6 +122,7 @@ class DistributedSearchServiceClientImpl @Inject() (
     query: String,
     filter: Option[Either[Id[User], String]],
     library: LibraryContext,
+    orderBy: SearchRanking,
     maxHits: Int,
     context: Option[String],
     debug: Option[String]): Seq[Future[JsValue]] = {
@@ -128,6 +131,7 @@ class DistributedSearchServiceClientImpl @Inject() (
     // keep the following in sync with SearchController
     builder += ("userId", userId.id)
     builder += ("query", query)
+    builder += ("orderBy", orderBy.orderBy)
     builder += ("maxHits", maxHits)
     builder += ("lang1", firstLang.lang)
     if (secondLang.isDefined) builder += ("lang2", secondLang.get.lang)

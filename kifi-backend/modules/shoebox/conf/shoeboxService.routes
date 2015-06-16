@@ -401,7 +401,7 @@ POST    /site/libraries/:id/modify  @com.keepit.controllers.website.LibraryContr
 POST    /site/libraries/:id/delete  @com.keepit.controllers.website.LibraryController.removeLibrary(id: PublicId[Library])
 POST    /site/libraries/:id/invite  @com.keepit.controllers.website.LibraryController.inviteUsersToLibrary(id: PublicId[Library])
 DELETE  /site/libraries/:id/invite  @com.keepit.controllers.website.LibraryController.revokeLibraryInvitation(id: PublicId[Library])
-POST    /site/libraries/:id/join    @com.keepit.controllers.website.LibraryController.joinLibrary(id: PublicId[Library], authToken: Option[String] ?= None, subscribed: Boolean ?= false)
+POST    /site/libraries/:id/join    @com.keepit.controllers.website.LibraryController.joinLibrary(id: PublicId[Library], authToken: Option[String] ?= None, subscribed: Option[Boolean] ?= None)
 POST    /site/libraries/:id/decline @com.keepit.controllers.website.LibraryController.declineLibrary(id: PublicId[Library])
 POST    /site/libraries/:id/leave   @com.keepit.controllers.website.LibraryController.leaveLibrary(id: PublicId[Library])
 POST    /site/libraries/:id/subscription @com.keepit.controllers.website.LibraryController.setSubscribedToUpdates(id: PublicId[Library], subscribed: Boolean)
@@ -411,6 +411,7 @@ POST    /site/libraries/:id/keeps   @com.keepit.controllers.website.LibraryContr
 POST    /site/libraries/:id/keeps/delete   @com.keepit.controllers.website.LibraryController.removeKeeps(id: PublicId[Library])
 DELETE  /site/libraries/:id/keeps/:k   @com.keepit.controllers.website.LibraryController.removeKeep(id: PublicId[Library], k: ExternalId[Keep])
 GET     /site/libraries/:id/keeps/:k/tags/suggest  @com.keepit.controllers.website.LibraryController.suggestTags(id: PublicId[Library], k: ExternalId[Keep], q: Option[String] ?= None, n: Int ?= 5)
+GET     /site/libraries/:id/tags/suggest  @com.keepit.controllers.website.LibraryController.suggestTagsSimple(id: PublicId[Library], n: Int ?= 5)
 POST    /site/libraries/:id/keeps/:k/update       @com.keepit.controllers.website.LibraryController.updateKeep(id:PublicId[Library], k: ExternalId[Keep])
 POST    /site/libraries/:id/keeps/:k/tags/:tag    @com.keepit.controllers.website.LibraryController.tagKeep(id: PublicId[Library], k: ExternalId[Keep], tag: String)
 DELETE  /site/libraries/:id/keeps/:k/tags/:tag    @com.keepit.controllers.website.LibraryController.untagKeep(id: PublicId[Library], k: ExternalId[Keep], tag: String)
@@ -531,6 +532,10 @@ GET     /admin/graphs/users.json    @com.keepit.controllers.admin.AdminDashboard
 GET     /admin/engineering/overview @com.keepit.controllers.admin.AdminEngineeringDashboardController.overview
 GET     /admin/engineering/seyren   @com.keepit.controllers.admin.AdminEngineeringDashboardController.seyren
 
+GET     /admin/ids/all              @com.keepit.controllers.admin.AdminIDController.listAll
+GET     /admin/ids/byPublicId       @com.keepit.controllers.admin.AdminIDController.byPublicId(name: String, id: String)
+GET     /admin/ids/byId             @com.keepit.controllers.admin.AdminIDController.byId(name: String, id: Long)
+
 GET     /admin/abooks               @com.keepit.controllers.admin.ABookAdminController.allABooksView
 GET     /admin/abooks/page/:page    @com.keepit.controllers.admin.ABookAdminController.abooksView(page:Int)
 
@@ -624,6 +629,7 @@ POST    /admin/users/search         @com.keepit.controllers.admin.AdminUserContr
 GET     /admin/user/:id             @com.keepit.controllers.admin.AdminUserController.userViewByEitherId(id: String, showPrivates: Boolean ?= false)
 GET     /admin/user/:id/keeps       @com.keepit.controllers.admin.AdminUserController.userKeepsView(id: Id[User], showPrivates: Boolean ?= false)
 GET     /admin/user/:id/libraries   @com.keepit.controllers.admin.AdminUserController.userLibrariesView(id: Id[User], showSecrets: Boolean ?= false)
+GET     /admin/user/:id/ips         @com.keepit.controllers.admin.AdminUserController.userIpAddressesView(id: Id[User])
 POST    /admin/user/:id             @com.keepit.controllers.admin.AdminUserController.userView(id: Id[User], showPrivates: Boolean ?= false)
 GET     /admin/user/:id/more-info   @com.keepit.controllers.admin.AdminUserController.moreUserInfoView(id: Id[User], showPrivates: Boolean ?= false)
 GET     /admin/user/:id/prefixSearch @com.keepit.controllers.admin.AdminUserController.prefixSearch(id:Id[User], query:String ?= "")
@@ -691,7 +697,7 @@ POST    /admin/searchExperiments    @com.keepit.controllers.admin.AdminSearchCon
 POST    /admin/searchExperiments/delete    @com.keepit.controllers.admin.AdminSearchConfigController.deleteExperiment
 POST    /admin/searchExperiments/update    @com.keepit.controllers.admin.AdminSearchConfigController.updateExperiment
 
-GET     /admin/explainUriResult        @com.keepit.controllers.admin.AdminSearchController.explainUriResult(query: String, uriId: Id[NormalizedURI], lang: String, debug: Option[String])
+GET     /admin/explainUriResult        @com.keepit.controllers.admin.AdminSearchController.explainUriResult(query: String, uriId: Id[NormalizedURI], libraryId: Option[Long], lang: String, debug: Option[String])
 GET     /admin/explainLibraryResult        @com.keepit.controllers.admin.AdminSearchController.explainLibraryResult(query: String, libraryId: PublicId[Library], debug: Option[String], disablePrefixSearch: Boolean ?= false)
 GET     /admin/explainUserResult        @com.keepit.controllers.admin.AdminSearchController.explainUserResult(query: String, userId: Id[User], debug: Option[String], disablePrefixSearch: Boolean ?= false)
 
@@ -837,7 +843,6 @@ POST    /internal/shoebox/database/internNormalizedURI                 @com.keep
 GET     /internal/shoebox/database/getUsers                            @com.keepit.controllers.internal.ShoeboxController.getUsers(ids: String)
 GET     /internal/shoebox/database/userIdsByExternalIds                @com.keepit.controllers.internal.ShoeboxController.getUserIdsByExternalIds(ids: String)
 POST    /internal/shoebox/database/getBasicUsers                       @com.keepit.controllers.internal.ShoeboxController.getBasicUsers()
-POST    /internal/shoebox/database/getBasicUsersNoCache                @com.keepit.controllers.internal.ShoeboxController.getBasicUsersNoCache()
 POST    /internal/shoebox/database/getEmailAddressesForUsers           @com.keepit.controllers.internal.ShoeboxController.getEmailAddressesForUsers()
 POST    /internal/shoebox/database/getPrimaryEmailAddressForUsers      @com.keepit.controllers.internal.ShoeboxController.getPrimaryEmailAddressForUsers()
 GET     /internal/shoebox/database/collectionIdsByExternalIds          @com.keepit.controllers.internal.ShoeboxController.getCollectionIdsByExternalIds(ids: String)

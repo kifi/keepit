@@ -44,10 +44,7 @@ class KifiSiteRouter @Inject() (
 
   def redirectUserToOwnProfile(subpath: String) = WebAppPage(implicit request => redirUserToOwnProfile(subpath, request))
   private def redirUserToOwnProfile(subpath: String, request: MaybeUserRequest[_]): Result = request match {
-    case r: UserRequest[_] => {
-      userIpAddressCommander.logUserByRequest(r)
-      Redirect(s"/${r.user.username.urlEncoded}$subpath")
-    }
+    case r: UserRequest[_] => Redirect(s"/${r.user.username.urlEncoded}$subpath")
     case r: NonUserRequest[_] => redirectToLogin(s"/me$subpath", r)
   }
 
@@ -73,7 +70,10 @@ class KifiSiteRouter @Inject() (
 
   def serveWebAppToUser = WebAppPage(implicit request => serveWebAppToUser2)
   private def serveWebAppToUser2(implicit request: MaybeUserRequest[_]): Result = request match {
-    case _: UserRequest[_] => AngularApp.app()
+    case ur: UserRequest[_] => {
+      userIpAddressCommander.logUserByRequest(ur)
+      AngularApp.app()
+    }
     case r: NonUserRequest[_] => redirectToLogin(r.uri, r)
   }
 

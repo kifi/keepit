@@ -2,6 +2,7 @@ package com.keepit.controllers.admin
 
 import com.keepit.commanders.HandleCommander.{ UnavailableHandleException, InvalidHandleException }
 import com.keepit.commanders.emails.ActivityFeedEmailSender
+import com.keepit.common.service.IpAddress
 import com.keepit.curator.CuratorServiceClient
 import com.keepit.shoebox.cron.{ ActivityPusher, ActivityPushScheduler }
 import scala.concurrent.{ Await, Future, Promise }
@@ -121,6 +122,7 @@ class AdminUserController @Inject() (
     activityEmailSender: ActivityFeedEmailSender,
     activityPushSchedualer: ActivityPushScheduler,
     activityPusher: ActivityPusher,
+    userIpAddressCommander: UserIpAddressCommander,
     authCommander: AuthCommander) extends AdminUserActions {
 
   def createPushActivityEntities = AdminUserPage { implicit request =>
@@ -880,7 +882,7 @@ class AdminUserController @Inject() (
         val socialUsers = socialUserInfoRepo.getByUser(userId)
         val socialConnections = socialConnectionRepo.getSocialConnectionInfosByUser(userId)
         val userConnections = userConnectionRepo.getConnectedUsers(userId)
-        val handles = handleRepo.getByOwnerId(Some(Right(userId))).map(_.handle)
+        val handles = handleRepo.getByOwnerId(Some(userId)).map(_.handle)
         implicit val userIdFormat = Id.format[User]
         Json.obj(
           "user" -> user,
@@ -932,7 +934,7 @@ class AdminUserController @Inject() (
     val user = userRepo.get(userId)
 
     userRepo.save(user.withState(UserStates.INACTIVE).copy(primaryEmail = None, primaryUsername = None)) // User
-    handleCommander.reclaimAll(Right(userId), overrideProtection = true, overrideLock = true)
+    handleCommander.reclaimAll(userId, overrideProtection = true, overrideLock = true)
   }
 
   def deactivateUserEmailAddress(id: Id[UserEmailAddress]) = AdminUserAction { request =>
@@ -967,6 +969,13 @@ class AdminUserController @Inject() (
       (owner, accessToLibs)
     }
     Ok(html.admin.userLibraries(owner, accessToLibs))
+  }
+
+  def userIpAddressesView(ownerId: Id[User]) = AdminUserPage { implicit request =>
+    val owner = db.readOnlyReplica { implicit session => userRepo.get(ownerId) }
+    val logs: Seq[UserIpAddress] = userIpAddressCommander.getByUser(ownerId, 1000)
+    val sharedIpAddresses: Map[IpAddress, Seq[Id[User]]] = userIpAddressCommander.findSharedIpsByUser(ownerId, 100)
+    Ok(html.admin.userIpAddresses(owner, logs, sharedIpAddresses))
   }
 
   def sendActivityEmailToAll() = AdminUserPage(parse.tolerantJson) { implicit request =>

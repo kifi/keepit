@@ -454,33 +454,37 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           val newLibrary = library().withUser(user).withVisibility(LibraryVisibility.ORGANIZATION).saved
           val organization = orgRepo.save(Organization(name = "Kung Fu Academy", ownerId = orgOwner.id.get, handle = None))
           val otherOrg = orgRepo.save(Organization(name = "Martial Arts", ownerId = orgOwner.id.get, handle = None))
-          orgMemberRepo.save(OrganizationMembership(organizationId = organization.id.get, userId = user.id.get, access = OrganizationAccess.READ_WRITE))
+          orgMemberRepo.save(OrganizationMembership(organizationId = organization.id.get, userId = user.id.get, role = OrganizationRole.OWNER))
           (user, newLibrary, organization, otherOrg)
         }
 
         // User does not own the library
-        libraryCommander.canMoveToFromOrg(Id[User](0), newLibrary.id.get, None, organization.id) must equalTo(false)
+        libraryCommander.canMoveToOrg(Id[User](0), newLibrary.id.get, organization.id) must equalTo(false)
 
         // User owns the library
         // Can move libraries to organizations you are part of.
-        libraryCommander.canMoveToFromOrg(user.id.get, newLibrary.id.get, None, organization.id) must equalTo(true)
+        libraryCommander.canMoveToOrg(user.id.get, newLibrary.id.get, organization.id) must equalTo(true)
         // Cannot inject libraries to random organizations.
-        libraryCommander.canMoveToFromOrg(user.id.get, newLibrary.id.get, None, otherOrg.id) must equalTo(false)
+        libraryCommander.canMoveToOrg(user.id.get, newLibrary.id.get, otherOrg.id) must equalTo(false)
+
+        db.readWrite { implicit s => libraryRepo.save(newLibrary.copy(organizationId = organization.id)) }
         // Can move libraries out of organizations you are part of.
-        libraryCommander.canMoveToFromOrg(user.id.get, newLibrary.id.get, organization.id, None) must equalTo(true)
+        libraryCommander.canMoveToOrg(user.id.get, newLibrary.id.get, None) must equalTo(true)
         // Cannot inject libraries from an organization you are part of to a random organization.
-        libraryCommander.canMoveToFromOrg(user.id.get, newLibrary.id.get, organization.id, otherOrg.id) must equalTo(false)
+        libraryCommander.canMoveToOrg(user.id.get, newLibrary.id.get, otherOrg.id) must equalTo(false)
+
+        db.readWrite { implicit s => libraryRepo.save(newLibrary.copy(organizationId = otherOrg.id)) }
         // Cannot remove libraries from other organizations you are not part of.
-        libraryCommander.canMoveToFromOrg(user.id.get, newLibrary.id.get, otherOrg.id, None) must equalTo(false)
+        libraryCommander.canMoveToOrg(user.id.get, newLibrary.id.get, None) must equalTo(false)
         // Prevent Company Espionage and library stealing!!
-        libraryCommander.canMoveToFromOrg(user.id.get, newLibrary.id.get, otherOrg.id, organization.id) must equalTo(false)
+        libraryCommander.canMoveToOrg(user.id.get, newLibrary.id.get, organization.id) must equalTo(false)
         // What about if your library is in an organization and you leave
         db.readWrite { implicit s =>
           val membership = orgMemberRepo.getByOrgIdAndUserId(organization.id.get, user.id.get)
           orgMemberRepo.save(membership.get.copy(state = OrganizationMembershipStates.INACTIVE))
         }
         // You're out of luck.
-        libraryCommander.canMoveToFromOrg(user.id.get, newLibrary.id.get, organization.id, None) must equalTo(false)
+        libraryCommander.canMoveToOrg(user.id.get, newLibrary.id.get, None) must equalTo(false)
       }
     }
 
@@ -496,7 +500,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           val starLabsOrg = orgRepo.save(Organization(name = "Star Labs", ownerId = harrison.id.get, handle = None))
           val starLabsLib = library().withUser(harrison).withVisibility(LibraryVisibility.ORGANIZATION).withOrganization(starLabsOrg.id).saved
 
-          val membership = orgMemberRepo.save(OrganizationMembership(organizationId = starLabsOrg.id.get, userId = barry.id.get, access = OrganizationAccess.READ_WRITE))
+          val membership = orgMemberRepo.save(OrganizationMembership(organizationId = starLabsOrg.id.get, userId = barry.id.get, role = OrganizationRole.MEMBER))
 
           starLabsLib.organizationId must equalTo(starLabsOrg.id)
           membership.state must equalTo(OrganizationMembershipStates.ACTIVE)
@@ -604,7 +608,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           (Left(userAgent.id.get), LibraryAccess.READ_ONLY, None),
           (Left(userHulk.id.get), LibraryAccess.READ_ONLY, None),
           (Right(thorEmail), LibraryAccess.READ_ONLY, Some("America > Asgard")))
-        val res1 = Await.result(libraryInviteCommander.inviteUsersToLibrary(libMurica.id.get, userCaptain.id.get, inviteList1), Duration(5, "seconds"))
+        val res1 = Await.result(libraryInviteCommander.inviteToLibrary(libMurica.id.get, userCaptain.id.get, inviteList1), Duration(5, "seconds"))
         res1.isRight === true
         res1.right.get === Seq((Left(BasicUser.fromUser(userIron)), LibraryAccess.READ_ONLY),
           (Left(BasicUser.fromUser(userAgent)), LibraryAccess.READ_ONLY),
@@ -621,7 +625,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
         // Tests that users can have multiple invitations multiple times
         // but if invites are sent within 5 Minutes of each other, they do not persist!
-        Await.result(libraryInviteCommander.inviteUsersToLibrary(libMurica.id.get, userCaptain.id.get, inviteList1), Duration(5, "seconds")).isRight === true
+        Await.result(libraryInviteCommander.inviteToLibrary(libMurica.id.get, userCaptain.id.get, inviteList1), Duration(5, "seconds")).isRight === true
         db.readOnlyMaster { implicit s =>
           libraryInviteRepo.count === 4 // 8 invites sent, only 4 persisted from previous call
         }
@@ -637,12 +641,12 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         val inviteCollab2 = Seq((Right(EmailAddress("hawkeye@shield.gov")), LibraryAccess.READ_WRITE, None))
 
         // Test owner invite to collaborate (invite persists)
-        Await.result(libraryInviteCommander.inviteUsersToLibrary(libMurica.id.get, userCaptain.id.get, inviteCollab1), Duration(5, "seconds")).isRight === true
+        Await.result(libraryInviteCommander.inviteToLibrary(libMurica.id.get, userCaptain.id.get, inviteCollab1), Duration(5, "seconds")).isRight === true
         db.readOnlyMaster { implicit s =>
           libraryInviteRepo.count === 5
         }
         // Test collaborator invite to collaborate (invite persists)
-        Await.result(libraryInviteCommander.inviteUsersToLibrary(libMurica.id.get, userFalcon.id.get, inviteCollab1), Duration(5, "seconds")).isRight === true
+        Await.result(libraryInviteCommander.inviteToLibrary(libMurica.id.get, userFalcon.id.get, inviteCollab1), Duration(5, "seconds")).isRight === true
         db.readOnlyMaster { implicit s =>
           libraryInviteRepo.count === 6
         }
@@ -653,13 +657,13 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         }
 
         // Test owner invite to collaborate (invite persists)
-        Await.result(libraryInviteCommander.inviteUsersToLibrary(libMurica.id.get, userCaptain.id.get, inviteCollab2), Duration(5, "seconds")).isRight === true
+        Await.result(libraryInviteCommander.inviteToLibrary(libMurica.id.get, userCaptain.id.get, inviteCollab2), Duration(5, "seconds")).isRight === true
         db.readOnlyMaster { implicit s =>
           libraryInviteRepo.count === 7
         }
 
         // Test collaborator invite to collaborate (invite does NOT persist)
-        Await.result(libraryInviteCommander.inviteUsersToLibrary(libMurica.id.get, userFalcon.id.get, inviteCollab2), Duration(5, "seconds")).isRight === true
+        Await.result(libraryInviteCommander.inviteToLibrary(libMurica.id.get, userFalcon.id.get, inviteCollab2), Duration(5, "seconds")).isRight === true
         db.readOnlyMaster { implicit s =>
           libraryInviteRepo.count === 7
         }
@@ -1218,7 +1222,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           LibraryInvite(libraryId = libScience.id.get, inviterId = userIron.id.get, userId = Some(userHulk.id.get), access = LibraryAccess.READ_INSERT, createdAt = t1)
         )
 
-        Await.result(libraryInviteCommander.processInvites(newInvites), Duration(10, "seconds"))
+        Await.result(libraryInviteCommander.persistInvitesAndNotify(newInvites), Duration(10, "seconds"))
         eliza.inbox.size === 4
 
         eliza.inbox.count(t => t._2 == NotificationCategory.User.LIBRARY_FOLLOWED && t._4.endsWith("/0.jpg")) === 0
@@ -1233,7 +1237,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           LibraryInvite(libraryId = libMurica.id.get, inviterId = userCaptain.id.get, userId = Some(userHulk.id.get), access = LibraryAccess.READ_ONLY, createdAt = t2),
           LibraryInvite(libraryId = libScience.id.get, inviterId = userIron.id.get, userId = Some(userHulk.id.get), access = LibraryAccess.READ_INSERT, createdAt = t2)
         )
-        Await.result(libraryInviteCommander.processInvites(newInvitesAgain), Duration(10, "seconds"))
+        Await.result(libraryInviteCommander.persistInvitesAndNotify(newInvitesAgain), Duration(10, "seconds"))
         eliza.inbox.size === 4
         db.readOnlyMaster { implicit s => emailRepo.count === 4 }
       }

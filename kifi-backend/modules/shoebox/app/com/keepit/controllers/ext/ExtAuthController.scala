@@ -33,7 +33,6 @@ class ExtAuthController @Inject() (
   libraryCommander: LibraryCommander,
   installationRepo: KifiInstallationRepo,
   urlPatternRepo: URLPatternRepo,
-  userIpAddressCommander: UserIpAddressCommander,
   experimentCommander: LocalUserExperimentCommander,
   kifiInstallationCookie: KifiInstallationCookie,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
@@ -67,7 +66,6 @@ class ExtAuthController @Inject() (
           kiId
         })
     log.info(s"start details: $userAgent, $version, $installationIdOpt")
-    userIpAddressCommander.logUserByRequest(request)
 
     val (libraries, installation, urlPatterns, isInstall, isUpdate) = db.readWrite { implicit s =>
       val libraries = libraryCommander.getMainAndSecretLibrariesForUser(userId)

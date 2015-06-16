@@ -43,7 +43,7 @@ angular.module('kifi')
     //
     var api = {
       getOwnInfos: function () {
-        return infos.slice();
+        return (infos || []).slice();
       },
 
       getSysMainInfo: function () {
@@ -109,6 +109,7 @@ angular.module('kifi')
         }
         return net.getLibraryByUserSlug(username, slug, {authToken: authToken}).then(function (res) {
           res.data.library.suggestedSearches = (res.data.suggestedSearches && res.data.suggestedSearches.terms) || [];
+          res.data.library.subscriptions = res.data.subscriptions;
           return augment(res.data.library);
         });
       },

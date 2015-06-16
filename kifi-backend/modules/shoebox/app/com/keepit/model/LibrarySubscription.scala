@@ -1,7 +1,7 @@
 package com.keepit.model
 
 import com.keepit.common.db.{ Id, State, ModelWithState, States }
-import com.keepit.common.net.URIParser
+import com.keepit.common.net.{ URI, URIParser }
 import com.keepit.common.time.{ currentDateTime, DEFAULT_DATE_TIME_ZONE }
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
@@ -32,6 +32,10 @@ object LibrarySubscription {
     (__ \ 'name).format[String] and
     (__ \ 'trigger).format[SubscriptionTrigger] and
     (__ \ 'info).format[SubscriptionInfo])(LibrarySubscription.apply _, unlift(LibrarySubscription.unapply))
+
+  def toSubKey(sub: LibrarySubscription): LibrarySubscriptionKey = {
+    LibrarySubscriptionKey(name = sub.name, info = sub.info)
+  }
 }
 
 object LibrarySubscriptionStates extends States[LibrarySubscription] {
@@ -45,7 +49,11 @@ trait SubscriptionInfo {
 case class SlackInfo(url: String) extends SubscriptionInfo {
   def hasSameEndpoint(other: SubscriptionInfo) = {
     other match {
-      case SlackInfo(otherUrl) => url == otherUrl
+      case SlackInfo(otherUrl) => {
+        val uri1 = URIParser.parse(URIParser.uri, url).getOrElse("1").toString
+        val uri2 = URIParser.parse(URIParser.uri, otherUrl).getOrElse("2").toString
+        uri1 == uri2
+      }
       case _ => false
     }
   }

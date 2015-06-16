@@ -8,20 +8,20 @@ import com.keepit.common.store.ImagePath
 import com.keepit.common.time.Clock
 import org.joda.time.DateTime
 
-@ImplementedBy(classOf[OrganizationLogoRepoImpl])
-trait OrganizationLogoRepo extends Repo[OrganizationLogo] {
-  def getByOrganization(organizationId: Id[Organization]): Seq[OrganizationLogo] = ???
+@ImplementedBy(classOf[OrganizationAvatarRepoImpl])
+trait OrganizationAvatarRepo extends Repo[OrganizationAvatar] {
+  def getByOrganization(organizationId: Id[Organization])(implicit session: RSession): Seq[OrganizationAvatar]
 }
 
 @Singleton
-class OrganizationLogoRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) extends OrganizationLogoRepo with DbRepo[OrganizationLogo] {
-  override def deleteCache(orgLogo: OrganizationLogo)(implicit session: RSession) {}
-  override def invalidateCache(orgLogo: OrganizationLogo)(implicit session: RSession) {}
+class OrganizationAvatarRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) extends OrganizationAvatarRepo with DbRepo[OrganizationAvatar] {
+  override def deleteCache(orgLogo: OrganizationAvatar)(implicit session: RSession) {}
+  override def invalidateCache(orgLogo: OrganizationAvatar)(implicit session: RSession) {}
 
   import db.Driver.simple._
 
-  type RepoImpl = OrganizationLogoTable
-  class OrganizationLogoTable(tag: Tag) extends RepoTable[OrganizationLogo](db, tag, "organization_logo") {
+  type RepoImpl = OrganizationAvatarTable
+  class OrganizationAvatarTable(tag: Tag) extends RepoTable[OrganizationAvatar](db, tag, "organization_avatar") {
     def organizationId = column[Id[Organization]]("organization_id", O.NotNull)
     def xPosition = column[Option[Int]]("x_position", O.Nullable)
     def yPosition = column[Option[Int]]("y_position", O.Nullable)
@@ -35,10 +35,10 @@ class OrganizationLogoRepoImpl @Inject() (val db: DataBaseComponent, val clock: 
     def sourceImageURL = column[Option[String]]("source_image_url", O.Nullable)
 
     def applyFromDbRow(
-      id: Option[Id[OrganizationLogo]],
+      id: Option[Id[OrganizationAvatar]],
       createdAt: DateTime,
       updatedAt: DateTime,
-      state: State[OrganizationLogo],
+      state: State[OrganizationAvatar],
       organizationId: Id[Organization],
       xPosition: Option[Int],
       yPosition: Option[Int],
@@ -53,10 +53,10 @@ class OrganizationLogoRepoImpl @Inject() (val db: DataBaseComponent, val clock: 
       val imagePosition: Option[ImagePosition] = xPosition.flatMap { x =>
         yPosition.map(y => ImagePosition(x, y))
       }
-      OrganizationLogo(id, createdAt, updatedAt, state, organizationId, imagePosition, width, height, format, kind, imagePath, source, sourceFileHash, sourceImageURL)
+      OrganizationAvatar(id, createdAt, updatedAt, state, organizationId, imagePosition, width, height, format, kind, imagePath, source, sourceFileHash, sourceImageURL)
     }
 
-    def unapplyToDbRow(logo: OrganizationLogo) = {
+    def unapplyToDbRow(logo: OrganizationAvatar) = {
       Some((logo.id,
         logo.createdAt,
         logo.updatedAt,
@@ -77,6 +77,14 @@ class OrganizationLogoRepoImpl @Inject() (val db: DataBaseComponent, val clock: 
     def * = (id.?, createdAt, updatedAt, state, organizationId, xPosition, yPosition, width, height, format, kind, imagePath, source, sourceFileHash, sourceImageURL) <> ((applyFromDbRow _).tupled, unapplyToDbRow _)
   }
 
-  def table(tag: Tag) = new OrganizationLogoTable(tag)
+  def table(tag: Tag) = new OrganizationAvatarTable(tag)
   initTable()
+
+  def getByOrganizationCompiled = Compiled { (organizationId: Column[Id[Organization]]) =>
+    (for (row <- rows if row.organizationId === organizationId) yield row)
+  }
+
+  def getByOrganization(organizationId: Id[Organization])(implicit session: RSession): Seq[OrganizationAvatar] = {
+    getByOrganizationCompiled(organizationId).list
+  }
 }

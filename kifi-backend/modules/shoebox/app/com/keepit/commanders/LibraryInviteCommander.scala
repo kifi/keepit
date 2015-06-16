@@ -1,6 +1,6 @@
 package com.keepit.commanders
 
-import com.google.inject.{ Inject, Provider }
+import com.google.inject.{ ImplementedBy, Inject, Provider }
 import com.keepit.abook.ABookServiceClient
 import com.keepit.abook.model.RichContact
 import com.keepit.commanders.emails.LibraryInviteEmailSender
@@ -18,10 +18,29 @@ import com.keepit.model._
 import com.keepit.social.BasicUser
 import play.api.http.Status._
 import play.api.libs.json.Json
+import scala.util.Try
 
 import scala.concurrent.{ ExecutionContext, Future }
 
-class LibraryInviteCommander @Inject() (
+@ImplementedBy(classOf[LibraryInviteCommanderImpl])
+trait LibraryInviteCommander {
+  // todo: For each method here, remove if no one's calling it externally, and set as private in the implementation
+  def convertPendingInvites(emailAddress: EmailAddress, userId: Id[User]): Unit
+  def declineLibrary(userId: Id[User], libraryId: Id[Library])
+  def notifyInviterOnLibraryInvitationAcceptance(invitesToAlert: Seq[LibraryInvite], invitee: User, lib: Library, owner: BasicUser): Unit
+  def inviteAnonymousToLibrary(libraryId: Id[Library], inviterId: Id[User], access: LibraryAccess, message: Option[String])(implicit context: HeimdalContext): Either[LibraryFail, (LibraryInvite, Library)]
+  def inviteToLibrary(libraryId: Id[Library], inviterId: Id[User], inviteList: Seq[(Either[Id[User], EmailAddress], LibraryAccess, Option[String])])(implicit eventContext: HeimdalContext): Future[Either[LibraryFail, Seq[(Either[BasicUser, RichContact], LibraryAccess)]]]
+  def improperInvite(library: Library, inviterMembership: Option[LibraryMembership], access: LibraryAccess): Option[LibraryFail]
+  def persistInvitesAndNotify(invites: Seq[LibraryInvite]): Future[Seq[ElectronicMail]]
+  def notifyInviteeAboutInvitationToJoinLibrary(inviter: User, lib: Library, libOwner: BasicUser, inviteeMap: Map[Id[User], LibraryInviteeUser]): Unit
+  def notifyLibOwnerAboutInvitationToTheirLibrary(inviter: User, lib: Library, libOwner: BasicUser, userImage: String, libImageOpt: Option[LibraryImage], inviteeMap: Map[Id[User], LibraryInviteeUser]): Unit
+  def revokeInvitationToLibrary(libraryId: Id[Library], inviterId: Id[User], invitee: Either[ExternalId[User], EmailAddress]): Either[(String, String), String]
+  def getViewerInviteInfo(userIdOpt: Option[Id[User]], libraryId: Id[Library]): Option[LibraryInviteInfo]
+
+  type LibraryInviteeUser = { def isCollaborator: Boolean }
+}
+
+class LibraryInviteCommanderImpl @Inject() (
     db: Database,
     libraryRepo: LibraryRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
@@ -38,7 +57,7 @@ class LibraryInviteCommander @Inject() (
     libraryImageCommander: LibraryImageCommander,
     kifiInstallationCommander: KifiInstallationCommander,
     implicit val defaultContext: ExecutionContext,
-    implicit val publicIdConfig: PublicIdConfiguration) extends Logging {
+    implicit val publicIdConfig: PublicIdConfiguration) extends LibraryInviteCommander with Logging {
 
   def convertPendingInvites(emailAddress: EmailAddress, userId: Id[User]): Unit = {
     db.readWrite { implicit s =>
@@ -55,32 +74,36 @@ class LibraryInviteCommander @Inject() (
     }
   }
 
-  def notifyInviterOnLibraryInvitationAcceptance(invitesToAlert: Seq[LibraryInvite], invaitee: User, lib: Library, owner: BasicUser): Unit = {
-    val invaiteeImage = s3ImageStore.avatarUrlByUser(invaitee)
+  def notifyInviterOnLibraryInvitationAcceptance(invitesToAlert: Seq[LibraryInvite], invitee: User, lib: Library, owner: BasicUser): Unit = {
+    val invaiteeImage = s3ImageStore.avatarUrlByUser(invitee)
     val libImageOpt = libraryImageCommander.getBestImageForLibrary(lib.id.get, ProcessedImageSize.Medium.idealSize)
     invitesToAlert foreach { invite =>
+      val title = if (invite.access == LibraryAccess.READ_WRITE) {
+        s"${invitee.firstName} is now collaborating on ${lib.name}"
+      } else {
+        s"${invitee.firstName} is now following ${lib.name}"
+      }
       val inviterId = invite.inviterId
       elizaClient.sendGlobalNotification( //push sent
         userIds = Set(inviterId),
-        title = s"${invaitee.firstName} is now following ${lib.name}",
-        body = s"You invited ${invaitee.fullName} to follow ${lib.name}.",
-        linkText = s"See ${invaitee.firstName}’s profile",
-        linkUrl = s"https://www.kifi.com/${invaitee.username.value}",
+        title = title,
+        body = s"You invited ${invitee.fullName} to join ${lib.name}.",
+        linkText = s"See ${invitee.firstName}’s profile",
+        linkUrl = s"https://www.kifi.com/${invitee.username.value}",
         imageUrl = invaiteeImage,
         sticky = false,
         category = NotificationCategory.User.LIBRARY_FOLLOWED,
         extra = Some(Json.obj(
-          "follower" -> BasicUser.fromUser(invaitee),
+          "follower" -> BasicUser.fromUser(invitee),
           "library" -> Json.toJson(LibraryNotificationInfo.fromLibraryAndOwner(lib, libImageOpt, owner))
         ))
       ) map { _ =>
-          val message = s"${invaitee.firstName} is now following ${lib.name}"
           val canSendPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(inviterId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
           if (canSendPush) {
             elizaClient.sendUserPushNotification(
               userId = inviterId,
-              message = message,
-              recipient = invaitee,
+              message = title,
+              recipient = invitee,
               pushNotificationExperiment = PushNotificationExperiment.Experiment1,
               category = UserPushNotificationCategory.NewLibraryFollower)
           }
@@ -109,19 +132,16 @@ class LibraryInviteCommander @Inject() (
     }
   }
 
-  def inviteUsersToLibrary(libraryId: Id[Library], inviterId: Id[User], inviteList: Seq[(Either[Id[User], EmailAddress], LibraryAccess, Option[String])])(implicit eventContext: HeimdalContext): Future[Either[LibraryFail, Seq[(Either[BasicUser, RichContact], LibraryAccess)]]] = {
+  def inviteToLibrary(libraryId: Id[Library], inviterId: Id[User], inviteList: Seq[(Either[Id[User], EmailAddress], LibraryAccess, Option[String])])(implicit eventContext: HeimdalContext): Future[Either[LibraryFail, Seq[(Either[BasicUser, RichContact], LibraryAccess)]]] = {
     val (lib, inviterMembership) = db.readOnlyMaster { implicit s =>
       val lib = libraryRepo.get(libraryId)
       val mem = libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, inviterId)
       (lib, mem)
     }
-    val inviterIsOwner = inviterMembership.exists(_.isOwner)
-    val inviterIsCollab = inviterMembership.exists(_.isCollaborator)
-    val collabCannotInvite = lib.whoCanInvite == Some(LibraryInvitePermissions.OWNER)
 
-    if (lib.kind == LibraryKind.SYSTEM_MAIN || lib.kind == LibraryKind.SYSTEM_SECRET)
+    if (lib.kind == LibraryKind.SYSTEM_MAIN || lib.kind == LibraryKind.SYSTEM_SECRET) {
       Future.successful(Left(LibraryFail(BAD_REQUEST, "cant_invite_to_system_generated_library")))
-    else {
+    } else {
       // get all invitee contacts by email address
       val futureInviteeContactsByEmailAddress = {
         val invitedEmailAddresses = inviteList.collect { case (Right(emailAddress), _, _) => emailAddress }
@@ -139,8 +159,10 @@ class LibraryInviteCommander @Inject() (
       }
 
       futureInviteeContactsByEmailAddress.map { inviteeContactsByEmailAddress => // when email contacts are done fetching... process through inviteList
-        val invitesForInvitees = db.readOnlyMaster { implicit s =>
-          val libMembersMap = libraryMembershipRepo.getWithLibraryId(lib.id.get).map { mem =>
+        val invitesForInvitees = {
+          val libMembersMap = db.readOnlyMaster { implicit s =>
+            libraryMembershipRepo.getWithLibraryId(lib.id.get)
+          }.map { mem =>
             mem.userId -> mem
           }.toMap
 
@@ -159,12 +181,18 @@ class LibraryInviteCommander @Inject() (
                       case Some(mem) if mem.access == inviteAccess => // don't persist invite to a user with same access
                         log.warn(s"[inviteUsersToLibrary] not persisting invite: user $inviterId attempting to invite user $userId for $inviteAccess access when membership has same access level")
                         None
+                      case Some(mem) if inviteAccess == LibraryAccess.READ_WRITE && mem.state == LibraryMembershipStates.ACTIVE => // auto-promote people when they're already in the library
+                        db.readWrite { implicit session =>
+                          libraryMembershipRepo.save(mem.copy(access = inviteAccess)) // Not a huge fan of this location, but the persisting function isn't better.
+                        }
+                        val newInvite = LibraryInvite(libraryId = libraryId, inviterId = inviterId, userId = Some(userId), access = inviteAccess, message = msgOpt, state = LibraryInviteStates.ACCEPTED)
+                        val inviteeInfo = (Left(inviteeUserMap(userId)), inviteAccess)
+                        Some((newInvite, inviteeInfo))
                       case _ =>
                         val newInvite = LibraryInvite(libraryId = libraryId, inviterId = inviterId, userId = Some(userId), access = inviteAccess, message = msgOpt)
                         val inviteeInfo = (Left(inviteeUserMap(userId)), inviteAccess)
                         Some((newInvite, inviteeInfo))
                     }
-
                   case Right(email) =>
                     val newInvite = LibraryInvite(libraryId = libraryId, inviterId = inviterId, emailAddress = Some(email), access = inviteAccess, message = msgOpt)
                     val inviteeInfo = (Right(inviteeContactsByEmailAddress(email)), inviteAccess)
@@ -174,10 +202,8 @@ class LibraryInviteCommander @Inject() (
           }
         }
         val (invites, inviteesWithAccess) = invitesForInvitees.flatten.unzip
-        processInvites(invites)
-        libraryAnalytics.sendLibraryInvite(inviterId, lib, inviteList.map {
-          _._1
-        }, eventContext)
+        libraryAnalytics.sendLibraryInvite(inviterId, lib, inviteList.map(_._1), eventContext)
+        persistInvitesAndNotify(invites)
         Right(inviteesWithAccess)
       }
     }
@@ -186,7 +212,7 @@ class LibraryInviteCommander @Inject() (
   def improperInvite(library: Library, inviterMembership: Option[LibraryMembership], access: LibraryAccess): Option[LibraryFail] = {
     val inviterIsOwner = inviterMembership.exists(_.isOwner)
     val inviterIsCollab = inviterMembership.exists(_.isCollaborator)
-    val collabCannotInvite = library.whoCanInvite == Some(LibraryInvitePermissions.OWNER)
+    val collabCannotInvite = library.whoCanInvite.contains(LibraryInvitePermissions.OWNER)
     if (access == LibraryAccess.READ_WRITE && !inviterIsOwner && !inviterIsCollab) {
       // invite to RW, but inviter is not owner or collaborator
       Some(LibraryFail(BAD_REQUEST, "cant_invite_rw_nonowner_noncollab"))
@@ -204,70 +230,75 @@ class LibraryInviteCommander @Inject() (
     }
   }
 
-  def processInvites(invites: Seq[LibraryInvite]): Future[Seq[ElectronicMail]] = {
-    val emailFutures = {
-      invites.groupBy(invite => (invite.inviterId, invite.libraryId, invite.userId, invite.emailAddress))
-        .map { key =>
-          val (inviterId, libId, recipientId, recipientEmail) = key._1
-
-          val (inviter, lib, libOwner, lastInviteOpt) = db.readOnlyMaster { implicit s =>
-            val inviter = userRepo.get(inviterId)
-            val lib = libraryRepo.get(libId)
-            val libOwner = basicUserRepo.load(lib.ownerId)
-            val lastInviteOpt = (recipientId, recipientEmail) match {
-              case (Some(userId), _) =>
-                libraryInviteRepo.getLastSentByLibraryIdAndInviterIdAndUserId(libId, inviterId, userId, Set(LibraryInviteStates.ACTIVE))
-              case (_, Some(email)) =>
-                libraryInviteRepo.getLastSentByLibraryIdAndInviterIdAndEmail(libId, inviterId, email, Set(LibraryInviteStates.ACTIVE))
-              case _ => None
-            }
-            (inviter, lib, libOwner, lastInviteOpt)
+  def persistInvitesAndNotify(invites: Seq[LibraryInvite]): Future[Seq[ElectronicMail]] = {
+    val groupedInvitesWithExtras = invites.groupBy(invite => (invite.inviterId, invite.libraryId, invite.userId, invite.emailAddress)).map {
+      case ((inviterId, libId, recipientId, recipientEmail), inviteGroup) =>
+        val (inviter, lib, libOwner, lastInviteOpt) = db.readOnlyMaster { implicit s =>
+          val inviter = userRepo.get(inviterId)
+          val lib = libraryRepo.get(libId)
+          val libOwner = basicUserRepo.load(lib.ownerId)
+          val lastInviteOpt = (recipientId, recipientEmail) match {
+            case (Some(userId), _) =>
+              libraryInviteRepo.getLastSentByLibraryIdAndInviterIdAndUserId(libId, inviterId, userId, Set(LibraryInviteStates.ACTIVE))
+            case (_, Some(email)) =>
+              libraryInviteRepo.getLastSentByLibraryIdAndInviterIdAndEmail(libId, inviterId, email, Set(LibraryInviteStates.ACTIVE))
+            case _ => None
           }
-          val invitesToPersist = key._2.filter { invite =>
-            lastInviteOpt.map { lastInvite =>
-              lastInvite.access != invite.access || lastInvite.createdAt.plusMinutes(5).isBefore(invite.createdAt)
-            }.getOrElse(true)
-          }
+          (inviter, lib, libOwner, lastInviteOpt)
+        }
+        val invitesToPersist = inviteGroup.filter { invite =>
+          lastInviteOpt.map { lastInvite =>
+            lastInvite.access != invite.access || lastInvite.createdAt.plusMinutes(5).isBefore(invite.createdAt)
+          }.getOrElse(true)
+        }
 
-          db.readWrite { implicit s =>
-            invitesToPersist.map { inv =>
-              libraryInviteRepo.save(inv)
-            }
+        val persistedInvites = db.readWrite { implicit s =>
+          invitesToPersist.map { inv =>
+            libraryInviteRepo.save(inv)
           }
+        }
+        (persistedInvites, inviter, lib, libOwner)
+    }.toSeq
 
-          val userImage = s3ImageStore.avatarUrlByUser(inviter)
-          val libLink = s"""https://www.kifi.com${Library.formatLibraryPath(libOwner.username, lib.slug)}"""
-          val libImageOpt = libraryImageCommander.getBestImageForLibrary(libId, ProcessedImageSize.Medium.idealSize)
+    val emailFutures = groupedInvitesWithExtras.flatMap((notifyInvitees _).tupled)
 
-          val userInviteesMap = invitesToPersist.collect {
-            case invite if invite.userId.isDefined =>
-              invite.userId.get -> invite
-          }.toMap
-
-          // send notifications to kifi users only
-          if (userInviteesMap.nonEmpty) {
-            notifyInviteeAboutInvitationToJoinLIbrary(inviter, lib, libOwner, userImage, libLink, libImageOpt, userInviteesMap)
-            if (inviterId != lib.ownerId) {
-              notifyLibOwnerAboutInvitationToTheirLibrary(inviter, lib, libOwner, userImage, libImageOpt, userInviteesMap)
-            }
-          }
-          // send emails to both users & non-users
-          invitesToPersist.map { invite =>
-            invite.userId match {
-              case Some(id) =>
-                libraryInvitesAbuseMonitor.inspect(inviterId, Some(id), None, libId, invitesToPersist.length)
-              case _ =>
-                libraryInvitesAbuseMonitor.inspect(inviterId, None, invite.emailAddress, libId, invitesToPersist.length)
-            }
-            libraryInviteSender.get.sendInvite(invite)
-          }
-        }.toSeq.flatten
-    }
     val emailsF = Future.sequence(emailFutures)
     emailsF map (_.filter(_.isDefined).map(_.get))
   }
 
-  def notifyInviteeAboutInvitationToJoinLIbrary(inviter: User, lib: Library, libOwner: BasicUser, userImage: String, libLink: String, libImageOpt: Option[LibraryImage], inviteeMap: Map[Id[User], LibraryInvite]): Unit = {
+  private def notifyInvitees(groupedInvites: Seq[LibraryInvite], inviter: User, lib: Library, libOwner: BasicUser) = {
+    val userInviteesMap = groupedInvites.collect {
+      case invite if invite.userId.isDefined =>
+        invite.userId.get -> invite
+    }.toMap
+
+    // send notifications to kifi users only
+    if (userInviteesMap.nonEmpty) {
+      notifyInviteeAboutInvitationToJoinLibrary(inviter, lib, libOwner, userInviteesMap)
+    }
+
+    // send emails to both users & non-users
+    groupedInvites.map { invite =>
+      Try(invite.userId match {
+        case Some(id) =>
+          libraryInvitesAbuseMonitor.inspect(inviter.id.get, Some(id), None, lib.id.get, 1)
+        case None =>
+          libraryInvitesAbuseMonitor.inspect(inviter.id.get, None, invite.emailAddress, lib.id.get, 1)
+      }).map { _ =>
+        libraryInviteSender.get.sendInvite(invite)
+      }.getOrElse(Future.successful(None))
+    }
+  }
+
+  def notifyInviteeAboutInvitationToJoinLibrary(inviter: User, lib: Library, libOwner: BasicUser, inviteeMap: Map[Id[User], LibraryInviteeUser]): Unit = {
+    val userImage = s3ImageStore.avatarUrlByUser(inviter)
+    val libLink = s"""https://www.kifi.com${Library.formatLibraryPath(libOwner.username, lib.slug)}"""
+    val libImageOpt = libraryImageCommander.getBestImageForLibrary(lib.id.get, ProcessedImageSize.Medium.idealSize)
+
+    if (inviter.id.get != lib.ownerId) {
+      notifyLibOwnerAboutInvitationToTheirLibrary(inviter, lib, libOwner, userImage, libImageOpt, inviteeMap)
+    }
+
     val (collabInvitees, followInvitees) = inviteeMap.partition { case (userId, invite) => invite.isCollaborator }
     val collabInviteeSet = collabInvitees.keySet
     val followInviteeSet = followInvitees.keySet
@@ -336,14 +367,14 @@ class LibraryInviteCommander @Inject() (
     }
   }
 
-  def notifyLibOwnerAboutInvitationToTheirLibrary(inviter: User, lib: Library, libOwner: BasicUser, userImage: String, libImageOpt: Option[LibraryImage], inviteeMap: Map[Id[User], LibraryInvite]): Unit = {
+  def notifyLibOwnerAboutInvitationToTheirLibrary(inviter: User, lib: Library, libOwner: BasicUser, userImage: String, libImageOpt: Option[LibraryImage], inviteeMap: Map[Id[User], LibraryInviteeUser]): Unit = {
     val (collabInvitees, followInvitees) = inviteeMap.partition { case (userId, invite) => invite.isCollaborator }
     val collabInviteeSet = collabInvitees.keySet
     val followInviteeSet = followInvitees.keySet
     val collabFriendStr = if (collabInviteeSet.size > 1) "friends" else "a friend"
     val followFriendStr = if (followInviteeSet.size > 1) "friends" else "a friend"
 
-    val collabInvitesF = if (collabInviteeSet.size > 0) {
+    val collabInvitesF = if (collabInviteeSet.nonEmpty) {
       elizaClient.sendGlobalNotification( //push sent
         userIds = Set(lib.ownerId),
         title = s"${inviter.firstName} invited someone to contribute to your Library!",
@@ -362,7 +393,7 @@ class LibraryInviteCommander @Inject() (
       Future.successful((): Unit)
     }
 
-    val followInvitesF = if (followInviteeSet.size > 0) {
+    val followInvitesF = if (followInviteeSet.nonEmpty) {
       elizaClient.sendGlobalNotification( //push sent
         userIds = Set(lib.ownerId),
         title = s"${inviter.firstName} invited someone to follow your Library!",
@@ -387,7 +418,7 @@ class LibraryInviteCommander @Inject() (
     } yield {
       val canSendPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(lib.ownerId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
       if (canSendPush) {
-        if (collabInviteeSet.size > 0) {
+        if (collabInviteeSet.nonEmpty) {
           elizaClient.sendUserPushNotification(
             userId = lib.ownerId,
             message = s"${inviter.firstName} invited $collabFriendStr to contribute to your library ${lib.name}!",
@@ -395,7 +426,7 @@ class LibraryInviteCommander @Inject() (
             pushNotificationExperiment = PushNotificationExperiment.Experiment1,
             category = UserPushNotificationCategory.NewLibraryFollower)
         }
-        if (followInviteeSet.size > 0) {
+        if (followInviteeSet.nonEmpty) {
           elizaClient.sendUserPushNotification(
             userId = lib.ownerId,
             message = s"${inviter.firstName} invited $followFriendStr to follow your library ${lib.name}!",

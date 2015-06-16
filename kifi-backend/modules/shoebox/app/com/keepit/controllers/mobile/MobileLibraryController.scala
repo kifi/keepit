@@ -317,7 +317,7 @@ class MobileLibraryController @Inject() (
           }
         }
         implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
-        libraryInviteCommander.inviteUsersToLibrary(id, request.userId, validInviteList).map {
+        libraryInviteCommander.inviteToLibrary(id, request.userId, validInviteList).map {
           case Left(fail) => sendFailResponse(fail)
           case Right(inviteesWithAccess) =>
             val result = inviteesWithAccess.map {

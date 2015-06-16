@@ -45,15 +45,8 @@ def register_logentries(name, service):
   if daemon_code != 0: print 'Failed to install logentries-daemon', name
 
   appDir = '/home/fortytwo/run/%s/log/' % service
-  le_follow(appDir + 'db.log')
   le_follow(appDir + 'app.log')
-  le_follow(appDir + 'access.log')
-  le_follow(appDir + 'cache.log')
   le_follow(appDir + service + '.out')
-  le_follow('/var/log/syslog')
-  le_follow('/var/log/nginx/access.log', 'nginx_access')
-  le_follow('/var/log/nginx/error.log', 'nginx_error')
-  le_follow('/var/log/lastlog')
   restart_code = call(['service', 'logentries', 'restart'])
   if restart_code != 0: print 'Error restarting logentries'
 
