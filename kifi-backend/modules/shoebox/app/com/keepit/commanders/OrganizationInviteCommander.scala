@@ -1,20 +1,26 @@
 package com.keepit.commanders
 
-import com.google.inject.Singleton
-import com.google.inject.{ ImplementedBy, Inject }
+import com.google.inject.{ Provider, ImplementedBy, Inject, Singleton }
 import com.keepit.abook.ABookServiceClient
 import com.keepit.abook.model.RichContact
+import com.keepit.commanders.emails.{ EmailTemplateSender, LibraryInviteEmailSender }
 import com.keepit.common.core._
+import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.mail.{ ElectronicMail, BasicContact, EmailAddress }
+import com.keepit.common.mail.template.EmailToSend
+import com.keepit.common.mail.template.TemplateOptions._
+import com.keepit.common.mail._
 import com.keepit.common.social.BasicUserRepo
+import com.keepit.common.store.S3ImageStore
+import com.keepit.eliza.{ ElizaServiceClient, LibraryPushNotificationCategory, PushNotificationExperiment, UserPushNotificationCategory }
 import com.keepit.model._
 import com.keepit.social.BasicUser
+import play.api.libs.json.Json
 
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.Try
 
 @ImplementedBy(classOf[OrganizationInviteCommanderImpl])
 trait OrganizationInviteCommander {
@@ -27,6 +33,7 @@ trait OrganizationInviteCommander {
 
 @Singleton
 class OrganizationInviteCommanderImpl @Inject() (db: Database,
+    airbrake: AirbrakeNotifier,
     organizationRepo: OrganizationRepo,
     organizationMembershipRepo: OrganizationMembershipRepo,
     organizationInviteRepo: OrganizationInviteRepo,
@@ -34,7 +41,11 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     aBookClient: ABookServiceClient,
     implicit val defaultContext: ExecutionContext,
     userIpAddressRepo: UserIpAddressRepo,
-    userRepo: UserRepo) extends OrganizationInviteCommander with Logging {
+    userRepo: UserRepo,
+    elizaClient: ElizaServiceClient,
+    s3ImageStore: S3ImageStore,
+    userEmailAddressRepo: UserEmailAddressRepo,
+    emailTemplateSender: EmailTemplateSender) extends OrganizationInviteCommander with Logging {
 
   private def canInvite(membership: OrganizationMembership): Boolean = {
     membership.hasPermission(OrganizationPermission.INVITE_MEMBERS)
@@ -112,7 +123,7 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
               persistInvitation(invite)
             }
 
-            sendInvitationEmail(persistedInvites, org, owner, inviter)
+            sendInvitationEmails(persistedInvites, org, owner, inviter)
             def trackSentInvitation = ???
 
             Right(inviteesWithRole)
@@ -151,8 +162,68 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     }
   }
 
-  def sendInvitationEmail(persistedInvites: Seq[OrganizationInvite], org: Organization, owner: BasicUser, inviter: User): Unit = {
+  def sendInvitationEmails(persistedInvites: Seq[OrganizationInvite], org: Organization, owner: BasicUser, inviter: User): Unit = {
+    val (inviteesById, _) = persistedInvites.partition(_.userId.nonEmpty)
 
+    // send notifications to kifi users only
+    if (inviteesById.nonEmpty) {
+      notifyInviteeAboutInvitationToJoinLibrary(org, owner, inviter, inviteesById.flatMap(_.userId).toSet)
+    }
+
+    // send emails to both users & non-users
+    persistedInvites.foreach { invite =>
+      sendInvite(invite, org)
+    }
+  }
+
+  def sendInvite(invite: OrganizationInvite, org: Organization)(implicit publicIdConfig: PublicIdConfiguration): Future[Option[ElectronicMail]] = {
+    val toRecipientOpt: Option[Either[Id[User], EmailAddress]] =
+      if (invite.userId.isDefined) Some(Left(invite.userId.get))
+      else if (invite.emailAddress.isDefined) Some(Right(invite.emailAddress.get))
+      else None
+
+    toRecipientOpt map { toRecipient =>
+      val trimmedInviteMsg = invite.message map (_.trim) filter (_.nonEmpty)
+      val fromUserId = invite.inviterId
+      val fromAddress = db.readOnlyReplica { implicit session => userEmailAddressRepo.getByUser(invite.inviterId).address }
+      val authToken = invite.authToken
+      val emailToSend = EmailToSend(
+        fromName = Some(Left(invite.inviterId)),
+        from = SystemEmailAddress.NOTIFICATIONS,
+        subject = s"Please join our organization ${org.name} on Kifi!",
+        to = toRecipient,
+        category = toRecipient.fold(_ => NotificationCategory.User.LIBRARY_INVITATION, _ => NotificationCategory.NonUser.LIBRARY_INVITATION),
+        htmlTemplate = views.html.email.organizationInvitationPlain(toRecipient.left.toOption, fromUserId, trimmedInviteMsg, org, authToken),
+        textTemplate = Some(views.html.email.organizationInvitationText(toRecipient.left.toOption, fromUserId, trimmedInviteMsg, org, authToken)),
+        templateOptions = Seq(CustomLayout).toMap,
+        extraHeaders = Some(Map(PostOffice.Headers.REPLY_TO -> fromAddress)),
+        campaign = Some("na"),
+        channel = Some("vf_email"),
+        source = Some("library_invite")
+      )
+      emailTemplateSender.send(emailToSend) map (Some(_))
+    } getOrElse {
+      airbrake.notify(s"LibraryInvite does not have a recipient: $invite")
+      Future.successful(None)
+    }
+  }
+
+  def notifyInviteeAboutInvitationToJoinLibrary(org: Organization, orgOwner: BasicUser, inviter: User, invitees: Set[Id[User]]): Unit = {
+    val userImage = s3ImageStore.avatarUrlByUser(inviter)
+    val orgLink = s"""https://www.kifi.com/${org.name}"""
+
+    elizaClient.sendGlobalNotification( //push sent
+      userIds = invitees,
+      title = s"${inviter.firstName} ${inviter.lastName} invited you to join ${org.name}!",
+      body = s"Help ${org.name} by sharing your knowledge with them.",
+      linkText = "Let's do it!",
+      linkUrl = orgLink,
+      imageUrl = userImage,
+      sticky = false,
+      category = NotificationCategory.User.ORGANIZATION_INVITATION
+    )
+
+    // TODO: handle push notifications to mobile.
   }
 
   def acceptInvitation(orgId: Id[Organization], userId: Id[User], authToken: Option[String] = None): Either[OrganizationFail, (Organization, OrganizationMembership)] = {
