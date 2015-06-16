@@ -17,13 +17,12 @@ Hi @firstName(inviteeId.get),
 }
 }
 
-@description = @{ libraryInfo.shortDescription.filter( description => description.length < 250 ).map ( des => "Here's what it's about: " + des).getOrElse("") }
+@description = @{ organization.description.filter( description => description.length < 250 ).map ( des => "Here's what it's about: " + des).getOrElse("") }
 
 @emailMessage = {
 Please join "@organization.name" on Kifi at www.kifi.com/@organization.name,
-    so we can collaborate together. It's a great way to organize the links that we find.
+so we can collaborate together. It's a great way to organize the links that we find.
 }
-
 
 @if(inviteMsg.isEmpty) {
 @salutation

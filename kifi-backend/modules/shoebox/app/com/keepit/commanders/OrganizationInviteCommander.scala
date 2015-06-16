@@ -162,7 +162,7 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     }
   }
 
-  def sendInvitationEmails(persistedInvites: Seq[OrganizationInvite], org: Organization, owner: BasicUser, inviter: User): Unit = {
+  def sendInvitationEmails(persistedInvites: Seq[OrganizationInvite], org: Organization, owner: BasicUser, inviter: User) {
     val (inviteesById, _) = persistedInvites.partition(_.userId.nonEmpty)
 
     // send notifications to kifi users only
@@ -176,7 +176,7 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     }
   }
 
-  def sendInvite(invite: OrganizationInvite, org: Organization)(implicit publicIdConfig: PublicIdConfiguration): Future[Option[ElectronicMail]] = {
+  def sendInvite(invite: OrganizationInvite, org: Organization): Future[Option[ElectronicMail]] = {
     val toRecipientOpt: Option[Either[Id[User], EmailAddress]] =
       if (invite.userId.isDefined) Some(Left(invite.userId.get))
       else if (invite.emailAddress.isDefined) Some(Right(invite.emailAddress.get))

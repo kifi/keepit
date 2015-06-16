@@ -17,7 +17,7 @@ authToken: String
 }
 }
 
-@description = @{ libraryInfo.shortDescription.filter( description => description.length < 250 ).map ( des => "Here's what it's about: " + des).getOrElse("") }
+@description = @{ organization.description.filter( description => description.length < 250 ).map ( des => "Here's what it's about: " + des).getOrElse("") }
 
 @emailMessage = {
 <p>Please join "@organization.name" on Kifi - <a href="@organizationUrl">www.kifi.com/@organization.name</a>,
