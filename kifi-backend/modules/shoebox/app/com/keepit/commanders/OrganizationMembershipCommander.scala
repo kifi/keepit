@@ -1,6 +1,6 @@
 package com.keepit.commanders
 
-import com.google.inject.{ImplementedBy, Inject, Singleton}
+import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
@@ -9,8 +9,19 @@ import com.keepit.common.social.BasicUserRepo
 import com.keepit.model._
 import com.keepit.social.BasicUser
 import org.joda.time.DateTime
+import com.keepit.common.json
+import play.api.libs.json._
 
 final case class MaybeOrganizationMember(member: Either[BasicUser, BasicContact], role: Option[OrganizationRole], lastInvitedAt: Option[DateTime])
+
+object MaybeOrganizationMember {
+  implicit val writes = Writes[MaybeOrganizationMember] { member =>
+    val identityFields = member.member.fold(user => Json.toJson(user), contact => Json.toJson(contact)).as[JsObject]
+    val libraryRelatedFields = Json.obj("membership" -> member.role, "lastInvitedAt" -> member.lastInvitedAt)
+    json.minify(identityFields ++ libraryRelatedFields)
+  }
+}
+
 final case class MemberRemovals(failedToRemove: Seq[Id[User]], removed: Seq[Id[User]])
 final case class OrganizationFail(status: Int, message: String)
 
