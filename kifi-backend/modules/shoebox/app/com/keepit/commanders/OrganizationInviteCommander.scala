@@ -1,24 +1,22 @@
 package com.keepit.commanders
 
-import com.google.inject.{ Provider, ImplementedBy, Inject, Singleton }
+import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.abook.ABookServiceClient
 import com.keepit.abook.model.RichContact
-import com.keepit.commanders.emails.{ EmailTemplateSender, LibraryInviteEmailSender }
+import com.keepit.commanders.emails.EmailTemplateSender
 import com.keepit.common.core._
-import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
+import com.keepit.common.mail._
 import com.keepit.common.mail.template.EmailToSend
 import com.keepit.common.mail.template.TemplateOptions._
-import com.keepit.common.mail._
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.S3ImageStore
-import com.keepit.eliza.{ ElizaServiceClient, LibraryPushNotificationCategory, PushNotificationExperiment, UserPushNotificationCategory }
+import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
 import com.keepit.social.BasicUser
-import play.api.libs.json.Json
 
 import scala.concurrent.{ ExecutionContext, Future }
 

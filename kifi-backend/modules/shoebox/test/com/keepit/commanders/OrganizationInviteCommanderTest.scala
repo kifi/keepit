@@ -7,17 +7,11 @@ import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.abook.model.RichContact
 import com.keepit.common.actor.TestKitSupport
 import com.keepit.common.concurrent.FakeExecutionContextModule
-import com.keepit.common.crypto.FakeCryptoModule
 import com.keepit.common.db.Id
-import com.keepit.common.mail.{ FakeMailModule, EmailAddress }
+import com.keepit.common.mail.EmailAddress
 import com.keepit.common.social.FakeSocialGraphModule
-import com.keepit.common.store.FakeShoeboxStoreModule
-import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.model._
-import com.keepit.search.FakeSearchServiceClientModule
-import com.keepit.shoebox.{ FakeShoeboxServiceModule, FakeKeepImportsModule }
-import com.keepit.social.BasicUser
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.SpecificationLike
 
