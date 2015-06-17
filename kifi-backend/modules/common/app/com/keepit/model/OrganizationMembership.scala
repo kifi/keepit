@@ -94,10 +94,6 @@ object OrganizationRole {
       def writes(o: OrganizationRole) = JsString(o.value)
     })
 
-  implicit def ord: Ordering[OrganizationRole] = new Ordering[OrganizationRole] {
-    def compare(x: OrganizationRole, y: OrganizationRole): Int = y.priority compare x.priority
-  }
-
   def apply(str: String): OrganizationRole = {
     str match {
       case OWNER.value => OWNER
