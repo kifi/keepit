@@ -47,7 +47,7 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
       withDb(modules: _*) { implicit injector =>
         val invitees = Seq[Invitation]((Right(EmailAddress("kiwi-test@kifi.com")), OrganizationRole.MEMBER, Some("join, we have kiwis at kifi")))
         val (org, owner, membership) = setup
-        val result = Await.result(orgInviteCommander.inviteUsersToOrganization(org.id.get, owner.id.get, invitees), new FiniteDuration(2, TimeUnit.SECONDS))
+        val result = Await.result(orgInviteCommander.inviteUsersToOrganization(org.id.get, owner.id.get, invitees), new FiniteDuration(3, TimeUnit.SECONDS))
 
         result.isRight === true
         val inviteesWithAccess = result.right.get
@@ -79,7 +79,7 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
             organizationMembershipRepo.save(membership.copy(permissions = (membership.permissions + OrganizationPermission.INVITE_MEMBERS)))
             bond
           }
-          val result = Await.result(orgInviteCommander.inviteUsersToOrganization(org.id.get, aMemberThatCannotInvite.id.get, invitees), new FiniteDuration(2, TimeUnit.SECONDS))
+          val result = Await.result(orgInviteCommander.inviteUsersToOrganization(org.id.get, aMemberThatCannotInvite.id.get, invitees), new FiniteDuration(3, TimeUnit.SECONDS))
 
           result.isRight === true
           val inviteesWithRole = result.right.get
@@ -98,7 +98,7 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
             organizationMembershipRepo.save(OrganizationMembership(organizationId = org.id.get, userId = bond.id.get, role = OrganizationRole.MEMBER))
             bond
           }
-          val result = Await.result(orgInviteCommander.inviteUsersToOrganization(org.id.get, aMemberThatCannotInvite.id.get, invitees), new FiniteDuration(2, TimeUnit.SECONDS))
+          val result = Await.result(orgInviteCommander.inviteUsersToOrganization(org.id.get, aMemberThatCannotInvite.id.get, invitees), new FiniteDuration(3, TimeUnit.SECONDS))
 
           result.isLeft === true
           val organizationFail = result.left.get
@@ -112,7 +112,7 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
           val notAMember = db.readWrite { implicit session =>
             UserFactory.user.withName("James", "Bond").saved
           }
-          val result = Await.result(orgInviteCommander.inviteUsersToOrganization(org.id.get, notAMember.id.get, invitees), new FiniteDuration(2, TimeUnit.SECONDS))
+          val result = Await.result(orgInviteCommander.inviteUsersToOrganization(org.id.get, notAMember.id.get, invitees), new FiniteDuration(3, TimeUnit.SECONDS))
 
           result.isLeft === true
           val organizationFail = result.left.get

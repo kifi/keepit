@@ -72,35 +72,38 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
                 membership.userId -> membership
               }.toMap
             }
-            val invitesForInvitees = for ((recipient, inviteRole, msgOpt) <- invitees) yield {
-              if (inviterMembership.role >= inviteRole) {
-                recipient match {
-                  case Left(inviteeId) =>
-                    organizationMembersMap.get(inviteeId) match {
-                      case Some(inviteeMember) if (inviteeMember.role < inviteRole && inviteRole != OrganizationRole.OWNER) => // member needs upgrade
-                        db.readWrite { implicit session =>
-                          organizationMembershipRepo.save(inviteeMember.copy(role = inviteRole))
-                        }
-                        val orgInvite = OrganizationInvite(organizationId = orgId, inviterId = inviterId, userId = Some(inviteeId), role = inviteRole, message = msgOpt)
-                        val inviteeInfo = (Left(contactsByUserId(inviteeId)), inviteRole)
-                        Some((orgInvite, inviteeInfo))
-                      case Some(inviteeMember) => // don't demote members through an invitation.
-                        None
-                      case _ => // user not a member of org yet
-                        val orgInvite = OrganizationInvite(organizationId = orgId, inviterId = inviterId, userId = Some(inviteeId), role = inviteRole, message = msgOpt)
-                        val inviteeInfo = (Left(contactsByUserId(inviteeId)), inviteRole)
-                        Some((orgInvite, inviteeInfo))
+            val (inviteesWithUserId, invitesForEmail) = invitees.filter {
+              case (_, inviteRole, _) => inviterMembership.role >= inviteRole
+            }.partition {
+              case (Left(_), _, _) => true
+              case _ => false
+            }
+
+            val invitationsForUserId = inviteesWithUserId.collect {
+              case (Left(inviteeId), inviteRole, msgOpt) =>
+                organizationMembersMap.get(inviteeId) match {
+                  case Some(inviteeMember) if (inviteeMember.role < inviteRole && inviteRole != OrganizationRole.OWNER) => // member needs upgrade
+                    db.readWrite { implicit session =>
+                      organizationMembershipRepo.save(inviteeMember.copy(role = inviteRole))
                     }
-                  case Right(email) =>
-                    val orgInvite = OrganizationInvite(organizationId = orgId, inviterId = inviterId, emailAddress = Some(email), role = inviteRole, message = msgOpt)
-                    val inviteeInfo = (Right(contactsByEmail(email)), inviteRole)
+                    val orgInvite = OrganizationInvite(organizationId = orgId, inviterId = inviterId, userId = Some(inviteeId), role = inviteRole, message = msgOpt)
+                    val inviteeInfo = (Left(contactsByUserId(inviteeId)), inviteRole)
+                    Some((orgInvite, inviteeInfo))
+                  case Some(inviteeMember) => // don't demote members through an invitation.
+                    None
+                  case _ => // user not a member of org yet
+                    val orgInvite = OrganizationInvite(organizationId = orgId, inviterId = inviterId, userId = Some(inviteeId), role = inviteRole, message = msgOpt)
+                    val inviteeInfo = (Left(contactsByUserId(inviteeId)), inviteRole)
                     Some((orgInvite, inviteeInfo))
                 }
-              } else {
-                log.warn(s"Inviter $inviterId attempting to grant role inviter does not have.")
-                None
-              }
             }
+            val invitationsForEmail = invitesForEmail.collect {
+              case (Right(email), inviteRole, msgOpt) =>
+                val orgInvite = OrganizationInvite(organizationId = orgId, inviterId = inviterId, emailAddress = Some(email), role = inviteRole, message = msgOpt)
+                val inviteeInfo = (Right(contactsByEmail(email)), inviteRole)
+                Some((orgInvite, inviteeInfo))
+            }
+            val invitesForInvitees = invitationsForUserId ++ invitationsForEmail
 
             val (invites, inviteesWithRole) = invitesForInvitees.flatten.unzip
 
@@ -110,9 +113,7 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
               val inviter = userRepo.get(inviterId)
               (org, owner, inviter)
             }
-            val persistedInvites = invites.flatMap { invite =>
-              persistInvitation(invite)
-            }
+            val persistedInvites = invites.flatMap(persistInvitation(_))
 
             sendInvitationEmails(persistedInvites, org, owner, inviter)
             // TODO: still need to write code for tracking sent invitation
