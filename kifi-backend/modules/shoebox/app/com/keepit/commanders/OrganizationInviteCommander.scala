@@ -17,6 +17,7 @@ import com.keepit.common.store.S3ImageStore
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
 import com.keepit.social.BasicUser
+import play.api.http.Status._
 
 import scala.concurrent.{ ExecutionContext, Future }
 
@@ -122,10 +123,10 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
             Right(inviteesWithRole)
           }
         } else {
-          Future.successful(Left(OrganizationFail(200, "cannot_invite_members")))
+          Future.successful(Left(OrganizationFail(OK, "cannot_invite_members")))
         }
       case None =>
-        Future.successful(Left(OrganizationFail(401, "inviter_not_a_member")))
+        Future.successful(Left(OrganizationFail(UNAUTHORIZED, "inviter_not_a_member")))
     }
   }
 
