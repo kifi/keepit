@@ -196,7 +196,6 @@ angular.module('kifi')
     };
 
     $scope.showFeedModal = function () {
-      libraryService.trackEvent('user_clicked_page', scope.library, { type: 'rss', action: 'clicked_subscribe_button'});
       modalService.open({
         template: 'libraries/libraryFeedModal.tpl.html',
         scope: $scope
