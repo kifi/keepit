@@ -45,22 +45,18 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     userEmailAddressRepo: UserEmailAddressRepo,
     emailTemplateSender: EmailTemplateSender) extends OrganizationInviteCommander with Logging {
 
-  private def canInvite(membership: OrganizationMembership): Boolean = {
-    membership.hasPermission(OrganizationPermission.INVITE_MEMBERS)
-  }
-
   def inviteUsersToOrganization(orgId: Id[Organization], inviterId: Id[User], invitees: Seq[(Either[Id[User], EmailAddress], OrganizationRole, Option[String])]): Future[Either[OrganizationFail, Seq[(Either[BasicUser, RichContact], OrganizationRole)]]] = {
     val inviterMembershipOpt = db.readOnlyMaster { implicit session =>
       organizationMembershipRepo.getByOrgIdAndUserId(orgId, inviterId)
     }
     inviterMembershipOpt match {
       case Some(inviterMembership) =>
-        if (canInvite(inviterMembership)) {
+        if (inviterMembership.hasPermission(OrganizationPermission.INVITE_MEMBERS)) {
           val inviteesByAddress = invitees.collect { case (Right(emailAddress), _, _) => emailAddress }
           val inviteesByUserId = invitees.collect { case (Left(userId), _, _) => userId }
 
           // contacts by email address
-          val futureContactsByEmailAddress: Future[Map[EmailAddress, RichContact]] = {
+          val contactsByEmailAddressFut: Future[Map[EmailAddress, RichContact]] = {
             aBookClient.internKifiContacts(inviterId, inviteesByAddress.map(BasicContact(_)): _*).imap { kifiContacts =>
               (inviteesByAddress zip kifiContacts).toMap
             }
@@ -70,7 +66,7 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
             basicUserRepo.loadAll(inviteesByUserId.toSet)
           }
 
-          futureContactsByEmailAddress map { contactsByEmail =>
+          contactsByEmailAddressFut map { contactsByEmail =>
             val organizationMembersMap = db.readOnlyMaster { implicit session =>
               organizationMembershipRepo.getByOrgIdAndUserIds(orgId, inviteesByUserId.toSet).map { membership =>
                 membership.userId -> membership
@@ -163,7 +159,7 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
 
     // send notifications to kifi users only
     if (inviteesById.nonEmpty) {
-      notifyInviteeAboutInvitationToJoinLibrary(org, owner, inviter, inviteesById.flatMap(_.userId).toSet)
+      notifyInviteeAboutInvitationToJoinOrganization(org, owner, inviter, inviteesById.flatMap(_.userId).toSet)
     }
 
     // send emails to both users & non-users
@@ -188,23 +184,23 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
         from = SystemEmailAddress.NOTIFICATIONS,
         subject = s"Please join our organization ${org.name} on Kifi!",
         to = toRecipient,
-        category = toRecipient.fold(_ => NotificationCategory.User.LIBRARY_INVITATION, _ => NotificationCategory.NonUser.LIBRARY_INVITATION),
+        category = toRecipient.fold(_ => NotificationCategory.User.ORGANIZATION_INVITATION, _ => NotificationCategory.NonUser.ORGANIZATION_INVITATION),
         htmlTemplate = views.html.email.organizationInvitationPlain(toRecipient.left.toOption, fromUserId, trimmedInviteMsg, org, authToken),
         textTemplate = Some(views.html.email.organizationInvitationText(toRecipient.left.toOption, fromUserId, trimmedInviteMsg, org, authToken)),
         templateOptions = Seq(CustomLayout).toMap,
         extraHeaders = Some(Map(PostOffice.Headers.REPLY_TO -> fromAddress)),
         campaign = Some("na"),
         channel = Some("vf_email"),
-        source = Some("library_invite")
+        source = Some("organization_invite")
       )
       emailTemplateSender.send(emailToSend) map (Some(_))
     } getOrElse {
-      airbrake.notify(s"LibraryInvite does not have a recipient: $invite")
+      airbrake.notify(s"OrganizationInvite does not have a recipient: $invite")
       Future.successful(None)
     }
   }
 
-  def notifyInviteeAboutInvitationToJoinLibrary(org: Organization, orgOwner: BasicUser, inviter: User, invitees: Set[Id[User]]) {
+  def notifyInviteeAboutInvitationToJoinOrganization(org: Organization, orgOwner: BasicUser, inviter: User, invitees: Set[Id[User]]) {
     val userImage = s3ImageStore.avatarUrlByUser(inviter)
     val orgLink = s"""https://www.kifi.com/${org.name}"""
 
