@@ -81,7 +81,9 @@ object OrganizationPermission {
   }
 }
 
-sealed abstract class OrganizationRole(val value: String, val priority: Int)
+sealed abstract class OrganizationRole(val value: String, val priority: Int) extends Ordered[OrganizationRole] {
+  override def compare(that: OrganizationRole): Int = that.priority compare priority
+}
 
 object OrganizationRole {
   case object OWNER extends OrganizationRole("owner", 0)
@@ -91,10 +93,6 @@ object OrganizationRole {
     Format(__.read[String].map(OrganizationRole(_)), new Writes[OrganizationRole] {
       def writes(o: OrganizationRole) = JsString(o.value)
     })
-
-  implicit def ord: Ordering[OrganizationRole] = new Ordering[OrganizationRole] {
-    def compare(x: OrganizationRole, y: OrganizationRole): Int = x.priority compare y.priority
-  }
 
   def apply(str: String): OrganizationRole = {
     str match {
