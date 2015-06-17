@@ -73,14 +73,9 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
                 membership.userId -> membership
               }.toMap
             }
-            val (inviteesWithUserId, inviteesWithEmail) = invitees.filter {
+            val invitesForInvitees = invitees.filter {
               case OrganizationMemberInvitation(_, inviteRole, _) => inviterMembership.role >= inviteRole
-            }.partition {
-              case OrganizationMemberInvitation(Left(_), _, _) => true
-              case _ => false
-            }
-
-            val invitationsForUserId = inviteesWithUserId.collect {
+            }.map {
               case OrganizationMemberInvitation(Left(inviteeId), inviteRole, msgOpt) =>
                 organizationMembersMap.get(inviteeId) match {
                   case Some(inviteeMember) if (inviteeMember.role < inviteRole && inviteRole != OrganizationRole.OWNER) => // member needs upgrade
@@ -97,14 +92,11 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
                     val inviteeInfo = (Left(contactsByUserId(inviteeId)), inviteRole)
                     Some((orgInvite, inviteeInfo))
                 }
-            }
-            val invitationsForEmail = inviteesWithEmail.collect {
               case OrganizationMemberInvitation(Right(email), inviteRole, msgOpt) =>
                 val orgInvite = OrganizationInvite(organizationId = orgId, inviterId = inviterId, emailAddress = Some(email), role = inviteRole, message = msgOpt)
                 val inviteeInfo = (Right(contactsByEmail(email)), inviteRole)
                 Some((orgInvite, inviteeInfo))
             }
-            val invitesForInvitees = invitationsForUserId ++ invitationsForEmail
 
             val (invites, inviteesWithRole) = invitesForInvitees.flatten.unzip
 
