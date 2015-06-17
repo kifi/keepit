@@ -23,7 +23,7 @@ import scala.concurrent.{ ExecutionContext, Future }
 
 @ImplementedBy(classOf[OrganizationInviteCommanderImpl])
 trait OrganizationInviteCommander {
-  def inviteUsersToOrganization(orgId: Id[Organization], inviterId: Id[User], invitees: Seq[(Either[Id[User], EmailAddress], OrganizationRole, Option[String])]): Future[Either[OrganizationFail, Seq[(Either[BasicUser, RichContact], OrganizationRole)]]]
+  def inviteUsersToOrganization(orgId: Id[Organization], inviterId: Id[User], invitees: Seq[OrganizationMemberInvitation]): Future[Either[OrganizationFail, Seq[(Either[BasicUser, RichContact], OrganizationRole)]]]
   def acceptInvitation(orgId: Id[Organization], userId: Id[User], authToken: Option[String] = None): Either[OrganizationFail, (Organization, OrganizationMembership)]
   def declineInvitation(orgId: Id[Organization], userId: Id[User]): Unit
   // Creates a Universal Invite Link for an organization and inviter. Anyone with the link can join the Organization
@@ -46,15 +46,15 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     userEmailAddressRepo: UserEmailAddressRepo,
     emailTemplateSender: EmailTemplateSender) extends OrganizationInviteCommander with Logging {
 
-  def inviteUsersToOrganization(orgId: Id[Organization], inviterId: Id[User], invitees: Seq[(Either[Id[User], EmailAddress], OrganizationRole, Option[String])]): Future[Either[OrganizationFail, Seq[(Either[BasicUser, RichContact], OrganizationRole)]]] = {
+  def inviteUsersToOrganization(orgId: Id[Organization], inviterId: Id[User], invitees: Seq[OrganizationMemberInvitation]): Future[Either[OrganizationFail, Seq[(Either[BasicUser, RichContact], OrganizationRole)]]] = {
     val inviterMembershipOpt = db.readOnlyMaster { implicit session =>
       organizationMembershipRepo.getByOrgIdAndUserId(orgId, inviterId)
     }
     inviterMembershipOpt match {
       case Some(inviterMembership) =>
         if (inviterMembership.hasPermission(OrganizationPermission.INVITE_MEMBERS)) {
-          val inviteesByAddress = invitees.collect { case (Right(emailAddress), _, _) => emailAddress }
-          val inviteesByUserId = invitees.collect { case (Left(userId), _, _) => userId }
+          val inviteesByAddress = invitees.collect { case OrganizationMemberInvitation(Right(emailAddress), _, _) => emailAddress }
+          val inviteesByUserId = invitees.collect { case OrganizationMemberInvitation(Left(userId), _, _) => userId }
 
           // contacts by email address
           val contactsByEmailAddressFut: Future[Map[EmailAddress, RichContact]] = {
@@ -74,14 +74,14 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
               }.toMap
             }
             val (inviteesWithUserId, inviteesWithEmail) = invitees.filter {
-              case (_, inviteRole, _) => inviterMembership.role >= inviteRole
+              case OrganizationMemberInvitation(_, inviteRole, _) => inviterMembership.role >= inviteRole
             }.partition {
-              case (Left(_), _, _) => true
+              case OrganizationMemberInvitation(Left(_), _, _) => true
               case _ => false
             }
 
             val invitationsForUserId = inviteesWithUserId.collect {
-              case (Left(inviteeId), inviteRole, msgOpt) =>
+              case OrganizationMemberInvitation(Left(inviteeId), inviteRole, msgOpt) =>
                 organizationMembersMap.get(inviteeId) match {
                   case Some(inviteeMember) if (inviteeMember.role < inviteRole && inviteRole != OrganizationRole.OWNER) => // member needs upgrade
                     db.readWrite { implicit session =>
@@ -99,7 +99,7 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
                 }
             }
             val invitationsForEmail = inviteesWithEmail.collect {
-              case (Right(email), inviteRole, msgOpt) =>
+              case OrganizationMemberInvitation(Right(email), inviteRole, msgOpt) =>
                 val orgInvite = OrganizationInvite(organizationId = orgId, inviterId = inviterId, emailAddress = Some(email), role = inviteRole, message = msgOpt)
                 val inviteeInfo = (Right(contactsByEmail(email)), inviteRole)
                 Some((orgInvite, inviteeInfo))

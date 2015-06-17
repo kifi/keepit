@@ -19,7 +19,6 @@ import scala.concurrent.Await
 import scala.concurrent.duration.FiniteDuration
 
 class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationLike with ShoeboxTestInjector {
-  type Invitation = (Either[Id[User], EmailAddress], OrganizationRole, Option[String])
   def orgInviteCommander(implicit injector: Injector) = inject[OrganizationInviteCommander]
   def organizationRepo(implicit injector: Injector) = inject[OrganizationRepo]
   def organizationMembershipRepo(implicit injector: Injector) = inject[OrganizationMembershipRepo]
@@ -45,8 +44,8 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
   "organization invite commander" should {
     "invite members" in {
       withDb(modules: _*) { implicit injector =>
-        val invitees = Seq[Invitation]((Right(EmailAddress("kiwi-test@kifi.com")), OrganizationRole.MEMBER, Some("join, we have kiwis at kifi")))
-        val (org, owner, membership) = setup
+        val invitees = Seq[OrganizationMemberInvitation](OrganizationMemberInvitation(Right(EmailAddress("kiwi-test@kifi.com")), OrganizationRole.MEMBER, Some("join, we have kiwis at kifi")))
+        val (org, owner, _) = setup
         val result = Await.result(orgInviteCommander.inviteUsersToOrganization(org.id.get, owner.id.get, invitees), new FiniteDuration(3, TimeUnit.SECONDS))
 
         result.isRight === true
@@ -71,8 +70,8 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
 
       "do not demote invited members" in {
         withDb(modules: _*) { implicit injector =>
-          val (org, owner, membership) = setup
-          val invitees = Seq[Invitation]((Left(owner.id.get), OrganizationRole.MEMBER, Some("I just demoted you from owner")))
+          val (org, owner, _) = setup
+          val invitees = Seq[OrganizationMemberInvitation](OrganizationMemberInvitation(Left(owner.id.get), OrganizationRole.MEMBER, Some("I just demoted you from owner")))
           val aMemberThatCannotInvite = db.readWrite { implicit session =>
             val bond = UserFactory.user.withName("James", "Bond").saved
             val membership: OrganizationMembership = OrganizationMembership(organizationId = org.id.get, userId = bond.id.get, role = OrganizationRole.MEMBER)
@@ -91,8 +90,8 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
     "not invite members when" in {
       "the inviter cannot invite" in {
         withDb(modules: _*) { implicit injector =>
-          val (org, owner, membership) = setup
-          val invitees = Seq[Invitation]()
+          val (org, _, _) = setup
+          val invitees = Seq[OrganizationMemberInvitation]()
           val aMemberThatCannotInvite = db.readWrite { implicit session =>
             val bond = UserFactory.user.withName("James", "Bond").saved
             organizationMembershipRepo.save(OrganizationMembership(organizationId = org.id.get, userId = bond.id.get, role = OrganizationRole.MEMBER))
@@ -107,8 +106,8 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
       }
       "the inviter is not a member" in {
         withDb(modules: _*) { implicit injector =>
-          val (org, owner, membership) = setup
-          val invitees = Seq[Invitation]()
+          val (org, _, _) = setup
+          val invitees = Seq[OrganizationMemberInvitation]()
           val notAMember = db.readWrite { implicit session =>
             UserFactory.user.withName("James", "Bond").saved
           }

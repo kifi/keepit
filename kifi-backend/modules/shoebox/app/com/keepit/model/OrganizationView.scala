@@ -1,7 +1,10 @@
 package com.keepit.model
 
 import com.keepit.common.db.Id
+import com.keepit.common.mail.EmailAddress
 import play.api.http.Status._
+
+case class OrganizationMemberInvitation(invitedBy: Either[Id[User], EmailAddress], role: OrganizationRole, msgOpt: Option[String] = None)
 
 sealed abstract class OrganizationMembershipRequest {
   def orgId: Id[Organization]
