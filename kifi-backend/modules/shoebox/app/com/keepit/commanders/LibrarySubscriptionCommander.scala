@@ -110,8 +110,6 @@ class LibrarySubscriptionCommander @Inject() (
 
     val currSubs = librarySubscriptionRepo.getByLibraryId(libId)
 
-    println(currSubs)
-
     if (currSubs.isEmpty) {
       saveSubsByLibIdAndKey(libId, subKeys)
     } else {
@@ -120,8 +118,6 @@ class LibrarySubscriptionCommander @Inject() (
     }
 
     val newSubs = librarySubscriptionRepo.getByLibraryId(libId)
-
-    println(newSubs)
 
     currSubs != newSubs
   }
