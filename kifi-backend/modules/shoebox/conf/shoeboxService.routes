@@ -763,6 +763,7 @@ GET     /admin/clusters/zooKeeperInspector        @com.keepit.controllers.admin.
 GET     /admin/experiments/overview   @com.keepit.controllers.admin.AdminExperimentController.overview
 GET     /admin/experiments/users/:exp/page/:page @com.keepit.controllers.admin.AdminUserController.byExperimentUsersView(page: Int, exp: String)
 POST     /admin/experiments/saveGenerator @com.keepit.controllers.admin.AdminExperimentController.saveGenerator
+POST    /admin/experiments/removeConditions  @com.keepit.controllers.admin.AdminExperimentController.removeConditions(exId: Id[ProbabilisticExperimentGenerator])
 
 GET     /admin/learning/pornDetect/model    @com.keepit.controllers.admin.AdminPornDetectorController.getPornDetectorModel
 GET     /admin/learning/pornDetect          @com.keepit.controllers.admin.AdminPornDetectorController.index
