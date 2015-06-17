@@ -27,6 +27,7 @@ class OrganizationMembershipCommanderTest extends TestKitSupport with Specificat
         orgMemberCommander.getMembersAndInvitees(orgId, Limit(50), Offset(0), true).length === 20
       }
     }
+
     "and page results" in {
       withDb() { implicit injector =>
         val orgId = Id[Organization](1)
@@ -52,5 +53,90 @@ class OrganizationMembershipCommanderTest extends TestKitSupport with Specificat
         membersLimitedByOffset.length === 10
       }
     }
+
+    "add members to org" in {
+      withDb() { implicit injector =>
+        val orgMemberRepo = inject[OrganizationMembershipRepo]
+
+        val orgId = Id[Organization](1)
+        val ownerId = Id[User](1)
+
+        db.readWrite { implicit session =>
+          orgMemberRepo.save(OrganizationMembership(organizationId = orgId, userId = ownerId, role = OrganizationRole.OWNER))
+        }
+
+        val orgMemberCommander = inject[OrganizationMembershipCommander]
+
+        val ownerAddUser = OrganizationMembershipAddRequest(orgId, ownerId, Id[User](2), OrganizationRole.MEMBER)
+        orgMemberCommander.addMembership(ownerAddUser) === Right(OrganizationMembershipAddResponse(ownerAddUser))
+
+        val memberAddUser = OrganizationMembershipAddRequest(orgId, Id[User](2), Id[User](3), OrganizationRole.MEMBER)
+        orgMemberCommander.addMembership(memberAddUser) === Right(OrganizationMembershipAddResponse(memberAddUser))
+
+        val memberAddUserAsOwner = OrganizationMembershipAddRequest(orgId, Id[User](2), Id[User](5), OrganizationRole.OWNER)
+        orgMemberCommander.addMembership(memberAddUserAsOwner) === Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+
+        val noneAddUser = OrganizationMembershipAddRequest(orgId, Id[User](42), Id[User](4), OrganizationRole.MEMBER)
+        orgMemberCommander.addMembership(noneAddUser) === Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+
+        val memberAddMember = OrganizationMembershipAddRequest(orgId, Id[User](3), Id[User](1), OrganizationRole.MEMBER)
+        orgMemberCommander.addMembership(memberAddMember) === Left(OrganizationFail.INSUFFICIENT_PERMISSIONS) // TODO: this should fail differently
+      }
+    }
+
+    "modify members in org" in {
+      withDb() { implicit injector =>
+        val orgMemberRepo = inject[OrganizationMembershipRepo]
+
+        val orgId = Id[Organization](1)
+
+        db.readWrite { implicit session =>
+          orgMemberRepo.save(OrganizationMembership(organizationId = orgId, userId = Id[User](1), role = OrganizationRole.OWNER))
+          orgMemberRepo.save(OrganizationMembership(organizationId = orgId, userId = Id[User](2), role = OrganizationRole.MEMBER))
+          orgMemberRepo.save(OrganizationMembership(organizationId = orgId, userId = Id[User](3), role = OrganizationRole.MEMBER))
+          orgMemberRepo.save(OrganizationMembership(organizationId = orgId, userId = Id[User](4), role = OrganizationRole.MEMBER))
+        }
+
+        val orgMemberCommander = inject[OrganizationMembershipCommander]
+
+        val ownerModMember = OrganizationMembershipModifyRequest(orgId, Id[User](1), Id[User](2), OrganizationRole.OWNER)
+        orgMemberCommander.modifyMembership(ownerModMember) === Right(OrganizationMembershipModifyResponse(ownerModMember))
+
+        // 2 is now an OWNER, try to set him back to MEMBER
+        val memberModOwner = OrganizationMembershipModifyRequest(orgId, Id[User](3), Id[User](2), OrganizationRole.MEMBER)
+        orgMemberCommander.modifyMembership(memberModOwner) === Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+
+        // Try to modify a random user
+        val memberModUser = OrganizationMembershipModifyRequest(orgId, Id[User](3), Id[User](42), OrganizationRole.MEMBER)
+        orgMemberCommander.modifyMembership(memberModOwner) === Left(OrganizationFail.INSUFFICIENT_PERMISSIONS) // TODO: this should fail differently
+      }
+    }
+
+    "remove members from org" in {
+      withDb() { implicit injector =>
+        val orgMemberRepo = inject[OrganizationMembershipRepo]
+
+        val orgId = Id[Organization](1)
+
+        db.readWrite { implicit session =>
+          orgMemberRepo.save(OrganizationMembership(organizationId = orgId, userId = Id[User](1), role = OrganizationRole.OWNER))
+          orgMemberRepo.save(OrganizationMembership(organizationId = orgId, userId = Id[User](2), role = OrganizationRole.MEMBER))
+          orgMemberRepo.save(OrganizationMembership(organizationId = orgId, userId = Id[User](3), role = OrganizationRole.MEMBER))
+          orgMemberRepo.save(OrganizationMembership(organizationId = orgId, userId = Id[User](4), role = OrganizationRole.MEMBER))
+        }
+
+        val orgMemberCommander = inject[OrganizationMembershipCommander]
+
+        val ownerDelMember = OrganizationMembershipRemoveRequest(orgId, Id[User](1), Id[User](2))
+        orgMemberCommander.removeMembership(ownerDelMember) === Right(OrganizationMembershipRemoveResponse(ownerDelMember))
+
+        val memberDelOwner = OrganizationMembershipRemoveRequest(orgId, Id[User](3), Id[User](1))
+        orgMemberCommander.removeMembership(memberDelOwner) === Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+
+        val memberDelNone = OrganizationMembershipRemoveRequest(orgId, Id[User](3), Id[User](2))
+        orgMemberCommander.removeMembership(memberDelNone) === Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+      }
+    }
+
   }
 }
