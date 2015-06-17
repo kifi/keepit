@@ -160,14 +160,14 @@ class PageCommander @Inject() (
   private def filterLibrariesUserDoesNotOwnOrFollow(libraries: Seq[(Id[Library], Id[User], DateTime)], userId: Id[User])(implicit session: RSession): Seq[Library] = {
     val otherLibraryIds = libraries.filterNot(_._2 == userId).map(_._1)
     val memberLibraryIds = libraryMembershipRepo.getWithLibraryIdsAndUserId(otherLibraryIds.toSet, userId).filter(lm => lm._2.isDefined).keys
-    val libraryIds = otherLibraryIds.diff(memberLibraryIds.toSeq)
+    val libraryIds = otherLibraryIds.diff(memberLibraryIds.toSeq) // these are just libraries I don't own or follow. Could be other people's main library?
     val libraryMap = libraryRepo.getLibraries(libraryIds.toSet)
 
     // hacky debug: I know this only happens to one user and one library.
-    if (userId == Id[User](94290) && libraryMap.keySet.contains(Id[Library](563665))) {
+    if (libraryMap.keySet.contains(Id[Library](563665))) {
       val info1 = libraries.find(_._1 == Id[Library](563665)).map { triple => s"exhibit 1: ${triple}" }
       val info2 = "exhibit 2: " + memberLibraryIds.mkString(", ")
-      airbrake.notify(s"filterLibrariesUserDoesNotOwnOrFollow bug: ${info1} , ${info2}")
+      airbrake.notify(s"filterLibrariesUserDoesNotOwnOrFollow bug: userId = ${userId},  ${info1} , ${info2}")
     }
 
     libraryIds.map(libraryMap)
