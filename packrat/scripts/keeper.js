@@ -202,7 +202,7 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
       var $btn = $(this);
       if ($btn.hasClass('kifi-dock-site')) {
         e.preventDefault();
-        api.port.emit('open_tab', {path: '', source: 'keeper'});
+        api.port.emit('open_tab', {path: '/me', source: 'keeper'});
       } else if ($btn.hasClass('kifi-dock-compose')) {
         if (k.toaster && k.toaster.showing()) {
           k.toaster.hideIfBlank($slider);
