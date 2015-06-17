@@ -12,6 +12,8 @@ import org.joda.time.DateTime
 trait OrganizationInviteRepo extends Repo[OrganizationInvite] {
   def getByOrganization(organizationId: Id[Organization], limit: Limit, offset: Offset, state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit s: RSession): Seq[OrganizationInvite]
   def getByInviter(inviterId: Id[User], state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit s: RSession): Seq[OrganizationInvite]
+  def getLastSentByOrgIdAndInviterIdAndUserId(organizationId: Id[Organization], inviterId: Id[User], userId: Id[User], includeStates: Set[State[OrganizationInvite]])(implicit s: RSession): Option[OrganizationInvite]
+  def getLastSentByOrgIdAndInviterIdAndEmailAddress(organizationId: Id[Organization], inviterId: Id[User], emailAddress: EmailAddress, includeStates: Set[State[OrganizationInvite]])(implicit s: RSession): Option[OrganizationInvite]
 }
 
 @Singleton
@@ -80,5 +82,23 @@ class OrganizationInviteRepoImpl @Inject() (val db: DataBaseComponent, val clock
 
   def getByInviter(inviterId: Id[User], state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit session: RSession): Seq[OrganizationInvite] = {
     getByInviterIdCompiled(inviterId, state).list
+  }
+
+  def getLastSentByOrgIdAndInviterIdAndUserIdCompiled(organizationId: Column[Id[Organization]], inviterId: Column[Id[User]], userId: Column[Id[User]], includeStates: Set[State[OrganizationInvite]]) = Compiled {
+    (for (row <- rows if row.organizationId === organizationId && row.inviterId === inviterId && row.userId === userId && row.state.inSet(includeStates)) yield row).sortBy(_.createdAt.desc)
+  }
+
+  def getLastSentByOrgIdAndInviterIdAndUserId(organizationId: Id[Organization], inviterId: Id[User], userId: Id[User],
+    includeStates: Set[State[OrganizationInvite]])(implicit s: RSession): Option[OrganizationInvite] = {
+    getLastSentByOrgIdAndInviterIdAndUserIdCompiled(organizationId, inviterId, userId, includeStates).firstOption
+  }
+
+  def getLastSentByOrgIdAndInviterIdAndEmailAddressCompiled(organizationId: Column[Id[Organization]], inviterId: Column[Id[User]], emailAddress: Column[EmailAddress], includeStates: Set[State[OrganizationInvite]]) = Compiled {
+    (for (row <- rows if row.organizationId === organizationId && row.inviterId === inviterId && row.emailAddress === emailAddress && row.state.inSet(includeStates)) yield row).sortBy(_.createdAt.desc)
+  }
+
+  def getLastSentByOrgIdAndInviterIdAndEmailAddress(organizationId: Id[Organization], inviterId: Id[User],
+    emailAddress: EmailAddress, includeStates: Set[State[OrganizationInvite]])(implicit s: RSession): Option[OrganizationInvite] = {
+    getLastSentByOrgIdAndInviterIdAndEmailAddressCompiled(organizationId, inviterId, emailAddress, includeStates).firstOption
   }
 }

@@ -1,7 +1,10 @@
 package com.keepit.model
 
 import com.keepit.common.db.Id
-import play.api.http.Status.FORBIDDEN
+import com.keepit.common.mail.EmailAddress
+import play.api.http.Status._
+
+case class OrganizationMemberInvitation(invitedBy: Either[Id[User], EmailAddress], role: OrganizationRole, msgOpt: Option[String] = None)
 
 sealed abstract class OrganizationMembershipRequest {
   def orgId: Id[Organization]
@@ -33,9 +36,11 @@ case class OrganizationMembershipRemoveResponse(request: OrganizationMembershipR
 sealed abstract class OrganizationFail(val status: Int, val message: String)
 object OrganizationFail {
   case object INSUFFICIENT_PERMISSIONS extends OrganizationFail(FORBIDDEN, "insufficient_permissions")
+  case object NOT_A_MEMBER extends OrganizationFail(UNAUTHORIZED, "not_a_member")
   def apply(str: String): OrganizationFail = {
     str match {
       case INSUFFICIENT_PERMISSIONS.message => INSUFFICIENT_PERMISSIONS
+      case NOT_A_MEMBER.message => NOT_A_MEMBER
     }
   }
 }

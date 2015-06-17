@@ -82,6 +82,7 @@ object OrganizationPermission {
 }
 
 sealed abstract class OrganizationRole(val value: String, val priority: Int) extends Ordered[OrganizationRole] {
+  // reverse compare to ensure that 0 is highest priority
   override def compare(that: OrganizationRole): Int = that.priority compare priority
 }
 
