@@ -15,7 +15,7 @@ import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success }
 
 @Singleton
-class MobileOrganizationInviteControllerImpl @Inject() (
+class MobileOrganizationInviteController @Inject() (
     userCommander: UserCommander,
     orgCommander: OrganizationCommander,
     orgMembershipCommander: OrganizationMembershipCommander,

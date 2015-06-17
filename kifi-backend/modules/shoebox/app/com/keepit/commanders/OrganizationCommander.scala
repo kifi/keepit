@@ -9,6 +9,7 @@ import com.keepit.model._
 @ImplementedBy(classOf[OrganizationCommanderImpl])
 trait OrganizationCommander {
   def get(orgId: Id[Organization]): Organization
+  def canViewOrganization(userIdOpt: Option[Id[User]], orgId: Id[Organization], authToken: Option[String]): Boolean
 }
 
 @Singleton
@@ -17,4 +18,7 @@ class OrganizationCommanderImpl @Inject() (
     orgRepo: OrganizationRepo) extends OrganizationCommander with Logging {
 
   def get(orgId: Id[Organization]): Organization = db.readOnlyReplica { implicit session => orgRepo.get(orgId) }
+
+  // Right now, Organization's are 100% public
+  def canViewOrganization(userIdOpt: Option[Id[User]], orgId: Id[Organization], authToken: Option[String]): Boolean = true
 }

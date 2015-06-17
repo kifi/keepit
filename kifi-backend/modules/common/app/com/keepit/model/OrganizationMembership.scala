@@ -20,6 +20,7 @@ case class OrganizationMembership(
   def withId(id: Id[OrganizationMembership]): OrganizationMembership = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime): OrganizationMembership = this.copy(updatedAt = now)
   def withState(newState: State[OrganizationMembership]): OrganizationMembership = this.copy(state = newState)
+  def withRole(newRole: OrganizationRole): OrganizationMembership = this.copy(role = newRole, permissions = OrganizationPermission.defaultPermissions(newRole))
   def withPermissions(newPermissions: Set[OrganizationPermission]): OrganizationMembership = this.copy(permissions = newPermissions)
 
   def hasPermission(p: OrganizationPermission): Boolean = permissions.contains(p)
@@ -81,7 +82,7 @@ object OrganizationPermission {
 }
 
 sealed abstract class OrganizationRole(val value: String, val priority: Int) extends Ordered[OrganizationRole] {
-  // need to reverse this if 0 is going to be the highest priority.
+  // reverse compare to ensure that 0 is highest priority
   override def compare(that: OrganizationRole): Int = that.priority compare priority
 }
 

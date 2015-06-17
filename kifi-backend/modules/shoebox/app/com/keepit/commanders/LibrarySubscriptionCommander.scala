@@ -22,7 +22,7 @@ case class BasicSlackMessage( // https://api.slack.com/incoming-webhooks
   text: String,
   channel: Option[String] = None,
   username: String = "Kifi",
-  iconUrl: String = "https://djty7jcqog9qu.cloudfront.net/assets/black/logo.png",
+  iconUrl: String = "https://d1dwdv9wd966qu.cloudfront.net/img/favicon64x64.7cc6dd4.png",
   attachments: Seq[SlackAttachment] = Seq.empty)
 
 object BasicSlackMessage {
