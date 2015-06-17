@@ -21,6 +21,7 @@ class LibraryChecker @Inject() (val airbrake: AirbrakeNotifier,
     val libraryCommander: LibraryCommander,
     val libraryMembershipRepo: LibraryMembershipRepo,
     val libraryRepo: LibraryRepo,
+    val organizationRepo: OrganizationRepo,
     val userRepo: UserRepo,
     val systemValueRepo: SystemValueRepo) extends Logging {
 
@@ -29,12 +30,40 @@ class LibraryChecker @Inject() (val airbrake: AirbrakeNotifier,
 
   private[integrity] val LAST_KEPT_AND_KEEP_COUNT_NAME = Name[SequenceNumber[Keep]]("integrity_plugin_library_sync")
   private[integrity] val MEMBER_COUNT_NAME = Name[SequenceNumber[LibraryMembership]]("integrity_plugin_library_member_count")
+  private[integrity] val LIBRARY_MOVED_NAME = Name[SequenceNumber[Library]]("integrity_plugin_library_moved")
   private val MEMBER_FETCH_SIZE = 500
   private val KEEP_FETCH_SIZE = 500
+  private val LIBRARY_FETCH_SIZE = 250
 
   def check(): Unit = lock.synchronized {
-    syncLibraryLastKeptAndKeepCount()
-    syncLibraryMemberCounts()
+    syncLibraryLastKeptAndKeepCount() // reads keeps, updates libraries
+    syncLibraryMemberCounts() // reads libraryMembership, updates libraries
+    syncOnLibraryMove() // reads libraries, updates keeps. (This is kind of recursive, but not really as I only update the ones that are wrong.)
+  }
+
+  private[integrity] def syncOnLibraryMove(): Unit = {
+    val timer = new NamedStatsdTimer("LibraryChecker.syncOnLibraryMove")
+    val (nextSeqNum, keepsNeedingUpdate, libraries) = db.readOnlyReplica { implicit s =>
+      val lastSeq = getLastSeqNum(LIBRARY_MOVED_NAME)
+      val libraries = libraryRepo.getBySequenceNumber(lastSeq, LIBRARY_FETCH_SIZE)
+      val keepsNeedingUpdate = keepRepo.getByLibraryIds((libraries.map(_.id.get).toSet))
+
+      val nextSeqNum = if (libraries.isEmpty) None else Some(libraries.map(_.seq).max)
+      (nextSeqNum, keepsNeedingUpdate, libraries.map(lib => (lib.id.get, lib)).toMap)
+    }
+
+    keepsNeedingUpdate.foreach { keep =>
+      // library id cannot be None here since we got the keep by looking it up by its library id.
+      val library = libraries(keep.libraryId.get)
+      if (keep.organizationId != library.organizationId) {
+        updateKeep(keep.id.get, _.copy(organizationId = library.organizationId))
+      }
+    }
+
+    nextSeqNum.foreach(seqNum => db.readWrite { implicit session =>
+      systemValueRepo.setSequenceNumber(LIBRARY_MOVED_NAME, seqNum)
+    })
+    timer.stopAndReport(appLog = true)
   }
 
   private[integrity] def checkSystemLibraries(): Unit = {
@@ -58,6 +87,11 @@ class LibraryChecker @Inject() (val airbrake: AirbrakeNotifier,
 
   private def getLastSeqNum[T](key: Name[SequenceNumber[T]])(implicit session: RSession) = {
     systemValueRepo.getSequenceNumber(key).getOrElse(SequenceNumber[T](0))
+  }
+
+  private def updateKeep(id: Id[Keep], mutator: Keep => Keep) = db.readWrite { implicit session =>
+    // same as below
+    keepRepo.save(mutator(keepRepo.get(id)))
   }
 
   private def updateLibrary(id: Id[Library], mutator: Library => Library) = db.readWrite { implicit session =>
