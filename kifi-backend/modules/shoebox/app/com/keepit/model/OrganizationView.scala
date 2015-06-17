@@ -37,6 +37,7 @@ object OrganizationFail {
   def apply(str: String): OrganizationFail = {
     str match {
       case INSUFFICIENT_PERMISSIONS.message => INSUFFICIENT_PERMISSIONS
+      case NOT_A_MEMBER.message => NOT_A_MEMBER
     }
   }
 }
