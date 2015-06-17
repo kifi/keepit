@@ -80,6 +80,7 @@ case class UserProfileStats(
   numKeeps: Int,
   numConnections: Int,
   numFollowers: Int,
+  numTags: Int,
   numInvitedLibraries: Option[Int] = None,
   biography: Option[String] = None)
 

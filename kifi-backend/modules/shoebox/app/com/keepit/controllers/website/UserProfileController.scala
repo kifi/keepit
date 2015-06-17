@@ -34,6 +34,7 @@ class UserProfileController @Inject() (
     userConnectionRepo: UserConnectionRepo,
     abookServiceClient: ABookServiceClient,
     userConnectionsCommander: UserConnectionsCommander,
+    collectionCommander: CollectionCommander,
     userProfileCommander: UserProfileCommander,
     val userActionsHelper: UserActionsHelper,
     friendStatusCommander: FriendStatusCommander,
@@ -64,6 +65,7 @@ class UserProfileController @Inject() (
           numKeeps = profile.numKeeps,
           numConnections = numConnections,
           numFollowers = userProfileCommander.countFollowers(profile.userId, viewer.map(_.id.get)),
+          numTags = collectionCommander.getCount(profile.userId),
           numInvitedLibraries = numInvitedLibs,
           biography = userBiography
         )).as[JsObject]
