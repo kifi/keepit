@@ -60,11 +60,11 @@
           </div>
 
           <div class="manage-lib-input-wrapper-subs" ng-if="onSubscriptionExperiment">
-            <div class="manage-lib-heading">Subscriptions</div>
-            <button class="manage-lib-subs-instruct-button" ng-click="toggleInstructions()">?</button>
+            <div class="manage-lib-heading">Slack Subscriptions</div>
+            <button class="manage-lib-sub-button" ng-click="toggleInstructions()">?</button>
             <div class="manage-lib-subs-instruct" ng-if="showSubInstructions">
               To subscribe a Slack channel to this library:
-                <li>Log into Slack, then <a href="https://slack.com/services/new/incoming-webhook">go to this page</a>.</li>
+                <li>Log into Slack, then <a href="https://slack.com/services/new/incoming-webhook" target="_blank">go to this page</a>.</li>
                 <li>Choose a channel, then click "Add Incoming WebHooks Integration"</li>
                 <li>Copy the Webhook URL, and paste it in the URL field below.</li>
                 <li>Enter a unique name for the subscription, press "+", then "Save".</li>
@@ -77,7 +77,7 @@
               </tr>
               <tr class="manage-lib-subs-new" ng-if="library.subscriptions.length < 3">
                 <td class="manage-lib-sub-name-input"><textarea class="manage-lib-sub-input" ng-model="newSub.name" placeholder="Name" autocomplete="off" novalidate></td>
-                <td class="manage-lib-sub-url-input"><form ng-submit="addSubscription()"><textarea class="manage-lib-sub-input" ng-model="newSub.info.url" ng-submit="addSubscription()" placeholder="Url" autocomplete="off" novalidate></form></td>
+                <td class="manage-lib-sub-url-input" ng-keydown=""><form ng-submit="addSubscription()"><textarea class="manage-lib-sub-input" ng-model="newSub.info.url" ng-submit="addSubscription()" placeholder="Url" autocomplete="off" novalidate></form></td>
                 <td><button class="manage-lib-sub-button" ng-click="addSubscription()">+</button></td>
               </tr>
               <tr ng-if="showError" class="manage-lib-subs-error">
