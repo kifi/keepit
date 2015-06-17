@@ -59,15 +59,14 @@ class OrganizationMembershipCommanderTest extends TestKitSupport with Specificat
         val orgMemberRepo = inject[OrganizationMembershipRepo]
 
         val orgId = Id[Organization](1)
-        val ownerId = Id[User](1)
 
         db.readWrite { implicit session =>
-          orgMemberRepo.save(OrganizationMembership(organizationId = orgId, userId = ownerId, role = OrganizationRole.OWNER))
+          orgMemberRepo.save(OrganizationMembership(organizationId = orgId, userId = Id[User](1), role = OrganizationRole.OWNER))
         }
 
         val orgMemberCommander = inject[OrganizationMembershipCommander]
 
-        val ownerAddUser = OrganizationMembershipAddRequest(orgId, ownerId, Id[User](2), OrganizationRole.MEMBER)
+        val ownerAddUser = OrganizationMembershipAddRequest(orgId, Id[User](1), Id[User](2), OrganizationRole.MEMBER)
         orgMemberCommander.addMembership(ownerAddUser) === Right(OrganizationMembershipAddResponse(ownerAddUser))
 
         val memberAddUser = OrganizationMembershipAddRequest(orgId, Id[User](2), Id[User](3), OrganizationRole.MEMBER)

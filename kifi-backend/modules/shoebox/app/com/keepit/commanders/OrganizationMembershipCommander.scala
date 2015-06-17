@@ -97,31 +97,32 @@ class OrganizationMembershipCommanderImpl @Inject() (
     val requesterOpt = organizationMembershipRepo.getByOrgIdAndUserId(request.orgId, request.requesterId)
     val targetOpt = organizationMembershipRepo.getByOrgIdAndUserId(request.orgId, request.targetId)
 
-    if (requesterOpt.isEmpty) return false // a non-member can't request anything
-    val requester = requesterOpt.get
-
-    request match {
-      case OrganizationMembershipAddRequest(_, _, _, newRole) => validAdd(requester, targetOpt, newRole)
-      case OrganizationMembershipModifyRequest(_, _, _, newRole) => validModify(requester, targetOpt, newRole)
-      case OrganizationMembershipRemoveRequest(_, _, _) => validRemove(requester, targetOpt)
+    requesterOpt match {
+      case None => false // a non-member can't request anything
+      case Some(requester) =>
+        request match {
+          case OrganizationMembershipAddRequest(_, _, _, newRole) => validAdd(requester, targetOpt, newRole)
+          case OrganizationMembershipModifyRequest(_, _, _, newRole) => validModify(requester, targetOpt, newRole)
+          case OrganizationMembershipRemoveRequest(_, _, _) => validRemove(requester, targetOpt)
+        }
     }
   }
   private def validAdd(requester: OrganizationMembership, targetOpt: Option[OrganizationMembership], newRole: OrganizationRole): Boolean = {
     targetOpt match {
-      case None => newRole <= requester.role
+      case None => requester.role >= newRole
       case Some(_) => false
     }
   }
   private def validModify(requester: OrganizationMembership, targetOpt: Option[OrganizationMembership], newRole: OrganizationRole): Boolean = {
     targetOpt match {
       case None => false
-      case Some(target) => target.role <= requester.role && newRole <= requester.role
+      case Some(target) => (requester.role >= target.role) && (newRole <= requester.role)
     }
   }
   private def validRemove(requester: OrganizationMembership, targetOpt: Option[OrganizationMembership]): Boolean = {
     targetOpt match {
       case None => false
-      case Some(target) => target.role <= requester.role
+      case Some(target) => requester.role >= target.role
     }
   }
 
