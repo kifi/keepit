@@ -57,6 +57,19 @@ angular.module('kifi')
           scope.showSubInstructions = !scope.showSubInstructions;
         };
 
+        scope.addIfEnter = function(event) {
+          if (event.keyCode === 13) {
+            event.preventDefault();
+            scope.addSubscription();
+          }
+        };
+
+        scope.preventNewline = function(enterPressed) {
+          if (event.keyCode === 13) {
+            event.preventDefault();
+          }
+        };
+
         scope.addSubscription = function() {
 
           function validateSubscription(newSub, subscriptions) {
