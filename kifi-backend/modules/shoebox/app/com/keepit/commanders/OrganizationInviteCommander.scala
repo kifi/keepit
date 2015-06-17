@@ -123,10 +123,10 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
             Right(inviteesWithRole)
           }
         } else {
-          Future.successful(Left(OrganizationFail(OK, "cannot_invite_members")))
+          Future.successful(Left(OrganizationFail("insufficient_permissions")))
         }
       case None =>
-        Future.successful(Left(OrganizationFail(UNAUTHORIZED, "inviter_not_a_member")))
+        Future.successful(Left(OrganizationFail("not_a_member")))
     }
   }
 

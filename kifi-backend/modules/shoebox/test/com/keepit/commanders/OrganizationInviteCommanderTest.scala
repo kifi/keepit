@@ -72,7 +72,7 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
       "do not demote invited members" in {
         withDb(modules: _*) { implicit injector =>
           val (org, owner, membership) = setup
-          val invitees = Seq[Invitation]((Left(owner.id.get), OrganizationRole.MEMBER, Some("haha I just demoted you from owner")))
+          val invitees = Seq[Invitation]((Left(owner.id.get), OrganizationRole.MEMBER, Some("I just demoted you from owner")))
           val aMemberThatCannotInvite = db.readWrite { implicit session =>
             val bond = UserFactory.user.withName("James", "Bond").saved
             val membership: OrganizationMembership = OrganizationMembership(organizationId = org.id.get, userId = bond.id.get, role = OrganizationRole.MEMBER)
@@ -102,7 +102,7 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
 
           result.isLeft === true
           val organizationFail = result.left.get
-          organizationFail.message === "cannot_invite_members"
+          organizationFail === OrganizationFail.INSUFFICIENT_PERMISSIONS
         }
       }
       "the inviter is not a member" in {
@@ -116,7 +116,7 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
 
           result.isLeft === true
           val organizationFail = result.left.get
-          organizationFail.message === "inviter_not_a_member"
+          organizationFail === OrganizationFail.NOT_A_MEMBER
         }
       }
     }
