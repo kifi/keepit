@@ -17,7 +17,6 @@ import com.keepit.common.store.S3ImageStore
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
 import com.keepit.social.BasicUser
-import play.api.http.Status._
 
 import scala.concurrent.{ ExecutionContext, Future }
 
