@@ -94,7 +94,21 @@ class OrganizationMembershipCommanderImpl @Inject() (
   }
 
   private def validRequest(request: OrganizationMembershipRequest)(implicit session: RSession): Boolean = {
-    true
+    val requesterOpt = organizationMembershipRepo.getByOrgIdAndUserId(request.orgId, request.requesterId)
+    val targetOpt = organizationMembershipRepo.getByOrgIdAndUserId(request.orgId, request.targetId)
+
+    requesterOpt exists { requester =>
+      request match {
+        case OrganizationMembershipAddRequest(_, _, _, newRole) =>
+          targetOpt.isEmpty && (newRole <= requester.role)
+
+        case OrganizationMembershipModifyRequest(_, _, _, newRole) =>
+          targetOpt.exists(_.role < requester.role) && (newRole <= requester.role)
+
+        case OrganizationMembershipRemoveRequest(_, _, _) =>
+          targetOpt.exists(_.role < requester.role)
+      }
+    }
   }
 
   def addMembership(request: OrganizationMembershipAddRequest): Either[OrganizationFail, OrganizationMembershipAddResponse] = {
