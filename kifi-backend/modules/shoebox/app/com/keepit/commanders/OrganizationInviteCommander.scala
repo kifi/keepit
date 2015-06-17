@@ -34,6 +34,7 @@ trait OrganizationInviteCommander {
 class OrganizationInviteCommanderImpl @Inject() (db: Database,
     airbrake: AirbrakeNotifier,
     organizationRepo: OrganizationRepo,
+    organizationMembershipCommander: OrganizationMembershipCommander,
     organizationMembershipRepo: OrganizationMembershipRepo,
     organizationInviteRepo: OrganizationInviteRepo,
     basicUserRepo: BasicUserRepo,
@@ -79,9 +80,9 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
               case OrganizationMemberInvitation(Left(inviteeId), inviteRole, msgOpt) =>
                 organizationMembersMap.get(inviteeId) match {
                   case Some(inviteeMember) if (inviteeMember.role < inviteRole && inviteRole != OrganizationRole.OWNER) => // member needs upgrade
-                    db.readWrite { implicit session =>
-                      organizationMembershipRepo.save(inviteeMember.withRole(inviteRole))
-                    }
+                    val modifyRequest = OrganizationMembershipModifyRequest(orgId = orgId, requesterId = inviterId, targetId = inviteeId, newRole = inviteRole)
+                    organizationMembershipCommander.modifyMembership(modifyRequest)
+
                     val orgInvite = OrganizationInvite(organizationId = orgId, inviterId = inviterId, userId = Some(inviteeId), role = inviteRole, message = msgOpt)
                     val inviteeInfo = (Left(contactsByUserId(inviteeId)), inviteRole)
                     Some((orgInvite, inviteeInfo))
