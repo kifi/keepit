@@ -1,6 +1,7 @@
 package com.keepit.controllers.admin
 
 import com.keepit.common.controller.{ UserActionsHelper, AdminUserActions }
+import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.model.{
   UserExperimentRepo,
@@ -11,6 +12,7 @@ import com.keepit.model.{
   ProbabilisticExperimentGeneratorRepo,
   Name
 }
+import play.api.libs.json._
 
 import com.google.inject.Inject
 
@@ -56,6 +58,14 @@ class AdminExperimentController @Inject() (
       generatorRepo.internByName(Name[ProbabilisticExperimentGenerator](condition + "-default"), ProbabilityDensity[ExperimentType](density), None, Some(ExperimentType(condition)))
     }
     Ok(data)
+  }
+
+  def removeConditions(exId: Id[ProbabilisticExperimentGenerator]) = AdminUserAction { request =>
+    db.readWrite { implicit s =>
+      val model = generatorRepo.get(exId).copy(condition = None)
+      generatorRepo.save(model)
+      Ok(Json.toJson(model))
+    }
   }
 
 }

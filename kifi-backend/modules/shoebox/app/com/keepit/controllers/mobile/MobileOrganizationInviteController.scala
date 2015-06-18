@@ -15,7 +15,7 @@ import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success }
 
 @Singleton
-class MobileOrganizationInviteControllerImpl @Inject() (
+class MobileOrganizationInviteController @Inject() (
     userCommander: UserCommander,
     orgCommander: OrganizationCommander,
     orgMembershipCommander: OrganizationMembershipCommander,
@@ -45,12 +45,12 @@ class MobileOrganizationInviteControllerImpl @Inject() (
         val userMap = userCommander.getByExternalIds(userExternalIds)
         val userInfo = for ((extId, inv) <- userExternalIds zip userInvites) yield {
           val userId = userMap(extId).id.get
-          (Left(userId), (inv \ "role").as[OrganizationRole], msg)
+          OrganizationMemberInvitation(Left(userId), (inv \ "role").as[OrganizationRole], msg)
         }
 
         val emails = emailInvites.map(inv => (inv \ "id").as[EmailAddress])
         val emailInfo = for ((email, inv) <- emails zip emailInvites) yield {
-          (Right(email), (inv \ "role").as[OrganizationRole], msg)
+          OrganizationMemberInvitation(Right(email), (inv \ "role").as[OrganizationRole], msg)
         }
 
         implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
