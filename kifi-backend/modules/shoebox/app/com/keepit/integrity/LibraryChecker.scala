@@ -44,7 +44,7 @@ class LibraryChecker @Inject() (val airbrake: AirbrakeNotifier,
     Math.min(Math.max(needed.value, 0), pageSize.value) match {
       case 0 =>
       case results =>
-        val items = f(Limit(pageSize.value), currentOffset)
+        val items = f(Limit(results), currentOffset)
         items.foreach(block)
         if (items.size == pageSize.value && items.size != needed.value) {
           stream(f, Limit(needed.value - items.size), pageSize, Offset(currentOffset.value + items.size))(block)
