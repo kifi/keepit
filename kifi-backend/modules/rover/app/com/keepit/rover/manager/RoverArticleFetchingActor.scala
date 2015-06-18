@@ -28,6 +28,8 @@ class RoverArticleFetchingActor @Inject() (
     instanceInfo: AmazonInstanceInfo,
     implicit val executionContext: ExecutionContext) extends FortyTwoActor(airbrake) with ConcurrentTaskProcessingActor[SQSMessage[FetchTask]] {
 
+  protected val logger = log.logger
+
   private val concurrencyFactor = 25
   protected val maxConcurrentTasks: Int = 1 + instanceInfo.instantTypeInfo.cores * concurrencyFactor
   protected val minConcurrentTasks: Int = 1 + maxConcurrentTasks / 2

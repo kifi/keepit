@@ -72,7 +72,8 @@ object NotificationCategory {
     val SCRAPER = NotificationCategory("scraper")
     val PLAY = NotificationCategory("play")
     val EMAIL_QA = NotificationCategory("email_qa")
-    val all = Set(HEALTHCHECK, ADMIN, PLAY, SCRAPER, EMAIL_QA)
+    val LEADS = NotificationCategory("leads")
+    val all = Set(HEALTHCHECK, ADMIN, PLAY, SCRAPER, EMAIL_QA, LEADS)
   }
 
   object NonUser {
