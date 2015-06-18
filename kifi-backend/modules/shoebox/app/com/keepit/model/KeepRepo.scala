@@ -51,6 +51,7 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def getLatestKeepsURIByUser(userId: Id[User], limit: Int, includePrivate: Boolean = false)(implicit session: RSession): Seq[Id[NormalizedURI]]
   def getKeepExports(userId: Id[User])(implicit session: RSession): Seq[KeepExport]
   def getByLibrary(libraryId: Id[Library], offset: Int, limit: Int, excludeSet: Set[State[Keep]] = Set(KeepStates.INACTIVE, KeepStates.DUPLICATE))(implicit session: RSession): Seq[Keep]
+  def getByLibraryWithoutOrgId(libraryId: Id[Library], orgIdOpt: Option[Id[Organization]], offset: Offset, limit: Limit, excludeState: State[Keep] = KeepStates.INACTIVE)(implicit session: RSession): Seq[Keep]
   def getCountByLibrary(libraryId: Id[Library])(implicit session: RSession): Int
   def getCountsByLibrary(libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Int]
   def getByExtIdandLibraryId(extId: ExternalId[Keep], libraryId: Id[Library], excludeSet: Set[State[Keep]] = Set(KeepStates.INACTIVE, KeepStates.DUPLICATE))(implicit session: RSession): Option[Keep]
@@ -459,6 +460,21 @@ class KeepRepoImpl @Inject() (
 
   def getByLibrary(libraryId: Id[Library], offset: Int, limit: Int, excludeSet: Set[State[Keep]])(implicit session: RSession): Seq[Keep] = {
     (for (b <- rows if b.libraryId === libraryId && !b.state.inSet(excludeSet)) yield b).sortBy(_.keptAt desc).drop(offset).take(limit).list
+  }
+
+  def getByLibraryWithoutOrgIdCompiled = Compiled { (libraryId: Column[Id[Library]], orgId: Column[Id[Organization]], offset: ConstColumn[Long], limit: ConstColumn[Long], excludeState: Column[State[Keep]]) =>
+    (for (row <- rows if row.libraryId === libraryId && row.state =!= excludeState && row.organizationId =!= orgId) yield row).sortBy(_.keptAt desc).drop(offset).take(limit)
+  }
+
+  def getByLibraryWithExistingOrgIdCompiled = Compiled { (libraryId: Column[Id[Library]], offset: ConstColumn[Long], limit: ConstColumn[Long], excludeState: Column[State[Keep]]) =>
+    (for (row <- rows if row.libraryId === libraryId && row.state =!= excludeState && row.organizationId.isDefined) yield row).sortBy(_.keptAt desc).drop(offset).take(limit)
+  }
+
+  def getByLibraryWithoutOrgId(libraryId: Id[Library], orgIdOpt: Option[Id[Organization]], offset: Offset, limit: Limit, excludeState: State[Keep] = KeepStates.INACTIVE)(implicit session: RSession): Seq[Keep] = {
+    orgIdOpt match {
+      case Some(orgId) => getByLibraryWithoutOrgIdCompiled(libraryId, orgId, offset.value, limit.value, excludeState).list
+      case None => getByLibraryWithExistingOrgIdCompiled(libraryId, offset.value, limit.value, excludeState).list
+    }
   }
 
   def getCountByLibrary(libraryId: Id[Library])(implicit session: RSession): Int = {
