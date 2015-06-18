@@ -61,7 +61,7 @@ class UserIpAddressCommander @Inject() (
   }
 
   def formatCluster(ip: IpAddress, users: Seq[User]): BasicSlackMessage = {
-    val clusterDeclaration = s"Found a cluster of ${users.length} at <http://ip-api/$ip|$ip>"
+    val clusterDeclaration = s"Found a cluster of ${users.length} at <http://ip-api.com/$ip|$ip>"
     val userDeclarations = (for { u <- users } yield s"<http://admin.kifi.com/admin/user/${u.id.get}|${u.fullName}>").toList
     BasicSlackMessage((clusterDeclaration :: userDeclarations).mkString("\n"))
   }
