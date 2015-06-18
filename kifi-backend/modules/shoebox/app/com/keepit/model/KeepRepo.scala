@@ -466,8 +466,8 @@ class KeepRepoImpl @Inject() (
   def getByLibraryWithoutOrgId(libraryId: Id[Library], orgIdOpt: Option[Id[Organization]], offset: Offset, limit: Limit)(implicit session: RSession): Seq[Keep] = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     (orgIdOpt match {
-      case None => sql"select * from bookmark where library_id = $libraryId and organization_id is not null"
-      case _ => sql"select * from bookmark where library_id = $libraryId and (organization_id != ${orgIdOpt.get} or organization_id is null)"
+      case None => sql"select * from bookmark where library_id = $libraryId and organization_id is not null offset ${offset.value} limit ${limit.value}"
+      case _ => sql"select * from bookmark where library_id = $libraryId and (organization_id != ${orgIdOpt.get} or organization_id is null) offset ${offset.value} limit ${limit.value}"
     }).as[Keep].list
   }
 
