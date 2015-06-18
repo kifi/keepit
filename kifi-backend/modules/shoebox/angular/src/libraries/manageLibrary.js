@@ -97,18 +97,18 @@ angular.module('kifi')
 
           scope.$error = {};
 
-          scope.library.subscriptions.forEach(function(sub, i) {
+          scope.library.subscriptions.forEach(function(sub) {
 
             if (!sub.name) {
               sub.$error = sub.$error || {};
               sub.$error.name = true;
-              scope.$error.general = "Please enter a channel name for each subscription.";
+              scope.$error.general = 'Please enter a channel name for each subscription.';
             }
 
             if (sub.info.url === '' || sub.info.url.match(/https:\/\/hooks.slack.com\/services\/.*\/.*/i) == null) {
               sub.$error = sub.$error || {};
               sub.$error.url = true;
-              scope.$error.general = "Please enter a valid webhook URL for each subscription.";
+              scope.$error.general = 'Please enter a valid webhook URL for each subscription.';
             }
           });
 
