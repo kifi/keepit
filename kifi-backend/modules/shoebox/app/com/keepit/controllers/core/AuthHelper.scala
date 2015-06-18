@@ -356,7 +356,8 @@ class AuthHelper @Inject() (
     "picHeight" -> optional(number),
     "cropX" -> optional(number),
     "cropY" -> optional(number),
-    "cropSize" -> optional(number)
+    "cropSize" -> optional(number),
+    "companyName" -> optional(text)
   )(EmailPassFinalizeInfo.apply)(EmailPassFinalizeInfo.unapply))
   def doUserPassFinalizeAccountAction(implicit request: UserRequest[JsValue]): Future[Result] = {
     userPassFinalizeAccountForm.bindFromRequest.fold(
