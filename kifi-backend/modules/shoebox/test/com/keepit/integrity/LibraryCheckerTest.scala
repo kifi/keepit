@@ -111,7 +111,7 @@ class LibraryCheckerTest extends TestKitSupport with SpecificationLike with Shoe
           buffer ++= values
           values
         }
-        libraryChecker.stream(iterator, totalItems = Limit(1000), Limit(10)) { x =>
+        libraryChecker.stream(iterator, needed = Limit(1000), Limit(10)) { x =>
           // buffer only increases when we get a new page, because we are only adding to it on new page in our iterator function.
           buffer.size === ((x + 10) - (x % 10))
         }

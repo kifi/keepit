@@ -40,20 +40,14 @@ class LibraryChecker @Inject() (val airbrake: AirbrakeNotifier,
 
   // terminates early when it runs out of elements.
   @tailrec
-  final def stream[A](f: (Limit, Offset) => Iterable[A], totalItems: Limit, pageSize: Limit, currentOffset: Offset = Offset(0))(block: A => Unit): Unit = {
-    val resultsLeftToGet = totalItems.value match {
-      case -1 => pageSize.value // until the function runs out of elements.
-      case _ => Math.max(totalItems.value - currentOffset.value, 0)
-    }
-
-    resultsLeftToGet match {
+  final def stream[A](f: (Limit, Offset) => Iterable[A], needed: Limit, pageSize: Limit, currentOffset: Offset = Offset(0))(block: A => Unit): Unit = {
+    Math.min(Math.max(needed.value, 0), pageSize.value) match {
       case 0 =>
-      case results if (results < pageSize.value) => f(Limit(resultsLeftToGet), currentOffset).foreach(block)
-      case _ =>
+      case results =>
         val items = f(Limit(pageSize.value), currentOffset)
         items.foreach(block)
-        if (items.size == pageSize.value) {
-          stream(f, totalItems, pageSize, Offset(currentOffset.value + items.size))(block)
+        if (items.size == pageSize.value && items.size != needed.value) {
+          stream(f, Limit(needed.value - items.size), pageSize, Offset(currentOffset.value + items.size))(block)
         }
     }
   }
@@ -74,7 +68,7 @@ class LibraryChecker @Inject() (val airbrake: AirbrakeNotifier,
       }
       // iterate over all keeps by 100keep pages.
       db.readWrite { implicit session =>
-        stream(getKeeps, totalItems = Limit(-1), pageSize = Limit(100)) { keep =>
+        stream(getKeeps, needed = Limit(Long.MaxValue), pageSize = Limit(100)) { keep =>
           updateKeep(keep.id.get, _.copy(organizationId = library.organizationId))
         }
       }

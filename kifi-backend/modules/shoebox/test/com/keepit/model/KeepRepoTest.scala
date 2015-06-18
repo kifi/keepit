@@ -68,20 +68,31 @@ class KeepRepoTest extends Specification with ShoeboxTestInjector {
 
     "keeps by library without orgId" in {
       withDb() { implicit injector =>
-        val orgId = Some(Id[Organization](1))
+        val orgId1 = Some(Id[Organization](1))
+        val orgId2 = Some(Id[Organization](2))
         val library = db.readWrite { implicit s =>
           val lib = libraryRepo.save(Library(name = "Kifi", ownerId = Id[User](1), visibility = LibraryVisibility.PUBLISHED, slug = LibrarySlug("slug"), memberCount = 1))
-          keeps(20).map(_.withLibrary(lib.id.get).withOrganizationId(orgId)).saved
+          keeps(20).map(_.withLibrary(lib.id.get).withOrganizationId(orgId1)).saved
+          keeps(20).map(_.withLibrary(lib.id.get).withOrganizationId(orgId2)).saved
           keeps(10).map(_.withLibrary(lib.id.get)).saved
           lib
         }
 
-        val keepsWithoutOrgId = db.readOnlyMaster { implicit s =>
+        db.readOnlyMaster { implicit s => keepRepo.getByLibrary(library.id.get, 0, 50) }.length === 50
+
+        val keepsWithOrgId1 = db.readOnlyMaster { implicit s =>
           keepRepo.getByLibraryWithoutOrgId(library.id.get, None, Offset(0), Limit(50))
         }
 
-        keepsWithoutOrgId.foreach(_.organizationId === orgId)
-        keepsWithoutOrgId.length === 20
+        keepsWithOrgId1.foreach(_.organizationId !== None)
+        keepsWithOrgId1.length === 40
+
+        val keepsWithoutOrgId = db.readOnlyMaster { implicit s =>
+          keepRepo.getByLibraryWithoutOrgId(library.id.get, orgId1, Offset(0), Limit(50))
+        }
+
+        keepsWithoutOrgId.foreach(_.organizationId !== orgId1)
+        keepsWithoutOrgId.length === 30
       }
     }
 
