@@ -58,11 +58,12 @@ object MarketingSiteRouter extends AssetsBuilder with Controller with Logging {
   private object Version2 extends LandingVersion { val version = 2 }
   private object Version3 extends LandingVersion { val version = 3 }
   private object Version4 extends LandingVersion { val version = 4 }
+  private object Version5 extends LandingVersion { val version = 5 }
 
   def landing(implicit request: Request[_]): String = {
     val possiblyBot = request.userAgentOpt.map(_.possiblyBot).getOrElse(true)
     val version: LandingVersion = if (possiblyBot) {
-      Version4
+      Version5
     } else {
       val pickOpt = Try {
         request.getQueryString("v").map(_.toInt)
@@ -77,6 +78,7 @@ object MarketingSiteRouter extends AssetsBuilder with Controller with Logging {
         case Some(idx) if idx == 2 => Version2
         case Some(idx) if idx == 3 => Version3
         case Some(idx) if idx == 4 => Version4
+        case Some(idx) if idx == 5 => Version5
         case _ =>
           //currently we have only one version alive. When we'll restart the a/b testing the next five lines will be relevant again.
           //          val ip = request.remoteAddress // remoteAddress looks up 'X-Forwarded-For'
@@ -84,7 +86,7 @@ object MarketingSiteRouter extends AssetsBuilder with Controller with Logging {
           //          val winner = if (hash < 50) Version3 else Version1
           //          log.info(s"[landing] remoteAddr=${request.remoteAddress} ip=$ip winner=$winner")
           //          winner
-          Version4
+          Version5
       }
     }
     s"index.${version.version}"
