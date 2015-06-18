@@ -29,7 +29,7 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
         val owner = UserFactory.user().withName("Kiwi", "Kiwi").withEmailAddress("kiwi-test@kifi.com").saved
         userEmailAddressRepo.save(UserEmailAddress(userId = owner.id.get, address = owner.primaryEmail.get))
         val org = organizationRepo.save(Organization(name = "Kifi", ownerId = owner.id.get, handle = None))
-        val membership = organizationMembershipRepo.save(OrganizationMembership(organizationId = org.id.get, userId = owner.id.get, role = OrganizationRole.OWNER))
+        val membership = organizationMembershipRepo.save(org.newMembership(userId = owner.id.get, role = OrganizationRole.OWNER))
         (org, owner, membership)
       }
     }
@@ -74,7 +74,7 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
           val invitees = Seq[OrganizationMemberInvitation](OrganizationMemberInvitation(Left(owner.id.get), OrganizationRole.MEMBER, Some("I just demoted you from owner")))
           val aMemberThatCannotInvite = db.readWrite { implicit session =>
             val bond = UserFactory.user.withName("James", "Bond").saved
-            val membership: OrganizationMembership = OrganizationMembership(organizationId = org.id.get, userId = bond.id.get, role = OrganizationRole.MEMBER)
+            val membership: OrganizationMembership = org.newMembership(userId = bond.id.get, role = OrganizationRole.MEMBER)
             organizationMembershipRepo.save(membership.copy(permissions = (membership.permissions + OrganizationPermission.INVITE_MEMBERS)))
             bond
           }
@@ -94,7 +94,7 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
           val invitees = Seq[OrganizationMemberInvitation]()
           val aMemberThatCannotInvite = db.readWrite { implicit session =>
             val bond = UserFactory.user.withName("James", "Bond").saved
-            organizationMembershipRepo.save(OrganizationMembership(organizationId = org.id.get, userId = bond.id.get, role = OrganizationRole.MEMBER))
+            organizationMembershipRepo.save(org.newMembership(userId = bond.id.get, role = OrganizationRole.MEMBER))
             bond
           }
           val result = Await.result(orgInviteCommander.inviteUsersToOrganization(org.id.get, aMemberThatCannotInvite.id.get, invitees), new FiniteDuration(3, TimeUnit.SECONDS))
