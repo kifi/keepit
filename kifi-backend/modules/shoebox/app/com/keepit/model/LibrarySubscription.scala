@@ -34,12 +34,12 @@ object LibrarySubscription {
     (__ \ 'info).format[SubscriptionInfo])(LibrarySubscription.apply _, unlift(LibrarySubscription.unapply))
 
   def toSubKey(sub: LibrarySubscription): LibrarySubscriptionKey = {
-    LibrarySubscriptionKey(name = sub.name, info = sub.info)
+    LibrarySubscriptionKey(name = sub.name, info = sub.info, state = sub.state)
   }
 }
 
 object LibrarySubscriptionStates extends States[LibrarySubscription] {
-  val PAUSED = State[LibrarySubscription]("paused")
+  val DISABLED = State[LibrarySubscription]("disabled")
 }
 
 trait SubscriptionInfo {

@@ -1,7 +1,7 @@
 package com.keepit.commanders
 
 import com.google.inject.{ Singleton, Inject }
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ State, Id }
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -43,6 +43,7 @@ class LibrarySubscriptionCommander @Inject() (
   private val httpLock = new ReactiveLock(5)
 
   val client = httpClient.withTimeout(CallTimeouts(responseTimeout = Some(2 * 60 * 1000), maxJsonParseTime = Some(20000)))
+  val validateClient = httpClient.withTimeout(CallTimeouts(responseTimeout = Some(1 * 1000), maxJsonParseTime = Some(1000)))
 
   def sendNewKeepMessage(keep: Keep, library: Library): Seq[Future[ClientResponse]] = {
 
@@ -56,17 +57,18 @@ class LibrarySubscriptionCommander @Inject() (
     subscriptions.map { subscription =>
       subscription.info match {
         case info: SlackInfo =>
-          val text = s"<http://www.kifi.com/${keeper.username.value}|${keeper.fullName}> just added <${keep.url}|${keep.title.getOrElse("a keep")}> to the <http://www.kifi.com/${owner.username.value}/${library.slug.value}|${library.name}> library."
+          val text = s"<http://www.kifi.com/${keeper.username.value}?kma=1|${keeper.fullName}> just added <${keep.url}|${keep.title.getOrElse("a keep")}> to the <http://www.kifi.com/${owner.username.value}/${library.slug.value}?kma=1|${library.name}> library."
           val attachments: Seq[SlackAttachment] = keep.note.map { note => Seq(SlackAttachment(fallback = "", text = "\"" + note + "\" - " + keeper.firstName)) }.getOrElse(Seq.empty)
           val body = BasicSlackMessage(text = text, attachments = attachments)
           val response = httpLock.withLockFuture(client.postFuture(DirectUrl(info.url), Json.toJson(body)))
           log.info(s"sendNewKeepMessage: Slack message request sent to subscription.id=${subscription.id}")
           response.onComplete {
-            case Success(res) if res.status != 200 =>
-              log.error("sendNewKeepMessage: Slack message failed to send: status=" + res.status);
+            case Success(res) if res.status == 400 =>
+              log.error(s"sendNewKeepMessage: invalid webhook on subscriptionId=${subscription.id.get}, disabling")
+              db.readWrite { implicit s => librarySubscriptionRepo.save(subscription.withState(LibrarySubscriptionStates.DISABLED)) }
             case Failure(t) =>
               log.error("sendNewKeepMessage: Future failed: " + t.getMessage);
-            case _ => log.info("sendNewKeepMessage: Slack message succeeded.")
+            case _ => log.info(s"sendNewKeepMessage: Slack message to subscriptionId=${subscription.id.get} succeeded.")
           }
           response
         case _ =>
@@ -75,7 +77,7 @@ class LibrarySubscriptionCommander @Inject() (
     }
   }
 
-  def saveSubByLibIdAndKey(libId: Id[Library], subKey: LibrarySubscriptionKey)(implicit session: RWSession): LibrarySubscription = {
+  def saveSubByLibIdAndKey(libId: Id[Library], subKey: LibrarySubscriptionKey, state: State[LibrarySubscription] = LibrarySubscriptionStates.ACTIVE)(implicit session: RWSession): LibrarySubscription = {
     librarySubscriptionRepo.save(LibrarySubscription(libraryId = libId, name = subKey.name, trigger = SubscriptionTrigger.NEW_KEEP, info = subKey.info)) // TODO: extend this to other triggers
   }
 
@@ -86,13 +88,17 @@ class LibrarySubscriptionCommander @Inject() (
   def updateSubsByLibIdAndKey(libId: Id[Library], subKeys: Seq[LibrarySubscriptionKey])(implicit session: RWSession): Boolean = {
 
     def hasSameNameOrEndpoint(key: LibrarySubscriptionKey, sub: LibrarySubscription) = sub.name == key.name || sub.info.hasSameEndpoint(key.info)
-    def saveUpdates(currSubs: Seq[LibrarySubscription], subKeys: Seq[LibrarySubscriptionKey])(implicit session: RWSession): Unit = {
+    def saveUpdates(currSubs: => Seq[LibrarySubscription], subKeys: Seq[LibrarySubscriptionKey])(implicit session: RWSession): Unit = {
       subKeys.foreach { key =>
-        currSubs.find {
-          hasSameNameOrEndpoint(key, _)
-        } match {
-          case None => saveSubByLibIdAndKey(libId, key) // key represents a new sub, save it
-          case Some(equivalentSub) => librarySubscriptionRepo.save(equivalentSub.copy(name = key.name, info = key.info)) // key represents an old sub, update it
+        isValidWebhook(key.info) foreach { isValid =>
+          val state = { if (isValid) { LibrarySubscriptionStates.ACTIVE } else { LibrarySubscriptionStates.DISABLED } }
+          log.info(s"Subscription saved with state=${state}")
+          currSubs.find {
+            hasSameNameOrEndpoint(key, _)
+          } match {
+            case None => saveSubByLibIdAndKey(libId, key, state = state) // key represents a new sub, save it
+            case Some(equivalentSub) => librarySubscriptionRepo.save(equivalentSub.copy(name = key.name, info = key.info, state = state)) // key represents an old sub, update it
+          }
         }
       }
     }
@@ -108,18 +114,25 @@ class LibrarySubscriptionCommander @Inject() (
       }
     }
 
-    val currSubs = librarySubscriptionRepo.getByLibraryId(libId)
+    val currentSubs = librarySubscriptionRepo.getByLibraryId(libId)
 
-    if (currSubs.isEmpty) {
+    if (currentSubs.isEmpty) {
       saveSubsByLibIdAndKey(libId, subKeys)
     } else {
-      saveUpdates(currSubs, subKeys) // save new subs and changes to existing subs
-      removeDifferences(currSubs, subKeys) // inactivate existing subs that are not in subKeys
+      saveUpdates(currentSubs, subKeys) // save new subs and changes to existing subs
+      removeDifferences(currentSubs, subKeys) // inactivate existing subs that are not in subKeys
     }
 
     val newSubs = librarySubscriptionRepo.getByLibraryId(libId)
 
-    currSubs != newSubs
+    currentSubs != newSubs
+  }
+
+  def isValidWebhook(subInfo: SubscriptionInfo): Future[Boolean] = {
+    subInfo match {
+      case s: SlackInfo => validateClient.getFuture(DirectUrl(subInfo.asInstanceOf[SlackInfo].url)).map { _.status == 500 }
+      case _ => Future.successful(false)
+    }
   }
 
 }

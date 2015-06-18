@@ -2,7 +2,7 @@ package com.keepit.model
 
 import com.keepit.common.cache.{ ImmutableJsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
-import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.db.{ State, ExternalId, Id }
 import com.keepit.common.json
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.mail.BasicContact
@@ -33,7 +33,7 @@ object LibraryError {
 case class LibraryFail(status: Int, message: String)
 
 @json
-case class LibrarySubscriptionKey(name: String, info: SubscriptionInfo)
+case class LibrarySubscriptionKey(name: String, info: SubscriptionInfo, state: State[LibrarySubscription])
 
 @json
 case class LibraryAddRequest(
