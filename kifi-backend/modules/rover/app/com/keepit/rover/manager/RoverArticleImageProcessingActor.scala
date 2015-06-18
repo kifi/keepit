@@ -31,6 +31,8 @@ class RoverArticleImageProcessingActor @Inject() (
     instanceInfo: AmazonInstanceInfo,
     implicit val executionContext: ExecutionContext) extends FortyTwoActor(airbrake) with ConcurrentTaskProcessingActor[SQSMessage[ArticleImageProcessingTask]] {
 
+  protected val logger = log.logger
+
   private val concurrencyFactor = 5
   protected val maxConcurrentTasks: Int = 1 + instanceInfo.instantTypeInfo.cores * concurrencyFactor
   protected val minConcurrentTasks: Int = 1 + maxConcurrentTasks / 2

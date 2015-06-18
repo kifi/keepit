@@ -193,4 +193,20 @@ class LibraryChecker @Inject() (val airbrake: AirbrakeNotifier,
   private def getIndex(): (Int, Int) = {
     timeSlicer.getSliceAndSize(TimeToSliceInDays.ONE_WEEK, OneSliceInMinutes(DataIntegrityPlugin.EVERY_N_MINUTE))
   }
+
+  def keepVisibilityCheck(libId: Id[Library]): Int = {
+    db.readWrite { implicit s =>
+      val lib = libraryRepo.get(libId)
+      var total = 0
+      var done = false
+      val LIMIT = 500
+      while (!done) {
+        val keepsToFix = keepRepo.getByLibraryIdAndExcludingVisibility(libId, excludeVisibility = Some(lib.visibility), limit = LIMIT)
+        total += keepsToFix.size
+        keepsToFix.foreach { keep => keepRepo.save(keep.copy(visibility = lib.visibility)) }
+        if (keepsToFix.size < LIMIT) done = true
+      }
+      total
+    }
+  }
 }

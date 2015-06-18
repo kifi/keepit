@@ -5,10 +5,10 @@ angular.module('kifi')
 .directive('kfLibraryHeader', [
   '$http', '$location', '$q', '$rootScope', '$state', '$stateParams', '$timeout', '$window', '$$rAF',
   '$filter', 'env', 'libraryService', 'modalService','profileService', 'platformService', 'signupService',
-  'routeService', 'linkify', 'util', 'keepActionService', '$injector', 'installService',
+  'routeService', 'linkify',
   function ($http, $location, $q, $rootScope, $state, $stateParams, $timeout, $window, $$rAF,
             $filter, env, libraryService, modalService, profileService, platformService, signupService,
-            routeService, linkify, util, keepActionService, $injector, installService) {
+            routeService, linkify) {
     return {
       restrict: 'A',
       replace: true,
@@ -628,48 +628,6 @@ angular.module('kifi')
             }
           });
         };
-
-        scope.doQuickKeep = function () {
-          var url = (scope.quickKeep.url) || '';
-          scope.quickKeep.quickCheck = true;
-          libraryService.trackEvent('user_clicked_page', scope.library, { action: 'clickedQuickKeep' });
-          if (url && util.validateUrl(url)) {
-            keepActionService.keepToLibrary([{ url: url }], scope.library.id).then(function (result) {
-              scope.quickKeep.quickCheck = false;
-              scope.quickKeep = {};
-              if (result.failures && result.failures.length) {
-                // scope.resetAndHide();
-                modalService.openGenericErrorModal();
-              } else {
-                libraryService.fetchLibraryInfos(true);
-                // If we are on the library page where the keep is being added, add the keep to the top of the list of keeps.
-                if (result.alreadyKept.length === 0) {
-                  return keepActionService.fetchFullKeepInfo(result.keeps[0]).then(function (keep) {
-                    $rootScope.$emit('keepAdded', [keep], scope.library);
-                  });
-                }
-              }
-            })['catch'](modalService.openGenericErrorModal);
-          } else {
-            scope.quickKeep.invalidUrl = true;
-          }
-        };
-
-        scope.checkQuickKeepUrl = function () {
-          var url = (scope.quickKeep.url) || '';
-          if (!scope.quickKeep.quickCheck) {
-            return;
-          }
-          if (url && util.validateUrl(url) || url==='') {
-            scope.quickKeep.invalidUrl = false;
-          } else {
-            scope.quickKeep.invalidUrl = true;
-          }
-        };
-
-        scope.triggerExtensionInstall = installService.triggerInstall;
-
-        scope.canInstallExtension = installService.canInstall;
 
 
         function onWinResize() {

@@ -118,5 +118,21 @@ class LibraryCheckerTest extends TestKitSupport with SpecificationLike with Shoe
         "" === ""
       }
     }
+
+    "check visibility" in {
+      withDb(modules: _*) { implicit injector =>
+        val libraryChecker = inject[LibraryChecker]
+        db.readWrite { implicit session =>
+          LibraryFactory.library().withId(Id[Library](1)).discoverable().saved
+          KeepFactory.keep().withId(Id[Keep](1)).published().withLibrary(Id[Library](1)).saved
+
+          inject[KeepRepo].get(Id[Keep](1)).visibility === LibraryVisibility.PUBLISHED
+        }
+
+        libraryChecker.keepVisibilityCheck(Id[Library](1)) === 1
+
+        db.readOnlyReplica { implicit s => inject[KeepRepo].get(Id[Keep](1)).visibility === LibraryVisibility.DISCOVERABLE }
+      }
+    }
   }
 }

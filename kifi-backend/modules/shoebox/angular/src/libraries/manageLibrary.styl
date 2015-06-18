@@ -396,18 +396,21 @@ button.manage-lib-delete-button
 
 
 .manage-lib-sub-url
-  padding-left: 5px
+  padding-left: 10px
   width: 48%
   overflow: hidden
+  white-space: nowrap
 
 .manage-lib-sub-name
-  padding-left: 5px
+  padding-left: 10px
   width: 20%
   overflow: hidden
+  white-space: nowrap
 
 .manage-lib-sub-name-input
   width: 20%
   overflow: hidden
+  white-space: nowrap
 
 .manage-lib-sub-url-input
   width: 48%
@@ -418,12 +421,19 @@ button.manage-lib-delete-button
   border-color: gray
   border-width: 1px
   border-style: solid
+  background-color: light-gray
 
-.manage-lib-sub-remove-button
+.manage-lib-sub-button
   border-radius: 20px
   border-color: gray
   border-width: 1px
   border-style: solid
+  font-size: 13px
+  background-color: #EEEEEE
+  opacity: .85
+
+  &:hover
+    background-color: #DDDDDD
 
 .manage-lib-subs-error
   color: red
@@ -433,13 +443,6 @@ button.manage-lib-delete-button
 .manage-lib-subs-instruct
   margin-left: 35px
   color: gray
-
-.manage-lib-subs-instruct-button
-  border-radius: 20px
-  border-color: gray
-  border-style: solid
-  color: gray
-  border-width: 1px
 
 
 input.manage-lib-sub-input
