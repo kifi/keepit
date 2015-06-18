@@ -13,7 +13,7 @@ import com.kifi.macros.json
 import play.api.libs.json._
 
 import scala.concurrent.{ Future, ExecutionContext }
-import scala.util.{ Failure, Success }
+import scala.util.{ Try, Failure, Success }
 
 @json
 case class SlackAttachment(fallback: String, text: String)
@@ -57,7 +57,8 @@ class LibrarySubscriptionCommander @Inject() (
     subscriptions.map { subscription =>
       subscription.info match {
         case info: SlackInfo =>
-          val text = s"<http://www.kifi.com/${keeper.username.value}?kma=1|${keeper.fullName}> just added <${keep.url}|${keep.title.getOrElse("a keep")}> to the <http://www.kifi.com/${owner.username.value}/${library.slug.value}?kma=1|${library.name}> library."
+          val keepTitle = keep.title.exists(_.nonEmpty)
+          val text = s"<http://www.kifi.com/${keeper.username.value}?kma=1|${keeper.fullName}> just added <${keep.url}|${keepTitle}> to the <http://www.kifi.com/${owner.username.value}/${library.slug.value}?kma=1|${library.name}> library."
           val attachments: Seq[SlackAttachment] = keep.note.map { note => Seq(SlackAttachment(fallback = "", text = "\"" + note + "\" - " + keeper.firstName)) }.getOrElse(Seq.empty)
           val body = BasicSlackMessage(text = text, attachments = attachments)
           val response = httpLock.withLockFuture(client.postFuture(DirectUrl(info.url), Json.toJson(body)))
@@ -108,13 +109,13 @@ class LibrarySubscriptionCommander @Inject() (
         subKeys.find {
           hasSameNameOrEndpoint(_, currSub)
         } match {
-          case None => librarySubscriptionRepo.save(currSub.copy(state = LibrarySubscriptionStates.INACTIVE)) // currSub not found in subKeys, inactivate it
+          case None => librarySubscriptionRepo.save(currSub.copy(state = LibrarySubscriptionStates.INACTIVE))
           case Some(key) => // currSub has already been updated above, do nothing
         }
       }
     }
 
-    val currentSubs = librarySubscriptionRepo.getByLibraryId(libId)
+    val currentSubs = librarySubscriptionRepo.getByLibraryId(libId, excludeStates = Set.empty)
 
     if (currentSubs.isEmpty) {
       saveSubsByLibIdAndKey(libId, subKeys)
@@ -130,7 +131,7 @@ class LibrarySubscriptionCommander @Inject() (
 
   def isValidWebhook(subInfo: SubscriptionInfo): Future[Boolean] = {
     subInfo match {
-      case s: SlackInfo => validateClient.getFuture(DirectUrl(subInfo.asInstanceOf[SlackInfo].url)).map { _.status == 500 }
+      case s: SlackInfo => httpClient.getFuture(DirectUrl(subInfo.asInstanceOf[SlackInfo].url)).map { _.status == 500 }
       case _ => Future.successful(false)
     }
   }
