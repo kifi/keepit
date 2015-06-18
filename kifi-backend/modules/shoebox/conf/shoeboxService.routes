@@ -307,6 +307,7 @@ GET     /about/join_us.html         @com.keepit.controllers.website.HomeControll
 GET     /about/user_feedback        @com.keepit.controllers.website.HomeController.route(path = "user_feedback")
 GET     /how_it_works               @com.keepit.controllers.website.HomeController.route(path = "how_it_works")
 GET     /teams                      @com.keepit.controllers.website.HomeController.route(path = "teams")
+GET     /teams-confirmation         @com.keepit.controllers.website.HomeController.route(path = "teams-confirmation")
 GET     /contact                    @com.keepit.controllers.website.HomeController.route(path = "contact")
 GET     /install                    @com.keepit.controllers.website.HomeController.install
 GET     /getting-started            @com.keepit.controllers.website.HomeController.gettingStarted
