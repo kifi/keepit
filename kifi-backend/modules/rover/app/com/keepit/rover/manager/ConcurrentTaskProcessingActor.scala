@@ -11,13 +11,13 @@ object ConcurrentTaskProcessingActor {
   case object IfYouCouldJustGoAhead extends TaskProcessingActorMessage
 
   case class UnknownTaskStatusException[T](task: T) extends Exception(s"Unknown task status: $task")
-  case class UnsupportedActorMessage(any: Any) extends IllegalStateException(if (any != null) any.toString else "Message is NULL")
+  case class UnsupportedActorMessageException(any: Any) extends IllegalStateException(if (any != null) any.toString else "Message is NULL")
 
 }
 
 trait ConcurrentTaskProcessingActor[T] { _: Actor =>
 
-  protected val log: play.api.LoggerLike
+  protected val logger: org.slf4j.Logger
 
   protected val minConcurrentTasks: Int
   protected val maxConcurrentTasks: Int
@@ -26,14 +26,8 @@ trait ConcurrentTaskProcessingActor[T] { _: Actor =>
   protected def processTasks(tasks: Seq[T]): Map[T, Future[Unit]]
 
   protected val immediately = new scala.concurrent.ExecutionContext {
-    def execute(runnable: Runnable): Unit = {
-      try {
-        runnable.run()
-      } catch {
-        case t: Throwable => reportFailure(t)
-      }
-    }
-    def reportFailure(t: Throwable): Unit = { log.error("retry failure", t) }
+    def execute(runnable: Runnable): Unit = { runnable.run() }
+    def reportFailure(t: Throwable): Unit = { }
     override def prepare(): scala.concurrent.ExecutionContext = this
   }
 
@@ -57,13 +51,13 @@ trait ConcurrentTaskProcessingActor[T] { _: Actor =>
         case Close => close()
       }
     }
-    case m => throw new UnsupportedActorMessage(m)
+    case m => throw new UnsupportedActorMessageException(m)
   }
 
   private def startPulling(): Unit = if (!closing) {
     val limit = maxConcurrentTasks - concurrentFetchTasks
     if (limit > 0) {
-      log.info(s"Pulling up to $limit tasks.")
+      logger.info(s"Pulling up to $limit tasks.")
       pulling += limit
 
       val pulledTasks = try {
@@ -82,18 +76,18 @@ trait ConcurrentTaskProcessingActor[T] { _: Actor =>
     pulling -= limit
     pulled match {
       case Success(tasks) => {
-        log.info(s"Pulled ${tasks.length} tasks.")
+        logger.info(s"Pulled ${tasks.length} tasks.")
         startProcessing(tasks)
       }
       case Failure(error) => {
-        log.error("Failed to pull tasks.", error)
+        logger.error("Failed to pull tasks.", error)
       }
     }
   }
 
   private def startProcessing(tasks: Seq[T]): Unit = {
     if (!closing && tasks.nonEmpty) {
-      log.info(s"Processing ${tasks.length} tasks...")
+      logger.info(s"Processing ${tasks.length} tasks...")
       processing ++= tasks
 
       val processedTasks = try {
@@ -113,7 +107,7 @@ trait ConcurrentTaskProcessingActor[T] { _: Actor =>
 
   private def endProcessing(task: T): Unit = {
     processing -= task
-    log.info(s"Processed $task.")
+    logger.info(s"Processed $task.")
     if (concurrentFetchTasks < minConcurrentTasks) {
       startPulling()
     }
@@ -121,7 +115,7 @@ trait ConcurrentTaskProcessingActor[T] { _: Actor =>
 
   private def close(): Unit = {
     closing = true
-    log.info(s"Closed $this.")
+    logger.info(s"Closed $this.")
   }
 }
 
