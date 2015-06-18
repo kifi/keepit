@@ -73,7 +73,7 @@ object BasicUser {
   implicit val mapUserIdToBasicUser = mapOfIdToObjectFormat[User, BasicUser]
   implicit val mapUserIdToUserIdSet = mapOfIdToObjectFormat[User, Set[Id[User]]]
 
-  private def userToPictureName(user: User) = {
+  private def userToPictureName(user: User): String = {
     import play.api.Play.current
 
     @inline def userToDefaultImgVariant(user: User): String = {
