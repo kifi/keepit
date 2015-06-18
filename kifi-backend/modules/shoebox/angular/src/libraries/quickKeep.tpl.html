@@ -1,0 +1,10 @@
+<div class="kf-quick-add-keep" ng-show="::isOwnerOrCollaborator()">
+  <div class="kf-quick-add-keep-explain">Add a Link to this library: {{something}}</div>
+  <div>
+    <input class="kf-quick-add-keep-input" placeholder="http://..." ng-model="quickKeep.url" ng-change="checkQuickKeepUrl()"></input> <button class="kf-quick-add-keep-button" ng-click="doQuickKeep()"><span class="svg-hearts-white"></span>Keep It</button>
+  </div>
+  <div class="kf-quick-add-keep-error" ng-show="quickKeep.invalidUrl">Please use a valid URL</div>
+  <div class="kf-quick-add-keep-get-extension" ng-if="canInstallExtension">
+    Tip: To add links faster and find them in Google, <a href="#" ng-click="triggerExtensionInstall()">get the Kifi browser button</a>.
+  </div>
+</div>

@@ -20,6 +20,7 @@ case class OrganizationMembership(
   def withId(id: Id[OrganizationMembership]): OrganizationMembership = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime): OrganizationMembership = this.copy(updatedAt = now)
   def withState(newState: State[OrganizationMembership]): OrganizationMembership = this.copy(state = newState)
+  def withRole(newRole: OrganizationRole): OrganizationMembership = this.copy(role = newRole, permissions = OrganizationPermission.defaultPermissions(newRole))
   def withPermissions(newPermissions: Set[OrganizationPermission]): OrganizationMembership = this.copy(permissions = newPermissions)
 
   def hasPermission(p: OrganizationPermission): Boolean = permissions.contains(p)
@@ -80,7 +81,10 @@ object OrganizationPermission {
   }
 }
 
-sealed abstract class OrganizationRole(val value: String, val priority: Int)
+sealed abstract class OrganizationRole(val value: String, val priority: Int) extends Ordered[OrganizationRole] {
+  // reverse compare to ensure that 0 is highest priority
+  override def compare(that: OrganizationRole): Int = that.priority compare priority
+}
 
 object OrganizationRole {
   case object OWNER extends OrganizationRole("owner", 0)
@@ -90,10 +94,6 @@ object OrganizationRole {
     Format(__.read[String].map(OrganizationRole(_)), new Writes[OrganizationRole] {
       def writes(o: OrganizationRole) = JsString(o.value)
     })
-
-  implicit def ord: Ordering[OrganizationRole] = new Ordering[OrganizationRole] {
-    def compare(x: OrganizationRole, y: OrganizationRole): Int = x.priority compare y.priority
-  }
 
   def apply(str: String): OrganizationRole = {
     str match {

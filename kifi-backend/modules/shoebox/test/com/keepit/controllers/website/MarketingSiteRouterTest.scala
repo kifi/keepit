@@ -14,14 +14,14 @@ class MarketingSiteRouterTest extends Specification with ShoeboxApplicationInjec
       running(new ShoeboxApplication(modules: _*)) {
         val request = FakeRequest().withHeaders("user-agent" -> "googlebot")
         val landing = MarketingSiteRouter.landing(request)
-        landing === "index.4"
+        landing === "index.5"
       }
     }
     "landing page routing" in {
       running(new ShoeboxApplication(modules: _*)) {
         val request = FakeRequest().withHeaders("user-agent" -> "Mozilla/5.0 (X11; CrOS armv7l 2913.260.0) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.99 Safari/537.11")
         val landing = MarketingSiteRouter.landing(request)
-        landing === "index.4"
+        landing === "index.5"
       }
     }
     "landing page routing v1" in {

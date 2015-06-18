@@ -18,7 +18,7 @@ class TagCloudCommander @Inject() (
     articleCommander: ArticleCommander,
     shoebox: ShoeboxServiceClient) extends Logging {
 
-  def generateTagCloud(libId: Id[Library]): Future[SuggestedSearchTermsWithLibraryId] = {
+  def generateTagCloud(libId: Id[Library], experiment: Boolean = false): Future[SuggestedSearchTermsWithLibraryId] = {
     val corpusFuture = for {
       ids <- shoebox.getLibraryURIs(libId)
       articles <- articleCommander.getBestArticlesByUris(ids.toSet)
@@ -26,7 +26,7 @@ class TagCloudCommander @Inject() (
 
     corpusFuture.map { corpus =>
       log.info(s"library ${libId} corpus retrieved. computing tag clouds")
-      val terms = TagCloudGenerator.generate(corpus)
+      val terms = TagCloudGenerator.generate(corpus, experiment)
       SuggestedSearchTermsWithLibraryId(libId, terms)
     }
 

@@ -42,7 +42,7 @@ final class FutureExtensionOps[A](x: => Future[A]) {
   }
 }
 
-final class CollectionExtensionOps[A, Repr](xs: IterableLike[A, Repr]) {
+final class IterableExtensionOps[A, Repr](xs: IterableLike[A, Repr]) {
   def distinctBy[B, That](f: A => B)(implicit cbf: CanBuildFrom[Repr, A, That]) = {
     val builder = cbf(xs.repr)
     val i = xs.iterator
@@ -59,11 +59,23 @@ final class CollectionExtensionOps[A, Repr](xs: IterableLike[A, Repr]) {
   }
 }
 
+final class TraversableOnceExtensionOps[A](xs: TraversableOnce[A]) {
+  def maxOpt(implicit cmp: Ordering[A]): Option[A] = if (xs.isEmpty) None else Option(xs.max)
+  def minOpt(implicit cmp: Ordering[A]): Option[A] = if (xs.isEmpty) None else Option(xs.min)
+  def maxByOpt[B](f: A => B)(implicit cmp: Ordering[B]): Option[A] = {
+    if (xs.isEmpty) None else Option(xs.maxBy(f))
+  }
+  def minByOpt[B](f: A => B)(implicit cmp: Ordering[B]): Option[A] = {
+    if (xs.isEmpty) None else Option(xs.minBy(f))
+  }
+}
+
 trait Implicits {
   implicit def anyExtensionOps[A](x: A): AnyExtensionOps[A] = new AnyExtensionOps[A](x)
   implicit def tryExtensionOps[A](x: scala.util.Try[A]): TryExtensionOps[A] = new TryExtensionOps[A](x)
   implicit def funcExtensionOps[A](x: => A): FuncExtensionOpts[A] = new FuncExtensionOpts[A](x)
   implicit def futureExtensionOps[A](x: => Future[A]): FutureExtensionOps[A] = new FutureExtensionOps[A](x)
-  implicit def collectionExtensionOps[A, Repr](xs: IterableLike[A, Repr]): CollectionExtensionOps[A, Repr] = new CollectionExtensionOps(xs)
+  implicit def iterableExtensionOps[A, Repr](xs: IterableLike[A, Repr]): IterableExtensionOps[A, Repr] = new IterableExtensionOps(xs)
+  implicit def traversableOnceExtensionOps[A](xs: TraversableOnce[A]): TraversableOnceExtensionOps[A] = new TraversableOnceExtensionOps(xs)
 }
 

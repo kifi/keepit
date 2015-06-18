@@ -267,7 +267,7 @@ class AdminUserController @Inject() (
       val fortyTwoConnections = userConnectionRepo.getConnectedUsers(userId).map { userId =>
         userRepo.get(userId)
       }.toSeq.sortBy(u => s"${u.firstName} ${u.lastName}")
-      val kifiInstallations = kifiInstallationRepo.all(userId).sortWith((a, b) => a.updatedAt.isBefore(b.updatedAt))
+      val kifiInstallations = kifiInstallationRepo.all(userId).sortWith((a, b) => b.updatedAt.isBefore(a.updatedAt)).take(10)
       val allowedInvites = userValueRepo.getValue(userId, UserValues.availableInvites)
       val emails = emailRepo.getAllByUser(userId)
       val invitedByUsers = invitedBy(socialUsers.map(_.id), emails)

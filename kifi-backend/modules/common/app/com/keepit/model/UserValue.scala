@@ -88,6 +88,7 @@ object UserValueName {
   val LAST_SMS_SENT = UserValueName("last_sms_sent")
 
   val UPDATED_LIBRARIES_LAST_SEEN = UserValueName("updated_libraries_last_seen")
+  val COMPANY_NAME = UserValueName("company_name")
 
   // Please use lower_underscore_case for new value names (and not lowerCamelCase)
 
