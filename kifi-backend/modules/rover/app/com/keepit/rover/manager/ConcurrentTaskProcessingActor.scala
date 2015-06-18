@@ -27,7 +27,7 @@ trait ConcurrentTaskProcessingActor[T] { _: Actor =>
 
   protected val immediately = new scala.concurrent.ExecutionContext {
     def execute(runnable: Runnable): Unit = { runnable.run() }
-    def reportFailure(t: Throwable): Unit = { }
+    def reportFailure(t: Throwable): Unit = {}
     override def prepare(): scala.concurrent.ExecutionContext = this
   }
 
