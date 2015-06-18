@@ -14,8 +14,8 @@ object TagCloudGenerator extends Logging {
 
   val TOP_K = 50
 
-  def generate(corpus: LibraryCorpus): SuggestedSearchTerms = {
-    val (keywordCnts, entityCnts, docs) = extractFromCorpus(corpus)
+  def generate(corpus: LibraryCorpus, experiment: Boolean = false): SuggestedSearchTerms = {
+    val (keywordCnts, entityCnts, docs) = extractFromCorpus(corpus, experiment)
     val (twoGrams, threeGrams) = (NGramHelper.generateNGramsForCorpus(docs, 2), NGramHelper.generateNGramsForCorpus(docs, 3))
 
     val top2grams = topKcounts(twoGrams, 50).toArray.sortBy(-_._2)
@@ -43,13 +43,17 @@ object TagCloudGenerator extends Logging {
   }
 
   // return: EmbedlyKeywords, EmbedlyEnitites, ArticleContents
-  def extractFromCorpus(corpus: LibraryCorpus): (WordCounts, WordCounts, Seq[String]) = {
+  def extractFromCorpus(corpus: LibraryCorpus, experiment: Boolean = false): (WordCounts, WordCounts, Seq[String]) = {
     val (keywords, entities, contents) = corpus.articles.values.map { articles =>
       val extractor = ArticleContentExtractor(articles)
       val embedlyArticle: Option[EmbedlyContent] = extractor.getByKind(EmbedlyArticle).asInstanceOf[Option[EmbedlyContent]]
       val keywords = embedlyArticle.map { _.keywords }.getOrElse(Seq())
       val entities = embedlyArticle.map { _.entities }.getOrElse(Seq()).map { _.name.toLowerCase }
-      val content = extractor.content.getOrElse("").toLowerCase
+      val content = if (experiment) {
+        (extractor.title.getOrElse("").toLowerCase + "; " + extractor.content.getOrElse("").toLowerCase).split(" ").filter(!_.isEmpty).take(150).mkString // take first 150 tokens. signal/noise ratio drops after that, I assume
+      } else {
+        extractor.content.getOrElse("").toLowerCase
+      }
       (keywords, entities, content)
     }.unzip3
 

@@ -346,13 +346,24 @@ class MobileLibraryController @Inject() (
             }
             val libraryPath = s"${fortyTwoConfig.applicationBaseUrl}${Library.formatLibraryPath(owner.username, library.slug)}"
             val link = libraryPath + "?authToken=" + invite.authToken
+
+            val (subjectText, bodyText) = if (LibraryAccess.collaborativePermissions.contains(access)) {
+              (s"""I want to collaborate with you on this Kifi library: "${library.name}"""",
+                s"""Please help me build the "${library.name}" Kifi library -
+                   |$link
+                   |
+                   |So we can collaborate together. It's a great way to organize the links that we find.""".stripMargin)
+            } else {
+              (s"Check out this Kifi library: ${library.name}",
+                s"I think you will find this Kifi library interesting: $link")
+            }
             Ok(Json.obj(
               "link" -> link,
               "access" -> invite.access.value,
               "sms" -> s"Check out this interesting Kifi library: $link",
               "email" -> Json.obj(
-                "subject" -> s"Check out this Kifi library: ${library.name}",
-                "body" -> s"I think you will find this Kifi library interesting: $link"
+                "subject" -> subjectText,
+                "body" -> bodyText
               ),
               "facebook" -> s"Check out this interesting Kifi library: $link",
               "twitter" -> s"Check out this interesting Kifi library: $link",

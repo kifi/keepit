@@ -9,6 +9,7 @@ import com.keepit.model._
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import scala.concurrent.duration.Duration
+import play.api.Play
 
 trait BasicUserLikeEntity {
   def asBasicUser: Option[BasicUser] = None
@@ -72,19 +73,44 @@ object BasicUser {
   implicit val mapUserIdToBasicUser = mapOfIdToObjectFormat[User, BasicUser]
   implicit val mapUserIdToUserIdSet = mapOfIdToObjectFormat[User, Set[Id[User]]]
 
+  private def userToPictureName(user: User) = {
+    import play.api.Play.current
+
+    @inline def userToDefaultImgVariant(user: User): String = {
+      // Keep this stable! There are 43 images. If this is changed, treat old user ids differently.
+      // The CDN will cache for 6 hours, so don't expect immediate updates. If you need changes, you can
+      // modify this to be a function from id -> whatever file name you actually need
+      (user.id.get.id % 44).toString
+    }
+    // Only turn the default avatars on for some users:
+    val usersWithDefaultImages = Set(1, 2, 3, 32, 128, 96228).map(i => Id.apply[User](i.toLong))
+    val useDefaultPics = Play.maybeApplication.exists(_ => !Play.isTest) // This is probably a bad thing to do in general
+
+    if (useDefaultPics && usersWithDefaultImages.contains(user.id.get)) {
+      user.pictureName match {
+        case Some(picName) if picName != "0" => picName + ".jpg"
+        case _ => // No image, or one of the defaults
+          val picNum = userToDefaultImgVariant(user)
+          s"../../../../default-pic/${picNum}_200.png"
+      }
+    } else {
+      user.pictureName.getOrElse(S3UserPictureConfig.defaultName) + ".jpg"
+    }
+  }
+
   def fromUser(user: User): BasicUser = {
     BasicUser(
       externalId = user.externalId,
       firstName = user.firstName,
       lastName = user.lastName,
-      pictureName = user.pictureName.getOrElse(S3UserPictureConfig.defaultName) + ".jpg",
+      pictureName = userToPictureName(user),
       username = user.username
     )
   }
 }
 
 case class BasicUserUserIdKey(userId: Id[User]) extends Key[BasicUser] {
-  override val version = 12
+  override val version = 13
   val namespace = "basic_user_userid"
   def toKey(): String = userId.id.toString
 }

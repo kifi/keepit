@@ -6,7 +6,6 @@ import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db._
 import com.keepit.common.time._
 import org.joda.time.DateTime
-import scala.concurrent.duration.Duration
 import scala.slick.jdbc.{ PositionedResult, GetResult, StaticQuery }
 import com.keepit.common.logging.Logging
 import com.keepit.commanders.{ LibraryMetadataKey, LibraryMetadataCache, WhoKeptMyKeeps }
@@ -63,6 +62,7 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def getRecentKeepsFromFollowedLibraries(userId: Id[User], num: Int, beforeTime: String)(implicit session: RSession): Seq[Keep]
   def getMaxKeepSeqNumForLibraries(libIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], SequenceNumber[Keep]]
   def recentKeepNotes(libId: Id[Library], limit: Int)(implicit session: RSession): Seq[String]
+  def getByLibraryIdAndExcludingVisibility(libId: Id[Library], excludeVisibility: Option[LibraryVisibility], limit: Int)(implicit session: RSession): Seq[Keep]
 }
 
 @Singleton
@@ -94,9 +94,11 @@ class KeepRepoImpl @Inject() (
     def sourceAttributionId = column[Option[Id[KeepSourceAttribution]]]("source_attribution_id", O.Nullable)
     def note = column[Option[String]]("note", O.Nullable)
     def originalKeeperId = column[Option[Id[User]]]("original_keeper_id", O.Nullable)
+    def organizationId = column[Option[Id[Organization]]]("organization_id", O.Nullable)
 
-    def * = (id.?, createdAt, updatedAt, externalId, title, uriId, isPrimary, inDisjointLib, urlId, url, isPrivate,
-      userId, state, source, kifiInstallation, seq, libraryId, visibility, keptAt, sourceAttributionId, note, originalKeeperId) <> ((Keep.applyFromDbRow _).tupled, Keep.unapplyToDbRow _)
+    def * = ((id.?, createdAt, updatedAt, externalId, title, uriId, isPrimary, inDisjointLib, urlId, url),
+      (isPrivate, userId, state, source, kifiInstallation, seq, libraryId, visibility, keptAt, sourceAttributionId,
+        note, originalKeeperId, organizationId)).shaped <> ({ case (first10, rest) => Keep.applyFromDbRowTuples(first10, rest) }, { Keep.unapplyToDbRow _ })
   }
 
   def table(tag: Tag) = new KeepTable(tag)
@@ -108,7 +110,7 @@ class KeepRepoImpl @Inject() (
   private implicit val getBookmarkResult: GetResult[com.keepit.model.Keep] = GetResult { r: PositionedResult => // bonus points for anyone who can do this generically in Slick 2.0
     var privateFlag: Boolean = false
 
-    Keep.applyFromDbRow(
+    Keep._applyFromDbRow(
       id = r.<<[Option[Id[Keep]]],
       createdAt = r.<<[DateTime],
       updatedAt = r.<<[DateTime],
@@ -130,7 +132,8 @@ class KeepRepoImpl @Inject() (
       keptAt = r.<<[DateTime],
       sourceAttributionId = r.<<[Option[Id[KeepSourceAttribution]]],
       note = r.<<[Option[String]],
-      originalKeeperId = r.<<[Option[Id[User]]]
+      originalKeeperId = r.<<[Option[Id[User]]],
+      organizationId = r.<<[Option[Id[Organization]]]
     )
   }
   private val bookmarkColumnOrder: String = _taggedTable.columnStrings("bm")
@@ -535,6 +538,11 @@ class KeepRepoImpl @Inject() (
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     val q = sql"""select note from bookmark where library_id = $libId and note is not null order by updated_at desc limit $limit"""
     q.as[String].list
+  }
+
+  def getByLibraryIdAndExcludingVisibility(libId: Id[Library], excludeVisibility: Option[LibraryVisibility], limit: Int)(implicit session: RSession): Seq[Keep] = {
+    val q = { for (r <- rows if r.libraryId === libId && r.visibility =!= excludeVisibility.orNull) yield r }.take(limit)
+    q.list
   }
 
 }

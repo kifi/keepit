@@ -1,0 +1,44 @@
+@(inviteeId: Option[Id[User]],
+inviterId: Id[User],
+inviteMsg: Option[String],
+organization: Organization,
+authToken: String
+)
+
+@import com.keepit.common.mail.template.helpers._
+@organizationUrl = @{htmlUrl(baseUrl + organization.name + "?authToken=" + authToken + "&", "organizationInviteLink", inviteeId.nonEmpty)}
+
+@* setting up message components that depend on conditionals *@
+@salutation = {
+@if(inviteeId.isEmpty) {
+<p>Hello,</p>
+} else {
+<p>Hi @firstName(inviteeId.get),</p>
+}
+}
+
+@description = @{ organization.description.filter( description => description.length < 250 ).map ( des => "Here's what it's about: " + des).getOrElse("") }
+
+@emailMessage = {
+<p>Please join "@organization.name" on Kifi - <a href="@organizationUrl">www.kifi.com/@organization.name</a>,
+    so we can collaborate together. It's a great way to organize the links that we find.</p>
+}
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+</head>
+<body>
+@if(inviteMsg.isEmpty) {
+@salutation
+@emailMessage
+@firstName(inviterId)
+} else {
+@inviteMsg.get
+<p><a href="@organizationUrl">www.kifi.com/@organization.name</a></p>
+@firstName(inviterId)
+}
+</body>
+</html>

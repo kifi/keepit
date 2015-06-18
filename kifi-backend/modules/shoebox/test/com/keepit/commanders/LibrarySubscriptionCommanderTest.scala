@@ -63,12 +63,24 @@ class LibrarySubscriptionCommanderTest extends Specification with ShoeboxTestInj
 
         didSubsChange === true
 
-        newSubs.exists { _.name == "competitors" } === false
-        newSubs.exists { _.name == "competitors1" } === true
-        newSubs.exists { _.name == "competitors2" } === false
-        newSubs.exists { _.info == SlackInfo("http://www.fakewebhook.com") } === true
-        newSubs.exists { _.info == SlackInfo("http://www.fakewebhook2.com") } === false
-        newSubs.exists { _.info == SlackInfo("http://www.fakewebhook3.com") } === true
+        newSubs.exists {
+          _.name == "competitors"
+        } === false
+        newSubs.exists {
+          _.name == "competitors1"
+        } === true
+        newSubs.exists {
+          _.name == "competitors2"
+        } === false
+        newSubs.exists {
+          _.info == SlackInfo("http://www.fakewebhook.com")
+        } === true
+        newSubs.exists {
+          _.info == SlackInfo("http://www.fakewebhook2.com")
+        } === false
+        newSubs.exists {
+          _.info == SlackInfo("http://www.fakewebhook3.com")
+        } === true
 
       }
     }

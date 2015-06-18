@@ -11,6 +11,7 @@ import com.keepit.common.performance._
 import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.time._
 import com.keepit.heimdal._
+import com.keepit.integrity.LibraryChecker
 import com.keepit.model.{ KeepStates, _ }
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
@@ -37,6 +38,7 @@ class AdminBookmarksController @Inject() (
   collectionRepo: CollectionRepo,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
   keepDecorator: KeepDecorator,
+  libraryChecker: LibraryChecker,
   clock: Clock,
   implicit val imageConfig: S3ImageConfig)
     extends AdminUserActions {
@@ -329,6 +331,11 @@ class AdminBookmarksController @Inject() (
       }
     }
     Ok
+  }
+
+  def checkLibraryKeepVisibility(libId: Id[Library]) = UserAction { request =>
+    val numFix = libraryChecker.keepVisibilityCheck(libId)
+    Ok(JsNumber(numFix))
   }
 
 }

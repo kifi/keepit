@@ -2,6 +2,7 @@ package com.keepit.common.social
 
 import com.keepit.common.db.{ Id }
 import com.keepit.common.healthcheck.{ AirbrakeNotifier }
+import com.keepit.common.logging.Logging
 import com.keepit.model._
 import com.google.inject.Inject
 import com.keepit.common.db.slick.DBSession.RSession
@@ -10,7 +11,7 @@ import com.keepit.social._
 class BasicUserRepo @Inject() (
     userRepo: UserRepo,
     basicUserCache: BasicUserUserIdCache,
-    airbrake: AirbrakeNotifier) {
+    airbrake: AirbrakeNotifier) extends Logging {
 
   def load(userId: Id[User])(implicit session: RSession): BasicUser = {
     loadActive(userId) getOrElse loadInactive(userId)
@@ -46,7 +47,7 @@ class BasicUserRepo @Inject() (
 
   private def loadInactive(userId: Id[User])(implicit session: RSession): BasicUser = {
     val user = userRepo.get(userId)
-    airbrake.notify(s"Loading BasicUser for inactive user: $user")
+    log.error("Loading BasicUser for inactive user.", new IllegalStateException(s"User not active: $user"))
     toBasicUserSafely(user)
   }
 

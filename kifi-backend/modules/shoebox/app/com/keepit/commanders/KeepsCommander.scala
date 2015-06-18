@@ -266,6 +266,7 @@ class KeepsCommander @Inject() (
       libraryRepo.get(libraryId)
     }
     val (keep, isNewKeep) = keepInterner.internRawBookmark(rawBookmark, userId, library, source, installationId).get
+    if (isNewKeep) { librarySubscriptionCommander.sendNewKeepMessage(keep, library) }
     postSingleKeepReporting(keep, isNewKeep, library, socialShare)
     (keep, isNewKeep)
   }
@@ -275,6 +276,9 @@ class KeepsCommander @Inject() (
       libraryRepo.get(libraryId)
     }
     val (newKeeps, existingKeeps, failures) = keepInterner.internRawBookmarksWithStatus(rawBookmarks, userId, library, source)
+
+    newKeeps.foreach { keep => librarySubscriptionCommander.sendNewKeepMessage(keep, library) }
+
     val keeps = newKeeps ++ existingKeeps
     log.info(s"[keepMulti] keeps(len=${keeps.length}):${keeps.mkString(",")}")
     val addedToCollection = collection flatMap {
@@ -666,7 +670,6 @@ class KeepsCommander @Inject() (
     log.info(s"postSingleKeepReporting for user ${keep.userId} with $socialShare keep ${keep.title}")
     if (socialShare.twitter) twitterPublishingCommander.publishKeep(keep.userId, keep, library)
     if (socialShare.facebook) facebookPublishingCommander.publishKeep(keep.userId, keep, library)
-    librarySubscriptionCommander.sendNewKeepMessage(keep, library)
     searchClient.updateKeepIndex()
     curator.updateUriRecommendationFeedback(keep.userId, keep.uriId, UriRecommendationFeedback(kept = Some(true)))
   }
