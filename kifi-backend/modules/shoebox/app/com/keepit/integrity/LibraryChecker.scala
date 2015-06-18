@@ -2,17 +2,16 @@ package com.keepit.integrity
 
 import com.google.inject.Inject
 import com.keepit.commanders.LibraryCommander
+import com.keepit.common.core.tailrec
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
-import com.keepit.common.db.{ Id, SequenceNumber }
+import com.keepit.common.db.{Id, SequenceNumber}
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.logging.{ Logging, NamedStatsdTimer }
-import com.keepit.common.time.{ Clock, _ }
+import com.keepit.common.logging.{Logging, NamedStatsdTimer}
+import com.keepit.common.time.{Clock, _}
 import com.keepit.model._
 
-import scala.annotation.tailrec
-import scala.util.control.NonFatal
-import scala.util.{ Failure, Success, Try }
+case class PageSize(value: Long) extends AnyVal
 
 class LibraryChecker @Inject() (val airbrake: AirbrakeNotifier,
     val clock: Clock,
@@ -41,28 +40,56 @@ class LibraryChecker @Inject() (val airbrake: AirbrakeNotifier,
     syncOnLibraryMove() // reads libraries, updates keeps. (This is kind of recursive, but not really as I only update the ones that are wrong.)
   }
 
+  // terminates early when it runs out of elements.
+  @tailrec
+  final def stream[A](f: (Limit, Offset) => Iterable[A], limit: Limit, pageSize: PageSize, currentOffset: Offset = Offset(0))(block: A => Unit): Unit = {
+    val resultsLeftToGet = limit.value match {
+      case -1 => pageSize.value // until the function runs out of elements.
+      case _ => Math.max(limit.value - currentOffset.value, 0)
+    }
+
+    resultsLeftToGet match {
+      case 0 =>
+      case results if (results < pageSize.value) => f(Limit(resultsLeftToGet), currentOffset).foreach(block)
+      case _ =>
+        val items = f(Limit(pageSize.value), currentOffset)
+        items.foreach(block)
+        if (items.size == pageSize.value) {
+          stream(f, limit, pageSize, Offset(currentOffset.value + items.size))(block)
+        }
+    }
+  }
+
   private[integrity] def syncOnLibraryMove(): Unit = {
     val timer = new NamedStatsdTimer("LibraryChecker.syncOnLibraryMove")
-    val (nextSeqNum, keepsNeedingUpdate, libraries) = db.readOnlyReplica { implicit s =>
-      val lastSeq = getLastSeqNum(LIBRARY_MOVED_NAME)
-      val libraries = libraryRepo.getBySequenceNumber(lastSeq, LIBRARY_FETCH_SIZE)
-      val keepsNeedingUpdate = keepRepo.getByLibraryIds((libraries.map(_.id.get).toSet))
-
-      val nextSeqNum = if (libraries.isEmpty) None else Some(libraries.map(_.seq).max)
-      (nextSeqNum, keepsNeedingUpdate, libraries.map(lib => (lib.id.get, lib)).toMap)
+    val lastSeq = db.readOnlyReplica { implicit s =>
+      getLastSeqNum(LIBRARY_MOVED_NAME)
     }
 
-    keepsNeedingUpdate.foreach { keep =>
-      // library id cannot be None here since we got the keep by looking it up by its library id.
-      val library = libraries(keep.libraryId.get)
-      if (keep.organizationId != library.organizationId) {
-        updateKeep(keep.id.get, _.copy(organizationId = library.organizationId))
+    def getLibraries(limit: Limit, offset: Offset): Iterable[Library] = db.readOnlyReplica { implicit s =>
+      libraryRepo.getBySequenceNumber(lastSeq + offset.value, limit.value.toInt)
+    }
+
+    // wasn't sure of a better way to do this, since we want to get the libraries lazily, we can't really return anything or we end up keeping the memory around.
+    var nextSeqNum: SequenceNumber[Library] = lastSeq
+
+    // iterate over LIBRARY_FETCH_SIZE libraries by 25library pages.
+    stream(getLibraries, limit = Limit(LIBRARY_FETCH_SIZE), pageSize = PageSize(25)) { library =>
+      def getKeeps(limit: Limit, offset: Offset): Iterable[Keep] = db.readOnlyReplica { implicit s =>
+        keepRepo.getByLibrary(library.id.get, offset = offset.value.toInt, limit = limit.value.toInt)
       }
+      // iterate over all keeps by 50keep pages.
+      stream(getKeeps, limit = Limit(-1), pageSize = PageSize(50)) { keep =>
+        if (keep.organizationId != library.organizationId) {
+          updateKeep(keep.id.get, _.copy(organizationId = library.organizationId))
+        }
+      }
+      nextSeqNum = nextSeqNum.max(library.seq)
     }
 
-    nextSeqNum.foreach(seqNum => db.readWrite { implicit session =>
-      systemValueRepo.setSequenceNumber(LIBRARY_MOVED_NAME, seqNum)
-    })
+    if (nextSeqNum != lastSeq) db.readWrite { implicit session =>
+      systemValueRepo.setSequenceNumber(LIBRARY_MOVED_NAME, nextSeqNum)
+    }
     timer.stopAndReport(appLog = true)
   }
 
