@@ -69,7 +69,8 @@ object UserPassFinalizeInfo {
       info.picHeight,
       info.cropX,
       info.cropY,
-      info.cropSize
+      info.cropSize,
+      None
     )
 }
 
