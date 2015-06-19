@@ -663,15 +663,9 @@ class LibraryCommanderImpl @Inject() (
           }
         }
 
-        val wereSubsChanged = newSubKeysOpt match {
+        newSubKeysOpt match {
           case Some(newSubKeys) => db.readWrite { implicit s =>
-            val oldSubs = librarySubscriptionRepo.getByLibraryId(targetLib.id.get)
-
             librarySubscriptionCommander.updateSubsByLibIdAndKey(targetLib.id.get, newSubKeys)
-
-            val newSubs = librarySubscriptionRepo.getByLibraryId(targetLib.id.get)
-
-            oldSubs != newSubs
           }
           case None => false
         }
@@ -696,8 +690,7 @@ class LibraryCommanderImpl @Inject() (
           "color" -> (newColor != targetLib.color),
           "madePrivate" -> (newVisibility != targetLib.visibility && newVisibility == LibraryVisibility.SECRET),
           "listed" -> (newListed != targetMembership.listed),
-          "inviteToCollab" -> (newInviteToCollab != targetLib.whoCanInvite),
-          "subscriptions" -> wereSubsChanged
+          "inviteToCollab" -> (newInviteToCollab != targetLib.whoCanInvite)
         )
         (lib, edits)
       }

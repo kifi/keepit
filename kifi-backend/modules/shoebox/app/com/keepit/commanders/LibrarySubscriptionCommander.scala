@@ -75,7 +75,7 @@ class LibrarySubscriptionCommander @Inject() (
           }
           response
         case _ =>
-          Future.failed(new NoSuchFieldException("sendNewKeepMessage: SubscriptionInfo not supported"))
+          Future.failed(new Exception("sendNewKeepMessage: SubscriptionInfo not supported"))
       }
     }
   }
@@ -91,7 +91,7 @@ class LibrarySubscriptionCommander @Inject() (
   def updateSubsByLibIdAndKey(libId: Id[Library], subKeys: Seq[LibrarySubscriptionKey])(implicit session: RWSession): Unit = {
 
     def hasSameNameOrEndpoint(key: LibrarySubscriptionKey, sub: LibrarySubscription) = sub.name == key.name || sub.info.hasSameEndpoint(key.info)
-    def saveUpdates(currSubs: => Seq[LibrarySubscription], subKeys: Seq[LibrarySubscriptionKey])(implicit session: RWSession): Unit = {
+    def saveUpdates(currSubs: Seq[LibrarySubscription], subKeys: Seq[LibrarySubscriptionKey])(implicit session: RWSession): Unit = {
       subKeys.foreach { key =>
         currSubs.find {
           hasSameNameOrEndpoint(key, _)
@@ -120,17 +120,6 @@ class LibrarySubscriptionCommander @Inject() (
     } else {
       saveUpdates(currentSubs, subKeys) // save new subs and changes to existing subs
       removeDifferences(currentSubs, subKeys) // inactivate existing subs that are not in subKeys
-    }
-
-    val newSubs = librarySubscriptionRepo.getByLibraryId(libId)
-
-    currentSubs != newSubs
-  }
-
-  def isValidWebhook(subInfo: SubscriptionInfo): Future[Boolean] = {
-    subInfo match {
-      case s: SlackInfo => httpLock.withLockFuture { httpClient.getFuture(DirectUrl(subInfo.asInstanceOf[SlackInfo].url)).map { _.status == 500 } }
-      case _ => Future.successful(false)
     }
   }
 
