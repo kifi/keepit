@@ -26,6 +26,8 @@ class RoverFetchSchedulingActor @Inject() (
 
   import RoverFetchSchedulingActor._
 
+  protected val logger = log.logger
+
   protected def nextBatch: Future[Seq[RoverArticleInfo]] = {
     SafeFuture {
       log.info(s"Queuing up to $maxBatchSize article fetch tasks...")
