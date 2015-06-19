@@ -24,7 +24,7 @@ import scala.concurrent.{ ExecutionContext, Future }
 trait OrganizationInviteCommander {
   def inviteUsersToOrganization(orgId: Id[Organization], inviterId: Id[User], invitees: Seq[OrganizationMemberInvitation]): Future[Either[OrganizationFail, Seq[(Either[BasicUser, RichContact], OrganizationRole)]]]
   def acceptInvitation(orgId: Id[Organization], userId: Id[User], authToken: Option[String] = None): Either[OrganizationFail, (Organization, OrganizationMembership)]
-  def declineInvitation(orgId: Id[Organization], userId: Id[User]): Unit
+  def declineInvitation(orgId: Id[Organization], userId: Id[User]): Seq[OrganizationInvite]
   // Creates a Universal Invite Link for an organization and inviter. Anyone with the link can join the Organization
   def universalInviteLink(orgId: Id[Organization], inviterId: Id[User], role: OrganizationRole = OrganizationRole.MEMBER, authToken: Option[String] = None): Either[OrganizationFail, (OrganizationInvite, Organization)]
 }
@@ -216,8 +216,11 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     ???
   }
 
-  def declineInvitation(orgId: Id[Organization], userId: Id[User]) {
-    ???
+  def declineInvitation(orgId: Id[Organization], userId: Id[User]): Seq[OrganizationInvite] = {
+    db.readWrite { implicit s =>
+      organizationInviteRepo.getByOrgIdAndUserId(orgId, userId)
+        .map(inv => organizationInviteRepo.save(inv.copy(state = OrganizationInviteStates.DECLINED)))
+    }
   }
 
   def universalInviteLink(orgId: Id[Organization], inviterId: Id[User], role: OrganizationRole = OrganizationRole.MEMBER, authToken: Option[String] = None): Either[OrganizationFail, (OrganizationInvite, Organization)] = {
