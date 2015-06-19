@@ -23,10 +23,14 @@ import scala.concurrent.{ ExecutionContext, Future }
 @ImplementedBy(classOf[OrganizationInviteCommanderImpl])
 trait OrganizationInviteCommander {
   def inviteUsersToOrganization(orgId: Id[Organization], inviterId: Id[User], invitees: Seq[OrganizationMemberInvitation]): Future[Either[OrganizationFail, Seq[(Either[BasicUser, RichContact], OrganizationRole)]]]
-  def acceptInvitation(orgId: Id[Organization], userId: Id[User], authToken: Option[String] = None): Either[OrganizationFail, (Organization, OrganizationMembership)]
+  def acceptInvitation(orgId: Id[Organization], userId: Id[User], authTokenOpt: Option[String] = None): Either[OrganizationFail, OrganizationMembership]
   def declineInvitation(orgId: Id[Organization], userId: Id[User]): Unit
   // Creates a Universal Invite Link for an organization and inviter. Anyone with the link can join the Organization
   def universalInviteLink(orgId: Id[Organization], inviterId: Id[User], role: OrganizationRole = OrganizationRole.MEMBER, authToken: Option[String] = None): Either[OrganizationFail, (OrganizationInvite, Organization)]
+}
+
+object OrganizationInviteCommander {
+  type UserOrEmailInvitation = Either[Id[User], EmailAddress]
 }
 
 @Singleton
@@ -212,8 +216,37 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     // TODO: handle push notifications to mobile.
   }
 
-  def acceptInvitation(orgId: Id[Organization], userId: Id[User], authToken: Option[String] = None): Either[OrganizationFail, (Organization, OrganizationMembership)] = {
-    ???
+  def acceptInvitation(orgId: Id[Organization], userId: Id[User], authTokenOpt: Option[String] = None): Either[OrganizationFail, OrganizationMembership] = {
+    val (invitations, membershipOpt) = db.readOnlyReplica { implicit session =>
+      val authInvitations = authTokenOpt.map(authToken => organizationInviteRepo.getByOrgIdAndAuthToken(orgId, authToken)).getOrElse(Seq.empty[OrganizationInvite])
+      val userInvitations = organizationInviteRepo.getByOrgAndUserId(orgId, userId)
+      val allInvitations = authInvitations ++ userInvitations
+      val existingMembership = organizationMembershipRepo.getByOrgIdAndUserId(orgId, userId)
+      (allInvitations, existingMembership)
+    }
+
+    val sortedInvitations = invitations.sortBy(_.role).reverse
+    (membershipOpt match {
+      case Some(membership) =>
+        val modifyRequests = sortedInvitations.map(currentInvitation => OrganizationMembershipModifyRequest(orgId, currentInvitation.inviterId, userId, currentInvitation.role))
+        val findFirstSuccess = modifyRequests.toStream.map(organizationMembershipCommander.modifyMembership(_))
+          .find(_.isRight) // stop at first success
+        findFirstSuccess.map(_.right.map(_.membership))
+          .getOrElse(Left(OrganizationFail.NO_VALID_INVITATIONS))
+      case None => // new membership
+        val addRequests = sortedInvitations.map(currentInvitation => OrganizationMembershipAddRequest(orgId, currentInvitation.inviterId, userId, currentInvitation.role))
+        val findFirstSuccess = addRequests.toStream.map(organizationMembershipCommander.addMembership(_))
+          .find(_.isRight)
+        findFirstSuccess.map(_.right.map(_.membership))
+          .getOrElse(Left(OrganizationFail.NO_VALID_INVITATIONS))
+    }).right.map { success =>
+      // on success accept invitations
+      db.readWrite { implicit s =>
+        // TODO: notify inviters about invitee accepting invitation.
+        invitations.map(_.copy(state = OrganizationInviteStates.ACCEPTED)).foreach(organizationInviteRepo.save(_))
+      }
+      success
+    }
   }
 
   def declineInvitation(orgId: Id[Organization], userId: Id[User]) {

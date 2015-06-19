@@ -29,18 +29,20 @@ case class OrganizationMembershipRemoveRequest(
   requesterId: Id[User],
   targetId: Id[User]) extends OrganizationMembershipRequest
 
-case class OrganizationMembershipAddResponse(request: OrganizationMembershipAddRequest)
-case class OrganizationMembershipModifyResponse(request: OrganizationMembershipModifyRequest)
+case class OrganizationMembershipAddResponse(request: OrganizationMembershipAddRequest, membership: OrganizationMembership)
+case class OrganizationMembershipModifyResponse(request: OrganizationMembershipModifyRequest, membership: OrganizationMembership)
 case class OrganizationMembershipRemoveResponse(request: OrganizationMembershipRemoveRequest)
 
 sealed abstract class OrganizationFail(val status: Int, val message: String)
 object OrganizationFail {
   case object INSUFFICIENT_PERMISSIONS extends OrganizationFail(FORBIDDEN, "insufficient_permissions")
   case object NOT_A_MEMBER extends OrganizationFail(UNAUTHORIZED, "not_a_member")
+  case object NO_VALID_INVITATIONS extends OrganizationFail(FORBIDDEN, "no_valid_invitations")
   def apply(str: String): OrganizationFail = {
     str match {
       case INSUFFICIENT_PERMISSIONS.message => INSUFFICIENT_PERMISSIONS
       case NOT_A_MEMBER.message => NOT_A_MEMBER
+      case NO_VALID_INVITATIONS.message => NO_VALID_INVITATIONS
     }
   }
 }

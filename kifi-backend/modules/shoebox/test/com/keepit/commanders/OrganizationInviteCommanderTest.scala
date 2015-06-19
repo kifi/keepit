@@ -119,5 +119,74 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
         }
       }
     }
+
+    "accept invitations" should {
+      "succeed when there are valid invitations" in {
+        withDb(modules: _*) { implicit injector =>
+          val inviteCommander = inject[OrganizationInviteCommander]
+          val inviteRepo = inject[OrganizationInviteRepo]
+          val memberRepo = inject[OrganizationMembershipRepo]
+          val orgId = Id[Organization](1)
+          val inviterId = Id[User](1)
+          val userId = Id[User](2)
+          db.readWrite { implicit session =>
+            memberRepo.save(OrganizationMembership(organizationId = orgId, userId = inviterId, role = OrganizationRole.OWNER))
+            inviteRepo.save(OrganizationInvite(organizationId = orgId, inviterId = inviterId, userId = Some(userId), role = OrganizationRole.MEMBER))
+          }
+          inviteCommander.acceptInvitation(orgId, userId, None) must haveClass[Right[OrganizationFail, OrganizationMembership]]
+        }
+      }
+
+      "pick the highest role" in {
+        withDb(modules: _*) { implicit injector =>
+          val inviteCommander = inject[OrganizationInviteCommander]
+          val inviteRepo = inject[OrganizationInviteRepo]
+          val memberRepo = inject[OrganizationMembershipRepo]
+          val orgId = Id[Organization](1)
+          val inviterId = Id[User](1)
+          val userId = Id[User](2)
+          db.readWrite { implicit session =>
+            memberRepo.save(OrganizationMembership(organizationId = orgId, userId = inviterId, role = OrganizationRole.OWNER))
+            inviteRepo.save(OrganizationInvite(organizationId = orgId, inviterId = inviterId, userId = Some(userId), role = OrganizationRole.MEMBER))
+            inviteRepo.save(OrganizationInvite(organizationId = orgId, inviterId = inviterId, userId = Some(userId), role = OrganizationRole.OWNER))
+          }
+          inviteCommander.acceptInvitation(orgId, userId, None) must haveClass[Right[OrganizationFail, OrganizationMembership]]
+
+          db.readOnlyMaster { implicit session =>
+            memberRepo.getByOrgIdAndUserId(orgId, userId).map(_.role) === Some(OrganizationRole.OWNER)
+          }
+        }
+      }
+
+      "fail when there are no valid invitations" in {
+        withDb(modules: _*) { implicit injector =>
+          val inviteCommander = inject[OrganizationInviteCommander]
+          val memberRepo = inject[OrganizationMembershipRepo]
+          val orgId = Id[Organization](1)
+          val inviterId = Id[User](1)
+          val userId = Id[User](2)
+          db.readWrite { implicit session =>
+            memberRepo.save(OrganizationMembership(organizationId = orgId, userId = inviterId, role = OrganizationRole.OWNER))
+          }
+          inviteCommander.acceptInvitation(orgId, userId, None) === Left(OrganizationFail.NO_VALID_INVITATIONS)
+        }
+      }
+
+      "fail when there are invitations but none are valid" in {
+        withDb(modules: _*) { implicit injector =>
+          val inviteCommander = inject[OrganizationInviteCommander]
+          val inviteRepo = inject[OrganizationInviteRepo]
+          val memberRepo = inject[OrganizationMembershipRepo]
+          val orgId = Id[Organization](1)
+          val inviterId = Id[User](1)
+          val userId = Id[User](2)
+          db.readWrite { implicit session =>
+            memberRepo.save(OrganizationMembership(organizationId = orgId, userId = inviterId, role = OrganizationRole.MEMBER))
+            inviteRepo.save(OrganizationInvite(organizationId = orgId, inviterId = inviterId, userId = Some(userId), role = OrganizationRole.OWNER))
+          }
+          inviteCommander.acceptInvitation(orgId, userId, None) === Left(OrganizationFail.NO_VALID_INVITATIONS)
+        }
+      }
+    }
   }
 }

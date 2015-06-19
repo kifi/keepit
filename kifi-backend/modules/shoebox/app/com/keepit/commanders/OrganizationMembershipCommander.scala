@@ -93,7 +93,7 @@ class OrganizationMembershipCommanderImpl @Inject() (
     membersNotIncludingOwner ++ invitedByUserId ++ invitedByEmailAddress
   }
 
-  private def validRequest(request: OrganizationMembershipRequest)(implicit session: RSession): Boolean = {
+  def validRequest(request: OrganizationMembershipRequest)(implicit session: RSession): Boolean = {
     val requesterOpt = organizationMembershipRepo.getByOrgIdAndUserId(request.orgId, request.requesterId)
     val targetOpt = organizationMembershipRepo.getByOrgIdAndUserId(request.orgId, request.targetId)
 
@@ -114,8 +114,8 @@ class OrganizationMembershipCommanderImpl @Inject() (
   def addMembership(request: OrganizationMembershipAddRequest): Either[OrganizationFail, OrganizationMembershipAddResponse] = {
     db.readWrite { implicit session =>
       if (validRequest(request)) {
-        organizationMembershipRepo.save(OrganizationMembership(organizationId = request.orgId, userId = request.targetId, role = request.newRole))
-        Right(OrganizationMembershipAddResponse(request))
+        val membership = organizationMembershipRepo.save(OrganizationMembership(organizationId = request.orgId, userId = request.targetId, role = request.newRole))
+        Right(OrganizationMembershipAddResponse(request, membership))
       } else {
         Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
       }
@@ -126,8 +126,8 @@ class OrganizationMembershipCommanderImpl @Inject() (
     db.readWrite { implicit session =>
       if (validRequest(request)) {
         val oldMembership = organizationMembershipRepo.getByOrgIdAndUserId(request.orgId, request.targetId).get
-        organizationMembershipRepo.save(oldMembership.withRole(request.newRole))
-        Right(OrganizationMembershipModifyResponse(request))
+        val newMembership = organizationMembershipRepo.save(oldMembership.withRole(request.newRole))
+        Right(OrganizationMembershipModifyResponse(request, newMembership))
       } else {
         Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
       }
