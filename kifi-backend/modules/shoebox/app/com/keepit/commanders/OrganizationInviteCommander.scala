@@ -226,7 +226,7 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
 
     val sortedInvitations = invitations.sortBy(_.role).reverse
     (membershipOpt match {
-      case Some(membership) => Left(OrganizationFail.NO_VALID_INVITATIONS)
+      case Some(membership) => Right(membership) // already a member
       case None => // new membership
         val addRequests = sortedInvitations.map(currentInvitation => OrganizationMembershipAddRequest(orgId, currentInvitation.inviterId, userId, currentInvitation.role))
         val firstSuccess = addRequests.toStream.map(organizationMembershipCommander.addMembership(_))
