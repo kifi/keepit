@@ -226,17 +226,12 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
 
     val sortedInvitations = invitations.sortBy(_.role).reverse
     (membershipOpt match {
-      case Some(membership) =>
-        val modifyRequests = sortedInvitations.map(currentInvitation => OrganizationMembershipModifyRequest(orgId, currentInvitation.inviterId, userId, currentInvitation.role))
-        val findFirstSuccess = modifyRequests.toStream.map(organizationMembershipCommander.modifyMembership(_))
-          .find(_.isRight) // stop at first success
-        findFirstSuccess.map(_.right.map(_.membership))
-          .getOrElse(Left(OrganizationFail.NO_VALID_INVITATIONS))
+      case Some(membership) => Left(OrganizationFail.NO_VALID_INVITATIONS)
       case None => // new membership
         val addRequests = sortedInvitations.map(currentInvitation => OrganizationMembershipAddRequest(orgId, currentInvitation.inviterId, userId, currentInvitation.role))
-        val findFirstSuccess = addRequests.toStream.map(organizationMembershipCommander.addMembership(_))
+        val firstSuccess = addRequests.toStream.map(organizationMembershipCommander.addMembership(_))
           .find(_.isRight)
-        findFirstSuccess.map(_.right.map(_.membership))
+        firstSuccess.map(_.right.map(_.membership))
           .getOrElse(Left(OrganizationFail.NO_VALID_INVITATIONS))
     }).right.map { success =>
       // on success accept invitations
