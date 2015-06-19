@@ -1,0 +1,35 @@
+@(inviteeId: Option[Id[User]],
+inviterId: Id[User],
+inviteMsg: Option[String],
+organization: Organization,
+authToken: String
+)
+
+@import com.keepit.common.mail.template.helpers._
+@organizationUrl = @{htmlUrl(baseUrl + organization.name + "?authToken=" + authToken + "&", "organizationInviteLink", inviteeId.nonEmpty)}
+
+@* setting up message components that depend on conditionals *@
+@salutation = {
+@if(inviteeId.isEmpty) {
+Hello,
+} else {
+Hi @firstName(inviteeId.get),
+}
+}
+
+@description = @{ organization.description.filter( description => description.length < 250 ).map ( des => "Here's what it's about: " + des).getOrElse("") }
+
+@emailMessage = {
+Please join "@organization.name" on Kifi at www.kifi.com/@organization.name,
+so we can collaborate together. It's a great way to organize the links that we find.
+}
+
+@if(inviteMsg.isEmpty) {
+@salutation
+@emailMessage
+@firstName(inviterId)
+} else {
+@inviteMsg.get
+www.kifi.com/@organization.name
+@firstName(inviterId)
+}

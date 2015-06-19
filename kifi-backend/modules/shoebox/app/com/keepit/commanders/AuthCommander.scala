@@ -82,7 +82,8 @@ case class EmailPassFinalizeInfo(
   picHeight: Option[Int],
   cropX: Option[Int],
   cropY: Option[Int],
-  cropSize: Option[Int])
+  cropSize: Option[Int],
+  companyName: Option[String])
 
 object EmailPassFinalizeInfo {
   implicit val format = (
@@ -93,7 +94,8 @@ object EmailPassFinalizeInfo {
     (__ \ 'picWidth).formatNullable[Int] and
     (__ \ 'cropX).formatNullable[Int] and
     (__ \ 'cropY).formatNullable[Int] and
-    (__ \ 'cropSize).formatNullable[Int]
+    (__ \ 'cropSize).formatNullable[Int] and
+    (__ \ 'companyName).formatNullable[String]
   )(EmailPassFinalizeInfo.apply, unlift(EmailPassFinalizeInfo.unapply))
 }
 
@@ -118,7 +120,8 @@ class AuthCommander @Inject() (
     userExperimentCommander: LocalUserExperimentCommander,
     userCommander: UserCommander,
     handleCommander: HandleCommander,
-    heimdalServiceClient: HeimdalServiceClient) extends Logging {
+    heimdalServiceClient: HeimdalServiceClient,
+    amazonSimpleMailProvider: AmazonSimpleMailProvider) extends Logging {
 
   def emailAddressMatchesSomeKifiUser(addr: EmailAddress): Boolean = {
     db.readOnlyMaster { implicit s =>
@@ -233,6 +236,30 @@ class AuthCommander @Inject() (
       (user, emailPassIdentity)
     }
 
+  def processCompanyNameFromSignup(user: User, companyNameOpt: Option[String]): Unit = {
+    companyNameOpt.map { companyName =>
+      val trimmed = companyName.trim
+      if (trimmed != "") {
+        userCommander.updateUserBiography(user.id.get, s"Works at $trimmed");
+        db.readWrite { implicit session =>
+          userValueRepo.setValue(user.id.get, UserValueName.COMPANY_NAME, trimmed)
+        }
+
+        val informationalMessage = s"""
+          UserId:<a href="https://admin.kifi.com/admin/user/${user.id.get}">${user.id.get}</a>, Name: ${user.firstName} ${user.lastName}, Email: ${user.primaryEmail}""
+        """
+        amazonSimpleMailProvider.sendMail(ElectronicMail(
+          from = SystemEmailAddress.ENG,
+          to = Seq(SystemEmailAddress.SALES),
+          subject = s"New user from company: $trimmed",
+          htmlBody = informationalMessage,
+          category = NotificationCategory.toElectronicMailCategory(NotificationCategory.System.LEADS)
+        ))
+
+      }
+    }
+  }
+
   def finalizeEmailPassAccount(efi: EmailPassFinalizeInfo, userId: Id[User], externalUserId: ExternalId[User], identityOpt: Option[Identity], inviteExtIdOpt: Option[ExternalId[Invitation]])(implicit context: HeimdalContext): Future[(User, EmailAddress, Identity)] = {
     log.info(s"[finalizeEmailPassAccount] efi=$efi, userId=$userId, extUserId=$externalUserId, identity=$identityOpt, inviteExtId=$inviteExtIdOpt")
 
@@ -248,6 +275,10 @@ class AuthCommander @Inject() (
       val user = db.readWrite { implicit session =>
         val userPreUsername = userRepo.get(userId)
         handleCommander.autoSetUsername(userPreUsername) getOrElse userPreUsername
+      }
+
+      SafeFuture {
+        processCompanyNameFromSignup(user, efi.companyName)
       }
 
       reportUserRegistration(user, inviteExtIdOpt)

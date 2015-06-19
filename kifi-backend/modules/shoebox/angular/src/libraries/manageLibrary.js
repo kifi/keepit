@@ -38,8 +38,9 @@ angular.module('kifi')
         scope.colors = ['#447ab7','#5ab7e7','#4fc49e','#f99457','#dd5c60','#c16c9e','#9166ac'];
         scope.currentPageOrigin = '';
         scope.onSubscriptionExperiment = (profileService.me.experiments || []).indexOf('subscription') > -1;
-        scope.showSubInstructions = false;
-        scope.newSub = { 'name': '', 'info': { 'kind': 'slack', 'url':'' } };
+        scope.showSubIntegrations = false;
+        scope.newBlankSub = function () { return { 'name': '', 'info': { 'kind': 'slack', 'url': '' }}; };
+        scope.showError = false;
 
         //
         // Scope methods.
@@ -53,40 +54,29 @@ angular.module('kifi')
           scope.userHasEditedSlug = true;
         };
 
-        scope.toggleInstructions = function() {
-          scope.showSubInstructions = !scope.showSubInstructions;
+        scope.toggleIntegrations = function() {
+          scope.showIntegrations = !scope.showIntegrations;
+        };
+
+        scope.addIfEnter = function(event) {
+          if (event.keyCode === 13) {
+            event.preventDefault();
+            scope.addSubscription();
+          }
+        };
+
+        scope.preventNewline = function(event) {
+          if (event.keyCode === 13) {
+            event.preventDefault();
+          }
         };
 
         scope.addSubscription = function() {
-
-          function validateSubscription(newSub, subscriptions) {
-
-            function containsEquivalentSub(subs, newSub) { // don't allow two subs w/ same name or endpoint
-              return _.some(subs, function(sub) { return sub.name === newSub.name; }) ||
-               _.some(subs, function(sub) { return sub.info.url === newSub.info.url; }); // TODO: only works for url-based SubInfos (e.g. SlackInfo)
-            }
-
-            return !containsEquivalentSub(subscriptions, newSub);
-          }
-
-          scope.validateName = function (name) {
-            return name.length > 0;
-          };
-
-          scope.validateUrl = function (url) {
-            return url.match(/https:\/\/hooks.slack.com\/services\/.*\/.*\/?/i) != null;
-          };
-
-          var isNameValid = scope.validateName(scope.newSub.name);
-          var isUrlValid = scope.validateUrl(scope.newSub.info.url);
-          scope.isSubValid = validateSubscription(scope.newSub, scope.library.subscriptions);
-
-          if (isNameValid && isUrlValid && scope.isSubValid) {
-            scope.showError = false;
-            scope.library.subscriptions.push ( scope.newSub );
-            scope.newSub = { 'name': '', 'info': { 'kind': 'slack', 'url':'' } };
+          var lastSub = scope.library.subscriptions.slice(-1)[0];
+          if(lastSub.name === '' && lastSub.info.url === '') {
+            return;
           } else {
-            scope.showError = true;
+            scope.library.subscriptions.push(scope.newBlankSub());
           }
         };
 
@@ -96,6 +86,31 @@ angular.module('kifi')
 
         scope.saveLibrary = function () {
           if (submitting) {
+            return;
+          }
+
+          scope.$error = {};
+
+          scope.library.subscriptions.forEach(function(sub) {
+
+            if (sub.name) { // slack channels can't have uppercase letters
+              sub.name = sub.name.toLowerCase();
+            }
+
+            if (!sub.name || sub.name.includes(' ')) {
+              sub.$error = sub.$error || {};
+              sub.$error.name = true;
+              scope.$error.general = 'Please enter a valid Slack channel name for each subscription.';
+            }
+
+            if (sub.info.url === '' || sub.info.url.match(/https:\/\/hooks.slack.com\/services\/.*\/.*/i) == null) {
+              sub.$error = sub.$error || {};
+              sub.$error.url = true;
+              scope.$error.general = 'Please enter a valid webhook URL for each subscription.';
+            }
+          });
+
+          if (scope.$error.general) {
             return;
           }
 
@@ -226,6 +241,9 @@ angular.module('kifi')
           scope.emptySlug = false;
           scope.modalTitle = scope.library.name;
           scope.library.subscriptions = scope.library.subscriptions || [];
+          if (scope.library.subscriptions.length < 3) {
+            scope.library.subscriptions.push(scope.newBlankSub());
+          }
         } else {
           scope.library = {
             'name': '',
@@ -238,7 +256,7 @@ angular.module('kifi')
             listed: true,
             subscribed: false
           };
-          scope.library.subscriptions = [];
+          scope.library.subscriptions = [scope.newBlankSub()];
           scope.modalTitle = 'Create a library';
         }
         returnAction = scope.modalData && scope.modalData.returnAction;

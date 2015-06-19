@@ -32,6 +32,8 @@ class RoverArticleInfoIngestionActor @Inject() (
 
   import RoverArticleInfoIngestionActor._
 
+  protected val logger = log.logger
+
   protected def nextBatch: Future[Seq[IndexableUri]] = {
     log.info(s"Starting ingestion...")
     SafeFuture {

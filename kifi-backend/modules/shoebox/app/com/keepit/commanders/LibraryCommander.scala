@@ -640,7 +640,7 @@ class LibraryCommanderImpl @Inject() (
         }
       }
 
-      val newSubKeysOpt = modifyReq.subscriptions
+      val newSubKeysOpt = modifyReq.subscriptions.filter(sub => sub == LibrarySubscriptionKey("", SlackInfo("")))
 
       val result = for {
         newName <- validName(modifyReq.name).right
@@ -663,9 +663,11 @@ class LibraryCommanderImpl @Inject() (
           }
         }
 
-        val wereSubsChanged = newSubKeysOpt match {
-          case Some(newSubKeys) => db.readWrite { implicit s => librarySubscriptionCommander.updateSubsByLibIdAndKey(targetLib.id.get, newSubKeys) }
-          case None => false
+        newSubKeysOpt match {
+          case Some(newSubKeys) => db.readWrite { implicit s =>
+            librarySubscriptionCommander.updateSubsByLibIdAndKey(targetLib.id.get, newSubKeys)
+          }
+          case None =>
         }
 
         val lib = db.readWrite { implicit s =>
@@ -688,8 +690,7 @@ class LibraryCommanderImpl @Inject() (
           "color" -> (newColor != targetLib.color),
           "madePrivate" -> (newVisibility != targetLib.visibility && newVisibility == LibraryVisibility.SECRET),
           "listed" -> (newListed != targetMembership.listed),
-          "inviteToCollab" -> (newInviteToCollab != targetLib.whoCanInvite),
-          "subscriptions" -> wereSubsChanged
+          "inviteToCollab" -> (newInviteToCollab != targetLib.whoCanInvite)
         )
         (lib, edits)
       }

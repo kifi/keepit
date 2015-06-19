@@ -1,5 +1,6 @@
 package com.keepit.controllers.assets
 
+import com.keepit.social.BasicUser
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.util.Try
 
@@ -11,12 +12,13 @@ import com.keepit.common.store.{ S3ImageConfig, S3UserPictureConfig, S3ImageStor
 import com.keepit.model._
 import scala.concurrent.{ Await, Future }
 
-import play.api.mvc.Action
+import play.api.mvc.{ Result, Action }
 import com.amazonaws.services.s3.AmazonS3
 import com.amazonaws.services.s3.model.{ ListObjectsRequest, CopyObjectRequest }
 import com.keepit.common.akka.SafeFuture
 import scala.concurrent.duration.Duration
 import java.util.concurrent.TimeUnit
+import com.keepit.common.core._
 
 class UserPictureController @Inject() (
   val userActionsHelper: UserActionsHelper,
@@ -28,28 +30,50 @@ class UserPictureController @Inject() (
     extends UserActions with ShoeboxServiceController {
 
   def getPic(size: String, id: ExternalId[User], picName: String) = Action.async { request =>
-    val trimmedName = if (picName.endsWith(".jpg")) picName.dropRight(4) else picName
-    db.readOnlyReplica { implicit s => userRepo.getOpt(id) } collect {
-      case user if Set(UserStates.ACTIVE, UserStates.PENDING, UserStates.INCOMPLETE_SIGNUP) contains user.state =>
-        val optSize = if (size == "original") None else Try(size.toInt).toOption
-        imageStore.getPictureUrl(optSize, user, trimmedName) map (Redirect(_))
-    } getOrElse {
-      resolve(Redirect(S3UserPictureConfig.defaultImage))
-    }
+    imageUrl(Try(size.toInt).getOrElse(200), id)
   }
 
   def get(size: Int, id: ExternalId[User]) = Action.async { request =>
-    db.readOnlyReplica { implicit s => userRepo.getOpt(id) } collect {
-      case user if Set(UserStates.ACTIVE, UserStates.PENDING, UserStates.INCOMPLETE_SIGNUP) contains user.state =>
+    imageUrl(Try(size.toInt).getOrElse(200), id)
+  }
+
+  private def imageUrl(size: Int, id: ExternalId[User]): Future[Result] = {
+    // This is a black box function. It should be replaced when user images work a bit better.
+    // Input is a userExtId and requested size. Output is the image to show. The subtlety here is that social images
+    // can take a second to finish uploading, and we'd prefer to show someone the image they *just* authed with, rather
+    // than a placeholder image. So we wait.
+    // Normally, this function is not called; instead the CDN is hit directly because all the info needed is known.
+    // However, signup confirmation page and iOS use this.
+    val userOpt = db.readOnlyReplica { implicit s =>
+      userRepo.getOpt(id)
+    }
+
+    userOpt.collect {
+      case user if Set(UserStates.ACTIVE, UserStates.PENDING, UserStates.INCOMPLETE_SIGNUP).contains(user.state) =>
         val optSize = Some(size)
         user.pictureName.map { pictureName =>
-          imageStore.getPictureUrl(optSize, user, pictureName) map (Redirect(_))
-        } getOrElse {
-          imageStore.getPictureUrl(optSize, user, "0") map (Redirect(_))
+          imageStore.getPictureUrl(optSize, user, pictureName).map(Some.apply)
+        }.getOrElse {
+          imageStore.getPictureUrl(optSize, user, "0").map(Some.apply)
         }
-    } getOrElse {
-      resolve(Redirect(S3UserPictureConfig.defaultImage))
+    }.getOrElse(Future.successful(None)).map {
+      case Some(imgUrl) if userOpt.isDefined && (imgUrl.endsWith("/0.jpg") || imgUrl.endsWith("ghost.200.png")) =>
+        // We may be redirecting to a default image instead.
+        val url = if (BasicUser.useDefaultImageForUser(userOpt.get)) {
+          val img = BasicUser.defaultImageForUserId(userOpt.get.id.get)
+          s"https://djty7jcqog9qu.cloudfront.net$img" // hard coded to remove dependency on existing (bad) methods
+        } else {
+          imgUrl
+        }
+        Redirect(url)
+      case Some(imgUrl) =>
+        Redirect(imgUrl)
+      case None => NotFound
     }
+  }
+
+  def hackyRedirectForiOSv3(file: String) = Action { request =>
+    Redirect(s"https://djty7jcqog9qu.cloudfront.net/default-pic/$file")
   }
 
   def update() = UserAction.async { request =>

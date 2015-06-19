@@ -2,17 +2,14 @@ package com.keepit.integrity
 
 import com.google.inject.Inject
 import com.keepit.commanders.LibraryCommander
-import com.keepit.common.db.slick.DBSession.RSession
+import com.keepit.common.core.tailrec
+import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ Id, SequenceNumber }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.{ Logging, NamedStatsdTimer }
 import com.keepit.common.time.{ Clock, _ }
 import com.keepit.model._
-
-import scala.annotation.tailrec
-import scala.util.control.NonFatal
-import scala.util.{ Failure, Success, Try }
 
 class LibraryChecker @Inject() (val airbrake: AirbrakeNotifier,
     val clock: Clock,
@@ -21,6 +18,7 @@ class LibraryChecker @Inject() (val airbrake: AirbrakeNotifier,
     val libraryCommander: LibraryCommander,
     val libraryMembershipRepo: LibraryMembershipRepo,
     val libraryRepo: LibraryRepo,
+    val organizationRepo: OrganizationRepo,
     val userRepo: UserRepo,
     val systemValueRepo: SystemValueRepo) extends Logging {
 
@@ -29,12 +27,58 @@ class LibraryChecker @Inject() (val airbrake: AirbrakeNotifier,
 
   private[integrity] val LAST_KEPT_AND_KEEP_COUNT_NAME = Name[SequenceNumber[Keep]]("integrity_plugin_library_sync")
   private[integrity] val MEMBER_COUNT_NAME = Name[SequenceNumber[LibraryMembership]]("integrity_plugin_library_member_count")
+  private[integrity] val LIBRARY_MOVED_NAME = Name[SequenceNumber[Library]]("integrity_plugin_library_moved")
   private val MEMBER_FETCH_SIZE = 500
   private val KEEP_FETCH_SIZE = 500
+  private val LIBRARY_FETCH_SIZE = 250
 
   def check(): Unit = lock.synchronized {
-    syncLibraryLastKeptAndKeepCount()
-    syncLibraryMemberCounts()
+    syncLibraryLastKeptAndKeepCount() // reads keeps, updates libraries
+    syncLibraryMemberCounts() // reads libraryMembership, updates libraries
+    syncOnLibraryMove() // reads libraries, updates keeps. (This is kind of recursive, but not really as I only update the ones that are wrong.)
+  }
+
+  // terminates early when it runs out of elements.
+  @tailrec
+  final def stream[A](f: (Limit, Offset) => Iterable[A], needed: Limit, pageSize: Limit, currentOffset: Offset = Offset(0))(block: A => Unit): Unit = {
+    Math.min(Math.max(needed.value, 0), pageSize.value) match {
+      case 0 =>
+      case howManyToQueryFor =>
+        val items = f(Limit(howManyToQueryFor), currentOffset)
+        items.foreach(block)
+        if (items.size == pageSize.value && items.size != needed.value) {
+          stream(f, Limit(needed.value - items.size), pageSize, Offset(currentOffset.value + items.size))(block)
+        }
+    }
+  }
+
+  private[integrity] def syncOnLibraryMove(): Unit = {
+    val timer = new NamedStatsdTimer("LibraryChecker.syncOnLibraryMove")
+    val libraries = db.readOnlyReplica { implicit s =>
+      val lastSeq = getLastSeqNum(LIBRARY_MOVED_NAME)
+      libraryRepo.getBySequenceNumber(lastSeq, LIBRARY_FETCH_SIZE)
+    }
+    val nextSeqNum = if (libraries.isEmpty) None else Some(libraries.map(_.seq).max)
+
+    libraries.foreach { library =>
+      // only gets the keeps that have no matching orgId
+      def getKeeps(limit: Limit, offset: Offset): Iterable[Keep] = db.readOnlyReplica { implicit s =>
+        keepRepo.getByLibraryWithoutOrgId(library.id.get, library.organizationId, offset = offset, limit = limit)
+      }
+      // iterate over all keeps by 100keep pages.
+      db.readWrite { implicit session =>
+        stream(getKeeps, needed = Limit(Long.MaxValue), pageSize = Limit(100)) { keep =>
+          updateKeep(keep.id.get, _.copy(organizationId = library.organizationId))
+        }
+      }
+    }
+
+    nextSeqNum.foreach { seqNum =>
+      db.readWrite { implicit session =>
+        systemValueRepo.setSequenceNumber(LIBRARY_MOVED_NAME, seqNum)
+      }
+    }
+    timer.stopAndReport(appLog = true)
   }
 
   private[integrity] def checkSystemLibraries(): Unit = {
@@ -58,6 +102,11 @@ class LibraryChecker @Inject() (val airbrake: AirbrakeNotifier,
 
   private def getLastSeqNum[T](key: Name[SequenceNumber[T]])(implicit session: RSession) = {
     systemValueRepo.getSequenceNumber(key).getOrElse(SequenceNumber[T](0))
+  }
+
+  private def updateKeep(id: Id[Keep], mutator: Keep => Keep)(implicit session: RWSession) = {
+    // same as below
+    keepRepo.save(mutator(keepRepo.get(id)))
   }
 
   private def updateLibrary(id: Id[Library], mutator: Library => Library) = db.readWrite { implicit session =>
@@ -143,5 +192,21 @@ class LibraryChecker @Inject() (val airbrake: AirbrakeNotifier,
 
   private def getIndex(): (Int, Int) = {
     timeSlicer.getSliceAndSize(TimeToSliceInDays.ONE_WEEK, OneSliceInMinutes(DataIntegrityPlugin.EVERY_N_MINUTE))
+  }
+
+  def keepVisibilityCheck(libId: Id[Library]): Int = {
+    db.readWrite { implicit s =>
+      val lib = libraryRepo.get(libId)
+      var total = 0
+      var done = false
+      val LIMIT = 500
+      while (!done) {
+        val keepsToFix = keepRepo.getByLibraryIdAndExcludingVisibility(libId, excludeVisibility = Some(lib.visibility), limit = LIMIT)
+        total += keepsToFix.size
+        keepsToFix.foreach { keep => keepRepo.save(keep.copy(visibility = lib.visibility)) }
+        if (keepsToFix.size < LIMIT) done = true
+      }
+      total
+    }
   }
 }

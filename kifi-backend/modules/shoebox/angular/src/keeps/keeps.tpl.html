@@ -1,4 +1,5 @@
 <div class="kf-main-keeps">
+  <div kf-quick-keep library="library"></div>
   <div class="kf-keep-selection-tools" ng-if="edit.enabled" ng-show="availableKeeps.length > 0">
     <div class="kf-keep-checkbox-wrap">
       <div class="kf-keep-checkbox-icon sprite" ng-class="{'sprite-checkbox-icon': isUnchecked(availableKeeps), 'sprite-checkbox-icon-partial': isMultiChecked(availableKeeps), 'sprite-checkbox-icon-active': selection.isSelectedAll(availableKeeps)}" ng-click="selection.toggleSelectAll(availableKeeps)"></div>

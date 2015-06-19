@@ -1,7 +1,9 @@
 package com.keepit.commanders
 
+import com.keepit.common.core._
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.db.Id
+import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.BasicContact
@@ -22,32 +24,38 @@ object MaybeOrganizationMember {
   }
 }
 
-final case class MemberRemovals(failedToRemove: Set[Id[User]], removed: Set[Id[User]])
-final case class OrganizationFail(status: Int, message: String)
-
 @ImplementedBy(classOf[OrganizationMembershipCommanderImpl])
 trait OrganizationMembershipCommander {
-  def getMemberPermissions(orgId: Id[Organization], userId: Id[User]): Option[Set[OrganizationPermission]]
   def getMembersAndInvitees(orgId: Id[Organization], limit: Limit, offset: Offset, includeInvitees: Boolean): Seq[MaybeOrganizationMember]
-  def modifyMemberships(orgId: Id[Organization], requestorId: Id[User], modifications: Seq[(Id[User], OrganizationRole)]): Either[OrganizationFail, Seq[OrganizationMembership]]
-  def removeMembers(orgId: Id[Organization], requestorId: Id[User], removals: Seq[Id[User]]): MemberRemovals
+
+  def getPermissions(orgId: Id[Organization], userIdOpt: Option[Id[User]]): Set[OrganizationPermission]
+
+  def addMembership(request: OrganizationMembershipAddRequest): Either[OrganizationFail, OrganizationMembershipAddResponse]
+  def modifyMembership(request: OrganizationMembershipModifyRequest): Either[OrganizationFail, OrganizationMembershipModifyResponse]
+  def removeMembership(request: OrganizationMembershipRemoveRequest): Either[OrganizationFail, OrganizationMembershipRemoveResponse]
 }
 
 @Singleton
 class OrganizationMembershipCommanderImpl @Inject() (
     db: Database,
+    organizationRepo: OrganizationRepo,
     organizationMembershipRepo: OrganizationMembershipRepo,
     organizationInviteRepo: OrganizationInviteRepo,
     basicUserRepo: BasicUserRepo) extends OrganizationMembershipCommander with Logging {
 
-  def getMemberPermissions(orgId: Id[Organization], userId: Id[User]): Option[Set[OrganizationPermission]] = {
-    val membershipOpt = db.readOnlyReplica { implicit session =>
-      organizationMembershipRepo.getByOrgIdAndUserId(orgId, userId)
+  def getPermissions(orgId: Id[Organization], userIdOpt: Option[Id[User]]): Set[OrganizationPermission] = db.readOnlyReplica { implicit session =>
+    val org = organizationRepo.get(orgId)
+    userIdOpt match {
+      case None => org.getNonmemberPermissions
+      case Some(userId) =>
+        organizationMembershipRepo.getByOrgIdAndUserId(orgId, userId).map(_.permissions) getOrElse {
+          val invites = organizationInviteRepo.getByOrgIdAndUserId(orgId, userId)
+          if (invites.isEmpty) org.getNonmemberPermissions
+          else org.getNonmemberPermissions + OrganizationPermission.VIEW_ORGANIZATION
+        }
     }
-    membershipOpt.map { _.permissions }
   }
 
-  // Offset and Count to prevent accidental reversal of arguments with same type (Long).
   def getMembersAndInvitees(orgId: Id[Organization], limit: Limit, offset: Offset, includeInvitees: Boolean): Seq[MaybeOrganizationMember] = {
     db.readOnlyMaster { implicit session =>
       val members = organizationMembershipRepo.getbyOrgId(orgId, limit, offset)
@@ -93,7 +101,57 @@ class OrganizationMembershipCommanderImpl @Inject() (
     membersNotIncludingOwner ++ invitedByUserId ++ invitedByEmailAddress
   }
 
-  def modifyMemberships(orgId: Id[Organization], requestorId: Id[User], modifications: Seq[(Id[User], OrganizationRole)]): Either[OrganizationFail, Seq[OrganizationMembership]] = ???
+  private def validRequest(request: OrganizationMembershipRequest)(implicit session: RSession): Boolean = {
+    val requesterOpt = organizationMembershipRepo.getByOrgIdAndUserId(request.orgId, request.requesterId)
+    val targetOpt = organizationMembershipRepo.getByOrgIdAndUserId(request.orgId, request.targetId)
 
-  def removeMembers(orgId: Id[Organization], requestorId: Id[User], removals: Seq[Id[User]]): MemberRemovals = ???
+    requesterOpt exists { requester =>
+      request match {
+        case OrganizationMembershipAddRequest(_, _, _, newRole) =>
+          targetOpt.isEmpty && (newRole <= requester.role)
+
+        case OrganizationMembershipModifyRequest(_, _, _, newRole) =>
+          targetOpt.exists(_.role < requester.role) && (newRole <= requester.role)
+
+        case OrganizationMembershipRemoveRequest(_, _, _) =>
+          targetOpt.exists(_.role < requester.role)
+      }
+    }
+  }
+
+  def addMembership(request: OrganizationMembershipAddRequest): Either[OrganizationFail, OrganizationMembershipAddResponse] = {
+    db.readWrite { implicit session =>
+      if (validRequest(request)) {
+        val org = organizationRepo.get(request.orgId)
+        organizationMembershipRepo.save(org.newMembership(request.targetId, request.newRole))
+        Right(OrganizationMembershipAddResponse(request))
+      } else {
+        Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+      }
+    }
+  }
+
+  def modifyMembership(request: OrganizationMembershipModifyRequest): Either[OrganizationFail, OrganizationMembershipModifyResponse] = {
+    db.readWrite { implicit session =>
+      if (validRequest(request)) {
+        val membership = organizationMembershipRepo.getByOrgIdAndUserId(request.orgId, request.targetId).get
+        val org = organizationRepo.get(request.orgId)
+        organizationMembershipRepo.save(org.modifiedMembership(membership, request.newRole))
+        Right(OrganizationMembershipModifyResponse(request))
+      } else {
+        Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+      }
+    }
+  }
+  def removeMembership(request: OrganizationMembershipRemoveRequest): Either[OrganizationFail, OrganizationMembershipRemoveResponse] = {
+    db.readWrite { implicit session =>
+      if (validRequest(request)) {
+        val membership = organizationMembershipRepo.getByOrgIdAndUserId(request.orgId, request.targetId).get
+        organizationMembershipRepo.deactivate(membership.id.get)
+        Right(OrganizationMembershipRemoveResponse(request))
+      } else {
+        Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+      }
+    }
+  }
 }

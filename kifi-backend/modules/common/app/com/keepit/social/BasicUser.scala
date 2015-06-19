@@ -8,7 +8,9 @@ import com.keepit.common.store.S3UserPictureConfig
 import com.keepit.model._
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
+import scala.annotation.switch
 import scala.concurrent.duration.Duration
+import play.api.Play
 
 trait BasicUserLikeEntity {
   def asBasicUser: Option[BasicUser] = None
@@ -72,19 +74,99 @@ object BasicUser {
   implicit val mapUserIdToBasicUser = mapOfIdToObjectFormat[User, BasicUser]
   implicit val mapUserIdToUserIdSet = mapOfIdToObjectFormat[User, Set[Id[User]]]
 
+  // Public so I can avoid putting it in S3ImageStore, which will die.
+  // Please don't use these a ton:
+
+  def useDefaultImageForUser(user: User): Boolean = {
+    import play.api.Play.current
+
+    val useDefaultPics = Play.maybeApplication.exists(_ => !Play.isTest) // This is probably a bad thing to do in general
+    if (useDefaultPics) {
+      user.pictureName match {
+        case Some(picName) if picName != "0" => false
+        case _ =>
+          true
+      }
+    } else {
+      false
+    }
+  }
+
+  def defaultImageForUserId(userId: Id[User]): String = {
+    // Keep this stable! There are 42 images. If this is changed, treat old user ids differently.
+    // The CDN will cache for 6 hours, so don't expect immediate updates. If you need changes, you can
+    // modify this to be a function from id -> whatever file name you actually need
+    val variant = (userId.id % 42).toInt
+    val choice = (variant: @switch) match {
+      case 0 => "bat"
+      case 1 => "bear"
+      case 2 => "bird"
+      case 3 => "bug"
+      case 4 => "butterfly"
+      case 5 => "camel"
+      case 6 => "cat"
+      case 7 => "cheetah"
+      case 8 => "chicken"
+      case 9 => "koala"
+      case 10 => "cow"
+      case 11 => "crocodile"
+      case 12 => "dinosaur"
+      case 13 => "dog"
+      case 14 => "dove"
+      case 15 => "duck"
+      case 16 => "eagle"
+      case 17 => "elephant"
+      case 18 => "fish"
+      case 19 => "flamingo"
+      case 20 => "fly"
+      case 21 => "fox"
+      case 22 => "frog"
+      case 23 => "giraffe"
+      case 24 => "gorilla"
+      case 25 => "horse"
+      case 26 => "kangaroo"
+      case 27 => "leopard"
+      case 28 => "lion"
+      case 29 => "monkey"
+      case 30 => "mouse"
+      case 31 => "panda"
+      case 32 => "parrot"
+      case 33 => "penguin"
+      case 34 => "sheep"
+      case 35 => "spider"
+      case 36 => "squirrel"
+      case 37 => "starfish"
+      case 38 => "tiger"
+      case 39 => "turtle"
+      case 40 => "wolf"
+      case 41 => "zebra"
+      case _ => "dog" // the cutest
+    }
+    s"/default-pic/${choice}_200.png"
+  }
+
+  private def userToPictureName(user: User): String = {
+    if (useDefaultImageForUser(user)) {
+      val path = defaultImageForUserId(user.id.get)
+      s"../../../..$path"
+    } else {
+      user.pictureName.getOrElse(S3UserPictureConfig.defaultName) + ".jpg"
+    }
+  }
+
   def fromUser(user: User): BasicUser = {
     BasicUser(
       externalId = user.externalId,
       firstName = user.firstName,
       lastName = user.lastName,
-      pictureName = user.pictureName.getOrElse(S3UserPictureConfig.defaultName) + ".jpg",
+      pictureName = userToPictureName(user),
       username = user.username
     )
   }
 }
 
 case class BasicUserUserIdKey(userId: Id[User]) extends Key[BasicUser] {
-  override val version = 12
+  override val version = 13
   val namespace = "basic_user_userid"
   def toKey(): String = userId.id.toString
 }
