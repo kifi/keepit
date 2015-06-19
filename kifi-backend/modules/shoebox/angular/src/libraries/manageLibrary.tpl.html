@@ -80,8 +80,8 @@
                 <table class="manage-lib-subs-table">
                   <form name="slackForm">
                     <tr ng-repeat="subscription in library.subscriptions">
-                      <td class="manage-lib-sub-name-input" ng-keydown="preventNewline($event)"><input class="manage-lib-input manage-lib-sub-input ng-pristine ng-valid" ng-class="{manage-lib-input-error: subscription.$error && subscription.$error.name}" ng-model="subscription.name" type="text" name="name" placeholder="Channel" autocomplete="off" novalidate></td>
-                      <td class="manage-lib-sub-url-input" ng-keydown="preventNewline($event)"><input class="manage-lib-input manage-lib-sub-input ng-pristine ng-valid" ng-class="{manage-lib-input-error: subscription.$error && subscription.$error.url}" ng-model="subscription.info.url" placeholder="Webhook Url" autocomplete="off" novalidate></td>
+                      <td class="manage-lib-sub-name-input" ng-keydown="preventNewline($event)"><input class="manage-lib-input manage-lib-sub-input ng-pristine ng-valid" ng-class="{'manage-lib-input-error': subscription.$error && subscription.$error.name}" ng-model="subscription.name" type="text" name="name" placeholder="Channel" autocomplete="off" novalidate></td>
+                      <td class="manage-lib-sub-url-input" ng-keydown="preventNewline($event)"><input class="manage-lib-input manage-lib-sub-input ng-pristine ng-valid" ng-class="{'manage-lib-input-error': subscription.$error && subscription.$error.url}" ng-model="subscription.info.url" placeholder="Webhook Url" autocomplete="off" novalidate></td>
                       <td><button class="manage-lib-sub-button" ng-if="$index != (library.subscriptions.length-1) || library.subscriptions.length == 3" ng-click="removeSubscription($index)">x</button><button class="manage-lib-sub-button" ng-if="$index == (library.subscriptions.length-1) && (library.subscriptions.length != 3)" ng-click="addSubscription()">+</button></td>
                     </tr>
                   </form>
