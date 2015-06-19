@@ -242,14 +242,14 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
       // on success accept invitations
       db.readWrite { implicit s =>
         // Notify inviters on organization joined.
-        notifyInviterOnLibraryInvitationAcceptance(invitations, userRepo.get(userId), organizationRepo.get(orgId))
+        notifyInviterOnOrganizationInvitationAcceptance(invitations, userRepo.get(userId), organizationRepo.get(orgId))
         invitations.map(_.copy(state = OrganizationInviteStates.ACCEPTED)).foreach(organizationInviteRepo.save(_))
       }
       success
     }
   }
 
-  def notifyInviterOnLibraryInvitationAcceptance(invitesToAlert: Seq[OrganizationInvite], invitee: User, org: Organization): Unit = {
+  def notifyInviterOnOrganizationInvitationAcceptance(invitesToAlert: Seq[OrganizationInvite], invitee: User, org: Organization): Unit = {
     val inviteeImage = s3ImageStore.avatarUrlByUser(invitee)
     val orgImageOpt = organizationAvatarCommander.getBestImage(org.id.get, ProcessedImageSize.Medium.idealSize)
     invitesToAlert foreach { invite =>
