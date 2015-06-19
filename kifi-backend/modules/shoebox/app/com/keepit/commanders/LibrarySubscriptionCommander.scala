@@ -1,19 +1,19 @@
 package com.keepit.commanders
 
 import com.google.inject.{ Singleton, Inject }
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ State, Id }
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.net.{ ClientResponse, DirectUrl, CallTimeouts, HttpClient }
+import com.keepit.common.net.{ NonOKResponseException, ClientResponse, DirectUrl, CallTimeouts, HttpClient }
 import com.keepit.common.concurrent.ReactiveLock
 import com.keepit.model._
 import com.kifi.macros.json
 import play.api.libs.json._
 
 import scala.concurrent.{ Future, ExecutionContext }
-import scala.util.{ Failure, Success }
+import scala.util.{ Try, Failure, Success }
 
 @json
 case class SlackAttachment(fallback: String, text: String)
@@ -60,14 +60,18 @@ class LibrarySubscriptionCommander @Inject() (
           val text = s"<http://www.kifi.com/${keeper.username.value}|${keeper.fullName}?kma=1> just added <${keep.url}|${keepTitle}> to the <http://www.kifi.com/${owner.username.value}/${library.slug.value}?kma=1|${library.name}> library."
           val attachments: Seq[SlackAttachment] = keep.note.map { note => Seq(SlackAttachment(fallback = "", text = "\"" + note + "\" - " + keeper.firstName)) }.getOrElse(Seq.empty)
           val body = BasicSlackMessage(text = text, channel = Some(subscription.name.toLowerCase), attachments = attachments)
+
           val response = httpLock.withLockFuture(client.postFuture(DirectUrl(info.url), Json.toJson(body)))
           log.info(s"sendNewKeepMessage: Slack message request sent to subscription.id=${subscription.id}")
+
           response.onComplete {
-            case Success(res) if res.status != 200 =>
-              log.error("sendNewKeepMessage: Slack message failed to send: status=" + res.status);
-            case Failure(t) =>
-              log.error("sendNewKeepMessage: Future failed: " + t.getMessage);
-            case _ => log.info("sendNewKeepMessage: Slack message succeeded.")
+            case Success(res) =>
+              log.info(s"[sendNewKeepMessage] Slack message to subscriptionId=${subscription.id.get} succeeded.")
+            case Failure(t: NonOKResponseException) =>
+              log.warn(s"[sendNewKeepMessage] Slack info invalid for subscriptionId=${subscription.id.get}, disabling.")
+              db.readWrite { implicit s => librarySubscriptionRepo.save(subscription.withState(LibrarySubscriptionStates.DISABLED)) }
+            case _ =>
+              log.error(s"[sendNewKeepMessage] Slack message request failed.")
           }
           response
         case _ =>
@@ -76,7 +80,7 @@ class LibrarySubscriptionCommander @Inject() (
     }
   }
 
-  def saveSubByLibIdAndKey(libId: Id[Library], subKey: LibrarySubscriptionKey)(implicit session: RWSession): LibrarySubscription = {
+  def saveSubByLibIdAndKey(libId: Id[Library], subKey: LibrarySubscriptionKey, state: State[LibrarySubscription] = LibrarySubscriptionStates.ACTIVE)(implicit session: RWSession): LibrarySubscription = {
     librarySubscriptionRepo.save(LibrarySubscription(libraryId = libId, name = subKey.name, trigger = SubscriptionTrigger.NEW_KEEP, info = subKey.info)) // TODO: extend this to other triggers
   }
 
@@ -87,7 +91,7 @@ class LibrarySubscriptionCommander @Inject() (
   def updateSubsByLibIdAndKey(libId: Id[Library], subKeys: Seq[LibrarySubscriptionKey])(implicit session: RWSession): Unit = {
 
     def hasSameNameOrEndpoint(key: LibrarySubscriptionKey, sub: LibrarySubscription) = sub.name == key.name || sub.info.hasSameEndpoint(key.info)
-    def saveUpdates(currSubs: Seq[LibrarySubscription], subKeys: Seq[LibrarySubscriptionKey])(implicit session: RWSession): Unit = {
+    def saveUpdates(currSubs: => Seq[LibrarySubscription], subKeys: Seq[LibrarySubscriptionKey])(implicit session: RWSession): Unit = {
       subKeys.foreach { key =>
         currSubs.find {
           hasSameNameOrEndpoint(key, _)
@@ -103,19 +107,30 @@ class LibrarySubscriptionCommander @Inject() (
         subKeys.find {
           hasSameNameOrEndpoint(_, currSub)
         } match {
-          case None => librarySubscriptionRepo.save(currSub.copy(state = LibrarySubscriptionStates.INACTIVE)) // currSub not found in subKeys, inactivate it
+          case None => librarySubscriptionRepo.save(currSub.copy(state = LibrarySubscriptionStates.INACTIVE))
           case Some(key) => // currSub has already been updated above, do nothing
         }
       }
     }
 
-    val currSubs = librarySubscriptionRepo.getByLibraryId(libId, excludeStates = Set.empty)
+    val currentSubs = librarySubscriptionRepo.getByLibraryId(libId, excludeStates = Set.empty)
 
-    if (currSubs.isEmpty) {
+    if (currentSubs.isEmpty) {
       saveSubsByLibIdAndKey(libId, subKeys)
     } else {
-      saveUpdates(currSubs, subKeys) // save new subs and changes to existing subs
-      removeDifferences(currSubs, subKeys) // inactivate existing subs that are not in subKeys
+      saveUpdates(currentSubs, subKeys) // save new subs and changes to existing subs
+      removeDifferences(currentSubs, subKeys) // inactivate existing subs that are not in subKeys
+    }
+
+    val newSubs = librarySubscriptionRepo.getByLibraryId(libId)
+
+    currentSubs != newSubs
+  }
+
+  def isValidWebhook(subInfo: SubscriptionInfo): Future[Boolean] = {
+    subInfo match {
+      case s: SlackInfo => httpLock.withLockFuture { httpClient.getFuture(DirectUrl(subInfo.asInstanceOf[SlackInfo].url)).map { _.status == 500 } }
+      case _ => Future.successful(false)
     }
   }
 
