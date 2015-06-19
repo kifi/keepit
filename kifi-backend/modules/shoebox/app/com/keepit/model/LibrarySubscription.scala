@@ -39,7 +39,7 @@ object LibrarySubscription {
 }
 
 object LibrarySubscriptionStates extends States[LibrarySubscription] {
-  val PAUSED = State[LibrarySubscription]("paused")
+  val DISABLED = State[LibrarySubscription]("disabled")
 }
 
 trait SubscriptionInfo {

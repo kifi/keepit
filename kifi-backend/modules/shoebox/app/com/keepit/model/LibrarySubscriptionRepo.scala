@@ -53,15 +53,15 @@ class LibrarySubscriptionRepoImpl @Inject() (val db: DataBaseComponent, val cloc
   def deleteCache(model: LibrarySubscription)(implicit session: RSession): Unit = {}
   def invalidateCache(model: LibrarySubscription)(implicit session: RSession): Unit = {}
 
-  def getByLibraryId(libraryId: Id[Library], excludeStates: Set[State[LibrarySubscription]] = Set(LibrarySubscriptionStates.INACTIVE))(implicit session: RSession): Seq[LibrarySubscription] = {
+  def getByLibraryId(libraryId: Id[Library], excludeStates: Set[State[LibrarySubscription]] = Set(LibrarySubscriptionStates.INACTIVE, LibrarySubscriptionStates.DISABLED))(implicit session: RSession): Seq[LibrarySubscription] = {
     (for (c <- rows if c.libraryId === libraryId && !c.state.inSet(excludeStates)) yield c).list
   }
 
-  def getByLibraryIdAndName(libraryId: Id[Library], name: String, excludeStates: Set[State[LibrarySubscription]] = Set(LibrarySubscriptionStates.INACTIVE))(implicit session: RSession): Option[LibrarySubscription] = {
+  def getByLibraryIdAndName(libraryId: Id[Library], name: String, excludeStates: Set[State[LibrarySubscription]] = Set(LibrarySubscriptionStates.INACTIVE, LibrarySubscriptionStates.DISABLED))(implicit session: RSession): Option[LibrarySubscription] = {
     (for (c <- rows if c.libraryId === libraryId && c.name.trim.toLowerCase === name.trim.toLowerCase && !c.state.inSet(excludeStates)) yield c).firstOption
   }
 
-  def getByLibraryIdAndTrigger(libraryId: Id[Library], trigger: SubscriptionTrigger, excludeStates: Set[State[LibrarySubscription]] = Set(LibrarySubscriptionStates.INACTIVE))(implicit session: RSession): Seq[LibrarySubscription] = {
+  def getByLibraryIdAndTrigger(libraryId: Id[Library], trigger: SubscriptionTrigger, excludeStates: Set[State[LibrarySubscription]] = Set(LibrarySubscriptionStates.INACTIVE, LibrarySubscriptionStates.DISABLED))(implicit session: RSession): Seq[LibrarySubscription] = {
     (for (c <- rows if c.libraryId === libraryId && c.trigger === trigger && !c.state.inSet(excludeStates)) yield c).list
   }
 }
