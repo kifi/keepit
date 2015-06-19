@@ -89,12 +89,6 @@ angular.module('kifi')
             return;
           }
 
-          var lastSub = scope.library.subscriptions.slice(-1)[0];
-
-          if (lastSub.name === '' && lastSub.info.url === '') {
-            scope.library.subscriptions.pop();
-          }
-
           scope.$error = {};
 
           scope.library.subscriptions.forEach(function(sub) {

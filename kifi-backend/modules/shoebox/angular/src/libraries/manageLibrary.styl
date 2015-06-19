@@ -469,7 +469,7 @@ button.manage-lib-delete-button
   overflow-x: hidden
 
 .manage-lib-sub-url-input
-  width: 48%
+  width: 55%
   white-space: nowrap
   overflow-x: hidden
 
@@ -493,6 +493,82 @@ button.manage-lib-delete-button
 
   &:hover
     background-color: #DDDDDD
+
+.manage-lib-sub-remove-x
+  display: block
+  top: 16px
+  right: 18px
+  border-radius: 100%
+  width: 20px
+  height: 20px
+  background-color: #c8ced7
+  cursor: pointer
+  transform: rotate(45deg)
+
+  &:hover
+  &:focus
+    background-color: red
+    opacity: .5
+
+  &:active
+    background-color: #afb5be
+
+  &::before
+  &::after
+    content: ''
+    position: absolute
+    background: #fff
+    font-size: 0
+
+  &::before
+    top: 9px
+    left: 4px
+    right: 4px
+    height: 2px
+
+  &::after
+    left: 9px
+    top: 4px
+    bottom: 4px
+    width: 2px
+
+.manage-lib-sub-add-x
+  display: block
+  top: 16px
+  right: 18px
+  border-radius: 100%
+  width: 20px
+  height: 20px
+  background-color: #c8ced7
+  cursor: pointer
+  transform: rotate(90deg)
+
+  &:hover
+  &:focus
+    background-color: green
+    opacity: .5
+
+  &:active
+    background-color: #afb5be
+
+  &::before
+  &::after
+    content: ''
+    position: absolute
+    background: #fff
+    font-size: 0
+
+  &::before
+    top: 9px
+    left: 4px
+    right: 4px
+    height: 2px
+
+  &::after
+    left: 9px
+    top: 4px
+    bottom: 4px
+    width: 2px
 
 .manage-lib-subs-instruct
   margin-left: 42px

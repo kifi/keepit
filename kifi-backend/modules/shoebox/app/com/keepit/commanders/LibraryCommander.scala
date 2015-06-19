@@ -640,7 +640,7 @@ class LibraryCommanderImpl @Inject() (
         }
       }
 
-      val newSubKeysOpt = modifyReq.subscriptions
+      val newSubKeysOpt = modifyReq.subscriptions.filter(sub => sub == LibrarySubscriptionKey("", SlackInfo("")))
 
       val result = for {
         newName <- validName(modifyReq.name).right
@@ -667,7 +667,7 @@ class LibraryCommanderImpl @Inject() (
           case Some(newSubKeys) => db.readWrite { implicit s =>
             librarySubscriptionCommander.updateSubsByLibIdAndKey(targetLib.id.get, newSubKeys)
           }
-          case None => false
+          case None =>
         }
 
         val lib = db.readWrite { implicit s =>
