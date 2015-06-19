@@ -6,6 +6,7 @@ import com.keepit.abook.model.RichContact
 import com.keepit.commanders.emails.EmailTemplateSender
 import com.keepit.common.core._
 import com.keepit.common.db.Id
+import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
@@ -23,7 +24,7 @@ import scala.concurrent.{ ExecutionContext, Future }
 @ImplementedBy(classOf[OrganizationInviteCommanderImpl])
 trait OrganizationInviteCommander {
   def inviteUsersToOrganization(orgId: Id[Organization], inviterId: Id[User], invitees: Seq[OrganizationMemberInvitation]): Future[Either[OrganizationFail, Seq[(Either[BasicUser, RichContact], OrganizationRole)]]]
-  def acceptInvitation(orgId: Id[Organization], userId: Id[User], authTokenOpt: Option[String] = None): Either[OrganizationFail, OrganizationMembership]
+  def acceptInvitation(orgId: Id[Organization], userId: Id[User]): Either[OrganizationFail, OrganizationMembership]
   def declineInvitation(orgId: Id[Organization], userId: Id[User]): Unit
   // Creates a Universal Invite Link for an organization and inviter. Anyone with the link can join the Organization
   def universalInviteLink(orgId: Id[Organization], inviterId: Id[User], role: OrganizationRole = OrganizationRole.MEMBER, authToken: Option[String] = None): Either[OrganizationFail, (OrganizationInvite, Organization)]
@@ -212,13 +213,15 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     // TODO: handle push notifications to mobile.
   }
 
-  def acceptInvitation(orgId: Id[Organization], userId: Id[User], authTokenOpt: Option[String] = None): Either[OrganizationFail, OrganizationMembership] = {
+  def authorizeInvitation(orgId: Id[Organization], userId: Id[User], authToken: String)(implicit session: RSession): Boolean = {
+    organizationInviteRepo.getByOrgIdAndUserIdAndAuthToken(orgId, userId, authToken).nonEmpty
+  }
+
+  def acceptInvitation(orgId: Id[Organization], userId: Id[User]): Either[OrganizationFail, OrganizationMembership] = {
     val (invitations, membershipOpt) = db.readOnlyReplica { implicit session =>
-      val authInvitations = authTokenOpt.map(authToken => organizationInviteRepo.getByOrgIdAndAuthToken(orgId, authToken)).getOrElse(Seq.empty[OrganizationInvite])
       val userInvitations = organizationInviteRepo.getByOrgAndUserId(orgId, userId)
-      val allInvitations = authInvitations ++ userInvitations
       val existingMembership = organizationMembershipRepo.getByOrgIdAndUserId(orgId, userId)
-      (allInvitations, existingMembership)
+      (userInvitations, existingMembership)
     }
 
     val sortedInvitations = invitations.sortBy(_.role).reverse

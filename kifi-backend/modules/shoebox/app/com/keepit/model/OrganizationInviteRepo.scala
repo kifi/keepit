@@ -11,7 +11,7 @@ import org.joda.time.DateTime
 @ImplementedBy(classOf[OrganizationInviteRepoImpl])
 trait OrganizationInviteRepo extends Repo[OrganizationInvite] {
   def getByOrganization(organizationId: Id[Organization], limit: Limit, offset: Offset, state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit s: RSession): Seq[OrganizationInvite]
-  def getByOrgIdAndAuthToken(organizationId: Id[Organization], authToken: String, state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit s: RSession): Seq[OrganizationInvite]
+  def getByOrgIdAndUserIdAndAuthToken(organizationId: Id[Organization], userId: Id[User], authToken: String, state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit s: RSession): Seq[OrganizationInvite]
   def getByOrgAndUserId(organizationId: Id[Organization], userId: Id[User], state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit s: RSession): Seq[OrganizationInvite]
   def getByInviter(inviterId: Id[User], state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit s: RSession): Seq[OrganizationInvite]
   def getByOrgIdAndUserId(organizationId: Id[Organization], userId: Id[User], state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit s: RSession): Seq[OrganizationInvite]
@@ -81,12 +81,12 @@ class OrganizationInviteRepoImpl @Inject() (val db: DataBaseComponent, val clock
     getByOrganizationCompiled(organizationId, limit.value, offset.value, state).list
   }
 
-  def getMostRecentByOrgAndAuthCompiled = Compiled { (orgId: Column[Id[Organization]], authToken: Column[String], state: Column[State[OrganizationInvite]]) =>
-    (for (row <- rows if row.organizationId === orgId && row.state === state && row.authToken === authToken) yield row).sortBy(_.createdAt desc)
+  def getByOrgIdAndUserIdAndAuthTokenCompiled = Compiled { (orgId: Column[Id[Organization]], userId: Column[Id[User]], authToken: Column[String], state: Column[State[OrganizationInvite]]) =>
+    (for (row <- rows if row.organizationId === orgId && row.state === state && row.userId === userId && row.authToken === authToken) yield row).sortBy(_.createdAt desc)
   }
 
-  def getByOrgIdAndAuthToken(organizationId: Id[Organization], authToken: String, state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit s: RSession): Seq[OrganizationInvite] = {
-    getMostRecentByOrgAndAuthCompiled(organizationId, authToken, state).list
+  def getByOrgIdAndUserIdAndAuthToken(organizationId: Id[Organization], userId: Id[User], authToken: String, state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit s: RSession): Seq[OrganizationInvite] = {
+    getByOrgIdAndUserIdAndAuthTokenCompiled(organizationId, userId, authToken, state).list
   }
 
   def getByOrgAndUserIdCompiled = Compiled { (orgId: Column[Id[Organization]], userId: Column[Id[User]], state: Column[State[OrganizationInvite]]) =>
