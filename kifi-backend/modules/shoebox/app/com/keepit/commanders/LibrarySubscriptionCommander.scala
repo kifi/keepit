@@ -56,7 +56,8 @@ class LibrarySubscriptionCommander @Inject() (
     subscriptions.map { subscription =>
       subscription.info match {
         case info: SlackInfo =>
-          val text = s"<http://www.kifi.com/${keeper.username.value}|${keeper.fullName}> just added <${keep.url}|${keep.title.getOrElse("a keep")}> to the <http://www.kifi.com/${owner.username.value}/${library.slug.value}|${library.name}> library."
+          val keepTitle = if (keep.title.exists(_.nonEmpty)) { keep.title.get } else { "a keep" }
+          val text = s"<http://www.kifi.com/${keeper.username.value}|${keeper.fullName}?kma=1> just added <${keep.url}|${keepTitle}> to the <http://www.kifi.com/${owner.username.value}/${library.slug.value}?kma=1|${library.name}> library."
           val attachments: Seq[SlackAttachment] = keep.note.map { note => Seq(SlackAttachment(fallback = "", text = "\"" + note + "\" - " + keeper.firstName)) }.getOrElse(Seq.empty)
           val body = BasicSlackMessage(text = text, attachments = attachments)
           val response = httpLock.withLockFuture(client.postFuture(DirectUrl(info.url), Json.toJson(body)))
@@ -83,7 +84,7 @@ class LibrarySubscriptionCommander @Inject() (
     subKeys.map { key => saveSubByLibIdAndKey(libId, key) }
   }
 
-  def updateSubsByLibIdAndKey(libId: Id[Library], subKeys: Seq[LibrarySubscriptionKey])(implicit session: RWSession): Boolean = {
+  def updateSubsByLibIdAndKey(libId: Id[Library], subKeys: Seq[LibrarySubscriptionKey])(implicit session: RWSession): Unit = {
 
     def hasSameNameOrEndpoint(key: LibrarySubscriptionKey, sub: LibrarySubscription) = sub.name == key.name || sub.info.hasSameEndpoint(key.info)
     def saveUpdates(currSubs: Seq[LibrarySubscription], subKeys: Seq[LibrarySubscriptionKey])(implicit session: RWSession): Unit = {
@@ -92,7 +93,7 @@ class LibrarySubscriptionCommander @Inject() (
           hasSameNameOrEndpoint(key, _)
         } match {
           case None => saveSubByLibIdAndKey(libId, key) // key represents a new sub, save it
-          case Some(equivalentSub) => librarySubscriptionRepo.save(equivalentSub.copy(name = key.name, info = key.info)) // key represents an old sub, update it
+          case Some(equivalentSub) => librarySubscriptionRepo.save(equivalentSub.copy(name = key.name, info = key.info, state = LibrarySubscriptionStates.ACTIVE))
         }
       }
     }
@@ -108,7 +109,7 @@ class LibrarySubscriptionCommander @Inject() (
       }
     }
 
-    val currSubs = librarySubscriptionRepo.getByLibraryId(libId)
+    val currSubs = librarySubscriptionRepo.getByLibraryId(libId, excludeStates = Set.empty)
 
     if (currSubs.isEmpty) {
       saveSubsByLibIdAndKey(libId, subKeys)
@@ -116,10 +117,6 @@ class LibrarySubscriptionCommander @Inject() (
       saveUpdates(currSubs, subKeys) // save new subs and changes to existing subs
       removeDifferences(currSubs, subKeys) // inactivate existing subs that are not in subKeys
     }
-
-    val newSubs = librarySubscriptionRepo.getByLibraryId(libId)
-
-    currSubs != newSubs
   }
 
 }

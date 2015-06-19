@@ -664,7 +664,15 @@ class LibraryCommanderImpl @Inject() (
         }
 
         val wereSubsChanged = newSubKeysOpt match {
-          case Some(newSubKeys) => db.readWrite { implicit s => librarySubscriptionCommander.updateSubsByLibIdAndKey(targetLib.id.get, newSubKeys) }
+          case Some(newSubKeys) => db.readWrite { implicit s =>
+            val oldSubs = librarySubscriptionRepo.getByLibraryId(targetLib.id.get)
+
+            librarySubscriptionCommander.updateSubsByLibIdAndKey(targetLib.id.get, newSubKeys)
+
+            val newSubs = librarySubscriptionRepo.getByLibraryId(targetLib.id.get)
+
+            oldSubs != newSubs
+          }
           case None => false
         }
 
