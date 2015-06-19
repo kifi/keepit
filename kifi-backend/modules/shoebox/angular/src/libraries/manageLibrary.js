@@ -99,10 +99,14 @@ angular.module('kifi')
 
           scope.library.subscriptions.forEach(function(sub) {
 
-            if (!sub.name) {
+            if (sub.name) { // slack channels can't have uppercase letters
+              sub.name = sub.name.toLowerCase();
+            }
+
+            if (!sub.name || sub.name.includes(' ')) {
               sub.$error = sub.$error || {};
               sub.$error.name = true;
-              scope.$error.general = 'Please enter a channel name for each subscription.';
+              scope.$error.general = 'Please enter a valid Slack channel name for each subscription.';
             }
 
             if (sub.info.url === '' || sub.info.url.match(/https:\/\/hooks.slack.com\/services\/.*\/.*/i) == null) {
