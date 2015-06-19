@@ -29,10 +29,6 @@ trait OrganizationInviteCommander {
   def universalInviteLink(orgId: Id[Organization], inviterId: Id[User], role: OrganizationRole = OrganizationRole.MEMBER, authToken: Option[String] = None): Either[OrganizationFail, (OrganizationInvite, Organization)]
 }
 
-object OrganizationInviteCommander {
-  type UserOrEmailInvitation = Either[Id[User], EmailAddress]
-}
-
 @Singleton
 class OrganizationInviteCommanderImpl @Inject() (db: Database,
     airbrake: AirbrakeNotifier,
