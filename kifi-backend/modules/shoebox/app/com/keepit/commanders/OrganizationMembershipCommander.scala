@@ -101,7 +101,7 @@ class OrganizationMembershipCommanderImpl @Inject() (
     membersNotIncludingOwner ++ invitedByUserId ++ invitedByEmailAddress
   }
 
-  def validRequest(request: OrganizationMembershipRequest)(implicit session: RSession): Boolean = {
+  private def validRequest(request: OrganizationMembershipRequest)(implicit session: RSession): Boolean = {
     val requesterOpt = organizationMembershipRepo.getByOrgIdAndUserId(request.orgId, request.requesterId)
     val targetOpt = organizationMembershipRepo.getByOrgIdAndUserId(request.orgId, request.targetId)
 
