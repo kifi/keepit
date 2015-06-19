@@ -108,7 +108,7 @@ class RoverController @Inject() (
     }
   }
 
-  def dumpTagCloud(libId: Id[Library]) = Action.async { request =>
-    tagCloudCommander.generateTagCloud(libId).map { res => Ok(Json.toJson(res)) }
+  def dumpTagCloud(libId: Id[Library], experiment: Boolean) = Action.async { request =>
+    tagCloudCommander.generateTagCloud(libId, experiment).map { res => Ok(Json.toJson(res)) }
   }
 }

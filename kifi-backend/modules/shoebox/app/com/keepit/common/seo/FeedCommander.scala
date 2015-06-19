@@ -44,7 +44,7 @@ class FeedCommander @Inject() (
     header.andThen(elems &> toBytes)
   }
 
-  final case class RssItem(title: String, description: String, link: String, guid: String, pubDate: DateTime, creator: String, icon: Option[String])
+  case class RssItem(title: String, description: String, link: String, guid: String, pubDate: DateTime, creator: String, icon: Option[String])
 
   private def rssItems(items: Seq[RssItem]): Seq[Elem] = {
     items map { item =>

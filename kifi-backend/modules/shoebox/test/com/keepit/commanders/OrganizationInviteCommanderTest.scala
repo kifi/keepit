@@ -29,7 +29,7 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
         val owner = UserFactory.user().withName("Kiwi", "Kiwi").withEmailAddress("kiwi-test@kifi.com").saved
         userEmailAddressRepo.save(UserEmailAddress(userId = owner.id.get, address = owner.primaryEmail.get))
         val org = organizationRepo.save(Organization(name = "Kifi", ownerId = owner.id.get, handle = None))
-        val membership = organizationMembershipRepo.save(OrganizationMembership(organizationId = org.id.get, userId = owner.id.get, role = OrganizationRole.OWNER))
+        val membership = organizationMembershipRepo.save(org.newMembership(userId = owner.id.get, role = OrganizationRole.OWNER))
         (org, owner, membership)
       }
     }
@@ -74,7 +74,7 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
           val invitees = Seq[OrganizationMemberInvitation](OrganizationMemberInvitation(Left(owner.id.get), OrganizationRole.MEMBER, Some("I just demoted you from owner")))
           val aMemberThatCannotInvite = db.readWrite { implicit session =>
             val bond = UserFactory.user.withName("James", "Bond").saved
-            val membership: OrganizationMembership = OrganizationMembership(organizationId = org.id.get, userId = bond.id.get, role = OrganizationRole.MEMBER)
+            val membership: OrganizationMembership = org.newMembership(userId = bond.id.get, role = OrganizationRole.MEMBER)
             organizationMembershipRepo.save(membership.copy(permissions = (membership.permissions + OrganizationPermission.INVITE_MEMBERS)))
             bond
           }
@@ -94,7 +94,7 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
           val invitees = Seq[OrganizationMemberInvitation]()
           val aMemberThatCannotInvite = db.readWrite { implicit session =>
             val bond = UserFactory.user.withName("James", "Bond").saved
-            organizationMembershipRepo.save(OrganizationMembership(organizationId = org.id.get, userId = bond.id.get, role = OrganizationRole.MEMBER))
+            organizationMembershipRepo.save(org.newMembership(userId = bond.id.get, role = OrganizationRole.MEMBER))
             bond
           }
           val result = Await.result(orgInviteCommander.inviteUsersToOrganization(org.id.get, aMemberThatCannotInvite.id.get, invitees), new FiniteDuration(3, TimeUnit.SECONDS))
@@ -126,14 +126,15 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
           val inviteCommander = inject[OrganizationInviteCommander]
           val inviteRepo = inject[OrganizationInviteRepo]
           val memberRepo = inject[OrganizationMembershipRepo]
-          val orgId = Id[Organization](1)
           val inviterId = Id[User](1)
           val userId = Id[User](2)
-          db.readWrite { implicit session =>
-            memberRepo.save(OrganizationMembership(organizationId = orgId, userId = inviterId, role = OrganizationRole.OWNER))
-            inviteRepo.save(OrganizationInvite(organizationId = orgId, inviterId = inviterId, userId = Some(userId), role = OrganizationRole.MEMBER))
+          val org = db.readWrite { implicit session =>
+            val org = inject[OrganizationRepo].save(Organization(name = "kifi", ownerId = inviterId, handle = None))
+            memberRepo.save(org.newMembership(userId = inviterId, role = OrganizationRole.OWNER))
+            inviteRepo.save(OrganizationInvite(organizationId = org.id.get, inviterId = inviterId, userId = Some(userId), role = OrganizationRole.MEMBER))
+            org
           }
-          inviteCommander.acceptInvitation(orgId, userId, None) must haveClass[Right[OrganizationFail, OrganizationMembership]]
+          inviteCommander.acceptInvitation(org.id.get, userId, None) must haveClass[Right[OrganizationFail, OrganizationMembership]]
         }
       }
 
@@ -142,18 +143,19 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
           val inviteCommander = inject[OrganizationInviteCommander]
           val inviteRepo = inject[OrganizationInviteRepo]
           val memberRepo = inject[OrganizationMembershipRepo]
-          val orgId = Id[Organization](1)
           val inviterId = Id[User](1)
           val userId = Id[User](2)
-          db.readWrite { implicit session =>
-            memberRepo.save(OrganizationMembership(organizationId = orgId, userId = inviterId, role = OrganizationRole.OWNER))
-            inviteRepo.save(OrganizationInvite(organizationId = orgId, inviterId = inviterId, userId = Some(userId), role = OrganizationRole.MEMBER))
-            inviteRepo.save(OrganizationInvite(organizationId = orgId, inviterId = inviterId, userId = Some(userId), role = OrganizationRole.OWNER))
+          val org = db.readWrite { implicit session =>
+            val org = inject[OrganizationRepo].save(Organization(name = "kifi", ownerId = inviterId, handle = None))
+            memberRepo.save(org.newMembership(userId = inviterId, role = OrganizationRole.OWNER))
+            inviteRepo.save(OrganizationInvite(organizationId = org.id.get, inviterId = inviterId, userId = Some(userId), role = OrganizationRole.MEMBER))
+            inviteRepo.save(OrganizationInvite(organizationId = org.id.get, inviterId = inviterId, userId = Some(userId), role = OrganizationRole.OWNER))
+            org
           }
-          inviteCommander.acceptInvitation(orgId, userId, None) must haveClass[Right[OrganizationFail, OrganizationMembership]]
+          inviteCommander.acceptInvitation(org.id.get, userId, None) must haveClass[Right[OrganizationFail, OrganizationMembership]]
 
           db.readOnlyMaster { implicit session =>
-            memberRepo.getByOrgIdAndUserId(orgId, userId).map(_.role) === Some(OrganizationRole.OWNER)
+            memberRepo.getByOrgIdAndUserId(org.id.get, userId).map(_.role) === Some(OrganizationRole.OWNER)
           }
         }
       }
@@ -162,13 +164,14 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
         withDb(modules: _*) { implicit injector =>
           val inviteCommander = inject[OrganizationInviteCommander]
           val memberRepo = inject[OrganizationMembershipRepo]
-          val orgId = Id[Organization](1)
           val inviterId = Id[User](1)
           val userId = Id[User](2)
-          db.readWrite { implicit session =>
-            memberRepo.save(OrganizationMembership(organizationId = orgId, userId = inviterId, role = OrganizationRole.OWNER))
+          val org = db.readWrite { implicit session =>
+            val org = inject[OrganizationRepo].save(Organization(name = "kifi", ownerId = inviterId, handle = None))
+            memberRepo.save(org.newMembership(userId = inviterId, role = OrganizationRole.OWNER))
+            org
           }
-          inviteCommander.acceptInvitation(orgId, userId, None) === Left(OrganizationFail.NO_VALID_INVITATIONS)
+          inviteCommander.acceptInvitation(org.id.get, userId, None) === Left(OrganizationFail.NO_VALID_INVITATIONS)
         }
       }
 
@@ -177,14 +180,15 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
           val inviteCommander = inject[OrganizationInviteCommander]
           val inviteRepo = inject[OrganizationInviteRepo]
           val memberRepo = inject[OrganizationMembershipRepo]
-          val orgId = Id[Organization](1)
           val inviterId = Id[User](1)
           val userId = Id[User](2)
-          db.readWrite { implicit session =>
-            memberRepo.save(OrganizationMembership(organizationId = orgId, userId = inviterId, role = OrganizationRole.MEMBER))
-            inviteRepo.save(OrganizationInvite(organizationId = orgId, inviterId = inviterId, userId = Some(userId), role = OrganizationRole.OWNER))
+          val org = db.readWrite { implicit session =>
+            val org = inject[OrganizationRepo].save(Organization(name = "kifi", ownerId = inviterId, handle = None))
+            memberRepo.save(org.newMembership(userId = inviterId, role = OrganizationRole.MEMBER))
+            inviteRepo.save(OrganizationInvite(organizationId = org.id.get, inviterId = inviterId, userId = Some(userId), role = OrganizationRole.OWNER))
+            org
           }
-          inviteCommander.acceptInvitation(orgId, userId, None) === Left(OrganizationFail.NO_VALID_INVITATIONS)
+          inviteCommander.acceptInvitation(org.id.get, userId, None) === Left(OrganizationFail.NO_VALID_INVITATIONS)
         }
       }
     }
