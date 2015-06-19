@@ -11,71 +11,85 @@ class OrganizationMembershipRepoTest extends Specification with ShoeboxTestInjec
   "Organization Member Repo" should {
     "save members and get them by id" in {
       withDb() { implicit injector =>
+        val orgRepo = inject[OrganizationRepo]
         val orgMemberRepo = inject[OrganizationMembershipRepo]
-        val org = db.readWrite { implicit s =>
-          orgMemberRepo.save(OrganizationMembership(organizationId = Id[Organization](1), userId = Id[User](1), role = OrganizationRole.OWNER))
+
+        val (org, membership) = db.readWrite { implicit s =>
+          val org = orgRepo.save(Organization(ownerId = Id[User](1), name = "Luther Corp.", handle = None))
+          val membership = orgMemberRepo.save(org.newMembership(userId = Id[User](1), role = OrganizationRole.OWNER))
+          (org, membership)
         }
 
         db.readOnlyMaster { implicit s =>
-          orgMemberRepo.get(org.id.get) === org
+          orgMemberRepo.get(membership.id.get) === membership
         }
       }
     }
 
     "get by organization id and user id" in {
       withDb() { implicit injector =>
-        val notUsedOrgId = Id[Organization](10)
-        val organizationId = Id[Organization](1)
+        val orgRepo = inject[OrganizationRepo]
+        val orgMemberRepo = inject[OrganizationMembershipRepo]
+
         val userId = Id[User](1)
 
-        val orgMemberRepo = inject[OrganizationMembershipRepo]
-        val (activeMember, inactiveMember) = db.readWrite { implicit s =>
-          val active = orgMemberRepo.save(OrganizationMembership(organizationId = organizationId, userId = userId, role = OrganizationRole.OWNER))
-          val inactive = orgMemberRepo.save(OrganizationMembership(organizationId = organizationId, userId = userId, role = OrganizationRole.OWNER).withState(OrganizationMembershipStates.INACTIVE))
-          (active, inactive)
+        val (org, activeMember, inactiveMember) = db.readWrite { implicit s =>
+          val org = orgRepo.save(Organization(ownerId = Id[User](1), name = "Luther Corp.", handle = None))
+          val active = orgMemberRepo.save(org.newMembership(userId = userId, role = OrganizationRole.OWNER))
+          val inactive = orgMemberRepo.save(org.newMembership(userId = userId, role = OrganizationRole.OWNER).withState(OrganizationMembershipStates.INACTIVE))
+          (org, active, inactive)
         }
+
+        val orgId = org.id.get
+        val notUsedOrgId = Id[Organization](10)
 
         db.readOnlyMaster { implicit s =>
           orgMemberRepo.getByOrgIdAndUserId(notUsedOrgId, userId) must beNone
-          orgMemberRepo.getByOrgIdAndUserId(organizationId, userId) must equalTo(Some(activeMember))
-          orgMemberRepo.getByOrgIdAndUserId(organizationId, userId, excludeState = Some(OrganizationMembershipStates.ACTIVE)) must beSome(inactiveMember)
+          orgMemberRepo.getByOrgIdAndUserId(orgId, userId) must equalTo(Some(activeMember))
+          orgMemberRepo.getByOrgIdAndUserId(orgId, userId, excludeState = Some(OrganizationMembershipStates.ACTIVE)) must beSome(inactiveMember)
         }
       }
     }
 
     "get by user id" in {
       withDb() { implicit injector =>
+        val orgRepo = inject[OrganizationRepo]
         val orgMemberRepo = inject[OrganizationMembershipRepo]
-        val userId = Id[User](1)
-        val orgIds: IndexedSeq[Id[Organization]] = 5 to 15 map (Id[Organization](_))
-        db.readWrite { implicit session =>
-          orgMemberRepo.save(OrganizationMembership(organizationId = Id(1), role = OrganizationRole.MEMBER, userId = Id[User](2)))
-          for { orgId <- orgIds } {
-            orgMemberRepo.save(OrganizationMembership(organizationId = orgId, role = OrganizationRole.MEMBER, userId = userId))
-          }
+
+        val orgs = db.readWrite { implicit session =>
+          val orgs = for (i <- 1 to 10) yield orgRepo.save(Organization(ownerId = Id[User](1), name = "Luther Corp.", handle = None))
+          for (org <- orgs) orgMemberRepo.save(org.newMembership(role = OrganizationRole.OWNER, userId = Id[User](1)))
+
+          orgMemberRepo.save(orgs(0).newMembership(role = OrganizationRole.MEMBER, userId = Id[User](2)))
+          orgs
         }
 
-        val memberships = db.readOnlyMaster { implicit session => orgMemberRepo.getByUserId(userId) }
-        memberships.length === orgIds.length
-        memberships.map(_.organizationId).diff(orgIds) === List.empty[Id[Organization]]
+        val memberships = db.readOnlyMaster { implicit session => orgMemberRepo.getByUserId(Id[User](1)) }
+        memberships.length === orgs.length
+        memberships.map(_.organizationId).diff(orgs.map(_.id.get)) === List.empty[Id[Organization]]
       }
     }
 
     "get by org id and userIds" in {
       withDb() { implicit injector =>
+        val orgRepo = inject[OrganizationRepo]
         val orgMemberRepo = inject[OrganizationMembershipRepo]
-        val orgId = Id[Organization](1)
-        val otherOrgId = Id[Organization](5)
+
         val userIds: IndexedSeq[Id[User]] = 5 to 10 map (Id[User](_))
-        db.readWrite { implicit session =>
+        val (org, otherOrg) = db.readWrite { implicit session =>
+          val org = orgRepo.save(Organization(ownerId = Id[User](1), name = "Luther Corp.", handle = None))
+          val otherOrg = orgRepo.save(Organization(ownerId = Id[User](2), name = "Superman Corp.", handle = None))
+
           for (userId <- userIds) {
-            orgMemberRepo.save(OrganizationMembership(organizationId = otherOrgId, role = OrganizationRole.MEMBER, userId = userId))
-            orgMemberRepo.save(OrganizationMembership(organizationId = orgId, role = OrganizationRole.MEMBER, userId = userId))
+            orgMemberRepo.save(otherOrg.newMembership(role = OrganizationRole.MEMBER, userId = userId))
+            orgMemberRepo.save(org.newMembership(role = OrganizationRole.MEMBER, userId = userId))
           }
+
+          (org, otherOrg)
         }
 
         val getUserIds = Set(Id[User](5), Id[User](6), Id[User](7))
-        val memberships = db.readOnlyMaster { implicit session => orgMemberRepo.getByOrgIdAndUserIds(orgId, getUserIds) }
+        val memberships = db.readOnlyMaster { implicit session => orgMemberRepo.getByOrgIdAndUserIds(org.id.get, getUserIds) }
         memberships.length === getUserIds.size
         memberships.map(_.userId).diff(getUserIds.toSeq) === List.empty[Id[Organization]]
       }
@@ -83,11 +97,13 @@ class OrganizationMembershipRepoTest extends Specification with ShoeboxTestInjec
 
     "deactivate" in {
       withDb() { implicit injector =>
+        val orgRepo = inject[OrganizationRepo]
         val orgMemberRepo = inject[OrganizationMembershipRepo]
-        val orgId = Id[Organization](1)
+
         val userId = Id[User](1)
         val membership = db.readWrite { implicit session =>
-          orgMemberRepo.save(OrganizationMembership(organizationId = orgId, role = OrganizationRole.MEMBER, userId = userId))
+          val org = orgRepo.save(Organization(ownerId = Id[User](1), name = "Luther Corp.", handle = None))
+          orgMemberRepo.save(org.newMembership(role = OrganizationRole.MEMBER, userId = userId))
         }
 
         val deactivate = db.readWrite { implicit session => orgMemberRepo.deactivate(membership.id.get) }

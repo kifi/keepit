@@ -1,8 +1,9 @@
 package com.keepit.commanders
 
+import com.keepit.common.core._
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.db.Id
-import com.keepit.common.db.slick.DBSession.RSession
+import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.BasicContact
@@ -27,7 +28,7 @@ object MaybeOrganizationMember {
 trait OrganizationMembershipCommander {
   def getMembersAndInvitees(orgId: Id[Organization], limit: Limit, offset: Offset, includeInvitees: Boolean): Seq[MaybeOrganizationMember]
 
-  def getMemberPermissions(orgId: Id[Organization], userId: Id[User]): Option[Set[OrganizationPermission]]
+  def getPermissions(orgId: Id[Organization], userIdOpt: Option[Id[User]]): Set[OrganizationPermission]
 
   def addMembership(request: OrganizationMembershipAddRequest): Either[OrganizationFail, OrganizationMembershipAddResponse]
   def modifyMembership(request: OrganizationMembershipModifyRequest): Either[OrganizationFail, OrganizationMembershipModifyResponse]
@@ -37,15 +38,22 @@ trait OrganizationMembershipCommander {
 @Singleton
 class OrganizationMembershipCommanderImpl @Inject() (
     db: Database,
+    organizationRepo: OrganizationRepo,
     organizationMembershipRepo: OrganizationMembershipRepo,
     organizationInviteRepo: OrganizationInviteRepo,
     basicUserRepo: BasicUserRepo) extends OrganizationMembershipCommander with Logging {
 
-  def getMemberPermissions(orgId: Id[Organization], userId: Id[User]): Option[Set[OrganizationPermission]] = {
-    val membershipOpt = db.readOnlyReplica { implicit session =>
-      organizationMembershipRepo.getByOrgIdAndUserId(orgId, userId)
+  def getPermissions(orgId: Id[Organization], userIdOpt: Option[Id[User]]): Set[OrganizationPermission] = db.readOnlyReplica { implicit session =>
+    val org = organizationRepo.get(orgId)
+    userIdOpt match {
+      case None => org.getNonmemberPermissions
+      case Some(userId) =>
+        organizationMembershipRepo.getByOrgIdAndUserId(orgId, userId).map(_.permissions) getOrElse {
+          val invites = organizationInviteRepo.getByOrgIdAndUserId(orgId, userId)
+          if (invites.isEmpty) org.getNonmemberPermissions
+          else org.getNonmemberPermissions + OrganizationPermission.VIEW_ORGANIZATION
+        }
     }
-    membershipOpt.map { _.permissions }
   }
 
   def getMembersAndInvitees(orgId: Id[Organization], limit: Limit, offset: Offset, includeInvitees: Boolean): Seq[MaybeOrganizationMember] = {
@@ -114,7 +122,8 @@ class OrganizationMembershipCommanderImpl @Inject() (
   def addMembership(request: OrganizationMembershipAddRequest): Either[OrganizationFail, OrganizationMembershipAddResponse] = {
     db.readWrite { implicit session =>
       if (validRequest(request)) {
-        organizationMembershipRepo.save(OrganizationMembership(organizationId = request.orgId, userId = request.targetId, role = request.newRole))
+        val org = organizationRepo.get(request.orgId)
+        organizationMembershipRepo.save(org.newMembership(request.targetId, request.newRole))
         Right(OrganizationMembershipAddResponse(request))
       } else {
         Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
@@ -125,8 +134,9 @@ class OrganizationMembershipCommanderImpl @Inject() (
   def modifyMembership(request: OrganizationMembershipModifyRequest): Either[OrganizationFail, OrganizationMembershipModifyResponse] = {
     db.readWrite { implicit session =>
       if (validRequest(request)) {
-        val oldMembership = organizationMembershipRepo.getByOrgIdAndUserId(request.orgId, request.targetId).get
-        organizationMembershipRepo.save(oldMembership.withRole(request.newRole))
+        val membership = organizationMembershipRepo.getByOrgIdAndUserId(request.orgId, request.targetId).get
+        val org = organizationRepo.get(request.orgId)
+        organizationMembershipRepo.save(org.modifiedMembership(membership, request.newRole))
         Right(OrganizationMembershipModifyResponse(request))
       } else {
         Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
@@ -136,8 +146,8 @@ class OrganizationMembershipCommanderImpl @Inject() (
   def removeMembership(request: OrganizationMembershipRemoveRequest): Either[OrganizationFail, OrganizationMembershipRemoveResponse] = {
     db.readWrite { implicit session =>
       if (validRequest(request)) {
-        val oldMembership = organizationMembershipRepo.getByOrgIdAndUserId(request.orgId, request.targetId).get
-        organizationMembershipRepo.deactivate(oldMembership.id.get)
+        val membership = organizationMembershipRepo.getByOrgIdAndUserId(request.orgId, request.targetId).get
+        organizationMembershipRepo.deactivate(membership.id.get)
         Right(OrganizationMembershipRemoveResponse(request))
       } else {
         Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)

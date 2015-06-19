@@ -12,6 +12,7 @@ import org.joda.time.DateTime
 trait OrganizationInviteRepo extends Repo[OrganizationInvite] {
   def getByOrganization(organizationId: Id[Organization], limit: Limit, offset: Offset, state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit s: RSession): Seq[OrganizationInvite]
   def getByInviter(inviterId: Id[User], state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit s: RSession): Seq[OrganizationInvite]
+  def getByOrgIdAndUserId(organizationId: Id[Organization], userId: Id[User], state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit s: RSession): Seq[OrganizationInvite]
   def getLastSentByOrgIdAndInviterIdAndUserId(organizationId: Id[Organization], inviterId: Id[User], userId: Id[User], includeStates: Set[State[OrganizationInvite]])(implicit s: RSession): Option[OrganizationInvite]
   def getLastSentByOrgIdAndInviterIdAndEmailAddress(organizationId: Id[Organization], inviterId: Id[User], emailAddress: EmailAddress, includeStates: Set[State[OrganizationInvite]])(implicit s: RSession): Option[OrganizationInvite]
 }
@@ -82,6 +83,13 @@ class OrganizationInviteRepoImpl @Inject() (val db: DataBaseComponent, val clock
 
   def getByInviter(inviterId: Id[User], state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit session: RSession): Seq[OrganizationInvite] = {
     getByInviterIdCompiled(inviterId, state).list
+  }
+
+  def getByOrgIdAndUserIdCompiled(organizationId: Column[Id[Organization]], userId: Column[Id[User]], state: State[OrganizationInvite]) = Compiled {
+    for (row <- rows if row.organizationId === organizationId && row.userId === userId && row.state === state) yield row
+  }
+  def getByOrgIdAndUserId(organizationId: Id[Organization], userId: Id[User], state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit s: RSession): Seq[OrganizationInvite] = {
+    getByOrgIdAndUserIdCompiled(organizationId, userId, state).list
   }
 
   def getLastSentByOrgIdAndInviterIdAndUserIdCompiled(organizationId: Column[Id[Organization]], inviterId: Column[Id[User]], userId: Column[Id[User]], includeStates: Set[State[OrganizationInvite]]) = Compiled {
