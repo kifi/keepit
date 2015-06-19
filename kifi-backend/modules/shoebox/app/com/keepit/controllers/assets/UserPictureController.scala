@@ -72,6 +72,10 @@ class UserPictureController @Inject() (
     }
   }
 
+  def hackyRedirectForiOSv3(file: String) = Action { request =>
+    Redirect(s"https://djty7jcqog9qu.cloudfront.net/default-pic/$file")
+  }
+
   def update() = UserAction.async { request =>
     if (request.experiments.contains(ExperimentType.ADMIN)) {
       Future.sequence(for {
