@@ -134,7 +134,7 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
             val invite = inviteRepo.save(OrganizationInvite(organizationId = org.id.get, inviterId = inviterId, userId = Some(userId), role = OrganizationRole.MEMBER))
             (org, invite)
           }
-          inviteCommander.acceptInvitation(org.id.get, userId, Some(invite.authToken)) must haveClass[Right[OrganizationFail, OrganizationMembership]]
+          inviteCommander.acceptInvitation(org.id.get, userId) must haveClass[Right[OrganizationFail, OrganizationMembership]]
         }
       }
 
@@ -152,7 +152,7 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
             inviteRepo.save(OrganizationInvite(organizationId = org.id.get, inviterId = inviterId, userId = Some(userId), role = OrganizationRole.OWNER))
             (org, invite)
           }
-          inviteCommander.acceptInvitation(org.id.get, userId, None) must haveClass[Right[OrganizationFail, OrganizationMembership]]
+          inviteCommander.acceptInvitation(org.id.get, userId) must haveClass[Right[OrganizationFail, OrganizationMembership]]
 
           db.readOnlyMaster { implicit session =>
             memberRepo.getByOrgIdAndUserId(org.id.get, userId).map(_.role) === Some(OrganizationRole.OWNER)
@@ -171,7 +171,7 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
             memberRepo.save(org.newMembership(userId = inviterId, role = OrganizationRole.OWNER))
             org
           }
-          inviteCommander.acceptInvitation(org.id.get, userId, None) === Left(OrganizationFail.NO_VALID_INVITATIONS)
+          inviteCommander.acceptInvitation(org.id.get, userId) === Left(OrganizationFail.NO_VALID_INVITATIONS)
         }
       }
 
@@ -188,7 +188,7 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
             inviteRepo.save(OrganizationInvite(organizationId = org.id.get, inviterId = inviterId, userId = Some(userId), role = OrganizationRole.OWNER))
             org
           }
-          inviteCommander.acceptInvitation(org.id.get, userId, None) === Left(OrganizationFail.NO_VALID_INVITATIONS)
+          inviteCommander.acceptInvitation(org.id.get, userId) === Left(OrganizationFail.NO_VALID_INVITATIONS)
         }
       }
     }
