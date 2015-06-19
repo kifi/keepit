@@ -119,5 +119,26 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
         }
       }
     }
+
+    "convert email invitations to userId" in {
+      withDb(modules: _*) { implicit injector =>
+        val orgInviteRepo = inject[OrganizationInviteRepo]
+        db.readWrite { implicit session =>
+          for (i <- 1 to 20) yield {
+            orgInviteRepo.save(OrganizationInvite(organizationId = Id[Organization](1), inviterId = Id[User](1), role = OrganizationRole.MEMBER, emailAddress = Some(EmailAddress("kiwi@kifi.com"))))
+          }
+        }
+
+        val orgInviteCommander = inject[OrganizationInviteCommander]
+        orgInviteCommander.convertPendingInvites(EmailAddress("kiwi@kifi.com"), Id[User](42))
+        val invites = db.readOnlyMaster { implicit session =>
+          orgInviteRepo.getByEmailAddress(EmailAddress("kiwi@kifi.com"))
+        }
+        invites.foreach { invite =>
+          invite.userId === Some(Id[User](42))
+        }
+        invites.length === 20
+      }
+    }
   }
 }

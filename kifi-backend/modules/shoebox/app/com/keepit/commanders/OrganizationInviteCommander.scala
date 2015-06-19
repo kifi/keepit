@@ -22,6 +22,7 @@ import scala.concurrent.{ ExecutionContext, Future }
 
 @ImplementedBy(classOf[OrganizationInviteCommanderImpl])
 trait OrganizationInviteCommander {
+  def convertPendingInvites(emailAddress: EmailAddress, userId: Id[User]): Unit
   def inviteUsersToOrganization(orgId: Id[Organization], inviterId: Id[User], invitees: Seq[OrganizationMemberInvitation]): Future[Either[OrganizationFail, Seq[(Either[BasicUser, RichContact], OrganizationRole)]]]
   def acceptInvitation(orgId: Id[Organization], userId: Id[User], authToken: Option[String] = None): Either[OrganizationFail, (Organization, OrganizationMembership)]
   def declineInvitation(orgId: Id[Organization], userId: Id[User]): Unit
@@ -45,6 +46,14 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     s3ImageStore: S3ImageStore,
     userEmailAddressRepo: UserEmailAddressRepo,
     emailTemplateSender: EmailTemplateSender) extends OrganizationInviteCommander with Logging {
+
+  def convertPendingInvites(emailAddress: EmailAddress, userId: Id[User]): Unit = {
+    db.readWrite { implicit s =>
+      organizationInviteRepo.getByEmailAddress(emailAddress) foreach { invitation =>
+        organizationInviteRepo.save(invitation.copy(userId = Some(userId)))
+      }
+    }
+  }
 
   def inviteUsersToOrganization(orgId: Id[Organization], inviterId: Id[User], invitees: Seq[OrganizationMemberInvitation]): Future[Either[OrganizationFail, Seq[(Either[BasicUser, RichContact], OrganizationRole)]]] = {
     val inviterMembershipOpt = db.readOnlyMaster { implicit session =>
