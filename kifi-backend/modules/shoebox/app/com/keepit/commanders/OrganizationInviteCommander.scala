@@ -5,6 +5,7 @@ import com.keepit.abook.ABookServiceClient
 import com.keepit.abook.model.RichContact
 import com.keepit.commanders.emails.EmailTemplateSender
 import com.keepit.common.core._
+import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
@@ -15,9 +16,10 @@ import com.keepit.common.mail.template.EmailToSend
 import com.keepit.common.mail.template.TemplateOptions._
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.S3ImageStore
-import com.keepit.eliza.ElizaServiceClient
+import com.keepit.eliza.{ UserPushNotificationCategory, PushNotificationExperiment, ElizaServiceClient }
 import com.keepit.model._
 import com.keepit.social.BasicUser
+import play.api.libs.json.Json
 
 import scala.concurrent.{ ExecutionContext, Future }
 
@@ -45,7 +47,10 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     elizaClient: ElizaServiceClient,
     s3ImageStore: S3ImageStore,
     userEmailAddressRepo: UserEmailAddressRepo,
-    emailTemplateSender: EmailTemplateSender) extends OrganizationInviteCommander with Logging {
+    emailTemplateSender: EmailTemplateSender,
+    kifiInstallationCommander: KifiInstallationCommander,
+    organizationAvatarCommander: OrganizationAvatarCommander,
+    implicit val publicIdConfig: PublicIdConfiguration) extends OrganizationInviteCommander with Logging {
 
   def inviteUsersToOrganization(orgId: Id[Organization], inviterId: Id[User], invitees: Seq[OrganizationMemberInvitation]): Future[Either[OrganizationFail, Seq[(Either[BasicUser, RichContact], OrganizationRole)]]] = {
     val inviterMembershipOpt = db.readOnlyMaster { implicit session =>
@@ -236,10 +241,44 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     }).right.map { success =>
       // on success accept invitations
       db.readWrite { implicit s =>
-        // TODO: notify inviters about invitee accepting invitation.
+        // Notify inviters on organization joined.
+        notifyInviterOnLibraryInvitationAcceptance(invitations, userRepo.get(userId), organizationRepo.get(orgId))
         invitations.map(_.copy(state = OrganizationInviteStates.ACCEPTED)).foreach(organizationInviteRepo.save(_))
       }
       success
+    }
+  }
+
+  def notifyInviterOnLibraryInvitationAcceptance(invitesToAlert: Seq[OrganizationInvite], invitee: User, org: Organization): Unit = {
+    val inviteeImage = s3ImageStore.avatarUrlByUser(invitee)
+    val orgImageOpt = organizationAvatarCommander.getBestImage(org.id.get, ProcessedImageSize.Medium.idealSize)
+    invitesToAlert foreach { invite =>
+      val title = s"${invitee.firstName} has joined ${org.name}"
+      val inviterId = invite.inviterId
+      elizaClient.sendGlobalNotification( //push sent
+        userIds = Set(inviterId),
+        title = title,
+        body = s"You invited ${invitee.fullName} to join ${org.name}.",
+        linkText = s"See ${invitee.firstName}’s profile",
+        linkUrl = s"https://www.kifi.com/${invitee.username.value}",
+        imageUrl = inviteeImage,
+        sticky = false,
+        category = NotificationCategory.User.ORGANIZATION_JOINED,
+        extra = Some(Json.obj(
+          "member" -> BasicUser.fromUser(invitee),
+          "organization" -> Json.toJson(OrganizationNotificationInfo.fromOrganization(org, orgImageOpt))
+        ))
+      ) map { _ =>
+          val canSendPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(inviterId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
+          if (canSendPush) {
+            elizaClient.sendUserPushNotification(
+              userId = inviterId,
+              message = title,
+              recipient = invitee,
+              pushNotificationExperiment = PushNotificationExperiment.Experiment1,
+              category = UserPushNotificationCategory.NewOrganizationMember)
+          }
+        }
     }
   }
 
