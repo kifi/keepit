@@ -1,4 +1,5 @@
 .manage-library
+
   .dialog-content
     padding-bottom: 0
 
@@ -61,7 +62,6 @@
 
   .dialog-body
     padding: 0
-    overflow: hidden
 
   .dialog-text
     padding: 0 35px
@@ -121,6 +121,14 @@ textarea.manage-lib-input
 
   &:focus
     border: 1px solid blueColor
+
+.manage-lib-input-error
+  border: 1px solid redColor
+  color: redColor
+
+.manage-lib-sub-error-msg
+  text-color: red
+  margin-left: 20px
 
 .manage-lib-slug
   display: table
@@ -370,7 +378,6 @@ button.manage-lib-delete-button
 .manage-lib-content
   position: relative
   height: 400px
-  overflow: hidden
 
 .manage-lib-content-subs
   position: relative
@@ -386,35 +393,87 @@ button.manage-lib-delete-button
   &.ng-hide
     margin-left: -600px
 
+.manage-lib-integrations-title
+  font-weight: 700
+  color: black
+  margin-left: 5px
+
+.manage-lib-subs-heading
+  margin-left: 27px
+  font-size: 14px
+  font-weight: 700
+
+.manage-lib-integrations-title-wrapper
+  display: block
+  color: textBlackColor
+  font-size: 15px
+  padding: 5px 0
+  margin-top: 10px
+  outline: 0
+  outline-style: none
+
+.manage-lib-integrations-arrow
+  position: relative
+  overflow: hidden
+  display: inline-block
+  width: 13px
+  height: 13px
+  vertical-align: middle
+  top: -1px
+
+  &.active
+    transform: rotate(90deg)
+    transition: all 0.8s
+
+    &:before
+      background-color: blueColor
+      transition: all 0.8s
+
+.manage-lib-integrations-arrow:before
+  content: ''
+  background-color: textGreyColor
+  transform: rotate(45deg)
+  width: 9px
+  height: 9px
+  position: absolute
+  top: 2px
+  left: 0
+
+.manage-lib-integrations-arrow:after
+  content: ''
+  position: absolute
+  top: 0
+  left: 0
+  width: 31%
+  height: 100%
+  background-color: #fff
+
 .manage-lib-subs-table
   width: 120%
-  margin-left: 30px
+  margin-left: 25px
   table-layout: fixed
   border-collapse: separate
   border-spacing: 10px
 
-
-
 .manage-lib-sub-url
-  padding-left: 10px
+  padding-left: 5px
   width: 48%
-  overflow: hidden
   white-space: nowrap
 
 .manage-lib-sub-name
-  padding-left: 10px
+  padding-left: 5px
   width: 20%
-  overflow: hidden
   white-space: nowrap
 
 .manage-lib-sub-name-input
   width: 20%
-  overflow: hidden
   white-space: nowrap
+  overflow-x: hidden
 
 .manage-lib-sub-url-input
   width: 48%
-  overflow: hidden
+  white-space: nowrap
+  overflow-x: hidden
 
 .manage-lib-sub-add-button
   border-radius: 20px
@@ -431,17 +490,14 @@ button.manage-lib-delete-button
   font-size: 13px
   background-color: #EEEEEE
   opacity: .85
+  padding: 2px 5px 2px 5px
+  margin: 2px 2px 2px 2px
 
   &:hover
     background-color: #DDDDDD
 
-.manage-lib-subs-error
-  color: red
-  width: 60%
-  overflow: hidden
-
 .manage-lib-subs-instruct
-  margin-left: 35px
+  margin-left: 42px
   color: gray
 
 
