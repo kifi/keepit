@@ -89,20 +89,18 @@ angular.module('kifi')
             return;
           }
 
-          var lastSub = scope.library.subscriptions.slice(-1)[0];
-
-          if (lastSub.name === '' && lastSub.info.url === '') {
-            scope.library.subscriptions.pop();
-          }
-
           scope.$error = {};
 
           scope.library.subscriptions.forEach(function(sub) {
 
-            if (!sub.name) {
+            if (sub.name) { // slack channels can't have uppercase letters
+              sub.name = sub.name.toLowerCase();
+            }
+
+            if (!sub.name || sub.name.includes(' ')) {
               sub.$error = sub.$error || {};
               sub.$error.name = true;
-              scope.$error.general = 'Please enter a channel name for each subscription.';
+              scope.$error.general = 'Please enter a valid Slack channel name for each subscription.';
             }
 
             if (sub.info.url === '' || sub.info.url.match(/https:\/\/hooks.slack.com\/services\/.*\/.*/i) == null) {

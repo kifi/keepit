@@ -56,9 +56,10 @@ class LibrarySubscriptionCommanderTest extends Specification with ShoeboxTestInj
           LibrarySubscriptionKey("competitors3", SlackInfo("http://www.fakewebhook3.com")))
 
         val (newSubs, didSubsChange) = db.readWrite { implicit s =>
-          val didSubsChange = libSubCommander.updateSubsByLibIdAndKey(library.id.get, subKeys)
+          val oldSubs = librarySubscriptionRepo.getByLibraryId(library.id.get)
+          libSubCommander.updateSubsByLibIdAndKey(library.id.get, subKeys)
           val newSubs = librarySubscriptionRepo.getByLibraryId(library.id.get)
-          (newSubs, didSubsChange)
+          (newSubs, oldSubs != newSubs)
         }
 
         didSubsChange === true
