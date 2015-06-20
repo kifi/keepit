@@ -22,7 +22,7 @@ class GratificationCommander @Inject() (
     userConnectionRepo: UserConnectionRepo,
     userRepo: UserRepo,
     localUserExperimentCommander: LocalUserExperimentCommander,
-    gratEmailSender: GratificationEmailSender,
+    emailSenderProvider: EmailSenderProvider,
     heimdal: HeimdalServiceClient) extends Logging {
 
   private val NUM_WEEKS_BACK = 1
@@ -74,7 +74,7 @@ class GratificationCommander @Inject() (
     (0 to numBatches).foreach { batchNum =>
       val userIds: Seq[Id[User]] = generateUserBatch(batchNum).filter(filter)
       val fGratData: Future[Seq[GratificationData]] = getEligibleGratDatas(userIds)
-      fGratData.foreach { log.info(s"Grat Data batch retrieval succeeded: batchNum=$batchNum, sending emails"); gratEmailSender.sendToUsersWithData(_, sendTo) }
+      fGratData.foreach { log.info(s"Grat Data batch retrieval succeeded: batchNum=$batchNum, sending emails"); emailSenderProvider.gratification.sendToUsersWithData(_, sendTo) }
       fGratData.onFailure {
         case t: Throwable => log.error(s"Grat Data batch retrieval failed: batchNum=$batchNum")
       }
