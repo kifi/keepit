@@ -29,11 +29,11 @@ object GratificationEmailSender {
 
 class GratificationEmailSender @Inject() (
     emailTemplateSender: EmailTemplateSender,
-    gratificationCommander: GratificationCommander,
     db: Database,
     userConnectionRepo: UserConnectionRepo,
     userRepo: UserRepo,
     localUserExperimentCommander: LocalUserExperimentCommander,
+    gratificationCommander: GratificationCommander,
     protected val airbrake: AirbrakeNotifier) extends Logging {
 
   val sendEmailLock = new ReactiveLock(5)
