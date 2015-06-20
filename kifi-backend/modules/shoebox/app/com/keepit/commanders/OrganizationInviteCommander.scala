@@ -230,7 +230,7 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     }
 
     val sortedInvitations = invitations.sortBy(_.role).reverse
-    (membershipOpt match {
+    val updatedMembership: Either[OrganizationFail, OrganizationMembership] = membershipOpt match {
       case Some(membership) => Right(membership) // already a member
       case None => // new membership
         val addRequests = sortedInvitations.map(currentInvitation => OrganizationMembershipAddRequest(orgId, currentInvitation.inviterId, userId, currentInvitation.role))
@@ -238,7 +238,8 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
           .find(_.isRight)
         firstSuccess.map(_.right.map(_.membership))
           .getOrElse(Left(OrganizationFail.NO_VALID_INVITATIONS))
-    }).right.map { success =>
+    }
+    updatedMembership.right.map { success =>
       // on success accept invitations
       db.readWrite { implicit s =>
         // Notify inviters on organization joined.
