@@ -55,7 +55,7 @@ class UserPictureController @Inject() (
           imageStore.getPictureUrl(optSize, user, pictureName).map(r => Try(r).toOption)
         }.getOrElse {
           imageStore.getPictureUrl(optSize, user, "0").map(r => Try(r).toOption)
-        }).getOrElse(Future.successful(Some("0.jpg")))
+        }).getOrElse(Future.successful(Some("/0.jpg")))
     }.getOrElse(Future.successful(None)).map {
       case Some(imgUrl) if userOpt.isDefined && (imgUrl.endsWith("/0.jpg") || imgUrl.endsWith("ghost.200.png")) =>
         // We may be redirecting to a default image instead.
