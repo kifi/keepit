@@ -41,7 +41,7 @@ class OrganizationAvatarRepoTest extends Specification with ShoeboxTestInjector 
           }
         }
 
-        val avatarsForOrganization = db.readOnlyMaster { implicit s => orgAvatarRepo.getByOrganization(orgId) }
+        val avatarsForOrganization = db.readOnlyMaster { implicit s => orgAvatarRepo.getByOrganizationId(orgId) }
         avatarsForOrganization.length === range.length
         avatarsForOrganization.map(_.width).diff(range) === List.empty[Int]
       }
