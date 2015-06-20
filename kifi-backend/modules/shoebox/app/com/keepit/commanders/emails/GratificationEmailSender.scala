@@ -3,6 +3,7 @@ package com.keepit.commanders.emails
 import com.google.inject.Inject
 import com.keepit.commanders.LocalUserExperimentCommander
 import com.keepit.commanders.emails.GratificationEmailSender.SenderInfo
+import com.keepit.common.concurrent.ReactiveLock
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -35,9 +36,11 @@ class GratificationEmailSender @Inject() (
     localUserExperimentCommander: LocalUserExperimentCommander,
     protected val airbrake: AirbrakeNotifier) extends Logging {
 
+  val sendEmailLock = new ReactiveLock(5)
+
   def apply(userId: Id[User], toAddress: Option[EmailAddress]) = sendToUser(userId, toAddress)
 
-  def sendToUsersWithData(gratDatas: Seq[GratificationData], toAddress: Option[EmailAddress]): Seq[Future[ElectronicMail]] = {
+  def sendToUsersWithData(gratDatas: Seq[GratificationData], toAddress: Option[EmailAddress] = None): Seq[Future[ElectronicMail]] = {
     gratDatas.map { gratData =>
       val emailToSend = EmailToSend(
         from = SenderInfo.ADDR,
@@ -50,11 +53,11 @@ class GratificationEmailSender @Inject() (
         templateOptions = Map("layout" -> CustomLayout),
         tips = Seq.empty
       )
-      emailTemplateSender.send(emailToSend)
+      sendEmailLock.withLockFuture { emailTemplateSender.send(emailToSend) }
     }
   }
 
-  def sendToUser(userId: Id[User], toAddress: Option[EmailAddress]): Future[ElectronicMail] = {
+  def sendToUser(userId: Id[User], toAddress: Option[EmailAddress] = None): Future[ElectronicMail] = {
 
     val fGratData = gratificationCommander.getGratData(userId)
 
