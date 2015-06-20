@@ -10,11 +10,15 @@ import org.joda.time.DateTime
 
 @ImplementedBy(classOf[OrganizationAvatarRepoImpl])
 trait OrganizationAvatarRepo extends Repo[OrganizationAvatar] {
-  def getByOrganization(organizationId: Id[Organization])(implicit session: RSession): Seq[OrganizationAvatar]
+  def getByOrganizationId(organizationId: Id[Organization], state: State[OrganizationAvatar] = OrganizationAvatarStates.ACTIVE)(implicit s: RSession): Seq[OrganizationAvatar]
+  def getByOrganizationIds(organizationIds: Set[Id[Organization]])(implicit session: RSession): Map[Id[Organization], Seq[OrganizationAvatar]]
 }
 
 @Singleton
-class OrganizationAvatarRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) extends OrganizationAvatarRepo with DbRepo[OrganizationAvatar] {
+class OrganizationAvatarRepoImpl @Inject() (
+    organizationAvatarCache: OrganizationAvatarCache,
+    val db: DataBaseComponent,
+    val clock: Clock) extends OrganizationAvatarRepo with DbRepo[OrganizationAvatar] {
   override def deleteCache(orgLogo: OrganizationAvatar)(implicit session: RSession) {}
   override def invalidateCache(orgLogo: OrganizationAvatar)(implicit session: RSession) {}
 
@@ -80,11 +84,24 @@ class OrganizationAvatarRepoImpl @Inject() (val db: DataBaseComponent, val clock
   def table(tag: Tag) = new OrganizationAvatarTable(tag)
   initTable()
 
-  def getByOrganizationCompiled = Compiled { (organizationId: Column[Id[Organization]]) =>
-    (for (row <- rows if row.organizationId === organizationId) yield row)
+  def getByOrganizationIdCompiled = Compiled { (orgId: Column[Id[Organization]], state: Column[State[OrganizationAvatar]]) =>
+    for { row <- rows if row.organizationId === orgId && row.state === state } yield row
   }
 
-  def getByOrganization(organizationId: Id[Organization])(implicit session: RSession): Seq[OrganizationAvatar] = {
-    getByOrganizationCompiled(organizationId).list
+  def getByOrganizationId(organizationId: Id[Organization], state: State[OrganizationAvatar] = OrganizationAvatarStates.ACTIVE)(implicit s: RSession): Seq[OrganizationAvatar] = {
+    organizationAvatarCache.getOrElse(OrganizationAvatarKey(organizationId)) {
+      getByOrganizationIdCompiled(organizationId, state).list
+    }
+  }
+
+  def getByOrganizationIds(orgIds: Set[Id[Organization]])(implicit session: RSession): Map[Id[Organization], Seq[OrganizationAvatar]] = {
+    val keys = orgIds.map(OrganizationAvatarKey)
+    organizationAvatarCache.bulkGetOrElse(keys) { missingKeys =>
+      val missingOrgIds = missingKeys.map(_.organizationId)
+      val missingImages = (for (r <- rows if r.organizationId.inSet(missingOrgIds) && r.state =!= OrganizationAvatarStates.INACTIVE) yield r).list
+      missingImages.groupBy(_.organizationId).map { case (orgId, avatars) => OrganizationAvatarKey(orgId) -> avatars }
+    } map {
+      case (key, images) => key.organizationId -> images
+    }
   }
 }
