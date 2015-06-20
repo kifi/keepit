@@ -52,9 +52,9 @@ class UserPictureController @Inject() (
       case user if Set(UserStates.ACTIVE, UserStates.PENDING, UserStates.INCOMPLETE_SIGNUP).contains(user.state) =>
         val optSize = Some(size)
         user.pictureName.map { pictureName =>
-          imageStore.getPictureUrl(optSize, user, pictureName).map(Some.apply)
+          imageStore.getPictureUrl(optSize, user, pictureName).map(r => Try(r).toOption)
         }.getOrElse {
-          imageStore.getPictureUrl(optSize, user, "0").map(Some.apply)
+          imageStore.getPictureUrl(optSize, user, "0").map(r => Try(r).toOption)
         }
     }.getOrElse(Future.successful(None)).map {
       case Some(imgUrl) if userOpt.isDefined && (imgUrl.endsWith("/0.jpg") || imgUrl.endsWith("ghost.200.png")) =>
