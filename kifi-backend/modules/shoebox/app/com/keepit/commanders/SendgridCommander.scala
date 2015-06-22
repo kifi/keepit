@@ -161,7 +161,7 @@ class SendgridCommander @Inject() (
       userEmail <- email.to.headOption
       emailAddr <- emailAddressRepo.getByAddressOpt(userEmail)
       if !emailAddr.verified
-    } yield {
+    } {
       log.info(s"verifying email($userEmail) from SendGrid event($event)")
       userEmailAddressCommander.saveAsVerified(emailAddr)
     }
