@@ -6,6 +6,7 @@ import com.keepit.abook.model.RichContact
 import com.keepit.commanders.emails.EmailTemplateSender
 import com.keepit.common.core._
 import com.keepit.common.db.Id
+import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
@@ -22,7 +23,7 @@ import scala.concurrent.{ ExecutionContext, Future }
 
 @ImplementedBy(classOf[OrganizationInviteCommanderImpl])
 trait OrganizationInviteCommander {
-  def convertPendingInvites(emailAddress: EmailAddress, userId: Id[User]): Unit
+  def convertPendingInvites(emailAddress: EmailAddress, userId: Id[User])(implicit session: RWSession): Unit
   def inviteUsersToOrganization(orgId: Id[Organization], inviterId: Id[User], invitees: Seq[OrganizationMemberInvitation]): Future[Either[OrganizationFail, Seq[(Either[BasicUser, RichContact], OrganizationRole)]]]
   def acceptInvitation(orgId: Id[Organization], userId: Id[User], authToken: Option[String] = None): Either[OrganizationFail, (Organization, OrganizationMembership)]
   def declineInvitation(orgId: Id[Organization], userId: Id[User]): Unit
@@ -47,11 +48,9 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     userEmailAddressRepo: UserEmailAddressRepo,
     emailTemplateSender: EmailTemplateSender) extends OrganizationInviteCommander with Logging {
 
-  def convertPendingInvites(emailAddress: EmailAddress, userId: Id[User]): Unit = {
-    db.readWrite { implicit s =>
-      organizationInviteRepo.getByEmailAddress(emailAddress) foreach { invitation =>
-        organizationInviteRepo.save(invitation.copy(userId = Some(userId)))
-      }
+  def convertPendingInvites(emailAddress: EmailAddress, userId: Id[User])(implicit session: RWSession): Unit = {
+    organizationInviteRepo.getByEmailAddress(emailAddress) foreach { invitation =>
+      organizationInviteRepo.save(invitation.copy(userId = Some(userId)))
     }
   }
 

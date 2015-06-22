@@ -130,7 +130,9 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
         }
 
         val orgInviteCommander = inject[OrganizationInviteCommander]
-        orgInviteCommander.convertPendingInvites(EmailAddress("kiwi@kifi.com"), Id[User](42))
+        db.readWrite { implicit session =>
+          orgInviteCommander.convertPendingInvites(EmailAddress("kiwi@kifi.com"), Id[User](42))
+        }
         val invites = db.readOnlyMaster { implicit session =>
           orgInviteRepo.getByEmailAddress(EmailAddress("kiwi@kifi.com"))
         }

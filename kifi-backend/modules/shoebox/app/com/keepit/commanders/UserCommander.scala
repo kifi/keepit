@@ -113,6 +113,7 @@ class UserCommander @Inject() (
     libraryCommander: LibraryCommander,
     libraryMembershipRepo: LibraryMembershipRepo,
     friendStatusCommander: FriendStatusCommander,
+    userEmailAddressCommander: UserEmailAddressCommander,
     emailSender: EmailSenderProvider,
     usernameCache: UsernameCache,
     userExperimentRepo: UserExperimentRepo,
@@ -637,7 +638,7 @@ class UserCommander @Inject() (
         log.info(s"creating new email $emailAddress for user $userId")
         val user = userRepo.get(userId)
         if (user.primaryEmail.isEmpty) userRepo.save(user.copy(primaryEmail = Some(emailAddress)))
-        emailRepo.save(UserEmailAddress(userId = userId, address = emailAddress, state = UserEmailAddressStates.VERIFIED))
+        userEmailAddressCommander.saveAsVerified(UserEmailAddress(userId = userId, address = emailAddress))
       }
     }
   }

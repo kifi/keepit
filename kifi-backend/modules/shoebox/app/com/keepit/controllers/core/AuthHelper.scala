@@ -248,7 +248,9 @@ class AuthHelper @Inject() (
 
     val uri = intent match {
       case AutoFollowLibrary(libId, authTokenOpt) =>
-        libraryInviteCommander.convertPendingInvites(emailAddress, user.id.get)
+        db.readWrite { implicit session =>
+          libraryInviteCommander.convertPendingInvites(emailAddress, user.id.get)
+        }
         authCommander.autoJoinLib(user.id.get, libId, authTokenOpt)
         val url = Library.decodePublicId(libId).map { libraryId =>
           db.readOnlyMaster { implicit session =>
