@@ -19,6 +19,7 @@ import play.api.libs.functional.syntax._
 import com.kifi.franz.SQSQueue
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.util.matching.Regex
+import scala.util.Try
 
 private case object FetchNewDiscussionReplies
 
@@ -64,17 +65,24 @@ class MailDiscussionReceiverActor @Inject() (
         val unrecognized = store.getFolder("Unrecognized")
         val messages = inbox.getMessages()
         for (message <- messages) {
-          messageParser.getInfo(message) match {
-            case Some(mailNotificationReply) => {
-              log.info("Received valid message")
-              mailNotificationReplyQueue.send(mailNotificationReply)
+          Try {
+            messageParser.getInfo(message) match {
+              case Some(mailNotificationReply) => {
+                log.info("Received valid message")
+                mailNotificationReplyQueue.send(mailNotificationReply)
+              }
+              case None => {
+                log.info("Received invalid message")
+                inbox.copyMessages(Array(message), unrecognized)
+              }
             }
-            case None => {
-              log.info("Received invalid message")
-              inbox.copyMessages(Array(message), unrecognized)
-            }
+            message.setFlags(new Flags(Flags.Flag.DELETED), true)
+          }.recover {
+            case ex =>
+              airbrake.notify(s"Failed processing message from ${message.getFrom.map(a => a.toString).mkString(", ")}")
+              log.error(s"Failed processing message from ${message.getFrom.map(a => a.toString).mkString(", ")}. Msg: ${message.getContent.toString.take(200)}")
+              ()
           }
-          message.setFlags(new Flags(Flags.Flag.DELETED), true)
         }
         inbox.close(true)
       } finally {
@@ -92,13 +100,13 @@ class MailDiscussionMessageParser @Inject() (
   private val DiscussionEmail = raw"""^${settings.identifier}\+(\w+)@[\w\.]+$$""".r
 
   private def getPublicId(message: Message): Option[String] = {
-    message.getAllRecipients.map(getAddr).map {
+    message.getAllRecipients.map(getAddr).flatMap {
       DiscussionEmail.findFirstMatchIn(_).map(_.group(1))
-    }.flatten.headOption
+    }.headOption
   }
 
   private def getTimestamp(message: Message): DateTime = {
-    new DateTime(message.getReceivedDate())
+    new DateTime(message.getReceivedDate)
   }
 
   def getInfo(message: Message): Option[MailNotificationReply] = {
@@ -140,8 +148,11 @@ object MailDiscussionMessageParser {
   )
   def extractMessage(content: String): String = {
     val mainText = EXTRACTORS.foldLeft(content) { (extracted, extractor) =>
-      val newExtracted = (new Regex(raw"[^\n]*$extractor")).split(content)(0).trim
-      if (newExtracted.length < extracted.length) newExtracted else extracted
+      val newExtractedOpt = (new Regex(raw"[^\n]*$extractor")).split(content).headOption.map(_.trim)
+      newExtractedOpt match {
+        case Some(newExtracted) if newExtracted.length < extracted.length => newExtracted // If it's smaller than previous
+        case _ => extracted
+      }
     }
     SIGNATURES.foldLeft(mainText)((text, signature) => text.stripSuffix(signature)).trim
   }

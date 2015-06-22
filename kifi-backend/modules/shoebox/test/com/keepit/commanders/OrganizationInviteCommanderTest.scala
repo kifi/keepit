@@ -10,6 +10,7 @@ import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.db.Id
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.social.FakeSocialGraphModule
+import com.keepit.heimdal.{ HeimdalContext, FakeHeimdalServiceClientModule }
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.model._
 import com.keepit.test.ShoeboxTestInjector
@@ -19,6 +20,7 @@ import scala.concurrent.Await
 import scala.concurrent.duration.FiniteDuration
 
 class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationLike with ShoeboxTestInjector {
+  implicit val context = HeimdalContext.empty
   def orgInviteCommander(implicit injector: Injector) = inject[OrganizationInviteCommander]
   def organizationRepo(implicit injector: Injector) = inject[OrganizationRepo]
   def organizationMembershipRepo(implicit injector: Injector) = inject[OrganizationMembershipRepo]
@@ -38,7 +40,8 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
   val modules = Seq(
     FakeExecutionContextModule(),
     FakeABookServiceClientModule(),
-    FakeSocialGraphModule()
+    FakeSocialGraphModule(),
+    FakeHeimdalServiceClientModule()
   )
 
   "organization invite commander" should {
@@ -140,6 +143,87 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
           invite.userId === Some(Id[User](42))
         }
         invites.length === 20
+      }
+    }
+
+    "accept invitations" should {
+      "succeed when there are valid invitations" in {
+        withDb(modules: _*) { implicit injector =>
+          val inviteCommander = inject[OrganizationInviteCommander]
+          val inviteRepo = inject[OrganizationInviteRepo]
+          val memberRepo = inject[OrganizationMembershipRepo]
+          val inviterId = Id[User](1)
+          val userId = Id[User](2)
+          val (org, _) = db.readWrite { implicit session =>
+            UserFactory.user().withId(inviterId).saved
+            UserFactory.user().withId(userId).saved
+            val org = inject[OrganizationRepo].save(Organization(name = "kifi", ownerId = inviterId, handle = None))
+            memberRepo.save(org.newMembership(userId = inviterId, role = OrganizationRole.OWNER))
+            val invite = inviteRepo.save(OrganizationInvite(organizationId = org.id.get, inviterId = inviterId, userId = Some(userId), role = OrganizationRole.MEMBER))
+            (org, invite)
+          }
+          inviteCommander.acceptInvitation(org.id.get, userId) must haveClass[Right[OrganizationFail, OrganizationMembership]]
+        }
+      }
+
+      "pick the highest role" in {
+        withDb(modules: _*) { implicit injector =>
+          val inviteCommander = inject[OrganizationInviteCommander]
+          val inviteRepo = inject[OrganizationInviteRepo]
+          val memberRepo = inject[OrganizationMembershipRepo]
+          val inviterId = Id[User](1)
+          val userId = Id[User](2)
+          val (org, _) = db.readWrite { implicit session =>
+            UserFactory.user().withId(inviterId).saved
+            UserFactory.user().withId(userId).saved
+            val org = inject[OrganizationRepo].save(Organization(name = "kifi", ownerId = inviterId, handle = None))
+            memberRepo.save(org.newMembership(userId = inviterId, role = OrganizationRole.OWNER))
+            val invite = inviteRepo.save(OrganizationInvite(organizationId = org.id.get, inviterId = inviterId, userId = Some(userId), role = OrganizationRole.MEMBER))
+            inviteRepo.save(OrganizationInvite(organizationId = org.id.get, inviterId = inviterId, userId = Some(userId), role = OrganizationRole.OWNER))
+            (org, invite)
+          }
+          inviteCommander.acceptInvitation(org.id.get, userId) must haveClass[Right[OrganizationFail, OrganizationMembership]]
+
+          db.readOnlyMaster { implicit session =>
+            memberRepo.getByOrgIdAndUserId(org.id.get, userId).map(_.role) === Some(OrganizationRole.OWNER)
+          }
+        }
+      }
+
+      "fail when there are no valid invitations" in {
+        withDb(modules: _*) { implicit injector =>
+          val inviteCommander = inject[OrganizationInviteCommander]
+          val memberRepo = inject[OrganizationMembershipRepo]
+          val inviterId = Id[User](1)
+          val userId = Id[User](2)
+          val org = db.readWrite { implicit session =>
+            UserFactory.user().withId(inviterId).saved
+            UserFactory.user().withId(userId).saved
+            val org = inject[OrganizationRepo].save(Organization(name = "kifi", ownerId = inviterId, handle = None))
+            memberRepo.save(org.newMembership(userId = inviterId, role = OrganizationRole.OWNER))
+            org
+          }
+          inviteCommander.acceptInvitation(org.id.get, userId) === Left(OrganizationFail.NO_VALID_INVITATIONS)
+        }
+      }
+
+      "fail when there are invitations but none are valid" in {
+        withDb(modules: _*) { implicit injector =>
+          val inviteCommander = inject[OrganizationInviteCommander]
+          val inviteRepo = inject[OrganizationInviteRepo]
+          val memberRepo = inject[OrganizationMembershipRepo]
+          val inviterId = Id[User](1)
+          val userId = Id[User](2)
+          val org = db.readWrite { implicit session =>
+            UserFactory.user().withId(inviterId).saved
+            UserFactory.user().withId(userId).saved
+            val org = inject[OrganizationRepo].save(Organization(name = "kifi", ownerId = inviterId, handle = None))
+            memberRepo.save(org.newMembership(userId = inviterId, role = OrganizationRole.MEMBER))
+            inviteRepo.save(OrganizationInvite(organizationId = org.id.get, inviterId = inviterId, userId = Some(userId), role = OrganizationRole.OWNER))
+            org
+          }
+          inviteCommander.acceptInvitation(org.id.get, userId) === Left(OrganizationFail.NO_VALID_INVITATIONS)
+        }
       }
     }
   }

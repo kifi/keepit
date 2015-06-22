@@ -93,6 +93,10 @@ angular.module('kifi')
 
           scope.library.subscriptions.forEach(function(sub) {
 
+            if (sub.name === '' && sub.info.url === '') {
+              return;
+            }
+
             if (sub.name) { // slack channels can't have uppercase letters
               sub.name = sub.name.toLowerCase();
             }
@@ -127,6 +131,10 @@ angular.module('kifi')
 
           submitting = true;
 
+          var nonEmptySubscriptions = _.filter(scope.library.subscriptions, function(sub){
+            return sub.name !== '' && sub.info.url !== '';
+          });
+
           libraryService[scope.modifyingExistingLibrary && scope.library.id ? 'modifyLibrary' : 'createLibrary']({
             id: scope.library.id,
             name: scope.library.name,
@@ -135,7 +143,7 @@ angular.module('kifi')
             visibility: scope.library.visibility,
             listed: scope.library.membership.listed,
             color: colorNames[scope.library.color],
-            subscriptions: scope.library.subscriptions
+            subscriptions: nonEmptySubscriptions
           }, true).then(function (resp) {
             libraryService.fetchLibraryInfos(true);
 
@@ -145,6 +153,8 @@ angular.module('kifi')
             scope.$error = {};
             submitting = false;
             scope.close();
+
+            scope.library.subscriptions = nonEmptySubscriptions;
 
             if (!returnAction) {
               $location.url(newLibrary.url);
