@@ -5,7 +5,9 @@ import com.keepit.abook.ABookServiceClient
 import com.keepit.abook.model.RichContact
 import com.keepit.commanders.emails.EmailTemplateSender
 import com.keepit.common.core._
+import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
+import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
@@ -14,17 +16,19 @@ import com.keepit.common.mail.template.EmailToSend
 import com.keepit.common.mail.template.TemplateOptions._
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.S3ImageStore
-import com.keepit.eliza.ElizaServiceClient
+import com.keepit.eliza.{ UserPushNotificationCategory, PushNotificationExperiment, ElizaServiceClient }
+import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
 import com.keepit.social.BasicUser
+import play.api.libs.json.Json
 
 import scala.concurrent.{ ExecutionContext, Future }
 
 @ImplementedBy(classOf[OrganizationInviteCommanderImpl])
 trait OrganizationInviteCommander {
-  def inviteUsersToOrganization(orgId: Id[Organization], inviterId: Id[User], invitees: Seq[OrganizationMemberInvitation]): Future[Either[OrganizationFail, Seq[(Either[BasicUser, RichContact], OrganizationRole)]]]
-  def acceptInvitation(orgId: Id[Organization], userId: Id[User], authToken: Option[String] = None): Either[OrganizationFail, (Organization, OrganizationMembership)]
-  def declineInvitation(orgId: Id[Organization], userId: Id[User]): Unit
+  def inviteUsersToOrganization(orgId: Id[Organization], inviterId: Id[User], invitees: Seq[OrganizationMemberInvitation])(implicit eventContext: HeimdalContext): Future[Either[OrganizationFail, Seq[(Either[BasicUser, RichContact], OrganizationRole)]]]
+  def acceptInvitation(orgId: Id[Organization], userId: Id[User]): Either[OrganizationFail, OrganizationMembership]
+  def declineInvitation(orgId: Id[Organization], userId: Id[User]): Seq[OrganizationInvite]
   // Creates a Universal Invite Link for an organization and inviter. Anyone with the link can join the Organization
   def universalInviteLink(orgId: Id[Organization], inviterId: Id[User], role: OrganizationRole = OrganizationRole.MEMBER, authToken: Option[String] = None): Either[OrganizationFail, (OrganizationInvite, Organization)]
 }
@@ -44,9 +48,13 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     elizaClient: ElizaServiceClient,
     s3ImageStore: S3ImageStore,
     userEmailAddressRepo: UserEmailAddressRepo,
-    emailTemplateSender: EmailTemplateSender) extends OrganizationInviteCommander with Logging {
+    emailTemplateSender: EmailTemplateSender,
+    kifiInstallationCommander: KifiInstallationCommander,
+    organizationAvatarCommander: OrganizationAvatarCommander,
+    organizationAnalytics: OrganizationAnalytics,
+    implicit val publicIdConfig: PublicIdConfiguration) extends OrganizationInviteCommander with Logging {
 
-  def inviteUsersToOrganization(orgId: Id[Organization], inviterId: Id[User], invitees: Seq[OrganizationMemberInvitation]): Future[Either[OrganizationFail, Seq[(Either[BasicUser, RichContact], OrganizationRole)]]] = {
+  def inviteUsersToOrganization(orgId: Id[Organization], inviterId: Id[User], invitees: Seq[OrganizationMemberInvitation])(implicit eventContext: HeimdalContext): Future[Either[OrganizationFail, Seq[(Either[BasicUser, RichContact], OrganizationRole)]]] = {
     val inviterMembershipOpt = db.readOnlyMaster { implicit session =>
       organizationMembershipRepo.getByOrgIdAndUserId(orgId, inviterId)
     }
@@ -109,8 +117,7 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
             val persistedInvites = invites.flatMap(persistInvitation(_))
 
             sendInvitationEmails(persistedInvites, org, owner, inviter)
-            // TODO: still need to write code for tracking sent invitation
-            def trackSentInvitation = ???
+            organizationAnalytics.trackSentOrganizationInvites(inviterId, org, persistedInvites)
 
             Right(inviteesWithRole)
           }
@@ -212,12 +219,78 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     // TODO: handle push notifications to mobile.
   }
 
-  def acceptInvitation(orgId: Id[Organization], userId: Id[User], authToken: Option[String] = None): Either[OrganizationFail, (Organization, OrganizationMembership)] = {
-    ???
+  def authorizeInvitation(orgId: Id[Organization], userId: Id[User], authToken: String)(implicit session: RSession): Boolean = {
+    organizationInviteRepo.getByOrgIdAndUserIdAndAuthToken(orgId, userId, authToken).nonEmpty
   }
 
-  def declineInvitation(orgId: Id[Organization], userId: Id[User]) {
-    ???
+  def acceptInvitation(orgId: Id[Organization], userId: Id[User]): Either[OrganizationFail, OrganizationMembership] = {
+    val (invitations, membershipOpt) = db.readOnlyReplica { implicit session =>
+      val userInvitations = organizationInviteRepo.getByOrgAndUserId(orgId, userId)
+      val existingMembership = organizationMembershipRepo.getByOrgIdAndUserId(orgId, userId)
+      (userInvitations, existingMembership)
+    }
+
+    val updatedMembership: Either[OrganizationFail, OrganizationMembership] = membershipOpt match {
+      case Some(membership) => Right(membership) // already a member
+      case None => // new membership
+        val addRequests = invitations.sortBy(_.role).reverse.map { currentInvitation =>
+          OrganizationMembershipAddRequest(orgId, currentInvitation.inviterId, userId, currentInvitation.role)
+        }
+        val firstSuccess = addRequests.toStream.map(organizationMembershipCommander.addMembership(_))
+          .find(_.isRight)
+        firstSuccess.map(_.right.map(_.membership))
+          .getOrElse(Left(OrganizationFail.NO_VALID_INVITATIONS))
+    }
+    updatedMembership.right.map { success =>
+      // on success accept invitations
+      db.readWrite { implicit s =>
+        // Notify inviters on organization joined.
+        notifyInviterOnOrganizationInvitationAcceptance(invitations, userRepo.get(userId), organizationRepo.get(orgId))
+        invitations.foreach { invite =>
+          organizationInviteRepo.save(invite.copy(state = OrganizationInviteStates.ACCEPTED))
+        }
+      }
+      success
+    }
+  }
+
+  def notifyInviterOnOrganizationInvitationAcceptance(invitesToAlert: Seq[OrganizationInvite], invitee: User, org: Organization): Unit = {
+    val inviteeImage = s3ImageStore.avatarUrlByUser(invitee)
+    val orgImageOpt = organizationAvatarCommander.getBestImage(org.id.get, ProcessedImageSize.Medium.idealSize)
+    invitesToAlert foreach { invite =>
+      val title = s"${invitee.firstName} has joined ${org.name}"
+      val inviterId = invite.inviterId
+      elizaClient.sendGlobalNotification( //push sent
+        userIds = Set(inviterId),
+        title = title,
+        body = s"You invited ${invitee.fullName} to join ${org.name}.",
+        linkText = s"See ${invitee.firstName}’s profile",
+        linkUrl = s"https://www.kifi.com/${invitee.username.value}",
+        imageUrl = inviteeImage,
+        sticky = false,
+        category = NotificationCategory.User.ORGANIZATION_JOINED,
+        extra = Some(Json.obj(
+          "member" -> BasicUser.fromUser(invitee),
+          "organization" -> Json.toJson(OrganizationNotificationInfo.fromOrganization(org, orgImageOpt))
+        ))
+      )
+      val canSendPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(inviterId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
+      if (canSendPush) {
+        elizaClient.sendUserPushNotification(
+          userId = inviterId,
+          message = title,
+          recipient = invitee,
+          pushNotificationExperiment = PushNotificationExperiment.Experiment1,
+          category = UserPushNotificationCategory.NewOrganizationMember)
+      }
+    }
+  }
+
+  def declineInvitation(orgId: Id[Organization], userId: Id[User]): Seq[OrganizationInvite] = {
+    db.readWrite { implicit s =>
+      organizationInviteRepo.getByOrgIdAndUserId(orgId, userId)
+        .map(inv => organizationInviteRepo.save(inv.copy(state = OrganizationInviteStates.DECLINED)))
+    }
   }
 
   def universalInviteLink(orgId: Id[Organization], inviterId: Id[User], role: OrganizationRole = OrganizationRole.MEMBER, authToken: Option[String] = None): Either[OrganizationFail, (OrganizationInvite, Organization)] = {

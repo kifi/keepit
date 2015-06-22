@@ -89,20 +89,22 @@ angular.module('kifi')
             return;
           }
 
-          var lastSub = scope.library.subscriptions.slice(-1)[0];
-
-          if (lastSub.name === '' && lastSub.info.url === '') {
-            scope.library.subscriptions.pop();
-          }
-
           scope.$error = {};
 
           scope.library.subscriptions.forEach(function(sub) {
 
-            if (!sub.name) {
+            if (sub.name === '' && sub.info.url === '') {
+              return;
+            }
+
+            if (sub.name) { // slack channels can't have uppercase letters
+              sub.name = sub.name.toLowerCase();
+            }
+
+            if (!sub.name || sub.name.includes(' ')) {
               sub.$error = sub.$error || {};
               sub.$error.name = true;
-              scope.$error.general = 'Please enter a channel name for each subscription.';
+              scope.$error.general = 'Please enter a valid Slack channel name for each subscription.';
             }
 
             if (sub.info.url === '' || sub.info.url.match(/https:\/\/hooks.slack.com\/services\/.*\/.*/i) == null) {
@@ -129,6 +131,10 @@ angular.module('kifi')
 
           submitting = true;
 
+          var nonEmptySubscriptions = _.filter(scope.library.subscriptions, function(sub){
+            return sub.name !== '' && sub.info.url !== '';
+          });
+
           libraryService[scope.modifyingExistingLibrary && scope.library.id ? 'modifyLibrary' : 'createLibrary']({
             id: scope.library.id,
             name: scope.library.name,
@@ -137,7 +143,7 @@ angular.module('kifi')
             visibility: scope.library.visibility,
             listed: scope.library.membership.listed,
             color: colorNames[scope.library.color],
-            subscriptions: scope.library.subscriptions
+            subscriptions: nonEmptySubscriptions
           }, true).then(function (resp) {
             libraryService.fetchLibraryInfos(true);
 
@@ -147,6 +153,8 @@ angular.module('kifi')
             scope.$error = {};
             submitting = false;
             scope.close();
+
+            scope.library.subscriptions = nonEmptySubscriptions;
 
             if (!returnAction) {
               $location.url(newLibrary.url);
