@@ -65,7 +65,7 @@ case class OrganizationCreateResponse(request: OrganizationCreateRequest, newOrg
 case class OrganizationModifyRequest(
   orgId: Id[Organization],
   requesterId: Id[User],
-  modification: OrganizationModification) extends OrganizationRequest
+  modifications: OrganizationModifications) extends OrganizationRequest
 case class OrganizationModifyResponse(request: OrganizationModifyRequest, modifiedOrg: Organization)
 
 case class OrganizationDeleteRequest(
@@ -73,11 +73,9 @@ case class OrganizationDeleteRequest(
   requesterId: Id[User]) extends OrganizationRequest
 case class OrganizationDeleteResponse(request: OrganizationDeleteRequest, deactivatedOrg: Organization)
 
-sealed abstract class OrganizationModification
-object OrganizationModification {
-  case class NAME_CHANGE(newName: String) extends OrganizationModification
-  case class PERMISSIONS_CHANGE(newBasePermissions: BasePermissions) extends OrganizationModification
-}
+case class OrganizationModifications(
+  newName: Option[String],
+  newBasePermissions: Option[BasePermissions])
 
 sealed abstract class OrganizationFail(val status: Int, val message: String)
 object OrganizationFail {
