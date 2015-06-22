@@ -60,6 +60,7 @@ class AuthHelper @Inject() (
     authCommander: AuthCommander,
     userRepo: UserRepo,
     libraryRepo: LibraryRepo,
+    libraryInviteRepo: LibraryInviteRepo,
     userCredRepo: UserCredRepo,
     socialRepo: SocialUserInfoRepo,
     emailAddressRepo: UserEmailAddressRepo,
@@ -71,6 +72,7 @@ class AuthHelper @Inject() (
     inviteCommander: InviteCommander,
     libraryCommander: LibraryCommander,
     libraryInviteCommander: LibraryInviteCommander,
+    userEmailAddressCommander: UserEmailAddressCommander,
     userCommander: UserCommander,
     twitterWaitlistCommander: TwitterWaitlistCommander,
     heimdalContextBuilder: HeimdalContextBuilderFactory,
@@ -248,9 +250,6 @@ class AuthHelper @Inject() (
 
     val uri = intent match {
       case AutoFollowLibrary(libId, authTokenOpt) =>
-        db.readWrite { implicit session =>
-          libraryInviteCommander.convertPendingInvites(emailAddress, user.id.get)
-        }
         authCommander.autoJoinLib(user.id.get, libId, authTokenOpt)
         val url = Library.decodePublicId(libId).map { libraryId =>
           db.readOnlyMaster { implicit session =>
@@ -378,7 +377,21 @@ class AuthHelper @Inject() (
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build
     authCommander.finalizeEmailPassAccount(efi, request.userId, request.user.externalId, request.identityOpt, inviteExtIdOpt).map {
       case (user, email, newIdentity) =>
+        convertInvitesForEmailSignup(email, libraryPublicId, libAuthToken)
         finishSignup(user, email, newIdentity, emailConfirmedAlready = false, libraryPublicId = libraryPublicId, libAuthToken = libAuthToken, isFinalizedImmediately = false)
+    }
+  }
+
+  private def convertInvitesForEmailSignup(email: EmailAddress, libraryPublicId: Option[PublicId[Library]], libAuthToken: Option[String]): Unit = {
+    for (
+      publicLibId <- libraryPublicId;
+      authToken <- libAuthToken
+    ) yield Library.decodePublicId(publicLibId).foreach { libId =>
+      db.readWrite { implicit session =>
+        if (libraryInviteRepo.getByLibraryIdAndAuthToken(libId, authToken).nonEmpty) {
+          emailAddressRepo.getByAddress(email).foreach(userEmailAddressCommander.saveAsVerified(_))
+        }
+      }
     }
   }
 
