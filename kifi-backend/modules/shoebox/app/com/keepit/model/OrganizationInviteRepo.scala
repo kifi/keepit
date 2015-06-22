@@ -97,6 +97,7 @@ class OrganizationInviteRepoImpl @Inject() (val db: DataBaseComponent, val clock
 
   def getByOrgAndUserId(organizationId: Id[Organization], userId: Id[User], state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit s: RSession): Seq[OrganizationInvite] = {
     getByOrgAndUserIdCompiled(organizationId, userId, state).list
+  }
 
   def getAllByOrganizationCompiled = Compiled { (orgId: Column[Id[Organization]], state: Column[State[OrganizationInvite]]) =>
     for { row <- rows if row.organizationId === orgId && row.state === state } yield row
