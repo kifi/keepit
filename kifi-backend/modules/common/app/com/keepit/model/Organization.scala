@@ -26,6 +26,9 @@ case class Organization(
 
   override def withId(id: Id[Organization]): Organization = this.copy(id = Some(id))
   override def withUpdateTime(now: DateTime): Organization = this.copy(updatedAt = now)
+  def withState(newState: State[Organization]): Organization = this.copy(state = newState)
+  def withName(newName: String): Organization = this.copy(name = newName)
+  def withBasePermissions(newBasePermissions: BasePermissions): Organization = this.copy(basePermissions = newBasePermissions)
 
   def getNonmemberPermissions = basePermissions.forNonmember
   def getRolePermissions(role: OrganizationRole) = basePermissions.forRole(role)

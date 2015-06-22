@@ -58,7 +58,7 @@ class OrganizationMembershipCommanderImpl @Inject() (
 
   def getMembersAndInvitees(orgId: Id[Organization], limit: Limit, offset: Offset, includeInvitees: Boolean): Seq[MaybeOrganizationMember] = {
     db.readOnlyMaster { implicit session =>
-      val members = organizationMembershipRepo.getbyOrgId(orgId, limit, offset)
+      val members = organizationMembershipRepo.getByOrgId(orgId, limit, offset)
       val invitees = includeInvitees match {
         case true =>
           val leftOverCount = Limit(Math.max(limit.value - members.length, 0))
