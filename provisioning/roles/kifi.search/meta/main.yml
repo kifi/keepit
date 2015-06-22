@@ -1,0 +1,5 @@
+---
+dependencies:
+- role: kifi.common
+  service: search
+  setup_nginx: yes
