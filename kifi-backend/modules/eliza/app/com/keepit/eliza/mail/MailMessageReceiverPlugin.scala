@@ -19,6 +19,7 @@ import play.api.libs.functional.syntax._
 import com.kifi.franz.SQSQueue
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.util.matching.Regex
+import scala.util.Try
 
 private case object FetchNewDiscussionReplies
 
@@ -138,13 +139,13 @@ object MailDiscussionMessageParser {
     raw"From:[\s\S]+@[\s\S]+To:[\s\S]+@[\s\S]+", // Outlook (US)
     raw"----- Original Message -----" // Zimbra
   )
-  def extractMessage(content: String): String = {
+  def extractMessage(content: String): String = Try {
     val mainText = EXTRACTORS.foldLeft(content) { (extracted, extractor) =>
       val newExtracted = (new Regex(raw"[^\n]*$extractor")).split(content)(0).trim
       if (newExtracted.length < extracted.length) newExtracted else extracted
     }
     SIGNATURES.foldLeft(mainText)((text, signature) => text.stripSuffix(signature)).trim
-  }
+  }.getOrElse("")
 }
 
 @ImplementedBy(classOf[MailMessageReceiverPluginImpl])
