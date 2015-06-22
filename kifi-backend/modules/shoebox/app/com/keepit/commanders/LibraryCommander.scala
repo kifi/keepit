@@ -640,7 +640,7 @@ class LibraryCommanderImpl @Inject() (
         }
       }
 
-      val newSubKeysOpt = modifyReq.subscriptions.filter(sub => sub == LibrarySubscriptionKey("", SlackInfo("")))
+      val newSubKeysOpt = modifyReq.subscriptions
 
       val result = for {
         newName <- validName(modifyReq.name).right
