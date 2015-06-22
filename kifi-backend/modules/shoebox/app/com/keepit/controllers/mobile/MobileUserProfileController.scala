@@ -28,6 +28,7 @@ class MobileUserProfileController @Inject() (
   userValueRepo: UserValueRepo,
   userCommander: UserCommander,
   userProfileCommander: UserProfileCommander,
+  collectionCommander: CollectionCommander,
   userConnectionsCommander: UserConnectionsCommander,
   friendStatusCommander: FriendStatusCommander,
   libraryCommander: LibraryCommander,
@@ -54,6 +55,7 @@ class MobileUserProfileController @Inject() (
           numKeeps = profile.numKeeps,
           numConnections = numConnections,
           numFollowers = userProfileCommander.countFollowers(profile.userId, viewer.map(_.id.get)),
+          numTags = collectionCommander.getCount(profile.userId),
           numInvitedLibraries = numInvitedLibs,
           biography = userBiography
         )).as[JsObject]
