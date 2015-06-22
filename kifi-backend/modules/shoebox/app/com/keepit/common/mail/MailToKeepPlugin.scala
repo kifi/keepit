@@ -122,7 +122,7 @@ class MailToKeepActor @Inject() (
                   val bmText = bookmarks.map { bm =>
                     log.info(s"created bookmark from email with id ${bm.id.get}")
                     s"<p>${bm.url}</p>"
-                  }
+                  }.mkString("\n")
 
                   sendReply(
                     message = message,
