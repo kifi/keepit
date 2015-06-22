@@ -75,10 +75,10 @@ class OrganizationMembershipCommanderTest extends TestKitSupport with Specificat
         val orgMembershipCommander = inject[OrganizationMembershipCommander]
 
         val ownerAddUser = OrganizationMembershipAddRequest(orgId, Id[User](1), Id[User](2), OrganizationRole.MEMBER)
-        orgMembershipCommander.addMembership(ownerAddUser) === Right(OrganizationMembershipAddResponse(ownerAddUser))
+        orgMembershipCommander.addMembership(ownerAddUser) must haveClass[Right[OrganizationFail, OrganizationMembershipAddResponse]]
 
         val memberAddUser = OrganizationMembershipAddRequest(orgId, Id[User](2), Id[User](3), OrganizationRole.MEMBER)
-        orgMembershipCommander.addMembership(memberAddUser) === Right(OrganizationMembershipAddResponse(memberAddUser))
+        orgMembershipCommander.addMembership(memberAddUser) must haveClass[Right[OrganizationFail, OrganizationMembershipAddResponse]]
 
         val memberAddUserAsOwner = OrganizationMembershipAddRequest(orgId, Id[User](2), Id[User](5), OrganizationRole.OWNER)
         orgMembershipCommander.addMembership(memberAddUserAsOwner) === Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
@@ -109,7 +109,7 @@ class OrganizationMembershipCommanderTest extends TestKitSupport with Specificat
         val orgMembershipCommander = inject[OrganizationMembershipCommander]
 
         val ownerModMember = OrganizationMembershipModifyRequest(orgId, Id[User](1), Id[User](2), OrganizationRole.OWNER)
-        orgMembershipCommander.modifyMembership(ownerModMember) === Right(OrganizationMembershipModifyResponse(ownerModMember))
+        orgMembershipCommander.modifyMembership(ownerModMember) must haveClass[Right[OrganizationFail, OrganizationMembershipModifyResponse]]
 
         // 2 is now an OWNER, try to set him back to MEMBER
         val memberModOwner = OrganizationMembershipModifyRequest(orgId, Id[User](3), Id[User](2), OrganizationRole.MEMBER)

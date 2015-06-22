@@ -123,8 +123,8 @@ class OrganizationMembershipCommanderImpl @Inject() (
     db.readWrite { implicit session =>
       if (validRequest(request)) {
         val org = organizationRepo.get(request.orgId)
-        organizationMembershipRepo.save(org.newMembership(request.targetId, request.newRole))
-        Right(OrganizationMembershipAddResponse(request))
+        val newMembership = organizationMembershipRepo.save(org.newMembership(request.targetId, request.newRole))
+        Right(OrganizationMembershipAddResponse(request, newMembership))
       } else {
         Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
       }
@@ -136,8 +136,8 @@ class OrganizationMembershipCommanderImpl @Inject() (
       if (validRequest(request)) {
         val membership = organizationMembershipRepo.getByOrgIdAndUserId(request.orgId, request.targetId).get
         val org = organizationRepo.get(request.orgId)
-        organizationMembershipRepo.save(org.modifiedMembership(membership, request.newRole))
-        Right(OrganizationMembershipModifyResponse(request))
+        val newMembership = organizationMembershipRepo.save(org.modifiedMembership(membership, request.newRole))
+        Right(OrganizationMembershipModifyResponse(request, newMembership))
       } else {
         Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
       }
