@@ -6,3 +6,12 @@ logentries_logs:
     path: /home/fortytwo/run/{{ service }}/log/{{ service }}.out
   - name: app.log
     path: /home/fortytwo/run/{{ service }}/log/app.log
+ulimit_config:
+  - domain: fortytwo
+    type: soft
+    item: nofile
+    value: 8192
+  - domain: fortytwo
+    type: hard
+    item: nofile
+    value: 8192

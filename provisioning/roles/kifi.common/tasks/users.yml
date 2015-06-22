@@ -46,3 +46,13 @@
     line: '%sudo ALL=(ALL) NOPASSWD:ALL'
     # Validate the sudoers file before saving
     validate: 'visudo -cf %s'
+
+- name: ensure ulimit is set by default
+  lineinfile:
+    dest: /etc/pam.d/{{ item }}
+    state: present
+    regexp: 'session\s+required\s+pam_limits\.so'
+    line: 'session required pam_limits.so'
+  with_items:
+    - common-session
+    - common-session-noninteractive
