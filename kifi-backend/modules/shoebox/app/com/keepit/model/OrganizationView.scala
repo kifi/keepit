@@ -26,7 +26,7 @@ object OrganizationNotificationInfo {
   }
 }
 
-case class OrganizationMemberInvitation(invitedBy: Either[Id[User], EmailAddress], role: OrganizationRole, msgOpt: Option[String] = None)
+case class OrganizationMemberInvitation(invited: Either[Id[User], EmailAddress], role: OrganizationRole, msgOpt: Option[String] = None)
 
 sealed abstract class OrganizationMembershipRequest {
   def orgId: Id[Organization]

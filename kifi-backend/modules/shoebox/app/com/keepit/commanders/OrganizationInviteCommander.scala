@@ -17,6 +17,7 @@ import com.keepit.common.mail.template.TemplateOptions._
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.S3ImageStore
 import com.keepit.eliza.{ UserPushNotificationCategory, PushNotificationExperiment, ElizaServiceClient }
+import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
 import com.keepit.social.BasicUser
 import play.api.libs.json.Json
@@ -25,7 +26,7 @@ import scala.concurrent.{ ExecutionContext, Future }
 
 @ImplementedBy(classOf[OrganizationInviteCommanderImpl])
 trait OrganizationInviteCommander {
-  def inviteUsersToOrganization(orgId: Id[Organization], inviterId: Id[User], invitees: Seq[OrganizationMemberInvitation]): Future[Either[OrganizationFail, Seq[(Either[BasicUser, RichContact], OrganizationRole)]]]
+  def inviteUsersToOrganization(orgId: Id[Organization], inviterId: Id[User], invitees: Seq[OrganizationMemberInvitation])(implicit eventContext: HeimdalContext): Future[Either[OrganizationFail, Seq[(Either[BasicUser, RichContact], OrganizationRole)]]]
   def acceptInvitation(orgId: Id[Organization], userId: Id[User]): Either[OrganizationFail, OrganizationMembership]
   def declineInvitation(orgId: Id[Organization], userId: Id[User]): Seq[OrganizationInvite]
   // Creates a Universal Invite Link for an organization and inviter. Anyone with the link can join the Organization
@@ -50,9 +51,10 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     emailTemplateSender: EmailTemplateSender,
     kifiInstallationCommander: KifiInstallationCommander,
     organizationAvatarCommander: OrganizationAvatarCommander,
+    organizationAnalytics: OrganizationAnalytics,
     implicit val publicIdConfig: PublicIdConfiguration) extends OrganizationInviteCommander with Logging {
 
-  def inviteUsersToOrganization(orgId: Id[Organization], inviterId: Id[User], invitees: Seq[OrganizationMemberInvitation]): Future[Either[OrganizationFail, Seq[(Either[BasicUser, RichContact], OrganizationRole)]]] = {
+  def inviteUsersToOrganization(orgId: Id[Organization], inviterId: Id[User], invitees: Seq[OrganizationMemberInvitation])(implicit eventContext: HeimdalContext): Future[Either[OrganizationFail, Seq[(Either[BasicUser, RichContact], OrganizationRole)]]] = {
     val inviterMembershipOpt = db.readOnlyMaster { implicit session =>
       organizationMembershipRepo.getByOrgIdAndUserId(orgId, inviterId)
     }
@@ -115,8 +117,7 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
             val persistedInvites = invites.flatMap(persistInvitation(_))
 
             sendInvitationEmails(persistedInvites, org, owner, inviter)
-            // TODO: still need to write code for tracking sent invitation
-            def trackSentInvitation = ???
+            organizationAnalytics.trackSentOrganizationInvites(inviterId, org, persistedInvites)
 
             Right(inviteesWithRole)
           }

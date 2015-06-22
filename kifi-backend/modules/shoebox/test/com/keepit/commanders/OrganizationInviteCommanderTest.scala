@@ -10,6 +10,7 @@ import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.db.Id
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.social.FakeSocialGraphModule
+import com.keepit.heimdal.{ HeimdalContext, FakeHeimdalServiceClientModule }
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.model._
 import com.keepit.test.ShoeboxTestInjector
@@ -19,6 +20,7 @@ import scala.concurrent.Await
 import scala.concurrent.duration.FiniteDuration
 
 class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationLike with ShoeboxTestInjector {
+  implicit val context = HeimdalContext.empty
   def orgInviteCommander(implicit injector: Injector) = inject[OrganizationInviteCommander]
   def organizationRepo(implicit injector: Injector) = inject[OrganizationRepo]
   def organizationMembershipRepo(implicit injector: Injector) = inject[OrganizationMembershipRepo]
@@ -38,7 +40,8 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
   val modules = Seq(
     FakeExecutionContextModule(),
     FakeABookServiceClientModule(),
-    FakeSocialGraphModule()
+    FakeSocialGraphModule(),
+    FakeHeimdalServiceClientModule()
   )
 
   "organization invite commander" should {
