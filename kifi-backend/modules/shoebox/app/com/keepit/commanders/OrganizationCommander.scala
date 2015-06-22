@@ -32,18 +32,18 @@ class OrganizationCommanderImpl @Inject() (
       case OrganizationCreateRequest(createrId, orgName) => true // TODO: can we check ahead of time that an org handle is available?
       case OrganizationModifyRequest(orgId, requesterId, modifications) =>
         val permissions = orgMembershipRepo.getByOrgIdAndUserId(orgId, requesterId).map(_.permissions)
-        permissions.exists { _.contains(EDIT_ORGANIZATION) } && !hasInvalidModification(modifications)
+        permissions.exists { _.contains(EDIT_ORGANIZATION) } && areAllValidModifications(modifications)
       case OrganizationDeleteRequest(orgId, requesterId) =>
         requesterId == orgRepo.get(orgId).ownerId
     }
   }
-  private def hasInvalidModification(modifications: OrganizationModifications): Boolean = {
+  private def areAllValidModifications(modifications: OrganizationModifications): Boolean = {
     lazy val badName = modifications.newName.exists(_.isEmpty)
     lazy val badBasePermissions = modifications.newBasePermissions.exists { bps =>
       // Are there any members that can't even see the organization?
-      !OrganizationRole.all.forall { role => bps.forRole(role).contains(VIEW_ORGANIZATION) }
+      OrganizationRole.all exists { role => !bps.forRole(role).contains(VIEW_ORGANIZATION) }
     }
-    badName || badBasePermissions
+    !badName && !badBasePermissions
   }
 
   def createOrganization(request: OrganizationCreateRequest): Either[OrganizationFail, OrganizationCreateResponse] = {
