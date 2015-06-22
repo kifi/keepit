@@ -17,7 +17,6 @@ case class OrganizationAvatar(
     updatedAt: DateTime = currentDateTime,
     state: State[OrganizationAvatar] = OrganizationAvatarStates.ACTIVE,
     organizationId: Id[Organization],
-    position: Option[ImagePosition],
     width: Int,
     height: Int,
     format: ImageFormat,
@@ -26,7 +25,7 @@ case class OrganizationAvatar(
     source: ImageSource,
     sourceFileHash: ImageHash,
     sourceImageURL: Option[String]) extends BaseImage with Model[OrganizationAvatar] {
-  def isOriginal = true
+  def isOriginal = (kind == ProcessImageOperation.Original)
 
   def dimensions = ImageSize(width, height)
   def withId(id: Id[OrganizationAvatar]) = this.copy(id = Some(id))
