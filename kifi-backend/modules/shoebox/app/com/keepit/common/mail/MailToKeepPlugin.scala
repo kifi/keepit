@@ -76,9 +76,9 @@ class MailToKeepActor @Inject() (
         inbox.open(Folder.READ_WRITE)
         val messages = inbox.search(KeepSearchTerm)
         for (message <- messages) {
-          val prefixes = message.getAllRecipients.map(messageParser.getAddr).map {
+          val prefixes = message.getAllRecipients.map(messageParser.getAddr).flatMap {
             KeepEmail.findFirstMatchIn(_).map(_.group(1).toLowerCase.trim)
-          }.flatten
+          }
           for (keepType <- KeepType.allTypes.filter(prefixes contains _.emailPrefix)) {
             val senderAddress = messageParser.getSenderAddress(message)
             (messageParser.getUser(senderAddress), messageParser.getUris(message)) match {
@@ -116,23 +116,21 @@ class MailToKeepActor @Inject() (
                   }
                 }
                 val bms = uris.map(uri => RawBookmarkRepresentation(url = uri.toString(), isPrivate = None, keptAt = Some(clock.now)))
-                for (uri <- uris) {
-                  implicit val context = HeimdalContext.empty
-                  val (bookmarks, _) = bookmarkInterner.internRawBookmarks(bms, user.id.get, library, KeepSource.email)
-                  val bmText = bookmarks.map { bm =>
-                    log.info(s"created bookmark from email with id ${bm.id.get}")
-                    s"<p>${bm.url}</p>"
-                  }.mkString("\n")
+                implicit val context = HeimdalContext.empty
+                val (bookmarks, _) = bookmarkInterner.internRawBookmarks(bms, user.id.get, library, KeepSource.email)
+                val bmText = bookmarks.map { bm =>
+                  log.info(s"created bookmark from email with id ${bm.id.get}")
+                  s"<p>${bm.url}</p>"
+                }.mkString("\n")
 
-                  sendReply(
-                    message = message,
-                    htmlBody =
-                      s"<p>Hi ${user.firstName},</p>" +
-                        s"<p>Congratulations! We added ${bookmarks.length} ${keepType.name} keeps:</p>" +
-                        bmText +
-                        "<p>Sincerely,<br>The Kifi team</p>"
-                  )
-                }
+                sendReply(
+                  message = message,
+                  htmlBody =
+                    s"<p>Hi ${user.firstName},</p>" +
+                      s"<p>Congratulations! We added ${bookmarks.length} ${keepType.name} keeps:</p>" +
+                      bmText +
+                      "<p>Sincerely,<br>The Kifi team</p>"
+                )
             }
           }
           message.setFlags(new Flags(Flags.Flag.DELETED), true)
