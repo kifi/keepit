@@ -7,10 +7,10 @@ import com.keepit.common.store.ImagePath
 import com.kifi.macros.json
 import play.api.http.Status._
 
-@json case class OrganizationImageInfo(path: ImagePath, x: Int, y: Int)
+@json case class OrganizationImageInfo(path: ImagePath)
 
 object OrganizationImageInfo {
-  def createInfo(img: OrganizationAvatar) = OrganizationImageInfo(img.imagePath, img.position.map(_.x).getOrElse(50), img.position.map(_.y).getOrElse(50))
+  def createInfo(img: OrganizationAvatar) = OrganizationImageInfo(img.imagePath)
 }
 
 @json

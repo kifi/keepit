@@ -229,11 +229,12 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
       (userInvitations, existingMembership)
     }
 
-    val sortedInvitations = invitations.sortBy(_.role).reverse
     val updatedMembership: Either[OrganizationFail, OrganizationMembership] = membershipOpt match {
       case Some(membership) => Right(membership) // already a member
       case None => // new membership
-        val addRequests = sortedInvitations.map(currentInvitation => OrganizationMembershipAddRequest(orgId, currentInvitation.inviterId, userId, currentInvitation.role))
+        val addRequests = invitations.sortBy(_.role).reverse.map { currentInvitation =>
+          OrganizationMembershipAddRequest(orgId, currentInvitation.inviterId, userId, currentInvitation.role)
+        }
         val firstSuccess = addRequests.toStream.map(organizationMembershipCommander.addMembership(_))
           .find(_.isRight)
         firstSuccess.map(_.right.map(_.membership))
@@ -244,7 +245,9 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
       db.readWrite { implicit s =>
         // Notify inviters on organization joined.
         notifyInviterOnOrganizationInvitationAcceptance(invitations, userRepo.get(userId), organizationRepo.get(orgId))
-        invitations.map(_.copy(state = OrganizationInviteStates.ACCEPTED)).foreach(organizationInviteRepo.save(_))
+        invitations.foreach { invite =>
+          organizationInviteRepo.save(invite.copy(state = OrganizationInviteStates.ACCEPTED))
+        }
       }
       success
     }
@@ -269,17 +272,16 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
           "member" -> BasicUser.fromUser(invitee),
           "organization" -> Json.toJson(OrganizationNotificationInfo.fromOrganization(org, orgImageOpt))
         ))
-      ) map { _ =>
-          val canSendPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(inviterId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
-          if (canSendPush) {
-            elizaClient.sendUserPushNotification(
-              userId = inviterId,
-              message = title,
-              recipient = invitee,
-              pushNotificationExperiment = PushNotificationExperiment.Experiment1,
-              category = UserPushNotificationCategory.NewOrganizationMember)
-          }
-        }
+      )
+      val canSendPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(inviterId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
+      if (canSendPush) {
+        elizaClient.sendUserPushNotification(
+          userId = inviterId,
+          message = title,
+          recipient = invitee,
+          pushNotificationExperiment = PushNotificationExperiment.Experiment1,
+          category = UserPushNotificationCategory.NewOrganizationMember)
+      }
     }
   }
 
