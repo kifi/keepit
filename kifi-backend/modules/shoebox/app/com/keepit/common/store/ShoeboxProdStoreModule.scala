@@ -59,6 +59,7 @@ case class ShoeboxDevStoreModule() extends DevStoreModule(ShoeboxProdStoreModule
   def configure() {
     bind[RoverImageStore].to[InMemoryRoverImageStoreImpl]
     bind[OrganizationAvatarStore].to[InMemoryOrganizationAvatarStoreImpl]
+    bind[ImageDataIntegrityPlugin].to[ImageDataIntegrityPluginImpl].in[AppScoped]
   }
 
   @Singleton
