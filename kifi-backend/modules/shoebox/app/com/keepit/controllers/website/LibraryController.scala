@@ -39,6 +39,7 @@ class LibraryController @Inject() (
   libraryInviteRepo: LibraryInviteRepo,
   userRepo: UserRepo,
   keepRepo: KeepRepo,
+  orgRepo: OrganizationRepo,
   basicUserRepo: BasicUserRepo,
   librarySubscriptionRepo: LibrarySubscriptionRepo,
   librarySubscriptionCommander: LibrarySubscriptionCommander,
@@ -108,12 +109,13 @@ class LibraryController @Inject() (
       case Left(fail) =>
         Status(fail.status)(Json.obj("error" -> fail.message))
       case Right(lib) =>
-        val (owner, membership) = db.readOnlyMaster { implicit s =>
+        val (owner, membership, org) = db.readOnlyMaster { implicit s =>
           val basicUser = basicUserRepo.load(lib.ownerId)
           val membership = libraryMembershipRepo.getWithLibraryIdAndUserId(lib.id.get, request.userId)
-          (basicUser, membership)
+          val org = lib.organizationId.flatMap { id => orgRepo.get(id).handle }
+          (basicUser, membership, org)
         }
-        val libInfo = Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, None, owner))
+        val libInfo = Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, None, owner, org))
         Ok(Json.obj("library" -> libInfo, "listed" -> membership.map(_.listed)))
     }
   }
@@ -205,7 +207,9 @@ class LibraryController @Inject() (
     }
     val objs = libInfos.map {
       case (info: LibraryCardInfo, mem: MiniLibraryMembership, subs: Seq[LibrarySubscriptionKey]) =>
-        val path = formatLibraryPathUrlEncoded(info.owner.username, info.slug)
+        val id = Library.decodePublicId(info.id).get
+        val lib = db.readOnlyMaster { implicit s => libraryRepo.get(id) }
+        val path = libPathCommander.getPathUrlEncoded(lib)
         val obj = Json.toJson(info).as[JsObject] + ("url" -> JsString(path)) + ("subscriptions" -> Json.toJson(subs)) // TODO: stop adding "url" when web app uses "slug" instead
         if (mem.lastViewed.nonEmpty) {
           obj ++ Json.obj("lastViewed" -> mem.lastViewed)

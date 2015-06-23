@@ -16,6 +16,7 @@ class MobileMutualUserController @Inject() (
     basicUserRepo: BasicUserRepo,
     userConnectionRepo: UserConnectionRepo,
     libraryRepo: LibraryRepo,
+    orgRepo: OrganizationRepo,
     val config: PublicIdConfiguration) extends UserActions with ShoeboxServiceController {
 
   def getMutualConnections(userId: ExternalId[User], page: Int = 0, size: Int = 10) = UserAction { request =>
@@ -49,7 +50,8 @@ class MobileMutualUserController @Inject() (
           val libOwners = basicUserRepo.loadAll(mutualLibraries.map(_.ownerId).toSet)
           val libsJson = mutualLibraries.map { lib =>
             val owner = libOwners(lib.ownerId)
-            Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, None, owner)(config))
+            val org = lib.organizationId.flatMap(orgRepo.get(_).handle)
+            Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, None, owner, org)(config))
           }
           Ok(Json.obj("mutualLibraries" -> JsArray(libsJson), "totalMutualLibraries" -> countMutualLibraries))
       }

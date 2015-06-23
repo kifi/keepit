@@ -24,6 +24,7 @@ class KeepDecorator @Inject() (
     collectionCommander: CollectionCommander,
     libraryMembershipRepo: LibraryMembershipRepo,
     keepRepo: KeepRepo,
+    orgRepo: OrganizationRepo,
     keepImageCommander: KeepImageCommander,
     userCommander: Provider[UserCommander],
     searchClient: SearchServiceClient,
@@ -47,6 +48,13 @@ class KeepDecorator @Inject() (
           val librariesShown = augmentationInfos.flatMap(_.libraries.map(_._1)).toSet
           db.readOnlyMaster { implicit s => libraryRepo.getLibraries(librariesShown) } //cached
         }
+
+        val libIdToOrg = {
+          val libId2orgId = idToLibrary.mapValues(lib => lib.organizationId).collect { case (id, Some(orgid)) => id -> orgid }
+          val orgId2org = db.readOnlyMaster { implicit s => orgRepo.getByIds(libId2orgId.values.toSet) }
+          libId2orgId.mapValues { orgId => orgId2org.get(orgId) }.collect { case (id, Some(org)) => id -> org }
+        }
+
         val idToBasicUser = {
           val keepersShown = augmentationInfos.flatMap(_.keepers.map(_._1)).toSet
           val libraryContributorsShown = augmentationInfos.flatMap(_.libraries.map(_._2)).toSet
@@ -54,7 +62,7 @@ class KeepDecorator @Inject() (
           val keepers = keeps.map(_.userId).toSet // is this needed? need to double check, it may be redundant
           db.readOnlyMaster { implicit s => basicUserRepo.loadAll(keepersShown ++ libraryContributorsShown ++ libraryOwners ++ keepers) } //cached
         }
-        val idToBasicLibrary = idToLibrary.mapValues(library => BasicLibrary(library, idToBasicUser(library.ownerId)))
+        val idToBasicLibrary = idToLibrary.mapValues(library => BasicLibrary(library, idToBasicUser(library.ownerId), libIdToOrg.get(library.id.get).flatMap { _.handle }))
 
         (idToBasicUser, idToBasicLibrary)
       }

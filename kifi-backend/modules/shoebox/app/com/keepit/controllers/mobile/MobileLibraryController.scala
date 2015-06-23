@@ -20,6 +20,7 @@ import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
 import com.keepit.normalizer.NormalizedURIInterner
 import com.keepit.shoebox.controllers.LibraryAccessActions
+import com.keepit.social.BasicUser
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
 import com.keepit.common.core._
@@ -45,6 +46,7 @@ class MobileLibraryController @Inject() (
   userCommander: UserCommander,
   keepImageCommander: KeepImageCommander,
   libraryImageCommander: LibraryImageCommander,
+  orgRepo: OrganizationRepo,
   libPathCommander: LibraryPathCommander,
   normalizedUriInterner: NormalizedURIInterner,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
@@ -55,6 +57,12 @@ class MobileLibraryController @Inject() (
   val publicIdConfig: PublicIdConfiguration,
   implicit val config: PublicIdConfiguration)
     extends UserActions with LibraryAccessActions with ShoeboxServiceController {
+
+  private def constructLibraryInfo(lib: Library, inviter: Option[BasicUser] = None) = {
+    val (owner, org) = db.readOnlyMaster { implicit s => (basicUserRepo.load(lib.ownerId), lib.organizationId.flatMap { id => orgRepo.get(id).handle }) }
+    val libImage = libraryImageCommander.getBestImageForLibrary(lib.id.get, MobileLibraryController.defaultLibraryImageSize)
+    LibraryInfo.fromLibraryAndOwner(lib, libImage, owner, org, inviter)
+  }
 
   def createLibrary() = UserAction(parse.tolerantJson) { request =>
     val jsonBody = request.body
@@ -69,10 +77,7 @@ class MobileLibraryController @Inject() (
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
     libraryCommander.addLibrary(addRequest, request.userId) match {
       case Left(fail) => sendFailResponse(fail)
-      case Right(lib) =>
-        val owner = db.readOnlyMaster { implicit s => basicUserRepo.load(lib.ownerId) }
-        val libImage = libraryImageCommander.getBestImageForLibrary(lib.id.get, MobileLibraryController.defaultLibraryImageSize)
-        Ok(Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, libImage, owner)))
+      case Right(lib) => Ok(Json.toJson(constructLibraryInfo(lib)))
     }
   }
 
@@ -92,10 +97,7 @@ class MobileLibraryController @Inject() (
     val res = libraryCommander.modifyLibrary(libId, request.userId, modifyRequest)
     res match {
       case Left(fail) => sendFailResponse(fail)
-      case Right(lib) =>
-        val owner = db.readOnlyMaster { implicit s => basicUserRepo.load(lib.ownerId) }
-        val libImage = libraryImageCommander.getBestImageForLibrary(lib.id.get, MobileLibraryController.defaultLibraryImageSize)
-        Ok(Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, libImage, owner)))
+      case Right(lib) => Ok(Json.toJson(constructLibraryInfo(lib)))
     }
   }
 
@@ -252,23 +254,15 @@ class MobileLibraryController @Inject() (
     val libImages = libraryImageCommander.getBestImageForLibraries((librariesWithMemberships.map(_._2.id.get) ++ librariesWithInvites.map(_._2.id.get)).toSet, MobileLibraryController.defaultLibraryImageSize)
 
     val libsFollowing = for ((mem, library) <- librariesWithMemberships) yield {
-      val owner = db.readOnlyMaster { implicit s =>
-        basicUserRepo.load(library.ownerId)
-      }
-      val libImage = libImages.get(library.id.get)
-      val info = LibraryInfo.fromLibraryAndOwner(lib = library, image = libImage, owner = owner)
+      val info = constructLibraryInfo(library)
       val memInfo = if (mem.lastViewed.nonEmpty) Json.obj("access" -> mem.access, "lastViewed" -> mem.lastViewed) else Json.obj("access" -> mem.access)
       Json.toJson(info).as[JsObject] ++ memInfo ++ Json.obj("subscribedToUpdates" -> mem.subscribedToUpdates)
     }
     val libsInvitedTo = for (invitePair <- invitesToShow) yield {
       val invite = invitePair._1
       val lib = invitePair._2
-      val (libOwner, inviter) = db.readOnlyMaster { implicit s =>
-        (basicUserRepo.load(lib.ownerId),
-          basicUserRepo.load(invite.inviterId))
-      }
-      val libImage = libImages.get(lib.id.get)
-      val info = LibraryInfo.fromLibraryAndOwner(lib = lib, image = libImage, owner = libOwner, inviter = Some(inviter))
+      val inviter = db.readOnlyMaster { implicit s => basicUserRepo.load(invite.inviterId) }
+      val info = constructLibraryInfo(lib, Some(inviter))
       Json.toJson(info).as[JsObject] ++ Json.obj("access" -> invite.access)
     }
     Ok(Json.obj("libraries" -> libsFollowing, "invited" -> libsInvitedTo))
@@ -385,8 +379,8 @@ class MobileLibraryController @Inject() (
         res match {
           case Left(fail) => sendFailResponse(fail)
           case Right((lib, _)) =>
-            val owner = db.readOnlyMaster { implicit s => basicUserRepo.load(lib.ownerId) }
-            Ok(Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, None, owner)))
+            val (owner, org) = db.readOnlyMaster { implicit s => (basicUserRepo.load(lib.ownerId), lib.organizationId.flatMap(orgRepo.get(_).handle)) }
+            Ok(Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, None, owner, org)))
         }
     }
   }

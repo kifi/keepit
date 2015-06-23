@@ -12,6 +12,7 @@ import play.api.libs.json.Json
 trait OrganizationRepo extends Repo[Organization] with SeqNumberFunction[Organization] {
   def updateName(organizationId: Id[Organization], name: String): Organization = ???
   def updateDescription(organizationId: Id[Organization], description: String): Organization = ???
+  def getByIds(orgIds: Set[Id[Organization]])(implicit session: RSession): Map[Id[Organization], Organization]
 }
 
 @Singleton
@@ -39,5 +40,11 @@ class OrganizationRepoImpl @Inject() (val db: DataBaseComponent, val clock: Cloc
   }
 
   def table(tag: Tag) = new OrganizationTable(tag)
+
   initTable()
+
+  def getByIds(orgIds: Set[Id[Organization]])(implicit session: RSession): Map[Id[Organization], Organization] = {
+    val q = { for { row <- rows if row.id.inSet(orgIds) } yield row }
+    q.list.map { x => (x.id.get -> x) }.toMap
+  }
 }

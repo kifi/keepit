@@ -154,12 +154,18 @@ object Library extends ModelWithPublicIdCompanion[Library] with LibraryPathHelpe
 }
 
 trait LibraryPathHelper {
-  def formatLibraryPath(ownerUsername: Username, slug: LibrarySlug): String = {
-    s"/${ownerUsername.value}/${slug.value}"
+  def formatLibraryPath(ownerUsername: Username, org: Option[PrimaryOrganizationHandle], slug: LibrarySlug): String = {
+    org match {
+      case Some(handle) => s"/${handle.normalized.value}/${slug.value}"
+      case None => s"/${ownerUsername.value}/${slug.value}"
+    }
   }
 
-  def formatLibraryPathUrlEncoded(ownerUsername: Username, slug: LibrarySlug): String = {
-    s"/${ownerUsername.urlEncoded}/${slug.urlEncoded}"
+  def formatLibraryPathUrlEncoded(ownerUsername: Username, org: Option[PrimaryOrganizationHandle], slug: LibrarySlug): String = {
+    org match {
+      case Some(handle) => s"/${handle.normalized.urlEncoded}/${slug.urlEncoded}"
+      case None => s"/${ownerUsername.urlEncoded}/${slug.urlEncoded}"
+    }
   }
 }
 
@@ -280,8 +286,8 @@ case class BasicLibrary(id: PublicId[Library], name: String, path: String, visib
 }
 
 object BasicLibrary extends LibraryPathHelper {
-  def apply(library: Library, owner: BasicUser)(implicit publicIdConfig: PublicIdConfiguration): BasicLibrary = {
-    val path = formatLibraryPath(owner.username, library.slug)
+  def apply(library: Library, owner: BasicUser, org: Option[PrimaryOrganizationHandle])(implicit publicIdConfig: PublicIdConfiguration): BasicLibrary = {
+    val path = formatLibraryPath(owner.username, org, library.slug)
     BasicLibrary(Library.publicId(library.id.get), library.name, path, library.visibility, library.color)
   }
 }

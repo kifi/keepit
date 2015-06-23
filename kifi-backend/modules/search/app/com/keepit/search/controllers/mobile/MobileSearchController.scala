@@ -99,7 +99,7 @@ class MobileSearchController @Inject() (
           libraryRecordsAndVisibilityById.get(hit.id).map {
             case (library, visibility, _) =>
               val owner = usersById(library.ownerId)
-              val path = formatLibraryPath(owner.username, library.slug)
+              val path = formatLibraryPath(owner.username, None, library.slug) // todo: after orgId is indexed into LibraryRecord, we can call shoebox and get orgInfo
               val details = libraryDetailsById(library.id)
               val description = library.description.getOrElse("")
               Json.obj(
@@ -190,7 +190,7 @@ class MobileSearchController @Inject() (
                 val owner = usersById(library.ownerId)
                 val details = libraryDetails(library.id)
 
-                val path = formatLibraryPath(owner.username, details.slug)
+                val path = formatLibraryPath(owner.username, None, details.slug) // todo: after orgId is indexed into LibraryRecord, we can call shoebox and get orgInfo
                 val description = library.description.orElse(details.description).getOrElse("")
 
                 Json.obj(
@@ -249,7 +249,7 @@ class MobileSearchController @Inject() (
                 relevantLibraryRecordsAndVisibility.get(libraryId).map {
                   case (record, visibility, _) =>
                     val owner = users(record.ownerId)
-                    val library = makeBasicLibrary(record, visibility, owner)
+                    val library = makeBasicLibrary(record, visibility, owner, None) // todo: after orgId is indexed into LibraryRecord, we can call shoebox and get orgInfo
                     Json.obj("id" -> library.id, "name" -> library.name, "color" -> library.color, "path" -> library.path, "visibility" -> library.visibility)
                 }
               }
