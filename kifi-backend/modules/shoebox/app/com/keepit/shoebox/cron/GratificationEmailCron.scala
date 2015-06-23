@@ -59,10 +59,10 @@ class GratificationEmailActor @Inject() (
 
   def receive = {
     case SendEmails =>
-      emailCommander.batchSendEmails(_ => true, Some(testDestinationEmail))
+      emailCommander.batchSendEmails(_ => true, sendTo = Some(testDestinationEmail))
     case SendOddEmails =>
-      emailCommander.batchSendEmails(id => id.id % 2 == 1, Some(testDestinationEmail))
+      emailCommander.batchSendEmails(filter = { id => id.id % 2 == 1 }, sendTo = Some(testDestinationEmail))
     case SendEvenEmails =>
-      emailCommander.batchSendEmails(id => id.id % 2 == 0, Some(testDestinationEmail))
+      emailCommander.batchSendEmails(filter = { id => id.id % 2 == 0 }, sendTo = Some(testDestinationEmail))
   }
 }
