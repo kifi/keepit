@@ -33,15 +33,9 @@ class OrganizationAvatarCommanderImpl @Inject() (
     val webService: WebService,
     private implicit val executionContext: ExecutionContext) extends OrganizationAvatarCommander with ProcessedImageHelper with Logging {
 
-  def getBestImage(orgId: Id[Organization], imageSize: ImageSize): Option[OrganizationAvatar] = {
-    // Get the image that is the closest to the desired ImageSize, by a sum-of-squares metric
-    def sq(x: Int) = x * x
-    def metric(a: OrganizationAvatar) = sq(a.height - imageSize.height) + sq(a.width - imageSize.width)
-
-    db.readOnlyReplica { implicit session =>
-      val options = orgAvatarRepo.getByOrganization(orgId)
-      options.sortBy(metric).headOption
-    }
+  def getBestImage(orgId: Id[Organization], idealSize: ImageSize): Option[OrganizationAvatar] = {
+    val candidates = db.readOnlyReplica { implicit session => orgAvatarRepo.getByOrganization(orgId) }
+    ProcessedImageSize.pickByIdealImageSize(idealSize, candidates, strictAspectRatio = false)(_.imageSize)
   }
 
   def persistOrganizationAvatarsFromUserUpload(imageFile: TemporaryFile, orgId: Id[Organization]): Future[Either[ImageStoreFailure, ImageHash]] = {
@@ -81,9 +75,9 @@ class OrganizationAvatarCommanderImpl @Inject() (
               saveNewAvatars(orgId, sourceImage, existingAvatars, uploadedImages, unnecessary)
               Right(sourceImage.hash)
             } catch {
-              case imageInfoError: Exception =>
-                log.error(s"Failed to update ImageInfoRepo after fetching image from user uploaded file: $imageInfoError")
-                Left(ImageProcessState.DbPersistFailed(imageInfoError))
+              case repoError: Exception =>
+                log.error(s"Failed to update OrganizationAvatarRepo after processing image from user uploaded file: $repoError")
+                Left(ImageProcessState.DbPersistFailed(repoError))
             }
         }
     }
