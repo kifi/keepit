@@ -1,6 +1,5 @@
 package com.keepit.graph.model
 
-import com.keepit.common.service.IpAddress
 import com.keepit.model._
 import com.keepit.common.db.Id
 import com.keepit.search.index.message.ThreadContent
@@ -45,7 +44,4 @@ object VertexDataId {
 
   implicit def fromLibraryId(libId: Id[Library]): VertexDataId[LibraryReader] = VertexDataId(libId.id)
   implicit def toLibraryId(libReaderId: VertexDataId[LibraryReader]): Id[Library] = Id(libReaderId.id)
-
-  implicit def fromIpAddr(ipAddr: IpAddress): VertexDataId[IpAddressReader] = VertexDataId(ipAddr)
-  implicit def toIpAddr(ipReaderId: VertexDataId[IpAddressReader]) = IpAddress(ipReaderId.id.toOctalString)
 }

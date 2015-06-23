@@ -1,13 +1,10 @@
 package com.keepit.model
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
-import com.keepit.common.actor.ActorInstance
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick._
-import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.plugin.{ SequencingActor, SchedulingProperties, SequencingPlugin }
 import com.keepit.common.service.IpAddress
 import com.keepit.common.time.Clock
 import org.joda.time.DateTime
@@ -15,7 +12,7 @@ import org.joda.time.DateTime
 import scala.slick.jdbc.GetResult
 
 @ImplementedBy(classOf[UserIpAddressRepoImpl])
-trait UserIpAddressRepo extends Repo[UserIpAddress] with SeqNumberFunction[UserIpAddress] {
+trait UserIpAddressRepo extends Repo[UserIpAddress] {
   def saveIfNew(model: UserIpAddress)(implicit session: RWSession): UserIpAddress
   def countByUser(userId: Id[User])(implicit session: RSession): Int
   def getByUser(userId: Id[User], limit: Int)(implicit session: RSession): Seq[UserIpAddress]
@@ -29,18 +26,18 @@ class UserIpAddressRepoImpl @Inject() (
   val db: DataBaseComponent,
   userIpAddressCache: UserIpAddressCache,
   val clock: Clock)
-    extends DbRepo[UserIpAddress] with UserIpAddressRepo with SeqNumberDbFunction[UserIpAddress] with Logging {
+    extends DbRepo[UserIpAddress] with UserIpAddressRepo with Logging {
 
   import db.Driver.simple._
   implicit val IpAddressTypeMapper = MappedColumnType.base[IpAddress, String](_.toString, IpAddress(_))
 
   type RepoImpl = UserIpAddressTable
-  class UserIpAddressTable(tag: Tag) extends RepoTable[UserIpAddress](db, tag, "user_ip_addresses") with SeqNumberColumn[UserIpAddress] {
+  class UserIpAddressTable(tag: Tag) extends RepoTable[UserIpAddress](db, tag, "user_ip_addresses") {
     def userId = column[Id[User]]("user_id", O.NotNull)
     def ipAddress = column[IpAddress]("ip_address", O.NotNull)
     def agentType = column[String]("agent_type", O.NotNull)
 
-    def * = (id.?, createdAt, updatedAt, state, userId, ipAddress, agentType, seq) <> ((UserIpAddress.apply _).tupled, UserIpAddress.unapply)
+    def * = (id.?, createdAt, updatedAt, state, userId, ipAddress, agentType) <> ((UserIpAddress.apply _).tupled, UserIpAddress.unapply)
   }
 
   def table(tag: Tag) = new UserIpAddressTable(tag)
@@ -52,10 +49,6 @@ class UserIpAddressRepoImpl @Inject() (
 
   override def invalidateCache(model: UserIpAddress)(implicit session: RSession) = {
     userIpAddressCache.set(UserIpAddressKey(model.userId), model)
-  }
-
-  override def save(model: UserIpAddress)(implicit session: RWSession): UserIpAddress = {
-    super.save(model.copy(seq = deferredSeqNum()))
   }
 
   def saveIfNew(model: UserIpAddress)(implicit session: RWSession): UserIpAddress = {
@@ -108,15 +101,3 @@ class UserIpAddressRepoImpl @Inject() (
     result.as[IpAddress].list
   }
 }
-
-trait IpAddressSequencingPlugin extends SequencingPlugin
-
-class IpAddressSequencingPluginImpl @Inject() (
-  override val actor: ActorInstance[IpAddressSequencingActor],
-  override val scheduling: SchedulingProperties) extends IpAddressSequencingPlugin
-
-@Singleton
-class IpAddressSequenceNumberAssigner @Inject() (db: Database, repo: UserIpAddressRepo, airbrake: AirbrakeNotifier) extends DbSequenceAssigner[UserIpAddress](db, repo, airbrake)
-class IpAddressSequencingActor @Inject() (
-  assigner: IpAddressSequenceNumberAssigner,
-  airbrake: AirbrakeNotifier) extends SequencingActor(assigner, airbrake)

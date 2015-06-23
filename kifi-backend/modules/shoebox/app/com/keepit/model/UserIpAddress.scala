@@ -6,7 +6,6 @@ import com.keepit.common.logging.AccessLog
 import com.keepit.common.service.IpAddress
 import com.keepit.common.time.DateTimeJsonFormat
 import com.keepit.model.UserIpAddress._
-import com.keepit.shoebox.model.IngestableUserIpAddress
 import org.joda.time.DateTime
 
 import play.api.libs.functional.syntax._
@@ -22,14 +21,10 @@ case class UserIpAddress(
     userId: Id[User],
     ipAddress: IpAddress,
     // TODO: Turn agentType into an Enum?
-    agentType: String,
-    seq: SequenceNumber[UserIpAddress] = SequenceNumber.ZERO) extends ModelWithState[UserIpAddress] with ModelWithSeqNumber[UserIpAddress] {
+    agentType: String) extends ModelWithState[UserIpAddress] {
 
   def withId(id: Id[UserIpAddress]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
-
-  implicit def toIngestableUserIpAddressSeq(seqNum: SequenceNumber[UserIpAddress]): SequenceNumber[IngestableUserIpAddress] = seqNum.copy()
-  def toIngestableUserIpAddress = IngestableUserIpAddress(userId, ipAddress, updatedAt, seq)
 }
 
 object UserIpAddress {
@@ -40,10 +35,8 @@ object UserIpAddress {
     (__ \ 'state).format(State.format[UserIpAddress]) and
     (__ \ 'userId).format(Id.format[User]) and
     (__ \ 'ipAddress).format[IpAddress] and
-    (__ \ 'agentType).format[String] and
-    (__ \ 'seqNum).format(SequenceNumber.format[UserIpAddress])
+    (__ \ 'agentType).format[String]
   )(UserIpAddress.apply, unlift(UserIpAddress.unapply))
-
 }
 
 object UserIpAddressStates extends States[UserIpAddress] {}

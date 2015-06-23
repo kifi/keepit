@@ -36,7 +36,6 @@ import com.keepit.common.usersegment.UserSegmentKey
 import com.keepit.common.json.TupleFormat
 import com.keepit.common.core._
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
-import com.keepit.shoebox.model.IngestableUserIpAddress
 
 trait ShoeboxServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SHOEBOX
@@ -122,7 +121,6 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getLibrariesWithWriteAccess(userId: Id[User]): Future[Set[Id[Library]]]
   def getUserActivePersonas(userId: Id[User]): Future[UserActivePersonas]
   def getLibraryURIs(libId: Id[Library]): Future[Seq[Id[NormalizedURI]]]
-  def getUserIpAddressesChanged(seqNum: SequenceNumber[IngestableUserIpAddress], fetchSize: Int): Future[Seq[IngestableUserIpAddress]]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -769,9 +767,5 @@ class ShoeboxServiceClientImpl @Inject() (
 
   def getLibraryURIs(libId: Id[Library]): Future[Seq[Id[NormalizedURI]]] = {
     call(Shoebox.internal.getLibraryURIS(libId), callTimeouts = longTimeout).map { _.json.as[Seq[Id[NormalizedURI]]] }
-  }
-
-  def getUserIpAddressesChanged(seqNum: SequenceNumber[IngestableUserIpAddress], fetchSize: Int): Future[Seq[IngestableUserIpAddress]] = {
-    call(Shoebox.internal.getUserIpAddressesChanged(seqNum, fetchSize)).map { _.json.as[Seq[IngestableUserIpAddress]] }
   }
 }

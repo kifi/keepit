@@ -8,7 +8,7 @@ import com.keepit.common.zookeeper.{ ShardingCommander, ServiceInstance, Service
 trait SchedulingProperties {
   def enabled: Boolean
   //bad name, can you think of anything else?
-  //method returns true if scheduling is enabled and the instance is the leader
+  //method returns true if schedualing is enabled and the instance is the leader
   def enabledOnlyForLeader: Boolean
   def enabledOnlyForOneMachine(taskName: String): Boolean
   def isRunnerFor(taskName: String): Boolean
