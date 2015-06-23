@@ -31,6 +31,7 @@ class ShoeboxDataPipeController @Inject() (
     emailAddressRepo: UserEmailAddressRepo,
     libraryRepo: LibraryRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
+    userIpAddressRepo: UserIpAddressRepo,
     executor: DataPipelineExecutor) extends ShoeboxServiceController with Logging {
 
   implicit val context = executor.context
@@ -234,6 +235,15 @@ class ShoeboxDataPipeController @Inject() (
       val keeps = db.readOnlyReplica { implicit s => keepRepo.getByLibrary(libId, offset = 0, limit = Integer.MAX_VALUE) }
       val ids = keeps.filter(_.state == KeepStates.ACTIVE).sortBy(-_.keptAt.getMillis).take(5000).map { _.uriId }
       Ok(Json.toJson(ids))
+    }
+  }
+
+  def getUserIpAddressesChanged(seqNum: SequenceNumber[UserIpAddress], fetchSize: Int) = Action.async { request =>
+    SafeFuture {
+      val ipAddresses = db.readOnlyReplica { implicit s => userIpAddressRepo.getBySequenceNumber(seqNum, fetchSize) }.map {
+        _.toIngestableUserIpAddress
+      }
+      Ok(Json.toJson(ipAddresses))
     }
   }
 }

@@ -5,6 +5,7 @@ import com.keepit.curator.model.LibraryRecoSelectionParams
 import com.keepit.model._
 import com.keepit.rover.article.{ ArticleKind, Article }
 import com.keepit.rover.model.ArticleInfo
+import com.keepit.shoebox.model.IngestableUserIpAddress
 import com.keepit.shoebox.model.ids.UserSessionExternalId
 import com.keepit.search.SearchConfigExperiment
 import java.net.URLEncoder
@@ -158,6 +159,7 @@ object Shoebox extends Service {
     def getLibrariesWithWriteAccess(userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/getLibrariesWithWriteAccess", Param("userId", userId))
     def getUserActivePersonas(userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/user/activePersonas", Param("userId", userId))
     def getLibraryURIS(libId: Id[Library]) = ServiceRoute(GET, "/internal/shoebox/database/dumpLibraryURIIds", Param("libId", libId))
+    def getUserIpAddressesChanged(sequenceNumber: SequenceNumber[IngestableUserIpAddress], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getUserIpAddressesChanged")
   }
 }
 
