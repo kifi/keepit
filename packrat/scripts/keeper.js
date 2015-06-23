@@ -159,7 +159,8 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
               subsource: 'keepButton',
               friendsShown: params.keepers.length,
               friendsElided: params.numMore || undefined,
-              librariesShown: params.libs.length
+              librariesShown: params.libs.length,
+              relatedPagesShown: (params.pages || []).length
             });
           });
         } else {
@@ -329,7 +330,7 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
   }
 
   function attachSocialToolTipHandlers($tip, params, subsource) {
-    return $tip.on('click', '.kifi-keepers-pic,.kifi-keepers-lib', function () {
+    return $tip.on('click', '.kifi-keepers-pic,.kifi-keepers-lib,.kifi-keepers-page', function () {
       var a = this, url = a.href;
       if (url.indexOf('?') < 0) {
         a.href = url + '?o=xst';
@@ -337,13 +338,22 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
           a.href = url;
         });
       }
+      var action;
+      if (a.classList.contains('kifi-keepers-page')) {
+        action = 'clickedRelatedPage';
+      } else if (a.classList.contains('kifi-keepers-lib')) {
+        action = 'clickedLibrary'
+      } else {
+        action = 'clickedFriend'
+      }
       api.port.emit('track_notification_click', {
         category: 'socialToolTip',
-        action: a.classList.contains('kifi-keepers-lib') ? 'clickedLibrary' : 'clickedFriend',
+        action: action,
         subsource: subsource,
         friendsShown: params.keepers.length,
         friendsElided: params.numMore || undefined,
-        librariesShown: params.libs.length
+        librariesShown: params.libs.length,
+        relatedPagesShown: (params.pages || []).length
       });
     })
     .hoverfu('.kifi-keepers-pic', function (configureHover) {
@@ -604,7 +614,8 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
                   subsource: 'tile',
                   friendsShown: params.keepers.length,
                   friendsElided: params.numMore || undefined,
-                  librariesShown: params.libs.length
+                  librariesShown: params.libs.length,
+                  relatedPagesShown: (params.pages || []).length
                 });
               });
             }).hoverfu('show');
