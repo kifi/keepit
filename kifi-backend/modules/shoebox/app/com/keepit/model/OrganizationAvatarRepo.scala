@@ -1,7 +1,7 @@
 package com.keepit.model
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
-import com.keepit.common.db.slick.DBSession.RSession
+import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick.{ DataBaseComponent, DbRepo, Repo }
 import com.keepit.common.db.{ Id, State }
 import com.keepit.common.store.ImagePath
@@ -11,6 +11,8 @@ import org.joda.time.DateTime
 @ImplementedBy(classOf[OrganizationAvatarRepoImpl])
 trait OrganizationAvatarRepo extends Repo[OrganizationAvatar] {
   def getByOrganization(organizationId: Id[Organization], state: State[OrganizationAvatar] = OrganizationAvatarStates.ACTIVE)(implicit session: RSession): Seq[OrganizationAvatar]
+  def getByImageHash(hash: ImageHash, state: State[OrganizationAvatar] = OrganizationAvatarStates.ACTIVE)(implicit session: RSession): Seq[OrganizationAvatar]
+  def deactivate(model: OrganizationAvatar)(implicit session: RWSession): OrganizationAvatar
 }
 
 @Singleton
@@ -74,8 +76,15 @@ class OrganizationAvatarRepoImpl @Inject() (val db: DataBaseComponent, val clock
   def getByOrganizationCompiled = Compiled { (organizationId: Column[Id[Organization]], state: Column[State[OrganizationAvatar]]) =>
     for (row <- rows if row.organizationId === organizationId && row.state === state) yield row
   }
-
   def getByOrganization(organizationId: Id[Organization], state: State[OrganizationAvatar] = OrganizationAvatarStates.ACTIVE)(implicit session: RSession): Seq[OrganizationAvatar] = {
     getByOrganizationCompiled(organizationId, state).list
+  }
+
+  def getByImageHash(hash: ImageHash, state: State[OrganizationAvatar] = OrganizationAvatarStates.ACTIVE)(implicit session: RSession): Seq[OrganizationAvatar] = {
+    (for (row <- rows if row.sourceFileHash === hash && row.state === state) yield row).list
+  }
+
+  def deactivate(model: OrganizationAvatar)(implicit session: RWSession): OrganizationAvatar = {
+    save(model.copy(state = OrganizationAvatarStates.INACTIVE))
   }
 }

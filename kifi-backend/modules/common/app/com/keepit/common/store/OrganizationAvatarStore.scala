@@ -6,28 +6,26 @@ import com.amazonaws.services.s3.model.ObjectMetadata
 import com.amazonaws.services.s3.transfer.TransferManager
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.core._
-import com.keepit.model.{ ImageFormat, ImageHash, ProcessImageOperation }
 import play.api.Play
-import play.api.libs.Files.TemporaryFile
-import play.api.libs.json._
 import play.api.Play.current
+import play.api.libs.Files.TemporaryFile
 
 import scala.collection.mutable
 import scala.concurrent.{ ExecutionContext, Future }
 
-trait RoverImageStore {
+trait OrganizationAvatarStore {
   def put(key: ImagePath, is: InputStream, contentLength: Int, mimeType: String): Future[Unit]
   def get(key: ImagePath): Future[TemporaryFile]
 }
 
-case class RoverImageStoreInbox(dir: File) extends S3InboxDirectory
+case class OrganizationAvatarStoreInbox(dir: File) extends S3InboxDirectory
 
 @Singleton
-class S3RoverImageStoreImpl @Inject() (
+class S3OrganizationAvatarStoreImpl @Inject() (
     s3ImageConfig: S3ImageConfig,
-    val inbox: RoverImageStoreInbox,
+    val inbox: OrganizationAvatarStoreInbox,
     implicit val transferManager: TransferManager,
-    implicit val executionContext: ExecutionContext) extends RoverImageStore with S3AsyncHelper {
+    implicit val executionContext: ExecutionContext) extends OrganizationAvatarStore with S3AsyncHelper {
 
   def put(key: ImagePath, is: InputStream, contentLength: Int, mimeType: String): Future[Unit] = {
     val om = new ObjectMetadata()
@@ -48,7 +46,7 @@ class S3RoverImageStoreImpl @Inject() (
   }
 }
 
-class InMemoryRoverImageStoreImpl() extends RoverImageStore {
+class InMemoryOrganizationAvatarStoreImpl() extends OrganizationAvatarStore {
 
   require(!(Play.maybeApplication.isDefined && Play.isProd), "Can't have in memory file store in production")
 
