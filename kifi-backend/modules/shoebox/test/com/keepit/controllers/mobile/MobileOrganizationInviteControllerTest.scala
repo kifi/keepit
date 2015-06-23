@@ -51,7 +51,7 @@ class MobileOrganizationInviteControllerTest extends Specification with ShoeboxT
         }
       }
 
-      "accept on member with invite rights" in {
+      "succeed on member with invite rights" in {
         withDb(controllerTestModules: _*) { implicit injector =>
           val orgId = Id[Organization](1)
           val publicOrgId = Organization.publicId(orgId)(inject[PublicIdConfiguration])
@@ -126,6 +126,49 @@ class MobileOrganizationInviteControllerTest extends Specification with ShoeboxT
           inject[FakeUserActionsHelper].setUser(invitee)
           val request = route.acceptInvitation(PublicId[Organization]("12345"))
           val result = controller.acceptInvitation(PublicId[Organization]("12345"))(request)
+
+          result === OrganizationFail.INVALID_PUBLIC_ID
+        }
+      }
+    }
+
+    "when declineInvitation is called:" in {
+      "succeed given a valid public id" in {
+        withDb(controllerTestModules: _*) { implicit injector =>
+          val inviteRepo = inject[OrganizationInviteRepo]
+          val (invitee, org) = db.readWrite { implicit session =>
+            val user = UserFactory.user().withName("New", "Guy").saved
+            val inviter = UserFactory.user().withName("Mr", "Inviter").saved
+            val owner = UserFactory.user().withName("Kifi", "Kifi").saved
+            val org = inject[OrganizationRepo].save(Organization(name = "Kifi", ownerId = owner.id.get, handle = None))
+            inject[OrganizationMembershipRepo].save(org.newMembership(inviter.id.get, OrganizationRole.MEMBER).withPermissions(Set(OrganizationPermission.INVITE_MEMBERS)))
+
+            inviteRepo.save(OrganizationInvite(organizationId = org.id.get, inviterId = inviter.id.get, userId = user.id, role = OrganizationRole.MEMBER))
+            (user, org)
+          }
+          val orgId = org.id.get
+          val publicOrgId = Organization.publicId(orgId)(inject[PublicIdConfiguration])
+
+          inject[FakeUserActionsHelper].setUser(invitee)
+          val request = route.declineInvitation(publicOrgId)
+          val result = controller.declineInvitation(publicOrgId)(request)
+          status(result) must equalTo(OK)
+
+          db.readOnlyMaster { implicit session =>
+            inviteRepo.getByOrgAndUserId(orgId, invitee.id.get).forall(_.state == OrganizationInviteStates.DECLINED) === true
+          }
+        }
+      }
+
+      "fail on bad public id" in {
+        withDb(controllerTestModules: _*) { implicit injector =>
+          val invitee = db.readWrite { implicit session =>
+            UserFactory.user().withName("New", "Guy").saved
+          }
+
+          inject[FakeUserActionsHelper].setUser(invitee)
+          val request = route.declineInvitation(PublicId[Organization]("12345"))
+          val result = controller.declineInvitation(PublicId[Organization]("12345"))(request)
 
           result === OrganizationFail.INVALID_PUBLIC_ID
         }
