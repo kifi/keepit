@@ -109,7 +109,7 @@ class KifiSiteRouter @Inject() (
         libraryCommander.getLibraryBySlugOrAlias(user.id.get, LibrarySlug(slug)) map {
           case (library, isLibraryAlias) =>
             if (library.slug.value != slug || userRedirectStatusOpt.isDefined) { // library moved
-              val uri = libPathCommander.getPath(library) + dropPathSegment(dropPathSegment(request.uri))
+              val uri = libPathCommander.getPathUrlEncoded(library) + dropPathSegment(dropPathSegment(request.uri))
               val status = if (!isLibraryAlias || userRedirectStatusOpt.exists(_ == 303)) 303 else 301
               Redirect(uri, status)
             } else {
