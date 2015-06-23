@@ -31,6 +31,8 @@ class ShoeboxDataPipeController @Inject() (
     emailAddressRepo: UserEmailAddressRepo,
     libraryRepo: LibraryRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
+    organizationRepo: OrganizationRepo,
+    organizationMembershipRepo: OrganizationMembershipRepo,
     executor: DataPipelineExecutor) extends ShoeboxServiceController with Logging {
 
   implicit val context = executor.context
@@ -234,6 +236,24 @@ class ShoeboxDataPipeController @Inject() (
       val keeps = db.readOnlyReplica { implicit s => keepRepo.getByLibrary(libId, offset = 0, limit = Integer.MAX_VALUE) }
       val ids = keeps.filter(_.state == KeepStates.ACTIVE).sortBy(-_.keptAt.getMillis).take(5000).map { _.uriId }
       Ok(Json.toJson(ids))
+    }
+  }
+
+  def getOrganizationsChanged(seqNum: SequenceNumber[Organization], fetchSize: Int) = Action.async { request =>
+    SafeFuture {
+      val orgs = db.readOnlyReplica { implicit s => organizationRepo.getBySequenceNumber(seqNum, fetchSize) } map {
+        _.toOrganizationView
+      }
+      Ok(Json.toJson(orgs))
+    }
+  }
+
+  def getOrganizationMembershipsChanged(seqNum: SequenceNumber[OrganizationMembership], fetchSize: Int) = Action.async { request =>
+    SafeFuture {
+      val orgMems = db.readOnlyReplica { implicit s => organizationMembershipRepo.getBySequenceNumber(seqNum, fetchSize) } map {
+        _.toOrganizationMembershipView
+      }
+      Ok(Json.toJson(orgMems))
     }
   }
 }

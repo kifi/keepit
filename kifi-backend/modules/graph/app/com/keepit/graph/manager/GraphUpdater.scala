@@ -25,6 +25,7 @@ class GraphUpdaterImpl @Inject() () extends GraphUpdater with Logging {
     case emailContactUpdate: EmailContactGraphUpdate => processEmailContactGraphUpdate(emailContactUpdate)
     case libUpdate: LibraryGraphUpdate => processLibraryGraphUpdate(libUpdate)
     case libMemUpdate: LibraryMembershipGraphUpdate => processLibraryMembershipGraphUpdate(libMemUpdate)
+    case orgUpdate: OrganizationGraphUpdate => processOrganizationGraphUpdate(orgUpdate)
   }
 
   private def processUserGraphUpdate(update: UserGraphUpdate)(implicit writer: GraphWriter) = update.state match {
@@ -210,5 +211,23 @@ class GraphUpdaterImpl @Inject() () extends GraphUpdater with Logging {
     case _ =>
       writer.removeEdgeIfExists(update.userId, update.libId, EmptyEdgeReader)
       writer.removeEdgeIfExists(update.libId, update.userId, EmptyEdgeReader)
+  }
+
+  private def processOrganizationGraphUpdate(update: OrganizationGraphUpdate)(implicit writer: GraphWriter) = update.state match {
+    case OrganizationStates.INACTIVE =>
+      writer.removeVertexIfExists(update.orgId)
+    case OrganizationStates.ACTIVE =>
+      writer.saveVertex(OrganizationData(update.orgId))
+  }
+
+  private def processOrganizationMembershipGraphUpdate(update: OrganizationMembershipGraphUpdate)(implicit writer: GraphWriter) = update.state match {
+    case OrganizationMembershipStates.INACTIVE =>
+      writer.removeEdgeIfExists(update.userId, update.orgId, TimestampEdgeReader)
+      writer.removeEdgeIfExists(update.orgId, update.userId, TimestampEdgeReader)
+    case OrganizationMembershipStates.ACTIVE =>
+      writer.saveVertex(OrganizationData(update.orgId))
+      writer.saveVertex(UserData(update.userId))
+      writer.saveEdge(update.userId, update.orgId, TimestampEdgeData(update.createdAt.getMillis))
+      writer.saveEdge(update.orgId, update.userId, TimestampEdgeData(update.createdAt.getMillis))
   }
 }

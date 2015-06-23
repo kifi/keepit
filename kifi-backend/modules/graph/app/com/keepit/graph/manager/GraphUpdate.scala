@@ -164,3 +164,25 @@ case object LibraryGraphUpdate extends GraphUpdateKind[LibraryGraphUpdate] {
   val code = "library_graph_update"
   def apply(libView: LibraryView): LibraryGraphUpdate = LibraryGraphUpdate(libView.id.get, libView.state, libView.seq)
 }
+
+case class OrganizationGraphUpdate(orgId: Id[Organization], state: State[Organization], orgSeq: SequenceNumber[Organization]) extends GraphUpdate {
+  type U = OrganizationGraphUpdate
+  def kind = OrganizationGraphUpdate
+  def seq = kind.seq(orgSeq.value)
+}
+
+case object OrganizationGraphUpdate extends GraphUpdateKind[OrganizationGraphUpdate] {
+  val code = "organization_graph_update"
+  def apply(org: OrganizationView): OrganizationGraphUpdate = OrganizationGraphUpdate(org.id.get, org.state, org.seq)
+}
+
+case class OrganizationMembershipGraphUpdate(orgId: Id[Organization], userId: Id[User], createdAt: DateTime, state: State[OrganizationMembership], orgMemSeq: SequenceNumber[OrganizationMembership]) extends GraphUpdate {
+  type U = OrganizationMembershipGraphUpdate
+  def kind = OrganizationMembershipGraphUpdate
+  def seq = kind.seq(orgMemSeq.value)
+}
+
+case object OrganizationMembershipGraphUpdate extends GraphUpdateKind[OrganizationMembershipGraphUpdate] {
+  val code = "organization_membership_graph_update"
+  def apply(orgMem: OrganizationMembershipView): OrganizationMembershipGraphUpdate = OrganizationMembershipGraphUpdate(orgMem.orgId, orgMem.userId, orgMem.createdAt, orgMem.state, orgMem.seq)
+}

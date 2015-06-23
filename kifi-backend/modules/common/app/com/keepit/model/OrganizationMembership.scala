@@ -2,6 +2,7 @@ package com.keepit.model
 
 import com.keepit.common.db._
 import com.keepit.common.time._
+import com.kifi.macros.json
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -26,6 +27,19 @@ case class OrganizationMembership(
 
   def isOwner: Boolean = role == OrganizationRole.OWNER
   def hasRole(r: OrganizationRole): Boolean = r == role
+
+  def toOrganizationMembershipView = OrganizationMembershipView(organizationId, userId, createdAt, state, seq)
+}
+
+case class OrganizationMembershipView(
+  orgId: Id[Organization],
+  userId: Id[User],
+  createdAt: DateTime,
+  state: State[OrganizationMembership],
+  seq: SequenceNumber[OrganizationMembership])
+
+object OrganizationMembershipView {
+  implicit val format = Json.format[OrganizationMembershipView]
 }
 
 object OrganizationMembership {

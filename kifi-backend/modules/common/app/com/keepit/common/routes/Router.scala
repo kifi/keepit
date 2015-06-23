@@ -158,6 +158,8 @@ object Shoebox extends Service {
     def getLibrariesWithWriteAccess(userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/getLibrariesWithWriteAccess", Param("userId", userId))
     def getUserActivePersonas(userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/user/activePersonas", Param("userId", userId))
     def getLibraryURIS(libId: Id[Library]) = ServiceRoute(GET, "/internal/shoebox/database/dumpLibraryURIIds", Param("libId", libId))
+    def getOrganizationsChanged(seqNum: SequenceNumber[Organization], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getOrganizationsChanged", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
+    def getOrganizationMembershipsChanged(seqNum: SequenceNumber[OrganizationMembership], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getOrganizationMembershipsChanged", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
   }
 }
 

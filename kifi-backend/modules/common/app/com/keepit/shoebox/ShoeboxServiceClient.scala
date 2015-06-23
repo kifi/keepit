@@ -121,6 +121,8 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getLibrariesWithWriteAccess(userId: Id[User]): Future[Set[Id[Library]]]
   def getUserActivePersonas(userId: Id[User]): Future[UserActivePersonas]
   def getLibraryURIs(libId: Id[Library]): Future[Seq[Id[NormalizedURI]]]
+  def getOrganizationsChanged(seqNum: SequenceNumber[Organization], fetchSize: Int): Future[Seq[OrganizationView]]
+  def getOrganizationMembershipsChanged(seqNum: SequenceNumber[OrganizationMembership], fetchSize: Int): Future[Seq[OrganizationMembershipView]]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -767,5 +769,13 @@ class ShoeboxServiceClientImpl @Inject() (
 
   def getLibraryURIs(libId: Id[Library]): Future[Seq[Id[NormalizedURI]]] = {
     call(Shoebox.internal.getLibraryURIS(libId), callTimeouts = longTimeout).map { _.json.as[Seq[Id[NormalizedURI]]] }
+  }
+
+  def getOrganizationsChanged(seqNum: SequenceNumber[Organization], fetchSize: Int): Future[Seq[OrganizationView]] = {
+    call(Shoebox.internal.getOrganizationsChanged(seqNum, fetchSize)).map { _.json.as[Seq[OrganizationView]] }
+  }
+
+  def getOrganizationMembershipsChanged(seqNum: SequenceNumber[OrganizationMembership], fetchSize: Int): Future[Seq[OrganizationMembershipView]] = {
+    call(Shoebox.internal.getOrganizationMembershipsChanged(seqNum, fetchSize)).map { _.json.as[Seq[OrganizationMembershipView]] }
   }
 }

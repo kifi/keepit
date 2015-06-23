@@ -14,3 +14,4 @@ case class KeepData(id: VertexDataId[KeepReader]) extends KeepReader with Vertex
 case class EmailAccountData(id: VertexDataId[EmailAccountReader]) extends EmailAccountReader with VertexData[EmailAccountReader]
 case class AddressBookData(id: VertexDataId[AddressBookReader]) extends AddressBookReader with VertexData[AddressBookReader]
 case class LibraryData(id: VertexDataId[LibraryReader]) extends LibraryReader with VertexData[LibraryReader]
+case class OrganizationData(id: VertexDataId[OrganizationReader]) extends OrganizationReader with VertexData[OrganizationReader]
