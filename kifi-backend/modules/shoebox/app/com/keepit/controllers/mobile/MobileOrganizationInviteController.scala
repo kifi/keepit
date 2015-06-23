@@ -87,9 +87,10 @@ class MobileOrganizationInviteControllerImpl @Inject() (
         val msg = (request.body \ "message").asOpt[String].filter(_.nonEmpty)
 
         implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
-        orgInviteCommander.universalInviteLink(orgId, request.userId, role, msg) match {
+        orgInviteCommander.universalInviteLink(orgId, request.userId, role) match {
           case Left(fail) => sendFailResponse(fail)
-          case Right((invite, org)) =>
+          case Right(invite) =>
+            val org = orgCommander.get(invite.organizationId)
             // TODO: should we be using the organization handle here?
             val organizationPath = s"${fortyTwoConfig.applicationBaseUrl}/${org.handle.get.original}"
             val link = organizationPath + "?authToken=" + invite.authToken
