@@ -108,7 +108,9 @@ class OrganizationMembershipCommanderImpl @Inject() (
     requesterOpt exists { requester =>
       request match {
         case OrganizationMembershipAddRequest(_, _, _, newRole) =>
-          targetOpt.isEmpty && (newRole <= requester.role)
+          val inviterMembership = organizationMembershipRepo.getByOrgIdAndUserId(request.orgId, request.requesterId)
+          targetOpt.isEmpty && (newRole <= requester.role) &&
+            inviterMembership.exists(_.permissions.contains(OrganizationPermission.INVITE_MEMBERS))
 
         case OrganizationMembershipModifyRequest(_, _, _, newRole) =>
           targetOpt.exists(_.role < requester.role) && (newRole <= requester.role)

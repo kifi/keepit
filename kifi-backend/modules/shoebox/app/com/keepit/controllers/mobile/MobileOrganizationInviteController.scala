@@ -9,22 +9,33 @@ import com.keepit.common.mail.EmailAddress
 import com.keepit.heimdal.HeimdalContextBuilderFactory
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
+import com.keepit.shoebox.controllers.OrganizationAccessActions
 import play.api.libs.json._
+import play.api.mvc.{ Action, AnyContent }
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success }
 
+@ImplementedBy(classOf[MobileOrganizationInviteControllerImpl])
+trait MobileOrganizationInviteController {
+  def inviteUsers(pubId: PublicId[Organization]): Action[JsValue]
+  def createAnonymousInviteToOrganization(pubId: PublicId[Organization]): Action[JsValue]
+  def acceptInvitation(pubId: PublicId[Organization]): Action[AnyContent]
+  def declineInvitation(pubId: PublicId[Organization]): Action[AnyContent]
+}
+
 @Singleton
-class MobileOrganizationInviteController @Inject() (
+class MobileOrganizationInviteControllerImpl @Inject() (
     userCommander: UserCommander,
-    orgCommander: OrganizationCommander,
-    orgMembershipCommander: OrganizationMembershipCommander,
+    val orgCommander: OrganizationCommander,
+    val orgMembershipCommander: OrganizationMembershipCommander,
+    organizationInviteCommander: OrganizationInviteCommander,
     orgInviteCommander: OrganizationInviteCommander,
     fortyTwoConfig: FortyTwoConfig,
     heimdalContextBuilder: HeimdalContextBuilderFactory,
     val userActionsHelper: UserActionsHelper,
-    implicit val config: PublicIdConfiguration,
-    implicit val executionContext: ExecutionContext) extends UserActions with ShoeboxServiceController {
+    implicit val publicIdConfig: PublicIdConfiguration,
+    implicit val executionContext: ExecutionContext) extends MobileOrganizationInviteController with UserActions with OrganizationAccessActions with ShoeboxServiceController {
 
   private def sendFailResponse(fail: OrganizationFail) = Status(fail.status)(Json.obj("error" -> fail.message))
 
@@ -99,7 +110,23 @@ class MobileOrganizationInviteController @Inject() (
     }
   }
 
-  def acceptInvitation(pubId: PublicId[Organization]) = ???
-  def declineInvitation(pubId: PublicId[Organization]) = ???
+  def acceptInvitation(pubId: PublicId[Organization]) = UserAction { request =>
+    Organization.decodePublicId(pubId) match {
+      case Success(orgId) =>
+        orgInviteCommander.acceptInvitation(orgId, request.userId) match {
+          case Right(organizationMembership) => Ok(JsString("success"))
+          case Left(organizationFail) => organizationFail.asResponse
+        }
+      case Failure(_) => OrganizationFail.INVALID_PUBLIC_ID.asResponse
+    }
+  }
 
+  def declineInvitation(pubId: PublicId[Organization]) = UserAction { request =>
+    Organization.decodePublicId(pubId) match {
+      case Success(orgId) =>
+        organizationInviteCommander.declineInvitation(orgId, request.userId)
+        Ok(JsString("success"))
+      case _ => OrganizationFail.INVALID_PUBLIC_ID.asResponse
+    }
+  }
 }
