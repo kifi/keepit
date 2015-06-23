@@ -13,9 +13,9 @@ import scala.slick.lifted.Tag
 
 @ImplementedBy(classOf[LibrarySubscriptionRepoImpl])
 trait LibrarySubscriptionRepo extends Repo[LibrarySubscription] {
-  def getByLibraryId(libraryId: Id[Library], excludeStates: Set[State[LibrarySubscription]] = Set(LibrarySubscriptionStates.INACTIVE))(implicit session: RSession): Seq[LibrarySubscription]
-  def getByLibraryIdAndName(libraryId: Id[Library], name: String, excludeStates: Set[State[LibrarySubscription]] = Set(LibrarySubscriptionStates.INACTIVE))(implicit session: RSession): Option[LibrarySubscription]
-  def getByLibraryIdAndTrigger(libraryId: Id[Library], trigger: SubscriptionTrigger, excludeStates: Set[State[LibrarySubscription]] = Set(LibrarySubscriptionStates.INACTIVE))(implicit session: RSession): Seq[LibrarySubscription]
+  def getByLibraryId(libraryId: Id[Library], excludeStates: Set[State[LibrarySubscription]] = Set(LibrarySubscriptionStates.INACTIVE, LibrarySubscriptionStates.DISABLED))(implicit session: RSession): Seq[LibrarySubscription]
+  def getByLibraryIdAndName(libraryId: Id[Library], name: String, excludeStates: Set[State[LibrarySubscription]] = Set(LibrarySubscriptionStates.INACTIVE, LibrarySubscriptionStates.DISABLED))(implicit session: RSession): Option[LibrarySubscription]
+  def getByLibraryIdAndTrigger(libraryId: Id[Library], trigger: SubscriptionTrigger, excludeStates: Set[State[LibrarySubscription]] = Set(LibrarySubscriptionStates.INACTIVE, LibrarySubscriptionStates.DISABLED))(implicit session: RSession): Seq[LibrarySubscription]
 }
 
 @Singleton
