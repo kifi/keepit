@@ -26,6 +26,7 @@ class GraphUpdaterImpl @Inject() () extends GraphUpdater with Logging {
     case libUpdate: LibraryGraphUpdate => processLibraryGraphUpdate(libUpdate)
     case libMemUpdate: LibraryMembershipGraphUpdate => processLibraryMembershipGraphUpdate(libMemUpdate)
     case orgUpdate: OrganizationGraphUpdate => processOrganizationGraphUpdate(orgUpdate)
+    case orgMemUpdate: OrganizationMembershipGraphUpdate => processOrganizationMembershipGraphUpdate(orgMemUpdate)
   }
 
   private def processUserGraphUpdate(update: UserGraphUpdate)(implicit writer: GraphWriter) = update.state match {

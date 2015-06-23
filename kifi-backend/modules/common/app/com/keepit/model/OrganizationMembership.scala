@@ -2,7 +2,6 @@ package com.keepit.model
 
 import com.keepit.common.db._
 import com.keepit.common.time._
-import com.kifi.macros.json
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._

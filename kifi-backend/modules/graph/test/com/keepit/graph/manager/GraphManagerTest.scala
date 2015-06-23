@@ -10,7 +10,7 @@ import com.keepit.model.{ LibraryStates, Library }
 import org.specs2.mutable.Specification
 
 class GraphManagerTest extends Specification with GraphTestInjector with GraphTestHelper with NeighborQuerier {
-  "grap ingestion" should {
+  "graph ingestion" should {
     "correctly ingest data" in {
       withInjector(SimpleGraphTestModule()) { implicit injector =>
         val manager = inject[GraphManager]
@@ -40,6 +40,15 @@ class GraphManagerTest extends Specification with GraphTestInjector with GraphTe
           v.moveTo(VertexDataId[UserReader](1))
           nbs = getNeighbors(v, (UserReader, LibraryReader, EmptyEdgeReader), true)
           nbs.map { x: VertexId => x.asId[LibraryReader].id } === Set(1, 2)
+
+          // user to org
+          nbs = getNeighbors(v, (UserReader, OrganizationReader, TimestampEdgeReader), true)
+          nbs.map { x: VertexId => x.asId[OrganizationReader].id } === Set(1)
+
+          // org to users
+          v.moveTo(VertexDataId[OrganizationReader](1))
+          nbs = getNeighbors(v, (OrganizationReader, UserReader, TimestampEdgeReader), true)
+          nbs.map { x: VertexId => x.asId[UserReader].id } === Set(1, 2)
 
           // library to users
           v.moveTo(VertexDataId[LibraryReader](1))
