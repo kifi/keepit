@@ -28,6 +28,7 @@ class KifiSiteRouter @Inject() (
   val userIpAddressCommander: UserIpAddressCommander,
   pageMetaTagsCommander: PageMetaTagsCommander,
   libraryCommander: LibraryCommander,
+  libPathCommander: LibraryPathCommander,
   libraryMetadataCache: LibraryMetadataCache,
   userMetadataCache: UserMetadataCache,
   applicationConfig: FortyTwoConfig,
@@ -108,7 +109,7 @@ class KifiSiteRouter @Inject() (
         libraryCommander.getLibraryBySlugOrAlias(user.id.get, LibrarySlug(slug)) map {
           case (library, isLibraryAlias) =>
             if (library.slug.value != slug || userRedirectStatusOpt.isDefined) { // library moved
-              val uri = Library.formatLibraryPathUrlEncoded(user.username, library.slug) + dropPathSegment(dropPathSegment(request.uri))
+              val uri = libPathCommander.getPath(library) + dropPathSegment(dropPathSegment(request.uri))
               val status = if (!isLibraryAlias || userRedirectStatusOpt.exists(_ == 303)) 303 else 301
               Redirect(uri, status)
             } else {

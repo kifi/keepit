@@ -130,6 +130,7 @@ class LibraryCommanderImpl @Inject() (
     heimdal: HeimdalServiceClient,
     contextBuilderFactory: HeimdalContextBuilderFactory,
     libraryImageCommander: LibraryImageCommander,
+    libPathCommander: LibraryPathCommander,
     experimentCommander: LocalUserExperimentCommander,
     userValueRepo: UserValueRepo,
     systemValueRepo: SystemValueRepo,
@@ -177,8 +178,7 @@ class LibraryCommanderImpl @Inject() (
   }
 
   def getLibraryPath(library: Library): String = {
-    val owner = db.readOnlyMaster { implicit session => userRepo.get(library.ownerId) }
-    Library.formatLibraryPath(owner.username, library.slug)
+    libPathCommander.getPath(library)
   }
 
   def getBasicLibraryDetails(libraryIds: Set[Id[Library]], idealImageSize: ImageSize, viewerId: Option[Id[User]]): Map[Id[Library], BasicLibraryDetails] = {
@@ -352,7 +352,7 @@ class LibraryCommanderImpl @Inject() (
           owner = owner,
           description = lib.description,
           slug = lib.slug,
-          url = Library.formatLibraryPath(owner.username, lib.slug),
+          url = libPathCommander.getPath(lib),
           color = lib.color,
           kind = lib.kind,
           visibility = lib.visibility,
@@ -995,7 +995,7 @@ class LibraryCommanderImpl @Inject() (
                 userId,
                 message = s"New Keep in ${library.name}",
                 libraryId = library.id.get,
-                libraryUrl = "https://www.kifi.com" + Library.formatLibraryPath(owner.username, library.slug),
+                libraryUrl = "https://www.kifi.com" + libPathCommander.getPath(library),
                 pushNotificationExperiment = PushNotificationExperiment.Experiment1,
                 category = LibraryPushNotificationCategory.LibraryChanged
               )

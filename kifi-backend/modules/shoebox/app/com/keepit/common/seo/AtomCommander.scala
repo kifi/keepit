@@ -1,7 +1,7 @@
 package com.keepit.common.seo
 
 import com.google.inject.Inject
-import com.keepit.commanders.{ KeepImageCommander, ScaleImageRequest, LibraryImageCommander }
+import com.keepit.commanders.{ LibraryPathCommander, KeepImageCommander, ScaleImageRequest, LibraryImageCommander }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.store.{ ImageSize, S3ImageConfig }
@@ -22,6 +22,7 @@ class AtomCommander @Inject() (
     keepRepo: KeepRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
     keepImageCommander: KeepImageCommander,
+    libPathCommander: LibraryPathCommander,
     libraryImageCommander: LibraryImageCommander,
     rover: RoverServiceClient) extends Logging {
 
@@ -77,7 +78,7 @@ class AtomCommander @Inject() (
       val libraryCreator = userRepo.get(library.ownerId)
       (image.map(i => s"https:${i.imagePath.getUrl(s3ImageConfig)}"), keeps, libraryCreator)
     }
-    val feedUrl = s"${fortyTwoConfig.applicationBaseUrl}${Library.formatLibraryPathUrlEncoded(libraryCreator.username, library.slug)}"
+    val feedUrl = s"${fortyTwoConfig.applicationBaseUrl}${libPathCommander.getPath(library)}"
 
     val descriptionsFuture = db.readOnlyMaster { implicit s => rover.getUriSummaryByUris(keeps.map(_.uriId).toSet) }
     descriptionsFuture map { descriptions =>
