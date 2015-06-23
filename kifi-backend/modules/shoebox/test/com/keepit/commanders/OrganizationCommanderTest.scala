@@ -61,6 +61,45 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
       }
     }
 
+    "modify an organization's base permissions" in {
+      withDb() { implicit injector =>
+        val orgCommander = inject[OrganizationCommander]
+        val orgMembershipRepo = inject[OrganizationMembershipRepo]
+        val orgMembershipCommander = inject[OrganizationMembershipCommander]
+
+        val createResponse = orgCommander.createOrganization(OrganizationCreateRequest(userId = Id[User](1), "Kifi"))
+        val org = createResponse.right.get.newOrg
+
+        db.readWrite { implicit session =>
+          orgMembershipRepo.save(org.newMembership(userId = Id[User](2), role = OrganizationRole.MEMBER))
+        }
+
+        val memberInviteMember = OrganizationMembershipAddRequest(orgId = org.id.get, requesterId = Id[User](2), targetId = Id[User](42), newRole = OrganizationRole.MEMBER)
+
+        // By default, Organization's do not allow members to invite other members
+        val try1 = orgMembershipCommander.addMembership(memberInviteMember)
+        try1 === Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+
+        // An owner can change the base permissions so that members CAN do this
+        val betterBasePermissions = org.basePermissions.modified(OrganizationRole.MEMBER, added = Set(OrganizationPermission.INVITE_MEMBERS), removed = Set())
+        val orgModifyRequest = OrganizationModifyRequest(orgId = org.id.get, requesterId = Id[User](1),
+          modifications = OrganizationModifications(newBasePermissions = Some(betterBasePermissions)))
+
+        val orgModifyResponse = orgCommander.modifyOrganization(orgModifyRequest)
+        orgModifyResponse must haveClass[Right[OrganizationFail, OrganizationModifyResponse]]
+        orgModifyResponse.right.get.request === orgModifyRequest
+        orgModifyResponse.right.get.modifiedOrg.basePermissions === betterBasePermissions
+
+        // Now the member should be able to invite others
+        val try2 = orgMembershipCommander.addMembership(memberInviteMember)
+        try2 must haveClass[Right[OrganizationFail, OrganizationMembershipAddResponse]]
+
+        val allMembers = db.readOnlyMaster { implicit session => orgMembershipRepo.getAllByOrgId(org.id.get) }
+        allMembers.length === 3
+        allMembers.map(_.userId) === Seq(Id[User](1), Id[User](2), Id[User](42))
+      }
+    }
+
     "delete an organization" in {
       withDb() { implicit injector =>
         val orgCommander = inject[OrganizationCommander]

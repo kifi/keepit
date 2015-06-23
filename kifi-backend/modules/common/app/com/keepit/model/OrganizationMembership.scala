@@ -49,8 +49,11 @@ object OrganizationPermission {
   case object VIEW_ORGANIZATION extends OrganizationPermission("view_organization")
   case object EDIT_ORGANIZATION extends OrganizationPermission("edit_organization")
   case object INVITE_MEMBERS extends OrganizationPermission("invite_members")
+  case object REMOVE_MEMBERS extends OrganizationPermission("remove_members")
   case object ADD_LIBRARIES extends OrganizationPermission("add_libraries")
   case object REMOVE_LIBRARIES extends OrganizationPermission("remove_libraries")
+
+  def all: Set[OrganizationPermission] = Set(VIEW_ORGANIZATION, EDIT_ORGANIZATION, INVITE_MEMBERS, REMOVE_MEMBERS, ADD_LIBRARIES, REMOVE_LIBRARIES)
 
   implicit val format: Format[OrganizationPermission] =
     Format(__.read[String].map(OrganizationPermission(_)), new Writes[OrganizationPermission] {
@@ -62,6 +65,7 @@ object OrganizationPermission {
       case VIEW_ORGANIZATION.value => VIEW_ORGANIZATION
       case EDIT_ORGANIZATION.value => EDIT_ORGANIZATION
       case INVITE_MEMBERS.value => INVITE_MEMBERS
+      case REMOVE_MEMBERS.value => REMOVE_MEMBERS
       case ADD_LIBRARIES.value => ADD_LIBRARIES
       case REMOVE_LIBRARIES.value => REMOVE_LIBRARIES
     }

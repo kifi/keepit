@@ -112,10 +112,12 @@ class OrganizationMembershipCommanderImpl @Inject() (
             requester.permissions.contains(OrganizationPermission.INVITE_MEMBERS)
 
         case OrganizationMembershipModifyRequest(_, _, _, newRole) =>
-          targetOpt.exists(_.role < requester.role) && (newRole <= requester.role)
+          targetOpt.exists(_.role < requester.role) && (newRole <= requester.role) &&
+            requester.permissions.contains(OrganizationPermission.EDIT_ORGANIZATION)
 
         case OrganizationMembershipRemoveRequest(_, _, _) =>
-          targetOpt.exists(_.role < requester.role)
+          targetOpt.exists(_.role < requester.role) &&
+            requester.permissions.contains(OrganizationPermission.REMOVE_MEMBERS)
       }
     }
   }
