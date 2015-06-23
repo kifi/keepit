@@ -173,7 +173,7 @@ case class OrganizationGraphUpdate(orgId: Id[Organization], state: State[Organiz
 
 case object OrganizationGraphUpdate extends GraphUpdateKind[OrganizationGraphUpdate] {
   val code = "organization_graph_update"
-  def apply(org: OrganizationView): OrganizationGraphUpdate = OrganizationGraphUpdate(org.id.get, org.state, org.seq)
+  def apply(org: IngestableOrganization): OrganizationGraphUpdate = OrganizationGraphUpdate(org.id.get, org.state, org.seq)
 }
 
 case class OrganizationMembershipGraphUpdate(orgId: Id[Organization], userId: Id[User], createdAt: DateTime, state: State[OrganizationMembership], orgMemSeq: SequenceNumber[OrganizationMembership]) extends GraphUpdate {
@@ -184,5 +184,5 @@ case class OrganizationMembershipGraphUpdate(orgId: Id[Organization], userId: Id
 
 case object OrganizationMembershipGraphUpdate extends GraphUpdateKind[OrganizationMembershipGraphUpdate] {
   val code = "organization_membership_graph_update"
-  def apply(orgMem: OrganizationMembershipView): OrganizationMembershipGraphUpdate = OrganizationMembershipGraphUpdate(orgMem.orgId, orgMem.userId, orgMem.createdAt, orgMem.state, orgMem.seq)
+  def apply(orgMem: IngestableOrganizationMembership): OrganizationMembershipGraphUpdate = OrganizationMembershipGraphUpdate(orgMem.orgId, orgMem.userId, orgMem.createdAt, orgMem.state, orgMem.seq)
 }

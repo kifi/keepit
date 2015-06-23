@@ -39,7 +39,7 @@ case class Organization(
   def modifiedMembership(membership: OrganizationMembership, newRole: OrganizationRole): OrganizationMembership =
     membership.copy(role = newRole, permissions = getRolePermissions(newRole))
 
-  def toOrganizationView = OrganizationView(id, state, seq)
+  def toIngestableOrganization = IngestableOrganization(id, state, seq)
 }
 
 object Organization extends ModelWithPublicIdCompanion[Organization] {
@@ -113,10 +113,10 @@ object Organization extends ModelWithPublicIdCompanion[Organization] {
   }
 }
 
-case class OrganizationView(id: Option[Id[Organization]], state: State[Organization], seq: SequenceNumber[Organization])
+case class IngestableOrganization(id: Option[Id[Organization]], state: State[Organization], seq: SequenceNumber[Organization])
 
-object OrganizationView {
-  implicit val format = Json.format[OrganizationView]
+object IngestableOrganization {
+  implicit val format = Json.format[IngestableOrganization]
 }
 
 object OrganizationStates extends States[Organization]

@@ -27,18 +27,18 @@ case class OrganizationMembership(
   def isOwner: Boolean = role == OrganizationRole.OWNER
   def hasRole(r: OrganizationRole): Boolean = r == role
 
-  def toOrganizationMembershipView = OrganizationMembershipView(organizationId, userId, createdAt, state, seq)
+  def toIngestableOrganizationMembership = IngestableOrganizationMembership(organizationId, userId, createdAt, state, seq)
 }
 
-case class OrganizationMembershipView(
+case class IngestableOrganizationMembership(
   orgId: Id[Organization],
   userId: Id[User],
   createdAt: DateTime,
   state: State[OrganizationMembership],
   seq: SequenceNumber[OrganizationMembership])
 
-object OrganizationMembershipView {
-  implicit val format = Json.format[OrganizationMembershipView]
+object IngestableOrganizationMembership {
+  implicit val format = Json.format[IngestableOrganizationMembership]
 }
 
 object OrganizationMembership {
