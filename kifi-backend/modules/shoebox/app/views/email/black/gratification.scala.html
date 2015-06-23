@@ -1,10 +1,11 @@
 @(userId: Id[User],
-libViews: com.keepit.commanders.emails.GratificationCommander.LibraryCountData,
-libFollowers: com.keepit.commanders.emails.GratificationCommander.LibraryCountData,
-newConnections: Seq[Id[User]]
+libViews: com.keepit.model.LibraryCountData,
+keepViews: com.keepit.model.KeepCountData,
+rekeeps: com.keepit.model.KeepCountData
 )
 @import com.keepit.common.mail.template.helpers._
-@import com.keepit.commanders.emails.GratificationEmailSender._
+@import com.keepit.model.GratificationData._
+@import com.keepit.commanders.emails.GratificationEmailSender.SenderInfo
 @MIN_VIEWS = @{5}
 @MIN_FOLLOWERS = @{1}
 @MIN_CONNECTIONS = @{1}
@@ -16,35 +17,34 @@ newConnections: Seq[Id[User]]
 </head>
 <body>
 <p>Hey @firstName(userId),</p>
-@if(libViews.totalCount >= MIN_VIEWS) {
+@if(libViews.totalCount >= MIN_LIB_VIEWS) {
 <p>You had <b>@{libViews.totalCount} views</b> across all of your libraries:</p>
 <ul>
-    @for((libId, viewCount) <- libViews.sortedCountByLibrary) {
+    @for((libId, viewCount) <- libViews.sortedCountById) {
     <li>@{viewCount} @singularOrPlural("view", viewCount) on <a href=@libraryUrl(libId, "gratLibUrl")>@libraryName(libId)</a></li>
     }
 </ul>
 }
 
-@if(libFollowers.totalCount >= MIN_FOLLOWERS) {
-<p>You had <b>@libFollowers.totalCount new @singularOrPlural("follow", libFollowers.totalCount)</b>:</p>
+@if(keepViews.totalCount >= MIN_KEEP_VIEWS) {
+<p>You had <b>@{keepViews.totalCount} views</b> across all of your keeps:</p>
 <ul>
-    @for((libId, followCount) <- libFollowers.sortedCountByLibrary) {
-    <li>@followCount new @singularOrPlural("follow", followCount) on <a href="@libraryUrl(libId, "gratLibUrl")">@libraryName(libId)</a></li>
+    @for((keepId, viewCount) <- keepViews.sortedCountById) {
+    <li>@{viewCount} @singularOrPlural("view", viewCount) on <a href=@keepUrl(keepId, "gratKeepUrl")>@keepName(keepId)</a></li>
     }
 </ul>
 }
 
-@if(newConnections.length >= MIN_CONNECTIONS) {
-<p>You made <b>@newConnections.length new @singularOrPlural("connection", newConnections.length)</b>:</p>
+@if(keepViews.totalCount >= MIN_REKEEPS) {
+<p>You had <b>@{keepViews.totalCount} total rekeeps</b>:</p>
 <ul>
-@for(userId <- newConnections) {
-    <li><a href="@profileUrl(userId, "gratConnectProf")">@fullName(userId)</a></li>
-}
+    @for((keepId, count) <- rekeeps.sortedCountById) {
+    <li>@{count} @singularOrPlural("rekeep", count) on <a href=@keepUrl(keepId, "gratRekeepUrl")>@keepName(keepId)</a></li>
+    }
 </ul>
-Share a library with them :)
 }
 
-@if(libViews.totalCount >= MIN_VIEWS || libFollowers.totalCount >= MIN_FOLLOWERS || newConnections.length >= MIN_CONNECTIONS){
+@if(libViews.totalCount >= MIN_LIB_VIEWS || keepViews.totalCount >= MIN_KEEP_VIEWS || rekeeps.totalCount >= MIN_REKEEPS){
 <p>What other stats would you like to see? Please let me know if you have any questions, suggestions, or comments about Kifi!</p>
 } else {
 We at Kifi hope you're having a great week.

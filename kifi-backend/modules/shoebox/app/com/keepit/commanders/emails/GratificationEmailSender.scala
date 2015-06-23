@@ -2,8 +2,8 @@ package com.keepit.commanders.emails
 
 import com.google.inject.Inject
 import com.keepit.commanders.LocalUserExperimentCommander
-import com.keepit.commanders.emails.GratificationCommander.LibraryCountData
 import com.keepit.commanders.emails.GratificationEmailSender.SenderInfo
+import com.keepit.common.concurrent.ReactiveLock
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -29,35 +29,54 @@ object GratificationEmailSender {
 
 class GratificationEmailSender @Inject() (
     emailTemplateSender: EmailTemplateSender,
-    gratificationCommander: GratificationCommander,
     db: Database,
     userConnectionRepo: UserConnectionRepo,
     userRepo: UserRepo,
     localUserExperimentCommander: LocalUserExperimentCommander,
+    gratificationCommander: GratificationCommander,
     protected val airbrake: AirbrakeNotifier) extends Logging {
+
+  val sendEmailLock = new ReactiveLock(5)
 
   def apply(userId: Id[User], toAddress: Option[EmailAddress]) = sendToUser(userId, toAddress)
 
-  def sendToUser(userId: Id[User], toAddress: Option[EmailAddress]): Future[ElectronicMail] = {
-
-    val fViewsByLibrary: Future[LibraryCountData] = gratificationCommander.getLibraryViewData(userId)
-    val followersByLibrary: LibraryCountData = gratificationCommander.getLibraryFollowCounts(userId)
-    val newConnections: Seq[Id[User]] = gratificationCommander.getNewConnections(userId)
-
-    fViewsByLibrary.flatMap { viewsByLibrary: LibraryCountData =>
+  def sendToUsersWithData(gratDatas: Seq[GratificationData], toAddress: Option[EmailAddress] = None): Seq[Future[ElectronicMail]] = {
+    gratDatas.map { gratData =>
       val emailToSend = EmailToSend(
         from = SenderInfo.ADDR,
         fromName = Some(Right(SenderInfo.FIRSTNAME + " " + SenderInfo.LASTNAME)),
-        to = toAddress.map(Right.apply).getOrElse(Left(userId)),
+        to = toAddress.map(Right.apply).getOrElse(Left(gratData.userId)),
         subject = "People have been viewing your content on Kifi!",
         category = NotificationCategory.User.GRATIFICATION_EMAIL,
-        htmlTemplate = views.html.email.black.gratification(userId, viewsByLibrary, followersByLibrary, newConnections),
-        textTemplate = Some(views.html.email.black.gratificationText(userId, viewsByLibrary, followersByLibrary, newConnections)),
+        htmlTemplate = views.html.email.black.gratification(gratData.userId, gratData.libraryViews, gratData.keepViews, gratData.rekeeps),
+        textTemplate = Some(views.html.email.black.gratificationText(gratData.userId, gratData.libraryViews, gratData.keepViews, gratData.rekeeps)),
         templateOptions = Map("layout" -> CustomLayout),
         tips = Seq.empty
       )
-      emailTemplateSender.send(emailToSend)
+      sendEmailLock.withLockFuture { emailTemplateSender.send(emailToSend) }
     }
+  }
+
+  def sendToUser(userId: Id[User], toAddress: Option[EmailAddress] = None): Future[ElectronicMail] = {
+
+    val fGratData = gratificationCommander.getGratData(userId)
+
+    fGratData.flatMap { gratData =>
+      emailTemplateSender.send(emailToSend(gratData, toAddress))
+    }
+  }
+
+  def emailToSend(gratData: GratificationData, toAddress: Option[EmailAddress]): EmailToSend = {
+    EmailToSend(
+      from = SenderInfo.ADDR,
+      fromName = Some(Right(SenderInfo.FIRSTNAME + " " + SenderInfo.LASTNAME)),
+      to = toAddress.map(Right.apply).getOrElse(Left(gratData.userId)),
+      subject = "People have been viewing your content on Kifi!",
+      category = NotificationCategory.User.GRATIFICATION_EMAIL,
+      htmlTemplate = views.html.email.black.gratification(gratData.userId, gratData.libraryViews, gratData.keepViews, gratData.rekeeps),
+      textTemplate = Some(views.html.email.black.gratificationText(gratData.userId, gratData.libraryViews, gratData.keepViews, gratData.rekeeps)),
+      templateOptions = Map("layout" -> CustomLayout),
+      tips = Seq.empty)
   }
 }
 
