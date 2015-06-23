@@ -1,4 +1,4 @@
-Sub mobules
+Sub modules
 ===========
 We use git sub modules to integrate the marketing site. For more info about git submobules see:
 https://chrisjean.com/2009/04/20/git-submodules-adding-using-removing-and-updating/
@@ -24,4 +24,17 @@ git submodule update --init
 ```
 and then build
 
+Gulp
+====
 
+- In the `kifi-backend/modules/shoebox/angular` directory, run `npm install`
+- `npm install -g gulp`
+- Edit `/etc/hosts` with `sudo` adding the following:
+
+    127.0.0.1      dev.ezkeep.com
+    108.60.110.146 office
+    172.18.0.11    arthur
+
+- `gulp`
+- Log in to http://kifi.com
+- `http://dev.ezkeep.com:8080/` should now load your local instance of Kifi.
