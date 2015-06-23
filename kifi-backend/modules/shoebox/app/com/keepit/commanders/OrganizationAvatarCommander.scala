@@ -56,19 +56,23 @@ class OrganizationAvatarCommanderImpl @Inject() (
             }
             println("[RPB] existingImageInfo = " + existingImageInfos)
 
-            val expectedProcessRequests = calcSizesForImage(sourceImageSize, scaleSizes, cropSizes)
+            val expectedProcessRequests = {
+              val scaleRequests = scaleSizes.map(scale => ScaleImageRequest(scale.idealSize))
+              val cropRequests = cropSizes.map(crop => CropImageRequest(crop.idealSize))
+              scaleRequests ++ cropRequests
+            }.toSet
             val existingImageProcessRequests = existingImageInfos.collect {
               case scaledImage if scaledImage.kind == ProcessImageOperation.Scale => ScaleImageRequest(scaledImage.imageSize)
               case croppedImage if croppedImage.kind == ProcessImageOperation.Crop => CropImageRequest(croppedImage.imageSize)
-            }
+            }.toSet
             val (necessaryProcessRequests, unnecessaryProcessRequests) = {
               println("[RPB] Figuring out which processing requests we have to handle")
               println("[RPB] These ones are already in the store: " + existingImageProcessRequests)
               println("We want to hit: " + scaleSizes + " and " + cropSizes + " from an image of size " + sourceImageSize)
               println("[RPB] These are the ones we need to have: " + expectedProcessRequests)
-              val necessaryProcessRequests = filterProcessImageRequests(expectedProcessRequests, existingImageProcessRequests.toSet)
+              val necessaryProcessRequests = filterProcessImageRequests(expectedProcessRequests, existingImageProcessRequests)
               println("[RPB] These are the ones we need to actually do: " + necessaryProcessRequests)
-              val unnecessaryProcessRequests = intersectProcessImageRequests(existingImageProcessRequests.toSet, expectedProcessRequests)
+              val unnecessaryProcessRequests = intersectProcessImageRequests(existingImageProcessRequests, expectedProcessRequests)
               println("[RPB] These are the ones we do not need to do: " + unnecessaryProcessRequests)
               (necessaryProcessRequests, unnecessaryProcessRequests)
             }
@@ -166,65 +170,6 @@ class OrganizationAvatarCommanderImpl @Inject() (
         log.error(s"Could not store image from user uploaded file: $storeError")
         Future.successful(Left(storeError))
       }
-    }
-  }
-  override def calcSizesForImage(imageSize: ImageSize, scaleCandidates: Seq[ScaledImageSize], cropCandidates: Seq[CroppedImageSize]): Set[ProcessImageRequest] = {
-    val scaleSizes = scaleCandidates.flatMap { size =>
-      calcResizeBoundingBox(imageSize, size.idealSize)
-    }
-    println("[RPB''] In calcSizes we have scaleSizes = " + scaleSizes)
-
-    val scaleImageRequests = {
-      var t = 0
-      scaleSizes.sorted.flatMap { x =>
-        if (x - t > 100) {
-          t = x
-          Some(x)
-        } else None
-      }.filterNot { i => i == Math.max(imageSize.width, imageSize.height) }.
-        map { x => ScaleImageRequest(x) }
-    }
-
-    val imgHeight = imageSize.height
-    val imgWidth = imageSize.width
-
-    log.info(s"[csfi] imageSize=${imageSize.width}x${imageSize.height} cropCandidates=$cropCandidates")
-    val cropImageRequests = cropCandidates.filterNot { cropSize =>
-      val size = cropSize.idealSize
-      def isAlmostSameAspectRatio = Math.abs(imgWidth.toFloat / imgHeight - cropSize.aspectRatio) < 0.01
-
-      // 1) if either the width or height of the actual image is smaller than our crop, abort
-      // 2) or, if the aspect ratio of the image and crop size are the same and there exists
-      //    a scale bounding box close to enough to our crop candidate, we can skip the crop
-      imgWidth < size.width || imgHeight < size.height ||
-        (isAlmostSameAspectRatio && scaleImageRequests.exists { scaleSize =>
-          val candidateCropWidth = cropSize.idealSize.width
-          val candidateCropHeight = cropSize.idealSize.height
-          val scaleWidth = scaleSize.size.width
-          val scaleHeight = scaleSize.size.height
-
-          scaleWidth >= candidateCropWidth && scaleHeight >= candidateCropHeight &&
-            scaleWidth - candidateCropWidth < 100 && scaleHeight - candidateCropHeight < 100
-        })
-    }.map { c => CropImageRequest(c.idealSize) }
-
-    log.info(s"[csfi] imageSize=${imageSize.width}x${imageSize.height} cropRequests=$cropImageRequests")
-    (scaleImageRequests ++ cropImageRequests).toSet
-  }
-  override def calcResizeBoundingBox(imageSize: ImageSize, size: ImageSize): Option[Int] = {
-    println("[RPB'] Using overriden method")
-    val imgHeight = imageSize.height
-    val imgWidth = imageSize.width
-
-    val fudgeFactor = 0.00
-
-    if (size.height * fudgeFactor > imgHeight && size.width * fudgeFactor > imgWidth) {
-      // The size we want is just too far from the original.
-      None
-    } else {
-      val h2 = Math.min(size.height, imgHeight)
-      val w2 = Math.min(size.width, imgWidth)
-      Some(Math.max(h2, w2))
     }
   }
 

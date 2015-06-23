@@ -56,10 +56,10 @@ class OrganizationAvatarCommanderTest extends Specification with ShoeboxTestInje
 
         // upload an image
         {
-          val savedF = commander.persistOrganizationAvatarsFromUserUpload(fakeFile2, org1.id.get)
+          val savedF = commander.persistOrganizationAvatarsFromUserUpload(fakeFile1, org1.id.get)
           val saved = Await.result(savedF, Duration("10 seconds"))
           saved must haveClass[Right[ImageStoreFailure, ImageHash]]
-          saved.right.get === ImageHash("1b3d95541538044c2a26598fbe1d06ae")
+          saved.right.get === ImageHash("26dbdc56d54dbc94830f7cfc85031481")
           // if this test fails, make sure imagemagick is installed. Use `brew install imagemagick`
         }
 
