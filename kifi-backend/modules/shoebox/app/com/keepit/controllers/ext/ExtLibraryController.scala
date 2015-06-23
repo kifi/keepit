@@ -32,6 +32,7 @@ class ExtLibraryController @Inject() (
   keepsCommander: KeepsCommander,
   basicUserRepo: BasicUserRepo,
   libraryMembershipRepo: LibraryMembershipRepo,
+  libPathCommander: LibraryPathCommander,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
   keepImageRequestRepo: KeepImageRequestRepo,
   keepImageCommander: KeepImageCommander,
@@ -55,7 +56,7 @@ class ExtLibraryController @Inject() (
           name = lib.name,
           color = lib.color,
           visibility = lib.visibility,
-          path = Library.formatLibraryPath(owner.username, lib.slug),
+          path = libPathCommander.getPath(lib),
           hasCollaborators = !collabs.isEmpty,
           subscribedToUpdates = membership.subscribedToUpdates,
           collaborators = collabs
@@ -79,7 +80,7 @@ class ExtLibraryController @Inject() (
           name = lib.name,
           color = lib.color,
           visibility = lib.visibility,
-          path = Library.formatLibraryPath(request.user.username, lib.slug),
+          path = libPathCommander.getPath(lib),
           hasCollaborators = false,
           subscribedToUpdates = false,
           collaborators = Seq.empty)))

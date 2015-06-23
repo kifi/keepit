@@ -1,7 +1,7 @@
 package com.keepit.controllers.website
 
 import com.google.inject.Inject
-import com.keepit.commanders.{ LibraryCommander, LocalUserExperimentCommander, UserCommander }
+import com.keepit.commanders.{ LibraryPathCommander, LibraryCommander, LocalUserExperimentCommander, UserCommander }
 import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.seo.{ AtomCommander, FeedCommander }
 import com.keepit.inject.FortyTwoConfig
@@ -11,12 +11,14 @@ import play.api.mvc.{ ResponseHeader, Result }
 
 import scala.concurrent.Future
 
-class LibraryFeedController @Inject() (val userCommander: UserCommander,
-    val libraryCommander: LibraryCommander,
-    val experimentCommander: LocalUserExperimentCommander,
-    val feedCommander: FeedCommander,
-    val fortyTwoConfig: FortyTwoConfig,
-    val atomCommander: AtomCommander,
+class LibraryFeedController @Inject() (
+    userCommander: UserCommander,
+    libraryCommander: LibraryCommander,
+    libPathCommander: LibraryPathCommander,
+    experimentCommander: LocalUserExperimentCommander,
+    feedCommander: FeedCommander,
+    fortyTwoConfig: FortyTwoConfig,
+    atomCommander: AtomCommander,
     val userActionsHelper: UserActionsHelper) extends UserActions with ShoeboxServiceController {
 
   private def lookupUsername(username: Username): Option[(User, Option[Int])] = {
@@ -38,7 +40,7 @@ class LibraryFeedController @Inject() (val userCommander: UserCommander,
         libraryCommander.getLibraryBySlugOrAlias(user.id.get, LibrarySlug(librarySlug)) map {
           case (library, isLibraryAlias) =>
             if (library.slug.value != librarySlug || userRedirectStatusOpt.isDefined) { // library moved
-              val uri = Library.formatLibraryPathUrlEncoded(user.username, library.slug) + dropPathSegment(dropPathSegment(request.uri))
+              val uri = libPathCommander.getPathUrlEncoded(library) + dropPathSegment(dropPathSegment(request.uri))
               val status = if (!isLibraryAlias || userRedirectStatusOpt.contains(303)) 303 else 301
               Future.successful(Redirect(uri, status))
             } else if (libraryCommander.canViewLibrary(request.userOpt.flatMap(_.id), library, authToken)) {
@@ -61,7 +63,7 @@ class LibraryFeedController @Inject() (val userCommander: UserCommander,
         libraryCommander.getLibraryBySlugOrAlias(user.id.get, LibrarySlug(librarySlug)) map {
           case (library, isLibraryAlias) =>
             if (library.slug.value != librarySlug || userRedirectStatusOpt.isDefined) { // library moved
-              val uri = Library.formatLibraryPathUrlEncoded(user.username, library.slug) + dropPathSegment(dropPathSegment(request.uri))
+              val uri = libPathCommander.getPathUrlEncoded(library) + dropPathSegment(dropPathSegment(request.uri))
               val status = if (!isLibraryAlias || userRedirectStatusOpt.contains(303)) 303 else 301
               Future.successful(Redirect(uri, status))
             } else if (libraryCommander.canViewLibrary(request.userOpt.flatMap(_.id), library, authToken)) {

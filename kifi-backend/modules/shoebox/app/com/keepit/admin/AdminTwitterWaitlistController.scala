@@ -1,7 +1,7 @@
 package com.keepit.controllers.admin
 
 import com.google.inject.Inject
-import com.keepit.commanders.TwitterWaitlistCommander
+import com.keepit.commanders.{ LibraryPathCommander, TwitterWaitlistCommander }
 import com.keepit.commanders.emails.EmailTemplateSender
 import com.keepit.common.controller.{ AdminUserActions, UserActionsHelper }
 import com.keepit.common.crypto.PublicIdConfiguration
@@ -21,6 +21,7 @@ class AdminTwitterWaitlistController @Inject() (
     db: Database,
     userRepo: UserRepo,
     libraryRepo: LibraryRepo,
+    libPathCommander: LibraryPathCommander,
     userEmailAddressRepo: UserEmailAddressRepo,
     emailTemplateSender: EmailTemplateSender,
     userValueRepo: UserValueRepo,
@@ -40,7 +41,7 @@ class AdminTwitterWaitlistController @Inject() (
         val owner = userRepo.get(lib.ownerId)
         (lib, owner)
       }
-      val libraryPath = Library.formatLibraryPath(owner.username, lib.slug)
+      val libraryPath = libPathCommander.getPath(lib)
       (syncState, libraryPath, owner.primaryEmail)
     }
     Ok(html.admin.twitterWaitlistAccept(result))
@@ -55,7 +56,7 @@ class AdminTwitterWaitlistController @Inject() (
       val alreadySent = userValueRepo.getValue(user.id.get, UserValues.twitterSyncAcceptSent)
 
       val library = libraryRepo.get(sync.libraryId)
-      val libraryPath = Library.formatLibraryPath(user.username, library.slug)
+      val libraryPath = libPathCommander.getPath(library)
 
       (user, email, libraryPath, alreadySent)
     }

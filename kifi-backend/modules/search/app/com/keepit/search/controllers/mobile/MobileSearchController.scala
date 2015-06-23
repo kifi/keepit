@@ -50,7 +50,7 @@ class MobileSearchController @Inject() (
     augmentationCommander: AugmentationCommander,
     searchFactory: SearchFactory,
     libraryIndexer: LibraryIndexer,
-    libraryMembershipIndexer: LibraryMembershipIndexer) extends UserActions with SearchServiceController with SearchControllerUtil with Logging {
+    libraryMembershipIndexer: LibraryMembershipIndexer) extends UserActions with SearchServiceController with SearchControllerUtil with LibraryPathHelper with Logging {
 
   def searchV1(
     query: String,
@@ -99,7 +99,7 @@ class MobileSearchController @Inject() (
           libraryRecordsAndVisibilityById.get(hit.id).map {
             case (library, visibility, _) =>
               val owner = usersById(library.ownerId)
-              val path = Library.formatLibraryPath(owner.username, library.slug)
+              val path = formatLibraryPath(owner.username, library.slug)
               val details = libraryDetailsById(library.id)
               val description = library.description.getOrElse("")
               Json.obj(
@@ -190,7 +190,7 @@ class MobileSearchController @Inject() (
                 val owner = usersById(library.ownerId)
                 val details = libraryDetails(library.id)
 
-                val path = Library.formatLibraryPath(owner.username, details.slug)
+                val path = formatLibraryPath(owner.username, details.slug)
                 val description = library.description.orElse(details.description).getOrElse("")
 
                 Json.obj(

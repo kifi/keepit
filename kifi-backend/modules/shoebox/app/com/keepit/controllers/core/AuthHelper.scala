@@ -70,6 +70,7 @@ class AuthHelper @Inject() (
     postOffice: LocalPostOffice,
     inviteCommander: InviteCommander,
     libraryCommander: LibraryCommander,
+    libPathCommander: LibraryPathCommander,
     libraryInviteCommander: LibraryInviteCommander,
     userCommander: UserCommander,
     twitterWaitlistCommander: TwitterWaitlistCommander,
@@ -251,11 +252,8 @@ class AuthHelper @Inject() (
         libraryInviteCommander.convertPendingInvites(emailAddress, user.id.get)
         authCommander.autoJoinLib(user.id.get, libId, authTokenOpt)
         val url = Library.decodePublicId(libId).map { libraryId =>
-          db.readOnlyMaster { implicit session =>
-            val library = libraryRepo.get(libraryId)
-            val owner = userRepo.get(library.ownerId)
-            Library.formatLibraryPath(owner.username, library.slug)
-          }
+          val library = db.readOnlyMaster { implicit session => libraryRepo.get(libraryId) }
+          libPathCommander.getPath(library)
         }.getOrElse("/")
         url
       case JoinTwitterWaitlist =>

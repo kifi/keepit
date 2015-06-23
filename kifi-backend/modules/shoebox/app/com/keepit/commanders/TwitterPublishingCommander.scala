@@ -19,6 +19,7 @@ class TwitterPublishingCommander @Inject() (
     socialUserInfoRepo: SocialUserInfoRepo,
     keepImageCommander: KeepImageCommander,
     libraryImageCommander: LibraryImageCommander,
+    libPathCommander: LibraryPathCommander,
     userRepo: UserRepo,
     imageStore: RoverImageStore,
     twitterMessages: TwitterMessages,
@@ -36,7 +37,7 @@ class TwitterPublishingCommander @Inject() (
           val libOwner = db.readOnlyMaster { implicit session =>
             userRepo.get(library.ownerId)
           }
-          val libraryUrl = s"""https://www.kifi.com${Library.formatLibraryPath(libOwner.username, library.slug)}"""
+          val libraryUrl = s"""https://www.kifi.com${libPathCommander.getPath(library)}"""
           val title = keep.title.getOrElse("interesting link")
           twitterMessages.keepMessage(title.trim, keep.url.trim, library.name.trim, libraryUrl.trim) map { msg =>
             log.info(s"twitting about user $userId keeping $title with msg = $msg of size ${msg.size}")
@@ -70,7 +71,7 @@ class TwitterPublishingCommander @Inject() (
         case None => log.info(s"user $userId is not connected to twitter!")
         case Some(sui) =>
           val libOwner = db.readOnlyMaster { implicit session => userRepo.get(library.ownerId) }
-          val libraryUrl = s"""https://www.kifi.com${Library.formatLibraryPath(libOwner.username, library.slug)}"""
+          val libraryUrl = s"""https://www.kifi.com${libPathCommander.getPath(library)}"""
           val libName = library.name.abbreviate(140 - 28 - 20 - libOwner.fullName.size) //140 - text overhead - url len - lib owner size
           val name = twitterHandle(libOwner.id.get).getOrElse(libOwner.fullName.trim)
           val message = s"following @kifi library ${libName.trim} $libraryUrl by $name"

@@ -45,6 +45,7 @@ class MobileLibraryController @Inject() (
   userCommander: UserCommander,
   keepImageCommander: KeepImageCommander,
   libraryImageCommander: LibraryImageCommander,
+  libPathCommander: LibraryPathCommander,
   normalizedUriInterner: NormalizedURIInterner,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
   clock: Clock,
@@ -344,7 +345,7 @@ class MobileLibraryController @Inject() (
             val owner = db.readOnlyMaster { implicit s =>
               basicUserRepo.load(library.ownerId)
             }
-            val libraryPath = s"${fortyTwoConfig.applicationBaseUrl}${Library.formatLibraryPath(owner.username, library.slug)}"
+            val libraryPath = s"${fortyTwoConfig.applicationBaseUrl}${libPathCommander.getPath(library)}"
             val link = libraryPath + "?authToken=" + invite.authToken
 
             val (subjectText, bodyText) = if (LibraryAccess.collaborativePermissions.contains(access)) {
