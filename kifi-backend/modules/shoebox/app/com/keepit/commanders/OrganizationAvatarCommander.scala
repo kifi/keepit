@@ -19,7 +19,7 @@ import scala.util.{ Failure, Success }
 @ImplementedBy(classOf[OrganizationAvatarCommanderImpl])
 trait OrganizationAvatarCommander {
   def getBestImage(orgId: Id[Organization], imageSize: ImageSize): Option[OrganizationAvatar]
-  def uploadOrganizationAvatarFromFile(image: TemporaryFile, orgId: Id[Organization]): Future[ImageProcessDone]
+  def persistOrganizationAvatarsFromUserUpload(imageFile: TemporaryFile, orgId: Id[Organization]): Future[Either[ImageStoreFailure, ImageHash]]
 }
 
 @Singleton
@@ -42,47 +42,7 @@ class OrganizationAvatarCommanderImpl @Inject() (
     }
   }
 
-  def uploadOrganizationAvatarFromFile(imageFile: TemporaryFile, orgId: Id[Organization]): Future[ImageProcessDone] = {
-    val fetcher = fetchAndHashLocalImage(imageFile)
-    fetcher.flatMap {
-      case Right(loadedImage) =>
-        buildPersistSet(loadedImage, imagePathPrefix, scaleSizes, cropSizes)(photoshop) match {
-          case Right(toPersist) =>
-            uploadAndPersistImages(loadedImage, toPersist, orgId)
-          case Left(failure) =>
-            Future.successful(failure)
-        }
-      case Left(failure) => Future.successful(failure)
-    }
-  }
-
-  private def uploadAndPersistImages(originalImage: ImageProcessState.ImageLoadedAndHashed, toPersist: Set[ImageProcessState.ReadyToPersist], orgId: Id[Organization]): Future[ImageProcessDone] = {
-    val uploads = toPersist.map { image =>
-      log.info(s"[oac] Persisting ${image.key} (${image.bytes} B)")
-      imageStore.put(image.key, image.is, image.bytes, imageFormatToMimeType(image.format)).map { r =>
-        ImageProcessState.UploadedImage(image.key, image.format, image.image, image.processOperation)
-      }
-    }
-
-    Future.sequence(uploads).map { results =>
-      val orgAvatars = results.map {
-        case uploadedImage =>
-          val orgAvatar = OrganizationAvatar(organizationId = orgId, imagePath = uploadedImage.key, format = uploadedImage.format,
-            width = uploadedImage.image.getWidth, height = uploadedImage.image.getHeight, sourceFileHash = originalImage.hash,
-            state = OrganizationAvatarStates.ACTIVE, sourceImageURL = None, kind = ProcessImageOperation.Original, source = ImageSource.UserUpload)
-          uploadedImage.image.flush() // TODO: what is this for?
-          orgAvatar
-      }
-      db.readWrite(attempts = 3) { implicit session => // because of request consolidator, this can be very race-conditiony
-        val existingImages = orgAvatarRepo.getByOrganization(orgId).toSet
-        existingImages.foreach(orgAvatarRepo.deactivate)
-        orgAvatars.foreach(orgAvatarRepo.save)
-      }
-      ImageProcessState.StoreSuccess(originalImage.format, orgAvatars.filter(_.isOriginal).head.dimensions, originalImage.file.file.length.toInt)
-    }
-  }
-
-  def fetchAndStoreUploadedImage(imageFile: TemporaryFile, orgId: Id[Organization]): Future[Either[ImageStoreFailure, ImageHash]] = {
+  def persistOrganizationAvatarsFromUserUpload(imageFile: TemporaryFile, orgId: Id[Organization]): Future[Either[ImageStoreFailure, ImageHash]] = {
     fetchAndHashLocalImage(imageFile).flatMap {
       case Right(sourceImage) => {
         validateAndLoadImageFile(sourceImage.file.file) match {
@@ -176,9 +136,9 @@ class OrganizationAvatarCommanderImpl @Inject() (
           }
         }
       }
-      case Left(fetchError) => {
-        log.error(s"Could not fetch remote image from user uploaded file: $fetchError")
-        Future.successful(Left(fetchError))
+      case Left(storeError) => {
+        log.error(s"Could not store image from user uploaded file: $storeError")
+        Future.successful(Left(storeError))
       }
     }
   }

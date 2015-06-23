@@ -46,7 +46,8 @@ class S3OrganizationAvatarStoreImpl @Inject() (
   }
 }
 
-class InMemoryOrganizationAvatarStoreImpl() extends OrganizationAvatarStore {
+@Singleton
+class InMemoryOrganizationAvatarStoreImpl @Inject() () extends OrganizationAvatarStore {
 
   require(!(Play.maybeApplication.isDefined && Play.isProd), "Can't have in memory file store in production")
 
