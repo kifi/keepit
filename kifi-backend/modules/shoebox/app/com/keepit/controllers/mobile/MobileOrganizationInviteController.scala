@@ -115,9 +115,9 @@ class MobileOrganizationInviteControllerImpl @Inject() (
       case Success(orgId) =>
         orgInviteCommander.acceptInvitation(orgId, request.userId) match {
           case Right(organizationMembership) => Ok(JsString("success"))
-          case Left(organizationFail) => organizationFail.asResponse
+          case Left(organizationFail) => organizationFail.asErrorResponse
         }
-      case Failure(_) => OrganizationFail.INVALID_PUBLIC_ID.asResponse
+      case Failure(_) => OrganizationFail.INVALID_PUBLIC_ID.asErrorResponse
     }
   }
 
@@ -126,7 +126,7 @@ class MobileOrganizationInviteControllerImpl @Inject() (
       case Success(orgId) =>
         organizationInviteCommander.declineInvitation(orgId, request.userId)
         Ok(JsString("success"))
-      case _ => OrganizationFail.INVALID_PUBLIC_ID.asResponse
+      case _ => OrganizationFail.INVALID_PUBLIC_ID.asErrorResponse
     }
   }
 }

@@ -80,8 +80,10 @@ case class OrganizationModifications(
   newBasePermissions: Option[BasePermissions])
 
 sealed abstract class OrganizationFail(val status: Int, val message: String) {
-  def asResponse = Status(status)(Json.obj("error" -> message))
+  def asErrorResponse = Status(status)(Json.obj("error" -> message))
 }
+
+//TODO: when modifying these, make sure we do not break existing Mobile Controllers that are calling .asErrorResponse. Preferably don't modify, just add as needed.
 object OrganizationFail {
   case object INSUFFICIENT_PERMISSIONS extends OrganizationFail(UNAUTHORIZED, "insufficient_permissions")
   case object HANDLE_UNAVAILABLE extends OrganizationFail(FORBIDDEN, "handle_unavailable")
