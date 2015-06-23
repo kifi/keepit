@@ -47,5 +47,5 @@ object VertexDataId {
   implicit def toLibraryId(libReaderId: VertexDataId[LibraryReader]): Id[Library] = Id(libReaderId.id)
 
   implicit def fromIpAddr(ipAddr: IpAddress): VertexDataId[IpAddressReader] = VertexDataId(ipAddr)
-  implicit def toIpAddr(ipReaderId: VertexDataId[IpAddressReader]) = IpAddress(ipReaderId.id.toOctalString)
+  implicit def toIpAddr(ipReaderId: VertexDataId[IpAddressReader]): IpAddress = ipReaderId.id
 }
