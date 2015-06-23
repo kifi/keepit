@@ -165,9 +165,9 @@ trait ProcessedImageHelper {
 
   // Returns Set of bounding box sizes
   protected def calcSizesForImage(imageSize: ImageSize, scaleCandidates: Seq[ScaledImageSize], cropCandidates: Seq[CroppedImageSize]): Set[ProcessImageRequest] = {
-    val scaleSizes = scaleCandidates.map { size =>
+    val scaleSizes = scaleCandidates.flatMap { size =>
       calcResizeBoundingBox(imageSize, size.idealSize)
-    }.flatten
+    }
 
     val scaleImageRequests = {
       var t = 0
