@@ -454,7 +454,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           val newLibrary = library().withUser(user).withVisibility(LibraryVisibility.ORGANIZATION).saved
           val organization = orgRepo.save(Organization(name = "Kung Fu Academy", ownerId = orgOwner.id.get, handle = None))
           val otherOrg = orgRepo.save(Organization(name = "Martial Arts", ownerId = orgOwner.id.get, handle = None))
-          orgMemberRepo.save(OrganizationMembership(organizationId = organization.id.get, userId = user.id.get, role = OrganizationRole.OWNER))
+          orgMemberRepo.save(organization.newMembership(userId = user.id.get, role = OrganizationRole.OWNER))
           (user, newLibrary, organization, otherOrg)
         }
 
@@ -500,7 +500,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           val starLabsOrg = orgRepo.save(Organization(name = "Star Labs", ownerId = harrison.id.get, handle = None))
           val starLabsLib = library().withUser(harrison).withVisibility(LibraryVisibility.ORGANIZATION).withOrganization(starLabsOrg.id).saved
 
-          val membership = orgMemberRepo.save(OrganizationMembership(organizationId = starLabsOrg.id.get, userId = barry.id.get, role = OrganizationRole.MEMBER))
+          val membership = orgMemberRepo.save(starLabsOrg.newMembership(userId = barry.id.get, role = OrganizationRole.MEMBER))
 
           starLabsLib.organizationId must equalTo(starLabsOrg.id)
           membership.state must equalTo(OrganizationMembershipStates.ACTIVE)

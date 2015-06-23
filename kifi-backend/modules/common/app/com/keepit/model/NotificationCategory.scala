@@ -44,6 +44,7 @@ object NotificationCategory {
     val NEW_KEEP = NotificationCategory("new_keep")
 
     val ORGANIZATION_INVITATION = NotificationCategory("organization_invitation")
+    val ORGANIZATION_JOINED = NotificationCategory("organization_joined")
 
     val DIGEST = NotificationCategory("digest")
     val DIGEST_QA = NotificationCategory("digest_qa")

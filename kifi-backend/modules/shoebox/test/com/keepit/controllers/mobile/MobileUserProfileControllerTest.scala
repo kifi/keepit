@@ -97,7 +97,8 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
               "numKeeps": 5,
               "numConnections": 3,
               "numFollowers": 2,
-              "biography":"First Prez yo!"
+              "biography":"First Prez yo!",
+              "numTags":0
             }
           """)
 
@@ -120,7 +121,8 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
               "numKeeps": 5,
               "numConnections": 3,
               "numFollowers": 3,
-              "biography":"First Prez yo!"
+              "biography":"First Prez yo!",
+              "numTags":0
             }
           """)
 
@@ -143,7 +145,8 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
               "numConnections": 3,
               "numFollowers": 3,
               "numInvitedLibraries": 0,
-              "biography":"First Prez yo!"
+              "biography":"First Prez yo!",
+              "numTags":0
             }
           """)
       }

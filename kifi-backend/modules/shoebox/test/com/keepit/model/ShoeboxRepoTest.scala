@@ -43,7 +43,7 @@ class ShoeboxRepoTest extends Specification with ShoeboxApplicationInjector {
         // OrganizationMembershipRepo
         val organizationMembershipRepo = inject[OrganizationMembershipRepo]
         val orgMember = db.readWrite { implicit session =>
-          organizationMembershipRepo.save(OrganizationMembership(organizationId = org.id.get, userId = user.id.get, role = OrganizationRole.OWNER))
+          organizationMembershipRepo.save(org.newMembership(userId = user.id.get, role = OrganizationRole.OWNER))
         }
         orgMember.id must beSome
 

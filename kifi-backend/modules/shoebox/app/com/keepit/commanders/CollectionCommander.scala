@@ -46,6 +46,12 @@ class CollectionCommander @Inject() (
     implicit val executionContext: ExecutionContext,
     clock: Clock) extends Logging {
 
+  def getCount(userId: Id[User]) = {
+    db.readOnlyMaster { implicit s =>
+      collectionRepo.count(userId)
+    }
+  }
+
   def allCollections(sort: String, userId: Id[User]) = {
     log.info(s"Getting all collections for $userId (sort $sort)")
     val unsortedCollections = db.readOnlyMaster { implicit s =>

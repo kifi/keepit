@@ -80,10 +80,8 @@ object BasicUser {
   def useDefaultImageForUser(user: User): Boolean = {
     import play.api.Play.current
 
-    // Only turn the default avatars on for some users:
-    val usersWithDefaultImages = Set(1, 2, 3, 32, 128, 96228).map(i => Id.apply[User](i.toLong))
     val useDefaultPics = Play.maybeApplication.exists(_ => !Play.isTest) // This is probably a bad thing to do in general
-    if (useDefaultPics && usersWithDefaultImages.contains(user.id.get)) {
+    if (useDefaultPics) {
       user.pictureName match {
         case Some(picName) if picName != "0" => false
         case _ =>

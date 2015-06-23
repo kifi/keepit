@@ -29,11 +29,8 @@ class MobileOrganizationMembershipController @Inject() (
     } else Organization.decodePublicId(pubId) match {
       case Failure(ex) => BadRequest(Json.obj("error" -> "invalid_organization_id"))
       case Success(orgId) =>
-        val permissionsOpt: Option[Set[OrganizationPermission]] = userIdOpt flatMap { userId => orgMembershipCommander.getMemberPermissions(orgId, userId) }
-        val showInvitees: Boolean = permissionsOpt match {
-          case None => false
-          case Some(permissions) => permissions.contains(OrganizationPermission.INVITE_MEMBERS)
-        }
+        val permissions = orgMembershipCommander.getPermissions(orgId, userIdOpt)
+        val showInvitees = permissions.contains(OrganizationPermission.INVITE_MEMBERS)
         val membersAndMaybeInvitees = orgMembershipCommander.getMembersAndInvitees(orgId, Limit(limit), Offset(offset), includeInvitees = showInvitees)
         Ok(Json.obj("members" -> membersAndMaybeInvitees))
     }

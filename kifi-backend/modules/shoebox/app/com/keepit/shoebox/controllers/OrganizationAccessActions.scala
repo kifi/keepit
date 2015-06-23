@@ -25,7 +25,8 @@ trait OrganizationAccessActions {
   private def lookupViewable[A](orgPubId: PublicId[Organization], input: MaybeUserRequest[A]) = {
     parseRequest(orgPubId, input) match {
       case Some((orgId, userIdOpt, authToken)) =>
-        val access = orgCommander.canViewOrganization(userIdOpt, orgId, authToken)
+        // Right now all organizations are publicly visible
+        val access = true // TODO: this ought to be removed when Leo gets to OrganizationAccessAction.byPermission
         if (access) {
           None
         } else {
