@@ -336,7 +336,7 @@ GET     /get-the-kifi-extension-on-you-iphone @com.keepit.controllers.website.Ho
 GET     /users/:id/pics/:size/0.jpg @com.keepit.controllers.assets.UserPictureController.get(size: Int, id: ExternalId[User])
 GET     /users/:id/pics/:size/:name @com.keepit.controllers.assets.UserPictureController.getPic(size: String, id: ExternalId[User], name: String)
 
-POST    /users/pics/update          @com.keepit.controllers.assets.UserPictureController.update()
+GET     /default-pic/:name          @com.keepit.controllers.assets.UserPictureController.hackyRedirectForiOSv3(name: String)
 
 ##########################################
 # Feeds (RSS)

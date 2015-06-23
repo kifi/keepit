@@ -20,6 +20,7 @@ import com.keepit.heimdal.HeimdalContextBuilderFactory
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
 import com.keepit.shoebox.controllers.LibraryAccessActions
+import scala.collection.mutable
 
 import org.joda.time.DateTime
 
@@ -58,18 +59,30 @@ class LibraryController @Inject() (
     extends UserActions with LibraryAccessActions with ShoeboxServiceController with Logging {
 
   private def getSuggestedSearchesAsJson(libId: Id[Library]): JsValue = {
-    val top = suggestedSearchCommander.getSuggestedTermsForLibrary(libId, limit = 10, kind = SuggestedSearchTermKind.AUTO)
-    val (terms, weights): (Array[String], Array[Float]) = if (top.terms.size < 10) (Array[String](), Array[Float]()) else {
+    def similar(s1: String, s2: String): Boolean = {
+      val ts1 = s1.split(" ").flatMap(_.sliding(2)).toSet
+      val ts2 = s2.split(" ").flatMap(_.sliding(2)).toSet
+      ts1.intersect(ts2).size * 1.0 / ts1.union(ts2).size > 0.6
+    }
+
+    val LIMIT = 10
+    val top = suggestedSearchCommander.getSuggestedTermsForLibrary(libId, limit = LIMIT * 2, kind = SuggestedSearchTermKind.AUTO)
+    val (terms, weights): (Array[String], Array[Float]) = if (top.terms.size < LIMIT) (Array[String](), Array[Float]()) else {
       val (tms, ws) = top.terms.toArray.sortBy(-_._2).unzip
-      (tms.toArray, ws.toArray)
+      val taken = mutable.Set[String]()
+      tms.foreach { tm =>
+        val dup = taken.find(x => similar(tm, x))
+        if (dup.isEmpty) taken.add(tm)
+      }
+
+      val (tms2, ws2) = (tms zip ws).filter { case (word, weight) => taken.contains(word) }.take(LIMIT).unzip
+      (tms2.toArray, ws2.toArray)
     }
     Json.obj("terms" -> terms, "weights" -> weights)
   }
 
   def addLibrary() = UserAction.async(parse.tolerantJson) { request =>
     val addRequest = request.body.as[LibraryAddRequest]
-
-    log.info("Add request received, subscriptions =" + addRequest.subscriptions)
 
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
     libraryCommander.addLibrary(addRequest, request.userId) match {
@@ -88,8 +101,6 @@ class LibraryController @Inject() (
   def modifyLibrary(pubId: PublicId[Library]) = (UserAction andThen LibraryOwnerAction(pubId))(parse.tolerantJson) { request =>
     val id = Library.decodePublicId(pubId).get
     val libModifyRequest = request.body.as[LibraryModifyRequest]
-
-    log.info("Modify req received, subs = " + libModifyRequest.subscriptions)
 
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
     libraryCommander.modifyLibrary(id, request.userId, libModifyRequest) match {

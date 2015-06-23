@@ -35,7 +35,7 @@ object SuggestedSearchTermKind {
 }
 
 case class LibrarySuggestedSearchKey(id: Id[Library], kind: SuggestedSearchTermKind) extends Key[SuggestedSearchTerms] {
-  override val version = 2
+  override val version = 3
   val namespace = "suggested_search_by_libId"
   def toKey(): String = id.id.toString + "#" + kind.value
 }

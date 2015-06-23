@@ -44,7 +44,7 @@ class FeedCommander @Inject() (
     header.andThen(elems &> toBytes)
   }
 
-  final case class RssItem(title: String, description: String, link: String, guid: String, pubDate: DateTime, creator: String, icon: Option[String])
+  case class RssItem(title: String, description: String, link: String, guid: String, pubDate: DateTime, creator: String, icon: Option[String])
 
   private def rssItems(items: Seq[RssItem]): Seq[Elem] = {
     items map { item =>
@@ -101,12 +101,12 @@ class FeedCommander @Inject() (
             def convertKeep(keep: Keep): RssItem = {
               val (keepImage, originalKeeper) = db.readOnlyMaster { implicit s =>
                 val image = keepImageCommander.getBestImageForKeep(keep.id.get, ScaleImageRequest(ImageSize(100, 100)))
-                (image, userRepo.getNoCache(keep.userId))
+                (image.flatten, userRepo.getNoCache(keep.userId))
               }
 
               RssItem(title = keep.title.getOrElse(""), description = descriptions.get(keep.uriId).flatMap(_.article.description).getOrElse(""), link = keep.url,
                 guid = keep.externalId.id, pubDate = keep.keptAt, creator = originalKeeper.fullName,
-                icon = keepImage.map(_.map(_.imagePath.getUrl(s3ImageConfig))).map(url => s"https:$url"))
+                icon = keepImage.map(_.imagePath.getUrl(s3ImageConfig)).map(url => s"https:$url"))
             }
             rssItems(keeps map convertKeep)
           }{ /* License asking for attribution */ }

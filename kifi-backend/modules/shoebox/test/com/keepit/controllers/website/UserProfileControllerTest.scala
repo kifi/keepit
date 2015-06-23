@@ -262,7 +262,8 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
               "numKeeps": 5,
               "numConnections": 3,
               "numFollowers": 2,
-              "biography": "First Prez yo!"
+              "biography": "First Prez yo!",
+              "numTags":0
             }
           """)
 
@@ -286,7 +287,8 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
               "numConnections": 3,
               "numFollowers": 3,
               "numInvitedLibraries": 1,
-              "biography": "First Prez yo!"
+              "biography": "First Prez yo!",
+              "numTags":0
             }
           """)
 
@@ -310,7 +312,8 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
               "numKeeps": 5,
               "numConnections": 3,
               "numFollowers": 3,
-              "biography": "First Prez yo!"
+              "biography": "First Prez yo!",
+              "numTags":0
             }
           """)
       }

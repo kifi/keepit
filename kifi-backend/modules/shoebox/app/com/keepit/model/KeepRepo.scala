@@ -19,6 +19,7 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def getByUserAndUriIds(userId: Id[User], uriIds: Set[Id[NormalizedURI]])(implicit session: RSession): Seq[Keep]
   def getByUserIdAndLibraryId(userId: Id[User], libraryId: Id[Library], excludeSet: Set[State[Keep]] = Set(KeepStates.INACTIVE, KeepStates.DUPLICATE))(implicit session: RSession): Seq[Keep]
   def getByLibraryIdsAndUriIds(libraryIds: Set[Id[Library]], uriIds: Set[Id[NormalizedURI]])(implicit session: RSession): Seq[Keep]
+  def getByLibraryIds(libraryIds: Set[Id[Library]])(implicit session: RSession): Seq[Keep]
   def getByExtIdAndUser(extId: ExternalId[Keep], userId: Id[User])(implicit session: RSession): Option[Keep]
   def getPrimaryByUriAndLibrary(uriId: Id[NormalizedURI], libId: Id[Library])(implicit session: RSession): Option[Keep]
   def getPrimaryInDisjointByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[Keep]
@@ -50,6 +51,7 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def getLatestKeepsURIByUser(userId: Id[User], limit: Int, includePrivate: Boolean = false)(implicit session: RSession): Seq[Id[NormalizedURI]]
   def getKeepExports(userId: Id[User])(implicit session: RSession): Seq[KeepExport]
   def getByLibrary(libraryId: Id[Library], offset: Int, limit: Int, excludeSet: Set[State[Keep]] = Set(KeepStates.INACTIVE, KeepStates.DUPLICATE))(implicit session: RSession): Seq[Keep]
+  def getByLibraryWithoutOrgId(libraryId: Id[Library], orgIdOpt: Option[Id[Organization]], offset: Offset, limit: Limit)(implicit session: RSession): Seq[Keep]
   def getCountByLibrary(libraryId: Id[Library])(implicit session: RSession): Int
   def getCountsByLibrary(libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Int]
   def getByExtIdandLibraryId(extId: ExternalId[Keep], libraryId: Id[Library], excludeSet: Set[State[Keep]] = Set(KeepStates.INACTIVE, KeepStates.DUPLICATE))(implicit session: RSession): Option[Keep]
@@ -210,6 +212,10 @@ class KeepRepoImpl @Inject() (
 
   def getByLibraryIdsAndUriIds(libraryIds: Set[Id[Library]], uriIds: Set[Id[NormalizedURI]])(implicit session: RSession): Seq[Keep] = {
     (for (b <- rows if b.uriId.inSet(uriIds) && b.libraryId.inSet(libraryIds) && b.state === KeepStates.ACTIVE) yield b).list
+  }
+
+  def getByLibraryIds(libraryIds: Set[Id[Library]])(implicit session: RSession): Seq[Keep] = {
+    (for (row <- rows if row.libraryId.inSet(libraryIds) && row.state === KeepStates.ACTIVE) yield row).list
   }
 
   def getByUserIdAndLibraryId(userId: Id[User], libraryId: Id[Library], excludeSet: Set[State[Keep]] = Set(KeepStates.INACTIVE, KeepStates.DUPLICATE))(implicit session: RSession): Seq[Keep] = {
@@ -455,6 +461,14 @@ class KeepRepoImpl @Inject() (
 
   def getByLibrary(libraryId: Id[Library], offset: Int, limit: Int, excludeSet: Set[State[Keep]])(implicit session: RSession): Seq[Keep] = {
     (for (b <- rows if b.libraryId === libraryId && !b.state.inSet(excludeSet)) yield b).sortBy(r => (r.keptAt desc, r.id desc)).drop(offset).take(limit).list
+  }
+
+  def getByLibraryWithoutOrgId(libraryId: Id[Library], orgIdOpt: Option[Id[Organization]], offset: Offset, limit: Limit)(implicit session: RSession): Seq[Keep] = {
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
+    (orgIdOpt match {
+      case None => sql"select * from bookmark where library_id = $libraryId and organization_id is not null limit ${limit.value} offset ${offset.value}"
+      case _ => sql"select * from bookmark where library_id = $libraryId and (organization_id != ${orgIdOpt.get} or organization_id is null) limit ${limit.value} offset ${offset.value}"
+    }).as[Keep].list
   }
 
   def getCountByLibrary(libraryId: Id[Library])(implicit session: RSession): Int = {
