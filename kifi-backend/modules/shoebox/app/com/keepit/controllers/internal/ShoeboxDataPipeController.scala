@@ -239,7 +239,7 @@ class ShoeboxDataPipeController @Inject() (
     }
   }
 
-  def getOrganizationsChanged(seqNum: SequenceNumber[Organization], fetchSize: Int) = Action.async { request =>
+  def getIngestableOrganizations(seqNum: SequenceNumber[Organization], fetchSize: Int) = Action.async { request =>
     SafeFuture {
       val orgs = db.readOnlyReplica { implicit s => organizationRepo.getBySequenceNumber(seqNum, fetchSize) } map {
         _.toIngestableOrganization
@@ -248,7 +248,7 @@ class ShoeboxDataPipeController @Inject() (
     }
   }
 
-  def getOrganizationMembershipsChanged(seqNum: SequenceNumber[OrganizationMembership], fetchSize: Int) = Action.async { request =>
+  def getIngestableOrganizationMemberships(seqNum: SequenceNumber[OrganizationMembership], fetchSize: Int) = Action.async { request =>
     SafeFuture {
       val orgMems = db.readOnlyReplica { implicit s => organizationMembershipRepo.getBySequenceNumber(seqNum, fetchSize) } map {
         _.toIngestableOrganizationMembership

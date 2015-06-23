@@ -690,7 +690,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
 
   def getLibraryURIs(libId: Id[Library]): Future[Seq[Id[NormalizedURI]]] = Future.successful(Seq())
 
-  def getOrganizationsChanged(seqNum: SequenceNumber[Organization], fetchSize: Int): Future[Seq[IngestableOrganization]] = Future.successful(Seq())
+  def getIngestableOrganizations(seqNum: SequenceNumber[Organization], fetchSize: Int): Future[Seq[IngestableOrganization]] = Future.successful(Seq())
 
-  def getOrganizationMembershipsChanged(seqNum: SequenceNumber[OrganizationMembership], fetchSize: Int): Future[Seq[IngestableOrganizationMembership]] = Future.successful(Seq())
+  def getIngestableOrganizationMemberships(seqNum: SequenceNumber[OrganizationMembership], fetchSize: Int): Future[Seq[IngestableOrganizationMembership]] = Future.successful(Seq())
 }

@@ -121,8 +121,8 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getLibrariesWithWriteAccess(userId: Id[User]): Future[Set[Id[Library]]]
   def getUserActivePersonas(userId: Id[User]): Future[UserActivePersonas]
   def getLibraryURIs(libId: Id[Library]): Future[Seq[Id[NormalizedURI]]]
-  def getOrganizationsChanged(seqNum: SequenceNumber[Organization], fetchSize: Int): Future[Seq[IngestableOrganization]]
-  def getOrganizationMembershipsChanged(seqNum: SequenceNumber[OrganizationMembership], fetchSize: Int): Future[Seq[IngestableOrganizationMembership]]
+  def getIngestableOrganizations(seqNum: SequenceNumber[Organization], fetchSize: Int): Future[Seq[IngestableOrganization]]
+  def getIngestableOrganizationMemberships(seqNum: SequenceNumber[OrganizationMembership], fetchSize: Int): Future[Seq[IngestableOrganizationMembership]]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -771,11 +771,11 @@ class ShoeboxServiceClientImpl @Inject() (
     call(Shoebox.internal.getLibraryURIS(libId), callTimeouts = longTimeout).map { _.json.as[Seq[Id[NormalizedURI]]] }
   }
 
-  def getOrganizationsChanged(seqNum: SequenceNumber[Organization], fetchSize: Int): Future[Seq[IngestableOrganization]] = {
-    call(Shoebox.internal.getOrganizationsChanged(seqNum, fetchSize)).map { _.json.as[Seq[IngestableOrganization]] }
+  def getIngestableOrganizations(seqNum: SequenceNumber[Organization], fetchSize: Int): Future[Seq[IngestableOrganization]] = {
+    call(Shoebox.internal.getIngestableOrganizations(seqNum, fetchSize)).map { _.json.as[Seq[IngestableOrganization]] }
   }
 
-  def getOrganizationMembershipsChanged(seqNum: SequenceNumber[OrganizationMembership], fetchSize: Int): Future[Seq[IngestableOrganizationMembership]] = {
-    call(Shoebox.internal.getOrganizationMembershipsChanged(seqNum, fetchSize)).map { _.json.as[Seq[IngestableOrganizationMembership]] }
+  def getIngestableOrganizationMemberships(seqNum: SequenceNumber[OrganizationMembership], fetchSize: Int): Future[Seq[IngestableOrganizationMembership]] = {
+    call(Shoebox.internal.getIngestableOrganizationMemberships(seqNum, fetchSize)).map { _.json.as[Seq[IngestableOrganizationMembership]] }
   }
 }
