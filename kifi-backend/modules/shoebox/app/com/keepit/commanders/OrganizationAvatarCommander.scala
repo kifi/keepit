@@ -56,60 +56,60 @@ class OrganizationAvatarCommanderImpl @Inject() (
     }
   }
 
-  def persistOrganizationAvatarsFromBufferedSourceImage(sourceImage: ImageProcessState.ImageLoadedAndHashed, bufferedSourceImage: BufferedImage, orgId: Id[Organization]) = {
+  def persistOrganizationAvatarsFromBufferedSourceImage(sourceImage: ImageProcessState.ImageLoadedAndHashed, bufferedSourceImage: BufferedImage, orgId: Id[Organization]): Future[Either[ImageStoreFailure, ImageHash]] = {
     val sourceImageSize = ImageSize(bufferedSourceImage)
-    val outFormat = inputFormatToOutputFormat(sourceImage.format)
     val existingAvatars = db.readOnlyMaster { implicit session =>
       orgAvatarRepo.getByImageHash(sourceImage.hash)
     }
-    println("[RPB] existingAvatars = " + existingAvatars)
 
-    val (expected, necessary, unnecessary) = determineRequiredProcessImageRequests(sourceImageSize, existingAvatars)
+    val (necessary, unnecessary) = determineRequiredProcessImageRequests(sourceImageSize, existingAvatars)
 
-    // Prepare Original Image
+    prepareNewImagesToBePersisted(sourceImage, bufferedSourceImage, existingAvatars, necessary) match {
+      case Left(processingError) => Future.successful(Left(processingError))
+      case Right(processedImagesReadyToPersist) =>
+        val uploads = processedImagesReadyToPersist.map { image =>
+          imageStore.put(image.key, image.is, image.bytes, imageFormatToMimeType(image.format)).imap { _ =>
+            ImageProcessState.UploadedImage(image.key, image.format, image.image, image.processOperation)
+          }
+        }
+
+        val uploadedImagesFut = Future.sequence(uploads).imap(Right(_)).recover { case error: Exception => Left(ImageProcessState.CDNUploadFailed(error)) }
+        uploadedImagesFut.imap {
+          case Left(uploadError) => Left(uploadError)
+          case Right(uploadedImages) =>
+            try {
+              saveNewAvatars(orgId, sourceImage, existingAvatars, uploadedImages, unnecessary)
+              Right(sourceImage.hash)
+            } catch {
+              case imageInfoError: Exception =>
+                log.error(s"Failed to update ImageInfoRepo after fetching image from user uploaded file: $imageInfoError")
+                Left(ImageProcessState.DbPersistFailed(imageInfoError))
+            }
+        }
+    }
+  }
+
+  def prepareNewImagesToBePersisted(sourceImage: ImageProcessState.ImageLoadedAndHashed, bufferedSourceImage: BufferedImage, existingAvatars: Seq[OrganizationAvatar], necessary: Set[ProcessImageRequest]): Either[ImageStoreFailure, Set[ImageProcessState.ReadyToPersist]] = {
+    val outFormat = inputFormatToOutputFormat(sourceImage.format)
     val sourceImageReadyToPersistMaybe = existingAvatars.find(_.kind == ProcessImageOperation.Original) match {
       case Some(sourceImageInfo) => Success(None)
       case None => bufferedImageToInputStream(bufferedSourceImage, sourceImage.format).map {
         case (is, bytes) =>
-          println("[RPB] No existing original image found, will have to persist this one")
-          val key = ImagePath(imagePathPrefix, sourceImage.hash, sourceImageSize, ProcessImageOperation.Original, sourceImage.format)
+          val key = ImagePath(imagePathPrefix, sourceImage.hash, ImageSize(bufferedSourceImage), ProcessImageOperation.Original, sourceImage.format)
           Some(ImageProcessState.ReadyToPersist(key, outFormat, is, bufferedSourceImage, bytes, ProcessImageOperation.Original))
       }
     }
 
     sourceImageReadyToPersistMaybe match {
-      case Failure(sourceImageProcessingError) => Future.successful(Left(ImageProcessState.InvalidImage(sourceImageProcessingError)))
+      case Failure(sourceImageProcessingError) =>
+        Left(ImageProcessState.InvalidImage(sourceImageProcessingError))
+
       case Success(sourceImageReadyToPersist) =>
-        println("[RPB] We have to perform these processing requests: " + necessary)
         processAndPersistImages(bufferedSourceImage, imagePathPrefix, sourceImage.hash, sourceImage.format, necessary)(photoshop) match {
-          case Left(processingError) => Future.successful(Left(processingError))
-          case Right(processedImagesReadyToPersist) =>
-            val newImagesToPersist = processedImagesReadyToPersist ++ sourceImageReadyToPersist
-            println("[RPB] Done processing, ready to persist all these images: " + newImagesToPersist)
-            val uploads = newImagesToPersist.map { image =>
-              imageStore.put(image.key, image.is, image.bytes, imageFormatToMimeType(image.format)).imap { _ =>
-                ImageProcessState.UploadedImage(image.key, image.format, image.image, image.processOperation)
-              }
-            }
-
-            println("[RPB] Just put all the new images into the image store")
-
-            // Update RoverImageInfo
-
-            val uploadedImagesFut = Future.sequence(uploads).imap(Right(_)).recover {
-              case error: Exception => Left(ImageProcessState.CDNUploadFailed(error))
-            }
-            uploadedImagesFut.imap {
-              case Left(uploadError) => Left(uploadError)
-              case Right(uploadedImages) => try {
-                saveNewAvatars(orgId, sourceImage, existingAvatars, uploadedImages, unnecessary)
-              } catch {
-                case imageInfoError: Exception =>
-                  log.error(s"Failed to update ImageInfoRepo after fetching image from user uploaded file: $imageInfoError")
-                  Left(ImageProcessState.DbPersistFailed(imageInfoError))
-              }
-            }
-
+          case Left(processingError) =>
+            Left(processingError)
+          case Right(modifiedImagesReadyToPersist) =>
+            Right(modifiedImagesReadyToPersist ++ sourceImageReadyToPersist)
         }
     }
   }
@@ -120,21 +120,17 @@ class OrganizationAvatarCommanderImpl @Inject() (
       uploadedImages.foreach { img =>
         val orgAvatar = OrganizationAvatar(organizationId = orgId, width = img.image.getWidth, height = img.image.getHeight, format = sourceImage.format, kind = img.processOperation, imagePath = img.key, source = UserUpload, sourceFileHash = sourceImage.hash, sourceImageURL = None)
         orgAvatarRepo.save(orgAvatar)
-        println("[RPB] Saved to repo: " + orgAvatar)
       }
 
       val originalImageOpt = existingAvatars.find(_.kind == ProcessImageOperation.Original)
       if (originalImageOpt.nonEmpty) {
         val alreadyExistingImageInfo = originalImageOpt.get
-        println("[RPB] See? It was here: " + alreadyExistingImageInfo)
         val orgAvatar = OrganizationAvatar(organizationId = orgId, width = alreadyExistingImageInfo.width, height = alreadyExistingImageInfo.height, format = sourceImage.format, kind = alreadyExistingImageInfo.kind, imagePath = alreadyExistingImageInfo.imagePath, source = UserUpload, sourceFileHash = sourceImage.hash, sourceImageURL = None)
         orgAvatarRepo.save(orgAvatar)
       }
 
       unnecessary.foreach { processOperationRequest =>
-        println("[RPB] This operation is unnecessary: " + processOperationRequest + " because it's already in the store")
         val alreadyExistingImageInfo = existingAvatars.find(avatar => avatar.kind == processOperationRequest.operation && avatar.imageSize == processOperationRequest.size).get
-        println("[RPB] See? It was here: " + alreadyExistingImageInfo)
         val orgAvatar = OrganizationAvatar(organizationId = orgId, width = alreadyExistingImageInfo.width, height = alreadyExistingImageInfo.height, format = sourceImage.format, kind = alreadyExistingImageInfo.kind, imagePath = alreadyExistingImageInfo.imagePath, source = UserUpload, sourceFileHash = sourceImage.hash, sourceImageURL = None)
         orgAvatarRepo.save(orgAvatar)
       }
@@ -155,16 +151,10 @@ class OrganizationAvatarCommanderImpl @Inject() (
       case croppedImage if croppedImage.kind == ProcessImageOperation.Crop => CropImageRequest(croppedImage.imageSize)
     }.toSet
 
-    println("[RPB] Figuring out which processing requests we have to handle")
-    println("[RPB] These ones are already in the store: " + existing)
-    println("We want to hit: " + scaleSizes + " and " + cropSizes + " from an image of size " + imageSize)
     val necessary = diffProcessImageRequests(expected, existing)
     val unnecessary = intersectProcessImageRequests(existing, expected)
-    println("[RPB] These are the ones we need to have: " + expected)
-    println("[RPB] These are the ones we need to actually do: " + necessary)
-    println("[RPB] These are the ones we do not need to do: " + unnecessary)
 
-    (expected, necessary, unnecessary)
+    (necessary, unnecessary)
   }
   // All the ProcessImageRequests in A that are NOT in B
   def diffProcessImageRequests(A: Set[ProcessImageRequest], B: Set[ProcessImageRequest]): Set[ProcessImageRequest] = {
