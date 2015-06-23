@@ -215,6 +215,8 @@ class GraphUpdaterImpl @Inject() () extends GraphUpdater with Logging {
 
   private def processUserIpAddressGraphUpdate(update: UserIpAddressGraphUpdate)(implicit writer: GraphWriter) = {
     writer.saveVertex(IpAddressData(update.ipAddr))
+    writer.saveVertex(UserData(update.userId))
     writer.saveEdge(update.userId, update.ipAddr, TimestampEdgeData(update.updatedAt.getMillis))
+    writer.saveEdge(update.ipAddr, update.userId, TimestampEdgeData(update.updatedAt.getMillis))
   }
 }
