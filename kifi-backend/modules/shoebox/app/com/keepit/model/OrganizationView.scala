@@ -87,7 +87,7 @@ object OrganizationFail {
   case object HANDLE_UNAVAILABLE extends OrganizationFail(FORBIDDEN, "handle_unavailable")
   case object NOT_A_MEMBER extends OrganizationFail(UNAUTHORIZED, "not_a_member")
   case object NO_VALID_INVITATIONS extends OrganizationFail(FORBIDDEN, "no_valid_invitations")
-  case object INVALID_PUBLIC_ID extends OrganizationFail(BAD_REQUEST, "invalid_organization_id")
+  case object INVALID_PUBLIC_ID extends OrganizationFail(BAD_REQUEST, "invalid_public_id")
 
   def apply(str: String): OrganizationFail = {
     str match {
