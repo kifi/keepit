@@ -25,7 +25,7 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
       }
     }
 
-    "delete an organization" in {
+    "modify an organization" in {
       withDb() { implicit injector =>
         val orgCommander = inject[OrganizationCommander]
         val orgMembershipRepo = inject[OrganizationMembershipRepo]
@@ -37,12 +37,68 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
           orgMembershipRepo.save(org.newMembership(userId = Id[User](2), role = OrganizationRole.MEMBER))
         }
 
-        val deleteResponse = orgCommander.deleteOrganization(OrganizationDeleteRequest(orgId = org.id.get, requesterId = Id[User](1)))
+        // Random non-members shouldn't be able to modify the org
+        val nonmemberModifyRequest = OrganizationModifyRequest(orgId = org.id.get, requesterId = Id[User](42),
+          modifications = OrganizationModifications(newName = Some("User 42 Rules!")))
+        val nonmemberModifyResponse = orgCommander.modifyOrganization(nonmemberModifyRequest)
+        nonmemberModifyResponse === Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+
+        // Neither should a generic member
+        val memberModifyRequest = OrganizationModifyRequest(orgId = org.id.get, requesterId = Id[User](2),
+          modifications = OrganizationModifications(newName = Some("User 2 Rules!")))
+        val memberModifyResponse = orgCommander.modifyOrganization(memberModifyRequest)
+        memberModifyResponse === Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+
+        // An owner can do whatever they want
+        val ownerModifyRequest = OrganizationModifyRequest(orgId = org.id.get, requesterId = Id[User](1),
+          modifications = OrganizationModifications(newName = Some("The view is nice from up here")))
+        val ownerModifyResponse = orgCommander.modifyOrganization(ownerModifyRequest)
+        ownerModifyResponse must haveClass[Right[OrganizationModifyRequest, Organization]]
+        ownerModifyResponse.right.get.request === ownerModifyRequest
+        ownerModifyResponse.right.get.modifiedOrg.name === "The view is nice from up here"
+
+        orgCommander.get(org.id.get) === ownerModifyResponse.right.get.modifiedOrg
+      }
+    }
+
+    "delete an organization" in {
+      withDb() { implicit injector =>
+        val orgCommander = inject[OrganizationCommander]
+        val orgMembershipRepo = inject[OrganizationMembershipRepo]
+
+        val createResponse = orgCommander.createOrganization(OrganizationCreateRequest(userId = Id[User](1), "Kifi"))
+        val org = createResponse.right.get.newOrg
+
+        db.readWrite { implicit session =>
+          orgMembershipRepo.save(org.newMembership(userId = Id[User](2), role = OrganizationRole.OWNER))
+          orgMembershipRepo.save(org.newMembership(userId = Id[User](3), role = OrganizationRole.MEMBER))
+        }
+
+        // Random non-members shouldn't be able to delete the org
+        val nonmemberDeleteRequest = OrganizationDeleteRequest(orgId = org.id.get, requesterId = Id[User](42))
+        val nonmemberDeleteResponse = orgCommander.deleteOrganization(nonmemberDeleteRequest)
+        nonmemberDeleteResponse === Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+
+        // Neither should a generic member
+        val memberDeleteRequest = OrganizationDeleteRequest(orgId = org.id.get, requesterId = Id[User](3))
+        val memberDeleteResponse = orgCommander.deleteOrganization(memberDeleteRequest)
+        memberDeleteResponse === Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+
+        // Even an owner can't, if they aren't the "original" owner
+        val ownerDeleteRequest = OrganizationDeleteRequest(orgId = org.id.get, requesterId = Id[User](2))
+        val ownerDeleteResponse = orgCommander.deleteOrganization(ownerDeleteRequest)
+        ownerDeleteResponse === Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+
+        // The OG owner can do whatever they want
+        val trueOwnerDeleteRequest = OrganizationDeleteRequest(orgId = org.id.get, requesterId = Id[User](1))
+        val trueOwnerDeleteResponse = orgCommander.deleteOrganization(trueOwnerDeleteRequest)
+        trueOwnerDeleteResponse must haveClass[Right[OrganizationDeleteRequest, Organization]]
+        trueOwnerDeleteResponse.right.get.request === trueOwnerDeleteRequest
+        trueOwnerDeleteResponse.right.get.deactivatedOrg.state === OrganizationStates.INACTIVE
+        orgCommander.get(org.id.get) === trueOwnerDeleteResponse.right.get.deactivatedOrg
 
         val memberships = db.readOnlyMaster { implicit session => orgMembershipRepo.getAllByOrgId(org.id.get) }
         memberships.length === 0
-
-        orgCommander.get(org.id.get) === deleteResponse.right.get.deactivatedOrg
       }
     }
   }
