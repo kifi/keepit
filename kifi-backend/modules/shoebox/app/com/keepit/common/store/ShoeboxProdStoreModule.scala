@@ -15,7 +15,6 @@ trait ShoeboxStoreModule extends StoreModule with Logging
 
 case class ShoeboxProdStoreModule() extends ProdStoreModule with ShoeboxStoreModule {
   def configure() {
-    bind[ImageDataIntegrityPlugin].to[ImageDataIntegrityPluginImpl].in[AppScoped]
     bind[RoverImageStore].to[S3RoverImageStoreImpl]
   }
 
@@ -57,7 +56,6 @@ case class ShoeboxProdStoreModule() extends ProdStoreModule with ShoeboxStoreMod
 
 case class ShoeboxDevStoreModule() extends DevStoreModule(ShoeboxProdStoreModule()) with ShoeboxStoreModule {
   def configure() {
-    bind[ImageDataIntegrityPlugin].to[ImageDataIntegrityPluginImpl].in[AppScoped]
     bind[RoverImageStore].to[InMemoryRoverImageStoreImpl]
   }
 

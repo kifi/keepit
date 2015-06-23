@@ -283,6 +283,8 @@ POST    /m/1/libraries/recos/feedback      @com.keepit.controllers.website.Libra
 POST    /m/1/content/flagUrl                @com.keepit.controllers.mobile.MobileUriController.flagContent()
 GET     /m/1/inviteInfo                     @com.keepit.controllers.website.InviteController.getGeneralInviteInfo()
 
+POST    /m/1/teams/:id/members/invites/accept @com.keepit.controllers.mobile.MobileOrganizationInviteController.acceptInvitation(id: PublicId[Organization])
+POST    /m/1/teams/:id/members/invites/decline @com.keepit.controllers.mobile.MobileOrganizationInviteController.declineInvitation(id: PublicId[Organization])
 
 ##########################################
 # Website
@@ -304,7 +306,7 @@ GET     /about/team                 @com.keepit.controllers.website.HomeControll
 GET     /about/team.html            @com.keepit.controllers.website.HomeController.moved(uri  = "about/team")
 GET     /about/join_us              @com.keepit.controllers.website.HomeController.route(path = "about/join_us")
 GET     /about/join_us.html         @com.keepit.controllers.website.HomeController.moved(uri = "/about/join_us")
-GET     /about/user_feedback        @com.keepit.controllers.website.HomeController.route(path = "user_feedback")
+GET     /about/user_feedback        @com.keepit.controllers.website.HomeController.route(path = "about/user_feedback")
 GET     /how_it_works               @com.keepit.controllers.website.HomeController.route(path = "how_it_works")
 GET     /teams                      @com.keepit.controllers.website.HomeController.route(path = "teams")
 GET     /teams-confirmation         @com.keepit.controllers.website.HomeController.route(path = "teams-confirmation")
