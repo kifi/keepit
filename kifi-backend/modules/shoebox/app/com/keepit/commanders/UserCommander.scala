@@ -68,7 +68,7 @@ object UpdatableUserInfo {
   implicit val updatableUserDataFormat = Json.format[UpdatableUserInfo]
 }
 
-case class BasicUserInfo(basicUser: BasicUser, info: UpdatableUserInfo, notAuthed: Seq[String])
+case class BasicUserInfo(basicUser: BasicUser, info: UpdatableUserInfo, notAuthed: Seq[String], numLibraries: Int, numConnections: Int, numFollowers: Int)
 
 case class UserProfile(userId: Id[User], basicUserWithFriendStatus: BasicUserWithFriendStatus, numKeeps: Int)
 
@@ -267,17 +267,26 @@ class UserCommander @Inject() (
   }
 
   def getUserInfo(user: User): BasicUserInfo = {
-    val (basicUser, biography, emails, pendingPrimary, notAuthed) = db.readOnlyMaster { implicit session =>
+    val (basicUser, biography, emails, pendingPrimary, notAuthed, numLibraries, numConnections, numFollowers) = db.readOnlyMaster { implicit session =>
       val basicUser = basicUserRepo.load(user.id.get)
       val biography = userValueRepo.getValueStringOpt(user.id.get, UserValueName.USER_DESCRIPTION)
       val emails = emailRepo.getAllByUser(user.id.get)
       val pendingPrimary = userValueRepo.getValueStringOpt(user.id.get, UserValueName.PENDING_PRIMARY_EMAIL).map(EmailAddress(_))
-      val notAuthed = socialUserInfoRepo.getNotAuthorizedByUser(user.id.get).map(_.networkType.name)
-      (basicUser, biography, emails, pendingPrimary, notAuthed)
+      val notAuthed = socialUserInfoRepo.getNotAuthorizedByUser(user.id.get).map(_.networkType.name).filter(_ != "linkedin") // Don't send down LinkedIn anymore
+
+      val libCounts = libraryMembershipRepo.countsWithUserIdAndAccesses(user.id.get, LibraryAccess.all.toSet)
+      val numLibsOwned = libCounts.getOrElse(LibraryAccess.OWNER, 0)
+      val numLibsCollab = libCounts.getOrElse(LibraryAccess.READ_WRITE, 0) + libCounts.getOrElse(LibraryAccess.READ_INSERT, 0)
+      val numLibraries = numLibsOwned + numLibsCollab
+
+      val numConnections = userConnectionRepo.getConnectionCount(user.id.get)
+      val numFollowers = libraryMembershipRepo.countFollowersForOwner(user.id.get)
+
+      (basicUser, biography, emails, pendingPrimary, notAuthed, numLibraries, numConnections, numFollowers)
     }
 
     def isPrimary(address: EmailAddress) = user.primaryEmail.isDefined && address.equalsIgnoreCase(user.primaryEmail.get)
-    val emailInfos = emails.sortBy(e => (isPrimary(e.address), !e.verified, e.id.get.id)).map { email =>
+    val emailInfos = emails.sortBy(e => (isPrimary(e.address), !e.verified, e.id.get.id)).reverse.map { email =>
       EmailInfo(
         address = email.address,
         isVerified = email.verified,
@@ -285,10 +294,10 @@ class UserCommander @Inject() (
         isPendingPrimary = pendingPrimary.isDefined && pendingPrimary.get.equalsIgnoreCase(email.address)
       )
     }
-    BasicUserInfo(basicUser, UpdatableUserInfo(biography, Some(emailInfos)), notAuthed)
+    BasicUserInfo(basicUser, UpdatableUserInfo(biography, Some(emailInfos)), notAuthed, numLibraries, numConnections, numFollowers)
   }
 
-  def getKeepAttributionInfo(userId: Id[User]): Future[UserKeepAttributionInfo] = {
+  def getHelpRankInfo(userId: Id[User]): Future[UserKeepAttributionInfo] = {
     heimdalClient.getKeepAttributionInfo(userId)
   }
 
