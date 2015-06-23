@@ -74,7 +74,7 @@ class GraphUpdateFetcherImpl @Inject() (
 
       case LibraryMembershipGraphUpdate => shoebox.getLibraryMembershipsChanged(seq.copy(), fetchSize).imap(_.map(LibraryMembershipGraphUpdate.apply))
 
-      case UserIpAddressGraphUpdate => shoebox.getUserIpAddressesChanged(seq.copy(), fetchSize).imap(_.map(UserIpAddressGraphUpdate.apply))
+      case UserIpAddressGraphUpdate => shoebox.getIngestableUserIpAddresses(seq.copy(), fetchSize).imap(_.map(UserIpAddressGraphUpdate.apply))
     }
   }
 }

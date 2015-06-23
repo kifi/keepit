@@ -8,7 +8,7 @@ object IpAddress {
 
   implicit def ipToLong(ipAddress: IpAddress): Long = {
     val octets = ipAddress.ip.split("\\.")
-    Math.round(octets.zipWithIndex.map { case (x, i) => Integer.parseInt(x) * Math.pow(256, 3 - i) }.sum)
+    octets.reverse.zipWithIndex.map { case (x, i) => x.toLong * Math.pow(256, i).toLong }.sum
   }
 
   implicit def longToIp(long: Long): IpAddress = {

@@ -122,7 +122,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getLibrariesWithWriteAccess(userId: Id[User]): Future[Set[Id[Library]]]
   def getUserActivePersonas(userId: Id[User]): Future[UserActivePersonas]
   def getLibraryURIs(libId: Id[Library]): Future[Seq[Id[NormalizedURI]]]
-  def getUserIpAddressesChanged(seqNum: SequenceNumber[IngestableUserIpAddress], fetchSize: Int): Future[Seq[IngestableUserIpAddress]]
+  def getIngestableUserIpAddresses(seqNum: SequenceNumber[IngestableUserIpAddress], fetchSize: Int): Future[Seq[IngestableUserIpAddress]]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -771,7 +771,7 @@ class ShoeboxServiceClientImpl @Inject() (
     call(Shoebox.internal.getLibraryURIS(libId), callTimeouts = longTimeout).map { _.json.as[Seq[Id[NormalizedURI]]] }
   }
 
-  def getUserIpAddressesChanged(seqNum: SequenceNumber[IngestableUserIpAddress], fetchSize: Int): Future[Seq[IngestableUserIpAddress]] = {
-    call(Shoebox.internal.getUserIpAddressesChanged(seqNum, fetchSize)).map { _.json.as[Seq[IngestableUserIpAddress]] }
+  def getIngestableUserIpAddresses(seqNum: SequenceNumber[IngestableUserIpAddress], fetchSize: Int): Future[Seq[IngestableUserIpAddress]] = {
+    call(Shoebox.internal.getIngestableUserIpAddresses(seqNum, fetchSize)).map { _.json.as[Seq[IngestableUserIpAddress]] }
   }
 }

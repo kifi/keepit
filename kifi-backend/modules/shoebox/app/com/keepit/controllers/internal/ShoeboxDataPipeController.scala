@@ -238,7 +238,7 @@ class ShoeboxDataPipeController @Inject() (
     }
   }
 
-  def getUserIpAddressesChanged(seqNum: SequenceNumber[UserIpAddress], fetchSize: Int) = Action.async { request =>
+  def getIngestableUserIpAddresses(seqNum: SequenceNumber[UserIpAddress], fetchSize: Int) = Action.async { request =>
     SafeFuture {
       val ipAddresses = db.readOnlyReplica { implicit s => userIpAddressRepo.getBySequenceNumber(seqNum, fetchSize) }.map {
         _.toIngestableUserIpAddress
