@@ -31,10 +31,10 @@ class AdminIDController @Inject() (
   }
 
   def byPublicId(name: String, publicId: String) = AdminUserPage { implicit request =>
-    val id = PublicIdRegistry.registry.find(_._1.toLowerCase.contains(name.toLowerCase)).map {
+    val id = PublicIdRegistry.registry.filter(_._1.toLowerCase.contains(name.toLowerCase)).map {
       case (clazz, accessor) =>
         clazz + " " + Try(accessor.toId(publicId)).toOption.getOrElse("(invalid)")
-    }.getOrElse("Couldn't find class")
+    }.mkString("\n")
     Ok(id)
   }
 
