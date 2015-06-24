@@ -167,7 +167,7 @@ case object LibraryGraphUpdate extends GraphUpdateKind[LibraryGraphUpdate] {
   def apply(libView: LibraryView): LibraryGraphUpdate = LibraryGraphUpdate(libView.id.get, libView.state, libView.seq)
 }
 
-case class UserIpAddressGraphUpdate(userId: Id[User], ipAddr: IpAddress, updatedAt: DateTime, ipSeq: SequenceNumber[IngestableUserIpAddress]) extends GraphUpdate {
+case class UserIpAddressGraphUpdate(userId: Id[User], ipAddress: IpAddress, updatedAt: DateTime, ipSeq: SequenceNumber[IngestableUserIpAddress]) extends GraphUpdate {
   type U = UserIpAddressGraphUpdate
   def kind = UserIpAddressGraphUpdate
   def seq = kind.seq(ipSeq.value)
