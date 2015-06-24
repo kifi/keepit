@@ -11,8 +11,9 @@ case class OrganizationAvatar(
     id: Option[Id[OrganizationAvatar]] = None,
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,
-    state: State[OrganizationAvatar] = OrganizationAvatarStates.ACTIVE,
+    state: State[OrganizationAvatar] = OrganizationImageStates.ACTIVE,
     organizationId: Id[Organization],
+    position: Option[ImagePosition],
     width: Int,
     height: Int,
     format: ImageFormat,
@@ -21,7 +22,7 @@ case class OrganizationAvatar(
     source: ImageSource,
     sourceFileHash: ImageHash,
     sourceImageURL: Option[String]) extends BaseImage with Model[OrganizationAvatar] {
-  def isOriginal = kind == ProcessImageOperation.Original
+  def isOriginal = true
 
   def dimensions = ImageSize(width, height)
   def withId(id: Id[OrganizationAvatar]) = this.copy(id = Some(id))
@@ -35,6 +36,7 @@ object OrganizationAvatar {
     (__ \ 'updatedAt).format(DateTimeJsonFormat) and
     (__ \ 'state).format(State.format[OrganizationAvatar]) and
     (__ \ 'organizationId).format(Id.format[Organization]) and
+    (__ \ 'position).formatNullable[ImagePosition] and
     (__ \ 'width).format[Int] and
     (__ \ 'height).format[Int] and
     (__ \ 'format).format[ImageFormat] and
@@ -46,4 +48,13 @@ object OrganizationAvatar {
   )(OrganizationAvatar.apply, unlift(OrganizationAvatar.unapply))
 }
 
-object OrganizationAvatarStates extends States[OrganizationAvatar]
+case class ImagePosition(x: Int, y: Int)
+
+object ImagePosition {
+  implicit val format: Format[ImagePosition] = (
+    (__ \ 'x).format[Int] and
+    (__ \ 'y).format[Int]
+  )(ImagePosition.apply, unlift(ImagePosition.unapply))
+}
+
+object OrganizationImageStates extends States[OrganizationAvatar]
