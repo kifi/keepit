@@ -37,7 +37,6 @@ angular.module('kifi')
         scope.showFollowers = false;
         scope.colors = ['#447ab7','#5ab7e7','#4fc49e','#f99457','#dd5c60','#c16c9e','#9166ac'];
         scope.currentPageOrigin = '';
-        scope.onSubscriptionExperiment = (profileService.me.experiments || []).indexOf('subscription') > -1;
         scope.showSubIntegrations = false;
         scope.newBlankSub = function () { return { 'name': '', 'info': { 'kind': 'slack', 'url': '' }}; };
         scope.showError = false;
