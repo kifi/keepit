@@ -57,7 +57,7 @@ class ShoeboxRepoTest extends Specification with ShoeboxApplicationInjector {
         // OrganizationLogoRepo
         val organizationLogoRepo = inject[OrganizationAvatarRepo]
         val logo = db.readWrite { implicit session =>
-          val orgLogo = OrganizationAvatar(organizationId = org.id.get, position = Some(ImagePosition(0, 0)),
+          val orgLogo = OrganizationAvatar(organizationId = org.id.get,
             width = 100, height = 100, format = ImageFormat.JPG, kind = ProcessImageOperation.Scale,
             imagePath = ImagePath(""), source = ImageSource.UserUpload, sourceFileHash = ImageHash("X"),
             sourceImageURL = Some("NONE"))
