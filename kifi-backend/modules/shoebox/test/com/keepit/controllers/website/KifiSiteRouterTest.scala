@@ -197,7 +197,7 @@ class KifiSiteRouterTest extends Specification with ShoeboxApplicationInjector {
         route(FakeRequest("GET", "/tags/manage")) must beLoginRedirect("/tags/manage")
         actionsHelper.setUser(user1)
         route(FakeRequest("GET", "/invite")) must beWebApp
-        route(FakeRequest("GET", "/profile")) must beWebApp
+        route(FakeRequest("GET", "/settings")) must beWebApp
         route(FakeRequest("GET", "/tags/manage")) must beWebApp
 
         // /me
