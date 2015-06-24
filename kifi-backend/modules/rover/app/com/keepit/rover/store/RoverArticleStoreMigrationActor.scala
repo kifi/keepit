@@ -40,6 +40,8 @@ class RoverArticleStoreMigrationActor @Inject() (
           var version = oldestVersion
           while (version <= latestVersion) {
             val key = ArticleKey(articleInfo.uriId, articleInfo.urlHash, articleInfo.articleKind, version)
+            val deprecatedUrlHashKey = DeprecatedUrlHashArticleStoreKey(key)
+            articleStore -= deprecatedUrlHashKey
             val uriKey = ArticleStoreKey(key)
             val urlHashKey = UrlHashArticleStoreKey(key)
             Try(articleStore.copy(uriKey, urlHashKey)) match {
