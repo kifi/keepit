@@ -1,10 +1,13 @@
 package com.keepit.model
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
-import com.keepit.common.db.{ SequenceNumber, State, Id }
+import com.keepit.common.actor.ActorInstance
+import com.keepit.common.db.{ DbSequenceAssigner, SequenceNumber, State, Id }
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick._
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
+import com.keepit.common.plugin.{ SequencingActor, SchedulingProperties, SequencingPlugin }
 import com.keepit.common.time.Clock
 import org.joda.time.DateTime
 import play.api.libs.json._
@@ -149,3 +152,15 @@ class OrganizationMembershipRepoImpl @Inject() (val db: DataBaseComponent, val c
     save(get(membership).copy(state = OrganizationMembershipStates.INACTIVE))
   }
 }
+
+trait OrganizationMembershipSequencingPlugin extends SequencingPlugin
+
+class OrganizationMembershipSequencingPluginImpl @Inject() (
+  override val actor: ActorInstance[OrganizationMembershipSequencingActor],
+  override val scheduling: SchedulingProperties) extends OrganizationMembershipSequencingPlugin
+
+@Singleton
+class OrganizationMembershipSequenceNumberAssigner @Inject() (db: Database, repo: OrganizationMembershipRepo, airbrake: AirbrakeNotifier) extends DbSequenceAssigner[OrganizationMembership](db, repo, airbrake)
+class OrganizationMembershipSequencingActor @Inject() (
+  assigner: OrganizationMembershipSequenceNumberAssigner,
+  airbrake: AirbrakeNotifier) extends SequencingActor(assigner, airbrake)

@@ -1,10 +1,13 @@
 package com.keepit.model
 
 import com.google.inject.{ Provider, ImplementedBy, Inject, Singleton }
-import com.keepit.common.db.{ Id }
+import com.keepit.common.actor.ActorInstance
+import com.keepit.common.db.{ DbSequenceAssigner, Id }
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick._
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
+import com.keepit.common.plugin.{ SequencingActor, SchedulingProperties, SequencingPlugin }
 import com.keepit.common.time.Clock
 import play.api.libs.json.Json
 
@@ -41,3 +44,15 @@ class OrganizationRepoImpl @Inject() (val db: DataBaseComponent, val clock: Cloc
   def table(tag: Tag) = new OrganizationTable(tag)
   initTable()
 }
+
+trait OrganizationSequencingPlugin extends SequencingPlugin
+
+class OrganizationSequencingPluginImpl @Inject() (
+  override val actor: ActorInstance[OrganizationSequencingActor],
+  override val scheduling: SchedulingProperties) extends OrganizationSequencingPlugin
+
+@Singleton
+class OrganizationSequenceNumberAssigner @Inject() (db: Database, repo: OrganizationRepo, airbrake: AirbrakeNotifier) extends DbSequenceAssigner[Organization](db, repo, airbrake)
+class OrganizationSequencingActor @Inject() (
+  assigner: OrganizationSequenceNumberAssigner,
+  airbrake: AirbrakeNotifier) extends SequencingActor(assigner, airbrake)

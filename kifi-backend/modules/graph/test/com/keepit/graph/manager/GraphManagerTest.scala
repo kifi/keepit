@@ -42,14 +42,6 @@ class GraphManagerTest extends Specification with GraphTestInjector with GraphTe
           nbs = getNeighbors(v, (UserReader, LibraryReader, EmptyEdgeReader), true)
           nbs.map { x: VertexId => x.asId[LibraryReader].id } === Set(1, 2)
 
-          // user to org
-          nbs = getNeighbors(v, (UserReader, OrganizationReader, TimestampEdgeReader), true)
-          nbs.map { x: VertexId => x.asId[OrganizationReader].id } === Set(1)
-
-          // org to users
-          v.moveTo(VertexDataId[OrganizationReader](1))
-          nbs = getNeighbors(v, (OrganizationReader, UserReader, TimestampEdgeReader), true)
-
           // user to ip address
           nbs = getNeighbors(v, (UserReader, IpAddressReader, TimestampEdgeReader), true)
           nbs.map { x: VertexId => x.asId[IpAddressReader].id } === Set(IpAddress.ipToLong(ipAddress1))
@@ -58,6 +50,15 @@ class GraphManagerTest extends Specification with GraphTestInjector with GraphTe
           v.moveTo(VertexDataId[IpAddressReader](ipAddress1))
           nbs = getNeighbors(v, (IpAddressReader, UserReader, TimestampEdgeReader), true)
           nbs.map { x: VertexId => x.asId[UserReader].id } === Set(1, 2)
+
+          // user to org
+          v.moveTo(VertexDataId[UserReader](1))
+          nbs = getNeighbors(v, (UserReader, OrganizationReader, TimestampEdgeReader), true)
+          nbs.map { x: VertexId => x.asId[OrganizationReader].id } === Set(1)
+
+          // org to users
+          v.moveTo(VertexDataId[OrganizationReader](1))
+          nbs = getNeighbors(v, (OrganizationReader, UserReader, TimestampEdgeReader), true)
 
           // library to users
           v.moveTo(VertexDataId[LibraryReader](1))
