@@ -30,7 +30,7 @@ trait OrganizationInviteCommander {
   def acceptInvitation(orgId: Id[Organization], userId: Id[User], authTokenOpt: Option[String] = None): Either[OrganizationFail, OrganizationMembership]
   def declineInvitation(orgId: Id[Organization], userId: Id[User]): Seq[OrganizationInvite]
   // Creates a Universal Invite Link for an organization and inviter. Anyone with the link can join the Organization
-  def createUniversalInviteLink(orgId: Id[Organization], inviterId: Id[User], role: OrganizationRole = OrganizationRole.MEMBER): Either[OrganizationFail, OrganizationInvite]
+  def createUniversalInviteLink(orgId: Id[Organization], inviterId: Id[User], role: OrganizationRole = OrganizationRole.MEMBER)(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationInvite]
 }
 
 @Singleton
@@ -294,12 +294,16 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     }
   }
 
-  def createUniversalInviteLink(orgId: Id[Organization], inviterId: Id[User], role: OrganizationRole = OrganizationRole.MEMBER): Either[OrganizationFail, OrganizationInvite] = {
+  def createUniversalInviteLink(orgId: Id[Organization], inviterId: Id[User], role: OrganizationRole = OrganizationRole.MEMBER)(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationInvite] = {
     db.readWrite { implicit session =>
       val membershipOpt = organizationMembershipRepo.getByOrgIdAndUserId(orgId, inviterId)
       membershipOpt match {
         case Some(membership) if membership.hasPermission(OrganizationPermission.INVITE_MEMBERS) && role <= membership.role =>
-          Right(organizationInviteRepo.save(OrganizationInvite(organizationId = orgId, inviterId = inviterId, role = role)))
+          val invite = organizationInviteRepo.save(OrganizationInvite(organizationId = orgId, inviterId = inviterId, role = role))
+
+          // tracking
+          organizationAnalytics.trackSentOrganizationInvites(inviterId, organizationRepo.get(orgId), Seq(invite))
+          Right(invite)
         case Some(membership) => Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
         case None => Left(OrganizationFail.NOT_A_MEMBER)
       }
