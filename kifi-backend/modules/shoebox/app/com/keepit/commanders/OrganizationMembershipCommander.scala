@@ -30,7 +30,9 @@ trait OrganizationMembershipCommander {
   def getMembersAndInvitees(orgId: Id[Organization], limit: Limit, offset: Offset, includeInvitees: Boolean): Seq[MaybeOrganizationMember]
 
   def getPermissions(orgId: Id[Organization], userIdOpt: Option[Id[User]]): Set[OrganizationPermission]
+  def validRequest(request: OrganizationMembershipRequest)(implicit session: RSession): Boolean
 
+  def validateRequests(requests: Seq[OrganizationMembershipRequest]): Map[OrganizationMembershipRequest, Boolean]
   def addMembership(request: OrganizationMembershipAddRequest): Either[OrganizationFail, OrganizationMembershipAddResponse]
   def modifyMembership(request: OrganizationMembershipModifyRequest): Either[OrganizationFail, OrganizationMembershipModifyResponse]
   def removeMembership(request: OrganizationMembershipRemoveRequest): Either[OrganizationFail, OrganizationMembershipRemoveResponse]
@@ -102,7 +104,8 @@ class OrganizationMembershipCommanderImpl @Inject() (
     membersNotIncludingOwner ++ invitedByUserId ++ invitedByEmailAddress
   }
 
-  private def validRequest(request: OrganizationMembershipRequest)(implicit session: RSession): Boolean = {
+  def validRequest(request: OrganizationMembershipRequest)(implicit session: RSession): Boolean = {
+    val org = organizationRepo.get(request.orgId)
     val requesterOpt = organizationMembershipRepo.getByOrgIdAndUserId(request.orgId, request.requesterId)
     val targetOpt = organizationMembershipRepo.getByOrgIdAndUserId(request.orgId, request.targetId)
 
@@ -116,9 +119,16 @@ class OrganizationMembershipCommanderImpl @Inject() (
           targetOpt.exists(_.role < requester.role) && requester.permissions.contains(MODIFY_MEMBERS)
 
         case OrganizationMembershipRemoveRequest(_, _, _) =>
-          targetOpt.exists(_.role < requester.role) &&
-            requester.permissions.contains(REMOVE_MEMBERS)
+          val selfRemove = targetOpt.exists(t => t.userId == requester.userId && t.userId != org.ownerId)
+          val otherRemove = targetOpt.exists(_.role < requester.role) && requester.permissions.contains(REMOVE_MEMBERS)
+          selfRemove || otherRemove
       }
+    }
+  }
+
+  def validateRequests(requests: Seq[OrganizationMembershipRequest]): Map[OrganizationMembershipRequest, Boolean] = {
+    db.readOnlyReplica { implicit session =>
+      requests.map(r => r -> validRequest(r)).toMap
     }
   }
 
