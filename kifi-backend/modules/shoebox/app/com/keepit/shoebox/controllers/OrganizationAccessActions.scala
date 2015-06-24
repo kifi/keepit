@@ -4,9 +4,9 @@ import com.keepit.commanders.{ OrganizationCommander, OrganizationMembershipComm
 import com.keepit.common.controller.{ MaybeUserRequest, UserActions, UserRequest }
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.Id
-import com.keepit.model.{ Organization, User }
+import com.keepit.model.{ OrganizationFail, OrganizationPermission, Organization, User }
 import play.api.libs.json.Json
-import play.api.mvc.{ ActionFilter, Controller, Result }
+import play.api.mvc._
 
 import scala.concurrent.Future
 
@@ -18,22 +18,43 @@ trait OrganizationAccessActions {
   val orgCommander: OrganizationCommander
   val orgMembershipCommander: OrganizationMembershipCommander
 
-  def OrganizationViewAction(id: PublicId[Organization]) = new ActionFilter[MaybeUserRequest] {
-    def filter[A](input: MaybeUserRequest[A]): Future[Option[Result]] = Future.successful(lookupViewable(id, input))
+  case class OrganizationRequest[T](request: MaybeUserRequest[T], orgId: Id[Organization], authToken: Option[String], permissions: Set[OrganizationPermission]) extends WrappedRequest[T](request) {
+    def userIdOpt = request.userIdOpt
   }
 
-  private def lookupViewable[A](orgPubId: PublicId[Organization], input: MaybeUserRequest[A]) = {
+  def OrganizationAction(id: PublicId[Organization], permissions: OrganizationPermission*) = MaybeUserAction andThen new ActionFunction[MaybeUserRequest, OrganizationRequest] {
+    override def invokeBlock[A](request: MaybeUserRequest[A], block: (OrganizationRequest[A]) => Future[Result]): Future[Result] = {
+      parseRequest(id, request) match {
+        case Some((orgId, userIdOpt, authToken)) =>
+          // Right now all organizations are publicly visible
+          val memberPermissions = orgMembershipCommander.getPermissions(orgId, userIdOpt)
+          if (permissions forall (memberPermissions.contains)) {
+            block(OrganizationRequest(request, orgId, authToken, memberPermissions))
+          } else {
+            Future.successful(OrganizationFail.INSUFFICIENT_PERMISSIONS.asErrorResponse)
+          }
+        case _ =>
+          Future.successful(OrganizationFail.INVALID_PUBLIC_ID.asErrorResponse)
+      }
+    }
+  }
+
+  def OrganizationAccessCheck(id: PublicId[Organization], permissions: OrganizationPermission*) = new ActionFilter[MaybeUserRequest] {
+    def filter[A](input: MaybeUserRequest[A]): Future[Option[Result]] = Future.successful(lookupViewable(id, input, permissions))
+  }
+
+  private def lookupViewable[A](orgPubId: PublicId[Organization], input: MaybeUserRequest[A], permissions: Seq[OrganizationPermission]) = {
     parseRequest(orgPubId, input) match {
       case Some((orgId, userIdOpt, authToken)) =>
         // Right now all organizations are publicly visible
-        val access = true // TODO: this ought to be removed when Leo gets to OrganizationAccessAction.byPermission
-        if (access) {
+        val memberPermissions = orgMembershipCommander.getPermissions(orgId, userIdOpt)
+        if (permissions forall (memberPermissions.contains)) {
           None
         } else {
-          Some(Forbidden(Json.obj("error" -> "permission_denied")))
+          Some(OrganizationFail.INSUFFICIENT_PERMISSIONS.asErrorResponse)
         }
       case _ =>
-        Some(BadRequest(Json.obj("error" -> "invalid_id")))
+        Some(OrganizationFail.INVALID_PUBLIC_ID.asErrorResponse)
     }
   }
 
