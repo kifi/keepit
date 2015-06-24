@@ -25,6 +25,12 @@ case class ShoeboxProdStoreModule() extends ProdStoreModule with ShoeboxStoreMod
     RoverImageStoreInbox(inboxDir)
   }
 
+  @Provides @Singleton
+  def organizationAvatarStoreInbox: OrganizationAvatarStoreInbox = {
+    val inboxDir = forceMakeTemporaryDirectory(current.configuration.getString("shoebox.temporary.directory").get, "organization-avatars")
+    OrganizationAvatarStoreInbox(inboxDir)
+  }
+
   @Singleton
   @Provides
   def socialUserRawInfoStore(amazonS3Client: AmazonS3, accessLog: AccessLog): SocialUserRawInfoStore = {
