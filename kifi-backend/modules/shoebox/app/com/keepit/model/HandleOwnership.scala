@@ -1,27 +1,19 @@
 package com.keepit.model
 
+import java.net.URLEncoder
+
 import com.google.inject.{ Inject, Singleton, ImplementedBy }
 import com.keepit.commanders.HandleOps
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick.{ DbRepo, DataBaseComponent, Repo }
 import com.keepit.common.db._
 import com.keepit.common.logging.Logging
+import com.keepit.common.strings._
 import com.keepit.common.time._
 import com.keepit.model.HandleOwner.{ UserOwner, OrganizationOwner }
 import com.kifi.macros.json
 import org.joda.time.DateTime
 import scala.concurrent.duration._
-
-@json
-case class Handle(value: String) extends AnyVal {
-  override def toString() = value
-}
-
-object Handle {
-  implicit def fromUsername(username: Username) = Handle(username.value)
-  implicit def fromOrganizationHandle(organizationHandle: OrganizationHandle) = Handle(organizationHandle.value)
-  def normalize(handle: Handle): Handle = Handle(HandleOps.normalize(handle.value))
-}
 
 sealed trait HandleOwner
 
@@ -145,7 +137,7 @@ class HandleOwnershipRepoImpl @Inject() (
   }
 
   def getByHandle(handle: Handle, excludeState: Option[State[HandleOwnership]] = Some(INACTIVE))(implicit session: RSession): Option[HandleOwnership] = {
-    getByNormalizedHandle(Handle.normalize(handle), excludeState)
+    getByNormalizedHandle(HandleOps.normalizeHandle(handle), excludeState)
   }
 
   private val compiledGetByUserId = Compiled { (userId: Column[Id[User]]) =>
