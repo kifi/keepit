@@ -131,7 +131,7 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
           val memberRepo = inject[OrganizationMembershipRepo]
           val inviterId = Id[User](1)
           val userId = Id[User](2)
-          val (org, _) = db.readWrite { implicit session =>
+          val (org, invite) = db.readWrite { implicit session =>
             UserFactory.user().withId(inviterId).saved
             UserFactory.user().withId(userId).saved
             val org = inject[OrganizationRepo].save(Organization(name = "kifi", ownerId = inviterId, handle = None))
@@ -139,7 +139,7 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
             val invite = inviteRepo.save(OrganizationInvite(organizationId = org.id.get, inviterId = inviterId, userId = Some(userId), role = OrganizationRole.MEMBER))
             (org, invite)
           }
-          inviteCommander.acceptInvitation(org.id.get, userId) must haveClass[Right[OrganizationFail, OrganizationMembership]]
+          inviteCommander.acceptInvitation(org.id.get, userId, invite.authToken) must haveClass[Right[OrganizationFail, OrganizationMembership]]
         }
       }
 
@@ -150,7 +150,7 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
           val memberRepo = inject[OrganizationMembershipRepo]
           val inviterId = Id[User](1)
           val userId = Id[User](2)
-          val (org, _) = db.readWrite { implicit session =>
+          val (org, invite) = db.readWrite { implicit session =>
             UserFactory.user().withId(inviterId).saved
             UserFactory.user().withId(userId).saved
             val org = inject[OrganizationRepo].save(Organization(name = "kifi", ownerId = inviterId, handle = None))
@@ -159,7 +159,7 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
             inviteRepo.save(OrganizationInvite(organizationId = org.id.get, inviterId = inviterId, userId = Some(userId), role = OrganizationRole.OWNER))
             (org, invite)
           }
-          inviteCommander.acceptInvitation(org.id.get, userId) must haveClass[Right[OrganizationFail, OrganizationMembership]]
+          inviteCommander.acceptInvitation(org.id.get, userId, invite.authToken) must haveClass[Right[OrganizationFail, OrganizationMembership]]
 
           db.readOnlyMaster { implicit session =>
             memberRepo.getByOrgIdAndUserId(org.id.get, userId).map(_.role) === Some(OrganizationRole.OWNER)
@@ -180,7 +180,7 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
             memberRepo.save(org.newMembership(userId = inviterId, role = OrganizationRole.OWNER))
             org
           }
-          inviteCommander.acceptInvitation(org.id.get, userId) === Left(OrganizationFail.NO_VALID_INVITATIONS)
+          inviteCommander.acceptInvitation(org.id.get, userId, "authToken") === Left(OrganizationFail.NO_VALID_INVITATIONS)
         }
       }
 
@@ -191,15 +191,15 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
           val memberRepo = inject[OrganizationMembershipRepo]
           val inviterId = Id[User](1)
           val userId = Id[User](2)
-          val org = db.readWrite { implicit session =>
+          val (org, invite) = db.readWrite { implicit session =>
             UserFactory.user().withId(inviterId).saved
             UserFactory.user().withId(userId).saved
             val org = inject[OrganizationRepo].save(Organization(name = "kifi", ownerId = inviterId, handle = None))
             memberRepo.save(org.newMembership(userId = inviterId, role = OrganizationRole.MEMBER))
-            inviteRepo.save(OrganizationInvite(organizationId = org.id.get, inviterId = inviterId, userId = Some(userId), role = OrganizationRole.OWNER))
-            org
+            val invite = inviteRepo.save(OrganizationInvite(organizationId = org.id.get, inviterId = inviterId, userId = Some(userId), role = OrganizationRole.OWNER))
+            (org, invite)
           }
-          inviteCommander.acceptInvitation(org.id.get, userId) === Left(OrganizationFail.NO_VALID_INVITATIONS)
+          inviteCommander.acceptInvitation(org.id.get, userId, invite.authToken) === Left(OrganizationFail.NO_VALID_INVITATIONS)
         }
       }
     }

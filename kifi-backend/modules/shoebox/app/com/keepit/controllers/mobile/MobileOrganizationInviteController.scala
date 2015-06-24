@@ -1,6 +1,6 @@
 package com.keepit.controllers.mobile
 
-import com.google.inject.{ ImplementedBy, Inject, Singleton }
+import com.google.inject.{ Inject, Singleton }
 import com.keepit.commanders._
 import com.keepit.common.controller._
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
@@ -11,21 +11,12 @@ import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
 import com.keepit.shoebox.controllers.OrganizationAccessActions
 import play.api.libs.json._
-import play.api.mvc.{ Action, AnyContent }
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success }
 
-@ImplementedBy(classOf[MobileOrganizationInviteControllerImpl])
-trait MobileOrganizationInviteController {
-  def inviteUsers(pubId: PublicId[Organization]): Action[JsValue]
-  def createAnonymousInviteToOrganization(pubId: PublicId[Organization]): Action[JsValue]
-  def acceptInvitation(pubId: PublicId[Organization], authTokenOpt: Option[String] = None): Action[AnyContent]
-  def declineInvitation(pubId: PublicId[Organization]): Action[AnyContent]
-}
-
 @Singleton
-class MobileOrganizationInviteControllerImpl @Inject() (
+class MobileOrganizationInviteController @Inject() (
     userCommander: UserCommander,
     val orgCommander: OrganizationCommander,
     val orgMembershipCommander: OrganizationMembershipCommander,
@@ -35,7 +26,7 @@ class MobileOrganizationInviteControllerImpl @Inject() (
     heimdalContextBuilder: HeimdalContextBuilderFactory,
     val userActionsHelper: UserActionsHelper,
     implicit val publicIdConfig: PublicIdConfiguration,
-    implicit val executionContext: ExecutionContext) extends MobileOrganizationInviteController with UserActions with OrganizationAccessActions with ShoeboxServiceController {
+    implicit val executionContext: ExecutionContext) extends UserActions with OrganizationAccessActions with ShoeboxServiceController {
 
   private def sendFailResponse(fail: OrganizationFail) = Status(fail.status)(Json.obj("error" -> fail.message))
 
@@ -43,7 +34,6 @@ class MobileOrganizationInviteControllerImpl @Inject() (
   // : Future[Either[OrganizationFail, Seq[(Either[BasicUser, RichContact], OrganizationRole)]]]
   def inviteUsers(pubId: PublicId[Organization]) = UserAction.async(parse.tolerantJson) { request =>
     Organization.decodePublicId(pubId) match {
-      case Failure(ex) => Future.successful(BadRequest(Json.obj("error" -> "invalid_id")))
       case Success(orgId) =>
         val invites = (request.body \ "invites").as[JsArray].value
         val msg = (request.body \ "message").asOpt[String].filter(_.nonEmpty)
@@ -75,6 +65,7 @@ class MobileOrganizationInviteControllerImpl @Inject() (
             }
             Ok(Json.toJson(result))
         }
+      case Failure(ex) => Future.successful(OrganizationFail.INVALID_PUBLIC_ID.asErrorResponse)
     }
   }
 
@@ -88,16 +79,16 @@ class MobileOrganizationInviteControllerImpl @Inject() (
         implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
         orgInviteCommander.createGenericInvite(orgId, request.userId, role) match {
           case Right(invite) =>
-            Ok(Json.obj("link" -> (fortyTwoConfig.applicationBaseUrl + routes.MobileOrganizationInviteController.acceptInvitation(Organization.publicId(invite.organizationId), Some(invite.authToken)).url)))
+            Ok(Json.obj("link" -> (fortyTwoConfig.applicationBaseUrl + routes.MobileOrganizationInviteController.acceptInvitation(Organization.publicId(invite.organizationId), invite.authToken).url)))
           case Left(fail) => fail.asErrorResponse
         }
     }
   }
 
-  def acceptInvitation(pubId: PublicId[Organization], authToken: Option[String] = None) = UserAction { request =>
+  def acceptInvitation(pubId: PublicId[Organization], authToken: String) = UserAction { request =>
     Organization.decodePublicId(pubId) match {
       case Success(orgId) =>
-        orgInviteCommander.acceptInvitation(orgId, request.userId) match {
+        orgInviteCommander.acceptInvitation(orgId, request.userId, authToken) match {
           case Right(organizationMembership) => NoContent
           case Left(organizationFail) => organizationFail.asErrorResponse
         }

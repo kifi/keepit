@@ -33,19 +33,19 @@ class MobileOrganizationInviteControllerTest extends Specification with ShoeboxT
         withDb(controllerTestModules: _*) { implicit injector =>
           val orgId = Id[Organization](1)
           val publicOrgId = Organization.publicId(orgId)(inject[PublicIdConfiguration])
-          val invitee = db.readWrite { implicit session =>
-            val user = UserFactory.user().withName("New", "Guy").saved
+          val (invitee, invite) = db.readWrite { implicit session =>
+            val invitee = UserFactory.user().withName("New", "Guy").saved
             val owner = UserFactory.user().withName("Kifi", "Kifi").saved
             val org = inject[OrganizationRepo].save(Organization(name = "Kifi", ownerId = owner.id.get, handle = None))
             inject[OrganizationMembershipRepo].save(org.newMembership(owner.id.get, OrganizationRole.OWNER))
 
-            inject[OrganizationInviteRepo].save(OrganizationInvite(organizationId = org.id.get, inviterId = owner.id.get, userId = user.id, role = OrganizationRole.MEMBER))
-            user
+            val invite = inject[OrganizationInviteRepo].save(OrganizationInvite(organizationId = org.id.get, inviterId = owner.id.get, userId = invitee.id, role = OrganizationRole.MEMBER))
+            (invitee, invite)
           }
 
           inject[FakeUserActionsHelper].setUser(invitee)
-          val request = route.acceptInvitation(publicOrgId)
-          val result = controller.acceptInvitation(publicOrgId)(request)
+          val request = route.acceptInvitation(publicOrgId, invite.authToken)
+          val result = controller.acceptInvitation(publicOrgId, invite.authToken)(request)
 
           status(result) must equalTo(NO_CONTENT)
         }
@@ -55,20 +55,20 @@ class MobileOrganizationInviteControllerTest extends Specification with ShoeboxT
         withDb(controllerTestModules: _*) { implicit injector =>
           val orgId = Id[Organization](1)
           val publicOrgId = Organization.publicId(orgId)(inject[PublicIdConfiguration])
-          val invitee = db.readWrite { implicit session =>
-            val user = UserFactory.user().withName("New", "Guy").saved
+          val (invitee, invite) = db.readWrite { implicit session =>
+            val invitee = UserFactory.user().withName("New", "Guy").saved
             val inviter = UserFactory.user().withName("Mr", "Inviter").saved
             val owner = UserFactory.user().withName("Kifi", "Kifi").saved
             val org = inject[OrganizationRepo].save(Organization(name = "Kifi", ownerId = owner.id.get, handle = None))
             inject[OrganizationMembershipRepo].save(org.newMembership(inviter.id.get, OrganizationRole.MEMBER).withPermissions(Set(OrganizationPermission.INVITE_MEMBERS)))
 
-            inject[OrganizationInviteRepo].save(OrganizationInvite(organizationId = org.id.get, inviterId = inviter.id.get, userId = user.id, role = OrganizationRole.MEMBER))
-            user
+            val invite = inject[OrganizationInviteRepo].save(OrganizationInvite(organizationId = org.id.get, inviterId = inviter.id.get, userId = invitee.id, role = OrganizationRole.MEMBER))
+            (invitee, invite)
           }
 
           inject[FakeUserActionsHelper].setUser(invitee)
-          val request = route.acceptInvitation(publicOrgId)
-          val result = controller.acceptInvitation(publicOrgId)(request)
+          val request = route.acceptInvitation(publicOrgId, invite.authToken)
+          val result = controller.acceptInvitation(publicOrgId, invite.authToken)(request)
           status(result) must equalTo(NO_CONTENT)
         }
       }
@@ -77,20 +77,20 @@ class MobileOrganizationInviteControllerTest extends Specification with ShoeboxT
         withDb(controllerTestModules: _*) { implicit injector =>
           val orgId = Id[Organization](1)
           val publicOrgId = Organization.publicId(orgId)(inject[PublicIdConfiguration])
-          val invitee = db.readWrite { implicit session =>
-            val user = UserFactory.user().withName("New", "Guy").saved
+          val (invitee, invite) = db.readWrite { implicit session =>
+            val invitee = UserFactory.user().withName("New", "Guy").saved
             val inviter = UserFactory.user().withName("Mr", "Inviter").saved
             val owner = UserFactory.user().withName("Kifi", "Kifi").saved
             val org = inject[OrganizationRepo].save(Organization(name = "Kifi", ownerId = owner.id.get, handle = None))
             inject[OrganizationMembershipRepo].save(org.newMembership(inviter.id.get, OrganizationRole.MEMBER))
 
-            inject[OrganizationInviteRepo].save(OrganizationInvite(organizationId = org.id.get, inviterId = inviter.id.get, userId = user.id, role = OrganizationRole.MEMBER))
-            user
+            val invite = inject[OrganizationInviteRepo].save(OrganizationInvite(organizationId = org.id.get, inviterId = inviter.id.get, userId = invitee.id, role = OrganizationRole.MEMBER))
+            (invitee, invite)
           }
 
           inject[FakeUserActionsHelper].setUser(invitee)
-          val request = route.acceptInvitation(publicOrgId)
-          val result = controller.acceptInvitation(publicOrgId)(request)
+          val request = route.acceptInvitation(publicOrgId, invite.authToken)
+          val result = controller.acceptInvitation(publicOrgId, invite.authToken)(request)
           result === OrganizationFail.NO_VALID_INVITATIONS
         }
       }
@@ -99,20 +99,20 @@ class MobileOrganizationInviteControllerTest extends Specification with ShoeboxT
         withDb(controllerTestModules: _*) { implicit injector =>
           val orgId = Id[Organization](1)
           val publicOrgId = Organization.publicId(orgId)(inject[PublicIdConfiguration])
-          val invitee = db.readWrite { implicit session =>
-            val user = UserFactory.user().withName("New", "Guy").saved
+          val (invitee, invite) = db.readWrite { implicit session =>
+            val invitee = UserFactory.user().withName("New", "Guy").saved
             val inviter = UserFactory.user().withName("Mr", "Inviter").saved
             val owner = UserFactory.user().withName("Kifi", "Kifi").saved
             val org = inject[OrganizationRepo].save(Organization(name = "Kifi", ownerId = owner.id.get, handle = None))
             inject[OrganizationMembershipRepo].save(org.newMembership(inviter.id.get, OrganizationRole.MEMBER).withPermissions(Set(OrganizationPermission.INVITE_MEMBERS)))
 
-            inject[OrganizationInviteRepo].save(OrganizationInvite(organizationId = org.id.get, inviterId = inviter.id.get, userId = user.id, role = OrganizationRole.OWNER))
-            user
+            val invite = inject[OrganizationInviteRepo].save(OrganizationInvite(organizationId = org.id.get, inviterId = inviter.id.get, userId = invitee.id, role = OrganizationRole.OWNER))
+            (invitee, invite)
           }
 
           inject[FakeUserActionsHelper].setUser(invitee)
-          val request = route.acceptInvitation(publicOrgId)
-          val result = controller.acceptInvitation(publicOrgId)(request)
+          val request = route.acceptInvitation(publicOrgId, invite.authToken)
+          val result = controller.acceptInvitation(publicOrgId, invite.authToken)(request)
           result === OrganizationFail.NO_VALID_INVITATIONS
         }
       }
@@ -124,8 +124,8 @@ class MobileOrganizationInviteControllerTest extends Specification with ShoeboxT
           }
 
           inject[FakeUserActionsHelper].setUser(invitee)
-          val request = route.acceptInvitation(PublicId[Organization]("12345"))
-          val result = controller.acceptInvitation(PublicId[Organization]("12345"))(request)
+          val request = route.acceptInvitation(PublicId[Organization]("12345"), "authToken")
+          val result = controller.acceptInvitation(PublicId[Organization]("12345"), "authToken")(request)
 
           result === OrganizationFail.INVALID_PUBLIC_ID
         }

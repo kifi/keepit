@@ -27,7 +27,7 @@ import scala.concurrent.{ ExecutionContext, Future }
 @ImplementedBy(classOf[OrganizationInviteCommanderImpl])
 trait OrganizationInviteCommander {
   def inviteToOrganization(orgId: Id[Organization], inviterId: Id[User], invitees: Seq[OrganizationMemberInvitation])(implicit eventContext: HeimdalContext): Future[Either[OrganizationFail, Seq[(Either[BasicUser, RichContact], OrganizationRole)]]]
-  def acceptInvitation(orgId: Id[Organization], userId: Id[User], authTokenOpt: Option[String] = None): Either[OrganizationFail, OrganizationMembership]
+  def acceptInvitation(orgId: Id[Organization], userId: Id[User], authToken: String): Either[OrganizationFail, OrganizationMembership]
   def declineInvitation(orgId: Id[Organization], userId: Id[User]): Seq[OrganizationInvite]
   // Creates a Universal Invite Link for an organization and inviter. Anyone with the link can join the Organization
   def createGenericInvite(orgId: Id[Organization], inviterId: Id[User], role: OrganizationRole = OrganizationRole.MEMBER)(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationInvite]
@@ -223,12 +223,16 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     organizationInviteRepo.getByOrgIdAndUserIdAndAuthToken(orgId, userId, authToken).nonEmpty
   }
 
-  def acceptInvitation(orgId: Id[Organization], userId: Id[User], authTokenOpt: Option[String] = None): Either[OrganizationFail, OrganizationMembership] = {
+  def acceptInvitation(orgId: Id[Organization], userId: Id[User], authToken: String): Either[OrganizationFail, OrganizationMembership] = {
     val (invitations, membershipOpt) = db.readOnlyReplica { implicit session =>
       val userInvitations = organizationInviteRepo.getByOrgAndUserId(orgId, userId)
       val existingMembership = organizationMembershipRepo.getByOrgIdAndUserId(orgId, userId)
-      val universalInvitation = authTokenOpt.map(organizationInviteRepo.getByOrgIdAndAuthToken(orgId, _)).flatten
-      (userInvitations ++ universalInvitation, existingMembership)
+      val universalInvitation = organizationInviteRepo.getByOrgIdAndAuthToken(orgId, authToken)
+      val allInvitations = universalInvitation match {
+        case Some(invitation) if (!userInvitations.contains(invitation)) => userInvitations.+:(invitation)
+        case _ => userInvitations
+      }
+      (allInvitations, existingMembership)
     }
 
     val updatedMembership: Either[OrganizationFail, OrganizationMembership] = membershipOpt match {
