@@ -58,6 +58,7 @@ case class ShoeboxProdStoreModule() extends ProdStoreModule with ShoeboxStoreMod
 case class ShoeboxDevStoreModule() extends DevStoreModule(ShoeboxProdStoreModule()) with ShoeboxStoreModule {
   def configure() {
     bind[RoverImageStore].to[InMemoryRoverImageStoreImpl]
+    bind[OrganizationAvatarStore].to[InMemoryOrganizationAvatarStoreImpl]
   }
 
   @Singleton
