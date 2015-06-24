@@ -20,7 +20,7 @@ import scala.util.{ Failure, Success }
 trait MobileOrganizationInviteController {
   def inviteUsers(pubId: PublicId[Organization]): Action[JsValue]
   def createAnonymousInviteToOrganization(pubId: PublicId[Organization]): Action[JsValue]
-  def acceptInvitation(pubId: PublicId[Organization]): Action[AnyContent]
+  def acceptInvitation(pubId: PublicId[Organization], authTokenOpt: Option[String] = None): Action[AnyContent]
   def declineInvitation(pubId: PublicId[Organization]): Action[AnyContent]
 }
 
@@ -81,37 +81,20 @@ class MobileOrganizationInviteControllerImpl @Inject() (
   def createAnonymousInviteToOrganization(pubId: PublicId[Organization]) = UserAction(parse.tolerantJson) { request =>
     Organization.decodePublicId(pubId) match {
       case Failure(ex) =>
-        BadRequest(Json.obj("error" -> "invalid_organization_id"))
+        OrganizationFail.INVALID_PUBLIC_ID.asErrorResponse
       case Success(orgId) =>
         val role = (request.body \ "role").as[OrganizationRole]
-        val msg = (request.body \ "message").asOpt[String].filter(_.nonEmpty)
 
         implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
-        orgInviteCommander.universalInviteLink(orgId, request.userId, role) match {
-          case Left(fail) => sendFailResponse(fail)
+        orgInviteCommander.createUniversalInviteLink(orgId, request.userId, role) match {
           case Right(invite) =>
-            val org = orgCommander.get(invite.organizationId)
-            // TODO: should we be using the organization handle here?
-            val organizationPath = s"${fortyTwoConfig.applicationBaseUrl}/${org.handle.get.original}"
-            val link = organizationPath + "?authToken=" + invite.authToken
-            val shortMsg = s"You've been invited to an organization on Kifi: $link"
-            Ok(Json.obj(
-              "link" -> link,
-              "role" -> invite.role,
-              "sms" -> shortMsg,
-              "email" -> Json.obj(
-                "subject" -> s"You've been invited to a team on Kifi: ${org.name}",
-                "body" -> s"Join us at: $link"
-              ),
-              "facebook" -> shortMsg,
-              "twitter" -> shortMsg,
-              "message" -> "" // Ignore!
-            ))
+            Ok(Json.obj("link" -> routes.MobileOrganizationInviteController.acceptInvitation(Organization.publicId(invite.organizationId), Some(invite.authToken)).url))
+          case Left(fail) => fail.asErrorResponse
         }
     }
   }
 
-  def acceptInvitation(pubId: PublicId[Organization]) = UserAction { request =>
+  def acceptInvitation(pubId: PublicId[Organization], authToken: Option[String] = None) = UserAction { request =>
     Organization.decodePublicId(pubId) match {
       case Success(orgId) =>
         orgInviteCommander.acceptInvitation(orgId, request.userId) match {

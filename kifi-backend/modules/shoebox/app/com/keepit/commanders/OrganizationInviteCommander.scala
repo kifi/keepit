@@ -27,10 +27,10 @@ import scala.concurrent.{ ExecutionContext, Future }
 @ImplementedBy(classOf[OrganizationInviteCommanderImpl])
 trait OrganizationInviteCommander {
   def inviteUsersToOrganization(orgId: Id[Organization], inviterId: Id[User], invitees: Seq[OrganizationMemberInvitation])(implicit eventContext: HeimdalContext): Future[Either[OrganizationFail, Seq[(Either[BasicUser, RichContact], OrganizationRole)]]]
-  def acceptInvitation(orgId: Id[Organization], userId: Id[User]): Either[OrganizationFail, OrganizationMembership]
+  def acceptInvitation(orgId: Id[Organization], userId: Id[User], authTokenOpt: Option[String] = None): Either[OrganizationFail, OrganizationMembership]
   def declineInvitation(orgId: Id[Organization], userId: Id[User]): Seq[OrganizationInvite]
   // Creates a Universal Invite Link for an organization and inviter. Anyone with the link can join the Organization
-  def universalInviteLink(orgId: Id[Organization], inviterId: Id[User], role: OrganizationRole = OrganizationRole.MEMBER): Either[OrganizationFail, OrganizationInvite]
+  def createUniversalInviteLink(orgId: Id[Organization], inviterId: Id[User], role: OrganizationRole = OrganizationRole.MEMBER): Either[OrganizationFail, OrganizationInvite]
 }
 
 @Singleton
@@ -223,11 +223,12 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     organizationInviteRepo.getByOrgIdAndUserIdAndAuthToken(orgId, userId, authToken).nonEmpty
   }
 
-  def acceptInvitation(orgId: Id[Organization], userId: Id[User]): Either[OrganizationFail, OrganizationMembership] = {
+  def acceptInvitation(orgId: Id[Organization], userId: Id[User], authTokenOpt: Option[String] = None): Either[OrganizationFail, OrganizationMembership] = {
     val (invitations, membershipOpt) = db.readOnlyReplica { implicit session =>
       val userInvitations = organizationInviteRepo.getByOrgAndUserId(orgId, userId)
       val existingMembership = organizationMembershipRepo.getByOrgIdAndUserId(orgId, userId)
-      (userInvitations, existingMembership)
+      val universalInvitation = authTokenOpt.map(organizationInviteRepo.getByOrgIdAndAuthToken(orgId, _)).flatten
+      (userInvitations ++ universalInvitation, existingMembership)
     }
 
     val updatedMembership: Either[OrganizationFail, OrganizationMembership] = membershipOpt match {
@@ -293,25 +294,15 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     }
   }
 
-  def universalInviteLink(orgId: Id[Organization], inviterId: Id[User], role: OrganizationRole = OrganizationRole.MEMBER): Either[OrganizationFail, OrganizationInvite] = {
+  def createUniversalInviteLink(orgId: Id[Organization], inviterId: Id[User], role: OrganizationRole = OrganizationRole.MEMBER): Either[OrganizationFail, OrganizationInvite] = {
     db.readWrite { implicit session =>
       val membershipOpt = organizationMembershipRepo.getByOrgIdAndUserId(orgId, inviterId)
       membershipOpt match {
-        case Some(membership) if membership.hasPermission(OrganizationPermission.INVITE_MEMBERS) =>
+        case Some(membership) if membership.hasPermission(OrganizationPermission.INVITE_MEMBERS) && role <= membership.role =>
           Right(organizationInviteRepo.save(OrganizationInvite(organizationId = orgId, inviterId = inviterId, role = role)))
         case Some(membership) => Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
         case None => Left(OrganizationFail.NOT_A_MEMBER)
       }
-    }
-  }
-
-  def acceptUniversalInviteLink(orgId: Id[Organization], userId: Id[User], authToken: String) = {
-    val invitationOpt = db.readOnlyMaster { implicit session =>
-      organizationInviteRepo.getByOrgIdAndAuthToken(orgId, authToken)
-    }
-    invitationOpt.map { invitation =>
-      val addRequest = OrganizationMembershipAddRequest(orgId, invitation.inviterId, userId, invitation.role)
-      organizationMembershipCommander.addMembership(addRequest)
     }
   }
 }
