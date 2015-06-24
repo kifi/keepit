@@ -108,28 +108,27 @@ class OrganizationAvatarCommanderImpl @Inject() (
     }
   }
 
-  def saveNewAvatars(orgId: Id[Organization], sourceImage: ImageProcessState.ImageLoadedAndHashed, existingAvatars: Seq[OrganizationAvatar], uploadedImages: Set[ImageProcessState.UploadedImage], unnecessary: Set[ProcessImageRequest]) = {
+  def saveNewAvatars(orgId: Id[Organization], sourceImage: ImageProcessState.ImageLoadedAndHashed, existingAvatars: Seq[OrganizationAvatar], uploadedImages: Set[ImageProcessState.UploadedImage], unnecessary: Set[ProcessImageRequest]): Unit = {
     db.readWrite(attempts = 3) { implicit session =>
+      for (oldAvatar <- orgAvatarRepo.getByOrganization(orgId)) {
+        orgAvatarRepo.deactivate(oldAvatar)
+      }
 
-      uploadedImages.foreach { img =>
+      for (img <- uploadedImages) {
         val orgAvatar = OrganizationAvatar(organizationId = orgId, width = img.image.getWidth, height = img.image.getHeight, format = sourceImage.format, kind = img.processOperation, imagePath = img.key, source = UserUpload, sourceFileHash = sourceImage.hash, sourceImageURL = None)
         orgAvatarRepo.save(orgAvatar)
       }
 
-      val originalImageOpt = existingAvatars.find(_.kind == ProcessImageOperation.Original)
-      if (originalImageOpt.nonEmpty) {
-        val alreadyExistingImageInfo = originalImageOpt.get
-        val orgAvatar = OrganizationAvatar(organizationId = orgId, width = alreadyExistingImageInfo.width, height = alreadyExistingImageInfo.height, format = sourceImage.format, kind = alreadyExistingImageInfo.kind, imagePath = alreadyExistingImageInfo.imagePath, source = UserUpload, sourceFileHash = sourceImage.hash, sourceImageURL = None)
+      for (originalImage <- existingAvatars.find(_.kind == ProcessImageOperation.Original)) {
+        val orgAvatar = OrganizationAvatar(organizationId = orgId, width = originalImage.width, height = originalImage.height, format = originalImage.format, kind = originalImage.kind, imagePath = originalImage.imagePath, source = UserUpload, sourceFileHash = sourceImage.hash, sourceImageURL = None)
         orgAvatarRepo.save(orgAvatar)
       }
 
-      unnecessary.foreach { processOperationRequest =>
-        val alreadyExistingImageInfo = existingAvatars.find(avatar => avatar.kind == processOperationRequest.operation && avatar.imageSize == processOperationRequest.size).get
-        val orgAvatar = OrganizationAvatar(organizationId = orgId, width = alreadyExistingImageInfo.width, height = alreadyExistingImageInfo.height, format = sourceImage.format, kind = alreadyExistingImageInfo.kind, imagePath = alreadyExistingImageInfo.imagePath, source = UserUpload, sourceFileHash = sourceImage.hash, sourceImageURL = None)
+      for (processOperationRequest <- unnecessary) {
+        val existingImage = existingAvatars.find(avatar => avatar.kind == processOperationRequest.operation && avatar.imageSize == processOperationRequest.size).get
+        val orgAvatar = OrganizationAvatar(organizationId = orgId, width = existingImage.width, height = existingImage.height, format = sourceImage.format, kind = existingImage.kind, imagePath = existingImage.imagePath, source = UserUpload, sourceFileHash = sourceImage.hash, sourceImageURL = None)
         orgAvatarRepo.save(orgAvatar)
       }
-
-      Right(sourceImage.hash)
     }
   }
 

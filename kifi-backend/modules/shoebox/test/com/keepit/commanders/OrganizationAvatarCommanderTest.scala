@@ -52,7 +52,7 @@ class OrganizationAvatarCommanderTest extends Specification with ShoeboxTestInje
         val commander = inject[OrganizationAvatarCommander]
         val store = inject[OrganizationAvatarStore].asInstanceOf[InMemoryOrganizationAvatarStoreImpl]
         val repo = inject[OrganizationAvatarRepo]
-        val (user1, user2, org1, org2) = setup()
+        val (_, _, org1, _) = setup()
 
         // upload an image
         {
@@ -72,12 +72,53 @@ class OrganizationAvatarCommanderTest extends Specification with ShoeboxTestInje
         }
       }
     }
-    "reuse existing avatars when possible" in {
+    "deactivate old avatars when a new one is uploaded" in {
       withDb(modules: _*) { implicit injector =>
         val commander = inject[OrganizationAvatarCommander]
         val store = inject[OrganizationAvatarStore].asInstanceOf[InMemoryOrganizationAvatarStoreImpl]
         val repo = inject[OrganizationAvatarRepo]
-        val (user1, user2, org1, org2) = setup()
+        val (_, _, org1, _) = setup()
+
+        {
+          val savedF = commander.persistOrganizationAvatarsFromUserUpload(fakeFile1, org1.id.get)
+          val saved = Await.result(savedF, Duration("10 seconds"))
+          saved must haveClass[Right[ImageStoreFailure, ImageHash]]
+          saved.right.get === ImageHash("26dbdc56d54dbc94830f7cfc85031481")
+        }
+
+        println("OrgAvatarStore keys: " + store.all.keySet)
+        store.all.keySet.size === scaleSizes.length + cropSizes.length + 1
+
+        db.readOnlyMaster { implicit s =>
+          val org1Avatars =
+            repo.getByOrganization(org1.id.get).length === scaleSizes.length + cropSizes.length + 1
+        }
+
+        {
+          val savedF = commander.persistOrganizationAvatarsFromUserUpload(fakeFile2, org1.id.get)
+          val saved = Await.result(savedF, Duration("10 seconds"))
+          saved must haveClass[Right[ImageStoreFailure, ImageHash]]
+          saved.right.get === ImageHash("1b3d95541538044c2a26598fbe1d06ae")
+          // if this test fails, make sure imagemagick is installed. Use `brew install imagemagick`
+        }
+
+        // All the images have been uploaded and persisted
+        store.all.keySet.size === 2 * (scaleSizes.length + cropSizes.length + 1)
+
+        // Only the second avatars are active
+        db.readOnlyMaster { implicit s =>
+          repo.getByOrganization(org1.id.get).length === scaleSizes.length + cropSizes.length + 1
+          repo.count === 2 * (scaleSizes.length + cropSizes.length + 1)
+        }
+
+      }
+    }
+    "reuse existing images when possible" in {
+      withDb(modules: _*) { implicit injector =>
+        val commander = inject[OrganizationAvatarCommander]
+        val store = inject[OrganizationAvatarStore].asInstanceOf[InMemoryOrganizationAvatarStoreImpl]
+        val repo = inject[OrganizationAvatarRepo]
+        val (_, _, org1, org2) = setup()
 
         // upload an image
         {
@@ -101,11 +142,12 @@ class OrganizationAvatarCommanderTest extends Specification with ShoeboxTestInje
           val saved = Await.result(savedF, Duration("10 seconds"))
           saved must haveClass[Right[ImageStoreFailure, ImageHash]]
           saved.right.get === ImageHash("1b3d95541538044c2a26598fbe1d06ae")
-          // if this test fails, make sure imagemagick is installed. Use `brew install imagemagick`
         }
 
+        // No new images have been persisted in the image store
         store.all.keySet.size === scaleSizes.length + cropSizes.length + 1
 
+        // But the appropriate avatars are in the DB now
         db.readOnlyMaster { implicit s =>
           repo.getByOrganization(org1.id.get).length === scaleSizes.length + cropSizes.length + 1
           repo.getByOrganization(org2.id.get).length === scaleSizes.length + cropSizes.length + 1
