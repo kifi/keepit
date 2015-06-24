@@ -58,7 +58,7 @@ class LibraryController @Inject() (
   val userActionsHelper: UserActionsHelper,
   val publicIdConfig: PublicIdConfiguration,
   implicit val config: PublicIdConfiguration)
-    extends UserActions with LibraryAccessActions with ShoeboxServiceController with LibraryPathHelper with Logging {
+    extends UserActions with LibraryAccessActions with ShoeboxServiceController with Logging {
 
   private def getSuggestedSearchesAsJson(libId: Id[Library]): JsValue = {
     def similar(s1: String, s2: String): Boolean = {

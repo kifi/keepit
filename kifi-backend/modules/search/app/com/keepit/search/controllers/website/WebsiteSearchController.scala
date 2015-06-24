@@ -54,7 +54,7 @@ class WebsiteSearchController @Inject() (
     rover: RoverServiceClient,
     implicit val imageConfig: S3ImageConfig,
     implicit val publicIdConfig: PublicIdConfiguration,
-    airbrake: AirbrakeNotifier) extends UserActions with SearchServiceController with SearchControllerUtil with LibraryPathHelper with Logging {
+    airbrake: AirbrakeNotifier) extends UserActions with SearchServiceController with SearchControllerUtil with Logging {
 
   def search2(
     query: String,
@@ -375,7 +375,7 @@ class WebsiteSearchController @Inject() (
                 val (collaboratorIds, followerIds) = libraryMembersById(hit.id)
                 val collaborators = orderWithPictureFirst(collaboratorIds.map(usersById(_)))
                 val followers = orderWithPictureFirst(followerIds.map(usersById(_)))
-                val path = formatLibraryPath(owner.username, None, library.slug) // todo: after orgId is indexed into LibraryRecord, we can call shoebox and get orgInfo
+                val path = Library.formatLibraryPath(owner.username, None, library.slug) // todo: after orgId is indexed into LibraryRecord, we can call shoebox and get orgInfo
                 val details = libraryDetailsById(library.id)
                 val description = library.description.getOrElse("")
                 val membershipInfo = details.membership.map(LibraryMembershipInfo.fromMembership)

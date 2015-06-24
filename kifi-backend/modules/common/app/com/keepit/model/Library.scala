@@ -8,8 +8,6 @@ import com.keepit.common.cache.{ CacheStatistics, FortyTwoCachePlugin, JsonCache
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration, ModelWithPublicId, ModelWithPublicIdCompanion }
 import com.keepit.common.db._
 import com.keepit.common.logging.AccessLog
-import com.keepit.common.json
-import com.keepit.common.store.ImagePath
 import com.keepit.common.strings.UTF8
 import com.keepit.common.time._
 import com.keepit.model.view.LibraryMembershipView
@@ -63,7 +61,7 @@ case class Library(
   val isSecret: Boolean = visibility == LibraryVisibility.SECRET
 }
 
-object Library extends ModelWithPublicIdCompanion[Library] with LibraryPathHelper {
+object Library extends ModelWithPublicIdCompanion[Library] {
 
   val SYSTEM_MAIN_DISPLAY_NAME = "My Main Library"
   val SYSTEM_SECRET_DISPLAY_NAME = "My Private Library"
@@ -146,14 +144,6 @@ object Library extends ModelWithPublicIdCompanion[Library] with LibraryPathHelpe
     name.nonEmpty && name.length <= 200 && !name.contains('"') && !name.contains('/')
   }
 
-  def toLibraryView(lib: Library): LibraryView = LibraryView(id = lib.id, ownerId = lib.ownerId, state = lib.state, seq = lib.seq, kind = lib.kind)
-
-  def toDetailedLibraryView(lib: Library): DetailedLibraryView = DetailedLibraryView(id = lib.id, ownerId = lib.ownerId, state = lib.state,
-    seq = lib.seq, kind = lib.kind, memberCount = lib.memberCount, keepCount = lib.keepCount, lastKept = lib.lastKept, lastFollowed = None, visibility = lib.visibility,
-    updatedAt = lib.updatedAt, name = lib.name, description = lib.description, color = lib.color, slug = lib.slug)
-}
-
-trait LibraryPathHelper {
   def formatLibraryPath(ownerUsername: Username, org: Option[PrimaryOrganizationHandle], slug: LibrarySlug): String = {
     org match {
       case Some(handle) => s"/${handle.normalized.value}/${slug.value}"
@@ -167,6 +157,12 @@ trait LibraryPathHelper {
       case None => s"/${ownerUsername.urlEncoded}/${slug.urlEncoded}"
     }
   }
+
+  def toLibraryView(lib: Library): LibraryView = LibraryView(id = lib.id, ownerId = lib.ownerId, state = lib.state, seq = lib.seq, kind = lib.kind)
+
+  def toDetailedLibraryView(lib: Library): DetailedLibraryView = DetailedLibraryView(id = lib.id, ownerId = lib.ownerId, state = lib.state,
+    seq = lib.seq, kind = lib.kind, memberCount = lib.memberCount, keepCount = lib.keepCount, lastKept = lib.lastKept, lastFollowed = None, visibility = lib.visibility,
+    updatedAt = lib.updatedAt, name = lib.name, description = lib.description, color = lib.color, slug = lib.slug)
 }
 
 case class LibraryIdKey(id: Id[Library]) extends Key[Library] {
@@ -285,9 +281,9 @@ case class BasicLibrary(id: PublicId[Library], name: String, path: String, visib
   def isSecret = visibility == LibraryVisibility.SECRET
 }
 
-object BasicLibrary extends LibraryPathHelper {
+object BasicLibrary {
   def apply(library: Library, owner: BasicUser, org: Option[PrimaryOrganizationHandle])(implicit publicIdConfig: PublicIdConfiguration): BasicLibrary = {
-    val path = formatLibraryPath(owner.username, org, library.slug)
+    val path = Library.formatLibraryPath(owner.username, org, library.slug)
     BasicLibrary(Library.publicId(library.id.get), library.name, path, library.visibility, library.color)
   }
 }
