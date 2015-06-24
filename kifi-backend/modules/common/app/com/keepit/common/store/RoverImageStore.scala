@@ -15,6 +15,20 @@ import play.api.Play.current
 import scala.collection.mutable
 import scala.concurrent.{ ExecutionContext, Future }
 
+case class ImagePath(path: String) extends AnyVal {
+  override def toString() = path
+  def getUrl(implicit imageConfig: S3ImageConfig): String = imageConfig.cdnBase + "/" + path
+}
+
+object ImagePath {
+  def apply(prefix: String, hash: ImageHash, size: ImageSize, kind: ProcessImageOperation, format: ImageFormat): ImagePath = {
+    val fileName = hash.hash + "_" + size.width + "x" + size.height + kind.fileNameSuffix + "." + format.value
+    ImagePath(prefix + "/" + fileName)
+  }
+
+  implicit val format: Format[ImagePath] = Format(__.read[String].map(ImagePath(_)), Writes(path => JsString(path.path)))
+}
+
 trait RoverImageStore {
   def put(key: ImagePath, is: InputStream, contentLength: Int, mimeType: String): Future[Unit]
   def get(key: ImagePath): Future[TemporaryFile]

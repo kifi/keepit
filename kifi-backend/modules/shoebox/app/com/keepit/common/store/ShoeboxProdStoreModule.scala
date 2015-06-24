@@ -16,7 +16,6 @@ trait ShoeboxStoreModule extends StoreModule with Logging
 case class ShoeboxProdStoreModule() extends ProdStoreModule with ShoeboxStoreModule {
   def configure() {
     bind[RoverImageStore].to[S3RoverImageStoreImpl]
-    bind[OrganizationAvatarStore].to[S3OrganizationAvatarStoreImpl]
   }
 
   @Provides @Singleton
