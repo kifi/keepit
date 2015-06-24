@@ -33,8 +33,9 @@ case class Organization(
   def getNonmemberPermissions = basePermissions.forNonmember
   def getRolePermissions(role: OrganizationRole) = basePermissions.forRole(role)
 
-  def newMembership(userId: Id[User], role: OrganizationRole): OrganizationMembership =
+  def newMembership(userId: Id[User], role: OrganizationRole): OrganizationMembership = {
     OrganizationMembership(organizationId = id.get, userId = userId, role = role, permissions = getRolePermissions(role))
+  }
 
   def modifiedMembership(membership: OrganizationMembership, newRole: OrganizationRole): OrganizationMembership =
     membership.copy(role = newRole, permissions = getRolePermissions(newRole))
