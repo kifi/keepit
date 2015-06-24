@@ -966,7 +966,7 @@ GET     /me/followers              @com.keepit.controllers.website.KifiSiteRoute
 GET     /me/libraries              @com.keepit.controllers.website.KifiSiteRouter.redirectUserToOwnProfile(subpath = "/libraries")
 GET     /me/libraries/following    @com.keepit.controllers.website.KifiSiteRouter.redirectUserToOwnProfile(subpath = "/libraries/following")
 GET     /me/libraries/invited      @com.keepit.controllers.website.KifiSiteRouter.redirectUserToOwnProfile(subpath = "/libraries/invited")
-GET     /profile                   @com.keepit.controllers.website.KifiSiteRouter.serveWebAppToUser
+GET     /profile                   @com.keepit.controllers.website.KifiSiteRouter.redirectUserTo(path = "/settings")
 GET     /settings                  @com.keepit.controllers.website.KifiSiteRouter.serveWebAppToUser
 GET     /recommendations           @com.keepit.controllers.website.KifiSiteRouter.redirectUserTo(path = "/")
 GET     /tags/manage               @com.keepit.controllers.website.KifiSiteRouter.serveWebAppToUser
