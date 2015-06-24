@@ -26,6 +26,7 @@ case class OrganizationAvatar(
   def dimensions = ImageSize(width, height)
   def withId(id: Id[OrganizationAvatar]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
+  def withState(newState: State[OrganizationAvatar]) = this.copy(state = newState)
 }
 
 object OrganizationAvatar {

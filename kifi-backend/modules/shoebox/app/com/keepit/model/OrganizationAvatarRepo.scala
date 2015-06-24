@@ -87,6 +87,6 @@ class OrganizationAvatarRepoImpl @Inject() (val db: DataBaseComponent, val clock
   }
 
   def deactivate(model: OrganizationAvatar)(implicit session: RWSession): OrganizationAvatar = {
-    save(model.copy(state = OrganizationAvatarStates.INACTIVE))
+    save(model.withState(OrganizationAvatarStates.INACTIVE))
   }
 }
