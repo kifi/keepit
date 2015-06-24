@@ -110,7 +110,7 @@ class KeepImageCommanderImpl @Inject() (
           val processDoneFOpt = originalImageOpt.map { originalImage =>
 
             val expectedVersions = calcSizesForImage(originalImage.imageSize, KeepImageSizes.scaleSizes, KeepImageSizes.cropSizes)
-            val missingVersions = diffProcessImageRequests(expectedVersions, existingVersions)
+            val missingVersions = filterProcessImageRequests(expectedVersions, existingVersions)
 
             if (missingVersions.nonEmpty) {
               log.info(s"[getBestImagesForKeepsPatiently] keepId=$keepId has missing versions: $missingVersions; existing: $existingVersions; expected $expectedVersions")

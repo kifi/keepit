@@ -109,14 +109,14 @@ class UserIpAddressRepoImpl @Inject() (
   }
 }
 
-trait IpAddressSequencingPlugin extends SequencingPlugin
+trait UserIpAddressSequencingPlugin extends SequencingPlugin
 
-class IpAddressSequencingPluginImpl @Inject() (
-  override val actor: ActorInstance[IpAddressSequencingActor],
-  override val scheduling: SchedulingProperties) extends IpAddressSequencingPlugin
+class UserIpAddressSequencingPluginImpl @Inject() (
+  override val actor: ActorInstance[UserIpAddressSequencingActor],
+  override val scheduling: SchedulingProperties) extends UserIpAddressSequencingPlugin
 
 @Singleton
-class IpAddressSequenceNumberAssigner @Inject() (db: Database, repo: UserIpAddressRepo, airbrake: AirbrakeNotifier) extends DbSequenceAssigner[UserIpAddress](db, repo, airbrake)
-class IpAddressSequencingActor @Inject() (
-  assigner: IpAddressSequenceNumberAssigner,
+class UserIpAddressSequenceNumberAssigner @Inject() (db: Database, repo: UserIpAddressRepo, airbrake: AirbrakeNotifier) extends DbSequenceAssigner[UserIpAddress](db, repo, airbrake)
+class UserIpAddressSequencingActor @Inject() (
+  assigner: UserIpAddressSequenceNumberAssigner,
   airbrake: AirbrakeNotifier) extends SequencingActor(assigner, airbrake)
