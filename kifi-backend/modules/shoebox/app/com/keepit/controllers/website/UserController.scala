@@ -302,6 +302,9 @@ class UserController @Inject() (
 
     val experiments = userExperimentCommander.getExperimentsByUser(userId)
     val pimpedUser = userCommander.getUserInfo(user)
+    val pendingFriendRequests = db.readOnlyMaster { implicit session =>
+      friendRequestRepo.getCountByRecipient(userId)
+    }
 
     val json = Json.toJson(pimpedUser.basicUser).as[JsObject] ++
       toJson(pimpedUser.info).as[JsObject] ++
@@ -310,7 +313,8 @@ class UserController @Inject() (
         "numLibraries" -> pimpedUser.numLibraries,
         "numConnections" -> pimpedUser.numConnections,
         "numFollowers" -> pimpedUser.numFollowers,
-        "experiments" -> experiments.map(_.value)
+        "experiments" -> experiments.map(_.value),
+        "pendingFriendRequests" -> pendingFriendRequests
       )
     Ok(json)
   }

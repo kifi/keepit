@@ -64,7 +64,8 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
               "experiments":["admin", "libraries"],
               "numLibraries":0,
               "numConnections":0,
-              "numFollowers":0
+              "numFollowers":0,
+              "pendingFriendRequests":0
             }
           """)
 
