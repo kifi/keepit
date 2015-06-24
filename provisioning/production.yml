@@ -9,6 +9,11 @@
       ec2:
         key_name: "{{ ec2.defaults.key_name }}"
         instance_type: "{{ item.instance_type }}"
+        # the id is used for EC2 idempotency - once the API is used to launch
+        # an instance with a particular id, it will not create that instance
+        # again and can throw a IdempotentParameterMismatch error if parameters
+        # are different. see:
+        #   http://docs.aws.amazon.com/AWSEC2/latest/APIReference/Run_Instance_Idempotency.html)
         id: "{{ item.tags.Name }}"
         instance_tags: "{{ item.tags }}"
         count: 1
@@ -54,6 +59,42 @@
     - set_fact:
         ansible_fqdn: "{{ kifi_hostname.stdout_lines.0 }}"
 
+- hosts: tag_Service_abook
+  sudo: yes
+  roles:
+    - { role: kifi.abook }
+- hosts: tag_Service_cortex
+  sudo: yes
+  roles:
+    - { role: kifi.cortex }
+- hosts: tag_Service_curator
+  sudo: yes
+  roles:
+    - { role: kifi.curator }
+- hosts: tag_Service_eliza
+  sudo: yes
+  roles:
+    - { role: kifi.eliza }
+- hosts: tag_Service_graph
+  sudo: yes
+  roles:
+    - { role: kifi.graph }
+- hosts: tag_Service_heimdal
+  sudo: yes
+  roles:
+    - { role: kifi.heimdal }
+- hosts: tag_Service_rover
+  sudo: yes
+  roles:
+    - { role: kifi.rover }
+- hosts: tag_Service_scraper
+  sudo: yes
+  roles:
+    - { role: kifi.scraper }
+- hosts: tag_Service_search
+  sudo: yes
+  roles:
+    - { role: kifi.search }
 - hosts: tag_Service_shoebox
   sudo: yes
   roles:

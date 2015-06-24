@@ -13,7 +13,7 @@ ec2:
         delete_on_termination: true
   instances:
     - tags:
-        Name: tmp-ansible-shoebox-demand6
+        Name: shoebox-demand-2
         Service: shoebox
         Mode: primary
         ELB: shoebox-b-1
@@ -21,10 +21,16 @@ ec2:
       zone: us-west-1b
       instance_type: m3.xlarge
     - tags:
-        Name: tmp-ansible-shoebox-demand7
-        Service: shoebox
+        Name: abook-demand-1
+        Service: abook
         Mode: primary
-        ELB: shoebox-b-1
+        Ansible: v1
+      zone: us-west-1b
+      instance_type: m3.medium
+    - tags:
+        Name: curator-demand-1
+        Service: curator
+        Mode: primary
         Ansible: v1
       zone: us-west-1a
       instance_type: m3.xlarge
