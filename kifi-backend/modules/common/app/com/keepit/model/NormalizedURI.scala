@@ -84,7 +84,7 @@ object NormalizedURI {
 
 case class UrlHash(hash: String) extends AnyVal {
   override def toString: String = hash
-  def toKey: String = hash.replaceAllLiterally("+" -> "-", "/" -> "_") // See RFC 3548 http://tools.ietf.org/html/rfc3548#page-6
+  def urlEncoded: String = hash.replaceAllLiterally("+" -> "-", "/" -> "_") // See RFC 3548 http://tools.ietf.org/html/rfc3548#page-6
 }
 
 object UrlHash {

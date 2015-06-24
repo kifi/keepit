@@ -17,7 +17,7 @@ private[store] object ArticleStoreKey {
 }
 
 private[store] class UrlHashArticleStoreKey(key: ArticleKey[_]) extends ArticleStoreKey(key) {
-  override def toString = s"${key.urlHash.toKey}/${key.kind.typeCode}/${key.version.major.value}.${key.version.minor.value}"
+  override def toString = s"${key.urlHash.urlEncoded}/${key.kind.typeCode}/${key.version.major.value}.${key.version.minor.value}"
 }
 
 private[store] object UrlHashArticleStoreKey {
