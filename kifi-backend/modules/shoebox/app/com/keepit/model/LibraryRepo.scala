@@ -13,6 +13,8 @@ import com.keepit.common.plugin.{ SchedulingProperties, SequencingActor, Sequenc
 import com.keepit.common.time._
 import com.keepit.common.util.Paginator
 import org.joda.time.DateTime
+import play.api.libs.json._
+import play.api.mvc.QueryStringBindable
 import scala.concurrent.duration._
 import scala.slick.jdbc.{ PositionedResult, GetResult, StaticQuery }
 
@@ -38,14 +40,15 @@ trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
   def countOwnerLibrariesForOtherUser(userId: Id[User], friendId: Id[User])(implicit session: RSession): Int
   // def countFollowingLibrariesForSelf(userId: Id[User])(implicit session: RSession): Int  // use LibraryMembershipRepo.countWithUserIdAndAccess(userId, READ_ONLY) instead (cached)
 
-  def getOwnerLibrariesForAnonymous(ownerId: Id[User], page: Paginator)(implicit session: RSession): Seq[Library]
-  def getOwnerLibrariesForOtherUser(userId: Id[User], friendId: Id[User], page: Paginator)(implicit session: RSession): Seq[Library]
+  def getOwnerLibrariesForAnonymous(ownerId: Id[User], page: Paginator, ordering: Option[LibraryOrdering])(implicit session: RSession): Seq[Library]
+  def getOwnerLibrariesForOtherUser(userId: Id[User], friendId: Id[User], page: Paginator, ordering: Option[LibraryOrdering])(implicit session: RSession): Seq[Library]
   def getOwnerLibrariesForSelf(userId: Id[User], page: Paginator)(implicit session: RSession): Seq[Library]
+  def getOwnerLibrariesForSelfWithOrdering(userId: Id[User], page: Paginator, ordering: Option[LibraryOrdering])(implicit session: RSession): Seq[Library]
   def getInvitedLibrariesForSelf(userId: Id[User], page: Paginator)(implicit session: RSession): Seq[(Library, LibraryInvite)]
 
-  def getFollowingLibrariesForAnonymous(userId: Id[User], page: Paginator)(implicit session: RSession): Seq[Library]
-  def getFollowingLibrariesForOtherUser(userId: Id[User], friendId: Id[User], page: Paginator)(implicit session: RSession): Seq[Library]
-  def getFollowingLibrariesForSelf(userId: Id[User], page: Paginator)(implicit session: RSession): Seq[Library]
+  def getFollowingLibrariesForAnonymous(userId: Id[User], page: Paginator, ordering: Option[LibraryOrdering])(implicit session: RSession): Seq[Library]
+  def getFollowingLibrariesForOtherUser(userId: Id[User], friendId: Id[User], page: Paginator, ordering: Option[LibraryOrdering])(implicit session: RSession): Seq[Library]
+  def getFollowingLibrariesForSelf(userId: Id[User], page: Paginator, ordering: Option[LibraryOrdering])(implicit session: RSession): Seq[Library]
 
   def countLibrariesForOtherUserByAccess(userId: Id[User], viewerId: Id[User])(implicit session: RSession): Map[LibraryAccess, Int]
   def countLibrariesForAnonymousByAccess(userId: Id[User])(implicit session: RSession): Map[LibraryAccess, Int]
@@ -278,15 +281,28 @@ class LibraryRepoImpl @Inject() (
     query.as[Int].firstOption.getOrElse(0)
   }
 
-  def getOwnerLibrariesForAnonymous(userId: Id[User], page: Paginator)(implicit session: RSession): Seq[Library] = {
+  def getOwnerLibrariesForAnonymous(userId: Id[User], page: Paginator, ordering: Option[LibraryOrdering])(implicit session: RSession): Seq[Library] = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    val query = sql"select lib.* from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $userId and (lm.access='owner' or lm.access='read_write') and lib.state = 'active' and lm.state = 'active' and (lib.keep_count > 0 and lm.listed and lib.visibility = 'published') order by lib.member_count desc, lib.last_kept desc, lib.id desc limit ${page.itemsToDrop}, ${page.size}"
+    val query =
+      sql"""select lib.* from library_membership lm, library lib
+           where lm.library_id = lib.id and lm.user_id = $userId
+           and (lm.access='owner' or lm.access='read_write')
+           and lib.state = 'active' and lm.state = 'active' and (lib.keep_count > 0
+           and lm.listed and lib.visibility = 'published')
+           order by #${getOrderBySql(ordering)} limit ${page.itemsToDrop}, ${page.size}"""
     query.as[Library].list
   }
 
-  def getOwnerLibrariesForOtherUser(userId: Id[User], friendId: Id[User], page: Paginator)(implicit session: RSession): Seq[Library] = {
+  def getOwnerLibrariesForOtherUser(userId: Id[User], friendId: Id[User], page: Paginator, ordering: Option[LibraryOrdering])(implicit session: RSession): Seq[Library] = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    val query = sql"select lib.* from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $userId and (lm.access='owner' or lm.access='read_write') and lib.state = 'active' and lm.state = 'active' and ((lib.keep_count > 0 and lm.listed and lib.visibility = 'published') or (lib.id in (select lm.library_id from library_membership lm where lm.user_id = $friendId and lm.state = 'active'))) order by lib.member_count desc, lib.last_kept desc, lib.id desc limit ${page.itemsToDrop}, ${page.size}"
+    val query =
+      sql"""select lib.* from library_membership lm, library lib
+           where lm.library_id = lib.id and lm.user_id = $userId
+           and (lm.access='owner' or lm.access='read_write') and lib.state = 'active'
+           and lm.state = 'active' and ((lib.keep_count > 0 and lm.listed
+           and lib.visibility = 'published') or
+           (lib.id in (select lm.library_id from library_membership lm where lm.user_id = $friendId and lm.state = 'active')))
+           order by #${getOrderBySql(ordering)} limit ${page.itemsToDrop}, ${page.size}"""
     query.as[Library].list
   }
 
@@ -294,6 +310,30 @@ class LibraryRepoImpl @Inject() (
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     val query = sql"select lib.* from library lib inner join library_membership lm on lm.user_id = $userId and lib.id = lm.library_id and lib.state='active' and lm.state='active' and (lm.access='owner' or lm.access='read_write') order by case lib.kind when 'system_main' then 1 when 'system_secret' then 2 else 3 end, lib.member_count desc, lib.last_kept desc, lib.id desc limit ${page.itemsToDrop}, ${page.size}"
     query.as[Library].list
+  }
+
+  def getOwnerLibrariesForSelfWithOrdering(userId: Id[User], page: Paginator, ordering: Option[LibraryOrdering])(implicit session: RSession): Seq[Library] = {
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
+    val query = sql"""select lib.* from library lib
+                  inner join library_membership lm on lm.user_id = $userId
+                  and lib.id = lm.library_id and lib.state='active' and lm.state='active'
+                  and (lm.access='owner' or lm.access='read_write')
+                  order by case lib.kind when 'system_main' then 1 when 'system_secret' then 2 else 3 end,
+                  #${getOrderBySql(ordering)} limit ${page.itemsToDrop}, ${page.size}"""
+    query.as[Library].list
+  }
+
+  def getOrderBySql(ordering: Option[LibraryOrdering]): String = {
+    ordering match {
+      case Some(LibraryOrdering.ALPHABETICAL) =>
+        s"lib.name asc, lib.id desc"
+      case Some(LibraryOrdering.MEMBER_COUNT) =>
+        s"lib.member_count desc"
+      case Some(LibraryOrdering.LAST_KEPT_INTO) =>
+        s"lib.last_kept desc"
+      case None =>
+        s"lib.member_count desc, lib.last_kept desc, lib.id desc"
+    }
   }
 
   def getInvitedLibrariesForSelf(userId: Id[User], page: Paginator)(implicit session: RSession): Seq[(Library, LibraryInvite)] = {
@@ -312,13 +352,18 @@ class LibraryRepoImpl @Inject() (
     """.as[(Library, LibraryInvite)].list
   }
 
-  def getFollowingLibrariesForAnonymous(userId: Id[User], page: Paginator)(implicit session: RSession): Seq[Library] = {
+  def getFollowingLibrariesForAnonymous(userId: Id[User], page: Paginator, ordering: Option[LibraryOrdering])(implicit session: RSession): Seq[Library] = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    val query = sql"select lib.* from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $userId and lib.state = 'active' and lm.state = 'active' and lm.listed and lib.visibility = 'published' and lm.access = 'read_only' order by lib.member_count desc, lib.last_kept desc, lib.id desc limit ${page.itemsToDrop}, ${page.size}"
+    val query =
+      sql"""select lib.* from library_membership lm, library lib
+           where lm.library_id = lib.id and lm.user_id = $userId
+           and lib.state = 'active' and lm.state = 'active'
+           and lm.listed and lib.visibility = 'published' and lm.access = 'read_only'
+           order by #${getOrderBySql(ordering)} limit ${page.itemsToDrop}, ${page.size}"""
     query.as[Library].list
   }
 
-  def getFollowingLibrariesForOtherUser(userId: Id[User], friendId: Id[User], page: Paginator)(implicit session: RSession): Seq[Library] = {
+  def getFollowingLibrariesForOtherUser(userId: Id[User], friendId: Id[User], page: Paginator, ordering: Option[LibraryOrdering])(implicit session: RSession): Seq[Library] = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     val libsFriendFollow = sql"select lib.id from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $friendId and lib.state = 'active' and lm.state = 'active'".as[Id[Library]].list
     val libVisibility = libsFriendFollow.size match {
@@ -326,13 +371,22 @@ class LibraryRepoImpl @Inject() (
       case 1 => s"or (lib.id = ${libsFriendFollow.head})"
       case _ => s"or (lib.id in (${libsFriendFollow mkString ","}))"
     }
-    val query = sql"select lib.* from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $userId and lib.state = 'active' and lm.state = 'active' and lm.access = 'read_only' and ((lm.listed and lib.visibility = 'published' and lm.access = 'read_only') #$libVisibility) order by lib.member_count desc, lib.last_kept desc, lib.id desc limit ${page.itemsToDrop}, ${page.size}"
+    val query =
+      sql"""select lib.* from library_membership lm, library lib
+           where lm.library_id = lib.id and lm.user_id = $userId
+           and lib.state = 'active' and lm.state = 'active' and lm.access = 'read_only'
+           and ((lm.listed and lib.visibility = 'published' and lm.access = 'read_only') #$libVisibility)
+           order by #${getOrderBySql(ordering)} limit ${page.itemsToDrop}, ${page.size}"""
     query.as[Library].list
   }
 
-  def getFollowingLibrariesForSelf(userId: Id[User], page: Paginator)(implicit session: RSession): Seq[Library] = {
+  def getFollowingLibrariesForSelf(userId: Id[User], page: Paginator, ordering: Option[LibraryOrdering])(implicit session: RSession): Seq[Library] = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    val query = sql"select lib.* from library_membership lm, library lib where lm.library_id = lib.id and lm.user_id = $userId and lib.state = 'active' and lm.state = 'active' and lm.access = 'read_only' order by lib.member_count desc, lib.last_kept desc, lib.id desc limit ${page.itemsToDrop}, ${page.size}"
+    val query =
+      sql"""select lib.* from library_membership lm, library lib
+           where lm.library_id = lib.id and lm.user_id = $userId
+           and lib.state = 'active' and lm.state = 'active' and lm.access = 'read_only'
+           order by #${getOrderBySql(ordering)} limit ${page.itemsToDrop}, ${page.size}"""
     query.as[Library].list
   }
 
@@ -432,6 +486,42 @@ class LibrarySequencingPluginImpl @Inject() (
     override val scheduling: SchedulingProperties) extends LibrarySequencingPlugin {
 
   override val interval: FiniteDuration = 20.seconds
+}
+
+/*
+    Does as it it says, a class making it more typesafe to refer
+    to a specific ordering of libraries, currently there exist 3:
+    - alphabetical, last kept into, member count
+ */
+sealed abstract class LibraryOrdering(val value: String)
+
+object LibraryOrdering {
+  case object LAST_KEPT_INTO extends LibraryOrdering("last_kept_into")
+  case object ALPHABETICAL extends LibraryOrdering("alphabetical")
+  case object MEMBER_COUNT extends LibraryOrdering("member_count")
+
+  def fromStr(str: String): LibraryOrdering = {
+    str match {
+      case LAST_KEPT_INTO.value => LAST_KEPT_INTO
+      case ALPHABETICAL.value => ALPHABETICAL
+      case MEMBER_COUNT.value => MEMBER_COUNT
+    }
+  }
+
+  def all: Seq[LibraryOrdering] = Seq(LAST_KEPT_INTO, ALPHABETICAL, MEMBER_COUNT)
+
+  implicit def queryStringBinder[T](implicit stringBinder: QueryStringBindable[String]) = new QueryStringBindable[LibraryOrdering] {
+    override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, LibraryOrdering]] = {
+      stringBinder.bind(key, params) map {
+        case Right(str) =>
+          Right(LibraryOrdering.fromStr(str))
+        case _ => Left("Unable to bind a LibraryOrdering")
+      }
+    }
+    override def unbind(key: String, ordering: LibraryOrdering): String = {
+      stringBinder.unbind(key, ordering.value)
+    }
+  }
 }
 
 @Singleton
