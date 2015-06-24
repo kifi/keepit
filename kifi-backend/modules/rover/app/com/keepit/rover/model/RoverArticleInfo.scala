@@ -122,6 +122,8 @@ object RoverArticleInfo {
       info.state == ArticleInfoStates.INACTIVE,
       info.seq,
       info.uriId,
+      info.url,
+      info.urlHash,
       info.kind,
       info.bestVersion,
       info.latestVersion

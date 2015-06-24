@@ -28,6 +28,8 @@ trait InMemoryObjectStore[A, B] extends ObjectStore[A, B] with Logging {
 
   def syncGet(id: A): Option[B] = localStore.get(id)
 
+  def copy(sourceId: A, destinationId: A): Boolean = syncGet(sourceId).exists { value => this += (destinationId, value); true }
+
   override def toString = s"[size=${localStore.size} keys=${localStore.keySet}"
 }
 
@@ -57,6 +59,8 @@ trait InMemoryFileStore[A] extends ObjectStore[A, File] {
 
   def syncGet(key: A): Option[File] = pathMap.get(key).map(new File(_))
 
+  def copy(sourceId: A, destinationId: A): Boolean = syncGet(sourceId).exists { file => this += (destinationId, file); true }
+
   override def toString = s"[size=${pathMap.size} keys=${pathMap.keySet}"
 
 }
@@ -82,4 +86,6 @@ trait InMemoryBlobStore[A, B] extends ObjectStore[A, B] {
     localBlobStore.remove(key)
     this
   }
+
+  def copy(sourceId: A, destinationId: A): Boolean = syncGet(sourceId).exists { blob => this += (destinationId, blob); true }
 }
