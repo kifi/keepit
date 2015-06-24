@@ -104,7 +104,7 @@ class FeedControllerTest extends Specification with ShoeboxTestInjector {
         (channel \ "link").text.trim === s"http://dev.ezkeep.com:9000$path"
         val items = (elem \\ "item")
         items.size === 3
-        (items.head \ "link").text.trim === s"http://dev.ezkeep.com:9000${Library.formatLibraryPath(u2.username, None, lib3.slug)}"
+        (items.head \ "link").text.trim === s"http://dev.ezkeep.com:9000${Library.formatLibraryPath(u2.username, lib3.slug)}"
 
       }
     }
@@ -125,7 +125,7 @@ class FeedControllerTest extends Specification with ShoeboxTestInjector {
         (channel \ "link").text.trim === s"http://dev.ezkeep.com:9000$path"
         val items = (elem \\ "item")
         items.size === 1
-        (items.head \ "link").text.trim === s"http://dev.ezkeep.com:9000${Library.formatLibraryPath(u1.username, None, lib1.slug)}"
+        (items.head \ "link").text.trim === s"http://dev.ezkeep.com:9000${Library.formatLibraryPath(u1.username, lib1.slug)}"
 
       }
     }

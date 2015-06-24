@@ -96,7 +96,7 @@ object LibraryInfo {
       name = lib.name,
       visibility = lib.visibility,
       shortDescription = lib.description,
-      url = Library.formatLibraryPath(owner.username, org, lib.slug),
+      url = Library.formatLibraryPath((owner.username, org.map(_.original)), lib.slug),
       color = lib.color,
       image = image.map(LibraryImageInfo.createInfo(_)),
       owner = owner,

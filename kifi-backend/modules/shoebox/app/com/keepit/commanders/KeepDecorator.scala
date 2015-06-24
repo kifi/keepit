@@ -62,7 +62,12 @@ class KeepDecorator @Inject() (
           val keepers = keeps.map(_.userId).toSet // is this needed? need to double check, it may be redundant
           db.readOnlyMaster { implicit s => basicUserRepo.loadAll(keepersShown ++ libraryContributorsShown ++ libraryOwners ++ keepers) } //cached
         }
-        val idToBasicLibrary = idToLibrary.mapValues(library => BasicLibrary(library, idToBasicUser(library.ownerId), libIdToOrg.get(library.id.get).flatMap { _.handle }))
+        val idToBasicLibrary = idToLibrary.mapValues { library =>
+          val orgOpt = libIdToOrg.get(library.id.get)
+          val user = idToBasicUser(library.ownerId)
+          val space = if (orgOpt.isDefined) Right(orgOpt.get) else Left(user)
+          BasicLibrary(library, space)
+        }
 
         (idToBasicUser, idToBasicLibrary)
       }
