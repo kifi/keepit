@@ -59,7 +59,7 @@ class RoverImageFetcher @Inject() (
                     case croppedImage if croppedImage.kind == ProcessImageOperation.Crop => CropImageRequest(croppedImage.imageSize)
                   }
                   val expectedProcessRequests = calcSizesForImage(sourceImageSize, requiredScaleSizes.toSeq, requiredCropSizes.toSeq)
-                  filterProcessImageRequests(expectedProcessRequests, existingImageProcessRequests)
+                  diffProcessImageRequests(expectedProcessRequests, existingImageProcessRequests)
                 }
 
                 processAndPersistImages(bufferedSourceImage, imagePathPrefix, sourceImage.hash, sourceImage.format, requiredProcessRequests)(photoshop) match {

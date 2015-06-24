@@ -135,7 +135,7 @@ class OrganizationAvatarCommanderImpl @Inject() (
 
   // What ProcessImageRequests are necessary to perform on an image, given that we have some existing avatars already
   def determineRequiredProcessImageRequests(imageSize: ImageSize, existingAvatars: Seq[OrganizationAvatar]) = {
-    val expected = {
+    val required = {
       val scaleRequests = scaleSizes.map(scale => ScaleImageRequest(scale.idealSize))
       val cropRequests = cropSizes.map(crop => CropImageRequest(crop.idealSize))
       scaleRequests ++ cropRequests
@@ -145,29 +145,10 @@ class OrganizationAvatarCommanderImpl @Inject() (
       case croppedImage if croppedImage.kind == ProcessImageOperation.Crop => CropImageRequest(croppedImage.imageSize)
     }.toSet
 
-    val necessary = diffProcessImageRequests(expected, existing)
-    val unnecessary = intersectProcessImageRequests(existing, expected)
+    val unnecessary = intersectProcessImageRequests(existing, required)
+    val necessary = diffProcessImageRequests(required, unnecessary)
 
     (necessary, unnecessary)
-  }
-  // All the ProcessImageRequests in A that are NOT in B
-  def diffProcessImageRequests(A: Set[ProcessImageRequest], B: Set[ProcessImageRequest]): Set[ProcessImageRequest] = {
-    @inline def boundingBox(imageSize: ImageSize): Int = Math.max(imageSize.width, imageSize.height)
-    val Bp = B.collect { case ProcessImageRequest(ProcessImageOperation.Scale, size) => boundingBox(size) }
-    A filterNot {
-      case ProcessImageRequest(ProcessImageOperation.Scale, size) => Bp.contains(boundingBox(size))
-      case otherRequest => B.contains(otherRequest)
-    }
-  }
-
-  // All the ProcessImageRequests in A that ARE in B
-  def intersectProcessImageRequests(A: Set[ProcessImageRequest], B: Set[ProcessImageRequest]): Set[ProcessImageRequest] = {
-    @inline def boundingBox(imageSize: ImageSize): Int = Math.max(imageSize.width, imageSize.height)
-    val Bp = B.collect { case ProcessImageRequest(ProcessImageOperation.Scale, size) => boundingBox(size) }
-    A filter {
-      case ProcessImageRequest(ProcessImageOperation.Scale, size) => Bp.contains(boundingBox(size))
-      case otherRequest => B.contains(otherRequest)
-    }
   }
 }
 

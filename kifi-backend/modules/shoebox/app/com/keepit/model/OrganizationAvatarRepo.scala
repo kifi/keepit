@@ -80,8 +80,10 @@ class OrganizationAvatarRepoImpl @Inject() (val db: DataBaseComponent, val clock
     getByOrganizationCompiled(organizationId, state).list
   }
 
+  // gets only the DISTINCT images (i.e., only distinct imagePaths)
   def getByImageHash(hash: ImageHash, state: State[OrganizationAvatar] = OrganizationAvatarStates.ACTIVE)(implicit session: RSession): Seq[OrganizationAvatar] = {
-    (for (row <- rows if row.sourceFileHash === hash && row.state === state) yield row).list
+    val matchingAvatars = (for (row <- rows if row.sourceFileHash === hash && row.state === state) yield row).list
+    matchingAvatars.groupBy(_.imagePath).mapValues(_.head).values.toSeq
   }
 
   def deactivate(model: OrganizationAvatar)(implicit session: RWSession): OrganizationAvatar = {

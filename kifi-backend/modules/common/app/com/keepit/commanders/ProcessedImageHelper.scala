@@ -153,13 +153,23 @@ trait ProcessedImageHelper {
     }
   }
 
-  protected def filterProcessImageRequests(expectedImages: Set[ProcessImageRequest], existingImages: Set[ProcessImageRequest]): Set[ProcessImageRequest] = {
+  // All the ProcessImageRequests in A that are also in B
+  def intersectProcessImageRequests(A: Set[ProcessImageRequest], B: Set[ProcessImageRequest]): Set[ProcessImageRequest] = {
+    @inline def boundingBox(imageSize: ImageSize): Int = Math.max(imageSize.width, imageSize.height)
+    val Bp = B.collect { case ProcessImageRequest(ProcessImageOperation.Scale, size) => boundingBox(size) }
+    A filter {
+      case ProcessImageRequest(ProcessImageOperation.Scale, size) => Bp.contains(boundingBox(size))
+      case otherRequest => B.contains(otherRequest)
+    }
+  }
+  // All the ProcessImageRequests in A that are NOT in B
+  protected def diffProcessImageRequests(A: Set[ProcessImageRequest], B: Set[ProcessImageRequest]): Set[ProcessImageRequest] = {
     // hack to eliminate expecting scale versions that have the same scaled bounding box
     @inline def boundingBox(imageSize: ImageSize): Int = Math.max(imageSize.width, imageSize.height)
-    val existingScaleBoundingBoxes = existingImages.collect { case ProcessImageRequest(ProcessImageOperation.Scale, size) => boundingBox(size) }
-    expectedImages filterNot {
-      case ProcessImageRequest(ProcessImageOperation.Scale, size) => existingScaleBoundingBoxes.contains(boundingBox(size))
-      case otherRequest => existingImages.contains(otherRequest)
+    val Bp = B.collect { case ProcessImageRequest(ProcessImageOperation.Scale, size) => boundingBox(size) }
+    A filterNot {
+      case ProcessImageRequest(ProcessImageOperation.Scale, size) => Bp.contains(boundingBox(size))
+      case otherRequest => B.contains(otherRequest)
     }
   }
 
