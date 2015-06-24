@@ -28,12 +28,7 @@ frisby.create('get user information for site (api.kifi.com/site/user/me)')
       return Array.isArray(val) && val.every( function (exp) {
         return typeof(exp)==='string';
       })
-    },
-    uniqueKeepsClicked: Number,
-    totalKeepsClicked: Number,
-    clickCount: Number,
-    rekeepCount: Number,
-    rekeepTotalCount: Number,
+    }
   })
   .expectJSONTypes('emails.*', {
     address: String,

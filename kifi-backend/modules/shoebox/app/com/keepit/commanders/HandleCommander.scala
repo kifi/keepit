@@ -178,7 +178,7 @@ class HandleCommanderImpl @Inject() (
   }
 
   private def getAvailableOwnership(handle: Handle, ownerId: Option[HandleOwner], overrideProtection: Boolean = false)(implicit session: RSession): Try[HandleOwnership] = {
-    val normalizedHandle = Handle.normalize(handle)
+    val normalizedHandle = HandleOps.normalizeHandle(handle)
     handleRepo.getByNormalizedHandle(normalizedHandle, excludeState = None) match {
       case Some(ownership) if ownership.belongsTo(ownerId) => Success(ownership)
       case Some(ownership) if ownership.isLocked => Failure(LockedHandleException(ownership))

@@ -1,6 +1,7 @@
 package com.keepit.graph.manager
 
 import com.keepit.common.db.{ Id, SequenceNumber }
+import com.keepit.common.service.IpAddress
 import com.keepit.graph.GraphTestHelper
 import com.keepit.graph.model._
 import com.keepit.graph.simple.{ SimpleGraphTestModule }
@@ -40,6 +41,15 @@ class GraphManagerTest extends Specification with GraphTestInjector with GraphTe
           v.moveTo(VertexDataId[UserReader](1))
           nbs = getNeighbors(v, (UserReader, LibraryReader, EmptyEdgeReader), true)
           nbs.map { x: VertexId => x.asId[LibraryReader].id } === Set(1, 2)
+
+          // user to ip address
+          nbs = getNeighbors(v, (UserReader, IpAddressReader, TimestampEdgeReader), true)
+          nbs.map { x: VertexId => x.asId[IpAddressReader].id } === Set(IpAddress.ipToLong(ipAddress1))
+
+          // ip address to users
+          v.moveTo(VertexDataId[IpAddressReader](ipAddress1))
+          nbs = getNeighbors(v, (IpAddressReader, UserReader, TimestampEdgeReader), true)
+          nbs.map { x: VertexId => x.asId[UserReader].id } === Set(1, 2)
 
           // library to users
           v.moveTo(VertexDataId[LibraryReader](1))

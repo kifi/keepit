@@ -138,7 +138,7 @@ class MobileUserController @Inject() (
     userIpAddressCommander.logUserByRequest(request)
     val user = userCommander.getUserInfo(request.user)
     val (friendCount, keepCount, libCount, libFollowerCount) = if (profileInfo) db.readOnlyMaster { implicit s => getProfileInfo(request.userId) } else (0, 0, 0, 0)
-    userCommander.getKeepAttributionInfo(request.userId) map { info =>
+    userCommander.getHelpRankInfo(request.userId) map { info =>
       Ok(toJson(user.basicUser).as[JsObject] ++
         toJson(user.info).as[JsObject] ++
         Json.obj(

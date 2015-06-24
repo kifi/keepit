@@ -1,7 +1,7 @@
 package com.keepit.model
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
-import com.keepit.common.db.slick.DBSession.RSession
+import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick.{ DataBaseComponent, DbRepo, Repo }
 import com.keepit.common.db.{ Id, State }
 import com.keepit.common.store.ImagePath
@@ -10,7 +10,9 @@ import org.joda.time.DateTime
 
 @ImplementedBy(classOf[OrganizationAvatarRepoImpl])
 trait OrganizationAvatarRepo extends Repo[OrganizationAvatar] {
-  def getByOrganization(organizationId: Id[Organization])(implicit session: RSession): Seq[OrganizationAvatar]
+  def getByOrganization(organizationId: Id[Organization], state: State[OrganizationAvatar] = OrganizationAvatarStates.ACTIVE)(implicit session: RSession): Seq[OrganizationAvatar]
+  def getByImageHash(hash: ImageHash, state: State[OrganizationAvatar] = OrganizationAvatarStates.ACTIVE)(implicit session: RSession): Seq[OrganizationAvatar]
+  def deactivate(model: OrganizationAvatar)(implicit session: RWSession): OrganizationAvatar
 }
 
 @Singleton
@@ -23,8 +25,6 @@ class OrganizationAvatarRepoImpl @Inject() (val db: DataBaseComponent, val clock
   type RepoImpl = OrganizationAvatarTable
   class OrganizationAvatarTable(tag: Tag) extends RepoTable[OrganizationAvatar](db, tag, "organization_avatar") {
     def organizationId = column[Id[Organization]]("organization_id", O.NotNull)
-    def xPosition = column[Option[Int]]("x_position", O.Nullable)
-    def yPosition = column[Option[Int]]("y_position", O.Nullable)
     def width = column[Int]("width", O.NotNull)
     def height = column[Int]("height", O.NotNull)
     def format = column[ImageFormat]("format", O.NotNull)
@@ -40,8 +40,6 @@ class OrganizationAvatarRepoImpl @Inject() (val db: DataBaseComponent, val clock
       updatedAt: DateTime,
       state: State[OrganizationAvatar],
       organizationId: Id[Organization],
-      xPosition: Option[Int],
-      yPosition: Option[Int],
       width: Int,
       height: Int,
       format: ImageFormat,
@@ -50,41 +48,45 @@ class OrganizationAvatarRepoImpl @Inject() (val db: DataBaseComponent, val clock
       source: ImageSource,
       sourceFileHash: ImageHash,
       sourceImageURL: Option[String]) = {
-      val imagePosition: Option[ImagePosition] = xPosition.flatMap { x =>
-        yPosition.map(y => ImagePosition(x, y))
-      }
-      OrganizationAvatar(id, createdAt, updatedAt, state, organizationId, imagePosition, width, height, format, kind, imagePath, source, sourceFileHash, sourceImageURL)
+      OrganizationAvatar(id, createdAt, updatedAt, state, organizationId, width, height, format, kind, imagePath, source, sourceFileHash, sourceImageURL)
     }
 
-    def unapplyToDbRow(logo: OrganizationAvatar) = {
-      Some((logo.id,
-        logo.createdAt,
-        logo.updatedAt,
-        logo.state,
-        logo.organizationId,
-        logo.position.map(_.x),
-        logo.position.map(_.y),
-        logo.width,
-        logo.height,
-        logo.format,
-        logo.kind,
-        logo.imagePath,
-        logo.source,
-        logo.sourceFileHash,
-        logo.sourceImageURL))
+    def unapplyToDbRow(avatar: OrganizationAvatar) = {
+      Some((avatar.id,
+        avatar.createdAt,
+        avatar.updatedAt,
+        avatar.state,
+        avatar.organizationId,
+        avatar.width,
+        avatar.height,
+        avatar.format,
+        avatar.kind,
+        avatar.imagePath,
+        avatar.source,
+        avatar.sourceFileHash,
+        avatar.sourceImageURL))
     }
 
-    def * = (id.?, createdAt, updatedAt, state, organizationId, xPosition, yPosition, width, height, format, kind, imagePath, source, sourceFileHash, sourceImageURL) <> ((applyFromDbRow _).tupled, unapplyToDbRow _)
+    def * = (id.?, createdAt, updatedAt, state, organizationId, width, height, format, kind, imagePath, source, sourceFileHash, sourceImageURL) <> ((applyFromDbRow _).tupled, unapplyToDbRow _)
   }
 
   def table(tag: Tag) = new OrganizationAvatarTable(tag)
   initTable()
 
-  def getByOrganizationCompiled = Compiled { (organizationId: Column[Id[Organization]]) =>
-    (for (row <- rows if row.organizationId === organizationId) yield row)
+  def getByOrganizationCompiled = Compiled { (organizationId: Column[Id[Organization]], state: Column[State[OrganizationAvatar]]) =>
+    for (row <- rows if row.organizationId === organizationId && row.state === state) yield row
+  }
+  def getByOrganization(organizationId: Id[Organization], state: State[OrganizationAvatar] = OrganizationAvatarStates.ACTIVE)(implicit session: RSession): Seq[OrganizationAvatar] = {
+    getByOrganizationCompiled(organizationId, state).list
   }
 
-  def getByOrganization(organizationId: Id[Organization])(implicit session: RSession): Seq[OrganizationAvatar] = {
-    getByOrganizationCompiled(organizationId).list
+  // gets only the DISTINCT images (i.e., only distinct imagePaths)
+  def getByImageHash(hash: ImageHash, state: State[OrganizationAvatar] = OrganizationAvatarStates.ACTIVE)(implicit session: RSession): Seq[OrganizationAvatar] = {
+    val matchingAvatars = (for (row <- rows if row.sourceFileHash === hash && row.state === state) yield row).list
+    matchingAvatars.groupBy(_.imagePath).mapValues(_.head).values.toSeq
+  }
+
+  def deactivate(model: OrganizationAvatar)(implicit session: RWSession): OrganizationAvatar = {
+    save(model.copy(state = OrganizationAvatarStates.INACTIVE))
   }
 }

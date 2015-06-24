@@ -7,6 +7,7 @@ import com.keepit.commanders.emails.EmailTemplateSender
 import com.keepit.common.core._
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
+import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -26,11 +27,12 @@ import scala.concurrent.{ ExecutionContext, Future }
 
 @ImplementedBy(classOf[OrganizationInviteCommanderImpl])
 trait OrganizationInviteCommander {
-  def inviteUsersToOrganization(orgId: Id[Organization], inviterId: Id[User], invitees: Seq[OrganizationMemberInvitation])(implicit eventContext: HeimdalContext): Future[Either[OrganizationFail, Seq[(Either[BasicUser, RichContact], OrganizationRole)]]]
-  def acceptInvitation(orgId: Id[Organization], userId: Id[User]): Either[OrganizationFail, OrganizationMembership]
+  def convertPendingInvites(emailAddress: EmailAddress, userId: Id[User])(implicit session: RWSession): Unit
+  def inviteToOrganization(orgId: Id[Organization], inviterId: Id[User], invitees: Seq[OrganizationMemberInvitation])(implicit eventContext: HeimdalContext): Future[Either[OrganizationFail, Seq[(Either[BasicUser, RichContact], OrganizationRole)]]]
+  def acceptInvitation(orgId: Id[Organization], userId: Id[User], authToken: String): Either[OrganizationFail, OrganizationMembership]
   def declineInvitation(orgId: Id[Organization], userId: Id[User]): Seq[OrganizationInvite]
   // Creates a Universal Invite Link for an organization and inviter. Anyone with the link can join the Organization
-  def universalInviteLink(orgId: Id[Organization], inviterId: Id[User], role: OrganizationRole = OrganizationRole.MEMBER, authToken: Option[String] = None): Either[OrganizationFail, (OrganizationInvite, Organization)]
+  def createGenericInvite(orgId: Id[Organization], inviterId: Id[User], role: OrganizationRole = OrganizationRole.MEMBER)(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationInvite]
 }
 
 @Singleton
@@ -54,7 +56,13 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     organizationAnalytics: OrganizationAnalytics,
     implicit val publicIdConfig: PublicIdConfiguration) extends OrganizationInviteCommander with Logging {
 
-  def inviteUsersToOrganization(orgId: Id[Organization], inviterId: Id[User], invitees: Seq[OrganizationMemberInvitation])(implicit eventContext: HeimdalContext): Future[Either[OrganizationFail, Seq[(Either[BasicUser, RichContact], OrganizationRole)]]] = {
+  def convertPendingInvites(emailAddress: EmailAddress, userId: Id[User])(implicit session: RWSession): Unit = {
+    organizationInviteRepo.getByEmailAddress(emailAddress) foreach { invitation =>
+      organizationInviteRepo.save(invitation.copy(userId = Some(userId)))
+    }
+  }
+
+  def inviteToOrganization(orgId: Id[Organization], inviterId: Id[User], invitees: Seq[OrganizationMemberInvitation])(implicit eventContext: HeimdalContext): Future[Either[OrganizationFail, Seq[(Either[BasicUser, RichContact], OrganizationRole)]]] = {
     val inviterMembershipOpt = db.readOnlyMaster { implicit session =>
       organizationMembershipRepo.getByOrgIdAndUserId(orgId, inviterId)
     }
@@ -223,11 +231,16 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     organizationInviteRepo.getByOrgIdAndUserIdAndAuthToken(orgId, userId, authToken).nonEmpty
   }
 
-  def acceptInvitation(orgId: Id[Organization], userId: Id[User]): Either[OrganizationFail, OrganizationMembership] = {
+  def acceptInvitation(orgId: Id[Organization], userId: Id[User], authToken: String): Either[OrganizationFail, OrganizationMembership] = {
     val (invitations, membershipOpt) = db.readOnlyReplica { implicit session =>
       val userInvitations = organizationInviteRepo.getByOrgAndUserId(orgId, userId)
       val existingMembership = organizationMembershipRepo.getByOrgIdAndUserId(orgId, userId)
-      (userInvitations, existingMembership)
+      val universalInvitation = organizationInviteRepo.getByOrgIdAndAuthToken(orgId, authToken)
+      val allInvitations = universalInvitation match {
+        case Some(invitation) if (!userInvitations.contains(invitation)) => userInvitations.+:(invitation)
+        case _ => userInvitations
+      }
+      (allInvitations, existingMembership)
     }
 
     val updatedMembership: Either[OrganizationFail, OrganizationMembership] = membershipOpt match {
@@ -293,7 +306,19 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     }
   }
 
-  def universalInviteLink(orgId: Id[Organization], inviterId: Id[User], role: OrganizationRole = OrganizationRole.MEMBER, authToken: Option[String] = None): Either[OrganizationFail, (OrganizationInvite, Organization)] = {
-    ???
+  def createGenericInvite(orgId: Id[Organization], inviterId: Id[User], role: OrganizationRole = OrganizationRole.MEMBER)(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationInvite] = {
+    db.readWrite { implicit session =>
+      val membershipOpt = organizationMembershipRepo.getByOrgIdAndUserId(orgId, inviterId)
+      membershipOpt match {
+        case Some(membership) if membership.hasPermission(OrganizationPermission.INVITE_MEMBERS) && role <= membership.role =>
+          val invite = organizationInviteRepo.save(OrganizationInvite(organizationId = orgId, inviterId = inviterId, role = role))
+
+          // tracking
+          organizationAnalytics.trackSentOrganizationInvites(inviterId, organizationRepo.get(orgId), Seq(invite))
+          Right(invite)
+        case Some(membership) => Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+        case None => Left(OrganizationFail.NOT_A_MEMBER)
+      }
+    }
   }
 }

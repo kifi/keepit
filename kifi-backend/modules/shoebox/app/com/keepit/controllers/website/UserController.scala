@@ -59,6 +59,7 @@ class UserController @Inject() (
     airbrakeNotifier: AirbrakeNotifier,
     abookUploadConf: ABookUploadConf,
     emailSender: EmailSenderProvider,
+    userProfileCommander: UserProfileCommander,
     fortytwoConfig: FortyTwoConfig) extends UserActions with ShoeboxServiceController {
 
   def friends(page: Int, pageSize: Int) = UserAction { request =>
@@ -168,7 +169,7 @@ class UserController @Inject() (
     }
   }
 
-  def currentUser = UserAction.async { implicit request =>
+  def currentUser = UserAction { implicit request =>
     getUserInfo(request.userId)
   }
 
@@ -281,16 +282,16 @@ class UserController @Inject() (
 
   //private val emailRegex = """^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$""".r
   @deprecated(message = "use addEmail/modifyEmail/removeEmail", since = "2014-08-20")
-  def updateCurrentUser() = UserAction.async(parse.tolerantJson) { implicit request =>
+  def updateCurrentUser() = UserAction(parse.tolerantJson) { implicit request =>
     request.body.validate[UpdatableUserInfo] match {
       case JsSuccess(userData, _) => {
         userCommander.updateUserInfo(request.userId, userData)
         getUserInfo(request.userId)
       }
       case JsError(errors) if errors.exists { case (path, _) => path == __ \ "emails" } =>
-        Future.successful(BadRequest(Json.obj("error" -> "bad email addresses")))
+        BadRequest(Json.obj("error" -> "bad email addresses"))
       case _ =>
-        Future.successful(BadRequest(Json.obj("error" -> "could not parse user info from body")))
+        BadRequest(Json.obj("error" -> "could not parse user info from body"))
     }
   }
 
@@ -298,21 +299,20 @@ class UserController @Inject() (
     val user = db.readOnlyMaster { implicit session =>
       userRepo.get(userId)
     }
+
     val experiments = userExperimentCommander.getExperimentsByUser(userId)
     val pimpedUser = userCommander.getUserInfo(user)
-    val json = toJson(pimpedUser.basicUser).as[JsObject] ++
+
+    val json = Json.toJson(pimpedUser.basicUser).as[JsObject] ++
       toJson(pimpedUser.info).as[JsObject] ++
-      Json.obj("notAuthed" -> pimpedUser.notAuthed).as[JsObject] ++
-      Json.obj("experiments" -> experiments.map(_.value))
-    userCommander.getKeepAttributionInfo(userId) map { info =>
-      Ok(json ++ Json.obj(
-        "uniqueKeepsClicked" -> info.uniqueKeepsClicked,
-        "totalKeepsClicked" -> info.totalClicks,
-        "clickCount" -> info.clickCount,
-        "rekeepCount" -> info.rekeepCount,
-        "rekeepTotalCount" -> info.rekeepTotalCount
-      ))
-    }
+      Json.obj(
+        "notAuthed" -> pimpedUser.notAuthed,
+        "numLibraries" -> pimpedUser.numLibraries,
+        "numConnections" -> pimpedUser.numConnections,
+        "numFollowers" -> pimpedUser.numFollowers,
+        "experiments" -> experiments.map(_.value)
+      )
+    Ok(json)
   }
 
   private val SitePrefNames = {

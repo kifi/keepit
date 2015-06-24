@@ -11,6 +11,7 @@ import shutil
 import sys
 import iso8601
 import subprocess
+import socket
 import random
 import string
 import time
@@ -293,7 +294,11 @@ def cleanUp(serviceType, afterVersion):
   localAssets.keepOnlyNewest(5)
   rolledbackAssets.keepOnlyNewest(2)
 
-if __name__ == "__main__":
+def isVagrantInstance():
+  hostname = socket.gethostname()
+  return hostname.startswith('vagrant-')
+
+if __name__ == "__main__" and not isVagrantInstance():
   try:
     #figure out who I am and what to do
     me = whoAmI()
