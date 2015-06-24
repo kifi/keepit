@@ -76,8 +76,8 @@ case class OrganizationDeleteRequest(
 case class OrganizationDeleteResponse(request: OrganizationDeleteRequest, deactivatedOrg: Organization)
 
 case class OrganizationModifications(
-  newName: Option[String],
-  newBasePermissions: Option[BasePermissions])
+  newName: Option[String] = None,
+  newBasePermissions: Option[BasePermissions] = None)
 
 sealed abstract class OrganizationFail(val status: Int, val message: String) {
   def asErrorResponse = Status(status)(Json.obj("error" -> message))

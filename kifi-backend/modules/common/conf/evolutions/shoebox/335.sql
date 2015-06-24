@@ -30,7 +30,7 @@ CREATE TABLE organization_membership (
 	organization_id bigint(20) NOT NULL,
 	user_id bigint(20) NOT NULL,
 	role varchar(20) NOT NULL,
-	permissions varchar(120) NOT NULL,
+	permissions text NOT NULL,
 
 	PRIMARY KEY(id),
 	CONSTRAINT `organization_membership_f_organization` FOREIGN KEY (`organization_id`) REFERENCES organization(`id`),
