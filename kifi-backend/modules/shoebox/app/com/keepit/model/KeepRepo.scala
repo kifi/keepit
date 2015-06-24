@@ -61,7 +61,7 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def latestKeptAtByLibraryIds(libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Option[DateTime]]
   def getKeepsByTimeWindow(uriId: Id[NormalizedURI], url: String, keptAfter: DateTime, keptBefore: DateTime)(implicit session: RSession): Set[Keep]
   def getRecentKeepsFromFollowedLibraries(userId: Id[User], num: Int)(implicit session: RSession): Seq[Keep]
-  def getRecentKeepsFromFollowedLibraries(userId: Id[User], num: Int, beforeTime: String)(implicit session: RSession): Seq[Keep]
+  def getRecentKeepsFromFollowedLibraries(userId: Id[User], num: Int, beforeTime: Option[String], afterTime: Option[String])(implicit session: RSession): Seq[Keep]
   def getMaxKeepSeqNumForLibraries(libIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], SequenceNumber[Keep]]
   def recentKeepNotes(libId: Id[Library], limit: Int)(implicit session: RSession): Seq[String]
   def getByLibraryIdAndExcludingVisibility(libId: Id[Library], excludeVisibility: Option[LibraryVisibility], limit: Int)(implicit session: RSession): Seq[Keep]
@@ -530,10 +530,20 @@ class KeepRepoImpl @Inject() (
     sql"""SELECT #$bookmarkColumnOrder FROM bookmark bm WHERE library_id IN (SELECT library_id FROM library_membership WHERE user_id=$userId AND state='active') AND state='active' AND user_id!=$userId ORDER BY kept_at DESC LIMIT $num;""".as[Keep].list
   }
 
-  def getRecentKeepsFromFollowedLibraries(userId: Id[User], num: Int, beforeTime: String)(implicit session: RSession): Seq[Keep] = {
+  def getRecentKeepsFromFollowedLibraries(userId: Id[User], num: Int, beforeTime: Option[String], afterTime: Option[String])(implicit session: RSession): Seq[Keep] = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
 
-    sql"""SELECT #$bookmarkColumnOrder FROM bookmark bm WHERE library_id IN (SELECT library_id FROM library_membership WHERE user_id=$userId AND state='active') AND state='active' AND user_id!=$userId AND kept_at<$beforeTime ORDER BY kept_at DESC LIMIT $num;""".as[Keep].list
+    // only beforeTime or afterTime should be set, not both
+    // if so, default to using beforeTime
+    (beforeTime, afterTime) match {
+      case (Some(before), _) =>
+        sql"""SELECT #$bookmarkColumnOrder FROM bookmark bm WHERE library_id IN (SELECT library_id FROM library_membership WHERE user_id=$userId AND state='active') AND state='active' AND user_id!=$userId AND kept_at<=$before ORDER BY kept_at DESC LIMIT $num;""".as[Keep].list
+      case (None, Some(after)) =>
+        sql"""SELECT #$bookmarkColumnOrder FROM bookmark bm WHERE library_id IN (SELECT library_id FROM library_membership WHERE user_id=$userId AND state='active') AND state='active' AND user_id!=$userId AND kept_at>$after ORDER BY kept_at DESC LIMIT $num;""".as[Keep].list
+      case (None, None) =>
+        sql"""SELECT #$bookmarkColumnOrder FROM bookmark bm WHERE library_id IN (SELECT library_id FROM library_membership WHERE user_id=$userId AND state='active') AND state='active' AND user_id!=$userId ORDER BY kept_at DESC LIMIT $num;""".as[Keep].list
+    }
+
   }
 
   def getMaxKeepSeqNumForLibraries(libIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], SequenceNumber[Keep]] = {
