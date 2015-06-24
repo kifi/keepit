@@ -3,9 +3,9 @@
 # --- !Ups
 
 -- MySQL:
--- CREATE TABLE organization_sequence (id BIGINT NOT NULL);
+-- CREATE TABLE organization_sequence (id BIGINT(20) NOT NULL);
 -- INSERT organization_sequence SET id = 0;
--- CREATE TABLE organization_membership_sequence (id BIGINT NOT NULL);
+-- CREATE TABLE organization_membership_sequence (id BIGINT(20) NOT NULL);
 -- INSERT organization_membership_sequence SET id = 0;
 -- H2:
 CREATE SEQUENCE organization_sequence;
