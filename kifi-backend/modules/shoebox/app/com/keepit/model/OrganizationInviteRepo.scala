@@ -10,6 +10,7 @@ import org.joda.time.DateTime
 
 @ImplementedBy(classOf[OrganizationInviteRepoImpl])
 trait OrganizationInviteRepo extends Repo[OrganizationInvite] {
+  def getByEmailAddress(emailAddress: EmailAddress)(implicit session: RSession): Seq[OrganizationInvite]
   def getByOrganization(organizationId: Id[Organization], limit: Limit, offset: Offset, state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit s: RSession): Seq[OrganizationInvite]
   def getByOrgIdAndUserIdAndAuthToken(organizationId: Id[Organization], userId: Id[User], authToken: String, state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit s: RSession): Seq[OrganizationInvite]
   def getByOrgIdAndAuthToken(organizationId: Id[Organization], authToken: String, state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit s: RSession): Option[OrganizationInvite]
@@ -75,6 +76,14 @@ class OrganizationInviteRepoImpl @Inject() (val db: DataBaseComponent, val clock
 
   def table(tag: Tag) = new OrganizationInviteTable(tag)
   initTable()
+
+  def getByEmailAddressCompiled = Compiled { (emailAddress: Column[EmailAddress]) =>
+    (for (row <- rows if row.emailAddress === emailAddress) yield row)
+  }
+
+  def getByEmailAddress(emailAddress: EmailAddress)(implicit session: RSession): Seq[OrganizationInvite] = {
+    getByEmailAddressCompiled(emailAddress).list
+  }
 
   def getByOrganizationCompiled = Compiled { (orgId: Column[Id[Organization]], limit: ConstColumn[Long], offset: ConstColumn[Long], state: Column[State[OrganizationInvite]]) =>
     (for { row <- rows if row.organizationId === orgId && row.state === state } yield row).drop(offset).take(limit)

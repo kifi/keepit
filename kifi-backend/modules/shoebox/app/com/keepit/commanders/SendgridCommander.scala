@@ -26,6 +26,7 @@ class SendgridCommander @Inject() (
     recoCommander: RecommendationsCommander,
     heimdalContextBuilder: HeimdalContextBuilderFactory,
     userExperimentCommander: RemoteUserExperimentCommander,
+    userEmailAddressCommander: UserEmailAddressCommander,
     implicit val executionContext: ExecutionContext,
     protected val airbrake: AirbrakeNotifier) extends Logging {
 
@@ -155,19 +156,16 @@ class SendgridCommander @Inject() (
     case _ => "External Page"
   }
 
-  private def verifyEmailAddress(event: SendgridEvent, email: ElectronicMail): Unit =
-    db.readWrite { implicit rw =>
-      for {
-        userEmail <- email.to.headOption
-        emailAddr <- emailAddressRepo.getByAddressOpt(userEmail)
-        if !emailAddr.verified
-      } yield {
-        log.info(s"verifying email($userEmail) from SendGrid event($event)")
-
-        emailAddressRepo.save(emailAddr.copy(state = UserEmailAddressStates.VERIFIED,
-          verifiedAt = Some(currentDateTime)))
-      }
+  private def verifyEmailAddress(event: SendgridEvent, email: ElectronicMail): Unit = db.readWrite { implicit rw =>
+    for {
+      userEmail <- email.to.headOption
+      emailAddr <- emailAddressRepo.getByAddressOpt(userEmail)
+      if !emailAddr.verified
+    } {
+      log.info(s"verifying email($userEmail) from SendGrid event($event)")
+      userEmailAddressCommander.saveAsVerified(emailAddr)
     }
+  }
 
   private def handleUnsubscribeEvent(event: SendgridEvent, emailOpt: Option[ElectronicMail]): Unit =
     db.readWrite { implicit rw =>
