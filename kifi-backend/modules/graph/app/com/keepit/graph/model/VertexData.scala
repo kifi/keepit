@@ -1,7 +1,5 @@
 package com.keepit.graph.model
 
-import com.keepit.graph.model.OrganizationReader.IpAddressReader
-
 sealed trait VertexData[V <: VertexDataReader] { self: V =>
   def asReader: V = self
 }

@@ -199,6 +199,7 @@ case object OrganizationReader extends VertexKind[OrganizationReader] {
   def apply(rawDataReader: RawDataReader): OrganizationReader = ???
   implicit val writes = Writes[OrganizationReader](reader => Json.obj("id" -> reader.id))
   implicit val readsAsVertexData = Reads[VertexData[OrganizationReader]] { json => (json \ "id").validate.map(OrganizationData(_)) }
+}
 
 trait IpAddressReader extends VertexDataReader {
   type V = IpAddressReader

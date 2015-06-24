@@ -239,7 +239,7 @@ class ShoeboxDataPipeController @Inject() (
       Ok(Json.toJson(ids))
     }
   }
-  
+
   def getIngestableOrganizations(seqNum: SequenceNumber[Organization], fetchSize: Int) = Action.async { request =>
     SafeFuture {
       val orgs = db.readOnlyReplica { implicit s => organizationRepo.getBySequenceNumber(seqNum, fetchSize) } map {

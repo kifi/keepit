@@ -3,7 +3,6 @@ package com.keepit.graph.manager
 import com.keepit.common.db.{ Id, SequenceNumber }
 import com.keepit.common.service.IpAddress
 import com.keepit.graph.GraphTestHelper
-import com.keepit.graph.model.OrganizationReader.IpAddressReader
 import com.keepit.graph.model._
 import com.keepit.graph.simple.{ SimpleGraphTestModule }
 import com.keepit.graph.test.GraphTestInjector

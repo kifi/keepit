@@ -1,7 +1,6 @@
 package com.keepit.graph.model
 
 import com.keepit.common.service.IpAddress
-import com.keepit.graph.model.OrganizationReader.IpAddressReader
 import com.keepit.model._
 import com.keepit.common.db.Id
 import com.keepit.search.index.message.ThreadContent
