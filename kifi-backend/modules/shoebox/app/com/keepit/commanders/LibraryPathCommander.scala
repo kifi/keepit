@@ -2,7 +2,7 @@ package com.keepit.commanders
 
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.db.slick.Database
-import com.keepit.model.{ OrganizationRepo, Library, UserRepo }
+import com.keepit.model.{ User, OrganizationRepo, Library, UserRepo }
 
 @Singleton
 class LibraryPathCommander @Inject() (

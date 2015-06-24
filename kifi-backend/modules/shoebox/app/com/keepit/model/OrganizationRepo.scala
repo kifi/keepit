@@ -16,9 +16,11 @@ trait OrganizationRepo extends Repo[Organization] with SeqNumberFunction[Organiz
 }
 
 @Singleton
-class OrganizationRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock, libRepo: Provider[LibraryRepoImpl]) extends OrganizationRepo with DbRepo[Organization] with SeqNumberDbFunction[Organization] with Logging {
-  override def deleteCache(org: Organization)(implicit session: RSession) {}
-  override def invalidateCache(org: Organization)(implicit session: RSession) {}
+class OrganizationRepoImpl @Inject() (
+    val db: DataBaseComponent,
+    val clock: Clock,
+    orgCache: OrganizationCache,
+    libRepo: Provider[LibraryRepoImpl]) extends OrganizationRepo with DbRepo[Organization] with SeqNumberDbFunction[Organization] with Logging {
 
   import db.Driver.simple._
 
@@ -40,11 +42,21 @@ class OrganizationRepoImpl @Inject() (val db: DataBaseComponent, val clock: Cloc
   }
 
   def table(tag: Tag) = new OrganizationTable(tag)
+  implicit def orgId2Key(orgId: Id[Organization]) = OrganizationKey(orgId)
 
   initTable()
 
+  override def deleteCache(org: Organization)(implicit session: RSession) {
+    orgCache.remove(org.id.get)
+  }
+  override def invalidateCache(org: Organization)(implicit session: RSession) {
+    orgCache.set(org.id.get, org)
+  }
+
   def getByIds(orgIds: Set[Id[Organization]])(implicit session: RSession): Map[Id[Organization], Organization] = {
-    val q = { for { row <- rows if row.id.inSet(orgIds) } yield row }
-    q.list.map { x => (x.id.get -> x) }.toMap
+    orgCache.bulkGetOrElse(orgIds map orgId2Key) { missingKeys =>
+      val q = { for { row <- rows if row.id.inSet(missingKeys.map { _.id }.toSet) && row.state === OrganizationStates.ACTIVE } yield row }
+      q.list.map { x => (orgId2Key(x.id.get) -> x) }.toMap
+    }.map { case (key, org) => key.id -> org }.toMap
   }
 }
