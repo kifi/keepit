@@ -14,4 +14,10 @@ case class Handle(value: String) extends AnyVal {
 object Handle {
   implicit def fromUsername(username: Username) = Handle(username.value)
   implicit def fromOrganizationHandle(organizationHandle: OrganizationHandle) = Handle(organizationHandle.value)
+  implicit def fromUserOrgOpt(tuple: (Username, Option[OrganizationHandle])): Handle = {
+    tuple match {
+      case (_, Some(handle)) => handle
+      case (user, None) => user
+    }
+  }
 }

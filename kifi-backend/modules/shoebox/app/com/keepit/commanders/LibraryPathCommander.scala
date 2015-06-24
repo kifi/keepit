@@ -9,13 +9,14 @@ class LibraryPathCommander @Inject() (
     db: Database,
     orgRepo: OrganizationRepo,
     userRepo: UserRepo) {
+
   def getPath(lib: Library): String = {
     val (user, org) = db.readOnlyMaster { implicit s =>
       val user = userRepo.get(lib.ownerId)
       val org = lib.organizationId.flatMap(orgRepo.get(_).handle)
       (user, org)
     }
-    Library.formatLibraryPath(user.username, org, lib.slug)
+    Library.formatLibraryPath((user.username, org.map(_.original)), lib.slug)
   }
 
   def getPathUrlEncoded(lib: Library): String = {
@@ -24,6 +25,7 @@ class LibraryPathCommander @Inject() (
       val org = lib.organizationId.flatMap(orgRepo.get(_).handle)
       (user, org)
     }
-    Library.formatLibraryPathUrlEncoded(user.username, org, lib.slug)
+
+    Library.formatLibraryPathUrlEncoded((user.username, org.map(_.original)), lib.slug)
   }
 }

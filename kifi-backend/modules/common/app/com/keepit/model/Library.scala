@@ -144,18 +144,12 @@ object Library extends ModelWithPublicIdCompanion[Library] {
     name.nonEmpty && name.length <= 200 && !name.contains('"') && !name.contains('/')
   }
 
-  def formatLibraryPath(ownerUsername: Username, org: Option[PrimaryOrganizationHandle], slug: LibrarySlug): String = {
-    org match {
-      case Some(handle) => s"/${handle.normalized.value}/${slug.value}"
-      case None => s"/${ownerUsername.value}/${slug.value}"
-    }
+  def formatLibraryPath(handle: Handle, slug: LibrarySlug): String = {
+    s"/${handle.value}/${slug.value}"
   }
 
-  def formatLibraryPathUrlEncoded(ownerUsername: Username, org: Option[PrimaryOrganizationHandle], slug: LibrarySlug): String = {
-    org match {
-      case Some(handle) => s"/${handle.normalized.urlEncoded}/${slug.urlEncoded}"
-      case None => s"/${ownerUsername.urlEncoded}/${slug.urlEncoded}"
-    }
+  def formatLibraryPathUrlEncoded(handle: Handle, slug: LibrarySlug): String = {
+    s"/${handle.urlEncoded}/${slug.urlEncoded}"
   }
 
   def toLibraryView(lib: Library): LibraryView = LibraryView(id = lib.id, ownerId = lib.ownerId, state = lib.state, seq = lib.seq, kind = lib.kind)
@@ -282,8 +276,11 @@ case class BasicLibrary(id: PublicId[Library], name: String, path: String, visib
 }
 
 object BasicLibrary {
-  def apply(library: Library, owner: BasicUser, org: Option[PrimaryOrganizationHandle])(implicit publicIdConfig: PublicIdConfiguration): BasicLibrary = {
-    val path = Library.formatLibraryPath(owner.username, org, library.slug)
+  def apply(library: Library, space: Either[BasicUser, Organization])(implicit publicIdConfig: PublicIdConfiguration): BasicLibrary = {
+    val path = space.fold(
+      user => Library.formatLibraryPath(user.username, library.slug),
+      org => Library.formatLibraryPath(org.handle.get.original, library.slug)
+    )
     BasicLibrary(Library.publicId(library.id.get), library.name, path, library.visibility, library.color)
   }
 }
