@@ -50,7 +50,7 @@ class MobileMutualUserController @Inject() (
           val libOwners = basicUserRepo.loadAll(mutualLibraries.map(_.ownerId).toSet)
           val libsJson = mutualLibraries.map { lib =>
             val owner = libOwners(lib.ownerId)
-            val org = lib.organizationId.flatMap(orgRepo.get(_).handle)
+            val org = lib.organizationId.map(orgRepo.get(_).getHandle)
             Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, None, owner, org)(config))
           }
           Ok(Json.obj("mutualLibraries" -> JsArray(libsJson), "totalMutualLibraries" -> countMutualLibraries))

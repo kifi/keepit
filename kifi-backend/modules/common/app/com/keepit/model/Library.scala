@@ -279,7 +279,7 @@ object BasicLibrary {
   def apply(library: Library, space: Either[BasicUser, Organization])(implicit publicIdConfig: PublicIdConfiguration): BasicLibrary = {
     val path = space.fold(
       user => Library.formatLibraryPath(user.username, library.slug),
-      org => Library.formatLibraryPath(org.handle.get.original, library.slug)
+      org => Library.formatLibraryPath(org.getHandle, library.slug)
     )
     BasicLibrary(Library.publicId(library.id.get), library.name, path, library.visibility, library.color)
   }

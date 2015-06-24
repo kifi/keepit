@@ -42,6 +42,13 @@ case class Organization(
 
   def modifiedMembership(membership: OrganizationMembership, newRole: OrganizationRole): OrganizationMembership =
     membership.copy(role = newRole, permissions = getRolePermissions(newRole))
+
+  def getHandle: OrganizationHandle = {
+    handle match {
+      case Some(h) => h.original
+      case None => throw Organization.UndefinedHandleException(this)
+    }
+  }
 }
 
 object Organization extends ModelWithPublicIdCompanion[Organization] {
@@ -107,6 +114,8 @@ object Organization extends ModelWithPublicIdCompanion[Organization] {
       org.handle.map(_.normalized),
       org.basePermissions))
   }
+
+  case class UndefinedHandleException(org: Organization) extends Exception(s"no handle found for $org")
 }
 
 object OrganizationStates extends States[Organization]

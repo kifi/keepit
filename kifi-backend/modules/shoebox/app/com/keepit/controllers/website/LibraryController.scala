@@ -112,7 +112,7 @@ class LibraryController @Inject() (
         val (owner, membership, org) = db.readOnlyMaster { implicit s =>
           val basicUser = basicUserRepo.load(lib.ownerId)
           val membership = libraryMembershipRepo.getWithLibraryIdAndUserId(lib.id.get, request.userId)
-          val org = lib.organizationId.flatMap { id => orgRepo.get(id).handle }
+          val org = lib.organizationId.map { id => orgRepo.get(id).getHandle }
           (basicUser, membership, org)
         }
         val libInfo = Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, None, owner, org))
