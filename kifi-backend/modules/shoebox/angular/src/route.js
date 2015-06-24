@@ -38,7 +38,7 @@ angular.module('kifi')
         controller: 'ManageTagCtrl'
       })
       .state('settings', {
-        url: '/profile',
+        url: '/settings',
         templateUrl: 'profile/profile.tpl.html',
         controller: 'ProfileCtrl'
       })
