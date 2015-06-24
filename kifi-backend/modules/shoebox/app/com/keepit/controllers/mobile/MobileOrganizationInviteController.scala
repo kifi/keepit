@@ -88,7 +88,7 @@ class MobileOrganizationInviteControllerImpl @Inject() (
         implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
         orgInviteCommander.createUniversalInviteLink(orgId, request.userId, role) match {
           case Right(invite) =>
-            Ok(Json.obj("link" -> routes.MobileOrganizationInviteController.acceptInvitation(Organization.publicId(invite.organizationId), Some(invite.authToken)).url))
+            Ok(Json.obj("link" -> (fortyTwoConfig.applicationBaseUrl + routes.MobileOrganizationInviteController.acceptInvitation(Organization.publicId(invite.organizationId), Some(invite.authToken)).url)))
           case Left(fail) => fail.asErrorResponse
         }
     }

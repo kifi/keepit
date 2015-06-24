@@ -203,6 +203,7 @@ class MobileOrganizationInviteControllerTest extends Specification with ShoeboxT
           val link = (Json.parse(contentAsString(result)) \ "link").as[String]
           link must contain(s"authToken=$token")
           link must contain(Organization.publicId(org.id.get).id)
+          link must contain("http://dev.ezkeep.com:9000/m/1/")
         }
       }
 
