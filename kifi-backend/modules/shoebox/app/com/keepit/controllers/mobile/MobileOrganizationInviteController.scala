@@ -65,7 +65,7 @@ class MobileOrganizationInviteControllerImpl @Inject() (
         }
 
         implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
-        val inviteResult = orgInviteCommander.inviteUsersToOrganization(orgId, request.userId, userInfo ++ emailInfo)
+        val inviteResult = orgInviteCommander.inviteToOrganization(orgId, request.userId, userInfo ++ emailInfo)
         inviteResult.map {
           case Left(fail) => sendFailResponse(fail)
           case Right(inviteesWithAccess) =>
@@ -86,7 +86,7 @@ class MobileOrganizationInviteControllerImpl @Inject() (
         val role = (request.body \ "role").as[OrganizationRole]
 
         implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
-        orgInviteCommander.createUniversalInviteLink(orgId, request.userId, role) match {
+        orgInviteCommander.createGenericInvite(orgId, request.userId, role) match {
           case Right(invite) =>
             Ok(Json.obj("link" -> (fortyTwoConfig.applicationBaseUrl + routes.MobileOrganizationInviteController.acceptInvitation(Organization.publicId(invite.organizationId), Some(invite.authToken)).url)))
           case Left(fail) => fail.asErrorResponse
@@ -98,7 +98,7 @@ class MobileOrganizationInviteControllerImpl @Inject() (
     Organization.decodePublicId(pubId) match {
       case Success(orgId) =>
         orgInviteCommander.acceptInvitation(orgId, request.userId) match {
-          case Right(organizationMembership) => Ok(JsString("success"))
+          case Right(organizationMembership) => NoContent
           case Left(organizationFail) => organizationFail.asErrorResponse
         }
       case Failure(_) => OrganizationFail.INVALID_PUBLIC_ID.asErrorResponse
@@ -109,7 +109,7 @@ class MobileOrganizationInviteControllerImpl @Inject() (
     Organization.decodePublicId(pubId) match {
       case Success(orgId) =>
         organizationInviteCommander.declineInvitation(orgId, request.userId)
-        Ok(JsString("success"))
+        NoContent
       case _ => OrganizationFail.INVALID_PUBLIC_ID.asErrorResponse
     }
   }

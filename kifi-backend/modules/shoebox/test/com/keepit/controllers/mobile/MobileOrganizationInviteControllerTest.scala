@@ -47,7 +47,7 @@ class MobileOrganizationInviteControllerTest extends Specification with ShoeboxT
           val request = route.acceptInvitation(publicOrgId)
           val result = controller.acceptInvitation(publicOrgId)(request)
 
-          status(result) must equalTo(OK)
+          status(result) must equalTo(NO_CONTENT)
         }
       }
 
@@ -69,7 +69,7 @@ class MobileOrganizationInviteControllerTest extends Specification with ShoeboxT
           inject[FakeUserActionsHelper].setUser(invitee)
           val request = route.acceptInvitation(publicOrgId)
           val result = controller.acceptInvitation(publicOrgId)(request)
-          status(result) must equalTo(OK)
+          status(result) must equalTo(NO_CONTENT)
         }
       }
 
@@ -152,7 +152,7 @@ class MobileOrganizationInviteControllerTest extends Specification with ShoeboxT
           inject[FakeUserActionsHelper].setUser(invitee)
           val request = route.declineInvitation(publicOrgId)
           val result = controller.declineInvitation(publicOrgId)(request)
-          status(result) must equalTo(OK)
+          status(result) must equalTo(NO_CONTENT)
 
           db.readOnlyMaster { implicit session =>
             inviteRepo.getByOrgAndUserId(orgId, invitee.id.get).forall(_.state == OrganizationInviteStates.DECLINED) === true
