@@ -101,7 +101,7 @@ angular.module('kifi')
               sub.name = sub.name.toLowerCase();
             }
 
-            if (!sub.name || sub.name.contains(' ')) {
+            if (!sub.name || sub.name.indexOf(' ') > -1) {
               sub.$error = sub.$error || {};
               sub.$error.name = true;
               scope.$error.general = 'Please enter a valid Slack channel name for each subscription.';
