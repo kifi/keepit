@@ -3,9 +3,11 @@ package com.keepit.graph.manager
 import com.keepit.abook.model.{ EmailAccountInfo, IngestableContact }
 import com.keepit.common.db.{ Id, SequenceNumber, State }
 import com.keepit.common.reflection.CompanionTypeSystem
+import com.keepit.common.service.IpAddress
 import com.keepit.cortex.core.ModelVersion
 import com.keepit.cortex.models.lda.{ DenseLDA, UriSparseLDAFeatures }
 import com.keepit.model._
+import com.keepit.shoebox.model.IngestableUserIpAddress
 import com.keepit.model.view.LibraryMembershipView
 import com.keepit.social.SocialNetworkType
 import org.joda.time.DateTime
@@ -185,4 +187,15 @@ case class OrganizationMembershipGraphUpdate(orgId: Id[Organization], userId: Id
 case object OrganizationMembershipGraphUpdate extends GraphUpdateKind[OrganizationMembershipGraphUpdate] {
   val code = "organization_membership_graph_update"
   def apply(orgMem: IngestableOrganizationMembership): OrganizationMembershipGraphUpdate = OrganizationMembershipGraphUpdate(orgMem.orgId, orgMem.userId, orgMem.createdAt, orgMem.state, orgMem.seq)
+}
+
+case class UserIpAddressGraphUpdate(userId: Id[User], ipAddress: IpAddress, updatedAt: DateTime, ipSeq: SequenceNumber[IngestableUserIpAddress]) extends GraphUpdate {
+  type U = UserIpAddressGraphUpdate
+  def kind = UserIpAddressGraphUpdate
+  def seq = kind.seq(ipSeq.value)
+}
+
+case object UserIpAddressGraphUpdate extends GraphUpdateKind[UserIpAddressGraphUpdate] {
+  val code = "user_ip_addr_update"
+  def apply(userIpAddress: IngestableUserIpAddress): UserIpAddressGraphUpdate = UserIpAddressGraphUpdate(userIpAddress.userId, userIpAddress.ipAddress, userIpAddress.updatedAt, userIpAddress.seqNum)
 }

@@ -13,6 +13,7 @@ import com.keepit.social.BasicUser
 import org.joda.time.DateTime
 import com.keepit.common.json
 import play.api.libs.json._
+import com.keepit.model.OrganizationPermission._
 
 final case class MaybeOrganizationMember(member: Either[BasicUser, BasicContact], role: Option[OrganizationRole], lastInvitedAt: Option[DateTime])
 
@@ -51,7 +52,7 @@ class OrganizationMembershipCommanderImpl @Inject() (
         organizationMembershipRepo.getByOrgIdAndUserId(orgId, userId).map(_.permissions) getOrElse {
           val invites = organizationInviteRepo.getByOrgIdAndUserId(orgId, userId)
           if (invites.isEmpty) org.getNonmemberPermissions
-          else org.getNonmemberPermissions + OrganizationPermission.VIEW_ORGANIZATION
+          else org.getNonmemberPermissions + VIEW_ORGANIZATION
         }
     }
   }
@@ -108,13 +109,15 @@ class OrganizationMembershipCommanderImpl @Inject() (
     requesterOpt exists { requester =>
       request match {
         case OrganizationMembershipAddRequest(_, _, _, newRole) =>
-          targetOpt.isEmpty && (newRole <= requester.role)
+          targetOpt.isEmpty && (newRole <= requester.role) &&
+            requester.permissions.contains(INVITE_MEMBERS)
 
         case OrganizationMembershipModifyRequest(_, _, _, newRole) =>
-          targetOpt.exists(_.role < requester.role) && (newRole <= requester.role)
+          targetOpt.exists(_.role < requester.role) && requester.permissions.contains(MODIFY_MEMBERS)
 
         case OrganizationMembershipRemoveRequest(_, _, _) =>
-          targetOpt.exists(_.role < requester.role)
+          targetOpt.exists(_.role < requester.role) &&
+            requester.permissions.contains(REMOVE_MEMBERS)
       }
     }
   }

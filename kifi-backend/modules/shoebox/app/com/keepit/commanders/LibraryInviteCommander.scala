@@ -6,6 +6,7 @@ import com.keepit.abook.model.RichContact
 import com.keepit.commanders.emails.LibraryInviteEmailSender
 import com.keepit.common.core._
 import com.keepit.common.crypto.PublicIdConfiguration
+import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.logging.Logging
@@ -25,7 +26,7 @@ import scala.concurrent.{ ExecutionContext, Future }
 @ImplementedBy(classOf[LibraryInviteCommanderImpl])
 trait LibraryInviteCommander {
   // todo: For each method here, remove if no one's calling it externally, and set as private in the implementation
-  def convertPendingInvites(emailAddress: EmailAddress, userId: Id[User]): Unit
+  def convertPendingInvites(emailAddress: EmailAddress, userId: Id[User])(implicit session: RWSession): Unit
   def declineLibrary(userId: Id[User], libraryId: Id[Library])
   def notifyInviterOnLibraryInvitationAcceptance(invitesToAlert: Seq[LibraryInvite], invitee: User, lib: Library, owner: BasicUser): Unit
   def inviteAnonymousToLibrary(libraryId: Id[Library], inviterId: Id[User], access: LibraryAccess, message: Option[String])(implicit context: HeimdalContext): Either[LibraryFail, (LibraryInvite, Library)]
@@ -53,17 +54,16 @@ class LibraryInviteCommanderImpl @Inject() (
     abookClient: ABookServiceClient,
     libraryAnalytics: LibraryAnalytics,
     libraryInviteSender: Provider[LibraryInviteEmailSender],
+    libPathCommander: LibraryPathCommander,
     heimdal: HeimdalServiceClient,
     libraryImageCommander: LibraryImageCommander,
     kifiInstallationCommander: KifiInstallationCommander,
     implicit val defaultContext: ExecutionContext,
     implicit val publicIdConfig: PublicIdConfiguration) extends LibraryInviteCommander with Logging {
 
-  def convertPendingInvites(emailAddress: EmailAddress, userId: Id[User]): Unit = {
-    db.readWrite { implicit s =>
-      libraryInviteRepo.getByEmailAddress(emailAddress, Set.empty) foreach { libInv =>
-        libraryInviteRepo.save(libInv.copy(userId = Some(userId)))
-      }
+  def convertPendingInvites(emailAddress: EmailAddress, userId: Id[User])(implicit session: RWSession): Unit = {
+    libraryInviteRepo.getByEmailAddress(emailAddress, Set.empty) foreach { libInv =>
+      libraryInviteRepo.save(libInv.copy(userId = Some(userId)))
     }
   }
 
@@ -292,7 +292,7 @@ class LibraryInviteCommanderImpl @Inject() (
 
   def notifyInviteeAboutInvitationToJoinLibrary(inviter: User, lib: Library, libOwner: BasicUser, inviteeMap: Map[Id[User], LibraryInviteeUser]): Unit = {
     val userImage = s3ImageStore.avatarUrlByUser(inviter)
-    val libLink = s"""https://www.kifi.com${Library.formatLibraryPath(libOwner.username, lib.slug)}"""
+    val libLink = s"""https://www.kifi.com${libPathCommander.getPath(lib)}"""
     val libImageOpt = libraryImageCommander.getBestImageForLibrary(lib.id.get, ProcessedImageSize.Medium.idealSize)
 
     if (inviter.id.get != lib.ownerId) {

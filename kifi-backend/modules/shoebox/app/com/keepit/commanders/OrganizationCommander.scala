@@ -88,11 +88,11 @@ class OrganizationCommanderImpl @Inject() (
   private def applyNewBasePermissionsToMembers(memberships: Seq[OrganizationMembership], oldBasePermissions: BasePermissions, newBasePermissions: BasePermissions)(implicit session: RWSession): Unit = {
     val membershipsByRole = memberships.groupBy(_.role)
     for ((role, memberships) <- membershipsByRole) {
-      val addedPermissions = newBasePermissions.forRole(role) diff oldBasePermissions.forRole(role)
-      val removedPermissions = oldBasePermissions.forRole(role) diff newBasePermissions.forRole(role)
+      val addedPermissions = newBasePermissions.forRole(role) -- oldBasePermissions.forRole(role)
+      val removedPermissions = oldBasePermissions.forRole(role) -- newBasePermissions.forRole(role)
       memberships.foreach { membership =>
         // TODO: is there a simpler way of expressing this?
-        val myPermissions = membership.permissions.diff(removedPermissions).union(addedPermissions)
+        val myPermissions = (membership.permissions -- removedPermissions) ++ addedPermissions
         orgMembershipRepo.save(membership.withPermissions(myPermissions))
       }
     }

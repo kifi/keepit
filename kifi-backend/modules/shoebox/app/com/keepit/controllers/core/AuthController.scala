@@ -291,7 +291,7 @@ class AuthController @Inject() (
             }
         } getOrElse {
           val pInfo = hasher.hash(new String(info.password))
-          val (newIdentity, userId) = authCommander.saveUserPasswordIdentity(None, getSecureSocialUserFromRequest, info.email, pInfo, isComplete = false) // todo(ray): remove getSecureSocialUserFromRequest
+          val (_, userId) = authCommander.saveUserPasswordIdentity(None, getSecureSocialUserFromRequest, info.email, pInfo, isComplete = false) // todo(ray): remove getSecureSocialUserFromRequest
           val user = db.readOnlyMaster { implicit s => userRepo.get(userId) }
           authHelper.handleEmailPassFinalizeInfo(UserPassFinalizeInfo.toEmailPassFinalizeInfo(info), info.libraryPublicId, info.libAuthToken)(UserRequest(request, user.id.get, None, userActionsHelper))
         }

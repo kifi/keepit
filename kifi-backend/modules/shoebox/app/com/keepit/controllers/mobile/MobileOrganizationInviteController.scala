@@ -1,6 +1,6 @@
 package com.keepit.controllers.mobile
 
-import com.google.inject.{ ImplementedBy, Inject, Singleton }
+import com.google.inject.{ Inject, Singleton }
 import com.keepit.commanders._
 import com.keepit.common.controller._
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
@@ -9,6 +9,7 @@ import com.keepit.common.mail.EmailAddress
 import com.keepit.heimdal.HeimdalContextBuilderFactory
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
+import com.keepit.shoebox.controllers.OrganizationAccessActions
 import play.api.libs.json._
 
 import scala.concurrent.{ ExecutionContext, Future }
@@ -17,14 +18,15 @@ import scala.util.{ Failure, Success }
 @Singleton
 class MobileOrganizationInviteController @Inject() (
     userCommander: UserCommander,
-    orgCommander: OrganizationCommander,
-    orgMembershipCommander: OrganizationMembershipCommander,
+    val orgCommander: OrganizationCommander,
+    val orgMembershipCommander: OrganizationMembershipCommander,
+    organizationInviteCommander: OrganizationInviteCommander,
     orgInviteCommander: OrganizationInviteCommander,
     fortyTwoConfig: FortyTwoConfig,
     heimdalContextBuilder: HeimdalContextBuilderFactory,
     val userActionsHelper: UserActionsHelper,
-    implicit val config: PublicIdConfiguration,
-    implicit val executionContext: ExecutionContext) extends UserActions with ShoeboxServiceController {
+    implicit val publicIdConfig: PublicIdConfiguration,
+    implicit val executionContext: ExecutionContext) extends UserActions with OrganizationAccessActions with ShoeboxServiceController {
 
   private def sendFailResponse(fail: OrganizationFail) = Status(fail.status)(Json.obj("error" -> fail.message))
 
@@ -32,7 +34,6 @@ class MobileOrganizationInviteController @Inject() (
   // : Future[Either[OrganizationFail, Seq[(Either[BasicUser, RichContact], OrganizationRole)]]]
   def inviteUsers(pubId: PublicId[Organization]) = UserAction.async(parse.tolerantJson) { request =>
     Organization.decodePublicId(pubId) match {
-      case Failure(ex) => Future.successful(BadRequest(Json.obj("error" -> "invalid_id")))
       case Success(orgId) =>
         val invites = (request.body \ "invites").as[JsArray].value
         val msg = (request.body \ "message").asOpt[String].filter(_.nonEmpty)
@@ -54,7 +55,7 @@ class MobileOrganizationInviteController @Inject() (
         }
 
         implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
-        val inviteResult = orgInviteCommander.inviteUsersToOrganization(orgId, request.userId, userInfo ++ emailInfo)
+        val inviteResult = orgInviteCommander.inviteToOrganization(orgId, request.userId, userInfo ++ emailInfo)
         inviteResult.map {
           case Left(fail) => sendFailResponse(fail)
           case Right(inviteesWithAccess) =>
@@ -64,42 +65,43 @@ class MobileOrganizationInviteController @Inject() (
             }
             Ok(Json.toJson(result))
         }
+      case Failure(ex) => Future.successful(OrganizationFail.INVALID_PUBLIC_ID.asErrorResponse)
     }
   }
 
   def createAnonymousInviteToOrganization(pubId: PublicId[Organization]) = UserAction(parse.tolerantJson) { request =>
     Organization.decodePublicId(pubId) match {
       case Failure(ex) =>
-        BadRequest(Json.obj("error" -> "invalid_organization_id"))
+        OrganizationFail.INVALID_PUBLIC_ID.asErrorResponse
       case Success(orgId) =>
         val role = (request.body \ "role").as[OrganizationRole]
-        val msg = (request.body \ "message").asOpt[String].filter(_.nonEmpty)
 
         implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
-        orgInviteCommander.universalInviteLink(orgId, request.userId, role, msg) match {
-          case Left(fail) => sendFailResponse(fail)
-          case Right((invite, org)) =>
-            // TODO: should we be using the organization handle here?
-            val organizationPath = s"${fortyTwoConfig.applicationBaseUrl}/${org.handle.get.original}"
-            val link = organizationPath + "?authToken=" + invite.authToken
-            val shortMsg = s"You've been invited to an organization on Kifi: $link"
-            Ok(Json.obj(
-              "link" -> link,
-              "role" -> invite.role,
-              "sms" -> shortMsg,
-              "email" -> Json.obj(
-                "subject" -> s"You've been invited to a team on Kifi: ${org.name}",
-                "body" -> s"Join us at: $link"
-              ),
-              "facebook" -> shortMsg,
-              "twitter" -> shortMsg,
-              "message" -> "" // Ignore!
-            ))
+        orgInviteCommander.createGenericInvite(orgId, request.userId, role) match {
+          case Right(invite) =>
+            Ok(Json.obj("link" -> (fortyTwoConfig.applicationBaseUrl + routes.MobileOrganizationInviteController.acceptInvitation(Organization.publicId(invite.organizationId), invite.authToken).url)))
+          case Left(fail) => fail.asErrorResponse
         }
     }
   }
 
-  def acceptInvitation(pubId: PublicId[Organization]) = ???
-  def declineInvitation(pubId: PublicId[Organization]) = ???
+  def acceptInvitation(pubId: PublicId[Organization], authToken: String) = UserAction { request =>
+    Organization.decodePublicId(pubId) match {
+      case Success(orgId) =>
+        orgInviteCommander.acceptInvitation(orgId, request.userId, authToken) match {
+          case Right(organizationMembership) => NoContent
+          case Left(organizationFail) => organizationFail.asErrorResponse
+        }
+      case Failure(_) => OrganizationFail.INVALID_PUBLIC_ID.asErrorResponse
+    }
+  }
 
+  def declineInvitation(pubId: PublicId[Organization]) = UserAction { request =>
+    Organization.decodePublicId(pubId) match {
+      case Success(orgId) =>
+        organizationInviteCommander.declineInvitation(orgId, request.userId)
+        NoContent
+      case _ => OrganizationFail.INVALID_PUBLIC_ID.asErrorResponse
+    }
+  }
 }

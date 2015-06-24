@@ -1,5 +1,7 @@
 package com.keepit.commanders
 
+import com.keepit.model.Handle
+
 object HandleOps {
   import scala.collection.immutable.HashSet
   // Words that cannot appear anywhere in a handle
@@ -28,6 +30,8 @@ object HandleOps {
   def normalize(handle: String): String = {
     removePunctuation(engrishify(handle.toLowerCase))
   }
+
+  def normalizeHandle(handle: Handle): Handle = Handle(HandleOps.normalize(handle.value))
 
   // any letter or digit, followed by any letter, digit, ., _, or - (1 to 30 times)
   private val handleRegex = """([\p{L}\d][\p{L}\d\.\_\-]?){2,30}[\p{L}\d]""".r.pattern

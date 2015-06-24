@@ -36,6 +36,7 @@ import com.keepit.common.usersegment.UserSegmentKey
 import com.keepit.common.json.TupleFormat
 import com.keepit.common.core._
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
+import com.keepit.shoebox.model.IngestableUserIpAddress
 
 trait ShoeboxServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SHOEBOX
@@ -123,6 +124,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getLibraryURIs(libId: Id[Library]): Future[Seq[Id[NormalizedURI]]]
   def getIngestableOrganizations(seqNum: SequenceNumber[Organization], fetchSize: Int): Future[Seq[IngestableOrganization]]
   def getIngestableOrganizationMemberships(seqNum: SequenceNumber[OrganizationMembership], fetchSize: Int): Future[Seq[IngestableOrganizationMembership]]
+  def getIngestableUserIpAddresses(seqNum: SequenceNumber[IngestableUserIpAddress], fetchSize: Int): Future[Seq[IngestableUserIpAddress]]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -777,5 +779,9 @@ class ShoeboxServiceClientImpl @Inject() (
 
   def getIngestableOrganizationMemberships(seqNum: SequenceNumber[OrganizationMembership], fetchSize: Int): Future[Seq[IngestableOrganizationMembership]] = {
     call(Shoebox.internal.getIngestableOrganizationMemberships(seqNum, fetchSize)).map { _.json.as[Seq[IngestableOrganizationMembership]] }
+  }
+
+  def getIngestableUserIpAddresses(seqNum: SequenceNumber[IngestableUserIpAddress], fetchSize: Int): Future[Seq[IngestableUserIpAddress]] = {
+    call(Shoebox.internal.getIngestableUserIpAddresses(seqNum, fetchSize)).map { _.json.as[Seq[IngestableUserIpAddress]] }
   }
 }

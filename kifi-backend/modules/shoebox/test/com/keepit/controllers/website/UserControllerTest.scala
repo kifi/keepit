@@ -62,11 +62,9 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
               "emails":[],
               "notAuthed":[],
               "experiments":["admin", "libraries"],
-              "uniqueKeepsClicked":0,
-              "totalKeepsClicked":0,
-              "clickCount":0,
-              "rekeepCount":0,
-              "rekeepTotalCount":0
+              "numLibraries":0,
+              "numConnections":0,
+              "numFollowers":0
             }
           """)
 
@@ -168,7 +166,7 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
           "auto_show_guide" -> JsNull,
           "auto_show_persona" -> JsNull,
           "show_delighted_question" -> false,
-          "site_notify_libraries_in_search" -> JsNull,
+          "use_minimal_keep_card" -> JsNull,
           "has_no_password" -> JsNull)
       }
     }

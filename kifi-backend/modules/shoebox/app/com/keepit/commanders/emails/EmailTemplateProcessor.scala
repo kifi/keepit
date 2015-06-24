@@ -1,7 +1,7 @@
 package com.keepit.commanders.emails
 
 import com.google.inject.{ Provider, ImplementedBy, Inject }
-import com.keepit.commanders.UserCommander
+import com.keepit.commanders.{ LibraryPathCommander, UserCommander }
 import com.keepit.commanders.emails.tips.EmailTipProvider
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.{ LargeString, Id }
@@ -63,6 +63,7 @@ class EmailTemplateProcessorImpl @Inject() (
     libraryRepo: LibraryRepo,
     userRepo: UserRepo,
     userCommander: Provider[UserCommander],
+    libPathCommander: LibraryPathCommander,
     emailAddressRepo: UserEmailAddressRepo,
     config: FortyTwoConfig,
     htmlDecorator: EmailTemplateHtmlDecorator,
@@ -188,8 +189,7 @@ class EmailTemplateProcessorImpl @Inject() (
         case tags.avatarUrl => toHttpsUrl(input.imageUrls(userId))
         case tags.profileUrl => config.applicationBaseUrl + "/" + basicUser.username.value
         case tags.libraryUrl =>
-          val libOwner = input.users(library.ownerId)
-          config.applicationBaseUrl + Library.formatLibraryPath(libOwner.username, library.slug)
+          config.applicationBaseUrl + libPathCommander.getPath(library)
         case tags.libraryName => library.name
         case tags.libraryOwnerFullName =>
           val libOwner = input.users(library.ownerId)

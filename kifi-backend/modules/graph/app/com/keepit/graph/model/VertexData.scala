@@ -1,5 +1,7 @@
 package com.keepit.graph.model
 
+import com.keepit.graph.model.OrganizationReader.IpAddressReader
+
 sealed trait VertexData[V <: VertexDataReader] { self: V =>
   def asReader: V = self
 }
@@ -15,3 +17,4 @@ case class EmailAccountData(id: VertexDataId[EmailAccountReader]) extends EmailA
 case class AddressBookData(id: VertexDataId[AddressBookReader]) extends AddressBookReader with VertexData[AddressBookReader]
 case class LibraryData(id: VertexDataId[LibraryReader]) extends LibraryReader with VertexData[LibraryReader]
 case class OrganizationData(id: VertexDataId[OrganizationReader]) extends OrganizationReader with VertexData[OrganizationReader]
+case class IpAddressData(id: VertexDataId[IpAddressReader]) extends IpAddressReader with VertexData[IpAddressReader]

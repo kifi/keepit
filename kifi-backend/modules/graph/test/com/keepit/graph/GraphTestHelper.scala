@@ -9,7 +9,8 @@ import com.keepit.model._
 import org.joda.time.DateTime
 
 trait GraphTestHelper {
-  val t1 = new DateTime(2015, 6, 23, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
+
+  val t1 = new DateTime(2015, 6, 23, 10, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
 
   val u42: Id[User] = Id[User](42)
   val u43: Id[User] = Id[User](43)
@@ -38,6 +39,8 @@ trait GraphTestHelper {
 
   val orgId1: Id[Organization] = Id[Organization](1)
 
+  val ipAddress1: IpAddress = IpAddress("108.60.110.146")
+
   val userUpdate = UserGraphUpdate(UserFactory.user().withId(u42).withName("Tan", "Lin").withUsername("test").withSeq(1).get)
 
   val keepGraphUpdate1 = KeepGraphUpdate(Keep(id = Some(keepid1), uriId = uriid1, urlId = urlid1, url = "url1", userId = u43,
@@ -64,9 +67,14 @@ trait GraphTestHelper {
   val libMemUpdate4 = LibraryMembershipGraphUpdate(Id[User](2), Id[Library](1), LibraryMembershipStates.ACTIVE, SequenceNumber(4))
   val libMemUpdates = List(libMemUpdate1, libMemUpdate2, libMemUpdate3, libMemUpdate4)
 
+  val userIpAddressUpdate1 = UserIpAddressGraphUpdate(userid1, ipAddress1, t1, SequenceNumber(1))
+  val userIpAddressUpdate2 = UserIpAddressGraphUpdate(userid2, ipAddress1, t1, SequenceNumber(2))
+  val userIpAddressUpdates = List(userIpAddressUpdate1, userIpAddressUpdate2)
+
   val orgMemUpdate1 = OrganizationMembershipGraphUpdate(orgId1, userid1, t1, OrganizationMembershipStates.ACTIVE, SequenceNumber(1))
   val orgMemUpdate2 = OrganizationMembershipGraphUpdate(orgId1, userid2, t1, OrganizationMembershipStates.ACTIVE, SequenceNumber(2))
   val orgMemUpdates = List(orgMemUpdate1, orgMemUpdate2)
 
-  val allUpdates: List[GraphUpdate] = List(userUpdate) ++ keepUpdates ++ userConnUpdates ++ libMemUpdates ++ orgMemUpdates
+  val allUpdates: List[GraphUpdate] = List(userUpdate) ++ keepUpdates ++ userConnUpdates ++ libMemUpdates ++ userIpAddressUpdates ++ orgMemUpdates
+
 }

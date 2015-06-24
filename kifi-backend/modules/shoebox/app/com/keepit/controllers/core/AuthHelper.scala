@@ -60,6 +60,7 @@ class AuthHelper @Inject() (
     authCommander: AuthCommander,
     userRepo: UserRepo,
     libraryRepo: LibraryRepo,
+    libraryInviteRepo: LibraryInviteRepo,
     userCredRepo: UserCredRepo,
     socialRepo: SocialUserInfoRepo,
     emailAddressRepo: UserEmailAddressRepo,
@@ -70,7 +71,9 @@ class AuthHelper @Inject() (
     postOffice: LocalPostOffice,
     inviteCommander: InviteCommander,
     libraryCommander: LibraryCommander,
+    libPathCommander: LibraryPathCommander,
     libraryInviteCommander: LibraryInviteCommander,
+    userEmailAddressCommander: UserEmailAddressCommander,
     userCommander: UserCommander,
     twitterWaitlistCommander: TwitterWaitlistCommander,
     heimdalContextBuilder: HeimdalContextBuilderFactory,
@@ -248,14 +251,10 @@ class AuthHelper @Inject() (
 
     val uri = intent match {
       case AutoFollowLibrary(libId, authTokenOpt) =>
-        libraryInviteCommander.convertPendingInvites(emailAddress, user.id.get)
         authCommander.autoJoinLib(user.id.get, libId, authTokenOpt)
         val url = Library.decodePublicId(libId).map { libraryId =>
-          db.readOnlyMaster { implicit session =>
-            val library = libraryRepo.get(libraryId)
-            val owner = userRepo.get(library.ownerId)
-            Library.formatLibraryPath(owner.username, library.slug)
-          }
+          val library = db.readOnlyMaster { implicit session => libraryRepo.get(libraryId) }
+          libPathCommander.getPath(library)
         }.getOrElse("/")
         url
       case JoinTwitterWaitlist =>
@@ -376,7 +375,27 @@ class AuthHelper @Inject() (
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build
     authCommander.finalizeEmailPassAccount(efi, request.userId, request.user.externalId, request.identityOpt, inviteExtIdOpt).map {
       case (user, email, newIdentity) =>
-        finishSignup(user, email, newIdentity, emailConfirmedAlready = false, libraryPublicId = libraryPublicId, libAuthToken = libAuthToken, isFinalizedImmediately = false)
+        val verifiedEmail = verifySignupEmail(email, libraryPublicId, libAuthToken).nonEmpty
+        finishSignup(user, email, newIdentity, emailConfirmedAlready = verifiedEmail, libraryPublicId = libraryPublicId, libAuthToken = libAuthToken, isFinalizedImmediately = false)
+    }
+  }
+
+  private def verifySignupEmail(email: EmailAddress, libraryPublicId: Option[PublicId[Library]], libAuthToken: Option[String]): Option[UserEmailAddress] = {
+    libAuthToken.flatMap { authToken =>
+      libraryPublicId.flatMap { publicLibId =>
+        Library.decodePublicId(publicLibId) match {
+          case Success(libId) =>
+            db.readWrite { implicit session =>
+              if (libraryInviteRepo.getByLibraryIdAndAuthToken(libId, authToken).exists(_.emailAddress.contains(email))) {
+                // we found an invite with lib / email / authToken, this email is verified.
+                emailAddressRepo.getByAddressOpt(email).map(userEmailAddressCommander.saveAsVerified(_))
+              } else {
+                None
+              }
+            }
+          case Failure(_) => None
+        }
+      }
     }
   }
 

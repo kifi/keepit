@@ -59,6 +59,7 @@ class UserController @Inject() (
     airbrakeNotifier: AirbrakeNotifier,
     abookUploadConf: ABookUploadConf,
     emailSender: EmailSenderProvider,
+    userProfileCommander: UserProfileCommander,
     fortytwoConfig: FortyTwoConfig) extends UserActions with ShoeboxServiceController {
 
   def friends(page: Int, pageSize: Int) = UserAction { request =>
@@ -168,7 +169,7 @@ class UserController @Inject() (
     }
   }
 
-  def currentUser = UserAction.async { implicit request =>
+  def currentUser = UserAction { implicit request =>
     getUserInfo(request.userId)
   }
 
@@ -281,16 +282,16 @@ class UserController @Inject() (
 
   //private val emailRegex = """^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$""".r
   @deprecated(message = "use addEmail/modifyEmail/removeEmail", since = "2014-08-20")
-  def updateCurrentUser() = UserAction.async(parse.tolerantJson) { implicit request =>
+  def updateCurrentUser() = UserAction(parse.tolerantJson) { implicit request =>
     request.body.validate[UpdatableUserInfo] match {
       case JsSuccess(userData, _) => {
         userCommander.updateUserInfo(request.userId, userData)
         getUserInfo(request.userId)
       }
       case JsError(errors) if errors.exists { case (path, _) => path == __ \ "emails" } =>
-        Future.successful(BadRequest(Json.obj("error" -> "bad email addresses")))
+        BadRequest(Json.obj("error" -> "bad email addresses"))
       case _ =>
-        Future.successful(BadRequest(Json.obj("error" -> "could not parse user info from body")))
+        BadRequest(Json.obj("error" -> "could not parse user info from body"))
     }
   }
 
@@ -298,21 +299,20 @@ class UserController @Inject() (
     val user = db.readOnlyMaster { implicit session =>
       userRepo.get(userId)
     }
+
     val experiments = userExperimentCommander.getExperimentsByUser(userId)
     val pimpedUser = userCommander.getUserInfo(user)
-    val json = toJson(pimpedUser.basicUser).as[JsObject] ++
+
+    val json = Json.toJson(pimpedUser.basicUser).as[JsObject] ++
       toJson(pimpedUser.info).as[JsObject] ++
-      Json.obj("notAuthed" -> pimpedUser.notAuthed).as[JsObject] ++
-      Json.obj("experiments" -> experiments.map(_.value))
-    userCommander.getKeepAttributionInfo(userId) map { info =>
-      Ok(json ++ Json.obj(
-        "uniqueKeepsClicked" -> info.uniqueKeepsClicked,
-        "totalKeepsClicked" -> info.totalClicks,
-        "clickCount" -> info.clickCount,
-        "rekeepCount" -> info.rekeepCount,
-        "rekeepTotalCount" -> info.rekeepTotalCount
-      ))
-    }
+      Json.obj(
+        "notAuthed" -> pimpedUser.notAuthed,
+        "numLibraries" -> pimpedUser.numLibraries,
+        "numConnections" -> pimpedUser.numConnections,
+        "numFollowers" -> pimpedUser.numFollowers,
+        "experiments" -> experiments.map(_.value)
+      )
+    Ok(json)
   }
 
   private val SitePrefNames = {
@@ -321,14 +321,15 @@ class UserController @Inject() (
       AUTO_SHOW_GUIDE,
       AUTO_SHOW_PERSONA,
       SHOW_DELIGHTED_QUESTION,
-      SITE_NOTIFY_LIBRARIES_IN_SEARCH,
-      HAS_NO_PASSWORD)
+      HAS_NO_PASSWORD,
+      USE_MINIMAL_KEEP_CARD
+    )
   }
 
   def getPrefs() = UserAction.async { request =>
     // The prefs endpoint is used as an indicator that the user is active
     userCommander.setLastUserActive(request.userId)
-    userCommander.getPrefs(SitePrefNames, request.userId, request.experiments) map (Ok(_))
+    userCommander.getPrefs(SitePrefNames, request.userId, request.experiments).map(Ok(_))
   }
 
   def savePrefs() = UserAction(parse.tolerantJson) { request =>
@@ -494,85 +495,6 @@ class UserController @Inject() (
     userCommander.cancelDelightedSurvey(request.userId) map { success =>
       if (success) Ok else BadRequest
     }
-  }
-
-  // todo(Andrew): Remove when ng is out
-  def checkIfImporting(network: String, callback: String) = UserAction { implicit request =>
-    val startTime = clock.now
-    val importHasHappened = new AtomicBoolean(false)
-    val finishedImportAnnounced = new AtomicBoolean(false)
-    def check(): Option[JsValue] = {
-      val v = db.readOnlyMaster { implicit session =>
-        userValueRepo.getValueStringOpt(request.userId, UserValueName.importInProgress(network))
-      }
-      if (v.isEmpty && clock.now.minusSeconds(20).compareTo(startTime) > 0) {
-        None
-      } else if (clock.now.minusMinutes(2).compareTo(startTime) > 0) {
-        None
-      } else if (v.isDefined) {
-        if (v.get == "false") {
-          if (finishedImportAnnounced.get) None
-          else if (importHasHappened.get) {
-            finishedImportAnnounced.set(true)
-            Some(JsString("finished"))
-          } else Some(JsBoolean(v.get.toBoolean))
-        } else {
-          importHasHappened.set(true)
-          Some(JsString(v.get))
-        }
-      } else {
-        Some(JsBoolean(false))
-      }
-    }
-    def poller(): Future[Option[JsValue]] = PlayPromise.timeout(check, 2 seconds)
-    def script(msg: JsValue) = Html(s"<script>$callback(${msg.toString});</script>")
-
-    db.readOnlyMaster { implicit session =>
-      socialUserRepo.getByUser(request.userId).find(_.networkType.name == network)
-    } match {
-      case Some(sui) =>
-        val firstResponse = Enumerator.enumerate(check().map(script).toSeq)
-        val returnEnumerator = Enumerator.generateM(poller)
-        Status(200).chunked(firstResponse andThen returnEnumerator &> Comet(callback = callback) andThen Enumerator(script(JsString("end"))) andThen Enumerator.eof)
-      case None =>
-        Ok(script(JsString("network_not_connected")))
-    }
-  }
-
-  // todo(Andrew): Remove when ng is out
-  // status update -- see ScalaComet & Andrew's gist -- https://gist.github.com/andrewconner/f6333839c77b7a1cf2da
-  def getABookUploadStatus(id: Id[ABookInfo], callbackOpt: Option[String]) = UserAction { request =>
-    import com.keepit.model.ABookInfoStates._
-    val ts = System.currentTimeMillis
-    val callback = callbackOpt.getOrElse("parent.updateABookProgress")
-    val done = new AtomicBoolean(false)
-    def timeoutF = play.api.libs.concurrent.Promise.timeout(None, 500)
-    def reqF = abookServiceClient.getABookInfo(request.userId, id) map { abookInfoOpt =>
-      log.info(s"[getABookUploadStatus($id)] ... ${abookInfoOpt.map(_.state)}")
-      if (done.get) None
-      else {
-        val (state, numContacts, numProcessed) = abookInfoOpt match {
-          case None => ("notAvail", -1, -1)
-          case Some(abookInfo) =>
-            val resp = (abookInfo.state, abookInfo.numContacts.getOrElse(-1), abookInfo.numProcessed.getOrElse(-1))
-            abookInfo.state match {
-              case ACTIVE => { done.set(true); resp }
-              case UPLOAD_FAILURE => { done.set(true); resp }
-              case PENDING => resp
-            }
-        }
-        if ((System.currentTimeMillis - ts) > abookUploadConf.timeoutThreshold * 1000) {
-          done.set(true)
-          Some(s"<script>$callback($id,'timeout',${numContacts},${numProcessed})</script>")
-        } else Some(s"<script>$callback($id,'${state}',${numContacts},${numProcessed})</script>")
-      }
-    }
-    val returnEnumerator = Enumerator.generateM {
-      Future.sequence(Seq(timeoutF, reqF)).map { res =>
-        res.collect { case Some(s: String) => s }.headOption
-      }
-    }
-    Status(200).chunked(returnEnumerator.andThen(Enumerator.eof))
   }
 
   def getSettings() = UserAction { request =>

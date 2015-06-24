@@ -1,0 +1,5 @@
+---
+dependencies:
+- role: kifi.common
+  service: eliza
+  setup_nginx: yes

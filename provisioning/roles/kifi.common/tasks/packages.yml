@@ -1,0 +1,24 @@
+---
+
+- name: install packages
+  apt:
+    name: "{{ item }}"
+    update_cache: true
+    cache_valid_time: 300
+  with_items:
+    - python-software-properties
+    - wget
+    - tmux
+    - tshark
+    - screen
+    - rsync
+    - mosh
+    - htop
+    - gzip
+    - curl
+    - zip
+    - fail2ban
+    - ntp
+    - python-setuptools
+    - python-pip
+    - imagemagick

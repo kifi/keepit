@@ -33,6 +33,7 @@ class ShoeboxDataPipeController @Inject() (
     libraryMembershipRepo: LibraryMembershipRepo,
     organizationRepo: OrganizationRepo,
     organizationMembershipRepo: OrganizationMembershipRepo,
+    userIpAddressRepo: UserIpAddressRepo,
     executor: DataPipelineExecutor) extends ShoeboxServiceController with Logging {
 
   implicit val context = executor.context
@@ -238,7 +239,7 @@ class ShoeboxDataPipeController @Inject() (
       Ok(Json.toJson(ids))
     }
   }
-
+  
   def getIngestableOrganizations(seqNum: SequenceNumber[Organization], fetchSize: Int) = Action.async { request =>
     SafeFuture {
       val orgs = db.readOnlyReplica { implicit s => organizationRepo.getBySequenceNumber(seqNum, fetchSize) } map {
@@ -254,6 +255,15 @@ class ShoeboxDataPipeController @Inject() (
         _.toIngestableOrganizationMembership
       }
       Ok(Json.toJson(orgMems))
+    }
+  }
+
+  def getIngestableUserIpAddresses(seqNum: SequenceNumber[UserIpAddress], fetchSize: Int) = Action.async { request =>
+    SafeFuture {
+      val ipAddresses = db.readOnlyReplica { implicit s => userIpAddressRepo.getBySequenceNumber(seqNum, fetchSize) }.map {
+        _.toIngestableUserIpAddress
+      }
+      Ok(Json.toJson(ipAddresses))
     }
   }
 }
