@@ -42,6 +42,7 @@ class LibraryController @Inject() (
   basicUserRepo: BasicUserRepo,
   librarySubscriptionRepo: LibrarySubscriptionRepo,
   librarySubscriptionCommander: LibrarySubscriptionCommander,
+  libPathCommander: LibraryPathCommander,
   keepsCommander: KeepsCommander,
   keepDecorator: KeepDecorator,
   userCommander: UserCommander,
@@ -56,7 +57,7 @@ class LibraryController @Inject() (
   val userActionsHelper: UserActionsHelper,
   val publicIdConfig: PublicIdConfiguration,
   implicit val config: PublicIdConfiguration)
-    extends UserActions with LibraryAccessActions with ShoeboxServiceController with Logging {
+    extends UserActions with LibraryAccessActions with ShoeboxServiceController with LibraryPathHelper with Logging {
 
   private def getSuggestedSearchesAsJson(libId: Id[Library]): JsValue = {
     def similar(s1: String, s2: String): Boolean = {
@@ -147,12 +148,13 @@ class LibraryController @Inject() (
   def getLibrarySummaryById(pubId: PublicId[Library]) = (MaybeUserAction andThen LibraryViewAction(pubId)) { request =>
     val id = Library.decodePublicId(pubId).get
     val viewerOpt = request.userOpt
-    val info = db.readOnlyReplica { implicit session =>
+    val (lib, info) = db.readOnlyReplica { implicit session =>
       val lib = libraryRepo.get(id)
       val owners = Map(lib.ownerId -> basicUserRepo.load(lib.ownerId))
-      libraryCommander.createLibraryCardInfos(Seq(lib), owners, viewerOpt, withFollowing = false, idealSize = ProcessedImageSize.Medium.idealSize).seq.head
+      val info = libraryCommander.createLibraryCardInfos(Seq(lib), owners, viewerOpt, withFollowing = false, idealSize = ProcessedImageSize.Medium.idealSize).seq.head
+      (lib, info)
     }
-    val path = Library.formatLibraryPathUrlEncoded(info.owner.username, info.slug)
+    val path = libPathCommander.getPathUrlEncoded(lib)
     Ok(Json.obj("library" -> (Json.toJson(info).as[JsObject] + ("url" -> JsString(path))))) // TODO: stop adding "url" once web app stops using it
   }
 
@@ -203,7 +205,7 @@ class LibraryController @Inject() (
     }
     val objs = libInfos.map {
       case (info: LibraryCardInfo, mem: MiniLibraryMembership, subs: Seq[LibrarySubscriptionKey]) =>
-        val path = Library.formatLibraryPathUrlEncoded(info.owner.username, info.slug)
+        val path = formatLibraryPathUrlEncoded(info.owner.username, info.slug)
         val obj = Json.toJson(info).as[JsObject] + ("url" -> JsString(path)) + ("subscriptions" -> Json.toJson(subs)) // TODO: stop adding "url" when web app uses "slug" instead
         if (mem.lastViewed.nonEmpty) {
           obj ++ Json.obj("lastViewed" -> mem.lastViewed)

@@ -6,6 +6,8 @@ import com.keepit.common.mail.EmailAddress
 import com.keepit.common.store.ImagePath
 import com.kifi.macros.json
 import play.api.http.Status._
+import play.api.libs.json.Json
+import play.api.mvc.Results.Status
 
 @json case class OrganizationImageInfo(path: ImagePath)
 
@@ -55,16 +57,47 @@ case class OrganizationMembershipAddResponse(request: OrganizationMembershipAddR
 case class OrganizationMembershipModifyResponse(request: OrganizationMembershipModifyRequest, membership: OrganizationMembership)
 case class OrganizationMembershipRemoveResponse(request: OrganizationMembershipRemoveRequest)
 
-sealed abstract class OrganizationFail(val status: Int, val message: String)
+sealed abstract class OrganizationRequest
+
+case class OrganizationCreateRequest(
+  userId: Id[User],
+  orgName: String) extends OrganizationRequest
+case class OrganizationCreateResponse(request: OrganizationCreateRequest, newOrg: Organization)
+
+case class OrganizationModifyRequest(
+  orgId: Id[Organization],
+  requesterId: Id[User],
+  modifications: OrganizationModifications) extends OrganizationRequest
+case class OrganizationModifyResponse(request: OrganizationModifyRequest, modifiedOrg: Organization)
+
+case class OrganizationDeleteRequest(
+  orgId: Id[Organization],
+  requesterId: Id[User]) extends OrganizationRequest
+case class OrganizationDeleteResponse(request: OrganizationDeleteRequest, deactivatedOrg: Organization)
+
+case class OrganizationModifications(
+  newName: Option[String] = None,
+  newBasePermissions: Option[BasePermissions] = None)
+
+sealed abstract class OrganizationFail(val status: Int, val message: String) {
+  def asErrorResponse = Status(status)(Json.obj("error" -> message))
+}
+
+//TODO: when modifying these, make sure we do not break existing Mobile Controllers that are calling .asErrorResponse. Preferably don't modify, just add as needed.
 object OrganizationFail {
-  case object INSUFFICIENT_PERMISSIONS extends OrganizationFail(FORBIDDEN, "insufficient_permissions")
+  case object INSUFFICIENT_PERMISSIONS extends OrganizationFail(UNAUTHORIZED, "insufficient_permissions")
+  case object HANDLE_UNAVAILABLE extends OrganizationFail(FORBIDDEN, "handle_unavailable")
   case object NOT_A_MEMBER extends OrganizationFail(UNAUTHORIZED, "not_a_member")
   case object NO_VALID_INVITATIONS extends OrganizationFail(FORBIDDEN, "no_valid_invitations")
+  case object INVALID_PUBLIC_ID extends OrganizationFail(BAD_REQUEST, "invalid_public_id")
+
   def apply(str: String): OrganizationFail = {
     str match {
       case INSUFFICIENT_PERMISSIONS.message => INSUFFICIENT_PERMISSIONS
+      case HANDLE_UNAVAILABLE.message => HANDLE_UNAVAILABLE
       case NOT_A_MEMBER.message => NOT_A_MEMBER
       case NO_VALID_INVITATIONS.message => NO_VALID_INVITATIONS
+      case INVALID_PUBLIC_ID.message => INVALID_PUBLIC_ID
     }
   }
 }

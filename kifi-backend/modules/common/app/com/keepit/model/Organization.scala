@@ -26,6 +26,9 @@ case class Organization(
 
   override def withId(id: Id[Organization]): Organization = this.copy(id = Some(id))
   override def withUpdateTime(now: DateTime): Organization = this.copy(updatedAt = now)
+  def withState(newState: State[Organization]): Organization = this.copy(state = newState)
+  def withName(newName: String): Organization = this.copy(name = newName)
+  def withBasePermissions(newBasePermissions: BasePermissions): Organization = this.copy(basePermissions = newBasePermissions)
 
   def getNonmemberPermissions = basePermissions.forNonmember
   def getRolePermissions(role: OrganizationRole) = basePermissions.forRole(role)
@@ -45,19 +48,13 @@ object Organization extends ModelWithPublicIdCompanion[Organization] {
 
   val defaultBasePermissions: BasePermissions =
     BasePermissions(Map(
-      None -> Set(
-        OrganizationPermission.VIEW_ORGANIZATION
-      ),
+      None -> Set(OrganizationPermission.VIEW_ORGANIZATION),
+
+      Some(OrganizationRole.OWNER) -> OrganizationPermission.all,
+
       Some(OrganizationRole.MEMBER) -> Set(
         OrganizationPermission.VIEW_ORGANIZATION,
         OrganizationPermission.ADD_LIBRARIES
-      ),
-      Some(OrganizationRole.OWNER) -> Set(
-        OrganizationPermission.VIEW_ORGANIZATION,
-        OrganizationPermission.EDIT_ORGANIZATION,
-        OrganizationPermission.INVITE_MEMBERS,
-        OrganizationPermission.ADD_LIBRARIES,
-        OrganizationPermission.REMOVE_LIBRARIES
       )
     ))
 
@@ -121,6 +118,10 @@ case class PrimaryOrganizationHandle(original: OrganizationHandle, normalized: O
 case class BasePermissions(permissionsMap: Map[Option[OrganizationRole], Set[OrganizationPermission]]) {
   def forRole(role: OrganizationRole): Set[OrganizationPermission] = permissionsMap(Some(role))
   def forNonmember: Set[OrganizationPermission] = permissionsMap(None)
+
+  // Return a BasePermissions where "role" has added and removed permissions
+  def modified(role: OrganizationRole, added: Set[OrganizationPermission], removed: Set[OrganizationPermission]): BasePermissions =
+    BasePermissions(permissionsMap.updated(Some(role), forRole(role) ++ added -- removed))
 }
 
 object BasePermissions {

@@ -1,7 +1,7 @@
 package com.keepit.common.seo
 
 import com.google.inject.Inject
-import com.keepit.commanders.{ KeepImageCommander, ScaleImageRequest, LibraryImageCommander }
+import com.keepit.commanders.{ LibraryPathCommander, KeepImageCommander, ScaleImageRequest, LibraryImageCommander }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.store.{ ImageSize, S3ImageConfig }
@@ -22,6 +22,7 @@ class AtomCommander @Inject() (
     keepRepo: KeepRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
     keepImageCommander: KeepImageCommander,
+    libPathCommander: LibraryPathCommander,
     libraryImageCommander: LibraryImageCommander,
     rover: RoverServiceClient) extends Logging {
 
@@ -77,14 +78,14 @@ class AtomCommander @Inject() (
       val libraryCreator = userRepo.get(library.ownerId)
       (image.map(i => s"https:${i.imagePath.getUrl(s3ImageConfig)}"), keeps, libraryCreator)
     }
-    val feedUrl = s"${fortyTwoConfig.applicationBaseUrl}${Library.formatLibraryPathUrlEncoded(libraryCreator.username, library.slug)}"
+    val feedUrl = s"${fortyTwoConfig.applicationBaseUrl}${libPathCommander.getPathUrlEncoded(library)}"
 
     val descriptionsFuture = db.readOnlyMaster { implicit s => rover.getUriSummaryByUris(keeps.map(_.uriId).toSet) }
     descriptionsFuture map { descriptions =>
       val entries = keeps.map { keep =>
         val (keepImageOpt, keeper) = db.readOnlyMaster { implicit s =>
           val image = keepImageCommander.getBestImageForKeep(keep.id.get, ScaleImageRequest(ImageSize(100, 100)))
-          (image, userRepo.getNoCache(keep.userId))
+          (image.flatten, userRepo.getNoCache(keep.userId))
         }
         val title = keep.title.getOrElse("")
         val author = keeper.fullName
@@ -92,7 +93,7 @@ class AtomCommander @Inject() (
         val id = keep.externalId.id
         val updatedAt = keep.updatedAt
         val link = AtomLink(keep.url)
-        val keepImage = keepImageOpt.map(_.map(_.imagePath.getUrl(s3ImageConfig))).map(url => s"https:$url")
+        val keepImage = keepImageOpt.map(_.imagePath.getUrl(s3ImageConfig)).map(url => s"https:$url")
         AtomEntry(title, author, Some(content), id, updatedAt, link, icon = keepImage)
       }
       val links = Seq(AtomLink(feedUrl + "/atom", rel = Some("self")), AtomLink(feedUrl))

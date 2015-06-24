@@ -52,7 +52,7 @@ class MobilePageController @Inject() (
     val pageFutures = SafeFuture { pageCommander.getPageDetails(url, request.userId, request.experiments) }
     // user infos
     val basicUserFutures = SafeFuture { userCommander.getUserInfo(request.user) }
-    val userAttributeFutures = userCommander.getKeepAttributionInfo(request.userId)
+    val userAttributeFutures = userCommander.getHelpRankInfo(request.userId)
     // keeps & collections
     val numKeepsFuture = SafeFuture { db.readOnlyMaster { implicit s => keepRepo.getCountByUser(request.userId) } }
     val collectionsFuture = SafeFuture { collectionCommander.allCollections(sortOrder, request.userId) }

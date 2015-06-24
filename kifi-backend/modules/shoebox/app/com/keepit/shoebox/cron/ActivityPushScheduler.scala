@@ -1,6 +1,6 @@
 package com.keepit.shoebox.cron
 
-import com.keepit.commanders.{ LibraryImageCommander, ProcessedImageSize, KifiInstallationCommander }
+import com.keepit.commanders.{ LibraryPathCommander, LibraryImageCommander, ProcessedImageSize, KifiInstallationCommander }
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.social.BasicUserRepo
@@ -83,6 +83,7 @@ class ActivityPusher @Inject() (
     libraryMembershipRepo: LibraryMembershipRepo,
     kifiInstallationCommander: KifiInstallationCommander,
     libraryImageCommander: LibraryImageCommander,
+    libPathCommander: LibraryPathCommander,
     s3ImageStore: S3ImageStore,
     actor: ActorInstance[ActivityPushActor],
     implicit val publicIdConfig: PublicIdConfiguration,
@@ -230,7 +231,7 @@ class ActivityPusher @Inject() (
           else s""""${lib.name.abbreviate(25)}" library has updates"""
         }
         val owner = basicUserRepo.load(lib.ownerId)
-        val libraryUrl = "https://www.kifi.com" + Library.formatLibraryPathUrlEncoded(owner.username, lib.slug)
+        val libraryUrl = "https://www.kifi.com" + libPathCommander.getPathUrlEncoded(lib)
         keepRepo.getByLibrary(lib.id.get, 0, 1) match {
           case keeps if keeps.nonEmpty =>
             val libImageOpt = libraryImageCommander.getBestImageForLibrary(lib.id.get, ProcessedImageSize.Medium.idealSize)

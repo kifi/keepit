@@ -6,7 +6,6 @@ import com.keepit.FortyTwoGlobal
 import com.keepit.common.cache.FortyTwoCachePlugin
 import com.keepit.common.healthcheck._
 import com.keepit.common.mail.{ MailToKeepPlugin, MailSenderPlugin }
-import com.keepit.common.store.ImageDataIntegrityPlugin
 import com.keepit.shoebox.cron.{ UserIpAddressClusterCronPlugin, GratificationEmailCronPlugin, ActivityPushScheduler, ActivityEmailCronPlugin }
 import play.api.Mode._
 import play.api._
@@ -43,7 +42,6 @@ trait ShoeboxServices { self: FortyTwoGlobal =>
     require(injector.instance[DataIntegrityPlugin] != null) //make sure its not lazy loaded
     require(injector.instance[UriIntegrityPlugin] != null) //make sure its not lazy loaded
     require(injector.instance[FortyTwoCachePlugin] != null) //make sure its not lazy loaded
-    require(injector.instance[ImageDataIntegrityPlugin] != null) //make sure its not lazy loaded
     require(injector.instance[GeckoboardReporterPlugin] != null) //make sure its not lazy loaded
     require(injector.instance[UriIntegrityPlugin] != null) //make sure its not lazy loaded
     require(injector.instance[LoadBalancerCheckPlugin] != null) //make sure its not lazy loaded

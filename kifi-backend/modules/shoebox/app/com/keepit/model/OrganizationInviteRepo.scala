@@ -1,7 +1,7 @@
 package com.keepit.model
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
-import com.keepit.common.db.slick.DBSession.RSession
+import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick.{ DataBaseComponent, DbRepo, Repo }
 import com.keepit.common.db.{ States, Id, State }
 import com.keepit.common.mail.EmailAddress
@@ -13,11 +13,14 @@ trait OrganizationInviteRepo extends Repo[OrganizationInvite] {
   def getByEmailAddress(emailAddress: EmailAddress)(implicit session: RSession): Seq[OrganizationInvite]
   def getByOrganization(organizationId: Id[Organization], limit: Limit, offset: Offset, state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit s: RSession): Seq[OrganizationInvite]
   def getByOrgIdAndUserIdAndAuthToken(organizationId: Id[Organization], userId: Id[User], authToken: String, state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit s: RSession): Seq[OrganizationInvite]
+  def getByOrgIdAndAuthToken(organizationId: Id[Organization], authToken: String, state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit s: RSession): Option[OrganizationInvite]
   def getByOrgAndUserId(organizationId: Id[Organization], userId: Id[User], state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit s: RSession): Seq[OrganizationInvite]
+  def getAllByOrganization(organizationId: Id[Organization], state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit s: RSession): Seq[OrganizationInvite]
   def getByInviter(inviterId: Id[User], state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit s: RSession): Seq[OrganizationInvite]
   def getByOrgIdAndUserId(organizationId: Id[Organization], userId: Id[User], state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit s: RSession): Seq[OrganizationInvite]
   def getLastSentByOrgIdAndInviterIdAndUserId(organizationId: Id[Organization], inviterId: Id[User], userId: Id[User], includeStates: Set[State[OrganizationInvite]])(implicit s: RSession): Option[OrganizationInvite]
   def getLastSentByOrgIdAndInviterIdAndEmailAddress(organizationId: Id[Organization], inviterId: Id[User], emailAddress: EmailAddress, includeStates: Set[State[OrganizationInvite]])(implicit s: RSession): Option[OrganizationInvite]
+  def deactivate(invite: Id[OrganizationInvite])(implicit session: RWSession): OrganizationInvite
 }
 
 @Singleton
@@ -98,12 +101,27 @@ class OrganizationInviteRepoImpl @Inject() (val db: DataBaseComponent, val clock
     getByOrgIdAndUserIdAndAuthTokenCompiled(organizationId, userId, authToken, state).list
   }
 
+  def getByOrgIdAndAuthTokenCompiled = Compiled { (orgId: Column[Id[Organization]], authToken: Column[String], state: Column[State[OrganizationInvite]]) =>
+    (for (row <- rows if row.organizationId === orgId && row.state === state && row.authToken === authToken) yield row).sortBy(_.createdAt desc)
+  }
+
+  def getByOrgIdAndAuthToken(organizationId: Id[Organization], authToken: String, state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit s: RSession): Option[OrganizationInvite] = {
+    getByOrgIdAndAuthTokenCompiled(organizationId, authToken, state).firstOption
+  }
+
   def getByOrgAndUserIdCompiled = Compiled { (orgId: Column[Id[Organization]], userId: Column[Id[User]], state: Column[State[OrganizationInvite]]) =>
     (for (row <- rows if row.organizationId === orgId && row.userId === userId && row.state === state) yield row)
   }
 
   def getByOrgAndUserId(organizationId: Id[Organization], userId: Id[User], state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit s: RSession): Seq[OrganizationInvite] = {
     getByOrgAndUserIdCompiled(organizationId, userId, state).list
+  }
+
+  def getAllByOrganizationCompiled = Compiled { (orgId: Column[Id[Organization]], state: Column[State[OrganizationInvite]]) =>
+    for { row <- rows if row.organizationId === orgId && row.state === state } yield row
+  }
+  def getAllByOrganization(organizationId: Id[Organization], state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit s: RSession): Seq[OrganizationInvite] = {
+    getAllByOrganizationCompiled(organizationId, state).list
   }
 
   def getByInviterIdCompiled = Compiled { (inviterId: Column[Id[User]], state: Column[State[OrganizationInvite]]) => (for { row <- rows if row.inviterId === inviterId && row.state === state } yield row) }
@@ -135,5 +153,9 @@ class OrganizationInviteRepoImpl @Inject() (val db: DataBaseComponent, val clock
   def getLastSentByOrgIdAndInviterIdAndEmailAddress(organizationId: Id[Organization], inviterId: Id[User],
     emailAddress: EmailAddress, includeStates: Set[State[OrganizationInvite]])(implicit s: RSession): Option[OrganizationInvite] = {
     getLastSentByOrgIdAndInviterIdAndEmailAddressCompiled(organizationId, inviterId, emailAddress, includeStates).firstOption
+  }
+
+  def deactivate(inviteId: Id[OrganizationInvite])(implicit session: RWSession): OrganizationInvite = {
+    save(get(inviteId).copy(state = OrganizationInviteStates.INACTIVE))
   }
 }

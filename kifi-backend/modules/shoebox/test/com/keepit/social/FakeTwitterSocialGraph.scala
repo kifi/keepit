@@ -3,7 +3,7 @@ package com.keepit.social
 import java.io.File
 
 import com.google.inject.Inject
-import com.keepit.commanders.{ LibraryImageCommander, KifiInstallationCommander }
+import com.keepit.commanders.{ LibraryPathCommander, LibraryImageCommander, KifiInstallationCommander }
 import com.keepit.common.concurrent.WatchableExecutionContext
 import com.keepit.common.core._
 import com.keepit.common.crypto.PublicIdConfiguration
@@ -39,6 +39,7 @@ class FakeTwitterSocialGraph @Inject() (
     basicUserRepo: BasicUserRepo,
     socialUserInfoRepo: SocialUserInfoRepo,
     libraryImageCommander: LibraryImageCommander,
+    libPathCommander: LibraryPathCommander,
     elizaServiceClient: ElizaServiceClient,
     s3ImageStore: S3ImageStore,
     socialRepo: SocialUserInfoRepo,
@@ -50,7 +51,7 @@ class FakeTwitterSocialGraph @Inject() (
     }
   }
 
-  val twtrGraph: TwitterSocialGraphImpl = new TwitterSocialGraphImpl(airbrake, db, s3ImageStore, clock, oauth1Config, twtrOAuthProvider, userValueRepo, twitterSyncStateRepo, libraryMembershipRepo, libraryRepo, basicUserRepo, socialUserInfoRepo, libraryImageCommander, elizaServiceClient, kifiInstallationCommander, publicIdConfig, executionContext, userRepo) {
+  val twtrGraph: TwitterSocialGraphImpl = new TwitterSocialGraphImpl(airbrake, db, s3ImageStore, clock, oauth1Config, twtrOAuthProvider, userValueRepo, twitterSyncStateRepo, libraryMembershipRepo, libraryRepo, basicUserRepo, socialUserInfoRepo, libraryImageCommander, libPathCommander, elizaServiceClient, kifiInstallationCommander, publicIdConfig, executionContext, userRepo) {
     override protected def lookupUsers(socialUserInfo: SocialUserInfo, accessToken: OAuth1TokenInfo, mutualFollows: Set[TwitterId]): Future[JsValue] = Future.successful {
       socialUserInfo.socialId.id.toLong match {
         case tweetfortytwoInfo.id =>

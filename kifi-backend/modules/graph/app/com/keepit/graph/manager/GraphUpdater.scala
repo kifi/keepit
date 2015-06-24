@@ -25,6 +25,7 @@ class GraphUpdaterImpl @Inject() () extends GraphUpdater with Logging {
     case emailContactUpdate: EmailContactGraphUpdate => processEmailContactGraphUpdate(emailContactUpdate)
     case libUpdate: LibraryGraphUpdate => processLibraryGraphUpdate(libUpdate)
     case libMemUpdate: LibraryMembershipGraphUpdate => processLibraryMembershipGraphUpdate(libMemUpdate)
+    case userIpAddressUpdate: UserIpAddressGraphUpdate => processUserIpAddressGraphUpdate(userIpAddressUpdate)
   }
 
   private def processUserGraphUpdate(update: UserGraphUpdate)(implicit writer: GraphWriter) = update.state match {
@@ -210,5 +211,12 @@ class GraphUpdaterImpl @Inject() () extends GraphUpdater with Logging {
     case _ =>
       writer.removeEdgeIfExists(update.userId, update.libId, EmptyEdgeReader)
       writer.removeEdgeIfExists(update.libId, update.userId, EmptyEdgeReader)
+  }
+
+  private def processUserIpAddressGraphUpdate(update: UserIpAddressGraphUpdate)(implicit writer: GraphWriter) = {
+    writer.saveVertex(IpAddressData(update.ipAddr))
+    writer.saveVertex(UserData(update.userId))
+    writer.saveEdge(update.userId, update.ipAddr, TimestampEdgeData(update.updatedAt.getMillis))
+    writer.saveEdge(update.ipAddr, update.userId, TimestampEdgeData(update.updatedAt.getMillis))
   }
 }

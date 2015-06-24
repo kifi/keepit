@@ -1,11 +1,16 @@
 package com.keepit.graph
 
 import com.keepit.common.db.{ SequenceNumber, Id, ExternalId }
+import com.keepit.common.service.IpAddress
+import com.keepit.common.time._
 import com.keepit.graph.manager._
 import com.keepit.graph.model.{ ConnectedUserScore, ConnectedUriScore }
 import com.keepit.model._
+import org.joda.time.DateTime
 
 trait GraphTestHelper {
+  val t1 = new DateTime(2015, 6, 23, 10, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
+
   val u42: Id[User] = Id[User](42)
   val u43: Id[User] = Id[User](43)
 
@@ -30,6 +35,8 @@ trait GraphTestHelper {
   val keepid3: Id[Keep] = Id[Keep](3)
   val keepid4: Id[Keep] = Id[Keep](4)
   val keepid5: Id[Keep] = Id[Keep](5)
+
+  val ipAddress1: IpAddress = IpAddress("108.60.110.146")
 
   val userUpdate = UserGraphUpdate(UserFactory.user().withId(u42).withName("Tan", "Lin").withUsername("test").withSeq(1).get)
 
@@ -57,5 +64,9 @@ trait GraphTestHelper {
   val libMemUpdate4 = LibraryMembershipGraphUpdate(Id[User](2), Id[Library](1), LibraryMembershipStates.ACTIVE, SequenceNumber(4))
   val libMemUpdates = List(libMemUpdate1, libMemUpdate2, libMemUpdate3, libMemUpdate4)
 
-  val allUpdates: List[GraphUpdate] = List(userUpdate) ++ keepUpdates ++ userConnUpdates ++ libMemUpdates
+  val userIpAddressUpdate1 = UserIpAddressGraphUpdate(userid1, ipAddress1, t1, SequenceNumber(1))
+  val userIpAddressUpdate2 = UserIpAddressGraphUpdate(userid2, ipAddress1, t1, SequenceNumber(2))
+  val userIpAddressUpdates = List(userIpAddressUpdate1, userIpAddressUpdate2)
+
+  val allUpdates: List[GraphUpdate] = List(userUpdate) ++ keepUpdates ++ userConnUpdates ++ libMemUpdates ++ userIpAddressUpdates
 }
