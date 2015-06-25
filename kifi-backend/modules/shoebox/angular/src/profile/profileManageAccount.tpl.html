@@ -26,20 +26,7 @@
   <div class="profile-manage-account-title" ng-class="{'active':isOpen.close}">Close your account</div>
 </a>
 <div class="profile-manage-account-close-account-change" ng-show="isOpen.close">
-  <textarea placeholder="Please tell us why you would like to close your account..."
-      ng-disabled="isCloseAccountStatus('sent')" ng-model="comment"></textarea>
-  <div>
-    <a class="profile-export close-account-button export-first" href="javascript:" ng-click="closeAccount()"
-        ng-disabled="isCloseAccountStatus('sent')">
-      {{getCloseAccountButtonText()}}
-    </a>
-  </div>
-  <p class="profile-close-account-status success" ng-show="isCloseAccountStatus('sent')">
-    <span class="profile-placeholder">&nbsp;</span>
-    <span>Message sent. We’ll send you a confirmation email in about 1 business day.</span>
-  </p>
-  <p class="profile-close-account-status error" ng-show="isCloseAccountStatus('error')">
-    <span class="profile-placeholder">&nbsp;</span>
-    <span>There was an error sending the request. Please try again later.</span>
+  <p>
+    Please request to close your account via the <a ng-click="closeAccount()" href="//support.kifi.com/">support page</a>.
   </p>
 </div>
