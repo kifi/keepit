@@ -16,6 +16,7 @@ case class OrganizationInvite(
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,
     state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE,
+    status: Option[InvitationStatus] = None,
     organizationId: Id[Organization],
     inviterId: Id[User],
     userId: Option[Id[User]] = None,
@@ -32,6 +33,20 @@ case class OrganizationInvite(
 
 }
 
+// doesn't need to be specific to just OrganizationInvite, could be re-used later.
+abstract class InvitationStatus(val value: String)
+object InvitationStatus {
+  case object ACCEPTED extends InvitationStatus("accepted")
+  case object DECLINED extends InvitationStatus("declined")
+  def apply(value: String) = value match {
+    case ACCEPTED.value => ACCEPTED
+    case DECLINED.value => DECLINED
+  }
+  def unapply(status: InvitationStatus) = Some(status.value)
+  implicit def format[T]: Format[InvitationStatus] =
+    Format(__.read[String].map(InvitationStatus(_)), new Writes[InvitationStatus] { def writes(o: InvitationStatus) = JsString(o.value) })
+}
+
 object OrganizationInvite extends ModelWithPublicIdCompanion[OrganizationInvite] {
 
   protected[this] val publicIdPrefix = "o"
@@ -42,6 +57,7 @@ object OrganizationInvite extends ModelWithPublicIdCompanion[OrganizationInvite]
     (__ \ 'createdAt).format(DateTimeJsonFormat) and
     (__ \ 'updatedAt).format(DateTimeJsonFormat) and
     (__ \ 'state).format(State.format[OrganizationInvite]) and
+    (__ \ "status").formatNullable[InvitationStatus] and
     (__ \ 'organizationId).format[Id[Organization]] and
     (__ \ 'inviterId).format[Id[User]] and
     (__ \ 'userId).format[Option[Id[User]]] and
@@ -56,7 +72,4 @@ object OrganizationInvite extends ModelWithPublicIdCompanion[OrganizationInvite]
   }
 }
 
-object OrganizationInviteStates extends States[OrganizationInvite] {
-  val ACCEPTED = State[OrganizationInvite]("accepted")
-  val DECLINED = State[OrganizationInvite]("declined")
-}
+object OrganizationInviteStates extends States[OrganizationInvite]

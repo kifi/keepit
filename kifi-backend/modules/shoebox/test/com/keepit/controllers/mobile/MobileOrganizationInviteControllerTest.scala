@@ -155,7 +155,7 @@ class MobileOrganizationInviteControllerTest extends Specification with ShoeboxT
           status(result) must equalTo(NO_CONTENT)
 
           db.readOnlyMaster { implicit session =>
-            inviteRepo.getByOrgAndUserId(orgId, invitee.id.get).forall(_.state == OrganizationInviteStates.DECLINED) === true
+            inviteRepo.getByOrgAndUserId(orgId, invitee.id.get).forall(_.status == Some(InvitationStatus.DECLINED)) === true
           }
         }
       }
