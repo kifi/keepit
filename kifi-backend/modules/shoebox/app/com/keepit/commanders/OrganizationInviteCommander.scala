@@ -19,6 +19,7 @@ import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.S3ImageStore
 import com.keepit.eliza.{ UserPushNotificationCategory, PushNotificationExperiment, ElizaServiceClient }
 import com.keepit.heimdal.HeimdalContext
+import com.keepit.model.OrganizationFail.INSUFFICIENT_PERMISSIONS
 import com.keepit.model._
 import com.keepit.social.BasicUser
 import play.api.libs.json.Json
@@ -83,57 +84,81 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
             basicUserRepo.loadAll(inviteesByUserId.toSet)
           }
 
-          contactsByEmailAddressFut map { contactsByEmail =>
-            val organizationMembersMap = db.readOnlyMaster { implicit session =>
-              organizationMembershipRepo.getByOrgIdAndUserIds(orgId, inviteesByUserId.toSet).map { membership =>
-                membership.userId -> membership
-              }.toMap
+          val organizationMembersMap = db.readOnlyMaster { implicit session =>
+            organizationMembershipRepo.getByOrgIdAndUserIds(orgId, inviteesByUserId.toSet).map { membership =>
+              membership.userId -> membership
+            }.toMap
+          }
+
+          val (userInvites, emailInvites) = invitees.partition {
+            case OrganizationMemberInvitation(Left(userId), _, _) => true
+            case OrganizationMemberInvitation(Right(email), _, _) => false
+          }
+          val combined = userInvites.map(userInvite => (userInvite, organizationMembersMap.get(userInvite.invited.left.get)))
+          val possibleUserIdInvites: Seq[OrganizationMembershipRequest] = combined.flatMap {
+            case (userInvite, orgMembershipOpt) =>
+              orgMembershipOpt match {
+                case Some(orgMembership) if (orgMembership.role < userInvite.role) => // some modify request (promotion)
+                  Some(OrganizationMembershipModifyRequest(orgId = orgId, requesterId = inviterId, targetId = orgMembership.userId, newRole = userInvite.role))
+                case Some(_) => None // demotion (ignore)
+                case _ => // not a member yet Some add request
+                  val inviteeId = userInvite.invited.left.get
+                  Some(OrganizationMembershipAddRequest(orgId = orgId, requesterId = inviterId, targetId = inviteeId, newRole = userInvite.role))
+              }
+          }
+          val foundInvalidRequest = db.readOnlyMaster { implicit session =>
+            possibleUserIdInvites.toIterator.map(organizationMembershipCommander.validRequest(_)).find(_ == false)
+          }
+          foundInvalidRequest.map(_ => Future.successful(Left(OrganizationFail.INSUFFICIENT_PERMISSIONS))).getOrElse {
+            val (modifyInvites, addInvites) = possibleUserIdInvites.partition {
+              case modify: OrganizationMembershipModifyRequest => true
+              case _ => false
             }
-            val invitesForInvitees = invitees.filter {
-              case OrganizationMemberInvitation(_, inviteRole, _) => inviterMembership.role >= inviteRole
-            }.map {
-              case OrganizationMemberInvitation(Left(inviteeId), inviteRole, msgOpt) =>
-                organizationMembersMap.get(inviteeId) match {
-                  case Some(inviteeMember) if (inviteeMember.role < inviteRole && inviteRole != OrganizationRole.OWNER) => // member needs upgrade
-                    val modifyRequest = OrganizationMembershipModifyRequest(orgId = orgId, requesterId = inviterId, targetId = inviteeId, newRole = inviteRole)
-                    organizationMembershipCommander.modifyMembership(modifyRequest)
-
-                    val orgInvite = OrganizationInvite(organizationId = orgId, inviterId = inviterId, userId = Some(inviteeId), role = inviteRole, message = msgOpt)
-                    val inviteeInfo = (Left(contactsByUserId(inviteeId)), inviteRole)
-                    Some((orgInvite, inviteeInfo))
-                  case Some(inviteeMember) => // don't demote members through an invitation.
-                    None
-                  case _ => // user not a member of org yet
-                    val orgInvite = OrganizationInvite(organizationId = orgId, inviterId = inviterId, userId = Some(inviteeId), role = inviteRole, message = msgOpt)
-                    val inviteeInfo = (Left(contactsByUserId(inviteeId)), inviteRole)
-                    Some((orgInvite, inviteeInfo))
-                }
-              case OrganizationMemberInvitation(Right(email), inviteRole, msgOpt) =>
-                val orgInvite = OrganizationInvite(organizationId = orgId, inviterId = inviterId, emailAddress = Some(email), role = inviteRole, message = msgOpt)
-                val inviteeInfo = (Right(contactsByEmail(email)), inviteRole)
-                Some((orgInvite, inviteeInfo))
+            // do promotions for modify
+            modifyInvites.collect {
+              case modifyInvite: OrganizationMembershipModifyRequest =>
+                organizationMembershipCommander.modifyMembership(modifyInvite)
             }
 
-            val (invites, inviteesWithRole) = invitesForInvitees.flatten.unzip
+            // send invites for add requests
+            // send invites for email requests
+            contactsByEmailAddressFut map { contactsByEmail =>
+              val invitesByUserId = userInvites.groupBy(invite => invite.invited.left.get)
+              val addMembers = addInvites.collect {
+                case addMember: OrganizationMembershipAddRequest =>
+                  val orgInvite = OrganizationInvite(organizationId = orgId, inviterId = inviterId, userId = Some(addMember.targetId), role = addMember.newRole, message = invitesByUserId(addMember.targetId).map(_.msgOpt).head)
+                  val inviteeInfo = (Left(contactsByUserId(addMember.targetId)), addMember.newRole)
+                  Some((orgInvite, inviteeInfo))
+              }
+              val addByEmail = emailInvites.collect {
+                case OrganizationMemberInvitation(Right(email), inviteRole, msgOpt) =>
+                  val orgInvite = OrganizationInvite(organizationId = orgId, inviterId = inviterId, emailAddress = Some(email), role = inviteRole, message = msgOpt)
+                  val inviteeInfo = (Right(contactsByEmail(email)), inviteRole)
+                  Some((orgInvite, inviteeInfo))
+              }
+              val invitesForInvitees = addMembers ++ addByEmail
 
-            val (org, owner, inviter) = db.readOnlyMaster { implicit session =>
-              val org = organizationRepo.get(orgId)
-              val owner = basicUserRepo.load(org.ownerId)
-              val inviter = userRepo.get(inviterId)
-              (org, owner, inviter)
+              val (invites, inviteesWithRole) = invitesForInvitees.flatten.unzip
+
+              val (org, owner, inviter) = db.readOnlyMaster { implicit session =>
+                val org = organizationRepo.get(orgId)
+                val owner = basicUserRepo.load(org.ownerId)
+                val inviter = userRepo.get(inviterId)
+                (org, owner, inviter)
+              }
+              val persistedInvites = invites.flatMap(persistInvitation(_))
+
+              sendInvitationEmails(persistedInvites, org, owner, inviter)
+              organizationAnalytics.trackSentOrganizationInvites(inviterId, org, persistedInvites)
+
+              Right(inviteesWithRole)
             }
-            val persistedInvites = invites.flatMap(persistInvitation(_))
-
-            sendInvitationEmails(persistedInvites, org, owner, inviter)
-            organizationAnalytics.trackSentOrganizationInvites(inviterId, org, persistedInvites)
-
-            Right(inviteesWithRole)
           }
         } else {
-          Future.successful(Left(OrganizationFail("insufficient_permissions")))
+          Future.successful(Left(OrganizationFail.INSUFFICIENT_PERMISSIONS))
         }
       case None =>
-        Future.successful(Left(OrganizationFail("not_a_member")))
+        Future.successful(Left(OrganizationFail.NOT_A_MEMBER))
     }
   }
 

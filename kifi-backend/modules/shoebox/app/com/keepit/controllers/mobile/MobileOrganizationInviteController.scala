@@ -28,42 +28,42 @@ class MobileOrganizationInviteController @Inject() (
     implicit val publicIdConfig: PublicIdConfiguration,
     implicit val executionContext: ExecutionContext) extends UserActions with OrganizationAccessActions with ShoeboxServiceController {
 
-  private def sendFailResponse(fail: OrganizationFail) = Status(fail.status)(Json.obj("error" -> fail.message))
-
-  //inviteUsersToOrganization(orgId: Id[Organization], inviterId: Id[User], invitees: Seq[(Either[Id[User], EmailAddress], OrganizationRole, Option[String])])
-  // : Future[Either[OrganizationFail, Seq[(Either[BasicUser, RichContact], OrganizationRole)]]]
   def inviteUsers(pubId: PublicId[Organization]) = UserAction.async(parse.tolerantJson) { request =>
+    println("entering")
     Organization.decodePublicId(pubId) match {
       case Success(orgId) =>
         val invites = (request.body \ "invites").as[JsArray].value
         val msg = (request.body \ "message").asOpt[String].filter(_.nonEmpty)
 
-        // TODO: can we use PublicId[User] here instead of ExternalId[User]?
         val userInvites = invites.filter(inv => (inv \ "type").as[String] == "user")
         val emailInvites = invites.filter(inv => (inv \ "type").as[String] == "email")
 
         val userExternalIds = userInvites.map(inv => (inv \ "id").as[ExternalId[User]])
         val userMap = userCommander.getByExternalIds(userExternalIds)
-        val userInfo = for ((extId, inv) <- userExternalIds zip userInvites) yield {
-          val userId = userMap(extId).id.get
-          OrganizationMemberInvitation(Left(userId), (inv \ "role").as[OrganizationRole], msg)
+        val userInfo = userInvites.map { userInvite =>
+          val externalId = (userInvite \ "id").as[ExternalId[User]]
+          val userId = userMap(externalId).id.get
+          val role = (userInvite \ "role").as[OrganizationRole]
+          OrganizationMemberInvitation(Left(userId), role, msg)
         }
 
-        val emails = emailInvites.map(inv => (inv \ "id").as[EmailAddress])
-        val emailInfo = for ((email, inv) <- emails zip emailInvites) yield {
-          OrganizationMemberInvitation(Right(email), (inv \ "role").as[OrganizationRole], msg)
+        val emailInfo = emailInvites.map { emailInvite =>
+          // TODO: why is this `id` instead of `email`? It is the same way in LibraryController.
+          val email = (emailInvite \ "id").as[EmailAddress]
+          val role = (emailInvite \ "role").as[OrganizationRole]
+          OrganizationMemberInvitation(Right(email), role, msg)
         }
 
         implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
         val inviteResult = orgInviteCommander.inviteToOrganization(orgId, request.userId, userInfo ++ emailInfo)
         inviteResult.map {
-          case Left(fail) => sendFailResponse(fail)
           case Right(inviteesWithAccess) =>
             val result = inviteesWithAccess.map {
-              case (Left(user), access) => Json.obj("user" -> user.externalId, "access" -> access)
-              case (Right(contact), access) => Json.obj("email" -> contact.email, "access" -> access)
+              case (Left(user), role) => Json.obj("user" -> user.externalId, "role" -> role)
+              case (Right(contact), role) => Json.obj("email" -> contact.email, "role" -> role)
             }
             Ok(Json.toJson(result))
+          case Left(organizationFail) => organizationFail.asErrorResponse
         }
       case Failure(ex) => Future.successful(OrganizationFail.INVALID_PUBLIC_ID.asErrorResponse)
     }

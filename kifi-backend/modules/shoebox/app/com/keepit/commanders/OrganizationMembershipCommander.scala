@@ -27,6 +27,7 @@ object MaybeOrganizationMember {
 
 @ImplementedBy(classOf[OrganizationMembershipCommanderImpl])
 trait OrganizationMembershipCommander {
+  def validRequest(request: OrganizationMembershipRequest)(implicit session: RSession): Boolean
   def getMembersAndInvitees(orgId: Id[Organization], limit: Limit, offset: Offset, includeInvitees: Boolean): Seq[MaybeOrganizationMember]
 
   def getPermissions(orgId: Id[Organization], userIdOpt: Option[Id[User]]): Set[OrganizationPermission]
@@ -102,7 +103,7 @@ class OrganizationMembershipCommanderImpl @Inject() (
     membersNotIncludingOwner ++ invitedByUserId ++ invitedByEmailAddress
   }
 
-  private def validRequest(request: OrganizationMembershipRequest)(implicit session: RSession): Boolean = {
+  def validRequest(request: OrganizationMembershipRequest)(implicit session: RSession): Boolean = {
     val requesterOpt = organizationMembershipRepo.getByOrgIdAndUserId(request.orgId, request.requesterId)
     val targetOpt = organizationMembershipRepo.getByOrgIdAndUserId(request.orgId, request.targetId)
 
