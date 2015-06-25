@@ -885,7 +885,7 @@ GET     /internal/shoebox/database/getLibraryMembershipsChanged            @com.
 GET     /internal/shoebox/database/newKeepsInLibraryForEmail               @com.keepit.controllers.internal.ShoeboxController.newKeepsInLibraryForEmail(userId: Id[User], max: Int)
 GET     /internal/shoebox/database/dumpLibraryURIIds                       @com.keepit.controllers.internal.ShoeboxDataPipeController.dumpLibraryURIIds(libId: Id[Library])
 GET     /internal/shoebox/database/getIngestableOrganizations                  @com.keepit.controllers.internal.ShoeboxDataPipeController.getIngestableOrganizations(seqNum: SequenceNumber[Organization], fetchSize: Int)
-GET     /internal/shoebox/database/getIngestableOrganizationMemberhips                 @com.keepit.controllers.internal.ShoeboxDataPipeController.getIngestableOrganizationMemberships(seqNum: SequenceNumber[OrganizationMembership], fetchSize: Int)
+GET     /internal/shoebox/database/getIngestableOrganizationMemberships                 @com.keepit.controllers.internal.ShoeboxDataPipeController.getIngestableOrganizationMemberships(seqNum: SequenceNumber[OrganizationMembership], fetchSize: Int)
 GET     /internal/shoebox/database/getIngestableUserIpAddresses           @com.keepit.controllers.internal.ShoeboxDataPipeController.getIngestableUserIpAddresses(seqNum: SequenceNumber[UserIpAddress], fetchSize: Int)
 
 POST    /internal/shoebox/database/createDeepLink     @com.keepit.controllers.internal.ShoeboxDeepLinkController.createDeepLink()
