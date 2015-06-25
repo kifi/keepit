@@ -23,7 +23,7 @@ class GratificationStatsController @Inject() (
     airbrake: AirbrakeNotifier) extends HeimdalServiceController with Logging {
 
   def getEligibleGratData = Action(parse.json) { request =>
-    val userIds = (request.body \ "userIds").as[Seq[Id[User]]]
+    val userIds = request.body.as[Seq[Id[User]]]
     val gratDatas = userIds.map { gratStatsCommander.getGratData }.filter { _.isEligible }
     Ok(Json.arr(gratDatas.map { gratData => Json.toJson(gratData) }))
   }
@@ -34,7 +34,7 @@ class GratificationStatsController @Inject() (
   }
 
   def getGratDatas = Action(parse.json) { request =>
-    val userIds = (request.body \ "userIds").as[Seq[Id[User]]]
+    val userIds = request.body.as[Seq[Id[User]]]
     val gratDatas = userIds.map { gratStatsCommander.getGratData }
     Ok(Json.arr(gratDatas.map { gratData => Json.toJson(gratData) }))
   }
