@@ -35,7 +35,14 @@ class KeepDecorator @Inject() (
     implicit val executionContext: ExecutionContext,
     implicit val publicIdConfig: PublicIdConfiguration) {
 
-  def decorateKeepsIntoKeepInfos(perspectiveUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, keeps: Seq[Keep], idealImageSize: ImageSize, withKeepTime: Boolean): Future[Seq[KeepInfo]] = {
+  def decorateKeepsIntoKeepInfos(perspectiveUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, keepsSeq: Seq[Keep], idealImageSize: ImageSize, withKeepTime: Boolean): Future[Seq[KeepInfo]] = {
+    val keeps = keepsSeq match {
+      case k: List[Keep] => k
+      case other =>
+        // Make sure we're not dealing with a lazy structure here, which doesn't play nice with a database session...
+        airbrake.notify("[decorateKeepsIntoKeepInfos] Found it! Grab Léo, Yingjie, and Andrew", new Exception())
+        other.toList
+    }
     if (keeps.isEmpty) Future.successful(Seq.empty[KeepInfo])
     else {
       val augmentationFuture = {

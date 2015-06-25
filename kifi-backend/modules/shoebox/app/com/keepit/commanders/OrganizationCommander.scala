@@ -88,12 +88,15 @@ class OrganizationCommanderImpl @Inject() (
   private def applyNewBasePermissionsToMembers(memberships: Seq[OrganizationMembership], oldBasePermissions: BasePermissions, newBasePermissions: BasePermissions)(implicit session: RWSession): Unit = {
     val membershipsByRole = memberships.groupBy(_.role)
     for ((role, memberships) <- membershipsByRole) {
-      val addedPermissions = newBasePermissions.forRole(role) -- oldBasePermissions.forRole(role)
-      val removedPermissions = oldBasePermissions.forRole(role) -- newBasePermissions.forRole(role)
+      val beingAdded = newBasePermissions.forRole(role) -- oldBasePermissions.forRole(role)
+      val beingRemoved = oldBasePermissions.forRole(role) -- newBasePermissions.forRole(role)
       memberships.foreach { membership =>
-        // TODO: is there a simpler way of expressing this?
-        val myPermissions = (membership.permissions -- removedPermissions) ++ addedPermissions
-        orgMembershipRepo.save(membership.withPermissions(myPermissions))
+        // If the member is currently MISSING some permissions that normally come with their role
+        // it means those permissions were explicitly revoked. We do not give them those back.
+        val explicitlyRevoked = oldBasePermissions.forRole(role) -- membership.permissions
+
+        val newPermissions = ((membership.permissions ++ beingAdded) -- beingRemoved) -- explicitlyRevoked
+        orgMembershipRepo.save(membership.withPermissions(newPermissions))
       }
     }
   }
@@ -109,7 +112,9 @@ class OrganizationCommanderImpl @Inject() (
         val invites = orgInviteRepo.getAllByOrganization(org.id.get)
         invites.foreach { invite => orgInviteRepo.deactivate(invite.id.get) }
 
-        Right(OrganizationDeleteResponse(request, orgRepo.save(org.withState(OrganizationStates.INACTIVE))))
+        orgRepo.save(org.sanitizeForDelete)
+        handleCommander.reclaimAll(org.id.get, overrideProtection = true, overrideLock = true)
+        Right(OrganizationDeleteResponse(request))
       } else {
         Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
       }

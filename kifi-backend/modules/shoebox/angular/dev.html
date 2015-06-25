@@ -30,4 +30,18 @@
       return s;
     }());
   }
+
+  var ngAppElem = angular.element(document.querySelector('[ng-app]') || document.body);
+
+  window.injector = ngAppElem.injector();
+  window.inject = injector.invoke;
+  window.$rootScope = ngAppElem.scope();
+  window.inj = injector.get;
+
+  Object.defineProperty(window, '$scope', {
+      get: function () {
+          var elem = angular.element(__commandLineAPI.$0);
+          return elem.isolateScope() || elem.scope();
+      },
+  });
 </script>

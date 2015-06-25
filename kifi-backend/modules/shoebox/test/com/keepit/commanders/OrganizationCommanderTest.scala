@@ -104,6 +104,7 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
 
     "delete an organization" in {
       withDb() { implicit injector =>
+        val orgRepo = inject[OrganizationRepo]
         val orgCommander = inject[OrganizationCommander]
         val orgMembershipRepo = inject[OrganizationMembershipRepo]
 
@@ -136,10 +137,11 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
         val trueOwnerDeleteResponse = orgCommander.deleteOrganization(trueOwnerDeleteRequest)
         trueOwnerDeleteResponse must haveClass[Right[OrganizationDeleteRequest, Organization]]
         trueOwnerDeleteResponse.right.get.request === trueOwnerDeleteRequest
-        trueOwnerDeleteResponse.right.get.deactivatedOrg.state === OrganizationStates.INACTIVE
-        orgCommander.get(org.id.get) === trueOwnerDeleteResponse.right.get.deactivatedOrg
 
-        val memberships = db.readOnlyMaster { implicit session => orgMembershipRepo.getAllByOrgId(org.id.get) }
+        val (deactivatedOrg, memberships) = db.readOnlyMaster { implicit session =>
+          (orgRepo.get(org.id.get), orgMembershipRepo.getAllByOrgId(org.id.get))
+        }
+        deactivatedOrg.state == OrganizationStates.INACTIVE
         memberships.length === 0
       }
     }

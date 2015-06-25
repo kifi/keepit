@@ -4,6 +4,8 @@ import com.google.inject.{ Provider, ImplementedBy, Inject, Singleton }
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.db.{ DbSequenceAssigner, Id }
 import com.keepit.common.db.slick.DBSession.RSession
+import com.keepit.common.db.{ Id }
+import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
@@ -13,8 +15,7 @@ import play.api.libs.json.Json
 
 @ImplementedBy(classOf[OrganizationRepoImpl])
 trait OrganizationRepo extends Repo[Organization] with SeqNumberFunction[Organization] {
-  def updateName(organizationId: Id[Organization], name: String): Organization = ???
-  def updateDescription(organizationId: Id[Organization], description: String): Organization = ???
+  def deactivate(model: Organization)(implicit session: RWSession): Unit
 }
 
 @Singleton
@@ -43,6 +44,10 @@ class OrganizationRepoImpl @Inject() (val db: DataBaseComponent, val clock: Cloc
 
   def table(tag: Tag) = new OrganizationTable(tag)
   initTable()
+
+  def deactivate(model: Organization)(implicit session: RWSession): Unit = {
+    save(model.sanitizeForDelete)
+  }
 }
 
 trait OrganizationSequencingPlugin extends SequencingPlugin

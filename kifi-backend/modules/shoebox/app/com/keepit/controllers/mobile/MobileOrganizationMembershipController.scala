@@ -23,7 +23,7 @@ class MobileOrganizationMembershipController @Inject() (
   private def sendFailResponse(fail: OrganizationFail) = Status(fail.status)(Json.obj("error" -> fail.message))
 
   // If userIdOpt is provided AND the user can invite members, return invited users as well as members
-  def getMembers(pubId: PublicId[Organization], offset: Int, limit: Int, userIdOpt: Option[Id[User]]) = (MaybeUserAction andThen OrganizationViewAction(pubId)) { request =>
+  def getMembers(pubId: PublicId[Organization], offset: Int, limit: Int, userIdOpt: Option[Id[User]]) = OrganizationAction(pubId) { request =>
     if (limit > 30) {
       BadRequest(Json.obj("error" -> "invalid_limit"))
     } else Organization.decodePublicId(pubId) match {
