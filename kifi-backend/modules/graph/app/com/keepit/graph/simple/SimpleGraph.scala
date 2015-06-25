@@ -41,20 +41,28 @@ object SimpleGraph extends Logging {
 
   val SerializationVersionId = 1
 
+  private val vertexLoggingPeriod = 1000000
+
   /**
    * Int, Int (Long, VRTX)
    */
   def write(graph: SimpleGraph, graphFile: File): Unit = {
     val out = new ObjectOutputStream(new FileOutputStream(graphFile))
     try {
+      val graphSize = graph.vertices.size
       out.writeInt(SerializationVersionId)
-      out.writeInt(graph.vertices.size)
+      out.writeInt(graphSize)
+      log.info("Persisting graph vertices...")
+      var persisted = 0
       graph.vertices foreach {
         case (vertexId, vertex) =>
+          if (persisted % vertexLoggingPeriod == 0) log.info(s"$persisted/$graphSize vertices persisted so far...")
           checkVertexIntegrity(graph.vertices, vertexId, vertex)
           out.writeLong(vertexId.id)
           vertex.write(out)
+          persisted += 1
       }
+      log.info(s"All $graphSize vertices have been persisted.")
     } finally {
       out.flush()
       out.close()
@@ -71,13 +79,18 @@ object SimpleGraph extends Logging {
       val version = in.readInt()
       if (version != SerializationVersionId) None
       else {
+        log.info("Loading graph vertices...")
         val graphSize = in.readInt()
         for (i <- 0 until graphSize) {
+          if (i % vertexLoggingPeriod == 0) log.info(s"$i/$graphSize vertices loaded so far...")
           val vertexId = VertexId(in.readLong())
           val vertex = MutableVertex.reads(in)
           vertices += (vertexId -> vertex)
         }
+        log.info(s"All $graphSize vertices have been loaded.")
+        log.info(s"Initializing incoming edges...")
         MutableVertex.initializeIncomingEdges(vertices)
+        log.info(s"All incoming edges have been initialized.")
         Some(SimpleGraph(vertices))
       }
     } finally {

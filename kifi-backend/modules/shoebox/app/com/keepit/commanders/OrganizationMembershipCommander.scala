@@ -27,11 +27,12 @@ object MaybeOrganizationMember {
 
 @ImplementedBy(classOf[OrganizationMembershipCommanderImpl])
 trait OrganizationMembershipCommander {
-  def validRequest(request: OrganizationMembershipRequest)(implicit session: RSession): Boolean
   def getMembersAndInvitees(orgId: Id[Organization], limit: Limit, offset: Offset, includeInvitees: Boolean): Seq[MaybeOrganizationMember]
 
   def getPermissions(orgId: Id[Organization], userIdOpt: Option[Id[User]]): Set[OrganizationPermission]
+  def isValidRequest(request: OrganizationMembershipRequest)(implicit session: RSession): Boolean
 
+  def validateRequests(requests: Seq[OrganizationMembershipRequest]): Map[OrganizationMembershipRequest, Boolean]
   def addMembership(request: OrganizationMembershipAddRequest): Either[OrganizationFail, OrganizationMembershipAddResponse]
   def modifyMembership(request: OrganizationMembershipModifyRequest): Either[OrganizationFail, OrganizationMembershipModifyResponse]
   def removeMembership(request: OrganizationMembershipRemoveRequest): Either[OrganizationFail, OrganizationMembershipRemoveResponse]
@@ -103,7 +104,8 @@ class OrganizationMembershipCommanderImpl @Inject() (
     membersNotIncludingOwner ++ invitedByUserId ++ invitedByEmailAddress
   }
 
-  def validRequest(request: OrganizationMembershipRequest)(implicit session: RSession): Boolean = {
+  def isValidRequest(request: OrganizationMembershipRequest)(implicit session: RSession): Boolean = {
+    val org = organizationRepo.get(request.orgId)
     val requesterOpt = organizationMembershipRepo.getByOrgIdAndUserId(request.orgId, request.requesterId)
     val targetOpt = organizationMembershipRepo.getByOrgIdAndUserId(request.orgId, request.targetId)
 
@@ -114,18 +116,27 @@ class OrganizationMembershipCommanderImpl @Inject() (
             requester.permissions.contains(INVITE_MEMBERS)
 
         case OrganizationMembershipModifyRequest(_, _, _, newRole) =>
-          targetOpt.exists(_.role < requester.role) && requester.permissions.contains(MODIFY_MEMBERS)
+          val requesterIsOwner = (requester.userId == org.ownerId) && !targetOpt.exists(_.userId == org.ownerId)
+          val requesterOutranksTarget = targetOpt.exists(_.role < requester.role) && requester.permissions.contains(MODIFY_MEMBERS)
+          requesterIsOwner || requesterOutranksTarget
 
         case OrganizationMembershipRemoveRequest(_, _, _) =>
-          targetOpt.exists(_.role < requester.role) &&
-            requester.permissions.contains(REMOVE_MEMBERS)
+          val requesterRemovingSelf = targetOpt.exists(t => t.userId == requester.userId && t.userId != org.ownerId)
+          val requesterOutranksTarget = targetOpt.exists(_.role < requester.role) && requester.permissions.contains(REMOVE_MEMBERS)
+          requesterRemovingSelf || requesterOutranksTarget
       }
+    }
+  }
+
+  def validateRequests(requests: Seq[OrganizationMembershipRequest]): Map[OrganizationMembershipRequest, Boolean] = {
+    db.readOnlyReplica { implicit session =>
+      requests.map(r => r -> isValidRequest(r)).toMap
     }
   }
 
   def addMembership(request: OrganizationMembershipAddRequest): Either[OrganizationFail, OrganizationMembershipAddResponse] = {
     db.readWrite { implicit session =>
-      if (validRequest(request)) {
+      if (isValidRequest(request)) {
         val org = organizationRepo.get(request.orgId)
         val newMembership = organizationMembershipRepo.save(org.newMembership(request.targetId, request.newRole))
         Right(OrganizationMembershipAddResponse(request, newMembership))
@@ -137,7 +148,7 @@ class OrganizationMembershipCommanderImpl @Inject() (
 
   def modifyMembership(request: OrganizationMembershipModifyRequest): Either[OrganizationFail, OrganizationMembershipModifyResponse] = {
     db.readWrite { implicit session =>
-      if (validRequest(request)) {
+      if (isValidRequest(request)) {
         val membership = organizationMembershipRepo.getByOrgIdAndUserId(request.orgId, request.targetId).get
         val org = organizationRepo.get(request.orgId)
         val newMembership = organizationMembershipRepo.save(org.modifiedMembership(membership, request.newRole))
@@ -149,7 +160,7 @@ class OrganizationMembershipCommanderImpl @Inject() (
   }
   def removeMembership(request: OrganizationMembershipRemoveRequest): Either[OrganizationFail, OrganizationMembershipRemoveResponse] = {
     db.readWrite { implicit session =>
-      if (validRequest(request)) {
+      if (isValidRequest(request)) {
         val membership = organizationMembershipRepo.getByOrgIdAndUserId(request.orgId, request.targetId).get
         organizationMembershipRepo.deactivate(membership.id.get)
         Right(OrganizationMembershipRemoveResponse(request))

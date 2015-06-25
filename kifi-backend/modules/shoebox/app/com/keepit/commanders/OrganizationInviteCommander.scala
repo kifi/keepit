@@ -107,7 +107,7 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
               }
           }
           val foundInvalidRequest = db.readOnlyMaster { implicit session =>
-            possibleUserIdInvites.toIterator.map(organizationMembershipCommander.validRequest(_)).find(_ == false)
+            possibleUserIdInvites.toIterator.map(organizationMembershipCommander.isValidRequest(_)).find(_ == false)
           }
           if (foundInvalidRequest.isDefined) {
             Future.successful(Left(OrganizationFail.INSUFFICIENT_PERMISSIONS))

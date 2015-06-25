@@ -16,6 +16,22 @@ private[store] object ArticleStoreKey {
   implicit def apply[A <: Article](key: ArticleKey[A]): ArticleStoreKey = new ArticleStoreKey(key)
 }
 
+private[store] class UrlHashArticleStoreKey(key: ArticleKey[_]) extends ArticleStoreKey(key) {
+  override def toString = s"${key.urlHash.urlEncoded}/${key.kind.typeCode}/${key.version.major.value}.${key.version.minor.value}"
+}
+
+private[store] object UrlHashArticleStoreKey {
+  implicit def apply[A <: Article](key: ArticleKey[A]): UrlHashArticleStoreKey = new UrlHashArticleStoreKey(key)
+}
+
+private[store] class DeprecatedUrlHashArticleStoreKey(key: ArticleKey[_]) extends ArticleStoreKey(key) {
+  override def toString = s"${key.urlHash.hash}/${key.kind.typeCode}/${key.version.major.value}.${key.version.minor.value}"
+}
+
+private[store] object DeprecatedUrlHashArticleStoreKey {
+  implicit def apply[A <: Article](key: ArticleKey[A]): DeprecatedUrlHashArticleStoreKey = new DeprecatedUrlHashArticleStoreKey(key)
+}
+
 private[store] trait RoverUnderlyingArticleStore extends ObjectStore[ArticleStoreKey, Article]
 
 private[store] class S3RoverUnderlyingArticleStoreImpl(val bucketName: S3Bucket, val amazonS3Client: AmazonS3, val accessLog: AccessLog)

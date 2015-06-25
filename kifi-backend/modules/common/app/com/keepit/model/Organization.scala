@@ -8,6 +8,7 @@ import com.keepit.common.db._
 import com.keepit.common.strings._
 import com.keepit.common.time._
 import com.kifi.macros.json
+import org.apache.commons.lang3.RandomStringUtils
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -33,11 +34,18 @@ case class Organization(
   def getNonmemberPermissions = basePermissions.forNonmember
   def getRolePermissions(role: OrganizationRole) = basePermissions.forRole(role)
 
-  def newMembership(userId: Id[User], role: OrganizationRole): OrganizationMembership =
+  def newMembership(userId: Id[User], role: OrganizationRole): OrganizationMembership = {
     OrganizationMembership(organizationId = id.get, userId = userId, role = role, permissions = getRolePermissions(role))
+  }
 
   def modifiedMembership(membership: OrganizationMembership, newRole: OrganizationRole): OrganizationMembership =
     membership.copy(role = newRole, permissions = getRolePermissions(newRole))
+
+  def sanitizeForDelete = this.copy(
+    state = OrganizationStates.INACTIVE,
+    name = RandomStringUtils.randomAlphanumeric(20),
+    description = None
+  )
 }
 
 object Organization extends ModelWithPublicIdCompanion[Organization] {
