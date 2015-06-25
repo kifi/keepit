@@ -4,12 +4,13 @@ import com.google.inject.Inject
 import com.keepit.commanders._
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.util.Paginator
 import com.keepit.model._
+import com.keepit.social.BasicUser
 import play.api.libs.json.{ JsNumber, JsObject, Json, JsValue }
 
 import scala.concurrent.{ Future, ExecutionContext }
@@ -112,6 +113,63 @@ class MobileUserProfileController @Inject() (
             Future.successful(BadRequest(Json.obj("error" -> "no_such_filter")))
         }
     }
+  }
+
+  // v2 differs from above as it is allowed to take a LibraryOrdering
+  // as well as uses the external-id instead of the username as it is
+  // more readily available via mobile clients, I assume desktop would
+  // benefit as well - @jaredpetker
+  def getProfileLibrariesV2(id: ExternalId[User], page: Int, pageSize: Int,
+    filter: String, ordering: Option[LibraryOrdering]) = MaybeUserAction.async { implicit request =>
+    db.readOnlyReplica { implicit session =>
+      userRepo.getOpt(id).map { user =>
+        val viewer = request.userOpt
+        val paginator = Paginator(page, pageSize)
+        val imageSize = ProcessedImageSize.Large.idealSize
+        filter match {
+          case "own" =>
+            val libs = if (viewer.exists(_.id == user.id)) {
+              Json.toJson(userProfileCommander.getOwnLibrariesForSelf(user, paginator, imageSize, ordering).seq)
+            } else {
+              Json.toJson(userProfileCommander.getOwnLibraries(user, viewer, paginator, imageSize, ordering).seq)
+            }
+            Future.successful(Ok(Json.obj("own" -> libs)))
+          case "following" =>
+            val libs = userProfileCommander.getFollowingLibraries(user, viewer, paginator, imageSize, ordering).seq
+            Future.successful(Ok(Json.obj("following" -> libs)))
+          case "invited" =>
+            val libs = userProfileCommander.getInvitedLibraries(user, viewer, paginator, imageSize).seq
+            Future.successful(Ok(Json.obj("invited" -> libs)))
+          case "all" if page == 0 =>
+            val ownLibsF = if (viewer.exists(_.id == user.id)) {
+              SafeFuture(Json.toJson(userProfileCommander.getOwnLibrariesForSelf(user, paginator, imageSize, ordering).seq))
+            } else {
+              SafeFuture(Json.toJson(userProfileCommander.getOwnLibraries(user, viewer, paginator, imageSize, ordering).seq))
+            }
+            val followLibsF = SafeFuture(userProfileCommander.getFollowingLibraries(user, viewer, paginator, imageSize, ordering).seq)
+            val invitedLibsF = SafeFuture(userProfileCommander.getInvitedLibraries(user, viewer, paginator, imageSize).seq)
+            for {
+              ownLibs <- ownLibsF
+              followLibs <- followLibsF
+              invitedLibs <- invitedLibsF
+            } yield {
+              Ok(Json.obj(
+                "own" -> ownLibs,
+                "following" -> followLibs,
+                "invited" -> invitedLibs
+              ))
+            }
+          case "all" if page != 0 =>
+            Future.successful(BadRequest(Json.obj("error" -> "cannot_page_all_filters")))
+          case _ =>
+            Future.successful(BadRequest(Json.obj("error" -> "no_such_filter")))
+        }
+      } getOrElse {
+        Future.successful(NotFound(Json.obj("error" -> "user not found")))
+      }
+
+    }
+
   }
 
   def getProfileFollowers(username: Username, page: Int = 0, size: Int = 12) = MaybeUserAction.async { request =>
