@@ -4,7 +4,7 @@ import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.controller.FakeUserActionsHelper
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.model.UserFactoryHelper._
@@ -16,7 +16,8 @@ import play.api.mvc.{ Call, Result }
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 
-import scala.concurrent.Future
+import scala.concurrent.duration.Duration
+import scala.concurrent.{ Await, Future }
 
 class MobileOrganizationInviteControllerTest extends Specification with ShoeboxTestInjector {
   implicit def createFakeRequest(route: Call) = FakeRequest(route.method, route.url)
@@ -261,6 +262,103 @@ class MobileOrganizationInviteControllerTest extends Specification with ShoeboxT
           val result = controller.createAnonymousInviteToOrganization(PublicId[Organization]("12345"))(request)
 
           result === OrganizationFail.INVALID_PUBLIC_ID
+        }
+      }
+    }
+
+    "when inviteUsers is called:" in {
+      def setupInviters()(implicit injector: Injector) = {
+        db.readWrite { implicit session =>
+          val owner = UserFactory.user().withName("The", "Unknown").saved
+          val inviter = UserFactory.user().withEmailAddress("inviter@kifi.com").saved
+          val cannot_invite = UserFactory.user().saved
+          val not_a_member = UserFactory.user().saved
+          val org = inject[OrganizationRepo].save(Organization(name = "Void", ownerId = owner.id.get, handle = None))
+          val membershipRepo = inject[OrganizationMembershipRepo]
+          membershipRepo.save(org.newMembership(owner.id.get, OrganizationRole.OWNER))
+          membershipRepo.save(org.newMembership(inviter.id.get, OrganizationRole.MEMBER)
+            .withPermissions(Set(OrganizationPermission.INVITE_MEMBERS)))
+          membershipRepo.save(org.newMembership(cannot_invite.id.get, OrganizationRole.MEMBER))
+          (org, owner, inviter, cannot_invite, not_a_member)
+        }
+      }
+
+      "succeed for member that has invite permissions" in {
+        withDb(controllerTestModules: _*) { implicit injector =>
+          val (org, owner, inviter, cannot_invite, not_a_member) = setupInviters()
+          implicit val config = inject[PublicIdConfiguration]
+          val publicId = Organization.publicId(org.id.get)
+
+          inject[FakeUserActionsHelper].setUser(inviter)
+          val jsonInput = Json.parse(
+            s"""{ "invites": [
+               |{ "id":  "${not_a_member.externalId.id}", "type": "user", "role": "member"}
+               |]}""".stripMargin)
+          val request = route.inviteUsers(publicId).withBody(jsonInput)
+          val response = controller.inviteUsers(publicId)(request)
+
+          val content = contentAsString(response)
+          status(response) === OK
+          content must contain(not_a_member.externalId.id)
+          content must contain("member")
+        }
+      }
+
+      "fail for member trying to elevate permissions above his own" in {
+        withDb(controllerTestModules: _*) { implicit injector =>
+          val (org, owner, inviter, cannot_invite, not_a_member) = setupInviters()
+          implicit val config = inject[PublicIdConfiguration]
+          val publicId = Organization.publicId(org.id.get)
+
+          inject[FakeUserActionsHelper].setUser(inviter)
+          val jsonInput = Json.parse(
+            s"""{ "invites": [
+               |{ "id":  "${not_a_member.externalId.id}", "type": "user", "role": "owner"}
+                                                         |]}""".stripMargin)
+          val request = route.inviteUsers(publicId).withBody(jsonInput)
+          val response = controller.inviteUsers(publicId)(request)
+
+          response === OrganizationFail.INSUFFICIENT_PERMISSIONS
+          db.readOnlyMaster { implicit s =>
+            inject[OrganizationMembershipRepo].getByOrgIdAndUserId(org.id.get, inviter.id.get).map(_.role) !== Some(OrganizationRole.OWNER)
+          }
+        }
+      }
+
+      "fail for member without invite rights" in {
+        withDb(controllerTestModules: _*) { implicit injector =>
+          val (org, owner, inviter, cannot_invite, not_a_member) = setupInviters()
+          implicit val config = inject[PublicIdConfiguration]
+          val publicId = Organization.publicId(org.id.get)
+
+          inject[FakeUserActionsHelper].setUser(cannot_invite)
+          val jsonInput = Json.parse(
+            s"""{ "invites": [
+               |{ "id":  "${not_a_member.externalId.id}", "type": "user", "role": "member"}
+                                                         |]}""".stripMargin)
+          val request = route.inviteUsers(publicId).withBody(jsonInput)
+          val response = controller.inviteUsers(publicId)(request)
+
+          response === OrganizationFail.INSUFFICIENT_PERMISSIONS
+        }
+      }
+
+      "fail on bad public id" in {
+        withDb(controllerTestModules: _*) { implicit injector =>
+          val (org, owner, inviter, cannot_invite, not_a_member) = setupInviters()
+          implicit val config = inject[PublicIdConfiguration]
+          // guaranteed to be random, because it was generated with a random number generator.
+          val publicId = PublicId[Organization]("2267")
+
+          inject[FakeUserActionsHelper].setUser(inviter)
+          val jsonInput = Json.parse(
+            s"""{ "invites": [
+               |{ "id":  "${not_a_member.externalId.id}", "type": "user", "role": "member"}
+                                                         |]}""".stripMargin)
+          val request = route.inviteUsers(publicId).withBody(jsonInput)
+          val response = controller.inviteUsers(publicId)(request)
+
+          response === OrganizationFail.INVALID_PUBLIC_ID
         }
       }
     }

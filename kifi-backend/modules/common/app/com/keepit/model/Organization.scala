@@ -52,6 +52,8 @@ case class Organization(
     }
   }
 
+  def toIngestableOrganization = IngestableOrganization(id, state, seq)
+
   def sanitizeForDelete = this.copy(
     state = OrganizationStates.INACTIVE,
     name = RandomStringUtils.randomAlphanumeric(20),
@@ -124,6 +126,12 @@ object Organization extends ModelWithPublicIdCompanion[Organization] {
   }
 
   case class UndefinedOrganizationHandleException(org: Organization) extends Exception(s"no handle found for $org")
+}
+
+case class IngestableOrganization(id: Option[Id[Organization]], state: State[Organization], seq: SequenceNumber[Organization])
+
+object IngestableOrganization {
+  implicit val format = Json.format[IngestableOrganization]
 }
 
 object OrganizationStates extends States[Organization]
