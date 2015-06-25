@@ -116,7 +116,9 @@ class OrganizationMembershipCommanderImpl @Inject() (
             requester.permissions.contains(INVITE_MEMBERS)
 
         case OrganizationMembershipModifyRequest(_, _, _, newRole) =>
-          targetOpt.exists(_.role < requester.role) && requester.permissions.contains(MODIFY_MEMBERS)
+          val ownerModify = (requester.userId == org.ownerId) && !targetOpt.exists(_.userId == org.ownerId)
+          val otherModify = targetOpt.exists(_.role < requester.role) && requester.permissions.contains(MODIFY_MEMBERS)
+          ownerModify || otherModify
 
         case OrganizationMembershipRemoveRequest(_, _, _) =>
           val selfRemove = targetOpt.exists(t => t.userId == requester.userId && t.userId != org.ownerId)
