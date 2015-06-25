@@ -285,6 +285,7 @@ POST    /m/1/libraries/recos/feedback      @com.keepit.controllers.website.Libra
 POST    /m/1/content/flagUrl                @com.keepit.controllers.mobile.MobileUriController.flagContent()
 GET     /m/1/inviteInfo                     @com.keepit.controllers.website.InviteController.getGeneralInviteInfo()
 
+POST    /m/1/teams/:id/members/invite           @com.keepit.controllers.mobile.MobileOrganizationInviteController.inviteUsers(id: PublicId[Organization])
 POST    /m/1/teams/:id/members/invites/accept   @com.keepit.controllers.mobile.MobileOrganizationInviteController.acceptInvitation(id: PublicId[Organization], authToken: String)
 POST    /m/1/teams/:id/members/invites/decline  @com.keepit.controllers.mobile.MobileOrganizationInviteController.declineInvitation(id: PublicId[Organization])
 POST    /m/1/teams/:id/members/invites/link     @com.keepit.controllers.mobile.MobileOrganizationInviteController.createAnonymousInviteToOrganization(id: PublicId[Organization])
