@@ -15,6 +15,8 @@ import com.keepit.common.json
 import play.api.libs.json._
 import com.keepit.model.OrganizationPermission._
 
+import scala.util.control.NoStackTrace
+
 final case class MaybeOrganizationMember(member: Either[BasicUser, BasicContact], role: Option[OrganizationRole], lastInvitedAt: Option[DateTime])
 
 object MaybeOrganizationMember {
@@ -183,9 +185,10 @@ class OrganizationMembershipCommanderImpl @Inject() (
     db.readWrite { implicit session => removeMembershipHelper(request) }
 
   // Accumulates the A -> B results in a Map. If any of the results fail, throw an exception
-  def accumulateWithFail[A, B, F](f: (A => Either[F, B]), xs: Seq[A]): Map[A, B] = {
+  case class OrganizationFailException(failure: OrganizationFail) extends Exception with NoStackTrace
+  def accumulateWithFail[A, B](f: (A => Either[OrganizationFail, B]), xs: Seq[A]): Map[A, B] = {
     def g(accum: Map[A, B], x: A) = f(x) match {
-      case Left(failure) => throw new Exception
+      case Left(failure) => throw OrganizationFailException(failure)
       case Right(y) => accum + (x -> y)
     }
     xs.foldLeft(Map.empty[A, B])(g)
@@ -195,7 +198,7 @@ class OrganizationMembershipCommanderImpl @Inject() (
     try {
       db.readWrite { implicit session => Right(accumulateWithFail(addMembershipHelper, requests)) }
     } catch {
-      case fail: Exception => Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+      case OrganizationFailException(failure) => Left(failure)
     }
   }
 
@@ -203,7 +206,7 @@ class OrganizationMembershipCommanderImpl @Inject() (
     try {
       db.readWrite { implicit session => Right(accumulateWithFail(modifyMembershipHelper, requests)) }
     } catch {
-      case fail: Exception => Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+      case OrganizationFailException(failure) => Left(failure)
     }
   }
 
@@ -211,7 +214,7 @@ class OrganizationMembershipCommanderImpl @Inject() (
     try {
       db.readWrite { implicit session => Right(accumulateWithFail(removeMembershipHelper, requests)) }
     } catch {
-      case fail: Exception => Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+      case OrganizationFailException(failure) => Left(failure)
     }
   }
 }
