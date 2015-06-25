@@ -37,6 +37,29 @@ class MobileOrganizationMembershipController @Inject() (
   }
 
   def modifyMembers(pubId: PublicId[Organization]) = ???
-  def removeMembers(pubId: PublicId[Organization]) = ???
+  def removeMembers(pubId: PublicId[Organization]) = UserAction(parse.tolerantJson) { request =>
+    Organization.decodePublicId(pubId) match {
+      case Failure(ex) => BadRequest(Json.obj("error" -> "invalid_organization_id"))
+      case Success(orgId) =>
+        val membersToBeRemoved = (request.body \ "members").as[Seq[Id[User]]]
+        val removeRequests = for( targetId <- membersToBeRemoved ) yield OrganizationMembershipRemoveRequest(orgId, request.userId, targetId)
+
+        if ( !orgMembershipCommander.validateRequests(removeRequests).values.contains(false) ) {
+          for( r <- removeRequests ) { orgMembershipCommander.removeMembership(r) }
+        }
+    }
+  }
+
+  def leaveOrganization(pubId: PublicId[Organization]) = UserAction { request =>
+    Organization.decodePublicId(pubId) match {
+      case Failure(ex) => BadRequest(Json.obj("error" -> "invalid_id"))
+      case Success(orgId) =>
+        val leaveRequest = OrganizationMembershipRemoveRequest(orgId, request.userId, request.userId)
+        orgMembershipCommander.removeMembership(leaveRequest) match {
+          case Left(fail) => fail.asErrorResponse
+          case Right(response) => Ok(JsString("success"))
+        }
+    }
+  }
 
 }
